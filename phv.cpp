@@ -71,3 +71,20 @@ void Phv::input(VECTOR(value_t) args, value_t data) {
             addreg(EGRESS, kv.key.s, kv.value);
     }
 }
+
+Phv::Ref::Ref(gress_t g, value_t &n) : lineno(n.lineno), gress(g), lo(0), hi(-1) {
+    if (CHECKTYPE2M(n, tSTR, tCMD, "expecting phv or register reference or slice")) {
+	if (n.type == tSTR) {
+	    name = n.s;
+	} else {
+	    name = n[0].s;
+	    if (PCHECKTYPE2M(n.vec.size != 2, n[1], tINT, tRANGE, "invalid slice")) {
+		if (n[1].type == tINT)
+		    lo = hi = n[1].i;
+		else {
+		    lo = n[1].lo;
+		    hi = n[1].hi;
+		    if (lo > hi) {
+			lo = n[1].hi;
+			hi = n[1].lo; } } } } }
+}

@@ -9,13 +9,14 @@
 
 class Stage;
 class Instruction;
+class InputXbar;
 
 class Table {
 
 protected:
     Table(int line, std::string &&n, gress_t gr, Stage *s, int lid = -1)
-        : name_(n), stage(s), gress(gr), lineno(line), logical_id(lid), format(0),
-          actions(0) {
+        : name_(n), stage(s), gress(gr), lineno(line), logical_id(lid),
+	  input_xbar(0), format(0), actions(0) {
             assert(all.find(name_) == all.end());
             all.emplace(name_, this); }
     virtual ~Table() { all.erase(name_); }
@@ -94,7 +95,8 @@ public:
         std::map<int, std::map<std::string, Field>::iterator>   byindex;
     public:
         int                                                     lineno;
-        unsigned                                                size;
+        unsigned                                                size, immed_size;
+
         int groups() const { return fmt.size(); }
         Field *field(const std::string &n, int group = 0) {
             assert(group >= 0 && (size_t)group < fmt.size());
@@ -139,6 +141,7 @@ public:
     gress_t                     gress;
     int                         lineno;
     int                         logical_id;
+    InputXbar			*input_xbar;
     std::vector<Layout>         layout;
     Format                      *format;
     Ref                         action;

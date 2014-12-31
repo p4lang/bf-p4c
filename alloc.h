@@ -1,13 +1,15 @@
 #ifndef _alloc_h_
 #define _alloc_h_
 
+#include <stdlib.h>
+
 template<class T> class Alloc1Dbase {
     int         size;
     T           *data;
 protected:
     Alloc1Dbase(int sz) : size(sz) {
         data = new T[sz];
-        for (size_t i = 0; i < sz; i++) data[i] = T(); }
+        for (int i = 0; i < sz; i++) data[i] = T(); }
     virtual ~Alloc1Dbase() { delete [] data; }
 public:
     T &operator[](int i) {

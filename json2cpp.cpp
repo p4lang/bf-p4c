@@ -36,7 +36,7 @@ static bool test_sanity(json::obj *data, std::string name) {
 	    if (!test_sanity(a.second.get(), name)) return false; }
 	return true; }
     if (json::number *n = dynamic_cast<json::number *>(data)) {
-	if (n->val >= 0 && n->val <= sizeof(unsigned long) * CHAR_BIT)
+	if (n->val >= 0 && (size_t)n->val <= sizeof(unsigned long) * CHAR_BIT)
 	    return true;
 	std::cerr << "size out of range: " << name << " " << n->val
 		   << std::endl; }

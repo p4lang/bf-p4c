@@ -92,12 +92,18 @@ inline pair_t *VECTOR(pair_t)::end() const { return data + size; }
 #define CHECKTYPEM(V, T, M) \
     ((V).type == (T) || \
      (error((V).lineno, "Syntax error, expecting %s", M), 0))
+#define PCHECKTYPEM(P, V, T, M) \
+    (((P) && (V).type == (T)) || \
+     (error((V).lineno, "Syntax error, expecting %s", M), 0))
 #define CHECKTYPE2(V, T1, T2) \
     ((V).type == (T1) || (V).type == (T2) || \
      (error((V).lineno, "Syntax error, expecting %s or %s", \
             value_type_desc[T1], value_type_desc[T2]), 0))
 #define CHECKTYPE2M(V, T1, T2, M) \
     ((V).type == (T1) || (V).type == (T2) || \
+     (error((V).lineno, "Syntax error, expecting %s", M), 0))
+#define PCHECKTYPE2M(P, V, T1, T2, M) \
+    (((P) && ((V).type == (T1) || (V).type == (T2))) || \
      (error((V).lineno, "Syntax error, expecting %s", M), 0))
 
 inline value_t *get(VECTOR(pair_t) &map, const char *key) {

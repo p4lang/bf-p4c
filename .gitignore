@@ -1,0 +1,8 @@
+*.o
+*.d
+gen
+templates
+asm-parse.c
+lex-yaml.c
+json2cpp
+tfas

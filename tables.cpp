@@ -1,4 +1,5 @@
 #include "algorithm.h"
+#include "input_xbar.h"
 #include "instruction.h"
 #include "stage.h"
 #include "tables.h"
@@ -200,7 +201,7 @@ static void overlap_test(int lineno,
                   a->first.c_str(), b->first.c_str()); }
 }
 
-Table::Format::Format(VECTOR(pair_t) &data) : lineno(data[0].key.lineno), size(0) {
+Table::Format::Format(VECTOR(pair_t) &data) : lineno(data[0].key.lineno), size(0), immed_size(0) {
     unsigned nextbit = 0;
     for (auto &kv : data) {
         if (!CHECKTYPE2M(kv.key, tSTR, tCMD, "expecting field desc"))
@@ -238,6 +239,7 @@ Table::Format::Format(VECTOR(pair_t) &data) : lineno(data[0].key.lineno), size(0
     for (size_t i = 1; i < fmt.size(); i++)
         if (fmt[0] != fmt[i])
             error(data[0].key.lineno, "Format group %d doesn't match group 0", i);
+    /* FIXME -- need to figure out which fields are immediates, and set immed_size */
 }
 
 Table::Actions::Actions(VECTOR(pair_t) &data) : lineno(data[0].key.lineno) {
@@ -305,8 +307,18 @@ static int get_address_mau_actiondata_adr_default(unsigned width) {
 }
 
 void MatchTable::write_regs(int type, Table *result) {
+    /* this follows the order an behavior in stage_match_entry_table.py
+     * it can be reorganized to be clearer */
+
+    /*------------------------
+     * data path
+     *-----------------------*/
     if (gress == EGRESS)
         stage->regs.dp.imem_table_addr_egress |= 1 << logical_id;
+
+    /*------------------------
+     * Match Merge
+     *-----------------------*/
     auto &merge = stage->regs.rams.match.merge;
     for (int v : VersionIter(config_version))
         merge.predication_ctl[gress][v].table_thread |=
@@ -329,6 +341,9 @@ void MatchTable::write_regs(int type, Table *result) {
             assert(0);
         }
     }
+    /*------------------------
+     * Action instruction Address
+     *-----------------------*/
     if (result->action) {
         if (result->action_args.size() != 1) {
             error(action.lineno, "Expecting single instruction address argument to "
@@ -354,29 +369,36 @@ void MatchTable::write_regs(int type, Table *result) {
                 error(action.lineno, "No %s in table format", result->action_args[0].c_str());
         }
     }
-    if (result->hit_next.size() == 0 && hit_next.size() > 0)
-        /* FIXME -- do we still need original 'result'? */
-        result = this;
-    if (result->hit_next.size() < NEXT_TABLE_SUCCESSOR_TABLE_DEPTH) {
+    /*------------------------
+     * Next Table
+     *-----------------------*/
+    Table *next = result->hit_next.size() > 0 ? result : this;
+    if (next->hit_next.size() < NEXT_TABLE_SUCCESSOR_TABLE_DEPTH) {
         merge.next_table_map_en |= (1U << logical_id);
         auto &mp = merge.next_table_map_data[logical_id];
         ubits<8> *map_data[8] = { &mp[0].next_table_map_data0, &mp[0].next_table_map_data1,
             &mp[0].next_table_map_data2, &mp[0].next_table_map_data3, &mp[1].next_table_map_data0,
             &mp[1].next_table_map_data1, &mp[1].next_table_map_data2, &mp[1].next_table_map_data3 };
         int i = 0;
-        for (auto &next : result->hit_next)
-            *map_data[i++] = next ? next->table_id() : 0xff;
+        for (auto &n : next->hit_next)
+            *map_data[i++] = n ? n->table_id() : 0xff;
     } else {
         /* FIXME */
         assert(0);
     }
-    if (result->miss_next || result->miss_next == "END") {
+    if (next->miss_next || next->miss_next == "END") {
         merge.next_table_format_data[logical_id].match_next_table_adr_miss_value = 
-            result->miss_next ? result->miss_next->table_id() : 0xff; }
-    assert(((result->hit_next.size()-1) & result->hit_next.size()) == 0);
-    merge.next_table_format_data[logical_id].match_next_table_adr_mask = result->hit_next.size()-1;
+            next->miss_next ? next->miss_next->table_id() : 0xff; }
+    assert(((next->hit_next.size()-1) & next->hit_next.size()) == 0);
+    merge.next_table_format_data[logical_id].match_next_table_adr_mask = next->hit_next.size()-1;
 
-
+    /*------------------------
+     * Immediate data found in overhead
+     *-----------------------*/
+    for (auto &row : result->layout) {
+        int bus = row.row*2 | row.bus;
+        assert(bus >= 0 && bus < 15);
+	merge.mau_immediate_data_mask[type][bus] = (1U << result->format->immed_size)-1; }
 
 }
 
@@ -386,6 +408,8 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
     setup_logical_id();
     for (auto &kv : MapIterChecked(data)) {
         if (kv.key == "input_xbar") {
+	    if (CHECKTYPE(kv.value, tMAP))
+		input_xbar = new InputXbar(this, false, kv.value.map);
         } else if (kv.key == "gateway") {
         } else if (kv.key == "vpn") {
         } else if (kv.key == "format") {
@@ -442,6 +466,8 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     setup_logical_id();
     for (auto &kv : MapIterChecked(data)) {
         if (kv.key == "input_xbar") {
+	    if (CHECKTYPE(kv.value, tMAP))
+		input_xbar = new InputXbar(this, true, kv.value.map);
         } else if (kv.key == "gateway") {
         } else if (kv.key == "vpn") {
         } else if (kv.key == "indirect") {
