@@ -1,7 +1,15 @@
-  {
+{
     "memories":[
+        "pipe_top_level", "pipe_addrmap",
+        "prsr_mem_rspec",
+        "dprsr_mem_rspec"
     ],
     "regs":[
-	"mau_addrmap"
+        "tofino",
+        "dvsl_addrmap", "pipe_addrmap", "mac_addrmap", "serdes_addrmap",
+        "dprsr_reg_rspec",
+        "epb_regs", "parb_regs",
+        "prsr_reg_rspec", "prsr_reg_merge_rspec",
+        "mau_addrmap"
     ]
-  }
+}

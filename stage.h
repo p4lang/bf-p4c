@@ -29,6 +29,8 @@ public:
     Alloc2D<Table *, TCAM_ROWS, 2>                      tcam_match_bus_use;
     Alloc2D<Table *, SRAM_ROWS, 2>                      tcam_indirect_bus_use;
     Alloc1D<Table *, LOGICAL_TABLES_PER_STAGE>          logical_id_use;
+    Alloc1D<std::vector<InputXbar *>, 8>                exact_ixbar;
+    Alloc1D<std::vector<InputXbar *>, 16>               tcam_ixbar;
     int                         pass1_logical_id;
     regs_match_action_stage_    regs;
     Stage() {

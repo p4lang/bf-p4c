@@ -1,5 +1,7 @@
 #include "ubits.h"
 #include <map>
+#include "log.h"
+#include <sstream>
 
 struct regrange {
     const char  *base;
@@ -33,4 +35,10 @@ void print_regname(std::ostream &out, const void *addr_) {
             it->second.fn(out, addr);
             return; } }
     out << "???";
+}
+
+void ubits_base::log(const char *op, unsigned long v) const {
+    std::ostringstream tmp;
+    LOG1(this << ' ' << op << ' ' << v <<
+         (v != value ?  tmp << " (now " << value << ")", tmp : tmp).str());
 }

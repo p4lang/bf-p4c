@@ -5,6 +5,11 @@
 
 config_version_t config_version = CONFIG_BOTH;
 
+int get_file_log_level(const char *file, int *level) {
+    /* fixed for now */
+    return *level = 1;
+}
+
 int main(int ac, char **av) {
     for (int i = 1; i < ac; i++) {
         if (av[i][0] == '-' && av[i][1] == 0) {

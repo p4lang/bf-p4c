@@ -400,6 +400,7 @@ void MatchTable::write_regs(int type, Table *result) {
         assert(bus >= 0 && bus < 15);
 	merge.mau_immediate_data_mask[type][bus] = (1U << result->format->immed_size)-1; }
 
+    input_xbar->write_regs();
 }
 
 DEFINE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match", )
@@ -451,8 +452,10 @@ void ExactMatchTable::pass1() {
     alloc_logical_id();
     alloc_busses(stage->sram_match_bus_use);
     check_next();
+    input_xbar->pass1(stage->exact_ixbar, 128);
 }
 void ExactMatchTable::pass2() {
+    input_xbar->pass2(stage->exact_ixbar, 128);
 }
 void ExactMatchTable::write_regs() {
     MatchTable::write_regs(0, this);
@@ -504,8 +507,10 @@ void TernaryMatchTable::pass1() {
               "than 2 hit next tables");
     if (indirect && hit_next.size() > 0 && indirect->hit_next.size() > 0)
         error(hit_next[0].lineno, "Ternary Match table with both direct and indirect next tables");
+    input_xbar->pass1(stage->tcam_ixbar, 44);
 }
 void TernaryMatchTable::pass2() {
+    input_xbar->pass2(stage->tcam_ixbar, 44);
 }
 void TernaryMatchTable::write_regs() {
     MatchTable::write_regs(1, indirect);

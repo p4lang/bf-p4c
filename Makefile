@@ -28,7 +28,7 @@ templates/.templates-updated: chip.schema templates-config
 	@touch $@
 
 templates/%.json: templates/.templates-updated
-	@true
+	@test -r $@
 
 -include $(wildcard *.d gen/*.d)
 

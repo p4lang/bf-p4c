@@ -1,6 +1,8 @@
 #include "phv.h"
+#include <iostream>
 
 Phv Phv::phv;
+const Phv::Register Phv::Slice::invalid = { 0, 0 };
 
 Phv::Phv() : Section("phv") {
     static const struct { char code[4]; unsigned size, count; } sizes[] =
@@ -26,12 +28,6 @@ void Phv::start(int lineno, VECTOR(value_t) args) {
     if (args.size > 1 ||
         (args.size == 1 && args[0] != "ingress" && args[0] != "egress"))
         error(lineno, "phv can only be ingress or egress");
-}
-
-const Phv::Slice *Phv::get(gress_t gress, const char *name) {
-    auto it = names[gress].find(name);
-    if (it == names[gress].end()) return 0;
-    return &it->second;
 }
 
 int Phv::addreg(gress_t gress, const char *name, value_t &what) {
@@ -72,12 +68,12 @@ void Phv::input(VECTOR(value_t) args, value_t data) {
     }
 }
 
-Phv::Ref::Ref(gress_t g, value_t &n) : lineno(n.lineno), gress(g), lo(0), hi(-1) {
+Phv::Ref::Ref(gress_t g, value_t &n) : gress(g), lo(-1), hi(-1), lineno(n.lineno) {
     if (CHECKTYPE2M(n, tSTR, tCMD, "expecting phv or register reference or slice")) {
 	if (n.type == tSTR) {
-	    name = n.s;
+	    name_ = n.s;
 	} else {
-	    name = n[0].s;
+	    name_ = n[0].s;
 	    if (PCHECKTYPE2M(n.vec.size != 2, n[1], tINT, tRANGE, "invalid slice")) {
 		if (n[1].type == tINT)
 		    lo = hi = n[1].i;
@@ -87,4 +83,20 @@ Phv::Ref::Ref(gress_t g, value_t &n) : lineno(n.lineno), gress(g), lo(0), hi(-1)
 		    if (lo > hi) {
 			lo = n[1].hi;
 			hi = n[1].lo; } } } } }
+}
+
+void Phv::Ref::dbprint(std::ostream &out) const {
+    out << name_;
+    if (lo >= 0) { 
+        out << '(' << lo;
+        if (hi != lo) out << ".." << hi;
+        out << ')'; }
+    Slice sl(**this);
+    if (sl.valid) {
+        out << "[R" << sl.reg.index;
+        if (sl.lo != 0 || sl.hi != sl.reg.size-1) {
+            out << '(' << sl.lo;
+            if (sl.hi != sl.lo) out << ".." << sl.hi;
+            out << ')'; }
+        out << ']'; }
 }
