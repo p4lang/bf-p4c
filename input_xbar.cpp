@@ -3,7 +3,7 @@
 #include "stage.h"
 
 InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
-: lineno(data[0].key.lineno), table(t), ternary(tern)
+: table(t), ternary(tern), lineno(data[0].key.lineno)
 {
     int numgroups = ternary ? 16 : 8;
     for (auto &kv : data) {

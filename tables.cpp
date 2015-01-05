@@ -167,17 +167,20 @@ void Table::alloc_busses(Alloc2Dbase<Table *> &bus_use) {
                       row.row, name()); } }
 }
 
-void Table::alloc_logical_id() {
-    if (logical_id >= 0) {
-        stage->pass1_logical_id = logical_id;
+void Table::alloc_id(const char *idname, int &id, int &next_id, int max_id,
+		     Alloc1Dbase<Table *> &use)
+{
+    if (id >= 0) {
+        next_id = id;
         return; }
-    while (++stage->pass1_logical_id < LOGICAL_TABLES_PER_STAGE &&
-           stage->logical_id_use[stage->pass1_logical_id]);
-    if (stage->pass1_logical_id < LOGICAL_TABLES_PER_STAGE) {
-        logical_id = stage->pass1_logical_id;
-        stage->logical_id_use[logical_id] = this;
-    } else
-        error(lineno, "Can't pick logical id for table %s (ran out)", name());
+    while (++next_id < max_id && use[next_id]);
+    if (next_id >= max_id) {
+	next_id = -1;
+	while (++next_id < max_id && use[next_id]); }
+    if (next_id < max_id)
+        use[id = next_id] = this;
+    else
+        error(lineno, "Can't pick %s id for table %s (ran out)", idname, name());
 }
 
 void Table::check_next() {
@@ -242,7 +245,7 @@ Table::Format::Format(VECTOR(pair_t) &data) : lineno(data[0].key.lineno), size(0
     /* FIXME -- need to figure out which fields are immediates, and set immed_size */
 }
 
-Table::Actions::Actions(VECTOR(pair_t) &data) : lineno(data[0].key.lineno) {
+Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) : lineno(data[0].key.lineno) {
     for (auto &kv : data) {
         if (!CHECKTYPE(kv.key, tSTR) || !CHECKTYPE(kv.value, tVEC))
             continue;
@@ -257,10 +260,30 @@ Table::Actions::Actions(VECTOR(pair_t) &data) : lineno(data[0].key.lineno) {
                 ins.first = i.i;
                 continue; }
             if (!CHECKTYPE(i, tCMD)) continue;
-            if (auto *p = Instruction::decode(i.vec))
+            if (auto *p = Instruction::decode(tbl, i.vec))
                 ins.second.push_back(p);
         }
     }
+}
+
+Table::ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
+    for (auto &kv : data) {
+	if (!CHECKTYPE2(kv.key, tINT, tRANGE)) continue;
+	if (!CHECKTYPE(kv.value, tSTR)) continue;
+	Format::Field *f = tbl->format->field(kv.value.s);
+	if (!f) {
+	    error(kv.value.lineno, "No field %s in format", kv.value.s);
+	    continue; }
+	int idx = kv.key.i;
+	if (kv.key.type == tRANGE) {
+	    idx = kv.key.lo;
+	    unsigned size = (kv.key.hi-idx+1) * 8;
+	    if (size != f->size) {
+		error(kv.key.lineno, "Byte range doesn't match size %d of %s",
+		      f->size, kv.key.s);
+		continue; } }
+	bus[kv.value.s].first.push_back(idx);
+	bus[kv.value.s].second = f; }
 }
 
 class MatchTable : public Table {
@@ -270,7 +293,7 @@ protected:
     void write_regs(int type, Table *result);
 };
 
-#define DEFINE_TABLE_TYPE(TYPE, PARENT, NAME, MORE)                     \
+#define DEFINE_TABLE_TYPE(TYPE, PARENT, NAME, ...)                      \
 class TYPE : public PARENT {                                            \
     static struct Type : public Table::Type {                           \
         Type() : Table::Type(NAME) {}                                   \
@@ -284,7 +307,7 @@ class TYPE : public PARENT {                                            \
     void pass1();                                                       \
     void pass2();                                                       \
     void write_regs();                                                  \
-    MORE                                                                \
+    __VA_ARGS__                                                         \
 };                                                                      \
 TYPE::Type TYPE::table_type;                                            \
 Table *TYPE::Type::create(int lineno, const char *name, gress_t gress,  \
@@ -407,20 +430,30 @@ DEFINE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match", )
 void ExactMatchTable::setup(VECTOR(pair_t) &data) {
     setup_layout(get(data, "row"), get(data, "column"), get(data, "bus"));
     setup_logical_id();
+    if (auto *fmt = get(data, "format")) {
+	if (CHECKTYPE(*fmt, tMAP))
+	    format = new Format(fmt->map);
+    } else
+        error(lineno, "No format specified in table %s", name());
     for (auto &kv : MapIterChecked(data)) {
         if (kv.key == "input_xbar") {
 	    if (CHECKTYPE(kv.value, tMAP))
 		input_xbar = new InputXbar(this, false, kv.value.map);
         } else if (kv.key == "gateway") {
         } else if (kv.key == "vpn") {
+            if (CHECKTYPE(kv.value, tINT))
+		if ((vpn = kv.value.i) < 0 || vpn >= MAX_VPN)
+		    error(kv.key.lineno, "Invalid vpn %d", vpn);
         } else if (kv.key == "format") {
-            if (CHECKTYPE(kv.value, tMAP))
-                format = new Format(kv.value.map);
+	    /* done above so it's always before 'actions' */
         } else if (kv.key == "action") {
             setup_action_table(kv.value);
         } else if (kv.key == "actions") {
             if (CHECKTYPE(kv.value, tMAP))
-                actions = new Actions(kv.value.map);
+                actions = new Actions(this, kv.value.map);
+        } else if (kv.key == "action_bus") {
+            if (CHECKTYPE(kv.value, tMAP))
+                action_bus = new ActionBus(this, kv.value.map);
         } else if (kv.key == "hit") {
             if (!hit_next.empty())
                 error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
@@ -444,12 +477,13 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     kv.key.s, name()); }
-    if (!format)
-        error(lineno, "No format specified in table %s", name());
     alloc_rams(false, stage->sram_use, &stage->sram_match_bus_use);
+    if (action && actions)
+	error(lineno, "Table %s has both action table and immedaite actions", name());
 }
 void ExactMatchTable::pass1() {
-    alloc_logical_id();
+    alloc_id("logical", logical_id, stage->pass1_logical_id,
+	     LOGICAL_TABLES_PER_STAGE, stage->logical_id_use);
     alloc_busses(stage->sram_match_bus_use);
     check_next();
     input_xbar->pass1(stage->exact_ixbar, 128);
@@ -462,9 +496,11 @@ void ExactMatchTable::write_regs() {
 }
 
 DEFINE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
+    int tcam_id;
     Table::Ref indirect;
 )
 void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
+    tcam_id = -1;
     setup_layout(get(data, "row"), get(data, "column"), get(data, "bus"));
     setup_logical_id();
     for (auto &kv : MapIterChecked(data)) {
@@ -473,9 +509,16 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
 		input_xbar = new InputXbar(this, true, kv.value.map);
         } else if (kv.key == "gateway") {
         } else if (kv.key == "vpn") {
+            if (CHECKTYPE(kv.value, tINT))
+		if ((vpn = kv.value.i) < 0 || vpn >= MAX_VPN)
+		    error(kv.key.lineno, "Invalid vpn %d", vpn);
         } else if (kv.key == "indirect") {
             if (CHECKTYPE(kv.value, tSTR))
                 indirect = kv.value;
+        } else if (kv.key == "tcam_id") {
+            if (CHECKTYPE(kv.value, tINT))
+		if ((tcam_id = kv.value.i) < 0 || tcam_id >= TCAM_TABLES_PER_STAGE)
+		    error(kv.key.lineno, "Invalid tcam_id %d", tcam_id);
         } else if (kv.key == "hit") {
             if (!hit_next.empty())
                 error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
@@ -498,7 +541,10 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     alloc_rams(false, stage->tcam_use, &stage->tcam_match_bus_use);
 }
 void TernaryMatchTable::pass1() {
-    alloc_logical_id();
+    alloc_id("logical", logical_id, stage->pass1_logical_id,
+	     LOGICAL_TABLES_PER_STAGE, stage->logical_id_use);
+    alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
+	     TCAM_TABLES_PER_STAGE, stage->tcam_id_use);
     alloc_busses(stage->tcam_match_bus_use);
     check_next();
     indirect.check();
@@ -514,20 +560,59 @@ void TernaryMatchTable::pass2() {
 }
 void TernaryMatchTable::write_regs() {
     MatchTable::write_regs(1, indirect);
+    int idx = 0;
+    for (Layout &row : layout) {
+	for (int col : row.cols) {
+	    auto &tcam_mode = stage->regs.tcams.col[col].tcam_mode[row.row];
+	    /* TODO -- always setting dirtcam mode to 0 */
+	    tcam_mode.tcam_data_dirtcam_mode = 0;
+	    tcam_mode.tcam_data1_select = row.bus;
+	    tcam_mode.tcam_chain_out_enable = 0 /*???*/;
+	    if (gress == INGRESS)
+		tcam_mode.tcam_ingress = 1;
+	    else
+		tcam_mode.tcam_egress = 1;
+	    tcam_mode.tcam_match_output_enable = 1;
+	    tcam_mode.tcam_vpn = vpn + idx++;
+	    tcam_mode.tcam_logical_table = tcam_id;
+	    /* TODO -- always disable tcam_validbit_xbar */
+	    auto tcam_vh_xbar = stage->regs.tcams.vh_data_xbar;
+	    for (int i = 0; i < 8; i++)
+		tcam_vh_xbar.tcam_validbit_xbar_ctl[row.bus][row.row/2][i] = 15;
+	    /* TODO -- don't support wide tcam matches yet. */
+	    if (input_xbar->width() != 1)
+		error(input_xbar->lineno, "FIXME -- no support for wide TCAM matches");
+	    tcam_vh_xbar.tcam_row_halfbyte_mux_ctl[row.bus][row.row]
+		.tcam_row_halfbyte_mux_ctl_select = 3;
+	    tcam_vh_xbar.tcam_row_halfbyte_mux_ctl[row.bus][row.row]
+		.tcam_row_halfbyte_mux_ctl_enable = 1;
+	    tcam_vh_xbar.tcam_row_output_ctl[row.bus][row.row]
+		.enabled_4bit_muxctl_select = *input_xbar->begin();
+	    tcam_vh_xbar.tcam_row_output_ctl[row.bus][row.row]
+		.enabled_4bit_muxctl_enable = 1;
+	}
+    }
 }
 
 DEFINE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect", )
 void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
     setup_layout(get(data, "row"), get(data, "column"), get(data, "bus"));
+    if (auto *fmt = get(data, "format")) {
+	if (CHECKTYPE(*fmt, tMAP))
+	    format = new Format(fmt->map);
+    } else
+        error(lineno, "No format specified in table %s", name());
     for (auto &kv : MapIterChecked(data)) {
         if (kv.key == "format") {
-            if (CHECKTYPE(kv.value, tMAP))
-                format = new Format(kv.value.map);
+	    /* done above so it's always before 'actions' */
         } else if (kv.key == "action") {
             setup_action_table(kv.value);
         } else if (kv.key == "actions") {
             if (CHECKTYPE(kv.value, tMAP))
-                actions = new Actions(kv.value.map);
+                actions = new Actions(this, kv.value.map);
+        } else if (kv.key == "action_bus") {
+            if (CHECKTYPE(kv.value, tMAP))
+                action_bus = new ActionBus(this, kv.value.map);
         } else if (kv.key == "hit") {
             if (!hit_next.empty())
                 error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
@@ -552,8 +637,8 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     kv.key.s, name()); }
     alloc_rams(false, stage->sram_use, &stage->tcam_indirect_bus_use);
-    if (!format)
-        error(lineno, "No format specified in table %s", name());
+    if (action && actions)
+	error(lineno, "Table %s has both action table and immedaite actions", name());
 }
 void TernaryIndirectTable::pass1() {
     alloc_busses(stage->tcam_indirect_bus_use);
@@ -564,18 +649,27 @@ void TernaryIndirectTable::pass2() {
 void TernaryIndirectTable::write_regs() {
 }
 
-DEFINE_TABLE_TYPE(ActionTable, Table, "action", )
+DEFINE_TABLE_TYPE(ActionTable, Table, "action",)
+
+
 void ActionTable::setup(VECTOR(pair_t) &data) {
     auto *row = get(data, "row");
     if (!row) row = get(data, "logical_row");
     setup_layout(row, get(data, "column"), get(data, "bus"));
+    if (auto *fmt = get(data, "format")) {
+	if (CHECKTYPE(*fmt, tMAP))
+	    format = new Format(fmt->map);
+    } else
+        error(lineno, "No format specified in table %s", name());
     for (auto &kv : MapIterChecked(data)) {
         if (kv.key == "format") {
-            if (CHECKTYPE(kv.value, tMAP))
-                format = new Format(kv.value.map);
+	    /* done above so it's always before 'actions' and 'action_bus' */
         } else if (kv.key == "actions") {
             if (CHECKTYPE(kv.value, tMAP))
-                actions = new Actions(kv.value.map);
+                actions = new Actions(this, kv.value.map);
+        } else if (kv.key == "action_bus") {
+            if (CHECKTYPE(kv.value, tMAP))
+                action_bus = new ActionBus(this, kv.value.map);
         } else if (kv.key == "row" || kv.key == "logical_row" ||
                    kv.key == "column" || kv.key == "bus") {
             /* already done in setup_layout */
@@ -583,8 +677,6 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     kv.key.s, name()); }
     alloc_rams(true, stage->sram_use, 0);
-    if (!format)
-        error(lineno, "No format specified in table %s", name());
 }
 void ActionTable::pass1() {
 }

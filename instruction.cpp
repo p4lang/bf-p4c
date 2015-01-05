@@ -1,4 +1,6 @@
 #include "instruction.h"
+#include "phv.h"
+#include "tables.h"
 
 struct Idecode {
     static std::map<std::string, Idecode *> opcode;
@@ -6,57 +8,66 @@ struct Idecode {
     Idecode &alias(const char *name) {
         opcode[name] = this;
         return *this; }
-    virtual Instruction *decode(const VECTOR(value_t) &op) = 0;
+    virtual Instruction *decode(Table *tbl, const VECTOR(value_t) &op) = 0;
 };
 
 std::map<std::string, Idecode *> Idecode::opcode;
 
-struct operand {
-    enum { INVALID, CONST, REG, SLICE } type;
-    std::string         name;
-    union {
-        long            value;
-        struct {
-            unsigned    lo, hi;
-        };
+class operand {
+private:
+    struct Base {
+	virtual ~Base() {}
+	virtual Base *clone() = 0;
+    } *op;
+    struct Const : public Base {
+	long		value;
+	Const(long v) : value(v) {}
+	virtual Const *clone() { return new Const(*this); }
     };
-    operand() : type(INVALID) {}
-    operand(const operand &) = default;
-    operand(operand &&) = default;
-    operand &operator=(const operand &) & = default;
-    operand &operator=(operand &&) & = default;
-    operand &operator=(const value_t &v) {
-        if (v.type == tINT) {
-            type = CONST;
-            value = v.i;
-        } else if (v.type == tSTR) {
-            type = REG;
-            name = v.s;
-        } else if (v.type == tCMD && v.vec.size == 2) {
-            type = SLICE;
-            name = v[0].s;
-            if (v[1].type == tINT) {
-                lo = hi = v[1].i;
-            } else if (v[1].type == tRANGE) {
-                lo = v[1].lo;
-                hi = v[1].hi;
-            } else
-                type = INVALID;
-        } else
-            type = INVALID;
-        return *this; }
-    operand(const value_t &v) { *this = v; }
+    struct Phv : public Base {
+	::Phv::Ref	reg;
+	Phv(gress_t g, const value_t &n) : reg(g, n) {}
+	virtual Phv *clone() { return new Phv(*this); }
+    };
+    struct Action : public Base {
+	std::string		name;
+	Table::Format::Field	*field;
+	Action(const std::string &n, Table::Format::Field *f) : name(n), field(f) {}
+	virtual Action *clone() { return new Action(*this); }
+    };
+public:
+    operand() : op(0) {}
+    operand(long v) : op(new Const(v)) {}
+    operand(gress_t g, const value_t &n) : op(new Phv(g, n)) {}
+    operand(const std::string &n, Table::Format::Field *f) : op(new Action(n, f)) {}
+    operand(const operand &a) : op(a.op ? a.op->clone() : 0) {}
+    operand(operand &&a) : op(a.op) { a.op = 0; }
+    ~operand() { delete op; }
+    operand(Table *tbl, const value_t &v);
+    bool valid() const { return op != 0; }
 };
+
+operand::operand(Table *tbl, const value_t &v) : op(0) {
+    if (v.type == tINT) {
+	op = new Const(v.i);
+    } else if (CHECKTYPE2(v, tSTR, tCMD)) {
+	const std::string &n = v.type == tSTR ? v.s : v[0].s;
+	if (auto *field = tbl->format ? tbl->format->field(n) : 0) {
+	    op = new Action(n, field);
+	} else
+	    op = new Phv(tbl->gress, v); }
+}
 
 struct AluOP : public Instruction {
     struct Decode : public Idecode {
         std::string name;
         unsigned opcode;
         Decode(const char *n, unsigned opc) : Idecode(n), name(n), opcode(opc) {}
-        Instruction *decode(const VECTOR(value_t) &op);
+        Instruction *decode(Table *tbl, const VECTOR(value_t) &op);
     } *opc;
     operand dest, src1, src2;
-    AluOP(Decode *d, const value_t *ops) : opc(d), dest(ops[0]), src1(ops[1]), src2(ops[2]) {}
+    AluOP(Decode *d, Table *tbl, const value_t *ops) : opc(d), dest(tbl, ops[0]),
+		    src1(tbl, ops[1]), src2(tbl, ops[2]) {}
     void encode(Table *fmt);
 };
 
@@ -75,16 +86,16 @@ static AluOP::Decode opADD("add", 0x23e), opADDC("addc", 0x2be),
                      opA("alu_a", 0x31e), opORCB("orcb", 0x35e),
                      opOR("or", 0x39e), opSETHI("sethi", 0x39e);
 
-Instruction *AluOP::Decode::decode(const VECTOR(value_t) &op) {
+Instruction *AluOP::Decode::decode(Table *tbl, const VECTOR(value_t) &op) {
     if (op.size != 4) {
         error(op[0].lineno, "%s requires 3 operands", op[0].s);
         return 0; }
-    AluOP *rv = new AluOP(this, op.data + 1);
-    if (rv->dest.type != operand::REG)
+    AluOP *rv = new AluOP(this, tbl, op.data + 1);
+    if (!rv->dest.valid())
         error(op[1].lineno, "invalid dest");
-    else if (rv->src1.type == operand::INVALID)
+    else if (!rv->src1.valid())
         error(op[2].lineno, "invalid src1");
-    else if (rv->src2.type == operand::INVALID)
+    else if (!rv->src2.valid())
         error(op[3].lineno, "invalid src2");
     else
         return rv;
@@ -98,26 +109,32 @@ void AluOP::encode(Table *fmt) {
 struct DepositField : public Instruction {
     struct Decode : public Idecode {
         Decode(const char *n) : Idecode(n) {}
-        Instruction *decode(const VECTOR(value_t) &op);
+        Instruction *decode(Table *tbl, const VECTOR(value_t) &op);
     };
     operand dest, src1, src2;
-    DepositField(const value_t &d, const value_t &s) : dest(d), src1(s), src2(d) {}
+    DepositField(Table *tbl, const value_t &d, const value_t &s)
+	: dest(tbl, d), src1(tbl, s), src2(tbl, d) {}
+    DepositField(Table *tbl, const value_t &d, const value_t &s1, const value_t &s2)
+	: dest(tbl, d), src1(tbl, s1), src2(tbl, s2) {}
     void encode(Table *fmt);
 };
 
 static DepositField::Decode opDepositField("deposit_field");
 
-Instruction *DepositField::Decode::decode(const VECTOR(value_t) &op) {
+Instruction *DepositField::Decode::decode(Table *tbl, const VECTOR(value_t) &op) {
     if (op.size != 4 && op.size != 3) {
         error(op[0].lineno, "%s requires 2 or 3 operands", op[0].s);
         return 0; }
-    DepositField *rv = new DepositField(op[1], op[2]);
-    if (op.size == 4) rv->src2 = op[3];
-    if (rv->dest.type == operand::INVALID)
+    DepositField *rv;
+    if (op.size == 4)
+	rv = new DepositField(tbl, op[1], op[2], op[3]);
+    else
+	rv = new DepositField(tbl, op[1], op[2]);
+    if (!rv->dest.valid())
         error(op[1].lineno, "invalid dest");
-    else if (rv->src1.type == operand::INVALID)
+    else if (!rv->src1.valid())
         error(op[2].lineno, "invalid src1");
-    else if (rv->src2.type == operand::INVALID)
+    else if (!rv->src2.valid())
         error(op[3].lineno, "invalid src2");
     else
         return rv;
@@ -128,9 +145,9 @@ Instruction *DepositField::Decode::decode(const VECTOR(value_t) &op) {
 void DepositField::encode(Table *fmt) {
 }
 
-Instruction *Instruction::decode(const VECTOR(value_t) &op) {
+Instruction *Instruction::decode(Table *tbl, const VECTOR(value_t) &op) {
     if (auto *d = ::get(Idecode::opcode, op[0].s))
-        return d->decode(op);
+        return d->decode(tbl, op);
     else
         error(op[0].lineno, "Unknown instruction %s", op[0].s);
     return 0;

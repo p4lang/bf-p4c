@@ -9,7 +9,9 @@
 enum {
     /* global constants related to MAU stage */
     NUM_MAU_STAGES = 12,
+    MAX_VPN = 512,
     LOGICAL_TABLES_PER_STAGE = 16,
+    TCAM_TABLES_PER_STAGE = 8,
     SRAM_ROWS = 8,
     SRAM_UNITS_PER_ROW = 12,
     TCAM_ROWS = 16,
@@ -29,9 +31,10 @@ public:
     Alloc2D<Table *, TCAM_ROWS, 2>                      tcam_match_bus_use;
     Alloc2D<Table *, SRAM_ROWS, 2>                      tcam_indirect_bus_use;
     Alloc1D<Table *, LOGICAL_TABLES_PER_STAGE>          logical_id_use;
+    Alloc1D<Table *, TCAM_TABLES_PER_STAGE>          	tcam_id_use;
     Alloc1D<std::vector<InputXbar *>, 8>                exact_ixbar;
     Alloc1D<std::vector<InputXbar *>, 16>               tcam_ixbar;
-    int                         pass1_logical_id;
+    int                         pass1_logical_id, pass1_tcam_id;
     regs_match_action_stage_    regs;
     Stage() {
         declare_registers(&regs, sizeof(regs), [this](std::ostream &out, const char *addr) {

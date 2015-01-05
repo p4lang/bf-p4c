@@ -30,7 +30,7 @@ void Phv::start(int lineno, VECTOR(value_t) args) {
         error(lineno, "phv can only be ingress or egress");
 }
 
-int Phv::addreg(gress_t gress, const char *name, value_t &what) {
+int Phv::addreg(gress_t gress, const char *name, const value_t &what) {
     if (!CHECKTYPE2M(what, tSTR, tCMD, "register or slice"))
         return -1;
     auto reg = what.type == tSTR ? what.s : what[0].s;
@@ -68,7 +68,7 @@ void Phv::input(VECTOR(value_t) args, value_t data) {
     }
 }
 
-Phv::Ref::Ref(gress_t g, value_t &n) : gress(g), lo(-1), hi(-1), lineno(n.lineno) {
+Phv::Ref::Ref(gress_t g, const value_t &n) : gress(g), lo(-1), hi(-1), lineno(n.lineno) {
     if (CHECKTYPE2M(n, tSTR, tCMD, "expecting phv or register reference or slice")) {
 	if (n.type == tSTR) {
 	    name_ = n.s;

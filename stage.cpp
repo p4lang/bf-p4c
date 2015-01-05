@@ -58,6 +58,7 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
 void AsmStage::process() {
     for (int i = 0; i < NUM_MAU_STAGES; i++) {
         stage[i].pass1_logical_id = -1;
+        stage[i].pass1_tcam_id = -1;
         for (auto table : stage[i].tables)
             table->pass1(); }
 }

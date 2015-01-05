@@ -33,10 +33,10 @@ templates/%.json: templates/.templates-updated
 -include $(wildcard *.d gen/*.d)
 
 clean:
-	rm -f *.o *.d asm-parse.c lex-yaml.c *.json
+	rm -f *.o *.d asm-parse.c lex-yaml.c *.json json2cpp tfas
 
 veryclean: clean
-	rm -rf gen templates tfas
+	rm -rf gen templates
 
 help:
 	@echo "Tofino assembler makefile -- builds assembler"

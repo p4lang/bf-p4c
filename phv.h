@@ -41,7 +41,7 @@ public:
 private:
     Register regs[NUM_PHV_REGS];
     std::map<std::string, Slice> names[2];
-    int addreg(gress_t gress, const char *name, value_t &what);
+    int addreg(gress_t gress, const char *name, const value_t &what);
 public:
     const Slice *get(gress_t gress, const char *name) {
         auto it = names[gress].find(name);
@@ -55,7 +55,7 @@ public:
 	int		lo, hi;
     public:
 	int		lineno;
-	Ref(gress_t g, value_t &n);
+	Ref(gress_t g, const value_t &n);
 	Slice operator*() const {
 	    if (auto *s = phv.get(gress, name_)) {
 		if (hi >= 0) return Slice(*s, lo, hi);

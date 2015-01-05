@@ -15,7 +15,7 @@ class Table {
 
 protected:
     Table(int line, std::string &&n, gress_t gr, Stage *s, int lid = -1)
-        : name_(n), stage(s), gress(gr), lineno(line), logical_id(lid),
+        : name_(n), stage(s), gress(gr), lineno(line), vpn(-1), logical_id(lid),
 	  input_xbar(0), format(0), actions(0) {
             assert(all.find(name_) == all.end());
             all.emplace(name_, this); }
@@ -27,7 +27,8 @@ protected:
     void setup_actions(value_t &);
     void alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Table *> *bus_use);
     void alloc_busses(Alloc2Dbase<Table *> &bus_use);
-    void alloc_logical_id();
+    void alloc_id(const char *idname, int &id, int &next_id, int max_id,
+		  Alloc1Dbase<Table *> &use);
     void check_next();
 public:
     const char *name() { return name_.c_str(); }
@@ -109,37 +110,23 @@ public:
         act_t                           actions;
         std::vector<act_t::iterator>    order;
         typedef std::vector<act_t::iterator>::iterator  iterator;
-#if 0
-        struct iterator {
-            vector<act_t::iterator>::iterator     it;
-            iterator(const act_t::iterator &i) : it(i) {}
-            iterator(const iterator &) = default;
-            iterator(iterator &&) = default;
-            iterator &operator=(const iterator &) & = default;
-            iterator &operator=(iterator &&) & = default;
-            bool operator==(const iterator &a) { return it == a.it; }
-            iterator &operator++() { ++it; return *this; }
-            iterator &operator*() { return *this; }
-            const char *name() { return it->first.c_str(); }
-            int &address() { return it->second.first; }
-            size_t size() { return it->second.second.size(); }
-            Instruction *operator[](size_t i) {
-                assert(i < it->second.second.size());
-                return it->second.second[i]; }
-        };
-#endif
     public:
-        Actions(VECTOR(pair_t) &);
+        Actions(Table *tbl, VECTOR(pair_t) &);
         int             lineno;
         iterator begin() { return order.begin(); }
         iterator end() { return order.end(); }
     };
-
+    class ActionBus {
+	std::map<std::string, std::pair<std::vector<int>, Table::Format::Field *>>      bus;
+    public:
+	ActionBus(Table *, VECTOR(pair_t) &);
+    };
 public:
     std::string                 name_;
     Stage                       *stage;
     gress_t                     gress;
     int                         lineno;
+    int				vpn;
     int                         logical_id;
     InputXbar			*input_xbar;
     std::vector<Layout>         layout;
@@ -147,6 +134,7 @@ public:
     Ref                         action;
     std::vector<std::string>    action_args;
     Actions                     *actions;
+    ActionBus			*action_bus;
     std::vector<Ref>            hit_next;
     Ref                         miss_next;
 
