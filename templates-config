@@ -1,15 +1,20 @@
 {
     "memories":[
         "pipe_top_level", "pipe_addrmap",
-        "prsr_mem_rspec",
-        "dprsr_mem_rspec"
+        "prsr_mem_main_rspec",
+        "dprsr_mem_rspec",
+        "tm_pre_mem_rspec"
     ],
     "regs":[
         "tofino",
         "dvsl_addrmap", "pipe_addrmap", "mac_addrmap", "serdes_addrmap",
         "dprsr_reg_rspec",
-        "epb_regs", "parb_regs",
-        "prsr_reg_rspec", "prsr_reg_merge_rspec",
+        "prsr_reg_main_rspec",
+        "prsr_reg_merge_rspec",
+        "ing_buf_regs",
+        "epb_port_regs",
+        "ebuf_regs",
+        "parb_regs",
         "mau_addrmap"
     ]
 }

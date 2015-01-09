@@ -328,10 +328,12 @@ static void gen_dump_unread_method(std::ostream &out, json::map *m, int indent,
 #pragma GCC diagnostic pop
 }
 
+bool delete_copy = true;
 bool gen_emit = true;
 bool gen_fieldname = true;
 bool gen_unpack = true;
 bool gen_unread = true;
+bool checked_array = true;
 
 static void gen_type(std::ostream &out, const std::string &parent,
                      const char *name, json::obj *t, int indent)
@@ -359,13 +361,33 @@ static void gen_type(std::ostream &out, const std::string &parent,
             if ((*name)[0] == '_') continue;
             json::obj *type = get_indexes(a.second.get(), indexes);
             type = singleton_obj(type, name);
-            if (gen_definitions != DEFN_ONLY)
+            bool notclass = !dynamic_cast<json::map *>(type);
+            if (gen_definitions != DEFN_ONLY) {
                 out << std::setw(2*indent) << "";
+                if (checked_array && notclass && !indexes.empty())
+                    for (int idx : indexes) out << "checked_array<" << idx << ", ";
+            }
             gen_type(out, classname, ("_" + *name).c_str(), type, indent);
             if (gen_definitions != DEFN_ONLY) {
-                out << ' ' << *name;
-                for (int idx : indexes) out << '[' << idx << ']';
-                out << ";" << std::endl; } }
+                if (checked_array && !indexes.empty()) {
+                    if (!notclass) {
+                        out << ";" << std::endl;
+                        out << std::setw(2*indent) << "";
+                        for (int idx : indexes) out << "checked_array<" << idx << ", ";
+                        out << '_' << *name; }
+                    for (size_t i = 0; i < indexes.size(); i++) out << '>';
+                    out << ' ' << *name << ";" << std::endl;
+                } else {
+                    out << ' ' << *name;
+                    for (int idx : indexes) out << '[' << idx << ']';
+                    out << ";" << std::endl; } } }
+        if (delete_copy && gen_definitions != DEFN_ONLY) {
+            out << std::setw(2*indent) << "" << namestr << "() = default;"
+                << std::endl;
+            out << std::setw(2*indent) << "" << namestr << "(const "
+                << namestr << " &) = delete;" << std::endl;
+            out << std::setw(2*indent) << "" << namestr << "("
+                << namestr << " &&) = delete;" << std::endl; }
         if (gen_emit)
             gen_emit_method(out, m, indent, classname, name, nameargs);
         if (gen_fieldname) gen_fieldname_method(out, m, indent, classname);
@@ -401,8 +423,9 @@ int main(int ac, char **av) {
                 case 'I': includes.push_back(av[++i]); break;
                 case 'n': name = av[++i]; break;
                 case 'r': gen_unread = flag; break;
-                case 'u': gen_unpack = flag; break;
                 case 't': test = *arg++; break;
+                case 'u': gen_unpack = flag; break;
+                case 'x': delete_copy = flag; break;
                 case 'i':
                     if (int v = strtol(arg, &arg, 10)) {
                         if (v > 0 && v < 20) {
@@ -438,6 +461,8 @@ int main(int ac, char **av) {
                 std::cout << "#include <iomanip>" << std::endl; }
             if (gen_unpack || test)
                 std::cout << "#include \"json.h\"" << std::endl;
+            if (checked_array)
+                std::cout << "#include \"checked_array.h\"" << std::endl;
             std::cout << "#include \"ubits.h\"" << std::endl;
             std::cout << std::endl;
             gen_hdrs = false; }

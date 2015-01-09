@@ -2,6 +2,7 @@
 #define _phv_h_
 
 #include "sections.h"
+#include "bitvec.h"
 
 enum {
     NUM_PHV_REGS = 384
@@ -32,7 +33,7 @@ public:
         Slice(const Slice &s, int l, int h) : reg(s.reg), lo(s.lo + l), hi(s.lo + h) {
             valid = lo >= 0 && hi >= lo && hi < reg.size; }
         Slice(const Slice &) = default;
-        //Slice &operator=(const Slice &a) { new(this) Slice(a.reg, a.lo, a.hi); return *this; }
+        Slice &operator=(const Slice &a) { new(this) Slice(a.reg, a.lo, a.hi); return *this; }
 	const Slice *operator->() const { return this; }
         const bool operator==(const Slice &s) {
             return valid && s.valid && reg.index == s.reg.index &&
@@ -41,14 +42,15 @@ public:
 private:
     Register regs[NUM_PHV_REGS];
     std::map<std::string, Slice> names[2];
+    bitvec      phv_use[2];
     int addreg(gress_t gress, const char *name, const value_t &what);
 public:
-    const Slice *get(gress_t gress, const char *name) {
+    const Slice *get(gress_t gress, const std::string &name) const {
         auto it = names[gress].find(name);
         if (it == names[gress].end()) return 0;
         return &it->second; }
-    const Slice *get(gress_t gress, const std::string &name) {
-        return get(gress, name.c_str()); }
+    const Slice *get(gress_t gress, const char *name) const {
+        return get(gress, std::string(name)); }
     class Ref {
 	gress_t		gress;
 	std::string	name_;
@@ -80,6 +82,7 @@ public:
         const char *name() const { return name_.c_str(); }
         void dbprint(std::ostream &out) const;
     };
+    static const bitvec &use(gress_t gress) { return phv.phv_use[gress]; }
 };
 
 inline std::ostream &operator<<(std::ostream &out, const Phv::Ref &r) {

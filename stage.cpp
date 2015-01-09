@@ -2,6 +2,7 @@
 #include "stage.h"
 #include "phv.h"
 #include <fstream>
+#include "range.h"
 
 #define NUM_MAU_STAGES  12
 
@@ -68,12 +69,55 @@ void AsmStage::output() {
         if  (stage[i].tables.empty()) continue;
         for (auto table : stage[i].tables)
             table->pass2();
+        if (error_count > 0) return;
         for (auto table : stage[i].tables)
             table->write_regs();
+        stage[i].write_regs();
         char buffer[64];
         sprintf(buffer, "regs.match_action_stage.%02x.cfg.json", i);
         std::ofstream out(buffer);
         stage[i].regs.emit_json(out, i);
     }
+}
+
+/* FIXME -- HW specs 11 for min delay, compiler uses 10 */
+                                    /* !  TCAM   ! TCAM
+                                     * !    !   STATEFUL  */   
+static int action_output_delay[8] = { 10,  12,  15,  16,    /* not PIPED */
+                                      10,  13,  15,  17 };  /* PIPED */
+
+void Stage::write_regs() {
+    /* FIXME -- most of the values set here are 'placeholder' constants copied
+     * from build_pipeline_output_2.py in the compiler */
+    auto &merge = regs.rams.match.merge;
+    merge.exact_match_delay_config.exact_match_delay_ingress =
+        table_use[INGRESS] & USE_TCAM ? 3 : 0;
+    merge.exact_match_delay_config.exact_match_delay_egress =
+        table_use[EGRESS] & USE_TCAM ? 3 : 0;
+    for (int v : VersionIter(config_version)) {
+        for (gress_t gress : Range(INGRESS, EGRESS)) {
+            merge.predication_ctl[gress][v].start_table_fifo_delay0 = 15;
+            merge.predication_ctl[gress][v].start_table_fifo_delay1 = 8;
+            merge.predication_ctl[gress][v].start_table_fifo_enable = stageno ? 3 : 1;
+            regs.dp.action_output_delay[gress][v] = action_output_delay[table_use[gress]];
+            regs.dp.final_output_delay[gress][v] = 0;
+            regs.dp.cur_stage_dependency_on_prev[gress][v] = 0;
+            regs.dp.next_stage_dependency_on_cur[gress][v] = 0; }
+        regs.dp.match_ie_input_mux_sel[v] = 3;
+        regs.dp.stage_concurrent_with_prev[v] = stageno ? 0 : 3;
+        regs.dp.phv_fifo_enable[v].phv_fifo_ingress_final_output_enable = 0;
+        regs.dp.phv_fifo_enable[v].phv_fifo_egress_final_output_enable = 0;
+        regs.dp.phv_fifo_enable[v].phv_fifo_ingress_action_output_enable = 1;
+        regs.dp.phv_fifo_enable[v].phv_fifo_egress_action_output_enable = 1; }
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 7; j++) {
+            regs.dp.phv_ingress_thread[i][j] = phv_use[INGRESS].getrange(32*j, 32) |
+                    Phv::use(INGRESS).getrange(32*j, 32);
+            regs.dp.phv_egress_thread[i][j] = phv_use[EGRESS].getrange(32*j, 32) |
+                    Phv::use(EGRESS).getrange(32*j, 32); } }
+    if (table_use[INGRESS] & USE_TCAM_PIPED)
+        regs.tcams.tcam_piped |= 1;
+    if (table_use[EGRESS] & USE_TCAM_PIPED)
+        regs.tcams.tcam_piped |= 2;
 }
 

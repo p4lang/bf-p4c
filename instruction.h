@@ -6,8 +6,9 @@
 class Table;
 
 struct Instruction {
-    unsigned    slot, bits;
-    Instruction() : slot(-1), bits(0) {}
+    int         lineno;
+    int         slot, bits;
+    Instruction(int l) : lineno(l), slot(-1), bits(0) {}
     virtual ~Instruction() {}
     virtual void encode(Table *) = 0;
     static Instruction *decode(Table *, const VECTOR(value_t) &);

@@ -3,7 +3,7 @@
 #include <fstream>
 #include <iostream>
 
-config_version_t config_version = CONFIG_BOTH;
+config_version_t config_version = CONFIG_OLD;
 
 int get_file_log_level(const char *file, int *level) {
     /* fixed for now */

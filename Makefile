@@ -1,5 +1,5 @@
 CC = g++
-CPPFLAGS = -std=gnu++11 -Og -Wall -g -MMD -I.
+CPPFLAGS = -std=gnu++11 -O0 -Wall -g -MMD -I.
 YFLAGS = -v
 
 GEN_HEADERS = gen/regs.mau_addrmap.h
@@ -20,7 +20,7 @@ gen/%.h: templates/%.size.json json2cpp
 
 gen/%.cpp: templates/%.size.json json2cpp
 	@mkdir -p gen
-	./json2cpp +ehDD -run '$(JSON_NAME)' -I $*.h $< >$@
+	./json2cpp +ehDDi2 -run '$(JSON_NAME)' -I $*.h $< >$@
 
 templates/.templates-updated: chip.schema templates-config
 	@mkdir -p templates

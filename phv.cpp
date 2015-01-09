@@ -35,6 +35,7 @@ int Phv::addreg(gress_t gress, const char *name, const value_t &what) {
         return -1;
     auto reg = what.type == tSTR ? what.s : what[0].s;
     if (const Slice *sl = get(gress, reg)) {
+        if (sl->valid) phv_use[gress][sl->reg.index] = true;
         if (what.type == tSTR) {
             names[gress].emplace(name, *sl);
             return 0; }

@@ -53,7 +53,7 @@ ID [A-Za-z_]([-.]?*[A-Za-z0-9_])*
 <LINE1,LINE2,LINE3>\n { lineno++; BEGIN(LINESTART); }
 <LINE1,LINE2,LINE3><<EOF>> { BEGIN(LINESTART); }
 
-<LINESTART>"#"        { BEGIN(LINE3); }
+<LINESTART>[ \t]*"#"  { BEGIN(LINE3); }
 <LINESTART>.          { yyless(0);
                         if (indent.top() > 0) {
                             indent.pop();

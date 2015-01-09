@@ -61,6 +61,7 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
     for (auto &group : groups) {
         for (auto &input : group.second) {
             if (!input.what.check()) continue;
+            table->stage->phv_use[table->gress][input.what->reg.index] = 1;
             if (input.lo >= 0) {
                 if (input.hi >= 0) {
                     if (input.hi - input.lo != input.what->hi - input.what->lo)

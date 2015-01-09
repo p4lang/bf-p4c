@@ -31,9 +31,12 @@ void Table::setup_action_table(value_t &val) {
         else {
             action = val[0];
             for (int i = 1; i < val.vec.size; i++) {
-                CHECKTYPE(val[i], tSTR);
-                action_args.push_back(val[1].s); }
-        }
+                Format::Field *arg = 0;
+                if (CHECKTYPE(val[i], tSTR) &&
+                    !(arg = format->field(val[i].s)))
+                    error(val[i].lineno, "No field named %s in format for %s",
+                          val[i].s, name());
+                action_args.push_back(arg); } }
         action.lineno = val.lineno; }
 }
 
@@ -41,7 +44,7 @@ static int add_row(int lineno, Table *t, int row) {
     if (contains_if(t->layout, [row](Table::Layout &p)->bool { return p.row == row; })) {
         error(lineno, "row %d duplicated in table %s", row, t->name());
         return 1; }
-    t->layout.push_back(Table::Layout{row, -1});
+    t->layout.push_back(Table::Layout{lineno, row, -1});
     return 0;
 }
 
@@ -168,13 +171,13 @@ void Table::alloc_busses(Alloc2Dbase<Table *> &bus_use) {
 }
 
 void Table::alloc_id(const char *idname, int &id, int &next_id, int max_id,
-		     Alloc1Dbase<Table *> &use)
+		     bool order, Alloc1Dbase<Table *> &use)
 {
     if (id >= 0) {
         next_id = id;
         return; }
     while (++next_id < max_id && use[next_id]);
-    if (next_id >= max_id) {
+    if (next_id >= max_id && !order) {
 	next_id = -1;
 	while (++next_id < max_id && use[next_id]); }
     if (next_id < max_id)
@@ -221,7 +224,7 @@ Table::Format::Format(VECTOR(pair_t) &data) : lineno(data[0].key.lineno), size(0
         if (fmt[idx].count(name.s) > 0) {
             error(name.lineno, "Duplicate key %s in format", name.s);
             continue; }
-        auto it = fmt[idx].emplace(name.s, Field{ nextbit, 0, idx }).first;
+        auto it = fmt[idx].emplace(name.s, Field{ nextbit, 0, idx, -1 }).first;
         if (kv.value.type == tINT) {
             it->second.size  = kv.value.i;
         } else {
@@ -243,6 +246,7 @@ Table::Format::Format(VECTOR(pair_t) &data) : lineno(data[0].key.lineno), size(0
         if (fmt[0] != fmt[i])
             error(data[0].key.lineno, "Format group %d doesn't match group 0", i);
     /* FIXME -- need to figure out which fields are immediates, and set immed_size */
+    for (log2size = 0; (1U << log2size) < size; log2size++);
 }
 
 Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) : lineno(data[0].key.lineno) {
@@ -257,7 +261,8 @@ Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) : lineno(data[0].key.l
         order.push_back(actions.find(kv.key.s));
         for (auto &i : kv.value.vec) {
             if (i.type == tINT && ins.second.empty()) {
-                ins.first = i.i;
+                if ((ins.first = i.i) >= ACTION_IMEM_ADDR_MAX)
+                    error(i.lineno, "invalid instruction address %d", i.i);
                 continue; }
             if (!CHECKTYPE(i, tCMD)) continue;
             if (auto *p = Instruction::decode(tbl, i.vec))
@@ -266,7 +271,85 @@ Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) : lineno(data[0].key.l
     }
 }
 
+void Table::Actions::pass1(Table *tbl) {
+    for (auto &act : actions) {
+        int iaddr = -1;
+        if (act.second.first >= 0) {
+            if (tbl->stage->imem_addr_use[tbl->gress][act.second.first])
+                error(lineno, "action instruction addr %d in use elsewhere",
+                      act.second.first);
+            tbl->stage->imem_addr_use[tbl->gress][act.second.first] = 1;
+            iaddr = act.second.first/ACTION_IMEM_COLORS; }
+        for (auto *inst : act.second.second) {
+            inst->encode(tbl);
+            if (inst->slot >= 0 && iaddr >= 0) {
+                if (tbl->stage->imem_use[iaddr][inst->slot])
+                    error(lineno, "action instruction slot %d.%d in use elsewhere",
+                          iaddr, inst->slot);
+                tbl->stage->imem_use[iaddr][inst->slot] = 1; } } }
+}
+
+void Table::Actions::pass2(Table *tbl) {
+    for (auto &act : actions) {
+        if (act.second.first >= 0)
+            continue;
+        bitvec use;
+        for (auto *inst : act.second.second) 
+            if (inst->slot >= 0) use[inst->slot] = 1;
+        for (int i = 0; i < ACTION_IMEM_ADDR_MAX; i++) {
+            if (tbl->stage->imem_addr_use[tbl->gress][i]) continue;
+            if (tbl->stage->imem_use[i/ACTION_IMEM_COLORS].intersects(use))
+                continue;
+            act.second.first = i;
+            tbl->stage->imem_use[i/ACTION_IMEM_COLORS] |= use;
+            tbl->stage->imem_addr_use[tbl->gress][i] = 1;
+            break; }
+        if (act.second.first < 0)
+            error(lineno, "Can't find an available instruction address");
+    }
+}
+
+static int parity(unsigned v) {
+    v ^= v >> 16;
+    v ^= v >> 8;
+    v ^= v >> 4;
+    v ^= v >> 2;
+    v ^= v >> 1;
+    return v&1;
+}
+
+void Table::Actions::write_regs(Table *tbl) {
+    auto &imem = tbl->stage->regs.dp.imem;
+    for (auto &act : actions) {
+        int iaddr = act.second.first/ACTION_IMEM_COLORS;
+        int color = act.second.first%ACTION_IMEM_COLORS;
+        for (auto *inst : act.second.second) {
+            assert(inst->slot >= 0);
+            switch (inst->slot/32) {
+            case 0: case 1: /* 32 bit */
+                imem.imem_subword32[inst->slot][iaddr].imem_subword32_instr = inst->bits;
+                imem.imem_subword32[inst->slot][iaddr].imem_subword32_color = color;
+                imem.imem_subword32[inst->slot][iaddr].imem_subword32_parity =
+                    parity(inst->bits) ^ color;
+                break;
+            case 2: case 3: /* 8 bit */
+                imem.imem_subword8[inst->slot-64][iaddr].imem_subword8_instr = inst->bits;
+                imem.imem_subword8[inst->slot-64][iaddr].imem_subword8_color = color;
+                imem.imem_subword8[inst->slot-64][iaddr].imem_subword8_parity =
+                    parity(inst->bits) ^ color;
+                break;
+            case 4: case 5: case 6: /* 16 bit */
+                imem.imem_subword16[inst->slot-128][iaddr].imem_subword16_instr = inst->bits;
+                imem.imem_subword16[inst->slot-128][iaddr].imem_subword16_color = color;
+                imem.imem_subword16[inst->slot-128][iaddr].imem_subword16_parity =
+                    parity(inst->bits) ^ color;
+                break;
+            default:
+                assert(0); } } }
+}
+
 Table::ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
+    lineno = data[0].key.lineno;
     for (auto &kv : data) {
 	if (!CHECKTYPE2(kv.key, tINT, tRANGE)) continue;
 	if (!CHECKTYPE(kv.value, tSTR)) continue;
@@ -274,22 +357,28 @@ Table::ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
 	if (!f) {
 	    error(kv.value.lineno, "No field %s in format", kv.value.s);
 	    continue; }
-	int idx = kv.key.i;
+	unsigned idx = kv.key.i;
 	if (kv.key.type == tRANGE) {
 	    idx = kv.key.lo;
 	    unsigned size = (kv.key.hi-idx+1) * 8;
 	    if (size != f->size) {
 		error(kv.key.lineno, "Byte range doesn't match size %d of %s",
-		      f->size, kv.key.s);
+		      f->size, kv.value.s);
 		continue; } }
-	bus[kv.value.s].first.push_back(idx);
-	bus[kv.value.s].second = f; }
+        if (idx >= 160) {
+            error(kv.key.lineno, "Action bus index out of range");
+            continue; }
+        f->action_xbar = idx;
+	by_name[kv.value.s].first.push_back(idx);
+	by_name[kv.value.s].second = f;
+        by_byte[idx] = std::make_pair(std::string(kv.value.s), f); }
 }
 
 class MatchTable : public Table {
 protected:
     MatchTable(int l, std::string &&n, gress_t g, Stage *s, int lid)
         : Table(l, std::move(n), g, s, lid) {}
+    void link_action(Table::Ref &ref);
     void write_regs(int type, Table *result);
 };
 
@@ -317,20 +406,16 @@ Table *TYPE::Type::create(int lineno, const char *name, gress_t gress,  \
     return rv;                                                          \
 }
 
-static int get_address_mau_actiondata_adr_default(unsigned width) {
-    int huffman_size = 0;
-    width >>= 3; /* min size 8 bits */
-    while (width) {
-        huffman_size++;
-        width >>= 1; }
-    assert(huffman_size < 8);
-    int rv = (1 << huffman_size) - 1;
+static int get_address_mau_actiondata_adr_default(unsigned log2size) {
+    int huffman_ones = log2size > 2 ? log2size - 3 : 0;
+    assert(huffman_ones < 7);
+    int rv = (1 << huffman_ones) - 1;
     rv = ((rv << 10) & 0xf8000) | ( rv & 0x1f);
     return rv;
 }
 
 void MatchTable::write_regs(int type, Table *result) {
-    /* this follows the order an behavior in stage_match_entry_table.py
+    /* this follows the order and behavior in stage_match_entry_table.py
      * it can be reorganized to be clearer */
 
     /*------------------------
@@ -351,14 +436,11 @@ void MatchTable::write_regs(int type, Table *result) {
         assert(bus >= 0 && bus < 15);
         merge.match_to_logical_table_ixbar_outputmap[type][bus].enabled_4bit_muxctl_select = logical_id;
         merge.match_to_logical_table_ixbar_outputmap[type][bus].enabled_4bit_muxctl_enable = 1;
-        auto iaddr = result->format->field("iaddr");
-        if (iaddr)
-            merge.mau_action_instruction_adr_mask[type][bus] = (1U << iaddr->size) - 1;
-        else
-            warning(result->format->lineno, "No iaddr in format");
+        assert(result->action_args.size() >= 1 && result->action_args[0]);
+        merge.mau_action_instruction_adr_mask[type][bus] = (1U << result->action_args[0]->size) - 1;
         if (result->action) {
             merge.mau_actiondata_adr_default[type][bus] =
-                get_address_mau_actiondata_adr_default(result->action->format->size);
+                get_address_mau_actiondata_adr_default(result->action->format->log2size);
         } else {
             /* FIXME */
             assert(0);
@@ -372,24 +454,22 @@ void MatchTable::write_regs(int type, Table *result) {
             error(action.lineno, "Expecting single instruction address argument to "
                   "action table");
         } else {
-            if (Format::Field *iaddr = result->format->field(result->action_args[0])) {
-                if ((1U << iaddr->size) <= ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
-                    merge.mau_action_instruction_adr_map_en[type] |= (1U << logical_id);
-                    int idx = 0;
-                    int shift = 0;
-                    for (auto act : *result->action->actions) {
-                        merge.mau_action_instruction_adr_map_data[type][logical_id][idx]
-                            |= act->second.first << shift;
-                        if ((shift += 6) >= 24) {
-                            shift = 0;
-                            idx++;
-                            assert(idx < 2); } }
-                } else {
-                    /* FIXME */
-                    assert(0);
-                }
-            } else
-                error(action.lineno, "No %s in table format", result->action_args[0].c_str());
+            assert(result->action_args[0]);
+            if ((1U << result->action_args[0]->size) <= ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
+                merge.mau_action_instruction_adr_map_en[type] |= (1U << logical_id);
+                int idx = 0;
+                int shift = 0;
+                for (auto act : *result->action->actions) {
+                    merge.mau_action_instruction_adr_map_data[type][logical_id][idx]
+                        |= act->second.first << shift;
+                    if ((shift += 6) >= 24) {
+                        shift = 0;
+                        idx++;
+                        assert(idx < 2); } }
+            } else {
+                /* FIXME */
+                assert(0);
+            }
         }
     }
     /*------------------------
@@ -427,6 +507,26 @@ void MatchTable::write_regs(int type, Table *result) {
 }
 
 DEFINE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match", )
+DEFINE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
+public:
+    int tcam_id;
+    Table::Ref indirect;
+)
+DEFINE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",)
+DEFINE_TABLE_TYPE(ActionTable, Table, "action",)
+DEFINE_TABLE_TYPE(GatewayTable, Table, "gateway", )
+
+void MatchTable::link_action(Table::Ref &ref) {
+    if (ref) {
+        if (!dynamic_cast<ActionTable *>((Table *)ref))
+            error(ref.lineno, "%s is not an action table", ref->name());
+        if (ref->match)
+            error(ref->lineno, "Multiple references to action table %s",
+                  ref->name());
+        ref->match = this;
+        ref->logical_id = logical_id; }
+}
+
 void ExactMatchTable::setup(VECTOR(pair_t) &data) {
     setup_layout(get(data, "row"), get(data, "column"), get(data, "bus"));
     setup_logical_id();
@@ -440,10 +540,6 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
 	    if (CHECKTYPE(kv.value, tMAP))
 		input_xbar = new InputXbar(this, false, kv.value.map);
         } else if (kv.key == "gateway") {
-        } else if (kv.key == "vpn") {
-            if (CHECKTYPE(kv.value, tINT))
-		if ((vpn = kv.value.i) < 0 || vpn >= MAX_VPN)
-		    error(kv.key.lineno, "Invalid vpn %d", vpn);
         } else if (kv.key == "format") {
 	    /* done above so it's always before 'actions' */
         } else if (kv.key == "action") {
@@ -478,27 +574,37 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     kv.key.s, name()); }
     alloc_rams(false, stage->sram_use, &stage->sram_match_bus_use);
-    if (action && actions)
-	error(lineno, "Table %s has both action table and immedaite actions", name());
+    if (action.set() && actions)
+	error(lineno, "Table %s has both action table and immediate actions", name());
+    if (!action.set() && !actions)
+	error(lineno, "Table %s has neither action table nor immediate actions", name());
+    if (action.set() && (action_args.size() < 1 || action_args.size() > 2))
+        error(lineno, "Unexpected number of action table arguments %d", action_args.size());
 }
 void ExactMatchTable::pass1() {
     alloc_id("logical", logical_id, stage->pass1_logical_id,
-	     LOGICAL_TABLES_PER_STAGE, stage->logical_id_use);
+	     LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
     alloc_busses(stage->sram_match_bus_use);
     check_next();
+    link_action(action);
+    if (actions) {
+        assert(action_args.size() == 0);
+        if (auto *sel = format->field("action"))
+            action_args.push_back(sel);
+        else
+            error(lineno, "No field 'action' in table %s format", name());
+        actions->pass1(this); }
     input_xbar->pass1(stage->exact_ixbar, 128);
 }
 void ExactMatchTable::pass2() {
     input_xbar->pass2(stage->exact_ixbar, 128);
+    if (actions) actions->pass2(this);
 }
 void ExactMatchTable::write_regs() {
     MatchTable::write_regs(0, this);
+    if (actions) actions->write_regs(this);
 }
 
-DEFINE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
-    int tcam_id;
-    Table::Ref indirect;
-)
 void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     tcam_id = -1;
     setup_layout(get(data, "row"), get(data, "column"), get(data, "bus"));
@@ -508,17 +614,18 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
 	    if (CHECKTYPE(kv.value, tMAP))
 		input_xbar = new InputXbar(this, true, kv.value.map);
         } else if (kv.key == "gateway") {
-        } else if (kv.key == "vpn") {
-            if (CHECKTYPE(kv.value, tINT))
-		if ((vpn = kv.value.i) < 0 || vpn >= MAX_VPN)
-		    error(kv.key.lineno, "Invalid vpn %d", vpn);
         } else if (kv.key == "indirect") {
             if (CHECKTYPE(kv.value, tSTR))
                 indirect = kv.value;
         } else if (kv.key == "tcam_id") {
-            if (CHECKTYPE(kv.value, tINT))
+            if (CHECKTYPE(kv.value, tINT)) {
 		if ((tcam_id = kv.value.i) < 0 || tcam_id >= TCAM_TABLES_PER_STAGE)
 		    error(kv.key.lineno, "Invalid tcam_id %d", tcam_id);
+                else if (stage->tcam_id_use[tcam_id])
+                    error(kv.key.lineno, "Tcam id %s already in use by table %s",
+                          tcam_id, stage->tcam_id_use[tcam_id]->name());
+                else
+                    stage->tcam_id_use[tcam_id] = this; }
         } else if (kv.key == "hit") {
             if (!hit_next.empty())
                 error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
@@ -541,26 +648,40 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     alloc_rams(false, stage->tcam_use, &stage->tcam_match_bus_use);
 }
 void TernaryMatchTable::pass1() {
+    stage->table_use[gress] |= Stage::USE_TCAM;
     alloc_id("logical", logical_id, stage->pass1_logical_id,
-	     LOGICAL_TABLES_PER_STAGE, stage->logical_id_use);
+	     LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
     alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
-	     TCAM_TABLES_PER_STAGE, stage->tcam_id_use);
+	     TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
     alloc_busses(stage->tcam_match_bus_use);
     check_next();
     indirect.check();
+    link_action(action);
+    if (indirect) {
+        if (!dynamic_cast<TernaryIndirectTable *>((Table *)indirect))
+            error(indirect.lineno, "%s is not a ternary indirect table", indirect->name());
+        if (indirect->match)
+            error(indirect->lineno, "Multiple references to ternary indirect table %s",
+                  indirect->name());
+        indirect->match = this;
+        indirect->logical_id = logical_id;
+        link_action(indirect->action);
+        if (hit_next.size() > 0 && indirect->hit_next.size() > 0)
+            error(hit_next[0].lineno, "Ternary Match table with both direct and indirect "
+                  "next tables"); }
     if (hit_next.size() > 2)
         error(hit_next[0].lineno, "Ternary Match tables cannot directly specify more"
               "than 2 hit next tables");
-    if (indirect && hit_next.size() > 0 && indirect->hit_next.size() > 0)
-        error(hit_next[0].lineno, "Ternary Match table with both direct and indirect next tables");
     input_xbar->pass1(stage->tcam_ixbar, 44);
+    if (actions) actions->pass1(this);
 }
 void TernaryMatchTable::pass2() {
     input_xbar->pass2(stage->tcam_ixbar, 44);
 }
 void TernaryMatchTable::write_regs() {
     MatchTable::write_regs(1, indirect);
-    int idx = 0;
+    int vpn = 0;
+    auto &merge = stage->regs.rams.match.merge;
     for (Layout &row : layout) {
 	for (int col : row.cols) {
 	    auto &tcam_mode = stage->regs.tcams.col[col].tcam_mode[row.row];
@@ -573,12 +694,13 @@ void TernaryMatchTable::write_regs() {
 	    else
 		tcam_mode.tcam_egress = 1;
 	    tcam_mode.tcam_match_output_enable = 1;
-	    tcam_mode.tcam_vpn = vpn + idx++;
+	    tcam_mode.tcam_vpn = vpn++;
 	    tcam_mode.tcam_logical_table = tcam_id;
 	    /* TODO -- always disable tcam_validbit_xbar */
-	    auto tcam_vh_xbar = stage->regs.tcams.vh_data_xbar;
-	    for (int i = 0; i < 8; i++)
-		tcam_vh_xbar.tcam_validbit_xbar_ctl[row.bus][row.row/2][i] = 15;
+	    auto &tcam_vh_xbar = stage->regs.tcams.vh_data_xbar;
+            int off = (row.row&1) * 4;
+	    for (int i = 0; i < 4; i++)
+		tcam_vh_xbar.tcam_validbit_xbar_ctl[row.bus][row.row/2][i+off] = 15;
 	    /* TODO -- don't support wide tcam matches yet. */
 	    if (input_xbar->width() != 1)
 		error(input_xbar->lineno, "FIXME -- no support for wide TCAM matches");
@@ -586,20 +708,44 @@ void TernaryMatchTable::write_regs() {
 		.tcam_row_halfbyte_mux_ctl_select = 3;
 	    tcam_vh_xbar.tcam_row_halfbyte_mux_ctl[row.bus][row.row]
 		.tcam_row_halfbyte_mux_ctl_enable = 1;
+	    tcam_vh_xbar.tcam_row_halfbyte_mux_ctl[row.bus][row.row]
+                .tcam_row_search_thread = gress;
+            /* FIXME:
+            tcam_vh_xbar.tcam_extra_byte_ctl[row.bus][row.row/2]
+                .enabled_3bit_muxctl_select = byte_match_group_number;
+            tcam_vh_xbar.tcam_extra_byte_ctl[row.bus][row.row/2]
+                .enabled_3bit_muxctl_enable = 1; */
 	    tcam_vh_xbar.tcam_row_output_ctl[row.bus][row.row]
 		.enabled_4bit_muxctl_select = *input_xbar->begin();
 	    tcam_vh_xbar.tcam_row_output_ctl[row.bus][row.row]
 		.enabled_4bit_muxctl_enable = 1;
+            stage->regs.tcams.col[col].tcam_table_map[tcam_id] |= 1U << row.row;
 	}
     }
+    merge.tcam_hit_to_logical_table_ixbar_outputmap[tcam_id]
+        .enabled_4bit_muxctl_select = logical_id;
+    merge.tcam_hit_to_logical_table_ixbar_outputmap[tcam_id]
+        .enabled_4bit_muxctl_enable = 1;
+    /* FIXME -- unconditionally setting piped mode -- only need it for wide
+     * match across a 4-row boundary */
+    merge.tcam_table_prop[tcam_id].tcam_piped = 1;
+    stage->table_use[gress] |= Stage::USE_TCAM_PIPED;
+    merge.tcam_table_prop[tcam_id].thread = gress;
+    merge.tcam_table_prop[tcam_id].enabled = 1;
 }
 
-DEFINE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect", )
 void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
+    match = 0;
     setup_layout(get(data, "row"), get(data, "column"), get(data, "bus"));
     if (auto *fmt = get(data, "format")) {
 	if (CHECKTYPE(*fmt, tMAP))
 	    format = new Format(fmt->map);
+        if (format->size > 64)
+            error(fmt->lineno, "ternary indirect format larger than 64 bits");
+        if (format->size < 4) {
+            /* pad out to minumum size */
+            format->size = 4;
+            format->log2size = 2; }
     } else
         error(lineno, "No format specified in table %s", name());
     for (auto &kv : MapIterChecked(data)) {
@@ -637,19 +783,96 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     kv.key.s, name()); }
     alloc_rams(false, stage->sram_use, &stage->tcam_indirect_bus_use);
-    if (action && actions)
-	error(lineno, "Table %s has both action table and immedaite actions", name());
+    if (action.set() && actions)
+	error(lineno, "Table %s has both action table and immediate actions", name());
+    if (!action.set() && !actions)
+	error(lineno, "Table %s has neither action table nor immediate actions", name());
+    if (action.set() && (action_args.size() < 1 || action_args.size() > 2))
+        error(lineno, "Unexpected number of action table arguments %d", action_args.size());
 }
 void TernaryIndirectTable::pass1() {
     alloc_busses(stage->tcam_indirect_bus_use);
     check_next();
+    if (actions) {
+        assert(action_args.size() == 0);
+        if (auto *sel = format->field("action"))
+            action_args.push_back(sel);
+        else
+            error(lineno, "No field 'action' in table %s format", name());
+        actions->pass1(this); }
 }
 void TernaryIndirectTable::pass2() {
+    if (!match)
+        error(lineno, "No match table for ternary indirect table %s", name());
+    if (actions) actions->pass2(this);
 }
 void TernaryIndirectTable::write_regs() {
+    int tcam_id = dynamic_cast<TernaryMatchTable *>(match)->tcam_id;
+    stage->regs.tcams.tcam_match_adr_shift[tcam_id] = format->log2size-2;
+    int vpn = 0;
+    auto &merge = stage->regs.rams.match.merge;
+    for (Layout &row : layout) {
+	for (int col : row.cols) {
+            auto &unit_ram_ctl = stage->regs.rams.array.row[row.row].ram[col].unit_ram_ctl;
+            for (int v : VersionIter(config_version)) {
+                unit_ram_ctl[v].match_ram_write_data_mux_select = 7; /* disable */
+                unit_ram_ctl[v].match_ram_read_data_mux_select = 7; /* disable */
+                unit_ram_ctl[v].tind_result_bus_select = 1U << row.bus; }
+            auto &mux_ctl = stage->regs.rams.map_alu.row[row.row].adrmux
+                    .ram_address_mux_ctl[col/6][col%6];
+            for (int v : VersionIter(config_version))
+                mux_ctl[v].ram_unitram_adr_mux_select = row.bus + 2;
+            auto &unitram_config = stage->regs.rams.map_alu.row[row.row].adrmux
+                    .unitram_config[col/6][col%6];
+            for (int v : VersionIter(config_version)) {
+                unitram_config[v].unitram_type = 6;
+                unitram_config[v].unitram_vpn = vpn;
+                unitram_config[v].unitram_logical_table = logical_id;
+                if (gress == INGRESS)
+                    unitram_config[v].unitram_ingress = 1;
+                else
+                    unitram_config[v].unitram_egress = 1;
+                unitram_config[v].unitram_enable = 1; }
+            auto &xbar_ctl = stage->regs.rams.map_alu.row[row.row].vh_xbars
+                    .adr_dist_tind_adr_xbar_ctl[row.bus];
+            for (int v : VersionIter(config_version)) {
+                xbar_ctl[v].enabled_3bit_muxctl_select = tcam_id;
+                xbar_ctl[v].enabled_3bit_muxctl_enable = 1; }
+            vpn++; }
+        int bus = row.row*2 + row.bus;
+        merge.tind_ram_data_size[bus] = format->log2size - 1;
+        merge.tcam_match_adr_to_physical_oxbar_outputmap[bus].enabled_3bit_muxctl_select = tcam_id;
+        merge.tcam_match_adr_to_physical_oxbar_outputmap[bus].enabled_3bit_muxctl_enable = 1;
+        merge.tind_bus_prop[bus].tcam_piped = 1;
+        merge.tind_bus_prop[bus].thread = gress;
+        merge.tind_bus_prop[bus].enabled = 1;
+        merge.mau_action_instruction_adr_tcam_shiftcount[bus] = action_args[0]->bit;
+        if (action) {
+            int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
+            if (action_args.size() == 1) {
+                /* FIXME -- fixed actiondata mask??  See
+                 * get_direct_address_mau_actiondata_adr_tcam_mask in
+                 * device/pipeline/mau/address_and_data_structures.py
+                 * Maybe should be masking off bottom 6-format->log2size bits, as those
+                 * will be coming from the top of the tcam_indir data bus?  They'll always
+                 * be 0 anyways, unless the full data bus is in use */
+                merge.mau_actiondata_adr_mask[1][bus] = 0x3fffff;
+                merge.mau_actiondata_adr_tcam_shiftcount[bus] =
+                    69 + (format->log2size-2) - lo_huffman_bits;
+            } else {
+                /* FIXME -- support for multiple sizes of action data? */
+                merge.mau_actiondata_adr_mask[1][bus] =
+                    ((1U << action_args[1]->size) - 1) << lo_huffman_bits;
+                merge.mau_actiondata_adr_tcam_shiftcount[bus] =
+                    action_args[1]->bit + 5 - lo_huffman_bits; }
+            merge.mau_actiondata_adr_vpn_shiftcount[1][bus] =
+                std::max(0, (int)action->format->log2size - 7);
+        } else {
+            error(lineno, "TODO -- ternary indirect with no action data table");
+        }
+    }
+    if (actions) actions->write_regs(this);
 }
-
-DEFINE_TABLE_TYPE(ActionTable, Table, "action",)
 
 
 void ActionTable::setup(VECTOR(pair_t) &data) {
@@ -679,19 +902,132 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
     alloc_rams(true, stage->sram_use, 0);
 }
 void ActionTable::pass1() {
+    for (Layout &row : layout) {
+        if (row.row > layout[0].row)
+            error(row.lineno, "Action table %s home row must be first", name());
+    }
+    if (actions) actions->pass1(this);
 }
 void ActionTable::pass2() {
+    if (!match)
+        error(lineno, "No match table for action table %s", name());
+    if (actions) actions->pass2(this);
 }
-void ActionTable::write_regs() {
+void Table::ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action_slice) {
+    auto &action_hv_xbar = tbl->stage->regs.rams.array.row[home_row/2].action_hv_xbar;
+    unsigned side = home_row%2;  /* 0 == left,  1 == right */
+    for (auto &el : by_byte) {
+        unsigned byte = el.first;
+        Format::Field *f = el.second.second;
+        if ((f->bit >> 7) != action_slice)
+            continue;
+        unsigned bit = f->bit & 0x7f;
+        if (bit + f->size > 128) {
+            error(lineno, "Action bus setup can't deal with field split across "
+                  "SRAM rows");
+            continue; }
+        if (byte < 16) {
+            for (unsigned sbyte = bit/8; sbyte <= (bit+f->size-1)/8; sbyte++, byte++) {
+                unsigned code, mask;
+                switch (sbyte >> 2) {
+                case 0: code = sbyte>>1; mask = 1; break;
+                case 1: code = 2; mask = 3; break;
+                case 2: case 3: code = 3; mask = 7; break;
+                default: assert(0); }
+                if ((sbyte^byte) & mask) {
+                    error(lineno, "Can't put field %s into byte %d on action xbar",
+                          el.second.first.c_str(), byte);
+                    break; }
+                action_hv_xbar.action_hv_xbar_ctl_byte[side].set_subfield(code, byte*2, 2);
+                action_hv_xbar.action_hv_xbar_ctl_byte_enable[side] |= 1 << byte; }
+        } else if (byte < 72) {
+            for (unsigned word = bit/16; word <= (bit+f->size-1)/16; word++, byte+=2) {
+                unsigned code, mask;
+                switch (word >> 1) {
+                case 0: code = 1; mask = 3; break;
+                case 1: code = 2; mask = 3; break;
+                case 2: case 3: code = 3; mask = 7; break;
+                default: assert(0); }
+                if (((word << 1)^byte) & mask) {
+                    error(lineno, "Can't put field %s into byte %d on action xbar",
+                          el.second.first.c_str(), byte);
+                    break; }
+                action_hv_xbar.action_hv_xbar_ctl_half[side][(byte-16)/8]
+                        .set_subfield(code, byte%8, 2); }
+        } else if (byte < 160) {
+            unsigned word = bit/32;
+            unsigned code = 1 + word/2;
+            if (((word << 2)^byte) & 7)
+                error(lineno, "Can't put field %s into byte %d on action xbar",
+                      el.second.first.c_str(), byte);
+            else
+                action_hv_xbar.action_hv_xbar_ctl_word[side][(byte-72)/8]
+                        .set_subfield(code, (byte%8)/2, 2);
+        } else assert(0);
+    }
 }
 
-DEFINE_TABLE_TYPE(GatewayTable, Table, "gateway", )
+void ActionTable::write_regs() {
+    Layout &home = layout[0];
+    unsigned home_top = home.row >= 8;
+    for (unsigned slice = 0; slice <= (format->size-1)/128; slice++)
+        action_bus->write_action_regs(this, home.row, slice);
+    int vpn = 0;
+    bool home_row = true;
+    auto &icxbar = stage->regs.rams.match.adrdist.adr_dist_action_data_adr_icxbar_ctl[logical_id];
+    for (Layout &logical_row : layout) {
+        unsigned row = logical_row.row/2;
+        unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
+        unsigned top = logical_row.row >= 8; /* 0 == bottom  1 == top */
+        for (int logical_col : logical_row.cols) {
+            unsigned col = logical_col + 6*side;
+            auto &ram = stage->regs.rams.array.row[row].ram[col];
+            auto &map_alu_row =  stage->regs.rams.map_alu.row[row];
+            auto &oflo_adr_xbar = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
+            auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
+            auto &ram_mux = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
+            for (int v : VersionIter(config_version)) {
+                ram.unit_ram_ctl[v].match_ram_write_data_mux_select = 7; /*disable*/
+                ram.unit_ram_ctl[v].match_ram_read_data_mux_select = home_row ? 4 : 2;
+                if (!home_row) {
+                    if (home_top == top) {
+                        oflo_adr_xbar[v].adr_dist_oflo_adr_xbar_source_index = logical_row.row % 8;
+                        oflo_adr_xbar[v].adr_dist_oflo_adr_xbar_source_sel = 0;
+                    } else {
+                        assert(home_top);
+                        oflo_adr_xbar[v].adr_dist_oflo_adr_xbar_source_index = 0;
+                        oflo_adr_xbar[v].adr_dist_oflo_adr_xbar_source_sel = 2;
+                        if (!icxbar.address_distr_to_overflow)
+                            icxbar.address_distr_to_overflow = 1; }
+                    oflo_adr_xbar[v].adr_dist_oflo_adr_xbar_enable = 1; }
+                unitram_config[v].unitram_type = 2;
+                unitram_config[v].unitram_vpn = vpn;
+                unitram_config[v].unitram_logical_table = logical_id;
+                if (gress == INGRESS)
+                    unitram_config[v].unitram_ingress = 1;
+                else
+                    unitram_config[v].unitram_egress = 1;
+                if (home_row)
+                    unitram_config[v].unitram_action_subword_out_en = 1;
+                unitram_config[v].unitram_enable = 1;
+                if (home_row)
+                    ram_mux[v].ram_unitram_adr_mux_select = 1;
+                else {
+                    ram_mux[v].ram_unitram_adr_mux_select = 4;
+                    ram_mux[v].ram_oflo_adr_mux_select_oflo = 1; } }
+            vpn++; }
+        icxbar.address_distr_to_logical_rows |= 1U << logical_row.row;
+        home_row = false; }
+
+    if (actions) actions->write_regs(this);
+}
+
 void GatewayTable::setup(VECTOR(pair_t) &data) {
     int bus = -1;
     for (auto &kv : MapIterChecked(data)) {
         if (kv.key == "row") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
-            layout.push_back(Layout{kv.value.i, bus});
+            layout.push_back(Layout{kv.value.lineno, kv.value.i, bus});
         } else if (kv.key == "bus") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
             bus = kv.value.i;
