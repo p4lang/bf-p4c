@@ -46,10 +46,10 @@ public:
     regs_match_action_stage_    regs;
     Stage() {
         table_use[0] = table_use[1] = NONE;
-        declare_registers(&regs, sizeof(regs), [this](std::ostream &out, const char *addr) {
-            out << "mau[" << stageno << "]";
-            regs.emit_fieldname(out, addr);
-        }); }
+        declare_registers(&regs, sizeof(regs),
+            [this](std::ostream &out, const char *addr, const void *end) {
+                out << "mau[" << stageno << "]";
+                regs.emit_fieldname(out, addr, end); }); }
     ~Stage() { undeclare_registers(&regs); }
     void write_regs();
 };

@@ -6,12 +6,12 @@
 struct regrange {
     const char  *base;
     size_t      sz;
-    std::function<void(std::ostream &, const char *)> fn;
+    std::function<void(std::ostream &, const char *, const void *)> fn;
 };
 
 static std::map<const char *, regrange> *registers;
 
-void declare_registers(const void *addr_, size_t sz, std::function<void(std::ostream &, const char *)> fn) {
+void declare_registers(const void *addr_, size_t sz, std::function<void(std::ostream &, const char *, const void *)> fn) {
     const char *addr = (const char *)addr_;
     if (!registers)
         registers = new std::map<const char *, regrange>();
@@ -26,13 +26,13 @@ void undeclare_registers(const void *addr_) {
         registers = 0; }
 }
 
-void print_regname(std::ostream &out, const void *addr_) {
+void print_regname(std::ostream &out, const void *addr_, const void *end) {
     const char *addr = (const char *)addr_;
     if (registers) {
         auto it = registers->upper_bound(addr);
         if (it != registers->begin()) {
             it--;
-            it->second.fn(out, addr);
+            it->second.fn(out, addr, end);
             return; } }
     out << "???";
 }

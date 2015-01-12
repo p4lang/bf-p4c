@@ -48,8 +48,8 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
         if (kv.key.vec.size > 2 && !CHECKTYPE(kv.key[2], tINT)) continue;
         if (kv.key.vec.size > 3) warning(kv.key[3].lineno, "Ignoring extra stuff after table");
         if (auto old = ::get(Table::all, kv.key[1].s)) {
-            error(kv.key[1].lineno, "Table %s already defined\n", kv.key[1].s);
-            warning(old->lineno, "previously defined here\n");
+            error(kv.key[1].lineno, "Table %s already defined", kv.key[1].s);
+            warning(old->lineno, "previously defined here");
             continue; }
         if (Table *table = tt->create(kv.key.lineno, kv.key[1].s, gress, &stage[stageno],
                                       kv.key.vec.size > 2 ? kv.key[2].i : -1, kv.value.map)) {

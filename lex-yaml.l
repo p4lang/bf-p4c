@@ -4,10 +4,12 @@
 
 %{
 #include <assert.h>
+#include <limits.h>
 #include <stack>
 static std::stack<int>  indent;
 static int              parens=0;
 static int indent_depth(const char *);
+static unsigned parse_num(const char *s, int base);
 static struct match_t parse_match(const char *s, int bits_per_digit);
 
 #if YYDEBUG
@@ -75,13 +77,13 @@ ID [A-Za-z_]([-.]?*[A-Za-z0-9_])*
 [ \t]+              ;
 ".."              { return DOTDOT; }
 {ID}              { yylval.str = strdup(yytext); return ID; }
-[0-9]+            { yylval.i = atoi(yytext); return INT; }
-0[xX][0-9a-fA-F]+ { yylval.i = strtol(yytext+2, 0, 16); return INT; }
-0[oO][0-7]+       { yylval.i = strtol(yytext+2, 0, 8); return INT; }
-0[bB][0-1]+       { yylval.i = strtol(yytext+2, 0, 2); return INT; }
-0[xX][0-9a-fA-F*]+ { yylval.match = parse_match(yytext+2, 4); return MATCH; }
-0[oO][0-7*]+      { yylval.match = parse_match(yytext+2, 3); return MATCH; }
-0[bB][0-1*]+      { yylval.match = parse_match(yytext+2, 1); return MATCH; }
+[0-9_]+           { yylval.i = parse_num(yytext, 10); return INT; }
+0[xX][0-9a-fA-F_]+ { yylval.i = parse_num(yytext+2, 16); return INT; }
+0[oO][0-7_]+      { yylval.i = parse_num(yytext+2, 8); return INT; }
+0[bB][0-1_]+      { yylval.i = parse_num(yytext+2, 2); return INT; }
+0[xX][0-9a-fA-F*_]+ { yylval.match = parse_match(yytext+2, 4); return MATCH; }
+0[oO][0-7*_]+     { yylval.match = parse_match(yytext+2, 3); return MATCH; }
+0[bB][0-1*_]+     { yylval.match = parse_match(yytext+2, 1); return MATCH; }
 
 "#".*               ;
 .                 { return *yytext; }
@@ -100,12 +102,40 @@ int indent_depth(const char *pfx) {
     return rv;
 }
 
+unsigned parse_num(const char *s, int base) {
+    unsigned rv = 0;
+    s--;
+    while (*++s) {
+        if (*s == '_') continue;
+        if (rv > (unsigned)(INT_MAX/base))
+            error(lineno, "integer overflow in constant");
+        rv *= base;
+        switch (*s) {
+        case '0': case '1': case '2': case '3': case '4':
+        case '5': case '6': case '7': case '8': case '9':
+            rv += *s - '0';
+            break;
+        case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
+            rv += *s - 'a' + 10;
+            break;
+        case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
+            rv += *s - 'A' + 10;
+            break;
+        default:
+            assert(0); } }
+    return rv;
+}
+
 struct match_t parse_match(const char *s, int bits_per_digit) {
     struct match_t rv = { 0, 0 };
     unsigned digit, digit_mask = (1U << bits_per_digit) - 1;
-    while (*s) {
+    s--;
+    while (*++s) {
+        if (*s == '_') continue;
         rv.word0 <<= bits_per_digit;
         rv.word1 <<= bits_per_digit;
+        if ((rv.word0 | rv.word1) > INT_MAX)
+            error(lineno, "integer overflow in match constant");
         switch (*s) {
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9':
@@ -125,7 +155,6 @@ struct match_t parse_match(const char *s, int bits_per_digit) {
             assert(0); }
         assert((digit & ~digit_mask) == 0);
         rv.word1 |= digit;
-        rv.word0 |= digit_mask & ~digit;
-        s++; }
+        rv.word0 |= digit_mask & ~digit; }
     return rv;
 }

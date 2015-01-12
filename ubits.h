@@ -6,15 +6,11 @@
 #include <functional>
 #include "log.h"
 
-void declare_registers(const void *addr, size_t sz, std::function<void(std::ostream &, const char *)> fn);
+void declare_registers(const void *addr, size_t sz, std::function<void(std::ostream &, const char *, const void *)> fn);
 void undeclare_registers(const void *addr);
-void print_regname(std::ostream &out, const void *addr);
+void print_regname(std::ostream &out, const void *addr, const void *end);
 
 struct ubits_base;
-
-inline std::ostream &operator<<(std::ostream &out, const ubits_base *u) {
-    print_regname(out, u);
-    return out; }
 
 struct ubits_base {
     unsigned long	value;
@@ -24,7 +20,12 @@ struct ubits_base {
     ubits_base(unsigned long v) : value(v), read(false), write(true) {}
     void log(const char *op, unsigned long v) const;
     operator unsigned long() const { read = true; return value; }
+    bool modified() const { return write; }
 };
+
+inline std::ostream &operator<<(std::ostream &out, const ubits_base *u) {
+    print_regname(out, u, u+1);
+    return out; }
 
 template<int N> struct ubits : ubits_base {
     ubits() : ubits_base() {}
