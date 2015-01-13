@@ -45,8 +45,13 @@ public:
             Phv::Ref    where;
             Save(gress_t, int l, int h, value_t &data);
         };
-        std::vector<Save>                       save;
-        std::vector<std::pair<Phv::Ref, int>>   set;
+        std::vector<Save>               save;
+	struct Set {
+	    Phv::Ref	where;
+	    int		what;
+	    Set(gress_t gress, value_t &data, int v) : where(gress, data) , what(v) {}
+	};
+        std::vector<Set>   		set;
         Match(int lineno, gress_t, match_t m, VECTOR(pair_t) &data);
     };
     class State {

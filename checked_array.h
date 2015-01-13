@@ -25,7 +25,7 @@ public:
         assert(idx < S);
         return data[idx]; }
     bool modified() const {
-        for (int i = 0; i < S; i++)
+        for (size_t i = 0; i < S; i++)
             if (data[i].modified()) return true;
         return false; }
     bool disabled() const { return disabled_; }

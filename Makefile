@@ -11,7 +11,7 @@ GEN_OBJS := gen/memories.dprsr_mem_rspec.o \
 TFAS_OBJS:= asm-parse.o asm-types.o deparser.o input_xbar.o instruction.o \
 	    parser.o phv.o stage.o tables.o tfas.o ubits.o vector.o
 all: tfas
-tfas: $(TFAS_OBJS) $(GEN_OBJS)
+tfas: $(GEN_OBJS) $(TFAS_OBJS)
 
 json2cpp: json.o
 

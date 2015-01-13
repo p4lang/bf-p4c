@@ -70,12 +70,12 @@ void Phv::input(VECTOR(value_t) args, value_t data) {
 }
 
 Phv::Ref::Ref(gress_t g, const value_t &n) : gress(g), lo(-1), hi(-1), lineno(n.lineno) {
-    if (CHECKTYPE2M(n, tSTR, tCMD, "expecting phv or register reference or slice")) {
+    if (CHECKTYPE2M(n, tSTR, tCMD, "phv or register reference or slice")) {
 	if (n.type == tSTR) {
 	    name_ = n.s;
 	} else {
 	    name_ = n[0].s;
-	    if (PCHECKTYPE2M(n.vec.size != 2, n[1], tINT, tRANGE, "invalid slice")) {
+	    if (PCHECKTYPE2M(n.vec.size == 2, n[1], tINT, tRANGE, "register slice")) {
 		if (n[1].type == tINT)
 		    lo = hi = n[1].i;
 		else {

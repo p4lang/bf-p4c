@@ -35,7 +35,7 @@ Parser::~Parser() {
 }
 
 void Parser::start(int lineno, VECTOR(value_t) args) {
-    if (args.size != 1 || args[0] != "ingress" || args[0] != "egress")
+    if (args.size != 1 || (args[0] != "ingress" && args[0] != "egress"))
         error(lineno, "parser must specify ingress or egress");
 }
 void Parser::input(VECTOR(value_t) args, value_t data) {
@@ -160,7 +160,7 @@ Parser::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &data) : li
         } else if (kv.key.type == tRANGE) {
             save.emplace_back(gress, kv.key.lo, kv.key.hi, kv.value);
         } else if (kv.value.type == tINT) {
-            set.emplace_back(gress, Phv::Ref(gress, kv.key), kv.value.i);
+            set.emplace_back(gress, kv.key, kv.value.i);
         } else {
             error(kv.key.lineno, "Syntax error");
         }
