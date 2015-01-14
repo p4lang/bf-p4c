@@ -244,7 +244,7 @@ Table::Format::Format(VECTOR(pair_t) &data) : lineno(data[0].key.lineno), size(0
         if (nextbit > size) size = nextbit; }
     for (size_t i = 1; i < fmt.size(); i++)
         if (fmt[0] != fmt[i])
-            error(data[0].key.lineno, "Format group %d doesn't match group 0", i);
+            error(data[0].key.lineno, "Format group %zu doesn't match group 0", i);
     /* FIXME -- need to figure out which fields are immediates, and set immed_size */
     for (log2size = 0; (1U << log2size) < size; log2size++);
 }
@@ -579,7 +579,7 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
     if (!action.set() && !actions)
 	error(lineno, "Table %s has neither action table nor immediate actions", name());
     if (action.set() && (action_args.size() < 1 || action_args.size() > 2))
-        error(lineno, "Unexpected number of action table arguments %d", action_args.size());
+        error(lineno, "Unexpected number of action table arguments %zu", action_args.size());
 }
 void ExactMatchTable::pass1() {
     alloc_id("logical", logical_id, stage->pass1_logical_id,
@@ -622,7 +622,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
 		if ((tcam_id = kv.value.i) < 0 || tcam_id >= TCAM_TABLES_PER_STAGE)
 		    error(kv.key.lineno, "Invalid tcam_id %d", tcam_id);
                 else if (stage->tcam_id_use[tcam_id])
-                    error(kv.key.lineno, "Tcam id %s already in use by table %s",
+                    error(kv.key.lineno, "Tcam id %d already in use by table %s",
                           tcam_id, stage->tcam_id_use[tcam_id]->name());
                 else
                     stage->tcam_id_use[tcam_id] = this; }
@@ -788,7 +788,7 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
     if (!action.set() && !actions)
 	error(lineno, "Table %s has neither action table nor immediate actions", name());
     if (action.set() && (action_args.size() < 1 || action_args.size() > 2))
-        error(lineno, "Unexpected number of action table arguments %d", action_args.size());
+        error(lineno, "Unexpected number of action table arguments %zu", action_args.size());
 }
 void TernaryIndirectTable::pass1() {
     alloc_busses(stage->tcam_indirect_bus_use);

@@ -10,8 +10,9 @@ GEN_OBJS := gen/memories.dprsr_mem_rspec.o \
 	    gen/regs.prsr_reg_merge_rspec.o
 TFAS_OBJS:= asm-parse.o asm-types.o deparser.o input_xbar.o instruction.o \
 	    parser.o phv.o stage.o tables.o tfas.o ubits.o vector.o
-all: tfas
-tfas: $(GEN_OBJS) $(TFAS_OBJS)
+TEST_SRCS:= $(wildcard test_*.cpp)
+all: $(GEN_OBJS:%.o=%.h) tfas
+tfas: $(TFAS_OBJS) $(GEN_OBJS) $(TEST_SRCS:%.cpp=%.o)
 
 json2cpp: json.o
 

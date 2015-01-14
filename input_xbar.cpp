@@ -73,7 +73,7 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
                           input.what.name()); } }
         for (InputXbar *other : use[group.first]) {
             if (conflict(other->groups[group.first], group.second)) {
-                error(lineno, "Input xbar group %d conflict in stage %s", group.first,
+                error(lineno, "Input xbar group %d conflict in stage %d", group.first,
                       table->stage->stageno);
                 warning(other->lineno, "conflicting group definition here"); } }
         use[group.first].push_back(this);

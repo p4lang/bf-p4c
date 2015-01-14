@@ -11,12 +11,14 @@ void asm_parse_file(const char *name, FILE *in);
 
 extern int error_count;
 extern void error(int lineno, const char *fmt, va_list);
+void error(int lineno, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 inline void error(int lineno, const char *fmt, ...) {
     va_list     args;
     va_start(args, fmt);
     error(lineno, fmt, args);
     va_end(args); }
 extern void warning(int lineno, const char *fmt, va_list);
+void warning(int lineno, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 inline void warning(int lineno, const char *fmt, ...) {
     va_list     args;
     va_start(args, fmt);

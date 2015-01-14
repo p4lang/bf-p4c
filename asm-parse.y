@@ -76,7 +76,7 @@ static value_t list_map_expand(VECTOR(value_t) &v);
 %token<str>     ID
 %token<match>   MATCH
 
-%type<value>    param list_element key value elements cmd_arg
+%type<value>    param list_element key value elements
 %type<vec>      opt_params params comma_params list_elements value_list
 %type<pair>     map_element pair
 %type<map>      map_elements pair_list
@@ -113,9 +113,10 @@ comma_params
         : param ',' param { VECTOR_init2($$, $1, $3); }
         | comma_params ',' param { $$ = $1; VECTOR_add($$, $3); }
         ;
-param   : INT { $$ = value($1); }
-        | ID { $$ = value($1); }
-        | '-' INT { $$ = value(-$2); }
+param   : INT { $$ = value($1, yychar == '\n'); }
+        | ID { $$ = value($1, yychar == '\n'); }
+        | '-' INT { $$ = value(-$2, yychar == '\n'); }
+        | INT DOTDOT INT { $$ = value($1, $3, yychar == '\n'); }
         ;
 
 elements: list_elements { $$ = list_map_expand($1); }
@@ -141,18 +142,12 @@ list_element
         | '-' key ':' '\n' INDENT elements UNINDENT { $$ = singleton_map($2, $6); }
         ;
 
-cmd_arg
-    : INT { $$ = value($1, yychar == '\n'); }
-    | ID { $$ = value($1, yychar == '\n'); }
-    | INT DOTDOT INT { $$ = value($1, $3, yychar == '\n'); }
-    ;
-
 key : ID { $$ = value($1, yychar == '\n'); }
     | ID params { $$ = command($1, $2, yychar == '\n'); }
     | INT { $$ = value($1, yychar == '\n'); }
     | MATCH { $$ = value($1, yychar == '\n'); }
     | INT DOTDOT INT { $$ = value($1, $3, yychar == '\n'); }
-    | ID '(' cmd_arg ')' { $$ = command($1, $3, yychar == '\n'); }
+    | ID '(' param ')' { $$ = command($1, $3, yychar == '\n'); }
     ;
 
 value: key

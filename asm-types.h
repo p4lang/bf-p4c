@@ -10,6 +10,12 @@ enum gress_t { INGRESS, EGRESS };
 
 struct match_t {
     unsigned word0, word1;
+#ifdef __cplusplus
+    operator bool() { return (word0 | word1) != 0; }
+    bool matches(unsigned v) {
+        return (v | word1) == word1 && ((~v & word1) | word0) == word0; }
+    bool matches(match_t &v) { assert(0); }
+#endif /* __cplusplus */
 };
 
 enum value_type { tINT, tRANGE, tSTR, tMATCH, tVEC, tMAP, tCMD };
@@ -146,6 +152,39 @@ public:
     iter begin() { return iter(this, map.begin()); }
     iter end() { return iter(this, map.end()); }
 };
+
+class MatchIter {
+/* Iterate through the integers that match a match_t */
+    match_t     m;
+    class iter {
+        MatchIter       *self;
+        unsigned        wcbits, ctr; 
+    public:
+        iter(MatchIter *s, bool last=false) : self(s),
+            wcbits(s->m.word0 & s->m.word1), ctr(0) {
+                if (last) ctr = wcbits;
+                assert((wcbits >> 31) == 0); }
+        unsigned operator*() const {
+            return ctr | (self->m.word1 & ~self->m.word0); }
+        bool operator==(iter &a) const { return ctr == a.ctr; }
+        iter &operator++() {
+            if (wcbits) {
+                /* add 1 to ctr, manually propagating the carry across
+                 * bits that are clear in wcbits */
+                ctr += (wcbits ^ (wcbits-1)) & wcbits;
+                while ((ctr & ~wcbits) && ctr < wcbits) {
+                    unsigned tmp = wcbits & ~((ctr & ~wcbits)-1);
+                    ctr &= wcbits;
+                    ctr += (tmp ^ (tmp-1)) & tmp; } }
+            else if (self->m.word1 | self->m.word0)
+                ctr++;
+            return *this; } };
+public:
+    MatchIter(match_t m_) : m(m_) {}
+    iter begin() { return iter(this); }
+    iter end() { return ++iter(this, true); }
+};
+
 #endif /* __cplusplus */
 
 #endif /* _asm_types_h_ */

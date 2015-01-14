@@ -32,7 +32,8 @@ public:
 	    return b ? set.setbit(idx) : set.clrbit(idx); }
 	operator bool() const { return set.getbit(idx); }
 	operator int() const { return set.getbit(idx) ? 1 : 0; }
-	int index() { return idx; }
+	int index() const { return idx; }
+        int operator*() const { return idx; }
 	bitref &operator++() {
 	    while ((size_t)++idx < set.size * bitvec::bits_per_unit)
 		if (set.getbit(idx)) return *this;
@@ -121,6 +122,8 @@ public:
     bool operator[](int idx) const { return getbit(idx); }
     bitref min() { return ++bitref(*this, -1); }
     bitref max() { return --bitref(*this, size * bits_per_unit); }
+    bitref begin() { return min(); }
+    bitref end() { return bitref(*this, -1); }
     bool empty() const {
 	if (size > 1) {
 	    for (size_t i = 0; i < size; i++)

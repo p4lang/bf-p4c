@@ -35,7 +35,7 @@ private:
         int bits(int group) {
             if (value >= -16 || value < 16)
                 return value+48;
-            error(lineno, "constant value %d out of range for immediate", value);
+            error(lineno, "constant value %ld out of range for immediate", value);
             return -1; }
     };
     struct Phv : public Base {
