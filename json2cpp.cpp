@@ -91,7 +91,7 @@ static void gen_emit_method(std::ostream &out, json::map *m, int indent,
     out << " {" << std::endl;
     if (enable_disable) {
         out << std::setw(2*indent++) << "" << "if (disabled_) {" << std::endl;
-        out << std::setw(2*indent) << "" << "out << \"0, \\n\";" << std::endl;
+        out << std::setw(2*indent) << "" << "out << \"0\";" << std::endl;
         out << std::setw(2*indent--) << "" << "return; }" << std::endl; }
     out << std::setw(2*indent) << "" << "out << '{' << std::endl;"
 	<< std::endl;
@@ -218,7 +218,7 @@ static void gen_fieldname_method(std::ostream &out, json::map *m, int indent,
                 << " = (addr - (char *)&" << *name;
             for (size_t j = 0; j < i; j++)
                 out << "[i" << j << ']';
-            out << ")/sizeof(" << *name;
+            out << "[0])/sizeof(" << *name;
             for (size_t j = 0; j <= i; j++)
                 out << "[0]";
             out << ");" << std::endl;;

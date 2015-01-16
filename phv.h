@@ -57,6 +57,7 @@ public:
 	int		lo, hi;
     public:
 	int		lineno;
+        Ref() : lineno(-1) {}
 	Ref(gress_t g, const value_t &n);
 	Slice operator*() const {
 	    if (auto *s = phv.get(gress, name_)) {

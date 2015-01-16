@@ -43,6 +43,18 @@ int get_file_log_level(const char *file, int *level) {
     return *level = verbose;
 }
 
+static void check_debug_spec(const char *spec) {
+    bool ok = false;
+    for (const char *p = strchr(spec, ':'); p; p = strchr(p, ':')) {
+        ok = true;
+        strtol(p+1, (char **)&p, 10);
+        if (*p && *p != ',') {
+            ok = false;
+            break; } }
+    if (!ok)
+        std::cerr << "Invalid debug trace spec '" << spec << "'" << std::endl;
+}
+
 int main(int ac, char **av) {
     for (int i = 1; i < ac; i++) {
         if (av[i][0] == '-' && av[i][1] == 0) {
@@ -52,8 +64,9 @@ int main(int ac, char **av) {
             for (char *arg = av[i]+1; *arg;)
                 switch (*arg++) {
                 case 'D':
-                    if (++i < ac)
-                        debug_specs.push_back(av[i]);
+                    if (++i < ac) {
+                        check_debug_spec(av[i]);
+                        debug_specs.push_back(av[i]); }
                     break;
                 case 'l':
                     if (auto *tmp = new std::ofstream(av[++i])) {

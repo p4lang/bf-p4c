@@ -5,6 +5,7 @@
 #include <iostream>
 #include <functional>
 #include "log.h"
+#include <sstream>
 
 void declare_registers(const void *addr, size_t sz, std::function<void(std::ostream &, const char *, const void *)> fn);
 void undeclare_registers(const void *addr);
@@ -18,9 +19,9 @@ struct ubits_base {
 
     ubits_base() : value(0), read(false), write(false) {}
     ubits_base(unsigned long v) : value(v), read(false), write(true) {}
-    void log(const char *op, unsigned long v) const;
     operator unsigned long() const { read = true; return value; }
     bool modified() const { return write; }
+    virtual unsigned long operator=(unsigned long v) = 0;
 };
 
 inline std::ostream &operator<<(std::ostream &out, const ubits_base *u) {
@@ -37,13 +38,18 @@ template<int N> struct ubits : ubits_base {
     ubits(unsigned long v) : ubits_base(v) { check(); }
     ubits(const ubits &) = delete;
     ubits(ubits &&) = delete;
-    const ubits &operator=(unsigned long v) {
+    void log(const char *op, unsigned long v) const {
+        std::ostringstream tmp;
+        LOG1(this << ' ' << op << ' ' << v <<
+             (v != value ?  tmp << " (now " << value << ")", tmp : tmp).str()); }
+    unsigned long operator=(unsigned long v) {
         if (write)
             ERROR("Overwriting " << value << " with " << v << " in " << this);
         value = v;
         write = true;
         log("=", v);
-        return check(); }
+        check();
+        return v; }
     const ubits &operator|=(unsigned long v) {
         if (value & v)
             ERROR("Overwriting " << value << " with " << (v|value) <<

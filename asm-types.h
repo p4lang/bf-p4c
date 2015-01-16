@@ -12,9 +12,10 @@ struct match_t {
     unsigned word0, word1;
 #ifdef __cplusplus
     operator bool() { return (word0 | word1) != 0; }
-    bool matches(unsigned v) {
+    bool operator==(const match_t &a) const { return word0 == a.word0 && word1 == a.word1; }
+    bool matches(unsigned v) const {
         return (v | word1) == word1 && ((~v & word1) | word0) == word0; }
-    bool matches(match_t &v) { assert(0); }
+    bool matches(const match_t &v) const { assert(0); }
 #endif /* __cplusplus */
 };
 
@@ -30,6 +31,7 @@ DECLARE_VECTOR3(value_t, value_t,
     value_t *end() const; )
 DECLARE_VECTOR3(pair_t, pair_t,
     pair_t &operator[](int) const;
+    pair_t *operator[](const char *) const;
     pair_t *begin() const { return data; }
     pair_t *end() const; )
 #else
@@ -88,6 +90,10 @@ inline value_t *VECTOR(value_t)::end() const { return data + size; }
 inline pair_t &VECTOR(pair_t)::operator[](int i) const {
     assert(i >= 0 && i < size);
     return data[i]; }
+inline pair_t *VECTOR(pair_t)::operator[](const char *k) const {
+    for (int i = 0; i < size; i++)
+        if (data[i].key == k) return &data[i];
+    return 0; }
 inline pair_t *VECTOR(pair_t)::end() const { return data + size; }
 #endif /* __cplusplus */
 
@@ -118,8 +124,16 @@ inline value_t *get(VECTOR(pair_t) &map, const char *key) {
 
 #ifdef __cplusplus
 #include <functional>
+#include <iostream>
 #include "map.h"
 #include "tfas.h"
+
+inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
+    switch (gress) {
+    case INGRESS: out << "ingress"; break;
+    case EGRESS: out << "egress"; break;
+    default: out << "(invalid gress " << (int)gress << ")"; }
+    return out; }
 
 class MapIterChecked {
 /* Iterate through a map (VECTOR(pair_t)), giving errors for non-string and
