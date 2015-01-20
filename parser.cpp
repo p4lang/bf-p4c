@@ -37,6 +37,9 @@ Parser::~Parser() {
 }
 
 void Parser::start(int lineno, VECTOR(value_t) args) {
+    if (args.size == 0) {
+        this->lineno[INGRESS] = this->lineno[EGRESS] = lineno;
+        return; }
     if (args.size != 1 || (args[0] != "ingress" && args[0] != "egress"))
         error(lineno, "parser must specify ingress or egress");
     gress_t gress = args[0] == "egress" ? EGRESS : INGRESS;
@@ -44,50 +47,53 @@ void Parser::start(int lineno, VECTOR(value_t) args) {
 }
 void Parser::input(VECTOR(value_t) args, value_t data) {
     if (!CHECKTYPE(data, tMAP)) return;
-    gress_t gress = args[0] == "egress" ? EGRESS : INGRESS;
-    for (auto &kv : data.map) {
-        if (kv.key == "start" && (kv.value.type == tVEC || kv.value.type == tSTR)) {
-            if (start_state[gress][0].lineno >= 0) {
-                error(kv.key.lineno, "Multiple start declarations");
-                warning(start_state[gress][0].lineno, "Previous was here");
-            } else if (kv.value.type == tVEC)
-                for (int i = 0; i < 4 && i < kv.value.vec.size; i++)
-                    start_state[gress][i] = kv.value[i];
-            else
-                for (int i = 0; i < 4; i++)
-                    start_state[gress][i] = kv.value;
-            continue; }
-        if (kv.key == "parser_error") {
-            if (parser_error[gress].lineno >= 0) {
-                error(kv.key.lineno, "Multiple parser_error declarations");
-                warning(parser_error[gress].lineno, "Previous was here");
-            } else
-                parser_error[gress] = Phv::Ref(gress, kv.value);
-            continue; }
-        if (!CHECKTYPE2M(kv.key, tSTR, tCMD, "state declaration")) continue;
-        const char *name = kv.key.s;
-        match_t stateno = { 0, 0 };
-        if (kv.key.type == tCMD) {
-            name = kv.key[0].s;
-            if (CHECKTYPE2(kv.key[1], tINT, tMATCH)) continue;
-            if (kv.key[1].type == tINT) {
-                if (kv.key[1].i > PARSER_STATE_MASK)
-                    error(kv.key.lineno, "Explicit state out of range");
-                stateno.word1 = kv.key[1].i;
-                stateno.word0 = (~kv.key[1].i) & PARSER_STATE_MASK;
-            } else {
-                stateno = kv.key[1].m;
-                if ((stateno.word0 | stateno.word1) > PARSER_STATE_MASK)
-                    error(kv.key.lineno, "Explicit state out of range");
-                stateno.word0 |= ~(stateno.word0 | stateno.word1) & PARSER_STATE_MASK; } }
-        if (!CHECKTYPE(kv.value, tMAP)) continue;
-        auto n = states[gress].emplace(name, State(kv.key.lineno, name, gress,
-                                       stateno, kv.value.map));
-        if (n.second)
-            all.push_back(&n.first->second);
-        else {
-            error(kv.key.lineno, "State %s already defined in %sgress", name, gress ? "e" : "in");
-            error(n.first->second.lineno, "previously defined here"); } }
+    for (gress_t gress : Range(INGRESS, EGRESS)) {
+        if (args.size > 0) {
+            if (args[0] == "ingress" && gress != INGRESS) continue;
+            if (args[0] == "egress" && gress != EGRESS) continue;
+        } else if (error_count > 0)
+            break;
+        for (auto &kv : MapIterChecked(data.map, true)) {
+            if (kv.key == "start" && (kv.value.type == tVEC || kv.value.type == tSTR)) {
+                if (kv.value.type == tVEC)
+                    for (int i = 0; i < 4 && i < kv.value.vec.size; i++)
+                        start_state[gress][i] = kv.value[i];
+                else
+                    for (int i = 0; i < 4; i++)
+                        start_state[gress][i] = kv.value;
+                continue; }
+            if (kv.key == "parser_error") {
+                if (parser_error[gress].lineno >= 0) {
+                    error(kv.key.lineno, "Multiple parser_error declarations");
+                    warning(parser_error[gress].lineno, "Previous was here");
+                } else
+                    parser_error[gress] = Phv::Ref(gress, kv.value);
+                continue; }
+            if (!CHECKTYPE2M(kv.key, tSTR, tCMD, "state declaration")) continue;
+            const char *name = kv.key.s;
+            match_t stateno = { 0, 0 };
+            if (kv.key.type == tCMD) {
+                name = kv.key[0].s;
+                if (CHECKTYPE2(kv.key[1], tINT, tMATCH)) continue;
+                if (kv.key[1].type == tINT) {
+                    if (kv.key[1].i > PARSER_STATE_MASK)
+                        error(kv.key.lineno, "Explicit state out of range");
+                    stateno.word1 = kv.key[1].i;
+                    stateno.word0 = (~kv.key[1].i) & PARSER_STATE_MASK;
+                } else {
+                    stateno = kv.key[1].m;
+                    if ((stateno.word0 | stateno.word1) > PARSER_STATE_MASK)
+                        error(kv.key.lineno, "Explicit state out of range");
+                    stateno.word0 |= ~(stateno.word0 | stateno.word1) & PARSER_STATE_MASK; } }
+            if (!CHECKTYPE(kv.value, tMAP)) continue;
+            auto n = states[gress].emplace(name, State(kv.key.lineno, name, gress,
+                                           stateno, kv.value.map));
+            if (n.second)
+                all.push_back(&n.first->second);
+            else {
+                error(kv.key.lineno, "State %s already defined in %sgress", name,
+                      gress ? "e" : "in");
+                warning(n.first->second.lineno, "previously defined here"); } } }
 }
 
 void Parser::process() {
@@ -335,7 +341,7 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
 {
     counter = offset = shift = 0;
     counter_reset = offset_reset = false;
-    for (auto &kv : data) {
+    for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "counter") {
             if (counter || counter_reset)
                 error(kv.key.lineno, "Multiple counter settings in match");
@@ -434,8 +440,7 @@ Parser::State::State(int l, const char *n, gress_t gr, match_t sno, const VECTOR
     VECTOR(pair_t) default_data = EMPTY_VECTOR_INIT;
     bool have_default = data["default"] != 0;
     for (auto &kv : data) {
-        if (kv.key.type == tINT) {
-            if (!CHECKTYPE(kv.value, tMAP)) continue;
+        if (kv.key.type == tINT && kv.value.type == tMAP) {
             match_t m = { ~(unsigned)kv.key.i, (unsigned)kv.key.i };
             match.emplace_back(kv.key.lineno, gress, m, kv.value.map);
         } else if (kv.key.type == tMATCH) {

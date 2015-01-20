@@ -5,7 +5,7 @@
 #include "bitvec.h"
 
 enum {
-    NUM_PHV_REGS = 384
+    NUM_PHV_REGS = 368
 };
 
 class Phv : public Section {
@@ -85,8 +85,5 @@ public:
     };
     static const bitvec &use(gress_t gress) { return phv.phv_use[gress]; }
 };
-
-inline std::ostream &operator<<(std::ostream &out, const Phv::Ref &r) {
-    r.dbprint(out); return out; }
 
 #endif /* _phv_h_ */

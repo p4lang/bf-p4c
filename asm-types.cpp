@@ -4,11 +4,13 @@
 #include <stdlib.h>
 
 const char *value_type_desc[] = {
-    "integer", "range", "identifier", "match pattern", "list", "key: value pairs", "operation"
+    "integer", "bigint", "range", "identifier", "match pattern", "list",
+    "key: value pairs", "operation"
 };
 
 void free_value(value_t *p) {
     switch(p->type) {
+    case tBIGINT: VECTOR_fini(p->bigi); break;
     case tSTR: free(p->s); break;
     case tVEC: case tCMD:
         VECTOR_foreach(p->vec, free_value);
@@ -23,9 +25,29 @@ void free_value(value_t *p) {
 }
 
 bool operator==(const struct value_t &a, const struct value_t &b) {
-    if (a.type != b.type) return false;
+    int i;
+    if (a.type != b.type) {
+        if (a.type == tINT && b.type == tBIGINT) {
+            if (a.i < 0 || (size_t)a.i != b.bigi.data[0]) return false;
+            for (i = 1; i < b.bigi.size; i++)
+                if (b.bigi.data[i]) return false;
+            return true;
+        } else if (a.type == tBIGINT && b.type == tINT) {
+            if (b.i < 0 || (size_t)b.i != a.bigi.data[0]) return false;
+            for (i = 1; i < a.bigi.size; i++)
+                if (a.bigi.data[i]) return false;
+            return true; }
+        return false; }
     switch(a.type) {
     case tINT: return a.i == b.i;
+    case tBIGINT:
+        for (i = 0; i < a.bigi.size && i < b.bigi.size; i++)
+            if (a.bigi.data[i] != b.bigi.data[i]) return false;
+        for (; i < a.bigi.size; i++)
+            if (a.bigi.data[i]) return false;
+        for (; i < b.bigi.size; i++)
+            if (b.bigi.data[i]) return false;
+        return true;
     case tRANGE: return a.lo == b.lo && a.hi == b.hi;
     case tSTR: return !strcmp(a.s, b.s);
     case tMATCH: return a.m.word0 == b.m.word0 && a.m.word1 == b.m.word1;

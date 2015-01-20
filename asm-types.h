@@ -3,6 +3,7 @@
 
 #include <assert.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <string.h>
 #include "vector.h"
 
@@ -19,7 +20,7 @@ struct match_t {
 #endif /* __cplusplus */
 };
 
-enum value_type { tINT, tRANGE, tSTR, tMATCH, tVEC, tMAP, tCMD };
+enum value_type { tINT, tBIGINT, tRANGE, tSTR, tMATCH, tVEC, tMAP, tCMD };
 extern const char *value_type_desc[];
 
 struct value_t;
@@ -38,20 +39,22 @@ DECLARE_VECTOR3(pair_t, pair_t,
 DECLARE_VECTOR(value_t)
 DECLARE_VECTOR(pair_t)
 #endif /* __cplusplus */
+DECLARE_VECTOR(uintptr_t);
 
 struct value_t {
-    enum value_type     type;
-    int                 lineno;
+    enum value_type             type;
+    int                         lineno;
     union {
-        int             i;
+        int                     i;
+        VECTOR(uintptr_t)       bigi;
         struct {
-            int         lo;
-            int         hi;
+            int                 lo;
+            int                 hi;
         };
-        char            *s;
-        match_t         m;
-        VECTOR(value_t) vec;
-        VECTOR(pair_t)  map;
+        char                    *s;
+        match_t                 m;
+        VECTOR(value_t)         vec;
+        VECTOR(pair_t)          map;
     };
 #ifdef __cplusplus
     value_t &operator[](int i) const {
@@ -139,6 +142,7 @@ class MapIterChecked {
 /* Iterate through a map (VECTOR(pair_t)), giving errors for non-string and
  * duplicate keys (and skipping them) */
     VECTOR(pair_t) &map;
+    bool        allow;
     std::map<const char *, int, std::function<bool(const char *, const char *)>>
         keys_seen;
     class iter {
@@ -146,6 +150,7 @@ class MapIterChecked {
         pair_t          *p;
         void check() {
             while (p != self->map.end()) {
+                if (self->allow && p->key.type != tSTR) break;
                 if (!CHECKTYPE(p->key, tSTR)) { p++; continue; }
                 if (get(self->keys_seen, p->key.s)) {
                     error(p->key.lineno, "Duplicate element %s", p->key.s);
@@ -153,6 +158,7 @@ class MapIterChecked {
                             p->key.s);
                     p++;
                     continue; }
+                self->keys_seen[p->key.s] = p->key.lineno;
                 break; } }
     public:
         iter(MapIterChecked *s, pair_t *p_) : self(s), p(p_) {}
@@ -161,7 +167,7 @@ class MapIterChecked {
         bool operator==(iter &a) const { return p == a.p; }
         iter &operator++() { p++; check(); return *this; } };
 public:
-    MapIterChecked(VECTOR(pair_t) &map_) : map(map_),
+    MapIterChecked(VECTOR(pair_t) &map_, bool o=false) : map(map_), allow(o),
         keys_seen([](const char *a, const char *b) { return strcmp(a,b)<0; }) {}
     iter begin() { return iter(this, map.begin()); }
     iter end() { return iter(this, map.end()); }

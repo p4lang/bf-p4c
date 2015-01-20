@@ -27,6 +27,7 @@ private:
         virtual ::Phv::Slice *slice() { return 0; }
         virtual int bits(int group) = 0;
         virtual void mark_use(Table *tbl) {}
+        virtual void dbprint(std::ostream &) const = 0;
     } *op;
     struct Const : public Base {
 	long		value;
@@ -37,6 +38,7 @@ private:
                 return value+48;
             error(lineno, "constant value %ld out of range for immediate", value);
             return -1; }
+        virtual void dbprint(std::ostream &out) const { out << value; }
     };
     struct Phv : public Base {
 	::Phv::Ref	reg;
@@ -53,56 +55,58 @@ private:
             return reg->reg.index % 32; }
         virtual void mark_use(Table *tbl) {
             tbl->stage->phv_use[tbl->gress][reg->reg.index] = true; }
+        virtual void dbprint(std::ostream &out) const { out << reg; }
     };
     struct Action : public Base {
 	std::string		name;
 	Table::Format::Field	*field;
-	Action(int line, const std::string &n, Table::Format::Field *f) :
-            Base(line), name(n), field(f) {}
+        unsigned                off;
+	Action(int line, const std::string &n, Table::Format::Field *f, unsigned o) :
+            Base(line), name(n), field(f), off(o) {}
 	virtual Action *clone() { return new Action(*this); }
         int bits(int group) { 
             if (field->action_xbar < 0)
                 error(lineno, "%s is not on the action bus", name.c_str());
             else switch (group) {
             case 0: case 1:
-                if (field->action_xbar >= 160)
+                if (field->action_xbar + off/32 >= 160)
                     error(lineno, "action bus entry %d(%s) out of range for 32-bit access",
                           field->action_xbar, name.c_str());
                 else if (field->action_xbar&3)
                     error(lineno, "action bus entry %d(%s) misaligned for 32-bit access",
                           field->action_xbar, name.c_str());
                 else
-                    return 0x40 + field->action_xbar / 4;
+                    return 0x40 + field->action_xbar / 4 + off/32;
                 break;
             case 2: case 3:
-                if (field->action_xbar >= 40)
+                if (field->action_xbar + off/8 >= 40)
                     error(lineno, "action bus entry %d(%s) out of range for 8-bit access",
                           field->action_xbar, name.c_str());
                 else
-                    return 0x40 + field->action_xbar;
+                    return 0x40 + field->action_xbar +off/8;
                 break;
             case 4: case 5: case 6:
-                if (field->action_xbar < 40 || field->action_xbar >= 120)
+                if (field->action_xbar + off/16 < 40 || field->action_xbar + off/16 >= 120)
                     error(lineno, "action bus entry %d(%s) out of range for 16-bit access",
                           field->action_xbar, name.c_str());
                 else if (field->action_xbar&1)
                     error(lineno, "action bus entry %d(%s) misaligned for 16-bit access",
                           field->action_xbar, name.c_str());
                 else
-                    return 0x40 + (field->action_xbar / 2) - 20;
+                    return 0x40 + (field->action_xbar / 2) - 20 + off/16;
                 break;
             default:
                 assert(0);
                 break; }
             return -1; }
+        virtual void dbprint(std::ostream &out) const {
+            out << name;
+            if (field)
+                out << '[' << field->action_xbar << ", " << field->bit << ':'
+                    << field->size << ", " << field->group << ']'; }
     };
 public:
     operand() : op(0) {}
-#if 0
-    operand(long v) : op(new Const(v)) {}
-    operand(gress_t g, const value_t &n) : op(new Phv(g, n)) {}
-    operand(const std::string &n, Table::Format::Field *f) : op(new Action(n, f)) {}
-#endif
     operand(const operand &a) : op(a.op ? a.op->clone() : 0) {}
     operand(operand &&a) : op(a.op) { a.op = 0; }
     operand &operator=(const operand &a) {
@@ -124,6 +128,7 @@ public:
     ::Phv::Slice *slice() { return op->slice(); }
     int bits(int group) const { return op->bits(group); }
     void mark_use(Table *tbl) const { op->mark_use(tbl); }
+    void dbprint(std::ostream &out) const { op->dbprint(out); }
 };
 
 operand::operand(Table *tbl, const value_t &v) : op(0) {
@@ -132,7 +137,20 @@ operand::operand(Table *tbl, const value_t &v) : op(0) {
     } else if (CHECKTYPE2(v, tSTR, tCMD)) {
 	const std::string &n = v.type == tSTR ? v.s : v[0].s;
 	if (auto *field = tbl->format ? tbl->format->field(n) : 0) {
-	    op = new Action(v.lineno, n, field);
+            unsigned off = 0;
+            if (v.type == tCMD) {
+                if (!CHECKTYPE2(v[1], tINT, tRANGE)) return;
+                if (v[1].type == tINT) off = v[1].i;
+                else {
+                    off = v[1].lo;
+                    if ((unsigned)v[1].hi >= field->size) {
+                        error(v.lineno, "Slice %d..%d out of range for field %s",
+                              v[1].lo, v[1].hi, n.c_str());
+                        return; } } }
+            if (off > field->size)
+                error(v.lineno, "Bit %d out of range for field %s", off, n.c_str());
+            else
+                op = new Action(v.lineno, n, field, off);
 	} else
 	    op = new Phv(v.lineno, tbl->gress, v); }
 }
@@ -153,6 +171,8 @@ struct AluOP : public Instruction {
     AluOP(Decode *d, Table *tbl, const value_t *ops) : Instruction(ops->lineno), opc(d),
             dest(tbl->gress, ops[0]), src1(tbl, ops[1]), src2(tbl, ops[2]) {}
     void encode(Table *tbl);
+    void dbprint(std::ostream &out) const {
+        out << "INSTR: " << opc->name << ' ' << dest << ", " << src1 << ", " << src2; }
 };
 
 static AluOP::Decode opADD("add", 0x23e, true), opADDC("addc", 0x2be, true),
@@ -167,7 +187,7 @@ static AluOP::Decode opADD("add", 0x23e, true), opADDC("addc", 0x2be, true),
                      opXOR("xor", 0x19e, true), opNAND("nand", 0x19e, true),
                      opAND("and", 0x21e, true), opXNOR("xnor", 0x25e, true),
                      opB("alu_b", 0x29e), opORCA("orca", 0x29e),
-                     opA("alu_a", 0x31e, &opA), opORCB("orcb", 0x35e, &opORCA),
+                     opA("alu_a", 0x31e, &opB), opORCB("orcb", 0x35e, &opORCA),
                      opOR("or", 0x39e, true), opSETHI("sethi", 0x39e, true);
 
 Instruction *AluOP::Decode::decode(Table *tbl, const VECTOR(value_t) &op) {
@@ -205,6 +225,48 @@ void AluOP::encode(Table *tbl) {
     bits = (opc->opcode << 12) | (src1.bits(slot/32) << 5) | src2.bits(slot/32);
 }
 
+struct Set : public Instruction {
+    struct Decode : public Idecode {
+        Decode(const char *n) : Idecode(n) {}
+        Instruction *decode(Table *tbl, const VECTOR(value_t) &op);
+    } *opc;
+    Phv::Ref    dest;
+    operand     src;
+    Set(Table *tbl, const value_t &d, const value_t &s)
+	: Instruction(d.lineno), dest(tbl->gress, d), src(tbl, s) {}
+    void encode(Table *tbl);
+    void dbprint(std::ostream &out) const {
+        out << "INSTR: set " << dest << ", " << src; }
+
+};
+
+static Set::Decode opSet("set");
+
+Instruction *Set::Decode::decode(Table *tbl, const VECTOR(value_t) &op) {
+    if (op.size != 3) {
+        error(op[0].lineno, "%s requires 2 operands", op[0].s);
+        return 0; }
+    Set *rv = new Set(tbl, op[1], op[2]);
+    if (!rv->src.valid())
+        error(op[2].lineno, "invalid src");
+    else
+        return rv;
+    delete rv;
+    return 0;
+}
+
+void Set::encode(Table *tbl) {
+    if (!dest.check() || !src.check()) return;
+    if (dest->lo || dest->hi != dest->reg.size-1) {
+        error(lineno, "ALU ops cannot operate on slices");
+        return; }
+    slot = dest->reg.index;
+    tbl->stage->phv_use[tbl->gress][slot] = true;
+    src.mark_use(tbl);
+    bits = (opA.opcode << 12) | (src.bits(slot/32) << 5);
+}
+
+
 struct DepositField : public Instruction {
     struct Decode : public Idecode {
         Decode(const char *n) : Idecode(n) {}
@@ -217,6 +279,8 @@ struct DepositField : public Instruction {
     DepositField(Table *tbl, const value_t &d, const value_t &s1, const value_t &s2)
 	: Instruction(d.lineno), dest(tbl->gress, d), src1(tbl, s1), src2(tbl, s2) {}
     void encode(Table *tbl);
+    void dbprint(std::ostream &out) const {
+        out << "INSTR: deposit_field " << dest << ", " << src1 << ", " << src2; }
 };
 
 static DepositField::Decode opDepositField("deposit_field");
@@ -277,6 +341,8 @@ struct Invalidate : public Instruction {
     Phv::Ref    dest;
     Invalidate(Table *tbl, const value_t &d) : Instruction(d.lineno), dest(tbl->gress, d) {}
     void encode(Table *tbl);
+    void dbprint(std::ostream &out) const {
+        out << "INSTR: invalidate " << dest; }
 };
 
 static Invalidate::Decode opInvalidate("invalidate");

@@ -92,6 +92,22 @@ public:
             while (++i < idx/bits_per_unit) {
                 ptr[i] = ~0; }
             ptr[i] |= (((uintptr_t)1 << (idx%bits_per_unit)) - 1); } }
+    void setraw(uintptr_t raw) {
+        if (size == 1)
+            data = raw;
+        else {
+            ptr[0] = raw;
+            for (size_t i = 1; i < size; i++)
+                ptr[i] = 0; } }
+    void setraw(uintptr_t *raw, size_t sz) {
+        if (sz > size) expand(sz);
+        if (size == 1)
+            data = raw[0];
+        else {
+            for (size_t i = 0; i < sz; i++)
+                ptr[i] = raw[i];
+            for (size_t i = sz; i < size; i++)
+                ptr[i] = 0; } }
     bool clrbit(size_t idx) {
 	if (idx >= size * bits_per_unit) return false;
 	if (size > 1)
@@ -118,6 +134,11 @@ public:
 	    return rv & ~(~(uintptr_t)1 << (sz-1)); 
         } else
 	    return (data >> idx) & ~(~(uintptr_t)1 << (sz-1)); }
+    operator bool() {
+        if (size == 1) return data != 0;
+        for (size_t i = 0; i < size; i++)
+            if (ptr[i]) return true;
+        return false; }
     bitref operator[](int idx) { return bitref(*this, idx); }
     bool operator[](int idx) const { return getbit(idx); }
     bitref min() { return ++bitref(*this, -1); }

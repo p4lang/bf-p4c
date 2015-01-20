@@ -12,12 +12,13 @@ class Stage;
 class Instruction;
 class InputXbar;
 class MatchTable;
+class GatewayTable;
 
 class Table {
 protected:
     Table(int line, std::string &&n, gress_t gr, Stage *s, int lid = -1)
         : name_(n), stage(s), match(0), gress(gr), lineno(line),
-          logical_id(lid), input_xbar(0), format(0), actions(0) {
+          logical_id(lid), gateway(0), input_xbar(0), format(0), actions(0) {
             assert(all.find(name_) == all.end());
             all.emplace(name_, this); }
     virtual ~Table() { all.erase(name_); }
@@ -144,6 +145,7 @@ public:
     gress_t                     gress;
     int                         lineno;
     int                         logical_id;
+    GatewayTable                *gateway;
     InputXbar			*input_xbar;
     std::vector<Layout>         layout;
     Format                      *format;

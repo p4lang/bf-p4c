@@ -7,7 +7,7 @@ const Phv::Register Phv::Slice::invalid = { 0, 0 };
 Phv::Phv() : Section("phv") {
     static const struct { char code[4]; unsigned size, count; } sizes[] =
         { { "W", 32, 64 }, { "B", 8, 64 }, { "H", 16, 96 }, { "", 0, 32 },
-          { "TW", 32, 32 }, { "TB", 8, 32 }, { "TH", 16, 64 } };
+          { "TW", 32, 32 }, { "TB", 8, 32 }, { "TH", 16, 48 } };
     int idx = 0;
     for (unsigned i = 0; i < sizeof sizes/sizeof *sizes; i++) {
         for (unsigned j = 0; j < sizes[i].count; j++, idx++) {

@@ -11,14 +11,16 @@ GEN_OBJS := gen/memories.dprsr_mem_rspec.o \
 TFAS_OBJS:= asm-parse.o asm-types.o deparser.o input_xbar.o instruction.o \
 	    parser.o phv.o stage.o tables.o tfas.o ubits.o vector.o
 TEST_SRCS:= $(wildcard test_*.cpp)
-all: $(GEN_OBJS:%.o=%.h) tfas
+all: $(GEN_OBJS:%.o=%.h) gen/uptr_sizes.h tfas
 tfas: $(TFAS_OBJS) $(GEN_OBJS) $(TEST_SRCS:%.cpp=%.o)
 
 json2cpp: json.o
+hashdump: json.o ubits.o
 
 asm-parse.o: lex-yaml.c
 
 %: %.cpp
+$(GEN_OBJS) $(TFAS_OBJS): | $(GEN_OBJS:%.o=%.h) gen/uptr_sizes.h
 
 $(GEN_OBJS): gen/%.o: gen/%.cpp gen/%.h
 gen/memories.dprsr_mem_rspec.%: JSON_NAME=memories.all.deparser.%s
@@ -31,9 +33,17 @@ gen/%.h: templates/%.size.json json2cpp
 	@mkdir -p gen
 	./json2cpp +ehD -run '$(JSON_NAME)' $< >$@
 
+gen/disas.%.h: templates/%.size.json json2cpp
+	@mkdir -p gen
+	./json2cpp +hru -en $* $< >$@
+
 gen/%.cpp: templates/%.size.json json2cpp
 	@mkdir -p gen
 	./json2cpp +ehDDi2 -run '$(JSON_NAME)' -I $*.h $< >$@
+
+gen/uptr_sizes.h: mksizes
+	@mkdir -p gen
+	./mksizes > $@
 
 templates/.templates-updated: chip.schema templates-config
 	@mkdir -p templates

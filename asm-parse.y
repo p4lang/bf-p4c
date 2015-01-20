@@ -14,6 +14,10 @@ static value_t value(int v, bool lineno_adj = false) {
     value_t rv{tINT, lineno - (lineno_adj ? 1 : 0)};
     rv.i = v;
     return rv; }
+static value_t value(VECTOR(uintptr_t) &v, bool lineno_adj = false) {
+    value_t rv{tBIGINT, lineno - (lineno_adj ? 1 : 0)};
+    rv.bigi = v;
+    return rv; }
 static value_t value(int lo, int hi, bool lineno_adj = false) {
     value_t rv{tRANGE, lineno - (lineno_adj ? 1 : 0)};
     rv.lo = lo;
@@ -36,6 +40,10 @@ static value_t value(VECTOR(pair_t) &v, bool lineno_adj = false) {
     value_t rv{tMAP, lineno - (lineno_adj ? 1 : 0)};
     if (v.size > 0) rv.lineno = v.data[0].key.lineno;
     rv.map = v;
+    return rv; }
+static value_t empty_vector(bool lineno_adj = false) {
+    value_t rv{tVEC, lineno - (lineno_adj ? 1 : 0)};
+    memset(&rv.vec, 0, sizeof(rv.vec));
     return rv; }
 static value_t singleton_map(const value_t &k, const value_t &v) {
     value_t rv{tMAP, k.lineno};
@@ -63,6 +71,7 @@ static value_t list_map_expand(VECTOR(value_t) &v);
 
 %union {
     int                 i;
+    VECTOR(uintptr_t)   bigi;
     char                *str;
     match_t             match;
     value_t             value;
@@ -73,6 +82,7 @@ static value_t list_map_expand(VECTOR(value_t) &v);
 
 %token          INDENT UNINDENT DOTDOT
 %token<i>       INT
+%token<bigi>    BIGINT
 %token<str>     ID
 %token<match>   MATCH
 
@@ -117,6 +127,8 @@ param   : INT { $$ = value($1, yychar == '\n'); }
         | ID { $$ = value($1, yychar == '\n'); }
         | '-' INT { $$ = value(-$2, yychar == '\n'); }
         | INT DOTDOT INT { $$ = value($1, $3, yychar == '\n'); }
+        | ID '(' param ')' { $$ = command($1, $3, yychar == '\n'); }
+        | ID '(' comma_params ')' { $$ = command($1, $3, yychar == '\n'); }
         ;
 
 elements: list_elements { $$ = list_map_expand($1); }
@@ -148,11 +160,14 @@ key : ID { $$ = value($1, yychar == '\n'); }
     | MATCH { $$ = value($1, yychar == '\n'); }
     | INT DOTDOT INT { $$ = value($1, $3, yychar == '\n'); }
     | ID '(' param ')' { $$ = command($1, $3, yychar == '\n'); }
+    | ID '(' comma_params ')' { $$ = command($1, $3, yychar == '\n'); }
     ;
 
 value: key
     | '[' value_list ']' { $$ = value($2); }
     | '{' pair_list '}' { $$ = value($2); }
+    | '[' ']' { $$ = empty_vector(yychar == '\n'); }
+    | BIGINT { $$ = value($1); }
     ;
 
 value_list

@@ -24,4 +24,20 @@ extern int get_file_log_level(const char *file, int *level);
 
 #define ERROR(X) (std::cerr << X << std::endl)
 
+#if 0
+
+template<class T, class = decltype(void(std::declval<T>().dbprint(std::declval<std::ostream&>())), std::true_type{})> inline std::ostream &operator<<(std::ostream &out, const T &obj) { obj.dbprint(out); return out; }
+
+template<class T, class = decltype(void(std::declval<T*>()->dbprint(std::declval<std::ostream&>())), std::true_type{})> inline std::ostream &operator<<(std::ostream &out, const T *obj) { obj->dbprint(out); return out; }
+
+#else
+
+template<class T> inline auto operator<<(std::ostream &out, const T &obj) -> decltype((void)obj.dbprint(out), out)
+{ obj.dbprint(out); return out; }
+
+template<class T> inline auto operator<<(std::ostream &out, const T *obj) -> decltype((void)obj->dbprint(out), out)
+{ obj->dbprint(out); return out; }
+
+#endif
+
 #endif /* _log_h_ */

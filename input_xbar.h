@@ -12,10 +12,17 @@ class InputXbar {
         Input(const Phv::Ref &a, int s) : what(a), lo(s), hi(-1) {}
         Input(const Phv::Ref &a, int l, int h) : what(a), lo(l), hi(h) {}
     };
+    struct HashCol {
+        bitvec          data;
+        unsigned        valid, seed;
+        HashCol() : valid(0), seed(0) {}
+    };
     Table	*table;
     bool        ternary;
     std::map<int, std::vector<Input>>   groups;
-    bool conflict(std::vector<Input> &a, std::vector<Input> &b);
+    std::map<int, std::map<int, HashCol>>   hash_groups;
+    static bool conflict(std::vector<Input> &a, std::vector<Input> &b);
+    static bool conflict(std::map<int, HashCol> &a, std::map<int, HashCol> &b);
     void add_use(unsigned &byte_use, std::vector<Input> &a);
 public:
     const int	lineno;

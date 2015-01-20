@@ -325,6 +325,7 @@ void Table::Actions::write_regs(Table *tbl) {
         int color = act.second.first%ACTION_IMEM_COLORS;
         for (auto *inst : act.second.second) {
             assert(inst->slot >= 0);
+            LOG2(inst);
             switch (inst->slot/32) {
             case 0: case 1: /* 32 bit */
                 imem.imem_subword32[inst->slot][iaddr].imem_subword32_instr = inst->bits;
@@ -386,7 +387,7 @@ protected:
 class TYPE : public PARENT {                                            \
     static struct Type : public Table::Type {                           \
         Type() : Table::Type(NAME) {}                                   \
-        Table *create(int lineno, const char *name, gress_t gress,      \
+        TYPE *create(int lineno, const char *name, gress_t gress,       \
                       Stage *stage, int lid, VECTOR(pair_t) &data);     \
     } table_type;                                                       \
     friend struct Type;                                                 \
@@ -399,7 +400,7 @@ class TYPE : public PARENT {                                            \
     __VA_ARGS__                                                         \
 };                                                                      \
 TYPE::Type TYPE::table_type;                                            \
-Table *TYPE::Type::create(int lineno, const char *name, gress_t gress,  \
+TYPE *TYPE::Type::create(int lineno, const char *name, gress_t gress,  \
                           Stage *stage, int lid, VECTOR(pair_t) &data) {\
     TYPE *rv = new TYPE(lineno, name, gress, stage, lid);               \
     rv->setup(data);                                                    \
@@ -442,8 +443,8 @@ void MatchTable::write_regs(int type, Table *result) {
             merge.mau_actiondata_adr_default[type][bus] =
                 get_address_mau_actiondata_adr_default(result->action->format->log2size);
         } else {
-            /* FIXME */
-            assert(0);
+            merge.mau_actiondata_adr_default[type][bus] =
+                get_address_mau_actiondata_adr_default(result->format->log2size);
         }
     }
     /*------------------------
@@ -514,7 +515,14 @@ public:
 )
 DEFINE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",)
 DEFINE_TABLE_TYPE(ActionTable, Table, "action",)
-DEFINE_TABLE_TYPE(GatewayTable, Table, "gateway", )
+DEFINE_TABLE_TYPE(GatewayTable, Table, "gateway",
+    unsigned    xor_mask;
+    uint64_t    payload;
+public:
+    static GatewayTable *create(int lineno, const std::string &name, gress_t gress,
+                                Stage *stage, int lid, VECTOR(pair_t) &data)
+        { return table_type.create(lineno, name.c_str(), gress, stage, lid, data); }
+)
 
 void MatchTable::link_action(Table::Ref &ref) {
     if (ref) {
@@ -540,6 +548,10 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
 	    if (CHECKTYPE(kv.value, tMAP))
 		input_xbar = new InputXbar(this, false, kv.value.map);
         } else if (kv.key == "gateway") {
+	    if (CHECKTYPE(kv.value, tMAP)) {
+                gateway = GatewayTable::create(kv.key.lineno, name_+" gateway",
+                        gress, stage, logical_id, kv.value.map);
+                gateway->match = this; }
         } else if (kv.key == "format") {
 	    /* done above so it's always before 'actions' */
         } else if (kv.key == "action") {
@@ -614,6 +626,10 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
 	    if (CHECKTYPE(kv.value, tMAP))
 		input_xbar = new InputXbar(this, true, kv.value.map);
         } else if (kv.key == "gateway") {
+	    if (CHECKTYPE(kv.value, tMAP)) {
+                gateway = GatewayTable::create(kv.key.lineno, name_+" gateway",
+                        gress, stage, logical_id, kv.value.map);
+                gateway->match = this; }
         } else if (kv.key == "indirect") {
             if (CHECKTYPE(kv.value, tSTR))
                 indirect = kv.value;
@@ -1024,18 +1040,27 @@ void ActionTable::write_regs() {
 
 void GatewayTable::setup(VECTOR(pair_t) &data) {
     int bus = -1;
-    for (auto &kv : MapIterChecked(data)) {
+    xor_mask = 0;
+    payload = 0;
+    for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "row") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
+            if (kv.value.i < 0 || kv.value.i > 7)
+                error(kv.value.lineno, "row %d out of range", kv.value.i);
             layout.push_back(Layout{kv.value.lineno, kv.value.i, bus});
         } else if (kv.key == "bus") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
+            if (kv.value.i < 0 || kv.value.i > 1)
+                error(kv.value.lineno, "bus %d out of range", kv.value.i);
             bus = kv.value.i;
             if (!layout.empty()) layout[0].bus = bus;
         } else if (kv.key == "input_xbar") {
-        } else if (kv.key == "match") {
+	    if (CHECKTYPE(kv.value, tMAP))
+		input_xbar = new InputXbar(this, false, kv.value.map);
         } else if (kv.key == "miss") {
         } else if (kv.key == "payload") {
+        } else if (kv.key == "xor") {
+        } else if (kv.key.type == tINT || kv.key.type == tMATCH) {
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     kv.key.s, name()); }
