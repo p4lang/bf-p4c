@@ -68,6 +68,7 @@ struct pair_t {
 };
 
 void free_value(value_t *p);
+const char *value_desc(value_t *v);
 static inline void free_pair(pair_t *p) {
     free_value(&p->key);
     free_value(&p->value); }
@@ -82,6 +83,8 @@ inline bool operator==(const struct value_t &a, int b) {
     return a.type == tINT && a.i == b; }
 inline bool operator==(int a, const struct value_t &b) {
     return b.type == tINT && a == b.i; }
+
+inline const char *value_desc(value_t &v) { return value_desc(&v); }
 
 template<class A, class B> inline bool operator !=(A a, B b)
     { return !(a == b); }
@@ -102,6 +105,10 @@ inline pair_t *VECTOR(pair_t)::end() const { return data + size; }
 
 #define CHECKTYPE(V, T) \
     ((V).type == (T) || \
+     (error((V).lineno, "Syntax error, expecting %s", \
+            value_type_desc[T]), 0))
+#define PCHECKTYPE(P, V, T) \
+    (((P) && (V).type == (T)) || \
      (error((V).lineno, "Syntax error, expecting %s", \
             value_type_desc[T]), 0))
 #define CHECKTYPEM(V, T, M) \
@@ -130,6 +137,7 @@ inline value_t *get(VECTOR(pair_t) &map, const char *key) {
 #include <iostream>
 #include "map.h"
 #include "tfas.h"
+#include "bitops.h"
 
 inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
     switch (gress) {
@@ -176,6 +184,7 @@ public:
 class MatchIter {
 /* Iterate through the integers that match a match_t */
     match_t     m;
+#if 0
     class iter {
         MatchIter       *self;
         unsigned        wcbits, ctr; 
@@ -198,11 +207,23 @@ class MatchIter {
                     ctr += (tmp ^ (tmp-1)) & tmp; } }
             else if (self->m.word1 | self->m.word0)
                 ctr++;
-            return *this; } };
+            return *this; }
+        iter &end() { ctr = wcbits; return ++*this; } };
+#else
+    class iter : public MaskCounter {
+        MatchIter       *self;
+    public:
+        iter(MatchIter *s) : MaskCounter(s->m.word0 & s->m.word1), self(s) {
+            if (!(self->m.word1 | self->m.word0)) overflow(); }
+        unsigned operator *() const {
+            return this->operator unsigned() | (self->m.word1 & ~ self->m.word0); }
+        iter &end() { overflow();  return *this; }
+    };
+#endif
 public:
     MatchIter(match_t m_) : m(m_) {}
     iter begin() { return iter(this); }
-    iter end() { return ++iter(this, true); }
+    iter end() { return iter(this).end(); }
 };
 
 #endif /* __cplusplus */

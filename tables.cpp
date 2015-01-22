@@ -33,7 +33,7 @@ void Table::setup_action_table(value_t &val) {
             for (int i = 1; i < val.vec.size; i++) {
                 Format::Field *arg = 0;
                 if (CHECKTYPE(val[i], tSTR) &&
-                    !(arg = format->field(val[i].s)))
+                    !(arg = lookup_field(val[i].s)))
                     error(val[i].lineno, "No field named %s in format for %s",
                           val[i].s, name());
                 action_args.push_back(arg); } }
@@ -102,12 +102,9 @@ void Table::setup_layout(value_t *row, value_t *col, value_t *bus) {
     if (col->type == tVEC && col->vec.size == (int)layout.size()) {
         for (int i = 0; i < col->vec.size; i++)
             err |= add_cols(layout[i], col->vec[i]);
-
     } else {
         for (auto &row : layout)
-            if ((err |= add_cols(row, *col)))
-                break;
-    }
+            if ((err |= add_cols(row, *col))) break; }
     if (bus) {
         if (!CHECKTYPE2(*bus, tINT, tVEC)) err = 1;
         else if (bus->type == tVEC) {
@@ -119,8 +116,7 @@ void Table::setup_layout(value_t *row, value_t *col, value_t *bus) {
                         layout[i].bus = bus->vec[i].i;
         } else
             for (auto &row : layout)
-                row.bus = bus->i;
-    }
+                row.bus = bus->i; }
 }
 
 void Table::setup_logical_id() {
@@ -207,7 +203,9 @@ static void overlap_test(int lineno,
                   a->first.c_str(), b->first.c_str()); }
 }
 
-Table::Format::Format(VECTOR(pair_t) &data) : lineno(data[0].key.lineno), size(0), immed_size(0) {
+Table::Format::Format(VECTOR(pair_t) &data) :
+    lineno(data[0].key.lineno), size(0), immed_bit(0), immed_size(0)
+{
     unsigned nextbit = 0;
     for (auto &kv : data) {
         if (!CHECKTYPE2M(kv.key, tSTR, tCMD, "expecting field desc"))
@@ -224,7 +222,7 @@ Table::Format::Format(VECTOR(pair_t) &data) : lineno(data[0].key.lineno), size(0
         if (fmt[idx].count(name.s) > 0) {
             error(name.lineno, "Duplicate key %s in format", name.s);
             continue; }
-        auto it = fmt[idx].emplace(name.s, Field{ nextbit, 0, idx, -1 }).first;
+        auto it = fmt[idx].emplace(name.s, Field{ nextbit, 0, idx, 0, -1 }).first;
         if (kv.value.type == tINT) {
             it->second.size  = kv.value.i;
         } else {
@@ -249,6 +247,74 @@ Table::Format::Format(VECTOR(pair_t) &data) : lineno(data[0].key.lineno), size(0
     for (log2size = 0; (1U << log2size) < size; log2size++);
 }
 
+void Table::Format::setup_immed(Table *tbl) {
+    std::map<unsigned, Field *> immed;
+    unsigned lo = INT_MAX, hi = 0;
+    for (auto &f : fmt[0]) {
+        if (f.second.action_xbar < 0 && !(f.second.flags & Field::USED_IMMED))
+            continue;
+        immed[f.second.bit] = &f.second;
+        if (f.second.bit < lo) {
+            first_immed_field = f.first;
+            immed_bit = lo = f.second.bit; }
+        if (f.second.bit + f.second.size > hi) hi = f.second.bit + f.second.size - 1; }
+    if (immed.empty()) {
+        LOG2("table " << tbl->name() << " has no immediate data");
+        return; }
+    LOG2("table " << tbl->name() << " has " << immed.size() << " immediate data fields "
+         "over " << (hi + 1 - lo) << " bits");
+    if (hi - lo >= MAX_IMMED_ACTION_DATA) {
+        error(lineno, "Immediate data for table %s spread over more than %d bits",
+              tbl->name(), MAX_IMMED_ACTION_DATA);
+        return; }
+    immed_size = hi + 1 - lo;
+    for (unsigned i = 1; i < fmt.size(); i++) {
+        int delta = (int)fmt[i][first_immed_field].bit - (int)fmt[0][first_immed_field].bit;
+        for (auto &f : fmt[0]) {
+            if (f.second.action_xbar < 0 && !(f.second.flags & Field::USED_IMMED))
+                continue;
+            if (delta != (int)f.second.bit - (int)fmt[0][f.first].bit) {
+                error(lineno, "Immediate data field %s for table %s does not match across "
+                      "ways in a ram", f.first.c_str(), tbl->name());
+                break; } } }
+    int byte[4] = { -1, -1, -1, -1 };
+    bool err = false;
+    for (auto &f : fmt[0]) {
+        if (f.second.action_xbar < 0)
+            continue;
+        int slot = Stage::action_bus_slot_map[f.second.action_xbar];
+        unsigned off = f.second.bit - immed_bit;
+        switch (Stage::action_bus_slot_size[slot]) {
+        case 8:
+            for (unsigned b = off/8; b <= (off + f.second.size - 1)/8; b++) {
+                if (b >= 4 || (byte[b] >= 0 && byte[b] != slot) ||
+                    Stage::action_bus_slot_size[slot] != 8) {
+                    err = true;
+                    break; }
+                byte[b] = slot++; }
+            break;
+        case 16:
+            for (unsigned w = off/16; w <= (off + f.second.size - 1)/16; w++) {
+                if (w >= 2 || (byte[2*w] >= 0 && byte[2*w] != slot) ||
+                    (byte[2*w+1] >= 0 && byte[2*w+1] != slot) ||
+                    Stage::action_bus_slot_size[slot] != 16) {
+                    err = true;
+                    break; }
+                byte[2*w] = slot;
+                byte[2*w+1] = slot++; }
+            break;
+        case 32:
+            for (int b = 0; b < 4; b++) {
+                if (byte[b] >= 0 && byte[b] != slot) { err = true; break; }
+                byte[b] = slot; }
+            break;
+        default:
+            assert(0); }
+        if (err)
+            error(lineno, "Immediate data misaligned for action bus byte %d",
+                  f.second.action_xbar); }
+}
+
 Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) : lineno(data[0].key.lineno) {
     for (auto &kv : data) {
         if (!CHECKTYPE(kv.key, tSTR) || !CHECKTYPE(kv.value, tVEC))
@@ -265,7 +331,7 @@ Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) : lineno(data[0].key.l
                     error(i.lineno, "invalid instruction address %d", i.i);
                 continue; }
             if (!CHECKTYPE(i, tCMD)) continue;
-            if (auto *p = Instruction::decode(tbl, i.vec))
+            if (auto *p = Instruction::decode(tbl, kv.key.s, i.vec))
                 ins.second.push_back(p);
         }
     }
@@ -281,7 +347,7 @@ void Table::Actions::pass1(Table *tbl) {
             tbl->stage->imem_addr_use[tbl->gress][act.second.first] = 1;
             iaddr = act.second.first/ACTION_IMEM_COLORS; }
         for (auto *inst : act.second.second) {
-            inst->encode(tbl);
+            inst->pass1(tbl);
             if (inst->slot >= 0 && iaddr >= 0) {
                 if (tbl->stage->imem_use[iaddr][inst->slot])
                     error(lineno, "action instruction slot %d.%d in use elsewhere",
@@ -324,26 +390,27 @@ void Table::Actions::write_regs(Table *tbl) {
         int iaddr = act.second.first/ACTION_IMEM_COLORS;
         int color = act.second.first%ACTION_IMEM_COLORS;
         for (auto *inst : act.second.second) {
+            unsigned bits = inst->encode();
             assert(inst->slot >= 0);
             LOG2(inst);
             switch (inst->slot/32) {
             case 0: case 1: /* 32 bit */
-                imem.imem_subword32[inst->slot][iaddr].imem_subword32_instr = inst->bits;
+                imem.imem_subword32[inst->slot][iaddr].imem_subword32_instr = bits;
                 imem.imem_subword32[inst->slot][iaddr].imem_subword32_color = color;
                 imem.imem_subword32[inst->slot][iaddr].imem_subword32_parity =
-                    parity(inst->bits) ^ color;
+                    parity(bits) ^ color;
                 break;
             case 2: case 3: /* 8 bit */
-                imem.imem_subword8[inst->slot-64][iaddr].imem_subword8_instr = inst->bits;
+                imem.imem_subword8[inst->slot-64][iaddr].imem_subword8_instr = bits;
                 imem.imem_subword8[inst->slot-64][iaddr].imem_subword8_color = color;
                 imem.imem_subword8[inst->slot-64][iaddr].imem_subword8_parity =
-                    parity(inst->bits) ^ color;
+                    parity(bits) ^ color;
                 break;
             case 4: case 5: case 6: /* 16 bit */
-                imem.imem_subword16[inst->slot-128][iaddr].imem_subword16_instr = inst->bits;
+                imem.imem_subword16[inst->slot-128][iaddr].imem_subword16_instr = bits;
                 imem.imem_subword16[inst->slot-128][iaddr].imem_subword16_color = color;
                 imem.imem_subword16[inst->slot-128][iaddr].imem_subword16_parity =
-                    parity(inst->bits) ^ color;
+                    parity(bits) ^ color;
                 break;
             default:
                 assert(0); } } }
@@ -354,7 +421,7 @@ Table::ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
     for (auto &kv : data) {
 	if (!CHECKTYPE2(kv.key, tINT, tRANGE)) continue;
 	if (!CHECKTYPE(kv.value, tSTR)) continue;
-	Format::Field *f = tbl->format->field(kv.value.s);
+	Format::Field *f = tbl->lookup_field(kv.value.s, "*");
 	if (!f) {
 	    error(kv.value.lineno, "No field %s in format", kv.value.s);
 	    continue; }
@@ -366,10 +433,10 @@ Table::ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
 		error(kv.key.lineno, "Byte range doesn't match size %d of %s",
 		      f->size, kv.value.s);
 		continue; } }
-        if (idx >= 160) {
+        if (idx >= ACTION_DATA_BUS_BYTES) {
             error(kv.key.lineno, "Action bus index out of range");
             continue; }
-        f->action_xbar = idx;
+        tbl->apply_to_field(kv.value.s, [idx](Format::Field *f){ f->action_xbar = idx; });
 	by_name[kv.value.s].first.push_back(idx);
 	by_name[kv.value.s].second = f;
         by_byte[idx] = std::make_pair(std::string(kv.value.s), f); }
@@ -440,6 +507,7 @@ void MatchTable::write_regs(int type, Table *result) {
         assert(result->action_args.size() >= 1 && result->action_args[0]);
         merge.mau_action_instruction_adr_mask[type][bus] = (1U << result->action_args[0]->size) - 1;
         if (result->action) {
+            /* FIXME -- deal with variable-sized actions */
             merge.mau_actiondata_adr_default[type][bus] =
                 get_address_mau_actiondata_adr_default(result->action->format->log2size);
         } else {
@@ -450,29 +518,29 @@ void MatchTable::write_regs(int type, Table *result) {
     /*------------------------
      * Action instruction Address
      *-----------------------*/
+    Actions *actions = result->actions;
     if (result->action) {
-        if (result->action_args.size() != 1) {
-            error(action.lineno, "Expecting single instruction address argument to "
-                  "action table");
-        } else {
-            assert(result->action_args[0]);
-            if ((1U << result->action_args[0]->size) <= ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
-                merge.mau_action_instruction_adr_map_en[type] |= (1U << logical_id);
-                int idx = 0;
-                int shift = 0;
-                for (auto act : *result->action->actions) {
-                    merge.mau_action_instruction_adr_map_data[type][logical_id][idx]
-                        |= act->second.first << shift;
-                    if ((shift += 6) >= 24) {
-                        shift = 0;
-                        idx++;
-                        assert(idx < 2); } }
-            } else {
-                /* FIXME */
-                assert(0);
-            }
-        }
+        assert(!actions);
+        actions = result->action->actions; }
+    assert(actions);
+
+    assert(result->action_args[0]);
+    if ((1U << result->action_args[0]->size) <= ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
+        merge.mau_action_instruction_adr_map_en[type] |= (1U << logical_id);
+        int idx = 0;
+        int shift = 0;
+        for (auto act : *actions) {
+            merge.mau_action_instruction_adr_map_data[type][logical_id][idx]
+                |= act->second.first << shift;
+            if ((shift += 6) >= 24) {
+                shift = 0;
+                idx++;
+                assert(idx < 2); } }
+    } else {
+        /* FIXME */
+        assert(0);
     }
+
     /*------------------------
      * Next Table
      *-----------------------*/
@@ -502,19 +570,66 @@ void MatchTable::write_regs(int type, Table *result) {
     for (auto &row : result->layout) {
         int bus = row.row*2 | row.bus;
         assert(bus >= 0 && bus < 15);
-	merge.mau_immediate_data_mask[type][bus] = (1U << result->format->immed_size)-1; }
+	merge.mau_immediate_data_mask[type][bus] = (1UL << result->format->immed_size)-1; }
+    result->action_bus->write_immed_regs(result);
 
     input_xbar->write_regs();
 }
 
-DEFINE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match", )
+void Table::ActionBus::write_immed_regs(Table *tbl) {
+    auto &adrdist = tbl->stage->regs.rams.match.adrdist;
+    int tid = tbl->logical_id;
+    for (auto &f : by_byte) {
+        assert(f.second.second->action_xbar == (int)f.first);
+        int slot = Stage::action_bus_slot_map[f.first];
+        unsigned off = f.second.second->bit - tbl->format->immed_bit;
+        unsigned size = f.second.second->size;
+        switch(Stage::action_bus_slot_size[slot]) {
+        case 8:
+            for (unsigned b = off/8; b <= (off + size - 1)/8; b++) {
+                adrdist.immediate_data_8b_ixbar_ctl[tid*4 + b]
+                    .enabled_4bit_muxctl_select = slot++;
+                adrdist.immediate_data_8b_ixbar_ctl[tid*4 + b]
+                    .enabled_4bit_muxctl_enable = 1; }
+            break;
+        case 16:
+            slot -= ACTION_DATA_8B_SLOTS;
+            for (unsigned w = off/16; w <= (off + size - 1)/16; w++) {
+                adrdist.immediate_data_16b_ixbar_ctl[tid*2 + w]
+                    .enabled_5bit_muxctl_select = slot++;
+                adrdist.immediate_data_16b_ixbar_ctl[tid*2 + w]
+                    .enabled_5bit_muxctl_enable = 1; }
+            break;
+        case 32:
+            slot -= ACTION_DATA_8B_SLOTS + ACTION_DATA_16B_SLOTS;
+            adrdist.immediate_data_32b_ixbar_ctl[tid].enabled_5bit_muxctl_select = slot;
+            adrdist.immediate_data_32b_ixbar_ctl[tid].enabled_5bit_muxctl_enable = 1;
+            break;
+        default:
+            assert(0); } }
+}
+
+DEFINE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
+    struct Way {
+        int        lineno;
+        int        group, subgroup, mask;
+    };
+    std::vector<Way>    ways;
+)
 DEFINE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
 public:
     int tcam_id;
     Table::Ref indirect;
+    Format::Field *lookup_field(const std::string &name, const std::string &action) {
+        assert(!format);
+        return indirect ? indirect->lookup_field(name, action) : 0; }
 )
 DEFINE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",)
-DEFINE_TABLE_TYPE(ActionTable, Table, "action",)
+DEFINE_TABLE_TYPE(ActionTable, Table, "action",
+    std::map<std::string, Format *>     action_formats;
+    Format::Field *lookup_field(const std::string &name, const std::string &action);
+    void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn);
+)
 DEFINE_TABLE_TYPE(GatewayTable, Table, "gateway",
     unsigned    xor_mask;
     uint64_t    payload;
@@ -539,8 +654,8 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
     setup_layout(get(data, "row"), get(data, "column"), get(data, "bus"));
     setup_logical_id();
     if (auto *fmt = get(data, "format")) {
-	if (CHECKTYPE(*fmt, tMAP))
-	    format = new Format(fmt->map);
+       if (CHECKTYPE(*fmt, tMAP))
+           format = new Format(fmt->map);
     } else
         error(lineno, "No format specified in table %s", name());
     for (auto &kv : MapIterChecked(data)) {
@@ -553,7 +668,7 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
                         gress, stage, logical_id, kv.value.map);
                 gateway->match = this; }
         } else if (kv.key == "format") {
-	    /* done above so it's always before 'actions' */
+            /* done above to be done before action_bus */
         } else if (kv.key == "action") {
             setup_action_table(kv.value);
         } else if (kv.key == "actions") {
@@ -582,6 +697,13 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
                 miss_next = kv.value;
         } else if (kv.key == "row" || kv.key == "column" || kv.key == "bus") {
             /* already done in setup_layout */
+        } else if (kv.key == "ways") {
+            if (!CHECKTYPE(kv.value, tVEC)) continue;
+            for (auto &w : kv.value.vec) {
+                if (!CHECKTYPE(w, tVEC)) continue;
+                if (w.vec.size != 3 || w[0].type != tINT || w[1].type != tINT || w[2].type != tINT)
+                    error(w.lineno, "invalid way descriptor");
+                else ways.emplace_back(Way{w.lineno, w[0].i, w[1].i, w[2].i}); }
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     kv.key.s, name()); }
@@ -592,6 +714,7 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
 	error(lineno, "Table %s has neither action table nor immediate actions", name());
     if (action.set() && (action_args.size() < 1 || action_args.size() > 2))
         error(lineno, "Unexpected number of action table arguments %zu", action_args.size());
+    if (actions && !action_bus) action_bus = new ActionBus();
 }
 void ExactMatchTable::pass1() {
     alloc_id("logical", logical_id, stage->pass1_logical_id,
@@ -599,21 +722,64 @@ void ExactMatchTable::pass1() {
     alloc_busses(stage->sram_match_bus_use);
     check_next();
     link_action(action);
+    action_bus->pass1(this);
     if (actions) {
         assert(action_args.size() == 0);
-        if (auto *sel = format->field("action"))
+        if (auto *sel = lookup_field("action"))
             action_args.push_back(sel);
         else
             error(lineno, "No field 'action' in table %s format", name());
         actions->pass1(this); }
     input_xbar->pass1(stage->exact_ixbar, 128);
+    if (format) format->setup_immed(this);
+    unsigned fmt_width = (format->size + 127)/128;
+    if (ways.empty())
+        error(lineno, "No ways defined in table %s", name());
+    else if (layout.size() % (ways.size()*fmt_width) != 0)
+        error(lineno, "Rows is not a mulitple of ways in table %s", name());
+    unsigned way = 0, word = 0;
+    for (auto &row : layout) {
+        if (word == 0) {
+            if (ways[way].group >= EXACT_HASH_GROUPS ||
+                ways[way].subgroup >= 5 ||
+                (ways[way].mask &~ 0xfff)) {
+                error(ways[way].lineno, "invalid exact match way");
+                break; } }
+        if (row.cols.size() != 1U << bitcount(ways[way].mask))
+            error(ways[way].lineno, "Depth of way doesn't match number of columns on "
+                  "row %d in table %s", row.row, name());
+        if (++word == fmt_width) { word = 0; way++; } }
 }
+
 void ExactMatchTable::pass2() {
     input_xbar->pass2(stage->exact_ixbar, 128);
+    action_bus->pass2(this);
     if (actions) actions->pass2(this);
 }
 void ExactMatchTable::write_regs() {
     MatchTable::write_regs(0, this);
+    unsigned fmt_width = (format->size + 127)/128;
+    unsigned way = 0, word = 0;
+    for (auto &row : layout) {
+        auto &vh_adr_xbar = stage->regs.rams.array.row[row.row].vh_adr_xbar;
+        vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus]
+            .enabled_3bit_muxctl_select = ways[way].group;
+        vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus]
+            .enabled_3bit_muxctl_enable = 1;
+        MaskCounter bank(ways[way].mask);
+        for (auto col : row.cols) {
+            vh_adr_xbar.exactmatch_mem_hashadr_xbar_ctl[col]
+                .enabled_4bit_muxctl_select = ways[way].subgroup + row.bus*5;
+            vh_adr_xbar.exactmatch_mem_hashadr_xbar_ctl[col]
+                .enabled_4bit_muxctl_enable = 1;
+            vh_adr_xbar.exactmatch_bank_enable[col]
+                .exactmatch_bank_enable_bank_mask = ways[way].mask;
+            vh_adr_xbar.exactmatch_bank_enable[col]
+                .exactmatch_bank_enable_bank_id = bank++;
+            vh_adr_xbar.exactmatch_bank_enable[col]
+                .exactmatch_bank_enable_inp_sel |= 1 << row.bus; }
+        if (++word == fmt_width) { word = 0; way++; } }
+
     if (actions) actions->write_regs(this);
 }
 
@@ -754,8 +920,8 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
     match = 0;
     setup_layout(get(data, "row"), get(data, "column"), get(data, "bus"));
     if (auto *fmt = get(data, "format")) {
-	if (CHECKTYPE(*fmt, tMAP))
-	    format = new Format(fmt->map);
+       if (CHECKTYPE(*fmt, tMAP))
+           format = new Format(fmt->map);
         if (format->size > 64)
             error(fmt->lineno, "ternary indirect format larger than 64 bits");
         if (format->size < 4) {
@@ -766,7 +932,7 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
         error(lineno, "No format specified in table %s", name());
     for (auto &kv : MapIterChecked(data)) {
         if (kv.key == "format") {
-	    /* done above so it's always before 'actions' */
+            /* done above to be done before action_bus */
         } else if (kv.key == "action") {
             setup_action_table(kv.value);
         } else if (kv.key == "actions") {
@@ -805,21 +971,25 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
 	error(lineno, "Table %s has neither action table nor immediate actions", name());
     if (action.set() && (action_args.size() < 1 || action_args.size() > 2))
         error(lineno, "Unexpected number of action table arguments %zu", action_args.size());
+    if (actions && !action_bus) action_bus = new ActionBus();
 }
 void TernaryIndirectTable::pass1() {
     alloc_busses(stage->tcam_indirect_bus_use);
     check_next();
+    action_bus->pass1(this);
     if (actions) {
         assert(action_args.size() == 0);
-        if (auto *sel = format->field("action"))
+        if (auto *sel = lookup_field("action"))
             action_args.push_back(sel);
         else
             error(lineno, "No field 'action' in table %s format", name());
         actions->pass1(this); }
+    if (format) format->setup_immed(this);
 }
 void TernaryIndirectTable::pass2() {
     if (!match)
         error(lineno, "No match table for ternary indirect table %s", name());
+    action_bus->pass2(this);
     if (actions) actions->pass2(this);
 }
 void TernaryIndirectTable::write_regs() {
@@ -890,19 +1060,53 @@ void TernaryIndirectTable::write_regs() {
     if (actions) actions->write_regs(this);
 }
 
+Table::Format::Field *ActionTable::lookup_field(const std::string &name, const std::string &action)
+{
+    if (action == "*" || action == "") {
+        if (auto *rv = format ? format->field(name) : 0)
+            return rv;
+        if (action == "*")
+            for (auto &fmt : action_formats)
+                if (auto *rv = fmt.second->field(name))
+                    return rv;
+    } else { 
+        if (auto *fmt = get(action_formats, name)) {
+            if (auto *rv = fmt->field(name))
+                return rv;
+        } else if (auto *rv = format ? format->field(name) : 0)
+            return rv; }
+    if (match) {
+        assert((Table *)match != (Table *)this);
+        return match->lookup_field(name); }
+    return 0;
+}
+void ActionTable::apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn) {
+    for (auto &fmt : action_formats)
+        fmt.second->apply_to_field(n, fn);
+    if (format)
+        format->apply_to_field(n, fn);
+}
 
 void ActionTable::setup(VECTOR(pair_t) &data) {
     auto *row = get(data, "row");
     if (!row) row = get(data, "logical_row");
     setup_layout(row, get(data, "column"), get(data, "bus"));
-    if (auto *fmt = get(data, "format")) {
-	if (CHECKTYPE(*fmt, tMAP))
-	    format = new Format(fmt->map);
-    } else
-        error(lineno, "No format specified in table %s", name());
-    for (auto &kv : MapIterChecked(data)) {
+    for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "format") {
-	    /* done above so it's always before 'actions' and 'action_bus' */
+            if (CHECKTYPE(kv.value, tMAP))
+                format = new Format(kv.value.map);
+        } else if (kv.key.type == tCMD && kv.key[0] == "format") {
+            if (!PCHECKTYPE(kv.key.vec.size > 1, kv.key[1], tSTR)) continue;
+            if (action_formats.count(kv.key[1].s)) {
+                error(kv.key.lineno, "Multiple formats for action %s", kv.key[1].s);
+                return; }
+            if (CHECKTYPE(kv.value, tMAP))
+                action_formats[kv.key[1].s] = new Format(kv.value.map); } }
+    for (auto &kv : MapIterChecked(data, true)) {
+        if (kv.key == "format") {
+            /* done above to be done before action_bus */
+        } else if (kv.key.type == tCMD && kv.key[0] == "format") {
+            /* done above to be done before action_bus */
         } else if (kv.key == "actions") {
             if (CHECKTYPE(kv.value, tMAP))
                 actions = new Actions(this, kv.value.map);
@@ -914,21 +1118,71 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
             /* already done in setup_layout */
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
-                    kv.key.s, name()); }
+                    value_desc(kv.key), name()); }
     alloc_rams(true, stage->sram_use, 0);
+    if (!actions)
+        error(lineno, "No actions in action table %s", name());
+    if (actions && !action_bus) action_bus = new ActionBus();
 }
 void ActionTable::pass1() {
     for (Layout &row : layout) {
         if (row.row > layout[0].row)
             error(row.lineno, "Action table %s home row must be first", name());
     }
+    for (auto &fmt : action_formats) {
+        if (!actions->exists(fmt.first)) {
+            error(fmt.second->lineno, "Format for non-existant action %s", fmt.first.c_str());
+            continue; }
+        for (auto &fld : *fmt.second) {
+            if (auto *f = format ? format->field(fld.first) : 0) {
+                if (fld.second.bit != f->bit || fld.second.size != f->size) {
+                    error(fmt.second->lineno, "Action %s format for field %s incompatible "
+                          "with default format", fmt.first.c_str(), fld.first.c_str());
+                    continue; } }
+            for (auto &fmt2 : action_formats) {
+                if (fmt.second == fmt2.second) break;
+                if (auto *f = fmt2.second->field(fld.first)) {
+                    if (fld.second.bit != f->bit || fld.second.size != f->size) {
+                        error(fmt.second->lineno, "Action %s format for field %s incompatible "
+                              "with action %s format", fmt.first.c_str(), fld.first.c_str(),
+                              fmt2.first.c_str());
+                        break; } } } } }
+    action_bus->pass1(this);
     if (actions) actions->pass1(this);
 }
 void ActionTable::pass2() {
     if (!match)
         error(lineno, "No match table for action table %s", name());
+    action_bus->pass2(this);
     if (actions) actions->pass2(this);
 }
+
+void Table::ActionBus::pass1(Table *tbl) {
+    for (auto &ent : by_byte) {
+        int slot = Stage::action_bus_slot_map[ent.first];
+        Format::Field *field = ent.second.second;
+        bool err = false;
+        for (int space = field->size; space > 0; space -= Stage::action_bus_slot_size[slot++]) {
+            if (slot >= ACTION_DATA_BUS_SLOTS) {
+                error(lineno, "%s extends past the end of the actions bus",
+                      ent.second.first.c_str());
+                err = true;
+                break; }
+            if (tbl->stage->action_bus_use[slot]) {
+                error(lineno, "Action bus byte %d set in table %s and table %s", ent.first,
+                      tbl->name(), tbl->stage->action_bus_use[slot]->name());
+                err = true;
+                break; }
+            tbl->stage->action_bus_use[slot] = tbl;
+        }
+        if (err) continue;
+    }
+}
+void Table::ActionBus::pass2(Table *tbl) {
+    /* FIXME -- allocate action bus slots for things that need to be on the action bus
+     * FIXME -- and aren't */
+}
+
 void Table::ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action_slice) {
     auto &action_hv_xbar = tbl->stage->regs.rams.array.row[home_row/2].action_hv_xbar;
     unsigned side = home_row%2;  /* 0 == left,  1 == right */

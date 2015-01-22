@@ -97,6 +97,7 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
 }
 
 void Parser::process() {
+    if (all.empty()) return;
     for (auto st : all) st->pass1(this);
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         if (states[gress].empty()) continue;
@@ -147,6 +148,7 @@ void Parser::process() {
 }
 
 void Parser::output() {
+    if (all.empty()) return;
     for (auto st : all) st->pass2(this);
     if (error_count > 0) return;
     tcam_row_use[INGRESS] = tcam_row_use[EGRESS] = PARSER_TCAM_DEPTH;

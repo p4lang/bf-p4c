@@ -31,7 +31,7 @@ public:
         Slice(const Register &r, int b) : reg(r), lo(b), hi(b) {
             valid = lo >= 0 && hi >= lo && hi < reg.size; }
         Slice(const Slice &s, int l, int h) : reg(s.reg), lo(s.lo + l), hi(s.lo + h) {
-            valid = lo >= 0 && hi >= lo && hi < reg.size; }
+            valid = lo >= 0 && hi >= lo && hi <= s.hi && hi < reg.size; }
         Slice(const Slice &) = default;
         Slice &operator=(const Slice &a) { new(this) Slice(a.reg, a.lo, a.hi); return *this; }
 	const Slice *operator->() const { return this; }
@@ -59,6 +59,8 @@ public:
 	int		lineno;
         Ref() : lineno(-1) {}
 	Ref(gress_t g, const value_t &n);
+	Ref(gress_t g, int line, const std::string &n, int l, int h) :
+            gress(g), name_(n), lo(l), hi(h), lineno(line) {}
 	Slice operator*() const {
 	    if (auto *s = phv.get(gress, name_)) {
 		if (hi >= 0) return Slice(*s, lo, hi);

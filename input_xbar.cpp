@@ -5,12 +5,12 @@
 InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
 : table(t), ternary(tern), lineno(data[0].key.lineno)
 {
-    int numgroups = ternary ? 16 : 8;
+    int numgroups = ternary ? TCAM_XBAR_GROUPS : EXACT_XBAR_GROUPS;
     for (auto &kv : data) {
 	if (!CHECKTYPEM(kv.key, tCMD, "group or hash descriptor"))
 	    continue;
 	if (kv.key[0] == "group") {
-	    if (kv.key.vec.size != 2 || kv.key[1].type != tINT || kv.key[1].i > numgroups) {
+	    if (kv.key.vec.size != 2 || kv.key[1].type != tINT || kv.key[1].i >= numgroups) {
 		error(kv.key.lineno, "invalid group descriptor");
 		continue; }
             if (groups.count(kv.key[1].i)) {
@@ -31,7 +31,9 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
             } else
                 group.emplace_back(Phv::Ref(t->gress, kv.value));
 	} else if (!ternary && kv.key[0] == "hash") {
-	    if (kv.key.vec.size != 2 || kv.key[1].type != tINT || kv.key[1].i > numgroups) {
+	    if (kv.key.vec.size != 2 || kv.key[1].type != tINT ||
+                kv.key[1].i >= EXACT_HASH_GROUPS)
+            {
 		error(kv.key.lineno, "invalid hash group descriptor");
 		continue; }
             if (!CHECKTYPE(kv.value, tMAP)) continue;
@@ -190,8 +192,8 @@ void InputXbar::write_regs() {
         unsigned group_base;
         unsigned half_byte = 0;
         if (ternary) {
-            group_base = 128 + (group.first*9 + 1)/2U;
-            half_byte = 133 + 9*(group.first/2U);
+            group_base = 128 + (group.first*11 + 1)/2U;
+            half_byte = 133 + 11*(group.first/2U);
         } else
             group_base = group.first * 16U;
         for (auto &input : group.second) {

@@ -96,17 +96,20 @@ public:
     class Format {
     public:
         struct Field {
-            unsigned    bit, size, group;
+            unsigned    bit, size, group, flags;
             int         action_xbar;
             bool operator==(const Field &a) const { return size == a.size; }
+            enum flags_t { USED_IMMED=1 };
         };
         Format(VECTOR(pair_t) &);
+        void setup_immed(Table *tbl);
     private:
         std::vector<std::map<std::string, Field>>               fmt;
         std::map<int, std::map<std::string, Field>::iterator>   byindex;
+        std::string                                             first_immed_field;
     public:
         int                                                     lineno;
-        unsigned                                                size, immed_size;
+        unsigned                                                size, immed_bit, immed_size;
         unsigned                                                log2size; /* ceil(log2(size)) */
 
         int groups() const { return fmt.size(); }
@@ -115,6 +118,13 @@ public:
             auto it = fmt[group].find(n);
             if (it != fmt[group].end()) return &it->second;
             return 0; }
+        void apply_to_field(const std::string &n,
+                            std::function<void(Format::Field *)> fn) {
+            for (auto &m : fmt) {
+                auto it = m.find(n);
+                if (it != m.end()) fn(&it->second); } }
+        decltype(fmt[0].begin()) begin(int grp=0) { return fmt[grp].begin(); }
+        decltype(fmt[0].end()) end(int grp=0) { return fmt[grp].end(); }
     };
     class Actions {
         typedef std::map<std::string, std::pair<int, std::vector<Instruction *>>> act_t;
@@ -126,6 +136,7 @@ public:
         int             lineno;
         iterator begin() { return order.begin(); }
         iterator end() { return order.end(); }
+        bool exists(const std::string &n) { return actions.count(n) > 0; }
         void pass1(Table *);
         void pass2(Table *);
         void write_regs(Table *);
@@ -135,7 +146,11 @@ public:
 	std::map<unsigned, std::pair<std::string, Table::Format::Field *>>   by_byte;
     public:
         int             lineno;
+        ActionBus() : lineno(-1) {}
 	ActionBus(Table *, VECTOR(pair_t) &);
+        void pass1(Table *tbl);
+        void pass2(Table *tbl);
+        void write_immed_regs(Table *tbl);
         void write_action_regs(Table *tbl, unsigned homerow, unsigned action_slice);
     };
 public:
@@ -162,6 +177,11 @@ public:
         unsigned rv = 0;
         for (auto &row : layout) rv += row.cols.size();
         return rv; }
+    virtual Format::Field *lookup_field(const std::string &n,
+                                        const std::string &act = "")
+        { return format ? format->field(n) : 0; }
+    virtual void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn)
+        { if (format) format->apply_to_field(n, fn); }
 };
 
 #endif /* _tables_h_ */

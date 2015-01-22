@@ -4,7 +4,8 @@
 #include <fstream>
 #include "range.h"
 
-#define NUM_MAU_STAGES  12
+unsigned char Stage::action_bus_slot_map[ACTION_DATA_BUS_BYTES];
+unsigned char Stage::action_bus_slot_size[ACTION_DATA_BUS_SLOTS];
 
 class AsmStage : public Section {
     void start(int lineno, VECTOR(value_t) args);
@@ -20,6 +21,22 @@ class AsmStage : public Section {
 AsmStage::AsmStage() : Section("stage") {
     for (int i = 0; i < NUM_MAU_STAGES; i++)
         stage[i].stageno = 0;
+    int slot = 0, byte = 0;
+    for (int i = 0; i < ACTION_DATA_8B_SLOTS; i++) {
+        Stage::action_bus_slot_map[byte++] = slot;
+        Stage::action_bus_slot_size[slot++] = 8; }
+    for (int i = 0; i < ACTION_DATA_16B_SLOTS; i++) {
+        Stage::action_bus_slot_map[byte++] = slot;
+        Stage::action_bus_slot_map[byte++] = slot;
+        Stage::action_bus_slot_size[slot++] = 16; }
+    for (int i = 0; i < ACTION_DATA_32B_SLOTS; i++) {
+        Stage::action_bus_slot_map[byte++] = slot;
+        Stage::action_bus_slot_map[byte++] = slot;
+        Stage::action_bus_slot_map[byte++] = slot;
+        Stage::action_bus_slot_map[byte++] = slot;
+        Stage::action_bus_slot_size[slot++] = 32; }
+    assert(byte == ACTION_DATA_BUS_BYTES);
+    assert(slot == ACTION_DATA_BUS_SLOTS);
 }
 
 void AsmStage::start(int lineno, VECTOR(value_t) args) {

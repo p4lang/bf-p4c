@@ -16,7 +16,20 @@ enum {
     SRAM_UNITS_PER_ROW = 12,
     TCAM_ROWS = 16,
     TCAM_UNITS_PER_ROW = 2,
+    TCAM_XBAR_GROUPS = 16,
+    EXACT_XBAR_GROUPS = 8,
+    EXACT_HASH_GROUPS = 8,
     NEXT_TABLE_SUCCESSOR_TABLE_DEPTH = 8,
+    MAX_IMMED_ACTION_DATA = 32,
+    ACTION_DATA_8B_SLOTS = 16,
+    ACTION_DATA_16B_SLOTS = 28,
+    ACTION_DATA_32B_SLOTS = 22,
+    ACTION_DATA_BUS_SLOTS = ACTION_DATA_8B_SLOTS +
+                            ACTION_DATA_16B_SLOTS +
+                            ACTION_DATA_32B_SLOTS,
+    ACTION_DATA_BUS_BYTES = ACTION_DATA_8B_SLOTS +
+                          2*ACTION_DATA_16B_SLOTS +
+                          4*ACTION_DATA_32B_SLOTS,
     ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH = 8,
     ACTION_IMEM_SLOTS = 32,
     ACTION_IMEM_COLORS = 2,
@@ -37,10 +50,13 @@ public:
     Alloc1D<Table *, TCAM_TABLES_PER_STAGE>          	tcam_id_use;
     Alloc1D<std::vector<InputXbar *>, 8>                exact_ixbar;
     Alloc1D<std::vector<InputXbar *>, 16>               tcam_ixbar;
+    Alloc1D<Table *, ACTION_DATA_BUS_SLOTS>             action_bus_use;
     bitvec      imem_addr_use[2], imem_use[ACTION_IMEM_SLOTS];
     enum { NONE=0, USE_TCAM=1, USE_STATEFUL=2, USE_TCAM_PIPED=4, };
     int                 table_use[2];
     bitvec              phv_use[2];
+    static unsigned char action_bus_slot_map[ACTION_DATA_BUS_BYTES];
+    static unsigned char action_bus_slot_size[ACTION_DATA_BUS_SLOTS];
 
     int                         pass1_logical_id, pass1_tcam_id;
     regs_match_action_stage_    regs;

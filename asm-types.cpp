@@ -8,6 +8,23 @@ const char *value_type_desc[] = {
     "key: value pairs", "operation"
 };
 
+const char *value_desc(value_t *p) {
+    static char buffer[32];
+    switch(p->type) {
+    case tINT: sprintf(buffer, "%d", p->i); return buffer;
+    case tBIGINT: return "<bigint>";
+    case tRANGE: sprintf(buffer, "%d..%d", p->lo, p->hi); return buffer;
+    case tMATCH: return "<pattern>";
+    case tSTR: return p->s;
+    case tVEC: return "<list>";
+    case tMAP: return "<map>";
+    case tCMD:
+        if (p->vec.size > 0 && p->vec.data[0].type == tSTR)
+            return p->vec.data[0].s;
+        return "<cmd>"; }
+    assert(0);
+}
+
 void free_value(value_t *p) {
     switch(p->type) {
     case tBIGINT: VECTOR_fini(p->bigi); break;
