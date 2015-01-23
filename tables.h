@@ -98,6 +98,9 @@ public:
         struct Field {
             unsigned    bit, size, group, flags;
             int         action_xbar;
+            int         action_xbar_bit;
+            Field() : bit(0), size(0), group(0), flags(0),
+                action_xbar(-1), action_xbar_bit(0) {}
             bool operator==(const Field &a) const { return size == a.size; }
             enum flags_t { USED_IMMED=1 };
         };
@@ -150,6 +153,8 @@ public:
 	ActionBus(Table *, VECTOR(pair_t) &);
         void pass1(Table *tbl);
         void pass2(Table *tbl);
+        void set_immed_offsets(Table *tbl);
+        void set_action_offsets(Table *tbl);
         void write_immed_regs(Table *tbl);
         void write_action_regs(Table *tbl, unsigned homerow, unsigned action_slice);
     };

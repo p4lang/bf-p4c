@@ -234,6 +234,7 @@ void InputXbar::write_regs() {
             int c = col.first;
             HashCol &h = col.second;
             hash.hash_seed[grp][c/26] |= h.seed << (c%26);
+            /* FIXME -- only write the relevant parts of the matrix */
             for (int word = 0; word < 8; word++) {
                 auto &w = hash.galois_field_matrix[grp*8 + word][c];
                 w.byte0 = h.data.getrange(word*16, 8);

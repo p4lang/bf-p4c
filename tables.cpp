@@ -222,23 +222,27 @@ Table::Format::Format(VECTOR(pair_t) &data) :
         if (fmt[idx].count(name.s) > 0) {
             error(name.lineno, "Duplicate key %s in format", name.s);
             continue; }
-        auto it = fmt[idx].emplace(name.s, Field{ nextbit, 0, idx, 0, -1 }).first;
+        //auto it = fmt[idx].emplace(name.s, Field{ nextbit, 0, idx, 0, -1 }).first;
+        Field *f = &fmt[idx][name.s];
+        f->group = idx;
         if (kv.value.type == tINT) {
-            it->second.size  = kv.value.i;
+            f->bit = nextbit;
+            f->size  = kv.value.i;
         } else {
-            it->second.bit = kv.value.lo;
-            it->second.size = kv.value.hi - kv.value.lo + 1; }
-        nextbit = it->second.bit + it->second.size;
+            f->bit = kv.value.lo;
+            f->size = kv.value.hi - kv.value.lo + 1; }
+        nextbit = f->bit + f->size;
+        auto it = fmt[idx].find(name.s);
         if (byindex.empty())
-            byindex[it->second.bit] = it;
+            byindex[f->bit] = it;
         else {
-            auto p = byindex.upper_bound(it->second.bit);
+            auto p = byindex.upper_bound(f->bit);
             if (p != byindex.end())
                 overlap_test(kv.value.lineno, it, p->second);
             p--;
             overlap_test(kv.value.lineno, p->second, it);
             if (nextbit > p->second->second.bit + p->second->second.size)
-                byindex[it->second.bit] = it; }
+                byindex[f->bit] = it; }
         if (nextbit > size) size = nextbit; }
     for (size_t i = 1; i < fmt.size(); i++)
         if (fmt[0] != fmt[i])
@@ -461,9 +465,11 @@ class TYPE : public PARENT {                                            \
     TYPE(int l, const char *n, gress_t g, Stage *s, int lid)            \
         : PARENT(l, n, g, s, lid) {}                                    \
     void setup(VECTOR(pair_t) &data);                                   \
+public:                                                                 \
     void pass1();                                                       \
     void pass2();                                                       \
     void write_regs();                                                  \
+private:                                                                \
     __VA_ARGS__                                                         \
 };                                                                      \
 TYPE::Type TYPE::table_type;                                            \
@@ -574,6 +580,15 @@ void MatchTable::write_regs(int type, Table *result) {
     result->action_bus->write_immed_regs(result);
 
     input_xbar->write_regs();
+}
+
+void Table::ActionBus::set_immed_offsets(Table *tbl) {
+    for (auto &f : by_byte) {
+        Format::Field *field = f.second.second;
+        assert(field->action_xbar == (int)f.first);
+        int slot = Stage::action_bus_slot_map[f.first];
+        unsigned off = field->bit - tbl->format->immed_bit;
+        field->action_xbar_bit = off % Stage::action_bus_slot_size[slot]; }
 }
 
 void Table::ActionBus::write_immed_regs(Table *tbl) {
@@ -731,7 +746,9 @@ void ExactMatchTable::pass1() {
             error(lineno, "No field 'action' in table %s format", name());
         actions->pass1(this); }
     input_xbar->pass1(stage->exact_ixbar, 128);
-    if (format) format->setup_immed(this);
+    format->setup_immed(this);
+    if (!format->field("match"))
+        error(format->lineno, "No 'match' field in format for table %s", name());
     unsigned fmt_width = (format->size + 127)/128;
     if (ways.empty())
         error(lineno, "No ways defined in table %s", name());
@@ -749,17 +766,29 @@ void ExactMatchTable::pass1() {
             error(ways[way].lineno, "Depth of way doesn't match number of columns on "
                   "row %d in table %s", row.row, name());
         if (++word == fmt_width) { word = 0; way++; } }
+    if (gateway) gateway->pass1();
 }
 
 void ExactMatchTable::pass2() {
     input_xbar->pass2(stage->exact_ixbar, 128);
     action_bus->pass2(this);
+    action_bus->set_immed_offsets(this);
     if (actions) actions->pass2(this);
+    if (gateway) gateway->pass2();
 }
 void ExactMatchTable::write_regs() {
     MatchTable::write_regs(0, this);
     unsigned fmt_width = (format->size + 127)/128;
     unsigned way = 0, word = 0;
+    int vpn = 0;
+    bitvec match_mask;
+    int match_entries[fmt_width];
+    for (unsigned i = 0; i < fmt_width; i++) match_entries[i] = 0;
+    format->apply_to_field("match", [&](Format::Field *f){
+        match_mask.setrange(f->bit, f->size);
+        match_entries[f->bit/128]++;
+        if (f->bit%128 + f->size > 128)
+            match_entries[f->bit/128 + 1]++; });
     for (auto &row : layout) {
         auto &vh_adr_xbar = stage->regs.rams.array.row[row.row].vh_adr_xbar;
         vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus]
@@ -777,10 +806,26 @@ void ExactMatchTable::write_regs() {
             vh_adr_xbar.exactmatch_bank_enable[col]
                 .exactmatch_bank_enable_bank_id = bank++;
             vh_adr_xbar.exactmatch_bank_enable[col]
-                .exactmatch_bank_enable_inp_sel |= 1 << row.bus; }
-        if (++word == fmt_width) { word = 0; way++; } }
+                .exactmatch_bank_enable_inp_sel |= 1 << row.bus;
+            auto &ram = stage->regs.rams.array.row[row.row].ram[col];
+            for (unsigned i = 0; i < 4; i++)
+                ram.match_mask[i] = 0xffffffff ^ match_mask.getrange(word*128+i*32, 32);
+            for (int v : VersionIter(config_version)) {
+                ram.unit_ram_ctl[v].match_ram_write_data_mux_select = 7; /* unused */
+                ram.unit_ram_ctl[v].match_ram_read_data_mux_select = 7; /* unused */
+                ram.unit_ram_ctl[v].match_result_bus_select = 1 << row.bus;
+                ram.unit_ram_ctl[v].match_entry_enable = (1 << match_entries[word] >> 1) - 1; }
+            ram.match_ram_vpn.match_ram_vpn0 = vpn >> 2;
+            unsigned vpn_lsb = (vpn&3) - 1;
+            for (int i = 0; i < format->groups(); i++)
+                ram.match_ram_vpn.match_ram_vpn_lsbs |= (++vpn_lsb) << i*3;
+            if (vpn_lsb & 4)
+                ram.match_ram_vpn.match_ram_vpn1 = (vpn >> 2) + 1;
+        }
+        if (++word == fmt_width) { word = 0; way++; vpn += format->groups(); } }
 
     if (actions) actions->write_regs(this);
+    if (gateway) gateway->write_regs();
 }
 
 void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
@@ -856,9 +901,11 @@ void TernaryMatchTable::pass1() {
               "than 2 hit next tables");
     input_xbar->pass1(stage->tcam_ixbar, 44);
     if (actions) actions->pass1(this);
+    if (gateway) gateway->pass1();
 }
 void TernaryMatchTable::pass2() {
     input_xbar->pass2(stage->tcam_ixbar, 44);
+    if (gateway) gateway->pass2();
 }
 void TernaryMatchTable::write_regs() {
     MatchTable::write_regs(1, indirect);
@@ -914,6 +961,7 @@ void TernaryMatchTable::write_regs() {
     stage->table_use[gress] |= Stage::USE_TCAM_PIPED;
     merge.tcam_table_prop[tcam_id].thread = gress;
     merge.tcam_table_prop[tcam_id].enabled = 1;
+    if (gateway) gateway->write_regs();
 }
 
 void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
@@ -990,6 +1038,7 @@ void TernaryIndirectTable::pass2() {
     if (!match)
         error(lineno, "No match table for ternary indirect table %s", name());
     action_bus->pass2(this);
+    action_bus->set_immed_offsets(this);
     if (actions) actions->pass2(this);
 }
 void TernaryIndirectTable::write_regs() {
@@ -1154,6 +1203,7 @@ void ActionTable::pass2() {
     if (!match)
         error(lineno, "No match table for action table %s", name());
     action_bus->pass2(this);
+    action_bus->set_action_offsets(this);
     if (actions) actions->pass2(this);
 }
 
@@ -1183,7 +1233,16 @@ void Table::ActionBus::pass2(Table *tbl) {
      * FIXME -- and aren't */
 }
 
+void Table::ActionBus::set_action_offsets(Table *tbl) {
+    for (auto &f : by_byte) {
+        Format::Field *field = f.second.second;
+        assert(field->action_xbar == (int)f.first);
+        int slot = Stage::action_bus_slot_map[f.first];
+        field->action_xbar_bit = field->bit % Stage::action_bus_slot_size[slot]; }
+}
+
 void Table::ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action_slice) {
+    /* FIXME -- home_row is the wrong row to use for action_slice != 0 */
     auto &action_hv_xbar = tbl->stage->regs.rams.array.row[home_row/2].action_hv_xbar;
     unsigned side = home_row%2;  /* 0 == left,  1 == right */
     for (auto &el : by_byte) {
@@ -1196,8 +1255,10 @@ void Table::ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned
             error(lineno, "Action bus setup can't deal with field split across "
                   "SRAM rows");
             continue; }
-        if (byte < 16) {
-            for (unsigned sbyte = bit/8; sbyte <= (bit+f->size-1)/8; sbyte++, byte++) {
+        unsigned slot = Stage::action_bus_slot_map[byte];
+        switch (Stage::action_bus_slot_size[slot]) {
+        case 8:
+            for (unsigned sbyte = bit/8; sbyte <= (bit+f->size-1)/8; sbyte++, byte++, slot++) {
                 unsigned code, mask;
                 switch (sbyte >> 2) {
                 case 0: code = sbyte>>1; mask = 1; break;
@@ -1208,10 +1269,12 @@ void Table::ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned
                     error(lineno, "Can't put field %s into byte %d on action xbar",
                           el.second.first.c_str(), byte);
                     break; }
-                action_hv_xbar.action_hv_xbar_ctl_byte[side].set_subfield(code, byte*2, 2);
-                action_hv_xbar.action_hv_xbar_ctl_byte_enable[side] |= 1 << byte; }
-        } else if (byte < 72) {
-            for (unsigned word = bit/16; word <= (bit+f->size-1)/16; word++, byte+=2) {
+                action_hv_xbar.action_hv_xbar_ctl_byte[side].set_subfield(code, slot*2, 2);
+                action_hv_xbar.action_hv_xbar_ctl_byte_enable[side] |= 1 << slot; }
+            break;
+        case 16:
+            slot -= ACTION_DATA_8B_SLOTS;
+            for (unsigned word = bit/16; word <= (bit+f->size-1)/16; word++, byte+=2, slot++) {
                 unsigned code, mask;
                 switch (word >> 1) {
                 case 0: code = 1; mask = 3; break;
@@ -1222,18 +1285,22 @@ void Table::ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned
                     error(lineno, "Can't put field %s into byte %d on action xbar",
                           el.second.first.c_str(), byte);
                     break; }
-                action_hv_xbar.action_hv_xbar_ctl_half[side][(byte-16)/8]
-                        .set_subfield(code, byte%8, 2); }
-        } else if (byte < 160) {
+                action_hv_xbar.action_hv_xbar_ctl_half[side][slot/4]
+                        .set_subfield(code, (slot%4)*2, 2); }
+            break;
+        case 32: {
+            slot -= ACTION_DATA_8B_SLOTS + ACTION_DATA_16B_SLOTS;
             unsigned word = bit/32;
             unsigned code = 1 + word/2;
             if (((word << 2)^byte) & 7)
                 error(lineno, "Can't put field %s into byte %d on action xbar",
                       el.second.first.c_str(), byte);
             else
-                action_hv_xbar.action_hv_xbar_ctl_word[side][(byte-72)/8]
-                        .set_subfield(code, (byte%8)/2, 2);
-        } else assert(0);
+                action_hv_xbar.action_hv_xbar_ctl_word[side][slot/2]
+                        .set_subfield(code, (slot%2)*2, 2);
+            break; }
+        default:
+            assert(0); }
     }
 }
 
@@ -1320,8 +1387,11 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
                     kv.key.s, name()); }
 }
 void GatewayTable::pass1() {
+    if (input_xbar) input_xbar->pass1(stage->exact_ixbar, 128);
 }
 void GatewayTable::pass2() {
+    if (input_xbar) input_xbar->pass2(stage->exact_ixbar, 128);
 }
 void GatewayTable::write_regs() {
+    if (input_xbar) input_xbar->write_regs();
 }

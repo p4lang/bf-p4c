@@ -114,14 +114,15 @@ private:
             return -1; }
         virtual void mark_use(Table *tbl) {
             field->flags |= Table::Format::Field::USED_IMMED; }
-        virtual unsigned bitoffset() const { return field->bit + off; }
+        virtual unsigned bitoffset() const { return field->action_xbar_bit + off; }
         virtual unsigned bitsize() const { return field->size; }
         virtual void dbprint(std::ostream &out) const {
             out << name;
             if (off) out << '(' << off << ')';
             if (field)
-                out << '[' << field->action_xbar << ", " << field->bit << ':'
-                    << field->size << ", " << field->group << ']'; }
+                out << '[' << field->action_xbar << ':' << field->action_xbar_bit
+                    << ", " << field->bit << ':' << field->size << ", "
+                    << field->group << ']'; }
     };
     class Named : public Base {
         std::string     name;
@@ -414,7 +415,10 @@ Instruction *NulOP::Decode::decode(Table *tbl, const std::string &act, const VEC
 void NulOP::pass1(Table *tbl) {
     if (!dest.check()) return;
     slot = dest->reg.index;
-    tbl->stage->phv_use[tbl->gress][slot] = true;
+    if (opc->opcode) {
+        /* FIXME -- for compatibilty with compiler, don't mark phv as used if
+         * this is a noop instruction */
+        tbl->stage->phv_use[tbl->gress][slot] = true; }
 }
 int NulOP::encode() {
     return opc->opcode;
