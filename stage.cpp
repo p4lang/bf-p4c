@@ -117,7 +117,6 @@ void Stage::write_regs() {
             merge.predication_ctl[gress][v].start_table_fifo_delay1 = 8;
             merge.predication_ctl[gress][v].start_table_fifo_enable = stageno ? 3 : 1;
             regs.dp.action_output_delay[gress][v] = action_output_delay[table_use[gress]];
-            regs.dp.final_output_delay[gress][v] = 0;
             regs.dp.cur_stage_dependency_on_prev[gress][v] = 0;
             regs.dp.next_stage_dependency_on_cur[gress][v] = 0; }
         regs.dp.match_ie_input_mux_sel[v] = 3;

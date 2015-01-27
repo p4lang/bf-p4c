@@ -1344,9 +1344,9 @@ void TernaryIndirectTable::write_regs() {
             merge.mau_actiondata_adr_vpn_shiftcount[1][bus] =
                 std::max(0, (int)action->format->log2size - 7);
         } else {
-            /* FIXME -- are these actually needed? */
-            merge.mau_actiondata_adr_mask[0][bus] = 0x3fffff;
-            merge.mau_actiondata_adr_tcam_shiftcount[bus] = 69; }
+            /* FIXME -- are these actually needed?  Duplicating what the compiler does */
+            merge.mau_actiondata_adr_mask[1][bus] = 0x3fffff;
+            merge.mau_actiondata_adr_tcam_shiftcount[bus] = 73; }
     }
     if (actions) actions->write_regs(this);
 }

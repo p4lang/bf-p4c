@@ -4,7 +4,8 @@ YFLAGS = -v
 
 GEN_OBJS := gen/memories.dprsr_mem_rspec.o \
 	    gen/memories.prsr_mem_main_rspec.o \
-	    gen/regs.dprsr_reg_rspec.o \
+	    gen/regs.dprsr_hdr.o \
+	    gen/regs.dprsr_inp.o \
 	    gen/regs.mau_addrmap.o \
 	    gen/regs.prsr_reg_main_rspec.o \
 	    gen/regs.prsr_reg_merge_rspec.o
@@ -23,9 +24,9 @@ asm-parse.o: lex-yaml.c
 $(GEN_OBJS) $(TFAS_OBJS): | $(GEN_OBJS:%.o=%.h) gen/uptr_sizes.h
 
 $(GEN_OBJS): gen/%.o: gen/%.cpp gen/%.h
-gen/memories.dprsr_mem_rspec.%: JSON_NAME=memories.all.deparser.%s
 gen/memories.prsr_mem_main_rspec.%: JSON_NAME=memories.all.parser.%s
-gen/regs.dprsr_reg_rspec.%: JSON_NAME=regs.all.deparser.%s
+gen/regs.dprsr_hdr.%: JSON_NAME=regs.all.deparser.header_phase
+gen/regs.dprsr_inp.%: JSON_NAME=regs.all.deparser.input_phase
 gen/regs.mau_addrmap.%: JSON_NAME=regs.match_action_stage.%02x
 gen/regs.prsr_reg_main_rspec.%: JSON_NAME=regs.all.parser.%s
 gen/regs.prsr_reg_merge_rspec.%: JSON_NAME=regs.all.parse_merge

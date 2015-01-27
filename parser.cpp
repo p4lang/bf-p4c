@@ -168,10 +168,12 @@ void Parser::output() {
         reg[gress].max_iter.max = 128;
         if (parser_error[gress].lineno >= 0)
             reg[gress].err_phv_cfg.dst = parser_error[gress]->reg.index;
+        reg[gress].err_phv_cfg.aram_mem_err_en = 1;
+        reg[gress].err_phv_cfg.csum_mem_err_en = 1;
+        reg[gress].err_phv_cfg.ctr_mem_err_en = 1;
         reg[gress].err_phv_cfg.ctr_range_err_en = 1;
         reg[gress].err_phv_cfg.dst_cont_err_en = 1;
         reg[gress].err_phv_cfg.fcs_err_en = 1;
-        reg[gress].err_phv_cfg.mem_err_en = 1;
         reg[gress].err_phv_cfg.multi_wr_err_en = 1;
         reg[gress].err_phv_cfg.no_tcam_match_err_en = 1;
         reg[gress].err_phv_cfg.partial_hdr_err_en = 1;
@@ -179,21 +181,24 @@ void Parser::output() {
         reg[gress].err_phv_cfg.src_ext_err_en = 1;
         reg[gress].err_phv_cfg.timeout_err_en = 1;
         // disable unused registers
-        reg[gress].cont_size_err_cnt.disable();
+        reg[gress].aram_mem_err_cnt.disable();
         reg[gress].csum_err_cnt.disable();
+        reg[gress].csum_mem_err_cnt.disable();
+        reg[gress].ctr_mem_err_cnt.disable();
         reg[gress].ctr_range_err_cnt.disable();
-        reg[gress].err_int_cfg.disable();
+        reg[gress].dst_cont_err_cnt.disable();
         reg[gress].fcs_err_cnt.disable();
         reg[gress].hdr_byte_cnt.disable();
         reg[gress].idle_cnt.disable();
         reg[gress].int_en.disable();
         reg[gress].int_status.disable();
         reg[gress].max_cycle.disable();
-        reg[gress].mem_err_cnt.disable();
         reg[gress].multi_wr_err_cnt.disable();
         reg[gress].no_tcam_match_err_cnt.disable();
         reg[gress].partial_hdr_err_cnt.disable();
+        reg[gress].phv_owner_err_cnt.disable();
         reg[gress].pri_start.disable();
+        reg[gress].src_ext_err_cnt.disable();
         reg[gress].timeout_err_cnt.disable(); }
     for (int i : phv_use[EGRESS]) {
         if (i >= 256)
@@ -771,9 +776,9 @@ void Parser::State::Match::Set::write_output_config(phv_output_map *map, unsigne
 }
 
 void Parser::State::write_config(Parser *pa) {
-    if (def) def->write_config(pa, this, 0);
-    for (auto i = match.rbegin(); i != match.rend(); i++)
+    for (auto i = match.begin(); i != match.end(); i++)
         i->write_config(pa, this, def);
+    if (def) def->write_config(pa, this, 0);
 }
 
 #define OUTPUT_MAP_INIT(MAP, ROW, SIZE, INDEX) \

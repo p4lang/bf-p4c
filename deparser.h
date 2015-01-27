@@ -2,12 +2,12 @@
 #define _deparser_h_
 
 #include "sections.h"
-#include "gen/memories.dprsr_mem_rspec.h"
-#include "gen/regs.dprsr_reg_rspec.h"
+#include "gen/regs.dprsr_hdr.h"
+#include "gen/regs.dprsr_inp.h"
 
 class Deparser : public Section {
-    memories_all_deparser_        mem[2];
-    regs_all_deparser_            reg[2];
+    regs_all_deparser_input_phase       inp_regs;
+    regs_all_deparser_header_phase      hdr_regs;
     Deparser();
     ~Deparser();
     void start(int lineno, VECTOR(value_t) args);
