@@ -19,8 +19,9 @@ class InputXbar {
     };
     Table	*table;
     bool        ternary;
-    std::map<int, std::vector<Input>>   groups;
-    std::map<int, std::map<int, HashCol>>   hash_groups;
+    std::map<unsigned, std::vector<Input>>              groups;
+    std::vector<std::map<unsigned, std::vector<Input>>::iterator>   group_order;
+    std::map<unsigned, std::map<int, HashCol>>          hash_groups;
     static bool conflict(std::vector<Input> &a, std::vector<Input> &b);
     static bool conflict(std::map<int, HashCol> &a, std::map<int, HashCol> &b);
     void add_use(unsigned &byte_use, std::vector<Input> &a);
@@ -31,18 +32,24 @@ public:
     void pass2(Alloc1Dbase<std::vector<InputXbar *>> &use, int size);
     void write_regs();
 
-    int width() const { return groups.size(); }
+    unsigned width() const { return groups.size(); }
+    unsigned group_for_word(unsigned w) {
+        assert(w < group_order.size());
+        return group_order[w]->first; }
     class iterator {
 	std::map<int, std::vector<Input>>::const_iterator	iter;
     public:
 	iterator(std::map<int, std::vector<Input>>::const_iterator it) : iter(it) {}
 	std::vector<Input>::const_iterator begin() const { return iter->second.begin(); }
 	std::vector<Input>::const_iterator end() const { return iter->second.end(); }
+        bool operator==(const iterator &a) const { return iter == a.iter; }
 	int operator *() const { return iter->first; }
 	iterator &operator++() { ++iter; return *this; }
     };
-    iterator begin() const { return iterator(groups.begin()); }
-    iterator end() const { return iterator(groups.end()); }
+    //iterator begin() const { return iterator(groups.begin()); }
+    //iterator end() const { return iterator(groups.end()); }
+
+    Input *find(Phv::Slice sl, int group);
 };
 
 #endif /* _input_xbar_h_ */

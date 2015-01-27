@@ -17,6 +17,7 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
                 error(kv.key[1].lineno, "group %d duplicated", kv.key[1].i);
                 continue; }
             auto &group = groups[kv.key[1].i];
+            group_order.push_back(groups.find(kv.key[1].i));
             if (kv.value.type == tVEC) {
                 for (auto &reg : kv.value.vec)
                     group.emplace_back(Phv::Ref(t->gress, reg));
@@ -234,12 +235,22 @@ void InputXbar::write_regs() {
             int c = col.first;
             HashCol &h = col.second;
             hash.hash_seed[grp][c/26] |= h.seed << (c%26);
-            /* FIXME -- only write the relevant parts of the matrix */
             for (int word = 0; word < 8; word++) {
+                unsigned data = h.data.getrange(word*16, 16);
+                unsigned valid = (h.valid >> word*2) & 3;
+                if (data == 0 && valid == 0) continue;
                 auto &w = hash.galois_field_matrix[grp*8 + word][c];
-                w.byte0 = h.data.getrange(word*16, 8);
-                w.byte1 = h.data.getrange(word*16 + 8, 8);
-                w.valid0 = (h.valid >> word*2) & 1;
-                w.valid1 = (h.valid >> (word*2 + 1)) & 1; } } }
+                w.byte0 = data & 0xff;
+                w.byte1 = (data >> 8) & 0xff;
+                w.valid0 = valid & 1;
+                w.valid1 = (valid >> 1) & 1; } } }
 }
 
+InputXbar::Input *InputXbar::find(Phv::Slice sl, int grp) {
+    for (auto &in : groups[grp]) {
+        if (in.what->reg.index != sl.reg.index) continue;
+        if (in.what->lo > sl.lo) continue;
+        if (in.what->hi < sl.hi) continue;
+        return &in; }
+    return 0;
+}

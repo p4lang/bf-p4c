@@ -17,7 +17,7 @@ class GatewayTable;
 class Table {
 protected:
     Table(int line, std::string &&n, gress_t gr, Stage *s, int lid = -1)
-        : name_(n), stage(s), match(0), gress(gr), lineno(line),
+        : name_(n), stage(s), match_table(0), gress(gr), lineno(line),
           logical_id(lid), gateway(0), input_xbar(0), format(0), actions(0) {
             assert(all.find(name_) == all.end());
             all.emplace(name_, this); }
@@ -70,8 +70,14 @@ public:
         Ref() : lineno(-1) {}
         Ref(const Ref &) = default;
         Ref(Ref &&) = default;
-        Ref &operator=(const Ref &a) & { name = a.name; return *this; }
-        Ref &operator=(Ref &&a) & { name = a.name; return *this; }
+        Ref &operator=(const Ref &a) & {
+            name = a.name;
+            if (lineno < 0) lineno = a.lineno;
+            return *this; }
+        Ref &operator=(Ref &&a) & {
+            name = a.name;
+            if (lineno < 0) lineno = a.lineno;
+            return *this; }
         Ref &operator=(const value_t &a) & {
             assert(a.type == tSTR);
             name = a.s;
@@ -99,23 +105,25 @@ public:
             unsigned    bit, size, group, flags;
             int         action_xbar;
             int         action_xbar_bit;
+            Field       **by_group;
             Field() : bit(0), size(0), group(0), flags(0),
-                action_xbar(-1), action_xbar_bit(0) {}
+                action_xbar(-1), action_xbar_bit(0), by_group(0) {}
             bool operator==(const Field &a) const { return size == a.size; }
             enum flags_t { USED_IMMED=1 };
         };
         Format(VECTOR(pair_t) &);
+        ~Format();
         void setup_immed(Table *tbl);
     private:
         std::vector<std::map<std::string, Field>>               fmt;
         std::map<int, std::map<std::string, Field>::iterator>   byindex;
-        std::string                                             first_immed_field;
     public:
         int                                                     lineno;
-        unsigned                                                size, immed_bit, immed_size;
+        unsigned                                                size, immed_size;
+        Field                                                   *immed;
         unsigned                                                log2size; /* ceil(log2(size)) */
 
-        int groups() const { return fmt.size(); }
+        unsigned groups() const { return fmt.size(); }
         Field *field(const std::string &n, int group = 0) {
             assert(group >= 0 && (size_t)group < fmt.size());
             auto it = fmt[group].find(n);
@@ -161,7 +169,7 @@ public:
 public:
     std::string                 name_;
     Stage                       *stage;
-    MatchTable                  *match;
+    MatchTable                  *match_table;
     gress_t                     gress;
     int                         lineno;
     int                         logical_id;

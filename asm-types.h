@@ -10,11 +10,11 @@
 enum gress_t { INGRESS, EGRESS };
 
 struct match_t {
-    unsigned word0, word1;
+    unsigned long       word0, word1;
 #ifdef __cplusplus
     operator bool() { return (word0 | word1) != 0; }
     bool operator==(const match_t &a) const { return word0 == a.word0 && word1 == a.word1; }
-    bool matches(unsigned v) const {
+    bool matches(unsigned long v) const {
         return (v | word1) == word1 && ((~v & word1) | word0) == word0; }
     bool matches(const match_t &v) const { assert(0); }
 #endif /* __cplusplus */

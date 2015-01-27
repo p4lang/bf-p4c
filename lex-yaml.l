@@ -184,7 +184,7 @@ int parse_match(YYSTYPE *val, const char *s, int bits_per_digit) {
         if (*s == '_') continue;
         val->match.word0 <<= bits_per_digit;
         val->match.word1 <<= bits_per_digit;
-        if ((val->match.word0 | val->match.word1) > INT_MAX)
+        if ((val->match.word0 | val->match.word1) > LONG_MAX)
             error(lineno, "integer overflow in match constant");
         switch (*s) {
         case '0': case '1': case '2': case '3': case '4':

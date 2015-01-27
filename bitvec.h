@@ -90,7 +90,7 @@ public:
             ptr[i] |= ~(uintptr_t)0 << (idx%bits_per_unit);
             idx += sz;
             while (++i < idx/bits_per_unit) {
-                ptr[i] = ~0; }
+                ptr[i] = ~(uintptr_t)0; }
             ptr[i] |= (((uintptr_t)1 << (idx%bits_per_unit)) - 1); } }
     void setraw(uintptr_t raw) {
         if (size == 1)
@@ -115,6 +115,24 @@ public:
 	else
 	    data &= ~((uintptr_t)1 << idx);
 	return false; }
+    void clrrange(size_t idx, size_t sz) {
+	if (idx >= size * bits_per_unit) return;
+        if (size == 1) {
+            if (idx + sz < bits_per_unit)
+                data &= ~(~(~(uintptr_t)1 << (sz-1)) << idx);
+            else
+                data &= ~(~(uintptr_t)0 << idx);
+        } else if (idx/bits_per_unit == (idx+sz-1)/bits_per_unit) {
+            ptr[idx/bits_per_unit] &=
+                ~(~(~(uintptr_t)1 << (sz-1)) << (idx%bits_per_unit));
+        } else {
+            size_t i = idx/bits_per_unit;
+            ptr[i] &= ~(~(uintptr_t)0 << (idx%bits_per_unit));
+            idx += sz;
+            while (++i < idx/bits_per_unit && i < size) {
+                ptr[i] = 0; }
+            if (i < size)
+                ptr[i] &= ~(((uintptr_t)1 << (idx%bits_per_unit)) - 1); } }
     bool getbit(size_t idx) const {
 	if (idx >= size * bits_per_unit) return false;
 	if (size > 1)
