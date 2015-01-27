@@ -587,7 +587,8 @@ void MatchTable::write_regs(int type, Table *result) {
         int bus = row.row*2 | row.bus;
         assert(bus >= 0 && bus < 15);
 	merge.mau_immediate_data_mask[type][bus] = (1UL << result->format->immed_size)-1; }
-    result->action_bus->write_immed_regs(result);
+    if (result->action_bus)
+        result->action_bus->write_immed_regs(result);
 
     input_xbar->write_regs();
 }
@@ -763,7 +764,8 @@ void ExactMatchTable::pass1() {
     alloc_busses(stage->sram_match_bus_use);
     check_next();
     link_action(action);
-    action_bus->pass1(this);
+    if (action_bus)
+        action_bus->pass1(this);
     if (actions) {
         assert(action_args.size() == 0);
         if (auto *sel = lookup_field("action"))
@@ -808,8 +810,9 @@ void ExactMatchTable::pass1() {
 
 void ExactMatchTable::pass2() {
     input_xbar->pass2(stage->exact_ixbar, 128);
-    action_bus->pass2(this);
-    action_bus->set_immed_offsets(this);
+    if (action_bus) {
+        action_bus->pass2(this);
+        action_bus->set_immed_offsets(this); }
     if (actions) actions->pass2(this);
     if (gateway) gateway->pass2();
 }
@@ -1259,7 +1262,7 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
 void TernaryIndirectTable::pass1() {
     alloc_busses(stage->tcam_indirect_bus_use);
     check_next();
-    action_bus->pass1(this);
+    if (action_bus) action_bus->pass1(this);
     if (actions) {
         assert(action_args.size() == 0);
         if (auto *sel = lookup_field("action"))
@@ -1272,8 +1275,9 @@ void TernaryIndirectTable::pass1() {
 void TernaryIndirectTable::pass2() {
     if (!match_table)
         error(lineno, "No match table for ternary indirect table %s", name());
-    action_bus->pass2(this);
-    action_bus->set_immed_offsets(this);
+    if (action_bus) {
+        action_bus->pass2(this);
+        action_bus->set_immed_offsets(this); }
     if (actions) actions->pass2(this);
 }
 void TernaryIndirectTable::write_regs() {
