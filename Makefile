@@ -2,8 +2,7 @@ CC = g++
 CPPFLAGS = -std=gnu++11 -O0 -Wall -g -MMD -I.
 YFLAGS = -v
 
-GEN_OBJS := gen/memories.dprsr_mem_rspec.o \
-	    gen/memories.prsr_mem_main_rspec.o \
+GEN_OBJS := gen/memories.prsr_mem_main_rspec.o \
 	    gen/regs.dprsr_hdr.o \
 	    gen/regs.dprsr_inp.o \
 	    gen/regs.mau_addrmap.o \
@@ -26,13 +25,15 @@ $(GEN_OBJS) $(TFAS_OBJS): | $(GEN_OBJS:%.o=%.h) gen/uptr_sizes.h
 $(GEN_OBJS): gen/%.o: gen/%.cpp gen/%.h
 gen/memories.prsr_mem_main_rspec.%: JSON_NAME=memories.all.parser.%s
 gen/regs.dprsr_hdr.%: JSON_NAME=regs.all.deparser.header_phase
+gen/regs.dprsr_hdr.%: JSON_GLOBALS="fde_phv"
 gen/regs.dprsr_inp.%: JSON_NAME=regs.all.deparser.input_phase
+gen/regs.dprsr_inp.%: JSON_GLOBALS="fde_pov"
 gen/regs.mau_addrmap.%: JSON_NAME=regs.match_action_stage.%02x
 gen/regs.prsr_reg_main_rspec.%: JSON_NAME=regs.all.parser.%s
 gen/regs.prsr_reg_merge_rspec.%: JSON_NAME=regs.all.parse_merge
 gen/%.h: templates/%.size.json json2cpp
 	@mkdir -p gen
-	./json2cpp +ehD -run '$(JSON_NAME)' $< >$@
+	./json2cpp +ehD $(JSON_GLOBALS:%=-g %) -run '$(JSON_NAME)' $< >$@
 
 gen/disas.%.h: templates/%.size.json json2cpp
 	@mkdir -p gen
@@ -40,7 +41,7 @@ gen/disas.%.h: templates/%.size.json json2cpp
 
 gen/%.cpp: templates/%.size.json json2cpp
 	@mkdir -p gen
-	./json2cpp +ehDDi2 -run '$(JSON_NAME)' -I $*.h $< >$@
+	./json2cpp +ehDDi2 $(JSON_GLOBALS:%=-g %) -run '$(JSON_NAME)' -I $*.h $< >$@
 
 gen/uptr_sizes.h: mksizes
 	@mkdir -p gen

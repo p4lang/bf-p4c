@@ -412,6 +412,7 @@ bool gen_fieldname = true;
 bool gen_unpack = true;
 bool gen_unread = true;
 bool checked_array = true;
+std::map<std::string, json::map *> global_types;
 
 static void gen_type(std::ostream &out, const std::string &parent,
                      const char *name, json::obj *t, int indent)
@@ -461,20 +462,23 @@ static void gen_type(std::ostream &out, const std::string &parent,
             json::obj *type = get_indexes(a.second.get(), indexes);
             type = singleton_obj(type, name);
             bool notclass = !dynamic_cast<json::map *>(type);
+            bool isglobal = global_types.count(*name) > 0;
             if (gen_definitions != DEFN_ONLY) {
                 out << std::setw(2*indent) << "";
                 if (checked_array && notclass && !indexes.empty())
                     for (int idx : indexes)
                         out << "checked_array<" << idx << ", "; }
-            gen_type(out, classname, ("_" + *name).c_str(), type, indent);
+            if (!isglobal)
+                gen_type(out, classname, ("_" + *name).c_str(), type, indent);
             if (gen_definitions != DEFN_ONLY) {
                 if (checked_array && !indexes.empty()) {
                     if (!notclass) {
-                        out << ";" << std::endl;
-                        out << std::setw(2*indent) << "";
+                        if (!isglobal) {
+                            out << ";" << std::endl;
+                            out << std::setw(2*indent) << ""; }
                         for (int idx : indexes)
                             out << "checked_array<" << idx << ", ";
-                        out << '_' << *name; }
+                        out << (isglobal ? "::" : "_") << *name; }
                     for (size_t i = 0; i < indexes.size(); i++) out << '>';
                     out << ' ' << *name << ";" << std::endl;
                 } else {
@@ -506,6 +510,32 @@ static void gen_type(std::ostream &out, const std::string &parent,
 	assert(0);
 }
 
+static int gen_global_types(std::ostream &out, json::obj *t)
+{
+    int rv = 0;
+    if (json::map *m = dynamic_cast<json::map *>(t)) {
+        for (auto &a : *m) {
+            std::vector<int> indexes;
+            json::string *name = dynamic_cast<json::string *>(a.first);
+            if ((*name)[0] == '_') continue;
+            json::obj *type = get_indexes(a.second.get(), indexes);
+            type = singleton_obj(type, name);
+            if (json::map *cl = dynamic_cast<json::map *>(type)) {
+                rv |= gen_global_types(out, type);
+                auto it = global_types.find(*name);
+                if (it == global_types.end())
+                    continue;
+                if (it->second) {
+                    if (*it->second != *cl) {
+                        std::cerr << "Inconsitent definition of type " << name << std::endl;
+                        rv = -1; }
+                } else {
+                    it->second = cl;
+                    gen_type(out, "", name->c_str(), cl, 0);
+                    out << ";" << std::endl; } } } }
+    return rv;
+}
+
 int main(int ac, char **av) {
     bool gen_hdrs = true;
     int test = 0;
@@ -523,6 +553,7 @@ int main(int ac, char **av) {
                             mod_definitions[flag][gen_definitions];
                 case 'e': gen_emit = flag; break;
                 case 'f': gen_fieldname = flag; break;
+                case 'g': global_types[av[++i]] = 0; break;
                 case 'h': gen_hdrs = flag; break;
                 case 'I': includes.push_back(av[++i]); break;
                 case 'n': name = av[++i]; break;
@@ -540,7 +571,7 @@ int main(int ac, char **av) {
                 default:
                     std::cerr << "Unknown option -" << arg[-1] << std::endl;
                     std::cerr << "usage: " << av[0]
-                              << " -/+dDefhi?I:n:rut?uxX files"
+                              << " -/+dDefg:hi?I:n:rut?uxX files"
                               << std::endl;
                     exit(1); }
             continue; }
@@ -572,6 +603,8 @@ int main(int ac, char **av) {
             std::cout << "#include \"ubits.h\"" << std::endl;
             std::cout << std::endl;
             gen_hdrs = false; }
+        if (!global_types.empty() && gen_global_types(std::cout, data) < 0)
+            exit(1);
 	gen_type(std::cout, "", name, data, 0);
         if (test && !declare) declare = "table";
         if (declare) std::cout << " " << declare;
@@ -605,6 +638,7 @@ int main(int ac, char **av) {
         default:
             std::cerr << "Unknown test -t" << (char)test << std::endl;
             break; }
+        global_types.clear();
         name = declare = 0; }
     return error;
 }

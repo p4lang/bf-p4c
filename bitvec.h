@@ -152,11 +152,6 @@ public:
 	    return rv & ~(~(uintptr_t)1 << (sz-1)); 
         } else
 	    return (data >> idx) & ~(~(uintptr_t)1 << (sz-1)); }
-    operator bool() {
-        if (size == 1) return data != 0;
-        for (size_t i = 0; i < size; i++)
-            if (ptr[i]) return true;
-        return false; }
     bitref operator[](int idx) { return bitref(*this, idx); }
     bool operator[](int idx) const { return getbit(idx); }
     bitref min() { return ++bitref(*this, -1); }
@@ -169,6 +164,7 @@ public:
 		if (ptr[i] != 0) return false;
 	    return true;
 	} else return data == 0; }
+    explicit operator bool() const { return !empty(); }
     bool operator&=(const bitvec &a) {
 	bool rv = false;
 	if (size > 1) {
@@ -192,7 +188,10 @@ public:
 	    data &= a.data; }
 	return rv; }
     bitvec operator&(const bitvec &a) const {
-	bitvec rv(*this); rv &= a; return rv; }
+        if (size <= a.size) {
+            bitvec rv(*this); rv &= a; return rv;
+        } else {
+            bitvec rv(a); rv &= *this; return rv; } }
     bool operator|=(const bitvec &a) {
 	bool rv = false;
 	if (size < a.size) expand(a.size);
@@ -241,6 +240,27 @@ public:
 	return rv; }
     bitvec operator-(const bitvec &a) const {
 	bitvec rv(*this); rv -= a; return rv; }
+    bool operator==(const bitvec &a) const {
+        if (size > 1) {
+            if (a.size > 1) {
+                size_t i;
+                for (i = 0; i < size && i < a.size; i++)
+                    if (ptr[i] != a.ptr[i]) return false;
+                for (; i < size; i++)
+                    if (ptr[i]) return false;
+                for (; i < a.size; i++)
+                    if (a.ptr[i]) return false;
+            } else {
+                if (ptr[0] != a.data) return false;
+                for (size_t i = 1; i < size; i++)
+                    if (ptr[i]) return false; }
+        } else if (a.size > 0) {
+            if (data != a.ptr[0]) return false;
+            for (size_t i = 1; i < a.size; i++)
+                if (a.ptr[i]) return false;
+        } else return data != a.data;
+        return true; }
+    bool operator!=(const bitvec &a) const { return !(*this == a); }
     bool intersects(const bitvec &a) const {
         if (size > 1) {
             if (a.size > 1) {

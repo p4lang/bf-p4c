@@ -86,6 +86,7 @@ public:
         void dbprint(std::ostream &out) const;
     };
     static const bitvec &use(gress_t gress) { return phv.phv_use[gress]; }
+    static const bitvec tagalong_groups[8];
 };
 
 #endif /* _phv_h_ */

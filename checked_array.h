@@ -11,8 +11,18 @@ template<size_t S, typename T> class checked_array;
 template<size_t S, typename T>
 std::ostream &operator<<(std::ostream &out, checked_array<S, T> *arr);
 
+template<typename T>
+class checked_array_base {
+public:
+    virtual T& operator[](size_t) = 0;
+    virtual const T& operator[](size_t) const = 0;
+    virtual bool modified() const = 0;
+    virtual bool disabled() const = 0;
+    virtual void disable() = 0;
+};
+
 template<size_t S, typename T>
-class checked_array {
+class checked_array : public checked_array_base<T> {
     bool disabled_;
     T data[S];
 public:
