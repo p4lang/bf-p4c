@@ -6,6 +6,7 @@
 #include "bitvec.h"
 #include "map.h"
 #include <string>
+#include "phv.h"
 #include <vector>
 
 class Stage;
@@ -196,5 +197,80 @@ public:
     virtual void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn)
         { if (format) format->apply_to_field(n, fn); }
 };
+
+class MatchTable : public Table {
+protected:
+    MatchTable(int l, std::string &&n, gress_t g, Stage *s, int lid)
+        : Table(l, std::move(n), g, s, lid) {}
+    void link_action(Table::Ref &ref);
+    void write_regs(int type, Table *result);
+};
+
+#define DECLARE_TABLE_TYPE(TYPE, PARENT, NAME, ...)                     \
+class TYPE : public PARENT {                                            \
+    static struct Type : public Table::Type {                           \
+        Type() : Table::Type(NAME) {}                                   \
+        TYPE *create(int lineno, const char *name, gress_t gress,       \
+                      Stage *stage, int lid, VECTOR(pair_t) &data);     \
+    } table_type;                                                       \
+    friend struct Type;                                                 \
+    TYPE(int l, const char *n, gress_t g, Stage *s, int lid)            \
+        : PARENT(l, n, g, s, lid) {}                                    \
+    void setup(VECTOR(pair_t) &data);                                   \
+public:                                                                 \
+    void pass1();                                                       \
+    void pass2();                                                       \
+    void write_regs();                                                  \
+private:                                                                \
+    __VA_ARGS__                                                         \
+};
+#define DEFINE_TABLE_TYPE(TYPE)                                         \
+TYPE::Type TYPE::table_type;                                            \
+TYPE *TYPE::Type::create(int lineno, const char *name, gress_t gress,   \
+                          Stage *stage, int lid, VECTOR(pair_t) &data) {\
+    TYPE *rv = new TYPE(lineno, name, gress, stage, lid);               \
+    rv->setup(data);                                                    \
+    return rv;                                                          \
+}
+
+DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
+    struct Way {
+        int        lineno;
+        int        group, subgroup, mask;
+    };
+    std::vector<Way>            ways;
+    std::vector<Phv::Ref>       match;
+)
+DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
+public:
+    int tcam_id;
+    Table::Ref indirect;
+    Format::Field *lookup_field(const std::string &name, const std::string &action) {
+        assert(!format);
+        return indirect ? indirect->lookup_field(name, action) : 0; }
+)
+DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",)
+DECLARE_TABLE_TYPE(ActionTable, Table, "action",
+    std::map<std::string, Format *>     action_formats;
+    Format::Field *lookup_field(const std::string &name, const std::string &action);
+    void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn);
+)
+DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
+    uint64_t                    payload;
+    int                         gw_unit;
+    std::vector<Phv::Ref>       match, xor_match;
+    struct Match {
+        match_t                 val;
+        bool                    run_table;
+        Ref                     next;
+        Match() : val{0,0}, run_table(false) {}
+        Match(match_t &v, value_t &data);
+    }                           miss;
+    std::vector<Match>          table;
+public:
+    static GatewayTable *create(int lineno, const std::string &name, gress_t gress,
+                                Stage *stage, int lid, VECTOR(pair_t) &data)
+        { return table_type.create(lineno, name.c_str(), gress, stage, lid, data); }
+)
 
 #endif /* _tables_h_ */
