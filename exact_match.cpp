@@ -383,3 +383,6 @@ void ExactMatchTable::write_regs() {
     if (actions) actions->write_regs(this);
     if (gateway) gateway->write_regs();
 }
+
+void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
+}

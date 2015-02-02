@@ -7,6 +7,7 @@
 #include <string>
 #include <typeindex>
 #include <vector>
+#include <assert.h>
 
 namespace json {
 
@@ -161,6 +162,47 @@ public:
 	auto rv = find(&tmp);
 	if (rv != end()) return rv->second.get();
 	return 0; }
+private:
+    class element_ref {
+        map                     &self;
+        std::unique_ptr<obj>    key;
+        map_base::iterator      iter;
+    public:
+        element_ref(map &s, const char *k) : self(s) {
+            string tmp(k);
+            iter = self.find(&tmp);
+            if (iter == self.end())
+                key.reset(new string(std::move(tmp))); }
+        element_ref(map &s, long k) : self(s) {
+            number tmp(k);
+            iter = self.find(&tmp);
+            if (iter == self.end())
+                key.reset(new number(std::move(tmp))); }
+        const char *operator=(const char *v) {
+            if (key)
+                iter = self.emplace(key.release(), std::unique_ptr<obj>(new string(v))).first;
+            else { assert(iter != self.end());
+                iter->second.reset(new string(v)); }
+            return v; }
+        long operator=(long v) {
+            if (key)
+                iter = self.emplace(key.release(), std::unique_ptr<obj>(new number(v))).first;
+            else { assert(iter != self.end());
+                iter->second.reset(new number(v)); }
+            return v; }
+        const std::unique_ptr<obj> &operator=(std::unique_ptr<obj> &&v) {
+            if (key) iter = self.emplace(key.release(), std::move(v)).first;
+            else { assert(iter != self.end());
+                iter->second = std::move(v); }
+            return iter->second; }
+        explicit operator bool() const { return !key; }
+        obj *get() const { return key ? 0 : iter->second.get(); }
+        obj *operator->() const { return key ? 0 : iter->second.get(); }
+    };
+    friend std::ostream &operator<<(std::ostream &out, const element_ref &el);
+public:
+    element_ref operator[](const char *str) { return element_ref(*this, str); }
+    element_ref operator[](long n) { return element_ref(*this, n); }
 };
 
 std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json);
@@ -174,7 +216,11 @@ inline std::istream &operator>>(std::istream &in, obj *&json) {
 inline std::ostream &operator<<(std::ostream &out, const obj *json) {
     json->print_on(out);
     return out; }
-inline std::ostream &operator<<(std::ostream &out, const std::unique_ptr<obj> &json) { return out << json.get(); }
+inline std::ostream &operator<<(std::ostream &out, const std::unique_ptr<obj> &json) {
+    return out << json.get(); }
+inline std::ostream &operator<<(std::ostream &out, const map::element_ref &el) {
+    el->print_on(out);
+    return out; }
 
 }
 #endif /* _json_h_ */

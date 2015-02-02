@@ -173,3 +173,6 @@ void GatewayTable::write_regs() {
         }
     }
 }
+
+void GatewayTable::gen_tbl_cfg(json::vector &out) {
+}

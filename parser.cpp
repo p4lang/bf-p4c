@@ -1,7 +1,6 @@
 #include "parser.h"
 #include "phv.h"
 #include "range.h"
-#include <fstream>
 
 Parser Parser::singleton_object;
 
@@ -211,16 +210,11 @@ void Parser::output() {
     for (int i = 0; i < 112; i++)
         if (!phv_slice_write[256+i])
             reg_merge.no_multi_wr.t_nmw[i] = 1;
-    std::ofstream mem_in("memories.all.parser.ingress.cfg.json");
-    mem[INGRESS].emit_json(mem_in, "ingress");
-    std::ofstream mem_eg("memories.all.parser.egress.cfg.json");
-    mem[EGRESS].emit_json(mem_eg, "egress");
-    std::ofstream reg_in("regs.all.parser.ingress.cfg.json");
-    reg[INGRESS].emit_json(reg_in, "ingress");
-    std::ofstream reg_eg("regs.all.parser.egress.cfg.json");
-    reg[EGRESS].emit_json(reg_eg, "egress");
-    std::ofstream reg_mg("regs.all.parse_merge.cfg.json");
-    reg_merge.emit_json(reg_mg);
+    mem[INGRESS].emit_json(*open_output("memories.all.parser.ingress.cfg.json"), "ingress");
+    mem[EGRESS].emit_json(*open_output("memories.all.parser.egress.cfg.json"), "egress");
+    reg[INGRESS].emit_json(*open_output("regs.all.parser.ingress.cfg.json"), "ingress");
+    reg[EGRESS].emit_json(*open_output("regs.all.parser.egress.cfg.json"), "egress");
+    reg_merge.emit_json(*open_output("regs.all.parse_merge.cfg.json"));
 }
 
 Parser::State::Ref &Parser::State::Ref::operator=(const value_t &v) {

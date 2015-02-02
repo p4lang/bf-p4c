@@ -1,7 +1,6 @@
 #include "deparser.h"
 #include "phv.h"
 #include "range.h"
-#include <fstream>
 
 Deparser Deparser::singleton_object;
 
@@ -156,8 +155,6 @@ void Deparser::output() {
                 error(lineno[INGRESS], "tagalong group %d used in both ingress and "
                       "egress deparser", i); } } }
 
-    std::ofstream reg_inp("regs.all.deparser.input_phase.cfg.json");
-    inp_regs.emit_json(reg_inp);
-    std::ofstream reg_hdr("regs.all.deparser.header_phase.cfg.json");
-    hdr_regs.emit_json(reg_hdr);
+    inp_regs.emit_json(*open_output("regs.all.deparser.input_phase.cfg.json"));
+    hdr_regs.emit_json(*open_output("regs.all.deparser.header_phase.cfg.json"));
 }

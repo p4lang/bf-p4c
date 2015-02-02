@@ -6,6 +6,8 @@ extern config_version_t config_version;
 
 #include "stdarg.h"
 #include "stdio.h"
+#include <iostream>
+#include <memory>
 
 void asm_parse_file(const char *name, FILE *in);
 
@@ -24,6 +26,8 @@ inline void warning(int lineno, const char *fmt, ...) {
     va_start(args, fmt);
     warning(lineno, fmt, args);
     va_end(args); }
+
+extern std::unique_ptr<std::ostream> open_output(const char *, ...);
 
 class VersionIter {
     unsigned    left, bit;

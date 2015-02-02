@@ -256,3 +256,6 @@ void ActionTable::write_regs() {
     if (actions) actions->write_regs(this);
 }
 
+void ActionTable::gen_tbl_cfg(json::vector &out) {
+}
+

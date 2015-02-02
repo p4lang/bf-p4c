@@ -4,6 +4,7 @@
 #include "alloc.h"
 #include "asm-types.h"
 #include "bitvec.h"
+#include "json.h"
 #include "map.h"
 #include <string>
 #include "phv.h"
@@ -39,6 +40,7 @@ public:
     virtual void pass1() = 0;
     virtual void pass2() = 0;
     virtual void write_regs() = 0;
+    virtual void gen_tbl_cfg(json::vector &out) = 0;
 
     struct Layout {
         /* Holds the layout of which rams/tcams/busses are used by the table
@@ -221,6 +223,7 @@ public:                                                                 \
     void pass1();                                                       \
     void pass2();                                                       \
     void write_regs();                                                  \
+    void gen_tbl_cfg(json::vector &out);                                \
 private:                                                                \
     __VA_ARGS__                                                         \
 };

@@ -146,6 +146,9 @@ void TernaryMatchTable::write_regs() {
     if (gateway) gateway->write_regs();
 }
 
+void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
+}
+
 void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
     match_table = 0;
     setup_layout(get(data, "row"), get(data, "column"), get(data, "bus"));
@@ -293,4 +296,7 @@ void TernaryIndirectTable::write_regs() {
             merge.mau_actiondata_adr_tcam_shiftcount[bus] = 73; }
     }
     if (actions) actions->write_regs(this);
+}
+
+void TernaryIndirectTable::gen_tbl_cfg(json::vector &out) {
 }

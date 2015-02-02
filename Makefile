@@ -13,7 +13,7 @@ TFAS_OBJS:= action_table.o asm-parse.o asm-types.o deparser.o exact_match.o \
 	    tables.o ternary_match.o tfas.o ubits.o vector.o
 TEST_SRCS:= $(wildcard test_*.cpp)
 all: $(GEN_OBJS:%.o=%.h) gen/uptr_sizes.h tfas
-tfas: $(TFAS_OBJS) $(GEN_OBJS) $(TEST_SRCS:%.cpp=%.o)
+tfas: $(TFAS_OBJS) json.o $(GEN_OBJS) $(TEST_SRCS:%.cpp=%.o)
 
 json2cpp: json.o
 hashdump: json.o ubits.o

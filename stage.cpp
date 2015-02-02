@@ -1,7 +1,6 @@
 #include "sections.h"
 #include "stage.h"
 #include "phv.h"
-#include <fstream>
 #include "range.h"
 
 unsigned char Stage::action_bus_slot_map[ACTION_DATA_BUS_BYTES];
@@ -82,19 +81,19 @@ void AsmStage::process() {
 }
 
 void AsmStage::output() {
+    json::vector        tbl_cfg;
     for (int i = 0; i < NUM_MAU_STAGES; i++) {
         if  (stage[i].tables.empty()) continue;
         for (auto table : stage[i].tables)
             table->pass2();
         if (error_count > 0) return;
-        for (auto table : stage[i].tables)
+        for (auto table : stage[i].tables) {
             table->write_regs();
+            table->gen_tbl_cfg(tbl_cfg); }
         stage[i].write_regs();
-        char buffer[64];
-        sprintf(buffer, "regs.match_action_stage.%02x.cfg.json", i);
-        std::ofstream out(buffer);
-        stage[i].regs.emit_json(out, i);
+        stage[i].regs.emit_json(*open_output("regs.match_action_stage.%02x.cfg.json") , i);
     }
+    *open_output("tbl-cfg") << &tbl_cfg << std::endl;
 }
 
 /* FIXME -- HW specs 11 for min delay, compiler uses 10 */
