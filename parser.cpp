@@ -73,7 +73,7 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
             match_t stateno = { 0, 0 };
             if (kv.key.type == tCMD) {
                 name = kv.key[0].s;
-                if (CHECKTYPE2(kv.key[1], tINT, tMATCH)) continue;
+                if (!CHECKTYPE2(kv.key[1], tINT, tMATCH)) continue;
                 if (kv.key[1].type == tINT) {
                     if (kv.key[1].i > PARSER_STATE_MASK)
                         error(kv.key.lineno, "Explicit state out of range");

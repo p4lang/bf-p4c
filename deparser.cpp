@@ -128,6 +128,8 @@ void dump_field_dictionary(checked_array_base<fde_pov> &fde_control,
 }
 
 void Deparser::output() {
+    if (dictionary[INGRESS].empty() && dictionary[EGRESS].empty())
+        return;
     inp_regs.icr.inp_cfg.disable();
     inp_regs.icr.inp_int_stat.disable();
     inp_regs.icr.inp_int_inj.disable();
