@@ -68,6 +68,13 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
                 } else
                     parser_error[gress] = Phv::Ref(gress, kv.value);
                 continue; }
+            if (kv.key == "multi_write") {
+                if (kv.value.type == tVEC)
+                    for (auto &el : kv.value.vec)
+                        multi_write.emplace_back(gress, el);
+                else
+                    multi_write.emplace_back(gress, kv.value);
+                continue; }
             if (!CHECKTYPE2M(kv.key, tSTR, tCMD, "state declaration")) continue;
             const char *name = kv.key.s;
             match_t stateno = { 0, 0 };
@@ -144,6 +151,9 @@ void Parser::process() {
         tmp &= phv_use[EGRESS];
         for (int reg : tmp)
             error(lineno[0], "Phv register R%d used by both ingress and egress", reg); }
+    for (auto &reg : multi_write)
+        if (reg.check())
+            phv_allow_multi_write[reg->reg.index] = 1;
 }
 
 void Parser::output() {
@@ -205,10 +215,10 @@ void Parser::output() {
         else
             reg_merge.phv_owner.owner[i] = 1; }
     for (int i = 0; i < 224; i++)
-        if (!phv_slice_write[i])
+        if (!phv_allow_multi_write[i])
             reg_merge.no_multi_wr.nmw[i] = 1;
     for (int i = 0; i < 112; i++)
-        if (!phv_slice_write[256+i])
+        if (!phv_allow_multi_write[256+i])
             reg_merge.no_multi_wr.t_nmw[i] = 1;
     mem[INGRESS].emit_json(*open_output("memories.all.parser.ingress.cfg.json"), "ingress");
     mem[EGRESS].emit_json(*open_output("memories.all.parser.egress.cfg.json"), "egress");
@@ -507,7 +517,7 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
         if (!s.where.check()) continue;
         pa->phv_use[state->gress][s.where->reg.index] = 1;
         if (s.where->lo || s.where->hi != s.where->reg.size-1) {
-            pa->phv_slice_write[s.where->reg.index] = 1;
+            pa->phv_allow_multi_write[s.where->reg.index] = 1;
             if (s.what != ~(~1 << (s.where->hi - s.where->lo)))
                 warning(s.where.lineno, "Not writing all bits of phv slice"); }
     }
@@ -545,6 +555,10 @@ void Parser::State::pass2(Parser *pa) {
             succ->pred.insert(this);
 }
 
+/* FIXME -- hack to swap allocation of 8-bit lookups slots to match compiler
+ * should be a config param somehow?  Or just not do it at all */
+int lookup_swap8bit = 1;
+
 void Parser::State::write_lookup_config(Parser *pa, State *state, int row,
                                         const std::vector<State *> &prev)
 {
@@ -562,8 +576,8 @@ void Parser::State::write_lookup_config(Parser *pa, State *state, int row,
                           p->name.c_str(), state->name.c_str()); } }
         if (set) {
             if (i) {
-                ea_row.lookup_offset_8[i-2] = key.data[i].byte;
-                ea_row.ld_lookup_8[i-2] = 1;
+                ea_row.lookup_offset_8[(i-2)^lookup_swap8bit] = key.data[i].byte;
+                ea_row.ld_lookup_8[(i-2)^lookup_swap8bit] = 1;
             } else {
                 ea_row.lookup_offset_16 = key.data[i].byte;
                 ea_row.ld_lookup_16 = 1; } } }
@@ -599,10 +613,10 @@ void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
     lookup.word1 |= dont_care;
     word0.lookup_16 = (lookup.word0 >> 16) & 0xffff;
     word1.lookup_16 = (lookup.word1 >> 16) & 0xffff;
-    word0.lookup_8[0] = (lookup.word0 >> 8) & 0xff;
-    word1.lookup_8[0] = (lookup.word1 >> 8) & 0xff;
-    word0.lookup_8[1] = lookup.word0 & 0xff;
-    word1.lookup_8[1] = lookup.word1 & 0xff;
+    word0.lookup_8[0^lookup_swap8bit] = (lookup.word0 >> 8) & 0xff;
+    word1.lookup_8[0^lookup_swap8bit] = (lookup.word1 >> 8) & 0xff;
+    word0.lookup_8[1^lookup_swap8bit] = lookup.word0 & 0xff;
+    word1.lookup_8[1^lookup_swap8bit] = lookup.word1 & 0xff;
     word0.curr_state = state->stateno.word0;
     word1.curr_state = state->stateno.word1;
     if (state->key.ctr_zero >= 0) {

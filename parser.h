@@ -119,7 +119,8 @@ class Parser : public Section {
     State::Ref                          start_state[2][4];
     int                                 tcam_row_use[2];
     Phv::Ref                            parser_error[2];
-    bitvec                              phv_use[2], phv_slice_write;
+    std::vector<Phv::Ref>               multi_write;
+    bitvec                              phv_use[2], phv_allow_multi_write;
 
 
 
