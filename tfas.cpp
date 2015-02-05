@@ -150,3 +150,14 @@ int main(int ac, char **av) {
     return error_count != 0;
 }
 
+class Version : public Section {
+    Version() : Section("version") {}
+    void start(int lineno, VECTOR(value_t) args) {}
+    void input(VECTOR(value_t) args, value_t data) {
+        if (!CHECKTYPE2(data, tINT, tVEC)) return;
+        /* ignore for now */
+    }
+    void process() {}
+    void output() {}
+    static Version singleton_version;
+} Version::singleton_version;

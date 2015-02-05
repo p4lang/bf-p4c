@@ -10,62 +10,65 @@ static void yyerror(const char *, ...);
 static int lineno;
 static std::map<int, std::pair<std::string, int>> line_file_map;
 
-static value_t value(int v, bool lineno_adj = false) {
-    value_t rv{tINT, lineno - (lineno_adj ? 1 : 0)};
+static value_t value(int v, int lineno_adj) {
+    value_t rv{tINT, lineno - lineno_adj};
     rv.i = v;
     return rv; }
-static value_t value(VECTOR(uintptr_t) &v, bool lineno_adj = false) {
-    value_t rv{tBIGINT, lineno - (lineno_adj ? 1 : 0)};
+static value_t value(VECTOR(uintptr_t) &v, int lineno_adj) {
+    value_t rv{tBIGINT, lineno - lineno_adj};
     rv.bigi = v;
     return rv; }
-static value_t value(int lo, int hi, bool lineno_adj = false) {
-    value_t rv{tRANGE, lineno - (lineno_adj ? 1 : 0)};
+static value_t value(int lo, int hi, int lineno_adj) {
+    value_t rv{tRANGE, lineno - lineno_adj};
     rv.lo = lo;
     rv.hi = hi;
     return rv; }
-static value_t value(char *v, bool lineno_adj = false) {
-    value_t rv{tSTR, lineno - (lineno_adj ? 1 : 0)};
+static value_t value(char *v, int lineno_adj) {
+    value_t rv{tSTR, lineno - lineno_adj};
     rv.s = v;
     return rv; }
-static value_t value(match_t v, bool lineno_adj = false) {
-    value_t rv{tMATCH, lineno - (lineno_adj ? 1 : 0)};
+static value_t value(match_t v, int lineno_adj) {
+    value_t rv{tMATCH, lineno - lineno_adj};
     rv.m = v;
     return rv; }
-static value_t value(VECTOR(value_t) &v, bool lineno_adj = false) {
-    value_t rv{tVEC, lineno - (lineno_adj ? 1 : 0)};
+static value_t value(VECTOR(value_t) &v, int lineno_adj) {
+    value_t rv{tVEC, lineno - lineno_adj};
     if (v.size > 0) rv.lineno = v.data[0].lineno;
     rv.vec = v;
     return rv; }
-static value_t value(VECTOR(pair_t) &v, bool lineno_adj = false) {
-    value_t rv{tMAP, lineno - (lineno_adj ? 1 : 0)};
+static value_t value(VECTOR(pair_t) &v, int lineno_adj) {
+    value_t rv{tMAP, lineno - lineno_adj};
     if (v.size > 0) rv.lineno = v.data[0].key.lineno;
     rv.map = v;
     return rv; }
-static value_t empty_vector(bool lineno_adj = false) {
-    value_t rv{tVEC, lineno - (lineno_adj ? 1 : 0)};
+static value_t empty_vector(int lineno_adj) {
+    value_t rv{tVEC, lineno - lineno_adj};
     memset(&rv.vec, 0, sizeof(rv.vec));
     return rv; }
 static value_t singleton_map(const value_t &k, const value_t &v) {
     value_t rv{tMAP, k.lineno};
     VECTOR_init1(rv.map, (pair_t{k, v}));
     return rv; }
-static value_t command(char *cmd, const VECTOR(value_t) &args, bool lineno_adj = false) {
-    value_t rv{tCMD, lineno - (lineno_adj ? 1 : 0)};
+static value_t command(char *cmd, const VECTOR(value_t) &args, int lineno_adj) {
+    value_t rv{tCMD, lineno - lineno_adj};
     if (args.size && args.data[0].lineno < rv.lineno)
         rv.lineno = args.data[0].lineno;
     rv.vec = args;
     VECTOR_insert(rv.vec, 0, 1);
-    rv[0] = value(cmd);
+    rv[0] = value(cmd, 0);
     rv[0].lineno = rv.lineno;
     return rv; }
-static value_t command(char *cmd, const value_t &arg, bool lineno_adj = false) {
-    value_t rv{tCMD, lineno - (lineno_adj ? 1 : 0)};
+static value_t command(char *cmd, const value_t &arg, int lineno_adj) {
+    value_t rv{tCMD, lineno - lineno_adj};
     if (arg.lineno < rv.lineno)
         rv.lineno = arg.lineno;
-    VECTOR_init2(rv.vec, value(cmd), arg);
+    VECTOR_init2(rv.vec, value(cmd, 0), arg);
     rv[0].lineno = rv.lineno;
     return rv; }
 static value_t list_map_expand(VECTOR(value_t) &v);
+
+#define VAL(...)  value(__VA_ARGS__, yychar == '\n' ? 1 : 0)
+#define CMD(...)  command(__VA_ARGS__, yychar == '\n' ? 1 : 0)
 
 %}
 
@@ -87,7 +90,7 @@ static value_t list_map_expand(VECTOR(value_t) &v);
 %token<match>   MATCH
 
 %type<value>    param list_element key value elements
-%type<vec>      opt_params params comma_params list_elements value_list
+%type<vec>      opt_params params comma_params list_elements value_list dotvals
 %type<pair>     map_element pair
 %type<map>      map_elements pair_list
 
@@ -103,13 +106,21 @@ start: INDENT sections UNINDENT | sections | /* epsilon */;
 
 sections: sections section | section ;
 
-section: ID opt_params ':'
+section : ID opt_params ':'
             { $<i>$ = Section::start_section(lineno, $1, $2); }
-         '\n' INDENT elements UNINDENT
+          '\n' INDENT elements UNINDENT
             { if (!$<i>4) Section::asm_section($1, $2, $7);
               VECTOR_foreach($2, free_value);
               VECTOR_fini($2);
               free_value(&$7);
+              free($1); }
+        | ID opt_params ':'
+            { $<i>$ = Section::start_section(lineno, $1, $2); }
+          value '\n'
+            { if (!$<i>4) Section::asm_section($1, $2, $5);
+              VECTOR_foreach($2, free_value);
+              VECTOR_fini($2);
+              free_value(&$5);
               free($1); }
 ;
 
@@ -123,16 +134,16 @@ comma_params
         : param ',' param { VECTOR_init2($$, $1, $3); }
         | comma_params ',' param { $$ = $1; VECTOR_add($$, $3); }
         ;
-param   : INT { $$ = value($1, yychar == '\n'); }
-        | ID { $$ = value($1, yychar == '\n'); }
-        | '-' INT { $$ = value(-$2, yychar == '\n'); }
-        | INT DOTDOT INT { $$ = value($1, $3, yychar == '\n'); }
-        | ID '(' param ')' { $$ = command($1, $3, yychar == '\n'); }
-        | ID '(' comma_params ')' { $$ = command($1, $3, yychar == '\n'); }
+param   : INT { $$ = VAL($1); }
+        | ID { $$ = VAL($1); }
+        | '-' INT { $$ = VAL(-$2); }
+        | INT DOTDOT INT { $$ = VAL($1, $3); }
+        | ID '(' param ')' { $$ = CMD($1, $3); }
+        | ID '(' comma_params ')' { $$ = CMD($1, $3); }
         ;
 
 elements: list_elements { $$ = list_map_expand($1); }
-        | map_elements { $$ = value($1); }
+        | map_elements { $$ = VAL($1); }
         ;
 map_elements: map_elements map_element { $$ = $1; VECTOR_add($$, $2); }
         | map_element { VECTOR_init1($$, $1); }
@@ -144,30 +155,31 @@ list_elements: list_elements list_element { $$ = $1; VECTOR_add($$, $2); }
 map_element
         : key ':' value '\n' { $$ = pair_t{ $1, $3 }; }
         | key ':' '\n' INDENT elements UNINDENT { $$ = pair_t{ $1, $5 }; }
-        | key ':' '\n' list_elements { $$ = pair_t{ $1, value($4) }; }
+        | key ':' '\n' list_elements { $$ = pair_t{ $1, VAL($4) }; }
         ;
 
 list_element
         : '-' key ':' value '\n' { $$ = singleton_map($2, $4); }
         | '-' value '\n' { $$ = $2; }
-        | '-' ID comma_params '\n' { $$ = command($2, $3); }
+        | '-' ID comma_params '\n' { $$ = command($2, $3, yychar == '\n' ? 2 : 1); }
         | '-' key ':' '\n' INDENT elements UNINDENT { $$ = singleton_map($2, $6); }
         ;
 
-key : ID { $$ = value($1, yychar == '\n'); }
-    | ID params { $$ = command($1, $2, yychar == '\n'); }
-    | INT { $$ = value($1, yychar == '\n'); }
-    | MATCH { $$ = value($1, yychar == '\n'); }
-    | INT DOTDOT INT { $$ = value($1, $3, yychar == '\n'); }
-    | ID '(' param ')' { $$ = command($1, $3, yychar == '\n'); }
-    | ID '(' comma_params ')' { $$ = command($1, $3, yychar == '\n'); }
+key : ID { $$ = VAL($1); }
+    | ID params { $$ = CMD($1, $2); }
+    | INT { $$ = VAL($1); }
+    | MATCH { $$ = VAL($1); }
+    | INT DOTDOT INT { $$ = VAL($1, $3); }
+    | ID '(' param ')' { $$ = CMD($1, $3); }
+    | ID '(' comma_params ')' { $$ = CMD($1, $3); }
     ;
 
 value: key
-    | '[' value_list ']' { $$ = value($2); }
-    | '{' pair_list '}' { $$ = value($2); }
-    | '[' ']' { $$ = empty_vector(yychar == '\n'); }
-    | BIGINT { $$ = value($1); }
+    | '[' value_list ']' { $$ = VAL($2); }
+    | '{' pair_list '}' { $$ = VAL($2); }
+    | '[' ']' { $$ = empty_vector(yychar == '\n' ? 1 : 0); }
+    | BIGINT { $$ = VAL($1); }
+    | dotvals INT { VECTOR_add($1, VAL($2)); $$ = VAL($1); }
     ;
 
 value_list
@@ -180,6 +192,9 @@ pair_list
     ;
 pair: key ':' value { $$ = pair_t{ $1, $3 }; }
     ;
+
+dotvals : dotvals INT '.' { $$ = $1; VECTOR_add($$, VAL($2)); }
+        | INT '.' { VECTOR_init1($$, VAL($1)); }
 
 %%
 
