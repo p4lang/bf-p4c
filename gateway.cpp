@@ -153,7 +153,7 @@ void GatewayTable::write_regs() {
             .enabled_4bit_muxctl_select = logical_id;
         merge.gateway_inhibit_logical_to_tcam_xbar_ctl[tm->tcam_id]
             .enabled_4bit_muxctl_enable = 1; }
-    for (int v : VersionIter(config_version))
+    for (int v : VersionIter(options.version))
         merge.gateway_en[v] |= 1 << logical_id;
     merge.gateway_to_logicaltable_xbar_ctl[logical_id].enabled_4bit_muxctl_select =
         row.row*2 + gw_unit;

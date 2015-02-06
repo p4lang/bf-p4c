@@ -77,7 +77,13 @@ void AsmStage::process() {
         stage[i].pass1_logical_id = -1;
         stage[i].pass1_tcam_id = -1;
         for (auto table : stage[i].tables)
-            table->pass1(); }
+            table->pass1();
+        if (options.match_compiler) {
+            /* FIXME -- do we really want to do this?  In theory different stages could
+             * FIXME -- use the same PHV slots differently, but the compiler always uses them
+             * FIXME -- consistently, so we need this to get bit-identical results */
+            Phv::setuse(INGRESS, stage[i].phv_use[INGRESS]);
+            Phv::setuse(EGRESS, stage[i].phv_use[EGRESS]); } }
 }
 
 void AsmStage::output() {
@@ -110,7 +116,7 @@ void Stage::write_regs() {
         table_use[INGRESS] & USE_TCAM ? 3 : 0;
     merge.exact_match_delay_config.exact_match_delay_egress =
         table_use[EGRESS] & USE_TCAM ? 3 : 0;
-    for (int v : VersionIter(config_version)) {
+    for (int v : VersionIter(options.version)) {
         for (gress_t gress : Range(INGRESS, EGRESS)) {
             merge.predication_ctl[gress][v].start_table_fifo_delay0 = 15;
             merge.predication_ctl[gress][v].start_table_fifo_delay1 = 8;

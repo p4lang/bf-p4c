@@ -7,7 +7,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-config_version_t config_version = CONFIG_OLD;
+option_t options = {
+    .version = CONFIG_OLD,
+    .match_compiler = true,
+};
 
 static int verbose = 0;
 static std::vector<std::string> debug_specs;
@@ -84,7 +87,7 @@ int main(int ac, char **av) {
             bool flag = av[i][0] == '+';
             for (char *arg = av[i]+1; *arg;)
                 switch (*arg++) {
-                case 'D':
+                case 'T':
                     if (++i < ac) {
                         check_debug_spec(av[i]);
                         debug_specs.push_back(av[i]); }

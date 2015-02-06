@@ -154,6 +154,9 @@ void Parser::process() {
     for (auto &reg : multi_write)
         if (reg.check())
             phv_allow_multi_write[reg->reg.index] = 1;
+    if (options.match_compiler) {
+        Phv::setuse(INGRESS, phv_use[INGRESS]);
+        Phv::setuse(EGRESS, phv_use[EGRESS]); }
 }
 
 void Parser::output() {
@@ -209,6 +212,9 @@ void Parser::output() {
         reg[gress].pri_start.disable();
         reg[gress].src_ext_err_cnt.disable();
         reg[gress].timeout_err_cnt.disable(); }
+    if (options.match_compiler) {
+        phv_use[INGRESS] |= Phv::use(INGRESS);
+        phv_use[EGRESS] |= Phv::use(EGRESS); }
     for (int i : phv_use[EGRESS]) {
         if (i >= 256)
             reg_merge.phv_owner.t_owner[i-256] = 1;

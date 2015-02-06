@@ -220,7 +220,7 @@ void ActionTable::write_regs() {
             auto &oflo_adr_xbar = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
             auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
             auto &ram_mux = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
-            for (int v : VersionIter(config_version)) {
+            for (int v : VersionIter(options.version)) {
                 ram.unit_ram_ctl[v].match_ram_write_data_mux_select = 7; /*disable*/
                 ram.unit_ram_ctl[v].match_ram_read_data_mux_select = home_row ? 4 : 2;
                 if (!home_row) {

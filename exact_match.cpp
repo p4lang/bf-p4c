@@ -268,7 +268,7 @@ void ExactMatchTable::write_regs() {
                     .unitram_config[col/6][col%6];
             for (unsigned i = 0; i < 4; i++)
                 ram.match_mask[i] = match_mask.getrange(word*128+i*32, 32);
-            for (int v : VersionIter(config_version)) {
+            for (int v : VersionIter(options.version)) {
                 ram.unit_ram_ctl[v].match_ram_write_data_mux_select = 7; /* unused */
                 ram.unit_ram_ctl[v].match_ram_read_data_mux_select = 7; /* unused */
                 ram.unit_ram_ctl[v].match_result_bus_select = 1 << row.bus;

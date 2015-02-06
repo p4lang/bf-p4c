@@ -235,17 +235,17 @@ void TernaryIndirectTable::write_regs() {
     for (Layout &row : layout) {
 	for (int col : row.cols) {
             auto &unit_ram_ctl = stage->regs.rams.array.row[row.row].ram[col].unit_ram_ctl;
-            for (int v : VersionIter(config_version)) {
+            for (int v : VersionIter(options.version)) {
                 unit_ram_ctl[v].match_ram_write_data_mux_select = 7; /* disable */
                 unit_ram_ctl[v].match_ram_read_data_mux_select = 7; /* disable */
                 unit_ram_ctl[v].tind_result_bus_select = 1U << row.bus; }
             auto &mux_ctl = stage->regs.rams.map_alu.row[row.row].adrmux
                     .ram_address_mux_ctl[col/6][col%6];
-            for (int v : VersionIter(config_version))
+            for (int v : VersionIter(options.version))
                 mux_ctl[v].ram_unitram_adr_mux_select = row.bus + 2;
             auto &unitram_config = stage->regs.rams.map_alu.row[row.row].adrmux
                     .unitram_config[col/6][col%6];
-            for (int v : VersionIter(config_version)) {
+            for (int v : VersionIter(options.version)) {
                 unitram_config[v].unitram_type = 6;
                 unitram_config[v].unitram_vpn = vpn;
                 unitram_config[v].unitram_logical_table = logical_id;
@@ -256,7 +256,7 @@ void TernaryIndirectTable::write_regs() {
                 unitram_config[v].unitram_enable = 1; }
             auto &xbar_ctl = stage->regs.rams.map_alu.row[row.row].vh_xbars
                     .adr_dist_tind_adr_xbar_ctl[row.bus];
-            for (int v : VersionIter(config_version)) {
+            for (int v : VersionIter(options.version)) {
                 xbar_ctl[v].enabled_3bit_muxctl_select = tcam_id;
                 xbar_ctl[v].enabled_3bit_muxctl_enable = 1; }
             vpn++; }

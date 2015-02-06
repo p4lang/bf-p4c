@@ -2,7 +2,10 @@
 #define _tfas_h_
 
 enum config_version_t { CONFIG_OLD=1, CONFIG_NEW=2, CONFIG_BOTH=3 };
-extern config_version_t config_version;
+extern struct option_t {
+    config_version_t    version;
+    bool                match_compiler;
+} options;
 
 #include "stdarg.h"
 #include "stdio.h"

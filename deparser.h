@@ -13,12 +13,15 @@ enum {
 };
 
 class Deparser : public Section {
+public:
     int                                 lineno[2];
     regs_all_deparser_input_phase       inp_regs;
     regs_all_deparser_header_phase      hdr_regs;
     std::vector<std::pair<Phv::Ref, Phv::Ref>>  dictionary[2];
     std::vector<Phv::Ref>               pov_order[2];
     bitvec                              phv_use[2];
+    struct Intrinsic;
+    std::vector<std::pair<Intrinsic *, std::vector<Phv::Ref>>> intrinsics;
     Deparser();
     ~Deparser();
     void start(int lineno, VECTOR(value_t) args);
