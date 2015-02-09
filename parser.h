@@ -57,11 +57,11 @@ class Parser : public Section {
             short   ctr_zero, ctr_neg;
             short   width;
             MatchKey() : lineno(0), ctr_zero(-1), ctr_neg(-1), width(0) {
-                for (auto &a : data) a.bit = a.byte = -2; }
+                for (auto &a : data) a.bit = -1; }
             void setup(value_t &);
             int setup_match_el(value_t &);
         private:
-            int add_byte(unsigned);
+            int add_byte(int);
         };
         struct Match {
             int     lineno;

@@ -280,8 +280,8 @@ void Parser::State::Ref::check(gress_t gress, Parser *pa, State *state) {
                     ptr.push_back(st); } } }
 }
 
-int Parser::State::MatchKey::add_byte(unsigned byte) {
-    if (byte >= 32) {
+int Parser::State::MatchKey::add_byte(int byte) {
+    if (byte < 0 || byte >= 32) {
         error(lineno, "Match key index out of range");
         return -1; }
     for (int i = 3; i >= 0; i--) {
@@ -568,13 +568,14 @@ int lookup_swap8bit = 1;
 void Parser::State::write_lookup_config(Parser *pa, State *state, int row,
                                         const std::vector<State *> &prev)
 {
+    LOG2("-- checking match from state " << name << " (" << stateno << ')');
     auto &ea_row = pa->mem[gress].ml_ea_row[row];
     for (int i = 0; i < 4; i++) {
         if (i == 1) continue;
-        if (key.data[i].byte < 0) continue;
+        if (key.data[i].bit < 0) continue;
         bool set = true;
         for (State *p : prev) {
-            if (p->key.data[i].byte >= 0) {
+            if (p->key.data[i].bit >= 0) {
                 set = false;
                 if (p->key.data[i].byte != key.data[i].byte)
                     error(p->lineno, "Incompatible match fields between states "
@@ -611,7 +612,7 @@ void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
     for (int i = 0; i < 4; i++) {
         lookup.word0 <<= 8;
         lookup.word1 <<= 8;
-        if (state->key.data[i].byte >= 0) {
+        if (state->key.data[i].bit >= 0) {
             lookup.word0 |= ((match.word0 >> state->key.data[i].bit) & 0xff);
             lookup.word1 |= ((match.word1 >> state->key.data[i].bit) & 0xff); } }
     unsigned dont_care = ~(lookup.word0 | lookup.word1);
@@ -790,6 +791,7 @@ void Parser::State::Match::Set::write_output_config(phv_output_map *map, unsigne
 }
 
 void Parser::State::write_config(Parser *pa) {
+    LOG2(gress << " state " << name << " (" << stateno << ')');
     for (auto i = match.begin(); i != match.end(); i++)
         i->write_config(pa, this, def);
     if (def) def->write_config(pa, this, 0);

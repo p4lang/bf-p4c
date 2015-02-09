@@ -45,6 +45,10 @@ static value_t empty_vector(int lineno_adj) {
     value_t rv{tVEC, lineno - lineno_adj};
     memset(&rv.vec, 0, sizeof(rv.vec));
     return rv; }
+static value_t empty_map(int lineno_adj) {
+    value_t rv{tMAP, lineno - lineno_adj};
+    memset(&rv.vec, 0, sizeof(rv.vec));
+    return rv; }
 static value_t singleton_map(const value_t &k, const value_t &v) {
     value_t rv{tMAP, k.lineno};
     VECTOR_init1(rv.map, (pair_t{k, v}));
@@ -89,12 +93,13 @@ static value_t list_map_expand(VECTOR(value_t) &v);
 %token<str>     ID
 %token<match>   MATCH
 
-%type<value>    param list_element key value elements
+%type<value>    param list_element key value elements indent_elements flow_value
 %type<vec>      opt_params params comma_params list_elements value_list dotvals
 %type<pair>     map_element pair
 %type<map>      map_elements pair_list
 
 %destructor   { free($$); } <str>
+%destructor   { VECTOR_fini($$); } <bigi>
 %destructor   { free_value(&$$); } <value>
 %destructor   { VECTOR_foreach($$, free_value); VECTOR_fini($$); } <vec>
 %destructor   { free_pair(&$$); } <pair>
@@ -108,11 +113,11 @@ sections: sections section | section ;
 
 section : ID opt_params ':'
             { $<i>$ = Section::start_section(lineno, $1, $2); }
-          '\n' INDENT elements UNINDENT
-            { if (!$<i>4) Section::asm_section($1, $2, $7);
+          '\n' indent_elements
+            { if (!$<i>4) Section::asm_section($1, $2, $6);
               VECTOR_foreach($2, free_value);
               VECTOR_fini($2);
-              free_value(&$7);
+              free_value(&$6);
               free($1); }
         | ID opt_params ':'
             { $<i>$ = Section::start_section(lineno, $1, $2); }
@@ -142,6 +147,11 @@ param   : INT { $$ = VAL($1); }
         | ID '(' comma_params ')' { $$ = CMD($1, $3); }
         ;
 
+indent_elements
+        : INDENT elements UNINDENT { $$ = $2; }
+        | INDENT elements error error_resync UNINDENT { $$ = $2; }
+        | INDENT error { $<i>$ = lineno; } error_resync UNINDENT { $$ = empty_map(lineno-$<i>3); }
+        ;
 elements: list_elements { $$ = list_map_expand($1); }
         | map_elements { $$ = VAL($1); }
         ;
@@ -154,7 +164,7 @@ list_elements: list_elements list_element { $$ = $1; VECTOR_add($$, $2); }
 
 map_element
         : key ':' value '\n' { $$ = pair_t{ $1, $3 }; }
-        | key ':' '\n' INDENT elements UNINDENT { $$ = pair_t{ $1, $5 }; }
+        | key ':' '\n' indent_elements { $$ = pair_t{ $1, $4 }; }
         | key ':' '\n' list_elements { $$ = pair_t{ $1, VAL($4) }; }
         ;
 
@@ -162,7 +172,7 @@ list_element
         : '-' key ':' value '\n' { $$ = singleton_map($2, $4); }
         | '-' value '\n' { $$ = $2; }
         | '-' ID comma_params '\n' { $$ = command($2, $3, yychar == '\n' ? 2 : 1); }
-        | '-' key ':' '\n' INDENT elements UNINDENT { $$ = singleton_map($2, $6); }
+        | '-' key ':' '\n' indent_elements { $$ = singleton_map($2, $5); }
         ;
 
 key : ID { $$ = VAL($1); }
@@ -175,11 +185,21 @@ key : ID { $$ = VAL($1); }
     ;
 
 value: key
-    | '[' value_list ']' { $$ = VAL($2); }
-    | '{' pair_list '}' { $$ = VAL($2); }
-    | '[' ']' { $$ = empty_vector(yychar == '\n' ? 1 : 0); }
+    | flow_value
+    | '-' INT { $$ = VAL(-$2); }
     | BIGINT { $$ = VAL($1); }
     | dotvals INT { VECTOR_add($1, VAL($2)); $$ = VAL($1); }
+    ;
+
+flow_value
+    : '[' value_list ']' { $$ = VAL($2); }
+    | '[' value_list error error_resync ']' { $$ = VAL($2); }
+    | '{' pair_list '}' { $$ = VAL($2); }
+    | '{' pair_list error error_resync '}' { $$ = VAL($2); }
+    | '[' ']' { $$ = empty_vector(yychar == '\n' ? 1 : 0); }
+    | '[' error error_resync ']' { $$ = empty_vector(yychar == '\n' ? 1 : 0); }
+    | '{' '}' { $$ = empty_map(yychar == '\n' ? 1 : 0); }
+    | '{' error error_resync '}' { $$ = empty_map(yychar == '\n' ? 1 : 0); }
     ;
 
 value_list
@@ -195,6 +215,13 @@ pair: key ':' value { $$ = pair_t{ $1, $3 }; }
 
 dotvals : dotvals INT '.' { $$ = $1; VECTOR_add($$, VAL($2)); }
         | INT '.' { VECTOR_init1($$, VAL($1)); }
+
+error_resync: /* epsilon */ | error_resync indent_elements { free_value(&$2); }
+    | error_resync INT | error_resync ID { free($2); } | error_resync MATCH
+    | error_resync BIGINT { VECTOR_fini($2); } | error_resync ':' | error_resync '-'
+    | error_resync ',' | error_resync '(' | error_resync ')' | error_resync DOTDOT
+    | error_resync '\n' | error_resync flow_value { free_value(&$2); }
+    ;
 
 %%
 

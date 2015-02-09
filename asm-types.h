@@ -139,6 +139,8 @@ inline value_t *get(VECTOR(pair_t) &map, const char *key) {
 #include "tfas.h"
 #include "bitops.h"
 
+std::ostream &operator<<(std::ostream &out, match_t m);
+
 inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
     switch (gress) {
     case INGRESS: out << "ingress"; break;
