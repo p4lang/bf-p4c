@@ -281,7 +281,7 @@ void Parser::State::Ref::check(gress_t gress, Parser *pa, State *state) {
 }
 
 int Parser::State::MatchKey::add_byte(int byte) {
-    if (byte < 0 || byte >= 32) {
+    if (byte <= -64 || byte >= 32) {
         error(lineno, "Match key index out of range");
         return -1; }
     for (int i = 3; i >= 0; i--) {
@@ -582,11 +582,16 @@ void Parser::State::write_lookup_config(Parser *pa, State *state, int row,
                           "%s and %s, triggered from state %s", name.c_str(),
                           p->name.c_str(), state->name.c_str()); } }
         if (set) {
-            if (i) {
-                ea_row.lookup_offset_8[(i-2)^lookup_swap8bit] = key.data[i].byte;
+            int off = key.data[i].byte + ea_row.shift_amt;
+            if (off < 0 || off >= 32) {
+                error(key.lineno, "Match offset of %d int state %s out of range "
+                      "for previous state %s", key.data[i].byte, name.c_str(),
+                      state->name.c_str());
+            } else if (i) {
+                ea_row.lookup_offset_8[(i-2)^lookup_swap8bit] = off;
                 ea_row.ld_lookup_8[(i-2)^lookup_swap8bit] = 1;
             } else {
-                ea_row.lookup_offset_16 = key.data[i].byte;
+                ea_row.lookup_offset_16 = off;
                 ea_row.ld_lookup_16 = 1; } } }
 }
 
@@ -735,10 +740,11 @@ void Parser::State::Match::Save::write_output_config(phv_output_map *map, unsign
 }
 
 static int encode_constant_for_slot(int slot, unsigned val) {
+    if (val == 0) return val;
     switch(slot) {
     case phv_32b_0: case phv_32b_1: case phv_32b_2: case phv_32b_3:
         for (int i = 0; i < 32; i++) {
-            if ((0x7 & val) == val)
+            if ((val & 1) && (0x7 & val) == val)
                 return (i << 3) | val;
             val = ((val >> 1) | (val << 31)) & 0xffffffffU; }
         return -1;
@@ -746,13 +752,13 @@ static int encode_constant_for_slot(int slot, unsigned val) {
         if ((val >> 16) && encode_constant_for_slot(slot, val >> 16) < 0)
             return -1;
         val &= 0xffff;
-        for (int i = 0; i < 32; i++) {
-            if ((0xf & val) == val)
+        for (int i = 0; i < 16; i++) {
+            if ((val & 1) && (0xf & val) == val)
                 return (i << 4) | val;
             val = ((val >> 1) | (val << 15)) & 0xffffU; }
         return -1;
     case phv_8b_0: case phv_8b_1: case phv_8b_2: case phv_8b_3:
-        return val & 0xf;
+        return val & 0xff;
     default:
         assert(0);
         return -1; }
