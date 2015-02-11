@@ -575,10 +575,6 @@ void Parser::State::pass2(Parser *pa) {
             succ->pred.insert(this);
 }
 
-/* FIXME -- hack to swap allocation of 8-bit lookups slots to match compiler
- * should be a config param somehow?  Or just not do it at all */
-int lookup_swap8bit = 0;
-
 void Parser::State::write_lookup_config(Parser *pa, State *state, int row,
                                         const std::vector<State *> &prev)
 {
@@ -602,8 +598,8 @@ void Parser::State::write_lookup_config(Parser *pa, State *state, int row,
                       "for previous state %s", key.data[i].byte, name.c_str(),
                       state->name.c_str());
             } else if (i) {
-                ea_row.lookup_offset_8[(i-2)^lookup_swap8bit] = off;
-                ea_row.ld_lookup_8[(i-2)^lookup_swap8bit] = 1;
+                ea_row.lookup_offset_8[(i-2)] = off;
+                ea_row.ld_lookup_8[(i-2)] = 1;
             } else {
                 ea_row.lookup_offset_16 = off;
                 ea_row.ld_lookup_16 = 1; } } }
@@ -639,10 +635,10 @@ void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
     lookup.word1 |= dont_care;
     word0.lookup_16 = (lookup.word0 >> 16) & 0xffff;
     word1.lookup_16 = (lookup.word1 >> 16) & 0xffff;
-    word0.lookup_8[0^lookup_swap8bit] = (lookup.word0 >> 8) & 0xff;
-    word1.lookup_8[0^lookup_swap8bit] = (lookup.word1 >> 8) & 0xff;
-    word0.lookup_8[1^lookup_swap8bit] = lookup.word0 & 0xff;
-    word1.lookup_8[1^lookup_swap8bit] = lookup.word1 & 0xff;
+    word0.lookup_8[0] = (lookup.word0 >> 8) & 0xff;
+    word1.lookup_8[0] = (lookup.word1 >> 8) & 0xff;
+    word0.lookup_8[1] = lookup.word0 & 0xff;
+    word1.lookup_8[1] = lookup.word1 & 0xff;
     word0.curr_state = state->stateno.word0;
     word1.curr_state = state->stateno.word1;
     if (state->key.ctr_zero >= 0) {

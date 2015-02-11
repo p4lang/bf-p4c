@@ -165,7 +165,7 @@ list_elements: list_elements list_element { $$ = $1; VECTOR_add($$, $2); }
 map_element
         : key ':' value '\n' { $$ = pair_t{ $1, $3 }; }
         | key ':' '\n' indent_elements { $$ = pair_t{ $1, $4 }; }
-        | key ':' '\n' list_elements { $$ = pair_t{ $1, VAL($4) }; }
+        | key ':' '\n' list_elements { $$ = pair_t{ $1, list_map_expand($4) }; }
         ;
 
 list_element
