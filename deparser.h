@@ -10,6 +10,7 @@
 enum {
     DEPARSER_MAX_POV_BYTES = 32,
     DEPARSER_MAX_FD_ENTRIES = 384,
+    DEPARSER_LEARN_GROUPS = 8,
 };
 
 class Deparser : public Section {
@@ -21,6 +22,10 @@ public:
     std::vector<Phv::Ref>               pov_order[2];
     bitvec                              phv_use[2];
     struct Intrinsic;
+    struct Learning {
+        Phv::Ref                                select;
+        std::map<int, std::vector<Phv::Ref>>    layout;
+    } learn;
     std::vector<std::pair<Intrinsic *, std::vector<Phv::Ref>>> intrinsics;
     Deparser();
     ~Deparser();

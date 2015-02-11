@@ -109,6 +109,22 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                 if (!CHECKTYPE(kv.value, tVEC)) continue;
                 for (auto &ent : kv.value.vec)
                     pov_order[gress].emplace_back(gress, ent);
+            } else if (kv.key == "learning" && (gress == INGRESS || args.size == 0)) {
+                if (gress != INGRESS) continue;
+                if (!CHECKTYPE(kv.value, tMAP)) continue;
+                for (auto &l : kv.value.map) {
+                    if (l.key == "select")
+                        learn.select = Phv::Ref(gress, l.value);
+                    else if (!CHECKTYPE(l.key, tINT))
+                        continue;
+                    else if (l.key.i < 0 || l.key.i >= DEPARSER_LEARN_GROUPS)
+                        error(l.key.lineno, "Learning index %d out of range", l.key.i);
+                    else if (l.value.type != tVEC)
+                        learn.layout[l.key.i].emplace_back(gress, l.value);
+                    else for (auto &v : l.value.vec)
+                        learn.layout[l.key.i].emplace_back(gress, v); }
+                if (!learn.select)
+                    error(kv.value.lineno, "No select key in leanring spec");
             } else if (auto *intrin = ::get(Intrinsic::all[gress], kv.key.s)) {
                 intrinsics.emplace_back(intrin, std::vector<Phv::Ref>());
                 std::vector<Phv::Ref> &vec = intrinsics.back().second;
@@ -147,6 +163,11 @@ void Deparser::process() {
     if (options.match_compiler) {
         Phv::setuse(INGRESS, phv_use[INGRESS]);
         Phv::setuse(EGRESS, phv_use[EGRESS]); }
+    if (learn.select) {
+        learn.select.check();
+        for (auto &set : learn.layout)
+            for (auto &reg : set.second)
+                reg.check(); }
 }
 
 void dump_field_dictionary(checked_array_base<fde_pov> &fde_control,
@@ -241,6 +262,18 @@ void Deparser::output() {
         intrin.first->setregs(this, intrin.second);
     if (!hdr_regs.hir.ingr.ingress_port.sel.modified())
         hdr_regs.hir.ingr.ingress_port.sel = 1;
+
+    if (learn.select) {
+        inp_regs.iir.ingr.learn_cfg.phv = learn.select->reg.index;
+        inp_regs.iir.ingr.learn_cfg.valid = 1;
+        for (auto &set : learn.layout) {
+            int idx = 0;
+            for (auto &reg : set.second)
+                for (int i = reg->reg.size/8; i > 0; i--)
+                    inp_regs.iir.ingr.learn_tbl[set.first].phvs[idx++] = reg->reg.index;
+            inp_regs.iir.ingr.learn_tbl[set.first].valid = 1;
+            inp_regs.iir.ingr.learn_tbl[set.first].len = idx; } }
+
     inp_regs.emit_json(*open_output("regs.all.deparser.input_phase.cfg.json"));
     hdr_regs.emit_json(*open_output("regs.all.deparser.header_phase.cfg.json"));
 }

@@ -33,6 +33,7 @@ public:
         Slice(const Slice &s, int l, int h) : reg(s.reg), lo(s.lo + l), hi(s.lo + h) {
             valid = lo >= 0 && hi >= lo && hi <= s.hi && hi < reg.size; }
         Slice(const Slice &) = default;
+        explicit operator bool() { return valid; }
         Slice &operator=(const Slice &a) { new(this) Slice(a.reg, a.lo, a.hi); return *this; }
 	const Slice *operator->() const { return this; }
         const bool operator==(const Slice &s) {
@@ -61,12 +62,13 @@ public:
 	Ref(gress_t g, const value_t &n);
 	Ref(gress_t g, int line, const std::string &n, int l, int h) :
             gress(g), name_(n), lo(l), hi(h), lineno(line) {}
+        explicit operator bool() { return lineno >= 0; }
 	Slice operator*() const {
 	    if (auto *s = phv.get(gress, name_)) {
 		if (hi >= 0) return Slice(*s, lo, hi);
 		return *s;
 	    } else {
-		error(lineno, "No phv record %s", name_.c_str());
+                error(lineno, "No phv record %s", name_.c_str());
 		return Slice(); } }
 	Slice operator->() const { return **this; }
         bool operator==(const Ref &a) const {
@@ -79,7 +81,8 @@ public:
 		    error(lineno, "Invalid slice of %s", name_.c_str());
                     return false; }
 	    } else {
-		error(lineno, "No phv record %s", name_.c_str());
+                if (lineno >= 0)
+                    error(lineno, "No phv record %s", name_.c_str());
                 return false; }
             return true; }
         const char *name() const { return name_.c_str(); }
