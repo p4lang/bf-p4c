@@ -351,6 +351,20 @@ void Parser::State::MatchKey::setup(value_t &spec) {
         auto t = data[0];
         data[0] = data[1];
         data[1] = t; }
+    if (options.match_compiler) {
+        if (data[0].bit < 0 && data[2].bit >= 0) {
+            /* if using just the two 8-bit slots, swap them */
+            auto t = data[2];
+            data[2] = data[3];
+            data[3] = t;
+        }
+        if (data[0].bit >= 0 && data[1].bit < 0) {
+            /* using 3 bytes -- swap 1st and 3rd */
+            auto t = data[0];
+            data[0] = data[3];
+            data[3] = t;
+        }
+    }
 }
 
 Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &data) :
@@ -563,7 +577,7 @@ void Parser::State::pass2(Parser *pa) {
 
 /* FIXME -- hack to swap allocation of 8-bit lookups slots to match compiler
  * should be a config param somehow?  Or just not do it at all */
-int lookup_swap8bit = 1;
+int lookup_swap8bit = 0;
 
 void Parser::State::write_lookup_config(Parser *pa, State *state, int row,
                                         const std::vector<State *> &prev)
@@ -584,7 +598,7 @@ void Parser::State::write_lookup_config(Parser *pa, State *state, int row,
         if (set) {
             int off = key.data[i].byte + ea_row.shift_amt;
             if (off < 0 || off >= 32) {
-                error(key.lineno, "Match offset of %d int state %s out of range "
+                error(key.lineno, "Match offset of %d in state %s out of range "
                       "for previous state %s", key.data[i].byte, name.c_str(),
                       state->name.c_str());
             } else if (i) {
