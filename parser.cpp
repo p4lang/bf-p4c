@@ -15,15 +15,14 @@ Parser::Parser() : Section("parser") {
             } else {
                 out << "EGRESS]";
                 mem[EGRESS].emit_fieldname(out, addr, end); } });
-    declare_registers(&reg, sizeof(reg),
+    declare_registers(&reg_in, sizeof(reg_in),
         [this](std::ostream &out, const char *addr, const void *end) {
-            out << "parser.reg[";
-            if (addr < (const char *)&reg[EGRESS]) {
-                out << "INGRESS]";
-                reg[INGRESS].emit_fieldname(out, addr, end);
-            } else {
-                out << "EGRESS]";
-                reg[EGRESS].emit_fieldname(out, addr, end); } });
+            out << "parser.ibp_reg";
+            reg_in.emit_fieldname(out, addr, end); });
+    declare_registers(&reg_eg, sizeof(reg_eg),
+        [this](std::ostream &out, const char *addr, const void *end) {
+            out << "parser.ebp_reg";
+            reg_eg.emit_fieldname(out, addr, end); });
     declare_registers(&reg_merge, sizeof(reg_merge),
         [this](std::ostream &out, const char *addr, const void *end) {
             out << "parser.merge";
@@ -31,7 +30,8 @@ Parser::Parser() : Section("parser") {
 }
 Parser::~Parser() {
     undeclare_registers(&mem);
-    undeclare_registers(&reg);
+    undeclare_registers(&reg_in);
+    undeclare_registers(&reg_eg);
     undeclare_registers(&reg_merge);
 }
 
@@ -159,6 +159,50 @@ void Parser::process() {
         Phv::setuse(EGRESS, phv_use[EGRESS]); }
 }
 
+template <class COMMON> void init_common_regs(Parser *p, COMMON &regs, gress_t gress) {
+    // TODO: fixed config copied from compiler -- needs to be controllable
+    for (int i = 0; i < 4; i++)
+        if (p->start_state[gress][i]) {
+            regs.start_state.state[i] = p->start_state[gress][i]->stateno.word1;
+            regs.enable.enable[i] = 1; }
+    regs.mode = 4;
+    regs.max_iter.max = 128;
+    if (p->parser_error[gress].lineno >= 0)
+        regs.err_phv_cfg.dst = p->parser_error[gress]->reg.index;
+    regs.err_phv_cfg.aram_mem_err_en = 1;
+    regs.err_phv_cfg.csum_mem_err_en = 1;
+    regs.err_phv_cfg.ctr_mem_err_en = 1;
+    regs.err_phv_cfg.ctr_range_err_en = 1;
+    regs.err_phv_cfg.dst_cont_err_en = 1;
+    regs.err_phv_cfg.fcs_err_en = 1;
+    regs.err_phv_cfg.multi_wr_err_en = 1;
+    regs.err_phv_cfg.no_tcam_match_err_en = 1;
+    regs.err_phv_cfg.partial_hdr_err_en = 1;
+    regs.err_phv_cfg.phv_owner_err_en = 1;
+    regs.err_phv_cfg.src_ext_err_en = 1;
+    regs.err_phv_cfg.timeout_err_en = 1;
+    // disable unused registers
+    regs.aram_mem_err_cnt.disable();
+    regs.csum_err_cnt.disable();
+    regs.csum_mem_err_cnt.disable();
+    regs.ctr_mem_err_cnt.disable();
+    regs.ctr_range_err_cnt.disable();
+    regs.dst_cont_err_cnt.disable();
+    regs.fcs_err_cnt.disable();
+    regs.hdr_byte_cnt.disable();
+    regs.idle_cnt.disable();
+    regs.int_en.disable();
+    regs.int_status.disable();
+    regs.max_cycle.disable();
+    regs.multi_wr_err_cnt.disable();
+    regs.no_tcam_match_err_cnt.disable();
+    regs.partial_hdr_err_cnt.disable();
+    regs.phv_owner_err_cnt.disable();
+    regs.pri_start.disable();
+    regs.src_ext_err_cnt.disable();
+    regs.timeout_err_cnt.disable();
+}
+
 void Parser::output() {
     if (all.empty()) return;
     for (auto st : all) st->pass2(this);
@@ -170,48 +214,24 @@ void Parser::output() {
         // TODO: write ctr_init_ram
         // TODO: write checksum units
         mem[gress].po_csum_ctrl_0_row.disable();
-        mem[gress].po_csum_ctrl_1_row.disable();
-        // TODO: fixed config copied from compiler -- needs to be controllable
-        for (int i = 0; i < 4; i++)
-            if (start_state[gress][i]) {
-                reg[gress].start_state.state[i] = start_state[gress][i]->stateno.word1;
-                reg[gress].enable.enable[i] = 1; }
-        reg[gress].mode = 4;
-        reg[gress].max_iter.max = 128;
-        if (parser_error[gress].lineno >= 0)
-            reg[gress].err_phv_cfg.dst = parser_error[gress]->reg.index;
-        reg[gress].err_phv_cfg.aram_mem_err_en = 1;
-        reg[gress].err_phv_cfg.csum_mem_err_en = 1;
-        reg[gress].err_phv_cfg.ctr_mem_err_en = 1;
-        reg[gress].err_phv_cfg.ctr_range_err_en = 1;
-        reg[gress].err_phv_cfg.dst_cont_err_en = 1;
-        reg[gress].err_phv_cfg.fcs_err_en = 1;
-        reg[gress].err_phv_cfg.multi_wr_err_en = 1;
-        reg[gress].err_phv_cfg.no_tcam_match_err_en = 1;
-        reg[gress].err_phv_cfg.partial_hdr_err_en = 1;
-        reg[gress].err_phv_cfg.phv_owner_err_en = 1;
-        reg[gress].err_phv_cfg.src_ext_err_en = 1;
-        reg[gress].err_phv_cfg.timeout_err_en = 1;
-        // disable unused registers
-        reg[gress].aram_mem_err_cnt.disable();
-        reg[gress].csum_err_cnt.disable();
-        reg[gress].csum_mem_err_cnt.disable();
-        reg[gress].ctr_mem_err_cnt.disable();
-        reg[gress].ctr_range_err_cnt.disable();
-        reg[gress].dst_cont_err_cnt.disable();
-        reg[gress].fcs_err_cnt.disable();
-        reg[gress].hdr_byte_cnt.disable();
-        reg[gress].idle_cnt.disable();
-        reg[gress].int_en.disable();
-        reg[gress].int_status.disable();
-        reg[gress].max_cycle.disable();
-        reg[gress].multi_wr_err_cnt.disable();
-        reg[gress].no_tcam_match_err_cnt.disable();
-        reg[gress].partial_hdr_err_cnt.disable();
-        reg[gress].phv_owner_err_cnt.disable();
-        reg[gress].pri_start.disable();
-        reg[gress].src_ext_err_cnt.disable();
-        reg[gress].timeout_err_cnt.disable(); }
+        mem[gress].po_csum_ctrl_1_row.disable(); }
+
+    init_common_regs(this, reg_in.prsr_reg, INGRESS);
+    reg_in.ing_buf_regs.glb_group.disable();
+    reg_in.ing_buf_regs.chan0_group.chnl_ctrl.chnl_ena = 1;
+    reg_in.ing_buf_regs.chan0_group.chnl_drop.disable();
+    reg_in.ing_buf_regs.chan1_group.chnl_ctrl.chnl_ena = 1;
+    reg_in.ing_buf_regs.chan1_group.chnl_drop.disable();
+    reg_in.ing_buf_regs.chan2_group.chnl_ctrl.chnl_ena = 1;
+    reg_in.ing_buf_regs.chan2_group.chnl_drop.disable();
+    reg_in.ing_buf_regs.chan3_group.chnl_ctrl.chnl_ena = 1;
+    reg_in.ing_buf_regs.chan3_group.chnl_drop.disable();
+
+    init_common_regs(this, reg_eg.prsr_reg, EGRESS);
+    for (int i = 0; i < 4; i++) {
+        reg_eg.ebuf_reg.chnl_ctrl[i].chnl_ena = 1;
+        reg_eg.epb_port_regs.chnl_ctrl[i].chnl_ena = 1; }
+
     if (options.match_compiler) {
         phv_use[INGRESS] |= Phv::use(INGRESS);
         phv_use[EGRESS] |= Phv::use(EGRESS); }
@@ -228,8 +248,8 @@ void Parser::output() {
             reg_merge.no_multi_wr.t_nmw[i] = 1;
     mem[INGRESS].emit_json(*open_output("memories.all.parser.ingress.cfg.json"), "ingress");
     mem[EGRESS].emit_json(*open_output("memories.all.parser.egress.cfg.json"), "egress");
-    reg[INGRESS].emit_json(*open_output("regs.all.parser.ingress.cfg.json"), "ingress");
-    reg[EGRESS].emit_json(*open_output("regs.all.parser.egress.cfg.json"), "egress");
+    reg_in.emit_json(*open_output("regs.all.parser.ingress.cfg.json"));
+    reg_eg.emit_json(*open_output("regs.all.parser.egress.cfg.json"));
     reg_merge.emit_json(*open_output("regs.all.parse_merge.cfg.json"));
 }
 

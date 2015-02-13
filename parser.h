@@ -4,7 +4,8 @@
 #include "sections.h"
 #include "phv.h"
 #include "gen/memories.prsr_mem_main_rspec.h"
-#include "gen/regs.prsr_reg_main_rspec.h"
+#include "gen/regs.ibp_rspec.h"
+#include "gen/regs.ebp_rspec.h"
 #include "gen/regs.prsr_reg_merge_rspec.h"
 #include <map>
 #include <vector>
@@ -21,7 +22,8 @@ enum {
 class Parser : public Section {
     int                         lineno[2];
     memories_all_parser_        mem[2];
-    regs_all_parser_            reg[2];
+    regs_all_parser_ingress     reg_in;
+    regs_all_parser_egress      reg_eg;
     regs_all_parse_merge        reg_merge;
     Parser();
     ~Parser();
@@ -113,6 +115,7 @@ class Parser : public Section {
         void write_config(Parser *);
     };
     friend class State;
+public:
     std::map<std::string, State>        states[2];
     std::vector<State *>                all;
     bitvec                              state_use[2];
@@ -122,9 +125,7 @@ class Parser : public Section {
     std::vector<Phv::Ref>               multi_write;
     bitvec                              phv_use[2], phv_allow_multi_write;
 
-
-
-
+private:
     /* remapping structure for getting at the config bits for phv output
      * programming in a systematic way */
     struct phv_output_map {
