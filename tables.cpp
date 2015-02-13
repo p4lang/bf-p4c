@@ -332,7 +332,7 @@ void Table::Format::setup_immed(Table *tbl) {
                   f.second.action_xbar); }
 }
 
-Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) : lineno(data[0].key.lineno) {
+Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) : lineno(data.size > 0 ? data[0].key.lineno : -1) {
     for (auto &kv : data) {
         if (!CHECKTYPE(kv.key, tSTR) || !CHECKTYPE(kv.value, tVEC))
             continue;
@@ -543,8 +543,9 @@ void MatchTable::write_regs(int type, Table *result) {
     if (next->miss_next || next->miss_next == "END") {
         merge.next_table_format_data[logical_id].match_next_table_adr_miss_value = 
             next->miss_next ? next->miss_next->table_id() : 0xff; }
-    assert(((next->hit_next.size()-1) & next->hit_next.size()) == 0);
-    merge.next_table_format_data[logical_id].match_next_table_adr_mask = next->hit_next.size()-1;
+    if (next->hit_next.size() > 0) {
+        assert(((next->hit_next.size()-1) & next->hit_next.size()) == 0);
+        merge.next_table_format_data[logical_id].match_next_table_adr_mask = next->hit_next.size()-1; }
 
     /*------------------------
      * Immediate data found in overhead

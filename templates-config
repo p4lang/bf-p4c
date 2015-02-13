@@ -1,18 +1,44 @@
 {
-    "memories":[
-        "pipe_top_level", "pipe_addrmap",
-        "prsr_mem_main_rspec",
-        "tm_pre_mem_rspec"
-    ],
-    "regs":[
-        "tofino",
-        "dvsl_addrmap", "pipe_addrmap", "mac_addrmap", "serdes_addrmap",
-        "prsr_reg_main_rspec", "prsr_reg_merge_rspec",
-        "ing_buf_regs",
-        "epb_port_regs",
-        "ebuf_reg",
-        "parb_regs",
-        "mau_addrmap",
-        "dprsr_inp", "dprsr_out", "dprsr_hdr"
-    ]
+    "generate": {
+        "memories":[
+            "pipe_top_level",
+                "pipe_addrmap",
+                    "prsr_mem_main_rspec",
+        ],
+        "regs":[
+            "tofino",
+                "pipe_addrmap",
+                    # pmarb_rspec
+                        "ibp_rspec", # Ingress parser registers
+                        "ebp_rspec", # Egress parser registers
+                        "prsr_reg_merge_rspec", # Shared parser registers
+                    "mau_addrmap",
+                    # dprsr_reg_rspec
+                        "dprsr_inp",
+                        "dprsr_out",
+                        "dprsr_hdr",
+        ]
+    },
+
+    "ignore": {
+        "memories":[
+            # pipe_top_level
+                "tm_pre_mem_rspec",
+                "party_pgr_mem_rspec",
+        ],
+        "regs":[
+            # tofino
+                "dvsl_addrmap", "mac_addrmap", "serdes_addrmap",
+                # pipe_addrmap
+                    # pmarb_rspec
+                        "parb_regs",
+                        "party_pgr_reg_rspec",
+                        "epb_dispatch_regs",
+                        "pbus_station_regs",
+                    # dprsr_reg_rspec
+                        # dprsr_hdr
+                            # dprsr_hi_mem
+                                "dprsr_h_pv_table_map",
+        ]
+    }
 }

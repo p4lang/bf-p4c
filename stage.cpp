@@ -97,7 +97,7 @@ void AsmStage::output() {
             table->write_regs();
             table->gen_tbl_cfg(tbl_cfg); }
         stage[i].write_regs();
-        stage[i].regs.emit_json(*open_output("regs.match_action_stage.%02x.cfg.json") , i);
+        stage[i].regs.emit_json(*open_output("regs.match_action_stage.%02x.cfg.json", i) , i);
     }
     *open_output("tbl-cfg") << &tbl_cfg << std::endl;
 }

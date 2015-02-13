@@ -30,7 +30,7 @@ inline void warning(int lineno, const char *fmt, ...) {
     warning(lineno, fmt, args);
     va_end(args); }
 
-extern std::unique_ptr<std::ostream> open_output(const char *, ...);
+extern std::unique_ptr<std::ostream> open_output(const char *, ...) __attribute__((format(printf, 1, 2)));
 
 class VersionIter {
     unsigned    left, bit;

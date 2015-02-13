@@ -146,24 +146,22 @@ void GatewayTable::write_regs() {
     if (!miss.run_table) {
         merge.gateway_next_table_lut[logical_id][4] = miss.next ? miss.next->table_id() : 0xff;
         merge.gateway_inhibit_lut[logical_id] |= 1 << 4; }
-    //bool ternary_match = false;
-    if (auto *tm = dynamic_cast<TernaryMatchTable *>(match_table)) {
-        //ternary_match = true;
-        merge.gateway_inhibit_logical_to_tcam_xbar_ctl[tm->tcam_id]
-            .enabled_4bit_muxctl_select = logical_id;
-        merge.gateway_inhibit_logical_to_tcam_xbar_ctl[tm->tcam_id]
-            .enabled_4bit_muxctl_enable = 1; }
     for (int v : VersionIter(options.version))
         merge.gateway_en[v] |= 1 << logical_id;
     merge.gateway_to_logicaltable_xbar_ctl[logical_id].enabled_4bit_muxctl_select =
         row.row*2 + gw_unit;
     merge.gateway_to_logicaltable_xbar_ctl[logical_id].enabled_4bit_muxctl_enable = 1;
     if (match_table) {
+        bool ternary_match = dynamic_cast<TernaryMatchTable *>(match_table) != 0;
         for (auto &row : match_table->layout) {
-            merge.gateway_to_pbus_xbar_ctl[row.row*2 + row.bus]
-                .enabled_4bit_muxctl_select = logical_id;
-            merge.gateway_to_pbus_xbar_ctl[row.row*2 + row.bus]
-                .enabled_4bit_muxctl_enable = 1;
+            auto &xbar_ctl = merge.gateway_to_pbus_xbar_ctl[row.row*2 + row.bus];
+            if (ternary_match) {
+                xbar_ctl.tind_logical_select = logical_id;
+                xbar_ctl.tind_inhibit_enable = 1;
+            } else {
+                xbar_ctl.exact_logical_select = logical_id;
+                xbar_ctl.exact_inhibit_enable = 1;
+            }
 #if 0
             merge.gateway_payload_pbus[row.row][row.bus] |= 1 << (row.bus + ternary_match ? 2 : 0);
             merge.gateway_payload_data[row.row][row.bus][0] = ???;
