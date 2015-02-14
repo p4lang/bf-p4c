@@ -102,26 +102,34 @@ void AsmStage::output() {
     *open_output("tbl-cfg") << &tbl_cfg << std::endl;
 }
 
-/* FIXME -- HW specs 11 for min delay, compiler uses 10 */
-                                    /* !  TCAM   ! TCAM
-                                     * !    !   STATEFUL  */   
-static int action_output_delay[8] = { 10,  12,  15,  16,    /* not PIPED */
-                                      10,  13,  15,  17 };  /* PIPED */
+static int action_output_delay(int use_flags) {
+    int rv = 11;
+    if (use_flags & Stage::USE_TCAM) {
+        rv += 2;
+        if (use_flags & Stage::USE_TCAM_PIPED) rv++; }
+    if (use_flags & Stage::USE_SELECTOR)
+        rv += 9;
+    else if (use_flags & Stage::USE_METER)
+        rv += 5;
+    else if (use_flags & Stage::USE_STATEFUL)
+        rv += 4;
+    return rv;
+}
 
 void Stage::write_regs() {
     /* FIXME -- most of the values set here are 'placeholder' constants copied
      * from build_pipeline_output_2.py in the compiler */
     auto &merge = regs.rams.match.merge;
     merge.exact_match_delay_config.exact_match_delay_ingress =
-        table_use[INGRESS] & USE_TCAM ? 3 : 0;
+        table_use[INGRESS] & USE_TCAM ? table_use[INGRESS] & USE_TCAM_PIPED ? 3 : 2 : 0;
     merge.exact_match_delay_config.exact_match_delay_egress =
-        table_use[EGRESS] & USE_TCAM ? 3 : 0;
+        table_use[INGRESS] & USE_TCAM ? table_use[INGRESS] & USE_TCAM_PIPED ? 3 : 2 : 0;
     for (int v : VersionIter(options.version)) {
         for (gress_t gress : Range(INGRESS, EGRESS)) {
             merge.predication_ctl[gress][v].start_table_fifo_delay0 = 15;
             merge.predication_ctl[gress][v].start_table_fifo_delay1 = 8;
             merge.predication_ctl[gress][v].start_table_fifo_enable = stageno ? 3 : 1;
-            regs.dp.action_output_delay[gress][v] = action_output_delay[table_use[gress]];
+            regs.dp.action_output_delay[gress][v] = action_output_delay(table_use[gress]);
             regs.dp.cur_stage_dependency_on_prev[gress][v] = 0;
             regs.dp.next_stage_dependency_on_cur[gress][v] = 0; }
         regs.dp.match_ie_input_mux_sel[v] = 3;

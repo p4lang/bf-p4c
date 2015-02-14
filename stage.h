@@ -52,7 +52,9 @@ public:
     Alloc1D<std::vector<InputXbar *>, 16>               tcam_ixbar;
     Alloc1D<Table *, ACTION_DATA_BUS_SLOTS>             action_bus_use;
     bitvec      imem_addr_use[2], imem_use[ACTION_IMEM_SLOTS];
-    enum { NONE=0, USE_TCAM=1, USE_STATEFUL=2, USE_TCAM_PIPED=4, };
+    enum { NONE=0, USE_TCAM=1, USE_TCAM_PIPED=2, USE_STATEFUL=4,
+            USE_METER=8, USE_SELECTOR=16, };
+
     int                 table_use[2];
     bitvec              phv_use[2];
     static unsigned char action_bus_slot_map[ACTION_DATA_BUS_BYTES];
