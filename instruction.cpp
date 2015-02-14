@@ -322,7 +322,7 @@ int Set::encode() {
 
 struct DepositField : public Instruction {
     struct Decode : public Idecode {
-        Decode(const char *n) : Idecode(n) {}
+        Decode() : Idecode("deposit_field") { alias("deposit-field"); }
         Instruction *decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op);
     };
     Phv::Ref    dest;
@@ -337,7 +337,7 @@ struct DepositField : public Instruction {
         out << "INSTR: deposit_field " << dest << ", " << src1 << ", " << src2; }
 };
 
-static DepositField::Decode opDepositField("deposit_field");
+static DepositField::Decode opDepositField;
 
 Instruction *DepositField::Decode::decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op) {
     if (op.size != 4 && op.size != 3) {
