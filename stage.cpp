@@ -102,8 +102,8 @@ void AsmStage::output() {
     *open_output("tbl-cfg") << &tbl_cfg << std::endl;
 }
 
-static int action_output_delay(int use_flags) {
-    int rv = 11;
+static int pipelength_added_stages(int use_flags) {
+    int rv = 0;
     if (use_flags & Stage::USE_TCAM) {
         rv += 2;
         if (use_flags & Stage::USE_TCAM_PIPED) rv++; }
@@ -123,17 +123,22 @@ void Stage::write_regs() {
     merge.exact_match_delay_config.exact_match_delay_ingress =
         table_use[INGRESS] & USE_TCAM ? table_use[INGRESS] & USE_TCAM_PIPED ? 3 : 2 : 0;
     merge.exact_match_delay_config.exact_match_delay_egress =
-        table_use[INGRESS] & USE_TCAM ? table_use[INGRESS] & USE_TCAM_PIPED ? 3 : 2 : 0;
+        table_use[EGRESS] & USE_TCAM ? table_use[EGRESS] & USE_TCAM_PIPED ? 3 : 2 : 0;
     for (int v : VersionIter(options.version)) {
         for (gress_t gress : Range(INGRESS, EGRESS)) {
             merge.predication_ctl[gress][v].start_table_fifo_delay0 = 15;
             merge.predication_ctl[gress][v].start_table_fifo_delay1 = 8;
             merge.predication_ctl[gress][v].start_table_fifo_enable = stageno ? 3 : 1;
-            regs.dp.action_output_delay[gress][v] = action_output_delay(table_use[gress]);
+            int add = pipelength_added_stages(table_use[gress]);
+            if (options.match_compiler)
+                add = pipelength_added_stages(table_use[INGRESS]|table_use[EGRESS]);
+            regs.dp.action_output_delay[gress][v] = 11 + add;
+            regs.dp.pipelength_added_stages[gress][v] = add;
             regs.dp.cur_stage_dependency_on_prev[gress][v] = 0;
             regs.dp.next_stage_dependency_on_cur[gress][v] = 0; }
         regs.dp.match_ie_input_mux_sel[v] = 3;
-        regs.dp.stage_concurrent_with_prev[v] = stageno ? 0 : 3;
+        /* FIXME -- need to figure out interstage dependencies */
+        regs.dp.stage_concurrent_with_prev[v] = 0;
         regs.dp.phv_fifo_enable[v].phv_fifo_ingress_final_output_enable = 0;
         regs.dp.phv_fifo_enable[v].phv_fifo_egress_final_output_enable = 0;
         regs.dp.phv_fifo_enable[v].phv_fifo_ingress_action_output_enable = 1;
@@ -144,9 +149,15 @@ void Stage::write_regs() {
                     Phv::use(INGRESS).getrange(32*j, 32);
             regs.dp.phv_egress_thread[i][j] = phv_use[EGRESS].getrange(32*j, 32) |
                     Phv::use(EGRESS).getrange(32*j, 32); } }
-    if (table_use[INGRESS] & USE_TCAM_PIPED)
-        regs.tcams.tcam_piped |= 1;
-    if (table_use[EGRESS] & USE_TCAM_PIPED)
-        regs.tcams.tcam_piped |= 2;
+    for (auto gress : Range(INGRESS, EGRESS)) {
+        if (table_use[gress] & USE_TCAM) {
+            if (table_use[gress] & USE_TCAM_PIPED) {
+                if (options.match_compiler)
+                    regs.tcams.tcam_piped |= 3;
+                else
+                    regs.tcams.tcam_piped |= 1 << gress;
+                merge.mau_thread_tcam_delay[gress] = 3;
+            } else 
+                merge.mau_thread_tcam_delay[gress] = 2; } }
 }
 

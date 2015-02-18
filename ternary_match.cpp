@@ -138,7 +138,8 @@ void TernaryMatchTable::write_regs() {
         .enabled_4bit_muxctl_enable = 1;
     /* FIXME -- unconditionally setting piped mode -- only need it for wide
      * match across a 4-row boundary */
-    merge.tcam_table_prop[tcam_id].tcam_piped = 1;
+    bool is_piped = true;
+    merge.tcam_table_prop[tcam_id].tcam_piped = is_piped;
     stage->table_use[gress] |= Stage::USE_TCAM_PIPED;
     merge.tcam_table_prop[tcam_id].thread = gress;
     merge.tcam_table_prop[tcam_id].enabled = 1;

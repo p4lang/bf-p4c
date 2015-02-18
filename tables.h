@@ -20,7 +20,8 @@ class Table {
 protected:
     Table(int line, std::string &&n, gress_t gr, Stage *s, int lid = -1)
         : name_(n), stage(s), match_table(0), gress(gr), lineno(line),
-          logical_id(lid), gateway(0), input_xbar(0), format(0), actions(0) {
+          logical_id(lid), gateway(0), input_xbar(0), format(0), actions(0),
+          action_bus(0) {
             assert(all.find(name_) == all.end());
             all.emplace(name_, this); }
     virtual ~Table() { all.erase(name_); }
