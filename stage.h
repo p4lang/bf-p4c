@@ -56,7 +56,7 @@ public:
             USE_METER=8, USE_SELECTOR=16, };
 
     int                 table_use[2];
-    bitvec              phv_use[2];
+    bitvec              match_use[2], action_use[2], action_set[2];
     static unsigned char action_bus_slot_map[ACTION_DATA_BUS_BYTES];
     static unsigned char action_bus_slot_size[ACTION_DATA_BUS_SLOTS];
 

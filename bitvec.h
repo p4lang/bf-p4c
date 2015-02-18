@@ -293,4 +293,13 @@ private:
     }
 };
 
+inline bitvec operator|(bitvec &&a, const bitvec &b) {
+    bitvec rv(a); rv |= b; return rv; }
+inline bitvec operator&(bitvec &&a, const bitvec &b) {
+    bitvec rv(a); rv &= b; return rv; }
+inline bitvec operator^(bitvec &&a, const bitvec &b) {
+    bitvec rv(a); rv ^= b; return rv; }
+inline bitvec operator-(bitvec &&a, const bitvec &b) {
+    bitvec rv(a); rv -= b; return rv; }
+
 #endif // _bitvec_h_

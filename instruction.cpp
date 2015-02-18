@@ -67,7 +67,7 @@ private:
         virtual unsigned bitoffset() const { return reg->lo; }
         virtual unsigned bitsize() const { return reg->hi - reg->lo + 1; }
         virtual void mark_use(Table *tbl) {
-            tbl->stage->phv_use[tbl->gress][reg->reg.index] = true; }
+            tbl->stage->action_use[tbl->gress][reg->reg.index] = true; }
         virtual void dbprint(std::ostream &out) const { out << reg; }
     };
     struct Action : public Base {
@@ -262,7 +262,7 @@ void AluOP::pass1(Table *tbl) {
         error(lineno, "ALU ops cannot operate on slices");
         return; }
     slot = dest->reg.index;
-    tbl->stage->phv_use[tbl->gress][slot] = true;
+    tbl->stage->action_set[tbl->gress][slot] = true;
     src1.mark_use(tbl);
     src2.mark_use(tbl);
     if (src2.phvGroup() < 0 && opc->swap_args) {
@@ -312,7 +312,7 @@ void Set::pass1(Table *tbl) {
         error(lineno, "ALU ops cannot operate on slices");
         return; }
     slot = dest->reg.index;
-    tbl->stage->phv_use[tbl->gress][slot] = true;
+    tbl->stage->action_set[tbl->gress][slot] = true;
     src.mark_use(tbl);
 }
 int Set::encode() {
@@ -361,7 +361,7 @@ Instruction *DepositField::Decode::decode(Table *tbl, const std::string &act, co
 void DepositField::pass1(Table *tbl) {
     if (!dest.check() || !src1.check() || !src2.check()) return;
     slot = dest->reg.index;
-    tbl->stage->phv_use[tbl->gress][slot] = true;
+    tbl->stage->action_set[tbl->gress][slot] = true;
     src1.mark_use(tbl);
     src2.mark_use(tbl);
 }
@@ -415,10 +415,8 @@ Instruction *NulOP::Decode::decode(Table *tbl, const std::string &act, const VEC
 void NulOP::pass1(Table *tbl) {
     if (!dest.check()) return;
     slot = dest->reg.index;
-    if (opc->opcode) {
-        /* FIXME -- for compatibilty with compiler, don't mark phv as used if
-         * this is a noop instruction */
-        tbl->stage->phv_use[tbl->gress][slot] = true; }
+    if (opc->opcode || !options.match_compiler) {
+        tbl->stage->action_set[tbl->gress][slot] = true; }
 }
 int NulOP::encode() {
     return opc->opcode;

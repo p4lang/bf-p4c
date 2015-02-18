@@ -82,8 +82,10 @@ void AsmStage::process() {
             /* FIXME -- do we really want to do this?  In theory different stages could
              * FIXME -- use the same PHV slots differently, but the compiler always uses them
              * FIXME -- consistently, so we need this to get bit-identical results */
-            Phv::setuse(INGRESS, stage[i].phv_use[INGRESS]);
-            Phv::setuse(EGRESS, stage[i].phv_use[EGRESS]); } }
+            for (auto gress : Range(INGRESS, EGRESS)) {
+                Phv::setuse(gress, stage[i].match_use[gress]);
+                Phv::setuse(gress, stage[i].action_use[gress]);
+                Phv::setuse(gress, stage[i].action_set[gress]); } } }
 }
 
 void AsmStage::output() {
@@ -126,8 +128,8 @@ void Stage::write_regs() {
         table_use[EGRESS] & USE_TCAM ? table_use[EGRESS] & USE_TCAM_PIPED ? 3 : 2 : 0;
     for (int v : VersionIter(options.version)) {
         for (gress_t gress : Range(INGRESS, EGRESS)) {
-            merge.predication_ctl[gress][v].start_table_fifo_delay0 = 15;
-            merge.predication_ctl[gress][v].start_table_fifo_delay1 = 8;
+            merge.predication_ctl[gress][v].start_table_fifo_delay0 = 9;
+            merge.predication_ctl[gress][v].start_table_fifo_delay1 = 0;
             merge.predication_ctl[gress][v].start_table_fifo_enable = stageno ? 3 : 1;
             int add = pipelength_added_stages(table_use[gress]);
             if (options.match_compiler)
@@ -143,12 +145,15 @@ void Stage::write_regs() {
         regs.dp.phv_fifo_enable[v].phv_fifo_egress_final_output_enable = 0;
         regs.dp.phv_fifo_enable[v].phv_fifo_ingress_action_output_enable = 1;
         regs.dp.phv_fifo_enable[v].phv_fifo_egress_action_output_enable = 1; }
+    bitvec in_use = match_use[INGRESS] | action_use[INGRESS] | action_set[INGRESS];
+    bitvec eg_use = match_use[EGRESS] | action_use[EGRESS] | action_set[EGRESS];
+    if (options.match_compiler) {
+        in_use |= Phv::use(INGRESS);
+        eg_use |= Phv::use(EGRESS); }
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 7; j++) {
-            regs.dp.phv_ingress_thread[i][j] = phv_use[INGRESS].getrange(32*j, 32) |
-                    Phv::use(INGRESS).getrange(32*j, 32);
-            regs.dp.phv_egress_thread[i][j] = phv_use[EGRESS].getrange(32*j, 32) |
-                    Phv::use(EGRESS).getrange(32*j, 32); } }
+            regs.dp.phv_ingress_thread[i][j] = in_use.getrange(32*j, 32);
+            regs.dp.phv_egress_thread[i][j] = eg_use.getrange(32*j, 32); } }
     for (auto gress : Range(INGRESS, EGRESS)) {
         if (table_use[gress] & USE_TCAM) {
             if (table_use[gress] & USE_TCAM_PIPED) {
