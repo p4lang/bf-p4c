@@ -21,7 +21,7 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "gateway") {
 	    if (CHECKTYPE(kv.value, tMAP)) {
                 gateway = GatewayTable::create(kv.key.lineno, name_+" gateway",
-                        gress, stage, logical_id, kv.value.map);
+                        gress, stage, -1, kv.value.map);
                 gateway->match_table = this; }
         } else if (kv.key == "format") {
             /* done above to be done before action_bus */
@@ -111,18 +111,19 @@ void ExactMatchTable::pass1() {
         error(lineno, "No ways defined in table %s", name());
     else if (layout.size() % (ways.size()*fmt_width) != 0)
         error(lineno, "Rows is not a mulitple of ways in table %s", name());
-    unsigned way = 0, word = 0;
-    for (auto &row : layout) {
-        if (word == 0) {
-            if (ways[way].group >= EXACT_HASH_GROUPS ||
-                ways[way].subgroup >= 5 ||
-                (ways[way].mask &~ 0xfff)) {
-                error(ways[way].lineno, "invalid exact match way");
-                break; } }
-        if (row.cols.size() != 1U << bitcount(ways[way].mask))
-            error(ways[way].lineno, "Depth of way doesn't match number of columns on "
-                  "row %d in table %s", row.row, name());
-        if (++word == fmt_width) { word = 0; way++; } }
+    else {
+        unsigned way = 0, word = 0;
+        for (auto &row : layout) {
+            if (word == 0) {
+                if (ways[way].group >= EXACT_HASH_GROUPS ||
+                    ways[way].subgroup >= 5 ||
+                    (ways[way].mask &~ 0xfff)) {
+                    error(ways[way].lineno, "invalid exact match way");
+                    break; } }
+            if (row.cols.size() != 1U << bitcount(ways[way].mask))
+                error(ways[way].lineno, "Depth of way doesn't match number of columns on "
+                      "row %d in table %s", row.row, name());
+            if (++word == fmt_width) { word = 0; way++; } } }
     for (auto &r : match) r.check();
     if (gateway) {
         gateway->logical_id = logical_id;

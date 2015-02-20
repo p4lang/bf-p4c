@@ -18,7 +18,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "gateway") {
 	    if (CHECKTYPE(kv.value, tMAP)) {
                 gateway = GatewayTable::create(kv.key.lineno, name_+" gateway",
-                        gress, stage, logical_id, kv.value.map);
+                        gress, stage, -1, kv.value.map);
                 gateway->match_table = this; }
         } else if (kv.key == "indirect") {
             if (CHECKTYPE(kv.value, tSTR))
