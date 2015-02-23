@@ -132,8 +132,6 @@ void Stage::write_regs() {
             merge.predication_ctl[gress][v].start_table_fifo_delay1 = 0;
             merge.predication_ctl[gress][v].start_table_fifo_enable = stageno ? 3 : 1;
             int add = pipelength_added_stages(table_use[gress]);
-            if (options.match_compiler)
-                add = pipelength_added_stages(table_use[INGRESS]|table_use[EGRESS]);
             regs.dp.action_output_delay[gress][v] = 11 + add;
             regs.dp.pipelength_added_stages[gress][v] = add;
             regs.dp.cur_stage_dependency_on_prev[gress][v] = 0;
