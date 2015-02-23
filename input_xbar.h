@@ -36,6 +36,7 @@ public:
     unsigned group_for_word(unsigned w) {
         assert(w < group_order.size());
         return group_order[w]->first; }
+#if 0
     class iterator {
 	std::map<int, std::vector<Input>>::const_iterator	iter;
     public:
@@ -48,6 +49,39 @@ public:
     };
     //iterator begin() const { return iterator(groups.begin()); }
     //iterator end() const { return iterator(groups.end()); }
+#endif
+    class all_iter {
+        decltype(group_order)::const_iterator   outer;
+        bool                                    inner_valid;
+        std::vector<Input>::iterator            inner;
+        void mk_inner_valid() {
+            if (!inner_valid) inner = (**outer).second.begin();
+            while (inner == (**outer).second.end())
+                inner = (**++outer).second.begin();
+            inner_valid = true; }
+        struct iter_deref : public std::pair<unsigned, Input &> {
+            iter_deref(const std::pair<unsigned, Input &> &a) : std::pair<unsigned, Input &>(a) {}
+            iter_deref *operator->() { return this; } };
+    public:
+        all_iter(decltype(group_order)::const_iterator o) :
+            outer(o), inner_valid(false) {}
+        bool operator==(const all_iter &a) {
+            if (outer != a.outer) return false;
+            if (inner_valid != a.inner_valid) return false;
+            return inner_valid ? inner == a.inner : true; }
+        all_iter &operator++() {
+            mk_inner_valid();
+            if (++inner == (**outer).second.end()) {
+                ++outer;
+                inner_valid = false; } 
+            return *this; }
+        std::pair<unsigned, Input &> operator*() {
+            mk_inner_valid();
+            return std::pair<unsigned, Input &>((**outer).first, *inner); }
+        iter_deref operator->() { return iter_deref(**this); }
+    };
+    all_iter all_begin() const { return all_iter(group_order.begin()); }
+    all_iter all_end() const { return all_iter(group_order.end()); }
 
     Input *find(Phv::Slice sl, int group);
 };

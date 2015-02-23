@@ -190,6 +190,7 @@ void InputXbar::pass2(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
 void InputXbar::write_regs() {
     auto &xbar = table->stage->regs.dp.xbar;
     for (auto &group : groups) {
+        if (group.second.empty()) continue;
         unsigned group_base;
         unsigned half_byte = 0;
         if (ternary) {
@@ -229,6 +230,7 @@ void InputXbar::write_regs() {
                     LOG1("FIXME -- need swizzle for " << input.what); } } }
     auto &hash = table->stage->regs.dp.hash;
     for (auto &hg : hash_groups) {
+        if (hg.second.empty()) continue;
         int grp = hg.first;
         hash.parity_group_mask[grp] |= 1 << grp;
         for (auto &col : hg.second) {

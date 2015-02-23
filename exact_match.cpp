@@ -128,6 +128,10 @@ void ExactMatchTable::pass1() {
     if (gateway) {
         gateway->logical_id = logical_id;
         gateway->pass1(); }
+    if (error_count > 0) return;
+    if (match.empty())
+        for (auto it = input_xbar->all_begin(); it != input_xbar->all_end(); ++it)
+            match.push_back(it->second.what);
 }
 
 void ExactMatchTable::pass2() {
@@ -195,6 +199,8 @@ static bool setup_match_input(unsigned bytes[16], std::vector<Phv::Ref> &match, 
         if (!found) {
             error(r.lineno, "Can't find %s in input xbar group %d", r.name(), group);
             rv = false; } }
+    while (byte < 16)
+        bytes[byte++] = 0xdeadbeef;
     return rv;
 }
 
