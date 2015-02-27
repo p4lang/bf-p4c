@@ -196,7 +196,7 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
         if (lo >= 0 && (unsigned)lo >= field->size) {
             error(lineno, "Bit %d out of range for field %s", lo, name.c_str());
             ref = 0;
-        } else if ((unsigned)hi >= field->size) {
+        } else if (hi >= 0 && (unsigned)hi >= field->size) {
             error(lineno, "Bit %d out of range for field %s", hi, name.c_str());
             ref = 0;
         } else

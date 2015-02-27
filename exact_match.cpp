@@ -340,17 +340,11 @@ void ExactMatchTable::write_regs() {
         if (word == 0) wide_bus = bus;
         /* FIXME -- factor this where possible with ternary match code */
         if (action) {
+            int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
             if (action_args.size() == 1) {
-                /* FIXME -- fixed actiondata mask??  See
-                 * get_direct_address_mau_actiondata_adr_tcam_mask in
-                 * device/pipeline/mau/address_and_data_structures.py
-                 * Maybe should be masking off bottom 6-format->log2size bits, as those
-                 * will be coming from the top of the tcam_indir data bus?  They'll always
-                 * be 0 anyways, unless the full data bus is in use */
-                merge.mau_actiondata_adr_mask[0][bus] = 0x3fffff;
+                merge.mau_actiondata_adr_mask[0][bus] = 0x3fffff & (~0U << lo_huffman_bits);
             } else {
                 /* FIXME -- support for multiple sizes of action data? */
-                int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
                 merge.mau_actiondata_adr_mask[0][bus] =
                     ((1U << action_args[1]->size) - 1) << lo_huffman_bits; }
             merge.mau_actiondata_adr_vpn_shiftcount[0][bus] =

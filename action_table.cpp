@@ -250,6 +250,12 @@ void ActionTable::write_regs() {
                 ram_mux.ram_oflo_adr_mux_select_oflo = 1; }
             vpn++; }
         icxbar.address_distr_to_logical_rows |= 1U << logical_row.row;
+        auto &switch_ctl = stage->regs.rams.array.switchbox.row[row].ctl;
+        /* FIXME -- figure out oflo stuff */
+        if(side)
+            switch_ctl.r_action_o_mux_select.r_action_o_sel_action_rd_r_i = 1;
+        else
+            switch_ctl.r_l_action_o_mux_select.r_l_action_o_sel_action_rd_l_i = 1;
         home_row = false; }
 
     if (actions) actions->write_regs(this);

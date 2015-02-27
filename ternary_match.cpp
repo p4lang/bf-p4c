@@ -112,13 +112,19 @@ void TernaryMatchTable::write_regs() {
             int off = (row.row&1) * 4;
 	    for (int i = 0; i < 4; i++)
 		tcam_vh_xbar.tcam_validbit_xbar_ctl[row.bus][row.row/2][i+off] = 15;
+            auto &halfbyte_mux_ctl = tcam_vh_xbar.tcam_row_halfbyte_mux_ctl[row.bus][row.row];
             if (word+1 == input_xbar->width()) {
-                tcam_vh_xbar.tcam_row_halfbyte_mux_ctl[row.bus][row.row]
-                    .tcam_row_halfbyte_mux_ctl_select = 3;
-                tcam_vh_xbar.tcam_row_halfbyte_mux_ctl[row.bus][row.row]
-                    .tcam_row_halfbyte_mux_ctl_enable = 1;
-                tcam_vh_xbar.tcam_row_halfbyte_mux_ctl[row.bus][row.row]
-                    .tcam_row_search_thread = gress; }
+                halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_select = 3;
+                halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_enable = 1;
+                halfbyte_mux_ctl.tcam_row_search_thread = gress;
+            } else {
+                /* FIXME -- program to halfbyte mux */
+                if (options.match_compiler) {
+                    halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_select = (row.row & 1) + 1;
+                    halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_enable = 1;
+                    halfbyte_mux_ctl.tcam_row_search_thread = gress;
+                }
+            }
             /* FIXME:
             tcam_vh_xbar.tcam_extra_byte_ctl[row.bus][row.row/2]
                 .enabled_3bit_muxctl_select = byte_match_group_number;
@@ -270,13 +276,7 @@ void TernaryIndirectTable::write_regs() {
         if (action) {
             int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
             if (action_args.size() == 1) {
-                /* FIXME -- fixed actiondata mask??  See
-                 * get_direct_address_mau_actiondata_adr_tcam_mask in
-                 * device/pipeline/mau/address_and_data_structures.py
-                 * Maybe should be masking off bottom 6-format->log2size bits, as those
-                 * will be coming from the top of the tcam_indir data bus?  They'll always
-                 * be 0 anyways, unless the full data bus is in use */
-                merge.mau_actiondata_adr_mask[1][bus] = 0x3fffff;
+                merge.mau_actiondata_adr_mask[1][bus] = 0x3fffff & (~0U << lo_huffman_bits);
                 merge.mau_actiondata_adr_tcam_shiftcount[bus] =
                     69 + (format->log2size-2) - lo_huffman_bits;
             } else {
