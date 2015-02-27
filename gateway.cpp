@@ -146,8 +146,7 @@ void GatewayTable::write_regs() {
     if (!miss.run_table) {
         merge.gateway_next_table_lut[logical_id][4] = miss.next ? miss.next->table_id() : 0xff;
         merge.gateway_inhibit_lut[logical_id] |= 1 << 4; }
-    for (int v : VersionIter(options.version))
-        merge.gateway_en[v] |= 1 << logical_id;
+    merge.gateway_en |= 1 << logical_id;
     merge.gateway_to_logicaltable_xbar_ctl[logical_id].enabled_4bit_muxctl_select =
         row.row*2 + gw_unit;
     merge.gateway_to_logicaltable_xbar_ctl[logical_id].enabled_4bit_muxctl_enable = 1;

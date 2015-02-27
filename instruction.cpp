@@ -169,7 +169,7 @@ public:
     bool valid() const { return op != 0; }
     unsigned bitoffset() { return op->lookup(op)->bitoffset(); }
     unsigned bitsize() { return op->lookup(op)->bitsize(); }
-    bool check() { return op ? op->lookup(op)->check() : false; }
+    bool check() { return op && op->lookup(op) ? op->check() : false; }
     int phvGroup() { return op->lookup(op)->phvGroup(); }
     int bits(int group) { return op->lookup(op)->bits(group); }
     void mark_use(Table *tbl) { op->lookup(op)->mark_use(tbl); }
@@ -193,8 +193,11 @@ operand::operand(Table *tbl, const std::string &act, const value_t &v) : op(0) {
 
 auto operand::Named::lookup(Base *&ref) -> Base * {
     if (auto *field = tbl->lookup_field(name, action)) {
-        if (lo >= 0 && (unsigned)lo > field->size) {
+        if (lo >= 0 && (unsigned)lo >= field->size) {
             error(lineno, "Bit %d out of range for field %s", lo, name.c_str());
+            ref = 0;
+        } else if ((unsigned)hi >= field->size) {
+            error(lineno, "Bit %d out of range for field %s", hi, name.c_str());
             ref = 0;
         } else
             ref = new Action(lineno, name, field, lo >= 0 ? lo : 0);

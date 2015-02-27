@@ -236,30 +236,26 @@ void TernaryIndirectTable::write_regs() {
     for (Layout &row : layout) {
 	for (int col : row.cols) {
             auto &unit_ram_ctl = stage->regs.rams.array.row[row.row].ram[col].unit_ram_ctl;
-            for (int v : VersionIter(options.version)) {
-                unit_ram_ctl[v].match_ram_write_data_mux_select = 7; /* disable */
-                unit_ram_ctl[v].match_ram_read_data_mux_select = 7; /* disable */
-                unit_ram_ctl[v].tind_result_bus_select = 1U << row.bus; }
+            unit_ram_ctl.match_ram_write_data_mux_select = 7; /* disable */
+            unit_ram_ctl.match_ram_read_data_mux_select = 7; /* disable */
+            unit_ram_ctl.tind_result_bus_select = 1U << row.bus;
             auto &mux_ctl = stage->regs.rams.map_alu.row[row.row].adrmux
                     .ram_address_mux_ctl[col/6][col%6];
-            for (int v : VersionIter(options.version))
-                mux_ctl[v].ram_unitram_adr_mux_select = row.bus + 2;
+                mux_ctl.ram_unitram_adr_mux_select = row.bus + 2;
             auto &unitram_config = stage->regs.rams.map_alu.row[row.row].adrmux
                     .unitram_config[col/6][col%6];
-            for (int v : VersionIter(options.version)) {
-                unitram_config[v].unitram_type = 6;
-                unitram_config[v].unitram_vpn = vpn;
-                unitram_config[v].unitram_logical_table = logical_id;
-                if (gress == INGRESS)
-                    unitram_config[v].unitram_ingress = 1;
-                else
-                    unitram_config[v].unitram_egress = 1;
-                unitram_config[v].unitram_enable = 1; }
+            unitram_config.unitram_type = 6;
+            unitram_config.unitram_vpn = vpn;
+            unitram_config.unitram_logical_table = logical_id;
+            if (gress == INGRESS)
+                unitram_config.unitram_ingress = 1;
+            else
+                unitram_config.unitram_egress = 1;
+            unitram_config.unitram_enable = 1;
             auto &xbar_ctl = stage->regs.rams.map_alu.row[row.row].vh_xbars
                     .adr_dist_tind_adr_xbar_ctl[row.bus];
-            for (int v : VersionIter(options.version)) {
-                xbar_ctl[v].enabled_3bit_muxctl_select = tcam_id;
-                xbar_ctl[v].enabled_3bit_muxctl_enable = 1; }
+            xbar_ctl.enabled_3bit_muxctl_select = tcam_id;
+            xbar_ctl.enabled_3bit_muxctl_enable = 1;
             vpn++; }
         int bus = row.row*2 + row.bus;
         merge.tind_ram_data_size[bus] = format->log2size - 1;
@@ -290,12 +286,7 @@ void TernaryIndirectTable::write_regs() {
                 merge.mau_actiondata_adr_tcam_shiftcount[bus] =
                     action_args[1]->bit + 5 - lo_huffman_bits; }
             merge.mau_actiondata_adr_vpn_shiftcount[1][bus] =
-                std::max(0, (int)action->format->log2size - 7);
-        } else {
-            /* FIXME -- are these actually needed?  Duplicating what the compiler does */
-            merge.mau_actiondata_adr_mask[1][bus] = 0x3fffff;
-            merge.mau_actiondata_adr_tcam_shiftcount[bus] = 73; }
-    }
+                std::max(0, (int)action->format->log2size - 7); } }
     if (actions) actions->write_regs(this);
 }
 

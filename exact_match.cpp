@@ -271,23 +271,22 @@ void ExactMatchTable::write_regs() {
             vh_adr_xbar.exactmatch_bank_enable[col]
                 .exactmatch_bank_enable_inp_sel |= 1 << row.bus;
             auto &ram = stage->regs.rams.array.row[row.row].ram[col];
-            auto &unitram_config = stage->regs.rams.map_alu.row[row.row].adrmux
-                    .unitram_config[col/6][col%6];
             for (unsigned i = 0; i < 4; i++)
                 ram.match_mask[i] = match_mask.getrange(word*128+i*32, 32);
-            for (int v : VersionIter(options.version)) {
-                ram.unit_ram_ctl[v].match_ram_write_data_mux_select = 7; /* unused */
-                ram.unit_ram_ctl[v].match_ram_read_data_mux_select = 7; /* unused */
-                ram.unit_ram_ctl[v].match_result_bus_select = 1 << row.bus;
-                if (auto cnt = bitcount(groups_in_word[word]))
-                    ram.unit_ram_ctl[v].match_entry_enable = ~(~0U << --cnt);
-                unitram_config[v].unitram_type = 1;
-                unitram_config[v].unitram_logical_table = logical_id;
-                switch (gress) {
-                case INGRESS: unitram_config[v].unitram_ingress = 1; break;
-                case EGRESS: unitram_config[v].unitram_egress = 1; break;
-                default: assert(0); }
-                unitram_config[v].unitram_enable = 1; }
+            ram.unit_ram_ctl.match_ram_write_data_mux_select = 7; /* unused */
+            ram.unit_ram_ctl.match_ram_read_data_mux_select = 7; /* unused */
+            ram.unit_ram_ctl.match_result_bus_select = 1 << row.bus;
+            if (auto cnt = bitcount(groups_in_word[word]))
+                ram.unit_ram_ctl.match_entry_enable = ~(~0U << --cnt);
+            auto &unitram_config = stage->regs.rams.map_alu.row[row.row].adrmux
+                    .unitram_config[col/6][col%6];
+            unitram_config.unitram_type = 1;
+            unitram_config.unitram_logical_table = logical_id;
+            switch (gress) {
+            case INGRESS: unitram_config.unitram_ingress = 1; break;
+            case EGRESS: unitram_config.unitram_egress = 1; break;
+            default: assert(0); }
+            unitram_config.unitram_enable = 1;
             ram.match_ram_vpn.match_ram_vpn0 = vpn >> 2;
             unsigned vpn_lsb = (vpn&3) - 1;
             for (unsigned i = 0; i < format->groups(); i++)
@@ -355,10 +354,7 @@ void ExactMatchTable::write_regs() {
                 merge.mau_actiondata_adr_mask[0][bus] =
                     ((1U << action_args[1]->size) - 1) << lo_huffman_bits; }
             merge.mau_actiondata_adr_vpn_shiftcount[0][bus] =
-                std::max(0, (int)action->format->log2size - 7);
-        } else {
-            /* FIXME -- do we need to actually set this? */
-            merge.mau_actiondata_adr_mask[0][bus] = 0x3fffff; }
+                std::max(0, (int)action->format->log2size - 7); }
         int word_group = 0;
         for (unsigned group : GroupsInWord(groups_in_word[word], groups_cross_words)) {
             assert(action_args[0]->by_group[group]->bit/128 == word);

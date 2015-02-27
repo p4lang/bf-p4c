@@ -216,39 +216,38 @@ void ActionTable::write_regs() {
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;
             auto &ram = stage->regs.rams.array.row[row].ram[col];
+            ram.unit_ram_ctl.match_ram_write_data_mux_select = 7; /*disable*/
+            ram.unit_ram_ctl.match_ram_read_data_mux_select = home_row ? 4 : 2;
             auto &map_alu_row =  stage->regs.rams.map_alu.row[row];
             auto &oflo_adr_xbar = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
+            if (!home_row) {
+                if (home_top == top) {
+                    oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_index = logical_row.row % 8;
+                    oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_sel = 0;
+                } else {
+                    assert(home_top);
+                    oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_index = 0;
+                    oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_sel = 2;
+                    if (!icxbar.address_distr_to_overflow)
+                        icxbar.address_distr_to_overflow = 1; }
+                oflo_adr_xbar.adr_dist_oflo_adr_xbar_enable = 1; }
             auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
+            unitram_config.unitram_type = 2;
+            unitram_config.unitram_vpn = vpn;
+            unitram_config.unitram_logical_table = logical_id;
+            if (gress == INGRESS)
+                unitram_config.unitram_ingress = 1;
+            else
+                unitram_config.unitram_egress = 1;
+            if (home_row)
+                unitram_config.unitram_action_subword_out_en = 1;
+            unitram_config.unitram_enable = 1;
             auto &ram_mux = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
-            for (int v : VersionIter(options.version)) {
-                ram.unit_ram_ctl[v].match_ram_write_data_mux_select = 7; /*disable*/
-                ram.unit_ram_ctl[v].match_ram_read_data_mux_select = home_row ? 4 : 2;
-                if (!home_row) {
-                    if (home_top == top) {
-                        oflo_adr_xbar[v].adr_dist_oflo_adr_xbar_source_index = logical_row.row % 8;
-                        oflo_adr_xbar[v].adr_dist_oflo_adr_xbar_source_sel = 0;
-                    } else {
-                        assert(home_top);
-                        oflo_adr_xbar[v].adr_dist_oflo_adr_xbar_source_index = 0;
-                        oflo_adr_xbar[v].adr_dist_oflo_adr_xbar_source_sel = 2;
-                        if (!icxbar.address_distr_to_overflow)
-                            icxbar.address_distr_to_overflow = 1; }
-                    oflo_adr_xbar[v].adr_dist_oflo_adr_xbar_enable = 1; }
-                unitram_config[v].unitram_type = 2;
-                unitram_config[v].unitram_vpn = vpn;
-                unitram_config[v].unitram_logical_table = logical_id;
-                if (gress == INGRESS)
-                    unitram_config[v].unitram_ingress = 1;
-                else
-                    unitram_config[v].unitram_egress = 1;
-                if (home_row)
-                    unitram_config[v].unitram_action_subword_out_en = 1;
-                unitram_config[v].unitram_enable = 1;
-                if (home_row)
-                    ram_mux[v].ram_unitram_adr_mux_select = 1;
-                else {
-                    ram_mux[v].ram_unitram_adr_mux_select = 4;
-                    ram_mux[v].ram_oflo_adr_mux_select_oflo = 1; } }
+            if (home_row)
+                ram_mux.ram_unitram_adr_mux_select = 1;
+            else {
+                ram_mux.ram_unitram_adr_mux_select = 4;
+                ram_mux.ram_oflo_adr_mux_select_oflo = 1; }
             vpn++; }
         icxbar.address_distr_to_logical_rows |= 1U << logical_row.row;
         home_row = false; }

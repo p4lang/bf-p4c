@@ -481,9 +481,7 @@ void MatchTable::write_regs(int type, Table *result) {
      * Match Merge
      *-----------------------*/
     auto &merge = stage->regs.rams.match.merge;
-    for (int v : VersionIter(options.version))
-        merge.predication_ctl[gress][v].table_thread |=
-            1 << logical_id;
+    merge.predication_ctl[gress].table_thread |= 1 << logical_id;
     for (auto &row : result->layout) {
         int bus = row.row*2 | row.bus;
         assert(bus >= 0 && bus < 15);
