@@ -191,6 +191,7 @@ void InputXbar::write_regs() {
     auto &xbar = table->stage->regs.dp.xbar;
     for (auto &group : groups) {
         if (group.second.empty()) continue;
+        LOG1("  # Input xbar group " << group.first);
         unsigned group_base;
         unsigned half_byte = 0;
         if (ternary) {
@@ -231,6 +232,7 @@ void InputXbar::write_regs() {
     auto &hash = table->stage->regs.dp.hash;
     for (auto &hg : hash_groups) {
         if (hg.second.empty()) continue;
+        LOG1("  # Input xbar hash group " << hg.first);
         int grp = hg.first;
         hash.parity_group_mask[grp] |= 1 << grp;
         for (auto &col : hg.second) {

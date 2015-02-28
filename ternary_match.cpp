@@ -89,6 +89,7 @@ void TernaryMatchTable::pass2() {
     if (gateway) gateway->pass2();
 }
 void TernaryMatchTable::write_regs() {
+    LOG1("### Ternary match table " << name());
     MatchTable::write_regs(1, indirect);
     int vpn = 0;
     unsigned word = 0;
@@ -235,6 +236,7 @@ void TernaryIndirectTable::pass2() {
     if (actions) actions->pass2(this);
 }
 void TernaryIndirectTable::write_regs() {
+    LOG1("### Ternary indirect table " << name());
     int tcam_id = dynamic_cast<TernaryMatchTable *>(match_table)->tcam_id;
     stage->regs.tcams.tcam_match_adr_shift[tcam_id] = format->log2size-2;
     int vpn = 0;

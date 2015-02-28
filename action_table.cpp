@@ -202,6 +202,7 @@ void Table::ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned
 }
 
 void ActionTable::write_regs() {
+    LOG1("### Action table " << name());
     Layout &home = layout[0];
     unsigned home_top = home.row >= 8;
     for (unsigned slice = 0; slice <= (format->size-1)/128; slice++)

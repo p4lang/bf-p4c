@@ -27,7 +27,7 @@ public:
 };
 
 inline unsigned bitcount(unsigned v) {
-    unsigned rv;
+    unsigned rv = 0;
     while (v) { v &= v-1; ++rv; }
     return rv; }
 

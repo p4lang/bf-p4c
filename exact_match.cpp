@@ -3,6 +3,7 @@
 #include "instruction.h"
 #include "stage.h"
 #include "tables.h"
+#include "hex.h"
 
 DEFINE_TABLE_TYPE(ExactMatchTable)
 
@@ -144,6 +145,8 @@ void ExactMatchTable::pass2() {
 }
 
 class GroupsInWord {
+    /* iterator adapter to iterate through the bits set in a pair of words --
+     * iterate through the bits in the first word, then the second word */
     unsigned    groups[2];
     struct iter {
         const GroupsInWord      *self;
@@ -205,8 +208,10 @@ static bool setup_match_input(unsigned bytes[16], std::vector<Phv::Ref> &match, 
 }
 
 void ExactMatchTable::write_regs() {
+    LOG1("### Exact match table " << name());
     if (input_xbar->width() > 1) {
         error(lineno, "FIXME -- can't deal with exact match larger than 128 bits");
+        LOG1("  (skipped)");
         return; }
     MatchTable::write_regs(0, this);
     unsigned fmt_width = (format->size + 127)/128;
@@ -240,6 +245,9 @@ void ExactMatchTable::write_regs() {
             return; }
         if (words_in_group[i] & ~(t >> 1))
             groups_cross_words |= 1U << i; }
+    LOG1(" : groups_in_word = " << hexvec(groups_in_word, fmt_width));
+    LOG1(" : groups_cross_words = " << hex(groups_cross_words));
+    LOG1(" : words_in_group = " << hexvec(words_in_group, format->groups()));
     for (unsigned i = 0; i < fmt_width; i++) {
         if (bitcount(groups_in_word[i]) > 5) {
             error(lineno, "More than 5 match groups in one word in table %s", name());
@@ -277,7 +285,7 @@ void ExactMatchTable::write_regs() {
             ram.unit_ram_ctl.match_ram_read_data_mux_select = 7; /* unused */
             ram.unit_ram_ctl.match_result_bus_select = 1 << row.bus;
             if (auto cnt = bitcount(groups_in_word[word]))
-                ram.unit_ram_ctl.match_entry_enable = ~(~0U << --cnt);
+                ram.unit_ram_ctl.match_entry_enable = ~(~0U << cnt);
             auto &unitram_config = stage->regs.rams.map_alu.row[row.row].adrmux
                     .unitram_config[col/6][col%6];
             unitram_config.unitram_type = 1;

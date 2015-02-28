@@ -115,6 +115,7 @@ void GatewayTable::pass2() {
     if (input_xbar) input_xbar->pass2(stage->exact_ixbar, 128);
 }
 void GatewayTable::write_regs() {
+    LOG1("### Gateway table " << name());
     if (input_xbar) input_xbar->write_regs();
     auto &row = layout[0];
     auto &gw_reg = stage->regs.rams.array.row[row.row].gateway_table[gw_unit];
