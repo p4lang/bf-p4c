@@ -218,9 +218,12 @@ Table::Format::Format(VECTOR(pair_t) &data) :
             error(kv.key.lineno, "Invalid field group");
             continue; }
         if (!CHECKTYPE2(kv.value, tINT, tRANGE)) continue;
-        if (idx <= fmt.size()) fmt.resize(idx+1);
+        if (idx >= fmt.size()) fmt.resize(idx+1);
         if (fmt[idx].count(name.s) > 0) {
-            error(name.lineno, "Duplicate key %s in format", name.s);
+            if (kv.key.type == tCMD)
+                error(name.lineno, "Duplicate key %s(%d) in format", name.s, idx);
+            else
+                error(name.lineno, "Duplicate key %s in format", name.s);
             continue; }
         //auto it = fmt[idx].emplace(name.s, Field{ nextbit, 0, idx, 0, -1 }).first;
         Field *f = &fmt[idx][name.s];
@@ -232,18 +235,19 @@ Table::Format::Format(VECTOR(pair_t) &data) :
             f->bit = kv.value.lo;
             f->size = kv.value.hi - kv.value.lo + 1; }
         nextbit = f->bit + f->size;
-        auto it = fmt[idx].find(name.s);
-        if (byindex.empty())
-            byindex[f->bit] = it;
-        else {
-            auto p = byindex.upper_bound(f->bit);
-            if (p != byindex.end())
-                overlap_test(kv.value.lineno, it, p->second);
-            p--;
-            overlap_test(kv.value.lineno, p->second, it);
-            if (nextbit > p->second->second.bit + p->second->second.size)
-                byindex[f->bit] = it; }
         if (nextbit > size) size = nextbit; }
+    for (auto &grp : fmt) {
+        for (auto it = grp.begin(); it != grp.end(); ++it) {
+            if (byindex.empty())
+                byindex[it->second.bit] = it;
+            else {
+                auto p = byindex.upper_bound(it->second.bit);
+                if (p != byindex.end())
+                    overlap_test(lineno, it, p->second);
+                p--;
+                overlap_test(lineno, p->second, it);
+                if (it->second.bit+it->second.size > p->second->second.bit+p->second->second.size)
+                    byindex[it->second.bit] = it; } } }
     for (size_t i = 1; i < fmt.size(); i++)
         if (fmt[0] != fmt[i])
             error(data[0].key.lineno, "Format group %zu doesn't match group 0", i);
