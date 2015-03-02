@@ -80,7 +80,7 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
                     kv.key.s, name()); }
 }
 
-unsigned width(const Phv::Ref &r) { return r->hi - r->lo + 1; }
+unsigned width(const Phv::Ref &r) { return r->size(); }
 unsigned width(const std::vector<Phv::Ref> &vec) {
     unsigned rv = 0;
     for (auto &f : vec)
@@ -106,18 +106,36 @@ void GatewayTable::pass1() {
             line.next.check();
     if (miss.next != "END")
         miss.next.check();
+    unsigned long ignore = ~0UL << width(match);
     for (auto &line : table) {
-        unsigned long ignore = ~(line.val.word0 | line.val.word1);
         line.val.word0 |= ignore;
         line.val.word1 |= ignore; }
 }
 void GatewayTable::pass2() {
     if (input_xbar) input_xbar->pass2(stage->exact_ixbar, 128);
 }
+
+/* FIXME -- this function is in exact_match.cpp */
+extern bool setup_match_input(unsigned bytes[16], std::vector<Phv::Ref> &match, Stage *stage, int group);
+
+/* FIXME -- how to deal with (or even specify) matches in the upper 24 bits coming from
+ * the hash bus? */
+static void setup_vh_xbar(Stage *stage, Table::Layout &row, int byte, std::vector<Phv::Ref> &match, int group) {
+    auto &vh_xbar = stage->regs.rams.array.row[row.row].vh_xbar;
+    unsigned input_bus_locs[16];
+    setup_match_input(input_bus_locs, match, stage, group);
+    for (unsigned b = 0; b < width(match)/8; b++, byte++)
+        vh_xbar[row.bus].exactmatch_row_vh_xbar_byteswizzle_ctl[byte/4]
+            .set_subfield(0x10 + input_bus_locs[b], (byte%4)*5, 5);
+}
+
 void GatewayTable::write_regs() {
     LOG1("### Gateway table " << name());
     if (input_xbar) input_xbar->write_regs();
     auto &row = layout[0];
+    setup_vh_xbar(stage, row, 0, match, input_xbar->group_for_word(0));
+    setup_vh_xbar(stage, row, 4, xor_match, input_xbar->group_for_word(0));
+
     auto &gw_reg = stage->regs.rams.array.row[row.row].gateway_table[gw_unit];
     auto &merge = stage->regs.rams.match.merge;
     if (row.bus == 0) {
@@ -130,8 +148,9 @@ void GatewayTable::write_regs() {
     gw_reg.gateway_table_ctl.gateway_table_logical_table = logical_id;
     gw_reg.gateway_table_ctl.gateway_table_thread = gress;
     gw_reg.gateway_table_matchdata_xor_en = ~(~0U << width(xor_match));
-    unsigned lineno = 0;
+    int lineno = 3;
     for (auto &line : table) {
+        assert(lineno >= 0);
         /* FIXME -- hardcoding version/valid to always */
         gw_reg.gateway_table_vv_entry[lineno].gateway_table_entry_versionvalid0 = 0x3;
         gw_reg.gateway_table_vv_entry[lineno].gateway_table_entry_versionvalid1 = 0x3;
@@ -143,7 +162,7 @@ void GatewayTable::write_regs() {
             merge.gateway_next_table_lut[logical_id][lineno] =
                 line.next ? line.next->table_id() : 0xff;
             merge.gateway_inhibit_lut[logical_id] |= 1 << lineno; }
-        lineno++; }
+        lineno--; }
     if (!miss.run_table) {
         merge.gateway_next_table_lut[logical_id][4] = miss.next ? miss.next->table_id() : 0xff;
         merge.gateway_inhibit_lut[logical_id] |= 1 << 4; }

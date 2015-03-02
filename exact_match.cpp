@@ -140,6 +140,12 @@ void ExactMatchTable::pass2() {
     if (action_bus) {
         action_bus->pass2(this);
         action_bus->set_immed_offsets(this); }
+    unsigned match_width = 0;
+    for (auto &r : match)
+        match_width += r->size();
+    if (match_width != format->field("match")->size)
+        warning(match[0].lineno, "Match width %d for table %s doesn't match format match width %d",
+                match_width, name(), format->field("match")->size);
     if (actions) actions->pass2(this);
     if (gateway) gateway->pass2();
 }
@@ -187,7 +193,7 @@ static bool mask2tofino_mask(bitvec &mask, int word, bitvec &ignored, unsigned &
     return true;
 }
 
-static bool setup_match_input(unsigned bytes[16], std::vector<Phv::Ref> &match, Stage *stage, int group) {
+bool setup_match_input(unsigned bytes[16], std::vector<Phv::Ref> &match, Stage *stage, int group) {
     auto byte = 0;
     bool rv = true;
     for (auto &r : match) {
@@ -374,11 +380,7 @@ void ExactMatchTable::write_regs() {
                         69 + (format->log2size-2) - lo_huffman_bits;
                 } else {
                     merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
-                        action_args[1]->bit + 5 - lo_huffman_bits; }
-            } else {
-                /* FIXME -- do we actually need to set this? */
-                merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] = 69;
-            }
+                        action_args[1]->bit + 5 - lo_huffman_bits; } }
             word_group++; }
         for (auto col : row.cols) {
             merge.col[col].row_action_nxtable_bus_drive[row.row] = 1 << row.bus;

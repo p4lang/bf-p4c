@@ -36,9 +36,10 @@ public:
         explicit operator bool() { return valid; }
         Slice &operator=(const Slice &a) { new(this) Slice(a.reg, a.lo, a.hi); return *this; }
 	const Slice *operator->() const { return this; }
-        const bool operator==(const Slice &s) {
+        bool operator==(const Slice &s) const {
             return valid && s.valid && reg.index == s.reg.index &&
                    lo == s.lo && hi == s.hi; }
+        unsigned size() const { return valid ? hi - lo + 1 : 0; }
     };
 private:
     Register regs[NUM_PHV_REGS];
