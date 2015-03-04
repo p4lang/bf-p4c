@@ -127,6 +127,9 @@ inline pair_t *VECTOR(pair_t)::end() const { return data + size; }
 #define PCHECKTYPE2M(P, V, T1, T2, M) \
     (((P) && ((V).type == (T1) || (V).type == (T2))) || \
      (error((V).lineno, "Syntax error, expecting %s", M), 0))
+#define VALIDATE_RANGE(V) \
+    ((V).type != tRANGE || (V).lo <= (V).hi || \
+     (error((V).lineno, "Invalid range %d..%d", (V).lo, (V).hi), 0))
 
 inline value_t *get(VECTOR(pair_t) &map, const char *key) {
     for (auto &kv : map) if (kv.key == key) return &kv.value;

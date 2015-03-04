@@ -81,14 +81,14 @@ void ActionTable::pass1() {
             continue; }
         for (auto &fld : *fmt.second) {
             if (auto *f = format ? format->field(fld.first) : 0) {
-                if (fld.second.bit != f->bit || fld.second.size != f->size) {
+                if (fld.second.bits != f->bits || fld.second.size != f->size) {
                     error(fmt.second->lineno, "Action %s format for field %s incompatible "
                           "with default format", fmt.first.c_str(), fld.first.c_str());
                     continue; } }
             for (auto &fmt2 : action_formats) {
                 if (fmt.second == fmt2.second) break;
                 if (auto *f = fmt2.second->field(fld.first)) {
-                    if (fld.second.bit != f->bit || fld.second.size != f->size) {
+                    if (fld.second.bits != f->bits || fld.second.size != f->size) {
                         error(fmt.second->lineno, "Action %s format for field %s incompatible "
                               "with action %s format", fmt.first.c_str(), fld.first.c_str(),
                               fmt2.first.c_str());
@@ -133,9 +133,11 @@ void Table::ActionBus::pass2(Table *tbl) {
 void Table::ActionBus::set_action_offsets(Table *tbl) {
     for (auto &f : by_byte) {
         Format::Field *field = f.second.second;
+        if (field->bits.size() > 1)
+            error(lineno, "Split field %s cannot go on action bus", f.second.first.c_str());
         assert(field->action_xbar == (int)f.first);
         int slot = Stage::action_bus_slot_map[f.first];
-        field->action_xbar_bit = field->bit % Stage::action_bus_slot_size[slot]; }
+        field->action_xbar_bit = field->bits[0].lo % Stage::action_bus_slot_size[slot]; }
 }
 
 void Table::ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action_slice) {
@@ -145,12 +147,12 @@ void Table::ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned
     for (auto &el : by_byte) {
         unsigned byte = el.first;
         Format::Field *f = el.second.second;
-        if ((f->bit >> 7) != action_slice)
+        if ((f->bits[0].lo >> 7) != action_slice)
             continue;
-        unsigned bit = f->bit & 0x7f;
+        unsigned bit = f->bits[0].lo & 0x7f;
         if (bit + f->size > 128) {
-            error(lineno, "Action bus setup can't deal with field split across "
-                  "SRAM rows");
+            error(lineno, "Action bus setup can't deal with field %s split across "
+                  "SRAM rows", el.second.first.c_str());
             continue; }
         unsigned slot = Stage::action_bus_slot_map[byte];
         switch (Stage::action_bus_slot_size[slot]) {

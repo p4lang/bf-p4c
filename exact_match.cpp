@@ -97,17 +97,63 @@ void ExactMatchTable::pass1() {
         actions->pass1(this); }
     input_xbar->pass1(stage->exact_ixbar, 128);
     format->setup_immed(this);
+    group_info.resize(format->groups());
     if (!format->field("match"))
         error(format->lineno, "No 'match' field in format for table %s", name());
     else for (unsigned i = 0; i < format->groups(); i++) {
         Format::Field *match = format->field("match", i);
-        if (match->bit % 8 != 0 || match->size % 8 != 0)
-            error(format->lineno, "'match' field not byte aligned in table %s", name());
-        if (auto *version = format->field("version"))
-            if (version->size != 4 || (version->bit % 4) != 0)
+        for (auto &piece : match->bits) {
+            if (piece.lo % 8 != 0 || (piece.hi+1) % 8 != 0)
+                error(format->lineno, "'match' field not byte aligned in table %s", name());
+            if (piece.lo/128 != piece.hi/128)
+                error(format->lineno, "'match' field must be explictly split across 128-bit "
+                      "boundary in table %s", name());
+            group_info[i].match_group[piece.lo/128] = -1; }
+        if (auto *version = format->field("version", i)) {
+            if (version->bits.size() != 1)
+                error(format->lineno, "'version' field cannot be split");
+            if (version->size != 4 || (version->bits[0].lo % 4) != 0)
                 error(format->lineno, "'version' field not 4 bits and nibble aligned "
-                      "in table %s", name()); }
+                      "in table %s", name());
+            group_info[i].match_group[version->bits[0].lo/128] = -1; }
+        for (auto it = format->begin(i); it != format->end(i); it++) {
+            if (it->first == "match" || it->first == "version") continue;
+            if (it->second.bits.size() != 1) {
+                error(format->lineno, "Can't deal with split field %s", it->first.c_str());
+                continue; }
+            unsigned limit = it->first == "next" ? 40 : 64;
+            unsigned word = it->second.bits[0].lo/128;
+            if (group_info[i].overhead_word < 0) {
+                group_info[i].overhead_word = word;
+                if (!group_info[i].match_group.count(word))
+                    error(format->lineno, "Overhead for group %d must be in the same word "
+                          "as part of its match", i);
+            } else if (group_info[i].overhead_word != (int)word)
+                error(format->lineno, "Match overhead group %d split across words", i);
+            else if (word != it->second.bits[0].hi/128 || it->second.bits[0].hi%128 >= limit)
+                error(format->lineno, "Match overhead field %s(%d) not in bottom %d bits",
+                      it->first.c_str(), i, limit); } }
     unsigned fmt_width = (format->size + 127)/128;
+    word_info.resize(fmt_width);
+    for (unsigned i = 0; i < group_info.size(); i++)
+        if (group_info[i].match_group.size() > 1)
+            for (auto &mgrp : group_info[i].match_group) {
+                if ((mgrp.second = word_info[mgrp.first].size()) > 1)
+                    error(format->lineno, "Too many multi-word groups using word %d", mgrp.first);
+                word_info[mgrp.first].push_back(i); }
+    LOG1("### Exact match table " << name());
+    for (unsigned i = 0; i < group_info.size(); i++) {
+        if (group_info[i].match_group.size() == 1)
+            for (auto &mgrp : group_info[i].match_group) {
+                if ((mgrp.second = word_info[mgrp.first].size()) > 4)
+                    error(format->lineno, "Too many match groups using word %d", mgrp.first);
+                word_info[mgrp.first].push_back(i); }
+        group_info[i].word_group = group_info[i].match_group[group_info[i].overhead_word];
+        LOG1("  format group " << i << " overhead in word " << group_info[i].overhead_word);
+        for (auto &mgrp : group_info[i].match_group)
+            LOG1("    match group " << mgrp.second << " in word " << mgrp.first); }
+    for (unsigned i = 0; i < word_info.size(); i++)
+        LOG1("  word " << i << " groups: " << word_info[i]);
     if (ways.empty())
         error(lineno, "No ways defined in table %s", name());
     else if (layout.size() % (ways.size()*fmt_width) != 0)
@@ -149,31 +195,6 @@ void ExactMatchTable::pass2() {
     if (actions) actions->pass2(this);
     if (gateway) gateway->pass2();
 }
-
-class GroupsInWord {
-    /* iterator adapter to iterate through the bits set in a pair of words --
-     * iterate through the bits in the first word, then the second word */
-    unsigned    groups[2];
-    struct iter {
-        const GroupsInWord      *self;
-        unsigned                idx, ctr;
-        iter(const GroupsInWord *s) : self(s), idx(0), ctr(0) {
-            if (!((self->groups[idx] >> ctr) & 1)) ++*this; }
-        iter() : self(0), idx(2), ctr(0) { }
-        bool operator==(const iter &a) const { return idx == a.idx && ctr == a.ctr; }
-        unsigned operator*() const { return ctr; }
-        iter &operator++() {
-            do { if (++ctr >= 32 || self->groups[idx] < (1U << ctr)) {
-                    ctr=0; idx++; }
-            } while (idx < 2 && (!((self->groups[idx] >> ctr) & 1)));
-            return *this; }
-    };
-public:
-    GroupsInWord(unsigned words, unsigned cross_words) {
-        groups[0] = words&cross_words; groups[1] = words&~cross_words; }
-    iter begin() const { return iter(this); }
-    iter end() const { return iter(); }
-};
 
 /* build the weird 18-bit byte/nibble mask for matching, checking for problems */
 static bool mask2tofino_mask(bitvec &mask, int word, bitvec &ignored, unsigned &bytemask) {
@@ -221,51 +242,26 @@ void ExactMatchTable::write_regs() {
         return; }
     MatchTable::write_regs(0, this);
     unsigned fmt_width = (format->size + 127)/128;
-    unsigned way = 0, word = 0;
+    int way = 0, word = fmt_width-1;
     int vpn = 0;
     bitvec match_mask, version_nibble_mask;
-    unsigned groups_in_word[fmt_width];
-    unsigned groups_cross_words = 0;
-    unsigned words_in_group[format->groups()];
     match_mask.setrange(0, 128*fmt_width);
     version_nibble_mask.setrange(0, 32*fmt_width);
-    for (unsigned i = 0; i < fmt_width; i++) groups_in_word[i] = 0;
     for (unsigned i = 0; i < format->groups(); i++) {
-        words_in_group[i] = 0;
         Format::Field *match = format->field("match", i);
-        match_mask.clrrange(match->bit, match->size);
-        groups_in_word[match->bit/128] |= 1U << i;
-        words_in_group[i] |= 1U << match->bit/128;
-        if (match->bit%128 + match->size > 128) {
-            groups_in_word[match->bit/128 + 1] |= 1U << i;
-            words_in_group[i] |= 2U << match->bit/128; }
+        for (auto &piece : match->bits)
+            match_mask.clrrange(piece.lo, piece.hi+1-piece.lo);
         if (Format::Field *version = format->field("version", i)) {
-            match_mask.clrrange(version->bit, version->size);
-            groups_in_word[version->bit/128] |= 1U << i;
-            words_in_group[i] |= 1U << version->bit/128;
-            version_nibble_mask.clrrange(version->bit/4, 1); }
-        unsigned t = ((words_in_group[i] ^ (words_in_group[i]-1)) << 1) | 1;
-        if (words_in_group[i] & ~t) {
-            error(lineno, "Group %d in table %s tries to match over non-adjacent"
-                  " rows", i, name());
-            return; }
-        if (words_in_group[i] & ~(t >> 1))
-            groups_cross_words |= 1U << i; }
-    LOG1(" : groups_in_word = " << hexvec(groups_in_word, fmt_width));
-    LOG1(" : groups_cross_words = " << hex(groups_cross_words));
-    LOG1(" : words_in_group = " << hexvec(words_in_group, format->groups()));
-    for (unsigned i = 0; i < fmt_width; i++) {
-        if (bitcount(groups_in_word[i]) > 5) {
-            error(lineno, "More than 5 match groups in one word in table %s", name());
-            return; }
-        if (bitcount(groups_in_word[i]&groups_cross_words) > 2) {
-            error(lineno, "More than 2 match groups that cross words in table %s", name());
-            return; } }
+            match_mask.clrrange(version->bits[0].lo, version->size);
+            version_nibble_mask.clrrange(version->bits[0].lo/4, 1); } }
+
     /* iterating through rows in the sram array;  while in this loop, 'row' is the
      * row we're on, 'word' is which word in a wide full-way the row is for, and 'way'
-     * is which full-way of the match table the row is for */
-    unsigned wide_bus = ~0;     /* bus used by first word of wide match */
+     * is which full-way of the match table the row is for.  For compatibility with the
+     * compiler, we iterate over rows and ways in order, and words from msb to lsb (reversed) */
+    int index = -1;
     for (auto &row : layout) {
+        index++;  /* index of the row in the layout */
         /* setup match logic in rams */
         auto &vh_adr_xbar = stage->regs.rams.array.row[row.row].vh_adr_xbar;
         vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus]
@@ -290,7 +286,7 @@ void ExactMatchTable::write_regs() {
             ram.unit_ram_ctl.match_ram_write_data_mux_select = 7; /* unused */
             ram.unit_ram_ctl.match_ram_read_data_mux_select = 7; /* unused */
             ram.unit_ram_ctl.match_result_bus_select = 1 << row.bus;
-            if (auto cnt = bitcount(groups_in_word[word]))
+            if (auto cnt = word_info[word].size())
                 ram.unit_ram_ctl.match_entry_enable = ~(~0U << cnt);
             auto &unitram_config = stage->regs.rams.map_alu.row[row.row].adrmux
                     .unitram_config[col/6][col%6];
@@ -301,24 +297,32 @@ void ExactMatchTable::write_regs() {
             case EGRESS: unitram_config.unitram_egress = 1; break;
             default: assert(0); }
             unitram_config.unitram_enable = 1;
-            ram.match_ram_vpn.match_ram_vpn0 = vpn >> 2;
-            unsigned vpn_lsb = (vpn&3) - 1;
-            for (unsigned i = 0; i < format->groups(); i++)
-                ram.match_ram_vpn.match_ram_vpn_lsbs |= (++vpn_lsb) << i*3;
-            if (vpn_lsb & 4)
-                ram.match_ram_vpn.match_ram_vpn1 = (vpn >> 2) + 1;
+
+            int vpn_base = (vpn + word_info[word][0]) & ~3;
+            ram.match_ram_vpn.match_ram_vpn0 = vpn_base >> 2;
+            int vpn_use = 0;
+            for (unsigned group = 0; group < word_info[word].size(); group++) {
+                int vpn_off = vpn + word_info[word][group] - vpn_base;
+                vpn_use |= vpn_off;
+                ram.match_ram_vpn.match_ram_vpn_lsbs .set_subfield(vpn_off, group*3, 3); }
+            if (vpn_use & 4)
+                ram.match_ram_vpn.match_ram_vpn1 = (vpn_base >> 2) + 1;
+
             /* TODO -- Algorithmic TCAM support will require something else here */
             ram.match_nibble_s0q1_enable = version_nibble_mask.getrange(word*32, 32);
             ram.match_nibble_s1q0_enable = 0xffffffffUL;
+
             int word_group = 0;
-            for (unsigned group : GroupsInWord(groups_in_word[word], groups_cross_words)) {
+            for (int group : word_info[word]) {
                 unsigned tofino_mask = 0;
                 bitvec mask;
                 mask.clear();
                 Format::Field *match = format->field("match", group);
-                mask.setrange(match->bit, match->size);
+                for (auto &piece : match->bits)
+                    mask.setrange(piece.lo, piece.hi+1-piece.lo);
                 if (Format::Field *version = format->field("version", group))
-                    mask.setrange(version->bit, version->size);
+                    mask.setrange(version->bits[0].lo, version->size);
+                LOG2(" : mask for group " << group << " is " << mask);
                 if (!mask2tofino_mask(mask, word, match_mask, tofino_mask)) {
                     error(lineno, "Invalid match mask for group %d in table %s",
                           group, name());
@@ -336,22 +340,24 @@ void ExactMatchTable::write_regs() {
         setup_match_input(input_bus_locs, match, stage, ways[way].group);
         for (unsigned i = 0; i < format->groups(); i++) {
             Format::Field *match = format->field("match", i);
-            if (match->bit >= (word+1)*128 || match->bit + match->size <= word*128)
-                continue;
-            unsigned byte = (match->bit%128)/8;
-            for (unsigned b = 0; b < match->size/8; b++, byte++)
-                vh_xbar[row.bus].exactmatch_row_vh_xbar_byteswizzle_ctl[byte/4]
-                    .set_subfield(0x10 + input_bus_locs[b], (byte%4)*5, 5);
+            unsigned b = 0;
+            for (auto &piece : match->bits) {
+                if (piece.lo/128 != (unsigned)word) {
+                    b += (piece.hi+1-piece.lo)/8;
+                    continue; }
+                for (unsigned byte = (piece.lo%128)/8; byte <= (piece.hi%128)/8; byte++)
+                    vh_xbar[row.bus].exactmatch_row_vh_xbar_byteswizzle_ctl[byte/4]
+                        .set_subfield(0x10 + input_bus_locs[b++], (byte%4)*5, 5); }
+            assert(b == match->size/8);
             if (Format::Field *version = format->field("version", i)) {
-                if (version->bit/128 != word) continue;
-                vh_xbar[row.bus].exactmatch_validselect |= 1U << (version->bit%128)/4; } }
+                if (version->bits[0].lo/128 != (unsigned)word) continue;
+                vh_xbar[row.bus].exactmatch_validselect |= 1U << (version->bits[0].lo%128)/4; } }
         vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl.exactmatch_row_vh_xbar_select = ways[way].group;
         vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl.exactmatch_row_vh_xbar_enable = 1;
         vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress;
         /* setup match central config to extract results of the match */
         auto &merge = stage->regs.rams.match.merge;
         unsigned bus = row.row*2 + row.bus;
-        if (word == 0) wide_bus = bus;
         /* FIXME -- factor this where possible with ternary match code */
         if (action) {
             int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
@@ -363,15 +369,15 @@ void ExactMatchTable::write_regs() {
                     ((1U << action_args[1]->size) - 1) << lo_huffman_bits; }
             merge.mau_actiondata_adr_vpn_shiftcount[0][bus] =
                 std::max(0, (int)action->format->log2size - 7); }
-        int word_group = 0;
-        for (unsigned group : GroupsInWord(groups_in_word[word], groups_cross_words)) {
-            assert(action_args[0]->by_group[group]->bit/128 == word);
+        for (unsigned word_group = 0; word_group < word_info[word].size(); word_group++) {
+            int group = word_info[word][word_group];
+            if (action_args[0]->by_group[group]->bits[0].lo/128 != (unsigned)word) continue;
             merge.mau_action_instruction_adr_exact_shiftcount[bus][word_group] =
-                action_args[0]->by_group[group]->bit % 128;
+                action_args[0]->by_group[group]->bits[0].lo % 128;
             if (format->immed) {
-                assert(format->immed->by_group[group]->bit/128 == word);
+                assert(format->immed->by_group[group]->bits[0].lo/128 == (unsigned)word);
                 merge.mau_immediate_data_exact_shiftcount[bus][word_group] =
-                    format->immed->by_group[group]->bit % 128; }
+                    format->immed->by_group[group]->bits[0].lo % 128; }
             /* FIXME -- factor this where possible with ternary match code */
             if (action) {
                 int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
@@ -379,14 +385,23 @@ void ExactMatchTable::write_regs() {
                     merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
                         69 + (format->log2size-2) - lo_huffman_bits;
                 } else {
+                    assert(action_args[1]->by_group[group]->bits[0].lo/128 == (unsigned)word);
                     merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
-                        action_args[1]->bit + 5 - lo_huffman_bits; } }
-            word_group++; }
+                        action_args[1]->bits[0].lo + 5 - lo_huffman_bits; } } }
         for (auto col : row.cols) {
             merge.col[col].row_action_nxtable_bus_drive[row.row] = 1 << row.bus;
-            merge.col[col].hitmap_output_map[bus].enabled_4bit_muxctl_select = wide_bus;
-            merge.col[col].hitmap_output_map[bus].enabled_4bit_muxctl_enable = 1; }
-        if (++word == fmt_width) { word = 0; way++; vpn += format->groups(); } }
+            int word_group = 0;
+            for (int group : word_info[word]) {
+                auto &overhead_row = layout[index + word - group_info[group].overhead_word];
+                auto &hitmap_ixbar = merge.col[col].hitmap_output_map[2*row.row + word_group];
+                hitmap_ixbar.enabled_4bit_muxctl_select =
+                    overhead_row.row*2 + group_info[group].word_group;
+                hitmap_ixbar.enabled_4bit_muxctl_enable = 1;
+                if (++word_group > 1) break; }
+            /*merge.col[col].hitmap_output_map[bus].enabled_4bit_muxctl_select =
+                layout[index+word].row*2 + layout[index+word].bus;
+            merge.col[col].hitmap_output_map[bus].enabled_4bit_muxctl_enable = 1;*/ }
+        if (--word < 0) { word = fmt_width-1; way++; vpn += format->groups(); } }
     if (actions) actions->write_regs(this);
     if (gateway) gateway->write_regs();
 }

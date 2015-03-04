@@ -235,7 +235,8 @@ void warning(int lineno, const char *fmt, va_list args) {
     fprintf(stderr, "%s:%d: ", it->second.first.c_str(),
             lineno - it->first + it->second.second);
     vfprintf(stderr, fmt, args);
-    fprintf(stderr, "\n"); }
+    fprintf(stderr, "\n");
+    fflush(stderr); }
 
 void error(int lineno, const char *fmt, va_list args) {
     warning(lineno, fmt, args);

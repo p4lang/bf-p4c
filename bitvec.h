@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <utility>
+#include <iostream>
 
 class bitvec {
     size_t		size;
@@ -291,6 +292,8 @@ private:
 	}
 	size = newsize;
     }
+public:
+    friend std::ostream &operator<<(std::ostream &, const bitvec &);
 };
 
 inline bitvec operator|(bitvec &&a, const bitvec &b) {
@@ -301,5 +304,6 @@ inline bitvec operator^(bitvec &&a, const bitvec &b) {
     bitvec rv(a); rv ^= b; return rv; }
 inline bitvec operator-(bitvec &&a, const bitvec &b) {
     bitvec rv(a); rv -= b; return rv; }
+
 
 #endif // _bitvec_h_

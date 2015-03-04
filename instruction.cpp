@@ -121,7 +121,7 @@ private:
             if (off) out << '(' << off << ')';
             if (field)
                 out << '[' << field->action_xbar << ':' << field->action_xbar_bit
-                    << ", " << field->bit << ':' << field->size << ", "
+                    << ", " << field->bits[0].lo << ':' << field->size << ", "
                     << field->group << ']'; }
     };
     class Named : public Base {

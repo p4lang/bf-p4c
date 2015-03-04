@@ -104,28 +104,38 @@ public:
     };
 
     class Format {
+        struct bitrange_t { unsigned lo, hi;
+            bitrange_t(unsigned l, unsigned h) : lo(l), hi(h) {}
+            bool operator==(const bitrange_t &a) const { return lo == a.lo && hi == a.hi; }
+        };
     public:
         struct Field {
-            unsigned    bit, size, group, flags;
+            unsigned    size, group, flags;
+            std::vector<bitrange_t>    bits;
             int         action_xbar;
             int         action_xbar_bit;
             Field       **by_group;
-            Field() : bit(0), size(0), group(0), flags(0),
+            Field() : size(0), group(0), flags(0),
                 action_xbar(-1), action_xbar_bit(0), by_group(0) {}
             bool operator==(const Field &a) const { return size == a.size; }
+            unsigned hi(unsigned bit) {
+                for (auto &chunk : bits)
+                    if (bit >= chunk.lo && bit <= chunk.hi)
+                        return chunk.hi;
+                assert(0); }
             enum flags_t { USED_IMMED=1 };
         };
         Format(VECTOR(pair_t) &);
         ~Format();
         void setup_immed(Table *tbl);
     private:
-        std::vector<std::map<std::string, Field>>               fmt;
-        std::map<int, std::map<std::string, Field>::iterator>   byindex;
+        std::vector<std::map<std::string, Field>>                  fmt;
+        std::map<unsigned, std::map<std::string, Field>::iterator> byindex;
     public:
-        int                                                     lineno;
-        unsigned                                                size, immed_size;
-        Field                                                   *immed;
-        unsigned                                                log2size; /* ceil(log2(size)) */
+        int                     lineno;
+        unsigned                size, immed_size;
+        Field                   *immed;
+        unsigned                log2size; /* ceil(log2(size)) */
 
         unsigned groups() const { return fmt.size(); }
         Field *field(const std::string &n, int group = 0) {
@@ -244,6 +254,16 @@ DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
     };
     std::vector<Way>            ways;
     std::vector<Phv::Ref>       match;
+    struct GroupInfo {
+        /* info about which word(s) are used per group with wide matches */
+        int                     overhead_word;  /* which word of wide match contains overhead */
+        int                     word_group;     /* which match group within the word to use */
+        std::map<int, int>      match_group;    /* which match group for each word with match */
+        GroupInfo() : overhead_word(-1), word_group(-1) {}
+    };
+    std::vector<GroupInfo>      group_info;
+    std::vector<std::vector<int>> word_info;    /* which format group corresponds to each
+                                                 * match group in each word */
 )
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
 public:

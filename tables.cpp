@@ -36,7 +36,10 @@ void Table::setup_action_table(value_t &val) {
                     !(arg = lookup_field(val[i].s)))
                     error(val[i].lineno, "No field named %s in format for %s",
                           val[i].s, name());
-                action_args.push_back(arg); } }
+                if (arg) {
+                    if (arg->bits.size() != 1)
+                        error(val[i].lineno, "Action arg fields can't be split in format");
+                    action_args.push_back(arg); } } }
         action.lineno = val.lineno; }
 }
 
@@ -190,10 +193,10 @@ void Table::check_next() {
 }
 
 static void overlap_test(int lineno,
-    std::map<std::string, Table::Format::Field>::iterator a,
-    std::map<std::string, Table::Format::Field>::iterator b)
+    unsigned a_bit, std::map<std::string, Table::Format::Field>::iterator a,
+    unsigned b_bit, std::map<std::string, Table::Format::Field>::iterator b)
 {
-    if (b->second.bit < a->second.bit + a->second.size) {
+    if (b_bit <= a->second.hi(a_bit)) {
         if (a->second.group || b->second.group)
             error(lineno, "Field %s(%d) overlaps with %s(%d)",
                   a->first.c_str(), a->second.group,
@@ -217,7 +220,9 @@ Table::Format::Format(VECTOR(pair_t) &data) :
              (idx = kv.key[1].i) < 0 || idx > 15)) {
             error(kv.key.lineno, "Invalid field group");
             continue; }
-        if (!CHECKTYPE2(kv.value, tINT, tRANGE)) continue;
+        if (kv.value.type != tVEC &&
+            !(CHECKTYPE2(kv.value, tINT, tRANGE) && VALIDATE_RANGE(kv.value)))
+            continue;
         if (idx >= fmt.size()) fmt.resize(idx+1);
         if (fmt[idx].count(name.s) > 0) {
             if (kv.key.type == tCMD)
@@ -229,25 +234,34 @@ Table::Format::Format(VECTOR(pair_t) &data) :
         Field *f = &fmt[idx][name.s];
         f->group = idx;
         if (kv.value.type == tINT) {
-            f->bit = nextbit;
             f->size  = kv.value.i;
-        } else {
-            f->bit = kv.value.lo;
-            f->size = kv.value.hi - kv.value.lo + 1; }
-        nextbit = f->bit + f->size;
+            f->bits.emplace_back(nextbit, nextbit+f->size-1);
+        } else if (kv.value.type == tRANGE) {
+            if (kv.value.lo > kv.value.hi)
+                error(kv.value.lineno, "invalid range %d..%d", kv.value.lo, kv.value.hi);
+            f->bits.emplace_back(kv.value.lo, kv.value.hi);
+            f->size = kv.value.hi - kv.value.lo + 1;
+        } else if (kv.value.type == tVEC) {
+            f->size = 0;
+            for (auto &c : kv.value.vec)
+                if (CHECKTYPE(c, tRANGE) && VALIDATE_RANGE(c)) {
+                    f->bits.emplace_back(c.lo, c.hi);
+                    f->size += c.hi - c.lo + 1; } }
+        nextbit = f->bits.back().hi + 1;
         if (nextbit > size) size = nextbit; }
     for (auto &grp : fmt) {
         for (auto it = grp.begin(); it != grp.end(); ++it) {
-            if (byindex.empty())
-                byindex[it->second.bit] = it;
-            else {
-                auto p = byindex.upper_bound(it->second.bit);
-                if (p != byindex.end())
-                    overlap_test(lineno, it, p->second);
-                p--;
-                overlap_test(lineno, p->second, it);
-                if (it->second.bit+it->second.size > p->second->second.bit+p->second->second.size)
-                    byindex[it->second.bit] = it; } } }
+            for (auto &piece : it->second.bits) {
+                if (byindex.empty())
+                    byindex[piece.lo] = it;
+                else {
+                    auto p = byindex.upper_bound(piece.lo);
+                    if (p != byindex.end())
+                        overlap_test(lineno, piece.lo, it, p->first, p->second);
+                    p--;
+                    overlap_test(lineno, p->first, p->second, piece.lo, it);
+                    if (p->first != piece.lo || piece.hi > p->second->second.hi(piece.lo))
+                        byindex[piece.lo] = it; } } } }
     for (size_t i = 1; i < fmt.size(); i++)
         if (fmt[0] != fmt[i])
             error(data[0].key.lineno, "Format group %zu doesn't match group 0", i);
@@ -274,11 +288,13 @@ void Table::Format::setup_immed(Table *tbl) {
     for (auto &f : fmt[0]) {
         if (f.second.action_xbar < 0 && !(f.second.flags & Field::USED_IMMED))
             continue;
-        immed_fields[f.second.bit] = &f.second;
-        if (f.second.bit < lo) {
+        if (f.second.bits.size() > 1)
+            error(lineno, "Immmediate action data %s cannot be split", f.first.c_str());
+        immed_fields[f.second.bits[0].lo] = &f.second;
+        if (f.second.bits[0].lo < lo) {
             immed = &f.second;
-            lo = immed->bit; }
-        if (f.second.bit + f.second.size > hi) hi = f.second.bit + f.second.size - 1; }
+            lo = immed->bits[0].lo; }
+        if (f.second.bits[0].hi > hi) hi = f.second.bits[0].hi; }
     if (immed_fields.empty()) {
         LOG2("table " << tbl->name() << " has no immediate data");
         return; }
@@ -290,11 +306,11 @@ void Table::Format::setup_immed(Table *tbl) {
         return; }
     immed_size = hi + 1 - lo;
     for (unsigned i = 1; i < fmt.size(); i++) {
-        int delta = (int)immed->by_group[i]->bit - (int)immed->bit;
+        int delta = (int)immed->by_group[i]->bits[0].lo - (int)immed->bits[0].lo;
         for (auto &f : fmt[0]) {
             if (f.second.action_xbar < 0 && !(f.second.flags & Field::USED_IMMED))
                 continue;
-            if (delta != (int)f.second.by_group[i]->bit - (int)f.second.bit) {
+            if (delta != (int)f.second.by_group[i]->bits[0].lo - (int)f.second.bits[0].lo) {
                 error(lineno, "Immediate data field %s for table %s does not match across "
                       "ways in a ram", f.first.c_str(), tbl->name());
                 break; } } }
@@ -304,7 +320,7 @@ void Table::Format::setup_immed(Table *tbl) {
         if (f.second.action_xbar < 0)
             continue;
         int slot = Stage::action_bus_slot_map[f.second.action_xbar];
-        unsigned off = f.second.bit - immed->bit;
+        unsigned off = f.second.bits[0].lo - immed->bits[0].lo;
         switch (Stage::action_bus_slot_size[slot]) {
         case 8:
             for (unsigned b = off/8; b <= (off + f.second.size - 1)/8; b++) {
@@ -567,7 +583,7 @@ void Table::ActionBus::set_immed_offsets(Table *tbl) {
         Format::Field *field = f.second.second;
         assert(field->action_xbar == (int)f.first);
         int slot = Stage::action_bus_slot_map[f.first];
-        unsigned off = field->bit - tbl->format->immed->bit;
+        unsigned off = field->bits[0].lo - tbl->format->immed->bits[0].lo;
         field->action_xbar_bit = off % Stage::action_bus_slot_size[slot]; }
 }
 
@@ -577,7 +593,7 @@ void Table::ActionBus::write_immed_regs(Table *tbl) {
     for (auto &f : by_byte) {
         assert(f.second.second->action_xbar == (int)f.first);
         int slot = Stage::action_bus_slot_map[f.first];
-        unsigned off = f.second.second->bit - tbl->format->immed->bit;
+        unsigned off = f.second.second->bits[0].lo - tbl->format->immed->bits[0].lo;
         unsigned size = f.second.second->size;
         switch(Stage::action_bus_slot_size[slot]) {
         case 8:

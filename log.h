@@ -2,6 +2,7 @@
 #define _log_h_
 
 #include <iostream>
+#include <vector>
 
 #ifndef __GNUC__
 #define __attribute__(X)
@@ -22,7 +23,7 @@ extern int get_file_log_level(const char *file, int *level);
 #define LOG2(X) LOG(1, X)
 #define LOG3(X) LOG(1, X)
 
-#define ERROR(X) (std::cerr << X << std::endl)
+#define ERROR(X) (std::clog << X << std::endl)
 
 #if 0
 
@@ -39,5 +40,16 @@ template<class T> inline auto operator<<(std::ostream &out, const T *obj) -> dec
 { obj->dbprint(out); return out; }
 
 #endif
+
+template<class T> std::ostream &operator<<(std::ostream &out, const std::vector<T> &vec) {
+    bool first = true;
+    out << '[';
+    for (auto &el : vec) {
+        if (first) first = false;
+        else out << ',';
+        out << ' ' << el; }
+    if (!first) out << ' ';
+    out << ']';
+    return out; }
 
 #endif /* _log_h_ */

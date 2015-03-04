@@ -272,9 +272,9 @@ void TernaryIndirectTable::write_regs() {
         merge.tind_bus_prop[bus].tcam_piped = 1;
         merge.tind_bus_prop[bus].thread = gress;
         merge.tind_bus_prop[bus].enabled = 1;
-        merge.mau_action_instruction_adr_tcam_shiftcount[bus] = action_args[0]->bit;
+        merge.mau_action_instruction_adr_tcam_shiftcount[bus] = action_args[0]->bits[0].lo;
         if (format->immed)
-            merge.mau_immediate_data_tcam_shiftcount[bus] = format->immed->bit;
+            merge.mau_immediate_data_tcam_shiftcount[bus] = format->immed->bits[0].lo;
         if (action) {
             int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
             if (action_args.size() == 1) {
@@ -286,7 +286,7 @@ void TernaryIndirectTable::write_regs() {
                 merge.mau_actiondata_adr_mask[1][bus] =
                     ((1U << action_args[1]->size) - 1) << lo_huffman_bits;
                 merge.mau_actiondata_adr_tcam_shiftcount[bus] =
-                    action_args[1]->bit + 5 - lo_huffman_bits; }
+                    action_args[1]->bits[0].lo + 5 - lo_huffman_bits; }
             merge.mau_actiondata_adr_vpn_shiftcount[1][bus] =
                 std::max(0, (int)action->format->log2size - 7); } }
     if (actions) actions->write_regs(this);
