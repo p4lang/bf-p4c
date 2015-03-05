@@ -50,7 +50,7 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
                 action_formats[kv.key[1].s] = new Format(kv.value.map); } }
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "format") {
-            /* done above to be done before action_bus */
+            /* done above to be done before action_bus and vpns */
         } else if (kv.key.type == tCMD && kv.key[0] == "format") {
             /* done above to be done before action_bus */
         } else if (kv.key == "actions") {
@@ -59,6 +59,9 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "action_bus") {
             if (CHECKTYPE(kv.value, tMAP))
                 action_bus = new ActionBus(this, kv.value.map);
+        } else if (kv.key == "vpns") {
+            if (CHECKTYPE(kv.value, tVEC))
+                setup_vpns(&kv.value.vec);
         } else if (kv.key == "row" || kv.key == "logical_row" ||
                    kv.key == "column" || kv.key == "bus") {
             /* already done in setup_layout */
@@ -71,6 +74,7 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
     if (actions && !action_bus) action_bus = new ActionBus();
 }
 void ActionTable::pass1() {
+    alloc_vpns();
     for (Layout &row : layout) {
         if (row.row > layout[0].row)
             error(row.lineno, "Action table %s home row must be first", name());
@@ -209,13 +213,13 @@ void ActionTable::write_regs() {
     unsigned home_top = home.row >= 8;
     for (unsigned slice = 0; slice <= (format->size-1)/128; slice++)
         action_bus->write_action_regs(this, home.row, slice);
-    int vpn = 0;
     bool home_row = true;
     auto &icxbar = stage->regs.rams.match.adrdist.adr_dist_action_data_adr_icxbar_ctl[logical_id];
     for (Layout &logical_row : layout) {
         unsigned row = logical_row.row/2;
         unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
         unsigned top = logical_row.row >= 8; /* 0 == bottom  1 == top */
+        auto vpn = logical_row.vpns.begin();
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;
             auto &ram = stage->regs.rams.array.row[row].ram[col];
@@ -236,7 +240,7 @@ void ActionTable::write_regs() {
                 oflo_adr_xbar.adr_dist_oflo_adr_xbar_enable = 1; }
             auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
             unitram_config.unitram_type = 2;
-            unitram_config.unitram_vpn = vpn;
+            unitram_config.unitram_vpn = *vpn++;
             unitram_config.unitram_logical_table = logical_id;
             if (gress == INGRESS)
                 unitram_config.unitram_ingress = 1;
@@ -250,8 +254,7 @@ void ActionTable::write_regs() {
                 ram_mux.ram_unitram_adr_mux_select = 1;
             else {
                 ram_mux.ram_unitram_adr_mux_select = 4;
-                ram_mux.ram_oflo_adr_mux_select_oflo = 1; }
-            vpn++; }
+                ram_mux.ram_oflo_adr_mux_select_oflo = 1; } }
         icxbar.address_distr_to_logical_rows |= 1U << logical_row.row;
         auto &switch_ctl = stage->regs.rams.array.switchbox.row[row].ctl;
         /* FIXME -- figure out oflo stuff */

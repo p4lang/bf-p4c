@@ -25,7 +25,7 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
                         gress, stage, -1, kv.value.map);
                 gateway->match_table = this; }
         } else if (kv.key == "format") {
-            /* done above to be done before action_bus */
+            /* done above to be done before action_bus and vpns */
         } else if (kv.key == "action") {
             setup_action_table(kv.value);
         } else if (kv.key == "actions") {
@@ -67,6 +67,9 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
                     match.emplace_back(gress, v);
             else
                 match.emplace_back(gress, kv.value);
+        } else if (kv.key == "vpns") {
+            if (CHECKTYPE(kv.value, tVEC))
+                setup_vpns(&kv.value.vec);
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     kv.key.s, name()); }
@@ -84,6 +87,7 @@ void ExactMatchTable::pass1() {
     alloc_id("logical", logical_id, stage->pass1_logical_id,
 	     LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
     alloc_busses(stage->sram_match_bus_use);
+    alloc_vpns();
     check_next();
     link_action(action);
     if (action_bus)
@@ -243,7 +247,6 @@ void ExactMatchTable::write_regs() {
     MatchTable::write_regs(0, this);
     unsigned fmt_width = (format->size + 127)/128;
     int way = 0, word = fmt_width-1;
-    int vpn = 0;
     bitvec match_mask, version_nibble_mask;
     match_mask.setrange(0, 128*fmt_width);
     version_nibble_mask.setrange(0, 32*fmt_width);
@@ -269,6 +272,7 @@ void ExactMatchTable::write_regs() {
         vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus]
             .enabled_3bit_muxctl_enable = 1;
         MaskCounter bank(ways[way].mask);
+        auto vpn_iter = row.vpns.begin();
         for (auto col : row.cols) {
             vh_adr_xbar.exactmatch_mem_hashadr_xbar_ctl[col]
                 .enabled_4bit_muxctl_select = ways[way].subgroup + row.bus*5;
@@ -298,6 +302,7 @@ void ExactMatchTable::write_regs() {
             default: assert(0); }
             unitram_config.unitram_enable = 1;
 
+            int vpn = *vpn_iter++;
             int vpn_base = (vpn + word_info[word][0]) & ~3;
             ram.match_ram_vpn.match_ram_vpn0 = vpn_base >> 2;
             int vpn_use = 0;
@@ -401,7 +406,7 @@ void ExactMatchTable::write_regs() {
             /*merge.col[col].hitmap_output_map[bus].enabled_4bit_muxctl_select =
                 layout[index+word].row*2 + layout[index+word].bus;
             merge.col[col].hitmap_output_map[bus].enabled_4bit_muxctl_enable = 1;*/ }
-        if (--word < 0) { word = fmt_width-1; way++; vpn += format->groups(); } }
+        if (--word < 0) { word = fmt_width-1; way++; } }
     if (actions) actions->write_regs(this);
     if (gateway) gateway->write_regs();
 }

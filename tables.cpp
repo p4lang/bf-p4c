@@ -131,6 +131,42 @@ void Table::setup_logical_id() {
         stage->logical_id_use[logical_id] = this; }
 }
 
+void Table::setup_vpns(VECTOR(value_t) *vpn) {
+    int groups = 1, width = 1;
+    if (format) {
+        groups = format->groups();
+        width = (format->size-1)/128 + 1;
+    } else if (input_xbar)
+        width = input_xbar->width();
+    if (vpn && (unsigned)vpn->size != layout_size()/width) {
+        error(lineno, "Vpn list length doesn't match layout (is %d, should be %d)",
+              vpn->size, layout_size()/width);
+        return; }
+    int word = width;
+    Layout *firstrow = 0;
+    auto vpniter = vpn ? vpn->begin() : 0;
+    int vpn_ctr = 0;
+    for (auto &row : layout) {
+        if (++word < width) {
+            if (row.cols != firstrow->cols)
+                error(row.lineno, "Columns across wide rows don't match in table %s", name());
+            row.vpns = firstrow->vpns;
+            continue; }
+        word = 0;
+        firstrow = &row;
+        row.vpns.resize(row.cols.size());
+        for (int &el : row.vpns) {
+            if (vpniter) {
+                if (vpniter == vpn->end()) break;
+                if (CHECKTYPE(*vpniter, tINT) && (el = vpniter->i) % groups != 0)
+                    error(vpniter->lineno, "%d is not a multiple of the match "
+                          "group size %d", el, groups); 
+                ++vpniter;
+            } else {
+                el = vpn_ctr;
+                vpn_ctr += groups; } } }
+}
+
 void Table::alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Table *> *bus_use) {
     for (auto &row : layout) {
         for (int col : row.cols) {
@@ -183,6 +219,11 @@ void Table::alloc_id(const char *idname, int &id, int &next_id, int max_id,
         use[id = next_id] = this;
     else
         error(lineno, "Can't pick %s id for table %s (ran out)", idname, name());
+}
+
+void Table::alloc_vpns() {
+    if (layout.size() == 0 || layout[0].vpns.size() > 0) return;
+    setup_vpns(0);
 }
 
 void Table::check_next() {

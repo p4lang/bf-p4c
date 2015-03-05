@@ -12,10 +12,14 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     tcam_id = -1;
     setup_layout(get(data, "row"), get(data, "column"), get(data, "bus"));
     setup_logical_id();
+    if (auto *ixbar = get(data, "input_xbar")) {
+        if (CHECKTYPE(*ixbar, tMAP))
+            input_xbar = new InputXbar(this, true, ixbar->map);
+    } else
+        error(lineno, "No input xbar specified in table %s", name());
     for (auto &kv : MapIterChecked(data)) {
         if (kv.key == "input_xbar") {
-            if (CHECKTYPE(kv.value, tMAP))
-                input_xbar = new InputXbar(this, true, kv.value.map);
+            /* done above to be done before vpns */
         } else if (kv.key == "gateway") {
             if (CHECKTYPE(kv.value, tMAP)) {
                 gateway = GatewayTable::create(kv.key.lineno, name_+" gateway",
@@ -47,6 +51,9 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
             else if (CHECKTYPE(kv.value, tSTR))
                 hit_next.emplace_back(kv.value);
                 miss_next = kv.value;
+        } else if (kv.key == "vpns") {
+            if (CHECKTYPE(kv.value, tVEC))
+                setup_vpns(&kv.value.vec);
         } else if (kv.key == "row" || kv.key == "column" || kv.key == "bus") {
             /* already done in setup_layout */
         } else
@@ -61,6 +68,7 @@ void TernaryMatchTable::pass1() {
     alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
              TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
     alloc_busses(stage->tcam_match_bus_use);
+    alloc_vpns();
     check_next();
     indirect.check();
     link_action(action);
@@ -92,12 +100,11 @@ void TernaryMatchTable::pass2() {
 void TernaryMatchTable::write_regs() {
     LOG1("### Ternary match table " << name());
     MatchTable::write_regs(1, indirect);
-    int vpn = 0;
     unsigned word = 0;
     auto &merge = stage->regs.rams.match.merge;
-    for (int col : Range(0, 1)) {
-        for (Layout &row : layout) {
-            if (!contains(row.cols, col)) continue;
+    for (Layout &row : layout) {
+        auto vpn = row.vpns.begin();
+        for (auto col : row.cols) {
             auto &tcam_mode = stage->regs.tcams.col[col].tcam_mode[row.row];
             /* TODO -- always setting dirtcam mode to 0 */
             tcam_mode.tcam_data_dirtcam_mode = 0;
@@ -108,7 +115,7 @@ void TernaryMatchTable::write_regs() {
             else
                 tcam_mode.tcam_egress = 1;
             tcam_mode.tcam_match_output_enable = (word == 0);
-            tcam_mode.tcam_vpn = vpn;
+            tcam_mode.tcam_vpn = *vpn++;
             tcam_mode.tcam_logical_table = tcam_id;
             /* TODO -- always disable tcam_validbit_xbar? */
             auto &tcam_vh_xbar = stage->regs.tcams.vh_data_xbar;
@@ -138,8 +145,8 @@ void TernaryMatchTable::write_regs() {
             tcam_vh_xbar.tcam_row_output_ctl[row.bus][row.row]
                 .enabled_4bit_muxctl_enable = 1;
             if (word == 0)
-                stage->regs.tcams.col[col].tcam_table_map[tcam_id] |= 1U << row.row;
-            if (++word == input_xbar->width()) { word = 0; vpn++; } } }
+                stage->regs.tcams.col[col].tcam_table_map[tcam_id] |= 1U << row.row; }
+        if (++word == input_xbar->width()) word = 0; }
     merge.tcam_hit_to_logical_table_ixbar_outputmap[tcam_id]
         .enabled_4bit_muxctl_select = logical_id;
     merge.tcam_hit_to_logical_table_ixbar_outputmap[tcam_id]
@@ -174,7 +181,7 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
         error(lineno, "No format specified in table %s", name());
     for (auto &kv : MapIterChecked(data)) {
         if (kv.key == "format") {
-            /* done above to be done before action_bus */
+            /* done above to be done before action_bus and vpns */
         } else if (kv.key == "action") {
             setup_action_table(kv.value);
         } else if (kv.key == "actions") {
@@ -201,6 +208,9 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
             else if (CHECKTYPE(kv.value, tSTR))
                 hit_next.emplace_back(kv.value);
                 miss_next = kv.value;
+        } else if (kv.key == "vpns") {
+            if (CHECKTYPE(kv.value, tVEC))
+                setup_vpns(&kv.value.vec);
         } else if (kv.key == "row" || kv.key == "column" || kv.key == "bus") {
             /* already done in setup_layout */
         } else
@@ -217,6 +227,7 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
 }
 void TernaryIndirectTable::pass1() {
     alloc_busses(stage->tcam_indirect_bus_use);
+    alloc_vpns();
     check_next();
     if (action_bus) action_bus->pass1(this);
     if (actions) {
@@ -240,9 +251,9 @@ void TernaryIndirectTable::write_regs() {
     LOG1("### Ternary indirect table " << name());
     int tcam_id = dynamic_cast<TernaryMatchTable *>(match_table)->tcam_id;
     stage->regs.tcams.tcam_match_adr_shift[tcam_id] = format->log2size-2;
-    int vpn = 0;
     auto &merge = stage->regs.rams.match.merge;
     for (Layout &row : layout) {
+        auto vpn = row.vpns.begin();
         for (int col : row.cols) {
             auto &unit_ram_ctl = stage->regs.rams.array.row[row.row].ram[col].unit_ram_ctl;
             unit_ram_ctl.match_ram_write_data_mux_select = 7; /* disable */
@@ -254,7 +265,7 @@ void TernaryIndirectTable::write_regs() {
             auto &unitram_config = stage->regs.rams.map_alu.row[row.row].adrmux
                     .unitram_config[col/6][col%6];
             unitram_config.unitram_type = 6;
-            unitram_config.unitram_vpn = vpn;
+            unitram_config.unitram_vpn = *vpn++;
             unitram_config.unitram_logical_table = logical_id;
             if (gress == INGRESS)
                 unitram_config.unitram_ingress = 1;
@@ -264,8 +275,7 @@ void TernaryIndirectTable::write_regs() {
             auto &xbar_ctl = stage->regs.rams.map_alu.row[row.row].vh_xbars
                     .adr_dist_tind_adr_xbar_ctl[row.bus];
             xbar_ctl.enabled_3bit_muxctl_select = tcam_id;
-            xbar_ctl.enabled_3bit_muxctl_enable = 1;
-            vpn++; }
+            xbar_ctl.enabled_3bit_muxctl_enable = 1; }
         int bus = row.row*2 + row.bus;
         merge.tind_ram_data_size[bus] = format->log2size - 1;
         merge.tcam_match_adr_to_physical_oxbar_outputmap[bus].enabled_3bit_muxctl_select = tcam_id;

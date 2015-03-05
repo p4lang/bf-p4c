@@ -30,10 +30,12 @@ protected:
     void setup_logical_id();
     void setup_action_table(value_t &);
     void setup_actions(value_t &);
+    void setup_vpns(VECTOR(value_t) *);
     void alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Table *> *bus_use);
     void alloc_busses(Alloc2Dbase<Table *> &bus_use);
     void alloc_id(const char *idname, int &id, int &next_id, int max_id,
 		  bool order, Alloc1Dbase<Table *> &use);
+    void alloc_vpns();
     void check_next();
 public:
     const char *name() { return name_.c_str(); }
@@ -51,7 +53,7 @@ public:
          * action (and others?) refer to logical srams (16x6) */
         int                     lineno;
         int                     row, bus;
-        std::vector<int>        cols;
+        std::vector<int>        cols, vpns;
     };
 
     class Type {
