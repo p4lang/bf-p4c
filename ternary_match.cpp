@@ -1,6 +1,7 @@
 #include "algorithm.h"
 #include "input_xbar.h"
 #include "instruction.h"
+#include "range.h"
 #include "stage.h"
 #include "tables.h"
 
@@ -13,10 +14,10 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     setup_logical_id();
     for (auto &kv : MapIterChecked(data)) {
         if (kv.key == "input_xbar") {
-	    if (CHECKTYPE(kv.value, tMAP))
-		input_xbar = new InputXbar(this, true, kv.value.map);
+            if (CHECKTYPE(kv.value, tMAP))
+                input_xbar = new InputXbar(this, true, kv.value.map);
         } else if (kv.key == "gateway") {
-	    if (CHECKTYPE(kv.value, tMAP)) {
+            if (CHECKTYPE(kv.value, tMAP)) {
                 gateway = GatewayTable::create(kv.key.lineno, name_+" gateway",
                         gress, stage, -1, kv.value.map);
                 gateway->match_table = this; }
@@ -25,8 +26,8 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
                 indirect = kv.value;
         } else if (kv.key == "tcam_id") {
             if (CHECKTYPE(kv.value, tINT)) {
-		if ((tcam_id = kv.value.i) < 0 || tcam_id >= TCAM_TABLES_PER_STAGE)
-		    error(kv.key.lineno, "Invalid tcam_id %d", tcam_id);
+                if ((tcam_id = kv.value.i) < 0 || tcam_id >= TCAM_TABLES_PER_STAGE)
+                    error(kv.key.lineno, "Invalid tcam_id %d", tcam_id);
                 else if (stage->tcam_id_use[tcam_id])
                     error(kv.key.lineno, "Tcam id %d already in use by table %s",
                           tcam_id, stage->tcam_id_use[tcam_id]->name());
@@ -56,9 +57,9 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
 void TernaryMatchTable::pass1() {
     stage->table_use[gress] |= Stage::USE_TCAM;
     alloc_id("logical", logical_id, stage->pass1_logical_id,
-	     LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
+             LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
     alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
-	     TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
+             TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
     alloc_busses(stage->tcam_match_bus_use);
     check_next();
     indirect.check();
@@ -94,25 +95,26 @@ void TernaryMatchTable::write_regs() {
     int vpn = 0;
     unsigned word = 0;
     auto &merge = stage->regs.rams.match.merge;
-    for (Layout &row : layout) {
-	for (int col : row.cols) {
-	    auto &tcam_mode = stage->regs.tcams.col[col].tcam_mode[row.row];
-	    /* TODO -- always setting dirtcam mode to 0 */
-	    tcam_mode.tcam_data_dirtcam_mode = 0;
-	    tcam_mode.tcam_data1_select = row.bus;
-	    tcam_mode.tcam_chain_out_enable = word > 0;
-	    if (gress == INGRESS)
-		tcam_mode.tcam_ingress = 1;
-	    else
-		tcam_mode.tcam_egress = 1;
-	    tcam_mode.tcam_match_output_enable = (word == 0);
-	    tcam_mode.tcam_vpn = vpn;
-	    tcam_mode.tcam_logical_table = tcam_id;
-	    /* TODO -- always disable tcam_validbit_xbar? */
-	    auto &tcam_vh_xbar = stage->regs.tcams.vh_data_xbar;
-            int off = (row.row&1) * 4;
-	    for (int i = 0; i < 4; i++)
-		tcam_vh_xbar.tcam_validbit_xbar_ctl[row.bus][row.row/2][i+off] = 15;
+    for (int col : Range(0, 1)) {
+        for (Layout &row : layout) {
+            if (!contains(row.cols, col)) continue;
+            auto &tcam_mode = stage->regs.tcams.col[col].tcam_mode[row.row];
+            /* TODO -- always setting dirtcam mode to 0 */
+            tcam_mode.tcam_data_dirtcam_mode = 0;
+            tcam_mode.tcam_data1_select = row.bus;
+            tcam_mode.tcam_chain_out_enable = word > 0;
+            if (gress == INGRESS)
+                tcam_mode.tcam_ingress = 1;
+            else
+                tcam_mode.tcam_egress = 1;
+            tcam_mode.tcam_match_output_enable = (word == 0);
+            tcam_mode.tcam_vpn = vpn;
+            tcam_mode.tcam_logical_table = tcam_id;
+            /* TODO -- always disable tcam_validbit_xbar? */
+            auto &tcam_vh_xbar = stage->regs.tcams.vh_data_xbar;
+            if (options.match_compiler) {
+                for (int i = 0; i < 8; i++)
+                    tcam_vh_xbar.tcam_validbit_xbar_ctl[row.bus][row.row/2][i] |= 15; }
             auto &halfbyte_mux_ctl = tcam_vh_xbar.tcam_row_halfbyte_mux_ctl[row.bus][row.row];
             if (word+1 == input_xbar->width()) {
                 halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_select = 3;
@@ -131,14 +133,13 @@ void TernaryMatchTable::write_regs() {
                 .enabled_3bit_muxctl_select = byte_match_group_number;
             tcam_vh_xbar.tcam_extra_byte_ctl[row.bus][row.row/2]
                 .enabled_3bit_muxctl_enable = 1; */
-	    tcam_vh_xbar.tcam_row_output_ctl[row.bus][row.row]
-		.enabled_4bit_muxctl_select = input_xbar->group_for_word(word);
-	    tcam_vh_xbar.tcam_row_output_ctl[row.bus][row.row]
-		.enabled_4bit_muxctl_enable = 1;
+            tcam_vh_xbar.tcam_row_output_ctl[row.bus][row.row]
+                .enabled_4bit_muxctl_select = input_xbar->group_for_word(word);
+            tcam_vh_xbar.tcam_row_output_ctl[row.bus][row.row]
+                .enabled_4bit_muxctl_enable = 1;
             if (word == 0)
                 stage->regs.tcams.col[col].tcam_table_map[tcam_id] |= 1U << row.row;
-	}
-        if (++word == input_xbar->width()) { word = 0; vpn++; } }
+            if (++word == input_xbar->width()) { word = 0; vpn++; } } }
     merge.tcam_hit_to_logical_table_ixbar_outputmap[tcam_id]
         .enabled_4bit_muxctl_select = logical_id;
     merge.tcam_hit_to_logical_table_ixbar_outputmap[tcam_id]
@@ -207,9 +208,9 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
                     kv.key.s, name()); }
     alloc_rams(false, stage->sram_use, &stage->tcam_indirect_bus_use);
     if (action.set() && actions)
-	error(lineno, "Table %s has both action table and immediate actions", name());
+        error(lineno, "Table %s has both action table and immediate actions", name());
     if (!action.set() && !actions)
-	error(lineno, "Table %s has neither action table nor immediate actions", name());
+        error(lineno, "Table %s has neither action table nor immediate actions", name());
     if (action.set() && (action_args.size() < 1 || action_args.size() > 2))
         error(lineno, "Unexpected number of action table arguments %zu", action_args.size());
     if (actions && !action_bus) action_bus = new ActionBus();
@@ -242,7 +243,7 @@ void TernaryIndirectTable::write_regs() {
     int vpn = 0;
     auto &merge = stage->regs.rams.match.merge;
     for (Layout &row : layout) {
-	for (int col : row.cols) {
+        for (int col : row.cols) {
             auto &unit_ram_ctl = stage->regs.rams.array.row[row.row].ram[col].unit_ram_ctl;
             unit_ram_ctl.match_ram_write_data_mux_select = 7; /* disable */
             unit_ram_ctl.match_ram_read_data_mux_select = 7; /* disable */
