@@ -43,23 +43,20 @@ void Table::setup_action_table(value_t &val) {
         action.lineno = val.lineno; }
 }
 
-static int add_row(int lineno, Table *t, int row) {
-    if (contains_if(t->layout, [row](Table::Layout &p)->bool { return p.row == row; })) {
-        error(lineno, "row %d duplicated in table %s", row, t->name());
-        return 1; }
+static void add_row(int lineno, Table *t, int row) {
     t->layout.push_back(Table::Layout{lineno, row, -1});
-    return 0;
 }
 
 static int add_rows(Table *t, value_t &rows) {
     if (!CHECKTYPE2(rows, tINT, tRANGE)) return 1;
-    if (rows.type == tINT) return add_row(rows.lineno, t, rows.i);
-    int rv = 0;
-    int step = rows.lo > rows.hi ? -1 : 1;
-    for (int i = rows.lo; i != rows.hi; i += step)
-        rv |= add_row(rows.lineno, t, i);
-    rv |= add_row(rows.lineno, t, rows.hi);
-    return rv;
+    if (rows.type == tINT)
+        add_row(rows.lineno, t, rows.i);
+    else {
+        int step = rows.lo > rows.hi ? -1 : 1;
+        for (int i = rows.lo; i != rows.hi; i += step)
+            add_row(rows.lineno, t, i);
+        add_row(rows.lineno, t, rows.hi); }
+    return 0;
 }
 
 static int add_col(int lineno, Table::Layout &row, int col) {
@@ -111,15 +108,24 @@ void Table::setup_layout(value_t *row, value_t *col, value_t *bus) {
     if (bus) {
         if (!CHECKTYPE2(*bus, tINT, tVEC)) err = 1;
         else if (bus->type == tVEC) {
-            if (bus->vec.size != (int)layout.size())
+            if (bus->vec.size != (int)layout.size()) {
                 error(bus->lineno, "Bus shape doesn't match rows");
-            else
+                err = 1;
+            } else
                 for (int i = 0; i < bus->vec.size; i++)
                     if (CHECKTYPE(bus->vec[i], tINT))
                         layout[i].bus = bus->vec[i].i;
+                    else err = 1;
         } else
             for (auto &row : layout)
                 row.bus = bus->i; }
+    if (err) return;
+    for (auto i = layout.begin(); i != layout.end(); i++)
+        for (auto j = i+1; j != layout.end(); j++)
+            if (i->row == j->row && i->bus == j->bus) {
+                char bus[16] = { 0 };
+                if (i->bus >= 0) sprintf(bus, " bus %d", i->bus);
+                error(i->lineno, "row %d%s duplicated in table %s", i->row, bus, name()); }
 }
 
 void Table::setup_logical_id() {

@@ -61,6 +61,10 @@ templates/%.json: templates/.templates-updated
 
 -include $(wildcard *.d gen/*.d)
 
+test: all
+	cd test
+	./runtests
+
 clean:
 	rm -f *.o *.d asm-parse.c lex-yaml.c *.json json2cpp tfas
 
@@ -72,5 +76,6 @@ help:
 	@echo "other targets:"
 	@echo "    make clean       cleans up object/dep files"
 	@echo "    make veryclean   also cleans up generated templates"
+	@echo "    make test        run regression tests"
 
 .SECONDARY:
