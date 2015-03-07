@@ -19,30 +19,35 @@ public:
     static constexpr size_t bits_per_unit = CHAR_BIT * sizeof(uintptr_t);
     class bitref {
 	friend class bitvec;
-	bitvec		&set;
+	bitvec		&self;
 	int		idx;
-	bitref(bitvec &s, int i) : set(s), idx(i) {}
+	bitref(bitvec &s, int i) : self(s), idx(i) {}
     public:
 	bitref(const bitref &a) = default;
 	bitref(bitref &&a) = default;
 	bool operator=(bool b) const {
 	    assert(idx >= 0);
-	    return b ? set.setbit(idx) : set.clrbit(idx); }
+	    return b ? self.setbit(idx) : self.clrbit(idx); }
 	bool operator=(int b) const {
 	    assert(idx >= 0);
-	    return b ? set.setbit(idx) : set.clrbit(idx); }
-	operator bool() const { return set.getbit(idx); }
-	operator int() const { return set.getbit(idx) ? 1 : 0; }
+	    return b ? self.setbit(idx) : self.clrbit(idx); }
+	operator bool() const { return self.getbit(idx); }
+	operator int() const { return self.getbit(idx) ? 1 : 0; }
+        bool set(bool b = true) {
+	    assert(idx >= 0);
+            bool rv = self.getbit(idx);
+	    b ? self.setbit(idx) : self.clrbit(idx);
+            return rv; }
 	int index() const { return idx; }
         int operator*() const { return idx; }
 	bitref &operator++() {
-	    while ((size_t)++idx < set.size * bitvec::bits_per_unit)
-		if (set.getbit(idx)) return *this;
+	    while ((size_t)++idx < self.size * bitvec::bits_per_unit)
+		if (self.getbit(idx)) return *this;
 	    idx = -1;
 	    return *this; }
 	bitref &operator--() {
 	    while (--idx >= 0)
-		if (set.getbit(idx)) return *this;
+		if (self.getbit(idx)) return *this;
 	    return *this; }
     };
     bitvec() : size(1), data(0) {}

@@ -58,9 +58,18 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
             if (!CHECKTYPE(kv.value, tVEC)) continue;
             for (auto &w : kv.value.vec) {
                 if (!CHECKTYPE(w, tVEC)) continue;
-                if (w.vec.size != 3 || w[0].type != tINT || w[1].type != tINT || w[2].type != tINT)
+                if (w.vec.size < 3 || w[0].type != tINT || w[1].type != tINT || w[2].type != tINT)
                     error(w.lineno, "invalid way descriptor");
-                else ways.emplace_back(Way{w.lineno, w[0].i, w[1].i, w[2].i}); }
+                else ways.emplace_back(Way{w.lineno, w[0].i, w[1].i, w[2].i});
+                if (w.vec.size > 3) {
+                    for (int i = 3; i < w.vec.size; i++) {
+                        if (!CHECKTYPE(w[i], tVEC)) continue;
+                        if (w[i].vec.size != 2 || w[i][0].type != tINT || w[i][1].type != tINT ||
+                            w[i][0].i < 0 || w[i][0].i >= SRAM_ROWS ||
+                            w[i][1].i < 0 || w[i][1].i >= SRAM_UNITS_PER_ROW)
+                            error(w[i].lineno, "invalid ram in way");
+                        else
+                            ways.back().rams.emplace_back(w[i][0].i, w[i][1].i); } } }
         } else if (kv.key == "match") {
             if (kv.value.type == tVEC)
                 for (auto &v : kv.value.vec)
@@ -158,23 +167,7 @@ void ExactMatchTable::pass1() {
             LOG1("    match group " << mgrp.second << " in word " << mgrp.first); }
     for (unsigned i = 0; i < word_info.size(); i++)
         LOG1("  word " << i << " groups: " << word_info[i]);
-    if (ways.empty())
-        error(lineno, "No ways defined in table %s", name());
-    else if (layout.size() % (ways.size()*fmt_width) != 0)
-        error(lineno, "Rows is not a mulitple of ways in table %s", name());
-    else {
-        unsigned way = 0, word = 0;
-        for (auto &row : layout) {
-            if (word == 0) {
-                if (ways[way].group >= EXACT_HASH_GROUPS ||
-                    ways[way].subgroup >= 5 ||
-                    (ways[way].mask &~ 0xfff)) {
-                    error(ways[way].lineno, "invalid exact match way");
-                    break; } }
-            if (row.cols.size() != 1U << bitcount(ways[way].mask))
-                error(ways[way].lineno, "Depth of way doesn't match number of columns on "
-                      "row %d in table %s", row.row, name());
-            if (++word == fmt_width) { word = 0; way++; } } }
+    setup_ways();
     for (auto &r : match) r.check();
     if (gateway) {
         gateway->logical_id = logical_id;
@@ -183,6 +176,79 @@ void ExactMatchTable::pass1() {
     if (match.empty())
         for (auto it = input_xbar->all_begin(); it != input_xbar->all_end(); ++it)
             match.push_back(it->second.what);
+}
+
+void ExactMatchTable::setup_ways() {
+    unsigned fmt_width = (format->size + 127)/128;
+    if (ways.empty())
+        error(lineno, "No ways defined in table %s", name());
+    else if (ways[0].rams.empty()) {
+        for (auto &w : ways)
+            if (!w.rams.empty()) {
+                error(w.lineno, "Must specify rams for all ways in tabls %s, or none",
+                      name());
+                return; }
+        if (layout.size() % (ways.size()*fmt_width) != 0)
+            error(lineno, "Rows is not a mulitple of ways in table %s", name());
+        else {
+            unsigned way = 0, word = 0;
+            for (auto &row : layout) {
+                if (word == 0) {
+                    if (ways[way].group >= EXACT_HASH_GROUPS ||
+                        ways[way].subgroup >= 5 ||
+                        (ways[way].mask &~ 0xfff)) {
+                        error(ways[way].lineno, "invalid exact match way");
+                        break; } }
+                if (row.cols.size() != 1U << bitcount(ways[way].mask))
+                    error(ways[way].lineno, "Depth of way doesn't match number of columns on "
+                          "row %d in table %s", row.row, name());
+                for (auto col : row.cols) {
+                    ways[way].rams.emplace_back(row.row, col);
+                    way_map[ways[way].rams.back()].way = way; }
+                if (++word == fmt_width) { word = 0; way++; } } }
+    } else {
+        bitvec rams;
+        for (auto &row : layout)
+            for (auto col : row.cols)
+                rams[row.row*16 + col] = 1;
+        int way = -1;
+        for (auto &w : ways) {
+            ++way;
+            int index = -1;
+            if (w.rams.size() != (1U << bitcount(w.mask)) * fmt_width)
+                error(w.lineno, "Depth of way doesn't match number of rams in table %s", name());
+            for (auto &ram : w.rams) {
+                ++index;
+                if (way_map.count(ram)) {
+                    if (way == way_map[ram].way)
+                        error(w.lineno, "Ram %d,%d used twice in way %d of table %s",
+                              ram.first, ram.second, way, name());
+                    else
+                        error(w.lineno, "Ram %d,%d used ways %d and %d of table %s",
+                              ram.first, ram.second, way, way_map[ram].way, name());
+                    continue; }
+                way_map[ram].way = way;
+                if (!rams[ram.first*16 + ram.second].set(false))
+                    error(w.lineno, "Ram %d,%d in way %d not part of table %s",
+                          ram.first, ram.second, way, name()); } }
+        for (auto bit : rams)
+            error(lineno, "Ram %d,%d not in any way of table %s", bit/16, bit%16, name()); }
+    if (error_count > 0) return;
+    for (auto &w : ways) {
+        MaskCounter bank(w.mask);
+        unsigned index = 0, word = 0;
+        int col = -1;
+        for (auto &ram : w.rams) {
+            auto &wm = way_map[ram];
+            wm.index = index;
+            wm.word = fmt_width - word - 1;
+            wm.bank = bank;
+            if (word && col != ram.second)
+                error(w.lineno, "Wide exact match split across columns %d and %d",
+                      col, ram.second);
+            col = ram.second;
+            ++index;
+            if (++word == fmt_width) { word = 0; bank++; } } }
 }
 
 void ExactMatchTable::pass2() {
@@ -240,13 +306,9 @@ bool setup_match_input(unsigned bytes[16], std::vector<Phv::Ref> &match, Stage *
 
 void ExactMatchTable::write_regs() {
     LOG1("### Exact match table " << name());
-    if (input_xbar->width() > 1) {
-        error(lineno, "FIXME -- can't deal with exact match larger than 128 bits");
-        LOG1("  (skipped)");
-        return; }
     MatchTable::write_regs(0, this);
     unsigned fmt_width = (format->size + 127)/128;
-    int way = 0, word = fmt_width-1;
+    int word = fmt_width-1;  // FIXME -- don't need this anymore?
     bitvec match_mask, version_nibble_mask;
     match_mask.setrange(0, 128*fmt_width);
     version_nibble_mask.setrange(0, 32*fmt_width);
@@ -267,21 +329,29 @@ void ExactMatchTable::write_regs() {
         index++;  /* index of the row in the layout */
         /* setup match logic in rams */
         auto &vh_adr_xbar = stage->regs.rams.array.row[row.row].vh_adr_xbar;
-        vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus]
-            .enabled_3bit_muxctl_select = ways[way].group;
-        vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus]
-            .enabled_3bit_muxctl_enable = 1;
-        MaskCounter bank(ways[way].mask);
+        bool first = true;
+        int group = -1;
         auto vpn_iter = row.vpns.begin();
         for (auto col : row.cols) {
+            auto &way = way_map[std::make_pair(row.row, col)];
+            if (first) {
+                group = ways[way.way].group;
+                vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus]
+                    .enabled_3bit_muxctl_select = group;
+                vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus]
+                    .enabled_3bit_muxctl_enable = 1;
+                first = false;
+            } else
+                assert(group == ways[way.way].group);
+            assert(way.word == word);
             vh_adr_xbar.exactmatch_mem_hashadr_xbar_ctl[col]
-                .enabled_4bit_muxctl_select = ways[way].subgroup + row.bus*5;
+                .enabled_4bit_muxctl_select = ways[way.way].subgroup + row.bus*5;
             vh_adr_xbar.exactmatch_mem_hashadr_xbar_ctl[col]
                 .enabled_4bit_muxctl_enable = 1;
             vh_adr_xbar.exactmatch_bank_enable[col]
-                .exactmatch_bank_enable_bank_mask = ways[way].mask;
+                .exactmatch_bank_enable_bank_mask = ways[way.way].mask;
             vh_adr_xbar.exactmatch_bank_enable[col]
-                .exactmatch_bank_enable_bank_id = bank++;
+                .exactmatch_bank_enable_bank_id = way.bank;
             vh_adr_xbar.exactmatch_bank_enable[col]
                 .exactmatch_bank_enable_inp_sel |= 1 << row.bus;
             auto &ram = stage->regs.rams.array.row[row.row].ram[col];
@@ -342,7 +412,7 @@ void ExactMatchTable::write_regs() {
         /* setup input xbars to get data to the right places on the bus(es) */
         auto &vh_xbar = stage->regs.rams.array.row[row.row].vh_xbar;
         unsigned input_bus_locs[16];
-        setup_match_input(input_bus_locs, match, stage, ways[way].group);
+        setup_match_input(input_bus_locs, match, stage, group);
         for (unsigned i = 0; i < format->groups(); i++) {
             Format::Field *match = format->field("match", i);
             unsigned b = 0;
@@ -357,7 +427,7 @@ void ExactMatchTable::write_regs() {
             if (Format::Field *version = format->field("version", i)) {
                 if (version->bits[0].lo/128 != (unsigned)word) continue;
                 vh_xbar[row.bus].exactmatch_validselect |= 1U << (version->bits[0].lo%128)/4; } }
-        vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl.exactmatch_row_vh_xbar_select = ways[way].group;
+        vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl.exactmatch_row_vh_xbar_select = group;
         vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl.exactmatch_row_vh_xbar_enable = 1;
         vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress;
         /* setup match central config to extract results of the match */
@@ -406,7 +476,7 @@ void ExactMatchTable::write_regs() {
             /*merge.col[col].hitmap_output_map[bus].enabled_4bit_muxctl_select =
                 layout[index+word].row*2 + layout[index+word].bus;
             merge.col[col].hitmap_output_map[bus].enabled_4bit_muxctl_enable = 1;*/ }
-        if (--word < 0) { word = fmt_width-1; way++; } }
+        if (--word < 0) { word = fmt_width-1; } }
     if (actions) actions->write_regs(this);
     if (gateway) gateway->write_regs();
 }

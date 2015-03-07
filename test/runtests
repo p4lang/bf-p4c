@@ -29,7 +29,7 @@ for f in "$@"; do
     mkdir -p $name.out
     cd $name.out
     if $GLSC --verbose 2 -S ../$name.p4 >glsc.log 2>&1; then
-        if tfas -vvv $name.tfa >tfas.log 2>&1; then
+        if tfas -vvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
             for f in $name.out/*.json; do
                 if reflow $f >tmp.json; then
                     mv tmp.json $f

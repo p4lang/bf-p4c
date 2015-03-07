@@ -50,7 +50,8 @@ public:
          * These refer to rows/columns in different spaces:
          * ternary match refers to tcams (16x2)
          * exact match and ternary indirect refer to physical srams (8x12)
-         * action (and others?) refer to logical srams (16x6) */
+         * action (and others?) refer to logical srams (16x6)
+         * vpns contains the (base)vpn index of each ram in the row (matching cols) */
         int                     lineno;
         int                     row, bus;
         std::vector<int>        cols, vpns;
@@ -251,11 +252,16 @@ TYPE *TYPE::Type::create(int lineno, const char *name, gress_t gress,   \
 
 DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
     struct Way {
-        int        lineno;
-        int        group, subgroup, mask;
+        int                              lineno;
+        int                              group, subgroup, mask;
+        std::vector<std::pair<int, int>> rams;
+
     };
-    std::vector<Way>            ways;
-    std::vector<Phv::Ref>       match;
+    std::vector<Way>                      ways;
+    struct WayRam { int way, index, word, bank; };
+    std::map<std::pair<int, int>, WayRam> way_map;
+    void setup_ways();
+    std::vector<Phv::Ref>                 match;
     struct GroupInfo {
         /* info about which word(s) are used per group with wide matches */
         int                     overhead_word;  /* which word of wide match contains overhead */

@@ -70,6 +70,8 @@ static int add_col(int lineno, Table::Layout &row, int col) {
 static int add_cols(Table::Layout &row, value_t &cols) {
     int rv = 0;
     if (cols.type == tVEC) {
+        if (cols.vec.size == 1)
+            return add_cols(row, cols.vec[0]);
         for (auto &col : cols.vec) {
             if (col.type == tVEC) {
                 error(col.lineno, "Column shape doesn't match rows");
