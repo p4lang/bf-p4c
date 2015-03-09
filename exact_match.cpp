@@ -330,19 +330,19 @@ void ExactMatchTable::write_regs() {
         /* setup match logic in rams */
         auto &vh_adr_xbar = stage->regs.rams.array.row[row.row].vh_adr_xbar;
         bool first = true;
-        int group = -1;
+        int hash_group = -1;
         auto vpn_iter = row.vpns.begin();
         for (auto col : row.cols) {
             auto &way = way_map[std::make_pair(row.row, col)];
             if (first) {
-                group = ways[way.way].group;
+                hash_group = ways[way.way].group;
                 vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus]
-                    .enabled_3bit_muxctl_select = group;
+                    .enabled_3bit_muxctl_select = hash_group;
                 vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus]
                     .enabled_3bit_muxctl_enable = 1;
                 first = false;
             } else
-                assert(group == ways[way.way].group);
+                assert(hash_group == ways[way.way].group);
             assert(way.word == word);
             vh_adr_xbar.exactmatch_mem_hashadr_xbar_ctl[col]
                 .enabled_4bit_muxctl_select = ways[way.way].subgroup + row.bus*5;
@@ -359,6 +359,7 @@ void ExactMatchTable::write_regs() {
                 ram.match_mask[i] = match_mask.getrange(word*128+i*32, 32);
             ram.unit_ram_ctl.match_ram_write_data_mux_select = 7; /* unused */
             ram.unit_ram_ctl.match_ram_read_data_mux_select = 7; /* unused */
+            ram.unit_ram_ctl.match_ram_matchdata_bus1_sel = row.bus;
             ram.unit_ram_ctl.match_result_bus_select = 1 << row.bus;
             if (auto cnt = word_info[word].size())
                 ram.unit_ram_ctl.match_entry_enable = ~(~0U << cnt);
@@ -373,7 +374,7 @@ void ExactMatchTable::write_regs() {
             unitram_config.unitram_enable = 1;
 
             int vpn = *vpn_iter++;
-            int vpn_base = (vpn + word_info[word][0]) & ~3;
+            int vpn_base = (vpn + *min_element(word_info[word])) & ~3;
             ram.match_ram_vpn.match_ram_vpn0 = vpn_base >> 2;
             int vpn_use = 0;
             for (unsigned group = 0; group < word_info[word].size(); group++) {
@@ -412,7 +413,7 @@ void ExactMatchTable::write_regs() {
         /* setup input xbars to get data to the right places on the bus(es) */
         auto &vh_xbar = stage->regs.rams.array.row[row.row].vh_xbar;
         unsigned input_bus_locs[16];
-        setup_match_input(input_bus_locs, match, stage, group);
+        setup_match_input(input_bus_locs, match, stage, hash_group);
         for (unsigned i = 0; i < format->groups(); i++) {
             Format::Field *match = format->field("match", i);
             unsigned b = 0;
@@ -427,7 +428,7 @@ void ExactMatchTable::write_regs() {
             if (Format::Field *version = format->field("version", i)) {
                 if (version->bits[0].lo/128 != (unsigned)word) continue;
                 vh_xbar[row.bus].exactmatch_validselect |= 1U << (version->bits[0].lo%128)/4; } }
-        vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl.exactmatch_row_vh_xbar_select = group;
+        vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl.exactmatch_row_vh_xbar_select = hash_group;
         vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl.exactmatch_row_vh_xbar_enable = 1;
         vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress;
         /* setup match central config to extract results of the match */

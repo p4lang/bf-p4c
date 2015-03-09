@@ -170,7 +170,7 @@ void InputXbar::pass2(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
             int need = input.what->hi/8U - input.what->lo/8U + 1;
             unsigned mask = (1U << need)-1;
             int max = (size+7)/8 - need;
-            for (int i = 0; i < max; i++, mask <<= 1)
+            for (int i = 0; i <= max; i++, mask <<= 1)
                 if (!(bytes_in_use & mask)) {
                     input.lo = i*8 + input.what->lo%8U;
                     input.hi = (i+need-1)*8 + input.what->hi%8U;

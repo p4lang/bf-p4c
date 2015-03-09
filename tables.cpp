@@ -154,6 +154,7 @@ void Table::setup_vpns(VECTOR(value_t) *vpn) {
     Layout *firstrow = 0;
     auto vpniter = vpn ? vpn->begin() : 0;
     int vpn_ctr = 0;
+    bitvec used_vpns;
     for (auto &row : layout) {
         if (++word < width) {
             if (row.cols != firstrow->cols)
@@ -169,10 +170,17 @@ void Table::setup_vpns(VECTOR(value_t) *vpn) {
                 if (CHECKTYPE(*vpniter, tINT) && (el = vpniter->i) % groups != 0)
                     error(vpniter->lineno, "%d is not a multiple of the match "
                           "group size %d", el, groups); 
+                if (used_vpns[el/groups].set(true))
+                    error(vpniter->lineno, "Vpn %d used twice in table %s", el, name());
                 ++vpniter;
             } else {
                 el = vpn_ctr;
                 vpn_ctr += groups; } } }
+    if (vpn && error_count == 0) {
+        for (int i = 0; i < vpn->size; i++)
+            if (!used_vpns[i]) {
+                error((*vpn)[0].lineno, "Hole in vpn list (%d) for table %s", i*groups, name());
+                break; } }
 }
 
 void Table::alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Table *> *bus_use) {

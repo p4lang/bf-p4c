@@ -23,7 +23,7 @@ extern int get_file_log_level(const char *file, int *level);
 #define LOG2(X) LOG(1, X)
 #define LOG3(X) LOG(1, X)
 
-#define ERROR(X) (std::clog << X << std::endl)
+#define ERROR(X) (std::clog << "ERROR: " << X << std::endl)
 
 #if 0
 

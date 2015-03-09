@@ -61,6 +61,10 @@ templates/%.json: templates/.templates-updated
 
 -include $(wildcard *.d gen/*.d)
 
+.PHONY: all tags test clean veryclean help
+tags:
+	ctags -R -I VECTOR --exclude=test
+
 test: all
 	cd test
 	./runtests
