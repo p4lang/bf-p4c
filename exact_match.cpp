@@ -413,7 +413,8 @@ void ExactMatchTable::write_regs() {
         /* setup input xbars to get data to the right places on the bus(es) */
         auto &vh_xbar = stage->regs.rams.array.row[row.row].vh_xbar;
         unsigned input_bus_locs[16];
-        setup_match_input(input_bus_locs, match, stage, hash_group);
+        if (!setup_match_input(input_bus_locs, match, stage, hash_group))
+            return;
         for (unsigned i = 0; i < format->groups(); i++) {
             Format::Field *match = format->field("match", i);
             unsigned b = 0;

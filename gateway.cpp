@@ -120,21 +120,24 @@ extern bool setup_match_input(unsigned bytes[16], std::vector<Phv::Ref> &match, 
 
 /* FIXME -- how to deal with (or even specify) matches in the upper 24 bits coming from
  * the hash bus? */
-static void setup_vh_xbar(Stage *stage, Table::Layout &row, int byte, std::vector<Phv::Ref> &match, int group) {
+static bool setup_vh_xbar(Stage *stage, Table::Layout &row, int byte, std::vector<Phv::Ref> &match, int group) {
     auto &vh_xbar = stage->regs.rams.array.row[row.row].vh_xbar;
     unsigned input_bus_locs[16];
-    setup_match_input(input_bus_locs, match, stage, group);
+    if (!setup_match_input(input_bus_locs, match, stage, group))
+        return false;
     for (unsigned b = 0; b < width(match)/8; b++, byte++)
         vh_xbar[row.bus].exactmatch_row_vh_xbar_byteswizzle_ctl[byte/4]
             .set_subfield(0x10 + input_bus_locs[b], (byte%4)*5, 5);
+    return true;
 }
 
 void GatewayTable::write_regs() {
     LOG1("### Gateway table " << name());
     if (input_xbar) input_xbar->write_regs();
     auto &row = layout[0];
-    setup_vh_xbar(stage, row, 0, match, input_xbar->group_for_word(0));
-    setup_vh_xbar(stage, row, 4, xor_match, input_xbar->group_for_word(0));
+    if (!setup_vh_xbar(stage, row, 0, match, input_xbar->group_for_word(0)) ||
+        !setup_vh_xbar(stage, row, 4, xor_match, input_xbar->group_for_word(0)))
+        return;
 
     auto &gw_reg = stage->regs.rams.array.row[row.row].gateway_table[gw_unit];
     auto &merge = stage->regs.rams.match.merge;
