@@ -148,12 +148,23 @@ void ExactMatchTable::pass1() {
                       it->first.c_str(), i, limit); } }
     unsigned fmt_width = (format->size + 127)/128;
     word_info.resize(fmt_width);
-    for (unsigned i = 0; i < group_info.size(); i++)
-        if (group_info[i].match_group.size() > 1)
-            for (auto &mgrp : group_info[i].match_group) {
-                if ((mgrp.second = word_info[mgrp.first].size()) > 1)
-                    error(format->lineno, "Too many multi-word groups using word %d", mgrp.first);
-                word_info[mgrp.first].push_back(i); }
+    if (options.match_compiler && format->field("match")->size > 128) {
+        /* wide multiway macthes allocated in reverse order?!? */
+        for (int i = group_info.size()-1; i >= 0; --i)
+            if (group_info[i].match_group.size() > 1)
+                for (auto &mgrp : group_info[i].match_group) {
+                    if ((mgrp.second = word_info[mgrp.first].size()) > 1)
+                        error(format->lineno, "Too many multi-word groups using word %d",
+                              mgrp.first);
+                    word_info[mgrp.first].push_back(i); }
+    } else {
+        for (unsigned i = 0; i < group_info.size(); i++)
+            if (group_info[i].match_group.size() > 1)
+                for (auto &mgrp : group_info[i].match_group) {
+                    if ((mgrp.second = word_info[mgrp.first].size()) > 1)
+                        error(format->lineno, "Too many multi-word groups using word %d",
+                              mgrp.first);
+                    word_info[mgrp.first].push_back(i); } }
     LOG1("### Exact match table " << name());
     for (unsigned i = 0; i < group_info.size(); i++) {
         if (group_info[i].match_group.size() == 1)
@@ -296,8 +307,12 @@ static int find_in_ixbar(Stage *stage, Table *table, std::vector<Phv::Ref> &matc
         if (ok) {
             LOG3(" success");
             return group; } }
-    error(match[max_i].lineno, "%s: Can't find %s in any input xbar group", table->name(),
-          match[max_i].name());
+    if (max_i > 0)
+        error(match[max_i].lineno, "%s: Can't find %s and %s in same input xbar group",
+              table->name(), match[max_i].name(), match[0].name());
+    else
+        error(match[0].lineno, "%s: Can't find %s in any input xbar group",
+              table->name(), match[0].name());
     return -1;
 }
 
