@@ -95,6 +95,38 @@ Phv::Ref::Ref(gress_t g, const value_t &n) : gress(g), lo(-1), hi(-1), lineno(n.
 			hi = n[1].lo; } } } } }
 }
 
+bool Phv::Ref::merge(const Phv::Ref &r) {
+    if (r.name_ != name_ || r.gress != gress) return false;
+    if (lo < 0) return true;
+    if (r.lo < 0) {
+        lo = hi = -1;
+        return true; }
+    if (r.hi+1 < lo || hi+1 < r.lo) return false;
+    if (r.lo < lo) lo = r.lo;
+    if (r.hi > hi) {
+        lineno = r.lineno;
+        hi = r.hi; }
+    return true;
+}
+
+void merge_phv_vec(std::vector<Phv::Ref> &vec, const Phv::Ref &r) {
+    int merged = -1;
+    for (int i = 0; (unsigned)i < vec.size(); i++) {
+        if (merged >= 0) {
+            if (vec[merged].merge(vec[i])) {
+                vec.erase(vec.begin()+i);
+                --i; }
+        } else if (vec[i].merge(r))
+            merged = i; }
+    if (merged < 0)
+        vec.push_back(r);
+}
+
+void merge_phv_vec(std::vector<Phv::Ref> &v1, const std::vector<Phv::Ref> &v2) {
+    for (auto &r : v2)
+        merge_phv_vec(v1, r);
+}
+
 void Phv::Ref::dbprint(std::ostream &out) const {
     out << name_;
     if (lo >= 0) { 
@@ -103,10 +135,18 @@ void Phv::Ref::dbprint(std::ostream &out) const {
         out << ')'; }
     Slice sl(**this);
     if (sl.valid) {
-        out << "[R" << sl.reg.index;
-        if (sl.lo != 0 || sl.hi != sl.reg.size-1) {
-            out << '(' << sl.lo;
-            if (sl.hi != sl.lo) out << ".." << sl.hi;
-            out << ')'; }
+        out << '[';
+        sl.dbprint(out);
         out << ']'; }
+}
+
+void Phv::Slice::dbprint(std::ostream &out) const {
+    if (valid) {
+        out << "R" << reg.index;
+        if (lo != 0 || hi != reg.size-1) {
+            out << '(' << lo;
+            if (hi != lo) out << ".." << hi;
+            out << ')'; }
+    } else
+        out << "<invalid>";
 }

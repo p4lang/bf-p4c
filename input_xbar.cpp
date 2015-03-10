@@ -6,6 +6,7 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
 : table(t), ternary(tern), lineno(data[0].key.lineno)
 {
     int numgroups = ternary ? TCAM_XBAR_GROUPS : EXACT_XBAR_GROUPS;
+    memset(parity_groups, 0, sizeof(parity_groups));
     for (auto &kv : data) {
 	if (!CHECKTYPEM(kv.key, tCMD, "group or hash descriptor"))
 	    continue;
@@ -234,7 +235,7 @@ void InputXbar::write_regs() {
         if (hg.second.empty()) continue;
         LOG1("  # Input xbar hash group " << hg.first);
         int grp = hg.first;
-        hash.parity_group_mask[grp] |= 1 << grp;
+        hash.parity_group_mask[grp] |= parity_groups[grp];
         for (auto &col : hg.second) {
             int c = col.first;
             HashCol &h = col.second;

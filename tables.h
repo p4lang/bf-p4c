@@ -110,6 +110,7 @@ public:
         struct bitrange_t { unsigned lo, hi;
             bitrange_t(unsigned l, unsigned h) : lo(l), hi(h) {}
             bool operator==(const bitrange_t &a) const { return lo == a.lo && hi == a.hi; }
+            int size() { return hi-lo+1; }
         };
     public:
         struct Field {
@@ -262,6 +263,9 @@ DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
     std::map<std::pair<int, int>, WayRam> way_map;
     void setup_ways();
     std::vector<Phv::Ref>                 match;
+    std::map<unsigned, Phv::Ref>          match_by_bit;
+    std::vector<std::vector<Phv::Ref>>    match_in_word;
+    std::vector<int>                      word_ixbar_group;
     struct GroupInfo {
         /* info about which word(s) are used per group with wide matches */
         int                     overhead_word;  /* which word of wide match contains overhead */

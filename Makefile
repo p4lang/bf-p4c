@@ -66,8 +66,7 @@ tags:
 	ctags -R -I VECTOR --exclude=test
 
 test: all
-	cd test
-	./runtests
+	cd test; ./runtests
 
 clean:
 	rm -f *.o *.d asm-parse.c lex-yaml.c *.json json2cpp tfas

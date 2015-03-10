@@ -176,6 +176,29 @@ void ExactMatchTable::pass1() {
     if (match.empty())
         for (auto it = input_xbar->all_begin(); it != input_xbar->all_end(); ++it)
             match.push_back(it->second.what);
+    unsigned bit = 0;
+    for (auto &r : match) {
+        match_by_bit[bit] = r;
+        bit += r->size(); }
+    if ((unsigned)bit != format->field("match")->size)
+        warning(match[0].lineno, "Match width %d for table %s doesn't match format match width %d",
+                bit, name(), format->field("match")->size);
+    match_in_word.resize(fmt_width);
+    for (unsigned i = 0; i < format->groups(); i++) {
+        Format::Field *match = format->field("match", i);
+        unsigned bit = 0;
+        for (auto &piece : match->bits) {
+            auto mw = --match_by_bit.upper_bound(bit);
+            int lo = bit - mw->first;
+            while(mw != match_by_bit.end() &&  mw->first < bit + piece.size()) {
+                int hi = std::min((unsigned)mw->second->hi, bit+piece.size()-mw->first-1);
+                assert((unsigned)piece.lo/128 < fmt_width);
+                merge_phv_vec(match_in_word[piece.lo/128], Phv::Ref(mw->second, lo, hi));
+                lo = 0;
+                ++mw; }
+            bit += piece.size(); } }
+    for (unsigned i = 0; i < fmt_width; i++)
+        LOG1("  match in word " << i << ": " << match_in_word[i]);
 }
 
 void ExactMatchTable::setup_ways() {
@@ -251,17 +274,48 @@ void ExactMatchTable::setup_ways() {
             if (++word == fmt_width) { word = 0; bank++; } } }
 }
 
+static int find_in_ixbar(Stage *stage, Table *table, std::vector<Phv::Ref> &match) {
+    int max_i = -1;
+    LOG3("find_in_ixbar " << match);
+    for (unsigned group = 0; group < EXACT_XBAR_GROUPS; group++) {
+        LOG3(" looking in group " << group);
+        bool ok = true;
+        for (auto &r : match) {
+            LOG3("  looking for " << r);
+            bool found = false;
+            for (auto *in : stage->exact_ixbar[group]) {
+                if (in->find(*r, group)) {
+                    found = true;
+                    break; } }
+            if (!found) {
+                LOG3("   -- not found");
+                if (&r - &match[0] > max_i)
+                    max_i = &r - &match[0];
+                ok = false;
+                break; } }
+        if (ok) {
+            LOG3(" success");
+            return group; } }
+    error(match[max_i].lineno, "%s: Can't find %s in any input xbar group", table->name(),
+          match[max_i].name());
+    return -1;
+}
+
 void ExactMatchTable::pass2() {
     input_xbar->pass2(stage->exact_ixbar, 128);
     if (action_bus) {
         action_bus->pass2(this);
         action_bus->set_immed_offsets(this); }
-    unsigned match_width = 0;
-    for (auto &r : match)
-        match_width += r->size();
-    if (match_width != format->field("match")->size)
-        warning(match[0].lineno, "Match width %d for table %s doesn't match format match width %d",
-                match_width, name(), format->field("match")->size);
+    word_ixbar_group.resize(match_in_word.size());
+    for (unsigned i = 0; i < match_in_word.size(); i++)
+        word_ixbar_group[i] = find_in_ixbar(stage, this, match_in_word[i]);
+    /* FIXME -- seems like a horrible hack to figure out which hash groups are
+     * FIXME -- xored together for wide matches */
+    for (auto &way : ways) {
+        input_xbar->add_to_parity(way.group, way.group);
+        for (auto group : word_ixbar_group)
+            if (group > way.group)
+                input_xbar->add_to_parity(way.group, group); }
     if (actions) actions->pass2(this);
     if (gateway) gateway->pass2();
 }
@@ -287,6 +341,7 @@ static bool mask2tofino_mask(bitvec &mask, int word, bitvec &ignored, unsigned &
 bool setup_match_input(unsigned bytes[16], std::vector<Phv::Ref> &match, Stage *stage, int group) {
     auto byte = 0;
     bool rv = true;
+    LOG3("setup_match_input group " << group << ": " << match);
     for (auto &r : match) {
         bool found = false;
         for (auto *in : stage->exact_ixbar[group]) {
@@ -299,9 +354,25 @@ bool setup_match_input(unsigned bytes[16], std::vector<Phv::Ref> &match, Stage *
         if (!found) {
             error(r.lineno, "Can't find %s in input xbar group %d", r.name(), group);
             rv = false; } }
+    LOG3("  result is " << hexvec(bytes, byte));
     while (byte < 16)
         bytes[byte++] = 0xdeadbeef;
     return rv;
+}
+
+/* FIXME -- this is very ugly -- should be doing a lookup in a map rather than a search
+ * FIXME -- also, do we need to support match keys that are not byte aligned? */
+static int find_on_bus(Phv::Slice sl, std::vector<Phv::Ref> &match) {
+    int rv = 0;
+    for (auto &m : match) {
+        if (m->reg.index == sl.reg.index && m->lo <= sl.lo && m->hi >= sl->hi) {
+            rv += sl.lo - m->lo;
+            assert(rv%8 == 0);
+            return rv/8; }
+        rv += m->size();
+        assert(rv%8 == 0); }
+    assert(0);
+    return -1;
 }
 
 void ExactMatchTable::write_regs() {
@@ -413,7 +484,7 @@ void ExactMatchTable::write_regs() {
         /* setup input xbars to get data to the right places on the bus(es) */
         auto &vh_xbar = stage->regs.rams.array.row[row.row].vh_xbar;
         unsigned input_bus_locs[16];
-        if (!setup_match_input(input_bus_locs, match, stage, hash_group))
+        if (!setup_match_input(input_bus_locs, match_in_word[word], stage, word_ixbar_group[word]))
             return;
         for (unsigned i = 0; i < format->groups(); i++) {
             Format::Field *match = format->field("match", i);
@@ -422,16 +493,21 @@ void ExactMatchTable::write_regs() {
                 if (piece.lo/128 != (unsigned)word) {
                     b += (piece.hi+1-piece.lo)/8;
                     continue; }
-                for (unsigned byte = (piece.lo%128)/8; byte <= (piece.hi%128)/8; byte++)
+                for (unsigned byte = (piece.lo%128)/8; byte <= (piece.hi%128)/8; byte++, b++) {
+                    auto it = --match_by_bit.upper_bound(b*8);
+                    Phv::Slice sl(*it->second, b*8-it->first, b*8-it->first+7);
+                    int bus_loc = find_on_bus(sl, match_in_word[word]);
+                    assert(bus_loc >= 0 && bus_loc < 16);
                     vh_xbar[row.bus].exactmatch_row_vh_xbar_byteswizzle_ctl[byte/4]
-                        .set_subfield(0x10 + input_bus_locs[b++], (byte%4)*5, 5); }
+                        .set_subfield(0x10 + input_bus_locs[bus_loc], (byte%4)*5, 5); } }
             assert(b == match->size/8);
             if (Format::Field *version = format->field("version", i)) {
                 if (version->bits[0].lo/128 != (unsigned)word) continue;
                 vh_xbar[row.bus].exactmatch_validselect |= 1U << (version->bits[0].lo%128)/4; } }
-        vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl.exactmatch_row_vh_xbar_select = hash_group;
-        vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl.exactmatch_row_vh_xbar_enable = 1;
-        vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress;
+        auto &vh_xbar_ctl = vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl;
+        vh_xbar_ctl.exactmatch_row_vh_xbar_select = word_ixbar_group[word];
+        vh_xbar_ctl.exactmatch_row_vh_xbar_enable = 1;
+        vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress;
         /* setup match central config to extract results of the match */
         auto &merge = stage->regs.rams.match.merge;
         unsigned bus = row.row*2 + row.bus;
@@ -466,10 +542,11 @@ void ExactMatchTable::write_regs() {
                     merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
                         action_args[1]->bits[0].lo + 5 - lo_huffman_bits; } } }
         for (auto col : row.cols) {
-            merge.col[col].row_action_nxtable_bus_drive[row.row] = 1 << row.bus;
             int word_group = 0;
             for (int group : word_info[word]) {
                 auto &overhead_row = layout[index + word - group_info[group].overhead_word];
+                if (&overhead_row == &row)
+                    merge.col[col].row_action_nxtable_bus_drive[row.row] = 1 << row.bus;
                 auto &hitmap_ixbar = merge.col[col].hitmap_output_map[2*row.row + word_group];
                 hitmap_ixbar.enabled_4bit_muxctl_select =
                     overhead_row.row*2 + group_info[group].word_group;

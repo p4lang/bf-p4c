@@ -3,6 +3,7 @@
 
 #include "sections.h"
 #include "bitvec.h"
+#include <vector>
 
 enum {
     NUM_PHV_REGS = 368
@@ -40,6 +41,7 @@ public:
             return valid && s.valid && reg.index == s.reg.index &&
                    lo == s.lo && hi == s.hi; }
         unsigned size() const { return valid ? hi - lo + 1 : 0; }
+        void dbprint(std::ostream &out) const;
     };
 private:
     Register regs[NUM_PHV_REGS];
@@ -63,6 +65,9 @@ public:
 	Ref(gress_t g, const value_t &n);
 	Ref(gress_t g, int line, const std::string &n, int l, int h) :
             gress(g), name_(n), lo(l), hi(h), lineno(line) {}
+        Ref(const Ref &r, int l, int h) : gress(r.gress), name_(r.name_),
+            lo(r.lo < 0 ? l : r.lo + l), hi(r.lo < 0 ? h : r.lo + h),
+            lineno(r.lineno) { assert(r.hi < 0 || hi <= r.hi); }
         explicit operator bool() { return lineno >= 0; }
 	Slice operator*() const {
 	    if (auto *s = phv.get(gress, name_)) {
@@ -87,11 +92,15 @@ public:
                 return false; }
             return true; }
         const char *name() const { return name_.c_str(); }
+        bool merge(const Ref &r);
         void dbprint(std::ostream &out) const;
     };
     static const bitvec &use(gress_t gress) { return phv.phv_use[gress]; }
     static const bitvec tagalong_groups[8];
     static void setuse(gress_t gress, const bitvec &u) { phv.phv_use[gress] |= u; }
 };
+
+extern void merge_phv_vec(std::vector<Phv::Ref> &vec, const Phv::Ref &r);
+extern void merge_phv_vec(std::vector<Phv::Ref> &v1, const std::vector<Phv::Ref> &v2);
 
 #endif /* _phv_h_ */

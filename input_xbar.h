@@ -2,6 +2,7 @@
 #define _input_xbar_h_
 
 #include "tables.h"
+#include "stage.h"
 #include "phv.h"
 
 class InputXbar {
@@ -22,6 +23,7 @@ class InputXbar {
     std::map<unsigned, std::vector<Input>>              groups;
     std::vector<std::map<unsigned, std::vector<Input>>::iterator>   group_order;
     std::map<unsigned, std::map<int, HashCol>>          hash_groups;
+    unsigned parity_groups[EXACT_HASH_GROUPS];
     static bool conflict(std::vector<Input> &a, std::vector<Input> &b);
     static bool conflict(std::map<int, HashCol> &a, std::map<int, HashCol> &b);
     void add_use(unsigned &byte_use, std::vector<Input> &a);
@@ -36,20 +38,10 @@ public:
     unsigned group_for_word(unsigned w) {
         assert(w < group_order.size());
         return group_order[w]->first; }
-#if 0
-    class iterator {
-	std::map<int, std::vector<Input>>::const_iterator	iter;
-    public:
-	iterator(std::map<int, std::vector<Input>>::const_iterator it) : iter(it) {}
-	std::vector<Input>::const_iterator begin() const { return iter->second.begin(); }
-	std::vector<Input>::const_iterator end() const { return iter->second.end(); }
-        bool operator==(const iterator &a) const { return iter == a.iter; }
-	int operator *() const { return iter->first; }
-	iterator &operator++() { ++iter; return *this; }
-    };
-    //iterator begin() const { return iterator(groups.begin()); }
-    //iterator end() const { return iterator(groups.end()); }
-#endif
+    void add_to_parity(unsigned group, unsigned parity) {
+        assert(group <= EXACT_HASH_GROUPS);
+        assert(parity <= EXACT_HASH_GROUPS);
+        parity_groups[group] |= 1U << parity; }
     class all_iter {
         decltype(group_order)::const_iterator   outer;
         bool                                    inner_valid;
