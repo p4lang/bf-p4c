@@ -81,7 +81,7 @@ public:
             if (name_ == a.name_ && lo == a.lo && hi == a.hi)
                 return true;
             return **this == *a; }
-	bool check() {
+	bool check() const {
 	    if (auto *s = phv.get(gress, name_)) {
 		if (hi >= 0 && !Slice(*s, lo, hi).valid) {
 		    error(lineno, "Invalid slice of %s", name_.c_str());

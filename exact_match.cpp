@@ -353,43 +353,6 @@ static bool mask2tofino_mask(bitvec &mask, int word, bitvec &ignored, unsigned &
     return true;
 }
 
-bool setup_match_input(unsigned bytes[16], std::vector<Phv::Ref> &match, Stage *stage, int group) {
-    auto byte = 0;
-    bool rv = true;
-    LOG3("setup_match_input group " << group << ": " << match);
-    for (auto &r : match) {
-        bool found = false;
-        for (auto *in : stage->exact_ixbar[group]) {
-            if (auto *i = in->find(*r, group)) {
-                for (int bit = r->lo; bit <= r->hi; bit += 8) {
-                    assert(byte < 16);
-                    bytes[byte++] = (i->lo + bit - i->what->lo)/8; }
-                found = true;
-                break; } }
-        if (!found) {
-            error(r.lineno, "Can't find %s in input xbar group %d", r.name(), group);
-            rv = false; } }
-    LOG3("  result is " << hexvec(bytes, byte));
-    while (byte < 16)
-        bytes[byte++] = 0xdeadbeef;
-    return rv;
-}
-
-/* FIXME -- this is very ugly -- should be doing a lookup in a map rather than a search
- * FIXME -- also, do we need to support match keys that are not byte aligned? */
-static int find_on_bus(Phv::Slice sl, std::vector<Phv::Ref> &match) {
-    int rv = 0;
-    for (auto &m : match) {
-        if (m->reg.index == sl.reg.index && m->lo <= sl.lo && m->hi >= sl->hi) {
-            rv += sl.lo - m->lo;
-            assert(rv%8 == 0);
-            return rv/8; }
-        rv += m->size();
-        assert(rv%8 == 0); }
-    assert(0);
-    return -1;
-}
-
 void ExactMatchTable::write_regs() {
     LOG1("### Exact match table " << name());
     MatchTable::write_regs(0, this);
@@ -498,9 +461,6 @@ void ExactMatchTable::write_regs() {
         }
         /* setup input xbars to get data to the right places on the bus(es) */
         auto &vh_xbar = stage->regs.rams.array.row[row.row].vh_xbar;
-        unsigned input_bus_locs[16];
-        if (!setup_match_input(input_bus_locs, match_in_word[word], stage, word_ixbar_group[word]))
-            return;
         for (unsigned i = 0; i < format->groups(); i++) {
             Format::Field *match = format->field("match", i);
             unsigned b = 0;
@@ -511,10 +471,10 @@ void ExactMatchTable::write_regs() {
                 for (unsigned byte = (piece.lo%128)/8; byte <= (piece.hi%128)/8; byte++, b++) {
                     auto it = --match_by_bit.upper_bound(b*8);
                     Phv::Slice sl(*it->second, b*8-it->first, b*8-it->first+7);
-                    int bus_loc = find_on_bus(sl, match_in_word[word]);
+                    int bus_loc = stage->find_on_ixbar(sl, word_ixbar_group[word]);
                     assert(bus_loc >= 0 && bus_loc < 16);
                     vh_xbar[row.bus].exactmatch_row_vh_xbar_byteswizzle_ctl[byte/4]
-                        .set_subfield(0x10 + input_bus_locs[bus_loc], (byte%4)*5, 5); } }
+                        .set_subfield(0x10 + bus_loc, (byte%4)*5, 5); } }
             assert(b == match->size/8);
             if (Format::Field *version = format->field("version", i)) {
                 if (version->bits[0].lo/128 != (unsigned)word) continue;

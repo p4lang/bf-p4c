@@ -70,6 +70,8 @@ public:
                 regs.emit_fieldname(out, addr, end); }); }
     ~Stage() { undeclare_registers(&regs); }
     void write_regs();
+
+    int find_on_ixbar(Phv::Slice, int group);
 };
 
 #endif /* _stage_h_ */

@@ -38,6 +38,10 @@ public:
     unsigned group_for_word(unsigned w) {
         assert(w < group_order.size());
         return group_order[w]->first; }
+    int hash_group() {
+        /* used by gateways to get the associated hash group */
+        if (hash_groups.size() != 1) return -1;
+        return hash_groups.begin()->first; }
     void add_to_parity(unsigned group, unsigned parity) {
         assert(group <= EXACT_HASH_GROUPS);
         assert(parity <= EXACT_HASH_GROUPS);

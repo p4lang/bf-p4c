@@ -178,6 +178,7 @@ list_element
 key : ID { $$ = VAL($1); }
     | ID params { $$ = CMD($1, $2); }
     | INT { $$ = VAL($1); }
+    | BIGINT { $$ = VAL($1); }
     | MATCH { $$ = VAL($1); }
     | INT DOTDOT INT { $$ = VAL($1, $3); }
     | ID '(' param ')' { $$ = CMD($1, $3); }
@@ -187,7 +188,6 @@ key : ID { $$ = VAL($1); }
 value: key
     | flow_value
     | '-' INT { $$ = VAL(-$2); }
-    | BIGINT { $$ = VAL($1); }
     | dotvals INT { VECTOR_add($1, VAL($2)); $$ = VAL($1); }
     ;
 

@@ -2,6 +2,7 @@
 #include "stage.h"
 #include "phv.h"
 #include "range.h"
+#include "input_xbar.h"
 
 unsigned char Stage::action_bus_slot_map[ACTION_DATA_BUS_BYTES];
 unsigned char Stage::action_bus_slot_size[ACTION_DATA_BUS_SLOTS];
@@ -160,5 +161,16 @@ void Stage::write_regs() {
                 merge.mau_thread_tcam_delay[gress] = 3;
             } else 
                 merge.mau_thread_tcam_delay[gress] = 2; } }
+}
+
+int Stage::find_on_ixbar(Phv::Slice sl, int group) {
+    for (auto *in : exact_ixbar[group]) {
+        if (auto *i = in->find(sl, group)) {
+            unsigned bit = (i->lo + sl.lo - i->what->lo);
+            assert(bit%8 == 0);
+            assert(bit < 128);
+            return bit/8; } }
+    assert(0);
+    return -1;
 }
 

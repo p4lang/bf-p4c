@@ -44,7 +44,7 @@ template<int N> struct ubits : ubits_base {
              (v != value ?  tmp << " (now " << value << ")", tmp : tmp).str()); }
     unsigned long operator=(unsigned long v) {
         if (write)
-            ERROR("Overwriting " << value << " with " << v << " in " << this);
+            ERRWARN(value != v, "Overwriting " << value << " with " << v << " in " << this);
         value = v;
         write = true;
         log("=", v);
@@ -52,8 +52,8 @@ template<int N> struct ubits : ubits_base {
         return v; }
     const ubits &operator|=(unsigned long v) {
         if (value & v)
-            ERROR("Overwriting " << value << " with " << (v|value) <<
-                  " in " << this);
+            ERRWARN(value != (v|value), "Overwriting " << value << " with " << (v|value) <<
+                    " in " << this);
         value |= v;
         write = true;
         log("|=", v);
@@ -68,9 +68,10 @@ template<int N> struct ubits : ubits_base {
             ERROR("subfield " << bit << ".." << (bit+size-1) <<
                   " out of range in " << this);
         else if ((value >> bit) & ((1U << size)-1))
-            ERROR("Overwriting subfield(" << bit << ".." << (bit+size-1) <<
-                  ") value " << ((value >> bit) & ((1U << size)-1)) <<
-                  " with " << v << " in " << this);
+            ERRWARN(((value >> bit) & ((1U << size)-1)) != v,
+                    "Overwriting subfield(" << bit << ".." << (bit+size-1) <<
+                    ") value " << ((value >> bit) & ((1U << size)-1)) <<
+                    " with " << v << " in " << this);
         if (v >= (1U << size))
             ERROR("Subfield value " << v << " too large for " << size <<
                   " bits in " << this);

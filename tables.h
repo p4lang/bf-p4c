@@ -294,7 +294,15 @@ DECLARE_TABLE_TYPE(ActionTable, Table, "action",
 DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
     uint64_t                    payload;
     int                         gw_unit;
-    std::vector<Phv::Ref>       match, xor_match;
+public:
+    struct MatchKey {
+        unsigned                offset;
+        Phv::Ref                val;
+        MatchKey(gress_t gr, value_t &v) : offset(0), val(gr, v) {}
+        MatchKey(int off, gress_t gr, value_t &v) : offset(off), val(gr, v) {}
+    };
+private:
+    std::vector<MatchKey>       match, xor_match;
     struct Match {
         match_t                 val;
         bool                    run_table;
