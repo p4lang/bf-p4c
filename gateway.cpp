@@ -142,16 +142,16 @@ void GatewayTable::pass2() {
  * the hash bus?   Currently we assume that the input_xbar is declared to set up the
  * hash signals correctly so that we can just match them.  Should at least check it
  * somewhere, somehow. */
-static bool setup_vh_xbar(Stage *stage, Table::Layout &row, int base,
+static bool setup_vh_xbar(Table *table, Table::Layout &row, int base,
                           std::vector<GatewayTable::MatchKey> &match, int group)
 {
-    auto &vh_xbar = stage->regs.rams.array.row[row.row].vh_xbar;
+    auto &vh_xbar = table->stage->regs.rams.array.row[row.row].vh_xbar;
     for (auto &r : match) {
         if (r.offset >= 32) break; /* skip hash matches */
         unsigned byte = base + r.offset / 8;
         for (unsigned b = 0; b < r.val->size()/8; b++, byte++)
             vh_xbar[row.bus].exactmatch_row_vh_xbar_byteswizzle_ctl[byte/4]
-                .set_subfield(0x10 + stage->find_on_ixbar(*r.val, group) + b, (byte%4)*5, 5); }
+                .set_subfield(0x10 + table->find_on_ixbar(*r.val, group) + b, (byte%4)*5, 5); }
     return true;
 }
 
@@ -159,8 +159,8 @@ void GatewayTable::write_regs() {
     LOG1("### Gateway table " << name());
     if (input_xbar) input_xbar->write_regs();
     auto &row = layout[0];
-    if (!setup_vh_xbar(stage, row, 0, match, input_xbar->group_for_word(0)) ||
-        !setup_vh_xbar(stage, row, 4, xor_match, input_xbar->group_for_word(0)))
+    if (!setup_vh_xbar(this, row, 0, match, input_xbar->group_for_word(0)) ||
+        !setup_vh_xbar(this, row, 4, xor_match, input_xbar->group_for_word(0)))
         return;
 
     auto &row_reg = stage->regs.rams.array.row[row.row];

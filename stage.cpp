@@ -163,14 +163,3 @@ void Stage::write_regs() {
                 merge.mau_thread_tcam_delay[gress] = 2; } }
 }
 
-int Stage::find_on_ixbar(Phv::Slice sl, int group) {
-    for (auto *in : exact_ixbar[group]) {
-        if (auto *i = in->find(sl, group)) {
-            unsigned bit = (i->lo + sl.lo - i->what->lo);
-            assert(bit%8 == 0);
-            assert(bit < 128);
-            return bit/8; } }
-    assert(0);
-    return -1;
-}
-

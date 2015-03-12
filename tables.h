@@ -213,6 +213,7 @@ public:
         { return format ? format->field(n) : 0; }
     virtual void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn)
         { if (format) format->apply_to_field(n, fn); }
+    int find_on_ixbar(Phv::Slice sl, int group);
 };
 
 class MatchTable : public Table {

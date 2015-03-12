@@ -471,7 +471,7 @@ void ExactMatchTable::write_regs() {
                 for (unsigned byte = (piece.lo%128)/8; byte <= (piece.hi%128)/8; byte++, b++) {
                     auto it = --match_by_bit.upper_bound(b*8);
                     Phv::Slice sl(*it->second, b*8-it->first, b*8-it->first+7);
-                    int bus_loc = stage->find_on_ixbar(sl, word_ixbar_group[word]);
+                    int bus_loc = find_on_ixbar(sl, word_ixbar_group[word]);
                     assert(bus_loc >= 0 && bus_loc < 16);
                     vh_xbar[row.bus].exactmatch_row_vh_xbar_byteswizzle_ctl[byte/4]
                         .set_subfield(0x10 + bus_loc, (byte%4)*5, 5); } }
