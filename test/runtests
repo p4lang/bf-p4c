@@ -32,40 +32,43 @@ for f in "$@"; do
     name=$(basename $f .p4)
     mkdir -p $name.out
     cd $name.out
-    if $fast && [ -r $name.tfa ] || \
-        $GLSC --verbose 2 -S ../$name.p4 >glsc.log 2>&1; then
-        if tfas -vvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
-            for f in $name.out/*.json; do
-                if reflow $f >tmp.json; then
-                    mv tmp.json $f
-                fi
-                if $fast; then true
-                elif reflow $(basename $f) >tmp.json; then
-                    mv tmp.json $(basename $f)
-                fi
-                diff -u $f $(basename $f)
-            done > json_diff.txt
-            cnt=$(grep -Ev '^\+\+\+|^---|"int_inj"' json_diff.txt | grep -Ec '^\+|^-')
-            if [ $cnt -gt 0 ]; then
-                echo " mismatch"
-                let fail++
-                echo "$f:" >> $FAILLOG
-                cat json_diff.txt >> $FAILLOG
-            else
-                echo " pass"
-                let pass++
-            fi
-        else
-            echo " tfas failed"
-            let fail++
-            echo "$f:" >> $FAILLOG
-            cat tfas.log >> $FAILLOG
-        fi
+    ok=true
+    if $fast && [ -r $name.tfa ]; then
+        need_reflow=false
+    elif $GLSC --verbose 2 -S ../$name.p4 >glsc.log 2>&1; then
+        need_reflow=true
     else
         echo " p4 compile failed"
         let fail++
         echo "$f:" >> $FAILLOG
         cat glsc.log >> $FAILLOG
+        ok=false
+    fi
+    if $ok && tfas -vvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
+        for f in $name.out/*.json; do
+            if reflow $f >tmp.json; then
+                mv tmp.json $f
+            fi
+            if $need_reflow && reflow $(basename $f) >tmp.json; then
+                mv tmp.json $(basename $f)
+            fi
+            diff -u $f $(basename $f)
+        done > json_diff.txt
+        cnt=$(grep -Ev '^\+\+\+|^---|"int_inj"' json_diff.txt | grep -Ec '^\+|^-')
+        if [ $cnt -gt 0 ]; then
+            echo " mismatch"
+            let fail++
+            echo "$f:" >> $FAILLOG
+            cat json_diff.txt >> $FAILLOG
+        else
+            echo " pass"
+            let pass++
+        fi
+    else
+        echo " tfas failed"
+        let fail++
+        echo "$f:" >> $FAILLOG
+        cat tfas.log >> $FAILLOG
     fi
     popd >/dev/null
 done

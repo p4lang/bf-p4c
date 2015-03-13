@@ -68,6 +68,9 @@ tags:
 test: all
 	cd test; ./runtests
 
+ftest: all
+	cd test; ./runtests -f
+
 clean:
 	rm -f *.o *.d asm-parse.c lex-yaml.c *.json json2cpp tfas
 

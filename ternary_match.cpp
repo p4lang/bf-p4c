@@ -33,8 +33,11 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
             if (CHECKTYPE(kv.value, tINT)) {
                 if (kv.value.i < 0 || kv.value.i >= 16)
                     error(kv.value.lineno, "Invalid ternary indirect bus number");
-                else
-                    indirect_bus = kv.value.i; }
+                else {
+                    indirect_bus = kv.value.i;
+                    if (auto *old = stage->tcam_indirect_bus_use[indirect_bus/2][indirect_bus&1])
+                        error(kv.value.lineno, "Indirect bus %d already in use by table %s",
+                              indirect_bus, old->name()); } }
         } else if (kv.key == "action") {
             setup_action_table(kv.value);
         } else if (kv.key == "actions") {
@@ -72,11 +75,14 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     kv.key.s, name()); }
     alloc_rams(false, stage->tcam_use, &stage->tcam_match_bus_use);
+    if (indirect_bus > 0) {
+        stage->tcam_indirect_bus_use[indirect_bus/2][indirect_bus&1] = this; }
     if (indirect.set()) {
         if (action.set() || actions)
             error(lineno, "Table %s has both ternary indirect and direct actions", name());
         if (indirect_bus > 0)
-            error(lineno, "Table %s has both ternary indirect and explicit indirect bus", name());
+            error(lineno, "Table %s has both ternary indirect table and explicit indirect bus",
+                  name());
     } else if (action.set() && actions)
         error(lineno, "Table %s has both action table and immediate actions", name());
     else if (!action.set() && !actions)
@@ -119,6 +125,14 @@ void TernaryMatchTable::pass1() {
 }
 void TernaryMatchTable::pass2() {
     input_xbar->pass2(stage->tcam_ixbar, 44);
+    if (!indirect && indirect_bus < 0) {
+        for (int i = 0; i < 16; i++)
+            if (!stage->tcam_indirect_bus_use[i/2][i&1]) {
+                indirect_bus = i;
+                stage->tcam_indirect_bus_use[i/2][i&1] = this;
+                break; }
+        if (indirect_bus < 0)
+            error(lineno, "No ternary indirect bus available for table %s", name()); }
     if (gateway) gateway->pass2();
 }
 void TernaryMatchTable::write_regs() {
