@@ -559,19 +559,27 @@ void MatchTable::write_regs(int type, Table *result) {
      *-----------------------*/
     auto &merge = stage->regs.rams.match.merge;
     merge.predication_ctl[gress].table_thread |= 1 << logical_id;
-    for (auto &row : result->layout) {
-        int bus = row.row*2 | row.bus;
-        assert(bus >= 0 && bus < 15);
-        merge.match_to_logical_table_ixbar_outputmap[type][bus].enabled_4bit_muxctl_select = logical_id;
-        merge.match_to_logical_table_ixbar_outputmap[type][bus].enabled_4bit_muxctl_enable = 1;
-        assert(result->action_args.size() >= 1 && result->action_args[0]);
-        merge.mau_action_instruction_adr_mask[type][bus] = (1U << result->action_args[0]->size) - 1;
-        if (result->action) {
-            /* FIXME -- deal with variable-sized actions */
-            merge.mau_actiondata_adr_default[type][bus] =
-                get_address_mau_actiondata_adr_default(result->action->format->log2size);
+    if (result) {
+        for (auto &row : result->layout) {
+            int bus = row.row*2 | row.bus;
+            assert(bus >= 0 && bus < 15);
+            merge.match_to_logical_table_ixbar_outputmap[type][bus].enabled_4bit_muxctl_select =
+                logical_id;
+            merge.match_to_logical_table_ixbar_outputmap[type][bus].enabled_4bit_muxctl_enable = 1;
+            if (result->action_args.size() >= 1) {
+                assert(result->action_args[0]);
+                merge.mau_action_instruction_adr_mask[type][bus] =
+                    (1U << result->action_args[0]->size) - 1;
+            } else
+                merge.mau_action_instruction_adr_mask[type][bus] = 0;
+            if (result->action) {
+                /* FIXME -- deal with variable-sized actions */
+                merge.mau_actiondata_adr_default[type][bus] =
+                    get_address_mau_actiondata_adr_default(result->action->format->log2size);
+            }
         }
-    }
+    } else result = this;
+
     /*------------------------
      * Action instruction Address
      *-----------------------*/
@@ -581,8 +589,9 @@ void MatchTable::write_regs(int type, Table *result) {
         actions = result->action->actions; }
     assert(actions);
 
-    assert(result->action_args[0]);
-    if ((1U << result->action_args[0]->size) <= ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
+    //assert(result->action_args[0]);
+    if (result->action_args.empty() ||
+        (1U << result->action_args[0]->size) <= ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
         merge.mau_action_instruction_adr_map_en[type] |= (1U << logical_id);
         int idx = 0;
         int shift = 0;
@@ -625,12 +634,13 @@ void MatchTable::write_regs(int type, Table *result) {
     /*------------------------
      * Immediate data found in overhead
      *-----------------------*/
-    for (auto &row : result->layout) {
-        int bus = row.row*2 | row.bus;
-        assert(bus >= 0 && bus < 15);
-	merge.mau_immediate_data_mask[type][bus] = (1UL << result->format->immed_size)-1; }
-    if (result->action_bus)
-        result->action_bus->write_immed_regs(result);
+    if (result->format) {
+        for (auto &row : result->layout) {
+            int bus = row.row*2 | row.bus;
+            assert(bus >= 0 && bus < 15);
+            merge.mau_immediate_data_mask[type][bus] = (1UL << result->format->immed_size)-1; }
+        if (result->action_bus)
+            result->action_bus->write_immed_regs(result); }
 
     input_xbar->write_regs();
 }

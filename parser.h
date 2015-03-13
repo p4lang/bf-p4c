@@ -56,14 +56,18 @@ class Parser : public Section {
             struct {
             short   bit, byte;
             }       data[4];
+            enum { USE_SAVED = 0x7fff }; /* magic number can be stored in 'byte' field */
+            short   specified;
             short   ctr_zero, ctr_neg;
             short   width;
-            MatchKey() : lineno(0), ctr_zero(-1), ctr_neg(-1), width(0) {
+            MatchKey() : lineno(0), specified(0), ctr_zero(-1), ctr_neg(-1), width(0) {
                 for (auto &a : data) a.bit = -1; }
             void setup(value_t &);
-            int setup_match_el(value_t &);
+            int setup_match_el(int, value_t &);
+            void preserve_saved(unsigned mask);
         private:
-            int add_byte(int);
+            int add_byte(int, int, bool use_saved = false);
+            int move_down(int);
         };
         struct Match {
             int     lineno;
@@ -98,7 +102,7 @@ class Parser : public Section {
         std::string             name;
         gress_t                 gress;
         match_t                 stateno;
-        MatchKey                key;
+        MatchKey                key, save;
         std::vector<Match>      match;
         Match                   *def;
         std::set<State *>       pred;
@@ -112,6 +116,7 @@ class Parser : public Section {
         void pass1(Parser *);
         void pass2(Parser *);
         void write_lookup_config(Parser *, State *, int, const std::vector<State *> &);
+        void write_save_config(Parser *, int);
         void write_config(Parser *);
     };
     friend class State;

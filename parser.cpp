@@ -300,31 +300,72 @@ void Parser::State::Ref::check(gress_t gress, Parser *pa, State *state) {
                     ptr.push_back(st); } } }
 }
 
-int Parser::State::MatchKey::add_byte(int byte) {
+static const char *loc_names[] = { "half", "half", "byte1", "byte0" };
+
+int Parser::State::MatchKey::move_down(int loc) {
+    int to = loc;
+    while (to >= 0 && ((specified >> to) & 1)) to--;
+    if (to < 0) return -1;
+    if (data[to].bit >= 0 && move_down(to) < 0)
+        return -1;
+    data[to] = data[loc];
+    data[loc].bit = -1;
+    return 0;
+}
+
+int Parser::State::MatchKey::add_byte(int loc, int byte, bool use_saved) {
     if (byte <= -64 || byte >= 32) {
         error(lineno, "Match key index out of range");
         return -1; }
-    for (int i = 3; i >= 0; i--) {
-        if (data[i].bit < 0) {
-            data[i].bit = width;
-            data[i].byte = byte;
-            width += 8;
-            return 0; } }
-    error(lineno, "Too much data for parse matcher");
+    if (loc >= 0) {
+        if ((specified >> loc) & 1)
+            error(lineno, "Multiple matches in %s matcher", loc_names[loc]);
+        specified |= (1 << loc);
+        if (data[loc].bit >= 0 && move_down(loc) < 0)
+            return -1;
+    } else {
+        for (int i = 3; i >= 0; i--)
+            if (data[i].bit < 0) {
+                loc = i;
+                break; }
+        if (loc < 0) {
+            error(lineno, "Too much data for parse matcher");
+            return -1; } }
+    data[loc].bit = width;
+    data[loc].byte = use_saved ? USE_SAVED : byte;
+    width += 8;
+    return 0;
+}
+
+static int matchKeyLoc(value_t &key, bool errchk = true) {
+    if (errchk && !CHECKTYPE(key, tSTR)) return -1;
+    if (key == "half" || key == "half0") return 0;
+    if (key == "byte0") return 3;
+    if (key == "byte1") return 2;
+    if (errchk)
+        error(key.lineno, "Invalid matcher location %s", key.s);
     return -1;
 }
 
-int Parser::State::MatchKey::setup_match_el(value_t &spec) {
+int Parser::State::MatchKey::setup_match_el(int at, value_t &spec) {
     switch (spec.type) {
     case tINT:
-        return add_byte(spec.i);
+        return add_byte(at, spec.i);
     case tRANGE:
         if (spec.lo >= spec.hi) {
             error(spec.lineno, "Invalid match range");
             return -1; }
+        if (at >= 0) at += spec.hi - spec.lo;
         for (int i = spec.hi; i >= spec.lo; i--) {
-            if (add_byte(i) < 0)
-                return -1; }
+            if (add_byte(at, i) < 0)
+                return -1;
+            if (at >= 0) at--; }
+        return 0;
+    case tMAP:
+        if (at >= 0) goto error;
+        for (int i = spec.map.size-1; i >= 0; i--)
+            if (setup_match_el(matchKeyLoc(spec.map[i].key), spec.map[i].value) < 0)
+                return -1;
         return 0;
     case tSTR:
         if (spec == "ctr_zero") {
@@ -338,9 +379,14 @@ int Parser::State::MatchKey::setup_match_el(value_t &spec) {
                 error(spec.lineno, "'ctr_neg' specified twice");
                 return -1; }
             ctr_neg = width++;
+            return 0;
+        } else if (at < 0 && (at = matchKeyLoc(spec, false)) >= 0) {
+            if (add_byte(at, 0, true) < 0) return -1;
+            if (at == 0) return add_byte(1, 0, true);
             return 0; }
         /* fall through */
     default:
+    error:
         error(spec.lineno, "Syntax error in match spec");
         return -1; }
 }
@@ -350,10 +396,10 @@ void Parser::State::MatchKey::setup(value_t &spec) {
     if (spec.type == tVEC) {
         /* allocate the keys bits for the least significant match bits first... */
         for (int i = spec.vec.size-1; i >= 0; i--)
-            if (setup_match_el(spec[i]) < 0)
+            if (setup_match_el(-1, spec[i]) < 0)
                 return;
     } else
-        setup_match_el(spec);
+        setup_match_el(-1, spec);
     if (data[0].bit >= 0 && data[1].byte != data[0].byte + 1) {
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
@@ -371,6 +417,7 @@ void Parser::State::MatchKey::setup(value_t &spec) {
         auto t = data[0];
         data[0] = data[1];
         data[1] = t; }
+#if 0
     if (options.match_compiler) {
         if (data[0].bit < 0 && data[2].bit >= 0) {
             /* if using just the two 8-bit slots, swap them */
@@ -385,6 +432,7 @@ void Parser::State::MatchKey::setup(value_t &spec) {
             data[3] = t;
         }
     }
+#endif
 }
 
 Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &data) :
@@ -503,6 +551,12 @@ Parser::State::State(int l, const char *n, gress_t gr, match_t sno, const VECTOR
                 error(key.lineno, "previous specified here");
             } else
                 key.setup(kv.value);
+        } else if (kv.key == "save") {
+            if (save.lineno) {
+                error(kv.value.lineno, "Multiple save entries in state %s", n);
+                error(save.lineno, "previous specified here");
+            } else
+                save.setup(kv.value);
         } else if (kv.key == "default") {
             if (!CHECKTYPE(kv.value, tMAP)) continue;
             if (def) {
@@ -574,6 +628,26 @@ void Parser::State::pass1(Parser *pa) {
                 if (state != this && state->gress == gress && state->stateno.matches(code))
                     error(state->lineno, "also used by state %s", state->name.c_str()); } }
         pa->state_use[gress][code] = 1; }
+    for (auto &m : match)
+        for (auto succ : m.next)
+            succ->pred.insert(this);
+    if (def)
+        for (auto succ : def->next)
+            succ->pred.insert(this);
+}
+
+void Parser::State::MatchKey::preserve_saved(unsigned saved) {
+    for (int i = 3; i >= 0; i--) {
+        if (!((saved >> i) & 1)) continue;
+        if (data[i].bit < 0 || data[i].byte == USE_SAVED)
+            continue;
+        if ((specified >> i) & 1)
+            error(lineno, "match in %s matcher conflicts with previous state save "
+                  "action", loc_names[i]);
+        else if (move_down(i) < 0) {
+            error(lineno, "Ran out of matching space due to preserved values from "
+                  "previous states");
+            break; } }
 }
 
 void Parser::State::pass2(Parser *pa) {
@@ -587,12 +661,12 @@ void Parser::State::pass2(Parser *pa) {
             stateno.word0 = s ^ PARSER_STATE_MASK;
             stateno.word1 = s;
             pa->state_use[gress][s] = 1; } }
-    for (auto &m : match)
-        for (auto succ : m.next)
-            succ->pred.insert(this);
-    if (def)
-        for (auto succ : def->next)
-            succ->pred.insert(this);
+    unsigned saved = 0;
+    for (auto *p : pred)
+        for (int i = 0; i < 4; i++)
+            if (p->save.data[i].bit >= 0)
+                saved |= 1 << i;
+    if (saved) key.preserve_saved(saved);
 }
 
 void Parser::State::write_lookup_config(Parser *pa, State *state, int row,
@@ -611,12 +685,31 @@ void Parser::State::write_lookup_config(Parser *pa, State *state, int row,
                     error(p->lineno, "Incompatible match fields between states "
                           "%s and %s, triggered from state %s", name.c_str(),
                           p->name.c_str(), state->name.c_str()); } }
-        if (set) {
+        if (set && key.data[i].byte != MatchKey::USE_SAVED) {
             int off = key.data[i].byte + ea_row.shift_amt;
             if (off < 0 || off >= 32) {
                 error(key.lineno, "Match offset of %d in state %s out of range "
                       "for previous state %s", key.data[i].byte, name.c_str(),
                       state->name.c_str());
+            } else if (i) {
+                ea_row.lookup_offset_8[(i-2)] = off;
+                ea_row.ld_lookup_8[(i-2)] = 1;
+            } else {
+                ea_row.lookup_offset_16 = off;
+                ea_row.ld_lookup_16 = 1; } } }
+}
+
+void Parser::State::write_save_config(Parser *pa, int row)
+{
+    auto &ea_row = pa->mem[gress].ml_ea_row[row];
+    for (int i = 0; i < 4; i++) {
+        if (i == 1) continue;
+        if (save.data[i].bit < 0) continue;
+        if (save.data[i].byte != MatchKey::USE_SAVED) {
+            int off = save.data[i].byte;
+            if (off < 0 || off >= 32) {
+                error(save.lineno, "Save offset of %d in state %s out of range",
+                      save.data[i].byte, name.c_str());
             } else if (i) {
                 ea_row.lookup_offset_8[(i-2)] = off;
                 ea_row.ld_lookup_8[(i-2)] = 1;
@@ -683,6 +776,7 @@ void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
         ea_row.ctr_load = def->counter_reset; }
     if (shift) ea_row.shift_amt = shift;
     else if (def) ea_row.shift_amt = def->shift;
+    state->write_save_config(pa, row);
     if (auto &next = (!this->next && def) ? def->next : this->next) {
         std::vector<State *> prev;
         for (auto n : next) {

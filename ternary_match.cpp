@@ -10,6 +10,7 @@ DEFINE_TABLE_TYPE(TernaryIndirectTable)
 
 void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     tcam_id = -1;
+    indirect_bus = -1;
     setup_layout(get(data, "row"), get(data, "column"), get(data, "bus"));
     setup_logical_id();
     if (auto *ixbar = get(data, "input_xbar")) {
@@ -28,6 +29,17 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "indirect") {
             if (CHECKTYPE(kv.value, tSTR))
                 indirect = kv.value;
+        } else if (kv.key == "indirect_bus") {
+            if (CHECKTYPE(kv.value, tINT)) {
+                if (kv.value.i < 0 || kv.value.i >= 16)
+                    error(kv.value.lineno, "Invalid ternary indirect bus number");
+                else
+                    indirect_bus = kv.value.i; }
+        } else if (kv.key == "action") {
+            setup_action_table(kv.value);
+        } else if (kv.key == "actions") {
+            if (CHECKTYPE(kv.value, tMAP))
+                actions = new Actions(this, kv.value.map);
         } else if (kv.key == "tcam_id") {
             if (CHECKTYPE(kv.value, tINT)) {
                 if ((tcam_id = kv.value.i) < 0 || tcam_id >= TCAM_TABLES_PER_STAGE)
@@ -60,6 +72,18 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     kv.key.s, name()); }
     alloc_rams(false, stage->tcam_use, &stage->tcam_match_bus_use);
+    if (indirect.set()) {
+        if (action.set() || actions)
+            error(lineno, "Table %s has both ternary indirect and direct actions", name());
+        if (indirect_bus > 0)
+            error(lineno, "Table %s has both ternary indirect and explicit indirect bus", name());
+    } else if (action.set() && actions)
+        error(lineno, "Table %s has both action table and immediate actions", name());
+    else if (!action.set() && !actions)
+        error(lineno, "Table %s has no indirect, action table or immediate actions", name());
+    if (action.set() && action_args.size() > 0)
+        error(lineno, "Unexpected number of action table arguments %zu", action_args.size());
+    if (actions && !action_bus) action_bus = new ActionBus();
 }
 void TernaryMatchTable::pass1() {
     stage->table_use[gress] |= Stage::USE_TCAM;
@@ -159,6 +183,16 @@ void TernaryMatchTable::write_regs() {
     merge.tcam_table_prop[tcam_id].thread = gress;
     merge.tcam_table_prop[tcam_id].enabled = 1;
     stage->regs.tcams.tcam_output_table_thread[tcam_id] = 1 << gress;
+    if (indirect_bus >= 0) {
+        auto &ixbar_outputmap = merge.match_to_logical_table_ixbar_outputmap[1][indirect_bus];
+        ixbar_outputmap.enabled_4bit_muxctl_select = logical_id;
+        ixbar_outputmap.enabled_4bit_muxctl_enable = 1;
+        auto &oxbar_outputmap = merge.tcam_match_adr_to_physical_oxbar_outputmap[indirect_bus];
+        oxbar_outputmap.enabled_3bit_muxctl_select = tcam_id;
+        oxbar_outputmap.enabled_3bit_muxctl_enable = 1;
+        merge.tind_bus_prop[indirect_bus].tcam_piped = 1;
+        merge.tind_bus_prop[indirect_bus].thread = gress;
+        merge.tind_bus_prop[indirect_bus].enabled = 1; }
     if (gateway) gateway->write_regs();
 }
 
@@ -234,8 +268,9 @@ void TernaryIndirectTable::pass1() {
         assert(action_args.size() == 0);
         if (auto *sel = lookup_field("action"))
             action_args.push_back(sel);
-        else
-            error(lineno, "No field 'action' in table %s format", name());
+        else if (actions->count() > 1)
+            error(lineno, "No field 'action' to select between mulitple actions in "
+                  "table %s format", name());
         actions->pass1(this); }
     if (format) format->setup_immed(this);
 }

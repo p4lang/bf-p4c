@@ -105,8 +105,9 @@ void ExactMatchTable::pass1() {
         assert(action_args.size() == 0);
         if (auto *sel = lookup_field("action"))
             action_args.push_back(sel);
-        else
-            error(lineno, "No field 'action' in table %s format", name());
+        else if (actions->count() > 1)
+            error(lineno, "No field 'action' to select between mulitple actions in "
+                  "table %s format", name());
         actions->pass1(this); }
     input_xbar->pass1(stage->exact_ixbar, 128);
     format->setup_immed(this);
@@ -172,8 +173,13 @@ void ExactMatchTable::pass1() {
                 if ((mgrp.second = word_info[mgrp.first].size()) > 4)
                     error(format->lineno, "Too many match groups using word %d", mgrp.first);
                 word_info[mgrp.first].push_back(i); }
-        group_info[i].word_group = group_info[i].match_group[group_info[i].overhead_word];
-        LOG1("  format group " << i << " overhead in word " << group_info[i].overhead_word);
+        if (group_info[i].overhead_word < 0) {
+            /* no overhead -- use the first match word */
+            group_info[i].word_group = group_info[i].match_group.begin()->second;
+            LOG1("  format group " << i << " no overhead");
+        } else {
+            group_info[i].word_group = group_info[i].match_group[group_info[i].overhead_word];
+            LOG1("  format group " << i << " overhead in word " << group_info[i].overhead_word); }
         for (auto &mgrp : group_info[i].match_group)
             LOG1("    match group " << mgrp.second << " in word " << mgrp.first); }
     for (unsigned i = 0; i < word_info.size(); i++)
@@ -499,13 +505,13 @@ void ExactMatchTable::write_regs() {
                 std::max(0, (int)action->format->log2size - 7); }
         for (unsigned word_group = 0; word_group < word_info[word].size(); word_group++) {
             int group = word_info[word][word_group];
-            if (action_args[0]->by_group[group]->bits[0].lo/128 != (unsigned)word) continue;
+            if (format->immed && format->immed->by_group[group]->bits[0].lo/128 == (unsigned)word)
+                merge.mau_immediate_data_exact_shiftcount[bus][word_group] =
+                    format->immed->by_group[group]->bits[0].lo % 128;
+            if (action_args.empty() ||
+                action_args[0]->by_group[group]->bits[0].lo/128 != (unsigned)word) continue;
             merge.mau_action_instruction_adr_exact_shiftcount[bus][word_group] =
                 action_args[0]->by_group[group]->bits[0].lo % 128;
-            if (format->immed) {
-                assert(format->immed->by_group[group]->bits[0].lo/128 == (unsigned)word);
-                merge.mau_immediate_data_exact_shiftcount[bus][word_group] =
-                    format->immed->by_group[group]->bits[0].lo % 128; }
             /* FIXME -- factor this where possible with ternary match code */
             if (action) {
                 int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
@@ -519,12 +525,16 @@ void ExactMatchTable::write_regs() {
         for (auto col : row.cols) {
             int word_group = 0;
             for (int group : word_info[word]) {
-                auto &overhead_row = layout[index + word - group_info[group].overhead_word];
-                if (&overhead_row == &row)
-                    merge.col[col].row_action_nxtable_bus_drive[row.row] = 1 << row.bus;
                 auto &hitmap_ixbar = merge.col[col].hitmap_output_map[2*row.row + word_group];
-                hitmap_ixbar.enabled_4bit_muxctl_select =
-                    overhead_row.row*2 + group_info[group].word_group;
+                if (group_info[group].overhead_word >= 0) {
+                    auto &overhead_row = layout[index + word - group_info[group].overhead_word];
+                    if (&overhead_row == &row)
+                        merge.col[col].row_action_nxtable_bus_drive[row.row] = 1 << row.bus;
+                    hitmap_ixbar.enabled_4bit_muxctl_select =
+                        overhead_row.row*2 + group_info[group].word_group;
+                } else {
+                    hitmap_ixbar.enabled_4bit_muxctl_select =
+                        row.row*2 + group_info[group].word_group; }
                 hitmap_ixbar.enabled_4bit_muxctl_enable = 1;
                 if (++word_group > 1) break; }
             /*merge.col[col].hitmap_output_map[bus].enabled_4bit_muxctl_select =

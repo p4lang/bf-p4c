@@ -1,7 +1,11 @@
 #!/bin/bash
 
+fast=false;
+
 while expr "$1" : - >/dev/null; do
     case $1 in
+    -f) fast=true
+        ;;
     -*)
         echo >&2 "unknown argumnet $1"
         ;;
@@ -28,13 +32,15 @@ for f in "$@"; do
     name=$(basename $f .p4)
     mkdir -p $name.out
     cd $name.out
-    if $GLSC --verbose 2 -S ../$name.p4 >glsc.log 2>&1; then
+    if $fast && [ -r $name.tfa ] || \
+        $GLSC --verbose 2 -S ../$name.p4 >glsc.log 2>&1; then
         if tfas -vvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
             for f in $name.out/*.json; do
                 if reflow $f >tmp.json; then
                     mv tmp.json $f
                 fi
-                if reflow $(basename $f) >tmp.json; then
+                if $fast; then true
+                elif reflow $(basename $f) >tmp.json; then
                     mv tmp.json $(basename $f)
                 fi
                 diff -u $f $(basename $f)

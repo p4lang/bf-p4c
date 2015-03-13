@@ -165,6 +165,7 @@ public:
         int             lineno;
         iterator begin() { return order.begin(); }
         iterator end() { return order.end(); }
+        int count() { return actions.size(); }
         bool exists(const std::string &n) { return actions.count(n) > 0; }
         void pass1(Table *);
         void pass2(Table *);
@@ -282,6 +283,8 @@ DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
 public:
     int tcam_id;
     Table::Ref indirect;
+    int indirect_bus;   /* indirect bus to mark as used if there's no indirect table
+                         * needed for bit-exact compiler matching */
     Format::Field *lookup_field(const std::string &name, const std::string &action) {
         assert(!format);
         return indirect ? indirect->lookup_field(name, action) : 0; }
