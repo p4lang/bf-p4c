@@ -400,7 +400,9 @@ void Parser::State::MatchKey::setup(value_t &spec) {
                 return;
     } else
         setup_match_el(-1, spec);
-    if (data[0].bit >= 0 && data[1].byte != data[0].byte + 1) {
+    if (data[0].bit >= 0 && data[1].bit >= 0 && data[1].byte != data[0].byte + 1 &&
+        (data[0].byte & data[1].byte) != USE_SAVED)
+    {
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
                 if (data[i].byte+1 == data[j].byte) {
