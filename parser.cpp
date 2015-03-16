@@ -300,7 +300,7 @@ void Parser::State::Ref::check(gress_t gress, Parser *pa, State *state) {
                     ptr.push_back(st); } } }
 }
 
-static const char *loc_names[] = { "half", "half", "byte1", "byte0" };
+static const char *loc_names[] = { "half", "half", "byte0", "byte1" };
 
 int Parser::State::MatchKey::move_down(int loc) {
     int to = loc;
@@ -340,8 +340,8 @@ int Parser::State::MatchKey::add_byte(int loc, int byte, bool use_saved) {
 static int matchKeyLoc(value_t &key, bool errchk = true) {
     if (errchk && !CHECKTYPE(key, tSTR)) return -1;
     if (key == "half" || key == "half0") return 0;
-    if (key == "byte0") return 3;
-    if (key == "byte1") return 2;
+    if (key == "byte0") return 2;
+    if (key == "byte1") return 3;
     if (errchk)
         error(key.lineno, "Invalid matcher location %s", key.s);
     return -1;

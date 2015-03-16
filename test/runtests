@@ -64,11 +64,12 @@ for f in "$@"; do
             echo " pass"
             let pass++
         fi
-    else
+    elif $ok; then
         echo " tfas failed"
         let fail++
         echo "$f:" >> $FAILLOG
         cat tfas.log >> $FAILLOG
+        ok=false
     fi
     popd >/dev/null
 done
