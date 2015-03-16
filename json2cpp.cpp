@@ -10,7 +10,7 @@ mod_definitions[2][3] = {
     { BOTH, BOTH, DECL_ONLY },
     { DECL_ONLY, DEFN_ONLY, DEFN_ONLY } };
 
-static bool test_sanity(json::obj *data, std::string name) {
+static bool test_sanity(json::obj *data, std::string name, bool sizes=true) {
     if (json::vector *v = dynamic_cast<json::vector *>(data)) {
 	data = 0;
 	for (auto &a : *v) {
@@ -18,7 +18,7 @@ static bool test_sanity(json::obj *data, std::string name) {
 	    else if (*data != *a) {
 		std::cerr << "array element mismatch: " << name << std::endl;
 		return false; } }
-	return test_sanity(data, name+"[]"); }
+	return test_sanity(data, name+"[]", sizes); }
     if (json::map *m = dynamic_cast<json::map *>(data)) {
 	for (auto &a : *m) {
 	    if (json::string *key = dynamic_cast<json::string *>(a.first)) {
@@ -33,19 +33,24 @@ static bool test_sanity(json::obj *data, std::string name) {
 	    } else {
 		std::cerr << "field not string: " << name << std::endl;
 		return false; }
-	    if (!test_sanity(a.second.get(), name)) return false; }
+	    if (!test_sanity(a.second.get(), name, sizes)) return false; }
 	return true; }
     if (json::number *n = dynamic_cast<json::number *>(data)) {
-	if (n->val >= 0 && (size_t)n->val <= sizeof(unsigned long) * CHAR_BIT)
-	    return true;
-	std::cerr << "size out of range: " << name << " " << n->val
-		   << std::endl; }
+        if (!sizes || (n->val >= 0 && (size_t)n->val <= sizeof(unsigned long) * CHAR_BIT))
+            return true;
+        std::cerr << "size out of range: " << name << " " << n->val
+                   << std::endl; }
     return false;
 }
 
 static json::obj *get_indexes(json::obj *t, std::vector<int> &indexes) {
     while (json::vector *v = dynamic_cast<json::vector *>(t)) {
 	indexes.push_back(v->size());
+	t = v->begin()->get(); }
+    return t;
+}
+static const json::obj *skip_indexes(const json::obj *t) {
+    while (const json::vector *v = dynamic_cast<const json::vector *>(t)) {
 	t = v->begin()->get(); }
     return t;
 }
@@ -414,10 +419,36 @@ bool gen_unread = true;
 bool checked_array = true;
 std::map<std::string, json::map *> global_types;
 
+static bool need_ctor(const json::map *m_init) {
+    if (!m_init) return false;
+    for (auto &a : *m_init) {
+        auto *n_init = dynamic_cast<const json::number *>(skip_indexes(a.second.get()));
+        if (n_init && n_init->val) return true; }
+    return false;
+}
+
+static void gen_ctor(std::ostream &out, const std::string &namestr, const json::map *m_init,
+                     bool enable_disable, int indent) {
+    out << std::setw(2*indent) << "" << namestr << "() : ";
+    bool first = true;
+    if (enable_disable) {
+        out << "disabled_(false)";
+        first = false; }
+    if (m_init) for (auto &a : *m_init) {
+        const json::string *name = dynamic_cast<const json::string *>(a.first);
+        if ((*name)[0] == '_') continue;
+        auto *n_init = dynamic_cast<const json::number *>(skip_indexes(a.second.get()));
+        if (n_init && n_init->val) {
+            if (first) first = false; else out << ", ";
+            out << *name << '(' << n_init->val << ')'; } }
+    out << " {}" << std::endl;
+}
+
 static void gen_type(std::ostream &out, const std::string &parent,
-                     const char *name, json::obj *t, int indent)
+                     const char *name, json::obj *t, const json::obj *init, int indent)
 {
     if (json::map *m = dynamic_cast<json::map *>(t)) {
+        const json::map *m_init = dynamic_cast<const json::map *>(init);
         std::vector<const char *> nameargs;
         std::string namestr;
         if (name) {
@@ -450,16 +481,18 @@ static void gen_type(std::ostream &out, const std::string &parent,
         classname += namestr;
         if (gen_definitions != DEFN_ONLY) {
             indent++;
-            out << "struct " << namestr << " {" << std::endl; }
-        if (enable_disable && gen_definitions != DEFN_ONLY) {
-            out << std::setw(2*indent) << "" << "bool disabled_;" << std::endl;
-            out << std::setw(2*indent) << "" << namestr << "() : "
-                << "disabled_(false) {}" << std::endl; }
+            out << "struct " << namestr << " {" << std::endl;
+            if (enable_disable)
+                out << std::setw(2*indent) << "" << "bool disabled_;" << std::endl;
+            if (enable_disable || need_ctor(m_init))
+                gen_ctor(out, namestr, m_init, enable_disable, indent); }
         for (auto &a : *m) {
             std::vector<int> indexes;
             json::string *name = dynamic_cast<json::string *>(a.first);
             if ((*name)[0] == '_') continue;
+            init = m_init ? m_init->at(name).get() : 0;
             json::obj *type = get_indexes(a.second.get(), indexes);
+            init = skip_indexes(init);
             type = singleton_obj(type, name);
             bool notclass = !dynamic_cast<json::map *>(type);
             bool isglobal = global_types.count(*name) > 0;
@@ -469,7 +502,7 @@ static void gen_type(std::ostream &out, const std::string &parent,
                     for (int idx : indexes)
                         out << "checked_array<" << idx << ", "; }
             if (!isglobal)
-                gen_type(out, classname, ("_" + *name).c_str(), type, indent);
+                gen_type(out, classname, ("_" + *name).c_str(), type, init, indent);
             if (gen_definitions != DEFN_ONLY) {
                 if (checked_array && !indexes.empty()) {
                     if (!notclass) {
@@ -486,7 +519,7 @@ static void gen_type(std::ostream &out, const std::string &parent,
                     for (int idx : indexes) out << '[' << idx << ']';
                     out << ";" << std::endl; } } }
         if (delete_copy && gen_definitions != DEFN_ONLY) {
-            if (!enable_disable)
+            if (!enable_disable && !need_ctor(m_init))
                 out << std::setw(2*indent) << "" << namestr << "() = default;"
                     << std::endl;
             out << std::setw(2*indent) << "" << namestr << "(const "
@@ -504,24 +537,30 @@ static void gen_type(std::ostream &out, const std::string &parent,
         if (gen_definitions != DEFN_ONLY) {
             out << std::setw(2*--indent) << "" << '}'; }
     } else if (json::number *n = dynamic_cast<json::number *>(t)) {
+        //const json::number *n_init = dynamic_cast<const json::number *>(init);
+        //if (n_init && n_init->val)
+        //    std::clog << "init value " << n_init->val << std::endl;
         if (gen_definitions != DEFN_ONLY)
             out << "ubits<" << (n->val ? n->val : 32) << ">";
     } else
 	assert(0);
 }
 
-static int gen_global_types(std::ostream &out, json::obj *t)
+static int gen_global_types(std::ostream &out, json::obj *t, const json::obj *init)
 {
     int rv = 0;
     if (json::map *m = dynamic_cast<json::map *>(t)) {
+        const json::map *m_init = dynamic_cast<const json::map *>(init);
         for (auto &a : *m) {
             std::vector<int> indexes;
             json::string *name = dynamic_cast<json::string *>(a.first);
             if ((*name)[0] == '_') continue;
+            init = m_init ? m_init->at(name).get() : 0;
             json::obj *type = get_indexes(a.second.get(), indexes);
+            init = skip_indexes(init);
             type = singleton_obj(type, name);
             if (json::map *cl = dynamic_cast<json::map *>(type)) {
-                rv |= gen_global_types(out, type);
+                rv |= gen_global_types(out, type, init);
                 auto it = global_types.find(*name);
                 if (it == global_types.end())
                     continue;
@@ -531,7 +570,7 @@ static int gen_global_types(std::ostream &out, json::obj *t)
                         rv = -1; }
                 } else {
                     it->second = cl;
-                    gen_type(out, "", name->c_str(), cl, 0);
+                    gen_type(out, "", name->c_str(), cl, init, 0);
                     out << ";" << std::endl; } } } }
     return rv;
 }
@@ -543,11 +582,20 @@ int main(int ac, char **av) {
     const char *name = 0;
     const char *declare = 0;
     std::vector<const char *> includes;
+    json::obj *initvals = 0;
     for (int i = 1; i < ac; i++) {
         if (av[i][0] == '-' || av[i][0] == '+') {
             bool flag = av[i][0] == '+';
             for (char *arg = av[i]+1; *arg;)
                 switch(*arg++) {
+                case 'c': {
+                    std::ifstream file(av[++i]);
+                    delete initvals;
+                    file >> initvals;
+                    if (!file || !test_sanity(initvals, "", false)) {
+                        std::cerr << av[i] << ": not valid template" << std::endl;
+                        error = 1; }
+                    break; }
                 case 'd': declare = av[++i]; break;
                 case 'D': gen_definitions =
                             mod_definitions[flag][gen_definitions];
@@ -603,9 +651,9 @@ int main(int ac, char **av) {
             std::cout << "#include \"ubits.h\"" << std::endl;
             std::cout << std::endl;
             gen_hdrs = false; }
-        if (!global_types.empty() && gen_global_types(std::cout, data) < 0)
+        if (!global_types.empty() && gen_global_types(std::cout, data, initvals) < 0)
             exit(1);
-	gen_type(std::cout, "", name, data, 0);
+	gen_type(std::cout, "", name, data, initvals, 0);
         if (test && !declare) declare = "table";
         if (declare) std::cout << " " << declare;
         std::cout << ";" << std::endl;
@@ -639,6 +687,10 @@ int main(int ac, char **av) {
             std::cerr << "Unknown test -t" << (char)test << std::endl;
             break; }
         global_types.clear();
+        delete data;
+        delete initvals;
+        initvals = 0;
         name = declare = 0; }
+    delete initvals;
     return error;
 }

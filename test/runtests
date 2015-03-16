@@ -70,6 +70,15 @@ for f in "$@"; do
         echo "$f:" >> $FAILLOG
         cat tfas.log >> $FAILLOG
         ok=false
+        if $need_reflow; then
+            # we ran the compiler and tfas failed, so reflow the compiler outputs
+            # so that later -f runs will work
+            for f in *.json; do
+                if reflow $f >tmp.json; then
+                    mv tmp.json $f
+                fi
+            done
+        fi
     fi
     popd >/dev/null
 done

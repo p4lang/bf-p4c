@@ -18,7 +18,7 @@ struct ubits_base {
     mutable bool        read, write;
 
     ubits_base() : value(0), read(false), write(false) {}
-    ubits_base(unsigned long v) : value(v), read(false), write(true) {}
+    ubits_base(unsigned long v) : value(v), read(false), write(false) {}
     operator unsigned long() const { read = true; return value; }
     bool modified() const { return write; }
     virtual unsigned long operator=(unsigned long v) = 0;

@@ -180,27 +180,28 @@ template <class COMMON> void init_common_regs(Parser *p, COMMON &regs, gress_t g
     regs.err_phv_cfg.partial_hdr_err_en = 1;
     regs.err_phv_cfg.phv_owner_err_en = 1;
     regs.err_phv_cfg.src_ext_err_en = 1;
-    regs.err_phv_cfg.timeout_err_en = 1;
+    regs.err_phv_cfg.timeout_cycle_err_en = 1;
+    regs.err_phv_cfg.timeout_iter_err_en = 1;
     // disable unused registers
-    regs.aram_mem_err_cnt.disable();
-    regs.csum_err_cnt.disable();
-    regs.csum_mem_err_cnt.disable();
-    regs.ctr_mem_err_cnt.disable();
-    regs.ctr_range_err_cnt.disable();
-    regs.dst_cont_err_cnt.disable();
-    regs.fcs_err_cnt.disable();
-    regs.hdr_byte_cnt.disable();
-    regs.idle_cnt.disable();
-    regs.int_en.disable();
-    regs.int_status.disable();
-    regs.max_cycle.disable();
-    regs.multi_wr_err_cnt.disable();
-    regs.no_tcam_match_err_cnt.disable();
-    regs.partial_hdr_err_cnt.disable();
-    regs.phv_owner_err_cnt.disable();
-    regs.pri_start.disable();
-    regs.src_ext_err_cnt.disable();
-    regs.timeout_err_cnt.disable();
+    //regs.aram_mem_err_cnt.disable();
+    //regs.csum_err_cnt.disable();
+    //regs.csum_mem_err_cnt.disable();
+    //regs.ctr_mem_err_cnt.disable();
+    //regs.ctr_range_err_cnt.disable();
+    //regs.dst_cont_err_cnt.disable();
+    //regs.fcs_err_cnt.disable();
+    //regs.hdr_byte_cnt.disable();
+    //regs.idle_cnt.disable();
+    //regs.int_en.disable();
+    //regs.int_status.disable();
+    //regs.max_cycle.disable();
+    //regs.multi_wr_err_cnt.disable();
+    //regs.no_tcam_match_err_cnt.disable();
+    //regs.partial_hdr_err_cnt.disable();
+    //regs.phv_owner_err_cnt.disable();
+    //regs.pri_start.disable();
+    //regs.src_ext_err_cnt.disable();
+    //regs.timeout_err_cnt.disable();
 }
 
 void Parser::output() {
@@ -229,23 +230,33 @@ void Parser::output() {
 
     init_common_regs(this, reg_eg.prsr_reg, EGRESS);
     for (int i = 0; i < 4; i++) {
-        reg_eg.ebuf_reg.chnl_ctrl[i].chnl_ena = 1;
-        reg_eg.epb_port_regs.chnl_ctrl[i].chnl_ena = 1; }
+        //reg_eg.ebuf_reg.chnl_ctrl[i].chnl_ena = 1;
+        reg_eg.epb_prsr_port_regs.chnl_ctrl[i].chnl_ena = 1; }
 
     if (options.match_compiler) {
         phv_use[INGRESS] |= Phv::use(INGRESS);
         phv_use[EGRESS] |= Phv::use(EGRESS); }
     for (int i : phv_use[EGRESS]) {
-        if (i >= 256)
+        if (i >= 256) {
             reg_merge.phv_owner.t_owner[i-256] = 1;
-        else
-            reg_merge.phv_owner.owner[i] = 1; }
+            reg_in.prsr_reg.phv_owner.t_owner[i-256] = 1;
+            reg_eg.prsr_reg.phv_owner.t_owner[i-256] = 1;
+        } else {
+            reg_merge.phv_owner.owner[i] = 1;
+            reg_in.prsr_reg.phv_owner.owner[i] = 1;
+            reg_eg.prsr_reg.phv_owner.owner[i] = 1; } }
     for (int i = 0; i < 224; i++)
-        if (!phv_allow_multi_write[i])
-            reg_merge.no_multi_wr.nmw[i] = 1;
+        if (phv_allow_multi_write[i]) {
+            reg_merge.phv_valid.vld[i] = 1;
+        } else {
+            reg_in.prsr_reg.no_multi_wr.nmw[i] = 1;
+            reg_eg.prsr_reg.no_multi_wr.nmw[i] = 1;
+        }
     for (int i = 0; i < 112; i++)
-        if (!phv_allow_multi_write[256+i])
-            reg_merge.no_multi_wr.t_nmw[i] = 1;
+        if (!phv_allow_multi_write[256+i]) {
+            reg_in.prsr_reg.no_multi_wr.t_nmw[i] = 1;
+            reg_eg.prsr_reg.no_multi_wr.t_nmw[i] = 1;
+        }
     mem[INGRESS].emit_json(*open_output("memories.all.parser.ingress.cfg.json"), "ingress");
     mem[EGRESS].emit_json(*open_output("memories.all.parser.egress.cfg.json"), "egress");
     reg_in.emit_json(*open_output("regs.all.parser.ingress.cfg.json"));

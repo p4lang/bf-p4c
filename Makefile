@@ -35,17 +35,17 @@ gen/regs.mau_addrmap.%: JSON_NAME=regs.match_action_stage.%02x
 gen/regs.ibp_rspec.%: JSON_NAME=regs.all.parser.ingress
 gen/regs.ebp_rspec.%: JSON_NAME=regs.all.parser.egress
 gen/regs.prsr_reg_merge_rspec.%: JSON_NAME=regs.all.parse_merge
-gen/%.h: templates/%.size.json json2cpp
+gen/%.h: templates/%.size.json templates/%.cfg.json json2cpp
 	@mkdir -p gen
-	./json2cpp +ehD $(JSON_GLOBALS:%=-g %) -run '$(JSON_NAME)' $< >$@
+	./json2cpp +ehD $(JSON_GLOBALS:%=-g %) -run '$(JSON_NAME)' -c templates/$*.cfg.json $< >$@
 
 gen/disas.%.h: templates/%.size.json json2cpp
 	@mkdir -p gen
 	./json2cpp +hru -en $* $< >$@
 
-gen/%.cpp: templates/%.size.json json2cpp
+gen/%.cpp: templates/%.size.json templates/%.cfg.json json2cpp
 	@mkdir -p gen
-	./json2cpp +ehDDi2 $(JSON_GLOBALS:%=-g %) -run '$(JSON_NAME)' -I $*.h $< >$@
+	./json2cpp +ehDDi2 $(JSON_GLOBALS:%=-g %) -run '$(JSON_NAME)' -c templates/$*.cfg.json -I $*.h $< >$@
 
 gen/uptr_sizes.h: mksizes
 	@mkdir -p gen
