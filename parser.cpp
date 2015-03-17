@@ -430,22 +430,6 @@ void Parser::State::MatchKey::setup(value_t &spec) {
         auto t = data[0];
         data[0] = data[1];
         data[1] = t; }
-#if 0
-    if (options.match_compiler) {
-        if (data[0].bit < 0 && data[2].bit >= 0) {
-            /* if using just the two 8-bit slots, swap them */
-            auto t = data[2];
-            data[2] = data[3];
-            data[3] = t;
-        }
-        if (data[0].bit >= 0 && data[1].bit < 0) {
-            /* using 3 bytes -- swap 1st and 3rd */
-            auto t = data[0];
-            data[0] = data[3];
-            data[3] = t;
-        }
-    }
-#endif
 }
 
 Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &data) :
@@ -496,6 +480,12 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
                 error(kv.key.lineno, "Multiple next settings in match");
                 error(next.lineno, "previously set here"); }
             next = kv.value;
+        } else if (kv.key == "save") {
+            if (future.lineno) {
+                error(kv.value.lineno, "Multiple save entries in match");
+                error(future.lineno, "previous specified here");
+            } else
+                future.setup(kv.value);
         } else if (kv.key.type == tINT) {
             save.emplace_back(gress, kv.key.i, kv.key.i, kv.value);
         } else if (kv.key.type == tRANGE) {
@@ -564,12 +554,6 @@ Parser::State::State(int l, const char *n, gress_t gr, match_t sno, const VECTOR
                 error(key.lineno, "previous specified here");
             } else
                 key.setup(kv.value);
-        } else if (kv.key == "save") {
-            if (save.lineno) {
-                error(kv.value.lineno, "Multiple save entries in state %s", n);
-                error(save.lineno, "previous specified here");
-            } else
-                save.setup(kv.value);
         } else if (kv.key == "default") {
             if (!CHECKTYPE(kv.value, tMAP)) continue;
             if (def) {
@@ -674,14 +658,29 @@ void Parser::State::pass2(Parser *pa) {
             stateno.word0 = s ^ PARSER_STATE_MASK;
             stateno.word1 = s;
             pa->state_use[gress][s] = 1; } }
-    unsigned saved = 0;
-    for (auto *p : pred)
+    unsigned def_saved = 0;
+    if (def && def->future.lineno >= 0) {
         for (int i = 0; i < 4; i++)
-            if (p->save.data[i].bit >= 0)
-                saved |= 1 << i;
-    if (saved) key.preserve_saved(saved);
+            if (def->future.data[i].bit >= 0)
+                def_saved |= 1 << i;
+        if (def_saved && def->next)
+            def->next->key.preserve_saved(def_saved); }
+    for (auto &m : match) {
+        unsigned saved = def_saved;
+        if (m.future.lineno)
+            for (int i = 0; i < 4; i++)
+                if (m.future.data[i].bit >= 0)
+                    saved |= 1 << i;
+                else if (def && def->future.lineno && def->future.data[i].bit >= 0)
+                    m.future.data[i] = def->future.data[i];
+        if (saved) {
+            if (m.next)
+                m.next->key.preserve_saved(saved);
+            else if (def && def->next)
+                def->next->key.preserve_saved(saved); } }
 }
 
+/* FIXME -- combine these two methods into a single method on MachKey */
 void Parser::State::write_lookup_config(Parser *pa, State *state, int row,
                                         const std::vector<State *> &prev)
 {
@@ -712,17 +711,17 @@ void Parser::State::write_lookup_config(Parser *pa, State *state, int row,
                 ea_row.ld_lookup_16 = 1; } } }
 }
 
-void Parser::State::write_save_config(Parser *pa, int row)
+void Parser::State::Match::write_future_config(Parser *pa, State *state, int row)
 {
-    auto &ea_row = pa->mem[gress].ml_ea_row[row];
+    auto &ea_row = pa->mem[state->gress].ml_ea_row[row];
     for (int i = 0; i < 4; i++) {
         if (i == 1) continue;
-        if (save.data[i].bit < 0) continue;
-        if (save.data[i].byte != MatchKey::USE_SAVED) {
-            int off = save.data[i].byte;
+        if (future.data[i].bit < 0) continue;
+        if (future.data[i].byte != MatchKey::USE_SAVED) {
+            int off = future.data[i].byte;
             if (off < 0 || off >= 32) {
-                error(save.lineno, "Save offset of %d in state %s out of range",
-                      save.data[i].byte, name.c_str());
+                error(future.lineno, "Save offset of %d in state %s out of range",
+                      future.data[i].byte, state->name.c_str());
             } else if (i) {
                 ea_row.lookup_offset_8[(i-2)] = off;
                 ea_row.ld_lookup_8[(i-2)] = 1;
@@ -789,7 +788,7 @@ void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
         ea_row.ctr_load = def->counter_reset; }
     if (shift) ea_row.shift_amt = shift;
     else if (def) ea_row.shift_amt = def->shift;
-    state->write_save_config(pa, row);
+    write_future_config(pa, state, row);
     if (auto &next = (!this->next && def) ? def->next : this->next) {
         std::vector<State *> prev;
         for (auto n : next) {

@@ -70,11 +70,12 @@ class Parser : public Section {
             int move_down(int);
         };
         struct Match {
-            int     lineno;
-            match_t match;
-            int     counter, offset, shift;
-            bool    counter_reset, offset_reset;
-            Ref     next;
+            int         lineno;
+            match_t     match;
+            int         counter, offset, shift;
+            bool        counter_reset, offset_reset;
+            Ref         next;
+            MatchKey    future;
             enum flags_t { OFFSET=1, ROTATE=2 };
             struct Save {
                 int         lo, hi;
@@ -96,13 +97,14 @@ class Parser : public Section {
             Match(int lineno, gress_t, State *n);
             void unmark_reachable(Parser *, State *state, bitvec &unreach);
             void pass1(Parser *pa, State *state);
+            void write_future_config(Parser *, State *, int);
             void write_config(Parser *, State *, Match *);
         };
 
         std::string             name;
         gress_t                 gress;
         match_t                 stateno;
-        MatchKey                key, save;
+        MatchKey                key;
         std::vector<Match>      match;
         Match                   *def;
         std::set<State *>       pred;
@@ -116,7 +118,6 @@ class Parser : public Section {
         void pass1(Parser *);
         void pass2(Parser *);
         void write_lookup_config(Parser *, State *, int, const std::vector<State *> &);
-        void write_save_config(Parser *, int);
         void write_config(Parser *);
     };
     friend class State;
