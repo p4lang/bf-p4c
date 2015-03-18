@@ -56,14 +56,16 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
             if (stage[stageno].stage_dep[gress])
                 error(kv.key.lineno, "Multiple dependencies specified for %sgress stage %d",
                       gress ? "e" : "in", stageno);
-            else if (kv.value == "concurrent")
+            else if (stageno == 0)
+                warning(kv.key.lineno, "Stage dependency in stage 0 will be ignored");
+            if (kv.value == "concurrent")
                 stage[stageno].stage_dep[gress] = Stage::CONCURRENT;
             else if (kv.value == "action")
                 stage[stageno].stage_dep[gress] = Stage::ACTION_DEP;
             else if (kv.value == "match")
                 stage[stageno].stage_dep[gress] = Stage::MATCH_DEP;
             else
-                error(kv.value.lineno, "Synatx error, invalid stage dependency");
+                error(kv.value.lineno, "Syntax error, invalid stage dependency");
             continue; }
         if (!CHECKTYPEM(kv.key, tCMD, "table declaration")) continue;
         if (!CHECKTYPE(kv.value, tMAP)) continue;

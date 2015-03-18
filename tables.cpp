@@ -511,7 +511,7 @@ void Table::Actions::write_regs(Table *tbl) {
 }
 
 Table::ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
-    lineno = data[0].key.lineno;
+    lineno = data.size ? data[0].key.lineno : -1;
     for (auto &kv : data) {
 	if (!CHECKTYPE2(kv.key, tINT, tRANGE)) continue;
 	if (!CHECKTYPE(kv.value, tSTR)) continue;
