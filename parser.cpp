@@ -141,8 +141,10 @@ void Parser::process() {
     for (auto st : all) st->all_idx = all_index++;
     bitvec unreach(0, all_index);
     for (int i = 0; i < 4; i++) {
-        start_state[INGRESS][i]->unmark_reachable(this, unreach);
-        start_state[EGRESS][i]->unmark_reachable(this, unreach); }
+        if (!states[INGRESS].empty())
+            start_state[INGRESS][i]->unmark_reachable(this, unreach);
+        if (!states[EGRESS].empty())
+            start_state[EGRESS][i]->unmark_reachable(this, unreach); }
     for (auto u : unreach)
         error(all[u]->lineno, "%sgress state %s unreachable",
               all[u]->gress ? "E" : "In", all[u]->name.c_str());

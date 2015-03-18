@@ -309,16 +309,15 @@ Table::Format::Format(VECTOR(pair_t) &data) :
     for (auto &grp : fmt) {
         for (auto it = grp.begin(); it != grp.end(); ++it) {
             for (auto &piece : it->second.bits) {
-                if (byindex.empty())
-                    byindex[piece.lo] = it;
-                else {
-                    auto p = byindex.upper_bound(piece.lo);
-                    if (p != byindex.end())
-                        overlap_test(lineno, piece.lo, it, p->first, p->second);
-                    p--;
+                auto p = byindex.upper_bound(piece.lo);
+                if (p != byindex.end())
+                    overlap_test(lineno, piece.lo, it, p->first, p->second);
+                if (p != byindex.begin()) {
+                    --p;
                     overlap_test(lineno, p->first, p->second, piece.lo, it);
-                    if (p->first != piece.lo || piece.hi > p->second->second.hi(piece.lo))
-                        byindex[piece.lo] = it; } } } }
+                    if (p->first == piece.lo && piece.hi <= p->second->second.hi(piece.lo))
+                        continue; }
+                byindex[piece.lo] = it; } } }
     for (size_t i = 1; i < fmt.size(); i++)
         if (fmt[0] != fmt[i])
             error(data[0].key.lineno, "Format group %zu doesn't match group 0", i);
@@ -604,6 +603,7 @@ void MatchTable::write_regs(int type, Table *result) {
                 assert(idx < 2); } }
     } else {
         /* FIXME */
+        ERROR("Unimplemented -- tables with more than 8 actions");
         assert(0);
     }
 

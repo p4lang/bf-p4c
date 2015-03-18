@@ -94,7 +94,7 @@ static value_t list_map_expand(VECTOR(value_t) &v);
 %token<match>   MATCH
 
 %type<value>    param list_element key value elements indent_elements flow_value
-%type<vec>      opt_params params comma_params list_elements value_list dotvals
+%type<vec>      opt_params params comma_params linewrapped_params list_elements value_list dotvals
 %type<pair>     map_element pair
 %type<map>      map_elements pair_list
 
@@ -139,6 +139,22 @@ comma_params
         : param ',' param { VECTOR_init2($$, $1, $3); }
         | comma_params ',' param { $$ = $1; VECTOR_add($$, $3); }
         ;
+linewrapped_params
+        /* nasty rule duplication caused by mixing left- and right- recursive
+         * rules.  Factoring here results in shift/reduce conflicts */
+        : param { VECTOR_init1($$, $1); }
+        | comma_params { $$ = $1; }
+        | param ',' '\n' linewrapped_params
+              { $$ = $4; VECTOR_insert($$, 0); $$.data[0] = $1; }
+        | comma_params ',' '\n' linewrapped_params
+              { $$ = $1; VECTOR_addcopy($$, $4.data, $4.size); VECTOR_fini($4); }
+        | INDENT param '\n' UNINDENT { VECTOR_init1($$, $2); }
+        | INDENT comma_params '\n' UNINDENT { $$ = $2; }
+        | INDENT param ',' '\n' linewrapped_params '\n' UNINDENT
+              { $$ = $5; VECTOR_insert($$, 0); $$.data[0] = $2; }
+        | INDENT comma_params ',' '\n' linewrapped_params '\n' UNINDENT
+              { $$ = $2; VECTOR_addcopy($$, $5.data, $5.size); VECTOR_fini($5); }
+        ;
 param   : INT { $$ = VAL($1); }
         | ID { $$ = VAL($1); }
         | '-' INT { $$ = VAL(-$2); }
@@ -172,6 +188,13 @@ list_element
         : '-' key ':' value '\n' { $$ = singleton_map($2, $4); }
         | '-' value '\n' { $$ = $2; }
         | '-' ID comma_params '\n' { $$ = command($2, $3, yychar == '\n' ? 2 : 1); }
+        | '-' ID comma_params ',' '\n' linewrapped_params
+              { VECTOR_addcopy($3, $6.data, $6.size);
+                $$ = command($2, $3, yychar == '\n' ? 2 : 1);
+                VECTOR_fini($6); }
+        | '-' ID param ',' '\n' linewrapped_params
+              { VECTOR_insert($6, 0); $6.data[0] = $3;
+                $$ = command($2, $6, yychar == '\n' ? 2 : 1); }
         | '-' key ':' '\n' indent_elements { $$ = singleton_map($2, $5); }
         ;
 
