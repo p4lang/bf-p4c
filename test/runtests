@@ -26,10 +26,10 @@ GLSC=$HOME/p4c-tofino/p4c_tofino/shell.py
 pass=0
 fail=0
 
-for f in "$@"; do
-    echo -n $f
-    pushd $(dirname $f) >/dev/null
-    name=$(basename $f .p4)
+for p4file in "$@"; do
+    echo -n $p4file
+    pushd $(dirname $p4file) >/dev/null
+    name=$(basename $p4file .p4)
     mkdir -p $name.out
     cd $name.out
     ok=true
@@ -40,7 +40,7 @@ for f in "$@"; do
     else
         echo " p4 compile failed"
         let fail++
-        echo "$f:" >> $FAILLOG
+        echo "$p4file:" >> $FAILLOG
         cat glsc.log >> $FAILLOG
         ok=false
     fi
@@ -58,7 +58,7 @@ for f in "$@"; do
         if [ $cnt -gt 0 ]; then
             echo " mismatch"
             let fail++
-            echo "$f:" >> $FAILLOG
+            echo "$p4file:" >> $FAILLOG
             cat json_diff.txt >> $FAILLOG
         else
             echo " pass"
@@ -67,7 +67,7 @@ for f in "$@"; do
     elif $ok; then
         echo " tfas failed"
         let fail++
-        echo "$f:" >> $FAILLOG
+        echo "$p4file:" >> $FAILLOG
         cat tfas.log >> $FAILLOG
         ok=false
         if $need_reflow; then

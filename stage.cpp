@@ -20,7 +20,7 @@ class AsmStage : public Section {
 
 AsmStage::AsmStage() : Section("stage") {
     for (int i = 0; i < NUM_MAU_STAGES; i++)
-        stage[i].stageno = 0;
+        stage[i].stageno = i;
     int slot = 0, byte = 0;
     for (int i = 0; i < ACTION_DATA_8B_SLOTS; i++) {
         Stage::action_bus_slot_map[byte++] = slot;
@@ -52,6 +52,19 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
     assert(stageno >= 0 && stageno < NUM_MAU_STAGES);
     gress_t gress = args[1] == "egress" ? EGRESS : INGRESS;
     for (auto &kv : data.map) {
+        if (kv.key == "dependency") {
+            if (stage[stageno].stage_dep[gress])
+                error(kv.key.lineno, "Multiple dependencies specified for %sgress stage %d",
+                      gress ? "e" : "in", stageno);
+            else if (kv.value == "concurrent")
+                stage[stageno].stage_dep[gress] = Stage::CONCURRENT;
+            else if (kv.value == "action")
+                stage[stageno].stage_dep[gress] = Stage::ACTION_DEP;
+            else if (kv.value == "match")
+                stage[stageno].stage_dep[gress] = Stage::MATCH_DEP;
+            else
+                error(kv.value.lineno, "Synatx error, invalid stage dependency");
+            continue; }
         if (!CHECKTYPEM(kv.key, tCMD, "table declaration")) continue;
         if (!CHECKTYPE(kv.value, tMAP)) continue;
         auto tt = Table::Type::get(kv.key[0].s);
@@ -86,11 +99,40 @@ void AsmStage::process() {
             for (auto gress : Range(INGRESS, EGRESS)) {
                 Phv::setuse(gress, stage[i].match_use[gress]);
                 Phv::setuse(gress, stage[i].action_use[gress]);
-                Phv::setuse(gress, stage[i].action_set[gress]); } } }
+                Phv::setuse(gress, stage[i].action_set[gress]); }
+            /* if a stage is used only in ingress or egress, the compiler configures delays
+             *  for the unused part to match the used part. */
+            if (stage[i].stage_dep[INGRESS] && !stage[i].stage_dep[EGRESS])
+                stage[i].stage_dep[EGRESS] = stage[i].stage_dep[INGRESS];
+            else if (!stage[i].stage_dep[INGRESS] && stage[i].stage_dep[EGRESS])
+                stage[i].stage_dep[INGRESS] = stage[i].stage_dep[EGRESS]; } }
 }
 
 void AsmStage::output() {
     json::vector        tbl_cfg;
+    for (gress_t gress : Range(INGRESS, EGRESS)) {
+        bitvec set_regs = stage[0].action_set[gress];
+        for (int i = 1; i < NUM_MAU_STAGES; i++) {
+            if (!stage[i].stage_dep[gress]) {
+                if (stage[i].match_use[gress].intersects(set_regs))
+                    stage[i].stage_dep[gress] = Stage::MATCH_DEP;
+                else if (stage[i].action_use[gress].intersects(set_regs))
+                    stage[i].stage_dep[gress] = Stage::ACTION_DEP;
+                else
+                    stage[i].stage_dep[gress] = Stage::CONCURRENT; }
+            if (stage[i].stage_dep[gress] == Stage::MATCH_DEP)
+                set_regs = stage[i].action_set[gress];
+            else
+                set_regs |= stage[i].action_set[gress]; }
+        stage[0].group_table_use[gress] = stage[0].table_use[gress];
+        /* propagate group_table_use to adjacent stages that are not match-dependent */
+        for (int i = 1; i < NUM_MAU_STAGES; i++) {
+            stage[i].group_table_use[gress] = stage[i].table_use[gress];
+            if (stage[i].stage_dep[gress] != Stage::MATCH_DEP)
+                stage[i].group_table_use[gress] |= stage[i-1].group_table_use[gress]; }
+        for (int i = NUM_MAU_STAGES-1; i > 0; i--)
+            if (stage[i].stage_dep[gress] != Stage::MATCH_DEP)
+                stage[i-1].group_table_use[gress] |= stage[i].group_table_use[gress]; }
     for (int i = 0; i < NUM_MAU_STAGES; i++) {
         if  (stage[i].tables.empty()) continue;
         for (auto table : stage[i].tables)
@@ -108,33 +150,63 @@ void AsmStage::output() {
 static int tcam_delay(int use_flags) {
     return use_flags & Stage::USE_TCAM ? use_flags & Stage::USE_TCAM_PIPED ? 3 : 2 : 0;
 }
-
-static int pipelength_added_stages(int use_flags) {
-    int rv = tcam_delay(use_flags);
+static int adr_dist_delay(int use_flags) {
     if (use_flags & Stage::USE_SELECTOR)
-        rv += 9;
+        return 9;
     else if (use_flags & Stage::USE_METER)
-        rv += 5;
+        return 5;
     else if (use_flags & Stage::USE_STATEFUL)
-        rv += 4;
-    return rv;
+        return 4;
+    else
+        return 0;
+}
+
+static int pipelength(int use_flags) {
+    return 14 + tcam_delay(use_flags) + adr_dist_delay(use_flags);
+}
+static int pred_cycle(int use_flags) {
+    return 7 + tcam_delay(use_flags);
 }
 
 void Stage::write_regs() {
     /* FIXME -- most of the values set here are 'placeholder' constants copied
      * from build_pipeline_output_2.py in the compiler */
     auto &merge = regs.rams.match.merge;
-    merge.exact_match_delay_config.exact_match_delay_ingress = tcam_delay(table_use[INGRESS]);
-    merge.exact_match_delay_config.exact_match_delay_egress = tcam_delay(table_use[EGRESS]);
+    merge.exact_match_delay_config.exact_match_delay_ingress = tcam_delay(group_table_use[INGRESS]);
+    merge.exact_match_delay_config.exact_match_delay_egress = tcam_delay(group_table_use[EGRESS]);
     for (gress_t gress : Range(INGRESS, EGRESS)) {
-        merge.predication_ctl[gress].start_table_fifo_delay0 = 6 + tcam_delay(table_use[gress]);
-        merge.predication_ctl[gress].start_table_fifo_delay1 = 0;
-        merge.predication_ctl[gress].start_table_fifo_enable = stageno ? 3 : 1;
-        int add = pipelength_added_stages(table_use[gress]);
-        regs.dp.action_output_delay[gress] = 11 + add;
-        regs.dp.pipelength_added_stages[gress] = add;
-        regs.dp.cur_stage_dependency_on_prev[gress] = 0;
-        regs.dp.next_stage_dependency_on_cur[gress] = 0; }
+        if (stageno == 0) {
+            merge.predication_ctl[gress].start_table_fifo_delay0 = pred_cycle(table_use[gress]) - 1;
+            merge.predication_ctl[gress].start_table_fifo_delay1 = 0;
+            merge.predication_ctl[gress].start_table_fifo_enable = 1;
+        } else switch (stage_dep[gress]) {
+        case MATCH_DEP:
+            merge.predication_ctl[gress].start_table_fifo_delay0 =
+                pipelength(this[-1].group_table_use[gress])
+                - pred_cycle(this[-1].table_use[gress])
+                + pred_cycle(table_use[gress]) - 1;
+            merge.predication_ctl[gress].start_table_fifo_delay1 =
+                pipelength(this[-1].group_table_use[gress])
+                - pred_cycle(this[-1].table_use[gress]) + 1;
+            merge.predication_ctl[gress].start_table_fifo_enable = 3;
+            break;
+        case ACTION_DEP:
+            merge.predication_ctl[gress].start_table_fifo_delay0 = 1;
+            merge.predication_ctl[gress].start_table_fifo_delay1 = 0;
+            merge.predication_ctl[gress].start_table_fifo_enable = 1;
+            break;
+        case CONCURRENT:
+            merge.predication_ctl[gress].start_table_fifo_enable = 0;
+            break;
+        default:
+            assert(0); }
+        regs.rams.match.adrdist.adr_dist_pipe_delay[gress] = adr_dist_delay(group_table_use[gress]);
+        regs.dp.action_output_delay[gress] = pipelength(group_table_use[gress]) - 3;
+        regs.dp.pipelength_added_stages[gress] = pipelength(group_table_use[gress]) - 14;
+        if (stageno != 0)
+            regs.dp.cur_stage_dependency_on_prev[gress] = MATCH_DEP - stage_dep[gress];
+        if (stageno != NUM_MAU_STAGES-1 && !this[1].tables.empty())
+            regs.dp.next_stage_dependency_on_cur[gress] = MATCH_DEP - this[1].stage_dep[gress]; }
     regs.dp.match_ie_input_mux_sel = 3;
     /* FIXME -- need to figure out interstage dependencies */
     regs.dp.stage_concurrent_with_prev = 0;

@@ -52,10 +52,10 @@ public:
     Alloc1D<std::vector<InputXbar *>, 16>               tcam_ixbar;
     Alloc1D<Table *, ACTION_DATA_BUS_SLOTS>             action_bus_use;
     bitvec      imem_addr_use[2], imem_use[ACTION_IMEM_SLOTS];
-    enum { NONE=0, USE_TCAM=1, USE_TCAM_PIPED=2, USE_STATEFUL=4,
-            USE_METER=8, USE_SELECTOR=16, };
-
-    int                 table_use[2];
+    enum { USE_TCAM=1, USE_TCAM_PIPED=2, USE_STATEFUL=4,
+           USE_METER=8, USE_SELECTOR=16, };
+    int /* enum */      table_use[2], group_table_use[2];
+    enum { NONE=0, CONCURRENT=1, ACTION_DEP=2, MATCH_DEP=3 } stage_dep[2];
     bitvec              match_use[2], action_use[2], action_set[2];
     static unsigned char action_bus_slot_map[ACTION_DATA_BUS_BYTES];
     static unsigned char action_bus_slot_size[ACTION_DATA_BUS_SLOTS];
@@ -64,6 +64,7 @@ public:
     regs_match_action_stage_    regs;
     Stage() {
         table_use[0] = table_use[1] = NONE;
+        stage_dep[0] = stage_dep[1] = NONE;
         declare_registers(&regs, sizeof(regs),
             [this](std::ostream &out, const char *addr, const void *end) {
                 out << "mau[" << stageno << "]";

@@ -93,6 +93,9 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
 }
 void TernaryMatchTable::pass1() {
     stage->table_use[gress] |= Stage::USE_TCAM;
+    /* FIXME -- unconditionally setting piped mode -- only need it for wide
+     * match across a 4-row boundary */
+    stage->table_use[gress] |= Stage::USE_TCAM_PIPED;
     alloc_id("logical", logical_id, stage->pass1_logical_id,
              LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
     alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
@@ -189,11 +192,10 @@ void TernaryMatchTable::write_regs() {
         .enabled_4bit_muxctl_select = logical_id;
     merge.tcam_hit_to_logical_table_ixbar_outputmap[tcam_id]
         .enabled_4bit_muxctl_enable = 1;
-    /* FIXME -- unconditionally setting piped mode -- only need it for wide
-     * match across a 4-row boundary */
-    bool is_piped = true;
-    merge.tcam_table_prop[tcam_id].tcam_piped = is_piped;
-    stage->table_use[gress] |= Stage::USE_TCAM_PIPED;
+    /* FIXME -- setting piped mode if any table in the stage is piped -- perhaps
+     * FIXME -- tables can be different? */
+    if (stage->table_use[gress] & Stage::USE_TCAM_PIPED)
+        merge.tcam_table_prop[tcam_id].tcam_piped = 1;
     merge.tcam_table_prop[tcam_id].thread = gress;
     merge.tcam_table_prop[tcam_id].enabled = 1;
     stage->regs.tcams.tcam_output_table_thread[tcam_id] = 1 << gress;
