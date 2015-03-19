@@ -22,7 +22,19 @@ fi
 rm -rf faillog.txt
 FAILLOG=$(pwd -P)/faillog.txt
 
-GLSC=$HOME/p4c-tofino/p4c_tofino/shell.py
+for f in \
+    $HOME/p4c-tofino/p4c_tofino/shell.py \
+    $PWD/../p4c-tofino/p4c_tofino/shell.py \
+    $PWD/../../p4c-tofino/p4c_tofino/shell.py
+do
+    if [ -x $f ]; then
+	GLSC=$f
+	break
+    fi
+done
+TFAS=$PWD/../tfas
+
+#GLSC=$HOME/p4c-tofino/p4c_tofino/shell.py
 pass=0
 fail=0
 
@@ -44,12 +56,12 @@ for p4file in "$@"; do
         cat glsc.log >> $FAILLOG
         ok=false
     fi
-    if $ok && tfas -vvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
+    if $ok && $TFAS -vvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
         for f in $name.out/*.json; do
-            if reflow $f >tmp.json; then
+            if reflow $f >tmp.json 2>/dev/null; then
                 mv tmp.json $f
             fi
-            if $need_reflow && reflow $(basename $f) >tmp.json; then
+            if $need_reflow && reflow $(basename $f) >tmp.json 2>/dev/null; then
                 mv tmp.json $(basename $f)
             fi
             diff -u $f $(basename $f)
@@ -74,7 +86,7 @@ for p4file in "$@"; do
             # we ran the compiler and tfas failed, so reflow the compiler outputs
             # so that later -f runs will work
             for f in *.json; do
-                if reflow $f >tmp.json; then
+                if reflow $f >tmp.json 2>/dev/null; then
                     mv tmp.json $f
                 fi
             done

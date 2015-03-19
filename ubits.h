@@ -30,11 +30,14 @@ inline std::ostream &operator<<(std::ostream &out, const ubits_base *u) {
 
 template<int N> struct ubits : ubits_base {
     ubits() : ubits_base() {}
-    const ubits &check() {
-	if (N < sizeof(unsigned long) * CHAR_BIT && value >= (1UL << N)) {
+    const ubits &check(std::true_type) {
+	if (value >= (1UL << N)) {
             ERROR(value << " out of range for " << N << " bits in " << this);
 	    value &= (1UL << N) - 1; }
         return *this; }
+    const ubits &check(std::false_type) { return *this; }
+    const ubits &check() {
+	return check(std::integral_constant<bool, (N != sizeof(unsigned long) * CHAR_BIT)>{}); }
     ubits(unsigned long v) : ubits_base(v) { check(); }
     ubits(const ubits &) = delete;
     ubits(ubits &&) = delete;
