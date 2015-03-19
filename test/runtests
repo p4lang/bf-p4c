@@ -96,3 +96,7 @@ for p4file in "$@"; do
 done
 
 echo "$pass tests passed, $fail tests fail"
+
+if [ $fail -gt 0 ]; then
+    exit 1
+fi

@@ -273,6 +273,7 @@ DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
         int                     overhead_word;  /* which word of wide match contains overhead */
         int                     word_group;     /* which match group within the word to use */
         std::map<int, int>      match_group;    /* which match group for each word with match */
+        std::vector<unsigned>   tofino_mask;    /* 14-bit tofino byte/nibble mask for each word */
         GroupInfo() : overhead_word(-1), word_group(-1) {}
     };
     std::vector<GroupInfo>      group_info;

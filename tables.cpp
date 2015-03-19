@@ -702,13 +702,11 @@ int Table::find_on_ixbar(Phv::Slice sl, int group) {
     if (input_xbar)
         if (auto *i = input_xbar->find(sl, group)) {
             unsigned bit = (i->lo + sl.lo - i->what->lo);
-            assert(bit%8 == 0);
             assert(bit < 128);
             return bit/8; }
     for (auto *in : stage->exact_ixbar[group]) {
         if (auto *i = in->find(sl, group)) {
             unsigned bit = (i->lo + sl.lo - i->what->lo);
-            assert(bit%8 == 0);
             assert(bit < 128);
             return bit/8; } }
     assert(0);

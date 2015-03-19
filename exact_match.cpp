@@ -92,6 +92,14 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
     if (actions && !action_bus) action_bus = new ActionBus();
 }
 
+/* calculate the 18-bit byte/nybble mask tofino uses for matching in a 128-bit word */
+static unsigned tofino_bytemask(int lo, int hi) {
+    unsigned rv = 0;
+    for (unsigned i = lo/4U; i <= hi/4U; i++)
+        rv |= 1U << (i < 28 ? i/2 : i-14);
+    return rv;
+}
+
 void ExactMatchTable::pass1() {
     alloc_id("logical", logical_id, stage->pass1_logical_id,
 	     LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
@@ -112,24 +120,38 @@ void ExactMatchTable::pass1() {
     input_xbar->pass1(stage->exact_ixbar, 128);
     format->setup_immed(this);
     group_info.resize(format->groups());
+    unsigned fmt_width = (format->size + 127)/128;
     if (!format->field("match"))
         error(format->lineno, "No 'match' field in format for table %s", name());
     else for (unsigned i = 0; i < format->groups(); i++) {
+        auto &info = group_info[i];
+        info.tofino_mask.resize(fmt_width);
         Format::Field *match = format->field("match", i);
         for (auto &piece : match->bits) {
-            if (piece.lo % 8 != 0 || (piece.hi+1) % 8 != 0)
-                error(format->lineno, "'match' field not byte aligned in table %s", name());
-            if (piece.lo/128 != piece.hi/128)
+            unsigned word = piece.lo/128;
+            if (word != piece.hi/128)
                 error(format->lineno, "'match' field must be explictly split across 128-bit "
                       "boundary in table %s", name());
-            group_info[i].match_group[piece.lo/128] = -1; }
+            info.tofino_mask[word] |= tofino_bytemask(piece.lo%128, piece.hi%128);
+            info.match_group[word] = -1; }
         if (auto *version = format->field("version", i)) {
             if (version->bits.size() != 1)
                 error(format->lineno, "'version' field cannot be split");
-            if (version->size != 4 || (version->bits[0].lo % 4) != 0)
+            auto &piece = version->bits[0];
+            unsigned word = piece.lo/128;
+            if (version->size != 4 || (piece.lo % 4) != 0)
                 error(format->lineno, "'version' field not 4 bits and nibble aligned "
                       "in table %s", name());
-            group_info[i].match_group[version->bits[0].lo/128] = -1; }
+            info.tofino_mask[word] |= tofino_bytemask(piece.lo%128, piece.hi%128);
+            info.match_group[word] = -1; }
+        for (unsigned j = 0; j < i; j++)
+            for (unsigned word = 0; word < fmt_width; word++)
+                if (group_info[j].tofino_mask[word] & info.tofino_mask[word]) {
+                    int bit = ffs(group_info[j].tofino_mask[word] & info.tofino_mask[word])-1;
+                    if (bit >= 14) bit += 14;
+                    error(format->lineno, "Match groups %d and %d both use %s %d in word %d",
+                          i, j, bit > 20 ? "nibble" : "byte", bit, word);
+                    break; }
         for (auto it = format->begin(i); it != format->end(i); it++) {
             if (it->first == "match" || it->first == "version") continue;
             if (it->second.bits.size() != 1) {
@@ -137,17 +159,16 @@ void ExactMatchTable::pass1() {
                 continue; }
             unsigned limit = it->first == "next" ? 40 : 64;
             unsigned word = it->second.bits[0].lo/128;
-            if (group_info[i].overhead_word < 0) {
-                group_info[i].overhead_word = word;
-                if (!group_info[i].match_group.count(word))
+            if (info.overhead_word < 0) {
+                info.overhead_word = word;
+                if (!info.match_group.count(word))
                     error(format->lineno, "Overhead for group %d must be in the same word "
                           "as part of its match", i);
-            } else if (group_info[i].overhead_word != (int)word)
+            } else if (info.overhead_word != (int)word)
                 error(format->lineno, "Match overhead group %d split across words", i);
             else if (word != it->second.bits[0].hi/128 || it->second.bits[0].hi%128 >= limit)
                 error(format->lineno, "Match overhead field %s(%d) not in bottom %d bits",
                       it->first.c_str(), i, limit); } }
-    unsigned fmt_width = (format->size + 127)/128;
     word_info.resize(fmt_width);
     if (options.match_compiler && format->field("match")->size > 128) {
         /* wide multiway macthes allocated in reverse order?!? */
@@ -180,6 +201,7 @@ void ExactMatchTable::pass1() {
         } else {
             group_info[i].word_group = group_info[i].match_group[group_info[i].overhead_word];
             LOG1("  format group " << i << " overhead in word " << group_info[i].overhead_word); }
+        LOG1("  masks: " << hexvec(group_info[i].tofino_mask));
         for (auto &mgrp : group_info[i].match_group)
             LOG1("    match group " << mgrp.second << " in word " << mgrp.first); }
     for (unsigned i = 0; i < word_info.size(); i++)
@@ -341,24 +363,6 @@ void ExactMatchTable::pass2() {
     if (gateway) gateway->pass2();
 }
 
-/* build the weird 18-bit byte/nibble mask for matching, checking for problems */
-static bool mask2tofino_mask(bitvec &mask, int word, bitvec &ignored, unsigned &bytemask) {
-    bytemask = 0;
-    for (unsigned i = 0; i < 14; i++) {
-        unsigned byte = mask.getrange(word*128+i*8, 8);
-        if (byte) {
-            byte |= ignored.getrange(word*128+i*8, 8);
-            if (byte != 0xff) return false;
-            bytemask |= 1U << i; } }
-    for (unsigned i = 0; i < 4; i++) {
-        unsigned nibble = mask.getrange(word*128+i*4+112, 4);
-        if (nibble) {
-            nibble |= ignored.getrange(word*128+i*4+112, 4);
-            if (nibble != 0xf) return false;
-            bytemask |= 1U << (i + 14); } }
-    return true;
-}
-
 void ExactMatchTable::write_regs() {
     LOG1("### Exact match table " << name());
     MatchTable::write_regs(0, this);
@@ -445,21 +449,9 @@ void ExactMatchTable::write_regs() {
 
             int word_group = 0;
             for (int group : word_info[word]) {
-                unsigned tofino_mask = 0;
-                bitvec mask;
-                mask.clear();
-                Format::Field *match = format->field("match", group);
-                for (auto &piece : match->bits)
-                    mask.setrange(piece.lo, piece.hi+1-piece.lo);
-                if (Format::Field *version = format->field("version", group))
-                    mask.setrange(version->bits[0].lo, version->size);
-                LOG2(" : mask for group " << group << " is " << mask);
-                if (!mask2tofino_mask(mask, word, match_mask, tofino_mask)) {
-                    error(lineno, "Invalid match mask for group %d in table %s",
-                          group, name());
-                    return; }
-                ram.match_bytemask[word_group].mask_bytes_0_to_13 = ~tofino_mask & 0x3fff;
-                ram.match_bytemask[word_group].mask_nibbles_28_to_31 = ~(tofino_mask >> 14) & 0xf;
+                unsigned mask = group_info[group].tofino_mask[word];
+                ram.match_bytemask[word_group].mask_bytes_0_to_13 = ~mask & 0x3fff;
+                ram.match_bytemask[word_group].mask_nibbles_28_to_31 = ~(mask >> 14) & 0xf;
                 word_group++; }
             for (; word_group < 5; word_group++) {
                 ram.match_bytemask[word_group].mask_bytes_0_to_13 = 0x3fff;
@@ -469,19 +461,25 @@ void ExactMatchTable::write_regs() {
         auto &vh_xbar = stage->regs.rams.array.row[row.row].vh_xbar;
         for (unsigned i = 0; i < format->groups(); i++) {
             Format::Field *match = format->field("match", i);
-            unsigned b = 0;
+            unsigned bit = 0;
             for (auto &piece : match->bits) {
                 if (piece.lo/128 != (unsigned)word) {
-                    b += (piece.hi+1-piece.lo)/8;
+                    bit += piece.size();
                     continue; }
-                for (unsigned byte = (piece.lo%128)/8; byte <= (piece.hi%128)/8; byte++, b++) {
-                    auto it = --match_by_bit.upper_bound(b*8);
-                    Phv::Slice sl(*it->second, b*8-it->first, b*8-it->first+7);
+                for (unsigned fmt_bit = piece.lo; fmt_bit <= piece.hi;) {
+                    unsigned byte = (fmt_bit%128)/8;
+                    unsigned bits_in_byte = (byte+1)*8 - (fmt_bit%128);
+                    if (fmt_bit + bits_in_byte > piece.hi + 1)
+                        bits_in_byte = piece.hi + 1 - fmt_bit;
+                    auto it = --match_by_bit.upper_bound(bit);
+                    Phv::Slice sl(*it->second, bit-it->first, bit-it->first+bits_in_byte-1);
                     int bus_loc = find_on_ixbar(sl, word_ixbar_group[word]);
                     assert(bus_loc >= 0 && bus_loc < 16);
                     vh_xbar[row.bus].exactmatch_row_vh_xbar_byteswizzle_ctl[byte/4]
-                        .set_subfield(0x10 + bus_loc, (byte%4)*5, 5); } }
-            assert(b == match->size/8);
+                        .set_subfield(0x10 + bus_loc, (byte%4)*5, 5);
+                    fmt_bit += bits_in_byte;
+                    bit += bits_in_byte; } }
+            assert(bit == match->size);
             if (Format::Field *version = format->field("version", i)) {
                 if (version->bits[0].lo/128 != (unsigned)word) continue;
                 vh_xbar[row.bus].exactmatch_validselect |= 1U << (version->bits[0].lo%128)/4; } }
