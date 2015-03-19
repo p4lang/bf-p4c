@@ -19,6 +19,7 @@ tfas: $(TFAS_OBJS) json.o $(GEN_OBJS) $(TEST_SRCS:%.cpp=%.o)
 
 json2cpp: json.o
 hashdump: json.o ubits.o
+reflow: reflow.o
 
 asm-parse.o: lex-yaml.c
 
@@ -65,10 +66,10 @@ templates/%.json: templates/.templates-updated
 tags:
 	ctags -R -I VECTOR --exclude=test
 
-test: all
+test: all reflow
 	cd test; ./runtests
 
-ftest: all
+ftest: all reflow
 	cd test; ./runtests -f
 
 clean:
