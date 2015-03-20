@@ -322,6 +322,67 @@ int Set::encode() {
     return (opA.opcode << 12) | (src.bits(slot/32) << 5);
 }
 
+struct CondMoveMux : public Instruction {
+    struct Decode : public Idecode {
+        unsigned opcode, cond_size;
+        bool    src2opt;
+        Decode(const char *name, unsigned opc, bool s2opt, unsigned csize, const char *alias_name)
+            : Idecode(name), opcode(opc), cond_size(csize), src2opt(s2opt) { alias(alias_name); }
+        Instruction *decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op);
+    } *opc;
+    Phv::Ref    dest;
+    operand     src1, src2;
+    unsigned    cond;
+    CondMoveMux(Table *tbl, Decode *op, const std::string &act, const value_t &d, const value_t &s)
+	: Instruction(d.lineno), opc(op), dest(tbl->gress, d), src1(tbl, act, s),
+          src2(tbl->gress, d) {}
+    CondMoveMux(Table *tbl, Decode *op, const std::string &act, const value_t &d,
+                const value_t &s1, const value_t &s2)
+	: Instruction(d.lineno), opc(op), dest(tbl->gress, d), src1(tbl, act, s1),
+          src2(tbl, act, s2) {}
+    void pass1(Table *tbl);
+    int encode();
+    void dbprint(std::ostream &out) const {
+        out << "INSTR: cmov " << dest << ", " << src1 << ", " << src2; }
+};
+
+static CondMoveMux::Decode opCondMove("cmov", 0x16, true, 5, "conditional-move"),
+                           opCondMux("cmux", 0x6, false, 2, "conditional-mux");
+
+Instruction *CondMoveMux::Decode::decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op) {
+    if (op.size != 5 && (op.size != 4 || !src2opt)) {
+        error(op[0].lineno, "%s requires %s4 operands", op[0].s, src2opt ? "3 or " : "");
+        return 0; }
+    if (!CHECKTYPE(op[op.size-1], tINT))
+    if (op[op.size-1].i < 0 || op[op.size-1].i >= (1 << cond_size)) {
+        error(op[op.size-1].lineno, "%s condition must be %d-bit constant", op[0].s, cond_size);
+        return 0; }
+    CondMoveMux *rv;
+    if (op.size == 5)
+	rv = new CondMoveMux(tbl, this, act, op[1], op[2], op[3]);
+    else
+	rv = new CondMoveMux(tbl, this, act, op[1], op[2]);
+    rv->cond = op[op.size-1].i;
+    if (!rv->src1.valid())
+        error(op[2].lineno, "invalid src1");
+    else if (!rv->src2.valid())
+        error(op[3].lineno, "invalid src2");
+    else
+        return rv;
+    delete rv;
+    return 0;
+}
+
+void CondMoveMux::pass1(Table *tbl) {
+    if (!dest.check() || !src1.check() || !src2.check()) return;
+    slot = dest->reg.index;
+    tbl->stage->action_set[tbl->gress][slot] = true;
+    src1.mark_use(tbl);
+    src2.mark_use(tbl);
+}
+int CondMoveMux::encode() {
+    return (cond << 17) | (opc->opcode << 12) | (src1.bits(slot/32) << 5) | src2.bits(slot/32);
+}
 
 struct DepositField : public Instruction {
     struct Decode : public Idecode {
