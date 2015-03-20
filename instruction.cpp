@@ -58,12 +58,12 @@ private:
             Base(line), reg(g, line, n, l, h) {}
 	virtual Phv *clone() { return new Phv(*this); }
         bool check() { return reg.check(); }
-        int phvGroup() { return reg->reg.index / 32; }
+        int phvGroup() { return reg->reg.index / 16; }
         int bits(int group) {
             if (group != phvGroup()) {
                 error(lineno, "registers in an instruction must all be in the same phv group");
                 return -1; }
-            return reg->reg.index % 32; }
+            return reg->reg.index % 16; }
         virtual unsigned bitoffset() const { return reg->lo; }
         virtual unsigned bitsize() const { return reg->hi - reg->lo + 1; }
         virtual void mark_use(Table *tbl) {
@@ -81,7 +81,7 @@ private:
             if (field->action_xbar < 0)
                 error(lineno, "%s is not on the action bus", name.c_str());
             else switch (group) {
-            case 0: case 1:
+            case 0: case 1: case 2: case 3:
                 if (field->action_xbar + off/32 >= 160)
                     error(lineno, "action bus entry %d(%s) out of range for 32-bit access",
                           field->action_xbar, name.c_str());
@@ -91,14 +91,14 @@ private:
                 else
                     return 0x40 + field->action_xbar / 4 + off/32;
                 break;
-            case 2: case 3:
+            case 4: case 5: case 6: case 7:
                 if (field->action_xbar + off/8 >= 40)
                     error(lineno, "action bus entry %d(%s) out of range for 8-bit access",
                           field->action_xbar, name.c_str());
                 else
                     return 0x40 + field->action_xbar +off/8;
                 break;
-            case 4: case 5: case 6:
+            case 8: case 9: case 10: case 11: case 12: case 13:
                 if (field->action_xbar + off/16 < 40 || field->action_xbar + off/16 >= 120)
                     error(lineno, "action bus entry %d(%s) out of range for 16-bit access",
                           field->action_xbar, name.c_str());
@@ -275,7 +275,7 @@ void AluOP::pass1(Table *tbl) {
         error(lineno, "src2 must be phv register");
 }
 int AluOP::encode() {
-    return (opc->opcode << 12) | (src1.bits(slot/32) << 5) | src2.bits(slot/32);
+    return (opc->opcode << 12) | (src1.bits(slot/16) << 5) | src2.bits(slot/16);
 }
 
 struct Set : public Instruction {
@@ -319,7 +319,7 @@ void Set::pass1(Table *tbl) {
     src.mark_use(tbl);
 }
 int Set::encode() {
-    return (opA.opcode << 12) | (src.bits(slot/32) << 5);
+    return (opA.opcode << 12) | (src.bits(slot/16) << 5);
 }
 
 struct CondMoveMux : public Instruction {
@@ -381,7 +381,7 @@ void CondMoveMux::pass1(Table *tbl) {
     src2.mark_use(tbl);
 }
 int CondMoveMux::encode() {
-    return (cond << 17) | (opc->opcode << 12) | (src1.bits(slot/32) << 5) | src2.bits(slot/32);
+    return (cond << 17) | (opc->opcode << 12) | (src1.bits(slot/16) << 5) | src2.bits(slot/16);
 }
 
 struct DepositField : public Instruction {
@@ -431,20 +431,20 @@ void DepositField::pass1(Table *tbl) {
 }
 int DepositField::encode() {
     unsigned rot = (dest->reg.size - dest->lo + src1.bitoffset()) % dest->reg.size;
-    int bits = (1 << 12) | (src1.bits(slot/32) << 5) | src2.bits(slot/32);
+    int bits = (1 << 12) | (src1.bits(slot/16) << 5) | src2.bits(slot/16);
     bits |= dest->hi << 13;
     bits |= rot << 18;
-    switch (slot/32) {
-    case 0: case 1:
-        bits |= dest->lo << 23;
-        break;
-    case 2: case 3:
+    switch (Phv::reg(slot).size) {
+    case 8:
         bits |= (dest->lo & 3) << 16;
         bits |= (dest->lo & ~3) << 19;
         break;
-    case 4: case 5: case 6:
+    case 16:
         bits |= (dest->lo & 1) << 17;
         bits |= (dest->lo & ~1) << 21;
+        break;
+    case 32:
+        bits |= dest->lo << 23;
         break;
     default:
         assert(0); }

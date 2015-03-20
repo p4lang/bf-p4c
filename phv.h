@@ -95,6 +95,8 @@ public:
         bool merge(const Ref &r);
         void dbprint(std::ostream &out) const;
     };
+    static const Register &reg(int idx)
+        { assert(idx >= 0 && idx < NUM_PHV_REGS); return phv.regs[idx]; }
     static const bitvec &use(gress_t gress) { return phv.phv_use[gress]; }
     static const bitvec tagalong_groups[8];
     static void setuse(gress_t gress, const bitvec &u) { phv.phv_use[gress] |= u; }

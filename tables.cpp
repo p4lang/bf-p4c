@@ -486,23 +486,23 @@ void Table::Actions::write_regs(Table *tbl) {
             unsigned bits = inst->encode();
             assert(inst->slot >= 0);
             LOG2(inst);
-            switch (inst->slot/32) {
-            case 0: case 1: /* 32 bit */
-                imem.imem_subword32[inst->slot][iaddr].imem_subword32_instr = bits;
-                imem.imem_subword32[inst->slot][iaddr].imem_subword32_color = color;
-                imem.imem_subword32[inst->slot][iaddr].imem_subword32_parity =
-                    parity(bits) ^ color;
-                break;
-            case 2: case 3: /* 8 bit */
+            switch (Phv::reg(inst->slot).size) {
+            case 8:
                 imem.imem_subword8[inst->slot-64][iaddr].imem_subword8_instr = bits;
                 imem.imem_subword8[inst->slot-64][iaddr].imem_subword8_color = color;
                 imem.imem_subword8[inst->slot-64][iaddr].imem_subword8_parity =
                     parity(bits) ^ color;
                 break;
-            case 4: case 5: case 6: /* 16 bit */
+            case 16:
                 imem.imem_subword16[inst->slot-128][iaddr].imem_subword16_instr = bits;
                 imem.imem_subword16[inst->slot-128][iaddr].imem_subword16_color = color;
                 imem.imem_subword16[inst->slot-128][iaddr].imem_subword16_parity =
+                    parity(bits) ^ color;
+                break;
+            case 32:
+                imem.imem_subword32[inst->slot][iaddr].imem_subword32_instr = bits;
+                imem.imem_subword32[inst->slot][iaddr].imem_subword32_color = color;
+                imem.imem_subword32[inst->slot][iaddr].imem_subword32_parity =
                     parity(bits) ^ color;
                 break;
             default:
