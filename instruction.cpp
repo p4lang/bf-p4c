@@ -242,7 +242,8 @@ static AluOP::Decode opADD("add", 0x23e, true), opADDC("addc", 0x2be, true),
                      opAND("and", 0x21e, true), opXNOR("xnor", 0x25e, true),
                      opB("alu_b", 0x29e), opORCA("orca", 0x29e),
                      opA("alu_a", 0x31e, &opB), opORCB("orcb", 0x35e, &opORCA),
-                     opOR("or", 0x39e, true), opSETHI("sethi", 0x39e, true);
+                     opOR("or", 0x39e, true), opSETHI("sethi", 0x39e, true),
+                     opBMSET("bitmasked-set", 0x2e);
 
 Instruction *AluOP::Decode::decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op) {
     if (op.size != 4) {
@@ -282,7 +283,7 @@ struct Set : public Instruction {
     struct Decode : public Idecode {
         Decode(const char *n) : Idecode(n) {}
         Instruction *decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op);
-    } *opc;
+    };
     Phv::Ref    dest;
     operand     src;
     Set(Table *tbl, const std::string &act, const value_t &d, const value_t &s)
@@ -312,7 +313,7 @@ Instruction *Set::Decode::decode(Table *tbl, const std::string &act, const VECTO
 void Set::pass1(Table *tbl) {
     if (!dest.check() || !src.check()) return;
     if (dest->lo || dest->hi != dest->reg.size-1) {
-        error(lineno, "ALU ops cannot operate on slices");
+        error(lineno, "set cannot operate on slices");
         return; }
     slot = dest->reg.index;
     tbl->stage->action_set[tbl->gress][slot] = true;
@@ -320,6 +321,49 @@ void Set::pass1(Table *tbl) {
 }
 int Set::encode() {
     return (opA.opcode << 12) | (src.bits(slot/16) << 5);
+}
+
+struct LoadConst : public Instruction {
+    struct Decode : public Idecode {
+        Decode(const char *n) : Idecode(n) {}
+        Instruction *decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op);
+    };
+    Phv::Ref    dest;
+    int         src;
+    LoadConst(Table *tbl, const std::string &act, const value_t &d, int&s)
+	: Instruction(d.lineno), dest(tbl->gress, d), src(s) {}
+    void pass1(Table *tbl);
+    int encode();
+    void dbprint(std::ostream &out) const {
+        out << "INSTR: set " << dest << ", " << src; }
+
+};
+
+static LoadConst::Decode opLoadConst("load-const");
+
+Instruction *LoadConst::Decode::decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op) {
+    if (op.size != 3) {
+        error(op[0].lineno, "%s requires 2 operands", op[0].s);
+        return 0; }
+    if (!CHECKTYPE(op[2], tINT)) return 0;
+    return new LoadConst(tbl, act, op[1], op[2].i);
+}
+
+void LoadConst::pass1(Table *tbl) {
+    if (!dest.check()) return;
+    if (dest->lo || dest->hi != dest->reg.size-1) {
+        error(lineno, "load-const cannot operate on slices");
+        return; }
+    slot = dest->reg.index;
+    int size = Phv::reg(slot).size;
+    if (size > 23) size = 23;
+    if (src >= (1 << size) || src < -(1 << (size-1)))
+        error(lineno, "Constant value %d out of range", src);
+    src &= (1 << size) - 1;
+    tbl->stage->action_set[tbl->gress][slot] = true;
+}
+int LoadConst::encode() {
+    return (src >> 12 << 17) | (0x8 << 12) | (src & 0xfff);
 }
 
 struct CondMoveMux : public Instruction {

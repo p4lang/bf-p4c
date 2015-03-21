@@ -76,6 +76,8 @@ static value_t list_map_expand(VECTOR(value_t) &v);
 
 %}
 
+%define parse.error verbose
+
 %union {
     int                 i;
     VECTOR(uintptr_t)   bigi;
