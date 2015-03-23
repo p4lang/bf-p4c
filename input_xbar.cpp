@@ -129,7 +129,7 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
                         error(input.what.lineno, "Input xbar size doesn't match register size");
                 } else
                     input.hi = input.lo - input.what->lo + input.what->hi;
-                if (input.hi >= size)
+                if (input.lo >= size)
                     error(input.what.lineno, "placing %s off the top of the input xbar",
                           input.what.name()); } }
         for (InputXbar *other : use[group.first]) {

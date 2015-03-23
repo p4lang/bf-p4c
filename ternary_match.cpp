@@ -1,3 +1,4 @@
+#include "action_bus.h"
 #include "algorithm.h"
 #include "input_xbar.h"
 #include "instruction.h"
@@ -87,7 +88,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
         error(lineno, "Table %s has both action table and immediate actions", name());
     else if (!action.set() && !actions)
         error(lineno, "Table %s has no indirect, action table or immediate actions", name());
-    if (action.set() && action_args.size() > 0)
+    if (action_args.size() > 0)
         error(lineno, "Unexpected number of action table arguments %zu", action_args.size());
     if (actions && !action_bus) action_bus = new ActionBus();
 }
@@ -271,7 +272,7 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
         error(lineno, "Table %s has both action table and immediate actions", name());
     if (!action.set() && !actions)
         error(lineno, "Table %s has neither action table nor immediate actions", name());
-    if (action.set() && (action_args.size() < 1 || action_args.size() > 2))
+    if (action_args.size() > 2)
         error(lineno, "Unexpected number of action table arguments %zu", action_args.size());
     if (actions && !action_bus) action_bus = new ActionBus();
 }

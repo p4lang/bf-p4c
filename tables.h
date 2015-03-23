@@ -10,11 +10,12 @@
 #include "phv.h"
 #include <vector>
 
-class Stage;
+class ActionBus;
+class GatewayTable;
 class Instruction;
 class InputXbar;
 class MatchTable;
-class GatewayTable;
+class Stage;
 
 class Table {
 protected:
@@ -170,20 +171,6 @@ public:
         void pass1(Table *);
         void pass2(Table *);
         void write_regs(Table *);
-    };
-    class ActionBus {
-	std::map<std::string, std::pair<std::vector<unsigned>, Table::Format::Field *>>      by_name;
-	std::map<unsigned, std::pair<std::string, Table::Format::Field *>>   by_byte;
-    public:
-        int             lineno;
-        ActionBus() : lineno(-1) {}
-	ActionBus(Table *, VECTOR(pair_t) &);
-        void pass1(Table *tbl);
-        void pass2(Table *tbl);
-        void set_immed_offsets(Table *tbl);
-        void set_action_offsets(Table *tbl);
-        void write_immed_regs(Table *tbl);
-        void write_action_regs(Table *tbl, unsigned homerow, unsigned action_slice);
     };
 public:
     std::string                 name_;

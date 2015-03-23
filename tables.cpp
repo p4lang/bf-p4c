@@ -1,3 +1,4 @@
+#include "action_bus.h"
 #include "algorithm.h"
 #include "input_xbar.h"
 #include "instruction.h"
@@ -303,7 +304,8 @@ Table::Format::Format(VECTOR(pair_t) &data) :
             for (auto &c : kv.value.vec)
                 if (CHECKTYPE(c, tRANGE) && VALIDATE_RANGE(c)) {
                     f->bits.emplace_back(c.lo, c.hi);
-                    f->size += c.hi - c.lo + 1; } }
+                    f->size += c.hi - c.lo + 1;
+                    if ((size_t)c.hi+1 > size) size = c.hi+1; } }
         nextbit = f->bits.back().hi + 1;
         if (nextbit > size) size = nextbit; }
     for (auto &grp : fmt) {
@@ -509,32 +511,6 @@ void Table::Actions::write_regs(Table *tbl) {
                 assert(0); } } }
 }
 
-Table::ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
-    lineno = data.size ? data[0].key.lineno : -1;
-    for (auto &kv : data) {
-	if (!CHECKTYPE2(kv.key, tINT, tRANGE)) continue;
-	if (!CHECKTYPE(kv.value, tSTR)) continue;
-	Format::Field *f = tbl->lookup_field(kv.value.s, "*");
-	if (!f) {
-	    error(kv.value.lineno, "No field %s in format", kv.value.s);
-	    continue; }
-	unsigned idx = kv.key.i;
-	if (kv.key.type == tRANGE) {
-	    idx = kv.key.lo;
-	    unsigned size = (kv.key.hi-idx+1) * 8;
-	    if (size != f->size) {
-		error(kv.key.lineno, "Byte range doesn't match size %d of %s",
-		      f->size, kv.value.s);
-		continue; } }
-        if (idx >= ACTION_DATA_BUS_BYTES) {
-            error(kv.key.lineno, "Action bus index out of range");
-            continue; }
-        tbl->apply_to_field(kv.value.s, [idx](Format::Field *f){ f->action_xbar = idx; });
-	by_name[kv.value.s].first.push_back(idx);
-	by_name[kv.value.s].second = f;
-        by_byte[idx] = std::make_pair(std::string(kv.value.s), f); }
-}
-
 static int get_address_mau_actiondata_adr_default(unsigned log2size) {
     int huffman_ones = log2size > 2 ? log2size - 3 : 0;
     assert(huffman_ones < 7);
@@ -643,48 +619,6 @@ void MatchTable::write_regs(int type, Table *result) {
             result->action_bus->write_immed_regs(result); }
 
     input_xbar->write_regs();
-}
-
-void Table::ActionBus::set_immed_offsets(Table *tbl) {
-    for (auto &f : by_byte) {
-        Format::Field *field = f.second.second;
-        assert(field->action_xbar == (int)f.first);
-        int slot = Stage::action_bus_slot_map[f.first];
-        unsigned off = field->bits[0].lo - tbl->format->immed->bits[0].lo;
-        field->action_xbar_bit = off % Stage::action_bus_slot_size[slot]; }
-}
-
-void Table::ActionBus::write_immed_regs(Table *tbl) {
-    auto &adrdist = tbl->stage->regs.rams.match.adrdist;
-    int tid = tbl->logical_id;
-    for (auto &f : by_byte) {
-        assert(f.second.second->action_xbar == (int)f.first);
-        int slot = Stage::action_bus_slot_map[f.first];
-        unsigned off = f.second.second->bits[0].lo - tbl->format->immed->bits[0].lo;
-        unsigned size = f.second.second->size;
-        switch(Stage::action_bus_slot_size[slot]) {
-        case 8:
-            for (unsigned b = off/8; b <= (off + size - 1)/8; b++) {
-                adrdist.immediate_data_8b_ixbar_ctl[tid*4 + b]
-                    .enabled_4bit_muxctl_select = slot++;
-                adrdist.immediate_data_8b_ixbar_ctl[tid*4 + b]
-                    .enabled_4bit_muxctl_enable = 1; }
-            break;
-        case 16:
-            slot -= ACTION_DATA_8B_SLOTS;
-            for (unsigned w = off/16; w <= (off + size - 1)/16; w++) {
-                adrdist.immediate_data_16b_ixbar_ctl[tid*2 + w]
-                    .enabled_5bit_muxctl_select = slot++;
-                adrdist.immediate_data_16b_ixbar_ctl[tid*2 + w]
-                    .enabled_5bit_muxctl_enable = 1; }
-            break;
-        case 32:
-            slot -= ACTION_DATA_8B_SLOTS + ACTION_DATA_16B_SLOTS;
-            adrdist.immediate_data_32b_ixbar_ctl[tid].enabled_5bit_muxctl_select = slot;
-            adrdist.immediate_data_32b_ixbar_ctl[tid].enabled_5bit_muxctl_enable = 1;
-            break;
-        default:
-            assert(0); } }
 }
 
 void MatchTable::link_action(Table::Ref &ref) {
