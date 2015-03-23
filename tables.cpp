@@ -569,7 +569,7 @@ void MatchTable::write_regs(int type, Table *result) {
         (1U << result->action_args[0]->size) <= ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
         merge.mau_action_instruction_adr_map_en[type] |= (1U << logical_id);
         int idx = 0;
-        int shift = 0;
+        int shift = gateway ? 6 : 0; // skip slot 0 if there's a gateway (reserved for NOP)
         for (auto act : *actions) {
             merge.mau_action_instruction_adr_map_data[type][logical_id][idx]
                 |= act->second.first << shift;

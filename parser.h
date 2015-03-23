@@ -135,6 +135,7 @@ private:
     /* remapping structure for getting at the config bits for phv output
      * programming in a systematic way */
     struct phv_output_map {
+        int         size;   /* 8, 16, or 32 */
         ubits<9>    *dst;
         ubits_base  *src;   /* 6 or 8 bits */
         ubits<1>    *src_type, *offset_add, *offset_rot;

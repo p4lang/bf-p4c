@@ -225,15 +225,8 @@ void Stage::write_regs() {
         for (int j = 0; j < 7; j++) {
             regs.dp.phv_ingress_thread[i][j] = in_use.getrange(32*j, 32);
             regs.dp.phv_egress_thread[i][j] = eg_use.getrange(32*j, 32); } }
-    for (auto gress : Range(INGRESS, EGRESS)) {
-        if (table_use[gress] & USE_TCAM) {
-            if (table_use[gress] & USE_TCAM_PIPED) {
-                if (options.match_compiler)
-                    regs.tcams.tcam_piped |= 3;
-                else
-                    regs.tcams.tcam_piped |= 1 << gress;
-                merge.mau_thread_tcam_delay[gress] = 3;
-            } else 
-                merge.mau_thread_tcam_delay[gress] = 2; } }
+    for (auto gress : Range(INGRESS, EGRESS))
+        if (table_use[gress] & USE_TCAM_PIPED)
+            regs.tcams.tcam_piped |=  options.match_compiler ? 3 : 1 << gress;
 }
 

@@ -801,7 +801,6 @@ void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
         ea_row.nxt_state_mask = ~(n.word0 & n.word1) & PARSER_STATE_MASK;
     } else
         ea_row.done = 1;
-    ea_row.buf_req = 0; /* FIXME -- set to? */
 
     auto &action_row = pa->mem[state->gress].po_action_row[row];
     /* FIXME -- checksum setup? */
@@ -821,6 +820,24 @@ void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
     for (int i = 0; i < phv_output_map_size; i++)
         if (!(used & (1U << i)))
             *output_map[i].dst = 0x1ff;
+
+    /* FIXME -- probably need a way to specify buf_req explicitly in asm, for when
+     * FIXME -- the compiler wants to do weird sepculative stuff.  Also, the compiler's
+     * FIXME -- calculation of this is weird (incorrect?), but we try to match it.
+     * FIXME -- See output/parser.py */
+    unsigned buf_req = ea_row.shift_amt;
+    if (ea_row.lookup_offset_16 + 2 > buf_req) buf_req = ea_row.lookup_offset_16 + 2;
+    if (ea_row.lookup_offset_8[0] + 1 > buf_req) buf_req = ea_row.lookup_offset_8[0] + 1;
+    if (ea_row.lookup_offset_8[1] + 1 > buf_req) buf_req = ea_row.lookup_offset_8[1] + 1;
+    for (int i = 0; i < phv_output_map_size; i++)
+        if (!output_map[i].src_type || 0 == *output_map[i].src_type)
+            if (options.match_compiler || !(0x20 & *output_map[i].src)) {
+                unsigned off = 0x1f & *output_map[i].src;
+                off += output_map[i].size/8;
+                if (options.match_compiler)
+                    off = (*output_map[i].src + output_map[i].size)/8;
+                if (off > buf_req) buf_req = off; }
+    ea_row.buf_req = buf_req;
 }
 
 static struct phv_use_slots { int idx; unsigned usemask, shift, size; }
@@ -942,12 +959,14 @@ void Parser::State::write_config(Parser *pa) {
 }
 
 #define OUTPUT_MAP_INIT(MAP, ROW, SIZE, INDEX) \
+    MAP[phv_##SIZE##b_##INDEX].size = SIZE;                                             \
     MAP[phv_##SIZE##b_##INDEX].dst = &ROW.phv_##SIZE##b_dst_##INDEX;                    \
     MAP[phv_##SIZE##b_##INDEX].src = &ROW.phv_##SIZE##b_src_##INDEX;                    \
     MAP[phv_##SIZE##b_##INDEX].src_type = &ROW.phv_##SIZE##b_src_type_##INDEX;          \
     MAP[phv_##SIZE##b_##INDEX].offset_add = &ROW.phv_##SIZE##b_offset_add_dst_##INDEX;  \
     MAP[phv_##SIZE##b_##INDEX].offset_rot = &ROW.phv_##SIZE##b_offset_rot_imm_##INDEX;
 #define OUTPUT_MAP_INIT_PART(MAP, ROW, SIZE, INDEX) \
+    MAP[phv_##SIZE##b_##INDEX].size = SIZE;                                             \
     MAP[phv_##SIZE##b_##INDEX].dst = &ROW.phv_##SIZE##b_dst_##INDEX;                    \
     MAP[phv_##SIZE##b_##INDEX].src = &ROW.phv_##SIZE##b_src_##INDEX;                    \
     MAP[phv_##SIZE##b_##INDEX].src_type = 0;                                            \
