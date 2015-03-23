@@ -5,7 +5,6 @@
 
 class ActionBus {
     struct Slot {
-        int                         lineno;
         std::string                 name;
         unsigned                    byte, size;
         Table::Format::Field        *data;

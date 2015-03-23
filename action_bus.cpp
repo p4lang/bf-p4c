@@ -9,11 +9,13 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
         const char *name = kv.value.s;
         unsigned off = 0, sz = 0;
         if (kv.value.type == tCMD) {
+            assert(kv.value.vec.size > 0 && kv.value[0].type == tSTR);
             if (!PCHECKTYPEM(kv.value.vec.size == 2, kv.value[1], tRANGE, "field name or slice"))
                 continue;
             if ((kv.value[1].lo & 7) != 0 || (kv.value[1].hi & 7) != 7) {
                 error(kv.value.lineno, "Slice must be byte slice");
                 continue; }
+            name = kv.value[0].s;
             off = kv.value[1].lo >> 3;
             sz = (kv.value[1].hi - kv.value[1].lo + 1) >> 3; }
 	Table::Format::Field *f = tbl->lookup_field(name, "*");
@@ -35,31 +37,26 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
         if (getref(by_byte, idx)) {
             error(kv.key.lineno, "Multiple action bus entries at %d", idx);
             continue; }
-        by_byte.emplace(idx, Slot{kv.key.lineno, name, idx, sz, f, off});
+        by_byte.emplace(idx, Slot{name, idx, sz, f, off});
 	//by_name[name].push_back(&by_byte[idx]);
         if (off == 0)
             tbl->apply_to_field(name, [idx](Table::Format::Field *f){ f->action_xbar = idx; }); }
 }
 
 void ActionBus::pass1(Table *tbl) {
-    for (auto &ent : by_byte) {
-        int slot = Stage::action_bus_slot_map[ent.first];
-        Table::Format::Field *field = ent.second.data;
-        bool err = false;
-        for (int space = field->size; space > 0; space -= Stage::action_bus_slot_size[slot++]) {
-            if (slot >= ACTION_DATA_BUS_SLOTS) {
-                error(ent.second.lineno, "%s extends past the end of the actions bus",
-                      ent.second.name.c_str());
-                err = true;
+    for (auto &slot : Values(by_byte)) {
+        int slotno = Stage::action_bus_slot_map[slot.byte];
+        for (int space = slot.size; space > 0; space -= Stage::action_bus_slot_size[slotno++]) {
+            if (slotno >= ACTION_DATA_BUS_SLOTS) {
+                error(lineno, "%s extends past the end of the actions bus",
+                      slot.name.c_str());
                 break; }
-            if (tbl->stage->action_bus_use[slot]) {
-                error(lineno, "Action bus byte %d set in table %s and table %s", ent.first,
-                      tbl->name(), tbl->stage->action_bus_use[slot]->name());
-                err = true;
+            if (tbl->stage->action_bus_use[slotno]) {
+                error(lineno, "Action bus byte %d set in table %s and table %s", slot.byte,
+                      tbl->name(), tbl->stage->action_bus_use[slotno]->name());
                 break; }
-            tbl->stage->action_bus_use[slot] = tbl;
+            tbl->stage->action_bus_use[slotno] = tbl;
         }
-        if (err) continue;
     }
 }
 void ActionBus::pass2(Table *tbl) {
@@ -71,7 +68,7 @@ void ActionBus::set_action_offsets(Table *tbl) {
     for (auto &f : by_byte) {
         Table::Format::Field *field = f.second.data;
         if (field->bits.size() > 1)
-            error(f.second.lineno, "Split field %s cannot go on action bus",
+            error(lineno, "Split field %s cannot go on action bus",
                   f.second.name.c_str());
         assert(field->action_xbar == (int)f.first);
         int slot = Stage::action_bus_slot_map[f.first];
@@ -89,7 +86,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
             continue;
         unsigned bit = f->bits[0].lo & 0x7f;
         if (bit + f->size > 128) {
-            error(el.second.lineno, "Action bus setup can't deal with field %s split across "
+            error(lineno, "Action bus setup can't deal with field %s split across "
                   "SRAM rows", el.second.name.c_str());
             continue; }
         unsigned slot = Stage::action_bus_slot_map[byte];
@@ -103,7 +100,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
                 case 2: case 3: code = 3; mask = 7; break;
                 default: assert(0); }
                 if ((sbyte^byte) & mask) {
-                    error(el.second.lineno, "Can't put field %s into byte %d on action xbar",
+                    error(lineno, "Can't put field %s into byte %d on action xbar",
                           el.second.name.c_str(), byte);
                     break; }
                 action_hv_xbar.action_hv_xbar_ctl_byte[side].set_subfield(code, slot*2, 2);
@@ -119,7 +116,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
                 case 2: case 3: code = 3; mask = 7; break;
                 default: assert(0); }
                 if (((word << 1)^byte) & mask) {
-                    error(el.second.lineno, "Can't put field %s into byte %d on action xbar",
+                    error(lineno, "Can't put field %s into byte %d on action xbar",
                           el.second.name.c_str(), byte);
                     break; }
                 action_hv_xbar.action_hv_xbar_ctl_half[side][slot/4]
@@ -130,7 +127,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
             unsigned word = bit/32;
             unsigned code = 1 + word/2;
             if (((word << 2)^byte) & 7)
-                error(el.second.lineno, "Can't put field %s into byte %d on action xbar",
+                error(lineno, "Can't put field %s into byte %d on action xbar",
                       el.second.name.c_str(), byte);
             else
                 action_hv_xbar.action_hv_xbar_ctl_word[side][slot/2]
