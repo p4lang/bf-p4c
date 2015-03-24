@@ -1,0 +1,3 @@
+[submodule "submodules/walle"]
+	path = submodules/walle
+	url = git@github.com:barefootnetworks/walle.git
