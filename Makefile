@@ -1,6 +1,7 @@
 CC = g++
 CPPFLAGS = -std=gnu++11 -O0 -Wall -g -MMD -I.
 YFLAGS = -v
+WALLE=submodules/walle/walle/walle.py
 
 GEN_OBJS := gen/memories.prsr_mem_main_rspec.o \
 	    gen/regs.dprsr_hdr.o \
@@ -54,7 +55,7 @@ gen/uptr_sizes.h: mksizes
 
 templates/.templates-updated: chip.schema templates-config
 	@mkdir -p templates
-	walle --generate-templates templates-config
+	$(WALLE) --generate-templates templates-config
 	@touch $@
 
 templates/%.json: templates/.templates-updated
