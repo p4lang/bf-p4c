@@ -24,8 +24,8 @@ FAILLOG=$(pwd -P)/faillog.txt
 
 for f in \
     $HOME/p4c-tofino/p4c_tofino/shell.py \
-    $PWD/../p4c-tofino/p4c_tofino/shell.py \
-    $PWD/../../p4c-tofino/p4c_tofino/shell.py
+    $PWD/../../p4c-tofino/p4c_tofino/shell.py \
+    $PWD/../submodules/p4c-tofino/p4c_tofino/shell.py
 do
     if [ -x $f ]; then
 	GLSC=$f
