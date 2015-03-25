@@ -494,7 +494,7 @@ void ExactMatchTable::write_regs() {
         /* FIXME -- factor this where possible with ternary match code */
         if (action) {
             int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
-            if (action_args.size() == 1) {
+            if (action_args.size() <= 1) {
                 merge.mau_actiondata_adr_mask[0][bus] = 0x3fffff & (~0U << lo_huffman_bits);
             } else {
                 /* FIXME -- support for multiple sizes of action data? */
@@ -539,9 +539,12 @@ void ExactMatchTable::write_regs() {
             /*merge.col[col].hitmap_output_map[bus].enabled_4bit_muxctl_select =
                 layout[index+word].row*2 + layout[index+word].bus;
             merge.col[col].hitmap_output_map[bus].enabled_4bit_muxctl_enable = 1;*/ }
+        if (gress == EGRESS)
+            merge.exact_match_delay_config.exact_match_bus_thread |= 1 << bus;
         if (--word < 0) { word = fmt_width-1; } }
     if (actions) actions->write_regs(this);
     if (gateway) gateway->write_regs();
+    /* FIXME -- should be setting bit per bus, not per table */
 }
 
 void ExactMatchTable::gen_tbl_cfg(json::vector &out) {

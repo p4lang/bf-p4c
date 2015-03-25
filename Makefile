@@ -53,10 +53,13 @@ gen/uptr_sizes.h: mksizes
 	@mkdir -p gen
 	./mksizes > $@
 
-templates/.templates-updated: chip.schema templates-config
+templates/.templates-updated: $(WALLE) chip.schema templates-config
 	@mkdir -p templates
 	$(WALLE) --generate-templates templates-config
 	@touch $@
+
+$(WALLE):
+	git submodule update --init
 
 templates/%.json: templates/.templates-updated
 	@test -r $@

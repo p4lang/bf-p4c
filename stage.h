@@ -13,10 +13,11 @@ enum {
     LOGICAL_TABLES_PER_STAGE = 16,
     TCAM_TABLES_PER_STAGE = 8,
     SRAM_ROWS = 8,
+    LOGICAL_SRAM_ROWS = 16,
     SRAM_UNITS_PER_ROW = 12,
     TCAM_ROWS = 12,
     TCAM_UNITS_PER_ROW = 2,
-    TCAM_XBAR_GROUPS = 16,
+    TCAM_XBAR_GROUPS = 12,
     EXACT_XBAR_GROUPS = 8,
     EXACT_HASH_GROUPS = 8,
     NEXT_TABLE_SUCCESSOR_TABLE_DEPTH = 8,
@@ -51,6 +52,8 @@ public:
     Alloc1D<std::vector<InputXbar *>, 8>                exact_ixbar;
     Alloc1D<std::vector<InputXbar *>, 16>               tcam_ixbar;
     Alloc1D<Table *, ACTION_DATA_BUS_SLOTS>             action_bus_use;
+    Alloc1D<Table *, LOGICAL_SRAM_ROWS>                 action_data_use,
+                                                        meter_use, stats_use, overflow_use;
     bitvec      imem_addr_use[2], imem_use[ACTION_IMEM_SLOTS];
     enum { USE_TCAM=1, USE_TCAM_PIPED=2, USE_STATEFUL=4,
            USE_METER=8, USE_SELECTOR=16, };

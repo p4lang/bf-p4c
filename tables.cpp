@@ -158,7 +158,7 @@ void Table::setup_vpns(VECTOR(value_t) *vpn) {
     bitvec used_vpns;
     for (auto &row : layout) {
         if (++word < width) {
-            if (row.cols != firstrow->cols)
+            if (row.cols.size() != firstrow->cols.size())
                 error(row.lineno, "Columns across wide rows don't match in table %s", name());
             row.vpns = firstrow->vpns;
             continue; }

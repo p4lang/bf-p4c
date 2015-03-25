@@ -37,7 +37,7 @@ void ActionTable::apply_to_field(const std::string &n, std::function<void(Format
 void ActionTable::setup(VECTOR(pair_t) &data) {
     auto *row = get(data, "row");
     if (!row) row = get(data, "logical_row");
-    setup_layout(row, get(data, "column"), get(data, "bus"));
+    setup_layout(row, get(data, "column"), 0);
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "format") {
             if (CHECKTYPE(kv.value, tMAP))
@@ -63,8 +63,7 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "vpns") {
             if (CHECKTYPE(kv.value, tVEC))
                 setup_vpns(&kv.value.vec);
-        } else if (kv.key == "row" || kv.key == "logical_row" ||
-                   kv.key == "column" || kv.key == "bus") {
+        } else if (kv.key == "row" || kv.key == "logical_row" || kv.key == "column") {
             /* already done in setup_layout */
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
@@ -74,12 +73,21 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
         error(lineno, "No actions in action table %s", name());
     if (actions && !action_bus) action_bus = new ActionBus();
 }
+
+static void need_bus(int lineno, Alloc1Dbase<Table *> &use, Table *table, int idx, const char *name)
+{
+    if (use[idx]) {
+        error(lineno, "%s bus conflict on row %d between tables %s and %s", name, idx,
+              table->name(), use[idx]->name());
+        error(use[idx]->lineno, "%s defined here", use[idx]->name());
+    } else
+        use[idx] = table;
+}
+
 void ActionTable::pass1() {
     alloc_vpns();
-    for (Layout &row : layout) {
-        if (row.row > layout[0].row)
-            error(row.lineno, "Action table %s home row must be first", name());
-    }
+    std::sort(layout.begin(), layout.end(),
+              [](const Layout &a, const Layout &b)->bool { return a.row > b.row; });
     for (auto &fmt : action_formats) {
         if (!actions->exists(fmt.first)) {
             error(fmt.second->lineno, "Format for non-existant action %s", fmt.first.c_str());
@@ -98,6 +106,19 @@ void ActionTable::pass1() {
                               "with action %s format", fmt.first.c_str(), fld.first.c_str(),
                               fmt2.first.c_str());
                         break; } } } } }
+    unsigned width = (format->size-1)/128 + 1;
+    unsigned depth = layout_size()/width;
+    unsigned idx = 0; // ram index within depth
+    int prev_row = -1;
+    for (auto &row : layout) {
+        if (idx != 0)
+            need_bus(lineno, stage->overflow_use, this, row.row, "Overflow");
+        if (idx == 0 || idx + row.cols.size() > depth)
+            need_bus(lineno, stage->action_data_use, this, row.row, "Action data");
+        for (int r = (row.row + 1) | 1; r < prev_row; r += 2)
+            need_bus(lineno, stage->overflow_use, this, r, "Overflow");
+        if ((idx += row.cols.size()) >= depth) idx -= depth;
+        prev_row = row.row; }
     action_bus->pass1(this);
     if (actions) actions->pass1(this);
 }
@@ -111,18 +132,47 @@ void ActionTable::pass2() {
 
 void ActionTable::write_regs() {
     LOG1("### Action table " << name());
-    Layout &home = layout[0];
-    unsigned home_top = home.row >= 8;
-    for (unsigned slice = 0; slice <= (format->size-1)/128; slice++)
-        action_bus->write_action_regs(this, home.row, slice);
+    int width = (format->size+127)/128;
+    int depth = layout_size()/width;
+    int idx = 0;
+    int word = 0;
     bool home_row = true;
+    unsigned home_top = 0;
+    int prev_logical_row = -1;
+    decltype(stage->regs.rams.array.switchbox.row[0].ctl) *home_switch_ctl = 0;
     auto &icxbar = stage->regs.rams.match.adrdist.adr_dist_action_data_adr_icxbar_ctl[logical_id];
     for (Layout &logical_row : layout) {
         unsigned row = logical_row.row/2;
         unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
         unsigned top = logical_row.row >= 8; /* 0 == bottom  1 == top */
         auto vpn = logical_row.vpns.begin();
+        auto &switch_ctl = stage->regs.rams.array.switchbox.row[row].ctl;
+        if (idx != 0) {
+            if (&switch_ctl == home_switch_ctl) {
+                /* overflow from L to R action */
+                switch_ctl.r_action_o_mux_select.r_action_o_sel_oflo_rd_l_i = 1;
+            } else if (side) {
+                /* overflow R up */
+                switch_ctl.t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_r_i = 1;
+            } else {
+                /* overflow L up */
+                switch_ctl.t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_l_i = 1; }
+            /* if we're skipping over full rows and overflowing over those rows, need to
+             * propagate overflow from bottom to top.  This effectively uses only the
+             * odd (right side) overflow busses.  L ovfl can still go to R action */
+            for (int r = (logical_row.row + 2) | 1; r < prev_logical_row; r += 2)
+                stage->regs.rams.array.switchbox.row[r/2].ctl
+                    .t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_b_i = 1; }
         for (int logical_col : logical_row.cols) {
+            if (idx == 0) {
+                home_row = true;
+                home_switch_ctl = &switch_ctl;
+                home_top = logical_row.row >= 8;
+                action_bus->write_action_regs(this, logical_row.row, word);
+                if (side)
+                    switch_ctl.r_action_o_mux_select.r_action_o_sel_action_rd_r_i = 1;
+                else
+                    switch_ctl.r_l_action_o_mux_select.r_l_action_o_sel_action_rd_l_i = 1; }
             unsigned col = logical_col + 6*side;
             auto &ram = stage->regs.rams.array.row[row].ram[col];
             ram.unit_ram_ctl.match_ram_write_data_mux_select = 7; /*disable*/
@@ -156,16 +206,13 @@ void ActionTable::write_regs() {
                 ram_mux.ram_unitram_adr_mux_select = 1;
             else {
                 ram_mux.ram_unitram_adr_mux_select = 4;
-                ram_mux.ram_oflo_adr_mux_select_oflo = 1; } }
+                ram_mux.ram_oflo_adr_mux_select_oflo = 1; }
+            if (++idx == depth) { idx = 0; ++word; } }
+        if (home_row && idx != 0 && !side)
+            switch_ctl.r_l_action_o_mux_select.r_l_action_o_sel_oflo_rd_b_i = 1;
         icxbar.address_distr_to_logical_rows |= 1U << logical_row.row;
-        auto &switch_ctl = stage->regs.rams.array.switchbox.row[row].ctl;
-        /* FIXME -- figure out oflo stuff */
-        if(side)
-            switch_ctl.r_action_o_mux_select.r_action_o_sel_action_rd_r_i = 1;
-        else
-            switch_ctl.r_l_action_o_mux_select.r_l_action_o_sel_action_rd_l_i = 1;
-        home_row = false; }
-
+        home_row = false;
+        prev_logical_row = logical_row.row; }
     if (actions) actions->write_regs(this);
 }
 
