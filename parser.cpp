@@ -547,6 +547,9 @@ Parser::State::State(int l, const char *n, gress_t gr, match_t sno, const VECTOR
         if (kv.key.type == tINT && kv.value.type == tMAP) {
             match_t m = { ~(unsigned)kv.key.i, (unsigned)kv.key.i };
             match.emplace_back(kv.key.lineno, gress, m, kv.value.map);
+        } else if (kv.key.type == tBIGINT && kv.value.type == tMAP) {
+            match_t m = { ~(unsigned)kv.key.bigi.data[0], (unsigned)kv.key.bigi.data[0] };
+            match.emplace_back(kv.key.lineno, gress, m, kv.value.map);
         } else if (kv.key.type == tMATCH) {
             if (!CHECKTYPE(kv.value, tMAP)) continue;
             match.emplace_back(kv.key.lineno, gress, kv.key.m, kv.value.map);

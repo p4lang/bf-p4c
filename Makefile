@@ -68,7 +68,7 @@ templates/%.json: templates/.templates-updated
 
 .PHONY: all tags test clean veryclean help
 tags:
-	ctags -R -I VECTOR --exclude=test
+	ctags -R -I VECTOR --exclude=test --exclude=submodules
 
 test: all reflow
 	cd test; ./runtests

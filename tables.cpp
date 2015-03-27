@@ -579,7 +579,7 @@ void MatchTable::write_regs(int type, Table *result) {
                 assert(idx < 2); } }
     } else {
         /* FIXME */
-        ERROR("Unimplemented -- tables with more than 8 actions");
+        ERROR("Unimplemented -- tables with more than 8 actions: " << result->name());
         assert(0);
     }
 

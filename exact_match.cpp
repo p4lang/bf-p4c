@@ -122,9 +122,10 @@ void ExactMatchTable::pass1() {
     format->setup_immed(this);
     group_info.resize(format->groups());
     unsigned fmt_width = (format->size + 127)/128;
-    if (!format->field("match"))
+    if (!format->field("match")) {
         error(format->lineno, "No 'match' field in format for table %s", name());
-    else for (unsigned i = 0; i < format->groups(); i++) {
+        return; }
+    for (unsigned i = 0; i < format->groups(); i++) {
         auto &info = group_info[i];
         info.tofino_mask.resize(fmt_width);
         Format::Field *match = format->field("match", i);
@@ -231,7 +232,7 @@ void ExactMatchTable::pass1() {
             auto mw = --match_by_bit.upper_bound(bit);
             int lo = bit - mw->first;
             while(mw != match_by_bit.end() &&  mw->first < bit + piece.size()) {
-                int hi = std::min((unsigned)mw->second->hi, bit+piece.size()-mw->first-1);
+                int hi = std::min((unsigned)mw->second->size()-1, bit+piece.size()-mw->first-1);
                 assert((unsigned)piece.lo/128 < fmt_width);
                 merge_phv_vec(match_in_word[piece.lo/128], Phv::Ref(mw->second, lo, hi));
                 lo = 0;
