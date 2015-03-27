@@ -9,6 +9,12 @@
 DEFINE_TABLE_TYPE(TernaryMatchTable)
 DEFINE_TABLE_TYPE(TernaryIndirectTable)
 
+void TernaryMatchTable::vpn_params(int &width, int &period, const char *&period_name) {
+    width = input_xbar->width();
+    period = 1;
+    period_name = 0;
+}
+
 void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     tcam_id = -1;
     indirect_bus = -1;

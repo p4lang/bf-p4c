@@ -500,16 +500,16 @@ void ExactMatchTable::write_regs() {
             if (format->immed && format->immed->by_group[group]->bits[0].lo/128 == (unsigned)word)
                 merge.mau_immediate_data_exact_shiftcount[bus][word_group] =
                     format->immed->by_group[group]->bits[0].lo % 128;
-            if (action_args.empty() ||
-                action_args[0]->by_group[group]->bits[0].lo/128 != (unsigned)word) continue;
-            merge.mau_action_instruction_adr_exact_shiftcount[bus][word_group] =
-                action_args[0]->by_group[group]->bits[0].lo % 128;
+            if (!action_args.empty() &&
+                action_args[0]->by_group[group]->bits[0].lo/128 == (unsigned)word)
+                merge.mau_action_instruction_adr_exact_shiftcount[bus][word_group] =
+                    action_args[0]->by_group[group]->bits[0].lo % 128;
             /* FIXME -- factor this where possible with ternary match code */
             if (action) {
                 int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
-                if (action_args.size() == 1) {
+                if (action_args.size() <= 1) {
                     merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
-                        69 + (format->log2size-2) - lo_huffman_bits;
+                        69 - lo_huffman_bits;
                 } else {
                     assert(action_args[1]->by_group[group]->bits[0].lo/128 == (unsigned)word);
                     merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =

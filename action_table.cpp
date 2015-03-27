@@ -136,8 +136,7 @@ void ActionTable::write_regs() {
     int depth = layout_size()/width;
     int idx = 0;
     int word = 0;
-    bool home_row = true;
-    unsigned home_side = 0, home_top = 0;
+    Layout *home = &layout[0];
     int prev_logical_row = -1;
     decltype(stage->regs.rams.array.switchbox.row[0].ctl) *home_switch_ctl = 0,
                                                           *prev_switch_ctl = 0;
@@ -162,7 +161,7 @@ void ActionTable::write_regs() {
                     switch_ctl.t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_l_i = 1; }
                 if (prev_switch_ctl != home_switch_ctl)
                     prev_switch_ctl->t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_b_i = 1;
-                else if (home_side)
+                else if (home->row & 1)
                     home_switch_ctl->r_action_o_mux_select.r_action_o_sel_oflo_rd_b_i = 1;
                 else
                     home_switch_ctl->r_l_action_o_mux_select.r_l_action_o_sel_oflo_rd_b_i = 1; }
@@ -174,32 +173,32 @@ void ActionTable::write_regs() {
                 prev_switch_ctl->t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_b_i = 1; }
 
             auto &oflo_adr_xbar = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
-            if (home_top == top) {
-                oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_index = logical_row.row % 8;
+            if ((home->row >= 8) == top) {
+                oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_index = home->row % 8;
                 oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_sel = 0;
             } else {
-                assert(home_top);
+                assert(home->row >= 8);
                 oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_index = 0;
                 oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_sel = 2;
                 if (!icxbar.address_distr_to_overflow)
                     icxbar.address_distr_to_overflow = 1; }
             oflo_adr_xbar.adr_dist_oflo_adr_xbar_enable = 1; }
         for (int logical_col : logical_row.cols) {
+            unsigned col = logical_col + 6*side;
+            auto &ram = stage->regs.rams.array.row[row].ram[col];
+            auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
             if (idx == 0) {
-                home_row = true;
+                home = &logical_row;
                 home_switch_ctl = &switch_ctl;
-                home_top = top;
-                home_side = side;
                 action_bus->write_action_regs(this, logical_row.row, word);
                 if (side)
                     switch_ctl.r_action_o_mux_select.r_action_o_sel_action_rd_r_i = 1;
                 else
-                    switch_ctl.r_l_action_o_mux_select.r_l_action_o_sel_action_rd_l_i = 1; }
-            unsigned col = logical_col + 6*side;
-            auto &ram = stage->regs.rams.array.row[row].ram[col];
+                    switch_ctl.r_l_action_o_mux_select.r_l_action_o_sel_action_rd_l_i = 1;
+                unitram_config.unitram_action_subword_out_en = 1;
+                icxbar.address_distr_to_logical_rows |= 1U << logical_row.row; }
             ram.unit_ram_ctl.match_ram_write_data_mux_select = 7; /*disable*/
-            ram.unit_ram_ctl.match_ram_read_data_mux_select = home_row ? 4 : 2;
-            auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
+            ram.unit_ram_ctl.match_ram_read_data_mux_select = home == &logical_row ? 4 : 2;
             unitram_config.unitram_type = 2;
             unitram_config.unitram_vpn = *vpn++;
             unitram_config.unitram_logical_table = logical_id;
@@ -207,18 +206,14 @@ void ActionTable::write_regs() {
                 unitram_config.unitram_ingress = 1;
             else
                 unitram_config.unitram_egress = 1;
-            if (home_row)
-                unitram_config.unitram_action_subword_out_en = 1;
             unitram_config.unitram_enable = 1;
             auto &ram_mux = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
-            if (home_row)
+            if (home == &logical_row)
                 ram_mux.ram_unitram_adr_mux_select = 1;
             else {
                 ram_mux.ram_unitram_adr_mux_select = 4;
                 ram_mux.ram_oflo_adr_mux_select_oflo = 1; }
             if (++idx == depth) { idx = 0; ++word; } }
-        icxbar.address_distr_to_logical_rows |= 1U << logical_row.row;
-        home_row = false;
         prev_switch_ctl = &switch_ctl;
         prev_logical_row = logical_row.row; }
     if (actions) actions->write_regs(this);

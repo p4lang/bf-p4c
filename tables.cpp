@@ -141,12 +141,9 @@ void Table::setup_logical_id() {
 }
 
 void Table::setup_vpns(VECTOR(value_t) *vpn) {
-    int groups = 1, width = 1;
-    if (format) {
-        groups = format->groups();
-        width = (format->size-1)/128 + 1;
-    } else if (input_xbar)
-        width = input_xbar->width();
+    int period, width;
+    const char *period_name;
+    vpn_params(width, period, period_name);
     if (vpn && (unsigned)vpn->size != layout_size()/width) {
         error(lineno, "Vpn list length doesn't match layout (is %d, should be %d)",
               vpn->size, layout_size()/width);
@@ -156,6 +153,7 @@ void Table::setup_vpns(VECTOR(value_t) *vpn) {
     auto vpniter = vpn ? vpn->begin() : 0;
     int vpn_ctr = 0;
     bitvec used_vpns;
+    bool on_repeat = false;
     for (auto &row : layout) {
         if (++word < width) {
             if (row.cols.size() != firstrow->cols.size())
@@ -167,20 +165,22 @@ void Table::setup_vpns(VECTOR(value_t) *vpn) {
         row.vpns.resize(row.cols.size());
         for (int &el : row.vpns) {
             if (vpniter) {
-                if (vpniter == vpn->end()) break;
-                if (CHECKTYPE(*vpniter, tINT) && (el = vpniter->i) % groups != 0)
-                    error(vpniter->lineno, "%d is not a multiple of the match "
-                          "group size %d", el, groups); 
-                if (used_vpns[el/groups].set(true))
+                if (vpniter == vpn->end()) {
+                    on_repeat = true;
+                    vpniter = vpn->begin(); }
+                if (CHECKTYPE(*vpniter, tINT) && (el = vpniter->i) % period != 0)
+                    error(vpniter->lineno, "%d is not a multiple of the %s %d", el,
+                          period_name, period); 
+                if (!on_repeat && used_vpns[el/period].set(true))
                     error(vpniter->lineno, "Vpn %d used twice in table %s", el, name());
                 ++vpniter;
             } else {
                 el = vpn_ctr;
-                vpn_ctr += groups; } } }
+                vpn_ctr += period; } } }
     if (vpn && error_count == 0) {
         for (int i = 0; i < vpn->size; i++)
             if (!used_vpns[i]) {
-                error((*vpn)[0].lineno, "Hole in vpn list (%d) for table %s", i*groups, name());
+                error((*vpn)[0].lineno, "Hole in vpn list (%d) for table %s", i*period, name());
                 break; } }
 }
 
