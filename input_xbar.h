@@ -15,17 +15,23 @@ class InputXbar {
     };
     struct HashCol {
         bitvec          data;
-        unsigned        valid, seed;
-        HashCol() : valid(0), seed(0) {}
+        unsigned        valid;
+        HashCol() : valid(0) {}
+    };
+    struct HashGrp {
+        unsigned        tables;
+        uint64_t        seed;
+        HashGrp() : tables(0), seed(0) {}
     };
     Table	*table;
     bool        ternary;
     std::map<unsigned, std::vector<Input>>              groups;
     std::vector<std::map<unsigned, std::vector<Input>>::iterator>   group_order;
-    std::map<unsigned, std::map<int, HashCol>>          hash_groups;
-    unsigned parity_groups[EXACT_HASH_GROUPS];
-    static bool conflict(std::vector<Input> &a, std::vector<Input> &b);
-    static bool conflict(std::map<int, HashCol> &a, std::map<int, HashCol> &b);
+    std::map<unsigned, std::map<int, HashCol>>          hash_tables;
+    std::map<unsigned, HashGrp>                         hash_groups;
+    static bool conflict(const std::vector<Input> &a, const std::vector<Input> &b);
+    static bool conflict(const std::map<int, HashCol> &a, const std::map<int, HashCol> &b);
+    static bool conflict(const HashGrp &a, const HashGrp &b);
     void add_use(unsigned &byte_use, std::vector<Input> &a);
 public:
     const int	lineno;
@@ -42,10 +48,10 @@ public:
         /* used by gateways to get the associated hash group */
         if (hash_groups.size() != 1) return -1;
         return hash_groups.begin()->first; }
-    void add_to_parity(unsigned group, unsigned parity) {
-        assert(group <= EXACT_HASH_GROUPS);
-        assert(parity <= EXACT_HASH_GROUPS);
-        parity_groups[group] |= 1U << parity; }
+    int match_group() {
+        /* used by gateways to get the associated match group */
+        if (groups.size() != 1) return -1;
+        return groups.begin()->first; }
     class all_iter {
         decltype(group_order)::const_iterator   outer;
         bool                                    inner_valid;

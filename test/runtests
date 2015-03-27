@@ -6,6 +6,9 @@ while expr "$1" : - >/dev/null; do
     case $1 in
     -f) fast=true
         ;;
+    -s)
+        GLSC=$PWD/../submodules/p4c-tofino/p4c_tofino/shell.py
+        ;;
     -*)
         echo >&2 "unknown argumnet $1"
         ;;
@@ -22,16 +25,19 @@ fi
 rm -rf faillog.txt
 FAILLOG=$(pwd -P)/faillog.txt
 
-for f in \
-    $HOME/p4c-tofino/p4c_tofino/shell.py \
-    $PWD/../../p4c-tofino/p4c_tofino/shell.py \
-    $PWD/../submodules/p4c-tofino/p4c_tofino/shell.py
-do
-    if [ -x $f ]; then
-	GLSC=$f
-	break
-    fi
-done
+if [ ! -x "$GLSC" ]; then
+    for f in \
+        $HOME/p4c-tofino/p4c_tofino/shell.py \
+        $PWD/../../p4c-tofino/p4c_tofino/shell.py \
+        $PWD/../submodules/p4c-tofino/p4c_tofino/shell.py
+    do
+        if [ -x $f ]; then
+            GLSC=$f
+            break
+        fi
+    done
+fi
+
 TFAS=$PWD/../tfas
 REFLOW=$PWD/../reflow
 
@@ -47,14 +53,17 @@ for p4file in "$@"; do
     ok=true
     if $fast && [ -r $name.tfa ]; then
         need_reflow=false
-    elif $GLSC --verbose 2 -S ../$name.p4 >glsc.log 2>&1; then
-        need_reflow=true
-    else
-        echo " p4 compile failed"
-        let fail++
-        echo "$p4file:" >> $FAILLOG
-        cat glsc.log >> $FAILLOG
-        ok=false
+    else 
+        rm -f $name.tfa
+        if $GLSC --verbose 2 -S ../$name.p4 >glsc.log 2>&1; then
+            need_reflow=true
+        else
+            echo " p4 compile failed"
+            let fail++
+            echo "$p4file:" >> $FAILLOG
+            cat glsc.log >> $FAILLOG
+            ok=false
+        fi
     fi
     if $ok && $TFAS -vvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
         for f in $name.out/*.json; do

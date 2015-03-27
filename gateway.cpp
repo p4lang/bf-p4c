@@ -173,13 +173,13 @@ void GatewayTable::write_regs() {
         assert(row.bus == 1);
         gw_reg.gateway_table_ctl.gateway_table_input_data1_select = 1;
         gw_reg.gateway_table_ctl.gateway_table_input_hash1_select = 1; }
-    int hash_group = input_xbar->hash_group();
-    if (hash_group >= 0) {
+    if (input_xbar->hash_group() >= 0) {
         auto &vh_adr_xbar_ctl = row_reg.vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus];
-        vh_adr_xbar_ctl.enabled_3bit_muxctl_select = hash_group;
-        vh_adr_xbar_ctl.enabled_3bit_muxctl_enable = 1;
+        vh_adr_xbar_ctl.enabled_3bit_muxctl_select = input_xbar->hash_group();
+        vh_adr_xbar_ctl.enabled_3bit_muxctl_enable = 1; }
+    if (input_xbar->match_group() >= 0) {
         auto &vh_xbar_ctl = row_reg.vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl;
-        vh_xbar_ctl.exactmatch_row_vh_xbar_select = hash_group;
+        vh_xbar_ctl.exactmatch_row_vh_xbar_select = input_xbar->match_group();
         vh_xbar_ctl.exactmatch_row_vh_xbar_enable = 1;
         vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress; }
     gw_reg.gateway_table_ctl.gateway_table_logical_table = logical_id;

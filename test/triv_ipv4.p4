@@ -51,7 +51,7 @@ action route_ipv4(egress_spec) {
     add_to_field(ipv4.ttl, -1);
     modify_field(standard_metadata.egress_spec, egress_spec);
 }
-action do_drop() { drop(); }
+action do_drop() { /*drop();*/ }
 action do_noop() { }
 
 table routing {

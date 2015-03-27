@@ -837,7 +837,8 @@ void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
                 if (options.match_compiler)
                     off = (*output_map[i].src + output_map[i].size)/8;
                 if (off > buf_req) buf_req = off; }
-    ea_row.buf_req = buf_req;
+    assert(buf_req <= 32);
+    ea_row.buf_req = options.match_compiler ? 32 : buf_req;
 }
 
 static struct phv_use_slots { int idx; unsigned usemask, shift, size; }

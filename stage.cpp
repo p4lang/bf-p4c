@@ -150,7 +150,7 @@ void AsmStage::output() {
 }
 
 static int tcam_delay(int use_flags) {
-    return use_flags & Stage::USE_TCAM ? use_flags & Stage::USE_TCAM_PIPED ? 3 : 2 : 0;
+    return use_flags & Stage::USE_TCAM ? use_flags & Stage::USE_TCAM_PIPED ? 4 : 4 : 0;
 }
 static int adr_dist_delay(int use_flags) {
     if (use_flags & Stage::USE_SELECTOR)
@@ -174,8 +174,8 @@ void Stage::write_regs() {
     /* FIXME -- most of the values set here are 'placeholder' constants copied
      * from build_pipeline_output_2.py in the compiler */
     auto &merge = regs.rams.match.merge;
-    merge.exact_match_delay_config.exact_match_delay_ingress = tcam_delay(group_table_use[INGRESS]);
-    merge.exact_match_delay_config.exact_match_delay_egress = tcam_delay(group_table_use[EGRESS]);
+    merge.exact_match_delay_config.exact_match_delay_ingress = tcam_delay(group_table_use[INGRESS]) ? 3 : 0;
+    merge.exact_match_delay_config.exact_match_delay_egress = tcam_delay(group_table_use[EGRESS]) ? 3 : 0;
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         if (stageno == 0) {
             merge.predication_ctl[gress].start_table_fifo_delay0 = pred_cycle(table_use[gress]) - 1;

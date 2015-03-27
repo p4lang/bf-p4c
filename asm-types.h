@@ -76,8 +76,12 @@ static inline void free_pair(pair_t *p) {
 #ifdef __cplusplus
 bool operator==(const struct value_t &, const struct value_t &);
 inline bool operator==(const struct value_t &a, const char *b) {
+    if (a.type == tCMD && a.vec.size > 0 && a[0].type == tSTR)
+        return !strcmp(a[0].s, b);
     return a.type == tSTR && !strcmp(a.s, b); }
 inline bool operator==(const char *a, const struct value_t &b) {
+    if (b.type == tCMD && b.vec.size > 0 && b[0].type == tSTR)
+        return !strcmp(a, b[0].s);
     return b.type == tSTR && !strcmp(a, b.s); }
 inline bool operator==(const struct value_t &a, int b) {
     return a.type == tINT && a.i == b; }

@@ -353,13 +353,6 @@ void ExactMatchTable::pass2() {
     word_ixbar_group.resize(match_in_word.size());
     for (unsigned i = 0; i < match_in_word.size(); i++)
         word_ixbar_group[i] = find_in_ixbar(stage, this, match_in_word[i]);
-    /* FIXME -- seems like a horrible hack to figure out which hash groups are
-     * FIXME -- xored together for wide matches */
-    for (auto &way : ways) {
-        input_xbar->add_to_parity(way.group, way.group);
-        for (auto group : word_ixbar_group)
-            if (group > way.group)
-                input_xbar->add_to_parity(way.group, group); }
     if (actions) actions->pass2(this);
     if (gateway) gateway->pass2();
 }

@@ -320,7 +320,7 @@ void Set::pass1(Table *tbl) {
     src.mark_use(tbl);
 }
 int Set::encode() {
-    return (opA.opcode << 12) | (src.bits(slot/16) << 5);
+    return (opA.opcode << 12) | (src.bits(slot/16) << 5) | (slot & 0xf);
 }
 
 struct LoadConst : public Instruction {

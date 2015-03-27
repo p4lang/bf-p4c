@@ -6,7 +6,7 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
 : table(t), ternary(tern), lineno(data[0].key.lineno)
 {
     int numgroups = ternary ? TCAM_XBAR_GROUPS : EXACT_XBAR_GROUPS;
-    memset(parity_groups, 0, sizeof(parity_groups));
+    //memset(parity_groups, 0, sizeof(parity_groups));
     for (auto &kv : data) {
 	if (!CHECKTYPEM(kv.key, tCMD, "group or hash descriptor"))
 	    continue;
@@ -33,21 +33,56 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
             } else
                 group.emplace_back(Phv::Ref(t->gress, kv.value));
 	} else if (!ternary && kv.key[0] == "hash") {
+            if (kv.key.vec.size == 3 && kv.key[1] == "group") {
+                if (kv.key[2].type != tINT || kv.key[2].i >= EXACT_HASH_GROUPS) {
+                    error(kv.key.lineno, "invalid hash group descriptor");
+                    continue; }
+                int id = kv.key[2].i;
+                if (kv.value.type == tINT && (unsigned)kv.value.i < EXACT_HASH_GROUPS) {
+                    hash_groups[id].tables |= 1U << kv.value.i;
+                    continue; }
+                if (!CHECKTYPE2(kv.value, tVEC, tMAP)) continue;
+                VECTOR(value_t) *tbl = 0;
+                if (kv.value.type == tMAP) {
+                    for (auto &el : MapIterChecked(kv.value.map)) {
+                        if (el.key == "seed") {
+                            if (!CHECKTYPE2(el.value, tINT, tBIGINT)) continue;
+                            if (el.value.type == tBIGINT) {
+                                hash_groups[id].seed = el.value.bigi.data[0];
+                            } else
+                                hash_groups[id].seed = el.value.i;
+                        } else if (el.key == "table") {
+                            if (el.value.type == tINT) {
+                                if (el.value.i < 0 || el.value.i >= EXACT_HASH_GROUPS)
+                                    error(el.value.lineno, "invalid hash group descriptor");
+                                else
+                                    hash_groups[id].tables |= 1U << el.value.i;
+                            } else if (CHECKTYPE(el.value, tVEC))
+                                tbl = &el.value.vec;
+                        } else
+                            error(el.key.lineno, "invalid hash group descriptor"); }
+                } else
+                    tbl = &kv.value.vec;
+                if (tbl) {
+                    for (auto &v : *tbl) {
+                        if (!CHECKTYPE(v, tINT)) continue;
+                        if (v.i < 0 || v.i >= EXACT_HASH_GROUPS)
+                            error(v.lineno, "invalid hash group descriptor");
+                        else
+                            hash_groups[id].tables |= 1U << v.i; } }
+                continue; }
 	    if (kv.key.vec.size != 2 || kv.key[1].type != tINT ||
                 kv.key[1].i >= EXACT_HASH_GROUPS)
             {
-		error(kv.key.lineno, "invalid hash group descriptor");
+		error(kv.key.lineno, "invalid hash descriptor");
 		continue; }
             if (!CHECKTYPE(kv.value, tMAP)) continue;
-            int group = kv.key[1].i;
+            int id = kv.key[1].i;
             for (auto &c : kv.value.map) {
                 if (!CHECKTYPE2M(c.key, tINT, tCMD, "hash column decriptor"))
                     continue;
                 if (c.key.type == tCMD) {
-                    if (c.key.vec.size != 2 ||
-                        (c.key[0] != "valid" && c.key[0] != "seed") ||
-                        c.key[1].type != tINT)
-                    {
+                    if (c.key.vec.size != 2 || c.key[0] != "valid" || c.key[1].type != tINT) {
                         error(c.key.lineno, "Invalid hash column descriptor");
                         continue; }
                     int col = c.key[1].i;
@@ -55,36 +90,27 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
                         error(c.key.lineno, "Hash column out of range");
                         continue; }
                     if (!CHECKTYPE(c.value, tINT)) continue;
-                    if (c.key[0] == "valid") {
-                        if (hash_groups[group][col].valid)
-                            error(c.key.lineno, "Hash group %d column %d valid duplicated",
-                                  group, col);
-                        else if (c.value.i >= 0x10000)
-                            error(c.value.lineno, "Hash valid value out of range");
-                        else
-                            hash_groups[group][col].valid = c.value.i;
-                    } else {
-                        if (hash_groups[group][col].seed)
-                            error(c.key.lineno, "Hash group %d column %d seed duplicated",
-                                  group, col);
-                        else if (c.value.i >= 2)
-                            error(c.value.lineno, "Hash seed value out of range");
-                        else
-                            hash_groups[group][col].seed = c.value.i; }
+                    if (hash_tables[id][col].valid)
+                        error(c.key.lineno, "Hash table %d column %d valid duplicated",
+                              id, col);
+                    else if (c.value.i >= 0x10000)
+                        error(c.value.lineno, "Hash valid value out of range");
+                    else
+                        hash_tables[id][col].valid = c.value.i;
                 } else {
                     int col = c.key.i;
                     if (col < 0 || col >= 52) {
                         error(c.key.lineno, "Hash column out of range");
                         continue; }
                     if (!CHECKTYPE2(c.value, tINT, tBIGINT)) continue;
-                    if (hash_groups[group][col].data)
-                        error(c.key.lineno, "Hash group %d column %d duplicated",
-                              group, col);
+                    if (hash_tables[id][col].data)
+                        error(c.key.lineno, "Hash table %d column %d duplicated",
+                              id, col);
                     if (c.value.type == tINT)
-                        hash_groups[group][col].data.setraw(c.value.i);
+                        hash_tables[id][col].data.setraw(c.value.i);
                     else {
-                        hash_groups[group][col].data.setraw(c.value.bigi.data, c.value.bigi.size);
-                        if (hash_groups[group][col].data.max().index() >= 128)
+                        hash_tables[id][col].data.setraw(c.value.bigi.data, c.value.bigi.size);
+                        if (hash_tables[id][col].data.max().index() >= 128)
                             error(c.key.lineno, "Hash column value out of range"); } } }
 	} else {
 	    error(kv.key.lineno, "expecting a group %sdescriptor",
@@ -92,7 +118,7 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
     }
 }
 
-bool InputXbar::conflict(std::vector<Input> &a, std::vector<Input> &b) {
+bool InputXbar::conflict(const std::vector<Input> &a, const std::vector<Input> &b) {
     for (auto &i1 : a) {
         if (i1.lo < 0) continue;
         for (auto &i2 : b) {
@@ -108,13 +134,17 @@ bool InputXbar::conflict(std::vector<Input> &a, std::vector<Input> &b) {
     return false;
 }
 
-bool InputXbar::conflict(std::map<int, HashCol> &a, std::map<int, HashCol> &b) {
-    for (auto &acol : a) {
-        if (auto bcol = ::getref(b, acol.first)) {
-            if (acol.second.data != bcol->data ||
-                acol.second.valid != bcol->valid ||
-                acol.second.seed != bcol->seed)
-                return true; } }
+bool InputXbar::conflict(const std::map<int, HashCol> &a, const std::map<int, HashCol> &b) {
+    for (auto &acol : a)
+        if (auto bcol = ::getref(b, acol.first))
+            if (acol.second.data != bcol->data || acol.second.valid != bcol->valid)
+                return true;
+    return false;
+}
+
+bool InputXbar::conflict(const HashGrp &a, const HashGrp &b) {
+    if (a.tables != b.tables) return true;
+    if (a.seed && b.seed && a.seed != b.seed) return true;
     return false;
 }
 
@@ -133,23 +163,32 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
                     error(input.what.lineno, "placing %s off the top of the input xbar",
                           input.what.name()); } }
         for (InputXbar *other : use[group.first]) {
-            if (conflict(other->groups[group.first], group.second)) {
+            if (other->groups.count(group.first) &&
+                conflict(other->groups[group.first], group.second)) {
                 error(lineno, "Input xbar group %d conflict in stage %d", group.first,
                       table->stage->stageno);
                 warning(other->lineno, "conflicting group definition here"); } }
         use[group.first].push_back(this); }
-    for (auto &hash : hash_groups) {
+    for (auto &hash : hash_tables) {
         bool add_to_use = true;
         for (InputXbar *other : use[hash.first]) {
             if (other == this) {
                 add_to_use = false;
                 break; }
-            if (conflict(other->hash_groups[hash.first], hash.second)) {
-                error(lineno, "Input xbar hash %d conflict in stage %d", hash.first,
+            if (other->hash_tables.count(hash.first) &&
+                conflict(other->hash_tables[hash.first], hash.second)) {
+                error(lineno, "Input xbar hash table %d conflict in stage %d", hash.first,
                       table->stage->stageno);
-                warning(other->lineno, "conflicting group definition here"); } }
+                warning(other->lineno, "conflicting hash definition here"); } }
         if (add_to_use)
             use[hash.first].push_back(this); }
+    for (auto &group : hash_groups) {
+        for (InputXbar *other : use[group.first]) {
+            if (other->hash_groups.count(group.first) &&
+                conflict(other->hash_groups[group.first], group.second)) {
+                error(lineno, "Input xbar hash group %d conflict in stage %d", group.first,
+                      table->stage->stageno);
+                warning(other->lineno, "conflicting hash definition here"); } } }
 }
 
 void InputXbar::add_use(unsigned &byte_use, std::vector<Input> &inputs) {
@@ -231,28 +270,34 @@ void InputXbar::write_regs() {
                 if ((i ^ phv_byte) & swizzle_mask)
                     LOG1("FIXME -- need swizzle for " << input.what); } } }
     auto &hash = table->stage->regs.dp.hash;
-    for (auto &hg : hash_groups) {
-        if (hg.second.empty()) continue;
-        LOG1("  # Input xbar hash group " << hg.first);
-        int grp = hg.first;
-        hash.parity_group_mask[grp] |= parity_groups[grp];
-        for (auto &col : hg.second) {
+    for (auto &ht : hash_tables) {
+        if (ht.second.empty()) continue;
+        LOG1("  # Input xbar hash table " << ht.first);
+        int id = ht.first;
+        for (auto &col : ht.second) {
             int c = col.first;
             HashCol &h = col.second;
-            hash.hash_seed[grp][c/26] |= h.seed << (c%26);
             for (int word = 0; word < 8; word++) {
                 unsigned data = h.data.getrange(word*16, 16);
                 unsigned valid = (h.valid >> word*2) & 3;
                 if (data == 0 && valid == 0) continue;
-                auto &w = hash.galois_field_matrix[grp*8 + word][c];
+                auto &w = hash.galois_field_matrix[id*8 + word][c];
                 w.byte0 = data & 0xff;
                 w.byte1 = (data >> 8) & 0xff;
                 w.valid0 = valid & 1;
                 w.valid1 = (valid >> 1) & 1; } }
         if (table->gress == INGRESS)
-            hash.hashout_ctl.hash_group_ingress_enable |= 1 << grp;
+            hash.hashout_ctl.hash_group_ingress_enable |= 1 << id;
         else
-            hash.hashout_ctl.hash_group_egress_enable |= 1 << grp; }
+            hash.hashout_ctl.hash_group_egress_enable |= 1 << id; }
+    for (auto &hg : hash_groups) {
+        LOG1("  # Input xbar hash group " << hg.first);
+        int grp = hg.first;
+        if (hg.second.tables)
+            hash.parity_group_mask[grp] = hg.second.tables;
+        if (hg.second.seed) {
+            hash.hash_seed[grp][0] = hg.second.seed & 0x3ffffff;
+            hash.hash_seed[grp][1] = (hg.second.seed >> 26) & 0x3ffffff; } }
 }
 
 InputXbar::Input *InputXbar::find(Phv::Slice sl, int grp) {
