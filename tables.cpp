@@ -537,7 +537,6 @@ void MatchTable::write_regs(int type, Table *result) {
     if (result) {
         for (auto &row : result->layout) {
             int bus = row.row*2 | row.bus;
-            assert(bus >= 0 && bus < 15);
             merge.match_to_logical_table_ixbar_outputmap[type][bus].enabled_4bit_muxctl_select =
                 logical_id;
             merge.match_to_logical_table_ixbar_outputmap[type][bus].enabled_4bit_muxctl_enable = 1;
@@ -577,10 +576,6 @@ void MatchTable::write_regs(int type, Table *result) {
                 shift = 0;
                 idx++;
                 assert(idx < 2); } }
-    } else {
-        /* FIXME */
-        ERROR("Unimplemented -- tables with more than 8 actions: " << result->name());
-        assert(0);
     }
 
     /*------------------------
@@ -613,7 +608,6 @@ void MatchTable::write_regs(int type, Table *result) {
     if (result->format) {
         for (auto &row : result->layout) {
             int bus = row.row*2 | row.bus;
-            assert(bus >= 0 && bus < 15);
             merge.mau_immediate_data_mask[type][bus] = (1UL << result->format->immed_size)-1; }
         if (result->action_bus)
             result->action_bus->write_immed_regs(result); }

@@ -208,24 +208,28 @@ void GatewayTable::write_regs() {
     merge.gateway_to_logicaltable_xbar_ctl[logical_id].enabled_4bit_muxctl_select =
         row.row*2 + gw_unit;
     merge.gateway_to_logicaltable_xbar_ctl[logical_id].enabled_4bit_muxctl_enable = 1;
-    if (match_table) {
-        bool ternary_match = dynamic_cast<TernaryMatchTable *>(match_table) != 0;
-        for (auto &row : match_table->layout) {
-            auto &xbar_ctl = merge.gateway_to_pbus_xbar_ctl[row.row*2 + row.bus];
-            if (ternary_match) {
-                xbar_ctl.tind_logical_select = logical_id;
-                xbar_ctl.tind_inhibit_enable = 1;
-            } else {
-                xbar_ctl.exact_logical_select = logical_id;
-                xbar_ctl.exact_inhibit_enable = 1;
-            }
+    if (Table *payload = match_table) {
+        bool ternary_match = false;
+        if (auto tmatch = dynamic_cast<TernaryMatchTable *>(payload)) {
+            ternary_match = true;
+            payload = tmatch->indirect; }
+        if (payload)
+            for (auto &row : payload->layout) {
+                auto &xbar_ctl = merge.gateway_to_pbus_xbar_ctl[row.row*2 + row.bus];
+                if (ternary_match) {
+                    xbar_ctl.tind_logical_select = logical_id;
+                    xbar_ctl.tind_inhibit_enable = 1;
+                } else {
+                    xbar_ctl.exact_logical_select = logical_id;
+                    xbar_ctl.exact_inhibit_enable = 1;
+                }
 #if 0
-            merge.gateway_payload_pbus[row.row][row.bus] |= 1 << (row.bus + ternary_match ? 2 : 0);
-            merge.gateway_payload_data[row.row][row.bus][0] = ???;
-            merge.gateway_payload_data[row.row][row.bus][1] = ???;
-            merge.gateway_payload_match_adr[row.row][row.bus] = ???;
+                merge.gateway_payload_pbus[row.row][row.bus] |= 1 << (row.bus + ternary_match ? 2 : 0);
+                merge.gateway_payload_data[row.row][row.bus][0] = ???;
+                merge.gateway_payload_data[row.row][row.bus][1] = ???;
+                merge.gateway_payload_match_adr[row.row][row.bus] = ???;
 #endif
-        }
+            }
     }
 }
 

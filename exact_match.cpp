@@ -498,13 +498,15 @@ void ExactMatchTable::write_regs() {
                 std::max(0, (int)action->format->log2size - 7); }
         for (unsigned word_group = 0; word_group < word_info[word].size(); word_group++) {
             int group = word_info[word][word_group];
-            if (format->immed && format->immed->by_group[group]->bits[0].lo/128 == (unsigned)word)
+            if (group_info[group].overhead_word != word) continue;
+            if (format->immed) {
+                assert(format->immed->by_group[group]->bits[0].lo/128 == (unsigned)word);
                 merge.mau_immediate_data_exact_shiftcount[bus][word_group] =
-                    format->immed->by_group[group]->bits[0].lo % 128;
-            if (!action_args.empty() &&
-                action_args[0]->by_group[group]->bits[0].lo/128 == (unsigned)word)
+                    format->immed->by_group[group]->bits[0].lo % 128; }
+            if (!action_args.empty()) {
+                assert(action_args[0]->by_group[group]->bits[0].lo/128 == (unsigned)word);
                 merge.mau_action_instruction_adr_exact_shiftcount[bus][word_group] =
-                    action_args[0]->by_group[group]->bits[0].lo % 128;
+                    action_args[0]->by_group[group]->bits[0].lo % 128; }
             /* FIXME -- factor this where possible with ternary match code */
             if (action) {
                 int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
@@ -538,7 +540,6 @@ void ExactMatchTable::write_regs() {
         if (--word < 0) { word = fmt_width-1; } }
     if (actions) actions->write_regs(this);
     if (gateway) gateway->write_regs();
-    /* FIXME -- should be setting bit per bus, not per table */
 }
 
 void ExactMatchTable::gen_tbl_cfg(json::vector &out) {

@@ -261,7 +261,7 @@ DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
     std::vector<std::vector<Phv::Ref>>    match_in_word;
     std::vector<int>                      word_ixbar_group;
     struct GroupInfo {
-        /* info about which word(s) are used per group with wide matches */
+        /* info about which word(s) are used per format group with wide matches */
         int                     overhead_word;  /* which word of wide match contains overhead */
         int                     word_group;     /* which match group within the word to use */
         std::map<int, int>      match_group;    /* which match group for each word with match */
