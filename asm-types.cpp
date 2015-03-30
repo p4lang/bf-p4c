@@ -29,7 +29,7 @@ std::ostream &operator<<(std::ostream &out, match_t m) {
         if (mask & m.word0 & m.word1)
             out << '*';
         else
-            out << "0123456789abcdef"[(m.word1 >> shift) & mask];
+            out << "0123456789abcdef"[(m.word1 & mask) >> shift];
     return out;
 }
 

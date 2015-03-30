@@ -394,9 +394,8 @@ int Parser::State::MatchKey::setup_match_el(int at, value_t &spec) {
             ctr_neg = width++;
             return 0;
         } else if (at < 0 && (at = matchKeyLoc(spec, false)) >= 0) {
-            if (add_byte(at, 0, true) < 0) return -1;
-            if (at == 0) return add_byte(1, 0, true);
-            return 0; }
+            if (at == 0 && add_byte(1, 0, true) < 0) return -1;
+            return add_byte(at, 0, true); }
         /* fall through */
     default:
     error:
@@ -439,7 +438,7 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
 {
     counter = offset = shift = 0;
     counter_reset = offset_reset = false;
-    for (auto &kv : MapIterChecked(data, true)) {
+    for (auto &kv : data) {
         if (kv.key == "counter") {
             if (counter || counter_reset)
                 error(kv.key.lineno, "Multiple counter settings in match");
