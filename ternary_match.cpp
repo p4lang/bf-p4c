@@ -350,14 +350,14 @@ void TernaryIndirectTable::write_regs() {
                 merge.mau_actiondata_adr_mask[1][bus] = 0x3fffff & (~0U << lo_huffman_bits);
                 merge.mau_actiondata_adr_tcam_shiftcount[bus] =
                     69 + (format->log2size-2) - lo_huffman_bits;
+                merge.mau_actiondata_adr_vpn_shiftcount[1][bus] =
+                    std::max(0, (int)action->format->log2size - 7);
             } else {
                 /* FIXME -- support for multiple sizes of action data? */
                 merge.mau_actiondata_adr_mask[1][bus] =
                     ((1U << action_args[1]->size) - 1) << lo_huffman_bits;
                 merge.mau_actiondata_adr_tcam_shiftcount[bus] =
-                    action_args[1]->bits[0].lo + 5 - lo_huffman_bits; }
-            merge.mau_actiondata_adr_vpn_shiftcount[1][bus] =
-                std::max(0, (int)action->format->log2size - 7); } }
+                    action_args[1]->bits[0].lo + 5 - lo_huffman_bits; } } }
     if (actions) actions->write_regs(this);
 }
 

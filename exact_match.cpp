@@ -172,7 +172,7 @@ void ExactMatchTable::pass1() {
                 error(format->lineno, "Match overhead field %s(%d) not in bottom %d bits",
                       it->first.c_str(), i, limit); } }
     word_info.resize(fmt_width);
-    if (options.match_compiler && format->field("match")->size > 128) {
+    if (options.match_compiler /*&& format->field("match")->size > 128*/) {
         /* wide multiway macthes allocated in reverse order?!? */
         for (int i = group_info.size()-1; i >= 0; --i)
             if (group_info[i].match_group.size() > 1)
@@ -190,7 +190,7 @@ void ExactMatchTable::pass1() {
                               mgrp.first);
                     word_info[mgrp.first].push_back(i); } }
     LOG1("### Exact match table " << name());
-    for (unsigned i = 0; i < group_info.size(); i++) {
+    for (int i = 0; i < (int)group_info.size(); i++) {
         if (group_info[i].match_group.size() == 1)
             for (auto &mgrp : group_info[i].match_group) {
                 if ((mgrp.second = word_info[mgrp.first].size()) > 4)
@@ -208,6 +208,26 @@ void ExactMatchTable::pass1() {
             LOG1("    match group " << mgrp.second << " in word " << mgrp.first); }
     for (unsigned i = 0; i < word_info.size(); i++)
         LOG1("  word " << i << " groups: " << word_info[i]);
+    if (options.match_compiler) {
+        /* hack to match the compiler's nibble usage -- if any of the top 4 nibbles is
+         * unused in a word, mark it as used by any group that uses the other nibble of the
+         * byte, UNLESS it is used for the version.  This is ok, as the unused nibble will
+         * end up being masked off by the match_mask anyways */
+        for (unsigned word = 0; word < word_info.size(); word++) {
+            unsigned used_nibbles = 0;
+            for (auto group : word_info[word])
+                used_nibbles |= group_info[group].tofino_mask[word] >> 14;
+            for (unsigned nibble = 0; nibble < 4; nibble++) {
+                if (!((used_nibbles >> nibble) & 1) && ((used_nibbles >> (nibble^1)) & 1)) {
+                    LOG1("  ** fixup nibble " << nibble << " in word " << word);
+                    for (auto group : word_info[word])
+                        if ((group_info[group].tofino_mask[word] >> (14 + (nibble^1))) & 1) {
+                            if (auto *version = format->field("version", group)) {
+                                if (version->bits[0].lo == word*128 + (nibble^1)*4 + 112) {
+                                    LOG1("      skip group " << group << " (version)");
+                                    continue; } }
+                            group_info[group].tofino_mask[word] |= 1 << (14 + nibble);
+                            LOG1("      adding to group " << group); } } } } }
     setup_ways();
     for (auto &r : match) r.check();
     if (gateway) {
@@ -490,12 +510,12 @@ void ExactMatchTable::write_regs() {
             int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
             if (action_args.size() <= 1) {
                 merge.mau_actiondata_adr_mask[0][bus] = 0x3fffff & (~0U << lo_huffman_bits);
+                merge.mau_actiondata_adr_vpn_shiftcount[0][bus] =
+                    std::max(0, (int)action->format->log2size - 7);
             } else {
                 /* FIXME -- support for multiple sizes of action data? */
                 merge.mau_actiondata_adr_mask[0][bus] =
-                    ((1U << action_args[1]->size) - 1) << lo_huffman_bits; }
-            merge.mau_actiondata_adr_vpn_shiftcount[0][bus] =
-                std::max(0, (int)action->format->log2size - 7); }
+                    ((1U << action_args[1]->size) - 1) << lo_huffman_bits; } }
         for (unsigned word_group = 0; word_group < word_info[word].size(); word_group++) {
             int group = word_info[word][word_group];
             if (group_info[group].overhead_word != word) continue;
@@ -516,7 +536,7 @@ void ExactMatchTable::write_regs() {
                 } else {
                     assert(action_args[1]->by_group[group]->bits[0].lo/128 == (unsigned)word);
                     merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
-                        action_args[1]->bits[0].lo + 5 - lo_huffman_bits; } } }
+                        action_args[1]->by_group[group]->bits[0].lo + 5 - lo_huffman_bits; } } }
         for (auto col : row.cols) {
             int word_group = 0;
             for (int group : word_info[word]) {
