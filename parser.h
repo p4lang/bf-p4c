@@ -128,8 +128,8 @@ public:
     State::Ref                          start_state[2][4];
     int                                 tcam_row_use[2];
     Phv::Ref                            parser_error[2];
-    std::vector<Phv::Ref>               multi_write;
-    bitvec                              phv_use[2], phv_allow_multi_write;
+    std::vector<Phv::Ref>               multi_write, init_zero;
+    bitvec                              phv_use[2], phv_allow_multi_write, phv_init_valid;
 
 private:
     /* remapping structure for getting at the config bits for phv output

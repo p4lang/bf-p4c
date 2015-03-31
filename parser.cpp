@@ -75,6 +75,13 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
                 else
                     multi_write.emplace_back(gress, kv.value);
                 continue; }
+            if (kv.key == "init_zero") {
+                if (kv.value.type == tVEC)
+                    for (auto &el : kv.value.vec)
+                        init_zero.emplace_back(gress, el);
+                else
+                    init_zero.emplace_back(gress, kv.value);
+                continue; }
             if (!CHECKTYPE2M(kv.key, tSTR, tCMD, "state declaration")) continue;
             const char *name = kv.key.s;
             match_t stateno = { 0, 0 };
@@ -156,6 +163,9 @@ void Parser::process() {
     for (auto &reg : multi_write)
         if (reg.check())
             phv_allow_multi_write[reg->reg.index] = 1;
+    for (auto &reg : init_zero)
+        if (reg.check())
+            phv_init_valid[reg->reg.index] = 1;
     if (options.match_compiler) {
         Phv::setuse(INGRESS, phv_use[INGRESS]);
         Phv::setuse(EGRESS, phv_use[EGRESS]); }
@@ -235,6 +245,9 @@ void Parser::output() {
         //reg_eg.ebuf_reg.chnl_ctrl[i].chnl_ena = 1;
         reg_eg.epb_prsr_port_regs.chnl_ctrl[i].chnl_ena = 1; }
 
+    reg_in.prsr_reg.hdr_len_adj.amt = 0;
+    reg_eg.prsr_reg.hdr_len_adj.amt = 2;
+
     if (options.match_compiler) {
         phv_use[INGRESS] |= Phv::use(INGRESS);
         phv_use[EGRESS] |= Phv::use(EGRESS); }
@@ -247,13 +260,15 @@ void Parser::output() {
             reg_merge.phv_owner.owner[i] = 1;
             reg_in.prsr_reg.phv_owner.owner[i] = 1;
             reg_eg.prsr_reg.phv_owner.owner[i] = 1; } }
-    for (int i = 0; i < 224; i++)
-        if (phv_allow_multi_write[i]) {
-            reg_merge.phv_valid.vld[i] = 1;
-        } else {
+    for (int i = 0; i < 224; i++) {
+        if (!phv_allow_multi_write[i]) {
             reg_in.prsr_reg.no_multi_wr.nmw[i] = 1;
             reg_eg.prsr_reg.no_multi_wr.nmw[i] = 1;
         }
+        if (phv_allow_multi_write[i] || phv_init_valid[i])
+            reg_merge.phv_valid.vld[i] = 1;
+    }
+
     for (int i = 0; i < 112; i++)
         if (!phv_allow_multi_write[256+i]) {
             reg_in.prsr_reg.no_multi_wr.t_nmw[i] = 1;
