@@ -131,7 +131,7 @@ public:
                 assert(0); }
             enum flags_t { USED_IMMED=1 };
         };
-        Format(VECTOR(pair_t) &);
+        Format(VECTOR(pair_t) &data, bool may_overlap = false);
         ~Format();
         void setup_immed(Table *tbl);
     private:

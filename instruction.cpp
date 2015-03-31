@@ -425,7 +425,10 @@ void CondMoveMux::pass1(Table *tbl) {
     src2.mark_use(tbl);
 }
 int CondMoveMux::encode() {
-    return (cond << 17) | (opc->opcode << 12) | (src1.bits(slot/16) << 5) | src2.bits(slot/16);
+    /* funny cond test on src2 is to match the compiler output -- if we're not testing
+     * src2 validity, what we specify as src2 is irrelevant */
+    return (cond << 17) | (opc->opcode << 12) | (src1.bits(slot/16) << 5) | 
+        (cond & 0x40 ? src2.bits(slot/16) : 0);
 }
 
 struct DepositField : public Instruction {

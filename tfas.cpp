@@ -12,7 +12,7 @@ option_t options = {
     .match_compiler = true,
 };
 
-static int verbose = 0;
+int verbose = 0;
 static std::vector<std::string> debug_specs;
 static std::string output_dir;
 
@@ -46,7 +46,7 @@ int get_file_log_level(const char *file, int *level) {
             if (match(p, file))
                 if (auto *l = strchr(p, ':'))
                     return *level = atoi(l+1); }
-    return *level = verbose;
+    return *level = verbose > 0 ? verbose - 1 : 0;
 }
 
 static void check_debug_spec(const char *spec) {

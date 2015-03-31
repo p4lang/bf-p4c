@@ -16,6 +16,8 @@ while expr "$1" : - >/dev/null; do
     shift
 done
 
+glsc_args="--placement-order ingress_before_egress"
+
 trap 'exit' 2
 
 if [ $# -eq 0 ]; then
@@ -55,7 +57,7 @@ for p4file in "$@"; do
         need_reflow=false
     else 
         rm -f $name.tfa
-        if $GLSC --verbose 2 -S ../$name.p4 >glsc.log 2>&1; then
+        if $GLSC --verbose 2 -S $glsc_args ../$name.p4 >glsc.log 2>&1; then
             need_reflow=true
         else
             echo " p4 compile failed"
@@ -65,7 +67,7 @@ for p4file in "$@"; do
             ok=false
         fi
     fi
-    if $ok && $TFAS -vvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
+    if $ok && $TFAS -vvvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
         for f in $name.out/*.json; do
             if $REFLOW $f >tmp.json 2>/dev/null; then
                 mv tmp.json $f

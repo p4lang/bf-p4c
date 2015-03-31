@@ -264,7 +264,7 @@ static void overlap_test(int lineno,
                   a->first.c_str(), b->first.c_str()); }
 }
 
-Table::Format::Format(VECTOR(pair_t) &data) :
+Table::Format::Format(VECTOR(pair_t) &data, bool may_overlap) :
     lineno(data[0].key.lineno), size(0), immed_size(0), immed(0), log2size(0)
 {
     unsigned nextbit = 0;
@@ -308,18 +308,19 @@ Table::Format::Format(VECTOR(pair_t) &data) :
                     if ((size_t)c.hi+1 > size) size = c.hi+1; } }
         nextbit = f->bits.back().hi + 1;
         if (nextbit > size) size = nextbit; }
-    for (auto &grp : fmt) {
-        for (auto it = grp.begin(); it != grp.end(); ++it) {
-            for (auto &piece : it->second.bits) {
-                auto p = byindex.upper_bound(piece.lo);
-                if (p != byindex.end())
-                    overlap_test(lineno, piece.lo, it, p->first, p->second);
-                if (p != byindex.begin()) {
-                    --p;
-                    overlap_test(lineno, p->first, p->second, piece.lo, it);
-                    if (p->first == piece.lo && piece.hi <= p->second->second.hi(piece.lo))
-                        continue; }
-                byindex[piece.lo] = it; } } }
+    if (!may_overlap) {
+        for (auto &grp : fmt) {
+            for (auto it = grp.begin(); it != grp.end(); ++it) {
+                for (auto &piece : it->second.bits) {
+                    auto p = byindex.upper_bound(piece.lo);
+                    if (p != byindex.end())
+                        overlap_test(lineno, piece.lo, it, p->first, p->second);
+                    if (p != byindex.begin()) {
+                        --p;
+                        overlap_test(lineno, p->first, p->second, piece.lo, it);
+                        if (p->first == piece.lo && piece.hi <= p->second->second.hi(piece.lo))
+                            continue; }
+                    byindex[piece.lo] = it; } } } }
     for (size_t i = 1; i < fmt.size(); i++)
         if (fmt[0] != fmt[i])
             error(data[0].key.lineno, "Format group %zu doesn't match group 0", i);
@@ -570,13 +571,10 @@ void MatchTable::write_regs(int type, Table *result) {
         int idx = 0;
         int shift = gateway ? 6 : 0; // skip slot 0 if there's a gateway (reserved for NOP)
         for (auto act : *actions) {
+            assert(idx < 2);
             merge.mau_action_instruction_adr_map_data[type][logical_id][idx]
                 |= act->second.first << shift;
-            if ((shift += 6) >= 24) {
-                shift = 0;
-                idx++;
-                assert(idx < 2); } }
-    }
+            if ((shift += 6) >= 24) { shift = 0; idx++; } } }
 
     /*------------------------
      * Next Table

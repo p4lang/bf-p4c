@@ -41,7 +41,7 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "format") {
             if (CHECKTYPE(kv.value, tMAP))
-                format = new Format(kv.value.map);
+                format = new Format(kv.value.map, true);
         } else if (kv.key.type == tCMD && kv.key[0] == "format") {
             if (!PCHECKTYPE(kv.key.vec.size > 1, kv.key[1], tSTR)) continue;
             if (action_formats.count(kv.key[1].s)) {

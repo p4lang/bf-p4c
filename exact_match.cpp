@@ -254,7 +254,8 @@ void ExactMatchTable::pass1() {
             while(mw != match_by_bit.end() &&  mw->first < bit + piece.size()) {
                 int hi = std::min((unsigned)mw->second->size()-1, bit+piece.size()-mw->first-1);
                 assert((unsigned)piece.lo/128 < fmt_width);
-                merge_phv_vec(match_in_word[piece.lo/128], Phv::Ref(mw->second, lo, hi));
+                //merge_phv_vec(match_in_word[piece.lo/128], Phv::Ref(mw->second, lo, hi));
+                match_in_word[piece.lo/128].emplace_back(mw->second, lo, hi);
                 lo = 0;
                 ++mw; }
             bit += piece.size(); } }
@@ -536,7 +537,7 @@ void ExactMatchTable::write_regs() {
                 } else {
                     assert(action_args[1]->by_group[group]->bits[0].lo/128 == (unsigned)word);
                     merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
-                        action_args[1]->by_group[group]->bits[0].lo + 5 - lo_huffman_bits; } } }
+                        action_args[1]->by_group[group]->bits[0].lo%128 + 5 - lo_huffman_bits; } } }
         for (auto col : row.cols) {
             int word_group = 0;
             for (int group : word_info[word]) {
@@ -544,7 +545,7 @@ void ExactMatchTable::write_regs() {
                 if (group_info[group].overhead_word >= 0) {
                     auto &overhead_row = layout[index + word - group_info[group].overhead_word];
                     if (&overhead_row == &row)
-                        merge.col[col].row_action_nxtable_bus_drive[row.row] = 1 << row.bus;
+                        merge.col[col].row_action_nxtable_bus_drive[row.row] |= 1 << row.bus;
                     hitmap_ixbar.enabled_4bit_muxctl_select =
                         overhead_row.row*2 + group_info[group].word_group;
                 } else {
