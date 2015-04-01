@@ -33,6 +33,15 @@ void ActionTable::apply_to_field(const std::string &n, std::function<void(Format
     if (format)
         format->apply_to_field(n, fn);
 }
+int ActionTable::find_on_actionbus(Table::Format::Field *f, int off) {
+    int rv;
+    if (action_bus && (rv = action_bus->find(f, off)) >= 0)
+        return rv;
+    if (match_table) {
+        assert((Table *)match_table != (Table *)this);
+        return match_table->find_on_actionbus(f, off); }
+    return -1;
+}
 
 void ActionTable::setup(VECTOR(pair_t) &data) {
     auto *row = get(data, "row");
@@ -126,7 +135,6 @@ void ActionTable::pass2() {
     if (!match_table)
         error(lineno, "No match table for action table %s", name());
     action_bus->pass2(this);
-    action_bus->set_action_offsets(this);
     if (actions) actions->pass2(this);
 }
 

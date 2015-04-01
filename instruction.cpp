@@ -14,6 +14,8 @@ struct Idecode {
 
 std::map<std::string, Idecode *> Idecode::opcode;
 
+static const int group_size[] = { 32, 32, 32, 32, 8, 8, 8, 8, 16, 16, 16, 16, 16, 16 };
+
 class operand {
 private:
     struct Base {
@@ -26,7 +28,7 @@ private:
         virtual bool check() { return true; }
         virtual int phvGroup() { return -1; }
         virtual int bits(int group) = 0;
-        virtual unsigned bitoffset() const { return 0; }
+        virtual unsigned bitoffset(int group) const { return 0; }
         virtual unsigned bitsize() const { return 0; }
         virtual void mark_use(Table *tbl) {}
         virtual void dbprint(std::ostream &) const = 0;
@@ -64,7 +66,7 @@ private:
                 error(lineno, "registers in an instruction must all be in the same phv group");
                 return -1; }
             return reg->reg.index % 16; }
-        virtual unsigned bitoffset() const { return reg->lo; }
+        virtual unsigned bitoffset(int group) const { return reg->lo; }
         virtual unsigned bitsize() const { return reg->hi - reg->lo + 1; }
         virtual void mark_use(Table *tbl) {
             tbl->stage->action_use[tbl->gress][reg->reg.index] = true; }
@@ -72,56 +74,39 @@ private:
     };
     struct Action : public Base {
 	std::string		name;
+        Table                   *table;
 	Table::Format::Field	*field;
-        unsigned                off;
-	Action(int line, const std::string &n, Table::Format::Field *f, unsigned o) :
-            Base(line), name(n), field(f), off(o) {}
+        unsigned                lo, hi;
+	Action(int line, const std::string &n, Table *tbl, Table::Format::Field *f,
+               unsigned l, unsigned h) : Base(line), name(n), table(tbl), field(f), lo(l), hi(h) {}
 	virtual Action *clone() { return new Action(*this); }
         int bits(int group) { 
-            if (field->action_xbar < 0)
+            int byte = table->find_on_actionbus(field, lo);
+            if (byte < 0)
                 error(lineno, "%s is not on the action bus", name.c_str());
-            else switch (group) {
-            case 0: case 1: case 2: case 3:
-                if (field->action_xbar + off/32 >= 160)
-                    error(lineno, "action bus entry %d(%s) out of range for 32-bit access",
-                          field->action_xbar, name.c_str());
-                else if (field->action_xbar&3)
-                    error(lineno, "action bus entry %d(%s) misaligned for 32-bit access",
-                          field->action_xbar, name.c_str());
-                else
-                    return 0x40 + field->action_xbar / 4 + off/32;
-                break;
-            case 4: case 5: case 6: case 7:
-                if (field->action_xbar + off/8 >= 40)
-                    error(lineno, "action bus entry %d(%s) out of range for 8-bit access",
-                          field->action_xbar, name.c_str());
-                else
-                    return 0x40 + field->action_xbar +off/8;
-                break;
-            case 8: case 9: case 10: case 11: case 12: case 13:
-                if (field->action_xbar + off/16 < 40 || field->action_xbar + off/16 >= 120)
-                    error(lineno, "action bus entry %d(%s) out of range for 16-bit access",
-                          field->action_xbar, name.c_str());
-                else if (field->action_xbar&1)
-                    error(lineno, "action bus entry %d(%s) misaligned for 16-bit access",
-                          field->action_xbar, name.c_str());
-                else
-                    return 0x40 + (field->action_xbar / 2) - 20 + off/16;
-                break;
-            default:
-                assert(0);
-                break; }
+            int byte_value = byte;
+            int size = group_size[group]/8U;
+            if (size == 2) byte -= 40;
+            if (byte < 0 || byte > 40*size)
+                error(lineno, "action bus entry %d(%s) out of range for %d-bit access",
+                      byte_value, name.c_str(), size*8);
+            //else if (byte % size != 0) 
+            //    error(lineno, "action bus entry %d(%s) misaligned for %d-bit access",
+            //          byte_value, name.c_str(), size*8);
+            else
+                return 0x40 + byte/size;
             return -1; }
         virtual void mark_use(Table *tbl) {
             field->flags |= Table::Format::Field::USED_IMMED; }
-        virtual unsigned bitoffset() const { return field->action_xbar_bit + off; }
+        virtual unsigned bitoffset(int group) const {
+            int byte = table->find_on_actionbus(field, lo);
+            int size = group_size[group]/8U;
+            return 8*(byte % size) + lo % 8; }
         virtual unsigned bitsize() const { return field->size; }
         virtual void dbprint(std::ostream &out) const {
-            out << name;
-            if (off) out << '(' << off << ')';
+            out << name << '(' << lo << ".." << hi << ')';
             if (field)
-                out << '[' << field->action_xbar << ':' << field->action_xbar_bit
-                    << ", " << field->bits[0].lo << ':' << field->size << ", "
+                out << '[' << field->bits[0].lo << ':' << field->size << ", "
                     << field->group << ']'; }
     };
     class Named : public Base {
@@ -137,7 +122,7 @@ private:
         bool check() { assert(0); return true; }
         int phvGroup() { assert(0); return -1; }
         int bits(int group) { assert(0); return 0; }
-        unsigned bitoffset() const { assert(0); return 0; }
+        unsigned bitoffset(int group) const { assert(0); return 0; }
         unsigned bitsize() const { assert(0); return 0; }
         void mark_use(Table *tbl) { assert(0); }
         void dbprint(std::ostream &out) const { 
@@ -167,7 +152,7 @@ public:
     operand(Table *tbl, const std::string &act, const value_t &v);
     operand(gress_t gress, const value_t &v) : op(new Phv(v.lineno, gress, v)) {}
     bool valid() const { return op != 0; }
-    unsigned bitoffset() { return op->lookup(op)->bitoffset(); }
+    unsigned bitoffset(int group) { return op->lookup(op)->bitoffset(group); }
     unsigned bitsize() { return op->lookup(op)->bitsize(); }
     bool check() { return op && op->lookup(op) ? op->check() : false; }
     int phvGroup() { return op->lookup(op)->phvGroup(); }
@@ -192,6 +177,7 @@ operand::operand(Table *tbl, const std::string &act, const value_t &v) : op(0) {
 }
 
 auto operand::Named::lookup(Base *&ref) -> Base * {
+    if (tbl->action) tbl = tbl->action;
     if (auto *field = tbl->lookup_field(name, action)) {
         if (lo >= 0 && (unsigned)lo >= field->size) {
             error(lineno, "Bit %d out of range for field %s", lo, name.c_str());
@@ -200,7 +186,8 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
             error(lineno, "Bit %d out of range for field %s", hi, name.c_str());
             ref = 0;
         } else
-            ref = new Action(lineno, name, field, lo >= 0 ? lo : 0);
+            ref = new Action(lineno, name, tbl, field, lo >= 0 ? lo : 0,
+                             hi >= 0 ? hi : field->size - 1 );
     } else
         ref = new Phv(lineno, tbl->gress, name, lo, hi);
     if (ref != this) delete this;
@@ -477,7 +464,7 @@ void DepositField::pass1(Table *tbl) {
     src2.mark_use(tbl);
 }
 int DepositField::encode() {
-    unsigned rot = (dest->reg.size - dest->lo + src1.bitoffset()) % dest->reg.size;
+    unsigned rot = (dest->reg.size - dest->lo + src1.bitoffset(slot/16)) % dest->reg.size;
     int bits = (1 << 12) | (src1.bits(slot/16) << 5) | src2.bits(slot/16);
     bits |= dest->hi << 13;
     bits |= rot << 18;

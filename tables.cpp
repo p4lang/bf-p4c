@@ -345,7 +345,7 @@ void Table::Format::setup_immed(Table *tbl) {
     std::map<unsigned, Field *> immed_fields;
     unsigned lo = INT_MAX, hi = 0;
     for (auto &f : fmt[0]) {
-        if (f.second.action_xbar < 0 && !(f.second.flags & Field::USED_IMMED))
+        if (!(f.second.flags & Field::USED_IMMED))
             continue;
         if (f.second.bits.size() > 1)
             error(lineno, "Immmediate action data %s cannot be split", f.first.c_str());
@@ -367,7 +367,7 @@ void Table::Format::setup_immed(Table *tbl) {
     for (unsigned i = 1; i < fmt.size(); i++) {
         int delta = (int)immed->by_group[i]->bits[0].lo - (int)immed->bits[0].lo;
         for (auto &f : fmt[0]) {
-            if (f.second.action_xbar < 0 && !(f.second.flags & Field::USED_IMMED))
+            if (!(f.second.flags & Field::USED_IMMED))
                 continue;
             if (delta != (int)f.second.by_group[i]->bits[0].lo - (int)f.second.bits[0].lo) {
                 error(lineno, "Immediate data field %s for table %s does not match across "
@@ -376,9 +376,9 @@ void Table::Format::setup_immed(Table *tbl) {
     int byte[4] = { -1, -1, -1, -1 };
     bool err = false;
     for (auto &f : fmt[0]) {
-        if (f.second.action_xbar < 0)
-            continue;
-        int slot = Stage::action_bus_slot_map[f.second.action_xbar];
+        int byte_slot = tbl->find_on_actionbus(&f.second, 0);
+        if (byte_slot < 0) continue;
+        int slot = Stage::action_bus_slot_map[byte_slot];
         unsigned off = f.second.bits[0].lo - immed->bits[0].lo;
         switch (Stage::action_bus_slot_size[slot]) {
         case 8:
@@ -407,8 +407,7 @@ void Table::Format::setup_immed(Table *tbl) {
         default:
             assert(0); }
         if (err)
-            error(lineno, "Immediate data misaligned for action bus byte %d",
-                  f.second.action_xbar); }
+            error(lineno, "Immediate data misaligned for action bus byte %d", byte_slot); }
 }
 
 Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) : lineno(data.size > 0 ? data[0].key.lineno : -1) {
@@ -622,6 +621,10 @@ void MatchTable::link_action(Table::Ref &ref) {
                   ref->name());
         ref->match_table = this;
         ref->logical_id = logical_id; }
+}
+
+int Table::find_on_actionbus(Format::Field *f, int off) {
+    return action_bus ? action_bus->find(f, off) : -1;
 }
 
 int Table::find_on_ixbar(Phv::Slice sl, int group) {

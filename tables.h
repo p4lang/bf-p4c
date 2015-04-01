@@ -118,11 +118,11 @@ public:
         struct Field {
             unsigned    size, group, flags;
             std::vector<bitrange_t>    bits;
-            int         action_xbar;
-            int         action_xbar_bit;
+            //int         action_xbar;
+            //int         action_xbar_bit;
             Field       **by_group;
             Field() : size(0), group(0), flags(0),
-                action_xbar(-1), action_xbar_bit(0), by_group(0) {}
+                /*action_xbar(-1), action_xbar_bit(0),*/ by_group(0) {}
             bool operator==(const Field &a) const { return size == a.size; }
             unsigned hi(unsigned bit) {
                 for (auto &chunk : bits)
@@ -203,6 +203,7 @@ public:
     virtual void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn)
         { if (format) format->apply_to_field(n, fn); }
     int find_on_ixbar(Phv::Slice sl, int group);
+    virtual int find_on_actionbus(Format::Field *f, int off);
 };
 
 class MatchTable : public Table {
@@ -281,6 +282,8 @@ public:
     Format::Field *lookup_field(const std::string &name, const std::string &action) {
         assert(!format);
         return indirect ? indirect->lookup_field(name, action) : 0; }
+    int find_on_actionbus(Format::Field *f, int off) {
+        return indirect ? indirect->find_on_actionbus(f, off) : -1; }
 )
 DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     void vpn_params(int &width, int &period, const char *&period_name) {
@@ -295,6 +298,7 @@ DECLARE_TABLE_TYPE(ActionTable, Table, "action",
     std::map<std::string, Format *>     action_formats;
     Format::Field *lookup_field(const std::string &name, const std::string &action);
     void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn);
+    int find_on_actionbus(Format::Field *f, int off);
 )
 DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
     uint64_t                    payload;

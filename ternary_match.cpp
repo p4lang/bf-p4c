@@ -300,9 +300,7 @@ void TernaryIndirectTable::pass1() {
 void TernaryIndirectTable::pass2() {
     if (!match_table)
         error(lineno, "No match table for ternary indirect table %s", name());
-    if (action_bus) {
-        action_bus->pass2(this);
-        action_bus->set_immed_offsets(this); }
+    if (action_bus) action_bus->pass2(this);
     if (actions) actions->pass2(this);
 }
 void TernaryIndirectTable::write_regs() {

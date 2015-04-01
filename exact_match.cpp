@@ -108,8 +108,7 @@ void ExactMatchTable::pass1() {
     alloc_vpns();
     check_next();
     link_action(action);
-    if (action_bus)
-        action_bus->pass1(this);
+    if (action_bus) action_bus->pass1(this);
     if (actions) {
         assert(action_args.size() == 0);
         if (auto *sel = lookup_field("action"))
@@ -369,9 +368,8 @@ static int find_in_ixbar(Stage *stage, Table *table, std::vector<Phv::Ref> &matc
 
 void ExactMatchTable::pass2() {
     input_xbar->pass2(stage->exact_ixbar, 128);
-    if (action_bus) {
+    if (action_bus)
         action_bus->pass2(this);
-        action_bus->set_immed_offsets(this); }
     word_ixbar_group.resize(match_in_word.size());
     for (unsigned i = 0; i < match_in_word.size(); i++)
         word_ixbar_group[i] = find_in_ixbar(stage, this, match_in_word[i]);

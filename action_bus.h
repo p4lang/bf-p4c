@@ -17,10 +17,9 @@ public:
     ActionBus(Table *, VECTOR(pair_t) &);
     void pass1(Table *tbl);
     void pass2(Table *tbl);
-    void set_immed_offsets(Table *tbl);
-    void set_action_offsets(Table *tbl);
     void write_immed_regs(Table *tbl);
     void write_action_regs(Table *tbl, unsigned homerow, unsigned action_slice);
+    int find(Table::Format::Field *f, int off);
 };
 
 #endif /* _action_bus_h_ */

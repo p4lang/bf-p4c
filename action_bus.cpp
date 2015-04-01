@@ -39,8 +39,9 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
             continue; }
         by_byte.emplace(idx, Slot{name, idx, sz, f, off});
 	//by_name[name].push_back(&by_byte[idx]);
-        if (off == 0)
-            tbl->apply_to_field(name, [idx](Table::Format::Field *f){ f->action_xbar = idx; }); }
+        tbl->apply_to_field(name, [](Table::Format::Field *f){
+            f->flags |= Table::Format::Field::USED_IMMED; });
+    }
 }
 
 void ActionBus::pass1(Table *tbl) {
@@ -64,15 +65,13 @@ void ActionBus::pass2(Table *tbl) {
      * FIXME -- and aren't */
 }
 
-void ActionBus::set_action_offsets(Table *tbl) {
-    for (auto &f : by_byte) {
-        Table::Format::Field *field = f.second.data;
-        if (field->bits.size() > 1)
-            error(lineno, "Split field %s cannot go on action bus",
-                  f.second.name.c_str());
-        assert(field->action_xbar == (int)f.first);
-        int slot = Stage::action_bus_slot_map[f.first];
-        field->action_xbar_bit = field->bits[0].lo % Stage::action_bus_slot_size[slot]; }
+int ActionBus::find(Table::Format::Field *f, int off) {
+    for (auto &slot : by_byte) {
+        if (slot.second.data != f) continue;
+        if ((int)slot.second.offset * 8 > off) continue;
+        if (off/8 - slot.second.offset >= slot.second.size) continue;
+        return slot.first + off/8 - slot.second.offset; }
+    return -1;
 }
 
 void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action_slice) {
@@ -138,22 +137,10 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
     }
 }
 
-void ActionBus::set_immed_offsets(Table *tbl) {
-    for (auto &f : by_byte) {
-        Table::Format::Field *field = f.second.data;
-        if (f.second.offset == 0)
-            assert((unsigned)field->action_xbar == f.first);
-        int slot = Stage::action_bus_slot_map[f.first];
-        unsigned off = field->bits[0].lo - tbl->format->immed->bits[0].lo + f.second.offset*8;
-        field->action_xbar_bit = off % Stage::action_bus_slot_size[slot]; }
-}
-
 void ActionBus::write_immed_regs(Table *tbl) {
     auto &adrdist = tbl->stage->regs.rams.match.adrdist;
     int tid = tbl->logical_id;
     for (auto &f : by_byte) {
-        if (f.second.offset == 0)
-            assert(f.second.data->action_xbar == (int)f.first);
         int slot = Stage::action_bus_slot_map[f.first];
         unsigned off = f.second.data->bits[0].lo - tbl->format->immed->bits[0].lo +
                        f.second.offset*8;
