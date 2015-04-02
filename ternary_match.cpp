@@ -9,8 +9,9 @@
 DEFINE_TABLE_TYPE(TernaryMatchTable)
 DEFINE_TABLE_TYPE(TernaryIndirectTable)
 
-void TernaryMatchTable::vpn_params(int &width, int &period, const char *&period_name) {
+void TernaryMatchTable::vpn_params(int &width, int &depth, int &period, const char *&period_name) {
     width = input_xbar->width();
+    depth = layout_size() / width;
     period = 1;
     period_name = 0;
 }

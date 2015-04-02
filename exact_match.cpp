@@ -171,8 +171,10 @@ void ExactMatchTable::pass1() {
                 error(format->lineno, "Match overhead field %s(%d) not in bottom %d bits",
                       it->first.c_str(), i, limit); } }
     word_info.resize(fmt_width);
-    if (options.match_compiler /*&& format->field("match")->size > 128*/) {
-        /* wide multiway macthes allocated in reverse order?!? */
+    if (options.match_compiler && format->field("match")->size > 32) {
+        /* wide(ish) multiway macthes allocated in reverse order?!?
+         * FIXME -- need to either have the compiler tell us when it is swapping things
+         * or have a reliable way of figuring it out */
         for (int i = group_info.size()-1; i >= 0; --i)
             if (group_info[i].match_group.size() > 1)
                 for (auto &mgrp : group_info[i].match_group) {
@@ -517,22 +519,23 @@ void ExactMatchTable::write_regs() {
                     ((1U << action_args[1]->size) - 1) << lo_huffman_bits; } }
         for (unsigned word_group = 0; word_group < word_info[word].size(); word_group++) {
             int group = word_info[word][word_group];
-            if (group_info[group].overhead_word != word) continue;
-            if (format->immed) {
-                assert(format->immed->by_group[group]->bits[0].lo/128 == (unsigned)word);
-                merge.mau_immediate_data_exact_shiftcount[bus][word_group] =
-                    format->immed->by_group[group]->bits[0].lo % 128; }
-            if (!action_args.empty()) {
-                assert(action_args[0]->by_group[group]->bits[0].lo/128 == (unsigned)word);
-                merge.mau_action_instruction_adr_exact_shiftcount[bus][word_group] =
-                    action_args[0]->by_group[group]->bits[0].lo % 128; }
+            if (group_info[group].overhead_word == word) {
+                if (format->immed) {
+                    assert(format->immed->by_group[group]->bits[0].lo/128 == (unsigned)word);
+                    merge.mau_immediate_data_exact_shiftcount[bus][word_group] =
+                        format->immed->by_group[group]->bits[0].lo % 128; }
+                if (!action_args.empty()) {
+                    assert(action_args[0]->by_group[group]->bits[0].lo/128 == (unsigned)word);
+                    merge.mau_action_instruction_adr_exact_shiftcount[bus][word_group] =
+                        action_args[0]->by_group[group]->bits[0].lo % 128; }
+            } else if (!options.match_compiler) continue;
             /* FIXME -- factor this where possible with ternary match code */
             if (action) {
                 int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
                 if (action_args.size() <= 1) {
                     merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
                         69 - lo_huffman_bits;
-                } else {
+                } else if (group_info[group].overhead_word == word) {
                     assert(action_args[1]->by_group[group]->bits[0].lo/128 == (unsigned)word);
                     merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
                         action_args[1]->by_group[group]->bits[0].lo%128 + 5 - lo_huffman_bits; } } }

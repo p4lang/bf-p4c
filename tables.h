@@ -32,7 +32,7 @@ protected:
     void setup_action_table(value_t &);
     void setup_actions(value_t &);
     void setup_vpns(VECTOR(value_t) *);
-    virtual void vpn_params(int &width, int &period, const char *&period_name) { assert(0); }
+    virtual void vpn_params(int &width, int &depth, int &period, const char *&period_name) { assert(0); }
     void alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Table *> *bus_use);
     void alloc_busses(Alloc2Dbase<Table *> &bus_use);
     void alloc_id(const char *idname, int &id, int &next_id, int max_id,
@@ -243,9 +243,10 @@ TYPE *TYPE::Type::create(int lineno, const char *name, gress_t gress,   \
 }
 
 DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
-    void vpn_params(int &width, int &period, const char *&period_name) {
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
         width = (format->size-1)/128 + 1;
         period = format->groups();
+        depth = period * layout_size() / width;
         period_name = "match group size"; }
     struct Way {
         int                              lineno;
@@ -274,7 +275,7 @@ DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
                                                  * match group in each word */
 )
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
-    void vpn_params(int &width, int &period, const char *&period_name);
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name);
 public:
     int tcam_id;
     Table::Ref indirect;
@@ -286,14 +287,16 @@ public:
         return indirect ? indirect->find_on_actionbus(f, off) : -1; }
 )
 DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
-    void vpn_params(int &width, int &period, const char *&period_name) {
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
         width = (format->size-1)/128 + 1;
+        depth = layout_size() / width;
         period = 1;
         period_name = 0; }
 )
 DECLARE_TABLE_TYPE(ActionTable, Table, "action",
-    void vpn_params(int &width, int &period, const char *&period_name) {
-        width = period = (format->size-1)/128 + 1;
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
+        width = 1; depth = layout_size();
+        period = 1 << std::max((int)format->log2size - 7, 0);
         period_name = "action data width"; }
     std::map<std::string, Format *>     action_formats;
     Format::Field *lookup_field(const std::string &name, const std::string &action);

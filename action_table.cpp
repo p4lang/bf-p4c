@@ -167,12 +167,15 @@ void ActionTable::write_regs() {
                 } else {
                     /* overflow L up */
                     switch_ctl.t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_l_i = 1; }
-                if (prev_switch_ctl != home_switch_ctl)
-                    prev_switch_ctl->t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_b_i = 1;
-                else if (home->row & 1)
-                    home_switch_ctl->r_action_o_mux_select.r_action_o_sel_oflo_rd_b_i = 1;
-                else
-                    home_switch_ctl->r_l_action_o_mux_select.r_l_action_o_sel_oflo_rd_b_i = 1; }
+                if (prev_switch_ctl != &switch_ctl) {
+                    if (prev_switch_ctl != home_switch_ctl)
+                        prev_switch_ctl->t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_b_i = 1;
+                    else if (home->row & 1)
+                        home_switch_ctl->r_action_o_mux_select.r_action_o_sel_oflo_rd_b_i = 1;
+                    else
+                        home_switch_ctl->r_l_action_o_mux_select.r_l_action_o_sel_oflo_rd_b_i = 1;
+                }
+            }
             /* if we're skipping over full rows and overflowing over those rows, need to
              * propagate overflow from bottom to top.  This effectively uses only the
              * odd (right side) overflow busses.  L ovfl can still go to R action */
@@ -187,7 +190,7 @@ void ActionTable::write_regs() {
             } else {
                 assert(home->row >= 8);
                 oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_index = 0;
-                oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_sel = 2;
+                oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_sel = 3;
                 if (!icxbar.address_distr_to_overflow)
                     icxbar.address_distr_to_overflow = 1; }
             oflo_adr_xbar.adr_dist_oflo_adr_xbar_enable = 1; }

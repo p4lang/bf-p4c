@@ -141,12 +141,12 @@ void Table::setup_logical_id() {
 }
 
 void Table::setup_vpns(VECTOR(value_t) *vpn) {
-    int period, width;
+    int period, width, depth;
     const char *period_name;
-    vpn_params(width, period, period_name);
-    if (vpn && (unsigned)vpn->size != layout_size()/width) {
+    vpn_params(width, depth, period, period_name);
+    if (vpn && vpn->size % (depth/period) != 0) {
         error(lineno, "Vpn list length doesn't match layout (is %d, should be %d)",
-              vpn->size, layout_size()/width);
+              vpn->size, depth/period);
         return; }
     int word = width;
     Layout *firstrow = 0;
@@ -176,7 +176,7 @@ void Table::setup_vpns(VECTOR(value_t) *vpn) {
                 ++vpniter;
             } else {
                 el = vpn_ctr;
-                vpn_ctr += period; } } }
+                if ((vpn_ctr += period) == depth) vpn_ctr = 0; } } }
     if (vpn && error_count == 0) {
         for (int i = 0; i < vpn->size; i++)
             if (!used_vpns[i]) {
