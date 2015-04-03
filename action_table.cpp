@@ -44,6 +44,7 @@ int ActionTable::find_on_actionbus(Table::Format::Field *f, int off) {
 }
 
 void ActionTable::setup(VECTOR(pair_t) &data) {
+    action_id = -1;
     auto *row = get(data, "row");
     if (!row) row = get(data, "logical_row");
     setup_layout(row, get(data, "column"), 0);
@@ -69,6 +70,9 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "action_bus") {
             if (CHECKTYPE(kv.value, tMAP))
                 action_bus = new ActionBus(this, kv.value.map);
+        } else if (kv.key == "action_id") {
+            if (CHECKTYPE(kv.value, tINT))
+                action_id = kv.value.i;
         } else if (kv.key == "vpns") {
             if (CHECKTYPE(kv.value, tVEC))
                 setup_vpns(&kv.value.vec);
@@ -212,7 +216,7 @@ void ActionTable::write_regs() {
             ram.unit_ram_ctl.match_ram_read_data_mux_select = home == &logical_row ? 4 : 2;
             unitram_config.unitram_type = 2;
             unitram_config.unitram_vpn = *vpn++;
-            unitram_config.unitram_logical_table = logical_id;
+            unitram_config.unitram_logical_table = action_id >= 0 ? action_id : logical_id;
             if (gress == INGRESS)
                 unitram_config.unitram_ingress = 1;
             else

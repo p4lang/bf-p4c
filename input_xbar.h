@@ -40,10 +40,6 @@ public:
     void pass2(Alloc1Dbase<std::vector<InputXbar *>> &use, int size);
     void write_regs();
 
-    unsigned width() const { return groups.size(); }
-    unsigned group_for_word(unsigned w) {
-        assert(w < group_order.size());
-        return group_order[w]->first; }
     int hash_group() {
         /* used by gateways to get the associated hash group */
         if (hash_groups.size() != 1) return -1;
@@ -52,6 +48,11 @@ public:
         /* used by gateways to get the associated match group */
         if (groups.size() != 1) return -1;
         return groups.begin()->first; }
+    /* functions for tcam ixbar that take into account funny byte/word group stuff */
+    unsigned tcam_width();
+    int tcam_byte_group(int n);
+    int tcam_word_group(int n);
+
     class all_iter {
         decltype(group_order)::const_iterator   outer;
         bool                                    inner_valid;

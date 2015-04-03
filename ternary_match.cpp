@@ -10,10 +10,28 @@ DEFINE_TABLE_TYPE(TernaryMatchTable)
 DEFINE_TABLE_TYPE(TernaryIndirectTable)
 
 void TernaryMatchTable::vpn_params(int &width, int &depth, int &period, const char *&period_name) {
-    width = input_xbar->width();
+    if ((width = match.size()) == 0)
+        width = input_xbar->tcam_width();
     depth = layout_size() / width;
     period = 1;
     period_name = 0;
+}
+
+TernaryMatchTable::Match::Match(const value_t &v) {
+    if (!CHECKTYPE(v, tVEC)) return;
+    if (v.vec.size < 2 || v.vec.size > 3) {
+        error(v.lineno, "Syntax error");
+        return; }
+    if (!CHECKTYPE(v[0], tINT) || !CHECKTYPE(v[v.vec.size-1], tINT)) return;
+    if ((word_group = v[0].i) < 0 || v[0].i >= TCAM_XBAR_GROUPS)
+        error(v[0].lineno, "Invalid input xbar group %d", v[0].i);
+    if (v.vec.size == 3 && CHECKTYPE(v[1], tINT)) {
+        if ((byte_group = v[1].i) < 0 || v[1].i >= TCAM_XBAR_GROUPS/2)
+            error(v[1].lineno, "Invalid input xbar group %d", v[1].i);
+    } else
+        byte_group = -1;
+    if ((byte_config = v[v.vec.size-1].i) < 0 || byte_config >= 4)
+        error(v[v.vec.size-1].lineno, "Invalid input xbar byte control %d", byte_config);
 }
 
 void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
@@ -26,8 +44,12 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
             input_xbar = new InputXbar(this, true, ixbar->map);
     } else
         error(lineno, "No input xbar specified in table %s", name());
+    if (auto *m = get(data, "match"))
+        if (CHECKTYPE(*m, tVEC))
+            for (auto &v : m->vec)
+                match.emplace_back(v);
     for (auto &kv : MapIterChecked(data)) {
-        if (kv.key == "input_xbar") {
+        if (kv.key == "input_xbar" || kv.key == "match") {
             /* done above to be done before vpns */
         } else if (kv.key == "gateway") {
             if (CHECKTYPE(kv.value, tMAP)) {
@@ -109,10 +131,38 @@ void TernaryMatchTable::pass1() {
     alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
              TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
     alloc_busses(stage->tcam_match_bus_use);
+    input_xbar->pass1(stage->tcam_ixbar, 44);
+    if (match.empty()) {
+        match.resize(input_xbar->tcam_width());
+        for (unsigned i = 0; i < match.size(); i++) {
+            match[i].word_group = input_xbar->tcam_word_group(i);
+            match[i].byte_group = input_xbar->tcam_byte_group(i/2);
+            match[i].byte_config = (i&1) + 1; }
+        match.back().byte_config = 3; }
     alloc_vpns();
     check_next();
     indirect.check();
     link_action(action);
+    chain_rows = 0;
+    unsigned row_use = 0;
+    for (auto &row : layout) row_use |= 1U << row.row;
+    if (layout.size() % match.size() != 0)
+        error(layout[0].lineno, "Rows not a multiple of the match width in tables %s", name());
+    unsigned word = 0;
+    int prev_row = -1;
+    for (auto &row : layout) {
+        if (word && prev_row+1 != row.row)
+            error(row.lineno, "Ternary match rows must be contiguous in ascending order"
+                  "within each group of rows in a wide match");
+        /* row 6 never chains -- other rows chain towards row 6 */
+        if (row.row != 6 && word != (row.row < 6 ? match.size()-1 : 0)) {
+            chain_rows |= 1 << row.row;
+            int chain_to = row.row + (row.row < 6 ? 1 : -1);
+            if (!((row_use >> chain_to) & 1))
+                error(row.lineno, "Can't chain properly from row %d in ternary match %s, "
+                      "as the table isn't using the next row", row.row, name()); }
+        prev_row = row.row;
+        if (++word == match.size()) word = 0; }
     if (indirect) {
         if (!dynamic_cast<TernaryIndirectTable *>((Table *)indirect))
             error(indirect.lineno, "%s is not a ternary indirect table", indirect->name());
@@ -128,7 +178,6 @@ void TernaryMatchTable::pass1() {
     if (hit_next.size() > 2)
         error(hit_next[0].lineno, "Ternary Match tables cannot directly specify more"
               "than 2 hit next tables");
-    input_xbar->pass1(stage->tcam_ixbar, 44);
     if (actions) actions->pass1(this);
     if (gateway) {
         gateway->logical_id = logical_id;
@@ -158,12 +207,13 @@ void TernaryMatchTable::write_regs() {
             /* TODO -- always setting dirtcam mode to 0 */
             tcam_mode.tcam_data_dirtcam_mode = 0;
             tcam_mode.tcam_data1_select = row.bus;
-            tcam_mode.tcam_chain_out_enable = word > 0;
+            tcam_mode.tcam_chain_out_enable = (chain_rows >> row.row) & 1;
             if (gress == INGRESS)
                 tcam_mode.tcam_ingress = 1;
             else
                 tcam_mode.tcam_egress = 1;
-            tcam_mode.tcam_match_output_enable = (word == 0);
+            tcam_mode.tcam_match_output_enable = 
+                ((~chain_rows | ALWAYS_ENABLE_ROW) >> row.row) & 1;
             tcam_mode.tcam_vpn = *vpn++;
             tcam_mode.tcam_logical_table = tcam_id;
             /* TODO -- always disable tcam_validbit_xbar? */
@@ -172,30 +222,21 @@ void TernaryMatchTable::write_regs() {
                 for (int i = 0; i < 8; i++)
                     tcam_vh_xbar.tcam_validbit_xbar_ctl[row.bus][row.row/2][i] |= 15; }
             auto &halfbyte_mux_ctl = tcam_vh_xbar.tcam_row_halfbyte_mux_ctl[row.bus][row.row];
-            if (word+1 == input_xbar->width()) {
-                halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_select = 3;
-                halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_enable = 1;
-                halfbyte_mux_ctl.tcam_row_search_thread = gress;
-            } else {
-                /* FIXME -- program to halfbyte mux */
-                if (options.match_compiler) {
-                    halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_select = (row.row & 1) + 1;
-                    halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_enable = 1;
-                    halfbyte_mux_ctl.tcam_row_search_thread = gress;
-                }
-            }
-            /* FIXME:
-            tcam_vh_xbar.tcam_extra_byte_ctl[row.bus][row.row/2]
-                .enabled_3bit_muxctl_select = byte_match_group_number;
-            tcam_vh_xbar.tcam_extra_byte_ctl[row.bus][row.row/2]
-                .enabled_3bit_muxctl_enable = 1; */
+            halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_select = match[word].byte_config;
+            halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_enable = 1;
+            halfbyte_mux_ctl.tcam_row_search_thread = gress;
             tcam_vh_xbar.tcam_row_output_ctl[row.bus][row.row]
-                .enabled_4bit_muxctl_select = input_xbar->group_for_word(word);
+                .enabled_4bit_muxctl_select = match[word].word_group;
             tcam_vh_xbar.tcam_row_output_ctl[row.bus][row.row]
                 .enabled_4bit_muxctl_enable = 1;
-            if (word == 0)
+            if (match[word].byte_group >= 0) {
+                tcam_vh_xbar.tcam_extra_byte_ctl[row.bus][row.row/2]
+                    .enabled_3bit_muxctl_select = match[word].byte_group;
+                tcam_vh_xbar.tcam_extra_byte_ctl[row.bus][row.row/2]
+                    .enabled_3bit_muxctl_enable = 1; }
+            if (!((chain_rows >> row.row) & 1))
                 stage->regs.tcams.col[col].tcam_table_map[tcam_id] |= 1U << row.row; }
-        if (++word == input_xbar->width()) word = 0; }
+        if (++word == match.size()) word = 0; }
     merge.tcam_hit_to_logical_table_ixbar_outputmap[tcam_id]
         .enabled_4bit_muxctl_select = logical_id;
     merge.tcam_hit_to_logical_table_ixbar_outputmap[tcam_id]

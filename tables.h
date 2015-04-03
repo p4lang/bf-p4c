@@ -274,8 +274,17 @@ DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
     std::vector<std::vector<int>> word_info;    /* which format group corresponds to each
                                                  * match group in each word */
 )
+
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
     void vpn_params(int &width, int &depth, int &period, const char *&period_name);
+    struct Match {
+        int word_group, byte_group, byte_config;
+        Match() {}
+        Match(const value_t &);
+    };
+    std::vector<Match>  match;
+    unsigned            chain_rows; /* bitvector */
+    enum { ALWAYS_ENABLE_ROW = (1<<2) | (1<<5) | (1<<9) };
 public:
     int tcam_id;
     Table::Ref indirect;
@@ -286,6 +295,7 @@ public:
     int find_on_actionbus(Format::Field *f, int off) {
         return indirect ? indirect->find_on_actionbus(f, off) : -1; }
 )
+
 DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
         width = (format->size-1)/128 + 1;
@@ -293,7 +303,9 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
         period = 1;
         period_name = 0; }
 )
+
 DECLARE_TABLE_TYPE(ActionTable, Table, "action",
+    int action_id;
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
         width = 1; depth = layout_size();
         period = 1 << std::max((int)format->log2size - 7, 0);
@@ -303,6 +315,7 @@ DECLARE_TABLE_TYPE(ActionTable, Table, "action",
     void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn);
     int find_on_actionbus(Format::Field *f, int off);
 )
+
 DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
     uint64_t                    payload;
     int                         gw_unit;

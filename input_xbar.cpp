@@ -118,6 +118,40 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
     }
 }
 
+unsigned InputXbar::tcam_width() {
+    unsigned words = 0, bytes = 0;
+    for (auto group : group_order) {
+        unsigned in_word = 0, in_byte = 0;
+        for (auto &input : group->second) {
+            if (input.lo < 40)
+                in_word = 1;
+            if (input.lo >= 40 || input.hi >= 40)
+                in_byte = 1; }
+        words += in_word;
+        bytes += in_byte; }
+    if (bytes*2 > words)
+        error(lineno, "Too many byte groups in tcam input xbar");
+    return words;
+}
+
+int InputXbar::tcam_byte_group(int idx) {
+    for (auto group : group_order)
+        for (auto &input : group->second)
+            if (input.lo >= 40 || input.hi >= 40) {
+                if (--idx < 0) return group->first/2;
+                break; }
+    return -1;
+}
+
+int InputXbar::tcam_word_group(int idx) {
+    for (auto group : group_order)
+        for (auto &input : group->second)
+            if (input.lo < 40) {
+                if (--idx < 0) return group->first;
+                break; }
+    return -1;
+}
+
 bool InputXbar::conflict(const std::vector<Input> &a, const std::vector<Input> &b) {
     for (auto &i1 : a) {
         if (i1.lo < 0) continue;

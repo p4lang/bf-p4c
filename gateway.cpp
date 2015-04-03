@@ -159,8 +159,8 @@ void GatewayTable::write_regs() {
     LOG1("### Gateway table " << name());
     if (input_xbar) input_xbar->write_regs();
     auto &row = layout[0];
-    if (!setup_vh_xbar(this, row, 0, match, input_xbar->group_for_word(0)) ||
-        !setup_vh_xbar(this, row, 4, xor_match, input_xbar->group_for_word(0)))
+    if (!setup_vh_xbar(this, row, 0, match, input_xbar->match_group()) ||
+        !setup_vh_xbar(this, row, 4, xor_match, input_xbar->match_group()))
         return;
 
     auto &row_reg = stage->regs.rams.array.row[row.row];
