@@ -179,21 +179,21 @@ template <class COMMON> void init_common_regs(Parser *p, COMMON &regs, gress_t g
             regs.enable.enable[i] = 1; }
     regs.mode = 4;
     regs.max_iter.max = 128;
-    if (p->parser_error[gress].lineno >= 0)
+    if (p->parser_error[gress].lineno >= 0) {
         regs.err_phv_cfg.dst = p->parser_error[gress]->reg.index;
-    regs.err_phv_cfg.aram_mem_err_en = 1;
-    regs.err_phv_cfg.csum_mem_err_en = 1;
-    regs.err_phv_cfg.ctr_mem_err_en = 1;
-    regs.err_phv_cfg.ctr_range_err_en = 1;
-    regs.err_phv_cfg.dst_cont_err_en = 1;
-    regs.err_phv_cfg.fcs_err_en = 1;
-    regs.err_phv_cfg.multi_wr_err_en = 1;
-    regs.err_phv_cfg.no_tcam_match_err_en = 1;
-    regs.err_phv_cfg.partial_hdr_err_en = 1;
-    regs.err_phv_cfg.phv_owner_err_en = 1;
-    regs.err_phv_cfg.src_ext_err_en = 1;
-    regs.err_phv_cfg.timeout_cycle_err_en = 1;
-    regs.err_phv_cfg.timeout_iter_err_en = 1;
+        regs.err_phv_cfg.aram_mem_err_en = 1;
+        regs.err_phv_cfg.csum_mem_err_en = 1;
+        regs.err_phv_cfg.ctr_mem_err_en = 1;
+        regs.err_phv_cfg.ctr_range_err_en = 1;
+        regs.err_phv_cfg.dst_cont_err_en = 1;
+        regs.err_phv_cfg.fcs_err_en = 1;
+        regs.err_phv_cfg.multi_wr_err_en = 1;
+        regs.err_phv_cfg.no_tcam_match_err_en = 1;
+        regs.err_phv_cfg.partial_hdr_err_en = 1;
+        regs.err_phv_cfg.phv_owner_err_en = 1;
+        regs.err_phv_cfg.src_ext_err_en = 1;
+        regs.err_phv_cfg.timeout_cycle_err_en = 1;
+        regs.err_phv_cfg.timeout_iter_err_en = 1; }
     // disable unused registers
     //regs.aram_mem_err_cnt.disable();
     //regs.csum_err_cnt.disable();
@@ -848,14 +848,11 @@ void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
     if (ea_row.lookup_offset_8[1] + 1 > buf_req) buf_req = ea_row.lookup_offset_8[1] + 1;
     for (int i = 0; i < phv_output_map_size; i++)
         if (!output_map[i].src_type || 0 == *output_map[i].src_type)
-            if (options.match_compiler || !(0x20 & *output_map[i].src)) {
-                unsigned off = 0x1f & *output_map[i].src;
-                off += output_map[i].size/8;
-                if (options.match_compiler)
-                    off = (*output_map[i].src + output_map[i].size)/8;
+            if (*output_map[i].src < 32) {
+                unsigned off = *output_map[i].src + output_map[i].size/8;
                 if (off > buf_req) buf_req = off; }
     assert(buf_req <= 32);
-    ea_row.buf_req = options.match_compiler ? 32 : buf_req;
+    ea_row.buf_req = buf_req;
 }
 
 static struct phv_use_slots { int idx; unsigned usemask, shift, size; }
