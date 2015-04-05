@@ -22,9 +22,10 @@ Table::Format::Field *ActionTable::lookup_field(const std::string &name, const s
                 return rv;
         } else if (auto *rv = format ? format->field(name) : 0)
             return rv; }
-    if (match_table) {
+    for (auto *match_table : match_tables) {
         assert((Table *)match_table != (Table *)this);
-        return match_table->lookup_field(name); }
+        if (auto *rv = match_table->lookup_field(name))
+            return rv; }
     return 0;
 }
 void ActionTable::apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn) {
@@ -37,9 +38,10 @@ int ActionTable::find_on_actionbus(Table::Format::Field *f, int off) {
     int rv;
     if (action_bus && (rv = action_bus->find(f, off)) >= 0)
         return rv;
-    if (match_table) {
+    for (auto *match_table : match_tables) {
         assert((Table *)match_table != (Table *)this);
-        return match_table->find_on_actionbus(f, off); }
+        if ((rv = match_table->find_on_actionbus(f, off)) >= 0)
+            return rv; }
     return -1;
 }
 
@@ -136,7 +138,7 @@ void ActionTable::pass1() {
     if (actions) actions->pass1(this);
 }
 void ActionTable::pass2() {
-    if (!match_table)
+    if (match_tables.empty())
         error(lineno, "No match table for action table %s", name());
     action_bus->pass2(this);
     if (actions) actions->pass2(this);
@@ -152,7 +154,7 @@ void ActionTable::write_regs() {
     int prev_logical_row = -1;
     decltype(stage->regs.rams.array.switchbox.row[0].ctl) *home_switch_ctl = 0,
                                                           *prev_switch_ctl = 0;
-    auto &icxbar = stage->regs.rams.match.adrdist.adr_dist_action_data_adr_icxbar_ctl[logical_id];
+    auto &icxbar = stage->regs.rams.match.adrdist.adr_dist_action_data_adr_icxbar_ctl;
     for (Layout &logical_row : layout) {
         unsigned row = logical_row.row/2;
         unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
@@ -195,8 +197,9 @@ void ActionTable::write_regs() {
                 assert(home->row >= 8);
                 oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_index = 0;
                 oflo_adr_xbar.adr_dist_oflo_adr_xbar_source_sel = 3;
-                if (!icxbar.address_distr_to_overflow)
-                    icxbar.address_distr_to_overflow = 1; }
+                for (auto mtab : match_tables)
+                    if (!icxbar[mtab->logical_id].address_distr_to_overflow)
+                        icxbar[mtab->logical_id].address_distr_to_overflow = 1; }
             oflo_adr_xbar.adr_dist_oflo_adr_xbar_enable = 1; }
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;
@@ -211,7 +214,9 @@ void ActionTable::write_regs() {
                 else
                     switch_ctl.r_l_action_o_mux_select.r_l_action_o_sel_action_rd_l_i = 1;
                 unitram_config.unitram_action_subword_out_en = 1;
-                icxbar.address_distr_to_logical_rows |= 1U << logical_row.row; }
+                for (auto mtab : match_tables)
+                    icxbar[mtab->logical_id].address_distr_to_logical_rows |=
+                        1U << logical_row.row; }
             ram.unit_ram_ctl.match_ram_write_data_mux_select = 7; /*disable*/
             ram.unit_ram_ctl.match_ram_read_data_mux_select = home == &logical_row ? 4 : 2;
             unitram_config.unitram_type = 2;

@@ -6,6 +6,7 @@
 #include "bitvec.h"
 #include "json.h"
 #include "map.h"
+#include <set>
 #include <string>
 #include "phv.h"
 #include <vector>
@@ -20,7 +21,7 @@ class Stage;
 class Table {
 protected:
     Table(int line, std::string &&n, gress_t gr, Stage *s, int lid = -1)
-        : name_(n), stage(s), match_table(0), gress(gr), lineno(line),
+        : name_(n), stage(s), gress(gr), lineno(line),
           logical_id(lid), gateway(0), input_xbar(0), format(0), actions(0),
           action_bus(0) {
             assert(all.find(name_) == all.end());
@@ -46,6 +47,7 @@ public:
     virtual void pass2() = 0;
     virtual void write_regs() = 0;
     virtual void gen_tbl_cfg(json::vector &out) = 0;
+    virtual bool set_match_table(MatchTable *m) { return false; }
 
     struct Layout {
         /* Holds the layout of which rams/tcams/busses are used by the table
@@ -176,7 +178,6 @@ public:
 public:
     std::string                 name_;
     Stage                       *stage;
-    MatchTable                  *match_table;
     gress_t                     gress;
     int                         lineno;
     int                         logical_id;
@@ -252,7 +253,6 @@ DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
         int                              lineno;
         int                              group, subgroup, mask;
         std::vector<std::pair<int, int>> rams;
-
     };
     std::vector<Way>                      ways;
     struct WayRam { int way, index, word, bank; };
@@ -265,14 +265,16 @@ DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
     struct GroupInfo {
         /* info about which word(s) are used per format group with wide matches */
         int                     overhead_word;  /* which word of wide match contains overhead */
+        int                     overhead_bit;   /* lowest bit that contains overhead in that word */
         int                     word_group;     /* which match group within the word to use */
         std::map<int, int>      match_group;    /* which match group for each word with match */
         std::vector<unsigned>   tofino_mask;    /* 14-bit tofino byte/nibble mask for each word */
-        GroupInfo() : overhead_word(-1), word_group(-1) {}
+        GroupInfo() : overhead_word(-1), overhead_bit(-1), word_group(-1) {}
     };
     std::vector<GroupInfo>      group_info;
     std::vector<std::vector<int>> word_info;    /* which format group corresponds to each
                                                  * match group in each word */
+    int         mgm_lineno;     /* match_group_map lineno */
 )
 
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
@@ -297,6 +299,8 @@ public:
 )
 
 DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
+    TernaryMatchTable           *match_table;
+    bool set_match_table(MatchTable *m);
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
         width = (format->size-1)/128 + 1;
         depth = layout_size() / width;
@@ -305,6 +309,7 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
 )
 
 DECLARE_TABLE_TYPE(ActionTable, Table, "action",
+    std::set<MatchTable *>      match_tables;
     int action_id;
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
         width = 1; depth = layout_size();
@@ -314,9 +319,11 @@ DECLARE_TABLE_TYPE(ActionTable, Table, "action",
     Format::Field *lookup_field(const std::string &name, const std::string &action);
     void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn);
     int find_on_actionbus(Format::Field *f, int off);
+    bool set_match_table(MatchTable *m) { match_tables.insert(m); return true; }
 )
 
 DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
+    MatchTable                  *match_table;
     uint64_t                    payload;
     int                         gw_unit;
 public:
@@ -337,6 +344,7 @@ private:
     }                           miss;
     std::vector<Match>          table;
 public:
+    bool set_match_table(MatchTable *m) { match_table = m; return false; }
     static GatewayTable *create(int lineno, const std::string &name, gress_t gress,
                                 Stage *stage, int lid, VECTOR(pair_t) &data)
         { return table_type.create(lineno, name.c_str(), gress, stage, lid, data); }

@@ -31,6 +31,7 @@ GatewayTable::Match::Match(match_t &v, value_t &data) : val(v), run_table(false)
 
 void GatewayTable::setup(VECTOR(pair_t) &data) {
     int bus = -1;
+    match_table = 0;
     payload = 0;
     gw_unit = -1;
     setup_logical_id();

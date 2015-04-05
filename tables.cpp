@@ -613,13 +613,10 @@ void MatchTable::write_regs(int type, Table *result) {
 }
 
 void MatchTable::link_action(Table::Ref &ref) {
+    ref.check();
     if (ref) {
-        if (!dynamic_cast<ActionTable *>((Table *)ref))
+        if (!ref->set_match_table(this))
             error(ref.lineno, "%s is not an action table", ref->name());
-        if (ref->match_table)
-            error(ref->lineno, "Multiple references to action table %s",
-                  ref->name());
-        ref->match_table = this;
         ref->logical_id = logical_id; }
 }
 

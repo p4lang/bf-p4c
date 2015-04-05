@@ -55,7 +55,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
             if (CHECKTYPE(kv.value, tMAP)) {
                 gateway = GatewayTable::create(kv.key.lineno, name_+" gateway",
                         gress, stage, -1, kv.value.map);
-                gateway->match_table = this; }
+                gateway->set_match_table(this); }
         } else if (kv.key == "indirect") {
             if (CHECKTYPE(kv.value, tSTR))
                 indirect = kv.value;
@@ -166,10 +166,8 @@ void TernaryMatchTable::pass1() {
     if (indirect) {
         if (!dynamic_cast<TernaryIndirectTable *>((Table *)indirect))
             error(indirect.lineno, "%s is not a ternary indirect table", indirect->name());
-        if (indirect->match_table)
-            error(indirect->lineno, "Multiple references to ternary indirect table %s",
-                  indirect->name());
-        indirect->match_table = this;
+        else
+            indirect->set_match_table(this);
         indirect->logical_id = logical_id;
         link_action(indirect->action);
         if (hit_next.size() > 0 && indirect->hit_next.size() > 0)
@@ -324,6 +322,14 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
         error(lineno, "Unexpected number of action table arguments %zu", action_args.size());
     if (actions && !action_bus) action_bus = new ActionBus();
 }
+
+bool TernaryIndirectTable::set_match_table(MatchTable *m) {
+    if (match_table)
+        error(lineno, "Multiple references to ternary indirect table %s", name());
+    match_table = dynamic_cast<TernaryMatchTable *>(m);
+    return false;
+}
+
 void TernaryIndirectTable::pass1() {
     alloc_busses(stage->tcam_indirect_bus_use);
     alloc_vpns();
@@ -347,7 +353,7 @@ void TernaryIndirectTable::pass2() {
 }
 void TernaryIndirectTable::write_regs() {
     LOG1("### Ternary indirect table " << name());
-    int tcam_id = dynamic_cast<TernaryMatchTable *>(match_table)->tcam_id;
+    int tcam_id = match_table->tcam_id;
     stage->regs.tcams.tcam_match_adr_shift[tcam_id] = format->log2size-2;
     auto &merge = stage->regs.rams.match.merge;
     for (Layout &row : layout) {

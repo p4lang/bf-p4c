@@ -24,7 +24,7 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
 	    if (CHECKTYPE(kv.value, tMAP)) {
                 gateway = GatewayTable::create(kv.key.lineno, name_+" gateway",
                         gress, stage, -1, kv.value.map);
-                gateway->match_table = this; }
+                gateway->set_match_table(this); }
         } else if (kv.key == "format") {
             /* done above to be done before action_bus and vpns */
         } else if (kv.key == "action") {
@@ -77,6 +77,17 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
                     match.emplace_back(gress, v);
             else
                 match.emplace_back(gress, kv.value);
+        } else if (kv.key == "match_group_map") {
+            mgm_lineno = kv.value.lineno;
+            if (CHECKTYPE(kv.value, tVEC)) {
+                word_info.resize(kv.value.vec.size);
+                for (int i = 0; i < kv.value.vec.size; i++)
+                    if (CHECKTYPE(kv.value[i], tVEC)) {
+                        if (kv.value[i].vec.size > 5)
+                            error(kv.value[i].lineno, "Too many groups for word %d", i);
+                        for (auto &v : kv.value[i].vec)
+                            if (CHECKTYPE(v, tINT))
+                                word_info[i].push_back(v.i); } }
         } else if (kv.key == "vpns") {
             if (CHECKTYPE(kv.value, tVEC))
                 setup_vpns(&kv.value.vec);
@@ -162,6 +173,7 @@ void ExactMatchTable::pass1() {
             unsigned word = it->second.bits[0].lo/128;
             if (info.overhead_word < 0) {
                 info.overhead_word = word;
+                info.overhead_bit = it->second.bits[0].lo%128;
                 if (!info.match_group.count(word))
                     error(format->lineno, "Overhead for group %d must be in the same word "
                           "as part of its match", i);
@@ -169,31 +181,49 @@ void ExactMatchTable::pass1() {
                 error(format->lineno, "Match overhead group %d split across words", i);
             else if (word != it->second.bits[0].hi/128 || it->second.bits[0].hi%128 >= limit)
                 error(format->lineno, "Match overhead field %s(%d) not in bottom %d bits",
-                      it->first.c_str(), i, limit); } }
-    word_info.resize(fmt_width);
-    if (options.match_compiler && format->field("match")->size > 32) {
-        /* wide(ish) multiway macthes allocated in reverse order?!?
-         * FIXME -- need to either have the compiler tell us when it is swapping things
-         * or have a reliable way of figuring it out */
-        for (int i = group_info.size()-1; i >= 0; --i)
+                      it->first.c_str(), i, limit);
+            if ((unsigned)info.overhead_bit > it->second.bits[0].lo%128)
+                info.overhead_bit = it->second.bits[0].lo%128; } }
+    if (word_info.empty()) {
+        word_info.resize(fmt_width);
+        if (format->field("next")) {
+            /* 'next' for match group 0 must be in bit 0, so make the format group with
+             * overhead in bit 0 match group 0 in its overhead word */
+            for (unsigned i = 0; i < group_info.size(); i++) {
+                if (group_info[i].overhead_bit == 0) {
+                    assert(error_count > 0 || word_info[group_info[i].overhead_word].empty());
+                    group_info[i].match_group[group_info[i].overhead_word] = 0;
+                    word_info[group_info[i].overhead_word].push_back(i); } } }
+        for (unsigned i = 0; i < group_info.size(); i++)
             if (group_info[i].match_group.size() > 1)
                 for (auto &mgrp : group_info[i].match_group) {
+                    if (mgrp.second >= 0) continue;
                     if ((mgrp.second = word_info[mgrp.first].size()) > 1)
                         error(format->lineno, "Too many multi-word groups using word %d",
                               mgrp.first);
                     word_info[mgrp.first].push_back(i); }
     } else {
-        for (unsigned i = 0; i < group_info.size(); i++)
-            if (group_info[i].match_group.size() > 1)
-                for (auto &mgrp : group_info[i].match_group) {
-                    if ((mgrp.second = word_info[mgrp.first].size()) > 1)
-                        error(format->lineno, "Too many multi-word groups using word %d",
-                              mgrp.first);
-                    word_info[mgrp.first].push_back(i); } }
+        if (word_info.size() != fmt_width)
+            error(mgm_lineno, "Match group map doesn't match format size");
+        for (unsigned i = 0; i < word_info.size(); i++) {
+            for (unsigned j = 0; j < word_info[i].size(); j++) {
+                int grp = word_info[i][j];
+                if (grp < 0 || (unsigned)grp >= format->groups())
+                    error(mgm_lineno, "Invalid group number %d", grp);
+                else if (!group_info[grp].match_group.count(i))
+                    error(mgm_lineno, "Format group %d doesn't match in word %d", grp, i);
+                else {
+                    group_info[grp].match_group[i] = j;
+                    Format::Field *next = format->field("next", grp);
+                    if (!j && next && next->bits[0].lo/128 == i && next->bits[0].lo%128)
+                        error(mgm_lineno, "Next(%d) field must be at bit %d to be in match group 0",
+                              grp, i*128); } } } }
+    if (error_count > 0) return;
     LOG1("### Exact match table " << name());
     for (int i = 0; i < (int)group_info.size(); i++) {
         if (group_info[i].match_group.size() == 1)
             for (auto &mgrp : group_info[i].match_group) {
+                if (mgrp.second >= 0) continue;
                 if ((mgrp.second = word_info[mgrp.first].size()) > 4)
                     error(format->lineno, "Too many match groups using word %d", mgrp.first);
                 word_info[mgrp.first].push_back(i); }
@@ -203,7 +233,8 @@ void ExactMatchTable::pass1() {
             LOG1("  format group " << i << " no overhead");
         } else {
             group_info[i].word_group = group_info[i].match_group[group_info[i].overhead_word];
-            LOG1("  format group " << i << " overhead in word " << group_info[i].overhead_word); }
+            LOG1("  format group " << i << " overhead in word " << group_info[i].overhead_word <<
+                 " at bit " << group_info[i].overhead_bit); }
         LOG1("  masks: " << hexvec(group_info[i].tofino_mask));
         for (auto &mgrp : group_info[i].match_group)
             LOG1("    match group " << mgrp.second << " in word " << mgrp.first); }
