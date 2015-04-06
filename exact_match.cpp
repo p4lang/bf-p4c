@@ -113,6 +113,7 @@ static unsigned tofino_bytemask(int lo, int hi) {
 }
 
 void ExactMatchTable::pass1() {
+    LOG1("### Exact match table " << name() << " pass1");
     alloc_id("logical", logical_id, stage->pass1_logical_id,
 	     LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
     alloc_busses(stage->sram_match_bus_use);
@@ -219,7 +220,6 @@ void ExactMatchTable::pass1() {
                         error(mgm_lineno, "Next(%d) field must be at bit %d to be in match group 0",
                               grp, i*128); } } } }
     if (error_count > 0) return;
-    LOG1("### Exact match table " << name());
     for (int i = 0; i < (int)group_info.size(); i++) {
         if (group_info[i].match_group.size() == 1)
             for (auto &mgrp : group_info[i].match_group) {
@@ -262,9 +262,6 @@ void ExactMatchTable::pass1() {
                             LOG1("      adding to group " << group); } } } } }
     setup_ways();
     for (auto &r : match) r.check();
-    if (gateway) {
-        gateway->logical_id = logical_id;
-        gateway->pass1(); }
     if (error_count > 0) return;
     if (match.empty())
         for (auto it = input_xbar->all_begin(); it != input_xbar->all_end(); ++it)
@@ -293,6 +290,9 @@ void ExactMatchTable::pass1() {
             bit += piece.size(); } }
     for (unsigned i = 0; i < fmt_width; i++)
         LOG1("  match in word " << i << ": " << match_in_word[i]);
+    if (gateway) {
+        gateway->logical_id = logical_id;
+        gateway->pass1(); }
 }
 
 void ExactMatchTable::setup_ways() {
@@ -372,6 +372,18 @@ static int find_in_ixbar(Stage *stage, Table *table, std::vector<Phv::Ref> &matc
     int max_i = -1;
     LOG3("find_in_ixbar " << match);
     for (unsigned group = 0; group < EXACT_XBAR_GROUPS; group++) {
+        LOG3(" looking in table in group " << group);
+        bool ok = true;
+        for (auto &r : match) {
+            LOG3("  looking for " << r);
+            if (!table->input_xbar->find(*r, group)) {
+                LOG3("   -- not found");
+                ok = false;
+                break; } }
+        if (ok) {
+            LOG3(" success");
+            return group; } }
+    for (unsigned group = 0; group < EXACT_XBAR_GROUPS; group++) {
         LOG3(" looking in group " << group);
         bool ok = true;
         for (auto &r : match) {
@@ -400,6 +412,7 @@ static int find_in_ixbar(Stage *stage, Table *table, std::vector<Phv::Ref> &matc
 }
 
 void ExactMatchTable::pass2() {
+    LOG1("### Exact match table " << name() << " pass2");
     input_xbar->pass2(stage->exact_ixbar, 128);
     if (action_bus)
         action_bus->pass2(this);
@@ -411,7 +424,7 @@ void ExactMatchTable::pass2() {
 }
 
 void ExactMatchTable::write_regs() {
-    LOG1("### Exact match table " << name());
+    LOG1("### Exact match table " << name() << " write_regs");
     MatchTable::write_regs(0, this);
     unsigned fmt_width = (format->size + 127)/128;
     int word = fmt_width-1;  // FIXME -- don't need this anymore?

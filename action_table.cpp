@@ -100,6 +100,7 @@ static void need_bus(int lineno, Alloc1Dbase<Table *> &use, Table *table, int id
 }
 
 void ActionTable::pass1() {
+    LOG1("### Action table " << name() << " pass1");
     alloc_vpns();
     std::sort(layout.begin(), layout.end(),
               [](const Layout &a, const Layout &b)->bool { return a.row > b.row; });
@@ -138,6 +139,7 @@ void ActionTable::pass1() {
     if (actions) actions->pass1(this);
 }
 void ActionTable::pass2() {
+    LOG1("### Action table " << name() << " pass2");
     if (match_tables.empty())
         error(lineno, "No match table for action table %s", name());
     action_bus->pass2(this);
@@ -145,7 +147,7 @@ void ActionTable::pass2() {
 }
 
 void ActionTable::write_regs() {
-    LOG1("### Action table " << name());
+    LOG1("### Action table " << name() << " write_regs");
     int width = (format->size+127)/128;
     int depth = layout_size()/width;
     int idx = 0;

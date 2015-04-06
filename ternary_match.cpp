@@ -122,6 +122,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     if (actions && !action_bus) action_bus = new ActionBus();
 }
 void TernaryMatchTable::pass1() {
+    LOG1("### Ternary match table " << name() << " pass1");
     stage->table_use[gress] |= Stage::USE_TCAM;
     /* FIXME -- unconditionally setting piped mode -- only need it for wide
      * match across a 4-row boundary */
@@ -182,6 +183,7 @@ void TernaryMatchTable::pass1() {
         gateway->pass1(); }
 }
 void TernaryMatchTable::pass2() {
+    LOG1("### Ternary match table " << name() << " pass2");
     input_xbar->pass2(stage->tcam_ixbar, 44);
     if (!indirect && indirect_bus < 0) {
         for (int i = 0; i < 16; i++)
@@ -194,7 +196,7 @@ void TernaryMatchTable::pass2() {
     if (gateway) gateway->pass2();
 }
 void TernaryMatchTable::write_regs() {
-    LOG1("### Ternary match table " << name());
+    LOG1("### Ternary match table " << name() << " write_regs");
     MatchTable::write_regs(1, indirect);
     unsigned word = 0;
     auto &merge = stage->regs.rams.match.merge;
@@ -213,7 +215,7 @@ void TernaryMatchTable::write_regs() {
             tcam_mode.tcam_match_output_enable = 
                 ((~chain_rows | ALWAYS_ENABLE_ROW) >> row.row) & 1;
             tcam_mode.tcam_vpn = *vpn++;
-            tcam_mode.tcam_logical_table = tcam_id;
+            tcam_mode.tcam_logical_table = logical_id;
             /* TODO -- always disable tcam_validbit_xbar? */
             auto &tcam_vh_xbar = stage->regs.tcams.vh_data_xbar;
             if (options.match_compiler) {
@@ -331,6 +333,7 @@ bool TernaryIndirectTable::set_match_table(MatchTable *m) {
 }
 
 void TernaryIndirectTable::pass1() {
+    LOG1("### Ternary indirect table " << name() << " pass1");
     alloc_busses(stage->tcam_indirect_bus_use);
     alloc_vpns();
     check_next();
@@ -346,13 +349,14 @@ void TernaryIndirectTable::pass1() {
     if (format) format->setup_immed(this);
 }
 void TernaryIndirectTable::pass2() {
+    LOG1("### Ternary indirect table " << name() << " pass2");
     if (!match_table)
         error(lineno, "No match table for ternary indirect table %s", name());
     if (action_bus) action_bus->pass2(this);
     if (actions) actions->pass2(this);
 }
 void TernaryIndirectTable::write_regs() {
-    LOG1("### Ternary indirect table " << name());
+    LOG1("### Ternary indirect table " << name() << " write_regs");
     int tcam_id = match_table->tcam_id;
     stage->regs.tcams.tcam_match_adr_shift[tcam_id] = format->log2size-2;
     auto &merge = stage->regs.rams.match.merge;

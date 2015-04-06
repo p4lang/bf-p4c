@@ -113,6 +113,7 @@ void check_match_key(std::vector<GatewayTable::MatchKey> &vec, const char *name,
 }
 
 void GatewayTable::pass1() {
+    LOG1("### Gateway table " << name() << " pass1");
     alloc_id("logical", logical_id, stage->pass1_logical_id,
 	     LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
     alloc_busses(stage->sram_match_bus_use);
@@ -150,14 +151,14 @@ static bool setup_vh_xbar(Table *table, Table::Layout &row, int base,
     for (auto &r : match) {
         if (r.offset >= 32) break; /* skip hash matches */
         unsigned byte = base + r.offset / 8;
-        for (unsigned b = 0; b < r.val->size()/8; b++, byte++)
+        for (unsigned b = 0; b < (r.val->size()+7)/8; b++, byte++)
             vh_xbar[row.bus].exactmatch_row_vh_xbar_byteswizzle_ctl[byte/4]
                 .set_subfield(0x10 + table->find_on_ixbar(*r.val, group) + b, (byte%4)*5, 5); }
     return true;
 }
 
 void GatewayTable::write_regs() {
-    LOG1("### Gateway table " << name());
+    LOG1("### Gateway table " << name() << " write_regs");
     if (input_xbar) input_xbar->write_regs();
     auto &row = layout[0];
     if (!setup_vh_xbar(this, row, 0, match, input_xbar->match_group()) ||
@@ -182,7 +183,7 @@ void GatewayTable::write_regs() {
         auto &vh_xbar_ctl = row_reg.vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl;
         vh_xbar_ctl.exactmatch_row_vh_xbar_select = input_xbar->match_group();
         vh_xbar_ctl.exactmatch_row_vh_xbar_enable = 1;
-        vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress; }
+        /* vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress; */ }
     gw_reg.gateway_table_ctl.gateway_table_logical_table = logical_id;
     gw_reg.gateway_table_ctl.gateway_table_thread = gress;
     for (auto &r : xor_match)

@@ -27,6 +27,9 @@ Parser::Parser() : Section("parser") {
         [this](std::ostream &out, const char *addr, const void *end) {
             out << "parser.merge";
             reg_merge.emit_fieldname(out, addr, end); });
+    hdr_len_adj[INGRESS] = 0;
+    hdr_len_adj[EGRESS] = 2;
+    meta_opt = 0;
 }
 Parser::~Parser() {
     undeclare_registers(&mem);
@@ -81,6 +84,14 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
                         init_zero.emplace_back(gress, el);
                 else
                     init_zero.emplace_back(gress, kv.value);
+                continue; }
+            if (kv.key == "hdr_len_adj") {
+                if (CHECKTYPE(kv.value, tINT))
+                    hdr_len_adj[gress] = kv.value.i;
+                continue; }
+            if (gress == EGRESS && kv.key == "meta_opt") {
+                if (CHECKTYPE(kv.value, tINT))
+                    meta_opt = kv.value.i;
                 continue; }
             if (!CHECKTYPE2M(kv.key, tSTR, tCMD, "state declaration")) continue;
             const char *name = kv.key.s;
@@ -243,10 +254,11 @@ void Parser::output() {
     init_common_regs(this, reg_eg.prsr_reg, EGRESS);
     for (int i = 0; i < 4; i++) {
         //reg_eg.ebuf_reg.chnl_ctrl[i].chnl_ena = 1;
+        reg_eg.epb_prsr_port_regs.chnl_ctrl[i].meta_opt = meta_opt;
         reg_eg.epb_prsr_port_regs.chnl_ctrl[i].chnl_ena = 1; }
 
-    reg_in.prsr_reg.hdr_len_adj.amt = 0;
-    reg_eg.prsr_reg.hdr_len_adj.amt = 2;
+    reg_in.prsr_reg.hdr_len_adj.amt = hdr_len_adj[INGRESS];
+    reg_eg.prsr_reg.hdr_len_adj.amt = hdr_len_adj[EGRESS];
 
     if (options.match_compiler) {
         phv_use[INGRESS] |= Phv::use(INGRESS);
