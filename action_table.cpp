@@ -219,9 +219,9 @@ void ActionTable::write_regs() {
                 for (auto mtab : match_tables)
                     icxbar[mtab->logical_id].address_distr_to_logical_rows |=
                         1U << logical_row.row; }
-            ram.unit_ram_ctl.match_ram_write_data_mux_select = 7; /*disable*/
+            ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::NONE;
             ram.unit_ram_ctl.match_ram_read_data_mux_select = home == &logical_row ? 4 : 2;
-            unitram_config.unitram_type = 2;
+            unitram_config.unitram_type = UnitRam::ACTION;
             unitram_config.unitram_vpn = *vpn++;
             unitram_config.unitram_logical_table = action_id >= 0 ? action_id : logical_id;
             if (gress == INGRESS)
@@ -230,11 +230,23 @@ void ActionTable::write_regs() {
                 unitram_config.unitram_egress = 1;
             unitram_config.unitram_enable = 1;
             auto &ram_mux = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
-            if (home == &logical_row)
-                ram_mux.ram_unitram_adr_mux_select = 1;
-            else {
-                ram_mux.ram_unitram_adr_mux_select = 4;
-                ram_mux.ram_oflo_adr_mux_select_oflo = 1; }
+            if (SelectionTable *sel = get_selector()) {
+                int slot = side * 6;
+                if (row == sel->layout[0].row/2U) {
+                    /* we're on the home row of the selector, so use it directly */
+                    ram_mux.ram_unitram_adr_mux_select = UnitRam::AdrMux::SELECTOR_ALU;
+                    slot += 9;
+                } else {
+                    /* not on the home row -- use overflows */
+                    ram_mux.ram_unitram_adr_mux_select = UnitRam::AdrMux::SELECTOR_OVERFLOW; }
+                stage->regs.rams.map_alu.mau_selector_action_adr_shift[row]
+                    .set_subfield(format->log2size - 2, slot, 3);
+            } else {
+                if (home == &logical_row)
+                    ram_mux.ram_unitram_adr_mux_select = UnitRam::AdrMux::ACTION;
+                else {
+                    ram_mux.ram_unitram_adr_mux_select = UnitRam::AdrMux::OVERFLOW;
+                    ram_mux.ram_oflo_adr_mux_select_oflo = 1; } }
             if (++idx == depth) { idx = 0; ++word; } }
         prev_switch_ctl = &switch_ctl;
         prev_logical_row = logical_row.row; }

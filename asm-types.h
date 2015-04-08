@@ -118,6 +118,9 @@ inline pair_t *VECTOR(pair_t)::end() const { return data + size; }
 #define CHECKTYPEM(V, T, M) \
     ((V).type == (T) || \
      (error((V).lineno, "Syntax error, expecting %s", M), 0))
+#define CHECKTYPEPM(V, T, P, M) \
+    (((V).type == (T) && (P)) || \
+     (error((V).lineno, "Syntax error, expecting %s", M), 0))
 #define PCHECKTYPEM(P, V, T, M) \
     (((P) && (V).type == (T)) || \
      (error((V).lineno, "Syntax error, expecting %s", M), 0))

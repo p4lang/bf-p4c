@@ -25,6 +25,25 @@ Table::Type::~Type() {
 
 int Table::table_id() { return (stage->stageno << 4) + logical_id; }
 
+void Table::Call::setup(const value_t &val, Table *tbl) {
+    if (!CHECKTYPE2(val, tSTR, tCMD)) return;
+    if (val.type == tSTR) {
+        Ref::operator=(val);
+        return; }
+    Ref::operator=(val[0]);
+    for (int i = 1; i < val.vec.size; i++) {
+        Format::Field *arg = 0;
+        if (CHECKTYPE(val[i], tSTR) &&
+            !(arg = tbl->lookup_field(val[i].s)))
+            error(val[i].lineno, "No field named %s in format for %s", val[i].s, tbl->name());
+        if (arg) {
+            if (arg->bits.size() != 1)
+                error(val[i].lineno, "arg fields can't be split in format");
+            args.push_back(arg); } }
+    lineno = val.lineno;
+}
+
+#if 0
 void Table::setup_action_table(value_t &val) {
     if (CHECKTYPE2(val, tSTR, tCMD)) {
         if (val.type == tSTR)
@@ -43,6 +62,7 @@ void Table::setup_action_table(value_t &val) {
                     action_args.push_back(arg); } } }
         action.lineno = val.lineno; }
 }
+#endif
 
 static void add_row(int lineno, Table *t, int row) {
     t->layout.push_back(Table::Layout{lineno, row, -1});
@@ -203,9 +223,11 @@ void Table::alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Tabl
             }
         }
         if (row.bus >= 0 && bus_use) {
-            if (Table *old = (*bus_use)[row.row][row.bus])
-                error(lineno, "Table %s trying to use bus %d on row %d which is already in use "
-                      "by table %s", name(), row.bus, row.row, old->name());
+            if (Table *old = (*bus_use)[row.row][row.bus]) {
+                if (old != this)
+                    error(lineno, "Table %s trying to use bus %d on row %d which is already in "
+                          "use by table %s", name(), row.bus, row.row, old->name());
+            } else (*bus_use)[row.row][row.bus] = this;
         }
     }
 }
@@ -213,7 +235,11 @@ void Table::alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Tabl
 void Table::alloc_busses(Alloc2Dbase<Table *> &bus_use) {
     for (auto &row : layout) {
         if (row.bus < 0) {
-            if (!bus_use[row.row][0])
+            if (bus_use[row.row][0] == this)
+                row.bus = 0;
+            else if (bus_use[row.row][1] == this)
+                row.bus = 1;
+            else if (!bus_use[row.row][0])
                 bus_use[row.row][row.bus=0] = this;
             else if (!bus_use[row.row][1])
                 bus_use[row.row][row.bus=1] = this;
@@ -410,24 +436,27 @@ void Table::Format::setup_immed(Table *tbl) {
             error(lineno, "Immediate data misaligned for action bus byte %d", byte_slot); }
 }
 
-Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) : lineno(data.size > 0 ? data[0].key.lineno : -1) {
+Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
     for (auto &kv : data) {
-        if (!CHECKTYPE(kv.key, tSTR) || !CHECKTYPE(kv.value, tVEC))
+        if (!CHECKTYPE2(kv.key, tSTR, tCMD) || !CHECKTYPE(kv.value, tVEC))
             continue;
-        if (actions.count(kv.key.s)) {
-            error(kv.key.lineno, "Duplicate action %s", kv.key.s);
+        const char *name = kv.key.type == tSTR ? kv.key.s : kv.key[0].s;
+        if (by_name.count(name)) {
+            error(kv.key.lineno, "Duplicate action %s", name);
             continue; }
-        auto &ins = actions[kv.key.s];
-        ins.first = -1;
-        order.push_back(actions.find(kv.key.s));
+        by_name[name] = actions.size();
+        actions.emplace_back(name, kv.key.lineno);
+        auto &ins = actions.back();
+        if (kv.key.type == tCMD && CHECKTYPE(kv.key[1], tINT))
+            ins.code = kv.key[1].i;
         for (auto &i : kv.value.vec) {
-            if (i.type == tINT && ins.second.empty()) {
-                if ((ins.first = i.i) >= ACTION_IMEM_ADDR_MAX)
+            if (i.type == tINT && ins.instr.empty()) {
+                if ((ins.addr = i.i) >= ACTION_IMEM_ADDR_MAX)
                     error(i.lineno, "invalid instruction address %d", i.i);
                 continue; }
             if (!CHECKTYPE(i, tCMD)) continue;
-            if (auto *p = Instruction::decode(tbl, kv.key.s, i.vec))
-                ins.second.push_back(p);
+            if (auto *p = Instruction::decode(tbl, name, i.vec))
+                ins.instr.push_back(p);
         }
     }
 }
@@ -435,39 +464,46 @@ Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) : lineno(data.size > 0
 void Table::Actions::pass1(Table *tbl) {
     for (auto &act : actions) {
         int iaddr = -1;
-        if (act.second.first >= 0) {
-            if (tbl->stage->imem_addr_use[tbl->gress][act.second.first])
-                error(lineno, "action instruction addr %d in use elsewhere",
-                      act.second.first);
-            tbl->stage->imem_addr_use[tbl->gress][act.second.first] = 1;
-            iaddr = act.second.first/ACTION_IMEM_COLORS; }
-        for (auto *inst : act.second.second) {
+        if (act.addr >= 0) {
+            if (tbl->stage->imem_addr_use[tbl->gress][act.addr])
+                error(act.lineno, "action instruction addr %d in use elsewhere",
+                      act.addr);
+            tbl->stage->imem_addr_use[tbl->gress][act.addr] = 1;
+            iaddr = act.addr/ACTION_IMEM_COLORS; }
+        for (auto *inst : act.instr) {
             inst->pass1(tbl);
             if (inst->slot >= 0 && iaddr >= 0) {
                 if (tbl->stage->imem_use[iaddr][inst->slot])
-                    error(lineno, "action instruction slot %d.%d in use elsewhere",
+                    error(act.lineno, "action instruction slot %d.%d in use elsewhere",
                           iaddr, inst->slot);
                 tbl->stage->imem_use[iaddr][inst->slot] = 1; } } }
 }
 
 void Table::Actions::pass2(Table *tbl) {
+    int code = tbl->get_gateway() ? 1 : 0;
+    if (code + actions.size() > ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH)
+        code = -1;
     for (auto &act : actions) {
-        if (act.second.first >= 0)
-            continue;
-        bitvec use;
-        for (auto *inst : act.second.second) 
-            if (inst->slot >= 0) use[inst->slot] = 1;
-        for (int i = 0; i < ACTION_IMEM_ADDR_MAX; i++) {
-            if (tbl->stage->imem_addr_use[tbl->gress][i]) continue;
-            if (tbl->stage->imem_use[i/ACTION_IMEM_COLORS].intersects(use))
-                continue;
-            act.second.first = i;
-            tbl->stage->imem_use[i/ACTION_IMEM_COLORS] |= use;
-            tbl->stage->imem_addr_use[tbl->gress][i] = 1;
-            break; }
-        if (act.second.first < 0)
-            error(lineno, "Can't find an available instruction address");
-    }
+        if (act.addr < 0) {
+            bitvec use;
+            for (auto *inst : act.instr) 
+                if (inst->slot >= 0) use[inst->slot] = 1;
+            for (int i = 0; i < ACTION_IMEM_ADDR_MAX; i++) {
+                if (tbl->stage->imem_addr_use[tbl->gress][i]) continue;
+                if (tbl->stage->imem_use[i/ACTION_IMEM_COLORS].intersects(use))
+                    continue;
+                act.addr = i;
+                tbl->stage->imem_use[i/ACTION_IMEM_COLORS] |= use;
+                tbl->stage->imem_addr_use[tbl->gress][i] = 1;
+                break; } }
+        if (act.addr < 0)
+            error(act.lineno, "Can't find an available instruction address");
+        if (act.code < 0)
+            act.code = code < 0 ? act.addr : code;
+        else if (code < 0 && act.code != act.addr)
+            error(act.lineno, "Action code must be the same as action instruction address "
+                  "when there are more than 8 actions");
+        if (code >= 0) code++; }
 }
 
 static int parity(unsigned v) {
@@ -482,9 +518,9 @@ static int parity(unsigned v) {
 void Table::Actions::write_regs(Table *tbl) {
     auto &imem = tbl->stage->regs.dp.imem;
     for (auto &act : actions) {
-        int iaddr = act.second.first/ACTION_IMEM_COLORS;
-        int color = act.second.first%ACTION_IMEM_COLORS;
-        for (auto *inst : act.second.second) {
+        int iaddr = act.addr/ACTION_IMEM_COLORS;
+        int color = act.addr%ACTION_IMEM_COLORS;
+        for (auto *inst : act.instr) {
             unsigned bits = inst->encode();
             assert(inst->slot >= 0);
             LOG2(inst);
@@ -540,18 +576,18 @@ void MatchTable::write_regs(int type, Table *result) {
             merge.match_to_logical_table_ixbar_outputmap[type][bus].enabled_4bit_muxctl_select =
                 logical_id;
             merge.match_to_logical_table_ixbar_outputmap[type][bus].enabled_4bit_muxctl_enable = 1;
-            if (result->action_args.size() >= 1) {
-                assert(result->action_args[0]);
+            if (result->action.args.size() >= 1) {
+                assert(result->action.args[0]);
                 merge.mau_action_instruction_adr_mask[type][bus] =
-                    (1U << result->action_args[0]->size) - 1;
+                    (1U << result->action.args[0]->size) - 1;
             } else
                 merge.mau_action_instruction_adr_mask[type][bus] = 0;
-            if (result->action) {
-                /* FIXME -- deal with variable-sized actions */
-                merge.mau_actiondata_adr_default[type][bus] =
-                    get_address_mau_actiondata_adr_default(result->action->format->log2size);
-            }
-        }
+            if (!result->action) continue;
+            /* FIXME -- deal with variable-sized actions */
+            merge.mau_actiondata_adr_default[type][bus] =
+                get_address_mau_actiondata_adr_default(result->action->format->log2size);
+            if (auto *sel = get_selector())
+                sel->write_merge_regs(type, bus, result->action, result->action.args.size() > 1); }
     } else result = this;
 
     /*------------------------
@@ -563,17 +599,13 @@ void MatchTable::write_regs(int type, Table *result) {
         actions = result->action->actions; }
     assert(actions);
 
-    //assert(result->action_args[0]);
-    if (result->action_args.empty() ||
-        (1U << result->action_args[0]->size) <= ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
+    //assert(result->action.args[0]);
+    if (result->action.args.empty() ||
+        (1U << result->action.args[0]->size) <= ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
         merge.mau_action_instruction_adr_map_en[type] |= (1U << logical_id);
-        int idx = 0;
-        int shift = gateway ? 6 : 0; // skip slot 0 if there's a gateway (reserved for NOP)
-        for (auto act : *actions) {
-            assert(idx < 2);
-            merge.mau_action_instruction_adr_map_data[type][logical_id][idx]
-                |= act->second.first << shift;
-            if ((shift += 6) >= 24) { shift = 0; idx++; } } }
+        for (auto &act : *actions)
+            merge.mau_action_instruction_adr_map_data[type][logical_id][act.code/4]
+                .set_subfield(act.addr, (act.code%4) * 6, 6); }
 
     /*------------------------
      * Next Table
@@ -597,7 +629,8 @@ void MatchTable::write_regs(int type, Table *result) {
             next->miss_next ? next->miss_next->table_id() : 0xff; }
     if (next->hit_next.size() > 0) {
         assert(((next->hit_next.size()-1) & next->hit_next.size()) == 0);
-        merge.next_table_format_data[logical_id].match_next_table_adr_mask = next->hit_next.size()-1; }
+        merge.next_table_format_data[logical_id].match_next_table_adr_mask =
+            next->hit_next.size() - 1; }
 
     /*------------------------
      * Immediate data found in overhead
@@ -610,14 +643,6 @@ void MatchTable::write_regs(int type, Table *result) {
             result->action_bus->write_immed_regs(result); }
 
     input_xbar->write_regs();
-}
-
-void MatchTable::link_action(Table::Ref &ref) {
-    ref.check();
-    if (ref) {
-        if (!ref->set_match_table(this))
-            error(ref.lineno, "%s is not an action table", ref->name());
-        ref->logical_id = logical_id; }
 }
 
 int Table::find_on_actionbus(Format::Field *f, int off) {

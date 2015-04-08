@@ -16,25 +16,24 @@ class GatewayTable;
 class Instruction;
 class InputXbar;
 class MatchTable;
+class SelectionTable;
 class Stage;
 
 class Table {
 protected:
     Table(int line, std::string &&n, gress_t gr, Stage *s, int lid = -1)
         : name_(n), stage(s), gress(gr), lineno(line),
-          logical_id(lid), gateway(0), input_xbar(0), format(0), actions(0),
-          action_bus(0) {
+          logical_id(lid), input_xbar(0), format(0), actions(0), action_bus(0) {
             assert(all.find(name_) == all.end());
             all.emplace(name_, this); }
     virtual ~Table() { all.erase(name_); }
     virtual void setup(VECTOR(pair_t) &data) = 0;
     void setup_layout(value_t *row, value_t *col, value_t *bus);
     void setup_logical_id();
-    void setup_action_table(value_t &);
     void setup_actions(value_t &);
     void setup_vpns(VECTOR(value_t) *);
     virtual void vpn_params(int &width, int &depth, int &period, const char *&period_name) { assert(0); }
-    void alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Table *> *bus_use);
+    void alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Table *> *bus_use = 0);
     void alloc_busses(Alloc2Dbase<Table *> &bus_use);
     void alloc_id(const char *idname, int &id, int &next_id, int max_id,
 		  bool order, Alloc1Dbase<Table *> &use);
@@ -47,7 +46,10 @@ public:
     virtual void pass2() = 0;
     virtual void write_regs() = 0;
     virtual void gen_tbl_cfg(json::vector &out) = 0;
-    virtual bool set_match_table(MatchTable *m) { return false; }
+    enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION };
+    virtual table_type_t set_match_table(MatchTable *m) { return OTHER; }
+    virtual GatewayTable *get_gateway() { return 0; }
+    virtual SelectionTable *get_selector() { return 0; }
 
     struct Layout {
         /* Holds the layout of which rams/tcams/busses are used by the table
@@ -105,9 +107,10 @@ public:
         bool operator==(const Table *t) { return name == t->name_; }
         bool operator==(const char *t) { return name == t; }
         bool operator==(const std::string &t) { return name == t; }
-        void check() {
+        bool check() {
             if (set() && !*this)
-                error(lineno, "No table named %s", name.c_str()); }
+                error(lineno, "No table named %s", name.c_str());
+            return *this; }
     };
 
     class Format {
@@ -159,18 +162,27 @@ public:
         decltype(fmt[0].begin()) begin(int grp=0) { return fmt[grp].begin(); }
         decltype(fmt[0].end()) end(int grp=0) { return fmt[grp].end(); }
     };
+
+    struct Call : Ref { /* a Ref with arguments */
+        std::vector<Format::Field*>     args;
+        void setup(const value_t &v, Table *tbl);
+    };
+
     class Actions {
-        typedef std::map<std::string, std::pair<int, std::vector<Instruction *>>> act_t;
-        act_t                           actions;
-        std::vector<act_t::iterator>    order;
-        typedef std::vector<act_t::iterator>::iterator  iterator;
+        struct Action {
+            std::string                 name;
+            int                         lineno, addr, code;
+            std::vector<Instruction *>  instr;
+            Action(const char *n, int l) : name(n), lineno(l), addr(-1), code(-1) {}
+        };
+        std::vector<Action>             actions;
+        std::map<std::string, int>      by_name;
     public:
         Actions(Table *tbl, VECTOR(pair_t) &);
-        int             lineno;
-        iterator begin() { return order.begin(); }
-        iterator end() { return order.end(); }
+        std::vector<Action>::iterator begin() { return actions.begin(); }
+        std::vector<Action>::iterator end() { return actions.end(); }
         int count() { return actions.size(); }
-        bool exists(const std::string &n) { return actions.count(n) > 0; }
+        bool exists(const std::string &n) { return by_name.count(n) > 0; }
         void pass1(Table *);
         void pass2(Table *);
         void write_regs(Table *);
@@ -181,12 +193,10 @@ public:
     gress_t                     gress;
     int                         lineno;
     int                         logical_id;
-    GatewayTable                *gateway;
     InputXbar			*input_xbar;
     std::vector<Layout>         layout;
     Format                      *format;
-    Ref                         action;
-    std::vector<Format::Field*> action_args;
+    Call                        action;
     Actions                     *actions;
     ActionBus			*action_bus;
     std::vector<Ref>            hit_next;
@@ -209,10 +219,12 @@ public:
 
 class MatchTable : public Table {
 protected:
+    GatewayTable                *gateway;
     MatchTable(int l, std::string &&n, gress_t g, Stage *s, int lid)
-        : Table(l, std::move(n), g, s, lid) {}
-    void link_action(Table::Ref &ref);
+        : Table(l, std::move(n), g, s, lid), gateway(0) {}
     void write_regs(int type, Table *result);
+public:
+   GatewayTable *get_gateway() { return gateway; }
 };
 
 #define DECLARE_TABLE_TYPE(TYPE, PARENT, NAME, ...)                     \
@@ -244,6 +256,7 @@ TYPE *TYPE::Type::create(int lineno, const char *name, gress_t gress,   \
 }
 
 DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
+    Table::Call                 selector;
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
         width = (format->size-1)/128 + 1;
         period = format->groups();
@@ -275,6 +288,8 @@ DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
     std::vector<std::vector<int>> word_info;    /* which format group corresponds to each
                                                  * match group in each word */
     int         mgm_lineno;     /* match_group_map lineno */
+public:
+   SelectionTable *get_selector();
 )
 
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
@@ -296,16 +311,20 @@ public:
         return indirect ? indirect->lookup_field(name, action) : 0; }
     int find_on_actionbus(Format::Field *f, int off) {
         return indirect ? indirect->find_on_actionbus(f, off) : -1; }
+    SelectionTable *get_selector() { return indirect ? indirect->get_selector() : 0; }
 )
 
 DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     TernaryMatchTable           *match_table;
-    bool set_match_table(MatchTable *m);
+    Table::Call                 selector;
+    table_type_t set_match_table(MatchTable *m);
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
         width = (format->size-1)/128 + 1;
         depth = layout_size() / width;
         period = 1;
         period_name = 0; }
+    GatewayTable *get_gateway() { return match_table->get_gateway(); }
+    SelectionTable *get_selector();
 )
 
 DECLARE_TABLE_TYPE(ActionTable, Table, "action",
@@ -319,7 +338,14 @@ DECLARE_TABLE_TYPE(ActionTable, Table, "action",
     Format::Field *lookup_field(const std::string &name, const std::string &action);
     void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn);
     int find_on_actionbus(Format::Field *f, int off);
-    bool set_match_table(MatchTable *m) { match_tables.insert(m); return true; }
+    table_type_t set_match_table(MatchTable *m) {
+        match_tables.insert(m);
+        if ((unsigned)m->logical_id < (unsigned)logical_id) logical_id = m->logical_id;
+        return ACTION; }
+    GatewayTable *get_gateway() {
+        return match_tables.size() == 1 ? (*match_tables.begin())->get_gateway() : 0; }
+    SelectionTable *get_selector() {
+        return match_tables.size() == 1 ? (*match_tables.begin())->get_selector() : 0; }
 )
 
 DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
@@ -344,10 +370,38 @@ private:
     }                           miss;
     std::vector<Match>          table;
 public:
-    bool set_match_table(MatchTable *m) { match_table = m; return false; }
+    table_type_t set_match_table(MatchTable *m) {
+        match_table = m;
+        if ((unsigned)m->logical_id < (unsigned)logical_id) logical_id = m->logical_id;
+        return GATEWAY; }
     static GatewayTable *create(int lineno, const std::string &name, gress_t gress,
                                 Stage *stage, int lid, VECTOR(pair_t) &data)
         { return table_type.create(lineno, name.c_str(), gress, stage, lid, data); }
+   GatewayTable *get_gateway() { return this; }
+   SelectionTable *get_selector() { return match_table ? match_table->get_selector() : 0; }
+)
+
+DECLARE_TABLE_TYPE(SelectionTable, Table, "selection",
+    std::set<MatchTable *>      match_tables;
+    bool                non_linear_hash, resilient_hash;
+                        /* resilient_hash == false is fair hash */
+    int                 mode_lineno, param;
+    std::vector<int>    pool_sizes;
+    int                 min_words, max_words;
+public:
+    bool                per_flow_enable;
+    table_type_t set_match_table(MatchTable *m) {
+        match_tables.insert(m);
+        if ((unsigned)m->logical_id < (unsigned)logical_id) logical_id = m->logical_id;
+        return SELECTION; }
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
+        width = period = 1; depth = layout_size(); period_name = 0; }
+    GatewayTable *get_gateway() {
+        return match_tables.size() == 1 ? (*match_tables.begin())->get_gateway() : 0; }
+    SelectionTable *get_selector() {
+        return match_tables.size() == 1 ? (*match_tables.begin())->get_selector() : 0; }
+    void write_merge_regs(int type, int bus, Table *action, bool indirect);
+    unsigned address_shift() { return 8 + ceil_log2(min_words); }
 )
 
 #endif /* _tables_h_ */

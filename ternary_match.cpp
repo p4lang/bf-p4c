@@ -69,7 +69,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
                         error(kv.value.lineno, "Indirect bus %d already in use by table %s",
                               indirect_bus, old->name()); } }
         } else if (kv.key == "action") {
-            setup_action_table(kv.value);
+            action.setup(kv.value, this);
         } else if (kv.key == "actions") {
             if (CHECKTYPE(kv.value, tMAP))
                 actions = new Actions(this, kv.value.map);
@@ -117,8 +117,8 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
         error(lineno, "Table %s has both action table and immediate actions", name());
     else if (!action.set() && !actions)
         error(lineno, "Table %s has no indirect, action table or immediate actions", name());
-    if (action_args.size() > 0)
-        error(lineno, "Unexpected number of action table arguments %zu", action_args.size());
+    if (action.args.size() > 0)
+        error(lineno, "Unexpected number of action table arguments %zu", action.args.size());
     if (actions && !action_bus) action_bus = new ActionBus();
 }
 void TernaryMatchTable::pass1() {
@@ -143,7 +143,8 @@ void TernaryMatchTable::pass1() {
     alloc_vpns();
     check_next();
     indirect.check();
-    link_action(action);
+    if (action.check() && action->set_match_table(this) != ACTION)
+        error(action.lineno, "%s is not an action table", action->name());
     chain_rows = 0;
     unsigned row_use = 0;
     for (auto &row : layout) row_use |= 1U << row.row;
@@ -165,12 +166,8 @@ void TernaryMatchTable::pass1() {
         prev_row = row.row;
         if (++word == match.size()) word = 0; }
     if (indirect) {
-        if (!dynamic_cast<TernaryIndirectTable *>((Table *)indirect))
+        if (indirect->set_match_table(this) != TERNARY_INDIRECT)
             error(indirect.lineno, "%s is not a ternary indirect table", indirect->name());
-        else
-            indirect->set_match_table(this);
-        indirect->logical_id = logical_id;
-        link_action(indirect->action);
         if (hit_next.size() > 0 && indirect->hit_next.size() > 0)
             error(hit_next[0].lineno, "Ternary Match table with both direct and indirect "
                   "next tables"); }
@@ -193,6 +190,7 @@ void TernaryMatchTable::pass2() {
                 break; }
         if (indirect_bus < 0)
             error(lineno, "No ternary indirect bus available for table %s", name()); }
+    if (actions) actions->pass2(this);
     if (gateway) gateway->pass2();
 }
 void TernaryMatchTable::write_regs() {
@@ -282,7 +280,9 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
         if (kv.key == "format") {
             /* done above to be done before action_bus and vpns */
         } else if (kv.key == "action") {
-            setup_action_table(kv.value);
+            action.setup(kv.value, this);
+        } else if (kv.key == "selector") {
+            selector.setup(kv.value, this);
         } else if (kv.key == "actions") {
             if (CHECKTYPE(kv.value, tMAP))
                 actions = new Actions(this, kv.value.map);
@@ -320,16 +320,28 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
         error(lineno, "Table %s has both action table and immediate actions", name());
     if (!action.set() && !actions)
         error(lineno, "Table %s has neither action table nor immediate actions", name());
-    if (action_args.size() > 2)
-        error(lineno, "Unexpected number of action table arguments %zu", action_args.size());
+    if (action.args.size() > 2)
+        error(lineno, "Unexpected number of action table arguments %zu", action.args.size());
     if (actions && !action_bus) action_bus = new ActionBus();
 }
 
-bool TernaryIndirectTable::set_match_table(MatchTable *m) {
+SelectionTable *TernaryIndirectTable::get_selector() {
+    return dynamic_cast<SelectionTable *>((Table *)selector);
+}
+
+Table::table_type_t TernaryIndirectTable::set_match_table(MatchTable *m) {
     if (match_table)
         error(lineno, "Multiple references to ternary indirect table %s", name());
-    match_table = dynamic_cast<TernaryMatchTable *>(m);
-    return false;
+    else if (!(match_table = dynamic_cast<TernaryMatchTable *>(m)))
+        error(lineno, "Trying to link ternary indirect table %s to non-ternary table %s",
+              name(), m->name());
+    else {
+        if (action.check() && action->set_match_table(m) != ACTION)
+            error(action.lineno, "%s is not an action table", action->name());
+        if (selector.check() && selector->set_match_table(m) != SELECTION)
+            error(selector.lineno, "%s is not a selection table", selector->name());
+        logical_id = m->logical_id; }
+    return TERNARY_INDIRECT;
 }
 
 void TernaryIndirectTable::pass1() {
@@ -339,9 +351,9 @@ void TernaryIndirectTable::pass1() {
     check_next();
     if (action_bus) action_bus->pass1(this);
     if (actions) {
-        assert(action_args.size() == 0);
+        assert(action.args.size() == 0);
         if (auto *sel = lookup_field("action"))
-            action_args.push_back(sel);
+            action.args.push_back(sel);
         else if (actions->count() > 1)
             error(lineno, "No field 'action' to select between mulitple actions in "
                   "table %s format", name());
@@ -391,12 +403,12 @@ void TernaryIndirectTable::write_regs() {
         merge.tind_bus_prop[bus].tcam_piped = 1;
         merge.tind_bus_prop[bus].thread = gress;
         merge.tind_bus_prop[bus].enabled = 1;
-        merge.mau_action_instruction_adr_tcam_shiftcount[bus] = action_args[0]->bits[0].lo;
+        merge.mau_action_instruction_adr_tcam_shiftcount[bus] = action.args[0]->bits[0].lo;
         if (format->immed)
             merge.mau_immediate_data_tcam_shiftcount[bus] = format->immed->bits[0].lo;
         if (action) {
             int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
-            if (action_args.size() == 1) {
+            if (action.args.size() == 1) {
                 merge.mau_actiondata_adr_mask[1][bus] = 0x3fffff & (~0U << lo_huffman_bits);
                 merge.mau_actiondata_adr_tcam_shiftcount[bus] =
                     69 + (format->log2size-2) - lo_huffman_bits;
@@ -405,9 +417,9 @@ void TernaryIndirectTable::write_regs() {
             } else {
                 /* FIXME -- support for multiple sizes of action data? */
                 merge.mau_actiondata_adr_mask[1][bus] =
-                    ((1U << action_args[1]->size) - 1) << lo_huffman_bits;
+                    ((1U << action.args[1]->size) - 1) << lo_huffman_bits;
                 merge.mau_actiondata_adr_tcam_shiftcount[bus] =
-                    action_args[1]->bits[0].lo + 5 - lo_huffman_bits; } } }
+                    action.args[1]->bits[0].lo + 5 - lo_huffman_bits; } } }
     if (actions) actions->write_regs(this);
 }
 

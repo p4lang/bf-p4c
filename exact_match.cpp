@@ -28,13 +28,15 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "format") {
             /* done above to be done before action_bus and vpns */
         } else if (kv.key == "action") {
-            setup_action_table(kv.value);
+            action.setup(kv.value, this);
         } else if (kv.key == "actions") {
             if (CHECKTYPE(kv.value, tMAP))
                 actions = new Actions(this, kv.value.map);
         } else if (kv.key == "action_bus") {
             if (CHECKTYPE(kv.value, tMAP))
                 action_bus = new ActionBus(this, kv.value.map);
+        } else if (kv.key == "selector") {
+            selector.setup(kv.value, this);
         } else if (kv.key == "hit") {
             if (!hit_next.empty())
                 error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
@@ -99,9 +101,13 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
 	error(lineno, "Table %s has both action table and immediate actions", name());
     if (!action.set() && !actions)
 	error(lineno, "Table %s has neither action table nor immediate actions", name());
-    if (action_args.size() > 2)
-        error(lineno, "Unexpected number of action table arguments %zu", action_args.size());
+    if (action.args.size() > 2)
+        error(lineno, "Unexpected number of action table arguments %zu", action.args.size());
     if (actions && !action_bus) action_bus = new ActionBus();
+}
+
+SelectionTable *ExactMatchTable::get_selector() {
+    return dynamic_cast<SelectionTable *>((Table *)selector);
 }
 
 /* calculate the 18-bit byte/nybble mask tofino uses for matching in a 128-bit word */
@@ -119,12 +125,18 @@ void ExactMatchTable::pass1() {
     alloc_busses(stage->sram_match_bus_use);
     alloc_vpns();
     check_next();
-    link_action(action);
+    if (action.check() && action->set_match_table(this) != ACTION)
+        error(action.lineno, "%s is not an action table", action->name());
+    if (selector.check()) {
+        if (selector->set_match_table(this) != SELECTION)
+            error(selector.lineno, "%s is not a selection table", selector->name());
+        if (selector.args.size() != 1)
+            error(selector.lineno, "selector requires one arg"); }
     if (action_bus) action_bus->pass1(this);
     if (actions) {
-        assert(action_args.size() == 0);
+        assert(action.args.size() == 0);
         if (auto *sel = lookup_field("action"))
-            action_args.push_back(sel);
+            action.args.push_back(sel);
         else if (actions->count() > 1)
             error(lineno, "No field 'action' to select between mulitple actions in "
                   "table %s format", name());
@@ -553,14 +565,14 @@ void ExactMatchTable::write_regs() {
         /* FIXME -- factor this where possible with ternary match code */
         if (action) {
             int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
-            if (action_args.size() <= 1) {
+            if (action.args.size() <= 1) {
                 merge.mau_actiondata_adr_mask[0][bus] = 0x3fffff & (~0U << lo_huffman_bits);
                 merge.mau_actiondata_adr_vpn_shiftcount[0][bus] =
                     std::max(0, (int)action->format->log2size - 7);
             } else {
                 /* FIXME -- support for multiple sizes of action data? */
                 merge.mau_actiondata_adr_mask[0][bus] =
-                    ((1U << action_args[1]->size) - 1) << lo_huffman_bits; } }
+                    ((1U << action.args[1]->size) - 1) << lo_huffman_bits; } }
         for (unsigned word_group = 0; word_group < word_info[word].size(); word_group++) {
             int group = word_info[word][word_group];
             if (group_info[group].overhead_word == word) {
@@ -568,21 +580,26 @@ void ExactMatchTable::write_regs() {
                     assert(format->immed->by_group[group]->bits[0].lo/128 == (unsigned)word);
                     merge.mau_immediate_data_exact_shiftcount[bus][word_group] =
                         format->immed->by_group[group]->bits[0].lo % 128; }
-                if (!action_args.empty()) {
-                    assert(action_args[0]->by_group[group]->bits[0].lo/128 == (unsigned)word);
+                if (!action.args.empty()) {
+                    assert(action.args[0]->by_group[group]->bits[0].lo/128 == (unsigned)word);
                     merge.mau_action_instruction_adr_exact_shiftcount[bus][word_group] =
-                        action_args[0]->by_group[group]->bits[0].lo % 128; }
+                        action.args[0]->by_group[group]->bits[0].lo % 128; }
             } else if (!options.match_compiler) continue;
             /* FIXME -- factor this where possible with ternary match code */
             if (action) {
                 int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
-                if (action_args.size() <= 1) {
+                if (action.args.size() <= 1) {
                     merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
                         69 - lo_huffman_bits;
                 } else if (group_info[group].overhead_word == word) {
-                    assert(action_args[1]->by_group[group]->bits[0].lo/128 == (unsigned)word);
+                    assert(action.args[1]->by_group[group]->bits[0].lo/128 == (unsigned)word);
                     merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
-                        action_args[1]->by_group[group]->bits[0].lo%128 + 5 - lo_huffman_bits; } } }
+                        action.args[1]->by_group[group]->bits[0].lo%128 + 5 - lo_huffman_bits; } }
+            if (selector) {
+                merge.mau_selectorlength_default[word_group][bus] = 0x601; // FIXME
+                merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 
+                    selector.args[0]->by_group[group]->bits[0].lo%128 -
+                        get_selector()->address_shift(); } }
         for (auto col : row.cols) {
             int word_group = 0;
             for (int group : word_info[word]) {

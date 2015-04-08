@@ -1,14 +1,19 @@
-
 header_type data_t {
     fields {
         f1 : 32;
         f2 : 32;
         f3 : 32;
         f4 : 32;
-        b1 : 8;
-        b2 : 8;
-        b3 : 8;
-        b4 : 8;
+        x1 : 2;
+        pad0 : 3;
+        x2 : 2;
+        pad1 : 5;
+        x3 : 1;
+        pad2 : 2;
+        skip : 32;
+        x4 : 1;
+        x5 : 1;
+        pad3 : 6;
     }
 }
 header data_t data;
@@ -19,14 +24,14 @@ parser start {
 }
 
 action noop() { }
-action setb1(val) { modify_field(data.b1, val); }
+action setf4(val) { modify_field(data.f4, val); }
 
 table test1 {
     reads {
         data.f1 : exact;
     }
     actions {
-        setb1;
+        setf4;
         noop;
     }
 }
@@ -35,17 +40,15 @@ table test2 {
         data.f2 : exact;
     }
     actions {
-        setb1;
+        setf4;
         noop;
     }
 }
 
 control ingress {
-    if (data.b2 == data.b3 and data.b4 == 10) {
-        if (data.b1 == data.b2) {
-            apply(test1);
-        }
-    } else { if (data.b1 != data.b2) {
+    if (data.x1 == 1 and data.x4 == 0) {
+        apply(test1);
+    } else {
         apply(test2);
-    } }
+    }
 }

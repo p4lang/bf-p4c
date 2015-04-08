@@ -232,6 +232,10 @@ void GatewayTable::write_regs() {
                 merge.gateway_payload_match_adr[row.row][row.bus] = ???;
 #endif
             }
+    } else {
+        if (gress == EGRESS)
+            stage->regs.dp.imem_table_addr_egress |= 1 << logical_id;
+        merge.predication_ctl[gress].table_thread |= 1 << logical_id;
     }
 }
 

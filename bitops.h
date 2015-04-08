@@ -1,6 +1,8 @@
 #ifndef _bitops_h_
 #define _bitops_h_
 
+#include <limits.h>
+
 class MaskCounter {
     unsigned    mask, val;
     bool        oflo;
@@ -26,9 +28,18 @@ public:
     MaskCounter &overflow(bool v = true) { oflo = v; return *this; }
 };
 
-inline unsigned bitcount(unsigned v) {
+static inline unsigned bitcount(unsigned v) {
     unsigned rv = 0;
     while (v) { v &= v-1; ++rv; }
+    return rv; }
+static inline int ceil_log2(unsigned v) {
+    if (!v) return -1;
+    for (int rv = 0; rv < (int)(CHAR_BIT*sizeof(unsigned)); rv++)
+        if ((1U << rv) >= v) return rv;
+    return CHAR_BIT*sizeof(unsigned); }
+static inline int floor_log2(unsigned v) {
+    int rv = -1;
+    while (v) { rv++; v >>= 1; }
     return rv; }
 
 #endif /* _bitops_h_ */

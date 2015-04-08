@@ -12,8 +12,8 @@ GEN_OBJS := gen/memories.prsr_mem_main_rspec.o \
 	    gen/regs.prsr_reg_merge_rspec.o
 TFAS_OBJS:= action_bus.o action_table.o asm-parse.o asm-types.o bitvec.o \
 	    deparser.o exact_match.o gateway.o hex.o input_xbar.o \
-	    instruction.o parser.o phv.o stage.o tables.o ternary_match.o \
-	    tfas.o ubits.o vector.o
+	    instruction.o parser.o phv.o selection.o stage.o tables.o \
+	    ternary_match.o tfas.o ubits.o vector.o
 TEST_SRCS:= $(wildcard test_*.cpp)
 all: $(GEN_OBJS:%.o=%.h) gen/uptr_sizes.h tfas
 tfas: $(TFAS_OBJS) json.o $(GEN_OBJS) $(TEST_SRCS:%.cpp=%.o)

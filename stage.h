@@ -76,4 +76,46 @@ public:
     void write_regs();
 };
 
+/* constants for various config params */
+#undef OVERFLOW         /* get rid of global preproc define from math.h */
+namespace UnitRam {
+    enum {
+        MATCH = 1,
+        ACTION = 2,
+        STATISTICS = 3,
+        METER = 4,
+        STATEFUL = 5,
+        TERNARY_INDIRECTION = 6,
+        SELECTOR = 7,
+    };
+    namespace DataMux {
+        enum {
+            STATISTICS = 0,
+            METER = 1,
+            OVERFLOW = 2,
+            OVERFLOW2 = 3,
+            ACTION = 4,
+            NONE = 7,
+        };
+    }
+    namespace AdrMux {
+        enum {
+            ACTION = 1,
+            TERNARY_INDIRECTION = 2,
+            OVERFLOW = 4,
+            STATS_METERS = 5,
+            SELECTOR_ALU = 6,
+            SELECTOR_OVERFLOW = 7,
+        };
+    }
+}
+namespace AdrDist {
+    enum {
+        ACTION = 0,
+        STATISTICS = 1,
+        METER = 2,
+        OVERFLOW = 3,
+    };
+}
+
 #endif /* _stage_h_ */
