@@ -16,7 +16,7 @@ Table::Format::Field *ActionTable::lookup_field(const std::string &name, const s
             for (auto &fmt : action_formats)
                 if (auto *rv = fmt.second->field(name))
                     return rv;
-    } else { 
+    } else {
         if (auto *fmt = get(action_formats, name)) {
             if (auto *rv = fmt->field(name))
                 return rv;
@@ -146,6 +146,34 @@ void ActionTable::pass2() {
     if (actions) actions->pass2(this);
 }
 
+static void flow_selector_addr(Stage *stage, int from, int to) {
+    assert(from > to);
+    if (from/2 == to/2) {
+        /* L to R */
+        stage->regs.rams.map_alu.selector_adr_switchbox.row[from/2].ctl
+            .l_oflo_adr_o_mux_select.l_oflo_adr_o_sel_selector_adr_r_i = 1;
+        return; }
+    if (from & 1)
+        /* R down */
+        stage->regs.rams.map_alu.selector_adr_switchbox.row[from/2].ctl
+            .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_selector_adr_r_i = 1;
+    else
+        /* L down */
+        stage->regs.rams.map_alu.selector_adr_switchbox.row[from/2].ctl
+            .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_selector_adr_l_i = 1;
+    for (int row = from/2 - 1; row > to/2; row--)
+        /* top to bottom */
+        stage->regs.rams.map_alu.selector_adr_switchbox.row[row].ctl
+            .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_oflo_adr_t_i = 1;
+    if (to & 1)
+        /* flow down? to R */
+        stage->regs.rams.map_alu.selector_adr_switchbox.row[to/2].ctl.r_oflo_adr_o_mux_select = 1;
+    else
+        /* flow down to L */
+        stage->regs.rams.map_alu.selector_adr_switchbox.row[to/2].ctl
+            .l_oflo_adr_o_mux_select.l_oflo_adr_o_sel_oflo_adr_t_i = 1;
+}
+
 void ActionTable::write_regs() {
     LOG1("### Action table " << name() << " write_regs");
     int width = (format->size+127)/128;
@@ -203,6 +231,13 @@ void ActionTable::write_regs() {
                     if (!icxbar[mtab->logical_id].address_distr_to_overflow)
                         icxbar[mtab->logical_id].address_distr_to_overflow = 1; }
             oflo_adr_xbar.adr_dist_oflo_adr_xbar_enable = 1; }
+        if (SelectionTable *sel = get_selector()) {
+            if (logical_row.row != sel->layout[0].row) {
+                if (logical_row.row > sel->layout[0].row)
+                    error(lineno, "Selector data from %s on row %d cannot flow up to %s on row %d",
+                          sel->name(), sel->layout[0].row, name(), logical_row.row);
+                else
+                    flow_selector_addr(stage, sel->layout[0].row, logical_row.row); } }
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;
             auto &ram = stage->regs.rams.array.row[row].ram[col];
@@ -231,11 +266,11 @@ void ActionTable::write_regs() {
             unitram_config.unitram_enable = 1;
             auto &ram_mux = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
             if (SelectionTable *sel = get_selector()) {
-                int slot = side * 6;
+                int slot = side * 9;
                 if (row == sel->layout[0].row/2U) {
                     /* we're on the home row of the selector, so use it directly */
                     ram_mux.ram_unitram_adr_mux_select = UnitRam::AdrMux::SELECTOR_ALU;
-                    slot += 9;
+                    slot += 6;
                 } else {
                     /* not on the home row -- use overflows */
                     ram_mux.ram_unitram_adr_mux_select = UnitRam::AdrMux::SELECTOR_OVERFLOW; }

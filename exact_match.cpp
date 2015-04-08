@@ -573,6 +573,8 @@ void ExactMatchTable::write_regs() {
                 /* FIXME -- support for multiple sizes of action data? */
                 merge.mau_actiondata_adr_mask[0][bus] =
                     ((1U << action.args[1]->size) - 1) << lo_huffman_bits; } }
+        if (selector)
+            merge.mau_selectorlength_default[0][bus] = 0x601; // FIXME
         for (unsigned word_group = 0; word_group < word_info[word].size(); word_group++) {
             int group = word_info[word][word_group];
             if (group_info[group].overhead_word == word) {
@@ -596,7 +598,6 @@ void ExactMatchTable::write_regs() {
                     merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
                         action.args[1]->by_group[group]->bits[0].lo%128 + 5 - lo_huffman_bits; } }
             if (selector) {
-                merge.mau_selectorlength_default[word_group][bus] = 0x601; // FIXME
                 merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 
                     selector.args[0]->by_group[group]->bits[0].lo%128 -
                         get_selector()->address_shift(); } }

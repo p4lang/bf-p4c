@@ -419,7 +419,11 @@ void TernaryIndirectTable::write_regs() {
                 merge.mau_actiondata_adr_mask[1][bus] =
                     ((1U << action.args[1]->size) - 1) << lo_huffman_bits;
                 merge.mau_actiondata_adr_tcam_shiftcount[bus] =
-                    action.args[1]->bits[0].lo + 5 - lo_huffman_bits; } } }
+                    action.args[1]->bits[0].lo + 5 - lo_huffman_bits; } }
+        if (selector) {
+            merge.mau_selectorlength_default[1][bus] = 0x601; // FIXME
+            merge.mau_meter_adr_tcam_shiftcount[bus] =
+                selector.args[0]->bits[0].lo%128 - get_selector()->address_shift(); } }
     if (actions) actions->write_regs(this);
 }
 
