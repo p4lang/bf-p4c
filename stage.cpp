@@ -203,6 +203,20 @@ void Stage::write_regs() {
         default:
             assert(0); }
         regs.rams.match.adrdist.adr_dist_pipe_delay[gress] = adr_dist_delay(group_table_use[gress]);
+        auto &deferred_eop_bus_delay = regs.rams.match.adrdist.deferred_eop_bus_delay[gress];
+        deferred_eop_bus_delay.eop_internal_delay_fifo = pred_cycle(group_table_use[gress]);
+        /* FIXME -- making this depend on the dependecny of the next stage seems wrong */
+        if (stageno == NUM_MAU_STAGES-1)
+            deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(group_table_use[gress]);
+        else if (this[1].stage_dep[gress] == MATCH_DEP)
+            deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(group_table_use[gress]);
+        else if (this[1].stage_dep[gress] == ACTION_DEP)
+            deferred_eop_bus_delay.eop_output_delay_fifo = 2;
+        else if (options.match_compiler && this[1].tables.empty())
+            deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(group_table_use[gress]);
+        else
+            deferred_eop_bus_delay.eop_output_delay_fifo = 1;
+        deferred_eop_bus_delay.eop_delay_fifo_en = 1;
         regs.dp.action_output_delay[gress] = pipelength(group_table_use[gress]) - 3;
         regs.dp.pipelength_added_stages[gress] = pipelength(group_table_use[gress]) - 14;
         if (stageno != 0)
