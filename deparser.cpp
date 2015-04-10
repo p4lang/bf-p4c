@@ -291,9 +291,7 @@ void dump_field_dictionary(checked_array_base<fde_pov> &fde_control,
                 fde_control[row].valid = 1;
                 pos = 0; }
             fde_data[row].phv[pos++] = ent.first->reg.index;
-            prev_pov = pov_bit; }
-        if (options.match_compiler && prev_is_checksum)
-            fde_data[row].phv[pos] = ent.first->reg.index; }
+            prev_pov = pov_bit; } }
     if (pos) {
         fde_control[row].num_bytes = pos & 3;
         fde_data[row].num_bytes = pos & 3; }
