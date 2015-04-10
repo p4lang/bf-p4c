@@ -21,6 +21,7 @@ struct ubits_base {
     ubits_base(unsigned long v) : value(v), read(false), write(false) {}
     operator unsigned long() const { read = true; return value; }
     bool modified() const { return write; }
+    void rewrite() { write = false; }
     virtual unsigned long operator=(unsigned long v) = 0;
 };
 

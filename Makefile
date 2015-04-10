@@ -30,9 +30,9 @@ $(GEN_OBJS) $(TFAS_OBJS): | $(GEN_OBJS:%.o=%.h) gen/uptr_sizes.h
 $(GEN_OBJS): gen/%.o: gen/%.cpp gen/%.h
 gen/memories.prsr_mem_main_rspec.%: JSON_NAME=memories.all.parser.%s
 gen/regs.dprsr_hdr.%: JSON_NAME=regs.all.deparser.header_phase
-gen/regs.dprsr_hdr.%: JSON_GLOBALS="fde_phv"
+gen/regs.dprsr_hdr.%: JSON_GLOBALS=fde_phv
 gen/regs.dprsr_inp.%: JSON_NAME=regs.all.deparser.input_phase
-gen/regs.dprsr_inp.%: JSON_GLOBALS="fde_pov"
+gen/regs.dprsr_inp.%: JSON_GLOBALS=fde_pov
 gen/regs.mau_addrmap.%: JSON_NAME=regs.match_action_stage.%02x
 gen/regs.ibp_rspec.%: JSON_NAME=regs.all.parser.ingress
 gen/regs.ebp_rspec.%: JSON_NAME=regs.all.parser.egress

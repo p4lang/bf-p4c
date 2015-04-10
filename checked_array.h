@@ -16,6 +16,9 @@ class checked_array_base {
 public:
     virtual T& operator[](size_t) = 0;
     virtual const T& operator[](size_t) const = 0;
+    virtual size_t size() const = 0;
+    virtual T *begin() = 0;
+    virtual T *end() = 0;
     virtual bool modified() const = 0;
     virtual bool disabled() const = 0;
     virtual void disable() = 0;
@@ -34,6 +37,9 @@ public:
     const T& operator[](size_t idx) const {
         assert(idx < S);
         return data[idx]; }
+    size_t size() const { return S; }
+    T *begin() { return data; }
+    T *end() { return data + S; }
     bool modified() const {
         for (size_t i = 0; i < S; i++)
             if (data[i].modified()) return true;

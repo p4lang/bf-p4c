@@ -268,7 +268,7 @@ void Parser::output() {
             reg_merge.phv_owner.t_owner[i-256] = 1;
             reg_in.prsr_reg.phv_owner.t_owner[i-256] = 1;
             reg_eg.prsr_reg.phv_owner.t_owner[i-256] = 1;
-        } else {
+        } else if (i < 224) {
             reg_merge.phv_owner.owner[i] = 1;
             reg_in.prsr_reg.phv_owner.owner[i] = 1;
             reg_eg.prsr_reg.phv_owner.owner[i] = 1; } }

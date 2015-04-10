@@ -1,3 +1,4 @@
+#include <tofino/intrinsic_metadata.p4>
 
 header_type data_t {
     fields {

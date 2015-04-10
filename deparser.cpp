@@ -99,11 +99,11 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
             if (args[0] == "egress" && gress != EGRESS) continue;
         } else if (error_count > 0)
             break;
-        for (auto &kv : MapIterChecked(data.map)) {
+        for (auto &kv : MapIterChecked(data.map, true)) {
             if (kv.key == "dictionary") {
                 if (!CHECKTYPE(kv.value, tMAP)) continue;
                 for (auto &ent : kv.value.map)
-                    dictionary[gress].emplace_back(Phv::Ref(gress, ent.key),
+                    dictionary[gress].emplace_back(RefOrChksum(gress, ent.key),
                                                    Phv::Ref(gress, ent.value));
             } else if (kv.key == "pov") {
                 if (!CHECKTYPE(kv.value, tVEC)) continue;
@@ -125,7 +125,15 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                         learn.layout[l.key.i].emplace_back(gress, v); }
                 if (!learn.select)
                     error(kv.value.lineno, "No select key in leanring spec");
-            } else if (auto *intrin = ::get(Intrinsic::all[gress], kv.key.s)) {
+            } else if (kv.key == "checksum") {
+                if (kv.key.type != tCMD || kv.key.vec.size != 2 || kv.key[1].type != tINT ||
+                    kv.key[1].i < 0 || kv.key[1].i >= DEPARSER_CHECKSUM_UNITS)
+                    error(kv.key.lineno, "Invalid checksum unit number");
+                else if (CHECKTYPE(kv.value, tVEC)) {
+                    int unit = kv.key[1].i;
+                    for (auto &ent : kv.value.vec)
+                        checksum[gress][unit].emplace_back(gress, ent); }
+            } else if (auto *intrin = ::get(Intrinsic::all[gress], value_desc(&kv.key))) {
                 intrinsics.emplace_back(intrin, std::vector<Phv::Ref>());
                 std::vector<Phv::Ref> &vec = intrinsics.back().second;
                 if (kv.value.type == tVEC)
@@ -152,7 +160,11 @@ void Deparser::process() {
             if (ent.second.check()) {
                 phv_use[gress][ent.second->reg.index] = 1;
                 if (ent.second->lo != ent.second->hi)
-                    error(ent.second.lineno, "POV bits shoudl be single bits"); } } }
+                    error(ent.second.lineno, "POV bits should be single bits"); } }
+        for (int i = 0; i < DEPARSER_CHECKSUM_UNITS; i++)
+            for (auto &ent : checksum[gress][i])
+                if (ent.check() && (ent->lo != 0 || ent->hi != ent->reg.size - 1))
+                    error(ent.lineno, "Can only do checksums on full phv registers, not slices"); }
     for (auto &intrin : intrinsics) {
         for (auto &el : intrin.second)
             el.check();
@@ -170,11 +182,64 @@ void Deparser::process() {
                 reg.check(); }
 }
 
+template<typename IPO, typename HPO> static
+void dump_checksum_units(checked_array_base<IPO> &main_csum_units,
+                         checked_array_base<HPO> &tagalong_csum_units,
+                         std::vector<Phv::Ref> checksum[DEPARSER_CHECKSUM_UNITS])
+{
+    for (int i = 0; i < DEPARSER_CHECKSUM_UNITS; i++) {
+        if (checksum[i].empty()) continue;
+        auto &main_unit = main_csum_units[i].csum_cfg_entry;
+        auto &tagalong_unit = tagalong_csum_units[i].csum_cfg_entry;
+        for (auto &ent : main_unit) {
+            ent.zero_l_s_b = 1;
+            ent.zero_l_s_b.rewrite();
+            ent.zero_m_s_b = 1;
+            ent.zero_m_s_b.rewrite(); }
+        for (auto &ent : tagalong_unit) {
+            ent.zero_l_s_b = 1;
+            ent.zero_l_s_b.rewrite();
+            ent.zero_m_s_b = 1;
+            ent.zero_m_s_b.rewrite(); }
+        int polarity = 0;
+        for (auto &reg : checksum[i]) {
+            int idx = reg->reg.index;
+            if (idx >= 256) {
+                idx -= 256;
+                if (idx < 32) {
+                    tagalong_unit[idx*2].zero_l_s_b = 0;
+                    tagalong_unit[idx*2].zero_m_s_b = 0;
+                    tagalong_unit[idx*2].swap = polarity;
+                    tagalong_unit[idx*2+1].zero_l_s_b = 0;
+                    tagalong_unit[idx*2+1].zero_m_s_b = 0;
+                    tagalong_unit[idx*2+1].swap = polarity;
+                } else {
+                    tagalong_unit[idx+32].zero_l_s_b = 0;
+                    tagalong_unit[idx+32].zero_m_s_b = 0;
+                    if (reg->reg.size == 8)
+                        polarity ^= 1;
+                    tagalong_unit[idx+32].swap = polarity; }
+            } else {
+                if (idx < 64) {
+                    main_unit[idx*2].zero_l_s_b = 0;
+                    main_unit[idx*2].zero_m_s_b = 0;
+                    main_unit[idx*2].swap = polarity;
+                    main_unit[idx*2+1].zero_l_s_b = 0;
+                    main_unit[idx*2+1].zero_m_s_b = 0;
+                    main_unit[idx*2+1].swap = polarity;
+                } else {
+                    main_unit[idx+64].zero_l_s_b = 0;
+                    main_unit[idx+64].zero_m_s_b = 0;
+                    if (reg->reg.size == 8)
+                        polarity ^= 1;
+                    main_unit[idx+64].swap = polarity; } } } }
+}
+
 void dump_field_dictionary(checked_array_base<fde_pov> &fde_control,
                            checked_array_base<fde_phv> &fde_data,
                            checked_array_base<ubits<8>> &pov_layout,
                            std::vector<Phv::Ref> &pov_order,
-                           std::vector<std::pair<Phv::Ref, Phv::Ref>> &dict)
+                           std::vector<std::pair<Deparser::RefOrChksum, Phv::Ref>> &dict)
 {
     std::map<unsigned, unsigned>        pov;
     unsigned pov_byte = 0, pov_size = 0;
@@ -200,10 +265,19 @@ void dump_field_dictionary(checked_array_base<fde_pov> &fde_control,
         pov_layout[pov_byte++] = 0xff;
 
     int row = -1, prev_pov = -1;
+    bool prev_is_checksum = false;
     unsigned pos = 0;
     for (auto &ent : dict) {
         unsigned size = ent.first->reg.size/8;
         int pov_bit = pov[ent.second->reg.index] + ent.second->lo;
+        if (options.match_compiler) {
+            if (ent.first->reg.index >= 224 && ent.first->reg.index < 236) {
+                /* checksum unit -- make sure it gets its own dictionary line */
+                prev_pov = -1;
+                prev_is_checksum = true;
+            } else {
+                if (prev_is_checksum) prev_pov = -1;
+                prev_is_checksum = false; } }
         while (size--) {
             if (pov_bit != prev_pov || pos >= 4 /*|| (pos & (size-1)) != 0*/) {
                 if (row >= 0) {
@@ -217,7 +291,9 @@ void dump_field_dictionary(checked_array_base<fde_pov> &fde_control,
                 fde_control[row].valid = 1;
                 pos = 0; }
             fde_data[row].phv[pos++] = ent.first->reg.index;
-            prev_pov = pov_bit; } }
+            prev_pov = pov_bit; }
+        if (options.match_compiler && prev_is_checksum)
+            fde_data[row].phv[pos] = ent.first->reg.index; }
     if (pos) {
         fde_control[row].num_bytes = pos & 3;
         fde_data[row].num_bytes = pos & 3; }
@@ -234,7 +310,10 @@ void Deparser::output() {
     hdr_regs.hem.he_edf_cfg.disable();
     hdr_regs.him.hi_edf_cfg.disable();
     //hdr_regs.him.hi_pv_table.disable();
-    /* TODO -- checksum units */
+    dump_checksum_units(inp_regs.iim.ii_phv_csum.csum_cfg, hdr_regs.him.hi_tphv_csum.csum_cfg,
+                        checksum[INGRESS]);
+    dump_checksum_units(inp_regs.iem.ie_phv_csum.csum_cfg, hdr_regs.hem.he_tphv_csum.csum_cfg,
+                        checksum[EGRESS]);
     dump_field_dictionary(inp_regs.iim.ii_fde_pov.fde_pov, hdr_regs.him.hi_fde_phv.fde_phv,
         inp_regs.iir.main_i.pov.phvs, pov_order[INGRESS], dictionary[INGRESS]);
     dump_field_dictionary(inp_regs.iem.ie_fde_pov.fde_pov, hdr_regs.hem.he_fde_phv.fde_phv,
@@ -276,4 +355,26 @@ void Deparser::output() {
 
     inp_regs.emit_json(*open_output("regs.all.deparser.input_phase.cfg.json"));
     hdr_regs.emit_json(*open_output("regs.all.deparser.header_phase.cfg.json"));
+}
+
+bool Deparser::RefOrChksum::check() const {
+    if (name_ == "checksum") {
+        if (lo != hi || lo < 0 || lo >= DEPARSER_CHECKSUM_UNITS) {
+            error(lineno, "Invalid checksum unit number");
+            return false; }
+        return true; }
+    return Phv::Ref::check();
+}
+
+Phv::Register Deparser::RefOrChksum::checksum_units[12] = {
+    { 224, 16 }, { 225, 16 }, { 226, 16 }, { 227, 16 }, { 228, 16 }, { 229, 16 },
+    { 230, 16 }, { 231, 16 }, { 232, 16 }, { 233, 16 }, { 234, 16 }, { 235, 16 } };
+
+Phv::Slice Deparser::RefOrChksum::operator *() const {
+    if (name_ == "checksum") {
+        if (lo != hi || lo < 0 || lo >= DEPARSER_CHECKSUM_UNITS) {
+            error(lineno, "Invalid checksum unit number");
+            return Phv::Slice(); }
+        return Phv::Slice(checksum_units[gress*DEPARSER_CHECKSUM_UNITS+lo], 0, 15); }
+    return Phv::Ref::operator*();
 }

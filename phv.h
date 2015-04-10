@@ -56,6 +56,7 @@ public:
     const Slice *get(gress_t gress, const char *name) const {
         return get(gress, std::string(name)); }
     class Ref {
+    protected:
 	gress_t		gress;
 	std::string	name_;
 	int		lo, hi;
