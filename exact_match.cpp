@@ -1,10 +1,10 @@
 #include "action_bus.h"
 #include "algorithm.h"
+#include "hex.h"
 #include "input_xbar.h"
 #include "instruction.h"
 #include "stage.h"
 #include "tables.h"
-#include "hex.h"
 
 DEFINE_TABLE_TYPE(ExactMatchTable)
 
@@ -627,4 +627,11 @@ void ExactMatchTable::write_regs() {
 }
 
 void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
+    json::map tbl;
+    tbl["name"] = name();
+    tbl["table_type"] = "match_entry";
+    tbl["direction"] = gress ? "egress" : "ingress";
+    tbl["stage_tables_length"] = 1;
+
+    out.emplace_back(std::make_unique<json::map>(std::move(tbl)));
 }

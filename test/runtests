@@ -42,6 +42,7 @@ fi
 
 TFAS=$PWD/../tfas
 REFLOW=$PWD/../reflow
+JSON_DIFF=$PWD/../json_diff
 
 pass=0
 fail=0
@@ -77,6 +78,9 @@ for p4file in "$@"; do
             fi
             diff -u $f $(basename $f)
         done > json_diff.txt
+        if [ -r $name.out/tbl-cfg ]; then
+            $JSON_DIFF -dl name -i table_type ${name}_context_llir.json $name.out/tbl-cfg >> json_diff.txt
+        fi
         cnt=$(grep -Ev '^\+\+\+|^---|"int_inj"' json_diff.txt | grep -Ec '^\+|^-')
         if [ $cnt -gt 0 ]; then
             echo " mismatch"

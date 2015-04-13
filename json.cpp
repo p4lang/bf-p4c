@@ -23,46 +23,61 @@ std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json) {
 	    return in; }
 	case '[': {
 	    std::unique_ptr<vector> rv(new vector());
-	    do {
-		std::unique_ptr<obj> o;
-		in >> o >> ch;
-		rv->push_back(std::move(o));
-		if (ch != ',' && ch != ']') {
-		    std::cerr << "missing ',' in vector" << std::endl;
-		    in.unget(); }
-	    } while (in && ch != ']');
+            in >> ch;
+            if (ch != ']') {
+                in.unget();
+                do {
+                    std::unique_ptr<obj> o;
+                    in >> o >> ch;
+                    rv->push_back(std::move(o));
+                    if (ch != ',' && ch != ']') {
+                        std::cerr << "missing ',' in vector" << std::endl;
+                        in.unget(); }
+                } while (in && ch != ']'); }
 	    json = std::move(rv);
 	    return in; }
 	case '{': {
 	    std::unique_ptr<map> rv(new map());
-	    do {
-		std::unique_ptr<obj> key, val;
-		in >> key >> ch;
-		if (ch == '}') {
-		    std::cerr << "missing value in map" << std::endl;
-		} else {
-		    if (ch != ':') {
-			std::cerr << "missing ':' in map" << std::endl;
-			in.unget(); }
-		    in >> val >> ch; }
-                if (rv->count(key.get()))
-                    std::cerr << "duplicate key in map" << std::endl;
-                else
-                    (*rv)[key.release()] = std::move(val);
-		if (ch != ',' && ch != '}') {
-		    std::cerr << "missing ',' in map" << std::endl;
-		    in.unget(); }
-	    } while (in && ch != '}');
+            in >> ch;
+            if (ch != '}') {
+                in.unget();
+                do {
+                    std::unique_ptr<obj> key, val;
+                    in >> key >> ch;
+                    if (ch == '}') {
+                        std::cerr << "missing value in map" << std::endl;
+                    } else {
+                        if (ch != ':') {
+                            std::cerr << "missing ':' in map" << std::endl;
+                            in.unget(); }
+                        in >> val >> ch; }
+                    if (rv->count(key.get()))
+                        std::cerr << "duplicate key in map" << std::endl;
+                    else
+                        (*rv)[key.release()] = std::move(val);
+                    if (ch != ',' && ch != '}') {
+                        std::cerr << "missing ',' in map" << std::endl;
+                        in.unget(); }
+                } while (in && ch != '}'); }
 	    json = std::move(rv);
 	    return in; }
 	default:
-	    std::cerr << "unexpected character '" << ch << "'" << std::endl;
+            if (isalpha(ch) || ch == '_') {
+                std::string s;
+                while (isalnum(ch) || ch == '_') {
+                    s += ch;
+                    if (!(in >> ch)) break; }
+                in.unget();
+                json.reset(new string(std::move(s)));
+                return in;
+            } else
+                std::cerr << "unexpected character '" << ch << "'" << std::endl;
 	}
     }
     return in;
 }
 
-void vector::print_on(std::ostream &out, int indent, int width) const {
+void vector::print_on(std::ostream &out, int indent, int width, const char *pfx) const {
     int twidth = width;
     bool first = true;
     bool oneline = test_width(twidth);
@@ -70,7 +85,7 @@ void vector::print_on(std::ostream &out, int indent, int width) const {
     indent += 2;
     for (auto &e : *this) {
 	if (!first) out << ',';
-	if (!oneline) out << '\n' << std::setw(indent);
+	if (!oneline) out << '\n' << pfx << std::setw(indent);
 	out << ' ' << std::setw(0);
 	e->print_on(out, indent, width - 2);
 	first = false;
@@ -80,7 +95,7 @@ void vector::print_on(std::ostream &out, int indent, int width) const {
     out << ']';
 }
 
-void map::print_on(std::ostream &out, int indent, int width) const {
+void map::print_on(std::ostream &out, int indent, int width, const char *pfx) const {
     int twidth = width;
     bool first = true;
     bool oneline = test_width(twidth);
@@ -89,7 +104,7 @@ void map::print_on(std::ostream &out, int indent, int width) const {
     indent += 2;
     for (auto &e : *this) {
 	if (!first) out << ',';
-	if (!oneline) out << '\n' << std::setw(indent);
+	if (!oneline) out << '\n' << pfx << std::setw(indent);
 	out << ' ' << std::setw(0);
 	e.first->print_on(out, indent, width - 2);
 	out << ": ";

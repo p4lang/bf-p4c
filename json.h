@@ -29,7 +29,7 @@ public:
 	bool operator()(const obj *a, const obj *b) const
 	    { return b ? a ? *a < *b : true : false; }
     };
-    virtual void print_on(std::ostream &out, int indent=0, int width=80) const = 0;
+    virtual void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const = 0;
     virtual bool test_width(int &limit) const = 0;
 };
 
@@ -44,7 +44,7 @@ public:
     bool operator ==(const obj &a) const {
 	if (auto *b = dynamic_cast<const number *>(&a)) return val == b->val;
 	return false; }
-    void print_on(std::ostream &out, int indent, int width) const { out << val; }
+    void print_on(std::ostream &out, int indent, int width, const char *pfx) const { out << val; }
     bool test_width(int &limit) const
 	{ char buf[32]; limit -= sprintf(buf, "%ld", val); return limit >= 0; }
 };
@@ -69,7 +69,7 @@ public:
 	    return static_cast<const std::string &>(*this) ==
 		   static_cast<const std::string &>(*b);
 	return false; }
-    void print_on(std::ostream &out, int indent, int width) const {
+    void print_on(std::ostream &out, int indent, int width, const char *pfx) const {
 	out << '"' << *this << '"'; }
     bool test_width(int &limit) const { limit -= size()+2; return limit >= 0; }
 };
@@ -97,12 +97,10 @@ public:
 	    auto p1 = begin(), p2 = b->begin();
 	    while (p1 != end() && p2 != b->end()) {
 		if (**p1 != **p2) return false;
-		p1++; p2++; }
-	    if (p1 != end() || p2 != b->end())
-		return false;
-	    return true; }
+		p1++; p2++; } 
+	    return (p1 == end() && p2 == b->end()); }
 	return false; }
-    void print_on(std::ostream &out, int indent, int width) const;
+    void print_on(std::ostream &out, int indent, int width, const char *pfx) const;
     bool test_width(int &limit) const {
 	limit -= 2;
 	for (auto &e : *this) {
@@ -139,11 +137,9 @@ public:
 		if (*p1->first != *p2->first) return false;
 		if (*p1->second != *p2->second) return false;
 		p1++; p2++; }
-	    if (p1 != end() || p2 != b->end())
-		return false;
-	    return true; }
+	    return (p1 == end() && p2 == b->end()); }
 	return false; }
-    void print_on(std::ostream &out, int indent, int width) const;
+    void print_on(std::ostream &out, int indent, int width, const char *pfx) const;
     bool test_width(int &limit) const {
 	limit -= 2;
 	for (auto &e : *this) {
@@ -151,6 +147,13 @@ public:
 	    if (!e.second->test_width(limit)) return false;
 	    if ((limit -= 4) < 0 ) return false; }
 	return true; }
+    using map_base::count;
+    map_base::size_type count(const char *str) const {
+	string tmp(str);
+        return count(&tmp); }
+    map_base::size_type count(long n) const {
+	number tmp(n);
+        return count(&tmp); }
     using map_base::operator[];
     obj *operator[](const char *str) const {
 	string tmp(str);
@@ -223,4 +226,17 @@ inline std::ostream &operator<<(std::ostream &out, const map::element_ref &el) {
     return out; }
 
 }
+
+#if defined(__GNUC__) && __GNUC__ == 4 && __GNUC__MINOR__ <= 8
+/* missing from gcc 4.8 stdlib */
+namespace std {
+    template<class T, class...Args>
+    std::unique_ptr<T> make_unique(Args&&... args)
+    {
+        std::unique_ptr<T> ret (new T(std::forward<Args>(args)...));
+        return ret;
+    }
+}
+#endif
+
 #endif /* _json_h_ */

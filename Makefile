@@ -19,6 +19,7 @@ all: $(GEN_OBJS:%.o=%.h) gen/uptr_sizes.h tfas
 tfas: $(TFAS_OBJS) json.o $(GEN_OBJS) $(TEST_SRCS:%.cpp=%.o)
 
 json2cpp: json.o
+json_diff: json.o
 hashdump: json.o ubits.o
 reflow: reflow.o
 
@@ -70,10 +71,10 @@ templates/%.json: templates/.templates-updated
 tags:
 	ctags -R -I VECTOR --exclude=test --exclude=submodules
 
-test: all reflow
+test: all reflow json_diff
 	cd test; ./runtests
 
-ftest: all reflow
+ftest: all reflow json_diff
 	cd test; ./runtests -f
 
 clean:

@@ -146,7 +146,7 @@ void AsmStage::output() {
         stage[i].write_regs();
         stage[i].regs.emit_json(*open_output("regs.match_action_stage.%02x.cfg.json", i) , i);
     }
-    *open_output("tbl-cfg") << &tbl_cfg << std::endl;
+    *open_output("tbl-cfg") << '[' << &tbl_cfg << ']' << std::endl;
 }
 
 static int tcam_delay(int use_flags) {
