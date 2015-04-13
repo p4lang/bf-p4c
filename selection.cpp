@@ -45,6 +45,12 @@ void SelectionTable::setup(VECTOR(pair_t) &data) {
                 for (value_t &v : kv.value.vec)
                     if (CHECKTYPE(v, tINT))
                         pool_sizes.push_back(v.i);
+        } else if (kv.key == "p4_table") {
+            if (CHECKTYPE(kv.value, tSTR))
+                p4_table = kv.value.s;
+        } else if (kv.key == "handle") {
+            if (CHECKTYPE(kv.value, tINT))
+                handle = kv.value.i;
         } else if (kv.key == "row" || kv.key == "logical_row" || kv.key == "column") {
             /* already done in setup_layout */
         } else

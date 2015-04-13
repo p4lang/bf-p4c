@@ -22,7 +22,7 @@ class Stage;
 class Table {
 protected:
     Table(int line, std::string &&n, gress_t gr, Stage *s, int lid = -1)
-        : name_(n), stage(s), gress(gr), lineno(line),
+        : name_(n), handle(0), stage(s), gress(gr), lineno(line),
           logical_id(lid), input_xbar(0), format(0), actions(0), action_bus(0) {
             assert(all.find(name_) == all.end());
             all.emplace(name_, this); }
@@ -123,8 +123,6 @@ public:
         struct Field {
             unsigned    size, group, flags;
             std::vector<bitrange_t>    bits;
-            //int         action_xbar;
-            //int         action_xbar_bit;
             Field       **by_group;
             Field() : size(0), group(0), flags(0),
                 /*action_xbar(-1), action_xbar_bit(0),*/ by_group(0) {}
@@ -188,7 +186,8 @@ public:
         void write_regs(Table *);
     };
 public:
-    std::string                 name_;
+    std::string                 name_, p4_table;
+    int                         handle;
     Stage                       *stage;
     gress_t                     gress;
     int                         lineno;

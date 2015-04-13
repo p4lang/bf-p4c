@@ -9,6 +9,18 @@
 #include <vector>
 #include <assert.h>
 
+#if defined(__GNUC__) && __GNUC__ == 4 && __GNUC__MINOR__ <= 8
+/* missing from gcc 4.8 stdlib <memory> */
+namespace std {
+    template<class T, class...Args>
+    std::unique_ptr<T> make_unique(Args&&... args)
+    {
+        std::unique_ptr<T> ret (new T(std::forward<Args>(args)...));
+        return ret;
+    }
+}
+#endif
+
 namespace json {
 
 class obj {
@@ -107,7 +119,13 @@ public:
 	    if (!e->test_width(limit)) return false;
 	    if ((limit -= 2) < 0 ) return false; }
 	return true; }
-
+    using vector_base::push_back;
+    void push_back(long n) {
+	number tmp(n);
+        emplace_back(std::make_unique<number>(std::move(tmp))); }
+    void push_back(const char *s) {
+	string tmp(s);
+        emplace_back(std::make_unique<string>(std::move(tmp))); }
 };
 
 typedef std::map<obj *, std::unique_ptr<obj>, obj::ptrless> map_base;
@@ -226,17 +244,5 @@ inline std::ostream &operator<<(std::ostream &out, const map::element_ref &el) {
     return out; }
 
 }
-
-#if defined(__GNUC__) && __GNUC__ == 4 && __GNUC__MINOR__ <= 8
-/* missing from gcc 4.8 stdlib */
-namespace std {
-    template<class T, class...Args>
-    std::unique_ptr<T> make_unique(Args&&... args)
-    {
-        std::unique_ptr<T> ret (new T(std::forward<Args>(args)...));
-        return ret;
-    }
-}
-#endif
 
 #endif /* _json_h_ */

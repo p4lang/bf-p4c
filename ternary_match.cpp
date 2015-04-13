@@ -99,6 +99,12 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "vpns") {
             if (CHECKTYPE(kv.value, tVEC))
                 setup_vpns(&kv.value.vec);
+        } else if (kv.key == "p4_table") {
+            if (CHECKTYPE(kv.value, tSTR))
+                p4_table = kv.value.s;
+        } else if (kv.key == "handle") {
+            if (CHECKTYPE(kv.value, tINT))
+                handle = kv.value.i;
         } else if (kv.key == "row" || kv.key == "column" || kv.key == "bus") {
             /* already done in setup_layout */
         } else
@@ -310,6 +316,12 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "vpns") {
             if (CHECKTYPE(kv.value, tVEC))
                 setup_vpns(&kv.value.vec);
+        } else if (kv.key == "p4_table") {
+            if (CHECKTYPE(kv.value, tSTR))
+                p4_table = kv.value.s;
+        } else if (kv.key == "handle") {
+            if (CHECKTYPE(kv.value, tINT))
+                handle = kv.value.i;
         } else if (kv.key == "row" || kv.key == "column" || kv.key == "bus") {
             /* already done in setup_layout */
         } else
