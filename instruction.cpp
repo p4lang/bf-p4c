@@ -18,8 +18,10 @@ static const int group_size[] = { 32, 32, 32, 32, 8, 8, 8, 8, 16, 16, 16, 16, 16
 
 class operand {
 private:
-    struct Base {
+    class Base {
+    protected:
         int     lineno;
+    public:
         Base(int line) : lineno(line) {}
         Base(const Base &a) : lineno(a.lineno) {}
 	virtual ~Base() {}
@@ -29,35 +31,29 @@ private:
         virtual int phvGroup() { return -1; }
         virtual int bits(int group) = 0;
         virtual unsigned bitoffset(int group) const { return 0; }
-        virtual unsigned bitsize() const { return 0; }
         virtual void mark_use(Table *tbl) {}
         virtual void dbprint(std::ostream &) const = 0;
     } *op;
-    struct Const : public Base {
+    class Const : public Base {
 	long		value;
+    public:
 	Const(int line, long v) : Base(line), value(v) {}
+    private:
 	virtual Const *clone() { return new Const(*this); }
         int bits(int group) {
             if (value >= -16 || value < 16)
                 return value+48;
             error(lineno, "constant value %ld out of range for immediate", value);
             return -1; }
-        virtual unsigned bitsize() const {
-            /* include space for sign */
-            unsigned rv = 1;
-            if (value >= 0)
-                while (value >= (1<<rv)) rv++;
-            else
-                while (1-value >= (1<<rv)) rv++;
-            return rv; }
         virtual void dbprint(std::ostream &out) const { out << value; }
     };
-    struct Phv : public Base {
+    class Phv : public Base {
 	::Phv::Ref	reg;
-        ::Phv::Slice    sl;
+    public:
 	Phv(int line, gress_t g, const value_t &n) : Base(line), reg(g, n) {}
 	Phv(int line, gress_t g, const std::string &n, int l, int h) :
             Base(line), reg(g, line, n, l, h) {}
+    private:
 	virtual Phv *clone() { return new Phv(*this); }
         bool check() { return reg.check(); }
         int phvGroup() { return reg->reg.index / 16; }
@@ -67,18 +63,19 @@ private:
                 return -1; }
             return reg->reg.index % 16; }
         virtual unsigned bitoffset(int group) const { return reg->lo; }
-        virtual unsigned bitsize() const { return reg->hi - reg->lo + 1; }
         virtual void mark_use(Table *tbl) {
             tbl->stage->action_use[tbl->gress][reg->reg.index] = true; }
         virtual void dbprint(std::ostream &out) const { out << reg; }
     };
-    struct Action : public Base {
+    class Action : public Base {
 	std::string		name;
         Table                   *table;
 	Table::Format::Field	*field;
         unsigned                lo, hi;
+    public:
 	Action(int line, const std::string &n, Table *tbl, Table::Format::Field *f,
                unsigned l, unsigned h) : Base(line), name(n), table(tbl), field(f), lo(l), hi(h) {}
+    private:
 	virtual Action *clone() { return new Action(*this); }
         int bits(int group) { 
             int byte = table->find_on_actionbus(field, lo);
@@ -102,12 +99,22 @@ private:
             int byte = table->find_on_actionbus(field, lo);
             int size = group_size[group]/8U;
             return 8*(byte % size) + lo % 8; }
-        virtual unsigned bitsize() const { return field->size; }
         virtual void dbprint(std::ostream &out) const {
             out << name << '(' << lo << ".." << hi << ')';
             if (field)
                 out << '[' << field->bits[0].lo << ':' << field->size << ", "
                     << field->group << ']'; }
+    };
+    class RawAction : public Base {
+        int             index;
+        unsigned        offset;
+    public:
+        RawAction(int line, int idx, unsigned off) : Base(line), index(idx), offset(off) {}
+    private:
+	virtual RawAction *clone() { return new RawAction(*this); }
+        int bits(int group) { return 0x40 + index; }
+        virtual unsigned bitoffset(int group) const { return offset; }
+        void dbprint(std::ostream &out) const { out << 'A' << index; }
     };
     class Named : public Base {
         std::string     name;
@@ -117,13 +124,13 @@ private:
     public:
         Named(int line, const std::string &n, int l, int h, Table *t, const std::string &act) :
             Base(line), name(n), lo(l), hi(h), tbl(t), action(act) {}
+    private:
         Base *lookup(Base *&ref);
 	Named *clone() { return new Named(*this); }
         bool check() { assert(0); return true; }
         int phvGroup() { assert(0); return -1; }
         int bits(int group) { assert(0); return 0; }
         unsigned bitoffset(int group) const { assert(0); return 0; }
-        unsigned bitsize() const { assert(0); return 0; }
         void mark_use(Table *tbl) { assert(0); }
         void dbprint(std::ostream &out) const { 
             out << name;
@@ -153,7 +160,6 @@ public:
     operand(gress_t gress, const value_t &v) : op(new Phv(v.lineno, gress, v)) {}
     bool valid() const { return op != 0; }
     unsigned bitoffset(int group) { return op->lookup(op)->bitoffset(group); }
-    unsigned bitsize() { return op->lookup(op)->bitsize(); }
     bool check() { return op && op->lookup(op) ? op->check() : false; }
     int phvGroup() { return op->lookup(op)->phvGroup(); }
     int bits(int group) { return op->lookup(op)->bits(group); }
@@ -177,6 +183,7 @@ operand::operand(Table *tbl, const std::string &act, const value_t &v) : op(0) {
 }
 
 auto operand::Named::lookup(Base *&ref) -> Base * {
+    int slot, len = -1;
     if (tbl->action) tbl = tbl->action;
     if (auto *field = tbl->lookup_field(name, action)) {
         if (lo >= 0 && (unsigned)lo >= field->size) {
@@ -188,7 +195,10 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
         } else
             ref = new Action(lineno, name, tbl, field, lo >= 0 ? lo : 0,
                              hi >= 0 ? hi : field->size - 1 );
-    } else
+    } else if (!::Phv::get(tbl->gress, name) && sscanf(name.c_str(), "A%d%n", &slot, &len) >= 1 &&
+               len == (int)name.size() && slot >= 0 && slot < 40)
+        ref = new RawAction(lineno, slot, lo >= 0 ? lo : 0);
+    else
         ref = new Phv(lineno, tbl->gress, name, lo, hi);
     if (ref != this) delete this;
     return ref;

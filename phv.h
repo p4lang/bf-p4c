@@ -49,11 +49,11 @@ private:
     bitvec      phv_use[2];
     int addreg(gress_t gress, const char *name, const value_t &what);
 public:
-    const Slice *get(gress_t gress, const std::string &name) const {
-        auto it = names[gress].find(name);
-        if (it == names[gress].end()) return 0;
+    static const Slice *get(gress_t gress, const std::string &name) {
+        auto it = phv.names[gress].find(name);
+        if (it == phv.names[gress].end()) return 0;
         return &it->second; }
-    const Slice *get(gress_t gress, const char *name) const {
+    static const Slice *get(gress_t gress, const char *name) {
         return get(gress, std::string(name)); }
     class Ref {
     protected:

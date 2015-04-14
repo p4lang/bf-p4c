@@ -262,6 +262,7 @@ void TernaryMatchTable::write_regs() {
         merge.tind_bus_prop[indirect_bus].tcam_piped = 1;
         merge.tind_bus_prop[indirect_bus].thread = gress;
         merge.tind_bus_prop[indirect_bus].enabled = 1; }
+    if (actions) actions->write_regs(this);
     if (gateway) gateway->write_regs();
 }
 
