@@ -43,7 +43,7 @@ void AsmStage::start(int lineno, VECTOR(value_t) args) {
     if (args.size != 2 || args[0].type != tINT || (args[1] != "ingress" && args[1] != "egress"))
         error(lineno, "stage must specify number and ingress or egress");
     else if (args[0].i < 0 || args[0].i >= NUM_MAU_STAGES)
-        error(lineno, "stage numner out of range");
+        error(lineno, "stage number out of range");
 }
 
 void AsmStage::input(VECTOR(value_t) args, value_t data) {
@@ -224,7 +224,7 @@ void Stage::write_regs() {
         if (stageno != NUM_MAU_STAGES-1 && !this[1].tables.empty())
             regs.dp.next_stage_dependency_on_cur[gress] = MATCH_DEP - this[1].stage_dep[gress]; }
     regs.dp.match_ie_input_mux_sel = 3;
-    /* FIXME -- need to figure out interstage dependencies */
+    /* FIXME -- need to set based on interstage dependencies */
     regs.dp.stage_concurrent_with_prev = 0;
     regs.dp.phv_fifo_enable.phv_fifo_ingress_final_output_enable = 0;
     regs.dp.phv_fifo_enable.phv_fifo_egress_final_output_enable = 0;
@@ -244,3 +244,4 @@ void Stage::write_regs() {
             regs.tcams.tcam_piped |=  options.match_compiler ? 3 : 1 << gress;
 }
 
+std::map<std::string, Stage::P4TableInfo> Stage::p4_tables;

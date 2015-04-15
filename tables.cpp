@@ -190,7 +190,7 @@ void Table::setup_vpns(VECTOR(value_t) *vpn) {
                     vpniter = vpn->begin(); }
                 if (CHECKTYPE(*vpniter, tINT) && (el = vpniter->i) % period != 0)
                     error(vpniter->lineno, "%d is not a multiple of the %s %d", el,
-                          period_name, period); 
+                          period_name, period);
                 if (!on_repeat && used_vpns[el/period].set(true))
                     error(vpniter->lineno, "Vpn %d used twice in table %s", el, name());
                 ++vpniter;
@@ -486,7 +486,7 @@ void Table::Actions::pass2(Table *tbl) {
     for (auto &act : actions) {
         if (act.addr < 0) {
             bitvec use;
-            for (auto *inst : act.instr) 
+            for (auto *inst : act.instr)
                 if (inst->slot >= 0) use[inst->slot] = 1;
             for (int i = 0; i < ACTION_IMEM_ADDR_MAX; i++) {
                 if (tbl->stage->imem_addr_use[tbl->gress][i]) continue;
@@ -625,7 +625,7 @@ void MatchTable::write_regs(int type, Table *result) {
         assert(0);
     }
     if (next->miss_next || next->miss_next == "END") {
-        merge.next_table_format_data[logical_id].match_next_table_adr_miss_value = 
+        merge.next_table_format_data[logical_id].match_next_table_adr_miss_value =
             next->miss_next ? next->miss_next->table_id() : 0xff; }
     if (next->hit_next.size() > 0) {
         assert(((next->hit_next.size()-1) & next->hit_next.size()) == 0);
@@ -662,5 +662,31 @@ int Table::find_on_ixbar(Phv::Slice sl, int group) {
             return bit/8; } }
     assert(0);
     return -1;
+}
+
+std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg() {
+    json::map mra;
+    json::vector *t;
+    mra["memory_type"] = "sram";
+    json::vector *mem_units = 0;
+    unsigned word = 0;
+    mra["memory_units_and_vpns"] = std::unique_ptr<json::obj>(t = new json::vector);
+    for (auto &row : layout) {
+        if (!mem_units)
+            mem_units = new json::vector;
+        auto vpn = row.vpns.begin();
+        for (auto col : row.cols) {
+            mem_units->push_back(row.row*12 + col);
+            if (++word == 1) {
+                json::map tmp;
+                tmp["memory_units"] = std::unique_ptr<json::obj>(mem_units);
+                mem_units = 0;
+                json::vector vpns;
+                vpns.push_back(*vpn);
+                tmp["vpns"] = std::make_unique<json::vector>(std::move(vpns));
+                t->emplace_back(std::make_unique<json::map>(std::move(tmp)));
+                word = 0; }
+            ++vpn; } }
+    return std::make_unique<json::map>(std::move(mra));
 }
 

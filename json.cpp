@@ -87,7 +87,7 @@ void vector::print_on(std::ostream &out, int indent, int width, const char *pfx)
 	if (!first) out << ',';
 	if (!oneline) out << '\n' << pfx << std::setw(indent);
 	out << ' ' << std::setw(0);
-	e->print_on(out, indent, width - 2);
+	e->print_on(out, indent, width - 2, pfx);
 	first = false;
     }
     indent -= 2;
@@ -106,9 +106,9 @@ void map::print_on(std::ostream &out, int indent, int width, const char *pfx) co
 	if (!first) out << ',';
 	if (!oneline) out << '\n' << pfx << std::setw(indent);
 	out << ' ' << std::setw(0);
-	e.first->print_on(out, indent, width - 2);
+	e.first->print_on(out, indent, width - 2, pfx);
 	out << ": ";
-	e.second->print_on(out, indent, width - 2);
+	e.second->print_on(out, indent, width - 2, pfx);
 	first = false;
     }
     indent -= 2;

@@ -74,6 +74,12 @@ public:
                 regs.emit_fieldname(out, addr, end); }); }
     ~Stage() { undeclare_registers(&regs); }
     void write_regs();
+    struct P4TableInfo {
+        json::map       *desc;
+        json::vector    *stage_tables;
+        P4TableInfo() : desc(0), stage_tables(0) {}
+    };
+    static std::map<std::string, P4TableInfo>   p4_tables;
 };
 
 /* constants for various config params */

@@ -13,6 +13,10 @@ template<class C, class Pred>
 inline bool contains_if(C &c, Pred pred) {
     return std::find_if(c.begin(), c.end(), pred) != c.end(); }
 
+template<class C, class T>
+inline typename C::iterator find(C &c, const T &val) {
+    return std::find(c.begin(), c.end(), val); }
+
 using std::min_element;
 using std::max_element;
 

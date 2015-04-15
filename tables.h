@@ -1,6 +1,7 @@
 #ifndef _tables_h_
 #define _tables_h_
 
+#include "algorithm.h"
 #include "alloc.h"
 #include "asm-types.h"
 #include "bitvec.h"
@@ -46,6 +47,7 @@ public:
     virtual void pass2() = 0;
     virtual void write_regs() = 0;
     virtual void gen_tbl_cfg(json::vector &out) = 0;
+    virtual std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg();
     enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION };
     virtual table_type_t set_match_table(MatchTable *m) { return OTHER; }
     virtual GatewayTable *get_gateway() { return 0; }
@@ -207,6 +209,14 @@ public:
         unsigned rv = 0;
         for (auto &row : layout) rv += row.cols.size();
         return rv; }
+    unsigned layout_get_vpn(int r, int c) {
+        for (auto &row : layout) {
+            if (row.row != r) continue;
+            auto col = find(row.cols, c);
+            if (col == row.cols.end()) continue;
+            return row.vpns.at(col - row.cols.begin()); }
+        assert(0);
+        return 0; }
     virtual Format::Field *lookup_field(const std::string &n,
                                         const std::string &act = "")
         { return format ? format->field(n) : 0; }
@@ -288,7 +298,8 @@ DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
                                                  * match group in each word */
     int         mgm_lineno;     /* match_group_map lineno */
 public:
-   SelectionTable *get_selector();
+    SelectionTable *get_selector();
+    std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(Way &);
 )
 
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
@@ -311,6 +322,7 @@ public:
     int find_on_actionbus(Format::Field *f, int off) {
         return indirect ? indirect->find_on_actionbus(f, off) : -1; }
     SelectionTable *get_selector() { return indirect ? indirect->get_selector() : 0; }
+    std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg();
 )
 
 DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
