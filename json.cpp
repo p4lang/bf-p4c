@@ -5,15 +5,23 @@ namespace json {
 
 std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json) {
     while (in) {
+        bool neg = false;
 	char ch;
 	in >> ch;
 	switch(ch) {
+        case '-':
+            neg = true;
+            in >> ch;
+            /* fall through */
 	case '0': case '1': case '2': case '3': case '4':
-	case '5': case '6': case '7': case '8': case '9':
-	case '-': {
-	    in.unget();
-	    long l;
-	    in >> l;
+	case '5': case '6': case '7': case '8': case '9': {
+	    long l = 0;
+            while (in && isdigit(ch)) {
+                /* FIXME -- deal with overflow ... and hex? */
+                l = l * 10 + ch - '0';
+                in >> ch; }
+            if (in) in.unget();
+            if (neg) l = -l;
 	    json.reset(new number(l));
 	    return in; }
 	case '"': {
@@ -31,7 +39,7 @@ std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json) {
                     in >> o >> ch;
                     rv->push_back(std::move(o));
                     if (ch != ',' && ch != ']') {
-                        std::cerr << "missing ',' in vector" << std::endl;
+                        std::cerr << "missing ',' in vector (saw '" << ch << "')" << std::endl;
                         in.unget(); }
                 } while (in && ch != ']'); }
 	    json = std::move(rv);
@@ -48,7 +56,7 @@ std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json) {
                         std::cerr << "missing value in map" << std::endl;
                     } else {
                         if (ch != ':') {
-                            std::cerr << "missing ':' in map" << std::endl;
+                            std::cerr << "missing ':' in map (saw '" << ch << "')" << std::endl;
                             in.unget(); }
                         in >> val >> ch; }
                     if (rv->count(key.get()))
@@ -56,7 +64,7 @@ std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json) {
                     else
                         (*rv)[key.release()] = std::move(val);
                     if (ch != ',' && ch != '}') {
-                        std::cerr << "missing ',' in map" << std::endl;
+                        std::cerr << "missing ',' in map (saw '" << ch << "')" << std::endl;
                         in.unget(); }
                 } while (in && ch != '}'); }
 	    json = std::move(rv);

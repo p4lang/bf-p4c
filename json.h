@@ -56,7 +56,7 @@ public:
     bool operator ==(const obj &a) const {
 	if (auto *b = dynamic_cast<const number *>(&a)) return val == b->val;
 	return false; }
-    void print_on(std::ostream &out, int indent, int width, const char *pfx) const { out << val; }
+    void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const { out << val; }
     bool test_width(int &limit) const
 	{ char buf[32]; limit -= sprintf(buf, "%ld", val); return limit >= 0; }
 };
@@ -81,7 +81,7 @@ public:
 	    return static_cast<const std::string &>(*this) ==
 		   static_cast<const std::string &>(*b);
 	return false; }
-    void print_on(std::ostream &out, int indent, int width, const char *pfx) const {
+    void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const {
 	out << '"' << *this << '"'; }
     bool test_width(int &limit) const { limit -= size()+2; return limit >= 0; }
 };
@@ -112,7 +112,7 @@ public:
 		p1++; p2++; } 
 	    return (p1 == end() && p2 == b->end()); }
 	return false; }
-    void print_on(std::ostream &out, int indent, int width, const char *pfx) const;
+    void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const;
     bool test_width(int &limit) const {
 	limit -= 2;
 	for (auto &e : *this) {
@@ -157,7 +157,7 @@ public:
 		p1++; p2++; }
 	    return (p1 == end() && p2 == b->end()); }
 	return false; }
-    void print_on(std::ostream &out, int indent, int width, const char *pfx) const;
+    void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const;
     bool test_width(int &limit) const {
 	limit -= 2;
 	for (auto &e : *this) {
