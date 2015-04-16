@@ -186,6 +186,7 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
     int slot, len = -1;
     if (tbl->action) tbl = tbl->action;
     if (auto *field = tbl->lookup_field(name, action)) {
+#if 0
         if (lo >= 0 && (unsigned)lo >= field->size) {
             error(lineno, "Bit %d out of range for field %s", lo, name.c_str());
             ref = 0;
@@ -193,8 +194,9 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
             error(lineno, "Bit %d out of range for field %s", hi, name.c_str());
             ref = 0;
         } else
+#endif
             ref = new Action(lineno, name, tbl, field, lo >= 0 ? lo : 0,
-                             hi >= 0 ? hi : field->size - 1 );
+                             hi >= 0 ? hi : field->size - 1);
     } else if (!::Phv::get(tbl->gress, name) && sscanf(name.c_str(), "A%d%n", &slot, &len) >= 1 &&
                len == (int)name.size() && slot >= 0 && slot < 40)
         ref = new RawAction(lineno, slot, lo >= 0 ? lo : 0);
@@ -536,4 +538,69 @@ Instruction *Instruction::decode(Table *tbl, const std::string &act, const VECTO
     else
         error(op[0].lineno, "Unknown instruction %s", op[0].s);
     return 0;
+}
+
+struct ShiftOP : public Instruction {
+    struct Decode : public Idecode {
+        std::string name;
+        unsigned opcode;
+        bool use_src1;
+        Decode *swap_args;
+        Decode(const char *n, unsigned opc, bool funnel = false) : Idecode(n), name(n),
+            opcode(opc), use_src1(funnel) {}
+        Instruction *decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op);
+    } *opc;
+    Phv::Ref    dest;
+    operand     src1, src2;
+    int         shift;
+    ShiftOP(Decode *d, Table *tbl, const std::string &act, const value_t *ops) :
+            Instruction(ops->lineno), opc(d), dest(tbl->gress, ops[0]),
+            src1(tbl, act, ops[1]), src2(tbl, act, ops[2]) {
+                if (opc->use_src1) {
+                    if (CHECKTYPE(ops[3], tINT)) shift = ops[3].i;
+                } else {
+                    src2 = src1;
+                    if (CHECKTYPE(ops[2], tINT)) shift = ops[2].i; } }
+    void pass1(Table *tbl);
+    int encode();
+    void dbprint(std::ostream &out) const {
+        out << "INSTR: " << opc->name << ' ' << dest << ", " << src1 << ", " << shift; }
+};
+
+static ShiftOP::Decode opSHL("shl", 0x0c, false), opSHRS("shrs", 0x1c, false),
+                       opSHRU("shru", 0x14, false), opFUNSHIFT("funnel-shift", 0x04, true);
+
+Instruction *ShiftOP::Decode::decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op) {
+    if (op.size != (use_src1 ? 5 : 4)) {
+        error(op[0].lineno, "%s requires %d operands", op[0].s, use_src1 ? 4 : 3);
+        return 0; }
+    ShiftOP *rv = new ShiftOP(this, tbl, act, op.data + 1);
+    if (!rv->src1.valid())
+        error(op[2].lineno, "invalid src1");
+    else if (!rv->src2.valid())
+        error(op[3].lineno, "invalid src2");
+    else if (rv->shift < 0 || rv->shift > 0x1f)
+        error(op[3].lineno, "invalid shift");
+    else
+        return rv;
+    delete rv;
+    return 0;
+}
+
+void ShiftOP::pass1(Table *tbl) {
+    if (!dest.check() || !src1.check() || !src2.check()) return;
+    if (dest->lo || dest->hi != dest->reg.size-1) {
+        error(lineno, "shift ops cannot operate on slices");
+        return; }
+    slot = dest->reg.index;
+    tbl->stage->action_set[tbl->gress][slot] = true;
+    src1.mark_use(tbl);
+    src2.mark_use(tbl);
+    if (src2.phvGroup() < 0)
+        error(lineno, "src%s must be phv register", opc->use_src1 ? "2" : "");
+}
+int ShiftOP::encode() {
+    int rv = (shift << 18) | (opc->opcode << 12) | src2.bits(slot/16);
+    if (opc->use_src1 || options.match_compiler) rv |= src1.bits(slot/16) << 5;
+    return rv;
 }
