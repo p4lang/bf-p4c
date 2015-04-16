@@ -37,11 +37,13 @@ enum {
     ACTION_IMEM_ADDR_MAX = ACTION_IMEM_SLOTS*ACTION_IMEM_COLORS,
 };
 
-class Stage {
+class Stage_data {
+    /* we encapsulate all the Stage non-static fields in a base class to automate the
+     * generation of the move construtor properly */
 public:
-    friend class AsmStage;
     int                         stageno;
     std::vector<Table *>        tables;
+    std::set<Stage **>          all_refs;
     Alloc2D<Table *, SRAM_ROWS, SRAM_UNITS_PER_ROW>     sram_use;
     Alloc2D<Table *, SRAM_ROWS, 2>                      sram_match_bus_use;
     Alloc2D<Table *, TCAM_ROWS, TCAM_UNITS_PER_ROW>     tcam_use;
@@ -60,19 +62,24 @@ public:
     int /* enum */      table_use[2], group_table_use[2];
     enum { NONE=0, CONCURRENT=1, ACTION_DEP=2, MATCH_DEP=3 } stage_dep[2];
     bitvec              match_use[2], action_use[2], action_set[2];
-    static unsigned char action_bus_slot_map[ACTION_DATA_BUS_BYTES];
-    static unsigned char action_bus_slot_size[ACTION_DATA_BUS_SLOTS];
 
     int                         pass1_logical_id, pass1_tcam_id;
     regs_match_action_stage_    regs;
-    Stage() {
-        table_use[0] = table_use[1] = NONE;
-        stage_dep[0] = stage_dep[1] = NONE;
-        declare_registers(&regs, sizeof(regs),
-            [this](std::ostream &out, const char *addr, const void *end) {
-                out << "mau[" << stageno << "]";
-                regs.emit_fieldname(out, addr, end); }); }
-    ~Stage() { undeclare_registers(&regs); }
+protected:
+    Stage_data() {}
+    Stage_data(const Stage_data &) = delete;
+    Stage_data(Stage_data &&) = default;
+    ~Stage_data() {}
+};
+
+class Stage : public Stage_data {
+public:
+    static unsigned char action_bus_slot_map[ACTION_DATA_BUS_BYTES];
+    static unsigned char action_bus_slot_size[ACTION_DATA_BUS_SLOTS];
+
+    Stage();
+    Stage(Stage &&);
+    ~Stage();
     void write_regs();
     struct P4TableInfo {
         json::map       *desc;

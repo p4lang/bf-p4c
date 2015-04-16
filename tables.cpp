@@ -8,6 +8,19 @@
 std::map<std::string, Table *> Table::all;
 std::map<std::string, Table::Type *> *Table::Type::all;
 
+Table::Table(int line, std::string &&n, gress_t gr, Stage *s, int lid) :
+    name_(n), handle(0), stage(s), gress(gr), lineno(line), logical_id(lid),
+    input_xbar(0), format(0), actions(0), action_bus(0)
+{
+    assert(all.find(name_) == all.end());
+    all.emplace(name_, this);
+    stage->all_refs.insert(&stage);
+}
+Table::~Table() {
+    all.erase(name_);
+    stage->all_refs.erase(&stage);
+}
+
 Table::Type::Type(std::string &&name) {
     if (!all) all = new std::map<std::string, Type *>();
     if (get(name)) {

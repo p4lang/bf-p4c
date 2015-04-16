@@ -411,7 +411,7 @@ static void gen_disable_method(std::ostream &out, json::map *m, int indent,
     out << std::setw(2*--indent) << "" << '}' << std::endl;
 }
 
-bool delete_copy = true;
+bool delete_copy = false;
 bool gen_emit = true;
 bool gen_fieldname = true;
 bool gen_unpack = true;

@@ -14,14 +14,15 @@ class AsmStage : public Section {
     void output();
     AsmStage();
     ~AsmStage() {}
-    Stage stage[NUM_MAU_STAGES];
+    std::vector<Stage>  stage;
     static AsmStage     singleton_object;
+public:
+    static int numstages() { return singleton_object.stage.size(); }
 } AsmStage::singleton_object;
 
 AsmStage::AsmStage() : Section("stage") {
-    for (int i = 0; i < NUM_MAU_STAGES; i++)
-        stage[i].stageno = i;
     int slot = 0, byte = 0;
+    stage.reserve(NUM_MAU_STAGES);
     for (int i = 0; i < ACTION_DATA_8B_SLOTS; i++) {
         Stage::action_bus_slot_map[byte++] = slot;
         Stage::action_bus_slot_size[slot++] = 8; }
@@ -42,14 +43,21 @@ AsmStage::AsmStage() : Section("stage") {
 void AsmStage::start(int lineno, VECTOR(value_t) args) {
     if (args.size != 2 || args[0].type != tINT || (args[1] != "ingress" && args[1] != "egress"))
         error(lineno, "stage must specify number and ingress or egress");
-    else if (args[0].i < 0 || args[0].i >= NUM_MAU_STAGES)
-        error(lineno, "stage number out of range");
+    else if (args[0].i < 0)
+        error(lineno, "invalid stage number");
+    else if ((unsigned)args[0].i >= stage.size()) {
+        if (args[0].i >= NUM_MAU_STAGES)
+            warning(lineno, "tofino only supports %d stages, using %d",
+                    NUM_MAU_STAGES, args[0].i + 1);
+        stage.resize(args[0].i + 1);
+        for (unsigned  i = 0; i < stage.size(); i++)
+            stage[i].stageno = i; }
 }
 
 void AsmStage::input(VECTOR(value_t) args, value_t data) {
     if (!CHECKTYPE(data, tMAP)) return;
     int stageno = args[0].i;
-    assert(stageno >= 0 && stageno < NUM_MAU_STAGES);
+    assert(stageno >= 0 && (unsigned)stageno < stage.size());
     gress_t gress = args[1] == "egress" ? EGRESS : INGRESS;
     for (auto &kv : data.map) {
         if (kv.key == "dependency") {
@@ -89,7 +97,7 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
 }
 
 void AsmStage::process() {
-    for (int i = 0; i < NUM_MAU_STAGES; i++) {
+    for (unsigned i = 0; i < stage.size(); i++) {
         stage[i].pass1_logical_id = -1;
         stage[i].pass1_tcam_id = -1;
         for (auto table : stage[i].tables)
@@ -114,7 +122,7 @@ void AsmStage::output() {
     json::vector        tbl_cfg;
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         bitvec set_regs = stage[0].action_set[gress];
-        for (int i = 1; i < NUM_MAU_STAGES; i++) {
+        for (unsigned i = 1; i < stage.size(); i++) {
             if (!stage[i].stage_dep[gress]) {
                 if (stage[i].match_use[gress].intersects(set_regs))
                     stage[i].stage_dep[gress] = Stage::MATCH_DEP;
@@ -128,14 +136,14 @@ void AsmStage::output() {
                 set_regs |= stage[i].action_set[gress]; }
         stage[0].group_table_use[gress] = stage[0].table_use[gress];
         /* propagate group_table_use to adjacent stages that are not match-dependent */
-        for (int i = 1; i < NUM_MAU_STAGES; i++) {
+        for (unsigned i = 1; i < stage.size(); i++) {
             stage[i].group_table_use[gress] = stage[i].table_use[gress];
             if (stage[i].stage_dep[gress] != Stage::MATCH_DEP)
                 stage[i].group_table_use[gress] |= stage[i-1].group_table_use[gress]; }
-        for (int i = NUM_MAU_STAGES-1; i > 0; i--)
+        for (unsigned i = stage.size()-1; i > 0; i--)
             if (stage[i].stage_dep[gress] != Stage::MATCH_DEP)
                 stage[i-1].group_table_use[gress] |= stage[i].group_table_use[gress]; }
-    for (int i = 0; i < NUM_MAU_STAGES; i++) {
+    for (unsigned i = 0; i < stage.size(); i++) {
         if  (stage[i].tables.empty()) continue;
         for (auto table : stage[i].tables)
             table->pass2();
@@ -147,6 +155,30 @@ void AsmStage::output() {
         stage[i].regs.emit_json(*open_output("regs.match_action_stage.%02x.cfg.json", i) , i);
     }
     *open_output("tbl-cfg") << '[' << &tbl_cfg << ']' << std::endl;
+}
+
+Stage::Stage() {
+    static_assert(sizeof(Stage_data) == sizeof(Stage),
+                  "All non-static Stage fields must be in Stage_data");
+    table_use[0] = table_use[1] = NONE;
+    stage_dep[0] = stage_dep[1] = NONE;
+    declare_registers(&regs, sizeof(regs),
+        [this](std::ostream &out, const char *addr, const void *end) {
+            out << "mau[" << stageno << "]";
+            regs.emit_fieldname(out, addr, end); });
+}
+
+Stage::~Stage() {
+    undeclare_registers(&regs);
+}
+
+Stage::Stage(Stage &&a) : Stage_data(std::move(a)) {
+    for (auto ref : all_refs)
+        *ref = this;
+    declare_registers(&regs, sizeof(regs),
+        [this](std::ostream &out, const char *addr, const void *end) {
+            out << "mau[" << stageno << "]";
+            regs.emit_fieldname(out, addr, end); });
 }
 
 static int tcam_delay(int use_flags) {
@@ -206,14 +238,12 @@ void Stage::write_regs() {
         auto &deferred_eop_bus_delay = regs.rams.match.adrdist.deferred_eop_bus_delay[gress];
         deferred_eop_bus_delay.eop_internal_delay_fifo = pred_cycle(group_table_use[gress]);
         /* FIXME -- making this depend on the dependecny of the next stage seems wrong */
-        if (stageno == NUM_MAU_STAGES-1)
+        if (stageno == AsmStage::numstages()-1)
             deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(group_table_use[gress]);
         else if (this[1].stage_dep[gress] == MATCH_DEP)
             deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(group_table_use[gress]);
         else if (this[1].stage_dep[gress] == ACTION_DEP)
             deferred_eop_bus_delay.eop_output_delay_fifo = 2;
-        else if (options.match_compiler && this[1].tables.empty())
-            deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(group_table_use[gress]);
         else
             deferred_eop_bus_delay.eop_output_delay_fifo = 1;
         deferred_eop_bus_delay.eop_delay_fifo_en = 1;
@@ -221,7 +251,7 @@ void Stage::write_regs() {
         regs.dp.pipelength_added_stages[gress] = pipelength(group_table_use[gress]) - 14;
         if (stageno != 0)
             regs.dp.cur_stage_dependency_on_prev[gress] = MATCH_DEP - stage_dep[gress];
-        if (stageno != NUM_MAU_STAGES-1 && !this[1].tables.empty())
+        if (stageno != AsmStage::numstages()-1)
             regs.dp.next_stage_dependency_on_cur[gress] = MATCH_DEP - this[1].stage_dep[gress]; }
     regs.dp.match_ie_input_mux_sel = 3;
     /* FIXME -- need to set based on interstage dependencies */

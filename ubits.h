@@ -41,7 +41,7 @@ template<int N> struct ubits : ubits_base {
 	return check(std::integral_constant<bool, (N != sizeof(unsigned long) * CHAR_BIT)>{}); }
     ubits(unsigned long v) : ubits_base(v) { check(); }
     ubits(const ubits &) = delete;
-    ubits(ubits &&) = delete;
+    ubits(ubits &&) = default;
     void log(const char *op, unsigned long v) const {
         std::ostringstream tmp;
         LOG1(this << ' ' << op << ' ' << v <<

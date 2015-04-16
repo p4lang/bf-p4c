@@ -10,6 +10,7 @@ protected:
     Alloc1Dbase(int sz) : size(sz) {
         data = new T[sz];
         for (int i = 0; i < sz; i++) data[i] = T(); }
+    Alloc1Dbase(Alloc1Dbase &&a) : size(a.size), data(a.data) { a.data = 0; }
     virtual ~Alloc1Dbase() { delete [] data; }
 public:
     T &operator[](int i) {
@@ -40,6 +41,7 @@ protected:
         size_t sz = r*c;
         data = new T[sz];
         for (size_t i = 0; i < sz; i++) data[i] = T(); }
+    Alloc2Dbase(Alloc2Dbase &&a) : nrows(a.nrows), ncols(a.ncols), data(a.data) { a.data = 0; }
     virtual ~Alloc2Dbase() { delete [] data; }
 public:
     rowref operator[](int i) {

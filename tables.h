@@ -22,12 +22,10 @@ class Stage;
 
 class Table {
 protected:
-    Table(int line, std::string &&n, gress_t gr, Stage *s, int lid = -1)
-        : name_(n), handle(0), stage(s), gress(gr), lineno(line),
-          logical_id(lid), input_xbar(0), format(0), actions(0), action_bus(0) {
-            assert(all.find(name_) == all.end());
-            all.emplace(name_, this); }
-    virtual ~Table() { all.erase(name_); }
+    Table(int line, std::string &&n, gress_t gr, Stage *s, int lid = -1);
+    virtual ~Table();
+    Table(const Table &) = delete;
+    Table(Table &&) = delete;
     virtual void setup(VECTOR(pair_t) &data) = 0;
     void setup_layout(value_t *row, value_t *col, value_t *bus);
     void setup_logical_id();

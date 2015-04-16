@@ -386,7 +386,7 @@ void ExactMatchTable::setup_ways() {
             if (++word == fmt_width) { word = 0; bank++; } } }
 }
 
-static int find_in_ixbar(Stage *stage, Table *table, std::vector<Phv::Ref> &match) {
+static int find_in_ixbar(Table *table, std::vector<Phv::Ref> &match) {
     int max_i = -1;
     LOG3("find_in_ixbar " << match);
     for (unsigned group = 0; group < EXACT_XBAR_GROUPS; group++) {
@@ -407,7 +407,7 @@ static int find_in_ixbar(Stage *stage, Table *table, std::vector<Phv::Ref> &matc
         for (auto &r : match) {
             LOG3("  looking for " << r);
             bool found = false;
-            for (auto *in : stage->exact_ixbar[group]) {
+            for (auto *in : table->stage->exact_ixbar[group]) {
                 if (in->find(*r, group)) {
                     found = true;
                     break; } }
@@ -436,7 +436,7 @@ void ExactMatchTable::pass2() {
         action_bus->pass2(this);
     word_ixbar_group.resize(match_in_word.size());
     for (unsigned i = 0; i < match_in_word.size(); i++)
-        word_ixbar_group[i] = find_in_ixbar(stage, this, match_in_word[i]);
+        word_ixbar_group[i] = find_in_ixbar(this, match_in_word[i]);
     if (actions) actions->pass2(this);
     if (gateway) gateway->pass2();
 }
