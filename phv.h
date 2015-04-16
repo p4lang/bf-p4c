@@ -101,6 +101,7 @@ public:
     static const bitvec &use(gress_t gress) { return phv.phv_use[gress]; }
     static const bitvec tagalong_groups[8];
     static void setuse(gress_t gress, const bitvec &u) { phv.phv_use[gress] |= u; }
+    static std::string db_regset(const bitvec &s);
 };
 
 extern void merge_phv_vec(std::vector<Phv::Ref> &vec, const Phv::Ref &r);

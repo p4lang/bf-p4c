@@ -17,6 +17,7 @@ class bitvec {
     };
 public:
     static constexpr size_t bits_per_unit = CHAR_BIT * sizeof(uintptr_t);
+
     class bitref {
 	friend class bitvec;
 	bitvec		&self;
@@ -25,21 +26,21 @@ public:
     public:
 	bitref(const bitref &a) = default;
 	bitref(bitref &&a) = default;
+	operator bool() const { return self.getbit(idx); }
+	operator int() const { return self.getbit(idx) ? 1 : 0; }
+	int index() const { return idx; }
+        int operator*() const { return idx; }
 	bool operator=(bool b) const {
 	    assert(idx >= 0);
 	    return b ? self.setbit(idx) : self.clrbit(idx); }
 	bool operator=(int b) const {
 	    assert(idx >= 0);
 	    return b ? self.setbit(idx) : self.clrbit(idx); }
-	operator bool() const { return self.getbit(idx); }
-	operator int() const { return self.getbit(idx) ? 1 : 0; }
         bool set(bool b = true) {
 	    assert(idx >= 0);
             bool rv = self.getbit(idx);
 	    b ? self.setbit(idx) : self.clrbit(idx);
             return rv; }
-	int index() const { return idx; }
-        int operator*() const { return idx; }
 	bitref &operator++() {
 	    while ((size_t)++idx < self.size * bitvec::bits_per_unit)
 		if (self.getbit(idx)) return *this;
@@ -50,6 +51,29 @@ public:
 		if (self.getbit(idx)) return *this;
 	    return *this; }
     };
+    class const_bitref {
+	friend class bitvec;
+	const bitvec	&self;
+	int		idx;
+	const_bitref(const bitvec &s, int i) : self(s), idx(i) {}
+    public:
+	const_bitref(const const_bitref &a) = default;
+	const_bitref(const_bitref &&a) = default;
+	operator bool() const { return self.getbit(idx); }
+	operator int() const { return self.getbit(idx) ? 1 : 0; }
+	int index() const { return idx; }
+        int operator*() const { return idx; }
+	const_bitref &operator++() {
+	    while ((size_t)++idx < self.size * bitvec::bits_per_unit)
+		if (self.getbit(idx)) return *this;
+	    idx = -1;
+	    return *this; }
+	const_bitref &operator--() {
+	    while (--idx >= 0)
+		if (self.getbit(idx)) return *this;
+	    return *this; }
+    };
+
     bitvec() : size(1), data(0) {}
     bitvec(unsigned long v) : size(1), data(v) {}
     bitvec(size_t lo, size_t hi) : size(1), data(0) { setrange(lo, hi); }
@@ -160,6 +184,11 @@ public:
 	    return (data >> idx) & ~(~(uintptr_t)1 << (sz-1)); }
     bitref operator[](int idx) { return bitref(*this, idx); }
     bool operator[](int idx) const { return getbit(idx); }
+    const_bitref min() const { return ++const_bitref(*this, -1); }
+    const_bitref max() const {
+        return --const_bitref(*this, size * bits_per_unit); }
+    const_bitref begin() const { return min(); }
+    const_bitref end() const { return const_bitref(*this, -1); }
     bitref min() { return ++bitref(*this, -1); }
     bitref max() { return --bitref(*this, size * bits_per_unit); }
     bitref begin() { return min(); }

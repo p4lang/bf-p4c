@@ -171,7 +171,8 @@ void Deparser::process() {
         if (intrin.second.size() > (size_t)intrin.first->max)
             error(intrin.second[0].lineno, "Too many values for %s", intrin.first->name.c_str()); }
     if (phv_use[INGRESS].intersects(phv_use[EGRESS]))
-        error(lineno[INGRESS], "Registers used in both ingress and egress in deparser");
+        error(lineno[INGRESS], "Registers used in both ingress and egress in deparser: %s",
+              Phv::db_regset(phv_use[INGRESS] & phv_use[EGRESS]).c_str());
     if (options.match_compiler) {
         Phv::setuse(INGRESS, phv_use[INGRESS]);
         Phv::setuse(EGRESS, phv_use[EGRESS]); }
@@ -321,7 +322,8 @@ void Deparser::output() {
         phv_use[INGRESS] |= Phv::use(INGRESS);
         phv_use[EGRESS] |= Phv::use(EGRESS);
         if (phv_use[INGRESS].intersects(phv_use[EGRESS]))
-            error(lineno[INGRESS], "Registers used in both ingress and egress in phv"); }
+            error(lineno[INGRESS], "Registers used in both ingress and egress in phv: %s",
+                  Phv::db_regset(phv_use[INGRESS] & phv_use[EGRESS]).c_str()); }
     for (unsigned i = 0; i < 7; i++) {
         /* FIXME -- should use the registers used by ingress here, but to match compiler
          * FIXME -- output we instead use registers not used by egress */

@@ -150,3 +150,13 @@ void Phv::Slice::dbprint(std::ostream &out) const {
     } else
         out << "<invalid>";
 }
+
+std::string Phv::db_regset(const bitvec &s) {
+    std::string rv;
+    for (int reg : s) {
+        char tmp[16];
+        if (!rv.empty()) rv += ", ";
+        sprintf(tmp, "R%d", reg);
+        rv += tmp; }
+    return rv;
+}
