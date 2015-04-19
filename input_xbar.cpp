@@ -342,3 +342,16 @@ InputXbar::Input *InputXbar::find(Phv::Slice sl, int grp) {
         return &in; }
     return 0;
 }
+
+bitvec InputXbar::hash_group_bituse() {
+    bitvec rv;
+    unsigned tables;
+    for (auto &grp : hash_groups) {
+        tables |= grp.second.tables;
+        rv |= grp.second.seed; }
+    for (auto &tbl : hash_tables) {
+        if (!((tables >> tbl.first) & 1)) continue;
+        for (auto &col : tbl.second)
+            rv[col.first] = 1; }
+    return rv;
+}

@@ -29,6 +29,9 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
             /* done above to be done before action_bus and vpns */
         } else if (kv.key == "action") {
             action.setup(kv.value, this);
+        } else if (kv.key == "action_enable") {
+            if (CHECKTYPE(kv.value, tINT))
+                action_enable = kv.value.i;
         } else if (kv.key == "actions") {
             if (CHECKTYPE(kv.value, tMAP))
                 actions = new Actions(this, kv.value.map);
@@ -147,6 +150,9 @@ void ExactMatchTable::pass1() {
             error(lineno, "No field 'action' to select between mulitple actions in "
                   "table %s format", name());
         actions->pass1(this); }
+    if (action_enable >= 0)
+        if (action.args.size() < 1 || action.args[0]->size <= (unsigned)action_enable)
+            error(lineno, "Action enable bit %d out of range for action selector", action_enable);
     input_xbar->pass1(stage->exact_ixbar, 128);
     format->setup_immed(this);
     group_info.resize(format->groups());
@@ -605,7 +611,7 @@ void ExactMatchTable::write_regs() {
                         action.args[1]->by_group[group]->bits[0].lo%128 + 5 - lo_huffman_bits; } }
             if (selector) {
                 merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 
-                    selector.args[0]->by_group[group]->bits[0].lo%128 -
+                    selector.args[0]->by_group[group]->bits[0].lo%128 + 23 -
                         get_selector()->address_shift(); } }
         for (auto col : row.cols) {
             int word_group = 0;

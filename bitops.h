@@ -2,6 +2,7 @@
 #define _bitops_h_
 
 #include <limits.h>
+#include "bitvec.h"
 
 class MaskCounter {
     unsigned    mask, val;
@@ -40,6 +41,15 @@ static inline int ceil_log2(unsigned v) {
 static inline int floor_log2(unsigned v) {
     int rv = -1;
     while (v) { rv++; v >>= 1; }
+    return rv; }
+
+static inline unsigned bitmask2bytemask(const bitvec &a) {
+    int max = a.max().index();
+    if (max < 0) return 0;
+    unsigned rv = 0;
+    for (unsigned i = 0; i <= max/8U; i++)
+        if (a.getrange(i*8, 8))
+            rv |= 1 << i;
     return rv; }
 
 #endif /* _bitops_h_ */

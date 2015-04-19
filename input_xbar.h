@@ -44,6 +44,7 @@ public:
         /* used by gateways to get the associated hash group */
         if (hash_groups.size() != 1) return -1;
         return hash_groups.begin()->first; }
+    bitvec hash_group_bituse();
     int match_group() {
         /* used by gateways to get the associated match group */
         if (groups.size() != 1) return -1;

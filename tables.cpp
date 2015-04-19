@@ -10,7 +10,7 @@ std::map<std::string, Table::Type *> *Table::Type::all;
 
 Table::Table(int line, std::string &&n, gress_t gr, Stage *s, int lid) :
     name_(n), handle(0), stage(s), gress(gr), lineno(line), logical_id(lid),
-    input_xbar(0), format(0), actions(0), action_bus(0)
+    input_xbar(0), format(0), action_enable(-1), actions(0), action_bus(0)
 {
     assert(all.find(name_) == all.end());
     all.emplace(name_, this);
@@ -465,7 +465,7 @@ Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
         for (auto &i : kv.value.vec) {
             if (i.type == tINT && ins.instr.empty()) {
                 if ((ins.addr = i.i) >= ACTION_IMEM_ADDR_MAX)
-                    error(i.lineno, "invalid instruction address %d", i.i);
+                    error(i.lineno, "Invalid instruction address %d", i.i);
                 continue; }
             if (!CHECKTYPE(i, tCMD)) continue;
             if (auto *p = Instruction::decode(tbl, name, i.vec))
@@ -565,6 +565,8 @@ static int get_address_mau_actiondata_adr_default(unsigned log2size) {
     assert(huffman_ones < 7);
     int rv = (1 << huffman_ones) - 1;
     rv = ((rv << 10) & 0xf8000) | ( rv & 0x1f);
+    /* FIXME -- unconditionally set the per-flow enable? */
+    rv |= 1 << 22;
     return rv;
 }
 
@@ -584,6 +586,9 @@ void MatchTable::write_regs(int type, Table *result) {
     auto &merge = stage->regs.rams.match.merge;
     merge.predication_ctl[gress].table_thread |= 1 << logical_id;
     if (result) {
+        unsigned action_enable = 0;
+        if (result->action_enable >= 0)
+            action_enable = 1 << result->action_enable;
         for (auto &row : result->layout) {
             int bus = row.row*2 | row.bus;
             merge.match_to_logical_table_ixbar_outputmap[type][bus].enabled_4bit_muxctl_select =
@@ -592,16 +597,23 @@ void MatchTable::write_regs(int type, Table *result) {
             if (result->action.args.size() >= 1) {
                 assert(result->action.args[0]);
                 merge.mau_action_instruction_adr_mask[type][bus] =
-                    (1U << result->action.args[0]->size) - 1;
+                    ((1U << result->action.args[0]->size) - 1) & ~action_enable;
             } else
                 merge.mau_action_instruction_adr_mask[type][bus] = 0;
+            merge.mau_action_instruction_adr_default[type][bus] = action_enable ? 0 : 0x40;
+            if (action_enable)
+                merge.mau_action_instruction_adr_per_entry_en_mux_ctl[type][bus] =
+                    result->action_enable;
             if (!result->action) continue;
             /* FIXME -- deal with variable-sized actions */
             merge.mau_actiondata_adr_default[type][bus] =
                 get_address_mau_actiondata_adr_default(result->action->format->log2size);
             if (auto *sel = get_selector())
                 sel->write_merge_regs(type, bus, result->action, result->action.args.size() > 1); }
-    } else result = this;
+    } else {
+        /* ternary match with no indirection table */
+        assert(type == 1);
+        result = this; }
 
     /*------------------------
      * Action instruction Address
@@ -618,7 +630,7 @@ void MatchTable::write_regs(int type, Table *result) {
         merge.mau_action_instruction_adr_map_en[type] |= (1U << logical_id);
         for (auto &act : *actions)
             merge.mau_action_instruction_adr_map_data[type][logical_id][act.code/4]
-                .set_subfield(act.addr, (act.code%4) * 6, 6); }
+                .set_subfield(act.addr + 0x40, (act.code%4) * 7, 7); }
 
     /*------------------------
      * Next Table

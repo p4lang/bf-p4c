@@ -259,6 +259,7 @@ void TernaryMatchTable::write_regs() {
         auto &oxbar_outputmap = merge.tcam_match_adr_to_physical_oxbar_outputmap[indirect_bus];
         oxbar_outputmap.enabled_3bit_muxctl_select = tcam_id;
         oxbar_outputmap.enabled_3bit_muxctl_enable = 1;
+        merge.mau_action_instruction_adr_default[1][indirect_bus] = 0x40;
         merge.tind_bus_prop[indirect_bus].tcam_piped = 1;
         merge.tind_bus_prop[indirect_bus].thread = gress;
         merge.tind_bus_prop[indirect_bus].enabled = 1; }
@@ -371,6 +372,9 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
             /* done above to be done before action_bus and vpns */
         } else if (kv.key == "action") {
             action.setup(kv.value, this);
+        } else if (kv.key == "action_enable") {
+            if (CHECKTYPE(kv.value, tINT))
+                action_enable = kv.value.i;
         } else if (kv.key == "selector") {
             selector.setup(kv.value, this);
         } else if (kv.key == "actions") {
@@ -454,6 +458,9 @@ void TernaryIndirectTable::pass1() {
             error(lineno, "No field 'action' to select between mulitple actions in "
                   "table %s format", name());
         actions->pass1(this); }
+    if (action_enable >= 0)
+        if (action.args.size() < 1 || action.args[0]->size <= (unsigned)action_enable)
+            error(lineno, "Action enable bit %d out of range for action selector", action_enable);
     if (format) format->setup_immed(this);
 }
 void TernaryIndirectTable::pass2() {
@@ -519,7 +526,7 @@ void TernaryIndirectTable::write_regs() {
         if (selector) {
             merge.mau_selectorlength_default[1][bus] = 0x601; // FIXME
             merge.mau_meter_adr_tcam_shiftcount[bus] =
-                selector.args[0]->bits[0].lo%128 - get_selector()->address_shift(); } }
+                selector.args[0]->bits[0].lo%128 + 23 - get_selector()->address_shift(); } }
     if (actions) actions->write_regs(this);
 }
 

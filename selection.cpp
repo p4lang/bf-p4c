@@ -20,7 +20,7 @@ void SelectionTable::setup(VECTOR(pair_t) &data) {
     resilient_hash = false;
     auto *row = get(data, "row");
     if (!row) row = get(data, "logical_row");
-    setup_layout(row, get(data, "column"), 0);
+    setup_layout(row, get(data, "column"), get(data, "bus"));
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
@@ -51,7 +51,8 @@ void SelectionTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "handle") {
             if (CHECKTYPE(kv.value, tINT))
                 handle = kv.value.i;
-        } else if (kv.key == "row" || kv.key == "logical_row" || kv.key == "column") {
+        } else if (kv.key == "row" || kv.key == "logical_row" ||
+                   kv.key == "column" || kv.key == "bus") {
             /* already done in setup_layout */
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
@@ -88,16 +89,17 @@ void SelectionTable::pass2() {
 void SelectionTable::write_merge_regs(int type, int bus, Table *action, bool indirect) {
     auto &merge = stage->regs.rams.match.merge;
     merge.mau_selector_action_entry_size[type][bus] = action->format->log2size - 3;
-    merge.mau_bus_hash_group_ctl[type] |= 0; // FIXME
-    merge.mau_meter_adr_type_position[type][bus] = 1;
+    merge.mau_bus_hash_group_ctl[type][bus/4] |= 0; // FIXME
+    merge.mau_meter_adr_type_position[type][bus] = 24;
     if (indirect) {
+        int bits = per_flow_enable ? 17 : 16;
         /* FIXME -- regs need to stabilize */
-        merge.mau_meter_adr_mask[type][bus] = 0x1ffff00;
+        merge.mau_meter_adr_mask[type][bus] = ((1U << bits) - 1) << 7;
     }
-    merge.mau_meter_adr_default[type][bus] = 0x7f | (per_flow_enable ? 0 : 0x1000000);
+    merge.mau_meter_adr_default[type][bus] = (4U << 24) | (per_flow_enable ? 0 : (1U << 23));
     if (per_flow_enable) {
         /* FIXME -- regs need to stabilize */
-        merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = 24;
+        merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = 23;
     }
 }
 
@@ -111,14 +113,16 @@ void SelectionTable::write_regs() {
         unsigned row = logical_row.row/2;
         unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
         auto vpn = logical_row.vpns.begin();
-        auto &map_alu_row =  stage->regs.rams.map_alu.row[row];
+        auto &map_alu =  stage->regs.rams.map_alu;
+        auto &map_alu_row =  map_alu.row[row];
+        unsigned meter_group = row/2;
         logical_row_use |= 1U << logical_row.row;
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;
             auto &ram = stage->regs.rams.array.row[row].ram[col];
             auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
             ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::NONE;
-            ram.unit_ram_ctl.match_ram_read_data_mux_select = UnitRam::DataMux::METER;
+            ram.unit_ram_ctl.match_ram_read_data_mux_select = UnitRam::DataMux::STATISTICS;
             unitram_config.unitram_type = UnitRam::SELECTOR;
             unitram_config.unitram_vpn = *vpn++;
             if (gress == INGRESS)
@@ -127,11 +131,13 @@ void SelectionTable::write_regs() {
                 unitram_config.unitram_egress = 1;
             unitram_config.unitram_enable = 1;
             auto &vh_adr_xbar = stage->regs.rams.array.row[row].vh_adr_xbar;
-            vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2]
+            vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + logical_row.bus]
                 .enabled_3bit_muxctl_select = input_xbar->hash_group();
-            vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2]
+            vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + logical_row.bus]
                 .enabled_3bit_muxctl_enable = 1;
-            auto &selector_ctl = map_alu_row.selector.selector_alu_ctl;
+            vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
+                bitmask2bytemask(input_xbar->hash_group_bituse());
+            auto &selector_ctl = map_alu.meter_group[meter_group].selector.selector_alu_ctl;
             selector_ctl.sps_nonlinear_hash_enable = non_linear_hash ? 1 : 0;
             if (resilient_hash)
                 selector_ctl.resilient_hash_enable = param;
@@ -139,10 +145,11 @@ void SelectionTable::write_regs() {
                 selector_ctl.selector_fair_hash_select = param;
             selector_ctl.resilient_hash_mode = resilient_hash ? 1 : 0;
             selector_ctl.selector_enable = 1;
-            auto &delay_ctl = map_alu_row.meter_alu_group_data_delay_ctl;
+            auto &delay_ctl = map_alu.meter_alu_group_data_delay_ctl[meter_group];
             delay_ctl.meter_alu_right_group_delay = 
                 stage->table_use[gress] & Stage::USE_TCAM ? 13 : 9;
             delay_ctl.meter_alu_right_group_enable = resilient_hash ? 3 : 1;
+            delay_ctl.meter_alu_right_group_sel = 1;
             auto &ram_address_mux_ctl = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
             ram_address_mux_ctl.ram_unitram_adr_mux_select = UnitRam::AdrMux::STATS_METERS;
             if (&logical_row == home) {

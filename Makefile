@@ -54,9 +54,9 @@ gen/uptr_sizes.h: mksizes
 	@mkdir -p gen
 	./mksizes > $@
 
-templates/.templates-updated: $(WALLE) chip.schema templates-config
+templates/.templates-updated: $(WALLE) chip.schema template_objects.yaml
 	@mkdir -p templates
-	$(WALLE) --generate-templates templates-config
+	$(WALLE) --generate-templates template_objects.yaml
 	@touch $@
 
 $(WALLE):

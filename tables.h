@@ -195,6 +195,7 @@ public:
     InputXbar			*input_xbar;
     std::vector<Layout>         layout;
     Format                      *format;
+    int                         action_enable;
     Call                        action;
     Actions                     *actions;
     ActionBus			*action_bus;
@@ -410,7 +411,7 @@ public:
     SelectionTable *get_selector() {
         return match_tables.size() == 1 ? (*match_tables.begin())->get_selector() : 0; }
     void write_merge_regs(int type, int bus, Table *action, bool indirect);
-    unsigned address_shift() { return 8 + ceil_log2(min_words); }
+    unsigned address_shift() { return 7 + ceil_log2(min_words); }
 )
 
 #endif /* _tables_h_ */
