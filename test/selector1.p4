@@ -45,7 +45,7 @@ action_profile sel_profile {
         setf1;
     }
     size : 16384;
-    selector : sel;
+    dynamic_action_selection : sel;
 }
 
 table test1 {
