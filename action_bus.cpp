@@ -19,18 +19,22 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
             off = kv.value[1].lo >> 3;
             sz = (kv.value[1].hi - kv.value[1].lo + 1) >> 3; }
 	Table::Format::Field *f = tbl->lookup_field(name, "*");
-	if (!f) {
+	if (!f && tbl->format) {
 	    error(kv.value.lineno, "No field %s in format", kv.value.s);
 	    continue; }
-        if (!sz) sz = f->size;
+        if (f && !sz) sz = f->size;
 	unsigned idx = kv.key.i;
 	if (kv.key.type == tRANGE) {
 	    idx = kv.key.lo;
 	    unsigned size = (kv.key.hi-idx+1) * 8;
-	    if (size != f->size) {
+            if (!sz) sz = size;
+	    if (f && size != f->size) {
 		error(kv.key.lineno, "Byte range doesn't match size %d of %s",
 		      f->size, name);
-		continue; } }
+		continue; }
+        } else if (!sz)
+            sz = idx < ACTION_DATA_8B_SLOTS ? 8 :
+                 idx < ACTION_DATA_8B_SLOTS + 2*ACTION_DATA_16B_SLOTS ? 16 : 32;
         if (idx >= ACTION_DATA_BUS_BYTES) {
             error(kv.key.lineno, "Action bus index out of range");
             continue; }
@@ -71,6 +75,13 @@ int ActionBus::find(Table::Format::Field *f, int off) {
         if ((int)slot.second.offset * 8 > off) continue;
         if (off/8 - slot.second.offset >= slot.second.size) continue;
         return slot.first + off/8 - slot.second.offset; }
+    return -1;
+}
+int ActionBus::find(const char *name, int off, int *size) {
+    for (auto &slot : by_byte)
+        if (slot.second.name == name) {
+            if (size) *size = slot.second.size;
+            return slot.first + off/8 - slot.second.offset; }
     return -1;
 }
 
@@ -142,8 +153,9 @@ void ActionBus::write_immed_regs(Table *tbl) {
     int tid = tbl->logical_id;
     for (auto &f : by_byte) {
         int slot = Stage::action_bus_slot_map[f.first];
-        unsigned off = f.second.data->bits[0].lo - tbl->format->immed->bits[0].lo +
-                       f.second.offset*8;
+        unsigned off = f.second.offset*8;
+        if (f.second.data) off += f.second.data->bits[0].lo;
+        if (tbl->format) off -= tbl->format->immed->bits[0].lo;
         unsigned size = f.second.size;
         switch(Stage::action_bus_slot_size[slot]) {
         case 8:

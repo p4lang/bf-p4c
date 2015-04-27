@@ -20,6 +20,13 @@ public:
     void write_immed_regs(Table *tbl);
     void write_action_regs(Table *tbl, unsigned homerow, unsigned action_slice);
     int find(Table::Format::Field *f, int off);
+    int find(const char *name, int off, int *size = 0);
+    int find(const std::string &name, int off, int *size = 0) {
+        return find(name.c_str(), off, size); }
+    unsigned size() {
+        unsigned rv = 0;
+        for (auto &slot : by_byte) rv += slot.second.size;
+        return rv; }
 };
 
 #endif /* _action_bus_h_ */

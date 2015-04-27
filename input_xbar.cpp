@@ -38,6 +38,7 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
                     error(kv.key.lineno, "invalid hash group descriptor");
                     continue; }
                 int id = kv.key[2].i;
+                hash_groups[id].lineno = kv.key.lineno;
                 if (kv.value.type == tINT && (unsigned)kv.value.i < EXACT_HASH_GROUPS) {
                     hash_groups[id].tables |= 1U << kv.value.i;
                     continue; }
@@ -182,6 +183,20 @@ bool InputXbar::conflict(const HashGrp &a, const HashGrp &b) {
     return false;
 }
 
+/* FIXME -- this is questionable, but the compiler produces hash groups that conflict
+ * FIXME -- so we try to tag ones that may be ok as merely warnings */
+bool InputXbar::can_merge(HashGrp &a, HashGrp &b) {
+    if (a.tables < b.tables || a.seed < b.seed) {
+        a.tables |= b.tables;
+        a.seed |= b.seed;
+        return !conflict(a, b); }
+    if (a.tables > b.tables || a.seed > b.seed) {
+        b.tables |= a.tables;
+        b.seed |= a.seed;
+        return !conflict(a, b); }
+    return false;
+}
+
 void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
     for (auto &group : groups) {
         for (auto &input : group.second) {
@@ -220,9 +235,14 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
         for (InputXbar *other : use[group.first]) {
             if (other->hash_groups.count(group.first) &&
                 conflict(other->hash_groups[group.first], group.second)) {
-                error(lineno, "Input xbar hash group %d conflict in stage %d", group.first,
-                      table->stage->stageno);
-                warning(other->lineno, "conflicting hash definition here"); } } }
+                if (can_merge(other->hash_groups[group.first], group.second))
+                    warning(group.second.lineno, "Input xbar hash group %d conflict in stage %d",
+                            group.first, table->stage->stageno);
+                else 
+                    error(group.second.lineno, "Input xbar hash group %d conflict in stage %d",
+                          group.first, table->stage->stageno);
+                warning(other->hash_groups[group.first].lineno,
+                        "conflicting hash group definition here"); } } }
 }
 
 void InputXbar::add_use(unsigned &byte_use, std::vector<Input> &inputs) {

@@ -1,3 +1,4 @@
+#include "action_bus.h"
 #include "instruction.h"
 #include "phv.h"
 #include "tables.h"
@@ -78,7 +79,8 @@ private:
     private:
 	virtual Action *clone() { return new Action(*this); }
         int bits(int group) { 
-            int byte = table->find_on_actionbus(field, lo);
+            int byte = field ? table->find_on_actionbus(field, lo)
+                             : table->action_bus->find(name, lo);
             if (byte < 0)
                 error(lineno, "%s is not on the action bus", name.c_str());
             int byte_value = byte;
@@ -94,9 +96,10 @@ private:
                 return 0x40 + byte/size;
             return -1; }
         virtual void mark_use(Table *tbl) {
-            field->flags |= Table::Format::Field::USED_IMMED; }
+            if (field) field->flags |= Table::Format::Field::USED_IMMED; }
         virtual unsigned bitoffset(int group) const {
-            int byte = table->find_on_actionbus(field, lo);
+            int byte = field ? table->find_on_actionbus(field, lo)
+                             : table->action_bus->find(name, lo);
             int size = group_size[group]/8U;
             return 8*(byte % size) + lo % 8; }
         virtual void dbprint(std::ostream &out) const {
@@ -197,6 +200,9 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
 #endif
             ref = new Action(lineno, name, tbl, field, lo >= 0 ? lo : 0,
                              hi >= 0 ? hi : field->size - 1);
+    } else if (tbl->action_bus && tbl->action_bus->find(name, 0, &len) >= 0) {
+        ref = new Action(lineno, name, tbl, 0, lo >= 0 ? lo : 0,
+                         hi >= 0 ? hi : len - 1);
     } else if (!::Phv::get(tbl->gress, name) && sscanf(name.c_str(), "A%d%n", &slot, &len) >= 1 &&
                len == (int)name.size() && slot >= 0 && slot < 40)
         ref = new RawAction(lineno, slot, lo >= 0 ? lo : 0);

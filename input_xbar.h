@@ -19,9 +19,10 @@ class InputXbar {
         HashCol() : valid(0) {}
     };
     struct HashGrp {
+        int             lineno;
         unsigned        tables;
         uint64_t        seed;
-        HashGrp() : tables(0), seed(0) {}
+        HashGrp() : lineno(-1), tables(0), seed(0) {}
     };
     Table	*table;
     bool        ternary;
@@ -32,6 +33,7 @@ class InputXbar {
     static bool conflict(const std::vector<Input> &a, const std::vector<Input> &b);
     static bool conflict(const std::map<int, HashCol> &a, const std::map<int, HashCol> &b);
     static bool conflict(const HashGrp &a, const HashGrp &b);
+    static bool can_merge(HashGrp &a, HashGrp &b);
     void add_use(unsigned &byte_use, std::vector<Input> &a);
 public:
     const int	lineno;

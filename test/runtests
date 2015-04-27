@@ -38,14 +38,35 @@ if [ ! -x "$GLSC" ]; then
     do
         if [ -x $f ]; then
             GLSC=$f
+            echo "Using $GLSC"
             break
         fi
     done
 fi
 
-TFAS=$PWD/../tfas
-REFLOW=$PWD/../reflow
-JSON_DIFF=$PWD/../json_diff
+function findbin () {
+    if [ -x "$PWD/../$1" ]; then
+        echo $PWD/../$1
+    elif type $1 >/dev/null 2>&1; then
+        echo $1
+    else
+        echo >&2 "Can't find $1 executable"
+        exit 1
+    fi
+}
+
+if [ ! -x "$TFAS" ]; then
+    TFAS=$(findbin tfas)
+fi
+if [ ! -x "$REFLOW" ]; then
+    REFLOW=$(findbin reflow)
+fi
+if [ ! -x "$JSON_DIFF" ]; then
+    JSON_DIFF=$(findbin json_diff)
+fi
+if [ -z "$DIFF" ]; then
+    DIFF="diff -u"
+fi
 
 pass=0
 fail=0
@@ -79,7 +100,7 @@ for p4file in "$@"; do
             if $need_reflow && $REFLOW $(basename $f) >tmp.json 2>/dev/null; then
                 mv tmp.json $(basename $f)
             fi
-            diff -u $f $(basename $f)
+            $DIFF $f $(basename $f)
         done > json_diff.txt
         if [ -r $name.out/tbl-cfg ]; then
             $JSON_DIFF -dl name -i table_type ${name}_context_llir.json $name.out/tbl-cfg >> json_diff.txt

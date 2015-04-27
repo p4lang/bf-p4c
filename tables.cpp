@@ -663,9 +663,9 @@ void MatchTable::write_regs(int type, Table *result) {
     if (result->format) {
         for (auto &row : result->layout) {
             int bus = row.row*2 | row.bus;
-            merge.mau_immediate_data_mask[type][bus] = (1UL << result->format->immed_size)-1; }
-        if (result->action_bus)
-            result->action_bus->write_immed_regs(result); }
+            merge.mau_immediate_data_mask[type][bus] = (1UL << result->format->immed_size)-1; } }
+    if (result->action_bus)
+        result->action_bus->write_immed_regs(result);
 
     input_xbar->write_regs();
 }

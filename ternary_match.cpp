@@ -73,6 +73,9 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "actions") {
             if (CHECKTYPE(kv.value, tMAP))
                 actions = new Actions(this, kv.value.map);
+        } else if (kv.key == "action_bus") {
+            if (CHECKTYPE(kv.value, tMAP))
+                action_bus = new ActionBus(this, kv.value.map);
         } else if (kv.key == "tcam_id") {
             if (CHECKTYPE(kv.value, tINT)) {
                 if ((tcam_id = kv.value.i) < 0 || tcam_id >= TCAM_TABLES_PER_STAGE)
@@ -262,7 +265,9 @@ void TernaryMatchTable::write_regs() {
         merge.mau_action_instruction_adr_default[1][indirect_bus] = 0x40;
         merge.tind_bus_prop[indirect_bus].tcam_piped = 1;
         merge.tind_bus_prop[indirect_bus].thread = gress;
-        merge.tind_bus_prop[indirect_bus].enabled = 1; }
+        merge.tind_bus_prop[indirect_bus].enabled = 1;
+        if (action_bus)
+             merge.mau_immediate_data_mask[1][indirect_bus] = (1UL << action_bus->size()) - 1; }
     if (actions) actions->write_regs(this);
     if (gateway) gateway->write_regs();
 }
