@@ -192,9 +192,6 @@ template <class COMMON> void init_common_regs(Parser *p, COMMON &regs, gress_t g
     regs.max_iter.max = 128;
     if (p->parser_error[gress].lineno >= 0) {
         regs.err_phv_cfg.dst = p->parser_error[gress]->reg.index;
-        regs.err_phv_cfg.aram_mem_err_en = 1;
-        regs.err_phv_cfg.csum_mem_err_en = 1;
-        regs.err_phv_cfg.ctr_mem_err_en = 1;
         regs.err_phv_cfg.ctr_range_err_en = 1;
         regs.err_phv_cfg.dst_cont_err_en = 1;
         regs.err_phv_cfg.fcs_err_en = 1;
@@ -205,26 +202,6 @@ template <class COMMON> void init_common_regs(Parser *p, COMMON &regs, gress_t g
         regs.err_phv_cfg.src_ext_err_en = 1;
         regs.err_phv_cfg.timeout_cycle_err_en = 1;
         regs.err_phv_cfg.timeout_iter_err_en = 1; }
-    // disable unused registers
-    //regs.aram_mem_err_cnt.disable();
-    //regs.csum_err_cnt.disable();
-    //regs.csum_mem_err_cnt.disable();
-    //regs.ctr_mem_err_cnt.disable();
-    //regs.ctr_range_err_cnt.disable();
-    //regs.dst_cont_err_cnt.disable();
-    //regs.fcs_err_cnt.disable();
-    //regs.hdr_byte_cnt.disable();
-    //regs.idle_cnt.disable();
-    //regs.int_en.disable();
-    //regs.int_status.disable();
-    //regs.max_cycle.disable();
-    //regs.multi_wr_err_cnt.disable();
-    //regs.no_tcam_match_err_cnt.disable();
-    //regs.partial_hdr_err_cnt.disable();
-    //regs.phv_owner_err_cnt.disable();
-    //regs.pri_start.disable();
-    //regs.src_ext_err_cnt.disable();
-    //regs.timeout_err_cnt.disable();
 }
 
 void Parser::output() {

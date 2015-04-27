@@ -15,7 +15,9 @@
                     "mau_addrmap",
                     # dprsr_reg_rspec
                         "dprsr_inp",
-                        "dprsr_out",
+                        "dprsr_out_ingr",
+                        "dprsr_out_egr",
+                        "mir_buf_all",
                         "dprsr_hdr",
         ]
     },

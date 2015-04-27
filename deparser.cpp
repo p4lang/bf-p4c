@@ -77,9 +77,6 @@ INTRINSIC(EGRESS, egress_unicast_port, 1,
     dep->inp_regs.ier.main_e.egress_unicast_port.valid = 1; )
 HER_INTRINSIC(force_tx_err)
 HER_INTRINSIC(capture_tx_ts)
-//HER_INTRINSIC(tx_pkt_has_offsets)
-//HER_INTRINSIC(ts_mod_offset)
-//HER_INTRINSIC(udp_mod_offset)
 HER_INTRINSIC(ecos)
 
 void Deparser::start(int lineno, VECTOR(value_t) args) {
@@ -308,7 +305,6 @@ void Deparser::output() {
     inp_regs.icr.inp_int_en1.disable();
     hdr_regs.hem.he_edf_cfg.disable();
     hdr_regs.him.hi_edf_cfg.disable();
-    //hdr_regs.him.hi_pv_table.disable();
     dump_checksum_units(inp_regs.iim.ii_phv_csum.csum_cfg, hdr_regs.him.hi_tphv_csum.csum_cfg,
                         checksum[INGRESS]);
     dump_checksum_units(inp_regs.iem.ie_phv_csum.csum_cfg, hdr_regs.hem.he_tphv_csum.csum_cfg,

@@ -7,7 +7,7 @@ while expr "$1" : - >/dev/null; do
     -f) fast=true
         ;;
     -s)
-        GLSC=$PWD/../submodules/p4c-tofino/p4c_tofino/shell.py
+        GLSC=$PWD/../submodules/p4c-tofino/shell.py
         ;;
     -*)
         echo >&2 "unknown argumnet $1"
@@ -29,8 +29,11 @@ FAILLOG=$(pwd -P)/faillog.txt
 
 if [ ! -x "$GLSC" ]; then
     for f in \
+        $HOME/p4c-tofino/shell.py \
         $HOME/p4c-tofino/p4c_tofino/shell.py \
+        $PWD/../../p4c-tofino/shell.py \
         $PWD/../../p4c-tofino/p4c_tofino/shell.py \
+        $PWD/../submodules/p4c-tofino/shell.py \
         $PWD/../submodules/p4c-tofino/p4c_tofino/shell.py
     do
         if [ -x $f ]; then
