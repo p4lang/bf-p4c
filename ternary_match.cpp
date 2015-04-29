@@ -382,6 +382,16 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
                 action_enable = kv.value.i;
         } else if (kv.key == "selector") {
             selector.setup(kv.value, this);
+        } else if (kv.key == "stats") {
+            if (kv.value.type == tVEC)
+                for (auto &v : kv.value.vec)
+                    stats.emplace_back(v, this);
+            else stats.emplace_back(kv.value, this);
+        } else if (kv.key == "meter") {
+            if (kv.value.type == tVEC)
+                for (auto &v : kv.value.vec)
+                    meter.emplace_back(v, this);
+            else meter.emplace_back(kv.value, this);
         } else if (kv.key == "actions") {
             if (CHECKTYPE(kv.value, tMAP))
                 actions = new Actions(this, kv.value.map);
@@ -431,8 +441,11 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
 }
 
 SelectionTable *TernaryIndirectTable::get_selector() {
-    return dynamic_cast<SelectionTable *>((Table *)selector);
-}
+    return dynamic_cast<SelectionTable *>((Table *)selector); }
+//StatsTable *TernaryIndirectTable::get_stats() {
+//    return dynamic_cast<StatsTable *>((Table *)stats); }
+//StatsTable *TernaryIndirectTable::get_meter() {
+//    return dynamic_cast<StatsTable *>((Table *)meter); }
 
 Table::table_type_t TernaryIndirectTable::set_match_table(MatchTable *m) {
     if (match_table)
@@ -445,6 +458,12 @@ Table::table_type_t TernaryIndirectTable::set_match_table(MatchTable *m) {
             error(action.lineno, "%s is not an action table", action->name());
         if (selector.check() && selector->set_match_table(m) != SELECTION)
             error(selector.lineno, "%s is not a selection table", selector->name());
+        for (auto &s : stats)
+            if (s.check() && s->set_match_table(m) != COUNTER)
+                error(s.lineno, "%s is not a counter table", s->name());
+        for (auto &s : meter)
+            if (s.check() && s->set_match_table(m) != METER)
+                error(s.lineno, "%s is not a meter table", s->name());
         logical_id = m->logical_id; }
     return TERNARY_INDIRECT;
 }
@@ -468,6 +487,7 @@ void TernaryIndirectTable::pass1() {
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
     if (format) format->setup_immed(this);
 }
+
 void TernaryIndirectTable::pass2() {
     LOG1("### Ternary indirect table " << name() << " pass2");
     if (!match_table)
@@ -475,6 +495,16 @@ void TernaryIndirectTable::pass2() {
     if (action_bus) action_bus->pass2(this);
     if (actions) actions->pass2(this);
 }
+
+void TernaryIndirectTable::write_merge_regs(int type, int bus) {
+    /* FIXME -- combine with ExactMatchTable::write_merge_regs */
+    assert(type == 1);
+    for (auto &s : stats) s->write_merge_regs(type, bus);
+    for (auto &m : meter) m->write_merge_regs(type, bus);
+    if (action && selector)
+        get_selector()->write_merge_regs(type, bus, action, action.args.size() > 1);
+}
+
 void TernaryIndirectTable::write_regs() {
     LOG1("### Ternary indirect table " << name() << " write_regs");
     int tcam_id = match_table->tcam_id;
@@ -531,7 +561,16 @@ void TernaryIndirectTable::write_regs() {
         if (selector) {
             merge.mau_selectorlength_default[1][bus] = 0x601; // FIXME
             merge.mau_meter_adr_tcam_shiftcount[bus] =
-                selector.args[0]->bits[0].lo%128 + 23 - get_selector()->address_shift(); } }
+                selector.args[0]->bits[0].lo%128 + 23 - get_selector()->address_shift(); }
+        if (!stats.empty()) {
+            if (stats[0].args.empty())
+                merge.mau_stats_adr_tcam_shiftcount[bus] = stats[0]->direct_shiftcount();
+            else
+                merge.mau_stats_adr_tcam_shiftcount[bus] = stats[0].args[0]->bits[0].lo; }
+        if (!meter.empty()) {
+            ERROR("meter setup for exact match not done");
+        }
+    }
     if (actions) actions->write_regs(this);
 }
 

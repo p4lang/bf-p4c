@@ -9,8 +9,7 @@ std::map<std::string, Table *> Table::all;
 std::map<std::string, Table::Type *> *Table::Type::all;
 
 Table::Table(int line, std::string &&n, gress_t gr, Stage *s, int lid) :
-    name_(n), handle(0), stage(s), gress(gr), lineno(line), logical_id(lid),
-    input_xbar(0), format(0), action_enable(-1), actions(0), action_bus(0)
+    name_(n), stage(s), gress(gr), lineno(line), logical_id(lid)
 {
     assert(all.find(name_) == all.end());
     all.emplace(name_, this);
@@ -173,7 +172,36 @@ void Table::setup_logical_id() {
         stage->logical_id_use[logical_id] = this; }
 }
 
-void Table::setup_vpns(VECTOR(value_t) *vpn) {
+void Table::setup_maprams(VECTOR(value_t) *rams) {
+    auto r = rams->begin();
+    for (auto &row : layout) {
+        int sram_row = row.row/2;
+        if (r == rams->end()) {
+            error(r->lineno, "Mapram layout doesn't match table layout");
+            break; }
+        auto &maprow = *r++;
+        VECTOR(value_t) *maprow_rams;
+        if (maprow.type == tINT && layout.size() == 1) {
+            maprow_rams = rams;
+        } else if (CHECKTYPE(maprow, tVEC)) {
+            maprow_rams = &maprow.vec;
+        } else continue;
+        if (maprow_rams->size != (int)row.cols.size()) {
+            error(r->lineno, "Mapram layout doesn't match table layout");
+            continue; }
+        for (auto mapcol : *maprow_rams)
+            if (CHECKTYPE(mapcol, tINT)) {
+                if (mapcol.i < 0 || mapcol.i >= MAPRAM_UNITS_PER_ROW)
+                    error(mapcol.lineno, "Invalid mapram column %d", mapcol.i);
+                else if (auto *old = stage->mapram_use[sram_row][mapcol.i])
+                    error(mapcol.lineno, "Mapram col %d in row %d already in use by table %s",
+                          sram_row, mapcol.i, old->name());
+                else {
+                    stage->mapram_use[sram_row][mapcol.i] = this;
+                    row.maprams.push_back(mapcol.i); } } }
+}
+
+void Table::setup_vpns(VECTOR(value_t) *vpn, bool allow_holes) {
     int period, width, depth;
     const char *period_name;
     vpn_params(width, depth, period, period_name);
@@ -210,7 +238,7 @@ void Table::setup_vpns(VECTOR(value_t) *vpn) {
             } else {
                 el = vpn_ctr;
                 if ((vpn_ctr += period) == depth) vpn_ctr = 0; } } }
-    if (vpn && error_count == 0) {
+    if (vpn && !allow_holes && error_count == 0) {
         for (int i = 0; i < vpn->size; i++)
             if (!used_vpns[i]) {
                 error((*vpn)[0].lineno, "Hole in vpn list (%d) for table %s", i*period, name());
@@ -277,6 +305,24 @@ void Table::alloc_id(const char *idname, int &id, int &next_id, int max_id,
         error(lineno, "Can't pick %s id for table %s (ran out)", idname, name());
 }
 
+void Table::alloc_maprams() {
+    for (auto &row : layout) {
+        int sram_row = row.row/2;
+        if ((row.row & 1) == 0) {
+            error(row.lineno, "Can only use 2-port rams on right side srams (odd logical rows)");
+            continue; }
+        if (!row.maprams.empty()) continue;
+        int use = 0;
+        for (unsigned i = 0; i < row.cols.size(); i++) {
+            while (use < MAPRAM_UNITS_PER_ROW && stage->mapram_use[sram_row][use]) use++;
+            if (use >= MAPRAM_UNITS_PER_ROW) {
+                error(row.lineno, "Ran out of maprams on row %d in stage %d", sram_row,
+                      stage->stageno);
+                break; }
+            row.maprams.push_back(use);
+            stage->mapram_use[sram_row][use++] = this; } }
+}
+
 void Table::alloc_vpns() {
     if (layout.size() == 0 || layout[0].vpns.size() > 0) return;
     setup_vpns(0);
@@ -287,6 +333,16 @@ void Table::check_next() {
         if (n != "END") n.check();
     if (miss_next != "END")
         miss_next.check();
+}
+
+void Table::need_bus(int lineno, Alloc1Dbase<Table *> &use, int idx, const char *busname)
+{
+    if (use[idx]) {
+        error(lineno, "%s bus conflict on row %d between tables %s and %s", busname, idx,
+              name(), use[idx]->name());
+        error(use[idx]->lineno, "%s defined here", use[idx]->name());
+    } else
+        use[idx] = this;
 }
 
 static void overlap_test(int lineno,
@@ -303,11 +359,10 @@ static void overlap_test(int lineno,
                   a->first.c_str(), b->first.c_str()); }
 }
 
-Table::Format::Format(VECTOR(pair_t) &data, bool may_overlap) :
-    lineno(data[0].key.lineno), size(0), immed_size(0), immed(0), log2size(0)
-{
+Table::Format::Format(VECTOR(pair_t) &data, bool may_overlap) {
     unsigned nextbit = 0;
     for (auto &kv : data) {
+        if (lineno < 0) lineno = kv.key.lineno;
         if (!CHECKTYPE2M(kv.key, tSTR, tCMD, "expecting field desc"))
             continue;
         value_t &name = kv.key.type == tSTR ? kv.key : kv.key[0];
@@ -604,12 +659,11 @@ void MatchTable::write_regs(int type, Table *result) {
             if (action_enable)
                 merge.mau_action_instruction_adr_per_entry_en_mux_ctl[type][bus] =
                     result->action_enable;
-            if (!result->action) continue;
-            /* FIXME -- deal with variable-sized actions */
-            merge.mau_actiondata_adr_default[type][bus] =
-                get_address_mau_actiondata_adr_default(result->action->format->log2size);
-            if (auto *sel = get_selector())
-                sel->write_merge_regs(type, bus, result->action, result->action.args.size() > 1); }
+            if (result->action)
+                /* FIXME -- deal with variable-sized actions */
+                merge.mau_actiondata_adr_default[type][bus] =
+                    get_address_mau_actiondata_adr_default(result->action->format->log2size);
+            result->write_merge_regs(type, bus); }
     } else {
         /* ternary match with no indirection table */
         assert(type == 1);

@@ -5,16 +5,6 @@
 
 DEFINE_TABLE_TYPE(SelectionTable)
 
-static bool get_bool(value_t &v) {
-    if (v == "true")
-        return true;
-    else if (v == "false")
-        return false;
-    else if (CHECKTYPE(v, tINT))
-        return v.i != 0;
-    return false;
-}
-
 void SelectionTable::setup(VECTOR(pair_t) &data) {
     non_linear_hash = false;
     resilient_hash = false;
@@ -116,6 +106,8 @@ void SelectionTable::write_regs() {
         auto &map_alu =  stage->regs.rams.map_alu;
         auto &map_alu_row =  map_alu.row[row];
         unsigned meter_group = row/2;
+        // FIXME meter_group based stuff should only be set once (on the home row?)
+        // FIXME rather than for every column of every row
         logical_row_use |= 1U << logical_row.row;
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;

@@ -40,6 +40,16 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
                 action_bus = new ActionBus(this, kv.value.map);
         } else if (kv.key == "selector") {
             selector.setup(kv.value, this);
+        } else if (kv.key == "stats") {
+            if (kv.value.type == tVEC)
+                for (auto &v : kv.value.vec)
+                    stats.emplace_back(v, this);
+            else stats.emplace_back(kv.value, this);
+        } else if (kv.key == "meter") {
+            if (kv.value.type == tVEC)
+                for (auto &v : kv.value.vec)
+                    meter.emplace_back(v, this);
+            else meter.emplace_back(kv.value, this);
         } else if (kv.key == "hit") {
             if (!hit_next.empty())
                 error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
@@ -116,8 +126,7 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
 }
 
 SelectionTable *ExactMatchTable::get_selector() {
-    return dynamic_cast<SelectionTable *>((Table *)selector);
-}
+    return dynamic_cast<SelectionTable *>((Table *)selector); }
 
 /* calculate the 18-bit byte/nybble mask tofino uses for matching in a 128-bit word */
 static unsigned tofino_bytemask(int lo, int hi) {
@@ -141,6 +150,21 @@ void ExactMatchTable::pass1() {
             error(selector.lineno, "%s is not a selection table", selector->name());
         if (selector.args.size() != 1)
             error(selector.lineno, "selector requires one arg"); }
+    for (auto &s : stats) if (s.check()) {
+        if (s->set_match_table(this) != COUNTER)
+            error(s.lineno, "%s is not a counter table", s->name());
+        if (s.args.size() > 1)
+            error(s.lineno, "stats table requires zero or one args");
+        else if (s.args != stats[0].args)
+            error(s.lineno, "must pass same args to all stats tables in a single table"); }
+    for (auto &m : meter) if (m.check()) {
+        if (m->set_match_table(this) != METER)
+            error(m.lineno, "%s is not a meter table", m->name());
+        if (m.args.size() > 1)
+            error(m.lineno, "meter table requires zero or one args");
+        else if (m.args != meter[0].args)
+            error(m.lineno, "must pass same args to all meter tables in a single table"); }
+
     if (action_bus) action_bus->pass1(this);
     if (actions) {
         assert(action.args.size() == 0);
@@ -447,6 +471,15 @@ void ExactMatchTable::pass2() {
     if (gateway) gateway->pass2();
 }
 
+void ExactMatchTable::write_merge_regs(int type, int bus) {
+    /* FIXME -- combine with TernaryIndirectTable::write_merge_regs */
+    assert(type == 0);
+    for (auto &s : stats) s->write_merge_regs(type, bus);
+    for (auto &m : meter) m->write_merge_regs(type, bus);
+    if (action && selector)
+        get_selector()->write_merge_regs(type, bus, action, action.args.size() > 1);
+}
+
 void ExactMatchTable::write_regs() {
     LOG1("### Exact match table " << name() << " write_regs");
     MatchTable::write_regs(0, this);
@@ -612,7 +645,17 @@ void ExactMatchTable::write_regs() {
             if (selector) {
                 merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 
                     selector.args[0]->by_group[group]->bits[0].lo%128 + 23 -
-                        get_selector()->address_shift(); } }
+                        get_selector()->address_shift(); }
+            if (!stats.empty()) {
+                if (stats[0].args.empty())
+                    merge.mau_stats_adr_exact_shiftcount[bus][word_group] = 
+                        stats[0]->direct_shiftcount();
+                else if (group_info[group].overhead_word == word) {
+                    assert(stats[0].args[0]->by_group[group]->bits[0].lo/128 == (unsigned)word);
+                    merge.mau_stats_adr_exact_shiftcount[bus][word_group] = 
+                        stats[0].args[0]->by_group[group]->bits[0].lo%128; } }
+            if (!meter.empty()) {
+                ERROR("meter setup for exact match not done"); } }
         for (auto col : row.cols) {
             int word_group = 0;
             for (int group : word_info[word]) {

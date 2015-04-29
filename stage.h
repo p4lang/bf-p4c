@@ -15,6 +15,7 @@ enum {
     SRAM_ROWS = 8,
     LOGICAL_SRAM_ROWS = 16,
     SRAM_UNITS_PER_ROW = 12,
+    MAPRAM_UNITS_PER_ROW = 6,
     TCAM_ROWS = 12,
     TCAM_UNITS_PER_ROW = 2,
     TCAM_XBAR_GROUPS = 12,
@@ -46,6 +47,7 @@ public:
     std::set<Stage **>          all_refs;
     Alloc2D<Table *, SRAM_ROWS, SRAM_UNITS_PER_ROW>     sram_use;
     Alloc2D<Table *, SRAM_ROWS, 2>                      sram_match_bus_use;
+    Alloc2D<Table *, SRAM_ROWS, MAPRAM_UNITS_PER_ROW>   mapram_use;
     Alloc2D<Table *, TCAM_ROWS, TCAM_UNITS_PER_ROW>     tcam_use;
     Alloc2D<Table *, TCAM_ROWS, 2>                      tcam_match_bus_use;
     Alloc2D<Table *, SRAM_ROWS, 2>                      tcam_indirect_bus_use;
@@ -55,7 +57,9 @@ public:
     Alloc1D<std::vector<InputXbar *>, 16>               tcam_ixbar;
     Alloc1D<Table *, ACTION_DATA_BUS_SLOTS>             action_bus_use;
     Alloc1D<Table *, LOGICAL_SRAM_ROWS>                 action_data_use,
-                                                        meter_use, stats_use, overflow_use;
+                                                        meter_bus_use,
+                                                        stats_bus_use,
+                                                        overflow_bus_use;
     bitvec      imem_addr_use[2], imem_use[ACTION_IMEM_SLOTS];
     enum { USE_TCAM=1, USE_TCAM_PIPED=2, USE_STATEFUL=4,
            USE_METER=8, USE_SELECTOR=16, };
@@ -129,6 +133,24 @@ namespace AdrDist {
         METER = 2,
         OVERFLOW = 3,
     };
+}
+namespace MapRam {
+    enum {
+        STATISTICS = 1,
+        METER = 2,
+        STATEFUL = 3,
+        IDLETIME = 4,
+        COLOR = 5,
+        SELECTOR_SIZE = 6,
+    };
+    namespace Mux {
+        enum {
+            SYSTEM = 0,
+            SYNTHETIC_TWO_PORT = 1,
+            IDLETIME = 2,
+            COLOR = 3,
+        };
+    }
 }
 
 #endif /* _stage_h_ */

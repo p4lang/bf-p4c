@@ -72,6 +72,7 @@ const char *value_desc(value_t *v);
 static inline void free_pair(pair_t *p) {
     free_value(&p->key);
     free_value(&p->value); }
+bool get_bool(value_t &v);
 
 #ifdef __cplusplus
 bool operator==(const struct value_t &, const struct value_t &);

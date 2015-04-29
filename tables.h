@@ -18,6 +18,7 @@ class Instruction;
 class InputXbar;
 class MatchTable;
 class SelectionTable;
+class StatsTable;
 class Stage;
 
 class Table {
@@ -30,14 +31,17 @@ protected:
     void setup_layout(value_t *row, value_t *col, value_t *bus);
     void setup_logical_id();
     void setup_actions(value_t &);
-    void setup_vpns(VECTOR(value_t) *);
+    void setup_maprams(VECTOR(value_t) *);
+    void setup_vpns(VECTOR(value_t) *, bool allow_holes = false);
     virtual void vpn_params(int &width, int &depth, int &period, const char *&period_name) { assert(0); }
     void alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Table *> *bus_use = 0);
     void alloc_busses(Alloc2Dbase<Table *> &bus_use);
     void alloc_id(const char *idname, int &id, int &next_id, int max_id,
 		  bool order, Alloc1Dbase<Table *> &use);
+    void alloc_maprams();
     void alloc_vpns();
     void check_next();
+    void need_bus(int lineno, Alloc1Dbase<Table *> &use, int idx, const char *name);
 public:
     const char *name() { return name_.c_str(); }
     int table_id();
@@ -46,10 +50,13 @@ public:
     virtual void write_regs() = 0;
     virtual void gen_tbl_cfg(json::vector &out) = 0;
     virtual std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg();
-    enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION };
+    enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER, METER };
+    virtual table_type_t table_type() { return OTHER; }
     virtual table_type_t set_match_table(MatchTable *m) { return OTHER; }
     virtual GatewayTable *get_gateway() { return 0; }
     virtual SelectionTable *get_selector() { return 0; }
+    virtual void write_merge_regs(int type, int bus) { assert(0); }
+    virtual int direct_shiftcount() { assert(0); }
 
     struct Layout {
         /* Holds the layout of which rams/tcams/busses are used by the table
@@ -57,10 +64,11 @@ public:
          * ternary match refers to tcams (16x2)
          * exact match and ternary indirect refer to physical srams (8x12)
          * action (and others?) refer to logical srams (16x6)
-         * vpns contains the (base)vpn index of each ram in the row (matching cols) */
+         * vpns contains the (base)vpn index of each ram in the row (matching cols)
+         * maprams contain the map ram indexes for synthetic 2-port memories (matching cols) */
         int                     lineno;
         int                     row, bus;
-        std::vector<int>        cols, vpns;
+        std::vector<int>        cols, vpns, maprams;
     };
 
     class Type {
@@ -121,11 +129,9 @@ public:
         };
     public:
         struct Field {
-            unsigned    size, group, flags;
+            unsigned    size = 0, group = 0, flags = 0;
             std::vector<bitrange_t>    bits;
-            Field       **by_group;
-            Field() : size(0), group(0), flags(0),
-                /*action_xbar(-1), action_xbar_bit(0),*/ by_group(0) {}
+            Field       **by_group = 0;
             bool operator==(const Field &a) const { return size == a.size; }
             unsigned hi(unsigned bit) {
                 for (auto &chunk : bits)
@@ -141,10 +147,10 @@ public:
         std::vector<std::map<std::string, Field>>                  fmt;
         std::map<unsigned, std::map<std::string, Field>::iterator> byindex;
     public:
-        int                     lineno;
-        unsigned                size, immed_size;
-        Field                   *immed;
-        unsigned                log2size; /* ceil(log2(size)) */
+        int                     lineno = -1;
+        unsigned                size = 0, immed_size = 0;
+        Field                   *immed = 0;
+        unsigned                log2size = 0; /* ceil(log2(size)) */
 
         unsigned groups() const { return fmt.size(); }
         Field *field(const std::string &n, int group = 0) {
@@ -164,14 +170,16 @@ public:
     struct Call : Ref { /* a Ref with arguments */
         std::vector<Format::Field*>     args;
         void setup(const value_t &v, Table *tbl);
+        Call() {}
+        Call(const value_t &v, Table *tbl) { setup(v, tbl); }
     };
 
     class Actions {
         struct Action {
             std::string                 name;
-            int                         lineno, addr, code;
+            int                         lineno = -1, addr = -1, code = -1;
             std::vector<Instruction *>  instr;
-            Action(const char *n, int l) : name(n), lineno(l), addr(-1), code(-1) {}
+            Action(const char *n, int l) : name(n), lineno(l) {}
         };
         std::vector<Action>             actions;
         std::map<std::string, int>      by_name;
@@ -187,18 +195,18 @@ public:
     };
 public:
     std::string                 name_, p4_table;
-    int                         handle;
-    Stage                       *stage;
+    int                         handle = 0;
+    Stage                       *stage = 0;
     gress_t                     gress;
-    int                         lineno;
-    int                         logical_id;
-    InputXbar			*input_xbar;
+    int                         lineno = -1;
+    int                         logical_id = -1;
+    InputXbar			*input_xbar = 0;
     std::vector<Layout>         layout;
-    Format                      *format;
-    int                         action_enable;
+    Format                      *format = 0;
+    int                         action_enable = -1;
     Call                        action;
-    Actions                     *actions;
-    ActionBus			*action_bus;
+    Actions                     *actions = 0;
+    ActionBus			*action_bus = 0;
     std::vector<Ref>            hit_next;
     Ref                         miss_next;
 
@@ -225,15 +233,20 @@ public:
     virtual int find_on_actionbus(Format::Field *f, int off);
 };
 
-class MatchTable : public Table {
-protected:
-    GatewayTable                *gateway;
-    MatchTable(int l, std::string &&n, gress_t g, Stage *s, int lid)
-        : Table(l, std::move(n), g, s, lid), gateway(0) {}
+#define DECLARE_ABSTRACT_TABLE_TYPE(TYPE, PARENT, ...)                  \
+class TYPE : public PARENT {                                            \
+protected:                                                              \
+    TYPE(int l, const char *n, gress_t g, Stage *s, int lid)            \
+        : PARENT(l, n, g, s, lid) {}                                    \
+    __VA_ARGS__                                                         \
+};
+
+DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
+    GatewayTable                *gateway = 0;
     void write_regs(int type, Table *result);
 public:
-   GatewayTable *get_gateway() { return gateway; }
-};
+    GatewayTable *get_gateway() { return gateway; }
+)
 
 #define DECLARE_TABLE_TYPE(TYPE, PARENT, NAME, ...)                     \
 class TYPE : public PARENT {                                            \
@@ -241,7 +254,7 @@ class TYPE : public PARENT {                                            \
         Type() : Table::Type(NAME) {}                                   \
         TYPE *create(int lineno, const char *name, gress_t gress,       \
                       Stage *stage, int lid, VECTOR(pair_t) &data);     \
-    } table_type;                                                       \
+    } table_type_singleton;                                             \
     friend struct Type;                                                 \
     TYPE(int l, const char *n, gress_t g, Stage *s, int lid)            \
         : PARENT(l, n, g, s, lid) {}                                    \
@@ -255,7 +268,7 @@ private:                                                                \
     __VA_ARGS__                                                         \
 };
 #define DEFINE_TABLE_TYPE(TYPE)                                         \
-TYPE::Type TYPE::table_type;                                            \
+TYPE::Type TYPE::table_type_singleton;                                  \
 TYPE *TYPE::Type::create(int lineno, const char *name, gress_t gress,   \
                           Stage *stage, int lid, VECTOR(pair_t) &data) {\
     TYPE *rv = new TYPE(lineno, name, gress, stage, lid);               \
@@ -265,6 +278,7 @@ TYPE *TYPE::Type::create(int lineno, const char *name, gress_t gress,   \
 
 DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
     Table::Call                 selector;
+    std::vector<Table::Call>    stats, meter;
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
         width = (format->size-1)/128 + 1;
         period = format->groups();
@@ -298,6 +312,7 @@ DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
     int         mgm_lineno;     /* match_group_map lineno */
 public:
     SelectionTable *get_selector();
+    void write_merge_regs(int type, int bus);
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(Way &);
 )
 
@@ -321,12 +336,15 @@ public:
     int find_on_actionbus(Format::Field *f, int off) {
         return indirect ? indirect->find_on_actionbus(f, off) : -1; }
     SelectionTable *get_selector() { return indirect ? indirect->get_selector() : 0; }
+    //void write_merge_regs(int type, int bus) { indirect->write_merge_regs(type, bus); }
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg();
 )
 
 DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     TernaryMatchTable           *match_table;
     Table::Call                 selector;
+    std::vector<Table::Call>    stats, meter;
+    table_type_t table_type() { return TERNARY_INDIRECT; }
     table_type_t set_match_table(MatchTable *m);
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
         width = (format->size-1)/128 + 1;
@@ -335,10 +353,23 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
         period_name = 0; }
     GatewayTable *get_gateway() { return match_table->get_gateway(); }
     SelectionTable *get_selector();
+    void write_merge_regs(int type, int bus);
 )
 
-DECLARE_TABLE_TYPE(ActionTable, Table, "action",
+DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
+    /* table that can be attached to multiple match tables to do something */
     std::set<MatchTable *>      match_tables;
+    table_type_t set_match_table(MatchTable *m) {
+        match_tables.insert(m);
+        if ((unsigned)m->logical_id < (unsigned)logical_id) logical_id = m->logical_id;
+        return table_type(); }
+    GatewayTable *get_gateway() {
+        return match_tables.size() == 1 ? (*match_tables.begin())->get_gateway() : 0; }
+    SelectionTable *get_selector() {
+        return match_tables.size() == 1 ? (*match_tables.begin())->get_selector() : 0; }
+)
+
+DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     int action_id;
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
         width = 1; depth = layout_size();
@@ -348,14 +379,7 @@ DECLARE_TABLE_TYPE(ActionTable, Table, "action",
     Format::Field *lookup_field(const std::string &name, const std::string &action);
     void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn);
     int find_on_actionbus(Format::Field *f, int off);
-    table_type_t set_match_table(MatchTable *m) {
-        match_tables.insert(m);
-        if ((unsigned)m->logical_id < (unsigned)logical_id) logical_id = m->logical_id;
-        return ACTION; }
-    GatewayTable *get_gateway() {
-        return match_tables.size() == 1 ? (*match_tables.begin())->get_gateway() : 0; }
-    SelectionTable *get_selector() {
-        return match_tables.size() == 1 ? (*match_tables.begin())->get_selector() : 0; }
+    table_type_t table_type() { return ACTION; }
 )
 
 DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
@@ -380,19 +404,19 @@ private:
     }                           miss;
     std::vector<Match>          table;
 public:
+    table_type_t table_type() { return GATEWAY; }
     table_type_t set_match_table(MatchTable *m) {
         match_table = m;
         if ((unsigned)m->logical_id < (unsigned)logical_id) logical_id = m->logical_id;
         return GATEWAY; }
     static GatewayTable *create(int lineno, const std::string &name, gress_t gress,
                                 Stage *stage, int lid, VECTOR(pair_t) &data)
-        { return table_type.create(lineno, name.c_str(), gress, stage, lid, data); }
+        { return table_type_singleton.create(lineno, name.c_str(), gress, stage, lid, data); }
    GatewayTable *get_gateway() { return this; }
    SelectionTable *get_selector() { return match_table ? match_table->get_selector() : 0; }
 )
 
-DECLARE_TABLE_TYPE(SelectionTable, Table, "selection",
-    std::set<MatchTable *>      match_tables;
+DECLARE_TABLE_TYPE(SelectionTable, AttachedTable, "selection",
     bool                non_linear_hash, resilient_hash;
                         /* resilient_hash == false is fair hash */
     int                 mode_lineno, param;
@@ -400,18 +424,27 @@ DECLARE_TABLE_TYPE(SelectionTable, Table, "selection",
     int                 min_words, max_words;
 public:
     bool                per_flow_enable;
-    table_type_t set_match_table(MatchTable *m) {
-        match_tables.insert(m);
-        if ((unsigned)m->logical_id < (unsigned)logical_id) logical_id = m->logical_id;
-        return SELECTION; }
+    table_type_t table_type() { return SELECTION; }
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
         width = period = 1; depth = layout_size(); period_name = 0; }
-    GatewayTable *get_gateway() {
-        return match_tables.size() == 1 ? (*match_tables.begin())->get_gateway() : 0; }
-    SelectionTable *get_selector() {
-        return match_tables.size() == 1 ? (*match_tables.begin())->get_selector() : 0; }
     void write_merge_regs(int type, int bus, Table *action, bool indirect);
     unsigned address_shift() { return 7 + ceil_log2(min_words); }
+)
+
+DECLARE_ABSTRACT_TABLE_TYPE(StatsTable, AttachedTable,
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
+        width = period = 1; depth = layout_size(); period_name = 0; }
+public:
+    virtual void write_merge_regs(int type, int bus) = 0;
+)
+
+DECLARE_TABLE_TYPE(CounterTable, StatsTable, "counter",
+    enum { NONE=0, PACKETS=1, BYTES=2, BOTH=3 } type = NONE;
+    table_type_t table_type() { return COUNTER; }
+    void write_merge_regs(int type, int bus);
+public:
+    bool                per_flow_enable;
+    int direct_shiftcount();
 )
 
 #endif /* _tables_h_ */

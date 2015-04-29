@@ -3,6 +3,16 @@
 #include <stdlib.h>
 #include <stdlib.h>
 
+bool get_bool(value_t &v) {
+    if (v == "true")
+        return true;
+    else if (v == "false")
+        return false;
+    else if (CHECKTYPE(v, tINT))
+        return v.i != 0;
+    return false;
+}
+
 static int chkmask(const match_t &m, int maskbits) {
     unsigned long mask = (1U << maskbits) - 1;
     int shift = 0;

@@ -95,16 +95,6 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
     if (actions && !action_bus) action_bus = new ActionBus();
 }
 
-static void need_bus(int lineno, Alloc1Dbase<Table *> &use, Table *table, int idx, const char *name)
-{
-    if (use[idx]) {
-        error(lineno, "%s bus conflict on row %d between tables %s and %s", name, idx,
-              table->name(), use[idx]->name());
-        error(use[idx]->lineno, "%s defined here", use[idx]->name());
-    } else
-        use[idx] = table;
-}
-
 void ActionTable::pass1() {
     LOG1("### Action table " << name() << " pass1");
     alloc_vpns();
@@ -134,11 +124,11 @@ void ActionTable::pass1() {
     int prev_row = -1;
     for (auto &row : layout) {
         if (idx != 0)
-            need_bus(lineno, stage->overflow_use, this, row.row, "Overflow");
+            need_bus(lineno, stage->overflow_bus_use, row.row, "Overflow");
         if (idx == 0 || idx + row.cols.size() > depth)
-            need_bus(lineno, stage->action_data_use, this, row.row, "Action data");
+            need_bus(lineno, stage->action_data_use, row.row, "Action data");
         for (int r = (row.row + 1) | 1; r < prev_row; r += 2)
-            need_bus(lineno, stage->overflow_use, this, r, "Overflow");
+            need_bus(lineno, stage->overflow_bus_use, r, "Overflow");
         if ((idx += row.cols.size()) >= depth) idx -= depth;
         prev_row = row.row; }
     action_bus->pass1(this);

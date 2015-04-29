@@ -1,0 +1,171 @@
+#include "algorithm.h"
+#include "input_xbar.h"
+#include "stage.h"
+#include "tables.h"
+
+DEFINE_TABLE_TYPE(CounterTable)
+
+void CounterTable::setup(VECTOR(pair_t) &data) {
+    auto *row = get(data, "row");
+    if (!row) row = get(data, "logical_row");
+    setup_layout(row, get(data, "column"), get(data, "bus"));
+    if (auto *fmt = get(data, "format")) {
+       if (CHECKTYPE(*fmt, tMAP))
+          format = new Format(fmt->map);
+    } else
+        error(lineno, "No format specified in table %s", name());
+    for (auto &kv : MapIterChecked(data, true)) {
+        if (kv.key == "p4_table") {
+            if (CHECKTYPE(kv.value, tSTR))
+                p4_table = kv.value.s;
+        } else if (kv.key == "handle") {
+            if (CHECKTYPE(kv.value, tINT))
+                handle = kv.value.i;
+        } else if (kv.key == "format") {
+            /* done above to be done before vpns */
+        } else if (kv.key == "vpns") {
+            if (CHECKTYPE(kv.value, tVEC))
+                setup_vpns(&kv.value.vec, true);
+        } else if (kv.key == "maprams") {
+            if (CHECKTYPE(kv.value, tVEC))
+                setup_maprams(&kv.value.vec);
+        } else if (kv.key == "count") {
+            if (kv.value == "bytes")
+                type = BYTES;
+            else if (kv.value == "packets")
+                type = PACKETS;
+            else if (kv.value == "both" || kv.value == "packets_and_bytes")
+                type = BOTH;
+            else error(kv.value.lineno, "Unknown counter type %s", value_desc(kv.value));
+        } else if (kv.key == "per_flow_enable") {
+            per_flow_enable = get_bool(kv.value);
+        } else if (kv.key == "row" || kv.key == "logical_row" ||
+                   kv.key == "column" || kv.key == "bus") {
+            /* already done in setup_layout */
+        } else
+            warning(kv.key.lineno, "ignoring unknown item %s in table %s",
+                    value_desc(kv.key), name()); }
+    alloc_rams(true, stage->sram_use);
+}
+
+void CounterTable::pass1() {
+    LOG1("### Counter table " << name() << " pass1");
+    alloc_vpns();
+    alloc_maprams();
+    std::sort(layout.begin(), layout.end(),
+              [](const Layout &a, const Layout &b)->bool { return a.row > b.row; });
+    //stage->table_use[gress] |= Stage::USE_SELECTOR;
+    int prev_row = -1;
+    for (auto &row : layout) {
+        if (prev_row >= 0)
+            need_bus(lineno, stage->overflow_bus_use, row.row, "Overflow");
+        else
+            need_bus(lineno, stage->stats_bus_use, row.row, "Statistics data");
+        for (int r = (row.row + 1) | 1; r < prev_row; r += 2)
+            need_bus(lineno, stage->overflow_bus_use, r, "Overflow");
+        prev_row = row.row; }
+}
+
+void CounterTable::pass2() {
+    LOG1("### Counter table " << name() << " pass2");
+}
+
+static int counter_masks[] = { 0, 7, 3, 4, 1, 0, 0 };
+static int counter_shifts[] = { 0, 3, 2, 2, 1, 0, 2 };
+
+int CounterTable::direct_shiftcount() {
+    return 64 - counter_shifts[format->groups()];
+}
+
+void CounterTable::write_merge_regs(int type, int bus) {
+    auto &merge =  stage->regs.rams.match.merge;
+    merge.mau_stats_adr_mask[type][bus] = 0xfffff & ~counter_masks[format->groups()];
+    merge.mau_stats_adr_default[type][bus] = per_flow_enable ? 0 : (1U << 19);
+    if (per_flow_enable)
+        merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = 19;
+}
+
+void CounterTable::write_regs() {
+    LOG1("### Counter table " << name() << " write_regs");
+    // FIXME -- factor common AttachedTable::write_regs
+    // FIXME -- factor common StatsTable::write_regs
+    Layout *home = &layout[0];
+    unsigned logical_row_use = 0;
+    bool push_on_overflow = false;
+    for (Layout &logical_row : layout) {
+        unsigned row = logical_row.row/2;
+        unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
+        auto vpn = logical_row.vpns.begin();
+        int maxvpn = -1;
+        for (auto v : logical_row.vpns) if (v > maxvpn) maxvpn = v;
+        auto mapram = logical_row.maprams.begin();
+        auto &map_alu =  stage->regs.rams.map_alu;
+        auto &map_alu_row =  map_alu.row[row];
+        logical_row_use |= 1U << logical_row.row;
+        for (int logical_col : logical_row.cols) {
+            unsigned col = logical_col + 6*side;
+            auto &ram = stage->regs.rams.array.row[row].ram[col];
+            ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::STATISTICS;
+            ram.unit_ram_ctl.match_ram_read_data_mux_select =
+                1 ? UnitRam::DataMux::STATISTICS : UnitRam::DataMux::OVERFLOW;
+            auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
+            unitram_config.unitram_type = UnitRam::STATISTICS;
+            unitram_config.unitram_vpn = *vpn;
+            if (gress == INGRESS)
+                unitram_config.unitram_ingress = 1;
+            else
+                unitram_config.unitram_egress = 1;
+            unitram_config.unitram_enable = 1;
+
+            auto &ram_address_mux_ctl = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
+            ram_address_mux_ctl.ram_unitram_adr_mux_select = UnitRam::AdrMux::STATS_METERS;
+            if (&logical_row == home) {
+                ram_address_mux_ctl.ram_stats_meter_adr_mux_select_stats = 1;
+                ram_address_mux_ctl.ram_ofo_stats_mux_select_statsmeter = 1;
+            } else {
+                ram_address_mux_ctl.ram_oflo_adr_mux_select_oflo = 1;
+                ram_address_mux_ctl.ram_ofo_stats_mux_select_oflo = 1; }
+            ram_address_mux_ctl.map_ram_wadr_mux_select = MapRam::Mux::SYNTHETIC_TWO_PORT;
+            ram_address_mux_ctl.map_ram_wadr_mux_enable = 1;
+            ram_address_mux_ctl.map_ram_radr_mux_select_smoflo = 1;
+
+            auto &mapram_config = map_alu_row.adrmux.mapram_config[*mapram];
+            auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[*mapram++];
+            mapram_config.mapram_type = MapRam::STATISTICS;
+            mapram_config.mapram_vpn_members = 0;
+            if (!options.match_compiler) // FIXME -- compiler doesn't set this?
+                mapram_config.mapram_vpn = *vpn;
+            if (gress == INGRESS)
+                mapram_config.mapram_ingress = 1;
+            else
+                mapram_config.mapram_egress = 1;
+            mapram_config.mapram_enable = 1;
+            if (!options.match_compiler) // FIXME -- compiler doesn't set this?
+                mapram_ctl.mapram_vpn_limit = maxvpn;
+            ++vpn; }
+        if (&logical_row == home) {
+            auto &stat_ctl = map_alu.stats_wrap[row/2].stats.statistics_ctl;
+            stat_ctl.stats_entries_per_word = format->groups();
+            if (type & BYTES) stat_ctl.stats_process_bytes = 1;
+            if (type & PACKETS) stat_ctl.stats_process_packets = 1;
+            stat_ctl.lrt_enable = 0;
+            if (gress == EGRESS) stat_ctl.stats_alu_egress = 1;
+        } else {
+            auto &adr_ctl = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
+            if (home->row >= 8 && logical_row.row < 8) {
+                adr_ctl.adr_dist_oflo_adr_xbar_source_index = 0;
+                adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::OVERFLOW;
+                push_on_overflow = true;
+            } else {
+                adr_ctl.adr_dist_oflo_adr_xbar_source_index = home->row % 8;
+                adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::STATISTICS; }
+            adr_ctl.adr_dist_oflo_adr_xbar_enable = 1; } }
+    for (MatchTable *m : match_tables) {
+        auto &icxbar = stage->regs.rams.match.adrdist.adr_dist_stats_adr_icxbar_ctl[m->logical_id];
+        icxbar.address_distr_to_logical_rows = logical_row_use;
+        icxbar.address_distr_to_overflow = push_on_overflow;
+    }
+}
+
+void CounterTable::gen_tbl_cfg(json::vector &out) {
+}
