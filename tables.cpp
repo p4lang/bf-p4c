@@ -769,3 +769,50 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg() {
     return std::make_unique<json::map>(std::move(mra));
 }
 
+SelectionTable *AttachedTables::get_selector() {
+    return dynamic_cast<SelectionTable *>((Table *)selector); }
+
+void AttachedTables::pass1(MatchTable *self) {
+    if (selector.check()) {
+        if (selector->set_match_table(self) != Table::SELECTION)
+            error(selector.lineno, "%s is not a selection table", selector->name());
+        if (selector.args.size() != 1)
+            error(selector.lineno, "Selector requires one arg");
+        if (selector->stage != self->stage)
+            error(selector.lineno, "Selector table %s not in same stage as %s",
+                  selector->name(), self->name());
+        else if (selector->gress != self->gress)
+            error(selector.lineno, "Selector table %s not in same thread as %s",
+                  selector->name(), self->name()); }
+    for (auto &s : stats) if (s.check()) {
+        if (s->set_match_table(self) != Table::COUNTER)
+            error(s.lineno, "%s is not a counter table", s->name());
+        if (s.args.size() > 1)
+            error(s.lineno, "Stats table requires zero or one args");
+        else if (s.args != stats[0].args)
+            error(s.lineno, "Must pass same args to all stats tables in a single table");
+        if (s->stage != self->stage)
+            error(s.lineno, "Counter %s not in same stage as %s", s->name(), self->name());
+        else if (s->gress != self->gress)
+            error(s.lineno, "Counter %s not in same thread as %s", s->name(), self->name()); }
+    for (auto &m : meter) if (m.check()) {
+        if (m->set_match_table(self) != Table::METER)
+            error(m.lineno, "%s is not a meter table", m->name());
+        if (m.args.size() > 1)
+            error(m.lineno, "Meter table requires zero or one args");
+        else if (m.args != meter[0].args)
+            error(m.lineno, "Must pass same args to all meter tables in a single table");
+        if (m->stage != self->stage)
+            error(m.lineno, "Meter %s not in same stage as %s", m->name(), self->name());
+        else if (m->gress != self->gress)
+            error(m.lineno, "Meter %s not in same thread as %s", m->name(), self->name()); }
+}
+
+void AttachedTables::write_merge_regs(Table *self, int type, int bus) {
+    for (auto &s : stats) s->write_merge_regs(type, bus);
+    for (auto &m : meter) m->write_merge_regs(type, bus);
+    if (self->action && selector)
+        get_selector()->write_merge_regs(type, bus, self->action, self->action.args.size() > 1);
+}
+
+

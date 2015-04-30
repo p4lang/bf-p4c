@@ -90,24 +90,40 @@ void CounterTable::write_regs() {
     // FIXME -- factor common AttachedTable::write_regs
     // FIXME -- factor common StatsTable::write_regs
     Layout *home = &layout[0];
-    unsigned logical_row_use = 0;
     bool push_on_overflow = false;
+    auto &map_alu =  stage->regs.rams.map_alu;
+    auto &swbox = stage->regs.rams.array.switchbox.row;
+    unsigned prev_row = home->row/2U;
     for (Layout &logical_row : layout) {
-        unsigned row = logical_row.row/2;
+        unsigned row = logical_row.row/2U;
         unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
+        assert(side == 1);      /* no map rams or alus on left side anymore */
         auto vpn = logical_row.vpns.begin();
         int maxvpn = -1;
         for (auto v : logical_row.vpns) if (v > maxvpn) maxvpn = v;
         auto mapram = logical_row.maprams.begin();
-        auto &map_alu =  stage->regs.rams.map_alu;
         auto &map_alu_row =  map_alu.row[row];
-        logical_row_use |= 1U << logical_row.row;
+        while (prev_row != row) {
+            if (prev_row == home->row/2U) {
+                swbox[prev_row].ctl.r_stats_alu_o_mux_select.r_stats_alu_o_sel_oflo_rd_b_i = 1;
+                swbox[prev_row].ctl.b_oflo_wr_o_mux_select.b_oflo_wr_o_sel_stats_wr_r_i = 1;
+                map_alu.row[prev_row].wadr_swbox.ctl.b_oflo_wadr_o_mux_select
+                    .b_oflo_wadr_o_sel_r_stats_wadr_i = 1;
+            } else {
+                swbox[prev_row].ctl.t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_b_i = 1;
+                swbox[prev_row].ctl.b_oflo_wr_o_mux_select.b_oflo_wr_o_sel_oflo_wr_t_i = 1;
+                map_alu.row[prev_row].wadr_swbox.ctl.b_oflo_wadr_o_mux_select
+                    .b_oflo_wadr_o_sel_t_oflo_wadr_i = 1; }
+            if (--prev_row == row) {
+                swbox[row].ctl.t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_r_i = 1;
+                swbox[row].ctl.r_oflo_wr_o_mux_select = 1;
+                map_alu.row[prev_row].wadr_swbox.ctl.r_oflo_wadr_o_mux_select = 1; } }
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;
             auto &ram = stage->regs.rams.array.row[row].ram[col];
             ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::STATISTICS;
-            ram.unit_ram_ctl.match_ram_read_data_mux_select =
-                1 ? UnitRam::DataMux::STATISTICS : UnitRam::DataMux::OVERFLOW;
+            ram.unit_ram_ctl.match_ram_read_data_mux_select = &logical_row == home
+                ? UnitRam::DataMux::STATISTICS : UnitRam::DataMux::OVERFLOW;
             auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
             unitram_config.unitram_type = UnitRam::STATISTICS;
             unitram_config.unitram_vpn = *vpn;
@@ -159,10 +175,12 @@ void CounterTable::write_regs() {
             } else {
                 adr_ctl.adr_dist_oflo_adr_xbar_source_index = home->row % 8;
                 adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::STATISTICS; }
-            adr_ctl.adr_dist_oflo_adr_xbar_enable = 1; } }
+            adr_ctl.adr_dist_oflo_adr_xbar_enable = 1;
+        }
+    }
     for (MatchTable *m : match_tables) {
         auto &icxbar = stage->regs.rams.match.adrdist.adr_dist_stats_adr_icxbar_ctl[m->logical_id];
-        icxbar.address_distr_to_logical_rows = logical_row_use;
+        icxbar.address_distr_to_logical_rows = 1U << home->row;
         icxbar.address_distr_to_overflow = push_on_overflow;
     }
 }

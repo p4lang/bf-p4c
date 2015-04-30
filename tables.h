@@ -276,9 +276,16 @@ TYPE *TYPE::Type::create(int lineno, const char *name, gress_t gress,   \
     return rv;                                                          \
 }
 
-DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
+struct AttachedTables {
     Table::Call                 selector;
     std::vector<Table::Call>    stats, meter;
+    SelectionTable *get_selector();
+    void pass1(MatchTable *self);
+    void write_merge_regs(Table *self, int type, int bus);
+};
+
+DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
+    AttachedTables              attached;
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
         width = (format->size-1)/128 + 1;
         period = format->groups();
@@ -311,8 +318,8 @@ DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
                                                  * match group in each word */
     int         mgm_lineno;     /* match_group_map lineno */
 public:
-    SelectionTable *get_selector();
-    void write_merge_regs(int type, int bus);
+    SelectionTable *get_selector() { return attached.get_selector(); }
+    void write_merge_regs(int type, int bus) { attached.write_merge_regs(this, type, bus); }
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(Way &);
 )
 
@@ -342,8 +349,7 @@ public:
 
 DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     TernaryMatchTable           *match_table;
-    Table::Call                 selector;
-    std::vector<Table::Call>    stats, meter;
+    AttachedTables              attached;
     table_type_t table_type() { return TERNARY_INDIRECT; }
     table_type_t set_match_table(MatchTable *m);
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
@@ -352,8 +358,8 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
         period = 1;
         period_name = 0; }
     GatewayTable *get_gateway() { return match_table->get_gateway(); }
-    SelectionTable *get_selector();
-    void write_merge_regs(int type, int bus);
+    SelectionTable *get_selector() { return attached.get_selector(); }
+    void write_merge_regs(int type, int bus) { attached.write_merge_regs(this, type, bus); }
 )
 
 DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,

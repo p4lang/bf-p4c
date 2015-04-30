@@ -39,17 +39,17 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
             if (CHECKTYPE(kv.value, tMAP))
                 action_bus = new ActionBus(this, kv.value.map);
         } else if (kv.key == "selector") {
-            selector.setup(kv.value, this);
+            attached.selector.setup(kv.value, this);
         } else if (kv.key == "stats") {
             if (kv.value.type == tVEC)
                 for (auto &v : kv.value.vec)
-                    stats.emplace_back(v, this);
-            else stats.emplace_back(kv.value, this);
+                    attached.stats.emplace_back(v, this);
+            else attached.stats.emplace_back(kv.value, this);
         } else if (kv.key == "meter") {
             if (kv.value.type == tVEC)
                 for (auto &v : kv.value.vec)
-                    meter.emplace_back(v, this);
-            else meter.emplace_back(kv.value, this);
+                    attached.meter.emplace_back(v, this);
+            else attached.meter.emplace_back(kv.value, this);
         } else if (kv.key == "hit") {
             if (!hit_next.empty())
                 error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
@@ -125,9 +125,6 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
     if (actions && !action_bus) action_bus = new ActionBus();
 }
 
-SelectionTable *ExactMatchTable::get_selector() {
-    return dynamic_cast<SelectionTable *>((Table *)selector); }
-
 /* calculate the 18-bit byte/nybble mask tofino uses for matching in a 128-bit word */
 static unsigned tofino_bytemask(int lo, int hi) {
     unsigned rv = 0;
@@ -145,26 +142,7 @@ void ExactMatchTable::pass1() {
     check_next();
     if (action.check() && action->set_match_table(this) != ACTION)
         error(action.lineno, "%s is not an action table", action->name());
-    if (selector.check()) {
-        if (selector->set_match_table(this) != SELECTION)
-            error(selector.lineno, "%s is not a selection table", selector->name());
-        if (selector.args.size() != 1)
-            error(selector.lineno, "selector requires one arg"); }
-    for (auto &s : stats) if (s.check()) {
-        if (s->set_match_table(this) != COUNTER)
-            error(s.lineno, "%s is not a counter table", s->name());
-        if (s.args.size() > 1)
-            error(s.lineno, "stats table requires zero or one args");
-        else if (s.args != stats[0].args)
-            error(s.lineno, "must pass same args to all stats tables in a single table"); }
-    for (auto &m : meter) if (m.check()) {
-        if (m->set_match_table(this) != METER)
-            error(m.lineno, "%s is not a meter table", m->name());
-        if (m.args.size() > 1)
-            error(m.lineno, "meter table requires zero or one args");
-        else if (m.args != meter[0].args)
-            error(m.lineno, "must pass same args to all meter tables in a single table"); }
-
+    attached.pass1(this);
     if (action_bus) action_bus->pass1(this);
     if (actions) {
         assert(action.args.size() == 0);
@@ -471,20 +449,11 @@ void ExactMatchTable::pass2() {
     if (gateway) gateway->pass2();
 }
 
-void ExactMatchTable::write_merge_regs(int type, int bus) {
-    /* FIXME -- combine with TernaryIndirectTable::write_merge_regs */
-    assert(type == 0);
-    for (auto &s : stats) s->write_merge_regs(type, bus);
-    for (auto &m : meter) m->write_merge_regs(type, bus);
-    if (action && selector)
-        get_selector()->write_merge_regs(type, bus, action, action.args.size() > 1);
-}
-
 void ExactMatchTable::write_regs() {
     LOG1("### Exact match table " << name() << " write_regs");
     MatchTable::write_regs(0, this);
     unsigned fmt_width = (format->size + 127)/128;
-    int word = fmt_width-1;  // FIXME -- don't need this anymore?
+    unsigned word = fmt_width-1;  // FIXME -- don't need this anymore?
     bitvec match_mask, version_nibble_mask;
     match_mask.setrange(0, 128*fmt_width);
     version_nibble_mask.setrange(0, 32*fmt_width);
@@ -519,7 +488,7 @@ void ExactMatchTable::write_regs() {
                 first = false;
             } else
                 assert(hash_group == ways[way.way].group);
-            assert(way.word == word);
+            assert(way.word == (int)word);
             vh_adr_xbar.exactmatch_mem_hashadr_xbar_ctl[col]
                 .enabled_4bit_muxctl_select = ways[way.way].subgroup + row.bus*5;
             vh_adr_xbar.exactmatch_mem_hashadr_xbar_ctl[col]
@@ -532,12 +501,12 @@ void ExactMatchTable::write_regs() {
                 .exactmatch_bank_enable_inp_sel |= 1 << row.bus;
             auto &ram = stage->regs.rams.array.row[row.row].ram[col];
             for (unsigned i = 0; i < 4; i++)
-                ram.match_mask[i] = match_mask.getrange(word*128+i*32, 32);
+                ram.match_mask[i] = match_mask.getrange(way.word*128U+i*32, 32);
             ram.unit_ram_ctl.match_ram_write_data_mux_select = 7; /* unused */
             ram.unit_ram_ctl.match_ram_read_data_mux_select = 7; /* unused */
             ram.unit_ram_ctl.match_ram_matchdata_bus1_sel = row.bus;
             ram.unit_ram_ctl.match_result_bus_select = 1 << row.bus;
-            if (auto cnt = word_info[word].size())
+            if (auto cnt = word_info[way.word].size())
                 ram.unit_ram_ctl.match_entry_enable = ~(~0U << cnt);
             auto &unitram_config = stage->regs.rams.map_alu.row[row.row].adrmux
                     .unitram_config[col/6][col%6];
@@ -550,23 +519,23 @@ void ExactMatchTable::write_regs() {
             unitram_config.unitram_enable = 1;
 
             int vpn = *vpn_iter++;
-            int vpn_base = (vpn + *min_element(word_info[word])) & ~3;
+            int vpn_base = (vpn + *min_element(word_info[way.word])) & ~3;
             ram.match_ram_vpn.match_ram_vpn0 = vpn_base >> 2;
             int vpn_use = 0;
-            for (unsigned group = 0; group < word_info[word].size(); group++) {
-                int vpn_off = vpn + word_info[word][group] - vpn_base;
+            for (unsigned group = 0; group < word_info[way.word].size(); group++) {
+                int vpn_off = vpn + word_info[way.word][group] - vpn_base;
                 vpn_use |= vpn_off;
                 ram.match_ram_vpn.match_ram_vpn_lsbs .set_subfield(vpn_off, group*3, 3); }
             if (vpn_use & 4)
                 ram.match_ram_vpn.match_ram_vpn1 = (vpn_base >> 2) + 1;
 
             /* TODO -- Algorithmic TCAM support will require something else here */
-            ram.match_nibble_s0q1_enable = version_nibble_mask.getrange(word*32, 32);
+            ram.match_nibble_s0q1_enable = version_nibble_mask.getrange(way.word*32U, 32);
             ram.match_nibble_s1q0_enable = 0xffffffffUL;
 
             int word_group = 0;
-            for (int group : word_info[word]) {
-                unsigned mask = group_info[group].tofino_mask[word];
+            for (int group : word_info[way.word]) {
+                unsigned mask = group_info[group].tofino_mask[way.word];
                 ram.match_bytemask[word_group].mask_bytes_0_to_13 = ~mask & 0x3fff;
                 ram.match_bytemask[word_group].mask_nibbles_28_to_31 = ~(mask >> 14) & 0xf;
                 word_group++; }
@@ -576,13 +545,15 @@ void ExactMatchTable::write_regs() {
         }
         /* setup input xbars to get data to the right places on the bus(es) */
         auto &vh_xbar = stage->regs.rams.array.row[row.row].vh_xbar;
+        bool using_match = false;
         for (unsigned i = 0; i < format->groups(); i++) {
             Format::Field *match = format->field("match", i);
             unsigned bit = 0;
             for (auto &piece : match->bits) {
-                if (piece.lo/128 != (unsigned)word) {
+                if (piece.lo/128U != word) {
                     bit += piece.size();
                     continue; }
+                using_match = true;
                 for (unsigned fmt_bit = piece.lo; fmt_bit <= piece.hi;) {
                     unsigned byte = (fmt_bit%128)/8;
                     unsigned bits_in_byte = (byte+1)*8 - (fmt_bit%128);
@@ -598,12 +569,13 @@ void ExactMatchTable::write_regs() {
                     bit += bits_in_byte; } }
             assert(bit == match->size);
             if (Format::Field *version = format->field("version", i)) {
-                if (version->bits[0].lo/128 != (unsigned)word) continue;
+                if (version->bits[0].lo/128U != word) continue;
                 vh_xbar[row.bus].exactmatch_validselect |= 1U << (version->bits[0].lo%128)/4; } }
-        auto &vh_xbar_ctl = vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl;
-        vh_xbar_ctl.exactmatch_row_vh_xbar_select = word_ixbar_group[word];
-        vh_xbar_ctl.exactmatch_row_vh_xbar_enable = 1;
-        vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress;
+        if (using_match) {
+            auto &vh_xbar_ctl = vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl;
+            vh_xbar_ctl.exactmatch_row_vh_xbar_select = word_ixbar_group[word];
+            vh_xbar_ctl.exactmatch_row_vh_xbar_enable = 1;
+            vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress; }
         /* setup match central config to extract results of the match */
         auto &merge = stage->regs.rams.match.merge;
         unsigned bus = row.row*2 + row.bus;
@@ -618,17 +590,17 @@ void ExactMatchTable::write_regs() {
                 /* FIXME -- support for multiple sizes of action data? */
                 merge.mau_actiondata_adr_mask[0][bus] =
                     ((1U << action.args[1]->size) - 1) << lo_huffman_bits; } }
-        if (selector)
+        if (attached.selector)
             merge.mau_selectorlength_default[0][bus] = 0x601; // FIXME
         for (unsigned word_group = 0; word_group < word_info[word].size(); word_group++) {
             int group = word_info[word][word_group];
-            if (group_info[group].overhead_word == word) {
+            if (group_info[group].overhead_word == (int)word) {
                 if (format->immed) {
-                    assert(format->immed->by_group[group]->bits[0].lo/128 == (unsigned)word);
+                    assert(format->immed->by_group[group]->bits[0].lo/128U == word);
                     merge.mau_immediate_data_exact_shiftcount[bus][word_group] =
                         format->immed->by_group[group]->bits[0].lo % 128; }
                 if (!action.args.empty()) {
-                    assert(action.args[0]->by_group[group]->bits[0].lo/128 == (unsigned)word);
+                    assert(action.args[0]->by_group[group]->bits[0].lo/128U == word);
                     merge.mau_action_instruction_adr_exact_shiftcount[bus][word_group] =
                         action.args[0]->by_group[group]->bits[0].lo % 128; }
             } else if (!options.match_compiler) continue;
@@ -638,23 +610,23 @@ void ExactMatchTable::write_regs() {
                 if (action.args.size() <= 1) {
                     merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
                         69 - lo_huffman_bits;
-                } else if (group_info[group].overhead_word == word) {
-                    assert(action.args[1]->by_group[group]->bits[0].lo/128 == (unsigned)word);
+                } else if (group_info[group].overhead_word == (int)word) {
+                    assert(action.args[1]->by_group[group]->bits[0].lo/128U == word);
                     merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
                         action.args[1]->by_group[group]->bits[0].lo%128 + 5 - lo_huffman_bits; } }
-            if (selector) {
+            if (attached.selector) {
                 merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 
-                    selector.args[0]->by_group[group]->bits[0].lo%128 + 23 -
+                    attached.selector.args[0]->by_group[group]->bits[0].lo%128 + 23 -
                         get_selector()->address_shift(); }
-            if (!stats.empty()) {
-                if (stats[0].args.empty())
+            for (auto &st : attached.stats) {
+                if (st.args.empty())
+                    merge.mau_stats_adr_exact_shiftcount[bus][word_group] = st->direct_shiftcount();
+                else if (group_info[group].overhead_word == (int)word) {
+                    assert(st.args[0]->by_group[group]->bits[0].lo/128U == word);
                     merge.mau_stats_adr_exact_shiftcount[bus][word_group] = 
-                        stats[0]->direct_shiftcount();
-                else if (group_info[group].overhead_word == word) {
-                    assert(stats[0].args[0]->by_group[group]->bits[0].lo/128 == (unsigned)word);
-                    merge.mau_stats_adr_exact_shiftcount[bus][word_group] = 
-                        stats[0].args[0]->by_group[group]->bits[0].lo%128; } }
-            if (!meter.empty()) {
+                        st.args[0]->by_group[group]->bits[0].lo%128U; }
+                break; /* all must be the same, only config once */ }
+            if (!attached.meter.empty()) {
                 ERROR("meter setup for exact match not done"); } }
         for (auto col : row.cols) {
             int word_group = 0;
@@ -676,7 +648,7 @@ void ExactMatchTable::write_regs() {
             merge.col[col].hitmap_output_map[bus].enabled_4bit_muxctl_enable = 1;*/ }
         if (gress == EGRESS)
             merge.exact_match_delay_config.exact_match_bus_thread |= 1 << bus;
-        if (--word < 0) { word = fmt_width-1; } }
+        if (word-- == 0) { word = fmt_width-1; } }
     if (actions) actions->write_regs(this);
     if (gateway) gateway->write_regs();
 }
@@ -769,11 +741,11 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
             act["how_referenced"] = action.args.size() > 1 ? "indirect" : "direct";
             tbl["p4_action_data_tables"] =  std::unique_ptr<json::obj>(t = new json::vector);
             t->emplace_back(std::make_unique<json::map>(std::move(act))); }
-        if (selector) {
+        if (attached.selector) {
             json::map sel;
-            sel["name"] = selector->name();
-            if (selector->handle)
-                sel["handle_reference"] = selector->handle;
+            sel["name"] = attached.selector->name();
+            if (attached.selector->handle)
+                sel["handle_reference"] = attached.selector->handle;
             tbl["p4_selection_tables"] =  std::unique_ptr<json::obj>(t = new json::vector);
             t->emplace_back(std::make_unique<json::map>(std::move(sel))); }
         out.emplace_back(std::make_unique<json::map>(std::move(tbl)));

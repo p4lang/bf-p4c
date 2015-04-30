@@ -212,7 +212,7 @@ void ActionTable::write_regs() {
              * propagate overflow from bottom to top.  This effectively uses only the
              * odd (right side) overflow busses.  L ovfl can still go to R action */
             for (int r = prev_logical_row/2 - 1; r > (int)row; r--) {
-                prev_switch_ctl = &stage->regs.rams.array.switchbox.row[r/2].ctl;
+                prev_switch_ctl = &stage->regs.rams.array.switchbox.row[r].ctl;
                 prev_switch_ctl->t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_b_i = 1; }
 
             auto &oflo_adr_xbar = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
