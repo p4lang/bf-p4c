@@ -4,12 +4,24 @@ fast=false;
 
 shopt -s nullglob
 
+TRY_GLSC="
+    $HOME/p4c-tofino/shell.py
+    $HOME/p4c-tofino/p4c_tofino/shell.py
+    $PWD/../../p4c-tofino/shell.py
+    $PWD/../../p4c-tofino/p4c_tofino/shell.py
+    $PWD/../submodules/p4c-tofino/shell.py
+    $PWD/../submodules/p4c-tofino/p4c_tofino/shell.py
+"
+
 while expr "$1" : - >/dev/null; do
     case $1 in
     -f) fast=true
         ;;
     -s)
-        GLSC=$PWD/../submodules/p4c-tofino/shell.py
+        TRY_GLSC="
+            $PWD/../submodules/p4c-tofino/shell.py
+            $PWD/../submodules/p4c-tofino/p4c_tofino/shell.py
+        "
         ;;
     -*)
         echo >&2 "unknown argumnet $1"
@@ -30,20 +42,19 @@ rm -rf faillog.txt
 FAILLOG=$(pwd -P)/faillog.txt
 
 if [ ! -x "$GLSC" ]; then
-    for f in \
-        $HOME/p4c-tofino/shell.py \
-        $HOME/p4c-tofino/p4c_tofino/shell.py \
-        $PWD/../../p4c-tofino/shell.py \
-        $PWD/../../p4c-tofino/p4c_tofino/shell.py \
-        $PWD/../submodules/p4c-tofino/shell.py \
-        $PWD/../submodules/p4c-tofino/p4c_tofino/shell.py
-    do
+    for f in $TRY_GLSC; do
         if [ -x $f ]; then
             GLSC=$f
-            echo "Using $GLSC"
             break
         fi
     done
+fi
+
+if [ -x "$GLSC" ]; then
+    echo "Using $GLSC"
+else
+    echo >&2 "Can't find p4c-tofino executable"
+    exit 1
 fi
 
 function findbin () {
