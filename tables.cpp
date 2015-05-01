@@ -359,6 +359,14 @@ static void overlap_test(int lineno,
                   a->first.c_str(), b->first.c_str()); }
 }
 
+static void append_bits(std::vector<Table::Format::bitrange_t> &vec, int lo, int hi) {
+    /* split any chunks that cross a word (128-bit) boundary */
+    while (lo/128U != hi/128U) {
+        vec.emplace_back(lo, lo | 127);
+        lo = (lo | 127) + 1; }
+    vec.emplace_back(lo, hi);
+}
+
 Table::Format::Format(VECTOR(pair_t) &data, bool may_overlap) {
     unsigned nextbit = 0;
     for (auto &kv : data) {
@@ -387,17 +395,17 @@ Table::Format::Format(VECTOR(pair_t) &data, bool may_overlap) {
         f->group = idx;
         if (kv.value.type == tINT) {
             f->size  = kv.value.i;
-            f->bits.emplace_back(nextbit, nextbit+f->size-1);
+            append_bits(f->bits, nextbit, nextbit+f->size-1);
         } else if (kv.value.type == tRANGE) {
             if (kv.value.lo > kv.value.hi)
                 error(kv.value.lineno, "invalid range %d..%d", kv.value.lo, kv.value.hi);
-            f->bits.emplace_back(kv.value.lo, kv.value.hi);
+            append_bits(f->bits, kv.value.lo, kv.value.hi);
             f->size = kv.value.hi - kv.value.lo + 1;
         } else if (kv.value.type == tVEC) {
             f->size = 0;
             for (auto &c : kv.value.vec)
                 if (CHECKTYPE(c, tRANGE) && VALIDATE_RANGE(c)) {
-                    f->bits.emplace_back(c.lo, c.hi);
+                    append_bits(f->bits, c.lo, c.hi);
                     f->size += c.hi - c.lo + 1;
                     if ((size_t)c.hi+1 > size) size = c.hi+1; } }
         nextbit = f->bits.back().hi + 1;

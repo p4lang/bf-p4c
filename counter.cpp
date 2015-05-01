@@ -18,6 +18,9 @@ void CounterTable::setup(VECTOR(pair_t) &data) {
         if (kv.key == "p4_table") {
             if (CHECKTYPE(kv.value, tSTR))
                 p4_table = kv.value.s;
+        } else if (kv.key == "p4_table_size") {
+            if (CHECKTYPE(kv.value, tINT))
+                p4_table_size = kv.value.i;
         } else if (kv.key == "handle") {
             if (CHECKTYPE(kv.value, tINT))
                 handle = kv.value.i;

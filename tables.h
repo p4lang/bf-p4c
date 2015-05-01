@@ -122,12 +122,12 @@ public:
     };
 
     class Format {
+    public:
         struct bitrange_t { unsigned lo, hi;
             bitrange_t(unsigned l, unsigned h) : lo(l), hi(h) {}
             bool operator==(const bitrange_t &a) const { return lo == a.lo && hi == a.hi; }
             int size() { return hi-lo+1; }
         };
-    public:
         struct Field {
             unsigned    size = 0, group = 0, flags = 0;
             std::vector<bitrange_t>    bits;
@@ -197,7 +197,7 @@ public:
     };
 public:
     std::string                 name_, p4_table;
-    int                         handle = 0;
+    int                         handle = 0, p4_table_size = 0;
     Stage                       *stage = 0;
     gress_t                     gress;
     int                         lineno = -1;

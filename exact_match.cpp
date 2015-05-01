@@ -109,6 +109,9 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "p4_table") {
             if (CHECKTYPE(kv.value, tSTR))
                 p4_table = kv.value.s;
+        } else if (kv.key == "p4_table_size") {
+            if (CHECKTYPE(kv.value, tINT))
+                p4_table_size = kv.value.i;
         } else if (kv.key == "handle") {
             if (CHECKTYPE(kv.value, tINT))
                 handle = kv.value.i;
@@ -699,15 +702,18 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
     json::map tbl, stage_tbl, pack_fmt;
     json::vector *t, *t2;
     unsigned fmt_width = (format->size + 127)/128;
+    unsigned number_entries = layout_size()/fmt_width * format->groups() * 1024;
     Stage::P4TableInfo *p4_info = p4_table.empty() ? 0 : &Stage::p4_tables[p4_table];
     if (!p4_info || !p4_info->desc) {
         tbl["name"] = name();
         if (handle) tbl["handle"] = handle;
         tbl["table_type"] = "match_entry";
+        tbl["number_entries"] = p4_table_size ? p4_table_size : number_entries;
         tbl["direction"] = gress ? "egress" : "ingress";
-        tbl["stage_tables_length"] = 1; }
+        tbl["stage_tables_length"] = 1;
+        tbl["preferred_match_type"] = "exact"; }
     stage_tbl["stage_number"] = stage->stageno;
-    stage_tbl["number_entries"] = layout_size()/fmt_width * format->groups() * 1024;
+    stage_tbl["number_entries"] = number_entries;
     stage_tbl["stage_table_type"] = "hash_match";
     pack_fmt["table_word_width"] = 128 * fmt_width;
     pack_fmt["memory_word_width"] = 128;
@@ -750,9 +756,13 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
             t->emplace_back(std::make_unique<json::map>(std::move(sel))); }
         out.emplace_back(std::make_unique<json::map>(std::move(tbl)));
         if (p4_info) {
+            p4_info->number_entries = number_entries;
             p4_info->desc = dynamic_cast<json::map *>(out.back().get());
             assert(p4_info->desc); }
     } else {
         p4_info->stage_tables->emplace_back(std::make_unique<json::map>(std::move(stage_tbl)));
-        (*p4_info->desc)["stage_tables_length"] = p4_info->stage_tables->size(); }
+        p4_info->number_entries += number_entries;
+        (*p4_info->desc)["stage_tables_length"] = p4_info->stage_tables->size();
+        if (!p4_table_size)
+            (*p4_info->desc)["number_entries"] = p4_info->number_entries; }
 }

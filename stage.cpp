@@ -120,6 +120,7 @@ void AsmStage::process() {
 
 void AsmStage::output() {
     json::vector        tbl_cfg;
+    assert(Stage::p4_tables.empty());
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         bitvec set_regs = stage[0].action_set[gress];
         for (unsigned i = 1; i < stage.size(); i++) {
@@ -155,6 +156,7 @@ void AsmStage::output() {
         stage[i].regs.emit_json(*open_output("regs.match_action_stage.%02x.cfg.json", i) , i);
     }
     *open_output("tbl-cfg") << '[' << &tbl_cfg << ']' << std::endl;
+    Stage::p4_tables.clear();
 }
 
 Stage::Stage() {

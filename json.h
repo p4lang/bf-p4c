@@ -4,6 +4,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include "ordered_map.h"
 #include <string>
 #include <typeindex>
 #include <vector>
@@ -128,7 +129,7 @@ public:
         emplace_back(std::make_unique<string>(std::move(tmp))); }
 };
 
-typedef std::map<obj *, std::unique_ptr<obj>, obj::ptrless> map_base;
+typedef ordered_map<obj *, std::unique_ptr<obj>, obj::ptrless> map_base;
 class map : public obj, public map_base {
 public:
     map() {}
