@@ -68,6 +68,16 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
                     if (auto *old = stage->tcam_indirect_bus_use[indirect_bus/2][indirect_bus&1])
                         error(kv.value.lineno, "Indirect bus %d already in use by table %s",
                               indirect_bus, old->name()); } }
+        } else if (kv.key == "stats") {
+            if (kv.value.type == tVEC)
+                for (auto &v : kv.value.vec)
+                    attached.stats.emplace_back(v, this);
+            else attached.stats.emplace_back(kv.value, this);
+        } else if (kv.key == "meter") {
+            if (kv.value.type == tVEC)
+                for (auto &v : kv.value.vec)
+                    attached.meter.emplace_back(v, this);
+            else attached.meter.emplace_back(kv.value, this);
         } else if (kv.key == "action") {
             action.setup(kv.value, this);
         } else if (kv.key == "actions") {
@@ -122,6 +132,9 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
         if (indirect_bus > 0)
             error(lineno, "Table %s has both ternary indirect table and explicit indirect bus",
                   name());
+        if (!attached.stats.empty() || !attached.meter.empty())
+            error(lineno, "Table %s has ternary indirect table and directly attached stats/meters"
+                  " -- move them to indirect table", name());
     } else if (action.set() && actions)
         error(lineno, "Table %s has both action table and immediate actions", name());
     else if (!action.set() && !actions)
@@ -180,6 +193,7 @@ void TernaryMatchTable::pass1() {
         if (hit_next.size() > 0 && indirect->hit_next.size() > 0)
             error(hit_next[0].lineno, "Ternary Match table with both direct and indirect "
                   "next tables"); }
+    attached.pass1(this);
     if (hit_next.size() > 2)
         error(hit_next[0].lineno, "Ternary Match tables cannot directly specify more"
               "than 2 hit next tables");
@@ -267,7 +281,17 @@ void TernaryMatchTable::write_regs() {
         merge.tind_bus_prop[indirect_bus].thread = gress;
         merge.tind_bus_prop[indirect_bus].enabled = 1;
         if (action_bus)
-             merge.mau_immediate_data_mask[1][indirect_bus] = (1UL << action_bus->size()) - 1; }
+             merge.mau_immediate_data_mask[1][indirect_bus] = (1UL << action_bus->size()) - 1;
+        attached.write_merge_regs(this, 1, indirect_bus);
+        for (auto &st : attached.stats) {
+            if (st.args.empty())
+                merge.mau_stats_adr_tcam_shiftcount[indirect_bus] = st->direct_shiftcount();
+            else
+                merge.mau_stats_adr_tcam_shiftcount[indirect_bus] = st.args[0]->bits[0].lo;
+            break; /* all must be the same, only config once */ }
+        if (!attached.meter.empty())
+            ERROR("meter setup for ternary match not done");
+    }
     if (actions) actions->write_regs(this);
     if (gateway) gateway->write_regs();
 }
@@ -541,14 +565,14 @@ void TernaryIndirectTable::write_regs() {
             merge.mau_selectorlength_default[1][bus] = 0x601; // FIXME
             merge.mau_meter_adr_tcam_shiftcount[bus] =
                 attached.selector.args[0]->bits[0].lo%128 + 23 - get_selector()->address_shift(); }
-        if (!attached.stats.empty()) {
-            if (attached.stats[0].args.empty())
-                merge.mau_stats_adr_tcam_shiftcount[bus] = attached.stats[0]->direct_shiftcount();
+        for (auto &st : attached.stats) {
+            if (st.args.empty())
+                merge.mau_stats_adr_tcam_shiftcount[bus] = st->direct_shiftcount();
             else
-                merge.mau_stats_adr_tcam_shiftcount[bus] = attached.stats[0].args[0]->bits[0].lo; }
-        if (!attached.meter.empty()) {
-            ERROR("meter setup for exact match not done");
-        }
+                merge.mau_stats_adr_tcam_shiftcount[bus] = st.args[0]->bits[0].lo;
+            break; /* all must be the same, only config once */ }
+        if (!attached.meter.empty())
+            ERROR("meter setup for ternary match not done");
     }
     if (actions) actions->write_regs(this);
 }

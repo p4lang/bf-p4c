@@ -516,7 +516,7 @@ Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
         actions.emplace_back(name, kv.key.lineno);
         auto &ins = actions.back();
         if (kv.key.type == tCMD && CHECKTYPE(kv.key[1], tINT))
-            ins.code = kv.key[1].i;
+            code_use |= 1U << (ins.code = kv.key[1].i);
         for (auto &i : kv.value.vec) {
             if (i.type == tINT && ins.instr.empty()) {
                 if ((ins.addr = i.i) >= ACTION_IMEM_ADDR_MAX)
@@ -534,8 +534,7 @@ void Table::Actions::pass1(Table *tbl) {
         int iaddr = -1;
         if (act.addr >= 0) {
             if (tbl->stage->imem_addr_use[tbl->gress][act.addr])
-                error(act.lineno, "action instruction addr %d in use elsewhere",
-                      act.addr);
+                error(act.lineno, "action instruction addr %d in use elsewhere", act.addr);
             tbl->stage->imem_addr_use[tbl->gress][act.addr] = 1;
             iaddr = act.addr/ACTION_IMEM_COLORS; }
         for (auto *inst : act.instr) {
@@ -571,7 +570,9 @@ void Table::Actions::pass2(Table *tbl) {
         else if (code < 0 && act.code != act.addr)
             error(act.lineno, "Action code must be the same as action instruction address "
                   "when there are more than 8 actions");
-        if (code >= 0) code++; }
+        code_use |= 1U << act.code;
+        if (act.code > max_code) max_code = act.code;
+        while (code >= 0 && ((code_use >> code) & 1)) code++; }
 }
 
 static int parity(unsigned v) {
@@ -679,8 +680,9 @@ void MatchTable::write_regs(int type, Table *result) {
     assert(actions);
 
     //assert(result->action.args[0]);
-    if (result->action.args.empty() ||
-        (1U << result->action.args[0]->size) <= ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
+    if (actions->max_code < ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
+    //if (result->action.args.empty() ||
+    //    (1U << result->action.args[0]->size) <= ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH)
         merge.mau_action_instruction_adr_map_en[type] |= (1U << logical_id);
         for (auto &act : *actions)
             merge.mau_action_instruction_adr_map_data[type][logical_id][act.code/4]

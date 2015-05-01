@@ -183,7 +183,9 @@ public:
         };
         std::vector<Action>             actions;
         std::map<std::string, int>      by_name;
+        unsigned                        code_use = 0;
     public:
+        int                             max_code = -1;
         Actions(Table *tbl, VECTOR(pair_t) &);
         std::vector<Action>::iterator begin() { return actions.begin(); }
         std::vector<Action>::iterator end() { return actions.end(); }
@@ -324,6 +326,7 @@ public:
 )
 
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
+    AttachedTables              attached;
     void vpn_params(int &width, int &depth, int &period, const char *&period_name);
     struct Match {
         int word_group, byte_group, byte_config;
@@ -343,7 +346,6 @@ public:
     int find_on_actionbus(Format::Field *f, int off) {
         return indirect ? indirect->find_on_actionbus(f, off) : -1; }
     SelectionTable *get_selector() { return indirect ? indirect->get_selector() : 0; }
-    //void write_merge_regs(int type, int bus) { indirect->write_merge_regs(type, bus); }
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg();
 )
 

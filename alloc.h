@@ -14,7 +14,7 @@ protected:
     virtual ~Alloc1Dbase() { delete [] data; }
 public:
     T &operator[](int i) {
-        if (i < 0 || i >= size) throw "index out of bounds";
+        if (i < 0 || i >= size) throw std::out_of_range("Alloc1D");
         return data[i]; }
 };
 
@@ -33,7 +33,7 @@ template<class T> class Alloc2Dbase {
         rowref(T *r, int c) : row(r), ncols(c) {}
     public:
         T &operator[](int i) {
-            if (i < 0 || i >= ncols) throw "index out of bounds";
+            if (i < 0 || i >= ncols) throw std::out_of_range("Alloc2D");
             return row[i]; }
     };
 protected:
@@ -45,7 +45,7 @@ protected:
     virtual ~Alloc2Dbase() { delete [] data; }
 public:
     rowref operator[](int i) {
-        if (i < 0 || i >= nrows) throw "index out of bounds";
+        if (i < 0 || i >= nrows) throw std::out_of_range("Alloc2D");
         return rowref(data+i*ncols, ncols); }
 };
 

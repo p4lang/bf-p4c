@@ -232,7 +232,11 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
         if (add_to_use)
             use[hash.first].push_back(this); }
     for (auto &group : hash_groups) {
+        bool add_to_use = true;
         for (InputXbar *other : use[group.first]) {
+            if (other == this) {
+                add_to_use = false;
+                break; }
             if (other->hash_groups.count(group.first) &&
                 conflict(other->hash_groups[group.first], group.second)) {
                 if (can_merge(other->hash_groups[group.first], group.second))
@@ -242,7 +246,9 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
                     error(group.second.lineno, "Input xbar hash group %d conflict in stage %d",
                           group.first, table->stage->stageno);
                 warning(other->hash_groups[group.first].lineno,
-                        "conflicting hash group definition here"); } } }
+                        "conflicting hash group definition here"); } }
+        if (add_to_use)
+            use[group.first].push_back(this); }
 }
 
 void InputXbar::add_use(unsigned &byte_use, std::vector<Input> &inputs) {
@@ -260,7 +266,8 @@ void InputXbar::pass2(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
             if (input.lo >= 0) continue;
             if (bytes_in_use == 0)
                 for (InputXbar *other : use[group.first])
-                    add_use(bytes_in_use, other->groups[group.first]);
+                    if (other->groups.count(group.first))
+                        add_use(bytes_in_use, other->groups[group.first]);
             int need = input.what->hi/8U - input.what->lo/8U + 1;
             unsigned mask = (1U << need)-1;
             int max = (size+7)/8 - need;
@@ -355,11 +362,12 @@ void InputXbar::write_regs() {
 }
 
 InputXbar::Input *InputXbar::find(Phv::Slice sl, int grp) {
-    for (auto &in : groups[grp]) {
-        if (in.what->reg.index != sl.reg.index) continue;
-        if (in.what->lo > sl.lo) continue;
-        if (in.what->hi < sl.hi) continue;
-        return &in; }
+    if (groups.count(grp))
+        for (auto &in : groups[grp]) {
+            if (in.what->reg.index != sl.reg.index) continue;
+            if (in.what->lo > sl.lo) continue;
+            if (in.what->hi < sl.hi) continue;
+            return &in; }
     return 0;
 }
 
