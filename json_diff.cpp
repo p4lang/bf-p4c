@@ -5,6 +5,7 @@
 
 static bool show_deletion = true;
 static bool show_addition = true;
+static bool sort_map = true;
 static const char *list_map_key = 0;
 static std::set<std::string> ignore_keys;
 
@@ -60,6 +61,13 @@ void do_output(json::map::iterator p, int indent, const char *prefix) {
 }
 
 void do_output(std::map<json::obj *, json::map *, json::obj::ptrless>::iterator p, int indent, const char *prefix) {
+    do_prefix(indent, prefix);
+    p->first->print_on(std::cout, indent, 80-indent, prefix);
+    std::cout << ": ";
+    p->second->print_on(std::cout, indent, 80-indent, prefix);
+}
+
+void do_output(std::map<json::obj *, json::obj *, json::obj::ptrless>::iterator p, int indent, const char *prefix) {
     do_prefix(indent, prefix);
     p->first->print_on(std::cout, indent, 80-indent, prefix);
     std::cout << ": ";
@@ -206,7 +214,72 @@ void print_diff(json::vector *a, json::vector *b, int indent) {
     std::cout << ']';
 }
 
+std::map<json::obj *, json::obj *, json::obj::ptrless> build_sort_map(json::map *m) {
+    std::map<json::obj *, json::obj *, json::obj::ptrless> rv;
+    for (auto &e : *m) {
+        rv[e.first] = e.second.get(); }
+    return rv;
+}
+bool sort_map_equiv(json::map *a, json::map *b) {
+    auto bmap = build_sort_map(b);
+    for (auto &e : *a) {
+        json::obj *ekey = e.first;
+        if (!bmap.count(ekey)) {
+            if (show_deletion && !ignore(ekey)) return false;
+            continue; }
+        if (!ignore(ekey) && !equiv(e.second.get(), bmap[ekey])) return false;
+        bmap.erase(ekey); }
+    if (show_addition)
+        for (auto &e : bmap)
+            if (!ignore(e.first)) return false;
+    return true;
+}
+void sort_map_print_diff(json::map *a, json::map *b, int indent) {
+    auto amap = build_sort_map(a);
+    auto bmap = build_sort_map(b);
+    auto p1 = amap.begin(), p2 = bmap.begin();
+    std::cout << " {";
+    indent += 2;
+    while (p1 != amap.end() && p2 != bmap.end()) {
+        if (*p1->first < *p2->first) {
+            if (show_deletion && !ignore(p1->first))
+                do_output(p1, indent, "-");
+            p1++;
+            continue; }
+        if (*p2->first < *p1->first) {
+            if (show_addition && !ignore(p1->first))
+                do_output(p2, indent, "+");
+            p2++;
+            continue; }
+        if (!ignore(p1->first) && !equiv(p1->second, p2->second)) {
+            int width = 80-indent, copy;
+            if (p1->first->test_width(width) && (copy = width) &&
+                p1->second->test_width(width) && p2->second->test_width(copy)
+            ) {
+                do_output(p1->first, indent, "-", ": ");
+                std::cout << p1->second;
+                do_output(p2->first, indent, "+", ": ");
+                std::cout << p2->second;
+            } else {
+                do_output(p1->first, indent, " ", ":");
+                print_diff(p1->second, p2->second, indent); } }
+        p1++;
+        p2++; }
+    if (show_deletion) while (p1 != amap.end()) {
+        if (!ignore(p1->first))
+            do_output(p1, indent, "-");
+        p1++; }
+    if (show_addition) while (p2 != bmap.end()) {
+        if (!ignore(p2->first))
+            do_output(p2, indent, "+");
+        p2++; }
+    indent -= 2;
+    do_prefix(indent, " ");
+    std::cout << '{';
+}
+
 bool equiv(json::map *a, json::map *b) {
+    if (sort_map) return sort_map_equiv(a, b);
     auto p1 = a->begin(), p2 = b->begin();
     while (p1 != a->end() && p2 != b->end()) {
         if (*p1->first < *p2->first) {
@@ -229,6 +302,9 @@ bool equiv(json::map *a, json::map *b) {
     return true;
 }
 void print_diff(json::map *a, json::map *b, int indent) {
+    if (sort_map) {
+        sort_map_print_diff(a, b, indent);
+        return; }
     auto p1 = a->begin(), p2 = b->begin();
     std::cout << " {";
     indent += 2;
@@ -336,6 +412,7 @@ int main(int ac, char **av) {
                 case 'd': show_deletion = flag; break;
                 case 'i': ignore_keys.insert(av[++i]); break;
                 case 'l': list_map_key = av[++i]; break;
+                case 's': sort_map = flag; break;
                 default:
                     std::cerr << "Unknown option " << (flag ? '+' : '-') << arg[-1] << std::endl;
                     error = 2; }
