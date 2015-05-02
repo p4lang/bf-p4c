@@ -44,6 +44,8 @@ protected:
     void need_bus(int lineno, Alloc1Dbase<Table *> &use, int idx, const char *name);
 public:
     const char *name() { return name_.c_str(); }
+    const char *p4_name() {
+        return p4_table.empty() ? name_.c_str() : p4_table.c_str(); }
     int table_id();
     virtual void pass1() = 0;
     virtual void pass2() = 0;

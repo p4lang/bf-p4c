@@ -705,7 +705,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
     unsigned number_entries = layout_size()/fmt_width * format->groups() * 1024;
     Stage::P4TableInfo *p4_info = p4_table.empty() ? 0 : &Stage::p4_tables[p4_table];
     if (!p4_info || !p4_info->desc) {
-        tbl["name"] = name();
+        tbl["name"] = p4_name();
         if (handle) tbl["handle"] = handle;
         tbl["table_type"] = "match_entry";
         tbl["number_entries"] = p4_table_size ? p4_table_size : number_entries;
@@ -741,7 +741,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
         if (p4_info) p4_info->stage_tables = t;
         if (action) {
             json::map act;
-            act["name"] = action->name();
+            act["name"] = action->p4_name();
             if (action->handle)
                 act["handle_reference"] = action->handle;
             act["how_referenced"] = action.args.size() > 1 ? "indirect" : "direct";
@@ -749,7 +749,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
             t->emplace_back(std::make_unique<json::map>(std::move(act))); }
         if (attached.selector) {
             json::map sel;
-            sel["name"] = attached.selector->name();
+            sel["name"] = attached.selector->p4_name();
             if (attached.selector->handle)
                 sel["handle_reference"] = attached.selector->handle;
             tbl["p4_selection_tables"] =  std::unique_ptr<json::obj>(t = new json::vector);
