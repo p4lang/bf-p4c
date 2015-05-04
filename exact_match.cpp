@@ -658,7 +658,6 @@ void ExactMatchTable::write_regs() {
 
 std::unique_ptr<json::map> ExactMatchTable::gen_memory_resource_allocation_tbl_cfg(Way &way) {
     json::map mra;
-    json::vector *t;
     mra["memory_type"] = "sram";
     int hash_id = -1;
     unsigned hash_groups = 0, vpn_ctr = 0;
@@ -678,91 +677,41 @@ std::unique_ptr<json::map> ExactMatchTable::gen_memory_resource_allocation_tbl_c
     } else
         mra["hash_select_bit_lo"] = mra["hash_select_bit_hi"] = 40;
     mra["number_select_bits"] = bitcount(way.mask);
-    json::vector *mem_units = 0;
-    mra["memory_units_and_vpns"] = std::unique_ptr<json::obj>(t = new json::vector);
+    json::vector mem_units;
+    json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
     for (auto &ram : way.rams) {
-        if (!mem_units) {
-            mem_units = new json::vector;
-            vpn_ctr = layout_get_vpn(ram.first, ram.second); }
-        mem_units->push_back(ram.first*12 + ram.second);
-        if (mem_units->size() == fmt_width) {
+        if (mem_units.empty())
+            vpn_ctr = layout_get_vpn(ram.first, ram.second);
+        else
+            assert(vpn_ctr == layout_get_vpn(ram.first, ram.second));
+        mem_units.push_back(memunit(ram.first, ram.second));
+        if (mem_units.size() == fmt_width) {
             json::map tmp;
-            tmp["memory_units"] = std::unique_ptr<json::obj>(mem_units);
-            mem_units = 0;
-            json::vector *vpns;
-            tmp["vpns"] = std::unique_ptr<json::obj>(vpns = new json::vector);
+            tmp["memory_units"] = std::move(mem_units);
+            mem_units = json::vector();
+            json::vector vpns;
             for (unsigned i = 0; i < format->groups(); i++)
-                vpns->push_back(vpn_ctr++);
-            t->emplace_back(std::make_unique<json::map>(std::move(tmp))); } }
-    assert(!mem_units);
+                vpns.push_back(vpn_ctr++);
+            tmp["vpns"] = std::move(vpns);
+            mem_units_and_vpns.push_back(std::move(tmp)); } }
+    assert(mem_units.empty());
     return std::make_unique<json::map>(std::move(mra));
 }
 
 void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
-    json::map tbl, stage_tbl, pack_fmt;
-    json::vector *t, *t2;
     unsigned fmt_width = (format->size + 127)/128;
     unsigned number_entries = layout_size()/fmt_width * format->groups() * 1024;
-    Stage::P4TableInfo *p4_info = p4_table.empty() ? 0 : &Stage::p4_tables[p4_table];
-    if (!p4_info || !p4_info->desc) {
-        tbl["name"] = p4_name();
-        if (handle) tbl["handle"] = handle;
-        tbl["table_type"] = "match_entry";
-        tbl["number_entries"] = p4_table_size ? p4_table_size : number_entries;
-        tbl["direction"] = gress ? "egress" : "ingress";
-        tbl["stage_tables_length"] = 1;
-        tbl["preferred_match_type"] = "exact"; }
-    stage_tbl["stage_number"] = stage->stageno;
-    stage_tbl["number_entries"] = number_entries;
-    stage_tbl["stage_table_type"] = "hash_match";
-    pack_fmt["table_word_width"] = 128 * fmt_width;
-    pack_fmt["memory_word_width"] = 128;
-    pack_fmt["entries_per_table_word"] = format->groups();
-    pack_fmt["number_memory_units_per_table_word"] = fmt_width;
-    stage_tbl["pack_format"] = std::unique_ptr<json::obj>(t = new json::vector);
-    t->emplace_back(std::make_unique<json::map>(std::move(pack_fmt)));
-    stage_tbl["way_stage_tables"] = std::unique_ptr<json::obj>(t = new json::vector);
+    json::map &tbl = *base_tbl_cfg(out, "exact_match", number_entries);
+    tbl["preferred_match_type"] = "exact";
+    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "hash_match", number_entries);
+    add_pack_format(stage_tbl, 128, fmt_width, format->groups());
+    json::vector &way_stage_tables = stage_tbl["way_stage_tables"] = json::vector();
     for (auto &way : ways) {
-        json::map way_tbl, pack_fmt, mra;
+        json::map way_tbl;
         way_tbl["stage_number"] = stage->stageno;
         way_tbl["number_entries"] = way.rams.size()/fmt_width * format->groups() * 1024;
         way_tbl["stage_table_type"] = "hash_way";
-        pack_fmt["table_word_width"] = 128 * fmt_width;
-        pack_fmt["memory_word_width"] = 128;
-        pack_fmt["entries_per_table_word"] = format->groups();
-        pack_fmt["number_memory_units_per_table_word"] = fmt_width;
-        way_tbl["pack_format"] = std::unique_ptr<json::obj>(t2 = new json::vector);
-        t2->emplace_back(std::make_unique<json::map>(std::move(pack_fmt)));
+        add_pack_format(way_tbl, 128, fmt_width, format->groups());
         way_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(way);
-        t->emplace_back(std::make_unique<json::map>(std::move(way_tbl))); }
-    if (!p4_info || !p4_info->desc) {
-        tbl["stage_tables"] = std::unique_ptr<json::obj>(t = new json::vector);
-        t->emplace_back(std::make_unique<json::map>(std::move(stage_tbl)));
-        if (p4_info) p4_info->stage_tables = t;
-        if (action) {
-            json::map act;
-            act["name"] = action->p4_name();
-            if (action->handle)
-                act["handle_reference"] = action->handle;
-            act["how_referenced"] = action.args.size() > 1 ? "indirect" : "direct";
-            tbl["p4_action_data_tables"] =  std::unique_ptr<json::obj>(t = new json::vector);
-            t->emplace_back(std::make_unique<json::map>(std::move(act))); }
-        if (attached.selector) {
-            json::map sel;
-            sel["name"] = attached.selector->p4_name();
-            if (attached.selector->handle)
-                sel["handle_reference"] = attached.selector->handle;
-            tbl["p4_selection_tables"] =  std::unique_ptr<json::obj>(t = new json::vector);
-            t->emplace_back(std::make_unique<json::map>(std::move(sel))); }
-        out.emplace_back(std::make_unique<json::map>(std::move(tbl)));
-        if (p4_info) {
-            p4_info->number_entries = number_entries;
-            p4_info->desc = dynamic_cast<json::map *>(out.back().get());
-            assert(p4_info->desc); }
-    } else {
-        p4_info->stage_tables->emplace_back(std::make_unique<json::map>(std::move(stage_tbl)));
-        p4_info->number_entries += number_entries;
-        (*p4_info->desc)["stage_tables_length"] = p4_info->stage_tables->size();
-        if (!p4_table_size)
-            (*p4_info->desc)["number_entries"] = p4_info->number_entries; }
+        way_stage_tables.push_back(std::move(way_tbl)); }
 }

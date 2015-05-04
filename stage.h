@@ -87,8 +87,8 @@ public:
     void write_regs();
     struct P4TableInfo {
         json::map       *desc = 0;
-        json::vector    *stage_tables = 0;
-        int             number_entries = 0;
+        int             size = 0;
+        bool            explicit_size = false;
     };
     static std::map<std::string, P4TableInfo>   p4_tables;
 };

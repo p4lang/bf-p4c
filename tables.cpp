@@ -55,27 +55,6 @@ void Table::Call::setup(const value_t &val, Table *tbl) {
     lineno = val.lineno;
 }
 
-#if 0
-void Table::setup_action_table(value_t &val) {
-    if (CHECKTYPE2(val, tSTR, tCMD)) {
-        if (val.type == tSTR)
-            action = val;
-        else {
-            action = val[0];
-            for (int i = 1; i < val.vec.size; i++) {
-                Format::Field *arg = 0;
-                if (CHECKTYPE(val[i], tSTR) &&
-                    !(arg = lookup_field(val[i].s)))
-                    error(val[i].lineno, "No field named %s in format for %s",
-                          val[i].s, name());
-                if (arg) {
-                    if (arg->bits.size() != 1)
-                        error(val[i].lineno, "Action arg fields can't be split in format");
-                    action_args.push_back(arg); } } }
-        action.lineno = val.lineno; }
-}
-#endif
-
 static void add_row(int lineno, Table *t, int row) {
     t->layout.push_back(Table::Layout{lineno, row, -1});
 }
@@ -754,28 +733,27 @@ int Table::find_on_ixbar(Phv::Slice sl, int group) {
 }
 
 std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg() {
+    int width, depth, period;
+    const char *period_name;
+    vpn_params(width, depth, period, period_name);
     json::map mra;
-    json::vector *t;
     mra["memory_type"] = "sram";
-    json::vector *mem_units = 0;
-    unsigned word = 0;
-    mra["memory_units_and_vpns"] = std::unique_ptr<json::obj>(t = new json::vector);
+    json::vector mem_units[depth/period];
+    json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
     for (auto &row : layout) {
-        if (!mem_units)
-            mem_units = new json::vector;
         auto vpn = row.vpns.begin();
-        for (auto col : row.cols) {
-            mem_units->push_back(row.row*12 + col);
-            if (++word == 1) {
-                json::map tmp;
-                tmp["memory_units"] = std::unique_ptr<json::obj>(mem_units);
-                mem_units = 0;
-                json::vector vpns;
-                vpns.push_back(*vpn);
-                tmp["vpns"] = std::make_unique<json::vector>(std::move(vpns));
-                t->emplace_back(std::make_unique<json::map>(std::move(tmp)));
-                word = 0; }
-            ++vpn; } }
+        for (auto col : row.cols)
+            mem_units[*vpn++/period].push_back(memunit(row.row, col)); }
+    int vpn = 0;
+    for (auto &mem : mem_units) {
+        std::sort(mem.begin(), mem.end(), json::obj::ptrless());
+        json::map tmp;
+        tmp["memory_units"] = std::move(mem);
+        json::vector vpns;
+        vpns.push_back(vpn);
+        tmp["vpns"] = std::move(vpns);
+        mem_units_and_vpns.push_back(std::move(tmp));
+        vpn += period; }
     return std::make_unique<json::map>(std::move(mra));
 }
 
@@ -825,4 +803,69 @@ void AttachedTables::write_merge_regs(Table *self, int type, int bus) {
         get_selector()->write_merge_regs(type, bus, self->action, self->action.args.size() > 1);
 }
 
+json::map *Table::base_tbl_cfg(json::vector &out, const char *type, int size) {
+    Stage::P4TableInfo *p4_info = p4_table.empty() ? 0 : &Stage::p4_tables[p4_table];
+    json::map *rv = p4_info ? p4_info->desc : 0;
+    if (!rv) {
+        out.emplace_back(std::make_unique<json::map>());
+        json::map &tbl = dynamic_cast<json::map &>(*out.back());
+        tbl["name"] = p4_name();
+        if (handle) tbl["handle"] = handle;
+        tbl["table_type"] = type;
+        tbl["direction"] = gress ? "egress" : "ingress";
+        tbl["number_entries"] = p4_table_size ? p4_table_size : size;
+        tbl["stage_tables_length"] = 0L;
+        tbl["stage_tables"] = std::make_unique<json::vector>();
+        if (action) {
+            json::map act;
+            act["name"] = action->p4_name();
+            if (action->handle)
+                act["handle_reference"] = action->handle;
+            act["how_referenced"] = action.args.size() > 1 ? "indirect" : "direct";
+            (tbl["p4_action_data_tables"] = json::vector()).push_back(std::move(act)); }
+        if (auto *selector = get_selector()) {
+            json::map sel;
+            sel["name"] = selector->p4_name();
+            if (selector->handle)
+                sel["handle_reference"] = selector->handle;
+            (tbl["p4_selection_tables"] = json::vector()).push_back(std::move(sel)); }
+        if (p4_info) {
+            p4_info->desc = &tbl;
+            p4_info->size = p4_table_size ? p4_table_size : size;
+            p4_info->explicit_size = p4_table_size > 0; }
+        rv = &tbl;
+    } else if (!p4_table_size) {
+        if (!p4_info->explicit_size)
+            (*rv)["number_entries"] = p4_info->size += size;
+    } else if (p4_info->explicit_size && p4_info->size != p4_table_size)
+        warning(lineno, "Inconsistent explicit table size for p4 table %s", p4_name());
+    else {
+        (*rv)["number_entries"] = p4_info->size = p4_table_size;
+        p4_info->explicit_size = true; }
+    return rv;
+}
 
+json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) {
+    auto &stage_tables = dynamic_cast<json::vector &>(*tbl["stage_tables"]);
+    stage_tables.push_back(json::map());
+    auto &stage_tbl = dynamic_cast<json::map &>(*stage_tables.back());
+    tbl["stage_tables_length"] = stage_tables.size();
+    stage_tbl["stage_number"] = stage->stageno;
+    stage_tbl["number_entries"] = size;
+    stage_tbl["stage_table_type"] = type;
+    return &stage_tbl;
+}
+
+void add_pack_format(json::map &stage_tbl, int memword, int words, int entries) {
+    json::map pack_fmt;
+    pack_fmt["table_word_width"] = memword * words;
+    pack_fmt["memory_word_width"] = memword;
+    if (entries > 0)
+        pack_fmt["entries_per_table_word"] = entries;
+    pack_fmt["number_memory_units_per_table_word"] = words;
+    if (stage_tbl.count("pack_format")) {
+        auto &pack_format = dynamic_cast<json::vector &>(*stage_tbl["pack_format"]);
+        pack_format.push_back(std::move(pack_fmt));
+    } else
+        (stage_tbl["pack_format"] = json::vector()).push_back(std::move(pack_fmt));
+}

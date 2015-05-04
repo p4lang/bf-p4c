@@ -41,6 +41,8 @@ public:
     struct ptrless {
 	bool operator()(const obj *a, const obj *b) const
 	    { return b ? a ? *a < *b : true : false; }
+	bool operator()(const std::unique_ptr<obj> &a, const std::unique_ptr<obj> &b) const
+	    { return b ? a ? *a < *b : true : false; }
     };
     virtual void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const = 0;
     virtual bool test_width(int &limit) const = 0;
@@ -87,6 +89,8 @@ public:
     bool test_width(int &limit) const { limit -= size()+2; return limit >= 0; }
 };
 
+class map; // forward decl
+
 typedef std::vector<std::unique_ptr<obj>> vector_base;
 class vector : public obj, public vector_base {
 public:
@@ -121,12 +125,10 @@ public:
 	    if ((limit -= 2) < 0 ) return false; }
 	return true; }
     using vector_base::push_back;
-    void push_back(long n) {
-	number tmp(n);
-        emplace_back(std::make_unique<number>(std::move(tmp))); }
-    void push_back(const char *s) {
-	string tmp(s);
-        emplace_back(std::make_unique<string>(std::move(tmp))); }
+    void push_back(long n) { push_back(std::make_unique<number>(number(n))); }
+    void push_back(const char *s) { push_back(std::make_unique<string>(string(s))); }
+    void push_back(vector &&v) { push_back(std::make_unique<vector>(std::move(v))); }
+    void push_back(json::map &&);
 };
 
 typedef ordered_map<obj *, std::unique_ptr<obj>, obj::ptrless> map_base;
@@ -212,11 +214,26 @@ private:
             else { assert(iter != self.end());
                 iter->second.reset(new number(v)); }
             return v; }
+        vector &operator=(vector &&v) {
+            if (key)
+                iter = self.emplace(key.release(), std::make_unique<vector>(std::move(v))).first;
+            else { assert(iter != self.end());
+                iter->second = std::make_unique<vector>(std::move(v)); }
+            return dynamic_cast<vector &>(*iter->second); }
+        map &operator=(map &&v) {
+            if (key)
+                iter = self.emplace(key.release(), std::make_unique<map>(std::move(v))).first;
+            else { assert(iter != self.end());
+                iter->second = std::make_unique<map>(std::move(v)); }
+            return dynamic_cast<map &>(*iter->second); }
         const std::unique_ptr<obj> &operator=(std::unique_ptr<obj> &&v) {
             if (key) iter = self.emplace(key.release(), std::move(v)).first;
             else { assert(iter != self.end());
                 iter->second = std::move(v); }
             return iter->second; }
+        obj &operator*() {
+            assert(!key && iter != self.end());
+            return *iter->second; }
         explicit operator bool() const { return !key; }
         obj *get() const { return key ? 0 : iter->second.get(); }
         obj *operator->() const { return key ? 0 : iter->second.get(); }
@@ -225,7 +242,15 @@ private:
 public:
     element_ref operator[](const char *str) { return element_ref(*this, str); }
     element_ref operator[](long n) { return element_ref(*this, n); }
+    map_base::size_type erase(const char *str) {
+	string tmp(str);
+        return map_base::erase(&tmp); }
+    map_base::size_type erase(long n) {
+	number tmp(n);
+        return map_base::erase(&tmp); }
 };
+
+inline void vector::push_back(map &&m) { emplace_back(std::make_unique<map>(std::move(m))); }
 
 std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json);
 inline std::istream &operator>>(std::istream &in, obj *&json) {

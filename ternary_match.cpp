@@ -301,95 +301,42 @@ void TernaryMatchTable::write_regs() {
 
 std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl_cfg() {
     json::map mra;
-    json::vector *t;
     mra["memory_type"] = "tcam";
-    json::vector *mem_units = 0;
+    json::vector mem_units;
     unsigned word = 0;
-    mra["memory_units_and_vpns"] = std::unique_ptr<json::obj>(t = new json::vector);
+    json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
     for (auto &row : layout) {
-        if (!mem_units)
-            mem_units = new json::vector;
         auto vpn = row.vpns.begin();
         for (auto col : row.cols) {
-            mem_units->push_back(row.row + col*12);
+            mem_units.push_back(memunit(row.row, col));
             if (++word == match.size()) {
                 json::map tmp;
-                tmp["memory_units"] = std::unique_ptr<json::obj>(mem_units);
-                mem_units = 0;
+                tmp["memory_units"] = std::move(mem_units);
+                mem_units = json::vector();
                 json::vector vpns;
                 vpns.push_back(*vpn);
-                tmp["vpns"] = std::make_unique<json::vector>(std::move(vpns));
-                t->emplace_back(std::make_unique<json::map>(std::move(tmp)));
+                tmp["vpns"] = std::move(vpns);
+                mem_units_and_vpns.push_back(std::move(tmp));
                 word = 0; }
             ++vpn; } }
     return std::make_unique<json::map>(std::move(mra));
 }
 
 void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
-    json::map tbl, stage_tbl, pack_fmt;
-    json::vector *t;
     unsigned number_entries = layout_size()/match.size() * 512;
-    Stage::P4TableInfo *p4_info = p4_table.empty() ? 0 : &Stage::p4_tables[p4_table];
-    if (!p4_info || !p4_info->desc) {
-        tbl["name"] = p4_name();
-        if (handle) tbl["handle"] = handle;
-        tbl["table_type"] = "ternary_match";
-        tbl["direction"] = gress ? "egress" : "ingress";
-        tbl["number_entries"] = p4_table_size ? p4_table_size : number_entries;
-        tbl["stage_tables_length"] = 1;
-        tbl["preferred_match_type"] = "ternary"; }
-    stage_tbl["stage_number"] = stage->stageno;
-    stage_tbl["number_entries"] = number_entries;
-    stage_tbl["stage_table_type"] = "ternary_match";
-    pack_fmt["table_word_width"] = 47 * match.size();
-    pack_fmt["memory_word_width"] = 47;
-    pack_fmt["entries_per_table_word"] = 1;
-    pack_fmt["number_memory_units_per_table_word"] = match.size();
-    stage_tbl["pack_format"] = std::unique_ptr<json::obj>(t = new json::vector);
-    t->emplace_back(std::make_unique<json::map>(std::move(pack_fmt)));
+    json::map &tbl = *base_tbl_cfg(out, "ternary_match", number_entries);
+    tbl["preferred_match_type"] = "ternary";
+    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "ternary_match", number_entries);
+    add_pack_format(stage_tbl, 47, match.size(), 1);
     stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg();
     if (indirect) {
-        json::map tind, pack_fmt;
+        json::map tind;
         unsigned fmt_width = 1U << indirect->format->log2size;
         tind["stage_number"] = stage->stageno;
         tind["number_entries"] = indirect->layout_size()*128/fmt_width * 1024;
-        pack_fmt["table_word_width"] = 128;
-        pack_fmt["memory_word_width"] = 128;
-        pack_fmt["number_memory_units_per_table_word"] = 1;
-        tind["pack_format"] = std::unique_ptr<json::obj>(t = new json::vector);
-        t->emplace_back(std::make_unique<json::map>(std::move(pack_fmt)));
+        add_pack_format(tind, 128, 1);
         tind["memory_resource_allocation"] = indirect->gen_memory_resource_allocation_tbl_cfg();
-        stage_tbl["ternary_indirection_table"] = std::make_unique<json::map>(std::move(tind)); }
-    if (!p4_info || !p4_info->desc) {
-        tbl["stage_tables"] = std::unique_ptr<json::obj>(t = new json::vector);
-        t->emplace_back(std::make_unique<json::map>(std::move(stage_tbl)));
-        if (p4_info) p4_info->stage_tables = t;
-        if (action) {
-            json::map act;
-            act["name"] = action->p4_name();
-            if (action->handle)
-                act["handle_reference"] = action->handle;
-            act["how_referenced"] = action.args.size() > 1 ? "indirect" : "direct";
-            tbl["p4_action_data_tables"] =  std::unique_ptr<json::obj>(t = new json::vector);
-            t->emplace_back(std::make_unique<json::map>(std::move(act))); }
-        if (auto *selector = get_selector()) {
-            json::map sel;
-            sel["name"] = selector->p4_name();
-            if (selector->handle)
-                sel["handle_reference"] = selector->handle;
-            tbl["p4_selection_tables"] =  std::unique_ptr<json::obj>(t = new json::vector);
-            t->emplace_back(std::make_unique<json::map>(std::move(sel))); }
-        out.emplace_back(std::make_unique<json::map>(std::move(tbl)));
-        if (p4_info) {
-            p4_info->number_entries = number_entries;
-            p4_info->desc = dynamic_cast<json::map *>(out.back().get());
-            assert(p4_info->desc); }
-    } else {
-        p4_info->stage_tables->emplace_back(std::make_unique<json::map>(std::move(stage_tbl)));
-        p4_info->number_entries += number_entries;
-        (*p4_info->desc)["stage_tables_length"] = p4_info->stage_tables->size();
-        if (!p4_table_size)
-            (*p4_info->desc)["number_entries"] = p4_info->number_entries; }
+        stage_tbl["ternary_indirection_table"] = std::move(tind); }
 }
 
 void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {

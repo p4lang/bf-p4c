@@ -288,5 +288,14 @@ void ActionTable::write_regs() {
 }
 
 void ActionTable::gen_tbl_cfg(json::vector &out) {
+    unsigned fmt_width = (format->size + 127)/128;
+    unsigned number_entries = (layout_size() * 128 * 1024) / (1 << format->log2size);
+    json::map &tbl = *base_tbl_cfg(out, "action_data", number_entries);
+    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "action_data", number_entries);
+    add_pack_format(stage_tbl, 128, fmt_width,
+                    128 >> format->log2size ? 128 >> format->log2size : 1);
+    stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg();
+    /* FIXME -- don't include ref to select table as compiler doesn't */
+    tbl.erase("p4_selection_tables");
 }
 

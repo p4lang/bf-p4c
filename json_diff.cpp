@@ -275,7 +275,7 @@ void sort_map_print_diff(json::map *a, json::map *b, int indent) {
         p2++; }
     indent -= 2;
     do_prefix(indent, " ");
-    std::cout << '{';
+    std::cout << '}';
 }
 
 bool equiv(json::map *a, json::map *b) {

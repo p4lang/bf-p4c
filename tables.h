@@ -51,6 +51,8 @@ public:
     virtual void pass2() = 0;
     virtual void write_regs() = 0;
     virtual void gen_tbl_cfg(json::vector &out) = 0;
+    json::map *base_tbl_cfg(json::vector &out, const char *type, int size);
+    json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size);
     virtual std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg();
     enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER, METER };
     virtual table_type_t table_type() { return OTHER; }
@@ -59,6 +61,8 @@ public:
     virtual SelectionTable *get_selector() { return 0; }
     virtual void write_merge_regs(int type, int bus) { assert(0); }
     virtual int direct_shiftcount() { assert(0); }
+    /* row,col -> mem unitno mapping -- unitnumbers used in context json */
+    virtual int memunit(int r, int c) { return r*12 + c; }
 
     struct Layout {
         /* Holds the layout of which rams/tcams/busses are used by the table
@@ -327,6 +331,8 @@ public:
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(Way &);
 )
 
+void add_pack_format(json::map &stage_tbl, int memword, int words, int entries = 0);
+
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
     AttachedTables              attached;
     void vpn_params(int &width, int &depth, int &period, const char *&period_name);
@@ -349,6 +355,7 @@ public:
         return indirect ? indirect->find_on_actionbus(f, off) : -1; }
     SelectionTable *get_selector() { return indirect ? indirect->get_selector() : 0; }
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg();
+    int memunit(int r, int c) { return r + c*12; }
 )
 
 DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
@@ -377,6 +384,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
         return match_tables.size() == 1 ? (*match_tables.begin())->get_gateway() : 0; }
     SelectionTable *get_selector() {
         return match_tables.size() == 1 ? (*match_tables.begin())->get_selector() : 0; }
+    int memunit(int r, int c) { return r*6 + c; }
 )
 
 DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
