@@ -324,7 +324,7 @@ std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl
 
 void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
     unsigned number_entries = layout_size()/match.size() * 512;
-    json::map &tbl = *base_tbl_cfg(out, "ternary_match", number_entries);
+    json::map &tbl = *base_tbl_cfg(out, "match_entry", number_entries);
     tbl["preferred_match_type"] = "ternary";
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "ternary_match", number_entries);
     add_pack_format(stage_tbl, 47, match.size(), 1);

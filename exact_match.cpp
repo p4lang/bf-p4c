@@ -701,7 +701,7 @@ std::unique_ptr<json::map> ExactMatchTable::gen_memory_resource_allocation_tbl_c
 void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
     unsigned fmt_width = (format->size + 127)/128;
     unsigned number_entries = layout_size()/fmt_width * format->groups() * 1024;
-    json::map &tbl = *base_tbl_cfg(out, "exact_match", number_entries);
+    json::map &tbl = *base_tbl_cfg(out, "match_entry", number_entries);
     tbl["preferred_match_type"] = "exact";
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "hash_match", number_entries);
     add_pack_format(stage_tbl, 128, fmt_width, format->groups());

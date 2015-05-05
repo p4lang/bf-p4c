@@ -103,7 +103,10 @@ void CounterTable::write_regs() {
         assert(side == 1);      /* no map rams or alus on left side anymore */
         auto vpn = logical_row.vpns.begin();
         int maxvpn = -1;
-        for (auto v : logical_row.vpns) if (v > maxvpn) maxvpn = v;
+        if (options.match_compiler)
+            maxvpn = layout_size() - 1;
+        else
+            for (auto v : logical_row.vpns) if (v > maxvpn) maxvpn = v;
         auto mapram = logical_row.maprams.begin();
         auto &map_alu_row =  map_alu.row[row];
         int syn2port_bus = &logical_row == home ? 0 : 1;
@@ -138,7 +141,8 @@ void CounterTable::write_regs() {
                 ? UnitRam::DataMux::STATISTICS : UnitRam::DataMux::OVERFLOW;
             auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
             unitram_config.unitram_type = UnitRam::STATISTICS;
-            unitram_config.unitram_vpn = *vpn;
+            if (!options.match_compiler) // FIXME -- compiler doesn't set this?
+                unitram_config.unitram_vpn = *vpn;
             if (gress == INGRESS)
                 unitram_config.unitram_ingress = 1;
             else
@@ -170,10 +174,11 @@ void CounterTable::write_regs() {
             else
                 mapram_config.mapram_egress = 1;
             mapram_config.mapram_enable = 1;
-            if (!options.match_compiler) // FIXME -- compiler doesn't set this?
+            //if (!options.match_compiler) // FIXME -- compiler doesn't set this?
                 mapram_ctl.mapram_vpn_limit = maxvpn;
             ++vpn; }
         if (&logical_row == home) {
+            swbox[row].ctl.r_stats_alu_o_mux_select.r_stats_alu_o_sel_stats_rd_r_i = 1;
             auto &stat_ctl = map_alu.stats_wrap[row/2].stats.statistics_ctl;
             stat_ctl.stats_entries_per_word = format->groups();
             if (type & BYTES) stat_ctl.stats_process_bytes = 1;
