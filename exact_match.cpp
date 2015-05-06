@@ -594,7 +594,7 @@ void ExactMatchTable::write_regs() {
                 merge.mau_actiondata_adr_mask[0][bus] =
                     ((1U << action.args[1]->size) - 1) << lo_huffman_bits; } }
         if (attached.selector)
-            merge.mau_selectorlength_default[0][bus] = 0x601; // FIXME
+            merge.mau_selectorlength_default[0][bus] = 1; // FIXME
         for (unsigned word_group = 0; word_group < word_info[word].size(); word_group++) {
             int group = word_info[word][word_group];
             if (group_info[group].overhead_word == (int)word) {

@@ -116,7 +116,7 @@ for p4file in "$@"; do
             $DIFF $f $(basename $f)
         done > json_diff.txt
         if [ -r $name.out/tbl-cfg ]; then
-            $JSON_DIFF -dl name -i table_type ${name}_context_llir.json $name.out/tbl-cfg >> json_diff.txt
+            $JSON_DIFF -dl handle -i table_type ${name}_context_llir.json $name.out/tbl-cfg >> json_diff.txt
         fi
         cnt=$(grep -Ev '^\+\+\+|^---|"int_inj"' json_diff.txt | grep -Ec '^\+|^-')
         if [ $cnt -gt 0 ]; then
