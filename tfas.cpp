@@ -105,7 +105,7 @@ int main(int ac, char **av) {
                     break;
                 case 'o':
                     if (stat(av[++i], &st)) {
-                        if (!mkdir(av[i], 0777)) {
+                        if (mkdir(av[i], 0777) < 0) {
                             std::cerr << "Can't create output dir " << av[i] << ": "
                                       << strerror(errno) << std::endl;
                             error_count++; }
