@@ -289,7 +289,7 @@ public:
                 if (ptr[0] != a.data) return false;
                 for (size_t i = 1; i < size; i++)
                     if (ptr[i]) return false; }
-        } else if (a.size > 0) {
+        } else if (a.size > 1) {
             if (data != a.ptr[0]) return false;
             for (size_t i = 1; i < a.size; i++)
                 if (a.ptr[i]) return false;
