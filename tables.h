@@ -386,6 +386,8 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
         return match_tables.size() == 1 ? (*match_tables.begin())->get_gateway() : 0; }
     SelectionTable *get_selector() {
         return match_tables.size() == 1 ? (*match_tables.begin())->get_selector() : 0; }
+    Call &action_call() {
+        return match_tables.size() == 1 ? (*match_tables.begin())->action_call() : action; }
     int memunit(int r, int c) { return r*6 + c; }
 )
 

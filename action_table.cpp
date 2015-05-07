@@ -295,11 +295,7 @@ void ActionTable::gen_tbl_cfg(json::vector &out) {
     add_pack_format(stage_tbl, 128, fmt_width,
                     128 >> format->log2size ? 128 >> format->log2size : 1);
     stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg();
-    bool indirect = false;
-    for (auto m : match_tables)
-        if (m->action_call().args.size() > 1)
-            indirect = true;
-    stage_tbl["how_referenced"] = indirect ? "indirect" : "direct";
+    stage_tbl["how_referenced"] = action_call().args.size() > 1 ? "indirect" : "direct";
     /* FIXME -- don't include ref to select table as compiler doesn't */
     tbl.erase("p4_selection_tables");
 }

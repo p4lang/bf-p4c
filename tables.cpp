@@ -816,14 +816,17 @@ json::map *Table::base_tbl_cfg(json::vector &out, const char *type, int size) {
         tbl["number_entries"] = p4_table_size ? p4_table_size : size;
         tbl["stage_tables_length"] = 0L;
         tbl["stage_tables"] = std::make_unique<json::vector>();
-        if (action) {
+        if (auto &action = action_call()) if ((Table *)action != this) {
             json::map act;
             act["name"] = action->p4_name();
             if (action->handle)
                 act["handle_reference"] = action->handle;
-            act["how_referenced"] = action.args.size() > 1 ? "indirect" : "direct";
-            (tbl["p4_action_data_tables"] = json::vector()).push_back(std::move(act)); }
-        if (auto *selector = get_selector()) {
+            if (options.match_compiler && !strcmp(type, "selection")) {
+                (tbl["p4_action_data_table"] = json::vector()).push_back(std::move(act));
+            } else {
+                act["how_referenced"] = action.args.size() > 1 ? "indirect" : "direct";
+                (tbl["p4_action_data_tables"] = json::vector()).push_back(std::move(act)); } }
+        if (auto *selector = get_selector()) if (selector != this) {
             json::map sel;
             sel["name"] = selector->p4_name();
             if (selector->handle)
