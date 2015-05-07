@@ -856,7 +856,8 @@ json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) 
     stage_tbl["stage_number"] = stage->stageno;
     stage_tbl["number_entries"] = size;
     stage_tbl["stage_table_type"] = type;
-    if (logical_id > 0)
+    if (options.match_compiler && !strcmp(type, "selection")) {
+    } else if (logical_id >= 0)
         stage_tbl["stage_table_handle"] = logical_id;
     return &stage_tbl;
 }
