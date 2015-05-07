@@ -239,6 +239,7 @@ public:
         { if (format) format->apply_to_field(n, fn); }
     int find_on_ixbar(Phv::Slice sl, int group);
     virtual int find_on_actionbus(Format::Field *f, int off);
+    virtual Call &action_call() { return action; }
 };
 
 #define DECLARE_ABSTRACT_TABLE_TYPE(TYPE, PARENT, ...)                  \
@@ -355,6 +356,7 @@ public:
         return indirect ? indirect->find_on_actionbus(f, off) : -1; }
     SelectionTable *get_selector() { return indirect ? indirect->get_selector() : 0; }
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg();
+    Call &action_call() { return indirect ? indirect->action : action; }
     int memunit(int r, int c) { return r + c*12; }
 )
 
