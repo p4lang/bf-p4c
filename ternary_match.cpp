@@ -334,6 +334,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         unsigned fmt_width = 1U << indirect->format->log2size;
         tind["stage_number"] = stage->stageno;
         tind["number_entries"] = indirect->layout_size()*128/fmt_width * 1024;
+        tind["stage_table_type"] = "ternary_indirection";
         add_pack_format(tind, 128, 1, 128/fmt_width);
         tind["memory_resource_allocation"] = indirect->gen_memory_resource_allocation_tbl_cfg();
         stage_tbl["ternary_indirection_table"] = std::move(tind);
