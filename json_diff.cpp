@@ -116,7 +116,7 @@ void list_map_print_diff(json::vector *a, json::vector *b, int indent) {
             p1++;
             continue; }
         if (*p2->first < *p1->first) {
-            if (show_addition && !ignore(p1->first))
+            if (show_addition && !ignore(p2->first))
                 do_output(p2, indent, "+");
             p2++;
             continue; }
@@ -247,7 +247,7 @@ void sort_map_print_diff(json::map *a, json::map *b, int indent) {
             p1++;
             continue; }
         if (*p2->first < *p1->first) {
-            if (show_addition && !ignore(p1->first))
+            if (show_addition && !ignore(p2->first))
                 do_output(p2, indent, "+");
             p2++;
             continue; }
@@ -410,7 +410,16 @@ int main(int ac, char **av) {
                 switch(*arg++) {
                 case 'a': show_addition = flag; break;
                 case 'd': show_deletion = flag; break;
-                case 'i': ignore_keys.insert(av[++i]); break;
+                case 'i':
+                    if (*av[++i] == '@') {
+                        std::ifstream file(av[i]+1);
+                        std::string str;
+                        if (!file) std::cerr << "Can't read " << av[i]+1 << std::endl;
+                        else while (file >> str)
+                            ignore_keys.insert(str);
+                    } else
+                        ignore_keys.insert(av[i]);
+                    break;
                 case 'l': list_map_key = av[++i]; break;
                 case 's': sort_map = flag; break;
                 default:

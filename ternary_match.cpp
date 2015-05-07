@@ -336,7 +336,15 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         tind["number_entries"] = indirect->layout_size()*128/fmt_width * 1024;
         add_pack_format(tind, 128, 1);
         tind["memory_resource_allocation"] = indirect->gen_memory_resource_allocation_tbl_cfg();
-        stage_tbl["ternary_indirection_table"] = std::move(tind); }
+        stage_tbl["ternary_indirection_table"] = std::move(tind);
+        if (indirect->action) {
+            /* FIXME -- factor into base_tbl_cfg somehow? */
+            json::map act;
+            act["name"] = indirect->action->p4_name();
+            if (indirect->action->handle)
+                act["handle_reference"] = indirect->action->handle;
+            act["how_referenced"] = indirect->action.args.size() > 1 ? "indirect" : "direct";
+            (tbl["p4_action_data_tables"] = json::vector()).push_back(std::move(act)); } }
 }
 
 void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
