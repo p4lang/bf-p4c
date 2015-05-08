@@ -5,4 +5,8 @@ templates
 asm-parse.c
 lex-yaml.c
 json2cpp
+json_diff
+mksizes
+reflow
 tfas
+y.output

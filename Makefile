@@ -78,10 +78,10 @@ ftest: all reflow json_diff
 	cd test; ./runtests -f
 
 clean:
-	rm -f *.o *.d asm-parse.c lex-yaml.c *.json json2cpp tfas
+	rm -f *.o *.d asm-parse.c lex-yaml.c *.json json2cpp tfas y.output
 
 veryclean: clean
-	rm -rf gen templates
+	rm -rf gen templates reflow json_diff mksizes test/*.out
 
 help:
 	@echo "Tofino assembler makefile -- builds assembler"
