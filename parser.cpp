@@ -1,6 +1,7 @@
 #include "parser.h"
 #include "phv.h"
 #include "range.h"
+#include "top_level.h"
 
 Parser Parser::singleton_object;
 
@@ -268,6 +269,13 @@ void Parser::output() {
     reg_in.emit_json(*open_output("regs.all.parser.ingress.cfg.json"));
     reg_eg.emit_json(*open_output("regs.all.parser.egress.cfg.json"));
     reg_merge.emit_json(*open_output("regs.all.parse_merge.cfg.json"));
+    for (int i = 0; i < 18; i++) {
+        TopLevel::all.mem_pipe.i_prsr[i] = "memories.all.parser.ingress";
+        TopLevel::all.reg_pipe.pmarb.ibp18_reg.ibp_reg[i] = "regs.all.parser.ingress";
+        TopLevel::all.mem_pipe.e_prsr[i] = "memories.all.parser.egress";
+        TopLevel::all.reg_pipe.pmarb.ebp18_reg.ebp_reg[i] = "regs.all.parser.egress";
+    }
+    TopLevel::all.reg_pipe.pmarb.prsr_reg = "regs.all.parse_merge";
 }
 
 Parser::State::Ref &Parser::State::Ref::operator=(const value_t &v) {

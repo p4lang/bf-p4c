@@ -390,7 +390,7 @@ int do_diff(const char *a_name, std::unique_ptr<json::obj> &a, const char *b_nam
 int main(int ac, char **av) {
     int error = 0;
     std::unique_ptr<json::obj>  file1;
-    const char                  *file1_name;
+    const char                  *file1_name = 0;
     for (int i = 1; i < ac; i++)
         if (av[i][0] == '-' && av[i][1] == 0) {
             if (file1) {

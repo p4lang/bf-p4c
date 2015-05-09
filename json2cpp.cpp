@@ -40,6 +40,8 @@ static bool test_sanity(json::obj *data, std::string name, bool sizes=true) {
             return true;
         std::cerr << "size out of range: " << name << " " << n->val
                    << std::endl; }
+    if (dynamic_cast<json::string *>(data)) {
+        return true; }
     return false;
 }
 
@@ -308,19 +310,30 @@ static void gen_unpack_method(std::ostream &out, json::map *m, int indent,
 	    } else out << "(*m)[" << name << "]";
 	    out << ");" << std::endl;
 	} else {
-	    out << std::setw(2*indent++) << ""
-		<< "if (json::number *n = dynamic_cast<json::number *>(";
+            const char *jtype = "json::number", *access = "n->val";
+            if (dynamic_cast<json::string *>(type))
+                jtype = "json::string", access = "*n";
+	    out << std::setw(2*indent++) << "" << "if (" << jtype
+                << " *n = dynamic_cast<" << jtype << " *>(";
 	    if (index_num) {
                 out << "(*v" << (index_num-1) << ")[i" << (index_num-1)
                     << "].get()";
 	    } else out << "(*m)[" << name << "]";
-	    out << "))" << std::endl;
+	    out << ")) {" << std::endl;
 	    out << std::setw(2*indent) << "" << *name;
 	    for (int i = 0; i < index_num; i++)
 		out << "[i" << i << ']';
-	    out << " = n->val;" << std::endl;
-	    out << std::setw(2*--indent) << "" << "else rv = -1;" << std::endl;
-	}
+	    out << " = " << access << ";" << std::endl;
+            if (dynamic_cast<json::string *>(type)) {
+                out << std::setw(2*indent++) << ""
+                    << "else if (json::number *n = dynamic_cast<json::number *>(";
+                if (index_num) {
+                    out << "(*v" << (index_num-1) << ")[i" << (index_num-1)
+                        << "].get()";
+                } else out << "(*m)[" << name << "]";
+                out << ")) {" << std::endl;
+                out << std::setw(2*indent) << "" << "if (n->v) rv = -1;" << std::endl; }
+	    out << std::setw(2*--indent) << "" << "} else rv = -1;" << std::endl; }
 	while (--index_num >= 0) {
 	    indent -= 2;
 	    out << std::setw(2*indent) << "" << "else rv = -1;" << std::endl;
@@ -542,6 +555,9 @@ static void gen_type(std::ostream &out, const std::string &parent,
         //    std::clog << "init value " << n_init->val << std::endl;
         if (gen_definitions != DEFN_ONLY)
             out << "ubits<" << (n->val ? n->val : 32) << ">";
+    } else if (dynamic_cast<json::string *>(t)) {
+        if (gen_definitions != DEFN_ONLY)
+            out << "ustring";
     } else
 	assert(0);
 }

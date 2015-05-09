@@ -1,5 +1,6 @@
 #include "tfas.h"
 #include "sections.h"
+#include "top_level.h"
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -149,7 +150,8 @@ int main(int ac, char **av) {
             if (stat(output_dir.c_str(), &st) ? mkdir(output_dir.c_str(), 0777)
                                               : !S_ISDIR(st.st_mode))
                 output_dir.clear(); }
-        Section::output_all(); }
+        Section::output_all();
+        TopLevel::output_all(); }
     return error_count != 0;
 }
 

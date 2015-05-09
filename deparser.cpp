@@ -1,6 +1,7 @@
 #include "deparser.h"
 #include "phv.h"
 #include "range.h"
+#include "top_level.h"
 
 Deparser Deparser::singleton_object;
 
@@ -351,6 +352,8 @@ void Deparser::output() {
 
     inp_regs.emit_json(*open_output("regs.all.deparser.input_phase.cfg.json"));
     hdr_regs.emit_json(*open_output("regs.all.deparser.header_phase.cfg.json"));
+    TopLevel::all.reg_pipe.deparser.hdr = "regs.all.deparser.header_phase";
+    TopLevel::all.reg_pipe.deparser.inp = "regs.all.deparser.input_phase";
 }
 
 bool Deparser::RefOrChksum::check() const {

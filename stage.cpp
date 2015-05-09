@@ -3,6 +3,7 @@
 #include "phv.h"
 #include "range.h"
 #include "input_xbar.h"
+#include "top_level.h"
 
 unsigned char Stage::action_bus_slot_map[ACTION_DATA_BUS_BYTES];
 unsigned char Stage::action_bus_slot_size[ACTION_DATA_BUS_SLOTS];
@@ -154,9 +155,12 @@ void AsmStage::output() {
             table->gen_tbl_cfg(tbl_cfg); }
         stage[i].write_regs();
         stage[i].regs.emit_json(*open_output("regs.match_action_stage.%02x.cfg.json", i) , i);
-    }
+        char buf[64];
+        sprintf(buf, "regs.match_action_stage.%02x", i);
+        TopLevel::all.reg_pipe.mau[i] = buf; }
     *open_output("tbl-cfg") << '[' << &tbl_cfg << ']' << std::endl;
     Stage::p4_tables.clear();
+    TopLevel::all.mem_pipe.mau.disable();
 }
 
 Stage::Stage() {

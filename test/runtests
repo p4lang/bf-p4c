@@ -107,6 +107,10 @@ for p4file in "$@"; do
     fi
     if $ok && $TFAS -vvvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
         for f in $name.out/*.json; do
+            if [ "$f" = "$name.out/regs.pipe.cfg.json" ]; then
+                $JSON_DIFF -i mau $f $(basename $f)
+                continue
+            fi
             if $REFLOW $f >tmp.json 2>/dev/null; then
                 mv tmp.json $f
             fi

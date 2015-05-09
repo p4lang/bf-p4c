@@ -97,4 +97,49 @@ inline std::ostream &operator<<(std::ostream &out, const prefix *p) {
         out << p->str; }
     return out; }
 
+class ustring;
+std::ostream &operator<<(std::ostream &out, const ustring *u);
+class ustring {
+    std::string         value;
+public:
+    mutable bool        read = false, write = false;
+    ustring() {}
+    ustring(const ustring &) = default;
+    ustring(ustring &&) = default;
+    ustring &operator=(const ustring &) & = default;
+    ustring &operator=(ustring &&) & = default;
+    ~ustring() {}
+
+    ustring(const std::string &a) : value(a) {}
+    ustring &operator=(const std::string &a) {
+        if (write)
+            ERRWARN(value != a, "Overwriting \"" << value << "\" with \"" << a <<
+                    "\" in " << this);
+        value = a;
+        LOG1(this << " = \"" << value << "\"");
+        write = true;
+        return *this; }
+    ustring &operator=(const char *a) {
+        if (write)
+            ERRWARN(value != a, "Overwriting \"" << value << "\" with \"" << a <<
+                    "\" in " << this);
+        value = a;
+        LOG1(this << " = \"" << value << "\"");
+        write = true;
+        return *this; }
+    operator const std::string&() const { read = true; return value; }
+    const char *c_str() const { read = true; return value.c_str(); }
+    bool modified() const { return write; }
+    void rewrite() { write = false; }
+    friend std::ostream &operator<<(std::ostream &out, const ustring &u);
+};
+
+inline std::ostream &operator<<(std::ostream &out, const ustring *u) {
+    print_regname(out, u, u+1);
+    return out; }
+inline std::ostream &operator<<(std::ostream &out, const ustring &u) {
+    if (u.value.empty()) out << 0;
+    else out << '"' << u.value << '"';
+    return out; }
+
 #endif /* _ubits_h_ */
