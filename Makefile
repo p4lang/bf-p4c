@@ -59,7 +59,7 @@ gen/disas.%.h: templates/%.size.json json2cpp
 
 gen/%.cpp: templates/%.size.json templates/%.cfg.json json2cpp
 	@mkdir -p gen
-	./json2cpp +ehDDi2 $(JSON_GLOBALS:%=-g %) -run '$(JSON_NAME)' -c templates/$*.cfg.json -I $*.h $< >$@
+	./json2cpp +ehDD $(JSON_GLOBALS:%=-g %) -run '$(JSON_NAME)' -c templates/$*.cfg.json -I $*.h $< >$@
 
 gen/uptr_sizes.h: mksizes
 	@mkdir -p gen

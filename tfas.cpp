@@ -3,6 +3,7 @@
 #include "top_level.h"
 #include <fstream>
 #include <iostream>
+#include "indent.h"
 #include <string>
 #include <vector>
 #include <sys/stat.h>
@@ -16,6 +17,7 @@ option_t options = {
 int verbose = 0;
 static std::vector<std::string> debug_specs;
 static std::string output_dir;
+int indent_t::tabsz = 2;
 
 static bool match(const char *pattern, const char *name) {
     const char *pend;

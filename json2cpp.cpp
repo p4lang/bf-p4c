@@ -1,9 +1,11 @@
 #include <assert.h>
 #include <fstream>
-#include <iomanip>
+#include "indent.h"
 #include "json.h"
 #include <limits.h>
 #include <string.h>
+
+int indent_t::tabsz = 2;
 
 enum { BOTH, DECL_ONLY, DEFN_ONLY } gen_definitions = BOTH,
 mod_definitions[2][3] = {
@@ -25,8 +27,7 @@ static bool test_sanity(json::obj *data, std::string name, bool sizes=true) {
 		if ((*key)[0] == '_') continue;
 		for (char ch : *key)
 		    if (!isalnum(ch) && ch != '_') {
-			std::cerr << "field not identifier: " << name << '.'
-				  << *key << std::endl;
+			std::cerr << "field not identifier: " << name << '.' << *key << std::endl;
 			return false; }
 		if (name.size()) name += '.';
 		name += *key;
@@ -36,12 +37,12 @@ static bool test_sanity(json::obj *data, std::string name, bool sizes=true) {
 	    if (!test_sanity(a.second.get(), name, sizes)) return false; }
 	return true; }
     if (json::number *n = dynamic_cast<json::number *>(data)) {
-        if (!sizes || (n->val >= 0 && (size_t)n->val <= sizeof(unsigned long) * CHAR_BIT))
+        if (!sizes ||
+            (n->val >= 0 && (size_t)n->val <= sizeof(unsigned long) * CHAR_BIT))
             return true;
-        std::cerr << "size out of range: " << name << " " << n->val
-                   << std::endl; }
-    if (dynamic_cast<json::string *>(data)) {
-        return true; }
+        std::cerr << "size out of range: " << name << " " << n->val << std::endl; }
+    if (dynamic_cast<json::string *>(data))
+        return true;
     return false;
 }
 
@@ -61,8 +62,7 @@ static json::obj *singleton_obj(json::obj *t, json::string *name) {
     if (json::map *m = dynamic_cast<json::map *>(t))
 	if (m->size() == 1 && m->find(name) != m->end()) {
             json::obj *o = m->find(name)->second.get();
-            /* FIXME -- could deal with vectors here?  Callers need to be
-             * changed */
+            /* FIXME -- could deal with vectors here?  Callers need to be changed */
             if (!dynamic_cast<json::vector *>(o))
                 return o; }
     return t;
@@ -79,47 +79,42 @@ static bool is_singleton(json::map *m) {
 static int tabsz = 4;
 static bool enable_disable = true;
 
-static void gen_emit_method(std::ostream &out, json::map *m, int indent,
+static void gen_emit_method(std::ostream &out, json::map *m, indent_t indent,
                             const std::string &classname, const char *objname,
                             const std::vector<const char *> &nameargs)
 {
-    out << std::setw(2*indent++) << "" << "void ";
+    out << indent++ << "void ";
     if (gen_definitions == DEFN_ONLY) out << classname << "::";
     out << "emit_json(std::ostream &out, ";
     int i = 0;
     for (auto t : nameargs)
         out << t << "na" << i++ << ", ";
-    out << "int indent";
-    if (gen_definitions != DEFN_ONLY) out << "=1";
+    out << "indent_t indent";
+    if (gen_definitions != DEFN_ONLY) out << " = 1";
     out << ") const";
     if (gen_definitions == DECL_ONLY) {
         out << ";" << std::endl;
         return; }
     out << " {" << std::endl;
     if (enable_disable) {
-        out << std::setw(2*indent++) << "" << "if (disabled_) {" << std::endl;
-        out << std::setw(2*indent) << "" << "out << \"0\";" << std::endl;
-        out << std::setw(2*indent--) << "" << "return; }" << std::endl; }
-    out << std::setw(2*indent) << "" << "out << '{' << std::endl;"
-	<< std::endl;
+        out << indent++ << "if (disabled_) {" << std::endl;
+        out << indent << "out << \"0\";" << std::endl;
+        out << indent-- << "return; }" << std::endl; }
+    out << indent << "out << '{' << std::endl;" << std::endl;
     bool first = true;
     for (auto &a : *m) {
 	if (!first)
-	    out << std::setw(2*indent) << "" << "out << \", \\n\";"
-		<< std::endl;
+	    out << indent << "out << \", \\n\";" << std::endl;
 	json::string *name = dynamic_cast<json::string *>(a.first);
         if (objname && *name == "_name") {
             if (nameargs.size() > 0) {
-                out << std::setw(2*indent) << "" << "char tmp["
-                    << (strlen(objname) + nameargs.size()*10 + 32) << "];"
-                    << std::endl;
-                out << std::setw(2*indent) << "" << "snprintf(tmp, sizeof(tmp)"
-                    << ", \"" << objname << "\"";
+                int tmplen = strlen(objname) + nameargs.size()*10 + 32;
+                out << indent << "char tmp[" << tmplen << "];" << std::endl;
+                out << indent << "snprintf(tmp, sizeof(tmp), \"" << objname << "\"";
                 for (size_t i = 0; i < nameargs.size(); i++)
                     out << ", na" << i;
                 out << ");" << std::endl; }
-            out << std::setw(2*indent) << "" << "out << std::setw(" << tabsz
-                << "*indent)" << " << \"\" << \"\\\"_name\\\": \\\"";
+            out << indent << "out << indent << \"\\\"_name\\\": \\\"";
             if (nameargs.size() > 0)
                 out << "\" << tmp << \"";
             else
@@ -130,99 +125,81 @@ static void gen_emit_method(std::ostream &out, json::map *m, int indent,
 	} else if ((*name)[0] == '_') {
             json::string *val = dynamic_cast<json::string *>(a.second.get());
             if (!val) continue;
-            out << std::setw(2*indent) << "" << "out << std::setw(" << tabsz
-                << "*indent)" << " << \"\" << \"\\\"" << *name << "\\\": \\\""
-                << *val << "\\\"\";" << std::endl;
+            out << indent << "out << indent << \"\\\"" << *name << "\\\": \\\"" << *val
+                << "\\\"\";" << std::endl;
             first = false;
             continue; }
-	out << std::setw(2*indent) << "" << "out << std::setw(" << tabsz
-            << "*indent)" << " << \"\" << \"\\\"" << *name << "\\\": \";"
-            << std::endl;
+	out << indent << "out << indent << \"\\\"" << *name << "\\\": \";" << std::endl;
 	std::vector<int> indexes;
 	json::obj *type = get_indexes(a.second.get(), indexes);
 	int index_num = 0;
 	for (int idx : indexes) {
             if (enable_disable) {
-                out << std::setw(2*indent++) << "" << "if (" << *name;
+                out << indent++ << "if (" << *name;
                 for (int i = 0; i < index_num; i++)
                     out << "[i" << i << ']';
                 out << ".disabled()) {" << std::endl;
-                out << std::setw(2*indent) << "" << "out << \"0\";"
-                    << std::endl;
-                out << std::setw(2*(indent-1)) << "" << "} else {"
-                    << std::endl; }
-	    out << std::setw(2*indent) << "" << "out << \"[\\n\" << "
-		<< "std::setw(" << tabsz << "*++indent) << \"\";" << std::endl;
-	    out << std::setw(2*indent++) << "" << "for (int i" << index_num
-		<< " = 0; i" << index_num << " < " << idx << "; i"
-		<< index_num << "++) { " << std::endl;
-	    out << std::setw(2*indent) << "" << "if (i" << index_num
-		<< ") out << \", \\n\" << std::setw(" << tabsz
-                << "*indent) << \"\";" << std::endl;
+                out << indent << "out << \"0\";" << std::endl;
+                out << indent-1 << "} else {" << std::endl; }
+	    out << indent << "out << \"[\\n\" << ++indent;" << std::endl;
+	    out << indent++ << "for (int i" << index_num << " = 0; i" << index_num << " < "
+                << idx << "; i" << index_num << "++) { " << std::endl;
+	    out << indent << "if (i" << index_num << ") out << \", \\n\" << indent;" << std::endl;
 	    index_num++; }
 	json::obj *single = singleton_obj(type, name);
 	if (single != type) {
-	    out << std::setw(2*indent) << "" << "out << \"{\\n\" << "
-		<< "std::setw(" << tabsz << "*(indent+1)) << \"\" << \"\\\""
-                << *name << "\\\": \" << " << *name;
+	    out << indent << "out << \"{\\n\" << indent+1 << \"\\\"" << *name
+                << "\\\": \" << " << *name;
 	    for (int i = 0; i < index_num; i++)
 		out << "[i" << i << ']';
 	    out << " << '\\n';" << std::endl;
-	    out << std::setw(2*indent) << "" << "out << " << "std::setw("
-                << tabsz << "*indent) << \"\" << '}';" << std::endl;
+	    out << indent << "out << indent << '}';" << std::endl;
 	} else if (dynamic_cast<json::map *>(type)) {
-	    out << std::setw(2*indent) << "" << *name;
+	    out << indent << *name;
 	    for (int i = 0; i < index_num; i++)
 		out << "[i" << i << ']';
-	    out << ".emit_json" << "(out, indent+1);" << std::endl;
+	    out << ".emit_json(out, indent+1);" << std::endl;
 	} else {
-	    out << std::setw(2*indent) << "" << "out << " << *name;
+	    out << indent << "out << " << *name;
 	    for (int i = 0; i < index_num; i++)
 		out << "[i" << i << ']';
 	    out << ';' << std::endl; }
 	while (--index_num >= 0) {
-	    out << std::setw(2*--indent) << "" << "}" << std::endl;
-	    out << std::setw(2*indent) << "" << "out << '\\n' << "
-		<< "std::setw(" << tabsz << "*--indent) << \"\" << ']';"
-                << std::endl;
+	    out << --indent << "}" << std::endl;
+	    out << indent << "out << '\\n' << --indent << ']';" << std::endl;
             if (enable_disable)
-                out << std::setw(2*--indent) << "" << "}" << std::endl; }
+                out << --indent << "}" << std::endl; }
 	first = false; }
-    out << std::setw(2*indent) << "" << "out << '\\n' << " << "std::setw("
-        << tabsz << "*(indent-1)) << \"\" << \"}\";" << std::endl;
-    out << std::setw(2*--indent) << "" << '}' << std::endl;
+    out << indent << "out << '\\n' << indent-1 << \"}\";" << std::endl;
+    out << --indent << '}' << std::endl;
 }
 
-static void gen_fieldname_method(std::ostream &out, json::map *m, int indent,
+static void gen_fieldname_method(std::ostream &out, json::map *m, indent_t indent,
                                  const std::string &classname)
 {
-    out << std::setw(2*indent++) << "" << "void ";
+    out << indent++ << "void ";
     if (gen_definitions == DEFN_ONLY) out << classname << "::";
-    out << "emit_fieldname(std::ostream &out, " << "const char *addr, "
-        << "const void *end) const";
+    out << "emit_fieldname(std::ostream &out, const char *addr, const void *end) const";
     if (gen_definitions == DECL_ONLY) {
         out << ";" << std::endl;
         return; }
     out << " {" << std::endl;
-    if (!is_singleton(m)) {
-        out << std::setw(2*indent) << "" << "if ((void *)addr == this && "
-            << "end == this+1) return;" << std::endl; }
+    if (!is_singleton(m))
+        out << indent << "if ((void *)addr == this && end == this+1) return;" << std::endl;
     bool first = true;
     for (auto it = m->rbegin(); it != m->rend(); it++) {
 	std::vector<int> indexes;
 	json::string *name = dynamic_cast<json::string *>(it->first);
 	if ((*name)[0] == '_') continue;
 	json::obj *type = get_indexes(it->second.get(), indexes);
-        out << std::setw(2*indent) << "";
+        out << indent;
         if (first) first = false;
         else out << "} else ";
         out << "if (addr >= (char *)&" << *name << ") {" << std::endl;
-        out << std::setw(2*++indent) << "" << "out << \"." << *name << "\";"
-            << std::endl;
+        out << ++indent << "out << \"." << *name << "\";" << std::endl;
         size_t i = 0;
         for (auto idx : indexes) {
-            out << std::setw(2*indent) << "" << "int i" << i
-                << " = (addr - (char *)&" << *name;
+            out << indent << "int i" << i << " = (addr - (char *)&" << *name;
             for (size_t j = 0; j < i; j++)
                 out << "[i" << j << ']';
             out << "[0])/sizeof(" << *name;
@@ -230,39 +207,36 @@ static void gen_fieldname_method(std::ostream &out, json::map *m, int indent,
                 out << "[0]";
             out << ");" << std::endl;;
             if (idx > 1) {
-                out << std::setw(2*indent) << "" << "if (i" << i << " == 0 "
-                    << "&& 1 + &" << *name;
+                out << indent << "if (i" << i << " == 0 && 1 + &" << *name;
                     for (size_t j = 0; j < i; j++)
                         out << "[i" << j << ']';
                     out << " == end) return;" << std::endl; }
-            out << std::setw(2*indent) << "" << "out << '[' << i" << i
-                << " << ']';" << std::endl;
+            out << indent << "out << '[' << i" << i << " << ']';" << std::endl;
             i++; }
 	json::obj *single = singleton_obj(type, name);
 	if (dynamic_cast<json::map *>(single)) {
-	    out << std::setw(2*indent) << "" << *name;
+	    out << indent << *name;
 	    for (size_t i = 0; i < indexes.size(); i++)
 		out << "[i" << i << ']';
 	    out << ".emit_fieldname" << "(out, addr, end);" << std::endl; }
         indent--; }
-    out << std::setw(2*indent--) << "" << "}" << std::endl;
-    out << std::setw(2*indent) << "" << "}" << std::endl;
+    out << indent-- << "}" << std::endl;
+    out << indent << "}" << std::endl;
 }
 
-static void gen_unpack_method(std::ostream &out, json::map *m, int indent,
+static void gen_unpack_method(std::ostream &out, json::map *m, indent_t indent,
                               const std::string &classname)
 {
-    out << std::setw(2*indent++) << "" << "int ";
+    out << indent++ << "int ";
     if (gen_definitions == DEFN_ONLY) out << classname << "::";
     out << "unpack_json(json::obj *obj)";
     if (gen_definitions == DECL_ONLY) {
         out << ";" << std::endl;
         return; }
     out << " {" << std::endl;
-    out << std::setw(2*indent) << "" << "int rv = 0;" << std::endl;
-    out << std::setw(2*indent) << ""
-	<< "json::map *m = dynamic_cast<json::map *>(obj);" << std::endl;
-    out << std::setw(2*indent) << "" << "if (!m) return -1;" << std::endl;
+    out << indent << "int rv = 0;" << std::endl;
+    out << indent << "json::map *m = dynamic_cast<json::map *>(obj);" << std::endl;
+    out << indent << "if (!m) return -1;" << std::endl;
     for (auto &a : *m) {
 	std::vector<int> indexes;
 	json::string *name = dynamic_cast<json::string *>(a.first);
@@ -270,84 +244,73 @@ static void gen_unpack_method(std::ostream &out, json::map *m, int indent,
 	json::obj *type = get_indexes(a.second.get(), indexes);
 	int index_num = 0;
 	for (int idx : indexes) {
-	    out << std::setw(2*indent++) << "" << "if (json::vector *v"
-		<< index_num << " = dynamic_cast<json::vector *>(";
+	    out << indent++ << "if (json::vector *v" << index_num
+                << " = dynamic_cast<json::vector *>(";
 	    if (index_num) {
-                out << "(*v" << (index_num-1) << ")[i" << (index_num-1)
-                    << "].get()";
+                out << "(*v" << (index_num-1) << ")[i" << (index_num-1) << "].get()";
 	    } else out << "(*m)[" << name << "]";
 	    out << "))" << std::endl;
-	    out << std::setw(2*indent++) << "" << "for (int i" << index_num
-                << " = 0; i" << index_num << " < " << idx << "; i" << index_num
-                << "++)" << std::endl;
+	    out << indent++ << "for (int i" << index_num << " = 0; i" << index_num << " < "
+                << idx << "; i" << index_num << "++)" << std::endl;
 	    index_num++; }
 	json::obj *single = singleton_obj(type, name);
 	if (single != type) {
-	    out << std::setw(2*indent++) << ""
-		<< "if (json::map *s = dynamic_cast<json::map *>(";
+	    out << indent++ << "if (json::map *s = dynamic_cast<json::map *>(";
 	    if (index_num) {
-                out << "(*v" << (index_num-1) << ")[i" << (index_num-1)
-                    << "].get()";
+                out << "(*v" << (index_num-1) << ")[i" << (index_num-1) << "].get()";
 	    } else out << "(*m)[" << name << "]";
 	    out << "))" << std::endl;
-	    out << std::setw(2*indent++) << ""
-		<< "if (json::number *n = dynamic_cast<json::number *>((*s)["
+	    out << indent++ << "if (json::number *n = dynamic_cast<json::number *>((*s)["
 		<< name << "]))" << std::endl;
-	    out << std::setw(2*indent) << "" << *name;
+	    out << indent << *name;
 	    for (int i = 0; i < index_num; i++)
 		out << "[i" << i << ']';
 	    out << " = n->val;" << std::endl;
-	    out << std::setw(2*--indent) << "" << "else rv = -1;" << std::endl;
-	    out << std::setw(2*--indent) << "" << "else rv = -1;" << std::endl;
+	    out << --indent << "else rv = -1;" << std::endl;
+	    out << --indent << "else rv = -1;" << std::endl;
 	} else if (dynamic_cast<json::map *>(type)) {
-	    out << std::setw(2*indent) << "" << "rv |= " << *name;
+	    out << indent << "rv |= " << *name;
 	    for (int i = 0; i < index_num; i++)
 		out << "[i" << i << ']';
 	    out << ".unpack_json(";
 	    if (index_num) {
-                out << "(*v" << (index_num-1) << ")[i" << (index_num-1)
-                    << "].get()";
+                out << "(*v" << (index_num-1) << ")[i" << (index_num-1) << "].get()";
 	    } else out << "(*m)[" << name << "]";
 	    out << ");" << std::endl;
 	} else {
             const char *jtype = "json::number", *access = "n->val";
             if (dynamic_cast<json::string *>(type))
                 jtype = "json::string", access = "*n";
-	    out << std::setw(2*indent++) << "" << "if (" << jtype
-                << " *n = dynamic_cast<" << jtype << " *>(";
-	    if (index_num) {
-                out << "(*v" << (index_num-1) << ")[i" << (index_num-1)
-                    << "].get()";
-	    } else out << "(*m)[" << name << "]";
+	    out << indent++ << "if (" << jtype << " *n = dynamic_cast<" << jtype << " *>(";
+	    if (index_num)
+                out << "(*v" << (index_num-1) << ")[i" << (index_num-1) << "].get()";
+	    else out << "(*m)[" << name << "]";
 	    out << ")) {" << std::endl;
-	    out << std::setw(2*indent) << "" << *name;
+	    out << indent << *name;
 	    for (int i = 0; i < index_num; i++)
 		out << "[i" << i << ']';
 	    out << " = " << access << ";" << std::endl;
             if (dynamic_cast<json::string *>(type)) {
-                out << std::setw(2*indent++) << ""
-                    << "else if (json::number *n = dynamic_cast<json::number *>(";
-                if (index_num) {
-                    out << "(*v" << (index_num-1) << ")[i" << (index_num-1)
-                        << "].get()";
-                } else out << "(*m)[" << name << "]";
+                out << indent++ << "else if (json::number *n = dynamic_cast<json::number *>(";
+                if (index_num)
+                    out << "(*v" << (index_num-1) << ")[i" << (index_num-1) << "].get()";
+                else out << "(*m)[" << name << "]";
                 out << ")) {" << std::endl;
-                out << std::setw(2*indent) << "" << "if (n->v) rv = -1;" << std::endl; }
-	    out << std::setw(2*--indent) << "" << "} else rv = -1;" << std::endl; }
-	while (--index_num >= 0) {
-	    indent -= 2;
-	    out << std::setw(2*indent) << "" << "else rv = -1;" << std::endl;
-	}
+                out << indent << "if (n->v) rv = -1;" << std::endl; }
+	    out << --indent << "} else rv = -1;" << std::endl; }
+	while (--index_num >= 0)
+	    out << ----indent << "else rv = -1;" << std::endl;
     }
-    out << std::setw(2*indent) << "" << "return rv;" << std::endl;
-    out << std::setw(2*--indent) << "" << '}' << std::endl;
+    out << indent << "return rv;" << std::endl;
+    out << --indent << '}' << std::endl;
 }
 
-static void gen_dump_unread_method(std::ostream &out, json::map *m, int indent,
+static void gen_dump_unread_method(std::ostream &out, json::map *m,
+                                   indent_t indent,
                                    const std::string &classname)
 {
 #pragma GCC diagnostic ignored "-Wunused-variable"
-    out << std::setw(2*indent++) << "" << "void ";
+    out << indent++ << "void ";
     if (gen_definitions == DEFN_ONLY) out << classname << "::";
     out << "dump_unread(std::ostream &out, prefix *pfx) const";
     if (gen_definitions == DECL_ONLY) {
@@ -363,31 +326,30 @@ static void gen_dump_unread_method(std::ostream &out, json::map *m, int indent,
 	json::obj *single = singleton_obj(type, name);
 	if (dynamic_cast<json::map *>(single)) {
             if (need_lpfx) {
-                out << std::setw(2*indent) << "" << "prefix lpfx(pfx, 0);"
-                    << std::endl;
+                out << indent << "prefix lpfx(pfx, 0);" << std::endl;
                 need_lpfx = false; }
-	    out << std::setw(2*indent) << "" << "lpfx.str = \"" << *name;
+	    out << indent << "lpfx.str = \"" << *name;
             for (int idx : indexes) out << "[" << idx << "]";
             out << "\";" << std::endl;
-	    out << std::setw(2*indent) << "" << *name;
+	    out << indent << *name;
             for (int idx : indexes) out << "[0]";
             out << ".dump_unread(out, &lpfx);" << std::endl;
         } else {
-	    out << std::setw(2*indent) << "" << "if (!" << *name;
+	    out << indent << "if (!" << *name;
             for (int idx : indexes) out << "[0]";
             out << ".read) out << pfx << \"." << *name;
             for (int idx : indexes) out << "[" << idx << "]";
             out << "\" << std::endl;" << std::endl;
         }
     }
-    out << std::setw(2*--indent) << "" << '}' << std::endl;
+    out << --indent << '}' << std::endl;
 #pragma GCC diagnostic pop
 }
 
-static void gen_modified_method(std::ostream &out, json::map *m, int indent,
+static void gen_modified_method(std::ostream &out, json::map *m, indent_t indent,
                                 const std::string &classname)
 {
-    out << std::setw(2*indent++) << "" << "bool ";
+    out << indent++ << "bool ";
     if (gen_definitions == DEFN_ONLY) out << classname << "::";
     out << "modified() const";
     if (gen_definitions == DECL_ONLY) {
@@ -397,31 +359,27 @@ static void gen_modified_method(std::ostream &out, json::map *m, int indent,
     for (auto &a : *m) {
 	json::string *name = dynamic_cast<json::string *>(a.first);
 	if ((*name)[0] == '_') continue;
-        out << std::setw(2*indent) << "" << "if (" << *name << ".modified()) "
-            << "return true;" << std::endl; }
-    out << std::setw(2*indent) << "" << "return false;" << std::endl;
-    out << std::setw(2*--indent) << "" << '}' << std::endl;
+        out << indent << "if (" << *name << ".modified()) return true;" << std::endl; }
+    out << indent << "return false;" << std::endl;
+    out << --indent << '}' << std::endl;
 }
 
-static void gen_disable_method(std::ostream &out, json::map *m, int indent,
+static void gen_disable_method(std::ostream &out, json::map *m, indent_t indent,
                                const std::string &classname)
 {
-    out << std::setw(2*indent++) << "" << "void ";
+    out << indent++ << "void ";
     if (gen_definitions == DEFN_ONLY) out << classname << "::";
     out << "disable()";
     if (gen_definitions == DECL_ONLY) {
         out << ";" << std::endl;
         return; }
     out << " {" << std::endl;
-    out << std::setw(2*indent++) << "" << "if (modified()) {" << std::endl;
-    out << std::setw(2*indent) << "" << "std::cerr << \"Disabling modified "
-        << "record \";" << std::endl;
-    out << std::setw(2*indent) << "" << "print_regname(std::cerr, this, "
-        << "this+1);" << std::endl;
-    out << std::setw(2*indent--) << "" << "std::cerr << std::endl; }"
-        << std::endl;
-    out << std::setw(2*indent) << "" << "disabled_ = true;" << std::endl;
-    out << std::setw(2*--indent) << "" << '}' << std::endl;
+    out << indent++ << "if (modified()) {" << std::endl;
+    out << indent << "std::cerr << \"Disabling modified record \";" << std::endl;
+    out << indent << "print_regname(std::cerr, this, this+1);" << std::endl;
+    out << indent-- << "std::cerr << std::endl; }" << std::endl;
+    out << indent << "disabled_ = true;" << std::endl;
+    out << --indent << '}' << std::endl;
 }
 
 bool delete_copy = false;
@@ -441,8 +399,8 @@ static bool need_ctor(const json::map *m_init) {
 }
 
 static void gen_ctor(std::ostream &out, const std::string &namestr, const json::map *m_init,
-                     bool enable_disable, int indent) {
-    out << std::setw(2*indent) << "" << namestr << "() : ";
+                     bool enable_disable, indent_t indent) {
+    out << indent << namestr << "() : ";
     bool first = true;
     if (enable_disable) {
         out << "disabled_(false)";
@@ -458,7 +416,8 @@ static void gen_ctor(std::ostream &out, const std::string &namestr, const json::
 }
 
 static void gen_type(std::ostream &out, const std::string &parent,
-                     const char *name, json::obj *t, const json::obj *init, int indent)
+                     const char *name, json::obj *t, const json::obj *init,
+                     indent_t indent = indent_t())
 {
     if (json::map *m = dynamic_cast<json::map *>(t)) {
         const json::map *m_init = dynamic_cast<const json::map *>(init);
@@ -483,12 +442,12 @@ static void gen_type(std::ostream &out, const std::string &parent,
                         nameargs.push_back("const char *");
                         break;
                     default:
-                        std::cerr << "Unknown conversion '%" << *c << "' in "
-                            "name format string -- ignoring" << std::endl;
+                        std::cerr << "Unknown conversion '%" << *c << "' in name format string "
+                                  << "-- ignoring" << std::endl;
                         break; }
                 } else
-                    std::cerr << "Bogus character '" << *c << "' in "
-                        "name format string -- ignoring" << std::endl; } }
+                    std::cerr << "Bogus character '" << *c << "' in name format string "
+                              << "-- ignoring" << std::endl; } }
         std::string classname = parent;
         if (!classname.empty()) classname += "::";
         classname += namestr;
@@ -496,7 +455,7 @@ static void gen_type(std::ostream &out, const std::string &parent,
             indent++;
             out << "struct " << namestr << " {" << std::endl;
             if (enable_disable)
-                out << std::setw(2*indent) << "" << "bool disabled_;" << std::endl;
+                out << indent << "bool disabled_;" << std::endl;
             if (enable_disable || need_ctor(m_init))
                 gen_ctor(out, namestr, m_init, enable_disable, indent); }
         for (auto &a : *m) {
@@ -510,7 +469,7 @@ static void gen_type(std::ostream &out, const std::string &parent,
             bool notclass = !dynamic_cast<json::map *>(type);
             bool isglobal = global_types.count(*name) > 0;
             if (gen_definitions != DEFN_ONLY) {
-                out << std::setw(2*indent) << "";
+                out << indent;
                 if (checked_array && notclass && !indexes.empty())
                     for (int idx : indexes)
                         out << "checked_array<" << idx << ", "; }
@@ -519,9 +478,8 @@ static void gen_type(std::ostream &out, const std::string &parent,
             if (gen_definitions != DEFN_ONLY) {
                 if (checked_array && !indexes.empty()) {
                     if (!notclass) {
-                        if (!isglobal) {
-                            out << ";" << std::endl;
-                            out << std::setw(2*indent) << ""; }
+                        if (!isglobal)
+                            out << ";" << std::endl << indent;
                         for (int idx : indexes)
                             out << "checked_array<" << idx << ", ";
                         out << (isglobal ? "::" : "_") << *name; }
@@ -533,12 +491,9 @@ static void gen_type(std::ostream &out, const std::string &parent,
                     out << ";" << std::endl; } } }
         if (delete_copy && gen_definitions != DEFN_ONLY) {
             if (!enable_disable && !need_ctor(m_init))
-                out << std::setw(2*indent) << "" << namestr << "() = default;"
-                    << std::endl;
-            out << std::setw(2*indent) << "" << namestr << "(const "
-                << namestr << " &) = delete;" << std::endl;
-            out << std::setw(2*indent) << "" << namestr << "("
-                << namestr << " &&) = delete;" << std::endl; }
+                out << indent << namestr << "() = default;" << std::endl;
+            out << indent << namestr << "(const " << namestr << " &) = delete;" << std::endl;
+            out << indent << namestr << "(" << namestr << " &&) = delete;" << std::endl; }
         if (gen_emit)
             gen_emit_method(out, m, indent, classname, name, nameargs);
         if (gen_fieldname) gen_fieldname_method(out, m, indent, classname);
@@ -548,7 +503,7 @@ static void gen_type(std::ostream &out, const std::string &parent,
             gen_modified_method(out, m, indent, classname);
             gen_disable_method(out, m, indent, classname); }
         if (gen_definitions != DEFN_ONLY) {
-            out << std::setw(2*--indent) << "" << '}'; }
+            out << --indent << '}'; }
     } else if (json::number *n = dynamic_cast<json::number *>(t)) {
         //const json::number *n_init = dynamic_cast<const json::number *>(init);
         //if (n_init && n_init->val)
@@ -586,7 +541,7 @@ static int gen_global_types(std::ostream &out, json::obj *t, const json::obj *in
                         rv = -1; }
                 } else {
                     it->second = cl;
-                    gen_type(out, "", name->c_str(), cl, init, 0);
+                    gen_type(out, "", name->c_str(), cl, init);
                     out << ";" << std::endl; } } } }
     return rv;
 }
@@ -613,8 +568,7 @@ int main(int ac, char **av) {
                         error = 1; }
                     break; }
                 case 'd': declare = av[++i]; break;
-                case 'D': gen_definitions =
-                            mod_definitions[flag][gen_definitions];
+                case 'D': gen_definitions = mod_definitions[flag][gen_definitions];
                 case 'e': gen_emit = flag; break;
                 case 'f': gen_fieldname = flag; break;
                 case 'g': global_types[av[++i]] = 0; break;
@@ -647,8 +601,7 @@ int main(int ac, char **av) {
             name = declare = 0;
             error = 1;
 	    continue; }
-        std::cout << "/* Autogenerated from " << av[i] << " -- DO NOT EDIT */"
-                  << std::endl;
+        std::cout << "/* Autogenerated from " << av[i] << " -- DO NOT EDIT */" << std::endl;
         if (name && !*name && !declare)
             name = 0;
         if (!name && gen_definitions != BOTH) {
@@ -657,9 +610,8 @@ int main(int ac, char **av) {
         for (auto n : includes)
             std::cout << "#include \"" << n << '"' << std::endl;
         if (gen_hdrs) {
-            if (gen_emit || gen_fieldname || gen_unread || test) {
-                std::cout << "#include <iostream>" << std::endl;
-                std::cout << "#include <iomanip>" << std::endl; }
+            if (gen_emit || gen_fieldname || gen_unread || test)
+                std::cout << "#include \"indent.h\"" << std::endl;
             if (gen_unpack || test)
                 std::cout << "#include \"json.h\"" << std::endl;
             if (checked_array)
@@ -669,7 +621,7 @@ int main(int ac, char **av) {
             gen_hdrs = false; }
         if (!global_types.empty() && gen_global_types(std::cout, data, initvals) < 0)
             exit(1);
-	gen_type(std::cout, "", name, data, initvals, 0);
+	gen_type(std::cout, "", name, data, initvals);
         if (test && !declare) declare = "table";
         if (declare) std::cout << " " << declare;
         std::cout << ";" << std::endl;
@@ -681,21 +633,19 @@ int main(int ac, char **av) {
             std::cout << "int main() {" << std::endl;
             std::cout << "  json::obj *data;" << std::endl;
             std::cout << "  std::cin >> data;" << std::endl;
-            std::cout << "  if (!std::cin || " << declare
-                      << ".unpack_json(data))" << std::endl;
+            std::cout << "  if (!std::cin || " << declare << ".unpack_json(data))" << std::endl;
             std::cout << "    return 1;" << std::endl;
             std::cout << "  " << declare << ".emit_json(std::cout, ";
             if (name)
                 for (const char *p = strchr(name, '%'); p; p = strchr(p+1, '%'))
                     std::cout << "0, ";
-            std::cout << "1);" << std::endl;
+            std::cout << "indent_t(1));" << std::endl;
             std::cout << "  return 0;" << std::endl;
             std::cout << "}" << std::endl;
             break;
         case '2':
             std::cout << "int main() {" << std::endl;
-            std::cout << "  " << declare << ".dump_unread(std::cout, 0);"
-                      << std::endl;
+            std::cout << "  " << declare << ".dump_unread(std::cout, 0);" << std::endl;
             std::cout << "  return 0;" << std::endl;
             std::cout << "}" << std::endl;
             break;
