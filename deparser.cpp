@@ -300,10 +300,7 @@ void Deparser::output() {
     if (dictionary[INGRESS].empty() && dictionary[EGRESS].empty())
         return;
     inp_regs.icr.inp_cfg.disable();
-    inp_regs.icr.inp_int_stat.disable();
-    inp_regs.icr.inp_int_inj.disable();
-    inp_regs.icr.inp_int_en0.disable();
-    inp_regs.icr.inp_int_en1.disable();
+    inp_regs.icr.intr.disable();
     hdr_regs.hem.he_edf_cfg.disable();
     hdr_regs.him.hi_edf_cfg.disable();
     dump_checksum_units(inp_regs.iim.ii_phv_csum.csum_cfg, hdr_regs.him.hi_tphv_csum.csum_cfg,

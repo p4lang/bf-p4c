@@ -83,6 +83,7 @@ fi
 
 pass=0
 fail=0
+expected_fail=0
 
 for p4file in "$@"; do
     echo -n $p4file
@@ -97,8 +98,15 @@ for p4file in "$@"; do
         rm -f $name.tfa
         if $GLSC --verbose 2 -S $glsc_args ../$name.p4 >glsc.log 2>&1; then
             need_reflow=true
+            if [ ! -r $name.tfa ]; then
+                echo -n " p4 compile failed to produce asm"
+                let fail++
+                echo "$p4file:" >> $FAILLOG
+                cat glsc.log >> $FAILLOG
+                ok=false
+            fi
         else
-            echo " p4 compile failed"
+            echo -n " p4 compile failed"
             let fail++
             echo "$p4file:" >> $FAILLOG
             cat glsc.log >> $FAILLOG
@@ -124,16 +132,16 @@ for p4file in "$@"; do
         fi
         cnt=$(grep -Ev '^\+\+\+|^---|"int_inj"' json_diff.txt | grep -Ec '^\+|^-')
         if [ $cnt -gt 0 ]; then
-            echo " mismatch"
+            echo -n " mismatch"
             let fail++
             echo "$p4file:" >> $FAILLOG
             cat json_diff.txt >> $FAILLOG
         else
-            echo " pass"
+            echo -n " pass"
             let pass++
         fi
     elif $ok; then
-        echo " tfas failed"
+        echo -n " tfas failed"
         let fail++
         echo "$p4file:" >> $FAILLOG
         cat tfas.log >> $FAILLOG
@@ -148,11 +156,21 @@ for p4file in "$@"; do
             done
         fi
     fi
+    if grep -qs "^$name.p4" ../expected_failures.txt; then
+        if $ok; then
+            echo " (UNEXPECTED PASS)"
+        else
+            echo " (expected)"
+            let expected_fail++
+        fi
+    else
+        echo
+    fi
     popd >/dev/null
 done
 
 echo "$pass tests passed, $fail tests fail"
 
-if [ $fail -gt 0 ]; then
+if [ $fail -ne $expected_fail ]; then
     exit 1
 fi
