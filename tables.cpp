@@ -804,48 +804,7 @@ void AttachedTables::write_merge_regs(Table *self, int type, int bus) {
 }
 
 json::map *Table::base_tbl_cfg(json::vector &out, const char *type, int size) {
-    Stage::P4TableInfo *p4_info = p4_table.empty() ? 0 : &Stage::p4_tables[p4_table];
-    json::map *rv = p4_info ? p4_info->desc : 0;
-    if (!rv) {
-        out.emplace_back(std::make_unique<json::map>());
-        json::map &tbl = dynamic_cast<json::map &>(*out.back());
-        tbl["name"] = p4_name();
-        if (handle) tbl["handle"] = handle;
-        tbl["table_type"] = type;
-        tbl["direction"] = gress ? "egress" : "ingress";
-        tbl["number_entries"] = p4_table_size ? p4_table_size : size;
-        tbl["stage_tables_length"] = 0L;
-        tbl["stage_tables"] = std::make_unique<json::vector>();
-        if (auto &action = action_call()) if ((Table *)action != this) {
-            json::map act;
-            act["name"] = action->p4_name();
-            if (action->handle)
-                act["handle_reference"] = action->handle;
-            if (options.match_compiler && !strcmp(type, "selection")) {
-                (tbl["p4_action_data_table"] = json::vector()).push_back(std::move(act));
-            } else {
-                act["how_referenced"] = action.args.size() > 1 ? "indirect" : "direct";
-                (tbl["p4_action_data_tables"] = json::vector()).push_back(std::move(act)); } }
-        if (auto *selector = get_selector()) if (selector != this) {
-            json::map sel;
-            sel["name"] = selector->p4_name();
-            if (selector->handle)
-                sel["handle_reference"] = selector->handle;
-            (tbl["p4_selection_tables"] = json::vector()).push_back(std::move(sel)); }
-        if (p4_info) {
-            p4_info->desc = &tbl;
-            p4_info->size = p4_table_size ? p4_table_size : size;
-            p4_info->explicit_size = p4_table_size > 0; }
-        rv = &tbl;
-    } else if (!p4_table_size) {
-        if (!p4_info->explicit_size)
-            (*rv)["number_entries"] = p4_info->size += size;
-    } else if (p4_info->explicit_size && p4_info->size != p4_table_size)
-        warning(lineno, "Inconsistent explicit table size for p4 table %s", p4_name());
-    else {
-        (*rv)["number_entries"] = p4_info->size = p4_table_size;
-        p4_info->explicit_size = true; }
-    return rv;
+    return p4_table->base_tbl_cfg(out, size, this);
 }
 
 json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) {

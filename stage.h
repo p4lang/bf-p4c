@@ -85,12 +85,6 @@ public:
     Stage(Stage &&);
     ~Stage();
     void write_regs();
-    struct P4TableInfo {
-        json::map       *desc = 0;
-        int             size = 0;
-        bool            explicit_size = false;
-    };
-    static std::map<std::string, P4TableInfo>   p4_tables;
 };
 
 /* constants for various config params */

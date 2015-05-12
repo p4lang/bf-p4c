@@ -16,6 +16,7 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
            format = new Format(fmt->map);
     } else
         error(lineno, "No format specified in table %s", name());
+    VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
     for (auto &kv : MapIterChecked(data)) {
         if (kv.key == "input_xbar") {
 	    if (CHECKTYPE(kv.value, tMAP))
@@ -106,18 +107,23 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "vpns") {
             if (CHECKTYPE(kv.value, tVEC))
                 setup_vpns(&kv.value.vec);
+        } else if (kv.key == "p4") {
+            if (CHECKTYPE(kv.value, tMAP))
+                p4_table = P4Table::get(P4Table::MatchEntry, kv.value.map);
         } else if (kv.key == "p4_table") {
-            if (CHECKTYPE(kv.value, tSTR))
-                p4_table = kv.value.s;
+            push_back(p4_info, "name", std::move(kv.value));
         } else if (kv.key == "p4_table_size") {
-            if (CHECKTYPE(kv.value, tINT))
-                p4_table_size = kv.value.i;
+            push_back(p4_info, "size", std::move(kv.value));
         } else if (kv.key == "handle") {
-            if (CHECKTYPE(kv.value, tINT))
-                handle = kv.value.i;
+            push_back(p4_info, "handle", std::move(kv.value));
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     kv.key.s, name()); }
+    if (p4_info.size) {
+        if (p4_table)
+            error(p4_info[0].key.lineno, "old and new p4 table info in %s", name());
+        else
+            p4_table = P4Table::get(P4Table::MatchEntry, p4_info); }
     alloc_rams(false, stage->sram_use, &stage->sram_match_bus_use);
     if (action.set() && actions)
 	error(lineno, "Table %s has both action table and immediate actions", name());
@@ -138,6 +144,8 @@ static unsigned tofino_bytemask(int lo, int hi) {
 
 void ExactMatchTable::pass1() {
     LOG1("### Exact match table " << name() << " pass1");
+    if (!p4_table) p4_table = P4Table::alloc(P4Table::MatchEntry, this);
+    else p4_table->check(this);
     alloc_id("logical", logical_id, stage->pass1_logical_id,
 	     LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
     alloc_busses(stage->sram_match_bus_use);

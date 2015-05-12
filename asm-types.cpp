@@ -3,6 +3,17 @@
 #include <stdlib.h>
 #include <stdlib.h>
 
+void VECTOR(pair_t)::push_back(const char *s, value_t &&v) {
+    pair_t entry { {tSTR, v.lineno}, v };
+    entry.key.s = strdup(s);
+    VECTOR_push(*this, entry);
+    memset(&v, 0, sizeof(v));
+}
+
+void push_back(VECTOR(pair_t) &m, const char *s, value_t &&v) {
+    m.push_back(s, std::move(v));
+}
+
 bool get_bool(value_t &v) {
     if (v == "true")
         return true;

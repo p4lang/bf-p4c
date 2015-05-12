@@ -11,6 +11,7 @@ void SelectionTable::setup(VECTOR(pair_t) &data) {
     auto *row = get(data, "row");
     if (!row) row = get(data, "logical_row");
     setup_layout(row, get(data, "column"), get(data, "bus"));
+    VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
@@ -35,26 +36,33 @@ void SelectionTable::setup(VECTOR(pair_t) &data) {
                 for (value_t &v : kv.value.vec)
                     if (CHECKTYPE(v, tINT))
                         pool_sizes.push_back(v.i);
+        } else if (kv.key == "p4") {
+            if (CHECKTYPE(kv.value, tMAP))
+                p4_table = P4Table::get(P4Table::Selection, kv.value.map);
         } else if (kv.key == "p4_table") {
-            if (CHECKTYPE(kv.value, tSTR))
-                p4_table = kv.value.s;
+            push_back(p4_info, "name", std::move(kv.value));
         } else if (kv.key == "p4_table_size") {
-            if (CHECKTYPE(kv.value, tINT))
-                p4_table_size = kv.value.i;
+            push_back(p4_info, "size", std::move(kv.value));
         } else if (kv.key == "handle") {
-            if (CHECKTYPE(kv.value, tINT))
-                handle = kv.value.i;
+            push_back(p4_info, "handle", std::move(kv.value));
         } else if (kv.key == "row" || kv.key == "logical_row" ||
                    kv.key == "column" || kv.key == "bus") {
             /* already done in setup_layout */
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
+    if (p4_info.size) {
+        if (p4_table)
+            error(p4_info[0].key.lineno, "old and new p4 table info in %s", name());
+        else
+            p4_table = P4Table::get(P4Table::Selection, p4_info); }
     alloc_rams(true, stage->sram_use);
 }
 
 void SelectionTable::pass1() {
     LOG1("### Selection table " << name() << " pass1");
+    if (!p4_table) p4_table = P4Table::alloc(P4Table::Selection, this);
+    else p4_table->check(this);
     if (layout.size() != 1 || layout[0].cols.size() != 1)
         error(layout[0].lineno, "Select table with more than 1 RAM not supported");
     alloc_vpns();

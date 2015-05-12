@@ -31,10 +31,13 @@ DECLARE_VECTOR3(value_t, value_t,
     value_t *begin() const { return data; }
     value_t *end() const; )
 DECLARE_VECTOR3(pair_t, pair_t,
+public:
+    void push_back(const char *, value_t &&);
     pair_t &operator[](int) const;
     pair_t *operator[](const char *) const;
     pair_t *begin() const { return data; }
-    pair_t *end() const; )
+    pair_t *end() const;
+    )
 #else
 DECLARE_VECTOR(value_t)
 DECLARE_VECTOR(pair_t)
@@ -106,6 +109,10 @@ inline pair_t *VECTOR(pair_t)::operator[](const char *k) const {
         if (data[i].key == k) return &data[i];
     return 0; }
 inline pair_t *VECTOR(pair_t)::end() const { return data + size; }
+
+/* can't call VECTOR(pair_t)::push_back directly except from the compilation unit where
+ * it is defined, due to gcc bug.  Workaround via global function */
+extern void push_back(VECTOR(pair_t) &m, const char *s, value_t &&v);
 #endif /* __cplusplus */
 
 #define CHECKTYPE(V, T) \

@@ -10,6 +10,7 @@
 #include <set>
 #include <string>
 #include "phv.h"
+#include "p4_table.h"
 #include <vector>
 
 class ActionBus;
@@ -44,8 +45,8 @@ protected:
     void need_bus(int lineno, Alloc1Dbase<Table *> &use, int idx, const char *name);
 public:
     const char *name() { return name_.c_str(); }
-    const char *p4_name() {
-        return p4_table.empty() ? name_.c_str() : p4_table.c_str(); }
+    const char *p4_name() { return p4_table->p4_name(); }
+    unsigned handle() { return p4_table->get_handle(); }
     int table_id();
     virtual void pass1() = 0;
     virtual void pass2() = 0;
@@ -202,8 +203,8 @@ public:
         void write_regs(Table *);
     };
 public:
-    std::string                 name_, p4_table;
-    int                         handle = 0, p4_table_size = 0;
+    std::string                 name_;
+    P4Table                     *p4_table = 0;
     Stage                       *stage = 0;
     gress_t                     gress;
     int                         lineno = -1;

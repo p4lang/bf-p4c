@@ -14,21 +14,22 @@ void CounterTable::setup(VECTOR(pair_t) &data) {
           format = new Format(fmt->map);
     } else
         error(lineno, "No format specified in table %s", name());
+    VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
     for (auto &kv : MapIterChecked(data, true)) {
-        if (kv.key == "p4_table") {
-            if (CHECKTYPE(kv.value, tSTR))
-                p4_table = kv.value.s;
-        } else if (kv.key == "p4_table_size") {
-            if (CHECKTYPE(kv.value, tINT))
-                p4_table_size = kv.value.i;
-        } else if (kv.key == "handle") {
-            if (CHECKTYPE(kv.value, tINT))
-                handle = kv.value.i;
-        } else if (kv.key == "format") {
+        if (kv.key == "format") {
             /* done above to be done before vpns */
         } else if (kv.key == "vpns") {
             if (CHECKTYPE(kv.value, tVEC))
                 setup_vpns(&kv.value.vec, true);
+        } else if (kv.key == "p4") {
+            if (CHECKTYPE(kv.value, tMAP))
+                p4_table = P4Table::get(P4Table::Statistics, kv.value.map);
+        } else if (kv.key == "p4_table") {
+            push_back(p4_info, "name", std::move(kv.value));
+        } else if (kv.key == "p4_table_size") {
+            push_back(p4_info, "size", std::move(kv.value));
+        } else if (kv.key == "handle") {
+            push_back(p4_info, "handle", std::move(kv.value));
         } else if (kv.key == "maprams") {
             if (CHECKTYPE(kv.value, tVEC))
                 setup_maprams(&kv.value.vec);
@@ -48,11 +49,18 @@ void CounterTable::setup(VECTOR(pair_t) &data) {
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
+    if (p4_info.size) {
+        if (p4_table)
+            error(p4_info[0].key.lineno, "old and new p4 table info in %s", name());
+        else
+            p4_table = P4Table::get(P4Table::Statistics, p4_info); }
     alloc_rams(true, stage->sram_use);
 }
 
 void CounterTable::pass1() {
     LOG1("### Counter table " << name() << " pass1");
+    if (!p4_table) p4_table = P4Table::alloc(P4Table::Statistics, this);
+    else p4_table->check(this);
     alloc_vpns();
     alloc_maprams();
     std::sort(layout.begin(), layout.end(),

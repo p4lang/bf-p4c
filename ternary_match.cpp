@@ -44,6 +44,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
             input_xbar = new InputXbar(this, true, ixbar->map);
     } else
         error(lineno, "No input xbar specified in table %s", name());
+    VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
     if (auto *m = get(data, "match"))
         if (CHECKTYPE(*m, tVEC))
             for (auto &v : m->vec)
@@ -112,20 +113,25 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "vpns") {
             if (CHECKTYPE(kv.value, tVEC))
                 setup_vpns(&kv.value.vec);
+        } else if (kv.key == "p4") {
+            if (CHECKTYPE(kv.value, tMAP))
+                p4_table = P4Table::get(P4Table::MatchEntry, kv.value.map);
         } else if (kv.key == "p4_table") {
-            if (CHECKTYPE(kv.value, tSTR))
-                p4_table = kv.value.s;
+            push_back(p4_info, "name", std::move(kv.value));
         } else if (kv.key == "p4_table_size") {
-            if (CHECKTYPE(kv.value, tINT))
-                p4_table_size = kv.value.i;
+            push_back(p4_info, "size", std::move(kv.value));
         } else if (kv.key == "handle") {
-            if (CHECKTYPE(kv.value, tINT))
-                handle = kv.value.i;
+            push_back(p4_info, "handle", std::move(kv.value));
         } else if (kv.key == "row" || kv.key == "column" || kv.key == "bus") {
             /* already done in setup_layout */
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     kv.key.s, name()); }
+    if (p4_info.size) {
+        if (p4_table)
+            error(p4_info[0].key.lineno, "old and new p4 table info in %s", name());
+        else
+            p4_table = P4Table::get(P4Table::MatchEntry, p4_info); }
     alloc_rams(false, stage->tcam_use, &stage->tcam_match_bus_use);
     if (indirect_bus > 0) {
         stage->tcam_indirect_bus_use[indirect_bus/2][indirect_bus&1] = this; }
@@ -148,6 +154,8 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
 }
 void TernaryMatchTable::pass1() {
     LOG1("### Ternary match table " << name() << " pass1");
+    if (!p4_table) p4_table = P4Table::alloc(P4Table::MatchEntry, this);
+    else p4_table->check(this);
     stage->table_use[gress] |= Stage::USE_TCAM;
     /* FIXME -- unconditionally setting piped mode -- only need it for wide
      * match across a 4-row boundary */
@@ -195,7 +203,8 @@ void TernaryMatchTable::pass1() {
             error(indirect.lineno, "%s is not a ternary indirect table", indirect->name());
         if (hit_next.size() > 0 && indirect->hit_next.size() > 0)
             error(hit_next[0].lineno, "Ternary Match table with both direct and indirect "
-                  "next tables"); }
+                  "next tables");
+        if (!indirect->p4_table) indirect->p4_table = p4_table; }
     attached.pass1(this);
     if (hit_next.size() > 2)
         error(hit_next[0].lineno, "Ternary Match tables cannot directly specify more"
@@ -354,6 +363,7 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
             format->log2size = 2; }
     } else
         error(lineno, "No format specified in table %s", name());
+    VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
     for (auto &kv : MapIterChecked(data)) {
         if (kv.key == "format") {
             /* done above to be done before action_bus and vpns */
@@ -401,20 +411,25 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "vpns") {
             if (CHECKTYPE(kv.value, tVEC))
                 setup_vpns(&kv.value.vec);
+        } else if (kv.key == "p4") {
+            if (CHECKTYPE(kv.value, tMAP))
+                p4_table = P4Table::get(P4Table::MatchEntry, kv.value.map);
         } else if (kv.key == "p4_table") {
-            if (CHECKTYPE(kv.value, tSTR))
-                p4_table = kv.value.s;
+            push_back(p4_info, "name", std::move(kv.value));
         } else if (kv.key == "p4_table_size") {
-            if (CHECKTYPE(kv.value, tINT))
-                p4_table_size = kv.value.i;
+            push_back(p4_info, "size", std::move(kv.value));
         } else if (kv.key == "handle") {
-            if (CHECKTYPE(kv.value, tINT))
-                handle = kv.value.i;
+            push_back(p4_info, "handle", std::move(kv.value));
         } else if (kv.key == "row" || kv.key == "column" || kv.key == "bus") {
             /* already done in setup_layout */
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     kv.key.s, name()); }
+    if (p4_info.size) {
+        if (p4_table)
+            error(p4_info[0].key.lineno, "old and new p4 table info in %s", name());
+        else
+            p4_table = P4Table::get(P4Table::MatchEntry, p4_info); }
     alloc_rams(false, stage->sram_use, &stage->tcam_indirect_bus_use);
     if (action.set() && actions)
         error(lineno, "Table %s has both action table and immediate actions", name());

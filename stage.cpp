@@ -121,7 +121,6 @@ void AsmStage::process() {
 
 void AsmStage::output() {
     json::vector        tbl_cfg;
-    assert(Stage::p4_tables.empty());
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         bitvec set_regs = stage[0].action_set[gress];
         for (unsigned i = 1; i < stage.size(); i++) {
@@ -159,7 +158,6 @@ void AsmStage::output() {
         sprintf(buf, "regs.match_action_stage.%02x", i);
         TopLevel::all.reg_pipe.mau[i] = buf; }
     *open_output("tbl-cfg") << '[' << &tbl_cfg << ']' << std::endl;
-    Stage::p4_tables.clear();
     TopLevel::all.mem_pipe.mau.disable();
 }
 
@@ -279,5 +277,3 @@ void Stage::write_regs() {
         if (table_use[gress] & USE_TCAM_PIPED)
             regs.tcams.tcam_piped |=  options.match_compiler ? 3 : 1 << gress;
 }
-
-std::map<std::string, Stage::P4TableInfo> Stage::p4_tables;

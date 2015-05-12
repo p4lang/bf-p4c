@@ -61,6 +61,7 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
                 return; }
             if (CHECKTYPE(kv.value, tMAP))
                 action_formats[kv.key[1].s] = new Format(kv.value.map); } }
+    VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "format") {
             /* done above to be done before action_bus and vpns */
@@ -78,20 +79,25 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "vpns") {
             if (CHECKTYPE(kv.value, tVEC))
                 setup_vpns(&kv.value.vec);
+        } else if (kv.key == "p4") {
+            if (CHECKTYPE(kv.value, tMAP))
+                p4_table = P4Table::get(P4Table::ActionData, kv.value.map);
         } else if (kv.key == "p4_table") {
-            if (CHECKTYPE(kv.value, tSTR))
-                p4_table = kv.value.s;
+            push_back(p4_info, "name", std::move(kv.value));
         } else if (kv.key == "p4_table_size") {
-            if (CHECKTYPE(kv.value, tINT))
-                p4_table_size = kv.value.i;
+            push_back(p4_info, "size", std::move(kv.value));
         } else if (kv.key == "handle") {
-            if (CHECKTYPE(kv.value, tINT))
-                handle = kv.value.i;
+            push_back(p4_info, "handle", std::move(kv.value));
         } else if (kv.key == "row" || kv.key == "logical_row" || kv.key == "column") {
             /* already done in setup_layout */
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
+    if (p4_info.size) {
+        if (p4_table)
+            error(p4_info[0].key.lineno, "old and new p4 table info in %s", name());
+        else
+            p4_table = P4Table::get(P4Table::ActionData, p4_info); }
     alloc_rams(true, stage->sram_use, 0);
     if (!actions)
         error(lineno, "No actions in action table %s", name());
@@ -100,6 +106,8 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
 
 void ActionTable::pass1() {
     LOG1("### Action table " << name() << " pass1");
+    if (!p4_table) p4_table = P4Table::alloc(P4Table::ActionData, this);
+    else p4_table->check(this);
     alloc_vpns();
     std::sort(layout.begin(), layout.end(),
               [](const Layout &a, const Layout &b)->bool { return a.row > b.row; });
