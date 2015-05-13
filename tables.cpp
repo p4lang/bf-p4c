@@ -224,6 +224,70 @@ void Table::setup_vpns(VECTOR(value_t) *vpn, bool allow_holes) {
                 break; } }
 }
 
+bool Table::common_setup(pair_t &kv) {
+    if (kv.key == "action") {
+        action.setup(kv.value, this);
+    } else if (kv.key == "action_enable") {
+        if (CHECKTYPE(kv.value, tINT))
+            action_enable = kv.value.i;
+    } else if (kv.key == "actions") {
+        if (CHECKTYPE(kv.value, tMAP))
+            actions = new Actions(this, kv.value.map);
+    } else if (kv.key == "action_bus") {
+        if (CHECKTYPE(kv.value, tMAP))
+            action_bus = new ActionBus(this, kv.value.map);
+    } else if (kv.key == "hit") {
+        if (!hit_next.empty())
+            error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
+        else if (CHECKTYPE(kv.value, tSTR))
+            hit_next.emplace_back(kv.value);
+    } else if (kv.key == "miss") {
+        if (CHECKTYPE(kv.value, tSTR))
+            miss_next = kv.value;
+    } else if (kv.key == "next") {
+        if (!hit_next.empty())
+            error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
+        else if (CHECKTYPE(kv.value, tSTR))
+            hit_next.emplace_back(kv.value);
+            miss_next = kv.value;
+    } else if (kv.key == "vpns") {
+        if (CHECKTYPE(kv.value, tVEC))
+            setup_vpns(&kv.value.vec);
+    } else if (kv.key == "p4") {
+        if (CHECKTYPE(kv.value, tMAP))
+            p4_table = P4Table::get(P4Table::MatchEntry, kv.value.map);
+    } else
+        return false;
+    return true;
+}
+
+bool MatchTable::common_setup(pair_t &kv) {
+    if (Table::common_setup(kv)) {
+        return true; }
+    if (kv.key == "gateway") {
+        if (CHECKTYPE(kv.value, tMAP)) {
+            gateway = GatewayTable::create(kv.key.lineno, name_+" gateway",
+                    gress, stage, -1, kv.value.map);
+            gateway->set_match_table(this); }
+        return true; }
+    if (kv.key == "selector") {
+        attached.selector.setup(kv.value, this);
+        return true; }
+    if (kv.key == "stats") {
+        if (kv.value.type == tVEC)
+            for (auto &v : kv.value.vec)
+                attached.stats.emplace_back(v, this);
+        else attached.stats.emplace_back(kv.value, this);
+        return true; }
+    if (kv.key == "meter") {
+        if (kv.value.type == tVEC)
+            for (auto &v : kv.value.vec)
+                attached.meter.emplace_back(v, this);
+        else attached.meter.emplace_back(kv.value, this);
+        return true; }
+    return false;
+}
+
 void Table::alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Table *> *bus_use) {
     for (auto &row : layout) {
         for (int col : row.cols) {

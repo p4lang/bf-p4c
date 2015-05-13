@@ -54,6 +54,7 @@ void CounterTable::setup(VECTOR(pair_t) &data) {
             error(p4_info[0].key.lineno, "old and new p4 table info in %s", name());
         else
             p4_table = P4Table::get(P4Table::Statistics, p4_info); }
+    fini(p4_info);
     alloc_rams(true, stage->sram_use);
 }
 

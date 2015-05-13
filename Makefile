@@ -73,6 +73,10 @@ templates/.templates-updated: $(WALLE) chip.schema template_objects.yaml
 $(WALLE):
 	git submodule update --init
 
+chip.schema template_objects.yaml: %: p4c-templates/%
+	# if there's a symlink 'p4c-templates' to somewhere with new reg schema, copy them
+	if [ $< -nt $@ ]; then cp $< $@; fi
+
 templates/%.json: templates/.templates-updated
 	@test -r $@
 

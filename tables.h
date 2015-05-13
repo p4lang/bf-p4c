@@ -29,6 +29,7 @@ protected:
     Table(const Table &) = delete;
     Table(Table &&) = delete;
     virtual void setup(VECTOR(pair_t) &data) = 0;
+    virtual bool common_setup(pair_t &);
     void setup_layout(value_t *row, value_t *col, value_t *bus);
     void setup_logical_id();
     void setup_actions(value_t &);
@@ -243,6 +244,14 @@ public:
     virtual Call &action_call() { return action; }
 };
 
+struct AttachedTables {
+    Table::Call                 selector;
+    std::vector<Table::Call>    stats, meter;
+    SelectionTable *get_selector();
+    void pass1(MatchTable *self);
+    void write_merge_regs(Table *self, int type, int bus);
+};
+
 #define DECLARE_ABSTRACT_TABLE_TYPE(TYPE, PARENT, ...)                  \
 class TYPE : public PARENT {                                            \
 protected:                                                              \
@@ -253,7 +262,10 @@ protected:                                                              \
 
 DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     GatewayTable                *gateway = 0;
+    AttachedTables              attached;
     void write_regs(int type, Table *result);
+protected:
+    bool common_setup(pair_t &);
 public:
     GatewayTable *get_gateway() { return gateway; }
 )
@@ -286,16 +298,7 @@ TYPE *TYPE::Type::create(int lineno, const char *name, gress_t gress,   \
     return rv;                                                          \
 }
 
-struct AttachedTables {
-    Table::Call                 selector;
-    std::vector<Table::Call>    stats, meter;
-    SelectionTable *get_selector();
-    void pass1(MatchTable *self);
-    void write_merge_regs(Table *self, int type, int bus);
-};
-
 DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
-    AttachedTables              attached;
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
         width = (format->size-1)/128 + 1;
         period = format->groups();
@@ -336,7 +339,6 @@ public:
 void add_pack_format(json::map &stage_tbl, int memword, int words, int entries = 0);
 
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
-    AttachedTables              attached;
     void vpn_params(int &width, int &depth, int &period, const char *&period_name);
     struct Match {
         int word_group, byte_group, byte_config;

@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include "vector.h"
 
@@ -113,6 +114,11 @@ inline pair_t *VECTOR(pair_t)::end() const { return data + size; }
 /* can't call VECTOR(pair_t)::push_back directly except from the compilation unit where
  * it is defined, due to gcc bug.  Workaround via global function */
 extern void push_back(VECTOR(pair_t) &m, const char *s, value_t &&v);
+
+inline void fini(value_t &v) { free_value(&v); }
+inline void fini(pair_t &p) { free_pair(&p); }
+inline void fini(VECTOR(value_t) &v) { VECTOR_foreach(v, free_value); VECTOR_fini(v); }
+inline void fini(VECTOR(pair_t) &v) { VECTOR_foreach(v, free_pair); VECTOR_fini(v); }
 #endif /* __cplusplus */
 
 #define CHECKTYPE(V, T) \

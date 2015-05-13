@@ -50,13 +50,9 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
             for (auto &v : m->vec)
                 match.emplace_back(v);
     for (auto &kv : MapIterChecked(data)) {
-        if (kv.key == "input_xbar" || kv.key == "match") {
+        if (common_setup(kv)) {
+        } else if (kv.key == "input_xbar" || kv.key == "match") {
             /* done above to be done before vpns */
-        } else if (kv.key == "gateway") {
-            if (CHECKTYPE(kv.value, tMAP)) {
-                gateway = GatewayTable::create(kv.key.lineno, name_+" gateway",
-                        gress, stage, -1, kv.value.map);
-                gateway->set_match_table(this); }
         } else if (kv.key == "indirect") {
             if (CHECKTYPE(kv.value, tSTR))
                 indirect = kv.value;
@@ -69,24 +65,6 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
                     if (auto *old = stage->tcam_indirect_bus_use[indirect_bus/2][indirect_bus&1])
                         error(kv.value.lineno, "Indirect bus %d already in use by table %s",
                               indirect_bus, old->name()); } }
-        } else if (kv.key == "stats") {
-            if (kv.value.type == tVEC)
-                for (auto &v : kv.value.vec)
-                    attached.stats.emplace_back(v, this);
-            else attached.stats.emplace_back(kv.value, this);
-        } else if (kv.key == "meter") {
-            if (kv.value.type == tVEC)
-                for (auto &v : kv.value.vec)
-                    attached.meter.emplace_back(v, this);
-            else attached.meter.emplace_back(kv.value, this);
-        } else if (kv.key == "action") {
-            action.setup(kv.value, this);
-        } else if (kv.key == "actions") {
-            if (CHECKTYPE(kv.value, tMAP))
-                actions = new Actions(this, kv.value.map);
-        } else if (kv.key == "action_bus") {
-            if (CHECKTYPE(kv.value, tMAP))
-                action_bus = new ActionBus(this, kv.value.map);
         } else if (kv.key == "tcam_id") {
             if (CHECKTYPE(kv.value, tINT)) {
                 if ((tcam_id = kv.value.i) < 0 || tcam_id >= TCAM_TABLES_PER_STAGE)
@@ -96,26 +74,6 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
                           tcam_id, stage->tcam_id_use[tcam_id]->name());
                 else
                     stage->tcam_id_use[tcam_id] = this; }
-        } else if (kv.key == "hit") {
-            if (!hit_next.empty())
-                error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
-            else if (CHECKTYPE(kv.value, tSTR))
-                hit_next.emplace_back(kv.value);
-        } else if (kv.key == "miss") {
-            if (CHECKTYPE(kv.value, tSTR))
-                miss_next = kv.value;
-        } else if (kv.key == "next") {
-            if (!hit_next.empty())
-                error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
-            else if (CHECKTYPE(kv.value, tSTR))
-                hit_next.emplace_back(kv.value);
-                miss_next = kv.value;
-        } else if (kv.key == "vpns") {
-            if (CHECKTYPE(kv.value, tVEC))
-                setup_vpns(&kv.value.vec);
-        } else if (kv.key == "p4") {
-            if (CHECKTYPE(kv.value, tMAP))
-                p4_table = P4Table::get(P4Table::MatchEntry, kv.value.map);
         } else if (kv.key == "p4_table") {
             push_back(p4_info, "name", std::move(kv.value));
         } else if (kv.key == "p4_table_size") {
@@ -132,6 +90,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
             error(p4_info[0].key.lineno, "old and new p4 table info in %s", name());
         else
             p4_table = P4Table::get(P4Table::MatchEntry, p4_info); }
+    fini(p4_info);
     alloc_rams(false, stage->tcam_use, &stage->tcam_match_bus_use);
     if (indirect_bus > 0) {
         stage->tcam_indirect_bus_use[indirect_bus/2][indirect_bus&1] = this; }
@@ -365,13 +324,9 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
         error(lineno, "No format specified in table %s", name());
     VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
     for (auto &kv : MapIterChecked(data)) {
-        if (kv.key == "format") {
+        if (common_setup(kv)) {
+        } else if (kv.key == "format") {
             /* done above to be done before action_bus and vpns */
-        } else if (kv.key == "action") {
-            action.setup(kv.value, this);
-        } else if (kv.key == "action_enable") {
-            if (CHECKTYPE(kv.value, tINT))
-                action_enable = kv.value.i;
         } else if (kv.key == "selector") {
             attached.selector.setup(kv.value, this);
         } else if (kv.key == "stats") {
@@ -384,36 +339,6 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
                 for (auto &v : kv.value.vec)
                     attached.meter.emplace_back(v, this);
             else attached.meter.emplace_back(kv.value, this);
-        } else if (kv.key == "actions") {
-            if (CHECKTYPE(kv.value, tMAP))
-                actions = new Actions(this, kv.value.map);
-        } else if (kv.key == "action_bus") {
-            if (CHECKTYPE(kv.value, tMAP))
-                action_bus = new ActionBus(this, kv.value.map);
-        } else if (kv.key == "hit") {
-            if (!hit_next.empty())
-                error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
-            else if (kv.value.type == tVEC) {
-                for (auto &v : kv.value.vec)
-                    if (CHECKTYPE(v, tSTR))
-                        hit_next.emplace_back(v);
-            } else if (CHECKTYPE(kv.value, tSTR))
-                hit_next.emplace_back(kv.value);
-        } else if (kv.key == "miss") {
-            if (CHECKTYPE(kv.value, tSTR))
-                miss_next = kv.value;
-        } else if (kv.key == "next") {
-            if (!hit_next.empty())
-                error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
-            else if (CHECKTYPE(kv.value, tSTR))
-                hit_next.emplace_back(kv.value);
-                miss_next = kv.value;
-        } else if (kv.key == "vpns") {
-            if (CHECKTYPE(kv.value, tVEC))
-                setup_vpns(&kv.value.vec);
-        } else if (kv.key == "p4") {
-            if (CHECKTYPE(kv.value, tMAP))
-                p4_table = P4Table::get(P4Table::MatchEntry, kv.value.map);
         } else if (kv.key == "p4_table") {
             push_back(p4_info, "name", std::move(kv.value));
         } else if (kv.key == "p4_table_size") {
@@ -430,6 +355,7 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
             error(p4_info[0].key.lineno, "old and new p4 table info in %s", name());
         else
             p4_table = P4Table::get(P4Table::MatchEntry, p4_info); }
+    fini(p4_info);
     alloc_rams(false, stage->sram_use, &stage->tcam_indirect_bus_use);
     if (action.set() && actions)
         error(lineno, "Table %s has both action table and immediate actions", name());
