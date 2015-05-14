@@ -239,7 +239,11 @@ bool Table::common_setup(pair_t &kv) {
     } else if (kv.key == "hit") {
         if (!hit_next.empty())
             error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
-        else if (CHECKTYPE(kv.value, tSTR))
+        else if (kv.value.type == tVEC) {
+            for (auto &v : kv.value.vec)
+                if (CHECKTYPE(v, tSTR))
+                    hit_next.emplace_back(v);
+        } else if (CHECKTYPE(kv.value, tSTR))
             hit_next.emplace_back(kv.value);
     } else if (kv.key == "miss") {
         if (CHECKTYPE(kv.value, tSTR))
