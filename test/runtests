@@ -30,7 +30,7 @@ while expr "$1" : - >/dev/null; do
     shift
 done
 
-glsc_args="--placement-order ingress_before_egress --gen-csum --libpd --pa-no-backtracking"
+glsc_args="--placement-order ingress_before_egress --gen-csum --libpd"
 
 trap 'exit' 2
 
@@ -114,7 +114,7 @@ for p4file in "$@"; do
         fi
     fi
     if $ok && $TFAS -vvvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
-        for f in $name.out/*.json; do
+        for f in $name.out/*.cfg.json; do
             if [ "$f" = "$name.out/regs.pipe.cfg.json" ]; then
                 $JSON_DIFF -i mau $f $(basename $f)
                 continue
