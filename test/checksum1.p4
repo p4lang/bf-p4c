@@ -99,6 +99,22 @@ table setup {
     actions { do_setup; }
 }
 
+action drop() {
+}
+action forward(to) {
+    modify_field(ethernet.dstAddr, to);
+    add_to_field(ipv4.ttl, -1);
+}
+
+table route {
+    reads { ipv4.dstAddr : ternary; }
+    actions {
+        drop;
+        forward;
+    }
+}
+
 control ingress {
     apply(setup);
+    apply(route);
 }
