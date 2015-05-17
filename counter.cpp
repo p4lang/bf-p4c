@@ -86,7 +86,7 @@ static int counter_masks[] = { 0, 7, 3, 4, 1, 0, 0 };
 static int counter_shifts[] = { 0, 3, 2, 2, 1, 0, 2 };
 
 int CounterTable::direct_shiftcount() {
-    return 64 - counter_shifts[format->groups()];
+    return 64 + 7 - counter_shifts[format->groups()];
 }
 
 void CounterTable::write_merge_regs(int type, int bus) {

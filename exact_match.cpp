@@ -585,7 +585,10 @@ void ExactMatchTable::write_regs() {
                 else if (group_info[group].overhead_word == (int)word) {
                     assert(st.args[0]->by_group[group]->bits[0].lo/128U == word);
                     merge.mau_stats_adr_exact_shiftcount[bus][word_group] = 
-                        st.args[0]->by_group[group]->bits[0].lo%128U; }
+                        st.args[0]->by_group[group]->bits[0].lo%128U + 7;
+                } else if (options.match_compiler) {
+                    /* unused, so should not be set... */
+                    merge.mau_stats_adr_exact_shiftcount[bus][word_group] = 7; }
                 break; /* all must be the same, only config once */ }
             if (!attached.meter.empty()) {
                 ERROR("meter setup for exact match not done"); } }
