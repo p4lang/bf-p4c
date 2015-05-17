@@ -293,7 +293,7 @@ public:
             if (data != a.ptr[0]) return false;
             for (size_t i = 1; i < a.size; i++)
                 if (a.ptr[i]) return false;
-        } else return data != a.data;
+        } else return data == a.data;
         return true; }
     bool operator!=(const bitvec &a) const { return !(*this == a); }
     bool intersects(const bitvec &a) const {
