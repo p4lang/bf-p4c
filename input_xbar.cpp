@@ -259,11 +259,43 @@ void InputXbar::add_use(unsigned &byte_use, std::vector<Input> &inputs) {
     }
 }
 
+InputXbar::Input *find(const std::vector<InputXbar *> &use, Phv::Slice sl, int group) {
+    for (InputXbar *i : use)
+        if (auto rv = i->find(sl, group))
+            return rv;
+    return 0;
+}
+
+std::ostream &operator <<(std::ostream &out, const std::pair<unsigned, const std::vector<InputXbar *> &> &u) {
+    std::map<unsigned, InputXbar::Input *> use;
+    for (InputXbar *ixbar : u.second)
+        if (ixbar->groups.count(u.first))
+            for (auto &i : ixbar->groups[u.first]) {
+                if (i.lo < 0) continue;
+                for (int byte = i.lo/8; byte <= i.hi/8; byte++)
+                    use[byte] = &i; }
+    InputXbar::Input *prev = 0;
+    for (auto &u : use) {
+        if (prev == u.second) continue;
+        if (prev) out << ", ";
+        prev = u.second;
+        out << prev->what << ':' << prev->lo << ".." << prev->hi; }
+    return out;
+}
+
 void InputXbar::pass2(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
     for (auto &group : groups) {
         unsigned bytes_in_use = 0;
         for (auto &input : group.second) {
             if (input.lo >= 0) continue;
+            if (auto *at = ::find(use[group.first], *input.what, group.first)) {
+                input.lo = at->lo;
+                input.hi = at->hi;
+                LOG1(input.what << " found in bytes " << at->lo/8 << ".."
+                     << at->hi/8 << " of " << (ternary ? "tcam" : "exact")
+                     << " ixbar group " << group.first << " in stage "
+                     << table->stage->stageno);
+                continue; }
             if (bytes_in_use == 0)
                 for (InputXbar *other : use[group.first])
                     if (other->groups.count(group.first))
@@ -281,9 +313,13 @@ void InputXbar::pass2(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
                          << " ixbar group " << group.first << " in stage "
                          << table->stage->stageno);
                     break; }
-            if (input.lo < 0)
-                error(input.what.lineno, "No space in input xbar group for %s",
-                      input.what.name());
+            if (input.lo < 0) {
+                error(input.what.lineno, "No space in input xbar group %d for %s",
+                      group.first, input.what.name());
+                LOG1("Failed to put " << input.what << " into " << (ternary ? "tcam" : "exact")
+                     << " ixbar group " << group.first << " in stage " << table->stage->stageno);
+                LOG1("  inuse: " << std::make_pair(group.first, use[group.first]));
+            }
         }
     }
 }
@@ -364,6 +400,7 @@ void InputXbar::write_regs() {
 InputXbar::Input *InputXbar::find(Phv::Slice sl, int grp) {
     if (groups.count(grp))
         for (auto &in : groups[grp]) {
+            if (in.lo < 0) continue;
             if (in.what->reg.index != sl.reg.index) continue;
             if (in.what->lo > sl.lo) continue;
             if (in.what->hi < sl.hi) continue;

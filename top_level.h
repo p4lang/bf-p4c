@@ -10,7 +10,8 @@ public:
     regs_top            reg_top;
     regs_pipe           reg_pipe;
 private:
-    TopLevel() {}
+    TopLevel();
+    ~TopLevel();
 public:
     static TopLevel     all;
     void output();

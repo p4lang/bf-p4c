@@ -7,11 +7,13 @@ Deparser Deparser::singleton_object;
 
 Deparser::Deparser() : Section("deparser") {
     declare_registers(&inp_regs, sizeof(inp_regs),
-        [](std::ostream &out, const char *addr, const void *end) {
-            out << "deparser.input_phase"; });
+        [this](std::ostream &out, const char *addr, const void *end) {
+            out << "deparser.input_phase";
+            inp_regs.emit_fieldname(out, addr, end); });
     declare_registers(&hdr_regs, sizeof(inp_regs),
-        [](std::ostream &out, const char *addr, const void *end) {
-            out << "deparser.header_phase"; });
+        [this](std::ostream &out, const char *addr, const void *end) {
+            out << "deparser.header_phase";
+            hdr_regs.emit_fieldname(out, addr, end); });
 }
 Deparser::~Deparser() {
     undeclare_registers(&inp_regs);

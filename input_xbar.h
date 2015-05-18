@@ -35,6 +35,9 @@ class InputXbar {
     static bool conflict(const HashGrp &a, const HashGrp &b);
     static bool can_merge(HashGrp &a, HashGrp &b);
     void add_use(unsigned &byte_use, std::vector<Input> &a);
+    // FIXME -- move these into friend or nested class? */
+    friend std::ostream &operator <<(std::ostream &, const std::pair<unsigned, const std::vector<InputXbar *> &> &);
+    friend InputXbar::Input *find(const std::vector<InputXbar *> &use, Phv::Slice sl, int group);
 public:
     const int	lineno;
     InputXbar(Table *table, bool ternary, VECTOR(pair_t) &data);

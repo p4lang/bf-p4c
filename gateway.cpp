@@ -137,6 +137,7 @@ void GatewayTable::pass1() {
         line.val.word1 = (line.val.word1 << match[0].offset) | ignore; }
 }
 void GatewayTable::pass2() {
+    LOG1("### Gateway table " << name() << " pass2");
     if (input_xbar) input_xbar->pass2(stage->exact_ixbar, 128);
 }
 
