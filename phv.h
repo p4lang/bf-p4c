@@ -62,7 +62,7 @@ public:
 	int		lo, hi;
     public:
 	int		lineno;
-        Ref() : lineno(-1) {}
+        Ref() : gress(INGRESS), lineno(-1) {}
 	Ref(gress_t g, const value_t &n);
 	Ref(gress_t g, int line, const std::string &n, int l, int h) :
             gress(g), name_(n), lo(l), hi(h), lineno(line) {}

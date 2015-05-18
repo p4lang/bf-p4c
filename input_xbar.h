@@ -14,15 +14,15 @@ class InputXbar {
         Input(const Phv::Ref &a, int l, int h) : what(a), lo(l), hi(h) {}
     };
     struct HashCol {
+        int             lineno = -1;
+        Phv::Ref        what;
         bitvec          data;
-        unsigned        valid;
-        HashCol() : valid(0) {}
+        unsigned        valid = 0;
     };
     struct HashGrp {
-        int             lineno;
-        unsigned        tables;
-        uint64_t        seed;
-        HashGrp() : lineno(-1), tables(0), seed(0) {}
+        int             lineno = -1;
+        unsigned        tables = 0;
+        uint64_t        seed = 0;
     };
     Table	*table;
     bool        ternary;
@@ -35,9 +35,14 @@ class InputXbar {
     static bool conflict(const HashGrp &a, const HashGrp &b);
     static bool can_merge(HashGrp &a, HashGrp &b);
     void add_use(unsigned &byte_use, std::vector<Input> &a);
-    // FIXME -- move these into friend or nested class? */
-    friend std::ostream &operator <<(std::ostream &, const std::pair<unsigned, const std::vector<InputXbar *> &> &);
-    friend InputXbar::Input *find(const std::vector<InputXbar *> &use, Phv::Slice sl, int group);
+    struct GroupSet {
+        unsigned        group;
+        const std::vector<InputXbar *> &use;
+        GroupSet(const std::vector<InputXbar *> &u, unsigned g) : group(g), use(u) {}
+        GroupSet(Alloc1Dbase<std::vector<InputXbar *>> &u, unsigned g) : group(g), use(u[g]) {}
+        void dbprint(std::ostream &) const;
+        Input *find(Phv::Slice sl) const;
+    };
 public:
     const int	lineno;
     InputXbar(Table *table, bool ternary, VECTOR(pair_t) &data);

@@ -1,6 +1,7 @@
 #include "input_xbar.h"
 #include "log.h"
 #include "stage.h"
+#include "range.h"
 
 InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
 : table(t), ternary(tern), lineno(data[0].key.lineno)
@@ -80,7 +81,8 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
             if (!CHECKTYPE(kv.value, tMAP)) continue;
             int id = kv.key[1].i;
             for (auto &c : kv.value.map) {
-                if (!CHECKTYPE2M(c.key, tINT, tCMD, "hash column decriptor"))
+                if (c.key.type != tRANGE &&
+                    !CHECKTYPE2M(c.key, tINT, tCMD, "hash column decriptor"))
                     continue;
                 if (c.key.type == tCMD) {
                     if (c.key.vec.size != 2 || c.key[0] != "valid" || c.key[1].type != tINT) {
@@ -92,27 +94,43 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
                         continue; }
                     if (!CHECKTYPE(c.value, tINT)) continue;
                     if (hash_tables[id][col].valid)
-                        error(c.key.lineno, "Hash table %d column %d valid duplicated",
-                              id, col);
+                        error(c.key.lineno, "Hash table %d column %d valid duplicated", id, col);
                     else if (c.value.i >= 0x10000)
                         error(c.value.lineno, "Hash valid value out of range");
                     else
                         hash_tables[id][col].valid = c.value.i;
+                } else if (c.key.type == tRANGE) {
+                    if (c.key.lo < 0 || c.key.lo >= 52 || c.key.hi < 0 || c.key.hi >= 52) {
+                        error(c.key.lineno, "Hash column out of range");
+                        continue; }
+                    Phv::Ref val(t->gress, c.value);
+                    int bit = 0;
+                    for (int col : Range(c.key.lo, c.key.hi)) {
+                        if (hash_tables[id][col].data || hash_tables[id][col].what)
+                            error(c.key.lineno, "Hash table %d column %d duplicated", id, col);
+                        else
+                            hash_tables[id][col].lineno = c.key.lineno;
+                        hash_tables[id][col].what = Phv::Ref(val, bit, bit);
+                        bit++; }
                 } else {
                     int col = c.key.i;
                     if (col < 0 || col >= 52) {
                         error(c.key.lineno, "Hash column out of range");
                         continue; }
-                    if (!CHECKTYPE2(c.value, tINT, tBIGINT)) continue;
-                    if (hash_tables[id][col].data)
-                        error(c.key.lineno, "Hash table %d column %d duplicated",
-                              id, col);
-                    if (c.value.type == tINT)
+                    if (hash_tables[id][col].data || hash_tables[id][col].what)
+                        error(c.key.lineno, "Hash table %d column %d duplicated", id, col);
+                    else
+                        hash_tables[id][col].lineno = c.key.lineno;
+                    if (c.value.type == tSTR || c.value.type == tCMD)
+                        hash_tables[id][col].what = Phv::Ref(t->gress, c.value);
+                    else if (c.value.type == tINT)
                         hash_tables[id][col].data.setraw(c.value.i);
-                    else {
+                    else if (c.value.type == tBIGINT) {
                         hash_tables[id][col].data.setraw(c.value.bigi.data, c.value.bigi.size);
                         if (hash_tables[id][col].data.max().index() >= 128)
-                            error(c.key.lineno, "Hash column value out of range"); } } }
+                            error(c.key.lineno, "Hash column value out of range");
+                    } else
+                        error (c.value.lineno, "Syntax error, expecting value or name"); } }
 	} else {
 	    error(kv.key.lineno, "expecting a group %sdescriptor",
 		  ternary ? "" : "or hash "); }
@@ -220,6 +238,16 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
         use[group.first].push_back(this); }
     for (auto &hash : hash_tables) {
         bool add_to_use = true;
+        for (auto &col : hash.second) {
+            if (col.second.what.check()) {
+                if (auto *in = find(*col.second.what, hash.first)) {
+                    if (in->lo >= 0)
+                        for (int bit = col.second.what->lo; bit <= col.second.what->hi; bit++) {
+                            assert(bit >= in->what->lo);
+                            col.second.data[in->lo + bit - in->what->lo] = 1; }
+                } else
+                    error(col.second.what.lineno, "%s not in group %d", col.second.what.name(),
+                          hash.first); } }
         for (InputXbar *other : use[hash.first]) {
             if (other == this) {
                 add_to_use = false;
@@ -259,28 +287,27 @@ void InputXbar::add_use(unsigned &byte_use, std::vector<Input> &inputs) {
     }
 }
 
-InputXbar::Input *find(const std::vector<InputXbar *> &use, Phv::Slice sl, int group) {
+InputXbar::Input *InputXbar::GroupSet::find(Phv::Slice sl) const {
     for (InputXbar *i : use)
         if (auto rv = i->find(sl, group))
             return rv;
     return 0;
 }
 
-std::ostream &operator <<(std::ostream &out, const std::pair<unsigned, const std::vector<InputXbar *> &> &u) {
-    std::map<unsigned, InputXbar::Input *> use;
-    for (InputXbar *ixbar : u.second)
-        if (ixbar->groups.count(u.first))
-            for (auto &i : ixbar->groups[u.first]) {
+void InputXbar::GroupSet::dbprint(std::ostream &out) const {
+    std::map<unsigned, InputXbar::Input *> byte_use;
+    for (InputXbar *ixbar : use)
+        if (ixbar->groups.count(group))
+            for (auto &i : ixbar->groups[group]) {
                 if (i.lo < 0) continue;
                 for (int byte = i.lo/8; byte <= i.hi/8; byte++)
-                    use[byte] = &i; }
+                    byte_use[byte] = &i; }
     InputXbar::Input *prev = 0;
-    for (auto &u : use) {
-        if (prev == u.second) continue;
+    for (auto &in : byte_use) {
+        if (prev == in.second) continue;
         if (prev) out << ", ";
-        prev = u.second;
+        prev = in.second;
         out << prev->what << ':' << prev->lo << ".." << prev->hi; }
-    return out;
 }
 
 void InputXbar::pass2(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
@@ -288,7 +315,7 @@ void InputXbar::pass2(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
         unsigned bytes_in_use = 0;
         for (auto &input : group.second) {
             if (input.lo >= 0) continue;
-            if (auto *at = ::find(use[group.first], *input.what, group.first)) {
+            if (auto *at = GroupSet(use, group.first).find(*input.what)) {
                 input.lo = at->lo;
                 input.hi = at->hi;
                 LOG1(input.what << " found in bytes " << at->lo/8 << ".."
@@ -318,10 +345,19 @@ void InputXbar::pass2(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
                       group.first, input.what.name());
                 LOG1("Failed to put " << input.what << " into " << (ternary ? "tcam" : "exact")
                      << " ixbar group " << group.first << " in stage " << table->stage->stageno);
-                LOG1("  inuse: " << std::make_pair(group.first, use[group.first]));
+                LOG1("  inuse: " << GroupSet(use, group.first));
             }
         }
     }
+    for (auto &hash : hash_tables) {
+        for (auto &col : hash.second) {
+            if (col.second.what && !col.second.data) {
+                auto *in = find(*col.second.what, hash.first);
+                /* FIXME -- should check that this doesn't conflict with some other use
+                 * FIXME -- of this hash table column... */
+                for (int bit = col.second.what->lo; bit <= col.second.what->hi; bit++) {
+                    assert(bit >= in->what->lo);
+                    col.second.data[in->lo + bit - in->what->lo] = 1; } } } }
 }
 
 void InputXbar::write_regs() {
