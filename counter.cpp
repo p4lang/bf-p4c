@@ -10,8 +10,8 @@ void CounterTable::setup(VECTOR(pair_t) &data) {
     if (!row) row = get(data, "logical_row");
     setup_layout(row, get(data, "column"), get(data, "bus"));
     if (auto *fmt = get(data, "format")) {
-       if (CHECKTYPE(*fmt, tMAP))
-          format = new Format(fmt->map);
+        if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
+            format = new Format(fmt->map);
     } else
         error(lineno, "No format specified in table %s", name());
     VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;

@@ -312,14 +312,14 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
     match_table = 0;
     setup_layout(get(data, "row"), get(data, "column"), get(data, "bus"));
     if (auto *fmt = get(data, "format")) {
-       if (CHECKTYPE(*fmt, tMAP))
-           format = new Format(fmt->map);
-        if (format->size > 64)
-            error(fmt->lineno, "ternary indirect format larger than 64 bits");
-        if (format->size < 4) {
-            /* pad out to minumum size */
-            format->size = 4;
-            format->log2size = 2; }
+        if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map")) {
+            format = new Format(fmt->map);
+            if (format->size > 64)
+                error(fmt->lineno, "ternary indirect format larger than 64 bits");
+            if (format->size < 4) {
+                /* pad out to minumum size */
+                format->size = 4;
+                format->log2size = 2; } }
     } else
         error(lineno, "No format specified in table %s", name());
     VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;

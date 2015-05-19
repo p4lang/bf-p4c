@@ -12,8 +12,8 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
     setup_layout(get(data, "row"), get(data, "column"), get(data, "bus"));
     setup_logical_id();
     if (auto *fmt = get(data, "format")) {
-       if (CHECKTYPE(*fmt, tMAP))
-           format = new Format(fmt->map);
+        if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
+            format = new Format(fmt->map);
     } else
         error(lineno, "No format specified in table %s", name());
     VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
