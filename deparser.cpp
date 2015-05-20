@@ -79,7 +79,9 @@ INTRINSIC(EGRESS, egress_unicast_port, 1,
     dep->inp_regs.ier.main_e.egress_unicast_port.phv = vals[0]->reg.index;
     dep->inp_regs.ier.main_e.egress_unicast_port.valid = 1; )
 HER_INTRINSIC(force_tx_err)
+HER_INTRINSIC(tx_pkt_has_offsets)
 HER_INTRINSIC(capture_tx_ts)
+HER_INTRINSIC(coal)
 HER_INTRINSIC(ecos)
 
 void Deparser::start(int lineno, VECTOR(value_t) args) {
