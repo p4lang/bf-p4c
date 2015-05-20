@@ -77,6 +77,7 @@ static value_t list_map_expand(VECTOR(value_t) &v);
 %}
 
 %define parse.error verbose
+%define lr.default-reduction accepting
 
 %union {
     int                 i;
@@ -167,11 +168,12 @@ param   : INT { $$ = VAL($1); }
 
 indent_elements
         : INDENT elements UNINDENT { $$ = $2; }
-        | INDENT elements error error_resync UNINDENT { $$ = $2; }
         | INDENT error { $<i>$ = lineno; } error_resync UNINDENT { $$ = empty_map(lineno-$<i>3); }
         ;
 elements: list_elements { $$ = list_map_expand($1); }
+        | list_elements error error_resync { $$ = list_map_expand($1); }
         | map_elements { $$ = VAL($1); }
+        | map_elements error error_resync { $$ = VAL($1); }
         ;
 map_elements: map_elements map_element { $$ = $1; VECTOR_add($$, $2); }
         | map_element { VECTOR_init1($$, $1); }

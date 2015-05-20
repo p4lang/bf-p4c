@@ -15,6 +15,7 @@
 
 class ActionBus;
 class GatewayTable;
+class IdletimeTable;
 class Instruction;
 class InputXbar;
 class MatchTable;
@@ -56,7 +57,8 @@ public:
     json::map *base_tbl_cfg(json::vector &out, const char *type, int size);
     json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size);
     virtual std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg();
-    enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER, METER };
+    enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER,
+                        METER, IDLETIME };
     virtual table_type_t table_type() { return OTHER; }
     virtual table_type_t set_match_table(MatchTable *m) { return OTHER; }
     virtual GatewayTable *get_gateway() { return 0; }
@@ -262,9 +264,9 @@ protected:                                                              \
 
 DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     GatewayTable                *gateway = 0;
+    IdletimeTable               *idletime = 0;
     AttachedTables              attached;
     void write_regs(int type, Table *result);
-protected:
     bool common_setup(pair_t &);
 public:
     GatewayTable *get_gateway() { return gateway; }
@@ -348,6 +350,7 @@ DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
     std::vector<Match>  match;
     unsigned            chain_rows; /* bitvector */
     enum { ALWAYS_ENABLE_ROW = (1<<2) | (1<<5) | (1<<9) };
+    friend class TernaryIndirectTable;
 public:
     int tcam_id;
     Table::Ref indirect;
@@ -455,6 +458,37 @@ public:
     void write_merge_regs(int type, int bus, Table *action, bool indirect);
     unsigned address_shift() { return 7 + ceil_log2(min_words); }
 )
+
+class IdletimeTable : public Table {
+    MatchTable          *match_table = 0;
+    int                 sweep_interval = 7, precision = 3;
+    bool                disable_notification = false;
+    bool                two_way_notification = false;
+    bool                per_flow_enable = false;
+
+    IdletimeTable(int lineno, const char *name, gress_t gress, Stage *stage, int lid) 
+        : Table(lineno, name, gress, stage, lid) {}
+    void setup(VECTOR(pair_t) &data);
+public:
+    table_type_t table_type() { return IDLETIME; }
+    table_type_t set_match_table(MatchTable *m) {
+        match_table = m;
+        if ((unsigned)m->logical_id < (unsigned)logical_id) logical_id = m->logical_id;
+        return IDLETIME; }
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
+        width = period = 1; depth = layout_size(); period_name = 0; }
+    int precision_shift();
+    void pass1();
+    void pass2();
+    void write_merge_regs(int type, int bus);
+    void write_regs();
+    void gen_tbl_cfg(json::vector &out);
+    static IdletimeTable *create(int lineno, const std::string &name, gress_t gress,
+                                 Stage *stage, int lid, VECTOR(pair_t) &data) {
+        IdletimeTable *rv = new IdletimeTable(lineno, name.c_str(), gress, stage, lid);
+        rv->setup(data);
+        return rv; }
+};
 
 DECLARE_ABSTRACT_TABLE_TYPE(StatsTable, AttachedTable,
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {

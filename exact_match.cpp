@@ -280,6 +280,9 @@ void ExactMatchTable::pass1() {
     if (gateway) {
         gateway->logical_id = logical_id;
         gateway->pass1(); }
+    if (idletime) {
+        idletime->logical_id = logical_id;
+        idletime->pass1(); }
 }
 
 void ExactMatchTable::setup_ways() {
@@ -408,6 +411,7 @@ void ExactMatchTable::pass2() {
         word_ixbar_group[i] = find_in_ixbar(this, match_in_word[i]);
     if (actions) actions->pass2(this);
     if (gateway) gateway->pass2();
+    if (idletime) idletime->pass2();
 }
 
 void ExactMatchTable::write_regs() {
@@ -579,6 +583,9 @@ void ExactMatchTable::write_regs() {
                 merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 
                     attached.selector.args[0]->by_group[group]->bits[0].lo%128 + 23 -
                         get_selector()->address_shift(); }
+            if (idletime)
+                merge.mau_idletime_adr_exact_shiftcount[bus][word_group] =
+                    68 - idletime->precision_shift();
             for (auto &st : attached.stats) {
                 if (st.args.empty())
                     merge.mau_stats_adr_exact_shiftcount[bus][word_group] = st->direct_shiftcount();
@@ -615,6 +622,7 @@ void ExactMatchTable::write_regs() {
         if (word-- == 0) { word = fmt_width-1; } }
     if (actions) actions->write_regs(this);
     if (gateway) gateway->write_regs();
+    if (idletime) idletime->write_regs();
 }
 
 std::unique_ptr<json::map> ExactMatchTable::gen_memory_resource_allocation_tbl_cfg(Way &way) {

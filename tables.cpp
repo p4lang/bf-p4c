@@ -185,7 +185,7 @@ void Table::setup_vpns(VECTOR(value_t) *vpn, bool allow_holes) {
     const char *period_name;
     vpn_params(width, depth, period, period_name);
     if (vpn && vpn->size % (depth/period) != 0) {
-        error(lineno, "Vpn list length doesn't match layout (is %d, should be %d)",
+        error(vpn->data[0].lineno, "Vpn list length doesn't match layout (is %d, should be %d)",
               vpn->size, depth/period);
         return; }
     int word = width;
@@ -271,8 +271,14 @@ bool MatchTable::common_setup(pair_t &kv) {
     if (kv.key == "gateway") {
         if (CHECKTYPE(kv.value, tMAP)) {
             gateway = GatewayTable::create(kv.key.lineno, name_+" gateway",
-                    gress, stage, -1, kv.value.map);
+                                           gress, stage, -1, kv.value.map);
             gateway->set_match_table(this); }
+        return true; }
+    if (kv.key == "idletime") {
+        if (CHECKTYPE(kv.value, tMAP)) {
+            idletime = IdletimeTable::create(kv.key.lineno, name_+" idletime",
+                                             gress, stage, -1, kv.value.map);
+            idletime->set_match_table(this); }
         return true; }
     if (kv.key == "selector") {
         attached.selector.setup(kv.value, this);
@@ -719,7 +725,9 @@ void MatchTable::write_regs(int type, Table *result) {
                 /* FIXME -- deal with variable-sized actions */
                 merge.mau_actiondata_adr_default[type][bus] =
                     get_address_mau_actiondata_adr_default(result->action->format->log2size);
-            result->write_merge_regs(type, bus); }
+            result->write_merge_regs(type, bus);
+            if (idletime)
+                idletime->write_merge_regs(type, bus); }
     } else {
         /* ternary match with no indirection table */
         assert(type == 1);

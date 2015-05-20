@@ -172,6 +172,9 @@ void TernaryMatchTable::pass1() {
     if (gateway) {
         gateway->logical_id = logical_id;
         gateway->pass1(); }
+    if (idletime) {
+        idletime->logical_id = logical_id;
+        idletime->pass1(); }
 }
 void TernaryMatchTable::pass2() {
     LOG1("### Ternary match table " << name() << " pass2");
@@ -186,6 +189,7 @@ void TernaryMatchTable::pass2() {
             error(lineno, "No ternary indirect bus available for table %s", name()); }
     if (actions) actions->pass2(this);
     if (gateway) gateway->pass2();
+    if (idletime) idletime->pass2();
 }
 void TernaryMatchTable::write_regs() {
     LOG1("### Ternary match table " << name() << " write_regs");
@@ -254,6 +258,8 @@ void TernaryMatchTable::write_regs() {
         if (action_bus)
              merge.mau_immediate_data_mask[1][indirect_bus] = (1UL << action_bus->size()) - 1;
         attached.write_merge_regs(this, 1, indirect_bus);
+        if (idletime)
+            idletime->write_merge_regs(1, indirect_bus);
         for (auto &st : attached.stats) {
             if (st.args.empty())
                 merge.mau_stats_adr_tcam_shiftcount[indirect_bus] = st->direct_shiftcount();
@@ -265,6 +271,7 @@ void TernaryMatchTable::write_regs() {
     }
     if (actions) actions->write_regs(this);
     if (gateway) gateway->write_regs();
+    if (idletime) idletime->write_regs();
 }
 
 std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl_cfg() {
@@ -467,6 +474,9 @@ void TernaryIndirectTable::write_regs() {
             merge.mau_selectorlength_default[1][bus] = 1; // FIXME
             merge.mau_meter_adr_tcam_shiftcount[bus] =
                 attached.selector.args[0]->bits[0].lo%128 + 23 - get_selector()->address_shift(); }
+        if (match_table->idletime)
+            merge.mau_idletime_adr_tcam_shiftcount[bus] =
+                    66 + format->log2size - match_table->idletime->precision_shift();
         for (auto &st : attached.stats) {
             if (st.args.empty())
                 merge.mau_stats_adr_tcam_shiftcount[bus] = st->direct_shiftcount();
