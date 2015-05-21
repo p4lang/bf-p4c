@@ -5,9 +5,22 @@
 
 DEFINE_TABLE_TYPE(SelectionTable)
 
+void SelectionTable::HashDist::setup(value_t &v) {
+    if (!CHECKTYPEPM(v, tVEC, v.vec.size == 4, "Invalid hash_dist")) return;
+    if (!CHECKTYPE(v[0], tINT) || v[0].i < 0 || v[0].i >= 8)
+        error(v[0].lineno, "Invalid hash group");
+    else if (!CHECKTYPE(v[1], tINT) || v[1].i < 0 || v[1].i >= 2)
+        error(v[1].lineno, "Invalid hash distribulion function id");
+    else if (!CHECKTYPE(v[2], tINT) || v[2].i < 0 || v[2].i >= 3)
+        error(v[2].lineno, "Invalid hash distribulion group id");
+    else if (CHECKTYPE(v[3], tINT)) {
+        hash_group = v[0].i;
+        func_id = v[1].i;
+        group_id = v[2].i;
+        mask = v[3].i; }
+}
+
 void SelectionTable::setup(VECTOR(pair_t) &data) {
-    non_linear_hash = false;
-    resilient_hash = false;
     auto *row = get(data, "row");
     if (!row) row = get(data, "logical_row");
     setup_layout(row, get(data, "column"), get(data, "bus"));
@@ -36,6 +49,11 @@ void SelectionTable::setup(VECTOR(pair_t) &data) {
                 for (value_t &v : kv.value.vec)
                     if (CHECKTYPE(v, tINT))
                         pool_sizes.push_back(v.i);
+        } else if (kv.key == "selection_hash") {
+            if (CHECKTYPE(kv.value, tINT))
+                selection_hash = kv.value.i;
+        } else if (kv.key == "hash_dist") {
+            hash_dist.setup(kv.value);
         } else if (kv.key == "p4") {
             if (CHECKTYPE(kv.value, tMAP))
                 p4_table = P4Table::get(P4Table::Selection, kv.value.map);
@@ -81,28 +99,44 @@ void SelectionTable::pass1() {
         int words = (size + 119)/120;
         if (words < min_words) min_words = words;
         if (words > max_words) max_words = words; }
+    if (max_words > 1)
+        stage->table_use[gress] |= Stage::USE_WIDE_SELECTOR;
 }
 
 void SelectionTable::pass2() {
     LOG1("### Selection table " << name() << " pass2");
     if (input_xbar) input_xbar->pass2(stage->exact_ixbar, 128);
+    if (selection_hash < 0 && (selection_hash = input_xbar->hash_group()) < 0)
+        error(lineno, "No selection_hash in selector table %s", name());
 }
 
-void SelectionTable::write_merge_regs(int type, int bus, Table *action, bool indirect) {
+void SelectionTable::write_merge_regs(int type, int bus, const std::vector<Format::Field*> &args,
+                                      Call &action)
+{
     auto &merge = stage->regs.rams.match.merge;
-    merge.mau_selector_action_entry_size[type][bus] = action->format->log2size - 3;
-    merge.mau_bus_hash_group_ctl[type][bus/4] |= 0; // FIXME
+    if (action)
+        merge.mau_selector_action_entry_size[type][bus] = action->format->log2size - 3;
+    if (args.size() > 1)
+        merge.mau_bus_hash_group_ctl[type][bus/4].set_subfield(
+            1 << BusHashGroup::SELECTOR_MOD, 5 * (bus%4), 5);
     merge.mau_meter_adr_type_position[type][bus] = 24;
-    if (indirect) {
+    if (action.args.size() > 1) {
         int bits = per_flow_enable ? 17 : 16;
         /* FIXME -- regs need to stabilize */
-        merge.mau_meter_adr_mask[type][bus] = ((1U << bits) - 1) << 7;
-    }
+        merge.mau_meter_adr_mask[type][bus] = ((1U << bits) - 1) << 7; }
     merge.mau_meter_adr_default[type][bus] = (4U << 24) | (per_flow_enable ? 0 : (1U << 23));
     if (per_flow_enable) {
         /* FIXME -- regs need to stabilize */
-        merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = 23;
-    }
+        merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = 23; }
+    if (hash_dist.hash_group >= 0) {
+        /* from HashDistributionResourceAllocation.write_config: */
+        merge.mau_bus_hash_group_sel[type][bus/8].set_subfield(hash_dist.code() | 8, 4*(bus%8), 4);
+        // FIXME
+        switch (hash_dist.group_id) {
+        case 0: merge.mau_hash_group_expand[hash_dist.func_id].hash_slice_group0_expand = 0; break;
+        case 1: merge.mau_hash_group_expand[hash_dist.func_id].hash_slice_group1_expand = 0; break;
+        case 2: merge.mau_hash_group_expand[hash_dist.func_id].hash_slice_group2_expand = 0; break;
+        default: assert(0); } }
 }
 
 void SelectionTable::write_regs() {
@@ -137,7 +171,7 @@ void SelectionTable::write_regs() {
             unitram_config.unitram_enable = 1;
             auto &vh_adr_xbar = stage->regs.rams.array.row[row].vh_adr_xbar;
             vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + logical_row.bus]
-                .enabled_3bit_muxctl_select = input_xbar->hash_group();
+                .enabled_3bit_muxctl_select = selection_hash;
             vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + logical_row.bus]
                 .enabled_3bit_muxctl_enable = 1;
             vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
@@ -181,6 +215,18 @@ void SelectionTable::write_regs() {
         icxbar.address_distr_to_logical_rows = logical_row_use;
         icxbar.address_distr_to_overflow = push_on_overflow;
     }
+    if (hash_dist.hash_group >= 0) {
+        /* from HashDistributionResourceAllocation.write_config: */
+        auto &merge = stage->regs.rams.match.merge;
+        if (non_linear_hash)
+            merge.mau_selector_hash_sps_enable |= 1 << hash_dist.code();
+        if (gress == EGRESS)
+            merge.mau_hash_group_config.hash_group_egress |= 1 << hash_dist.code();
+        merge.mau_hash_group_config.hash_group_enable |= 1 << hash_dist.code();
+        merge.mau_hash_group_config.hash_group_sel = hash_dist.hash_group | (1 << 3);
+        merge.mau_hash_group_config.hash_group_ctl.set_subfield(0, 2 * hash_dist.code(), 2);
+        merge.mau_hash_group_shiftcount.set_subfield(0, 3 * hash_dist.code(), 3); // FIXME
+        merge.mau_hash_group_mask[hash_dist.code()] = hash_dist.mask; }
 }
 
 void SelectionTable::gen_tbl_cfg(json::vector &out) {

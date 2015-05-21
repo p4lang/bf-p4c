@@ -840,8 +840,8 @@ void AttachedTables::pass1(MatchTable *self) {
     if (selector.check()) {
         if (selector->set_match_table(self) != Table::SELECTION)
             error(selector.lineno, "%s is not a selection table", selector->name());
-        if (selector.args.size() != 1)
-            error(selector.lineno, "Selector requires one arg");
+        if (selector.args.size() < 1 || selector.args.size() > 3)
+            error(selector.lineno, "Selector requires 1-3 args");
         if (selector->stage != self->stage)
             error(selector.lineno, "Selector table %s not in same stage as %s",
                   selector->name(), self->name());
@@ -875,8 +875,8 @@ void AttachedTables::pass1(MatchTable *self) {
 void AttachedTables::write_merge_regs(Table *self, int type, int bus) {
     for (auto &s : stats) s->write_merge_regs(type, bus);
     for (auto &m : meter) m->write_merge_regs(type, bus);
-    if (self->action && selector)
-        get_selector()->write_merge_regs(type, bus, self->action, self->action.args.size() > 1);
+    if (selector)
+        get_selector()->write_merge_regs(type, bus, selector.args, self->action);
 }
 
 json::map *Table::base_tbl_cfg(json::vector &out, const char *type, int size) {

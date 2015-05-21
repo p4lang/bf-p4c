@@ -471,7 +471,13 @@ void TernaryIndirectTable::write_regs() {
                 merge.mau_actiondata_adr_tcam_shiftcount[bus] =
                     action.args[1]->bits[0].lo + 5 - lo_huffman_bits; } }
         if (attached.selector) {
-            merge.mau_selectorlength_default[1][bus] = 1; // FIXME
+            if (attached.selector.args.size() == 1)
+                merge.mau_selectorlength_default[1][bus] = 1;
+            else {
+                int width = attached.selector.args[1]->size;
+                if (attached.selector.args.size() == 3)
+                    width += attached.selector.args[2]->size;
+                merge.mau_selectorlength_mask[1][bus] = (1 << width) - 1; }
             merge.mau_meter_adr_tcam_shiftcount[bus] =
                 attached.selector.args[0]->bits[0].lo%128 + 23 - get_selector()->address_shift(); }
         if (match_table->idletime)

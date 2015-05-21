@@ -61,8 +61,8 @@ public:
                                                         stats_bus_use,
                                                         overflow_bus_use;
     bitvec      imem_addr_use[2], imem_use[ACTION_IMEM_SLOTS];
-    enum { USE_TCAM=1, USE_TCAM_PIPED=2, USE_STATEFUL=4,
-           USE_METER=8, USE_SELECTOR=16, };
+    enum { USE_TCAM=1, USE_TCAM_PIPED=2, USE_STATEFUL=4, USE_METER=8,
+           USE_SELECTOR=16, USE_WIDE_SELECTOR=32 };
     int /* enum */      table_use[2], group_table_use[2];
     enum { NONE=0, CONCURRENT=1, ACTION_DEP=2, MATCH_DEP=3 } stage_dep[2];
     bitvec              match_use[2], action_use[2], action_set[2];
@@ -145,6 +145,15 @@ namespace MapRam {
             COLOR = 3,
         };
     }
+}
+namespace BusHashGroup {
+    enum {
+        SELECTOR_MOD = 0,
+        METER_ADDRESS = 1,
+        STATISTICS_ADDRESS = 2,
+        ACTION_DATA_ADDRESS = 3,
+        IMMEDIATE_DATA = 4,
+    };
 }
 
 #endif /* _stage_h_ */

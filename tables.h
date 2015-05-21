@@ -445,17 +445,27 @@ public:
 )
 
 DECLARE_TABLE_TYPE(SelectionTable, AttachedTable, "selection",
-    bool                non_linear_hash, resilient_hash;
-                        /* resilient_hash == false is fair hash */
-    int                 mode_lineno, param;
+    bool                non_linear_hash = false, /* == enable_sps_scrambling */
+                        resilient_hash = false; /* false is fair hash */
+    int                 mode_lineno = -1, param = -1;
     std::vector<int>    pool_sizes;
-    int                 min_words, max_words;
+    int                 min_words = -1, max_words = -1;
+    int                 selection_hash = -1;
+    struct HashDist {
+        // FIXME -- need less 'raw' data for this */
+        // FIXME -- needed in other table types? */
+        int             hash_group = -1, func_id = -1, group_id = -1;
+        int             mask = 0;
+        void setup(value_t &);
+        int code() { return func_id*3 + group_id; }
+    }                   hash_dist;
 public:
     bool                per_flow_enable;
     table_type_t table_type() { return SELECTION; }
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
         width = period = 1; depth = layout_size(); period_name = 0; }
-    void write_merge_regs(int type, int bus, Table *action, bool indirect);
+    void write_merge_regs(int type, int bus, const std::vector<Format::Field*> &args,
+                          Call &action);
     unsigned address_shift() { return 7 + ceil_log2(min_words); }
 )
 
