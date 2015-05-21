@@ -20,7 +20,8 @@ TFAS_OBJS:= action_bus.o action_table.o asm-parse.o asm-types.o bitvec.o \
 	    input_xbar.o instruction.o p4_table.o parser.o phv.o selection.o \
 	    stage.o tables.o ternary_match.o tfas.o top_level.o ubits.o vector.o
 TEST_SRCS:= $(wildcard test_*.cpp)
-all: $(GEN_OBJS:%.o=%.h) gen/uptr_sizes.h tfas
+default: $(GEN_OBJS:%.o=%.h) gen/uptr_sizes.h tfas
+all: default reflow json_diff
 tfas: $(TFAS_OBJS) json.o $(GEN_OBJS) $(TEST_SRCS:%.cpp=%.o)
 
 json2cpp: json.o
@@ -82,14 +83,14 @@ templates/%.json: templates/.templates-updated
 
 -include $(wildcard *.d gen/*.d)
 
-.PHONY: all tags test clean veryclean help
+.PHONY: default all tags test clean veryclean help
 tags:
 	ctags -R -I VECTOR --exclude=test --exclude=submodules
 
-test: all reflow json_diff
+test: all
 	cd test; ./runtests
 
-ftest: all reflow json_diff
+ftest: all
 	cd test; ./runtests -f
 
 clean:
@@ -101,6 +102,7 @@ veryclean: clean
 help:
 	@echo "Tofino assembler makefile -- builds assembler"
 	@echo "other targets:"
+	@echo "    make all	    build assembler + extra debugging tools"
 	@echo "    make clean       cleans up object/dep files"
 	@echo "    make veryclean   also cleans up generated templates"
 	@echo "    make test        run regression tests"
