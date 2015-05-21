@@ -96,7 +96,7 @@ for p4file in "$@"; do
         need_reflow=false
     else 
         rm -f $name.tfa
-        if $GLSC --verbose 2 -vl 2 -S $glsc_args ../$name.p4 >glsc.log 2>&1; then
+        if $GLSC --verbose 2 -vl 2 -S $glsc_args ../$name.p4 </dev/null >glsc.log 2>&1; then
             need_reflow=true
             if [ ! -r $name.tfa ]; then
                 echo -n " p4 compile failed to produce asm"
