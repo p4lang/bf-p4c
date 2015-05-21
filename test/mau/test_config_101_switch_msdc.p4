@@ -2935,7 +2935,7 @@ control process_ipv6_racl {
 }
 
 field_list mirror_info {
-    ig_intr_md.ingress_port;
+    ingress_metadata.ifindex;
     ingress_metadata.drop_reason;
     l3_metadata.lkp_ip_ttl;
 }
