@@ -54,7 +54,7 @@ if [ -x "$GLSC" ]; then
     echo "Using $GLSC"
 else
     echo >&2 "Can't find p4c-tofino executable"
-    exit 1
+    GLSC=false
 fi
 
 function findbin () {
@@ -64,7 +64,7 @@ function findbin () {
         echo $1
     else
         echo >&2 "Can't find $1 executable"
-        exit 1
+        echo false
     fi
 }
 
