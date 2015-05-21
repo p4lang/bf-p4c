@@ -1,5 +1,6 @@
 #include "algorithm.h"
 #include "input_xbar.h"
+#include "misc.h"
 #include "stage.h"
 #include "tables.h"
 
@@ -170,10 +171,8 @@ void SelectionTable::write_regs() {
                 unitram_config.unitram_egress = 1;
             unitram_config.unitram_enable = 1;
             auto &vh_adr_xbar = stage->regs.rams.array.row[row].vh_adr_xbar;
-            vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + logical_row.bus]
-                .enabled_3bit_muxctl_select = selection_hash;
-            vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + logical_row.bus]
-                .enabled_3bit_muxctl_enable = 1;
+            setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + logical_row.bus],
+                         selection_hash);
             vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
                 bitmask2bytemask(input_xbar->hash_group_bituse());
             auto &selector_ctl = map_alu.meter_group[meter_group].selector.selector_alu_ctl;

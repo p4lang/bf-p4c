@@ -2,6 +2,7 @@
 #include "algorithm.h"
 #include "input_xbar.h"
 #include "instruction.h"
+#include "misc.h"
 #include "stage.h"
 #include "tables.h"
 
@@ -708,9 +709,7 @@ void MatchTable::write_regs(int type, Table *result) {
             action_enable = 1 << result->action_enable;
         for (auto &row : result->layout) {
             int bus = row.row*2 | row.bus;
-            merge.match_to_logical_table_ixbar_outputmap[type][bus].enabled_4bit_muxctl_select =
-                logical_id;
-            merge.match_to_logical_table_ixbar_outputmap[type][bus].enabled_4bit_muxctl_enable = 1;
+            setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[type][bus], logical_id);
             if (result->action.args.size() >= 1) {
                 assert(result->action.args[0]);
                 merge.mau_action_instruction_adr_mask[type][bus] =

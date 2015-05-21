@@ -3,6 +3,7 @@
 #include "hex.h"
 #include "input_xbar.h"
 #include "instruction.h"
+#include "misc.h"
 #include "stage.h"
 #include "tables.h"
 
@@ -446,18 +447,13 @@ void ExactMatchTable::write_regs() {
             auto &way = way_map[std::make_pair(row.row, col)];
             if (first) {
                 hash_group = ways[way.way].group;
-                vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus]
-                    .enabled_3bit_muxctl_select = hash_group;
-                vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus]
-                    .enabled_3bit_muxctl_enable = 1;
+                setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus], hash_group);
                 first = false;
             } else
                 assert(hash_group == ways[way.way].group);
             assert(way.word == (int)word);
-            vh_adr_xbar.exactmatch_mem_hashadr_xbar_ctl[col]
-                .enabled_4bit_muxctl_select = ways[way.way].subgroup + row.bus*5;
-            vh_adr_xbar.exactmatch_mem_hashadr_xbar_ctl[col]
-                .enabled_4bit_muxctl_enable = 1;
+            setup_muxctl(vh_adr_xbar.exactmatch_mem_hashadr_xbar_ctl[col],
+                         ways[way.way].subgroup + row.bus*5);
             vh_adr_xbar.exactmatch_bank_enable[col]
                 .exactmatch_bank_enable_bank_mask = ways[way.way].mask;
             vh_adr_xbar.exactmatch_bank_enable[col]
@@ -614,16 +610,12 @@ void ExactMatchTable::write_regs() {
                     auto &overhead_row = layout[index + word - group_info[group].overhead_word];
                     if (&overhead_row == &row)
                         merge.col[col].row_action_nxtable_bus_drive[row.row] |= 1 << row.bus;
-                    hitmap_ixbar.enabled_4bit_muxctl_select =
-                        overhead_row.row*2 + group_info[group].word_group;
+                    setup_muxctl(hitmap_ixbar, overhead_row.row*2 + group_info[group].word_group);
                 } else {
-                    hitmap_ixbar.enabled_4bit_muxctl_select =
-                        row.row*2 + group_info[group].word_group; }
-                hitmap_ixbar.enabled_4bit_muxctl_enable = 1;
+                    setup_muxctl(hitmap_ixbar, row.row*2 + group_info[group].word_group); }
                 if (++word_group > 1) break; }
-            /*merge.col[col].hitmap_output_map[bus].enabled_4bit_muxctl_select =
-                layout[index+word].row*2 + layout[index+word].bus;
-            merge.col[col].hitmap_output_map[bus].enabled_4bit_muxctl_enable = 1;*/ }
+            /*setup_muxctl(merge.col[col].hitmap_output_map[bus],
+                           layout[index+word].row*2 + layout[index+word].bus); */ }
         if (gress == EGRESS)
             merge.exact_match_delay_config.exact_match_bus_thread |= 1 << bus;
         if (word-- == 0) { word = fmt_width-1; } }

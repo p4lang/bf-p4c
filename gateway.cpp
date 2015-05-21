@@ -1,6 +1,7 @@
 #include "algorithm.h"
 #include "input_xbar.h"
 #include "instruction.h"
+#include "misc.h"
 #include "stage.h"
 #include "tables.h"
 
@@ -176,14 +177,12 @@ void GatewayTable::write_regs() {
         assert(row.bus == 1);
         gw_reg.gateway_table_ctl.gateway_table_input_data1_select = 1;
         gw_reg.gateway_table_ctl.gateway_table_input_hash1_select = 1; }
-    if (input_xbar->hash_group() >= 0) {
-        auto &vh_adr_xbar_ctl = row_reg.vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus];
-        vh_adr_xbar_ctl.enabled_3bit_muxctl_select = input_xbar->hash_group();
-        vh_adr_xbar_ctl.enabled_3bit_muxctl_enable = 1; }
+    if (input_xbar->hash_group() >= 0)
+        setup_muxctl(row_reg.vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus],
+                     input_xbar->hash_group());
     if (input_xbar->match_group() >= 0) {
         auto &vh_xbar_ctl = row_reg.vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl;
-        vh_xbar_ctl.exactmatch_row_vh_xbar_select = input_xbar->match_group();
-        vh_xbar_ctl.exactmatch_row_vh_xbar_enable = 1;
+        setup_muxctl(vh_xbar_ctl, input_xbar->match_group());
         /* vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress; */ }
     gw_reg.gateway_table_ctl.gateway_table_logical_table = logical_id;
     gw_reg.gateway_table_ctl.gateway_table_thread = gress;
@@ -208,9 +207,7 @@ void GatewayTable::write_regs() {
         merge.gateway_next_table_lut[logical_id][4] = miss.next ? miss.next->table_id() : 0xff;
         merge.gateway_inhibit_lut[logical_id] |= 1 << 4; }
     merge.gateway_en |= 1 << logical_id;
-    merge.gateway_to_logicaltable_xbar_ctl[logical_id].enabled_4bit_muxctl_select =
-        row.row*2 + gw_unit;
-    merge.gateway_to_logicaltable_xbar_ctl[logical_id].enabled_4bit_muxctl_enable = 1;
+    setup_muxctl(merge.gateway_to_logicaltable_xbar_ctl[logical_id], row.row*2 + gw_unit);
     if (Table *payload = match_table) {
         auto tmatch = dynamic_cast<TernaryMatchTable *>(payload);
         if (tmatch)

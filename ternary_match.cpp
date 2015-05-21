@@ -2,6 +2,7 @@
 #include "algorithm.h"
 #include "input_xbar.h"
 #include "instruction.h"
+#include "misc.h"
 #include "range.h"
 #include "stage.h"
 #include "tables.h"
@@ -221,22 +222,15 @@ void TernaryMatchTable::write_regs() {
             halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_select = match[word].byte_config;
             halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_enable = 1;
             halfbyte_mux_ctl.tcam_row_search_thread = gress;
-            tcam_vh_xbar.tcam_row_output_ctl[row.bus][row.row]
-                .enabled_4bit_muxctl_select = match[word].word_group;
-            tcam_vh_xbar.tcam_row_output_ctl[row.bus][row.row]
-                .enabled_4bit_muxctl_enable = 1;
-            if (match[word].byte_group >= 0) {
-                tcam_vh_xbar.tcam_extra_byte_ctl[row.bus][row.row/2]
-                    .enabled_3bit_muxctl_select = match[word].byte_group;
-                tcam_vh_xbar.tcam_extra_byte_ctl[row.bus][row.row/2]
-                    .enabled_3bit_muxctl_enable = 1; }
+            setup_muxctl(tcam_vh_xbar.tcam_row_output_ctl[row.bus][row.row],
+                         match[word].word_group);
+            if (match[word].byte_group >= 0)
+                setup_muxctl(tcam_vh_xbar.tcam_extra_byte_ctl[row.bus][row.row/2],
+                             match[word].byte_group);
             if (!((chain_rows >> row.row) & 1))
                 stage->regs.tcams.col[col].tcam_table_map[tcam_id] |= 1U << row.row; }
         if (++word == match.size()) word = 0; }
-    merge.tcam_hit_to_logical_table_ixbar_outputmap[tcam_id]
-        .enabled_4bit_muxctl_select = logical_id;
-    merge.tcam_hit_to_logical_table_ixbar_outputmap[tcam_id]
-        .enabled_4bit_muxctl_enable = 1;
+    setup_muxctl(merge.tcam_hit_to_logical_table_ixbar_outputmap[tcam_id], logical_id);
     /* FIXME -- setting piped mode if any table in the stage is piped -- perhaps
      * FIXME -- tables can be different? */
     if (stage->table_use[gress] & Stage::USE_TCAM_PIPED)
@@ -245,12 +239,8 @@ void TernaryMatchTable::write_regs() {
     merge.tcam_table_prop[tcam_id].enabled = 1;
     stage->regs.tcams.tcam_output_table_thread[tcam_id] = 1 << gress;
     if (indirect_bus >= 0) {
-        auto &ixbar_outputmap = merge.match_to_logical_table_ixbar_outputmap[1][indirect_bus];
-        ixbar_outputmap.enabled_4bit_muxctl_select = logical_id;
-        ixbar_outputmap.enabled_4bit_muxctl_enable = 1;
-        auto &oxbar_outputmap = merge.tcam_match_adr_to_physical_oxbar_outputmap[indirect_bus];
-        oxbar_outputmap.enabled_3bit_muxctl_select = tcam_id;
-        oxbar_outputmap.enabled_3bit_muxctl_enable = 1;
+        setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[1][indirect_bus], logical_id);
+        setup_muxctl(merge.tcam_match_adr_to_physical_oxbar_outputmap[indirect_bus], tcam_id);
         merge.mau_action_instruction_adr_default[1][indirect_bus] = 0x40;
         merge.tind_bus_prop[indirect_bus].tcam_piped = 1;
         merge.tind_bus_prop[indirect_bus].thread = gress;
@@ -444,12 +434,10 @@ void TernaryIndirectTable::write_regs() {
             unitram_config.unitram_enable = 1;
             auto &xbar_ctl = stage->regs.rams.map_alu.row[row.row].vh_xbars
                     .adr_dist_tind_adr_xbar_ctl[row.bus];
-            xbar_ctl.enabled_3bit_muxctl_select = tcam_id;
-            xbar_ctl.enabled_3bit_muxctl_enable = 1; }
+            setup_muxctl(xbar_ctl, tcam_id); }
         int bus = row.row*2 + row.bus;
         merge.tind_ram_data_size[bus] = format->log2size - 1;
-        merge.tcam_match_adr_to_physical_oxbar_outputmap[bus].enabled_3bit_muxctl_select = tcam_id;
-        merge.tcam_match_adr_to_physical_oxbar_outputmap[bus].enabled_3bit_muxctl_enable = 1;
+        setup_muxctl(merge.tcam_match_adr_to_physical_oxbar_outputmap[bus], tcam_id);
         merge.tind_bus_prop[bus].tcam_piped = 1;
         merge.tind_bus_prop[bus].thread = gress;
         merge.tind_bus_prop[bus].enabled = 1;

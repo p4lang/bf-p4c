@@ -1,3 +1,4 @@
+#include "misc.h"
 #include "stage.h"
 #include "tables.h"
 
@@ -56,9 +57,7 @@ void IdletimeTable::write_regs() {
         auto &map_alu_row = map_alu.row[row.row];
         auto vpn = row.vpns.begin();
         for (int col : row.cols) {
-            auto &idle_xbar_ctl = map_alu_row.vh_xbars.adr_dist_idletime_adr_xbar_ctl[col];
-            idle_xbar_ctl.enabled_4bit_muxctl_select = 8; // FIXME
-            idle_xbar_ctl.enabled_4bit_muxctl_enable = 1;
+            setup_muxctl(map_alu_row.vh_xbars.adr_dist_idletime_adr_xbar_ctl[col], 8); // FIXME
             auto &mapram_cfg = map_alu_row.adrmux.mapram_config[col];
             //auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[col];
             if (disable_notification)
@@ -83,12 +82,10 @@ void IdletimeTable::write_regs() {
             adrmux_ctl.map_ram_radr_mux_select_smoflo = 1;
             adrmux_ctl.ram_ofo_stats_mux_select_statsmeter = 1;
             adrmux_ctl.ram_stats_meter_adr_mux_select_idlet = 1;
-            auto &sweep_ctl = map_alu_row.adrmux.idletime_logical_to_physical_sweep_grant_ctl[col];
-            sweep_ctl.enabled_4bit_muxctl_select = match_table->logical_id;
-            sweep_ctl.enabled_4bit_muxctl_enable = 1;
-            auto &lreq_ctl = map_alu_row.adrmux.idletime_physical_to_logical_req_inc_ctl[col];
-            lreq_ctl.enabled_4bit_muxctl_select = match_table->logical_id;
-            lreq_ctl.enabled_4bit_muxctl_enable = 1;
+            setup_muxctl(map_alu_row.adrmux.idletime_logical_to_physical_sweep_grant_ctl[col],
+                         match_table->logical_id);
+            setup_muxctl(map_alu_row.adrmux.idletime_physical_to_logical_req_inc_ctl[col],
+                         match_table->logical_id);
         }
     }
     unsigned bus_index = 8; // FIXME

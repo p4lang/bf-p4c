@@ -1,4 +1,5 @@
 #include "action_bus.h"
+#include "misc.h"
 #include "stage.h"
 
 ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
@@ -159,24 +160,17 @@ void ActionBus::write_immed_regs(Table *tbl) {
         unsigned size = f.second.size;
         switch(Stage::action_bus_slot_size[slot]) {
         case 8:
-            for (unsigned b = off/8; b <= (off + size - 1)/8; b++) {
-                adrdist.immediate_data_8b_ixbar_ctl[tid*4 + b]
-                    .enabled_4bit_muxctl_select = slot++;
-                adrdist.immediate_data_8b_ixbar_ctl[tid*4 + b]
-                    .enabled_4bit_muxctl_enable = 1; }
+            for (unsigned b = off/8; b <= (off + size - 1)/8; b++)
+                setup_muxctl(adrdist.immediate_data_8b_ixbar_ctl[tid*4 + b], slot++);
             break;
         case 16:
             slot -= ACTION_DATA_8B_SLOTS;
-            for (unsigned w = off/16; w <= (off + size - 1)/16; w++) {
-                adrdist.immediate_data_16b_ixbar_ctl[tid*2 + w]
-                    .enabled_5bit_muxctl_select = slot++;
-                adrdist.immediate_data_16b_ixbar_ctl[tid*2 + w]
-                    .enabled_5bit_muxctl_enable = 1; }
+            for (unsigned w = off/16; w <= (off + size - 1)/16; w++)
+                setup_muxctl(adrdist.immediate_data_16b_ixbar_ctl[tid*2 + w], slot++);
             break;
         case 32:
             slot -= ACTION_DATA_8B_SLOTS + ACTION_DATA_16B_SLOTS;
-            adrdist.immediate_data_32b_ixbar_ctl[tid].enabled_5bit_muxctl_select = slot;
-            adrdist.immediate_data_32b_ixbar_ctl[tid].enabled_5bit_muxctl_enable = 1;
+            setup_muxctl(adrdist.immediate_data_32b_ixbar_ctl[tid], slot);
             break;
         default:
             assert(0); } }
