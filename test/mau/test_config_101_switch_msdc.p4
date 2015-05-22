@@ -227,6 +227,7 @@ header_type ingress_intrinsic_metadata_for_mirror_buffer_t {
 @pragma dont_trim
 @pragma pa_gress ingress ig_intr_md_for_mb
 @pragma pa_atomic ingress ig_intr_md_for_mb.ingress_mirror_id
+@pragma pa_no_tagalong ingress ig_intr_md_for_mb.ingress_mirror_id
 @pragma not_deparsed ingress
 @pragma not_deparsed egress
 header ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb;
@@ -2935,7 +2936,7 @@ control process_ipv6_racl {
 }
 
 field_list mirror_info {
-    ig_intr_md.ingress_port;
+    ingress_metadata.ifindex;
     ingress_metadata.drop_reason;
     l3_metadata.lkp_ip_ttl;
 }
