@@ -282,7 +282,8 @@ void TernaryMatchTable::write_regs() {
     if (idletime) idletime->write_regs();
 }
 
-std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl_cfg() {
+std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl_cfg(bool skip_spare_bank) {
+    assert(!skip_spare_bank); // never spares in tcam
     json::map mra;
     mra["memory_type"] = "tcam";
     json::vector mem_units;

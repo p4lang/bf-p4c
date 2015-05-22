@@ -110,6 +110,7 @@ void CounterTable::write_regs() {
         unsigned row = logical_row.row/2U;
         unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
         assert(side == 1);      /* no map rams or alus on left side anymore */
+        /* FIXME factor vpn/mapram stuff with selection.cpp */
         auto vpn = logical_row.vpns.begin();
         int maxvpn = -1;
         if (options.match_compiler)

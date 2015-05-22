@@ -55,6 +55,9 @@ void SelectionTable::setup(VECTOR(pair_t) &data) {
                 selection_hash = kv.value.i;
         } else if (kv.key == "hash_dist") {
             hash_dist.setup(kv.value);
+        } else if (kv.key == "maprams") {
+            if (CHECKTYPE(kv.value, tVEC))
+                setup_maprams(&kv.value.vec);
         } else if (kv.key == "p4") {
             if (CHECKTYPE(kv.value, tMAP))
                 p4_table = P4Table::get(P4Table::Selection, kv.value.map);
@@ -83,9 +86,8 @@ void SelectionTable::pass1() {
     LOG1("### Selection table " << name() << " pass1");
     if (!p4_table) p4_table = P4Table::alloc(P4Table::Selection, this);
     else p4_table->check(this);
-    if (layout.size() != 1 || layout[0].cols.size() != 1)
-        error(layout[0].lineno, "Select table with more than 1 RAM not supported");
     alloc_vpns();
+    alloc_maprams();
     std::sort(layout.begin(), layout.end(),
               [](const Layout &a, const Layout &b)->bool { return a.row > b.row; });
     stage->table_use[gress] |= Stage::USE_SELECTOR;
@@ -152,9 +154,18 @@ void SelectionTable::write_regs() {
     for (Layout &logical_row : layout) {
         unsigned row = logical_row.row/2;
         unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
+        /* FIXME factor vpn/mapram stuff with counter.cpp */
         auto vpn = logical_row.vpns.begin();
+        int maxvpn = -1;
+        if (options.match_compiler)
+            maxvpn = layout_size() - 1;
+        else
+            for (auto v : logical_row.vpns) if (v > maxvpn) maxvpn = v;
+        auto mapram = logical_row.maprams.begin();
         auto &map_alu =  stage->regs.rams.map_alu;
         auto &map_alu_row =  map_alu.row[row];
+        int syn2port_bus = &logical_row == home ? 0 : 1;
+        auto &syn2port_members = map_alu_row.i2portctl.synth2port_hbus_members[syn2port_bus][side];
         unsigned meter_group = row/2;
         // FIXME meter_group based stuff should only be set once (on the home row?)
         // FIXME rather than for every column of every row
@@ -166,7 +177,8 @@ void SelectionTable::write_regs() {
             ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::NONE;
             ram.unit_ram_ctl.match_ram_read_data_mux_select = UnitRam::DataMux::STATISTICS;
             unitram_config.unitram_type = UnitRam::SELECTOR;
-            unitram_config.unitram_vpn = *vpn++;
+            if (!options.match_compiler) // FIXME -- compiler doesn't set this?
+                unitram_config.unitram_vpn = *vpn;
             if (gress == INGRESS)
                 unitram_config.unitram_ingress = 1;
             else
@@ -190,6 +202,7 @@ void SelectionTable::write_regs() {
                 stage->table_use[gress] & Stage::USE_TCAM ? 13 : 9;
             delay_ctl.meter_alu_right_group_enable = resilient_hash ? 3 : 1;
             delay_ctl.meter_alu_right_group_sel = 1;
+
             auto &ram_address_mux_ctl = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
             ram_address_mux_ctl.ram_unitram_adr_mux_select = UnitRam::AdrMux::STATS_METERS;
             if (&logical_row == home) {
@@ -198,7 +211,26 @@ void SelectionTable::write_regs() {
             } else {
                 ram_address_mux_ctl.ram_oflo_adr_mux_select_oflo = 1;
                 ram_address_mux_ctl.ram_ofo_stats_mux_select_oflo = 1; }
-        }
+            ram_address_mux_ctl.map_ram_wadr_mux_select = MapRam::Mux::SYNTHETIC_TWO_PORT;
+            ram_address_mux_ctl.map_ram_wadr_mux_enable = 1;
+            ram_address_mux_ctl.map_ram_radr_mux_select_smoflo = 1;
+
+            syn2port_members |= 1U << logical_col;
+
+            auto &mapram_config = map_alu_row.adrmux.mapram_config[*mapram];
+            auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[*mapram++];
+            mapram_config.mapram_type = MapRam::SELECTOR_SIZE;
+            mapram_config.mapram_vpn_members = 0;
+            if (!options.match_compiler) // FIXME -- compiler doesn't set this?
+                mapram_config.mapram_vpn = *vpn;
+            if (gress == INGRESS)
+                mapram_config.mapram_ingress = 1;
+            else
+                mapram_config.mapram_egress = 1;
+            mapram_config.mapram_enable = 1;
+            //if (!options.match_compiler) // FIXME -- compiler doesn't set this?
+                mapram_ctl.mapram_vpn_limit = maxvpn;
+            ++vpn; }
         if (&logical_row == home) {
             swbox[row].ctl.r_stats_alu_o_mux_select.r_stats_alu_o_sel_stats_rd_r_i = 1;
         } else {
@@ -234,5 +266,5 @@ void SelectionTable::gen_tbl_cfg(json::vector &out) {
     json::map &tbl = *base_tbl_cfg(out, "selection", 1024);
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "selection", 1024);
     add_pack_format(stage_tbl, 128, 1, 1);
-    stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg();
+    stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(true);
 }

@@ -808,10 +808,11 @@ int Table::find_on_ixbar(Phv::Slice sl, int group) {
     return -1;
 }
 
-std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg() {
+std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(bool skip_spare_bank) {
     int width, depth, period;
     const char *period_name;
     vpn_params(width, depth, period, period_name);
+    if (skip_spare_bank) period++;
     json::map mra;
     mra["memory_type"] = "sram";
     json::vector mem_units[depth/period];
@@ -822,6 +823,7 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg() {
             mem_units[*vpn++/period].push_back(memunit(row.row, col)); }
     int vpn = 0;
     for (auto &mem : mem_units) {
+        if (skip_spare_bank && &mem == &mem_units[depth/period - 1]) break;
         std::sort(mem.begin(), mem.end(), json::obj::ptrless());
         json::map tmp;
         tmp["memory_units"] = std::move(mem);

@@ -56,7 +56,8 @@ public:
     virtual void gen_tbl_cfg(json::vector &out) = 0;
     json::map *base_tbl_cfg(json::vector &out, const char *type, int size);
     json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size);
-    virtual std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg();
+    virtual std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(
+            bool skip_spare_bank = false);
     enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER,
                         METER, IDLETIME };
     virtual table_type_t table_type() { return OTHER; }
@@ -367,7 +368,7 @@ public:
         return indirect ? indirect->find_on_actionbus(n, off, len)
                         : Table::find_on_actionbus(n, off, len); }
     SelectionTable *get_selector() { return indirect ? indirect->get_selector() : 0; }
-    std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg();
+    std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(bool skip_spare_bank=false);
     Call &action_call() { return indirect ? indirect->action : action; }
     int memunit(int r, int c) { return r + c*12; }
 )
