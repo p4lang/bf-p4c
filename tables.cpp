@@ -46,13 +46,14 @@ void Table::Call::setup(const value_t &val, Table *tbl) {
     Ref::operator=(val[0]);
     for (int i = 1; i < val.vec.size; i++) {
         Format::Field *arg = 0;
-        if (CHECKTYPE(val[i], tSTR) &&
+        if (val[i].type == tINT && val[i].i == 0)
+            ; // ok
+        else if (CHECKTYPE(val[i], tSTR) &&
             !(arg = tbl->lookup_field(val[i].s)))
             error(val[i].lineno, "No field named %s in format for %s", val[i].s, tbl->name());
-        if (arg) {
-            if (arg->bits.size() != 1)
-                error(val[i].lineno, "arg fields can't be split in format");
-            args.push_back(arg); } }
+        if (arg && arg->bits.size() != 1)
+            error(val[i].lineno, "arg fields can't be split in format");
+        args.push_back(arg); }
     lineno = val.lineno;
 }
 
@@ -678,7 +679,7 @@ void Table::Actions::write_regs(Table *tbl) {
                 assert(0); } } }
 }
 
-static int get_address_mau_actiondata_adr_default(unsigned log2size) {
+int get_address_mau_actiondata_adr_default(unsigned log2size) {
     int huffman_ones = log2size > 2 ? log2size - 3 : 0;
     assert(huffman_ones < 7);
     int rv = (1 << huffman_ones) - 1;
@@ -710,8 +711,7 @@ void MatchTable::write_regs(int type, Table *result) {
         for (auto &row : result->layout) {
             int bus = row.row*2 | row.bus;
             setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[type][bus], logical_id);
-            if (result->action.args.size() >= 1) {
-                assert(result->action.args[0]);
+            if (result->action.args.size() >= 1 && result->action.args[0]) {
                 merge.mau_action_instruction_adr_mask[type][bus] =
                     ((1U << result->action.args[0]->size) - 1) & ~action_enable;
             } else
@@ -720,13 +720,13 @@ void MatchTable::write_regs(int type, Table *result) {
             if (action_enable)
                 merge.mau_action_instruction_adr_per_entry_en_mux_ctl[type][bus] =
                     result->action_enable;
+            if (idletime)
+                idletime->write_merge_regs(type, bus);
             if (result->action)
                 /* FIXME -- deal with variable-sized actions */
                 merge.mau_actiondata_adr_default[type][bus] =
                     get_address_mau_actiondata_adr_default(result->action->format->log2size);
-            result->write_merge_regs(type, bus);
-            if (idletime)
-                idletime->write_merge_regs(type, bus); }
+            result->write_merge_regs(type, bus); }
     } else {
         /* ternary match with no indirection table */
         assert(type == 1);
@@ -741,10 +741,7 @@ void MatchTable::write_regs(int type, Table *result) {
         actions = result->action->actions; }
     assert(actions);
 
-    //assert(result->action.args[0]);
     if (actions->max_code < ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
-    //if (result->action.args.empty() ||
-    //    (1U << result->action.args[0]->size) <= ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH)
         merge.mau_action_instruction_adr_map_en[type] |= (1U << logical_id);
         for (auto &act : *actions)
             merge.mau_action_instruction_adr_map_data[type][logical_id][act.code/4]
@@ -790,6 +787,10 @@ void MatchTable::write_regs(int type, Table *result) {
 
 int Table::find_on_actionbus(Format::Field *f, int off) {
     return action_bus ? action_bus->find(f, off) : -1;
+}
+
+int Table::find_on_actionbus(const char *name, int off, int *len) {
+    return action_bus ? action_bus->find(name, off, len) : -1;
 }
 
 int Table::find_on_ixbar(Phv::Slice sl, int group) {

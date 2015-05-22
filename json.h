@@ -208,6 +208,12 @@ private:
             else { assert(iter != self.end());
                 iter->second.reset(new string(v)); }
             return v; }
+        const std::string &operator=(const std::string &v) {
+            if (key)
+                iter = self.emplace(key.release(), std::unique_ptr<obj>(new string(v))).first;
+            else { assert(iter != self.end());
+                iter->second.reset(new string(v)); }
+            return v; }
         long operator=(long v) {
             if (key)
                 iter = self.emplace(key.release(), std::unique_ptr<obj>(new number(v))).first;

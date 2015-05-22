@@ -115,7 +115,8 @@ void ExactMatchTable::pass1() {
                   "table %s format", name());
         actions->pass1(this); }
     if (action_enable >= 0)
-        if (action.args.size() < 1 || action.args[0]->size <= (unsigned)action_enable)
+        if (action.args.size() < 1 || !action.args[0] ||
+            action.args[0]->size <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
     input_xbar->pass1(stage->exact_ixbar, 128);
     format->setup_immed(this);
@@ -566,7 +567,7 @@ void ExactMatchTable::write_regs() {
                     assert(format->immed->by_group[group]->bits[0].lo/128U == word);
                     merge.mau_immediate_data_exact_shiftcount[bus][word_group] =
                         format->immed->by_group[group]->bits[0].lo % 128; }
-                if (!action.args.empty()) {
+                if (!action.args.empty() && action.args[0]) {
                     assert(action.args[0]->by_group[group]->bits[0].lo/128U == word);
                     merge.mau_action_instruction_adr_exact_shiftcount[bus][word_group] =
                         action.args[0]->by_group[group]->bits[0].lo % 128; }
@@ -670,7 +671,8 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
     unsigned fmt_width = (format->size + 127)/128;
     unsigned number_entries = layout_size()/fmt_width * format->groups() * 1024;
     json::map &tbl = *base_tbl_cfg(out, "match_entry", number_entries);
-    tbl["preferred_match_type"] = "exact";
+    if (!tbl.count("preferred_match_type"))
+        tbl["preferred_match_type"] = "exact";
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "hash_match", number_entries);
     add_pack_format(stage_tbl, 128, fmt_width, format->groups());
     json::vector &way_stage_tables = stage_tbl["way_stage_tables"] = json::vector();

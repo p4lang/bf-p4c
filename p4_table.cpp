@@ -49,6 +49,9 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
                 } else {
                     rv->size = kv.value.i;
                     rv->explicit_size = true; } }
+        } else if (kv.key == "preferred_match_type") {
+            if (CHECKTYPE(kv.value, tSTR))
+                rv->preferred_match_type = kv.value.s;
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in p4 info", kv.key.s); }
     return rv;
@@ -77,6 +80,8 @@ json::map *P4Table::base_tbl_cfg(json::vector &out, int size, Table *table) {
         tbl["direction"] = table->gress ? "egress" : "ingress";
         tbl["number_entries"] = explicit_size ? this->size : size;
         tbl["stage_tables_length"] = 0L;
+        if (!preferred_match_type.empty())
+            tbl["preferred_match_type"] = preferred_match_type;
         tbl["stage_tables"] = std::make_unique<json::vector>();
         if (auto &action = table->action_call()) if ((Table *)action != table) {
             json::map act;

@@ -109,7 +109,7 @@ for p4file in "$@"; do
             echo -n " p4 compile failed"
             let fail++
             echo "$p4file:" >> $FAILLOG
-            cat glsc.log >> $FAILLOG
+            sed 's/^/ /' glsc.log >> $FAILLOG
             ok=false
         fi
     fi
@@ -144,7 +144,7 @@ for p4file in "$@"; do
         echo -n " tfas failed"
         let fail++
         echo "$p4file:" >> $FAILLOG
-        cat tfas.log >> $FAILLOG
+        sed 's/^/ /' tfas.log >> $FAILLOG
         ok=false
         if $need_reflow; then
             # we ran the compiler and tfas failed, so reflow the compiler outputs

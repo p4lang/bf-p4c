@@ -243,6 +243,9 @@ public:
         { if (format) format->apply_to_field(n, fn); }
     int find_on_ixbar(Phv::Slice sl, int group);
     virtual int find_on_actionbus(Format::Field *f, int off);
+    virtual int find_on_actionbus(const char *n, int off, int *len = 0);
+    int find_on_actionbus(const std::string &n, int off, int *len = 0) {
+        return find_on_actionbus(n.c_str(), off, len); }
     virtual Call &action_call() { return action; }
 };
 
@@ -359,7 +362,10 @@ public:
         assert(!format);
         return indirect ? indirect->lookup_field(name, action) : 0; }
     int find_on_actionbus(Format::Field *f, int off) {
-        return indirect ? indirect->find_on_actionbus(f, off) : -1; }
+        return indirect ? indirect->find_on_actionbus(f, off) : Table::find_on_actionbus(f, off); }
+    int find_on_actionbus(const char *n, int off, int *len = 0) {
+        return indirect ? indirect->find_on_actionbus(n, off, len)
+                        : Table::find_on_actionbus(n, off, len); }
     SelectionTable *get_selector() { return indirect ? indirect->get_selector() : 0; }
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg();
     Call &action_call() { return indirect ? indirect->action : action; }
@@ -407,6 +413,7 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     Format::Field *lookup_field(const std::string &name, const std::string &action);
     void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn);
     int find_on_actionbus(Format::Field *f, int off);
+    int find_on_actionbus(const char *n, int off, int *len);
     table_type_t table_type() { return ACTION; }
 )
 

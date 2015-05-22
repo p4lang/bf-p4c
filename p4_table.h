@@ -10,7 +10,7 @@ class Table;
 
 class P4Table {
     int                 lineno = -1;
-    std::string         name;
+    std::string         name, preferred_match_type;
     unsigned            handle = 0, size = 0;
     bool                explicit_size = false;
     json::map           *config = 0;

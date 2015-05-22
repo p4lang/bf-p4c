@@ -17,7 +17,7 @@ Table::Format::Field *ActionTable::lookup_field(const std::string &name, const s
                 if (auto *rv = fmt.second->field(name))
                     return rv;
     } else {
-        if (auto *fmt = get(action_formats, name)) {
+        if (auto *fmt = get(action_formats, action)) {
             if (auto *rv = fmt->field(name))
                 return rv;
         } else if (auto *rv = format ? format->field(name) : 0)
@@ -41,6 +41,16 @@ int ActionTable::find_on_actionbus(Table::Format::Field *f, int off) {
     for (auto *match_table : match_tables) {
         assert((Table *)match_table != (Table *)this);
         if ((rv = match_table->find_on_actionbus(f, off)) >= 0)
+            return rv; }
+    return -1;
+}
+int ActionTable::find_on_actionbus(const char *name, int off, int *len) {
+    int rv;
+    if (action_bus && (rv = action_bus->find(name, off, len)) >= 0)
+        return rv;
+    for (auto *match_table : match_tables) {
+        assert((Table *)match_table != (Table *)this);
+        if ((rv = match_table->find_on_actionbus(name, off, len)) >= 0)
             return rv; }
     return -1;
 }

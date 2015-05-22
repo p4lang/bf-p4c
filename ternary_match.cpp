@@ -192,6 +192,7 @@ void TernaryMatchTable::pass2() {
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
 }
+extern int get_address_mau_actiondata_adr_default(unsigned log2size);
 void TernaryMatchTable::write_regs() {
     LOG1("### Ternary match table " << name() << " write_regs");
     MatchTable::write_regs(1, indirect);
@@ -239,6 +240,7 @@ void TernaryMatchTable::write_regs() {
     merge.tcam_table_prop[tcam_id].enabled = 1;
     stage->regs.tcams.tcam_output_table_thread[tcam_id] = 1 << gress;
     if (indirect_bus >= 0) {
+        /* FIXME -- factor into corresponding code in MatchTable::write_regs */
         setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[1][indirect_bus], logical_id);
         setup_muxctl(merge.tcam_match_adr_to_physical_oxbar_outputmap[indirect_bus], tcam_id);
         merge.mau_action_instruction_adr_default[1][indirect_bus] = 0x40;
@@ -250,6 +252,22 @@ void TernaryMatchTable::write_regs() {
         attached.write_merge_regs(this, 1, indirect_bus);
         if (idletime)
             idletime->write_merge_regs(1, indirect_bus);
+        if (action) {
+            merge.mau_actiondata_adr_default[1][indirect_bus] =
+                get_address_mau_actiondata_adr_default(action->format->log2size);
+            /* FIXME -- factor with TernaryIndirect code below */
+            int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
+            if (action.args.size() <= 1) {
+                merge.mau_actiondata_adr_mask[1][indirect_bus] = 0x3fffff & (~0U<<lo_huffman_bits);
+                merge.mau_actiondata_adr_tcam_shiftcount[indirect_bus] = 69 - lo_huffman_bits;
+                merge.mau_actiondata_adr_vpn_shiftcount[1][indirect_bus] =
+                    std::max(0, (int)action->format->log2size - 7);
+            } else {
+                /* FIXME -- support for multiple sizes of action data? */
+                merge.mau_actiondata_adr_mask[1][indirect_bus] =
+                    ((1U << action.args[1]->size) - 1) << lo_huffman_bits;
+                merge.mau_actiondata_adr_tcam_shiftcount[indirect_bus] =
+                    action.args[1]->bits[0].lo + 5 - lo_huffman_bits; } }
         for (auto &st : attached.stats) {
             if (st.args.empty())
                 merge.mau_stats_adr_tcam_shiftcount[indirect_bus] = st->direct_shiftcount();
@@ -290,7 +308,8 @@ std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl
 void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
     unsigned number_entries = layout_size()/match.size() * 512;
     json::map &tbl = *base_tbl_cfg(out, "match_entry", number_entries);
-    tbl["preferred_match_type"] = "ternary";
+    if (!tbl.count("preferred_match_type"))
+        tbl["preferred_match_type"] = "ternary";
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "ternary_match", number_entries);
     add_pack_format(stage_tbl, 47, match.size(), 1);
     stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg();
@@ -394,7 +413,8 @@ void TernaryIndirectTable::pass1() {
     // attached.pass1(match_table); -- done in set_match_table, called from
     // TernaryMatchTable::pass1()
     if (action_enable >= 0)
-        if (action.args.size() < 1 || action.args[0]->size <= (unsigned)action_enable)
+        if (action.args.size() < 1 || !action.args[0] ||
+            action.args[0]->size <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
     if (format) format->setup_immed(this);
 }
@@ -441,12 +461,13 @@ void TernaryIndirectTable::write_regs() {
         merge.tind_bus_prop[bus].tcam_piped = 1;
         merge.tind_bus_prop[bus].thread = gress;
         merge.tind_bus_prop[bus].enabled = 1;
-        merge.mau_action_instruction_adr_tcam_shiftcount[bus] = action.args[0]->bits[0].lo;
+        if (action.args.size() > 0 && action.args[0])
+            merge.mau_action_instruction_adr_tcam_shiftcount[bus] = action.args[0]->bits[0].lo;
         if (format->immed)
             merge.mau_immediate_data_tcam_shiftcount[bus] = format->immed->bits[0].lo;
         if (action) {
             int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
-            if (action.args.size() == 1) {
+            if (action.args.size() <= 1) {
                 merge.mau_actiondata_adr_mask[1][bus] = 0x3fffff & (~0U << lo_huffman_bits);
                 merge.mau_actiondata_adr_tcam_shiftcount[bus] =
                     69 + (format->log2size-2) - lo_huffman_bits;

@@ -117,6 +117,8 @@ void SelectionTable::write_merge_regs(int type, int bus, const std::vector<Forma
     auto &merge = stage->regs.rams.match.merge;
     if (action)
         merge.mau_selector_action_entry_size[type][bus] = action->format->log2size - 3;
+    else if (options.match_compiler)
+        return; // compiler skips the rest if no action table
     if (args.size() > 1)
         merge.mau_bus_hash_group_ctl[type][bus/4].set_subfield(
             1 << BusHashGroup::SELECTOR_MOD, 5 * (bus%4), 5);
