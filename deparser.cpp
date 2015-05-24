@@ -84,6 +84,69 @@ HER_INTRINSIC(capture_tx_ts)
 HER_INTRINSIC(coal)
 HER_INTRINSIC(ecos)
 
+struct Deparser::Digest::Type {
+    gress_t     gress;
+    std::string name;
+    int         count;
+    bool        can_shift = false;
+    static std::map<std::string, Type *> all;
+protected:
+    Type(const char *n, int cnt) : gress(INGRESS), name(n), count(cnt) {
+        assert(!all.count(name)); all[name] = this; }
+    ~Type() { all.erase(name); }
+public:
+    virtual void setregs(Deparser *dep, Deparser::Digest &data) = 0;
+};
+Deparser::Digest::Digest(Deparser::Digest::Type *t, int lineno, VECTOR(pair_t) &data) {
+    type = t;
+    for (auto &l : data) {
+        if (l.key == "select")
+            select = Phv::Ref(t->gress, l.value);
+        else if (t->can_shift && l.key == "shift") {
+            if (CHECKTYPE(l.value, tINT))
+                shift = l.value.i;
+        } else if (!CHECKTYPE(l.key, tINT))
+            continue;
+        else if (l.key.i < 0 || l.key.i >= t->count)
+            error(l.key.lineno, "%s index %d out of range", t->name.c_str(), l.key.i);
+        else if (l.value.type != tVEC)
+            layout[l.key.i].emplace_back(t->gress, l.value);
+        else for (auto &v : l.value.vec)
+            layout[l.key.i].emplace_back(t->gress, v); }
+    if (!select)
+        error(lineno, "No select key in %s spec", t->name.c_str());
+}
+
+std::map<std::string, Deparser::Digest::Type *> Deparser::Digest::Type::all;
+#define DIGEST(NAME, CFG, TBL, IFSHIFT, IFID, CNT)                              \
+struct NAME##Digest : public Deparser::Digest::Type {                           \
+    NAME##Digest() : Deparser::Digest::Type(#NAME, CNT) {                       \
+        IFSHIFT( can_shift = true; ) }                                          \
+    void setregs(Deparser *dep, Deparser::Digest &data) {                       \
+        dep->CFG.phv = data.select->reg.index;                                  \
+        IFSHIFT( dep->CFG.shft = data.shift; )                                  \
+        dep->CFG.valid = 1;                                                     \
+        for (auto &set : data.layout) {                                         \
+            int id = set.first >> data. shift;                                  \
+            int idx = 0;                                                        \
+            bool first = true;                                                  \
+            for (auto &reg : set.second) {                                      \
+                if (first) {                                                    \
+                    first = false;                                              \
+                    IFID( dep->TBL[id].id_phv = reg->reg.index; continue; ) }   \
+                for (int i = reg->reg.size/8; i > 0; i--)                       \
+                    dep->TBL[id].phvs[idx++] = reg->reg.index; }                \
+            dep->TBL[id].valid = 1;                                             \
+            dep->TBL[id].len = idx; } }                                         \
+} NAME##Digest_singleton;
+#define YES(X)        X
+#define NO(X)
+
+DIGEST(learning, inp_regs.iir.ingr.learn_cfg, inp_regs.iir.ingr.learn_tbl, NO, NO, 8)
+DIGEST(mirror, hdr_regs.hir.main_i.mirror_cfg, hdr_regs.hir.main_i.mirror_tbl, YES, YES, 8)
+DIGEST(mirror_egress, hdr_regs.her.main_e.mirror_cfg, hdr_regs.her.main_e.mirror_tbl, YES, YES, 8)
+DIGEST(resubmit, inp_regs.iir.ingr.resub_cfg, inp_regs.iir.ingr.resub_tbl, YES, NO, 8)
+
 void Deparser::start(int lineno, VECTOR(value_t) args) {
     if (args.size == 0) {
         this->lineno[INGRESS] = this->lineno[EGRESS] = lineno;
@@ -111,22 +174,6 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                 if (!CHECKTYPE(kv.value, tVEC)) continue;
                 for (auto &ent : kv.value.vec)
                     pov_order[gress].emplace_back(gress, ent);
-            } else if (kv.key == "learning" && (gress == INGRESS || args.size == 0)) {
-                if (gress != INGRESS) continue;
-                if (!CHECKTYPE(kv.value, tMAP)) continue;
-                for (auto &l : kv.value.map) {
-                    if (l.key == "select")
-                        learn.select = Phv::Ref(gress, l.value);
-                    else if (!CHECKTYPE(l.key, tINT))
-                        continue;
-                    else if (l.key.i < 0 || l.key.i >= DEPARSER_LEARN_GROUPS)
-                        error(l.key.lineno, "Learning index %d out of range", l.key.i);
-                    else if (l.value.type != tVEC)
-                        learn.layout[l.key.i].emplace_back(gress, l.value);
-                    else for (auto &v : l.value.vec)
-                        learn.layout[l.key.i].emplace_back(gress, v); }
-                if (!learn.select)
-                    error(kv.value.lineno, "No select key in leanring spec");
             } else if (kv.key == "checksum") {
                 if (kv.key.type != tCMD || kv.key.vec.size != 2 || kv.key[1].type != tINT ||
                     kv.key[1].i < 0 || kv.key[1].i >= DEPARSER_CHECKSUM_UNITS)
@@ -143,6 +190,12 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                         vec.emplace_back(gress, val);
                 else
                     vec.emplace_back(gress, kv.value);
+            } else if (auto *digest = ::get(Digest::Type::all, value_desc(&kv.key))) {
+                if (gress != INGRESS)
+                    error(kv.key.lineno, "%s digests must be in ingress deparser",
+                          digest->name.c_str());
+                if (CHECKTYPE(kv.value, tMAP))
+                    digests.emplace_back(digest, kv.value.lineno, kv.value.map);
             } else
                 error(kv.key.lineno, "Unknown deparser tag %s", value_desc(&kv.key));
         }
@@ -178,9 +231,9 @@ void Deparser::process() {
     if (options.match_compiler) {
         Phv::setuse(INGRESS, phv_use[INGRESS]);
         Phv::setuse(EGRESS, phv_use[EGRESS]); }
-    if (learn.select) {
-        learn.select.check();
-        for (auto &set : learn.layout)
+    for (auto &digest : digests) {
+        digest.select.check();
+        for (auto &set : digest.layout)
             for (auto &reg : set.second)
                 reg.check(); }
 }
@@ -383,16 +436,8 @@ void Deparser::output() {
     if (!hdr_regs.hir.ingr.ingress_port.sel.modified())
         hdr_regs.hir.ingr.ingress_port.sel = 1;
 
-    if (learn.select) {
-        inp_regs.iir.ingr.learn_cfg.phv = learn.select->reg.index;
-        inp_regs.iir.ingr.learn_cfg.valid = 1;
-        for (auto &set : learn.layout) {
-            int idx = 0;
-            for (auto &reg : set.second)
-                for (int i = reg->reg.size/8; i > 0; i--)
-                    inp_regs.iir.ingr.learn_tbl[set.first].phvs[idx++] = reg->reg.index;
-            inp_regs.iir.ingr.learn_tbl[set.first].valid = 1;
-            inp_regs.iir.ingr.learn_tbl[set.first].len = idx; } }
+    for (auto &digest : digests)
+        digest.type->setregs(this, digest);
 
     inp_regs.emit_json(*open_output("regs.all.deparser.input_phase.cfg.json"));
     hdr_regs.emit_json(*open_output("regs.all.deparser.header_phase.cfg.json"));

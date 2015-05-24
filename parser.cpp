@@ -193,6 +193,7 @@ template <class COMMON> void init_common_regs(Parser *p, COMMON &regs, gress_t g
     regs.max_iter.max = 128;
     if (p->parser_error[gress].lineno >= 0) {
         regs.err_phv_cfg.dst = p->parser_error[gress]->reg.index;
+        regs.err_phv_cfg.aram_mbe_en = 1;
         regs.err_phv_cfg.ctr_range_err_en = 1;
         regs.err_phv_cfg.dst_cont_err_en = 1;
         regs.err_phv_cfg.fcs_err_en = 1;

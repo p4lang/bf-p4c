@@ -32,11 +32,16 @@ public:
     std::vector<Phv::Ref>               pov_order[2];
     bitvec                              phv_use[2];
     struct Intrinsic;
-    struct Learning {
-        Phv::Ref                                select;
-        std::map<int, std::vector<Phv::Ref>>    layout;
-    } learn;
     std::vector<std::pair<Intrinsic *, std::vector<Phv::Ref>>> intrinsics;
+    struct Digest {
+        struct Type;
+        Type                                    *type;
+        Phv::Ref                                select;
+        int                                     shift = 0;
+        std::map<int, std::vector<Phv::Ref>>    layout;
+        Digest(Type *t, int lineno, VECTOR(pair_t) &data);
+    };
+    std::vector<Digest>                 digests;
     Deparser();
     ~Deparser();
     void start(int lineno, VECTOR(value_t) args);
