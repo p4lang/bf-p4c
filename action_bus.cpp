@@ -160,13 +160,17 @@ void ActionBus::write_immed_regs(Table *tbl) {
         unsigned size = f.second.size;
         switch(Stage::action_bus_slot_size[slot]) {
         case 8:
-            for (unsigned b = off/8; b <= (off + size - 1)/8; b++)
-                setup_muxctl(adrdist.immediate_data_8b_ixbar_ctl[tid*4 + b], slot++);
+            for (unsigned b = off/8; b <= (off + size - 1)/8; b++) {
+                assert((b&3) == (slot&3));
+                adrdist.immediate_data_8b_enable[tid/8] |= 1U << ((tid&7)*4 + b);
+                // FIXME -- we write these ctl regs twice if we use both nytes in a pair 
+                setup_muxctl(adrdist.immediate_data_8b_ixbar_ctl[tid*2 + b/2], slot++/4); }
             break;
         case 16:
             slot -= ACTION_DATA_8B_SLOTS;
-            for (unsigned w = off/16; w <= (off + size - 1)/16; w++)
-                setup_muxctl(adrdist.immediate_data_16b_ixbar_ctl[tid*2 + w], slot++);
+            for (unsigned w = off/16; w <= (off + size - 1)/16; w++) {
+                assert((w&1) == (slot&1));
+                setup_muxctl(adrdist.immediate_data_16b_ixbar_ctl[tid*2 + w], slot++/2); }
             break;
         case 32:
             slot -= ACTION_DATA_8B_SLOTS + ACTION_DATA_16B_SLOTS;

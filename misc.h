@@ -2,6 +2,10 @@
 #define _misc_h_
 
 template<class T>
+auto setup_muxctl(T &reg, int val) -> decltype((void)reg.enabled_2bit_muxctl_enable) {
+    reg.enabled_2bit_muxctl_select = val;
+    reg.enabled_2bit_muxctl_enable = 1; }
+template<class T>
 auto setup_muxctl(T &reg, int val) -> decltype((void)reg.enabled_3bit_muxctl_enable) {
     reg.enabled_3bit_muxctl_select = val;
     reg.enabled_3bit_muxctl_enable = 1; }

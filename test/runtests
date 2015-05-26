@@ -113,6 +113,9 @@ for p4file in "$@"; do
             ok=false
         fi
     fi
+    if $ok; then
+        rm -f $name.out/*.json
+    fi
     if $ok && $TFAS -vvvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
         for f in $name.out/*.cfg.json; do
             if [ "$f" = "$name.out/regs.pipe.cfg.json" ]; then
