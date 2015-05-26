@@ -314,6 +314,13 @@ void ActionTable::gen_tbl_cfg(json::vector &out) {
     stage_tbl["stage_table_handle"] = action_id;
     add_pack_format(stage_tbl, 128, fmt_width,
                     128 >> format->log2size ? 128 >> format->log2size : 1);
+    for (auto &fmt : action_formats)
+        add_pack_format(stage_tbl, 128, (fmt.second->size + 127)/128,
+                        128 >> fmt.second->log2size ? 128 >> fmt.second->log2size : 1);
+    if (options.match_compiler && action_formats.empty())
+        for (int i = actions->count(); i > 1; i--)
+            add_pack_format(stage_tbl, 128, fmt_width,
+                            128 >> format->log2size ? 128 >> format->log2size : 1);
     stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg();
     stage_tbl["how_referenced"] = action_call().args.size() > 1 ? "indirect" : "direct";
     tbl["action_data_entry_width"] = 1 << format->log2size;

@@ -96,6 +96,7 @@ json::map *P4Table::base_tbl_cfg(json::vector &out, int size, Table *table) {
             json::map sel;
             sel["name"] = selector->p4_name();
             sel["handle_reference"] = selector->handle();
+            sel["how_referenced"] = "indirect";
             (tbl["p4_selection_tables"] = json::vector()).push_back(std::move(sel)); }
         if (!explicit_size)
             this->size = size;
