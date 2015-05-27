@@ -102,7 +102,7 @@ void ExactMatchTable::pass1() {
     alloc_busses(stage->sram_match_bus_use);
     alloc_vpns();
     check_next();
-    if (action.check() && action->set_match_table(this) != ACTION)
+    if (action.check() && action->set_match_table(this, action.args.size() > 1) != ACTION)
         error(action.lineno, "%s is not an action table", action->name());
     attached.pass1(this);
     if (action_bus) action_bus->pass1(this);
@@ -675,6 +675,8 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
         tbl["preferred_match_type"] = "exact";
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "hash_match", number_entries);
     add_pack_format(stage_tbl, 128, fmt_width, format->groups());
+    if (options.match_compiler)
+        stage_tbl["memory_resource_allocation"] = "null";
     json::vector &way_stage_tables = stage_tbl["way_stage_tables"] = json::vector();
     for (auto &way : ways) {
         json::map way_tbl;

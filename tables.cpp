@@ -274,13 +274,13 @@ bool MatchTable::common_setup(pair_t &kv) {
         if (CHECKTYPE(kv.value, tMAP)) {
             gateway = GatewayTable::create(kv.key.lineno, name_+" gateway",
                                            gress, stage, -1, kv.value.map);
-            gateway->set_match_table(this); }
+            gateway->set_match_table(this, false); }
         return true; }
     if (kv.key == "idletime") {
         if (CHECKTYPE(kv.value, tMAP)) {
             idletime = IdletimeTable::create(kv.key.lineno, name_+" idletime",
                                              gress, stage, -1, kv.value.map);
-            idletime->set_match_table(this); }
+            idletime->set_match_table(this, false); }
         return true; }
     if (kv.key == "selector") {
         attached.selector.setup(kv.value, this);
@@ -812,7 +812,6 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(bool sk
     int width, depth, period;
     const char *period_name;
     vpn_params(width, depth, period, period_name);
-    if (skip_spare_bank) period++;
     json::map mra;
     mra["memory_type"] = "sram";
     json::vector mem_units[depth/period];
@@ -840,7 +839,7 @@ SelectionTable *AttachedTables::get_selector() {
 
 void AttachedTables::pass1(MatchTable *self) {
     if (selector.check()) {
-        if (selector->set_match_table(self) != Table::SELECTION)
+        if (selector->set_match_table(self, true) != Table::SELECTION)
             error(selector.lineno, "%s is not a selection table", selector->name());
         if (selector.args.size() < 1 || selector.args.size() > 3)
             error(selector.lineno, "Selector requires 1-3 args");
@@ -851,7 +850,7 @@ void AttachedTables::pass1(MatchTable *self) {
             error(selector.lineno, "Selector table %s not in same thread as %s",
                   selector->name(), self->name()); }
     for (auto &s : stats) if (s.check()) {
-        if (s->set_match_table(self) != Table::COUNTER)
+        if (s->set_match_table(self, s.args.size() >= 1) != Table::COUNTER)
             error(s.lineno, "%s is not a counter table", s->name());
         if (s.args.size() > 1)
             error(s.lineno, "Stats table requires zero or one args");
@@ -862,7 +861,7 @@ void AttachedTables::pass1(MatchTable *self) {
         else if (s->gress != self->gress)
             error(s.lineno, "Counter %s not in same thread as %s", s->name(), self->name()); }
     for (auto &m : meter) if (m.check()) {
-        if (m->set_match_table(self) != Table::METER)
+        if (m->set_match_table(self, m.args.size() >= 1) != Table::METER)
             error(m.lineno, "%s is not a meter table", m->name());
         if (m.args.size() > 1)
             error(m.lineno, "Meter table requires zero or one args");

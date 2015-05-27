@@ -267,7 +267,8 @@ void SelectionTable::gen_tbl_cfg(json::vector &out) {
     tbl["selection_type"] = resilient_hash ? "resilient" : "fair";
     tbl["enable_sps_scrambling"] = non_linear_hash ? "true" : "false";
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "selection", 1024);
-    stage_tbl["how_referenced"] = "indirect";
+    stage_tbl["how_referenced"] = indirect ? "indirect" : "direct";
     add_pack_format(stage_tbl, 128, 1, 1);
     stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(true);
+    stage_tbl["stage_table_handle"] = 0L;
 }

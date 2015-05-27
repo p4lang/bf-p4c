@@ -157,7 +157,8 @@ void AsmStage::output() {
         char buf[64];
         sprintf(buf, "regs.match_action_stage.%02x", i);
         TopLevel::all.reg_pipe.mau[i] = buf; }
-    *open_output("tbl-cfg") << '[' << &tbl_cfg << ']' << std::endl;
+    *open_output("tbl-cfg") << '[' << &tbl_cfg << (options.match_compiler ? ",\n[] " : "")
+                            << ']' << std::endl;
     TopLevel::all.mem_pipe.mau.disable();
 }
 

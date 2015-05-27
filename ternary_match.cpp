@@ -136,7 +136,7 @@ void TernaryMatchTable::pass1() {
     alloc_vpns();
     check_next();
     indirect.check();
-    if (action.check() && action->set_match_table(this) != ACTION)
+    if (action.check() && action->set_match_table(this, action.args.size() > 1) != ACTION)
         error(action.lineno, "%s is not an action table", action->name());
     chain_rows = 0;
     unsigned row_use = 0;
@@ -159,7 +159,7 @@ void TernaryMatchTable::pass1() {
         prev_row = row.row;
         if (++word == match.size()) word = 0; }
     if (indirect) {
-        if (indirect->set_match_table(this) != TERNARY_INDIRECT)
+        if (indirect->set_match_table(this, false) != TERNARY_INDIRECT)
             error(indirect.lineno, "%s is not a ternary indirect table", indirect->name());
         if (hit_next.size() > 0 && indirect->hit_next.size() > 0)
             error(hit_next[0].lineno, "Ternary Match table with both direct and indirect "
@@ -383,14 +383,14 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
     if (actions && !action_bus) action_bus = new ActionBus();
 }
 
-Table::table_type_t TernaryIndirectTable::set_match_table(MatchTable *m) {
+Table::table_type_t TernaryIndirectTable::set_match_table(MatchTable *m, bool indirect) {
     if (match_table)
         error(lineno, "Multiple references to ternary indirect table %s", name());
     else if (!(match_table = dynamic_cast<TernaryMatchTable *>(m)))
         error(lineno, "Trying to link ternary indirect table %s to non-ternary table %s",
               name(), m->name());
     else {
-        if (action.check() && action->set_match_table(m) != ACTION)
+        if (action.check() && action->set_match_table(m, action.args.size() > 1) != ACTION)
             error(action.lineno, "%s is not an action table", action->name());
         attached.pass1(m);
         logical_id = m->logical_id; }

@@ -61,7 +61,7 @@ public:
     enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER,
                         METER, IDLETIME };
     virtual table_type_t table_type() { return OTHER; }
-    virtual table_type_t set_match_table(MatchTable *m) { return OTHER; }
+    virtual table_type_t set_match_table(MatchTable *m, bool indirect) { assert(0); }
     virtual GatewayTable *get_gateway() { return 0; }
     virtual SelectionTable *get_selector() { return 0; }
     virtual void write_merge_regs(int type, int bus) { assert(0); }
@@ -377,7 +377,7 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     TernaryMatchTable           *match_table;
     AttachedTables              attached;
     table_type_t table_type() { return TERNARY_INDIRECT; }
-    table_type_t set_match_table(MatchTable *m);
+    table_type_t set_match_table(MatchTable *m, bool indirect);
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
         width = (format->size-1)/128 + 1;
         depth = layout_size() / width;
@@ -391,7 +391,12 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
 DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
     /* table that can be attached to multiple match tables to do something */
     std::set<MatchTable *>      match_tables;
-    table_type_t set_match_table(MatchTable *m) {
+    bool                        direct = false, indirect = false;
+    table_type_t set_match_table(MatchTable *m, bool indirect) {
+        if ((indirect && direct) || (!indirect && this->indirect))
+            error(lineno, "Table %s is accessed with direct and indirect indices", name());
+        this->indirect = indirect;
+        direct = !indirect;
         match_tables.insert(m);
         if ((unsigned)m->logical_id < (unsigned)logical_id) logical_id = m->logical_id;
         return table_type(); }
@@ -441,7 +446,7 @@ private:
     std::vector<Match>          table;
 public:
     table_type_t table_type() { return GATEWAY; }
-    table_type_t set_match_table(MatchTable *m) {
+    table_type_t set_match_table(MatchTable *m, bool indirect) {
         match_table = m;
         if ((unsigned)m->logical_id < (unsigned)logical_id) logical_id = m->logical_id;
         return GATEWAY; }
@@ -489,7 +494,7 @@ class IdletimeTable : public Table {
     void setup(VECTOR(pair_t) &data);
 public:
     table_type_t table_type() { return IDLETIME; }
-    table_type_t set_match_table(MatchTable *m) {
+    table_type_t set_match_table(MatchTable *m, bool indirect) {
         match_table = m;
         if ((unsigned)m->logical_id < (unsigned)logical_id) logical_id = m->logical_id;
         return IDLETIME; }

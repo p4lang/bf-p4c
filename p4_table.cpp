@@ -83,6 +83,11 @@ json::map *P4Table::base_tbl_cfg(json::vector &out, int size, Table *table) {
         if (!preferred_match_type.empty())
             tbl["preferred_match_type"] = preferred_match_type;
         tbl["stage_tables"] = std::make_unique<json::vector>();
+        if (options.match_compiler && handle >> 24 == MatchEntry) {
+            tbl["p4_action_data_tables"] = json::vector();
+            tbl["p4_selection_tables"] = json::vector(); }
+        if (options.match_compiler && handle >> 24 == Selection)
+            tbl["p4_action_data_table"] = json::vector();
         if (auto &action = table->action_call()) if ((Table *)action != table) {
             json::map act;
             act["name"] = action->p4_name();
