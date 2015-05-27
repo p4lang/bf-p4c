@@ -117,6 +117,7 @@ namespace UnitRam {
             STATS_METERS = 5,
             SELECTOR_ALU = 6,
             SELECTOR_OVERFLOW = 7,
+            SELECTOR_ACTION_OVERFLOW = 8,
         };
     }
 }

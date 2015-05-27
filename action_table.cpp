@@ -283,22 +283,29 @@ void ActionTable::write_regs() {
                 unitram_config.unitram_egress = 1;
             unitram_config.unitram_enable = 1;
             auto &ram_mux = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
+            auto &adr_mux_sel = ram_mux.ram_unitram_adr_mux_select;
             if (SelectionTable *sel = get_selector()) {
                 int slot = side * 9;
-                if (row == sel->layout[0].row/2U) {
+                if (logical_row.row == sel->layout[0].row) {
                     /* we're on the home row of the selector, so use it directly */
-                    ram_mux.ram_unitram_adr_mux_select = UnitRam::AdrMux::SELECTOR_ALU;
                     slot += 6;
+                    if (home == &logical_row)
+                        adr_mux_sel = UnitRam::AdrMux::SELECTOR_ALU;
+                    else
+                        adr_mux_sel = UnitRam::AdrMux::SELECTOR_ACTION_OVERFLOW;
                 } else {
                     /* not on the home row -- use overflows */
-                    ram_mux.ram_unitram_adr_mux_select = UnitRam::AdrMux::SELECTOR_OVERFLOW; }
+                    if (home == &logical_row)
+                        adr_mux_sel = UnitRam::AdrMux::SELECTOR_OVERFLOW;
+                    else
+                        adr_mux_sel = UnitRam::AdrMux::SELECTOR_ACTION_OVERFLOW; }
                 stage->regs.rams.map_alu.mau_selector_action_adr_shift[row]
                     .set_subfield(format->log2size - 2, slot, 3);
             } else {
                 if (home == &logical_row)
-                    ram_mux.ram_unitram_adr_mux_select = UnitRam::AdrMux::ACTION;
+                    adr_mux_sel = UnitRam::AdrMux::ACTION;
                 else {
-                    ram_mux.ram_unitram_adr_mux_select = UnitRam::AdrMux::OVERFLOW;
+                    adr_mux_sel = UnitRam::AdrMux::OVERFLOW;
                     ram_mux.ram_oflo_adr_mux_select_oflo = 1; } }
             if (++idx == depth) { idx = 0; ++word; } }
         prev_switch_ctl = &switch_ctl;
