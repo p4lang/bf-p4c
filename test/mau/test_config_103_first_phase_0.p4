@@ -3,21 +3,6 @@
 /* Sample P4 program */
 header_type pkt_t {
     fields {
-        field_a0_1 : 1;
-        field_a1_1 : 1;
-        field_a2_1 : 1;
-        field_a3_1 : 1;
-        field_b_4 : 4;
-        field_c_4 : 4;
-        field_d_4 : 4;
-        field_e_4 : 4;
-        field_f_4 : 4;
-        field_g_4 : 4;
-        field_h0_1 : 1;
-        field_h1_1 : 1;
-        field_h2_1 : 1;
-        field_h3_1 : 1;
-
         field_a_32 : 32;
         field_b_32 : 32;
         field_c_32 : 32;
@@ -35,11 +20,31 @@ header_type pkt_t {
     }
 }
 
+header_type meta_t {
+    fields {
+        field_a0_1 : 1;
+        field_a1_1 : 1;
+        field_a2_1 : 1;
+        field_a3_1 : 1;
+        field_b_4 : 4;
+        field_c_4 : 4;
+        field_d_4 : 4;
+        field_e_4 : 4;
+        field_f_4 : 4;
+        field_g_4 : 4;
+        field_h0_1 : 1;
+        field_h1_1 : 1;
+        field_h2_1 : 1;
+        field_h3_1 : 1;
+    }
+}
+
 parser start {
     return parse_pkt;
 }
 
 header pkt_t pkt;
+metadata meta_t meta;
 
 parser parse_pkt {
     extract(pkt);
@@ -48,29 +53,21 @@ parser parse_pkt {
 
 
 action action_0(param0, param1, param2, param3, param4, param5){
-    modify_field(pkt.field_a0_1, 0);
-    modify_field(pkt.field_a1_1, param0);
-    modify_field(pkt.field_a2_1, 1);
-    modify_field(pkt.field_a3_1, param1);
-    modify_field(pkt.field_b_4, 9);
-    modify_field(pkt.field_c_4, param2);
-    modify_field(pkt.field_d_4, 6);
-    modify_field(pkt.field_e_4, 10);
-    modify_field(pkt.field_f_4, 15, 0xf);
-    modify_field(pkt.field_g_4, param3);
-    modify_field(pkt.field_h0_1, param4);
-    modify_field(pkt.field_h1_1, 0);
-    modify_field(pkt.field_h2_1, param5);
-    modify_field(pkt.field_h3_1, 1);
+    modify_field(meta.field_a0_1, 0);
+    modify_field(meta.field_a1_1, param0);
+    modify_field(meta.field_a2_1, 1);
+    modify_field(meta.field_a3_1, param1);
+    modify_field(meta.field_b_4, 9);
+    modify_field(meta.field_c_4, param2);
+    modify_field(meta.field_d_4, 6);
+    modify_field(meta.field_e_4, 10);
+    modify_field(meta.field_f_4, 15, 0xf);
+    modify_field(meta.field_g_4, param3);
+    modify_field(meta.field_h0_1, param4);
+    modify_field(meta.field_h1_1, 0);
+    modify_field(meta.field_h2_1, param5);
+    modify_field(meta.field_h3_1, 1);
 }
-
-/*
-action action_0(param0, param1){
-    modify_field(pkt.field_e_16, param0);
-    modify_field(pkt.field_d_32, param1);
-    modify_field(pkt.field_j_8, 0xA5);
-}
-*/
 
 action action_1(param0){
     modify_field(pkt.field_f_16, param0);
