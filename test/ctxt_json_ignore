@@ -43,6 +43,7 @@ stage_gateway_table
 stage_idletime_table
 stage_table_type_handle
 stash_resource_allocation
+statistics_precision
 table_type
 ternary_mode
 vliw_resource_allocation

@@ -211,7 +211,13 @@ void CounterTable::write_regs() {
         auto &icxbar = stage->regs.rams.match.adrdist.adr_dist_stats_adr_icxbar_ctl[m->logical_id];
         icxbar.address_distr_to_logical_rows = 1U << home->row;
         icxbar.address_distr_to_overflow = push_on_overflow;
-    }
+        auto &dump_ctl = stage->regs.cfg_regs.stats_dump_ctl[m->logical_id];
+        dump_ctl.stats_dump_entries_per_word = format->groups();
+        if (type == BYTES || type == BOTH)
+            dump_ctl.stats_dump_has_bytes = 1;
+        if (type == PACKETS || type == BOTH)
+            dump_ctl.stats_dump_has_packets = 1;
+        dump_ctl.stats_dump_size = layout_size(); }
 }
 
 void CounterTable::gen_tbl_cfg(json::vector &out) {
@@ -225,8 +231,11 @@ void CounterTable::gen_tbl_cfg(json::vector &out) {
     tbl.erase("p4_selection_tables");
     tbl.erase("p4_action_data_tables");
     switch (type) {
-    case PACKETS: tbl["statistics_type"] = "packets"; break;
-    case BYTES: tbl["statistics_type"] = "bytes"; break;
-    case BOTH: tbl["statistics_type"] = "packets_and_bytes"; break;
+    case PACKETS: tbl["statistics_type"] = "packets";
+                  stage_tbl["stat_type"] = "packets"; break;
+    case BYTES: tbl["statistics_type"] = "bytes";
+                stage_tbl["stat_type"] = "bytes"; break;
+    case BOTH: tbl["statistics_type"] = "packets_and_bytes";
+               stage_tbl["stat_type"] = "packets_and_bytes"; break;
     default: break; }
 }
