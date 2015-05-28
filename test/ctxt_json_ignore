@@ -17,6 +17,7 @@ hash_distribution_usage
 hash_polynomial
 hash_way_number
 include_idletime
+indirect
 match_entry_vpns
 match_group_resource_allocation
 match_key_fields
@@ -46,3 +47,4 @@ table_type
 ternary_mode
 vliw_resource_allocation
 way_match_group_map
+& 0xff000000 == 0x21000000

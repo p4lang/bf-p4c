@@ -204,10 +204,16 @@ void ExactMatchTable::pass1() {
                     error(mgm_lineno, "Format group %d doesn't match in word %d", grp, i);
                 else {
                     group_info[grp].match_group[i] = j;
-                    Format::Field *next = format->field("next", grp);
-                    if (!j && next && next->bits[0].lo/128 == i && next->bits[0].lo%128)
-                        error(mgm_lineno, "Next(%d) field must be at bit %d to be in match group 0",
-                              grp, i*128); } } } }
+                    if (Format::Field *next = format->field("next", grp)) {
+                        if (next->bits[0].lo/128 != i) continue;
+                        static unsigned limit[5] = { 0, 8, 32, 32, 32 };
+                        unsigned bit = next->bits[0].lo%128U;
+                        if (!j && bit)
+                            error(mgm_lineno, "Next(%d) field must start at bit %d to be in "
+                                  "match group 0", grp, i*128);
+                        else if (j && (!bit || bit > limit[j]))
+                            warning(mgm_lineno, "Next(%d) field must start in range %d..%d to be "
+                                    "in match group %d", grp, i*128+1, i*128+limit[j], j); } } } } }
     if (error_count > 0) return;
     for (int i = 0; i < (int)group_info.size(); i++) {
         if (group_info[i].match_group.size() == 1)
@@ -431,6 +437,7 @@ void ExactMatchTable::write_regs() {
         if (Format::Field *version = format->field("version", i)) {
             match_mask.clrrange(version->bits[0].lo, version->size);
             version_nibble_mask.clrrange(version->bits[0].lo/4, 1); } }
+    Format::Field *next = format->field("next");
 
     /* iterating through rows in the sram array;  while in this loop, 'row' is the
      * row we're on, 'word' is which word in a wide full-way the row is for, and 'way'
@@ -464,6 +471,20 @@ void ExactMatchTable::write_regs() {
             auto &ram = stage->regs.rams.array.row[row.row].ram[col];
             for (unsigned i = 0; i < 4; i++)
                 ram.match_mask[i] = match_mask.getrange(way.word*128U+i*32, 32);
+
+            if (next) {
+                for (int group : word_info[way.word]) {
+                    if (group_info[group].overhead_word != way.word) continue;
+                    int pos = (next->by_group[group]->bits[0].lo % 128) - 1;
+                    auto &n = ram.match_next_table_bitpos;
+                    switch(group_info[group].word_group) {
+                    case 0: break;
+                    case 1: n.match_next_table1_bitpos = pos; break;
+                    case 2: n.match_next_table2_bitpos = pos; break;
+                    case 3: n.match_next_table3_bitpos = pos; break;
+                    case 4: n.match_next_table4_bitpos = pos; break;
+                    default: assert(0); } } }
+
             ram.unit_ram_ctl.match_ram_write_data_mux_select = 7; /* unused */
             ram.unit_ram_ctl.match_ram_read_data_mux_select = 7; /* unused */
             ram.unit_ram_ctl.match_ram_matchdata_bus1_sel = row.bus;

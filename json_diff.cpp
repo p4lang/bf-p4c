@@ -8,6 +8,7 @@ static bool show_addition = true;
 static bool sort_map = true;
 static const char *list_map_key = 0;
 static std::set<std::string> ignore_keys;
+static std::vector<std::pair<long, long>>       ignore_intkeys;
 
 bool is_list_map(json::vector *v, const char *key) {
     if (!key) return false;
@@ -19,9 +20,33 @@ bool is_list_map(json::vector *v, const char *key) {
     return true;
 }
 
+void add_ignore(const char *a) {
+    while (isspace(*a)) a++;
+    if (*a == '&' || *a == '=' || isdigit(*a)) {
+        long mask, val;
+        int end = 0;
+        if (sscanf(a, "%li %n", &val, &end) >= 1)
+            ignore_intkeys.emplace_back(-1, val);
+        else if (sscanf(a, "== %li %n", &val, &end) >= 1)
+            ignore_intkeys.emplace_back(-1, val);
+        else if (sscanf(a, "& %li == %li %n", &mask, &val, &end) >= 2)
+            ignore_intkeys.emplace_back(mask, val);
+        else if (sscanf(a, "| %li == %li %n", &mask, &val, &end) >= 2)
+            ignore_intkeys.emplace_back(~mask, val^mask);
+        else {
+            std::cerr << "Unknown ignore expression " << a << std::endl;
+            return; }
+        if (a[end]) 
+            std::cerr << "extra text after ignore " << (a+end) << std::endl;
+        return; }
+    ignore_keys.insert(a);
+}
 bool ignore(json::obj *o) {
-    if (json::string *s = dynamic_cast<json::string *>(o))
+    if (json::string *s = dynamic_cast<json::string *>(o)) {
         if (ignore_keys.count(*s)) return true;
+    } else if (json::number *n = dynamic_cast<json::number *>(o)) {
+        for (auto &k : ignore_intkeys)
+            if ((n->val & k.first) == k.second) return true; }
     return false;
 }
 bool ignore(std::unique_ptr<json::obj> &o) { return ignore(o.get()); }
@@ -415,10 +440,10 @@ int main(int ac, char **av) {
                         std::ifstream file(av[i]+1);
                         std::string str;
                         if (!file) std::cerr << "Can't read " << av[i]+1 << std::endl;
-                        else while (file >> str)
-                            ignore_keys.insert(str);
+                        else while (getline(file, str))
+                            add_ignore(str.c_str());
                     } else
-                        ignore_keys.insert(av[i]);
+                        add_ignore(av[i]);
                     break;
                 case 'l': list_map_key = av[++i]; break;
                 case 's': sort_map = flag; break;

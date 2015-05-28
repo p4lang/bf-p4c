@@ -249,7 +249,7 @@ static AluOP::Decode opADD("add", 0x23e, true), opADDC("addc", 0x2be, true),
                      opB("alu_b", 0x29e), opORCA("orca", 0x29e),
                      opA("alu_a", 0x31e, &opB), opORCB("orcb", 0x35e, &opORCA),
                      opOR("or", 0x39e, true), opSETHI("sethi", 0x39e, true),
-                     opBMSET("bitmasked-set", 0x2e);
+                     opBMSET("bitmasked-set", 0x2e); // FIXME -- make 3rd operand explicit?
 
 Instruction *AluOP::Decode::decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op) {
     if (op.size != 4) {
