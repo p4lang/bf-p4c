@@ -144,6 +144,15 @@ public:
             std::vector<bitrange_t>    bits;
             Field       **by_group = 0;
             bool operator==(const Field &a) const { return size == a.size; }
+            unsigned bit(unsigned i) {
+                unsigned last = 0;
+                for (auto &chunk : bits) {
+                    if (i < (unsigned)chunk.size())
+                        return chunk.lo + i;
+                    i -= chunk.size();
+                    last = chunk.hi+1; }
+                if (i == 0) return last;
+                assert(0); }
             unsigned hi(unsigned bit) {
                 for (auto &chunk : bits)
                     if (bit >= chunk.lo && bit <= chunk.hi)

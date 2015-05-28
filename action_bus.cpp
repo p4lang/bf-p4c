@@ -50,20 +50,28 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
 }
 
 void ActionBus::pass1(Table *tbl) {
+    Slot *use[ACTION_DATA_BUS_SLOTS] = { 0 };
     for (auto &slot : Values(by_byte)) {
         int slotno = Stage::action_bus_slot_map[slot.byte];
-        for (int space = slot.size; space > 0; space -= Stage::action_bus_slot_size[slotno++]) {
+        for (unsigned byte = slot.byte; byte < slot.byte + slot.size;
+             byte += Stage::action_bus_slot_size[slotno++])
+        {
             if (slotno >= ACTION_DATA_BUS_SLOTS) {
                 error(lineno, "%s extends past the end of the actions bus",
                       slot.name.c_str());
                 break; }
             if (tbl->stage->action_bus_use[slotno]) {
-                error(lineno, "Action bus byte %d set in table %s and table %s", slot.byte,
-                      tbl->name(), tbl->stage->action_bus_use[slotno]->name());
-                break; }
+                if (tbl->stage->action_bus_use[slotno] != tbl)
+                    error(lineno, "Action bus byte %d set in table %s and table %s", byte,
+                          tbl->name(), tbl->stage->action_bus_use[slotno]->name());
+                else if (slot.data->bit(8*(byte - slot.byte)) !=
+                         use[slotno]->data->bit(8*(byte - use[slotno]->byte)))
+                    error(lineno, "Action bus byte %d used inconsistently for fields %s and "
+                          "%s in table %s", byte, use[slotno]->name.c_str(),
+                          slot.name.c_str(), tbl->name());
+                continue; }
             tbl->stage->action_bus_use[slotno] = tbl;
-        }
-    }
+            use[slotno] = &slot; } }
 }
 void ActionBus::pass2(Table *tbl) {
     /* FIXME -- allocate action bus slots for things that need to be on the action bus
