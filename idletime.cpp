@@ -57,7 +57,7 @@ void IdletimeTable::write_regs() {
         auto &map_alu_row = map_alu.row[row.row];
         auto vpn = row.vpns.begin();
         for (int col : row.cols) {
-            setup_muxctl(map_alu_row.vh_xbars.adr_dist_idletime_adr_xbar_ctl[col], 8); // FIXME
+            setup_muxctl(map_alu_row.vh_xbars.adr_dist_idletime_adr_xbar_ctl[col], row.bus);
             auto &mapram_cfg = map_alu_row.adrmux.mapram_config[col];
             //auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[col];
             if (disable_notification)
@@ -87,10 +87,12 @@ void IdletimeTable::write_regs() {
             setup_muxctl(map_alu_row.adrmux.idletime_physical_to_logical_req_inc_ctl[col],
                          match_table->logical_id);
         }
+        unsigned bus_index = row.bus;
+        if (bus_index < 8 && row.row >= 4)
+            bus_index += 10;
+        adrdist.adr_dist_idletime_adr_oxbar_ctl[bus_index/4].set_subfield(
+            match_table->logical_id | 0x10, 5 * (bus_index%4), 5);
     }
-    unsigned bus_index = 8; // FIXME
-    adrdist.adr_dist_idletime_adr_oxbar_ctl[bus_index/4].set_subfield(
-        match_table->logical_id | 0x10, 5 * (bus_index%4), 5);
     adrdist.idletime_sweep_ctl[match_table->logical_id].idletime_en = 1;
     adrdist.idletime_sweep_ctl[match_table->logical_id].idletime_size = layout_size();
     adrdist.idletime_sweep_ctl[match_table->logical_id].idletime_interval = sweep_interval;
