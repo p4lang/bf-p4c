@@ -88,7 +88,7 @@ tags:
 	ctags -R -I VECTOR --exclude=test --exclude=submodules
 
 test: all
-	cd test; ./runtests
+	cd test; ./runtests *.p4 mau/*.p4
 
 ftest: all
 	cd test; ./runtests -f

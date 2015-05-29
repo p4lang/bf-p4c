@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <fstream>
+#include "escape.h"
 #include "indent.h"
 #include "json.h"
 #include <limits.h>
@@ -125,8 +126,8 @@ static void gen_emit_method(std::ostream &out, json::map *m, indent_t indent,
 	} else if ((*name)[0] == '_') {
             json::string *val = dynamic_cast<json::string *>(a.second.get());
             if (!val) continue;
-            out << indent << "out << indent << \"\\\"" << *name << "\\\": \\\"" << *val
-                << "\\\"\";" << std::endl;
+            out << indent << "out << indent << \"\\\"" << *name << "\\\": \\\""
+                << escape(*val) << "\\\"\";" << std::endl;
             first = false;
             continue; }
 	out << indent << "out << indent << \"\\\"" << *name << "\\\": \";" << std::endl;
