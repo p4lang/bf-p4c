@@ -111,16 +111,16 @@ for p4file in "$@"; do
             if [ ! -r $name.tfa ]; then
                 echo -n " p4 compile failed to produce asm"
                 let fail++
-                echo "$p4file:" >> $FAILLOG
-                cat glsc.log >> $FAILLOG
                 ok=false
             fi
         else
             echo -n " p4 compile failed"
             let fail++
+            ok=false
+        fi
+        if $ok || grep -qs "^$name.p4" ../expected_failures.txt; then true; else
             echo "$p4file:" >> $FAILLOG
             sed 's/^/ /' glsc.log >> $FAILLOG
-            ok=false
         fi
     fi
     if $ok; then

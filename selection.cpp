@@ -177,6 +177,7 @@ void SelectionTable::write_regs() {
             ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::NONE;
             ram.unit_ram_ctl.match_ram_read_data_mux_select = UnitRam::DataMux::STATISTICS;
             unitram_config.unitram_type = UnitRam::SELECTOR;
+            unitram_config.unitram_logical_table = logical_id;
             if (!options.match_compiler) // FIXME -- compiler doesn't set this?
                 unitram_config.unitram_vpn = *vpn;
             if (gress == INGRESS)
@@ -220,6 +221,7 @@ void SelectionTable::write_regs() {
             auto &mapram_config = map_alu_row.adrmux.mapram_config[*mapram];
             auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[*mapram++];
             mapram_config.mapram_type = MapRam::SELECTOR_SIZE;
+            mapram_config.mapram_logical_table = logical_id;
             mapram_config.mapram_vpn_members = 0;
             if (!options.match_compiler) // FIXME -- compiler doesn't set this?
                 mapram_config.mapram_vpn = *vpn;
@@ -270,5 +272,5 @@ void SelectionTable::gen_tbl_cfg(json::vector &out) {
     stage_tbl["how_referenced"] = indirect ? "indirect" : "direct";
     add_pack_format(stage_tbl, 128, 1, 1);
     stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(true);
-    stage_tbl["stage_table_handle"] = 0L;
+    stage_tbl["stage_table_handle"] = logical_id;
 }

@@ -53,6 +53,7 @@ void IdletimeTable::write_regs() {
     LOG1("### Idletime table " << name() << " write_regs");
     auto &map_alu = stage->regs.rams.map_alu;
     auto &adrdist = stage->regs.rams.match.adrdist;
+    stage->regs.cfg_regs.idle_dump_ctl[match_table->logical_id].idle_dump_size = layout_size();
     for (Layout &row : layout) {
         auto &map_alu_row = map_alu.row[row.row];
         auto vpn = row.vpns.begin();
@@ -86,14 +87,20 @@ void IdletimeTable::write_regs() {
                          match_table->logical_id);
             setup_muxctl(map_alu_row.adrmux.idletime_physical_to_logical_req_inc_ctl[col],
                          match_table->logical_id);
-        }
+            unsigned clear_val = ~(~0U << precision);
+            if (per_flow_enable || precision == 1)
+                clear_val &= ~1U;
+            for (unsigned i = 0; i < 8U/precision; i++)
+                map_alu_row.adrmux.idletime_cfg_rd_clear_val[col].set_subfield(
+                    clear_val, i*precision, precision); }
         unsigned bus_index = row.bus;
         if (bus_index < 8 && row.row >= 4)
             bus_index += 10;
         adrdist.adr_dist_idletime_adr_oxbar_ctl[bus_index/4].set_subfield(
             match_table->logical_id | 0x10, 5 * (bus_index%4), 5);
     }
-    adrdist.idletime_sweep_ctl[match_table->logical_id].idletime_en = 1;
+    //don't enable initially -- runtime will enable
+    //adrdist.idletime_sweep_ctl[match_table->logical_id].idletime_en = 1;
     adrdist.idletime_sweep_ctl[match_table->logical_id].idletime_size = layout_size();
     adrdist.idletime_sweep_ctl[match_table->logical_id].idletime_interval = sweep_interval;
 }

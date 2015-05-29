@@ -151,6 +151,7 @@ void CounterTable::write_regs() {
                 ? UnitRam::DataMux::STATISTICS : UnitRam::DataMux::OVERFLOW;
             auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
             unitram_config.unitram_type = UnitRam::STATISTICS;
+            unitram_config.unitram_logical_table = logical_id;
             if (!options.match_compiler) // FIXME -- compiler doesn't set this?
                 unitram_config.unitram_vpn = *vpn;
             if (gress == INGRESS)
@@ -176,6 +177,7 @@ void CounterTable::write_regs() {
             auto &mapram_config = map_alu_row.adrmux.mapram_config[*mapram];
             auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[*mapram++];
             mapram_config.mapram_type = MapRam::STATISTICS;
+            mapram_config.mapram_logical_table = logical_id;
             mapram_config.mapram_vpn_members = 0;
             if (!options.match_compiler) // FIXME -- compiler doesn't set this?
                 mapram_config.mapram_vpn = *vpn;
@@ -227,9 +229,17 @@ void CounterTable::gen_tbl_cfg(json::vector &out) {
     stage_tbl["how_referenced"] = indirect ? "indirect" : "direct";
     add_pack_format(stage_tbl, 128, 1, format->groups());
     stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(true);
-    stage_tbl["stage_table_handle"] = 0L;
+    stage_tbl["stage_table_handle"] = logical_id;
     tbl.erase("p4_selection_tables");
     tbl.erase("p4_action_data_tables");
+    if (auto *f = lookup_field("bytes"))
+        stage_tbl["byte_width"] = f->size;
+    else
+        stage_tbl["byte_width"] = 0L;
+    if (auto *f = lookup_field("packets"))
+        stage_tbl["pkt_width"] = f->size;
+    else
+        stage_tbl["pkt_width"] = 0L;
     switch (type) {
     case PACKETS: tbl["statistics_type"] = "packets";
                   stage_tbl["stat_type"] = "packets"; break;
