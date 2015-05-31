@@ -5,6 +5,8 @@
 #include "stage.h"
 #include "phv.h"
 
+class HashExpr;
+
 class InputXbar {
     struct Input {
         Phv::Ref        what;
@@ -14,10 +16,11 @@ class InputXbar {
         Input(const Phv::Ref &a, int l, int h) : what(a), lo(l), hi(h) {}
     };
     struct HashCol {
-        int             lineno = -1;
-        Phv::Ref        what;
-        bitvec          data;
-        unsigned        valid = 0;
+        int                     lineno = -1;
+        HashExpr                *fn = 0;
+        int                     bit = 0;
+        bitvec                  data;
+        unsigned                valid = 0;
     };
     struct HashGrp {
         int             lineno = -1;
@@ -35,6 +38,7 @@ class InputXbar {
     static bool conflict(const HashGrp &a, const HashGrp &b);
     static bool can_merge(HashGrp &a, HashGrp &b);
     void add_use(unsigned &byte_use, std::vector<Input> &a);
+    void setup_hash(std::map<int, HashCol> &, int, gress_t, value_t &, int lineno, int lo, int hi);
     struct GroupSet {
         unsigned        group;
         const std::vector<InputXbar *> &use;

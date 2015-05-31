@@ -33,9 +33,6 @@ public:
 	bool operator=(bool b) const {
 	    assert(idx >= 0);
 	    return b ? self.setbit(idx) : self.clrbit(idx); }
-	bool operator=(int b) const {
-	    assert(idx >= 0);
-	    return b ? self.setbit(idx) : self.clrbit(idx); }
         bool set(bool b = true) {
 	    assert(idx >= 0);
             bool rv = self.getbit(idx);
@@ -308,7 +305,10 @@ public:
             return (data & a.ptr[0]) != 0;
         else
             return (data & a.data) != 0; }
-
+    bitvec &operator>>=(unsigned count);
+    bitvec &operator<<=(unsigned count);
+    bitvec operator>>(unsigned count) const { bitvec rv(*this); rv >>= count; return rv; }
+    bitvec operator<<(unsigned count) const { bitvec rv(*this); rv <<= count; return rv; }
 private:
     void expand(size_t newsize) {
 	assert(newsize > size);

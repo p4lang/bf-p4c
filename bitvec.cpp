@@ -19,3 +19,44 @@ std::ostream &operator<<(std::ostream &os, const bitvec &bv) {
     return os;
 }
 
+bitvec &bitvec::operator>>=(unsigned count) {
+    if (size == 1) {
+        if (count >= bits_per_unit)
+            data = 0;
+        else
+            data >>= count;
+        return *this; }
+    int off = count / bits_per_unit;
+    count %= bits_per_unit;
+    for (unsigned i = 0; i < size; i++)
+        if (i + off < size) {
+            ptr[i] = ptr[i+off] >> count;
+            if (count && i + off + 1 < size)
+                ptr[i] |= ptr[i+off+1] << (bits_per_unit - count);
+        } else
+            ptr[i] = 0;
+    while (size > 1 && !ptr[size-1]) size--;
+    if (size == 1) {
+        auto tmp = ptr[0];
+        delete [] ptr;
+        data = tmp; }
+    return *this;
+}
+
+bitvec &bitvec::operator<<=(unsigned count) {
+    unsigned needsize = (max().index() + count + bits_per_unit - 1)/bits_per_unit;
+    if (needsize > size) expand(needsize);
+    if (size == 1) {
+        data <<= count;
+        return *this; }
+    int off = count / bits_per_unit;
+    count %= bits_per_unit;
+    for (int i = size-1; i >= 0; i--)
+        if (i >= off) {
+            ptr[i] = ptr[i-off] << count;
+            if (count && i > off)
+                ptr[i] |= ptr[i-off-1] >> (bits_per_unit - count);
+        } else
+            ptr[i] = 0;
+    return *this;
+}

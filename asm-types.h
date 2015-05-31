@@ -69,6 +69,10 @@ struct value_t {
 
 struct pair_t {
     struct value_t      key, value;
+#ifdef __cplusplus
+    pair_t() = default;
+    pair_t(const value_t &k, const value_t &v) : key(k), value(v) {}
+#endif /* __cplusplus */
 };
 
 void free_value(value_t *p);

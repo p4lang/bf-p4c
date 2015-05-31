@@ -93,6 +93,10 @@ public:
                 return false; }
             return true; }
         const char *name() const { return name_.c_str(); }
+        unsigned size() {
+            if (lo >= 0) return hi - lo + 1;
+	    if (auto *s = phv.get(gress, name_)) return s->size();
+            return 0; }
         bool merge(const Ref &r);
         void dbprint(std::ostream &out) const;
     };

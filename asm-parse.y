@@ -51,7 +51,7 @@ static value_t empty_map(int lineno_adj) {
     return rv; }
 static value_t singleton_map(const value_t &k, const value_t &v) {
     value_t rv{tMAP, k.lineno};
-    VECTOR_init1(rv.map, (pair_t{k, v}));
+    VECTOR_init1(rv.map, pair_t(k, v));
     return rv; }
 static value_t command(char *cmd, const VECTOR(value_t) &args, int lineno_adj) {
     value_t rv{tCMD, lineno - lineno_adj};
@@ -62,11 +62,22 @@ static value_t command(char *cmd, const VECTOR(value_t) &args, int lineno_adj) {
     rv[0] = value(cmd, 0);
     rv[0].lineno = rv.lineno;
     return rv; }
-static value_t command(char *cmd, const value_t &arg, int lineno_adj) {
+static value_t command(char *cmd, value_t &arg, int lineno_adj) {
     value_t rv{tCMD, lineno - lineno_adj};
     if (arg.lineno < rv.lineno)
         rv.lineno = arg.lineno;
     VECTOR_init2(rv.vec, value(cmd, 0), arg);
+    rv[0].lineno = rv.lineno;
+    return rv; }
+static value_t command(char *cmd, value_t &a1, value_t &a2, int lineno_adj) {
+    if (a1.type == tCMD && a1 == cmd) {
+        free(cmd);
+        VECTOR_add(a1.vec, a2);
+        return a1; }
+    value_t rv{tCMD, lineno - lineno_adj};
+    if (a1.lineno < rv.lineno)
+        rv.lineno = a1.lineno;
+    VECTOR_init3(rv.vec, value(cmd, 0), a1, a2);
     rv[0].lineno = rv.lineno;
     return rv; }
 static value_t list_map_expand(VECTOR(value_t) &v);
@@ -78,6 +89,9 @@ static value_t list_map_expand(VECTOR(value_t) &v);
 
 %define parse.error verbose
 %define lr.default-reduction accepting
+
+%left '|' '^'
+%left '&'
 
 %union {
     int                 i;
@@ -183,9 +197,9 @@ list_elements: list_elements list_element { $$ = $1; VECTOR_add($$, $2); }
         ;
 
 map_element
-        : key ':' value '\n' { $$ = pair_t{ $1, $3 }; }
-        | key ':' '\n' indent_elements { $$ = pair_t{ $1, $4 }; }
-        | key ':' '\n' list_elements { $$ = pair_t{ $1, list_map_expand($4) }; }
+        : key ':' value '\n' { $$ = pair_t($1, $3); }
+        | key ':' '\n' indent_elements { $$ = pair_t($1, $4); }
+        | key ':' '\n' list_elements { $$ = pair_t($1, list_map_expand($4)); }
         ;
 
 list_element
@@ -216,6 +230,10 @@ value: key
     | flow_value
     | '-' INT { $$ = VAL(-$2); }
     | dotvals INT { VECTOR_add($1, VAL($2)); $$ = VAL($1); }
+    | value '^' value { $$ = CMD(strdup("^"), $1, $3); }
+    | value '|' value { $$ = CMD(strdup("|"), $1, $3); }
+    | value '&' value { $$ = CMD(strdup("&"), $1, $3); }
+    | '(' value ')' { $$ = $2; }
     ;
 
 flow_value
@@ -237,7 +255,7 @@ pair_list
     : pair_list ',' pair { $$ = $1; VECTOR_add($$, $3); }
     | pair { VECTOR_init1($$, $1); }
     ;
-pair: key ':' value { $$ = pair_t{ $1, $3 }; }
+pair: key ':' value { $$ = pair_t($1, $3); }
     ;
 
 dotvals : dotvals INT '.' { $$ = $1; VECTOR_add($$, VAL($2)); }

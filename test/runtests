@@ -5,6 +5,7 @@ fast=false;
 shopt -s nullglob
 
 TRY_GLSC="
+    #$HOME/p4c-tofino/build/lib.linux-x86_64-2.7/p4c_tofino/shell.py
     $HOME/p4c-tofino/shell.py
     $HOME/p4c-tofino/p4c_tofino/shell.py
     $PWD/../../p4c-tofino/shell.py
@@ -12,6 +13,8 @@ TRY_GLSC="
     $PWD/../submodules/p4c-tofino/shell.py
     $PWD/../submodules/p4c-tofino/p4c_tofino/shell.py
 "
+
+TIME=false
 
 while expr "$1" : - >/dev/null; do
     case $1 in
@@ -22,6 +25,9 @@ while expr "$1" : - >/dev/null; do
             $PWD/../submodules/p4c-tofino/shell.py
             $PWD/../submodules/p4c-tofino/p4c_tofino/shell.py
         "
+        ;;
+    -t)
+        TIME=true
         ;;
     -*)
         echo >&2 "unknown argumnet $1"
@@ -102,6 +108,7 @@ for p4file in "$@"; do
     mkdir -p $name.out
     cd $name.out
     ok=true
+    start=`date +%s`
     if $fast && [ -r $name.tfa ]; then
         need_reflow=false
     else 
@@ -171,11 +178,20 @@ for p4file in "$@"; do
     fi
     if grep -qs "^$name.p4" ../expected_failures.txt; then
         if $ok; then
-            echo " (UNEXPECTED PASS)"
+            echo -n " (UNEXPECTED PASS)"
         else
-            echo " (expected)"
+            echo -n " (expected)"
             let expected_fail++
         fi
+    fi
+    if $TIME; then
+        let elapsed=`date +%s`-start
+        let min=elapsed/60
+        let sec=elapsed%60
+        if [ $sec -lt 10 ]; then
+            sec=0$sec
+        fi
+        echo " ($min:$sec)"
     else
         echo
     fi
