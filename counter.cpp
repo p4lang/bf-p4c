@@ -196,7 +196,7 @@ void CounterTable::write_regs() {
             if (type & BYTES) stat_ctl.stats_process_bytes = 1;
             if (type & PACKETS) stat_ctl.stats_process_packets = 1;
             stat_ctl.lrt_enable = 0;
-            if (gress == EGRESS) stat_ctl.stats_alu_egress = 1;
+            stat_ctl.stats_alu_egress = gress;
         } else {
             auto &adr_ctl = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
             if (home->row >= 8 && logical_row.row < 8) {
@@ -209,8 +209,13 @@ void CounterTable::write_regs() {
             adr_ctl.adr_dist_oflo_adr_xbar_enable = 1;
         }
     }
+    auto &adrdist = stage->regs.rams.match.adrdist;
+    adrdist.deferred_ram_ctl[0][home->row/4].deferred_ram_en = 1;
+    adrdist.deferred_ram_ctl[0][home->row/4].deferred_ram_thread = gress;
+    if (push_on_overflow)
+        adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U);
     for (MatchTable *m : match_tables) {
-        auto &icxbar = stage->regs.rams.match.adrdist.adr_dist_stats_adr_icxbar_ctl[m->logical_id];
+        auto &icxbar = adrdist.adr_dist_stats_adr_icxbar_ctl[m->logical_id];
         icxbar.address_distr_to_logical_rows = 1U << home->row;
         icxbar.address_distr_to_overflow = push_on_overflow;
         auto &dump_ctl = stage->regs.cfg_regs.stats_dump_ctl[m->logical_id];

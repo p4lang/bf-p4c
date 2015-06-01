@@ -174,7 +174,7 @@ void SelectionTable::write_regs() {
             unsigned col = logical_col + 6*side;
             auto &ram = stage->regs.rams.array.row[row].ram[col];
             auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
-            ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::NONE;
+            ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::STATISTICS;
             ram.unit_ram_ctl.match_ram_read_data_mux_select = UnitRam::DataMux::STATISTICS;
             unitram_config.unitram_type = UnitRam::SELECTOR;
             unitram_config.unitram_logical_table = logical_id;
