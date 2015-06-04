@@ -336,7 +336,7 @@ table exm_3ways_8Entries_stage_1 {
 
 
 
-@pragma ways 6 
+@pragma ways 5  //Not enough memory to allocate all action entries 
 @pragma pack 8 
 
 table exm_6ways_8Entries_stage_2 {
