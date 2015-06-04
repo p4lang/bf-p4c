@@ -39,19 +39,21 @@ static struct INTRIN##GR##NAME : public Deparser::Intrinsic {           \
     INTRIN##GR##NAME() : Deparser::Intrinsic(GR, #NAME, MAX) {}         \
     void setregs(Deparser *dep, std::vector<Phv::Ref> &vals) { CODE; }  \
 } INTRIN##GR##NAME##_singleton;
-#define HIR_INTRINSIC(NAME) INTRINSIC(INGRESS, NAME, 1,                 \
-    dep->hdr_regs.hir.ingr.NAME.phv = vals[0]->reg.index;               \
-    dep->hdr_regs.hir.ingr.NAME.valid = 1; )
-#define HER_INTRINSIC(NAME) INTRINSIC(EGRESS, NAME, 1,                  \
-    dep->hdr_regs.her.egr.NAME.phv = vals[0]->reg.index;                \
-    dep->hdr_regs.her.egr.NAME.valid = 1; )
+#define YES(X)  X
+#define NO(X)
+#define SIMPLE_INTRINSIC(GR, PFX, NAME, IF_SHIFT) INTRINSIC(GR, NAME, 1,\
+    dep->PFX.NAME.phv = vals[0]->reg.index;                             \
+    IF_SHIFT( dep->PFX.NAME.shft = vals[0]->lo; )                       \
+    dep->PFX.NAME.valid = 1; )
+#define IIR_MAIN_INTRINSIC(NAME, SHFT) SIMPLE_INTRINSIC(INGRESS, inp_regs.iir.main_i, NAME, SHFT)
+#define IIR_INTRINSIC(NAME, SHFT)      SIMPLE_INTRINSIC(INGRESS, inp_regs.iir.ingr, NAME, SHFT)
+#define HIR_INTRINSIC(NAME, SHFT)      SIMPLE_INTRINSIC(INGRESS, hdr_regs.hir.ingr, NAME, SHFT)
+#define IER_MAIN_INTRINSIC(NAME, SHFT) SIMPLE_INTRINSIC(EGRESS, inp_regs.ier.main_e, NAME, SHFT)
+#define HER_INTRINSIC(NAME, SHFT)      SIMPLE_INTRINSIC(EGRESS, hdr_regs.her.egr, NAME, SHFT)
 
-INTRINSIC(INGRESS, egress_unicast_port, 1,
-    dep->inp_regs.iir.main_i.egress_unicast_port.phv = vals[0]->reg.index;
-    dep->inp_regs.iir.main_i.egress_unicast_port.valid = 1; )
-INTRINSIC(INGRESS, copy_to_cpu, 1,
-    dep->inp_regs.iir.ingr.copy_to_cpu.phv = vals[0]->reg.index;
-    dep->inp_regs.iir.ingr.copy_to_cpu.valid = 1;)
+IIR_MAIN_INTRINSIC(egress_unicast_port, NO)
+IIR_MAIN_INTRINSIC(drop_ctl, YES)
+IIR_INTRINSIC(copy_to_cpu, YES)
 INTRINSIC(INGRESS, egress_multicast_group, 2,
     int i = 0;
     for (auto &el : vals) {
@@ -62,27 +64,28 @@ INTRINSIC(INGRESS, hash_lag_ecmp_mcast, 2,
     for (auto &el : vals) {
         dep->hdr_regs.hir.ingr.hash_lag_ecmp_mcast[i].phv = el->reg.index;
         dep->hdr_regs.hir.ingr.hash_lag_ecmp_mcast[i++].valid = 1; } )
-HIR_INTRINSIC(copy_to_cpu_cos)
+HIR_INTRINSIC(copy_to_cpu_cos, YES)
 INTRINSIC(INGRESS, ingress_port_source, 1,
     dep->hdr_regs.hir.ingr.ingress_port.phv = vals[0]->reg.index;
     dep->hdr_regs.hir.ingr.ingress_port.sel = 0; )
-HIR_INTRINSIC(deflect_on_drop)
-HIR_INTRINSIC(meter_color)
-HIR_INTRINSIC(icos)
-HIR_INTRINSIC(qid)
-HIR_INTRINSIC(xid)
-HIR_INTRINSIC(yid)
-HIR_INTRINSIC(rid)
-HIR_INTRINSIC(warp)
+HIR_INTRINSIC(deflect_on_drop, YES)
+HIR_INTRINSIC(meter_color, YES)
+HIR_INTRINSIC(icos, YES)
+HIR_INTRINSIC(qid, YES)
+HIR_INTRINSIC(xid, NO)
+HIR_INTRINSIC(yid, NO)
+HIR_INTRINSIC(rid, NO)
+HIR_INTRINSIC(warp, YES)
+HIR_INTRINSIC(ct_disable, YES)
+HIR_INTRINSIC(ct_mcast, YES)
 
-INTRINSIC(EGRESS, egress_unicast_port, 1,
-    dep->inp_regs.ier.main_e.egress_unicast_port.phv = vals[0]->reg.index;
-    dep->inp_regs.ier.main_e.egress_unicast_port.valid = 1; )
-HER_INTRINSIC(force_tx_err)
-HER_INTRINSIC(tx_pkt_has_offsets)
-HER_INTRINSIC(capture_tx_ts)
-HER_INTRINSIC(coal)
-HER_INTRINSIC(ecos)
+IER_MAIN_INTRINSIC(egress_unicast_port, NO)
+IER_MAIN_INTRINSIC(drop_ctl, YES)
+HER_INTRINSIC(force_tx_err, YES)
+HER_INTRINSIC(tx_pkt_has_offsets, YES)
+HER_INTRINSIC(capture_tx_ts, YES)
+HER_INTRINSIC(coal, NO)
+HER_INTRINSIC(ecos, YES)
 
 struct Deparser::Digest::Type {
     gress_t     gress;
