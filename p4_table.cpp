@@ -103,6 +103,23 @@ json::map *P4Table::base_tbl_cfg(json::vector &out, int size, Table *table) {
             sel["handle_reference"] = selector->handle();
             sel["how_referenced"] = "indirect";
             (tbl["p4_selection_tables"] = json::vector()).push_back(std::move(sel)); }
+        if (auto *attached = table->get_attached()) {
+            json::vector *vec = 0;
+            for (auto &tblcall : attached->stats) {
+                if (!vec) vec = &(tbl["p4_statistics_tables"] = json::vector());
+                json::map stats;
+                stats["name"] = tblcall->p4_name();
+                stats["handle_reference"] = tblcall->handle();
+                stats["how_referenced"] = tblcall.args.empty() ? "direct" : "indirect";
+                vec->push_back(std::move(stats)); }
+            vec = 0;
+            for (auto &tblcall : attached->meter) {
+                if (!vec) vec = &(tbl["p4_meter_tables"] = json::vector());
+                json::map meter;
+                meter["name"] = tblcall->p4_name();
+                meter["handle_reference"] = tblcall->handle();
+                meter["how_referenced"] = tblcall.args.empty() ? "direct" : "indirect";
+                vec->push_back(std::move(meter)); } }
         if (!explicit_size)
             this->size = size;
     } else if (!explicit_size)

@@ -14,6 +14,7 @@
 #include <vector>
 
 class ActionBus;
+class AttachedTables;
 class GatewayTable;
 class IdletimeTable;
 class Instruction;
@@ -62,6 +63,7 @@ public:
                         METER, IDLETIME };
     virtual table_type_t table_type() { return OTHER; }
     virtual table_type_t set_match_table(MatchTable *m, bool indirect) { assert(0); }
+    virtual AttachedTables *get_attached() { return 0; }
     virtual GatewayTable *get_gateway() { return 0; }
     virtual SelectionTable *get_selector() { return 0; }
     virtual void write_merge_regs(int type, int bus) { assert(0); }
@@ -282,6 +284,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     void write_regs(int type, Table *result);
     bool common_setup(pair_t &);
 public:
+    AttachedTables *get_attached() { return &attached; }
     GatewayTable *get_gateway() { return gateway; }
 )
 
@@ -376,11 +379,14 @@ public:
     int find_on_actionbus(const char *n, int off, int *len = 0) {
         return indirect ? indirect->find_on_actionbus(n, off, len)
                         : Table::find_on_actionbus(n, off, len); }
+    AttachedTables *get_attached() { return indirect ? indirect->get_attached() : &attached; }
     SelectionTable *get_selector() { return indirect ? indirect->get_selector() : 0; }
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(bool skip_spare_bank=false);
     Call &action_call() { return indirect ? indirect->action : action; }
     int memunit(int r, int c) { return r + c*12; }
 )
+
+DECLARE_TABLE_TYPE(Phase0MatchTable, Table, "phase0_match", )
 
 DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     TernaryMatchTable           *match_table;
@@ -392,6 +398,7 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
         depth = layout_size() / width;
         period = 1;
         period_name = 0; }
+    AttachedTables *get_attached() { return &attached; }
     GatewayTable *get_gateway() { return match_table->get_gateway(); }
     SelectionTable *get_selector() { return attached.get_selector(); }
     void write_merge_regs(int type, int bus) { attached.write_merge_regs(this, type, bus); }

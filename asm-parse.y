@@ -70,7 +70,7 @@ static value_t command(char *cmd, value_t &arg, int lineno_adj) {
     rv[0].lineno = rv.lineno;
     return rv; }
 static value_t command(char *cmd, value_t &a1, value_t &a2, int lineno_adj) {
-    if (a1.type == tCMD && a1 == cmd) {
+    if (a1.type == tCMD && a1 == cmd && a1.vec.size > 2) {
         free(cmd);
         VECTOR_add(a1.vec, a2);
         return a1; }
@@ -92,6 +92,7 @@ static value_t list_map_expand(VECTOR(value_t) &v);
 
 %left '|' '^'
 %left '&'
+%nonassoc UNARY
 
 %union {
     int                 i;
@@ -222,13 +223,12 @@ key : ID { $$ = VAL($1); }
     | BIGINT { $$ = VAL($1); }
     | MATCH { $$ = VAL($1); }
     | INT DOTDOT INT { $$ = VAL($1, $3); }
-    | ID '(' param ')' { $$ = CMD($1, $3); }
-    | ID '(' comma_params ')' { $$ = CMD($1, $3); }
+    | ID '(' value_list ')' { $$ = CMD($1, $3); }
     ;
 
 value: key
     | flow_value
-    | '-' INT { $$ = VAL(-$2); }
+    | '-' value %prec UNARY { if (($$=$2).type == tINT) $$.i = -$$.i; else $$ = CMD(strdup("-"), $2); }
     | dotvals INT { VECTOR_add($1, VAL($2)); $$ = VAL($1); }
     | value '^' value { $$ = CMD(strdup("^"), $1, $3); }
     | value '|' value { $$ = CMD(strdup("|"), $1, $3); }
