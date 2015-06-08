@@ -4,14 +4,19 @@ fast=false;
 
 shopt -s nullglob
 
+TESTDIR=$(cd $(dirname $0); pwd -P)
+
 TRY_GLSC="
     #$HOME/p4c-tofino/build/lib.linux-x86_64-2.7/p4c_tofino/shell.py
+    #$HOME/p4c-tofino-work1/p4c_tofino/shell.py
     $HOME/p4c-tofino/shell.py
     $HOME/p4c-tofino/p4c_tofino/shell.py
     $PWD/../../p4c-tofino/shell.py
     $PWD/../../p4c-tofino/p4c_tofino/shell.py
     $PWD/../submodules/p4c-tofino/shell.py
     $PWD/../submodules/p4c-tofino/p4c_tofino/shell.py
+    $TESTDIR/../submodules/p4c-tofino/shell.py
+    $TESTDIR/../submodules/p4c-tofino/p4c_tofino/shell.py
 "
 
 TIME=false
@@ -24,6 +29,8 @@ while expr "$1" : - >/dev/null; do
         TRY_GLSC="
             $PWD/../submodules/p4c-tofino/shell.py
             $PWD/../submodules/p4c-tofino/p4c_tofino/shell.py
+            $TESTDIR/../submodules/p4c-tofino/shell.py
+            $TESTDIR/../submodules/p4c-tofino/p4c_tofino/shell.py
         "
         ;;
     -t)
@@ -36,6 +43,7 @@ while expr "$1" : - >/dev/null; do
     shift
 done
 
+#glsc_args="--placement-order ingress_before_egress --gen-csum --libpd --placement secret"
 glsc_args="--placement-order ingress_before_egress --gen-csum --libpd"
 
 trap 'exit' 2
@@ -62,8 +70,6 @@ else
     echo >&2 "Can't find p4c-tofino executable"
     GLSC=false
 fi
-
-TESTDIR=$(cd $(dirname $0); pwd -P)
 
 function findbin () {
     if [ -x "$PWD/../$1" ]; then

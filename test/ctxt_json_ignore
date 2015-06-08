@@ -4,6 +4,7 @@ action_parameter_map
 action_to_constant_mapping
 action_to_immediate_mapping
 action_to_next_table_mapping
+constant_name_to_value
 default_address_bits_provided
 default_lower_huffman_bits_included
 default_next_table

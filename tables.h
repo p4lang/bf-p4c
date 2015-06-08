@@ -386,7 +386,9 @@ public:
     int memunit(int r, int c) { return r + c*12; }
 )
 
-DECLARE_TABLE_TYPE(Phase0MatchTable, Table, "phase0_match", )
+DECLARE_TABLE_TYPE(Phase0MatchTable, Table, "phase0_match",
+    int         width = 1;
+)
 
 DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     TernaryMatchTable           *match_table;

@@ -6,13 +6,19 @@ DEFINE_TABLE_TYPE(Phase0MatchTable)
 void Phase0MatchTable::setup(VECTOR(pair_t) &data) {
     VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
     for (auto &kv : MapIterChecked(data)) {
-        if (common_setup(kv)) {
+        /* if (common_setup(kv)) { } else */
+        if (kv.key == "p4") {
+            if (CHECKTYPE(kv.value, tMAP))
+                p4_table = P4Table::get(P4Table::MatchEntry, kv.value.map);
         } else if (kv.key == "p4_table") {
             push_back(p4_info, "name", std::move(kv.value));
         } else if (kv.key == "p4_table_size") {
             push_back(p4_info, "size", std::move(kv.value));
         } else if (kv.key == "handle") {
             push_back(p4_info, "handle", std::move(kv.value));
+        } else if (kv.key == "width") {
+            if (CHECKTYPE(kv.value, tINT))
+                width = kv.value.i;
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     kv.key.s, name()); }
@@ -41,6 +47,17 @@ void Phase0MatchTable::write_regs() {
 void Phase0MatchTable::gen_tbl_cfg(json::vector &out) {
     int number_entries = 72;
     json::map &tbl = *base_tbl_cfg(out, "match_entry", number_entries);
-    //json::map &stage_tbl = *
-    add_stage_tbl_cfg(tbl, "phase_0_match", number_entries);
+    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "phase_0_match", number_entries);
+    auto &mra = stage_tbl["memory_resource_allocation"] = json::map();
+    stage_tbl["stage_number"] = -1;
+    mra["memory_type"] = "ingress_buffer";
+    mra["memory_units_depth"] = 1;
+    mra["memory_units_width"] = width;
+    json::map tmp;
+    auto &mem_units = tmp["memory_units"] = json::vector();
+    for (int i = width-1; i >= 0; i--)
+        mem_units.push_back(i);
+    (tmp["vpns"] = json::vector()).push_back(0L);
+    (mra["memory_units_and_vpns"] = json::vector()).push_back(std::move(tmp));
+    add_pack_format(stage_tbl, 32, width, 1);
 }
