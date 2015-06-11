@@ -70,6 +70,7 @@ public:
     virtual int direct_shiftcount() { assert(0); }
     /* row,col -> mem unitno mapping -- unitnumbers used in context json */
     virtual int memunit(int r, int c) { return r*12 + c; }
+    virtual bool run_at_eop() { return false; }
 
     struct Layout {
         /* Holds the layout of which rams/tcams/busses are used by the table
@@ -267,6 +268,7 @@ struct AttachedTables {
     SelectionTable *get_selector();
     void pass1(MatchTable *self);
     void write_merge_regs(Table *self, int type, int bus);
+    bool run_at_eop();
 };
 
 #define DECLARE_ABSTRACT_TABLE_TYPE(TYPE, PARENT, ...)                  \
@@ -286,6 +288,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
 public:
     AttachedTables *get_attached() { return &attached; }
     GatewayTable *get_gateway() { return gateway; }
+    bool run_at_eop() { return attached.run_at_eop(); }
 )
 
 #define DECLARE_TABLE_TYPE(TYPE, PARENT, NAME, ...)                     \
@@ -545,6 +548,7 @@ DECLARE_TABLE_TYPE(CounterTable, StatsTable, "counter",
 public:
     bool                per_flow_enable;
     int direct_shiftcount();
+    bool run_at_eop() { return (type&BYTES) != 0; }
 )
 
 #endif /* _tables_h_ */

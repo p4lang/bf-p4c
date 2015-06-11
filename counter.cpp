@@ -210,11 +210,9 @@ void CounterTable::write_regs() {
         }
     }
     auto &adrdist = stage->regs.rams.match.adrdist;
-    adrdist.deferred_ram_ctl[0][home->row/4].deferred_ram_en = 1;
-    adrdist.deferred_ram_ctl[0][home->row/4].deferred_ram_thread = gress;
-    if (push_on_overflow)
-        adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U);
+    bool run_at_eop = this->run_at_eop();
     for (MatchTable *m : match_tables) {
+        run_at_eop = run_at_eop || m->run_at_eop();
         auto &icxbar = adrdist.adr_dist_stats_adr_icxbar_ctl[m->logical_id];
         icxbar.address_distr_to_logical_rows = 1U << home->row;
         icxbar.address_distr_to_overflow = push_on_overflow;
@@ -225,6 +223,14 @@ void CounterTable::write_regs() {
         if (type == PACKETS || type == BOTH)
             dump_ctl.stats_dump_has_packets = 1;
         dump_ctl.stats_dump_size = layout_size(); }
+    if (run_at_eop) {
+        adrdist.deferred_ram_ctl[0][home->row/4].deferred_ram_en = 1;
+        adrdist.deferred_ram_ctl[0][home->row/4].deferred_ram_thread = gress;
+        if (push_on_overflow)
+            adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U);
+    } else
+        for (MatchTable *m : match_tables)
+            adrdist.packet_action_at_headertime[0][m->logical_id] = 1;
 }
 
 void CounterTable::gen_tbl_cfg(json::vector &out) {

@@ -782,7 +782,7 @@ void MatchTable::write_regs(int type, Table *result) {
     if (result->action_bus)
         result->action_bus->write_immed_regs(result);
 
-    input_xbar->write_regs();
+    if (input_xbar) input_xbar->write_regs();
 }
 
 int Table::find_on_actionbus(Format::Field *f, int off) {
@@ -836,6 +836,13 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(bool sk
 
 SelectionTable *AttachedTables::get_selector() {
     return dynamic_cast<SelectionTable *>((Table *)selector); }
+
+bool AttachedTables::run_at_eop() {
+    if (meter.size() > 0) return true;
+    for (auto &s : stats)
+        if (s->run_at_eop()) return true;
+    return false;
+}
 
 void AttachedTables::pass1(MatchTable *self) {
     if (selector.check()) {

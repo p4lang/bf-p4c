@@ -160,8 +160,11 @@ for p4file in "$@"; do
         if [ $cnt -gt 0 ]; then
             echo -n " mismatch"
             let fail++
-            echo "$p4file:" >> $FAILLOG
-            cat json_diff.txt >> $FAILLOG
+            if grep -qs "^$name.p4" ../expected_failures.txt; then true; else
+                echo "$p4file:" >> $FAILLOG
+                cat json_diff.txt >> $FAILLOG
+            fi
+            ok=false
         else
             echo -n " pass"
             let pass++

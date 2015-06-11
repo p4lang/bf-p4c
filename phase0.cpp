@@ -60,4 +60,5 @@ void Phase0MatchTable::gen_tbl_cfg(json::vector &out) {
     (tmp["vpns"] = json::vector()).push_back(0L);
     (mra["memory_units_and_vpns"] = json::vector()).push_back(std::move(tmp));
     add_pack_format(stage_tbl, 32, width, 1);
+    tbl["performs_hash_action"] = "false";
 }

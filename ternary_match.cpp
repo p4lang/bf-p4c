@@ -12,7 +12,7 @@ DEFINE_TABLE_TYPE(TernaryIndirectTable)
 
 void TernaryMatchTable::vpn_params(int &width, int &depth, int &period, const char *&period_name) {
     if ((width = match.size()) == 0)
-        width = input_xbar->tcam_width();
+        width = input_xbar ? input_xbar->tcam_width() : 1;
     depth = layout_size() / width;
     period = 1;
     period_name = 0;
@@ -44,7 +44,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
         if (CHECKTYPE(*ixbar, tMAP))
             input_xbar = new InputXbar(this, true, ixbar->map);
     } else
-        error(lineno, "No input xbar specified in table %s", name());
+        warning(lineno, "No input xbar specified in table %s", name());
     VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
     if (auto *m = get(data, "match"))
         if (CHECKTYPE(*m, tVEC))
@@ -125,14 +125,15 @@ void TernaryMatchTable::pass1() {
     alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
              TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
     alloc_busses(stage->tcam_match_bus_use);
-    input_xbar->pass1(stage->tcam_ixbar, 44);
-    if (match.empty()) {
-        match.resize(input_xbar->tcam_width());
-        for (unsigned i = 0; i < match.size(); i++) {
-            match[i].word_group = input_xbar->tcam_word_group(i);
-            match[i].byte_group = input_xbar->tcam_byte_group(i/2);
-            match[i].byte_config = (i&1) + 1; }
-        match.back().byte_config = 3; }
+    if (input_xbar) {
+        input_xbar->pass1(stage->tcam_ixbar, 44);
+        if (match.empty()) {
+            match.resize(input_xbar->tcam_width());
+            for (unsigned i = 0; i < match.size(); i++) {
+                match[i].word_group = input_xbar->tcam_word_group(i);
+                match[i].byte_group = input_xbar->tcam_byte_group(i/2);
+                match[i].byte_config = (i&1) + 1; }
+            match.back().byte_config = 3; } }
     alloc_vpns();
     check_next();
     indirect.check();
@@ -179,7 +180,7 @@ void TernaryMatchTable::pass1() {
 }
 void TernaryMatchTable::pass2() {
     LOG1("### Ternary match table " << name() << " pass2");
-    input_xbar->pass2(stage->tcam_ixbar, 44);
+    if (input_xbar) input_xbar->pass2(stage->tcam_ixbar, 44);
     if (!indirect && indirect_bus < 0) {
         for (int i = 0; i < 16; i++)
             if (!stage->tcam_indirect_bus_use[i/2][i&1]) {
@@ -323,6 +324,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         add_pack_format(tind, 128, 1, 128/fmt_width);
         tind["memory_resource_allocation"] = indirect->gen_memory_resource_allocation_tbl_cfg();
         stage_tbl["ternary_indirection_table"] = std::move(tind); }
+    tbl["performs_hash_action"] = "false";
 }
 
 void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
