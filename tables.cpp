@@ -379,7 +379,7 @@ void Table::alloc_maprams() {
 }
 
 void Table::alloc_vpns() {
-    if (layout.size() == 0 || layout[0].vpns.size() > 0) return;
+    if (no_vpns || layout.size() == 0 || layout[0].vpns.size() > 0) return;
     setup_vpns(0);
 }
 
@@ -751,7 +751,9 @@ void MatchTable::write_regs(int type, Table *result) {
      * Next Table
      *-----------------------*/
     Table *next = result->hit_next.size() > 0 ? result : this;
-    if (next->hit_next.size() < NEXT_TABLE_SUCCESSOR_TABLE_DEPTH) {
+    if (next->hit_next.empty()) {
+        /* nothing to do... */
+    } else if (next->hit_next.size() < NEXT_TABLE_SUCCESSOR_TABLE_DEPTH) {
         merge.next_table_map_en |= (1U << logical_id);
         auto &mp = merge.next_table_map_data[logical_id];
         ubits<8> *map_data[8] = { &mp[0].next_table_map_data0, &mp[0].next_table_map_data1,
@@ -816,10 +818,15 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(bool sk
     mra["memory_type"] = "sram";
     json::vector mem_units[depth/period];
     json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
+    int ctr = 0;
+    bool no_vpns = false;
     for (auto &row : layout) {
         auto vpn = row.vpns.begin();
-        for (auto col : row.cols)
-            mem_units[*vpn++/period].push_back(memunit(row.row, col)); }
+        for (auto col : row.cols) {
+            if (vpn == row.vpns.end())
+                no_vpns = true;
+            else ctr = *vpn++;
+            mem_units[ctr++/period].push_back(memunit(row.row, col)); } }
     int vpn = 0;
     for (auto &mem : mem_units) {
         if (skip_spare_bank && &mem == &mem_units[depth/period - 1]) break;
@@ -827,7 +834,10 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(bool sk
         json::map tmp;
         tmp["memory_units"] = std::move(mem);
         json::vector vpns;
-        vpns.push_back(vpn);
+        if (no_vpns)
+            vpns.push_back("null");
+        else
+            vpns.push_back(vpn);
         tmp["vpns"] = std::move(vpns);
         mem_units_and_vpns.push_back(std::move(tmp));
         vpn += period; }
@@ -887,6 +897,42 @@ void AttachedTables::write_merge_regs(Table *self, int type, int bus) {
         get_selector()->write_merge_regs(type, bus, selector.args, self->action);
 }
 
+void HashDistribution::setup(value_t &v) {
+    if (v.type ==  tMAP) {
+        for (auto &kv : MapIterChecked(v.map)) {
+            if (kv.key == "func") {
+                if (CHECKTYPE(kv.value, tINT) && (unsigned)(func_id = kv.value.i) >= 2U)
+                    error(kv.value.lineno, "Invalid hash distribulion function id");
+            } else if (kv.key == "group") {
+                if (CHECKTYPE(kv.value, tINT) && (unsigned)(group_id = kv.value.i) >= 3U)
+                    error(kv.value.lineno, "Invalid hash distribulion group id");
+            } else if (kv.key == "hash") {
+                if (CHECKTYPE(kv.value, tINT) && (unsigned)(hash_group = kv.value.i) >= 8U)
+                    error(kv.value.lineno, "Invalid hash group");
+            } else if (kv.key == "mask") {
+                if (CHECKTYPE(kv.value, tINT))
+                    mask = kv.value.i;
+            } else if (kv.key == "shift") {
+                if (CHECKTYPE(kv.value, tINT))
+                    shift = kv.value.i;
+            } else
+                warning(kv.key.lineno, "ignoring unknown item %s in hash_dist",
+                                    kv.key.s); }
+        return; }
+    else if (!CHECKTYPEPM(v, tVEC, v.vec.size == 4, "Invalid hash_dist")) return;
+    else if (!CHECKTYPE(v[0], tINT) || v[0].i < 0 || v[0].i >= 8)
+        error(v[0].lineno, "Invalid hash group");
+    else if (!CHECKTYPE(v[1], tINT) || v[1].i < 0 || v[1].i >= 2)
+        error(v[1].lineno, "Invalid hash distribulion function id");
+    else if (!CHECKTYPE(v[2], tINT) || v[2].i < 0 || v[2].i >= 3)
+        error(v[2].lineno, "Invalid hash distribulion group id");
+    else if (CHECKTYPE(v[3], tINT)) {
+        hash_group = v[0].i;
+        func_id = v[1].i;
+        group_id = v[2].i;
+        mask = v[3].i; }
+}
+
 json::map *Table::base_tbl_cfg(json::vector &out, const char *type, int size) {
     return p4_table->base_tbl_cfg(out, size, this);
 }
@@ -909,7 +955,7 @@ void add_pack_format(json::map &stage_tbl, int memword, int words, int entries) 
     json::map pack_fmt;
     pack_fmt["table_word_width"] = memword * words;
     pack_fmt["memory_word_width"] = memword;
-    if (entries > 0)
+    if (entries >= 0)
         pack_fmt["entries_per_table_word"] = entries;
     pack_fmt["number_memory_units_per_table_word"] = words;
     if (stage_tbl.count("pack_format")) {

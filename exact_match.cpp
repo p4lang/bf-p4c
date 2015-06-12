@@ -556,8 +556,7 @@ void ExactMatchTable::write_regs() {
                 vh_xbar[row.bus].exactmatch_validselect |= 1U << (version->bits[0].lo%128)/4; } }
         if (using_match) {
             auto &vh_xbar_ctl = vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl;
-            vh_xbar_ctl.exactmatch_row_vh_xbar_select = word_ixbar_group[word];
-            vh_xbar_ctl.exactmatch_row_vh_xbar_enable = 1;
+            setup_muxctl(vh_xbar_ctl,  word_ixbar_group[word]);
             vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress; }
         /* setup match central config to extract results of the match */
         auto &merge = stage->regs.rams.match.merge;

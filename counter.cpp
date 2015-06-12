@@ -19,7 +19,9 @@ void CounterTable::setup(VECTOR(pair_t) &data) {
         if (kv.key == "format") {
             /* done above to be done before vpns */
         } else if (kv.key == "vpns") {
-            if (CHECKTYPE(kv.value, tVEC))
+            if (kv.value == "null")
+                no_vpns = true;
+            else if (CHECKTYPE(kv.value, tVEC))
                 setup_vpns(&kv.value.vec, true);
         } else if (kv.key == "p4") {
             if (CHECKTYPE(kv.value, tMAP))

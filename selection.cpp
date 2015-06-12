@@ -6,21 +6,6 @@
 
 DEFINE_TABLE_TYPE(SelectionTable)
 
-void SelectionTable::HashDist::setup(value_t &v) {
-    if (!CHECKTYPEPM(v, tVEC, v.vec.size == 4, "Invalid hash_dist")) return;
-    if (!CHECKTYPE(v[0], tINT) || v[0].i < 0 || v[0].i >= 8)
-        error(v[0].lineno, "Invalid hash group");
-    else if (!CHECKTYPE(v[1], tINT) || v[1].i < 0 || v[1].i >= 2)
-        error(v[1].lineno, "Invalid hash distribulion function id");
-    else if (!CHECKTYPE(v[2], tINT) || v[2].i < 0 || v[2].i >= 3)
-        error(v[2].lineno, "Invalid hash distribulion group id");
-    else if (CHECKTYPE(v[3], tINT)) {
-        hash_group = v[0].i;
-        func_id = v[1].i;
-        group_id = v[2].i;
-        mask = v[3].i; }
-}
-
 void SelectionTable::setup(VECTOR(pair_t) &data) {
     auto *row = get(data, "row");
     if (!row) row = get(data, "logical_row");
@@ -260,7 +245,7 @@ void SelectionTable::write_regs() {
         merge.mau_hash_group_config.hash_group_enable |= 1 << hash_dist.code();
         merge.mau_hash_group_config.hash_group_sel = hash_dist.hash_group | (1 << 3);
         merge.mau_hash_group_config.hash_group_ctl.set_subfield(0, 2 * hash_dist.code(), 2);
-        merge.mau_hash_group_shiftcount.set_subfield(0, 3 * hash_dist.code(), 3); // FIXME
+        merge.mau_hash_group_shiftcount.set_subfield(hash_dist.shift, 3 * hash_dist.code(), 3);
         merge.mau_hash_group_mask[hash_dist.code()] = hash_dist.mask; }
 }
 

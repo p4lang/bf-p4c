@@ -121,6 +121,11 @@ void AsmStage::process() {
 
 void AsmStage::output() {
     json::vector        tbl_cfg;
+    for (unsigned i = 0; i < stage.size(); i++) {
+        if  (stage[i].tables.empty()) continue;
+        for (auto table : stage[i].tables)
+            table->pass2(); }
+    if (error_count > 0) return;
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         bitvec set_regs = stage[0].action_set[gress];
         for (unsigned i = 1; i < stage.size(); i++) {
@@ -146,9 +151,6 @@ void AsmStage::output() {
                 stage[i-1].group_table_use[gress] |= stage[i].group_table_use[gress]; }
     for (unsigned i = 0; i < stage.size(); i++) {
         if  (stage[i].tables.empty()) continue;
-        for (auto table : stage[i].tables)
-            table->pass2();
-        if (error_count > 0) return;
         for (auto table : stage[i].tables) {
             table->write_regs();
             table->gen_tbl_cfg(tbl_cfg); }

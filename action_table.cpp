@@ -87,7 +87,9 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
             if (CHECKTYPE(kv.value, tINT))
                 action_id = kv.value.i;
         } else if (kv.key == "vpns") {
-            if (CHECKTYPE(kv.value, tVEC))
+            if (kv.value == "null")
+                no_vpns = true;
+            else if (CHECKTYPE(kv.value, tVEC))
                 setup_vpns(&kv.value.vec);
         } else if (kv.key == "p4") {
             if (CHECKTYPE(kv.value, tMAP))
@@ -275,7 +277,8 @@ void ActionTable::write_regs() {
             ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::NONE;
             ram.unit_ram_ctl.match_ram_read_data_mux_select = home == &logical_row ? 4 : 2;
             unitram_config.unitram_type = UnitRam::ACTION;
-            unitram_config.unitram_vpn = *vpn++;
+            if (!no_vpns)
+                unitram_config.unitram_vpn = *vpn++;
             unitram_config.unitram_logical_table = action_id >= 0 ? action_id : logical_id;
             if (gress == INGRESS)
                 unitram_config.unitram_ingress = 1;

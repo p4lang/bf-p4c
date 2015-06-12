@@ -32,9 +32,6 @@ GatewayTable::Match::Match(match_t &v, value_t &data) : val(v), run_table(false)
 
 void GatewayTable::setup(VECTOR(pair_t) &data) {
     int bus = -1;
-    match_table = 0;
-    payload = 0;
-    gw_unit = -1;
     setup_logical_id();
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "row") {
@@ -60,6 +57,11 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
             match_t v = { 0, 0 };
             miss = Match(v, kv.value);
         } else if (kv.key == "payload") {
+            if (CHECKTYPE(kv.value, tINT))
+                payload = kv.value.i;
+        } else if (kv.key == "payload_unit") {
+            if (CHECKTYPE(kv.value, tINT))
+                payload_unit = kv.value.i;
         } else if (kv.key == "match") {
             if (kv.value.type == tVEC) {
                 for (auto &v : kv.value.vec)
@@ -101,13 +103,12 @@ void check_match_key(std::vector<GatewayTable::MatchKey> &vec, const char *name,
     for (unsigned i = 0; i < vec.size(); i++) {
         if (!vec[i].val.check())
             break;
-        if (i == 0) continue;
-        if (vec[i].offset) {
-            if (vec[i].offset < vec[i-1].offset + vec[i-1].val->size())
+        if (vec[i].offset >= 0) {
+            if (i && vec[i].offset < vec[i-1].offset + (int)vec[i-1].val->size())
                 error(vec[i].val.lineno, "Gateway %s key at offset %d overlaps previous value(s)",
                       name, vec[i].offset);
         } else 
-            vec[i].offset = vec[i-1].offset + vec[i-1].val->size();
+            vec[i].offset = i ? vec[i-1].offset + vec[i-1].val->size() : 0;
         if (vec[i].offset + vec[i].val->size() > max) {
             error(vec[i].val.lineno, "Gateway %s key too big", name);
             break; } }
@@ -131,11 +132,14 @@ void GatewayTable::pass1() {
         miss.next.check();
     if (error_count > 0) return;
     unsigned long ignore = ~0UL;
-    for (auto &r : match)
+    int shift = -1;
+    for (auto &r : match) {
         ignore ^= ((1UL << r.val->size()) - 1) << r.offset;
+        if (shift < 0 || shift > r.offset) shift = r.offset; }
+    if (shift < 0) shift = 0;
     for (auto &line : table) {
-        line.val.word0 = (line.val.word0 << match[0].offset) | ignore;
-        line.val.word1 = (line.val.word1 << match[0].offset) | ignore; }
+        line.val.word0 = (line.val.word0 << shift) | ignore;
+        line.val.word1 = (line.val.word1 << shift) | ignore; }
 }
 void GatewayTable::pass2() {
     LOG1("### Gateway table " << name() << " pass2");
@@ -208,26 +212,31 @@ void GatewayTable::write_regs() {
         merge.gateway_inhibit_lut[logical_id] |= 1 << 4; }
     merge.gateway_en |= 1 << logical_id;
     setup_muxctl(merge.gateway_to_logicaltable_xbar_ctl[logical_id], row.row*2 + gw_unit);
-    if (Table *payload = match_table) {
-        auto tmatch = dynamic_cast<TernaryMatchTable *>(payload);
-        if (tmatch)
-            payload = tmatch->indirect;
-        if (payload)
-            for (auto &row : payload->layout) {
+    if (Table *tbl = match_table) {
+        bool tind_bus = false;
+        auto *tmatch = dynamic_cast<TernaryMatchTable *>(tbl);
+        if (tmatch) {
+            tind_bus = true;
+            tbl = tmatch->indirect;
+        } else if (auto *hashaction = dynamic_cast<HashActionTable *>(tbl))
+            tind_bus = hashaction->bus >= 2;
+        if (tbl)
+            for (auto &row : tbl->layout) {
                 auto &xbar_ctl = merge.gateway_to_pbus_xbar_ctl[row.row*2 + row.bus];
-                if (tmatch) {
+                if (tind_bus) {
                     xbar_ctl.tind_logical_select = logical_id;
                     xbar_ctl.tind_inhibit_enable = 1;
                 } else {
                     xbar_ctl.exact_logical_select = logical_id;
                     xbar_ctl.exact_inhibit_enable = 1;
                 }
+                if (payload_unit >= 0) {
+                    merge.gateway_payload_pbus[row.row] |= 1 << (row.bus + (tind_bus ? 2 : 0));
+                    merge.gateway_payload_data[row.row][row.bus][payload_unit] = payload;
 #if 0
-                merge.gateway_payload_pbus[row.row][row.bus] |= 1 << (row.bus + ternary_match ? 2 : 0);
-                merge.gateway_payload_data[row.row][row.bus][0] = ???;
-                merge.gateway_payload_data[row.row][row.bus][1] = ???;
-                merge.gateway_payload_match_adr[row.row][row.bus] = ???;
+                    merge.gateway_payload_match_adr[row.row][row.bus] = ???;
 #endif
+                }
             }
         else {
             assert(tmatch);

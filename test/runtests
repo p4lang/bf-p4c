@@ -52,6 +52,8 @@ if [ $# -eq 0 ]; then
     set *.p4
 fi
 
+count=$#
+
 rm -rf faillog.txt
 FAILLOG=$(pwd -P)/faillog.txt
 
@@ -83,6 +85,8 @@ function findbin () {
         echo false
     fi
 }
+
+function not() { if "$@"; then return 1; else return 0; fi }
 
 if [ ! -x "$TFAS" ]; then
     TFAS=$(findbin tfas)
@@ -131,7 +135,7 @@ for p4file in "$@"; do
             let fail++
             ok=false
         fi
-        if $ok || grep -qs "^$name.p4" ../expected_failures.txt; then true; else
+        if not $ok && ( [ $count -eq 1 ] || not grep -qs "^$name.p4" ../expected_failures.txt ); then
             echo "$p4file:" >> $FAILLOG
             sed 's/^/ /' glsc.log >> $FAILLOG
         fi
@@ -160,7 +164,7 @@ for p4file in "$@"; do
         if [ $cnt -gt 0 ]; then
             echo -n " mismatch"
             let fail++
-            if grep -qs "^$name.p4" ../expected_failures.txt; then true; else
+            if [ $count -eq 1 ] || not grep -qs "^$name.p4" ../expected_failures.txt; then
                 echo "$p4file:" >> $FAILLOG
                 cat json_diff.txt >> $FAILLOG
             fi
