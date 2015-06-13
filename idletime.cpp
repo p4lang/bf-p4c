@@ -53,14 +53,16 @@ void IdletimeTable::write_regs() {
     LOG1("### Idletime table " << name() << " write_regs");
     auto &map_alu = stage->regs.rams.map_alu;
     auto &adrdist = stage->regs.rams.match.adrdist;
-    stage->regs.cfg_regs.idle_dump_ctl[match_table->logical_id].idle_dump_size = layout_size();
+    stage->regs.cfg_regs.idle_dump_ctl[logical_id].idletime_dump_size = layout_size() - 1;
+    stage->regs.cfg_regs.mau_cfg_lt_has_idle |= 1 << logical_id;
     for (Layout &row : layout) {
         auto &map_alu_row = map_alu.row[row.row];
+        auto &adrmux = map_alu_row.adrmux;
         auto vpn = row.vpns.begin();
         for (int col : row.cols) {
             setup_muxctl(map_alu_row.vh_xbars.adr_dist_idletime_adr_xbar_ctl[col], row.bus);
-            auto &mapram_cfg = map_alu_row.adrmux.mapram_config[col];
-            //auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[col];
+            auto &mapram_cfg = adrmux.mapram_config[col];
+            //auto &mapram_ctl = adrmux.mapram_ctl[col];
             if (disable_notification)
                 mapram_cfg.idletime_disable_notification = 1;
             if (two_way_notification)
@@ -69,7 +71,7 @@ void IdletimeTable::write_regs() {
                 mapram_cfg.per_flow_idletime = 1;
             mapram_cfg.idletime_bitwidth = precision_bits[precision];
             mapram_cfg.mapram_type = MapRam::IDLETIME;
-            mapram_cfg.mapram_logical_table = match_table->logical_id;
+            mapram_cfg.mapram_logical_table = logical_id;
             mapram_cfg.mapram_vpn_members = 0; // FIXME
             mapram_cfg.mapram_vpn = *vpn++;
             if (gress == INGRESS)
@@ -77,32 +79,30 @@ void IdletimeTable::write_regs() {
             else
                 mapram_cfg.mapram_egress = 1;
             mapram_cfg.mapram_enable = 1;
-            auto &adrmux_ctl = map_alu_row.adrmux.ram_address_mux_ctl[1][col];
+            auto &adrmux_ctl = adrmux.ram_address_mux_ctl[1][col];
             adrmux_ctl.map_ram_wadr_mux_select = MapRam::Mux::IDLETIME;
             adrmux_ctl.map_ram_wadr_mux_enable = 1;
             adrmux_ctl.map_ram_radr_mux_select_smoflo = 1;
             adrmux_ctl.ram_ofo_stats_mux_select_statsmeter = 1;
             adrmux_ctl.ram_stats_meter_adr_mux_select_idlet = 1;
-            setup_muxctl(map_alu_row.adrmux.idletime_logical_to_physical_sweep_grant_ctl[col],
-                         match_table->logical_id);
-            setup_muxctl(map_alu_row.adrmux.idletime_physical_to_logical_req_inc_ctl[col],
-                         match_table->logical_id);
+            setup_muxctl(adrmux.idletime_logical_to_physical_sweep_grant_ctl[col], logical_id);
+            setup_muxctl(adrmux.idletime_physical_to_logical_req_inc_ctl[col], logical_id);
             unsigned clear_val = ~(~0U << precision);
             if (per_flow_enable || precision == 1)
                 clear_val &= ~1U;
             for (unsigned i = 0; i < 8U/precision; i++)
-                map_alu_row.adrmux.idletime_cfg_rd_clear_val[col].set_subfield(
-                    clear_val, i*precision, precision); }
+                adrmux.idletime_cfg_rd_clear_val[col]
+                    .set_subfield(clear_val, i*precision, precision); }
         unsigned bus_index = row.bus;
         if (bus_index < 8 && row.row >= 4)
             bus_index += 10;
-        adrdist.adr_dist_idletime_adr_oxbar_ctl[bus_index/4].set_subfield(
-            match_table->logical_id | 0x10, 5 * (bus_index%4), 5);
+        adrdist.adr_dist_idletime_adr_oxbar_ctl[bus_index/4]
+            .set_subfield(logical_id | 0x10, 5 * (bus_index%4), 5);
     }
     //don't enable initially -- runtime will enable
-    //adrdist.idletime_sweep_ctl[match_table->logical_id].idletime_en = 1;
-    adrdist.idletime_sweep_ctl[match_table->logical_id].idletime_size = layout_size();
-    adrdist.idletime_sweep_ctl[match_table->logical_id].idletime_interval = sweep_interval;
+    //adrdist.idletime_sweep_ctl[logical_id].idletime_en = 1;
+    adrdist.idletime_sweep_ctl[logical_id].idletime_sweep_size = layout_size() - 1;
+    adrdist.idletime_sweep_ctl[logical_id].idletime_sweep_interval = sweep_interval;
 }
 
 void IdletimeTable::gen_tbl_cfg(json::vector &out) {

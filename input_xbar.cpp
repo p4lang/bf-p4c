@@ -413,11 +413,7 @@ void InputXbar::write_regs() {
                 w.byte0 = data & 0xff;
                 w.byte1 = (data >> 8) & 0xff;
                 w.valid0 = valid & 1;
-                w.valid1 = (valid >> 1) & 1; } }
-        if (table->gress == INGRESS)
-            hash.hashout_ctl.hash_group_ingress_enable |= 1 << id;
-        else
-            hash.hashout_ctl.hash_group_egress_enable |= 1 << id; }
+                w.valid1 = (valid >> 1) & 1; } } }
     for (auto &hg : hash_groups) {
         LOG1("  # Input xbar hash group " << hg.first);
         int grp = hg.first;
@@ -425,7 +421,11 @@ void InputXbar::write_regs() {
             hash.parity_group_mask[grp] = hg.second.tables;
         if (hg.second.seed) {
             hash.hash_seed[grp][0] = hg.second.seed & 0x3ffffff;
-            hash.hash_seed[grp][1] = (hg.second.seed >> 26) & 0x3ffffff; } }
+            hash.hash_seed[grp][1] = (hg.second.seed >> 26) & 0x3ffffff; }
+        if (table->gress == INGRESS)
+            hash.hashout_ctl.hash_group_ingress_enable |= 1 << grp;
+        else
+            hash.hashout_ctl.hash_group_egress_enable |= 1 << grp; }
 }
 
 InputXbar::Input *InputXbar::find(Phv::Slice sl, int grp) {

@@ -224,7 +224,10 @@ void CounterTable::write_regs() {
             dump_ctl.stats_dump_has_bytes = 1;
         if (type == PACKETS || type == BOTH)
             dump_ctl.stats_dump_has_packets = 1;
-        dump_ctl.stats_dump_size = layout_size(); }
+        dump_ctl.stats_dump_size = layout_size() - 1;  // FIXME
+        stage->regs.cfg_regs.mau_cfg_lt_has_stats |= 1 << m->logical_id;
+        if (direct)
+            stage->regs.cfg_regs.mau_cfg_lt_stats_are_direct |= 1 << m->logical_id; }
     if (run_at_eop) {
         adrdist.deferred_ram_ctl[0][home->row/4].deferred_ram_en = 1;
         adrdist.deferred_ram_ctl[0][home->row/4].deferred_ram_thread = gress;

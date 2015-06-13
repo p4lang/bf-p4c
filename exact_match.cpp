@@ -485,6 +485,7 @@ void ExactMatchTable::write_regs() {
                     case 4: n.match_next_table4_bitpos = pos; break;
                     default: assert(0); } } }
 
+            ram.unit_ram_ctl.match_ram_logical_table = logical_id;
             ram.unit_ram_ctl.match_ram_write_data_mux_select = 7; /* unused */
             ram.unit_ram_ctl.match_ram_read_data_mux_select = 7; /* unused */
             ram.unit_ram_ctl.match_ram_matchdata_bus1_sel = row.bus;

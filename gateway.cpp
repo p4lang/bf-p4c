@@ -232,7 +232,8 @@ void GatewayTable::write_regs() {
                 }
                 if (payload_unit >= 0) {
                     merge.gateway_payload_pbus[row.row] |= 1 << (row.bus + (tind_bus ? 2 : 0));
-                    merge.gateway_payload_data[row.row][row.bus][payload_unit] = payload;
+                    merge.gateway_payload_data[row.row][row.bus][payload_unit][0] = payload;
+                    merge.gateway_payload_data[row.row][row.bus][payload_unit][1] = payload;
 #if 0
                     merge.gateway_payload_match_adr[row.row][row.bus] = ???;
 #endif
