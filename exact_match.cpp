@@ -223,8 +223,8 @@ void ExactMatchTable::pass1() {
                     error(format->lineno, "Too many match groups using word %d", mgrp.first);
                 word_info[mgrp.first].push_back(i); }
         if (group_info[i].overhead_word < 0) {
-            /* no overhead -- use the first match word */
-            group_info[i].word_group = group_info[i].match_group.begin()->second;
+            /* no overhead -- use the last match word */
+            group_info[i].word_group = group_info[i].match_group.rbegin()->second;
             LOG1("  format group " << i << " no overhead");
         } else {
             group_info[i].word_group = group_info[i].match_group[group_info[i].overhead_word];
@@ -633,7 +633,9 @@ void ExactMatchTable::write_regs() {
                         merge.col[col].row_action_nxtable_bus_drive[row.row] |= 1 << row.bus;
                     setup_muxctl(hitmap_ixbar, overhead_row.row*2 + group_info[group].word_group);
                 } else {
-                    setup_muxctl(hitmap_ixbar, row.row*2 + group_info[group].word_group); }
+                    int last_word = group_info[group].match_group.rbegin()->first;
+                    auto &last_row = layout[index + word - last_word];
+                    setup_muxctl(hitmap_ixbar, last_row.row*2 + group_info[group].word_group); }
                 if (++word_group > 1) break; }
             /*setup_muxctl(merge.col[col].hitmap_output_map[bus],
                            layout[index+word].row*2 + layout[index+word].bus); */ }
