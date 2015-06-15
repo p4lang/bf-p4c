@@ -283,10 +283,10 @@ void TernaryMatchTable::write_regs() {
     if (idletime) idletime->write_regs();
 }
 
-std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl_cfg(bool skip_spare_bank) {
+std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl_cfg(const char *type, bool skip_spare_bank) {
     assert(!skip_spare_bank); // never spares in tcam
     json::map mra;
-    mra["memory_type"] = "tcam";
+    mra["memory_type"] = type;
     json::vector mem_units;
     unsigned word = 0;
     json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
@@ -314,7 +314,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         tbl["preferred_match_type"] = "ternary";
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "ternary_match", number_entries);
     add_pack_format(stage_tbl, 47, match.size(), 1);
-    stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg();
+    stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("tcam");
     if (indirect) {
         json::map tind;
         unsigned fmt_width = 1U << indirect->format->log2size;
@@ -322,8 +322,10 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         tind["number_entries"] = indirect->layout_size()*128/fmt_width * 1024;
         tind["stage_table_type"] = "ternary_indirection";
         add_pack_format(tind, 128, 1, 128/fmt_width);
-        tind["memory_resource_allocation"] = indirect->gen_memory_resource_allocation_tbl_cfg();
+        tind["memory_resource_allocation"] = indirect->gen_memory_resource_allocation_tbl_cfg("sram");
         stage_tbl["ternary_indirection_table"] = std::move(tind); }
+    if (idletime)
+        idletime->gen_stage_tbl_cfg(stage_tbl);
     tbl["performs_hash_action"] = "false";
 }
 

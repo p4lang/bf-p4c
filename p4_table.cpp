@@ -105,6 +105,8 @@ json::map *P4Table::base_tbl_cfg(json::vector &out, int size, Table *table) {
             (tbl["p4_selection_tables"] = json::vector()).push_back(std::move(sel)); }
         if (auto *attached = table->get_attached()) {
             json::vector *vec = 0;
+            if (options.match_compiler)
+                vec = &(tbl["p4_statistics_tables"] = json::vector());
             for (auto &tblcall : attached->stats) {
                 if (!vec) vec = &(tbl["p4_statistics_tables"] = json::vector());
                 json::map stats;

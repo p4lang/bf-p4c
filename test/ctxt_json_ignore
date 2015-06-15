@@ -4,6 +4,7 @@ action_parameter_map
 action_to_constant_mapping
 action_to_immediate_mapping
 action_to_next_table_mapping
+action_to_perform
 constant_name_to_value
 default_address_bits_provided
 default_lower_huffman_bits_included
@@ -31,7 +32,7 @@ number_selection_groups
 pack_format_length
 p4_meter_tables
 p4_stateful_tables
-p4_statistics_tables
+#p4_statistics_tables
 pack_format_length
 per_flow_enable_bit_position
 port_pool_sizes
@@ -41,11 +42,12 @@ saturating
 selection_fields
 stage_action_parameter_map
 stage_gateway_table
-stage_idletime_table
+#stage_idletime_table
 stage_table_type_handle
 stage_table_type_handle_type
 stash_resource_allocation
 statistics_precision
+sweep_interval
 table_type
 ternary_mode
 vliw_resource_allocation

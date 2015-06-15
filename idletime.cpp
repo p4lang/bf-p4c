@@ -105,5 +105,17 @@ void IdletimeTable::write_regs() {
     adrdist.idletime_sweep_ctl[logical_id].idletime_sweep_interval = sweep_interval;
 }
 
-void IdletimeTable::gen_tbl_cfg(json::vector &out) {
+void IdletimeTable::gen_stage_tbl_cfg(json::map &out) {
+    unsigned number_entries = layout_size() * (8U/precision) * 1024;
+    json::map &tbl = out["stage_idletime_table"] = json::map();
+    tbl["stage_number"] = stage->stageno;
+    tbl["stage_table_type"] = "idletime";
+    tbl["number_entries"] = number_entries;
+    add_pack_format(tbl, 10, 1, 8U/precision);
+    tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("map_ram");
+    tbl["stage_table_handle"] = logical_id;
+    tbl["idletime_precision"] = precision;
+    tbl["idletime_disable_notification"] = disable_notification ? "true" : "false";
+    tbl["idletime_two_way_notification"] = two_way_notification ? "true" : "false";
+    tbl["idletime_per_flow_idletime"] = per_flow_enable ? "true" : "false";
 }

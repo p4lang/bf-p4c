@@ -111,6 +111,11 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
         tbl["preferred_match_type"] = "exact";
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "hash_action", hash_dist.mask + 1);
     add_pack_format(stage_tbl, 0, 0, 0);
-    stage_tbl["memory_resource_allocation"] = "null";
+    if (options.match_compiler)
+        stage_tbl["memory_resource_allocation"] = "null";
+    if (idletime)
+        idletime->gen_stage_tbl_cfg(stage_tbl);
+    else if (options.match_compiler)
+        stage_tbl["stage_idletime_table"] = "null";
     tbl["performs_hash_action"] = "true";
 }

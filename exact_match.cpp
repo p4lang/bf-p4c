@@ -709,5 +709,9 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
         add_pack_format(way_tbl, 128, fmt_width, format->groups());
         way_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(way);
         way_stage_tables.push_back(std::move(way_tbl)); }
+    if (idletime)
+        idletime->gen_stage_tbl_cfg(stage_tbl);
+    else if (options.match_compiler)
+        stage_tbl["stage_idletime_table"] = "null";
     tbl["performs_hash_action"] = "false";
 }

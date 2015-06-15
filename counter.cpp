@@ -244,7 +244,7 @@ void CounterTable::gen_tbl_cfg(json::vector &out) {
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "statistics", size);
     stage_tbl["how_referenced"] = indirect ? "indirect" : "direct";
     add_pack_format(stage_tbl, 128, 1, format->groups());
-    stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(true);
+    stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("sram", true);
     stage_tbl["stage_table_handle"] = logical_id;
     tbl.erase("p4_selection_tables");
     tbl.erase("p4_action_data_tables");

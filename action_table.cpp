@@ -331,7 +331,7 @@ void ActionTable::gen_tbl_cfg(json::vector &out) {
         for (int i = actions->count(); i > 1; i--)
             add_pack_format(stage_tbl, 128, fmt_width,
                             128 >> format->log2size ? 128 >> format->log2size : 1);
-    stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg();
+    stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("sram");
     stage_tbl["how_referenced"] = indirect ? "indirect" : "direct";
     tbl["action_data_entry_width"] = 1 << format->log2size;
     /* FIXME -- don't include ref to select table as compiler doesn't */

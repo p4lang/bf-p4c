@@ -58,7 +58,7 @@ public:
     json::map *base_tbl_cfg(json::vector &out, const char *type, int size);
     json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size);
     virtual std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(
-            bool skip_spare_bank = false);
+            const char *type, bool skip_spare_bank = false);
     enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER,
                         METER, IDLETIME };
     virtual table_type_t table_type() { return OTHER; }
@@ -394,7 +394,7 @@ public:
                         : Table::find_on_actionbus(n, off, len); }
     AttachedTables *get_attached() { return indirect ? indirect->get_attached() : &attached; }
     SelectionTable *get_selector() { return indirect ? indirect->get_selector() : 0; }
-    std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(bool skip_spare_bank=false);
+    std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(const char *type, bool skip_spare_bank=false);
     Call &action_call() { return indirect ? indirect->action : action; }
     int memunit(int r, int c) { return r + c*12; }
 )
@@ -531,12 +531,14 @@ public:
         return IDLETIME; }
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
         width = period = 1; depth = layout_size(); period_name = 0; }
+    int memunit(int r, int c) { return r*6 + c; }
     int precision_shift();
     void pass1();
     void pass2();
     void write_merge_regs(int type, int bus);
     void write_regs();
-    void gen_tbl_cfg(json::vector &out);
+    void gen_tbl_cfg(json::vector &out) { /* nothing at top level */ }
+    void gen_stage_tbl_cfg(json::map &out);
     static IdletimeTable *create(int lineno, const std::string &name, gress_t gress,
                                  Stage *stage, int lid, VECTOR(pair_t) &data) {
         IdletimeTable *rv = new IdletimeTable(lineno, name.c_str(), gress, stage, lid);
