@@ -24,6 +24,11 @@ namespace std {
 
 namespace json {
 
+class number;
+class string;
+class vector;
+class map;
+
 class obj {
 public:
     obj() {}
@@ -38,6 +43,8 @@ public:
     bool operator <=(const obj &a) const { return !(a < *this); }
     virtual bool operator ==(const obj &a) const = 0;
     bool operator !=(const obj &a) const { return !(*this == a); }
+    virtual bool operator ==(const char *str) const { return false; }
+    bool operator !=(const char *str) const { return !(*this == str); }
     struct ptrless {
 	bool operator()(const obj *a, const obj *b) const
 	    { return b ? a ? *a < *b : true : false; }
@@ -46,6 +53,15 @@ public:
     };
     virtual void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const = 0;
     virtual bool test_width(int &limit) const = 0;
+    virtual number *as_number() { return nullptr; }
+    virtual const number *as_number() const { return nullptr; }
+    virtual string *as_string() { return nullptr; }
+    virtual const string *as_string() const { return nullptr; }
+    virtual vector *as_vector() { return nullptr; }
+    virtual const vector *as_vector() const { return nullptr; }
+    virtual map *as_map() { return nullptr; }
+    virtual const map *as_map() const { return nullptr; }
+    virtual const char *c_str() const { return nullptr; }
 };
 
 class number : public obj {
@@ -62,6 +78,8 @@ public:
     void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const { out << val; }
     bool test_width(int &limit) const
 	{ char buf[32]; limit -= sprintf(buf, "%ld", val); return limit >= 0; }
+    number *as_number() { return this; }
+    const number *as_number() const { return this; }
 };
 
 class string : public obj, public std::string {
@@ -84,9 +102,14 @@ public:
 	    return static_cast<const std::string &>(*this) ==
 		   static_cast<const std::string &>(*b);
 	return false; }
+    bool operator ==(const char *str) const {
+        return static_cast<const std::string &>(*this) == str; }
     void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const {
 	out << '"' << *this << '"'; }
     bool test_width(int &limit) const { limit -= size()+2; return limit >= 0; }
+    const char *c_str() const { return std::string::c_str(); }
+    string *as_string() { return this; }
+    const string *as_string() const { return this; }
 };
 
 class map; // forward decl
@@ -129,6 +152,8 @@ public:
     void push_back(const char *s) { push_back(std::make_unique<string>(string(s))); }
     void push_back(vector &&v) { push_back(std::make_unique<vector>(std::move(v))); }
     void push_back(json::map &&);
+    vector *as_vector() { return this; }
+    const vector *as_vector() const { return this; }
 };
 
 typedef ordered_map<obj *, std::unique_ptr<obj>, obj::ptrless> map_base;
@@ -175,7 +200,11 @@ public:
     map_base::size_type count(long n) const {
 	number tmp(n);
         return count(&tmp); }
-    using map_base::operator[];
+    //using map_base::operator[];
+    obj * operator[](const std::unique_ptr<obj> &i) const {
+	auto rv = find(i.get());
+	if (rv != end()) return rv->second.get();
+	return 0; }
     obj *operator[](const char *str) const {
 	string tmp(str);
 	auto rv = find(&tmp);
@@ -202,6 +231,10 @@ private:
             iter = self.find(&tmp);
             if (iter == self.end())
                 key.reset(new number(std::move(tmp))); }
+        element_ref(map &s, std::unique_ptr<obj> &&k) : self(s) {
+            iter = self.find(k.get());
+            if (iter == self.end())
+                key = std::move(k); }
         const char *operator=(const char *v) {
             if (key)
                 iter = self.emplace(key.release(), std::unique_ptr<obj>(new string(v))).first;
@@ -248,12 +281,15 @@ private:
 public:
     element_ref operator[](const char *str) { return element_ref(*this, str); }
     element_ref operator[](long n) { return element_ref(*this, n); }
+    element_ref operator[](std::unique_ptr<obj> &&i) { return element_ref(*this, std::move(i)); }
     map_base::size_type erase(const char *str) {
 	string tmp(str);
         return map_base::erase(&tmp); }
     map_base::size_type erase(long n) {
 	number tmp(n);
         return map_base::erase(&tmp); }
+    map *as_map() { return this; }
+    const map *as_map() const { return this; }
 };
 
 inline void vector::push_back(map &&m) { emplace_back(std::make_unique<map>(std::move(m))); }

@@ -79,6 +79,7 @@ static bool is_singleton(json::map *m) {
 
 static int tabsz = 4;
 static bool enable_disable = true;
+static bool checked_array = true;
 
 static void gen_emit_method(std::ostream &out, json::map *m, indent_t indent,
                             const std::string &classname, const char *objname,
@@ -135,7 +136,7 @@ static void gen_emit_method(std::ostream &out, json::map *m, indent_t indent,
 	json::obj *type = get_indexes(a.second.get(), indexes);
 	int index_num = 0;
 	for (int idx : indexes) {
-            if (enable_disable) {
+            if (enable_disable && checked_array) {
                 out << indent++ << "if (" << *name;
                 for (int i = 0; i < index_num; i++)
                     out << "[i" << i << ']';
@@ -168,7 +169,7 @@ static void gen_emit_method(std::ostream &out, json::map *m, indent_t indent,
 	while (--index_num >= 0) {
 	    out << --indent << "}" << std::endl;
 	    out << indent << "out << '\\n' << --indent << ']';" << std::endl;
-            if (enable_disable)
+            if (enable_disable && checked_array)
                 out << --indent << "}" << std::endl; }
 	first = false; }
     out << indent << "out << '\\n' << indent-1 << \"}\";" << std::endl;
@@ -249,7 +250,7 @@ static void gen_unpack_method(std::ostream &out, json::map *m, indent_t indent,
                 << " = dynamic_cast<json::vector *>(";
 	    if (index_num) {
                 out << "(*v" << (index_num-1) << ")[i" << (index_num-1) << "].get()";
-	    } else out << "(*m)[" << name << "]";
+	    } else out << "(*m)[" << name << "].get()";
 	    out << "))" << std::endl;
 	    out << indent++ << "for (int i" << index_num << " = 0; i" << index_num << " < "
                 << idx << "; i" << index_num << "++)" << std::endl;
@@ -259,10 +260,10 @@ static void gen_unpack_method(std::ostream &out, json::map *m, indent_t indent,
 	    out << indent++ << "if (json::map *s = dynamic_cast<json::map *>(";
 	    if (index_num) {
                 out << "(*v" << (index_num-1) << ")[i" << (index_num-1) << "].get()";
-	    } else out << "(*m)[" << name << "]";
+	    } else out << "(*m)[" << name << "].get()";
 	    out << "))" << std::endl;
 	    out << indent++ << "if (json::number *n = dynamic_cast<json::number *>((*s)["
-		<< name << "]))" << std::endl;
+		<< name << "].get()))" << std::endl;
 	    out << indent << *name;
 	    for (int i = 0; i < index_num; i++)
 		out << "[i" << i << ']';
@@ -276,7 +277,7 @@ static void gen_unpack_method(std::ostream &out, json::map *m, indent_t indent,
 	    out << ".unpack_json(";
 	    if (index_num) {
                 out << "(*v" << (index_num-1) << ")[i" << (index_num-1) << "].get()";
-	    } else out << "(*m)[" << name << "]";
+	    } else out << "(*m)[" << name << "].get()";
 	    out << ");" << std::endl;
 	} else {
             const char *jtype = "json::number", *access = "n->val";
@@ -285,7 +286,7 @@ static void gen_unpack_method(std::ostream &out, json::map *m, indent_t indent,
 	    out << indent++ << "if (" << jtype << " *n = dynamic_cast<" << jtype << " *>(";
 	    if (index_num)
                 out << "(*v" << (index_num-1) << ")[i" << (index_num-1) << "].get()";
-	    else out << "(*m)[" << name << "]";
+	    else out << "(*m)[" << name << "].get()";
 	    out << ")) {" << std::endl;
 	    out << indent << *name;
 	    for (int i = 0; i < index_num; i++)
@@ -295,7 +296,7 @@ static void gen_unpack_method(std::ostream &out, json::map *m, indent_t indent,
                 out << indent++ << "else if (json::number *n = dynamic_cast<json::number *>(";
                 if (index_num)
                     out << "(*v" << (index_num-1) << ")[i" << (index_num-1) << "].get()";
-                else out << "(*m)[" << name << "]";
+                else out << "(*m)[" << name << "].get()";
                 out << ")) {" << std::endl;
                 out << indent << "if (n->v) rv = -1;" << std::endl; }
 	    out << --indent << "} else rv = -1;" << std::endl; }
@@ -360,6 +361,21 @@ static void gen_modified_method(std::ostream &out, json::map *m, indent_t indent
     for (auto &a : *m) {
 	json::string *name = dynamic_cast<json::string *>(a.first);
 	if ((*name)[0] == '_') continue;
+        if (!checked_array) {
+            std::vector<int> indexes;
+            get_indexes(a.second.get(), indexes);
+            if (!indexes.empty()) {
+                int index_num = 0;
+                for (int idx : indexes) {
+                    out << indent++ << "for (int i" << index_num << " = 0; i" << index_num << " < "
+                        << idx << "; i" << index_num << "++)" << std::endl;
+                    index_num++; }
+                out << indent << "if (" << *name;
+                for (unsigned i = 0; i < indexes.size(); i++)
+                    out << "[i" << i << ']';
+                out << ".modified()) return true;" << std::endl;
+                indent -= indexes.size();
+                continue; } }
         out << indent << "if (" << *name << ".modified()) return true;" << std::endl; }
     out << indent << "return false;" << std::endl;
     out << --indent << '}' << std::endl;
@@ -383,13 +399,12 @@ static void gen_disable_method(std::ostream &out, json::map *m, indent_t indent,
     out << --indent << '}' << std::endl;
 }
 
-bool delete_copy = false;
-bool gen_emit = true;
-bool gen_fieldname = true;
-bool gen_unpack = true;
-bool gen_unread = true;
-bool checked_array = true;
-std::map<std::string, json::map *> global_types;
+static bool delete_copy = false;
+static bool gen_emit = true;
+static bool gen_fieldname = true;
+static bool gen_unpack = true;
+static bool gen_unread = true;
+static std::map<std::string, json::map *> global_types;
 
 static bool need_ctor(const json::map *m_init) {
     if (!m_init) return false;
@@ -560,6 +575,7 @@ int main(int ac, char **av) {
             bool flag = av[i][0] == '+';
             for (char *arg = av[i]+1; *arg;)
                 switch(*arg++) {
+                case 'a': checked_array = flag; break;
                 case 'c': {
                     std::ifstream file(av[++i]);
                     delete initvals;

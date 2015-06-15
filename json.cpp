@@ -62,7 +62,7 @@ std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json) {
                     if (rv->count(key.get()))
                         std::cerr << "duplicate key in map" << std::endl;
                     else
-                        (*rv)[key.release()] = std::move(val);
+                        (*rv)[std::move(key)] = std::move(val);
                     if (ch != ',' && ch != '}') {
                         std::cerr << "missing ',' in map (saw '" << ch << "')" << std::endl;
                         in.unget(); }
