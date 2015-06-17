@@ -16,10 +16,11 @@ GEN_OBJS := gen/memories.prsr_mem_main_rspec.o \
 	    gen/memories.pipe_top_level.o \
 	    gen/memories.pipe_addrmap.o
 TFAS_OBJS:= action_bus.o action_table.o asm-parse.o asm-types.o bitvec.o \
-	    counter.o deparser.o exact_match.o gateway.o hash_action.o hashexpr.o hex.o \
-	    idletime.o input_xbar.o instruction.o p4_table.o parser.o phase0.o \
-	    phv.o selection.o stage.o tables.o ternary_match.o tfas.o \
-	    top_level.o ubits.o vector.o
+	    counter.o deparser.o exact_match.o gateway.o hash_action.o \
+	    hash_dist.o hashexpr.o hex.o idletime.o input_xbar.o \
+	    instruction.o p4_table.o parser.o phase0.o phv.o selection.o \
+	    stage.o tables.o ternary_match.o tfas.o top_level.o ubits.o \
+	    vector.o
 TEST_SRCS:= $(wildcard test_*.cpp)
 default: $(GEN_OBJS:%.o=%.h) gen/uptr_sizes.h tfas
 all: default reflow json_diff

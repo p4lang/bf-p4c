@@ -897,42 +897,6 @@ void AttachedTables::write_merge_regs(Table *self, int type, int bus) {
         get_selector()->write_merge_regs(type, bus, selector.args, self->action);
 }
 
-void HashDistribution::setup(value_t &v) {
-    if (v.type ==  tMAP) {
-        for (auto &kv : MapIterChecked(v.map)) {
-            if (kv.key == "func") {
-                if (CHECKTYPE(kv.value, tINT) && (unsigned)(func_id = kv.value.i) >= 2U)
-                    error(kv.value.lineno, "Invalid hash distribulion function id");
-            } else if (kv.key == "group") {
-                if (CHECKTYPE(kv.value, tINT) && (unsigned)(group_id = kv.value.i) >= 3U)
-                    error(kv.value.lineno, "Invalid hash distribulion group id");
-            } else if (kv.key == "hash") {
-                if (CHECKTYPE(kv.value, tINT) && (unsigned)(hash_group = kv.value.i) >= 8U)
-                    error(kv.value.lineno, "Invalid hash group");
-            } else if (kv.key == "mask") {
-                if (CHECKTYPE(kv.value, tINT))
-                    mask = kv.value.i;
-            } else if (kv.key == "shift") {
-                if (CHECKTYPE(kv.value, tINT))
-                    shift = kv.value.i;
-            } else
-                warning(kv.key.lineno, "ignoring unknown item %s in hash_dist",
-                                    kv.key.s); }
-        return; }
-    else if (!CHECKTYPEPM(v, tVEC, v.vec.size == 4, "Invalid hash_dist")) return;
-    else if (!CHECKTYPE(v[0], tINT) || v[0].i < 0 || v[0].i >= 8)
-        error(v[0].lineno, "Invalid hash group");
-    else if (!CHECKTYPE(v[1], tINT) || v[1].i < 0 || v[1].i >= 2)
-        error(v[1].lineno, "Invalid hash distribulion function id");
-    else if (!CHECKTYPE(v[2], tINT) || v[2].i < 0 || v[2].i >= 3)
-        error(v[2].lineno, "Invalid hash distribulion group id");
-    else if (CHECKTYPE(v[3], tINT)) {
-        hash_group = v[0].i;
-        func_id = v[1].i;
-        group_id = v[2].i;
-        mask = v[3].i; }
-}
-
 json::map *Table::base_tbl_cfg(json::vector &out, const char *type, int size) {
     return p4_table->base_tbl_cfg(out, size, this);
 }

@@ -55,6 +55,7 @@ public:
     Alloc1D<Table *, TCAM_TABLES_PER_STAGE>          	tcam_id_use;
     Alloc1D<std::vector<InputXbar *>, 8>                exact_ixbar;
     Alloc1D<std::vector<InputXbar *>, 16>               tcam_ixbar;
+    Alloc1D<std::pair<Table *, HashDistribution *>, 6>  hash_dist_use;
     Alloc1D<Table *, ACTION_DATA_BUS_SLOTS>             action_bus_use;
     Alloc1D<Table *, LOGICAL_SRAM_ROWS>                 action_data_use,
                                                         meter_bus_use,

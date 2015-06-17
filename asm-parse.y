@@ -305,12 +305,12 @@ void asm_parse_file(const char *name, FILE *in) {
         error_count++;
 }
 
-/* check a list and see if it is a list of maps -- if so, concatenate the
+/* check a list and see if it is a list of singleton maps -- if so, concatenate the
  * maps into a single map and return that, otherwise return the list */
 static value_t list_map_expand(VECTOR(value_t) &v) {
     bool list_of_maps = v.size > 0;
     for (int i = 0; i < v.size; i++) {
-        if (v.data[i].type != tMAP) {
+        if (v.data[i].type != tMAP || v.data[i].map.size != 1) {
             list_of_maps = false;
             break; } }
     value_t rv{tVEC, lineno};

@@ -5,6 +5,7 @@
 #include "alloc.h"
 #include "asm-types.h"
 #include "bitvec.h"
+#include "hash_dist.h"
 #include "json.h"
 #include "map.h"
 #include <set>
@@ -273,14 +274,6 @@ struct AttachedTables {
     bool run_at_eop();
 };
 
-struct HashDistribution {
-    // FIXME -- need less 'raw' data for this */
-    int             hash_group = -1, func_id = -1, group_id = -1;
-    int             shift = 0, mask = 0;
-    void setup(value_t &);
-    int code() { return func_id*3 + group_id; }
-};
-
 #define DECLARE_ABSTRACT_TABLE_TYPE(TYPE, PARENT, ...)                  \
 class TYPE : public PARENT {                                            \
 protected:                                                              \
@@ -404,8 +397,8 @@ DECLARE_TABLE_TYPE(Phase0MatchTable, Table, "phase0_match",
 )
 DECLARE_TABLE_TYPE(HashActionTable, MatchTable, "hash_action",
 public:
-    int                 row = -1, bus = -1;
-    HashDistribution    hash_dist;
+    int                                 row = -1, bus = -1;
+    std::vector<HashDistribution>       hash_dist;
     void write_merge_regs(int type, int bus);
 )
 
@@ -502,7 +495,7 @@ DECLARE_TABLE_TYPE(SelectionTable, AttachedTable, "selection",
     std::vector<int>    pool_sizes;
     int                 min_words = -1, max_words = -1;
     int                 selection_hash = -1;
-    HashDistribution    hash_dist;
+    std::vector<HashDistribution>       hash_dist;
 public:
     bool                per_flow_enable;
     table_type_t table_type() { return SELECTION; }

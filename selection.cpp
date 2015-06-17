@@ -39,7 +39,9 @@ void SelectionTable::setup(VECTOR(pair_t) &data) {
             if (CHECKTYPE(kv.value, tINT))
                 selection_hash = kv.value.i;
         } else if (kv.key == "hash_dist") {
-            hash_dist.setup(kv.value);
+            HashDistribution::parse(hash_dist, kv.value);
+            if (hash_dist.size() > 1)
+                error(kv.key.lineno, "More than one hast_dist in a selection table not supported");
         } else if (kv.key == "maprams") {
             if (CHECKTYPE(kv.value, tVEC))
                 setup_maprams(&kv.value.vec);
@@ -76,6 +78,8 @@ void SelectionTable::pass1() {
     std::sort(layout.begin(), layout.end(),
               [](const Layout &a, const Layout &b)->bool { return a.row > b.row; });
     stage->table_use[gress] |= Stage::USE_SELECTOR;
+    for (auto &hd : hash_dist)
+        hd.pass1(this);
     if (input_xbar) input_xbar->pass1(stage->exact_ixbar, 128);
     if (param < 0 || param > (resilient_hash ? 7 : 2))
         error(mode_lineno, "Invalid %s hash param %d",
@@ -118,15 +122,9 @@ void SelectionTable::write_merge_regs(int type, int bus, const std::vector<Forma
     if (per_flow_enable) {
         /* FIXME -- regs need to stabilize */
         merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = 23; }
-    if (hash_dist.hash_group >= 0) {
+    if (!hash_dist.empty()) {
         /* from HashDistributionResourceAllocation.write_config: */
-        merge.mau_bus_hash_group_sel[type][bus/8].set_subfield(hash_dist.code() | 8, 4*(bus%8), 4);
-        // FIXME
-        switch (hash_dist.group_id) {
-        case 0: merge.mau_hash_group_expand[hash_dist.func_id].hash_slice_group0_expand = 0; break;
-        case 1: merge.mau_hash_group_expand[hash_dist.func_id].hash_slice_group1_expand = 0; break;
-        case 2: merge.mau_hash_group_expand[hash_dist.func_id].hash_slice_group2_expand = 0; break;
-        default: assert(0); } }
+        merge.mau_bus_hash_group_sel[type][bus/8].set_subfield(hash_dist[0].id | 8, 4*(bus%8), 4); }
 }
 
 void SelectionTable::write_regs() {
@@ -235,18 +233,8 @@ void SelectionTable::write_regs() {
         icxbar.address_distr_to_logical_rows = logical_row_use;
         icxbar.address_distr_to_overflow = push_on_overflow;
     }
-    if (hash_dist.hash_group >= 0) {
-        /* from HashDistributionResourceAllocation.write_config: */
-        auto &merge = stage->regs.rams.match.merge;
-        if (non_linear_hash)
-            merge.mau_selector_hash_sps_enable |= 1 << hash_dist.code();
-        if (gress == EGRESS)
-            merge.mau_hash_group_config.hash_group_egress |= 1 << hash_dist.code();
-        merge.mau_hash_group_config.hash_group_enable |= 1 << hash_dist.code();
-        merge.mau_hash_group_config.hash_group_sel = hash_dist.hash_group | (1 << 3);
-        merge.mau_hash_group_config.hash_group_ctl.set_subfield(0, 2 * hash_dist.code(), 2);
-        merge.mau_hash_group_shiftcount.set_subfield(hash_dist.shift, 3 * hash_dist.code(), 3);
-        merge.mau_hash_group_mask[hash_dist.code()] = hash_dist.mask; }
+    for (auto &hd : hash_dist)
+        hd.write_regs(stage, gress, 0, non_linear_hash);
 }
 
 void SelectionTable::gen_tbl_cfg(json::vector &out) {

@@ -45,7 +45,7 @@ void Phase0MatchTable::write_regs() {
 }
 
 void Phase0MatchTable::gen_tbl_cfg(json::vector &out) {
-    int number_entries = 72;
+    int number_entries = p4_table ? p4_table->size : 72;
     json::map &tbl = *base_tbl_cfg(out, "match_entry", number_entries);
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "phase_0_match", number_entries);
     auto &mra = stage_tbl["memory_resource_allocation"] = json::map();

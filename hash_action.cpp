@@ -20,7 +20,7 @@ void HashActionTable::setup(VECTOR(pair_t) &data) {
                 if ((bus = kv.value.i) >= 4)
                     error(kv.value.lineno, "Invalid bus %d", row);
         } else if (kv.key == "hash_dist") {
-            hash_dist.setup(kv.value);
+            HashDistribution::parse(hash_dist, kv.value);
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     kv.key.s, name()); }
@@ -54,6 +54,8 @@ void HashActionTable::pass1() {
             action.args[0]->size <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
     input_xbar->pass1(stage->exact_ixbar, 128);
+    for (auto &hd : hash_dist)
+        hd.pass1(this);
     if (gateway) {
         gateway->logical_id = logical_id;
         gateway->pass1(); }
@@ -66,7 +68,7 @@ void HashActionTable::pass2() {
     LOG1("### Hash Action " << name() << " pass2");
     if (row < 0 || bus < 0)
         error(lineno, "Need explicit row/bus in hash_action table"); // FIXME
-    if (hash_dist.hash_group < 0)
+    if (hash_dist.empty())
         error(lineno, "Need explicit hash_dist in hash_action table"); // FIXME
     if (bus >= 2) stage->table_use[gress] |= Stage::USE_TCAM;
     input_xbar->pass2(stage->exact_ixbar, 128);
@@ -82,7 +84,7 @@ void HashActionTable::write_merge_regs(int type, int bus) {
     auto &merge = stage->regs.rams.match.merge;
     merge.mau_bus_hash_group_ctl[type][bus/4].set_subfield(
         1 << BusHashGroup::ACTION_DATA_ADDRESS, 5 * (bus%4), 5);
-    merge.mau_bus_hash_group_sel[type][bus/8].set_subfield(hash_dist.code() | 8, 4*(bus%8), 4);
+    merge.mau_bus_hash_group_sel[type][bus/8].set_subfield(hash_dist[0].id | 8, 4*(bus%8), 4);
 }
 
 void HashActionTable::write_regs() {
@@ -95,21 +97,15 @@ void HashActionTable::write_regs() {
     if (actions) actions->write_regs(this);
     if (idletime) idletime->write_regs();
     if (gateway) gateway->write_regs();
-    auto &merge = stage->regs.rams.match.merge;
-    if (gress == EGRESS)
-        merge.mau_hash_group_config.hash_group_egress |= 1 << hash_dist.code();
-    merge.mau_hash_group_config.hash_group_enable |= 1 << hash_dist.code();
-    merge.mau_hash_group_config.hash_group_sel = hash_dist.hash_group | (1 << 3);
-    merge.mau_hash_group_config.hash_group_ctl.set_subfield(1, 2 * hash_dist.code(), 2);
-    merge.mau_hash_group_shiftcount.set_subfield(hash_dist.shift, 3 * hash_dist.code(), 3); // FIXME
-    merge.mau_hash_group_mask[hash_dist.code()] = hash_dist.mask;
+    for (auto &hd : hash_dist)
+        hd.write_regs(stage, gress, 1, false);
 }
 
 void HashActionTable::gen_tbl_cfg(json::vector &out) {
-    json::map &tbl = *base_tbl_cfg(out, "match_entry", hash_dist.mask + 1);
+    json::map &tbl = *base_tbl_cfg(out, "match_entry", hash_dist[0].mask + 1);
     if (!tbl.count("preferred_match_type"))
         tbl["preferred_match_type"] = "exact";
-    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "hash_action", hash_dist.mask + 1);
+    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "hash_action", hash_dist[0].mask + 1);
     add_pack_format(stage_tbl, 0, 0, 0);
     if (options.match_compiler)
         stage_tbl["memory_resource_allocation"] = "null";
