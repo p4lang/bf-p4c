@@ -48,12 +48,19 @@ void Table::Call::setup(const value_t &val, Table *tbl) {
         Format::Field *arg = 0;
         if (val[i].type == tINT && val[i].i == 0)
             ; // ok
+        else if (val[i] == "hash_dist") {
+            if (val[i].type == tCMD && val[i].vec.size > 1) {
+                if (CHECKTYPE(val[i][1], tINT))
+                    args.emplace_back(val[i][1].i);
+            } else
+                args.emplace_back(-1);
+            continue; }
         else if (CHECKTYPE(val[i], tSTR) &&
             !(arg = tbl->lookup_field(val[i].s)))
             error(val[i].lineno, "No field named %s in format for %s", val[i].s, tbl->name());
         if (arg && arg->bits.size() != 1)
             error(val[i].lineno, "arg fields can't be split in format");
-        args.push_back(arg); }
+        args.emplace_back(arg); }
     lineno = val.lineno;
 }
 
@@ -229,6 +236,9 @@ void Table::setup_vpns(VECTOR(value_t) *vpn, bool allow_holes) {
 bool Table::common_setup(pair_t &kv) {
     if (kv.key == "action") {
         action.setup(kv.value, this);
+        for (auto &a : action.args)
+            if (a.type != Call::Arg::Field)
+                error(action.lineno, "Action params must be in the format of table %s", name());
     } else if (kv.key == "action_enable") {
         if (CHECKTYPE(kv.value, tINT))
             action_enable = kv.value.i;
@@ -284,6 +294,9 @@ bool MatchTable::common_setup(pair_t &kv) {
         return true; }
     if (kv.key == "selector") {
         attached.selector.setup(kv.value, this);
+        for (auto &a : attached.selector.args)
+            if (a.type != Call::Arg::Field)
+                error(action.lineno, "Selector params must be in the format of table %s", name());
         return true; }
     if (kv.key == "stats") {
         if (kv.value.type == tVEC)
@@ -711,9 +724,9 @@ void MatchTable::write_regs(int type, Table *result) {
         for (auto &row : result->layout) {
             int bus = row.row*2 | row.bus;
             setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[type][bus], logical_id);
-            if (result->action.args.size() >= 1 && result->action.args[0]) {
+            if (result->action.args.size() >= 1 && result->action.args[0].field) {
                 merge.mau_action_instruction_adr_mask[type][bus] =
-                    ((1U << result->action.args[0]->size) - 1) & ~action_enable;
+                    ((1U << result->action.args[0].field->size) - 1) & ~action_enable;
             } else
                 merge.mau_action_instruction_adr_mask[type][bus] = 0;
             merge.mau_action_instruction_adr_default[type][bus] = action_enable ? 0 : 0x40;

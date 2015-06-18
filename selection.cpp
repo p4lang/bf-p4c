@@ -102,7 +102,7 @@ void SelectionTable::pass2() {
         error(lineno, "No selection_hash in selector table %s", name());
 }
 
-void SelectionTable::write_merge_regs(int type, int bus, const std::vector<Format::Field*> &args,
+void SelectionTable::write_merge_regs(int type, int bus, const std::vector<Call::Arg> &args,
                                       Call &action)
 {
     auto &merge = stage->regs.rams.match.merge;
@@ -240,7 +240,7 @@ void SelectionTable::write_regs() {
 void SelectionTable::gen_tbl_cfg(json::vector &out) {
     json::map &tbl = *base_tbl_cfg(out, "selection", 1024);
     tbl["selection_type"] = resilient_hash ? "resilient" : "fair";
-    tbl["enable_sps_scrambling"] = non_linear_hash ? "true" : "false";
+    tbl["enable_sps_scrambling"] = non_linear_hash;
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "selection", 1024);
     stage_tbl["how_referenced"] = indirect ? "indirect" : "direct";
     add_pack_format(stage_tbl, 128, 1, 1);

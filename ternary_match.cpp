@@ -266,14 +266,14 @@ void TernaryMatchTable::write_regs() {
             } else {
                 /* FIXME -- support for multiple sizes of action data? */
                 merge.mau_actiondata_adr_mask[1][indirect_bus] =
-                    ((1U << action.args[1]->size) - 1) << lo_huffman_bits;
+                    ((1U << action.args[1].field->size) - 1) << lo_huffman_bits;
                 merge.mau_actiondata_adr_tcam_shiftcount[indirect_bus] =
-                    action.args[1]->bits[0].lo + 5 - lo_huffman_bits; } }
+                    action.args[1].field->bits[0].lo + 5 - lo_huffman_bits; } }
         for (auto &st : attached.stats) {
             if (st.args.empty())
                 merge.mau_stats_adr_tcam_shiftcount[indirect_bus] = st->direct_shiftcount();
             else
-                merge.mau_stats_adr_tcam_shiftcount[indirect_bus] = st.args[0]->bits[0].lo;
+                merge.mau_stats_adr_tcam_shiftcount[indirect_bus] = st.args[0].field->bits[0].lo;
             break; /* all must be the same, only config once */ }
         if (!attached.meter.empty())
             ERROR("meter setup for ternary match not done");
@@ -326,7 +326,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         stage_tbl["ternary_indirection_table"] = std::move(tind); }
     if (idletime)
         idletime->gen_stage_tbl_cfg(stage_tbl);
-    tbl["performs_hash_action"] = "false";
+    tbl["performs_hash_action"] = false;
 }
 
 void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
@@ -418,8 +418,8 @@ void TernaryIndirectTable::pass1() {
     // attached.pass1(match_table); -- done in set_match_table, called from
     // TernaryMatchTable::pass1()
     if (action_enable >= 0)
-        if (action.args.size() < 1 || !action.args[0] ||
-            action.args[0]->size <= (unsigned)action_enable)
+        if (action.args.size() < 1 || !action.args[0].field ||
+            action.args[0].field->size <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
     if (format) format->setup_immed(this);
 }
@@ -466,8 +466,8 @@ void TernaryIndirectTable::write_regs() {
         merge.tind_bus_prop[bus].tcam_piped = 1;
         merge.tind_bus_prop[bus].thread = gress;
         merge.tind_bus_prop[bus].enabled = 1;
-        if (action.args.size() > 0 && action.args[0])
-            merge.mau_action_instruction_adr_tcam_shiftcount[bus] = action.args[0]->bits[0].lo;
+        if (action.args.size() > 0 && action.args[0].field)
+            merge.mau_action_instruction_adr_tcam_shiftcount[bus] = action.args[0].field->bits[0].lo;
         if (format->immed)
             merge.mau_immediate_data_tcam_shiftcount[bus] = format->immed->bits[0].lo;
         if (action) {
@@ -481,19 +481,19 @@ void TernaryIndirectTable::write_regs() {
             } else {
                 /* FIXME -- support for multiple sizes of action data? */
                 merge.mau_actiondata_adr_mask[1][bus] =
-                    ((1U << action.args[1]->size) - 1) << lo_huffman_bits;
+                    ((1U << action.args[1].field->size) - 1) << lo_huffman_bits;
                 merge.mau_actiondata_adr_tcam_shiftcount[bus] =
-                    action.args[1]->bits[0].lo + 5 - lo_huffman_bits; } }
+                    action.args[1].field->bits[0].lo + 5 - lo_huffman_bits; } }
         if (attached.selector) {
             if (attached.selector.args.size() == 1)
                 merge.mau_selectorlength_default[1][bus] = 1;
             else {
-                int width = attached.selector.args[1]->size;
+                int width = attached.selector.args[1].field->size;
                 if (attached.selector.args.size() == 3)
-                    width += attached.selector.args[2]->size;
+                    width += attached.selector.args[2].field->size;
                 merge.mau_selectorlength_mask[1][bus] = (1 << width) - 1; }
             merge.mau_meter_adr_tcam_shiftcount[bus] =
-                attached.selector.args[0]->bits[0].lo%128 + 23 - get_selector()->address_shift(); }
+                attached.selector.args[0].field->bits[0].lo%128 + 23 - get_selector()->address_shift(); }
         if (match_table->idletime)
             merge.mau_idletime_adr_tcam_shiftcount[bus] =
                     66 + format->log2size - match_table->idletime->precision_shift();
@@ -501,7 +501,7 @@ void TernaryIndirectTable::write_regs() {
             if (st.args.empty())
                 merge.mau_stats_adr_tcam_shiftcount[bus] = st->direct_shiftcount();
             else
-                merge.mau_stats_adr_tcam_shiftcount[bus] = st.args[0]->bits[0].lo;
+                merge.mau_stats_adr_tcam_shiftcount[bus] = st.args[0].field->bits[0].lo;
             break; /* all must be the same, only config once */ }
         if (!attached.meter.empty())
             ERROR("meter setup for ternary match not done");

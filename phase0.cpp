@@ -62,5 +62,5 @@ void Phase0MatchTable::gen_tbl_cfg(json::vector &out) {
     add_pack_format(stage_tbl, 32, width, 1);
     if (options.match_compiler)
         tbl["p4_statistics_tables"] = json::vector();
-    tbl["performs_hash_action"] = "false";
+    tbl["performs_hash_action"] = false;
 }

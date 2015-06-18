@@ -76,7 +76,9 @@ std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json) {
                     s += ch;
                     if (!(in >> ch)) break; }
                 in.unget();
-                json.reset(new string(std::move(s)));
+                if (s == "true") json.reset(new True());
+                else if (s == "false") json.reset(new False());
+                else json.reset(new string(std::move(s)));
                 return in;
             } else
                 std::cerr << "unexpected character '" << ch << "'" << std::endl;

@@ -337,6 +337,6 @@ void ActionTable::gen_tbl_cfg(json::vector &out) {
     /* FIXME -- don't include ref to select table as compiler doesn't */
     tbl.erase("p4_selection_tables");
     if (options.match_compiler)
-        tbl["indirect"] = indirect ? "true" : "false";
+        tbl["indirect"] = indirect;
 }
 

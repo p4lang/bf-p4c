@@ -192,7 +192,18 @@ public:
     };
 
     struct Call : Ref { /* a Ref with arguments */
-        std::vector<Format::Field*>     args;
+        struct Arg {
+            enum { Field, HashDist }    type;
+            union {
+                Format::Field   *field;
+                int             val;
+            };
+            Arg(Format::Field *f) : type(Field) { field = f; }
+            Arg(int hdist) : type(HashDist) { field = 0; val = hdist; }
+            bool operator==(const Arg &a) const { return type == a.type && field == a.field; }
+            bool operator!=(const Arg &a) const { return type != a.type || field != a.field; }
+        };
+        std::vector<Arg>        args;
         void setup(const value_t &v, Table *tbl);
         Call() {}
         Call(const value_t &v, Table *tbl) { setup(v, tbl); }
@@ -501,7 +512,7 @@ public:
     table_type_t table_type() { return SELECTION; }
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
         width = period = 1; depth = layout_size(); period_name = 0; }
-    void write_merge_regs(int type, int bus, const std::vector<Format::Field*> &args,
+    void write_merge_regs(int type, int bus, const std::vector<Call::Arg> &args,
                           Call &action);
     unsigned address_shift() { return 7 + ceil_log2(min_words); }
 )

@@ -115,8 +115,8 @@ void ExactMatchTable::pass1() {
                   "table %s format", name());
         actions->pass1(this); }
     if (action_enable >= 0)
-        if (action.args.size() < 1 || !action.args[0] ||
-            action.args[0]->size <= (unsigned)action_enable)
+        if (action.args.size() < 1 || !action.args[0].field ||
+            action.args[0].field->size <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
     input_xbar->pass1(stage->exact_ixbar, 128);
     format->setup_immed(this);
@@ -572,14 +572,14 @@ void ExactMatchTable::write_regs() {
             } else {
                 /* FIXME -- support for multiple sizes of action data? */
                 merge.mau_actiondata_adr_mask[0][bus] =
-                    ((1U << action.args[1]->size) - 1) << lo_huffman_bits; } }
+                    ((1U << action.args[1].field->size) - 1) << lo_huffman_bits; } }
         if (attached.selector) {
             if (attached.selector.args.size() == 1)
                 merge.mau_selectorlength_default[0][bus] = 1;
             else {
-                int width = attached.selector.args[1]->size;
+                int width = attached.selector.args[1].field->size;
                 if (attached.selector.args.size() == 3)
-                    width += attached.selector.args[2]->size;
+                    width += attached.selector.args[2].field->size;
                 merge.mau_selectorlength_mask[0][bus] = (1 << width) - 1; } }
         for (unsigned word_group = 0; word_group < word_info[word].size(); word_group++) {
             int group = word_info[word][word_group];
@@ -588,10 +588,10 @@ void ExactMatchTable::write_regs() {
                     assert(format->immed->by_group[group]->bits[0].lo/128U == word);
                     merge.mau_immediate_data_exact_shiftcount[bus][word_group] =
                         format->immed->by_group[group]->bits[0].lo % 128; }
-                if (!action.args.empty() && action.args[0]) {
-                    assert(action.args[0]->by_group[group]->bits[0].lo/128U == word);
+                if (!action.args.empty() && action.args[0].field) {
+                    assert(action.args[0].field->by_group[group]->bits[0].lo/128U == word);
                     merge.mau_action_instruction_adr_exact_shiftcount[bus][word_group] =
-                        action.args[0]->by_group[group]->bits[0].lo % 128; }
+                        action.args[0].field->by_group[group]->bits[0].lo % 128; }
             } else if (!options.match_compiler) continue;
             /* FIXME -- factor this where possible with ternary match code */
             if (action) {
@@ -600,13 +600,13 @@ void ExactMatchTable::write_regs() {
                     merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
                         69 - lo_huffman_bits;
                 } else if (group_info[group].overhead_word == (int)word) {
-                    assert(action.args[1]->by_group[group]->bits[0].lo/128U == word);
+                    assert(action.args[1].field->by_group[group]->bits[0].lo/128U == word);
                     merge.mau_actiondata_adr_exact_shiftcount[bus][word_group] =
-                        action.args[1]->by_group[group]->bits[0].lo%128 + 5 - lo_huffman_bits; } }
+                        action.args[1].field->by_group[group]->bits[0].lo%128 + 5 - lo_huffman_bits; } }
             if (attached.selector) {
                 if (group_info[group].overhead_word == (int)word) {
                     merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 
-                        attached.selector.args[0]->by_group[group]->bits[0].lo%128 + 23 -
+                        attached.selector.args[0].field->by_group[group]->bits[0].lo%128 + 23 -
                             get_selector()->address_shift(); } }
             if (idletime)
                 merge.mau_idletime_adr_exact_shiftcount[bus][word_group] =
@@ -615,9 +615,9 @@ void ExactMatchTable::write_regs() {
                 if (st.args.empty())
                     merge.mau_stats_adr_exact_shiftcount[bus][word_group] = st->direct_shiftcount();
                 else if (group_info[group].overhead_word == (int)word) {
-                    assert(st.args[0]->by_group[group]->bits[0].lo/128U == word);
+                    assert(st.args[0].field->by_group[group]->bits[0].lo/128U == word);
                     merge.mau_stats_adr_exact_shiftcount[bus][word_group] = 
-                        st.args[0]->by_group[group]->bits[0].lo%128U + 7;
+                        st.args[0].field->by_group[group]->bits[0].lo%128U + 7;
                 } else if (options.match_compiler) {
                     /* unused, so should not be set... */
                     merge.mau_stats_adr_exact_shiftcount[bus][word_group] = 7; }
@@ -713,5 +713,5 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
         idletime->gen_stage_tbl_cfg(stage_tbl);
     else if (options.match_compiler)
         stage_tbl["stage_idletime_table"] = "null";
-    tbl["performs_hash_action"] = "false";
+    tbl["performs_hash_action"] = false;
 }

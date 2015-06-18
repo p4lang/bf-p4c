@@ -115,7 +115,7 @@ void IdletimeTable::gen_stage_tbl_cfg(json::map &out) {
     tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("map_ram");
     tbl["stage_table_handle"] = logical_id;
     tbl["idletime_precision"] = precision;
-    tbl["idletime_disable_notification"] = disable_notification ? "true" : "false";
-    tbl["idletime_two_way_notification"] = two_way_notification ? "true" : "false";
-    tbl["idletime_per_flow_idletime"] = per_flow_enable ? "true" : "false";
+    tbl["idletime_disable_notification"] = disable_notification;
+    tbl["idletime_two_way_notification"] = two_way_notification;
+    tbl["idletime_per_flow_idletime"] = per_flow_enable;
 }

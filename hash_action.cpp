@@ -50,8 +50,8 @@ void HashActionTable::pass1() {
                   "table %s format", name());
         actions->pass1(this); }
     if (action_enable >= 0)
-        if (action.args.size() < 1 || !action.args[0] ||
-            action.args[0]->size <= (unsigned)action_enable)
+        if (action.args.size() < 1 || !action.args[0].field ||
+            action.args[0].field->size <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
     input_xbar->pass1(stage->exact_ixbar, 128);
     for (auto &hd : hash_dist)
@@ -113,5 +113,5 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
         idletime->gen_stage_tbl_cfg(stage_tbl);
     else if (options.match_compiler)
         stage_tbl["stage_idletime_table"] = "null";
-    tbl["performs_hash_action"] = "true";
+    tbl["performs_hash_action"] = true;
 }

@@ -64,6 +64,24 @@ public:
     virtual const char *c_str() const { return nullptr; }
 };
 
+class True : public obj {
+    bool operator <(const obj &a) const {
+	return std::type_index(typeid(*this)) < std::type_index(typeid(a)); }
+    bool operator ==(const obj &a) const { return dynamic_cast<const True *>(&a) != 0; }
+    void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const
+        { out << "true"; }
+    bool test_width(int &limit) const { limit -= 4; return limit >= 0; }
+};
+
+class False : public obj {
+    bool operator <(const obj &a) const {
+	return std::type_index(typeid(*this)) < std::type_index(typeid(a)); }
+    bool operator ==(const obj &a) const { return dynamic_cast<const False *>(&a) != 0; }
+    void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const
+        { out << "false"; }
+    bool test_width(int &limit) const { limit -= 5; return limit >= 0; }
+};
+
 class number : public obj {
 public:
     long	val;
@@ -148,7 +166,13 @@ public:
 	    if ((limit -= 2) < 0 ) return false; }
 	return true; }
     using vector_base::push_back;
+    void push_back(bool t) {
+        if (t) push_back(std::make_unique<True>(True()));
+        else push_back(std::make_unique<False>(False())); }
     void push_back(long n) { push_back(std::make_unique<number>(number(n))); }
+    void push_back(int n) { push_back((long)n); }
+    void push_back(unsigned int n) { push_back((long)n); }
+    void push_back(unsigned long n) { push_back((long)n); }
     void push_back(const char *s) { push_back(std::make_unique<string>(string(s))); }
     void push_back(vector &&v) { push_back(std::make_unique<vector>(std::move(v))); }
     void push_back(json::map &&);
@@ -235,6 +259,13 @@ private:
             iter = self.find(k.get());
             if (iter == self.end())
                 key = std::move(k); }
+        bool operator=(bool t) {
+            if (key)
+                iter = self.emplace(key.release(),
+                        std::unique_ptr<obj>(t ? (obj*)new True() : (obj*)new False())).first;
+            else { assert(iter != self.end());
+                iter->second.reset(t ? (obj*)new True() : (obj*)new False()); }
+            return t; }
         const char *operator=(const char *v) {
             if (key)
                 iter = self.emplace(key.release(), std::unique_ptr<obj>(new string(v))).first;
@@ -253,6 +284,9 @@ private:
             else { assert(iter != self.end());
                 iter->second.reset(new number(v)); }
             return v; }
+        int operator=(int v) { return (int)(*this = (long)v); }
+        unsigned int operator=(unsigned int v) { return (unsigned int)(*this = (long)v); }
+        unsigned long operator=(unsigned long v) { return (unsigned long)(*this = (long)v); }
         vector &operator=(vector &&v) {
             if (key)
                 iter = self.emplace(key.release(), std::make_unique<vector>(std::move(v))).first;
