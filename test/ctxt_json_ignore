@@ -21,12 +21,14 @@ hash_way_number
 include_idletime
 indirect
 match_entry_vpns
+match_fields_type_dictionary
 match_group_resource_allocation
 match_key_fields
 max_port_pool_size
 memory_units_depth
 memory_units_width
 min_port_pool_size
+number_entries_with_ranges
 number_hash_ways
 number_selection_groups
 pack_format_length
@@ -50,6 +52,7 @@ statistics_precision
 sweep_interval
 table_type
 ternary_mode
+uses_range
 vliw_resource_allocation
 way_match_group_map
 & 0xff000000 == 0x21000000
