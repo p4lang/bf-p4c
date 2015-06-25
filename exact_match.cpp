@@ -235,7 +235,7 @@ void ExactMatchTable::pass1() {
             LOG1("    match group " << mgrp.second << " in word " << mgrp.first); }
     for (unsigned i = 0; i < word_info.size(); i++)
         LOG1("  word " << i << " groups: " << word_info[i]);
-    if (options.match_compiler) {
+    if (options.match_compiler && 0) {
         /* hack to match the compiler's nibble usage -- if any of the top 4 nibbles is
          * unused in a word, mark it as used by any group that uses the other nibble of the
          * byte, UNLESS it is used for the version.  This is ok, as the unused nibble will
@@ -279,7 +279,7 @@ void ExactMatchTable::pass1() {
                 int hi = std::min((unsigned)mw->second->size()-1, bit+piece.size()-mw->first-1);
                 assert((unsigned)piece.lo/128 < fmt_width);
                 //merge_phv_vec(match_in_word[piece.lo/128], Phv::Ref(mw->second, lo, hi));
-                match_in_word[piece.lo/128].emplace_back(mw->second, lo, hi);
+                append(match_in_word[piece.lo/128], split_phv_bytes(Phv::Ref(mw->second, lo, hi)));
                 lo = 0;
                 ++mw; }
             bit += piece.size(); } }
@@ -714,4 +714,5 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
     else if (options.match_compiler)
         stage_tbl["stage_idletime_table"] = "null";
     tbl["performs_hash_action"] = false;
+    tbl["uses_versioning"] = format->field("version") != 0;
 }

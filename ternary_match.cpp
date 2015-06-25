@@ -327,6 +327,12 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
     if (idletime)
         idletime->gen_stage_tbl_cfg(stage_tbl);
     tbl["performs_hash_action"] = false;
+    bool uses_versioning = false;
+    for (auto &m : match)
+        if (m.byte_config == 3) {
+            uses_versioning = true;
+            break; }
+    tbl["uses_versioning"] = uses_versioning;
 }
 
 void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {

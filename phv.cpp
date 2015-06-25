@@ -1,3 +1,4 @@
+#include "misc.h"
 #include "phv.h"
 #include <iostream>
 
@@ -125,6 +126,25 @@ void merge_phv_vec(std::vector<Phv::Ref> &vec, const Phv::Ref &r) {
 void merge_phv_vec(std::vector<Phv::Ref> &v1, const std::vector<Phv::Ref> &v2) {
     for (auto &r : v2)
         merge_phv_vec(v1, r);
+}
+
+std::vector<Phv::Ref> split_phv_bytes(const Phv::Ref &r) {
+    std::vector<Phv::Ref> rv;
+    const auto &sl = *r;
+    for (unsigned byte = sl.lo/8U; byte <= sl.hi/8U; byte++) {
+        int lo = byte*8 - sl.lo;
+        int hi = lo + 7;
+        if (lo < 0) lo = 0;
+        if (hi >= (int)sl.size()) hi = sl.size() - 1;
+        rv.emplace_back(r, lo, hi); }
+    return rv;
+}
+
+std::vector<Phv::Ref> split_phv_bytes(const std::vector<Phv::Ref> &v) {
+    std::vector<Phv::Ref> rv;
+    for (auto &r : v)
+        append(rv, split_phv_bytes(r));
+    return rv;
 }
 
 void Phv::Ref::dbprint(std::ostream &out) const {

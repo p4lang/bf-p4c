@@ -110,5 +110,7 @@ public:
 
 extern void merge_phv_vec(std::vector<Phv::Ref> &vec, const Phv::Ref &r);
 extern void merge_phv_vec(std::vector<Phv::Ref> &v1, const std::vector<Phv::Ref> &v2);
+extern std::vector<Phv::Ref> split_phv_bytes(const Phv::Ref &r);
+extern std::vector<Phv::Ref> split_phv_bytes(const std::vector<Phv::Ref> &v);
 
 #endif /* _phv_h_ */

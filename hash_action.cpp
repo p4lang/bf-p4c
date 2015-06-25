@@ -114,4 +114,5 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
     else if (options.match_compiler)
         stage_tbl["stage_idletime_table"] = "null";
     tbl["performs_hash_action"] = true;
+    tbl["uses_versioning"] = true;  // FIXME
 }

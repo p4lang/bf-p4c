@@ -1,7 +1,3 @@
-dileep.p4
-dileep2.p4
-dileep4.p4
-#test_config_13_first_selection.p4
 test_config_96_hash_data.p4
 test_config_100_hash_action.p4
 test_config_101_switch_msdc.p4

@@ -22,4 +22,10 @@ auto setup_muxctl(T &reg, int val) -> decltype((void)reg.exactmatch_row_vh_xbar_
     reg.exactmatch_row_vh_xbar_select = val;
     reg.exactmatch_row_vh_xbar_enable = 1; }
 
+#include <vector>
+
+template<class T, class Alloc>
+void append(std::vector<T, Alloc> &a, const std::vector<T, Alloc> &b) {
+    for (auto &e : b) a.push_back(e); }
+
 #endif /* _misc_h_ */
