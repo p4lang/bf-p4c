@@ -272,6 +272,13 @@ void Stage::write_regs() {
     bitvec in_use = match_use[INGRESS] | action_use[INGRESS] | action_set[INGRESS];
     bitvec eg_use = match_use[EGRESS] | action_use[EGRESS] | action_set[EGRESS];
     if (options.match_compiler) {
+        /* the compiler occasionally programs extra uses of random registers on
+         * busses where it doesn't actually use them.  Sometimes, these regs
+         * are in use by the other thread, so rely on the deparser to correctly
+         * set the Phv::use info and strip out registers it says are used by
+         * the other thread */
+        in_use -= Phv::use(EGRESS);
+        eg_use -= Phv::use(INGRESS);
         in_use |= Phv::use(INGRESS);
         eg_use |= Phv::use(EGRESS); }
     for (int i = 0; i < 2; i++) {

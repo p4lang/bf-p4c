@@ -415,12 +415,18 @@ void Deparser::output() {
     dump_field_dictionary(inp_regs.iem.ie_fde_pov.fde_pov, hdr_regs.hem.he_fde_phv.fde_phv,
         inp_regs.ier.main_e.pov.phvs, pov_order[EGRESS], dictionary[EGRESS]);
 
+    if (Phv::use(INGRESS).intersects(Phv::use(EGRESS))) {
+        warning(lineno[INGRESS], "Registers used in both ingress and egress in pipeline: %s",
+                Phv::db_regset(phv_use[INGRESS] & phv_use[EGRESS]).c_str());
+        /* FIXME -- this only (sort-of) works because 'deparser' comes first in the alphabet,
+         * FIXME -- so is the first section to have its 'output' method run.  Its a hack
+         * FIXME -- anyways to attaempt to correct broken asm that should be an error */
+        Phv::unsetuse(INGRESS, phv_use[EGRESS]);
+        Phv::unsetuse(EGRESS, phv_use[INGRESS]);
+    }
     if (options.match_compiler) {
         phv_use[INGRESS] |= Phv::use(INGRESS);
-        phv_use[EGRESS] |= Phv::use(EGRESS);
-        if (phv_use[INGRESS].intersects(phv_use[EGRESS]))
-            error(lineno[INGRESS], "Registers used in both ingress and egress in phv: %s",
-                  Phv::db_regset(phv_use[INGRESS] & phv_use[EGRESS]).c_str()); }
+        phv_use[EGRESS] |= Phv::use(EGRESS); }
     for (unsigned i = 0; i < 7; i++) {
         /* FIXME -- should use the registers used by ingress here, but to match compiler
          * FIXME -- output we instead use registers not used by egress */
