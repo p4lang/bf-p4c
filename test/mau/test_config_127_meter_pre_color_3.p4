@@ -19,7 +19,14 @@ header_type pkt_t {
         pad_0 : 4;
         color_1 : 8;
         color_2 : 8;
+        pad_2 : 32;
         color_3 : 8;
+
+        pre_color_0 : 4;
+        pad_1 : 4;
+        pre_color_1 : 8;
+        pre_color_2 : 8;
+        pre_color_3 : 8;
     }
 }
 
@@ -40,6 +47,7 @@ meter meter_0 {
     //static : table_0;
     direct : table_0;
     result : pkt.color_0;
+    pre_color : pkt.pre_color_0;
     //instance_count : 500;
 }
 
@@ -56,12 +64,14 @@ meter meter_2 {
     type : bytes;
     direct : table_2;
     result : pkt.color_2;
+    pre_color : pkt.pre_color_2;
 }
 
 meter meter_3 {
     type : bytes;
     direct : table_3;
     result : pkt.color_3;
+    pre_color : pkt.pre_color_3;
 }
 
 
@@ -73,7 +83,7 @@ action action_0(param0){
 
 action action_1(param0){
     //modify_field(pkt.field_g_16, param0);
-    execute_meter(meter_1, 7, pkt.color_1);
+    execute_meter(meter_1, 7, pkt.color_1, pkt.pre_color_1);
 }
 
 
@@ -90,6 +100,10 @@ table table_0 {
         pkt.color_1 : exact;  //HACK
         pkt.color_2 : exact;  //HACK
         pkt.color_3 : exact;  //HACK
+        pkt.pre_color_0 : exact;  //HACK
+        pkt.pre_color_1 : exact;  //HACK
+        pkt.pre_color_2 : exact;  //HACK
+        pkt.pre_color_3 : exact;  //HACK
     }
     actions {
         action_0;
