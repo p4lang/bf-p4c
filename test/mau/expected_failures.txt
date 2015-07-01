@@ -1,3 +1,6 @@
+dileep10.p4
+dileep11.p4
+test_config_10_new_crossbar_allocation.p4
 test_config_96_hash_data.p4
 test_config_100_hash_action.p4
 test_config_101_switch_msdc.p4
@@ -12,3 +15,5 @@ test_config_124_meter_3.p4
 test_config_125_meter_pre_color.p4
 test_config_126_meter_pre_color_2.p4
 test_config_127_meter_pre_color_3.p4
+test_config_132_meter_pre_color_4.p4
+vk_basic_ipv4_subset.p4

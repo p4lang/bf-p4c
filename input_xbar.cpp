@@ -39,7 +39,6 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
 : table(t), ternary(tern), lineno(data[0].key.lineno)
 {
     int numgroups = ternary ? TCAM_XBAR_GROUPS : EXACT_XBAR_GROUPS;
-    //memset(parity_groups, 0, sizeof(parity_groups));
     for (auto &kv : data) {
 	if (!CHECKTYPEM(kv.key, tCMD, "group or hash descriptor"))
 	    continue;

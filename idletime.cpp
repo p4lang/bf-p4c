@@ -21,8 +21,7 @@ void IdletimeTable::setup(VECTOR(pair_t) &data) {
                       value_desc(kv.value));
         } else if (kv.key == "per_flow_enable") {
             per_flow_enable = get_bool(kv.value);
-        } else if (kv.key == "row" || kv.key == "logical_row" ||
-                   kv.key == "column" || kv.key == "bus") {
+        } else if (kv.key == "row" || kv.key == "column" || kv.key == "bus") {
             /* already done in setup_layout */
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
