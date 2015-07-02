@@ -21,7 +21,7 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
             sz = (kv.value[1].hi - kv.value[1].lo + 1) >> 3; }
 	Table::Format::Field *f = tbl->lookup_field(name, "*");
 	if (!f && tbl->format) {
-	    error(kv.value.lineno, "No field %s in format", kv.value.s);
+	    error(kv.value.lineno, "No field %s in format", name);
 	    continue; }
         if (f && !sz) sz = f->size;
 	unsigned idx = kv.key.i;
