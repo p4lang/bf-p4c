@@ -123,8 +123,12 @@ for p4file in "$@"; do
         need_reflow=false
     else 
         rm -f $name.tfa
-        if $GLSC --verbose 2 -vl 2 -S $glsc_args ../$name.p4 </dev/null >glsc.log 2>&1; then
+        if $GLSC -o . --verbose 2 -vl 2 -S $glsc_args ../$name.p4 </dev/null >glsc.log 2>&1; then
             need_reflow=true
+            if [ out.tfa -nt $name.tfa ]; then
+                rm -f $name.tfa
+                ln -s out.tfa $name.tfa
+            fi
             if [ ! -r $name.tfa ]; then
                 echo -n " p4 compile failed to produce asm"
                 let fail++
@@ -144,21 +148,29 @@ for p4file in "$@"; do
         rm -f $name.out/*.json
     fi
     if $ok && $TFAS -vvvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
+        glsc_cfg=.
+        if [ -d cfg ]; then
+            glsc_cfg=cfg
+        fi
         for f in $name.out/*.cfg.json; do
             if [ "$f" = "$name.out/regs.pipe.cfg.json" ]; then
-                $JSON_DIFF -i mau $f $(basename $f)
+                $JSON_DIFF -i mau $f $glsc_cfg/$(basename $f)
                 continue
             fi
             if $REFLOW $f >tmp.json 2>/dev/null; then
                 mv tmp.json $f
             fi
-            if $need_reflow && $REFLOW $(basename $f) >tmp.json 2>/dev/null; then
-                mv tmp.json $(basename $f)
+            if $need_reflow && $REFLOW $glsc_cfg/$(basename $f) >tmp.json 2>/dev/null; then
+                mv tmp.json $glsc_cfg/$(basename $f)
             fi
-            $DIFF $f $(basename $f)
+            $DIFF $f $glsc_cfg/$(basename $f)
         done > json_diff.txt
+        glsc_ctxt=${name}_context_llir.json
+        if [ -d context ]; then
+            glsc_ctxt=context/mau.context.json
+        fi
         if [ -r $name.out/tbl-cfg ]; then
-            $JSON_DIFF $CTXT_DIFFARGS $name.out/tbl-cfg ${name}_context_llir.json >> json_diff.txt
+            $JSON_DIFF $CTXT_DIFFARGS $name.out/tbl-cfg $glsc_ctxt >> json_diff.txt
         fi
         cnt=$(grep -Ev '^\+\+\+|^---|"int_inj"' json_diff.txt | grep -Ec '^\+|^-')
         if [ $cnt -gt 0 ]; then

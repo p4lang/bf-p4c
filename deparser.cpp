@@ -92,11 +92,11 @@ struct Deparser::Digest::Type {
     std::string name;
     int         count;
     bool        can_shift = false;
-    static std::map<std::string, Type *> all;
+    static std::map<std::string, Type *> all[2];
 protected:
-    Type(const char *n, int cnt) : gress(INGRESS), name(n), count(cnt) {
-        assert(!all.count(name)); all[name] = this; }
-    ~Type() { all.erase(name); }
+    Type(gress_t gr, const char *n, int cnt) : gress(gr), name(n), count(cnt) {
+        assert(!all[gress].count(name)); all[gress][name] = this; }
+    ~Type() { all[gress].erase(name); }
 public:
     virtual void setregs(Deparser *dep, Deparser::Digest &data) = 0;
 };
@@ -120,10 +120,10 @@ Deparser::Digest::Digest(Deparser::Digest::Type *t, int lineno, VECTOR(pair_t) &
         error(lineno, "No select key in %s spec", t->name.c_str());
 }
 
-std::map<std::string, Deparser::Digest::Type *> Deparser::Digest::Type::all;
-#define DIGEST(NAME, CFG, TBL, IFSHIFT, IFID, CNT)                              \
-struct NAME##Digest : public Deparser::Digest::Type {                           \
-    NAME##Digest() : Deparser::Digest::Type(#NAME, CNT) {                       \
+std::map<std::string, Deparser::Digest::Type *> Deparser::Digest::Type::all[2];
+#define DIGEST(GRESS, NAME, CFG, TBL, IFSHIFT, IFID, CNT)                       \
+struct GRESS##NAME##Digest : public Deparser::Digest::Type {                    \
+    GRESS##NAME##Digest() : Deparser::Digest::Type(GRESS, #NAME, CNT) {         \
         IFSHIFT( can_shift = true; ) }                                          \
     void setregs(Deparser *dep, Deparser::Digest &data) {                       \
         dep->CFG.phv = data.select->reg.index;                                  \
@@ -141,14 +141,14 @@ struct NAME##Digest : public Deparser::Digest::Type {                           
                     dep->TBL[id].phvs[idx++] = reg->reg.index; }                \
             dep->TBL[id].valid = 1;                                             \
             dep->TBL[id].len = idx; } }                                         \
-} NAME##Digest_singleton;
+} GRESS##NAME##Digest_singleton;
 #define YES(X)        X
 #define NO(X)
 
-DIGEST(learning, inp_regs.iir.ingr.learn_cfg, inp_regs.iir.ingr.learn_tbl, NO, NO, 8)
-DIGEST(mirror, hdr_regs.hir.main_i.mirror_cfg, hdr_regs.hir.main_i.mirror_tbl, YES, YES, 8)
-DIGEST(mirror_egress, hdr_regs.her.main_e.mirror_cfg, hdr_regs.her.main_e.mirror_tbl, YES, YES, 8)
-DIGEST(resubmit, inp_regs.iir.ingr.resub_cfg, inp_regs.iir.ingr.resub_tbl, YES, NO, 8)
+DIGEST(INGRESS, learning, inp_regs.iir.ingr.learn_cfg, inp_regs.iir.ingr.learn_tbl, NO, NO, 8)
+DIGEST(INGRESS, mirror, hdr_regs.hir.main_i.mirror_cfg, hdr_regs.hir.main_i.mirror_tbl, YES, YES, 8)
+DIGEST(EGRESS, mirror, hdr_regs.her.main_e.mirror_cfg, hdr_regs.her.main_e.mirror_tbl, YES, YES, 8)
+DIGEST(INGRESS, resubmit, inp_regs.iir.ingr.resub_cfg, inp_regs.iir.ingr.resub_tbl, YES, NO, 8)
 
 void Deparser::start(int lineno, VECTOR(value_t) args) {
     if (args.size == 0) {
@@ -193,10 +193,7 @@ void Deparser::input(VECTOR(value_t) args, value_t data) {
                         vec.emplace_back(gress, val);
                 else
                     vec.emplace_back(gress, kv.value);
-            } else if (auto *digest = ::get(Digest::Type::all, value_desc(&kv.key))) {
-                if (gress != INGRESS)
-                    error(kv.key.lineno, "%s digests must be in ingress deparser",
-                          digest->name.c_str());
+            } else if (auto *digest = ::get(Digest::Type::all[gress], value_desc(&kv.key))) {
                 if (CHECKTYPE(kv.value, tMAP))
                     digests.emplace_back(digest, kv.value.lineno, kv.value.map);
             } else

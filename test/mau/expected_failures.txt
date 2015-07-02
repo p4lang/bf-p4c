@@ -1,7 +1,11 @@
 dileep10.p4
 dileep11.p4
+test_7_storm_control.p4
 test_config_10_new_crossbar_allocation.p4
+test_config_85_table_ordering.p4
+test_config_91_gateway_with_split_table.p4
 test_config_96_hash_data.p4
+test_config_97_unrelated_tables.p4
 test_config_100_hash_action.p4
 test_config_101_switch_msdc.p4
 test_config_117_first_tcam_range.p4
