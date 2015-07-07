@@ -21,3 +21,4 @@ test_config_126_meter_pre_color_2.p4
 test_config_127_meter_pre_color_3.p4
 test_config_132_meter_pre_color_4.p4
 vk_basic_ipv4_subset.p4
+vk_basic_ipv4_20150706.p4
