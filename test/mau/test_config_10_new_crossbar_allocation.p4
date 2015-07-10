@@ -92,7 +92,6 @@ table table_0 {
    max_size : 1024;
 }
 
-@pragma stage 2
 @pragma ways 6
 @pragma pack 3
 table table_1 {

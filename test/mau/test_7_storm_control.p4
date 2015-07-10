@@ -124,7 +124,7 @@ action ing_meter_set(meter_) {
 
 table storm_control {
     reads {
-        standard_metadata.ingress_port : exact;
+        ingress_metadata.bd : exact;
         ethernet.dstAddr : ternary;
     }
     actions {
