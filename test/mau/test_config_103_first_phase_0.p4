@@ -84,7 +84,7 @@ table table_0 {
     actions {
         action_0;
     }
-    size : 1024;
+    size : 128;
 }
 
 @pragma include_idletime 1
