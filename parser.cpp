@@ -223,12 +223,16 @@ void Parser::output() {
     reg_in.ing_buf_regs.glb_group.disable();
     reg_in.ing_buf_regs.chan0_group.chnl_ctrl.chnl_ena = 1;
     reg_in.ing_buf_regs.chan0_group.chnl_drop.disable();
+    reg_in.ing_buf_regs.chan0_group.chnl_metadata_fix.disable();
     reg_in.ing_buf_regs.chan1_group.chnl_ctrl.chnl_ena = 1;
     reg_in.ing_buf_regs.chan1_group.chnl_drop.disable();
+    reg_in.ing_buf_regs.chan1_group.chnl_metadata_fix.disable();
     reg_in.ing_buf_regs.chan2_group.chnl_ctrl.chnl_ena = 1;
     reg_in.ing_buf_regs.chan2_group.chnl_drop.disable();
+    reg_in.ing_buf_regs.chan2_group.chnl_metadata_fix.disable();
     reg_in.ing_buf_regs.chan3_group.chnl_ctrl.chnl_ena = 1;
     reg_in.ing_buf_regs.chan3_group.chnl_drop.disable();
+    reg_in.ing_buf_regs.chan3_group.chnl_metadata_fix.disable();
 
     init_common_regs(this, reg_eg.prsr_reg, EGRESS);
     for (int i = 0; i < 4; i++) {

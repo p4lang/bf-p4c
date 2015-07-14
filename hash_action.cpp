@@ -115,4 +115,5 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
         stage_tbl["stage_idletime_table"] = "null";
     tbl["performs_hash_action"] = true;
     tbl["uses_versioning"] = true;  // FIXME
+    tbl["tcam_error_detect"] = false;
 }

@@ -24,6 +24,8 @@ public:
 AsmStage::AsmStage() : Section("stage") {
     int slot = 0, byte = 0;
     stage.reserve(NUM_MAU_STAGES);
+    //if (options.match_compiler)
+    //    stage.resize(NUM_MAU_STAGES);
     for (int i = 0; i < ACTION_DATA_8B_SLOTS; i++) {
         Stage::action_bus_slot_map[byte++] = slot;
         Stage::action_bus_slot_size[slot++] = 8; }
@@ -111,18 +113,22 @@ void AsmStage::process() {
                 Phv::setuse(gress, stage[i].match_use[gress]);
                 Phv::setuse(gress, stage[i].action_use[gress]);
                 Phv::setuse(gress, stage[i].action_set[gress]); }
+#if 0
             /* if a stage is used only in ingress or egress, the compiler configures delays
-             *  for the unused part to match the used part. */
+             *  for the unused part to be match dependent rather than concurrent. */
             if (stage[i].stage_dep[INGRESS] && !stage[i].stage_dep[EGRESS])
-                stage[i].stage_dep[EGRESS] = stage[i].stage_dep[INGRESS];
+                stage[i].stage_dep[EGRESS] = Stage::MATCH_DEP;
             else if (!stage[i].stage_dep[INGRESS] && stage[i].stage_dep[EGRESS])
-                stage[i].stage_dep[INGRESS] = stage[i].stage_dep[EGRESS]; } }
+                stage[i].stage_dep[INGRESS] = Stage::MATCH_DEP;
+#endif
+        }
+    }
 }
 
 void AsmStage::output() {
     json::vector        tbl_cfg;
     for (unsigned i = 0; i < stage.size(); i++) {
-        if  (stage[i].tables.empty()) continue;
+        //if  (stage[i].tables.empty()) continue;
         for (auto table : stage[i].tables)
             table->pass2(); }
     if (error_count > 0) return;
@@ -130,12 +136,15 @@ void AsmStage::output() {
         bitvec set_regs = stage[0].action_set[gress];
         for (unsigned i = 1; i < stage.size(); i++) {
             if (!stage[i].stage_dep[gress]) {
-                if (stage[i].match_use[gress].intersects(set_regs))
+                if (stage[i].match_use[gress].intersects(set_regs)) {
+                    LOG1("stage " << i << " " << gress << " is match dependent on previous stage");
                     stage[i].stage_dep[gress] = Stage::MATCH_DEP;
-                else if (stage[i].action_use[gress].intersects(set_regs))
+                } else if (stage[i].action_use[gress].intersects(set_regs)) {
+                    LOG1("stage " << i << " " << gress << " is action dependent on previous stage");
                     stage[i].stage_dep[gress] = Stage::ACTION_DEP;
-                else
-                    stage[i].stage_dep[gress] = Stage::CONCURRENT; }
+                } else {
+                    LOG1("stage " << i << " " << gress << " is concurrent with previous stage");
+                    stage[i].stage_dep[gress] = Stage::CONCURRENT; } }
             if (stage[i].stage_dep[gress] == Stage::MATCH_DEP)
                 set_regs = stage[i].action_set[gress];
             else
@@ -150,7 +159,7 @@ void AsmStage::output() {
             if (stage[i].stage_dep[gress] != Stage::MATCH_DEP)
                 stage[i-1].group_table_use[gress] |= stage[i].group_table_use[gress]; }
     for (unsigned i = 0; i < stage.size(); i++) {
-        if  (stage[i].tables.empty()) continue;
+        // if  (stage[i].tables.empty()) continue;
         for (auto table : stage[i].tables) {
             table->write_regs();
             table->gen_tbl_cfg(tbl_cfg); }
@@ -213,10 +222,14 @@ void Stage::write_regs() {
     /* FIXME -- most of the values set here are 'placeholder' constants copied
      * from build_pipeline_output_2.py in the compiler */
     auto &merge = regs.rams.match.merge;
+    // FIXME -- there are a number of places where the compiler appears to use the
+    // FIXME -- use stats of just the current stage, rather than a group of concurrent
+    // FIXME -- stages to program delays.
+    int *match_compiler_table_use = options.match_compiler ? table_use : group_table_use;
     merge.exact_match_delay_config.exact_match_delay_ingress =
-        group_table_use[INGRESS] & (Stage::USE_TCAM | Stage::USE_WIDE_SELECTOR) ? 3 : 0;
+        match_compiler_table_use[INGRESS] & (Stage::USE_TCAM | Stage::USE_WIDE_SELECTOR) ? 3 : 0;
     merge.exact_match_delay_config.exact_match_delay_egress =
-        group_table_use[EGRESS] & (Stage::USE_TCAM | Stage::USE_WIDE_SELECTOR) ? 3 : 0;
+        match_compiler_table_use[EGRESS] & (Stage::USE_TCAM | Stage::USE_WIDE_SELECTOR) ? 3 : 0;
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         if (stageno == 0) {
             merge.predication_ctl[gress].start_table_fifo_delay0 = pred_cycle(table_use[gress]) - 1;
@@ -224,13 +237,23 @@ void Stage::write_regs() {
             merge.predication_ctl[gress].start_table_fifo_enable = 1;
         } else switch (stage_dep[gress]) {
         case MATCH_DEP:
-            merge.predication_ctl[gress].start_table_fifo_delay0 =
-                pipelength(this[-1].group_table_use[gress])
-                - pred_cycle(this[-1].table_use[gress])
-                + pred_cycle(table_use[gress]) - 1;
-            merge.predication_ctl[gress].start_table_fifo_delay1 =
-                pipelength(this[-1].group_table_use[gress])
-                - pred_cycle(this[-1].table_use[gress]) + 1;
+            if (options.match_compiler) {
+                merge.predication_ctl[gress].start_table_fifo_delay0 =
+                    pipelength(this[-1].table_use[gress])
+                    - pred_cycle(this[-1].table_use[gress])
+                    + pred_cycle(table_use[gress]) - 1;
+                merge.predication_ctl[gress].start_table_fifo_delay1 =
+                    pipelength(this[-1].table_use[gress])
+                    - pred_cycle(this[-1].table_use[gress]) + 1;
+            } else {
+                merge.predication_ctl[gress].start_table_fifo_delay0 =
+                    pipelength(this[-1].group_table_use[gress])
+                    - pred_cycle(this[-1].table_use[gress])
+                    + pred_cycle(table_use[gress]) - 1;
+                merge.predication_ctl[gress].start_table_fifo_delay1 =
+                    pipelength(this[-1].group_table_use[gress])
+                    - pred_cycle(this[-1].table_use[gress]) + 1;
+            }
             merge.predication_ctl[gress].start_table_fifo_enable = 3;
             break;
         case ACTION_DEP:
@@ -243,32 +266,35 @@ void Stage::write_regs() {
             break;
         default:
             assert(0); }
-        regs.rams.match.adrdist.adr_dist_pipe_delay[gress] = adr_dist_delay(group_table_use[gress]);
+        regs.rams.match.adrdist.adr_dist_pipe_delay[gress] = adr_dist_delay(match_compiler_table_use[gress]);
         auto &deferred_eop_bus_delay = regs.rams.match.adrdist.deferred_eop_bus_delay[gress];
-        deferred_eop_bus_delay.eop_internal_delay_fifo = pred_cycle(group_table_use[gress]);
+        deferred_eop_bus_delay.eop_internal_delay_fifo = pred_cycle(match_compiler_table_use[gress]);
         /* FIXME -- making this depend on the dependecny of the next stage seems wrong */
         if (stageno == AsmStage::numstages()-1)
-            deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(group_table_use[gress]);
+            deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(match_compiler_table_use[gress]);
         else if (this[1].stage_dep[gress] == MATCH_DEP)
-            deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(group_table_use[gress]);
+            deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(match_compiler_table_use[gress]);
         else if (this[1].stage_dep[gress] == ACTION_DEP)
             deferred_eop_bus_delay.eop_output_delay_fifo = 2;
         else
             deferred_eop_bus_delay.eop_output_delay_fifo = 1;
         deferred_eop_bus_delay.eop_delay_fifo_en = 1;
-        regs.dp.action_output_delay[gress] = pipelength(group_table_use[gress]) - 3;
-        regs.dp.pipelength_added_stages[gress] = pipelength(group_table_use[gress]) - 14;
-        if (stageno != 0)
+        regs.dp.action_output_delay[gress] = pipelength(match_compiler_table_use[gress]) - 3;
+        regs.dp.pipelength_added_stages[gress] = pipelength(match_compiler_table_use[gress]) - 14;
+        if (stageno != 0) {
             regs.dp.cur_stage_dependency_on_prev[gress] = MATCH_DEP - stage_dep[gress];
+            if (stage_dep[gress] == CONCURRENT)
+                regs.dp.stage_concurrent_with_prev |= 1U << gress; }
         if (stageno != AsmStage::numstages()-1)
-            regs.dp.next_stage_dependency_on_cur[gress] = MATCH_DEP - this[1].stage_dep[gress]; }
-    regs.dp.match_ie_input_mux_sel = 3;
+            regs.dp.next_stage_dependency_on_cur[gress] = MATCH_DEP - this[1].stage_dep[gress];
+        if (stageno == 0 || stage_dep[gress] == MATCH_DEP)
+            regs.dp.match_ie_input_mux_sel |= 1 << gress;
+    }
     /* FIXME -- need to set based on interstage dependencies */
-    regs.dp.stage_concurrent_with_prev = 0;
-    regs.dp.phv_fifo_enable.phv_fifo_ingress_final_output_enable = 0;
-    regs.dp.phv_fifo_enable.phv_fifo_egress_final_output_enable = 0;
-    regs.dp.phv_fifo_enable.phv_fifo_ingress_action_output_enable = 1;
-    regs.dp.phv_fifo_enable.phv_fifo_egress_action_output_enable = 1;
+    regs.dp.phv_fifo_enable.phv_fifo_ingress_action_output_enable = stage_dep[INGRESS] != ACTION_DEP;
+    regs.dp.phv_fifo_enable.phv_fifo_ingress_final_output_enable = stage_dep[INGRESS] == ACTION_DEP;
+    regs.dp.phv_fifo_enable.phv_fifo_egress_action_output_enable = stage_dep[EGRESS] != ACTION_DEP;
+    regs.dp.phv_fifo_enable.phv_fifo_egress_final_output_enable = stage_dep[EGRESS] == ACTION_DEP;
     bitvec in_use = match_use[INGRESS] | action_use[INGRESS] | action_set[INGRESS];
     bitvec eg_use = match_use[EGRESS] | action_use[EGRESS] | action_set[EGRESS];
     if (options.match_compiler) {

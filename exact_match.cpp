@@ -715,4 +715,5 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
         stage_tbl["stage_idletime_table"] = "null";
     tbl["performs_hash_action"] = false;
     tbl["uses_versioning"] = format->field("version") != 0;
+    tbl["tcam_error_detect"] = false;
 }

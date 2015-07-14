@@ -333,6 +333,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
             uses_versioning = true;
             break; }
     tbl["uses_versioning"] = uses_versioning;
+    tbl["tcam_error_detect"] = false;
 }
 
 void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
