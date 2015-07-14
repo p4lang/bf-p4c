@@ -3,8 +3,6 @@ dileep11.p4
 test_config_96_hash_data.p4
 test_config_100_hash_action.p4
 test_config_101_switch_msdc.p4
-test_config_102_clone.p4
-test_config_103_first_phase_0.p4
 test_config_117_first_tcam_range.p4
 test_config_118_tcam_range_2.p4
 test_config_119_tcam_range_3.p4

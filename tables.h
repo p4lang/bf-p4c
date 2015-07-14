@@ -404,6 +404,7 @@ public:
 )
 
 DECLARE_TABLE_TYPE(Phase0MatchTable, Table, "phase0_match",
+    int         size = 72;
     int         width = 1;
 )
 DECLARE_TABLE_TYPE(HashActionTable, MatchTable, "hash_action",

@@ -16,6 +16,9 @@ void Phase0MatchTable::setup(VECTOR(pair_t) &data) {
             push_back(p4_info, "size", std::move(kv.value));
         } else if (kv.key == "handle") {
             push_back(p4_info, "handle", std::move(kv.value));
+        } else if (kv.key == "size") {
+            if (CHECKTYPE(kv.value, tINT))
+                size = kv.value.i;
         } else if (kv.key == "width") {
             if (CHECKTYPE(kv.value, tINT))
                 width = kv.value.i;
@@ -45,9 +48,8 @@ void Phase0MatchTable::write_regs() {
 }
 
 void Phase0MatchTable::gen_tbl_cfg(json::vector &out) {
-    int number_entries = p4_table ? p4_table->size : 72;
-    json::map &tbl = *base_tbl_cfg(out, "match_entry", number_entries);
-    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "phase_0_match", number_entries);
+    json::map &tbl = *base_tbl_cfg(out, "match_entry", p4_table ? p4_table->size : size);
+    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "phase_0_match", size);
     auto &mra = stage_tbl["memory_resource_allocation"] = json::map();
     stage_tbl["stage_number"] = -1;
     mra["memory_type"] = "ingress_buffer";
@@ -59,8 +61,10 @@ void Phase0MatchTable::gen_tbl_cfg(json::vector &out) {
         mem_units.push_back(i);
     (tmp["vpns"] = json::vector()).push_back(0L);
     (mra["memory_units_and_vpns"] = json::vector()).push_back(std::move(tmp));
-    add_pack_format(stage_tbl, 32, width, 1);
+    add_pack_format(stage_tbl, 64, width, 1);
     if (options.match_compiler)
         tbl["p4_statistics_tables"] = json::vector();
     tbl["performs_hash_action"] = false;
+    tbl["uses_versioning"] = true;
+    tbl["tcam_error_detect"] = false;
 }
