@@ -38,7 +38,7 @@ TernaryMatchTable::Match::Match(const value_t &v) {
 void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     tcam_id = -1;
     indirect_bus = -1;
-    setup_layout(get(data, "row"), get(data, "column"), get(data, "bus"));
+    setup_layout(layout, get(data, "row"), get(data, "column"), get(data, "bus"));
     setup_logical_id();
     if (auto *ixbar = get(data, "input_xbar")) {
         if (CHECKTYPE(*ixbar, tMAP))
@@ -248,8 +248,8 @@ void TernaryMatchTable::write_regs() {
         merge.tind_bus_prop[indirect_bus].tcam_piped = 1;
         merge.tind_bus_prop[indirect_bus].thread = gress;
         merge.tind_bus_prop[indirect_bus].enabled = 1;
-        if (action_bus)
-             merge.mau_immediate_data_mask[1][indirect_bus] = (1UL << action_bus->size()) - 1;
+        //if (action_bus)
+        //     merge.mau_immediate_data_mask[1][indirect_bus] = (1UL << action_bus->size()) - 1;
         attached.write_merge_regs(this, 1, indirect_bus);
         if (idletime)
             idletime->write_merge_regs(1, indirect_bus);
@@ -275,8 +275,14 @@ void TernaryMatchTable::write_regs() {
             else
                 merge.mau_stats_adr_tcam_shiftcount[indirect_bus] = st.args[0].field->bits[0].lo;
             break; /* all must be the same, only config once */ }
-        if (!attached.meter.empty())
-            ERROR("meter setup for ternary match not done");
+        for (auto &m : attached.meter) {
+            if (m.args.empty()) {
+                merge.mau_meter_adr_tcam_shiftcount[indirect_bus] = m->direct_shiftcount() + 16;
+                merge.mau_idletime_adr_tcam_shiftcount[indirect_bus] = m->direct_shiftcount();
+            } else {
+                merge.mau_meter_adr_tcam_shiftcount[indirect_bus] = m.args[0].field->bits[0].lo + 16;
+                merge.mau_idletime_adr_tcam_shiftcount[indirect_bus] = m.args[0].field->bits[0].lo; }
+            break; /* all must be the same, only config once */ }
     }
     if (actions) actions->write_regs(this);
     if (gateway) gateway->write_regs();
@@ -338,7 +344,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
 
 void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
     match_table = 0;
-    setup_layout(get(data, "row"), get(data, "column"), get(data, "bus"));
+    setup_layout(layout, get(data, "row"), get(data, "column"), get(data, "bus"));
     if (auto *fmt = get(data, "format")) {
         if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map")) {
             format = new Format(fmt->map);
@@ -510,8 +516,14 @@ void TernaryIndirectTable::write_regs() {
             else
                 merge.mau_stats_adr_tcam_shiftcount[bus] = st.args[0].field->bits[0].lo;
             break; /* all must be the same, only config once */ }
-        if (!attached.meter.empty())
-            ERROR("meter setup for ternary match not done");
+        for (auto &m : attached.meter) {
+            if (m.args.empty()) {
+                merge.mau_meter_adr_tcam_shiftcount[bus] = m->direct_shiftcount() + 16;
+                merge.mau_idletime_adr_tcam_shiftcount[bus] = m->direct_shiftcount();
+            } else {
+                merge.mau_meter_adr_tcam_shiftcount[bus] = m.args[0].field->bits[0].lo + 16;
+                merge.mau_idletime_adr_tcam_shiftcount[bus] = m.args[0].field->bits[0].lo; }
+            break; /* all must be the same, only config once */ }
     }
     if (actions) actions->write_regs(this);
 }

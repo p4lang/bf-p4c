@@ -26,53 +26,7 @@ class StatsTable;
 class Stage;
 
 class Table {
-protected:
-    Table(int line, std::string &&n, gress_t gr, Stage *s, int lid = -1);
-    virtual ~Table();
-    Table(const Table &) = delete;
-    Table(Table &&) = delete;
-    virtual void setup(VECTOR(pair_t) &data) = 0;
-    virtual bool common_setup(pair_t &);
-    void setup_layout(value_t *row, value_t *col, value_t *bus);
-    void setup_logical_id();
-    void setup_actions(value_t &);
-    void setup_maprams(VECTOR(value_t) *);
-    void setup_vpns(VECTOR(value_t) *, bool allow_holes = false);
-    virtual void vpn_params(int &width, int &depth, int &period, const char *&period_name) { assert(0); }
-    void alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Table *> *bus_use = 0);
-    void alloc_busses(Alloc2Dbase<Table *> &bus_use);
-    void alloc_id(const char *idname, int &id, int &next_id, int max_id,
-		  bool order, Alloc1Dbase<Table *> &use);
-    void alloc_maprams();
-    void alloc_vpns();
-    void check_next();
-    void need_bus(int lineno, Alloc1Dbase<Table *> &use, int idx, const char *name);
 public:
-    const char *name() { return name_.c_str(); }
-    const char *p4_name() { return p4_table->p4_name(); }
-    unsigned handle() { return p4_table->get_handle(); }
-    int table_id();
-    virtual void pass1() = 0;
-    virtual void pass2() = 0;
-    virtual void write_regs() = 0;
-    virtual void gen_tbl_cfg(json::vector &out) = 0;
-    json::map *base_tbl_cfg(json::vector &out, const char *type, int size);
-    json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size);
-    virtual std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(
-            const char *type, bool skip_spare_bank = false);
-    enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER,
-                        METER, IDLETIME };
-    virtual table_type_t table_type() { return OTHER; }
-    virtual table_type_t set_match_table(MatchTable *m, bool indirect) { assert(0); }
-    virtual AttachedTables *get_attached() { return 0; }
-    virtual GatewayTable *get_gateway() { return 0; }
-    virtual SelectionTable *get_selector() { return 0; }
-    virtual void write_merge_regs(int type, int bus) { assert(0); }
-    virtual int direct_shiftcount() { assert(0); }
-    /* row,col -> mem unitno mapping -- unitnumbers used in context json */
-    virtual int memunit(int r, int c) { return r*12 + c; }
-    virtual bool run_at_eop() { return false; }
-
     struct Layout {
         /* Holds the layout of which rams/tcams/busses are used by the table
          * These refer to rows/columns in different spaces:
@@ -85,6 +39,28 @@ public:
         int                     row, bus;
         std::vector<int>        cols, vpns, maprams;
     };
+protected:
+    Table(int line, std::string &&n, gress_t gr, Stage *s, int lid = -1);
+    virtual ~Table();
+    Table(const Table &) = delete;
+    Table(Table &&) = delete;
+    virtual void setup(VECTOR(pair_t) &data) = 0;
+    virtual bool common_setup(pair_t &);
+    void setup_layout(std::vector<Layout> &, value_t *row, value_t *col, value_t *bus, const char *subname = "");
+    void setup_logical_id();
+    void setup_actions(value_t &);
+    void setup_maprams(VECTOR(value_t) *);
+    void setup_vpns(std::vector<Layout> &, VECTOR(value_t) *, bool allow_holes = false);
+    virtual void vpn_params(int &width, int &depth, int &period, const char *&period_name) { assert(0); }
+    void alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Table *> *bus_use = 0);
+    void alloc_busses(Alloc2Dbase<Table *> &bus_use);
+    void alloc_id(const char *idname, int &id, int &next_id, int max_id,
+		  bool order, Alloc1Dbase<Table *> &use);
+    void alloc_maprams();
+    void alloc_vpns();
+    void check_next();
+    void need_bus(int lineno, Alloc1Dbase<Table *> &use, int idx, const char *name);
+public:
 
     class Type {
         static std::map<std::string, Type *>           *all;
@@ -231,6 +207,33 @@ public:
         void write_regs(Table *);
     };
 public:
+    const char *name() { return name_.c_str(); }
+    const char *p4_name() { return p4_table->p4_name(); }
+    unsigned handle() { return p4_table->get_handle(); }
+    int table_id();
+    virtual void pass1() = 0;
+    virtual void pass2() = 0;
+    virtual void write_merge_regs(int type, int bus) { assert(0); }
+    virtual void write_merge_regs(int type, int bus, const std::vector<Call::Arg> &args) { assert(0); }
+    virtual void write_merge_regs(int type, int bus, const std::vector<Call::Arg> &args, Call &action) { assert(0); }
+    virtual void write_regs() = 0;
+    virtual void gen_tbl_cfg(json::vector &out) = 0;
+    json::map *base_tbl_cfg(json::vector &out, const char *type, int size);
+    json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size);
+    virtual std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(
+            const char *type, bool skip_spare_bank = false);
+    enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER,
+                        METER, IDLETIME };
+    virtual table_type_t table_type() { return OTHER; }
+    virtual table_type_t set_match_table(MatchTable *m, bool indirect) { assert(0); }
+    virtual AttachedTables *get_attached() { return 0; }
+    virtual GatewayTable *get_gateway() { return 0; }
+    virtual SelectionTable *get_selector() { return 0; }
+    virtual int direct_shiftcount() { assert(0); }
+    /* row,col -> mem unitno mapping -- unitnumbers used in context json */
+    virtual int memunit(int r, int c) { return r*12 + c; }
+    virtual bool run_at_eop() { return false; }
+
     std::string                 name_;
     P4Table                     *p4_table = 0;
     Stage                       *stage = 0;
@@ -555,17 +558,32 @@ DECLARE_ABSTRACT_TABLE_TYPE(StatsTable, AttachedTable,
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
         width = period = 1; depth = layout_size(); period_name = 0; }
 public:
-    virtual void write_merge_regs(int type, int bus) = 0;
+    virtual void write_merge_regs(int type, int bus, const std::vector<Call::Arg> &args) = 0;
 )
 
 DECLARE_TABLE_TYPE(CounterTable, StatsTable, "counter",
     enum { NONE=0, PACKETS=1, BYTES=2, BOTH=3 } type = NONE;
     table_type_t table_type() { return COUNTER; }
-    void write_merge_regs(int type, int bus);
+    void write_merge_regs(int type, int bus, const std::vector<Call::Arg> &args);
+    bool                per_flow_enable = false;
 public:
-    bool                per_flow_enable;
     int direct_shiftcount();
     bool run_at_eop() { return (type&BYTES) != 0; }
+)
+
+DECLARE_TABLE_TYPE(MeterTable, StatsTable, "meter",
+    enum { NONE=0, STANDARD=1, LPF=2, RED=3 } type = NONE;
+    enum { NONE_=0, PACKETS=1, BYTES=2 } count = NONE_;
+    table_type_t table_type() { return METER; }
+    void write_merge_regs(int type, int bus, const std::vector<Call::Arg> &args);
+    std::vector<Layout> color_maprams;
+    int                 sweep_interval = 2;
+    bool                per_flow_enable = false;
+public:
+    int direct_shiftcount();
+    bool                color_aware = false;
+    bool                color_aware_per_flow_enable = false;
+    // int direct_shiftcount();
 )
 
 #endif /* _tables_h_ */

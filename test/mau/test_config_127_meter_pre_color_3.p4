@@ -92,7 +92,7 @@ action do_nothing(){
 }
 
 
-@pragma include_stash 1
+// @pragma include_stash 1
 table table_0 {
     reads {
         pkt.field_e_16 : ternary;
@@ -115,7 +115,7 @@ table table_0 {
 
 //@pragma include_idletime 1
 @pragma idletime_two_way_notification 1
-@pragma include_stash 1
+// @pragma include_stash 1
 table table_1 {
     reads {
         pkt.field_e_16: exact;

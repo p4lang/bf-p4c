@@ -15,7 +15,7 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
     if (!CHECKTYPE(*h, tINT));
     unsigned handle = h->i;
     if (handle >> 24 && handle >> 24 != t) {
-        error(h->lineno, "Inncorect handle type %d for %s table", handle >> 24, type_name[t]);
+        error(h->lineno, "Incorrect handle type %d for %s table", handle >> 24, type_name[t]);
         return 0; }
     handle &= 0xffffff;
     if (!handle) {

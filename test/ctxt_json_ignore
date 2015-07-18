@@ -5,6 +5,7 @@ action_to_constant_mapping
 action_to_immediate_mapping
 action_to_next_table_mapping
 action_to_perform
+color_aware_per_flow_enable_address_type_bit_position
 constant_name_to_value
 default_address_bits_provided
 default_lower_huffman_bits_included
@@ -17,6 +18,7 @@ field_list
 gateway_fields
 hash_algorithm
 hash_distribution_usage
+hash_distribution_usage_for_pre_color
 hash_polynomial
 hash_way_number
 include_idletime
@@ -39,8 +41,10 @@ p4_stateful_tables
 pack_format_length
 per_flow_enable_bit_position
 port_pool_sizes
+pre_color_field
 ram_enable_dictionary
 reference_dictionary
+result_field
 saturating
 selection_fields
 stage_action_parameter_map

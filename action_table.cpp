@@ -59,7 +59,7 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
     action_id = -1;
     auto *row = get(data, "row");
     if (!row) row = get(data, "logical_row");
-    setup_layout(row, get(data, "column"), 0);
+    setup_layout(layout, row, get(data, "column"), 0);
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "format") {
             if (CHECKTYPEPM(kv.value, tMAP, kv.value.map.size > 0, "non-empty map"))
@@ -90,7 +90,7 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
             if (kv.value == "null")
                 no_vpns = true;
             else if (CHECKTYPE(kv.value, tVEC))
-                setup_vpns(&kv.value.vec);
+                setup_vpns(layout, &kv.value.vec);
         } else if (kv.key == "p4") {
             if (CHECKTYPE(kv.value, tMAP))
                 p4_table = P4Table::get(P4Table::ActionData, kv.value.map);

@@ -200,6 +200,10 @@ Stage::Stage(Stage &&a) : Stage_data(std::move(a)) {
 static int tcam_delay(int use_flags) {
     return use_flags & Stage::USE_TCAM ? use_flags & Stage::USE_TCAM_PIPED ? 4 : 4 : 0;
 }
+int Stage::tcam_delay(gress_t gress, bool group) {
+    return ::tcam_delay((group && !options.match_compiler)
+                        ? group_table_use[gress] : table_use[gress]);
+}
 static int adr_dist_delay(int use_flags) {
     if (use_flags & Stage::USE_SELECTOR)
         return 9;

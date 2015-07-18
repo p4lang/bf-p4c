@@ -8,7 +8,7 @@ DEFINE_TABLE_TYPE(CounterTable)
 void CounterTable::setup(VECTOR(pair_t) &data) {
     auto *row = get(data, "row");
     if (!row) row = get(data, "logical_row");
-    setup_layout(row, get(data, "column"), get(data, "bus"));
+    setup_layout(layout, row, get(data, "column"), get(data, "bus"));
     if (auto *fmt = get(data, "format")) {
         if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
             format = new Format(fmt->map);
@@ -22,7 +22,7 @@ void CounterTable::setup(VECTOR(pair_t) &data) {
             if (kv.value == "null")
                 no_vpns = true;
             else if (CHECKTYPE(kv.value, tVEC))
-                setup_vpns(&kv.value.vec, true);
+                setup_vpns(layout, &kv.value.vec, true);
         } else if (kv.key == "p4") {
             if (CHECKTYPE(kv.value, tMAP))
                 p4_table = P4Table::get(P4Table::Statistics, kv.value.map);
@@ -91,7 +91,7 @@ int CounterTable::direct_shiftcount() {
     return 64 + 7 - counter_shifts[format->groups()];
 }
 
-void CounterTable::write_merge_regs(int type, int bus) {
+void CounterTable::write_merge_regs(int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge =  stage->regs.rams.match.merge;
     merge.mau_stats_adr_mask[type][bus] = 0xfffff & ~counter_masks[format->groups()];
     merge.mau_stats_adr_default[type][bus] = per_flow_enable ? 0 : (1U << 19);
@@ -103,6 +103,7 @@ void CounterTable::write_regs() {
     LOG1("### Counter table " << name() << " write_regs");
     // FIXME -- factor common AttachedTable::write_regs
     // FIXME -- factor common StatsTable::write_regs
+    // FIXME -- factor common MeterTable::write_regs
     Layout *home = &layout[0];
     bool push_on_overflow = false;
     auto &map_alu =  stage->regs.rams.map_alu;
@@ -264,4 +265,5 @@ void CounterTable::gen_tbl_cfg(json::vector &out) {
     case BOTH: tbl["statistics_type"] = "packets_and_bytes";
                stage_tbl["stat_type"] = "packets_and_bytes"; break;
     default: break; }
+    tbl["enable_per_flow_enable"] = per_flow_enable;
 }

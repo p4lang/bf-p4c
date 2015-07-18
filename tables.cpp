@@ -64,19 +64,19 @@ void Table::Call::setup(const value_t &val, Table *tbl) {
     lineno = val.lineno;
 }
 
-static void add_row(int lineno, Table *t, int row) {
-    t->layout.push_back(Table::Layout{lineno, row, -1});
+static void add_row(int lineno, std::vector<Table::Layout> &layout, int row) {
+    layout.push_back(Table::Layout{lineno, row, -1});
 }
 
-static int add_rows(Table *t, value_t &rows) {
+static int add_rows(std::vector<Table::Layout> &layout, value_t &rows) {
     if (!CHECKTYPE2(rows, tINT, tRANGE)) return 1;
     if (rows.type == tINT)
-        add_row(rows.lineno, t, rows.i);
+        add_row(rows.lineno, layout, rows.i);
     else {
         int step = rows.lo > rows.hi ? -1 : 1;
         for (int i = rows.lo; i != rows.hi; i += step)
-            add_row(rows.lineno, t, i);
-        add_row(rows.lineno, t, rows.hi); }
+            add_row(rows.lineno, layout, i);
+        add_row(rows.lineno, layout, rows.hi); }
     return 0;
 }
 
@@ -109,18 +109,18 @@ static int add_cols(Table::Layout &row, value_t &cols) {
     return rv;
 }
 
-void Table::setup_layout(value_t *row, value_t *col, value_t *bus) {
+void Table::setup_layout(std::vector<Layout> &layout, value_t *row, value_t *col, value_t *bus, const char *subname) {
     if (!row) {
-        error(lineno, "No 'row' attribute in table %s", name());
+        error(lineno, "No 'row' attribute in table %s%s", name(), subname);
         return; }
     if (!col) {
-        error(lineno, "No 'column' attribute in table %s", name());
+        error(lineno, "No 'column' attribute in table %s%s", name(), subname);
         return; }
     int err = 0;
     if (row->type == tVEC)
-        for (value_t &r : row->vec) err |= add_rows(this, r);
+        for (value_t &r : row->vec) err |= add_rows(layout, r);
     else
-        err |= add_rows(this, *row);
+        err |= add_rows(layout, *row);
     if (err) return;
     if (col->type == tVEC && col->vec.size == (int)layout.size()) {
         for (int i = 0; i < col->vec.size; i++)
@@ -148,7 +148,8 @@ void Table::setup_layout(value_t *row, value_t *col, value_t *bus) {
             if (i->row == j->row && i->bus == j->bus) {
                 char bus[16] = { 0 };
                 if (i->bus >= 0) sprintf(bus, " bus %d", i->bus);
-                error(i->lineno, "row %d%s duplicated in table %s", i->row, bus, name()); }
+                error(i->lineno, "row %d%s duplicated in table %s%s", i->row, bus,
+                      name(), subname); }
 }
 
 void Table::setup_logical_id() {
@@ -189,7 +190,7 @@ void Table::setup_maprams(VECTOR(value_t) *rams) {
                     row.maprams.push_back(mapcol.i); } } }
 }
 
-void Table::setup_vpns(VECTOR(value_t) *vpn, bool allow_holes) {
+void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool allow_holes) {
     int period, width, depth;
     const char *period_name;
     vpn_params(width, depth, period, period_name);
@@ -268,7 +269,7 @@ bool Table::common_setup(pair_t &kv) {
             miss_next = kv.value;
     } else if (kv.key == "vpns") {
         if (CHECKTYPE(kv.value, tVEC))
-            setup_vpns(&kv.value.vec);
+            setup_vpns(layout, &kv.value.vec);
     } else if (kv.key == "p4") {
         if (CHECKTYPE(kv.value, tMAP))
             p4_table = P4Table::get(P4Table::MatchEntry, kv.value.map);
@@ -393,7 +394,7 @@ void Table::alloc_maprams() {
 
 void Table::alloc_vpns() {
     if (no_vpns || layout.size() == 0 || layout[0].vpns.size() > 0) return;
-    setup_vpns(0);
+    setup_vpns(layout, 0);
 }
 
 void Table::check_next() {
@@ -884,6 +885,9 @@ void AttachedTables::pass1(MatchTable *self) {
             error(s.lineno, "%s is not a counter table", s->name());
         if (s.args.size() > 1)
             error(s.lineno, "Stats table requires zero or one args");
+        else if (!s.args.empty() && s.args[0].type != Table::Call::Arg::Field)
+            error(s.lineno, "argument to counter must be a field in the %s table format",
+                  self->name());
         else if (s.args != stats[0].args)
             error(s.lineno, "Must pass same args to all stats tables in a single table");
         if (s->stage != self->stage)
@@ -895,6 +899,9 @@ void AttachedTables::pass1(MatchTable *self) {
             error(m.lineno, "%s is not a meter table", m->name());
         if (m.args.size() > 1)
             error(m.lineno, "Meter table requires zero or one args");
+        else if (!m.args.empty() && m.args[0].type != Table::Call::Arg::Field)
+            error(m.lineno, "argument to meter must be a field in the %s table format",
+                  self->name());
         else if (m.args != meter[0].args)
             error(m.lineno, "Must pass same args to all meter tables in a single table");
         if (m->stage != self->stage)
@@ -904,8 +911,8 @@ void AttachedTables::pass1(MatchTable *self) {
 }
 
 void AttachedTables::write_merge_regs(Table *self, int type, int bus) {
-    for (auto &s : stats) s->write_merge_regs(type, bus);
-    for (auto &m : meter) m->write_merge_regs(type, bus);
+    for (auto &s : stats) s->write_merge_regs(type, bus, s.args);
+    for (auto &m : meter) m->write_merge_regs(type, bus, m.args);
     if (selector)
         get_selector()->write_merge_regs(type, bus, selector.args, self->action);
 }

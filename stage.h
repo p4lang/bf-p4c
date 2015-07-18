@@ -86,6 +86,7 @@ public:
     Stage(Stage &&);
     ~Stage();
     void write_regs();
+    int tcam_delay(gress_t gress, bool group = true);
 };
 
 /* constants for various config params */
@@ -147,6 +148,14 @@ namespace MapRam {
             COLOR = 3,
         };
     }
+    namespace ColorBus {
+        enum {
+            NONE = 0,
+            COLOR = 1,
+            OVERFLOW = 2,
+            OVERFLOW_2 = 3,
+        };
+    };
 }
 namespace BusHashGroup {
     enum {

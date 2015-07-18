@@ -18,11 +18,15 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                 continue; }
             name = kv.value[0].s;
             off = kv.value[1].lo >> 3;
-            sz = (kv.value[1].hi - kv.value[1].lo + 1) >> 3; }
+            sz = kv.value[1].hi - kv.value[1].lo + 1; }
 	Table::Format::Field *f = tbl->lookup_field(name, "*");
-	if (!f && tbl->format) {
-	    error(kv.value.lineno, "No field %s in format", name);
-	    continue; }
+	if (!f) {
+            if (kv.value == "meter") {
+                // FIXME -- meter color could be ORed into any byte of the immediate?
+                if (!sz) off = 3, sz = 8;
+            } else if (tbl->format) {
+                error(kv.value.lineno, "No field %s in format", name);
+                continue; } }
         if (f && !sz) sz = f->size;
 	unsigned idx = kv.key.i;
 	if (kv.key.type == tRANGE) {
@@ -90,7 +94,7 @@ int ActionBus::find(const char *name, int off, int *size) {
     for (auto &slot : by_byte)
         if (slot.second.name == name) {
             if (size) *size = slot.second.size;
-            return slot.first + off/8 - slot.second.offset; }
+            return slot.first + off/8; }
     return -1;
 }
 
@@ -163,15 +167,17 @@ void ActionBus::write_immed_regs(Table *tbl) {
     for (auto &f : by_byte) {
         int slot = Stage::action_bus_slot_map[f.first];
         unsigned off = f.second.offset*8;
-        if (f.second.data) off += f.second.data->bits[0].lo;
-        if (tbl->format) off -= tbl->format->immed->bits[0].lo;
+        if (f.second.data) {
+            off += f.second.data->bits[0].lo;
+            assert(tbl->format && tbl->format->immed);
+            if (tbl->format) off -= tbl->format->immed->bits[0].lo; }
         unsigned size = f.second.size;
         switch(Stage::action_bus_slot_size[slot]) {
         case 8:
             for (unsigned b = off/8; b <= (off + size - 1)/8; b++) {
                 assert((b&3) == (slot&3));
                 adrdist.immediate_data_8b_enable[tid/8] |= 1U << ((tid&7)*4 + b);
-                // FIXME -- we write these ctl regs twice if we use both nytes in a pair 
+                // FIXME -- we write these ctl regs twice if we use both bytes in a pair 
                 setup_muxctl(adrdist.immediate_data_8b_ixbar_ctl[tid*2 + b/2], slot++/4); }
             break;
         case 16:

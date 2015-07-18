@@ -10,7 +10,7 @@
 DEFINE_TABLE_TYPE(ExactMatchTable)
 
 void ExactMatchTable::setup(VECTOR(pair_t) &data) {
-    setup_layout(get(data, "row"), get(data, "column"), get(data, "bus"));
+    setup_layout(layout, get(data, "row"), get(data, "column"), get(data, "bus"));
     setup_logical_id();
     if (auto *fmt = get(data, "format")) {
         if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
@@ -622,8 +622,21 @@ void ExactMatchTable::write_regs() {
                     /* unused, so should not be set... */
                     merge.mau_stats_adr_exact_shiftcount[bus][word_group] = 7; }
                 break; /* all must be the same, only config once */ }
-            if (!attached.meter.empty()) {
-                ERROR("meter setup for exact match not done"); } }
+            for (auto &m : attached.meter) {
+                if (m.args.empty()) {
+                    merge.mau_meter_adr_exact_shiftcount[bus][word_group] = m->direct_shiftcount() + 16;
+                    merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = m->direct_shiftcount();
+                } else if (group_info[group].overhead_word == (int)word) {
+                    assert(m.args[0].field->by_group[group]->bits[0].lo/128U == word);
+                    merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 
+                        m.args[0].field->by_group[group]->bits[0].lo%128U + 16;
+                    merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = 
+                        m.args[0].field->by_group[group]->bits[0].lo%128U;
+                } else if (options.match_compiler) {
+                    /* unused, so should not be set... */
+                    merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 16;
+                    merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = 0; }
+                break; /* all must be the same, only config once */ } }
         for (auto col : row.cols) {
             int word_group = 0;
             for (int group : word_info[word]) {
