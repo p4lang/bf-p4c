@@ -71,7 +71,7 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
                     continue; }
                 int id = kv.key[2].i;
                 hash_groups[id].lineno = kv.key.lineno;
-                if (kv.value.type == tINT && (unsigned)kv.value.i < EXACT_HASH_GROUPS) {
+                if (kv.value.type == tINT && (unsigned)kv.value.i < HASH_TABLES) {
                     hash_groups[id].tables |= 1U << kv.value.i;
                     continue; }
                 if (!CHECKTYPE2(kv.value, tVEC, tMAP)) continue;
