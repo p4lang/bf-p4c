@@ -197,12 +197,18 @@ Stage::Stage(Stage &&a) : Stage_data(std::move(a)) {
             regs.emit_fieldname(out, addr, end); });
 }
 
-static int tcam_delay(int use_flags) {
-    return use_flags & Stage::USE_TCAM ? use_flags & Stage::USE_TCAM_PIPED ? 4 : 4 : 0;
+static int tcam_delay(int use_flags, bool selector = false) {
+    if (use_flags & Stage::USE_TCAM_PIPED)
+        return 3;
+    if (use_flags & Stage::USE_TCAM)
+        return 3;
+    if (selector && (use_flags & Stage::USE_WIDE_SELECTOR))
+        return 3;
+    return 0;
 }
-int Stage::tcam_delay(gress_t gress, bool group) {
+int Stage::tcam_delay(gress_t gress, bool group, bool selector) {
     return ::tcam_delay((group && !options.match_compiler)
-                        ? group_table_use[gress] : table_use[gress]);
+                        ? group_table_use[gress] : table_use[gress], selector);
 }
 static int adr_dist_delay(int use_flags) {
     if (use_flags & Stage::USE_SELECTOR)
@@ -210,16 +216,16 @@ static int adr_dist_delay(int use_flags) {
     else if (use_flags & Stage::USE_METER)
         return 5;
     else if (use_flags & Stage::USE_STATEFUL)
-        return 4;
+        return 5;
     else
         return 0;
 }
 
 static int pipelength(int use_flags) {
-    return 14 + tcam_delay(use_flags) + adr_dist_delay(use_flags);
+    return 15 + tcam_delay(use_flags) + adr_dist_delay(use_flags);
 }
 static int pred_cycle(int use_flags) {
-    return 7 + tcam_delay(use_flags);
+    return 8 + tcam_delay(use_flags);
 }
 
 void Stage::write_regs() {
@@ -229,7 +235,7 @@ void Stage::write_regs() {
     // FIXME -- there are a number of places where the compiler appears to use the
     // FIXME -- use stats of just the current stage, rather than a group of concurrent
     // FIXME -- stages to program delays.
-    int *match_compiler_table_use = options.match_compiler ? table_use : group_table_use;
+    int *match_compiler_table_use = options.match_compiler ? group_table_use : group_table_use;
     merge.exact_match_delay_config.exact_match_delay_ingress =
         match_compiler_table_use[INGRESS] & (Stage::USE_TCAM | Stage::USE_WIDE_SELECTOR) ? 3 : 0;
     merge.exact_match_delay_config.exact_match_delay_egress =
@@ -284,7 +290,7 @@ void Stage::write_regs() {
             deferred_eop_bus_delay.eop_output_delay_fifo = 1;
         deferred_eop_bus_delay.eop_delay_fifo_en = 1;
         regs.dp.action_output_delay[gress] = pipelength(match_compiler_table_use[gress]) - 3;
-        regs.dp.pipelength_added_stages[gress] = pipelength(match_compiler_table_use[gress]) - 14;
+        regs.dp.pipelength_added_stages[gress] = pipelength(match_compiler_table_use[gress]) - 15;
         if (stageno != 0) {
             regs.dp.cur_stage_dependency_on_prev[gress] = MATCH_DEP - stage_dep[gress];
             if (stage_dep[gress] == CONCURRENT)

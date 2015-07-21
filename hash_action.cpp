@@ -20,7 +20,7 @@ void HashActionTable::setup(VECTOR(pair_t) &data) {
                 if ((bus = kv.value.i) >= 4)
                     error(kv.value.lineno, "Invalid bus %d", row);
         } else if (kv.key == "hash_dist") {
-            HashDistribution::parse(hash_dist, kv.value);
+            HashDistribution::parse(hash_dist, kv.value, HashDistribution::ACTION_DATA_ADDRESS);
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     kv.key.s, name()); }
@@ -53,7 +53,7 @@ void HashActionTable::pass1() {
         if (action.args.size() < 1 || !action.args[0].field ||
             action.args[0].field->size <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
-    input_xbar->pass1(stage->exact_ixbar, 128);
+    input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
     for (auto &hd : hash_dist)
         hd.pass1(this);
     if (gateway) {
@@ -71,7 +71,7 @@ void HashActionTable::pass2() {
     if (hash_dist.empty())
         error(lineno, "Need explicit hash_dist in hash_action table"); // FIXME
     if (bus >= 2) stage->table_use[gress] |= Stage::USE_TCAM;
-    input_xbar->pass2(stage->exact_ixbar, 128);
+    input_xbar->pass2(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
     if (action_bus)
         action_bus->pass2(this);
     if (actions) actions->pass2(this);
@@ -81,10 +81,10 @@ void HashActionTable::pass2() {
 
 void HashActionTable::write_merge_regs(int type, int bus) {
     attached.write_merge_regs(this, type, bus);
-    auto &merge = stage->regs.rams.match.merge;
-    merge.mau_bus_hash_group_ctl[type][bus/4].set_subfield(
-        1 << BusHashGroup::ACTION_DATA_ADDRESS, 5 * (bus%4), 5);
-    merge.mau_bus_hash_group_sel[type][bus/8].set_subfield(hash_dist[0].id | 8, 4*(bus%8), 4);
+    //auto &merge = stage->regs.rams.match.merge;
+    //merge.mau_bus_hash_group_ctl[type][bus/4].set_subfield(
+    //    1 << BusHashGroup::ACTION_DATA_ADDRESS, 5 * (bus%4), 5);
+    //merge.mau_bus_hash_group_sel[type][bus/8].set_subfield(hash_dist[0].id | 8, 4*(bus%8), 4);
 }
 
 void HashActionTable::write_regs() {
@@ -98,7 +98,7 @@ void HashActionTable::write_regs() {
     if (idletime) idletime->write_regs();
     if (gateway) gateway->write_regs();
     for (auto &hd : hash_dist)
-        hd.write_regs(stage, gress, 1, false);
+        hd.write_regs(this, 1, false);
 }
 
 void HashActionTable::gen_tbl_cfg(json::vector &out) {

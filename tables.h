@@ -207,10 +207,10 @@ public:
         void write_regs(Table *);
     };
 public:
-    const char *name() { return name_.c_str(); }
-    const char *p4_name() { return p4_table->p4_name(); }
-    unsigned handle() { return p4_table->get_handle(); }
-    int table_id();
+    const char *name() const { return name_.c_str(); }
+    const char *p4_name() const { return p4_table->p4_name(); }
+    unsigned handle() const { return p4_table->get_handle(); }
+    int table_id() const;
     virtual void pass1() = 0;
     virtual void pass2() = 0;
     virtual void write_merge_regs(int type, int bus) { assert(0); }
@@ -226,9 +226,10 @@ public:
                         METER, IDLETIME };
     virtual table_type_t table_type() { return OTHER; }
     virtual table_type_t set_match_table(MatchTable *m, bool indirect) { assert(0); }
-    virtual AttachedTables *get_attached() { return 0; }
-    virtual GatewayTable *get_gateway() { return 0; }
-    virtual SelectionTable *get_selector() { return 0; }
+    virtual const AttachedTables *get_attached() const { return 0; }
+    virtual const GatewayTable *get_gateway() const { return 0; }
+    virtual SelectionTable *get_selector() const { return 0; }
+    virtual const Call &get_action() const { return action; }
     virtual int direct_shiftcount() { assert(0); }
     /* row,col -> mem unitno mapping -- unitnumbers used in context json */
     virtual int memunit(int r, int c) { return r*12 + c; }
@@ -282,7 +283,7 @@ public:
 struct AttachedTables {
     Table::Call                 selector;
     std::vector<Table::Call>    stats, meter;
-    SelectionTable *get_selector();
+    SelectionTable *get_selector() const;
     void pass1(MatchTable *self);
     void write_merge_regs(Table *self, int type, int bus);
     bool run_at_eop();
@@ -303,8 +304,8 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     void write_regs(int type, Table *result);
     bool common_setup(pair_t &);
 public:
-    AttachedTables *get_attached() { return &attached; }
-    GatewayTable *get_gateway() { return gateway; }
+    const AttachedTables *get_attached() const { return &attached; }
+    const GatewayTable *get_gateway() const { return gateway; }
     bool run_at_eop() { return attached.run_at_eop(); }
 )
 
@@ -369,7 +370,7 @@ DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
                                                  * match group in each word */
     int         mgm_lineno = -1;                /* match_group_map lineno */
 public:
-    SelectionTable *get_selector() { return attached.get_selector(); }
+    SelectionTable *get_selector() const { return attached.get_selector(); }
     void write_merge_regs(int type, int bus) { attached.write_merge_regs(this, type, bus); }
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(Way &);
 )
@@ -399,8 +400,9 @@ public:
     int find_on_actionbus(const char *n, int off, int *len = 0) {
         return indirect ? indirect->find_on_actionbus(n, off, len)
                         : Table::find_on_actionbus(n, off, len); }
-    AttachedTables *get_attached() { return indirect ? indirect->get_attached() : &attached; }
-    SelectionTable *get_selector() { return indirect ? indirect->get_selector() : 0; }
+    const Call &get_action() const { return indirect ? indirect->get_action() : action; }
+    const AttachedTables *get_attached() const { return indirect ? indirect->get_attached() : &attached; }
+    SelectionTable *get_selector() const { return indirect ? indirect->get_selector() : 0; }
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(const char *type, bool skip_spare_bank=false);
     Call &action_call() { return indirect ? indirect->action : action; }
     int memunit(int r, int c) { return r + c*12; }
@@ -427,9 +429,9 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
         depth = layout_size() / width;
         period = 1;
         period_name = 0; }
-    AttachedTables *get_attached() { return &attached; }
-    GatewayTable *get_gateway() { return match_table->get_gateway(); }
-    SelectionTable *get_selector() { return attached.get_selector(); }
+    const AttachedTables *get_attached() const { return &attached; }
+    const GatewayTable *get_gateway() const { return match_table->get_gateway(); }
+    SelectionTable *get_selector() const { return attached.get_selector(); }
     void write_merge_regs(int type, int bus) { attached.write_merge_regs(this, type, bus); }
 )
 
@@ -445,9 +447,9 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
         match_tables.insert(m);
         if ((unsigned)m->logical_id < (unsigned)logical_id) logical_id = m->logical_id;
         return table_type(); }
-    GatewayTable *get_gateway() {
+    const GatewayTable *get_gateway() const {
         return match_tables.size() == 1 ? (*match_tables.begin())->get_gateway() : 0; }
-    SelectionTable *get_selector() {
+    SelectionTable *get_selector() const {
         return match_tables.size() == 1 ? (*match_tables.begin())->get_selector() : 0; }
     Call &action_call() {
         return match_tables.size() == 1 ? (*match_tables.begin())->action_call() : action; }
@@ -499,8 +501,8 @@ public:
     static GatewayTable *create(int lineno, const std::string &name, gress_t gress,
                                 Stage *stage, int lid, VECTOR(pair_t) &data)
         { return table_type_singleton.create(lineno, name.c_str(), gress, stage, lid, data); }
-   GatewayTable *get_gateway() { return this; }
-   SelectionTable *get_selector() { return match_table ? match_table->get_selector() : 0; }
+   const GatewayTable *get_gateway() const { return this; }
+   SelectionTable *get_selector() const { return match_table ? match_table->get_selector() : 0; }
 )
 
 DECLARE_TABLE_TYPE(SelectionTable, AttachedTable, "selection",
@@ -518,7 +520,7 @@ public:
         width = period = 1; depth = layout_size(); period_name = 0; }
     void write_merge_regs(int type, int bus, const std::vector<Call::Arg> &args,
                           Call &action);
-    unsigned address_shift() { return 7 + ceil_log2(min_words); }
+    unsigned address_shift() const { return 7 + ceil_log2(min_words); }
 )
 
 class IdletimeTable : public Table {

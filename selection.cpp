@@ -80,7 +80,7 @@ void SelectionTable::pass1() {
     stage->table_use[gress] |= Stage::USE_SELECTOR;
     for (auto &hd : hash_dist)
         hd.pass1(this);
-    if (input_xbar) input_xbar->pass1(stage->exact_ixbar, 128);
+    if (input_xbar) input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
     if (param < 0 || param > (resilient_hash ? 7 : 2))
         error(mode_lineno, "Invalid %s hash param %d",
               resilient_hash ? "resilient" : "fair", param);
@@ -91,28 +91,30 @@ void SelectionTable::pass1() {
         int words = (size + 119)/120;
         if (words < min_words) min_words = words;
         if (words > max_words) max_words = words; }
-    if (max_words > 1)
+    if (max_words > 1) {
         stage->table_use[gress] |= Stage::USE_WIDE_SELECTOR;
+        for (auto &hd : hash_dist)
+            hd.use = HashDistribution::HASHMOD_DIVIDEND; }
 }
 
 void SelectionTable::pass2() {
     LOG1("### Selection table " << name() << " pass2");
-    if (input_xbar) input_xbar->pass2(stage->exact_ixbar, 128);
+    if (input_xbar) input_xbar->pass2(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
     if (selection_hash < 0 && (selection_hash = input_xbar->hash_group()) < 0)
         error(lineno, "No selection_hash in selector table %s", name());
 }
 
-void SelectionTable::write_merge_regs(int type, int bus, const std::vector<Call::Arg> &args,
-                                      Call &action)
+void SelectionTable::write_merge_regs(int type, int bus,
+    const std::vector<Call::Arg> &args, Call &action)
 {
     auto &merge = stage->regs.rams.match.merge;
     if (action)
-        merge.mau_selector_action_entry_size[type][bus] = action->format->log2size - 3;
+        /*merge.mau_selector_action_entry_size[type][bus] = action->format->log2size - 3*/;
     else if (options.match_compiler)
         return; // compiler skips the rest if no action table
-    if (args.size() > 1)
-        merge.mau_bus_hash_group_ctl[type][bus/4].set_subfield(
-            1 << BusHashGroup::SELECTOR_MOD, 5 * (bus%4), 5);
+    //if (args.size() > 1)
+    //    merge.mau_bus_hash_group_ctl[type][bus/4].set_subfield(
+    //        1 << BusHashGroup::SELECTOR_MOD, 5 * (bus%4), 5);
     merge.mau_meter_adr_type_position[type][bus] = 24;
     if (action.args.size() > 1) {
         int bits = per_flow_enable ? 17 : 16;
@@ -122,9 +124,9 @@ void SelectionTable::write_merge_regs(int type, int bus, const std::vector<Call:
     if (per_flow_enable) {
         /* FIXME -- regs need to stabilize */
         merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = 23; }
-    if (!hash_dist.empty()) {
-        /* from HashDistributionResourceAllocation.write_config: */
-        merge.mau_bus_hash_group_sel[type][bus/8].set_subfield(hash_dist[0].id | 8, 4*(bus%8), 4); }
+    //if (!hash_dist.empty()) {
+    //    /* from HashDistributionResourceAllocation.write_config: */
+    //    merge.mau_bus_hash_group_sel[type][bus/8].set_subfield(hash_dist[0].id | 8, 4*(bus%8), 4); }
 }
 
 void SelectionTable::write_regs() {
@@ -182,19 +184,20 @@ void SelectionTable::write_regs() {
             selector_ctl.resilient_hash_mode = resilient_hash ? 1 : 0;
             selector_ctl.selector_enable = 1;
             auto &delay_ctl = map_alu.meter_alu_group_data_delay_ctl[meter_group];
-            delay_ctl.meter_alu_right_group_delay = 
-                stage->table_use[gress] & Stage::USE_TCAM ? 13 : 9;
+            delay_ctl.meter_alu_right_group_delay = 10 + stage->tcam_delay(gress, true, true);
             delay_ctl.meter_alu_right_group_enable = resilient_hash ? 3 : 1;
-            delay_ctl.meter_alu_right_group_sel = 1;
+            //delay_ctl.meter_alu_right_group_sel = 1;
 
             auto &ram_address_mux_ctl = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
             ram_address_mux_ctl.ram_unitram_adr_mux_select = UnitRam::AdrMux::STATS_METERS;
             if (&logical_row == home) {
                 ram_address_mux_ctl.ram_stats_meter_adr_mux_select_meter = 1;
                 ram_address_mux_ctl.ram_ofo_stats_mux_select_statsmeter = 1;
+                ram_address_mux_ctl.synth2port_radr_mux_select_home_row = 1;
             } else {
                 ram_address_mux_ctl.ram_oflo_adr_mux_select_oflo = 1;
-                ram_address_mux_ctl.ram_ofo_stats_mux_select_oflo = 1; }
+                ram_address_mux_ctl.ram_ofo_stats_mux_select_oflo = 1;
+                ram_address_mux_ctl.synth2port_radr_mux_select_oflo = 1; }
             ram_address_mux_ctl.map_ram_wadr_mux_select = MapRam::Mux::SYNTHETIC_TWO_PORT;
             ram_address_mux_ctl.map_ram_wadr_mux_enable = 1;
             ram_address_mux_ctl.map_ram_radr_mux_select_smoflo = 1;
@@ -228,13 +231,15 @@ void SelectionTable::write_regs() {
                 adr_ctl.adr_dist_oflo_adr_xbar_source_index = home->row % 8;
                 adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::METER; }
             adr_ctl.adr_dist_oflo_adr_xbar_enable = 1; } }
+    auto &merge = stage->regs.rams.match.merge;
     for (MatchTable *m : match_tables) {
         auto &icxbar = stage->regs.rams.match.adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id];
         icxbar.address_distr_to_logical_rows = logical_row_use;
         icxbar.address_distr_to_overflow = push_on_overflow;
-    }
+        if (auto &act = m->get_action())
+            merge.mau_selector_action_entry_size[m->logical_id] = act->format->log2size - 3; }
     for (auto &hd : hash_dist)
-        hd.write_regs(stage, gress, 0, non_linear_hash);
+        hd.write_regs(this, 0, non_linear_hash);
 }
 
 void SelectionTable::gen_tbl_cfg(json::vector &out) {

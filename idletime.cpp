@@ -53,7 +53,7 @@ void IdletimeTable::write_regs() {
     auto &map_alu = stage->regs.rams.map_alu;
     auto &adrdist = stage->regs.rams.match.adrdist;
     stage->regs.cfg_regs.idle_dump_ctl[logical_id].idletime_dump_size = layout_size() - 1;
-    stage->regs.cfg_regs.mau_cfg_lt_has_idle |= 1 << logical_id;
+    //stage->regs.cfg_regs.mau_cfg_lt_has_idle |= 1 << logical_id;
     for (Layout &row : layout) {
         auto &map_alu_row = map_alu.row[row.row];
         auto &adrmux = map_alu_row.adrmux;
@@ -102,6 +102,8 @@ void IdletimeTable::write_regs() {
     //adrdist.idletime_sweep_ctl[logical_id].idletime_en = 1;
     adrdist.idletime_sweep_ctl[logical_id].idletime_sweep_size = layout_size() - 1;
     adrdist.idletime_sweep_ctl[logical_id].idletime_sweep_interval = sweep_interval;
+    adrdist.movereg_ad_ctl[logical_id].movereg_ad_direct_idle = 1;
+    adrdist.movereg_ad_ctl[logical_id].movereg_ad_idle_size = precision_bits[precision];
 }
 
 void IdletimeTable::gen_stage_tbl_cfg(json::map &out) {

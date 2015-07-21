@@ -152,20 +152,20 @@ void MeterTable::write_regs() {
             if (prev_row == home->row/2U) {
                 swbox[prev_row].ctl.r_stats_alu_o_mux_select.r_stats_alu_o_sel_oflo_rd_b_i = 1;
                 swbox[prev_row].ctl.b_oflo_wr_o_mux_select.b_oflo_wr_o_sel_stats_wr_r_i = 1;
-                map_alu.row[prev_row].wadr_swbox.ctl.b_oflo_wadr_o_mux_select
-                    .b_oflo_wadr_o_sel_r_stats_wadr_i = 1;
+                //map_alu.row[prev_row].wadr_swbox.ctl.b_oflo_wadr_o_mux_select
+                //    .b_oflo_wadr_o_sel_r_stats_wadr_i = 1;
                 prev_syn2port_ctl.stats_to_vbus_below = 1;
             } else {
                 swbox[prev_row].ctl.t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_b_i = 1;
                 swbox[prev_row].ctl.b_oflo_wr_o_mux_select.b_oflo_wr_o_sel_oflo_wr_t_i = 1;
-                map_alu.row[prev_row].wadr_swbox.ctl.b_oflo_wadr_o_mux_select
-                    .b_oflo_wadr_o_sel_t_oflo_wadr_i = 1;
+                //map_alu.row[prev_row].wadr_swbox.ctl.b_oflo_wadr_o_mux_select
+                //    .b_oflo_wadr_o_sel_t_oflo_wadr_i = 1;
                 prev_syn2port_ctl.synth2port_connect_below2above = 1; }
             prev_syn2port_ctl.synth2port_connect_below = 1;
             if (--prev_row == row) {
                 swbox[row].ctl.t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_r_i = 1;
                 swbox[row].ctl.r_oflo_wr_o_mux_select = 1;
-                map_alu.row[prev_row].wadr_swbox.ctl.r_oflo_wadr_o_mux_select = 1;
+                //map_alu.row[prev_row].wadr_swbox.ctl.r_oflo_wadr_o_mux_select = 1;
                 syn2port_ctl.oflo_to_vbus_above = 1;
                 syn2port_ctl.synth2port_connect_above = 1; } }
         for (int logical_col : logical_row.cols) {
@@ -191,9 +191,11 @@ void MeterTable::write_regs() {
             if (&logical_row == home) {
                 ram_address_mux_ctl.ram_stats_meter_adr_mux_select_meter = 1;
                 ram_address_mux_ctl.ram_ofo_stats_mux_select_statsmeter = 1;
+                ram_address_mux_ctl.synth2port_radr_mux_select_home_row = 1;
             } else {
                 ram_address_mux_ctl.ram_oflo_adr_mux_select_oflo = 1;
-                ram_address_mux_ctl.ram_ofo_stats_mux_select_oflo = 1; }
+                ram_address_mux_ctl.ram_ofo_stats_mux_select_oflo = 1;
+                ram_address_mux_ctl.synth2port_radr_mux_select_oflo = 1; }
             ram_address_mux_ctl.map_ram_wadr_mux_select = MapRam::Mux::SYNTHETIC_TWO_PORT;
             ram_address_mux_ctl.map_ram_wadr_mux_enable = 1;
             ram_address_mux_ctl.map_ram_radr_mux_select_smoflo = 1;
@@ -223,26 +225,27 @@ void MeterTable::write_regs() {
             //if (type & PACKETS) stat_ctl.stats_process_packets = 1;
             //stat_ctl.lrt_enable = 0;
             //stat_ctl.stats_alu_egress = gress;
-            map_alu.meter_group[row/2U].meter.meter_ctl.meter_bytecount_adjust = 0; // FIXME
-            map_alu.meter_group[row/2U].meter.meter_ctl.meter_rng_enable = 0; // FIXME
-            map_alu.meter_alu_group_data_delay_ctl[row/2U].meter_alu_right_group_delay =
-                10 + stage->tcam_delay(gress);
+            auto &meter_ctl = map_alu.meter_group[row/2U].meter.meter_ctl;
+            meter_ctl.meter_bytecount_adjust = 0; // FIXME
+            meter_ctl.meter_rng_enable = 0; // FIXME
+            auto &delay_ctl = map_alu.meter_alu_group_data_delay_ctl[row/2U];
+            delay_ctl.meter_alu_right_group_delay = 10 + stage->tcam_delay(gress, true, true);
             switch (type) {
                 case LPF:
-                    map_alu.meter_group[row/2U].meter.meter_ctl.lpf_enable = 1;
-                    map_alu.meter_alu_group_data_delay_ctl[row/2U].meter_alu_right_group_enable = 1;
+                    meter_ctl.lpf_enable = 1;
+                    delay_ctl.meter_alu_right_group_enable = 1;
                     break;
                 case RED:
-                    map_alu.meter_group[row/2U].meter.meter_ctl.lpf_enable = 1;
-                    map_alu.meter_group[row/2U].meter.meter_ctl.red_enable = 1;
+                    meter_ctl.lpf_enable = 1;
+                    meter_ctl.red_enable = 1;
                     break;
                 default:
-                    map_alu.meter_group[row/2U].meter.meter_ctl.meter_enable = 1;
+                    meter_ctl.meter_enable = 1;
                     break; }
             if (count == BYTES)
-                map_alu.meter_group[row/2U].meter.meter_ctl.meter_byte = 1;
+                meter_ctl.meter_byte = 1;
             if (gress == EGRESS)
-                map_alu.meter_group[row/2U].meter.meter_ctl.meter_alu_egress = 1;
+                meter_ctl.meter_alu_egress = 1;
         } else {
             auto &adr_ctl = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
             if (home->row >= 8 && logical_row.row < 8) {
@@ -315,8 +318,8 @@ void MeterTable::write_regs() {
         auto &icxbar = adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id];
         icxbar.address_distr_to_logical_rows = 1U << home->row;
         icxbar.address_distr_to_overflow = push_on_overflow;
-        if (direct)
-            stage->regs.cfg_regs.mau_cfg_lt_meter_are_direct |= 1 << m->logical_id;
+        //if (direct)
+        //    stage->regs.cfg_regs.mau_cfg_lt_meter_are_direct |= 1 << m->logical_id;
         merge.mau_mapram_color_map_to_logical_ctl[m->logical_id/8].set_subfield(
             0x4 | (color_maprams[0].row/2U), 3 * (m->logical_id%8U), 3);
         // FIXME -- this bus_index calculation is probably wrong

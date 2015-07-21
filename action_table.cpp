@@ -310,6 +310,8 @@ void ActionTable::write_regs() {
                 else {
                     adr_mux_sel = UnitRam::AdrMux::OVERFLOW;
                     ram_mux.ram_oflo_adr_mux_select_oflo = 1; } }
+            if (gress)
+                stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row);
             if (++idx == depth) { idx = 0; ++word; } }
         prev_switch_ctl = &switch_ctl;
         prev_logical_row = logical_row.row; }

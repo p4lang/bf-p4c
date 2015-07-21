@@ -86,7 +86,7 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
                                 hash_groups[id].seed = el.value.i;
                         } else if (el.key == "table") {
                             if (el.value.type == tINT) {
-                                if (el.value.i < 0 || el.value.i >= EXACT_HASH_GROUPS)
+                                if (el.value.i < 0 || el.value.i >= HASH_TABLES)
                                     error(el.value.lineno, "invalid hash group descriptor");
                                 else
                                     hash_groups[id].tables |= 1U << el.value.i;
@@ -99,14 +99,16 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
                 if (tbl) {
                     for (auto &v : *tbl) {
                         if (!CHECKTYPE(v, tINT)) continue;
-                        if (v.i < 0 || v.i >= EXACT_HASH_GROUPS)
+                        if (v.i < 0 || v.i >= HASH_TABLES)
                             error(v.lineno, "invalid hash group descriptor");
                         else
                             hash_groups[id].tables |= 1U << v.i; } }
                 continue; }
-	    if (kv.key.vec.size != 2 || kv.key[1].type != tINT ||
-                kv.key[1].i >= EXACT_HASH_GROUPS)
-            {
+            if (kv.key.vec.size == 3 && kv.key[1] == "table") {
+                free_value(&kv.key[1]);
+                kv.key[1] = kv.key[2];
+                kv.key.vec.size = 2; }
+	    if (kv.key.vec.size != 2 || kv.key[1].type != tINT || kv.key[1].i >= HASH_TABLES) {
 		error(kv.key.lineno, "invalid hash descriptor");
 		continue; }
             if (!CHECKTYPE(kv.value, tMAP)) continue;
@@ -206,6 +208,10 @@ bool InputXbar::conflict(const HashGrp &a, const HashGrp &b) {
 /* FIXME -- this is questionable, but the compiler produces hash groups that conflict
  * FIXME -- so we try to tag ones that may be ok as merely warnings */
 bool InputXbar::can_merge(HashGrp &a, HashGrp &b) {
+#if 1
+    a.tables |= b.tables;
+    b.tables |= a.tables;
+#endif
     if (a.tables < b.tables || a.seed < b.seed) {
         a.tables |= b.tables;
         a.seed |= b.seed;
@@ -243,9 +249,9 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
         HashExpr *prev = 0;
         for (auto &col : hash.second) {
             if (col.second.fn && col.second.fn != prev)
-                ok = (prev = col.second.fn)->check_ixbar(this, hash.first);
+                ok = (prev = col.second.fn)->check_ixbar(this, hash.first/2U);
             if (ok && col.second.fn)
-                col.second.fn->gen_data(col.second.data, col.second.bit, this, hash.first); }
+                col.second.fn->gen_data(col.second.data, col.second.bit, this, hash.first/2U); }
         bool add_to_use = true;
         for (InputXbar *other : use[hash.first]) {
             if (other == this) {
@@ -351,7 +357,7 @@ void InputXbar::pass2(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
     for (auto &hash : hash_tables)
         for (auto &col : hash.second)
             if (!col.second.data && col.second.fn)
-                col.second.fn->gen_data(col.second.data, col.second.bit, this, hash.first);
+                col.second.fn->gen_data(col.second.data, col.second.bit, this, hash.first/2U);
 }
 
 void InputXbar::write_regs() {
@@ -404,11 +410,11 @@ void InputXbar::write_regs() {
         for (auto &col : ht.second) {
             int c = col.first;
             HashCol &h = col.second;
-            for (int word = 0; word < 8; word++) {
+            for (int word = 0; word < 4; word++) {
                 unsigned data = h.data.getrange(word*16, 16);
                 unsigned valid = (h.valid >> word*2) & 3;
                 if (data == 0 && valid == 0) continue;
-                auto &w = hash.galois_field_matrix[id*8 + word][c];
+                auto &w = hash.galois_field_matrix[id*4 + word][c];
                 w.byte0 = data & 0xff;
                 w.byte1 = (data >> 8) & 0xff;
                 w.valid0 = valid & 1;

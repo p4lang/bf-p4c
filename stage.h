@@ -19,8 +19,12 @@ enum {
     TCAM_ROWS = 12,
     TCAM_UNITS_PER_ROW = 2,
     TCAM_XBAR_GROUPS = 12,
+    TCAM_XBAR_GROUP_SIZE = 44,
     EXACT_XBAR_GROUPS = 8,
+    EXACT_XBAR_GROUP_SIZE = 128,
+    HASH_TABLES = 16,
     EXACT_HASH_GROUPS = 8,
+    EXACT_HASH_GROUP_SIZE = 52,
     NEXT_TABLE_SUCCESSOR_TABLE_DEPTH = 8,
     MAX_IMMED_ACTION_DATA = 32,
     ACTION_DATA_8B_SLOTS = 16,
@@ -53,8 +57,8 @@ public:
     Alloc2D<Table *, SRAM_ROWS, 2>                      tcam_indirect_bus_use;
     Alloc1D<Table *, LOGICAL_TABLES_PER_STAGE>          logical_id_use;
     Alloc1D<Table *, TCAM_TABLES_PER_STAGE>          	tcam_id_use;
-    Alloc1D<std::vector<InputXbar *>, 8>                exact_ixbar;
-    Alloc1D<std::vector<InputXbar *>, 16>               tcam_ixbar;
+    Alloc1D<std::vector<InputXbar *>, 16>               exact_ixbar;
+    Alloc1D<std::vector<InputXbar *>, TCAM_XBAR_GROUPS> tcam_ixbar;
     Alloc1D<std::pair<Table *, HashDistribution *>, 6>  hash_dist_use;
     Alloc1D<Table *, ACTION_DATA_BUS_SLOTS>             action_bus_use;
     Alloc1D<Table *, LOGICAL_SRAM_ROWS>                 action_data_use,
@@ -86,7 +90,7 @@ public:
     Stage(Stage &&);
     ~Stage();
     void write_regs();
-    int tcam_delay(gress_t gress, bool group = true);
+    int tcam_delay(gress_t gress, bool group = true, bool selector = false);
 };
 
 /* constants for various config params */

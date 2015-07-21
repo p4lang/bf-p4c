@@ -120,7 +120,7 @@ void GatewayTable::pass1() {
 	     LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
     alloc_busses(stage->sram_match_bus_use);
     if (gw_unit < 0) gw_unit = layout[0].bus;
-    if (input_xbar) input_xbar->pass1(stage->exact_ixbar, 128);
+    if (input_xbar) input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
     check_match_key(match, "match", 44);
     check_match_key(xor_match, "xor", 32);
     if (table.size() > 4)
@@ -143,7 +143,7 @@ void GatewayTable::pass1() {
 }
 void GatewayTable::pass2() {
     LOG1("### Gateway table " << name() << " pass2");
-    if (input_xbar) input_xbar->pass2(stage->exact_ixbar, 128);
+    if (input_xbar) input_xbar->pass2(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
 }
 
 /* FIXME -- how to deal with (or even specify) matches in the upper 24 bits coming from

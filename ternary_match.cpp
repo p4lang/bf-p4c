@@ -126,7 +126,7 @@ void TernaryMatchTable::pass1() {
              TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
     alloc_busses(stage->tcam_match_bus_use);
     if (input_xbar) {
-        input_xbar->pass1(stage->tcam_ixbar, 44);
+        input_xbar->pass1(stage->tcam_ixbar, TCAM_XBAR_GROUP_SIZE);
         if (match.empty()) {
             match.resize(input_xbar->tcam_width());
             for (unsigned i = 0; i < match.size(); i++) {
@@ -180,7 +180,7 @@ void TernaryMatchTable::pass1() {
 }
 void TernaryMatchTable::pass2() {
     LOG1("### Ternary match table " << name() << " pass2");
-    if (input_xbar) input_xbar->pass2(stage->tcam_ixbar, 44);
+    if (input_xbar) input_xbar->pass2(stage->tcam_ixbar, TCAM_XBAR_GROUP_SIZE);
     if (!indirect && indirect_bus < 0) {
         for (int i = 0; i < 16; i++)
             if (!stage->tcam_indirect_bus_use[i/2][i&1]) {
@@ -287,6 +287,7 @@ void TernaryMatchTable::write_regs() {
     if (actions) actions->write_regs(this);
     if (gateway) gateway->write_regs();
     if (idletime) idletime->write_regs();
+    stage->regs.cfg_regs.mau_cfg_movereg_tcam_only |= 1U << logical_id;
 }
 
 std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl_cfg(const char *type, bool skip_spare_bank) {
@@ -472,7 +473,9 @@ void TernaryIndirectTable::write_regs() {
             unitram_config.unitram_enable = 1;
             auto &xbar_ctl = stage->regs.rams.map_alu.row[row.row].vh_xbars
                     .adr_dist_tind_adr_xbar_ctl[row.bus];
-            setup_muxctl(xbar_ctl, tcam_id); }
+            setup_muxctl(xbar_ctl, tcam_id);
+            if (gress)
+                stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row.row); }
         int bus = row.row*2 + row.bus;
         merge.tind_ram_data_size[bus] = format->log2size - 1;
         setup_muxctl(merge.tcam_match_adr_to_physical_oxbar_outputmap[bus], tcam_id);

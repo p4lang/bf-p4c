@@ -118,7 +118,7 @@ void ExactMatchTable::pass1() {
         if (action.args.size() < 1 || !action.args[0].field ||
             action.args[0].field->size <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
-    input_xbar->pass1(stage->exact_ixbar, 128);
+    input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
     format->setup_immed(this);
     group_info.resize(format->groups());
     unsigned fmt_width = (format->size + 127)/128;
@@ -411,7 +411,7 @@ static int find_in_ixbar(Table *table, std::vector<Phv::Ref> &match) {
 
 void ExactMatchTable::pass2() {
     LOG1("### Exact match table " << name() << " pass2");
-    input_xbar->pass2(stage->exact_ixbar, 128);
+    input_xbar->pass2(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
     if (action_bus)
         action_bus->pass2(this);
     word_ixbar_group.resize(match_in_word.size());
@@ -526,7 +526,8 @@ void ExactMatchTable::write_regs() {
             for (; word_group < 5; word_group++) {
                 ram.match_bytemask[word_group].mask_bytes_0_to_13 = 0x3fff;
                 ram.match_bytemask[word_group].mask_nibbles_28_to_31 = 0xf; }
-        }
+            if (gress)
+                stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row.row); }
         /* setup input xbars to get data to the right places on the bus(es) */
         auto &vh_xbar = stage->regs.rams.array.row[row.row].vh_xbar;
         bool using_match = false;

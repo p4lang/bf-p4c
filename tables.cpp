@@ -36,7 +36,7 @@ Table::Type::~Type() {
         all = 0; }
 }
 
-int Table::table_id() { return (stage->stageno << 4) + logical_id; }
+int Table::table_id() const { return (stage->stageno << 4) + logical_id; }
 
 void Table::Call::setup(const value_t &val, Table *tbl) {
     if (!CHECKTYPE2(val, tSTR, tCMD)) return;
@@ -799,6 +799,10 @@ void MatchTable::write_regs(int type, Table *result) {
         result->action_bus->write_immed_regs(result);
 
     if (input_xbar) input_xbar->write_regs();
+
+    if (options.match_compiler && dynamic_cast<HashActionTable *>(this))
+        return; // skip the rest
+    stage->regs.cfg_regs.mau_cfg_lt_thread |= 1U << logical_id;
 }
 
 int Table::find_on_actionbus(Format::Field *f, int off) {
@@ -858,7 +862,7 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(const c
     return std::make_unique<json::map>(std::move(mra));
 }
 
-SelectionTable *AttachedTables::get_selector() {
+SelectionTable *AttachedTables::get_selector() const {
     return dynamic_cast<SelectionTable *>((Table *)selector); }
 
 bool AttachedTables::run_at_eop() {

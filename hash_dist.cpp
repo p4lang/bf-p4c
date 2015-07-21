@@ -1,7 +1,7 @@
 #include "hash_dist.h"
 #include "stage.h"
 
-HashDistribution::HashDistribution(value_t &v) : lineno(v.lineno) {
+HashDistribution::HashDistribution(value_t &v, int u) : lineno(v.lineno), use(u) {
     if (v.type ==  tMAP) {
         int func = -1, group = -1;
         for (auto &kv : MapIterChecked(v.map)) {
@@ -39,7 +39,9 @@ HashDistribution::HashDistribution(value_t &v) : lineno(v.lineno) {
         id = v[1].i*3 + v[2].i;
         mask = v[3].i; }
 }
-HashDistribution::HashDistribution(int id_, value_t &data) : lineno(data.lineno), id (id_) {
+HashDistribution::HashDistribution(int id_, value_t &data, int u)
+    : lineno(data.lineno), id (id_), use(u)
+{
     if (id < 0 || id >= 6)
         error(data.lineno, "Invalid hash_dist unit id %d", id);
     if (CHECKTYPE(data, tMAP))
@@ -57,16 +59,16 @@ HashDistribution::HashDistribution(int id_, value_t &data) : lineno(data.lineno)
                 warning(kv.key.lineno, "ignoring unknown item %s in hash_dist", kv.key.s); }
 }
 
-void HashDistribution::parse(std::vector<HashDistribution> &out, value_t &data) {
+void HashDistribution::parse(std::vector<HashDistribution> &out, value_t &data, int use) {
     if (data.type == tVEC && data.vec.size > 0 && data[0].type != tINT) {
         for (auto &v : data.vec)
-            out.emplace_back(v);
+            out.emplace_back(v, use);
     } else if (data.type == tMAP && data.map.size > 0 && data.map[0].key.type == tINT) {
         for (auto &kv : data.map)
             if (CHECKTYPE(kv.key, tINT))
-                out.emplace_back(kv.key.i, kv.value);
+                out.emplace_back(kv.key.i, kv.value, use);
     } else
-        out.emplace_back(data);
+        out.emplace_back(data, use);
 }
 
 void HashDistribution::pass1(Table *tbl) {
@@ -87,12 +89,12 @@ void HashDistribution::pass1(Table *tbl) {
             warning(tbl->stage->hash_dist_use[m].second->lineno, "previous use here"); } }
 }
 
-void HashDistribution::write_regs(Stage *stage, gress_t gress, int type, bool non_linear) {
+void HashDistribution::write_regs(Table *tbl, int type, bool non_linear) {
     /* from HashDistributionResourceAllocation.write_config: */
-    auto &merge = stage->regs.rams.match.merge;
+    auto &merge = tbl->stage->regs.rams.match.merge;
     if (non_linear)
         merge.mau_selector_hash_sps_enable |= 1 << id;
-    if (gress == EGRESS)
+    if (tbl->gress == EGRESS)
         merge.mau_hash_group_config.hash_group_egress |= 1 << id;
     merge.mau_hash_group_config.hash_group_enable |= 1 << id;
     merge.mau_hash_group_config.hash_group_sel.set_subfield(hash_group, 4 * (id/3), 3);
@@ -106,4 +108,7 @@ void HashDistribution::write_regs(Stage *stage, gress_t gress, int type, bool no
     case 1: merge.mau_hash_group_expand[id/3].hash_slice_group1_expand = 0; break;
     case 2: merge.mau_hash_group_expand[id/3].hash_slice_group2_expand = 0; break;
     default: assert(0); }
+    if (use >= 0)
+        merge.mau_hash_group_xbar_ctl[use][tbl->logical_id/8U].set_subfield(
+            8|id, 4*(tbl->logical_id%8U), 4);
 }
