@@ -159,8 +159,6 @@ void SelectionTable::write_regs() {
             unsigned col = logical_col + 6*side;
             auto &ram = stage->regs.rams.array.row[row].ram[col];
             auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
-            ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::STATISTICS;
-            ram.unit_ram_ctl.match_ram_read_data_mux_select = UnitRam::DataMux::STATISTICS;
             unitram_config.unitram_type = UnitRam::SELECTOR;
             unitram_config.unitram_logical_table = logical_id;
             if (!options.match_compiler) // FIXME -- compiler doesn't set this?
@@ -170,11 +168,12 @@ void SelectionTable::write_regs() {
             else
                 unitram_config.unitram_egress = 1;
             unitram_config.unitram_enable = 1;
-            auto &vh_adr_xbar = stage->regs.rams.array.row[row].vh_adr_xbar;
-            setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + logical_row.bus],
-                         selection_hash);
-            vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
-                bitmask2bytemask(input_xbar->hash_group_bituse());
+            if (&logical_row == home) {
+                auto &vh_adr_xbar = stage->regs.rams.array.row[row].vh_adr_xbar;
+                setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + logical_row.bus],
+                             selection_hash);
+                vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
+                    bitmask2bytemask(input_xbar->hash_group_bituse()); }
             auto &selector_ctl = map_alu.meter_group[meter_group].selector.selector_alu_ctl;
             selector_ctl.sps_nonlinear_hash_enable = non_linear_hash ? 1 : 0;
             if (resilient_hash)
@@ -191,10 +190,14 @@ void SelectionTable::write_regs() {
             auto &ram_address_mux_ctl = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
             ram_address_mux_ctl.ram_unitram_adr_mux_select = UnitRam::AdrMux::STATS_METERS;
             if (&logical_row == home) {
+                ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::STATISTICS;
+                ram.unit_ram_ctl.match_ram_read_data_mux_select = UnitRam::DataMux::STATISTICS;
                 ram_address_mux_ctl.ram_stats_meter_adr_mux_select_meter = 1;
                 ram_address_mux_ctl.ram_ofo_stats_mux_select_statsmeter = 1;
                 ram_address_mux_ctl.synth2port_radr_mux_select_home_row = 1;
             } else {
+                ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::OVERFLOW;
+                ram.unit_ram_ctl.match_ram_read_data_mux_select = UnitRam::DataMux::OVERFLOW;
                 ram_address_mux_ctl.ram_oflo_adr_mux_select_oflo = 1;
                 ram_address_mux_ctl.ram_ofo_stats_mux_select_oflo = 1;
                 ram_address_mux_ctl.synth2port_radr_mux_select_oflo = 1; }

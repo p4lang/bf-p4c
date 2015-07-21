@@ -152,9 +152,6 @@ void CounterTable::write_regs() {
         for (int logical_col : logical_row.cols) {
             unsigned sram_col = logical_col + 6*side;
             auto &ram = stage->regs.rams.array.row[row].ram[sram_col];
-            ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::STATISTICS;
-            ram.unit_ram_ctl.match_ram_read_data_mux_select = &logical_row == home
-                ? UnitRam::DataMux::STATISTICS : UnitRam::DataMux::OVERFLOW;
             auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
             unitram_config.unitram_type = UnitRam::STATISTICS;
             unitram_config.unitram_logical_table = logical_id;
@@ -169,10 +166,14 @@ void CounterTable::write_regs() {
             auto &ram_address_mux_ctl = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
             ram_address_mux_ctl.ram_unitram_adr_mux_select = UnitRam::AdrMux::STATS_METERS;
             if (&logical_row == home) {
+                ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::STATISTICS;
+                ram.unit_ram_ctl.match_ram_read_data_mux_select = UnitRam::DataMux::STATISTICS;
                 ram_address_mux_ctl.ram_stats_meter_adr_mux_select_stats = 1;
                 ram_address_mux_ctl.ram_ofo_stats_mux_select_statsmeter = 1;
                 ram_address_mux_ctl.synth2port_radr_mux_select_home_row = 1;
             } else {
+                ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::STATISTICS;  // FIXME -- is correct?
+                ram.unit_ram_ctl.match_ram_read_data_mux_select = UnitRam::DataMux::OVERFLOW;
                 ram_address_mux_ctl.ram_oflo_adr_mux_select_oflo = 1;
                 ram_address_mux_ctl.ram_ofo_stats_mux_select_oflo = 1;
                 ram_address_mux_ctl.synth2port_radr_mux_select_oflo = 1; }
