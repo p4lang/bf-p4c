@@ -1,4 +1,5 @@
 #include "algorithm.h"
+#include "data_switchbox.h"
 #include "input_xbar.h"
 #include "misc.h"
 #include "stage.h"
@@ -135,7 +136,7 @@ void SelectionTable::write_regs() {
     Layout *home = &layout[0];
     unsigned logical_row_use = 0;
     bool push_on_overflow = false;
-    auto &swbox = stage->regs.rams.array.switchbox.row;
+    DataSwitchboxSetup swbox(stage, home->row/2U);
     for (Layout &logical_row : layout) {
         unsigned row = logical_row.row/2;
         unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
@@ -149,8 +150,7 @@ void SelectionTable::write_regs() {
         auto mapram = logical_row.maprams.begin();
         auto &map_alu =  stage->regs.rams.map_alu;
         auto &map_alu_row =  map_alu.row[row];
-        int syn2port_bus = &logical_row == home ? 0 : 1;
-        auto &syn2port_members = map_alu_row.i2portctl.synth2port_hbus_members[syn2port_bus][side];
+        swbox.setup_row(row);
         unsigned meter_group = row/2;
         // FIXME meter_group based stuff should only be set once (on the home row?)
         // FIXME rather than for every column of every row
@@ -205,7 +205,7 @@ void SelectionTable::write_regs() {
             ram_address_mux_ctl.map_ram_wadr_mux_enable = 1;
             ram_address_mux_ctl.map_ram_radr_mux_select_smoflo = 1;
 
-            syn2port_members |= 1U << logical_col;
+            swbox.setup_col(logical_col);
 
             auto &mapram_config = map_alu_row.adrmux.mapram_config[*mapram];
             auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[*mapram++];
@@ -222,9 +222,7 @@ void SelectionTable::write_regs() {
             //if (!options.match_compiler) // FIXME -- compiler doesn't set this?
                 mapram_ctl.mapram_vpn_limit = maxvpn;
             ++vpn; }
-        if (&logical_row == home) {
-            swbox[row].ctl.r_stats_alu_o_mux_select.r_stats_alu_o_sel_stats_rd_r_i = 1;
-        } else {
+        if (&logical_row != home) {
             auto &adr_ctl = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
             if (home->row >= 8 && logical_row.row < 8) {
                 adr_ctl.adr_dist_oflo_adr_xbar_source_index = 0;
