@@ -1,6 +1,11 @@
 #include "stage.h"
 #include "tables.h"
 
+/*
+ * Code to handle programming of the Ram Data Bus Horizontal/Vertical Switchbox
+ * see section 6.2.4.4 of the MAU uArch docs
+ */
+
 class DataSwitchboxSetup {
     Stage *stage;
     unsigned    home_row, prev_row;

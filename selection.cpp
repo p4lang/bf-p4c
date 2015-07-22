@@ -134,7 +134,6 @@ void SelectionTable::write_regs() {
     LOG1("### Selection table " << name() << " write_regs");
     if (input_xbar) input_xbar->write_regs();
     Layout *home = &layout[0];
-    unsigned logical_row_use = 0;
     bool push_on_overflow = false;
     DataSwitchboxSetup swbox(stage, home->row/2U);
     for (Layout &logical_row : layout) {
@@ -154,7 +153,6 @@ void SelectionTable::write_regs() {
         unsigned meter_group = row/2;
         // FIXME meter_group based stuff should only be set once (on the home row?)
         // FIXME rather than for every column of every row
-        logical_row_use |= 1U << logical_row.row;
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;
             auto &ram = stage->regs.rams.array.row[row].ram[col];
@@ -235,7 +233,7 @@ void SelectionTable::write_regs() {
     auto &merge = stage->regs.rams.match.merge;
     for (MatchTable *m : match_tables) {
         auto &icxbar = stage->regs.rams.match.adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id];
-        icxbar.address_distr_to_logical_rows = logical_row_use;
+        icxbar.address_distr_to_logical_rows = 1 << home->row;
         icxbar.address_distr_to_overflow = push_on_overflow;
         if (auto &act = m->get_action())
             merge.mau_selector_action_entry_size[m->logical_id] = act->format->log2size - 3; }
