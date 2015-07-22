@@ -197,18 +197,17 @@ Stage::Stage(Stage &&a) : Stage_data(std::move(a)) {
             regs.emit_fieldname(out, addr, end); });
 }
 
-static int tcam_delay(int use_flags, bool selector = false) {
+static int tcam_delay(int use_flags) {
     if (use_flags & Stage::USE_TCAM_PIPED)
         return 3;
     if (use_flags & Stage::USE_TCAM)
         return 3;
-    if (selector && (use_flags & Stage::USE_WIDE_SELECTOR))
+    if (use_flags & Stage::USE_WIDE_SELECTOR)
         return 3;
     return 0;
 }
-int Stage::tcam_delay(gress_t gress, bool group, bool selector) {
-    return ::tcam_delay((group && !options.match_compiler)
-                        ? group_table_use[gress] : table_use[gress], selector);
+int Stage::tcam_delay(gress_t gress) {
+    return ::tcam_delay(options.match_compiler ? table_use[gress] : group_table_use[gress]);
 }
 static int adr_dist_delay(int use_flags) {
     if (use_flags & Stage::USE_SELECTOR)

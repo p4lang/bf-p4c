@@ -181,7 +181,7 @@ void SelectionTable::write_regs() {
             selector_ctl.resilient_hash_mode = resilient_hash ? 1 : 0;
             selector_ctl.selector_enable = 1;
             auto &delay_ctl = map_alu.meter_alu_group_data_delay_ctl[meter_group];
-            delay_ctl.meter_alu_right_group_delay = 10 + stage->tcam_delay(gress, true, true);
+            delay_ctl.meter_alu_right_group_delay = 10 + stage->tcam_delay(gress);
             delay_ctl.meter_alu_right_group_enable = resilient_hash ? 3 : 1;
             //delay_ctl.meter_alu_right_group_sel = 1;
 

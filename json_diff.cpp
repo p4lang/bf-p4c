@@ -208,9 +208,10 @@ void print_diff(json::vector *a, json::vector *b, int indent) {
         if (!equiv(*p1, *p2)) {
             auto s1 = find(p1, a->end(), p2->get());
             auto s2 = find(p2, b->end(), p1->get());
-            if (typeid(**p1) == typeid(**p2) && p1 - a->begin() == p2 - b->begin() &&
-                (s1 - p1 == s2 - p2 || typeid(**p1) == typeid(json::vector) ||
-                 typeid(**p1) == typeid(json::map)))
+            if ((p1 + 1 != a->end() && p2 + 1 != b->end() && equiv(p1[1], p2[1])) ||
+                (typeid(**p1) == typeid(**p2) && p1 - a->begin() == p2 - b->begin() &&
+                 (s1 - p1 == s2 - p2 || typeid(**p1) == typeid(json::vector) ||
+                  typeid(**p1) == typeid(json::map))))
             {
                 do_prefix(indent, " ");
                 std::cout << '[' << p1 - a->begin() << "]";

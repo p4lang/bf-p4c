@@ -90,7 +90,7 @@ public:
     Stage(Stage &&);
     ~Stage();
     void write_regs();
-    int tcam_delay(gress_t gress, bool group = true, bool selector = false);
+    int tcam_delay(gress_t gress);
 };
 
 /* constants for various config params */

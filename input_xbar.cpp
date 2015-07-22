@@ -208,7 +208,7 @@ bool InputXbar::conflict(const HashGrp &a, const HashGrp &b) {
 /* FIXME -- this is questionable, but the compiler produces hash groups that conflict
  * FIXME -- so we try to tag ones that may be ok as merely warnings */
 bool InputXbar::can_merge(HashGrp &a, HashGrp &b) {
-#if 1
+#if 0
     a.tables |= b.tables;
     b.tables |= a.tables;
 #endif

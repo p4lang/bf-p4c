@@ -130,6 +130,7 @@ public:
     Phv::Ref                            parser_error[2];
     std::vector<Phv::Ref>               multi_write, init_zero;
     bitvec                              phv_use[2], phv_allow_multi_write, phv_init_valid;
+    // FIXME -- multi_write stuff should be split by gress?
     int                                 hdr_len_adj[2], meta_opt;
 
 private:

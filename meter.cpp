@@ -229,7 +229,7 @@ void MeterTable::write_regs() {
             meter_ctl.meter_bytecount_adjust = 0; // FIXME
             meter_ctl.meter_rng_enable = 0; // FIXME
             auto &delay_ctl = map_alu.meter_alu_group_data_delay_ctl[row/2U];
-            delay_ctl.meter_alu_right_group_delay = 10 + stage->tcam_delay(gress, true, true);
+            delay_ctl.meter_alu_right_group_delay = 10 + stage->tcam_delay(gress);
             switch (type) {
                 case LPF:
                     meter_ctl.lpf_enable = 1;
