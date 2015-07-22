@@ -90,6 +90,9 @@ public:
     Stage(Stage &&);
     ~Stage();
     void write_regs();
+    int adr_dist_delay(gress_t gress);
+    int pipelength(gress_t gress);
+    int pred_cycle(gress_t gress);
     int tcam_delay(gress_t gress);
 };
 

@@ -197,72 +197,52 @@ Stage::Stage(Stage &&a) : Stage_data(std::move(a)) {
             regs.emit_fieldname(out, addr, end); });
 }
 
-static int tcam_delay(int use_flags) {
-    if (use_flags & Stage::USE_TCAM_PIPED)
+int Stage::tcam_delay(gress_t gress) {
+    if (group_table_use[gress] & Stage::USE_TCAM_PIPED)
         return 3;
-    if (use_flags & Stage::USE_TCAM)
+    if (group_table_use[gress] & Stage::USE_TCAM)
         return 3;
-    if (use_flags & Stage::USE_WIDE_SELECTOR)
+    if (group_table_use[gress] & Stage::USE_WIDE_SELECTOR)
         return 3;
     return 0;
 }
-int Stage::tcam_delay(gress_t gress) {
-    return ::tcam_delay(options.match_compiler ? table_use[gress] : group_table_use[gress]);
-}
-static int adr_dist_delay(int use_flags) {
-    if (use_flags & Stage::USE_SELECTOR)
+
+int Stage::adr_dist_delay(gress_t gress) {
+    if (group_table_use[gress] & Stage::USE_SELECTOR)
         return 9;
-    else if (use_flags & Stage::USE_METER)
+    else if (group_table_use[gress] & Stage::USE_METER)
         return 5;
-    else if (use_flags & Stage::USE_STATEFUL)
+    else if (group_table_use[gress] & Stage::USE_STATEFUL)
         return 5;
     else
         return 0;
 }
 
-static int pipelength(int use_flags) {
-    return 15 + tcam_delay(use_flags) + adr_dist_delay(use_flags);
+int Stage::pipelength(gress_t gress) {
+    return 15 + tcam_delay(gress) + adr_dist_delay(gress);
 }
-static int pred_cycle(int use_flags) {
-    return 8 + tcam_delay(use_flags);
+
+int Stage::pred_cycle(gress_t gress) {
+    return 8 + tcam_delay(gress);
 }
 
 void Stage::write_regs() {
     /* FIXME -- most of the values set here are 'placeholder' constants copied
      * from build_pipeline_output_2.py in the compiler */
     auto &merge = regs.rams.match.merge;
-    // FIXME -- there are a number of places where the compiler appears to use the
-    // FIXME -- use stats of just the current stage, rather than a group of concurrent
-    // FIXME -- stages to program delays.
-    int *match_compiler_table_use = options.match_compiler ? group_table_use : group_table_use;
-    merge.exact_match_delay_config.exact_match_delay_ingress =
-        match_compiler_table_use[INGRESS] & (Stage::USE_TCAM | Stage::USE_WIDE_SELECTOR) ? 3 : 0;
-    merge.exact_match_delay_config.exact_match_delay_egress =
-        match_compiler_table_use[EGRESS] & (Stage::USE_TCAM | Stage::USE_WIDE_SELECTOR) ? 3 : 0;
+    merge.exact_match_delay_config.exact_match_delay_ingress = tcam_delay(INGRESS);
+    merge.exact_match_delay_config.exact_match_delay_egress = tcam_delay(EGRESS);
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         if (stageno == 0) {
-            merge.predication_ctl[gress].start_table_fifo_delay0 = pred_cycle(table_use[gress]) - 1;
+            merge.predication_ctl[gress].start_table_fifo_delay0 = pred_cycle(gress) - 1;
             merge.predication_ctl[gress].start_table_fifo_delay1 = 0;
             merge.predication_ctl[gress].start_table_fifo_enable = 1;
         } else switch (stage_dep[gress]) {
         case MATCH_DEP:
-            if (options.match_compiler) {
-                merge.predication_ctl[gress].start_table_fifo_delay0 =
-                    pipelength(this[-1].table_use[gress])
-                    - pred_cycle(this[-1].table_use[gress])
-                    + pred_cycle(table_use[gress]) - 1;
-                merge.predication_ctl[gress].start_table_fifo_delay1 =
-                    pipelength(this[-1].table_use[gress])
-                    - pred_cycle(this[-1].table_use[gress]) + 1;
-            } else {
-                merge.predication_ctl[gress].start_table_fifo_delay0 =
-                    pipelength(this[-1].group_table_use[gress])
-                    - pred_cycle(this[-1].table_use[gress])
-                    + pred_cycle(table_use[gress]) - 1;
-                merge.predication_ctl[gress].start_table_fifo_delay1 =
-                    pipelength(this[-1].group_table_use[gress])
-                    - pred_cycle(this[-1].table_use[gress]) + 1;
-            }
+            merge.predication_ctl[gress].start_table_fifo_delay0 =
+                this[-1].pipelength(gress) - this[-1].pred_cycle(gress) + pred_cycle(gress) - 1;
+            merge.predication_ctl[gress].start_table_fifo_delay1 =
+                this[-1].pipelength(gress) - this[-1].pred_cycle(gress) + 1;
             merge.predication_ctl[gress].start_table_fifo_enable = 3;
             break;
         case ACTION_DEP:
@@ -275,21 +255,21 @@ void Stage::write_regs() {
             break;
         default:
             assert(0); }
-        regs.rams.match.adrdist.adr_dist_pipe_delay[gress] = adr_dist_delay(match_compiler_table_use[gress]);
+        regs.rams.match.adrdist.adr_dist_pipe_delay[gress] = adr_dist_delay(gress);
         auto &deferred_eop_bus_delay = regs.rams.match.adrdist.deferred_eop_bus_delay[gress];
-        deferred_eop_bus_delay.eop_internal_delay_fifo = pred_cycle(match_compiler_table_use[gress]);
+        deferred_eop_bus_delay.eop_internal_delay_fifo = pred_cycle(gress);
         /* FIXME -- making this depend on the dependecny of the next stage seems wrong */
         if (stageno == AsmStage::numstages()-1)
-            deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(match_compiler_table_use[gress]);
+            deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress);
         else if (this[1].stage_dep[gress] == MATCH_DEP)
-            deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(match_compiler_table_use[gress]);
+            deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress);
         else if (this[1].stage_dep[gress] == ACTION_DEP)
             deferred_eop_bus_delay.eop_output_delay_fifo = 2;
         else
             deferred_eop_bus_delay.eop_output_delay_fifo = 1;
         deferred_eop_bus_delay.eop_delay_fifo_en = 1;
-        regs.dp.action_output_delay[gress] = pipelength(match_compiler_table_use[gress]) - 3;
-        regs.dp.pipelength_added_stages[gress] = pipelength(match_compiler_table_use[gress]) - 15;
+        regs.dp.action_output_delay[gress] = pipelength(gress) - 3;
+        regs.dp.pipelength_added_stages[gress] = pipelength(gress) - 15;
         if (stageno != 0) {
             regs.dp.cur_stage_dependency_on_prev[gress] = MATCH_DEP - stage_dep[gress];
             if (stage_dep[gress] == CONCURRENT)
