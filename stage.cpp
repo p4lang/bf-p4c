@@ -259,9 +259,12 @@ void Stage::write_regs() {
         auto &deferred_eop_bus_delay = regs.rams.match.adrdist.deferred_eop_bus_delay[gress];
         deferred_eop_bus_delay.eop_internal_delay_fifo = pred_cycle(gress);
         /* FIXME -- making this depend on the dependecny of the next stage seems wrong */
-        if (stageno == AsmStage::numstages()-1)
-            deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress);
-        else if (this[1].stage_dep[gress] == MATCH_DEP)
+        if (stageno == AsmStage::numstages()-1) {
+            if (AsmStage::numstages() < NUM_MAU_STAGES)
+                deferred_eop_bus_delay.eop_output_delay_fifo = 1;
+            else
+                deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress);
+        } else if (this[1].stage_dep[gress] == MATCH_DEP)
             deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress);
         else if (this[1].stage_dep[gress] == ACTION_DEP)
             deferred_eop_bus_delay.eop_output_delay_fifo = 2;
@@ -276,6 +279,8 @@ void Stage::write_regs() {
                 regs.dp.stage_concurrent_with_prev |= 1U << gress; }
         if (stageno != AsmStage::numstages()-1)
             regs.dp.next_stage_dependency_on_cur[gress] = MATCH_DEP - this[1].stage_dep[gress];
+        else if (AsmStage::numstages() < NUM_MAU_STAGES)
+            regs.dp.next_stage_dependency_on_cur[gress] = 2;
         if (stageno == 0 || stage_dep[gress] == MATCH_DEP)
             regs.dp.match_ie_input_mux_sel |= 1 << gress;
     }
