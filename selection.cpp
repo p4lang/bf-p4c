@@ -135,6 +135,7 @@ void SelectionTable::write_regs() {
     if (input_xbar) input_xbar->write_regs();
     Layout *home = &layout[0];
     bool push_on_overflow = false;
+    auto &map_alu =  stage->regs.rams.map_alu;
     DataSwitchboxSetup swbox(stage, home->row/2U);
     for (Layout &logical_row : layout) {
         unsigned row = logical_row.row/2;
@@ -147,15 +148,10 @@ void SelectionTable::write_regs() {
         else
             for (auto v : logical_row.vpns) if (v > maxvpn) maxvpn = v;
         auto mapram = logical_row.maprams.begin();
-        auto &map_alu =  stage->regs.rams.map_alu;
         auto &map_alu_row =  map_alu.row[row];
         swbox.setup_row(row);
-        unsigned meter_group = row/2;
-        // FIXME meter_group based stuff should only be set once (on the home row?)
-        // FIXME rather than for every column of every row
         for (int logical_col : logical_row.cols) {
-            unsigned col = logical_col + 6*side;
-            auto &ram = stage->regs.rams.array.row[row].ram[col];
+            auto &ram = stage->regs.rams.array.row[row].ram[logical_col + 6*side];
             auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
             unitram_config.unitram_type = UnitRam::SELECTOR;
             unitram_config.unitram_logical_table = logical_id;
@@ -166,24 +162,6 @@ void SelectionTable::write_regs() {
             else
                 unitram_config.unitram_egress = 1;
             unitram_config.unitram_enable = 1;
-            if (&logical_row == home) {
-                auto &vh_adr_xbar = stage->regs.rams.array.row[row].vh_adr_xbar;
-                setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + logical_row.bus],
-                             selection_hash);
-                vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
-                    bitmask2bytemask(input_xbar->hash_group_bituse()); }
-            auto &selector_ctl = map_alu.meter_group[meter_group].selector.selector_alu_ctl;
-            selector_ctl.sps_nonlinear_hash_enable = non_linear_hash ? 1 : 0;
-            if (resilient_hash)
-                selector_ctl.resilient_hash_enable = param;
-            else
-                selector_ctl.selector_fair_hash_select = param;
-            selector_ctl.resilient_hash_mode = resilient_hash ? 1 : 0;
-            selector_ctl.selector_enable = 1;
-            auto &delay_ctl = map_alu.meter_alu_group_data_delay_ctl[meter_group];
-            delay_ctl.meter_alu_right_group_delay = 10 + stage->tcam_delay(gress);
-            delay_ctl.meter_alu_right_group_enable = resilient_hash ? 3 : 1;
-            //delay_ctl.meter_alu_right_group_sel = 1;
 
             auto &ram_address_mux_ctl = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
             ram_address_mux_ctl.ram_unitram_adr_mux_select = UnitRam::AdrMux::STATS_METERS;
@@ -220,7 +198,14 @@ void SelectionTable::write_regs() {
             //if (!options.match_compiler) // FIXME -- compiler doesn't set this?
                 mapram_ctl.mapram_vpn_limit = maxvpn;
             ++vpn; }
-        if (&logical_row != home) {
+
+        if (&logical_row == home) {
+            auto &vh_adr_xbar = stage->regs.rams.array.row[row].vh_adr_xbar;
+            setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + logical_row.bus],
+                         selection_hash);
+            vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
+                bitmask2bytemask(input_xbar->hash_group_bituse());
+        } else {
             auto &adr_ctl = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
             if (home->row >= 8 && logical_row.row < 8) {
                 adr_ctl.adr_dist_oflo_adr_xbar_source_index = 0;
@@ -230,6 +215,20 @@ void SelectionTable::write_regs() {
                 adr_ctl.adr_dist_oflo_adr_xbar_source_index = home->row % 8;
                 adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::METER; }
             adr_ctl.adr_dist_oflo_adr_xbar_enable = 1; } }
+
+    unsigned meter_group = home->row/4U;
+    auto &selector_ctl = map_alu.meter_group[meter_group].selector.selector_alu_ctl;
+    selector_ctl.sps_nonlinear_hash_enable = non_linear_hash ? 1 : 0;
+    if (resilient_hash)
+        selector_ctl.resilient_hash_enable = param;
+    else
+        selector_ctl.selector_fair_hash_select = param;
+    selector_ctl.resilient_hash_mode = resilient_hash ? 1 : 0;
+    selector_ctl.selector_enable = 1;
+    auto &delay_ctl = map_alu.meter_alu_group_data_delay_ctl[meter_group];
+    delay_ctl.meter_alu_right_group_delay = 10 + stage->tcam_delay(gress);
+    delay_ctl.meter_alu_right_group_enable = resilient_hash ? 3 : 1;
+
     auto &merge = stage->regs.rams.match.merge;
     for (MatchTable *m : match_tables) {
         auto &icxbar = stage->regs.rams.match.adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id];
