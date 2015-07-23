@@ -223,7 +223,7 @@ for p4file in "$@"; do
     popd >/dev/null
 done
 
-echo "$pass tests passed, $fail tests fail"
+echo "$pass tests passed, $fail tests failed ($expected_fail expected)"
 
 if [ $fail -ne $expected_fail ]; then
     exit 1

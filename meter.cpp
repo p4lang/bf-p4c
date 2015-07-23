@@ -1,3 +1,4 @@
+#include "data_switchbox.h"
 #include "misc.h"
 #include "stage.h"
 #include "tables.h"
@@ -128,8 +129,7 @@ void MeterTable::write_regs() {
     Layout *home = &layout[0];
     bool push_on_overflow = false;
     auto &map_alu =  stage->regs.rams.map_alu;
-    auto &swbox = stage->regs.rams.array.switchbox.row;
-    unsigned prev_row = home->row/2U;
+    DataSwitchboxSetup swbox(stage, home->row/2U);
     int maxvpn = -1, minvpn = -1;
     if (options.match_compiler)
         minvpn = 0, maxvpn = layout_size() - 1;
@@ -144,30 +144,7 @@ void MeterTable::write_regs() {
                 if (v < minvpn || minvpn < 0) minvpn = v; }
         auto mapram = logical_row.maprams.begin();
         auto &map_alu_row =  map_alu.row[row];
-        int syn2port_bus = &logical_row == home ? 0 : 1;
-        auto &syn2port_members = map_alu_row.i2portctl.synth2port_hbus_members[syn2port_bus][side];
-        auto &syn2port_ctl = map_alu_row.i2portctl.synth2port_fabric_ctl[0][side];
-        while (prev_row != row) {
-            auto &prev_syn2port_ctl=map_alu.row[prev_row].i2portctl.synth2port_fabric_ctl[0][side];
-            if (prev_row == home->row/2U) {
-                swbox[prev_row].ctl.r_stats_alu_o_mux_select.r_stats_alu_o_sel_oflo_rd_b_i = 1;
-                swbox[prev_row].ctl.b_oflo_wr_o_mux_select.b_oflo_wr_o_sel_stats_wr_r_i = 1;
-                //map_alu.row[prev_row].wadr_swbox.ctl.b_oflo_wadr_o_mux_select
-                //    .b_oflo_wadr_o_sel_r_stats_wadr_i = 1;
-                prev_syn2port_ctl.stats_to_vbus_below = 1;
-            } else {
-                swbox[prev_row].ctl.t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_b_i = 1;
-                swbox[prev_row].ctl.b_oflo_wr_o_mux_select.b_oflo_wr_o_sel_oflo_wr_t_i = 1;
-                //map_alu.row[prev_row].wadr_swbox.ctl.b_oflo_wadr_o_mux_select
-                //    .b_oflo_wadr_o_sel_t_oflo_wadr_i = 1;
-                prev_syn2port_ctl.synth2port_connect_below2above = 1; }
-            prev_syn2port_ctl.synth2port_connect_below = 1;
-            if (--prev_row == row) {
-                swbox[row].ctl.t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_r_i = 1;
-                swbox[row].ctl.r_oflo_wr_o_mux_select = 1;
-                //map_alu.row[prev_row].wadr_swbox.ctl.r_oflo_wadr_o_mux_select = 1;
-                syn2port_ctl.oflo_to_vbus_above = 1;
-                syn2port_ctl.synth2port_connect_above = 1; } }
+        swbox.setup_row(row);
         for (int logical_col : logical_row.cols) {
             unsigned sram_col = logical_col + 6*side;
             auto &ram = stage->regs.rams.array.row[row].ram[sram_col];
@@ -200,7 +177,7 @@ void MeterTable::write_regs() {
             ram_address_mux_ctl.map_ram_wadr_mux_enable = 1;
             ram_address_mux_ctl.map_ram_radr_mux_select_smoflo = 1;
 
-            syn2port_members |= 1U << logical_col;
+            swbox.setup_col(logical_col);
 
             auto &mapram_config = map_alu_row.adrmux.mapram_config[*mapram];
             auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[*mapram++];
@@ -218,13 +195,6 @@ void MeterTable::write_regs() {
                 mapram_ctl.mapram_vpn_limit = maxvpn;
             ++vpn; }
         if (&logical_row == home) {
-            swbox[row].ctl.r_stats_alu_o_mux_select.r_stats_alu_o_sel_stats_rd_r_i = 1;
-            //auto &stat_ctl = map_alu.stats_wrap[row/2].stats.statistics_ctl;
-            //stat_ctl.stats_entries_per_word = format->groups();
-            //if (type & BYTES) stat_ctl.stats_process_bytes = 1;
-            //if (type & PACKETS) stat_ctl.stats_process_packets = 1;
-            //stat_ctl.lrt_enable = 0;
-            //stat_ctl.stats_alu_egress = gress;
             auto &meter_ctl = map_alu.meter_group[row/2U].meter.meter_ctl;
             meter_ctl.meter_bytecount_adjust = 0; // FIXME
             meter_ctl.meter_rng_enable = 0; // FIXME
