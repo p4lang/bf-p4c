@@ -74,7 +74,7 @@ templates/.templates-updated: $(WALLE) chip.schema template_objects.yaml
 	@touch $@
 
 $(WALLE):
-	git submodule update --init
+	git submodule update --init submodules/walle
 
 chip.schema template_objects.yaml: %: p4c-templates/%
 	# if there's a symlink 'p4c-templates' to somewhere with new reg schema, copy them
@@ -90,6 +90,7 @@ tags:
 	ctags -R -I VECTOR --exclude=test --exclude=submodules
 
 test: all
+	git submodule update --init submodules/p4c-tofino
 	cd test; ./runtests *.p4 mau/*.p4
 
 ftest: all
