@@ -1,6 +1,0 @@
-[submodule "submodules/walle"]
-	path = submodules/walle
-	url = git@github.com:barefootnetworks/walle.git
-[submodule "submodules/p4c-tofino"]
-	path = submodules/p4c-tofino
-	url = git@github.com:barefootnetworks/p4c-tofino.git
