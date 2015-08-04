@@ -69,11 +69,15 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
                       gress ? "e" : "in", stageno);
             else if (stageno == 0)
                 warning(kv.key.lineno, "Stage dependency in stage 0 will be ignored");
-            if (kv.value == "concurrent")
+            if (kv.value == "concurrent") {
                 stage[stageno].stage_dep[gress] = Stage::CONCURRENT;
-            else if (kv.value == "action")
+                if (stageno == NUM_MAU_STAGES/2)
+                    error(kv.value.lineno, "stage %d must be match dependent", stageno);
+            } else if (kv.value == "action") {
                 stage[stageno].stage_dep[gress] = Stage::ACTION_DEP;
-            else if (kv.value == "match")
+                if (stageno == NUM_MAU_STAGES/2)
+                    error(kv.value.lineno, "stage %d must be match dependent", stageno);
+            } else if (kv.value == "match")
                 stage[stageno].stage_dep[gress] = Stage::MATCH_DEP;
             else
                 error(kv.value.lineno, "Syntax error, invalid stage dependency");
@@ -105,6 +109,10 @@ void AsmStage::process() {
         stage[i].pass1_tcam_id = -1;
         for (auto table : stage[i].tables)
             table->pass1();
+        if (i == NUM_MAU_STAGES/2) {
+            /* to turn the corner, the middle stage must always be match dependent */
+            for (auto gress : Range(INGRESS, EGRESS))
+                stage[i].stage_dep[gress] = Stage::MATCH_DEP; }
         if (options.match_compiler) {
             /* FIXME -- do we really want to do this?  In theory different stages could
              * FIXME -- use the same PHV slots differently, but the compiler always uses them
