@@ -2,7 +2,13 @@ CC = g++
 OPTFLAGS = -O0
 CPPFLAGS = -std=gnu++11 $(OPTFLAGS) -Wall -g -MMD -I.
 YFLAGS = -v
-WALLE = submodules/walle/walle/walle.py
+WALLE := $(shell  \
+    for f in $(HOME)/walle ../walle submodules/walle; do \
+	if [ -x $$f/walle/walle.py ]; then \
+	    echo $$f/walle/walle.py; \
+	    exit; \
+	fi; \
+    done; echo walle)
 
 GEN_OBJS := gen/memories.prsr_mem_main_rspec.o \
 	    gen/regs.dprsr_hdr.o \
@@ -68,13 +74,13 @@ gen/uptr_sizes.h: mksizes
 	@mkdir -p gen
 	./mksizes > $@
 
-templates/.templates-updated: $(WALLE) chip.schema template_objects.yaml
+templates/.templates-updated: chip.schema template_objects.yaml
 	@mkdir -p templates
 	$(WALLE) --generate-templates template_objects.yaml
 	@touch $@
 
-$(WALLE):
-	git submodule update --init submodules/walle
+echo-walle:
+	@echo walle is '"$(WALLE)"'
 
 chip.schema template_objects.yaml: %: p4c-templates/%
 	# if there's a symlink 'p4c-templates' to somewhere with new reg schema, copy them
@@ -90,7 +96,6 @@ tags:
 	ctags -R -I VECTOR --exclude=test --exclude=submodules
 
 test: all
-	git submodule update --init submodules/p4c-tofino
 	cd test; ./runtests *.p4 mau/*.p4
 
 ftest: all
