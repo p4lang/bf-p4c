@@ -18,7 +18,7 @@ public:
     indent_t operator+(int v) { indent_t rv = *this; rv.indent += v; return rv; }
     indent_t operator-(int v) { indent_t rv = *this; rv.indent -= v; return rv; }
     indent_t &operator+=(int v) { indent += v; return *this; }
-    indent_t &operator-=(int v) { indent += v; return *this; }
+    indent_t &operator-=(int v) { indent -= v; return *this; }
 };
 
 inline std::ostream &operator<<(std::ostream &os, indent_t i) {
