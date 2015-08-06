@@ -163,7 +163,7 @@ void AsmStage::output() {
             stage[i].group_table_use[gress] = stage[i].table_use[gress];
             if (stage[i].stage_dep[gress] != Stage::MATCH_DEP)
                 stage[i].group_table_use[gress] |= stage[i-1].group_table_use[gress]; }
-        for (unsigned i = stage.size()-1; i > 0; i--)
+        for (int i = stage.size()-1; i > 0; i--)
             if (stage[i].stage_dep[gress] != Stage::MATCH_DEP)
                 stage[i-1].group_table_use[gress] |= stage[i].group_table_use[gress]; }
     for (unsigned i = 0; i < stage.size(); i++) {
