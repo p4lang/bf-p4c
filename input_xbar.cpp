@@ -370,6 +370,7 @@ void InputXbar::write_regs() {
         if (ternary) {
             group_base = 128 + (group.first*11 + 1)/2U;
             half_byte = 133 + 11*(group.first/2U);
+            xbar.mau_match_input_xbar_ternary_match_enable[table->gress] |= 1 << (group.first)/2U;
         } else
             group_base = group.first * 16U;
         for (auto &input : group.second) {
@@ -422,8 +423,9 @@ void InputXbar::write_regs() {
     for (auto &hg : hash_groups) {
         LOG1("  # Input xbar hash group " << hg.first);
         int grp = hg.first;
-        if (hg.second.tables)
+        if (hg.second.tables) {
             hash.parity_group_mask[grp] = hg.second.tables;
+            xbar.mau_match_input_xbar_exact_match_enable[table->gress] |= hg.second.tables; }
         if (hg.second.seed) {
             hash.hash_seed[grp][0] = hg.second.seed & 0x3ffffff;
             hash.hash_seed[grp][1] = (hg.second.seed >> 26) & 0x3ffffff; }

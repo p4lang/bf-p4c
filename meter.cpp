@@ -303,7 +303,8 @@ void MeterTable::write_regs() {
         adrdist.meter_sweep_ctl[m->logical_id].meter_sweep_size = maxvpn;
         adrdist.meter_sweep_ctl[m->logical_id].meter_sweep_remove_hole_pos = 0; // FIXME
         adrdist.meter_sweep_ctl[m->logical_id].meter_sweep_remove_hole_en = 0; // FIXME
-        adrdist.meter_sweep_ctl[m->logical_id].meter_sweep_interval = sweep_interval; }
+        adrdist.meter_sweep_ctl[m->logical_id].meter_sweep_interval = sweep_interval;
+        adrdist.movereg_ad_ctl[m->logical_id].movereg_ad_meter_shift = 7; }
     adrdist.deferred_ram_ctl[1][home->row/4].deferred_ram_en = 1;
     adrdist.deferred_ram_ctl[1][home->row/4].deferred_ram_thread = gress;
     if (push_on_overflow)

@@ -230,12 +230,15 @@ void SelectionTable::write_regs() {
     delay_ctl.meter_alu_right_group_enable = resilient_hash ? 3 : 1;
 
     auto &merge = stage->regs.rams.match.merge;
+    auto &adrdist = stage->regs.rams.match.adrdist;
     for (MatchTable *m : match_tables) {
-        auto &icxbar = stage->regs.rams.match.adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id];
+        auto &icxbar = adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id];
         icxbar.address_distr_to_logical_rows = 1 << home->row;
         icxbar.address_distr_to_overflow = push_on_overflow;
         if (auto &act = m->get_action())
-            merge.mau_selector_action_entry_size[m->logical_id] = act->format->log2size - 3; }
+            merge.mau_selector_action_entry_size[m->logical_id] = act->format->log2size - 3;
+        if (max_words == 1)
+            adrdist.movereg_ad_ctl[m->logical_id].movereg_ad_meter_shift = 7; }
     for (auto &hd : hash_dist)
         hd.write_regs(this, 0, non_linear_hash);
 }

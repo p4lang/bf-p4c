@@ -320,4 +320,5 @@ void Stage::write_regs() {
     for (int row = 0; row < SRAM_ROWS; row++)
         regs.rams.map_alu.row[row].adrmux.adrmux_row_mem_slow_mode = 1;
     regs.cfg_regs.mau_cfg_mem_slow_mode = 1;
+    regs.dp.imem_parity_ctl.imem_slow_mode = 1;
 }

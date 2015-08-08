@@ -1,6 +1,8 @@
 dileep4.p4
 dileep10.p4
 dileep11.p4
+test_config_26_direct_add_primitive.p4
+test_config_40_action_data_bit_xor.p4
 test_config_96_hash_data.p4
 test_config_100_hash_action.p4
 test_config_101_switch_msdc.p4
