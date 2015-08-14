@@ -91,7 +91,9 @@ void IdletimeTable::write_regs() {
                 clear_val &= ~1U;
             for (unsigned i = 0; i < 8U/precision; i++)
                 adrmux.idletime_cfg_rd_clear_val[col]
-                    .set_subfield(clear_val, i*precision, precision); }
+                    .set_subfield(clear_val, i*precision, precision);
+            if (gress)
+                stage->regs.cfg_regs.mau_cfg_mram_thread[col/3U] |= 1U << (col%3U*8U + row.row); }
         unsigned bus_index = row.bus;
         if (bus_index < 8 && row.row >= 4)
             bus_index += 10;

@@ -127,6 +127,7 @@ void CounterTable::write_regs() {
         auto &map_alu_row =  map_alu.row[row];
         swbox.setup_row(row);
         for (int logical_col : logical_row.cols) {
+            unsigned col = logical_col + 6*side;
             unsigned sram_col = logical_col + 6*side;
             auto &ram = stage->regs.rams.array.row[row].ram[sram_col];
             auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
@@ -161,7 +162,7 @@ void CounterTable::write_regs() {
             swbox.setup_col(logical_col);
 
             auto &mapram_config = map_alu_row.adrmux.mapram_config[*mapram];
-            auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[*mapram++];
+            auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[*mapram];
             mapram_config.mapram_type = MapRam::STATISTICS;
             mapram_config.mapram_logical_table = logical_id;
             mapram_config.mapram_vpn_members = 0;
@@ -174,7 +175,10 @@ void CounterTable::write_regs() {
             mapram_config.mapram_enable = 1;
             //if (!options.match_compiler) // FIXME -- compiler doesn't set this?
                 mapram_ctl.mapram_vpn_limit = maxvpn;
-            ++vpn; }
+            if (gress) {
+                stage->regs.cfg_regs.mau_cfg_mram_thread[*mapram/3U] |= 1U << (*mapram%3U*8U + row);
+                stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row); }
+            ++mapram, ++vpn; }
         if (&logical_row == home) {
             auto &stat_ctl = map_alu.stats_wrap[row/2].stats.statistics_ctl;
             stat_ctl.stats_entries_per_word = format->groups();
@@ -220,7 +224,9 @@ void CounterTable::write_regs() {
             adrdist.movereg_ad_ctl[m->logical_id].movereg_ad_direct_stats = 1; }
     if (run_at_eop) {
         adrdist.deferred_ram_ctl[0][home->row/4].deferred_ram_en = 1;
-        adrdist.deferred_ram_ctl[0][home->row/4].deferred_ram_thread = gress; }
+        adrdist.deferred_ram_ctl[0][home->row/4].deferred_ram_thread = gress;
+        if (gress)
+            stage->regs.cfg_regs.mau_cfg_dram_thread |= 1 << (home->row/4); }
     if (push_on_overflow)
         adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U);
 }

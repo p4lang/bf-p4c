@@ -78,9 +78,6 @@ void SelectionTable::pass1() {
     alloc_maprams();
     std::sort(layout.begin(), layout.end(),
               [](const Layout &a, const Layout &b)->bool { return a.row > b.row; });
-    stage->table_use[gress] |= Stage::USE_SELECTOR;
-    for (auto &hd : hash_dist)
-        hd.pass1(this);
     if (input_xbar) input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
     if (param < 0 || param > (resilient_hash ? 7 : 2))
         error(mode_lineno, "Invalid %s hash param %d",
@@ -92,10 +89,13 @@ void SelectionTable::pass1() {
         int words = (size + 119)/120;
         if (words < min_words) min_words = words;
         if (words > max_words) max_words = words; }
+    stage->table_use[gress] |= Stage::USE_SELECTOR;
     if (max_words > 1) {
         stage->table_use[gress] |= Stage::USE_WIDE_SELECTOR;
         for (auto &hd : hash_dist)
-            hd.use = HashDistribution::HASHMOD_DIVIDEND; }
+            hd.xbar_use = HashDistribution::HASHMOD_DIVIDEND; }
+    for (auto &hd : hash_dist)
+        hd.pass1(this);
 }
 
 void SelectionTable::pass2() {
@@ -151,6 +151,7 @@ void SelectionTable::write_regs() {
         auto &map_alu_row =  map_alu.row[row];
         swbox.setup_row(row);
         for (int logical_col : logical_row.cols) {
+            unsigned col = logical_col + 6*side;
             auto &ram = stage->regs.rams.array.row[row].ram[logical_col + 6*side];
             auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
             unitram_config.unitram_type = UnitRam::SELECTOR;
@@ -184,7 +185,7 @@ void SelectionTable::write_regs() {
             swbox.setup_col(logical_col);
 
             auto &mapram_config = map_alu_row.adrmux.mapram_config[*mapram];
-            auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[*mapram++];
+            auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[*mapram];
             mapram_config.mapram_type = MapRam::SELECTOR_SIZE;
             mapram_config.mapram_logical_table = logical_id;
             mapram_config.mapram_vpn_members = 0;
@@ -197,8 +198,10 @@ void SelectionTable::write_regs() {
             mapram_config.mapram_enable = 1;
             //if (!options.match_compiler) // FIXME -- compiler doesn't set this?
                 mapram_ctl.mapram_vpn_limit = maxvpn;
-            ++vpn; }
-
+            if (gress) {
+                stage->regs.cfg_regs.mau_cfg_mram_thread[*mapram/3U] |= 1U << (*mapram%3U*8U + row);
+                stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row); }
+            ++mapram, ++vpn; }
         if (&logical_row == home) {
             auto &vh_adr_xbar = stage->regs.rams.array.row[row].vh_adr_xbar;
             setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + logical_row.bus],
