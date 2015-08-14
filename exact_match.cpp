@@ -95,6 +95,7 @@ static unsigned tofino_bytemask(int lo, int hi) {
 
 void ExactMatchTable::pass1() {
     LOG1("### Exact match table " << name() << " pass1");
+    MatchTable::pass1(0);
     if (!p4_table) p4_table = P4Table::alloc(P4Table::MatchEntry, this);
     else p4_table->check(this);
     alloc_id("logical", logical_id, stage->pass1_logical_id,

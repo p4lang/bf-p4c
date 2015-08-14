@@ -301,6 +301,10 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     GatewayTable                *gateway = 0;
     IdletimeTable               *idletime = 0;
     AttachedTables              attached;
+    enum { NONE=0, TABLE_MISS=1, TABLE_HIT=2, GATEWAY_MISS=3, GATEWAY_HIT=4,
+           GATEWAY_INHIBIT=5 }  table_counter = NONE;
+
+    void pass1(int type);
     void write_regs(int type, Table *result);
     bool common_setup(pair_t &);
 public:

@@ -36,6 +36,7 @@ void HashActionTable::setup(VECTOR(pair_t) &data) {
 
 void HashActionTable::pass1() {
     LOG1("### Hash Action " << name() << " pass1");
+    MatchTable::pass1(0);
     check_next();
     if (action.check() && action->set_match_table(this, action.args.size() > 1) != ACTION)
         error(action.lineno, "%s is not an action table", action->name());

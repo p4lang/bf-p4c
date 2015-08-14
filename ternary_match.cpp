@@ -114,6 +114,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
 }
 void TernaryMatchTable::pass1() {
     LOG1("### Ternary match table " << name() << " pass1");
+    MatchTable::pass1(1);
     if (!p4_table) p4_table = P4Table::alloc(P4Table::MatchEntry, this);
     else p4_table->check(this);
     stage->table_use[gress] |= Stage::USE_TCAM;

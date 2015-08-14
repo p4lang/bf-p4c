@@ -1,4 +1,3 @@
-
 header_type data_t {
     fields {
         f1 : 32;

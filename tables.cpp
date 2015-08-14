@@ -311,6 +311,14 @@ bool MatchTable::common_setup(pair_t &kv) {
                 attached.meter.emplace_back(v, this);
         else attached.meter.emplace_back(kv.value, this);
         return true; }
+    if (kv.key == "table_counter") {
+        if (kv.value == "table_miss") table_counter = TABLE_MISS;
+        else if (kv.value == "table_hit") table_counter = TABLE_HIT;
+        else if (kv.value == "gateway_miss") table_counter = GATEWAY_MISS;
+        else if (kv.value == "gateway_hit") table_counter = GATEWAY_HIT;
+        else if (kv.value == "gateway_inhibit") table_counter = GATEWAY_INHIBIT;
+        else error(kv.value.lineno, "Invalid table counter %s", value_desc(kv.value));
+        return true; }
     return false;
 }
 
@@ -703,6 +711,13 @@ int get_address_mau_actiondata_adr_default(unsigned log2size) {
     return rv;
 }
 
+void MatchTable::pass1(int type) {
+    /* FIXME -- move common stuff from Exact/Ternary/HashAction here. */
+    if (table_counter >= GATEWAY_MISS && !gateway)
+        error(lineno, "Can't count gateway events on table %s as it doesn't have a gateway",
+              name());
+}
+
 void MatchTable::write_regs(int type, Table *result) {
     /* this follows the order and behavior in stage_match_entry_table.py
      * it can be reorganized to be clearer */
@@ -803,6 +818,10 @@ void MatchTable::write_regs(int type, Table *result) {
     if (options.match_compiler && dynamic_cast<HashActionTable *>(this))
         return; // skip the rest
     stage->regs.cfg_regs.mau_cfg_lt_thread |= 1U << logical_id;
+
+    if (table_counter)
+        merge.mau_table_counter_ctl[logical_id/8U].set_subfield(
+            table_counter, 4 * (logical_id%8U), 4);
 }
 
 int Table::find_on_actionbus(Format::Field *f, int off) {
