@@ -384,7 +384,7 @@ void add_pack_format(json::map &stage_tbl, int memword, int words, int entries =
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
     void vpn_params(int &width, int &depth, int &period, const char *&period_name);
     struct Match {
-        int word_group, byte_group, byte_config;
+        int word_group=-1, byte_group=-1, byte_config=0, dirtcam=0;
         Match() {}
         Match(const value_t &);
     };

@@ -540,7 +540,7 @@ field_list_calculation ipv4_checksum {
 }
 
 calculated_field ipv4.hdrChecksum  {
-#ifdef HARLYN
+#ifdef __TARGET_TOFINO__
     verify ipv4_checksum;
     update ipv4_checksum;
 #else
@@ -735,7 +735,7 @@ field_list_calculation inner_ipv4_checksum {
 }
 
 calculated_field inner_ipv4.hdrChecksum {
-#ifdef HARLYN
+#ifdef __TARGET_TOFINO__
     verify inner_ipv4_checksum;
     update inner_ipv4_checksum;
 #else

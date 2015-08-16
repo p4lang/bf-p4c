@@ -19,20 +19,40 @@ void TernaryMatchTable::vpn_params(int &width, int &depth, int &period, const ch
 }
 
 TernaryMatchTable::Match::Match(const value_t &v) {
-    if (!CHECKTYPE(v, tVEC)) return;
-    if (v.vec.size < 2 || v.vec.size > 3) {
-        error(v.lineno, "Syntax error");
-        return; }
-    if (!CHECKTYPE(v[0], tINT) || !CHECKTYPE(v[v.vec.size-1], tINT)) return;
-    if ((word_group = v[0].i) < 0 || v[0].i >= TCAM_XBAR_GROUPS)
-        error(v[0].lineno, "Invalid input xbar group %d", v[0].i);
-    if (v.vec.size == 3 && CHECKTYPE(v[1], tINT)) {
-        if ((byte_group = v[1].i) < 0 || v[1].i >= TCAM_XBAR_GROUPS/2)
-            error(v[1].lineno, "Invalid input xbar group %d", v[1].i);
-    } else
-        byte_group = -1;
-    if ((byte_config = v[v.vec.size-1].i) < 0 || byte_config >= 4)
-        error(v[v.vec.size-1].lineno, "Invalid input xbar byte control %d", byte_config);
+    if (v.type == tVEC) {
+        if (v.vec.size < 2 || v.vec.size > 3) {
+            error(v.lineno, "Syntax error");
+            return; }
+        if (!CHECKTYPE(v[0], tINT) || !CHECKTYPE(v[v.vec.size-1], tINT)) return;
+        if ((word_group = v[0].i) < 0 || v[0].i >= TCAM_XBAR_GROUPS)
+            error(v[0].lineno, "Invalid input xbar group %d", v[0].i);
+        if (v.vec.size == 3 && CHECKTYPE(v[1], tINT)) {
+            if ((byte_group = v[1].i) < 0 || v[1].i >= TCAM_XBAR_GROUPS/2)
+                error(v[1].lineno, "Invalid input xbar group %d", v[1].i);
+        } else
+            byte_group = -1;
+        if ((byte_config = v[v.vec.size-1].i) < 0 || byte_config >= 4)
+            error(v[v.vec.size-1].lineno, "Invalid input xbar byte control %d", byte_config);
+    } else if (CHECKTYPE(v, tMAP))
+        for (auto &kv : MapIterChecked(v.map))
+            if (kv.key == "group") {
+                if (kv.value.type != tINT || kv.value.i < 0 || kv.value.i >= TCAM_XBAR_GROUPS)
+                    error(kv.value.lineno, "Invalid input xbar group %s", value_desc(kv.value));
+                else word_group = kv.value.i;
+            } else if (kv.key == "byte_group") {
+                if (kv.value.type != tINT || kv.value.i < 0 || kv.value.i >= TCAM_XBAR_GROUPS/2)
+                    error(kv.value.lineno, "Invalid input xbar group %s", value_desc(kv.value));
+                else byte_group = kv.value.i;
+            } else if (kv.key == "byte_config") {
+                if (kv.value.type != tINT || kv.value.i < 0 || kv.value.i >= 4)
+                    error(kv.value.lineno, "Invalid byte group config %s", value_desc(kv.value));
+                else byte_config = kv.value.i;
+            } else if (kv.key == "dirtcam") {
+                if (kv.value.type != tINT || kv.value.i < 0 || kv.value.i > 0x3ff)
+                    error(kv.value.lineno, "Invalid dirtcam mode %s", value_desc(kv.value));
+                else dirtcam = kv.value.i;
+            } else
+                error(kv.key.lineno, "Unknown key '%s' in ternary match spec", value_desc(kv.key));
 }
 
 void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
@@ -47,9 +67,12 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
         warning(lineno, "No input xbar specified in table %s", name());
     VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
     if (auto *m = get(data, "match"))
-        if (CHECKTYPE(*m, tVEC))
-            for (auto &v : m->vec)
-                match.emplace_back(v);
+        if (CHECKTYPE2(*m, tVEC, tMAP)) {
+            if (m->type == tVEC)
+                for (auto &v : m->vec)
+                    match.emplace_back(v);
+            else
+                match.emplace_back(*m); }
     for (auto &kv : MapIterChecked(data)) {
         if (common_setup(kv)) {
         } else if (kv.key == "input_xbar" || kv.key == "match") {
@@ -216,6 +239,7 @@ void TernaryMatchTable::write_regs() {
                 ((~chain_rows | ALWAYS_ENABLE_ROW) >> row.row) & 1;
             tcam_mode.tcam_vpn = *vpn++;
             tcam_mode.tcam_logical_table = logical_id;
+            tcam_mode.tcam_data_dirtcam_mode = match[word].dirtcam;
             /* TODO -- always disable tcam_validbit_xbar? */
             auto &tcam_vh_xbar = stage->regs.tcams.vh_data_xbar;
             if (options.match_compiler) {

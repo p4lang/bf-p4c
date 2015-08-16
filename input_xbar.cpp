@@ -227,8 +227,16 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
     for (auto &group : groups) {
         for (auto &input : group.second) {
             if (!input.what.check()) continue;
+            if (ternary && (input.lo == 40 || input.lo < 0)) {
+                // can do a single nybble in a ternary group, so different error message?
+                if (input.what->lo % 4U != 0 || input.what->hi % 4U != 3)
+                    error(input.what.lineno, "input_xbar can only manipulate whole bytes");
+            } else if (input.what->lo % 8U != 0 || input.what->hi % 8U != 7)
+                error(input.what.lineno, "input_xbar can only manipulate whole bytes");
             table->stage->match_use[table->gress][input.what->reg.index] = 1;
             if (input.lo >= 0) {
+                if (input.lo % 8U != 0)
+                    error(input.what.lineno, "input_xbar can only manipulate whole bytes");
                 if (input.hi >= 0) {
                     if (input.hi - input.lo != input.what->hi - input.what->lo)
                         error(input.what.lineno, "Input xbar size doesn't match register size");
@@ -236,7 +244,9 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
                     input.hi = input.lo - input.what->lo + input.what->hi;
                 if (input.lo >= size)
                     error(input.what.lineno, "placing %s off the top of the input xbar",
-                          input.what.name()); } }
+                          input.what.name()); }
+                if (!ternary && (input.lo % input.what->reg.size != input.what->lo))
+                    error(input.what.lineno, "%s misaligned on input_xbar", input.what.name()); }
         for (InputXbar *other : use[group.first]) {
             if (other->groups.count(group.first) &&
                 conflict(other->groups[group.first], group.second)) {
@@ -360,6 +370,13 @@ void InputXbar::pass2(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
                 col.second.fn->gen_data(col.second.data, col.second.bit, this, hash.first/2U);
 }
 
+static int tcam_swizzle_offset[4][4] = {
+    {  0, +1, -2, -1 },
+    { +3,  0, +1, -2 },
+    { +2, -1,  0, -3 },
+    { +1, +2, -1,  0 },
+};
+
 void InputXbar::write_regs() {
     auto &xbar = table->stage->regs.dp.xbar;
     for (auto &group : groups) {
@@ -387,9 +404,20 @@ void InputXbar::write_regs() {
                 word_group -= 4;
                 swizzle_mask = 0; }
             unsigned phv_byte = input.what->lo/8U;
+            unsigned phv_size = input.what->reg.size/8U;
             for (unsigned byte = input.lo/8U; byte <= input.hi/8U; byte++, phv_byte++) {
                 unsigned i = group_base + byte;
                 if (half_byte && byte == 5) i = half_byte;
+                if (i%phv_size != phv_byte) {
+                    if (ternary) {
+                        int off;
+                        if (phv_size == 2)
+                            off = (i&2) ? -1 : 1;
+                        else
+                            off = tcam_swizzle_offset[i&3][phv_byte];
+                        xbar.tswizzle.tcam_byte_swizzle_ctl[i&0x7f] = off&3U;
+                        i += off;
+                    } else error(input.what.lineno, "misaligned phv access on input_xbar"); }
                 if (input.what->reg.index < 64) {
                     assert(input.what->reg.size == 32);
                     xbar.match_input_xbar_32b_ctl[word_group][i]

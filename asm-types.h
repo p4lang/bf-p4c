@@ -179,7 +179,7 @@ inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
 class MapIterChecked {
 /* Iterate through a map (VECTOR(pair_t)), giving errors for non-string and
  * duplicate keys (and skipping them) */
-    VECTOR(pair_t) &map;
+    const VECTOR(pair_t) &map;
     bool        allow;
     std::map<const char *, int, std::function<bool(const char *, const char *)>>
         keys_seen;
@@ -205,7 +205,7 @@ class MapIterChecked {
         bool operator==(iter &a) const { return p == a.p; }
         iter &operator++() { p++; check(); return *this; } };
 public:
-    MapIterChecked(VECTOR(pair_t) &map_, bool o=false) : map(map_), allow(o),
+    MapIterChecked(const VECTOR(pair_t) &map_, bool o=false) : map(map_), allow(o),
         keys_seen([](const char *a, const char *b) { return strcmp(a,b)<0; }) {}
     iter begin() { return iter(this, map.begin()); }
     iter end() { return iter(this, map.end()); }
