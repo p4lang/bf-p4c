@@ -162,7 +162,7 @@ table tcam_indirect_action {
         ipv4.version     : exact;
     }
     action_profile : indirect_action_profile;
-    size : 3072;
+    size : 2048;
 }
 
 action modify_ip_id(port, id, srcAddr, dstAddr) {
