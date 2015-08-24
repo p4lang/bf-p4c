@@ -57,11 +57,14 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
             match_t v = { 0, 0 };
             miss = Match(v, kv.value);
         } else if (kv.key == "payload") {
-            if (CHECKTYPE(kv.value, tINT))
+            if (kv.value.type == tBIGINT && kv.value.bigi.size == 1)
+                payload = kv.value.bigi.data[0];
+            else if (sizeof(uintptr_t) == sizeof(uint32_t) && kv.value.type == tBIGINT &&
+                     kv.value.bigi.size == 2)
+                payload = kv.value.bigi.data[0] + ((uint64_t)kv.value.bigi.data[1] << 32);
+            else if (CHECKTYPE(kv.value, tINT))
                 payload = kv.value.i;
-        } else if (kv.key == "payload_unit") {
-            if (CHECKTYPE(kv.value, tINT))
-                payload_unit = kv.value.i;
+            have_payload = true;
         } else if (kv.key == "match") {
             if (kv.value.type == tVEC) {
                 for (auto &v : kv.value.vec)
@@ -230,10 +233,10 @@ void GatewayTable::write_regs() {
                     xbar_ctl.exact_logical_select = logical_id;
                     xbar_ctl.exact_inhibit_enable = 1;
                 }
-                if (payload_unit >= 0) {
+                if (have_payload) {
                     merge.gateway_payload_pbus[row.row] |= 1 << (row.bus + (tind_bus ? 2 : 0));
-                    merge.gateway_payload_data[row.row][row.bus][payload_unit][0] = payload;
-                    merge.gateway_payload_data[row.row][row.bus][payload_unit][1] = payload;
+                    merge.gateway_payload_data[row.row][row.bus][0][tind_bus] = payload & 0xffffffff;
+                    merge.gateway_payload_data[row.row][row.bus][1][tind_bus] = payload >> 32;
 #if 0
                     merge.gateway_payload_match_adr[row.row][row.bus] = ???;
 #endif

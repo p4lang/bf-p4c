@@ -217,7 +217,7 @@ void TernaryMatchTable::pass2() {
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
 }
-extern int get_address_mau_actiondata_adr_default(unsigned log2size);
+extern int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable);
 void TernaryMatchTable::write_regs() {
     LOG1("### Ternary match table " << name() << " write_regs");
     MatchTable::write_regs(1, indirect);
@@ -280,7 +280,7 @@ void TernaryMatchTable::write_regs() {
             idletime->write_merge_regs(1, indirect_bus);
         if (action) {
             merge.mau_actiondata_adr_default[1][indirect_bus] =
-                get_address_mau_actiondata_adr_default(action->format->log2size);
+                get_address_mau_actiondata_adr_default(action->format->log2size, false);
             /* FIXME -- factor with TernaryIndirect code below */
             int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
             if (action.args.size() <= 1) {

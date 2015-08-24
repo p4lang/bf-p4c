@@ -1,21 +1,24 @@
-dileep4.p4
-dileep10.p4
-dileep11.p4
-test_config_26_direct_add_primitive.p4
-test_config_40_action_data_bit_xor.p4
-test_config_92_bit_xor_10_bits.p4
-test_config_96_hash_data.p4
-test_config_100_hash_action.p4
-test_config_101_switch_msdc.p4
-test_config_119_tcam_range_3.p4
-test_config_120_tcam_range_4.p4
-test_config_121_tcam_range_5.p4
-test_config_123_meter_2.p4
-test_config_132_meter_pre_color_4.p4
-vk_basic_ipv4_subset.p4
-vk_basic_ipv4_20150706.p4
-test_config_135_tcam_range_7.p4
-test_config_136_tcam_error_detection.p4
-test_config_137_tcam_error_detection_2.p4
-test_config_138_tcam_error_detection_3.p4
-test_config_139_tcam_error_detection_4.p4
+dileep4.p4 compile
+dileep10.p4 compile
+dileep11.p4 mismatch
+test_config_92_bit_xor_10_bits.p4 compile
+test_config_96_hash_data.p4 compile
+test_config_100_hash_action.p4 mismatch
+ - gateway table asmgen for hash_action looks to be wrong
+ - change compiler to use normal gateways for hash_action?
+test_config_101_switch_msdc.p4 compile
+test_config_119_tcam_range_3.p4 mismatch
+ - compiler uses tcam byte swizzler to duplicate 8-bit phv, rather than just loading it directly
+test_config_120_tcam_range_4.p4 mismatch
+ - compiler uses tcam byte swizzler to duplicate 8-bit phv, rather than just loading it directly
+test_config_121_tcam_range_5.p4 compile
+test_config_123_meter_2.p4 compile
+test_config_132_meter_pre_color_4.p4 compile
+test_config_135_tcam_range_7.p4 mismatch
+ - compiler uses tcam byte swizzler to duplicate 8-bit phv, rather than just loading it directly
+test_config_136_tcam_error_detection.p4 mismatch
+test_config_137_tcam_error_detection_2.p4 mismatch
+test_config_138_tcam_error_detection_3.p4 mismatch
+test_config_139_tcam_error_detection_4.p4 mismatch
+vk_basic_ipv4_subset.p4 compile
+vk_basic_ipv4_20150706.p4 compile

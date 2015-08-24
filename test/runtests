@@ -8,7 +8,6 @@ TESTDIR=$(cd $(dirname $0); pwd -P)
 
 TRY_GLSC="
     #$HOME/p4c-tofino/build/lib.linux-x86_64-2.7/p4c_tofino/shell.py
-    #$HOME/p4c-tofino-work1/p4c_tofino/shell.py
     $HOME/p4c-tofino/shell.py
     $HOME/p4c-tofino/p4c_tofino/shell.py
     $PWD/../../p4c-tofino/shell.py
@@ -32,6 +31,9 @@ while expr "$1" : - >/dev/null; do
             $TESTDIR/../submodules/p4c-tofino/shell.py
             $TESTDIR/../submodules/p4c-tofino/p4c_tofino/shell.py
         "
+        ;;
+    -stage*|-work*)
+        TRY_GLSC="$HOME/p4c-tofino$1/p4c_tofino/shell.py"
         ;;
     -t)
         TIME=true

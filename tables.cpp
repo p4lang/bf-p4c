@@ -243,6 +243,8 @@ bool Table::common_setup(pair_t &kv) {
     } else if (kv.key == "action_enable") {
         if (CHECKTYPE(kv.value, tINT))
             action_enable = kv.value.i;
+    } else if (kv.key == "enable_action_enable") {
+        enable_action_enable = get_bool(kv.value);
     } else if (kv.key == "actions") {
         if (CHECKTYPE(kv.value, tMAP))
             actions = new Actions(this, kv.value.map);
@@ -701,13 +703,13 @@ void Table::Actions::write_regs(Table *tbl) {
                 assert(0); } } }
 }
 
-int get_address_mau_actiondata_adr_default(unsigned log2size) {
+int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable) {
     int huffman_ones = log2size > 2 ? log2size - 3 : 0;
     assert(huffman_ones < 7);
     int rv = (1 << huffman_ones) - 1;
     rv = ((rv << 10) & 0xf8000) | ( rv & 0x1f);
-    /* FIXME -- unconditionally set the per-flow enable? */
-    rv |= 1 << 22;
+    if (!per_flow_enable)
+        rv |= 1 << 22;
     return rv;
 }
 
@@ -754,7 +756,8 @@ void MatchTable::write_regs(int type, Table *result) {
             if (result->action)
                 /* FIXME -- deal with variable-sized actions */
                 merge.mau_actiondata_adr_default[type][bus] =
-                    get_address_mau_actiondata_adr_default(result->action->format->log2size);
+                    get_address_mau_actiondata_adr_default(result->action->format->log2size,
+                                                           enable_action_enable);
             result->write_merge_regs(type, bus); }
     } else {
         /* ternary match with no indirection table */
