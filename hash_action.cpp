@@ -6,8 +6,13 @@
 DEFINE_TABLE_TYPE(HashActionTable)
 
 void HashActionTable::setup(VECTOR(pair_t) &data) {
+    if (auto *fmt = get(data, "format"))
+        if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
+            format = new Format(fmt->map);
     for (auto &kv : MapIterChecked(data)) {
         if (common_setup(kv)) {
+        } else if (kv.key == "format") {
+            /* done above to be done before action_bus and vpns */
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
                 input_xbar = new InputXbar(this, false, kv.value.map);

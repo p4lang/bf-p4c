@@ -10,12 +10,12 @@ TRY_GLSC="
     #$HOME/p4c-tofino/build/lib.linux-x86_64-2.7/p4c_tofino/shell.py
     $HOME/p4c-tofino/shell.py
     $HOME/p4c-tofino/p4c_tofino/shell.py
+    $PWD/../p4c-tofino/shell.py
+    $PWD/../p4c-tofino/p4c_tofino/shell.py
     $PWD/../../p4c-tofino/shell.py
     $PWD/../../p4c-tofino/p4c_tofino/shell.py
-    $PWD/../submodules/p4c-tofino/shell.py
-    $PWD/../submodules/p4c-tofino/p4c_tofino/shell.py
-    $TESTDIR/../submodules/p4c-tofino/shell.py
-    $TESTDIR/../submodules/p4c-tofino/p4c_tofino/shell.py
+    $TESTDIR/../../p4c-tofino/shell.py
+    $TESTDIR/../../p4c-tofino/p4c_tofino/shell.py
 "
 
 TIME=false
@@ -23,14 +23,6 @@ TIME=false
 while expr "$1" : - >/dev/null; do
     case $1 in
     -f) fast=true
-        ;;
-    -s)
-        TRY_GLSC="
-            $PWD/../submodules/p4c-tofino/shell.py
-            $PWD/../submodules/p4c-tofino/p4c_tofino/shell.py
-            $TESTDIR/../submodules/p4c-tofino/shell.py
-            $TESTDIR/../submodules/p4c-tofino/p4c_tofino/shell.py
-        "
         ;;
     -stage*|-work*)
         TRY_GLSC="$HOME/p4c-tofino$1/p4c_tofino/shell.py"
@@ -146,14 +138,14 @@ for p4file in "$@"; do
             sed 's/^/ /' glsc.log >> $FAILLOG
         fi
     fi
+    glsc_cfg=.
     if $ok; then
         rm -f $name.out/*.json
-    fi
-    if $ok && $TFAS -vvvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
-        glsc_cfg=.
         if [ -d cfg ]; then
             glsc_cfg=cfg
         fi
+    fi
+    if $ok && $TFAS -vvvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
         for f in $name.out/*.cfg.json; do
             if [ "$f" = "$name.out/regs.pipe.cfg.json" ]; then
                 $JSON_DIFF -i mau $f $glsc_cfg/$(basename $f)
@@ -196,7 +188,7 @@ for p4file in "$@"; do
         if $need_reflow; then
             # we ran the compiler and tfas failed, so reflow the compiler outputs
             # so that later -f runs will work
-            for f in *.json; do
+            for f in $glsc_cfg/*.json; do
                 if $REFLOW $f >tmp.json 2>/dev/null; then
                     mv tmp.json $f
                 fi

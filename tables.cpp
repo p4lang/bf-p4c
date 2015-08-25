@@ -243,8 +243,12 @@ bool Table::common_setup(pair_t &kv) {
     } else if (kv.key == "action_enable") {
         if (CHECKTYPE(kv.value, tINT))
             action_enable = kv.value.i;
-    } else if (kv.key == "enable_action_enable") {
-        enable_action_enable = get_bool(kv.value);
+        enable_action_data_enable = true;
+        enable_action_instruction_enable = true;
+    } else if (kv.key == "enable_action_data_enable") {
+        enable_action_data_enable = get_bool(kv.value);
+    } else if (kv.key == "enable_action_instruction_enable") {
+        enable_action_instruction_enable = get_bool(kv.value);
     } else if (kv.key == "actions") {
         if (CHECKTYPE(kv.value, tMAP))
             actions = new Actions(this, kv.value.map);
@@ -747,7 +751,8 @@ void MatchTable::write_regs(int type, Table *result) {
                     ((1U << result->action.args[0].field->size) - 1) & ~action_enable;
             } else
                 merge.mau_action_instruction_adr_mask[type][bus] = 0;
-            merge.mau_action_instruction_adr_default[type][bus] = action_enable ? 0 : 0x40;
+            merge.mau_action_instruction_adr_default[type][bus] =
+                result->enable_action_instruction_enable ? 0 : 0x40;
             if (action_enable)
                 merge.mau_action_instruction_adr_per_entry_en_mux_ctl[type][bus] =
                     result->action_enable;
@@ -757,7 +762,7 @@ void MatchTable::write_regs(int type, Table *result) {
                 /* FIXME -- deal with variable-sized actions */
                 merge.mau_actiondata_adr_default[type][bus] =
                     get_address_mau_actiondata_adr_default(result->action->format->log2size,
-                                                           enable_action_enable);
+                                                           result->enable_action_data_enable);
             result->write_merge_regs(type, bus); }
     } else {
         /* ternary match with no indirection table */
