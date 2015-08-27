@@ -23,6 +23,7 @@ struct ubits_base {
     bool modified() const { return write; }
     void rewrite() { write = false; }
     virtual unsigned long operator=(unsigned long v) = 0;
+    virtual unsigned size() = 0;
 };
 
 inline std::ostream &operator<<(std::ostream &out, const ubits_base *u) {
@@ -54,6 +55,7 @@ template<int N> struct ubits : ubits_base {
         log("=", v);
         check();
         return v; }
+    unsigned size() { return N; }
     const ubits &operator|=(unsigned long v) {
         if (value & v)
             ERRWARN(value != (v|value), "Overwriting " << value << " with " << (v|value) <<

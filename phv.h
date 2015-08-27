@@ -6,7 +6,19 @@
 #include <vector>
 
 enum {
-    NUM_PHV_REGS = 368
+    NUM_PHV_REGS = 368,
+    FIRST_8BIT_PHV = 64,
+    COUNT_8BIT_PHV = 64,
+    FIRST_16BIT_PHV = 128,
+    COUNT_16BIT_PHV = 96,
+    FIRST_32BIT_PHV = 0,
+    COUNT_32BIT_PHV = 64,
+    FIRST_8BIT_TPHV = 288,
+    COUNT_8BIT_TPHV = 32,
+    FIRST_16BIT_TPHV = 320,
+    COUNT_16BIT_TPHV = 48,
+    FIRST_32BIT_TPHV = 256,
+    COUNT_32BIT_TPHV = 32,
 };
 
 class Phv : public Section {

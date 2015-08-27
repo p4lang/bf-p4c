@@ -396,6 +396,32 @@ void dump_field_dictionary(checked_array_base<fde_pov> &fde_control,
         fde_data[row].num_bytes = pos & 3; }
 }
 
+template <typename IN_GRP, typename IN_SPLIT, typename EG_GRP, typename EG_SPLIT>
+void output_phv_ownership(bitvec phv_use[2],
+                          IN_GRP &in_grp, IN_SPLIT &in_split,
+                          EG_GRP &eg_grp, EG_SPLIT &eg_split,
+                          unsigned first, unsigned count)
+{
+    assert(in_grp.val.size() == eg_grp.val.size());
+    assert(in_split.val.size() == eg_split.val.size());
+    assert((in_grp.val.size() + 1) * in_split.val.size() == count);
+    unsigned group_size = in_split.val.size();
+    unsigned reg = first;
+    for (unsigned i = 0; i < in_grp.val.size(); i++, reg += group_size) {
+        int count = 0;
+        if (phv_use[INGRESS].getrange(reg, group_size)) {
+            in_grp.val |= 1U << i;
+            count++; }
+        if (phv_use[EGRESS].getrange(reg, group_size)) {
+            eg_grp.val |= 1U << i;
+            count++; }
+        if (count > 1)
+            error(0, "phv regs in %d..%d used by both ingress and egress",
+                  reg, reg+group_size-1); }
+    in_split.val = phv_use[INGRESS].getrange(reg, group_size);
+    eg_split.val = phv_use[INGRESS].getrange(reg, group_size);
+}
+
 void Deparser::output() {
     if (dictionary[INGRESS].empty() && dictionary[EGRESS].empty())
         return;
@@ -424,12 +450,17 @@ void Deparser::output() {
     if (options.match_compiler) {
         phv_use[INGRESS] |= Phv::use(INGRESS);
         phv_use[EGRESS] |= Phv::use(EGRESS); }
-    for (unsigned i = 0; i < 7; i++) {
-        /* FIXME -- should use the registers used by ingress here, but to match compiler
-         * FIXME -- output we instead use registers not used by egress */
-        inp_regs.iir.ingr.phv.in_ingress_thread[i] =
-            phv_use[EGRESS].getrange(i*32, 32) ^ 0xffffffff;
-        inp_regs.ier.egr.phv.in_egress_thread[i] = phv_use[EGRESS].getrange(i*32, 32); }
+
+    output_phv_ownership(phv_use, inp_regs.iir.ingr.phv8_grp, inp_regs.iir.ingr.phv8_split,
+                         inp_regs.ier.egr.phv8_grp, inp_regs.ier.egr.phv8_split,
+                         FIRST_8BIT_PHV, COUNT_8BIT_PHV);
+    output_phv_ownership(phv_use, inp_regs.iir.ingr.phv16_grp, inp_regs.iir.ingr.phv16_split,
+                         inp_regs.ier.egr.phv16_grp, inp_regs.ier.egr.phv16_split,
+                         FIRST_16BIT_PHV, COUNT_16BIT_PHV);
+    output_phv_ownership(phv_use, inp_regs.iir.ingr.phv32_grp, inp_regs.iir.ingr.phv32_split,
+                         inp_regs.ier.egr.phv32_grp, inp_regs.ier.egr.phv32_split,
+                         FIRST_32BIT_PHV, COUNT_32BIT_PHV);
+
     for (unsigned i = 0; i < 8; i++) {
         if (phv_use[EGRESS].intersects(Phv::tagalong_groups[i])) {
             inp_regs.icr.tphv_cfg.i_e_assign |= 1 << i;
