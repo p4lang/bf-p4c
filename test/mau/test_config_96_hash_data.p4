@@ -60,8 +60,8 @@ field_list_calculation hash_0 {
    input {
        field_list_0;
    }
-   algorithm : crc16;
-   output_width : 16;
+   algorithm : crc32;
+   output_width : 32;
 }
 
 field_list_calculation hash_1 {
@@ -76,8 +76,8 @@ field_list_calculation hash_2 {
    input {
        field_list_2;
    }
-   algorithm : crc16;
-   output_width : 16;
+   algorithm : random;
+   output_width : 72;
 }
 
 action action_0(param0){

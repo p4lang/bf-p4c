@@ -182,7 +182,7 @@ field_list_calculation ecmp_hash {
         ecmp_hash_fields;
     }
     algorithm : crc16;
-    output_width : 10;
+    output_width : 14;
 }
 
 
@@ -207,7 +207,7 @@ action_profile ecmp_action_profile {
 action_selector ecmp_selector {
     selection_key : ecmp_hash; // take a field_list_calculation only
     // optional
-    selection_mode : resilient; // “resilient” or “non-resilient”
+    selection_mode : fair; // “resilient” or “non-resilient”
 }
 
 action nhop_set(port) {
