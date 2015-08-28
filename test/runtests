@@ -37,8 +37,8 @@ while expr "$1" : - >/dev/null; do
     shift
 done
 
-#glsc_args="--placement-order ingress_before_egress --gen-csum --libpd --placement secret"
-glsc_args="--placement-order ingress_before_egress --gen-csum --libpd"
+#glsc_args="--placement-order ingress_before_egress --libpd --placement secret"
+glsc_args="--placement-order ingress_before_egress --libpd"
 
 trap 'exit' 2
 
