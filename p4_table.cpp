@@ -53,7 +53,7 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
             if (CHECKTYPE(kv.value, tSTR))
                 rv->preferred_match_type = kv.value.s;
         } else
-            warning(kv.key.lineno, "ignoring unknown item %s in p4 info", kv.key.s); }
+            warning(kv.key.lineno, "ignoring unknown item %s in p4 info", value_desc(kv.key)); }
     return rv;
 }
 

@@ -108,7 +108,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
             /* already done in setup_layout */
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
-                    kv.key.s, name()); }
+                    value_desc(kv.key), name()); }
     if (p4_info.size) {
         if (p4_table)
             error(p4_info[0].key.lineno, "old and new p4 table info in %s", name());
@@ -409,7 +409,7 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
             /* already done in setup_layout */
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
-                    kv.key.s, name()); }
+                    value_desc(kv.key), name()); }
     if (p4_info.size) {
         if (p4_table)
             error(p4_info[0].key.lineno, "old and new p4 table info in %s", name());

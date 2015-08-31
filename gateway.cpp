@@ -7,7 +7,33 @@
 
 DEFINE_TABLE_TYPE(GatewayTable)
 
-GatewayTable::Match::Match(match_t &v, value_t &data) : val(v), run_table(false) {
+static struct {
+    unsigned         units, bits, half_shift, mask, half_mask;
+} range_match_info[] = { { 0, 0, 0, 0 }, { 6, 4, 2, 0xf, 0x3 }, { 3, 8, 8, 0xffff, 0xff } };
+
+GatewayTable::Match::Match(value_t *v, value_t &data, range_match_t range_match) {
+    if (range_match)
+        for (unsigned i = 0; i < range_match_info[range_match].units; i++)
+            range[i] = range_match_info[range_match].mask;
+    if (v) {
+        if (v->type == tVEC) {
+            int last = v->vec.size - 1;
+            if (last > (int)range_match_info[range_match].units)
+                error(v->lineno, "Too many set values for range match");
+            for (int i = 0; i < last; i++)
+                if (CHECKTYPE((*v)[last-i-1], tINT)) {
+                    if ((unsigned)(*v)[last-i-1].i > range_match_info[range_match].mask)
+                        error(v->lineno, "range match set too large");
+                    range[i] = (*v)[last-i-1].i; }
+            v = &(*v)[last]; }
+        if (v->type == tINT) {
+            val.word0 = ~(val.word1 = (unsigned long)v->i);
+        } else if (v->type == tBIGINT) {
+            if (v->bigi.size > 1)
+                error(v->lineno, "Gateway key too large");
+            val.word0 = ~(val.word1 = (unsigned long)v->bigi.data[0]);
+        } else if (v->type == tMATCH) {
+            val = v->m; } }
     if (data == "run_table")
         run_table = true;
     else if (data.type == tSTR) {
@@ -33,6 +59,11 @@ GatewayTable::Match::Match(match_t &v, value_t &data) : val(v), run_table(false)
 void GatewayTable::setup(VECTOR(pair_t) &data) {
     int bus = -1;
     setup_logical_id();
+    if (auto *v = get(data, "range")) {
+        if (CHECKTYPE(*v, tINT)) {
+            if (v->i == 2) range_match = DC_2BIT;
+            if (v->i == 4) range_match = DC_4BIT;
+            else error(v->lineno, "Unknown range match size %d bits", v->i); } }
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "row") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
@@ -54,8 +85,7 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
 	    if (CHECKTYPE(kv.value, tMAP))
 		input_xbar = new InputXbar(this, false, kv.value.map);
         } else if (kv.key == "miss") {
-            match_t v = { 0, 0 };
-            miss = Match(v, kv.value);
+            miss = Match(0, kv.value, range_match);
         } else if (kv.key == "payload") {
             if (kv.value.type == tBIGINT && kv.value.bigi.size == 1)
                 payload = kv.value.bigi.data[0];
@@ -75,6 +105,8 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
                         match.emplace_back(v.key.i, gress, v.value);
             } else
                 match.emplace_back(gress, kv.value);
+        } else if (kv.key == "range") {
+            /* done above, to be before match parsing */
         } else if (kv.key == "xor") {
             if (kv.value.type == tVEC) {
                 for (auto &v : kv.value.vec)
@@ -85,21 +117,13 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
                         xor_match.emplace_back(v.key.i, gress, v.value);
             } else
                 xor_match.emplace_back(gress, kv.value);
-        } else if (kv.key.type == tINT) {
-            match_t v = { ~(unsigned long)kv.key.i, (unsigned long)kv.key.i };
-            table.emplace_back(v, kv.value);
-        } else if (kv.key.type == tBIGINT) {
-            if (kv.key.bigi.size > 1)
-                error(kv.key.lineno, "Gateway key too large");
-            else {
-                match_t v = { ~(unsigned long)kv.key.bigi.data[0],
-                              (unsigned long)kv.key.bigi.data[0] };
-                table.emplace_back(v, kv.value); }
-        } else if (kv.key.type == tMATCH) {
-            table.emplace_back(kv.key.m, kv.value);
+        } else if (kv.key.type == tINT || kv.key.type == tBIGINT || kv.key.type == tMATCH ||
+                   (kv.key.type == tVEC && range_match != NONE))
+        {
+            table.emplace_back(&kv.key, kv.value, range_match);
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
-                    kv.key.s, name()); }
+                    value_desc(kv.key), name()); }
 }
 
 void check_match_key(std::vector<GatewayTable::MatchKey> &vec, const char *name, unsigned max) {
@@ -110,7 +134,7 @@ void check_match_key(std::vector<GatewayTable::MatchKey> &vec, const char *name,
             if (i && vec[i].offset < vec[i-1].offset + (int)vec[i-1].val->size())
                 error(vec[i].val.lineno, "Gateway %s key at offset %d overlaps previous value(s)",
                       name, vec[i].offset);
-        } else 
+        } else
             vec[i].offset = i ? vec[i-1].offset + vec[i-1].val->size() : 0;
         if (vec[i].offset + vec[i].val->size() > max) {
             error(vec[i].val.lineno, "Gateway %s key too big", name);
@@ -137,6 +161,11 @@ void GatewayTable::pass1() {
     unsigned long ignore = ~0UL;
     int shift = -1;
     for (auto &r : match) {
+        if (range_match && r.offset >= 32) {
+            if ((r.offset-32) & ((1U<<range_match) - 1))
+                error(r.val.lineno, "Upper word match of %s for range gateway not a multiple"
+                      " of %d bits", r.val.name(), 1U<<range_match);
+            continue; }
         ignore ^= ((1UL << r.val->size()) - 1) << r.offset;
         if (shift < 0 || shift > r.offset) shift = r.offset; }
     if (shift < 0) shift = 0;
@@ -196,6 +225,7 @@ void GatewayTable::write_regs() {
     for (auto &r : xor_match)
         gw_reg.gateway_table_matchdata_xor_en |= ((1U << r.val->size()) - 1) << r.offset;
     int lineno = 3;
+    gw_reg.gateway_table_ctl.gateway_table_mode = range_match;
     for (auto &line : table) {
         assert(lineno >= 0);
         /* FIXME -- hardcoding version/valid to always */
@@ -203,8 +233,16 @@ void GatewayTable::write_regs() {
         gw_reg.gateway_table_vv_entry[lineno].gateway_table_entry_versionvalid1 = 0x3;
         gw_reg.gateway_table_entry_matchdata[lineno][0] = line.val.word0 & 0xffffffff;
         gw_reg.gateway_table_entry_matchdata[lineno][1] = line.val.word1 & 0xffffffff;
-        gw_reg.gateway_table_data_entry[lineno][0] = (line.val.word0 >> 32) & 0xffffff;
-        gw_reg.gateway_table_data_entry[lineno][1] = (line.val.word1 >> 32) & 0xffffff;
+        if (range_match) {
+            auto &info = range_match_info[range_match];
+            for (unsigned i = 0; i < range_match_info[range_match].units; i++) {
+                gw_reg.gateway_table_data_entry[lineno][0] |=
+                    (line.range[i] & info.half_mask) << (i * info.bits);
+                gw_reg.gateway_table_data_entry[lineno][1] |=
+                    ((line.range[i] >> info.half_shift) & info.half_mask) << (i * info.bits); }
+        } else {
+            gw_reg.gateway_table_data_entry[lineno][0] = (line.val.word0 >> 32) & 0xffffff;
+            gw_reg.gateway_table_data_entry[lineno][1] = (line.val.word1 >> 32) & 0xffffff; }
         if (!line.run_table) {
             merge.gateway_next_table_lut[logical_id][lineno] =
                 line.next ? line.next->table_id() : 0xff;

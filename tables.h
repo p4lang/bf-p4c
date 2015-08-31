@@ -481,6 +481,8 @@ DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
     uint64_t                    payload;
     bool                        have_payload = false;
     int                         gw_unit = -1;
+    enum range_match_t { NONE, DC_2BIT, DC_4BIT }
+                                range_match = NONE;
 public:
     struct MatchKey {
         int                     offset;
@@ -491,11 +493,13 @@ public:
 private:
     std::vector<MatchKey>       match, xor_match;
     struct Match {
-        match_t                 val;
-        bool                    run_table;
-        Ref                     next;
-        Match() : val{0,0}, run_table(false) {}
-        Match(match_t &v, value_t &data);
+    int                     lineno = 0;
+    uint16_t                range[6] = { 0, 0, 0, 0, 0, 0 };
+    match_t                 val = { 0, 0 };
+    bool                    run_table = false;
+    Ref                     next;
+    Match() {}
+    Match(value_t *v, value_t &data, range_match_t range_match);
     }                           miss;
     std::vector<Match>          table;
 public:

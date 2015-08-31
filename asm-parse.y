@@ -199,8 +199,13 @@ list_elements: list_elements list_element { $$ = $1; VECTOR_add($$, $2); }
 
 map_element
         : key ':' value '\n' { $$ = pair_t($1, $3); }
+        | flow_value ':' value '\n' { $$ = pair_t($1, $3); }
         | key ':' '\n' indent_elements { $$ = pair_t($1, $4); }
+        | flow_value ':' '\n' indent_elements { $$ = pair_t($1, $4); }
         | key ':' '\n' list_elements { $$ = pair_t($1, list_map_expand($4)); }
+        | flow_value ':' '\n' list_elements { $$ = pair_t($1, list_map_expand($4)); }
+        | '?' value  ':' value '\n' { $$ = pair_t($2, $4); }
+        | '?' value '\n' ':' value '\n' { $$ = pair_t($2, $5); }
         ;
 
 list_element
@@ -255,7 +260,7 @@ pair_list
     : pair_list ',' pair { $$ = $1; VECTOR_add($$, $3); }
     | pair { VECTOR_init1($$, $1); }
     ;
-pair: key ':' value { $$ = pair_t($1, $3); }
+pair: value ':' value { $$ = pair_t($1, $3); }
     ;
 
 dotvals : dotvals INT '.' { $$ = $1; VECTOR_add($$, VAL($2)); }

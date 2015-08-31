@@ -28,7 +28,7 @@ void HashActionTable::setup(VECTOR(pair_t) &data) {
             HashDistribution::parse(hash_dist, kv.value, HashDistribution::ACTION_DATA_ADDRESS);
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
-                    kv.key.s, name()); }
+                    value_desc(kv.key), name()); }
     if (action.set() && actions)
         error(lineno, "Table %s has both action table and immediate actions", name());
     if (!action.set() && !actions)

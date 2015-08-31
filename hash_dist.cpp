@@ -21,7 +21,8 @@ HashDistribution::HashDistribution(value_t &v, int u) : lineno(v.lineno), xbar_u
                 if (CHECKTYPE(kv.value, tINT))
                     shift = kv.value.i;
             } else
-                warning(kv.key.lineno, "ignoring unknown item %s in hash_dist", kv.key.s); }
+                warning(kv.key.lineno, "ignoring unknown item %s in hash_dist",
+                        value_desc(kv.key)); }
         if (id < 0) {
             if (func < 0 || group < 0)
                 error(v.lineno, "Need func and group in hash_dist");
@@ -56,7 +57,8 @@ HashDistribution::HashDistribution(int id_, value_t &data, int u)
                 if (CHECKTYPE(kv.value, tINT))
                     shift = kv.value.i;
             } else
-                warning(kv.key.lineno, "ignoring unknown item %s in hash_dist", kv.key.s); }
+                warning(kv.key.lineno, "ignoring unknown item %s in hash_dist",
+                        value_desc(kv.key)); }
 }
 
 void HashDistribution::parse(std::vector<HashDistribution> &out, value_t &data, int xbar_use) {
