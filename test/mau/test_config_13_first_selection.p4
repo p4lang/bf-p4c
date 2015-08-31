@@ -23,6 +23,10 @@ header_type ipv4_t {
         hdrChecksum : 16;
         srcAddr : 32;
         dstAddr: 32;
+
+        blah1 : 32;
+        blah2 : 8;
+        blah3 : 64;
     }
 }
 
@@ -49,8 +53,9 @@ parser parse_ipv4 {
 
 
 field_list first_field_list {
-    ipv4.protocol;
-    ipv4.srcAddr;
+    ipv4.blah1;
+    ipv4.blah2;
+    ipv4.blah3;
 }
 
 
@@ -58,8 +63,8 @@ field_list_calculation first_hash {
    input {
       first_field_list;
    }
-   algorithm : crc16;
-   output_width : 16;
+   algorithm : random;
+   output_width : 72;
 }
 
 
@@ -75,7 +80,7 @@ action action_0(param0){
 }
 
 action action_select(base, hash_size){
-    modify_field_with_hash_based_offset(ethernet.etherType, base, first_hash, hash_size);
+    modify_field_with_hash_based_offset(ipv4.blah2, base, first_hash, hash_size);
 }
 
 action do_nothing(){
@@ -123,17 +128,16 @@ table table_select {
    }
    max_size : 2048;
 }
-
+*/
 
 table table_group {
    reads {
-       ipv4.dstAddr : exact;
+       ipv4.blah1 : ternary;
    }
    actions {
        action_select;
    }
 }
-*/
 
 
 /* Main control flow */
@@ -142,7 +146,7 @@ control ingress {
 
       apply(test_select);
 
-//    apply(table_group);
+      apply(table_group);
 //    apply(table_select);
 
 }
