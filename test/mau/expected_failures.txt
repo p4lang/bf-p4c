@@ -1,10 +1,8 @@
-basic_ipv4_selection.p4 compile
-- resilient hash problem?
 dileep4.p4 compile
 dileep10.p4 compile
 dileep11.p4 mismatch
 test_config_13_first_selection.p4
-- resilient hash problem?
+ - matrix differences?
 test_config_92_bit_xor_10_bits.p4 compile
 test_config_96_hash_data.p4 compile
 test_config_100_hash_action.p4 mismatch
@@ -24,5 +22,8 @@ test_config_136_tcam_error_detection.p4 mismatch
 test_config_137_tcam_error_detection_2.p4 mismatch
 test_config_138_tcam_error_detection_3.p4 mismatch
 test_config_139_tcam_error_detection_4.p4 mismatch
+ - tcam error detection not supported by asmgen or assembler.
+test_config_147_subtract_primitive.p4 mismatch
+ - ??
 vk_basic_ipv4_subset.p4 compile
 vk_basic_ipv4_20150706.p4 compile
