@@ -1,4 +1,1 @@
-parser2.p4 compile
-parser_dc_full.p4 compile
-port_vlan_mapping.p4 compile
-- all three fail with AssertionError: Ownership of PHVs ... is not consistent
+- all tests expected to pass

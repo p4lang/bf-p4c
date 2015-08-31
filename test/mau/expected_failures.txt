@@ -1,6 +1,10 @@
+basic_ipv4_selection.p4 compile
+- resilient hash problem?
 dileep4.p4 compile
 dileep10.p4 compile
 dileep11.p4 mismatch
+test_config_13_first_selection.p4
+- resilient hash problem?
 test_config_92_bit_xor_10_bits.p4 compile
 test_config_96_hash_data.p4 compile
 test_config_100_hash_action.p4 mismatch

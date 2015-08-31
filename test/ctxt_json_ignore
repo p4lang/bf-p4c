@@ -19,6 +19,7 @@ gateway_fields
 hash_algorithm
 hash_distribution_usage
 hash_distribution_usage_for_pre_color
+hash_output_width
 hash_polynomial
 hash_way_number
 include_idletime

@@ -29,11 +29,12 @@ field_list_calculation sel_hash {
         sel_fields;
     }
     algorithm : crc16;
-    output_width : 10;
+    output_width : 14;
 }
 
 action_selector sel {
     selection_key : sel_hash;
+    selection_mode : fair;
 }
 
 action noop() { }
