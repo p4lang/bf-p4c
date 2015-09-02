@@ -53,10 +53,10 @@ static json::obj *get_indexes(json::obj *t, std::vector<int> &indexes) {
 	t = v->begin()->get(); }
     return t;
 }
-static const json::obj *skip_indexes(const json::obj *t) {
+static /*const*/ json::obj *skip_indexes(const json::obj *t) {
     while (const json::vector *v = dynamic_cast<const json::vector *>(t)) {
 	t = v->begin()->get(); }
-    return t;
+    return const_cast<json::obj *>(t); // return is const if argument was
 }
 
 static json::obj *singleton_obj(json::obj *t, json::string *name) {
@@ -409,7 +409,9 @@ static std::map<std::string, json::map *> global_types;
 static bool need_ctor(const json::map *m_init) {
     if (!m_init) return false;
     for (auto &a : *m_init) {
-        auto *n_init = dynamic_cast<const json::number *>(skip_indexes(a.second.get()));
+        json::string *name = dynamic_cast<json::string *>(a.first);
+        auto *n_init = dynamic_cast<json::number *>
+	    (singleton_obj(skip_indexes(a.second.get()), name));
         if (n_init && n_init->val) return true; }
     return false;
 }
@@ -422,9 +424,10 @@ static void gen_ctor(std::ostream &out, const std::string &namestr, const json::
         out << "disabled_(false)";
         first = false; }
     if (m_init) for (auto &a : *m_init) {
-        const json::string *name = dynamic_cast<const json::string *>(a.first);
+        json::string *name = dynamic_cast<json::string *>(a.first);
         if ((*name)[0] == '_') continue;
-        auto *n_init = dynamic_cast<const json::number *>(skip_indexes(a.second.get()));
+        auto *n_init = dynamic_cast<json::number *>
+	    (singleton_obj(skip_indexes(a.second.get()), name));
         if (n_init && n_init->val) {
             if (first) first = false; else out << ", ";
             out << *name << '(' << n_init->val << ')'; } }
@@ -480,8 +483,8 @@ static void gen_type(std::ostream &out, const std::string &parent,
             if ((*name)[0] == '_') continue;
             init = m_init ? m_init->at(name).get() : 0;
             json::obj *type = get_indexes(a.second.get(), indexes);
-            init = skip_indexes(init);
             type = singleton_obj(type, name);
+            init = singleton_obj(skip_indexes(init), name);
             bool notclass = !dynamic_cast<json::map *>(type);
             bool isglobal = global_types.count(*name) > 0;
             if (gen_definitions != DEFN_ONLY) {
@@ -544,8 +547,8 @@ static int gen_global_types(std::ostream &out, json::obj *t, const json::obj *in
             if ((*name)[0] == '_') continue;
             init = m_init ? m_init->at(name).get() : 0;
             json::obj *type = get_indexes(a.second.get(), indexes);
-            init = skip_indexes(init);
             type = singleton_obj(type, name);
+            init = singleton_obj(skip_indexes(init), name);
             if (json::map *cl = dynamic_cast<json::map *>(type)) {
                 rv |= gen_global_types(out, type, init);
                 auto it = global_types.find(*name);

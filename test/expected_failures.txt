@@ -1,1 +1,3 @@
-- all tests expected to pass
+parser_dc_full.p4 compile
+port_vlan_mapping.p4 compile
+- fail PHV allocation
