@@ -5,9 +5,8 @@ test_config_13_first_selection.p4
  - matrix differences?
 test_config_92_bit_xor_10_bits.p4 compile
 test_config_96_hash_data.p4 compile
-test_config_100_hash_action.p4 mismatch
- - gateway table asmgen for hash_action looks to be wrong
- - change compiler to use normal gateways for hash_action?
+test_config_100_hash_action.p4 tfas
+ - incorrect asm code for hash_action+counter
 test_config_101_switch_msdc.p4 compile
 test_config_119_tcam_range_3.p4 mismatch
  - compiler uses tcam byte swizzler to duplicate 8-bit phv, rather than just loading it directly
@@ -15,6 +14,11 @@ test_config_120_tcam_range_4.p4 mismatch
  - compiler uses tcam byte swizzler to duplicate 8-bit phv, rather than just loading it directly
 test_config_121_tcam_range_5.p4 compile
 test_config_123_meter_2.p4 compile
+test_config_124_meter_3.p4 mismatch
+test_config_125_meter_pre_color.p4 mismatch
+test_config_126_meter_pre_color_2.p4 mismatch
+test_config_127_meter_pre_color_3.p4 mismatch
+ - idletime config difference
 test_config_132_meter_pre_color_4.p4 compile
 test_config_135_tcam_range_7.p4 mismatch
  - compiler uses tcam byte swizzler to duplicate 8-bit phv, rather than just loading it directly

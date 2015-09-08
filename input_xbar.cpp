@@ -205,22 +205,39 @@ bool InputXbar::conflict(const HashGrp &a, const HashGrp &b) {
     return false;
 }
 
+uint64_t InputXbar::hash_columns_used(unsigned hash) {
+    uint64_t rv = 0;
+    if (hash_tables.count(hash))
+	for (auto &col : hash_tables[hash])
+	    rv |= 1UL << col.first;
+    return rv;
+}
+
 /* FIXME -- this is questionable, but the compiler produces hash groups that conflict
  * FIXME -- so we try to tag ones that may be ok as merely warnings */
-bool InputXbar::can_merge(HashGrp &a, HashGrp &b) {
-#if 0
+bool InputXbar::can_merge(HashGrp &a, HashGrp &b,
+			  Alloc1Dbase<std::vector<InputXbar *>> &use)
+{
+    unsigned both = a.tables & b.tables;
+    uint64_t both_cols = 0, a_cols = 0, b_cols = 0;
+    for (unsigned i = 0; i < 16; i++) {
+	unsigned mask = 1U << i;
+	if (!((a.tables|b.tables) & mask)) continue;
+	for (InputXbar *other : use[i]) {
+	    if (both & mask) both_cols |= other->hash_columns_used(i);
+	    if (a.tables & mask) a_cols |= other->hash_columns_used(i);
+	    if (b.tables & mask) b_cols |= other->hash_columns_used(i); } }
+    a_cols &= ~both_cols;
+    b_cols &= ~both_cols;
+    if (a_cols & b_cols)
+	return false;
+    if ((a_cols & b.seed & ~a.seed) || (b_cols & a.seed & ~b.seed))
+	return false;
     a.tables |= b.tables;
     b.tables |= a.tables;
-#endif
-    if (a.tables < b.tables || a.seed < b.seed) {
-        a.tables |= b.tables;
-        a.seed |= b.seed;
-        return !conflict(a, b); }
-    if (a.tables > b.tables || a.seed > b.seed) {
-        b.tables |= a.tables;
-        b.seed |= a.seed;
-        return !conflict(a, b); }
-    return false;
+    a.seed |= b.seed;
+    b.seed |= a.seed;
+    return true;
 }
 
 void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
@@ -282,9 +299,9 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
                 break; }
             if (other->hash_groups.count(group.first) &&
                 conflict(other->hash_groups[group.first], group.second)) {
-                if (can_merge(other->hash_groups[group.first], group.second))
-                    warning(group.second.lineno, "Input xbar hash group %d conflict in stage %d",
-                            group.first, table->stage->stageno);
+                if (can_merge(other->hash_groups[group.first], group.second, use))
+                    warning(group.second.lineno, "Input xbar hash group %d mergeable conflict "
+			    "in stage %d", group.first, table->stage->stageno);
                 else 
                     error(group.second.lineno, "Input xbar hash group %d conflict in stage %d",
                           group.first, table->stage->stageno);
