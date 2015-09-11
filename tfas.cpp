@@ -83,6 +83,8 @@ int main(int ac, char **av) {
     int srcfiles = 0;
     const char *firstsrc = 0;
     struct stat st;
+    extern void register_exit_signals();
+    register_exit_signals();
     for (int i = 1; i < ac; i++) {
         if (av[i][0] == '-' && av[i][1] == 0) {
             asm_parse_file("<stdin>", stdin);

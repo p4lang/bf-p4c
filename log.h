@@ -28,21 +28,11 @@ extern int verbose;
 #define WARNING(X) (verbose > 0 ? (std::clog << "WARNING: " << X << std::endl) : std::clog)
 #define ERRWARN(C, X) ((C) ? ERROR(X) : WARNING(X))
 
-#if 0
-
-template<class T, class = decltype(void(std::declval<T>().dbprint(std::declval<std::ostream&>())), std::true_type{})> inline std::ostream &operator<<(std::ostream &out, const T &obj) { obj.dbprint(out); return out; }
-
-template<class T, class = decltype(void(std::declval<T*>()->dbprint(std::declval<std::ostream&>())), std::true_type{})> inline std::ostream &operator<<(std::ostream &out, const T *obj) { obj->dbprint(out); return out; }
-
-#else
-
 template<class T> inline auto operator<<(std::ostream &out, const T &obj) -> decltype((void)obj.dbprint(out), out)
 { obj.dbprint(out); return out; }
 
 template<class T> inline auto operator<<(std::ostream &out, const T *obj) -> decltype((void)obj->dbprint(out), out)
 { obj->dbprint(out); return out; }
-
-#endif
 
 template<class T> std::ostream &operator<<(std::ostream &out, const std::vector<T> &vec) {
     bool first = true;

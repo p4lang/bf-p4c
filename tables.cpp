@@ -48,12 +48,17 @@ void Table::Call::setup(const value_t &val, Table *tbl) {
         Format::Field *arg = 0;
         if (val[i].type == tINT && val[i].i == 0)
             ; // ok
-        else if (val[i] == "hash_dist") {
-            if (val[i].type == tCMD && val[i].vec.size > 1) {
-                if (CHECKTYPE(val[i][1], tINT))
-                    args.emplace_back(val[i][1].i);
-            } else
-                args.emplace_back(-1);
+        else if (val[i].type == tCMD && val[i] == "hash_dist") {
+            if (PCHECKTYPE(val[i].vec.size > 1, val[i][1], tINT)) {
+		bool ok = false;
+		for (auto &hd : tbl->hash_dist)
+		    if (hd.id == val[i][1].i) {
+			args.emplace_back(&hd);
+			ok = true;
+			break; }
+		if (!ok)
+		    error(val[i].lineno, "hash_dist %d not defined in table %s", val[i][1].i,
+			  tbl->name()); }
             continue; }
         else if (CHECKTYPE(val[i], tSTR) &&
             !(arg = tbl->lookup_field(val[i].s)))
@@ -62,6 +67,17 @@ void Table::Call::setup(const value_t &val, Table *tbl) {
             error(val[i].lineno, "arg fields can't be split in format");
         args.emplace_back(arg); }
     lineno = val.lineno;
+}
+
+unsigned Table::Call::Arg::size() const {
+    switch(type) {
+    case Field:
+	return fld ? fld->size : 0;
+    case HashDist:
+	return hd ? hd->expand >= 0 ? 23 : 16 : 0;
+    default:
+	assert(0);
+    }
 }
 
 static void add_row(int lineno, std::vector<Table::Layout> &layout, int row) {
@@ -237,9 +253,6 @@ void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool a
 bool Table::common_setup(pair_t &kv) {
     if (kv.key == "action") {
         action.setup(kv.value, this);
-        for (auto &a : action.args)
-            if (a.type != Call::Arg::Field)
-                error(action.lineno, "Action params must be in the format of table %s", name());
     } else if (kv.key == "action_enable") {
         if (CHECKTYPE(kv.value, tINT))
             action_enable = kv.value.i;
@@ -301,9 +314,6 @@ bool MatchTable::common_setup(pair_t &kv) {
         return true; }
     if (kv.key == "selector") {
         attached.selector.setup(kv.value, this);
-        for (auto &a : attached.selector.args)
-            if (a.type != Call::Arg::Field)
-                error(action.lineno, "Selector params must be in the format of table %s", name());
         return true; }
     if (kv.key == "stats") {
         if (kv.value.type == tVEC)
@@ -746,9 +756,9 @@ void MatchTable::write_regs(int type, Table *result) {
         for (auto &row : result->layout) {
             int bus = row.row*2 | row.bus;
             setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[type][bus], logical_id);
-            if (result->action.args.size() >= 1 && result->action.args[0].field) {
+            if (result->action.args.size() >= 1 && result->action.args[0].field()) {
                 merge.mau_action_instruction_adr_mask[type][bus] =
-                    ((1U << result->action.args[0].field->size) - 1) & ~action_enable;
+                    ((1U << result->action.args[0].size()) - 1) & ~action_enable;
             } else
                 merge.mau_action_instruction_adr_mask[type][bus] = 0;
             merge.mau_action_instruction_adr_default[type][bus] =
@@ -916,9 +926,6 @@ void AttachedTables::pass1(MatchTable *self) {
             error(s.lineno, "%s is not a counter table", s->name());
         if (s.args.size() > 1)
             error(s.lineno, "Stats table requires zero or one args");
-        else if (!s.args.empty() && s.args[0].type != Table::Call::Arg::Field)
-            error(s.lineno, "argument to counter must be a field in the %s table format",
-                  self->name());
         else if (s.args != stats[0].args)
             error(s.lineno, "Must pass same args to all stats tables in a single table");
         if (s->stage != self->stage)
@@ -930,9 +937,6 @@ void AttachedTables::pass1(MatchTable *self) {
             error(m.lineno, "%s is not a meter table", m->name());
         if (m.args.size() > 1)
             error(m.lineno, "Meter table requires zero or one args");
-        else if (!m.args.empty() && m.args[0].type != Table::Call::Arg::Field)
-            error(m.lineno, "argument to meter must be a field in the %s table format",
-                  self->name());
         else if (m.args != meter[0].args)
             error(m.lineno, "Must pass same args to all meter tables in a single table");
         if (m->stage != self->stage)

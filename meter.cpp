@@ -123,7 +123,7 @@ void MeterTable::write_merge_regs(int type, int bus, const std::vector<Call::Arg
         merge.mau_meter_adr_mask[type][bus] =  0x7fff80;
     } else { // indirect access
         assert(args.size() == 1 && args[0].type == Call::Arg::Field);
-        int bits = args[0].field->size - 3;
+        int bits = args[0].size() - 3;
         if (per_flow_enable) --bits;
         merge.mau_meter_adr_mask[type][bus] = 0x700000 | (~(~0u << bits) << 7); }
     if (!color_aware)

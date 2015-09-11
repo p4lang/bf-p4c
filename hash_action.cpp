@@ -9,6 +9,8 @@ void HashActionTable::setup(VECTOR(pair_t) &data) {
     if (auto *fmt = get(data, "format"))
         if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
             format = new Format(fmt->map);
+    if (auto *fmt = get(data, "hash_dist"))
+	HashDistribution::parse(hash_dist, *fmt, HashDistribution::ACTION_DATA_ADDRESS);
     for (auto &kv : MapIterChecked(data)) {
         if (common_setup(kv)) {
         } else if (kv.key == "format") {
@@ -25,7 +27,7 @@ void HashActionTable::setup(VECTOR(pair_t) &data) {
                 if ((bus = kv.value.i) >= 4)
                     error(kv.value.lineno, "Invalid bus %d", row);
         } else if (kv.key == "hash_dist") {
-            HashDistribution::parse(hash_dist, kv.value, HashDistribution::ACTION_DATA_ADDRESS);
+	    /* done above to be dnoe before parsing table calls */
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
@@ -56,8 +58,7 @@ void HashActionTable::pass1() {
                   "table %s format", name());
         actions->pass1(this); }
     if (action_enable >= 0)
-        if (action.args.size() < 1 || !action.args[0].field ||
-            action.args[0].field->size <= (unsigned)action_enable)
+        if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
     input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
     for (auto &hd : hash_dist)
