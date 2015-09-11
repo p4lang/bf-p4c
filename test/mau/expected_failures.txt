@@ -7,6 +7,8 @@ test_config_92_bit_xor_10_bits.p4 compile
 test_config_96_hash_data.p4 compile
 test_config_100_hash_action.p4 tfas
  - incorrect asm code for hash_action+counter
+test_config_102_clone.p4
+ - PA exception
 test_config_101_switch_msdc.p4 compile
 test_config_119_tcam_range_3.p4 mismatch
  - compiler uses tcam byte swizzler to duplicate 8-bit phv, rather than just loading it directly

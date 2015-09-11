@@ -182,8 +182,10 @@ for p4file in "$@"; do
     elif $ok; then
         echo -n " tfas failed"
         let fail++
-        echo "$p4file:" >> $FAILLOG
-        sed -e 's/^/ /' -e '/\n/!a\' tfas.log >> $FAILLOG
+	if [ $count -eq 1 ] || not grep -qs "^$name.p4" ../expected_failures.txt; then
+	    echo "$p4file:" >> $FAILLOG
+	    sed -e 's/^/ /' -e '/\n/!a\' tfas.log >> $FAILLOG
+	fi
         ok=false
         if $need_reflow; then
             # we ran the compiler and tfas failed, so reflow the compiler outputs
