@@ -1,45 +1,6 @@
 #include "hash_dist.h"
 #include "stage.h"
 
-HashDistribution::HashDistribution(value_t &v, int u) : lineno(v.lineno), xbar_use(u) {
-    if (v.type ==  tMAP) {
-        int func = -1, group = -1;
-        for (auto &kv : MapIterChecked(v.map)) {
-            if (kv.key == "func") {
-                if (CHECKTYPE(kv.value, tINT) && (unsigned)(func = kv.value.i) >= 2U)
-                    error(kv.value.lineno, "Invalid hash distribulion function id");
-            } else if (kv.key == "group") {
-                if (CHECKTYPE(kv.value, tINT) && (unsigned)(group = kv.value.i) >= 3U)
-                    error(kv.value.lineno, "Invalid hash distribulion group id");
-            } else if (kv.key == "hash") {
-                if (CHECKTYPE(kv.value, tINT) && (unsigned)(hash_group = kv.value.i) >= 8U)
-                    error(kv.value.lineno, "Invalid hash group");
-            } else if (kv.key == "mask") {
-                if (CHECKTYPE(kv.value, tINT))
-                    mask = kv.value.i;
-            } else if (kv.key == "shift") {
-                if (CHECKTYPE(kv.value, tINT))
-                    shift = kv.value.i;
-            } else
-                warning(kv.key.lineno, "ignoring unknown item %s in hash_dist",
-                        value_desc(kv.key)); }
-        if (id < 0) {
-            if (func < 0 || group < 0)
-                error(v.lineno, "Need func and group in hash_dist");
-            id = func*3 + group; }
-        return; }
-    else if (!CHECKTYPEPM(v, tVEC, v.vec.size == 4, "hash_dist vector")) return;
-    else if (!CHECKTYPE(v[0], tINT) || v[0].i < 0 || v[0].i >= 8)
-        error(v[0].lineno, "Invalid hash group");
-    else if (!CHECKTYPE(v[1], tINT) || v[1].i < 0 || v[1].i >= 2)
-        error(v[1].lineno, "Invalid hash distribulion function id");
-    else if (!CHECKTYPE(v[2], tINT) || v[2].i < 0 || v[2].i >= 3)
-        error(v[2].lineno, "Invalid hash distribulion group id");
-    else if (CHECKTYPE(v[3], tINT)) {
-        hash_group = v[0].i;
-        id = v[1].i*3 + v[2].i;
-        mask = v[3].i; }
-}
 HashDistribution::HashDistribution(int id_, value_t &data, int u)
     : lineno(data.lineno), id (id_), xbar_use(u)
 {
@@ -56,27 +17,26 @@ HashDistribution::HashDistribution(int id_, value_t &data, int u)
             } else if (kv.key == "shift") {
                 if (CHECKTYPE(kv.value, tINT))
                     shift = kv.value.i;
+            } else if (kv.key == "expand") {
+                if (CHECKTYPE(kv.value, tINT))
+                    expand = kv.value.i;
             } else
                 warning(kv.key.lineno, "ignoring unknown item %s in hash_dist",
                         value_desc(kv.key)); }
 }
 
 void HashDistribution::parse(std::vector<HashDistribution> &out, value_t &data, int xbar_use) {
-    if (data.type == tVEC && data.vec.size > 0 && data[0].type != tINT) {
-        for (auto &v : data.vec)
-            out.emplace_back(v, xbar_use);
-    } else if (data.type == tMAP && data.map.size > 0 && data.map[0].key.type == tINT) {
+    if (CHECKTYPE(data, tMAP))
         for (auto &kv : data.map)
             if (CHECKTYPE(kv.key, tINT))
                 out.emplace_back(kv.key.i, kv.value, xbar_use);
-    } else
-        out.emplace_back(data, xbar_use);
 }
 
 bool HashDistribution::compatible(HashDistribution *a) {
     if (hash_group != a->hash_group) return false;
     if (id != a->id) return false;
     if (shift != a->shift) return false;
+    if (expand != a->expand) return false;
     if (meter_pre_color && !a->meter_pre_color && (mask & ~a->mask)) return false;
     if (!meter_pre_color && a->meter_pre_color && (~mask & a->mask)) return false;
     if (xbar_use != NONE && a->xbar_use != NONE && xbar_use != a->xbar_use) return false;
@@ -91,6 +51,26 @@ void HashDistribution::pass1(Table *tbl) {
             err = true;
             error(lineno, "hash_dist unit %d in table %s not compatible with", id, tbl->name());
             warning(use->lineno, "previous use in table %s", use->tbl->name()); } }
+    if (expand >= 0) {
+	int min_shift = 7, diff = 7, other = id-1;
+	switch(id%3) {
+	case '0':
+	    min_shift = 0; diff = -7; other = id+1;
+	    // fall through
+	case '1':
+	    if (expand < min_shift || expand >= min_shift + 16) {
+		error(lineno, "hash_dist unit %d expand can't pull from bit %d", id, expand);
+		err = true; }
+	    break;
+	case '2':
+	    error(lineno, "hash_dist unit %d cannot be expanded", id);
+	    err = true; }
+	if (!err) {
+	    for (auto *use : tbl->stage->hash_dist_use[other])
+		if (use->expand != expand - diff) {
+		    error(lineno, "hash_dist unit %d int table %s expand not compatible with",
+			  id, tbl->name());
+		    warning(use->lineno, "previous use in table %s", use->tbl->name()); } } }
     if (err) return;
     tbl->stage->hash_dist_use[id].push_back(this);
     for (int i = 0; i < 3; i++) {
@@ -121,11 +101,15 @@ void HashDistribution::write_regs(Table *tbl, int type, bool non_linear) {
     merge.mau_hash_group_config.hash_group_ctl.set_subfield(type, 2 * id, 2);
     merge.mau_hash_group_shiftcount.set_subfield(shift, 3 * id, 3);
     merge.mau_hash_group_mask[id] |= mask;
-    // FIXME -- these are for combining to get wider than 16-bit groups...
-    switch (id % 3) {
-    case 0: merge.mau_hash_group_expand[id/3].hash_slice_group0_expand = 0; break;
-    case 1: merge.mau_hash_group_expand[id/3].hash_slice_group1_expand = 0; break;
-    case 2: merge.mau_hash_group_expand[id/3].hash_slice_group2_expand = 0; break;
+    if (expand >= 0) switch (id % 3) {
+    case 0:
+	merge.mau_hash_group_expand[id/3].hash_slice_group0_expand = 1;
+	merge.mau_hash_group_expand[id/3].hash_slice_group2_expand = expand;
+	break;
+    case 1:
+	merge.mau_hash_group_expand[id/3].hash_slice_group1_expand = 1;
+	merge.mau_hash_group_expand[id/3].hash_slice_group2_expand = expand - 7;
+	break;
     default: assert(0); }
     if (xbar_use >= 0)
         merge.mau_hash_group_xbar_ctl[xbar_use][tbl->logical_id/8U].set_subfield(

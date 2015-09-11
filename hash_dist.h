@@ -16,14 +16,12 @@ struct HashDistribution {
     Table       *tbl = 0;
     int         lineno = -1;
     int         hash_group = -1, id = -1;
-    int         shift = 0, mask = 0;
+    int         shift = 0, mask = 0, expand = -1;
     bool        meter_pre_color = false;
     int         meter_mask_index;
     enum { NONE=-1, IMMEDIATE_HIGH=0, IMMEDIATE_LOW=1, METER_ADDRESS=2, STATISTICS_ADDRESS=3,
            ACTION_DATA_ADDRESS=4, HASHMOD_DIVIDEND=5 };
     int         xbar_use = NONE;
-    //HashDistribution() = default;
-    HashDistribution(value_t &v, int u=NONE);
     HashDistribution(int id, value_t &data, int u=NONE);
     static void parse(std::vector<HashDistribution> &out, value_t &v, int u=NONE);
     bool compatible(HashDistribution *a);
