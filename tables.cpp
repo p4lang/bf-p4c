@@ -931,6 +931,8 @@ void AttachedTables::pass1(MatchTable *self) {
             error(s.lineno, "%s is not a counter table", s->name());
         if (s.args.size() > 1)
             error(s.lineno, "Stats table requires zero or one args");
+	if (s.args.size() > 0 && s.args[0].hash_dist())
+	    s.args[0].hash_dist()->xbar_use = HashDistribution::STATISTICS_ADDRESS;
         else if (s.args != stats[0].args)
             error(s.lineno, "Must pass same args to all stats tables in a single table");
         if (s->stage != self->stage)
@@ -942,6 +944,8 @@ void AttachedTables::pass1(MatchTable *self) {
             error(m.lineno, "%s is not a meter table", m->name());
         if (m.args.size() > 1)
             error(m.lineno, "Meter table requires zero or one args");
+	if (m.args.size() > 0 && m.args[0].hash_dist())
+	    m.args[0].hash_dist()->xbar_use = HashDistribution::METER_ADDRESS;
         else if (m.args != meter[0].args)
             error(m.lineno, "Must pass same args to all meter tables in a single table");
         if (m->stage != self->stage)
