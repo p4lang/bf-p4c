@@ -95,6 +95,9 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
             else if (CHECKTYPE(kv.value, tINT))
                 payload = kv.value.i;
             have_payload = true;
+        } else if (kv.key == "match_address") {
+            if (CHECKTYPE(kv.value, tINT))
+                match_address = kv.value.i;
         } else if (kv.key == "match") {
             if (kv.value.type == tVEC) {
                 for (auto &v : kv.value.vec)
@@ -274,12 +277,9 @@ void GatewayTable::write_regs() {
                 if (have_payload) {
                     merge.gateway_payload_pbus[row.row] |= 1 << (row.bus + (tind_bus ? 2 : 0));
                     merge.gateway_payload_data[row.row][row.bus][0][tind_bus] = payload & 0xffffffff;
-                    merge.gateway_payload_data[row.row][row.bus][1][tind_bus] = payload >> 32;
-#if 0
-                    merge.gateway_payload_match_adr[row.row][row.bus] = ???;
-#endif
-                }
-            }
+                    merge.gateway_payload_data[row.row][row.bus][1][tind_bus] = payload >> 32; }
+		if (match_address >= 0)
+                    merge.gateway_payload_match_adr[row.row][row.bus][tind_bus] = match_address; }
         else {
             assert(tmatch);
             auto &xbar_ctl = merge.gateway_to_pbus_xbar_ctl[tmatch->indirect_bus];

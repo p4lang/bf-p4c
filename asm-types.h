@@ -214,32 +214,6 @@ public:
 class MatchIter {
 /* Iterate through the integers that match a match_t */
     match_t     m;
-#if 0
-    class iter {
-        MatchIter       *self;
-        unsigned        wcbits, ctr; 
-    public:
-        iter(MatchIter *s, bool last=false) : self(s),
-            wcbits(s->m.word0 & s->m.word1), ctr(0) {
-                if (last) ctr = wcbits;
-                assert((wcbits >> 31) == 0); }
-        unsigned operator*() const {
-            return ctr | (self->m.word1 & ~self->m.word0); }
-        bool operator==(iter &a) const { return ctr == a.ctr; }
-        iter &operator++() {
-            if (wcbits) {
-                /* add 1 to ctr, manually propagating the carry across
-                 * bits that are clear in wcbits */
-                ctr += (wcbits ^ (wcbits-1)) & wcbits;
-                while ((ctr & ~wcbits) && ctr < wcbits) {
-                    unsigned tmp = wcbits & ~((ctr & ~wcbits)-1);
-                    ctr &= wcbits;
-                    ctr += (tmp ^ (tmp-1)) & tmp; } }
-            else if (self->m.word1 | self->m.word0)
-                ctr++;
-            return *this; }
-        iter &end() { ctr = wcbits; return ++*this; } };
-#else
     class iter : public MaskCounter {
         MatchIter       *self;
     public:
@@ -249,7 +223,6 @@ class MatchIter {
             return this->operator unsigned() | (self->m.word1 & ~ self->m.word0); }
         iter &end() { overflow();  return *this; }
     };
-#endif
 public:
     MatchIter(match_t m_) : m(m_) {}
     iter begin() { return iter(this); }

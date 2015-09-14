@@ -24,8 +24,6 @@ public:
 AsmStage::AsmStage() : Section("stage") {
     int slot = 0, byte = 0;
     stage.reserve(NUM_MAU_STAGES);
-    //if (options.match_compiler)
-    //    stage.resize(NUM_MAU_STAGES);
     for (int i = 0; i < ACTION_DATA_8B_SLOTS; i++) {
         Stage::action_bus_slot_map[byte++] = slot;
         Stage::action_bus_slot_size[slot++] = 8; }
@@ -121,14 +119,6 @@ void AsmStage::process() {
                 Phv::setuse(gress, stage[i].match_use[gress]);
                 Phv::setuse(gress, stage[i].action_use[gress]);
                 Phv::setuse(gress, stage[i].action_set[gress]); }
-#if 0
-            /* if a stage is used only in ingress or egress, the compiler configures delays
-             *  for the unused part to be match dependent rather than concurrent. */
-            if (stage[i].stage_dep[INGRESS] && !stage[i].stage_dep[EGRESS])
-                stage[i].stage_dep[EGRESS] = Stage::MATCH_DEP;
-            else if (!stage[i].stage_dep[INGRESS] && stage[i].stage_dep[EGRESS])
-                stage[i].stage_dep[INGRESS] = Stage::MATCH_DEP;
-#endif
         }
     }
 }

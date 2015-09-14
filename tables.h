@@ -486,6 +486,7 @@ DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
     MatchTable                  *match_table = 0;
     uint64_t                    payload;
     bool                        have_payload = false;
+    int				match_address = -1;
     int                         gw_unit = -1;
     enum range_match_t { NONE, DC_2BIT, DC_4BIT }
 				range_match = NONE;
