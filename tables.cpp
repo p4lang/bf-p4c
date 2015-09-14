@@ -763,9 +763,14 @@ void MatchTable::write_regs(int type, Table *result) {
                 merge.mau_action_instruction_adr_mask[type][bus] = 0;
             merge.mau_action_instruction_adr_default[type][bus] =
                 result->enable_action_instruction_enable ? 0 : 0x40;
-            if (action_enable)
-                merge.mau_action_instruction_adr_per_entry_en_mux_ctl[type][bus] =
-                    result->action_enable;
+            if (action_enable) {
+		if (result->enable_action_instruction_enable)
+		    merge.mau_action_instruction_adr_per_entry_en_mux_ctl[type][bus] =
+			result->action_enable;
+		if (enable_action_data_enable)
+		    merge.mau_actiondata_adr_per_entry_en_mux_ctl[type][bus] =
+		        result->action_enable + 5;
+	    }
             if (idletime)
                 idletime->write_merge_regs(type, bus);
             if (result->action)
