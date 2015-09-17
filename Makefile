@@ -94,7 +94,7 @@ templates/%.json: templates/.templates-updated
 .PHONY: default all tags test clean veryclean help
 tags:
 	ctags -R -I VECTOR --exclude=test --exclude=submodules \
-	    --regex-C++='/^DECLARE_TABLE_TYPE\(([a-zA-Z0-9_]+)/\1/c/'
+	    --regex-C++='/^DECLARE_(ABSTRACT_)?TABLE_TYPE\(([a-zA-Z0-9_]+)/\2/c/'
 
 test: all
 	cd test; ./runtests *.p4 mau/*.p4

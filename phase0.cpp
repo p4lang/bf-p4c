@@ -6,7 +6,7 @@ DEFINE_TABLE_TYPE(Phase0MatchTable)
 void Phase0MatchTable::setup(VECTOR(pair_t) &data) {
     VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
     for (auto &kv : MapIterChecked(data)) {
-        /* if (common_setup(kv)) { } else */
+        /* if (common_setup(kv, data)) { } else */
         if (kv.key == "p4") {
             if (CHECKTYPE(kv.value, tMAP))
                 p4_table = P4Table::get(P4Table::MatchEntry, kv.value.map);

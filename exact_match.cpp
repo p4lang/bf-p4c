@@ -19,7 +19,7 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
         error(lineno, "No format specified in table %s", name());
     VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
     for (auto &kv : MapIterChecked(data)) {
-        if (common_setup(kv)) {
+        if (common_setup(kv, data)) {
         } else if (kv.key == "input_xbar") {
 	    if (CHECKTYPE(kv.value, tMAP))
 		input_xbar = new InputXbar(this, false, kv.value.map);

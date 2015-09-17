@@ -117,7 +117,7 @@ int MeterTable::direct_shiftcount() {
     return 64;
 }
 
-void MeterTable::write_merge_regs(int type, int bus, const std::vector<Call::Arg> &args) {
+void MeterTable::write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge = stage->regs.rams.match.merge;
     if (args.empty()) { // direct access
         merge.mau_meter_adr_mask[type][bus] =  0x7fff80;

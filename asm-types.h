@@ -159,6 +159,9 @@ inline void fini(VECTOR(pair_t) &v) { VECTOR_foreach(v, free_pair); VECTOR_fini(
 inline value_t *get(VECTOR(pair_t) &map, const char *key) {
     for (auto &kv : map) if (kv.key == key) return &kv.value;
     return 0; }
+inline const value_t *get(const VECTOR(pair_t) &map, const char *key) {
+    for (auto &kv : map) if (kv.key == key) return &kv.value;
+    return 0; }
 
 #ifdef __cplusplus
 #include <functional>

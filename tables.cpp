@@ -250,13 +250,14 @@ void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool a
                 break; } }
 }
 
-bool Table::common_setup(pair_t &kv) {
+bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data) {
     if (kv.key == "action") {
         action.setup(kv.value, this);
     } else if (kv.key == "action_enable") {
         if (CHECKTYPE(kv.value, tINT))
             action_enable = kv.value.i;
-        enable_action_data_enable = true;
+	if (get(data, "action"))
+	    enable_action_data_enable = true;
         enable_action_instruction_enable = true;
     } else if (kv.key == "enable_action_data_enable") {
         enable_action_data_enable = get_bool(kv.value);
@@ -297,8 +298,8 @@ bool Table::common_setup(pair_t &kv) {
     return true;
 }
 
-bool MatchTable::common_setup(pair_t &kv) {
-    if (Table::common_setup(kv)) {
+bool MatchTable::common_setup(pair_t &kv, const VECTOR(pair_t) &data) {
+    if (Table::common_setup(kv, data)) {
         return true; }
     if (kv.key == "gateway") {
         if (CHECKTYPE(kv.value, tMAP)) {
@@ -954,11 +955,11 @@ void AttachedTables::pass1(MatchTable *self) {
             error(m.lineno, "Meter %s not in same thread as %s", m->name(), self->name()); }
 }
 
-void AttachedTables::write_merge_regs(Table *self, int type, int bus) {
-    for (auto &s : stats) s->write_merge_regs(type, bus, s.args);
-    for (auto &m : meter) m->write_merge_regs(type, bus, m.args);
+void AttachedTables::write_merge_regs(MatchTable *self, int type, int bus) {
+    for (auto &s : stats) s->write_merge_regs(self, type, bus, s.args);
+    for (auto &m : meter) m->write_merge_regs(self, type, bus, m.args);
     if (selector)
-        get_selector()->write_merge_regs(type, bus, selector.args, self->action);
+        get_selector()->write_merge_regs(self, type, bus, selector.args);
 }
 
 json::map *Table::base_tbl_cfg(json::vector &out, const char *type, int size) {

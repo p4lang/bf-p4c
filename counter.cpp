@@ -94,12 +94,20 @@ int CounterTable::direct_shiftcount() {
     return 64 + 7 - counter_shifts[format->groups()];
 }
 
-void CounterTable::write_merge_regs(int type, int bus, const std::vector<Call::Arg> &args) {
+void CounterTable::write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge =  stage->regs.rams.match.merge;
-    merge.mau_stats_adr_mask[type][bus] = 0xfffff & ~counter_masks[format->groups()];
-    merge.mau_stats_adr_default[type][bus] = per_flow_enable ? 0 : (1U << 19);
+    auto pfe_bit = 19;
+    if (options.match_compiler && dynamic_cast<HashActionTable *>(match)) {
+	/* FIXME -- for some reason the compiler does not set the stats_adr_mask
+	 * for hash_action tables.  Is it not needed? */
+	/* FIXME -- figure out how the pfe bit is selected (make it an option?)
+	 * instead of hard-coding it */
+	pfe_bit = 7;
+    } else
+	merge.mau_stats_adr_mask[type][bus] = 0xfffff & ~counter_masks[format->groups()];
+    merge.mau_stats_adr_default[type][bus] = per_flow_enable ? 0 : (1U << pfe_bit);
     if (per_flow_enable)
-        merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = 19;
+        merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = pfe_bit;
 }
 
 void CounterTable::write_regs() {

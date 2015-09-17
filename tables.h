@@ -45,7 +45,7 @@ protected:
     Table(const Table &) = delete;
     Table(Table &&) = delete;
     virtual void setup(VECTOR(pair_t) &data) = 0;
-    virtual bool common_setup(pair_t &);
+    virtual bool common_setup(pair_t &, const VECTOR(pair_t) &);
     void setup_layout(std::vector<Layout> &, value_t *row, value_t *col, value_t *bus, const char *subname = "");
     void setup_logical_id();
     void setup_actions(value_t &);
@@ -220,8 +220,7 @@ public:
     virtual void pass1() = 0;
     virtual void pass2() = 0;
     virtual void write_merge_regs(int type, int bus) { assert(0); }
-    virtual void write_merge_regs(int type, int bus, const std::vector<Call::Arg> &args) { assert(0); }
-    virtual void write_merge_regs(int type, int bus, const std::vector<Call::Arg> &args, Call &action) { assert(0); }
+    virtual void write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args) { assert(0); }
     virtual void write_regs() = 0;
     virtual void gen_tbl_cfg(json::vector &out) = 0;
     json::map *base_tbl_cfg(json::vector &out, const char *type, int size);
@@ -294,7 +293,7 @@ struct AttachedTables {
     std::vector<Table::Call>    stats, meter;
     SelectionTable *get_selector() const;
     void pass1(MatchTable *self);
-    void write_merge_regs(Table *self, int type, int bus);
+    void write_merge_regs(MatchTable *self, int type, int bus);
     bool run_at_eop();
 };
 
@@ -315,7 +314,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
 
     void pass1(int type);
     void write_regs(int type, Table *result);
-    bool common_setup(pair_t &);
+    bool common_setup(pair_t &, const VECTOR(pair_t) &);
 public:
     const AttachedTables *get_attached() const { return &attached; }
     const GatewayTable *get_gateway() const { return gateway; }
@@ -444,7 +443,7 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     const AttachedTables *get_attached() const { return &attached; }
     const GatewayTable *get_gateway() const { return match_table->get_gateway(); }
     SelectionTable *get_selector() const { return attached.get_selector(); }
-    void write_merge_regs(int type, int bus) { attached.write_merge_regs(this, type, bus); }
+    void write_merge_regs(int type, int bus) { attached.write_merge_regs(match_table, type, bus); }
 )
 
 DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
@@ -534,8 +533,7 @@ public:
     table_type_t table_type() { return SELECTION; }
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
 	width = period = 1; depth = layout_size(); period_name = 0; }
-    void write_merge_regs(int type, int bus, const std::vector<Call::Arg> &args,
-			  Call &action);
+    void write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args);
     unsigned address_shift() const { return 7 + ceil_log2(min_words); }
 )
 
@@ -576,13 +574,13 @@ DECLARE_ABSTRACT_TABLE_TYPE(StatsTable, AttachedTable,
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
 	width = period = 1; depth = layout_size(); period_name = 0; }
 public:
-    virtual void write_merge_regs(int type, int bus, const std::vector<Call::Arg> &args) = 0;
+    virtual void write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args) = 0;
 )
 
 DECLARE_TABLE_TYPE(CounterTable, StatsTable, "counter",
     enum { NONE=0, PACKETS=1, BYTES=2, BOTH=3 } type = NONE;
     table_type_t table_type() { return COUNTER; }
-    void write_merge_regs(int type, int bus, const std::vector<Call::Arg> &args);
+    void write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args);
     bool                per_flow_enable = false;
 public:
     int direct_shiftcount();
@@ -594,7 +592,7 @@ DECLARE_TABLE_TYPE(MeterTable, StatsTable, "meter",
     enum { NONE_=0, PACKETS=1, BYTES=2 }        count = NONE_;
     std::vector<Layout>                         color_maprams;
     table_type_t table_type() { return METER; }
-    void write_merge_regs(int type, int bus, const std::vector<Call::Arg> &args);
+    void write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args);
     int                 sweep_interval = 2;
     bool                per_flow_enable = false;
 public:

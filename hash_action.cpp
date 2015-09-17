@@ -12,7 +12,7 @@ void HashActionTable::setup(VECTOR(pair_t) &data) {
     if (auto *fmt = get(data, "hash_dist"))
 	HashDistribution::parse(hash_dist, *fmt, HashDistribution::ACTION_DATA_ADDRESS);
     for (auto &kv : MapIterChecked(data)) {
-        if (common_setup(kv)) {
+        if (common_setup(kv, data)) {
         } else if (kv.key == "format") {
             /* done above to be done before action_bus and vpns */
         } else if (kv.key == "input_xbar") {

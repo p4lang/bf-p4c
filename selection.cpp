@@ -105,19 +105,19 @@ void SelectionTable::pass2() {
         error(lineno, "No selection_hash in selector table %s", name());
 }
 
-void SelectionTable::write_merge_regs(int type, int bus,
-    const std::vector<Call::Arg> &args, Call &action)
+void SelectionTable::write_merge_regs(MatchTable *match, int type, int bus,
+    const std::vector<Call::Arg> &args)
 {
     auto &merge = stage->regs.rams.match.merge;
-    if (action)
-        /*merge.mau_selector_action_entry_size[type][bus] = action->format->log2size - 3*/;
+    if (match->action_call())
+        /*merge.mau_selector_action_entry_size[type][bus] = match->action_call()->format->log2size - 3*/;
     else if (options.match_compiler)
         return; // compiler skips the rest if no action table
     //if (args.size() > 1)
     //    merge.mau_bus_hash_group_ctl[type][bus/4].set_subfield(
     //        1 << BusHashGroup::SELECTOR_MOD, 5 * (bus%4), 5);
     merge.mau_meter_adr_type_position[type][bus] = 24;
-    if (action.args.size() > 1) {
+    if (match->action_call().args.size() > 1) {
         int bits = per_flow_enable ? 17 : 16;
         /* FIXME -- regs need to stabilize */
         merge.mau_meter_adr_mask[type][bus] = ((1U << bits) - 1) << 7; }

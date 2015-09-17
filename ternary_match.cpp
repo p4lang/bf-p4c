@@ -74,7 +74,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
             else
                 match.emplace_back(*m); }
     for (auto &kv : MapIterChecked(data)) {
-        if (common_setup(kv)) {
+        if (common_setup(kv, data)) {
         } else if (kv.key == "input_xbar" || kv.key == "match") {
             /* done above to be done before vpns */
         } else if (kv.key == "indirect") {
@@ -298,7 +298,7 @@ void TernaryMatchTable::write_regs() {
             if (st.args.empty())
                 merge.mau_stats_adr_tcam_shiftcount[indirect_bus] = st->direct_shiftcount();
             else
-                merge.mau_stats_adr_tcam_shiftcount[indirect_bus] = st.args[0].field()->bits[0].lo;
+                merge.mau_stats_adr_tcam_shiftcount[indirect_bus] = st.args[0].field()->bits[0].lo + 7;
             break; /* all must be the same, only config once */ }
         for (auto &m : attached.meter) {
             if (m.args.empty()) {
@@ -384,7 +384,7 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
         error(lineno, "No format specified in table %s", name());
     VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
     for (auto &kv : MapIterChecked(data)) {
-        if (common_setup(kv)) {
+        if (common_setup(kv, data)) {
         } else if (kv.key == "format") {
             /* done above to be done before action_bus and vpns */
         } else if (kv.key == "selector") {
@@ -541,7 +541,7 @@ void TernaryIndirectTable::write_regs() {
             if (st.args.empty())
                 merge.mau_stats_adr_tcam_shiftcount[bus] = st->direct_shiftcount();
             else
-                merge.mau_stats_adr_tcam_shiftcount[bus] = st.args[0].field()->bits[0].lo;
+                merge.mau_stats_adr_tcam_shiftcount[bus] = st.args[0].field()->bits[0].lo + 7;
             break; /* all must be the same, only config once */ }
         for (auto &m : attached.meter) {
             if (m.args.empty()) {
