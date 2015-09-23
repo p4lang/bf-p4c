@@ -40,7 +40,7 @@ table test2 {
 }
 
 control ingress {
-    if (1 == 15 & data.b2) {
+    if (1 == (15 & data.b2)) {
         apply(test1);
     } else {
         apply(test2);

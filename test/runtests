@@ -38,7 +38,7 @@ while expr "$1" : - >/dev/null; do
 done
 
 #glsc_args="--placement-order ingress_before_egress --libpd --placement secret"
-glsc_args="--placement-order ingress_before_egress --libpd"
+glsc_args="--placement-order ingress_before_egress --libpd --no-bin"
 
 trap 'exit' 2
 
@@ -117,7 +117,7 @@ for p4file in "$@"; do
         need_reflow=false
     else 
         rm -f $name.tfa
-        if $GLSC -o . --verbose 2 -vl 2 -S $glsc_args ../$name.p4 </dev/null >glsc.log 2>&1; then
+        if $GLSC -o . --verbose 2 -vl 2 -S -G $glsc_args ../$name.p4 </dev/null >glsc.log 2>&1; then
             need_reflow=true
             if [ out.tfa -nt $name.tfa ]; then
                 rm -f $name.tfa
