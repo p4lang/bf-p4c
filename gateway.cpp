@@ -276,6 +276,10 @@ void GatewayTable::write_regs() {
                 }
                 if (have_payload) {
                     merge.gateway_payload_pbus[row.row] |= 1 << (row.bus + (tind_bus ? 2 : 0));
+		    if (options.match_compiler) {
+			/* working around a problem in the harlyn model */
+			merge.gateway_payload_data[row.row][row.bus][0][tind_bus^1] = payload & 0xffffffff;
+			merge.gateway_payload_data[row.row][row.bus][1][tind_bus^1] = payload >> 32; }
                     merge.gateway_payload_data[row.row][row.bus][0][tind_bus] = payload & 0xffffffff;
                     merge.gateway_payload_data[row.row][row.bus][1][tind_bus] = payload >> 32; }
 		if (match_address >= 0)
