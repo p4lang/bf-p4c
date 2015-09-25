@@ -20,9 +20,9 @@ parser start {
 }
 
 action noop() { }
-action setb1(val, out) {
+action setb1(val, port) {
     modify_field(data.b1, val);
-    modify_field(ig_intr_md_for_tm.ucast_egress_port, out);
+    modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
 }
 
 table test1 {
