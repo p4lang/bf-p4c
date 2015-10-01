@@ -16,21 +16,22 @@ GatewayTable::Match::Match(value_t *v, value_t &data, range_match_t range_match)
         for (unsigned i = 0; i < range_match_info[range_match].units; i++)
             range[i] = range_match_info[range_match].mask;
     if (v) {
+	lineno = v->lineno;
         if (v->type == tVEC) {
             int last = v->vec.size - 1;
             if (last > (int)range_match_info[range_match].units)
-                error(v->lineno, "Too many set values for range match");
+                error(lineno, "Too many set values for range match");
             for (int i = 0; i < last; i++)
                 if (CHECKTYPE((*v)[last-i-1], tINT)) {
                     if ((unsigned)(*v)[last-i-1].i > range_match_info[range_match].mask)
-                        error(v->lineno, "range match set too large");
+                        error(lineno, "range match set too large");
                     range[i] = (*v)[last-i-1].i; }
             v = &(*v)[last]; }
         if (v->type == tINT) {
             val.word0 = ~(val.word1 = (unsigned long)v->i);
         } else if (v->type == tBIGINT) {
             if (v->bigi.size > 1)
-                error(v->lineno, "Gateway key too large");
+                error(lineno, "Gateway key too large");
             val.word0 = ~(val.word1 = (unsigned long)v->bigi.data[0]);
         } else if (v->type == tMATCH) {
             val = v->m; } }
@@ -173,6 +174,12 @@ void GatewayTable::pass1() {
         if (shift < 0 || shift > r.offset) shift = r.offset; }
     if (shift < 0) shift = 0;
     for (auto &line : table) {
+#if 0
+	if ((line.val.word0 & (ignore >> shift)) != (ignore >> shift))
+	    error(line.lineno, "Not ignoring bits not in match of gateway");
+	if ((line.val.word1 & (ignore >> shift)) != (ignore >> shift))
+	    warning(line.lineno, "Not wildcarding bits not in match of gateway");
+#endif
         line.val.word0 = (line.val.word0 << shift) | ignore;
         line.val.word1 = (line.val.word1 << shift) | ignore; }
 }

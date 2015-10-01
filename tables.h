@@ -499,13 +499,13 @@ public:
 private:
     std::vector<MatchKey>       match, xor_match;
     struct Match {
-    int                     lineno = 0;
-    uint16_t                range[6] = { 0, 0, 0, 0, 0, 0 };
-    match_t                 val = { 0, 0 };
-    bool                    run_table = false;
-    Ref                     next;
-    Match() {}
-    Match(value_t *v, value_t &data, range_match_t range_match);
+	int                     lineno = 0;
+	uint16_t                range[6] = { 0, 0, 0, 0, 0, 0 };
+	match_t                 val = { 0, 0 };
+	bool                    run_table = false;
+	Ref                     next;
+	Match() {}
+	Match(value_t *v, value_t &data, range_match_t range_match);
     }                           miss;
     std::vector<Match>          table;
 public:
