@@ -72,8 +72,8 @@ class Parser : public Section {
         struct Match {
             int         lineno;
             match_t     match;
-            int         counter, offset, shift;
-            bool        counter_reset, offset_reset;
+            int         counter = 0, offset = 0, shift = 0, buf_req = -1;
+            bool        counter_reset = false, offset_reset = false;
             Ref         next;
             MatchKey    future;
             enum flags_t { OFFSET=1, ROTATE=2 };

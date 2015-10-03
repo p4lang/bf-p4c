@@ -165,8 +165,8 @@ void Parser::process() {
         if (!states[EGRESS].empty())
             start_state[EGRESS][i]->unmark_reachable(this, unreach); }
     for (auto u : unreach)
-        error(all[u]->lineno, "%sgress state %s unreachable",
-              all[u]->gress ? "E" : "In", all[u]->name.c_str());
+        warning(all[u]->lineno, "%sgress state %s unreachable",
+                all[u]->gress ? "E" : "In", all[u]->name.c_str());
     if (phv_use[INGRESS].intersects(phv_use[EGRESS])) {
         bitvec tmp = phv_use[INGRESS];
         tmp &= phv_use[EGRESS];
@@ -453,8 +453,6 @@ void Parser::State::MatchKey::setup(value_t &spec) {
 Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &data) :
     lineno(l), match(m)
 {
-    counter = offset = shift = 0;
-    counter_reset = offset_reset = false;
     for (auto &kv : data) {
         if (kv.key == "counter") {
             if (counter || counter_reset)
@@ -493,6 +491,11 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
                 error(kv.key.lineno, "Multiple shift settings in match");
             if (!CHECKTYPE(kv.value, tINT)) continue;
             shift = kv.value.i;
+        } else if (kv.key == "buf_req") {
+	    if (buf_req >= 0)
+                error(kv.key.lineno, "Multiple buf_req settings in match");
+            if (!CHECKTYPE(kv.value, tINT)) continue;
+            buf_req = kv.value.i;
         } else if (kv.key == "next") {
             if (next.lineno >= 0) {
                 error(kv.key.lineno, "Multiple next settings in match");
@@ -840,20 +843,22 @@ void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
         if (!(used & (1U << i)))
             *output_map[i].dst = 0x1ff;
 
-    /* FIXME -- probably need a way to specify buf_req explicitly in asm, for when
-     * FIXME -- the compiler wants to do weird sepculative stuff.  Also, the compiler's
-     * FIXME -- calculation of this is weird (incorrect?), but we try to match it.
-     * FIXME -- See output/parser.py */
-    unsigned buf_req = ea_row.shift_amt;
-    if (ea_row.lookup_offset_16 + 2 > buf_req) buf_req = ea_row.lookup_offset_16 + 2;
-    if (ea_row.lookup_offset_8[0] + 1 > buf_req) buf_req = ea_row.lookup_offset_8[0] + 1;
-    if (ea_row.lookup_offset_8[1] + 1 > buf_req) buf_req = ea_row.lookup_offset_8[1] + 1;
-    for (int i = 0; i < phv_output_map_size; i++)
-        if (!output_map[i].src_type || 0 == *output_map[i].src_type)
-            if (*output_map[i].src < 32) {
-                unsigned off = *output_map[i].src + output_map[i].size/8;
-                if (off > buf_req) buf_req = off; }
-    assert(buf_req <= 32);
+    if (buf_req < 0) {
+	/* this tries to more or less match how the compiler computes buf_req, but it is
+	 * pretty much impossible -- the compiler should set it explicitly */
+	buf_req = ea_row.shift_amt;
+	if (ea_row.lookup_offset_16 + 2 > (unsigned)buf_req)
+	    buf_req = ea_row.lookup_offset_16 + 2;
+	if (ea_row.lookup_offset_8[0] + 1 > (unsigned)buf_req)
+	    buf_req = ea_row.lookup_offset_8[0] + 1;
+	if (ea_row.lookup_offset_8[1] + 1 > (unsigned)buf_req)
+	    buf_req = ea_row.lookup_offset_8[1] + 1;
+	for (int i = 0; i < phv_output_map_size; i++)
+	    if (!output_map[i].src_type || 0 == *output_map[i].src_type)
+		if (*output_map[i].src < 32) {
+		    unsigned off = *output_map[i].src + output_map[i].size/8;
+		    if (off > (unsigned)buf_req) buf_req = off; }
+	assert(buf_req <= 32); }
     ea_row.buf_req = buf_req;
 }
 
