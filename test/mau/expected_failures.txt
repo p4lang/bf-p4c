@@ -29,5 +29,16 @@ test_config_139_tcam_error_detection_4.p4 mismatch
  - tcam error detection not supported by asmgen or assembler.
 test_config_147_subtract_primitive.p4 mismatch
  - ??
+test_config_163_stateful_table_math_unit.p4 compile
+test_config_164_stateful_deterministic_sampling.p4 compile
+test_config_165_stateful_bfd_failure_detection.p4 compile
+test_config_166_stateful_generic_counter.p4 compile
+test_config_167_stateful_flowlet_switching.p4 compile
+test_config_169_stateful_sflow_sequence.p4 compile
+test_config_170_stateful_selection_table_update.p4 compile
+test_config_171_stateful_conga.p4 compile
+test_config_172_stateful_heavy_hitter.p4 compile
+test_config_173_stateful_bloom_filter.p4 compile
+ - missing statefule_alu_blackbox.h header
 vk_basic_ipv4_subset.p4 compile
 vk_basic_ipv4_20150706.p4 compile

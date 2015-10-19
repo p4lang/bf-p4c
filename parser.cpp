@@ -636,6 +636,12 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
             if (s.what != ~(~1 << (s.where->hi - s.where->lo)))
                 warning(s.where.lineno, "Not writing all bits of phv slice"); }
     }
+    for (auto &m : state->match) {
+	if (&m == this) break;
+	if (m.match == match) {
+	    warning(lineno, "Can't match parser state due to previous match");
+	    warning(m.lineno, "here");
+	    break; } }
 }
 
 void Parser::State::pass1(Parser *pa) {
