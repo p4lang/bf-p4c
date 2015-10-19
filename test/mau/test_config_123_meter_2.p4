@@ -21,6 +21,8 @@ header_type pkt_t {
         pad_2 : 24;
         color_1 : 8;
         pad_3 : 24;
+
+        lpf : 16;
     }
 }
 
@@ -40,7 +42,7 @@ meter meter_0 {
     type : bytes;
     //static : table_0;
     direct : table_0;
-    result : pkt.color_0;
+    result : pkt.lpf;  // Over-loading the meaning of result to be the input and output
     //instance_count : 500;
     implementation : lpf;
 }
@@ -51,7 +53,7 @@ meter meter_1 {
     static : table_1;
     //direct : table_1;
     result : pkt.color_1;
-    instance_count : 500;
+    instance_count : 4097;
 }
 
 
@@ -76,16 +78,18 @@ action do_nothing(){
 
 //@pragma include_idletime 1
 @pragma pa_solitare meter_result.color_0, meter_result.color_1
-//@pragma include_stash 1
+@pragma include_stash 1
+@pragma action_default_only do_nothing
 table table_0 {
     reads {
         pkt.field_e_16 : ternary;
         pkt.color_0 : exact;  //HACK
         pkt.color_1 : exact;  //HACK
+        pkt.lpf : exact;  //HACK
     }
     actions {
         action_0;
-//        do_nothing;
+        do_nothing;
     }
     size : 6000;
 }
@@ -93,7 +97,7 @@ table table_0 {
 
 //@pragma include_idletime 1
 @pragma idletime_two_way_notification 1
-//@pragma include_stash 1
+@pragma include_stash 1
 table table_1 {
     reads {
         pkt.field_e_16: exact;
