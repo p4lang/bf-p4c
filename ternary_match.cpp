@@ -268,6 +268,7 @@ void TernaryMatchTable::write_regs() {
     if (indirect_bus >= 0) {
         /* FIXME -- factor into corresponding code in MatchTable::write_regs */
         setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[1][indirect_bus], logical_id);
+        setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[3][indirect_bus], logical_id);
         setup_muxctl(merge.tcam_match_adr_to_physical_oxbar_outputmap[indirect_bus], tcam_id);
         merge.mau_action_instruction_adr_default[1][indirect_bus] = 0x40;
         merge.tind_bus_prop[indirect_bus].tcam_piped = 1;
@@ -477,8 +478,9 @@ void TernaryIndirectTable::write_regs() {
     auto &merge = stage->regs.rams.match.merge;
     for (Layout &row : layout) {
         auto vpn = row.vpns.begin();
+	auto &ram_row = stage->regs.rams.array.row[row.row];
         for (int col : row.cols) {
-            auto &unit_ram_ctl = stage->regs.rams.array.row[row.row].ram[col].unit_ram_ctl;
+            auto &unit_ram_ctl = ram_row.ram[col].unit_ram_ctl;
             unit_ram_ctl.match_ram_write_data_mux_select = 7; /* disable */
             unit_ram_ctl.match_ram_read_data_mux_select = 7; /* disable */
             unit_ram_ctl.tind_result_bus_select = 1U << row.bus;
@@ -499,7 +501,8 @@ void TernaryIndirectTable::write_regs() {
                     .adr_dist_tind_adr_xbar_ctl[row.bus];
             setup_muxctl(xbar_ctl, tcam_id);
             if (gress)
-                stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row.row); }
+                stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row.row);
+	    ram_row.tind_ecc_error_uram_ctl[gress] |= 1 << (col - 2); }
         int bus = row.row*2 + row.bus;
         merge.tind_ram_data_size[bus] = format->log2size - 1;
         setup_muxctl(merge.tcam_match_adr_to_physical_oxbar_outputmap[bus], tcam_id);

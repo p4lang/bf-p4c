@@ -422,9 +422,13 @@ void ExactMatchTable::pass2() {
     if (idletime) idletime->pass2();
 }
 
+/* FIXME -- should have ExactMatchTable::write_merge_regs write some of the merge stuff
+ * from write_regs? */
+
 void ExactMatchTable::write_regs() {
     LOG1("### Exact match table " << name() << " write_regs");
     MatchTable::write_regs(0, this);
+    auto &merge = stage->regs.rams.match.merge;
     unsigned fmt_width = (format->size + 127)/128;
     unsigned word = fmt_width-1;  // FIXME -- don't need this anymore?
     bitvec match_mask, version_nibble_mask;
@@ -447,7 +451,8 @@ void ExactMatchTable::write_regs() {
     for (auto &row : layout) {
         index++;  /* index of the row in the layout */
         /* setup match logic in rams */
-        auto &vh_adr_xbar = stage->regs.rams.array.row[row.row].vh_adr_xbar;
+        auto &rams_row = stage->regs.rams.array.row[row.row];
+        auto &vh_adr_xbar = rams_row.vh_adr_xbar;
         bool first = true;
         int hash_group = -1;
         auto vpn_iter = row.vpns.begin();
@@ -468,7 +473,7 @@ void ExactMatchTable::write_regs() {
                 .exactmatch_bank_enable_bank_id = way.bank;
             vh_adr_xbar.exactmatch_bank_enable[col]
                 .exactmatch_bank_enable_inp_sel |= 1 << row.bus;
-            auto &ram = stage->regs.rams.array.row[row.row].ram[col];
+            auto &ram = rams_row.ram[col];
             for (unsigned i = 0; i < 4; i++)
                 ram.match_mask[i] = match_mask.getrange(way.word*128U+i*32, 32);
 
@@ -527,10 +532,11 @@ void ExactMatchTable::write_regs() {
                 ram.match_bytemask[word_group].mask_bytes_0_to_13 = 0x3fff;
                 ram.match_bytemask[word_group].mask_nibbles_28_to_31 = 0xf; }
             if (gress)
-                stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row.row); }
+                stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row.row);
+	    rams_row.emm_ecc_error_uram_ctl[gress] |= 1U << (col - 2); }
         /* setup input xbars to get data to the right places on the bus(es) */
-        auto &vh_xbar = stage->regs.rams.array.row[row.row].vh_xbar;
         bool using_match = false;
+	auto &byteswizzle_ctl = rams_row.exactmatch_row_vh_xbar_byteswizzle_ctl[row.bus];
         for (unsigned i = 0; i < format->groups(); i++) {
             Format::Field *match = format->field("match", i);
             unsigned bit = 0;
@@ -548,20 +554,20 @@ void ExactMatchTable::write_regs() {
                     Phv::Slice sl(*it->second, bit-it->first, bit-it->first+bits_in_byte-1);
                     int bus_loc = find_on_ixbar(sl, word_ixbar_group[word]);
                     assert(bus_loc >= 0 && bus_loc < 16);
-                    vh_xbar[row.bus].exactmatch_row_vh_xbar_byteswizzle_ctl[byte/4]
-                        .set_subfield(0x10 + bus_loc, (byte%4)*5, 5);
-                    fmt_bit += bits_in_byte;
+		    for (unsigned b = 0; b < bits_in_byte; b++, fmt_bit++)
+			byteswizzle_ctl[byte][fmt_bit%8U] = 0x10 + bus_loc;
                     bit += bits_in_byte; } }
             assert(bit == match->size);
             if (Format::Field *version = format->field("version", i)) {
                 if (version->bits[0].lo/128U != word) continue;
-                vh_xbar[row.bus].exactmatch_validselect |= 1U << (version->bits[0].lo%128)/4; } }
+		for (unsigned bit = version->bits[0].lo; bit <= version->bits[0].hi; bit++) {
+                    unsigned byte = (bit%128)/8;
+		    byteswizzle_ctl[byte][bit%8U] = 8; } } }
         if (using_match) {
-            auto &vh_xbar_ctl = vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl;
+            auto &vh_xbar_ctl = rams_row.vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl;
             setup_muxctl(vh_xbar_ctl,  word_ixbar_group[word]);
             vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress; }
         /* setup match central config to extract results of the match */
-        auto &merge = stage->regs.rams.match.merge;
         unsigned bus = row.row*2 + row.bus;
         /* FIXME -- factor this where possible with ternary match code */
         if (action) {
@@ -654,9 +660,18 @@ void ExactMatchTable::write_regs() {
                 if (++word_group > 1) break; }
             /*setup_muxctl(merge.col[col].hitmap_output_map[bus],
                            layout[index+word].row*2 + layout[index+word].bus); */ }
-        if (gress == EGRESS)
-            merge.exact_match_delay_config.exact_match_bus_thread |= 1 << bus;
+        //if (gress == EGRESS)
+        //    merge.exact_match_delay_config.exact_match_bus_thread |= 1 << bus;
+	merge.exact_match_phys_result_en[bus/8U] |= 1U << (bus%8U);
+	merge.exact_match_phys_result_thread[bus/8U] |= gress << (bus%8U);
+	if (stage->tcam_delay(gress))
+	    merge.exact_match_phys_result_delay[bus/8U] |= 1U << (bus%8U);
+
         if (word-- == 0) { word = fmt_width-1; } }
+
+    merge.exact_match_logical_result_en |= 1 << logical_id;
+    if (stage->tcam_delay(gress) > 0)
+	merge.exact_match_logical_result_delay |= 1 << logical_id;
     if (actions) actions->write_regs(this);
     if (gateway) gateway->write_regs();
     if (idletime) idletime->write_regs();

@@ -126,11 +126,29 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
                     error(lineno, "Can't put field %s into byte %d on action xbar",
                           el.second.name.c_str(), byte);
                     break; }
-                action_hv_xbar.action_hv_xbar_ctl_byte[side].set_subfield(code, slot*2, 2);
-                action_hv_xbar.action_hv_xbar_ctl_byte_enable[side] |= 1 << slot; }
+		auto &ctl = action_hv_xbar.action_hv_ixbar_ctl_byte[side];
+		switch (code) {
+		case 0:
+		    ctl.action_hv_ixbar_ctl_byte_1to0_ctl = slot/2;
+		    ctl.action_hv_ixbar_ctl_byte_1to0_enable = 1;
+		    break;
+		case 1:
+		    ctl.action_hv_ixbar_ctl_byte_3to2_ctl = slot/2;
+		    ctl.action_hv_ixbar_ctl_byte_3to2_enable = 1;
+		    break;
+		case 2:
+		    ctl.action_hv_ixbar_ctl_byte_7to4_ctl = slot/4;
+		    ctl.action_hv_ixbar_ctl_byte_7to4_enable = 1;
+		    break;
+		case 3:
+		    ctl.action_hv_ixbar_ctl_byte_15to8_ctl = slot/8;
+		    ctl.action_hv_ixbar_ctl_byte_15to8_enable = 1;
+		    break; }
+		action_hv_xbar.action_hv_ixbar_input_bytemask[side] |= 1 << sbyte; }
             break;
         case 16:
             slot -= ACTION_DATA_8B_SLOTS;
+	last_halfword_group:
             for (unsigned word = bit/16; word <= (bit+f->size-1)/16; word++, byte+=2, slot++) {
                 unsigned code, mask;
                 switch (word >> 1) {
@@ -142,19 +160,48 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
                     error(lineno, "Can't put field %s into byte %d on action xbar",
                           el.second.name.c_str(), byte);
                     break; }
-                action_hv_xbar.action_hv_xbar_ctl_half[side][slot/4]
-                        .set_subfield(code, (slot%4)*2, 2); }
+		auto &ctl = action_hv_xbar.action_hv_ixbar_ctl_halfword[slot/8][side];
+		unsigned subslot = slot%8U;
+		switch (code) {
+		case 1:
+		    ctl.action_hv_ixbar_ctl_halfword_3to0_ctl = subslot/2;
+		    ctl.action_hv_ixbar_ctl_halfword_3to0_enable = 1;
+		    break;
+		case 2:
+		    ctl.action_hv_ixbar_ctl_halfword_7to4_ctl = subslot/2;
+		    ctl.action_hv_ixbar_ctl_halfword_7to4_enable = 1;
+		    break;
+		case 3:
+		    ctl.action_hv_ixbar_ctl_halfword_15to8_ctl = subslot/4;
+		    ctl.action_hv_ixbar_ctl_halfword_15to8_enable = 1;
+		    break; }
+		action_hv_xbar.action_hv_ixbar_input_bytemask[side] |= 3 << (word*2); }
             break;
         case 32: {
             slot -= ACTION_DATA_8B_SLOTS + ACTION_DATA_16B_SLOTS;
+	    if (slot < 2) {
+		/* FIXME -- nasty hack to deal with the weird mixed encoding */
+		slot = slot * 2 + ACTION_DATA_16B_SLOTS;
+		goto last_halfword_group; }
+	    slot -= 2;
             unsigned word = bit/32;
             unsigned code = 1 + word/2;
-            if (((word << 2)^byte) & 7)
+            if (((word << 2)^byte) & 7) {
                 error(lineno, "Can't put field %s into byte %d on action xbar",
                       el.second.name.c_str(), byte);
-            else
-                action_hv_xbar.action_hv_xbar_ctl_word[side][slot/2]
-                        .set_subfield(code, (slot%2)*2, 2);
+		break; }
+	    auto &ctl = action_hv_xbar.action_hv_ixbar_ctl_word[slot/4][side];
+	    slot %= 4U;
+	    switch (code) {
+	    case 1:
+		ctl.action_hv_ixbar_ctl_word_7to0_ctl = slot/2;
+		ctl.action_hv_ixbar_ctl_word_7to0_enable = 1;
+		break;
+	    case 2:
+		ctl.action_hv_ixbar_ctl_word_15to8_ctl = slot/2;
+		ctl.action_hv_ixbar_ctl_word_15to8_enable = 1;
+		break; }
+	    action_hv_xbar.action_hv_ixbar_input_bytemask[side] |= 15 << (word*4);
             break; }
         default:
             assert(0); }

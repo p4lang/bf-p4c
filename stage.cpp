@@ -8,6 +8,7 @@
 unsigned char Stage::action_bus_slot_map[ACTION_DATA_BUS_BYTES];
 unsigned char Stage::action_bus_slot_size[ACTION_DATA_BUS_SLOTS];
 
+
 class AsmStage : public Section {
     void start(int lineno, VECTOR(value_t) args);
     void input(VECTOR(value_t) args, value_t data);
@@ -60,12 +61,9 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
     int stageno = args[0].i;
     assert(stageno >= 0 && (unsigned)stageno < stage.size());
     gress_t gress = args[1] == "egress" ? EGRESS : INGRESS;
-    for (auto &kv : data.map) {
+    for (auto &kv : MapIterChecked(data.map, true)) {
         if (kv.key == "dependency") {
-            if (stage[stageno].stage_dep[gress])
-                error(kv.key.lineno, "Multiple dependencies specified for %sgress stage %d",
-                      gress ? "e" : "in", stageno);
-            else if (stageno == 0)
+            if (stageno == 0)
                 warning(kv.key.lineno, "Stage dependency in stage 0 will be ignored");
             if (kv.value == "concurrent") {
                 stage[stageno].stage_dep[gress] = Stage::CONCURRENT;
@@ -78,8 +76,20 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
             } else if (kv.value == "match")
                 stage[stageno].stage_dep[gress] = Stage::MATCH_DEP;
             else
-                error(kv.value.lineno, "Syntax error, invalid stage dependency");
-            continue; }
+                error(kv.value.lineno, "Invalid stage dependency %s", value_desc(kv.value));
+            continue;
+        } else if (kv.key == "error_mode") {
+	    if (kv.value == "no_config")
+		stage[stageno].error_mode[gress] = Stage::NO_CONFIG;
+	    else if (kv.value == "propagate")
+		stage[stageno].error_mode[gress] = Stage::PROPAGATE;
+	    else if (kv.value == "map_to_immediate")
+		stage[stageno].error_mode[gress] = Stage::MAP_TO_IMMEDIATE;
+	    else if (kv.value == "disable")
+		stage[stageno].error_mode[gress] = Stage::DISABLE_ALL_TABLES;
+	    else
+		error(kv.value.lineno, "Unknown error mode %s", value_desc(kv.value));
+	    continue; }
         if (!CHECKTYPEM(kv.key, tCMD, "table declaration")) continue;
         if (!CHECKTYPE(kv.value, tMAP)) continue;
         auto tt = Table::Type::get(kv.key[0].s);
@@ -176,6 +186,7 @@ Stage::Stage() {
                   "All non-static Stage fields must be in Stage_data");
     table_use[0] = table_use[1] = NONE;
     stage_dep[0] = stage_dep[1] = NONE;
+    error_mode[0] = error_mode[1] = PROPAGATE;
     declare_registers(&regs, sizeof(regs),
         [this](std::ostream &out, const char *addr, const void *end) {
             out << "mau[" << stageno << "]";
@@ -197,11 +208,11 @@ Stage::Stage(Stage &&a) : Stage_data(std::move(a)) {
 
 int Stage::tcam_delay(gress_t gress) {
     if (group_table_use[gress] & Stage::USE_TCAM_PIPED)
-        return 3;
+        return 2;
     if (group_table_use[gress] & Stage::USE_TCAM)
-        return 3;
+        return 2;
     if (group_table_use[gress] & Stage::USE_WIDE_SELECTOR)
-        return 3;
+        return 2;
     return 0;
 }
 
@@ -217,20 +228,24 @@ int Stage::adr_dist_delay(gress_t gress) {
 }
 
 int Stage::pipelength(gress_t gress) {
-    return 15 + tcam_delay(gress) + adr_dist_delay(gress);
+    return 19 + tcam_delay(gress) + adr_dist_delay(gress);
 }
 
 int Stage::pred_cycle(gress_t gress) {
-    return 8 + tcam_delay(gress);
+    return 11 + tcam_delay(gress);
 }
 
 void Stage::write_regs() {
     /* FIXME -- most of the values set here are 'placeholder' constants copied
      * from build_pipeline_output_2.py in the compiler */
     auto &merge = regs.rams.match.merge;
-    merge.exact_match_delay_config.exact_match_delay_ingress = tcam_delay(INGRESS);
-    merge.exact_match_delay_config.exact_match_delay_egress = tcam_delay(EGRESS);
+    //merge.exact_match_delay_config.exact_match_delay_ingress = tcam_delay(INGRESS);
+    //merge.exact_match_delay_config.exact_match_delay_egress = tcam_delay(EGRESS);
     for (gress_t gress : Range(INGRESS, EGRESS)) {
+	if (tcam_delay(gress) > 0) {
+	    merge.exact_match_delay_thread[0] |= 1U << gress;
+	    merge.exact_match_delay_thread[1] |= 1U << gress;
+	    merge.exact_match_delay_thread[2] |= 1U << gress; }
         if (stageno == 0) {
             merge.predication_ctl[gress].start_table_fifo_delay0 = pred_cycle(gress) - 1;
             merge.predication_ctl[gress].start_table_fifo_delay1 = 0;
@@ -240,7 +255,7 @@ void Stage::write_regs() {
             merge.predication_ctl[gress].start_table_fifo_delay0 =
                 this[-1].pipelength(gress) - this[-1].pred_cycle(gress) + pred_cycle(gress) - 1;
             merge.predication_ctl[gress].start_table_fifo_delay1 =
-                this[-1].pipelength(gress) - this[-1].pred_cycle(gress) + 1;
+                this[-1].pipelength(gress) - this[-1].pred_cycle(gress);
             merge.predication_ctl[gress].start_table_fifo_enable = 3;
             break;
         case ACTION_DEP:
@@ -253,9 +268,10 @@ void Stage::write_regs() {
             break;
         default:
             assert(0); }
-        regs.rams.match.adrdist.adr_dist_pipe_delay[gress] = adr_dist_delay(gress);
+        regs.rams.match.adrdist.adr_dist_pipe_delay[gress][0] =
+        regs.rams.match.adrdist.adr_dist_pipe_delay[gress][1] = adr_dist_delay(gress);
         auto &deferred_eop_bus_delay = regs.rams.match.adrdist.deferred_eop_bus_delay[gress];
-        deferred_eop_bus_delay.eop_internal_delay_fifo = pred_cycle(gress);
+        deferred_eop_bus_delay.eop_internal_delay_fifo = pred_cycle(gress) + 3;
         /* FIXME -- making this depend on the dependecny of the next stage seems wrong */
         if (stageno == AsmStage::numstages()-1) {
             if (AsmStage::numstages() < NUM_MAU_STAGES)
@@ -270,7 +286,7 @@ void Stage::write_regs() {
             deferred_eop_bus_delay.eop_output_delay_fifo = 1;
         deferred_eop_bus_delay.eop_delay_fifo_en = 1;
         regs.dp.action_output_delay[gress] = pipelength(gress) - 3;
-        regs.dp.pipelength_added_stages[gress] = pipelength(gress) - 15;
+        regs.dp.pipelength_added_stages[gress] = pipelength(gress) - 19;
         if (stageno != 0) {
             regs.dp.cur_stage_dependency_on_prev[gress] = MATCH_DEP - stage_dep[gress];
             if (stage_dep[gress] == CONCURRENT)
@@ -311,4 +327,38 @@ void Stage::write_regs() {
         regs.rams.map_alu.row[row].adrmux.adrmux_row_mem_slow_mode = 1;
     regs.cfg_regs.mau_cfg_mem_slow_mode = 1;
     regs.dp.imem_parity_ctl.imem_slow_mode = 1;
+
+    /* Error handling related */
+    for (gress_t gress : Range(INGRESS, EGRESS)) {
+	int err_delay = tcam_delay(gress) ? 1 : 0;
+	switch (error_mode[gress]) {
+	case NO_CONFIG:
+	    break;
+	case PROPAGATE:
+	    merge.tcam_match_error_ctl[gress].tcam_match_error_ctl_o_err_en = 1;
+	    merge.tind_ecc_error_ctl[gress].tind_ecc_error_ctl_o_err_en = 1;
+	    merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_o_err_en = 1;
+	    merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_o_err_en = 1;
+	    merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_delay = err_delay;
+	    merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_delay = err_delay;
+	    break;
+	case MAP_TO_IMMEDIATE:
+	    merge.tcam_match_error_ctl[gress].tcam_match_error_ctl_idata_ovr = 1;
+	    merge.tind_ecc_error_ctl[gress].tind_ecc_error_ctl_idata_ovr = 1;
+	    merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_idata_ovr = 1;
+	    merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_idata_ovr = 1;
+	    merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_delay = err_delay;
+	    merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_delay = err_delay;
+	    break;
+	case DISABLE_ALL_TABLES:
+	    merge.tcam_match_error_ctl[gress].tcam_match_error_ctl_dis_pred = 1;
+	    merge.tind_ecc_error_ctl[gress].tind_ecc_error_ctl_dis_pred = 1;
+	    merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_dis_pred = 1;
+	    merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_dis_pred = 1;
+	    merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_delay = err_delay;
+	    merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_delay = err_delay;
+	    break;
+	default:
+	    assert(false); } }
+
 }

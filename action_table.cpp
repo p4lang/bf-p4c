@@ -167,30 +167,31 @@ void ActionTable::pass2() {
 }
 
 static void flow_selector_addr(Stage *stage, int from, int to) {
+    /* FIXME -- can only work on odd rows?  or?? */
     assert(from > to);
     if (from/2 == to/2) {
         /* L to R */
-        stage->regs.rams.map_alu.selector_adr_switchbox.row[from/2].ctl
+        stage->regs.rams.map_alu.selector_adr_switchbox.row[from/4].ctl
             .l_oflo_adr_o_mux_select.l_oflo_adr_o_sel_selector_adr_r_i = 1;
         return; }
     if (from & 1)
         /* R down */
-        stage->regs.rams.map_alu.selector_adr_switchbox.row[from/2].ctl
+        stage->regs.rams.map_alu.selector_adr_switchbox.row[from/4].ctl
             .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_selector_adr_r_i = 1;
     else
         /* L down */
-        stage->regs.rams.map_alu.selector_adr_switchbox.row[from/2].ctl
+        stage->regs.rams.map_alu.selector_adr_switchbox.row[from/4].ctl
             .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_selector_adr_l_i = 1;
-    for (int row = from/2 - 1; row > to/2; row--)
+    for (int row = from/4 - 1; row > to/4; row--)
         /* top to bottom */
         stage->regs.rams.map_alu.selector_adr_switchbox.row[row].ctl
             .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_oflo_adr_t_i = 1;
     if (to & 1)
         /* flow down? to R */
-        stage->regs.rams.map_alu.selector_adr_switchbox.row[to/2].ctl.r_oflo_adr_o_mux_select = 1;
+        stage->regs.rams.map_alu.selector_adr_switchbox.row[to/4].ctl.r_oflo_adr_o_mux_select = 1;
     else
         /* flow down to L */
-        stage->regs.rams.map_alu.selector_adr_switchbox.row[to/2].ctl
+        stage->regs.rams.map_alu.selector_adr_switchbox.row[to/4].ctl
             .l_oflo_adr_o_mux_select.l_oflo_adr_o_sel_oflo_adr_t_i = 1;
 }
 
@@ -288,22 +289,29 @@ void ActionTable::write_regs() {
             auto &ram_mux = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
             auto &adr_mux_sel = ram_mux.ram_unitram_adr_mux_select;
             if (SelectionTable *sel = get_selector()) {
-                int slot = side * 9;
+		int shift = format->log2size - 2;
+		auto &shift_ctl = stage->regs.rams.map_alu.mau_selector_action_adr_shift[row];
                 if (logical_row.row == sel->layout[0].row) {
                     /* we're on the home row of the selector, so use it directly */
-                    slot += 6;
                     if (home == &logical_row)
                         adr_mux_sel = UnitRam::AdrMux::SELECTOR_ALU;
                     else
                         adr_mux_sel = UnitRam::AdrMux::SELECTOR_ACTION_OVERFLOW;
+		    if (side)
+			shift_ctl.mau_selector_action_adr_shift_right = shift;
+		    else
+			shift_ctl.mau_selector_action_adr_shift_left = shift;
                 } else {
                     /* not on the home row -- use overflows */
                     if (home == &logical_row)
                         adr_mux_sel = UnitRam::AdrMux::SELECTOR_OVERFLOW;
                     else
-                        adr_mux_sel = UnitRam::AdrMux::SELECTOR_ACTION_OVERFLOW; }
-                stage->regs.rams.map_alu.mau_selector_action_adr_shift[row]
-                    .set_subfield(format->log2size - 2, slot, 3);
+                        adr_mux_sel = UnitRam::AdrMux::SELECTOR_ACTION_OVERFLOW;
+		    if (side)
+			shift_ctl.mau_selector_action_adr_shift_right_oflo = shift;
+		    else
+			shift_ctl.mau_selector_action_adr_shift_left_oflo = shift;
+		}
             } else {
                 if (home == &logical_row)
                     adr_mux_sel = UnitRam::AdrMux::ACTION;
@@ -312,6 +320,7 @@ void ActionTable::write_regs() {
                     ram_mux.ram_oflo_adr_mux_select_oflo = 1; } }
             if (gress)
                 stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row);
+            stage->regs.rams.array.row[row].actiondata_error_uram_ctl[gress] |= 1 << (col-2);
             if (++idx == depth) { idx = 0; ++word; } }
         prev_switch_ctl = &switch_ctl;
         prev_logical_row = logical_row.row; }

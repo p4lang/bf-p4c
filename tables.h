@@ -192,12 +192,15 @@ public:
     };
 
     class Actions {
+    public:
 	struct Action {
 	    std::string                 name;
 	    int                         lineno = -1, addr = -1, code = -1;
 	    std::vector<Instruction *>  instr;
 	    Action(const char *n, int l) : name(n), lineno(l) {}
+	    bool equiv(Action *a);
 	};
+    private:
 	std::vector<Action>             actions;
 	std::map<std::string, int>      by_name;
 	unsigned                        code_use = 0;

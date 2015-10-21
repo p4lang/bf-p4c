@@ -104,8 +104,8 @@ void IdletimeTable::write_regs() {
     //adrdist.idletime_sweep_ctl[logical_id].idletime_en = 1;
     adrdist.idletime_sweep_ctl[logical_id].idletime_sweep_size = layout_size() - 1;
     adrdist.idletime_sweep_ctl[logical_id].idletime_sweep_interval = sweep_interval;
-    adrdist.movereg_ad_ctl[logical_id].movereg_ad_direct_idle = 1;
-    adrdist.movereg_ad_ctl[logical_id].movereg_ad_idle_size = precision_bits[precision];
+    //adrdist.movereg_ad_ctl[logical_id].movereg_ad_direct_idle = 1;
+    //adrdist.movereg_ad_ctl[logical_id].movereg_ad_idle_size = precision_bits[precision];
 }
 
 void IdletimeTable::gen_stage_tbl_cfg(json::map &out) {

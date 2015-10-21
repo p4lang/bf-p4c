@@ -134,19 +134,23 @@ void SelectionTable::write_regs() {
     LOG1("### Selection table " << name() << " write_regs");
     if (input_xbar) input_xbar->write_regs();
     Layout *home = &layout[0];
-    bool push_on_overflow = false;
+    //bool push_on_overflow = false;
     auto &map_alu =  stage->regs.rams.map_alu;
     DataSwitchboxSetup swbox(stage, home->row/2U);
+    int minvpn = 1000000, maxvpn = -1;
+    if (options.match_compiler) {
+	minvpn = 0;
+	maxvpn = layout_size() - 1;
+    } else
+	for (Layout &logical_row : layout)
+	    for (auto v : logical_row.vpns) {
+		if (v < minvpn) minvpn = v;
+		if (v > maxvpn) maxvpn = v; }
     for (Layout &logical_row : layout) {
-        unsigned row = logical_row.row/2;
+        unsigned row = logical_row.row/2U;
         unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
         /* FIXME factor vpn/mapram stuff with counter.cpp */
         auto vpn = logical_row.vpns.begin();
-        int maxvpn = -1;
-        if (options.match_compiler)
-            maxvpn = layout_size() - 1;
-        else
-            for (auto v : logical_row.vpns) if (v > maxvpn) maxvpn = v;
         auto mapram = logical_row.maprams.begin();
         auto &map_alu_row =  map_alu.row[row];
         swbox.setup_row(row);
@@ -185,7 +189,7 @@ void SelectionTable::write_regs() {
             swbox.setup_col(logical_col);
 
             auto &mapram_config = map_alu_row.adrmux.mapram_config[*mapram];
-            auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[*mapram];
+            //auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[*mapram];
             mapram_config.mapram_type = MapRam::SELECTOR_SIZE;
             mapram_config.mapram_logical_table = logical_id;
             mapram_config.mapram_vpn_members = 0;
@@ -197,7 +201,7 @@ void SelectionTable::write_regs() {
                 mapram_config.mapram_egress = 1;
             mapram_config.mapram_enable = 1;
             //if (!options.match_compiler) // FIXME -- compiler doesn't set this?
-                mapram_ctl.mapram_vpn_limit = maxvpn;
+            //    mapram_ctl.mapram_vpn_limit = maxvpn;
             if (gress) {
                 stage->regs.cfg_regs.mau_cfg_mram_thread[*mapram/3U] |= 1U << (*mapram%3U*8U + row);
                 stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row); }
@@ -208,12 +212,14 @@ void SelectionTable::write_regs() {
                          selection_hash);
             vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
                 bitmask2bytemask(input_xbar->hash_group_bituse());
+            map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_base = minvpn;
+	    map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_limit = maxvpn;
         } else {
             auto &adr_ctl = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
             if (home->row >= 8 && logical_row.row < 8) {
                 adr_ctl.adr_dist_oflo_adr_xbar_source_index = 0;
                 adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::OVERFLOW;
-                push_on_overflow = true;
+                //push_on_overflow = true;
             } else {
                 adr_ctl.adr_dist_oflo_adr_xbar_source_index = home->row % 8;
                 adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::METER; }
@@ -235,13 +241,14 @@ void SelectionTable::write_regs() {
     auto &merge = stage->regs.rams.match.merge;
     auto &adrdist = stage->regs.rams.match.adrdist;
     for (MatchTable *m : match_tables) {
-        auto &icxbar = adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id];
-        icxbar.address_distr_to_logical_rows = 1 << home->row;
-        icxbar.address_distr_to_overflow = push_on_overflow;
+        adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id] = 1 << (home->row/4U);
+        //auto &icxbar = adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id];
+        //icxbar.address_distr_to_logical_rows = 1 << home->row;
+        //icxbar.address_distr_to_overflow = push_on_overflow;
         if (auto &act = m->get_action())
             merge.mau_selector_action_entry_size[m->logical_id] = act->format->log2size - 3;
         if (max_words == 1)
-            adrdist.movereg_ad_ctl[m->logical_id].movereg_ad_meter_shift = 7; }
+            /*adrdist.movereg_ad_ctl[m->logical_id].movereg_ad_meter_shift = 7*/; }
     for (auto &hd : hash_dist)
         hd.write_regs(this, 0, non_linear_hash);
 }

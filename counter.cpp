@@ -120,17 +120,21 @@ void CounterTable::write_regs() {
     auto &map_alu =  stage->regs.rams.map_alu;
     auto &adrdist = stage->regs.rams.match.adrdist;
     DataSwitchboxSetup swbox(stage, home->row/2U);
+    int minvpn = 1000000, maxvpn = -1;
+    if (options.match_compiler) {
+	minvpn = 0;
+	maxvpn = layout_size() - 1;
+    } else
+	for (Layout &logical_row : layout)
+	    for (auto v : logical_row.vpns) {
+		if (v < minvpn) minvpn = v;
+		if (v > maxvpn) maxvpn = v; }
     for (Layout &logical_row : layout) {
         unsigned row = logical_row.row/2U;
         unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
         assert(side == 1);      /* no map rams or alus on left side anymore */
         /* FIXME factor vpn/mapram stuff with selection.cpp */
         auto vpn = logical_row.vpns.begin();
-        int maxvpn = -1;
-        if (options.match_compiler)
-            maxvpn = layout_size() - 1;
-        else
-            for (auto v : logical_row.vpns) if (v > maxvpn) maxvpn = v;
         auto mapram = logical_row.maprams.begin();
         auto &map_alu_row =  map_alu.row[row];
         swbox.setup_row(row);
@@ -170,7 +174,7 @@ void CounterTable::write_regs() {
             swbox.setup_col(logical_col);
 
             auto &mapram_config = map_alu_row.adrmux.mapram_config[*mapram];
-            auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[*mapram];
+            //auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[*mapram];
             mapram_config.mapram_type = MapRam::STATISTICS;
             mapram_config.mapram_logical_table = logical_id;
             mapram_config.mapram_vpn_members = 0;
@@ -182,20 +186,25 @@ void CounterTable::write_regs() {
                 mapram_config.mapram_egress = 1;
             mapram_config.mapram_enable = 1;
             //if (!options.match_compiler) // FIXME -- compiler doesn't set this?
-                mapram_ctl.mapram_vpn_limit = maxvpn;
+            //    mapram_ctl.mapram_vpn_limit = maxvpn;
             if (gress) {
                 stage->regs.cfg_regs.mau_cfg_mram_thread[*mapram/3U] |= 1U << (*mapram%3U*8U + row);
                 stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row); }
             ++mapram, ++vpn; }
         if (&logical_row == home) {
-            auto &stat_ctl = map_alu.stats_wrap[row/2].stats.statistics_ctl;
+	    int stats_group_index = row/2;
+            auto &stat_ctl = map_alu.stats_wrap[stats_group_index].stats.statistics_ctl;
             stat_ctl.stats_entries_per_word = format->groups();
             if (type & BYTES) stat_ctl.stats_process_bytes = 1;
             if (type & PACKETS) stat_ctl.stats_process_packets = 1;
             stat_ctl.lrt_enable = 0;
             stat_ctl.stats_alu_egress = gress;
-            stage->regs.cfg_regs.mau_cfg_stats_alu_lt[row/2] = logical_id;
-            setup_muxctl(adrdist.stats_alu_phys_to_logical_ixbar_ctl[row/2], logical_id);
+	    stat_ctl.stats_bytecount_adjust = 0; // TODO
+	    stat_ctl.stats_alu_error_enable = 0; // TODO
+            stage->regs.cfg_regs.mau_cfg_stats_alu_lt[stats_group_index] = logical_id;
+            //setup_muxctl(adrdist.stats_alu_phys_to_logical_ixbar_ctl[row/2], logical_id);
+	    map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_base = minvpn;
+	    map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_limit = maxvpn;
         } else {
             auto &adr_ctl = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
             if (home->row >= 8 && logical_row.row < 8) {
@@ -208,13 +217,13 @@ void CounterTable::write_regs() {
             adr_ctl.adr_dist_oflo_adr_xbar_enable = 1;
         }
     }
+    int stats_group_index = home->row/4U;
     bool run_at_eop = this->run_at_eop();
     for (MatchTable *m : match_tables)
         run_at_eop = run_at_eop || m->run_at_eop();
+    auto &movereg_stats_ctl = adrdist.movereg_stats_ctl[stats_group_index];
     for (MatchTable *m : match_tables) {
-        auto &icxbar = adrdist.adr_dist_stats_adr_icxbar_ctl[m->logical_id];
-        icxbar.address_distr_to_logical_rows = 1U << home->row;
-        //icxbar.address_distr_to_overflow = push_on_overflow;
+        adrdist.adr_dist_stats_adr_icxbar_ctl[m->logical_id] |= 1U << stats_group_index;
         auto &dump_ctl = stage->regs.cfg_regs.stats_dump_ctl[m->logical_id];
         dump_ctl.stats_dump_entries_per_word = format->groups();
         if (type == BYTES || type == BOTH)
@@ -222,19 +231,22 @@ void CounterTable::write_regs() {
         if (type == PACKETS || type == BOTH)
             dump_ctl.stats_dump_has_packets = 1;
         dump_ctl.stats_dump_size = layout_size() - 1;  // FIXME
-        adrdist.movereg_ad_ctl[m->logical_id].movereg_ad_stats_size =
-            counter_size[format->groups()];
-        if (run_at_eop)
-            adrdist.movereg_ad_ctl[m->logical_id].movereg_stats_deferred = 1;
-        else
-            adrdist.packet_action_at_headertime[0][m->logical_id] = 1;
-        if (direct)
-            adrdist.movereg_ad_ctl[m->logical_id].movereg_ad_direct_stats = 1; }
+	if (direct)
+	    adrdist.movereg_ad_direct[MoveReg::STATS] |= 1U << m->logical_id;
+	movereg_stats_ctl.movereg_stats_ctl_lt = m->logical_id;
+	adrdist.movereg_ad_stats_alu_to_logical_xbar_ctl[m->logical_id/8U]
+	    .set_subfield(4+stats_group_index, 3*(m->logical_id%8U), 3);
+	adrdist.mau_ad_stats_virt_lt[stats_group_index] |= 1U << m->logical_id; }
+    movereg_stats_ctl.movereg_stats_ctl_size = counter_size[format->groups()];
+    movereg_stats_ctl.movereg_stats_ctl_direct = direct;
     if (run_at_eop) {
-        adrdist.deferred_ram_ctl[0][home->row/4].deferred_ram_en = 1;
-        adrdist.deferred_ram_ctl[0][home->row/4].deferred_ram_thread = gress;
+        adrdist.deferred_ram_ctl[MoveReg::STATS][stats_group_index].deferred_ram_en = 1;
+        adrdist.deferred_ram_ctl[MoveReg::STATS][stats_group_index].deferred_ram_thread = gress;
         if (gress)
-            stage->regs.cfg_regs.mau_cfg_dram_thread |= 1 << (home->row/4); }
+            stage->regs.cfg_regs.mau_cfg_dram_thread |= 1 << stats_group_index;
+	movereg_stats_ctl.movereg_stats_ctl_deferred = 1;
+    } else
+	adrdist.packet_action_at_headertime[0][stats_group_index] = 1;
     if (push_on_overflow)
         adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U);
 }

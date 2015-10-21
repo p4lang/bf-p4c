@@ -606,6 +606,14 @@ void Table::Format::setup_immed(Table *tbl) {
             error(lineno, "Immediate data misaligned for action bus byte %d", byte_slot); }
 }
 
+bool Table::Actions::Action::equiv(Action *a) {
+    if (instr.size() != a->instr.size()) return false;
+    for (unsigned i = 0; i < instr.size(); i++)
+	if (!instr[i]->equiv(a->instr[i]))
+	    return false;
+    return true;
+}
+
 Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
     for (auto &kv : data) {
         if (!CHECKTYPE2(kv.key, tSTR, tCMD) || !CHECKTYPE(kv.value, tVEC))
@@ -635,9 +643,12 @@ void Table::Actions::pass1(Table *tbl) {
     for (auto &act : actions) {
         int iaddr = -1;
         if (act.addr >= 0) {
-            if (tbl->stage->imem_addr_use[tbl->gress][act.addr])
+            if (auto old = tbl->stage->imem_addr_use[tbl->gress][act.addr]) {
+		if (act.equiv(old)) {
+		    continue; }
                 error(act.lineno, "action instruction addr %d in use elsewhere", act.addr);
-            tbl->stage->imem_addr_use[tbl->gress][act.addr] = 1;
+		warning(old->lineno, "also defined here"); }
+            tbl->stage->imem_addr_use[tbl->gress][act.addr] = &act;
             iaddr = act.addr/ACTION_IMEM_COLORS; }
         for (auto *inst : act.instr) {
             inst->pass1(tbl);
@@ -658,12 +669,16 @@ void Table::Actions::pass2(Table *tbl) {
             for (auto *inst : act.instr)
                 if (inst->slot >= 0) use[inst->slot] = 1;
             for (int i = 0; i < ACTION_IMEM_ADDR_MAX; i++) {
-                if (tbl->stage->imem_addr_use[tbl->gress][i]) continue;
+                if (auto old = tbl->stage->imem_addr_use[tbl->gress][i]) {
+		    if (act.equiv(old)) {
+			act.addr = i;
+			break; }
+		    continue; }
                 if (tbl->stage->imem_use[i/ACTION_IMEM_COLORS].intersects(use))
                     continue;
                 act.addr = i;
                 tbl->stage->imem_use[i/ACTION_IMEM_COLORS] |= use;
-                tbl->stage->imem_addr_use[tbl->gress][i] = 1;
+                tbl->stage->imem_addr_use[tbl->gress][i] = &act;
                 break; } }
         if (act.addr < 0)
             error(act.lineno, "Can't find an available instruction address");
@@ -689,6 +704,8 @@ static int parity(unsigned v) {
 void Table::Actions::write_regs(Table *tbl) {
     auto &imem = tbl->stage->regs.dp.imem;
     for (auto &act : actions) {
+	if (&act != tbl->stage->imem_addr_use[tbl->gress][act.addr])
+	    continue;
         int iaddr = act.addr/ACTION_IMEM_COLORS;
         int color = act.addr%ACTION_IMEM_COLORS;
         for (auto *inst : act.instr) {
@@ -749,7 +766,18 @@ void MatchTable::write_regs(int type, Table *result) {
      * Match Merge
      *-----------------------*/
     auto &merge = stage->regs.rams.match.merge;
+    auto &adrdist = stage->regs.rams.match.adrdist;
     merge.predication_ctl[gress].table_thread |= 1 << logical_id;
+    if (gress) {
+	merge.logical_table_thread[0].logical_table_thread_egress |= 1 << logical_id;
+	merge.logical_table_thread[1].logical_table_thread_egress |= 1 << logical_id;
+	merge.logical_table_thread[2].logical_table_thread_egress |= 1 << logical_id;
+    } else {
+	merge.logical_table_thread[0].logical_table_thread_ingress |= 1 << logical_id;
+	merge.logical_table_thread[1].logical_table_thread_ingress |= 1 << logical_id;
+	merge.logical_table_thread[2].logical_table_thread_ingress |= 1 << logical_id; }
+    adrdist.adr_dist_table_thread[gress][0] |= 1 << logical_id;
+    adrdist.adr_dist_table_thread[gress][1] |= 1 << logical_id;
     if (result) {
         unsigned action_enable = 0;
         if (result->action_enable >= 0)
@@ -757,11 +785,17 @@ void MatchTable::write_regs(int type, Table *result) {
         for (auto &row : result->layout) {
             int bus = row.row*2 | row.bus;
             setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[type][bus], logical_id);
+            setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[type+2][bus], logical_id);
             if (result->action.args.size() >= 1 && result->action.args[0].field()) {
                 merge.mau_action_instruction_adr_mask[type][bus] =
                     ((1U << result->action.args[0].size()) - 1) & ~action_enable;
-            } else
+		merge.mau_payload_shifter_enable[type][bus]
+		    .action_instruction_adr_payload_shifter_en = 1;
+            } else {
                 merge.mau_action_instruction_adr_mask[type][bus] = 0;
+		if (options.match_compiler)
+		    merge.mau_payload_shifter_enable[type][bus]
+			.action_instruction_adr_payload_shifter_en = 1; }
             merge.mau_action_instruction_adr_default[type][bus] =
                 result->enable_action_instruction_enable ? 0 : 0x40;
             if (action_enable) {
@@ -774,11 +808,17 @@ void MatchTable::write_regs(int type, Table *result) {
 	    }
             if (idletime)
                 idletime->write_merge_regs(type, bus);
-            if (result->action)
+            if (result->action) {
                 /* FIXME -- deal with variable-sized actions */
                 merge.mau_actiondata_adr_default[type][bus] =
                     get_address_mau_actiondata_adr_default(result->action->format->log2size,
                                                            result->enable_action_data_enable);
+		merge.mau_payload_shifter_enable[type][bus]
+		    .actiondata_adr_payload_shifter_en = 1; }
+	    if (!attached.stats.empty())
+		merge.mau_payload_shifter_enable[type][bus].stats_adr_payload_shifter_en = 1;
+	    if (!attached.meter.empty())
+		merge.mau_payload_shifter_enable[type][bus].meter_adr_payload_shifter_en = 1;
             result->write_merge_regs(type, bus); }
     } else {
         /* ternary match with no indirection table */
@@ -833,7 +873,10 @@ void MatchTable::write_regs(int type, Table *result) {
     if (result->format) {
         for (auto &row : result->layout) {
             int bus = row.row*2 | row.bus;
-            merge.mau_immediate_data_mask[type][bus] = (1UL << result->format->immed_size)-1; } }
+            merge.mau_immediate_data_mask[type][bus] = (1UL << result->format->immed_size)-1;
+	    if (result->format->immed_size > 0)
+		merge.mau_payload_shifter_enable[type][bus]
+		    .immediate_data_payload_shifter_en = 1; } }
     if (result->action_bus)
         result->action_bus->write_immed_regs(result);
 
@@ -846,6 +889,7 @@ void MatchTable::write_regs(int type, Table *result) {
     if (table_counter)
         merge.mau_table_counter_ctl[logical_id/8U].set_subfield(
             table_counter, 4 * (logical_id%8U), 4);
+
 }
 
 int Table::find_on_actionbus(Format::Field *f, int off) {

@@ -195,13 +195,15 @@ void GatewayTable::pass2() {
 static bool setup_vh_xbar(Table *table, Table::Layout &row, int base,
                           std::vector<GatewayTable::MatchKey> &match, int group)
 {
-    auto &vh_xbar = table->stage->regs.rams.array.row[row.row].vh_xbar;
+    auto &rams_row = table->stage->regs.rams.array.row[row.row];
+    auto &byteswizzle_ctl = rams_row.exactmatch_row_vh_xbar_byteswizzle_ctl[row.bus];
     for (auto &r : match) {
         if (r.offset >= 32) break; /* skip hash matches */
         unsigned byte = base + r.offset / 8;
-        for (unsigned b = 0; b < (r.val->size()+7)/8; b++, byte++)
-            vh_xbar[row.bus].exactmatch_row_vh_xbar_byteswizzle_ctl[byte/4]
-                .set_subfield(0x10 + table->find_on_ixbar(*r.val, group) + b, (byte%4)*5, 5); }
+	int ibyte = table->find_on_ixbar(*r.val, group);
+        for (unsigned b = 0; b < (r.val->size()+7)/8; b++, byte++, ibyte++)
+	    for (unsigned bit = 0; bit < 8; bit++)
+		byteswizzle_ctl[byte][bit] = 0x10 + ibyte; }
     return true;
 }
 
@@ -282,7 +284,10 @@ void GatewayTable::write_regs() {
                     xbar_ctl.exact_inhibit_enable = 1;
                 }
                 if (have_payload) {
-                    merge.gateway_payload_pbus[row.row] |= 1 << (row.bus + (tind_bus ? 2 : 0));
+		    if (tind_bus)
+			merge.gateway_payload_tind_pbus[row.row] |= 1 << row.bus;
+		    else
+			merge.gateway_payload_exact_pbus[row.row] |= 1 << row.bus;
 		    if (options.match_compiler) {
 			/* working around a problem in the harlyn model */
 			merge.gateway_payload_data[row.row][row.bus][0][tind_bus^1] = payload & 0xffffffff;
