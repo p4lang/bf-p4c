@@ -1,4 +1,5 @@
 #include "action_bus.h"
+#include "hex.h"
 #include "misc.h"
 #include "stage.h"
 
@@ -112,6 +113,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
             error(lineno, "Action bus setup can't deal with field %s split across "
                   "SRAM rows", el.second.name.c_str());
             continue; }
+	unsigned bytemask = ((1U << (el.second.size/8U)) - 1) << (el.second.offset/8U);
         unsigned slot = Stage::action_bus_slot_map[byte];
         switch (Stage::action_bus_slot_size[slot]) {
         case 8:
@@ -144,7 +146,11 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
 		    ctl.action_hv_ixbar_ctl_byte_15to8_ctl = slot/8;
 		    ctl.action_hv_ixbar_ctl_byte_15to8_enable = 1;
 		    break; }
-		action_hv_xbar.action_hv_ixbar_input_bytemask[side] |= 1 << sbyte; }
+		if (!(bytemask & 1))
+		    WARNING(SrcInfo(lineno) << ": putting " << el.second.name << " on action bus "
+			    "byte " << byte << " even though bit in bytemask is not set");
+		action_hv_xbar.action_hv_ixbar_input_bytemask[side] |= 1 << sbyte;
+		bytemask >>= 1; }
             break;
         case 16:
             slot -= ACTION_DATA_8B_SLOTS;
@@ -175,7 +181,8 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
 		    ctl.action_hv_ixbar_ctl_halfword_15to8_ctl = subslot/4;
 		    ctl.action_hv_ixbar_ctl_halfword_15to8_enable = 1;
 		    break; }
-		action_hv_xbar.action_hv_ixbar_input_bytemask[side] |= 3 << (word*2); }
+		action_hv_xbar.action_hv_ixbar_input_bytemask[side] |= (bytemask&3) << (word*2);
+		bytemask >>= 2; }
             break;
         case 32: {
             slot -= ACTION_DATA_8B_SLOTS + ACTION_DATA_16B_SLOTS;
@@ -201,10 +208,14 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
 		ctl.action_hv_ixbar_ctl_word_15to8_ctl = slot/2;
 		ctl.action_hv_ixbar_ctl_word_15to8_enable = 1;
 		break; }
-	    action_hv_xbar.action_hv_ixbar_input_bytemask[side] |= 15 << (word*4);
+	    action_hv_xbar.action_hv_ixbar_input_bytemask[side] |= (bytemask&15) << (word*4);
+	    bytemask >>= 4;
             break; }
         default:
             assert(0); }
+	if (bytemask)
+	    WARNING(SrcInfo(lineno) << ": excess bits " << hex(bytemask) <<
+		    " set in bytemask for " << el.second.name);
     }
 }
 

@@ -232,6 +232,13 @@ public:
     iter end() { return iter(this).end(); }
 };
 
+class SrcInfo {
+    int lineno;
+    friend std::ostream &operator<<(std::ostream &, const SrcInfo &);
+public:
+    SrcInfo(int l) : lineno(l) {}
+};
+
 #endif /* __cplusplus */
 
 #endif /* _asm_types_h_ */

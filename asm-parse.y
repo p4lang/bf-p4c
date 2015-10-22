@@ -279,6 +279,13 @@ error_resync: /* epsilon */ | error_resync indent_elements { free_value(&$2); }
 
 int error_count = 0;
 
+std::ostream &operator<<(std::ostream &out, const SrcInfo &s) {
+    auto it = line_file_map.upper_bound(s.lineno);
+    it--;
+    out << it->second.first << ':' << (s.lineno - it->first + it->second.second);
+    return out;
+}
+
 void warning(int lineno, const char *fmt, va_list args) {
     auto it = line_file_map.upper_bound(lineno);
     it--;

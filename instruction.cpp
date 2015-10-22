@@ -96,7 +96,10 @@ private:
             int byte = field ? table->find_on_actionbus(field, lo)
                              : table->find_on_actionbus(name, lo);
             if (byte < 0) {
-                error(lineno, "%s is not on the action bus", name.c_str());
+		if (lo > 0 || (field && hi+1 < field->size))
+		    error(lineno, "%s(%d..%d) is not on the action bus", name.c_str(), lo, hi);
+		else
+		    error(lineno, "%s is not on the action bus", name.c_str());
                 return -1; }
             int byte_value = byte;
             int size = group_size[group]/8U;
