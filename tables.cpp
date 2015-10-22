@@ -12,13 +12,17 @@ std::map<std::string, Table::Type *> *Table::Type::all;
 Table::Table(int line, std::string &&n, gress_t gr, Stage *s, int lid) :
     name_(n), stage(s), gress(gr), lineno(line), logical_id(lid)
 {
-    assert(all.find(name_) == all.end());
-    all.emplace(name_, this);
-    stage->all_refs.insert(&stage);
+    if (lineno >= 0) {
+	assert(all.find(name_) == all.end());
+	all.emplace(name_, this); }
+    if (stage)
+	stage->all_refs.insert(&stage);
 }
 Table::~Table() {
-    all.erase(name_);
-    stage->all_refs.erase(&stage);
+    if (lineno >= 0)
+	all.erase(name_);
+    if (stage)
+	stage->all_refs.erase(&stage);
 }
 
 Table::Type::Type(std::string &&name) {

@@ -167,8 +167,8 @@ void ActionTable::pass2() {
 }
 
 static void flow_selector_addr(Stage *stage, int from, int to) {
-    /* FIXME -- can only work on odd rows?  or?? */
     assert(from > to);
+    assert((from & 3) == 3);
     if (from/2 == to/2) {
         /* L to R */
         stage->regs.rams.map_alu.selector_adr_switchbox.row[from/4].ctl
@@ -178,10 +178,10 @@ static void flow_selector_addr(Stage *stage, int from, int to) {
         /* R down */
         stage->regs.rams.map_alu.selector_adr_switchbox.row[from/4].ctl
             .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_selector_adr_r_i = 1;
-    else
-        /* L down */
-        stage->regs.rams.map_alu.selector_adr_switchbox.row[from/4].ctl
-            .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_selector_adr_l_i = 1;
+    //else
+    //    /* L down */
+    //    stage->regs.rams.map_alu.selector_adr_switchbox.row[from/4].ctl
+    //        .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_selector_adr_l_i = 1;
     for (int row = from/4 - 1; row > to/4; row--)
         /* top to bottom */
         stage->regs.rams.map_alu.selector_adr_switchbox.row[row].ctl
@@ -214,6 +214,7 @@ void ActionTable::write_regs() {
         auto &switch_ctl = stage->regs.rams.array.switchbox.row[row].ctl;
         auto &map_alu_row =  stage->regs.rams.map_alu.row[row];
         if (idx != 0) {
+	    // FIXME use DataSwitchboxSetup for this somehow?
             if (&switch_ctl == home_switch_ctl) {
                 /* overflow from L to R action */
                 switch_ctl.r_action_o_mux_select.r_action_o_sel_oflo_rd_l_i = 1;

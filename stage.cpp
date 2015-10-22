@@ -181,6 +181,8 @@ void AsmStage::output() {
     TopLevel::all.mem_pipe.mau.disable();
 }
 
+static FakeTable invalid_rams("RAMS NOT PRESENT");
+
 Stage::Stage() {
     static_assert(sizeof(Stage_data) == sizeof(Stage),
                   "All non-static Stage fields must be in Stage_data");
@@ -191,6 +193,8 @@ Stage::Stage() {
         [this](std::ostream &out, const char *addr, const void *end) {
             out << "mau[" << stageno << "]";
             regs.emit_fieldname(out, addr, end); });
+    for (int i = 0; i < SRAM_ROWS; i++)
+	sram_use[i][0] = sram_use[i][1] = &invalid_rams;
 }
 
 Stage::~Stage() {

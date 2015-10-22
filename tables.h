@@ -291,6 +291,16 @@ public:
     virtual Call &action_call() { return action; }
 };
 
+class FakeTable : public Table {
+public:
+    FakeTable(const char *name) : Table(-1, name, INGRESS, 0, -1) {}
+    void setup(VECTOR(pair_t) &data) { assert(0); }
+    void pass1() { assert(0); }
+    void pass2() { assert(0); }
+    void write_regs() { assert(0); }
+    void gen_tbl_cfg(json::vector &out) { assert(0); }
+};
+
 struct AttachedTables {
     Table::Call                 selector;
     std::vector<Table::Call>    stats, meter;
