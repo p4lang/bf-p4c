@@ -26,13 +26,13 @@ void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
 		    mutex[t] |= other;
 }
 
-void TablesMutuallyExclusive::postorder(const IR::MAU::Pipe *pipe) {
+void TablesMutuallyExclusive::postorder(const IR::Tofino::Pipe *pipe) {
     /* ingress and egress are mutually exclusive */
     vector<bitvec> sets;
     for (auto th : pipe->thread)
-	if (th) {
+	if (th.mau) {
 	    bitvec set;
-	    for (auto t : th->tables)
+	    for (auto t : th.mau->tables)
 		set |= table_succ[t];
 	    sets.push_back(set); }
     for (auto &set : sets)

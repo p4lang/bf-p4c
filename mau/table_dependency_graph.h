@@ -22,7 +22,7 @@ struct DependencyGraph {
 class FindDependencyGraph : public Inspector, ControlFlowVisitor {
     typedef DependencyGraph::Table	Table;
     typedef DependencyGraph::access_t	access_t;
-    const IR::MAU::Pipe			*maupipe;
+    const IR::Tofino::Pipe		*maupipe;
     map<cstring, Table>			&graph;
     gress_t				gress;
     map<cstring, access_t>		access;
@@ -30,11 +30,11 @@ class FindDependencyGraph : public Inspector, ControlFlowVisitor {
     void recompute_dep_stages();
 
     // alt 3 functions
-    bool preorder(const IR::MAU::Pipe *p) override {
+    bool preorder(const IR::Tofino::Pipe *p) override {
 	graph.clear(); maupipe = p; return true; }
     bool preorder(const IR::MAU::TableSeq *s) override;
     bool preorder(const IR::MAU::Table *c) override;
-    void postorder(const IR::MAU::Pipe *p) override { recompute_dep_stages(); }
+    void postorder(const IR::Tofino::Pipe *p) override { recompute_dep_stages(); }
 
     void flow_merge(Visitor &v) override;
     Visitor *clone() const override { return new FindDependencyGraph(*this); }

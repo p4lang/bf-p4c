@@ -13,7 +13,7 @@ public:
 private:
     const DependencyGraph &deps;
     const TablesMutuallyExclusive &mutex;
-    IR::Node *preorder(IR::MAU::Pipe *) override;
+    IR::Node *preorder(IR::Tofino::Pipe *) override;
     IR::Node *preorder(IR::MAU::TableSeq *) override;
     IR::Node *preorder(IR::MAU::Table *) override;
     const Placed *placement;

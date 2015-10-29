@@ -291,10 +291,10 @@ std::ostream &operator<<(std::ostream &out, const DumpSeqTables &s) {
 }
 
 
-IR::Node *TablePlacement::preorder(IR::MAU::Pipe *pipe) {
+IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
     std::list<GroupPlace *>	work;
     for (auto th : pipe->thread)
-	if (th) new GroupPlace(work, th);
+	if (th.mau) new GroupPlace(work, th.mau);
     Placed *placed = nullptr;
     set<const IR::MAU::Table *> partly_placed;
     LOG1("table placement starting");

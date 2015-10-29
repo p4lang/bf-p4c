@@ -41,11 +41,11 @@ struct AttachTables : public Modifier {
 class GetTofinoTables : public Inspector {
     const IR::Global		*program;
     gress_t					gress;
-    IR::MAU::Pipe		*pipe;
+    IR::Tofino::Pipe		*pipe;
     map<const IR::Node *, IR::MAU::Table *>	tables;
     map<const IR::Node *, IR::MAU::TableSeq *>	seqs;
 public:
-    GetTofinoTables(const IR::Global *gl, gress_t gr, IR::MAU::Pipe *p)
+    GetTofinoTables(const IR::Global *gl, gress_t gr, IR::Tofino::Pipe *p)
     : program(gl), gress(gr), pipe(p) {}
 private:
     void setup_tt_actions(IR::MAU::Table *tt, const IR::Table *table) {
@@ -101,13 +101,13 @@ private:
 	throw std::logic_error("unnamed condition in control flow");
     }
     void postorder(const IR::Control *cf) override {
-	assert(!pipe->thread[gress]);
-	pipe->thread[gress] = seqs.at(cf->code);
+	assert(!pipe->thread[gress].mau);
+	pipe->thread[gress].mau = seqs.at(cf->code);
     }
 };
 
-const IR::MAU::Pipe *extract_maupipe(const IR::Global *program) {
-    auto rv = new IR::MAU::Pipe();
+const IR::Tofino::Pipe *extract_maupipe(const IR::Global *program) {
+    auto rv = new IR::Tofino::Pipe();
     program = program->apply(NameGateways());
     auto ingress = program->get<IR::Control>("ingress");
     if (!ingress) ingress = new IR::Control("ingress");
@@ -121,6 +121,6 @@ const IR::MAU::Pipe *extract_maupipe(const IR::Global *program) {
     egress->apply(GetTofinoTables(program, EGRESS, rv));
     AttachTables toAttach(program);
     for (auto &th : rv->thread)
-	th = th->apply(toAttach);
+	th.mau = th.mau->apply(toAttach);
     return rv;
 }

@@ -13,7 +13,7 @@ class TablesMutuallyExclusive : public Inspector {
 	table_ids.emplace(t, table_ids.size());
 	return true; }
     void postorder(const IR::MAU::Table *tbl) override;
-    void postorder(const IR::MAU::Pipe *pipe) override;
+    void postorder(const IR::Tofino::Pipe *pipe) override;
     profile_t init_apply(const IR::Node *root) override {
 	profile_t rv = Inspector::init_apply(root);
 	table_ids.clear();

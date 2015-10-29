@@ -90,7 +90,7 @@ void FindDependencyGraph::add_control_dependency(Table *tt, const IR::Node *chil
     while (ctxt && dynamic_cast<const IR::MAU::TableSeq *>(ctxt->node)) {
 	child = ctxt->node;
 	ctxt = ctxt->parent; }
-    if (!ctxt || dynamic_cast<const IR::MAU::Pipe *>(ctxt->node)) {
+    if (!ctxt || dynamic_cast<const IR::Tofino::Pipe *>(ctxt->node)) {
 	return;
     } else if (auto *t = dynamic_cast<const IR::MAU::Table *>(ctxt->node)) {
 	for (auto &kv : t->next)
@@ -104,7 +104,7 @@ void FindDependencyGraph::add_control_dependency(Table *tt, const IR::Node *chil
 
 bool FindDependencyGraph::preorder(const IR::MAU::TableSeq *tg) {
     const Context *ctxt = getContext();
-    if (ctxt && dynamic_cast<const IR::MAU::Pipe *>(ctxt->node)) {
+    if (ctxt && dynamic_cast<const IR::Tofino::Pipe *>(ctxt->node)) {
 	gress = gress_t(ctxt->child_index);
 	access.clear(); }
     return true;
