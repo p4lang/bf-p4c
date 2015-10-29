@@ -37,7 +37,7 @@ class FindDependencyGraph : public Inspector, ControlFlowVisitor {
     void postorder(const IR::MAU::Pipe *p) override { recompute_dep_stages(); }
 
     void flow_merge(Visitor &v) override;
-    Visitor *clone() { return new FindDependencyGraph(*this); }
+    Visitor *clone() const override { return new FindDependencyGraph(*this); }
 public:
     FindDependencyGraph(DependencyGraph *out) : graph(out->graph) {}
 };

@@ -15,6 +15,8 @@ void FieldUse::access_field(cstring name) {
 	idx = field_index[name];
     if (auto table = findContext<IR::MAU::Table>())
 	table_use[table->name][isWrite() ? 1 : 0][idx] = 1;
+    else
+	assert(0);
 }
 
 bool FieldUse::preorder(const IR::FieldRef *f) {

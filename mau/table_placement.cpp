@@ -283,7 +283,7 @@ std::ostream &operator<<(std::ostream &out, const DumpSeqTables &s) {
     for (auto i : s.which) {
 	if (first) first = false;
 	else out << ' ';
-	if (i < s.seq->tables.size())
+	if (i >= 0 && (size_t)i < s.seq->tables.size())
 	    out << s.seq->tables[i]->name;
 	else
 	    out << "<oob " << i << ">"; }
@@ -366,6 +366,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     auto it = table_placed.find(tbl->name);
     if (it == table_placed.end())
 	return tbl;
+    tbl->logical_id = it->second->logical_id;
     if (it->second->gw && it->second->gw->name == tbl->name) {
 	/* fold gateway and match table together */
 	auto match = it->second->table;
@@ -415,6 +416,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
 	sprintf(suffix, ".%d", ++counter);
 	auto *table_part = tbl->clone();
 	table_part->name +=  suffix;
+	table_part->logical_id = it->second->logical_id;
 	table_part->layout.entries = it->second->entries;
 	if (!rv) {
 	    rv = table_part;
