@@ -44,7 +44,21 @@ void FieldDefUse::access_field(cstring field) {
 		 " reading " << field);
 	    info.use.clear();
 	    info.use.insert(table);
-	}
+	    int firstdef = INT_MAX;
+	    for (auto def : info.def) {
+		if (!def) firstdef = -1;
+		else if (def->logical_order() < firstdef)
+		    firstdef = def->logical_order(); }
+	    for (auto &other : Values(defuse)) {
+		if (other.id == info.id) continue;
+		for (auto use : other.use)
+		    if (use->logical_order() > firstdef &&
+			use->logical_order() <= table->logical_order()) {
+			if (info.id >= other.id)
+			    (*conflict)(info.id, other.id) = true;
+			else
+			    (*conflict)(other.id, info.id) = true;
+			break; } } }
     } else
 	assert(0);
 }
@@ -85,6 +99,15 @@ std::ostream &operator<<(std::ostream &out, const FieldDefUse &a) {
 	    if (t && t->logical_id >= 0)
 		out << '(' << t->gress << ' ' << hex(t->logical_id) << ')';
 	    sep = ","; }
+	out << std::endl; }
+    int maxw = 0;
+    for (int i = 0; i < a.field_names->size(); i++)
+	if (a.field_names->at(i).size() > maxw)
+	    maxw = a.field_names->at(i).size();
+    for (int i = 0; i < a.field_names->size(); i++) {
+	out << std::setw(maxw) << std::left << a.field_names->at(i) << ' ';
+	for (int j = 0; j <= i; j++)
+	    out << ((*a.conflict)(i, j) ? '1' : '0');
 	out << std::endl; }
     return out;
 }

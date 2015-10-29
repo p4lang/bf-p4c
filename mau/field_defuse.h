@@ -3,11 +3,13 @@
 
 #include "ir/ir.h"
 #include "lib/bitvec.h"
+#include "lib/ltbitmatrix.h"
 #include <iostream>
 
 class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
     vector<cstring>		*field_names;
     map<cstring, int>		*field_index;
+    LTBitMatrix			*conflict;
     struct info {
 	cstring				name;
 	int				id;
@@ -26,9 +28,9 @@ class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
     FieldDefUse(FieldDefUse &&) = default;
     friend std::ostream &operator<<(std::ostream &, const FieldDefUse &);
 public:
-    FieldDefUse() : field_names(new vector<cstring>), field_index(new map<cstring, int>) {
-	visitDagOnce = false; }
+    FieldDefUse() : field_names(new vector<cstring>), field_index(new map<cstring, int>),
+	conflict(new LTBitMatrix) { visitDagOnce = false; }
 };
 
 
-#endif /* _field_use_h_ */
+#endif /* _field_defuse_h_ */
