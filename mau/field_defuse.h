@@ -4,12 +4,12 @@
 #include "ir/ir.h"
 #include "lib/bitvec.h"
 #include "lib/ltbitmatrix.h"
+#include "phv/phv_fields.h"
 #include <iostream>
 
 class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
-    vector<cstring>		*field_names;
-    map<cstring, int>		*field_index;
-    LTBitMatrix			*conflict;
+    const PhvInfo		&phv;
+    vector<bitvec>		&conflict;
     struct info {
 	cstring				name;
 	int				id;
@@ -28,8 +28,8 @@ class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
     FieldDefUse(FieldDefUse &&) = default;
     friend std::ostream &operator<<(std::ostream &, const FieldDefUse &);
 public:
-    FieldDefUse() : field_names(new vector<cstring>), field_index(new map<cstring, int>),
-	conflict(new LTBitMatrix) { visitDagOnce = false; }
+    FieldDefUse(const PhvInfo &p) : phv(p), conflict(*new vector<bitvec>(phv.num_fields())) {
+	visitDagOnce = false; }
 };
 
 

@@ -14,12 +14,10 @@ public:
 
 void FieldDefUse::Init::add_field(cstring field) {
     assert(field);
-    if (!self.field_index->count(field)) {
-	int idx = self.field_names->size();
-	self.field_index->emplace(field, idx);
-	self.field_names->push_back(field);
+    auto *info = self.phv.field(field);
+    if (info && !self.defuse.count(field)) {
 	self.defuse[field].name = field;
-	self.defuse[field].id = idx;
+	self.defuse[field].id = info->id;
 	self.defuse[field].def.insert(nullptr); }
 }
 
@@ -30,10 +28,12 @@ Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
 }
 
 void FieldDefUse::access_field(cstring field) {
+    auto *info = phv.field(field);
+    if (!info) return; // FIXME
     if (auto table = findContext<IR::MAU::Table>()) {
 	auto &info = defuse.at(field);
 	assert(info.name == field);
-	assert(info.id == field_index->at(field));
+	assert(info.id == phv.field(field)->id);
 	if (isWrite()) {
 	    LOG3("FieldDefUse(" << (void *)this << "): table " << table->name <<
 		 " writing " << field);
@@ -54,11 +54,8 @@ void FieldDefUse::access_field(cstring field) {
 		for (auto use : other.use)
 		    if (use->logical_order() > firstdef &&
 			use->logical_order() <= table->logical_order()) {
-			if (info.id >= other.id)
-			    (*conflict)(info.id, other.id) = true;
-			else
-			    (*conflict)(other.id, info.id) = true;
-			break; } } }
+			    conflict[info.id][other.id] = true;
+			    conflict[other.id][info.id] = true; } } }
     } else
 	assert(0);
 }
@@ -101,13 +98,19 @@ std::ostream &operator<<(std::ostream &out, const FieldDefUse &a) {
 	    sep = ","; }
 	out << std::endl; }
     int maxw = 0;
-    for (int i = 0; i < a.field_names->size(); i++)
-	if (a.field_names->at(i).size() > maxw)
-	    maxw = a.field_names->at(i).size();
-    for (int i = 0; i < a.field_names->size(); i++) {
-	out << std::setw(maxw) << std::left << a.field_names->at(i) << ' ';
+    for (int i = 0; i < a.phv.num_fields(); i++) {
+	int sz = a.phv.field(i)->name.size();
+	if (!a.defuse.count(a.phv.field(i)->name))
+	    sz += 2;
+	if (maxw < sz) maxw = sz; }
+    for (int i = 0; i < a.phv.num_fields(); i++) {
+	if (!a.defuse.count(a.phv.field(i)->name))
+	    out << '[' << std::setw(maxw-2) << std::left << a.phv.field(i)->name << ']';
+	else
+	    out << std::setw(maxw) << std::left << a.phv.field(i)->name;
+	out << ' ';
 	for (int j = 0; j <= i; j++)
-	    out << ((*a.conflict)(i, j) ? '1' : '0');
+	    out << (a.conflict[i][j] ? '1' : '0');
 	out << std::endl; }
     return out;
 }
