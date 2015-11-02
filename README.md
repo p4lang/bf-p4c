@@ -1,4 +1,4 @@
-# Tofino back-end details
+# Tofino back-end design
 
 The backend is where most of the resource allocation decisions take
 place.  Resource allocation passes should take extra ‘hints’ inputs to
