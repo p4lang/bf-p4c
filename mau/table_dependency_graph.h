@@ -1,7 +1,7 @@
 #ifndef _table_dependency_graph_h_
 #define _table_dependency_graph_h_
 
-#include "ir/ir.h"
+#include "mau_visitor.h"
 
 struct DependencyGraph {
     struct Table {
@@ -19,7 +19,7 @@ struct DependencyGraph {
     friend std::ostream &operator<<(std::ostream &, const DependencyGraph&);
 };
 
-class FindDependencyGraph : public Inspector, ControlFlowVisitor {
+class FindDependencyGraph : public MauInspector, ControlFlowVisitor {
     typedef DependencyGraph::Table	Table;
     typedef DependencyGraph::access_t	access_t;
     const IR::Tofino::Pipe		*maupipe;

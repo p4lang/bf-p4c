@@ -5,7 +5,7 @@ struct DependencyGraph;
 class TablesMutuallyExclusive;
 struct StageUse;
 
-class TablePlacement : public Transform {
+class TablePlacement : public MauTransform {
 public:
     TablePlacement(const DependencyGraph &d, const TablesMutuallyExclusive &m) : deps(d), mutex(m) {}
     struct GroupPlace;

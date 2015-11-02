@@ -1,13 +1,13 @@
 #ifndef _split_gateways_h_
 #define _split_gateways_h_
 
-#include "ir/visitor.h"
+#include "mau_visitor.h"
 #include "field_use.h"
 
 class reason : public Backtrack::trigger {
 };
 
-class SplitGateways : public Transform, public Backtrack {
+class SplitGateways : public MauTransform, public Backtrack {
     FieldUse	uses;
     bool do_splitting = false;
     bool backtrack(trigger &trig) { do_splitting = !do_splitting; return do_splitting; }

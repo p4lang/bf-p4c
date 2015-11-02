@@ -1,11 +1,11 @@
 #ifndef _field_use_h_
 #define _field_use_h_
 
-#include "ir/visitor.h"
+#include "mau_visitor.h"
 #include "lib/bitvec.h"
 #include <iostream>
 
-class FieldUse : public Inspector, P4WriteContext {
+class FieldUse : public MauInspector, P4WriteContext {
     vector<cstring>		field_names;
     map<cstring, int>		field_index;
     map<cstring, bitvec[2]>	table_use;

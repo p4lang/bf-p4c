@@ -3,7 +3,7 @@
 #include "lib/log.h"
 
 Visitor::profile_t SplitGateways::init_apply(const IR::Node *root) {
-    auto rv = Transform::init_apply(root);
+    auto rv = MauTransform::init_apply(root);
     root->apply(uses);
     LOG2(uses);
     return rv;

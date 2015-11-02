@@ -4,7 +4,7 @@
 #include "lib/ltbitmatrix.h"
 
 Visitor::profile_t TableFindSeqDependencies::init_apply(const IR::Node *root) {
-    auto rv = Modifier::init_apply(root);
+    auto rv = MauModifier::init_apply(root);
     root->apply(uses);
     LOG2(uses);
     return rv;

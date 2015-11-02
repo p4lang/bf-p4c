@@ -27,7 +27,7 @@ std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
     return out;
 }
 
-class AddDependencies : public Inspector, P4WriteContext {
+class AddDependencies : public MauInspector, P4WriteContext {
     typedef DependencyGraph::Table	Table;
     typedef DependencyGraph::access_t	access_t;
     map<cstring, access_t>	&access;
@@ -52,7 +52,7 @@ public:
     bool preorder(const IR::Index *f) { add_dependency(f->asString()); return false; }
 };
 
-class UpdateAccess : public Inspector {
+class UpdateAccess : public MauInspector {
     typedef DependencyGraph::Table	Table;
     typedef DependencyGraph::access_t	access_t;
     map<cstring, access_t>	&access;

@@ -1,9 +1,9 @@
 #ifndef _table_layout_h_
 #define _table_layout_h_
 
-#include "ir/ir.h"
+#include "mau_visitor.h"
 
-class TableLayout : public Modifier, Backtrack {
+class TableLayout : public MauModifier, Backtrack {
     bool backtrack(trigger &) override;
     bool preorder(IR::MAU::Table *tbl) override;
 };

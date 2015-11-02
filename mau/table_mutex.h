@@ -1,10 +1,10 @@
 #ifndef _table_mutex_h_
 #define _table_mutex_h_
 
-#include "ir/ir.h"
+#include "mau_visitor.h"
 #include "lib/ltbitmatrix.h"
 
-class TablesMutuallyExclusive : public Inspector {
+class TablesMutuallyExclusive : public MauInspector {
     map<const IR::MAU::Table *, int>	table_ids;
     map<const IR::MAU::Table *, bitvec>	table_succ;
     LTBitMatrix				mutex;
@@ -15,7 +15,7 @@ class TablesMutuallyExclusive : public Inspector {
     void postorder(const IR::MAU::Table *tbl) override;
     void postorder(const IR::Tofino::Pipe *pipe) override;
     profile_t init_apply(const IR::Node *root) override {
-	profile_t rv = Inspector::init_apply(root);
+	profile_t rv = MauInspector::init_apply(root);
 	table_ids.clear();
 	table_succ.clear();
 	mutex.clear();

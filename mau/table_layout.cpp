@@ -28,7 +28,7 @@ static void setup_match_layout(IR::MAU::Table::Layout &layout, const IR::Table *
     layout.overhead_bits = ceil_log2(tbl->actions.size());
 }
 
-class GatewayLayout : public Inspector {
+class GatewayLayout : public MauInspector {
     IR::MAU::Table::Layout &layout;
     set<cstring> added;
     bool preorder(const IR::FieldRef *f) {
