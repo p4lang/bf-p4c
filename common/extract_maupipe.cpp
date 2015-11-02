@@ -2,7 +2,7 @@
 #include "ir/dbprint.h"
 #include "frontends/common/inline_control_flow.h"
 #include "frontends/common/name_gateways.h"
-#include "table_dependency_graph.h"
+#include "mau/table_dependency_graph.h"
 #include <assert.h>
 #include "lib/algorithm.h"
 
@@ -109,6 +109,7 @@ private:
 const IR::Tofino::Pipe *extract_maupipe(const IR::Global *program) {
     auto rv = new IR::Tofino::Pipe();
     program = program->apply(NameGateways());
+    auto parser = program->get<IR::Parser>("start");
     auto ingress = program->get<IR::Control>("ingress");
     if (!ingress) ingress = new IR::Control("ingress");
     ingress = ingress->apply(InlineControlFlow(program));
@@ -119,6 +120,10 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::Global *program) {
 	std::cout << *ingress << std::endl << *egress << std::endl;
     ingress->apply(GetTofinoTables(program, INGRESS, rv));
     egress->apply(GetTofinoTables(program, EGRESS, rv));
+    rv->thread[INGRESS].parser = new IR::Tofino::Parser(INGRESS, parser);
+    rv->thread[EGRESS].parser = new IR::Tofino::Parser(EGRESS, parser);
+    rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, parser);
+    rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, parser);
     AttachTables toAttach(program);
     for (auto &th : rv->thread)
 	th.mau = th.mau->apply(toAttach);

@@ -13,9 +13,7 @@ public:
 };
 
 void FieldDefUse::Init::add_field(cstring field) {
-    assert(field);
-    auto *info = self.phv.field(field);
-    if (info && !self.defuse.count(field)) {
+    assert(field); auto *info = self.phv.field(field); if (info && !self.defuse.count(field)) {
 	self.defuse[field].name = field;
 	self.defuse[field].id = info->id;
 	self.defuse[field].def.insert(nullptr); }
@@ -27,9 +25,23 @@ Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
     return rv;
 }
 
+void FieldDefUse::check_conflicts(info &read, int when) {
+    int firstdef = INT_MAX;
+    for (auto def : read.def) {
+	if (!def) firstdef = -1;
+	else if (def->logical_order() < firstdef)
+	    firstdef = def->logical_order(); }
+    for (auto &other : Values(defuse)) {
+	if (other.id == read.id) continue;
+	for (auto use : other.use) {
+	    int use_when = use ? use->logical_order() : INT_MAX;
+	    if (use_when > firstdef && use_when <= when) {
+		    conflict[read.id][other.id] = true;
+		    conflict[other.id][read.id] = true; } } }
+}
+
 void FieldDefUse::access_field(cstring field) {
-    auto *info = phv.field(field);
-    if (!info) return; // FIXME
+    if (!phv.field(field)) return; // FIXME -- valid bit checks?
     if (auto table = findContext<IR::MAU::Table>()) {
 	auto &info = defuse.at(field);
 	assert(info.name == field);
@@ -44,18 +56,7 @@ void FieldDefUse::access_field(cstring field) {
 		 " reading " << field);
 	    info.use.clear();
 	    info.use.insert(table);
-	    int firstdef = INT_MAX;
-	    for (auto def : info.def) {
-		if (!def) firstdef = -1;
-		else if (def->logical_order() < firstdef)
-		    firstdef = def->logical_order(); }
-	    for (auto &other : Values(defuse)) {
-		if (other.id == info.id) continue;
-		for (auto use : other.use)
-		    if (use->logical_order() > firstdef &&
-			use->logical_order() <= table->logical_order()) {
-			    conflict[info.id][other.id] = true;
-			    conflict[other.id][info.id] = true; } } }
+	    check_conflicts(info, table->logical_order()); }
     } else
 	assert(0);
 }
@@ -67,6 +68,32 @@ bool FieldDefUse::preorder(const IR::FieldRef *f) {
 
 bool FieldDefUse::preorder(const IR::Index *f) {
     access_field(f->asString());
+    return false;
+}
+
+bool FieldDefUse::preorder(const IR::Tofino::Parser *p) {
+    return false;
+}
+
+static const char *output_metadata[2][4] = { {
+    "ig_intr_md_for_tm", "ig_intr_md_for_mb", 0,
+}, {
+    "eg_intr_md_for_deparser", "eg_intr_md_for_mb", "eg_intr_md_for_oport", 0,
+} };
+
+bool FieldDefUse::preorder(const IR::Tofino::Deparser *d) {
+    for (auto hdr : output_metadata[d->gress]) {
+	if (!d) break;
+	if (auto hdr_fields = phv.header(hdr)) {
+	    for (int id = hdr_fields->first; id < hdr_fields->second; id++) {
+		auto name = phv.field(id)->name;
+		if (defuse.count(name)) {
+		    auto &info = defuse.at(name);
+		    assert(info.name == name);
+		    assert(info.id == id);
+		    info.use.clear();
+		    info.use.insert(nullptr);
+		    check_conflicts(info, INT_MAX); } } } }
     return false;
 }
 
@@ -92,7 +119,7 @@ std::ostream &operator<<(std::ostream &out, const FieldDefUse &a) {
 	out << " use:";
 	sep = "";
 	for (auto t : i.use) {
-	    out << sep << t->name;
+	    out << sep << (t ? t->name : "<fini>");
 	    if (t && t->logical_id >= 0)
 		out << '(' << t->gress << ' ' << hex(t->logical_id) << ')';
 	    sep = ","; }

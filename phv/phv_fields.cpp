@@ -3,12 +3,13 @@
 #include "lib/log.h"
 
 
-void PhvInfo::add(cstring name, bool meta) {
+void PhvInfo::add(cstring name, const IR::Type *type, bool meta) {
     LOG3("PhvInfo adding " << (meta ? "metadata" : "header") << " field " << name);
     assert(all_fields.count(name) == 0);
     auto *info = &all_fields[name];
     info->name = name;
     info->id = by_id.size();
+    info->size = type->width_bits();
     info->metadata = meta;
     by_id.push_back(info);
 }
@@ -20,7 +21,7 @@ void PhvInfo::add_hdr(cstring name, const IR::HeaderType *type, bool meta) {
     LOG2("PhvInfo adding " << (meta ? "metadata" : "header") << " " << name);
     int start = by_id.size();
     for (auto &f : type->fields)
-	add(name + '.' + f.first, meta);
+	add(name + '.' + f.first, f.second, meta);
     int end = by_id.size() - 1;
     all_headers.emplace(name, std::make_pair(start, end));
 }

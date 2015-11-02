@@ -19,7 +19,10 @@ class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
     class Init;
 
     profile_t init_apply(const IR::Node *root) override;
+    void check_conflicts(info &read, int when);
     void access_field(cstring field);
+    bool preorder(const IR::Tofino::Parser *p) override;
+    bool preorder(const IR::Tofino::Deparser *p) override;
     bool preorder(const IR::FieldRef *f) override;
     bool preorder(const IR::Index *f) override;
     FieldDefUse *clone() const override { return new FieldDefUse(*this); }
