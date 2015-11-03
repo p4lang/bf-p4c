@@ -33,6 +33,7 @@ class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
 public:
     FieldDefUse(const PhvInfo &p) : phv(p), conflict(*new vector<bitvec>(phv.num_fields())) {
 	visitDagOnce = false; }
+    const vector<bitvec> &conflicts() { return conflict; }
 };
 
 
