@@ -32,7 +32,7 @@ class GatewayLayout : public MauInspector {
     IR::MAU::Table::Layout &layout;
     set<cstring> added;
     bool preorder(const IR::FieldRef *f) {
-	cstring name = f->asString();
+	cstring name = f->toString();
 	if (!added.count(name)) {
 	    added.insert(name);
 	    layout.ixbar_bytes += (f->type->width_bits() + 7)/8; }

@@ -29,7 +29,7 @@ struct AttachTables : public Modifier {
     }
     void postorder(IR::Primitive *prim) override {
 	if (prim->name == "count" || prim->name == "execute_meter")
-	    if (auto at = program->get<IR::Attached>(prim->operands[0]->asString())) {
+	    if (auto at = program->get<IR::Attached>(prim->operands[0]->toString())) {
 		if (auto tt = findContext<IR::MAU::Table>())
 		    if (!contains(attached[tt->name], at))
 			attached[tt->name].push_back(at); }

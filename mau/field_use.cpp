@@ -20,12 +20,12 @@ void FieldUse::access_field(cstring name) {
 }
 
 bool FieldUse::preorder(const IR::FieldRef *f) {
-    access_field(f->asString());
+    access_field(f->toString());
     return false;
 }
 
 bool FieldUse::preorder(const IR::Index *f) {
-    access_field(f->asString());
+    access_field(f->toString());
     return false;
 }
 

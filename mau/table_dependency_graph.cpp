@@ -48,8 +48,8 @@ public:
 		if (table->data_dep[t->name] < type)
 		    table->data_dep[t->name] = type;
     }
-    bool preorder(const IR::FieldRef *f) { add_dependency(f->asString()); return false; }
-    bool preorder(const IR::Index *f) { add_dependency(f->asString()); return false; }
+    bool preorder(const IR::FieldRef *f) { add_dependency(f->toString()); return false; }
+    bool preorder(const IR::Index *f) { add_dependency(f->toString()); return false; }
 };
 
 class UpdateAccess : public MauInspector {
@@ -60,20 +60,20 @@ class UpdateAccess : public MauInspector {
 public:
     UpdateAccess(map<cstring, access_t> &a, Table *t) : access(a), table(t) {}
     bool preorder(const IR::FieldRef *f) {
-	LOG3("update_access read " << f->asString());
-	access[f->asString()].read.insert(table);
+	LOG3("update_access read " << f->toString());
+	access[f->toString()].read.insert(table);
 	return false; }
     bool preorder(const IR::Index *f) {
-	LOG3("update_access read " << f->asString());
-	access[f->asString()].read.insert(table);
+	LOG3("update_access read " << f->toString());
+	access[f->toString()].read.insert(table);
 	return false; }
     void postorder(const IR::Primitive *prim) {
 	if (prim->name == "modify_field" || prim->name == "add_to_field") {
 	    cstring name;
 	    if (auto f = dynamic_cast<const IR::FieldRef *>(prim->operands[0]))
-		name = f->asString();
+		name = f->toString();
 	    else if (auto i = dynamic_cast<const IR::Index *>(prim->operands[0]))
-		name = i->asString();
+		name = i->toString();
 	    else {
 		error(prim->lineno, "Destination of %s is not a field", prim->name.c_str());
 		return; }
