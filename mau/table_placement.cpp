@@ -221,16 +221,21 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 	    avail.tcams -= current.tcams;
 	    avail.maprams -= current.maprams; } }
     assert(min_use <= avail);
+    int last_try = rv->entries;
     while (!(rv->use <= avail)) {
 	rv->need_more = true;
 	if (rv->use.tcams > avail.tcams)
-	    rv->entries = min_entries * avail.tcams / min_use.tcams;
+	    rv->entries = min_entries * (avail.tcams / min_use.tcams);
 	else if (rv->use.maprams > avail.maprams)
-	    rv->entries = min_entries * avail.maprams / min_use.maprams;
+	    rv->entries = min_entries * (avail.maprams / min_use.maprams);
 	else if (rv->use.srams > avail.srams)
-	    rv->entries = min_entries * avail.srams / min_use.srams;
+	    rv->entries = min_entries * (avail.srams / min_use.srams);
 	else
 	    assert(false);
+	if (rv->entries >= last_try)
+	    rv->entries = last_try - 100;
+	else
+	    last_try = rv->entries;
 	rv->use = StageUse(t, rv->entries);
 	if (rv->gw)
 	    rv->use.exact_ixbar_bytes += rv->gw->layout.ixbar_bytes; }
