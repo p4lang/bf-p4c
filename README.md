@@ -21,6 +21,12 @@ There are a variety of Tofino-specific IR classes used to hold information
 needed to track tofino resource use and manage the allocation of those
 resources.
 
+##### `IR::Tofino::Pipe`
+
+An abstraction of a single Tofino pipeline, this object is basically just a
+container for other (Parser, Deparser, and MAU) specific objects.  This becomes
+the root object of the IR tree after the mid-end.
+
 ##### `IR::Tofino::Parser`
 ##### `IR::Tofino::Deparser`
 
@@ -40,31 +46,44 @@ gateway result or action run.
    If there is no `gateway_expr` or no `match_table`, this is ignored.
 - `match_table`  match table to run iff `gateway_expr == nullptr` or
   `eval(gateway_expr) == gateway_cond`
-- `actions`  list of action functions that might be in the table.  **FIXME** probably need
+- `actions`  list of action functions that might be in the table.  **TBD:** probably need
   to differentiate default-only vs non-default-only vs other actions somehow?
 - `attached`  list of attached support tables -- ternary indirection, action data, selection,
   meter, counter, stateful alu...
 - `next`  map from gateway conditions and actions to control dependent table sequences.
   Keys are cstrings that may be action names or keywords.
-  - `true` next to run iff `eval(gateway_expr) == true`.  Not allowed if there is a `match_table`
-    and `gateway_cond == true`, since then the match table result applies
-  - `false` next to run iff `eval(gateway_expr) == false`.  Not allowed if there is a `match_table`
-    and `gateway_cond == false`, since then the match table result applies
-  - *action*  next to run if the `match_table` runs this action
-  - `$miss`  next to run if the `match_table` runs and misses
-  - `default`  next to run if the `match_table` runs and nothing else applies
+  - `true` -- next to run iff `eval(gateway_expr) == true`.  Not allowed if there is a
+      `match_table` and `gateway_cond == true`, since then the match table result applies.
+  - `false` -- next to run iff `eval(gateway_expr) == false`.  Not allowed if there is a
+      `match_table` and `gateway_cond == false`, since then the match table result applies.
+  - *action*  -- next to run if the `match_table` runs this action.
+  - `$miss`  -- next to run if the `match_table` runs and misses.  This will override if
+	the action also specifies a next.
+  - `default`  -- next to run if the `match_table` runs and nothing else applies.
 
 `IR::MAU::Table` objects are initially created by the mid-end corresponding to each gateway
-and match table in the P4 program.  These tables will then be manipulated (split. combined,
+and match table in the P4 program.  These tables will then be manipulated (split, combined,
 and reordered) by various passes to get them into a form where they can be fit into the
 Tofino pipeline, then allocated to specific stages/logical ids/resources within the pipeline.
 
 ##### `IR::MAU::TableSeq`
 
 A sequence of logical tables to run in order.  Each table will run, followed by any control
-dependent tables, followed by the next table in the sequence.
+dependent tables, followed by the next table in the sequence.  By definition, tables in a
+`TableSeq` are control-independent, but may be data-dependent.  The `TableSeq` also contains
+a bit-matrix that tracks data dependencies between tables in the sequence including
+their control-depedent tables.  Tables that are not data dependent may be reordered.
 
 ### Passes
+
+#### mid-end
+
+The first step in the Tofino backend is converting the P4-level IR into the
+needed forms for the backend.  In most cases, this will be a fairly simple
+wrapper around some P4-level IR objects, organizing them into the rough form
+that tofino requires.
+
+There's
 
 #### parde
 
@@ -78,9 +97,10 @@ dependent tables, followed by the next table in the sequence.
 
 #### mau
 
-Mau processing begins by converting the P4 IR into this form (this is
-the 'mid-end'), which is prototyped in `extract_maupipe.cpp`.  Then the
-code can reorganized by various optimization passes that will be needed:
+Mau processing begins by converting the P4 IR into a pair of `IR::MAU::TableSeq`
+objects (one for ingress, and one for egress -- this is the 'mid-end'), which is
+prototyped in `extract_maupipe.cpp`.  Then the code can reorganized by various
+optimization passes that will be needed:
 
 - Gateway analysis and splitting -- gateway tables that are too complex
   for tofino must be split int multiple gateways.
