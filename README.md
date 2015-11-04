@@ -15,6 +15,57 @@ The code here is organized into `parde` (parser-deparser), `mau`
 (match-action table), and `phv` (phv allocation and management) directories.
 To some extent these are independent, but there are interdependecies.
 
+### IR
+
+There are a variety of Tofino-specific IR classes used to hold information
+needed to track tofino resource use and manage the allocation of those
+resources.
+
+##### `IR::Tofino::Parser`
+##### `IR::Tofino::Deparser`
+
+##### `IR::MAU::Table`
+
+The mau code is largely organized around the `IR::MAU::Table` ir class, which
+represents a Tofino-specific logical table.  Such a table has an (optional)
+gateway, with an expression, condition, and (optional) payload action, an
+(optional) match table, and zero or more attached tables (indirect, action
+data, selector, meter, counter, ...).  There is a next table map that
+contains references to sequences of other tables to run based on the
+gateway result or action run.
+
+- `gateway_expr`  boolean expression that the gateway tests, or `nullptr` if there is no gateway
+- `gateway_payload`  action to run if the match-action table does not run
+- `gateway_cond`  if `eval(gateway_expr) == gateway_cond` then the `match_table` should run.
+   If there is no `gateway_expr` or no `match_table`, this is ignored.
+- `match_table`  match table to run iff `gateway_expr == nullptr` or
+  `eval(gateway_expr) == gateway_cond`
+- `actions`  list of action functions that might be in the table.  **FIXME** probably need
+  to differentiate default-only vs non-default-only vs other actions somehow?
+- `attached`  list of attached support tables -- ternary indirection, action data, selection,
+  meter, counter, stateful alu...
+- `next`  map from gateway conditions and actions to control dependent table sequences.
+  Keys are cstrings that may be action names or keywords.
+  - `true` next to run iff `eval(gateway_expr) == true`.  Not allowed if there is a `match_table`
+    and `gateway_cond == true`, since then the match table result applies
+  - `false` next to run iff `eval(gateway_expr) == false`.  Not allowed if there is a `match_table`
+    and `gateway_cond == false`, since then the match table result applies
+  - *action*  next to run if the `match_table` runs this action
+  - `$miss`  next to run if the `match_table` runs and misses
+  - `default`  next to run if the `match_table` runs and nothing else applies
+
+`IR::MAU::Table` objects are initially created by the mid-end corresponding to each gateway
+and match table in the P4 program.  These tables will then be manipulated (split. combined,
+and reordered) by various passes to get them into a form where they can be fit into the
+Tofino pipeline, then allocated to specific stages/logical ids/resources within the pipeline.
+
+##### `IR::MAU::TableSeq`
+
+A sequence of logical tables to run in order.  Each table will run, followed by any control
+dependent tables, followed by the next table in the sequence.
+
+### Passes
+
 #### parde
 
 **TBD**
@@ -26,14 +77,6 @@ To some extent these are independent, but there are interdependecies.
 
 
 #### mau
-
-The mau code is organized around the `IR::MAU::Table` ir class, which
-represents a Tofino-specific logical table.  Such a table has an (optional)
-gateway, with an expression, condition, and (optional) payload action, an
-(optional) match table, and zero or more attached tables (indirect, action
-data, selector, meter, counter, ...).  There is a next table map that
-contains references to sequences of other tables to run based on the
-gateway result or action run.
 
 Mau processing begins by converting the P4 IR into this form (this is
 the 'mid-end'), which is prototyped in `extract_maupipe.cpp`.  Then the
