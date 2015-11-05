@@ -27,6 +27,12 @@ An abstraction of a single Tofino pipeline, this object is basically just a
 container for other (Parser, Deparser, and MAU) specific objects.  This becomes
 the root object of the IR tree after the mid-end.
 
+Because most visitors only care about part of the Pipe object (eg, just the MAU, or
+just the Parser), we define special visitor bases `MauInspector`, `MauModifier`,
+`MauTransform`, `PardeInspector`, `PardeModifier`, and `PardeTransform` that visit
+just those parts of the tree of interest to Mau or Parde.  Other parts of the tree
+are skipped.
+
 ##### `IR::Tofino::Parser`
 ##### `IR::Tofino::Deparser`
 

@@ -13,6 +13,7 @@
 #include "mau/table_mutex.h"
 #include "mau/table_placement.h"
 #include "mau/table_seqdeps.h"
+#include "mau/table_summary.h"
 #include "phv/phv_allocate.h"
 
 void test_tofino_backend(const IR::Global *program) {
@@ -47,4 +48,8 @@ void test_tofino_backend(const IR::Global *program) {
     if (verbose) {
 	std::cout << *maupipe << std::endl << deps;
 	std::cout << defuse; }
+    TableSummary summary;
+    maupipe->apply(summary);
+    if (verbose)
+	std::cout << summary;
 }
