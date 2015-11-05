@@ -83,17 +83,35 @@ needed forms for the backend.  In most cases, this will be a fairly simple
 wrapper around some P4-level IR objects, organizing them into the rough form
 that tofino requires.
 
-There's
-
 #### parde
 
-**TBD**
+Parser and deparser processing starts with extracting the state machine graph
+from the P4-level IR.  Since the IR (currently) does not support loops, but the
+state machine may involve loops, this will require using a representation that
+breaks the loops.  We could extend the IR to allow loops (would require extending
+the Visitor base classes to deal with loops rather than just detecting them and
+throwing an error), but that may not be necessary.  A series of transformation passes
+can then optimize the parser:
+
+* Loop unrolling -- states that have backreferences (loops) can be unrolled by cloning
+  the backreferenced tree, limited by the maximum header stack size involved
 
 * Parser state splitting -- states that do too much (write too many
-  output bytes) need to be split into multiple states
+  output bytes) need to be split into multiple states.  States could also
+  be split into minimal states that each do a single thing that will later
+  bre recombined.
 
 * Parser state combining -- small consecutive states can be combined.
 
+It may be that simply splitting states into the smallest possible fragments and then
+recombining them works well for general optimization.  Alternately, other things could
+be tried.  The important thing is flexibility in the representation, to permit
+experimentation.
+
+Deparser handling in v1.1 is a matter of extracting the deparser from the parser state
+machine and blackboxes that do deparser-relevant processing (checksum units, learning
+filters, ...).  Its not clear whether this is best done from the P4-level parser IR,
+or from some later state of the parser IR (after some backend transformations).
 
 #### mau
 
@@ -180,4 +198,8 @@ can be used by passes we backtrack to to modify their uses.
 We can build an interference graph for all fields, allowing use to experiment
 with graph coloring algorithms for PHV allocation, as well as simpler
 greedy allocation.
+
+Inspector passes to find constraints could logically be either part of the component
+they are anaylzing (parde or mau) or part of phv allocation.
+
 
