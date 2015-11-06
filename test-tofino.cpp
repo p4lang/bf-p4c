@@ -46,8 +46,8 @@ void test_tofino_backend(const IR::Global *program) {
     maupipe->apply(defuse);
     maupipe->apply(MauPhvConstraints(phv));
     if (verbose) {
-	std::cout << *maupipe << std::endl << deps;
-	std::cout << defuse; }
+	std::cout << *maupipe << std::endl /* << deps;
+	std::cout << defuse */; }
     TableSummary summary;
     maupipe->apply(summary);
     if (verbose)
