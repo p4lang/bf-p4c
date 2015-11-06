@@ -23,8 +23,11 @@ void test_tofino_backend(const IR::Global *program) {
     auto maupipe = extract_maupipe(program);
     maupipe = maupipe->apply(TableLayout());
     maupipe = maupipe->apply(TableFindSeqDependencies());
-    if (verbose)
-	std::cout << *maupipe << std::endl;
+    if (verbose) {
+	std::cout << "-------------------------------------------------" << std::endl
+		  << "Initial table graph" << std::endl
+		  << "-------------------------------------------------" << std::endl;
+	std::cout << *maupipe << std::endl; }
     DependencyGraph deps;
     maupipe->apply(FindDependencyGraph(&deps));
     if (verbose)
@@ -46,9 +49,13 @@ void test_tofino_backend(const IR::Global *program) {
     maupipe->apply(defuse);
     maupipe->apply(MauPhvConstraints(phv));
     if (verbose) {
+	std::cout << "-------------------------------------------------" << std::endl
+		  << "Final table graph" << std::endl
+		  << "-------------------------------------------------" << std::endl;
 	std::cout << *maupipe << std::endl /* << deps;
 	std::cout << defuse */; }
     TableSummary summary;
+    //maupipe = maupipe->apply(TableLayout());
     maupipe->apply(summary);
     if (verbose)
 	std::cout << summary;
