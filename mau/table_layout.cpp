@@ -43,7 +43,7 @@ public:
 
 static const IR::Expression *setup_gateway_layout(IR::MAU::Table::Layout &layout, const IR::Expression *gw) {
     // gw = canonicalize_gateway_expr(gw);
-    gw = gw->apply(GatewayLayout(layout));
+    gw->apply(GatewayLayout(layout));
     // should count gw tcam width and depth to support gw splitting when needed
     return gw;
 }
@@ -59,10 +59,11 @@ static void setup_action_layout(IR::MAU::Table *tbl) {
 }
 
 bool TableLayout::preorder(IR::MAU::Table *tbl) {
-    tbl->layout.gateway = bool(tbl->gateway_expr);
+    tbl->layout.ixbar_bytes = tbl->layout.match_width_bits = 
+    tbl->layout.action_data_bytes = tbl->layout.overhead_bits = 0;
     if (tbl->match_table)
 	setup_match_layout(tbl->layout, tbl->match_table);
-    if (tbl->gateway_expr)
+    if ((tbl->layout.gateway = bool(tbl->gateway_expr)))
 	tbl->gateway_expr = setup_gateway_layout(tbl->layout, tbl->gateway_expr);
     setup_action_layout(tbl);
     for (auto at : tbl->attached) {
@@ -75,7 +76,7 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     } else {
 	// determine ways and match groups?
     }
-    return tbl;
+    return true;
 }
 
 bool TableLayout::backtrack(trigger &trig) {

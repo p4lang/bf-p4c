@@ -296,8 +296,9 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
 
 IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     auto it = table_placed.find(tbl->name);
-    if (it == table_placed.end())
-	return tbl;
+    if (it == table_placed.end()) {
+	assert(strchr(tbl->name, '.'));
+	return tbl; }
     tbl->logical_id = it->second->logical_id;
     if (it->second->gw && it->second->gw->name == tbl->name) {
 	/* fold gateway and match table together */
@@ -309,6 +310,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
 	tbl->match_table = match->match_table;
 	tbl->actions = match->actions;
 	tbl->attached = match->attached;
+	tbl->layout += match->layout;
 	auto *seq = tbl->next.at(tbl->gateway_cond ? "true" : "false")->clone();
 	tbl->next.erase(tbl->gateway_cond ? "true" : "false");
 	if (seq->tables.size() != 1) {
@@ -321,7 +323,6 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
 	    assert(found);
 	} else {
 	    assert(seq->tables[0] == match);
-	    delete seq;
 	    seq = 0; }
 	bool have_default = false;
 	for (auto &next : match->next) {
@@ -337,8 +338,9 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
 		tbl->next[next.first] = next.second; }
 	if (!have_default && seq)
 	    tbl->next["default"] = seq; }
-    if (table_placed.count(tbl->name) == 1)
-	return tbl;
+    if (table_placed.count(tbl->name) == 1) {
+	tbl->layout.entries = it->second->entries;
+	return tbl; }
     int counter = 0;
     IR::MAU::Table *rv = 0, *prev = 0;
     /* split the table into multiple parts per the placement */

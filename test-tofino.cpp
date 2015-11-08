@@ -16,7 +16,23 @@
 #include "mau/table_summary.h"
 #include "phv/phv_allocate.h"
 
+class CheckTableNameDuplicate : public MauInspector {
+    set<cstring>        names;
+    profile_t init_apply(const IR::Node *root) override {
+	names.clear();
+	return MauInspector::init_apply(root); }
+    bool preorder(const IR::MAU::Table *t) override {
+        assert(names.count(t->name) == 0);
+        names.insert(t->name);
+	return true; }
+};
+
 void test_tofino_backend(const IR::Global *program) {
+    if (verbose) {
+	std::cout << "-------------------------------------------------" << std::endl
+		  << "Initial program" << std::endl
+		  << "-------------------------------------------------" << std::endl;
+	std::cout << *program << std::endl; }
     PhvInfo phv;
     program->apply(phv);
 
@@ -36,26 +52,29 @@ void test_tofino_backend(const IR::Global *program) {
     FieldDefUse defuse(phv);
     PassManager backend = {
 	new SplitGateways,
+	new CheckTableNameDuplicate,
 	new TableFindSeqDependencies,
+	new CheckTableNameDuplicate,
 	new FindDependencyGraph(&deps),
 	&mutex,
 	new TablePlacement(deps, mutex),
+	new CheckTableNameDuplicate,
 	new TableFindSeqDependencies,  // not needed?
+	new CheckTableNameDuplicate,
 	&defuse,
 	new MauPhvConstraints(phv),
 	new PhvAllocate(phv, defuse.conflicts()),
     };
     maupipe = maupipe->apply(backend);
-    maupipe->apply(defuse);
-    maupipe->apply(MauPhvConstraints(phv));
     if (verbose) {
+	std::cout << DBPrint::setflag(DBPrint::TableNoActions);
 	std::cout << "-------------------------------------------------" << std::endl
 		  << "Final table graph" << std::endl
 		  << "-------------------------------------------------" << std::endl;
 	std::cout << *maupipe << std::endl /* << deps;
 	std::cout << defuse */; }
     TableSummary summary;
-    //maupipe = maupipe->apply(TableLayout());
+    maupipe->apply(CheckTableNameDuplicate());
     maupipe->apply(summary);
     if (verbose)
 	std::cout << summary;

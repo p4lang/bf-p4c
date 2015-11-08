@@ -6,8 +6,6 @@
 #include <assert.h>
 #include "lib/algorithm.h"
 
-extern int verbose;
-
 class FindAttached : public Inspector {
     map<cstring, vector<const IR::Attached *>>	&attached;
     void postorder(const IR::Stateful *st) override {
@@ -116,8 +114,6 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::Global *program) {
     auto egress = program->get<IR::Control>("egress");
     if (!egress) egress = new IR::Control("egress");
     egress = egress->apply(InlineControlFlow(program));
-    if (verbose)
-	std::cout << *ingress << std::endl << *egress << std::endl;
     ingress->apply(GetTofinoTables(program, INGRESS, rv));
     egress->apply(GetTofinoTables(program, EGRESS, rv));
     rv->thread[INGRESS].parser = new IR::Tofino::Parser(INGRESS, parser);
