@@ -222,6 +222,10 @@ std::ostream &operator<<(std::ostream &out, const DumpSeqTables &s) {
     return out;
 }
 
+std::ostream &operator<<(std::ostream &out, const std::tuple<TablePlacement::GroupPlace *, int, TablePlacement::Placed *> &v) {
+    out << std::get<2>(v)->name;
+    return out;
+}
 
 IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
     std::list<GroupPlace *>	work;
@@ -270,7 +274,7 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
 	if (work.empty()) break;
 	if (trial.empty())
 	    throw std::logic_error("No tables placeable, but not all tables placed?");
-	LOG2("found " << trial.size() << " tables that could be placed");
+	LOG2("found " << trial.size() << " tables that could be placed: " << trial);
 	decltype(trial)::value_type *best = 0;
 	for (auto &t : trial)
 	    if (!best || is_better(std::get<2>(t), std::get<2>(*best)))

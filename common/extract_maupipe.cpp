@@ -106,14 +106,16 @@ private:
 
 const IR::Tofino::Pipe *extract_maupipe(const IR::Global *program) {
     auto rv = new IR::Tofino::Pipe();
-    program = program->apply(NameGateways());
+    //program = program->apply(NameGateways());
     auto parser = program->get<IR::Parser>("start");
     auto ingress = program->get<IR::Control>("ingress");
     if (!ingress) ingress = new IR::Control("ingress");
     ingress = ingress->apply(InlineControlFlow(program));
+    ingress = ingress->apply(NameGateways());
     auto egress = program->get<IR::Control>("egress");
     if (!egress) egress = new IR::Control("egress");
     egress = egress->apply(InlineControlFlow(program));
+    egress = egress->apply(NameGateways());
     ingress->apply(GetTofinoTables(program, INGRESS, rv));
     egress->apply(GetTofinoTables(program, EGRESS, rv));
     rv->thread[INGRESS].parser = new IR::Tofino::Parser(INGRESS, parser);
