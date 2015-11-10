@@ -131,6 +131,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 	LOG2(" - can't place as its already done");
 	return nullptr; }
 
+    LOG3(" - will try " << rv->entries << " of " << t->name << " in stage " << rv->stage);
     StageUse min_use(t, min_entries); // minimum use for part of table to be useful
     rv->use = StageUse(t, rv->entries);
     if (rv->gw) {
@@ -163,12 +164,15 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 	    rv->entries = last_try - 100;
 	else
 	    last_try = rv->entries;
+	LOG3(" - reducing to " << rv->entries << " of " << t->name << " in stage " << rv->stage);
 	rv->use = StageUse(t, rv->entries);
 	if (rv->gw)
 	    rv->use.exact_ixbar_bytes += rv->gw->layout.ixbar_bytes; }
     rv->logical_id = done && done->stage == rv->stage ? done->logical_id + 1
 						      : rv->stage * StageUse::MAX_LOGICAL_IDS;
     assert((rv->logical_id / StageUse::MAX_LOGICAL_IDS) == rv->stage);
+    LOG2("try_place_table returning " << rv->entries << " of " << rv->name <<
+	 " in stage " << rv->stage);
     return rv;
 }
 
