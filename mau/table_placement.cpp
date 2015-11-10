@@ -201,7 +201,9 @@ TablePlacement::Placed *TablePlacement::place_table(GroupPlace *grp, int idx, Pl
 
 bool TablePlacement::is_better(const Placed *a, const Placed *b) {
     if (a->stage < b->stage) return true;
+    if (a->stage > b->stage) return false;
     if (b->need_more && !a->need_more) return true;
+    if (a->need_more && !b->need_more) return false;
     if (deps.graph.at(a->name).dep_stages > deps.graph.at(b->name).dep_stages)
 	return true;
     return false;
