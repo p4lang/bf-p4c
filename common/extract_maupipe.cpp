@@ -48,12 +48,12 @@ public:
 private:
     void setup_tt_actions(IR::MAU::Table *tt, const IR::Table *table) {
 	for (auto act : table->actions)
-	    if (auto action = program->get<IR::ActionFunction>(act))
+	    if (auto action = program->get<IR::ActionFunction>(act.name))
 		if (std::find(tt->actions.begin(), tt->actions.end(), action) == tt->actions.end())
 		    tt->actions.push_back(action);
 	if (auto ap = program->get<IR::ActionProfile>(table->action_profile))
 	    for (auto act : ap->actions)
-		if (auto action = program->get<IR::ActionFunction>(act))
+		if (auto action = program->get<IR::ActionFunction>(act.name))
 		    if (std::find(tt->actions.begin(), tt->actions.end(), action) == tt->actions.end())
 			tt->actions.push_back(action);
     }
