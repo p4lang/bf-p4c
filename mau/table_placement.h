@@ -1,6 +1,9 @@
 #ifndef _table_placement_h_
 #define _table_placement_h_
 
+#include "mau_visitor.h"
+#include "lib/ordered_set.h"
+
 struct DependencyGraph;
 class TablesMutuallyExclusive;
 struct StageUse;
@@ -11,6 +14,7 @@ public:
     struct GroupPlace;
     struct Placed;
 private:
+    map<cstring, unsigned>	table_uids;
     const DependencyGraph &deps;
     const TablesMutuallyExclusive &mutex;
     IR::Node *preorder(IR::Tofino::Pipe *) override;
@@ -19,7 +23,7 @@ private:
     const Placed *placement;
     bool is_better(const Placed *a, const Placed *b);
     Placed *try_place_table(const IR::MAU::Table *t, const Placed *done, const StageUse &current);
-    Placed *place_table(GroupPlace *grp, int idx, Placed *pl);
+    const Placed *place_table(ordered_set<const GroupPlace *>&work, const GroupPlace *grp, const Placed *pl);
     std::multimap<cstring, const Placed *> table_placed;
 };
 

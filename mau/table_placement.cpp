@@ -10,52 +10,60 @@
 #include <algorithm>
 #include <list>
 
+class SetupUids : public Inspector {
+    map<cstring, unsigned>      &table_uids;
+    bool preorder(const IR::MAU::Table *tbl) {
+	assert(table_uids.count(tbl->name) == 0);
+	table_uids.emplace(tbl->name, table_uids.size());
+	return true; }
+public:
+    SetupUids(map<cstring, unsigned> &t) : table_uids(t) {}
+};
+
+
 struct TablePlacement::GroupPlace {
     /* tracking the placement of a group of tables from an IR::MAU::TableSeq
-     *   work	work queue of groups that can have tables chosen to be placed next
      *   parent group that must wait until this group is fully placed before any more
      *		tables from it may be placed (so next_table setup works)
-     *   iter	pointer into the work queue for this object (work.end() if not currently
-     *		it the queue
-     *   seq	the TableSeq being placed for this group
-     *   placed	bitmap of tables in seq that are fully placed
-     *   waitcount count of other GroupPlace objects we're the parent of (they must all be
-     *		placed before we can continue) */
-    std::list<GroupPlace*>		&work;
-    GroupPlace				*parent;
-    std::list<GroupPlace*>::iterator	iter;
+     *   seq	the TableSeq being placed for this group */
+    const GroupPlace			*parent;
     const IR::MAU::TableSeq		*seq;
-    bitvec				placed;
-    int					waitcount;
-    GroupPlace(std::list<GroupPlace*> &w, GroupPlace *p, const IR::MAU::TableSeq *s) :
-	work(w), parent(p), seq(s), placed(0U), waitcount(0) {
-	    iter = work.insert(work.end(), this);
-	    if (parent) {
-		if (!parent->waitcount++) {
-		    assert(parent->iter != work.end());
-		    work.erase(parent->iter);
-		    parent->iter = work.end(); } } }
-    GroupPlace(std::list<GroupPlace*> &w, const IR::MAU::TableSeq *s) : GroupPlace(w, 0, s) {}
-    ~GroupPlace() {
-	/* DANGER -- we're not removing this from the worklist -- instead, whoever calls
-	 * delete must then erase the element from the worklist, and needs to get anything
-	 * we may have just added to the worklist... */
-	if (parent && !--parent->waitcount) {
-	    assert(parent->iter == work.end());
-	    parent->iter = work.insert(work.end(), parent); } }
+    GroupPlace(ordered_set<const GroupPlace*> &work, const GroupPlace *p, const IR::MAU::TableSeq *s) :
+	parent(p), seq(s) {
+	    work.insert(this);
+	    if (parent)
+		work.erase(parent); }
+    GroupPlace(ordered_set<const GroupPlace*> &work, const IR::MAU::TableSeq *s) : GroupPlace(work, 0, s) {}
+    void finish(ordered_set<const GroupPlace*> &work) const {
+	assert(work.count(this) == 1);
+	work.erase(this);
+	if (parent) {
+	    for (auto o : work)
+		if (o->parent == parent) return;
+	    work.insert(parent); } }
 };
 
 struct TablePlacement::Placed {
     /* A linked list of table placement decisions, from last table placed to first (so we
      * can backtrack and create different lists as needed) */
+    TablePlacement		&self;
     const Placed		*prev;
     cstring			name;
     int				entries = 0;
+    bitvec			placed;  // fully placed tables after this placement
     bool			need_more = false, gw_cond = true;
     const IR::MAU::Table	*table, *gw = 0;
     short			stage, logical_id;
     StageUse			use;
-    Placed(const Placed *p, const IR::MAU::Table *t) : prev(p), name(t->name), table(t) {}
+    Placed(TablePlacement &self, const Placed *p, const IR::MAU::Table *t)
+	: self(self), prev(p), name(t->name), table(t) {
+	    if (prev) placed = prev->placed; }
+    bool is_placed(cstring name) const { return placed[self.table_uids.at(name)]; }
+    bool is_placed(const IR::MAU::Table *tbl) const { return is_placed(tbl->name); }
+    bool is_placed(const IR::MAU::TableSeq *seq) const {
+	for (auto tbl : seq->tables)
+	    if (!is_placed(tbl)) return false;
+	return true; }
 };
 
 static StageUse get_current_stage_use(const TablePlacement::Placed *pl) {
@@ -102,12 +110,10 @@ TablePlacement::Placed *gateway_merge(TablePlacement::Placed *pl) {
     return pl;
 }
 
-
-
 TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t, const Placed *done,
 							const StageUse &current) {
     LOG2("try_place_table(" << t->name << ", stage=" << (done ? done->stage : 0) << ")");
-    auto *rv = gateway_merge(new Placed(done, t));
+    auto *rv = gateway_merge(new Placed(*this, done, t));
     t = rv->table;
     rv->stage = done ? done->stage : 0;
     int min_entries = 1;
@@ -127,9 +133,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 	} else if (p->stage == rv->stage && rvdeps.data_dep.count(p->name) &&
 		   rvdeps.data_dep.at(p->name) >= DependencyGraph::Table::ACTION)
 	    rv->stage++; }
-    if (rv->entries <= 0) {
-	LOG2(" - can't place as its already done");
-	return nullptr; }
+    assert(!rv->placed[table_uids.at(rv->name)]);
 
     LOG3(" - will try " << rv->entries << " of " << t->name << " in stage " << rv->stage);
     StageUse min_use(t, min_entries); // minimum use for part of table to be useful
@@ -173,28 +177,42 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     assert((rv->logical_id / StageUse::MAX_LOGICAL_IDS) == rv->stage);
     LOG2("try_place_table returning " << rv->entries << " of " << rv->name <<
 	 " in stage " << rv->stage);
+    if (!rv->need_more) {
+	rv->placed[table_uids.at(rv->name)] = true;
+	if (rv->gw)
+	    rv->placed[table_uids.at(rv->gw->name)] = true; }
     return rv;
 }
 
-TablePlacement::Placed *TablePlacement::place_table(GroupPlace *grp, int idx, Placed *pl) {
+const TablePlacement::Placed *TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const GroupPlace *grp, const Placed *pl) {
     LOG1("placing " << pl->entries << " entries of " << pl->name << (pl->gw ? " (with gw " : "") <<
 	 (pl->gw ? pl->gw->name : "") << (pl->gw ? ")" : "") << " in stage " <<
 	 pl->stage << (pl->need_more ? " (need more)" : ""));
     if (!pl->need_more) {
-	grp->placed[idx] = true;
+	if (pl->is_placed(grp->seq)) {
+	    grp->finish(work);
+	    grp = grp->parent; }
 	if (pl->gw)  {
 	    GroupPlace *match_grp = 0;
-	    for (auto &n : pl->gw->next)
-		if (n.second) {
-		    GroupPlace *g = new GroupPlace(grp->work, grp, n.second);
-		    for (auto t : n.second->tables) {
-			if (t == pl->table) {
-			    assert(!match_grp);
-			    match_grp = g; } } }
-	    assert(match_grp);
-	    grp = match_grp; }
-	for (auto &n : pl->table->next)
-	    if (n.second) new GroupPlace(grp->work, grp, n.second);
+	    bool found_match = false;
+	    for (auto n : Values(pl->gw->next)) {
+		if (!n || n->tables.size() == 0) continue;
+		if (n->tables.size() == 1 && n->tables.at(0) == pl->table) {
+		    assert(!found_match && !match_grp);
+		    found_match = true;
+		    continue; }
+		GroupPlace *g = new GroupPlace(work, grp, n);
+		for (auto t : n->tables) {
+		    if (t == pl->table) {
+			assert(!found_match && !match_grp);
+			found_match = true;
+			match_grp = g; } } }
+	    assert(found_match);
+	    if (match_grp)
+		grp = match_grp; }
+	for (auto n : Values(pl->table->next))
+	    if (n && n->tables.size() > 0)
+		new GroupPlace(work, grp, n);
     }
     return pl;
 }
@@ -228,34 +246,39 @@ std::ostream &operator<<(std::ostream &out, const DumpSeqTables &s) {
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const std::tuple<TablePlacement::GroupPlace *, int, TablePlacement::Placed *> &v) {
-    out << std::get<2>(v)->name;
+std::ostream &operator<<(std::ostream &out, const std::pair<const TablePlacement::GroupPlace *, const TablePlacement::Placed *> &v) {
+    out << v.second->name;
     return out;
 }
 
 IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
-    std::list<GroupPlace *>	work;
+    table_uids.clear();
+    pipe->apply(SetupUids(table_uids));
+    ordered_set<const GroupPlace *>	work;
     for (auto th : pipe->thread)
-	if (th.mau) new GroupPlace(work, th.mau);
-    Placed *placed = nullptr;
-    set<const IR::MAU::Table *> partly_placed;
+	if (th.mau && th.mau->tables.size() > 0) new GroupPlace(work, th.mau);
+    const Placed *placed = nullptr;
+    ordered_set<const IR::MAU::Table *> partly_placed;
     LOG1("table placement starting");
     while (!work.empty()) {
 	LOG3("stage " << (placed ? placed->stage : 0) << ", work size is " << work.size() <<
 	     ", partly placed " << partly_placed.size() << ", placed " << count(placed));
 	StageUse current = get_current_stage_use(placed);
-	vector<std::tuple<GroupPlace *, int, Placed *>> trial;
+	vector<std::pair<const GroupPlace *, const Placed *>> trial;
 	for (auto it = work.begin(); it != work.end();) {
 	    auto grp = *it;
 	    int idx = -1;
 	    bool done = true;
+	    bitvec seq_placed;
 	    for (auto t : grp->seq->tables) {
-		if (grp->placed[++idx]) {
+		++idx;
+		if (placed && placed->is_placed(t)) {
+		    seq_placed[idx] = true;
 		    LOG3(" - skipping " << t->name << " as its already done");
 		    continue; }
-		if (grp->seq->deps[idx] - grp->placed) {
+		if (grp->seq->deps[idx] - seq_placed) {
 		    LOG3(" - skipping " << t->name << " as its dependent on: " <<
-			 DumpSeqTables(grp->seq, grp->seq->deps[idx] - grp->placed));
+			 DumpSeqTables(grp->seq, grp->seq->deps[idx] - seq_placed));
 		    done = false;
 		    continue; }
 		if (auto pl = try_place_table(t, placed, current)) {
@@ -269,13 +292,12 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
 				defer = true;
 				break; }
 			if (defer) continue; }
-		    trial.emplace_back(grp, idx, pl);
+		    trial.emplace_back(grp, pl);
 		} else
-		    grp->placed[idx] = true; /* already placed */ }
-	    if (done) {
-		delete grp;
-		it = work.erase(it);
-	    } else
+		    assert(0); }
+	    if (done)
+		assert(0);
+	    else
 		it++; }
 	if (work.empty()) break;
 	if (trial.empty())
@@ -283,9 +305,9 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
 	LOG2("found " << trial.size() << " tables that could be placed: " << trial);
 	decltype(trial)::value_type *best = 0;
 	for (auto &t : trial)
-	    if (!best || is_better(std::get<2>(t), std::get<2>(*best)))
+	    if (!best || is_better(t.second, best->second))
 		best = &t;
-	placed = place_table(std::get<0>(*best), std::get<1>(*best), std::get<2>(*best));
+	placed = place_table(work, best->first, best->second);
 	if (placed->need_more)
 	    partly_placed.insert(placed->table);
 	else
