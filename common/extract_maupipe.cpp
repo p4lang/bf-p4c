@@ -52,11 +52,19 @@ private:
 	    if (auto action = program->get<IR::ActionFunction>(act.name))
 		if (std::find(tt->actions.begin(), tt->actions.end(), action) == tt->actions.end())
 		    tt->actions.push_back(action);
-	if (auto ap = program->get<IR::ActionProfile>(table->action_profile))
+	if (auto ap = program->get<IR::ActionProfile>(table->action_profile.name)) {
+	    tt->attached.push_back(ap);
 	    for (auto act : ap->actions)
 		if (auto action = program->get<IR::ActionFunction>(act.name))
 		    if (std::find(tt->actions.begin(), tt->actions.end(), action) == tt->actions.end())
 			tt->actions.push_back(action);
+	    if (auto sel = program->get<IR::ActionSelector>(ap->selector.name))
+		tt->attached.push_back(sel);
+	    else if (ap->selector)
+		error("%s: no action_selector %s", ap->selector.srcInfo, ap->selector.name);
+	} else if (table->action_profile)
+	    error("%s: no action_profile %s", table->action_profile.srcInfo,
+		  table->action_profile.name);
     }
     bool preorder(const IR::Vector<IR::Expression> *v) override {
 	assert(!seqs.count(v));

@@ -58,6 +58,32 @@ static void setup_action_layout(IR::MAU::Table *tbl) {
 	    tbl->layout.action_data_bytes = action_data_bytes; }
 }
 
+class VisitAttached : public Inspector {
+    IR::MAU::Table::Layout &layout;
+    bool &have_ternary_indirect;
+    bool preorder(const IR::Stateful *st) override {
+	if (!st->direct) {
+	    if (st->instance_count <= 0)
+		error("%s: No instance count in indirect %s %s", st->srcInfo, st->kind(), st->name);
+	    layout.overhead_bits += ceil_log2(st->instance_count); }
+	return false; }
+    bool preorder(const IR::ActionProfile *ap) override {
+	if (ap->size <= 0)
+	    error("%s: No size count in %s %s", ap->srcInfo, ap->kind(), ap->name);
+	layout.overhead_bits += ceil_log2(ap->size);
+	return false; }
+    bool preorder(const IR::ActionSelector *as) override {
+	// TODO -- what does this require from the layout?
+	return false; }
+    bool preorder(const IR::MAU::TernaryIndirect *ti) override {
+	have_ternary_indirect = true;
+	return false; }
+    bool preorder(const IR::Attached *att) override {
+	throw Util::CompilerBug("Unknown attached table type %s", typeid(*att).name()); }
+public:
+    VisitAttached(IR::MAU::Table::Layout *l, bool *hti) : layout(*l), have_ternary_indirect(*hti) {}
+};
+
 bool TableLayout::preorder(IR::MAU::Table *tbl) {
     tbl->layout.ixbar_bytes = tbl->layout.match_width_bits = 
     tbl->layout.action_data_bytes = tbl->layout.overhead_bits = 0;
@@ -66,12 +92,14 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     if ((tbl->layout.gateway = bool(tbl->gateway_expr)))
 	tbl->gateway_expr = setup_gateway_layout(tbl->layout, tbl->gateway_expr);
     setup_action_layout(tbl);
-    for (auto at : tbl->attached) {
-	// FIXME -- overhead bits for indirect attached tables?
-    }
+    bool have_ternary_indirect = false;
+    for (auto at : tbl->attached)
+	at->apply(VisitAttached(&tbl->layout, &have_ternary_indirect));
     if (tbl->layout.ternary) {
-	if (tbl->layout.overhead_bits > 1) {
-	    // attach a ternary indirect table
+	if (tbl->layout.overhead_bits > 1 && !have_ternary_indirect) {
+	    auto *tern_indir = new IR::MAU::TernaryIndirect;
+	    tbl->attached.push_back(tern_indir);
+	    tern_indir->apply(VisitAttached(&tbl->layout, &have_ternary_indirect));
         }
     } else {
 	// determine ways and match groups?
