@@ -75,7 +75,7 @@ public:
 	    else if (auto i = dynamic_cast<const IR::Index *>(prim->operands[0]))
 		name = i->toString();
 	    else {
-		error("%s: Destination of %s is not a field", prim->srcInfo, prim->name.c_str());
+		error("%s: Destination of %s is not a field", prim->srcInfo, prim->name);
 		return; }
 	    LOG3("update_access write " << name);
 	    auto &a = access[name];
@@ -125,7 +125,7 @@ bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
 	for (auto &action : t->actions)
 	    action->apply(UpdateAccess(access, &table));
     } else
-	error("%s: Multiple applies of table %s not supported", t->srcInfo, t->name.c_str());
+	error("%s: Multiple applies of table %s not supported", t->srcInfo, t->name);
     return true;
 }
 

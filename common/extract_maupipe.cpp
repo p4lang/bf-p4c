@@ -72,12 +72,12 @@ private:
 	auto table = program->get<IR::Table>(a->name);
 	if (!tables.count(a)) {
 	    if (!table) {
-		error("%s: No table named %s", a->srcInfo, a->name.c_str());
+		error("%s: No table named %s", a->srcInfo, a->name);
 		return true; }
 	    auto tt = tables[a] = new IR::MAU::Table(a->name, gress, table);
 	    setup_tt_actions(tt, table);
 	} else
-	    error("%s: Multiple applies of table %s not supported", a->srcInfo, a->name.c_str());
+	    error("%s: Multiple applies of table %s not supported", a->srcInfo, a->name);
 	return true;
     }
     void postorder(const IR::Apply *a) override {
