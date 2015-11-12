@@ -5,6 +5,7 @@
 #include "mau/table_dependency_graph.h"
 #include <assert.h>
 #include "lib/algorithm.h"
+#include "lib/error.h"
 
 class FindAttached : public Inspector {
     map<cstring, vector<const IR::Attached *>>	&attached;
@@ -37,9 +38,9 @@ struct AttachTables : public Modifier {
 };
 
 class GetTofinoTables : public Inspector {
-    const IR::Global		*program;
+    const IR::Global				*program;
     gress_t					gress;
-    IR::Tofino::Pipe		*pipe;
+    IR::Tofino::Pipe				*pipe;
     map<const IR::Node *, IR::MAU::Table *>	tables;
     map<const IR::Node *, IR::MAU::TableSeq *>	seqs;
 public:
@@ -63,19 +64,20 @@ private:
 	return true;
     }
     void postorder(const IR::Vector<IR::Expression> *v) override {
-	for (auto el : *v) {
-	    seqs.at(v)->tables.push_back(tables.at(el)); }
+	for (auto el : *v)
+	    if (tables.count(el))
+		seqs.at(v)->tables.push_back(tables.at(el));
     }
     bool preorder(const IR::Apply *a) override {
 	auto table = program->get<IR::Table>(a->name);
 	if (!tables.count(a)) {
 	    if (!table) {
-		error(a->lineno(), "No table named %s", a->name.c_str());
+		error("%s: No table named %s", a->srcInfo, a->name.c_str());
 		return true; }
 	    auto tt = tables[a] = new IR::MAU::Table(a->name, gress, table);
 	    setup_tt_actions(tt, table);
 	} else
-	    error(a->lineno(), "Multiple applies of table %s not supported", a->name.c_str());
+	    error("%s: Multiple applies of table %s not supported", a->srcInfo, a->name.c_str());
 	return true;
     }
     void postorder(const IR::Apply *a) override {
