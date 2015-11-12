@@ -72,10 +72,10 @@ class VisitAttached : public Inspector {
 	    error("%s: No size count in %s %s", ap->srcInfo, ap->kind(), ap->name);
 	layout.overhead_bits += ceil_log2(ap->size);
 	return false; }
-    bool preorder(const IR::ActionSelector *as) override {
+    bool preorder(const IR::ActionSelector *) override {
 	// TODO -- what does this require from the layout?
 	return false; }
-    bool preorder(const IR::MAU::TernaryIndirect *ti) override {
+    bool preorder(const IR::MAU::TernaryIndirect *) override {
 	have_ternary_indirect = true;
 	return false; }
     bool preorder(const IR::Attached *att) override {
@@ -107,6 +107,6 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     return true;
 }
 
-bool TableLayout::backtrack(trigger &trig) {
+bool TableLayout::backtrack(trigger &) {
     return false;
 }

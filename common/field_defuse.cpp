@@ -71,7 +71,7 @@ bool FieldDefUse::preorder(const IR::Index *f) {
     return false;
 }
 
-bool FieldDefUse::preorder(const IR::Tofino::Parser *p) {
+bool FieldDefUse::preorder(const IR::Tofino::Parser *) {
     return false;
 }
 
@@ -124,19 +124,19 @@ std::ostream &operator<<(std::ostream &out, const FieldDefUse &a) {
 		out << '(' << t->gress << ' ' << hex(t->logical_id) << ')';
 	    sep = ","; }
 	out << std::endl; }
-    int maxw = 0;
-    for (int i = 0; i < a.phv.num_fields(); i++) {
-	int sz = a.phv.field(i)->name.size();
+    unsigned maxw = 0;
+    for (unsigned i = 0; i < a.phv.num_fields(); i++) {
+	unsigned sz = a.phv.field(i)->name.size();
 	if (!a.defuse.count(a.phv.field(i)->name))
 	    sz += 2;
 	if (maxw < sz) maxw = sz; }
-    for (int i = 0; i < a.phv.num_fields(); i++) {
+    for (unsigned i = 0; i < a.phv.num_fields(); i++) {
 	if (!a.defuse.count(a.phv.field(i)->name))
 	    out << '[' << std::setw(maxw-2) << std::left << a.phv.field(i)->name << ']';
 	else
 	    out << std::setw(maxw) << std::left << a.phv.field(i)->name;
 	out << ' ';
-	for (int j = 0; j <= i; j++)
+	for (unsigned j = 0; j <= i; j++)
 	    out << (a.conflict[i][j] ? '1' : '0');
 	out << std::endl; }
     return out;

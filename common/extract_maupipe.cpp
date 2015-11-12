@@ -105,7 +105,7 @@ private:
 	if (c->ifFalse)
 	    tables.at(c)->next["false"] = seqs.at(c->ifFalse);
     }
-    bool preorder(const IR::If *c) override {
+    bool preorder(const IR::If *) override {
 	throw std::logic_error("unnamed condition in control flow");
     }
     void postorder(const IR::Control *cf) override {

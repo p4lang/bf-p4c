@@ -32,9 +32,9 @@ class FindDependencyGraph : public MauInspector, ControlFlowVisitor {
     // alt 3 functions
     bool preorder(const IR::Tofino::Pipe *p) override {
 	graph.clear(); maupipe = p; return true; }
-    bool preorder(const IR::MAU::TableSeq *s) override;
-    bool preorder(const IR::MAU::Table *c) override;
-    void postorder(const IR::Tofino::Pipe *p) override { recompute_dep_stages(); }
+    bool preorder(const IR::MAU::TableSeq *) override;
+    bool preorder(const IR::MAU::Table *) override;
+    void postorder(const IR::Tofino::Pipe *) override { recompute_dep_stages(); }
 
     void flow_merge(Visitor &v) override;
     FindDependencyGraph *clone() const override { return new FindDependencyGraph(*this); }
