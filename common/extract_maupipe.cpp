@@ -1,8 +1,8 @@
 #include "ir/ir.h"
 #include "ir/dbprint.h"
-#include "frontends/common/inline_control_flow.h"
-#include "frontends/common/name_gateways.h"
-#include "mau/table_dependency_graph.h"
+#include "common/inline_control_flow.h"
+#include "common/name_gateways.h"
+#include "tofino/mau/table_dependency_graph.h"
 #include <assert.h>
 #include "lib/algorithm.h"
 #include "lib/error.h"

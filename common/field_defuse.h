@@ -4,7 +4,7 @@
 #include "ir/ir.h"
 #include "lib/bitvec.h"
 #include "lib/ltbitmatrix.h"
-#include "phv/phv_fields.h"
+#include "tofino/phv/phv_fields.h"
 #include <iostream>
 
 class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {

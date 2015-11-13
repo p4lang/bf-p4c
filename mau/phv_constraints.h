@@ -2,7 +2,7 @@
 #define _mau_phv_constraints_h_
 
 #include "mau_visitor.h"
-#include "phv/phv_fields.h"
+#include "tofino/phv/phv_fields.h"
 
 class MauPhvConstraints : public MauInspector {
     PhvInfo	&phv;
