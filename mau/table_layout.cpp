@@ -61,7 +61,6 @@ static void setup_action_layout(IR::MAU::Table *tbl) {
 namespace {
 class VisitAttached : public Inspector {
     IR::MAU::Table::Layout &layout;
-    bool &have_ternary_indirect;
     bool preorder(const IR::Stateful *st) override {
 	if (!st->direct) {
 	    if (st->instance_count <= 0)
@@ -69,6 +68,7 @@ class VisitAttached : public Inspector {
 	    layout.overhead_bits += ceil_log2(st->instance_count); }
 	return false; }
     bool preorder(const IR::ActionProfile *ap) override {
+	have_action_data = true;
 	if (ap->size <= 0)
 	    error("%s: No size count in %s %s", ap->srcInfo, ap->kind(), ap->name);
 	layout.overhead_bits += ceil_log2(ap->size);
@@ -82,7 +82,9 @@ class VisitAttached : public Inspector {
     bool preorder(const IR::Attached *att) override {
 	throw Util::CompilerBug("Unknown attached table type %s", typeid(*att).name()); }
 public:
-    VisitAttached(IR::MAU::Table::Layout *l, bool *hti) : layout(*l), have_ternary_indirect(*hti) {}
+    VisitAttached(IR::MAU::Table::Layout *l) : layout(*l) {}
+    bool have_ternary_indirect = false;
+    bool have_action_data = false;;
 };
 }
 
@@ -94,14 +96,14 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     if ((tbl->layout.gateway = bool(tbl->gateway_expr)))
 	tbl->gateway_expr = setup_gateway_layout(tbl->layout, tbl->gateway_expr);
     setup_action_layout(tbl);
-    bool have_ternary_indirect = false;
+    VisitAttached attached(&tbl->layout);
     for (auto at : tbl->attached)
-	at->apply(VisitAttached(&tbl->layout, &have_ternary_indirect));
+	at->apply(attached);
     if (tbl->layout.ternary) {
-	if (tbl->layout.overhead_bits > 1 && !have_ternary_indirect) {
+	if (tbl->layout.overhead_bits > 1 && !attached.have_ternary_indirect) {
 	    auto *tern_indir = new IR::MAU::TernaryIndirect;
 	    tbl->attached.push_back(tern_indir);
-	    tern_indir->apply(VisitAttached(&tbl->layout, &have_ternary_indirect));
+	    tern_indir->apply(attached);
         }
     } else {
 	// determine ways and match groups?
