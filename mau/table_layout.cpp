@@ -58,6 +58,7 @@ static void setup_action_layout(IR::MAU::Table *tbl) {
 	    tbl->layout.action_data_bytes = action_data_bytes; }
 }
 
+namespace {
 class VisitAttached : public Inspector {
     IR::MAU::Table::Layout &layout;
     bool &have_ternary_indirect;
@@ -83,6 +84,7 @@ class VisitAttached : public Inspector {
 public:
     VisitAttached(IR::MAU::Table::Layout *l, bool *hti) : layout(*l), have_ternary_indirect(*hti) {}
 };
+}
 
 bool TableLayout::preorder(IR::MAU::Table *tbl) {
     tbl->layout.ixbar_bytes = tbl->layout.match_width_bits = 
