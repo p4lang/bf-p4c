@@ -23,27 +23,16 @@ public:
     vector<const Attached *>		attached;
     map<cstring, const MAU_TableSeq *>	next;
     struct Layout {
+	/* POD type */
 	int		entries = 0;
 	bool		gateway = false, ternary = false;
 	int		ixbar_bytes = 0;
 	int		match_width_bits = 0;
 	int		action_data_bytes = 0;
+	int		action_data_bytes_in_overhead = 0;
 	int		overhead_bits = 0;
-	bool operator==(const Layout &a) const {
-	    return entries == a.entries && gateway == a.gateway && ternary == a.ternary &&
-		   ixbar_bytes == a.ixbar_bytes &&
-		   match_width_bits == a.match_width_bits &&
-		   action_data_bytes == a.action_data_bytes &&
-		   overhead_bits == a.overhead_bits; }
-	Layout &operator+=(const Layout &a) {
-	    entries += a.entries;
-	    gateway |= a.gateway;
-	    ternary |= a.ternary;
-	    ixbar_bytes += a.ixbar_bytes;
-	    match_width_bits += a.match_width_bits;
-	    action_data_bytes += a.action_data_bytes;
-	    overhead_bits += a.overhead_bits;
-            return *this; }
+	bool operator==(const Layout &a) const { return memcmp(this, &a, sizeof(Layout)) == 0; }
+	Layout &operator+=(const Layout &a);
     } layout;
 
     MAU_Table(cstring n, gress_t gr, const Table *t) : name(n), gress(gr), match_table(t) {}
@@ -105,11 +94,18 @@ public:
 
 class MAU_TernaryIndirect : public Attached {
 public:
-    MAU_TernaryIndirect() { name = "<tind>"; }
+    MAU_TernaryIndirect(cstring tbl_name) { name = tbl_name + "$tind"; }
 
     IRNODE_SUBCLASS(MAU_TernaryIndirect)
     const char *kind() const { return "ternary indirect"; }
+};
 
+class MAU_ActionData : public Attached {
+public:
+    MAU_ActionData(cstring tbl_name) { name = tbl_name + "$action"; }
+
+    IRNODE_SUBCLASS(MAU_ActionData)
+    const char *kind() const { return "action data"; }
 };
 
 class MAU_TableSeq : public Node {
@@ -138,6 +134,7 @@ namespace MAU {
 using Table = MAU_Table;
 using TableSeq = MAU_TableSeq;
 using TernaryIndirect = MAU_TernaryIndirect;
+using ActionData = MAU_ActionData;
 } // end namespace MAU
 
 } // end namespace IR

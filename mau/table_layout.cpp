@@ -79,6 +79,9 @@ class VisitAttached : public Inspector {
     bool preorder(const IR::MAU::TernaryIndirect *) override {
 	have_ternary_indirect = true;
 	return false; }
+    bool preorder(const IR::MAU::ActionData *) override {
+	have_action_data = true;
+	return false; }
     bool preorder(const IR::Attached *att) override {
 	throw Util::CompilerBug("Unknown attached table type %s", typeid(*att).name()); }
 public:
@@ -99,9 +102,16 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     VisitAttached attached(&tbl->layout);
     for (auto at : tbl->attached)
 	at->apply(attached);
+    if (tbl->layout.action_data_bytes > 4 && !attached.have_action_data) {
+	auto *act_data = new IR::MAU::ActionData(tbl->name);
+	tbl->attached.push_back(act_data);
+	act_data->apply(attached); }
+    if (!attached.have_action_data) {
+	tbl->layout.action_data_bytes_in_overhead = tbl->layout.action_data_bytes;
+	tbl->layout.overhead_bits += 8 * tbl->layout.action_data_bytes_in_overhead; }
     if (tbl->layout.ternary) {
 	if (tbl->layout.overhead_bits > 1 && !attached.have_ternary_indirect) {
-	    auto *tern_indir = new IR::MAU::TernaryIndirect;
+	    auto *tern_indir = new IR::MAU::TernaryIndirect(tbl->name);
 	    tbl->attached.push_back(tern_indir);
 	    tern_indir->apply(attached);
         }

@@ -34,6 +34,15 @@ static int RegisterPerWord(const IR::Register *reg) {
     return 2;
 }
 
+static int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width) {
+    int size = ceil_log2(layout->action_data_bytes);
+    if (size > 4) {
+	*width = 1 << (size-4);
+	return 1;
+    } else
+	return 16 >> size;
+}
+
 StageUse::StageUse(const IR::MAU::Table *tbl, int &entries) {
     memset(this, 0, sizeof(*this));
     logical_ids = 1;
@@ -74,13 +83,10 @@ StageUse::StageUse(const IR::MAU::Table *tbl, int &entries) {
 	    if (!reg->direct) attached_entries = reg->instance_count;
 	    need_maprams = true;
 	} else if (auto *ap = dynamic_cast<const IR::ActionProfile *>(at)) {
-	    int size = ceil_log2(tbl->layout.action_data_bytes);
-	    if (size > 4) {
-		width = 1 << (size-4);
-		per_word = 1;
-	    } else
-		per_word = 16 >> size;
+	    per_word = ActionDataPerWord(&tbl->layout, &width);
 	    attached_entries = ap->size;
+	} else if (/*auto *ad = */dynamic_cast<const IR::MAU::ActionData *>(at)) {
+	    per_word = ActionDataPerWord(&tbl->layout, &width);
 	} else if (/*auto *as = */dynamic_cast<const IR::ActionSelector *>(at)) {
 	    // TODO
 	} else if (/*auto *ti = */dynamic_cast<const IR::MAU::TernaryIndirect *>(at)) {
