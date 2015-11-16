@@ -54,7 +54,7 @@ struct TablePlacement::Placed {
     bool			need_more = false, gw_cond = true;
     const IR::MAU::Table	*table, *gw = 0;
     short			stage, logical_id;
-    StageUse			use;
+    StageUseEstimate		use;
     Placed(TablePlacement &self, const Placed *p, const IR::MAU::Table *t)
 	: self(self), prev(p), name(t->name), table(t) {
 	    if (prev) placed = prev->placed; }
@@ -66,9 +66,9 @@ struct TablePlacement::Placed {
 	return true; }
 };
 
-static StageUse get_current_stage_use(const TablePlacement::Placed *pl) {
-    short	stage;
-    StageUse	rv;
+static StageUseEstimate get_current_stage_use(const TablePlacement::Placed *pl) {
+    short		stage;
+    StageUseEstimate	rv;
     if (pl) {
 	stage = pl->stage;
 	rv = pl->use;
@@ -111,7 +111,7 @@ TablePlacement::Placed *gateway_merge(TablePlacement::Placed *pl) {
 }
 
 TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t, const Placed *done,
-							const StageUse &current) {
+							const StageUseEstimate &current) {
     LOG2("try_place_table(" << t->name << ", stage=" << (done ? done->stage : 0) << ")");
     auto *rv = gateway_merge(new Placed(*this, done, t));
     t = rv->table;
@@ -136,15 +136,15 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     assert(!rv->placed[table_uids.at(rv->name)]);
 
     LOG3(" - will try " << rv->entries << " of " << t->name << " in stage " << rv->stage);
-    StageUse min_use(t, min_entries); // minimum use for part of table to be useful
-    rv->use = StageUse(t, rv->entries);
+    StageUseEstimate min_use(t, min_entries); // minimum use for part of table to be useful
+    rv->use = StageUseEstimate(t, rv->entries);
     if (rv->gw) {
 	assert(!t->gateway_expr);
 	assert(!rv->gw->match_table);
 	rv->use.exact_ixbar_bytes += rv->gw->layout.ixbar_bytes;
 	min_use.exact_ixbar_bytes += rv->gw->layout.ixbar_bytes; }
 
-    auto avail = StageUse::max();
+    auto avail = StageUseEstimate::max();
     if (rv->stage == (done ? done->stage : 0) && !(rv->use + current <= avail)) {
 	if (!(min_use + current <= avail))
 	    rv->stage++;
@@ -169,7 +169,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 	else
 	    last_try = rv->entries;
 	LOG3(" - reducing to " << rv->entries << " of " << t->name << " in stage " << rv->stage);
-	rv->use = StageUse(t, rv->entries);
+	rv->use = StageUseEstimate(t, rv->entries);
 	if (rv->gw)
 	    rv->use.exact_ixbar_bytes += rv->gw->layout.ixbar_bytes; }
     rv->logical_id = done && done->stage == rv->stage ? done->logical_id + 1
@@ -263,7 +263,7 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
     while (!work.empty()) {
 	LOG3("stage " << (placed ? placed->stage : 0) << ", work size is " << work.size() <<
 	     ", partly placed " << partly_placed.size() << ", placed " << count(placed));
-	StageUse current = get_current_stage_use(placed);
+	StageUseEstimate current = get_current_stage_use(placed);
 	vector<std::pair<const GroupPlace *, const Placed *>> trial;
 	for (auto it = work.begin(); it != work.end();) {
 	    auto grp = *it;

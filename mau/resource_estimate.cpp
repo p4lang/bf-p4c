@@ -43,7 +43,7 @@ static int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width) {
 	return 16 >> size;
 }
 
-StageUse::StageUse(const IR::MAU::Table *tbl, int &entries) {
+StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries) {
     memset(this, 0, sizeof(*this));
     logical_ids = 1;
     exact_ixbar_bytes = tbl->layout.ixbar_bytes;

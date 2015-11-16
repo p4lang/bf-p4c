@@ -7,7 +7,7 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
     out << " id G                     name       xb  hb g sr tc mr ab" << std::endl;
     for (auto *t : Values(ts.order)) {
 	int entries = t->layout.entries;
-	StageUse use(t, entries);
+	StageUseEstimate use(t, entries);
 	out << hex(t->logical_id, 3) << ' ' << (t->gress ? 'E' : 'I')
 	    << ' ' << std::setw(30) << t->name
 	    << ' ' << std::setw(2) << t->layout.ixbar_bytes

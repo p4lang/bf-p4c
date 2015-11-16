@@ -6,7 +6,7 @@
 
 struct DependencyGraph;
 class TablesMutuallyExclusive;
-struct StageUse;
+struct StageUseEstimate;
 
 class TablePlacement : public MauTransform {
 public:
@@ -22,7 +22,7 @@ private:
     IR::Node *preorder(IR::MAU::Table *) override;
     const Placed *placement;
     bool is_better(const Placed *a, const Placed *b);
-    Placed *try_place_table(const IR::MAU::Table *t, const Placed *done, const StageUse &current);
+    Placed *try_place_table(const IR::MAU::Table *t, const Placed *done, const StageUseEstimate &current);
     const Placed *place_table(ordered_set<const GroupPlace *>&work, const GroupPlace *grp, const Placed *pl);
     std::multimap<cstring, const Placed *> table_placed;
 };
