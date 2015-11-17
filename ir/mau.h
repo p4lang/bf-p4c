@@ -84,7 +84,7 @@ public:
 		next_count++; }
 	    v.flow_merge(gateway_inhibit); }
 	if (next_count != next.size())
-	    throw std::logic_error("unreachable results in table");
+	    throw Util::CompilerBug("unreachable results in table");
 	for (auto &att : attached)
 	    v.visit(att);
     })

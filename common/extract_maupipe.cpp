@@ -96,7 +96,7 @@ private:
 	if (!tables.count(c)) {
 	    tables[c] = new IR::MAU::Table(c->name, gress, c->pred);
 	} else
-	    throw std::logic_error("duplicated unique name?");
+	    throw Util::CompilerBug("duplicated unique name?");
 	return true;
     }
     void postorder(const IR::NamedCond *c) override {
@@ -106,7 +106,7 @@ private:
 	    tables.at(c)->next["false"] = seqs.at(c->ifFalse);
     }
     bool preorder(const IR::If *) override {
-	throw std::logic_error("unnamed condition in control flow");
+	throw Util::CompilerBug("unnamed condition in control flow");
     }
     void postorder(const IR::Control *cf) override {
 	assert(!pipe->thread[gress].mau);

@@ -301,7 +301,7 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
 		it++; }
 	if (work.empty()) break;
 	if (trial.empty())
-	    throw std::logic_error("No tables placeable, but not all tables placed?");
+	    throw Util::CompilerBug("No tables placeable, but not all tables placed?");
 	LOG2("found " << trial.size() << " tables that could be placed: " << trial);
 	decltype(trial)::value_type *best = 0;
 	for (auto &t : trial)
