@@ -23,15 +23,15 @@ resources.
 
 ##### `IR::Tofino::Pipe`
 
-An abstraction of a single Tofino pipeline, this object is basically just a
-container for other (Parser, Deparser, and MAU) specific objects.  This becomes
-the root object of the IR tree after the mid-end.
+An abstraction of a single Tofino pipeline, this object is basically
+just a container for other (Parser, Deparser, and MAU) specific objects.
+This becomes the root object of the IR tree after the mid-end.
 
-Because most visitors only care about part of the Pipe object (eg, just the MAU, or
-just the Parser), we define special visitor bases `MauInspector`, `MauModifier`,
-`MauTransform`, `PardeInspector`, `PardeModifier`, and `PardeTransform` that visit
-just those parts of the tree of interest to Mau or Parde.  Other parts of the tree
-are skipped.
+Because most visitors only care about part of the Pipe object (eg,
+just the MAU, or just the Parser), we define special visitor bases
+`MauInspector`, `MauModifier`, `MauTransform`, `PardeInspector`,
+`PardeModifier`, and `PardeTransform` that visit just those parts of the
+tree of interest to Mau or Parde.  Other parts of the tree are skipped.
 
 ##### `IR::Tofino::Parser`
 ##### `IR::Tofino::Deparser`
@@ -46,39 +46,49 @@ data, selector, meter, counter, ...).  There is a next table map that
 contains references to sequences of other tables to run based on the
 gateway result or action run.
 
-- `gateway_expr`  boolean expression that the gateway tests, or `nullptr` if there is no gateway
+- `gateway_expr`  boolean expression that the gateway tests, or `nullptr`
+  if there is no gateway
 - `gateway_payload`  action to run if the match-action table does not run
-- `gateway_cond`  if `eval(gateway_expr) == gateway_cond` then the `match_table` should run.
-   If there is no `gateway_expr` or no `match_table`, this is ignored.
+- `gateway_cond`  if `eval(gateway_expr) == gateway_cond` then the
+  `match_table` should run.  If there is no `gateway_expr` or no
+  `match_table`, this is ignored.
 - `match_table`  match table to run iff `gateway_expr == nullptr` or
   `eval(gateway_expr) == gateway_cond`
-- `actions`  list of action functions that might be in the table.  **TBD:** probably need
-  to differentiate default-only vs non-default-only vs other actions somehow?
-- `attached`  list of attached support tables -- ternary indirection, action data, selection,
-  meter, counter, stateful alu...
-- `next`  map from gateway conditions and actions to control dependent table sequences.
-  Keys are cstrings that may be action names or keywords.
-  - `true` -- next to run iff `eval(gateway_expr) == true`.  Not allowed if there is a
-      `match_table` and `gateway_cond == true`, since then the match table result applies.
-  - `false` -- next to run iff `eval(gateway_expr) == false`.  Not allowed if there is a
-      `match_table` and `gateway_cond == false`, since then the match table result applies.
+- `actions`  list of action functions that might be in the table.
+  **TBD:** probably need to differentiate default-only vs non-default-only vs
+  other actions somehow?
+- `attached`  list of attached support tables -- ternary indirection,
+  action data, selection, meter, counter, stateful alu...
+- `next`  map from gateway conditions and actions to control dependent table
+  sequences.  Keys are cstrings that may be action names or keywords.
+  - `true` -- next to run iff `eval(gateway_expr) == true`.  Not allowed if
+    there is a `match_table` and `gateway_cond == true`, since then the match
+    table result applies.
+  - `false` -- next to run iff `eval(gateway_expr) == false`.  Not allowed if
+    there is a `match_table` and `gateway_cond == false`, since then the match
+    table result applies.
   - *action*  -- next to run if the `match_table` runs this action.
-  - `$miss`  -- next to run if the `match_table` runs and misses.  This will override if
-	the action also specifies a next.
-  - `default`  -- next to run if the `match_table` runs and nothing else applies.
+  - `$miss`  -- next to run if the `match_table` runs and misses.  This will
+    override if the action also specifies a next.
+  - `default`  -- next to run if the `match_table` runs and nothing else
+    applies.
 
-`IR::MAU::Table` objects are initially created by the mid-end corresponding to each gateway
-and match table in the P4 program.  These tables will then be manipulated (split, combined,
-and reordered) by various passes to get them into a form where they can be fit into the
-Tofino pipeline, then allocated to specific stages/logical ids/resources within the pipeline.
+`IR::MAU::Table` objects are initially created by the mid-end
+corresponding to each gateway and match table in the P4 program.
+These tables will then be manipulated (split, combined, and reordered)
+by various passes to get them into a form where they can be fit into the
+Tofino pipeline, then allocated to specific stages/logical ids/resources
+within the pipeline.
 
 ##### `IR::MAU::TableSeq`
 
-A sequence of logical tables to run in order.  Each table will run, followed by any control
-dependent tables, followed by the next table in the sequence.  By definition, tables in a
-`TableSeq` are control-independent, but may be data-dependent.  The `TableSeq` also contains
-a bit-matrix that tracks data dependencies between tables in the sequence including
-their control-depedent tables.  Tables that are not data dependent may be reordered.
+A sequence of logical tables to run in order.  Each table will run,
+followed by any control dependent tables, followed by the next
+table in the sequence.  By definition, tables in a `TableSeq` are
+control-independent, but may be data-dependent.  The `TableSeq` also
+contains a bit-matrix that tracks data dependencies between tables in
+the sequence including their control-depedent tables.  Tables that are
+not data dependent may be reordered.
 
 ### Passes
 
@@ -91,16 +101,18 @@ that tofino requires.
 
 #### parde
 
-Parser and deparser processing starts with extracting the state machine graph
-from the P4-level IR.  Since the IR (currently) does not support loops, but the
-state machine may involve loops, this will require using a representation that
-breaks the loops.  We could extend the IR to allow loops (would require extending
-the Visitor base classes to deal with loops rather than just detecting them and
-throwing an error), but that may not be necessary.  A series of transformation passes
-can then optimize the parser:
+Parser and deparser processing starts with extracting the state machine
+graph from the P4-level IR.  Since the IR (currently) does not support
+loops, but the state machine may involve loops, this will require using
+a representation that breaks the loops.  We could extend the IR to
+allow loops (would require extending the Visitor base classes to deal
+with loops rather than just detecting them and throwing an error), but
+that may not be necessary.  A series of transformation passes can then
+optimize the parser:
 
-* Loop unrolling -- states that have backreferences (loops) can be unrolled by cloning
-  the backreferenced tree, limited by the maximum header stack size involved
+* Loop unrolling -- states that have backreferences (loops) can be unrolled by
+  cloning the backreferenced tree, limited by the maximum header stack size
+  involved
 
 * Parser state splitting -- states that do too much (write too many
   output bytes) need to be split into multiple states.  States could also
@@ -109,22 +121,24 @@ can then optimize the parser:
 
 * Parser state combining -- small consecutive states can be combined.
 
-It may be that simply splitting states into the smallest possible fragments and then
-recombining them works well for general optimization.  Alternately, other things could
-be tried.  The important thing is flexibility in the representation, to permit
-experimentation.
+It may be that simply splitting states into the smallest possible
+fragments and then recombining them works well for general optimization.
+Alternately, other things could be tried.  The important thing is
+flexibility in the representation, to permit experimentation.
 
-Deparser handling in v1.1 is a matter of extracting the deparser from the parser state
-machine and blackboxes that do deparser-relevant processing (checksum units, learning
-filters, ...).  Its not clear whether this is best done from the P4-level parser IR,
-or from some later state of the parser IR (after some backend transformations).
+Deparser handling in v1.1 is a matter of extracting the deparser from the
+parser state machine and blackboxes that do deparser-relevant processing
+(checksum units, learning filters, ...).  Its not clear whether this is
+best done from the P4-level parser IR, or from some later state of the
+parser IR (after some backend transformations).
 
 #### mau
 
-Mau processing begins by converting the P4 IR into a pair of `IR::MAU::TableSeq`
-objects (one for ingress, and one for egress -- this is the 'mid-end'), which is
-prototyped in `extract_maupipe.cpp`.  Then the code can reorganized by various
-optimization passes that will be needed:
+Mau processing begins by converting the P4 IR into a pair of
+`IR::MAU::TableSeq` objects (one for ingress, and one for egress --
+this is the 'mid-end'), which is prototyped in `extract_maupipe.cpp`.
+Then the code can reorganized by various optimization passes that will
+be needed:
 
 - Gateway analysis and splitting -- gateway tables that are too complex
   for tofino must be split int multiple gateways.
@@ -205,7 +219,7 @@ We can build an interference graph for all fields, allowing use to experiment
 with graph coloring algorithms for PHV allocation, as well as simpler
 greedy allocation.
 
-Inspector passes to find constraints could logically be either part of the component
-they are anaylzing (parde or mau) or part of phv allocation.
+Inspector passes to find constraints could logically be either part of
+the component they are anaylzing (parde or mau) or part of phv allocation.
 
 
