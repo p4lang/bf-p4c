@@ -1,5 +1,6 @@
 #include "ir/ir.h"
 #include "resource_estimate.h"
+#include "input_xbar.h"
 #include "table_dependency_graph.h"
 #include "table_mutex.h"
 #include "table_placement.h"
@@ -55,6 +56,7 @@ struct TablePlacement::Placed {
     const IR::MAU::Table	*table, *gw = 0;
     short			stage, logical_id;
     StageUseEstimate		use;
+    IXBar::Use			match_ixbar, gateway_ixbar;
     Placed(TablePlacement &self, const Placed *p, const IR::MAU::Table *t)
 	: self(self), prev(p), name(t->name), table(t) {
 	    if (prev) placed = prev->placed; }
@@ -134,6 +136,18 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 		   rvdeps.data_dep.at(p->name) >= DependencyGraph::Table::ACTION)
 	    rv->stage++; }
     assert(!rv->placed[table_uids.at(rv->name)]);
+
+    IXBar current_ixbar;
+    for (auto *p = done; p && p->stage == rv->stage; p = p->prev) {
+	current_ixbar.update(p->match_ixbar);
+	current_ixbar.update(p->gateway_ixbar); }
+    if (!current_ixbar.allocTable(rv->table, rv->match_ixbar, rv->gateway_ixbar) ||
+	!current_ixbar.allocTable(rv->gw, rv->match_ixbar, rv->gateway_ixbar)) {
+	rv->stage++;
+	current_ixbar.clear();
+	if (!current_ixbar.allocTable(rv->table, rv->match_ixbar, rv->gateway_ixbar) ||
+	    !current_ixbar.allocTable(rv->gw, rv->match_ixbar, rv->gateway_ixbar))
+	    throw Util::CompilerBug("Can't fit table %s in ixbar by itself", rv->name); }
 
     LOG3(" - will try " << rv->entries << " of " << t->name << " in stage " << rv->stage);
     StageUseEstimate min_use(t, min_entries); // minimum use for part of table to be useful
