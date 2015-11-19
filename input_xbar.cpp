@@ -17,7 +17,7 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
             return;
         } else if (what.type == tBIGINT) {
             hash_table[lo].data.setraw(what.bigi.data, what.bigi.size);
-            if (hash_table[lo].data.max().index() >= 128)
+            if (hash_table[lo].data.max().index() >= 64)
                 error(what.lineno, "Hash column value out of range");
             return; } }
     HashExpr *fn = HashExpr::create(gress, what);
