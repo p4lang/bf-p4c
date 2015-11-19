@@ -137,6 +137,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 	    rv->stage++; }
     assert(!rv->placed[table_uids.at(rv->name)]);
 
+#if 1
     IXBar current_ixbar;
     for (auto *p = done; p && p->stage == rv->stage; p = p->prev) {
 	current_ixbar.update(p->match_ixbar);
@@ -148,6 +149,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 	if (!current_ixbar.allocTable(rv->table, rv->match_ixbar, rv->gateway_ixbar) ||
 	    !current_ixbar.allocTable(rv->gw, rv->match_ixbar, rv->gateway_ixbar))
 	    throw Util::CompilerBug("Can't fit table %s in ixbar by itself", rv->name); }
+#endif
 
     LOG3(" - will try " << rv->entries << " of " << t->name << " in stage " << rv->stage);
     StageUseEstimate min_use(t, min_entries); // minimum use for part of table to be useful

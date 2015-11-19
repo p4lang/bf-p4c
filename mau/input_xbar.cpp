@@ -1,6 +1,7 @@
 #include "input_xbar.h"
 #include "lib/algorithm.h"
 #include "lib/bitvec.h"
+#include "lib/log.h"
 
 void IXBar::clear() {
     exact_use.clear();
@@ -12,10 +13,15 @@ void IXBar::clear() {
 
 static bool find_alloc(IXBar::Use &alloc, int groups, int bytes_per_group,
 		       Alloc2Dbase<std::pair<cstring, int>>	&use,
-		       std::multimap<cstring, IXBar::Loc>	&fields)
+		       std::multimap<cstring, IXBar::Loc>	&fields,
+		       bool second_try)
 {
     int groups_needed = (alloc.use.size() + bytes_per_group - 1)/bytes_per_group;
-    struct grp_use { int group, found, free_cnt; bitvec free; };
+    struct grp_use {
+	int group, found, free_cnt; bitvec free;
+	void dbprint(std::ostream &out) const {
+	    out << group << ": " << found << ' ' << free_cnt << ' ' << free; }
+    };
     vector<grp_use> order(groups);
     for (int i = 0; i < groups; i++) order[i].group = i;
     /* figure out how many needed bytes have already been allocated to each group the xbar */
@@ -30,10 +36,11 @@ static bool find_alloc(IXBar::Use &alloc, int groups, int bytes_per_group,
 		order[grp].free_cnt++;
 		order[grp].free[byte] = true; }
     /* sort group pref order: prefer groups with most bytes already in, then most free */
-    std::sort(order.begin(), order.end(), [](const grp_use &a, const grp_use &b) {
-	if (a.found != b.found) return a.found > b.found;
+    std::sort(order.begin(), order.end(), [=](const grp_use &a, const grp_use &b) {
+	if (!second_try && a.found != b.found) return a.found > b.found;
 	if (a.free_cnt != b.free_cnt) return a.free_cnt > b.free_cnt;
 	return a.group < b.group; });
+    LOG3(order);
     /* figure out which group(s) to use */
     bitvec groups_to_use;
     for (int i = 0; i < groups_needed; i++)
@@ -49,7 +56,7 @@ static bool find_alloc(IXBar::Use &alloc, int groups, int bytes_per_group,
 		break; }
 	if (found) continue;
 	for (auto &grp : order) {
-	    if (!groups_to_use[grp.group]) return false;
+	    if (!groups_to_use[grp.group]) break;
 	    if (!grp.free) continue;
 	    need_alloc[&need - &alloc.use[0]] = true;
 	    need.loc.group = grp.group;
@@ -57,7 +64,9 @@ static bool find_alloc(IXBar::Use &alloc, int groups, int bytes_per_group,
 	    grp.free.min() = false;
 	    found = true;
 	    break; }
-	if (!found) return false; }
+	if (!found) {
+	    LOG3("failed to fit");
+	    return false; } }
     /* succeded -- update the use info */
     for (int i : need_alloc) {
 	fields.emplace(alloc.use[i].field, alloc.use[i].loc);
@@ -89,12 +98,19 @@ bool IXBar::allocTable(bool ternary, const IR::Table *tbl, Use &alloc) {
 	int size = (field->type->width_bits() + 7)/8U;
 	for (int i = 0; i < size; i++)
 	    alloc.use.emplace_back(fname, i); }
+    LOG1("need " << alloc.use.size() << " bytes for table " << tbl->name);
     if (ternary) {
 	rv = find_alloc(alloc, TERNARY_GROUPS, TERNARY_BYTES_PER_GROUP,
-			  ternary_use, ternary_fields);
+			ternary_use, ternary_fields, false);
+	if (!rv)
+	    rv = find_alloc(alloc, TERNARY_GROUPS, TERNARY_BYTES_PER_GROUP,
+			    ternary_use, ternary_fields, true);
     } else {
 	rv = find_alloc(alloc, EXACT_GROUPS, EXACT_BYTES_PER_GROUP,
-			  exact_use, exact_fields);
+			  exact_use, exact_fields, false);
+	if (!rv)
+	    rv = find_alloc(alloc, EXACT_GROUPS, EXACT_BYTES_PER_GROUP,
+			      exact_use, exact_fields, true);
     }
     if (!rv) alloc.clear();
     return rv;
