@@ -1,6 +1,7 @@
 #include "ir/ir.h"
 #include "resource_estimate.h"
 #include "input_xbar.h"
+#include "memories.h"
 #include "table_dependency_graph.h"
 #include "table_mutex.h"
 #include "table_placement.h"
@@ -57,6 +58,7 @@ struct TablePlacement::Placed {
     short			stage, logical_id;
     StageUseEstimate		use;
     IXBar::Use			match_ixbar, gateway_ixbar;
+    map<cstring, Memories::Use>	memuse;
     Placed(TablePlacement &self, const Placed *p, const IR::MAU::Table *t)
 	: self(self), prev(p), name(t->name), table(t) {
 	    if (prev) placed = prev->placed; }
@@ -188,6 +190,17 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 	rv->use = StageUseEstimate(t, rv->entries);
 	if (rv->gw)
 	    rv->use.exact_ixbar_bytes += rv->gw->layout.ixbar_bytes; }
+
+#if 0
+    Memories current_mem;
+    for (auto *p = done; p && p->stage == rv->stage; p = p->prev)
+	current_mem.update(p->memuse);
+    int gw_entries = 1;
+    if (!current_mem.allocTable(rv->table, rv->entries, rv->memuse) ||
+	(rv->gw && !current_mem.allocTable(rv->gw, gw_entries, rv->memuse)))
+	throw Util::CompilerBug("Failed to allocate memory for %s", rv->name);
+#endif
+
     rv->logical_id = done && done->stage == rv->stage ? done->logical_id + 1
 						      : rv->stage * StageUse::MAX_LOGICAL_IDS;
     assert((rv->logical_id / StageUse::MAX_LOGICAL_IDS) == rv->stage);
@@ -271,9 +284,13 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
     table_uids.clear();
     pipe->apply(SetupUids(table_uids));
     ordered_set<const GroupPlace *>	work;
+    const Placed *placed = nullptr;
+    /* all the state for a partial table placement is stored in the work
+     * set and placed list, which are const pointers, so we can backtrack
+     * by just saving a snapshot of a work set and corresponding placed
+     * list and restoring that point */
     for (auto th : pipe->thread)
 	if (th.mau && th.mau->tables.size() > 0) new GroupPlace(work, th.mau);
-    const Placed *placed = nullptr;
     ordered_set<const IR::MAU::Table *> partly_placed;
     LOG1("table placement starting");
     while (!work.empty()) {

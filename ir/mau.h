@@ -9,10 +9,11 @@ namespace IR {
 
 class MAU_TableSeq;
 class MAU_Table : public Node {
-    /* A Tofino logical table (group) -- a gateway and/or match table along with whatever
-     * attached tables are run.  The basic scheduling unit for tofino; there are 16 such
-     * 'logical' tables available in each stage, which will run simultaneously and have
-     * their results predicated by the predicate mask calucluated from the next tables */
+    /* A Tofino logical table (group) -- a gateway and/or match table
+     * along with whatever attached tables are run.  The basic scheduling
+     * unit for tofino; there are 16 such 'logical' tables available in
+     * each stage, which will run simultaneously and have their results
+     * predicated by the predicate mask calucluated from the next tables */
 public:
     cstring				name;
     gress_t				gress;
@@ -33,19 +34,17 @@ public:
 	int		action_data_bytes = 0;
 	int		action_data_bytes_in_overhead = 0;
 	int		overhead_bits = 0;
-	bool operator==(const Layout &a) const { return memcmp(this, &a, sizeof(Layout)) == 0; }
+	bool operator==(const Layout &a) const {
+	    return memcmp(this, &a, sizeof(Layout)) == 0; }
 	Layout &operator+=(const Layout &a);
     } layout;
 
-    MAU_Table(cstring n, gress_t gr, const Table *t) : name(n), gress(gr), match_table(t) {}
-    MAU_Table(cstring n, gress_t gr, const Expression *gw) : name(n), gress(gr), gateway_expr(gw) {}
+    MAU_Table(cstring n, gress_t gr, const Table *t)
+    : name(n), gress(gr), match_table(t) {}
+    MAU_Table(cstring n, gress_t gr, const Expression *gw)
+    : name(n), gress(gr), gateway_expr(gw) {}
     IRNODE_SUBCLASS(MAU_Table)
-    bool operator==(const MAU_Table &a) const {
-	return name == a.name && gress == a.gress && logical_id == a.logical_id &&
-	       gateway_cond == a.gateway_cond && gateway_expr == a.gateway_expr &&
-	       gateway_payload == a.gateway_payload && match_table == a.match_table &&
-	       actions == a.actions && attached == a.attached && next == a.next &&
-	       layout == a.layout; }
+    bool operator==(const MAU_Table &a) const;
     IRNODE_VISIT_CHILDREN({
 	unsigned next_count = 0;
 	v.visit(gateway_expr);
@@ -111,8 +110,9 @@ public:
 };
 
 class MAU_TableSeq : public Node {
-    /* a sequence of tables -- may be reordered if deps allow.  deps(i,j) is true
-     * iff tables[i] is dependent on tables[j] (so must have j < i) */
+    /* a sequence of tables -- may be reordered if deps allow.
+     * deps(i,j) is true iff tables[i] is dependent on tables[j]
+     * (so must have j < i) */
 public:
     Vector<MAU_Table>		tables;
     LTBitMatrix			deps;
@@ -127,7 +127,8 @@ public:
 	if (b) tables.push_back(b); }
     IRNODE_SUBCLASS(MAU_TableSeq)
     IRNODE_DEFINE_APPLY_OVERLOAD(MAU_TableSeq)
-    bool operator==(const MAU_TableSeq &a) const { return tables == a.tables && deps == a.deps; }
+    bool operator==(const MAU_TableSeq &a) const {
+	return tables == a.tables && deps == a.deps; }
     IRNODE_VISIT_CHILDREN({ tables.visit_children(v); })
     void dbprint(std::ostream &out) const override;
 };

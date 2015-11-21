@@ -1,7 +1,7 @@
 #include "resource_estimate.h"
 #include "lib/bitops.h"
 
-static int CounterPerWord(const IR::Counter *ctr) {
+int CounterPerWord(const IR::Counter *ctr) {
     switch (ctr->type) {
     case IR::Counter::PACKETS:
 	if (ctr->min_width <= 21) return 6;
@@ -22,7 +22,7 @@ static int CounterPerWord(const IR::Counter *ctr) {
 	return 1; }
 }
 
-static int RegisterPerWord(const IR::Register *reg) {
+int RegisterPerWord(const IR::Register *reg) {
     if (reg->width <= 0)
 	warning("%s: No width in register %s, using 8", reg->srcInfo, reg->name);
     if (reg->width == 1) return 128;
@@ -34,7 +34,7 @@ static int RegisterPerWord(const IR::Register *reg) {
     return 2;
 }
 
-static int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width) {
+int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width) {
     int size = ceil_log2(layout->action_data_bytes);
     if (size > 4) {
 	*width = 1 << (size-4);

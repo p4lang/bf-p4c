@@ -1,4 +1,41 @@
-# Tofino back-end design
+# Tofino mid-end and back-end design
+
+The mid-end and back-end of the compiler are where all the Tofino-specific
+work is done.  To some extenet the boundary between mid-end and back-end
+is arbitrary, but the most logical place to put it is at the point where
+we transform the IR from frontend P4-oriented form (generally, a global scope
+containing a bunch of named symbols of various types) to Tofino-oriented
+form (a Pipe object containing ingress and egress parsers, deparsers, and tables).
+
+## Mid-end
+
+There are a variety of transformations we may want to do on the IR
+when it is still in P4 oriented form.  These could be considered
+non-tofino-specific transforms, since they operate at the frontend IR
+level, but are generally directed by target-specific considerations.
+Some could also be implemented to operate on the backend IR form.
+
+* Sequential action analysis.  Tofino actions happen in parallel, so
+  to ensure proper sequential behavior, we need to analyze actions and
+  substitute intermediate temporaries (essentially, copt propagation)
+  to ensure that each of the primitives within an action can be executed
+  in parallel.
+
+* Field packing and unpacking.  Tofino can only deal with 8, 16, and 32
+  bit quantities, so fields larger than 32 bits must be split.  The parser
+  operates on bytes, so fields in headers that need to be parsed/deparsed
+  that aren't on byte boundaries need to be reorganized so as to be
+  byte aligned.  This may necessitate introducing additional metadata.
+
+* POV allocation.  Tofino requires POV bits stored as additional metadata
+  for the deparser to control deparsing.  These bit should also be used
+  for validity checking of headers in tables.
+
+* Bridged metadata.  We need to introduce a bridged metadata fake header
+  that is deparsed from the ingress and parser in egress to carry metadat
+  information between ingress and egress.
+
+## Back-end
 
 The backend is where most of the resource allocation decisions take
 place.  Resource allocation passes should take extra ‘hints’ inputs to
@@ -91,8 +128,6 @@ the sequence including their control-depedent tables.  Tables that are
 not data dependent may be reordered.
 
 ### Passes
-
-#### mid-end
 
 The first step in the Tofino backend is converting the P4-level IR into the
 needed forms for the backend.  In most cases, this will be a fairly simple

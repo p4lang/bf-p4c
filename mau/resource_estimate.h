@@ -36,4 +36,8 @@ struct StageUseEstimate {
 	       ternary_ixbar_groups <= a.ternary_ixbar_groups; }
 };
 
+int CounterPerWord(const IR::Counter *ctr);
+int RegisterPerWord(const IR::Register *reg);
+int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width);
+
 #endif /* _resource_estimate_h_ */
