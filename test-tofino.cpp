@@ -16,6 +16,7 @@
 #include "tofino/mau/table_summary.h"
 #include "tofino/phv/phv_allocate.h"
 #include "tofino/phv/create_thread_local_instances.h"
+#include "tofino/phv/header_fragment_creator.h"
 
 class CheckTableNameDuplicate : public MauInspector {
     set<cstring>        names;
@@ -53,6 +54,7 @@ void test_tofino_backend(const IR::Global *program) {
     FieldDefUse defuse(phv);
     PassManager backend = {
 	new CreateThreadLocalInstances,
+	new HeaderFragmentCreator,
 	new SplitGateways,
 	new CheckTableNameDuplicate,
 	new TableFindSeqDependencies,

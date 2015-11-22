@@ -6,9 +6,9 @@ CreateThreadLocalInstances::CreateThreadLocalInstances() :
 }
 
 bool
-CreateThreadLocalInstances::preorder(IR::NamedRef *named_ref) {
+CreateThreadLocalInstances::preorder(IR::HeaderRef *hdr_ref) {
   assert(true == gress_valid_);
-  named_ref->name = cstring::to_cstring(gress_) + "::" + named_ref->name;
+  hdr_ref->set_name(cstring::to_cstring(gress_) + "::" + hdr_ref->toString());
   return false;
 }
 

@@ -1,7 +1,6 @@
 #ifndef BACKENDS_TOFINO_CREATE_THREAD_LOCAL_INSTANCES_
 #define BACKENDS_TOFINO_CREATE_THREAD_LOCAL_INSTANCES_
-#include <ir/visitor.h>
-#include <tofino/ir/tofino.h>
+#include "ir/ir.h"
 
 namespace IR {
   class NamedRef;
@@ -19,7 +18,7 @@ class CreateThreadLocalInstances : public Modifier {
   CreateThreadLocalInstances();
   ~CreateThreadLocalInstances() { }
   // Always returns true. It prepends "thread-name::" to named_ref->name.
-  bool preorder(IR::NamedRef *named_ref) override;
+  bool preorder(IR::HeaderRef *hdr_ref) override;
   bool preorder(IR::Tofino_Parser *parser) override;
   void postorder(IR::Tofino_Deparser *deparser) override;
  private:
