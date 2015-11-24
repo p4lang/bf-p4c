@@ -114,6 +114,18 @@ TablePlacement::Placed *gateway_merge(TablePlacement::Placed *pl) {
     return pl;
 }
 
+static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Placed *done, int &entries) {
+    Memories current_mem;
+    for (auto *p = done; p && p->stage == next->stage; p = p->prev)
+	current_mem.update(p->memuse);
+    int gw_entries = 1;
+    if (!current_mem.allocTable(next->table, entries, next->memuse) ||
+	(next->gw && !current_mem.allocTable(next->gw, gw_entries, next->memuse))) {
+	next->memuse.clear();
+	return false; }
+    return true;
+}
+
 TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t, const Placed *done,
 							const StageUseEstimate &current) {
     LOG2("try_place_table(" << t->name << ", stage=" << (done ? done->stage : 0) << ")");
@@ -155,51 +167,46 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 
     LOG3(" - will try " << rv->entries << " of " << t->name << " in stage " << rv->stage);
     StageUseEstimate min_use(t, min_entries); // minimum use for part of table to be useful
+    int increment_entries = min_entries + 1;
+    StageUseEstimate increment_use(t, increment_entries); // next bigger than min_use
     rv->use = StageUseEstimate(t, rv->entries);
     if (rv->gw) {
 	assert(!t->gateway_expr);
 	assert(!rv->gw->match_table);
 	rv->use.exact_ixbar_bytes += rv->gw->layout.ixbar_bytes;
-	min_use.exact_ixbar_bytes += rv->gw->layout.ixbar_bytes; }
+	min_use.exact_ixbar_bytes += rv->gw->layout.ixbar_bytes;
+	increment_use.exact_ixbar_bytes += rv->gw->layout.ixbar_bytes; }
 
     auto avail = StageUseEstimate::max();
-    if (rv->stage == (done ? done->stage : 0) && !(rv->use + current <= avail)) {
-	if (!(min_use + current <= avail))
+    if (rv->stage == (done ? done->stage : 0)) {
+	if (!(min_use + current <= avail) || !try_alloc_mem(rv, done, min_entries))
 	    rv->stage++;
-	else {
-	    avail.srams -= current.srams;
-	    avail.tcams -= current.tcams;
-	    avail.maprams -= current.maprams; } }
+	rv->memuse.clear(); }
+    if (done && rv->stage == done->stage) {
+	avail.srams -= current.srams;
+	avail.tcams -= current.tcams;
+	avail.maprams -= current.maprams; }
     assert(min_use <= avail);
     int last_try = rv->entries;
-    while (!(rv->use <= avail)) {
+    while (!(rv->use <= avail) || !try_alloc_mem(rv, done, rv->entries)) {
 	rv->need_more = true;
+	int scale = 0;
 	if (rv->use.tcams > avail.tcams)
-	    rv->entries = min_entries * (avail.tcams / min_use.tcams);
+	    scale = (avail.tcams - min_use.tcams) / (increment_use.tcams - min_use.tcams);
 	else if (rv->use.maprams > avail.maprams)
-	    rv->entries = min_entries * (avail.maprams / min_use.maprams);
+	    scale = (avail.maprams - min_use.maprams) / (increment_use.maprams - min_use.maprams);
 	else if (rv->use.srams > avail.srams)
-	    rv->entries = min_entries * (avail.srams / min_use.srams);
-	else
-	    assert(false);
+	    scale = (avail.srams - min_use.srams) / (increment_use.srams - min_use.srams);
+	if (scale)
+	    rv->entries = scale * increment_entries - (scale-1) * min_entries;
 	if (rv->entries >= last_try)
-	    rv->entries = last_try - 100;
-	else
-	    last_try = rv->entries;
+	    rv->entries = last_try - 500;
+	assert(rv->entries >= min_entries);
+	last_try = rv->entries;
 	LOG3(" - reducing to " << rv->entries << " of " << t->name << " in stage " << rv->stage);
 	rv->use = StageUseEstimate(t, rv->entries);
 	if (rv->gw)
 	    rv->use.exact_ixbar_bytes += rv->gw->layout.ixbar_bytes; }
-
-#if 0
-    Memories current_mem;
-    for (auto *p = done; p && p->stage == rv->stage; p = p->prev)
-	current_mem.update(p->memuse);
-    int gw_entries = 1;
-    if (!current_mem.allocTable(rv->table, rv->entries, rv->memuse) ||
-	(rv->gw && !current_mem.allocTable(rv->gw, gw_entries, rv->memuse)))
-	throw Util::CompilerBug("Failed to allocate memory for %s", rv->name);
-#endif
 
     rv->logical_id = done && done->stage == rv->stage ? done->logical_id + 1
 						      : rv->stage * StageUse::MAX_LOGICAL_IDS;
