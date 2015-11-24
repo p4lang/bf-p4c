@@ -8,7 +8,8 @@
 class FieldUse : public MauInspector, P4WriteContext {
     vector<cstring>		field_names;
     map<cstring, int>		field_index;
-    map<cstring, bitvec[2]>	table_use;
+    struct rw_t { bitvec reads, writes; };
+    map<cstring, rw_t>		table_use;
     void access_field(cstring field);
     bool preorder(const IR::MAU::Table *t) override;
     bool preorder(const IR::FieldRef *f) override;
@@ -21,13 +22,12 @@ public:
     bitvec tables_modify(const IR::MAU::Table *t) const;
     bitvec tables_access(const IR::MAU::Table *t) const;
     bitvec table_reads(const IR::MAU::Table *t) const {
-	return table_use.at(t->name)[0]; }
+	return table_use.at(t->name).reads; }
     bitvec table_writes(const IR::MAU::Table *t) const {
-	return table_use.at(t->name)[1]; }
+	return table_use.at(t->name).writes; }
     void cloning_table(cstring name, cstring newname) {
 	assert(table_use.count(name) && !table_use.count(newname));
-	table_use[newname][0] = table_use[name][0];
-	table_use[newname][1] = table_use[name][1]; }
+	table_use[newname] = table_use[name]; }
 };
 
 
