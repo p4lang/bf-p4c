@@ -6,7 +6,6 @@ enum gress_t { INGRESS, EGRESS };
 inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
     return out << (gress ? "egress" : "ingress"); }
 
-#include <ir/node.h>
 #include "parde.h"
 #include "mau.h"
 

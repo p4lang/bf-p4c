@@ -2,8 +2,7 @@
 #define _tofino_ir_mau_h_
 
 #include "lib/ltbitmatrix.h"
-#include "ir/p4.h"
-#include "ir/expression.h"
+#include "ir/ir.h"
 
 namespace IR {
 
