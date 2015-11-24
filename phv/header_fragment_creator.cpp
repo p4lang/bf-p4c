@@ -4,7 +4,7 @@ HeaderFragmentCreator::HeaderFragmentCreator() {
   visitDagOnce = false;
 }
 
-IR::Node*
+const IR::Node*
 HeaderFragmentCreator::preorder(IR::FieldRef *field_ref) {
   IR::Node *new_node = field_ref;
   const IR::HeaderType *header_type = IR::GetHeaderType(*field_ref);

@@ -5,6 +5,6 @@ class HeaderFragmentCreator : public Transform {
  public:
   HeaderFragmentCreator();
   ~HeaderFragmentCreator() { }
-  IR::Node* preorder(IR::FieldRef *field_ref) override;
+  const IR::Node* preorder(IR::FieldRef *field_ref) override;
 };
 #endif /* BACKENDS_TOFINO_HEADER_FRAGMENT_CREATOR_ */
