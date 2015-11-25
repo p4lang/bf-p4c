@@ -49,6 +49,7 @@ struct IXBar {
     bool allocGateway(const IR::Expression *gw, Use &alloc);
     bool allocTable(const IR::MAU::Table *tbl, Use &tbl_alloc, Use &gw_alloc);
     void update(const Use &alloc);
+    friend std::ostream &operator<<(std::ostream &, const IXBar &);
 };
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {

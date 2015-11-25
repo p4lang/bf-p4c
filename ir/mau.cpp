@@ -13,7 +13,8 @@ bool IR::MAU::Table::operator==(const IR::MAU::Table &a) const
 	   actions == a.actions &&
 	   attached == a.attached &&
 	   next == a.next &&
-	   layout == a.layout;
+	   layout == a.layout &&
+	   resources == a.resources;
 }
 
 IR::MAU::Table::Layout &IR::MAU::Table::Layout::operator += (

@@ -4,6 +4,8 @@
 #include "lib/ltbitmatrix.h"
 #include "ir/ir.h"
 
+struct TableResourceAlloc;
+
 namespace IR {
 
 class MAU_TableSeq;
@@ -37,6 +39,7 @@ public:
 	    return memcmp(this, &a, sizeof(Layout)) == 0; }
 	Layout &operator+=(const Layout &a);
     } layout;
+    const TableResourceAlloc		*resources = nullptr;
 
     MAU_Table(cstring n, gress_t gr, const Table *t)
     : name(n), gress(gr), match_table(t) {}

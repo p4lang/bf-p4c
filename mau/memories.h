@@ -43,6 +43,7 @@ struct Memories {
     void update(const map<cstring, Use> &alloc);
     void remove(cstring table_name, const Use &alloc);
     void remove(const map<cstring, Use> &alloc);
+    friend std::ostream &operator<<(std::ostream &, const Memories &);
 };
 
 #endif /* _mau_memories_h_ */
