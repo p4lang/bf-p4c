@@ -24,7 +24,7 @@ class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
     bool preorder(const IR::Tofino::Parser *p) override;
     bool preorder(const IR::Tofino::Deparser *p) override;
     bool preorder(const IR::FieldRef *f) override;
-    bool preorder(const IR::Index *f) override;
+    bool preorder(const IR::HeaderStackItemRef *f) override;
     FieldDefUse *clone() const override { return new FieldDefUse(*this); }
     void flow_merge(Visitor &) override;
     FieldDefUse(const FieldDefUse &) = default;

@@ -27,7 +27,7 @@ bool FieldUse::preorder(const IR::FieldRef *f) {
     return false;
 }
 
-bool FieldUse::preorder(const IR::Index *f) {
+bool FieldUse::preorder(const IR::HeaderStackItemRef *f) {
     access_field(f->toString());
     return false;
 }

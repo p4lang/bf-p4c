@@ -49,7 +49,7 @@ public:
 		    table->data_dep[t->name] = type;
     }
     bool preorder(const IR::FieldRef *f) { add_dependency(f->toString()); return false; }
-    bool preorder(const IR::Index *f) { add_dependency(f->toString()); return false; }
+    bool preorder(const IR::HeaderStackItemRef *f) { add_dependency(f->toString()); return false; }
 };
 
 class UpdateAccess : public MauInspector {
@@ -63,7 +63,7 @@ public:
 	LOG3("update_access read " << f->toString());
 	access[f->toString()].read.insert(table);
 	return false; }
-    bool preorder(const IR::Index *f) {
+    bool preorder(const IR::HeaderStackItemRef *f) {
 	LOG3("update_access read " << f->toString());
 	access[f->toString()].read.insert(table);
 	return false; }
@@ -72,7 +72,7 @@ public:
 	    cstring name;
 	    if (auto f = dynamic_cast<const IR::FieldRef *>(prim->operands[0]))
 		name = f->toString();
-	    else if (auto i = dynamic_cast<const IR::Index *>(prim->operands[0]))
+	    else if (auto i = dynamic_cast<const IR::HeaderStackItemRef *>(prim->operands[0]))
 		name = i->toString();
 	    else {
 		error("%s: Destination of %s is not a field", prim->srcInfo, prim->name);

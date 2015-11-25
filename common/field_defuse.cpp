@@ -7,7 +7,7 @@ class FieldDefUse::Init : public Inspector {
     FieldDefUse &self;
     void add_field(cstring field);
     bool preorder(const IR::FieldRef *f) override { add_field(f->toString()); return false; }
-    bool preorder(const IR::Index *f) override { add_field(f->toString()); return false; }
+    bool preorder(const IR::HeaderStackItemRef *f) override { add_field(f->toString()); return false; }
 public:
     Init(FieldDefUse &s) : self(s) {}
 };
@@ -66,7 +66,7 @@ bool FieldDefUse::preorder(const IR::FieldRef *f) {
     return false;
 }
 
-bool FieldDefUse::preorder(const IR::Index *f) {
+bool FieldDefUse::preorder(const IR::HeaderStackItemRef *f) {
     access_field(f->toString());
     return false;
 }
