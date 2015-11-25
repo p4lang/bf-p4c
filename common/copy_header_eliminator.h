@@ -4,6 +4,6 @@
 #include <list>
 class CopyHeaderEliminator : public Transform {
  public:
-  IR::Node *preorder(IR::Primitive *primitive);
+  const IR::Node *preorder(IR::Primitive *primitive);
 };
 #endif

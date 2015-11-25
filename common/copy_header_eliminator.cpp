@@ -1,6 +1,6 @@
 #include "copy_header_eliminator.h"
 
-IR::Node *
+const IR::Node *
 CopyHeaderEliminator::preorder(IR::Primitive *primitive) {
   if (primitive->name == "copy_header") {
     // replace with a sequence of modify_field primitives

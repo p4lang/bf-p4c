@@ -73,7 +73,7 @@ void test_tofino_backend(const IR::Global *program) {
     };
     maupipe = maupipe->apply(backend);
     if (verbose) {
-	//std::cout << DBPrint::setflag(DBPrint::TableNoActions);
+	std::cout << DBPrint::setflag(DBPrint::TableNoActions);
 	std::cout << "-------------------------------------------------" << std::endl
 		  << "Final table graph" << std::endl
 		  << "-------------------------------------------------" << std::endl;
