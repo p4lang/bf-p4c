@@ -2,6 +2,8 @@
 #define _mau_resource_h_
 
 #include "ir/ir.h"
+#include "input_xbar.h"
+#include "memories.h"
 
 struct StageUse {
     enum {
@@ -13,6 +15,11 @@ struct StageUse {
 	MAX_IXBAR_BYTES = 128,
 	MAX_TERNARY_GROUPS = 16,
     };
+};
+
+struct TableResourceAlloc {
+    IXBar::Use				match_ixbar, gateway_ixbar;
+    map<cstring, Memories::Use>		memuse;
 };
 
 #endif /* _mau_resource_h_ */

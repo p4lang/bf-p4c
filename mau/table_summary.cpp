@@ -19,5 +19,7 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
 	    << ' ' << std::setw(2) << t->layout.action_data_bytes
 	    << std::endl;
     }
+    for (auto &i : ts.ixbar)
+	out << "Stage " << i.first << std::endl << i.second << ts.memory.at(i.first);
     return out;
 }

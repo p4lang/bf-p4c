@@ -1,6 +1,7 @@
 #include "input_xbar.h"
 #include "lib/algorithm.h"
 #include "lib/bitvec.h"
+#include "lib/hex.h"
 #include "lib/log.h"
 
 void IXBar::clear() {
@@ -141,4 +142,39 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, Use &tbl_alloc, Use &gw_alloc)
 	tbl_alloc.clear();
 	return false; }
     return true;
+}
+
+template<class T>
+static void write_one(std::ostream &out, const T &f, std::map<cstring, char> &fields) {
+    if (f.first) {
+	if (!fields.count(f.first)) {
+	    if (fields.size() >= 26)
+		fields.emplace(f.first, 'a' + fields.size() - 26);
+	    else
+		fields.emplace(f.first, 'A' + fields.size()); }
+	out << fields[f.first] << hex(f.second);
+    } else
+	out << "..";
+}
+
+template<class T>
+static void write_group(std::ostream &out, const T &grp, std::map<cstring, char> &fields) {
+    for (auto &a : grp) write_one(out, a, fields);
+}
+
+/* IXBarPrinter in .gdbinit should match this */
+std::ostream &operator<<(std::ostream &out, const IXBar &ixbar) {
+    std::map<cstring, char>	fields;
+    for (int r = 0; r < IXBar::EXACT_GROUPS; r++) {
+	write_group(out, ixbar.exact_use[r], fields);
+	out << "  ";
+	write_group(out, ixbar.ternary_use[2*r], fields);
+	out << " ";
+	write_one(out, ixbar.byte_group_use[r], fields);
+	out << " ";
+	write_group(out, ixbar.ternary_use[2*r+1], fields);
+	out << std::endl; }
+    for (auto &f : fields)
+	out << "   " << f.second << " " << f.first << std::endl;
+    return out;
 }

@@ -2,6 +2,7 @@
 #include "resource_estimate.h"
 #include "input_xbar.h"
 #include "memories.h"
+#include "resource.h"
 #include "table_dependency_graph.h"
 #include "table_mutex.h"
 #include "table_placement.h"
@@ -57,8 +58,7 @@ struct TablePlacement::Placed {
     const IR::MAU::Table	*table, *gw = 0;
     short			stage, logical_id;
     StageUseEstimate		use;
-    IXBar::Use			match_ixbar, gateway_ixbar;
-    map<cstring, Memories::Use>	memuse;
+    const TableResourceAlloc	*resources;
     Placed(TablePlacement &self, const Placed *p, const IR::MAU::Table *t)
 	: self(self), prev(p), name(t->name), table(t) {
 	    if (prev) placed = prev->placed; }
@@ -114,14 +114,14 @@ TablePlacement::Placed *gateway_merge(TablePlacement::Placed *pl) {
     return pl;
 }
 
-static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Placed *done, int &entries) {
+static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Placed *done, int &entries, TableResourceAlloc *resources) {
     Memories current_mem;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev)
-	current_mem.update(p->memuse);
+	current_mem.update(p->resources->memuse);
     int gw_entries = 1;
-    if (!current_mem.allocTable(next->table, entries, next->memuse) ||
-	(next->gw && !current_mem.allocTable(next->gw, gw_entries, next->memuse))) {
-	next->memuse.clear();
+    if (!current_mem.allocTable(next->table, entries, resources->memuse) ||
+	(next->gw && !current_mem.allocTable(next->gw, gw_entries, resources->memuse))) {
+	resources->memuse.clear();
 	return false; }
     return true;
 }
@@ -130,6 +130,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 							const StageUseEstimate &current) {
     LOG2("try_place_table(" << t->name << ", stage=" << (done ? done->stage : 0) << ")");
     auto *rv = gateway_merge(new Placed(*this, done, t));
+    TableResourceAlloc *resources = new TableResourceAlloc;
+    rv->resources = resources;
     t = rv->table;
     rv->stage = done ? done->stage : 0;
     int min_entries = 1;
@@ -154,14 +156,14 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 #if 1
     IXBar current_ixbar;
     for (auto *p = done; p && p->stage == rv->stage; p = p->prev) {
-	current_ixbar.update(p->match_ixbar);
-	current_ixbar.update(p->gateway_ixbar); }
-    if (!current_ixbar.allocTable(rv->table, rv->match_ixbar, rv->gateway_ixbar) ||
-	!current_ixbar.allocTable(rv->gw, rv->match_ixbar, rv->gateway_ixbar)) {
+	current_ixbar.update(p->resources->match_ixbar);
+	current_ixbar.update(p->resources->gateway_ixbar); }
+    if (!current_ixbar.allocTable(rv->table, resources->match_ixbar, resources->gateway_ixbar) ||
+	!current_ixbar.allocTable(rv->gw, resources->match_ixbar, resources->gateway_ixbar)) {
 	rv->stage++;
 	current_ixbar.clear();
-	if (!current_ixbar.allocTable(rv->table, rv->match_ixbar, rv->gateway_ixbar) ||
-	    !current_ixbar.allocTable(rv->gw, rv->match_ixbar, rv->gateway_ixbar))
+	if (!current_ixbar.allocTable(rv->table, resources->match_ixbar, resources->gateway_ixbar)||
+	    !current_ixbar.allocTable(rv->gw, resources->match_ixbar, resources->gateway_ixbar))
 	    throw Util::CompilerBug("Can't fit table %s in ixbar by itself", rv->name); }
 #endif
 
@@ -179,16 +181,16 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 
     auto avail = StageUseEstimate::max();
     if (rv->stage == (done ? done->stage : 0)) {
-	if (!(min_use + current <= avail) || !try_alloc_mem(rv, done, min_entries))
+	if (!(min_use + current <= avail) || !try_alloc_mem(rv, done, min_entries, resources))
 	    rv->stage++;
-	rv->memuse.clear(); }
+	resources->memuse.clear(); }
     if (done && rv->stage == done->stage) {
 	avail.srams -= current.srams;
 	avail.tcams -= current.tcams;
 	avail.maprams -= current.maprams; }
     assert(min_use <= avail);
     int last_try = rv->entries;
-    while (!(rv->use <= avail) || !try_alloc_mem(rv, done, rv->entries)) {
+    while (!(rv->use <= avail) || !try_alloc_mem(rv, done, rv->entries, resources)) {
 	rv->need_more = true;
 	int scale = 0;
 	if (rv->use.tcams > avail.tcams)
@@ -412,6 +414,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
 	    tbl->next["default"] = seq; }
     if (table_placed.count(tbl->name) == 1) {
 	tbl->layout.entries = it->second->entries;
+	tbl->resources = it->second->resources;
 	return tbl; }
     int counter = 0;
     IR::MAU::Table *rv = 0, *prev = 0;
@@ -424,6 +427,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
 	table_part->name +=  suffix;
 	table_part->logical_id = it->second->logical_id;
 	table_part->layout.entries = it->second->entries;
+	table_part->resources = it->second->resources;
 	if (!rv) {
 	    rv = table_part;
 	    assert(!prev);
