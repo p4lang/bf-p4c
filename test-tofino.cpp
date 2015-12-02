@@ -6,6 +6,7 @@
 #include "lib/log.h"
 #include "tofino/common/extract_maupipe.h"
 #include "tofino/common/field_defuse.h"
+#include "tofino/mau/asm_output.h"
 #include "tofino/mau/phv_constraints.h"
 #include "tofino/mau/split_gateways.h"
 #include "tofino/mau/table_dependency_graph.h"
@@ -14,6 +15,7 @@
 #include "tofino/mau/table_placement.h"
 #include "tofino/mau/table_seqdeps.h"
 #include "tofino/mau/table_summary.h"
+#include "tofino/phv/asm_output.h"
 #include "tofino/phv/phv_allocate.h"
 #include "tofino/phv/create_thread_local_instances.h"
 #include "tofino/phv/header_fragment_creator.h"
@@ -84,4 +86,7 @@ void test_tofino_backend(const IR::Global *program) {
     maupipe->apply(summary);
     if (verbose)
 	std::cout << summary;
+    MauAsmOutput mauasm;
+    maupipe->apply(mauasm);
+    std::cout << PhvAsmOutput(phv) << mauasm;
 }

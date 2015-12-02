@@ -38,16 +38,17 @@ private:
     bool preorder(const IR::Expression *) override { return false; }
     bool preorder(const IR::Table *) override { return false; }
     bool preorder(const IR::Parser *) override { return false; }
+    template<typename Iter>
     class iterator {
-	vector<Info *>::iterator	it;
+	Iter	it;
     public:
-	iterator(vector<Info *>::iterator i) : it(i) {}
+	iterator(Iter i) : it(i) {}
 	bool operator==(iterator a) { return it == a.it; }
 	bool operator!=(iterator a) { return it != a.it; }
 	iterator &operator++() { ++it; return *this; }
 	iterator &operator--() { --it; return *this; }
-	Info &operator*() { return **it; }
-	Info *operator->() { return *it; }
+	decltype(**it) operator*() { return **it; }
+	decltype(*it) operator->() { return *it; }
     };
 public:
     Info *field(cstring name) { return all_fields.count(name) ? &all_fields.at(name) : 0; }
@@ -56,8 +57,10 @@ public:
     const Info *field(int idx) const { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
     const std::pair<int, int> *header(cstring name) const { return getref(all_headers, name); }
     size_t num_fields() const { return all_fields.size(); }
-    iterator begin() { return by_id.begin(); }
-    iterator end() { return by_id.end(); }
+    iterator<vector<Info *>::iterator> begin() { return by_id.begin(); }
+    iterator<vector<Info *>::iterator> end() { return by_id.end(); }
+    iterator<vector<Info *>::const_iterator> begin() const { return by_id.begin(); }
+    iterator<vector<Info *>::const_iterator> end() const { return by_id.end(); }
 };
 
 #endif /* _phv_fields_h_ */

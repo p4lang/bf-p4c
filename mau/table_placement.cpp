@@ -423,11 +423,10 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     for (it = table_placed.find(tbl->name); it->first == tbl->name; it++) {
 	char suffix[8];
 	sprintf(suffix, ".%d", ++counter);
-	auto *table_part = tbl->clone();
-	table_part->name +=  suffix;
+	auto *table_part = tbl->clone_rename(suffix);
 	table_part->logical_id = it->second->logical_id;
 	table_part->layout.entries = it->second->entries;
-	table_part->resources = it->second->resources;
+	table_part->resources = it->second->resources->clone_rename(suffix);
 	if (!rv) {
 	    rv = table_part;
 	    assert(!prev);

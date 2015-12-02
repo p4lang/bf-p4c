@@ -93,6 +93,11 @@ public:
     })
     void dbprint(std::ostream &out) const override;
     int logical_order() const { return logical_id + gress * 4096; }
+    MAU_Table *clone_rename(const char *ext) const {
+        MAU_Table *rv = clone();
+        rv->name += ext;
+        for (auto &at : rv->attached) at = at->clone_rename(ext);
+        return rv; }
 };
 
 class MAU_TernaryIndirect : public Attached {
