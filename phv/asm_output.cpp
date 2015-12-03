@@ -4,8 +4,18 @@ struct regused {
     int         B=0, H=0, W=0;
 };
 
+std::ostream &operator<<(std::ostream &out, canon_name n) {
+    for (auto ch : n.name) {
+        if (ch & ~0x7f) continue;
+        if (isalnum(ch) || ch == '_' || ch == '.' || ch == '$' || ch == '-')
+            out << ch;
+        if (ch == '[')
+            out << '$'; }
+    return out;
+}
+
 static void emit_phv_field(std::ostream &out, regused &use, const PhvInfo::Info &field) {
-    out << "  " << field.name << ": ";
+    out << "  " << canon_name(field.name) << ": ";
     int size = 0;
     if (field.size <= 8) {
         out << "B" << use.B++;

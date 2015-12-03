@@ -23,8 +23,8 @@ public:
     const Expression			*gateway_expr = nullptr;
     const ActionFunction		*gateway_payload = nullptr;
     const Table				*match_table = nullptr;
-    vector<const ActionFunction *>	actions;
-    vector<const Attached *>		attached;
+    vector<const ActionFunction *>      	actions;
+    Vector<Attached>		        attached;
     map<cstring, const MAU_TableSeq *>	next;
     struct Layout {
 	/* POD type */
@@ -88,8 +88,7 @@ public:
 	    v.flow_merge(gateway_inhibit); }
 	if (next_count != next.size())
 	    throw Util::CompilerBug("unreachable results in table");
-	for (auto &att : attached)
-	    v.visit(att);
+        attached.visit_children(v);
     })
     void dbprint(std::ostream &out) const override;
     int logical_order() const { return logical_id + gress * 4096; }
@@ -105,7 +104,7 @@ public:
     MAU_TernaryIndirect(cstring tbl_name) { name = tbl_name + "$tind"; }
 
     IRNODE_SUBCLASS(MAU_TernaryIndirect)
-    const char *kind() const { return "ternary indirect"; }
+    const char *kind() const { return "indirect"; }
 };
 
 class MAU_ActionData : public Attached {
@@ -113,7 +112,8 @@ public:
     MAU_ActionData(cstring tbl_name) { name = tbl_name + "$action"; }
 
     IRNODE_SUBCLASS(MAU_ActionData)
-    const char *kind() const { return "action data"; }
+    const char *kind() const { return "action"; }
+    bool indexed() const { return true; }
 };
 
 class MAU_TableSeq : public Node {

@@ -2,6 +2,7 @@
 #include "lib/indent.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
+#include "tofino/phv/asm_output.h"
 
 std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
     for (auto &stage : mauasm.by_stage) {
@@ -12,7 +13,7 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
 }
 
 static StringRef trim_name(StringRef name) {
-    if (auto *p = name.find('['))
+    if (auto *p = name.findlast('['))
         name = name.before(p);
     if (auto *p = name.findlast(':'))
         name = name.after(p+1);
@@ -34,7 +35,7 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::U
                 prev = b.second;
                 continue; }
             if (prev) out << (prev->byte*8 + 7) << ')' << ", ";
-            out << (b.first*8) << ": " << trim_name(b.second->field) << '('
+            out << (b.first*8) << ": " << canon_name(trim_name(b.second->field)) << '('
                 << (b.second->byte*8) << "..";
             prev = b.second; }
         if (prev) out << (prev->byte*8 + 7) << ')';
@@ -73,4 +74,25 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         emit_memory(out, indent, tbl->resources->memuse.at(tbl->name));
         emit_ixbar(out, indent, tbl->resources->match_ixbar);
     }
+    if (tbl->gateway_expr) {
+        indent_t gw_indent = indent;
+        if (tbl->match_table)
+            out << gw_indent++ << "gateway:" << std::endl;
+        emit_ixbar(out, gw_indent, tbl->resources->gateway_ixbar);
+    }
+
+    /* FIXME -- this is a mees and needs to be rewritten to be sane */
+    bool have_action = false, have_indirect = false;
+    for (auto at : tbl->attached) {
+        if (dynamic_cast<const IR::MAU::TernaryIndirect *>(at)) {
+            have_indirect = true;
+            out << indent << at->kind() << ": " << at->name << std::endl;
+        } else if (dynamic_cast<const IR::MAU::ActionData *>(at))
+            have_action = true; }
+    if (!have_indirect)
+        for (auto at : tbl->attached) {
+            out << indent << at->kind() << ": " << at->name;
+            if (at->indexed())
+                out << '(' << at->kind() << ')';
+            out << std::endl; }
 }
