@@ -10,7 +10,7 @@ CopyHeaderEliminator::preorder(IR::Primitive *primitive) {
     // header type.
     assert (dst_hdr_ref->type == src_hdr_ref->type);
     // TODO: Use modify_field to copy POVRef too.
-    auto *rv = new IR::Vector<IR::Primitive>;
+    auto rv = new IR::Vector<IR::Primitive>;
     for (int i = 0; i < dst_hdr_ref->type->width_bits(); i+=8) {
       rv->push_back(
         new IR::Primitive(primitive->srcInfo, "modify_field",
