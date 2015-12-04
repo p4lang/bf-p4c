@@ -3,6 +3,37 @@
 
 namespace IR {
 
+class Tofino_ParserState;
+
+class Tofino_ParserMatch : public Node {
+public:
+    long                        match, mask;
+    int                         shift;
+    Vector<Expression>          stmts;
+    const Tofino_ParserState    *next;
+    IRNODE_SUBCLASS(Tofino_ParserMatch)
+    bool operator==(const Tofino_ParserMatch &a) const {
+        return match == a.match && mask == a.mask && shift == a.shift &&
+               stmts == a.stmts && next == a.next; }
+    IRNODE_VISIT_CHILDREN({ 
+        stmts.visit_children(v);
+        v.visit(next); })
+};
+
+class Tofino_ParserState : public Node {
+public:
+    const IR::Parser            *p4state;
+    Vector<Expression>          select;
+    Vector<Tofino_ParserMatch>  match;
+    Tofino_ParserState(const IR::Parser *);
+    IRNODE_SUBCLASS(Tofino_ParserState)
+    bool operator==(const Tofino_ParserState &a) const {
+        return select == a.select && match == a.match; }
+    IRNODE_VISIT_CHILDREN({ 
+        select.visit_children(v);
+        match.visit_children(v); })
+};
+
 class Tofino_Parser : public Node {
 public:
     gress_t 		gress;
@@ -28,6 +59,7 @@ public:
 };
 
 namespace Tofino {
+using ParserState = Tofino_ParserState;
 using Parser = Tofino_Parser;
 using Deparser = Tofino_Deparser;
 } // end namespace Tofino
