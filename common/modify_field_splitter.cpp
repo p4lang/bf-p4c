@@ -46,7 +46,7 @@ ModifyFieldSplitter::preorder(IR::Primitive *primitive) {
       else if (auto src_constant =
                  dynamic_cast<const IR::Constant*>(src_operand)) {
         src_operand = new IR::Constant(src_constant->srcInfo,
-                                       IR::Type::Bits::get(cur_width),
+                                       IR::Type::Bits::get(primitive->srcInfo, cur_width),
                                        (((*src_constant) >> offset) &
                                          cur_width_mask).value);
       }
