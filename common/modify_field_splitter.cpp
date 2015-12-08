@@ -53,7 +53,10 @@ ModifyFieldSplitter::preorder(IR::Primitive *primitive) {
       else {
         auto src_action_arg = dynamic_cast<const IR::ActionArg*>(src_operand);
         assert (nullptr != src_action_arg);
-        src_operand = new IR::Slice(src_action_arg->srcInfo, src_action_arg,
+        src_operand = new IR::Slice(src_action_arg->srcInfo,
+                                    IR::Type_Bits::get(src_action_arg->srcInfo,
+                                                       cur_width),
+                                    src_action_arg,
                                     new IR::Constant(offset + cur_width),
                                     new IR::Constant(offset));
       }
