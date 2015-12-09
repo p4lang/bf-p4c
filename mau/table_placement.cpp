@@ -201,8 +201,10 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 	    scale = (avail.srams - min_use.srams) / (increment_use.srams - min_use.srams);
 	if (scale)
 	    rv->entries = scale * increment_entries - (scale-1) * min_entries;
-	if (rv->entries >= last_try)
+	if (rv->entries >= last_try) {
 	    rv->entries = last_try - 500;
+            if (rv->entries < min_entries && min_entries < last_try)
+                rv->entries = min_entries; }
 	assert(rv->entries >= min_entries);
 	last_try = rv->entries;
 	LOG3(" - reducing to " << rv->entries << " of " << t->name << " in stage " << rv->stage);
