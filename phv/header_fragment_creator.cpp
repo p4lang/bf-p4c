@@ -1,8 +1,5 @@
 #include "header_fragment_creator.h"
 #include "ir/ir.h"
-HeaderFragmentCreator::HeaderFragmentCreator() {
-  visitDagOnce = false;
-}
 
 const IR::Node*
 HeaderFragmentCreator::preorder(IR::FieldRef *field_ref) {

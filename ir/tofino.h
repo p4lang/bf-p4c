@@ -8,6 +8,7 @@ inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
 
 #include "parde.h"
 #include "mau.h"
+#include "thread_visitor.h"
 
 namespace IR {
 
@@ -25,7 +26,11 @@ public:
     bool operator==(const Tofino_Pipe &a) const {
 	return thread[0] == a.thread[0] && thread[1] == a.thread[1]; }
     IRNODE_VISIT_CHILDREN({
-	for (auto &th : thread) {
+        if (auto *th = dynamic_cast<ThreadVisitor *>(&v)) {
+	    v.visit(thread[th->thread].parser);
+	    v.visit(thread[th->thread].mau);
+	    v.visit(thread[th->thread].deparser);
+        } else for (auto &th : thread) {
 	    v.visit(th.parser);
 	    v.visit(th.mau);
 	    v.visit(th.deparser); } })

@@ -3,8 +3,6 @@
 #include "ir/visitor.h"
 class HeaderFragmentCreator : public Transform {
  public:
-  HeaderFragmentCreator();
-  ~HeaderFragmentCreator() { }
   const IR::Node* preorder(IR::FieldRef *field_ref) override;
 };
 #endif /* BACKENDS_TOFINO_HEADER_FRAGMENT_CREATOR_ */

@@ -58,7 +58,8 @@ void test_tofino_backend(const IR::Global *program) {
     TablesMutuallyExclusive mutex;
     FieldDefUse defuse(phv);
     PassManager backend = {
-	new CreateThreadLocalInstances,
+	new CreateThreadLocalInstances(INGRESS),
+	new CreateThreadLocalInstances(EGRESS),
 	new HeaderFragmentCreator,
 	new CopyHeaderEliminator,
 	new ModifyFieldSplitter,
