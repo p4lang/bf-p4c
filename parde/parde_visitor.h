@@ -4,13 +4,13 @@
 #include "ir/ir.h"
 
 class PardeInspector : public Inspector {
-    bool preorder(const IR::MAU::Table *) { return true; }
-    bool preorder(const IR::MAU::TableSeq *) { return true; }
+    bool preorder(const IR::MAU::Table *) override { return false; }
+    bool preorder(const IR::MAU::TableSeq *) override { return false; }
 };
 
 class PardeModifier : public Modifier {
-    bool preorder(IR::MAU::Table *) { return true; }
-    bool preorder(IR::MAU::TableSeq *) { return true; }
+    bool preorder(IR::MAU::Table *) override { return false; }
+    bool preorder(IR::MAU::TableSeq *) override { return false; }
 };
 
 class PardeTransform : public Transform {
