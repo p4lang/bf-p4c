@@ -16,9 +16,8 @@ namespace IR {
 class CreateThreadLocalInstances : public Modifier {
  public:
   CreateThreadLocalInstances();
-  ~CreateThreadLocalInstances() { }
   // Always returns true. It prepends "thread-name::" to named_ref->name.
-  bool preorder(IR::HeaderRef *hdr_ref) override;
+  bool preorder(IR::NamedHeaderRef *hdr_ref) override;
   bool preorder(IR::Tofino_Parser *parser) override;
   void postorder(IR::Tofino_Deparser *deparser) override;
  private:
