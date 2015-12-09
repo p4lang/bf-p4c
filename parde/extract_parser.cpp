@@ -38,18 +38,14 @@ IR::Expression *GetTofinoParser::RewriteExtractNext::preorder(IR::NamedRef *name
 }
 
 void GetTofinoParser::addMatch(IR::Tofino::ParserState *s, int val, int mask,
-                               const IR::ID &action, const Context *ctxt) {
+                               const IR::Vector<IR::Expression> &stmts, const IR::ID &action,
+                               const Context *ctxt) {
   Context local = { ctxt, ctxt ? ctxt->depth+1 : 0, s };
   LOG2("GetParser::addMatch(" << s->p4state->name << ", " << val << ", " <<
        mask << ", " << local.depth << ")");
-  auto match = new IR::Tofino::ParserMatch(val, mask, s->p4state->stmts);
-  RewriteExtractNext rewrite(program, ctxt);
-  match->stmts = *match->stmts.apply(rewrite);
+  auto match = new IR::Tofino::ParserMatch(val, mask, stmts);
   s->match.push_back(match);
-  if (rewrite.failed) {
-    match->stmts.clear();
-    match->except = new IR::ParserException; // header stack overflow, generally
-  } else if ((match->next = state(action, &local))) {
+  if ((match->next = state(action, &local))) {
   } else if (program->get<IR::Control>(action)) {
     if (ingress_control) {
       if (ingress_control != action)
@@ -58,24 +54,34 @@ void GetTofinoParser::addMatch(IR::Tofino::ParserState *s, int val, int mask,
     } else
       ingress_control = action;
   } else if ((match->except = program->get<IR::ParserException>(action))) {
+  } else if (program->get<IR::Parser>(action)) {
+    // there is a parser state with this name, but we couldn't generate it, probably
+    // because we've unrolled a loop filling a header stack completely.  Should set some
+    // parser error code?
   } else
     error("%s: No definition for %s", action.srcInfo, action);
 }
 
 IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctxt) {
   if (states.count(name) == 0) return nullptr;
+  if (ctxt && ctxt->depth >= 256) return nullptr;
   auto rv = states[name];
   if (ctxt->find(rv)) rv = new IR::Tofino::ParserState(rv->p4state);
   if (!rv->match.empty()) return rv;
+  RewriteExtractNext rewrite(program, ctxt);
+  const IR::Vector<IR::Expression> *stmts = rv->p4state->stmts.apply(rewrite);
+  if (rewrite.failed)
+    // FIXME should be setting an appropriate parser exception?
+    return nullptr;
   LOG2("GetParser::state(" << name << ")");
   if (rv->p4state->cases)
     for (auto ce : *rv->p4state->cases)
       for (auto val : ce->values)
-        addMatch(rv, val.first, val.second, ce->action, ctxt);
+        addMatch(rv, val.first, val.second, *stmts, ce->action, ctxt);
   if (rv->p4state->default_return)
-    addMatch(rv, 0, 0, rv->p4state->default_return, ctxt);
+    addMatch(rv, 0, 0, *stmts, rv->p4state->default_return, ctxt);
   else if (rv->p4state->parse_error)
-    addMatch(rv, 0, 0, rv->p4state->parse_error, ctxt);
+    addMatch(rv, 0, 0, *stmts, rv->p4state->parse_error, ctxt);
   return rv;
 }
 

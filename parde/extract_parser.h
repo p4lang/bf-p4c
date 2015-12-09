@@ -39,7 +39,8 @@ class GetTofinoParser : public Inspector {
     bool                        failed = false;
     RewriteExtractNext(const IR::Global *p, const Context *c) : program(p), ctxt(c) {}
   };
-  void addMatch(IR::Tofino::ParserState *, int, int, const IR::ID &, const Context *);
+  void addMatch(IR::Tofino::ParserState *, int, int, const IR::Vector<IR::Expression> &,
+                const IR::ID &, const Context *);
   IR::Tofino::ParserState *state(cstring, const Context *);
 
  public:
