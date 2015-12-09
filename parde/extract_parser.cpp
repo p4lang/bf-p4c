@@ -12,7 +12,7 @@ bool GetTofinoParser::FindExtract::preorder(const IR::HeaderStackItemRef *hs) {
   if (hs->base()->toString() == hdr->toString()) {
     auto idx = dynamic_cast<const IR::Constant *>(hs->index());
     if (idx)
-      index = idx->asInt(); }
+      index = std::max(index, idx->asInt()); }
   return true;
 }
 
