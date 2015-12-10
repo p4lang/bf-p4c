@@ -22,6 +22,7 @@
 #include "tofino/common/copy_header_eliminator.h"
 #include "tofino/common/modify_field_splitter.h"
 #include "tofino/common/modify_field_eliminator.h"
+#include "tofino/common/or_tools_allocator.h"
 
 class CheckTableNameDuplicate : public MauInspector {
     set<cstring>        names;
@@ -57,6 +58,7 @@ void test_tofino_backend(const IR::Global *program) {
 	std::cout << deps;
     TablesMutuallyExclusive mutex;
     FieldDefUse defuse(phv);
+    ORToolsAllocator or_tools_allocator;
     PassManager backend = {
 	new CreateThreadLocalInstances(INGRESS),
 	new CreateThreadLocalInstances(EGRESS),
@@ -77,8 +79,10 @@ void test_tofino_backend(const IR::Global *program) {
 	&defuse,
 	new MauPhvConstraints(phv),
 	new PhvAllocate(phv, defuse.conflicts()),
+	or_tools_allocator.parde_inspector(),
     };
     maupipe = maupipe->apply(backend);
+    or_tools_allocator.Solve();
     if (verbose) {
 	std::cout << DBPrint::setflag(DBPrint::TableNoActions);
 	std::cout << "-------------------------------------------------" << std::endl
