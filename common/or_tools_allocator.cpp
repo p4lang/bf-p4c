@@ -3,9 +3,11 @@
 #include "tofino/parde/parde_visitor.h"
 #include "tofino/mau/mau_visitor.h"
 #include <constraint_solver/constraint_solver.h>
+#undef LOG
 #include <map>
 #include <set>
 
+#include "lib/log.h"
 using namespace operations_research;
 
 // This class contains contraint variables for a byte in the P4 program.
@@ -230,11 +232,11 @@ class HeaderVars {
     unsigned int byte_offset = 0;
     for (auto &header_byte : header_bytes_) {
       auto allocation_vars = header_byte->allocation_vars();
-    std::cout << "|" << std::setw(30) <<
+    LOG3("|" << std::setw(30) <<
       (name + "[" + std::to_string(byte_offset++) + "]") << "|" <<
       std::setw(10) << allocation_vars[0]->Value() <<  "|" <<
       std::setw(10) << allocation_vars[1]->Value() <<  "|" <<
-      std::setw(10) << allocation_vars[2]->Value() << "|" << std::endl;
+      std::setw(10) << allocation_vars[2]->Value() << "|");
     }
   }
 
@@ -372,23 +374,23 @@ ORToolsAllocator::Solve() {
                               Solver::ASSIGN_MIN_VALUE);
   solver_.NewSearch(db);
   CHECK(solver_.NextSolution());
-  std::cout << "Generating solution for PHV allocation" << std::endl;
+  LOG3("Generating solution for PHV allocation");
   for (auto i : allocation_vars_) {
-    std::cout << i->name() << " : " << i->Value() << std::endl;
+    LOG3(i->name() << " : " << i->Value());
   }
-  std::cout << "|" << std::setw(30) << "Header" << "|" <<
+  LOG3("|" << std::setw(30) << "Header" << "|" <<
     std::setw(10) << "Group" <<  "|" <<
     std::setw(10) << "Container" <<  "|" <<
-    std::setw(10) << "Byte" << "|" << std::endl;
+    std::setw(10) << "Byte" << "|");
   for (auto &header : header_vars_) {
     header.second->PrintAllocation(header.first);
   }
   for (int group = 0; group < Phv::kNumGroups; ++group) {
     for (int container = 0; container < Phv::kNumContainersPerPhvGroup;
          ++container) {
-      std::cout << "|" << std::setw(10) <<
+      LOG3("|" << std::setw(10) <<
         std::string(std::to_string(group) + ":" + std::to_string(container)) <<
-        "|" << std::setw(30) << "" << "|" << std::endl;
+        "|" << std::setw(30) << "" << "|");
       for (auto &header : header_vars_) {
         for (long offset = 0; offset < header.second->max_length_bits();
              offset += 8) {
@@ -396,8 +398,8 @@ ORToolsAllocator::Solve() {
           if (group == byte->group()->Value() &&
               container == byte->container_in_group()->Value() &&
               0 == byte->byte_offset()->Value()) {
-            std::cout << "|" << std::setw(10) << "" << "|" << std::setw(20) <<
-              header.second->name(offset) << "|" << std::endl;
+            LOG3("|" << std::setw(10) << "" << "|" << std::setw(20) <<
+              header.second->name(offset) << "|");
           }
         }
       }
