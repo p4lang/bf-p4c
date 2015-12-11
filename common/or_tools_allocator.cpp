@@ -214,6 +214,8 @@ class HeaderVars {
 
   void
   AddHeaderConflictConstraint(Solver &solver, HeaderVars *header_vars) {
+    LOG3("Adding conflict between " << header_vars->name() << " and " <<
+           name());
     // The bytes of this and header_vars will not be overlayed.
     for (auto &header_byte1 : header_bytes_) {
       for (auto &header_byte2 : header_vars->header_bytes_) {
@@ -277,7 +279,8 @@ class HeaderVars {
 class PardeConstraintsInspector : public PardeInspector {
  public:
   PardeConstraintsInspector(ORToolsAllocator &allocator)
-  : PardeInspector(), is_extract_(false), allocator_(allocator) {
+  : PardeInspector(), is_extract_(false), is_match_(false),
+    allocator_(allocator) {
     visitDagOnce = false;
   }
 
@@ -287,28 +290,42 @@ class PardeConstraintsInspector : public PardeInspector {
     return true;
   }
 
-  bool preorder(const IR::Tofino::ParserState *) {
+  bool preorder(const IR::Tofino::ParserMatch *) {
     num_headers_stack_.push_back(header_names_.size());
+    is_match_ = true;
     return true;
   }
 
-  void postorder(const IR::Tofino::ParserState *) {
+  void postorder(const IR::Tofino::ParserMatch *) {
     assert(num_headers_stack_.back() <= header_names_.size());
     // Pop off headers seen in the current parse state.
     header_names_.resize(num_headers_stack_.back());
     num_headers_stack_.pop_back();
+    is_match_ = false;
   }
 
+  // Disable visits to Deparser. It has IR::Parser nodes which cause problems
+  // while visiting extract() primitives.
+  bool preorder(const IR::Tofino::Deparser *) { return false; }
+
   bool preorder(const IR::Primitive *primitive) {
-    if (primitive->name == "extract") is_extract_ = true;
+    if (primitive->name == "extract") {
+      CHECK(is_match_ == true) << primitive->toString() <<
+        "is a child of " << (getContext() == nullptr ?
+                             "nullptr" : typeid(getContext()->node).name()) <<
+        std::endl;
+      is_extract_ = true;
+    }
     return true;
   }
 
   bool preorder(const IR::HeaderRef *header_ref) {
     if (true == is_extract_) {
       cstring header_name = header_ref->toString();
-      header_names_.remove_if([&](const cstring &v) -> bool
-                                 { return v == header_name; });
+      CHECK(header_names_.end() == std::find(header_names_.begin(),
+                                             header_names_.end(),
+                                             header_name)) << "; Found " <<
+        header_name << " on stack\n";
       if (conflict_map_.find(header_name) == conflict_map_.end()) {
         conflict_map_.insert(std::make_pair(header_name, std::set<cstring>()));
       }
@@ -330,7 +347,7 @@ class PardeConstraintsInspector : public PardeInspector {
   // parse state was reached.
   std::list<std::list<cstring>::size_type> num_headers_stack_;
   std::list<cstring> header_names_;
-  bool is_extract_;
+  bool is_extract_, is_match_;
   gress_t gress_;
   std::map<cstring, std::set<cstring>> conflict_map_;
   ORToolsAllocator &allocator_;
