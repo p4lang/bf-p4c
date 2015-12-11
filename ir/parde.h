@@ -32,8 +32,10 @@ class Tofino_ParserState : public Node {
   Tofino_ParserState(const IR::Parser *);
   IRNODE_SUBCLASS(Tofino_ParserState)
   bool operator==(const Tofino_ParserState &a) const {
+    /* we don't compare the p4state, as it's only present for info */
     return select == a.select && match == a.match; }
   IRNODE_VISIT_CHILDREN({ 
+    /* we don't visit the p4state, as it's only present for info */
     select.visit_children(v);
     match.visit_children(v); })
 };

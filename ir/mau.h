@@ -23,7 +23,7 @@ public:
     const Expression			*gateway_expr = nullptr;
     const ActionFunction		*gateway_payload = nullptr;
     const Table				*match_table = nullptr;
-    vector<const ActionFunction *>      	actions;
+    vector<const ActionFunction *>     	actions;
     Vector<Attached>		        attached;
     map<cstring, const MAU_TableSeq *>	next;
     struct Layout {
