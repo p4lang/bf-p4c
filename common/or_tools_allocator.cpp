@@ -45,6 +45,8 @@ class HeaderByteVars {
                                       solver.MakeIntConst(25), offset_))}));
     is_last_byte_ = solver.MakeIsEqualVar(last_byte_expr,
                                           solver.MakeIntConst(1));
+    // previous_byte_ is nullptr if this is the first byte of the
+    // header.
     if (nullptr != previous_byte_) {
       assert (nullptr != previous_byte_->byte_offset_);
       is_next_byte_ = solver.MakeIsEqualVar(
@@ -55,9 +57,12 @@ class HeaderByteVars {
                             byte_offset_,
                             solver.MakeSum(previous_byte_->byte_offset_, 1))),
                         solver.MakeIntConst(2));
+      // Either is_next_byte_ or previous_byte_->is_last_byte() must be 1.
       solver.AddConstraint(
         solver.MakeEquality(solver.MakeSum(is_next_byte_,
                                            previous_byte_->is_last_byte()), 1));
+      // Either previous_byte_->is_last_byte_ or byte_offset must be 0.
+      // FIXME: Change this to MakeSum constraint.
       solver.AddConstraint(
         solver.MakeEquality(solver.MakeProd(previous_byte_->is_last_byte(),
                                             byte_offset_), 0));
@@ -192,8 +197,8 @@ class HeaderVars {
       s.MakeSumLessOrEqual(is32b, max_cycles * 4));
 
     // Make sure bytes of a header are not overlayed. This is not needed for
-    // metadata. For deparsed headers, the user may want the same value two
-    // fields always. So, don't enforce for deparsed headers either.
+    // metadata. For deparsed headers, the user may want the same value in two
+    // fields. So, don't enforce for deparsed headers either.
     for (auto header_byte1 = header_bytes_.begin();
          header_byte1 != header_bytes_.end(); ++header_byte1) {
       auto header_byte2 = header_byte1 + 1;
@@ -209,6 +214,7 @@ class HeaderVars {
 
   void
   AddHeaderConflictConstraint(Solver &solver, HeaderVars *header_vars) {
+    // The bytes of this and header_vars will not be overlayed.
     for (auto &header_byte1 : header_bytes_) {
       for (auto &header_byte2 : header_vars->header_bytes_) {
         solver.AddConstraint(
