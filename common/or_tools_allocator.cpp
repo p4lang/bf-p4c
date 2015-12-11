@@ -279,7 +279,7 @@ class HeaderVars {
 class PardeConstraintsInspector : public PardeInspector {
  public:
   PardeConstraintsInspector(ORToolsAllocator &allocator)
-  : PardeInspector(), is_extract_(false), is_match_(false),
+  : PardeInspector(), is_match_(false),
     allocator_(allocator) {
     visitDagOnce = false;
   }
@@ -308,46 +308,37 @@ class PardeConstraintsInspector : public PardeInspector {
   // while visiting extract() primitives.
   bool preorder(const IR::Tofino::Deparser *) { return false; }
 
-  bool preorder(const IR::Primitive *primitive) {
-    if (primitive->name == "extract") {
-      CHECK(is_match_ == true) << primitive->toString() <<
-        "is a child of " << (getContext() == nullptr ?
-                             "nullptr" : typeid(getContext()->node).name()) <<
-        std::endl;
-      is_extract_ = true;
-    }
-    return true;
-  }
-
   bool preorder(const IR::HeaderRef *header_ref) {
-    if (true == is_extract_) {
+    auto primitive = findContext<IR::Primitive>();
+    if ((nullptr != primitive) && (primitive->name == "extract")) {
+      CHECK(true == is_match_) << "; Found " << primitive->toString() <<
+        " outside match\n";
       cstring header_name = header_ref->toString();
       CHECK(header_names_.end() == std::find(header_names_.begin(),
                                              header_names_.end(),
                                              header_name)) << "; Found " <<
         header_name << " on stack\n";
-      if (conflict_map_.find(header_name) == conflict_map_.end()) {
+      if (0 == conflict_map_.count(header_name)) {
         conflict_map_.insert(std::make_pair(header_name, std::set<cstring>()));
       }
       std::list<cstring> new_conflicts(header_names_);
       new_conflicts.remove_if([this, &header_name] (const cstring &v) -> bool {
-                                return conflict_map_.at(header_name).find(v) !=
-                                         conflict_map_.at(header_name).end();
+                                return conflict_map_.at(header_name).count(v) != 0;
                               });
       allocator_.AddParserConstraints(header_ref, gress_, new_conflicts);
       conflict_map_.at(header_name).insert(header_names_.begin(),
                                            header_names_.end());
       header_names_.push_back(header_name);
-      is_extract_ = false;
     }
-    return true;
+    return false;
   }
 
   // This stack stores the number of headers seen in a packet till the current
   // parse state was reached.
   std::list<std::list<cstring>::size_type> num_headers_stack_;
   std::list<cstring> header_names_;
-  bool is_extract_, is_match_;
+  // Just used for sanity checks.
+  bool is_match_;
   gress_t gress_;
   std::map<cstring, std::set<cstring>> conflict_map_;
   ORToolsAllocator &allocator_;
@@ -366,7 +357,7 @@ ORToolsAllocator::AddParserConstraints(const IR::HeaderRef *header_ref,
                                        const gress_t &gress,
                                        const std::list<cstring> header_names) {
   const cstring header_name = header_ref->toString();
-  if (header_vars_.find(header_name) == header_vars_.end()) {
+  if (0 == header_vars_.count(header_name)) {
     header_vars_.emplace(
       header_name, std::unique_ptr<HeaderVars>(
                      new HeaderVars(solver_, header_name, gress,
