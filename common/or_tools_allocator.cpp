@@ -318,16 +318,13 @@ class PardeConstraintsInspector : public PardeInspector {
                                              header_names_.end(),
                                              header_name)) << "; Found " <<
         header_name << " on stack\n";
-      if (0 == conflict_map_.count(header_name)) {
-        conflict_map_.insert(std::make_pair(header_name, std::set<cstring>()));
-      }
+      auto &conflicts = conflict_map_[header_name];
       std::list<cstring> new_conflicts(header_names_);
-      new_conflicts.remove_if([this, &header_name] (const cstring &v) -> bool {
-                                return conflict_map_.at(header_name).count(v) != 0;
+      new_conflicts.remove_if([conflicts] (const cstring &v) -> bool {
+                                return conflicts.count(v) != 0;
                               });
       allocator_.AddParserConstraints(header_ref, gress_, new_conflicts);
-      conflict_map_.at(header_name).insert(header_names_.begin(),
-                                           header_names_.end());
+      conflicts.insert(header_names_.begin(), header_names_.end());
       header_names_.push_back(header_name);
     }
     return false;
