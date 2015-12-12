@@ -31,12 +31,15 @@ struct TablePlacement::GroupPlace {
      *   seq	the TableSeq being placed for this group */
     const GroupPlace			*parent;
     const IR::MAU::TableSeq		*seq;
-    GroupPlace(ordered_set<const GroupPlace*> &work, const GroupPlace *p, const IR::MAU::TableSeq *s) :
-	parent(p), seq(s) {
-	    work.insert(this);
-	    if (parent)
-		work.erase(parent); }
-    GroupPlace(ordered_set<const GroupPlace*> &work, const IR::MAU::TableSeq *s) : GroupPlace(work, 0, s) {}
+    int                                 depth;
+    GroupPlace(ordered_set<const GroupPlace*> &work, const GroupPlace *p,
+               const IR::MAU::TableSeq *s)
+    : parent(p), seq(s), depth(p ? p->depth+1 : 1) {
+        work.insert(this);
+        if (parent)
+            work.erase(parent); }
+    GroupPlace(ordered_set<const GroupPlace*> &work, const IR::MAU::TableSeq *s)
+    : GroupPlace(work, 0, s) {}
     void finish(ordered_set<const GroupPlace*> &work) const {
 	assert(work.count(this) == 1);
 	work.erase(this);
@@ -311,6 +314,7 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
 	vector<std::pair<const GroupPlace *, const Placed *>> trial;
 	for (auto it = work.begin(); it != work.end();) {
 	    auto grp = *it;
+            LOG4("group " << grp << " depth=" << grp->depth);
 	    int idx = -1;
 	    bool done = true;
 	    bitvec seq_placed;
