@@ -298,7 +298,7 @@ class PardeConstraintsInspector : public PardeInspector {
 
   void postorder(const IR::Tofino::ParserMatch *) {
     assert(num_headers_stack_.back() <= header_names_.size());
-    // Pop off headers seen in the current parse state.
+    // Pop off headers seen in the current ParserMatch subtree.
     header_names_.resize(num_headers_stack_.back());
     num_headers_stack_.pop_back();
     is_match_ = false;
