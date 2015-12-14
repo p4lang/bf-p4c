@@ -7,7 +7,7 @@
 #include <set>
 
 class HeaderVars;
-class ORToolsAllocator : public Inspector {
+class ORToolsAllocator {
 public:
   ORToolsAllocator();
   ~ORToolsAllocator();
