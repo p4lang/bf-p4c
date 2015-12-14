@@ -2,7 +2,9 @@
 #include "lib/log.h"
 
 bool GetTofinoParser::preorder(const IR::Parser *p) {
-  states[p->name] = new IR::Tofino::ParserState(p);
+  auto *s = states[p->name] = new IR::Tofino::ParserState(p);
+  if (s->name != p->name)
+    states[s->name] = s;
   return true;
 }
 
@@ -66,7 +68,10 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
   if (states.count(name) == 0) return nullptr;
   if (ctxt && ctxt->depth >= 256) return nullptr;
   auto rv = states[name];
-  if (ctxt->find(rv)) rv = new IR::Tofino::ParserState(rv->p4state);
+  if (ctxt->find(rv)) {
+    rv = new IR::Tofino::ParserState(rv->p4state);
+    rv->name = cstring::make_unique(states, name);
+    states[rv->name] = rv; }
   if (!rv->match.empty()) return rv;
   RewriteExtractNext rewrite(program, ctxt);
   const IR::Vector<IR::Expression> *stmts = rv->p4state->stmts.apply(rewrite);

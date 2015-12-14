@@ -4,6 +4,7 @@
 #include "default_next.h"
 #include "resource.h"
 #include "lib/log.h"
+#include "tofino/common/asm_output.h"
 
 class MauAsmOutput : public MauInspector {
     DefaultNext         default_next;

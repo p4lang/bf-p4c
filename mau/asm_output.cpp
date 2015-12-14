@@ -12,14 +12,6 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
     return out;
 }
 
-static StringRef trim_name(StringRef name) {
-    if (auto *p = name.findlast('['))
-        name = name.before(p);
-    if (auto *p = name.findlast(':'))
-        name = name.after(p+1);
-    return name;
-}
-
 void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::Use &use) const {
     map<int, map<int, const IXBar::Use::Byte *>> sort;
     if (use.use.empty()) return;
@@ -35,7 +27,7 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::U
                 prev = b.second;
                 continue; }
             if (prev) out << (prev->byte*8 + 7) << ')' << ", ";
-            out << (b.first*8) << ": " << canon_name(trim_name(b.second->field)) << '('
+            out << (b.first*8) << ": " << canon_name(trim_asm_name(b.second->field)) << '('
                 << (b.second->byte*8) << "..";
             prev = b.second; }
         if (prev) out << (prev->byte*8 + 7) << ')';

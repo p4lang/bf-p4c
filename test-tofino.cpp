@@ -15,6 +15,7 @@
 #include "tofino/mau/table_placement.h"
 #include "tofino/mau/table_seqdeps.h"
 #include "tofino/mau/table_summary.h"
+#include "tofino/parde/asm_output.h"
 #include "tofino/phv/asm_output.h"
 #include "tofino/phv/phv_allocate.h"
 #include "tofino/phv/create_thread_local_instances.h"
@@ -98,5 +99,10 @@ void test_tofino_backend(const IR::Global *program) {
 	std::cout << summary;
     MauAsmOutput mauasm;
     maupipe->apply(mauasm);
-    std::cout << PhvAsmOutput(phv) << mauasm;
+    std::cout << PhvAsmOutput(phv)
+              << ParserAsmOutput(maupipe, INGRESS)
+              << DeparserAsmOutput(maupipe, INGRESS)
+              << ParserAsmOutput(maupipe, EGRESS)
+              << DeparserAsmOutput(maupipe, EGRESS)
+              << mauasm;
 }
