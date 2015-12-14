@@ -1,23 +1,25 @@
 #ifndef _tofino_ir_parde_h_
 #define _tofino_ir_parde_h_
 
+#include "lib/match.h"
+
 namespace IR {
 
 class Tofino_ParserState;
 
 class Tofino_ParserMatch : public Node {
  public:
-  long                        match, mask;
+  match_t                     value;
   int                         shift = 0;
   Vector<Expression>          stmts;
   const Tofino_ParserState    *next = nullptr;
   const ParserException       *except = nullptr;
-  Tofino_ParserMatch(long v, long m, const Vector<Expression> &e)
-  : match(v), mask(m), shift(0), stmts(e), next(0), except(0) {}
+  Tofino_ParserMatch(unsigned long v, unsigned long m, const Vector<Expression> &e)
+  : value(~v&m, v&m), shift(0), stmts(e), next(0), except(0) {}
   IRNODE_SUBCLASS(Tofino_ParserMatch)
   bool operator==(const Tofino_ParserMatch &a) const {
-    return match == a.match && mask == a.mask && shift == a.shift &&
-           stmts == a.stmts && next == a.next && except == a.except; }
+    return value == a.value && shift == a.shift && stmts == a.stmts &&
+           next == a.next && except == a.except; }
   IRNODE_VISIT_CHILDREN({ 
     stmts.visit_children(v);
     v.visit(next);
@@ -26,6 +28,7 @@ class Tofino_ParserMatch : public Node {
 
 class Tofino_ParserState : public Node {
  public:
+  cstring                     name;
   const IR::Parser            *p4state;
   Vector<Expression>          select;
   Vector<Tofino_ParserMatch>  match;
@@ -33,7 +36,7 @@ class Tofino_ParserState : public Node {
   IRNODE_SUBCLASS(Tofino_ParserState)
   bool operator==(const Tofino_ParserState &a) const {
     /* we don't compare the p4state, as it's only present for info */
-    return select == a.select && match == a.match; }
+    return name == a.name && select == a.select && match == a.match; }
   IRNODE_VISIT_CHILDREN({ 
     /* we don't visit the p4state, as it's only present for info */
     select.visit_children(v);
@@ -50,6 +53,7 @@ public:
     return gress == a.gress && start == a.start; }
   IRNODE_VISIT_CHILDREN({ v.visit(start); })
   void dbprint(std::ostream &out) const override;
+  IRNODE_DEFINE_APPLY_OVERLOAD(Tofino_Parser);
 };
 
 class Tofino_Deparser : public Node {
@@ -63,6 +67,7 @@ public:
     return gress == a.gress && start == a.start; }
   IRNODE_VISIT_CHILDREN({ v.visit(start); })
   void dbprint(std::ostream &out) const override;
+  IRNODE_DEFINE_APPLY_OVERLOAD(Tofino_Deparser);
 };
 
 namespace Tofino {
