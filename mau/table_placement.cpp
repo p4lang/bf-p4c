@@ -232,7 +232,7 @@ const TablePlacement::Placed *TablePlacement::place_table(ordered_set<const Grou
 	 (pl->gw ? pl->gw->name : "") << (pl->gw ? ")" : "") << " in stage " <<
 	 pl->stage << (pl->need_more ? " (need more)" : ""));
     if (!pl->need_more) {
-	if (pl->is_placed(grp->seq)) {
+	while (grp && pl->is_placed(grp->seq)) {
 	    grp->finish(work);
 	    grp = grp->parent; }
 	if (pl->gw)  {
