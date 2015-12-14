@@ -80,6 +80,7 @@ void test_tofino_backend(const IR::Global *program) {
 	new MauPhvConstraints(phv),
 	new PhvAllocate(phv, defuse.conflicts()),
 	or_tools_allocator.parde_inspector(),
+	or_tools_allocator.mau_inspector(),
     };
     maupipe = maupipe->apply(backend);
     or_tools_allocator.Solve();
