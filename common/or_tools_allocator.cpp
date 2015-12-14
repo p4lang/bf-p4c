@@ -15,8 +15,8 @@ class HeaderByteVars {
  public:
   HeaderByteVars(Solver &solver, const std::string &byte_name,
                  const HeaderByteVars *previous_byte)
-  : is_next_byte_(nullptr), previous_byte_(previous_byte) {
-    group_ = solver.MakeIntVar(0, 13, byte_name + "-group");
+  : is_next_byte_(nullptr), previous_byte_(previous_byte), name_(byte_name) {
+    group_ = solver.MakeIntVar(0, Phv::kNumGroups - 1, byte_name + "-group");
     container_in_group_ = solver.MakeIntVar(0, Phv::kNumContainersPerPhvGroup - 1,
                                             byte_name + "-container");
     container_ = solver.MakeSum(solver.MakeProd(group_,
@@ -72,6 +72,20 @@ class HeaderByteVars {
   }
 
   void
+  AddAssignmentConstraint(Solver &solver, HeaderByteVars *header_byte_vars) {
+    // This function adds constraints for modify_field.
+    // TODO: single-write constraint.
+    // Assign both bytes to the same PHV group.
+    solver.AddConstraint(solver.MakeEquality(header_byte_vars->group(),
+                                             group()));
+    // Do not assign either byte to T-PHV.
+    solver.AddConstraint(solver.MakeLess(container_in_group(),
+                                         Phv::kTPhvContainerOffset));
+    solver.AddConstraint(solver.MakeLess(header_byte_vars->container_in_group(),
+                                         Phv::kTPhvContainerOffset));
+  }
+
+  void
   set_last_byte(Solver &solver) {
     solver.AddConstraint(solver.MakeEquality(is_last_byte_, 1));
   }
@@ -84,6 +98,10 @@ class HeaderByteVars {
       v.push_back(is_next_byte_);
     }
     return v;
+  }
+
+  cstring name() const {
+    return name_;
   }
 
   IntVar *
@@ -156,6 +174,7 @@ class HeaderByteVars {
   IntVar *is8b_, *is16b_, *is32b_;
   IntVar *is_last_byte_, *is_next_byte_;
   const HeaderByteVars *const previous_byte_;
+  const cstring name_;
 };
 
 class HeaderVars {
@@ -188,7 +207,8 @@ class HeaderVars {
       is32b.push_back(b->is32b());
     }
     // Setting parser bandwidth constraints.
-    long max_cycles = ((max_length_bits_ >> 3) / 7) + 3;
+    long max_cycles = (long)std::ceil((max_length_bits_ >> 3) / 7.0);
+    while ((max_cycles % 4) != 0) ++max_cycles;
     s.AddConstraint(
       s.MakeSumLessOrEqual(is8b, max_cycles));
     s.AddConstraint(
@@ -248,8 +268,10 @@ class HeaderVars {
     }
   }
 
-  HeaderByteVars* header_byte(int offset) const {
-    assert ((size_t)offset < header_bytes_.size());
+  HeaderByteVars* header_byte(int offset_bits) const {
+    size_t offset = offset_bits >> 3;
+    CHECK(offset < header_bytes_.size()) << "; Invalid size " << offset_bits <<
+            " for " << name();
     return header_bytes_[offset].get();
   }
 
@@ -341,8 +363,56 @@ class PardeConstraintsInspector : public PardeInspector {
   ORToolsAllocator &allocator_;
 };
 
+class MauConstraintsInspector : public MauInspector {
+ public:
+  MauConstraintsInspector(ORToolsAllocator &allocator)
+  : allocator_(allocator) { }
+
+  bool preorder(const IR::Primitive *) {
+    operands_.clear();
+    return true;
+  }
+
+  void postorder(const IR::Primitive *p) {
+    if (p->name == "modify_field") {
+      auto first_operand_iter = operands_.begin();
+      CHECK(operands_.end() != first_operand_iter) <<
+        "No operands for modify_field\n";
+      auto first_op= *first_operand_iter;
+      auto h_vars1 = allocator_.header_vars(first_op->base->toString());
+      auto width_bits = first_op->type->width_bits();
+      for (auto op = std::next(first_operand_iter); op != operands_.end();
+           ++op) {
+        auto h_vars2 = allocator_.header_vars((*op)->base->toString());
+        for (auto i = 0; i < width_bits; i=std::min(i+8,
+                                                    std::max(width_bits, i+1))) {
+          if (nullptr != h_vars1 && nullptr != h_vars2) {
+            auto hb_vars1 = h_vars1->header_byte(first_op->offset_bits() + i);
+            auto hb_vars2 = h_vars2->header_byte((*op)->offset_bits() + i);
+            CHECK(nullptr != hb_vars1) << "Cannot find byte for " <<
+              h_vars1->name() << "[" << i << "]\n";
+            CHECK(nullptr != hb_vars2) << "Cannot find byte for " <<
+              h_vars2->name() << "[" << i << "]\n";
+            allocator_.AddAssignmentConstraint(hb_vars1, hb_vars2);
+          }
+        }
+      }
+    }
+  }
+
+  bool preorder(const IR::FragmentRef *fragment_ref) {
+    operands_.push_back(fragment_ref);
+    return false;
+  }
+
+ private:
+  ORToolsAllocator &allocator_;
+  std::list<const IR::FragmentRef *> operands_;
+};
+
 ORToolsAllocator::ORToolsAllocator() :
-  solver_("Allocator"), parde_inspector_(new PardeConstraintsInspector(*this))
+  solver_("Allocator"), parde_inspector_(new PardeConstraintsInspector(*this)),
+  mau_inspector_(new MauConstraintsInspector(*this))
 {
 }
 
@@ -376,6 +446,14 @@ ORToolsAllocator::AddParserConstraints(const IR::HeaderRef *header_ref,
 }
 
 void
+ORToolsAllocator::AddAssignmentConstraint(HeaderByteVars *hb_vars1,
+                                          HeaderByteVars *hb_vars2) {
+  LOG3("Adding assignment constraint to " << hb_vars1->name() << " and " <<
+         hb_vars2->name());
+  hb_vars1->AddAssignmentConstraint(solver_, hb_vars2);
+}
+
+void
 ORToolsAllocator::Solve() {
   for (auto &h : header_vars_) {
     const auto &v =  h.second->allocation_vars();
@@ -405,7 +483,7 @@ ORToolsAllocator::Solve() {
       for (auto &header : header_vars_) {
         for (long offset = 0; offset < header.second->max_length_bits();
              offset += 8) {
-          HeaderByteVars *byte = header.second->header_byte(offset / 8);
+          HeaderByteVars *byte = header.second->header_byte(offset);
           if (group == byte->group()->Value() &&
               container == byte->container_in_group()->Value() &&
               0 == byte->byte_offset()->Value()) {
