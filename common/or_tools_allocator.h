@@ -24,6 +24,7 @@ public:
   }
   Inspector *parde_inspector() { return parde_inspector_.get(); }
   Inspector *mau_inspector() { return mau_inspector_.get(); }
+  operations_research::Solver *solver() { return &solver_; }
 private:
   operations_research::Solver solver_;
   std::vector<operations_research::IntVar *> allocation_vars_;

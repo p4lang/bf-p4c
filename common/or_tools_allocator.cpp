@@ -245,6 +245,25 @@ class HeaderVars {
     }
   }
 
+  void
+  AddAdditionConstraint(Solver &solver, const int &start_offset,
+                        const int &width) {
+    auto prev_hdr_byte = header_byte(start_offset);
+    for (int offset = start_offset + 1; offset < start_offset + width;) {
+      auto hdr_byte = header_byte(offset);
+      if (prev_hdr_byte != hdr_byte) {
+        solver.AddConstraint(solver.MakeEquality(prev_hdr_byte->group(),
+                                                 hdr_byte->group()));
+        solver.AddConstraint(
+          solver.MakeEquality(prev_hdr_byte->container_in_group(),
+                              hdr_byte->container_in_group()));
+        offset += 8;
+      }
+      else ++offset;
+      prev_hdr_byte = hdr_byte;
+    }
+  }
+
   std::vector<IntVar *>
   allocation_vars() const {
     std::vector<IntVar *> vars;
@@ -374,7 +393,8 @@ class MauConstraintsInspector : public MauInspector {
   }
 
   void postorder(const IR::Primitive *p) {
-    if (p->name == "modify_field") {
+    if (p->name == "modify_field" || p->name == "add" ||
+        p->name == "add_to_field") {
       auto first_operand_iter = operands_.begin();
       CHECK(operands_.end() != first_operand_iter) <<
         "No operands for modify_field\n";
@@ -384,8 +404,8 @@ class MauConstraintsInspector : public MauInspector {
       for (auto op = std::next(first_operand_iter); op != operands_.end();
            ++op) {
         auto h_vars2 = allocator_.header_vars((*op)->base->toString());
-        for (auto i = 0; i < width_bits; i=std::min(i+8,
-                                                    std::max(width_bits, i+1))) {
+        for (auto i = 0; i < width_bits;
+             i = std::min(i + 8, std::max(width_bits, i+1))) {
           if (nullptr != h_vars1 && nullptr != h_vars2) {
             auto hb_vars1 = h_vars1->header_byte(first_op->offset_bits() + i);
             auto hb_vars2 = h_vars2->header_byte((*op)->offset_bits() + i);
@@ -395,6 +415,15 @@ class MauConstraintsInspector : public MauInspector {
               h_vars2->name() << "[" << i << "]\n";
             allocator_.AddAssignmentConstraint(hb_vars1, hb_vars2);
           }
+        }
+      }
+    }
+    if (p->name == "add" || p->name == "add_to_field") {
+      for (auto op : operands_) {
+        auto h_vars = allocator_.header_vars(op->base->toString());
+        if (nullptr != h_vars) {
+          h_vars->AddAdditionConstraint(*allocator_.solver(), op->offset_bits(),
+                                        op->type->width_bits());
         }
       }
     }
