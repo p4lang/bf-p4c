@@ -460,8 +460,8 @@ ORToolsAllocator::Solve() {
     allocation_vars_.insert(allocation_vars_.end(), v.begin(), v.end());
   }
   auto db = solver_.MakePhase(allocation_vars_, Solver::CHOOSE_FIRST_UNBOUND,
-                              Solver::ASSIGN_MIN_VALUE);
-  solver_.NewSearch(db);
+                              Solver::ASSIGN_RANDOM_VALUE);
+  solver_.NewSearch(db, solver_.MakeLubyRestart(1000));
   CHECK(solver_.NextSolution());
   LOG3("Generating solution for PHV allocation");
   for (auto i : allocation_vars_) {
