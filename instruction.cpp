@@ -35,6 +35,7 @@ private:
         virtual void mark_use(Table *tbl) {}
         virtual void dbprint(std::ostream &) const = 0;
 	virtual bool equiv(const Base *) const = 0;
+        virtual void phvRead(std::function<void (const ::Phv::Slice &sl)>) {}
     } *op;
     class Const : public Base {
 	long		value;
@@ -76,6 +77,7 @@ private:
         virtual void mark_use(Table *tbl) {
             tbl->stage->action_use[tbl->gress][reg->reg.index] = true; }
         virtual void dbprint(std::ostream &out) const { out << reg; }
+        void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) override { fn(*reg); }
     };
     class Action : public Base {
 	std::string		name;
@@ -194,6 +196,7 @@ public:
     unsigned bitoffset(int group) { return op->lookup(op)->bitoffset(group); }
     bool check() { return op && op->lookup(op) ? op->check() : false; }
     int phvGroup() { return op->lookup(op)->phvGroup(); }
+    void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) { op->lookup(op)->phvRead(fn); }
     int bits(int group) { return op->lookup(op)->bits(group); }
     void mark_use(Table *tbl) { op->lookup(op)->mark_use(tbl); }
     void dbprint(std::ostream &out) const { op->dbprint(out); }
@@ -260,6 +263,8 @@ struct AluOP : public Instruction {
     void pass1(Table *tbl);
     int encode();
     bool equiv(Instruction *a_);
+    void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
+        src1.phvRead(fn); src2.phvRead(fn); }
     void dbprint(std::ostream &out) const {
         out << "INSTR: " << opc->name << ' ' << dest << ", " << src1 << ", " << src2; }
 };
@@ -311,7 +316,7 @@ void AluOP::pass1(Table *tbl) {
         error(lineno, "src2 must be phv register");
 }
 int AluOP::encode() {
-    return (opc->opcode << 12) | (src1.bits(slot/16) << 5) | src2.bits(slot/16);
+    return (opc->opcode << 11) | (src1.bits(slot/16) << 4) | src2.bits(slot/16);
 }
 bool AluOP::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<AluOP *>(a_)) {
@@ -332,6 +337,7 @@ struct Set : public Instruction {
     void pass1(Table *tbl);
     int encode();
     bool equiv(Instruction *a_);
+    void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) { src.phvRead(fn); }
     void dbprint(std::ostream &out) const {
         out << "INSTR: set " << dest << ", " << src; }
 
@@ -362,7 +368,7 @@ void Set::pass1(Table *tbl) {
     src.mark_use(tbl);
 }
 int Set::encode() {
-    return (opA.opcode << 12) | (src.bits(slot/16) << 5) | (slot & 0xf);
+    return (opA.opcode << 11) | (src.bits(slot/16) << 4) | (slot & 0xf);
 }
 bool Set::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<Set *>(a_)) {
@@ -383,6 +389,7 @@ struct LoadConst : public Instruction {
     void pass1(Table *tbl);
     int encode();
     bool equiv(Instruction *a_);
+    void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) { }
     void dbprint(std::ostream &out) const {
         out << "INSTR: set " << dest << ", " << src; }
 
@@ -412,7 +419,7 @@ void LoadConst::pass1(Table *tbl) {
     tbl->stage->action_set[tbl->gress][slot] = true;
 }
 int LoadConst::encode() {
-    return (src >> 12 << 17) | (0x8 << 12) | (src & 0xfff);
+    return (src >> 11 << 16) | (0x8 << 11) | (src & 0x7ff);
 }
 bool LoadConst::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<LoadConst *>(a_)) {
@@ -442,6 +449,8 @@ struct CondMoveMux : public Instruction {
     void pass1(Table *tbl);
     int encode();
     bool equiv(Instruction *a_);
+    void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
+        src1.phvRead(fn); src2.phvRead(fn); }
     void dbprint(std::ostream &out) const {
         out << "INSTR: cmov " << dest << ", " << src1 << ", " << src2; }
 };
@@ -483,7 +492,7 @@ void CondMoveMux::pass1(Table *tbl) {
 int CondMoveMux::encode() {
     /* funny cond test on src2 is to match the compiler output -- if we're not testing
      * src2 validity, what we specify as src2 is irrelevant */
-    return (cond << 17) | (opc->opcode << 12) | (src1.bits(slot/16) << 5) | 
+    return (cond << 16) | (opc->opcode << 11) | (src1.bits(slot/16) << 4) | 
         (cond & 0x40 ? src2.bits(slot/16) : 0);
 }
 bool CondMoveMux::equiv(Instruction *a_) {
@@ -508,6 +517,8 @@ struct DepositField : public Instruction {
     void pass1(Table *tbl);
     int encode();
     bool equiv(Instruction *a_);
+    void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
+        src1.phvRead(fn); src2.phvRead(fn); }
     void dbprint(std::ostream &out) const {
         out << "INSTR: deposit_field " << dest << ", " << src1 << ", " << src2; }
 };
@@ -542,20 +553,20 @@ void DepositField::pass1(Table *tbl) {
 }
 int DepositField::encode() {
     unsigned rot = (dest->reg.size - dest->lo + src1.bitoffset(slot/16)) % dest->reg.size;
-    int bits = (1 << 12) | (src1.bits(slot/16) << 5) | src2.bits(slot/16);
-    bits |= dest->hi << 13;
-    bits |= rot << 18;
+    int bits = (1 << 11) | (src1.bits(slot/16) << 4) | src2.bits(slot/16);
+    bits |= dest->hi << 12;
+    bits |= rot << 17;
     switch (Phv::reg(slot).size) {
     case 8:
-        bits |= (dest->lo & 3) << 16;
-        bits |= (dest->lo & ~3) << 19;
+        bits |= (dest->lo & 3) << 15;
+        bits |= (dest->lo & ~3) << 18;
         break;
     case 16:
-        bits |= (dest->lo & 1) << 17;
-        bits |= (dest->lo & ~1) << 21;
+        bits |= (dest->lo & 1) << 16;
+        bits |= (dest->lo & ~1) << 20;
         break;
     case 32:
-        bits |= dest->lo << 23;
+        bits |= dest->lo << 22;
         break;
     default:
         assert(0); }
@@ -581,11 +592,12 @@ struct NulOP : public Instruction {
     void pass1(Table *tbl);
     int encode();
     bool equiv(Instruction *a_);
+    void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) { }
     void dbprint(std::ostream &out) const {
         out << "INSTR: " << opc->name << " " << dest; }
 };
 
-static NulOP::Decode opInvalidate("invalidate", 0xe000), opNoop("noop", 0);
+static NulOP::Decode opInvalidate("invalidate", 0x7000), opNoop("noop", 0);
 
 Instruction *NulOP::Decode::decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op) {
     if (op.size != 2) {
@@ -642,6 +654,8 @@ struct ShiftOP : public Instruction {
     void pass1(Table *tbl);
     int encode();
     bool equiv(Instruction *a_);
+    void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
+        src1.phvRead(fn); src2.phvRead(fn); }
     void dbprint(std::ostream &out) const {
         out << "INSTR: " << opc->name << ' ' << dest << ", " << src1 << ", " << shift; }
 };
@@ -679,8 +693,8 @@ void ShiftOP::pass1(Table *tbl) {
         error(lineno, "src%s must be phv register", opc->use_src1 ? "2" : "");
 }
 int ShiftOP::encode() {
-    int rv = (shift << 18) | (opc->opcode << 12) | src2.bits(slot/16);
-    if (opc->use_src1 || options.match_compiler) rv |= src1.bits(slot/16) << 5;
+    int rv = (shift << 17) | (opc->opcode << 11) | src2.bits(slot/16);
+    if (opc->use_src1 || options.match_compiler) rv |= src1.bits(slot/16) << 4;
     return rv;
 }
 bool ShiftOP::equiv(Instruction *a_) {

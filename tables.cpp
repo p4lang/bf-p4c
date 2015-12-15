@@ -736,7 +736,11 @@ void Table::Actions::write_regs(Table *tbl) {
                     parity(bits) ^ color;
                 break;
             default:
-                assert(0); } } }
+                assert(0); }
+            auto &power_ctl = tbl->stage->regs.dp.actionmux_din_power_ctl;
+            inst->phvRead([&](const Phv::Slice &sl) {
+                int phv = sl.reg.index;
+                power_ctl[phv/112U][phv%112U/8U] |= 1U << phv%8U; }); } }
 }
 
 int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable) {

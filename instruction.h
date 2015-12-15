@@ -1,6 +1,7 @@
 #ifndef _instruction_h_
 #define _instruction_h_
 
+#include <functional>
 #include "asm-types.h"
 
 class Table;
@@ -14,6 +15,7 @@ struct Instruction {
     virtual int encode() = 0;
     virtual void dbprint(std::ostream &) const = 0;
     virtual bool equiv(Instruction *a) = 0;
+    virtual void phvRead(std::function<void (const Phv::Slice &sl)>) = 0;
     static Instruction *decode(Table *, const std::string &act, const VECTOR(value_t) &);
 };
 

@@ -395,7 +395,7 @@ static int tcam_swizzle_offset[4][4] = {
 };
 
 void InputXbar::write_regs() {
-    auto &xbar = table->stage->regs.dp.xbar;
+    auto &xbar = table->stage->regs.dp.xbar_hash.xbar;
     for (auto &group : groups) {
         if (group.second.empty()) continue;
         LOG1("  # Input xbar group " << group.first);
@@ -447,8 +447,11 @@ void InputXbar::write_regs() {
                     xbar.match_input_xbar_816b_ctl[word_group][i]
                         .match_input_xbar_816b_ctl_enable = 1; }
                 if ((i ^ phv_byte) & swizzle_mask)
-                    LOG1("FIXME -- need swizzle for " << input.what); } } }
-    auto &hash = table->stage->regs.dp.hash;
+                    LOG1("FIXME -- need swizzle for " << input.what); }
+            auto &power_ctl = table->stage->regs.dp.match_input_xbar_din_power_ctl;
+            int phv = input.what->reg.index;
+            power_ctl[phv/112U][phv%112U/8U] |= 1 << phv%8U; } }
+    auto &hash = table->stage->regs.dp.xbar_hash.hash;
     for (auto &ht : hash_tables) {
         if (ht.second.empty()) continue;
         LOG1("  # Input xbar hash table " << ht.first);

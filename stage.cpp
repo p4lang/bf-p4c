@@ -222,17 +222,17 @@ int Stage::tcam_delay(gress_t gress) {
 
 int Stage::adr_dist_delay(gress_t gress) {
     if (group_table_use[gress] & Stage::USE_SELECTOR)
-        return 9;
+        return 8;
     else if (group_table_use[gress] & Stage::USE_METER)
-        return 5;
+        return 4;
     else if (group_table_use[gress] & Stage::USE_STATEFUL)
-        return 5;
+        return 4;
     else
         return 0;
 }
 
 int Stage::pipelength(gress_t gress) {
-    return 19 + tcam_delay(gress) + adr_dist_delay(gress);
+    return 20 + tcam_delay(gress) + adr_dist_delay(gress);
 }
 
 int Stage::pred_cycle(gress_t gress) {
@@ -279,18 +279,18 @@ void Stage::write_regs() {
         /* FIXME -- making this depend on the dependecny of the next stage seems wrong */
         if (stageno == AsmStage::numstages()-1) {
             if (AsmStage::numstages() < NUM_MAU_STAGES)
-                deferred_eop_bus_delay.eop_output_delay_fifo = 1;
+                deferred_eop_bus_delay.eop_output_delay_fifo = 0;
             else
-                deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress);
+                deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress) - 1;
         } else if (this[1].stage_dep[gress] == MATCH_DEP)
-            deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress);
+            deferred_eop_bus_delay.eop_output_delay_fifo = pipelength(gress) - 1;
         else if (this[1].stage_dep[gress] == ACTION_DEP)
-            deferred_eop_bus_delay.eop_output_delay_fifo = 2;
-        else
             deferred_eop_bus_delay.eop_output_delay_fifo = 1;
+        else
+            deferred_eop_bus_delay.eop_output_delay_fifo = 0;
         deferred_eop_bus_delay.eop_delay_fifo_en = 1;
         regs.dp.action_output_delay[gress] = pipelength(gress) - 3;
-        regs.dp.pipelength_added_stages[gress] = pipelength(gress) - 19;
+        regs.dp.pipelength_added_stages[gress] = pipelength(gress) - 20;
         if (stageno != 0) {
             regs.dp.cur_stage_dependency_on_prev[gress] = MATCH_DEP - stage_dep[gress];
             if (stage_dep[gress] == CONCURRENT)
@@ -299,7 +299,7 @@ void Stage::write_regs() {
             regs.dp.next_stage_dependency_on_cur[gress] = MATCH_DEP - this[1].stage_dep[gress];
         else if (AsmStage::numstages() < NUM_MAU_STAGES)
             regs.dp.next_stage_dependency_on_cur[gress] = 2;
-        if (stageno == 0 || stage_dep[gress] == MATCH_DEP)
+        if (stageno > 0 && stage_dep[gress] == MATCH_DEP)
             regs.dp.match_ie_input_mux_sel |= 1 << gress;
     }
     /* FIXME -- need to set based on interstage dependencies */
@@ -319,10 +319,15 @@ void Stage::write_regs() {
         eg_use -= Phv::use(INGRESS);
         in_use |= Phv::use(INGRESS);
         eg_use |= Phv::use(EGRESS); }
+    static const int phv_use_transpose[2][14] = {
+        {  0,  1,  2,  3,  8,  9, 10, 11, 16, 17, 18, 19, 20, 21 },
+        {  4,  5,  6,  7, 12, 13, 14, 15, 22, 23, 24, 25, 26, 27 } };
     for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 7; j++) {
-            regs.dp.phv_ingress_thread[i][j] = in_use.getrange(32*j, 32);
-            regs.dp.phv_egress_thread[i][j] = eg_use.getrange(32*j, 32); } }
+        for (int j = 0; j < 14; j++) {
+            regs.dp.phv_ingress_thread_alu[i][j] = regs.dp.phv_ingress_thread_imem[i][j] =
+            regs.dp.phv_ingress_thread[i][j] = in_use.getrange(8*phv_use_transpose[i][j], 8);
+            regs.dp.phv_egress_thread_alu[i][j] = regs.dp.phv_egress_thread_imem[i][j] =
+            regs.dp.phv_egress_thread[i][j] = eg_use.getrange(8*phv_use_transpose[i][j], 8); } }
     for (auto gress : Range(INGRESS, EGRESS))
         if (table_use[gress] & USE_TCAM_PIPED)
             regs.tcams.tcam_piped |=  options.match_compiler ? 3 : 1 << gress;
