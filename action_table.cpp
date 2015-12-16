@@ -170,7 +170,7 @@ static void flow_selector_addr(Stage *stage, int from, int to) {
     assert(from > to);
     assert((from & 3) == 3);
     if (from/2 == to/2) {
-        /* L to R */
+        /* R to L */
         stage->regs.rams.map_alu.selector_adr_switchbox.row[from/4].ctl
             .l_oflo_adr_o_mux_select.l_oflo_adr_o_sel_selector_adr_r_i = 1;
         return; }
@@ -186,13 +186,19 @@ static void flow_selector_addr(Stage *stage, int from, int to) {
         /* top to bottom */
         stage->regs.rams.map_alu.selector_adr_switchbox.row[row].ctl
             .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_oflo_adr_t_i = 1;
-    if (to & 1)
-        /* flow down? to R */
+    switch (to & 3) {
+    case 3:
+        /* flow down to R */
         stage->regs.rams.map_alu.selector_adr_switchbox.row[to/4].ctl.r_oflo_adr_o_mux_select = 1;
-    else
+        break;
+    case 2:
         /* flow down to L */
         stage->regs.rams.map_alu.selector_adr_switchbox.row[to/4].ctl
             .l_oflo_adr_o_mux_select.l_oflo_adr_o_sel_oflo_adr_t_i = 1;
+        break;
+    default:
+        /* even physical rows are hardwired to flow down to both L and R */
+        break; }
 }
 
 void ActionTable::write_regs() {

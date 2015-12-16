@@ -109,10 +109,13 @@ void SelectionTable::write_merge_regs(MatchTable *match, int type, int bus,
     const std::vector<Call::Arg> &args)
 {
     auto &merge = stage->regs.rams.match.merge;
+    merge.mau_physical_to_meter_alu_ixbar_map[type][bus/8U].set_subfield(
+        4 | meter_group(), 3*(bus%8U), 3);
     if (match->action_call())
         /*merge.mau_selector_action_entry_size[type][bus] = match->action_call()->format->log2size - 3*/;
     else if (options.match_compiler)
         return; // compiler skips the rest if no action table
+    merge.mau_payload_shifter_enable[type][bus].meter_adr_payload_shifter_en = 1;
     //if (args.size() > 1)
     //    merge.mau_bus_hash_group_ctl[type][bus/4].set_subfield(
     //        1 << BusHashGroup::SELECTOR_MOD, 5 * (bus%4), 5);
@@ -235,22 +238,40 @@ void SelectionTable::write_regs() {
     selector_ctl.resilient_hash_mode = resilient_hash ? 1 : 0;
     selector_ctl.selector_enable = 1;
     auto &delay_ctl = map_alu.meter_alu_group_data_delay_ctl[meter_group];
-    delay_ctl.meter_alu_right_group_delay = 9 + stage->tcam_delay(gress);
+    delay_ctl.meter_alu_right_group_delay = 13 + stage->tcam_delay(gress);
     delay_ctl.meter_alu_right_group_enable = resilient_hash ? 3 : 1;
+    /* FIXME -- error_ctl should be configurable */
+    auto &error_ctl = map_alu.meter_alu_group_error_ctl[meter_group];
+    error_ctl.meter_alu_group_ecc_error_enable = 1;
+    error_ctl.meter_alu_group_sel_error_enable = 1;
 
     auto &merge = stage->regs.rams.match.merge;
     auto &adrdist = stage->regs.rams.match.adrdist;
     for (MatchTable *m : match_tables) {
-        adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id] = 1 << (home->row/4U);
+        adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id] = 1 << meter_group;
         //auto &icxbar = adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id];
         //icxbar.address_distr_to_logical_rows = 1 << home->row;
         //icxbar.address_distr_to_overflow = push_on_overflow;
         if (auto &act = m->get_action())
-            merge.mau_selector_action_entry_size[m->logical_id] = act->format->log2size - 3;
-        if (max_words == 1)
-            /*adrdist.movereg_ad_ctl[m->logical_id].movereg_ad_meter_shift = 7*/; }
+            /* FIXME -- can't be attached to mutliple tables with different format sizes? */
+            merge.mau_selector_action_entry_size[meter_group] = act->format->log2size - 3;
+        adrdist.mau_ad_meter_virt_lt[meter_group] |= 1U << m->logical_id;
+        adrdist.movereg_ad_meter_alu_to_logical_xbar_ctl[m->logical_id/8U].set_subfield(
+            4 | meter_group, 3*(m->logical_id % 8U), 3);
+        merge.mau_logical_to_meter_alu_map.set_subfield( 16 | m->logical_id, 5*meter_group, 5);
+        merge.mau_meter_alu_to_logical_map[m->logical_id/8U].set_subfield(
+            4 | meter_group, 3*(m->logical_id % 8U), 3); }
+    if (max_words == 1)
+        adrdist.movereg_meter_ctl[meter_group].movereg_ad_meter_shift = 7;
+    adrdist.packet_action_at_headertime[1][meter_group] = 1;
     for (auto &hd : hash_dist)
         hd.write_regs(this, 0, non_linear_hash);
+    if (gress == INGRESS) {
+        merge.meter_alu_thread[0].meter_alu_thread_ingress |= 1U << meter_group;
+        merge.meter_alu_thread[1].meter_alu_thread_ingress |= 1U << meter_group;
+    } else {
+        merge.meter_alu_thread[0].meter_alu_thread_egress |= 1U << meter_group;
+        merge.meter_alu_thread[1].meter_alu_thread_egress |= 1U << meter_group; }
 }
 
 void SelectionTable::gen_tbl_cfg(json::vector &out) {

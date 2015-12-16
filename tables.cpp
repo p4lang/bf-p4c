@@ -896,7 +896,7 @@ void MatchTable::write_regs(int type, Table *result) {
 
     if (table_counter)
         merge.mau_table_counter_ctl[logical_id/8U].set_subfield(
-            table_counter, 4 * (logical_id%8U), 4);
+            table_counter, 3 * (logical_id%8U), 3);
 
 }
 
@@ -942,7 +942,12 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(const c
             mem_units[ctr++/period].push_back(memunit(row.row, col)); } }
     int vpn = 0;
     for (auto &mem : mem_units) {
-        if (skip_spare_bank && &mem == &mem_units[depth/period - 1]) break;
+        if (skip_spare_bank && &mem == &mem_units[depth/period - 1]) {
+            if (mem.size() == 1)
+                mra["spare_bank_memory_unit"] = std::move(mem[0]);
+            else
+                mra["spare_bank_memory_unit"] = std::move(mem);
+            break; }
         std::sort(mem.begin(), mem.end(), json::obj::ptrless());
         json::map tmp;
         tmp["memory_units"] = std::move(mem);

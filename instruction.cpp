@@ -450,7 +450,10 @@ struct CondMoveMux : public Instruction {
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
-        src1.phvRead(fn); src2.phvRead(fn); }
+        if (cond & 1) fn(*dest);
+        src1.phvRead(fn);
+        if (!opc->src2opt || (cond & 4))
+            src2.phvRead(fn); }
     void dbprint(std::ostream &out) const {
         out << "INSTR: cmov " << dest << ", " << src1 << ", " << src2; }
 };

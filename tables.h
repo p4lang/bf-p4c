@@ -548,6 +548,7 @@ public:
 	width = period = 1; depth = layout_size(); period_name = 0; }
     void write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args);
     unsigned address_shift() const { return 7 + ceil_log2(min_words); }
+    unsigned meter_group() const { return layout.at(0).row/4U; }
 )
 
 class IdletimeTable : public Table {
