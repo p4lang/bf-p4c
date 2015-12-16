@@ -3,7 +3,6 @@
 #include "tofino/parde/parde_visitor.h"
 #include "tofino/mau/mau_visitor.h"
 #include <constraint_solver/constraint_solver.h>
-#undef LOG
 #include <map>
 #include <set>
 
