@@ -393,7 +393,9 @@ class MauConstraintsInspector : public MauInspector {
 
   void postorder(const IR::Primitive *p) {
     if (p->name == "modify_field" || p->name == "add" ||
-        p->name == "add_to_field") {
+        p->name == "add_to_field" || p->name == "subtract" ||
+        p->name == "subtract_from_field" || p->name == "bit_and" ||
+        p->name == "bit_or" || p->name == "bit_xor") {
       auto first_operand_iter = operands_.begin();
       CHECK(operands_.end() != first_operand_iter) <<
         "No operands for modify_field\n";
@@ -417,7 +419,9 @@ class MauConstraintsInspector : public MauInspector {
         }
       }
     }
-    if (p->name == "add" || p->name == "add_to_field") {
+    if (p->name == "add" || p->name == "add_to_field" ||
+        p->name == "subtract" || p->name == "subtract_from_field" ||
+        p->name == "shift_left" || p->name == "shift_right") {
       for (auto op : operands_) {
         auto h_vars = allocator_.header_vars(op->base->toString());
         if (nullptr != h_vars) {
@@ -496,9 +500,9 @@ ORToolsAllocator::Solve() {
     LOG3(i->name() << " : " << i->Value());
   }
   LOG3("|" << std::setw(30) << "Header" << "|" <<
-    std::setw(10) << "Group" <<  "|" <<
-    std::setw(10) << "Container" <<  "|" <<
-    std::setw(10) << "Byte" << "|");
+         std::setw(10) << "Group" <<  "|" <<
+         std::setw(10) << "Container" <<  "|" <<
+         std::setw(10) << "Byte" << "|");
   for (auto &header : header_vars_) {
     header.second->PrintAllocation(header.first);
   }
