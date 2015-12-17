@@ -331,6 +331,9 @@ void ActionTable::write_regs() {
             if (++idx == depth) { idx = 0; ++word; } }
         prev_switch_ctl = &switch_ctl;
         prev_logical_row = logical_row.row; }
+    // FIXME -- should we do this?
+    // if (push_on_overflow)
+    //    adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::ACTION;
     if (actions) actions->write_regs(this);
 }
 

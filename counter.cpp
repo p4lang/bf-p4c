@@ -134,6 +134,7 @@ void CounterTable::write_regs() {
         auto vpn = logical_row.vpns.begin();
         auto mapram = logical_row.maprams.begin();
         auto &map_alu_row =  map_alu.row[row];
+        LOG2("# DataSwitchbox.setup(" << row << ") home=" << home->row/2U);
         swbox.setup_row(row);
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;
@@ -159,7 +160,7 @@ void CounterTable::write_regs() {
                 ram_address_mux_ctl.ram_ofo_stats_mux_select_statsmeter = 1;
                 ram_address_mux_ctl.synth2port_radr_mux_select_home_row = 1;
             } else {
-                ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::STATISTICS;  // FIXME -- is correct?
+                ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::OVERFLOW;
                 ram.unit_ram_ctl.match_ram_read_data_mux_select = UnitRam::DataMux::OVERFLOW;
                 ram_address_mux_ctl.ram_oflo_adr_mux_select_oflo = 1;
                 ram_address_mux_ctl.ram_ofo_stats_mux_select_oflo = 1;
@@ -244,8 +245,9 @@ void CounterTable::write_regs() {
 	movereg_stats_ctl.movereg_stats_ctl_deferred = 1;
     } else
 	adrdist.packet_action_at_headertime[0][stats_group_index] = 1;
-    if (push_on_overflow)
+    if (push_on_overflow) {
         adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U);
+        adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::STATISTICS; }
 }
 
 void CounterTable::gen_tbl_cfg(json::vector &out) {

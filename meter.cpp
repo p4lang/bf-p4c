@@ -166,6 +166,7 @@ void MeterTable::write_regs() {
         auto vpn = logical_row.vpns.begin();
         auto mapram = logical_row.maprams.begin();
         auto &map_alu_row =  map_alu.row[row];
+        LOG2("# DataSwitchbox.setup(" << row << ") home=" << home->row/2U);
         swbox.setup_row(row);
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;
@@ -351,8 +352,9 @@ void MeterTable::write_regs() {
     adrdist.deferred_ram_ctl[1][home->row/4U].deferred_ram_thread = gress;
     if (gress)
         stage->regs.cfg_regs.mau_cfg_dram_thread |= 0x10 << (home->row/4U);
-    if (push_on_overflow)
+    if (push_on_overflow) {
         adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U);
+        adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::METER; }
     for (auto &hd : hash_dist)
         hd.write_regs(this, 1, false);
 }

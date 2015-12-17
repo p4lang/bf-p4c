@@ -137,7 +137,7 @@ void SelectionTable::write_regs() {
     LOG1("### Selection table " << name() << " write_regs");
     if (input_xbar) input_xbar->write_regs();
     Layout *home = &layout[0];
-    //bool push_on_overflow = false;
+    bool push_on_overflow = false;
     auto &map_alu =  stage->regs.rams.map_alu;
     DataSwitchboxSetup swbox(stage, home->row/2U);
     int minvpn = 1000000, maxvpn = -1;
@@ -156,6 +156,7 @@ void SelectionTable::write_regs() {
         auto vpn = logical_row.vpns.begin();
         auto mapram = logical_row.maprams.begin();
         auto &map_alu_row =  map_alu.row[row];
+        LOG2("# DataSwitchbox.setup(" << row << ") home=" << home->row/2U);
         swbox.setup_row(row);
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;
@@ -222,7 +223,7 @@ void SelectionTable::write_regs() {
             if (home->row >= 8 && logical_row.row < 8) {
                 adr_ctl.adr_dist_oflo_adr_xbar_source_index = 0;
                 adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::OVERFLOW;
-                //push_on_overflow = true;
+                push_on_overflow = true;
             } else {
                 adr_ctl.adr_dist_oflo_adr_xbar_source_index = home->row % 8;
                 adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::METER; }
@@ -263,6 +264,8 @@ void SelectionTable::write_regs() {
             4 | meter_group, 3*(m->logical_id % 8U), 3); }
     if (max_words == 1)
         adrdist.movereg_meter_ctl[meter_group].movereg_ad_meter_shift = 7;
+    if (push_on_overflow)
+        adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::METER;
     adrdist.packet_action_at_headertime[1][meter_group] = 1;
     for (auto &hd : hash_dist)
         hd.write_regs(this, 0, non_linear_hash);

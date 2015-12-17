@@ -792,18 +792,17 @@ void MatchTable::write_regs(int type, Table *result) {
             action_enable = 1 << result->action_enable;
         for (auto &row : result->layout) {
             int bus = row.row*2 | row.bus;
+            auto &shift_en = merge.mau_payload_shifter_enable[type][bus];
             setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[type][bus], logical_id);
             setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[type+2][bus], logical_id);
             if (result->action.args.size() >= 1 && result->action.args[0].field()) {
                 merge.mau_action_instruction_adr_mask[type][bus] =
                     ((1U << result->action.args[0].size()) - 1) & ~action_enable;
-		merge.mau_payload_shifter_enable[type][bus]
-		    .action_instruction_adr_payload_shifter_en = 1;
+		shift_en.action_instruction_adr_payload_shifter_en = 1;
             } else {
                 merge.mau_action_instruction_adr_mask[type][bus] = 0;
 		if (options.match_compiler)
-		    merge.mau_payload_shifter_enable[type][bus]
-			.action_instruction_adr_payload_shifter_en = 1; }
+		    shift_en.action_instruction_adr_payload_shifter_en = 1; }
             merge.mau_action_instruction_adr_default[type][bus] =
                 result->enable_action_instruction_enable ? 0 : 0x40;
             if (action_enable) {
@@ -823,14 +822,15 @@ void MatchTable::write_regs(int type, Table *result) {
                                                            result->enable_action_data_enable);
                 if (enable_action_data_enable || !dynamic_cast<HashActionTable *>(this))
                     /* HACK -- HashAction tables with no action data don't need this? */
-                    merge.mau_payload_shifter_enable[type][bus]
-                        .actiondata_adr_payload_shifter_en = 1; }
+                    shift_en.actiondata_adr_payload_shifter_en = 1; }
             if (!dynamic_cast<HashActionTable *>(this)) {
-                /* HACK -- hash action tables don't enable these */
-              if (!attached.stats.empty())
-                  merge.mau_payload_shifter_enable[type][bus].stats_adr_payload_shifter_en = 1;
-              if (!attached.meter.empty())
-                  merge.mau_payload_shifter_enable[type][bus].meter_adr_payload_shifter_en = 1; }
+                /* FIXME -- hash action tables don't enable these.  Should figure out when they
+                 * are actually needed and just enable them then.  Only needed for indirect
+                 * that extract an overhead field from the match bus, and not for direct? */
+                if (!attached.stats.empty())
+                    shift_en.stats_adr_payload_shifter_en = 1;
+                if (!attached.meter.empty())
+                    shift_en.meter_adr_payload_shifter_en = 1; }
             result->write_merge_regs(type, bus); }
     } else {
         /* ternary match with no indirection table */
