@@ -77,7 +77,7 @@ void HashActionTable::pass2() {
         error(lineno, "Need explicit row/bus in hash_action table"); // FIXME
     if (hash_dist.empty())
         error(lineno, "Need explicit hash_dist in hash_action table"); // FIXME
-    if (bus >= 2) stage->table_use[gress] |= Stage::USE_TCAM;
+    //if (bus >= 2) stage->table_use[gress] |= Stage::USE_TCAM;
     input_xbar->pass2(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
     if (action_bus)
         action_bus->pass2(this);
@@ -90,10 +90,13 @@ void HashActionTable::write_merge_regs(int type, int bus) {
     attached.write_merge_regs(this, type, bus);
     /* FIXME -- factor with ExactMatch::write_merge_regs? */
     auto &merge = stage->regs.rams.match.merge;
-    merge.exact_match_phys_result_en[bus/8U] |= 1U << (bus%8U);
+    //merge.exact_match_phys_result_en[bus/8U] |= 1U << (bus%8U);
     merge.exact_match_phys_result_thread[bus/8U] |= gress << (bus%8U);
-    if (stage->tcam_delay(gress))
-	merge.exact_match_phys_result_delay[bus/8U] |= 1U << (bus%8U);
+    //if (stage->tcam_delay(gress))
+    //    merge.exact_match_phys_result_delay[bus/8U] |= 1U << (bus%8U);
+    if (options.match_compiler && action_enable >= 0 && enable_action_instruction_enable)
+        /* this seems wrong */
+        merge.mau_action_instruction_adr_mask[type][bus] |= 1U << action_enable;
 
     //merge.mau_bus_hash_group_ctl[type][bus/4].set_subfield(
     //    1 << BusHashGroup::ACTION_DATA_ADDRESS, 5 * (bus%4), 5);
@@ -108,14 +111,19 @@ void HashActionTable::write_regs() {
     layout[0].bus = bus & 1;
     MatchTable::write_regs((bus&2) >> 1, this);
     auto &merge = stage->regs.rams.match.merge;
-    merge.exact_match_logical_result_en |= 1 << logical_id;
-    if (stage->tcam_delay(gress))
-	merge.exact_match_logical_result_delay |= 1 << logical_id;
+    //merge.exact_match_logical_result_en |= 1 << logical_id;
+    //if (stage->tcam_delay(gress))
+    //    merge.exact_match_logical_result_delay |= 1 << logical_id;
     if (actions) actions->write_regs(this);
     if (idletime) idletime->write_regs();
     if (gateway) gateway->write_regs();
     for (auto &hd : hash_dist)
         hd.write_regs(this, 1, false);
+    if (options.match_compiler && !enable_action_data_enable) {
+        /* this seems unneeded? (won't actually be used...) */
+        merge.next_table_format_data[logical_id].match_next_table_adr_default =
+            merge.next_table_format_data[logical_id].match_next_table_adr_miss_value.value;
+    }
 }
 
 void HashActionTable::gen_tbl_cfg(json::vector &out) {

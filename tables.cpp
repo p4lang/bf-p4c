@@ -821,12 +821,16 @@ void MatchTable::write_regs(int type, Table *result) {
                 merge.mau_actiondata_adr_default[type][bus] =
                     get_address_mau_actiondata_adr_default(result->action->format->log2size,
                                                            result->enable_action_data_enable);
-		merge.mau_payload_shifter_enable[type][bus]
-		    .actiondata_adr_payload_shifter_en = 1; }
-	    if (!attached.stats.empty())
-		merge.mau_payload_shifter_enable[type][bus].stats_adr_payload_shifter_en = 1;
-	    if (!attached.meter.empty())
-		merge.mau_payload_shifter_enable[type][bus].meter_adr_payload_shifter_en = 1;
+                if (enable_action_data_enable || !dynamic_cast<HashActionTable *>(this))
+                    /* HACK -- HashAction tables with no action data don't need this? */
+                    merge.mau_payload_shifter_enable[type][bus]
+                        .actiondata_adr_payload_shifter_en = 1; }
+            if (!dynamic_cast<HashActionTable *>(this)) {
+                /* HACK -- hash action tables don't enable these */
+              if (!attached.stats.empty())
+                  merge.mau_payload_shifter_enable[type][bus].stats_adr_payload_shifter_en = 1;
+              if (!attached.meter.empty())
+                  merge.mau_payload_shifter_enable[type][bus].meter_adr_payload_shifter_en = 1; }
             result->write_merge_regs(type, bus); }
     } else {
         /* ternary match with no indirection table */

@@ -100,9 +100,6 @@ void CounterTable::write_merge_regs(MatchTable *match, int type, int bus, const 
     if (options.match_compiler && dynamic_cast<HashActionTable *>(match)) {
 	/* FIXME -- for some reason the compiler does not set the stats_adr_mask
 	 * for hash_action tables.  Is it not needed? */
-	/* FIXME -- figure out how the pfe bit is selected (make it an option?)
-	 * instead of hard-coding it */
-	pfe_bit = 7;
     } else
 	merge.mau_stats_adr_mask[type][bus] = 0xfffff & ~counter_masks[format->groups()];
     merge.mau_stats_adr_default[type][bus] = per_flow_enable ? 0 : (1U << pfe_bit);

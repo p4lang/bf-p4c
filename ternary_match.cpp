@@ -271,9 +271,12 @@ void TernaryMatchTable::write_regs() {
         setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[3][indirect_bus], logical_id);
         setup_muxctl(merge.tcam_match_adr_to_physical_oxbar_outputmap[indirect_bus], tcam_id);
         merge.mau_action_instruction_adr_default[1][indirect_bus] = 0x40;
-	if (options.match_compiler)
+	if (options.match_compiler) {
 	    merge.mau_payload_shifter_enable[1][indirect_bus]
 		.action_instruction_adr_payload_shifter_en = 1;
+            if (action)
+              merge.mau_payload_shifter_enable[1][indirect_bus]
+                  .actiondata_adr_payload_shifter_en = 1; }
         merge.tind_bus_prop[indirect_bus].tcam_piped = 1;
         merge.tind_bus_prop[indirect_bus].thread = gress;
         merge.tind_bus_prop[indirect_bus].enabled = 1;
