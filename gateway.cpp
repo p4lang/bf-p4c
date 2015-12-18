@@ -58,7 +58,6 @@ GatewayTable::Match::Match(value_t *v, value_t &data, range_match_t range_match)
 }
 
 void GatewayTable::setup(VECTOR(pair_t) &data) {
-    int bus = -1;
     setup_logical_id();
     if (auto *v = get(data, "range")) {
         if (CHECKTYPE(*v, tINT)) {
@@ -70,13 +69,32 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
             if (!CHECKTYPE(kv.value, tINT)) continue;
             if (kv.value.i < 0 || kv.value.i > 7)
                 error(kv.value.lineno, "row %d out of range", kv.value.i);
-            layout.push_back(Layout{kv.value.lineno, kv.value.i, bus});
+            if (layout.empty()) layout.resize(1);
+            layout[0].row = kv.value.i;
+            layout[0].lineno = kv.value.lineno;
         } else if (kv.key == "bus") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
             if (kv.value.i < 0 || kv.value.i > 1)
                 error(kv.value.lineno, "bus %d out of range", kv.value.i);
-            bus = kv.value.i;
-            if (!layout.empty()) layout[0].bus = bus;
+            if (layout.empty()) layout.resize(1);
+            layout[0].bus = kv.value.i;
+            if (layout[0].lineno < 0)
+                layout[0].lineno = kv.value.lineno;
+        } else if (kv.key == "payload_row") {
+            if (!CHECKTYPE(kv.value, tINT)) continue;
+            if (kv.value.i < 0 || kv.value.i > 7)
+                error(kv.value.lineno, "row %d out of range", kv.value.i);
+            if (layout.size() < 2) layout.resize(2);
+            layout[1].row = kv.value.i;
+            layout[1].lineno = kv.value.lineno;
+        } else if (kv.key == "payload_bus") {
+            if (!CHECKTYPE(kv.value, tINT)) continue;
+            if (kv.value.i < 0 || kv.value.i > 1)
+                error(kv.value.lineno, "bus %d out of range", kv.value.i);
+            if (layout.size() < 2) layout.resize(2);
+            layout[1].bus = kv.value.i;
+            if (layout[1].lineno < 0)
+                layout[1].lineno = kv.value.lineno;
         } else if (kv.key == "gateway_unit") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
             if (kv.value.i < 0 || kv.value.i > 1)
@@ -95,7 +113,7 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
                 payload = kv.value.bigi.data[0] + ((uint64_t)kv.value.bigi.data[1] << 32);
             else if (CHECKTYPE(kv.value, tINT))
                 payload = kv.value.i;
-            have_payload = true;
+            have_payload = kv.key.lineno;
         } else if (kv.key == "match_address") {
             if (CHECKTYPE(kv.value, tINT))
                 match_address = kv.value.i;
@@ -150,6 +168,15 @@ void GatewayTable::pass1() {
     alloc_id("logical", logical_id, stage->pass1_logical_id,
 	     LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
     alloc_busses(stage->sram_match_bus_use);
+    if (layout.empty() || layout[0].row < 0)
+        error(lineno, "No row specified in gateway");
+    if (layout.size() > 1) {
+        if (layout[1].row < 0)
+            error(layout[1].lineno, "payload_bus with no payload_row in gateway");
+        else if (match_table)
+            error(layout[1].lineno, "payload_row/bus on gateway attached to table");
+    } else if (have_payload && !match_table)
+        error(have_payload, "payload on standalone gateway requires explicit payload_row");
     if (gw_unit < 0) gw_unit = layout[0].bus;
     if (input_xbar) input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
     check_match_key(match, "match", 44);
@@ -205,6 +232,30 @@ static bool setup_vh_xbar(Table *table, Table::Layout &row, int base,
 	    for (unsigned bit = 0; bit < 8; bit++)
 		byteswizzle_ctl[byte][bit] = 0x10 + ibyte; }
     return true;
+}
+
+void GatewayTable::payload_write_regs(int row, int type, int bus) {
+    auto &merge = stage->regs.rams.match.merge;
+    auto &xbar_ctl = merge.gateway_to_pbus_xbar_ctl[row*2 + bus];
+    if (type) {
+        xbar_ctl.tind_logical_select = logical_id;
+        xbar_ctl.tind_inhibit_enable = 1;
+    } else {
+        xbar_ctl.exact_logical_select = logical_id;
+        xbar_ctl.exact_inhibit_enable = 1; }
+    if (have_payload) {
+        if (type)
+            merge.gateway_payload_tind_pbus[row] |= 1 << bus;
+        else
+            merge.gateway_payload_exact_pbus[row] |= 1 << bus;
+        if (options.match_compiler) {
+            /* working around a problem in the harlyn model */
+            merge.gateway_payload_data[row][bus][0][type^1] = payload & 0xffffffff;
+            merge.gateway_payload_data[row][bus][1][type^1] = payload >> 32; }
+        merge.gateway_payload_data[row][bus][0][type] = payload & 0xffffffff;
+        merge.gateway_payload_data[row][bus][1][type] = payload >> 32; }
+    if (match_address >= 0)
+        merge.gateway_payload_match_adr[row][bus][type] = match_address;
 }
 
 void GatewayTable::write_regs() {
@@ -274,28 +325,8 @@ void GatewayTable::write_regs() {
         } else if (auto *hashaction = dynamic_cast<HashActionTable *>(tbl))
             tind_bus = hashaction->bus >= 2;
         if (tbl)
-            for (auto &row : tbl->layout) {
-                auto &xbar_ctl = merge.gateway_to_pbus_xbar_ctl[row.row*2 + row.bus];
-                if (tind_bus) {
-                    xbar_ctl.tind_logical_select = logical_id;
-                    xbar_ctl.tind_inhibit_enable = 1;
-                } else {
-                    xbar_ctl.exact_logical_select = logical_id;
-                    xbar_ctl.exact_inhibit_enable = 1;
-                }
-                if (have_payload) {
-		    if (tind_bus)
-			merge.gateway_payload_tind_pbus[row.row] |= 1 << row.bus;
-		    else
-			merge.gateway_payload_exact_pbus[row.row] |= 1 << row.bus;
-		    if (options.match_compiler) {
-			/* working around a problem in the harlyn model */
-			merge.gateway_payload_data[row.row][row.bus][0][tind_bus^1] = payload & 0xffffffff;
-			merge.gateway_payload_data[row.row][row.bus][1][tind_bus^1] = payload >> 32; }
-                    merge.gateway_payload_data[row.row][row.bus][0][tind_bus] = payload & 0xffffffff;
-                    merge.gateway_payload_data[row.row][row.bus][1][tind_bus] = payload >> 32; }
-		if (match_address >= 0)
-                    merge.gateway_payload_match_adr[row.row][row.bus][tind_bus] = match_address; }
+            for (auto &row : tbl->layout)
+                payload_write_regs(row.row, tind_bus, row.bus);
         else {
             assert(tmatch);
             auto &xbar_ctl = merge.gateway_to_pbus_xbar_ctl[tmatch->indirect_bus];
@@ -305,7 +336,8 @@ void GatewayTable::write_regs() {
         if (gress == EGRESS)
             stage->regs.dp.imem_table_addr_egress |= 1 << logical_id;
         merge.predication_ctl[gress].table_thread |= 1 << logical_id;
-    }
+        if (layout.size() > 1)
+            payload_write_regs(layout[1].row, layout[1].bus >> 1, layout[1].bus & 1); }
 }
 
 void GatewayTable::gen_tbl_cfg(json::vector &out) {

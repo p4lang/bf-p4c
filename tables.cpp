@@ -85,7 +85,7 @@ unsigned Table::Call::Arg::size() const {
 }
 
 static void add_row(int lineno, std::vector<Table::Layout> &layout, int row) {
-    layout.push_back(Table::Layout{lineno, row, -1});
+    layout.push_back(Table::Layout(lineno, row));
 }
 
 static int add_rows(std::vector<Table::Layout> &layout, value_t &rows) {

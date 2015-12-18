@@ -30,14 +30,16 @@ public:
     struct Layout {
 	/* Holds the layout of which rams/tcams/busses are used by the table
 	 * These refer to rows/columns in different spaces:
-	 * ternary match refers to tcams (16x2)
+	 * ternary match refers to tcams (12x2)
 	 * exact match and ternary indirect refer to physical srams (8x12)
 	 * action (and others?) refer to logical srams (16x6)
 	 * vpns contains the (base)vpn index of each ram in the row (matching cols)
 	 * maprams contain the map ram indexes for synthetic 2-port memories (matching cols) */
-	int                     lineno;
-	int                     row, bus;
+	int                     lineno = -1;
+	int                     row = -1, bus = -1;
 	std::vector<int>        cols, vpns, maprams;
+        Layout() = default;
+        Layout(int l, int r) : lineno(l), row(r) {}
     };
 protected:
     Table(int line, std::string &&n, gress_t gr, Stage *s, int lid = -1);
@@ -497,7 +499,7 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
 DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
     MatchTable                  *match_table = 0;
     uint64_t                    payload;
-    bool                        have_payload = false;
+    int                         have_payload = 0;
     int				match_address = -1;
     int                         gw_unit = -1;
     enum range_match_t { NONE, DC_2BIT, DC_4BIT }
@@ -521,6 +523,7 @@ private:
 	Match(value_t *v, value_t &data, range_match_t range_match);
     }                           miss;
     std::vector<Match>          table;
+    void payload_write_regs(int row, int type, int bus);
 public:
     table_type_t table_type() { return GATEWAY; }
     table_type_t set_match_table(MatchTable *m, bool indirect) {
