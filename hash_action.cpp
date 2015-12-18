@@ -60,7 +60,8 @@ void HashActionTable::pass1() {
     if (action_enable >= 0)
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
-    input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
+    if (input_xbar)
+        input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
     for (auto &hd : hash_dist)
         hd.pass1(this);
     if (gateway) {
@@ -75,10 +76,11 @@ void HashActionTable::pass2() {
     LOG1("### Hash Action " << name() << " pass2");
     if (row < 0 || bus < 0)
         error(lineno, "Need explicit row/bus in hash_action table"); // FIXME
-    if (hash_dist.empty())
-        error(lineno, "Need explicit hash_dist in hash_action table"); // FIXME
+    //if (hash_dist.empty())
+    //    error(lineno, "Need explicit hash_dist in hash_action table"); // FIXME
     //if (bus >= 2) stage->table_use[gress] |= Stage::USE_TCAM;
-    input_xbar->pass2(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
+    if (input_xbar)
+        input_xbar->pass2(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
     if (action_bus)
         action_bus->pass2(this);
     if (actions) actions->pass2(this);
@@ -127,18 +129,20 @@ void HashActionTable::write_regs() {
 }
 
 void HashActionTable::gen_tbl_cfg(json::vector &out) {
-    json::map &tbl = *base_tbl_cfg(out, "match_entry", hash_dist[0].mask + 1);
+    int size = hash_dist.empty() ? 1 : 1 + hash_dist[0].mask;
+    json::map &tbl = *base_tbl_cfg(out, "match_entry", size);
     if (!tbl.count("preferred_match_type"))
         tbl["preferred_match_type"] = "exact";
-    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "hash_action", hash_dist[0].mask + 1);
-    add_pack_format(stage_tbl, 0, 0, 0);
+    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, hash_dist.empty() ? "match_with_no_key"
+                                                                     : "hash_action", size);
+    add_pack_format(stage_tbl, 0, 0, hash_dist.empty() ? 1 : 0);
     if (options.match_compiler)
         stage_tbl["memory_resource_allocation"] = "null";
     if (idletime)
         idletime->gen_stage_tbl_cfg(stage_tbl);
     else if (options.match_compiler)
         stage_tbl["stage_idletime_table"] = "null";
-    tbl["performs_hash_action"] = true;
+    tbl["performs_hash_action"] = !hash_dist.empty();
     tbl["uses_versioning"] = true;  // FIXME
     tbl["tcam_error_detect"] = false;
 }
