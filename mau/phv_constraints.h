@@ -5,7 +5,7 @@
 #include "tofino/phv/phv_fields.h"
 
 class MauPhvConstraints : public MauInspector {
-    PhvInfo	&phv;
+    PhvInfo     &phv;
     bool preorder(const IR::Primitive *p) override;
     void constraining_op(const IR::Expression *e);
     bool preorder(const IR::Add *e) override { constraining_op(e); return false; }

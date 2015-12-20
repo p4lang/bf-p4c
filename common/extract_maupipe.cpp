@@ -9,7 +9,7 @@
 #include "lib/error.h"
 
 class FindAttached : public Inspector {
-  map<cstring, vector<const IR::Attached *>>	&attached;
+  map<cstring, vector<const IR::Attached *>>    &attached;
   void postorder(const IR::Stateful *st) override {
     if (!contains(attached[st->table], st))
       attached[st->table].push_back(st); }
@@ -18,8 +18,8 @@ class FindAttached : public Inspector {
 };
 
 struct AttachTables : public Modifier {
-  const IR::Global				*program;
-  map<cstring, vector<const IR::Attached *>>	attached;
+  const IR::Global                              *program;
+  map<cstring, vector<const IR::Attached *>>    attached;
 
   void postorder(IR::MAU::Table *tbl) override {
     if (attached.count(tbl->name))
@@ -39,11 +39,11 @@ struct AttachTables : public Modifier {
 };
 
 class GetTofinoTables : public Inspector {
-  const IR::Global				*program;
-  gress_t					gress;
-  IR::Tofino::Pipe				*pipe;
-  map<const IR::Node *, IR::MAU::Table *>	tables;
-  map<const IR::Node *, IR::MAU::TableSeq *>	seqs;
+  const IR::Global                              *program;
+  gress_t                                       gress;
+  IR::Tofino::Pipe                              *pipe;
+  map<const IR::Node *, IR::MAU::Table *>       tables;
+  map<const IR::Node *, IR::MAU::TableSeq *>    seqs;
  public:
   GetTofinoTables(const IR::Global *gl, gress_t gr, IR::Tofino::Pipe *p)
   : program(gl), gress(gr), pipe(p) {}

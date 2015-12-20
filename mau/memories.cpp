@@ -20,7 +20,7 @@ bool Memories::alloc2Port(cstring name, int entries, int entries_per_word, Use &
         for (int col = MAPRAM_COLUMNS-1; col >= 0; col--) {
             if (mapram_use[row][col]) continue;
             if (sram_use[row][col + SRAM_COLUMNS - MAPRAM_COLUMNS]) continue;
-            stateful_bus[row] = mapram_use[row][col] = 
+            stateful_bus[row] = mapram_use[row][col] =
             sram_use[row][col + SRAM_COLUMNS - MAPRAM_COLUMNS] = name;
             if (!alloc_row) {
                 alloc.row.emplace_back(row);
@@ -78,15 +78,15 @@ bool Memories::allocRams(cstring name, int width, int depth,
 
 namespace {
 class AllocAttached : public Inspector {
-    const IR::MAU::Table	*tbl;
-    Memories			&mem;
-    bool			&ok;
-    int				entries;
-    map<cstring, Memories::Use>	&alloc;
+    const IR::MAU::Table        *tbl;
+    Memories                    &mem;
+    bool                        &ok;
+    int                         entries;
+    map<cstring, Memories::Use> &alloc;
     bool preorder(const IR::Counter *ctr) override {
         cstring name = ctr->name + "$ctr";
         assert(!alloc.count(name));
-        if (!mem.alloc2Port(name, ctr->direct ? entries : ctr->instance_count, 
+        if (!mem.alloc2Port(name, ctr->direct ? entries : ctr->instance_count,
                             CounterPerWord(ctr), alloc[name]))
             ok = false;
         return false; }
@@ -99,7 +99,7 @@ class AllocAttached : public Inspector {
     bool preorder(const IR::Register *reg) override {
         cstring name = reg->name + "$reg";
         assert(!alloc.count(name));
-        if (!mem.alloc2Port(name, reg->direct ? entries : reg->instance_count, 
+        if (!mem.alloc2Port(name, reg->direct ? entries : reg->instance_count,
                             RegisterPerWord(reg), alloc[name]))
             ok = false;
         return false; }
@@ -216,7 +216,7 @@ void Memories::remove(const map<cstring, Use> &alloc) {
 std::ostream &operator<<(std::ostream &out, const Memories &mem) {
     const Alloc2Dbase<cstring> *arrays[] = { &mem.tcam_use, &mem.sram_match_bus, &mem.tind_bus,
         &mem.action_data_bus, &mem.sram_use, &mem.mapram_use };
-    std::map<cstring, char>	tables;
+    std::map<cstring, char>     tables;
     out << "tc  eb  tib ab  srams       mapram  sb" << std::endl;
     for (int r = 0; r < Memories::TCAM_ROWS; r++) {
         for (auto arr : arrays) {

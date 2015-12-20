@@ -15,14 +15,14 @@ void TableFindSeqDependencies::postorder(IR::MAU::TableSeq *seq) {
     int size = seq->tables.size();
     seq->deps.clear();
     for (int i = 0; i < size; i++) {
-	bitvec writes = uses.tables_modify(seq->tables[i]);
-	bitvec access = uses.tables_access(seq->tables[i]);
-	for (int j = i+1; j < size; j++) {
-	    if ((writes & uses.tables_access(seq->tables[j])) ||
-		(access & uses.tables_modify(seq->tables[j])))
-		seq->deps(j, i) = true; } }
+        bitvec writes = uses.tables_modify(seq->tables[i]);
+        bitvec access = uses.tables_access(seq->tables[i]);
+        for (int j = i+1; j < size; j++) {
+            if ((writes & uses.tables_access(seq->tables[j])) ||
+                (access & uses.tables_modify(seq->tables[j])))
+                seq->deps(j, i) = true; } }
     for (int j = 1; j < size; j++)
-	for (int i = j-1; i > 0; i--)
-	    if (seq->deps(j, i))
-		seq->deps[j] |= seq->deps[i];
+        for (int i = j-1; i > 0; i--)
+            if (seq->deps(j, i))
+                seq->deps[j] |= seq->deps[i];
 }

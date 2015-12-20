@@ -8,14 +8,14 @@
 #include <iostream>
 
 class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
-    const PhvInfo		&phv;
-    vector<bitvec>		&conflict;
+    const PhvInfo               &phv;
+    vector<bitvec>              &conflict;
     struct info {
-	cstring				name;
-	int				id;
-	set<const IR::MAU::Table *>	def, use;
+        cstring                         name;
+        int                             id;
+        set<const IR::MAU::Table *>     def, use;
     };
-    map<cstring, info>		defuse;
+    map<cstring, info>          defuse;
     class Init;
 
     profile_t init_apply(const IR::Node *root) override;
@@ -32,7 +32,7 @@ class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
     friend std::ostream &operator<<(std::ostream &, const FieldDefUse &);
 public:
     FieldDefUse(const PhvInfo &p) : phv(p), conflict(*new vector<bitvec>(phv.num_fields())) {
-	visitDagOnce = false; }
+        visitDagOnce = false; }
     const vector<bitvec> &conflicts() { return conflict; }
 };
 

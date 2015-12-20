@@ -28,20 +28,20 @@
 class CheckTableNameDuplicate : public MauInspector {
     set<cstring>        names;
     profile_t init_apply(const IR::Node *root) override {
-	names.clear();
-	return MauInspector::init_apply(root); }
+        names.clear();
+        return MauInspector::init_apply(root); }
     bool preorder(const IR::MAU::Table *t) override {
         assert(names.count(t->name) == 0);
         names.insert(t->name);
-	return true; }
+        return true; }
 };
 
 void test_tofino_backend(const IR::Global *program) {
     if (verbose) {
-	std::cout << "-------------------------------------------------" << std::endl
-		  << "Initial program" << std::endl
-		  << "-------------------------------------------------" << std::endl;
-	std::cout << *program << std::endl; }
+        std::cout << "-------------------------------------------------" << std::endl
+                  << "Initial program" << std::endl
+                  << "-------------------------------------------------" << std::endl;
+        std::cout << *program << std::endl; }
     PhvInfo phv;
     program->apply(phv);
 
@@ -49,54 +49,54 @@ void test_tofino_backend(const IR::Global *program) {
     maupipe = maupipe->apply(TableLayout());
     maupipe = maupipe->apply(TableFindSeqDependencies());
     if (verbose) {
-	std::cout << "-------------------------------------------------" << std::endl
-		  << "Initial table graph" << std::endl
-		  << "-------------------------------------------------" << std::endl;
-	std::cout << *maupipe << std::endl; }
+        std::cout << "-------------------------------------------------" << std::endl
+                  << "Initial table graph" << std::endl
+                  << "-------------------------------------------------" << std::endl;
+        std::cout << *maupipe << std::endl; }
     DependencyGraph deps;
     maupipe->apply(FindDependencyGraph(&deps));
     if (verbose)
-	std::cout << deps;
+        std::cout << deps;
     TablesMutuallyExclusive mutex;
     FieldDefUse defuse(phv);
     ORToolsAllocator or_tools_allocator;
     PassManager backend = {
-	new CreateThreadLocalInstances(INGRESS),
-	new CreateThreadLocalInstances(EGRESS),
-	new HeaderFragmentCreator,
-	new CopyHeaderEliminator,
-	new ModifyFieldSplitter,
-	new ModifyFieldEliminator,
-	new SplitGateways,
-	new CheckTableNameDuplicate,
-	new TableFindSeqDependencies,
-	new CheckTableNameDuplicate,
-	new FindDependencyGraph(&deps),
-	&mutex,
-	new TablePlacement(deps, mutex),
-	new CheckTableNameDuplicate,
-	new TableFindSeqDependencies,  // not needed?
-	new CheckTableNameDuplicate,
-	&defuse,
-	new MauPhvConstraints(phv),
-	new PhvAllocate(phv, defuse.conflicts()),
-	or_tools_allocator.parde_inspector(),
-	or_tools_allocator.mau_inspector(),
+        new CreateThreadLocalInstances(INGRESS),
+        new CreateThreadLocalInstances(EGRESS),
+        new HeaderFragmentCreator,
+        new CopyHeaderEliminator,
+        new ModifyFieldSplitter,
+        new ModifyFieldEliminator,
+        new SplitGateways,
+        new CheckTableNameDuplicate,
+        new TableFindSeqDependencies,
+        new CheckTableNameDuplicate,
+        new FindDependencyGraph(&deps),
+        &mutex,
+        new TablePlacement(deps, mutex),
+        new CheckTableNameDuplicate,
+        new TableFindSeqDependencies,  // not needed?
+        new CheckTableNameDuplicate,
+        &defuse,
+        new MauPhvConstraints(phv),
+        new PhvAllocate(phv, defuse.conflicts()),
+        or_tools_allocator.parde_inspector(),
+        or_tools_allocator.mau_inspector(),
     };
     maupipe = maupipe->apply(backend);
     or_tools_allocator.Solve();
     if (verbose) {
-	std::cout << DBPrint::setflag(DBPrint::TableNoActions);
-	std::cout << "-------------------------------------------------" << std::endl
-		  << "Final table graph" << std::endl
-		  << "-------------------------------------------------" << std::endl;
-	std::cout << *maupipe << std::endl /* << deps;
-	std::cout << defuse */; }
+        std::cout << DBPrint::setflag(DBPrint::TableNoActions);
+        std::cout << "-------------------------------------------------" << std::endl
+                  << "Final table graph" << std::endl
+                  << "-------------------------------------------------" << std::endl;
+        std::cout << *maupipe << std::endl /* << deps;
+        std::cout << defuse */; }
     TableSummary summary;
     maupipe->apply(CheckTableNameDuplicate());
     maupipe->apply(summary);
     if (verbose)
-	std::cout << summary;
+        std::cout << summary;
     MauAsmOutput mauasm;
     maupipe->apply(mauasm);
     std::cout << PhvAsmOutput(phv)

@@ -14,7 +14,7 @@ public:
     struct GroupPlace;
     struct Placed;
 private:
-    map<cstring, unsigned>	table_uids;
+    map<cstring, unsigned>      table_uids;
     const DependencyGraph &deps;
     const TablesMutuallyExclusive &mutex;
     IR::Node *preorder(IR::Tofino::Pipe *) override;

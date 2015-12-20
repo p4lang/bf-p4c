@@ -7,29 +7,29 @@
 class PhvInfo : public Inspector {
 public:
     struct constraint {
-	enum kind_t { SAME_GROUP, FULL_UNIT } kind;
-	cstring		with;
-	explicit constraint(kind_t k, cstring w = 0) : kind(k), with(w) {}
-	bool operator<(const constraint &a) const {
-	    return kind == a.kind ? with < a.with : kind < a.kind; }
+        enum kind_t { SAME_GROUP, FULL_UNIT } kind;
+        cstring         with;
+        explicit constraint(kind_t k, cstring w = 0) : kind(k), with(w) {}
+        bool operator<(const constraint &a) const {
+            return kind == a.kind ? with < a.with : kind < a.kind; }
     };
     struct Info {
-	cstring		name;
-	int		id;
-	int		size;
-	bool		metadata;
-	set<constraint>	constraints;
-	struct alloc_slice {
-	    int		container;
-	    int		field_bit, container_bit, width;
-	    alloc_slice(int c, int fb, int cb, int w) : container(c), field_bit(fb),
-		container_bit(cb), width(w) {} };
-	vector<alloc_slice>	alloc;
+        cstring         name;
+        int             id;
+        int             size;
+        bool            metadata;
+        set<constraint> constraints;
+        struct alloc_slice {
+            int         container;
+            int         field_bit, container_bit, width;
+            alloc_slice(int c, int fb, int cb, int w) : container(c), field_bit(fb),
+                container_bit(cb), width(w) {} };
+        vector<alloc_slice>     alloc;
     };
 private:
-    map<cstring, Info>			all_fields;
-    vector<Info *>			by_id;
-    map<cstring, std::pair<int, int>>	all_headers;
+    map<cstring, Info>                  all_fields;
+    vector<Info *>                      by_id;
+    map<cstring, std::pair<int, int>>   all_headers;
     void add(cstring, const IR::Type *, bool);
     void add_hdr(cstring, const IR::HeaderType *, bool);
     bool preorder(const IR::Header *h) override;
@@ -40,15 +40,15 @@ private:
     bool preorder(const IR::Parser *) override { return false; }
     template<typename Iter>
     class iterator {
-	Iter	it;
+        Iter    it;
     public:
-	iterator(Iter i) : it(i) {}
-	bool operator==(iterator a) { return it == a.it; }
-	bool operator!=(iterator a) { return it != a.it; }
-	iterator &operator++() { ++it; return *this; }
-	iterator &operator--() { --it; return *this; }
-	decltype(**it) operator*() { return **it; }
-	decltype(*it) operator->() { return *it; }
+        iterator(Iter i) : it(i) {}
+        bool operator==(iterator a) { return it == a.it; }
+        bool operator!=(iterator a) { return it != a.it; }
+        iterator &operator++() { ++it; return *this; }
+        iterator &operator--() { --it; return *this; }
+        decltype(**it) operator*() { return **it; }
+        decltype(*it) operator->() { return *it; }
     };
 public:
     Info *field(cstring name) { return all_fields.count(name) ? &all_fields.at(name) : 0; }

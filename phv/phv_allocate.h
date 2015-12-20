@@ -6,8 +6,8 @@
 #include "lib/bitvec.h"
 
 class PhvAllocate : public Inspector {
-    PhvInfo			&phv;
-    const vector<bitvec>	&conflict;
+    PhvInfo                     &phv;
+    const vector<bitvec>        &conflict;
     void do_alloc(PhvInfo::Info *);
     bool preorder(const IR::Tofino::Pipe *p) override;
 public:

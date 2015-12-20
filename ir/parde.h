@@ -20,7 +20,7 @@ class Tofino_ParserMatch : public Node {
   bool operator==(const Tofino_ParserMatch &a) const {
     return value == a.value && shift == a.shift && stmts == a.stmts &&
            next == a.next && except == a.except; }
-  IRNODE_VISIT_CHILDREN({ 
+  IRNODE_VISIT_CHILDREN({
     stmts.visit_children(v);
     v.visit(next);
     v.visit(except); })
@@ -37,7 +37,7 @@ class Tofino_ParserState : public Node {
   bool operator==(const Tofino_ParserState &a) const {
     /* we don't compare the p4state, as it's only present for info */
     return name == a.name && select == a.select && match == a.match; }
-  IRNODE_VISIT_CHILDREN({ 
+  IRNODE_VISIT_CHILDREN({
     /* we don't visit the p4state, as it's only present for info */
     select.visit_children(v);
     match.visit_children(v); })
@@ -45,8 +45,8 @@ class Tofino_ParserState : public Node {
 
 class Tofino_Parser : public Node {
 public:
-  gress_t 		        gress;
-  const Tofino_ParserState	*start;
+  gress_t                       gress;
+  const Tofino_ParserState      *start;
   Tofino_Parser(gress_t gr, const Tofino_ParserState *s) : gress(gr), start(s) {}
   IRNODE_SUBCLASS(Tofino_Parser)
   bool operator==(const Tofino_Parser &a) const {
@@ -58,8 +58,8 @@ public:
 
 class Tofino_Deparser : public Node {
 public:
-  gress_t 		gress;
-  const IR::Parser	*start;
+  gress_t               gress;
+  const IR::Parser      *start;
   Tofino_Deparser(gress_t gr, const Tofino_Parser *s)
   : gress(gr), start(s && s->start ? s->start->p4state : 0) {}
   IRNODE_SUBCLASS(Tofino_Deparser)
