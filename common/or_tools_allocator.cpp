@@ -3,6 +3,7 @@
 #include "tofino/parde/parde_visitor.h"
 #include "tofino/mau/mau_visitor.h"
 #include <constraint_solver/constraint_solver.h>
+#include <boost/iterator/zip_iterator.hpp>
 #include <map>
 #include <set>
 
@@ -14,13 +15,27 @@ class HeaderByteVars {
  public:
   HeaderByteVars(Solver &solver, const std::string &byte_name,
                  const HeaderByteVars *previous_byte)
-  : is_next_byte_(nullptr), previous_byte_(previous_byte), name_(byte_name) {
+  : is_next_byte_(nullptr), deparser_group_flags_(),
+    previous_byte_(previous_byte), name_(byte_name) {
     group_ = solver.MakeIntVar(0, Phv::kNumGroups - 1, byte_name + "-group");
     container_in_group_ = solver.MakeIntVar(0, Phv::kNumContainersPerPhvGroup - 1,
                                             byte_name + "-container");
     container_ = solver.MakeSum(solver.MakeProd(group_,
                                                 Phv::kNumContainersPerPhvGroup),
                                 container_in_group_);
+    // Create flags for PHV deparser groups.
+    for (auto iter = Phv::kPhvDeparserGroups.begin();
+         iter != Phv::kPhvDeparserGroups.end(); ++iter) {
+      deparser_group_flags_.push_back(solver.MakeIsBetweenVar(container_,
+                                                              iter->first,
+                                                              iter->second));
+    }
+    // Create flags for T-PHV deparser groups.
+    for (auto iter = Phv::kTPhvDeparserGroups.begin();
+         iter != Phv::kTPhvDeparserGroups.end(); ++iter) {
+      deparser_group_flags_.push_back(
+        solver.MakeIsEqualCstVar(container_in_group_, *iter));
+    }
     byte_offset_ = solver.MakeIntVar(0, 3, byte_name + "-byte-offset");
     byte_ = solver.MakeSum(solver.MakeProd(container_, 4), byte_offset_);
     offset_ = solver.MakeProd(byte_offset_, 8);
@@ -144,6 +159,10 @@ class HeaderByteVars {
   IntExpr* byte() const {
     return byte_;
   }
+
+  std::vector<IntVar *> deparser_group_flags() const {
+    return deparser_group_flags_;
+  }
  private:
   void SetGroupFlag(Solver &s, const std::vector<int> &groups,
                     const std::vector<int> &offsets, IntVar *v) {
@@ -172,6 +191,7 @@ class HeaderByteVars {
   // variable. Their sum must be 1.
   IntVar *is8b_, *is16b_, *is32b_;
   IntVar *is_last_byte_, *is_next_byte_;
+  std::vector<IntVar *> deparser_group_flags_;
   const HeaderByteVars *const previous_byte_;
   const cstring name_;
 };
@@ -240,6 +260,29 @@ class HeaderVars {
       for (auto &header_byte2 : header_vars->header_bytes_) {
         solver.AddConstraint(
           solver.MakeNonEquality(header_byte1->byte(), header_byte2->byte()));
+      }
+    }
+  }
+
+  void
+  AddPhvDeparserGroupConstraint(Solver &solver, HeaderVars *hdr_vars) {
+    for (auto &my_hdr_byte : header_bytes_) {
+      auto my_deparser_group_flags = my_hdr_byte->deparser_group_flags();
+      for (auto &hdr_byte : hdr_vars->header_bytes_) {
+        CHECK(my_hdr_byte != hdr_byte);
+        auto deparser_group_flags = hdr_byte->deparser_group_flags();
+        CHECK(deparser_group_flags.size() == my_deparser_group_flags.size());
+        auto beg1 = my_deparser_group_flags.begin();
+        auto end1 = my_deparser_group_flags.end();
+        auto beg2 = deparser_group_flags.begin();
+        auto end2 = deparser_group_flags.end();
+        for_each(boost::make_zip_iterator(boost::make_tuple(beg1, beg2)),
+                 boost::make_zip_iterator(boost::make_tuple(end1, end2)),
+                 [&](const boost::tuple<IntVar *, IntVar *> &flags) -> void {
+                   solver.AddConstraint(
+                     solver.MakeNonEquality(solver.MakeSum(flags.get<0>(),
+                                                           flags.get<1>()),
+                                            2)); });
       }
     }
   }
@@ -467,7 +510,7 @@ ORToolsAllocator::AddParserConstraints(const IR::HeaderRef *header_ref,
     header_vars_.at(header_name)->AddDeparserConstraints(solver_);
     for (auto &h : header_vars_) {
       if (h.second->gress() != gress)
-        header_vars_.at(header_name)->AddHeaderConflictConstraint(
+        header_vars_.at(header_name)->AddPhvDeparserGroupConstraint(
           solver_, h.second.get());
     }
   }
@@ -487,16 +530,17 @@ ORToolsAllocator::AddAssignmentConstraint(HeaderByteVars *hb_vars1,
 
 void
 ORToolsAllocator::Solve() {
+  std::vector<operations_research::IntVar *> vars;
   for (auto &h : header_vars_) {
     const auto &v =  h.second->allocation_vars();
-    allocation_vars_.insert(allocation_vars_.end(), v.begin(), v.end());
+    vars.insert(vars.end(), v.begin(), v.end());
   }
-  auto db = solver_.MakePhase(allocation_vars_, Solver::CHOOSE_FIRST_UNBOUND,
+  auto db = solver_.MakePhase(vars, Solver::CHOOSE_FIRST_UNBOUND,
                               Solver::ASSIGN_RANDOM_VALUE);
   solver_.NewSearch(db, solver_.MakeLubyRestart(1000));
   CHECK(solver_.NextSolution());
   LOG3("Generating solution for PHV allocation");
-  for (auto i : allocation_vars_) {
+  for (auto i : vars) {
     LOG3(i->name() << " : " << i->Value());
   }
   LOG3("|" << std::setw(30) << "Header" << "|" <<

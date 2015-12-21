@@ -27,7 +27,6 @@ public:
   operations_research::Solver *solver() { return &solver_; }
 private:
   operations_research::Solver solver_;
-  std::vector<operations_research::IntVar *> allocation_vars_;
   std::map<cstring, std::unique_ptr<HeaderVars>> header_vars_;
 
   const std::unique_ptr<Inspector> parde_inspector_;

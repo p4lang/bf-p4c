@@ -10,6 +10,8 @@ class Phv {
   // containers >= 16 are T-PHV containers.
   static constexpr int kNumContainersPerPhvGroup = 24;
   static constexpr int kTPhvContainerOffset = 16;
+  static const std::vector<std::pair<int, int>> kPhvDeparserGroups;
+  static const std::vector<int> kTPhvDeparserGroups;
   static const std::vector<int> k8bPhvGroups;
   static const std::vector<int> k16bPhvGroups;
   static const std::vector<int> k32bPhvGroups;
