@@ -150,8 +150,8 @@ static void write_one(std::ostream &out, const T &f, std::map<cstring, char> &fi
             else
                 fields.emplace(f.first, 'A' + fields.size()); }
         out << fields[f.first] << hex(f.second);
-    } else
-        out << "..";
+    } else {
+        out << ".."; }
 }
 
 template<class T>

@@ -7,23 +7,24 @@ static void setup_match_layout(IR::MAU::Table::Layout &layout, const IR::Table *
             layout.ternary = true;
             break; }
     layout.match_width_bits = 0;
-    if (tbl->reads) for (auto r : *tbl->reads) {
-        if (auto mask = dynamic_cast<const IR::BAnd *>(r)) {
-            auto fval = dynamic_cast<const IR::FieldRef *>(mask->operands[0]);
-            auto mval = dynamic_cast<const IR::Constant *>(mask->operands[1]);
-            layout.match_width_bits += bitcount(mval->value);
-            if (!layout.ternary)
-                layout.ixbar_bytes += (fval->type->width_bits() + 7)/8;
-        } else if (auto prim = dynamic_cast<const IR::Primitive *>(r)) {
-            if (prim->name != "valid")
-                throw Util::CompilerBug("unexpected reads expression %s", r);
-            layout.match_width_bits += 1;
-        } else if (dynamic_cast<const IR::FieldRef *>(r)) {
-            layout.match_width_bits += r->type->width_bits();
-            if (!layout.ternary)
-                layout.ixbar_bytes += (r->type->width_bits() + 7)/8;
-        } else {
-            throw Util::CompilerBug("unexpected reads expression %s", r); } }
+    if (tbl->reads) {
+        for (auto r : *tbl->reads) {
+            if (auto mask = dynamic_cast<const IR::BAnd *>(r)) {
+                auto fval = dynamic_cast<const IR::FieldRef *>(mask->operands[0]);
+                auto mval = dynamic_cast<const IR::Constant *>(mask->operands[1]);
+                layout.match_width_bits += bitcount(mval->value);
+                if (!layout.ternary)
+                    layout.ixbar_bytes += (fval->type->width_bits() + 7)/8;
+            } else if (auto prim = dynamic_cast<const IR::Primitive *>(r)) {
+                if (prim->name != "valid")
+                    throw Util::CompilerBug("unexpected reads expression %s", r);
+                layout.match_width_bits += 1;
+            } else if (dynamic_cast<const IR::FieldRef *>(r)) {
+                layout.match_width_bits += r->type->width_bits();
+                if (!layout.ternary)
+                    layout.ixbar_bytes += (r->type->width_bits() + 7)/8;
+            } else {
+                throw Util::CompilerBug("unexpected reads expression %s", r); } } }
     layout.overhead_bits = ceil_log2(tbl->actions.size());
 }
 

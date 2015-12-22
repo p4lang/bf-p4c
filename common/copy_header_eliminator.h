@@ -1,5 +1,5 @@
-#ifndef BACKENDS_TOFINO_COPY_HEADER_ELIMINATOR_
-#define BACKENDS_TOFINO_COPY_HEADER_ELIMINATOR_
+#ifndef BACKENDS_TOFINO_COPY_HEADER_ELIMINATOR_H_
+#define BACKENDS_TOFINO_COPY_HEADER_ELIMINATOR_H_
 
 #include "ir/ir.h"
 class CopyHeaderEliminator : public Transform {
@@ -7,4 +7,4 @@ class CopyHeaderEliminator : public Transform {
   const IR::Node *preorder(IR::Primitive *primitive) override;
 };
 
-#endif /* BACKENDS_TOFINO_COPY_HEADER_ELIMINATOR_ */
+#endif /* BACKENDS_TOFINO_COPY_HEADER_ELIMINATOR_H_ */

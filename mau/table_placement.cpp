@@ -74,7 +74,7 @@ struct TablePlacement::Placed {
 };
 
 static StageUseEstimate get_current_stage_use(const TablePlacement::Placed *pl) {
-    short               stage;
+    int                 stage;
     StageUseEstimate    rv;
     if (pl) {
         stage = pl->stage;
@@ -117,7 +117,8 @@ TablePlacement::Placed *gateway_merge(TablePlacement::Placed *pl) {
     return pl;
 }
 
-static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Placed *done, int &entries, TableResourceAlloc *resources) {
+static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Placed *done,
+                          int &entries, TableResourceAlloc *resources) {
     Memories current_mem;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev)
         current_mem.update(p->resources->memuse);

@@ -1,5 +1,5 @@
-#ifndef BACKENDS_TOFINO_CREATE_THREAD_LOCAL_INSTANCES_
-#define BACKENDS_TOFINO_CREATE_THREAD_LOCAL_INSTANCES_
+#ifndef _TOFINO_CREATE_THREAD_LOCAL_INSTANCES_H_
+#define _TOFINO_CREATE_THREAD_LOCAL_INSTANCES_H_
 #include "ir/ir.h"
 
 // This Visitor creates a thread-local instance of every metadata and header
@@ -16,4 +16,4 @@ class CreateThreadLocalInstances : public Modifier, ThreadVisitor {
   gress_t gress_;
 };
 
-#endif /* TOFINO_BACKEND_CREATE_THREAD_LOCAL_INSTANCES_ */
+#endif /* _TOFINO_CREATE_THREAD_LOCAL_INSTANCES_H_ */

@@ -117,15 +117,15 @@ class AllocAttached : public Inspector {
         return false; }
     bool preorder(const IR::Attached *att) override {
         throw Util::CompilerBug("Unknown attached table type %s", att->kind()); }
-public:
+
+ public:
     AllocAttached(Memories *m, const IR::MAU::Table *t, bool *o, int e,
                   map<cstring, Memories::Use> &a)
     : tbl(t), mem(*m), ok(*o), entries(e) , alloc(a) {}
 };
-}
+}  // namespace
 
-bool Memories::allocTable(const IR::MAU::Table *table, int &entries,  map<cstring, Use> &alloc)
-{
+bool Memories::allocTable(const IR::MAU::Table *table, int &entries,  map<cstring, Use> &alloc) {
     bool ok = true;
     int width, depth, groups = 1;
     if (table->layout.ternary) {

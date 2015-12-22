@@ -30,10 +30,11 @@ class Tofino_Pipe : public Node {
             v.visit(thread[th->thread].parser);
             v.visit(thread[th->thread].mau);
             v.visit(thread[th->thread].deparser);
-        } else for (auto &th : thread) {
-            v.visit(th.parser);
-            v.visit(th.mau);
-            v.visit(th.deparser); } })
+        } else {
+            for (auto &th : thread) {
+                v.visit(th.parser);
+                v.visit(th.mau);
+                v.visit(th.deparser); } } })
     void dbprint(std::ostream &out) const override;
 };
 
