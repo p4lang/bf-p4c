@@ -38,9 +38,8 @@ int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width) {
     int size = ceil_log2(layout->action_data_bytes);
     if (size > 4) {
         *width = 1 << (size-4);
-        return 1;
-    } else
-        return 16 >> size;
+        return 1; }
+    return 16 >> size;
 }
 
 StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries) {
@@ -49,22 +48,23 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries) {
     exact_ixbar_bytes = tbl->layout.ixbar_bytes;
     if (tbl->layout.ternary) {
         int depth = (entries + 511U)/512U;
-        int width = (tbl->layout.match_width_bits + 47)/44; // +4 bits for v/v, round up
+        int width = (tbl->layout.match_width_bits + 47)/44;  // +4 bits for v/v, round up
         ternary_ixbar_groups = width;
         tcams = depth * width;
         entries = depth * 512;
     } else if (tbl->match_table) {
-        int width = tbl->layout.match_width_bits + tbl->layout.overhead_bits + 4; // valid/version
+        int width = tbl->layout.match_width_bits + tbl->layout.overhead_bits + 4;  // valid/version
         int groups = 128/width;
-        if (groups) width = 1;
-        else {
+        if (groups) {
+            width = 1;
+        } else {
             groups = 1;
             width = (width+127)/128; }
         int depth = ((entries + groups - 1U)/groups + 1023)/1024U;
         srams = depth * width;
         entries = depth * groups * 1024U;
-    } else
-        entries = 0;
+    } else {
+        entries = 0; }
     for (auto at : tbl->attached) {
         int per_word = 0;
         int width = 1;
@@ -88,7 +88,7 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries) {
         } else if (/*auto *ad = */dynamic_cast<const IR::MAU::ActionData *>(at)) {
             per_word = ActionDataPerWord(&tbl->layout, &width);
         } else if (/*auto *as = */dynamic_cast<const IR::ActionSelector *>(at)) {
-            // TODO
+            // TODO(cdodd)
         } else if (/*auto *ti = */dynamic_cast<const IR::MAU::TernaryIndirect *>(at)) {
             int indir_size = ceil_log2(tbl->layout.overhead_bits);
             if (indir_size > 8)
@@ -96,8 +96,8 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries) {
                                         "ternary table %s", tbl->name);
             if (indir_size < 3) indir_size = 3;
             per_word = 128 >> indir_size;
-        } else
-            throw Util::CompilerBug("Unknown attached table type %s", at->kind());
+        } else {
+            throw Util::CompilerBug("Unknown attached table type %s", at->kind()); }
         if (per_word > 0) {
             if (attached_entries <= 0)
                 error("%s: No size in indirect %s %s", at->srcInfo, at->kind(), at->name);

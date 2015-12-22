@@ -53,15 +53,15 @@ void GetTofinoParser::addMatch(IR::Tofino::ParserState *s, int val, int mask,
       if (ingress_control != action)
         error("%s: Multiple ingress entry points %s and %s",
               action.srcInfo, ingress_control, action);
-    } else
-      ingress_control = action;
+    } else {
+      ingress_control = action; }
   } else if ((match->except = program->get<IR::ParserException>(action))) {
   } else if (program->get<IR::Parser>(action)) {
     // there is a parser state with this name, but we couldn't generate it, probably
     // because we've unrolled a loop filling a header stack completely.  Should set some
     // parser error code?
-  } else
-    error("%s: No definition for %s", action.srcInfo, action);
+  } else {
+    error("%s: No definition for %s", action.srcInfo, action); }
 }
 
 IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctxt) {
@@ -98,7 +98,7 @@ IR::Tofino::Parser *GetTofinoParser::parser(gress_t gress) {
 
 cstring GetTofinoParser::ingress_entry() {
   auto timer = init_apply(program);
-  if (!ingress_control){
+  if (!ingress_control) {
     LOG1("#GetTofinoParser");
     state("start", nullptr); }
   return ingress_control.name;

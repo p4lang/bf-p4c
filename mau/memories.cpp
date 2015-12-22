@@ -35,8 +35,7 @@ bool Memories::alloc2Port(cstring name, int entries, int entries_per_word, Use &
 
 bool Memories::allocRams(cstring name, int width, int depth,
                          Alloc2Dbase<cstring> &use, Alloc2Dbase<cstring> *bus,
-                         Use &alloc)
-{
+                         Use &alloc) {
     vector<int> free(use.rows()), free_bus(use.rows());
     for (int row = 0; row < use.rows(); row++) {
         for (auto col : use[row]) if (!col) free[row]++;
@@ -131,19 +130,20 @@ bool Memories::allocTable(const IR::MAU::Table *table, int &entries,  map<cstrin
     int width, depth, groups = 1;
     if (table->layout.ternary) {
         depth = (entries + 511U)/512U;
-        width = (table->layout.match_width_bits + 47)/44; // +4 bits for v/v, round up
+        width = (table->layout.match_width_bits + 47)/44;  // +4 bits for v/v, round up
         entries = depth * 512;
     } else if (table->match_table) {
-        width = table->layout.match_width_bits + table->layout.overhead_bits + 4; // valid/version
+        width = table->layout.match_width_bits + table->layout.overhead_bits + 4;  // valid/version
         groups = 128/width;
-        if (groups) width = 1;
-        else {
+        if (groups) {
+            width = 1;
+        } else {
             groups = 1;
             width = (width+127)/128; }
         depth = ((entries + groups - 1U)/groups + 1023)/1024U;
         entries = depth * groups * 1024U;
-    } else
-        width = depth = entries = 0;
+    } else {
+        width = depth = entries = 0; }
     for (auto at : table->attached)
         at->apply(AllocAttached(this, table, &ok, entries, alloc));
     assert(!alloc.count(table->name));
@@ -221,16 +221,16 @@ std::ostream &operator<<(std::ostream &out, const Memories &mem) {
     for (int r = 0; r < Memories::TCAM_ROWS; r++) {
         for (auto arr : arrays) {
             for (int c = 0; c < arr->cols(); c++) {
-                if (r >= arr->rows())
+                if (r >= arr->rows()) {
                     out << ' ';
-                else {
+                } else {
                     auto tbl = (*arr)[r][c];
                     if (tbl) {
                         if (!tables.count(tbl))
                             tables.emplace(tbl, 'A' + tables.size());
                         out << tables.at(tbl);
-                    } else
-                        out << '.'; } }
+                    } else {
+                        out << '.'; } } }
             out << "  "; }
         if (r < Memories::SRAM_ROWS) {
             auto tbl = mem.stateful_bus[r];
@@ -238,8 +238,8 @@ std::ostream &operator<<(std::ostream &out, const Memories &mem) {
                 if (!tables.count(tbl))
                     tables.emplace(tbl, 'A' + tables.size());
                 out << tables.at(tbl);
-            } else
-                out << '.'; }
+            } else {
+                out << '.'; } }
         out << std::endl; }
     for (auto &tbl : tables)
         out << "   " << tbl.second << " " << tbl.first << std::endl;

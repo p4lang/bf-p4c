@@ -1,9 +1,9 @@
-#ifndef _table_summary_h_
-#define _table_summary_h_
+#ifndef _TOFINO_MAU_TABLE_SUMMARY_H_
+#define _TOFINO_MAU_TABLE_SUMMARY_H_
 
+#include <iostream>
 #include "mau_visitor.h"
 #include "resource.h"
-#include <iostream>
 
 class TableSummary: public MauInspector {
     map<int, const IR::MAU::Table *>    order;
@@ -18,7 +18,6 @@ class TableSummary: public MauInspector {
             memory[t->logical_id/16].update(t->resources->memuse); }
         return true; }
     friend std::ostream &operator<<(std::ostream &out, const TableSummary &ts);
-public:
 };
 
-#endif /* _table_summary_h_ */
+#endif /* _TOFINO_MAU_TABLE_SUMMARY_H_ */

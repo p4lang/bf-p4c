@@ -1,5 +1,5 @@
-#ifndef _mau_input_xbar_h_
-#define _mau_input_xbar_h_
+#ifndef _TOFINO_MAU_INPUT_XBAR_H_
+#define _TOFINO_MAU_INPUT_XBAR_H_
 
 #include "lib/alloc.h"
 #include "ir/ir.h"
@@ -64,4 +64,4 @@ inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Use::Byte &b) {
     return out << b.field << ',' << b.byte << ' ' << b.loc; }
 
-#endif /* _mau_input_xbar_h_ */
+#endif /* _TOFINO_MAU_INPUT_XBAR_H_ */

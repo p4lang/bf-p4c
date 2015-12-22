@@ -1,5 +1,5 @@
-#include <iostream>
 #include <stdio.h>
+#include <iostream>
 #include <string>
 #include "ir/ir.h"
 #include "ir/dbprint.h"
@@ -90,8 +90,7 @@ void test_tofino_backend(const IR::Global *program) {
         std::cout << "-------------------------------------------------" << std::endl
                   << "Final table graph" << std::endl
                   << "-------------------------------------------------" << std::endl;
-        std::cout << *maupipe << std::endl /* << deps;
-        std::cout << defuse */; }
+        std::cout << *maupipe << std::endl /* << deps << defuse */; }
     TableSummary summary;
     maupipe->apply(CheckTableNameDuplicate());
     maupipe->apply(summary);

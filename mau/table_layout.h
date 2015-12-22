@@ -1,5 +1,5 @@
-#ifndef _table_layout_h_
-#define _table_layout_h_
+#ifndef _TOFINO_MAU_TABLE_LAYOUT_H_
+#define _TOFINO_MAU_TABLE_LAYOUT_H_
 
 #include "mau_visitor.h"
 
@@ -8,4 +8,4 @@ class TableLayout : public MauModifier, Backtrack {
     bool preorder(IR::MAU::Table *tbl) override;
 };
 
-#endif /* _table_layout_h_ */
+#endif /* _TOFINO_MAU_TABLE_LAYOUT_H_ */

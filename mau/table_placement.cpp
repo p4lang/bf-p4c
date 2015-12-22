@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <list>
 #include "ir/ir.h"
 #include "resource_estimate.h"
 #include "input_xbar.h"
@@ -10,8 +12,6 @@
 #include "lib/bitvec.h"
 #include "lib/log.h"
 #include "field_use.h"
-#include <algorithm>
-#include <list>
 
 class SetupUids : public Inspector {
     map<cstring, unsigned>      &table_uids;
@@ -19,8 +19,8 @@ class SetupUids : public Inspector {
         assert(table_uids.count(tbl->name) == 0);
         table_uids.emplace(tbl->name, table_uids.size());
         return true; }
-public:
-    SetupUids(map<cstring, unsigned> &t) : table_uids(t) {}
+ public:
+    explicit SetupUids(map<cstring, unsigned> &t) : table_uids(t) {}
 };
 
 
@@ -59,7 +59,7 @@ struct TablePlacement::Placed {
     bitvec                      placed;  // fully placed tables after this placement
     bool                        need_more = false, gw_cond = true;
     const IR::MAU::Table        *table, *gw = 0;
-    short                       stage, logical_id;
+    int                         stage, logical_id;
     StageUseEstimate            use;
     const TableResourceAlloc    *resources;
     Placed(TablePlacement &self, const Placed *p, const IR::MAU::Table *t)
@@ -152,8 +152,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
                 return nullptr; }
             rv->entries -= p->entries;
         } else if (p->stage == rv->stage && rvdeps.data_dep.count(p->name) &&
-                   rvdeps.data_dep.at(p->name) >= DependencyGraph::Table::ACTION)
-            rv->stage++; }
+                   rvdeps.data_dep.at(p->name) >= DependencyGraph::Table::ACTION) {
+            rv->stage++; } }
     assert(!rv->placed[table_uids.at(rv->name)]);
 
 #if 1
@@ -171,9 +171,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 #endif
 
     LOG3(" - will try " << rv->entries << " of " << t->name << " in stage " << rv->stage);
-    StageUseEstimate min_use(t, min_entries); // minimum use for part of table to be useful
+    StageUseEstimate min_use(t, min_entries);  // minimum use for part of table to be useful
     int increment_entries = min_entries + 1;
-    StageUseEstimate increment_use(t, increment_entries); // next bigger than min_use
+    StageUseEstimate increment_use(t, increment_entries);  // next bigger than min_use
     rv->use = StageUseEstimate(t, rv->entries);
     if (rv->gw) {
         assert(!t->gateway_expr);
@@ -227,7 +227,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     return rv;
 }
 
-const TablePlacement::Placed *TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const GroupPlace *grp, const Placed *pl) {
+const TablePlacement::Placed *
+TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const GroupPlace *grp,
+                            const Placed *pl) {
     LOG1("placing " << pl->entries << " entries of " << pl->name << (pl->gw ? " (with gw " : "") <<
          (pl->gw ? pl->gw->name : "") << (pl->gw ? ")" : "") << " in stage " <<
          pl->stage << (pl->need_more ? " (need more)" : ""));
@@ -274,22 +276,22 @@ class DumpSeqTables {
     const IR::MAU::TableSeq     *seq;
     bitvec                      which;
     friend std::ostream &operator<<(std::ostream &out, const DumpSeqTables &);
-public:
+ public:
     DumpSeqTables(const IR::MAU::TableSeq *s, bitvec w) : seq(s), which(w) {}
 };
 std::ostream &operator<<(std::ostream &out, const DumpSeqTables &s) {
-    bool first = true;
+    const char *sep = "";
     for (auto i : s.which) {
-        if (first) first = false;
-        else out << ' ';
         if (i >= 0 && (size_t)i < s.seq->tables.size())
-            out << s.seq->tables[i]->name;
+            out << sep << s.seq->tables[i]->name;
         else
-            out << "<oob " << i << ">"; }
+            out << sep << "<oob " << i << ">";
+        sep = " "; }
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const std::pair<const TablePlacement::GroupPlace *, const TablePlacement::Placed *> &v) {
+std::ostream &operator<<(std::ostream &out, const std::pair<const TablePlacement::GroupPlace *,
+                         const TablePlacement::Placed *> &v) {
     out << v.second->name;
     return out;
 }
@@ -341,8 +343,8 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
                                 break; }
                         if (defer) continue; }
                     trial.emplace_back(grp, pl);
-                } else
-                    assert(0); }
+                } else {
+                    assert(0); } }
             if (done)
                 assert(0);
             else
@@ -414,8 +416,8 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
                 for (auto t : seq->tables)
                     new_next->tables.push_back(t);
                 tbl->next[next.first] = new_next;
-            } else
-                tbl->next[next.first] = next.second; }
+            } else {
+                tbl->next[next.first] = next.second; } }
         if (!have_default && seq)
             tbl->next["default"] = seq; }
     if (table_placed.count(tbl->name) == 1) {
@@ -428,7 +430,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     LOG3("splitting " << tbl->name << " across " << table_placed.count(tbl->name) << " stages");
     for (it = table_placed.find(tbl->name); it->first == tbl->name; it++) {
         char suffix[8];
-        sprintf(suffix, ".%d", ++counter);
+        snprintf(suffix, sizeof(suffix), ".%d", ++counter);
         auto *table_part = tbl->clone_rename(suffix);
         table_part->logical_id = it->second->logical_id;
         table_part->layout.entries = it->second->entries;

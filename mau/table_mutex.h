@@ -1,5 +1,5 @@
-#ifndef _table_mutex_h_
-#define _table_mutex_h_
+#ifndef _TOFINO_MAU_TABLE_MUTEX_H_
+#define _TOFINO_MAU_TABLE_MUTEX_H_
 
 #include "mau_visitor.h"
 #include "lib/ltbitmatrix.h"
@@ -20,11 +20,12 @@ class TablesMutuallyExclusive : public MauInspector {
         table_succ.clear();
         mutex.clear();
         return rv; }
-public:
+
+ public:
     bool operator()(const IR::MAU::Table *a, const IR::MAU::Table *b) const {
         int a_id = table_ids.at(a);
         int b_id = table_ids.at(b);
         return a_id < b_id ? mutex(b_id, a_id) : mutex(a_id, b_id); }
 };
 
-#endif /* _table_mutex_h_ */
+#endif /* _TOFINO_MAU_TABLE_MUTEX_H_ */

@@ -1,5 +1,5 @@
-#ifndef _table_dependency_graph_h_
-#define _table_dependency_graph_h_
+#ifndef _TOFINO_MAU_TABLE_DEPENDENCY_GRAPH_H_
+#define _TOFINO_MAU_TABLE_DEPENDENCY_GRAPH_H_
 
 #include "mau_visitor.h"
 
@@ -38,8 +38,8 @@ class FindDependencyGraph : public MauInspector, ControlFlowVisitor {
 
     void flow_merge(Visitor &v) override;
     FindDependencyGraph *clone() const override { return new FindDependencyGraph(*this); }
-public:
-    FindDependencyGraph(DependencyGraph *out) : graph(out->graph) {}
+ public:
+    explicit FindDependencyGraph(DependencyGraph *out) : graph(out->graph) {}
 };
 
-#endif /* _table_dependency_graph_h_ */
+#endif /* _TOFINO_MAU_TABLE_DEPENDENCY_GRAPH_H_ */

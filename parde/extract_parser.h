@@ -44,7 +44,7 @@ class GetTofinoParser : public Inspector {
   IR::Tofino::ParserState *state(cstring, const Context *);
 
  public:
-  GetTofinoParser(const IR::Global *g) : program(g) {}
+  explicit GetTofinoParser(const IR::Global *g) : program(g) {}
   IR::Tofino::Parser *parser(gress_t);
   cstring ingress_entry();
 };

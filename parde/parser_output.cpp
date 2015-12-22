@@ -13,7 +13,7 @@ class OutputExtracts : public Inspector {
         } else if (prim->name == "set_metadata") {
             out << indent << dest << ": " << *prim->operands[1] << std::endl; }
         return false; }
-public:
+ public:
     OutputExtracts(std::ostream &o, indent_t i) : out(o), indent(i) {}
 };
 

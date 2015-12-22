@@ -1,5 +1,5 @@
-#ifndef _mau_phv_constraints_h_
-#define _mau_phv_constraints_h_
+#ifndef _TOFINO_MAU_PHV_CONSTRAINTS_H_
+#define _TOFINO_MAU_PHV_CONSTRAINTS_H_
 
 #include "mau_visitor.h"
 #include "tofino/phv/phv_fields.h"
@@ -12,8 +12,9 @@ class MauPhvConstraints : public MauInspector {
     bool preorder(const IR::Sub *e) override { constraining_op(e); return false; }
     bool preorder(const IR::Shl *e) override { constraining_op(e); return false; }
     bool preorder(const IR::Shr *e) override { constraining_op(e); return false; }
-public:
-    MauPhvConstraints(PhvInfo &p) : phv(p) {}
+
+ public:
+    explicit MauPhvConstraints(PhvInfo &p) : phv(p) {}
 };
 
-#endif /* _mau_phv_constraints_h_ */
+#endif /* _TOFINO_MAU_PHV_CONSTRAINTS_H_ */

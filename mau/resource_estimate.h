@@ -1,14 +1,13 @@
-#ifndef _resource_estimate_h_
-#define _resource_estimate_h_
+#ifndef _TOFINO_MAU_RESOURCE_ESTIMATE_H_
+#define _TOFINO_MAU_RESOURCE_ESTIMATE_H_
 
 #include "resource.h"
 
-
 struct StageUseEstimate {
-    short       logical_ids;
-    short       srams, tcams, maprams;
-    short       exact_ixbar_bytes;
-    short       ternary_ixbar_groups;
+    int logical_ids;
+    int srams, tcams, maprams;
+    int exact_ixbar_bytes;
+    int ternary_ixbar_groups;
     StageUseEstimate() { memset(this, 0, sizeof(*this)); }
     StageUseEstimate &operator+=(const StageUseEstimate &a) {
         logical_ids += a.logical_ids;
@@ -40,4 +39,4 @@ int CounterPerWord(const IR::Counter *ctr);
 int RegisterPerWord(const IR::Register *reg);
 int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width);
 
-#endif /* _resource_estimate_h_ */
+#endif /* _TOFINO_MAU_RESOURCE_ESTIMATE_H_ */

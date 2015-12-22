@@ -29,7 +29,7 @@ const IR::Node *SplitGateways::postorder(IR::MAU::Table *t) {
         IR::MAU::Table *newtable = nullptr;
         for (auto &table : seq->tables) {
             if (splitting) {
-                sprintf(suffix, ".%d", ++counter);
+                snprintf(suffix, sizeof(suffix), ".%d", ++counter);
                 newtable = new IR::MAU::Table(t->name + suffix, t->gress, t->gateway_expr);
                 newtable->gateway_cond = t->gateway_cond;
                 rv->push_back(newtable); }
@@ -40,7 +40,7 @@ const IR::Node *SplitGateways::postorder(IR::MAU::Table *t) {
     if (rv->size() <= 1)
         return t;
     for (int i = 1; i <= counter; i++) {
-        sprintf(suffix, ".%d", i);
+        snprintf(suffix, sizeof(suffix), ".%d", i);
         uses.cloning_table(t->name, t->name + suffix); }
     return rv;
 }

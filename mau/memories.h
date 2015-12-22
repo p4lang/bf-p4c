@@ -1,5 +1,5 @@
-#ifndef _mau_memories_h_
-#define _mau_memories_h_
+#ifndef _TOFINO_MAU_MEMORIES_H_
+#define _TOFINO_MAU_MEMORIES_H_
 
 #include <algorithm>
 #include "lib/alloc.h"
@@ -23,12 +23,13 @@ struct Memories {
     Alloc2D<cstring, SRAM_ROWS, 2>                      action_data_bus;
     Alloc1D<cstring, SRAM_ROWS>                         stateful_bus;
 
+    /* Memories::Use tracks memory use of a single table */
     struct Use {
         enum type_t { EXACT, TERNARY, TIND, TWOPORT, ACTIONDATA } type;
         struct Row {
             int         row, bus;
             vector<int> col, mapcol;
-            Row(int r, int b = -1) : row(r), bus(b) {}
+            explicit Row(int r, int b = -1) : row(r), bus(b) {}
         };
         vector<Row>     row;
         void visit(Memories &mem, std::function<void(cstring &)>) const;
@@ -46,4 +47,4 @@ struct Memories {
     friend std::ostream &operator<<(std::ostream &, const Memories &);
 };
 
-#endif /* _mau_memories_h_ */
+#endif /* _TOFINO_MAU_MEMORIES_H_ */

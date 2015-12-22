@@ -6,7 +6,7 @@ struct FieldsReferenced : public Inspector {
     set<cstring>        fields;
     bool preorder(const IR::FieldRef *f) { fields.insert(f->toString()); return false; }
     bool preorder(const IR::HeaderStackItemRef *f) { fields.insert(f->toString()); return false; }
-    FieldsReferenced(const IR::Expression *e) { e->apply(*this); }
+    explicit FieldsReferenced(const IR::Expression *e) { e->apply(*this); }
 };
 };
 

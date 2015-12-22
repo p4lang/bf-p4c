@@ -36,7 +36,7 @@ bool PhvInfo::preorder(const IR::HeaderStack *h) {
     char buffer[16];
     int start = by_id.size();
     for (int i = 0; i < h->size; i++) {
-        sprintf(buffer, "[%d]", i);
+        snprintf(buffer, sizeof(buffer), "[%d]", i);
         add_hdr(h->name + buffer, h->type, false); }
     int end = by_id.size() - 1;
     all_headers.emplace(h->name, std::make_pair(start, end));

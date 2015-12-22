@@ -1,7 +1,7 @@
-#include "ir/ir.h"
 #include <assert.h>
 #include <algorithm>
 #include "table_dependency_graph.h"
+#include "ir/ir.h"
 #include "lib/log.h"
 
 static const char *dep_types[] = { "W", "A", "M" };
@@ -10,7 +10,7 @@ std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
     auto save = out.flags();
     for (auto &tt : dg.graph) {
         out << std::setw(16) << std::left << tt.first;
-        int w = std::max((int)tt.first.size() - 16, 0);
+        int w = std::max(static_cast<int>(tt.first.size()) - 16, 0);
         if (tt.second.min_stage >= 0) {
             out << ' ' << tt.second.min_stage << '+' << tt.second.dep_stages;
             w += 4; }
@@ -30,10 +30,11 @@ std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
 class AddDependencies : public MauInspector, P4WriteContext {
     typedef DependencyGraph::Table      Table;
     typedef DependencyGraph::access_t   access_t;
-    map<cstring, access_t>      &access;
-    Table                       *table;
-    Table::depend_t             type;
-public:
+    map<cstring, access_t>              &access;
+    Table                               *table;
+    Table::depend_t                     type;
+
+ public:
     AddDependencies(map<cstring, access_t> &a, Table *t, Table::depend_t ty)
     : access(a), table(t), type(ty) {}
     void add_dependency(cstring field) {
@@ -43,21 +44,21 @@ public:
             for (auto t : access[field].read)
                 if (table->data_dep[t->name] < Table::WRITE)
                     table->data_dep[t->name] = Table::WRITE;
-        } else
+        } else {
             for (auto t : access[field].write)
                 if (table->data_dep[t->name] < type)
-                    table->data_dep[t->name] = type;
-    }
+                    table->data_dep[t->name] = type; } }
     bool preorder(const IR::FieldRef *f) { add_dependency(f->toString()); return false; }
     bool preorder(const IR::HeaderStackItemRef *f) { add_dependency(f->toString()); return false; }
 };
 
-class UpdateAccess : public MauInspector {
+class UpdateAccess : public MauInspector , P4WriteContext {
     typedef DependencyGraph::Table      Table;
     typedef DependencyGraph::access_t   access_t;
-    map<cstring, access_t>      &access;
-    Table                       *table;
-public:
+    map<cstring, access_t>              &access;
+    Table                               *table;
+
+ public:
     UpdateAccess(map<cstring, access_t> &a, Table *t) : access(a), table(t) {}
     bool preorder(const IR::FieldRef *f) {
         LOG3("update_access read " << f->toString());
@@ -68,13 +69,13 @@ public:
         access[f->toString()].read.insert(table);
         return false; }
     void postorder(const IR::Primitive *prim) {
-        if (prim->name == "modify_field" || prim->name == "add_to_field") {
+        if (isWrite(prim)) {
             cstring name;
-            if (auto f = dynamic_cast<const IR::FieldRef *>(prim->operands[0]))
+            if (auto f = dynamic_cast<const IR::FieldRef *>(prim->operands[0])) {
                 name = f->toString();
-            else if (auto i = dynamic_cast<const IR::HeaderStackItemRef *>(prim->operands[0]))
+            } else if (auto i = dynamic_cast<const IR::HeaderStackItemRef *>(prim->operands[0])) {
                 name = i->toString();
-            else {
+            } else {
                 error("%s: Destination of %s is not a field", prim->srcInfo, prim->name);
                 return; }
             LOG3("update_access write " << name);
@@ -98,8 +99,8 @@ void FindDependencyGraph::add_control_dependency(Table *tt, const IR::Node *chil
                 tt->control_dep[t->name] = kv.first;
                 return; }
         assert(false);
-    } else
-        assert(false);
+    } else {
+        assert(false); }
 }
 
 bool FindDependencyGraph::preorder(const IR::MAU::TableSeq *) {
@@ -124,8 +125,8 @@ bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
             t->gateway_expr->apply(UpdateAccess(access, &table));
         for (auto &action : t->actions)
             action->apply(UpdateAccess(access, &table));
-    } else
-        error("%s: Multiple applies of table %s not supported", t->srcInfo, t->name);
+    } else {
+        error("%s: Multiple applies of table %s not supported", t->srcInfo, t->name); }
     return true;
 }
 

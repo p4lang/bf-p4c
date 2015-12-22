@@ -1,8 +1,6 @@
 #include "asm_output.h"
 
-struct regused {
-    int         B=0, H=0, W=0;
-};
+struct regused { int B = 0, H = 0, W = 0; };
 
 std::ostream &operator<<(std::ostream &out, canon_name n) {
     for (auto ch : n.name) {

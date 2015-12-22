@@ -22,9 +22,8 @@ static void setup_match_layout(IR::MAU::Table::Layout &layout, const IR::Table *
             layout.match_width_bits += r->type->width_bits();
             if (!layout.ternary)
                 layout.ixbar_bytes += (r->type->width_bits() + 7)/8;
-        } else
-            throw Util::CompilerBug("unexpected reads expression %s", r);
-    }
+        } else {
+            throw Util::CompilerBug("unexpected reads expression %s", r); } }
     layout.overhead_bits = ceil_log2(tbl->actions.size());
 }
 
@@ -37,11 +36,13 @@ class GatewayLayout : public MauInspector {
             added.insert(name);
             layout.ixbar_bytes += (f->type->width_bits() + 7)/8; }
         return false; }
-public:
-    GatewayLayout(IR::MAU::Table::Layout &l) : layout(l) {}
+
+ public:
+    explicit GatewayLayout(IR::MAU::Table::Layout &l) : layout(l) {}
 };
 
-static const IR::Expression *setup_gateway_layout(IR::MAU::Table::Layout &layout, const IR::Expression *gw) {
+static const IR::Expression *
+setup_gateway_layout(IR::MAU::Table::Layout &layout, const IR::Expression *gw) {
     // gw = canonicalize_gateway_expr(gw);
     gw->apply(GatewayLayout(layout));
     // should count gw tcam width and depth to support gw splitting when needed
@@ -74,7 +75,7 @@ class VisitAttached : public Inspector {
         layout.overhead_bits += ceil_log2(ap->size);
         return false; }
     bool preorder(const IR::ActionSelector *) override {
-        // TODO -- what does this require from the layout?
+        // TODO(cdodd) -- what does this require from the layout?
         return false; }
     bool preorder(const IR::MAU::TernaryIndirect *) override {
         have_ternary_indirect = true;
@@ -84,19 +85,20 @@ class VisitAttached : public Inspector {
         return false; }
     bool preorder(const IR::Attached *att) override {
         throw Util::CompilerBug("Unknown attached table type %s", typeid(*att).name()); }
-public:
-    VisitAttached(IR::MAU::Table::Layout *l) : layout(*l) {}
+
+ public:
+    explicit VisitAttached(IR::MAU::Table::Layout *l) : layout(*l) {}
     bool have_ternary_indirect = false;
     bool have_action_data = false;;
 };
-}
+}  // namespace
 
 bool TableLayout::preorder(IR::MAU::Table *tbl) {
     tbl->layout.ixbar_bytes = tbl->layout.match_width_bits =
     tbl->layout.action_data_bytes = tbl->layout.overhead_bits = 0;
     if (tbl->match_table)
         setup_match_layout(tbl->layout, tbl->match_table);
-    if ((tbl->layout.gateway = bool(tbl->gateway_expr)))
+    if ((tbl->layout.gateway = tbl->gateway_expr != nullptr))
         tbl->gateway_expr = setup_gateway_layout(tbl->layout, tbl->gateway_expr);
     setup_action_layout(tbl);
     VisitAttached attached(&tbl->layout);

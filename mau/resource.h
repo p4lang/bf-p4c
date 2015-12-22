@@ -1,5 +1,5 @@
-#ifndef _mau_resource_h_
-#define _mau_resource_h_
+#ifndef _TOFINO_MAU_RESOURCE_H_
+#define _TOFINO_MAU_RESOURCE_H_
 
 #include "ir/ir.h"
 #include "input_xbar.h"
@@ -29,4 +29,4 @@ struct TableResourceAlloc {
         return rv; }
 };
 
-#endif /* _mau_resource_h_ */
+#endif /* _TOFINO_MAU_RESOURCE_H_ */

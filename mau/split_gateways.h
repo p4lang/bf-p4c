@@ -1,5 +1,5 @@
-#ifndef _split_gateways_h_
-#define _split_gateways_h_
+#ifndef _TOFINO_MAU_SPLIT_GATEWAYS_H_
+#define _TOFINO_MAU_SPLIT_GATEWAYS_H_
 
 #include "mau_visitor.h"
 #include "field_use.h"
@@ -15,4 +15,4 @@ class SplitGateways : public MauTransform, public Backtrack {
     const IR::Node *postorder(IR::MAU::Table *) override;
 };
 
-#endif /* _split_gateways_h_ */
+#endif /* _TOFINO_MAU_SPLIT_GATEWAYS_H_ */
