@@ -1,9 +1,9 @@
-#ifndef _field_use_h_
-#define _field_use_h_
+#ifndef _TOFINO_MAU_FIELD_USE_H_
+#define _TOFINO_MAU_FIELD_USE_H_
 
+#include <iostream>
 #include "mau_visitor.h"
 #include "lib/bitvec.h"
-#include <iostream>
 
 class FieldUse : public MauInspector, P4WriteContext {
     vector<cstring>             field_names;
@@ -15,7 +15,7 @@ class FieldUse : public MauInspector, P4WriteContext {
     bool preorder(const IR::FieldRef *f) override;
     bool preorder(const IR::HeaderStackItemRef *f) override;
     friend std::ostream &operator<<(std::ostream &, const FieldUse &);
-public:
+ public:
     FieldUse() { visitDagOnce = false; }
     bitvec tables_modify(const IR::MAU::TableSeq *t) const;
     bitvec tables_access(const IR::MAU::TableSeq *t) const;
@@ -31,4 +31,4 @@ public:
 };
 
 
-#endif /* _field_use_h_ */
+#endif /* _TOFINO_MAU_FIELD_USE_H_ */

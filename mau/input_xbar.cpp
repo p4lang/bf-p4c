@@ -15,8 +15,7 @@ void IXBar::clear() {
 static bool find_alloc(IXBar::Use &alloc, int groups, int bytes_per_group,
                        Alloc2Dbase<std::pair<cstring, int>>     &use,
                        std::multimap<cstring, IXBar::Loc>       &fields,
-                       bool second_try)
-{
+                       bool second_try) {
     int groups_needed = (alloc.use.size() + bytes_per_group - 1)/bytes_per_group;
     struct grp_use {
         int group, found, free_cnt; bitvec free;
@@ -102,23 +101,21 @@ bool IXBar::allocTable(bool ternary, const IR::Table *tbl, Use &alloc) {
     LOG1("need " << alloc.use.size() << " bytes for table " << tbl->name);
     if (ternary) {
         rv = find_alloc(alloc, TERNARY_GROUPS, TERNARY_BYTES_PER_GROUP,
-                        ternary_use, ternary_fields, false);
-        if (!rv)
-            rv = find_alloc(alloc, TERNARY_GROUPS, TERNARY_BYTES_PER_GROUP,
-                            ternary_use, ternary_fields, true);
+                        ternary_use, ternary_fields, false)
+          || find_alloc(alloc, TERNARY_GROUPS, TERNARY_BYTES_PER_GROUP,
+                        ternary_use, ternary_fields, true);
     } else {
         rv = find_alloc(alloc, EXACT_GROUPS, EXACT_BYTES_PER_GROUP,
-                          exact_use, exact_fields, false);
-        if (!rv)
-            rv = find_alloc(alloc, EXACT_GROUPS, EXACT_BYTES_PER_GROUP,
-                              exact_use, exact_fields, true);
+                        exact_use, exact_fields, false)
+          || find_alloc(alloc, EXACT_GROUPS, EXACT_BYTES_PER_GROUP,
+                        exact_use, exact_fields, true);
     }
     if (!rv) alloc.clear();
     return rv;
 }
 
 bool IXBar::allocGateway(const IR::Expression * /*tbl*/, Use &/*alloc*/) {
-    // TODO
+    // TODO(cdodd)
     return true;
 }
 

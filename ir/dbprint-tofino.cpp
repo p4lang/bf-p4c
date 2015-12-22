@@ -27,7 +27,6 @@ void IR::MAU::Table::dbprint(std::ostream &out) const {
     for (auto &a : attached) {
         out << sep << a->kind() << ' ' << a->name;
         sep = ", "; }
-
 }
 
 void IR::MAU::TableSeq::dbprint(std::ostream &out) const {

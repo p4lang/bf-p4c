@@ -1,5 +1,5 @@
-#ifndef _tofino_ir_parde_h_
-#define _tofino_ir_parde_h_
+#ifndef _TOFINO_IR_PARDE_H_
+#define _TOFINO_IR_PARDE_H_
 
 #include "lib/match.h"
 
@@ -14,7 +14,7 @@ class Tofino_ParserMatch : public Node {
   Vector<Expression>          stmts;
   const Tofino_ParserState    *next = nullptr;
   const ParserException       *except = nullptr;
-  Tofino_ParserMatch(unsigned long v, unsigned long m, const Vector<Expression> &e)
+  Tofino_ParserMatch(uintmax_t v, uintmax_t m, const Vector<Expression> &e)
   : value(~v&m, v&m), shift(0), stmts(e), next(0), except(0) {}
   IRNODE_SUBCLASS(Tofino_ParserMatch)
   bool operator==(const Tofino_ParserMatch &a) const {
@@ -32,7 +32,7 @@ class Tofino_ParserState : public Node {
   const IR::Parser            *p4state;
   Vector<Expression>          select;
   Vector<Tofino_ParserMatch>  match;
-  Tofino_ParserState(const IR::Parser *);
+  explicit Tofino_ParserState(const IR::Parser *);
   IRNODE_SUBCLASS(Tofino_ParserState)
   bool operator==(const Tofino_ParserState &a) const {
     /* we don't compare the p4state, as it's only present for info */
@@ -44,7 +44,7 @@ class Tofino_ParserState : public Node {
 };
 
 class Tofino_Parser : public Node {
-public:
+ public:
   gress_t                       gress;
   const Tofino_ParserState      *start;
   Tofino_Parser(gress_t gr, const Tofino_ParserState *s) : gress(gr), start(s) {}
@@ -57,7 +57,7 @@ public:
 };
 
 class Tofino_Deparser : public Node {
-public:
+ public:
   gress_t               gress;
   const IR::Parser      *start;
   Tofino_Deparser(gress_t gr, const Tofino_Parser *s)
@@ -75,8 +75,8 @@ using ParserMatch = Tofino_ParserMatch;
 using ParserState = Tofino_ParserState;
 using Parser = Tofino_Parser;
 using Deparser = Tofino_Deparser;
-} // end namespace Tofino
+}  // end namespace Tofino
 
-} // end namespace IR
+}  // end namespace IR
 
-#endif /* _tofino_ir_parde_h_ */
+#endif /* _TOFINO_IR_PARDE_H_ */

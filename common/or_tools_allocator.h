@@ -1,15 +1,16 @@
-#ifndef BACKENDS_TOFINO_OR_TOOLS_ALLOCATOR_H_
-#define BACKENDS_TOFINO_OR_TOOLS_ALLOCATOR_H_
-#include "ir/ir.h"
+#ifndef TOFINO_COMMON_OR_TOOLS_ALLOCATOR_H_
+#define TOFINO_COMMON_OR_TOOLS_ALLOCATOR_H_
+
 #include <constraint_solver/constraint_solver.h>
 #include <list>
 #include <map>
 #include <set>
+#include "ir/ir.h"
 
 class HeaderVars;
 class HeaderByteVars;
 class ORToolsAllocator {
-public:
+ public:
   ORToolsAllocator();
   ~ORToolsAllocator();
   void Solve();
@@ -25,11 +26,12 @@ public:
   Inspector *parde_inspector() { return parde_inspector_.get(); }
   Inspector *mau_inspector() { return mau_inspector_.get(); }
   operations_research::Solver *solver() { return &solver_; }
-private:
+ private:
   operations_research::Solver solver_;
   std::map<cstring, std::unique_ptr<HeaderVars>> header_vars_;
 
   const std::unique_ptr<Inspector> parde_inspector_;
   const std::unique_ptr<Inspector> mau_inspector_;
 };
-#endif
+
+#endif /* TOFINO_COMMON_OR_TOOLS_ALLOCATOR_H_ */

@@ -19,7 +19,6 @@ class MauAsmOutput : public MauInspector {
     void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use &) const;
     void emit_memory(std::ostream &out, indent_t, const Memories::Use &) const;
     void emit_table(std::ostream &out, const IR::MAU::Table *tbl) const;
-public:
 };
 
 // vector<T> output template defined in log.h

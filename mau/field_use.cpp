@@ -11,15 +11,15 @@ void FieldUse::access_field(cstring name) {
     if (!field_index.count(name)) {
         idx = field_index[name] = field_names.size();
         field_names.push_back(name);
-    } else
-        idx = field_index[name];
+    } else {
+        idx = field_index[name]; }
     if (auto table = findContext<IR::MAU::Table>()) {
         if (isWrite())
             table_use[table->name].writes[idx] = 1;
         else
             table_use[table->name].reads[idx] = 1;
-    } else
-        assert(0);
+    } else {
+        assert(0); }
 }
 
 bool FieldUse::preorder(const IR::FieldRef *f) {

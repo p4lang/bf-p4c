@@ -1,10 +1,10 @@
+#include <assert.h>
 #include "ir/ir.h"
 #include "ir/dbprint.h"
 #include "common/inline_control_flow.h"
 #include "common/name_gateways.h"
 #include "tofino/mau/table_dependency_graph.h"
 #include "tofino/parde/extract_parser.h"
-#include <assert.h>
 #include "lib/algorithm.h"
 #include "lib/error.h"
 
@@ -14,7 +14,7 @@ class FindAttached : public Inspector {
     if (!contains(attached[st->table], st))
       attached[st->table].push_back(st); }
  public:
-  FindAttached(map<cstring, vector<const IR::Attached *>> &a) : attached(a) {}
+  explicit FindAttached(map<cstring, vector<const IR::Attached *>> &a) : attached(a) {}
 };
 
 struct AttachTables : public Modifier {
@@ -34,7 +34,7 @@ struct AttachTables : public Modifier {
             attached[tt->name].push_back(at); }
     /* various error check should be here */ }
 
-  AttachTables(const IR::Global *prg) : program(prg) {
+  explicit AttachTables(const IR::Global *prg) : program(prg) {
     program->apply(FindAttached(attached)); }
 };
 
@@ -44,6 +44,7 @@ class GetTofinoTables : public Inspector {
   IR::Tofino::Pipe                              *pipe;
   map<const IR::Node *, IR::MAU::Table *>       tables;
   map<const IR::Node *, IR::MAU::TableSeq *>    seqs;
+
  public:
   GetTofinoTables(const IR::Global *gl, gress_t gr, IR::Tofino::Pipe *p)
   : program(gl), gress(gr), pipe(p) {}
@@ -64,9 +65,9 @@ class GetTofinoTables : public Inspector {
         tt->attached.push_back(sel);
       else if (ap->selector)
         error("%s: no action_selector %s", ap->selector.srcInfo, ap->selector.name);
-    } else if (table->action_profile)
+    } else if (table->action_profile) {
       error("%s: no action_profile %s", table->action_profile.srcInfo,
-            table->action_profile.name); }
+            table->action_profile.name); } }
 
   bool preorder(const IR::Vector<IR::Expression> *v) override {
     assert(!seqs.count(v));
@@ -85,17 +86,17 @@ class GetTofinoTables : public Inspector {
         return true; }
       auto tt = tables[a] = new IR::MAU::Table(a->name, gress, table);
       setup_tt_actions(tt, table);
-    } else
-      error("%s: Multiple applies of table %s not supported", a->srcInfo, a->name);
+    } else {
+      error("%s: Multiple applies of table %s not supported", a->srcInfo, a->name); }
     return true; }
   void postorder(const IR::Apply *a) override {
     for (auto &act : a->actions)
       tables.at(a)->next[act.first] = seqs.at(act.second); }
 
   bool preorder(const IR::NamedCond *c) override {
-    if (!tables.count(c)) {
+    if (!tables.count(c))
       tables[c] = new IR::MAU::Table(c->name, gress, c->pred);
-    } else
+    else
       throw Util::CompilerBug("duplicated unique name?");
     return true; }
   void postorder(const IR::NamedCond *c) override {
@@ -113,7 +114,6 @@ class GetTofinoTables : public Inspector {
 
 const IR::Tofino::Pipe *extract_maupipe(const IR::Global *program) {
   auto rv = new IR::Tofino::Pipe();
-  //program = program->apply(NameGateways());
   GetTofinoParser parser(program);
   program->apply(parser);
   auto ingress = program->get<IR::Control>(parser.ingress_entry());

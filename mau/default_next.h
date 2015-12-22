@@ -1,5 +1,5 @@
-#ifndef _default_next_h_
-#define _default_next_h_
+#ifndef _TOFINO_MAU_DEFAULT_NEXT_H_
+#define _TOFINO_MAU_DEFAULT_NEXT_H_
 
 #include "mau_visitor.h"
 
@@ -15,12 +15,13 @@ class DefaultNext : public MauInspector, ControlFlowVisitor {
     void postorder(const IR::MAU::Table *tbl) override {
         prev_tbls.clear();
         prev_tbls.insert(tbl); }
-    virtual DefaultNext *clone() const override { return new DefaultNext(*this); }
-    virtual void flow_merge(Visitor &a_) override {
+    DefaultNext *clone() const override { return new DefaultNext(*this); }
+    void flow_merge(Visitor &a_) override {
         auto &a = dynamic_cast<DefaultNext &>(a_);
         prev_tbls.insert(a.prev_tbls.begin(), a.prev_tbls.end()); }
     DefaultNext(const DefaultNext &) = default;
-public:
+
+ public:
     DefaultNext() : default_next(new std::remove_reference<decltype(*default_next)>::type) {}
     const IR::MAU::Table *next(const IR::MAU::Table *t) {
         return ::get(default_next, t); }
@@ -31,4 +32,4 @@ public:
         return "END"; }
 };
 
-#endif /* _default_next_h_ */
+#endif /* _TOFINO_MAU_DEFAULT_NEXT_H_ */

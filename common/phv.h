@@ -1,5 +1,5 @@
-#ifndef BACKENDS_TOFINO_PHV_H_
-#define BACKENDS_TOFINO_PHV_H_
+#ifndef TOFINO_COMMON_PHV_H_
+#define TOFINO_COMMON_PHV_H_
 #include <vector>
 #include <iostream>
 
@@ -16,4 +16,4 @@ class Phv {
   static const std::vector<int> k16bPhvGroups;
   static const std::vector<int> k32bPhvGroups;
 };
-#endif
+#endif /* TOFINO_COMMON_PHV_H_ */

@@ -42,17 +42,14 @@ ModifyFieldSplitter::preorder(IR::Primitive *primitive) {
                         src_fragment_ref->srcInfo, src_fragment_ref->base,
                         offset + src_fragment_ref->offset_bits(),
                         cur_width);
-      }
-      else if (auto src_constant =
-                 dynamic_cast<const IR::Constant*>(src_operand)) {
+      } else if (auto src_constant = dynamic_cast<const IR::Constant*>(src_operand)) {
         src_operand = new IR::Constant(src_constant->srcInfo,
                                        IR::Type::Bits::get(primitive->srcInfo, cur_width),
                                        (((*src_constant) >> offset) &
                                          cur_width_mask).value);
-      }
-      else {
+      } else {
         auto src_action_arg = dynamic_cast<const IR::ActionArg*>(src_operand);
-        assert (nullptr != src_action_arg);
+        assert(nullptr != src_action_arg);
         src_operand = new IR::Slice(src_action_arg->srcInfo,
                                     IR::Type_Bits::get(src_action_arg->srcInfo,
                                                        cur_width),

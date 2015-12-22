@@ -22,12 +22,18 @@ struct IXBar {
         operator std::pair<int, int>() const { return std::make_pair(group, byte); }
     };
 
+ private:
+    /* IXBar tracks the use of all the input xbar bytes in a single stage.  Each byte use is set
+     * to record the name of the field it will be getting and the byte offset within the field */
     Alloc2D<std::pair<cstring, int>, EXACT_GROUPS, EXACT_BYTES_PER_GROUP>       exact_use;
     Alloc2D<std::pair<cstring, int>, TERNARY_GROUPS, TERNARY_BYTES_PER_GROUP>   ternary_use;
     Alloc1D<std::pair<cstring, int>, BYTE_GROUPS>                               byte_group_use;
+    /* reverse maps of the above, mapping field names to sets of group+byte */
     std::multimap<cstring, Loc>         exact_fields;
     std::multimap<cstring, Loc>         ternary_fields;
 
+ public:
+    /* IXbar::Use tracks the input xbar use of a single table */
     struct Use {
         bool            ternary;
         struct Byte {

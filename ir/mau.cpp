@@ -1,8 +1,7 @@
 #include <assert.h>
 #include "ir/ir.h"
 
-bool IR::MAU::Table::operator==(const IR::MAU::Table &a) const
-{
+bool IR::MAU::Table::operator==(const IR::MAU::Table &a) const {
     return name == a.name &&
            gress == a.gress &&
            logical_id == a.logical_id &&
@@ -17,9 +16,7 @@ bool IR::MAU::Table::operator==(const IR::MAU::Table &a) const
            resources == a.resources;
 }
 
-IR::MAU::Table::Layout &IR::MAU::Table::Layout::operator += (
-    const IR::MAU::Table::Layout &a)
-{
+IR::MAU::Table::Layout &IR::MAU::Table::Layout::operator +=(const IR::MAU::Table::Layout &a) {
     entries += a.entries;
     gateway |= a.gateway;
     ternary |= a.ternary;
@@ -32,8 +29,8 @@ IR::MAU::Table::Layout &IR::MAU::Table::Layout::operator += (
     if (a.action_data_bytes_in_overhead >= action_data_bytes_in_overhead) {
         action_data_bytes_in_overhead = a.action_data_bytes_in_overhead;
         overhead_bits -= 8 * action_data_bytes_in_overhead;
-    } else
-        overhead_bits -= 8 * a.action_data_bytes_in_overhead;
+    } else {
+        overhead_bits -= 8 * a.action_data_bytes_in_overhead; }
     overhead_bits += a.overhead_bits;
     return *this;
 }

@@ -79,12 +79,12 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         if (dynamic_cast<const IR::MAU::TernaryIndirect *>(at)) {
             have_indirect = true;
             out << indent << at->kind() << ": " << at->name << std::endl;
-        } else if (dynamic_cast<const IR::MAU::ActionData *>(at))
-            have_action = true; }
-    if (!have_indirect)
+        } else if (dynamic_cast<const IR::MAU::ActionData *>(at)) {
+            have_action = true; } }
+    if (!have_indirect) {
         for (auto at : tbl->attached) {
             out << indent << at->kind() << ": " << at->name;
             if (at->indexed())
                 out << '(' << at->kind() << ')';
-            out << std::endl; }
+            out << std::endl; } }
 }

@@ -1,5 +1,5 @@
-#ifndef _tofino_ir_mau_h_
-#define _tofino_ir_mau_h_
+#ifndef _TOFINO_IR_MAU_H_
+#define _TOFINO_IR_MAU_H_
 
 #include "lib/ltbitmatrix.h"
 #include "ir/ir.h"
@@ -15,7 +15,7 @@ class MAU_Table : public Node {
      * unit for tofino; there are 16 such 'logical' tables available in
      * each stage, which will run simultaneously and have their results
      * predicated by the predicate mask calucluated from the next tables */
-public:
+ public:
     cstring                             name;
     gress_t                             gress;
     int                                 logical_id = -1;
@@ -100,16 +100,16 @@ public:
 };
 
 class MAU_TernaryIndirect : public Attached {
-public:
-    MAU_TernaryIndirect(cstring tbl_name) { name = tbl_name + "$tind"; }
+ public:
+    explicit MAU_TernaryIndirect(cstring tbl_name) { name = tbl_name + "$tind"; }
 
     IRNODE_SUBCLASS(MAU_TernaryIndirect)
     const char *kind() const { return "indirect"; }
 };
 
 class MAU_ActionData : public Attached {
-public:
-    MAU_ActionData(cstring tbl_name) { name = tbl_name + "$action"; }
+ public:
+    explicit MAU_ActionData(cstring tbl_name) { name = tbl_name + "$action"; }
 
     IRNODE_SUBCLASS(MAU_ActionData)
     const char *kind() const { return "action"; }
@@ -120,12 +120,12 @@ class MAU_TableSeq : public Node {
     /* a sequence of tables -- may be reordered if deps allow.
      * deps(i,j) is true iff tables[i] is dependent on tables[j]
      * (so must have j < i) */
-public:
+ public:
     Vector<MAU_Table>           tables;
     LTBitMatrix                 deps;
 
     MAU_TableSeq() = default;
-    MAU_TableSeq(const MAU_Table *a) { if (a) tables.push_back(a); }
+    explicit MAU_TableSeq(const MAU_Table *a) { if (a) tables.push_back(a); }
     MAU_TableSeq(const MAU_Table *a, const MAU_Table *b) {
         if (a) tables.push_back(a);
         if (b) tables.push_back(b); }
@@ -145,8 +145,8 @@ using Table = MAU_Table;
 using TableSeq = MAU_TableSeq;
 using TernaryIndirect = MAU_TernaryIndirect;
 using ActionData = MAU_ActionData;
-} // end namespace MAU
+}  // end namespace MAU
 
-} // end namespace IR
+}  // end namespace IR
 
-#endif /* _tofino_ir_mau_h_ */
+#endif /* _TOFINO_IR_MAU_H_ */

@@ -7,9 +7,10 @@ class FieldDefUse::Init : public Inspector {
     FieldDefUse &self;
     void add_field(cstring field);
     bool preorder(const IR::FieldRef *f) override { add_field(f->toString()); return false; }
-    bool preorder(const IR::HeaderStackItemRef *f) override { add_field(f->toString()); return false; }
-public:
-    Init(FieldDefUse &s) : self(s) {}
+    bool preorder(const IR::HeaderStackItemRef *f) override {
+        add_field(f->toString()); return false; }
+ public:
+    explicit Init(FieldDefUse &s) : self(s) {}
 };
 
 void FieldDefUse::Init::add_field(cstring field) {
@@ -25,7 +26,7 @@ Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
     return rv;
 }
 
-void FieldDefUse::check_conflicts(info &read, int when) {
+void FieldDefUse::check_conflicts(const info &read, int when) {
     int firstdef = INT_MAX;
     for (auto def : read.def) {
         if (!def) firstdef = -1;
@@ -41,7 +42,7 @@ void FieldDefUse::check_conflicts(info &read, int when) {
 }
 
 void FieldDefUse::access_field(cstring field) {
-    if (!phv.field(field)) return; // FIXME -- valid bit checks?
+    if (!phv.field(field)) return;   // FIXME -- valid bit checks?
     if (auto table = findContext<IR::MAU::Table>()) {
         auto &info = defuse.at(field);
         assert(info.name == field);
@@ -57,8 +58,8 @@ void FieldDefUse::access_field(cstring field) {
             info.use.clear();
             info.use.insert(table);
             check_conflicts(info, table->logical_order()); }
-    } else
-        assert(0);
+    } else {
+        assert(0); }
 }
 
 bool FieldDefUse::preorder(const IR::FieldRef *f) {

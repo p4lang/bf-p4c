@@ -1,5 +1,5 @@
-#ifndef _tofino_ir_h_
-#define _tofino_ir_h_
+#ifndef _TOFINO_IR_TOFINO_H_
+#define _TOFINO_IR_TOFINO_H_
 #include <ostream>
 enum gress_t { INGRESS, EGRESS };
 
@@ -13,7 +13,7 @@ inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
 namespace IR {
 
 class Tofino_Pipe : public Node {
-public:
+ public:
     struct thread_t {
         const Tofino_Parser     *parser;
         const MAU_TableSeq      *mau;
@@ -39,8 +39,8 @@ public:
 
 namespace Tofino {
 using Pipe = Tofino_Pipe;
-} // end namespace Tofino
+}  // end namespace Tofino
 
-} // end namespace IR
+}  // end namespace IR
 
-#endif /* _tofino_ir_h_ */
+#endif /* _TOFINO_IR_TOFINO_H_ */
