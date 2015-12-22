@@ -1,12 +1,14 @@
 #include "or_tools_allocator.h"
-#include "phv.h"
-#include "tofino/parde/parde_visitor.h"
-#include "tofino/mau/mau_visitor.h"
+
 #include <constraint_solver/constraint_solver.h>
 #include <boost/iterator/zip_iterator.hpp>
+
 #include <map>
 #include <set>
 
+#include "phv.h"
+#include "tofino/parde/parde_visitor.h"
+#include "tofino/mau/mau_visitor.h"
 #include "lib/log.h"
 using namespace operations_research;
 

@@ -8,7 +8,7 @@ CopyHeaderEliminator::preorder(IR::Primitive *primitive) {
     auto src_hdr_ref = dynamic_cast<const IR::HeaderRef*>(primitive->operands[1]);
     // Assuming that type-checker has ensured that both src and dst have same
     // header type.
-    assert (dst_hdr_ref->type == src_hdr_ref->type);
+    assert(dst_hdr_ref->type == src_hdr_ref->type);
     // TODO: Use modify_field to copy POVRef too.
     auto rv = new IR::Vector<IR::Primitive>;
     for (int i = 0; i < dst_hdr_ref->type->width_bits(); i+=8) {
