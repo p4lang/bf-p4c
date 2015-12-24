@@ -64,7 +64,7 @@ class HeaderByteVars {
     // previous_byte_ is nullptr if this is the first byte of the
     // header.
     if (nullptr != previous_byte_) {
-      assert (nullptr != previous_byte_->byte_offset_);
+      assert(nullptr != previous_byte_->byte_offset_);
       is_next_byte_ = solver.MakeIsEqualVar(
                         solver.MakeSum(
                           solver.MakeIsEqualVar(
@@ -84,7 +84,8 @@ class HeaderByteVars {
                                             byte_offset_), 0));
     }
     // If this is the first byte of a header, pin it to byte offset 0.
-    else byte_offset_->RemoveValues({1, 2, 3});
+    else
+        byte_offset_->RemoveValues({1, 2, 3});
   }
 
   void
@@ -165,6 +166,7 @@ class HeaderByteVars {
   std::vector<IntVar *> deparser_group_flags() const {
     return deparser_group_flags_;
   }
+
  private:
   void SetGroupFlag(Solver &s, const std::vector<int> &groups,
                     const std::vector<int> &offsets, IntVar *v) {
@@ -353,6 +355,7 @@ class HeaderVars {
   gress_t gress() const {
     return gress_;
   }
+
  private:
   HeaderVars(const HeaderVars &) = delete;
   std::vector<std::unique_ptr<HeaderByteVars>> header_bytes_;
@@ -363,7 +366,7 @@ class HeaderVars {
 
 class PardeConstraintsInspector : public PardeInspector {
  public:
-  PardeConstraintsInspector(ORToolsAllocator &allocator)
+  explicit PardeConstraintsInspector(ORToolsAllocator &allocator)
   : PardeInspector(), is_match_(false),
     allocator_(allocator) {
     visitDagOnce = false;
@@ -428,7 +431,7 @@ class PardeConstraintsInspector : public PardeInspector {
 
 class MauConstraintsInspector : public MauInspector {
  public:
-  MauConstraintsInspector(ORToolsAllocator &allocator)
+  explicit MauConstraintsInspector(ORToolsAllocator &allocator)
   : allocator_(allocator) { }
 
   bool preorder(const IR::Primitive *) {
@@ -444,7 +447,7 @@ class MauConstraintsInspector : public MauInspector {
       auto first_operand_iter = operands_.begin();
       CHECK(operands_.end() != first_operand_iter) <<
         "No operands for modify_field\n";
-      auto first_op= *first_operand_iter;
+      auto first_op = *first_operand_iter;
       auto h_vars1 = allocator_.header_vars(first_op->base->toString());
       auto width_bits = first_op->type->width_bits();
       for (auto op = std::next(first_operand_iter); op != operands_.end();
@@ -490,11 +493,9 @@ class MauConstraintsInspector : public MauInspector {
 ORToolsAllocator::ORToolsAllocator() :
   solver_("Allocator"), parde_inspector_(new PardeConstraintsInspector(*this)),
   mau_inspector_(new MauConstraintsInspector(*this))
-{
-}
+{}
 
-ORToolsAllocator::~ORToolsAllocator() {
-}
+ORToolsAllocator::~ORToolsAllocator() {}
 
 void
 ORToolsAllocator::AddParserConstraints(const IR::HeaderRef *header_ref,
