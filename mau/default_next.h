@@ -23,9 +23,9 @@ class DefaultNext : public MauInspector, ControlFlowVisitor {
 
  public:
     DefaultNext() : default_next(new std::remove_reference<decltype(*default_next)>::type) {}
-    const IR::MAU::Table *next(const IR::MAU::Table *t) {
+    const IR::MAU::Table *next(const IR::MAU::Table *t) const {
         return ::get(default_next, t); }
-    cstring next_in_thread(const IR::MAU::Table *t) {
+    cstring next_in_thread(const IR::MAU::Table *t) const {
         if (auto *n = next(t))
             if (n->gress == t->gress)
                 return n->name;
