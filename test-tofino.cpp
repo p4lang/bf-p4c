@@ -36,6 +36,13 @@ class CheckTableNameDuplicate : public MauInspector {
         return true; }
 };
 
+class DumpPipe : public Inspector {
+    bool preorder(const IR::Tofino::Pipe *pipe) override {
+        if (verbose)
+            std::cout << *pipe << std::endl;
+        return false; }
+};
+
 void test_tofino_backend(const IR::Global *program) {
     if (verbose) {
         std::cout << "-------------------------------------------------" << std::endl
@@ -77,6 +84,7 @@ void test_tofino_backend(const IR::Global *program) {
         new CheckTableNameDuplicate,
         new TableFindSeqDependencies,  // not needed?
         new CheckTableNameDuplicate,
+        new DumpPipe,
         &defuse,
         new MauPhvConstraints(phv),
         new PhvAllocate(phv, defuse.conflicts()),

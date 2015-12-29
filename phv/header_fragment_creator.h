@@ -1,8 +1,8 @@
-#ifndef BACKENDS_TOFINO_HEADER_FRAGMENT_CREATOR_
-#define BACKENDS_TOFINO_HEADER_FRAGMENT_CREATOR_
+#ifndef _TOFINO_PHV_HEADER_FRAGMENT_CREATOR_H_
+#define _TOFINO_PHV_HEADER_FRAGMENT_CREATOR_H_
 #include "ir/visitor.h"
 class HeaderFragmentCreator : public Transform {
  public:
   const IR::Node* preorder(IR::FieldRef *field_ref) override;
 };
-#endif /* BACKENDS_TOFINO_HEADER_FRAGMENT_CREATOR_ */
+#endif /* _TOFINO_PHV_HEADER_FRAGMENT_CREATOR_H_ */

@@ -138,6 +138,7 @@ class MAU_TableSeq : public Node {
         return tables == a.tables && deps == a.deps; }
     IRNODE_VISIT_CHILDREN({ tables.visit_children(v); })
     void dbprint(std::ostream &out) const override;
+    const MAU_Table *front() const { return tables.empty() ? nullptr : tables.front(); }
 };
 
 namespace MAU {

@@ -1,6 +1,8 @@
 #include "phv_fields.h"
 #include "ir/ir.h"
 #include "lib/log.h"
+#include "lib/stringref.h"
+#include "lib/range.h"
 
 
 void PhvInfo::add(cstring name, const IR::Type *type, bool meta) {
@@ -48,3 +50,38 @@ bool PhvInfo::preorder(const IR::Metadata *h) {
     return false;
 }
 
+const PhvInfo::Info *PhvInfo::field(const IR::FragmentRef *fr) const {
+    auto hdr = header(fr->base->toString());
+    int offset = fr->offset_bits();
+    for (auto idx : Range(hdr->first, hdr->second)) {
+        auto *info = field(idx);
+        /* TODO(cdodd) need to return slice info somehow if this fragment ref is a slice */
+        if (offset < info->size) return info;
+        offset -= info->size; }
+    throw Util::CompilerBug("can't find field at offset %d of %s", fr->offset_bits(),
+                            fr->base->toString());
+}
+
+const PhvInfo::Info *PhvInfo::field(const IR::FieldRef *fr) const {
+    if (auto *frg = dynamic_cast<const IR::FragmentRef *>(fr))
+        return field(frg);
+    StringRef name = fr->toString();
+    if (auto *p = name.findstr("::"))
+        name = name.after(p+2);
+    if (auto *p = name.find('[')) {
+        if (name.after(p).find(':'))
+            name = name.before(p); }
+    if (auto *rv = getref(all_fields, name))
+        return rv;
+    warning("can't find field '%s'", name);
+    return nullptr;
+}
+
+const std::pair<int, int> *PhvInfo::header(cstring name_) const {
+    StringRef name = name_;
+    if (auto *p = name.findstr("::"))
+        name = name.after(p+2);
+    if (auto *rv = getref(all_headers, name))
+        return rv;
+    return nullptr;
+}

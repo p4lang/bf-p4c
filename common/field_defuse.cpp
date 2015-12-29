@@ -1,28 +1,33 @@
 #include "field_defuse.h"
+#include "lib/hex.h"
 #include "lib/log.h"
 #include "lib/map.h"
-#include "lib/hex.h"
+#include "lib/range.h"
 
+#if 0
 class FieldDefUse::Init : public Inspector {
     FieldDefUse &self;
     void add_field(cstring field);
-    bool preorder(const IR::FieldRef *f) override { add_field(f->toString()); return false; }
+    bool preorder(const IR::FieldRef *f) override { add_field(self.phv.field(f)); return false; }
     bool preorder(const IR::HeaderStackItemRef *f) override {
-        add_field(f->toString()); return false; }
+        /*add_field(f->toString());*/ return false; }
  public:
     explicit Init(FieldDefUse &s) : self(s) {}
 };
 
 void FieldDefUse::Init::add_field(cstring field) {
-    assert(field); auto *info = self.phv.field(field); if (info && !self.defuse.count(field)) {
+    assert(field);
+    auto *info = self.phv.field(field);
+    if (info && !self.defuse.count(field)) {
         self.defuse[field].name = field;
         self.defuse[field].id = info->id;
         self.defuse[field].def.insert(nullptr); }
 }
+#endif
 
 Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
     auto rv = Inspector::init_apply(root);
-    root->apply(Init(*this));
+    // root->apply(Init(*this));
     return rv;
 }
 
@@ -33,28 +38,32 @@ void FieldDefUse::check_conflicts(const info &read, int when) {
         else if (def->logical_order() < firstdef)
             firstdef = def->logical_order(); }
     for (auto &other : Values(defuse)) {
-        if (other.id == read.id) continue;
+        if (other.field == read.field) continue;
         for (auto use : other.use) {
             int use_when = use ? use->logical_order() : INT_MAX;
             if (use_when > firstdef && use_when <= when) {
-                    conflict[read.id][other.id] = true;
-                    conflict[other.id][read.id] = true; } } }
+                    conflict[read.field->id][other.field->id] = true;
+                    conflict[other.field->id][read.field->id] = true; } } }
 }
 
-void FieldDefUse::access_field(cstring field) {
-    if (!phv.field(field)) return;   // FIXME -- valid bit checks?
+FieldDefUse::info &FieldDefUse::field(const PhvInfo::Info *f) {
+    auto &info = defuse[f->id];
+    assert(!info.field || info.field == f);
+    info.field = f;
+    return info;
+}
+
+void FieldDefUse::access_field(const PhvInfo::Info *f) {
     if (auto table = findContext<IR::MAU::Table>()) {
-        auto &info = defuse.at(field);
-        assert(info.name == field);
-        assert(info.id == phv.field(field)->id);
+        auto &info = field(f);
         if (isWrite()) {
             LOG3("FieldDefUse(" << (void *)this << "): table " << table->name <<
-                 " writing " << field);
+                 " writing " << f->name);
             info.def.clear();
             info.def.insert(table);
         } else {
             LOG3("FieldDefUse(" << (void *)this << "): table " << table->name <<
-                 " reading " << field);
+                 " reading " << f->name);
             info.use.clear();
             info.use.insert(table);
             check_conflicts(info, table->logical_order()); }
@@ -63,12 +72,12 @@ void FieldDefUse::access_field(cstring field) {
 }
 
 bool FieldDefUse::preorder(const IR::FieldRef *f) {
-    access_field(f->toString());
+    access_field(phv.field(f));
     return false;
 }
 
-bool FieldDefUse::preorder(const IR::HeaderStackItemRef *f) {
-    access_field(f->toString());
+bool FieldDefUse::preorder(const IR::HeaderStackItemRef *) {
+    // access_field(f->toString());
     return false;
 }
 
@@ -84,14 +93,12 @@ static const char *output_metadata[2][4] = { {
 
 bool FieldDefUse::preorder(const IR::Tofino::Deparser *d) {
     for (auto hdr : output_metadata[d->gress]) {
-        if (!d) break;
+        if (!hdr) break;
         if (auto hdr_fields = phv.header(hdr)) {
-            for (int id = hdr_fields->first; id < hdr_fields->second; id++) {
-                auto name = phv.field(id)->name;
-                if (defuse.count(name)) {
-                    auto &info = defuse.at(name);
-                    assert(info.name == name);
-                    assert(info.id == id);
+            for (int id : Range(hdr_fields->first, hdr_fields->second)) {
+                auto *f = phv.field(id);
+                if (defuse.count(f->id)) {
+                    auto &info = defuse[f->id];
                     info.use.clear();
                     info.use.insert(nullptr);
                     check_conflicts(info, INT_MAX); } } } }
@@ -102,15 +109,14 @@ void FieldDefUse::flow_merge(Visitor &a_) {
     FieldDefUse &a = dynamic_cast<FieldDefUse &>(a_);
     LOG3("FieldDefUse(" << (void *)this << "): merging " << (void *)&a);
     for (auto &i : Values(a.defuse)) {
-        assert(defuse.at(i.name).name == i.name);
-        assert(defuse.at(i.name).id == i.id);
-        defuse.at(i.name).def.insert(i.def.begin(), i.def.end());
-        defuse.at(i.name).use.insert(i.use.begin(), i.use.end()); }
+        auto &info = field(i.field);
+        info.def.insert(i.def.begin(), i.def.end());
+        info.use.insert(i.use.begin(), i.use.end()); }
 }
 
 std::ostream &operator<<(std::ostream &out, const FieldDefUse &a) {
     for (auto &i : Values(a.defuse)) {
-        out << i.name << ": def:";
+        out << i.field->name << ": def:";
         const char *sep = "";
         for (auto t : i.def) {
             out << sep << (t ? t->name : "<init>");
@@ -128,11 +134,11 @@ std::ostream &operator<<(std::ostream &out, const FieldDefUse &a) {
     unsigned maxw = 0;
     for (unsigned i = 0; i < a.phv.num_fields(); i++) {
         unsigned sz = a.phv.field(i)->name.size();
-        if (!a.defuse.count(a.phv.field(i)->name))
+        if (!a.defuse.count(i))
             sz += 2;
         if (maxw < sz) maxw = sz; }
     for (unsigned i = 0; i < a.phv.num_fields(); i++) {
-        if (!a.defuse.count(a.phv.field(i)->name))
+        if (!a.defuse.count(i))
             out << '[' << std::setw(maxw-2) << std::left << a.phv.field(i)->name << ']';
         else
             out << std::setw(maxw) << std::left << a.phv.field(i)->name;

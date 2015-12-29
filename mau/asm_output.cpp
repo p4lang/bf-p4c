@@ -84,7 +84,7 @@ void MauAsmOutput::emit_action(std::ostream &out, indent_t indent,
             out << indent << "- add " << instr->operands[0] << ", " << instr->operands[0] << ", "
                 << instr->operands[1] << std::endl;
         } else {
-            error("Unhandled instruction primitive %s", instr->name); } }
+            warning("Unhandled instruction primitive %s", instr->name); } }
     if (act->action.empty()) {
         /* a noop */
         out << indent << "- 0" << std::endl; }
@@ -128,9 +128,9 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         if (next.first == "true" || next.first == "false") {
             continue;  // for the gateway
         } else if (next.first == "$miss") {
-            next_miss = next.second->tables.front();
+            next_miss = next.second->front();
         } else {
-            next_hit.push_back(next.second->tables.front()); } }
+            next_hit.push_back(next.second->front()); } }
     if (next_hit.empty()) {
         if (next_miss) {
             out << indent << "hit: " << default_next.next_in_thread(tbl) << std::endl;
@@ -144,7 +144,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
             out << indent << "hit: ";
             const char *sep = next_hit.size() > 1 ? "[ " : "";
             for (auto t : next_hit) {
-                out << sep << t->name;
+                out << sep << (t ? t->name : default_next.next_in_thread(tbl));
                 sep = ", "; }
             out << " ]" << std::endl; }
         if (next_miss)

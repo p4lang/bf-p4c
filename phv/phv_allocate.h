@@ -1,5 +1,5 @@
-#ifndef _phv_allocate_h_
-#define _phv_allocate_h_
+#ifndef _TOFINO_PHV_PHV_ALLOCATE_H_
+#define _TOFINO_PHV_PHV_ALLOCATE_H_
 
 #include "ir/ir.h"
 #include "phv_fields.h"
@@ -8,11 +8,14 @@
 class PhvAllocate : public Inspector {
     PhvInfo                     &phv;
     const vector<bitvec>        &conflict;
-    void do_alloc(PhvInfo::Info *);
+    struct Regs;
+    class Uses;
+    void do_alloc(PhvInfo::Info *, gress_t, Regs *);
     bool preorder(const IR::Tofino::Pipe *p) override;
-public:
+
+ public:
     PhvAllocate(PhvInfo &p, const vector<bitvec> &c) : phv(p), conflict(c) {}
 };
 
 
-#endif /* _phv_allocate_h_ */
+#endif /* _TOFINO_PHV_PHV_ALLOCATE_H_ */

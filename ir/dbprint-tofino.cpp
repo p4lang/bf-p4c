@@ -47,8 +47,8 @@ void IR::Tofino::Deparser::dbprint(std::ostream &out) const {
 }
 
 void IR::Tofino::Pipe::dbprint(std::ostream &out) const {
-    out << "ingress:" << indent << thread[0].parser << thread[0].mau
+    out << "ingress:" << indent << thread[0].parser << endl << thread[0].mau << endl
                                 << thread[0].deparser << unindent << endl
-        << "egress:" << indent << thread[1].parser << thread[1].mau
+        << "egress:" << indent << thread[1].parser << endl << thread[1].mau << endl
                                << thread[1].deparser << unindent;
 }

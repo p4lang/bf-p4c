@@ -11,16 +11,16 @@ class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
     const PhvInfo               &phv;
     vector<bitvec>              &conflict;
     struct info {
-        cstring                         name;
-        int                             id;
+        const PhvInfo::Info             *field = 0;
         set<const IR::MAU::Table *>     def, use;
     };
-    map<cstring, info>          defuse;
-    class Init;
+    map<int, info>          defuse;
+    // class Init;
 
     profile_t init_apply(const IR::Node *root) override;
     void check_conflicts(const info &read, int when);
-    void access_field(cstring field);
+    info &field(const PhvInfo::Info *);
+    void access_field(const PhvInfo::Info *);
     bool preorder(const IR::Tofino::Parser *p) override;
     bool preorder(const IR::Tofino::Deparser *p) override;
     bool preorder(const IR::FieldRef *f) override;
