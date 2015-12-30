@@ -31,13 +31,13 @@ class Container {
         if (*n || index_ != v)
             throw Util::CompilerBug("Invalid register '%s'", name); }
 
-    size_t size() { return 8U << log2sz_; }
-    explicit operator bool() { return log2sz_ != 3; }
+    size_t size() const { return 8U << log2sz_; }
+    explicit operator bool() const { return log2sz_ != 3; }
     Container operator++() {
         if (index_ != 0x7ff) ++index_;
         return *this; }
     Container operator++(int) { Container rv = *this; ++*this; return rv; }
-    bool operator==(Container c) {
+    bool operator==(Container c) const {
         return tagalong_ == c.tagalong_ && log2sz_ == c.log2sz_ && index_ == c.index_; }
     friend std::ostream &operator<<(std::ostream &out, Container c);
 };

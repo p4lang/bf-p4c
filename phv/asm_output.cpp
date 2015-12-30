@@ -1,7 +1,5 @@
 #include "asm_output.h"
 
-struct regused { int B = 0, H = 0, W = 0; };
-
 std::ostream &operator<<(std::ostream &out, canon_name n) {
     for (auto ch : n.name) {
         if (ch & ~0x7f) continue;
@@ -12,30 +10,26 @@ std::ostream &operator<<(std::ostream &out, canon_name n) {
     return out;
 }
 
-static void emit_phv_field(std::ostream &out, regused &use, const PhvInfo::Info &field) {
-    out << "  " << canon_name(field.name) << ": ";
-    int size = 0;
-    if (field.size <= 8) {
-        out << "B" << use.B++;
-        size = 8;
-    } else if (field.size <= 16) {
-        out << "H" << use.H++;
-        size = 16;
-    } else {
-        out << "W" << use.W++;
-        size = 32; }
-    if (field.size < size)
-        out << "(0.." << (field.size-1) << ")";
-    out << std::endl;
+static void emit_phv_field(std::ostream &out, gress_t thread, const PhvInfo::Info &field) {
+    for (auto &alloc : field.alloc[thread]) {
+        out << "  " << canon_name(field.name);
+        if (alloc.field_bit > 0 || alloc.width != field.size)
+            out << '.' << alloc.field_bit << '-' << (alloc.field_bit+alloc.width-1);
+        out << ": " << alloc.container;
+        if (alloc.container_bit > 0 || alloc.container.size() != alloc.width) {
+            out << '(' << alloc.container_bit;
+            if (alloc.width > 1)
+                out << ".." << (alloc.container_bit + alloc.width - 1);
+            out << ')'; }
+        out << std::endl; }
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvAsmOutput &phvasm) {
-    regused use;
     out << "phv ingress:" << std::endl;
     for (auto &f : phvasm.phv)
-        emit_phv_field(out, use, f);
+        emit_phv_field(out, INGRESS, f);
     out << "phv egress:" << std::endl;
     for (auto &f : phvasm.phv)
-        emit_phv_field(out, use, f);
+        emit_phv_field(out, EGRESS, f);
     return out;
 }
