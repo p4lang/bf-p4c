@@ -82,10 +82,10 @@ class HeaderByteVars {
       solver.AddConstraint(
         solver.MakeEquality(solver.MakeProd(previous_byte_->is_last_byte(),
                                             byte_offset_), 0));
+    } else {
+      // If this is the first byte of a header, pin it to byte offset 0.
+      byte_offset_->RemoveValues({1, 2, 3});
     }
-    // If this is the first byte of a header, pin it to byte offset 0.
-    else
-        byte_offset_->RemoveValues({1, 2, 3});
   }
 
   void
@@ -304,8 +304,8 @@ class HeaderVars {
           solver.MakeEquality(prev_hdr_byte->container_in_group(),
                               hdr_byte->container_in_group()));
         offset += 8;
-      }
-      else ++offset;
+      } else {
+        ++offset; }
       prev_hdr_byte = hdr_byte;
     }
   }
