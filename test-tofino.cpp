@@ -7,6 +7,7 @@
 #include "tofino/common/extract_maupipe.h"
 #include "tofino/common/field_defuse.h"
 #include "tofino/mau/asm_output.h"
+#include "tofino/mau/instruction_selection.h"
 #include "tofino/mau/phv_constraints.h"
 #include "tofino/mau/split_gateways.h"
 #include "tofino/mau/table_dependency_graph.h"
@@ -84,6 +85,7 @@ void test_tofino_backend(const IR::Global *program) {
         new CheckTableNameDuplicate,
         new TableFindSeqDependencies,  // not needed?
         new CheckTableNameDuplicate,
+        new InstructionSelection,
         new DumpPipe,
         &defuse,
         new MauPhvConstraints(phv),
@@ -104,7 +106,7 @@ void test_tofino_backend(const IR::Global *program) {
     maupipe->apply(summary);
     if (verbose)
         std::cout << summary;
-    MauAsmOutput mauasm;
+    MauAsmOutput mauasm(phv);
     maupipe->apply(mauasm);
     std::cout << PhvAsmOutput(phv)
               << ParserAsmOutput(maupipe, INGRESS)

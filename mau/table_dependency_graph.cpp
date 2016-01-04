@@ -69,7 +69,7 @@ class UpdateAccess : public MauInspector , P4WriteContext {
         access[f->toString()].read.insert(table);
         return false; }
     void postorder(const IR::Primitive *prim) {
-        if (isWrite(prim)) {
+        if (prim->isOutput(0)) {
             cstring name;
             if (auto f = dynamic_cast<const IR::FieldRef *>(prim->operands[0])) {
                 name = f->toString();

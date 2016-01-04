@@ -6,7 +6,10 @@
 #include "lib/log.h"
 #include "tofino/common/asm_output.h"
 
+class PhvInfo;
+
 class MauAsmOutput : public MauInspector {
+    const PhvInfo       &phv;
     DefaultNext         default_next;
     std::map<std::pair<gress_t, int>, std::vector<const IR::MAU::Table *>>      by_stage;
     profile_t init_apply(const IR::Node *root) override {
@@ -16,12 +19,15 @@ class MauAsmOutput : public MauInspector {
         by_stage[std::make_pair(tbl->gress, tbl->logical_id/16U)].push_back(tbl);
         return true; }
     friend std::ostream &operator<<(std::ostream &, const MauAsmOutput &);
-    void emit_action(std::ostream &out, indent_t, const IR::ActionFunction *) const;
     void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use &) const;
     void emit_memory(std::ostream &out, indent_t, const Memories::Use &) const;
     void emit_table(std::ostream &out, const IR::MAU::Table *tbl) const;
     void emit_table_indir(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
+    class EmitAction;
     class EmitAttached;
+
+public:
+    MauAsmOutput(const PhvInfo &p) : phv(p) {}
 };
 
 // vector<T> output template defined in log.h

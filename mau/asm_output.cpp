@@ -70,25 +70,44 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     }
 }
 
-void MauAsmOutput::emit_action(std::ostream &out, indent_t indent,
-                               const IR::ActionFunction *act) const {
-    out << indent << act->name << ":" << std::endl;
-    for (auto instr : act->action) {
-        if (instr->name == "modify_field") {
-            out << indent << "- set " << instr->operands[0] << ", " << instr->operands[1]
-                << std::endl;
-        } else if (instr->name == "add") {
-            out << indent << "- add " << instr->operands[0] << ", " << instr->operands[1] << ", "
-                << instr->operands[2] << std::endl;
-        } else if (instr->name == "add_to_field") {
-            out << indent << "- add " << instr->operands[0] << ", " << instr->operands[0] << ", "
-                << instr->operands[1] << std::endl;
+class MauAsmOutput::EmitAction : public Inspector {
+    const MauAsmOutput  &self;
+    std::ostream        &out;
+    indent_t            indent;
+    const char          *sep = nullptr;
+    bool preorder(const IR::ActionFunction *act) override {
+        out << indent << act->name << ":" << std::endl;
+        if (act->action.empty()) {
+            /* a noop */
+            out << indent << "- 0" << std::endl; }
+        return true; }
+    bool preorder(const IR::MAU::Instruction *inst) override {
+        out << indent << "- " << inst->name;
+        sep = " ";
+        return true; }
+    bool preorder(const IR::FieldRef *fr) override {
+        assert(sep);
+        out << sep << canon_name(self.phv.field(fr)->name);
+        sep = ", ";
+        return false; }
+    bool preorder(const IR::Constant *c) override {
+        assert(sep);
+        out << sep << *c;
+        sep = ", ";
+        return false; }
+    void postorder(const IR::MAU::Instruction *) override {
+        sep = nullptr;
+        out << std::endl; }
+    bool preorder(const IR::Expression *exp) override {
+        if (sep) {
+            out << sep << "/* " << *exp << " */";
+            sep = ", ";
         } else {
-            warning("Unhandled instruction primitive %s", instr->name); } }
-    if (act->action.empty()) {
-        /* a noop */
-        out << indent << "- 0" << std::endl; }
-}
+            out << indent << "# " << *exp << std::endl; }
+        return false; }
+ public:
+    EmitAction(const MauAsmOutput &s, std::ostream &o, indent_t i) : self(s), out(o), indent(i) {}
+};
 
 void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) const {
     /* FIXME -- some of this should be method(s) in IR::MAU::Table? */
@@ -168,7 +187,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
     if (!tbl->actions.empty()) {
         out << indent++ << "actions:" << std::endl;
         for (auto act : tbl->actions)
-            emit_action(out, indent, act);
+            act->apply(EmitAction(*this, out, indent));
         --indent; }
 }
 

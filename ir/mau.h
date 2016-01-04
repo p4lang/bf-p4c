@@ -2,7 +2,6 @@
 #define _TOFINO_IR_MAU_H_
 
 #include "lib/ltbitmatrix.h"
-#include "ir/ir.h"
 
 struct TableResourceAlloc;
 
@@ -141,11 +140,27 @@ class MAU_TableSeq : public Node {
     const MAU_Table *front() const { return tables.empty() ? nullptr : tables.front(); }
 };
 
+class MAU_Instruction : public Primitive {
+    /* A single MAU instruction.  For the most part instructions look exactly like Primitives,
+     * just with more constraints applied.  For example, an "add" instruction has the same
+     * destination and two sources as an "add" primitive, with the additional constraints that
+     * the dest and first source are PHV while second source can be PHV, action bus, or constant.
+     * We convert the primitive into an instruction when we check those constraints
+     * TODO(cdodd) -- stateful ALU has its own disctinct instruction set -- should use a different
+     * class for those or reuse this? */
+public:
+    using Primitive::Primitive;
+    MAU_Instruction(const Primitive &p) : Primitive(p) {}
+    IRNODE_SUBCLASS(MAU_Instruction)
+    bool isOutput(int operand_index) const { return operand_index == 0; }
+};
+
 namespace MAU {
 using Table = MAU_Table;
 using TableSeq = MAU_TableSeq;
 using TernaryIndirect = MAU_TernaryIndirect;
 using ActionData = MAU_ActionData;
+using Instruction = MAU_Instruction;
 }  // end namespace MAU
 
 }  // end namespace IR
