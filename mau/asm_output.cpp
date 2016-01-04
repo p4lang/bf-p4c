@@ -105,6 +105,7 @@ class MauAsmOutput::EmitAction : public Inspector {
         } else {
             out << indent << "# " << *exp << std::endl; }
         return false; }
+
  public:
     EmitAction(const MauAsmOutput &s, std::ostream &o, indent_t i) : self(s), out(o), indent(i) {}
 };

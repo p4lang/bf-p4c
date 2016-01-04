@@ -6,7 +6,6 @@ struct FieldsReferenced : public Inspector {
     PhvInfo                     &phv;
     set<PhvInfo::Info *>        fields;
     bool preorder(const IR::FieldRef *f) { fields.insert(phv.field(f)); return false; }
-    // bool preorder(const IR::HeaderStackItemRef *f) { fields.insert(f->toString()); return false; }
     FieldsReferenced(PhvInfo &p, const IR::Expression *e) : phv(p) { e->apply(*this); }
 };
 }  // end anon namespace

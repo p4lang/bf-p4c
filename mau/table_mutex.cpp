@@ -10,7 +10,8 @@ void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
         if (!n.second) continue;
         bitvec succ;
         for (auto t : n.second->tables)
-            table_succ[tbl] |= succ |= table_succ[t];
+            succ |= table_succ[t];
+        table_succ[tbl] |= succ;
         /* find tables reachable via two or more next chains */
         for (auto &set : sets)
             common |= (set & succ);
