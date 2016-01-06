@@ -148,9 +148,9 @@ class MAU_Instruction : public Primitive {
      * We convert the primitive into an instruction when we check those constraints
      * TODO(cdodd) -- stateful ALU has its own disctinct instruction set -- should use a different
      * class for those or reuse this? */
-public:
+ public:
     using Primitive::Primitive;
-    MAU_Instruction(const Primitive &p) : Primitive(p) {}
+    explicit MAU_Instruction(const Primitive &p) : Primitive(p) {}
     IRNODE_SUBCLASS(MAU_Instruction)
     bool isOutput(int operand_index) const { return operand_index == 0; }
 };

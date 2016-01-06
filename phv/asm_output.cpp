@@ -16,7 +16,7 @@ static void emit_phv_field(std::ostream &out, gress_t thread, const PhvInfo::Inf
         if (alloc.field_bit > 0 || alloc.width != field.size)
             out << '.' << alloc.field_bit << '-' << (alloc.field_bit+alloc.width-1);
         out << ": " << alloc.container;
-        if (alloc.container_bit > 0 || alloc.container.size() != alloc.width) {
+        if (alloc.container_bit > 0 || alloc.container.size() != static_cast<size_t>(alloc.width)) {
             out << '(' << alloc.container_bit;
             if (alloc.width > 1)
                 out << ".." << (alloc.container_bit + alloc.width - 1);

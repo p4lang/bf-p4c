@@ -20,12 +20,15 @@ class ORToolsAllocator {
                                HeaderByteVars *hb_vars2);
 
   HeaderVars *header_vars(const cstring &header_name) {
-    if (header_vars_.find(header_name) == header_vars_.end()) return nullptr;
-    else return header_vars_.at(header_name).get();
+    if (header_vars_.find(header_name) == header_vars_.end())
+        return nullptr;
+    else
+        return header_vars_.at(header_name).get();
   }
   Inspector *parde_inspector() { return parde_inspector_.get(); }
   Inspector *mau_inspector() { return mau_inspector_.get(); }
   operations_research::Solver *solver() { return &solver_; }
+
  private:
   operations_research::Solver solver_;
   std::map<cstring, std::unique_ptr<HeaderVars>> header_vars_;

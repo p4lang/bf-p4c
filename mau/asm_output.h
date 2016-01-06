@@ -26,8 +26,8 @@ class MauAsmOutput : public MauInspector {
     class EmitAction;
     class EmitAttached;
 
-public:
-    MauAsmOutput(const PhvInfo &p) : phv(p) {}
+ public:
+    explicit MauAsmOutput(const PhvInfo &p) : phv(p) {}
 };
 
 // vector<T> output template defined in log.h
