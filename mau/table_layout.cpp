@@ -10,19 +10,19 @@ static void setup_match_layout(IR::MAU::Table::Layout &layout, const IR::Table *
     if (tbl->reads) {
         for (auto r : *tbl->reads) {
             if (auto mask = dynamic_cast<const IR::BAnd *>(r)) {
-                auto fval = dynamic_cast<const IR::FieldRef *>(mask->operands[0]);
-                auto mval = dynamic_cast<const IR::Constant *>(mask->operands[1]);
+                auto fval = dynamic_cast<const IR::FieldRef *>(mask->left);
+                auto mval = dynamic_cast<const IR::Constant *>(mask->right);
                 layout.match_width_bits += bitcount(mval->value);
                 if (!layout.ternary)
-                    layout.ixbar_bytes += (fval->type->width_bits() + 7)/8;
+                    layout.ixbar_bytes += (fval->type->to<IR::IType_WithSize>()->width_bits() + 7)/8;
             } else if (auto prim = dynamic_cast<const IR::Primitive *>(r)) {
                 if (prim->name != "valid")
                     throw Util::CompilerBug("unexpected reads expression %s", r);
                 layout.match_width_bits += 1;
             } else if (dynamic_cast<const IR::FieldRef *>(r)) {
-                layout.match_width_bits += r->type->width_bits();
+                layout.match_width_bits += r->type->to<IR::IType_WithSize>()->width_bits();
                 if (!layout.ternary)
-                    layout.ixbar_bytes += (r->type->width_bits() + 7)/8;
+                    layout.ixbar_bytes += (r->type->to<IR::IType_WithSize>()->width_bits() + 7)/8;
             } else {
                 throw Util::CompilerBug("unexpected reads expression %s", r); } } }
     layout.overhead_bits = ceil_log2(tbl->actions.size());
@@ -35,7 +35,7 @@ class GatewayLayout : public MauInspector {
         cstring name = f->toString();
         if (!added.count(name)) {
             added.insert(name);
-            layout.ixbar_bytes += (f->type->width_bits() + 7)/8; }
+            layout.ixbar_bytes += (f->type->to<IR::IType_WithSize>()->width_bits() + 7)/8; }
         return false; }
 
  public:
@@ -55,7 +55,7 @@ static void setup_action_layout(IR::MAU::Table *tbl) {
     for (auto action : tbl->actions) {
         int action_data_bytes = 0;
         for (auto arg : action->args)
-            action_data_bytes += (arg->type->width_bits() + 7) / 8U;
+            action_data_bytes += (arg->type->to<IR::IType_WithSize>()->width_bits() + 7) / 8U;
         if (action_data_bytes > tbl->layout.action_data_bytes)
             tbl->layout.action_data_bytes = action_data_bytes; }
 }

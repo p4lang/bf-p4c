@@ -9,13 +9,13 @@ ModifyFieldSplitter::preorder(IR::Primitive *primitive) {
   // Operate on src and dst of the same width
   if (primitive->name == "modify_field" &&
       (primitive->operands.size() != 3 ||
-       primitive->operands[0]->type->width_bits() > 8 ||
-       primitive->operands[0]->type->width_bits() !=
-       primitive->operands[1]->type->width_bits())) {
+       primitive->operands[0]->type->to<IR::IType_WithSize>()->width_bits() > 8 ||
+       primitive->operands[0]->type->to<IR::IType_WithSize>()->width_bits() !=
+       primitive->operands[1]->type->to<IR::IType_WithSize>()->width_bits())) {
     auto rv = new IR::Vector<IR::Primitive>;
     int offset = 0;
-    int width = std::min(primitive->operands[0]->type->width_bits(),
-                         primitive->operands[1]->type->width_bits());
+    int width = std::min(primitive->operands[0]->type->to<IR::IType_WithSize>()->width_bits(),
+                         primitive->operands[1]->type->to<IR::IType_WithSize>()->width_bits());
     IR::Constant mask = IR::Constant::GetMask(width);
     if (primitive->operands.size() == 3) {
       mask.value =

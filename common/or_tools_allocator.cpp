@@ -446,10 +446,10 @@ class MauConstraintsInspector : public MauInspector {
         p->name == "bit_or" || p->name == "bit_xor") {
       auto first_operand_iter = operands_.begin();
       CHECK(operands_.end() != first_operand_iter) <<
-        "No operands for modify_field\n";
+              " No operands for " << p->name << std::endl;
       auto first_op = *first_operand_iter;
       auto h_vars1 = allocator_.header_vars(first_op->base->toString());
-      auto width_bits = first_op->type->width_bits();
+      auto width_bits = first_op->type->to<IR::IType_WithSize>()->width_bits();
       for (auto op = std::next(first_operand_iter); op != operands_.end();
            ++op) {
         auto h_vars2 = allocator_.header_vars((*op)->base->toString());
@@ -474,7 +474,7 @@ class MauConstraintsInspector : public MauInspector {
         auto h_vars = allocator_.header_vars(op->base->toString());
         if (nullptr != h_vars) {
           h_vars->AddAdditionConstraint(*allocator_.solver(), op->offset_bits(),
-                                        op->type->width_bits());
+                                        op->type->to<IR::IType_WithSize>()->width_bits());
         }
       }
     }
@@ -506,7 +506,7 @@ ORToolsAllocator::AddParserConstraints(const IR::HeaderRef *header_ref,
     header_vars_.emplace(
       header_name, std::unique_ptr<HeaderVars>(
                      new HeaderVars(solver_, header_name, gress,
-                                    header_ref->type->width_bits())));
+                                    header_ref->type->to<IR::IType_WithSize>()->width_bits())));
     header_vars_.at(header_name)->AddParserConstraints(solver_);
     // FIXME: Assuming that all parsed headers are deparsed. This is not true
     // (esp for bridged metadata). Fix this when deparser IR is ready.

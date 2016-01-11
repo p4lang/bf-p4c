@@ -11,7 +11,7 @@ void PhvInfo::add(cstring name, const IR::Type *type, bool meta) {
     auto *info = &all_fields[name];
     info->name = name;
     info->id = by_id.size();
-    info->size = type->width_bits();
+    info->size = type->to<IR::IType_WithSize>()->width_bits();
     info->metadata = meta;
     by_id.push_back(info);
 }

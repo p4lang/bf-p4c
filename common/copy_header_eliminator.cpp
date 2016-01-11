@@ -11,7 +11,7 @@ CopyHeaderEliminator::preorder(IR::Primitive *primitive) {
     assert(dst_hdr_ref->type == src_hdr_ref->type);
     // TODO: Use modify_field to copy POVRef too.
     auto rv = new IR::Vector<IR::Primitive>;
-    for (int i = 0; i < dst_hdr_ref->type->width_bits(); i+=8) {
+    for (int i = 0; i < dst_hdr_ref->type->to<IR::IType_WithSize>()->width_bits(); i+=8) {
       rv->push_back(
         new IR::Primitive(primitive->srcInfo, "modify_field",
                           new IR::FragmentRef(dst_hdr_ref->srcInfo,

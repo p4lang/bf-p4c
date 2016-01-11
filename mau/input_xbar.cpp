@@ -83,7 +83,7 @@ bool IXBar::allocTable(bool ternary, const IR::Table *tbl, Use &alloc) {
     for (auto r : *tbl->reads) {
         auto field = dynamic_cast<const IR::FieldRef *>(r);
         if (auto mask = dynamic_cast<const IR::BAnd *>(r)) {
-            field = dynamic_cast<const IR::FieldRef *>(mask->operands[0]);
+            field = dynamic_cast<const IR::FieldRef *>(mask->left);
         } else if (auto prim = dynamic_cast<const IR::Primitive *>(r)) {
             if (prim->name != "valid")
                 throw Util::CompilerBug("unexpected reads expression %s", r);
@@ -95,7 +95,7 @@ bool IXBar::allocTable(bool ternary, const IR::Table *tbl, Use &alloc) {
         if (fields_needed.count(fname))
             throw Util::CompilationError("field %s read twice by table %s", fname, tbl->name);
         fields_needed.insert(fname);
-        int size = (field->type->width_bits() + 7)/8U;
+        int size = (field->type->to<IR::IType_WithSize>()->width_bits() + 7)/8U;
         for (int i = 0; i < size; i++)
             alloc.use.emplace_back(fname, i); }
     LOG1("need " << alloc.use.size() << " bytes for table " << tbl->name);
