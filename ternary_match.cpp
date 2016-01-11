@@ -48,7 +48,7 @@ TernaryMatchTable::Match::Match(const value_t &v) {
                     error(kv.value.lineno, "Invalid byte group config %s", value_desc(kv.value));
                 else byte_config = kv.value.i;
             } else if (kv.key == "dirtcam") {
-                if (kv.value.type != tINT || kv.value.i < 0 || kv.value.i > 0x3ff)
+                if (kv.value.type != tINT || kv.value.i < 0 || kv.value.i > 0xfff)
                     error(kv.value.lineno, "Invalid dirtcam mode %s", value_desc(kv.value));
                 else dirtcam = kv.value.i;
             } else
@@ -227,8 +227,6 @@ void TernaryMatchTable::write_regs() {
         auto vpn = row.vpns.begin();
         for (auto col : row.cols) {
             auto &tcam_mode = stage->regs.tcams.col[col].tcam_mode[row.row];
-            /* TODO -- always setting dirtcam mode to 0 */
-            tcam_mode.tcam_data_dirtcam_mode = 0;
             tcam_mode.tcam_data1_select = row.bus;
             tcam_mode.tcam_chain_out_enable = (chain_rows >> row.row) & 1;
             if (gress == INGRESS)
@@ -239,7 +237,8 @@ void TernaryMatchTable::write_regs() {
                 ((~chain_rows | ALWAYS_ENABLE_ROW) >> row.row) & 1;
             tcam_mode.tcam_vpn = *vpn++;
             tcam_mode.tcam_logical_table = logical_id;
-            tcam_mode.tcam_data_dirtcam_mode = match[word].dirtcam;
+            tcam_mode.tcam_data_dirtcam_mode = match[word].dirtcam & 0x3ff;
+            tcam_mode.tcam_vbit_dirtcam_mode = match[word].dirtcam >> 10;
             /* TODO -- always disable tcam_validbit_xbar? */
             auto &tcam_vh_xbar = stage->regs.tcams.vh_data_xbar;
             if (options.match_compiler) {
@@ -322,6 +321,7 @@ void TernaryMatchTable::write_regs() {
     if (actions) actions->write_regs(this);
     if (gateway) gateway->write_regs();
     if (idletime) idletime->write_regs();
+    merge.exact_match_logical_result_delay |= 1 << logical_id;
     stage->regs.cfg_regs.mau_cfg_movereg_tcam_only |= 1U << logical_id;
 }
 

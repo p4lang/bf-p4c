@@ -1,6 +1,7 @@
 #include "hashexpr.h"
 #include "input_xbar.h"
 #include "log.h"
+#include "misc.h"
 #include "stage.h"
 #include "range.h"
 #include <stdlib.h>
@@ -449,8 +450,7 @@ void InputXbar::write_regs() {
                 if ((i ^ phv_byte) & swizzle_mask)
                     LOG1("FIXME -- need swizzle for " << input.what); }
             auto &power_ctl = table->stage->regs.dp.match_input_xbar_din_power_ctl;
-            int phv = input.what->reg.index;
-            power_ctl[phv/112U][phv%112U/8U] |= 1 << phv%8U; } }
+            set_power_ctl_reg(power_ctl, input.what->reg.index); } }
     auto &hash = table->stage->regs.dp.xbar_hash.hash;
     for (auto &ht : hash_tables) {
         if (ht.second.empty()) continue;

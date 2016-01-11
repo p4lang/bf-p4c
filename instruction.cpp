@@ -48,8 +48,8 @@ private:
     private:
 	virtual Const *clone() { return new Const(*this); }
         int bits(int group) {
-            if (value >= -16 || value < 16)
-                return value+48;
+            if (value >= -8 || value < 8)
+                return value+24;
             error(lineno, "constant value %ld out of range for immediate", value);
             return -1; }
         virtual void dbprint(std::ostream &out) const { out << value; }
@@ -105,15 +105,15 @@ private:
                 return -1; }
             int byte_value = byte;
             int size = group_size[group]/8U;
-            if (size == 2) byte -= 40;
-            if (byte < 0 || byte > 40*size)
+            if (size == 2) byte -= 32;
+            if (byte < 0 || byte > 32*size)
                 error(lineno, "action bus entry %d(%s) out of range for %d-bit access",
                       byte_value, name.c_str(), size*8);
             //else if (byte % size != 0) 
             //    error(lineno, "action bus entry %d(%s) misaligned for %d-bit access",
             //          byte_value, name.c_str(), size*8);
             else
-                return 0x40 + byte/size;
+                return 0x20 + byte/size;
             return -1; }
         virtual void mark_use(Table *tbl) {
             if (field) field->flags |= Table::Format::Field::USED_IMMED; }
@@ -236,7 +236,7 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
         ref = new Action(lineno, name, tbl, 0, lo >= 0 ? lo : 0,
                          hi >= 0 ? hi : len - 1);
     } else if (!::Phv::get(tbl->gress, name) && sscanf(name.c_str(), "A%d%n", &slot, &len) >= 1 &&
-               len == (int)name.size() && slot >= 0 && slot < 40)
+               len == (int)name.size() && slot >= 0 && slot < 32)
         ref = new RawAction(lineno, slot, lo >= 0 ? lo : 0);
     else
         ref = new Phv(lineno, tbl->gress, name, lo, hi);
@@ -316,7 +316,7 @@ void AluOP::pass1(Table *tbl) {
         error(lineno, "src2 must be phv register");
 }
 int AluOP::encode() {
-    return (opc->opcode << 11) | (src1.bits(slot/16) << 4) | src2.bits(slot/16);
+    return (opc->opcode << 10) | (src1.bits(slot/16) << 4) | src2.bits(slot/16);
 }
 bool AluOP::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<AluOP *>(a_)) {
@@ -368,7 +368,7 @@ void Set::pass1(Table *tbl) {
     src.mark_use(tbl);
 }
 int Set::encode() {
-    return (opA.opcode << 11) | (src.bits(slot/16) << 4) | (slot & 0xf);
+    return (opA.opcode << 10) | (src.bits(slot/16) << 4) | (slot & 0xf);
 }
 bool Set::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<Set *>(a_)) {
@@ -419,7 +419,7 @@ void LoadConst::pass1(Table *tbl) {
     tbl->stage->action_set[tbl->gress][slot] = true;
 }
 int LoadConst::encode() {
-    return (src >> 11 << 16) | (0x8 << 11) | (src & 0x7ff);
+    return (src >> 10 << 15) | (0x8 << 10) | (src & 0x3ff);
 }
 bool LoadConst::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<LoadConst *>(a_)) {
@@ -495,7 +495,7 @@ void CondMoveMux::pass1(Table *tbl) {
 int CondMoveMux::encode() {
     /* funny cond test on src2 is to match the compiler output -- if we're not testing
      * src2 validity, what we specify as src2 is irrelevant */
-    return (cond << 16) | (opc->opcode << 11) | (src1.bits(slot/16) << 4) | 
+    return (cond << 15) | (opc->opcode << 10) | (src1.bits(slot/16) << 4) | 
         (cond & 0x40 ? src2.bits(slot/16) : 0);
 }
 bool CondMoveMux::equiv(Instruction *a_) {
@@ -556,20 +556,20 @@ void DepositField::pass1(Table *tbl) {
 }
 int DepositField::encode() {
     unsigned rot = (dest->reg.size - dest->lo + src1.bitoffset(slot/16)) % dest->reg.size;
-    int bits = (1 << 11) | (src1.bits(slot/16) << 4) | src2.bits(slot/16);
-    bits |= dest->hi << 12;
-    bits |= rot << 17;
+    int bits = (1 << 10) | (src1.bits(slot/16) << 4) | src2.bits(slot/16);
+    bits |= dest->hi << 11;
+    bits |= rot << 16;
     switch (Phv::reg(slot).size) {
     case 8:
-        bits |= (dest->lo & 3) << 15;
-        bits |= (dest->lo & ~3) << 18;
+        bits |= (dest->lo & 3) << 14;
+        bits |= (dest->lo & ~3) << 17;
         break;
     case 16:
         bits |= (dest->lo & 1) << 16;
-        bits |= (dest->lo & ~1) << 20;
+        bits |= (dest->lo & ~1) << 19;
         break;
     case 32:
-        bits |= dest->lo << 22;
+        bits |= dest->lo << 21;
         break;
     default:
         assert(0); }
@@ -696,7 +696,7 @@ void ShiftOP::pass1(Table *tbl) {
         error(lineno, "src%s must be phv register", opc->use_src1 ? "2" : "");
 }
 int ShiftOP::encode() {
-    int rv = (shift << 17) | (opc->opcode << 11) | src2.bits(slot/16);
+    int rv = (shift << 16) | (opc->opcode << 10) | src2.bits(slot/16);
     if (opc->use_src1 || options.match_compiler) rv |= src1.bits(slot/16) << 4;
     return rv;
 }

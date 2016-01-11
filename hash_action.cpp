@@ -114,8 +114,8 @@ void HashActionTable::write_regs() {
     MatchTable::write_regs((bus&2) >> 1, this);
     auto &merge = stage->regs.rams.match.merge;
     //merge.exact_match_logical_result_en |= 1 << logical_id;
-    //if (stage->tcam_delay(gress))
-    //    merge.exact_match_logical_result_delay |= 1 << logical_id;
+    if (stage->tcam_delay(gress))
+        merge.exact_match_logical_result_delay |= 1 << logical_id;
     if (actions) actions->write_regs(this);
     if (idletime) idletime->write_regs();
     if (gateway) gateway->write_regs();
