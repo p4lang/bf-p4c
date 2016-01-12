@@ -52,7 +52,7 @@ ModifyFieldSplitter::preorder(IR::Primitive *primitive) {
         assert(nullptr != src_action_arg);
         auto slice = new IR::Slice(src_action_arg->srcInfo,
                                     src_action_arg,
-                                    new IR::Constant(offset + cur_width),
+                                    new IR::Constant(offset + cur_width - 1),
                                     new IR::Constant(offset));
         slice->type = IR::Type_Bits::get(src_action_arg->srcInfo, cur_width);
         src_operand = slice;

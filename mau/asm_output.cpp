@@ -38,7 +38,7 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::U
     out << indent++ << "input_xbar:" << std::endl;
     for (auto &group : sort) {
         const IXBar::Use::Byte *prev = 0;
-        out << indent << "group " << group.first << ": {";
+        out << indent << "group " << group.first << ": { ";
         for (auto &b : group.second) {
             if (prev && prev->field == b.second->field && prev->byte+1 == b.second->byte) {
                 prev = b.second;
@@ -67,7 +67,7 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     } else {
         out << indent << "row: " << row[0] << std::endl;
         if (have_bus) out << indent << "bus: " << bus[0] << std::endl;
-        out << indent << "column:" << mem.row[0].col << std::endl;
+        out << indent << "column: " << mem.row[0].col << std::endl;
     }
 }
 
@@ -81,20 +81,40 @@ class MauAsmOutput::EmitAction : public Inspector {
         if (act->action.empty()) {
             /* a noop */
             out << indent << "- 0" << std::endl; }
-        return true; }
+        visit_children(act, [this, act]() { act->action.visit_children(*this); });
+        return false; }
     bool preorder(const IR::MAU::Instruction *inst) override {
         out << indent << "- " << inst->name;
         sep = " ";
         return true; }
     bool preorder(const IR::FieldRef *fr) override {
+        std::pair<int, int>     bits;
         assert(sep);
-        out << sep << canon_name(self.phv.field(fr)->name);
+        auto f = self.phv.field(fr, &bits);
+        out << sep << canon_name(f->name);
+        if (bits.second || bits.first != f->size-1)
+            out << '(' << bits.second << ".." << bits.first << ')';
         sep = ", ";
         return false; }
     bool preorder(const IR::Constant *c) override {
         assert(sep);
-        out << sep << *c;
+        out << sep << c->asLong();
         sep = ", ";
+        return false; }
+    bool preorder(const IR::ActionArg *a) override {
+        assert(sep);
+        out << sep << *a;
+        sep = ", ";
+        return false; }
+    bool preorder(const IR::Slice *sl) override {
+        assert(sep);
+        visit_children(sl, [this, sl]() {
+            visit(sl->e0);
+            sep = "(";
+            visit(sl->e2);
+            sep = "..";
+            visit(sl->e1);
+            out << ")"; });
         return false; }
     void postorder(const IR::MAU::Instruction *) override {
         sep = nullptr;
@@ -108,7 +128,8 @@ class MauAsmOutput::EmitAction : public Inspector {
         return false; }
 
  public:
-    EmitAction(const MauAsmOutput &s, std::ostream &o, indent_t i) : self(s), out(o), indent(i) {}
+    EmitAction(const MauAsmOutput &s, std::ostream &o, indent_t i) : self(s), out(o), indent(i) {
+        visitDagOnce = false; }
 };
 
 void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) const {

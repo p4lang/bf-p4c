@@ -50,22 +50,28 @@ bool PhvInfo::preorder(const IR::Metadata *h) {
     return false;
 }
 
-const PhvInfo::Info *PhvInfo::field(const IR::FragmentRef *fr) const {
+const PhvInfo::Info *PhvInfo::field(const IR::FragmentRef *fr, std::pair<int, int> *bits) const {
     auto hdr = header(fr->base->toString());
     int offset = fr->offset_bits();
     for (auto idx : Range(hdr->first, hdr->second)) {
         auto *info = field(idx);
-        /* TODO(cdodd) need to return slice info somehow if this fragment ref is a slice */
-        if (offset < info->size) return info;
+        if (offset < info->size) {
+            if (bits) {
+                bits->second = offset;
+                bits->first = offset + fr->type->width_bits() - 1; }
+            return info; }
         offset -= info->size; }
     throw Util::CompilerBug("can't find field at offset %d of %s", fr->offset_bits(),
                             fr->base->toString());
 }
 
-const PhvInfo::Info *PhvInfo::field(const IR::FieldRef *fr) const {
+const PhvInfo::Info *PhvInfo::field(const IR::FieldRef *fr, std::pair<int, int> *bits) const {
     if (auto *frg = dynamic_cast<const IR::FragmentRef *>(fr))
-        return field(frg);
+        return field(frg, bits);
     StringRef name = fr->toString();
+    if (bits) {
+        bits->second = 0;
+        bits->first = fr->type->width_bits(); }
     if (auto *p = name.findstr("::"))
         name = name.after(p+2);
     if (auto *p = name.find('[')) {
