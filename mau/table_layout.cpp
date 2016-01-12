@@ -14,7 +14,7 @@ static void setup_match_layout(IR::MAU::Table::Layout &layout, const IR::Table *
                 auto mval = dynamic_cast<const IR::Constant *>(mask->right);
                 layout.match_width_bits += bitcount(mval->value);
                 if (!layout.ternary)
-                    layout.ixbar_bytes += (fval->type->to<IR::IType_WithSize>()->width_bits() + 7)/8;
+                    layout.ixbar_bytes += (fval->type->to<IR::IType_WithSize>()->width_bits()+7)/8;
             } else if (auto prim = dynamic_cast<const IR::Primitive *>(r)) {
                 if (prim->name != "valid")
                     throw Util::CompilerBug("unexpected reads expression %s", r);
