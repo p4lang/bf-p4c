@@ -2,7 +2,7 @@
 #define _TOFINO_MAU_INPUT_XBAR_H_
 
 #include "lib/alloc.h"
-#include "../ir/tofino.h"
+#include "tofino/ir/tofino.h"
 
 struct IXBar {
     enum {

@@ -1,7 +1,7 @@
 #ifndef _TOFINO_COMMON_EXTRACT_MAUPIPE_H_
 #define _TOFINO_COMMON_EXTRACT_MAUPIPE_H_
 
-#include "../ir/tofino.h"
+#include "tofino/ir/tofino.h"
 
 const IR::Tofino::Pipe *extract_maupipe(const IR::Global *);
 

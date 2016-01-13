@@ -1,7 +1,7 @@
 #ifndef _mau_visitor_h_
 #define _mau_visitor_h_
 
-#include "../ir/tofino.h"
+#include "tofino/ir/tofino.h"
 
 /* MAU-specific visitor subclasses that automatically prune off traversal of non-MAU
  * parts of the tree */

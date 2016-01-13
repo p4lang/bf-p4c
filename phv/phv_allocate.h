@@ -1,7 +1,7 @@
 #ifndef _TOFINO_PHV_PHV_ALLOCATE_H_
 #define _TOFINO_PHV_PHV_ALLOCATE_H_
 
-#include "../ir/tofino.h"
+#include "tofino/ir/tofino.h"
 #include "phv_fields.h"
 #include "lib/bitvec.h"
 

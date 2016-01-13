@@ -1,7 +1,7 @@
 #ifndef _TOFINO_PARDE_EXTRACT_PARSER_H_
 #define _TOFINO_PARDE_EXTRACT_PARSER_H_
 
-#include "../ir/tofino.h"
+#include "tofino/ir/tofino.h"
 #include "ir/visitor.h"
 
 class GetTofinoParser : public Inspector {

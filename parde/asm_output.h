@@ -2,7 +2,7 @@
 #define _TOFINO_PARDE_ASM_OUTPUT_H_
 
 #include <functional>
-#include "../ir/tofino.h"
+#include "tofino/ir/tofino.h"
 #include "tofino/common/asm_output.h"
 
 class ParserAsmOutput : public Inspector {
