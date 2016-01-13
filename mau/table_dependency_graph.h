@@ -11,7 +11,7 @@ struct DependencyGraph {
         int             min_stage = -1, dep_stages = -1;
         map<cstring, depend_t>                  data_dep;
         map<cstring, cstring>                   control_dep;
-        Table(cstring n, gress_t gr) : name(n), gress(gr) {}
+        Table(cstring n, gress_t     gr) : name(n), gress(gr) {}
     };
     struct access_t { set<Table *> read, write; };
     map<cstring, Table>         graph;

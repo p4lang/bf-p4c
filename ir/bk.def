@@ -1,0 +1,241 @@
+#emit
+// Types needed by the back-end IR
+#include "backends/tofino/ir/resources.h"
+#end
+
+class Tofino_Pipe {
+#noconstructor
+#emit
+    struct thread_t {
+        const Tofino_Parser     *parser;
+        const MAU_TableSeq      *mau;
+        const Tofino_Deparser   *deparser;
+        bool operator==(const thread_t &a) const {
+            return parser == a.parser && mau == a.mau && deparser == a.deparser; }
+    } thread[2] = { { nullptr, nullptr, nullptr } };  // INGRESS and EGRESS
+#end
+#apply
+    equality{ return thread[0] == a.thread[0] && thread[1] == a.thread[1]; }
+    visitchildren{
+        if (auto *th = dynamic_cast<ThreadVisitor *>(&v)) {
+            v.visit(thread[th->thread].parser);
+            v.visit(thread[th->thread].mau);
+            v.visit(thread[th->thread].deparser);
+        } else {
+            for (auto &th : thread) {
+                v.visit(th.parser);
+                v.visit(th.mau);
+                v.visit(th.deparser); } } }
+}
+
+// A Tofino logical table (group) -- a gateway and/or match table
+// along with whatever attached tables are run.  The basic scheduling
+// unit for tofino; there are 16 such 'logical' tables available in
+// each stage, which will run simultaneously and have their results
+// predicated by the predicate mask calculated from the next tables
+class MAU_Table {
+    cstring                             name;
+    gress_t                             gress;
+    int                                 logical_id = -1;
+    bool                                gateway_cond = true;
+    Expression                          gateway_expr;
+    ActionFunction                      gateway_payload;
+    Table                               match_table;
+#noconstructor
+#noequality
+#emit
+    vector<const ActionFunction *>      actions;
+    Vector<Attached>                    attached;
+    map<cstring, const MAU_TableSeq *>  next;
+    struct Layout {
+        /* POD type */
+        int             entries = 0;
+        bool            gateway = false, ternary = false;
+        int             ixbar_bytes = 0;
+        int             match_width_bits = 0;
+        int             action_data_bytes = 0;
+        int             action_data_bytes_in_overhead = 0;
+        int             overhead_bits = 0;
+        bool operator==(const Layout &a) const {
+            return memcmp(this, &a, sizeof(Layout)) == 0; }
+        Layout &operator+=(const Layout &a);
+    } layout;
+    const TableResourceAlloc            *resources = nullptr;
+
+    MAU_Table(cstring n, gress_t gr, const Table *t)
+    : name(n), gress(gr), match_table(t) {}
+    MAU_Table(cstring n, gress_t gr, const Expression *gw)
+    : name(n), gress(gr), gateway_expr(gw) {}
+
+    int logical_order() const { return logical_id + gress * 4096; }
+    MAU_Table *clone_rename(const char *ext) const {
+        MAU_Table *rv = clone();
+        rv->name += ext;
+        for (auto &at : rv->attached) at = at->clone_rename(ext);
+        return rv; }
+    bool operator==(const MAU_Table &a) const;
+#end
+    visitchildren{
+        unsigned next_count = 0;
+        v.visit(gateway_expr);
+        auto &gateway_inhibit(v.flow_clone());
+        gateway_inhibit.visit(gateway_payload);
+        v.visit(match_table);
+        auto &clone(v.flow_clone());
+        if (match_table) {
+            for (auto &action : actions) {
+                auto &clone2(clone.flow_clone());
+                clone2.visit(action);
+                if (next.count(action->name)) {
+                    clone2.visit(next.at(action->name));
+                    next_count++; }
+                v.flow_merge(clone2); }
+            if (next.count("default")) {
+                auto &clone2(clone.flow_clone());
+                clone2.visit(next.at("default"));
+                next_count++;
+                v.flow_merge(clone2); }
+            if (next.count("$miss")) {
+                auto &clone2(clone.flow_clone());
+                clone2.visit(next.at("$miss"));
+                next_count++;
+                v.flow_merge(clone2); } }
+        if (gateway_expr) {
+            if (next.count("true")) {
+                if (gateway_cond && match_table)
+                    v.visit(next.at("true"));
+                else
+                    gateway_inhibit.visit(next.at("true"));
+                next_count++; }
+            if (next.count("false")) {
+                if (gateway_cond || !match_table)
+                    gateway_inhibit.visit(next.at("false"));
+                else
+                    v.visit(next.at("false"));
+                next_count++; }
+            v.flow_merge(gateway_inhibit); }
+        if (next_count != next.size())
+            throw Util::CompilerBug("unreachable results in table");
+        attached.visit_children(v);
+    }
+}
+
+class MAU_TernaryIndirect : Attached {
+#noconstructor
+#nodbprint
+#emit
+    explicit MAU_TernaryIndirect(cstring tbl_name) { name = tbl_name + "$tind"; }
+    const char *kind() const { return "indirect"; }
+#end
+}
+
+class MAU_ActionData : Attached {
+#noconstructor
+#nodbprint
+#emit
+    explicit MAU_ActionData(cstring tbl_name) { name = tbl_name + "$action"; }
+    const char *kind() const { return "action"; }
+    bool indexed() const { return true; }
+#end
+}
+
+// a sequence of tables -- may be reordered if deps allow.
+// deps(i,j) is true iff tables[i] is dependent on tables[j]
+// (so must have j < i) */
+class MAU_TableSeq {
+    LTBitMatrix                 deps;
+#emit
+    Vector<MAU_Table>           tables;
+
+    MAU_TableSeq() = default;
+    explicit MAU_TableSeq(const MAU_Table *a) { if (a) tables.push_back(a); }
+    MAU_TableSeq(const MAU_Table *a, const MAU_Table *b) {
+        if (a) tables.push_back(a);
+        if (b) tables.push_back(b); }
+    MAU_TableSeq(const MAU_TableSeq *a, const MAU_Table *b) {
+        if (a) tables.insert(tables.end(), a->tables.begin(), a->tables.end());
+        if (b) tables.push_back(b); }
+    const MAU_Table *front() const { return tables.empty() ? nullptr : tables.front(); }
+#end
+#apply
+    equality{ return tables == a.tables && deps == a.deps; }
+    visitchildren{ tables.visit_children(v); }
+}
+
+// A single MAU instruction.  For the most part instructions look exactly like Primitives,
+// just with more constraints applied.  For example, an "add" instruction has the same
+// destination and two sources as an "add" primitive, with the additional constraints that
+// the dest and first source are PHV while second source can be PHV, action bus, or constant.
+// We convert the primitive into an instruction when we check those constraints
+// TODO(cdodd) -- stateful ALU has its own disctinct instruction set -- should use a different
+// class for those or reuse this?
+class MAU_Instruction : Primitive {
+#noconstructor
+#nodbprint
+#emit
+    using Primitive::Primitive;
+    explicit MAU_Instruction(const Primitive &p) : Primitive(p) {}
+    bool isOutput(int operand_index) const { return operand_index == 0; }
+#end
+}
+
+class Tofino_ParserMatch {
+  match_t                     value;
+  int                         shift;
+  Tofino_ParserState          next;
+  ParserException             except;
+#noconstructor
+#nodbprint
+#emit
+  Vector<Expression>          stmts;
+  Tofino_ParserMatch(uintmax_t v, uintmax_t m, const Vector<Expression> &e)
+  : value(~v&m, v&m), shift(0), next(0), except(0), stmts(e) {}
+#end
+  equality{
+    return value == a.value && shift == a.shift && stmts == a.stmts &&
+           next == a.next && except == a.except; }
+  visitchildren{
+    stmts.visit_children(v);
+    v.visit(next);
+    v.visit(except); }
+}
+
+class Tofino_ParserState {
+  cstring                     name;
+  Parser                      p4state;
+#noconstructor
+#nodbprint
+#emit
+  Vector<Expression>          select;
+  Vector<Tofino_ParserMatch>  match;
+  explicit Tofino_ParserState(const IR::Parser *);
+#end
+  equality{
+    /* we don't compare the p4state, as it's only present for info */
+    return name == a.name && select == a.select && match == a.match; }
+  visitchildren{
+    /* we don't visit the p4state, as it's only present for info */
+    select.visit_children(v);
+    match.visit_children(v); }
+}
+
+class Tofino_Parser {
+  gress_t                       gress;
+  Tofino_ParserState            start;
+#noconstructor
+#emit
+  Tofino_Parser(gress_t gr, const Tofino_ParserState *s) : gress(gr), start(s) {}
+#end
+#apply
+}
+
+class Tofino_Deparser {
+  gress_t               gress;
+  Parser                start;
+#noconstructor
+#emit
+  Tofino_Deparser(gress_t gr, const Tofino_Parser *s)
+  : gress(gr), start(s && s->start ? s->start->p4state : 0) {}
+#end
+#apply
+}

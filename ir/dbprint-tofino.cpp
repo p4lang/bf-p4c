@@ -1,4 +1,4 @@
-#include "ir/ir.h"
+#include "tofino.h"
 #include "ir/dbprint.h"
 #include "lib/hex.h"
 

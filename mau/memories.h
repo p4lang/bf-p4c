@@ -3,7 +3,7 @@
 
 #include <algorithm>
 #include "lib/alloc.h"
-#include "ir/ir.h"
+#include "../ir/tofino.h"
 
 struct Memories {
     /* track memory allocations within a single stage */

@@ -3,6 +3,7 @@
 #include "lib/log.h"
 #include "lib/stringref.h"
 #include "tofino/phv/asm_output.h"
+#include "resource.h"
 
 class MauAsmOutput::EmitAttached : public Inspector {
     friend class MauAsmOutput;

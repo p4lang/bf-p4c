@@ -1,7 +1,7 @@
 #ifndef _parde_visitor_h_
 #define _parde_visitor_h_
 
-#include "ir/ir.h"
+#include "../ir/tofino.h"
 
 class PardeInspector : public Inspector {
     bool preorder(const IR::MAU::Table *) override { return false; }
