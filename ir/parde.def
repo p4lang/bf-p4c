@@ -1,0 +1,61 @@
+
+class Tofino_ParserMatch {
+  match_t                     value;
+  int                         shift;
+  Tofino_ParserState          next;
+  ParserException             except;
+#noconstructor
+#nodbprint
+#emit
+  Vector<Expression>          stmts;
+  Tofino_ParserMatch(uintmax_t v, uintmax_t m, const Vector<Expression> &e)
+  : value(~v&m, v&m), shift(0), next(0), except(0), stmts(e) {}
+#end
+  equality{
+    return value == a.value && shift == a.shift && stmts == a.stmts &&
+           next == a.next && except == a.except; }
+  visitchildren{
+    stmts.visit_children(v);
+    v.visit(next);
+    v.visit(except); }
+}
+
+class Tofino_ParserState {
+  cstring                     name;
+  Parser                      p4state;
+#noconstructor
+#nodbprint
+#emit
+  Vector<Expression>          select;
+  Vector<Tofino_ParserMatch>  match;
+  explicit Tofino_ParserState(const IR::Parser *);
+#end
+  equality{
+    /* we don't compare the p4state, as it's only present for info */
+    return name == a.name && select == a.select && match == a.match; }
+  visitchildren{
+    /* we don't visit the p4state, as it's only present for info */
+    select.visit_children(v);
+    match.visit_children(v); }
+}
+
+class Tofino_Parser {
+  gress_t                       gress;
+  Tofino_ParserState            start;
+#noconstructor
+#emit
+  Tofino_Parser(gress_t gr, const Tofino_ParserState *s) : gress(gr), start(s) {}
+#end
+#apply
+}
+
+class Tofino_Deparser {
+  gress_t               gress;
+  Parser                start;
+#noconstructor
+#emit
+  Tofino_Deparser(gress_t gr, const Tofino_Parser *s)
+  : gress(gr), start(s && s->start ? s->start->p4state : 0) {}
+#end
+#apply
+}
