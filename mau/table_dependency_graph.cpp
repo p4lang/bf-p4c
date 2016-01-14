@@ -106,7 +106,7 @@ void FindDependencyGraph::add_control_dependency(Table *tt, const IR::Node *chil
 bool FindDependencyGraph::preorder(const IR::MAU::TableSeq *) {
     const Context *ctxt = getContext();
     if (ctxt && dynamic_cast<const IR::Tofino::Pipe *>(ctxt->node)) {
-        gress = gress_t(ctxt->child_index);
+        gress = gress_t(ctxt->child_index / 3);
         access.clear(); }
     return true;
 }

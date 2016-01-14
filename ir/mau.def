@@ -12,11 +12,11 @@ class MAU_Table {
     Expression                          gateway_expr;
     ActionFunction                      gateway_payload;
     Table                               match_table;
+    inline Vector<Attached>             attached;
 #noconstructor
 #noequality
 #emit
     vector<const ActionFunction *>      actions;
-    Vector<Attached>                    attached;
     map<cstring, const MAU_TableSeq *>  next;
     struct Layout {
         /* POD type */
@@ -46,7 +46,7 @@ class MAU_Table {
         return rv; }
     bool operator==(const MAU_Table &a) const;
 #end
-    visitchildren{
+    visit_children {
         unsigned next_count = 0;
         v.visit(gateway_expr);
         auto &gateway_inhibit(v.flow_clone());
@@ -114,9 +114,9 @@ class MAU_ActionData : Attached {
 // deps(i,j) is true iff tables[i] is dependent on tables[j]
 // (so must have j < i) */
 class MAU_TableSeq {
+    inline Vector<MAU_Table>    tables;
     LTBitMatrix                 deps;
 #emit
-    Vector<MAU_Table>           tables;
 
     MAU_TableSeq() = default;
     explicit MAU_TableSeq(const MAU_Table *a) { if (a) tables.push_back(a); }
@@ -129,8 +129,6 @@ class MAU_TableSeq {
     const MAU_Table *front() const { return tables.empty() ? nullptr : tables.front(); }
 #end
 #apply
-    equality{ return tables == a.tables && deps == a.deps; }
-    visitchildren{ tables.visit_children(v); }
 }
 
 // A single MAU instruction.  For the most part instructions look exactly like Primitives,
