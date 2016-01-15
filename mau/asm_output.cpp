@@ -110,15 +110,15 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << indent << "- " << inst->name;
         sep = " ";
         return true; }
-    bool preorder(const IR::FieldRef *fr) override {
+    bool preorder(const IR::HeaderSliceRef *hsr) override {
         std::pair<int, int>     bits;
         assert(sep);
-        if (auto f = self.phv.field(fr, &bits)) {
+        if (auto f = self.phv.field(hsr, &bits)) {
             out << sep << canon_name(f->name);
             if (bits.second || bits.first != f->size-1)
                 out << '(' << bits.second << ".." << bits.first << ')';
         } else {
-            out << sep << "/* " << *fr << " */"; }
+            out << sep << "/* " << *hsr << " */"; }
         sep = ", ";
         return false; }
     bool preorder(const IR::Constant *c) override {

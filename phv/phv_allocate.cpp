@@ -36,8 +36,8 @@ class PhvAllocate::Uses : public Inspector {
         if (auto info = phv.field(fr))
             use[in_mau][thread][info->id] = true;
         return false; }
-    bool preorder(const IR::FragmentRef *fr) {
-        if (auto info = phv.field(fr))
+    bool preorder(const IR::HeaderSliceRef *hs) {
+        if (auto info = phv.field(hs))
             use[in_mau][thread][info->id] = true;
         return false; }
 };

@@ -81,9 +81,9 @@ bool IXBar::allocTable(bool ternary, const IR::Table *tbl, Use &alloc) {
     set<cstring>                        fields_needed;
     bool                                rv;
     for (auto r : *tbl->reads) {
-        auto field = dynamic_cast<const IR::FieldRef *>(r);
+        const IR::Expression *field = dynamic_cast<const IR::HeaderSliceRef *>(r);
         if (auto mask = dynamic_cast<const IR::BAnd *>(r)) {
-            field = dynamic_cast<const IR::FieldRef *>(mask->left);
+            field = dynamic_cast<const IR::HeaderSliceRef *>(mask->left);
         } else if (auto prim = dynamic_cast<const IR::Primitive *>(r)) {
             if (prim->name != "valid")
                 throw Util::CompilerBug("unexpected reads expression %s", r);

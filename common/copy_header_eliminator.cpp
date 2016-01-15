@@ -14,10 +14,10 @@ CopyHeaderEliminator::preorder(IR::Primitive *primitive) {
     for (int i = 0; i < dst_hdr_ref->type->width_bits(); i+=8) {
       rv->push_back(
         new IR::Primitive(primitive->srcInfo, "modify_field",
-                          new IR::FragmentRef(dst_hdr_ref->srcInfo,
-                                              dst_hdr_ref, i, 8),
-                          new IR::FragmentRef(src_hdr_ref->srcInfo,
-                                              src_hdr_ref, i, 8)));
+                          new IR::HeaderSliceRef(dst_hdr_ref->srcInfo,
+                                                 dst_hdr_ref, i + 7, i),
+                          new IR::HeaderSliceRef(src_hdr_ref->srcInfo,
+                                                 src_hdr_ref, i + 7, i)));
     }
     return rv;
   }

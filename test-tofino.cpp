@@ -26,9 +26,6 @@
 #include "tofino/phv/create_thread_local_instances.h"
 #include "tofino/phv/header_fragment_creator.h"
 #include "tofino/common/copy_header_eliminator.h"
-#include "tofino/common/modify_field_splitter.h"
-#include "tofino/common/modify_field_eliminator.h"
-#include "tofino/common/or_tools_allocator.h"
 
 class CheckTableNameDuplicate : public MauInspector {
     set<cstring>        names;
@@ -72,16 +69,12 @@ void test_tofino_backend(const IR::Global *program, const CompilerOptions *optio
         std::cout << deps;
     TablesMutuallyExclusive mutex;
     FieldDefUse defuse(phv);
-    ORToolsAllocator or_tools_allocator;
     PassManager backend = {
         new AddMetadataShims,
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),
         new SplitExtractEmit,
         options->phv_alloc ? new HeaderFragmentCreator : 0,
-        options->phv_alloc ? new CopyHeaderEliminator : 0,
-        options->phv_alloc ? new ModifyFieldSplitter : 0,
-        options->phv_alloc ? new ModifyFieldEliminator : 0,
         new SplitGateways,
         new CheckTableNameDuplicate,
         new TableFindSeqDependencies,
@@ -98,13 +91,8 @@ void test_tofino_backend(const IR::Global *program, const CompilerOptions *optio
         &defuse,
         new MauPhvConstraints(phv),
         new PhvAllocate(phv, defuse.conflicts()),
-#if 0
-        options->phv_alloc ? or_tools_allocator.parde_inspector() : 0,
-        options->phv_alloc ? or_tools_allocator.mau_inspector() : 0,
-#endif
     };
     maupipe = maupipe->apply(backend);
-    or_tools_allocator.Solve();
     if (verbose) {
         std::cout << DBPrint::setflag(DBPrint::TableNoActions);
         std::cout << "-------------------------------------------------" << std::endl

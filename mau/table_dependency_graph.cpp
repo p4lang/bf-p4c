@@ -75,6 +75,8 @@ class UpdateAccess : public MauInspector , P4WriteContext {
                 name = f->toString();
             } else if (auto i = dynamic_cast<const IR::HeaderStackItemRef *>(prim->operands[0])) {
                 name = i->toString();
+            } else if (auto i = dynamic_cast<const IR::HeaderSliceRef *>(prim->operands[0])) {
+                name = i->toString();
             } else {
                 error("%s: Destination of %s is not a field", prim->srcInfo, prim->name);
                 return; }

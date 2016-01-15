@@ -51,24 +51,23 @@ bool PhvInfo::preorder(const IR::Metadata *h) {
     return false;
 }
 
-const PhvInfo::Info *PhvInfo::field(const IR::FragmentRef *fr, std::pair<int, int> *bits) const {
-    auto hdr = header(fr->base->toString());
-    int offset = fr->offset_bits();
+const PhvInfo::Info *PhvInfo::field(const IR::HeaderSliceRef *hsr,
+                                    std::pair<int, int> *bits) const {
+    auto hdr = header(hsr->header_ref()->toString());
+    int offset = hsr->offset_bits();
     for (auto idx : Range(hdr->first, hdr->second)) {
         auto *info = field(idx);
         if (offset < info->size) {
             if (bits) {
                 bits->second = offset;
-                bits->first = offset + fr->type->width_bits() - 1; }
+                bits->first = offset + hsr->type->width_bits() - 1; }
             return info; }
         offset -= info->size; }
-    throw Util::CompilerBug("can't find field at offset %d of %s", fr->offset_bits(),
-                            fr->base->toString());
+    throw Util::CompilerBug("can't find field at offset %d of %s",
+                            hsr->offset_bits(), hsr->header_ref()->toString());
 }
 
 const PhvInfo::Info *PhvInfo::field(const IR::FieldRef *fr, std::pair<int, int> *bits) const {
-    if (auto *frg = dynamic_cast<const IR::FragmentRef *>(fr))
-        return field(frg, bits);
     StringRef name = fr->toString();
     if (bits) {
         bits->second = 0;

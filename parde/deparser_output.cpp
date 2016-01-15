@@ -5,9 +5,9 @@ class OutputDictionary : public Inspector {
     indent_t            indent;
     bool preorder(const IR::Primitive *prim) {
         if (prim->name != "emit") return true;
-        auto field = prim->operands[0]->to<IR::FieldRef>();
+        auto field = prim->operands[0]->to<IR::HeaderSliceRef>();
         out << indent << trim_asm_name(field->toString()) << ": "
-            << trim_asm_name(field->base->toString()) << ".$valid" << std::endl;
+            << trim_asm_name(field->header_ref()->toString()) << ".$valid" << std::endl;
         return false; }
 
  public:
