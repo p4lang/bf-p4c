@@ -1,6 +1,11 @@
 #emit
-// Types needed by the back-end IR
-#include "backends/tofino/ir/resources.h"
+enum gress_t { INGRESS, EGRESS };
+inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
+    return out << (gress ? "egress" : "ingress"); }
+#end
+
+#emit_impl
+#include "tofino/ir/thread_visitor.h"
 #end
 
 class Tofino_Pipe {

@@ -1,3 +1,6 @@
+#emit
+struct TableResourceAlloc;
+#end
 
 // A Tofino logical table (group) -- a gateway and/or match table
 // along with whatever attached tables are run.  The basic scheduling

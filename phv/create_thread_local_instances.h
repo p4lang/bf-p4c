@@ -1,6 +1,7 @@
 #ifndef _TOFINO_PHV_CREATE_THREAD_LOCAL_INSTANCES_H_
 #define _TOFINO_PHV_CREATE_THREAD_LOCAL_INSTANCES_H_
 #include "ir/ir.h"
+#include "tofino/ir/thread_visitor.h"
 
 // This Visitor creates a thread-local instance of every metadata and header
 // instance. The name of the new instance is gress-name::instance-name.
