@@ -123,6 +123,16 @@ static value_t list_map_expand(VECTOR(value_t) &v);
 %destructor   { free_pair(&$$); } <pair>
 %destructor   { VECTOR_foreach($$, free_pair); VECTOR_fini($$); } <map>
 
+%printer  { fprintf(yyoutput, "%d", $$); } <i>
+%printer  { fprintf(yyoutput, "0x%lx", $$.data[$$.size-1]);
+            for (int i = $$.size-2; i >= 0; i--)
+                fprintf(yyoutput, "%016lx", $$.data[i]); } <bigi>
+%printer  { if ($$) fprintf(yyoutput, "'%s'", $$); else fprintf(yyoutput, "null"); } <str>
+%printer  { print_match(yyoutput, $$); } <match>
+%printer  { fprintf(yyoutput, "%s", value_desc(&$$)); } <value>
+%printer  { fprintf(yyoutput, "vec of size %d", $$.size); } <vec>
+%printer  { fprintf(yyoutput, "map of size %d", $$.size); } <map>
+
 %%
 
 start: INDENT sections UNINDENT | sections | /* epsilon */;

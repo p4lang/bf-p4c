@@ -14,7 +14,7 @@ void push_back(VECTOR(pair_t) &m, const char *s, value_t &&v) {
     m.push_back(s, std::move(v));
 }
 
-bool get_bool(value_t &v) {
+bool get_bool(const value_t &v) {
     if (v == "true")
         return true;
     else if (v == "false")
@@ -54,12 +54,18 @@ std::ostream &operator<<(std::ostream &out, match_t m) {
     return out;
 }
 
+void print_match(FILE *fp, match_t m) {
+    std::stringstream tmp;
+    tmp << m;
+    fputs(tmp.str().c_str(), fp);
+}
+
 const char *value_type_desc[] = {
     "integer", "bigint", "range", "identifier", "match pattern", "list",
     "key: value pairs", "operation"
 };
 
-const char *value_desc(value_t *p) {
+const char *value_desc(const value_t *p) {
     static char buffer[32];
     switch(p->type) {
     case tINT: sprintf(buffer, "%d", p->i); return buffer;

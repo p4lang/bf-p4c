@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sstream>
 #include "vector.h"
 
 enum gress_t { INGRESS, EGRESS };
@@ -76,11 +77,11 @@ struct pair_t {
 };
 
 void free_value(value_t *p);
-const char *value_desc(value_t *v);
+const char *value_desc(const value_t *v);
 static inline void free_pair(pair_t *p) {
     free_value(&p->key);
     free_value(&p->value); }
-bool get_bool(value_t &v);
+bool get_bool(const value_t &v);
 
 #ifdef __cplusplus
 bool operator==(const struct value_t &, const struct value_t &);
@@ -171,6 +172,7 @@ inline const value_t *get(const VECTOR(pair_t) &map, const char *key) {
 #include "bitops.h"
 
 std::ostream &operator<<(std::ostream &out, match_t m);
+void print_match(FILE *fp, match_t m);
 
 inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
     switch (gress) {
