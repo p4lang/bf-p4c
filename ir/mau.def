@@ -104,12 +104,13 @@ class MAU_TernaryIndirect : Attached {
 }
 
 class MAU_ActionData : Attached {
+    bool        direct = true;
 #noconstructor
 #nodbprint
 #emit
     explicit MAU_ActionData(cstring tbl_name) { name = tbl_name + "$action"; }
     const char *kind() const { return "action"; }
-    bool indexed() const { return true; }
+    bool indexed() const { return !direct; }
 #end
 }
 

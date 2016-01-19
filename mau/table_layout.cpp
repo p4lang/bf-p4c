@@ -1,5 +1,6 @@
 #include "table_layout.h"
 #include "lib/bitops.h"
+#include "lib/log.h"
 
 static void setup_match_layout(IR::MAU::Table::Layout &layout, const IR::Table *tbl) {
     for (auto t : tbl->reads_types)
@@ -95,6 +96,7 @@ class VisitAttached : public Inspector {
 }  // namespace
 
 bool TableLayout::preorder(IR::MAU::Table *tbl) {
+    LOG1("## layout table " << tbl->name);
     tbl->layout.ixbar_bytes = tbl->layout.match_width_bits =
     tbl->layout.action_data_bytes = tbl->layout.overhead_bits = 0;
     if (tbl->match_table)
@@ -106,14 +108,17 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     for (auto at : tbl->attached)
         at->apply(attached);
     if (tbl->layout.action_data_bytes > 4 && !attached.have_action_data) {
+        LOG2("  adding action data table");
         auto *act_data = new IR::MAU::ActionData(tbl->name);
         tbl->attached.push_back(act_data);
         act_data->apply(attached); }
     if (!attached.have_action_data) {
+        LOG2("  putting " << tbl->layout.action_data_bytes << " bytes of action data in overhead");
         tbl->layout.action_data_bytes_in_overhead = tbl->layout.action_data_bytes;
         tbl->layout.overhead_bits += 8 * tbl->layout.action_data_bytes_in_overhead; }
     if (tbl->layout.ternary) {
         if (tbl->layout.overhead_bits > 1 && !attached.have_ternary_indirect) {
+            LOG2("  adding ternary indirect table");
             auto *tern_indir = new IR::MAU::TernaryIndirect(tbl->name);
             tbl->attached.push_back(tern_indir);
             tern_indir->apply(attached);

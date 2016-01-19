@@ -1,4 +1,5 @@
 #include "asm_output.h"
+#include "lib/bitops.h"
 #include "lib/indent.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
@@ -51,6 +52,27 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::U
         out << " }" << std::endl; }
 }
 
+class memory_vector {
+    const vector<int>           &vec;
+    Memories::Use::type_t       type;
+    friend std::ostream &operator<<(std::ostream &, const memory_vector &);
+ public:
+    memory_vector(const vector<int> &v, Memories::Use::type_t t) : vec(v), type(t) {}
+};
+
+std::ostream &operator<<(std::ostream &out, const memory_vector &v) {
+    if (v.vec.size() > 1) out << "[ ";
+    const char *sep = "";
+    int col_adjust = v.type == Memories::Use::TERNARY ? 0 : 2;
+    bool logical = v.type >= Memories::Use::TWOPORT;
+    int col_mod = logical ? 6 : 12;
+    for (auto c : v.vec) {
+        out << sep << (c + col_adjust) % col_mod;
+        sep = ", "; }
+    if (v.vec.size() > 1) out << " ]";
+    return out;
+}
+
 void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memories::Use &mem) const {
     vector<int> row, bus;
     bool have_bus = true;
@@ -63,11 +85,11 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
         if (have_bus) out << indent << "bus: " << bus << std::endl;
         out << indent << "column:" << std::endl;
         for (auto &r : mem.row)
-            out << indent << "- " << r.col << std::endl;
+            out << indent << "- " << memory_vector(r.col, mem.type) << std::endl;
     } else {
         out << indent << "row: " << row[0] << std::endl;
         if (have_bus) out << indent << "bus: " << bus[0] << std::endl;
-        out << indent << "column: " << mem.row[0].col << std::endl;
+        out << indent << "column: " << memory_vector(mem.row[0].col, mem.type) << std::endl;
     }
 }
 
@@ -155,14 +177,20 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         emit_ixbar(out, gw_indent, tbl->resources->gateway_ixbar);
     }
 
-    /* FIXME -- this is a mees and needs to be rewritten to be sane */
+    /* FIXME -- this is a mess and needs to be rewritten to be sane */
     bool have_action = false, have_indirect = false;
     for (auto at : tbl->attached) {
         if (dynamic_cast<const IR::MAU::TernaryIndirect *>(at)) {
             have_indirect = true;
             out << indent << at->kind() << ": " << at->name << std::endl;
+        } else if (dynamic_cast<const IR::ActionProfile *>(at)) {
+            have_action = true;
         } else if (dynamic_cast<const IR::MAU::ActionData *>(at)) {
+            assert(tbl->layout.action_data_bytes > tbl->layout.action_data_bytes_in_overhead);
             have_action = true; } }
+    assert(have_indirect == (tbl->layout.ternary && (tbl->layout.overhead_bits > 1)));
+    assert(have_action || (tbl->layout.action_data_bytes <=
+                           tbl->layout.action_data_bytes_in_overhead));
 
     vector<const IR::MAU::Table *>      next_hit;
     const IR::MAU::Table                *next_miss = 0;
@@ -203,6 +231,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
 void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
                                     const IR::MAU::Table *tbl) const {
     for (auto at : tbl->attached) {
+        if (at->is<IR::MAU::TernaryIndirect>()) continue;
         out << indent << at->kind() << ": " << at->name;
         if (at->indexed())
             out << '(' << at->kind() << ')';
@@ -223,6 +252,22 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionSelector *) {
 bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     indent_t    indent(1);
     out << indent++ << "ternary_indirect " << ti->name << ':' << std::endl;
+    self.emit_memory(out, indent, tbl->resources->memuse.at(ti->name));
+    out << indent << "format: { action: " << ceil_log2(tbl->actions.size());
+    for (auto act : tbl->actions) {
+        int bytes = 0;
+        for (auto arg : act->args) {
+            int sz = (arg->type->width_bits() + 7) / 8U;
+            if (bytes + sz <= tbl->layout.action_data_bytes_in_overhead) {
+                out << ", " << arg->name << ": " << (sz * 8);
+                bytes += sz;
+            } else {
+                /* putting data into overhead is currently all or nothing */
+                assert(tbl->layout.action_data_bytes_in_overhead == 0); } }
+            /* TODO -- if different actions have different incompatible data vals
+             * put in the overhead, need to recoincile them */
+            if (bytes > 0) break; }
+    out << " }" << std::endl;
     self.emit_table_indir(out, indent, tbl);
     return false; }
 bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *) {

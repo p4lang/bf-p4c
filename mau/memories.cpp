@@ -1,3 +1,4 @@
+#include "lib/bitops.h"
 #include "memories.h"
 #include "resource_estimate.h"
 
@@ -104,6 +105,15 @@ class AllocAttached : public Inspector {
         return false; }
     bool preorder(const IR::MAU::TernaryIndirect *ti) override {
         assert(!alloc.count(ti->name));
+        int sz = ceil_log2(tbl->layout.overhead_bits);
+        if (sz < 3) sz = 3;  // min 8 bits
+        if (sz > 8)
+            throw new Util::CompilationError("%1%: more than 64 bits of overhead for ternary "
+                                             "table", tbl->match_table); 
+        alloc[ti->name].type = Memories::Use::TIND;
+        if (!mem.allocRams(ti->name, 1, ((entries - 1) >> (19 - sz)) + 1, mem.sram_use,
+                           &mem.tind_bus, alloc[ti->name]))
+            ok = false;
         return false; }
     bool preorder(const IR::MAU::ActionData *ad) override {
         assert(!alloc.count(ad->name));
@@ -244,4 +254,8 @@ std::ostream &operator<<(std::ostream &out, const Memories &mem) {
     for (auto &tbl : tables)
         out << "   " << tbl.second << " " << tbl.first << std::endl;
     return out;
+}
+
+void pMemories(const Memories *mem) {
+    std::cout << *mem;
 }

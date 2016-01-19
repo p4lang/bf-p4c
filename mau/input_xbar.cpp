@@ -175,3 +175,7 @@ std::ostream &operator<<(std::ostream &out, const IXBar &ixbar) {
         out << "   " << f.second << " " << f.first << std::endl;
     return out;
 }
+
+void pIXBar(const IXBar *ixbar) {
+    std::cout << *ixbar;
+}
