@@ -34,23 +34,23 @@ void ActionTable::apply_to_field(const std::string &n, std::function<void(Format
     if (format)
         format->apply_to_field(n, fn);
 }
-int ActionTable::find_on_actionbus(Table::Format::Field *f, int off) {
+int ActionTable::find_on_actionbus(Table::Format::Field *f, int off, int size) {
     int rv;
-    if (action_bus && (rv = action_bus->find(f, off)) >= 0)
+    if (action_bus && (rv = action_bus->find(f, off, size)) >= 0)
         return rv;
     for (auto *match_table : match_tables) {
         assert((Table *)match_table != (Table *)this);
-        if ((rv = match_table->find_on_actionbus(f, off)) >= 0)
+        if ((rv = match_table->find_on_actionbus(f, off, size)) >= 0)
             return rv; }
     return -1;
 }
-int ActionTable::find_on_actionbus(const char *name, int off, int *len) {
+int ActionTable::find_on_actionbus(const char *name, int off, int size, int *len) {
     int rv;
-    if (action_bus && (rv = action_bus->find(name, off, len)) >= 0)
+    if (action_bus && (rv = action_bus->find(name, off, size, len)) >= 0)
         return rv;
     for (auto *match_table : match_tables) {
         assert((Table *)match_table != (Table *)this);
-        if ((rv = match_table->find_on_actionbus(name, off, len)) >= 0)
+        if ((rv = match_table->find_on_actionbus(name, off, size, len)) >= 0)
             return rv; }
     return -1;
 }
@@ -162,8 +162,8 @@ void ActionTable::pass2() {
     LOG1("### Action table " << name() << " pass2");
     if (match_tables.empty())
         error(lineno, "No match table for action table %s", name());
-    action_bus->pass2(this);
     if (actions) actions->pass2(this);
+    action_bus->pass2(this);
 }
 
 static void flow_selector_addr(Stage *stage, int from, int to) {

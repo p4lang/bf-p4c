@@ -576,7 +576,7 @@ void Table::Format::setup_immed(Table *tbl) {
     int byte[4] = { -1, -1, -1, -1 };
     bool err = false;
     for (auto &f : fmt[0]) {
-        int byte_slot = tbl->find_on_actionbus(&f.second, 0);
+        int byte_slot = tbl->find_on_actionbus(&f.second, 0, 7);
         if (byte_slot < 0) continue;
         int slot = Stage::action_bus_slot_map[byte_slot];
         unsigned off = f.second.bits[0].lo - immed->bits[0].lo;
@@ -654,8 +654,8 @@ void Table::Actions::pass1(Table *tbl) {
 		warning(old->lineno, "also defined here"); }
             tbl->stage->imem_addr_use[tbl->gress][act.addr] = &act;
             iaddr = act.addr/ACTION_IMEM_COLORS; }
-        for (auto *inst : act.instr) {
-            inst->pass1(tbl);
+        for (auto &inst : act.instr) {
+            inst = inst->pass1(tbl);
             if (inst->slot >= 0 && iaddr >= 0) {
                 if (tbl->stage->imem_use[iaddr][inst->slot])
                     error(act.lineno, "action instruction slot %d.%d in use elsewhere",
@@ -670,8 +670,9 @@ void Table::Actions::pass2(Table *tbl) {
     for (auto &act : actions) {
         if (act.addr < 0) {
             bitvec use;
-            for (auto *inst : act.instr)
-                if (inst->slot >= 0) use[inst->slot] = 1;
+            for (auto *inst : act.instr) {
+                inst->pass2(tbl);
+                if (inst->slot >= 0) use[inst->slot] = 1; }
             for (int i = 0; i < ACTION_IMEM_ADDR_MAX; i++) {
                 if (auto old = tbl->stage->imem_addr_use[tbl->gress][i]) {
 		    if (act.equiv(old)) {
@@ -903,12 +904,16 @@ void MatchTable::write_regs(int type, Table *result) {
 
 }
 
-int Table::find_on_actionbus(Format::Field *f, int off) {
-    return action_bus ? action_bus->find(f, off) : -1;
+int Table::find_on_actionbus(Format::Field *f, int off, int size) {
+    return action_bus ? action_bus->find(f, off, size) : -1;
 }
 
-int Table::find_on_actionbus(const char *name, int off, int *len) {
-    return action_bus ? action_bus->find(name, off, len) : -1;
+void Table::need_on_actionbus(Format::Field *f, int off, int size) {
+    if (action_bus) action_bus->need_alloc(this, f, off, size);
+}
+
+int Table::find_on_actionbus(const char *name, int off, int size, int *len) {
+    return action_bus ? action_bus->find(name, off, size, len) : -1;
 }
 
 int Table::find_on_ixbar(Phv::Slice sl, int group) {

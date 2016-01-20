@@ -412,12 +412,11 @@ static int find_in_ixbar(Table *table, std::vector<Phv::Ref> &match) {
 void ExactMatchTable::pass2() {
     LOG1("### Exact match table " << name() << " pass2");
     input_xbar->pass2(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
-    if (action_bus)
-        action_bus->pass2(this);
     word_ixbar_group.resize(match_in_word.size());
     for (unsigned i = 0; i < match_in_word.size(); i++)
         word_ixbar_group[i] = find_in_ixbar(this, match_in_word[i]);
     if (actions) actions->pass2(this);
+    if (action_bus) action_bus->pass2(this);
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
 }

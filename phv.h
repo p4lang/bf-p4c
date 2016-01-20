@@ -81,6 +81,7 @@ public:
         Ref(const Ref &r, int l, int h) : gress(r.gress), name_(r.name_),
             lo(r.lo < 0 ? l : r.lo + l), hi(r.lo < 0 ? h : r.lo + h),
             lineno(r.lineno) { assert(r.hi < 0 || hi <= r.hi); }
+        Ref(const Register &r);
         explicit operator bool() { return lineno >= 0; }
 	Slice operator*() const {
 	    if (auto *s = phv.get(gress, name_)) {

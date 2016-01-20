@@ -81,9 +81,8 @@ void HashActionTable::pass2() {
     //if (bus >= 2) stage->table_use[gress] |= Stage::USE_TCAM;
     if (input_xbar)
         input_xbar->pass2(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
-    if (action_bus)
-        action_bus->pass2(this);
     if (actions) actions->pass2(this);
+    if (action_bus) action_bus->pass2(this);
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
 }

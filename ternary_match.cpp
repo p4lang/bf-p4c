@@ -476,8 +476,8 @@ void TernaryIndirectTable::pass2() {
     LOG1("### Ternary indirect table " << name() << " pass2");
     if (!match_table)
         error(lineno, "No match table for ternary indirect table %s", name());
-    if (action_bus) action_bus->pass2(this);
     if (actions) actions->pass2(this);
+    if (action_bus) action_bus->pass2(this);
 }
 
 void TernaryIndirectTable::write_regs() {

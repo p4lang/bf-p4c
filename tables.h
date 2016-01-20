@@ -160,11 +160,16 @@ public:
 	    auto it = fmt[group].find(n);
 	    if (it != fmt[group].end()) return &it->second;
 	    return 0; }
-	void apply_to_field(const std::string &n,
-			    std::function<void(Format::Field *)> fn) {
+	void apply_to_field(const std::string &n, std::function<void(Field *)> fn) {
 	    for (auto &m : fmt) {
 		auto it = m.find(n);
 		if (it != m.end()) fn(&it->second); } }
+        std::string find_field(Field *field) {
+	    for (auto &m : fmt)
+                for (auto &f : m)
+                    if (field == &f.second)
+                        return f.first;
+            return "<unknown>"; }
 	decltype(fmt[0].begin()) begin(int grp=0) { return fmt[grp].begin(); }
 	decltype(fmt[0].end()) end(int grp=0) { return fmt[grp].end(); }
     };
@@ -286,10 +291,11 @@ public:
     virtual void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn)
 	{ if (format) format->apply_to_field(n, fn); }
     int find_on_ixbar(Phv::Slice sl, int group);
-    virtual int find_on_actionbus(Format::Field *f, int off);
-    virtual int find_on_actionbus(const char *n, int off, int *len = 0);
-    int find_on_actionbus(const std::string &n, int off, int *len = 0) {
-	return find_on_actionbus(n.c_str(), off, len); }
+    virtual int find_on_actionbus(Format::Field *f, int off, int size);
+    virtual void need_on_actionbus(Format::Field *f, int off, int size);
+    virtual int find_on_actionbus(const char *n, int off, int size, int *len = 0);
+    int find_on_actionbus(const std::string &n, int off, int size, int *len = 0) {
+	return find_on_actionbus(n.c_str(), off, size, len); }
     virtual Call &action_call() { return action; }
 };
 
@@ -422,11 +428,15 @@ public:
     Format::Field *lookup_field(const std::string &name, const std::string &action) {
 	assert(!format);
 	return indirect ? indirect->lookup_field(name, action) : 0; }
-    int find_on_actionbus(Format::Field *f, int off) {
-	return indirect ? indirect->find_on_actionbus(f, off) : Table::find_on_actionbus(f, off); }
-    int find_on_actionbus(const char *n, int off, int *len = 0) {
-	return indirect ? indirect->find_on_actionbus(n, off, len)
-			: Table::find_on_actionbus(n, off, len); }
+    int find_on_actionbus(Format::Field *f, int off, int size) {
+	return indirect ? indirect->find_on_actionbus(f, off, size)
+                        : Table::find_on_actionbus(f, off, size); }
+    void need_on_actionbus(Format::Field *f, int off, int size) {
+	indirect ? indirect->need_on_actionbus(f, off, size)
+                 : Table::need_on_actionbus(f, off, size); }
+    int find_on_actionbus(const char *n, int off, int size, int *len = 0) {
+	return indirect ? indirect->find_on_actionbus(n, off, size, len)
+			: Table::find_on_actionbus(n, off, size, len); }
     const Call &get_action() const { return indirect ? indirect->get_action() : action; }
     const AttachedTables *get_attached() const { return indirect ? indirect->get_attached() : &attached; }
     SelectionTable *get_selector() const { return indirect ? indirect->get_selector() : 0; }
@@ -491,8 +501,8 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     std::map<std::string, Format *>     action_formats;
     Format::Field *lookup_field(const std::string &name, const std::string &action);
     void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn);
-    int find_on_actionbus(Format::Field *f, int off);
-    int find_on_actionbus(const char *n, int off, int *len);
+    int find_on_actionbus(Format::Field *f, int off, int size);
+    int find_on_actionbus(const char *n, int off, int size, int *len);
     table_type_t table_type() { return ACTION; }
 )
 

@@ -36,6 +36,7 @@ private:
         virtual void dbprint(std::ostream &) const = 0;
 	virtual bool equiv(const Base *) const = 0;
         virtual void phvRead(std::function<void (const ::Phv::Slice &sl)>) {}
+        virtual void pass2(Table *, int) const {}
     } *op;
     class Const : public Base {
 	long		value;
@@ -60,6 +61,7 @@ private:
 	Phv(int line, gress_t g, const value_t &n) : Base(line), reg(g, n) {}
 	Phv(int line, gress_t g, const std::string &n, int l, int h) :
             Base(line), reg(g, line, n, l, h) {}
+        Phv(const ::Phv::Ref &r) : Base(r.lineno), reg(r) {}
 	bool equiv(const Base *a_) const {
 	    if (auto *a = dynamic_cast<const Phv *>(a_)) {
 		return reg == a->reg;
@@ -95,8 +97,9 @@ private:
     private:
 	virtual Action *clone() { return new Action(*this); }
         int bits(int group) { 
-            int byte = field ? table->find_on_actionbus(field, lo)
-                             : table->find_on_actionbus(name, lo);
+            int size = group_size[group]/8U;
+            int byte = field ? table->find_on_actionbus(field, lo, size)
+                             : table->find_on_actionbus(name, lo, size);
             if (byte < 0) {
 		if (lo > 0 || (field && hi+1 < field->size))
 		    error(lineno, "%s(%d..%d) is not on the action bus", name.c_str(), lo, hi);
@@ -104,7 +107,6 @@ private:
 		    error(lineno, "%s is not on the action bus", name.c_str());
                 return -1; }
             int byte_value = byte;
-            int size = group_size[group]/8U;
             if (size == 2) byte -= 32;
             if (byte < 0 || byte > 32*size)
                 error(lineno, "action bus entry %d(%s) out of range for %d-bit access",
@@ -115,12 +117,16 @@ private:
             else
                 return 0x20 + byte/size;
             return -1; }
+        virtual void pass2(Table *, int group) const {
+            int size = group_size[group]/8U;
+            if (field && table->find_on_actionbus(field, lo, size) < 0) 
+                table->need_on_actionbus(field, lo, size); }
         virtual void mark_use(Table *tbl) {
             if (field) field->flags |= Table::Format::Field::USED_IMMED; }
         virtual unsigned bitoffset(int group) const {
-            int byte = field ? table->find_on_actionbus(field, lo)
-                             : table->find_on_actionbus(name, lo);
             int size = group_size[group]/8U;
+            int byte = field ? table->find_on_actionbus(field, lo, size)
+                             : table->find_on_actionbus(name, lo, size);
             return 8*(byte % size) + lo % 8; }
         virtual void dbprint(std::ostream &out) const {
             out << name << '(' << lo << ".." << hi << ')';
@@ -190,6 +196,7 @@ public:
     ~operand() { delete op; }
     operand(Table *tbl, const std::string &act, const value_t &v);
     operand(gress_t gress, const value_t &v) : op(new Phv(v.lineno, gress, v)) {}
+    operand(const ::Phv::Ref &r) : op(new Phv(r)) {}
     bool valid() const { return op != 0; }
     bool operator==(operand &a) {
 	return op == a.op || (op && a.op && op->lookup(op)->equiv(a.op->lookup(a.op))); }
@@ -200,6 +207,7 @@ public:
     int bits(int group) { return op->lookup(op)->bits(group); }
     void mark_use(Table *tbl) { op->lookup(op)->mark_use(tbl); }
     void dbprint(std::ostream &out) const { op->dbprint(out); }
+    Base *operator->() { return op->lookup(op); }
 };
 
 operand::operand(Table *tbl, const std::string &act, const value_t &v) : op(0) {
@@ -232,7 +240,7 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
 #endif
             ref = new Action(lineno, name, tbl, field, lo >= 0 ? lo : 0,
                              hi >= 0 ? hi : field->size - 1);
-    } else if (tbl->find_on_actionbus(name, 0, &len) >= 0) {
+    } else if (tbl->find_on_actionbus(name, 0, 7, &len) >= 0) {
         ref = new Action(lineno, name, tbl, 0, lo >= 0 ? lo : 0,
                          hi >= 0 ? hi : len - 1);
     } else if (!::Phv::get(tbl->gress, name) && sscanf(name.c_str(), "A%d%n", &slot, &len) >= 1 &&
@@ -260,7 +268,8 @@ struct AluOP : public Instruction {
     AluOP(Decode *d, Table *tbl, const std::string &act, const value_t *ops) :
             Instruction(ops->lineno), opc(d), dest(tbl->gress, ops[0]),
             src1(tbl, act, ops[1]), src2(tbl, act, ops[2]) {}
-    void pass1(Table *tbl);
+    Instruction *pass1(Table *tbl);
+    void pass2(Table *tbl) { src1->pass2(tbl, slot/16); src2->pass2(tbl, slot/16); }
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
@@ -300,11 +309,11 @@ Instruction *AluOP::Decode::decode(Table *tbl, const std::string &act, const VEC
     return 0;
 }
 
-void AluOP::pass1(Table *tbl) {
-    if (!dest.check() || !src1.check() || !src2.check()) return;
+Instruction *AluOP::pass1(Table *tbl) {
+    if (!dest.check() || !src1.check() || !src2.check()) return this;
     if (dest->lo || dest->hi != dest->reg.size-1) {
         error(lineno, "ALU ops cannot operate on slices");
-        return; }
+        return this; }
     slot = dest->reg.index;
     tbl->stage->action_set[tbl->gress][slot] = true;
     src1.mark_use(tbl);
@@ -314,6 +323,7 @@ void AluOP::pass1(Table *tbl) {
         opc = opc->swap_args; }
     if (src2.phvGroup() < 0)
         error(lineno, "src2 must be phv register");
+    return this;
 }
 int AluOP::encode() {
     return (opc->opcode << 10) | (src1.bits(slot/16) << 4) | src2.bits(slot/16);
@@ -321,58 +331,6 @@ int AluOP::encode() {
 bool AluOP::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<AluOP *>(a_)) {
 	return opc == a->opc && dest == a->dest && src1 == a->src1 && src2 == a->src2;
-    } else
-	return false;
-}
-
-struct Set : public Instruction {
-    struct Decode : public Idecode {
-        Decode(const char *n) : Idecode(n) {}
-        Instruction *decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op);
-    };
-    Phv::Ref    dest;
-    operand     src;
-    Set(Table *tbl, const std::string &act, const value_t &d, const value_t &s)
-	: Instruction(d.lineno), dest(tbl->gress, d), src(tbl, act, s) {}
-    void pass1(Table *tbl);
-    int encode();
-    bool equiv(Instruction *a_);
-    void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) { src.phvRead(fn); }
-    void dbprint(std::ostream &out) const {
-        out << "INSTR: set " << dest << ", " << src; }
-
-};
-
-static Set::Decode opSet("set");
-
-Instruction *Set::Decode::decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op) {
-    if (op.size != 3) {
-        error(op[0].lineno, "%s requires 2 operands", op[0].s);
-        return 0; }
-    Set *rv = new Set(tbl, act, op[1], op[2]);
-    if (!rv->src.valid())
-        error(op[2].lineno, "invalid src");
-    else
-        return rv;
-    delete rv;
-    return 0;
-}
-
-void Set::pass1(Table *tbl) {
-    if (!dest.check() || !src.check()) return;
-    if (dest->lo || dest->hi != dest->reg.size-1) {
-        error(lineno, "set cannot operate on slices");
-        return; }
-    slot = dest->reg.index;
-    tbl->stage->action_set[tbl->gress][slot] = true;
-    src.mark_use(tbl);
-}
-int Set::encode() {
-    return (opA.opcode << 10) | (src.bits(slot/16) << 4) | (slot & 0xf);
-}
-bool Set::equiv(Instruction *a_) {
-    if (auto *a = dynamic_cast<Set *>(a_)) {
-	return dest == a->dest && src == a->src;
     } else
 	return false;
 }
@@ -386,7 +344,8 @@ struct LoadConst : public Instruction {
     int         src;
     LoadConst(Table *tbl, const std::string &act, const value_t &d, int&s)
 	: Instruction(d.lineno), dest(tbl->gress, d), src(s) {}
-    void pass1(Table *tbl);
+    Instruction *pass1(Table *tbl);
+    void pass2(Table *) {}
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) { }
@@ -405,11 +364,11 @@ Instruction *LoadConst::Decode::decode(Table *tbl, const std::string &act, const
     return new LoadConst(tbl, act, op[1], op[2].i);
 }
 
-void LoadConst::pass1(Table *tbl) {
-    if (!dest.check()) return;
+Instruction *LoadConst::pass1(Table *tbl) {
+    if (!dest.check()) return this;
     if (dest->lo || dest->hi != dest->reg.size-1) {
         error(lineno, "load-const cannot operate on slices");
-        return; }
+        return this; }
     slot = dest->reg.index;
     int size = Phv::reg(slot).size;
     if (size > 23) size = 23;
@@ -417,6 +376,7 @@ void LoadConst::pass1(Table *tbl) {
         error(lineno, "Constant value %d out of range", src);
     src &= (1 << size) - 1;
     tbl->stage->action_set[tbl->gress][slot] = true;
+    return this;
 }
 int LoadConst::encode() {
     return (src >> 10 << 15) | (0x8 << 10) | (src & 0x3ff);
@@ -446,7 +406,8 @@ struct CondMoveMux : public Instruction {
                 const value_t &s1, const value_t &s2)
 	: Instruction(d.lineno), opc(op), dest(tbl->gress, d), src1(tbl, act, s1),
           src2(tbl, act, s2) {}
-    void pass1(Table *tbl);
+    Instruction *pass1(Table *tbl);
+    void pass2(Table *tbl) { src1->pass2(tbl, slot/16); src2->pass2(tbl, slot/16); }
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
@@ -485,12 +446,13 @@ Instruction *CondMoveMux::Decode::decode(Table *tbl, const std::string &act, con
     return 0;
 }
 
-void CondMoveMux::pass1(Table *tbl) {
-    if (!dest.check() || !src1.check() || !src2.check()) return;
+Instruction *CondMoveMux::pass1(Table *tbl) {
+    if (!dest.check() || !src1.check() || !src2.check()) return this;
     slot = dest->reg.index;
     tbl->stage->action_set[tbl->gress][slot] = true;
     src1.mark_use(tbl);
     src2.mark_use(tbl);
+    return this;
 }
 int CondMoveMux::encode() {
     /* funny cond test on src2 is to match the compiler output -- if we're not testing
@@ -506,6 +468,8 @@ bool CondMoveMux::equiv(Instruction *a_) {
 	return false;
 }
 
+struct Set;
+
 struct DepositField : public Instruction {
     struct Decode : public Idecode {
         Decode() : Idecode("deposit_field") { alias("deposit-field"); }
@@ -517,7 +481,9 @@ struct DepositField : public Instruction {
 	: Instruction(d.lineno), dest(tbl->gress, d), src1(tbl, act, s), src2(tbl->gress, d) {}
     DepositField(Table *tbl, const std::string &act, const value_t &d, const value_t &s1, const value_t &s2)
 	: Instruction(d.lineno), dest(tbl->gress, d), src1(tbl, act, s1), src2(tbl, act, s2) {}
-    void pass1(Table *tbl);
+    DepositField(const Set &);
+    Instruction *pass1(Table *tbl);
+    void pass2(Table *tbl) { src1->pass2(tbl, slot/16); src2->pass2(tbl, slot/16); }
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
@@ -547,12 +513,13 @@ Instruction *DepositField::Decode::decode(Table *tbl, const std::string &act, co
     return 0;
 }
 
-void DepositField::pass1(Table *tbl) {
-    if (!dest.check() || !src1.check() || !src2.check()) return;
+Instruction *DepositField::pass1(Table *tbl) {
+    if (!dest.check() || !src1.check() || !src2.check()) return this;
     slot = dest->reg.index;
     tbl->stage->action_set[tbl->gress][slot] = true;
     src1.mark_use(tbl);
     src2.mark_use(tbl);
+    return this;
 }
 int DepositField::encode() {
     unsigned rot = (dest->reg.size - dest->lo + src1.bitoffset(slot/16)) % dest->reg.size;
@@ -582,6 +549,62 @@ bool DepositField::equiv(Instruction *a_) {
 	return false;
 }
 
+struct Set : public Instruction {
+    struct Decode : public Idecode {
+        Decode(const char *n) : Idecode(n) {}
+        Instruction *decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op);
+    };
+    Phv::Ref    dest;
+    operand     src;
+    Set(Table *tbl, const std::string &act, const value_t &d, const value_t &s)
+	: Instruction(d.lineno), dest(tbl->gress, d), src(tbl, act, s) {}
+    Instruction *pass1(Table *tbl);
+    void pass2(Table *tbl) { src->pass2(tbl, slot/16); }
+    int encode();
+    bool equiv(Instruction *a_);
+    void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) { src.phvRead(fn); }
+    void dbprint(std::ostream &out) const {
+        out << "INSTR: set " << dest << ", " << src; }
+
+};
+
+DepositField::DepositField(const Set &s)
+: Instruction(s), dest(s.dest), src1(s.src), src2(s.dest->reg) {}
+
+static Set::Decode opSet("set");
+
+Instruction *Set::Decode::decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op) {
+    if (op.size != 3) {
+        error(op[0].lineno, "%s requires 2 operands", op[0].s);
+        return 0; }
+    Set *rv = new Set(tbl, act, op[1], op[2]);
+    if (!rv->src.valid())
+        error(op[2].lineno, "invalid src");
+    else
+        return rv;
+    delete rv;
+    return 0;
+}
+
+Instruction *Set::pass1(Table *tbl) {
+    if (!dest.check() || !src.check()) return this;
+    if (dest->lo || dest->hi != dest->reg.size-1)
+        return (new DepositField(*this))->pass1(tbl);
+    slot = dest->reg.index;
+    tbl->stage->action_set[tbl->gress][slot] = true;
+    src.mark_use(tbl);
+    return this;
+}
+int Set::encode() {
+    return (opA.opcode << 10) | (src.bits(slot/16) << 4) | (slot & 0xf);
+}
+bool Set::equiv(Instruction *a_) {
+    if (auto *a = dynamic_cast<Set *>(a_)) {
+	return dest == a->dest && src == a->src;
+    } else
+	return false;
+}
+
 struct NulOP : public Instruction {
     struct Decode : public Idecode {
         std::string name;
@@ -592,7 +615,8 @@ struct NulOP : public Instruction {
     Phv::Ref    dest;
     NulOP(Table *tbl, const std::string &act, Decode *o, const value_t &d) :
         Instruction(d.lineno), opc(o), dest(tbl->gress, d) {}
-    void pass1(Table *tbl);
+    Instruction *pass1(Table *tbl);
+    void pass2(Table *) {}
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) { }
@@ -609,11 +633,12 @@ Instruction *NulOP::Decode::decode(Table *tbl, const std::string &act, const VEC
     return new NulOP(tbl, act, this, op[1]);
 }
 
-void NulOP::pass1(Table *tbl) {
-    if (!dest.check()) return;
+Instruction *NulOP::pass1(Table *tbl) {
+    if (!dest.check()) return this;
     slot = dest->reg.index;
     if (opc->opcode || !options.match_compiler) {
         tbl->stage->action_set[tbl->gress][slot] = true; }
+    return this;
 }
 int NulOP::encode() {
     return opc->opcode;
@@ -654,7 +679,8 @@ struct ShiftOP : public Instruction {
                 } else {
                     src2 = src1;
                     if (CHECKTYPE(ops[2], tINT)) shift = ops[2].i; } }
-    void pass1(Table *tbl);
+    Instruction *pass1(Table *tbl);
+    void pass2(Table *tbl) { src1->pass2(tbl, slot/16); src2->pass2(tbl, slot/16); }
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
@@ -683,17 +709,18 @@ Instruction *ShiftOP::Decode::decode(Table *tbl, const std::string &act, const V
     return 0;
 }
 
-void ShiftOP::pass1(Table *tbl) {
-    if (!dest.check() || !src1.check() || !src2.check()) return;
+Instruction *ShiftOP::pass1(Table *tbl) {
+    if (!dest.check() || !src1.check() || !src2.check()) return this;
     if (dest->lo || dest->hi != dest->reg.size-1) {
         error(lineno, "shift ops cannot operate on slices");
-        return; }
+        return this; }
     slot = dest->reg.index;
     tbl->stage->action_set[tbl->gress][slot] = true;
     src1.mark_use(tbl);
     src2.mark_use(tbl);
     if (src2.phvGroup() < 0)
         error(lineno, "src%s must be phv register", opc->use_src1 ? "2" : "");
+    return this;
 }
 int ShiftOP::encode() {
     int rv = (shift << 16) | (opc->opcode << 10) | src2.bits(slot/16);

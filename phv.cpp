@@ -96,6 +96,12 @@ Phv::Ref::Ref(gress_t g, const value_t &n) : gress(g), lo(-1), hi(-1), lineno(n.
 			hi = n[1].lo; } } } } }
 }
 
+Phv::Ref::Ref(const Phv::Register &r) : gress(EGRESS), lo(-1), hi(-1), lineno(-1) {
+    char buf[8];
+    sprintf(buf, "R%d", r.index);
+    name_ = buf;
+}
+
 bool Phv::Ref::merge(const Phv::Ref &r) {
     if (r.name_ != name_ || r.gress != gress) return false;
     if (lo < 0) return true;

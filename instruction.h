@@ -11,7 +11,8 @@ struct Instruction {
     int         slot;
     Instruction(int l) : lineno(l), slot(-1) {}
     virtual ~Instruction() {}
-    virtual void pass1(Table *) = 0;
+    virtual Instruction *pass1(Table *) = 0;
+    virtual void pass2(Table *) = 0;
     virtual int encode() = 0;
     virtual void dbprint(std::ostream &) const = 0;
     virtual bool equiv(Instruction *a) = 0;

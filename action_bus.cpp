@@ -58,8 +58,8 @@ void ActionBus::pass1(Table *tbl) {
     Slot *use[ACTION_DATA_BUS_SLOTS] = { 0 };
     for (auto &slot : Values(by_byte)) {
         int slotno = Stage::action_bus_slot_map[slot.byte];
-        for (unsigned byte = slot.byte; byte < slot.byte + slot.size;
-             byte += Stage::action_bus_slot_size[slotno++])
+        for (unsigned byte = slot.byte; byte < slot.byte + slot.size/8U;
+             byte += Stage::action_bus_slot_size[slotno++]/8U)
         {
             if (slotno >= ACTION_DATA_BUS_SLOTS) {
                 error(lineno, "%s extends past the end of the actions bus",
@@ -78,23 +78,74 @@ void ActionBus::pass1(Table *tbl) {
             tbl->stage->action_bus_use[slotno] = tbl;
             use[slotno] = &slot; } }
 }
-void ActionBus::pass2(Table *tbl) {
-    /* FIXME -- allocate action bus slots for things that need to be on the action bus
-     * FIXME -- and aren't */
+
+static int find_free(Stage *stage, int min, int max, int bytes) {
+    int avail = 0;
+    for (int i = min; i + bytes <= max; i++) {
+        avail = stage->action_bus_use[Stage::action_bus_slot_map[i]] ? 0 : avail+1;
+        if (avail == bytes)
+            return i - avail + 1; }
+    return -1;
 }
 
-int ActionBus::find(Table::Format::Field *f, int off) {
+void ActionBus::do_alloc(Table *tbl, Table::Format::Field *f, unsigned use, int bytes) {
+    unsigned offset = 0;
+    auto name = tbl->format->find_field(f);
+    LOG2("putting " << name << " at action_bus " << use);
+    while (bytes > 0) {
+        int slot = Stage::action_bus_slot_map[use];
+        int slotsize = Stage::action_bus_slot_size[slot];
+        assert(!tbl->stage->action_bus_use[slot]);
+        tbl->stage->action_bus_use[slot] = tbl;
+        by_byte.emplace(use, Slot{name, use, bytes*8U, f, offset});
+        offset += slotsize;
+        bytes -= slotsize/8U;
+        use += slotsize/8U; }
+}
+
+void ActionBus::pass2(Table *tbl) {
+    for (auto f : need_place) {
+        int bytes = (f.first->size + 7)/8U;
+        int use;
+        if (f.second & 1) {
+            /* need 8-bit */
+            if ((use = find_free(tbl->stage, 0, 31, bytes)) >= 0)
+                do_alloc(tbl, f.first, use, bytes); }
+        if (f.second & 2) {
+            /* need 16-bit */
+            if ((use = find_free(tbl->stage, 32, 95, bytes)) >= 0)
+                do_alloc(tbl, f.first, use, bytes); }
+        if (f.second == 4) {
+            /* need only 32-bit */
+            if ((use = find_free(tbl->stage, 96, 127, bytes)) >= 0)
+                do_alloc(tbl, f.first, use, bytes);
+            else if ((use = find_free(tbl->stage, 32, 95, bytes)) >= 0)
+                do_alloc(tbl, f.first, use, bytes);
+            else if ((use = find_free(tbl->stage, 0, 31, bytes)) >= 0)
+                do_alloc(tbl, f.first, use, bytes); } }
+}
+
+int slot_sizes[] = {
+    5,  /* 8-bit or 32-bit */
+    6,  /* 16-bit or 32-bit */
+    6,  /* 16-bit or 32-bit */
+    4   /* 32-bit only */
+};
+
+int ActionBus::find(Table::Format::Field *f, int off, int size) {
     for (auto &slot : by_byte) {
         if (slot.second.data != f) continue;
         if ((int)slot.second.offset * 8 > off) continue;
         if (off/8 - slot.second.offset >= slot.second.size) continue;
+        if (!(size & slot_sizes[slot.first/32U])) continue;
         return slot.first + off/8 - slot.second.offset; }
     return -1;
 }
-int ActionBus::find(const char *name, int off, int *size) {
+int ActionBus::find(const char *name, int off, int size, int *len) {
     for (auto &slot : by_byte)
         if (slot.second.name == name) {
-            if (size) *size = slot.second.size;
+            if (!(size & slot_sizes[slot.first/32U])) continue;
+            if (len) *len = slot.second.size;
             return slot.first + off/8; }
     return -1;
 }
