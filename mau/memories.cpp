@@ -109,7 +109,7 @@ class AllocAttached : public Inspector {
         if (sz < 3) sz = 3;  // min 8 bits
         if (sz > 8)
             throw new Util::CompilationError("%1%: more than 64 bits of overhead for ternary "
-                                             "table", tbl->match_table); 
+                                             "table", tbl->match_table);
         alloc[ti->name].type = Memories::Use::TIND;
         if (!mem.allocRams(ti->name, 1, ((entries - 1) >> (19 - sz)) + 1, mem.sram_use,
                            &mem.tind_bus, alloc[ti->name]))
