@@ -112,10 +112,12 @@ class MauAsmOutput::EmitAction : public Inspector {
     bool preorder(const IR::FieldRef *fr) override {
         std::pair<int, int>     bits;
         assert(sep);
-        auto f = self.phv.field(fr, &bits);
-        out << sep << canon_name(f->name);
-        if (bits.second || bits.first != f->size-1)
-            out << '(' << bits.second << ".." << bits.first << ')';
+        if (auto f = self.phv.field(fr, &bits)) {
+            out << sep << canon_name(f->name);
+            if (bits.second || bits.first != f->size-1)
+                out << '(' << bits.second << ".." << bits.first << ')';
+        } else {
+            out << sep << "/* " << *fr << " */"; }
         sep = ", ";
         return false; }
     bool preorder(const IR::Constant *c) override {

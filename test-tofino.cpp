@@ -4,6 +4,7 @@
 #include "ir/ir.h"
 #include "ir/dbprint.h"
 #include "lib/log.h"
+#include "lib/options.h"
 #include "tofino/common/extract_maupipe.h"
 #include "tofino/common/field_defuse.h"
 #include "tofino/mau/asm_output.h"
@@ -44,7 +45,7 @@ class DumpPipe : public Inspector {
         return false; }
 };
 
-void test_tofino_backend(const IR::Global *program) {
+void test_tofino_backend(const IR::Global *program, const CompilerOptions *options) {
     if (verbose) {
         std::cout << "-------------------------------------------------" << std::endl
                   << "Initial program" << std::endl
@@ -71,10 +72,10 @@ void test_tofino_backend(const IR::Global *program) {
     PassManager backend = {
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),
-        new HeaderFragmentCreator,
-        new CopyHeaderEliminator,
-        new ModifyFieldSplitter,
-        new ModifyFieldEliminator,
+        options->phv_alloc ? new HeaderFragmentCreator : 0,
+        options->phv_alloc ? new CopyHeaderEliminator : 0,
+        options->phv_alloc ? new ModifyFieldSplitter : 0,
+        options->phv_alloc ? new ModifyFieldEliminator : 0,
         new SplitGateways,
         new CheckTableNameDuplicate,
         new TableFindSeqDependencies,
@@ -90,8 +91,8 @@ void test_tofino_backend(const IR::Global *program) {
         &defuse,
         new MauPhvConstraints(phv),
         new PhvAllocate(phv, defuse.conflicts()),
-        or_tools_allocator.parde_inspector(),
-        or_tools_allocator.mau_inspector(),
+        options->phv_alloc ? or_tools_allocator.parde_inspector() : 0,
+        options->phv_alloc ? or_tools_allocator.mau_inspector() : 0,
     };
     maupipe = maupipe->apply(backend);
     or_tools_allocator.Solve();

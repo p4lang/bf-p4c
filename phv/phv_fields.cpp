@@ -71,7 +71,7 @@ const PhvInfo::Info *PhvInfo::field(const IR::FieldRef *fr, std::pair<int, int> 
     StringRef name = fr->toString();
     if (bits) {
         bits->second = 0;
-        bits->first = fr->type->width_bits(); }
+        bits->first = fr->type->width_bits() - 1; }
     if (auto *p = name.findstr("::"))
         name = name.after(p+2);
     if (auto *p = name.find('[')) {

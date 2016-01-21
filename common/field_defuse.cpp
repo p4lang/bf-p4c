@@ -72,7 +72,8 @@ void FieldDefUse::access_field(const PhvInfo::Info *f) {
 }
 
 bool FieldDefUse::preorder(const IR::FieldRef *f) {
-    access_field(phv.field(f));
+    if (auto *field = phv.field(f))
+        access_field(field);
     return false;
 }
 
