@@ -6,7 +6,6 @@ class Tofino_ParserMatch {
   Tofino_ParserState          next;
   ParserException             except;
 #noconstructor
-#nodbprint
 #emit
   Tofino_ParserMatch(uintmax_t v, uintmax_t m, const Vector<Expression> &e)
   : value(~v&m, v&m), shift(0), stmts(e), next(0), except(0) {}
@@ -18,9 +17,8 @@ class Tofino_ParserState {
   inline Vector<Expression>             select;
   inline Vector<Tofino_ParserMatch>     match;
 #noconstructor
-#nodbprint
 #emit
-  const Parser *p4state; /* informational only! not visited or compared for equal */
+  const IR::Parser *p4state; /* informational only! not visited or compared for equal */
   explicit Tofino_ParserState(const IR::Parser *);
 #end
 }

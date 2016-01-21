@@ -1,6 +1,7 @@
 #include "tofino.h"
 #include "ir/dbprint.h"
 #include "lib/hex.h"
+#include "lib/ordered_set.h"
 
 using namespace DBPrint;
 
@@ -38,8 +39,42 @@ void IR::MAU::TableSeq::dbprint(std::ostream &out) const {
         out << endl << indent << t << unindent;
 }
 
+void IR::Tofino::ParserMatch::dbprint(std::ostream &out) const {
+    (value ? out << "match " << value : out << "default") << "  shift=" << shift << indent;
+    for (auto st : stmts)
+        out << endl << *st;
+    if (next)
+        out << endl << "goto " << next->name;
+    if (except)
+        out << endl << "exception";
+    out << unindent;
+}
+
+void IR::Tofino::ParserState::dbprint(std::ostream &out) const {
+    out << "parser " << name << indent;
+    if (!select.empty()) {
+        out << endl << "select(" << setprec(Prec_Low);
+        const char *sep = "";
+        for (auto &e : select) {
+            out << sep << *e;
+            sep = ", "; }
+        out << ")" << setprec(0); }
+    for (auto *m : match)
+        out << endl << *m;
+    out << unindent;
+}
+
+struct FindStates : Inspector {
+    ordered_set<const IR::Tofino::ParserState *>        states;
+    bool preorder(const IR::Tofino::ParserState *s) override { states.insert(s); return true; }
+};
+
+
 void IR::Tofino::Parser::dbprint(std::ostream &out) const {
-    out << "IR::Tofino::Parser";
+    FindStates states;
+    apply(states);
+    for (auto st : states.states)
+        out << endl << *st;
 }
 
 void IR::Tofino::Deparser::dbprint(std::ostream &out) const {

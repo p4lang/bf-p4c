@@ -1,6 +1,7 @@
 #include "asm_output.h"
 #include "lib/match.h"
 #include "lib/log.h"
+#include "lib/range.h"
 
 class OutputExtracts : public Inspector {
     std::ostream        &out;
@@ -9,9 +10,13 @@ class OutputExtracts : public Inspector {
     bool preorder(const IR::Primitive *prim) {
         cstring dest = trim_asm_name(prim->operands[0]->toString());
         if (prim->name == "extract") {
-            out << indent << offset++ << ": " << dest << std::endl;
+            int size = prim->operands[0]->type->width_bits() / 8U;
+            out << indent << Range(offset, offset+size-1) << ": " << dest << std::endl;
+            offset += size;
         } else if (prim->name == "set_metadata") {
-            out << indent << dest << ": " << *prim->operands[1] << std::endl; }
+            out << indent << dest << ": " << *prim->operands[1] << std::endl;
+        } else {
+            out << indent << "/* " << *prim << " */"  << std::endl; }
         return false; }
  public:
     OutputExtracts(std::ostream &o, indent_t i) : out(o), indent(i) {}

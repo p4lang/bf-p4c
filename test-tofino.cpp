@@ -18,6 +18,8 @@
 #include "tofino/mau/table_seqdeps.h"
 #include "tofino/mau/table_summary.h"
 #include "tofino/parde/asm_output.h"
+#include "tofino/parde/compute_shifts.h"
+#include "tofino/parde/split_header.h"
 #include "tofino/phv/asm_output.h"
 #include "tofino/phv/phv_allocate.h"
 #include "tofino/phv/create_thread_local_instances.h"
@@ -72,6 +74,7 @@ void test_tofino_backend(const IR::Global *program, const CompilerOptions *optio
     PassManager backend = {
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),
+        new SplitExtractEmit,
         options->phv_alloc ? new HeaderFragmentCreator : 0,
         options->phv_alloc ? new CopyHeaderEliminator : 0,
         options->phv_alloc ? new ModifyFieldSplitter : 0,
@@ -87,12 +90,15 @@ void test_tofino_backend(const IR::Global *program, const CompilerOptions *optio
         new TableFindSeqDependencies,  // not needed?
         new CheckTableNameDuplicate,
         new InstructionSelection,
+        new ComputeShifts,
         new DumpPipe,
         &defuse,
         new MauPhvConstraints(phv),
         new PhvAllocate(phv, defuse.conflicts()),
+#if 0
         options->phv_alloc ? or_tools_allocator.parde_inspector() : 0,
         options->phv_alloc ? or_tools_allocator.mau_inspector() : 0,
+#endif
     };
     maupipe = maupipe->apply(backend);
     or_tools_allocator.Solve();
