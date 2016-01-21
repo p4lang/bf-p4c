@@ -107,16 +107,26 @@ class AllocAttached : public Inspector {
         assert(!alloc.count(ti->name));
         int sz = ceil_log2(tbl->layout.overhead_bits);
         if (sz < 3) sz = 3;  // min 8 bits
-        if (sz > 8)
+        if (sz > 6)
             throw new Util::CompilationError("%1%: more than 64 bits of overhead for ternary "
                                              "table", tbl->match_table);
         alloc[ti->name].type = Memories::Use::TIND;
-        if (!mem.allocRams(ti->name, 1, ((entries - 1) >> (19 - sz)) + 1, mem.sram_use,
+        if (!mem.allocRams(ti->name, 1, ((entries - 1) >> (17 - sz)) + 1, mem.sram_use,
                            &mem.tind_bus, alloc[ti->name]))
             ok = false;
         return false; }
     bool preorder(const IR::MAU::ActionData *ad) override {
         assert(!alloc.count(ad->name));
+        int sz = ceil_log2(tbl->layout.action_data_bytes) + 3;
+        if (sz > 10)
+            throw new Util::CompilationError("%1%: more than 1024 bits wide for action data "
+                                             "table", tbl->match_table);
+        alloc[ad->name].type = Memories::Use::ACTIONDATA;
+        int width = sz > 7 ? 1 << (sz - 7) : 1;
+        int per_ram = sz > 7 ? 10 : 17 - sz;
+        if (!mem.allocRams(ad->name, width, ((entries - 1) >> per_ram) + 1, mem.sram_use,
+                           &mem.action_data_bus, alloc[ad->name]))
+            ok = false;
         return false; }
     bool preorder(const IR::ActionProfile *ap) override {
         assert(!alloc.count(ap->name));

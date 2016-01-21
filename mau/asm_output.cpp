@@ -182,12 +182,12 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
     /* FIXME -- this is a mess and needs to be rewritten to be sane */
     bool have_action = false, have_indirect = false;
     for (auto at : tbl->attached) {
-        if (dynamic_cast<const IR::MAU::TernaryIndirect *>(at)) {
+        if (at->is<IR::MAU::TernaryIndirect>()) {
             have_indirect = true;
             out << indent << at->kind() << ": " << at->name << std::endl;
-        } else if (dynamic_cast<const IR::ActionProfile *>(at)) {
+        } else if (at->is<IR::ActionProfile>()) {
             have_action = true;
-        } else if (dynamic_cast<const IR::MAU::ActionData *>(at)) {
+        } else if (at->is<IR::MAU::ActionData>()) {
             assert(tbl->layout.action_data_bytes > tbl->layout.action_data_bytes_in_overhead);
             have_action = true; } }
     assert(have_indirect == (tbl->layout.ternary && (tbl->layout.overhead_bits > 1)));
@@ -232,13 +232,16 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
 
 void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
                                     const IR::MAU::Table *tbl) const {
+    bool have_action = false;
     for (auto at : tbl->attached) {
         if (at->is<IR::MAU::TernaryIndirect>()) continue;
+        if (at->is<IR::ActionProfile>() || at->is<IR::MAU::ActionData>())
+            have_action = true;
         out << indent << at->kind() << ": " << at->name;
         if (at->indexed())
             out << '(' << at->kind() << ')';
         out << std::endl; }
-    if (!tbl->actions.empty()) {
+    if (!have_action && !tbl->actions.empty()) {
         out << indent++ << "actions:" << std::endl;
         for (auto act : tbl->actions)
             act->apply(EmitAction(*this, out, indent));
@@ -272,5 +275,22 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     out << " }" << std::endl;
     self.emit_table_indir(out, indent, tbl);
     return false; }
-bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *) {
+bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
+    indent_t    indent(1);
+    out << indent++ << "action " << ad->name << ':' << std::endl;
+    self.emit_memory(out, indent, tbl->resources->memuse.at(ad->name));
+    for (auto act : tbl->actions) {
+        if (act->args.empty()) continue;
+        out << indent << "format " << act->name << ": {";
+        const char *sep = " ";
+        for (auto arg : act->args) {
+            int sz = (arg->type->width_bits() + 7) / 8U;
+            out << sep << arg->name << ": " << (sz * 8);
+            sep = ", "; }
+        out << " }" << std::endl; }
+    if (!tbl->actions.empty()) {
+        out << indent++ << "actions:" << std::endl;
+        for (auto act : tbl->actions)
+            act->apply(EmitAction(self, out, indent));
+        --indent; }
     return false; }
