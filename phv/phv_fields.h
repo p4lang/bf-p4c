@@ -33,7 +33,7 @@ class PhvInfo : public Inspector {
     map<cstring, Info>                  all_fields;
     vector<Info *>                      by_id;
     map<cstring, std::pair<int, int>>   all_headers;
-    void add(cstring, const IR::Type *, bool);
+    void add(cstring, int, bool);
     void add_hdr(cstring, const IR::HeaderType *, bool);
     bool preorder(const IR::Header *h) override;
     bool preorder(const IR::HeaderStack *) override;
@@ -70,6 +70,9 @@ class PhvInfo : public Inspector {
     iterator<vector<Info *>::iterator> end() { return by_id.end(); }
     iterator<vector<Info *>::const_iterator> begin() const { return by_id.begin(); }
     iterator<vector<Info *>::const_iterator> end() const { return by_id.end(); }
+    void allocatePOV();
 };
+
+std::ostream &operator<<(std::ostream &, const PhvInfo::Info::alloc_slice &);
 
 #endif /* _TOFINO_PHV_PHV_FIELDS_H_ */

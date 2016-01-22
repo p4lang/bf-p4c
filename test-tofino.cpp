@@ -55,6 +55,7 @@ void test_tofino_backend(const IR::Global *program, const CompilerOptions *optio
         std::cout << *program << std::endl; }
     PhvInfo phv;
     program->apply(phv);
+    phv.allocatePOV();
 
     auto maupipe = extract_maupipe(program);
     maupipe = maupipe->apply(TableLayout());
