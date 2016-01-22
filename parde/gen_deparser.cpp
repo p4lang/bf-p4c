@@ -8,7 +8,7 @@ class GenDeparser : public Inspector {
         return false; }
 
  public:
-    GenDeparser(IR::Vector<IR::Expression> &e) : emits(e) {}
+    explicit GenDeparser(IR::Vector<IR::Expression> &e) : emits(e) {}
 };
 
 IR::Tofino_Deparser::Tofino_Deparser(gress_t gr, const IR::Tofino::Parser *p) : gress(gr) {
