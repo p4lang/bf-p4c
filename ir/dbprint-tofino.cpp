@@ -40,7 +40,7 @@ void IR::MAU::TableSeq::dbprint(std::ostream &out) const {
 }
 
 void IR::Tofino::ParserMatch::dbprint(std::ostream &out) const {
-    (value ? out << "match " << value : out << "default") << "  shift=" << shift << indent;
+    (value ? out << "match " << value : out << "default") << ":  (shift=" << shift << ')' << indent;
     for (auto st : stmts)
         out << endl << *st;
     if (next)
@@ -51,7 +51,7 @@ void IR::Tofino::ParserMatch::dbprint(std::ostream &out) const {
 }
 
 void IR::Tofino::ParserState::dbprint(std::ostream &out) const {
-    out << "parser " << name << indent;
+    out << "parser " << name << ':' << indent;
     if (!select.empty()) {
         out << endl << "select(" << setprec(Prec_Low);
         const char *sep = "";
@@ -78,7 +78,10 @@ void IR::Tofino::Parser::dbprint(std::ostream &out) const {
 }
 
 void IR::Tofino::Deparser::dbprint(std::ostream &out) const {
-    out << "IR::Tofino::Deparser";
+    out << "deparser:" << indent;
+    for (auto st : stmts)
+        out << endl << *st;
+    out << unindent;
 }
 
 void IR::Tofino::Pipe::dbprint(std::ostream &out) const {

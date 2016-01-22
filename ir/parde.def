@@ -18,7 +18,7 @@ class Tofino_ParserState {
   inline Vector<Tofino_ParserMatch>     match;
 #noconstructor
 #emit
-  const IR::Parser *p4state; /* informational only! not visited or compared for equal */
+  const IR::Parser *p4state = 0; /* informational only! not visited or compared for equal */
   explicit Tofino_ParserState(const IR::Parser *);
 #end
 }
@@ -34,12 +34,12 @@ class Tofino_Parser {
 }
 
 class Tofino_Deparser {
-  gress_t               gress;
-  Parser                start;
+  gress_t                       gress;
+  inline Vector<Expression>     stmts;
 #noconstructor
 #emit
-  Tofino_Deparser(gress_t gr, const Tofino_Parser *s)
-  : gress(gr), start(s && s->start ? s->start->p4state : 0) {}
+  const IR::Parser *start = 0; /* informational only! not visited or compared for equal */
+  Tofino_Deparser(gress_t gr, const Tofino_Parser *s);
 #end
 #apply
 }
