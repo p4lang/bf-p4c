@@ -12,5 +12,9 @@ IR::Node *SplitExtractEmit::preorder(IR::Primitive *p) {
     for (auto &field : hdr_type->fields)
         rv->push_back(new IR::Primitive(p->srcInfo, p->name,
             new IR::FieldRef(field.second, hdr, field.first)));
+    if (p->name == "extract")
+        rv->push_back(new IR::Primitive(p->srcInfo, "set_metadata",
+            new IR::FieldRef(IR::Type::Bits::get(1), hdr, "$valid"),
+            new IR::Constant(1)));
     return rv;
 }

@@ -11,12 +11,17 @@ class OutputExtracts : public Inspector {
         cstring dest = trim_asm_name(prim->operands[0]->toString());
         if (prim->name == "extract") {
             int size = prim->operands[0]->type->width_bits() / 8U;
-            out << indent << Range(offset, offset+size-1) << ": " << dest << std::endl;
+            out << indent << Range(offset, offset+size-1) << ": " << dest;
             offset += size;
         } else if (prim->name == "set_metadata") {
-            out << indent << dest << ": " << *prim->operands[1] << std::endl;
+            out << indent << dest << ": ";
+            if (auto val = prim->operands[1]->to<IR::Constant>())
+                out << val->value;
+            else
+                out << "/* " << *prim->operands[1] << " */";
         } else {
-            out << indent << "/* " << *prim << " */"  << std::endl; }
+            out << indent << "/* " << *prim << " */"; }
+        out << std::endl;
         return false; }
  public:
     OutputExtracts(std::ostream &o, indent_t i) : out(o), indent(i) {}

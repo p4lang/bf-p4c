@@ -103,7 +103,7 @@ void PhvInfo::allocatePOV() {
     add("$POV", size, false);
     for (auto &hdr : all_headers)
         if (!field(hdr.second.first)->metadata)
-            add(hdr.first + "$POV", 1, false);
+            add(hdr.first + ".$valid", 1, false);
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo::Info::alloc_slice &sl) {
