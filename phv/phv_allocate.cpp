@@ -79,21 +79,26 @@ bool PhvAllocate::preorder(const IR::Tofino::Pipe *pipe) {
     Regs normal = { "B0", "H0", "W0" },
          tagalong = { "TB0", "TH0", "TW0" };
     pipe->apply(uses);
-    PhvInfo::Info *pov = nullptr;
-    int pov_bit = 0;
-    for (auto &field : phv) {
-        for (auto gr : Range(INGRESS, EGRESS)) {
+    for (auto gr : Range(INGRESS, EGRESS)) {
+        PhvInfo::Info *pov = nullptr;
+        int pov_bit = 0;
+        /* enforce group splitting limits between ingress and egress */
+        while (normal.B.index() % 8) ++normal.B;
+        while (normal.H.index() % 8) ++normal.H;
+        while (normal.W.index() % 4) ++normal.W;
+        while (tagalong.B.index() % 4) ++tagalong.B;
+        while (tagalong.H.index() % 6) ++tagalong.H;
+        while (tagalong.W.index() % 4) ++tagalong.W;
+        for (auto &field : phv) {
             if (field.alloc[gr].empty()) {
                 if (pov)
-                    alloc_pov(&field, gr, pov, pov_bit);
-                else if (field.name == "$POV" || uses.use[1][gr][field.id])
+                    alloc_pov(&field, gr, pov, pov_bit++);
+                else if (field.name == "$POV")
+                    do_alloc((pov = &field), gr, &normal);
+                else if (uses.use[1][gr][field.id])
                     do_alloc(&field, gr, &normal);
                 else if (uses.use[0][gr][field.id])
-                    do_alloc(&field, gr, &tagalong); } }
-        if (field.name == "$POV")
-            pov = &field;
-        else if (pov)
-            pov_bit++; }
+                    do_alloc(&field, gr, &tagalong); } } }
     return false;
 }
 
