@@ -1,5 +1,5 @@
 
-%x LINESTART LINE1 LINE2 LINE3
+%x LINESTART LINE1 LINE2 LINE3 COMMENT
 %s NORMAL
 
 %{
@@ -86,6 +86,11 @@ ID [A-Za-z_@$]([-.]?*[A-Za-z0-9_@$])*
 0[bB][0-1*_]+     { return parse_match(&yylval, yytext+2, 1); }
 
 "#".*               ;
+"/*"              { BEGIN(COMMENT); }
+<COMMENT>"*/"     { BEGIN(NORMAL); }
+<COMMENT>.              ;
+<COMMENT>\n       { lineno++; }
+
 .                 { return *yytext; }
 
 
