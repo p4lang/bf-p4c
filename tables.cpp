@@ -541,7 +541,7 @@ Table::Format::~Format() {
         delete [] f.second.by_group;
 }
 
-void Table::Format::setup_immed(Table *tbl) {
+void Table::Format::pass1(Table *tbl) {
     std::map<unsigned, Field *> immed_fields;
     unsigned lo = INT_MAX, hi = 0;
     for (auto &f : fmt[0]) {
@@ -573,6 +573,9 @@ void Table::Format::setup_immed(Table *tbl) {
                 error(lineno, "Immediate data field %s for table %s does not match across "
                       "ways in a ram", f.first.c_str(), tbl->name());
                 break; } } }
+}
+
+void Table::Format::pass2(Table *tbl) {
     int byte[4] = { -1, -1, -1, -1 };
     bool err = false;
     for (auto &f : fmt[0]) {

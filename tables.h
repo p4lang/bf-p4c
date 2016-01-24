@@ -144,7 +144,8 @@ public:
 	};
 	Format(VECTOR(pair_t) &data, bool may_overlap = false);
 	~Format();
-	void setup_immed(Table *tbl);
+	void pass1(Table *tbl);
+	void pass2(Table *tbl);
     private:
 	std::vector<std::map<std::string, Field>>                  fmt;
 	std::map<unsigned, std::map<std::string, Field>::iterator> byindex;

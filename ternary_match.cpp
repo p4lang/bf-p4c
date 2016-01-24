@@ -469,6 +469,7 @@ void TernaryIndirectTable::pass1() {
     if (action_enable >= 0)
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
+    if (format) format->pass1(this);
 }
 
 void TernaryIndirectTable::pass2() {
@@ -477,7 +478,7 @@ void TernaryIndirectTable::pass2() {
         error(lineno, "No match table for ternary indirect table %s", name());
     if (actions) actions->pass2(this);
     if (action_bus) action_bus->pass2(this);
-    if (format) format->setup_immed(this);
+    if (format) format->pass2(this);
 }
 
 void TernaryIndirectTable::write_regs() {

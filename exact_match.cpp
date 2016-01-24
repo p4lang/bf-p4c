@@ -119,6 +119,7 @@ void ExactMatchTable::pass1() {
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
     input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
+    format->pass1(this);
     group_info.resize(format->groups());
     unsigned fmt_width = (format->size + 127)/128;
     if (!format->field("match")) {
@@ -418,7 +419,7 @@ void ExactMatchTable::pass2() {
     if (action_bus) action_bus->pass2(this);
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
-    format->setup_immed(this);
+    format->pass2(this);
 }
 
 /* FIXME -- should have ExactMatchTable::write_merge_regs write some of the merge stuff

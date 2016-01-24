@@ -79,12 +79,16 @@ void ActionBus::pass1(Table *tbl) {
             use[slotno] = &slot; } }
 }
 
-static int find_free(Stage *stage, int min, int max, int bytes) {
-    int avail = 0;
-    for (int i = min; i + bytes <= max; i++) {
-        avail = stage->action_bus_use[Stage::action_bus_slot_map[i]] ? 0 : avail+1;
-        if (avail == bytes)
-            return i - avail + 1; }
+static int find_free(Stage *stage, int min, int max, int step, int bytes) {
+    int avail;
+    for (int i = min; i + bytes - 1 <= max; i += step) {
+        if (stage->action_bus_use[Stage::action_bus_slot_map[i]])
+            continue;
+        for (avail = 1; avail < bytes; avail++)
+            if (stage->action_bus_use[Stage::action_bus_slot_map[i+avail]])
+                break;
+        if (avail >= bytes)
+            return i; }
     return -1;
 }
 
@@ -104,24 +108,35 @@ void ActionBus::do_alloc(Table *tbl, Table::Format::Field *f, unsigned use, int 
 }
 
 void ActionBus::pass2(Table *tbl) {
+    int immed_offset = tbl->format->immed ? tbl->format->immed->bits[0].lo : 0;
     for (auto f : need_place) {
         int bytes = (f.first->size + 7)/8U;
+        int offset = f.first->bits[0].lo - immed_offset;
         int use;
         if (f.second & 1) {
             /* need 8-bit */
-            if ((use = find_free(tbl->stage, 0, 31, bytes)) >= 0)
+            if (offset % 8U)
+                error(tbl->format->lineno, "field %s not correctly aligned for 8-bit use on "
+                      "action bus", tbl->format->find_field(f.first).c_str());
+            else if ((use = find_free(tbl->stage, (offset/8U)%4, 31, 4, bytes)) >= 0)
                 do_alloc(tbl, f.first, use, bytes); }
         if (f.second & 2) {
             /* need 16-bit */
-            if ((use = find_free(tbl->stage, 32, 95, bytes)) >= 0)
+            if (offset % 16U)
+                error(tbl->format->lineno, "field %s not correctly aligned for 16-bit use on "
+                      "action bus", tbl->format->find_field(f.first).c_str());
+            else if ((use = find_free(tbl->stage, 32 + (offset/8U)%4, 95, 4, bytes)) >= 0)
                 do_alloc(tbl, f.first, use, bytes); }
         if (f.second == 4) {
             /* need only 32-bit */
-            if ((use = find_free(tbl->stage, 96, 127, bytes)) >= 0)
+            if (offset % 32U)
+                error(tbl->format->lineno, "field %s not correctly aligned for 32-bit use on "
+                      "action bus", tbl->format->find_field(f.first).c_str());
+            else if ((use = find_free(tbl->stage, 96, 127, 4, bytes)) >= 0)
                 do_alloc(tbl, f.first, use, bytes);
-            else if ((use = find_free(tbl->stage, 32, 95, bytes)) >= 0)
+            else if ((use = find_free(tbl->stage, 32, 95, 4, bytes)) >= 0)
                 do_alloc(tbl, f.first, use, bytes);
-            else if ((use = find_free(tbl->stage, 0, 31, bytes)) >= 0)
+            else if ((use = find_free(tbl->stage, 0, 31, 4, bytes)) >= 0)
                 do_alloc(tbl, f.first, use, bytes); } }
 }
 
