@@ -2,7 +2,7 @@
 #include "lib/exceptions.h"
 
 IR::FieldRef *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field) {
-    const IR::Type *ftype;
+    const IR::Type *ftype = nullptr;
     for (auto f : hdr->type->fields)
         if (f.first == field) {
             ftype = f.second;
