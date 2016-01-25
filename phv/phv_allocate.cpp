@@ -19,9 +19,12 @@ class PhvAllocate::Uses : public Inspector {
         thread = p->gress;
         return true; }
     bool preorder(const IR::Tofino::Deparser *d) {
-        in_mau = false;
         thread = d->gress;
-        return true; }
+        in_mau = true;  // treat egress_port as in mau as it can't go in TPHV
+        visit(d->egress_port);
+        in_mau = false;
+        d->emits.visit_children(*this);
+        return false; }
     bool preorder(const IR::MAU::TableSeq *) {
         in_mau = true;
         return true; }

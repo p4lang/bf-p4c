@@ -14,5 +14,5 @@ class GenDeparser : public Inspector {
 IR::Tofino_Deparser::Tofino_Deparser(gress_t gr, const IR::Tofino::Parser *p) : gress(gr) {
     if (p && p->start)
         start = p->start->p4state;
-    p->apply(GenDeparser(stmts));
+    p->apply(GenDeparser(emits));
 }

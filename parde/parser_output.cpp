@@ -10,7 +10,7 @@ class OutputExtracts : public Inspector {
     bool preorder(const IR::Primitive *prim) {
         cstring dest = trim_asm_name(prim->operands[0]->toString());
         if (prim->name == "extract") {
-            int size = prim->operands[0]->type->width_bits() / 8U;
+            int size = (prim->operands[0]->type->width_bits() + 7) / 8U;
             out << indent << Range(offset, offset+size-1) << ": " << dest;
             offset += size;
         } else if (prim->name == "set_metadata") {

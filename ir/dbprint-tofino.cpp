@@ -79,8 +79,10 @@ void IR::Tofino::Parser::dbprint(std::ostream &out) const {
 
 void IR::Tofino::Deparser::dbprint(std::ostream &out) const {
     out << "deparser:" << indent;
-    for (auto st : stmts)
+    for (auto st : emits)
         out << endl << *st;
+    if (egress_port)
+        out << endl << "egress_port: " << *egress_port;
     out << unindent;
 }
 

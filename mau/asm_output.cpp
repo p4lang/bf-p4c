@@ -1,3 +1,4 @@
+#include "lib/algorithm.h"
 #include "asm_output.h"
 #include "lib/bitops.h"
 #include "lib/indent.h"
@@ -248,6 +249,48 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         --indent; }
 }
 
+void emit_fmt_immed(std::ostream &out, const IR::MAU::Table *tbl, int base, const char *sep) {
+    std::map<cstring, int>      done;
+    for (auto act : tbl->actions) {
+        vector<std::pair<int, cstring>> sorted_args;
+        for (auto arg : act->args) {
+            int size = (arg->type->width_bits() + 7) / 8U; // in bytes
+            sorted_args.emplace_back(size, arg->name); }
+        std::stable_sort(sorted_args.begin(), sorted_args.end(),
+            [](const std::pair<int, cstring> &a, const std::pair<int, cstring> &b)->bool {
+                return a.first > b.first; });
+        int byte = 0;
+        for (auto &arg : sorted_args) {
+            if (byte >= 4) break;
+            if (byte + arg.first > 4) continue;
+            if (done.count(arg.second)) {
+                assert(done[arg.second] == byte);
+                byte += arg.first;
+                continue; }
+            done[arg.second] = byte;
+            out << sep << arg.second << ": " << base + byte*8;
+            byte += arg.first;
+            out << ".." << base + byte*8 - 1;
+            sep = ", "; } }
+}
+
+void emit_fmt_nonimmed(std::ostream &out, const IR::ActionFunction *act, const char *sep) {
+    vector<std::pair<int, cstring>> sorted_args;
+    for (auto arg : act->args) {
+        int size = (arg->type->width_bits() + 7) / 8U; // in bytes
+        sorted_args.emplace_back(size, arg->name); }
+    std::stable_sort(sorted_args.begin(), sorted_args.end(),
+        [](const std::pair<int, cstring> &a, const std::pair<int, cstring> &b)->bool {
+            return a.first > b.first; });
+    int byte = 0;
+    for (auto &arg : sorted_args) {
+        if (byte + arg.first <= 4) {
+            byte += arg.first;
+            continue; }
+        out << sep << arg.second << ": " << arg.first*8;
+        sep = ", "; }
+}
+
 bool MauAsmOutput::EmitAttached::preorder(const IR::Stateful *) {
     return false; }
 bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *) {
@@ -258,20 +301,9 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     indent_t    indent(1);
     out << indent++ << "ternary_indirect " << ti->name << ':' << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(ti->name));
-    out << indent << "format: { action: " << ceil_log2(tbl->actions.size());
-    for (auto act : tbl->actions) {
-        int bytes = 0;
-        for (auto arg : act->args) {
-            int sz = (arg->type->width_bits() + 7) / 8U;
-            if (bytes + sz <= tbl->layout.action_data_bytes_in_overhead) {
-                out << ", " << arg->name << ": " << (sz * 8);
-                bytes += sz;
-            } else {
-                /* putting data into overhead is currently all or nothing */
-                assert(tbl->layout.action_data_bytes_in_overhead == 0); } }
-            /* TODO -- if different actions have different incompatible data vals
-             * put in the overhead, need to recoincile them */
-            if (bytes > 0) break; }
+    int action_fmt_size = ceil_log2(tbl->actions.size());
+    out << indent << "format: { action: " << action_fmt_size;
+    emit_fmt_immed(out, tbl, action_fmt_size, ", ");
     out << " }" << std::endl;
     self.emit_table_indir(out, indent, tbl);
     return false; }
@@ -282,11 +314,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
     for (auto act : tbl->actions) {
         if (act->args.empty()) continue;
         out << indent << "format " << act->name << ": {";
-        const char *sep = " ";
-        for (auto arg : act->args) {
-            int sz = (arg->type->width_bits() + 7) / 8U;
-            out << sep << arg->name << ": " << (sz * 8);
-            sep = ", "; }
+        emit_fmt_nonimmed(out, act, " ");
         out << " }" << std::endl; }
     if (!tbl->actions.empty()) {
         out << indent++ << "actions:" << std::endl;

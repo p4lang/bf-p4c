@@ -17,6 +17,7 @@
 #include "tofino/mau/table_placement.h"
 #include "tofino/mau/table_seqdeps.h"
 #include "tofino/mau/table_summary.h"
+#include "tofino/parde/add_parde_metadata.h"
 #include "tofino/parde/asm_output.h"
 #include "tofino/parde/compute_shifts.h"
 #include "tofino/parde/split_header.h"
@@ -73,6 +74,7 @@ void test_tofino_backend(const IR::Global *program, const CompilerOptions *optio
     FieldDefUse defuse(phv);
     ORToolsAllocator or_tools_allocator;
     PassManager backend = {
+        new AddMetadataShims,
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),
         new SplitExtractEmit,

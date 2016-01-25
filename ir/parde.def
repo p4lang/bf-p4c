@@ -9,6 +9,9 @@ class Tofino_ParserMatch {
 #emit
   Tofino_ParserMatch(uintmax_t v, uintmax_t m, const Vector<Expression> &e)
   : value(~v&m, v&m), shift(0), stmts(e), next(0), except(0) {}
+  Tofino_ParserMatch(match_t v, int sh, const std::initializer_list<const Expression *> &st,
+                     const Tofino_ParserState *n, const ParserException *ex = nullptr)
+  : value(v), shift(sh), stmts(st), next(n), except(ex) {}
 #end
 }
 
@@ -20,6 +23,9 @@ class Tofino_ParserState {
 #emit
   const IR::Parser *p4state = 0; /* informational only! not visited or compared for equal */
   explicit Tofino_ParserState(const IR::Parser *);
+  Tofino_ParserState(cstring n, const std::initializer_list<const Expression *> &sel,
+                     const std::initializer_list<const Tofino_ParserMatch *> &m)
+  : name(n), select(sel), match(m) {}
 #end
 }
 
@@ -35,7 +41,8 @@ class Tofino_Parser {
 
 class Tofino_Deparser {
   gress_t                       gress;
-  inline Vector<Expression>     stmts;
+  inline Vector<Expression>     emits;
+  Expression                    egress_port;
 #noconstructor
 #emit
   const IR::Parser *start = 0; /* informational only! not visited or compared for equal */
