@@ -48,7 +48,7 @@ struct PhvAllocate::Regs {
 
 void PhvAllocate::do_alloc(PhvInfo::Info *i, gress_t thread, Regs *use) {
     /* greedy allocate space for field */
-    LOG2("allocate for " << i->id << (i->metadata ? " metadata " : " header ") << i->name <<
+    LOG2(i->id << ": " << (i->metadata ? "metadata " : "header ") << i->name <<
          " size=" << i->size);
     int size = i->size, bit = 0;
     while (size > 32) {
@@ -61,18 +61,18 @@ void PhvAllocate::do_alloc(PhvInfo::Info *i, gress_t thread, Regs *use) {
         i->alloc[thread].emplace_back(use->H++, bit, 0, size);
     else
         i->alloc[thread].emplace_back(use->B++, bit, 0, size);
-    LOG3("allocated " << i->alloc[thread] << " for " << thread);
+    LOG3("   allocated " << i->alloc[thread] << " for " << thread);
 }
 
 void alloc_pov(PhvInfo::Info *i, gress_t thread, PhvInfo::Info *pov, int pov_bit) {
-    LOG2("allocate for " << i->id << " POV " << i->name << " bit=" << pov_bit);
+    LOG2(i->id << ": POV " << i->name << " bit=" << pov_bit);
     if (i->size != 1)
         throw Util::CompilerBug("more than 1 bit for POV bit %s", i->name);
     for (auto &sl : pov->alloc[thread]) {
         int bit = pov_bit - sl.field_bit;
         if (bit >= 0 && bit < sl.width) {
             i->alloc[thread].emplace_back(sl.container, 0, bit + sl.container_bit, 1);
-            LOG3("allocated " << i->alloc[thread] << " for " << thread);
+            LOG3("   allocated " << i->alloc[thread] << " for " << thread);
             return; } }
     throw Util::CompilerBug("Failed to allocate POV bit for %s, POV too small?", i->name);
 }
@@ -101,7 +101,9 @@ bool PhvAllocate::preorder(const IR::Tofino::Pipe *pipe) {
                 else if (uses.use[1][gr][field.id])
                     do_alloc(&field, gr, &normal);
                 else if (uses.use[0][gr][field.id])
-                    do_alloc(&field, gr, &tagalong); } } }
+                    do_alloc(&field, gr, &tagalong);
+                else
+                    LOG2(field.id << ": " << field.name << " unused in " << gr); } } }
     return false;
 }
 

@@ -55,9 +55,12 @@ class PhvInfo : public Inspector {
 
  public:
     const Info *field(int idx) const { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
+    const Info *field(const IR::Expression *, std::pair<int, int> *bits = 0) const;
     const Info *field(const IR::FieldRef *, std::pair<int, int> *bits = 0) const;
     const Info *field(const IR::HeaderSliceRef *, std::pair<int, int> *bits = 0) const;
     Info *field(int idx) { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
+    Info *field(const IR::Expression *e, std::pair<int, int> *bits = 0) {
+        return const_cast<Info *>(const_cast<const PhvInfo *>(this)->field(e, bits)); }
     Info *field(const IR::FieldRef *fr, std::pair<int, int> *bits = 0) {
         return const_cast<Info *>(const_cast<const PhvInfo *>(this)->field(fr, bits)); }
     Info *field(const IR::HeaderSliceRef *hsr, std::pair<int, int> *bits = 0) {

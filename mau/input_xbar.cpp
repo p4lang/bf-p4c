@@ -81,15 +81,15 @@ bool IXBar::allocTable(bool ternary, const IR::Table *tbl, Use &alloc) {
     set<cstring>                        fields_needed;
     bool                                rv;
     for (auto r : *tbl->reads) {
-        const IR::Expression *field = dynamic_cast<const IR::HeaderSliceRef *>(r);
-        if (auto mask = dynamic_cast<const IR::BAnd *>(r)) {
-            field = dynamic_cast<const IR::HeaderSliceRef *>(mask->left);
-        } else if (auto prim = dynamic_cast<const IR::Primitive *>(r)) {
+        auto *field = r;
+        if (auto mask = r->to<IR::BAnd>()) {
+            field = mask->left;
+        } else if (auto prim = r->to<IR::Primitive>()) {
             if (prim->name != "valid")
                 throw Util::CompilerBug("unexpected reads expression %s", r);
             // FIXME -- for now just assuming we can fit the valid bit reads in as needed
             continue; }
-        if (!field)
+        if (!field || (!field->is<IR::FieldRef>() && !field->is<IR::HeaderSliceRef>()))
             throw Util::CompilerBug("unexpected reads expression %s", r);
         cstring fname = field->toString();
         if (fields_needed.count(fname))

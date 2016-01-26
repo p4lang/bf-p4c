@@ -110,17 +110,6 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << indent << "- " << inst->name;
         sep = " ";
         return true; }
-    bool preorder(const IR::HeaderSliceRef *hsr) override {
-        std::pair<int, int>     bits;
-        assert(sep);
-        if (auto f = self.phv.field(hsr, &bits)) {
-            out << sep << canon_name(f->name);
-            if (bits.second || bits.first != f->size-1)
-                out << '(' << bits.second << ".." << bits.first << ')';
-        } else {
-            out << sep << "/* " << *hsr << " */"; }
-        sep = ", ";
-        return false; }
     bool preorder(const IR::Constant *c) override {
         assert(sep);
         out << sep << c->asLong();
@@ -146,7 +135,13 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << std::endl; }
     bool preorder(const IR::Expression *exp) override {
         if (sep) {
-            out << sep << "/* " << *exp << " */";
+            std::pair<int, int>     bits;
+            if (auto f = self.phv.field(exp, &bits)) {
+                out << sep << canon_name(f->name);
+                if (bits.second || bits.first != f->size-1)
+                    out << '(' << bits.second << ".." << bits.first << ')';
+            } else {
+                out << sep << "/* " << *exp << " */"; }
             sep = ", ";
         } else {
             out << indent << "# " << *exp << std::endl; }

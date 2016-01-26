@@ -107,9 +107,9 @@ void test_tofino_backend(const IR::Global *program, const CompilerOptions *optio
     MauAsmOutput mauasm(phv);
     maupipe->apply(mauasm);
     std::cout << PhvAsmOutput(phv)
-              << ParserAsmOutput(maupipe, INGRESS)
-              << DeparserAsmOutput(maupipe, INGRESS)
-              << ParserAsmOutput(maupipe, EGRESS)
-              << DeparserAsmOutput(maupipe, EGRESS)
+              << ParserAsmOutput(maupipe, phv, INGRESS)
+              << DeparserAsmOutput(maupipe, phv, INGRESS)
+              << ParserAsmOutput(maupipe, phv, EGRESS)
+              << DeparserAsmOutput(maupipe, phv, EGRESS)
               << mauasm;
 }

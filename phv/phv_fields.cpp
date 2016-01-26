@@ -51,11 +51,19 @@ bool PhvInfo::preorder(const IR::Metadata *h) {
     return false;
 }
 
+const PhvInfo::Info *PhvInfo::field(const IR::Expression *e, std::pair<int, int> *bits) const {
+    if (auto *hsr = e->to<IR::HeaderSliceRef>())
+        return field(hsr, bits);
+    if (auto *fr = e->to<IR::FieldRef>())
+        return field(fr, bits);
+    return 0;
+}
+
 const PhvInfo::Info *PhvInfo::field(const IR::HeaderSliceRef *hsr,
                                     std::pair<int, int> *bits) const {
     auto hdr = header(hsr->header_ref()->toString());
     int offset = hsr->offset_bits();
-    for (auto idx : Range(hdr->first, hdr->second)) {
+    for (auto idx : Range(hdr->second, hdr->first)) {
         auto *info = field(idx);
         if (offset < info->size) {
             if (bits) {
