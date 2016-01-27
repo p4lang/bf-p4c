@@ -121,7 +121,6 @@ class MAU_TableSeq {
     inline Vector<MAU_Table>    tables;
     LTBitMatrix                 deps;
 #emit
-
     MAU_TableSeq() = default;
     explicit MAU_TableSeq(const MAU_Table *a) { if (a) tables.push_back(a); }
     MAU_TableSeq(const MAU_Table *a, const MAU_Table *b) {
@@ -133,6 +132,7 @@ class MAU_TableSeq {
     const MAU_Table *front() const { return tables.empty() ? nullptr : tables.front(); }
 #end
 #apply
+    dump { /* TODO */ }
 }
 
 // A single MAU instruction.  For the most part instructions look exactly like Primitives,
