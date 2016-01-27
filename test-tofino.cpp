@@ -74,6 +74,7 @@ void test_tofino_backend(const IR::Global *program, const CompilerOptions *optio
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),
         new SplitExtractEmit,
+        options->phv_alloc ? new CopyHeaderEliminator : 0,
         options->phv_alloc ? new HeaderFragmentCreator : 0,
         new SplitGateways,
         new CheckTableNameDuplicate,
