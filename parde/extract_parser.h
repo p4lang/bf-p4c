@@ -1,8 +1,7 @@
 #ifndef _TOFINO_PARDE_EXTRACT_PARSER_H_
 #define _TOFINO_PARDE_EXTRACT_PARSER_H_
 
-#include "tofino/ir/tofino.h"
-#include "ir/visitor.h"
+#include "ir/ir.h"
 
 class GetTofinoParser : public Inspector {
   const IR::Global                            *program;

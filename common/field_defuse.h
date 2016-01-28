@@ -2,7 +2,7 @@
 #define _FIELD_DEFUSE_H_
 
 #include <iostream>
-#include "tofino/ir/tofino.h"
+#include "ir/ir.h"
 #include "lib/bitvec.h"
 #include "lib/ltbitmatrix.h"
 #include "tofino/phv/phv_fields.h"

@@ -2,7 +2,7 @@
 #define _TOFINO_PARDE_ASM_OUTPUT_H_
 
 #include <functional>
-#include "tofino/ir/tofino.h"
+#include "ir/ir.h"
 #include "tofino/common/asm_output.h"
 #include "tofino/phv/phv_fields.h"
 

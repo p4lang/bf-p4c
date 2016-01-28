@@ -4,7 +4,7 @@
 #include "ir/ir.h"
 
 class ThreadVisitor : public virtual Visitor {
-  friend class  IR::Tofino_Pipe;
+  friend class  IR::Tofino::Pipe;
   gress_t       thread;
  public:
   explicit ThreadVisitor(gress_t th) : thread(th) {}

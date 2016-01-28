@@ -1,5 +1,5 @@
 #include <assert.h>
-#include "tofino/ir/tofino.h"
+#include "ir/ir.h"
 
 bool IR::MAU::Table::operator==(const IR::MAU::Table &a) const {
     return name == a.name &&

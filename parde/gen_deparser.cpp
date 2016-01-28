@@ -1,4 +1,4 @@
-#include "tofino/ir/tofino.h"
+#include "ir/ir.h"
 
 class GenDeparser : public Inspector {
     IR::Vector<IR::Expression>  &emits;
@@ -11,7 +11,7 @@ class GenDeparser : public Inspector {
     explicit GenDeparser(IR::Vector<IR::Expression> &e) : emits(e) {}
 };
 
-IR::Tofino_Deparser::Tofino_Deparser(gress_t gr, const IR::Tofino::Parser *p) : gress(gr) {
+IR::Tofino::Deparser::Deparser(gress_t gr, const IR::Tofino::Parser *p) : gress(gr) {
     if (p && p->start)
         start = p->start->p4state;
     p->apply(GenDeparser(emits));
