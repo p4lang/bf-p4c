@@ -2,25 +2,27 @@
 struct TableResourceAlloc;
 #end
 
+namespace MAU {
+
 // A Tofino logical table (group) -- a gateway and/or match table
 // along with whatever attached tables are run.  The basic scheduling
 // unit for tofino; there are 16 such 'logical' tables available in
 // each stage, which will run simultaneously and have their results
 // predicated by the predicate mask calculated from the next tables
-class MAU_Table {
+class Table {
     cstring                             name;
     gress_t                             gress;
     int                                 logical_id = -1;
     bool                                gateway_cond = true;
     Expression                          gateway_expr;
     ActionFunction                      gateway_payload;
-    Table                               match_table;
+    IR::Table                           match_table;
     inline Vector<Attached>             attached;
 #noconstructor
 #noequality
 #emit
     vector<const ActionFunction *>      actions;
-    map<cstring, const MAU_TableSeq *>  next;
+    map<cstring, const TableSeq *>      next;
     struct Layout {
         /* POD type */
         int             entries = 0;
@@ -36,18 +38,18 @@ class MAU_Table {
     } layout;
     const TableResourceAlloc            *resources = nullptr;
 
-    MAU_Table(cstring n, gress_t gr, const Table *t)
+    Table(cstring n, gress_t gr, const IR::Table *t)
     : name(n), gress(gr), match_table(t) {}
-    MAU_Table(cstring n, gress_t gr, const Expression *gw)
+    Table(cstring n, gress_t gr, const Expression *gw)
     : name(n), gress(gr), gateway_expr(gw) {}
 
     int logical_order() const { return logical_id + gress * 4096; }
-    MAU_Table *clone_rename(const char *ext) const {
-        MAU_Table *rv = clone();
+    Table *clone_rename(const char *ext) const {
+        Table *rv = clone();
         rv->name += ext;
         for (auto &at : rv->attached) at = at->clone_rename(ext);
         return rv; }
-    bool operator==(const MAU_Table &a) const;
+    bool operator==(const Table &a) const;
 #end
     visit_children {
         unsigned next_count = 0;
@@ -94,21 +96,21 @@ class MAU_Table {
     }
 }
 
-class MAU_TernaryIndirect : Attached {
+class TernaryIndirect : Attached {
 #noconstructor
 #nodbprint
 #emit
-    explicit MAU_TernaryIndirect(cstring tbl_name) { name = tbl_name + "$tind"; }
+    explicit TernaryIndirect(cstring tbl_name) { name = tbl_name + "$tind"; }
     const char *kind() const { return "indirect"; }
 #end
 }
 
-class MAU_ActionData : Attached {
+class ActionData : Attached {
     bool        direct = true;
 #noconstructor
 #nodbprint
 #emit
-    explicit MAU_ActionData(cstring tbl_name) { name = tbl_name + "$action"; }
+    explicit ActionData(cstring tbl_name) { name = tbl_name + "$action"; }
     const char *kind() const { return "action"; }
     bool indexed() const { return !direct; }
 #end
@@ -117,19 +119,19 @@ class MAU_ActionData : Attached {
 // a sequence of tables -- may be reordered if deps allow.
 // deps(i,j) is true iff tables[i] is dependent on tables[j]
 // (so must have j < i) */
-class MAU_TableSeq {
-    inline Vector<MAU_Table>    tables;
+class TableSeq {
+    inline Vector<Table>        tables;
     LTBitMatrix                 deps;
 #emit
-    MAU_TableSeq() = default;
-    explicit MAU_TableSeq(const MAU_Table *a) { if (a) tables.push_back(a); }
-    MAU_TableSeq(const MAU_Table *a, const MAU_Table *b) {
+    TableSeq() = default;
+    explicit TableSeq(const Table *a) { if (a) tables.push_back(a); }
+    TableSeq(const Table *a, const Table *b) {
         if (a) tables.push_back(a);
         if (b) tables.push_back(b); }
-    MAU_TableSeq(const MAU_TableSeq *a, const MAU_Table *b) {
+    TableSeq(const TableSeq *a, const Table *b) {
         if (a) tables.insert(tables.end(), a->tables.begin(), a->tables.end());
         if (b) tables.push_back(b); }
-    const MAU_Table *front() const { return tables.empty() ? nullptr : tables.front(); }
+    const Table *front() const { return tables.empty() ? nullptr : tables.front(); }
 #end
 #apply
     dump { /* TODO */ }
@@ -142,13 +144,14 @@ class MAU_TableSeq {
 // We convert the primitive into an instruction when we check those constraints
 // TODO(cdodd) -- stateful ALU has its own disctinct instruction set -- should use a different
 // class for those or reuse this?
-class MAU_Instruction : Primitive {
+class Instruction : Primitive {
 #noconstructor
 #nodbprint
 #emit
     using Primitive::Primitive;
-    explicit MAU_Instruction(const Primitive &p) : Primitive(p) {}
+    explicit Instruction(const Primitive &p) : Primitive(p) {}
     bool isOutput(int operand_index) const { return operand_index == 0; }
 #end
 }
 
+}  // end namespace MAU

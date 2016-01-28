@@ -33,7 +33,7 @@ class PhvInfo : public Inspector {
     map<cstring, Info>                  all_fields;
     vector<Info *>                      by_id;
     map<cstring, std::pair<int, int>>   all_headers;
-    void add(cstring, const IR::Type *, bool);
+    void add(cstring, int, bool);
     void add_hdr(cstring, const IR::HeaderType *, bool);
     bool preorder(const IR::Header *h) override;
     bool preorder(const IR::HeaderStack *) override;
@@ -55,13 +55,16 @@ class PhvInfo : public Inspector {
 
  public:
     const Info *field(int idx) const { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
+    const Info *field(const IR::Expression *, std::pair<int, int> *bits = 0) const;
     const Info *field(const IR::FieldRef *, std::pair<int, int> *bits = 0) const;
-    const Info *field(const IR::FragmentRef *, std::pair<int, int> *bits = 0) const;
+    const Info *field(const IR::HeaderSliceRef *, std::pair<int, int> *bits = 0) const;
     Info *field(int idx) { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
+    Info *field(const IR::Expression *e, std::pair<int, int> *bits = 0) {
+        return const_cast<Info *>(const_cast<const PhvInfo *>(this)->field(e, bits)); }
     Info *field(const IR::FieldRef *fr, std::pair<int, int> *bits = 0) {
         return const_cast<Info *>(const_cast<const PhvInfo *>(this)->field(fr, bits)); }
-    Info *field(const IR::FragmentRef *fr, std::pair<int, int> *bits = 0) {
-        return const_cast<Info *>(const_cast<const PhvInfo *>(this)->field(fr, bits)); }
+    Info *field(const IR::HeaderSliceRef *hsr, std::pair<int, int> *bits = 0) {
+        return const_cast<Info *>(const_cast<const PhvInfo *>(this)->field(hsr, bits)); }
     const std::pair<int, int> *header(cstring name) const;
     const std::pair<int, int> *header(const IR::HeaderRef *hr) const {
         return header(hr->toString()); }
@@ -70,6 +73,9 @@ class PhvInfo : public Inspector {
     iterator<vector<Info *>::iterator> end() { return by_id.end(); }
     iterator<vector<Info *>::const_iterator> begin() const { return by_id.begin(); }
     iterator<vector<Info *>::const_iterator> end() const { return by_id.end(); }
+    void allocatePOV();
 };
+
+std::ostream &operator<<(std::ostream &, const PhvInfo::Info::alloc_slice &);
 
 #endif /* _TOFINO_PHV_PHV_FIELDS_H_ */

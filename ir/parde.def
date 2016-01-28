@@ -1,45 +1,55 @@
+namespace Tofino {
 
-class Tofino_ParserMatch {
-  match_t                     value;
-  int                         shift;
-  inline Vector<Expression>   stmts;
-  Tofino_ParserState          next;
-  ParserException             except;
+class ParserMatch {
+  match_t                       value;
+  int                           shift;
+  inline Vector<Expression>     stmts;
+  ParserState                   next;
+  ParserException               except;
 #noconstructor
 #emit
-  Tofino_ParserMatch(uintmax_t v, uintmax_t m, const Vector<Expression> &e)
+  ParserMatch(uintmax_t v, uintmax_t m, const Vector<Expression> &e)
   : value(~v&m, v&m), shift(0), stmts(e), next(0), except(0) {}
+  ParserMatch(match_t v, int sh, const std::initializer_list<const Expression *> &st,
+                     const ParserState *n, const ParserException *ex = nullptr)
+  : value(v), shift(sh), stmts(st), next(n), except(ex) {}
 #end
 }
 
-class Tofino_ParserState {
-  cstring                               name;
-  inline Vector<Expression>             select;
-  inline Vector<Tofino_ParserMatch>     match;
+class ParserState {
+  cstring                       name;
+  inline Vector<Expression>     select;
+  inline Vector<ParserMatch>    match;
 #noconstructor
 #emit
   const IR::Parser *p4state = 0; /* informational only! not visited or compared for equal */
-  explicit Tofino_ParserState(const IR::Parser *);
+  explicit ParserState(const IR::Parser *);
+  ParserState(cstring n, const std::initializer_list<const Expression *> &sel,
+                     const std::initializer_list<const ParserMatch *> &m)
+  : name(n), select(sel), match(m) {}
 #end
 }
 
-class Tofino_Parser {
-  gress_t                       gress;
-  Tofino_ParserState            start;
+class Parser {
+  gress_t               gress;
+  ParserState           start;
 #noconstructor
 #emit
-  Tofino_Parser(gress_t gr, const Tofino_ParserState *s) : gress(gr), start(s) {}
+  Parser(gress_t gr, const ParserState *s) : gress(gr), start(s) {}
 #end
 #apply
 }
 
-class Tofino_Deparser {
+class Deparser {
   gress_t                       gress;
-  inline Vector<Expression>     stmts;
+  inline Vector<Expression>     emits;
+  Expression                    egress_port;
 #noconstructor
 #emit
   const IR::Parser *start = 0; /* informational only! not visited or compared for equal */
-  Tofino_Deparser(gress_t gr, const Tofino_Parser *s);
+  Deparser(gress_t gr, const Parser *s);
 #end
 #apply
 }
+
+}  // end namespace Tofino

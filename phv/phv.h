@@ -32,6 +32,7 @@ class Container {
             throw Util::CompilerBug("Invalid register '%s'", name); }
 
     size_t size() const { return 8U << log2sz_; }
+    unsigned index() const { return index_; }
     explicit operator bool() const { return log2sz_ != 3; }
     Container operator++() {
         if (index_ != 0x7ff) ++index_;

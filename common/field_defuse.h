@@ -2,7 +2,7 @@
 #define _FIELD_DEFUSE_H_
 
 #include <iostream>
-#include "tofino/ir/tofino.h"
+#include "ir/ir.h"
 #include "lib/bitvec.h"
 #include "lib/ltbitmatrix.h"
 #include "tofino/phv/phv_fields.h"
@@ -24,6 +24,7 @@ class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
     bool preorder(const IR::Tofino::Parser *p) override;
     bool preorder(const IR::Tofino::Deparser *p) override;
     bool preorder(const IR::FieldRef *f) override;
+    bool preorder(const IR::HeaderSliceRef *h) override;
     bool preorder(const IR::HeaderStackItemRef *f) override;
     FieldDefUse *clone() const override { return new FieldDefUse(*this); }
     void flow_merge(Visitor &) override;

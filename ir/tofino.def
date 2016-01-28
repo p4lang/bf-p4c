@@ -8,19 +8,21 @@ inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
 #include "tofino/ir/thread_visitor.h"
 #end
 
-class Tofino_Pipe {
+class Tofino::Pipe {
+    Metadata    standard_metadata; // not visited
 #noconstructor
 #emit
     struct thread_t {
-        const Tofino_Parser     *parser;
-        const MAU_TableSeq      *mau;
-        const Tofino_Deparser   *deparser;
+        const Tofino::Parser    *parser;
+        const MAU::TableSeq     *mau;
+        const Tofino::Deparser  *deparser;
         bool operator==(const thread_t &a) const {
             return parser == a.parser && mau == a.mau && deparser == a.deparser; }
     } thread[2] = { { nullptr, nullptr, nullptr } };  // INGRESS and EGRESS
 #end
 #apply
-    equality{ return thread[0] == a.thread[0] && thread[1] == a.thread[1]; }
+    equality{ return standard_metadata == a.standard_metadata &&
+                     thread[0] == a.thread[0] && thread[1] == a.thread[1]; }
     visitchildren{
         if (auto *th = dynamic_cast<ThreadVisitor *>(&v)) {
             v.visit(thread[th->thread].parser);

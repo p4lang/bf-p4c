@@ -17,6 +17,7 @@
 #include "tofino/mau/table_placement.h"
 #include "tofino/mau/table_seqdeps.h"
 #include "tofino/mau/table_summary.h"
+#include "tofino/parde/add_parde_metadata.h"
 #include "tofino/parde/asm_output.h"
 #include "tofino/parde/compute_shifts.h"
 #include "tofino/parde/split_header.h"
@@ -25,9 +26,6 @@
 #include "tofino/phv/create_thread_local_instances.h"
 #include "tofino/phv/header_fragment_creator.h"
 #include "tofino/common/copy_header_eliminator.h"
-#include "tofino/common/modify_field_splitter.h"
-#include "tofino/common/modify_field_eliminator.h"
-#include "tofino/common/or_tools_allocator.h"
 
 class CheckTableNameDuplicate : public MauInspector {
     set<cstring>        names;
@@ -55,6 +53,7 @@ void test_tofino_backend(const IR::Global *program, const CompilerOptions *optio
         std::cout << *program << std::endl; }
     PhvInfo phv;
     program->apply(phv);
+    phv.allocatePOV();
 
     auto maupipe = extract_maupipe(program);
     maupipe = maupipe->apply(TableLayout());
@@ -70,15 +69,13 @@ void test_tofino_backend(const IR::Global *program, const CompilerOptions *optio
         std::cout << deps;
     TablesMutuallyExclusive mutex;
     FieldDefUse defuse(phv);
-    ORToolsAllocator or_tools_allocator;
     PassManager backend = {
+        new AddMetadataShims,
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),
         new SplitExtractEmit,
-        options->phv_alloc ? new HeaderFragmentCreator : 0,
         options->phv_alloc ? new CopyHeaderEliminator : 0,
-        options->phv_alloc ? new ModifyFieldSplitter : 0,
-        options->phv_alloc ? new ModifyFieldEliminator : 0,
+        options->phv_alloc ? new HeaderFragmentCreator : 0,
         new SplitGateways,
         new CheckTableNameDuplicate,
         new TableFindSeqDependencies,
@@ -95,13 +92,8 @@ void test_tofino_backend(const IR::Global *program, const CompilerOptions *optio
         &defuse,
         new MauPhvConstraints(phv),
         new PhvAllocate(phv, defuse.conflicts()),
-#if 0
-        options->phv_alloc ? or_tools_allocator.parde_inspector() : 0,
-        options->phv_alloc ? or_tools_allocator.mau_inspector() : 0,
-#endif
     };
     maupipe = maupipe->apply(backend);
-    or_tools_allocator.Solve();
     if (verbose) {
         std::cout << DBPrint::setflag(DBPrint::TableNoActions);
         std::cout << "-------------------------------------------------" << std::endl
@@ -116,9 +108,9 @@ void test_tofino_backend(const IR::Global *program, const CompilerOptions *optio
     MauAsmOutput mauasm(phv);
     maupipe->apply(mauasm);
     std::cout << PhvAsmOutput(phv)
-              << ParserAsmOutput(maupipe, INGRESS)
-              << DeparserAsmOutput(maupipe, INGRESS)
-              << ParserAsmOutput(maupipe, EGRESS)
-              << DeparserAsmOutput(maupipe, EGRESS)
+              << ParserAsmOutput(maupipe, phv, INGRESS)
+              << DeparserAsmOutput(maupipe, phv, INGRESS)
+              << ParserAsmOutput(maupipe, phv, EGRESS)
+              << DeparserAsmOutput(maupipe, phv, EGRESS)
               << mauasm;
 }

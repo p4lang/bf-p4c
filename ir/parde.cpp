@@ -1,6 +1,6 @@
 #include "ir/ir.h"
 
-IR::Tofino_ParserState::Tofino_ParserState(const IR::Parser *parser) {
+IR::Tofino::ParserState::ParserState(const IR::Parser *parser) {
     name = parser->name;
     if (name == "start" || name == "end")
         name += "$";

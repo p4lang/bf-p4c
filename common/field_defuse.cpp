@@ -77,6 +77,11 @@ bool FieldDefUse::preorder(const IR::FieldRef *f) {
     return false;
 }
 
+bool FieldDefUse::preorder(const IR::HeaderSliceRef *h) {
+  access_field(phv.field(h));
+  return false;
+}
+
 bool FieldDefUse::preorder(const IR::HeaderStackItemRef *) {
     // access_field(f->toString());
     return false;

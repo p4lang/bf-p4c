@@ -114,6 +114,7 @@ class GetTofinoTables : public Inspector {
 
 const IR::Tofino::Pipe *extract_maupipe(const IR::Global *program) {
   auto rv = new IR::Tofino::Pipe();
+  rv->standard_metadata = program->get<IR::Metadata>("standard_metadata");
   GetTofinoParser parser(program);
   program->apply(parser);
   auto ingress = program->get<IR::Control>(parser.ingress_entry());

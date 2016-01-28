@@ -4,13 +4,14 @@
 #include "parde_visitor.h"
 
 class ComputeShifts : public PardeModifier {
-    int shift = 0;
+    int shift;
     void postorder(IR::Primitive *prim) {
         if (prim->name == "extract")
-            shift += prim->operands[0]->type->width_bits() / 8U; }
+            shift += (prim->operands[0]->type->width_bits() + 7) / 8U; }
+    bool preorder(IR::Tofino::ParserMatch *) { shift = 0; return true; }
     void postorder(IR::Tofino::ParserMatch *match) {
-        match->shift = shift;
-        shift = 0; }
+        if (findContext<IR::Tofino::ParserState>()->name[0] != '$')
+            match->shift = shift; }
 };
 
 #endif /* _TOFINO_PARDE_COMPUTE_SHIFTS_H_ */
