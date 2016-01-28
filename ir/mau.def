@@ -18,11 +18,11 @@ class Table {
     NullOK ActionFunction               gateway_payload;
     NullOK IR::Table                    match_table;
     inline Vector<Attached>             attached;
+    vector<ActionFunction>              actions;
+    map<cstring, TableSeq>              next;
 #noconstructor
 #noequality
 #emit
-    vector<const ActionFunction *>      actions;
-    map<cstring, const TableSeq *>      next;
     struct Layout {
         /* POD type */
         int             entries = 0;
