@@ -29,8 +29,7 @@ class OutputExtracts : public Inspector {
 };
 
 static void output_match(std::ostream &out, const PhvInfo &phv, indent_t indent,
-                         const IR::Tofino::ParserMatch *match)
-{
+                         const IR::Tofino::ParserMatch *match) {
     if (match->value)
         out << indent << match->value << ':' << std::endl;
     else
@@ -44,8 +43,7 @@ static void output_match(std::ostream &out, const PhvInfo &phv, indent_t indent,
 }
 
 static void output_state(std::ostream &out, const PhvInfo &phv, indent_t indent,
-                         const IR::Tofino::ParserState *state)
-{
+                         const IR::Tofino::ParserState *state) {
     out << indent++ << state->name << ':' << std::endl;
     if (!state->select.empty()) {
         out << indent << "match: ";

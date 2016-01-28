@@ -249,7 +249,7 @@ void emit_fmt_immed(std::ostream &out, const IR::MAU::Table *tbl, int base, cons
     for (auto act : tbl->actions) {
         vector<std::pair<int, cstring>> sorted_args;
         for (auto arg : act->args) {
-            int size = (arg->type->width_bits() + 7) / 8U; // in bytes
+            int size = (arg->type->width_bits() + 7) / 8U;  // in bytes
             sorted_args.emplace_back(size, arg->name); }
         std::stable_sort(sorted_args.begin(), sorted_args.end(),
             [](const std::pair<int, cstring> &a, const std::pair<int, cstring> &b)->bool {
@@ -272,7 +272,7 @@ void emit_fmt_immed(std::ostream &out, const IR::MAU::Table *tbl, int base, cons
 void emit_fmt_nonimmed(std::ostream &out, const IR::ActionFunction *act, const char *sep) {
     vector<std::pair<int, cstring>> sorted_args;
     for (auto arg : act->args) {
-        int size = (arg->type->width_bits() + 7) / 8U; // in bytes
+        int size = (arg->type->width_bits() + 7) / 8U;  // in bytes
         sorted_args.emplace_back(size, arg->name); }
     std::stable_sort(sorted_args.begin(), sorted_args.end(),
         [](const std::pair<int, cstring> &a, const std::pair<int, cstring> &b)->bool {
