@@ -14,9 +14,9 @@ class Table {
     gress_t                             gress;
     int                                 logical_id = -1;
     bool                                gateway_cond = true;
-    Expression                          gateway_expr;
-    ActionFunction                      gateway_payload;
-    IR::Table                           match_table;
+    NullOK Expression                   gateway_expr;
+    NullOK ActionFunction               gateway_payload;
+    NullOK IR::Table                    match_table;
     inline Vector<Attached>             attached;
 #noconstructor
 #noequality

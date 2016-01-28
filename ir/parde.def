@@ -4,8 +4,8 @@ class ParserMatch {
   match_t                       value;
   int                           shift;
   inline Vector<Expression>     stmts;
-  ParserState                   next;
-  ParserException               except;
+  NullOK ParserState            next;
+  NullOK ParserException        except;
 #noconstructor
 #emit
   ParserMatch(uintmax_t v, uintmax_t m, const Vector<Expression> &e)
@@ -43,7 +43,7 @@ class Parser {
 class Deparser {
   gress_t                       gress;
   inline Vector<Expression>     emits;
-  Expression                    egress_port;
+  NullOK Expression             egress_port;
 #noconstructor
 #emit
   const IR::Parser *start = 0; /* informational only! not visited or compared for equal */
