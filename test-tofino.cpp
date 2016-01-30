@@ -4,7 +4,7 @@
 #include "ir/ir.h"
 #include "ir/dbprint.h"
 #include "lib/log.h"
-#include "lib/options.h"
+#include "frontends/common/options.h"
 #include "tofino/common/extract_maupipe.h"
 #include "tofino/common/field_defuse.h"
 #include "tofino/mau/asm_output.h"
