@@ -21,7 +21,7 @@ class Table {
     vector<ActionFunction>              actions;
     map<cstring, TableSeq>              next;
 #noconstructor
-#noequality
+#nooperator==
 #emit
     struct Layout {
         /* POD type */

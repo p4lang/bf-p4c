@@ -21,8 +21,8 @@ class Tofino::Pipe {
     } thread[2] = { { nullptr, nullptr, nullptr } };  // INGRESS and EGRESS
 #end
 #apply
-    equality{ return standard_metadata == a.standard_metadata &&
-                     thread[0] == a.thread[0] && thread[1] == a.thread[1]; }
+    operator== { return standard_metadata == a.standard_metadata &&
+                        thread[0] == a.thread[0] && thread[1] == a.thread[1]; }
     visit_children {
         if (auto *th = dynamic_cast<ThreadVisitor *>(&v)) {
             v.visit(thread[th->thread].parser);
