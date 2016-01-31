@@ -45,7 +45,10 @@ int Phv::addreg(gress_t gress, const char *name, const value_t &what) {
         return -1;
     auto reg = what.type == tSTR ? what.s : what[0].s;
     if (const Slice *sl = get(gress, reg)) {
-        if (sl->valid) phv_use[gress][sl->reg.index] = true;
+        if (sl->valid) {
+            phv_use[gress][sl->reg.index] = true;
+            user_defined[sl->reg.index].first = gress;
+            user_defined[sl->reg.index].second.push_back(name); }
         if (what.type == tSTR) {
             names[gress].emplace(name, *sl);
             return 0; }
@@ -77,6 +80,12 @@ void Phv::input(VECTOR(value_t) args, value_t data) {
         if (!addreg(gress, kv.key.s, kv.value) && args.size == 0)
             addreg(EGRESS, kv.key.s, kv.value);
     }
+}
+
+void Phv::output_names(json::map &out) {
+    for (auto &slot : phv.user_defined)
+        out[std::to_string(slot.first)] = std::string(1, "IE"[slot.second.first])
+                + " [" + join(slot.second.second, ", ") + "]";
 }
 
 Phv::Ref::Ref(gress_t g, const value_t &n) : gress(g), lo(-1), hi(-1), lineno(n.lineno) {

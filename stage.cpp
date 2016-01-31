@@ -168,9 +168,14 @@ void AsmStage::output() {
                 stage[i-1].group_table_use[gress] |= stage[i].group_table_use[gress]; }
     for (unsigned i = 0; i < stage.size(); i++) {
         // if  (stage[i].tables.empty()) continue;
+        json::map &names = TopLevel::all.name_lookup["stages"][std::to_string(i)];
+        Phv::output_names(names["containers"]);
+        json::map &table_names = names["logical_tables"];
         for (auto table : stage[i].tables) {
             table->write_regs();
-            table->gen_tbl_cfg(tbl_cfg); }
+            table->gen_tbl_cfg(tbl_cfg);
+            if (table->logical_id >= 0)
+                table->gen_name_lookup(table_names[std::to_string(table->logical_id)]); }
         stage[i].write_regs();
         stage[i].regs.emit_json(*open_output("regs.match_action_stage.%02x.cfg.json", i) , i);
         char buf[64];

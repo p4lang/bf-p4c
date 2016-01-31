@@ -33,4 +33,13 @@ void append(std::vector<T, Alloc> &a, const std::vector<T, Alloc> &b) {
 
 void set_power_ctl_reg(checked_array<2, checked_array<16, ubits<8>>> &power_ctl, int reg);
 
+template<class T, class U>
+T join(const std::vector<T> &vec, U sep) {
+    T rv;
+    bool first = true;
+    for (auto &el : vec) {
+        if (first) first = false; else rv += sep;
+        rv += el; }
+    return rv; }
+
 #endif /* _misc_h_ */

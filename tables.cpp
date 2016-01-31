@@ -970,7 +970,7 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(const c
         tmp["vpns"] = std::move(vpns);
         mem_units_and_vpns.push_back(std::move(tmp));
         vpn += period; }
-    return std::make_unique<json::map>(std::move(mra));
+    return json::make_unique<json::map>(std::move(mra));
 }
 
 SelectionTable *AttachedTables::get_selector() const {
@@ -1060,4 +1060,11 @@ void add_pack_format(json::map &stage_tbl, int memword, int words, int entries) 
         pack_format.push_back(std::move(pack_fmt));
     } else
         (stage_tbl["pack_format"] = json::vector()).push_back(std::move(pack_fmt));
+}
+
+void Table::gen_name_lookup(json::map &out) {
+    if (p4_table && p4_table->p4_name())
+        out["table_name"] = p4_table->p4_name();
+    else
+        out["table_name"] = name();
 }

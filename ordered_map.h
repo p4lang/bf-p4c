@@ -62,6 +62,7 @@ public:
     ordered_map(ordered_map &&a) = default; /* move is ok? */
     ordered_map &operator=(const ordered_map &a) { data = a.data; init_data_map(); }
     ordered_map &operator=(ordered_map &&a) = default; /* move is ok? */
+    ordered_map(const std::initializer_list<value_type> &il) : data(il) { init_data_map(); }
     // FIXME add allocator and comparator ctors...
 
     iterator                    begin() noexcept { return data.begin(); }

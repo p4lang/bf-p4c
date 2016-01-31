@@ -20,8 +20,8 @@ TopLevel::TopLevel() {
         [this](std::ostream &out, const char *addr, const void *end) {
             out << "registers.pipe";
             reg_pipe.emit_fieldname(out, addr, end); });
-
 }
+
 TopLevel::~TopLevel() {
     undeclare_registers(&mem_top);
     undeclare_registers(&mem_pipe);
@@ -39,4 +39,6 @@ void TopLevel::output() {
     mem_pipe.emit_json(*open_output("memories.pipe.cfg.json"));
     reg_top.emit_json(*open_output("regs.top.cfg.json"));
     reg_pipe.emit_json(*open_output("regs.pipe.cfg.json"));
+    if (!name_lookup.empty())
+        *open_output("p4_name_lookup.json") <<  &name_lookup << std::endl;
 }

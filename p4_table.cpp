@@ -86,7 +86,7 @@ void P4Table::check(Table *tbl) {
 
 json::map *P4Table::base_tbl_cfg(json::vector &out, int size, Table *table) {
     if (!config) {
-        out.emplace_back(std::make_unique<json::map>());
+        out.emplace_back(json::make_unique<json::map>());
         json::map &tbl = dynamic_cast<json::map &>(*out.back());
         config = &tbl;
         tbl["name"] = p4_name();
@@ -97,7 +97,7 @@ json::map *P4Table::base_tbl_cfg(json::vector &out, int size, Table *table) {
         tbl["stage_tables_length"] = 0L;
         if (!preferred_match_type.empty())
             tbl["preferred_match_type"] = preferred_match_type;
-        tbl["stage_tables"] = std::make_unique<json::vector>();
+        tbl["stage_tables"] = json::make_unique<json::vector>();
         if (options.match_compiler && handle >> 24 == MatchEntry) {
             tbl["p4_action_data_tables"] = json::vector();
             tbl["p4_selection_tables"] = json::vector(); }

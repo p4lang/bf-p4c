@@ -346,7 +346,7 @@ std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl
                 mem_units_and_vpns.push_back(std::move(tmp));
                 word = 0; }
             ++vpn; } }
-    return std::make_unique<json::map>(std::move(mra));
+    return json::make_unique<json::map>(std::move(mra));
 }
 
 void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {

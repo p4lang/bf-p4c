@@ -3,6 +3,8 @@
 
 #include "sections.h"
 #include "bitvec.h"
+#include "json.h"
+#include <set>
 #include <vector>
 
 enum {
@@ -58,6 +60,7 @@ public:
 private:
     Register regs[NUM_PHV_REGS];
     std::map<std::string, Slice> names[2];
+    std::map<int, std::pair<gress_t, std::vector<std::string>>> user_defined;
     bitvec      phv_use[2];
     int addreg(gress_t gress, const char *name, const value_t &what);
 public:
@@ -119,6 +122,7 @@ public:
     static const bitvec tagalong_groups[8];
     static void setuse(gress_t gress, const bitvec &u) { phv.phv_use[gress] |= u; }
     static void unsetuse(gress_t gress, const bitvec &u) { phv.phv_use[gress] -= u; }
+    static void output_names(json::map &);
     static std::string db_regset(const bitvec &s);
 };
 
