@@ -3,6 +3,7 @@
 #include "lib/bitvec.h"
 #include "lib/hex.h"
 #include "lib/log.h"
+#include "tofino/phv/phv_fields.h"
 
 void IXBar::clear() {
     exact_use.clear();
@@ -74,7 +75,7 @@ static bool find_alloc(IXBar::Use &alloc, int groups, int bytes_per_group,
     return /* alloc */ true;
 }
 
-bool IXBar::allocTable(bool ternary, const IR::Table *tbl, Use &alloc) {
+bool IXBar::allocTable(bool ternary, const IR::Table *tbl, const PhvInfo &phv, Use &alloc) {
     alloc.clear();
     alloc.ternary = ternary;
     if (!tbl->reads) return true;
@@ -89,9 +90,10 @@ bool IXBar::allocTable(bool ternary, const IR::Table *tbl, Use &alloc) {
                 throw Util::CompilerBug("unexpected reads expression %s", r);
             // FIXME -- for now just assuming we can fit the valid bit reads in as needed
             continue; }
-        if (!field || (!field->is<IR::FieldRef>() && !field->is<IR::HeaderSliceRef>()))
+        const PhvInfo::Info *finfo;
+        if (!field || !(finfo = phv.field(field)))
             throw Util::CompilerBug("unexpected reads expression %s", r);
-        cstring fname = field->toString();
+        cstring fname = finfo->name;
         if (fields_needed.count(fname))
             throw Util::CompilationError("field %s read twice by table %s", fname, tbl->name);
         fields_needed.insert(fname);
@@ -114,7 +116,7 @@ bool IXBar::allocTable(bool ternary, const IR::Table *tbl, Use &alloc) {
     return rv;
 }
 
-bool IXBar::allocGateway(const IR::Expression * /*tbl*/, Use &/*alloc*/) {
+bool IXBar::allocGateway(const IR::Expression * /*tbl*/, const PhvInfo &/*phv*/, Use &/*alloc*/) {
     // TODO(cdodd)
     return true;
 }
@@ -131,11 +133,11 @@ void IXBar::update(const Use &alloc) {
         fields.emplace(byte.field, byte.loc); }
 }
 
-bool IXBar::allocTable(const IR::MAU::Table *tbl, Use &tbl_alloc, Use &gw_alloc) {
+bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_alloc, Use &gw_alloc) {
     if (!tbl) return true;
-    if (tbl->match_table && !allocTable(tbl->layout.ternary, tbl->match_table, tbl_alloc))
+    if (tbl->match_table && !allocTable(tbl->layout.ternary, tbl->match_table, phv, tbl_alloc))
         return false;
-    if (tbl->gateway_expr && !allocGateway(tbl->gateway_expr, gw_alloc)) {
+    if (tbl->gateway_expr && !allocGateway(tbl->gateway_expr, phv, gw_alloc)) {
         tbl_alloc.clear();
         return false; }
     return true;
