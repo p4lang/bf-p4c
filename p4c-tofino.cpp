@@ -13,13 +13,13 @@
 #include "frontends/common/constantFolding.h"
 #include "frontends/common/header_type.h"
 #include "frontends/common/typecheck.h"
-#include "frontends/common/options.h"
+#include "tofinoOptions.h"
 
-extern void test_tofino_backend(const IR::Global *, const CompilerOptions *);
+extern void test_tofino_backend(const IR::Global *, const Tofino_Options *);
 extern void setup_gc_logging();
 
 static const IR::Global *
-parse_input(const CompilerOptions &options, cstring filename, FILE* stream, bool closeFile) {
+parse_input(const Tofino_Options &options, cstring filename, FILE* stream, bool closeFile) {
     const IR::Global* program = nullptr;
     switch (options.langVersion) {
     case CompilerOptions::FrontendVersion::P4v1:
@@ -53,9 +53,20 @@ parse_input(const CompilerOptions &options, cstring filename, FILE* stream, bool
 int main(int ac, char **av) {
     const IR::Global *program = nullptr;
 
-    CompilerOptions options = process_options(ac, av);
-    if (options.invalid)
+    Tofino_Options options;
+    int optind = options.parse(ac, av);
+    if (optind < ac - 1) {
+        ::error("Only only input file must be specified");
+        options.usage();
         return 1;
+    } else if (optind >= ac) {
+        ::error("No input files specified");
+        options.usage();
+        return 1;
+    } else {
+        options.setInputFile(av[optind]);
+    }
+
     setup_gc_logging();
 
     FILE* in = nullptr;

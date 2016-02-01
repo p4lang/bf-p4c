@@ -4,7 +4,7 @@
 #include "ir/ir.h"
 #include "ir/dbprint.h"
 #include "lib/log.h"
-#include "frontends/common/options.h"
+#include "tofinoOptions.h"
 #include "tofino/common/extract_maupipe.h"
 #include "tofino/common/field_defuse.h"
 #include "tofino/mau/asm_output.h"
@@ -45,7 +45,7 @@ class DumpPipe : public Inspector {
         return false; }
 };
 
-void test_tofino_backend(const IR::Global *program, const CompilerOptions *options) {
+void test_tofino_backend(const IR::Global *program, const Tofino_Options *options) {
     if (verbose) {
         std::cout << "-------------------------------------------------" << std::endl
                   << "Initial program" << std::endl
