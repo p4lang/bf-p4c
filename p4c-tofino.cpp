@@ -56,7 +56,7 @@ int main(int ac, char **av) {
     Tofino_Options options;
     int optind = options.parse(ac, av);
     if (optind < ac - 1) {
-        ::error("Only only input file must be specified");
+        ::error("Only one input file must be specified");
         options.usage();
         return 1;
     } else if (optind >= ac) {
