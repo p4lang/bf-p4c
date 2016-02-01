@@ -70,7 +70,8 @@ tofino_backend_SOURCES = \
 	backends/tofino/phv/phv_allocate.h \
 	backends/tofino/phv/phv_fields.cpp \
 	backends/tofino/phv/phv_fields.h \
-	backends/tofino/test-tofino.cpp
+	backends/tofino/test-tofino.cpp \
+	backends/tofino/p4c-tofino.cpp
 
 ir_DEF_FILES += \
     $(srcdir)/backends/tofino/ir/tofino.def \
@@ -79,8 +80,7 @@ ir_DEF_FILES += \
 
 bin_PROGRAMS += p4c-tofino
 p4c_tofino_LDADD = -lgc libfrontend.a libp4ctoolkit.a 
-p4c_tofino_SOURCES = $(tofino_backend_SOURCES) \
-	backends/tofino/p4c-tofino.cpp
+p4c_tofino_SOURCES = $(tofino_backend_SOURCES)
 
 cpplint_FILES += $(tofino_backend_SOURCES)
 
