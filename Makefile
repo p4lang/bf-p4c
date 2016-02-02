@@ -10,17 +10,9 @@ WALLE := $(shell  \
 	fi; \
     done; echo walle)
 
-GEN_OBJS := gen/memories.prsr_mem_main_rspec.o \
-	    gen/regs.dprsr_hdr.o \
-	    gen/regs.dprsr_inp.o \
-	    gen/regs.ebp_rspec.o \
-	    gen/regs.ibp_rspec.o \
-	    gen/regs.mau_addrmap.o \
-	    gen/regs.prsr_reg_merge_rspec.o \
-	    gen/regs.tofino.o \
-	    gen/regs.pipe_addrmap.o \
-	    gen/memories.pipe_top_level.o \
-	    gen/memories.pipe_addrmap.o
+GEN :=  memories.pipe_addrmap  memories.pipe_top_level  memories.prsr_mem_main_rspec \
+	regs.dprsr_hdr regs.dprsr_inp regs.ebp_rspec regs.ibp_rspec regs.mau_addrmap \
+	regs.pipe_addrmap regs.prsr_reg_merge_rspec regs.tofino
 TFAS_OBJS:= action_bus.o action_table.o asm-parse.o asm-types.o bitvec.o \
 	    counter.o crash.o deparser.o exact_match.o gateway.o hash_action.o \
 	    hash_dist.o hashexpr.o hex.o idletime.o input_xbar.o \
@@ -28,9 +20,9 @@ TFAS_OBJS:= action_bus.o action_table.o asm-parse.o asm-types.o bitvec.o \
 	    selection.o stage.o tables.o ternary_match.o tfas.o top_level.o \
 	    ubits.o vector.o
 TEST_SRCS:= $(wildcard test_*.cpp)
-default: $(GEN_OBJS:%.o=%.h) gen/uptr_sizes.h tfas
+default: $(GEN:%=gen/%.h) gen/uptr_sizes.h tfas
 all: default reflow json_diff
-tfas: $(TFAS_OBJS) json.o $(GEN_OBJS) $(TEST_SRCS:%.cpp=%.o)
+tfas: $(TFAS_OBJS) json.o $(GEN:%=gen/%.o) $(TEST_SRCS:%.cpp=%.o)
 
 json2cpp: json.o
 json_diff: json.o
@@ -42,9 +34,9 @@ asm-parse.o: lex-yaml.c
 json_diff.o json.o: OPTFLAGS = -O3
 
 %: %.cpp
-$(GEN_OBJS) $(TFAS_OBJS): | $(GEN_OBJS:%.o=%.h) gen/uptr_sizes.h
+$(TFAS_OBJS): | $(GEN:%=gen/%.h) gen/uptr_sizes.h
 
-$(GEN_OBJS): gen/%.o: gen/%.cpp gen/%.h
+$(GEN:%=gen/%.o): gen/%.o: gen/%.cpp gen/%.h
 gen/memories.prsr_mem_main_rspec.%: JSON_NAME=memories.all.parser.%s
 gen/regs.dprsr_hdr.%: JSON_NAME=regs.all.deparser.header_phase
 gen/regs.dprsr_hdr.%: JSON_GLOBALS=fde_phv
@@ -86,7 +78,7 @@ chip.schema template_objects.yaml: %: p4c-templates/%
 	# if there's a symlink 'p4c-templates' to somewhere with new reg schema, copy them
 	if [ $< -nt $@ ]; then cp $< $@; fi
 
-templates/%.json: templates/.templates-updated
+$(GEN:%=templates/%.cfg.json) $(GEN:%=templates/%.size.json): templates/.templates-updated
 	@test -r $@
 
 -include $(wildcard *.d gen/*.d)
