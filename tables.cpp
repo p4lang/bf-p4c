@@ -1048,18 +1048,71 @@ json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) 
     return &stage_tbl;
 }
 
-void add_pack_format(json::map &stage_tbl, int memword, int words, int entries) {
+json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries) {
     json::map pack_fmt;
     pack_fmt["table_word_width"] = memword * words;
     pack_fmt["memory_word_width"] = memword;
     if (entries >= 0)
         pack_fmt["entries_per_table_word"] = entries;
     pack_fmt["number_memory_units_per_table_word"] = words;
-    if (stage_tbl.count("pack_format")) {
-        auto &pack_format = dynamic_cast<json::vector &>(*stage_tbl["pack_format"]);
-        pack_format.push_back(std::move(pack_fmt));
-    } else
-        (stage_tbl["pack_format"] = json::vector()).push_back(std::move(pack_fmt));
+    json::vector &pack_format = stage_tbl["pack_format"];
+    pack_format.push_back(std::move(pack_fmt));
+    return pack_format.back()->to<json::map>();
+}
+
+json::map &add_pack_format(json::map &stage_tbl, const Table::Format *format) {
+    json::map pack_fmt { { "memory_word_width", json::number(128) } };
+    /* FIXME -- factor the two cases of this if better */
+    if (format->log2size >= 7 || format->groups() > 1) {
+        pack_fmt["table_word_width"] = ((format->size - 1) | 127) + 1;
+        pack_fmt["entries_per_table_word"] = format->groups();
+        pack_fmt["number_memory_units_per_table_word"] = (format->size - 1)/128U + 1;
+        json::vector &entry_list = pack_fmt["entry_list"];
+        int basebit = (format->size - 1) | 127;
+        for (int i = format->groups()-1; i >= 0; --i) {
+            json::vector field_list;
+            for (auto it = format->begin(i); it != format->end(i); ++i) {
+                auto &field = *it;
+                std::string name = field.first;
+                if (name == "action") name = "--instruction_address--";
+                int lobit = 0;
+                for (auto &bits : field.second.bits) {
+                    field_list.push_back( json::map {
+                        { "name", json::string(name) },
+                        { "start_offset", json::number(basebit - bits.hi) },
+                        { "start_bit", json::number(lobit) },
+                        { "bit_width", json::number(bits.size()) }});
+                    lobit += bits.size(); } }
+            entry_list.push_back( json::map {
+                { "entry_number", json::number(i) },
+                { "field_list", std::move(field_list) }}); }
+    } else {
+        int entries = 1U << (7 - format->log2size);
+        pack_fmt["table_word_width"] = 128;
+        pack_fmt["entries_per_table_word"] = entries;
+        pack_fmt["number_memory_units_per_table_word"] = 1;
+        json::vector &entry_list = pack_fmt["entry_list"];
+        int basebit = (1 << format->log2size) - 1;
+        for (int i = entries-1; i >= 0; --i) {
+            json::vector field_list;
+            for (auto &field : *format) {
+                std::string name = field.first;
+                if (name == "action") name = "--instruction_address--";
+                int lobit = 0;
+                for (auto &bits : field.second.bits) {
+                    field_list.push_back( json::map {
+                        { "name", json::string(name) },
+                        { "start_offset", json::number(basebit - bits.hi) },
+                        { "start_bit", json::number(lobit) },
+                        { "bit_width", json::number(bits.size()) }});
+                    lobit += bits.size(); } }
+            entry_list.push_back( json::map {
+                { "entry_number", json::number(i) },
+                { "field_list", std::move(field_list) }});
+            basebit += 1 << format->log2size; } }
+    json::vector &pack_format = stage_tbl["pack_format"];
+    pack_format.push_back(std::move(pack_fmt));
+    return pack_format.back()->to<json::map>();
 }
 
 void Table::gen_name_lookup(json::map &out) {

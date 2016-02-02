@@ -259,8 +259,8 @@ void ExactMatchTable::pass1() {
     for (auto &r : match) r.check();
     if (error_count > 0) return;
     if (match.empty())
-        for (auto it = input_xbar->all_begin(); it != input_xbar->all_end(); ++it)
-            match.push_back(it->second.what);
+        for (auto ixbar_element : *input_xbar)
+            match.push_back(ixbar_element.second.what);
     unsigned bit = 0;
     for (auto &r : match) {
         match_by_bit[bit] = r;

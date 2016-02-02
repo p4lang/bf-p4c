@@ -100,8 +100,8 @@ public:
             return std::pair<unsigned, Input &>((**outer).first, *inner); }
         iter_deref operator->() { return iter_deref(**this); }
     };
-    all_iter all_begin() const { return all_iter(group_order.begin()); }
-    all_iter all_end() const { return all_iter(group_order.end()); }
+    all_iter begin() const { return all_iter(group_order.begin()); }
+    all_iter end() const { return all_iter(group_order.end()); }
 
     Input *find(Phv::Slice sl, int group);
 };

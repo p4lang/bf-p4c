@@ -119,7 +119,7 @@ public:
 	struct bitrange_t { unsigned lo, hi;
 	    bitrange_t(unsigned l, unsigned h) : lo(l), hi(h) {}
 	    bool operator==(const bitrange_t &a) const { return lo == a.lo && hi == a.hi; }
-	    int size() { return hi-lo+1; }
+	    int size() const { return hi-lo+1; }
 	};
 	struct Field {
 	    unsigned    size = 0, group = 0, flags = 0;
@@ -173,6 +173,8 @@ public:
             return "<unknown>"; }
 	decltype(fmt[0].begin()) begin(int grp=0) { return fmt[grp].begin(); }
 	decltype(fmt[0].end()) end(int grp=0) { return fmt[grp].end(); }
+	decltype(fmt[0].cbegin()) begin(int grp=0) const { return fmt[grp].begin(); }
+	decltype(fmt[0].cend()) end(int grp=0) const { return fmt[grp].end(); }
     };
 
     struct Call : Ref { /* a Ref with arguments */
@@ -410,7 +412,8 @@ public:
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(Way &);
 )
 
-void add_pack_format(json::map &stage_tbl, int memword, int words, int entries = -1);
+json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries = -1);
+json::map &add_pack_format(json::map &stage_tbl, const Table::Format *format);
 
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
     void vpn_params(int &width, int &depth, int &period, const char *&period_name);
@@ -420,6 +423,11 @@ DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
 	Match(const value_t &);
     };
     std::vector<Match>  match;
+    int match_word(int word_group) {
+        for (unsigned i = 0; i < match.size(); i++)
+            if (match[i].word_group == word_group)
+                return i;
+        return -1; }
     unsigned            chain_rows; /* bitvector */
     enum { ALWAYS_ENABLE_ROW = (1<<2) | (1<<5) | (1<<9) };
     friend class TernaryIndirectTable;

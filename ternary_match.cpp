@@ -327,23 +327,19 @@ void TernaryMatchTable::write_regs() {
 
 std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl_cfg(const char *type, bool skip_spare_bank) {
     assert(!skip_spare_bank); // never spares in tcam
-    json::map mra;
-    mra["memory_type"] = type;
+    json::map mra { { "memory_type", json::string(type) } };
+    json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"];
     json::vector mem_units;
     unsigned word = 0;
-    json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
     for (auto &row : layout) {
         auto vpn = row.vpns.begin();
         for (auto col : row.cols) {
             mem_units.push_back(memunit(row.row, col));
             if (++word == match.size()) {
-                json::map tmp;
-                tmp["memory_units"] = std::move(mem_units);
+                mem_units_and_vpns.push_back( json::map {
+                    { "memory_units",  std::move(mem_units) },
+                    { "vpns", json::vector { json::number(*vpn) }}});
                 mem_units = json::vector();
-                json::vector vpns;
-                vpns.push_back(*vpn);
-                tmp["vpns"] = std::move(vpns);
-                mem_units_and_vpns.push_back(std::move(tmp));
                 word = 0; }
             ++vpn; } }
     return json::make_unique<json::map>(std::move(mra));
@@ -355,16 +351,30 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
     if (!tbl.count("preferred_match_type"))
         tbl["preferred_match_type"] = "ternary";
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "ternary_match", number_entries);
-    add_pack_format(stage_tbl, 47, match.size(), 1);
+    json::map &pack_fmt = add_pack_format(stage_tbl, 47, match.size(), 1);
     stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("tcam");
+    json::vector match_field_list, match_entry_list;
+    for (auto field : *input_xbar) {
+        int word = match_word(field.first);
+        if (word < 0) continue;
+        match_field_list.push_back( json::map {
+            { "name", json::string(field.second.what.name()) },
+            { "start_offset", json::number(47*word + 45 - field.second.hi) },
+            { "start_bit", json::number(field.second.what->lo) },
+            { "bit_width", json::number(field.second.hi - field.second.lo + 1) }}); }
+    pack_fmt["entry_list"] = json::vector {
+        json::map {
+            { "entry_number",  json::number(0) },
+            { "field_list",  std::move(match_field_list) }}};
     if (indirect) {
-        json::map tind;
         unsigned fmt_width = 1U << indirect->format->log2size;
-        tind["stage_number"] = stage->stageno;
-        tind["number_entries"] = indirect->layout_size()*128/fmt_width * 1024;
-        tind["stage_table_type"] = "ternary_indirection";
-        add_pack_format(tind, 128, 1, 128/fmt_width);
-        tind["memory_resource_allocation"] = indirect->gen_memory_resource_allocation_tbl_cfg("sram");
+        json::map tind {
+            { "stage_number", json::number(stage->stageno) },
+            { "number_entries", json::number(indirect->layout_size()*128/fmt_width * 1024) },
+            { "stage_table_type", json::string("ternary_indirection") }};
+        add_pack_format(tind, indirect->format);
+        tind["memory_resource_allocation"] =
+            indirect->gen_memory_resource_allocation_tbl_cfg("sram");
         stage_tbl["ternary_indirection_table"] = std::move(tind); }
     if (idletime)
         idletime->gen_stage_tbl_cfg(stage_tbl);

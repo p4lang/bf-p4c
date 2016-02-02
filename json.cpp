@@ -126,5 +126,4 @@ void map::print_on(std::ostream &out, int indent, int width, const char *pfx) co
     out << '}';
 }
 
-
-}
+}  // end namespace json

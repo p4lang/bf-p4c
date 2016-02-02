@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include "ordered_map.h"
+#include "rvalue_reference_wrapper.h"
 #include <stdexcept>
 #include <string>
 #include <typeindex>
@@ -58,6 +59,10 @@ public:
     virtual map *as_map() { return nullptr; }
     virtual const map *as_map() const { return nullptr; }
     virtual const char *c_str() const { return nullptr; }
+    template<class T> T &to() { return dynamic_cast<T &>(*this); }
+    template<class T> const T &to() const { return dynamic_cast<const T &>(*this); }
+    virtual std::unique_ptr<obj> copy() && = 0;
+
 };
 
 class True : public obj {
@@ -67,6 +72,7 @@ class True : public obj {
     void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const
         { out << "true"; }
     bool test_width(int &limit) const { limit -= 4; return limit >= 0; }
+    std::unique_ptr<obj> copy() && { return make_unique<True>(std::move(*this)); }
 };
 
 class False : public obj {
@@ -76,6 +82,7 @@ class False : public obj {
     void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const
         { out << "false"; }
     bool test_width(int &limit) const { limit -= 5; return limit >= 0; }
+    std::unique_ptr<obj> copy() && { return make_unique<False>(std::move(*this)); }
 };
 
 class number : public obj {
@@ -94,6 +101,7 @@ public:
 	{ char buf[32]; limit -= sprintf(buf, "%ld", val); return limit >= 0; }
     number *as_number() { return this; }
     const number *as_number() const { return this; }
+    std::unique_ptr<obj> copy() && { return make_unique<number>(std::move(*this)); }
 };
 
 class string : public obj, public std::string {
@@ -101,6 +109,7 @@ public:
     string() {}
     string(const string &) = default;
     string(const std::string &a) : std::string(a) {}
+    string(const char *a) : std::string(a) {}
     string(string &&) = default;
     string(std::string &&a) : std::string(a) {}
     string &operator=(const string &) & = default;
@@ -124,6 +133,7 @@ public:
     const char *c_str() const { return std::string::c_str(); }
     string *as_string() { return this; }
     const string *as_string() const { return this; }
+    std::unique_ptr<obj> copy() && { return make_unique<string>(std::move(*this)); }
 };
 
 class map; // forward decl
@@ -134,6 +144,9 @@ public:
     vector() {}
     vector(const vector &) = default;
     vector(vector &&) = default;
+    vector(const std::initializer_list<rvalue_reference_wrapper<obj>> &init) {
+        for (auto o : init)
+            push_back(o.get().copy()); }
     vector &operator=(const vector &) & = default;
     vector &operator=(vector &&) & = default;
     ~vector() {}
@@ -174,6 +187,7 @@ public:
     void push_back(json::map &&);
     vector *as_vector() { return this; }
     const vector *as_vector() const { return this; }
+    std::unique_ptr<obj> copy() && { return make_unique<vector>(std::move(*this)); }
 };
 
 typedef ordered_map<obj *, std::unique_ptr<obj>, obj::ptrless> map_base;
@@ -182,6 +196,9 @@ public:
     map() {}
     map(const map &) = default;
     map(map &&) = default;
+    map(const std::initializer_list<std::pair<std::string, obj &&>> &init) {
+        for (auto pair : init)
+            (*this)[pair.first] = std::move(pair.second).copy(); }
     map &operator=(const map &) & = default;
     map &operator=(map &&) & = default;
     ~map() { for (auto &e : *this) delete e.first; }
@@ -311,6 +328,9 @@ private:
         explicit operator bool() const { return !key; }
         obj *get() const { return key ? 0 : iter->second.get(); }
         obj *operator->() const { return key ? 0 : iter->second.get(); }
+        operator vector&() {
+            if (key) iter = self.emplace(key.release(), make_unique<vector>()).first;
+            return dynamic_cast<vector &>(*iter->second); }
         operator map&() {
             if (key) iter = self.emplace(key.release(), make_unique<map>()).first;
             return dynamic_cast<map &>(*iter->second); }
@@ -334,6 +354,9 @@ private:
             map *m = dynamic_cast<map *>(iter->second.get());
             if (!m) throw std::runtime_error("lookup in non-map json object");
             return element_ref(*m, std::move(i)); }
+        template <class T> T &to() {
+            if (key) iter = self.emplace(key.release(), make_unique<T>()).first;
+            return dynamic_cast<T &>(*iter->second); }
     };
     friend std::ostream &operator<<(std::ostream &out, const element_ref &el);
 public:
@@ -349,6 +372,7 @@ public:
         return map_base::erase(&tmp); }
     map *as_map() { return this; }
     const map *as_map() const { return this; }
+    std::unique_ptr<obj> copy() && { return make_unique<map>(std::move(*this)); }
 };
 
 inline void vector::push_back(map &&m) { emplace_back(make_unique<map>(std::move(m))); }
