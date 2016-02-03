@@ -106,12 +106,15 @@ fail=0
 expected_fail=0
 
 for p4file in "$@"; do
-    echo -n $p4file
     pushd $(dirname $p4file) >/dev/null
     name=$(basename $p4file .p4)
     mkdir -p $name.out
+    expect_fail=$(sed -n "/^$name.p4/s/[^ ]* *//p" expected_failures.txt 2>/dev/null)
     cd $name.out
     ok=true
+    fail_type=""
+    #echo "about to run $name.p4, expecting ${expect_fail:-no} failure"
+    echo -n $p4file
     start=`date +%s`
     if $fast && [ -r $name.tfa ]; then
         need_reflow=false
@@ -125,15 +128,17 @@ for p4file in "$@"; do
             fi
             if [ ! -r $name.tfa ]; then
                 echo -n " p4 compile failed to produce asm"
+                fail_type="compile"
                 let fail++
                 ok=false
             fi
         else
             echo -n " p4 compile failed"
+            fail_type="compile"
             let fail++
             ok=false
         fi
-        if not $ok && ( [ $count -eq 1 ] || not grep -qs "^$name.p4" ../expected_failures.txt ); then
+        if not $ok && ( [ $count -eq 1 ] || [ "$expect_fail" != "compile" ] ); then
             echo "$p4file:" >> $FAILLOG
             sed 's/^/ /' glsc.log >> $FAILLOG
         fi
@@ -169,8 +174,9 @@ for p4file in "$@"; do
         cnt=$(grep -Ev '^\+\+\+|^---|"int_inj"' json_diff.txt | grep -Ec '^\+|^-')
         if [ $cnt -gt 0 ]; then
             echo -n " mismatch"
+            fail_type="mismatch"
             let fail++
-            if [ $count -eq 1 ] || not grep -qs "^$name.p4" ../expected_failures.txt; then
+            if [ $count -eq 1 ] || [ "$expect_fail" != "mismatch" ]; then
                 echo "$p4file:" >> $FAILLOG
                 cat json_diff.txt >> $FAILLOG
             fi
@@ -181,8 +187,9 @@ for p4file in "$@"; do
         fi
     elif $ok; then
         echo -n " tfas failed"
+        fail_type="tfas"
         let fail++
-	if [ $count -eq 1 ] || not grep -qs "^$name.p4" ../expected_failures.txt; then
+        if [ $count -eq 1 ] || [ "$expect_fail" != "tfas" ]; then
 	    echo "$p4file:" >> $FAILLOG
 	    sed -e 's/^/ /' -e '/\n/!a\' tfas.log >> $FAILLOG
 	fi
@@ -197,9 +204,11 @@ for p4file in "$@"; do
             done
         fi
     fi
-    if grep -qs "^$name.p4" ../expected_failures.txt; then
+    if [ "$expect_fail" != "" ]; then
         if $ok; then
-            echo -n " (UNEXPECTED PASS)"
+            echo -n " (UNEXPECTED PASS -- expected $expect_fail failure)"
+        elif [ "$expect_fail" != "$fail_type" ]; then
+            echo -n " (expected $expect_fail failure)"
         else
             echo -n " (expected)"
             let expected_fail++
