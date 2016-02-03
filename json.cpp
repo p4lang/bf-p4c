@@ -1,5 +1,6 @@
 #include "json.h"
 #include <iomanip>
+#include <sstream>
 
 namespace json {
 
@@ -126,4 +127,10 @@ void map::print_on(std::ostream &out, int indent, int width, const char *pfx) co
     out << '}';
 }
 
-}  // end namespace json
+std::string obj::toString() const {
+    std::stringstream buf;
+    print_on(buf);
+    return buf.str();
+}
+
+}

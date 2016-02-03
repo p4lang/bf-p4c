@@ -375,7 +375,11 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         add_pack_format(tind, indirect->format);
         tind["memory_resource_allocation"] =
             indirect->gen_memory_resource_allocation_tbl_cfg("sram");
-        stage_tbl["ternary_indirection_table"] = std::move(tind); }
+        stage_tbl["ternary_indirection_table"] = std::move(tind);
+        if (indirect->actions)
+            indirect->actions->gen_tbl_cfg((tbl["actions"] = json::vector())); }
+    if (actions)
+        actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
     if (idletime)
         idletime->gen_stage_tbl_cfg(stage_tbl);
     tbl["performs_hash_action"] = false;

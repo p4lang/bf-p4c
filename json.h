@@ -42,6 +42,8 @@ public:
     bool operator !=(const obj &a) const { return !(*this == a); }
     virtual bool operator ==(const char *str) const { return false; }
     bool operator !=(const char *str) const { return !(*this == str); }
+    virtual bool operator ==(long val) const { return false; }
+    bool operator !=(long val) const { return !(*this == val); }
     struct ptrless {
 	bool operator()(const obj *a, const obj *b) const
 	    { return b ? a ? *a < *b : true : false; }
@@ -59,10 +61,11 @@ public:
     virtual map *as_map() { return nullptr; }
     virtual const map *as_map() const { return nullptr; }
     virtual const char *c_str() const { return nullptr; }
+    template<class T> bool is() const { return dynamic_cast<const T *>(this) != nullptr; }
     template<class T> T &to() { return dynamic_cast<T &>(*this); }
     template<class T> const T &to() const { return dynamic_cast<const T &>(*this); }
     virtual std::unique_ptr<obj> copy() && = 0;
-
+    std::string toString() const;
 };
 
 class True : public obj {
@@ -96,7 +99,9 @@ public:
     bool operator ==(const obj &a) const {
 	if (auto *b = dynamic_cast<const number *>(&a)) return val == b->val;
 	return false; }
-    void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const { out << val; }
+    bool operator==(long v) const { return val == v; }
+    void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const {
+        out << val; }
     bool test_width(int &limit) const
 	{ char buf[32]; limit -= sprintf(buf, "%ld", val); return limit >= 0; }
     number *as_number() { return this; }

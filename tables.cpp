@@ -746,6 +746,13 @@ void Table::Actions::write_regs(Table *tbl) {
                 set_power_ctl_reg(power_ctl, sl.reg.index); }); } }
 }
 
+void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
+    for (auto &act : actions) {
+        while (cfg.size() <= size_t(act.code))
+            cfg.push_back(json::map());
+        cfg[act.code]->to<json::map>()["name"] = act.name; }
+}
+
 int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable) {
     int huffman_ones = log2size > 2 ? log2size - 3 : 0;
     assert(huffman_ones < 7);

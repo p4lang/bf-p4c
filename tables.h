@@ -224,6 +224,7 @@ public:
 	void pass1(Table *);
 	void pass2(Table *);
 	void write_regs(Table *);
+        void gen_tbl_cfg(json::vector &);
     };
 public:
     const char *name() const { return name_.c_str(); }

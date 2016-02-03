@@ -137,6 +137,8 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
     add_pack_format(stage_tbl, 0, 0, hash_dist.empty() ? 1 : 0);
     if (options.match_compiler)
         stage_tbl["memory_resource_allocation"] = "null";
+    if (actions)
+        actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
     if (idletime)
         idletime->gen_stage_tbl_cfg(stage_tbl);
     else if (options.match_compiler)
