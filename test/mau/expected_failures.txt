@@ -1,5 +1,3 @@
-dileep10.p4 compile
- - matrix differences?
 test_config_96_hash_data.p4 compile
  - incorrect asm code for hash_action+counter
 test_config_101_switch_msdc.p4 compile
@@ -34,14 +32,11 @@ test_config_170_stateful_selection_table_update.p4 compile
 test_config_171_stateful_conga.p4 compile
 test_config_172_stateful_heavy_hitter.p4 compile
 test_config_173_stateful_bloom_filter.p4 compile
- - missing statefule_alu_blackbox.h header
-vk_basic_ipv4_subset.p4 compile
-vk_basic_ipv4_20150706.p4 compile
 
 - uncharacterized failures (FIXME)
 01-FlexCounter.p4 compile
 02-FlexCounterActionProfile.p4 compile
-02-FullPHV1.p4 mismatch
+02-FullPHV1.p4 compile
 07-MacAddrCheck.p4 compile
 08-MacAddrCheck1.p4 compile
 09-MacAddrCheck2.p4 mismatch
@@ -56,7 +51,8 @@ vk_basic_ipv4_20150706.p4 compile
 22-SimpleTrillThreeStep.p4 tfas
 basic_ipv4_selection.p4 mismatch
 debug_issue_1_invalid_action_pack_format.p4 mismatch
-dileep11.p4 compile
+dileep10.p4 tfas
+dileep11.p4 tfas
 dileep12.p4 tfas
 dileep2.p4 tfas
 dileep3.p4 mismatch
@@ -71,7 +67,6 @@ test_config_13_first_selection.p4 compile
 test_config_140_table_counter.p4 mismatch
 test_config_142_stateful_bfd.p4 compile
 test_config_144_recirculate.p4 tfas
-test_config_145_shift_primitives.p4 compile
 test_config_148_action_profile.p4 compile
 test_config_149_signed_and_saturating_add_sub.p4 mismatch
 test_config_152_stateful_simple_cntr.p4 compile
@@ -80,13 +75,15 @@ test_config_154_stateful_sampling.p4 compile
 test_config_155_stateful_3_alus.p4 compile
 test_config_156_indirect_stateful_cntr.p4 compile
 test_config_157_random_number_generator.p4 tfas
-test_config_158_share_vliw.p4 compile
+test_config_158_share_vliw.p4 mismatch
 test_config_159_stateful_using_phv_field.p4 compile
 test_config_160_stateful_single_bit_mode.p4 compile
-test_config_161_new_primitives.p4 compile
+test_config_161_new_primitives.p4 mismatch
 test_config_168_meter_bug.p4 tfas
 test_config_175_match_table_with_no_key.p4 tfas
 test_config_177_meter_test.p4 tfas
+test_config_178_hash_action.p4 mismatch
+test_config_179_check_if_sequential_action_used.p4 mismatch
 test_config_17_action_packing_wide_with_pad.p4 mismatch
 test_config_180_first_proxy_hash.p4 tfas
 test_config_181_first_alg_tcam.p4 compile
@@ -103,7 +100,12 @@ test_config_63_tcam_with_48_bits_and_no_version.p4 tfas
 test_config_6_sram_and_tcam_allocation.p4 mismatch
 test_config_78_tcam_with_220_bits_high_nibble_and_version.p4 mismatch
 test_config_81_indirect_action_data_default.p4 mismatch
+test_config_85_table_ordering.p4 mismatch
 test_config_86_multiple_action_widths_for_indirect_action.p4 mismatch
 test_config_88_testing_action_data_allocation_3.p4 tfas
 test_config_90_testing_action_data_allocation_3_with_fields_in_overhead.p4 tfas
+test_config_91_gateway_with_split_table.p4 mismatch
+test_config_97_unrelated_tables.p4 mismatch
 test_config_99_share_exact_match_key.p4 mismatch
+vk_basic_ipv4_subset.p4 mismatch
+vk_basic_ipv4_20150706.p4 mismatch

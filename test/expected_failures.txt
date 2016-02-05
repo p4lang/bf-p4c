@@ -1,24 +1,29 @@
 - current compiler failures on some tests.
-exact_match6.p4 compile
+10-AssignChooseSource.p4 mismatch
+acl1.p4 mismatch
+action_bus1.p4 mismatch
+checksum1.p4 mismatch
+counter1.p4 mismatch
+counter2.p4 mismatch
+counter3.p4 mismatch
+counter4.p4 mismatch
+counter5.p4 mismatch
+exact_match8.p4 tfas
 gateway2.p4 compile
 gateway3.p4 compile
 gateway5.p4 compile
-validate_outer_ethernet.p4 compile
-- compiler produces invalid asm (FIXME)
-exact_match8.p4 tfas
-proxy_hash1.p4 tfas
-- mismatches (FIXME)
-10-AssignChooseSource.p4 mismatch
-acl1.p4action_bus1.p4 mismatch
-action_bus1.p4 mismatch
-checksum1.p4 mismatch
+hash_index0.p4 mismatch
+hash_index1.p4 mismatch
+hash_index2.p4 mismatch
 hash_index3.p4 mismatch
 hash_index5.p4 mismatch
 parser_dc_full.p4 mismatch
 port_vlan_mapping.p4 mismatch
+proxy_hash1.p4 tfas
 selector0.p4 mismatch
 selector1.p4 mismatch
 selector2.p4 mismatch
 selector3.p4 mismatch
 testgw.p4 mismatch
 triv_eth.p4 mismatch
+validate_outer_ethernet.p4 compile
