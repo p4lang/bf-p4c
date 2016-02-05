@@ -41,8 +41,8 @@ int main(int ac, char **av) {
     const IR::Global *program = nullptr;
 
     Tofino_Options options;
-    int optind = options.parse(ac, av);
-    options.setInputFile(optind, ac, av);
+    options.process(ac, av);
+    options.setInputFile();
     if (ErrorReporter::instance.getErrorCount() > 0)
         return 1;
 
@@ -53,7 +53,7 @@ int main(int ac, char **av) {
             return 1;
         if (!program)
             return 1;
-    
+
         if (verbose)
             std::cout << "Compiling" << std::endl;
         PassManager fe = {
@@ -63,7 +63,7 @@ int main(int ac, char **av) {
             new TypeCheck,
         };
         program = program->apply(fe);
-        
+
         if (options.target == "tofino")
             test_tofino_backend(program, &options);
     }

@@ -71,6 +71,7 @@ tofino_backend_SOURCES = \
 	backends/tofino/phv/phv_fields.cpp \
 	backends/tofino/phv/phv_fields.h \
 	backends/tofino/test-tofino.cpp \
+	backends/tofino/tofinoOptions.h \
 	backends/tofino/p4c-tofino.cpp
 
 ir_DEF_FILES += \

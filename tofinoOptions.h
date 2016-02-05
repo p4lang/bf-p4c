@@ -8,26 +8,10 @@ class Tofino_Options : public CompilerOptions {
  public:
     int phv_alloc;
 
-    void usage() {
-        CompilerOptions::usage();
-        usageStream << "Additional options: " << std::endl;
-        usageStream << "  --nopa        Do not perform PHV allocation" << std::endl;
-    }
-
-    int parse(int argc, char* const argv[]) {
-        (void)CompilerOptions::parse(argc, argv);
-        static struct option long_options[] = {
-            { "nopa",       no_argument,       &phv_alloc, 0 },
-            { 0,            0,                 0, 0 }
-        };
-
-        int opt;
-        while ((opt = getopt_long(argc, argv, "", long_options, 0)) >= 0) {
-            switch (opt) {
-                case 0:
-                default:
-                    break; } }
-        return optind;
+    Tofino_Options() {
+        registerOption("--nopa", nullptr,
+                       [this](const char*) { phv_alloc = 1; return true; },
+                       "Do not perform PHV allocation");
     }
 };
 
