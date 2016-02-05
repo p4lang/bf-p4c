@@ -1,0 +1,49 @@
+#!/bin/sh
+
+script=$(readlink -f $0)
+
+findfile () {
+    dir=$(dirname $script)
+    while [ "$dir" != "/" ]; do
+        if [ -f "$dir/$1" ]; then
+            echo "$dir/$1"
+            return
+        fi
+        if [ "$dir" = "." ]; then
+            dir=$(pwd -P)
+        fi
+        dir=$(dirname $dir)
+    done
+}
+
+WALLE=$(findfile walle/walle/walle.py)
+SCHEMA=$(findfile chip.schema)
+
+OUT="tofino.bin"
+
+while [ $# -gt 0 ]; do
+    case $1 in
+    -o)
+        OUT="$2"
+        shift ; shift ;;
+    --schema|-s)
+        SCHEMA="$2"
+        shift ; shift ;;
+    -*)
+        echo >&2 "Unknown argument $1"
+        shift ;;
+    *)
+        break
+    esac
+done
+
+if [ ! -x "$WALLE" ]; then
+    echo >&2 "Can't find walle"
+    exit 1
+fi
+if [ ! -r "$SCHEMA" ]; then
+    echo >&2 "Can't find chip schema"
+    exit 1
+fi
+
+$WALLE --schema $SCHEMA -o $OUT "$@"
