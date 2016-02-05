@@ -168,7 +168,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         current_ixbar.clear();
         if (!current_ixbar.allocTable(rv->table, resources->match_ixbar, resources->gateway_ixbar)||
             !current_ixbar.allocTable(rv->gw, resources->match_ixbar, resources->gateway_ixbar))
-            throw Util::CompilerBug("Can't fit table %s in ixbar by itself", rv->name); }
+            BUG("Can't fit table %s in ixbar by itself", rv->name); }
 #endif
 
     LOG3(" - will try " << rv->entries << " of " << t->name << " in stage " << rv->stage);
@@ -352,7 +352,7 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
                 it++; }
         if (work.empty()) break;
         if (trial.empty())
-            throw Util::CompilerBug("No tables placeable, but not all tables placed?");
+            BUG("No tables placeable, but not all tables placed?");
         LOG2("found " << trial.size() << " tables that could be placed: " << trial);
         decltype(trial)::value_type *best = 0;
         for (auto &t : trial)

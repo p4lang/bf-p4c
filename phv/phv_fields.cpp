@@ -71,7 +71,7 @@ const PhvInfo::Info *PhvInfo::field(const IR::HeaderSliceRef *hsr,
                 bits->first = offset + hsr->type->width_bits() - 1; }
             return info; }
         offset -= info->size; }
-    throw Util::CompilerBug("can't find field at offset %d of %s",
+    BUG("can't find field at offset %d of %s",
                             hsr->offset_bits(), hsr->header_ref()->toString());
 }
 
@@ -102,7 +102,7 @@ const std::pair<int, int> *PhvInfo::header(cstring name_) const {
 
 void PhvInfo::allocatePOV() {
     if (all_fields.count("$POV"))
-        throw Util::CompilerBug("trying to reallocate POV");
+        BUG("trying to reallocate POV");
     int size = 0;
     for (auto &hdr : all_headers)
         if (!field(hdr.second.first)->metadata)

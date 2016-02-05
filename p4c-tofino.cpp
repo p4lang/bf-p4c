@@ -30,7 +30,7 @@ parse_input(const Tofino_Options &options, FILE* stream) {
        break;
     }
     default:
-        throw Util::CompilerBug("Unexpected frontend"); }
+        BUG("Unexpected frontend"); }
     return program;
 }
 

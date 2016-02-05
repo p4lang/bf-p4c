@@ -67,14 +67,14 @@ void PhvAllocate::do_alloc(PhvInfo::Info *i, gress_t thread, Regs *use) {
 void alloc_pov(PhvInfo::Info *i, gress_t thread, PhvInfo::Info *pov, int pov_bit) {
     LOG2(i->id << ": POV " << i->name << " bit=" << pov_bit);
     if (i->size != 1)
-        throw Util::CompilerBug("more than 1 bit for POV bit %s", i->name);
+        BUG("more than 1 bit for POV bit %s", i->name);
     for (auto &sl : pov->alloc[thread]) {
         int bit = pov_bit - sl.field_bit;
         if (bit >= 0 && bit < sl.width) {
             i->alloc[thread].emplace_back(sl.container, 0, bit + sl.container_bit, 1);
             LOG3("   allocated " << i->alloc[thread] << " for " << thread);
             return; } }
-    throw Util::CompilerBug("Failed to allocate POV bit for %s, POV too small?", i->name);
+    BUG("Failed to allocate POV bit for %s, POV too small?", i->name);
 }
 
 bool PhvAllocate::preorder(const IR::Tofino::Pipe *pipe) {

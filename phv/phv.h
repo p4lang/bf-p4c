@@ -25,11 +25,11 @@ class Container {
         case 'B': log2sz_ = 0; break;
         case 'H': log2sz_ = 1; break;
         case 'W': log2sz_ = 2; break;
-        default: throw Util::CompilerBug("Invalid register '%s'", name); }
+        default: BUG("Invalid register '%s'", name); }
         int v = strtol(n, const_cast<char **>(&n), 10);
         index_ = v;
         if (*n || index_ != v)
-            throw Util::CompilerBug("Invalid register '%s'", name); }
+            BUG("Invalid register '%s'", name); }
 
     size_t size() const { return 8U << log2sz_; }
     unsigned index() const { return index_; }

@@ -97,7 +97,7 @@ class GetTofinoTables : public Inspector {
     if (!tables.count(c))
       tables[c] = new IR::MAU::Table(c->name, gress, c->pred);
     else
-      throw Util::CompilerBug("duplicated unique name?");
+      BUG("duplicated unique name?");
     return true; }
   void postorder(const IR::NamedCond *c) override {
     if (c->ifTrue)
@@ -106,7 +106,7 @@ class GetTofinoTables : public Inspector {
       tables.at(c)->next["false"] = seqs.at(c->ifFalse); }
 
   bool preorder(const IR::If *) override {
-    throw Util::CompilerBug("unnamed condition in control flow"); }
+    BUG("unnamed condition in control flow"); }
   void postorder(const IR::Control *cf) override {
     assert(!pipe->thread[gress].mau);
     pipe->thread[gress].mau = seqs.at(cf->code); }

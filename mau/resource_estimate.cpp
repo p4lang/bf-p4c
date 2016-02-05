@@ -92,12 +92,12 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries) {
         } else if (/*auto *ti = */dynamic_cast<const IR::MAU::TernaryIndirect *>(at)) {
             int indir_size = ceil_log2(tbl->layout.overhead_bits);
             if (indir_size > 8)
-                throw Util::CompilerBug("Can't have more than 64 bits of overhead in "
+                BUG("Can't have more than 64 bits of overhead in "
                                         "ternary table %s", tbl->name);
             if (indir_size < 3) indir_size = 3;
             per_word = 128 >> indir_size;
         } else {
-            throw Util::CompilerBug("Unknown attached table type %s", at->kind()); }
+            BUG("Unknown attached table type %s", at->kind()); }
         if (per_word > 0) {
             if (attached_entries <= 0)
                 error("%s: No size in indirect %s %s", at->srcInfo, at->kind(), at->name);

@@ -27,7 +27,7 @@ class GetTofinoParser : public Inspector {
     FindExtract(const IR::HeaderRef *h, int &out) : hdr(h), index(out) {}
     FindExtract(const IR::Expression *e, int &out)
     : hdr(dynamic_cast<const IR::HeaderRef *>(e)), index(out) {
-      if (!hdr) throw Util::CompilerBug("not a valid header ref"); }
+      if (!hdr) BUG("not a valid header ref"); }
   };
   class RewriteExtractNext : public Transform {
     typedef GetTofinoParser::Context Context;     // not to be confused with Visitor::Context

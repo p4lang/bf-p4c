@@ -91,7 +91,7 @@ class Table {
                 next_count++; }
             v.flow_merge(gateway_inhibit); }
         if (next_count != next.size())
-            throw Util::CompilerBug("unreachable results in table");
+            BUG("unreachable results in table");
         attached.visit_children(v);
     }
 }

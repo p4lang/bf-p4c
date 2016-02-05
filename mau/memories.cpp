@@ -136,7 +136,7 @@ class AllocAttached : public Inspector {
         assert(!alloc.count(name));
         return false; }
     bool preorder(const IR::Attached *att) override {
-        throw Util::CompilerBug("Unknown attached table type %s", att->kind()); }
+        BUG("Unknown attached table type %s", att->kind()); }
 
  public:
     AllocAttached(Memories *m, const IR::MAU::Table *t, bool *o, int e,
@@ -200,7 +200,7 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
         bus = &mem.action_data_bus;
         break;
     default:
-        throw Util::CompilerBug("Unhandled memory use type %d in Memories::Use::visit", type); }
+        BUG("Unhandled memory use type %d in Memories::Use::visit", type); }
     for (auto &r : row) {
         if (bus)
             fn((*bus)[r.row][r.bus]);
@@ -215,7 +215,7 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
 void Memories::update(cstring name, const Memories::Use &alloc) {
     alloc.visit(*this, [name](cstring &use) {
         if (use)
-            throw Util::CompilerBug("conflicting memory use between %s and %s", use, name);
+            BUG("conflicting memory use between %s and %s", use, name);
         use = name; });
 }
 void Memories::update(const map<cstring, Use> &alloc) {
@@ -225,7 +225,7 @@ void Memories::update(const map<cstring, Use> &alloc) {
 void Memories::remove(cstring name, const Memories::Use &alloc) {
     alloc.visit(*this, [name](cstring &use) {
         if (use != name)
-            throw Util::CompilerBug("Undo failure for %s", name);
+            BUG("Undo failure for %s", name);
         use = nullptr; });
 }
 void Memories::remove(const map<cstring, Use> &alloc) {

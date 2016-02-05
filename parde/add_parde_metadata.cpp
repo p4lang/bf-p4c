@@ -8,7 +8,7 @@ IR::FieldRef *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field) {
             ftype = f.second;
             break; }
     if (!ftype)
-        throw Util::CompilerBug("No field %s in %s", field, hdr->name);
+        BUG("No field %s in %s", field, hdr->name);
     return new IR::FieldRef(ftype, new IR::NamedRef(hdr->type, hdr->name), field);
 }
 

@@ -18,7 +18,7 @@ class MauAsmOutput::EmitAttached : public Inspector {
     bool preorder(const IR::MAU::TernaryIndirect *) override;
     bool preorder(const IR::MAU::ActionData *) override;
     bool preorder(const IR::Attached *att) override {
-        throw Util::CompilerBug("unknown attached table type %s", typeid(*att).name()); }
+        BUG("unknown attached table type %s", typeid(*att).name()); }
     EmitAttached(const MauAsmOutput &s, std::ostream &o, const IR::MAU::Table *t)
     : self(s), out(o), tbl(t) {}
 };

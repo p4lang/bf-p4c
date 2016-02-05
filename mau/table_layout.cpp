@@ -18,14 +18,14 @@ static void setup_match_layout(IR::MAU::Table::Layout &layout, const IR::Table *
                     layout.ixbar_bytes += (fval->type->width_bits()+7)/8;
             } else if (auto prim = dynamic_cast<const IR::Primitive *>(r)) {
                 if (prim->name != "valid")
-                    throw Util::CompilerBug("unexpected reads expression %s", r);
+                    BUG("unexpected reads expression %s", r);
                 layout.match_width_bits += 1;
             } else if (dynamic_cast<const IR::FieldRef *>(r)) {
                 layout.match_width_bits += r->type->width_bits();
                 if (!layout.ternary)
                     layout.ixbar_bytes += (r->type->width_bits() + 7)/8;
             } else {
-                throw Util::CompilerBug("unexpected reads expression %s", r); } } }
+                BUG("unexpected reads expression %s", r); } } }
     layout.overhead_bits = ceil_log2(tbl->actions.size());
 }
 
@@ -86,7 +86,7 @@ class VisitAttached : public Inspector {
         have_action_data = true;
         return false; }
     bool preorder(const IR::Attached *att) override {
-        throw Util::CompilerBug("Unknown attached table type %s", typeid(*att).name()); }
+        BUG("Unknown attached table type %s", typeid(*att).name()); }
 
  public:
     explicit VisitAttached(IR::MAU::Table::Layout *l) : layout(*l) {}

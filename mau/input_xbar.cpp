@@ -86,11 +86,11 @@ bool IXBar::allocTable(bool ternary, const IR::Table *tbl, Use &alloc) {
             field = mask->left;
         } else if (auto prim = r->to<IR::Primitive>()) {
             if (prim->name != "valid")
-                throw Util::CompilerBug("unexpected reads expression %s", r);
+                BUG("unexpected reads expression %s", r);
             // FIXME -- for now just assuming we can fit the valid bit reads in as needed
             continue; }
         if (!field || (!field->is<IR::FieldRef>() && !field->is<IR::HeaderSliceRef>()))
-            throw Util::CompilerBug("unexpected reads expression %s", r);
+            BUG("unexpected reads expression %s", r);
         cstring fname = field->toString();
         if (fields_needed.count(fname))
             throw Util::CompilationError("field %s read twice by table %s", fname, tbl->name);
@@ -126,7 +126,7 @@ void IXBar::update(const Use &alloc) {
         if (!byte.loc) continue;
         if (byte == use[byte.loc]) continue;
         if (use[byte.loc].first)
-            throw Util::CompilerBug("conflicting ixbar allocation");
+            BUG("conflicting ixbar allocation");
         use[byte.loc] = byte;
         fields.emplace(byte.field, byte.loc); }
 }
