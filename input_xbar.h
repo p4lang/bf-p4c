@@ -71,37 +71,40 @@ public:
     int tcam_word_group(int n);
 
     class all_iter {
-        decltype(group_order)::const_iterator   outer;
+        decltype(group_order)::const_iterator   outer, outer_end;
         bool                                    inner_valid;
         std::vector<Input>::iterator            inner;
         void mk_inner_valid() {
-            if (!inner_valid) inner = (**outer).second.begin();
-            while (inner == (**outer).second.end())
-                inner = (**++outer).second.begin();
+            if (!inner_valid) {
+                if (outer == outer_end) return;
+                inner = (**outer).second.begin(); }
+            while (inner == (**outer).second.end()) {
+                if (++outer == outer_end) return;
+                inner = (**outer).second.begin(); }
             inner_valid = true; }
         struct iter_deref : public std::pair<unsigned, Input &> {
             iter_deref(const std::pair<unsigned, Input &> &a) : std::pair<unsigned, Input &>(a) {}
             iter_deref *operator->() { return this; } };
     public:
-        all_iter(decltype(group_order)::const_iterator o) :
-            outer(o), inner_valid(false) {}
+        all_iter(decltype(group_order)::const_iterator o,
+                 decltype(group_order)::const_iterator oend) :
+            outer(o), outer_end(oend), inner_valid(false) { mk_inner_valid(); }
         bool operator==(const all_iter &a) {
             if (outer != a.outer) return false;
             if (inner_valid != a.inner_valid) return false;
             return inner_valid ? inner == a.inner : true; }
         all_iter &operator++() {
-            mk_inner_valid();
-            if (++inner == (**outer).second.end()) {
+            if (inner_valid && ++inner == (**outer).second.end()) {
                 ++outer;
-                inner_valid = false; } 
+                inner_valid = false;
+                mk_inner_valid(); } 
             return *this; }
         std::pair<unsigned, Input &> operator*() {
-            mk_inner_valid();
             return std::pair<unsigned, Input &>((**outer).first, *inner); }
         iter_deref operator->() { return iter_deref(**this); }
     };
-    all_iter begin() const { return all_iter(group_order.begin()); }
-    all_iter end() const { return all_iter(group_order.end()); }
+    all_iter begin() const { return all_iter(group_order.begin(), group_order.end()); }
+    all_iter end() const { return all_iter(group_order.end(), group_order.end()); }
 
     Input *find(Phv::Slice sl, int group);
 };

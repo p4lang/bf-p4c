@@ -2,8 +2,10 @@
 #ifndef NO_EXECINFO
 #include <execinfo.h>
 #endif
+#include <fcntl.h>
 #include "hex.h"
 #include <iostream>
+#include <limits.h>
 #include "log.h"
 #include <signal.h>
 #include <string.h>
@@ -52,27 +54,31 @@ const char *addr2line(void *addr, const char *text)
 {
     int pfd[2], len;
     pid_t child;
-    static char	buffer[1024], *p;
-    const char *argv[5] = { "addr2line", buffer, "-e", program_name, 0 };
+    static char	buffer[1024];
+    char *p = buffer;
+    const char *argv[4] = { "/bin/sh", "-c", buffer, 0 }, *t;
+    strcpy(p, "addr2line "); p += strlen(p);
     uintptr_t a = (uintptr_t)addr;
-    if (pipe(pfd) < 0) return 0;
-    p = buffer + sizeof(buffer) - 1;
-    *p = 0;
-    while (p > buffer) {
-	*--p = "0123456789abcdef"[a&0xf];
-	if (!(a >>= 4)) break; }
-    argv[1] = p;
-    if (text && (p = (char *)strchr(text, '('))) {
-	strncpy(buffer, text, p-text);
-	buffer[p-text] = 0;
-	argv[3] = buffer; }
+    int shift = (CHAR_BIT * sizeof(uintptr_t) - 1) & ~3;
+    while (shift > 0 && (a >> shift) == 0) shift -= 4;
+    while (shift >= 0) {
+        *p++ = "0123456789abcdef"[(a >> shift) & 0xf];
+        shift -= 4; }
+    strcpy(p, " -fsipe $(which "); p += strlen(p);
+    if (text && (t = strchr(text, '('))) {
+        strncpy(p, text, t-text);
+        p += t-text;
+    } else {
+        strcpy(p, program_name);
+        p += strlen(p); }
+    strcpy(p, ") | c++filt");
+    p += strlen(p);
+    if (pipe2(pfd, O_CLOEXEC) < 0) return 0;
     while ((child = fork()) == -1 && errno == EAGAIN);
     if (child == -1) return 0;
     if (child == 0) {
 	dup2(pfd[1], 1);
 	dup2(pfd[1], 2);
-	close(pfd[0]);
-	close(pfd[1]);
 	execvp(argv[0], (char*const*)argv);
 	_exit(-1); }
     close(pfd[1]);
