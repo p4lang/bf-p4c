@@ -42,7 +42,7 @@ test_config_173_stateful_bloom_filter.p4 compile
 09-MacAddrCheck2.p4 mismatch
 10-AssignChooseSource.p4 mismatch
 12-Counters.p4 compile
-12-SmallToBigFieldWithMask8.p4 tfas
+12-SmallToBigFieldWithMask8.p4 mismatch
 14-Counter.p4 tfas
 16-NoHeaders.p4 tfas
 19-SimpleTrill.p4 tfas
@@ -80,7 +80,7 @@ test_config_159_stateful_using_phv_field.p4 compile
 test_config_160_stateful_single_bit_mode.p4 compile
 test_config_161_new_primitives.p4 mismatch
 test_config_168_meter_bug.p4 tfas
-test_config_175_match_table_with_no_key.p4 tfas
+test_config_175_match_table_with_no_key.p4 mismatch
 test_config_177_meter_test.p4 tfas
 test_config_178_hash_action.p4 mismatch
 test_config_179_check_if_sequential_action_used.p4 mismatch
@@ -91,7 +91,6 @@ test_config_183_sample_e2e.p4 compile
 test_config_184_stateful_bug1.p4 compile
 test_config_185_first_lpf.p4 compile
 test_config_23_same_container_modified.p4 tfas
-test_config_25_no_reads_for_table.p4 tfas
 test_config_2_action_data_table_sizing.p4 mismatch
 test_config_45_action_data_immediate_param_and_constant.p4 mismatch
 test_config_48_action_data_bit_masked_set.p4 mismatch
