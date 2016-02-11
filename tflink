@@ -16,7 +16,10 @@ findfile () {
     done
 }
 
-WALLE=$(findfile walle/walle/walle.py)
+WALLE=$(findfile walle/walle.py)
+if [ ! -x "$WALLE" ]; then
+    WALLE=$(findfile walle/walle/walle.py)
+fi
 SCHEMA=$(findfile chip.schema)
 
 OUT="tofino.bin"

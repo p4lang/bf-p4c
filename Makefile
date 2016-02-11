@@ -3,7 +3,7 @@ OPTFLAGS = -O0
 CPPFLAGS = -std=gnu++11 $(OPTFLAGS) -Wall -g -MMD -I.
 YFLAGS = -v
 WALLE := $(shell  \
-    for f in $(HOME)/walle ../walle submodules/walle; do \
+    for f in . $(HOME)/walle ../walle submodules/walle; do \
 	if [ -x $$f/walle/walle.py ]; then \
 	    echo $$f/walle/walle.py; \
 	    exit; \
