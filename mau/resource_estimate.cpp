@@ -42,13 +42,16 @@ int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width) {
     return 16 >> size;
 }
 
-StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries) {
+StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
+                                   const IXBar::Use *match_ixbar) {
     memset(this, 0, sizeof(*this));
     logical_ids = 1;
     exact_ixbar_bytes = tbl->layout.ixbar_bytes;
     if (tbl->layout.ternary) {
         int depth = (entries + 511U)/512U;
         int width = (tbl->layout.match_width_bits + 47)/44;  // +4 bits for v/v, round up
+        if (match_ixbar)
+            width = match_ixbar->groups();
         ternary_ixbar_groups = width;
         tcams = depth * width;
         entries = depth * 512;

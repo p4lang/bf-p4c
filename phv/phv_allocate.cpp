@@ -89,9 +89,12 @@ bool PhvAllocate::preorder(const IR::Tofino::Pipe *pipe) {
         while (normal.B.index() % 8) ++normal.B;
         while (normal.H.index() % 8) ++normal.H;
         while (normal.W.index() % 4) ++normal.W;
-        while (tagalong.B.index() % 4) ++tagalong.B;
-        while (tagalong.H.index() % 6) ++tagalong.H;
-        while (tagalong.W.index() % 4) ++tagalong.W;
+        unsigned tagalong_group = std::max((tagalong.B.index() + 3)/4,
+                std::max((tagalong.H.index() + 5)/6, (tagalong.W.index() + 3)/4));
+        tagalong.B = PHV::Container::TB(tagalong_group * 4);
+        tagalong.H = PHV::Container::TH(tagalong_group * 6);
+        tagalong.W = PHV::Container::TW(tagalong_group * 4);
+
         for (auto &field : phv) {
             if (field.alloc[gr].empty()) {
                 if (pov)

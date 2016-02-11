@@ -13,6 +13,17 @@ void IXBar::clear() {
     ternary_fields.clear();
 }
 
+int IXBar::Use::groups() const {
+    int rv = 0;
+    unsigned counted = 0;
+    for (auto &b : use) {
+        assert(b.loc.group >= 0);
+        if (!(1 & (counted >> b.loc.group))) {
+            ++rv;
+            counted |= 1U << b.loc.group; } }
+    return rv;
+}
+
 static bool find_alloc(IXBar::Use &alloc, int groups, int bytes_per_group,
                        Alloc2Dbase<std::pair<cstring, int>>     &use,
                        std::multimap<cstring, IXBar::Loc>       &fields,
@@ -126,10 +137,19 @@ void IXBar::update(const Use &alloc) {
     auto &fields = alloc.ternary ? ternary_fields : exact_fields;
     for (auto &byte : alloc.use) {
         if (!byte.loc) continue;
-        if (byte == use[byte.loc]) continue;
-        if (use[byte.loc].first)
-            BUG("conflicting ixbar allocation");
-        use[byte.loc] = byte;
+        if (byte.loc.byte == 5 && alloc.ternary) {
+            /* the sixth byte in a ternary group is actually half a byte group it shares with
+             * the adjacent ternary group */
+            int byte_group = byte.loc.group/2;
+            if (byte == byte_group_use[byte_group]) continue;
+            if (byte_group_use[byte_group].first)
+                BUG("conflicting ixbar allocation");
+            byte_group_use[byte_group] = byte;
+        } else {
+            if (byte == use[byte.loc]) continue;
+            if (use[byte.loc].first)
+                BUG("conflicting ixbar allocation");
+            use[byte.loc] = byte; }
         fields.emplace(byte.field, byte.loc); }
 }
 

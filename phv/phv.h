@@ -11,6 +11,7 @@ class Container {
     bool        tagalong_ : 1;
     unsigned    log2sz_ : 2;   // 3 (8 byte) means invalid
     unsigned    index_ : 13;
+    Container(bool t, unsigned ls, unsigned i) : tagalong_(t), log2sz_(ls), index_(i) {}
 
  public:
     Container() : tagalong_(false), log2sz_(3), index_(0) {}
@@ -41,6 +42,12 @@ class Container {
     bool operator==(Container c) const {
         return tagalong_ == c.tagalong_ && log2sz_ == c.log2sz_ && index_ == c.index_; }
     friend std::ostream &operator<<(std::ostream &out, Container c);
+    static Container B(unsigned idx) { return Container(false, 0, idx); }
+    static Container H(unsigned idx) { return Container(false, 1, idx); }
+    static Container W(unsigned idx) { return Container(false, 2, idx); }
+    static Container TB(unsigned idx) { return Container(true, 0, idx); }
+    static Container TH(unsigned idx) { return Container(true, 1, idx); }
+    static Container TW(unsigned idx) { return Container(true, 2, idx); }
 };
 
 inline std::ostream &operator<<(std::ostream &out, PHV::Container c) {

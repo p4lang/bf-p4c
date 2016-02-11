@@ -1,0 +1,39 @@
+#!/bin/sh
+
+test=$1
+name=$2
+
+findbin() {
+    dir=$(pwd -P)
+    while [ "$dir" != "/" ]; do
+        if [ -d "$dir/$1" ]; then
+            x=""
+            for f in $(find "$dir/$1" -name $2 -type f); do
+                if [ "$f" -nt "$x" ]; then
+                    x="$f"
+                fi
+            done
+            if [ -x "$x" ]; then
+                echo $x
+                return
+            fi
+        fi
+        dir=$(dirname $dir)
+    done
+    echo $2
+}
+
+TFAS=$(findbin tofino-asm tfas)
+TFLN=$(findbin tofino-asm tflink)
+STF=$(findbin model simple_test_harness)
+
+mkdir -p $name.out
+
+if $TFAS -vvvvl $name.out/tfas.config.log $name.tfa; then
+    if $TFLN $name.out/*.cfg.json -o $name.out/tofino.bin; then
+        if $STF $test; then
+            exit 0
+        fi
+    fi
+fi
+exit 1

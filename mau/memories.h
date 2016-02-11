@@ -4,6 +4,7 @@
 #include <algorithm>
 #include "lib/alloc.h"
 #include "ir/ir.h"
+#include "input_xbar.h"
 
 struct Memories {
     /* track memory allocations within a single stage */
@@ -39,7 +40,8 @@ struct Memories {
     bool alloc2Port(cstring table_name, int entries, int entries_per_word, Use &alloc);
     bool allocRams(cstring table_name, int width, int depth,
                    Alloc2Dbase<cstring> &use, Alloc2Dbase<cstring> *bus, Use &alloc);
-    bool allocTable(const IR::MAU::Table *table, int &entries, map<cstring, Use> &alloc);
+    bool allocTable(const IR::MAU::Table *table, int &entries, map<cstring, Use> &alloc,
+                    const IXBar::Use &);
     void update(cstring table_name, const Use &alloc);
     void update(const map<cstring, Use> &alloc);
     void remove(cstring table_name, const Use &alloc);

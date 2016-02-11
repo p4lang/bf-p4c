@@ -17,7 +17,7 @@ struct StageUseEstimate {
         exact_ixbar_bytes += a.exact_ixbar_bytes;
         ternary_ixbar_groups += a.ternary_ixbar_groups;
         return *this; }
-    StageUseEstimate(const IR::MAU::Table *, int &);
+    StageUseEstimate(const IR::MAU::Table *, int &, const IXBar::Use *);
     StageUseEstimate operator+(const StageUseEstimate &a) const {
         StageUseEstimate rv = *this; rv += a; return rv; }
     static StageUseEstimate max() {

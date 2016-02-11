@@ -123,8 +123,9 @@ static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Pl
     for (auto *p = done; p && p->stage == next->stage; p = p->prev)
         current_mem.update(p->resources->memuse);
     int gw_entries = 1;
-    if (!current_mem.allocTable(next->table, entries, resources->memuse) ||
-        (next->gw && !current_mem.allocTable(next->gw, gw_entries, resources->memuse))) {
+    if (!current_mem.allocTable(next->table, entries, resources->memuse, resources->match_ixbar) ||
+        (next->gw && !current_mem.allocTable(next->gw, gw_entries, resources->memuse,
+                                             resources->match_ixbar))) {
         resources->memuse.clear();
         return false; }
     return true;
@@ -174,10 +175,12 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             BUG("Can't fit table %s in ixbar by itself", rv->name); }
 
     LOG3(" - will try " << rv->entries << " of " << t->name << " in stage " << rv->stage);
-    StageUseEstimate min_use(t, min_entries);  // minimum use for part of table to be useful
+    // minimum use for part of table to be useful
+    StageUseEstimate min_use(t, min_entries, &resources->match_ixbar);
     int increment_entries = min_entries + 1;
-    StageUseEstimate increment_use(t, increment_entries);  // next bigger than min_use
-    rv->use = StageUseEstimate(t, rv->entries);
+    // next bigger than min_use
+    StageUseEstimate increment_use(t, increment_entries, &resources->match_ixbar);
+    rv->use = StageUseEstimate(t, rv->entries, &resources->match_ixbar);
     if (rv->gw) {
         assert(!t->gateway_expr);
         assert(!rv->gw->match_table);
@@ -214,7 +217,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         assert(rv->entries >= min_entries);
         last_try = rv->entries;
         LOG3(" - reducing to " << rv->entries << " of " << t->name << " in stage " << rv->stage);
-        rv->use = StageUseEstimate(t, rv->entries);
+        rv->use = StageUseEstimate(t, rv->entries, &resources->match_ixbar);
         if (rv->gw)
             rv->use.exact_ixbar_bytes += rv->gw->layout.ixbar_bytes; }
 

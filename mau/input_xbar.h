@@ -50,6 +50,7 @@ struct IXBar {
         };
         vector<Byte>    use;
         void clear() { use.clear(); }
+        int groups() const;  // how many different groups in this use
     };
 
     void clear();

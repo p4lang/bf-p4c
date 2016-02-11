@@ -145,12 +145,15 @@ class AllocAttached : public Inspector {
 };
 }  // namespace
 
-bool Memories::allocTable(const IR::MAU::Table *table, int &entries,  map<cstring, Use> &alloc) {
+bool Memories::allocTable(const IR::MAU::Table *table, int &entries,  map<cstring, Use> &alloc,
+                          const IXBar::Use &match_ixbar) {
     bool ok = true;
     int width, depth, groups = 1;
     if (table->layout.ternary) {
         depth = (entries + 511U)/512U;
         width = (table->layout.match_width_bits + 47)/44;  // +4 bits for v/v, round up
+        if (width < 12)
+            width = std::max(width, match_ixbar.groups());
         entries = depth * 512;
     } else if (table->match_table) {
         width = table->layout.match_width_bits + table->layout.overhead_bits + 4;  // valid/version
