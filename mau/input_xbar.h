@@ -4,6 +4,8 @@
 #include "lib/alloc.h"
 #include "ir/ir.h"
 
+class PhvInfo;
+
 struct IXBar {
     enum {
         EXACT_GROUPS = 8,
@@ -51,9 +53,9 @@ struct IXBar {
     };
 
     void clear();
-    bool allocTable(bool ternary, const IR::Table *tbl, Use &alloc);
-    bool allocGateway(const IR::Expression *gw, Use &alloc);
-    bool allocTable(const IR::MAU::Table *tbl, Use &tbl_alloc, Use &gw_alloc);
+    bool allocTable(bool ternary, const IR::Table *tbl, const PhvInfo &phv, Use &alloc);
+    bool allocGateway(const IR::Expression *gw, const PhvInfo &phv, Use &alloc);
+    bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_alloc, Use &gw_alloc);
     void update(const Use &alloc);
     friend std::ostream &operator<<(std::ostream &, const IXBar &);
 };

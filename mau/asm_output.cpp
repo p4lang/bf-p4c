@@ -120,16 +120,6 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << sep << *a;
         sep = ", ";
         return false; }
-    bool preorder(const IR::Slice *sl) override {
-        assert(sep);
-        visit_children(sl, [this, sl]() {
-            visit(sl->e0);
-            sep = "(";
-            visit(sl->e2);
-            sep = "..";
-            visit(sl->e1);
-            out << ")"; });
-        return false; }
     void postorder(const IR::MAU::Instruction *) override {
         sep = nullptr;
         out << std::endl; }

@@ -7,17 +7,19 @@
 struct DependencyGraph;
 class TablesMutuallyExclusive;
 struct StageUseEstimate;
+class PhvInfo;
 
 class TablePlacement : public MauTransform {
  public:
-    TablePlacement(const DependencyGraph &d, const TablesMutuallyExclusive &m)
-    : deps(d), mutex(m) {}
+    TablePlacement(const DependencyGraph &d, const TablesMutuallyExclusive &m, const PhvInfo &p)
+    : deps(d), mutex(m), phv(p) {}
     struct GroupPlace;
     struct Placed;
  private:
     map<cstring, unsigned>      table_uids;
     const DependencyGraph &deps;
     const TablesMutuallyExclusive &mutex;
+    const PhvInfo &phv;
     IR::Node *preorder(IR::Tofino::Pipe *) override;
     IR::Node *preorder(IR::MAU::TableSeq *) override;
     IR::Node *preorder(IR::MAU::Table *) override;

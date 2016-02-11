@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <iostream>
+#include <fstream>
 #include <string>
 #include "ir/ir.h"
 #include "ir/dbprint.h"
@@ -82,7 +83,7 @@ void test_tofino_backend(const IR::Global *program, const Tofino_Options *option
         new CheckTableNameDuplicate,
         new FindDependencyGraph(&deps),
         &mutex,
-        new TablePlacement(deps, mutex),
+        new TablePlacement(deps, mutex, phv),
         new CheckTableNameDuplicate,
         new TableFindSeqDependencies,  // not needed?
         new CheckTableNameDuplicate,
@@ -105,12 +106,17 @@ void test_tofino_backend(const IR::Global *program, const Tofino_Options *option
     maupipe->apply(summary);
     if (verbose)
         std::cout << summary;
+    if (ErrorReporter::instance.getErrorCount() > 0)
+        return;
     MauAsmOutput mauasm(phv);
     maupipe->apply(mauasm);
-    std::cout << PhvAsmOutput(phv)
-              << ParserAsmOutput(maupipe, phv, INGRESS)
-              << DeparserAsmOutput(maupipe, phv, INGRESS)
-              << ParserAsmOutput(maupipe, phv, EGRESS)
-              << DeparserAsmOutput(maupipe, phv, EGRESS)
-              << mauasm;
+    std::ostream *out = &std::cout;
+    if (options->outputFile)
+        out = new std::ofstream(options->outputFile);
+    *out << PhvAsmOutput(phv)
+         << ParserAsmOutput(maupipe, phv, INGRESS)
+         << DeparserAsmOutput(maupipe, phv, INGRESS)
+         << ParserAsmOutput(maupipe, phv, EGRESS)
+         << DeparserAsmOutput(maupipe, phv, EGRESS)
+         << mauasm << std::flush;
 }

@@ -157,19 +157,21 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             rv->stage++; } }
     assert(!rv->placed[table_uids.at(rv->name)]);
 
-#if 1
     IXBar current_ixbar;
     for (auto *p = done; p && p->stage == rv->stage; p = p->prev) {
         current_ixbar.update(p->resources->match_ixbar);
         current_ixbar.update(p->resources->gateway_ixbar); }
-    if (!current_ixbar.allocTable(rv->table, resources->match_ixbar, resources->gateway_ixbar) ||
-        !current_ixbar.allocTable(rv->gw, resources->match_ixbar, resources->gateway_ixbar)) {
+    if (!current_ixbar.allocTable(rv->table, phv, resources->match_ixbar,
+                                  resources->gateway_ixbar) ||
+        !current_ixbar.allocTable(rv->gw, phv, resources->match_ixbar,
+                                  resources->gateway_ixbar)) {
         rv->stage++;
         current_ixbar.clear();
-        if (!current_ixbar.allocTable(rv->table, resources->match_ixbar, resources->gateway_ixbar)||
-            !current_ixbar.allocTable(rv->gw, resources->match_ixbar, resources->gateway_ixbar))
+        if (!current_ixbar.allocTable(rv->table, phv, resources->match_ixbar,
+                                      resources->gateway_ixbar) ||
+            !current_ixbar.allocTable(rv->gw, phv, resources->match_ixbar,
+                                      resources->gateway_ixbar))
             BUG("Can't fit table %s in ixbar by itself", rv->name); }
-#endif
 
     LOG3(" - will try " << rv->entries << " of " << t->name << " in stage " << rv->stage);
     StageUseEstimate min_use(t, min_entries);  // minimum use for part of table to be useful
