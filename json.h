@@ -202,7 +202,7 @@ public:
     map(const map &) = default;
     map(map &&) = default;
     map(const std::initializer_list<std::pair<std::string, obj &&>> &init) {
-        for (auto pair : init)
+        for (auto &pair : init)
             (*this)[pair.first] = std::move(pair.second).copy(); }
     map &operator=(const map &) & = default;
     map &operator=(map &&) & = default;

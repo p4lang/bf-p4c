@@ -24,6 +24,8 @@ selector0.p4 mismatch
 selector1.p4 mismatch
 selector2.p4 mismatch
 selector3.p4 mismatch
+ternary_match2.p4 mismatch
+ternary_match4.p4 mismatch
 testgw.p4 mismatch
 triv_eth.p4 mismatch
 validate_outer_ethernet.p4 compile

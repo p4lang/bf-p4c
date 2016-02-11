@@ -59,7 +59,7 @@ protected:
     void alloc_id(const char *idname, int &id, int &next_id, int max_id,
 		  bool order, Alloc1Dbase<Table *> &use);
     void alloc_maprams();
-    void alloc_vpns();
+    virtual void alloc_vpns();
     void check_next();
     void need_bus(int lineno, Alloc1Dbase<Table *> &use, int idx, const char *name);
 public:
@@ -142,6 +142,7 @@ public:
 		assert(0); }
 	    enum flags_t { USED_IMMED=1 };
 	};
+        Format() {}
 	Format(VECTOR(pair_t) &data, bool may_overlap = false);
 	~Format();
 	void pass1(Table *tbl);
@@ -213,7 +214,7 @@ public:
     private:
 	std::vector<Action>             actions;
 	std::map<std::string, int>      by_name;
-	unsigned                        code_use = 0;
+	bitvec                          code_use;
     public:
 	int                             max_code = -1;
 	Actions(Table *tbl, VECTOR(pair_t) &);
@@ -436,6 +437,7 @@ public:
     int tcam_id;
     Table::Ref indirect;
     int indirect_bus;   /* indirect bus to use if there's no indirect table */
+    void alloc_vpns();
     Format::Field *lookup_field(const std::string &name, const std::string &action) {
 	assert(!format);
 	return indirect ? indirect->lookup_field(name, action) : 0; }

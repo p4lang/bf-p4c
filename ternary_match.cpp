@@ -18,6 +18,28 @@ void TernaryMatchTable::vpn_params(int &width, int &depth, int &period, const ch
     period_name = 0;
 }
 
+void TernaryMatchTable::alloc_vpns() {
+    if (no_vpns || layout.size() == 0 || layout[0].vpns.size() > 0) return;
+    int period, width, depth;
+    const char *period_name;
+    vpn_params(width, depth, period, period_name);
+    std::vector<Layout *> rows;
+    for (auto &r : layout) {
+        rows.push_back(&r);
+        r.vpns.resize(r.cols.size()); }
+    std::sort(rows.begin(), rows.end(), [](Layout *const&a, Layout *const&b)->bool {
+                return a->row < b->row; });
+    int vpn = 0;
+    for (int col = 0; col <= 1; ++col) {
+        for (auto *r : rows) {
+            unsigned idx = find(r->cols, col) - r->cols.begin();
+            if (idx < r->vpns.size())
+                r->vpns[idx] = vpn++/width; }
+        if (vpn%width != 0)
+            error(layout[0].lineno, "%d-wide ternary match must use a multiple of %d tcams "
+                  "in each column", width, width); }
+}
+
 TernaryMatchTable::Match::Match(const value_t &v) {
     if (v.type == tVEC) {
         if (v.vec.size < 2 || v.vec.size > 3) {
@@ -53,6 +75,15 @@ TernaryMatchTable::Match::Match(const value_t &v) {
                 else dirtcam = kv.value.i;
             } else
                 error(kv.key.lineno, "Unknown key '%s' in ternary match spec", value_desc(kv.key));
+}
+
+static void check_tcam_match_bus(const std::vector<Table::Layout> &layout) {
+    for (auto &row : layout) {
+        if (row.bus < 0) continue;
+        for (auto col : row.cols)
+            if (row.bus != col)
+                error(row.lineno, "Tcam match bus hardwired to tcam column");
+    }
 }
 
 void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
@@ -116,6 +147,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
             p4_table = P4Table::get(P4Table::MatchEntry, p4_info); }
     fini(p4_info);
     alloc_rams(false, stage->tcam_use, &stage->tcam_match_bus_use);
+    check_tcam_match_bus(layout);
     if (indirect_bus > 0) {
         stage->tcam_indirect_bus_use[indirect_bus/2][indirect_bus&1] = this; }
     if (indirect.set()) {
@@ -135,6 +167,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
         error(lineno, "Unexpected number of action table arguments %zu", action.args.size());
     if (actions && !action_bus) action_bus = new ActionBus();
 }
+
 void TernaryMatchTable::pass1() {
     LOG1("### Ternary match table " << name() << " pass1");
     MatchTable::pass1(1);
@@ -148,7 +181,7 @@ void TernaryMatchTable::pass1() {
              LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
     alloc_id("tcam", tcam_id, stage->pass1_tcam_id,
              TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
-    alloc_busses(stage->tcam_match_bus_use);
+    // alloc_busses(stage->tcam_match_bus_use); -- now hardwired
     if (input_xbar) {
         input_xbar->pass1(stage->tcam_ixbar, TCAM_XBAR_GROUP_SIZE);
         if (match.empty()) {
@@ -227,7 +260,9 @@ void TernaryMatchTable::write_regs() {
         auto vpn = row.vpns.begin();
         for (auto col : row.cols) {
             auto &tcam_mode = stage->regs.tcams.col[col].tcam_mode[row.row];
-            tcam_mode.tcam_data1_select = row.bus;
+            //tcam_mode.tcam_data1_select = row.bus; -- no longer used
+            if (options.match_compiler)
+                tcam_mode.tcam_data1_select = col;
             tcam_mode.tcam_chain_out_enable = (chain_rows >> row.row) & 1;
             if (gress == INGRESS)
                 tcam_mode.tcam_ingress = 1;
@@ -243,15 +278,15 @@ void TernaryMatchTable::write_regs() {
             auto &tcam_vh_xbar = stage->regs.tcams.vh_data_xbar;
             if (options.match_compiler) {
                 for (int i = 0; i < 8; i++)
-                    tcam_vh_xbar.tcam_validbit_xbar_ctl[row.bus][row.row/2][i] |= 15; }
-            auto &halfbyte_mux_ctl = tcam_vh_xbar.tcam_row_halfbyte_mux_ctl[row.bus][row.row];
+                    tcam_vh_xbar.tcam_validbit_xbar_ctl[col][row.row/2][i] |= 15; }
+            auto &halfbyte_mux_ctl = tcam_vh_xbar.tcam_row_halfbyte_mux_ctl[col][row.row];
             halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_select = match[word].byte_config;
             halfbyte_mux_ctl.tcam_row_halfbyte_mux_ctl_enable = 1;
             halfbyte_mux_ctl.tcam_row_search_thread = gress;
-            setup_muxctl(tcam_vh_xbar.tcam_row_output_ctl[row.bus][row.row],
+            setup_muxctl(tcam_vh_xbar.tcam_row_output_ctl[col][row.row],
                          match[word].word_group);
             if (match[word].byte_group >= 0)
-                setup_muxctl(tcam_vh_xbar.tcam_extra_byte_ctl[row.bus][row.row/2],
+                setup_muxctl(tcam_vh_xbar.tcam_extra_byte_ctl[col][row.row/2],
                              match[word].byte_group);
             if (!((chain_rows >> row.row) & 1))
                 stage->regs.tcams.col[col].tcam_table_map[tcam_id] |= 1U << row.row; }
@@ -331,17 +366,19 @@ std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl
     json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"];
     json::vector mem_units;
     unsigned word = 0;
-    for (auto &row : layout) {
-        auto vpn = row.vpns.begin();
-        for (auto col : row.cols) {
-            mem_units.push_back(memunit(row.row, col));
-            if (++word == match.size()) {
-                mem_units_and_vpns.push_back( json::map {
-                    { "memory_units",  std::move(mem_units) },
-                    { "vpns", json::vector { json::number(*vpn) }}});
-                mem_units = json::vector();
-                word = 0; }
-            ++vpn; } }
+    for (auto col = 0; col < 2; col++) {
+        for (auto &row : layout) {
+            auto vpn = row.vpns.begin();
+            for (auto rowcol : row.cols) {
+                if (rowcol == col) {
+                    mem_units.push_back(memunit(row.row, col));
+                    if (++word == match.size()) {
+                        mem_units_and_vpns.push_back( json::map {
+                            { "memory_units",  std::move(mem_units) },
+                            { "vpns", json::vector { json::number(*vpn) }}});
+                        mem_units = json::vector();
+                        word = 0; } }
+                ++vpn; } } }
     return json::make_unique<json::map>(std::move(mra));
 }
 
@@ -357,11 +394,30 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
     for (auto field : *input_xbar) {
         int word = match_word(field.first);
         if (word < 0) continue;
-        match_field_list.push_back( json::map {
-            { "name", json::string(field.second.what.name()) },
-            { "start_offset", json::number(47*word + 45 - field.second.hi) },
-            { "start_bit", json::number(field.second.what->lo) },
-            { "bit_width", json::number(field.second.hi - field.second.lo + 1) }}); }
+        if (field.second.hi > 43) {
+            // a field in the byte group, which is shared with the adjacent word group
+            // each word gets only 4 bits of the byte group
+            assert(field.second.hi < 48);
+            assert((field.first & 1) == 0);
+            int hwidth = 44 - field.second.lo;
+            match_field_list.push_back( json::map {
+                { "name", json::string(field.second.what.name()) },
+                { "start_offset", json::number(47*word + 2) },
+                { "start_bit", json::number(field.second.what->lo) },
+                { "bit_width", json::number(hwidth) }});
+            int adjword = match_word(field.first + 1);
+            if (adjword < 0) continue;
+            match_field_list.push_back( json::map {
+                { "name", json::string(field.second.what.name()) },
+                { "start_offset", json::number(47*adjword + 49 - field.second.hi) },
+                { "start_bit", json::number(field.second.what->lo + hwidth) },
+                { "bit_width", json::number(field.second.hi - 43) }});
+        } else {
+            match_field_list.push_back( json::map {
+                { "name", json::string(field.second.what.name()) },
+                { "start_offset", json::number(47*word + 45 - field.second.hi) },
+                { "start_bit", json::number(field.second.what->lo) },
+                { "bit_width", json::number(field.second.hi - field.second.lo + 1) }}); } }
     pack_fmt["entry_list"] = json::vector {
         json::map {
             { "entry_number",  json::number(0) },
@@ -377,9 +433,13 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
             indirect->gen_memory_resource_allocation_tbl_cfg("sram");
         stage_tbl["ternary_indirection_table"] = std::move(tind);
         if (indirect->actions)
-            indirect->actions->gen_tbl_cfg((tbl["actions"] = json::vector())); }
+            indirect->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+        else if (indirect->action && indirect->action->actions)
+            indirect->action->actions->gen_tbl_cfg((tbl["actions"] = json::vector())); }
     if (actions)
         actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+    else if (action && action->actions)
+        action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
     if (idletime)
         idletime->gen_stage_tbl_cfg(stage_tbl);
     tbl["performs_hash_action"] = false;

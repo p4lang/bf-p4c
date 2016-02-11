@@ -632,8 +632,10 @@ Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
         by_name[name] = actions.size();
         actions.emplace_back(name, kv.key.lineno);
         auto &ins = actions.back();
-        if (kv.key.type == tCMD && CHECKTYPE(kv.key[1], tINT))
-            code_use |= 1U << (ins.code = kv.key[1].i);
+        if (kv.key.type == tCMD && CHECKTYPE(kv.key[1], tINT)) {
+            if (code_use[(ins.code = kv.key[1].i)])
+                error(kv.key.lineno, "Duplicate action code %d", ins.code);
+            code_use[ins.code] = true; }
         for (auto &i : kv.value.vec) {
             if (i.type == tINT && ins.instr.empty()) {
                 if ((ins.addr = i.i) >= ACTION_IMEM_ADDR_MAX)
@@ -691,13 +693,18 @@ void Table::Actions::pass2(Table *tbl) {
         if (act.addr < 0)
             error(act.lineno, "Can't find an available instruction address");
         if (act.code < 0)
-            act.code = code < 0 ? act.addr : code;
-        else if (code < 0 && act.code != act.addr)
+            act.code = code < 0 && !code_use[act.addr] ? act.addr : code;
+        else if (code < 0 && act.code != act.addr) {
             error(act.lineno, "Action code must be the same as action instruction address "
                   "when there are more than 8 actions");
-        code_use |= 1U << act.code;
+            if (act.code < 0)
+                warning(act.lineno, "Code %d is already in use by another action", act.addr); }
+        if (act.code >= 0)
+            code_use[act.code] = true;
         if (act.code > max_code) max_code = act.code;
-        while (code >= 0 && ((code_use >> code) & 1)) code++; }
+        while (code >= 0 && code_use[code]) code++; }
+    std::sort(actions.begin(), actions.end(),
+              [](const Action &a, const Action &b) -> bool { return a.code < b.code; });
 }
 
 static int parity(unsigned v) {
@@ -747,10 +754,8 @@ void Table::Actions::write_regs(Table *tbl) {
 }
 
 void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
-    for (auto &act : actions) {
-        while (cfg.size() <= size_t(act.code))
-            cfg.push_back(json::map());
-        cfg[act.code]->to<json::map>()["name"] = act.name; }
+    for (auto &act : actions)
+        cfg.push_back(json::map{{ "name", json::string(act.name) }});
 }
 
 int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable) {
@@ -1078,7 +1083,7 @@ json::map &add_pack_format(json::map &stage_tbl, const Table::Format *format) {
         int basebit = (format->size - 1) | 127;
         for (int i = format->groups()-1; i >= 0; --i) {
             json::vector field_list;
-            for (auto it = format->begin(i); it != format->end(i); ++i) {
+            for (auto it = format->begin(i); it != format->end(i); ++it) {
                 auto &field = *it;
                 std::string name = field.first;
                 if (name == "action") name = "--instruction_address--";
@@ -1094,7 +1099,7 @@ json::map &add_pack_format(json::map &stage_tbl, const Table::Format *format) {
                 { "entry_number", json::number(i) },
                 { "field_list", std::move(field_list) }}); }
     } else {
-        int entries = 1U << (7 - format->log2size);
+        int entries = format->log2size ? 1U << (7 - format->log2size) : 0;
         pack_fmt["table_word_width"] = 128;
         pack_fmt["entries_per_table_word"] = entries;
         pack_fmt["number_memory_units_per_table_word"] = 1;

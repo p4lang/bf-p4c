@@ -124,6 +124,7 @@ void ActionTable::pass1() {
     alloc_vpns();
     std::sort(layout.begin(), layout.end(),
               [](const Layout &a, const Layout &b)->bool { return a.row > b.row; });
+    unsigned width = format ? (format->size-1)/128 + 1 : 1;
     for (auto &fmt : action_formats) {
         if (!actions->exists(fmt.first)) {
             error(fmt.second->lineno, "Format for non-existant action %s", fmt.first.c_str());
@@ -141,8 +142,8 @@ void ActionTable::pass1() {
                         error(fmt.second->lineno, "Action %s format for field %s incompatible "
                               "with action %s format", fmt.first.c_str(), fld.first.c_str(),
                               fmt2.first.c_str());
-                        break; } } } } }
-    unsigned width = (format->size-1)/128 + 1;
+                        break; } } } }
+        width = std::max(width, (fmt.second->size-1)/128 + 1); }
     unsigned depth = layout_size()/width;
     unsigned idx = 0; // ram index within depth
     int prev_row = -1;
@@ -162,6 +163,16 @@ void ActionTable::pass2() {
     LOG1("### Action table " << name() << " pass2");
     if (match_tables.empty())
         error(lineno, "No match table for action table %s", name());
+    if (!format)
+        format = new Format();
+    if (direct) {
+        /* need all formats to be the same size, so pad them out */
+        for (auto &fmt : action_formats) {
+            for (auto &fmt2 : action_formats)
+                if (fmt.second->log2size < fmt2.second->log2size)
+                    fmt.second->log2size = fmt2.second->log2size;
+            if (format->size < fmt.second->log2size)
+                format->log2size = fmt.second->log2size; } }
     if (actions) actions->pass2(this);
     action_bus->pass2(this);
 }
@@ -338,21 +349,21 @@ void ActionTable::write_regs() {
 }
 
 void ActionTable::gen_tbl_cfg(json::vector &out) {
-    unsigned fmt_width = (format->size + 127)/128;
     unsigned number_entries = (layout_size() * 128 * 1024) / (1 << format->log2size);
     json::map &tbl = *base_tbl_cfg(out, "action_data", number_entries);
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "action_data", number_entries);
     stage_tbl["stage_table_handle"] = action_id;
-    add_pack_format(stage_tbl, 128, fmt_width,
-                    128 >> format->log2size ? 128 >> format->log2size : 1);
-    for (auto &fmt : action_formats)
-        add_pack_format(stage_tbl, 128, (fmt.second->size + 127)/128,
-                        128 >> fmt.second->log2size ? 128 >> fmt.second->log2size : 1);
-    if (options.match_compiler && action_formats.empty())
-        for (int i = actions->count(); i > 1; i--)
-            add_pack_format(stage_tbl, 128, fmt_width,
-                            128 >> format->log2size ? 128 >> format->log2size : 1);
+    int pack_fmt_count = 0;
+    for (auto &act : *actions) {
+        auto *fmt = ::get(action_formats, act.name);
+        if (!options.match_compiler) {
+            while (pack_fmt_count++ < act.code)
+                add_pack_format(stage_tbl, format);
+            assert(act.code == pack_fmt_count-1); }  // should have issued error and not got here
+        add_pack_format(stage_tbl, fmt ? fmt : format); }
     stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("sram");
+    if (actions)
+        actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
     stage_tbl["how_referenced"] = indirect ? "indirect" : "direct";
     tbl["action_data_entry_width"] = 1 << format->log2size;
     /* FIXME -- don't include ref to select table as compiler doesn't */
