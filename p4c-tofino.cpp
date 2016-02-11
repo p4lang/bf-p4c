@@ -41,8 +41,8 @@ int main(int ac, char **av) {
     const IR::Global *program = nullptr;
 
     Tofino_Options options;
-    options.process(ac, av);
-    options.setInputFile();
+    if (options.process(ac, av) != nullptr)
+        options.setInputFile();
     if (ErrorReporter::instance.getErrorCount() > 0)
         return 1;
 
