@@ -18,6 +18,17 @@ TRY_GLSC="
     $TESTDIR/../../p4c-tofino/p4c_tofino/shell.py
 "
 
+TRY_STF="
+    $HOME/model/tests/simple_test_harness/simple_test_harness
+    $HOME/model/*/tests/simple_test_harness/simple_test_harness
+    $PWD/../model/tests/simple_test_harness/simple_test_harness
+    $PWD/../model/*/tests/simple_test_harness/simple_test_harness
+    $PWD/../../model/tests/simple_test_harness/simple_test_harness
+    $PWD/../../model/*/tests/simple_test_harness/simple_test_harness
+    $TESTDIR/../../model/tests/simple_test_harness/simple_test_harness
+    $TESTDIR/../../model/*/tests/simple_test_harness/simple_test_harness
+"
+
 TIME=false
 
 while expr "$1" : - >/dev/null; do
@@ -60,11 +71,21 @@ if [ ! -x "$GLSC" ]; then
     done
 fi
 
+for f in $TRY_STF; do
+    if [ -x "$f" -a "$f" -nt "$STF" ]; then
+        STF="$f"
+    fi
+done
+
 if [ -x "$GLSC" ]; then
     echo "Using $GLSC"
 else
     echo >&2 "Can't find p4c-tofino executable"
     GLSC=false
+fi
+
+if [ -x "$STF" ]; then
+    echo "Using $STF"
 fi
 
 function findbin () {
@@ -84,6 +105,9 @@ function not() { if "$@"; then return 1; else return 0; fi }
 
 if [ ! -x "$TFAS" ]; then
     TFAS=$(findbin tfas)
+fi
+if [ ! -x "$TFLINK" ]; then
+    TFLINK=$(findbin tflink)
 fi
 if [ ! -x "$REFLOW" ]; then
     REFLOW=$(findbin reflow)
@@ -150,7 +174,9 @@ for p4file in "$@"; do
             glsc_cfg=cfg
         fi
     fi
+    tfas_succeeded=false
     if $ok && $TFAS -vvvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
+        tfas_succeeded=true
         for f in $name.out/*.cfg.json; do
             if [ "$f" = "$name.out/regs.pipe.cfg.json" ]; then
                 $JSON_DIFF -i mau $f $glsc_cfg/$(basename $f)
@@ -228,6 +254,37 @@ for p4file in "$@"; do
     else
         echo
     fi
+
+    if $tfas_succeeded && [ -r "../$name.stf" -a -x "$STF" ]; then
+        echo -n "$name.stf"
+        start=`date +%s`
+        if $TFLINK -o $name.out/tofino.bin $name.out/*.cfg.json >/dev/null 2>&1; then
+            export TOFINO_BIN=$name.out/tofino.bin
+            export TABLE_CONFIG=$name.out/tbl-cfg
+            if "$STF" ../$name.stf >stf.txt 2>&1; then
+                echo -n " pass"
+                let pass++
+            else
+                echo -n " fail"
+                let fail++
+            fi
+        else
+            echo -n " failed"
+            let fail++
+        fi
+        if $TIME; then
+            let elapsed=`date +%s`-start
+            let min=elapsed/60
+            let sec=elapsed%60
+            if [ $sec -lt 10 ]; then
+                sec=0$sec
+            fi
+            echo " ($min:$sec)"
+        else
+            echo
+        fi
+    fi
+
     popd >/dev/null
 done
 

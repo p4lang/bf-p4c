@@ -418,6 +418,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
                 { "start_offset", json::number(47*word + 45 - field.second.hi) },
                 { "start_bit", json::number(field.second.what->lo) },
                 { "bit_width", json::number(field.second.hi - field.second.lo + 1) }}); } }
+    canon_field_list(match_field_list);
     pack_fmt["entry_list"] = json::vector {
         json::map {
             { "entry_number",  json::number(0) },

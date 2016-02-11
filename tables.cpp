@@ -1072,6 +1072,18 @@ json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int ent
     return pack_format.back()->to<json::map>();
 }
 
+void canon_field_list(json::vector &field_list) {
+    for (auto &field_ : field_list) {
+        auto &field = field_->to<json::map>();
+        auto &name = field["name"]->to<json::string>();
+        auto tail = name.rfind('.');
+        if (tail == std::string::npos) continue;
+        int lo, hi, len = -1;
+        if (sscanf(&name[tail], ".%d-%d%n", &lo, &hi, &len) >= 2 && tail + len == name.size()) {
+            name.erase(tail);
+            field["start_bit"]->to<json::number>().val += lo; } }
+}
+
 json::map &add_pack_format(json::map &stage_tbl, const Table::Format *format) {
     json::map pack_fmt { { "memory_word_width", json::number(128) } };
     /* FIXME -- factor the two cases of this if better */
@@ -1095,6 +1107,7 @@ json::map &add_pack_format(json::map &stage_tbl, const Table::Format *format) {
                         { "start_bit", json::number(lobit) },
                         { "bit_width", json::number(bits.size()) }});
                     lobit += bits.size(); } }
+            canon_field_list(field_list);
             entry_list.push_back( json::map {
                 { "entry_number", json::number(i) },
                 { "field_list", std::move(field_list) }}); }
@@ -1118,6 +1131,7 @@ json::map &add_pack_format(json::map &stage_tbl, const Table::Format *format) {
                         { "start_bit", json::number(lobit) },
                         { "bit_width", json::number(bits.size()) }});
                     lobit += bits.size(); } }
+            canon_field_list(field_list);
             entry_list.push_back( json::map {
                 { "entry_number", json::number(i) },
                 { "field_list", std::move(field_list) }});

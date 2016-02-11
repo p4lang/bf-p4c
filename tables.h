@@ -416,6 +416,7 @@ public:
 
 json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries = -1);
 json::map &add_pack_format(json::map &stage_tbl, const Table::Format *format);
+void canon_field_list(json::vector &field_list);
 
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
     void vpn_params(int &width, int &depth, int &period, const char *&period_name);
