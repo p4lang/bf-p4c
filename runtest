@@ -8,8 +8,8 @@ findbin() {
     while [ "$dir" != "/" ]; do
         if [ -d "$dir/$1" ]; then
             x=""
-            for f in $(find "$dir/$1" -name $2 -type f); do
-                if [ "0$x" -eq "0" -o "$f" -nt "$x" ]; then
+            for f in $(find $(readlink -f "$dir/$1") -name $2 -type f); do
+                if [ -z "$x" -o "$f" -nt "$x" ]; then
                     x="$f"
                 fi
             done
