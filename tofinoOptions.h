@@ -12,6 +12,7 @@ class Tofino_Options : public CompilerOptions {
         registerOption("--nopa", nullptr,
                        [this](const char*) { phv_alloc = 1; return true; },
                        "Do not perform PHV allocation");
+        target = "tofino";
     }
 };
 

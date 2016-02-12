@@ -153,7 +153,8 @@ void IXBar::update(const Use &alloc) {
         fields.emplace(byte.field, byte.loc); }
 }
 
-bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_alloc, Use &gw_alloc) {
+bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv,
+                       Use &tbl_alloc, Use &gw_alloc) {
     if (!tbl) return true;
     if (tbl->match_table && !allocTable(tbl->layout.ternary, tbl->match_table, phv, tbl_alloc))
         return false;
