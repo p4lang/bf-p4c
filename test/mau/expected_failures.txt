@@ -61,8 +61,10 @@ dileep7-b.p4 tfas
 dileep8.p4 tfas
 dileep.p4 tfas
 selector1.p4 mismatch
+test_7_storm_control.p4 mismatch
 test_config_100_hash_action.p4 mismatch
 test_config_103_first_phase_0.p4 compile
+test_config_122_tcam_range_6.p4 mismatch
 test_config_13_first_selection.p4 compile
 test_config_140_table_counter.p4 mismatch
 test_config_142_stateful_bfd.p4 compile
@@ -90,6 +92,7 @@ test_config_181_first_alg_tcam.p4 compile
 test_config_183_sample_e2e.p4 compile
 test_config_184_stateful_bug1.p4 compile
 test_config_185_first_lpf.p4 compile
+test_config_21_tcam_vpns.p4 mismatch
 test_config_23_same_container_modified.p4 tfas
 test_config_2_action_data_table_sizing.p4 mismatch
 test_config_45_action_data_immediate_param_and_constant.p4 mismatch
@@ -106,5 +109,6 @@ test_config_90_testing_action_data_allocation_3_with_fields_in_overhead.p4 tfas
 test_config_91_gateway_with_split_table.p4 mismatch
 test_config_97_unrelated_tables.p4 mismatch
 test_config_99_share_exact_match_key.p4 mismatch
+test_config_9_no_ternary_indirection.p4 mismatch
 vk_basic_ipv4_subset.p4 mismatch
 vk_basic_ipv4_20150706.p4 mismatch
