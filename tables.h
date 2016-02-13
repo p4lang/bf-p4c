@@ -294,6 +294,8 @@ public:
     virtual Format::Field *lookup_field(const std::string &n,
 					const std::string &act = "")
 	{ return format ? format->field(n) : 0; }
+    virtual std::string find_field(Format::Field *field) {
+        return format ? format->find_field(field) : "<unknown>"; }
     virtual void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn)
 	{ if (format) format->apply_to_field(n, fn); }
     int find_on_ixbar(Phv::Slice sl, int group);
@@ -513,6 +515,7 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
 	period = 1 << std::max((int)format->log2size - 7, 0);
 	period_name = "action data width"; }
     std::map<std::string, Format *>     action_formats;
+    std::string find_field(Format::Field *field);
     Format::Field *lookup_field(const std::string &name, const std::string &action);
     void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn);
     int find_on_actionbus(Format::Field *f, int off, int size);

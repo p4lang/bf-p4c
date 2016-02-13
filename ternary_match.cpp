@@ -366,19 +366,22 @@ std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl
     json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"];
     json::vector mem_units;
     unsigned word = 0;
-    for (auto col = 0; col < 2; col++) {
+    bool done = false;
+    for (auto colnum = 0U; !done; colnum++) {
+        done = true;
         for (auto &row : layout) {
-            auto vpn = row.vpns.begin();
-            for (auto rowcol : row.cols) {
-                if (rowcol == col) {
-                    mem_units.push_back(memunit(row.row, col));
-                    if (++word == match.size()) {
-                        mem_units_and_vpns.push_back( json::map {
-                            { "memory_units",  std::move(mem_units) },
-                            { "vpns", json::vector { json::number(*vpn) }}});
-                        mem_units = json::vector();
-                        word = 0; } }
-                ++vpn; } } }
+            if (colnum >= row.cols.size())
+                continue;
+            auto col = row.cols[colnum];
+            auto vpn = row.vpns[colnum];
+            mem_units.push_back(memunit(row.row, col));
+            if (++word == match.size()) {
+                mem_units_and_vpns.push_back( json::map {
+                    { "memory_units",  std::move(mem_units) },
+                    { "vpns", json::vector { json::number(vpn) }}});
+                mem_units = json::vector();
+                word = 0; }
+            done = false; } }
     return json::make_unique<json::map>(std::move(mra));
 }
 

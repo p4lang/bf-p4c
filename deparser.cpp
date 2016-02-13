@@ -290,9 +290,12 @@ static short phv2cksum[NUM_PHV_REGS][2] = {
     {136,  -1}, {137,  -1}, {138,  -1}, {139,  -1}, {140,  -1}, {141,  -1}, {142,  -1}, {143,  -1}
 };
 
+#define TAGALONG_THREAD_BASE    (COUNT_8BIT_TPHV + COUNT_16BIT_TPHV + 2*COUNT_32BIT_TPHV)
+
 template<typename IPO, typename HPO> static
 void dump_checksum_units(checked_array_base<IPO> &main_csum_units,
                          checked_array_base<HPO> &tagalong_csum_units,
+                         gress_t gress,
                          std::vector<Phv::Ref> checksum[DEPARSER_CHECKSUM_UNITS])
 {
     assert(phv2cksum[NUM_PHV_REGS-1][0] == 143);
@@ -331,7 +334,12 @@ void dump_checksum_units(checked_array_base<IPO> &main_csum_units,
                 if (phv2cksum[idx][1] >= 0) {
                     main_unit[phv2cksum[idx][1]].zero_l_s_b = 0;
                     main_unit[phv2cksum[idx][1]].zero_m_s_b = 0;
-                    main_unit[phv2cksum[idx][1]].swap = polarity; } } } }
+                    main_unit[phv2cksum[idx][1]].swap = polarity; } } }
+        // Thread non-tagalong checksum results through the tagalong unit
+        int idx = i + TAGALONG_THREAD_BASE + gress * DEPARSER_CHECKSUM_UNITS;
+        tagalong_unit[idx].zero_l_s_b = 0;
+        tagalong_unit[idx].zero_m_s_b = 0;
+        tagalong_unit[idx].swap = 0; }
 }
 
 void dump_field_dictionary(checked_array_base<fde_pov> &fde_control,
@@ -430,9 +438,9 @@ void Deparser::output() {
     hdr_regs.hem.he_edf_cfg.disable();
     hdr_regs.him.hi_edf_cfg.disable();
     dump_checksum_units(inp_regs.iim.ii_phv_csum.csum_cfg, hdr_regs.him.hi_tphv_csum.csum_cfg,
-                        checksum[INGRESS]);
+                        INGRESS, checksum[INGRESS]);
     dump_checksum_units(inp_regs.iem.ie_phv_csum.csum_cfg, hdr_regs.hem.he_tphv_csum.csum_cfg,
-                        checksum[EGRESS]);
+                        EGRESS, checksum[EGRESS]);
     dump_field_dictionary(inp_regs.iim.ii_fde_pov.fde_pov, hdr_regs.him.hi_fde_phv.fde_phv,
         inp_regs.iir.main_i.pov.phvs, pov_order[INGRESS], dictionary[INGRESS]);
     dump_field_dictionary(inp_regs.iem.ie_fde_pov.fde_pov, hdr_regs.hem.he_fde_phv.fde_phv,

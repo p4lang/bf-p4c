@@ -166,7 +166,8 @@ int ActionBus::find(const char *name, int off, int size, int *len) {
 }
 
 void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action_slice) {
-    /* FIXME -- home_row is the wrong row to use for action_slice != 0 */
+    LOG2("--- ActionBus write_action_regs(" << tbl->name() << ", " << home_row << ", " <<
+         action_slice << ")");
     auto &action_hv_xbar = tbl->stage->regs.rams.array.row[home_row/2].action_hv_xbar;
     unsigned side = home_row%2;  /* 0 == left,  1 == right */
     for (auto &el : by_byte) {
@@ -174,13 +175,16 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
         Table::Format::Field *f = el.second.data;
         if ((f->bits[0].lo >> 7) != action_slice)
             continue;
+        unsigned slot = Stage::action_bus_slot_map[byte];
         unsigned bit = f->bits[0].lo & 0x7f;
+        LOG3("    byte " << byte << " (slot " << slot << "): field " << tbl->find_field(f) <<
+             "[" << bit << ".." << (bit+f->size-1) << "] size=" << el.second.size <<
+             " offset=" << el.second.offset);
         if (bit + f->size > 128) {
             error(lineno, "Action bus setup can't deal with field %s split across "
                   "SRAM rows", el.second.name.c_str());
             continue; }
 	unsigned bytemask = ((1U << (el.second.size/8U)) - 1) << (el.second.offset/8U);
-        unsigned slot = Stage::action_bus_slot_map[byte];
         switch (Stage::action_bus_slot_size[slot]) {
         case 8:
             for (unsigned sbyte = bit/8; sbyte <= (bit+f->size-1)/8; sbyte++, byte++, slot++) {
@@ -220,7 +224,8 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
             break;
         case 16:
             slot -= ACTION_DATA_8B_SLOTS;
-	last_halfword_group:
+	// last_halfword_group:
+            bytemask <<= ((bit/8) & 1);
             for (unsigned word = bit/16; word <= (bit+f->size-1)/16; word++, byte+=2, slot++) {
                 unsigned code, mask;
                 switch (word >> 1) {
@@ -252,13 +257,17 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
             break;
         case 32: {
             slot -= ACTION_DATA_8B_SLOTS + ACTION_DATA_16B_SLOTS;
+#if 0
 	    if (slot < 2) {
 		/* FIXME -- nasty hack to deal with the weird mixed encoding */
 		slot = slot * 2 + ACTION_DATA_16B_SLOTS;
 		goto last_halfword_group; }
 	    slot -= 2;
+#endif
             unsigned word = bit/32;
             unsigned code = 1 + word/2;
+            bit %= 32;
+            bytemask <<= bit/8;
             if (((word << 2)^byte) & 7) {
                 error(lineno, "Can't put field %s into byte %d on action xbar",
                       el.second.name.c_str(), byte);

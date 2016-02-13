@@ -7,6 +7,14 @@
 
 DEFINE_TABLE_TYPE(ActionTable)
 
+std::string ActionTable::find_field(Table::Format::Field *field) {
+    for (auto &af : action_formats) {
+        auto name = af.second->find_field(field);
+        if (!name.empty() && name[0] != '<')
+            return af.first + ":" + name; }
+    return Table::find_field(field);
+}
+
 Table::Format::Field *ActionTable::lookup_field(const std::string &name, const std::string &action)
 {
     if (action == "*" || action == "") {
@@ -218,7 +226,7 @@ void ActionTable::write_regs() {
     int depth = layout_size()/width;
     int idx = 0;
     int word = 0;
-    Layout *home = &layout[0];
+    Layout *home = nullptr;
     int prev_logical_row = -1;
     decltype(stage->regs.rams.array.switchbox.row[0].ctl) *home_switch_ctl = 0,
                                                           *prev_switch_ctl = 0;
@@ -230,7 +238,10 @@ void ActionTable::write_regs() {
         auto vpn = logical_row.vpns.begin();
         auto &switch_ctl = stage->regs.rams.array.switchbox.row[row].ctl;
         auto &map_alu_row =  stage->regs.rams.map_alu.row[row];
-        if (idx != 0) {
+        if (home && home->row > logical_row.row + 10) {
+            /* too many rows for timing -- need to create a second "home" row */
+            home = nullptr; }
+        if (home) {
 	    // FIXME use DataSwitchboxSetup for this somehow?
             if (&switch_ctl == home_switch_ctl) {
                 /* overflow from L to R action */
@@ -281,7 +292,11 @@ void ActionTable::write_regs() {
             unsigned col = logical_col + 6*side;
             auto &ram = stage->regs.rams.array.row[row].ram[col];
             auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
-            if (idx == 0) {
+            if (!home) {
+                /* FIXME -- this probably won't work if this isn't the first RAM used by this
+                 * table on this logical row (boundary between groups falls within a logical row)
+                 * as we'll then be trying to use the same physical bus for both groups
+                 * Should have issued an error earlier in this case?  */
                 home = &logical_row;
                 home_switch_ctl = &switch_ctl;
                 action_bus->write_action_regs(this, logical_row.row, word);
@@ -339,7 +354,7 @@ void ActionTable::write_regs() {
             if (gress)
                 stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row);
             stage->regs.rams.array.row[row].actiondata_error_uram_ctl[gress] |= 1 << (col-2);
-            if (++idx == depth) { idx = 0; ++word; } }
+            if (++idx == depth) { idx = 0; home = nullptr; ++word; } }
         prev_switch_ctl = &switch_ctl;
         prev_logical_row = logical_row.row; }
     // FIXME -- should we do this?

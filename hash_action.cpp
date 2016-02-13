@@ -102,6 +102,10 @@ void HashActionTable::write_merge_regs(int type, int bus) {
     //merge.mau_bus_hash_group_ctl[type][bus/4].set_subfield(
     //    1 << BusHashGroup::ACTION_DATA_ADDRESS, 5 * (bus%4), 5);
     //merge.mau_bus_hash_group_sel[type][bus/8].set_subfield(hash_dist[0].id | 8, 4*(bus%8), 4);
+    if (type) {
+        merge.tind_bus_prop[bus].tcam_piped = 1;
+        merge.tind_bus_prop[bus].thread = gress;
+        merge.tind_bus_prop[bus].enabled = 1; }
 }
 
 void HashActionTable::write_regs() {

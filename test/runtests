@@ -235,7 +235,7 @@ for p4file in "$@"; do
             echo -n " (UNEXPECTED PASS -- expected $expect_fail failure)"
         elif [ "$expect_fail" != "$fail_type" ]; then
             echo -n " (expected $expect_fail failure)"
-            if [ "$fail_type" = "mismatch" ]; then
+            if [ "$fail_type" = "mismatch" -o "$expect_fail" = "compiler" ]; then
                 let expected_fail++
             fi
         else

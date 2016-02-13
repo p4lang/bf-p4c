@@ -276,5 +276,7 @@ void CounterTable::gen_tbl_cfg(json::vector &out) {
     case BOTH: tbl["statistics_type"] = "packets_and_bytes";
                stage_tbl["stat_type"] = "packets_and_bytes"; break;
     default: break; }
+    tbl["lrt_enable"] = false;
+    tbl["saturating"] = false;  // FIXME?
     tbl["enable_per_flow_enable"] = per_flow_enable;
 }
