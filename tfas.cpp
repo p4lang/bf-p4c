@@ -20,15 +20,15 @@ static std::string output_dir;
 int indent_t::tabsz = 2;
 
 static bool match(const char *pattern, const char *name) {
-    const char *pend;
-    if (!(pend = strchr(pattern, ':')) && !(pend = strchr(pattern, ',')))
-        pend = pattern + strlen(pattern);
+    const char *pend = pattern + strcspn(pattern, ",:");
     const char *pbackup = 0;
     while(1) {
         while(pattern < pend && *pattern == *name) {
             pattern++;
             name++; }
-        if (pattern == pend) return *name == 0;
+        if (pattern == pend) {
+            if (!strcmp(name, ".cpp")) return true;
+            return *name == 0; }
         if (*pattern++ != '*') return false;
         if (pattern == pend) return true;
         while (*name && *name != *pattern) {
@@ -56,7 +56,7 @@ static void check_debug_spec(const char *spec) {
     bool ok = false;
     for (const char *p = strchr(spec, ':'); p; p = strchr(p, ':')) {
         ok = true;
-        strtol(p+1, (char **)&p, 10);
+        strtol(p+1, const_cast<char **>(&p), 10);
         if (*p && *p != ',') {
             ok = false;
             break; } }

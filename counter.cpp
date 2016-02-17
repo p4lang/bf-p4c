@@ -229,8 +229,10 @@ void CounterTable::write_regs() {
         if (type == PACKETS || type == BOTH)
             dump_ctl.stats_dump_has_packets = 1;
         dump_ctl.stats_dump_size = layout_size() - 1;  // FIXME
-	if (direct)
+	if (direct) {
 	    adrdist.movereg_ad_direct[MoveReg::STATS] |= 1U << m->logical_id;
+            if (m->is_ternary())
+                movereg_stats_ctl.movereg_stats_ctl_tcam = 1; }
 	movereg_stats_ctl.movereg_stats_ctl_lt = m->logical_id;
 	adrdist.movereg_ad_stats_alu_to_logical_xbar_ctl[m->logical_id/8U]
 	    .set_subfield(4+stats_group_index, 3*(m->logical_id%8U), 3);

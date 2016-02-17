@@ -91,10 +91,10 @@ void HashActionTable::write_merge_regs(int type, int bus) {
     attached.write_merge_regs(this, type, bus);
     /* FIXME -- factor with ExactMatch::write_merge_regs? */
     auto &merge = stage->regs.rams.match.merge;
-    //merge.exact_match_phys_result_en[bus/8U] |= 1U << (bus%8U);
+    merge.exact_match_phys_result_en[bus/8U] |= 1U << (bus%8U);
     merge.exact_match_phys_result_thread[bus/8U] |= gress << (bus%8U);
-    //if (stage->tcam_delay(gress))
-    //    merge.exact_match_phys_result_delay[bus/8U] |= 1U << (bus%8U);
+    if (stage->tcam_delay(gress))
+        merge.exact_match_phys_result_delay[bus/8U] |= 1U << (bus%8U);
     if (options.match_compiler && action_enable >= 0 && enable_action_instruction_enable)
         /* this seems wrong */
         merge.mau_action_instruction_adr_mask[type][bus] |= 1U << action_enable;
@@ -116,7 +116,7 @@ void HashActionTable::write_regs() {
     layout[0].bus = bus & 1;
     MatchTable::write_regs((bus&2) >> 1, this);
     auto &merge = stage->regs.rams.match.merge;
-    //merge.exact_match_logical_result_en |= 1 << logical_id;
+    merge.exact_match_logical_result_en |= 1 << logical_id;
     if (stage->tcam_delay(gress))
         merge.exact_match_logical_result_delay |= 1 << logical_id;
     if (actions) actions->write_regs(this);

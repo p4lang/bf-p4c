@@ -696,7 +696,7 @@ void Table::Actions::pass2(Table *tbl) {
             act.code = code < 0 && !code_use[act.addr] ? act.addr : code;
         else if (code < 0 && act.code != act.addr) {
             error(act.lineno, "Action code must be the same as action instruction address "
-                  "when there are more than 8 actions");
+                  "when there are more than %d actions", ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH);
             if (act.code < 0)
                 warning(act.lineno, "Code %d is already in use by another action", act.addr); }
         if (act.code >= 0)
@@ -861,7 +861,11 @@ void MatchTable::write_regs(int type, Table *result) {
         actions = result->action->actions; }
     assert(actions);
 
-    if (actions->max_code < ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
+    int max_code = actions->max_code;
+    if (options.match_compiler)
+        if (auto *action_format = lookup_field("action"))
+            max_code = (1 << (action_format->size - (gateway ? 1 : 0))) - 1;
+    if (max_code < ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
         merge.mau_action_instruction_adr_map_en[type] |= (1U << logical_id);
         for (auto &act : *actions)
             merge.mau_action_instruction_adr_map_data[type][logical_id][act.code/4]

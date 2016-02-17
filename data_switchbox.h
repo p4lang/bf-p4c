@@ -17,6 +17,7 @@ public:
         auto &map_alu_row =  map_alu.row[row];
         int side = 1;  // always -- currently no maprams on left side
         auto &syn2port_ctl = map_alu_row.i2portctl.synth2port_fabric_ctl[0][side];
+        map_alu_row.i2portctl.synth2port_ctl.synth2port_enable = 1;
         while (prev_row != row) {
             auto &prev_syn2port_ctl=map_alu.row[prev_row].i2portctl.synth2port_fabric_ctl[0];
             if (prev_row == home_row) {

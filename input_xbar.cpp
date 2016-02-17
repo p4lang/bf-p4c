@@ -410,17 +410,27 @@ void InputXbar::write_regs() {
             group_base = group.first * 16U;
         for (auto &input : group.second) {
             assert(input.lo >= 0);
-            unsigned word_group = input.what->reg.index / 16U;
-            unsigned word_index = input.what->reg.index % 16U;
-            unsigned swizzle_mask = 3;
-            if (input.what->reg.index >= 128) {
-                assert(input.what->reg.size == 16);
-                word_group = (input.what->reg.index-128) / 24U;
-                word_index = (input.what->reg.index-128) % 24U + 16;
+            unsigned word_group, word_index, swizzle_mask;
+            bool hi_enable = false;
+            switch (input.what->reg.size) {
+            case 8:
+                word_group = (input.what->reg.index-FIRST_8BIT_PHV) / 16U;
+                word_index = (input.what->reg.index-FIRST_8BIT_PHV) % 16U;
+                swizzle_mask = 0;
+                break;
+            case 16:
+                word_group = (input.what->reg.index-FIRST_16BIT_PHV) / 24U;
+                word_index = (input.what->reg.index-FIRST_16BIT_PHV) % 24U + 16;
                 swizzle_mask = 1;
-            } else if (input.what->reg.index >= 64) {
-                word_group -= 4;
-                swizzle_mask = 0; }
+                break;
+            case 32:
+                word_group = (input.what->reg.index / 8U) % 4U;
+                word_index = input.what->reg.index % 8U;
+                hi_enable = input.what->reg.index >= 32;
+                swizzle_mask = 3;
+                break;
+            default:
+                assert(0); }
             unsigned phv_byte = input.what->lo/8U;
             unsigned phv_size = input.what->reg.size/8U;
             for (unsigned byte = input.lo/8U; byte <= input.hi/8U; byte++, phv_byte++) {
@@ -440,8 +450,12 @@ void InputXbar::write_regs() {
                     assert(input.what->reg.size == 32);
                     xbar.match_input_xbar_32b_ctl[word_group][i]
                         .match_input_xbar_32b_ctl_address = word_index;
-                    xbar.match_input_xbar_32b_ctl[word_group][i]
-                        .match_input_xbar_32b_ctl_enable = 1;
+                    if (hi_enable)
+                        xbar.match_input_xbar_32b_ctl[word_group][i]
+                            .match_input_xbar_32b_ctl_hi_enable = 1;
+                    else
+                        xbar.match_input_xbar_32b_ctl[word_group][i]
+                            .match_input_xbar_32b_ctl_lo_enable = 1;
                 } else {
                     xbar.match_input_xbar_816b_ctl[word_group][i]
                         .match_input_xbar_816b_ctl_address = word_index;
@@ -451,7 +465,8 @@ void InputXbar::write_regs() {
                     LOG1("FIXME -- need swizzle for " << input.what); }
             auto &power_ctl = table->stage->regs.dp.match_input_xbar_din_power_ctl;
             set_power_ctl_reg(power_ctl, input.what->reg.index); } }
-    auto &hash = table->stage->regs.dp.xbar_hash.hash;
+    auto &dp = table->stage->regs.dp;
+    auto &hash = dp.xbar_hash.hash;
     for (auto &ht : hash_tables) {
         if (ht.second.empty()) continue;
         LOG1("  # Input xbar hash table " << ht.first);
@@ -472,15 +487,18 @@ void InputXbar::write_regs() {
         LOG1("  # Input xbar hash group " << hg.first);
         int grp = hg.first;
         if (hg.second.tables) {
-            hash.parity_group_mask[grp] = hg.second.tables;
-            xbar.mau_match_input_xbar_exact_match_enable[table->gress] |= hg.second.tables; }
+            hash.parity_group_mask[grp][0] = hg.second.tables & 0xff;
+            hash.parity_group_mask[grp][1] = (hg.second.tables >> 8) & 0xff;
+            dp.mau_match_input_xbar_exact_match_enable[table->gress] |= hg.second.tables; }
         if (hg.second.seed) {
-            hash.hash_seed[grp][0] = hg.second.seed & 0x3ffffff;
-            hash.hash_seed[grp][1] = (hg.second.seed >> 26) & 0x3ffffff; }
+            for (int bit = 0; bit < 52; ++bit)
+                if ((hg.second.seed >> bit) & 1)
+                    hash.hash_seed[bit] |= 1U << grp; }
         if (table->gress == INGRESS)
-            hash.hashout_ctl.hash_group_ingress_enable |= 1 << grp;
+            dp.hashout_ctl.hash_group_ingress_enable |= 1 << grp;
         else
-            hash.hashout_ctl.hash_group_egress_enable |= 1 << grp; }
+            dp.hashout_ctl.hash_group_egress_enable |= 1 << grp;
+    }
 }
 
 InputXbar::Input *InputXbar::find(Phv::Slice sl, int grp) {

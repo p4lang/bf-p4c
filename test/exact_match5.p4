@@ -1,3 +1,4 @@
+#include "tofino/intrinsic_metadata.p4"
 
 header_type data_t {
     fields {
@@ -19,7 +20,10 @@ parser start {
 }
 
 action noop() { }
-action setb1(val) { modify_field(data.b1, val); }
+action setb1(val, port) {
+    modify_field(data.b1, val);
+    modify_field(ig_intr_md_for_tm.ucast_egress_port, port);
+}
 
 table test1 {
     reads {
@@ -31,7 +35,7 @@ table test1 {
         setb1;
         noop;
     }
-    size: 10000;
+    size: 50000;
 }
 
 control ingress {

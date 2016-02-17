@@ -128,14 +128,14 @@ void ExactMatchTable::pass1() {
     for (unsigned i = 0; i < format->groups(); i++) {
         auto &info = group_info[i];
         info.tofino_mask.resize(fmt_width);
-        Format::Field *match = format->field("match", i);
-        for (auto &piece : match->bits) {
-            unsigned word = piece.lo/128;
-            if (word != piece.hi/128)
-                error(format->lineno, "'match' field must be explictly split across 128-bit "
-                      "boundary in table %s", name());
-            info.tofino_mask[word] |= tofino_bytemask(piece.lo%128, piece.hi%128);
-            info.match_group[word] = -1; }
+        if (Format::Field *match = format->field("match", i)) {
+            for (auto &piece : match->bits) {
+                unsigned word = piece.lo/128;
+                if (word != piece.hi/128)
+                    error(format->lineno, "'match' field must be explictly split across 128-bit "
+                          "boundary in table %s", name());
+                info.tofino_mask[word] |= tofino_bytemask(piece.lo%128, piece.hi%128);
+                info.match_group[word] = -1; } }
         if (auto *version = format->field("version", i)) {
             if (version->bits.size() != 1)
                 error(format->lineno, "'version' field cannot be split");
@@ -155,7 +155,8 @@ void ExactMatchTable::pass1() {
                           i, j, bit > 20 ? "nibble" : "byte", bit, word);
                     break; }
         for (auto it = format->begin(i); it != format->end(i); it++) {
-            if (it->first == "match" || it->first == "version") continue;
+            if (it->first == "match" || it->first == "version" || it->first == "proxy_hash")
+                continue;
             if (it->second.bits.size() != 1) {
                 error(format->lineno, "Can't deal with split field %s", it->first.c_str());
                 continue; }
@@ -258,19 +259,21 @@ void ExactMatchTable::pass1() {
     setup_ways();
     for (auto &r : match) r.check();
     if (error_count > 0) return;
-    if (match.empty())
+    auto match_format = format->field("match");
+    if (match_format && match.empty())
         for (auto ixbar_element : *input_xbar)
             match.push_back(ixbar_element.second.what);
     unsigned bit = 0;
     for (auto &r : match) {
         match_by_bit[bit] = r;
         bit += r->size(); }
-    if ((unsigned)bit != format->field("match")->size)
+    if ((unsigned)bit != (match_format ? match_format->size : 0))
         warning(match[0].lineno, "Match width %d for table %s doesn't match format match width %d",
-                bit, name(), format->field("match")->size);
+                bit, name(), match_format->size);
     match_in_word.resize(fmt_width);
     for (unsigned i = 0; i < format->groups(); i++) {
         Format::Field *match = format->field("match", i);
+        if (!match) continue;
         unsigned bit = 0;
         for (auto &piece : match->bits) {
             auto mw = --match_by_bit.upper_bound(bit);
@@ -436,6 +439,7 @@ void ExactMatchTable::write_regs() {
     version_nibble_mask.setrange(0, 32*fmt_width);
     for (unsigned i = 0; i < format->groups(); i++) {
         Format::Field *match = format->field("match", i);
+        if (!match) continue;
         for (auto &piece : match->bits)
             match_mask.clrrange(piece.lo, piece.hi+1-piece.lo);
         if (Format::Field *version = format->field("version", i)) {
@@ -539,6 +543,7 @@ void ExactMatchTable::write_regs() {
 	auto &byteswizzle_ctl = rams_row.exactmatch_row_vh_xbar_byteswizzle_ctl[row.bus];
         for (unsigned i = 0; i < format->groups(); i++) {
             Format::Field *match = format->field("match", i);
+            if (!match) continue;
             unsigned bit = 0;
             for (auto &piece : match->bits) {
                 if (piece.lo/128U != word) {

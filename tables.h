@@ -348,6 +348,7 @@ public:
     const AttachedTables *get_attached() const { return &attached; }
     const GatewayTable *get_gateway() const { return gateway; }
     bool run_at_eop() { return attached.run_at_eop(); }
+    virtual bool is_ternary() { return false; }
 )
 
 #define DECLARE_TABLE_TYPE(TYPE, PARENT, NAME, ...)                     \
@@ -459,6 +460,7 @@ public:
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(const char *type, bool skip_spare_bank=false);
     Call &action_call() { return indirect ? indirect->action : action; }
     int memunit(int r, int c) { return r + c*12; }
+    bool is_ternary() { return true; }
 )
 
 DECLARE_TABLE_TYPE(Phase0MatchTable, Table, "phase0_match",
