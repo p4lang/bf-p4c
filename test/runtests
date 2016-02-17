@@ -129,7 +129,8 @@ pass=0
 fail=0
 expected_fail=0
 
-for p4file in "$@"; do
+function test_p4() {
+    p4file="$1"
     pushd $(dirname $p4file) >/dev/null
     name=$(basename $p4file .p4)
     mkdir -p $name.out
@@ -235,7 +236,7 @@ for p4file in "$@"; do
             echo -n " (UNEXPECTED PASS -- expected $expect_fail failure)"
         elif [ "$expect_fail" != "$fail_type" ]; then
             echo -n " (expected $expect_fail failure)"
-            if [ "$fail_type" = "mismatch" -o "$expect_fail" = "compiler" ]; then
+            if [ "$fail_type" = "mismatch" -o "$expect_fail" = "compile" ]; then
                 let expected_fail++
             fi
         else
@@ -254,9 +255,17 @@ for p4file in "$@"; do
     else
         echo
     fi
+    popd >/dev/null
+}
 
-    if $tfas_succeeded && [ -r "../$name.stf" -a -x "$STF" ]; then
-        echo -n "$name.stf"
+function test_stf() {
+    echo -n "$1"
+    pushd $(dirname $1) >/dev/null
+    name=$(basename $1 .stf)
+    if [ ! -x $STF ]; then
+        echo " simple_test_framework not available"
+    elif [ -d $name.out ]; then
+        cd $name.out
         start=`date +%s`
         if $TFLINK -o $name.out/tofino.bin $name.out/*.cfg.json >/dev/null 2>&1; then
             export TOFINO_BIN=$name.out/tofino.bin
@@ -283,9 +292,20 @@ for p4file in "$@"; do
         else
             echo
         fi
+    else
+        echo " not built"
     fi
-
     popd >/dev/null
+}
+
+for file in "$@"; do
+    if [ ${file##*.} == "p4" ]; then
+        test_p4 $file
+    elif [ ${file##*.} == "stf" ]; then
+        test_stf $file
+    elif [ ${file##*.} == "stf" ]; then
+        echo "unrecognized file type $file"
+    fi
 done
 
 echo "$pass tests passed, $fail tests failed ($expected_fail expected)"
