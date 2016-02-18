@@ -443,7 +443,8 @@ void InputXbar::write_regs() {
                             off = (i&2) ? -1 : 1;
                         else
                             off = tcam_swizzle_offset[i&3][phv_byte];
-                        xbar.tswizzle.tcam_byte_swizzle_ctl[i&0x7f] = off&3U;
+                        xbar.tswizzle.tcam_byte_swizzle_ctl[(i&0x7f)/4U].set_subfield(
+                            off&3U, 2*(i%4U), 2);
                         i += off;
                     } else error(input.what.lineno, "misaligned phv access on input_xbar"); }
                 if (input.what->reg.index < 64) {
