@@ -6,7 +6,7 @@
 static bool show_deletion = true;
 static bool show_addition = true;
 static bool sort_map = true;
-static const char *list_map_key = 0;
+static std::vector<const char *> list_map_keys;
 static std::set<std::string> ignore_keys;
 static std::vector<std::pair<long, long>>       ignore_intkeys;
 
@@ -22,7 +22,7 @@ bool is_list_map(json::vector *v, const char *key) {
 
 void add_ignore(const char *a) {
     while (isspace(*a)) a++;
-    if (*a == '&' || *a == '=' || isdigit(*a)) {
+    if (*a == '&' || *a == '=' || *a == '|' || isdigit(*a)) {
         long mask, val;
         int end = 0;
         if (sscanf(a, "%li %n", &val, &end) >= 1)
@@ -113,11 +113,11 @@ json::vector::iterator find(json::vector::iterator p, json::vector::iterator end
     return p;
 }
 
-bool list_map_equiv(json::vector *a, json::vector *b) {
-    auto bmap = build_list_map(b, list_map_key);
+bool list_map_equiv(json::vector *a, json::vector *b, const char *key) {
+    auto bmap = build_list_map(b, key);
     for (auto &e : *a) {
         json::map *m = dynamic_cast<json::map *>(e.get());
-        json::obj *ekey = (*m)[list_map_key].get();
+        json::obj *ekey = (*m)[key].get();
         if (!bmap.count(ekey)) {
             if (show_deletion && !ignore(ekey)) return false;
             continue; }
@@ -128,9 +128,9 @@ bool list_map_equiv(json::vector *a, json::vector *b) {
             if (!ignore(e.first)) return false;
     return true;
 }
-void list_map_print_diff(json::vector *a, json::vector *b, int indent) {
-    auto amap = build_list_map(a, list_map_key);
-    auto bmap = build_list_map(b, list_map_key);
+void list_map_print_diff(json::vector *a, json::vector *b, int indent, const char *key) {
+    auto amap = build_list_map(a, key);
+    auto bmap = build_list_map(b, key);
     auto p1 = amap.begin(), p2 = bmap.begin();
     std::cout << " [";
     indent += 2;
@@ -173,8 +173,9 @@ void list_map_print_diff(json::vector *a, json::vector *b, int indent) {
 }
 
 bool equiv(json::vector *a, json::vector *b) {
-    if (is_list_map(a, list_map_key) && is_list_map(b, list_map_key))
-        return list_map_equiv(a, b);
+    for (auto key : list_map_keys)
+        if (is_list_map(a, key) && is_list_map(b, key))
+            return list_map_equiv(a, b, key);
     auto p1 = a->begin(), p2 = b->begin();
     while (p1 != a->end() && p2 != b->end()) {
         if (!equiv(*p1, *p2)) {
@@ -198,9 +199,10 @@ bool equiv(json::vector *a, json::vector *b) {
     return true;
 }
 void print_diff(json::vector *a, json::vector *b, int indent) {
-    if (is_list_map(a, list_map_key) && is_list_map(b, list_map_key)) {
-        list_map_print_diff(a, b, indent);
-        return; }
+    for (auto key : list_map_keys)
+        if (is_list_map(a, key) && is_list_map(b, key)) {
+            list_map_print_diff(a, b, indent, key);
+            return; }
     auto p1 = a->begin(), p2 = b->begin();
     std::cout << " [";
     indent += 2;
@@ -446,7 +448,7 @@ int main(int ac, char **av) {
                     } else
                         add_ignore(av[i]);
                     break;
-                case 'l': list_map_key = av[++i]; break;
+                case 'l': list_map_keys.push_back(av[++i]); break;
                 case 's': sort_map = flag; break;
                 default:
                     std::cerr << "Unknown option " << (flag ? '+' : '-') << arg[-1] << std::endl;

@@ -139,6 +139,7 @@ public:
             return 1; }
         return 0; }
 
+    template<class Compare> void sort(Compare comp) { data.sort(comp); }
 };
 
 #endif /* _ordered_map_h_ */

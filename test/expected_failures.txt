@@ -8,4 +8,3 @@ gateway5.p4 compile
 hash_index5.p4 mismatch
 proxy_hash1.p4 tfas
 selector0.p4 compile
-validate_outer_ethernet.p4 tfas

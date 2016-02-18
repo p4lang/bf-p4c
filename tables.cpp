@@ -621,35 +621,58 @@ bool Table::Actions::Action::equiv(Action *a) {
     return true;
 }
 
+Table::Actions::Action::alias_t::alias_t(value_t &data) {
+    lineno = data.lineno;
+    if (CHECKTYPE2(data, tSTR, tCMD)) {
+        if (data.type == tSTR) {
+            name = data.s;
+            lo = 0; hi = -1;
+        } else {
+            name = data.vec[0].s;
+            if (CHECKTYPE2(data.vec[1], tINT, tRANGE)) {
+                if (data.vec[1].type == tINT)
+                    lo = hi = data.vec[1].i;
+                else {
+                    lo = data.vec[1].lo;
+                    hi = data.vec[1].hi; } } } }
+}
+
+Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
+    lineno = kv.key.lineno;
+    if (kv.key.type == tCMD) {
+        name = kv.key[0].s;
+        if (CHECKTYPE(kv.key[1], tINT)) {
+            if (actions->code_use[(code = kv.key[1].i)])
+                error(kv.key.lineno, "Duplicate action code %d", code);
+            actions->code_use[code] = true; }
+    } else
+        name = kv.key.s;
+    for (auto &i : kv.value.vec) {
+        if (i.type == tINT && instr.empty()) {
+            if ((addr = i.i) >= ACTION_IMEM_ADDR_MAX)
+                error(i.lineno, "Invalid instruction address %d", i.i);
+        } else if (i.type == tMAP) {
+            for (auto &a : i.map)
+                if (CHECKTYPE(a.key, tSTR) && CHECKTYPE2(a.value, tSTR, tCMD))
+                    alias.emplace(a.key.s, a.value);
+        } else if (CHECKTYPE(i, tCMD))
+            if (auto *p = Instruction::decode(tbl, name, i.vec))
+                instr.push_back(p); }
+}
+
 Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
     for (auto &kv : data) {
         if (!CHECKTYPE2(kv.key, tSTR, tCMD) || !CHECKTYPE(kv.value, tVEC))
             continue;
         const char *name = kv.key.type == tSTR ? kv.key.s : kv.key[0].s;
-        if (by_name.count(name)) {
+        if (actions.count(name)) {
             error(kv.key.lineno, "Duplicate action %s", name);
             continue; }
-        by_name[name] = actions.size();
-        actions.emplace_back(name, kv.key.lineno);
-        auto &ins = actions.back();
-        if (kv.key.type == tCMD && CHECKTYPE(kv.key[1], tINT)) {
-            if (code_use[(ins.code = kv.key[1].i)])
-                error(kv.key.lineno, "Duplicate action code %d", ins.code);
-            code_use[ins.code] = true; }
-        for (auto &i : kv.value.vec) {
-            if (i.type == tINT && ins.instr.empty()) {
-                if ((ins.addr = i.i) >= ACTION_IMEM_ADDR_MAX)
-                    error(i.lineno, "Invalid instruction address %d", i.i);
-                continue; }
-            if (!CHECKTYPE(i, tCMD)) continue;
-            if (auto *p = Instruction::decode(tbl, name, i.vec))
-                ins.instr.push_back(p);
-        }
-    }
+        actions.emplace(name, Action(tbl, this, kv)); }
 }
 
 void Table::Actions::pass1(Table *tbl) {
-    for (auto &act : actions) {
+    for (auto &act : *this) {
         int iaddr = -1;
         if (act.addr >= 0) {
             if (auto old = tbl->stage->imem_addr_use[tbl->gress][act.addr]) {
@@ -665,14 +688,21 @@ void Table::Actions::pass1(Table *tbl) {
                 if (tbl->stage->imem_use[iaddr][inst->slot])
                     error(act.lineno, "action instruction slot %d.%d in use elsewhere",
                           iaddr, inst->slot);
-                tbl->stage->imem_use[iaddr][inst->slot] = 1; } } }
+                tbl->stage->imem_use[iaddr][inst->slot] = 1; } }
+        for (auto &a : act.alias) {
+            if (auto *f = tbl->lookup_field(a.second.name, act.name)) {
+                if (a.second.hi < 0)
+                    a.second.hi = f->size - 1;
+            } else
+                error(a.second.lineno, "No field %s in table %s", a.second.name.c_str(),
+                      tbl->name()); } }
 }
 
 void Table::Actions::pass2(Table *tbl) {
     int code = tbl->get_gateway() ? 1 : 0;
     if (code + actions.size() > ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH)
         code = -1;
-    for (auto &act : actions) {
+    for (auto &act : *this) {
         if (act.addr < 0) {
             bitvec use;
             for (auto *inst : act.instr) {
@@ -703,8 +733,8 @@ void Table::Actions::pass2(Table *tbl) {
             code_use[act.code] = true;
         if (act.code > max_code) max_code = act.code;
         while (code >= 0 && code_use[code]) code++; }
-    std::sort(actions.begin(), actions.end(),
-              [](const Action &a, const Action &b) -> bool { return a.code < b.code; });
+    actions.sort([](const value_type &a, const value_type &b) -> bool {
+        return a.second.code < b.second.code; });
 }
 
 static int parity(unsigned v) {
@@ -718,7 +748,7 @@ static int parity(unsigned v) {
 
 void Table::Actions::write_regs(Table *tbl) {
     auto &imem = tbl->stage->regs.dp.imem;
-    for (auto &act : actions) {
+    for (auto &act : *this) {
 	if (&act != tbl->stage->imem_addr_use[tbl->gress][act.addr])
 	    continue;
         int iaddr = act.addr/ACTION_IMEM_COLORS;
@@ -754,8 +784,22 @@ void Table::Actions::write_regs(Table *tbl) {
 }
 
 void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
-    for (auto &act : actions)
+    for (auto &act : *this)
         cfg.push_back(json::map{{ "name", json::string(act.name) }});
+}
+
+void Table::Actions::add_immediate_mapping(json::map &tbl) {
+    for (auto &act : *this) {
+        if (act.alias.empty()) continue;
+        json::vector &map = tbl["action_to_immediate_mapping"][act.name];
+        for (auto &a : act.alias) {
+            map.push_back( json::vector { json::map {
+                { "name", json::string(a.first) },
+                { "parameter_least_significant_bit", json::number(0) },
+                { "parameter_most_significant_bit", json::number(a.second.hi - a.second.lo) },
+                { "immediate_least_significant_bit", json::number(a.second.lo) },
+                { "immediate_most_significant_bit", json::number(a.second.hi) },
+                { "field_called", json::string(a.second.name) } } } ); } }
 }
 
 int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable) {
@@ -1064,7 +1108,7 @@ json::map *Table::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) 
     return &stage_tbl;
 }
 
-json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries) {
+json::map &Table::add_pack_format(json::map &stage_tbl, int memword, int words, int entries) {
     json::map pack_fmt;
     pack_fmt["table_word_width"] = memword * words;
     pack_fmt["memory_word_width"] = memword;
@@ -1076,7 +1120,7 @@ json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int ent
     return pack_format.back()->to<json::map>();
 }
 
-void canon_field_list(json::vector &field_list) {
+void Table::canon_field_list(json::vector &field_list) {
     for (auto &field_ : field_list) {
         auto &field = field_->to<json::map>();
         auto &name = field["name"]->to<json::string>();
@@ -1088,7 +1132,19 @@ void canon_field_list(json::vector &field_list) {
             field["start_bit"]->to<json::number>().val += lo; } }
 }
 
-json::map &add_pack_format(json::map &stage_tbl, const Table::Format *format) {
+void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std::string name, 
+                                     const Table::Format::Field &field) {
+    int lobit = 0;
+    for (auto &bits : field.bits) {
+        field_list.push_back( json::map {
+            { "name", json::string(name) },
+            { "start_offset", json::number(basebit - bits.hi) },
+            { "start_bit", json::number(lobit) },
+            { "bit_width", json::number(bits.size()) }});
+        lobit += bits.size(); }
+}
+
+json::map &Table::add_pack_format(json::map &stage_tbl, const Table::Format *format) {
     json::map pack_fmt { { "memory_word_width", json::number(128) } };
     /* FIXME -- factor the two cases of this if better */
     if (format->log2size >= 7 || format->groups() > 1) {
@@ -1099,18 +1155,8 @@ json::map &add_pack_format(json::map &stage_tbl, const Table::Format *format) {
         int basebit = (format->size - 1) | 127;
         for (int i = format->groups()-1; i >= 0; --i) {
             json::vector field_list;
-            for (auto it = format->begin(i); it != format->end(i); ++it) {
-                auto &field = *it;
-                std::string name = field.first;
-                if (name == "action") name = "--instruction_address--";
-                int lobit = 0;
-                for (auto &bits : field.second.bits) {
-                    field_list.push_back( json::map {
-                        { "name", json::string(name) },
-                        { "start_offset", json::number(basebit - bits.hi) },
-                        { "start_bit", json::number(lobit) },
-                        { "bit_width", json::number(bits.size()) }});
-                    lobit += bits.size(); } }
+            for (auto it = format->begin(i); it != format->end(i); ++it)
+                add_field_to_pack_format(field_list, basebit, it->first, it->second);
             canon_field_list(field_list);
             entry_list.push_back( json::map {
                 { "entry_number", json::number(i) },
@@ -1124,17 +1170,8 @@ json::map &add_pack_format(json::map &stage_tbl, const Table::Format *format) {
         int basebit = (1 << format->log2size) - 1;
         for (int i = entries-1; i >= 0; --i) {
             json::vector field_list;
-            for (auto &field : *format) {
-                std::string name = field.first;
-                if (name == "action") name = "--instruction_address--";
-                int lobit = 0;
-                for (auto &bits : field.second.bits) {
-                    field_list.push_back( json::map {
-                        { "name", json::string(name) },
-                        { "start_offset", json::number(basebit - bits.hi) },
-                        { "start_bit", json::number(lobit) },
-                        { "bit_width", json::number(bits.size()) }});
-                    lobit += bits.size(); } }
+            for (auto &field : *format)
+                add_field_to_pack_format(field_list, basebit, field.first, field.second);
             canon_field_list(field_list);
             entry_list.push_back( json::map {
                 { "entry_number", json::number(i) },

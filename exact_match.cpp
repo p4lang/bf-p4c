@@ -119,6 +119,8 @@ void ExactMatchTable::pass1() {
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
     input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
+    if (format->log2size < 7)
+        format->log2size = 7;
     format->pass1(this);
     group_info.resize(format->groups());
     unsigned fmt_width = (format->size + 127)/128;
@@ -724,6 +726,30 @@ std::unique_ptr<json::map> ExactMatchTable::gen_memory_resource_allocation_tbl_c
     return json::make_unique<json::map>(std::move(mra));
 }
 
+void ExactMatchTable::add_field_to_pack_format(json::vector &field_list, int basebit,
+                                std::string name, const Table::Format::Field &field) {
+    if (name == "action") name = "--instruction_address--";
+    if (name == "version") name = "--version_valid--";
+    // if (name == "immediate") name = "--immediate--";
+    if (name != "match") {
+        Table::add_field_to_pack_format(field_list, basebit, name, field);
+        return; }
+    unsigned bit = 0;
+    for (auto &piece : field.bits) {
+        auto mw = --match_by_bit.upper_bound(bit);
+        int lo = bit - mw->first;
+        while(mw != match_by_bit.end() &&  mw->first < bit + piece.size()) {
+            int hi = std::min((unsigned)mw->second->size()-1, bit+piece.size()-mw->first-1);
+            field_list.push_back( json::map {
+                { "name", json::string(mw->second.name()) },
+                { "start_offset", json::number(basebit - piece.hi) },
+                { "start_bit", json::number(lo + mw->second.lobit()) },
+                { "bit_width", json::number(hi - lo + 1) }});
+            lo = 0;
+            ++mw; }
+        bit += piece.size(); }
+}
+
 void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
     unsigned fmt_width = (format->size + 127)/128;
     unsigned number_entries = layout_size()/fmt_width * format->groups() * 1024;
@@ -731,20 +757,34 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
     if (!tbl.count("preferred_match_type"))
         tbl["preferred_match_type"] = "exact";
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "hash_match", number_entries);
-    add_pack_format(stage_tbl, 128, fmt_width, format->groups());
+    add_pack_format(stage_tbl, format);
     if (options.match_compiler)
         stage_tbl["memory_resource_allocation"] = "null";
+    json::vector match_field_list;
+    for (auto field : *input_xbar)
+        match_field_list.push_back( json::map {
+            { "name", json::string(field.second.what.name()) },
+            { "start_offset", json::number(1023 - field.first*128 - field.second.hi) },
+            { "start_bit", json::number(field.second.what->lo) },
+            { "bit_width", json::number(field.second.hi - field.second.lo + 1) }});
+    stage_tbl["match_group_resource_allocation"] = json::map {
+        { "field_list", std::move(match_field_list) } };
+    // FIXME -- need action_to_immediate_mapping -- need extra asmgen?
     json::vector &way_stage_tables = stage_tbl["way_stage_tables"] = json::vector();
     for (auto &way : ways) {
         json::map way_tbl;
         way_tbl["stage_number"] = stage->stageno;
         way_tbl["number_entries"] = way.rams.size()/fmt_width * format->groups() * 1024;
         way_tbl["stage_table_type"] = "hash_way";
-        add_pack_format(way_tbl, 128, fmt_width, format->groups());
+        add_pack_format(way_tbl, format);
         way_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg(way);
         way_stage_tables.push_back(std::move(way_tbl)); }
-    if (actions)
+    if (actions) {
         actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+        actions->add_immediate_mapping(stage_tbl);
+    } else if (action && action->actions) {
+        action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+        action->actions->add_immediate_mapping(stage_tbl); }
     if (idletime)
         idletime->gen_stage_tbl_cfg(stage_tbl);
     else if (options.match_compiler)

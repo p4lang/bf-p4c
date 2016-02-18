@@ -436,10 +436,12 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         tind["memory_resource_allocation"] =
             indirect->gen_memory_resource_allocation_tbl_cfg("sram");
         stage_tbl["ternary_indirection_table"] = std::move(tind);
-        if (indirect->actions)
+        if (indirect->actions) {
             indirect->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-        else if (indirect->action && indirect->action->actions)
-            indirect->action->actions->gen_tbl_cfg((tbl["actions"] = json::vector())); }
+            indirect->actions->add_immediate_mapping(stage_tbl);
+        } else if (indirect->action && indirect->action->actions) {
+            indirect->action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+            indirect->action->actions->add_immediate_mapping(stage_tbl); } }
     if (actions)
         actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
     else if (action && action->actions)
@@ -644,6 +646,12 @@ void TernaryIndirectTable::write_regs() {
             break; /* all must be the same, only config once */ }
     }
     if (actions) actions->write_regs(this);
+}
+
+void TernaryIndirectTable::add_field_to_pack_format(json::vector &field_list, int basebit,
+                                std::string name, const Table::Format::Field &field) {
+    if (name == "action") name = "--instruction_address--";
+    Table::add_field_to_pack_format(field_list, basebit, name, field);
 }
 
 void TernaryIndirectTable::gen_tbl_cfg(json::vector &out) {

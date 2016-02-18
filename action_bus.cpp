@@ -21,6 +21,9 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
             off = kv.value[1].lo >> 3;
             sz = kv.value[1].hi - kv.value[1].lo + 1; }
 	Table::Format::Field *f = tbl->lookup_field(name, "*");
+        const char *p = name-1;
+        while (!f && (p = strchr(p+1, '.')))
+            f = tbl->lookup_field(p+1, std::string(name, p-name));
 	if (!f) {
             if (kv.value == "meter") {
                 // FIXME -- meter color could be ORed into any byte of the immediate?

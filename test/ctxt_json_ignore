@@ -46,6 +46,7 @@ per_flow_enable_bit_position
 port_pool_sizes
 pre_color_field
 ram_enable_dictionary
+range_field
 reference_dictionary
 result_field
 saturating

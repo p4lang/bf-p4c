@@ -120,7 +120,7 @@ if [ -z "$DIFF" ]; then
 fi
 
 if [ -r $TESTDIR/ctxt_json_ignore ]; then
-    CTXT_DIFFARGS="-l handle -i @$TESTDIR/ctxt_json_ignore"
+    CTXT_DIFFARGS="-l handle -l start_offset -l entry_number -i @$TESTDIR/ctxt_json_ignore"
 else
     CTXT_DIFFARGS="-al handle -i table_type"
 fi
@@ -267,7 +267,17 @@ function test_stf() {
     elif [ -d $name.out ]; then
         cd $name.out
         start=`date +%s`
-        if $TFLINK -o $name.out/tofino.bin $name.out/*.cfg.json >/dev/null 2>&1; then
+        linked=false
+        if [ -r $name.out/tofino.bin ]; then
+            linked=true
+            for f in $name.out/*.cfg.json; do
+                if [ $f -nt $name.out/tofino.bin ]; then
+                    linked=false
+                    break
+                fi
+            done
+        fi
+        if $linked || $TFLINK -o $name.out/tofino.bin $name.out/*.cfg.json >/dev/null 2>&1; then
             export TOFINO_BIN=$name.out/tofino.bin
             export TABLE_CONFIG=$name.out/tbl-cfg
             if "$STF" ../$name.stf >stf.txt 2>&1; then

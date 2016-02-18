@@ -8,6 +8,7 @@
 #include "hash_dist.h"
 #include "json.h"
 #include "map.h"
+#include "ordered_map.h"
 #include <set>
 #include <string>
 #include "phv.h"
@@ -205,27 +206,39 @@ public:
     class Actions {
     public:
 	struct Action {
-	    std::string                 name;
-	    int                         lineno = -1, addr = -1, code = -1;
-	    std::vector<Instruction *>  instr;
+            struct alias_t {
+                std::string     name;
+                int             lineno = -1, lo = -1, hi = -1;
+                alias_t(value_t &); };
+	    std::string                         name;
+	    int                                 lineno = -1, addr = -1, code = -1;
+            std::map<std::string, alias_t>      alias;
+	    std::vector<Instruction *>          instr;
+            Action(Table *, Actions *, pair_t &);
 	    Action(const char *n, int l) : name(n), lineno(l) {}
 	    bool equiv(Action *a);
 	};
     private:
-	std::vector<Action>             actions;
-	std::map<std::string, int>      by_name;
-	bitvec                          code_use;
+	typedef ordered_map<std::string, Action> map_t;
+	map_t           actions;
+	bitvec          code_use;
     public:
-	int                             max_code = -1;
+	int                                     max_code = -1;
 	Actions(Table *tbl, VECTOR(pair_t) &);
-	std::vector<Action>::iterator begin() { return actions.begin(); }
-	std::vector<Action>::iterator end() { return actions.end(); }
+        typedef map_t::value_type                               value_type;
+        typedef IterValues<map_t::iterator>::iterator           iterator;
+        typedef IterValues<map_t::const_iterator>::iterator     const_iterator;
+        iterator begin() { return iterator(actions.begin()); }
+        const_iterator begin() const { return const_iterator(actions.begin()); }
+        iterator end() { return iterator(actions.end()); }
+        const_iterator end() const { return const_iterator(actions.end()); }
 	int count() { return actions.size(); }
-	bool exists(const std::string &n) { return by_name.count(n) > 0; }
+	bool exists(const std::string &n) { return actions.count(n) > 0; }
 	void pass1(Table *);
 	void pass2(Table *);
 	void write_regs(Table *);
         void gen_tbl_cfg(json::vector &);
+        void add_immediate_mapping(json::map &);
     };
 public:
     const char *name() const { return name_.c_str(); }
@@ -305,6 +318,11 @@ public:
     int find_on_actionbus(const std::string &n, int off, int size, int *len = 0) {
 	return find_on_actionbus(n.c_str(), off, size, len); }
     virtual Call &action_call() { return action; }
+    json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries = -1);
+    json::map &add_pack_format(json::map &stage_tbl, const Table::Format *format);
+    virtual void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
+                                          const Table::Format::Field &field);
+    void canon_field_list(json::vector &field_list);
 };
 
 class FakeTable : public Table {
@@ -415,11 +433,9 @@ public:
     SelectionTable *get_selector() const { return attached.get_selector(); }
     void write_merge_regs(int type, int bus) { attached.write_merge_regs(this, type, bus); }
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(Way &);
+    void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
+                                  const Table::Format::Field &field);
 )
-
-json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries = -1);
-json::map &add_pack_format(json::map &stage_tbl, const Table::Format *format);
-void canon_field_list(json::vector &field_list);
 
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
     void vpn_params(int &width, int &depth, int &period, const char *&period_name);
@@ -487,6 +503,8 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     const GatewayTable *get_gateway() const { return match_table->get_gateway(); }
     SelectionTable *get_selector() const { return attached.get_selector(); }
     void write_merge_regs(int type, int bus) { attached.write_merge_regs(match_table, type, bus); }
+    void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
+                                  const Table::Format::Field &field);
 )
 
 DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,

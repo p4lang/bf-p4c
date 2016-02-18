@@ -35,7 +35,7 @@ inline const V *getref(const std::map<K, V, Comp, Alloc> *m, T key) {
 
 /* iterate over the values in a map */
 template<class PairIter>
-class IterValues {
+struct IterValues {
     class iterator : public std::iterator<
         typename std::iterator_traits<PairIter>::iterator_category,
         typename std::iterator_traits<PairIter>::value_type,
@@ -53,11 +53,10 @@ class IterValues {
         decltype(&it->second) operator->() const { return &it->second; }
     } b, e;
 
-public:
-        template<class U> IterValues(U &map) : b(map.begin()), e(map.end()) {}
-        IterValues(PairIter b, PairIter e) : b(b), e(e) {}
-        iterator begin() const { return b; }
-        iterator end() const { return e; }
+    template<class U> IterValues(U &map) : b(map.begin()), e(map.end()) {}
+    IterValues(PairIter b, PairIter e) : b(b), e(e) {}
+    iterator begin() const { return b; }
+    iterator end() const { return e; }
 };
 
 template<class Map> IterValues<typename Map::iterator>
