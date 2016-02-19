@@ -87,7 +87,7 @@ cpplint_FILES += $(tofino_backend_SOURCES)
 
 # Tests
 
-include $(srcdir)/v1tests.am
+-include $(srcdir)/v1tests.am
 
 $(srcdir)/v1tests.am: $(srcdir)/testdata/v1_samples/*.p4 $(srcdir)/testdata/v1_errors/*.p4
 	$(srcdir)/gen-tests.py $(srcdir) v1 $(srcdir)/backends/tofino/run-tofino-sample.py $^ >$@
