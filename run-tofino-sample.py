@@ -92,108 +92,6 @@ def process_v1_file(options, argv):
             result = SUCCESS
     return result
 
-####################### P4 v1.2 processing
-
-v12_timeout = 100
-
-def compare_files(options, produced, expected):
-    if options.replace:
-        if options.verbose:
-            print("Saving new version of ", expected)
-        shutil.copy2(produced, expected)
-        return SUCCESS
-
-    if options.verbose:
-        print("Comparing", produced, "and", expected)
-    diff = difflib.Differ().compare(open(produced).readlines(), open(expected).readlines())
-    result = SUCCESS
-
-    message = ""
-    for l in diff:
-        if l[0] == ' ': continue
-        result = FAILURE
-        message += l
-
-    if message is not "":
-        print("Files ", produced, " and ", expected, " differ:", file=sys.stderr)
-        print(message, file=sys.stderr)
-
-    return result
-
-def recompile_file(options, produced, mustBeIdentical):
-    # Compile the generated file a second time
-    secondFile = produced + "-x";
-    args = ["./v12test", "--pp", secondFile, "--p4v", "1.2", produced]
-    result = run_timeout(options, args, v12_timeout, None)
-    if result != SUCCESS:
-        return result
-    if mustBeIdentical:
-        result = compare_files(options, produced, secondFile)
-    return result
-
-def check_generated_files(options, tmpdir, expecteddir):
-    files = os.listdir(tmpdir)
-    for file in files:
-        if options.verbose:
-            print("Checking", file)
-        produced = tmpdir + "/" + file
-        expected = expecteddir + "/" + file
-        if not os.path.isfile(expected):
-            if options.verbose:
-                print("Expected file does not exist; creating", expected)
-            shutil.copy2(produced, expected)
-        else:
-            result = compare_files(options, produced, expected)
-            if result != SUCCESS:
-                return result
-    return SUCCESS
-
-def process_v1_2_file(options, argv):
-    assert isinstance(options, Options)
-
-    tmpdir = tempfile.mkdtemp(dir=".")
-    basename = os.path.basename(options.p4filename)
-    base, ext = os.path.splitext(basename)
-    dirname = os.path.dirname(options.p4filename)
-    expected_dirname = dirname + "_outputs"  # expected outputs are here
-
-    if options.verbose:
-        print("Writing temporary files into ", tmpdir)
-    ppfile = tmpdir + "/" + basename                  # after parsing
-    lastfile = tmpdir + "/" + base + "-last" + ext    # last file produced
-    stderr = tmpdir + "/" + basename + "-stderr"
-
-    if not os.path.isfile(options.p4filename):
-        raise Exception("No such file " + options.p4filename)
-    args = ["./v12test", "--pp", ppfile, "--dump", tmpdir]
-    args.extend(argv)
-
-    result = run_timeout(options, args, v12_timeout, stderr)
-    if result != SUCCESS:
-        print("Error compiling")
-        print("".join(open(stderr).readlines()))
-
-    expected_error = isError(options.p4filename)
-    if expected_error:
-        # invert result
-        if result == SUCCESS:
-            result = FAILURE
-        else:
-            result = SUCCESS
-
-    if (result == SUCCESS):
-        result = check_generated_files(options, tmpdir, expected_dirname);
-    if (result == SUCCESS) and (not expected_error):
-        result = recompile_file(options, ppfile, True)
-    if (result == SUCCESS) and (not expected_error):
-        result = recompile_file(options, lastfile, True)
-
-    if options.cleanupTmp:
-        if options.verbose:
-            print("Removing", tmpdir)
-        shutil.rmtree(tmpdir)
-    return result
-
 ######################### main
 
 def main(argv):
@@ -224,21 +122,20 @@ def main(argv):
         argv = argv[1:]
 
     options.p4filename=argv[-1]
-    options.testName = None
     if options.p4filename.startswith(options.compilerSrcdir):
         options.testName = options.p4filename[len(options.compilerSrcdir):];
         if options.testName.startswith('/'):
             options.testName = options.testName[1:]
         if options.testName.endswith('.p4'):
             options.testName = options.testName[:-3]
-
-    if isv1_2(options.p4filename):
-        result = process_v1_2_file(options, argv)
+        options.testName = "tofino/" + options.testName
     else:
-        result = process_v1_file(options, argv)
+        print("Can't figure out test name")
+        return FAILURE
+
+    result = process_v1_file(options, argv)
 
     if (result == SUCCESS and options.testName and
-        os.path.exists(options.testName + '.tfa') and
         os.path.exists(options.p4filename[:-3] + '.stf')):
         srcdir = os.path.abspath(options.compilerSrcdir)
         test = os.path.abspath(options.p4filename[:-3] + '.stf')
