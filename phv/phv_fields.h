@@ -38,9 +38,6 @@ class PhvInfo : public Inspector {
     bool preorder(const IR::Header *h) override;
     bool preorder(const IR::HeaderStack *) override;
     bool preorder(const IR::Metadata *h) override;
-    bool preorder(const IR::Expression *) override { return false; }
-    bool preorder(const IR::Table *) override { return false; }
-    bool preorder(const IR::Parser *) override { return false; }
     template<typename Iter>
     class iterator {
         Iter    it;

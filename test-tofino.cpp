@@ -46,17 +46,14 @@ class DumpPipe : public Inspector {
         return false; }
 };
 
-void test_tofino_backend(const IR::Global *program, const Tofino_Options *options) {
-    if (verbose) {
-        std::cout << "-------------------------------------------------" << std::endl
-                  << "Initial program" << std::endl
-                  << "-------------------------------------------------" << std::endl;
-        std::cout << *program << std::endl; }
-    PhvInfo phv;
-    program->apply(phv);
-    phv.allocatePOV();
+extern void dump(const IR::Node *);
+void force_link_dump(const IR::Node *n) { dump(n); }
 
-    auto maupipe = extract_maupipe(program);
+void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *options) {
+    PhvInfo phv;
+    maupipe = maupipe->apply(AddMetadataShims());
+    maupipe = maupipe->apply(phv);
+    phv.allocatePOV();
     maupipe = maupipe->apply(TableLayout());
     maupipe = maupipe->apply(TableFindSeqDependencies());
     if (verbose) {
@@ -71,7 +68,6 @@ void test_tofino_backend(const IR::Global *program, const Tofino_Options *option
     TablesMutuallyExclusive mutex;
     FieldDefUse defuse(phv);
     PassManager backend = {
-        new AddMetadataShims,
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),
         new SplitExtractEmit,

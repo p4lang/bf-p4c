@@ -136,3 +136,7 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::Global *program) {
     th.mau = th.mau->apply(toAttach);
   return rv;
 }
+
+const IR::Tofino::Pipe *extract_maupipe(const IR::P4V12Program *program) {
+    return nullptr;
+}

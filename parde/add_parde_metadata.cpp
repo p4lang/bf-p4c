@@ -9,7 +9,7 @@ IR::FieldRef *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field) {
             break; }
     if (!ftype)
         BUG("No field %s in %s", field, hdr->name);
-    return new IR::FieldRef(ftype, new IR::NamedRef(hdr->type, hdr->name), field);
+    return new IR::FieldRef(ftype, new IR::ConcreteHeaderRef(hdr), field);
 }
 
 bool AddMetadataShims::preorder(IR::Tofino::Parser *parser) {
