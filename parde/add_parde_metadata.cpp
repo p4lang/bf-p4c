@@ -14,6 +14,7 @@ IR::FieldRef *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field) {
 
 bool AddMetadataShims::preorder(IR::Tofino::Parser *parser) {
     auto *std_meta = findContext<IR::Tofino::Pipe>()->standard_metadata;
+    if (!std_meta) return false;
     if (parser->gress == INGRESS) {
         parser->start = new IR::Tofino::ParserState(
             "$ingress_metadata_shim", {}, {
@@ -32,6 +33,7 @@ bool AddMetadataShims::preorder(IR::Tofino::Parser *parser) {
 
 bool AddMetadataShims::preorder(IR::Tofino::Deparser *d) {
     auto *std_meta = findContext<IR::Tofino::Pipe>()->standard_metadata;
+    if (!std_meta) return false;
     if (d->gress == INGRESS)
         d->egress_port =  gen_fieldref(std_meta, "egress_spec");
     else if (d->gress == EGRESS)

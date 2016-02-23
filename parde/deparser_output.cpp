@@ -27,10 +27,11 @@ std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
     indent_t    indent(1);
     out << "deparser " << d.gress << ":" << std::endl;
     out << indent << "dictionary:" << std::endl;
-    d.deparser->emits.apply(OutputDictionary(out, d.phv, ++indent));
-    --indent;
-    if (d.deparser->egress_port)
-        out << indent << "egress_unicast_port: "
-            << d.phv.field(d.deparser->egress_port)->name << std::endl;
+    if (d.deparser) {
+        d.deparser->emits.apply(OutputDictionary(out, d.phv, ++indent));
+        --indent;
+        if (d.deparser->egress_port)
+            out << indent << "egress_unicast_port: "
+                << d.phv.field(d.deparser->egress_port)->name << std::endl; }
     return out;
 }

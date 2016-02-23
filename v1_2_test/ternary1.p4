@@ -12,10 +12,11 @@ struct packet_t {
     data_h      data;
 }
 
-parser p(packet_in b, out packet_t hdrs)
+parser p(packet_in b, out packet_t hdrs, inout standard_metadata meta)
 {
     state start {
         b.extract(hdrs.data);
+        transition accept;
     }
 }
 
@@ -43,7 +44,7 @@ control egress(inout packet_t hdrs, inout standard_metadata meta) {
     apply { }
 }
 
-control deparser(packet_out b, in packet_t hdrs) {
+control deparser(packet_out b, in packet_t hdrs, inout standard_metadata meta) {
     apply {
         b.emit(hdrs.data);
     }

@@ -22,10 +22,10 @@ class ParserState {
   inline Vector<ParserMatch>    match;
 #noconstructor
 #emit
-  const IR::Parser *p4state = 0; /* informational only! not visited or compared for equal */
-  explicit ParserState(const IR::Parser *);
+  const IR::Node *p4state = 0; /* informational only! not visited or compared for equal */
+  explicit ParserState(const IR::Node *);
   ParserState(cstring n, const std::initializer_list<const Expression *> &sel,
-                     const std::initializer_list<const ParserMatch *> &m)
+              const std::initializer_list<const ParserMatch *> &m)
   : name(n), select(sel), match(m) {}
 #end
 }
@@ -46,7 +46,7 @@ class Deparser {
   NullOK Expression             egress_port;
 #noconstructor
 #emit
-  const IR::Parser *start = 0; /* informational only! not visited or compared for equal */
+  //const IR::Parser *start = 0; /* informational only! not visited or compared for equal */
   Deparser(gress_t gr, const Parser *s);
 #end
 #apply

@@ -60,7 +60,7 @@ static void output_state(std::ostream &out, const PhvInfo &phv, indent_t indent,
 std::ostream &operator<<(std::ostream &out, const ParserAsmOutput &parser) {
     indent_t    indent(1);
     out << "parser " << parser.gress << ":" << std::endl;
-    if (parser.parser->start)
+    if (parser.parser && parser.parser->start)
         out << indent << "start: " << parser.parser->start->name << std::endl;
     for (auto state : parser.states)
         output_state(out, parser.phv, indent, state);
