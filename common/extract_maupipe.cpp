@@ -118,11 +118,11 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::Global *program) {
   GetTofinoParser parser(program);
   program->apply(parser);
   auto ingress = program->get<IR::Control>(parser.ingress_entry());
-  if (!ingress) ingress = new IR::Control("ingress");
+  if (!ingress) ingress = new IR::Control(IR::ID("ingress"));
   ingress = ingress->apply(InlineControlFlow(program));
   ingress = ingress->apply(NameGateways());
   auto egress = program->get<IR::Control>("egress");
-  if (!egress) egress = new IR::Control("egress");
+  if (!egress) egress = new IR::Control(IR::ID("egress"));
   egress = egress->apply(InlineControlFlow(program));
   egress = egress->apply(NameGateways());
   ingress->apply(GetTofinoTables(program, INGRESS, rv));

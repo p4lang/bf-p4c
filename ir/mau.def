@@ -100,7 +100,7 @@ class TernaryIndirect : Attached {
 #noconstructor
 #nodbprint
 #emit
-    explicit TernaryIndirect(cstring tbl_name) { name = tbl_name + "$tind"; }
+    explicit TernaryIndirect(cstring tbl_name) { name = IR::ID(tbl_name + "$tind"); }
     const char *kind() const { return "indirect"; }
 #end
 }
@@ -110,7 +110,7 @@ class ActionData : Attached {
 #noconstructor
 #nodbprint
 #emit
-    explicit ActionData(cstring tbl_name) { name = tbl_name + "$action"; }
+    explicit ActionData(cstring tbl_name) { name = IR::ID(tbl_name + "$action"); }
     const char *kind() const { return "action"; }
     bool indexed() const { return !direct; }
 #end
