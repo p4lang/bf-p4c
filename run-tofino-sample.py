@@ -70,14 +70,14 @@ def run_timeout(options, args, timeout, stderr):
         print("Exit code ", local.process.returncode)
     return local.process.returncode
 
-def isv1_2(p4filename):
-    return "v1_2" in p4filename
 
-##################### P4 v1.0 processing
-
-def process_v1_file(options, argv):
+def process_file(options, argv):
     assert isinstance(options, Options)
-    args = ["./p4c-tofino", "-I" + options.compilerSrcdir + "/testdata/v1_samples/p4_lib"]
+    args = ["./p4c-tofino"]
+    if "v1_2" in options.p4filename:
+        args.extend(["--p4v", "1.2"]);
+    else:
+        args.extend(["-I" + options.compilerSrcdir + "/testdata/v1_samples/p4_lib"]);
     args.extend(argv)
     if options.testName:
         args.extend(['-o', options.testName + '.tfa'])
@@ -132,7 +132,7 @@ def main(argv):
         print("Can't figure out test name")
         return FAILURE
 
-    result = process_v1_file(options, argv)
+    result = process_file(options, argv)
 
     if (result == SUCCESS and options.testName and
         os.path.exists(options.p4filename[:-3] + '.stf')):

@@ -18,7 +18,7 @@ class ParserAsmOutput : public Inspector {
  public:
     ParserAsmOutput(const IR::Tofino::Pipe *pipe, const PhvInfo &phv, gress_t gr)
     : gress(gr), phv(phv), parser(pipe->thread[gress].parser) {
-        parser->apply(*this); }
+        if (parser) parser->apply(*this); }
 };
 
 class DeparserAsmOutput {

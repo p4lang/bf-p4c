@@ -12,7 +12,7 @@ class CreateThreadLocalInstances : public Modifier, ThreadVisitor {
  public:
   explicit CreateThreadLocalInstances(gress_t th) : ThreadVisitor(th), gress_(th) {}
   // Always returns true. It prepends "thread-name::" to named_ref->name.
-  bool preorder(IR::NamedHeaderRef *hdr_ref) override;
+  bool preorder(IR::HeaderOrMetadata *) override;
  private:
   gress_t gress_;
 };

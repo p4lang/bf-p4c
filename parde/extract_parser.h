@@ -4,10 +4,12 @@
 #include "ir/ir.h"
 
 class GetTofinoParser : public Inspector {
-  const IR::Global                            *program;
+  const IR::Global                            *program = 0;
+  const IR::ParserContainer                   *container = 0;
   map<cstring, IR::Tofino::ParserState *>     states;
   IR::ID                                      ingress_control;
   bool preorder(const IR::Parser *) override;
+  bool preorder(const IR::ParserState *) override;
 
   struct Context {
     const Context               *parent;
@@ -29,21 +31,14 @@ class GetTofinoParser : public Inspector {
     : hdr(dynamic_cast<const IR::HeaderRef *>(e)), index(out) {
       if (!hdr) BUG("not a valid header ref"); }
   };
-  class RewriteExtractNext : public Transform {
-    typedef GetTofinoParser::Context Context;     // not to be confused with Visitor::Context
-    const IR::Global            *program;
-    const Context               *ctxt;
-    IR::Expression *preorder(IR::NamedRef *name) override;
-   public:
-    bool                        failed = false;
-    RewriteExtractNext(const IR::Global *p, const Context *c) : program(p), ctxt(c) {}
-  };
+  class RewriteExtractNext;
   void addMatch(IR::Tofino::ParserState *, int, int, const IR::Vector<IR::Expression> &,
                 const IR::ID &, const Context *);
   IR::Tofino::ParserState *state(cstring, const Context *);
 
  public:
   explicit GetTofinoParser(const IR::Global *g) : program(g) {}
+  explicit GetTofinoParser(const IR::ParserContainer *p) : container(p) {}
   IR::Tofino::Parser *parser(gress_t);
   cstring ingress_entry();
 };
