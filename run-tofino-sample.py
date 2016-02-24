@@ -92,7 +92,6 @@ def process_v1_file(options, argv):
             result = SUCCESS
     return result
 
-
 ######################### main
 
 def main(argv):
@@ -123,18 +122,19 @@ def main(argv):
         argv = argv[1:]
 
     options.p4filename=argv[-1]
-    options.testName = None
     if options.p4filename.startswith(options.compilerSrcdir):
         options.testName = options.p4filename[len(options.compilerSrcdir):];
         if options.testName.startswith('/'):
             options.testName = options.testName[1:]
         if options.testName.endswith('.p4'):
-            options.testName = options.testName[:-3]
+            options.testName = "tofino/" + options.testName[:-3]
+    else:
+        print("Can't figure out test name")
+        return FAILURE
 
     result = process_v1_file(options, argv)
 
     if (result == SUCCESS and options.testName and
-        os.path.exists(options.testName + '.tfa') and
         os.path.exists(options.p4filename[:-3] + '.stf')):
         srcdir = os.path.abspath(options.compilerSrcdir)
         test = os.path.abspath(options.p4filename[:-3] + '.stf')
