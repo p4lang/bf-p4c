@@ -17,6 +17,7 @@
 
 extern void test_tofino_backend(const IR::Tofino::Pipe *, const Tofino_Options *);
 extern void setup_gc_logging();
+extern void dump(const IR::Node *);
 
 int main(int ac, char **av) {
     setup_gc_logging();
@@ -50,7 +51,10 @@ int main(int ac, char **av) {
             std::cout << "-------------------------------------------------" << std::endl
                       << "Initial program" << std::endl
                       << "-------------------------------------------------" << std::endl;
-            std::cout << *program << std::endl; }
+            if (verbose > 1)
+                dump(program);
+            else
+                std::cout << *program << std::endl; }
         maupipe = extract_maupipe(program);
         break; }
     case CompilerOptions::FrontendVersion::P4v1_2: {
@@ -60,7 +64,10 @@ int main(int ac, char **av) {
             std::cout << "-------------------------------------------------" << std::endl
                       << "Initial program" << std::endl
                       << "-------------------------------------------------" << std::endl;
-            std::cout << *program << std::endl; }
+            if (verbose > 1)
+                dump(program);
+            else
+                std::cout << *program << std::endl; }
        maupipe = extract_maupipe(program);
        break; }
     default:
