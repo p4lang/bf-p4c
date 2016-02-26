@@ -43,7 +43,15 @@ class GetTofinoParser::RewriteExtractNext : public Transform {
         rv->insert(rv->end(), v->begin(), v->end()); }
     prune();  // don't visit children again
     return rv; }
-  const IR::Expression *preorder(IR::MethodCallStatement *s) override { return s->methodCall; }
+  const IR::Node *preorder(IR::MethodCallStatement *s) override {
+    return transform_child(s->methodCall); }
+  const IR::Expression *preorder(IR::MethodCallExpression *e) override {
+    if (auto meth = e->method->to<IR::Member>()) {
+      if (meth->member == "extract")
+        return new IR::Primitive(meth->srcInfo, "extract", e->arguments);
+    } else {
+      BUG("invalid method call %s", e); }
+    return e; }
   const IR::Expression *preorder(IR::AssignmentStatement *s) override {
     return new IR::Primitive(s->srcInfo, "set_metadata", s->left, s->right); }
   IR::Expression *preorder(IR::Statement *) override { BUG("Unhandled statement kind"); }

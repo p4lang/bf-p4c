@@ -162,10 +162,11 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4V12Program *program) {
     // FIXME add consistency/sanity checks to make sure arch is well-formed.
 
     auto rv = new IR::Tofino::Pipe();
-#if 0
+#if 1
     auto hdr_t = blockMap->typeMap->getType(ingress->type->applyParams->parameters->at(0)->type);
     auto meta_t = blockMap->typeMap->getType(ingress->type->applyParams->parameters->at(1)->type);
-    rv->standard_metadata = new IR::Metadata("standard_metadata", "standard_metadata", meta_t);
+    rv->standard_metadata = new IR::Metadata("standard_metadata_t", "standard_metadata",
+                                             meta_t->to<IR::Type_Struct>());
 #endif
     GetTofinoParser make_parser(parser);
     parser->apply(make_parser);
