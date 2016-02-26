@@ -3,9 +3,9 @@
 
 IR::FieldRef *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field) {
     const IR::Type *ftype = nullptr;
-    for (auto f : hdr->type->fields)
-        if (f.first == field) {
-            ftype = f.second;
+    for (auto f : *hdr->type->fields)
+        if (f->name == field) {
+            ftype = f->type;
             break; }
     if (!ftype)
         BUG("No field %s in %s", field, hdr->name);

@@ -7,11 +7,11 @@ IR::Node *SplitExtractEmit::preorder(IR::Primitive *p) {
     auto *hdr = p->operands[0]->to<IR::HeaderRef>();
     if (!hdr) return p;
     auto *rv = new IR::Vector<IR::Expression>;
-    auto *hdr_type = hdr->type->to<IR::HeaderType>();
+    auto *hdr_type = hdr->type->to<IR::Type_StructLike>();
     assert(hdr_type);
-    for (auto &field : hdr_type->fields)
+    for (auto field : *hdr_type->fields)
         rv->push_back(new IR::Primitive(p->srcInfo, p->name,
-            new IR::FieldRef(field.second, hdr, field.first)));
+            new IR::FieldRef(field->type, hdr, field->name)));
     if (p->name == "extract")
         rv->push_back(new IR::Primitive(p->srcInfo, "set_metadata",
             new IR::FieldRef(IR::Type::Bits::get(1), hdr, "$valid"),
