@@ -47,6 +47,7 @@ class GetTofinoParser::RewriteExtractNext : public Transform {
   const IR::Expression *preorder(IR::AssignmentStatement *s) override {
     return new IR::Primitive(s->srcInfo, "set_metadata", s->left, s->right); }
   IR::Expression *preorder(IR::Statement *) override { BUG("Unhandled statement kind"); }
+
  public:
   bool                        failed = false;
   RewriteExtractNext(GetTofinoParser &s, const Context *c) : self(s), ctxt(c) {}
