@@ -17,14 +17,14 @@ void PhvInfo::add(cstring name, int size, bool meta) {
     by_id.push_back(info);
 }
 
-void PhvInfo::add_hdr(cstring name, const IR::HeaderType *type, bool meta) {
+void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, bool meta) {
     if (!type) {
         LOG2("PhvInfo no type for " << name);
         return; }
     LOG2("PhvInfo adding " << (meta ? "metadata" : "header") << " " << name);
     int start = by_id.size();
-    for (auto &f : type->fields)
-        add(name + '.' + f.first, f.second->width_bits(), meta);
+    for (auto f : *type->fields)
+        add(name + '.' + f->name, f->type->width_bits(), meta);
     int end = by_id.size() - 1;
     all_headers.emplace(name, std::make_pair(start, end));
 }

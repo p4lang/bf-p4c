@@ -34,7 +34,7 @@ class PhvInfo : public Inspector {
     vector<Info *>                      by_id;
     map<cstring, std::pair<int, int>>   all_headers;
     void add(cstring, int, bool);
-    void add_hdr(cstring, const IR::HeaderType *, bool);
+    void add_hdr(cstring, const IR::Type_StructLike *, bool);
     bool preorder(const IR::Header *h) override;
     bool preorder(const IR::HeaderStack *) override;
     bool preorder(const IR::Metadata *h) override;
