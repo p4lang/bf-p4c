@@ -13,9 +13,11 @@ class OutputDictionary : public Inspector {
     indent_t            indent;
     bool preorder(const IR::Primitive *prim) {
         if (prim->name != "emit") return true;
-        auto field = prim->operands[0];
-        out << indent << phv.field(field)->name << ": "
-            << trim_asm_name(header_ref(field)->toString()) << ".$valid" << std::endl;
+        auto hsr = prim->operands[0]->to<IR::HeaderSliceRef>();
+        for (auto field : hsr->fields())
+          out << indent << phv.field(field)->name << ": "
+              << trim_asm_name(header_ref(field)->toString()) << ".$valid"
+              << std::endl;
         return false; }
 
  public:
