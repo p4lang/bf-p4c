@@ -94,7 +94,7 @@ bool IXBar::allocTable(bool ternary, const IR::Table *tbl, const PhvInfo &phv, U
     bool                                rv;
     for (auto r : *tbl->reads) {
         auto *field = r;
-        if (auto mask = r->to<IR::BAnd>()) {
+        if (auto mask = r->to<IR::Mask>()) {
             field = mask->left;
         } else if (auto prim = r->to<IR::Primitive>()) {
             if (prim->name != "valid")

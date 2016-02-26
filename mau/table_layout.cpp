@@ -10,7 +10,7 @@ static void setup_match_layout(IR::MAU::Table::Layout &layout, const IR::Table *
     layout.match_width_bits = 0;
     if (tbl->reads) {
         for (auto r : *tbl->reads) {
-            if (auto mask = dynamic_cast<const IR::BAnd *>(r)) {
+            if (auto mask = dynamic_cast<const IR::Mask *>(r)) {
                 auto fval = dynamic_cast<const IR::FieldRef *>(mask->left);
                 auto mval = dynamic_cast<const IR::Constant *>(mask->right);
                 layout.match_width_bits += bitcount(mval->value);
