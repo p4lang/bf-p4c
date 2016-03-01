@@ -34,3 +34,19 @@ class Tofino::Pipe {
                 v.visit(th.mau, "mau");
                 v.visit(th.deparser, "deparser"); } } }
 }
+
+class InstanceRef : Expression {
+    ID                          name;
+    HeaderOrMetadata            obj;
+#noconstructor
+#emit
+    /* FIXME -- make ir_generator understand NameMap... */
+    NameMap<InstanceRef>        nested;
+    InstanceRef(ID n, const Type_StructLike *t);
+#end
+    visit_children { Expression::visit_children(v);
+        v.visit(obj); nested.visit_children(v); }
+    operator== { return Expression::operator==(a) && name == a.name && 
+        obj == a.obj && nested == a.nested; }
+    dbprint { out << obj; }
+}

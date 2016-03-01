@@ -4,6 +4,7 @@
 #include "common/inline_control_flow.h"
 #include "common/name_gateways.h"
 #include "frontends/p4v1.2/evaluator/evaluator.h"
+#include "tofino/common/param_binding.h"
 #include "tofino/mau/table_dependency_graph.h"
 #include "tofino/parde/extract_parser.h"
 #include "lib/algorithm.h"
@@ -162,12 +163,29 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4V12Program *program) {
     // FIXME add consistency/sanity checks to make sure arch is well-formed.
 
     auto rv = new IR::Tofino::Pipe();
-#if 1
-    auto hdr_t = blockMap->typeMap->getType(ingress->type->applyParams->parameters->at(0)->type);
-    auto meta_t = blockMap->typeMap->getType(ingress->type->applyParams->parameters->at(1)->type);
-    rv->standard_metadata = new IR::Metadata("standard_metadata_t", "standard_metadata",
-                                             meta_t->to<IR::Type_Struct>());
-#endif
+
+    ParamBinding bindings(blockMap);
+
+    for (auto param : *parser->type->applyParams->parameters)
+        if (param->type->is<IR::Type_StructLike>())
+            bindings.bind(param);
+    for (auto param : *ingress->type->applyParams->parameters)
+        if (param->type->is<IR::Type_StructLike>())
+            bindings.bind(param);
+    for (auto param : *egress->type->applyParams->parameters)
+        if (param->type->is<IR::Type_StructLike>())
+            bindings.bind(param);
+    for (auto param : *deparser->type->applyParams->parameters)
+        if (param->type->is<IR::Type_StructLike>())
+            bindings.bind(param);
+
+    rv->standard_metadata =
+        bindings.get(ingress->type->applyParams->parameters->at(1))->obj->to<IR::Metadata>();
+    parser = parser->apply(bindings)->apply(RemoveInstanceRef());
+    ingress = ingress->apply(bindings)->apply(RemoveInstanceRef());
+    egress = egress->apply(bindings)->apply(RemoveInstanceRef());
+    deparser = deparser->apply(bindings)->apply(RemoveInstanceRef());
+
     GetTofinoParser make_parser(parser);
     parser->apply(make_parser);
     if (auto in = rv->thread[INGRESS].parser = make_parser.parser(INGRESS))
