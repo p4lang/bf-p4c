@@ -127,7 +127,7 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
     if (v1_0->cases)
       for (auto ce : *v1_0->cases)
         for (auto val : ce->values)
-          addMatch(rv, val.first, val.second, *stmts, ce->action, ctxt);
+          addMatch(rv, val.first->asLong(), val.second->asLong(), *stmts, ce->action, ctxt);
     if (v1_0->default_return)
       addMatch(rv, 0, 0, *stmts, v1_0->default_return, ctxt);
     else if (v1_0->parse_error)
