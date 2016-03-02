@@ -4,6 +4,7 @@
 #include "lib/ordered_set.h"
 
 using namespace DBPrint;
+using namespace IndentCtl;
 
 void IR::MAU::Table::dbprint(std::ostream &out) const {
     out << "table " << name;
