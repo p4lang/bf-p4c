@@ -53,41 +53,41 @@ class Table {
 #end
     visit_children {
         unsigned next_count = 0;
-        v.visit(gateway_expr);
+        v.visit(gateway_expr, "gateway_expr");
         auto &gateway_inhibit(v.flow_clone());
-        gateway_inhibit.visit(gateway_payload);
-        v.visit(match_table);
+        gateway_inhibit.visit(gateway_payload, "gateway_payload");
+        v.visit(match_table, "match_table");
         auto &clone(v.flow_clone());
         if (match_table) {
             for (auto &action : actions) {
                 auto &clone2(clone.flow_clone());
                 clone2.visit(action);
                 if (next.count(action->name)) {
-                    clone2.visit(next.at(action->name));
+                    clone2.visit(next.at(action->name), action->name.name);
                     next_count++; }
                 v.flow_merge(clone2); }
             if (next.count("default")) {
                 auto &clone2(clone.flow_clone());
-                clone2.visit(next.at("default"));
+                clone2.visit(next.at("default"), "default");
                 next_count++;
                 v.flow_merge(clone2); }
             if (next.count("$miss")) {
                 auto &clone2(clone.flow_clone());
-                clone2.visit(next.at("$miss"));
+                clone2.visit(next.at("$miss"), "miss");
                 next_count++;
                 v.flow_merge(clone2); } }
         if (gateway_expr) {
             if (next.count("true")) {
                 if (gateway_cond && match_table)
-                    v.visit(next.at("true"));
+                    v.visit(next.at("true"), "true");
                 else
-                    gateway_inhibit.visit(next.at("true"));
+                    gateway_inhibit.visit(next.at("true"), "true");
                 next_count++; }
             if (next.count("false")) {
                 if (gateway_cond || !match_table)
-                    gateway_inhibit.visit(next.at("false"));
+                    gateway_inhibit.visit(next.at("false"), "false");
                 else
-                    v.visit(next.at("false"));
+                    v.visit(next.at("false"), "false");
                 next_count++; }
             v.flow_merge(gateway_inhibit); }
         if (next_count != next.size())

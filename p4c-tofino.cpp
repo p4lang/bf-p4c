@@ -4,6 +4,7 @@
 
 #include "ir/ir.h"
 #include "ir/dbprint.h"
+#include "lib/gc.h"
 #include "lib/log.h"
 #include "lib/exceptions.h"
 #include "frontends/p4v1/p4-parse.h"
@@ -16,8 +17,6 @@
 #include "tofinoOptions.h"
 
 extern void test_tofino_backend(const IR::Tofino::Pipe *, const Tofino_Options *);
-extern void setup_gc_logging();
-extern void dump(const IR::Node *);
 
 int main(int ac, char **av) {
     setup_gc_logging();
