@@ -42,6 +42,7 @@ struct AttachTables : public Modifier {
 
 class GetTofinoTables : public Inspector {
   const IR::Global                              *program;
+  const P4V12::BlockMap                         *blockMap;
   gress_t                                       gress;
   IR::Tofino::Pipe                              *pipe;
   map<const IR::Node *, IR::MAU::Table *>       tables;
@@ -49,7 +50,9 @@ class GetTofinoTables : public Inspector {
 
  public:
   GetTofinoTables(const IR::Global *gl, gress_t gr, IR::Tofino::Pipe *p)
-  : program(gl), gress(gr), pipe(p) {}
+  : program(gl), blockMap(nullptr), gress(gr), pipe(p) {}
+  GetTofinoTables(const P4V12::BlockMap *bm, gress_t gr, IR::Tofino::Pipe *p)
+  : program(nullptr), blockMap(bm), gress(gr), pipe(p) {}
 
  private:
   void setup_tt_actions(IR::MAU::Table *tt, const IR::Table *table) {
@@ -70,6 +73,16 @@ class GetTofinoTables : public Inspector {
     } else if (table->action_profile) {
       error("%s: no action_profile %s", table->action_profile.srcInfo,
             table->action_profile.name); } }
+  void setup_tt_actions(IR::MAU::Table *tt, const IR::TableContainer *table) {
+    for (auto act : *table->properties->getProperty("actions")->value
+                          ->to<IR::ActionList>()->actionList)
+      if (auto action = blockMap->refMap->getDeclaration(act->name->path)
+                                ->to<IR::ActionContainer>())
+        tt->actions.push_back(new IR::ActionFunction(action));
+    // action_profile already pulled into TableContainer?
+  }
+
+  bool preorder(const IR::Vector<IR::Declaration> *) override { return false; }
 
   bool preorder(const IR::Vector<IR::Expression> *v) override {
     assert(!seqs.count(v));
@@ -79,6 +92,14 @@ class GetTofinoTables : public Inspector {
     for (auto el : *v)
       if (tables.count(el))
         seqs.at(v)->tables.push_back(tables.at(el)); }
+  bool preorder(const IR::BlockStatement *b) override {
+    assert(!seqs.count(b));
+    seqs[b] = new IR::MAU::TableSeq();
+    return true; }
+  void postorder(const IR::BlockStatement *b) override {
+    for (auto el : *b->components)
+      if (tables.count(el))
+        seqs.at(b)->tables.push_back(tables.at(el)); }
 
   bool preorder(const IR::Apply *a) override {
     auto table = program->get<IR::Table>(a->name);
@@ -94,6 +115,22 @@ class GetTofinoTables : public Inspector {
   void postorder(const IR::Apply *a) override {
     for (auto &act : a->actions)
       tables.at(a)->next[act.first] = seqs.at(act.second); }
+  bool preorder(const IR::MethodCallStatement *m) override {
+    auto method = m->methodCall->to<IR::MethodCallExpression>()->method->to<IR::Member>();
+    if (!method || method->member != "apply")
+        BUG("Method Call %1% not apply", m);
+    auto path = method->expr->to<IR::PathExpression>()->path;
+    auto table = blockMap->refMap->getDeclaration(path)->to<IR::TableContainer>();
+    if (!tables.count(m)) {
+      if (!table) {
+        error("%s: No table named %s", path->srcInfo, path->toString());
+        return true; }
+      auto tt = tables[m] = new IR::MAU::Table(table->name, gress, new IR::Table(table, blockMap));
+      setup_tt_actions(tt, table);
+    } else {
+      error("%s: Multiple applies of table %s not supported", path->srcInfo, path->name); }
+    return true; }
+  void postorder(const IR::MethodCallStatement *) override { }
 
   bool preorder(const IR::NamedCond *c) override {
     if (!tables.count(c))
@@ -106,12 +143,32 @@ class GetTofinoTables : public Inspector {
       tables.at(c)->next["true"] = seqs.at(c->ifTrue);
     if (c->ifFalse)
       tables.at(c)->next["false"] = seqs.at(c->ifFalse); }
-
   bool preorder(const IR::If *) override {
     BUG("unnamed condition in control flow"); }
+  bool preorder(const IR::IfStatement *c) {
+    static int uid = 0;
+    char buf[16];
+    snprintf(buf, sizeof(buf), "cond-%d", ++uid);
+    tables[c] = new IR::MAU::Table(buf, gress, c->condition);
+    return true; }
+  void postorder(const IR::IfStatement *c) {
+    if (c->ifTrue)
+      tables.at(c)->next["true"] = seqs.at(c->ifTrue);
+    if (c->ifFalse)
+      tables.at(c)->next["false"] = seqs.at(c->ifFalse); }
+
   void postorder(const IR::Control *cf) override {
     assert(!pipe->thread[gress].mau);
     pipe->thread[gress].mau = seqs.at(cf->code); }
+  bool preorder(const IR::ControlContainer *cf) override {
+    visit(cf->body);
+    assert(!pipe->thread[gress].mau);
+    pipe->thread[gress].mau = seqs.at(cf->body);
+    return false; }
+
+  bool preorder(const IR::Statement *st) {
+    BUG("Unhandled statement %1%", st);
+    return true; }
 };
 
 const IR::Tofino::Pipe *extract_maupipe(const IR::Global *program) {
@@ -192,6 +249,13 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4V12Program *program) {
         rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, in);
     if (auto eg = rv->thread[EGRESS].parser = make_parser.parser(EGRESS))
         rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, eg);
+
+    ingress = ingress->apply(InlineControlFlow(blockMap));
+    ingress->apply(GetTofinoTables(blockMap, INGRESS, rv));
+    egress = egress->apply(InlineControlFlow(blockMap));
+    egress->apply(GetTofinoTables(blockMap, EGRESS, rv));
+
+    // AttachTables...
 
     return rv;
 }
