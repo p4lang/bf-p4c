@@ -257,5 +257,5 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4V12Program *program) {
 
     // AttachTables...
 
-    return rv;
+    return rv->apply(bindings)->apply(RemoveInstanceRef());
 }

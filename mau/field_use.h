@@ -12,7 +12,7 @@ class FieldUse : public MauInspector, P4WriteContext {
     map<cstring, rw_t>          table_use;
     void access_field(cstring field);
     bool preorder(const IR::MAU::Table *t) override;
-    bool preorder(const IR::FieldRef *f) override;
+    bool preorder(const IR::Member *f) override;
     bool preorder(const IR::HeaderStackItemRef *f) override;
     friend std::ostream &operator<<(std::ostream &, const FieldUse &);
  public:

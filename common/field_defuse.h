@@ -23,7 +23,7 @@ class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
     void access_field(const PhvInfo::Info *);
     bool preorder(const IR::Tofino::Parser *p) override;
     bool preorder(const IR::Tofino::Deparser *p) override;
-    bool preorder(const IR::FieldRef *f) override;
+    bool preorder(const IR::Member *f) override;
     bool preorder(const IR::HeaderSliceRef *h) override;
     bool preorder(const IR::HeaderStackItemRef *f) override;
     FieldDefUse *clone() const override { return new FieldDefUse(*this); }

@@ -48,7 +48,7 @@ class AddDependencies : public MauInspector, P4WriteContext {
             for (auto t : access[field].write)
                 if (table->data_dep[t->name] < type)
                     table->data_dep[t->name] = type; } }
-    bool preorder(const IR::FieldRef *f) { add_dependency(f->toString()); return false; }
+    bool preorder(const IR::Member *f) { add_dependency(f->toString()); return false; }
     bool preorder(const IR::HeaderStackItemRef *f) { add_dependency(f->toString()); return false; }
 };
 
@@ -60,7 +60,7 @@ class UpdateAccess : public MauInspector , P4WriteContext {
 
  public:
     UpdateAccess(map<cstring, access_t> &a, Table *t) : access(a), table(t) {}
-    bool preorder(const IR::FieldRef *f) {
+    bool preorder(const IR::Member *f) {
         LOG3("update_access read " << f->toString());
         access[f->toString()].read.insert(table);
         return false; }
@@ -71,7 +71,7 @@ class UpdateAccess : public MauInspector , P4WriteContext {
     void postorder(const IR::Primitive *prim) {
         if (prim->isOutput(0)) {
             cstring name;
-            if (auto f = dynamic_cast<const IR::FieldRef *>(prim->operands[0])) {
+            if (auto f = dynamic_cast<const IR::Member *>(prim->operands[0])) {
                 name = f->toString();
             } else if (auto i = dynamic_cast<const IR::HeaderStackItemRef *>(prim->operands[0])) {
                 name = i->toString();
