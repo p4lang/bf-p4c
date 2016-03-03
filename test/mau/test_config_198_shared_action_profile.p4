@@ -68,7 +68,6 @@ action_profile shared_action_profile {
     size : 1024;
 }
 
-@pragma stage 0
 table table_2 {
     reads {
         pkt.field_a_32 : exact;
