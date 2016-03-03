@@ -46,7 +46,6 @@ class DumpPipe : public Inspector {
         return false; }
 };
 
-extern void dump(const IR::Node *);
 void force_link_dump(const IR::Node *n) { dump(n); }
 
 void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *options) {

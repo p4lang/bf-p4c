@@ -46,7 +46,6 @@ class Deparser {
   NullOK Expression             egress_port;
 #noconstructor
 #emit
-  //const IR::Parser *start = 0; /* informational only! not visited or compared for equal */
   Deparser(gress_t gr, const Parser *s);
 #end
 #apply
