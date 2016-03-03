@@ -125,7 +125,7 @@ class GetTofinoTables : public Inspector {
       if (!table) {
         error("%s: No table named %s", path->srcInfo, path->toString());
         return true; }
-      auto tt = tables[m] = new IR::MAU::Table(table->name, gress, new IR::Table(table, blockMap));
+      auto tt = tables[m] = new IR::MAU::Table(table->name, gress, new IR::Table(table));
       setup_tt_actions(tt, table);
     } else {
       error("%s: Multiple applies of table %s not supported", path->srcInfo, path->name); }

@@ -27,10 +27,10 @@ const IR::Expression *ParamBinding::postorder(IR::PathExpression *pe) {
 }
 
 const IR::Expression *ParamBinding::postorder(IR::Member *mem) {
-    if (auto iref = mem->expr->to<IR::InstanceRef>())
+    if (auto iref = mem->expr->to<IR::InstanceRef>()) {
         if ((iref = iref->nested.get<IR::InstanceRef>(mem->member))) {
             LOG2("collapsing " << mem << " to " << iref);
-            return iref; }
+            return iref; } }
     LOG3("not collapsing " << mem);
     return mem;
 }

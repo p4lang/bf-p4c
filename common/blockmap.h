@@ -21,18 +21,6 @@ class FillFromBlockMap : public Transform {
                 BUG("Type_Name %1% maps to %2% rather than a type decl", type, decl);
         } else {
             BUG("Type_Name %1% doesn't map to a declaration", type, decl); } }
-#if 0
-    const IR::Node *preorder(IR::PathExpression *exp) {
-        if (auto decl = eval->getBlockMap()->refMap->getDeclaration(exp->path)) {
-            if (decl->getNode()->is<IR::Parameter>())
-                return exp;
-            else if (auto n = decl->getNode()->to<IR::Expression>())
-                return n;
-            else
-                BUG("PathExpression %1% maps to non-expression %2%", exp, decl);
-        } else {
-            BUG("no declaration for path expression %1%", exp); } }
-#endif
 
  public:
     explicit FillFromBlockMap(P4V12::EvaluatorPass *e) : eval(e) {}

@@ -9,6 +9,8 @@ bool GetTofinoParser::preorder(const IR::Parser *p) {
 }
 
 bool GetTofinoParser::preorder(const IR::ParserState *p) {
+  if (p->name == "accept" || p->name == "reject")
+    return false;
   auto *s = states[p->name] = new IR::Tofino::ParserState(p);
   if (s->name != p->name)
     states[s->name] = s;
@@ -91,6 +93,14 @@ void GetTofinoParser::addMatch(IR::Tofino::ParserState *s, int val, int mask,
   auto match = new IR::Tofino::ParserMatch(val, mask, stmts);
   s->match.push_back(match);
   if ((match->next = state(action, &local))) {
+  } else if (!program) {
+    if (action == "accept" || action == "reject")
+      return;
+    else if (!states.count(action))
+      error("%s: No definition for %s", action.srcInfo, action);
+    // If there is a parser state with this name, but we couldn't generate it, its probably
+    // because we've unrolled a loop filling a header stack completely.  Should set some
+    // parser error code?
   } else if (program->get<IR::Control>(action)) {
     if (ingress_control) {
       if (ingress_control != action)
