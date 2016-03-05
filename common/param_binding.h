@@ -6,8 +6,8 @@
 
 class ParamBinding : public Transform {
     const P4V12::BlockMap *blockMap;
-    std::map<const IR::Type_StructLike *, const IR::InstanceRef *>      by_type;
-    std::map<const IR::Parameter *, const IR::InstanceRef *>            by_param;
+    std::map<const IR::Type*, const IR::InstanceRef *>          by_type;
+    std::map<const IR::Parameter *, const IR::InstanceRef *>    by_param;
     const IR::Node *preorder(IR::Type_Parser *n) { prune(); return n; }
     const IR::Node *preorder(IR::Type_Control *n) { prune(); return n; }
     const IR::Expression *postorder(IR::PathExpression *pe);
@@ -21,8 +21,12 @@ class ParamBinding : public Transform {
 };
 
 class RemoveInstanceRef : public Transform {
+ public:
+    RemoveInstanceRef() { dontForwardChildrenBeforePreorder = true; }
     const IR::Expression *preorder(IR::InstanceRef *ir) {
-        return new IR::ConcreteHeaderRef(ir->obj); }
+        if (!ir->obj->is<IR::HeaderStack>())
+            return new IR::ConcreteHeaderRef(ir->obj);
+        return ir; }
 };
 
 #endif /* _COMMON_PARAM_BINDING_H_ */

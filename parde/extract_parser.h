@@ -12,6 +12,8 @@ class GetTofinoParser : public Inspector {
   bool preorder(const IR::ParserState *) override;
 
   struct Context {
+    /* records the path through the parser state machine from the start state to the
+     * current state.  Not to be confused with Visitor::Context */
     const Context               *parent;
     int                         depth;
     IR::Tofino::ParserState     *state;

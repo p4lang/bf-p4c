@@ -28,11 +28,12 @@ bool GetTofinoParser::FindExtract::preorder(const IR::HeaderStackItemRef *hs) {
 }
 
 class GetTofinoParser::RewriteExtractNext : public Transform {
-  GetTofinoParser             &self;
+  GetTofinoParser               &self;
   typedef GetTofinoParser::Context Context;     // not to be confused with Visitor::Context
-  const Context               *ctxt;
+  const Context                 *ctxt;
+  std::map<cstring, int>        adjust;
   IR::Expression *preorder(IR::NamedRef *name) override;
-  // FIXME -- what is v1.2 equivalent of extract(hdrstack[next]) ?
+  IR::Expression *preorder(IR::Member *name) override;
 
   IR::Vector<IR::Expression> *preorder(IR::Vector<IR::StatOrDecl> *vec) override {
     auto *rv = new IR::Vector<IR::Expression>;
@@ -68,10 +69,12 @@ IR::Expression *GetTofinoParser::RewriteExtractNext::preorder(IR::NamedRef *name
   auto *hdr = findContext<IR::HeaderStackItemRef>();
   if (!hdr) /* error? */
     return name;
+  cstring hdrname = hdr->toString();
   int index = -1;
   for (const Context *c = ctxt; index < 0 && c; c = c->parent)
     for (auto m : c->state->match)
       m->stmts.apply(FindExtract(hdr->base(), index));
+  index += adjust[hdrname];
   ++index;
   LOG2("   rewrite " << hdr->base() << "[next] => [" << index << "]");
   auto *hdrstack = self.program->get<IR::HeaderStack>(hdr->base()->toString());
@@ -81,7 +84,32 @@ IR::Expression *GetTofinoParser::RewriteExtractNext::preorder(IR::NamedRef *name
   } else if (index >= hdrstack->size) {
     failed = true;
     return name; }
+  if (auto prim = findContext<IR::Primitive>())
+    if (prim->name == "extract")
+      adjust[hdrname]++;
   return new IR::Constant(index);
+}
+
+IR::Expression *GetTofinoParser::RewriteExtractNext::preorder(IR::Member *m) {
+    if (m->member != "next" && m->member != "last") return m;
+  int index = -1;
+  for (const Context *c = ctxt; index < 0 && c; c = c->parent)
+    for (auto match : c->state->match)
+      match->stmts.apply(FindExtract(m->expr, index));
+  cstring hdrname = m->expr->toString();
+  index += adjust[hdrname];
+  if (m->member == "next")
+    ++index;
+  LOG2("   rewrite " << m << " => [" << index << "]");
+  if (index >= m->expr->type->to<IR::Type_Stack>()->size->to<IR::Constant>()->asInt()) {
+    failed = true;
+    return m; }
+  if (auto prim = findContext<IR::Primitive>())
+    if (prim->name == "extract")
+      adjust[hdrname]++;
+  return new IR::HeaderStackItemRef(m->srcInfo,
+        m->expr->type->to<IR::Type_Stack>()->baseType->to<IR::Type_Header>(),
+        m->expr, new IR::Constant(index));
 }
 
 void GetTofinoParser::addMatch(IR::Tofino::ParserState *s, int val, int mask,
@@ -139,6 +167,7 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
   if (rewrite.failed)
     // FIXME should be setting an appropriate parser exception?
     return nullptr;
+  rv->select = *rv->select.apply(rewrite);
 
   LOG2("GetParser::state(" << name << ")");
   if (v1_0) {
@@ -151,9 +180,21 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
     else if (v1_0->parse_error)
       addMatch(rv, 0, 0, *stmts, v1_0->parse_error, ctxt);
   } else {
-    if (auto *path = dynamic_cast<const IR::PathExpression *>(v1_2->selectExpression))
+    if (auto *path = dynamic_cast<const IR::PathExpression *>(v1_2->selectExpression)) {
       addMatch(rv, 0, 0, *stmts, path->path->name, ctxt);
-  }
+    } else if (auto *sel = dynamic_cast<const IR::SelectExpression *>(v1_2->selectExpression)) {
+      for (auto ce : *sel->selectCases) {
+        if (ce->keyset->is<IR::DefaultExpression>())
+          addMatch(rv, 0, 0, *stmts, ce->state->path->name, ctxt);
+        else if (auto k = ce->keyset->to<IR::Constant>())
+          addMatch(rv, k->asInt(), ~0, *stmts, ce->state->path->name, ctxt);
+        else if (auto mask = ce->keyset->to<IR::Mask>())
+          addMatch(rv, mask->left->to<IR::Constant>()->asInt(),
+                   mask->right->to<IR::Constant>()->asInt(), *stmts, ce->state->path->name, ctxt);
+        else
+          BUG("Invalid select case expression %1%", ce); }
+    } else if (v1_2->selectExpression) {
+        BUG("Invalid select expression %1%", v1_2->selectExpression); } }
   return rv;
 }
 

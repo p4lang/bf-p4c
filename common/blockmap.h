@@ -7,11 +7,9 @@
 class FillFromBlockMap : public Transform {
     P4V12::EvaluatorPass *eval;
     const IR::Expression *preorder(IR::Expression *exp) {
-        if (exp->type == IR::Type::Unknown::get()) {
+        if (exp->type == IR::Type::Unknown::get())
             if (auto type = eval->getBlockMap()->typeMap->getType(getOriginal()))
                 exp->type = type;
-            else
-                BUG("Expression %1% has no type in typeMap", exp); }
         return exp; }
     const IR::Type *preorder(IR::Type_Name *type) {
         if (auto decl = eval->getBlockMap()->refMap->getDeclaration(type->path)) {

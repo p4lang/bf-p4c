@@ -9,7 +9,7 @@ IR::Tofino::ParserState::ParserState(const IR::Node *p4state) {
     } else if (auto *v1_2 = p4state->to<IR::ParserState>()) {
         name = v1_2->name;
         if (auto *sel = dynamic_cast<const IR::SelectExpression *>(v1_2->selectExpression))
-            select.push_back(sel);
+            select = *sel->match->to<IR::ListExpression>()->components;
     } else {
         BUG("Invalid p4state type for Tofino::ParserState"); }
     if (name == "start" || name == "end")
