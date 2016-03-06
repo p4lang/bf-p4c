@@ -85,12 +85,20 @@ public:
     iterator        find(const key_type &a) { return tr_iter(data_map.find(&a)); }
     const_iterator  find(const key_type &a) const { return tr_iter(data_map.find(&a)); }
     size_type       count(const key_type &a) const { return data_map.count(&a); }
-    iterator        upper_bound(const key_type &a) { return tr_iter(data_map.upper_bound(&a)); }
-    const_iterator  upper_bound(const key_type &a) const {
-                        return tr_iter(data_map.upper_bound(&a)); }
     iterator        lower_bound(const key_type &a) { return tr_iter(data_map.lower_bound(&a)); }
     const_iterator  lower_bound(const key_type &a) const {
                         return tr_iter(data_map.lower_bound(&a)); }
+    iterator        upper_bound(const key_type &a) { return tr_iter(data_map.upper_bound(&a)); }
+    const_iterator  upper_bound(const key_type &a) const {
+                        return tr_iter(data_map.upper_bound(&a)); }
+    iterator        upper_bound_pred(const key_type &a) {
+                        auto ub = data_map.upper_bound(&a);
+                        if (ub == data_map.begin()) return end();
+                        return tr_iter(--ub); }
+    const_iterator  upper_bound_pred(const key_type &a) const {
+                        auto ub = data_map.upper_bound(&a);
+                        if (ub == data_map.begin()) return end();
+                        return tr_iter(--ub); }
 
     V& operator[](const K &x) {
         auto it = find(x);

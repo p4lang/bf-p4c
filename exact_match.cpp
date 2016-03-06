@@ -663,6 +663,8 @@ void ExactMatchTable::write_regs() {
                 } else {
                     int last_word = group_info[group].match_group.rbegin()->first;
                     auto &last_row = layout[index + word - last_word];
+                    if (&last_row == &row)
+                        merge.col[col].row_action_nxtable_bus_drive[row.row] |= 1 << row.bus;
                     setup_muxctl(hitmap_ixbar, last_row.row*2 + group_info[group].word_group); }
                 if (++word_group > 1) break; }
             /*setup_muxctl(merge.col[col].hitmap_output_map[bus],
