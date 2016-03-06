@@ -15,8 +15,8 @@ class OutputDictionary : public Inspector {
         if (prim->name != "emit") return true;
         auto hsr = prim->operands[0]->to<IR::HeaderSliceRef>();
         for (auto field : hsr->fields())
-          out << indent << phv.field(field)->name << ": "
-              << trim_asm_name(header_ref(field)->toString()) << ".$valid"
+          out << indent << canon_name(phv.field(field)->name) << ": "
+              << canon_name(trim_asm_name(header_ref(field)->toString())) << ".$valid"
               << std::endl;
         return false; }
 
@@ -34,6 +34,6 @@ std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
         --indent;
         if (d.deparser->egress_port)
             out << indent << "egress_unicast_port: "
-                << d.phv.field(d.deparser->egress_port)->name << std::endl; }
+                << canon_name(d.phv.field(d.deparser->egress_port)->name) << std::endl; }
     return out;
 }

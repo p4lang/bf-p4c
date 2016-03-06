@@ -12,10 +12,10 @@ class OutputExtracts : public Inspector {
         auto dest = phv.field(prim->operands[0]);
         if (prim->name == "extract") {
             int size = (prim->operands[0]->type->width_bits() + 7) / 8U;
-            out << indent << Range(offset, offset+size-1) << ": " << dest->name;
+            out << indent << Range(offset, offset+size-1) << ": " << canon_name(dest->name);
             offset += size;
         } else if (prim->name == "set_metadata") {
-            out << indent << dest->name << ": ";
+            out << indent << canon_name(dest->name) << ": ";
             if (auto val = prim->operands[1]->to<IR::Constant>())
                 out << val->value;
             else
@@ -49,7 +49,10 @@ static void output_state(std::ostream &out, const PhvInfo &phv, indent_t indent,
         out << indent << "match: ";
         const char *sep = "[ ";
         for (auto e : state->select) {
-            out << sep << *e;
+            if (auto field = phv.field(e))
+                out << sep << canon_name(field->name);
+            else
+                out << sep << "/* " << *e << " */";
             sep = ", "; }
         out << " ]" << std::endl; }
     for (auto m : state->match)

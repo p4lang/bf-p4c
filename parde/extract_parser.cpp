@@ -17,25 +17,59 @@ bool GetTofinoParser::preorder(const IR::ParserState *p) {
   return true;
 }
 
-bool GetTofinoParser::FindExtract::preorder(const IR::HeaderStackItemRef *hs) {
-  LOG3("   FindExtract(" << hs->toString() << ")  hdr=" << hdr->toString() <<
-       "  hs->base=" << hs->base()->toString());
-  if (hs->base()->toString() == hdr->toString()) {
-    auto idx = dynamic_cast<const IR::Constant *>(hs->index());
-    if (idx)
-      index = std::max(index, idx->asInt()); }
-  return true;
-}
+class GetTofinoParser::FindStackExtract : public Inspector {
+  const IR::HeaderRef         *hdr;
+  int                         &index;
+  bool preorder(const IR::HeaderStackItemRef *hs) override {
+    auto prim = findContext<IR::Primitive>();
+    if (!prim || prim->name != "extract") return true;  // do we need this check?
+    LOG3("   FindStackExtract(" << hs->toString() << ")  hdr=" << hdr->toString() <<
+         "  hs->base=" << hs->base()->toString());
+    if (hs->base()->toString() == hdr->toString()) {
+      auto idx = dynamic_cast<const IR::Constant *>(hs->index());
+      if (idx)
+        index = std::max(index, idx->asInt()); }
+    return true; }
+ public:
+  FindStackExtract(const IR::HeaderRef *h, int &out) : hdr(h), index(out) {}
+  FindStackExtract(const IR::Expression *e, int &out)
+  : hdr(dynamic_cast<const IR::HeaderRef *>(e)), index(out) {
+    if (!hdr) BUG("not a valid header ref"); }
+};
+
+class GetTofinoParser::FindLatestExtract : public Inspector {
+  const IR::Expression *&latest;
+  bool preorder(const IR::Primitive *prim) override {
+    if (prim->name == "extract") latest = prim->operands[0];
+    return true; }
+
+ public:
+  FindLatestExtract(const IR::Expression *&l) : latest(l) {}
+};
 
 class GetTofinoParser::RewriteExtractNext : public Transform {
   GetTofinoParser               &self;
   typedef GetTofinoParser::Context Context;     // not to be confused with Visitor::Context
   const Context                 *ctxt;
+  const IR::Expression          *latest = nullptr;
   std::map<cstring, int>        adjust;
-  IR::Expression *preorder(IR::NamedRef *name) override;
-  IR::Expression *preorder(IR::Member *name) override;
+  const IR::Expression *preorder(IR::NamedRef *name) override;
+  const IR::Expression *preorder(IR::Member *name) override;
+  const IR::Expression *postorder(IR::Primitive *prim) override {
+    if (prim->name == "extract") latest = prim->operands[0];
+    return prim; }
+  const IR::Expression *postorder(IR::Member *mem) override {
+    /* FIXME -- could do full typechecking after this pass, but this is the only fixup needed,
+     * for 'latest' refs that now point to real headers */
+    if (mem->type == IR::Type::Unknown::get()) {
+      if (auto ht = dynamic_cast<const IR::Type_StructLike  *>(mem->expr->type)) {
+        for (auto f : *ht->fields) {
+          if (f->name == mem->member) {
+            mem->type = f->type;
+            break; } } } }
+    return mem; }
 
-  IR::Vector<IR::Expression> *preorder(IR::Vector<IR::StatOrDecl> *vec) override {
+  const IR::Vector<IR::Expression> *preorder(IR::Vector<IR::StatOrDecl> *vec) override {
     auto *rv = new IR::Vector<IR::Expression>;
     for (auto stmt : *vec) {
       auto *n = apply_visitor(stmt);
@@ -57,14 +91,23 @@ class GetTofinoParser::RewriteExtractNext : public Transform {
     return e; }
   const IR::Expression *preorder(IR::AssignmentStatement *s) override {
     return new IR::Primitive(s->srcInfo, "set_metadata", s->left, s->right); }
-  IR::Expression *preorder(IR::Statement *) override { BUG("Unhandled statement kind"); }
+  const IR::Expression *preorder(IR::Statement *) override { BUG("Unhandled statement kind"); }
 
  public:
   bool                        failed = false;
   RewriteExtractNext(GetTofinoParser &s, const Context *c) : self(s), ctxt(c) {}
 };
 
-IR::Expression *GetTofinoParser::RewriteExtractNext::preorder(IR::NamedRef *name) {
+const IR::Expression *GetTofinoParser::RewriteExtractNext::preorder(IR::NamedRef *name) {
+  if (name->name == "latest") {
+    for (const Context *c = ctxt; c && !latest; c = c->parent)
+      for (auto m : c->state->match)
+        m->stmts.apply(FindLatestExtract(latest));
+    if (!latest) {
+      error("%s: Can't find latest extracted", name->srcInfo, name);
+      return name; }
+    LOG2("   rewrite latest => " << latest);
+    return latest; }
   if (name->name != "next") return name;
   auto *hdr = findContext<IR::HeaderStackItemRef>();
   if (!hdr) /* error? */
@@ -73,7 +116,7 @@ IR::Expression *GetTofinoParser::RewriteExtractNext::preorder(IR::NamedRef *name
   int index = -1;
   for (const Context *c = ctxt; index < 0 && c; c = c->parent)
     for (auto m : c->state->match)
-      m->stmts.apply(FindExtract(hdr->base(), index));
+      m->stmts.apply(FindStackExtract(hdr->base(), index));
   index += adjust[hdrname];
   ++index;
   LOG2("   rewrite " << hdr->base() << "[next] => [" << index << "]");
@@ -90,12 +133,12 @@ IR::Expression *GetTofinoParser::RewriteExtractNext::preorder(IR::NamedRef *name
   return new IR::Constant(index);
 }
 
-IR::Expression *GetTofinoParser::RewriteExtractNext::preorder(IR::Member *m) {
+const IR::Expression *GetTofinoParser::RewriteExtractNext::preorder(IR::Member *m) {
     if (m->member != "next" && m->member != "last") return m;
   int index = -1;
   for (const Context *c = ctxt; index < 0 && c; c = c->parent)
     for (auto match : c->state->match)
-      match->stmts.apply(FindExtract(m->expr, index));
+      match->stmts.apply(FindStackExtract(m->expr, index));
   cstring hdrname = m->expr->toString();
   index += adjust[hdrname];
   if (m->member == "next")

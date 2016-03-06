@@ -1,15 +1,5 @@
 #include "asm_output.h"
 
-std::ostream &operator<<(std::ostream &out, canon_name n) {
-    for (auto ch : n.name) {
-        if (ch & ~0x7f) continue;
-        if (isalnum(ch) || ch == '_' || ch == '.' || ch == '$' || ch == '-')
-            out << ch;
-        if (ch == '[')
-            out << '$'; }
-    return out;
-}
-
 static void emit_phv_field(std::ostream &out, gress_t thread, const PhvInfo::Info &field) {
     for (auto &alloc : field.alloc[thread]) {
         out << "  " << canon_name(field.name);

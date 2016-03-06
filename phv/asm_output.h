@@ -3,19 +3,13 @@
 
 #include "phv_fields.h"
 #include "lib/stringref.h"
+#include "tofino/common/asm_output.h"
 
 class PhvAsmOutput {
     const PhvInfo     &phv;
     friend std::ostream &operator<<(std::ostream &, const PhvAsmOutput &);
  public:
     explicit PhvAsmOutput(const PhvInfo &p) : phv(p) {}
-};
-
-class canon_name {
-    StringRef   name;
-    friend std::ostream &operator<<(std::ostream &, canon_name);
- public:
-    explicit canon_name(StringRef n) : name(n) {}
 };
 
 #endif /* _TOFINO_PHV_ASM_OUTPUT_H_ */

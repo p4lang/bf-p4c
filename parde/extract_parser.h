@@ -23,16 +23,8 @@ class GetTofinoParser : public Inspector {
           return c;
       return nullptr; }
   };
-  class FindExtract : public Inspector {
-    const IR::HeaderRef         *hdr;
-    int                         &index;
-    bool preorder(const IR::HeaderStackItemRef *) override;
-   public:
-    FindExtract(const IR::HeaderRef *h, int &out) : hdr(h), index(out) {}
-    FindExtract(const IR::Expression *e, int &out)
-    : hdr(dynamic_cast<const IR::HeaderRef *>(e)), index(out) {
-      if (!hdr) BUG("not a valid header ref"); }
-  };
+  class FindLatestExtract;
+  class FindStackExtract;
   class RewriteExtractNext;
   void addMatch(IR::Tofino::ParserState *, int, int, const IR::Vector<IR::Expression> &,
                 const IR::ID &, const Context *);
