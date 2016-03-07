@@ -134,7 +134,6 @@ class TableSeq {
     const Table *front() const { return tables.empty() ? nullptr : tables.front(); }
 #end
 #apply
-    dump { /* TODO */ }
 }
 
 // A single MAU instruction.  For the most part instructions look exactly like Primitives,
