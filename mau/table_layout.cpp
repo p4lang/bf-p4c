@@ -11,7 +11,7 @@ static void setup_match_layout(IR::MAU::Table::Layout &layout, const IR::Table *
     if (tbl->reads) {
         for (auto r : *tbl->reads) {
             if (auto mask = dynamic_cast<const IR::Mask *>(r)) {
-                auto fval = dynamic_cast<const IR::FieldRef *>(mask->left);
+                auto fval = dynamic_cast<const IR::Member *>(mask->left);
                 auto mval = dynamic_cast<const IR::Constant *>(mask->right);
                 layout.match_width_bits += bitcount(mval->value);
                 if (!layout.ternary)
@@ -20,7 +20,7 @@ static void setup_match_layout(IR::MAU::Table::Layout &layout, const IR::Table *
                 if (prim->name != "valid")
                     BUG("unexpected reads expression %s", r);
                 layout.match_width_bits += 1;
-            } else if (dynamic_cast<const IR::FieldRef *>(r)) {
+            } else if (dynamic_cast<const IR::Member *>(r)) {
                 layout.match_width_bits += r->type->width_bits();
                 if (!layout.ternary)
                     layout.ixbar_bytes += (r->type->width_bits() + 7)/8;
@@ -32,7 +32,7 @@ static void setup_match_layout(IR::MAU::Table::Layout &layout, const IR::Table *
 class GatewayLayout : public MauInspector {
     IR::MAU::Table::Layout &layout;
     set<cstring> added;
-    bool preorder(const IR::FieldRef *f) {
+    bool preorder(const IR::Member *f) {
         cstring name = f->toString();
         if (!added.count(name)) {
             added.insert(name);

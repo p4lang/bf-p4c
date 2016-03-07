@@ -12,10 +12,10 @@ IR::Node *SplitExtractEmit::preorder(IR::Primitive *p) {
     if (p->name == "extract") {
         for (auto field : *hdr_type->fields)
             rv->push_back(new IR::Primitive(p->srcInfo, p->name,
-                                            new IR::FieldRef(field->type, hdr,
-                                                             field->name)));
+                                            new IR::Member(field->type, hdr,
+                                                           field->name)));
         rv->push_back(new IR::Primitive(p->srcInfo, "set_metadata",
-            new IR::FieldRef(IR::Type::Bits::get(1), hdr, "$valid"),
+            new IR::Member(IR::Type::Bits::get(1), hdr, "$valid"),
             new IR::Constant(1)));
     } else {
       // Just change emit(header_ref) to emit(header_slice_ref). The slice will

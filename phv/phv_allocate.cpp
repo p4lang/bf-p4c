@@ -32,7 +32,7 @@ class PhvAllocate::Uses : public Inspector {
         if (auto head = phv.header(hr))
             use[in_mau][thread].setrange(head->first, head->second - head->first + 1);
         return false; }
-    bool preorder(const IR::FieldRef *fr) {
+    bool preorder(const IR::Member *fr) {
         if (auto info = phv.field(fr))
             use[in_mau][thread][info->id] = true;
         return false; }

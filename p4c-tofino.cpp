@@ -14,6 +14,7 @@
 #include "frontends/common/header_type.h"
 #include "frontends/common/typecheck.h"
 #include "common/extract_maupipe.h"
+#include "common/blockmap.h"
 #include "tofinoOptions.h"
 
 extern void test_tofino_backend(const IR::Tofino::Pipe *, const Tofino_Options *);
@@ -57,8 +58,8 @@ int main(int ac, char **av) {
         maupipe = extract_maupipe(program);
         break; }
     case CompilerOptions::FrontendVersion::P4v1_2: {
-       auto program = parse_p4v1_2_file(options.file, in);
-       program = run_v12_frontend(options, program, false);
+        auto program = parse_p4v1_2_file(options.file, in);
+        program = run_v12_frontend(options, program, false);
         if (verbose) {
             std::cout << "-------------------------------------------------" << std::endl
                       << "Initial program" << std::endl
@@ -67,8 +68,22 @@ int main(int ac, char **av) {
                 dump(program);
             else
                 std::cout << *program << std::endl; }
-       maupipe = extract_maupipe(program);
-       break; }
+        P4V12::EvaluatorPass evaluator(false);
+        PassManager midend = {
+            &evaluator,
+            new FillFromBlockMap(&evaluator),
+        };
+        program = program->apply(midend);
+        if (verbose) {
+            std::cout << "-------------------------------------------------" << std::endl
+                      << "After midend" << std::endl
+                      << "-------------------------------------------------" << std::endl;
+            if (verbose > 1)
+                dump(program);
+            else
+                std::cout << *program << std::endl; }
+        maupipe = extract_maupipe(program);
+        break; }
     default:
         BUG("Unexpected frontend"); }
 

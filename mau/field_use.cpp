@@ -22,7 +22,7 @@ void FieldUse::access_field(cstring name) {
         assert(0); }
 }
 
-bool FieldUse::preorder(const IR::FieldRef *f) {
+bool FieldUse::preorder(const IR::Member *f) {
     access_field(f->toString());
     return false;
 }

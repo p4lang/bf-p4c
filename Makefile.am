@@ -3,19 +3,23 @@
 tofino_ir_SOURCES = \
 	backends/tofino/ir/dbprint-tofino.cpp \
 	backends/tofino/ir/mau.cpp \
-	backends/tofino/ir/parde.cpp
+	backends/tofino/ir/parde.cpp \
+	backends/tofino/ir/tofino.cpp
 
 ir_SOURCES += $(tofino_ir_SOURCES)
 
 tofino_backend_SOURCES = \
 	$(tofino_ir_SOURCES) \
 	backends/tofino/common/asm_output.cpp \
+	backends/tofino/common/blockmap.h \
 	backends/tofino/common/copy_header_eliminator.cpp \
 	backends/tofino/common/copy_header_eliminator.h \
 	backends/tofino/common/extract_maupipe.cpp \
 	backends/tofino/common/extract_maupipe.h \
 	backends/tofino/common/field_defuse.cpp \
 	backends/tofino/common/field_defuse.h \
+	backends/tofino/common/param_binding.cpp \
+	backends/tofino/common/param_binding.h \
 	backends/tofino/common/phv.cpp \
 	backends/tofino/common/phv.h \
 	backends/tofino/mau/asm_output.cpp \

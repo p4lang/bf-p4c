@@ -1,7 +1,7 @@
 #include "add_parde_metadata.h"
 #include "lib/exceptions.h"
 
-IR::FieldRef *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field) {
+IR::Member *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field) {
     const IR::Type *ftype = nullptr;
     for (auto f : *hdr->type->fields)
         if (f->name == field) {
@@ -9,7 +9,7 @@ IR::FieldRef *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field) {
             break; }
     if (!ftype)
         BUG("No field %s in %s", field, hdr->name);
-    return new IR::FieldRef(ftype, new IR::ConcreteHeaderRef(hdr), field);
+    return new IR::Member(ftype, new IR::ConcreteHeaderRef(hdr), field);
 }
 
 bool AddMetadataShims::preorder(IR::Tofino::Parser *parser) {

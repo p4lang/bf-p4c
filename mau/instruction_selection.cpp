@@ -35,7 +35,7 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
         if ((prim->operands.size() | 1) != 3)
             error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);
         else if (!(dest = prim->operands[0]->to<IR::HeaderSliceRef>()) &&
-                 !(dest = prim->operands[0]->to<IR::FieldRef>()))
+                 !(dest = prim->operands[0]->to<IR::Member>()))
             error("%s: destination of %s must be a field", prim->srcInfo, prim->name);
         else if (!checkSrc1(prim->operands[1]))
             error("%s: source of %s invalid", prim->srcInfo, prim->name);
@@ -53,7 +53,7 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
         if (prim->operands.size() != 3)
             error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);
         else if (!(dest = prim->operands[0]->to<IR::HeaderSliceRef>()) &&
-                 !(dest = prim->operands[0]->to<IR::FieldRef>()))
+                 !(dest = prim->operands[0]->to<IR::Member>()))
             error("%s: destination of %s must be a field", prim->srcInfo, prim->name);
         else if (!checkSrc1(prim->operands[1]))
             error("%s: source 1 of %s invalid", prim->srcInfo, prim->name);

@@ -8,7 +8,7 @@
 class FieldDefUse::Init : public Inspector {
     FieldDefUse &self;
     void add_field(cstring field);
-    bool preorder(const IR::FieldRef *f) override { add_field(self.phv.field(f)); return false; }
+    bool preorder(const IR::Member *f) override { add_field(self.phv.field(f)); return false; }
     bool preorder(const IR::HeaderStackItemRef *f) override {
         /*add_field(f->toString());*/ return false; }
  public:
@@ -71,7 +71,7 @@ void FieldDefUse::access_field(const PhvInfo::Info *f) {
         assert(0); }
 }
 
-bool FieldDefUse::preorder(const IR::FieldRef *f) {
+bool FieldDefUse::preorder(const IR::Member *f) {
     if (auto *field = phv.field(f))
         access_field(field);
     return false;

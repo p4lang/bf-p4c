@@ -9,6 +9,8 @@ bool GetTofinoParser::preorder(const IR::Parser *p) {
 }
 
 bool GetTofinoParser::preorder(const IR::ParserState *p) {
+  if (p->name == "accept" || p->name == "reject")
+    return false;
   auto *s = states[p->name] = new IR::Tofino::ParserState(p);
   if (s->name != p->name)
     states[s->name] = s;
@@ -43,7 +45,15 @@ class GetTofinoParser::RewriteExtractNext : public Transform {
         rv->insert(rv->end(), v->begin(), v->end()); }
     prune();  // don't visit children again
     return rv; }
-  const IR::Expression *preorder(IR::MethodCallStatement *s) override { return s->methodCall; }
+  const IR::Node *preorder(IR::MethodCallStatement *s) override {
+    return transform_child(s->methodCall); }
+  const IR::Expression *preorder(IR::MethodCallExpression *e) override {
+    if (auto meth = e->method->to<IR::Member>()) {
+      if (meth->member == "extract")
+        return new IR::Primitive(meth->srcInfo, "extract", e->arguments);
+    } else {
+      BUG("invalid method call %s", e); }
+    return e; }
   const IR::Expression *preorder(IR::AssignmentStatement *s) override {
     return new IR::Primitive(s->srcInfo, "set_metadata", s->left, s->right); }
   IR::Expression *preorder(IR::Statement *) override { BUG("Unhandled statement kind"); }
@@ -83,6 +93,14 @@ void GetTofinoParser::addMatch(IR::Tofino::ParserState *s, int val, int mask,
   auto match = new IR::Tofino::ParserMatch(val, mask, stmts);
   s->match.push_back(match);
   if ((match->next = state(action, &local))) {
+  } else if (!program) {
+    if (action == "accept" || action == "reject")
+      return;
+    else if (!states.count(action))
+      error("%s: No definition for %s", action.srcInfo, action);
+    // If there is a parser state with this name, but we couldn't generate it, its probably
+    // because we've unrolled a loop filling a header stack completely.  Should set some
+    // parser error code?
   } else if (program->get<IR::Control>(action)) {
     if (ingress_control) {
       if (ingress_control != action)

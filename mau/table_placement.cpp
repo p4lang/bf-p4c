@@ -368,8 +368,8 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
             partly_placed.insert(placed->table);
         else
             partly_placed.erase(placed->table); }
-    LOG1("Table placement placed " << count(placed) << " tables in " << (placed->stage+1) <<
-         " stages");
+    LOG1("Table placement placed " << count(placed) << " tables in " <<
+         (placed ? placed->stage+1 : 0) << " stages");
     placement = placed;
     table_placed.clear();
     for (auto p = placement; p; p = p->prev) {

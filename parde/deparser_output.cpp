@@ -3,7 +3,7 @@
 static const IR::Expression *header_ref(const IR::Expression *e) {
     /* FIXME(cdodd) -- this is a nasty hack */
     if (auto *p = e->to<IR::HeaderSliceRef>()) return p->header_ref();
-    if (auto *p = e->to<IR::FieldRef>()) return p->base;
+    if (auto *p = e->to<IR::Member>()) return p->expr;
     return 0;
 }
 
