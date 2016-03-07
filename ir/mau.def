@@ -18,8 +18,8 @@ class Table {
     NullOK ActionFunction               gateway_payload;
     NullOK IR::Table                    match_table;
     inline Vector<Attached>             attached;
-    vector<ActionFunction>              actions;
-    map<cstring, TableSeq>              next;
+    inline Vector<ActionFunction>       actions;
+    inline NameMap<TableSeq>            next;
 #noconstructor
 #nooperator==
 #emit
