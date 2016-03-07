@@ -30,6 +30,7 @@
 #include "tofino/phv/split_phv_use.h"
 #include "tofino/phv/create_thread_local_instances.h"
 #include "tofino/phv/header_fragment_creator.h"
+#include "tofino/phv/phv_allocator.h"
 #include "tofino/common/copy_header_eliminator.h"
 
 class CheckTableNameDuplicate : public MauInspector {
@@ -113,13 +114,45 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     maupipe = maupipe->apply(backend);
     if (ErrorReporter::instance.getErrorCount() > 0)
         return;
+    PhvInfo gort_phv_allocation;
+    maupipe->apply(gort_phv_allocation);
+    gort_phv_allocation.allocatePOV();
+    PhvAllocator *phv_allocator = nullptr;
+    int num_tries = 0;
+    while ((num_tries++) < 5 && nullptr == phv_allocator) {
+      phv_allocator = new PhvAllocator(maupipe);
+      if (phv_allocator->Solve() == false) {
+        delete phv_allocator;
+        phv_allocator = nullptr;
+      }
+      else LOG1("Found solution with min-value strategy");
+    }
+    num_tries = 0;
+    while ((num_tries++) < 5 && nullptr == phv_allocator) {
+      phv_allocator = new PhvAllocator(maupipe);
+      if (phv_allocator->SolveRandomValueStrategy() == false) {
+        delete phv_allocator;
+        phv_allocator = nullptr;
+      }
+      else LOG1("Found solution with random strategy");
+    }
+    CHECK(nullptr != phv_allocator);
+    phv_allocator->GetAllocation(&gort_phv_allocation);
+    delete phv_allocator;
+    std::cout << "Printing PHV fields:\n";
+    for (auto iter = gort_phv_allocation.begin();
+         iter != gort_phv_allocation.end(); ++iter) {
+      std::cout << (iter)->name << (iter)->alloc[0] << "\n";
+      std::cout << (iter)->name << (iter)->alloc[1] << "\n";
+    }
+    PhvInfo *phv_ptr = &gort_phv_allocation;
     std::ostream *out = &std::cout;
     if (options->outputFile)
         out = new std::ofstream(options->outputFile);
-    *out << PhvAsmOutput(phv)
-         << ParserAsmOutput(maupipe, phv, INGRESS)
-         << DeparserAsmOutput(maupipe, phv, INGRESS)
-         << ParserAsmOutput(maupipe, phv, EGRESS)
-         << DeparserAsmOutput(maupipe, phv, EGRESS)
+    *out << PhvAsmOutput(*phv_ptr)
+         << ParserAsmOutput(maupipe, *phv_ptr, INGRESS)
+         << DeparserAsmOutput(maupipe, *phv_ptr, INGRESS)
+         << ParserAsmOutput(maupipe, *phv_ptr, EGRESS)
+         << DeparserAsmOutput(maupipe, *phv_ptr, EGRESS)
          << mauasm << std::flush;
 }

@@ -3,6 +3,7 @@
 #include "lib/log.h"
 #include "lib/stringref.h"
 #include "lib/range.h"
+#include "base/logging.h"
 
 
 void PhvInfo::add(cstring name, int size, bool meta) {
@@ -78,6 +79,8 @@ const PhvInfo::Info *PhvInfo::field(const IR::Member *fr, Info::bitrange *bits) 
     if (bits) {
         bits->lo = 0;
         bits->hi = fr->type->width_bits() - 1; }
+    if (auto *rv = getref(all_fields, name))
+        return rv;
     if (auto *p = name.findstr("::"))
         name = name.after(p+2);
     if (auto *p = name.find('[')) {
@@ -89,8 +92,20 @@ const PhvInfo::Info *PhvInfo::field(const IR::Member *fr, Info::bitrange *bits) 
     return nullptr;
 }
 
+vector<PhvInfo::Info::alloc_slice> *PhvInfo::alloc(const IR::Member *member) {
+  PhvInfo::Info *info = field(member);
+  CHECK(nullptr != info) << "; Cannot find PHV allocation for " <<
+    member->toString();
+  gress_t gress = INGRESS;
+  const cstring egress_str = cstring::to_cstring(EGRESS) + "::";
+  if (info->name.substr(0, egress_str.size()) == egress_str) gress = EGRESS;
+  return &(info->alloc[gress]);
+}
+
 const std::pair<int, int> *PhvInfo::header(cstring name_) const {
     StringRef name = name_;
+    if (auto *rv = getref(all_headers, name))
+        return rv;
     if (auto *p = name.findstr("::"))
         name = name.after(p+2);
     if (auto *rv = getref(all_headers, name))

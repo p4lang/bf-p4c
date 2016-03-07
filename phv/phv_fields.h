@@ -72,6 +72,7 @@ class PhvInfo : public Inspector {
         return const_cast<Info *>(const_cast<const PhvInfo *>(this)->field(fr, bits)); }
     Info *field(const IR::HeaderSliceRef *hsr, Info::bitrange *bits = 0) {
         return const_cast<Info *>(const_cast<const PhvInfo *>(this)->field(hsr, bits)); }
+    vector<Info::alloc_slice> *alloc(const IR::Member *member);
     const std::pair<int, int> *header(cstring name) const;
     const std::pair<int, int> *header(const IR::HeaderRef *hr) const {
         return header(hr->toString()); }
