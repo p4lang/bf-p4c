@@ -59,9 +59,13 @@ class Table {
         v.visit(match_table, "match_table");
         auto &clone(v.flow_clone());
         if (match_table) {
+            bool hit_action = false, miss_action = false;
             for (auto &action : actions) {
                 auto &clone2(clone.flow_clone());
                 clone2.visit(action);
+                // FIXME -- should be converting these to $hit and $miss in extract
+                if (action->name == "hit") hit_action = true;
+                if (action->name == "miss") miss_action = true;
                 if (next.count(action->name)) {
                     clone2.visit(next.at(action->name), action->name.name);
                     next_count++; }
@@ -74,6 +78,16 @@ class Table {
             if (next.count("$miss")) {
                 auto &clone2(clone.flow_clone());
                 clone2.visit(next.at("$miss"), "miss");
+                next_count++;
+                v.flow_merge(clone2); }
+            if (next.count("miss") && !miss_action) {
+                auto &clone2(clone.flow_clone());
+                clone2.visit(next.at("miss"), "miss");
+                next_count++;
+                v.flow_merge(clone2); }
+            if (next.count("hit") && !hit_action) {
+                auto &clone2(clone.flow_clone());
+                clone2.visit(next.at("hit"), "hit");
                 next_count++;
                 v.flow_merge(clone2); } }
         if (gateway_expr) {
@@ -90,8 +104,10 @@ class Table {
                     v.visit(next.at("false"), "false");
                 next_count++; }
             v.flow_merge(gateway_inhibit); }
-        if (next_count != next.size())
-            BUG("unreachable results in table");
+        if (next_count != next.size()) {
+            // FIXME -- should check for this and issue error in extract.  Still need
+            // BUG here in case a transform introduces a problem
+            BUG("unreachable results in table"); }
         attached.visit_children(v);
     }
 }
