@@ -156,7 +156,8 @@ bool Memories::allocTable(const IR::MAU::Table *table, int &entries,  map<cstrin
             width = std::max(width, match_ixbar.groups());
         entries = depth * 512;
     } else if (table->match_table) {
-        width = table->layout.match_width_bits + table->layout.overhead_bits + 4;  // valid/version
+        width = std::max(table->layout.match_width_bits - 8, 0) + table->layout.overhead_bits + 4;
+        // 4 bits for valid/version; assume 8 ghost bits.
         groups = 128/width;
         if (groups) {
             width = 1;
