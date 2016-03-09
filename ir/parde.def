@@ -8,8 +8,8 @@ class ParserMatch {
   NullOK ParserException        except;
 #noconstructor
 #emit
-  ParserMatch(uintmax_t v, uintmax_t m, const Vector<Expression> &e)
-  : value(~v&m, v&m), shift(0), stmts(e), next(0), except(0) {}
+  ParserMatch(match_t v, const Vector<Expression> &e)
+  : value(v), shift(0), stmts(e), next(0), except(0) {}
   ParserMatch(match_t v, int sh, const std::initializer_list<const Expression *> &st,
                      const ParserState *n, const ParserException *ex = nullptr)
   : value(v), shift(sh), stmts(st), next(n), except(ex) {}
@@ -28,6 +28,7 @@ class ParserState {
               const std::initializer_list<const ParserMatch *> &m)
   : name(n), select(sel), match(m) {}
 #end
+  toString { return name; }
 }
 
 class Parser {
@@ -38,6 +39,7 @@ class Parser {
   Parser(gress_t gr, const ParserState *s) : gress(gr), start(s) {}
 #end
 #apply
+  toString { return gress ? "egress parser" : "ingress parser"; }
 }
 
 class Deparser {
@@ -49,6 +51,7 @@ class Deparser {
   Deparser(gress_t gr, const Parser *s);
 #end
 #apply
+  toString { return gress ? "egress deparser" : "ingress deparser"; }
 }
 
 }  // end namespace Tofino

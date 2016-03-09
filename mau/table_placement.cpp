@@ -214,7 +214,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             rv->entries = last_try - 500;
             if (rv->entries < min_entries && min_entries < last_try)
                 rv->entries = min_entries; }
-        assert(rv->entries >= min_entries);
+        if (rv->entries < min_entries)
+            BUG("Can't fit any entries of table %s in a stage by iteself (too wide?)", t->name);
         last_try = rv->entries;
         LOG3(" - reducing to " << rv->entries << " of " << t->name << " in stage " << rv->stage);
         rv->use = StageUseEstimate(t, rv->entries, &resources->match_ixbar);
@@ -447,6 +448,8 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         } else {
             table_part->gateway_expr = 0;
             table_part->gateway_cond = true;
+            table_part->next.erase("true");
+            table_part->next.erase("false");
             prev->next["$miss"] = new IR::MAU::TableSeq(table_part); }
         prev = table_part; }
     assert(rv);

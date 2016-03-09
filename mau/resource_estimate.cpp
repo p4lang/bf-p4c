@@ -56,7 +56,8 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
         tcams = depth * width;
         entries = depth * 512;
     } else if (tbl->match_table) {
-        int width = tbl->layout.match_width_bits + tbl->layout.overhead_bits + 4;  // valid/version
+        int width = std::max(tbl->layout.match_width_bits - 8, 0) + tbl->layout.overhead_bits + 4;
+        // 4 bits for valid/version; assume 8 ghost bits
         int groups = 128/width;
         if (groups) {
             width = 1;

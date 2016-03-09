@@ -60,6 +60,8 @@ tofino_backend_SOURCES = \
 	backends/tofino/parde/extract_parser.cpp \
 	backends/tofino/parde/extract_parser.h \
 	backends/tofino/parde/gen_deparser.cpp \
+	backends/tofino/parde/match_keys.cpp \
+	backends/tofino/parde/match_keys.h \
 	backends/tofino/parde/parser_output.cpp \
 	backends/tofino/parde/split_header.cpp \
 	backends/tofino/parde/split_header.h \

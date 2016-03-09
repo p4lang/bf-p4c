@@ -4,14 +4,17 @@
 #include "parde_visitor.h"
 
 class ComputeShifts : public PardeModifier {
-    int shift;
-    void postorder(IR::Primitive *prim) {
-        if (prim->name == "extract")
-            shift += (prim->operands[0]->type->width_bits() + 7) / 8U; }
-    bool preorder(IR::Tofino::ParserMatch *) { shift = 0; return true; }
-    void postorder(IR::Tofino::ParserMatch *match) {
-        if (findContext<IR::Tofino::ParserState>()->name[0] != '$')
-            match->shift = shift; }
+    struct CountExtracts : public Inspector {
+        int &count;
+        void postorder(const IR::Primitive *prim) override {
+            if (prim->name == "extract")
+                count += (prim->operands[0]->type->width_bits() + 7) / 8U; }
+        CountExtracts(int &c) : count(c) {}
+    };
+    void postorder(IR::Tofino::ParserMatch *match) override {
+        if (findContext<IR::Tofino::ParserState>()->name[0] != '$') {
+            match->shift = 0;
+            match->stmts.apply(CountExtracts(match->shift)); } }
 };
 
 #endif /* _TOFINO_PARDE_COMPUTE_SHIFTS_H_ */

@@ -33,7 +33,7 @@ static void output_match(std::ostream &out, const PhvInfo &phv, indent_t indent,
     if (match->value)
         out << indent << match->value << ':' << std::endl;
     else
-        out << indent << "default:" << std::endl;
+        out << indent << "0x*:" << std::endl;
     ++indent;
     match->stmts.apply(OutputExtracts(out, phv, indent));
     if (match->shift)
@@ -51,6 +51,10 @@ static void output_state(std::ostream &out, const PhvInfo &phv, indent_t indent,
         for (auto e : state->select) {
             if (auto field = phv.field(e))
                 out << sep << canon_name(field->name);
+            else if (e->is<IR::Constant>())
+                out << sep << e->toString();
+            else if (auto r = e->to<IR::Range>())
+                out << sep << r->left->toString() << ".." << r->right->toString();
             else
                 out << sep << "/* " << *e << " */";
             sep = ", "; }

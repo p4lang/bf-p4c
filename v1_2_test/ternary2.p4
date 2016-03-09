@@ -10,8 +10,8 @@ header data_h {
 
 header extra_h {
     bit<16>     h;
-    bit<8>      b;
-    bit<8>      more;
+    bit<8>      b1;
+    bit<8>      b2;
 }
 
 struct packet_t {
@@ -27,9 +27,9 @@ parser p(packet_in b, out packet_t hdrs, inout standard_metadata meta)
     }
     state extra {
         b.extract(hdrs.extra.next);
-        transition select(hdrs.extra.last.more) {
-            8w0: accept;
-            default: extra;
+        transition select(hdrs.extra.last.b2) {
+            8w0x80 &&& 8w0x80: extra;
+            default: accept;
         }
     }
 }
@@ -40,6 +40,12 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
         meta.egress_spec = port;
     }
     action noop() { }
+    action setbyte(out bit<8> reg, bit<8> val) {
+        reg = val;
+    }
+    action act1(bit<8> val) { hdrs.extra[0].b1 = val; }
+    action act2(bit<8> val) { hdrs.extra[0].b1 = val; }
+    action act3(bit<8> val) { hdrs.extra[0].b1 = val; }
 
     table test1() {
         key = { hdrs.data.f1 : ternary; }
@@ -48,9 +54,33 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
             noop;
         }
     }
+    table ex1() {
+        key = { hdrs.extra[0].h : ternary; }
+        actions = {
+            setbyte(hdrs.extra[0].b1);
+            act1;
+            act2;
+            act3;
+            noop;
+        }
+    }
+    table tbl1() {
+        key = { hdrs.data.f2 : ternary; }
+        actions = { setbyte(hdrs.data.b2); noop; } }
+    table tbl2() {
+        key = { hdrs.data.f2 : ternary; }
+        actions = { setbyte(hdrs.extra[1].b1); noop; } }
+    table tbl3() {
+        key = { hdrs.data.f2 : ternary; }
+        actions = { setbyte(hdrs.extra[2].b2); noop; } }
 
     apply {
         test1.apply();
+        switch (ex1.apply().action_run) {
+            act1: { tbl1.apply(); }
+            act2: { tbl2.apply(); }
+            act3: { tbl3.apply(); }
+        }
     }
 }
 
