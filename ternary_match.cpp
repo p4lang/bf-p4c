@@ -224,7 +224,7 @@ void TernaryMatchTable::pass1() {
                   "next tables");
         if (!indirect->p4_table) indirect->p4_table = p4_table; }
     attached.pass1(this);
-    if (hit_next.size() > 2)
+    if (hit_next.size() > 2 && !indirect)
         error(hit_next[0].lineno, "Ternary Match tables cannot directly specify more"
               "than 2 hit next tables");
     if (actions) actions->pass1(this);

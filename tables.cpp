@@ -937,10 +937,9 @@ void MatchTable::write_regs(int type, Table *result) {
     if (next->miss_next || next->miss_next == "END") {
         merge.next_table_format_data[logical_id].match_next_table_adr_miss_value =
             next->miss_next ? next->miss_next->table_id() : 0xff; }
-    if (next->hit_next.size() > 0) {
-        assert(((next->hit_next.size()-1) & next->hit_next.size()) == 0);
+    if (next->hit_next.size() > 1)
         merge.next_table_format_data[logical_id].match_next_table_adr_mask =
-            next->hit_next.size() - 1; }
+            (1U << ceil_log2(next->hit_next.size())) - 1;
 
     /*------------------------
      * Immediate data found in overhead
