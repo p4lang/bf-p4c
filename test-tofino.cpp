@@ -21,6 +21,7 @@
 #include "tofino/parde/add_parde_metadata.h"
 #include "tofino/parde/asm_output.h"
 #include "tofino/parde/compute_shifts.h"
+#include "tofino/parde/match_keys.h"
 #include "tofino/parde/split_header.h"
 #include "tofino/phv/asm_output.h"
 #include "tofino/phv/phv_allocate.h"
@@ -42,7 +43,9 @@ class CheckTableNameDuplicate : public MauInspector {
 
 class DumpPipe : public Inspector {
     bool preorder(const IR::Tofino::Pipe *pipe) override {
-        if (verbose)
+        if (verbose > 1)
+            dump(pipe);
+        else if (verbose)
             std::cout << *pipe << std::endl;
         return false; }
 };
@@ -85,6 +88,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new CheckTableNameDuplicate,
         new InstructionSelection,
         new ComputeShifts,
+        new LoadMatchKeys(phv),
         new DumpPipe,
         &defuse,
         new MauPhvConstraints(phv),

@@ -4,6 +4,7 @@
 #include "common/inline_control_flow.h"
 #include "common/name_gateways.h"
 #include "frontends/p4v1.2/evaluator/evaluator.h"
+#include "frontends/p4v1.2/methodInstance.h"
 #include "tofino/common/param_binding.h"
 #include "tofino/mau/table_dependency_graph.h"
 #include "tofino/parde/extract_parser.h"
@@ -78,7 +79,7 @@ class GetTofinoTables : public Inspector {
                           ->to<IR::ActionList>()->actionList)
       if (auto action = blockMap->refMap->getDeclaration(act->name->path)
                                 ->to<IR::ActionContainer>())
-        tt->actions.push_back(new IR::ActionFunction(action));
+        tt->actions.push_back(new IR::ActionFunction(action, act->arguments));
     // action_profile already pulled into TableContainer?
   }
 
@@ -115,22 +116,30 @@ class GetTofinoTables : public Inspector {
   void postorder(const IR::Apply *a) override {
     for (auto &act : a->actions)
       tables.at(a)->next[act.first] = seqs.at(act.second); }
-  bool preorder(const IR::MethodCallStatement *m) override {
-    auto method = m->methodCall->to<IR::MethodCallExpression>()->method->to<IR::Member>();
-    if (!method || method->member != "apply")
-        BUG("Method Call %1% not apply", m);
-    auto path = method->expr->to<IR::PathExpression>()->path;
-    auto table = blockMap->refMap->getDeclaration(path)->to<IR::TableContainer>();
+  bool preorder(const IR::MethodCallExpression *m) override {
+    auto mi = P4V12::MethodInstance::resolve(m, blockMap->refMap, blockMap->typeMap);
+    if (!mi || !mi->isApply())
+      BUG("Method Call %1% not apply", m);
+    auto table = mi->object->to<IR::TableContainer>();
+    if (!table) BUG("%1% not apllied to table", m);
     if (!tables.count(m)) {
-      if (!table) {
-        error("%s: No table named %s", path->srcInfo, path->toString());
-        return true; }
       auto tt = tables[m] = new IR::MAU::Table(table->name, gress, new IR::Table(table));
       setup_tt_actions(tt, table);
     } else {
-      error("%s: Multiple applies of table %s not supported", path->srcInfo, path->name); }
+      error("%s: Multiple applies of table %s not supported", m->srcInfo, table->name); }
     return true; }
-  void postorder(const IR::MethodCallStatement *) override { }
+  void postorder(const IR::MethodCallStatement *m) override {
+    if (!tables.count(m->methodCall))
+        BUG("MethodCall %1% is not apply", m);
+    tables[m] = tables.at(m->methodCall); }
+  void postorder(const IR::SwitchStatement *s) override {
+    auto exp = s->expression->to<IR::Member>();
+    if (!exp || exp->member != "action_run" || !tables.count(exp->expr)) {
+      error("%s: Can only switch on table.apply().action_run", s->expression->srcInfo);
+      return; }
+    auto tt = tables[s] = tables.at(exp->expr);
+    for (auto c : *s->cases)
+      tt->next[c->label] = seqs.at(c->statement); }
 
   bool preorder(const IR::NamedCond *c) override {
     if (!tables.count(c))
@@ -166,9 +175,8 @@ class GetTofinoTables : public Inspector {
     pipe->thread[gress].mau = seqs.at(cf->body);
     return false; }
 
-  bool preorder(const IR::Statement *st) {
-    BUG("Unhandled statement %1%", st);
-    return true; }
+  void postorder(const IR::Statement *st) {
+    BUG("Unhandled statement %1%", st); }
 };
 
 const IR::Tofino::Pipe *extract_maupipe(const IR::Global *program) {
@@ -195,6 +203,13 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::Global *program) {
     th.mau = th.mau->apply(toAttach);
   return rv;
 }
+
+class ConvertIndexToHeaderStackItemRef : public Transform {
+    const IR::Expression *preorder(IR::ArrayIndex *idx) override {
+        auto type = idx->type->to<IR::Type_Header>();
+        if (!type) BUG("%1% is not a header stack ref");
+        return new IR::HeaderStackItemRef(idx->srcInfo, type, idx->left, idx->right); }
+};
 
 const IR::Tofino::Pipe *extract_maupipe(const IR::P4V12Program *program) {
     P4V12::EvaluatorPass evaluator(false);
@@ -238,10 +253,15 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4V12Program *program) {
 
     rv->standard_metadata =
         bindings.get(ingress->type->applyParams->parameters->at(1))->obj->to<IR::Metadata>();
-    parser = parser->apply(bindings)->apply(RemoveInstanceRef());
-    ingress = ingress->apply(bindings)->apply(RemoveInstanceRef());
-    egress = egress->apply(bindings)->apply(RemoveInstanceRef());
-    deparser = deparser->apply(bindings)->apply(RemoveInstanceRef());
+    PassManager fixups = {
+        &bindings,
+        new RemoveInstanceRef,
+        new ConvertIndexToHeaderStackItemRef
+    };
+    parser = parser->apply(fixups);
+    ingress = ingress->apply(fixups);
+    egress = egress->apply(fixups);
+    deparser = deparser->apply(fixups);
 
     GetTofinoParser make_parser(parser);
     parser->apply(make_parser);
@@ -257,5 +277,5 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4V12Program *program) {
 
     // AttachTables...
 
-    return rv->apply(bindings)->apply(RemoveInstanceRef());
+    return rv->apply(fixups);
 }

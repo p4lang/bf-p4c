@@ -71,8 +71,7 @@ const PhvInfo::Info *PhvInfo::field(const IR::HeaderSliceRef *hsr,
                 bits->first = offset + hsr->type->width_bits() - 1; }
             return info; }
         offset -= info->size; }
-    BUG("can't find field at offset %d of %s",
-                            hsr->offset_bits(), hsr->header_ref()->toString());
+    BUG("can't find field at offset %d of %s", hsr->offset_bits(), hsr->header_ref()->toString());
 }
 
 const PhvInfo::Info *PhvInfo::field(const IR::Member *fr, std::pair<int, int> *bits) const {

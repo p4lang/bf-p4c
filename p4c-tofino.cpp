@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <signal.h>
 #include <string>
 #include <iostream>
 
@@ -12,6 +13,7 @@
 #include "frontends/p4v1.2/v12_frontend.h"
 #include "frontends/common/constantFolding.h"
 #include "frontends/common/header_type.h"
+#include "frontends/common/parseInput.h"
 #include "frontends/common/typecheck.h"
 #include "common/extract_maupipe.h"
 #include "common/blockmap.h"
@@ -19,8 +21,32 @@
 
 extern void test_tofino_backend(const IR::Tofino::Pipe *, const Tofino_Options *);
 
+static void fatal_signal(int sig, siginfo_t *, void *) {
+    static int count = 0;
+    if (count++) _exit(-1);
+    BUG("Fatal signal %d", sig);
+}
+static void setup_signals() {
+    struct sigaction    sigact;
+    sigact.sa_sigaction = fatal_signal;
+    sigact.sa_flags = SA_SIGINFO;
+    sigemptyset(&sigact.sa_mask);
+    sigaction(SIGHUP, &sigact, 0);
+    sigaction(SIGINT, &sigact, 0);
+    sigaction(SIGQUIT, &sigact, 0);
+    sigaction(SIGTERM, &sigact, 0);
+    sigaction(SIGILL, &sigact, 0);
+    sigaction(SIGABRT, &sigact, 0);
+    sigaction(SIGFPE, &sigact, 0);
+    sigaction(SIGSEGV, &sigact, 0);
+    sigaction(SIGBUS, &sigact, 0);
+    sigaction(SIGTRAP, &sigact, 0);
+    signal(SIGPIPE, SIG_IGN);
+}
+
 int main(int ac, char **av) {
     setup_gc_logging();
+    setup_signals();
 
     Tofino_Options options;
     if (options.process(ac, av) != nullptr)
@@ -36,6 +62,10 @@ int main(int ac, char **av) {
         return 1; }
     const IR::Tofino::Pipe *maupipe = nullptr;
 
+    bool v1 = options.langVersion == CompilerOptions::FrontendVersion::P4v1;
+#if 0
+    auto program = parseP4File(options);
+#else
     switch (options.langVersion) {
     case CompilerOptions::FrontendVersion::P4v1: {
         auto program = parse_p4v1_file(options.file, in);
@@ -59,7 +89,8 @@ int main(int ac, char **av) {
         break; }
     case CompilerOptions::FrontendVersion::P4v1_2: {
         auto program = parse_p4v1_2_file(options.file, in);
-        program = run_v12_frontend(options, program, false);
+#endif
+        program = run_v12_frontend(options, program, v1);
         if (verbose) {
             std::cout << "-------------------------------------------------" << std::endl
                       << "Initial program" << std::endl
@@ -83,9 +114,11 @@ int main(int ac, char **av) {
             else
                 std::cout << *program << std::endl; }
         maupipe = extract_maupipe(program);
+#if 1
         break; }
     default:
         BUG("Unexpected frontend"); }
+#endif
 
     if (ErrorReporter::instance.getErrorCount() > 0)
         return 1;

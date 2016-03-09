@@ -155,13 +155,13 @@ const IR::Expression *GetTofinoParser::RewriteExtractNext::preorder(IR::Member *
         m->expr, new IR::Constant(index));
 }
 
-void GetTofinoParser::addMatch(IR::Tofino::ParserState *s, int val, int mask,
+void GetTofinoParser::addMatch(IR::Tofino::ParserState *s, match_t match_val,
                                const IR::Vector<IR::Expression> &stmts, const IR::ID &action,
                                const Context *ctxt) {
   Context local = { ctxt, ctxt ? ctxt->depth+1 : 0, s };
-  LOG2("GetParser::addMatch(" << s->p4state->toString() << ", " << val << ", " <<
-       mask << ", " << local.depth << ")");
-  auto match = new IR::Tofino::ParserMatch(val, mask, stmts);
+  LOG2("GetParser::addMatch(" << s->p4state->toString() << ", " << match_val <<
+       ", " << local.depth << ")");
+  auto match = new IR::Tofino::ParserMatch(match_val, stmts);
   s->match.push_back(match);
   if ((match->next = state(action, &local))) {
   } else if (!program) {
@@ -211,29 +211,35 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
     // FIXME should be setting an appropriate parser exception?
     return nullptr;
   rv->select = *rv->select.apply(rewrite);
+  int match_size = 0;
+  for (auto s : rv->select)
+    match_size += s->type->width_bits();
 
   LOG2("GetParser::state(" << name << ")");
   if (v1_0) {
     if (v1_0->cases)
       for (auto ce : *v1_0->cases)
         for (auto val : ce->values)
-          addMatch(rv, val.first->asLong(), val.second->asLong(), *stmts, ce->action, ctxt);
+          addMatch(rv, match_t(match_size, val.first->asLong(), val.second->asLong()),
+                   *stmts, ce->action, ctxt);
     if (v1_0->default_return)
-      addMatch(rv, 0, 0, *stmts, v1_0->default_return, ctxt);
+      addMatch(rv, match_t(), *stmts, v1_0->default_return, ctxt);
     else if (v1_0->parse_error)
-      addMatch(rv, 0, 0, *stmts, v1_0->parse_error, ctxt);
+      addMatch(rv, match_t(), *stmts, v1_0->parse_error, ctxt);
   } else {
     if (auto *path = dynamic_cast<const IR::PathExpression *>(v1_2->selectExpression)) {
-      addMatch(rv, 0, 0, *stmts, path->path->name, ctxt);
+      addMatch(rv, match_t(), *stmts, path->path->name, ctxt);
     } else if (auto *sel = dynamic_cast<const IR::SelectExpression *>(v1_2->selectExpression)) {
       for (auto ce : *sel->selectCases) {
         if (ce->keyset->is<IR::DefaultExpression>())
-          addMatch(rv, 0, 0, *stmts, ce->state->path->name, ctxt);
+          addMatch(rv, match_t(), *stmts, ce->state->path->name, ctxt);
         else if (auto k = ce->keyset->to<IR::Constant>())
-          addMatch(rv, k->asInt(), ~0, *stmts, ce->state->path->name, ctxt);
+          addMatch(rv, match_t(match_size, k->asLong(), ~0ULL),
+                   *stmts, ce->state->path->name, ctxt);
         else if (auto mask = ce->keyset->to<IR::Mask>())
-          addMatch(rv, mask->left->to<IR::Constant>()->asInt(),
-                   mask->right->to<IR::Constant>()->asInt(), *stmts, ce->state->path->name, ctxt);
+          addMatch(rv, match_t(match_size, mask->left->to<IR::Constant>()->asLong(),
+                                           mask->right->to<IR::Constant>()->asLong()),
+                   *stmts, ce->state->path->name, ctxt);
         else
           BUG("Invalid select case expression %1%", ce); }
     } else if (v1_2->selectExpression) {

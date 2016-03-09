@@ -26,7 +26,7 @@ class GetTofinoParser : public Inspector {
   class FindLatestExtract;
   class FindStackExtract;
   class RewriteExtractNext;
-  void addMatch(IR::Tofino::ParserState *, int, int, const IR::Vector<IR::Expression> &,
+  void addMatch(IR::Tofino::ParserState *, match_t, const IR::Vector<IR::Expression> &,
                 const IR::ID &, const Context *);
   IR::Tofino::ParserState *state(cstring, const Context *);
 
