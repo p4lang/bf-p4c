@@ -5,10 +5,12 @@
 #include "ir/ir.h"
 #include "ir/dbprint.h"
 #include "lib/log.h"
+#include "frontends/common/typecheck.h"
 #include "tofinoOptions.h"
 #include "tofino/common/extract_maupipe.h"
 #include "tofino/common/field_defuse.h"
 #include "tofino/mau/asm_output.h"
+#include "tofino/mau/gateway.h"
 #include "tofino/mau/instruction_selection.h"
 #include "tofino/mau/phv_constraints.h"
 #include "tofino/mau/split_gateways.h"
@@ -76,6 +78,8 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new SplitExtractEmit,
         options->phv_alloc ? new CopyHeaderEliminator : 0,
         options->phv_alloc ? new HeaderFragmentCreator : 0,
+        new CanonGatewayExpr,
+        new TypeCheck,
         new SplitGateways,
         new CheckTableNameDuplicate,
         new TableFindSeqDependencies,
