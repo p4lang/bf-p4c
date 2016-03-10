@@ -44,7 +44,7 @@ class GetTofinoParser::FindLatestExtract : public Inspector {
     return true; }
 
  public:
-  FindLatestExtract(const IR::Expression *&l) : latest(l) {}
+  explicit FindLatestExtract(const IR::Expression *&l) : latest(l) {}
 };
 
 class GetTofinoParser::RewriteExtractNext : public Transform {
