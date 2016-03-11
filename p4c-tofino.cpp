@@ -77,7 +77,7 @@ int main(int ac, char **av) {
                 dump(program);
             else
                 std::cout << *program << std::endl; }
-        P4V12::EvaluatorPass evaluator(false);
+        P4V12::EvaluatorPass evaluator(v1);
         PassManager midend = {
             &evaluator,
             new FillFromBlockMap(&evaluator),
