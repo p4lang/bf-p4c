@@ -9,7 +9,7 @@ class ComputeShifts : public PardeModifier {
         void postorder(const IR::Primitive *prim) override {
             if (prim->name == "extract")
                 count += (prim->operands[0]->type->width_bits() + 7) / 8U; }
-        CountExtracts(int &c) : count(c) {}
+        explicit CountExtracts(int &c) : count(c) {}
     };
     void postorder(IR::Tofino::ParserMatch *match) override {
         if (findContext<IR::Tofino::ParserState>()->name[0] != '$') {
