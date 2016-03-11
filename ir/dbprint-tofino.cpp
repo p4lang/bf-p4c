@@ -19,7 +19,7 @@ void IR::MAU::Table::dbprint(std::ostream &out) const {
             << (layout.ternary ? "T" : "E") << " " << layout.match_width_bits << "+"
             << layout.overhead_bits << ", " << layout.action_data_bytes << " }";
     if (!(dbgetflags(out) & TableNoActions))
-        for (auto &a : actions)
+        for (auto &a : Values(actions))
             out << endl << a;
     for (auto &n : next)
         out << endl << n.first << ": " << indent << n.second << unindent;

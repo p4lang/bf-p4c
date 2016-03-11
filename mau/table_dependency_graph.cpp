@@ -121,11 +121,11 @@ bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
             t->gateway_expr->apply(AddDependencies(access, &table, Table::MATCH));
         if (t->match_table && t->match_table->reads)
             t->match_table->reads->apply(AddDependencies(access, &table, Table::MATCH));
-        for (auto &action : t->actions)
+        for (auto &action : Values(t->actions))
             action->apply(AddDependencies(access, &table, Table::ACTION));
         if (t->gateway_expr)
             t->gateway_expr->apply(UpdateAccess(access, &table));
-        for (auto &action : t->actions)
+        for (auto &action : Values(t->actions))
             action->apply(UpdateAccess(access, &table));
     } else {
         error("%s: Multiple applies of table %s not supported", t->srcInfo, t->name); }

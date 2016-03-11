@@ -53,7 +53,7 @@ setup_gateway_layout(IR::MAU::Table::Layout &layout, const IR::Expression *gw) {
 
 static void setup_action_layout(IR::MAU::Table *tbl) {
     tbl->layout.action_data_bytes = 0;
-    for (auto action : tbl->actions) {
+    for (auto action : Values(tbl->actions)) {
         int action_data_bytes = 0;
         for (auto arg : action->args)
             action_data_bytes += (arg->type->width_bits() + 7) / 8U;

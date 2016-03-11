@@ -180,35 +180,45 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
     assert(have_action || (tbl->layout.action_data_bytes <=
                            tbl->layout.action_data_bytes_in_overhead));
 
-    vector<const IR::MAU::Table *>      next_hit;
-    const IR::MAU::Table                *next_miss = 0;
+    cstring     next_hit, next_miss, next_default;
+    bool        need_next_hit_map = false;
+    next_hit = next_miss = next_default = default_next.next_in_thread(tbl);
     for (auto &next : tbl->next) {
         if (next.first == "true" || next.first == "false") {
             continue;  // for the gateway
         } else if (next.first == "$miss") {
-            next_miss = next.second->front();
+            if (!next.second->empty())
+                next_miss = next.second->front()->name;
+        } else if (next.first == "$hit") {
+            if (!next.second->empty())
+                next_hit = next.second->front()->name;
+        } else if (next.first == "default") {
+            if (!next.second->empty())
+                next_default = next.second->front()->name;
         } else {
-            next_hit.push_back(next.second->front()); } }
-    if (next_hit.empty()) {
-        if (next_miss) {
-            out << indent << "hit: " << default_next.next_in_thread(tbl) << std::endl;
-            out << indent << "miss: " << next_miss->name << std::endl;
-        } else {
-            out << indent << "next: " << default_next.next_in_thread(tbl) << std::endl; }
+            need_next_hit_map = true; } }
+    if (need_next_hit_map) {
+        out << indent << "hit: [ ";
+        const char *sep = "";
+        for (auto act : Values(tbl->actions)) {
+            out << sep;
+            if (tbl->next.count(act->name)) {
+                auto seq = tbl->next.at(act->name);
+                if (seq->empty())
+                    default_next.next_in_thread(tbl);
+                else
+                    out << seq->front()->name;
+            } else
+                out << next_default;
+            sep = ", "; }
+        out << " ]" << std::endl;
+        out << indent << "miss: " << next_miss << std::endl;
     } else {
-        if (next_hit.size() == 1) {
-            out << indent << "hit: " << next_hit.front()->name << std::endl;
+        if (next_miss != next_hit) {
+            out << indent << "hit: " << next_hit << std::endl;
+            out << indent << "miss: " << next_miss << std::endl;
         } else {
-            out << indent << "hit: ";
-            const char *sep = next_hit.size() > 1 ? "[ " : "";
-            for (auto t : next_hit) {
-                out << sep << (t ? t->name : default_next.next_in_thread(tbl));
-                sep = ", "; }
-            out << " ]" << std::endl; }
-        if (next_miss)
-            out << indent << "miss: " << next_miss->name << std::endl;
-        else
-            out << indent << "miss: " << default_next.next_in_thread(tbl) << std::endl; }
+            out << indent << "next: " << default_next.next_in_thread(tbl) << std::endl; } }
 
     if (!have_indirect)
         emit_table_indir(out, indent, tbl);
@@ -229,14 +239,14 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         out << std::endl; }
     if (!have_action && !tbl->actions.empty()) {
         out << indent++ << "actions:" << std::endl;
-        for (auto act : tbl->actions)
+        for (auto act : Values(tbl->actions))
             act->apply(EmitAction(*this, out, indent));
         --indent; }
 }
 
 void emit_fmt_immed(std::ostream &out, const IR::MAU::Table *tbl, int base, const char *sep) {
     std::map<cstring, int>      done;
-    for (auto act : tbl->actions) {
+    for (auto act : Values(tbl->actions)) {
         vector<std::pair<int, cstring>> sorted_args;
         for (auto arg : act->args) {
             int size = (arg->type->width_bits() + 7) / 8U;  // in bytes
@@ -296,14 +306,14 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
     indent_t    indent(1);
     out << indent++ << "action " << ad->name << ':' << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(ad->name));
-    for (auto act : tbl->actions) {
+    for (auto act : Values(tbl->actions)) {
         if (act->args.empty()) continue;
         out << indent << "format " << act->name << ": {";
         emit_fmt_nonimmed(out, act, " ");
         out << " }" << std::endl; }
     if (!tbl->actions.empty()) {
         out << indent++ << "actions:" << std::endl;
-        for (auto act : tbl->actions)
+        for (auto act : Values(tbl->actions))
             act->apply(EmitAction(self, out, indent));
         --indent; }
     return false; }
