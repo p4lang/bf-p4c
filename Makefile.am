@@ -27,6 +27,8 @@ tofino_backend_SOURCES = \
 	backends/tofino/mau/default_next.h \
 	backends/tofino/mau/field_use.cpp \
 	backends/tofino/mau/field_use.h \
+	backends/tofino/mau/gateway.cpp \
+	backends/tofino/mau/gateway.h \
 	backends/tofino/mau/input_xbar.cpp \
 	backends/tofino/mau/input_xbar.h \
 	backends/tofino/mau/instruction_selection.cpp \

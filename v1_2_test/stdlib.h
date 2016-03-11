@@ -6,9 +6,9 @@ struct Version
     bit<8> major;
     bit<8> minor;
 }
-    
+
 const Version P4_LIBRARY_VERSION = { 8w0, 8w1 };
-    
+
 error {
     NoError,          // no error
     PacketTooShort,   // not enough bits in packet for extract
@@ -25,12 +25,12 @@ extern packet_in {
     // does not advance the cursor
     T lookahead<T>();
 }
-    
+
 extern packet_out {
     void emit<T>(in T hdr);
 }
 
-extern void assert(in bool check, in error toSignal); 
+extern void assert(in bool check, in error toSignal);
 
 action NoAction() {}
 
@@ -38,6 +38,6 @@ match_kind {
     exact,
     ternary,
     lpm,
-    range            
+    range
 }
 #endif

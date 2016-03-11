@@ -5,6 +5,7 @@
 
 #include "ir/ir.h"
 #include "ir/dbprint.h"
+#include "lib/crash.h"
 #include "lib/gc.h"
 #include "lib/log.h"
 #include "lib/exceptions.h"
@@ -20,29 +21,6 @@
 #include "tofinoOptions.h"
 
 extern void test_tofino_backend(const IR::Tofino::Pipe *, const Tofino_Options *);
-
-static void fatal_signal(int sig, siginfo_t *, void *) {
-    static int count = 0;
-    if (count++) _exit(-1);
-    BUG("Fatal signal %d", sig);
-}
-static void setup_signals() {
-    struct sigaction    sigact;
-    sigact.sa_sigaction = fatal_signal;
-    sigact.sa_flags = SA_SIGINFO;
-    sigemptyset(&sigact.sa_mask);
-    sigaction(SIGHUP, &sigact, 0);
-    sigaction(SIGINT, &sigact, 0);
-    sigaction(SIGQUIT, &sigact, 0);
-    sigaction(SIGTERM, &sigact, 0);
-    sigaction(SIGILL, &sigact, 0);
-    sigaction(SIGABRT, &sigact, 0);
-    sigaction(SIGFPE, &sigact, 0);
-    sigaction(SIGSEGV, &sigact, 0);
-    sigaction(SIGBUS, &sigact, 0);
-    sigaction(SIGTRAP, &sigact, 0);
-    signal(SIGPIPE, SIG_IGN);
-}
 
 int main(int ac, char **av) {
     setup_gc_logging();
