@@ -432,7 +432,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
             { "stage_number", json::number(stage->stageno) },
             { "number_entries", json::number(indirect->layout_size()*128/fmt_width * 1024) },
             { "stage_table_type", json::string("ternary_indirection") }};
-        add_pack_format(tind, indirect->format);
+        indirect->add_pack_format(tind, indirect->format);
         tind["memory_resource_allocation"] =
             indirect->gen_memory_resource_allocation_tbl_cfg("sram");
         stage_tbl["ternary_indirection_table"] = std::move(tind);
@@ -463,7 +463,7 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
     setup_layout(layout, get(data, "row"), get(data, "column"), get(data, "bus"));
     if (auto *fmt = get(data, "format")) {
         if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map")) {
-            format = new Format(fmt->map);
+            format = new Format(fmt->map, true);
             if (format->size > 64)
                 error(fmt->lineno, "ternary indirect format larger than 64 bits");
             if (format->size < 4) {
