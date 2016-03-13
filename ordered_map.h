@@ -60,7 +60,14 @@ public:
     ordered_map() {}
     ordered_map(const ordered_map &a) : data(a.data) { init_data_map(); }
     ordered_map(ordered_map &&a) = default; /* move is ok? */
-    ordered_map &operator=(const ordered_map &a) { data = a.data; init_data_map(); }
+    ordered_map &operator=(const ordered_map &a) {
+        /* std::list assignment broken by spec if elements are const... */
+        if (this != &a) {
+            data.clear();
+            for (auto &el : a.data)
+                data.push_back(el);
+            init_data_map(); }
+        return *this; }
     ordered_map &operator=(ordered_map &&a) = default; /* move is ok? */
     ordered_map(const std::initializer_list<value_type> &il) : data(il) { init_data_map(); }
     // FIXME add allocator and comparator ctors...
@@ -81,6 +88,8 @@ public:
     bool        empty() const noexcept { return data.empty(); }
     size_type   size() const noexcept { return data_map.size(); }
     size_type   max_size() const noexcept { return data_map.max_size(); }
+    bool operator==(const ordered_map &a) const { return data == a.data; }
+    bool operator!=(const ordered_map &a) const { return data != a.data; }
 
     iterator        find(const key_type &a) { return tr_iter(data_map.find(&a)); }
     const_iterator  find(const key_type &a) const { return tr_iter(data_map.find(&a)); }
@@ -135,8 +144,10 @@ public:
             data_map.emplace(&it->first, it);
             return std::make_pair(it, true); }
         return std::make_pair(it, false); }
+    template<class InputIterator> void insert(InputIterator b, InputIterator e) {
+        while (b != e) insert(*b++); }
 
-    iterator erase(const_iterator pos) {
+    iterator erase(iterator pos) {
         data_map.erase(&pos->first);
         return data.erase(pos); }
     size_type erase(const K &k) {

@@ -164,6 +164,9 @@ public:
 		p1++; p2++; }
 	    return p2 != b->end(); }
 	return std::type_index(typeid(*this)) < std::type_index(typeid(a)); }
+    using obj::operator <=;
+    using obj::operator >=;
+    using obj::operator >;
     bool operator ==(const obj &a) const {
 	if (const vector *b = dynamic_cast<const vector *>(&a)) {
 	    auto p1 = begin(), p2 = b->begin();
@@ -172,6 +175,7 @@ public:
 		p1++; p2++; } 
 	    return (p1 == end() && p2 == b->end()); }
 	return false; }
+    using obj::operator !=;
     void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const;
     bool test_width(int &limit) const {
 	limit -= 2;
@@ -218,6 +222,9 @@ public:
 		p1++; p2++; }
 	    return p2 != b->end(); }
 	return std::type_index(typeid(*this)) < std::type_index(typeid(a)); }
+    using obj::operator <=;
+    using obj::operator >=;
+    using obj::operator >;
     bool operator ==(const obj &a) const {
 	if (const map *b = dynamic_cast<const map *>(&a)) {
 	    auto p1 = begin(), p2 = b->begin();
@@ -227,6 +234,7 @@ public:
 		p1++; p2++; }
 	    return (p1 == end() && p2 == b->end()); }
 	return false; }
+    using obj::operator !=;
     void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const;
     bool test_width(int &limit) const {
 	limit -= 2;
