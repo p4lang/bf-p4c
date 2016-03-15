@@ -27,6 +27,8 @@ void FieldDefUse::Init::add_field(cstring field) {
 
 Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
     auto rv = Inspector::init_apply(root);
+    conflict.clear();
+    conflict.resize(phv.num_fields());
     // root->apply(Init(*this));
     return rv;
 }

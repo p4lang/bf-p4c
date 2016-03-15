@@ -43,12 +43,20 @@ class CheckTableNameDuplicate : public MauInspector {
         return true; }
 };
 
-class DumpPipe : public Inspector {
-    bool preorder(const IR::Tofino::Pipe *pipe) override {
-        if (verbose > 1)
-            dump(pipe);
-        else if (verbose)
-            std::cout << *pipe << std::endl;
+struct DumpPipe : public Inspector {
+    const char *heading;
+    DumpPipe() : heading(nullptr) {}
+    explicit DumpPipe(const char *h) : heading(h) {}
+    bool preorder(const IR::Node *pipe) override {
+        if (verbose) {
+            if (heading)
+                std::cout << "-------------------------------------------------" << std::endl
+                          << heading << std::endl
+                          << "-------------------------------------------------" << std::endl;
+            if (verbose > 1)
+                dump(pipe);
+            else
+                std::cout << *pipe << std::endl; }
         return false; }
 };
 
@@ -56,23 +64,20 @@ void force_link_dump(const IR::Node *n) { dump(n); }
 
 void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *options) {
     PhvInfo phv;
-    maupipe = maupipe->apply(AddMetadataShims());
-    maupipe = maupipe->apply(phv);
-    phv.allocatePOV();
-    maupipe = maupipe->apply(TableLayout());
-    maupipe = maupipe->apply(TableFindSeqDependencies());
-    if (verbose) {
-        std::cout << "-------------------------------------------------" << std::endl
-                  << "Initial table graph" << std::endl
-                  << "-------------------------------------------------" << std::endl;
-        std::cout << *maupipe << std::endl; }
     DependencyGraph deps;
-    maupipe->apply(FindDependencyGraph(&deps));
-    if (verbose)
-        std::cout << deps;
     TablesMutuallyExclusive mutex;
     FieldDefUse defuse(phv);
+    TableSummary summary;
+    MauAsmOutput mauasm(phv);
     PassManager backend = {
+        new AddMetadataShims,
+        &phv,
+        new VisitFunctor([&phv]() { phv.allocatePOV(); }),
+        new TableLayout,
+        new TableFindSeqDependencies,
+        new DumpPipe("Initial table graph"),
+        new FindDependencyGraph(&deps),
+        new VisitFunctor([&deps]() { if (verbose) std::cout << deps; }),
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),
         new SplitExtractEmit,
@@ -97,23 +102,15 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         &defuse,
         new MauPhvConstraints(phv),
         new PhvAllocate(phv, defuse.conflicts()),
+        new DumpPipe("Final table graph"),
+        new CheckTableNameDuplicate,
+        &summary,
+        new VisitFunctor([&summary]() { if (verbose) std::cout << summary; }),
+        &mauasm
     };
     maupipe = maupipe->apply(backend);
-    if (verbose) {
-        std::cout << DBPrint::setflag(DBPrint::TableNoActions);
-        std::cout << "-------------------------------------------------" << std::endl
-                  << "Final table graph" << std::endl
-                  << "-------------------------------------------------" << std::endl;
-        std::cout << *maupipe << std::endl /* << deps << defuse */; }
-    TableSummary summary;
-    maupipe->apply(CheckTableNameDuplicate());
-    maupipe->apply(summary);
-    if (verbose)
-        std::cout << summary;
     if (ErrorReporter::instance.getErrorCount() > 0)
         return;
-    MauAsmOutput mauasm(phv);
-    maupipe->apply(mauasm);
     std::ostream *out = &std::cout;
     if (options->outputFile)
         out = new std::ofstream(options->outputFile);
