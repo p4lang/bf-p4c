@@ -12,8 +12,8 @@ struct IXBar {
         EXACT_BYTES_PER_GROUP = 16,
         HASH_TABLES = 16,
         HASH_GROUPS = 8,
-        TERNARY_GROUPS = 16,
-        BYTE_GROUPS = 8,
+        TERNARY_GROUPS = StageUse::MAX_TERNARY_GROUPS,
+        BYTE_GROUPS = StageUse::MAX_TERNARY_GROUPS/2,
         TERNARY_BYTES_PER_GROUP = 5,
     };
     struct Loc {

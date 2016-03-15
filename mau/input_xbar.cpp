@@ -29,6 +29,8 @@ static bool find_alloc(IXBar::Use &alloc, int groups, int bytes_per_group,
                        std::multimap<cstring, IXBar::Loc>       &fields,
                        bool second_try) {
     int groups_needed = (alloc.use.size() + bytes_per_group - 1)/bytes_per_group;
+    if (groups_needed > groups)
+        return false;
     struct grp_use {
         int group, found, free_cnt; bitvec free;
         void dbprint(std::ostream &out) const {
@@ -188,12 +190,13 @@ std::ostream &operator<<(std::ostream &out, const IXBar &ixbar) {
     std::map<cstring, char>     fields;
     for (int r = 0; r < IXBar::EXACT_GROUPS; r++) {
         write_group(out, ixbar.exact_use[r], fields);
-        out << "  ";
-        write_group(out, ixbar.ternary_use[2*r], fields);
-        out << " ";
-        write_one(out, ixbar.byte_group_use[r], fields);
-        out << " ";
-        write_group(out, ixbar.ternary_use[2*r+1], fields);
+        if (r < IXBar::BYTE_GROUPS) {
+            out << "  ";
+            write_group(out, ixbar.ternary_use[2*r], fields);
+            out << " ";
+            write_one(out, ixbar.byte_group_use[r], fields);
+            out << " ";
+            write_group(out, ixbar.ternary_use[2*r+1], fields); }
         out << std::endl; }
     for (auto &f : fields)
         out << "   " << f.second << " " << f.first << std::endl;
