@@ -8,12 +8,13 @@ using namespace IndentCtl;
 
 void IR::MAU::Table::dbprint(std::ostream &out) const {
     out << "table " << name;
-    if (gateway_expr) {
-        int prec = getprec(out);
-        out << " " << (gateway_cond ? "" : "!") << "(" << setprec(Prec_Low) << indent
-            << gateway_expr << unindent << setprec(prec) << ")"; }
     if (logical_id >= 0)
         out << '[' << gress << ' ' << hex(logical_id) << ']';
+    for (auto &gw : gateway_rows) {
+        out << endl << "gw: ";
+        if (gw.first) out << gw.first;
+        else out << "(miss)";
+        out << " => " << (gw.second ? gw.second : "run table"); }
     if (layout.match_width_bits || layout.overhead_bits)
         out << endl << "{ " << (layout.gateway ? "G" : "")
             << (layout.ternary ? "T" : "E") << " " << layout.match_width_bits << "+"

@@ -158,7 +158,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         emit_memory(out, indent, tbl->resources->memuse.at(tbl->name));
         emit_ixbar(out, indent, tbl->resources->match_ixbar);
     }
-    if (tbl->gateway_expr) {
+    if (tbl->uses_gateway()) {
         indent_t gw_indent = indent;
         if (tbl->match_table)
             out << gw_indent++ << "gateway:" << std::endl;

@@ -158,9 +158,10 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv,
     if (!tbl) return true;
     if (tbl->match_table && !allocTable(tbl->layout.ternary, tbl->match_table, phv, tbl_alloc))
         return false;
-    if (tbl->gateway_expr && !allocGateway(tbl->gateway_expr, phv, gw_alloc)) {
-        tbl_alloc.clear();
-        return false; }
+    for (auto &gw : tbl->gateway_rows) {
+        if (!allocGateway(gw.first, phv, gw_alloc)) {
+            tbl_alloc.clear();
+            return false; } }
     return true;
 }
 

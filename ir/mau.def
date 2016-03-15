@@ -10,16 +10,19 @@ namespace MAU {
 // each stage, which will run simultaneously and have their results
 // predicated by the predicate mask calculated from the next tables
 class Table {
-    cstring                             name;
-    gress_t                             gress;
-    int                                 logical_id = -1;
-    bool                                gateway_cond = true;
-    NullOK Expression                   gateway_expr;
-    NullOK ActionFunction               gateway_payload;
-    NullOK IR::Table                    match_table;
-    inline Vector<Attached>             attached;
+    cstring                                     name;
+    gress_t                                     gress;
+    int                                         logical_id = -1;
+    vector<std::pair<Expression, cstring>>      gateway_rows;
+    /* each gateway_row is a an expression for a single row of the gateway, with the
+     * string being a tag to run in 'next' for next table, or null if the match_table should
+     * run.  The last row (only) may have a NULL expression for 'always' -- corresponding to the
+     * gateway miss action (taken if no gateway rows match) */
+    NullOK ActionFunction                       gateway_payload;
+    NullOK IR::Table                            match_table;
+    inline Vector<Attached>                     attached;
     inline NameMap<ActionFunction, ordered_map> actions;
-    inline NameMap<TableSeq>            next;
+    inline NameMap<TableSeq>                    next;
 #noconstructor
 #nooperator==
 #emit
@@ -41,7 +44,8 @@ class Table {
     Table(cstring n, gress_t gr, const IR::Table *t)
     : name(n), gress(gr), match_table(t) {}
     Table(cstring n, gress_t gr, const Expression *gw)
-    : name(n), gress(gr), gateway_expr(gw) {}
+    : name(n), gress(gr), gateway_rows{ std::make_pair(gw, "true"),
+                                        std::make_pair(nullptr, "false") } {}
 
     int logical_order() const { return logical_id + gress * 4096; }
     Table *clone_rename(const char *ext) const {
@@ -50,10 +54,32 @@ class Table {
         for (auto &at : rv->attached) at = at->clone_rename(ext);
         return rv; }
     bool operator==(const Table &a) const;
+    bool uses_gateway() const { return !gateway_rows.empty(); }
 #end
+    validate {
+        std::set<cstring> gw_next;
+        for (auto &gw : gateway_rows) {
+            if (&gw != &gateway_rows.back())
+                CHECK_NULL(gw.first);
+            else if (gw.first)
+                gw_next.emplace(cstring());
+            gw_next.emplace(gw.second); }
+        if (!match_table && !uses_gateway())
+            BUG("table with no gateway or match table");
+        if (!match_table && gw_next.count(cstring()))
+            BUG("gateway with no match table wants to run match table");
+        if (match_table && uses_gateway() && !gw_next.count(cstring()))
+            BUG("gateway always overrides match table");
+        for (auto &nxt : next) {
+            if (nxt.first == "default") {
+            } else if (nxt.first == "$hit" || nxt.first == "$miss") {
+                if (!match_table)
+                    BUG("%s next on table with no match_table", nxt.first);
+            } else if (!gw_next.count(nxt.first) && !actions.count(nxt.first)) {
+                BUG("%s next on table with no such action or gw result", nxt.first); } } }
     visit_children {
-        unsigned next_count = 0;
-        v.visit(gateway_expr, "gateway_expr");
+        for (auto &gw : gateway_rows)
+            v.visit(gw.first, "gateway_row");
         auto &gateway_inhibit(v.flow_clone());
         gateway_inhibit.visit(gateway_payload, "gateway_payload");
         v.visit(match_table, "match_table");
@@ -62,43 +88,28 @@ class Table {
             for (auto &action : Values(actions)) {
                 auto &clone2(clone.flow_clone());
                 clone2.visit(action);
-                if (next.count(action->name)) {
+                if (next.count(action->name))
                     clone2.visit(next.at(action->name), action->name.name);
-                    next_count++; }
                 v.flow_merge(clone2); }
             if (next.count("default")) {
                 auto &clone2(clone.flow_clone());
                 clone2.visit(next.at("default"), "default");
-                next_count++;
                 v.flow_merge(clone2); }
             if (next.count("$miss")) {
                 auto &clone2(clone.flow_clone());
                 clone2.visit(next.at("$miss"), "$miss");
-                next_count++;
                 v.flow_merge(clone2); }
             if (next.count("$hit")) {
                 auto &clone2(clone.flow_clone());
                 clone2.visit(next.at("$hit"), "$hit");
-                next_count++;
                 v.flow_merge(clone2); } }
-        if (gateway_expr) {
-            if (next.count("true")) {
-                if (gateway_cond && match_table)
-                    v.visit(next.at("true"), "true");
-                else
-                    gateway_inhibit.visit(next.at("true"), "true");
-                next_count++; }
-            if (next.count("false")) {
-                if (gateway_cond || !match_table)
-                    gateway_inhibit.visit(next.at("false"), "false");
-                else
-                    v.visit(next.at("false"), "false");
-                next_count++; }
-            v.flow_merge(gateway_inhibit); }
-        if (next_count != next.size()) {
-            // FIXME -- should check for this and issue error in extract.  Still need
-            // BUG here in case a transform introduces a problem
-            BUG("unreachable results in table"); }
+        std::set<cstring> gw_next;
+        for (auto &gw : gateway_rows) {
+            if (gw.second && next.count(gw.second) && !gw_next.count(gw.second)) {
+                auto &clone2(gateway_inhibit.flow_clone());
+                clone2.visit(next.at(gw.second), gw.second);
+                v.flow_merge(clone2);
+                gw_next.emplace(gw.second); } }
         attached.visit_children(v);
     }
 }

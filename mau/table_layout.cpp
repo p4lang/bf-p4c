@@ -43,12 +43,11 @@ class GatewayLayout : public MauInspector {
     explicit GatewayLayout(IR::MAU::Table::Layout &l) : layout(l) {}
 };
 
-static const IR::Expression *
-setup_gateway_layout(IR::MAU::Table::Layout &layout, const IR::Expression *gw) {
-    // gw = canonicalize_gateway_expr(gw);
-    gw->apply(GatewayLayout(layout));
+static void
+setup_gateway_layout(IR::MAU::Table::Layout &layout, IR::MAU::Table *tbl) {
+    for (auto &gw : tbl->gateway_rows)
+        gw.first->apply(GatewayLayout(layout));
     // should count gw tcam width and depth to support gw splitting when needed
-    return gw;
 }
 
 static void setup_action_layout(IR::MAU::Table *tbl) {
@@ -101,8 +100,8 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     tbl->layout.action_data_bytes = tbl->layout.overhead_bits = 0;
     if (tbl->match_table)
         setup_match_layout(tbl->layout, tbl->match_table);
-    if ((tbl->layout.gateway = tbl->gateway_expr != nullptr))
-        tbl->gateway_expr = setup_gateway_layout(tbl->layout, tbl->gateway_expr);
+    if ((tbl->layout.gateway = tbl->uses_gateway()))
+        setup_gateway_layout(tbl->layout, tbl);
     setup_action_layout(tbl);
     VisitAttached attached(&tbl->layout);
     for (auto at : tbl->attached)

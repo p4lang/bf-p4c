@@ -103,3 +103,23 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::BOr *e) {
         e->right = t; }
     return e;
 }
+
+const IR::MAU::Table *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
+    auto &rows = tbl->gateway_rows;
+    if (rows.empty() || !rows[0].first)
+        return tbl;
+    /* split logical-OR operations across rows */
+    while (auto *e = rows[0].first->to<IR::LOr>()) {
+        auto act = rows[0].second;
+        rows[0].first = e->right;
+        rows.insert(rows.begin(), std::make_pair(e->left, act)); }
+    /* move != to last row and reverse its sense (changing to ==) */
+    for (unsigned i = 0; i < rows.size() - 1; i++) {
+        if (auto *e = rows[i].first->to<IR::Neq>()) {
+            if (!rows[i+1].first) {
+                rows[i].first = new IR::Equ(e->left, e->right);
+                std::swap(rows[i].second, rows[i+1].second);
+            } else if (rows[i+1].second == rows[i].second) {
+                std::swap(rows[i].first, rows[i+1].first); } } }
+    return tbl;
+}

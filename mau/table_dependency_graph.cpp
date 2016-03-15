@@ -117,14 +117,14 @@ bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
         LOG3("FindDep table " << t->name);
         auto &table = graph.emplace(t->name, Table(t->name, gress)).first->second;
         add_control_dependency(&table, t);
-        if (t->gateway_expr)
-            t->gateway_expr->apply(AddDependencies(access, &table, Table::MATCH));
+        for (auto &gw : t->gateway_rows)
+            gw.first->apply(AddDependencies(access, &table, Table::MATCH));
         if (t->match_table && t->match_table->reads)
             t->match_table->reads->apply(AddDependencies(access, &table, Table::MATCH));
         for (auto &action : Values(t->actions))
             action->apply(AddDependencies(access, &table, Table::ACTION));
-        if (t->gateway_expr)
-            t->gateway_expr->apply(UpdateAccess(access, &table));
+        for (auto &gw : t->gateway_rows)
+            gw.first->apply(UpdateAccess(access, &table));
         for (auto &action : Values(t->actions))
             action->apply(UpdateAccess(access, &table));
     } else {

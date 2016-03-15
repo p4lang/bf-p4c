@@ -12,7 +12,7 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
             << ' ' << std::setw(30) << t->name
             << ' ' << std::setw(2) << t->layout.ixbar_bytes
             << ' ' << std::setw(3) << t->layout.match_width_bits
-            << ' ' << (t->gateway_expr ? '1' : '0')
+            << ' ' << (t->uses_gateway() ? '1' : '0')
             << ' ' << std::setw(2) << use.srams
             << ' ' << std::setw(2) << use.tcams
             << ' ' << std::setw(2) << use.maprams

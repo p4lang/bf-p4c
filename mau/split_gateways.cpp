@@ -17,7 +17,7 @@ const IR::Node *SplitGateways::postorder(IR::MAU::Table *t) {
         prune();
         return t; }
 #endif
-    if (!t->gateway_expr) return t;
+    if (!t->uses_gateway()) return t;
     if (t->match_table) return t;
     assert(t->actions.empty());
     assert(t->attached.empty());
@@ -30,9 +30,7 @@ const IR::Node *SplitGateways::postorder(IR::MAU::Table *t) {
         for (auto &table : seq->tables) {
             if (splitting) {
                 snprintf(suffix, sizeof(suffix), ".%d", ++counter);
-                newtable = new IR::MAU::Table(t->name + suffix, t->gress, t->gateway_expr);
-                newtable->gateway_cond = t->gateway_cond;
-                rv->push_back(newtable); }
+                rv->push_back(t->clone_rename(suffix)); }
             newtable->next[it->first] =
                 new IR::MAU::TableSeq(newtable->next[it->first], table);
             if (uses.tables_modify(table) & uses.table_reads(t))

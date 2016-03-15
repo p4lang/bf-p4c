@@ -16,6 +16,7 @@ class CanonGatewayExpr : public MauTransform {
     const IR::Expression *postorder(IR::LNot *) override;
     const IR::Expression *postorder(IR::BAnd *) override;
     const IR::Expression *postorder(IR::BOr *) override;
+    const IR::MAU::Table *postorder(IR::MAU::Table *) override;
 };
 
 #endif /* _TOFINO_MAU_GATEWAY_H_ */

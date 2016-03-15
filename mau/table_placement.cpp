@@ -57,7 +57,8 @@ struct TablePlacement::Placed {
     cstring                     name;
     int                         entries = 0;
     bitvec                      placed;  // fully placed tables after this placement
-    bool                        need_more = false, gw_cond = true;
+    bool                        need_more = false;
+    cstring                     gw_result_tag;
     const IR::MAU::Table        *table, *gw = 0;
     int                         stage, logical_id;
     StageUseEstimate            use;
@@ -93,19 +94,19 @@ static int count(const TablePlacement::Placed *pl) {
 }
 
 TablePlacement::Placed *gateway_merge(TablePlacement::Placed *pl) {
-    if (pl->gw || !pl->table->gateway_expr || pl->table->match_table)
+    if (pl->gw || !pl->table->uses_gateway() || pl->table->match_table)
         return pl;
     /* table is just a gateway -- look for a dependent match table to combine with */
-    bool cond = true;
+    cstring result_tag;
     const IR::MAU::Table *match = 0;
     for (auto it = pl->table->next.rbegin(); it != pl->table->next.rend(); it++) {
         int idx = -1;
         for (auto t : it->second->tables) {
             ++idx;
             if (it->second->deps[idx]) continue;
-            if (t->gateway_expr) continue;
+            if (t->uses_gateway()) continue;
             match = t;
-            cond = it->first == "true";
+            result_tag = it->first;
             break; }
         if (match) break; }
     if (match) {
@@ -113,7 +114,7 @@ TablePlacement::Placed *gateway_merge(TablePlacement::Placed *pl) {
         pl->name = match->name;
         pl->gw = pl->table;
         pl->table = match;
-        pl->gw_cond = cond; }
+        pl->gw_result_tag = result_tag; }
     return pl;
 }
 
@@ -182,7 +183,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     StageUseEstimate increment_use(t, increment_entries, &resources->match_ixbar);
     rv->use = StageUseEstimate(t, rv->entries, &resources->match_ixbar);
     if (rv->gw) {
-        assert(!t->gateway_expr);
+        assert(!t->uses_gateway());
         assert(!rv->gw->match_table);
         rv->use.exact_ixbar_bytes += rv->gw->layout.ixbar_bytes;
         min_use.exact_ixbar_bytes += rv->gw->layout.ixbar_bytes;
@@ -392,16 +393,18 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     if (it->second->gw && it->second->gw->name == tbl->name) {
         /* fold gateway and match table together */
         auto match = it->second->table;
-        assert(match && !tbl->match_table && !match->gateway_expr);
+        assert(match && !tbl->match_table && !match->uses_gateway());
         LOG3("folding gateway " << tbl->name << " onto " << match->name);
         tbl->name = match->name;
-        tbl->gateway_cond = it->second->gw_cond;
+        for (auto &gw : tbl->gateway_rows)
+            if (gw.second == it->second->gw_result_tag)
+                gw.second = cstring();
         tbl->match_table = match->match_table;
         tbl->actions = match->actions;
         tbl->attached = match->attached;
         tbl->layout += match->layout;
-        auto *seq = tbl->next.at(tbl->gateway_cond ? "true" : "false")->clone();
-        tbl->next.erase(tbl->gateway_cond ? "true" : "false");
+        auto *seq = tbl->next.at(it->second->gw_result_tag)->clone();
+        tbl->next.erase(it->second->gw_result_tag);
         if (seq->tables.size() != 1) {
             bool found = false;
             for (auto it = seq->tables.begin(); it != seq->tables.end(); it++)
@@ -446,10 +449,9 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
             rv = table_part;
             assert(!prev);
         } else {
-            table_part->gateway_expr = 0;
-            table_part->gateway_cond = true;
-            table_part->next.erase("true");
-            table_part->next.erase("false");
+            for (auto &gw : table_part->gateway_rows)
+                table_part->next.erase(gw.second);
+            table_part->gateway_rows.clear();
             prev->next["$miss"] = new IR::MAU::TableSeq(table_part); }
         prev = table_part; }
     assert(rv);
