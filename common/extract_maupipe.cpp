@@ -56,17 +56,21 @@ class GetTofinoTables : public Inspector {
   : program(nullptr), blockMap(bm), gress(gr), pipe(p) {}
 
  private:
+  void add_tt_action(IR::MAU::Table *tt, IR::ID name) {
+    if (auto action = program->get<IR::ActionFunction>(name)) {
+      if (!tt->actions.count(name))
+        tt->actions.add(name, action);
+      else
+        error("%s: action %s appears multiple times in table %s", name.srcInfo, name, tt->name);
+    } else {
+      error("%s: no action %s for table %s", name.srcInfo, name, tt->name); } }
   void setup_tt_actions(IR::MAU::Table *tt, const IR::Table *table) {
     for (auto act : table->actions)
-      if (auto action = program->get<IR::ActionFunction>(act.name))
-        if (std::find(tt->actions.begin(), tt->actions.end(), action) == tt->actions.end())
-          tt->actions.push_back(action);
+      add_tt_action(tt, act);
     if (auto ap = program->get<IR::ActionProfile>(table->action_profile.name)) {
       tt->attached.push_back(ap);
       for (auto act : ap->actions)
-        if (auto action = program->get<IR::ActionFunction>(act.name))
-          if (std::find(tt->actions.begin(), tt->actions.end(), action) == tt->actions.end())
-            tt->actions.push_back(action);
+        add_tt_action(tt, act);
       if (auto sel = program->get<IR::ActionSelector>(ap->selector.name))
         tt->attached.push_back(sel);
       else if (ap->selector)
@@ -78,8 +82,12 @@ class GetTofinoTables : public Inspector {
     for (auto act : *table->properties->getProperty("actions")->value
                           ->to<IR::ActionList>()->actionList)
       if (auto action = blockMap->refMap->getDeclaration(act->name->path)
-                                ->to<IR::ActionContainer>())
-        tt->actions.push_back(new IR::ActionFunction(action, act->arguments));
+                                ->to<IR::ActionContainer>()) {
+        if (!tt->actions.count(action->name))
+          tt->actions.add(action->name, new IR::ActionFunction(action, act->arguments));
+        else
+          error("%s: action %s appears multiple times in table %s", action->name.srcInfo,
+                action->name, tt->name); }
     // action_profile already pulled into TableContainer?
   }
 
@@ -114,8 +122,17 @@ class GetTofinoTables : public Inspector {
       error("%s: Multiple applies of table %s not supported", a->srcInfo, a->name); }
     return true; }
   void postorder(const IR::Apply *a) override {
-    for (auto &act : a->actions)
-      tables.at(a)->next[act.first] = seqs.at(act.second); }
+    auto tt = tables.at(a);
+    for (auto &act : a->actions) {
+      auto name = act.first;
+      if (!tt->actions.count(name)) {
+          if (name == "hit")
+            name = "$hit";
+          else if (name == "miss")
+            name = "$miss";
+          else if (name != "default")
+            error("%s: no action %s in table %s", a->srcInfo, name, tt->name); }
+      tt->next[name] = seqs.at(act.second); } }
   bool preorder(const IR::MethodCallExpression *m) override {
     auto mi = P4V12::MethodInstance::resolve(m, blockMap->refMap, blockMap->typeMap);
     if (!mi || !mi->isApply())

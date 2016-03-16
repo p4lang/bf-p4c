@@ -18,7 +18,7 @@ class Table {
     NullOK ActionFunction               gateway_payload;
     NullOK IR::Table                    match_table;
     inline Vector<Attached>             attached;
-    inline Vector<ActionFunction>       actions;
+    inline NameMap<ActionFunction, ordered_map> actions;
     inline NameMap<TableSeq>            next;
 #noconstructor
 #nooperator==
@@ -59,13 +59,9 @@ class Table {
         v.visit(match_table, "match_table");
         auto &clone(v.flow_clone());
         if (match_table) {
-            bool hit_action = false, miss_action = false;
-            for (auto &action : actions) {
+            for (auto &action : Values(actions)) {
                 auto &clone2(clone.flow_clone());
                 clone2.visit(action);
-                // FIXME -- should be converting these to $hit and $miss in extract
-                if (action->name == "hit") hit_action = true;
-                if (action->name == "miss") miss_action = true;
                 if (next.count(action->name)) {
                     clone2.visit(next.at(action->name), action->name.name);
                     next_count++; }
@@ -77,17 +73,12 @@ class Table {
                 v.flow_merge(clone2); }
             if (next.count("$miss")) {
                 auto &clone2(clone.flow_clone());
-                clone2.visit(next.at("$miss"), "miss");
+                clone2.visit(next.at("$miss"), "$miss");
                 next_count++;
                 v.flow_merge(clone2); }
-            if (next.count("miss") && !miss_action) {
+            if (next.count("$hit")) {
                 auto &clone2(clone.flow_clone());
-                clone2.visit(next.at("miss"), "miss");
-                next_count++;
-                v.flow_merge(clone2); }
-            if (next.count("hit") && !hit_action) {
-                auto &clone2(clone.flow_clone());
-                clone2.visit(next.at("hit"), "hit");
+                clone2.visit(next.at("$hit"), "$hit");
                 next_count++;
                 v.flow_merge(clone2); } }
         if (gateway_expr) {
@@ -147,6 +138,7 @@ class TableSeq {
     TableSeq(const TableSeq *a, const Table *b) {
         if (a) tables.insert(tables.end(), a->tables.begin(), a->tables.end());
         if (b) tables.push_back(b); }
+    bool empty() const { return tables.empty(); }
     const Table *front() const { return tables.empty() ? nullptr : tables.front(); }
 #end
 #apply
