@@ -220,13 +220,13 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4V12Program *program) {
         error("No main switch");
         return nullptr; }
 
-    auto parser_blk = blockMap->getBlock(top, top->getParameterValue("p"));
+    auto parser_blk = blockMap->getBlockBoundToParameter(top, "p");
     auto parser = parser_blk->to<P4V12::ParserBlock>()->container;
-    auto ingress_blk = blockMap->getBlock(top, top->getParameterValue("ig"));
+    auto ingress_blk = blockMap->getBlockBoundToParameter(top, "ig");
     auto ingress = ingress_blk->to<P4V12::ControlBlock>()->container;
-    auto egress_blk = blockMap->getBlock(top, top->getParameterValue("eg"));
+    auto egress_blk = blockMap->getBlockBoundToParameter(top, "eg");
     auto egress = egress_blk->to<P4V12::ControlBlock>()->container;
-    auto deparser_blk = blockMap->getBlock(top, top->getParameterValue("dep"));
+    auto deparser_blk = blockMap->getBlockBoundToParameter(top, "dep");
     auto deparser = deparser_blk->to<P4V12::ControlBlock>()->container;
     LOG1("parser:" << parser);
     LOG1("ingress:" << ingress);
