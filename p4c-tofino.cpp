@@ -46,7 +46,7 @@ int main(int ac, char **av) {
 #else
     switch (options.langVersion) {
     case CompilerOptions::FrontendVersion::P4v1: {
-        auto program = parse_p4v1_file(options.file, in);
+        auto program = parse_p4v1_file(options, in);
         options.closeInput(in);
         PassManager fe = {
             new P4V12::ConstantFolding(nullptr, nullptr),
