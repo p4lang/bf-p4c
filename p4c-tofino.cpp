@@ -9,9 +9,9 @@
 #include "lib/gc.h"
 #include "lib/log.h"
 #include "lib/exceptions.h"
-#include "frontends/p4v1/p4-parse.h"
-#include "frontends/p4v1.2/p4v1.2-parse.h"
-#include "frontends/p4v1.2/v12_frontend.h"
+#include "frontends/p4v1/p4v1-parse.h"
+#include "frontends/p4/p4-parse.h"
+#include "frontends/p4/frontend.h"
 #include "frontends/common/constantFolding.h"
 #include "frontends/common/header_type.h"
 #include "frontends/common/parseInput.h"
@@ -49,7 +49,7 @@ int main(int ac, char **av) {
         auto program = parse_p4v1_file(options.file, in);
         options.closeInput(in);
         PassManager fe = {
-            new P4V12::ConstantFolding(nullptr, nullptr),
+            new P4::ConstantFolding(nullptr, nullptr),
             new CheckHeaderTypes,
             new HeaderTypeMaxLengthCalculator,
             new TypeCheck,
@@ -68,7 +68,7 @@ int main(int ac, char **av) {
     case CompilerOptions::FrontendVersion::P4v1_2: {
         auto program = parse_p4v1_2_file(options.file, in);
 #endif
-        program = run_v12_frontend(options, program, v1);
+        program = run_frontend(options, program, v1);
         if (verbose) {
             std::cout << "-------------------------------------------------" << std::endl
                       << "Initial program" << std::endl
@@ -77,7 +77,7 @@ int main(int ac, char **av) {
                 dump(program);
             else
                 std::cout << *program << std::endl; }
-        P4V12::EvaluatorPass evaluator(v1);
+        P4::EvaluatorPass evaluator(v1);
         PassManager midend = {
             &evaluator,
             new FillFromBlockMap(&evaluator),

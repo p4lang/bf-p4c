@@ -2,10 +2,10 @@
 #define _TOFINO_COMMON_BLOCKMAP_H_
 
 #include "ir/ir.h"
-#include "frontends/p4v1.2/evaluator/evaluator.h"
+#include "frontends/p4/evaluator/evaluator.h"
 
 class FillFromBlockMap : public Transform {
-    P4V12::EvaluatorPass *eval;
+    P4::EvaluatorPass *eval;
     const IR::Expression *preorder(IR::Expression *exp) {
         if (exp->type == IR::Type::Unknown::get())
             if (auto type = eval->getBlockMap()->typeMap->getType(getOriginal()))
@@ -21,7 +21,7 @@ class FillFromBlockMap : public Transform {
             BUG("Type_Name %1% doesn't map to a declaration", type, decl); } }
 
  public:
-    explicit FillFromBlockMap(P4V12::EvaluatorPass *e) : eval(e) {}
+    explicit FillFromBlockMap(P4::EvaluatorPass *e) : eval(e) {}
 };
 
 #endif /* _TOFINO_COMMON_BLOCKMAP_H_ */

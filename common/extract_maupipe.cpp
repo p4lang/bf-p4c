@@ -3,8 +3,8 @@
 #include "ir/dbprint.h"
 #include "common/inline_control_flow.h"
 #include "common/name_gateways.h"
-#include "frontends/p4v1.2/evaluator/evaluator.h"
-#include "frontends/p4v1.2/methodInstance.h"
+#include "frontends/p4/evaluator/evaluator.h"
+#include "frontends/p4/methodInstance.h"
 #include "tofino/common/param_binding.h"
 #include "tofino/mau/table_dependency_graph.h"
 #include "tofino/parde/extract_parser.h"
@@ -43,7 +43,7 @@ struct AttachTables : public Modifier {
 
 class GetTofinoTables : public Inspector {
   const IR::Global                              *program;
-  const P4V12::BlockMap                         *blockMap;
+  const P4::BlockMap                         *blockMap;
   gress_t                                       gress;
   IR::Tofino::Pipe                              *pipe;
   map<const IR::Node *, IR::MAU::Table *>       tables;
@@ -52,7 +52,7 @@ class GetTofinoTables : public Inspector {
  public:
   GetTofinoTables(const IR::Global *gl, gress_t gr, IR::Tofino::Pipe *p)
   : program(gl), blockMap(nullptr), gress(gr), pipe(p) {}
-  GetTofinoTables(const P4V12::BlockMap *bm, gress_t gr, IR::Tofino::Pipe *p)
+  GetTofinoTables(const P4::BlockMap *bm, gress_t gr, IR::Tofino::Pipe *p)
   : program(nullptr), blockMap(bm), gress(gr), pipe(p) {}
 
  private:
@@ -134,7 +134,7 @@ class GetTofinoTables : public Inspector {
             error("%s: no action %s in table %s", a->srcInfo, name, tt->name); }
       tt->next[name] = seqs.at(act.second); } }
   bool preorder(const IR::MethodCallExpression *m) override {
-      auto mi = P4V12::MethodInstance::resolve(m, blockMap->refMap, blockMap->typeMap, true);
+      auto mi = P4::MethodInstance::resolve(m, blockMap->refMap, blockMap->typeMap, true);
     if (!mi || !mi->isApply())
       BUG("Method Call %1% not apply", m);
     auto table = mi->object->to<IR::TableContainer>();
@@ -228,8 +228,8 @@ class ConvertIndexToHeaderStackItemRef : public Transform {
         return new IR::HeaderStackItemRef(idx->srcInfo, type, idx->left, idx->right); }
 };
 
-const IR::Tofino::Pipe *extract_maupipe(const IR::P4V12Program *program) {
-    P4V12::EvaluatorPass evaluator(true);
+const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
+    P4::EvaluatorPass evaluator(true);
     program = program->apply(evaluator);
     auto blockMap = evaluator.getBlockMap();
     auto top = blockMap->getToplevelBlock();
@@ -238,13 +238,13 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4V12Program *program) {
         return nullptr; }
 
     auto parser_blk = blockMap->getBlockBoundToParameter(top, "p");
-    auto parser = parser_blk->to<P4V12::ParserBlock>()->container;
+    auto parser = parser_blk->to<P4::ParserBlock>()->container;
     auto ingress_blk = blockMap->getBlockBoundToParameter(top, "ig");
-    auto ingress = ingress_blk->to<P4V12::ControlBlock>()->container;
+    auto ingress = ingress_blk->to<P4::ControlBlock>()->container;
     auto egress_blk = blockMap->getBlockBoundToParameter(top, "eg");
-    auto egress = egress_blk->to<P4V12::ControlBlock>()->container;
+    auto egress = egress_blk->to<P4::ControlBlock>()->container;
     auto deparser_blk = blockMap->getBlockBoundToParameter(top, "dep");
-    auto deparser = deparser_blk->to<P4V12::ControlBlock>()->container;
+    auto deparser = deparser_blk->to<P4::ControlBlock>()->container;
     LOG1("parser:" << parser);
     LOG1("ingress:" << ingress);
     LOG1("egress:" << egress);
