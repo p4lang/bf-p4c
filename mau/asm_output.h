@@ -19,7 +19,8 @@ class MauAsmOutput : public MauInspector {
         by_stage[std::make_pair(tbl->gress, tbl->logical_id/16U)].push_back(tbl);
         return true; }
     friend std::ostream &operator<<(std::ostream &, const MauAsmOutput &);
-    void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use &) const;
+    class TableFormat;
+    void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use &, const TableFormat *) const;
     void emit_memory(std::ostream &out, indent_t, const Memories::Use &) const;
     void emit_table(std::ostream &out, const IR::MAU::Table *tbl) const;
     void emit_table_indir(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;

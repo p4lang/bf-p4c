@@ -1,6 +1,7 @@
 #include "lib/algorithm.h"
 #include "asm_output.h"
 #include "lib/bitops.h"
+#include "lib/bitrange.h"
 #include "lib/indent.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
@@ -31,26 +32,83 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
     return out;
 }
 
-void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::Use &use) const {
-    map<int, map<int, const IXBar::Use::Byte *>> sort;
+class MauAsmOutput::TableFormat {
+    const MauAsmOutput &self;
+public:
+    vector<Slice>       match_fields;
+    Slice               ghost_bits;
+    TableFormat(const MauAsmOutput &s, const IR::MAU::Table *tbl);
+};
+
+void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::Use &use,
+                              const TableFormat *fmt) const {
+    map<int, map<int, Slice>> sort;
     if (use.use.empty()) return;
     for (auto &b : use.use) {
-        bool n = sort[b.loc.group].emplace(b.loc.byte, &b).second;
+        bool n = sort[b.loc.group].emplace(b.loc.byte*8,
+            Slice(phv, b.field, b.byte*8, b.byte*8 + 7)).second;
         assert(n); }
-    out << indent++ << "input_xbar:" << std::endl;
     for (auto &group : sort) {
-        const IXBar::Use::Byte *prev = 0;
-        out << indent << "group " << group.first << ": { ";
-        for (auto &b : group.second) {
-            if (prev && prev->field == b.second->field && prev->byte+1 == b.second->byte) {
-                prev = b.second;
-                continue; }
-            if (prev) out << (prev->byte*8 + 7) << ')' << ", ";
-            out << (b.first*8) << ": " << canon_name(trim_asm_name(b.second->field)) << '('
-                << (b.second->byte*8) << "..";
-            prev = b.second; }
-        if (prev) out << (prev->byte*8 + 7) << ')';
-        out << " }" << std::endl; }
+        auto it = group.second.begin();
+        while (it != group.second.end()) {
+            auto next = it;
+            if (++next != group.second.end()) {
+                Slice j = it->second.join(next->second);
+                if (j && it->first + it->second.width() == next->first) {
+                    it->second = j;
+                    group.second.erase(next);
+                    continue; } }
+            it = next; } }
+    out << indent++ << "input_xbar:" << std::endl;
+    for (auto &group : sort)
+        out << indent << "group " << group.first << ": " << group.second << std::endl;
+    if (use.hash_table_input) {
+        for (int ht : bitvec(use.hash_table_input)) {
+            out << indent++ << "hash " << ht << ":" << std::endl;
+            unsigned half = ht & 1;
+            unsigned done = 0, mask_bits = 0;
+            vector<Slice> match_data;
+            Slice ghost;
+            for (auto &match : sort.at(ht/2)) {
+                Slice reg = match.second;
+                if (match.first/64U != half) {
+                    if ((match.first + reg.width() - 1)/64U != half)
+                        continue;
+                    assert(half);
+                    reg = reg(64 - match.first, 64);
+                } else if ((match.first + reg.width() - 1)/64U != half) {
+                    assert(!half);
+                    reg = reg(0, 63 - match.first); }
+                if (!reg) continue;
+                if (!ghost) ghost = fmt->ghost_bits & reg;
+                reg -= fmt->ghost_bits;
+                if (!reg) continue;
+                match_data.emplace_back(reg); }
+            for (auto &way : use.way_use) {
+                mask_bits |= way.mask;
+                if (done & (1 << way.slice)) continue;
+                done |= 1 << way.slice;
+                out << indent << (way.slice*10) << ".." << (way.slice*10 + 9) << ": ";
+                if (!match_data.empty()) {
+                    out << "random(" << emit_vector(match_data, ", ") << ")";
+                    if (ghost) out << " ^ "; }
+                if (ghost) out << ghost;
+                out << std::endl; }
+            for (auto range : bitranges(mask_bits)) {
+                out << indent << (range.first+40);
+                if (range.second != range.first) out << ".." << (range.second+40);
+                out << ": ";
+                if (!match_data.empty()) {
+                    out << "random(" << emit_vector(match_data, ", ") << ")";
+                    if (ghost) out << " ^ "; }
+                if (ghost) out << ghost(0, range.second - range.first);
+                out << std::endl; }
+            --indent; } }
+    if (use.hash_group >= 0) {
+        out << indent++ << "hash group " << use.hash_group << ":" << std::endl;
+        out << indent << "table: [" << emit_vector(bitvec(use.hash_table_input), ", ") << "]"
+            << std::endl;
+        --indent; }
 }
 
 class memory_vector {
@@ -142,8 +200,33 @@ class MauAsmOutput::EmitAction : public Inspector {
         visitDagOnce = false; }
 };
 
+MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Table *tbl) : self(s) {
+    /* FIXME -- this should probably be an aux data structure built earlier, rather than
+     * done in AsmOutput */
+
+    if (tbl->match_table && tbl->match_table->reads) {
+        /* somewhat duplicates what is done in IXBar::alloc_table */
+        for (auto r : *tbl->match_table->reads) {
+            auto *field = r;
+            if (auto mask = r->to<IR::Mask>()) {
+                field = mask->left;
+            } else if (auto prim = r->to<IR::Primitive>()) {
+                if (prim->name != "valid")
+                    BUG("unexpected reads expression %s", r);
+                // FIXME -- for now just assuming we can fit the valid bit reads in as needed
+                continue; }
+            const PhvInfo::Info *finfo;
+            if (!field || !(finfo = self.phv.field(field)))
+                BUG("unexpected reads expression %s", r);
+            match_fields.emplace_back(finfo); } }
+
+    if (!tbl->layout.ternary && !match_fields.empty())
+        ghost_bits = match_fields.back()(0, 9);
+}
+
 void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) const {
     /* FIXME -- some of this should be method(s) in IR::MAU::Table? */
+    TableFormat fmt(*this, tbl);
     const char *tbl_type = "gateway";
     indent_t    indent(1);
     if (tbl->match_table)
@@ -156,13 +239,13 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
             out << ", size: " << tbl->match_table->size;
         out << " }" << std::endl;
         emit_memory(out, indent, tbl->resources->memuse.at(tbl->name));
-        emit_ixbar(out, indent, tbl->resources->match_ixbar);
+        emit_ixbar(out, indent, tbl->resources->match_ixbar, &fmt);
     }
     if (tbl->uses_gateway()) {
         indent_t gw_indent = indent;
         if (tbl->match_table)
             out << gw_indent++ << "gateway:" << std::endl;
-        emit_ixbar(out, gw_indent, tbl->resources->gateway_ixbar);
+        emit_ixbar(out, gw_indent, tbl->resources->gateway_ixbar, &fmt);
     }
 
     /* FIXME -- this is a mess and needs to be rewritten to be sane */

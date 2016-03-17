@@ -52,6 +52,8 @@ class PhvInfo : public Inspector {
 
  public:
     const Info *field(int idx) const { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
+    const Info *field(cstring name) const {
+        return all_fields.count(name) ? &all_fields.at(name) : 0; }
     const Info *field(const IR::Expression *, std::pair<int, int> *bits = 0) const;
     const Info *field(const IR::Member *, std::pair<int, int> *bits = 0) const;
     const Info *field(const IR::HeaderSliceRef *, std::pair<int, int> *bits = 0) const;
