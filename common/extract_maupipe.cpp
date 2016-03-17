@@ -134,7 +134,7 @@ class GetTofinoTables : public Inspector {
             error("%s: no action %s in table %s", a->srcInfo, name, tt->name); }
       tt->next[name] = seqs.at(act.second); } }
   bool preorder(const IR::MethodCallExpression *m) override {
-    auto mi = P4V12::MethodInstance::resolve(m, blockMap->refMap, blockMap->typeMap);
+      auto mi = P4V12::MethodInstance::resolve(m, blockMap->refMap, blockMap->typeMap, true);
     if (!mi || !mi->isApply())
       BUG("Method Call %1% not apply", m);
     auto table = mi->object->to<IR::TableContainer>();

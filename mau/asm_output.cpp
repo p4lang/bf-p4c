@@ -208,8 +208,9 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
                     default_next.next_in_thread(tbl);
                 else
                     out << seq->front()->name;
-            } else
+            } else {
                 out << next_default;
+            }
             sep = ", "; }
         out << " ]" << std::endl;
         out << indent << "miss: " << next_miss << std::endl;
