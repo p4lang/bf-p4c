@@ -39,6 +39,15 @@ class Table {
             return memcmp(this, &a, sizeof(Layout)) == 0; }
         Layout &operator+=(const Layout &a);
     } layout;
+    struct Way {
+        /* POD type */
+        int             match_groups = 0;
+        int             entries = 0;
+        int             width = 0;
+        bool operator==(const Way &a) const {
+            return memcmp(this, &a, sizeof(Way)) == 0; }
+    };
+    std::vector<Way>    ways;
     const TableResourceAlloc            *resources = nullptr;
 
     Table(cstring n, gress_t gr, const IR::Table *t)
@@ -55,6 +64,7 @@ class Table {
         return rv; }
     bool operator==(const Table &a) const;
     bool uses_gateway() const { return !gateway_rows.empty(); }
+    int stage() const { return logical_id < 0 ? -1 : logical_id / StageUse::MAX_LOGICAL_IDS; }
 #end
     validate {
         std::set<cstring> gw_next;

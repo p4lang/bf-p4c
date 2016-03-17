@@ -15,10 +15,15 @@ void IR::MAU::Table::dbprint(std::ostream &out) const {
         if (gw.first) out << gw.first;
         else out << "(miss)";
         out << " => " << (gw.second ? gw.second : "run table"); }
-    if (layout.match_width_bits || layout.overhead_bits)
+    if (layout.match_width_bits || layout.overhead_bits) {
         out << endl << "{ " << (layout.gateway ? "G" : "")
             << (layout.ternary ? "T" : "E") << " " << layout.match_width_bits << "+"
-            << layout.overhead_bits << ", " << layout.action_data_bytes << " }";
+            << layout.overhead_bits << ", " << layout.action_data_bytes;
+        if (!ways.empty()) {
+            out << " [" << ways[0].width << 'x' << ways[0].match_groups;
+            for (auto &way : ways) out << " " << (way.entries/1024U) << "K";
+            out << "]"; }
+        out << " }"; }
     if (!(dbgetflags(out) & TableNoActions))
         for (auto &a : Values(actions))
             out << endl << a;

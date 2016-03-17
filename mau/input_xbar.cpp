@@ -1,6 +1,7 @@
 #include "input_xbar.h"
 #include "lib/algorithm.h"
 #include "lib/bitvec.h"
+#include "lib/bitops.h"
 #include "lib/hex.h"
 #include "lib/log.h"
 #include "tofino/phv/phv_fields.h"
@@ -11,6 +12,11 @@ void IXBar::clear() {
     byte_group_use.clear();
     exact_fields.clear();
     ternary_fields.clear();
+    hash_index_use.clear();
+    hash_single_bit_use.clear();
+    memset(hash_index_inuse, 0, sizeof(hash_index_inuse));
+    hash_group_use.clear();
+    memset(hash_single_bit_inuse, 0, sizeof(hash_single_bit_inuse));
 }
 
 int IXBar::Use::groups() const {
@@ -22,6 +28,13 @@ int IXBar::Use::groups() const {
             ++rv;
             counted |= 1U << b.loc.group; } }
     return rv;
+}
+void IXBar::Use::compute_hash_tables() {
+    hash_table_input = 0;
+    for (auto &b : use) {
+        unsigned grp = 1U << (b.loc.group * 2);
+        if (b.loc.byte >= 8) grp <<= 1;
+        hash_table_input |= grp; }
 }
 
 static bool find_alloc(IXBar::Use &alloc, int groups, int bytes_per_group,
@@ -89,7 +102,6 @@ static bool find_alloc(IXBar::Use &alloc, int groups, int bytes_per_group,
 }
 
 bool IXBar::allocTable(bool ternary, const IR::Table *tbl, const PhvInfo &phv, Use &alloc) {
-    alloc.clear();
     alloc.ternary = ternary;
     if (!tbl->reads) return true;
     set<cstring>                        fields_needed;
@@ -124,9 +136,56 @@ bool IXBar::allocTable(bool ternary, const IR::Table *tbl, const PhvInfo &phv, U
                         exact_use, exact_fields, false)
           || find_alloc(alloc, EXACT_GROUPS, EXACT_BYTES_PER_GROUP,
                         exact_use, exact_fields, true);
+        if (rv) alloc.compute_hash_tables();
     }
     if (!rv) alloc.clear();
     return rv;
+}
+
+static int way_groups_allocated(const IXBar::Use &alloc) {
+    for (unsigned i = 1; i < alloc.way_use.size(); ++i)
+        if (alloc.way_use[i].slice == alloc.way_use[0].slice)
+            return i;
+    return alloc.way_use.size();
+}
+
+bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const IR::MAU::Table::Way &way, Use &alloc) {
+    if (alloc.hash_group < 0) {
+        for (int i = 0; i < HASH_GROUPS; i++) {
+            if (!hash_group_use[i] || hash_group_use[i] == tbl->name) {
+                hash_group_use[i] = tbl->name;
+                alloc.hash_group = i;
+                break; } } }
+    if (alloc.hash_group < 0) {
+        LOG2("failed to allocate hash group");
+        return false; }
+    int way_bits = ceil_log2(way.entries/1024U);
+    int group;
+    unsigned way_mask = 0;
+    LOG3("Need " << way_bits << " mask bits for way " << alloc.way_use.size() <<
+         " in table " << tbl->name);
+    for (group = 0; group < HASH_INDEX_GROUPS; group++) {
+        if (!(hash_index_inuse[group] & alloc.hash_table_input))
+            break; }
+    if (group >= HASH_INDEX_GROUPS) {
+        group = alloc.way_use[alloc.way_use.size() % way_groups_allocated(alloc)].slice;
+        LOG3("all hash slices in use, reusing " << group); }
+    for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
+        if (way_bits <= 0) break;
+        if (!(hash_single_bit_inuse[bit] & alloc.hash_table_input)) {
+            way_mask |= 1U << bit;
+            way_bits--; } }
+    if (way_bits > 0)
+        LOG3("failed to allocate enough way mask bit, will need to reuse some");
+    alloc.way_use.emplace_back(Use::Way{ group, way_mask });
+    hash_index_inuse[group] |= alloc.hash_table_input;
+    for (auto bit : bitvec(way_mask))
+        hash_single_bit_inuse[bit] |= alloc.hash_table_input;
+    for (auto ht : bitvec(alloc.hash_table_input)) {
+        hash_index_use[ht][group] = tbl->name;
+        for (auto bit : bitvec(way_mask))
+            hash_single_bit_use[ht][bit] = tbl->name; }
+    return true;
 }
 
 bool IXBar::allocGateway(const IR::Expression * /*tbl*/, const PhvInfo &/*phv*/, Use &/*alloc*/) {
@@ -158,11 +217,18 @@ void IXBar::update(const Use &alloc) {
 bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv,
                        Use &tbl_alloc, Use &gw_alloc) {
     if (!tbl) return true;
+    tbl_alloc.clear();
+    gw_alloc.clear();
     if (tbl->match_table && !allocTable(tbl->layout.ternary, tbl->match_table, phv, tbl_alloc))
         return false;
+    for (auto &way : tbl->ways) {
+        if (!allocHashWay(tbl, way, tbl_alloc)) {
+            tbl_alloc.clear();
+            return false; } }
     for (auto &gw : tbl->gateway_rows) {
         if (!allocGateway(gw.first, phv, gw_alloc)) {
             tbl_alloc.clear();
+            gw_alloc.clear();
             return false; } }
     return true;
 }

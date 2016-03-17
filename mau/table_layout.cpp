@@ -3,6 +3,7 @@
 #include "lib/log.h"
 
 static void setup_match_layout(IR::MAU::Table::Layout &layout, const IR::Table *tbl) {
+    layout.entries = tbl->size;
     for (auto t : tbl->reads_types)
         if (t == "ternary" || t == "lpm") {
             layout.ternary = true;
@@ -120,11 +121,32 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
             LOG2("  adding ternary indirect table");
             auto *tern_indir = new IR::MAU::TernaryIndirect(tbl->name);
             tbl->attached.push_back(tern_indir);
-            tern_indir->apply(attached);
-        }
+            tern_indir->apply(attached); }
     } else {
         // determine ways and match groups?
-    }
+        int match_group_bits = std::max(tbl->layout.match_width_bits-10, 0) +
+                               tbl->layout.overhead_bits + 4;
+        int width = (match_group_bits+127)/128U;
+        int match_groups = width > 1 ? 1 : 128 / match_group_bits;
+        int ways = tbl->layout.entries / 1024U / match_groups;
+        // FIXME -- quick hack to choose a non-silly number of ways.  Should do for real
+        if (ways > 6) {
+            ways = 6;
+        } else if (ways < 3) {
+            if (match_groups == 1)
+                ways = 3;
+            else if (match_groups == 2)
+                ways = 2;
+            else if (ways < 1)
+                ways = 1; }
+        tbl->ways.resize(ways);
+        int entries = (tbl->layout.entries + match_groups - 1)/ match_groups;
+        for (auto &way : tbl->ways) {
+            way.match_groups = match_groups;
+            way.width = width;
+            way.entries = std::max(1024U, 1U << (ceil_log2(entries / ways--) + 1) >> 1);
+            if ((entries -= way.entries) < 0)
+                entries = 0; } }
     return true;
 }
 

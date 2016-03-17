@@ -232,6 +232,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         rv->placed[table_uids.at(rv->name)] = true;
         if (rv->gw)
             rv->placed[table_uids.at(rv->gw->name)] = true; }
+    /* FIXME -- need to redo IXBar alloc if we moved to the next stage?  Or if we need less
+     * hash indexing bits for smaller ways? */
     return rv;
 }
 

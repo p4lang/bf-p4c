@@ -27,6 +27,8 @@ struct Memories {
     /* Memories::Use tracks memory use of a single table */
     struct Use {
         enum type_t { EXACT, TERNARY, TIND, TWOPORT, ACTIONDATA } type;
+        /* FIXME -- when tracking EXACT table memuse, do we need to track which way
+         * each memory is allocated to?  For now, we do not. */
         struct Row {
             int         row, bus;
             vector<int> col, mapcol;
