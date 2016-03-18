@@ -54,6 +54,7 @@ class Slice {
         return *this; }
     Slice operator&(const Slice &a) const { auto tmp = *this; tmp &= a; return tmp; }
     int width() const { return hi - lo + 1; }
+    int bytealign() const { return lo & 7; }
 };
 
 inline std::ostream &operator<<(std::ostream &out, const Slice &sl) {
@@ -104,6 +105,18 @@ std::ostream &operator<<(std::ostream &out, const emit_vector_formatter<VEC> &v)
 template<class VEC>
 emit_vector_formatter<VEC> emit_vector(const VEC &v, const char *sep = ", ") {
     return emit_vector_formatter<VEC>{v, sep}; }
+
+template<class T> inline auto operator<<(std::ostream &out, const T &obj) ->
+        decltype((void)obj.print(out), out)
+{ obj.print(out); return out; }
+
+template<class T> inline auto operator<<(std::ostream &out, const T *obj) ->
+        decltype((void)obj->print(out), out) {
+    if (obj)
+        obj->print(out);
+    else
+        out << "<null>";
+    return out; }
 
 
 #endif /* _TOFINO_COMMON_ASM_OUTPUT_H_ */

@@ -155,16 +155,13 @@ bool Memories::allocTable(const IR::MAU::Table *table, int &entries,  map<cstrin
         if (width < 12)
             width = std::max(width, match_ixbar.groups());
         entries = depth * 512;
-    } else if (table->match_table) {
-        width = std::max(table->layout.match_width_bits - 8, 0) + table->layout.overhead_bits + 4;
-        // 4 bits for valid/version; assume 8 ghost bits.
-        groups = 128/width;
-        if (groups) {
-            width = 1;
-        } else {
-            groups = 1;
-            width = (width+127)/128; }
+    } else if (!table->ways.empty()) {
+        /* Assuming all ways have the same format and width (only differ in depth) */
+        width = table->ways[0].width;
+        groups = table->ways[0].match_groups;
         depth = ((entries + groups - 1U)/groups + 1023)/1024U;
+        if (depth < static_cast<int>(table->ways.size()))
+            depth = table->ways.size();
         entries = depth * groups * 1024U;
     } else {
         width = depth = entries = 0; }
@@ -174,10 +171,16 @@ bool Memories::allocTable(const IR::MAU::Table *table, int &entries,  map<cstrin
     if (table->layout.ternary) {
         alloc[table->name].type = Use::TERNARY;
         ok &= allocRams(table->name, width, depth, tcam_use, 0, alloc[table->name]);
-    } else if (table->match_table) {
+    } else if (!table->ways.empty()) {
         alloc[table->name].type = Use::EXACT;
-        ok &= allocRams(table->name, width, depth, sram_use, &sram_match_bus, alloc[table->name]);
-    }
+        int alloc_depth = 0;
+        for (int i = table->ways.size(); i > 0; --i) {
+            int sz = 1 << std::max(ceil_log2(depth/i), 0);
+            ok &= allocRams(table->name, width, sz, sram_use, &sram_match_bus, alloc[table->name]);
+            alloc_depth += sz;
+            alloc[table->name].way_depth.push_back(sz);
+            if ((depth -= sz) < 1) depth = 1; }
+        entries = alloc_depth * groups * 1024U; }
     return ok;
 }
 

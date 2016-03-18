@@ -354,9 +354,9 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
                         if (defer) continue; }
                     trial.emplace_back(grp, pl);
                 } else {
-                    assert(0); } }
+                    BUG("Can't place a table"); } }
             if (done)
-                assert(0);
+                BUG("Can't find a table to place");
             else
                 it++; }
         if (work.empty()) break;
@@ -386,6 +386,17 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
     return pipe;
 }
 
+static void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *resources,
+                                int entries) {
+    tbl->resources = resources;
+    tbl->layout.entries = entries;
+    if (!tbl->ways.empty()) {
+        auto &mem = resources->memuse.at(tbl->name);
+        assert(tbl->ways.size() == mem.way_depth.size());
+        for (unsigned i = 0; i < tbl->ways.size(); ++i)
+            tbl->ways[i].entries = mem.way_depth[i] * 1024 * tbl->ways[i].match_groups; }
+}
+
 IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     auto it = table_placed.find(tbl->name);
     if (it == table_placed.end()) {
@@ -405,6 +416,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         tbl->actions = match->actions;
         tbl->attached = match->attached;
         tbl->layout += match->layout;
+        tbl->ways = match->ways;
         auto *seq = tbl->next.at(it->second->gw_result_tag)->clone();
         tbl->next.erase(it->second->gw_result_tag);
         if (seq->tables.size() != 1) {
@@ -433,8 +445,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         if (!have_default && seq)
             tbl->next["default"] = seq; }
     if (table_placed.count(tbl->name) == 1) {
-        tbl->layout.entries = it->second->entries;
-        tbl->resources = it->second->resources;
+        table_set_resources(tbl, it->second->resources, it->second->entries);
         return tbl; }
     int counter = 0;
     IR::MAU::Table *rv = 0, *prev = 0;
@@ -445,8 +456,8 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         snprintf(suffix, sizeof(suffix), ".%d", ++counter);
         auto *table_part = tbl->clone_rename(suffix);
         table_part->logical_id = it->second->logical_id;
-        table_part->layout.entries = it->second->entries;
-        table_part->resources = it->second->resources->clone_rename(suffix);
+        table_set_resources(table_part, it->second->resources->clone_rename(suffix),
+                            it->second->entries);
         if (!rv) {
             rv = table_part;
             assert(!prev);

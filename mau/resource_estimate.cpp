@@ -55,16 +55,13 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
         ternary_ixbar_groups = width;
         tcams = depth * width;
         entries = depth * 512;
-    } else if (tbl->match_table) {
-        int width = std::max(tbl->layout.match_width_bits - 8, 0) + tbl->layout.overhead_bits + 4;
-        // 4 bits for valid/version; assume 8 ghost bits
-        int groups = 128/width;
-        if (groups) {
-            width = 1;
-        } else {
-            groups = 1;
-            width = (width+127)/128; }
+    } else if (!tbl->ways.empty()) {
+        /* Assuming all ways have the same format and width (only differ in depth) */
+        int width = tbl->ways[0].width;
+        int groups = tbl->ways[0].match_groups;
         int depth = ((entries + groups - 1U)/groups + 1023)/1024U;
+        if (depth < static_cast<int>(tbl->ways.size()))
+            depth = tbl->ways.size();
         srams = depth * width;
         entries = depth * groups * 1024U;
     } else {

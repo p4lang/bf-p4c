@@ -4,20 +4,22 @@ struct TableResourceAlloc;
 
 namespace MAU {
 
-// A Tofino logical table (group) -- a gateway and/or match table
-// along with whatever attached tables are run.  The basic scheduling
-// unit for tofino; there are 16 such 'logical' tables available in
-// each stage, which will run simultaneously and have their results
-// predicated by the predicate mask calculated from the next tables
+/* A Tofino logical table (group) -- a gateway and/or match table
+ * along with whatever attached tables are run.  The basic scheduling
+ * unit for tofino; there are 16 such 'logical' tables available in
+ * each stage, which will run simultaneously and have their results
+ * predicated by the predicate mask calculated from the next tables */
 class Table {
     cstring                                     name;
     gress_t                                     gress;
     int                                         logical_id = -1;
     vector<std::pair<Expression, cstring>>      gateway_rows;
-    /* each gateway_row is a an expression for a single row of the gateway, with the
-     * string being a tag to run in 'next' for next table, or null if the match_table should
-     * run.  The last row (only) may have a NULL expression for 'always' -- corresponding to the
-     * gateway miss action (taken if no gateway rows match) */
+    /* each gateway_row is a an expression for a single row of the gateway,
+     * with the string being a tag to run in 'next' for next table, or null
+     * if the match_table should run.  The last row (only) may have a NULL
+     * expression for 'always' -- corresponding to the gateway miss action
+     * (taken if no gateway rows match).  If this last row NULL expression
+     * is not present, the default action is to run the table. */
     NullOK ActionFunction                       gateway_payload;
     NullOK IR::Table                            match_table;
     inline Vector<Attached>                     attached;

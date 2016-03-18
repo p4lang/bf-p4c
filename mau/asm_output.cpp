@@ -34,10 +34,56 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
 
 class MauAsmOutput::TableFormat {
     const MauAsmOutput &self;
-public:
+    struct match_group {
+        int                             action=-1, immediate=-1, version=-1;
+        vector<std::pair<int, int>>     match;
+    };
+    int action_bits = 0;
+    int immediate_bits = 0;
+    vector<match_group> format;
+ public:
     vector<Slice>       match_fields;
     Slice               ghost_bits;
     TableFormat(const MauAsmOutput &s, const IR::MAU::Table *tbl);
+    void print(std::ostream &) const;
+};
+
+class MauAsmOutput::ImmedFormat {
+    struct arg {
+        cstring         name;
+        int             lo, hi;
+        arg(cstring n, int l, int sz) : name(n), lo(l), hi(l+sz-1) {}
+    };
+    vector<arg> immediates;
+    int         base = 0;
+    const char  *tag = nullptr;
+    void init(const IR::ActionFunction *act) {
+        vector<std::pair<int, cstring>> sorted_args;
+        for (auto arg : act->args) {
+            int size = (arg->type->width_bits() + 7) / 8U;  // in bytes
+            sorted_args.emplace_back(size, arg->name); }
+        std::stable_sort(sorted_args.begin(), sorted_args.end(),
+            [](const std::pair<int, cstring> &a, const std::pair<int, cstring> &b)->bool {
+                return a.first > b.first; });
+        int byte = 0;
+        for (auto &arg : sorted_args) {
+            if (byte >= 4) break;
+            if (byte + arg.first > 4) continue;
+            immediates.emplace_back(arg.second, byte*8, arg.first*8);
+            byte += arg.first; } }
+
+ public:
+    ImmedFormat(const IR::ActionFunction *act, const char *tag) : tag(tag) { init(act); }
+    ImmedFormat(const IR::ActionFunction *act, int base) : base(base) { init(act); }
+    explicit operator bool() { return !immediates.empty(); }
+    void print(std::ostream &out) const {
+        const char *sep="";
+        for (auto &a : immediates) {
+            out << sep << a.name << ": ";
+            if (tag) out << tag << '(';
+            out << (base+a.lo) << ".." << (base+a.hi);
+            if (tag) out << ")";
+            sep = ", "; } }
 };
 
 void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::Use &use,
@@ -59,6 +105,11 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::U
                     group.second.erase(next);
                     continue; } }
             it = next; } }
+    if (!use.way_use.empty()) {
+        out << indent << "ways:" << std::endl;
+        for (auto &way : use.way_use)
+            out << indent << "- [" << use.hash_group << ", " << way.slice << ", "
+                << way.mask << "]" << std::endl; }
     out << indent++ << "input_xbar:" << std::endl;
     for (auto &group : sort)
         out << indent << "group " << group.first << ": " << group.second << std::endl;
@@ -153,12 +204,16 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
 }
 
 class MauAsmOutput::EmitAction : public Inspector {
-    const MauAsmOutput  &self;
-    std::ostream        &out;
-    indent_t            indent;
-    const char          *sep = nullptr;
+    const MauAsmOutput          &self;
+    std::ostream                &out;
+    const IR::MAU::Table        *table;
+    indent_t                    indent;
+    const char                  *sep = nullptr;
     bool preorder(const IR::ActionFunction *act) override {
         out << indent << act->name << ":" << std::endl;
+        if (table->layout.action_data_bytes_in_overhead) {
+            ImmedFormat ifmt(act, "immediate");
+            if (ifmt) out << indent << "- { " << ifmt << " }" << std::endl; }
         if (act->action.empty()) {
             /* a noop */
             out << indent << "- 0" << std::endl; }
@@ -196,8 +251,8 @@ class MauAsmOutput::EmitAction : public Inspector {
         return false; }
 
  public:
-    EmitAction(const MauAsmOutput &s, std::ostream &o, indent_t i) : self(s), out(o), indent(i) {
-        visitDagOnce = false; }
+    EmitAction(const MauAsmOutput &s, std::ostream &o, const IR::MAU::Table *tbl, indent_t i)
+    : self(s), out(o), table(tbl), indent(i) { visitDagOnce = false; }
 };
 
 MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Table *tbl) : self(s) {
@@ -221,7 +276,81 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
             match_fields.emplace_back(finfo); } }
 
     if (!tbl->layout.ternary && !match_fields.empty())
-        ghost_bits = match_fields.back()(0, 9);
+        ghost_bits = match_fields[0](0, 9);
+
+    if (!tbl->ways.empty()) {
+        bitvec used;
+        action_bits = ceil_log2(tbl->actions.size());
+        immediate_bits = tbl->layout.action_data_bytes_in_overhead * 8;
+        int width = tbl->ways[0].width;
+        int groups = tbl->ways[0].match_groups;
+        int groups_per_word = (groups + width - 1)/width;
+        format.resize(groups);
+        for (int i = 0; i < groups; i++) {
+            int word = i / groups_per_word;
+            int j = i % groups_per_word;
+            if (action_bits > 0) {
+                format[i].action = 128*word + j*action_bits;
+                used.setrange(format[i].action, action_bits); }
+            format[i].version = 128*word + 124 - j*4;
+            used.setrange(format[i].version, 4); }
+        if (immediate_bits > 0) {
+            for (int i = 0; i < groups; i++) {
+                int word = i / groups_per_word;
+                format[i].immediate = used.ffz(128*word);
+                used.setrange(format[i].immediate, immediate_bits); } }
+        if (!match_fields.empty()) {
+            for (int i = 0; i < groups; i++) {
+                int word = i / groups_per_word;
+                int bit = used.ffz(128*word);
+                for (auto field : match_fields) {
+                    field -= ghost_bits;
+                    if (!field) continue;
+                    bit += (field.bytealign() - bit) & 7;
+                    while (used.getslice(bit, field.width())) {
+                        bit = used.ffz(used.ffs(bit));
+                        bit += (field.bytealign() - bit) & 7; }
+                    if (format[i].match.empty() || format[i].match.back().second != bit - 1)
+                        format[i].match.emplace_back(bit, bit + field.width() - 1);
+                    else
+                        format[i].match.back().second = bit + field.width() - 1;
+                    used.setrange(bit, field.width()); } } } }
+}
+
+void MauAsmOutput::TableFormat::print(std::ostream &out) const {
+    struct fmt_state {
+        const char *sep = " ";
+        int next = 0;
+        void emit(std::ostream &out, const char *name, int group, int bit, int width) {
+            if (bit < 0) return;
+            out << sep << name << '(' << group << "): ";
+            if (next == bit)
+                out << width;
+            else
+                out << bit << ".." << bit+width-1;
+            next = bit+width;
+            sep = ", "; }
+        void emit(std::ostream &out, const char *name, int group,
+                  const vector<std::pair<int, int>> &bits) {
+            if (bits.size() == 1)
+                emit(out, name, group, bits[0].first, bits[0].second - bits[0].first + 1);
+            else if (bits.size() > 1) {
+                out << sep << name << '(' << group << "): [ ";
+                sep = "";
+                for (auto &p : bits) {
+                    out << sep << p.first << ".." << p.second;
+                    sep = ", "; }
+                out << " ]"; } }
+    } fmt;
+    out << "format: {";
+    int i = 0;
+    for (auto &group : format) {
+        fmt.emit(out, "action", i, group.action, action_bits);
+        fmt.emit(out, "immediate", i, group.immediate, immediate_bits);
+        fmt.emit(out, "version", i, group.version, 4);
+        fmt.emit(out, "match", i, group.match);
+        ++i; }
+    out << (fmt.sep + 1) << "}";
 }
 
 void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) const {
@@ -240,7 +369,19 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         out << " }" << std::endl;
         emit_memory(out, indent, tbl->resources->memuse.at(tbl->name));
         emit_ixbar(out, indent, tbl->resources->match_ixbar, &fmt);
-    }
+        if (!tbl->layout.ternary) {
+            out << indent << fmt << std::endl;
+            bool first = true;
+            for (auto field : fmt.match_fields) {
+                field -= fmt.ghost_bits;
+                if (!field) continue;
+                if (first) {
+                    out << indent << "match: [ ";
+                    first = false;
+                } else {
+                    out << ", "; }
+                out << field; }
+            if (!first) out << " ]" << std::endl; } }
     if (tbl->uses_gateway()) {
         indent_t gw_indent = indent;
         if (tbl->match_table)
@@ -324,33 +465,8 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
     if (!have_action && !tbl->actions.empty()) {
         out << indent++ << "actions:" << std::endl;
         for (auto act : Values(tbl->actions))
-            act->apply(EmitAction(*this, out, indent));
+            act->apply(EmitAction(*this, out, tbl, indent));
         --indent; }
-}
-
-void emit_fmt_immed(std::ostream &out, const IR::MAU::Table *tbl, int base, const char *sep) {
-    std::map<cstring, int>      done;
-    for (auto act : Values(tbl->actions)) {
-        vector<std::pair<int, cstring>> sorted_args;
-        for (auto arg : act->args) {
-            int size = (arg->type->width_bits() + 7) / 8U;  // in bytes
-            sorted_args.emplace_back(size, arg->name); }
-        std::stable_sort(sorted_args.begin(), sorted_args.end(),
-            [](const std::pair<int, cstring> &a, const std::pair<int, cstring> &b)->bool {
-                return a.first > b.first; });
-        int byte = 0;
-        for (auto &arg : sorted_args) {
-            if (byte >= 4) break;
-            if (byte + arg.first > 4) continue;
-            if (done.count(arg.second)) {
-                assert(done[arg.second] == byte);
-                byte += arg.first;
-                continue; }
-            done[arg.second] = byte;
-            out << sep << arg.second << ": " << base + byte*8;
-            byte += arg.first;
-            out << ".." << base + byte*8 - 1;
-            sep = ", "; } }
 }
 
 void emit_fmt_nonimmed(std::ostream &out, const IR::ActionFunction *act, const char *sep) {
@@ -382,7 +498,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     self.emit_memory(out, indent, tbl->resources->memuse.at(ti->name));
     int action_fmt_size = ceil_log2(tbl->actions.size());
     out << indent << "format: { action: " << action_fmt_size;
-    emit_fmt_immed(out, tbl, action_fmt_size, ", ");
+    if (tbl->layout.action_data_bytes_in_overhead > 0)
+        out << ", immediate: " << tbl->layout.action_data_bytes_in_overhead*8;
     out << " }" << std::endl;
     self.emit_table_indir(out, indent, tbl);
     return false; }
@@ -398,6 +515,6 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
     if (!tbl->actions.empty()) {
         out << indent++ << "actions:" << std::endl;
         for (auto act : Values(tbl->actions))
-            act->apply(EmitAction(self, out, indent));
+            act->apply(EmitAction(self, out, tbl, indent));
         --indent; }
     return false; }
