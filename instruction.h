@@ -2,9 +2,7 @@
 #define _instruction_h_
 
 #include <functional>
-#include "asm-types.h"
-
-class Table;
+#include "tables.h"
 
 struct Instruction {
     int         lineno;
@@ -17,7 +15,7 @@ struct Instruction {
     virtual void dbprint(std::ostream &) const = 0;
     virtual bool equiv(Instruction *a) = 0;
     virtual void phvRead(std::function<void (const Phv::Slice &sl)>) = 0;
-    static Instruction *decode(Table *, const std::string &act, const VECTOR(value_t) &);
+    static Instruction *decode(Table *, const Table::Actions::Action *, const VECTOR(value_t) &);
 };
 
 #endif /* _instruction_h_ */

@@ -10,7 +10,8 @@ struct Idecode {
     Idecode &alias(const char *name) {
         opcode[name] = this;
         return *this; }
-    virtual Instruction *decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op) = 0;
+    virtual Instruction *decode(Table *tbl, const Table::Actions::Action *act,
+                                const VECTOR(value_t) &op) = 0;
 };
 
 std::map<std::string, Idecode *> Idecode::opcode;
@@ -155,8 +156,8 @@ private:
         Table           *tbl;
         std::string     action;
     public:
-        Named(int line, const std::string &n, int l, int h, Table *t, const std::string &act) :
-            Base(line), name(n), lo(l), hi(h), tbl(t), action(act) {}
+        Named(int line, const std::string &n, int l, int h, Table *t, const std::string &act)
+        : Base(line), name(n), lo(l), hi(h), tbl(t), action(act) {}
 	bool equiv(const Base *a_) const {
 	    if (auto *a = dynamic_cast<const Named *>(a_)) {
 		return name == a->name && lo == a->lo && hi == a->hi && tbl == a->tbl &&
@@ -194,7 +195,7 @@ public:
             a.op = 0; }
         return *this; }
     ~operand() { delete op; }
-    operand(Table *tbl, const std::string &act, const value_t &v);
+    operand(Table *tbl, const Table::Actions::Action *act, const value_t &v);
     operand(gress_t gress, const value_t &v) : op(new Phv(v.lineno, gress, v)) {}
     operand(const ::Phv::Ref &r) : op(new Phv(r)) {}
     bool valid() const { return op != 0; }
@@ -210,11 +211,11 @@ public:
     Base *operator->() { return op->lookup(op); }
 };
 
-operand::operand(Table *tbl, const std::string &act, const value_t &v) : op(0) {
+operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v) : op(0) {
     if (v.type == tINT) {
 	op = new Const(v.lineno, v.i);
     } else if (CHECKTYPE2(v, tSTR, tCMD)) {
-	const std::string &n = v.type == tSTR ? v.s : v[0].s;
+	std::string name = v.type == tSTR ? v.s : v[0].s;
         int lo = -1, hi = -1;
         if (v.type == tCMD) {
             if (!CHECKTYPE2(v[1], tINT, tRANGE)) return;
@@ -222,7 +223,19 @@ operand::operand(Table *tbl, const std::string &act, const value_t &v) : op(0) {
             else {
                 lo = v[1].lo;
                 hi = v[1].hi; } }
-        op = new Named(v.lineno, n, lo, hi, tbl, act); }
+        if (act->alias.count(name)) {
+            auto &alias = act->alias.at(name);
+            if (lo >= 0) {
+                if (alias.lo >= 0) {
+                    lo += alias.lo;
+                    hi += alias.lo;
+                    if (hi > alias.hi)
+                        error(v.lineno, "invalid bitslice of %s", name.c_str()); }
+            } else {
+                lo = alias.lo;
+                hi = alias.hi; }
+            name = alias.name; }
+        op = new Named(v.lineno, name, lo, hi, tbl, act->name); }
 }
 
 auto operand::Named::lookup(Base *&ref) -> Base * {
@@ -261,11 +274,12 @@ struct AluOP : public Instruction {
             opcode(opc), swap_args(assoc ? this : 0) {}
         Decode(const char *n, unsigned opc, Decode *sw) : Idecode(n), name(n), opcode(opc),
             swap_args(sw) { if (!sw->swap_args) sw->swap_args = this; }
-        Instruction *decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op);
+        Instruction *decode(Table *tbl, const Table::Actions::Action *act,
+                            const VECTOR(value_t) &op);
     } *opc;
     Phv::Ref    dest;
     operand     src1, src2;
-    AluOP(Decode *d, Table *tbl, const std::string &act, const value_t *ops) :
+    AluOP(Decode *d, Table *tbl, const Table::Actions::Action *act, const value_t *ops) :
             Instruction(ops->lineno), opc(d), dest(tbl->gress, ops[0]),
             src1(tbl, act, ops[1]), src2(tbl, act, ops[2]) {}
     Instruction *pass1(Table *tbl);
@@ -294,7 +308,8 @@ static AluOP::Decode opADD("add", 0x23e, true), opADDC("addc", 0x2be, true),
                      opOR("or", 0x39e, true), opSETHI("sethi", 0x39e, true),
                      opBMSET("bitmasked-set", 0x2e); // FIXME -- make 3rd operand explicit?
 
-Instruction *AluOP::Decode::decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op) {
+Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act,
+                                   const VECTOR(value_t) &op) {
     if (op.size != 4) {
         error(op[0].lineno, "%s requires 3 operands", op[0].s);
         return 0; }
@@ -338,11 +353,12 @@ bool AluOP::equiv(Instruction *a_) {
 struct LoadConst : public Instruction {
     struct Decode : public Idecode {
         Decode(const char *n) : Idecode(n) {}
-        Instruction *decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op);
+        Instruction *decode(Table *tbl, const Table::Actions::Action *act,
+                            const VECTOR(value_t) &op);
     };
     Phv::Ref    dest;
     int         src;
-    LoadConst(Table *tbl, const std::string &act, const value_t &d, int&s)
+    LoadConst(Table *tbl, const Table::Actions::Action *act, const value_t &d, int&s)
 	: Instruction(d.lineno), dest(tbl->gress, d), src(s) {}
     Instruction *pass1(Table *tbl);
     void pass2(Table *) {}
@@ -356,7 +372,8 @@ struct LoadConst : public Instruction {
 
 static LoadConst::Decode opLoadConst("load-const");
 
-Instruction *LoadConst::Decode::decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op) {
+Instruction *LoadConst::Decode::decode(Table *tbl, const Table::Actions::Action *act,
+                                       const VECTOR(value_t) &op) {
     if (op.size != 3) {
         error(op[0].lineno, "%s requires 2 operands", op[0].s);
         return 0; }
@@ -393,19 +410,19 @@ struct CondMoveMux : public Instruction {
         unsigned opcode, cond_size;
         bool    src2opt;
         Decode(const char *name, unsigned opc, bool s2opt, unsigned csize, const char *alias_name)
-            : Idecode(name), opcode(opc), cond_size(csize), src2opt(s2opt) { alias(alias_name); }
-        Instruction *decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op);
+        : Idecode(name), opcode(opc), cond_size(csize), src2opt(s2opt) { alias(alias_name); }
+        Instruction *decode(Table *tbl, const Table::Actions::Action *act,
+                            const VECTOR(value_t) &op);
     } *opc;
     Phv::Ref    dest;
     operand     src1, src2;
     unsigned    cond;
-    CondMoveMux(Table *tbl, Decode *op, const std::string &act, const value_t &d, const value_t &s)
-	: Instruction(d.lineno), opc(op), dest(tbl->gress, d), src1(tbl, act, s),
-          src2(tbl->gress, d) {}
-    CondMoveMux(Table *tbl, Decode *op, const std::string &act, const value_t &d,
+    CondMoveMux(Table *tbl, Decode *op, const Table::Actions::Action *act, const value_t &d,
+                const value_t &s)
+    : Instruction(d.lineno), opc(op), dest(tbl->gress, d), src1(tbl, act, s), src2(tbl->gress, d) {}
+    CondMoveMux(Table *tbl, Decode *op, const Table::Actions::Action *act, const value_t &d,
                 const value_t &s1, const value_t &s2)
-	: Instruction(d.lineno), opc(op), dest(tbl->gress, d), src1(tbl, act, s1),
-          src2(tbl, act, s2) {}
+    : Instruction(d.lineno), opc(op), dest(tbl->gress, d), src1(tbl, act, s1), src2(tbl, act, s2) {}
     Instruction *pass1(Table *tbl);
     void pass2(Table *tbl) { src1->pass2(tbl, slot/16); src2->pass2(tbl, slot/16); }
     int encode();
@@ -422,7 +439,8 @@ struct CondMoveMux : public Instruction {
 static CondMoveMux::Decode opCondMove("cmov", 0x16, true, 5, "conditional-move"),
                            opCondMux("cmux", 0x6, false, 2, "conditional-mux");
 
-Instruction *CondMoveMux::Decode::decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op) {
+Instruction *CondMoveMux::Decode::decode(Table *tbl, const Table::Actions::Action *act,
+                                         const VECTOR(value_t) &op) {
     if (op.size != 5 && (op.size != 4 || !src2opt)) {
         error(op[0].lineno, "%s requires %s4 operands", op[0].s, src2opt ? "3 or " : "");
         return 0; }
@@ -473,14 +491,16 @@ struct Set;
 struct DepositField : public Instruction {
     struct Decode : public Idecode {
         Decode() : Idecode("deposit_field") { alias("deposit-field"); }
-        Instruction *decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op);
+        Instruction *decode(Table *tbl, const Table::Actions::Action *act,
+                            const VECTOR(value_t) &op);
     };
     Phv::Ref    dest;
     operand     src1, src2;
-    DepositField(Table *tbl, const std::string &act, const value_t &d, const value_t &s)
-	: Instruction(d.lineno), dest(tbl->gress, d), src1(tbl, act, s), src2(tbl->gress, d) {}
-    DepositField(Table *tbl, const std::string &act, const value_t &d, const value_t &s1, const value_t &s2)
-	: Instruction(d.lineno), dest(tbl->gress, d), src1(tbl, act, s1), src2(tbl, act, s2) {}
+    DepositField(Table *tbl, const Table::Actions::Action *act, const value_t &d, const value_t &s)
+    : Instruction(d.lineno), dest(tbl->gress, d), src1(tbl, act, s), src2(tbl->gress, d) {}
+    DepositField(Table *tbl, const Table::Actions::Action *act, const value_t &d,
+                 const value_t &s1, const value_t &s2)
+    : Instruction(d.lineno), dest(tbl->gress, d), src1(tbl, act, s1), src2(tbl, act, s2) {}
     DepositField(const Set &);
     Instruction *pass1(Table *tbl);
     void pass2(Table *tbl) { src1->pass2(tbl, slot/16); src2->pass2(tbl, slot/16); }
@@ -494,7 +514,8 @@ struct DepositField : public Instruction {
 
 static DepositField::Decode opDepositField;
 
-Instruction *DepositField::Decode::decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op) {
+Instruction *DepositField::Decode::decode(Table *tbl, const Table::Actions::Action *act,
+                                          const VECTOR(value_t) &op) {
     if (op.size != 4 && op.size != 3) {
         error(op[0].lineno, "%s requires 2 or 3 operands", op[0].s);
         return 0; }
@@ -552,11 +573,12 @@ bool DepositField::equiv(Instruction *a_) {
 struct Set : public Instruction {
     struct Decode : public Idecode {
         Decode(const char *n) : Idecode(n) {}
-        Instruction *decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op);
+        Instruction *decode(Table *tbl, const Table::Actions::Action *act,
+                            const VECTOR(value_t) &op);
     };
     Phv::Ref    dest;
     operand     src;
-    Set(Table *tbl, const std::string &act, const value_t &d, const value_t &s)
+    Set(Table *tbl, const Table::Actions::Action *act, const value_t &d, const value_t &s)
 	: Instruction(d.lineno), dest(tbl->gress, d), src(tbl, act, s) {}
     Instruction *pass1(Table *tbl);
     void pass2(Table *tbl) { src->pass2(tbl, slot/16); }
@@ -573,7 +595,8 @@ DepositField::DepositField(const Set &s)
 
 static Set::Decode opSet("set");
 
-Instruction *Set::Decode::decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op) {
+Instruction *Set::Decode::decode(Table *tbl, const Table::Actions::Action *act,
+                                 const VECTOR(value_t) &op) {
     if (op.size != 3) {
         error(op[0].lineno, "%s requires 2 operands", op[0].s);
         return 0; }
@@ -610,10 +633,11 @@ struct NulOP : public Instruction {
         std::string name;
         unsigned opcode;
         Decode(const char *n, unsigned opc) : Idecode(n), name(n), opcode(opc) {}
-        Instruction *decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op);
+        Instruction *decode(Table *tbl, const Table::Actions::Action *act,
+                            const VECTOR(value_t) &op);
     } *opc;
     Phv::Ref    dest;
-    NulOP(Table *tbl, const std::string &act, Decode *o, const value_t &d) :
+    NulOP(Table *tbl, const Table::Actions::Action *act, Decode *o, const value_t &d) :
         Instruction(d.lineno), opc(o), dest(tbl->gress, d) {}
     Instruction *pass1(Table *tbl);
     void pass2(Table *) {}
@@ -626,7 +650,8 @@ struct NulOP : public Instruction {
 
 static NulOP::Decode opInvalidate("invalidate", 0x7000), opNoop("noop", 0);
 
-Instruction *NulOP::Decode::decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op) {
+Instruction *NulOP::Decode::decode(Table *tbl, const Table::Actions::Action *act,
+                                   const VECTOR(value_t) &op) {
     if (op.size != 2) {
         error(op[0].lineno, "%s requires 1 operand", op[0].s);
         return 0; }
@@ -650,7 +675,8 @@ bool NulOP::equiv(Instruction *a_) {
 	return false;
 }
 
-Instruction *Instruction::decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op) {
+Instruction *Instruction::decode(Table *tbl, const Table::Actions::Action *act,
+                                 const VECTOR(value_t) &op) {
     if (auto *d = ::get(Idecode::opcode, op[0].s))
         return d->decode(tbl, act, op);
     else
@@ -664,14 +690,15 @@ struct ShiftOP : public Instruction {
         unsigned opcode;
         bool use_src1;
         Decode *swap_args;
-        Decode(const char *n, unsigned opc, bool funnel = false) : Idecode(n), name(n),
-            opcode(opc), use_src1(funnel) {}
-        Instruction *decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op);
+        Decode(const char *n, unsigned opc, bool funnel = false)
+        : Idecode(n), name(n), opcode(opc), use_src1(funnel) {}
+        Instruction *decode(Table *tbl, const Table::Actions::Action *act,
+                            const VECTOR(value_t) &op);
     } *opc;
     Phv::Ref    dest;
     operand     src1, src2;
     int         shift;
-    ShiftOP(Decode *d, Table *tbl, const std::string &act, const value_t *ops) :
+    ShiftOP(Decode *d, Table *tbl, const Table::Actions::Action *act, const value_t *ops) :
             Instruction(ops->lineno), opc(d), dest(tbl->gress, ops[0]),
             src1(tbl, act, ops[1]), src2(tbl, act, ops[2]) {
                 if (opc->use_src1) {
@@ -692,7 +719,8 @@ struct ShiftOP : public Instruction {
 static ShiftOP::Decode opSHL("shl", 0x0c, false), opSHRS("shrs", 0x1c, false),
                        opSHRU("shru", 0x14, false), opFUNSHIFT("funnel-shift", 0x04, true);
 
-Instruction *ShiftOP::Decode::decode(Table *tbl, const std::string &act, const VECTOR(value_t) &op) {
+Instruction *ShiftOP::Decode::decode(Table *tbl, const Table::Actions::Action *act,
+                                     const VECTOR(value_t) &op) {
     if (op.size != (use_src1 ? 5 : 4)) {
         error(op[0].lineno, "%s requires %d operands", op[0].s, use_src1 ? 4 : 3);
         return 0; }

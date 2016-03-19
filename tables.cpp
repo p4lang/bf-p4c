@@ -656,7 +656,7 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
                 if (CHECKTYPE(a.key, tSTR) && CHECKTYPE2(a.value, tSTR, tCMD))
                     alias.emplace(a.key.s, a.value);
         } else if (CHECKTYPE(i, tCMD))
-            if (auto *p = Instruction::decode(tbl, name, i.vec))
+            if (auto *p = Instruction::decode(tbl, this, i.vec))
                 instr.push_back(p); }
 }
 
