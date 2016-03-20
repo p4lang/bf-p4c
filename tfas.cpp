@@ -43,6 +43,8 @@ static bool match(const char *pattern, const char *name) {
 int get_file_log_level(const char *file, int *level) {
     if (auto *p = strrchr(file, '/'))
         file = p+1;
+    if (auto *p = strrchr(file, '.'))
+        if (!strcmp(p, ".h")) return verbose-1;
     for (auto &s : debug_specs)
         for (auto *p = s.c_str(); p; p = strchr(p, ',')) {
             while (*p == ',') p++;
@@ -93,7 +95,11 @@ int main(int ac, char **av) {
             for (char *arg = av[i]+1; *arg;)
                 switch (*arg++) {
                 case 'T':
-                    if (++i < ac) {
+                    if (*arg) {
+                        check_debug_spec(arg);
+                        debug_specs.push_back(arg);
+                        arg += strlen(arg);
+                    } else if (++i < ac) {
                         check_debug_spec(av[i]);
                         debug_specs.push_back(av[i]); }
                     break;

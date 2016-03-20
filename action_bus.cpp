@@ -95,17 +95,18 @@ static int find_free(Stage *stage, int min, int max, int step, int bytes) {
     return -1;
 }
 
-void ActionBus::do_alloc(Table *tbl, Table::Format::Field *f, unsigned use, int bytes) {
-    unsigned offset = 0;
+void ActionBus::do_alloc(Table *tbl, Table::Format::Field *f, unsigned use, int bytes,
+                         unsigned offset) {
     auto name = tbl->format->find_field(f);
-    LOG2("putting " << name << " at action_bus " << use);
+    LOG2("putting " << name << '(' << (offset*8) << ".." << ((offset+bytes)*8 - 1) <<
+         ") at action_bus " << use);
     while (bytes > 0) {
         int slot = Stage::action_bus_slot_map[use];
         int slotsize = Stage::action_bus_slot_size[slot];
         assert(!tbl->stage->action_bus_use[slot]);
         tbl->stage->action_bus_use[slot] = tbl;
         by_byte.emplace(use, Slot{name, use, bytes*8U, f, offset});
-        offset += slotsize;
+        offset += slotsize/8U;
         bytes -= slotsize/8U;
         use += slotsize/8U; }
 }
@@ -116,31 +117,45 @@ void ActionBus::pass2(Table *tbl) {
         int bytes = (f.first->size + 7)/8U;
         int offset = f.first->bits[0].lo - immed_offset;
         int use;
-        if (f.second & 1) {
+        if (f.second & 0x1010101) {
             /* need 8-bit */
-            if (offset % 8U)
+            if (offset % 8U) {
                 error(tbl->format->lineno, "field %s not correctly aligned for 8-bit use on "
                       "action bus", tbl->format->find_field(f.first).c_str());
-            else if ((use = find_free(tbl->stage, (offset/8U)%4, 31, 4, bytes)) >= 0)
-                do_alloc(tbl, f.first, use, bytes); }
-        if (f.second & 2) {
+            } else if (f.second & 4) {
+                if ((use = find_free(tbl->stage, 0, 31, 4, bytes)) >= 0)
+                    do_alloc(tbl, f.first, use, bytes, 0);
+            } else {
+                unsigned start = (offset/8U) % 4U;
+                for (int byte = 0; byte < 4; byte++, start++) {
+                    if (((f.second >> (byte*8)) & 1) &&
+                        (use = find_free(tbl->stage, start, 31, 4, 1)) >= 0)
+                        do_alloc(tbl, f.first, use, 1, byte); } } }
+        if (f.second & 0x20002) {
             /* need 16-bit */
-            if (offset % 16U)
+            if (offset % 16U) {
                 error(tbl->format->lineno, "field %s not correctly aligned for 16-bit use on "
                       "action bus", tbl->format->find_field(f.first).c_str());
-            else if ((use = find_free(tbl->stage, 32 + (offset/8U)%4, 95, 4, bytes)) >= 0)
-                do_alloc(tbl, f.first, use, bytes); }
+            } else if (f.second & 4) {
+                if ((use = find_free(tbl->stage, 32, 95, 4, bytes)) >= 0)
+                    do_alloc(tbl, f.first, use, bytes, 0);
+            } else {
+                unsigned start = 32 + (offset/8U) % 4U;
+                for (int byte = 0; byte < 4; byte += 2, start += 2) {
+                    if (((f.second >> (byte*8)) & 2) &&
+                        (use = find_free(tbl->stage, start, 95, 4, 2)) >= 0)
+                        do_alloc(tbl, f.first, use, 2, byte); } } }
         if (f.second == 4) {
             /* need only 32-bit */
             if (offset % 32U)
                 error(tbl->format->lineno, "field %s not correctly aligned for 32-bit use on "
                       "action bus", tbl->format->find_field(f.first).c_str());
             else if ((use = find_free(tbl->stage, 96, 127, 4, bytes)) >= 0)
-                do_alloc(tbl, f.first, use, bytes);
+                do_alloc(tbl, f.first, use, bytes, 0);
             else if ((use = find_free(tbl->stage, 32, 95, 4, bytes)) >= 0)
-                do_alloc(tbl, f.first, use, bytes);
+                do_alloc(tbl, f.first, use, bytes, 0);
             else if ((use = find_free(tbl->stage, 0, 31, 4, bytes)) >= 0)
-                do_alloc(tbl, f.first, use, bytes); } }
+                do_alloc(tbl, f.first, use, bytes, 0); } }
 }
 
 int slot_sizes[] = {
@@ -298,6 +313,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
 }
 
 void ActionBus::write_immed_regs(Table *tbl) {
+    LOG2("--- ActionBus write_immed_regs(" << tbl->name() << ")");
     auto &adrdist = tbl->stage->regs.rams.match.adrdist;
     int tid = tbl->logical_id;
     for (auto &f : by_byte) {

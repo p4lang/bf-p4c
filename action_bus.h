@@ -6,12 +6,12 @@
 class ActionBus {
     struct Slot {
         std::string                 name;
-        unsigned                    byte, size;
+        unsigned                    byte, size;  // size in bits
         Table::Format::Field        *data;
-        unsigned                    offset;
+        unsigned                    offset;      // offset in bytes
     };
     std::map<unsigned, Slot>                        by_byte;
-    std::map<Table::Format::Field *, int>           need_place;
+    std::map<Table::Format::Field *, unsigned>      need_place;
 public:
     int             lineno;
     ActionBus() : lineno(-1) {}
@@ -21,9 +21,9 @@ public:
     void write_immed_regs(Table *tbl);
     void write_action_regs(Table *tbl, unsigned homerow, unsigned action_slice);
     int find(Table::Format::Field *f, int off, int size);
-    void do_alloc(Table *tbl, Table::Format::Field *f, unsigned use, int bytes);
+    void do_alloc(Table *tbl, Table::Format::Field *f, unsigned use, int bytes, unsigned offset);
     void need_alloc(Table *tbl, Table::Format::Field *f, int off, int size) {
-        need_place[f] |= size; }
+        need_place[f] |= size<<off; }
     int find(const char *name, int off, int size, int *len = 0);
     int find(const std::string &name, int off, int size, int *len = 0) {
         return find(name.c_str(), off, size, len); }

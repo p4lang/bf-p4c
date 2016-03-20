@@ -120,8 +120,10 @@ private:
             return -1; }
         virtual void pass2(Table *, int group) const {
             int size = group_size[group]/8U;
-            if (field && table->find_on_actionbus(field, lo, size) < 0) 
-                table->need_on_actionbus(field, lo, size); }
+            if (field && table->find_on_actionbus(field, lo, size) < 0) {
+                if (lo % (size*8) != 0 || lo >= 32)
+                    error(lineno, "%s misaligned for action bus", name.c_str());
+                table->need_on_actionbus(field, lo, size); } }
         virtual void mark_use(Table *tbl) {
             if (field) field->flags |= Table::Format::Field::USED_IMMED; }
         virtual unsigned bitoffset(int group) const {

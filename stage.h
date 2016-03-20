@@ -87,7 +87,7 @@ protected:
 class Stage : public Stage_data {
 public:
     static unsigned char action_bus_slot_map[ACTION_DATA_BUS_BYTES];
-    static unsigned char action_bus_slot_size[ACTION_DATA_BUS_SLOTS];
+    static unsigned char action_bus_slot_size[ACTION_DATA_BUS_SLOTS];  // size in bits
 
     Stage();
     Stage(Stage &&);
