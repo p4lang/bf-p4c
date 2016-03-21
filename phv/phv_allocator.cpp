@@ -3,7 +3,7 @@
 #include "constraint_solver/constraint_solver.h"
 #include "header_bit.h"
 #include "header_bit_creator.h"
-#include "set_tphv_constraints.h"
+#include "or_tools/t_phv_constraint.h"
 #include "set_deparser_constraints.h"
 #include "set_match_xbar_constraints.h"
 #include "set_write_constraints.h"
@@ -82,7 +82,7 @@ PhvAllocator::SetConstraints() {
   header_bits_.SetContainerWidthConstraints();
 
   // Set TPHV constraints. Fields used in MAU cannot go into T-PHV.
-  SetTPhvConstraints stphvc(header_bits_);
+  ORTools::TPhvConstraint stphvc(header_bits_);
   maupipe_->apply(stphvc);
   // Set deparser constraints including deparser groups.
   SetDeparserConstraints sdc(header_bits_);
