@@ -232,19 +232,19 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
     P4::EvaluatorPass evaluator(true);
     program = program->apply(evaluator);
     auto blockMap = evaluator.getBlockMap();
-    auto top = blockMap->getToplevelBlock();
+    auto top = blockMap->getMain();
     if (!top) {
         error("No main switch");
         return nullptr; }
 
     auto parser_blk = blockMap->getBlockBoundToParameter(top, "p");
-    auto parser = parser_blk->to<P4::ParserBlock>()->container;
+    auto parser = parser_blk->to<IR::ParserBlock>()->container;
     auto ingress_blk = blockMap->getBlockBoundToParameter(top, "ig");
-    auto ingress = ingress_blk->to<P4::ControlBlock>()->container;
+    auto ingress = ingress_blk->to<IR::ControlBlock>()->container;
     auto egress_blk = blockMap->getBlockBoundToParameter(top, "eg");
-    auto egress = egress_blk->to<P4::ControlBlock>()->container;
+    auto egress = egress_blk->to<IR::ControlBlock>()->container;
     auto deparser_blk = blockMap->getBlockBoundToParameter(top, "dep");
-    auto deparser = deparser_blk->to<P4::ControlBlock>()->container;
+    auto deparser = deparser_blk->to<IR::ControlBlock>()->container;
     LOG1("parser:" << parser);
     LOG1("ingress:" << ingress);
     LOG1("egress:" << egress);
