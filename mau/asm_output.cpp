@@ -35,7 +35,7 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
 class MauAsmOutput::TableFormat {
     const MauAsmOutput &self;
     struct match_group {
-        int                             action=-1, immediate=-1, version=-1;
+        int                             action = -1, immediate = -1, version = -1;
         vector<std::pair<int, int>>     match;
     };
     int action_bits = 0;
@@ -77,7 +77,7 @@ class MauAsmOutput::ImmedFormat {
     ImmedFormat(const IR::ActionFunction *act, int base) : base(base) { init(act); }
     explicit operator bool() { return !immediates.empty(); }
     void print(std::ostream &out) const {
-        const char *sep="";
+        const char *sep = "";
         for (auto &a : immediates) {
             out << sep << a.name << ": ";
             if (tag) out << tag << '(';
@@ -332,9 +332,9 @@ void MauAsmOutput::TableFormat::print(std::ostream &out) const {
             sep = ", "; }
         void emit(std::ostream &out, const char *name, int group,
                   const vector<std::pair<int, int>> &bits) {
-            if (bits.size() == 1)
+            if (bits.size() == 1) {
                 emit(out, name, group, bits[0].first, bits[0].second - bits[0].first + 1);
-            else if (bits.size() > 1) {
+            } else if (bits.size() > 1) {
                 out << sep << name << '(' << group << "): [ ";
                 sep = "";
                 for (auto &p : bits) {
