@@ -4,8 +4,8 @@
 #include "header_bit.h"
 #include "header_bit_creator.h"
 #include "or_tools/t_phv_constraint.h"
+#include "or_tools/match_xbar_constraint.h"
 #include "set_deparser_constraints.h"
-#include "set_match_xbar_constraints.h"
 #include "set_write_constraints.h"
 
 using namespace std::placeholders;
@@ -100,7 +100,7 @@ PhvAllocator::SetConstraints() {
   maupipe_->apply(sswc);
 
   // Set MAU match xbar constraints.
-  SetMatchXbarConstraints smxc(header_bits_);
+  ORTools::MatchXbarConstraint smxc(header_bits_);
   maupipe_->apply(smxc);
 
   // Collect constraint variables.
