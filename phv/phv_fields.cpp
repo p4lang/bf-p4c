@@ -23,7 +23,7 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, bool meta) 
         return; }
     LOG2("PhvInfo adding " << (meta ? "metadata" : "header") << " " << name);
     int start = by_id.size();
-    for (auto f : *type->fields)
+    for (auto f : *type->getEnumerator())
         add(name + '.' + f->name, f->type->width_bits(), meta);
     int end = by_id.size() - 1;
     all_headers.emplace(name, std::make_pair(start, end));

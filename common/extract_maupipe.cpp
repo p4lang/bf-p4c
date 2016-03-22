@@ -255,21 +255,22 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
 
     ParamBinding bindings(blockMap);
 
-    for (auto param : *parser->type->applyParams->parameters)
+    for (auto param : *parser->type->applyParams->getEnumerator())
         if (param->type->is<IR::Type_StructLike>())
             bindings.bind(param);
-    for (auto param : *ingress->type->applyParams->parameters)
+    for (auto param : *ingress->type->applyParams->getEnumerator())
         if (param->type->is<IR::Type_StructLike>())
             bindings.bind(param);
-    for (auto param : *egress->type->applyParams->parameters)
+    for (auto param : *egress->type->applyParams->getEnumerator())
         if (param->type->is<IR::Type_StructLike>())
             bindings.bind(param);
-    for (auto param : *deparser->type->applyParams->parameters)
+    for (auto param : *deparser->type->applyParams->getEnumerator())
         if (param->type->is<IR::Type_StructLike>())
             bindings.bind(param);
 
+    auto it = ingress->type->applyParams->parameters.rbegin();
     rv->standard_metadata =
-        bindings.get(ingress->type->applyParams->parameters->back())->obj->to<IR::Metadata>();
+        bindings.get(it->second)->obj->to<IR::Metadata>();
     PassManager fixups = {
         &bindings,
         new RemoveInstanceRef,

@@ -62,11 +62,10 @@ class GetTofinoParser::RewriteExtractNext : public Transform {
     /* FIXME -- could do full typechecking after this pass, but this is the only fixup needed,
      * for 'latest' refs that now point to real headers */
     if (mem->type == IR::Type::Unknown::get()) {
-      if (auto ht = dynamic_cast<const IR::Type_StructLike  *>(mem->expr->type)) {
-        for (auto f : *ht->fields) {
-          if (f->name == mem->member) {
-            mem->type = f->type;
-            break; } } } }
+        if (auto ht = mem->expr->type->to<IR::Type_StructLike>()) {
+            auto f = ht->getField(mem->member);
+            if (f != nullptr)
+                mem->type = f->type; } }
     return mem; }
 
   const IR::Vector<IR::Expression> *preorder(IR::Vector<IR::StatOrDecl> *vec) override {

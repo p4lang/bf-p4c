@@ -6,7 +6,7 @@ IR::InstanceRef::InstanceRef(IR::ID name, const IR::Type *t) : name(name) {
         obj = new IR::Header(name, hdr);
     } else if (auto *meta = t->to<IR::Type_Struct>()) {
         obj = new IR::Metadata(name, meta);
-        for (auto field : *meta->fields)
+        for (auto field : *meta->getEnumerator())
             if (field->type->is<IR::Type_StructLike>() || field->type->is<IR::Type_Stack>())
                 nested.add(field->name, new InstanceRef(field->name, field->type));
     } else if (auto *stk = t->to<IR::Type_Stack>()) {

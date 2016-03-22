@@ -3,11 +3,10 @@
 
 IR::Member *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field) {
     const IR::Type *ftype = nullptr;
-    for (auto f : *hdr->type->fields)
-        if (f->name == field) {
-            ftype = f->type;
-            break; }
-    if (!ftype)
+    auto f = hdr->type->getField(field);
+    if (f != nullptr)
+        ftype = f->type;
+    else
         BUG("No field %s in %s", field, hdr->name);
     return new IR::Member(ftype, new IR::ConcreteHeaderRef(hdr), field);
 }

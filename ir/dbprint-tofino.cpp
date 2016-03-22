@@ -12,8 +12,10 @@ void IR::MAU::Table::dbprint(std::ostream &out) const {
         out << '[' << gress << ' ' << hex(logical_id) << ']';
     for (auto &gw : gateway_rows) {
         out << endl << "gw: ";
-        if (gw.first) out << gw.first;
-        else out << "(miss)";
+        if (gw.first)
+            out << gw.first;
+        else
+            out << "(miss)";
         out << " => " << (gw.second ? gw.second : "run table"); }
     if (layout.match_width_bits || layout.overhead_bits) {
         out << endl << "{ " << (layout.gateway ? "G" : "")

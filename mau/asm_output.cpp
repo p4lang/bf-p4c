@@ -34,7 +34,7 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
 
 class MauAsmOutput::TableFormat {
     const MauAsmOutput &self;
-public:
+ public:
     vector<Slice>       match_fields;
     Slice               ghost_bits;
     TableFormat(const MauAsmOutput &s, const IR::MAU::Table *tbl);
