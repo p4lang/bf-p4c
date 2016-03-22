@@ -484,6 +484,9 @@ void Deparser::output() {
     for (auto &digest : digests)
         digest.type->setregs(this, digest);
 
+    if (!options.match_compiler) {
+        inp_regs.disable_if_zero();
+        hdr_regs.disable_if_zero(); }
     inp_regs.emit_json(*open_output("regs.all.deparser.input_phase.cfg.json"));
     hdr_regs.emit_json(*open_output("regs.all.deparser.header_phase.cfg.json"));
     TopLevel::all.reg_pipe.deparser.hdr = "regs.all.deparser.header_phase";

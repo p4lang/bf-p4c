@@ -24,7 +24,9 @@ public:
 
 AsmStage::AsmStage() : Section("stage") {
     int slot = 0, byte = 0;
-    stage.reserve(NUM_MAU_STAGES);
+    stage.resize(NUM_MAU_STAGES);
+    for (unsigned  i = 0; i < stage.size(); i++)
+        stage[i].stageno = i;
     for (int i = 0; i < ACTION_DATA_8B_SLOTS; i++) {
         Stage::action_bus_slot_map[byte++] = slot;
         Stage::action_bus_slot_size[slot++] = 8; }
@@ -177,6 +179,8 @@ void AsmStage::output() {
             if (table->logical_id >= 0)
                 table->gen_name_lookup(table_names[std::to_string(table->logical_id)]); }
         stage[i].write_regs();
+        if (!options.match_compiler)
+            stage[i].regs.disable_if_zero();
         stage[i].regs.emit_json(*open_output("regs.match_action_stage.%02x.cfg.json", i) , i);
         char buf[64];
         sprintf(buf, "regs.match_action_stage.%02x", i);

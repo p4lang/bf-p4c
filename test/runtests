@@ -176,7 +176,7 @@ function test_p4() {
         fi
     fi
     tfas_succeeded=false
-    if $ok && $TFAS -vvvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
+    if $ok && $TFAS -Mvvvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
         tfas_succeeded=true
         for f in $name.out/*.cfg.json; do
             if [ "$f" = "$name.out/regs.pipe.cfg.json" ]; then

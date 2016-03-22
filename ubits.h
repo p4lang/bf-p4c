@@ -21,6 +21,7 @@ struct ubits_base {
     ubits_base(unsigned long v) : value(v), read(false), write(false) {}
     operator unsigned long() const { read = true; return value; }
     bool modified() const { return write; }
+    bool disable_if_zero() const { return value == 0; }
     void rewrite() { write = false; }
     virtual unsigned long operator=(unsigned long v) = 0;
     virtual unsigned size() = 0;
@@ -134,6 +135,7 @@ public:
     bool modified() const { return write; }
     void rewrite() { write = false; }
     friend std::ostream &operator<<(std::ostream &out, const ustring &u);
+    bool disable_if_zero() { return false; }
 };
 
 inline std::ostream &operator<<(std::ostream &out, const ustring *u) {

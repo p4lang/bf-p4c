@@ -267,8 +267,13 @@ void Parser::output() {
     for (int i = 0; i < 112; i++)
         if (!phv_allow_multi_write[256+i]) {
             reg_in.prsr_reg.no_multi_wr.t_nmw[i] = 1;
-            reg_eg.prsr_reg.no_multi_wr.t_nmw[i] = 1;
-        }
+            reg_eg.prsr_reg.no_multi_wr.t_nmw[i] = 1; }
+    if (!options.match_compiler) {
+        mem[INGRESS].disable_if_zero();
+        mem[EGRESS].disable_if_zero();
+        reg_in.disable_if_zero();
+        reg_eg.disable_if_zero();
+        reg_merge.disable_if_zero(); }
     mem[INGRESS].emit_json(*open_output("memories.all.parser.ingress.cfg.json"), "ingress");
     mem[EGRESS].emit_json(*open_output("memories.all.parser.egress.cfg.json"), "egress");
     reg_in.emit_json(*open_output("regs.all.parser.ingress.cfg.json"));

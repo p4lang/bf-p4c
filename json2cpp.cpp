@@ -399,6 +399,41 @@ static void gen_disable_method(std::ostream &out, json::map *m, indent_t indent,
     out << --indent << '}' << std::endl;
 }
 
+static void gen_disable_if_zero_method(std::ostream &out, json::map *m, indent_t indent,
+                                       const std::string &classname)
+{
+    out << indent++ << "bool ";
+    if (gen_definitions == DEFN_ONLY) out << classname << "::";
+    out << "disable_if_zero()";
+    if (gen_definitions == DECL_ONLY) {
+        out << ";" << std::endl;
+        return; }
+    out << " {" << std::endl;
+    out << indent << "bool rv = true;" << std::endl;
+    for (auto &a : *m) {
+	json::string *name = dynamic_cast<json::string *>(a.first);
+	if ((*name)[0] == '_') continue;
+        if (!checked_array) {
+            std::vector<int> indexes;
+            get_indexes(a.second.get(), indexes);
+            if (!indexes.empty()) {
+                int index_num = 0;
+                for (int idx : indexes) {
+                    out << indent++ << "for (int i" << index_num << " = 0; i" << index_num << " < "
+                        << idx << "; i" << index_num << "++)" << std::endl;
+                    index_num++; }
+                out << indent << "if (!" << *name;
+                for (unsigned i = 0; i < indexes.size(); i++)
+                    out << "[i" << i << ']';
+                out << ".disable_if_zero()) rv = false;" << std::endl;
+                indent -= indexes.size();
+                continue; } }
+        out << indent << "if (!" << *name << ".disable_if_zero()) rv = false;" << std::endl; }
+    out << indent << "if (rv) disabled_ = true;" << std::endl;
+    out << indent << "return rv;" << std::endl;
+    out << --indent << '}' << std::endl;
+}
+
 static bool delete_copy = false;
 static bool gen_emit = true;
 static bool gen_fieldname = true;
@@ -520,7 +555,8 @@ static void gen_type(std::ostream &out, const std::string &parent,
         if (gen_unread) gen_dump_unread_method(out, m, indent, classname);
         if (enable_disable) {
             gen_modified_method(out, m, indent, classname);
-            gen_disable_method(out, m, indent, classname); }
+            gen_disable_method(out, m, indent, classname);
+            gen_disable_if_zero_method(out, m, indent, classname); }
         if (gen_definitions != DEFN_ONLY) {
             out << --indent << '}'; }
     } else if (json::number *n = dynamic_cast<json::number *>(t)) {

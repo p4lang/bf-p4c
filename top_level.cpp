@@ -35,6 +35,11 @@ void TopLevel::output() {
         reg_top.pipes[i] = "regs.pipe"; }
     reg_top.macs.disable();
     reg_top.serdes.disable();
+    if (!options.match_compiler) {
+        mem_top.disable_if_zero();
+        mem_pipe.disable_if_zero();
+        reg_top.disable_if_zero();
+        reg_pipe.disable_if_zero(); }
     mem_top.emit_json(*open_output("memories.top.cfg.json"));
     mem_pipe.emit_json(*open_output("memories.pipe.cfg.json"));
     reg_top.emit_json(*open_output("regs.top.cfg.json"));

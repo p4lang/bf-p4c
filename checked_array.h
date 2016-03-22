@@ -22,6 +22,7 @@ public:
     virtual bool modified() const = 0;
     virtual bool disabled() const = 0;
     virtual void disable() = 0;
+    virtual bool disable_if_zero() = 0;
 };
 
 template<size_t S, typename T>
@@ -48,6 +49,13 @@ public:
     void disable() {
         if (modified()) ERROR("Disabling modified record " << this);
         disabled_ = true; }
+    bool disable_if_zero() {
+        bool rv = true;
+        for (size_t i = 0; i < S; i++)
+            if (!data[i].disable_if_zero()) rv = false;
+        /* Can't actually disable arrays, as walle doesn't like it, but allow
+         * containing object to be disabled */
+        return rv; }
 };
 
 template<size_t S, typename T>

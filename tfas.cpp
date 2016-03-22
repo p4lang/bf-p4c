@@ -11,7 +11,7 @@
 
 option_t options = {
     .version = CONFIG_OLD,
-    .match_compiler = true,
+    .match_compiler = false,
 };
 
 int verbose = 0;
@@ -114,6 +114,9 @@ int main(int ac, char **av) {
                                       << " for writing" << std::endl;
                             delete tmp; } }
                     break;
+                case 'M':
+                    options.match_compiler = true;
+                    break;
                 case 'o':
                     if (stat(av[++i], &st)) {
                         if (mkdir(av[i], 0777) < 0) {
@@ -134,7 +137,7 @@ int main(int ac, char **av) {
                 default:
                     std::cerr << "Unknown option " << (flag ? '+' : '-') 
                               << arg[-1] << std::endl;
-                    std::cerr << "usage: " << av[0] << " [-l:D:qv] file..."
+                    std::cerr << "usage: " << av[0] << " [-l:D:Mo:qv] file..."
                               << std::endl;
                     error_count++; }
         } else if (FILE *fp = fopen(av[i], "r")) {
