@@ -29,9 +29,10 @@ STF=$(findbin model simple_test_harness)
 
 mkdir -p $name.out
 
-if $TFAS -vvvvl $name.out/tfas.config.log $name.tfa; then
-    if $TFLN $name.out/*.cfg.json -o $name.out/tofino.bin; then
-        if $STF $test; then
+rm -f $name.out/*.cfg.json
+if time $TFAS -vvvvl $name.out/tfas.config.log $name.tfa; then
+    if time $TFLN $name.out/*.cfg.json -o $name.out/tofino.bin; then
+        if time $STF $test; then
             exit 0
         fi
     fi

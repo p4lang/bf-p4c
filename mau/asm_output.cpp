@@ -2,6 +2,7 @@
 #include "asm_output.h"
 #include "lib/bitops.h"
 #include "lib/bitrange.h"
+#include "lib/hex.h"
 #include "lib/indent.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
@@ -87,7 +88,7 @@ class MauAsmOutput::ImmedFormat {
 };
 
 void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::Use &use,
-                              const TableFormat *fmt) const {
+                              const Memories::Use *mem, const TableFormat *fmt) const {
     map<int, map<int, Slice>> sort;
     if (use.use.empty()) return;
     for (auto &b : use.use) {
@@ -105,11 +106,17 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::U
                     group.second.erase(next);
                     continue; } }
             it = next; } }
+    int hash_group = -1;
     if (!use.way_use.empty()) {
         out << indent << "ways:" << std::endl;
-        for (auto &way : use.way_use)
-            out << indent << "- [" << use.hash_group << ", " << way.slice << ", "
-                << way.mask << "]" << std::endl; }
+        auto memway = mem->ways.begin();
+        for (auto &way : use.way_use) {
+            if (hash_group >= 0 && hash_group != way.group)
+                BUG("multiple hash groups use in ways");
+            hash_group = way.group;
+            out << indent << "- [" << way.group << ", " << way.slice << ", 0x"
+                << hex(memway->second) << "]" << std::endl;
+            ++memway; } }
     out << indent++ << "input_xbar:" << std::endl;
     for (auto &group : sort)
         out << indent << "group " << group.first << ": " << group.second << std::endl;
@@ -152,11 +159,11 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::U
                 if (!match_data.empty()) {
                     out << "random(" << emit_vector(match_data, ", ") << ")";
                     if (ghost) out << " ^ "; }
-                if (ghost) out << ghost(0, range.second - range.first);
+                if (ghost) out << "stripe(" << ghost << ")";
                 out << std::endl; }
             --indent; } }
-    if (use.hash_group >= 0) {
-        out << indent++ << "hash group " << use.hash_group << ":" << std::endl;
+    if (hash_group >= 0) {
+        out << indent++ << "hash group " << hash_group << ":" << std::endl;
         out << indent << "table: [" << emit_vector(bitvec(use.hash_table_input), ", ") << "]"
             << std::endl;
         --indent; }
@@ -368,7 +375,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
             out << ", size: " << tbl->match_table->size;
         out << " }" << std::endl;
         emit_memory(out, indent, tbl->resources->memuse.at(tbl->name));
-        emit_ixbar(out, indent, tbl->resources->match_ixbar, &fmt);
+        emit_ixbar(out, indent, tbl->resources->match_ixbar,
+                   &tbl->resources->memuse.at(tbl->name), &fmt);
         if (!tbl->layout.ternary) {
             out << indent << fmt << std::endl;
             bool first = true;
@@ -386,7 +394,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         indent_t gw_indent = indent;
         if (tbl->match_table)
             out << gw_indent++ << "gateway:" << std::endl;
-        emit_ixbar(out, gw_indent, tbl->resources->gateway_ixbar, &fmt);
+        emit_ixbar(out, gw_indent, tbl->resources->gateway_ixbar, 0, &fmt);
     }
 
     /* FIXME -- this is a mess and needs to be rewritten to be sane */

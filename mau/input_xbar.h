@@ -61,13 +61,13 @@ struct IXBar {
         };
         vector<Byte>    use;
         unsigned        hash_table_input = 0;
-        int             hash_group = -1;
         struct Way {
-            int         slice;
+            int         group, slice;
             unsigned    mask;
+            Way() = delete;
         };
         vector<Way>     way_use;
-        void clear() { use.clear(); hash_table_input = 0; hash_group = -1; way_use.clear(); }
+        void clear() { use.clear(); hash_table_input = 0; way_use.clear(); }
         void compute_hash_tables();
         int groups() const;  // how many different groups in this use
     };

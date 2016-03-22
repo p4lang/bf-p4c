@@ -124,9 +124,9 @@ static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Pl
     for (auto *p = done; p && p->stage == next->stage; p = p->prev)
         current_mem.update(p->resources->memuse);
     int gw_entries = 1;
+    resources->memuse.clear();
     if (!current_mem.allocTable(next->table, entries, resources->memuse, resources->match_ixbar) ||
-        (next->gw && !current_mem.allocTable(next->gw, gw_entries, resources->memuse,
-                                             resources->match_ixbar))) {
+        !current_mem.allocTable(next->gw, gw_entries, resources->memuse, resources->match_ixbar)) {
         resources->memuse.clear();
         return false; }
     return true;
@@ -169,6 +169,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
                                   resources->gateway_ixbar)) {
         rv->stage++;
         current_ixbar.clear();
+        resources->clear();
         if (!current_ixbar.allocTable(rv->table, phv, resources->match_ixbar,
                                       resources->gateway_ixbar) ||
             !current_ixbar.allocTable(rv->gw, phv, resources->match_ixbar,
@@ -392,9 +393,9 @@ static void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *r
     tbl->layout.entries = entries;
     if (!tbl->ways.empty()) {
         auto &mem = resources->memuse.at(tbl->name);
-        assert(tbl->ways.size() == mem.way_depth.size());
+        assert(tbl->ways.size() == mem.ways.size());
         for (unsigned i = 0; i < tbl->ways.size(); ++i)
-            tbl->ways[i].entries = mem.way_depth[i] * 1024 * tbl->ways[i].match_groups; }
+            tbl->ways[i].entries = mem.ways[i].first * 1024 * tbl->ways[i].match_groups; }
 }
 
 IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {

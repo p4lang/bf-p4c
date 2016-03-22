@@ -141,7 +141,7 @@ def main(argv):
         name = os.path.basename(options.testName)
         os.chdir(os.path.dirname(options.testName))
         result = run_timeout(options, [srcdir + '/backends/tofino/runtest',
-                                       test, name], 30.0, None)
+                                       test, name], 60.0, None)
     else:
         if not os.path.exists(options.testName + '.tfa'):
             print("no path ", options.testName + '.tfa')

@@ -102,6 +102,7 @@ static bool find_alloc(IXBar::Use &alloc, int groups, int bytes_per_group,
 }
 
 bool IXBar::allocTable(bool ternary, const IR::Table *tbl, const PhvInfo &phv, Use &alloc) {
+    LOG2("IXBar::allocTable(" << tbl->name << ")");
     alloc.ternary = ternary;
     if (!tbl->reads) return true;
     set<cstring>                        fields_needed;
@@ -150,15 +151,13 @@ static int way_groups_allocated(const IXBar::Use &alloc) {
 }
 
 bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const IR::MAU::Table::Way &way, Use &alloc) {
-    if (alloc.hash_group < 0) {
-        for (int i = 0; i < HASH_GROUPS; i++) {
-            if (!hash_group_use[i] || hash_group_use[i] == tbl->name) {
-                hash_group_use[i] = tbl->name;
-                alloc.hash_group = i;
-                break; } } }
-    if (alloc.hash_group < 0) {
+    int hash_group = find(hash_group_use, tbl->name) - hash_group_use.begin();
+    if (hash_group >= HASH_GROUPS)
+        hash_group = find(hash_group_use, cstring()) - hash_group_use.begin();
+    if (hash_group >= HASH_GROUPS) {
         LOG2("failed to allocate hash group");
         return false; }
+    hash_group_use[hash_group] = tbl->name;
     int way_bits = ceil_log2(way.entries/1024U/way.match_groups);
     int group;
     unsigned way_mask = 0;
@@ -176,8 +175,8 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const IR::MAU::Table::Way &w
             way_mask |= 1U << bit;
             way_bits--; } }
     if (way_bits > 0)
-        LOG3("failed to allocate enough way mask bit, will need to reuse some");
-    alloc.way_use.emplace_back(Use::Way{ group, way_mask });
+        LOG3("failed to allocate enough way mask bits, will need to reuse some");
+    alloc.way_use.emplace_back(Use::Way{ hash_group, group, way_mask });
     hash_index_inuse[group] |= alloc.hash_table_input;
     for (auto bit : bitvec(way_mask))
         hash_single_bit_inuse[bit] |= alloc.hash_table_input;
@@ -217,8 +216,6 @@ void IXBar::update(const Use &alloc) {
 bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv,
                        Use &tbl_alloc, Use &gw_alloc) {
     if (!tbl) return true;
-    tbl_alloc.clear();
-    gw_alloc.clear();
     if (tbl->match_table && !allocTable(tbl->layout.ternary, tbl->match_table, phv, tbl_alloc))
         return false;
     for (auto &way : tbl->ways) {
@@ -233,8 +230,8 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv,
     return true;
 }
 
-template<class T>
-static void write_one(std::ostream &out, const T &f, std::map<cstring, char> &fields) {
+static void write_one(std::ostream &out, const std::pair<cstring, int> &f,
+                      std::map<cstring, char> &fields) {
     if (f.first) {
         if (!fields.count(f.first)) {
             if (fields.size() >= 26)
@@ -245,6 +242,17 @@ static void write_one(std::ostream &out, const T &f, std::map<cstring, char> &fi
     } else {
         out << ".."; }
 }
+static void write_one(std::ostream &out, cstring n, std::map<cstring, char> &names) {
+    if (n) {
+        if (!names.count(n)) {
+            if (names.size() >= 26)
+                names.emplace(n, 'a' + names.size() - 26);
+            else
+                names.emplace(n, 'A' + names.size()); }
+        out << names[n];
+    } else {
+        out << '.'; }
+}
 
 template<class T>
 static void write_group(std::ostream &out, const T &grp, std::map<cstring, char> &fields) {
@@ -254,6 +262,7 @@ static void write_group(std::ostream &out, const T &grp, std::map<cstring, char>
 /* IXBarPrinter in .gdbinit should match this */
 std::ostream &operator<<(std::ostream &out, const IXBar &ixbar) {
     std::map<cstring, char>     fields;
+    out << "Input Xbar:" << std::endl;
     for (int r = 0; r < IXBar::EXACT_GROUPS; r++) {
         write_group(out, ixbar.exact_use[r], fields);
         if (r < IXBar::BYTE_GROUPS) {
@@ -266,9 +275,39 @@ std::ostream &operator<<(std::ostream &out, const IXBar &ixbar) {
         out << std::endl; }
     for (auto &f : fields)
         out << "   " << f.second << " " << f.first << std::endl;
+    std::map<cstring, char>     tables;
+    out << "Hash:" << std::endl;
+    for (int h = 0; h < IXBar::HASH_TABLES; ++h) {
+        write_group(out, ixbar.hash_index_use[h], tables);
+        out << " ";
+        write_group(out, ixbar.hash_single_bit_use[h], tables);
+        if (h < IXBar::HASH_GROUPS) {
+            out << "   ";
+            write_one(out, ixbar.hash_group_use[h], tables); }
+        out << std::endl; }
+    for (auto &t : tables)
+        out << "   " << t.second << " " << t.first << std::endl;
     return out;
 }
 
-void pIXBar(const IXBar *ixbar) {
+void dump(const IXBar *ixbar) {
     std::cout << *ixbar;
+}
+void dump(const IXBar &ixbar) {
+    std::cout << ixbar;
+}
+
+std::ostream &operator<<(std::ostream &out, const IXBar::Use &use) {
+    for (auto &b : use.use)
+        out << b << std::endl;
+    for (auto &w : use.way_use)
+        out << "[ " << w.group << ", " << w.slice << ", 0x" << hex(w.mask) << " ]" << std::endl;
+    return out;
+}
+
+void dump(const IXBar::Use *use) {
+    std::cout << *use;
+}
+void dump(const IXBar::Use &use) {
+    std::cout << use;
 }

@@ -147,6 +147,8 @@ class AllocAttached : public Inspector {
 
 bool Memories::allocTable(const IR::MAU::Table *table, int &entries,  map<cstring, Use> &alloc,
                           const IXBar::Use &match_ixbar) {
+    if (!table) return true;
+    LOG2("Memories::allocTable(" << table->name << ", &" << entries << ")");
     bool ok = true;
     int width, depth, groups = 1;
     if (table->layout.ternary) {
@@ -172,13 +174,31 @@ bool Memories::allocTable(const IR::MAU::Table *table, int &entries,  map<cstrin
         alloc[table->name].type = Use::TERNARY;
         ok &= allocRams(table->name, width, depth, tcam_use, 0, alloc[table->name]);
     } else if (!table->ways.empty()) {
+        assert(match_ixbar.way_use.size() == table->ways.size());
+        struct waybits {
+            bitvec              bits;
+            bitvec::bitref      next;
+            waybits() : next(bits.end()) {} };
+        std::map<int, waybits> alloc_bits;
+        for (auto &way : match_ixbar.way_use)
+            alloc_bits[way.group].bits |= way.mask;
         alloc[table->name].type = Use::EXACT;
         int alloc_depth = 0;
-        for (int i = table->ways.size(); i > 0; --i) {
-            int sz = 1 << std::max(ceil_log2(depth/i), 0);
+        auto ixbar_way = match_ixbar.way_use.begin();
+        for (int i = table->ways.size(); i > 0; --i, ++ixbar_way) {
+            int log2size = std::max(ceil_log2((depth+i-1)/i), 0);
+            int sz = 1 << log2size;
             ok &= allocRams(table->name, width, sz, sram_use, &sram_match_bus, alloc[table->name]);
             alloc_depth += sz;
-            alloc[table->name].way_depth.push_back(sz);
+            unsigned mask = 0;
+            auto &bits = alloc_bits[ixbar_way->group];
+            for (int bit = 0; bit < log2size; bit++) {
+                if (!++bits.next) ++bits.next;
+                if (!bits.next || (mask & (1 << *bits.next)))
+                    BUG("Not enough way select bits allocated in group %d for table %s",
+                        ixbar_way->group, table->name);
+                mask |= 1 << *bits.next; }
+            alloc[table->name].ways.emplace_back(sz, mask);
             if ((depth -= sz) < 1) depth = 1; }
         entries = alloc_depth * groups * 1024U; }
     return ok;
@@ -273,6 +293,6 @@ std::ostream &operator<<(std::ostream &out, const Memories &mem) {
     return out;
 }
 
-void pMemories(const Memories *mem) {
+void dump(const Memories *mem) {
     std::cout << *mem;
 }

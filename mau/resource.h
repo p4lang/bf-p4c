@@ -15,6 +15,10 @@ struct TableResourceAlloc {
         for (auto &use : memuse)
             rv->memuse.emplace(use.first + ext, use.second);
         return rv; }
+    void clear() {
+        match_ixbar.clear();
+        gateway_ixbar.clear();
+        memuse.clear(); }
 };
 
 #endif /* _TOFINO_MAU_RESOURCE_H_ */
