@@ -35,6 +35,7 @@ struct Memories {
             explicit Row(int r, int b = -1) : row(r), bus(b) {}
         };
         vector<Row>     row;
+        vector<int>     way_depth;  // depth in memory units
         void visit(Memories &mem, std::function<void(cstring &)>) const;
     };
 

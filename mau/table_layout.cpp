@@ -122,7 +122,7 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
             auto *tern_indir = new IR::MAU::TernaryIndirect(tbl->name);
             tbl->attached.push_back(tern_indir);
             tern_indir->apply(attached); }
-    } else {
+    } else if (tbl->match_table) {
         // determine ways and match groups?
         int match_group_bits = std::max(tbl->layout.match_width_bits-10, 0) +
                                tbl->layout.overhead_bits + 4;
@@ -139,6 +139,8 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
                 ways = 2;
             else if (ways < 1)
                 ways = 1; }
+        if (ways * width > 16)
+            ways = 16/width;
         tbl->ways.resize(ways);
         int entries = (tbl->layout.entries + match_groups - 1)/ match_groups;
         for (auto &way : tbl->ways) {
@@ -146,7 +148,8 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
             way.width = width;
             way.entries = std::max(1024U, 1U << (ceil_log2(entries / ways--) + 1) >> 1);
             if ((entries -= way.entries) < 0)
-                entries = 0; } }
+                entries = 0;
+            way.entries *= match_groups; } }
     return true;
 }
 

@@ -159,7 +159,7 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const IR::MAU::Table::Way &w
     if (alloc.hash_group < 0) {
         LOG2("failed to allocate hash group");
         return false; }
-    int way_bits = ceil_log2(way.entries/1024U);
+    int way_bits = ceil_log2(way.entries/1024U/way.match_groups);
     int group;
     unsigned way_mask = 0;
     LOG3("Need " << way_bits << " mask bits for way " << alloc.way_use.size() <<
