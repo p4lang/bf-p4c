@@ -958,7 +958,8 @@ void MatchTable::write_regs(int type, Table *result) {
 
     if (options.match_compiler && dynamic_cast<HashActionTable *>(this))
         return; // skip the rest
-    stage->regs.cfg_regs.mau_cfg_lt_thread |= 1U << logical_id;
+    if (gress == EGRESS)
+        stage->regs.cfg_regs.mau_cfg_lt_thread |= 1U << logical_id;
 
     if (table_counter)
         merge.mau_table_counter_ctl[logical_id/8U].set_subfield(
