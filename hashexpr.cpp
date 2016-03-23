@@ -24,7 +24,7 @@ static bool check_ixbar(Phv::Ref &ref, InputXbar *ix, int grp) {
 
 class HashExpr::PhvRef : HashExpr {
     Phv::Ref what;
-    PhvRef(gress_t gr, const value_t &v) : what(gr, v) {}
+    PhvRef(gress_t gr, const value_t &v) : HashExpr(v.lineno), what(gr, v) {}
     friend class HashExpr;
     bool check_ixbar(InputXbar *ix, int grp) { return ::check_ixbar(what, ix, grp); }
     void gen_data(bitvec &data, int bit, InputXbar *ix, int grp);
@@ -33,6 +33,7 @@ class HashExpr::PhvRef : HashExpr {
 
 class HashExpr::Random : HashExpr {
     std::vector<Phv::Ref>       what;
+    Random(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
     bool check_ixbar(InputXbar *ix, int grp) {
         bool rv = true;
@@ -46,6 +47,7 @@ class HashExpr::Random : HashExpr {
 class HashExpr::Crc : HashExpr {
     unsigned                    poly;
     std::vector<Phv::Ref>       what;
+    Crc(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
     bool check_ixbar(InputXbar *ix, int grp) {
         bool rv = true;
@@ -58,6 +60,7 @@ class HashExpr::Crc : HashExpr {
 
 class HashExpr::Xor : HashExpr {
     std::vector<HashExpr *>     what;
+    Xor(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
     bool check_ixbar(InputXbar *ix, int grp) {
         bool rv = true;
@@ -73,21 +76,39 @@ class HashExpr::Xor : HashExpr {
         return rv; }
 };
 
+class HashExpr::Stripe : HashExpr {
+    std::vector<HashExpr *>     what;
+    Stripe(int lineno) : HashExpr(lineno) {}
+    friend class HashExpr;
+    bool check_ixbar(InputXbar *ix, int grp) {
+        bool rv = true;
+        for (auto *e : what)
+            rv |= e->check_ixbar(ix, grp);
+        return rv; }
+    void gen_data(bitvec &data, int bit, InputXbar *ix, int grp);
+    int width() { return 0; }
+};
+
 HashExpr *HashExpr::create(gress_t gress, const value_t &what) {
     if (what.type == tCMD) {
         if (what[0] == "random") {
-            Random *rv = new Random;
+            Random *rv = new Random(what.lineno);
             for (int i = 1; i < what.vec.size; i++)
                 rv->what.emplace_back(gress, what[i]);
             return rv;
         } else if (what[0] == "crc" && CHECKTYPE(what[1], tINT)) {
-            Crc *rv = new Crc;
+            Crc *rv = new Crc(what.lineno);
             rv->poly = what[1].i*2 + 1;
             for (int i = 2; i < what.vec.size; i++)
                 rv->what.emplace_back(gress, what[i]);
             return rv;
         } else if (what[0] == "^") {
-            Xor *rv = new Xor;
+            Xor *rv = new Xor(what.lineno);
+            for (int i = 1; i < what.vec.size; i++)
+                rv->what.push_back(create(gress, what[i]));
+            return rv;
+        } else if (what[0] == "stripe") {
+            Stripe *rv = new Stripe(what.lineno);
             for (int i = 1; i < what.vec.size; i++)
                 rv->what.push_back(create(gress, what[i]));
             return rv;
@@ -131,4 +152,18 @@ void HashExpr::Crc::gen_data(bitvec &data, int bit, InputXbar *ix, int grp) {
 void HashExpr::Xor::gen_data(bitvec &data, int bit, InputXbar *ix, int grp) {
     for (auto *e : what)
         e->gen_data(data, bit, ix, grp);
+}
+
+void HashExpr::Stripe::gen_data(bitvec &data, int bit, InputXbar *ix, int grp) {
+    int total_size = 0;
+    while (1) {
+        for (auto *e : what) {
+            int sz = e->width();
+            if (bit < sz) {
+                e->gen_data(data, bit, ix, grp);
+                return; }
+            total_size += sz; }
+        if (total_size == 0)
+            error(lineno, "Can't stripe unsized data");
+        bit %= total_size; }
 }

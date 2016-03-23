@@ -10,7 +10,11 @@ class HashExpr {
     class Random;
     class Crc;
     class Xor;
+    class Stripe;
+protected:
+    HashExpr(int l) : lineno(l) {}
 public:
+    int lineno;
     static HashExpr *create(gress_t, const value_t &);
     virtual bool check_ixbar(InputXbar *ix, int grp) = 0;
     virtual void gen_data(bitvec &data, int bit, InputXbar *ix, int grp) = 0;
