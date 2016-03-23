@@ -308,24 +308,31 @@ void ExactMatchTable::setup_ways() {
                 error(w.lineno, "Must specify rams for all ways in tabls %s, or none",
                       name());
                 return; }
-        if (layout.size() % (ways.size()*fmt_width) != 0)
-            error(lineno, "Rows is not a mulitple of ways in table %s", name());
-        else {
-            unsigned way = 0, word = 0;
-            for (auto &row : layout) {
-                if (word == 0) {
-                    if (ways[way].group >= EXACT_HASH_GROUPS ||
-                        ways[way].subgroup >= 5 ||
-                        (ways[way].mask &~ 0xfff)) {
-                        error(ways[way].lineno, "invalid exact match way");
-                        break; } }
-                if (row.cols.size() != 1U << bitcount(ways[way].mask))
-                    error(ways[way].lineno, "Depth of way doesn't match number of columns on "
-                          "row %d in table %s", row.row, name());
-                for (auto col : row.cols) {
-                    ways[way].rams.emplace_back(row.row, col);
-                    way_map[ways[way].rams.back()].way = way; }
-                if (++word == fmt_width) { word = 0; way++; } } }
+        if (layout.size() % fmt_width != 0) {
+            error(lineno, "Rows is not a mulitple of width in table %s", name());
+            return; }
+        for (unsigned i = 0; i < layout.size(); ++i) {
+            unsigned first = (i / fmt_width) * fmt_width;
+            if (layout[i].cols.size() != layout[first].cols.size())
+                error(layout[i].lineno, "Row size mismatch within wide table %s", name()); }
+        if (error_count > 0) return;
+        unsigned ridx = 0, cidx = 0;
+        for (auto &way : ways) {
+            if (ridx >= layout.size()) {
+                error(way.lineno, "Not enough rams for ways in table %s", name());
+                break; }
+            unsigned size = 1U << bitcount(way.mask);
+            for (unsigned i = 0; i < size; i++) {
+                for (unsigned word = 0; word < fmt_width; ++word) {
+                    assert(ridx + word < layout.size());
+                    auto &row = layout[ridx + word];
+                    assert(cidx < row.cols.size());
+                    way.rams.emplace_back(row.row, row.cols[cidx]); }
+                if (++cidx == layout[ridx].cols.size()) {
+                    ridx += fmt_width;
+                    cidx = 0; } } }
+        if (ridx < layout.size())
+            error(ways[0].lineno, "Too many rams for ways in table %s", name());
     } else {
         bitvec rams;
         for (auto &row : layout)
@@ -354,12 +361,14 @@ void ExactMatchTable::setup_ways() {
         for (auto bit : rams)
             error(lineno, "Ram %d,%d not in any way of table %s", bit/16, bit%16, name()); }
     if (error_count > 0) return;
+    int way = 0;
     for (auto &w : ways) {
         MaskCounter bank(w.mask);
         unsigned index = 0, word = 0;
         int col = -1;
         for (auto &ram : w.rams) {
             auto &wm = way_map[ram];
+            wm.way = way;
             wm.index = index;
             wm.word = fmt_width - word - 1;
             wm.bank = bank;
@@ -368,7 +377,9 @@ void ExactMatchTable::setup_ways() {
                       col, ram.second);
             col = ram.second;
             ++index;
-            if (++word == fmt_width) { word = 0; bank++; } } }
+            if (++word == fmt_width) { word = 0; bank++; } }
+        ++way; }
+    // FIXME -- check to ensure that ways that share a bus use the same hash group?
 }
 
 static int find_in_ixbar(Table *table, std::vector<Phv::Ref> &match) {
