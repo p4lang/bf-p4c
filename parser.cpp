@@ -1,3 +1,4 @@
+#include "algorithm.h"
 #include "parser.h"
 #include "phv.h"
 #include "range.h"
@@ -540,6 +541,8 @@ Parser::State::Match::Match(int l, gress_t gress, State *n) : lineno(l)
 }
 
 static value_t &extract_save_phv(value_t &data) {
+    if (data.type == tVEC)
+        return data[0];
     if (data.type == tCMD && (data[0] == "offset" || data[0] == "rotate"))
         return data[1];
     return data;
@@ -548,6 +551,13 @@ static value_t &extract_save_phv(value_t &data) {
 Parser::State::Match::Save::Save(gress_t gress, int l, int h, value_t &data, int flgs) :
     lo(l), hi(h), where(gress, extract_save_phv(data)), flags(flgs)
 {
+    if (hi < lo || hi-lo > 3 || hi-lo == 2)
+        error(data.lineno, "Invalid parser extraction size");
+    if (data.type == tVEC) {
+        if (data.vec.size > 2 || data.vec.size < 1)
+            error(data.lineno, "Can only extract into single or pair");
+        if (data.vec.size == 2)
+            second = Phv::Ref(gress, data[1]); }
     if (data.type == tCMD) {
         if (data[0] == "offset")
             flags |= OFFSET;
@@ -626,14 +636,25 @@ void Parser::State::Match::unmark_reachable(Parser *pa, Parser::State *state, bi
     for (auto succ : next) succ->unmark_reachable(pa, unreach);
 }
 
+/********* pass 1 *********/
+
 void Parser::State::Match::pass1(Parser *pa, State *state) {
     next.check(state->gress, pa, state);
     for (auto &s : save) {
         if (!s.where.check()) continue;
         pa->phv_use[state->gress][s.where->reg.index] = 1;
+        int size = s.where->reg.size;
+        if (s.second) {
+            if (!s.second.check()) continue;
+            if (s.second->reg.index != s.where->reg.index + 1 || (s.where->reg.index & 1))
+                error(s.second.lineno, "Can only write into even/odd register pair");
+            else if (s.second->lo || s.second->hi != size-1)
+                error(s.second.lineno, "Can only write data into whole phv registers in parser");
+            else
+                size *= 2; }
         if (s.where->lo || s.where->hi != s.where->reg.size-1)
             error(s.where.lineno, "Can only write data into whole phv registers in parser");
-        else if ((s.hi-s.lo+1)*8 != s.where->reg.size)
+        else if ((s.hi-s.lo+1)*8 != size)
             error(s.where.lineno, "Data to write doesn't match phv register size");
     }
     for (auto &s : set) {
@@ -671,6 +692,8 @@ void Parser::State::pass1(Parser *pa) {
             succ->pred.insert(this);
 }
 
+/********* pass 2 *********/
+
 void Parser::State::MatchKey::preserve_saved(unsigned saved) {
     for (int i = 3; i >= 0; i--) {
         if (!((saved >> i) & 1)) continue;
@@ -683,6 +706,65 @@ void Parser::State::MatchKey::preserve_saved(unsigned saved) {
             error(lineno, "Ran out of matching space due to preserved values from "
                   "previous states");
             break; } }
+}
+
+Parser::State::OutputUse Parser::State::Match::Save::output_use() const {
+    OutputUse rv;
+    if (lo == hi) rv.b8++;
+    else if (lo+1 == hi) rv.b16++;
+    else if (lo+3 == hi) rv.b32++;
+    else assert(0);
+    return rv;
+}
+Parser::State::OutputUse Parser::State::Match::Set::output_use() const {
+    OutputUse rv;
+    if (where.size() == 8) rv.b8++;
+    else if (where.size() == 16) rv.b16++;
+    else if (where.size() == 32) rv.b32++;
+    else assert(0);
+    return rv;
+}
+Parser::State::OutputUse Parser::State::Match::output_use() const {
+    OutputUse rv;
+    for (auto &s : save) rv += s.output_use();
+    for (auto &s : set) rv += s.output_use();
+    return rv;
+}
+void Parser::State::Match::merge_outputs(OutputUse use) {
+    use += output_use();
+    if (use.b32 >= 4 && use.b16 >= 4) return;
+    std::sort(save.begin(), save.end(), [](const Save &a, const Save &b)->bool {
+        return a.lo < b.lo; });
+    /* combine adjacent aligned 16-bit extracts into 32 bit */
+    for (unsigned i = 0; i+1 < save.size() && use.b32 < 4; ++i) {
+        if (save[i].hi == save[i].lo + 1 && save[i+1].lo == save[i].hi + 1 &&
+            save[i+1].hi == save[i+1].lo + 1 && !save[i].flags && !save[i+1].flags &&
+            (save[i].where->reg.index & 1) == 0 &&
+            save[i].where->reg.index + 1 == save[i+1].where->reg.index) {
+            save[i].hi += 2;
+            save.erase(save.begin()+i+1);
+            use.b32++;
+            use.b16 -= 2; } }
+    /* combine adjacent aligned 8-bit extracts into 16 bit */
+    for (unsigned i = 0; i+1 < save.size() && use.b16 < 4; ++i) {
+        if (save[i].hi == save[i].lo && save[i+1].lo == save[i].hi + 1 &&
+            save[i+1].hi == save[i+1].lo && !save[i].flags && !save[i+1].flags &&
+            (save[i].where->reg.index & 1) == 0 &&
+            save[i].where->reg.index + 1 == save[i+1].where->reg.index) {
+            save[i].hi += 1;
+            save.erase(save.begin()+i+1);
+            use.b16++;
+            use.b8 -= 2; } }
+    /* combine 4 adjacent aligned 8-bit extracts into 32 bit */
+    for (unsigned i = 0; i+1 < save.size() && use.b32 < 4; ++i) {
+        if (save[i].hi == save[i].lo + 1 && save[i+1].lo == save[i].hi + 1 &&
+            save[i+1].hi == save[i+1].lo + 1 && !save[i].flags && !save[i+1].flags &&
+            (save[i].where->reg.index & 1) == 0 &&
+            save[i].where->reg.index + 1 == save[i+1].where->reg.index) {
+            save[i].hi += 2;
+            save.erase(save.begin()+i+1);
+            use.b32++;
+            use.b16 -= 2; } }
 }
 
 void Parser::State::pass2(Parser *pa) {
@@ -703,6 +785,8 @@ void Parser::State::pass2(Parser *pa) {
                 def_saved |= 1 << i;
         if (def_saved && def->next)
             def->next->key.preserve_saved(def_saved); }
+    OutputUse defuse;
+    if (def) defuse = def->output_use();
     for (auto &m : match) {
         unsigned saved = def_saved;
         if (m.future.lineno)
@@ -715,8 +799,12 @@ void Parser::State::pass2(Parser *pa) {
             if (m.next)
                 m.next->key.preserve_saved(saved);
             else if (def && def->next)
-                def->next->key.preserve_saved(saved); } }
+                def->next->key.preserve_saved(saved); }
+        if (!options.match_compiler)
+            m.merge_outputs(defuse); }
 }
+
+/********* output *********/
 
 /* FIXME -- combine these two methods into a single method on MachKey */
 void Parser::State::write_lookup_config(Parser *pa, State *state, int row,
@@ -749,8 +837,7 @@ void Parser::State::write_lookup_config(Parser *pa, State *state, int row,
                 ea_row.ld_lookup_16 = 1; } } }
 }
 
-void Parser::State::Match::write_future_config(Parser *pa, State *state, int row)
-{
+void Parser::State::Match::write_future_config(Parser *pa, State *state, int row) const {
     auto &ea_row = pa->mem[state->gress].ml_ea_row[row];
     for (int i = 0; i < 4; i++) {
         if (i == 1) continue;
@@ -832,7 +919,7 @@ void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
         for (auto n : next) {
             n->write_lookup_config(pa, state, row, prev);
             prev.push_back(n); }
-        match_t &n = next.pattern ? next.pattern : next->stateno;
+        const match_t &n = next.pattern ? next.pattern : next->stateno;
         ea_row.nxt_state = n.word1;
         ea_row.nxt_state_mask = ~(n.word0 & n.word1) & PARSER_STATE_MASK;
     } else
@@ -904,7 +991,7 @@ phv_8b_slots[] = {
     { 0, 0 }
 };
 
-void Parser::State::Match::Save::write_output_config(phv_output_map *map, unsigned &used)
+void Parser::State::Match::Save::write_output_config(phv_output_map *map, unsigned &used) const
 {
     phv_use_slots *usable_slots;
     if (hi-lo == 3) {
@@ -955,7 +1042,7 @@ static int encode_constant_for_slot(int slot, unsigned val) {
         return -1; }
 }
 
-void Parser::State::Match::Set::write_output_config(phv_output_map *map, unsigned &used)
+void Parser::State::Match::Set::write_output_config(phv_output_map *map, unsigned &used) const
 {
     phv_use_slots *usable_slots;
     if (where->reg.size == 32)

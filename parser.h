@@ -69,6 +69,12 @@ class Parser : public Section {
             int add_byte(int, int, bool use_saved = false);
             int move_down(int);
         };
+        struct OutputUse {
+            unsigned    b8 = 0, b16 = 0, b32 = 0;
+            OutputUse &operator+=(const OutputUse &a) {
+                b8 += a.b8; b16 += a.b16; b32 += a.b32;
+                return *this; }
+        };
         struct Match {
             int         lineno;
             match_t     match;
@@ -79,25 +85,29 @@ class Parser : public Section {
             enum flags_t { OFFSET=1, ROTATE=2 };
             struct Save {
                 int         lo, hi;
-                Phv::Ref    where;
+                Phv::Ref    where, second;
                 int         flags;
                 Save(gress_t, int l, int h, value_t &data, int flgs=0);
-                void write_output_config(phv_output_map *, unsigned &);
+                void write_output_config(phv_output_map *, unsigned &) const;
+                OutputUse output_use() const;
             };
             std::vector<Save>               save;
             struct Set {
                 Phv::Ref	where;
                 int		what;
-                int         flags;
+                int             flags;
                 Set(gress_t gress, value_t &data, int v, int flgs=0);
-                void write_output_config(phv_output_map *, unsigned &);
+                void write_output_config(phv_output_map *, unsigned &) const;
+                OutputUse output_use() const;
             };
             std::vector<Set>   		set;
             Match(int lineno, gress_t, match_t m, VECTOR(pair_t) &data);
             Match(int lineno, gress_t, State *n);
             void unmark_reachable(Parser *, State *state, bitvec &unreach);
             void pass1(Parser *pa, State *state);
-            void write_future_config(Parser *, State *, int);
+            OutputUse output_use() const;
+            void merge_outputs(OutputUse);
+            void write_future_config(Parser *, State *, int) const;
             void write_config(Parser *, State *, Match *);
         };
 

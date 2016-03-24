@@ -110,7 +110,7 @@ public:
             return true; }
         const char *name() const { return name_.c_str(); }
         int lobit() const { return lo < 0 ? 0 : lo; }
-        unsigned size() {
+        unsigned size() const {
             if (lo >= 0) return hi - lo + 1;
 	    if (auto *s = phv.get(gress, name_)) return s->size();
             return 0; }
