@@ -4,6 +4,7 @@
 #include <string.h>
 #include <iostream>
 #include "lib/exceptions.h"
+#include <array>
 
 namespace PHV {
 constexpr int kNumMauPhvGroups = 14;
@@ -142,7 +143,40 @@ inline std::ostream &operator<<(std::ostream &out, PHV::Container c) {
 
 // A pair to uniquely identify every bit in the P4 program. The cstring is the
 // name of the header and the int is the offset of the bit within the header.
-typedef std::pair<cstring, int> Bit;
-}  // namespace PHV
+class Bit : public std::pair<cstring, int> {
+ public:
+  Bit() : std::pair<cstring, int>("", -1) { } // This creates an invalid bit.
+  Bit(const cstring &n, const int &i) : std::pair<cstring, int>(n, i) { }
+  std::string name() const {
+    return first + "[" + std::to_string(second) + "]"; }
+};
 
+inline std::ostream &operator<<(std::ostream &out, const PHV::Bit &b) {
+  return out << b.first << "[" << b.second << "]";
+}
+
+class Byte : public ::std::array<Bit, 8> {
+ public:
+  iterator first() {
+    auto it = begin();
+    while (it->second < 0) ++it;
+    return it;
+  }
+  const_iterator cfirst() const {
+    auto it = cbegin();
+    while (it->second < 0) ++it;
+    return it;
+  }
+  iterator last() {
+    auto it = first();
+    while (it->second >= 0 && it != end()) ++it;
+    return it;
+  }
+  const_iterator clast() const {
+    auto it = cfirst();
+    while (it->second >= 0 && it != end()) ++it;
+    return it;
+  }
+};
+}  // namespace PHV
 #endif /* _TOFINO_PHV_PHV_H_ */
