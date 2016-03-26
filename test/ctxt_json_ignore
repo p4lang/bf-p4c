@@ -12,6 +12,7 @@ constant_name_to_value
 default_address_bits_provided
 default_lower_huffman_bits_included
 default_next_table
+default_next_table_modifiable
 default_only_action
 enable_per_flow_enable
 enable_sps_scrambling

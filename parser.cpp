@@ -718,9 +718,9 @@ Parser::State::OutputUse Parser::State::Match::Save::output_use() const {
 }
 Parser::State::OutputUse Parser::State::Match::Set::output_use() const {
     OutputUse rv;
-    if (where.size() == 8) rv.b8++;
-    else if (where.size() == 16) rv.b16++;
-    else if (where.size() == 32) rv.b32++;
+    if (where->reg.size == 8) rv.b8++;
+    else if (where->reg.size == 16) rv.b16++;
+    else if (where->reg.size == 32) rv.b32++;
     else assert(0);
     return rv;
 }
