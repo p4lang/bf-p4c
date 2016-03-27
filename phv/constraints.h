@@ -2,10 +2,12 @@
 #define _TOFINO_PHV_EQUALITY_CONSTRAINTS_H_
 #include "backends/tofino/phv/phv.h"
 #include "solver_interface.h"
+#include "ir/ir.h"
 #include <map>
 #include <set>
 class Constraints {
  public:
+  Constraints() : unique_bit_id_counter_(0) { }
   void SetEqualByte(const PHV::Bit &bit, const int &offset, const int &width) {
     PHV::Byte byte;
     for (int i = 0; i < width; ++i) {
@@ -16,6 +18,11 @@ class Constraints {
   template<class T> void
   SetEqualByte(const T &begin, const T &end) {
     byte_equalities_.insert(begin, end);
+  }
+
+  template<class T> void SetDeparsedHeader(const T &begin, const T &end,
+                                           const gress_t gress) {
+    deparsed_headers_.at(gress).insert(std::vector<PHV::Byte>(begin, end));
   }
 
   enum Equal {OFFSET, CONTAINER, MAU_GROUP, NUM_EQUALITIES};
@@ -30,12 +37,22 @@ class Constraints {
     for (;it != end; std::advance(it, 1)) SetEqual_(*begin, *it, eq);
   }
 
+  // This function sets DeparserGroupConstraints::is_t_phv to false for the
+  // deparsed byte that contains this bit.
+  void SetNoTPhv(const PHV::Bit &bit);
+
   void SetConstraints(SolverInterface &solver);
   void SetConstraints(const Equal &e, SolverInterface::SetEqual set_equal);
  private:
   void SetEqual_(const PHV::Bit &bit1, const PHV::Bit &bit2, const Equal &eq);
   std::map<PHV::Bit, std::set<PHV::Bit>> equalities_[NUM_EQUALITIES];
   std::set<PHV::Byte> byte_equalities_;
+  std::array<std::set<std::vector<PHV::Byte>>, 2> deparsed_headers_;
+  std::vector<bool> is_t_phv_;
+  // Helper function to generate/retrieve a unique ID for a bit.
+  size_t unique_bit_id_counter_;
+  std::map<PHV::Bit, size_t> unique_bit_ids_;
+  int unique_bit_id(const PHV::Bit &bit);
 };
 template<> void
 Constraints::SetEqual<PHV::Bit>(const PHV::Bit &bit1, const PHV::Bit &bit2,

@@ -5,6 +5,7 @@
 #include "container_constraint.h"
 #include "byte_constraint.h"
 #include "offset_constraint.h"
+#include "t_phv_constraint.h"
 #include "or_tools/min_value_solver.h"
 #include "or_tools/random_value_solver.h"
 
@@ -61,6 +62,7 @@ class PopulatePhvInfo : public Inspector {
 };
 
 void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
+  // TODO: The code below can be written more elegantly.
   MauGroupConstraint mgc(constraints_);
   pipe->apply(mgc);
   ContainerConstraint cc(constraints_);
@@ -69,6 +71,8 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
   pipe->apply(bc);
   OffsetConstraint oc(constraints_);
   pipe->apply(oc);
+  TPhvConstraint tphvc(constraints_);
+  pipe->apply(tphvc);
 
 //// Set TPHV constraints. Fields used in MAU cannot go into T-PHV.
 //ORTools::TPhvConstraint stphvc(header_bits_);

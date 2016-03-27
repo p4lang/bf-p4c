@@ -5,10 +5,21 @@
 
 bool ByteConstraint::preorder(const IR::Primitive *prim) {
   if ("emit" == prim->name) {
+    const IR::Tofino::Deparser *deparser = findContext<IR::Tofino::Deparser>();
+    CHECK(nullptr != deparser) << "; Cannot find context for " << (*prim);
+    const gress_t gress = deparser->gress;
     auto bytes(GetBytes(prim->operands[0], nullptr));
     equality_constraints_.SetEqualByte(bytes.begin(), bytes.end());
+    equality_constraints_.SetDeparsedHeader(bytes.begin(), bytes.end(), gress);
   }
-  if (prim->name == "set_metadata") {
+  else if ("extract" == prim->name) {
+    // FIXME: When extract primitive has been changed to
+    // extract(IR::HeaderSliceRef*) where the HeaderSliceRef object points to
+    // the whole header, uncomment the code below.
+    // auto bytes(GetBytes(prim->operands[0], nullptr));
+    // equality_constraints_.SetEqualByte(bytes.begin(), bytes.end());
+  }
+  else if (prim->name == "set_metadata") {
     auto bytes(GetBytes(prim->operands[0], prim->operands[1]));
     equality_constraints_.SetEqualByte(bytes.begin(), bytes.end());
   }

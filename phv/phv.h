@@ -9,10 +9,10 @@
 namespace PHV {
 constexpr int kNumMauPhvGroups = 14;
 constexpr int kNumMauUnusedGroups = 2;
-constexpr int kMauTPhvGroupOffset = kNumMauPhvGroups + kNumMauUnusedGroups;
-constexpr int kNumMauTPhvGroups = 7;
+constexpr int kTPhvMauGroupOffset = kNumMauPhvGroups + kNumMauUnusedGroups;
+constexpr int kNumTPhvMauGroups = 7;
 constexpr int kNumMauGroups = (kNumMauPhvGroups + kNumMauUnusedGroups +
-                               kNumMauTPhvGroups);
+                               kNumTPhvMauGroups);
 constexpr int kTPhvContainerOffset = 256;
 constexpr int kNumTPhvContainers = 256;
 constexpr int kNumContainersPerMauGroup = 16;
@@ -157,6 +157,18 @@ inline std::ostream &operator<<(std::ostream &out, const PHV::Bit &b) {
 
 class Byte : public ::std::array<Bit, 8> {
  public:
+  std::string name() const {
+    auto last_bit = cfirst();
+    while (std::next(last_bit, 1) != end() &&
+           std::next(last_bit, 1)->second >= 0) ++last_bit;
+    return cfirst()->first + "[" + std::to_string(cfirst()->second) + ":" +
+           std::to_string(last_bit->second) + "]"; }
+  bool Contains(const Bit &bit) const {
+    for (auto b : (*this)) {
+      if (b == bit) return true;
+    }
+    return false;
+  }
   iterator first() {
     auto it = begin();
     while (it->second < 0) ++it;
