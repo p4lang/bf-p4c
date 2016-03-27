@@ -9,10 +9,13 @@ class OutputExtracts : public Inspector {
     indent_t            indent;
     int                 offset = 0;
     bool preorder(const IR::Primitive *prim) {
-        auto dest = phv.field(prim->operands[0]);
+        std::pair<int, int>     bits;
+        auto dest = phv.field(prim->operands[0], &bits);
         if (prim->name == "extract") {
             int size = (prim->operands[0]->type->width_bits() + 7) / 8U;
             out << indent << Range(offset, offset+size-1) << ": " << canon_name(dest->name);
+            if (bits.second != 0 || bits.first + 1 != dest->size)
+                out << '.' << bits.second << '-' << bits.first;
             offset += size;
         } else if (prim->name == "set_metadata") {
             out << indent << canon_name(dest->name) << ": ";

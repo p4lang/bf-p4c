@@ -10,19 +10,26 @@ static const IR::Expression *header_ref(const IR::Expression *e) {
 class OutputDictionary : public Inspector {
     std::ostream        &out;
     const PhvInfo       &phv;
+    gress_t             gress;
     indent_t            indent;
     bool preorder(const IR::Primitive *prim) {
         if (prim->name != "emit") return true;
+        std::pair<int, int>     bits;
         auto hsr = prim->operands[0]->to<IR::HeaderSliceRef>();
-        for (auto field : hsr->fields())
-          out << indent << canon_name(phv.field(field)->name) << ": "
-              << canon_name(trim_asm_name(header_ref(field)->toString())) << ".$valid"
-              << std::endl;
+        if (!hsr) {
+            /* not allocated to header -- happens with Varbits currently */
+            return false; }
+        auto field = phv.field(prim->operands[0], &bits);
+        out << indent << canon_name(field->name);
+        if (bits.second != 0 || bits.first + 1 != field->size)
+            out << '.' << bits.second << '-' << bits.first;
+        out << ": " << canon_name(trim_asm_name(hsr->header_ref()->toString())) << ".$valid"
+            << std::endl;
         return false; }
 
  public:
-    OutputDictionary(std::ostream &out, const PhvInfo &phv, indent_t indent)
-    : out(out), phv(phv), indent(indent) {}
+    OutputDictionary(std::ostream &out, const PhvInfo &phv, gress_t gress, indent_t indent)
+    : out(out), phv(phv), gress(gress), indent(indent) {}
 };
 
 std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
@@ -30,7 +37,7 @@ std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
     out << "deparser " << d.gress << ":" << std::endl;
     out << indent << "dictionary:" << std::endl;
     if (d.deparser) {
-        d.deparser->emits.apply(OutputDictionary(out, d.phv, ++indent));
+        d.deparser->emits.apply(OutputDictionary(out, d.phv, d.gress, ++indent));
         --indent;
         if (d.deparser->egress_port)
             out << indent << "egress_unicast_port: "

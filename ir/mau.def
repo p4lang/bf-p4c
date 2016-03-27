@@ -37,6 +37,7 @@ class Table {
         int             action_data_bytes = 0;
         int             action_data_bytes_in_overhead = 0;
         int             overhead_bits = 0;
+        Layout() { memset(this, 0, sizeof(*this)); }
         bool operator==(const Layout &a) const {
             return memcmp(this, &a, sizeof(Layout)) == 0; }
         Layout &operator+=(const Layout &a);
@@ -46,6 +47,7 @@ class Table {
         int             match_groups = 0;
         int             entries = 0;
         int             width = 0;
+        Way() { memset(this, 0, sizeof(*this)); }
         bool operator==(const Way &a) const {
             return memcmp(this, &a, sizeof(Way)) == 0; }
     };
