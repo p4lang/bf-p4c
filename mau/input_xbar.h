@@ -65,6 +65,7 @@ struct IXBar {
             int         group, slice;
             unsigned    mask;
             Way() = delete;
+            Way(int g, int s, unsigned m) : group(g), slice(s), mask(m) {}
         };
         vector<Way>     way_use;
         void clear() { use.clear(); hash_table_input = 0; way_use.clear(); }
