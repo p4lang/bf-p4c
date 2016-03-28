@@ -1,4 +1,5 @@
 #include "bit.h"
+#include "byte.h"
 #include "lib/log.h"
 #include <constraint_solver/constraint_solver.h>
 
@@ -67,17 +68,14 @@ void Bit::SetContainerWidthConstraints() {
       1));
 }
 
-void Bit::SetFirstDeparsedHeaderByte(const std::array<Bit *, 8> &byte) {
+IntVar *Bit::SetFirstDeparsedHeaderByte() {
   LOG2("Setting first deparsed byte for " << name());
   auto solver = base_offset_->solver();
   solver->AddConstraint(solver->MakeEquality(base_offset(), 0));
-  is_last_byte_ = is_8b_;
-  CHECK(nullptr != is_last_byte_);
-  for (auto &b : byte) b->is_last_byte_ = is_last_byte_;
+  return is_8b_;
 }
 
-void Bit::SetDeparsedHeader(const Bit &prev_bit,
-                            const std::array<Bit *, 8> &byte) {
+IntVar *Bit::SetDeparsedHeader(const Bit &prev_bit, const Byte &prev_byte) {
   auto solver = base_offset_->solver();
   operations_research::IntExpr *is_next_byte =
     solver->MakeIsDifferentVar(
@@ -86,15 +84,15 @@ void Bit::SetDeparsedHeader(const Bit &prev_bit,
         solver->MakeIsEqualVar(base_offset(),
                                solver->MakeSum(prev_bit.base_offset(), 8))),
       solver->MakeIntConst(2));
-  // is_next_byte and prev_bit.is_last_byte() must be equal.
+  // is_next_byte and prev_byte.is_last_byte() must be equal.
   solver->AddConstraint(
-    solver->MakeEquality(is_next_byte, prev_bit.is_last_byte()));
-  // Either prev_bit_->is_last_byte_ or base_offset_ must be non 0.
+    solver->MakeEquality(is_next_byte, prev_byte.is_last_byte()));
+  // Either prev_bit->is_last_byte_ or base_offset_ must be non 0.
   solver->AddConstraint(
     solver->MakeEquality(
-      solver->MakeSum(prev_bit.is_last_byte(),
+      solver->MakeSum(prev_byte.is_last_byte(),
                       solver->MakeIsDifferentCstVar(base_offset(), 0)), 1));
-  // This block of code sets the constraints for is_last_byte_.
+  // This block of code sets the constraints for byte->is_last_byte_.
   auto last_byte_16b = solver->MakeIsEqualVar(
                          is_16b_, solver->MakeDifference(
                                     solver->MakeIntConst(9), base_offset()));
@@ -102,8 +100,8 @@ void Bit::SetDeparsedHeader(const Bit &prev_bit,
                          is_32b_, solver->MakeDifference(
                                     solver->MakeIntConst(25), base_offset()));
   std::vector<IntVar*> last_bytes({is_8b_, last_byte_16b, last_byte_32b});
-  is_last_byte_ = solver->MakeIsEqualVar(solver->MakeSum(last_bytes),
-                                         solver->MakeIntConst(1));
-  for (auto &b : byte) b->is_last_byte_ = is_last_byte_;
+
+  return solver->MakeIsEqualVar(solver->MakeSum(last_bytes),
+                                solver->MakeIntConst(1));
 }
 }

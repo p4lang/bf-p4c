@@ -1,9 +1,10 @@
 #include "phv_allocator.h"
 #include "constraints.h"
 #include "phv_fields.h"
-#include "mau_group_constraint.h"
-#include "container_constraint.h"
 #include "byte_constraint.h"
+#include "container_constraint.h"
+#include "match_xbar_constraint.h"
+#include "mau_group_constraint.h"
 #include "offset_constraint.h"
 #include "t_phv_constraint.h"
 #include "or_tools/min_value_solver.h"
@@ -71,8 +72,13 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
   pipe->apply(bc);
   OffsetConstraint oc(constraints_);
   pipe->apply(oc);
+  // Set bits which cannot be allocated to T-PHV.
   TPhvConstraint tphvc(constraints_);
   pipe->apply(tphvc);
+  // Set MAU match xbar constraints.
+  MatchXbarConstraint smxc(constraints_);
+  pipe->apply(smxc);
+
 
 //// Set TPHV constraints. Fields used in MAU cannot go into T-PHV.
 //ORTools::TPhvConstraint stphvc(header_bits_);
@@ -91,10 +97,6 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
 //// Set single write constraint on primitives in an action.
 //SetWriteConstraints sswc(header_bits_);
 //maupipe_->apply(sswc);
-
-//// Set MAU match xbar constraints.
-//ORTools::MatchXbarConstraint smxc(header_bits_);
-//maupipe_->apply(smxc);
 
 //  // Collect constraint variables.
 //  auto group_vars(header_bits_.GetGroupVars());

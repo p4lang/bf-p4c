@@ -20,6 +20,31 @@ Constraints::SetEqual_(const PHV::Bit &bit1, const PHV::Bit &bit2,
   }
 }
 
+PHV::Byte Constraints::GetByte(const PHV::Bit &b) const {
+  for (auto &byte : byte_equalities_) {
+    if (true == byte.Contains(b)) return byte;
+  }
+  return PHV::Byte();
+}
+
+inline void Constraints::SetMatchBits(const std::set<PHV::Bit> &bits,
+                                      std::vector<PHV::Bit> *v) {
+  // bits might contain 2 bits that must appear in the same byte of a PHV
+  // container. We need to apply the match xbar width constraint on only one of
+  // those bits since the other can be extracted for the PHV for no extra cost.
+  // So, we create a new set (called uniq_bytes) which will contain only 1 of
+  // the bits appearing in the same byte of a PHV container. The
+  // byte_equalities_ object must be used to identify bits that appear in the
+  // same PHV container byte. Note that std::set will consider two elements
+  // identical if both comp(b1, b2) and comp(b2, b1) return false.
+  auto comp = [this](const PHV::Bit &b1, const PHV::Bit &b2) -> bool {
+                 if (true == this->GetByte(b1).Contains(b2)) return false;
+                 return (b1 < b2); };
+  std::set<PHV::Bit, decltype(comp)> uniq_bytes(bits.begin(), bits.end(), comp);
+  v->insert(v->end(), uniq_bytes.begin(), uniq_bytes.end());
+  CHECK(v->size() == uniq_bytes.size());
+}
+
 template<> void
 Constraints::SetEqual<PHV::Bit>(const PHV::Bit &bit1, const PHV::Bit &bit2,
                                 const Equal &eq) {
@@ -39,8 +64,22 @@ Constraints::SetConstraints(const Equal &e,
 }
 
 void Constraints::SetNoTPhv(const PHV::Bit &bit) {
-  size_t bit_id = unique_bit_id(bit);
+  BitId bit_id = unique_bit_id(bit);
   is_t_phv_[bit_id] = false;
+}
+
+void Constraints::SetExactMatchBits(const int &stage,
+                                    const std::set<PHV::Bit> &bits) {
+  SetMatchBits(bits, &exact_match_bits_.at(stage));
+  LOG2("Found " << exact_match_bits_.at(stage).size() <<
+         " exact match bits in stage " << stage);
+}
+
+void Constraints::SetTcamMatchBits(const int &stage,
+                                   const std::set<PHV::Bit> &bits) {
+  SetMatchBits(bits, &tcam_match_bits_.at(stage));
+  LOG2("Found " << tcam_match_bits_.at(stage).size() <<
+         " TCAM match bits in stage " << stage);
 }
 
 void Constraints::SetConstraints(SolverInterface &solver) {
@@ -75,17 +114,25 @@ void Constraints::SetConstraints(SolverInterface &solver) {
       }
     }
   }
-  // Set T-PHV constraint.
-  for (auto &b : unique_bit_ids_) {
-    if (false == is_t_phv_.at(b.second)) solver.SetNoTPhv(b.first);
+  for (auto &v : exact_match_bits_) {
+    solver.SetMatchXbarWidth(v, {{32, 32, 32, 32}});
   }
+  for (auto &v : tcam_match_bits_) {
+    solver.SetMatchXbarWidth(v, {{17, 17, 16, 16}});
+  }
+  // Set T-PHV constraint.
+//for (auto &b : uniq_bit_ids_) {
+//  if (false == is_t_phv_.at(b.second)) solver.SetNoTPhv(b.first);
+//}
 }
 
-int Constraints::unique_bit_id(const PHV::Bit &bit) {
-  if (unique_bit_ids_.count(bit) == 0) {
-    unique_bit_ids_.insert(std::make_pair(bit, unique_bit_id_counter_));
+Constraints::BitId Constraints::unique_bit_id(const PHV::Bit &bit) {
+  if (uniq_bit_ids_.count(bit) == 0) {
+    uniq_bit_ids_.insert(std::make_pair(bit, unique_bit_id_counter_));
+    CHECK(bits_.size() == unique_bit_id_counter_);
+    bits_.push_back(bit);
     CHECK(is_t_phv_.size() == (unique_bit_id_counter_++));
     is_t_phv_.push_back(true);
   }
-  return unique_bit_ids_.at(bit);
+  return uniq_bit_ids_.at(bit);
 }

@@ -72,21 +72,22 @@ void Solver::SetEqualOffset(const std::set<PHV::Bit> &bits) {
 
 void Solver::SetFirstDeparsedHeaderByte(const PHV::Byte &byte) {
   Bit &bit = bits_.at(byte.at(0));
+  if (bytes_.count(byte) == 0) bytes_.insert(std::make_pair(byte, Byte()));
   // For the last bit of a header, is_last_byte_ must be true.
-  bit.SetFirstDeparsedHeaderByte(get_bits(byte));
-  bytes_.insert(std::make_pair(byte, Byte(byte)));
+  bytes_.at(byte).set_last_byte(bit.SetFirstDeparsedHeaderByte());
 }
 
 void Solver::SetDeparsedHeader(const PHV::Byte &byte1, const PHV::Byte &byte2) {
   Bit &bit = bits_.at(byte2.at(0));
-  bit.SetDeparsedHeader(bits_.at(byte1.at(7)), get_bits(byte2));
-  bytes_.insert(std::make_pair(byte2, Byte(byte2)));
+  if (bytes_.count(byte2) == 0) bytes_.insert(std::make_pair(byte2, Byte()));
+  bytes_.at(byte2).set_last_byte(bit.SetDeparsedHeader(bits_.at(byte1.at(7)),
+                                 bytes_.at(byte1)));
 }
 
-void Solver::SetLastDeparsedHeaderByte(const PHV::Byte &byte) {
-  Bit &bit = bits_.at(byte.at(0));
+void Solver::SetLastDeparsedHeaderByte(const PHV::Byte &phv_byte) {
+  Byte &byte = bytes_.at(phv_byte);
   // For the last bit of a header, is_last_byte_ must be true.
-  solver_.AddConstraint(solver_.MakeEquality(bit.is_last_byte(), 1));
+  solver_.AddConstraint(solver_.MakeEquality(byte.is_last_byte(), 1));
 }
 
 void Solver::SetDeparserGroups(const PHV::Byte &i_phv_byte,
@@ -118,12 +119,12 @@ void Solver::SetDeparserGroups(const PHV::Byte &i_phv_byte,
     IntExpr *i_dprsr_group_flag = i_byte.deparser_flag((size_t)i);
     IntExpr *e_dprsr_group_flag = e_byte.deparser_flag((size_t)i);
     if (nullptr == i_dprsr_group_flag) {
-      LOG2("Creating deparser flag for " << i_byte.name());
+      LOG2("Creating deparser flag for " << i_phv_byte.name());
       i_dprsr_group_flag = MakeDeparserGroupFlag(i, i_container);
       i_byte.set_deparser_flag(i, i_dprsr_group_flag);
     }
     if (nullptr == e_dprsr_group_flag) {
-      LOG2("Creating deparser flag for " << e_byte.name());
+      LOG2("Creating deparser flag for " << e_phv_byte.name());
       e_dprsr_group_flag = MakeDeparserGroupFlag(i, e_container);
       e_byte.set_deparser_flag(i, e_dprsr_group_flag);
     }
@@ -131,6 +132,10 @@ void Solver::SetDeparserGroups(const PHV::Byte &i_phv_byte,
       solver_.MakeNonEquality(
         solver_.MakeSum(i_dprsr_group_flag, e_dprsr_group_flag), 2));
   }
+}
+
+void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_bits,
+                               const std::array<int, 4> &width) {
 }
 
 void Solver::SetNoTPhv(const PHV::Bit &bit) {
@@ -284,6 +289,14 @@ IntVar *Solver::MakeOffset(const cstring &name) {
   LOG2("Making offset " << name);
   return solver_.MakeIntVar(0, 31,
                             name + "-offset-" + std::to_string(unique_id()));
+}
+
+IntExpr *Solver::MakeByte(IntVar *offset) {
+  return nullptr;
+//return solver_.MakeSum(
+//  std::vector<IntVar*>({{solver_.MakeIsGreaterCstVar(offset, 7),
+//                         solver_.MakeIsGreaterCstVar(offset, 15),
+//                         solver_.MakeIsGreaterCstVar(offset, 23)}}));
 }
 
 IntExpr *Solver::MakeDeparserGroupFlag(const int &group_num,

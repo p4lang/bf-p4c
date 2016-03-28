@@ -21,6 +21,8 @@ class Solver : public SolverInterface {
   void SetLastDeparsedHeaderByte(const PHV::Byte &last_byte) override;
   void SetDeparserGroups(const PHV::Byte &i_hdr_byte,
                          const PHV::Byte &e_hdr_byte) override;
+  void SetMatchXbarWidth(const std::vector<PHV::Bit> &bits,
+                         const std::array<int, 4> &width) override;
   void SetNoTPhv(const PHV::Bit &bit) override;
 
   void allocation(const PHV::Bit &bit, PHV::Container *c, int *container_bit);
@@ -48,6 +50,7 @@ class Solver : public SolverInterface {
                 operations_research::IntVar *container_in_group);
   operations_research::IntVar *MakeByteAlignedOffset(const cstring &name);
   operations_research::IntVar *MakeOffset(const cstring &name);
+  operations_research::IntExpr *MakeByte(operations_research::IntVar *offset);
   operations_research::IntExpr *MakeDeparserGroupFlag(
     const int &group_num, operations_research::IntExpr *container);
   // Get the Bit * objects for a PHV::Byte.

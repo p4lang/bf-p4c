@@ -5,6 +5,7 @@
 #include "ir/ir.h"
 #include <map>
 #include <set>
+#include <cstdint>
 class Constraints {
  public:
   Constraints() : unique_bit_id_counter_(0) { }
@@ -41,18 +42,33 @@ class Constraints {
   // deparsed byte that contains this bit.
   void SetNoTPhv(const PHV::Bit &bit);
 
+  // These functions are used to specify the bits that are used at match keys
+  // in TCAM and exact match tables.
+  void SetExactMatchBits(const int &stage, const std::set<PHV::Bit> &bits);
+  void SetTcamMatchBits(const int &stage, const std::set<PHV::Bit> &bits);
+
   void SetConstraints(SolverInterface &solver);
   void SetConstraints(const Equal &e, SolverInterface::SetEqual set_equal);
  private:
+  // This type is used to identify a bit in the internal data structures of
+  // this class.
+  typedef uint16_t BitId;
   void SetEqual_(const PHV::Bit &bit1, const PHV::Bit &bit2, const Equal &eq);
+  // This function return the byte containing b.
+  PHV::Byte GetByte(const PHV::Bit &b) const;
+  void SetMatchBits(const std::set<PHV::Bit> &bits, std::vector<PHV::Bit> *v);
+  // Data structures to store constraints.
   std::map<PHV::Bit, std::set<PHV::Bit>> equalities_[NUM_EQUALITIES];
   std::set<PHV::Byte> byte_equalities_;
   std::array<std::set<std::vector<PHV::Byte>>, 2> deparsed_headers_;
   std::vector<bool> is_t_phv_;
+  std::array<std::vector<PHV::Bit>, StageUse::MAX_STAGES> exact_match_bits_;
+  std::array<std::vector<PHV::Bit>, StageUse::MAX_STAGES> tcam_match_bits_;
   // Helper function to generate/retrieve a unique ID for a bit.
-  size_t unique_bit_id_counter_;
-  std::map<PHV::Bit, size_t> unique_bit_ids_;
-  int unique_bit_id(const PHV::Bit &bit);
+  BitId unique_bit_id_counter_;
+  std::map<PHV::Bit, BitId> uniq_bit_ids_;
+  std::vector<PHV::Bit> bits_;
+  BitId unique_bit_id(const PHV::Bit &bit);
 };
 template<> void
 Constraints::SetEqual<PHV::Bit>(const PHV::Bit &bit1, const PHV::Bit &bit2,

@@ -21,6 +21,11 @@ class SolverInterface {
   virtual void SetLastDeparsedHeaderByte(const PHV::Byte &last_byte) = 0;
   virtual void SetDeparserGroups(const PHV::Byte &i_hdr_byte,
                                  const PHV::Byte &e_hdr_byte) = 0;
+  // This function specifies the match bits used for exact/TCAM matches.
+  // FIXME: We must send the container conflict matrix too. Bits which cannot
+  // exist in the same container can never share the same match xbar byte.
+  virtual void SetMatchXbarWidth(const std::vector<PHV::Bit> &bits,
+                                 const std::array<int, 4> &width) = 0;
   // This function must prevent the bit from being allocated to T-PHV.
   virtual void SetNoTPhv(const PHV::Bit &bit) = 0;
   // Function for getting the allocation that a bit that satisfies all

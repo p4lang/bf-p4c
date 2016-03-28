@@ -1,4 +1,5 @@
 #include "match_xbar_constraint.h"
+#include "constraints.h"
 class HeaderSliceRefInspector : public Inspector {
  public:
   HeaderSliceRefInspector(const IR::Node *node) { node->apply(*this); }
@@ -19,35 +20,26 @@ bool MatchXbarConstraint::preorder(const IR::MAU::Table *mau_table) {
          " match width " << mau_table->layout.match_width_bits <<
          " and logical ID " << mau_table->logical_id);
   std::set<PHV::Bit> match_bits;
-  if ((nullptr != mau_table->match_table) &&
-      (nullptr != mau_table->match_table->reads)) {
-    HeaderSliceRefInspector hsri(mau_table->match_table->reads);
-    auto new_match_bits = hsri.match_bits();
-    match_bits.insert(new_match_bits.begin(), new_match_bits.end());
+  auto match_table = mau_table->match_table;
+  if ((nullptr != match_table) &&
+      (nullptr != match_table->reads)) {
+    match_bits = HeaderSliceRefInspector(match_table->reads).match_bits();
   }
   if (true == mau_table->layout.ternary) {
-    tcam_bits_[stage].insert(match_bits.begin(), match_bits.end());
-  }
-  else {
-    exm_bits_[stage].insert(match_bits.begin(), match_bits.end());
+    tcam_match_bits_.at(stage).insert(match_bits.begin(), match_bits.end());
+    match_bits.clear();
   }
   for (auto &gw_row : mau_table->gateway_rows) {
-    HeaderSliceRefInspector hsri(gw_row.first);
-    auto new_match_bits = hsri.match_bits();
-    exm_bits_[stage].insert(new_match_bits.begin(), new_match_bits.end());
+    auto new_match_bits = HeaderSliceRefInspector(gw_row.first).match_bits();
+    match_bits.insert(new_match_bits.begin(), new_match_bits.end());
   }
+  exact_match_bits_.at(stage).insert(match_bits.begin(), match_bits.end());
   return true;
 }
 
 void MatchXbarConstraint::postorder(const IR::Tofino::Pipe *) {
-  for (unsigned stage = 0; stage < StageUse::MAX_STAGES; ++stage) {
-    LOG2("Found " << exm_bits_[stage].size() <<
-           " exact match bits in stage " << stage);
-    LOG2("Found " << tcam_bits_[stage].size() <<
-           " ternary match bits in stage " << stage);
-    EnforceConstraint(exm_bits_[stage], {{32, 32, 32, 32}});
-    EnforceConstraint(tcam_bits_[stage], {{17, 17, 16, 16}});
-    exm_bits_[stage].clear();
-    tcam_bits_[stage].clear();
+  for (unsigned i = 0; i < StageUse::MAX_STAGES; ++i) {
+    constraints_.SetTcamMatchBits(i, tcam_match_bits_.at(i));
+    constraints_.SetExactMatchBits(i, exact_match_bits_.at(i));
   }
 }
