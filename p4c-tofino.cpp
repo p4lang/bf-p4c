@@ -31,6 +31,7 @@ int main(int ac, char **av) {
         options.setInputFile();
     if (ErrorReporter::instance.getErrorCount() > 0)
         return 1;
+    options.preprocessor_options += " -D__TARGET_TOFINO__";
 
     FILE* in = options.preprocess();
     if (!in) return 1;
