@@ -32,14 +32,16 @@ void Solver::SetEqualContainer(const std::set<PHV::Bit> &bits) {
   }
 }
 
-void Solver::SetByte(const PHV::Byte &byte) {
-  LOG2("Setting byte-constraint for " << byte.name());
-  IntVar *base_offset = MakeByteAlignedOffset(byte.cfirst()->name());
-  for (auto it = byte.cfirst(); it != byte.clast(); ++it) {
+void Solver::SetByte(const PHV::Byte &phv_byte) {
+  LOG2("Setting byte-constraint for " << phv_byte.name());
+  IntVar *base_offset = MakeByteAlignedOffset(phv_byte.cfirst()->name());
+  Byte *byte = new Byte();
+  for (auto it = phv_byte.cfirst(); it != phv_byte.clast(); ++it) {
     Bit &bit = bits_.at(*it);
     CHECK(nullptr != bit.container());
-    const int relative_offset = std::distance(byte.cbegin(), it);
+    const int relative_offset = std::distance(phv_byte.cbegin(), it);
     bit.set_offset(base_offset, relative_offset);
+    bit.set_byte(byte);
   }
 }
 
@@ -71,11 +73,10 @@ void Solver::SetEqualOffset(const std::set<PHV::Bit> &bits) {
 }
 
 void Solver::SetFirstDeparsedHeaderByte(const PHV::Byte &phv_byte) {
-  Byte *byte = new Byte();
-  for (auto b : phv_byte) {
-    CHECK(bits_.at(b).byte() == nullptr);
-    bits_.at(b).set_byte(byte);
-  }
+  Byte *byte = bits_.at(phv_byte.at(0)).byte();
+  // Just doing sanity check to make sure all Bit objects have a pointer to the
+  // same Byte object.
+  for (auto b : phv_byte) CHECK(bits_.at(b).byte() == byte);
   // For the last bit of a header, is_last_byte_ must be true.
   Bit &bit = bits_.at(phv_byte.at(0));
   byte->set_last_byte(bit.SetFirstDeparsedHeaderByte());
@@ -84,11 +85,8 @@ void Solver::SetFirstDeparsedHeaderByte(const PHV::Byte &phv_byte) {
 void Solver::SetDeparsedHeader(const PHV::Byte &byte1, const PHV::Byte &byte2) {
   Bit &bit = bits_.at(byte2.at(0));
   Bit &prev_bit = bits_.at(byte1.at(7));
-  Byte *byte = new Byte();
-  for (auto &b : byte2) {
-    CHECK(bits_.at(b).byte() == nullptr);
-    bits_.at(b).set_byte(byte);
-  }
+  Byte *byte = bits_.at(byte2.at(0)).byte();
+  for (auto &b : byte2) CHECK(bits_.at(b).byte() == byte);
   byte->set_last_byte(bit.SetDeparsedHeader(prev_bit, *(prev_bit.byte())));
 }
 
@@ -143,8 +141,36 @@ void Solver::SetDeparserGroups(const PHV::Byte &i_phv_byte,
   }
 }
 
-void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_bits,
+void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_phv_bits,
                                const std::array<int, 4> &width) {
+  std::vector<Bit*> match_bits;
+  for (auto &b : match_phv_bits) {
+    match_bits.push_back(&bits_.at(b));
+  }
+  std::vector<IntVar*> is_unique_flags;
+  for (auto bit1 = match_bits.begin(); bit1 != match_bits.end(); ++bit1) {
+    std::vector<IntVar*> is_equal_vars;
+    for (auto bit2 = std::next(bit1, 1); bit2 != match_bits.end(); ++bit2) {
+      is_equal_vars.push_back(
+        solver_.MakeIsDifferentVar((*bit1)->offset_bytes(),
+                                   (*bit2)->offset_bytes()));
+    }
+    if (is_equal_vars.size() > 0) {
+      IntExpr *sum = solver_.MakeSum(is_equal_vars);
+      is_unique_flags.push_back(
+        solver_.MakeIsEqualCstVar(sum,
+                                  std::distance(bit1, match_bits.end()) - 1));
+    }
+  }
+  // This constraint enforces the limit on the total width of the match xbar.
+  int total_bits = std::accumulate(width.begin(), width.end(),
+                                   0, std::plus<int>());
+  LOG2("Fitting " << is_unique_flags.size() << " flags into " <<
+         total_bits << "B");
+  CHECK(match_bits.size() == is_unique_flags.size());
+  solver_.AddConstraint(
+    solver_.MakeLessOrEqual(
+      solver_.MakeSum(is_unique_flags), total_bits));
 }
 
 void Solver::SetNoTPhv(const PHV::Bit &bit) {

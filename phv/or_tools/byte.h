@@ -12,13 +12,15 @@ typedef std::array<operations_research::IntExpr*,
                    PHV::kNumDeparserGroups> DeparserFlags;
 class Byte {
  public:
-  Byte() : deparser_flags_(), is_last_byte_(nullptr) { }
+  Byte() : deparser_flags_(), offset_(nullptr), is_last_byte_(nullptr) { }
   //cstring name() const { return phv_byte_.name(); }
   void set_deparser_flag(const size_t &i, operations_research::IntExpr *e) {
     assert(deparser_flags_.at(i) == nullptr);
     deparser_flags_[i] = e; }
   operations_research::IntExpr *deparser_flag(const size_t &i) const {
     return deparser_flags_.at(i); }
+  void set_offset(operations_research::IntExpr *offset) { offset_ = offset; }
+  operations_research::IntExpr *offset() const { return offset_; }
   void set_byte_flags(const std::array<operations_research::IntVar*, 4> &v) {
     byte_flags_ = v; }
   std::array<operations_research::IntVar*, 4>
@@ -29,7 +31,7 @@ class Byte {
   DeparserFlags deparser_flags_;
   // An expression that uniquely identifies the PHV byte where this variable is
   // allocated. It is computed as (container_ * 4) + byte_inside_container.
-  //operations_research::IntExpr *const byte_;
+  operations_research::IntExpr *offset_;
   // This flags was introduced for expressing the deparser constraint. It
   // indicates if this bit is allocated in the first byte of a container. If
   // this flag is true (== 1), offset_ must be in range [0, 7].

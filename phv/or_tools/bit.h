@@ -32,6 +32,7 @@ class Bit {
                   const int &relative_offset);
   void CopyOffset(const Bit &bit);
   operations_research::IntExpr *offset() const { return offset_; }
+  operations_research::IntExpr *offset_bytes() const;
   operations_research::IntVar *base_offset() const { return base_offset_; }
   int relative_offset() const { return relative_offset_; }
   // Setter/getter for byte object.

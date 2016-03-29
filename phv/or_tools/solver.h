@@ -21,7 +21,7 @@ class Solver : public SolverInterface {
   void SetLastDeparsedHeaderByte(const PHV::Byte &last_byte) override;
   void SetDeparserGroups(const PHV::Byte &i_hdr_byte,
                          const PHV::Byte &e_hdr_byte) override;
-  void SetMatchXbarWidth(const std::vector<PHV::Bit> &bits,
+  void SetMatchXbarWidth(const std::vector<PHV::Bit> &match_phv_bits,
                          const std::array<int, 4> &width) override;
   void SetNoTPhv(const PHV::Bit &bit) override;
 

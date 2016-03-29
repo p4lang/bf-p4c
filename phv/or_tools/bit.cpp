@@ -5,6 +5,7 @@
 
 namespace ORTools {
 using operations_research::IntVar;
+using operations_research::IntExpr;
 void Bit::set_mau_group(IntVar *const mau_group,
                         const std::array<IntVar*, 3> &size_flags) {
   mau_group_ = mau_group;
@@ -48,6 +49,20 @@ void Bit::CopyOffset(const Bit &bit) {
   relative_offset_ = bit.relative_offset();
   CHECK(nullptr != base_offset_);
   CHECK(nullptr != offset_);
+}
+
+IntExpr *Bit::offset_bytes() const {
+  CHECK(nullptr != byte_);
+  if (nullptr == byte_->offset()) {
+    auto solver = base_offset_->solver();
+    auto offset_bytes = solver->MakeSum(
+                          std::vector<IntVar*>(
+                            {{solver->MakeIsGreaterCstVar(offset_, 7),
+                              solver->MakeIsGreaterCstVar(offset_, 15),
+                              solver->MakeIsGreaterCstVar(offset_, 23)}}));
+    byte_->set_offset(offset_bytes);
+  }
+  return byte_->offset();
 }
 
 void Bit::SetContainerWidthConstraints() {
