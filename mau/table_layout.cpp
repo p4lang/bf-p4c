@@ -107,7 +107,25 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     VisitAttached attached(&tbl->layout);
     for (auto at : tbl->attached)
         at->apply(attached);
-    if (tbl->layout.action_data_bytes > 4 && !attached.have_action_data) {
+    bool add_action_data = false;
+    if (!attached.have_action_data) {
+        if (tbl->layout.action_data_bytes > 4) {   // too big for overhead
+            add_action_data = true;
+        } else if (!tbl->layout.ternary) {
+            // match size duplicated from way allocation below
+            int match_group_bits = std::max(tbl->layout.match_width_bits-10, 0) +
+                                   tbl->layout.overhead_bits + 4;
+            int w_overhead_bits = match_group_bits + 8*tbl->layout.action_data_bytes;
+            if ((match_group_bits + 127)/128U != (w_overhead_bits + 127)/128U) {
+                // would increase table width in rams (bad)
+                add_action_data = true;
+            } else if (128U/match_group_bits != 128U/w_overhead_bits) {
+                // would decrease the number of match groups (not good)
+                if (1024 * (128/w_overhead_bits) >= tbl->layout.entries) {
+                    // all the entries we want still fits in one ram, so ok
+                } else {
+                    add_action_data = true; } } } }
+    if (add_action_data) {
         LOG2("  adding action data table");
         auto *act_data = new IR::MAU::ActionData(tbl->name);
         tbl->attached.push_back(act_data);

@@ -1,12 +1,5 @@
 #include "asm_output.h"
 
-static const IR::Expression *header_ref(const IR::Expression *e) {
-    /* FIXME(cdodd) -- this is a nasty hack */
-    if (auto *p = e->to<IR::HeaderSliceRef>()) return p->header_ref();
-    if (auto *p = e->to<IR::Member>()) return p->expr;
-    return 0;
-}
-
 class OutputDictionary : public Inspector {
     std::ostream        &out;
     const PhvInfo       &phv;
@@ -14,15 +7,15 @@ class OutputDictionary : public Inspector {
     indent_t            indent;
     bool preorder(const IR::Primitive *prim) {
         if (prim->name != "emit") return true;
-        std::pair<int, int>     bits;
+        PhvInfo::Info::bitrange bits;
         auto hsr = prim->operands[0]->to<IR::HeaderSliceRef>();
         if (!hsr) {
             /* not allocated to header -- happens with Varbits currently */
             return false; }
         auto field = phv.field(prim->operands[0], &bits);
         out << indent << canon_name(field->name);
-        if (bits.second != 0 || bits.first + 1 != field->size)
-            out << '.' << bits.second << '-' << bits.first;
+        if (bits.lo != 0 || bits.hi + 1 != field->size)
+            out << '.' << bits.lo << '-' << bits.hi;
         out << ": " << canon_name(trim_asm_name(hsr->header_ref()->toString())) << ".$valid"
             << std::endl;
         return false; }

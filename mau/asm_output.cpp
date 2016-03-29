@@ -87,13 +87,13 @@ class MauAsmOutput::ImmedFormat {
             sep = ", "; } }
 };
 
-void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, const IXBar::Use &use,
-                              const Memories::Use *mem, const TableFormat *fmt) const {
+void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, gress_t gress,
+        const IXBar::Use &use, const Memories::Use *mem, const TableFormat *fmt) const {
     map<int, map<int, Slice>> sort;
     if (use.use.empty()) return;
     for (auto &b : use.use) {
         bool n = sort[b.loc.group].emplace(b.loc.byte*8,
-            Slice(phv, b.field, b.byte*8, b.byte*8 + 7)).second;
+            Slice(phv, gress, b.field, b.byte*8, b.byte*8 + 7)).second;
         assert(n); }
     for (auto &group : sort) {
         auto it = group.second.begin();
@@ -245,11 +245,11 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << std::endl; }
     bool preorder(const IR::Expression *exp) override {
         if (sep) {
-            std::pair<int, int>     bits;
+            PhvInfo::Info::bitrange bits;
             if (auto f = self.phv.field(exp, &bits)) {
                 out << sep << canon_name(f->name);
-                if (bits.second || bits.first != f->size-1)
-                    out << '(' << bits.second << ".." << bits.first << ')';
+                if (bits.lo || bits.size() != f->size)
+                    out << '(' << bits.lo << ".." << bits.hi << ')';
             } else {
                 out << sep << "/* " << *exp << " */"; }
             sep = ", ";
@@ -278,9 +278,10 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
                 // FIXME -- for now just assuming we can fit the valid bit reads in as needed
                 continue; }
             const PhvInfo::Info *finfo;
-            if (!field || !(finfo = self.phv.field(field)))
+            PhvInfo::Info::bitrange bits;
+            if (!field || !(finfo = self.phv.field(field, &bits)))
                 BUG("unexpected reads expression %s", r);
-            match_fields.emplace_back(finfo); } }
+            match_fields.emplace_back(finfo, tbl->gress, bits.lo, bits.hi); } }
 
     if (!tbl->layout.ternary && !match_fields.empty())
         ghost_bits = match_fields[0](0, 9);
@@ -375,7 +376,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
             out << ", size: " << tbl->match_table->size;
         out << " }" << std::endl;
         emit_memory(out, indent, tbl->resources->memuse.at(tbl->name));
-        emit_ixbar(out, indent, tbl->resources->match_ixbar,
+        emit_ixbar(out, indent, tbl->gress, tbl->resources->match_ixbar,
                    &tbl->resources->memuse.at(tbl->name), &fmt);
         if (!tbl->layout.ternary) {
             out << indent << fmt << std::endl;
@@ -394,7 +395,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         indent_t gw_indent = indent;
         if (tbl->match_table)
             out << gw_indent++ << "gateway:" << std::endl;
-        emit_ixbar(out, gw_indent, tbl->resources->gateway_ixbar, 0, &fmt);
+        emit_ixbar(out, gw_indent, tbl->gress, tbl->resources->gateway_ixbar, 0, &fmt);
     }
 
     /* FIXME -- this is a mess and needs to be rewritten to be sane */
@@ -477,7 +478,8 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         --indent; }
 }
 
-void emit_fmt_nonimmed(std::ostream &out, const IR::ActionFunction *act, const char *sep) {
+void emit_fmt_nonimmed(std::ostream &out, const IR::MAU::Table *tbl, const IR::ActionFunction *act,
+                       const char *sep) {
     vector<std::pair<int, cstring>> sorted_args;
     for (auto arg : act->args) {
         int size = (arg->type->width_bits() + 7) / 8U;  // in bytes
@@ -487,7 +489,7 @@ void emit_fmt_nonimmed(std::ostream &out, const IR::ActionFunction *act, const c
             return a.first > b.first; });
     int byte = 0;
     for (auto &arg : sorted_args) {
-        if (byte + arg.first <= 4) {
+        if (byte + arg.first <= tbl->layout.action_data_bytes_in_overhead) {
             byte += arg.first;
             continue; }
         out << sep << arg.second << ": " << arg.first*8;
@@ -518,7 +520,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
     for (auto act : Values(tbl->actions)) {
         if (act->args.empty()) continue;
         out << indent << "format " << act->name << ": {";
-        emit_fmt_nonimmed(out, act, " ");
+        emit_fmt_nonimmed(out, tbl, act, " ");
         out << " }" << std::endl; }
     if (!tbl->actions.empty()) {
         out << indent++ << "actions:" << std::endl;

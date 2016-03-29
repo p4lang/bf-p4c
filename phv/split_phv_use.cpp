@@ -3,19 +3,19 @@
 IR::Node *SplitPhvUse::preorder(IR::Primitive *p) {
     if (p->operands.empty()) return p;
     IR::Vector<IR::Primitive> *rv = nullptr;
-    std::pair<int, int>  bits;
+    PhvInfo::Info::bitrange bits;
     if (auto field = phv.field(p->operands[0], &bits)) {
         if (field->alloc[gress].size() <= 1) return p;
         LOG3("split " << *p << "into");
         for (auto &alloc : field->alloc[gress]) {
-            if (alloc.field_bit > bits.first || alloc.field_bit + alloc.width <= bits.second)
+            if (alloc.field_bit > bits.hi || alloc.field_hi() < bits.lo)
                 continue;
-            int lo = alloc.field_bit - bits.second;
+            int lo = alloc.field_bit - bits.lo;
             if (lo < 0) lo = 0;
-            int hi = alloc.field_bit + alloc.width - 1 - bits.second;
-            if (hi > bits.first - bits.second)
-                hi = bits.first - bits.second;
-            if (lo == 0 && hi == bits.first - bits.second) {
+            int hi = alloc.field_hi() - bits.lo;
+            if (hi > bits.hi - bits.lo)
+                hi = bits.hi - bits.lo;
+            if (lo == 0 && hi == bits.hi - bits.lo) {
                 LOG3("-- already split");
                 return p; }
             if (!rv) rv = new IR::Vector<IR::Primitive>;
@@ -29,20 +29,20 @@ IR::Node *SplitPhvUse::preorder(IR::Primitive *p) {
 }
 
 IR::Node *SplitPhvUse::preorder(IR::HeaderSliceRef *hsr) {
-    std::pair<int, int>  bits;
+    PhvInfo::Info::bitrange bits;
     IR::Vector<IR::Expression> *rv = nullptr;
     if (auto field = phv.field(hsr, &bits)) {
         if (field->alloc[gress].size() <= 1) return hsr;
         LOG3("split " << *hsr << " into");
         for (auto &alloc : field->alloc[gress]) {
-            if (alloc.field_bit > bits.first || alloc.field_bit + alloc.width <= bits.second)
+            if (alloc.field_bit > bits.hi || alloc.field_hi() < bits.lo)
                 continue;
-            int lo = alloc.field_bit - bits.second;
+            int lo = alloc.field_bit - bits.lo;
             if (lo < 0) lo = 0;
-            int hi = alloc.field_bit + alloc.width - 1 - bits.second;
-            if (hi > bits.first - bits.second)
-                hi = bits.first - bits.second;
-            if (lo == 0 && hi == bits.first - bits.second) {
+            int hi = alloc.field_hi() - bits.lo;
+            if (hi > bits.hi - bits.lo)
+                hi = bits.hi - bits.lo;
+            if (lo == 0 && hi == bits.hi - bits.lo) {
                 LOG3("-- already split");
                 return hsr; }
             if (getContext()->node->is<IR::Expression>()) {

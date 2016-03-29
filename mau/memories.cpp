@@ -125,7 +125,7 @@ class AllocAttached : public Inspector {
         int width = sz > 7 ? 1 << (sz - 7) : 1;
         int per_ram = sz > 7 ? 10 : 17 - sz;
         if (!mem.allocRams(ad->name, width, ((entries - 1) >> per_ram) + 1, mem.sram_use,
-                           &mem.action_data_bus, alloc[ad->name]))
+                           nullptr, alloc[ad->name]))
             ok = false;
         return false; }
     bool preorder(const IR::ActionProfile *ap) override {
@@ -224,7 +224,6 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
         break;
     case ACTIONDATA:
         use = &mem.sram_use;
-        bus = &mem.action_data_bus;
         break;
     default:
         BUG("Unhandled memory use type %d in Memories::Use::visit", type); }

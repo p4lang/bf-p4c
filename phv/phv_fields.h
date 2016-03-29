@@ -9,6 +9,7 @@ class PhvInfo : public Inspector {
  public:
     struct Info;
     struct constraint {
+        /* FIXME -- example only -- this isn't actually used for anything yet */
         enum kind_t { SAME_GROUP, FULL_UNIT } kind;
         const Info    *with;
         explicit constraint(kind_t k, const Info *w = nullptr) : kind(k), with(w) {}
@@ -26,8 +27,14 @@ class PhvInfo : public Inspector {
             PHV::Container         container;
             int         field_bit, container_bit, width;
             alloc_slice(PHV::Container c, int fb, int cb, int w) : container(c), field_bit(fb),
-                container_bit(cb), width(w) {} };
+                container_bit(cb), width(w) {}
+            int field_hi() const { return field_bit + width - 1; }
+            int container_hi() const { return container_bit + width - 1; } };
         vector<alloc_slice>     alloc[2];   // sorted MSB (field) first
+        struct bitrange {
+            int         lo, hi;         // range of bits within a container or field
+            int size() const { return hi - lo + 1; }
+        };
     };
 
  private:
@@ -55,15 +62,15 @@ class PhvInfo : public Inspector {
     const Info *field(int idx) const { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
     const Info *field(cstring name) const {
         return all_fields.count(name) ? &all_fields.at(name) : 0; }
-    const Info *field(const IR::Expression *, std::pair<int, int> *bits = 0) const;
-    const Info *field(const IR::Member *, std::pair<int, int> *bits = 0) const;
-    const Info *field(const IR::HeaderSliceRef *, std::pair<int, int> *bits = 0) const;
+    const Info *field(const IR::Expression *, Info::bitrange *bits = 0) const;
+    const Info *field(const IR::Member *, Info::bitrange *bits = 0) const;
+    const Info *field(const IR::HeaderSliceRef *, Info::bitrange *bits = 0) const;
     Info *field(int idx) { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
-    Info *field(const IR::Expression *e, std::pair<int, int> *bits = 0) {
+    Info *field(const IR::Expression *e, Info::bitrange *bits = 0) {
         return const_cast<Info *>(const_cast<const PhvInfo *>(this)->field(e, bits)); }
-    Info *field(const IR::Member *fr, std::pair<int, int> *bits = 0) {
+    Info *field(const IR::Member *fr, Info::bitrange *bits = 0) {
         return const_cast<Info *>(const_cast<const PhvInfo *>(this)->field(fr, bits)); }
-    Info *field(const IR::HeaderSliceRef *hsr, std::pair<int, int> *bits = 0) {
+    Info *field(const IR::HeaderSliceRef *hsr, Info::bitrange *bits = 0) {
         return const_cast<Info *>(const_cast<const PhvInfo *>(this)->field(hsr, bits)); }
     const std::pair<int, int> *header(cstring name) const;
     const std::pair<int, int> *header(const IR::HeaderRef *hr) const {

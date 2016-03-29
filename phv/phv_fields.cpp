@@ -51,7 +51,7 @@ bool PhvInfo::preorder(const IR::Metadata *h) {
     return false;
 }
 
-const PhvInfo::Info *PhvInfo::field(const IR::Expression *e, std::pair<int, int> *bits) const {
+const PhvInfo::Info *PhvInfo::field(const IR::Expression *e, Info::bitrange *bits) const {
     if (auto *hsr = e->to<IR::HeaderSliceRef>())
         return field(hsr, bits);
     if (auto *fr = e->to<IR::Member>())
@@ -59,26 +59,25 @@ const PhvInfo::Info *PhvInfo::field(const IR::Expression *e, std::pair<int, int>
     return 0;
 }
 
-const PhvInfo::Info *PhvInfo::field(const IR::HeaderSliceRef *hsr,
-                                    std::pair<int, int> *bits) const {
+const PhvInfo::Info *PhvInfo::field(const IR::HeaderSliceRef *hsr, Info::bitrange *bits) const {
     auto hdr = header(hsr->header_ref()->toString());
     int offset = hsr->offset_bits();
     for (auto idx : Range(hdr->second, hdr->first)) {
         auto *info = field(idx);
         if (offset < info->size) {
             if (bits) {
-                bits->second = offset;
-                bits->first = offset + hsr->type->width_bits() - 1; }
+                bits->lo = offset;
+                bits->hi = offset + hsr->type->width_bits() - 1; }
             return info; }
         offset -= info->size; }
     BUG("can't find field at offset %d of %s", hsr->offset_bits(), hsr->header_ref()->toString());
 }
 
-const PhvInfo::Info *PhvInfo::field(const IR::Member *fr, std::pair<int, int> *bits) const {
+const PhvInfo::Info *PhvInfo::field(const IR::Member *fr, Info::bitrange *bits) const {
     StringRef name = fr->toString();
     if (bits) {
-        bits->second = 0;
-        bits->first = fr->type->width_bits() - 1; }
+        bits->lo = 0;
+        bits->hi = fr->type->width_bits() - 1; }
     if (auto *p = name.findstr("::"))
         name = name.after(p+2);
     if (auto *p = name.find('[')) {
