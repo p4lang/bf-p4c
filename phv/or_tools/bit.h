@@ -12,7 +12,7 @@ class Bit {
  public:
   Bit(const cstring &name) :
     mau_group_(nullptr), container_in_group_(nullptr), base_offset_(nullptr),
-    offset_(nullptr), container_(nullptr), name_(name) { }
+    offset_(nullptr), container_(nullptr), byte_(nullptr), name_(name) { }
   cstring name() const { return name_; }
   void set_mau_group(operations_research::IntVar *const group,
                      const std::array<operations_research::IntVar*, 3> &is_xb);
@@ -34,7 +34,9 @@ class Bit {
   operations_research::IntExpr *offset() const { return offset_; }
   operations_research::IntVar *base_offset() const { return base_offset_; }
   int relative_offset() const { return relative_offset_; }
-
+  // Setter/getter for byte object.
+  void set_byte(Byte *byte) { byte_ = byte; }
+  Byte *byte() const { return byte_; }
   // Functions for setting constraints.
   void SetContainerWidthConstraints();
   operations_research::IntVar *SetFirstDeparsedHeaderByte();
@@ -61,6 +63,8 @@ class Bit {
   // These are flags to indicate if the bit has been allocated to a 8b, 16b
   // or 32b container.
   operations_research::IntVar *is_8b_, *is_16b_, *is_32b_;
+  // Pointer to ORTools::Byte object for this bit.
+  Byte *byte_;
 
   const cstring name_;
 };

@@ -62,6 +62,7 @@ class Constraints {
   std::set<PHV::Byte> byte_equalities_;
   std::array<std::set<std::vector<PHV::Byte>>, 2> deparsed_headers_;
   std::vector<bool> is_t_phv_;
+  // TODO: Change these to use BitId instead of PHV::Bit.
   std::array<std::vector<PHV::Bit>, StageUse::MAX_STAGES> exact_match_bits_;
   std::array<std::vector<PHV::Bit>, StageUse::MAX_STAGES> tcam_match_bits_;
   // Helper function to generate/retrieve a unique ID for a bit.

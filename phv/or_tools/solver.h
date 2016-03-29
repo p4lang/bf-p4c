@@ -50,7 +50,6 @@ class Solver : public SolverInterface {
                 operations_research::IntVar *container_in_group);
   operations_research::IntVar *MakeByteAlignedOffset(const cstring &name);
   operations_research::IntVar *MakeOffset(const cstring &name);
-  operations_research::IntExpr *MakeByte(operations_research::IntVar *offset);
   operations_research::IntExpr *MakeDeparserGroupFlag(
     const int &group_num, operations_research::IntExpr *container);
   // Get the Bit * objects for a PHV::Byte.
@@ -63,7 +62,6 @@ class Solver : public SolverInterface {
   }
   operations_research::Solver solver_;
   std::map<PHV::Bit, ORTools::Bit> bits_;
-  std::map<PHV::Byte, ORTools::Byte> bytes_;
 
   // Variable for generating unique names for IntVar objects.
   int unique_id() { return ++unique_id_; }

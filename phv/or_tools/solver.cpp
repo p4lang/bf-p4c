@@ -70,39 +70,50 @@ void Solver::SetEqualOffset(const std::set<PHV::Bit> &bits) {
   }
 }
 
-void Solver::SetFirstDeparsedHeaderByte(const PHV::Byte &byte) {
-  Bit &bit = bits_.at(byte.at(0));
-  if (bytes_.count(byte) == 0) bytes_.insert(std::make_pair(byte, Byte()));
+void Solver::SetFirstDeparsedHeaderByte(const PHV::Byte &phv_byte) {
+  Byte *byte = new Byte();
+  for (auto b : phv_byte) {
+    CHECK(bits_.at(b).byte() == nullptr);
+    bits_.at(b).set_byte(byte);
+  }
   // For the last bit of a header, is_last_byte_ must be true.
-  bytes_.at(byte).set_last_byte(bit.SetFirstDeparsedHeaderByte());
+  Bit &bit = bits_.at(phv_byte.at(0));
+  byte->set_last_byte(bit.SetFirstDeparsedHeaderByte());
 }
 
 void Solver::SetDeparsedHeader(const PHV::Byte &byte1, const PHV::Byte &byte2) {
   Bit &bit = bits_.at(byte2.at(0));
-  if (bytes_.count(byte2) == 0) bytes_.insert(std::make_pair(byte2, Byte()));
-  bytes_.at(byte2).set_last_byte(bit.SetDeparsedHeader(bits_.at(byte1.at(7)),
-                                 bytes_.at(byte1)));
+  Bit &prev_bit = bits_.at(byte1.at(7));
+  Byte *byte = new Byte();
+  for (auto &b : byte2) {
+    CHECK(bits_.at(b).byte() == nullptr);
+    bits_.at(b).set_byte(byte);
+  }
+  byte->set_last_byte(bit.SetDeparsedHeader(prev_bit, *(prev_bit.byte())));
 }
 
 void Solver::SetLastDeparsedHeaderByte(const PHV::Byte &phv_byte) {
-  Byte &byte = bytes_.at(phv_byte);
+  Byte *byte = bits_.at(phv_byte.at(0)).byte();
   // For the last bit of a header, is_last_byte_ must be true.
-  solver_.AddConstraint(solver_.MakeEquality(byte.is_last_byte(), 1));
+  solver_.AddConstraint(solver_.MakeEquality(byte->is_last_byte(), 1));
 }
 
 void Solver::SetDeparserGroups(const PHV::Byte &i_phv_byte,
                                const PHV::Byte &e_phv_byte) {
   IntExpr *i_container = nullptr, *e_container = nullptr;
   IntVar *i_mau_group = nullptr, *e_mau_group = nullptr;
+  Byte *i_byte = nullptr, *e_byte = nullptr;
   for (auto &b : i_phv_byte) {
     if (i_container == nullptr) i_container = bits_.at(b).container();
     if (i_mau_group == nullptr) i_mau_group = bits_.at(b).mau_group();
+    if (i_byte == nullptr) i_byte = bits_.at(b).byte();
     CHECK(nullptr != i_container) << "; Cannot find container for " << b.name();
     CHECK(i_container == bits_.at(b).container());
   }
   for (auto &b : e_phv_byte) {
     if (e_container == nullptr) e_container = bits_.at(b).container();
     if (e_mau_group == nullptr) e_mau_group = bits_.at(b).mau_group();
+    if (e_byte == nullptr) e_byte = bits_.at(b).byte();
     CHECK(nullptr != e_container) << "; Cannot find container for " << b.name();
     CHECK(e_container == bits_.at(b).container()) <<
       "; Container mismatch in " << e_phv_byte.name() << " for " << b.name();
@@ -111,22 +122,20 @@ void Solver::SetDeparserGroups(const PHV::Byte &i_phv_byte,
   // Remove statically assigned MAU groups.
   for (auto i : PHV::kEgressMauGroups) i_mau_group->RemoveValue(i);
   for (auto i : PHV::kIngressMauGroups) e_mau_group->RemoveValue(i);
-  Byte &i_byte = bytes_.at(i_phv_byte);
-  Byte &e_byte = bytes_.at(e_phv_byte);
   // FIXME: Currently, we only set deparser groups for T-PHV. This can be done
   // differently (and more efficiently) for PHV deparser groups.
   for (int i = 17; i < PHV::kNumDeparserGroups; ++i) {
-    IntExpr *i_dprsr_group_flag = i_byte.deparser_flag((size_t)i);
-    IntExpr *e_dprsr_group_flag = e_byte.deparser_flag((size_t)i);
+    IntExpr *i_dprsr_group_flag = i_byte->deparser_flag((size_t)i);
+    IntExpr *e_dprsr_group_flag = e_byte->deparser_flag((size_t)i);
     if (nullptr == i_dprsr_group_flag) {
       LOG2("Creating deparser flag for " << i_phv_byte.name());
       i_dprsr_group_flag = MakeDeparserGroupFlag(i, i_container);
-      i_byte.set_deparser_flag(i, i_dprsr_group_flag);
+      i_byte->set_deparser_flag(i, i_dprsr_group_flag);
     }
     if (nullptr == e_dprsr_group_flag) {
       LOG2("Creating deparser flag for " << e_phv_byte.name());
       e_dprsr_group_flag = MakeDeparserGroupFlag(i, e_container);
-      e_byte.set_deparser_flag(i, e_dprsr_group_flag);
+      e_byte->set_deparser_flag(i, e_dprsr_group_flag);
     }
     solver_.AddConstraint(
       solver_.MakeNonEquality(
@@ -289,14 +298,6 @@ IntVar *Solver::MakeOffset(const cstring &name) {
   LOG2("Making offset " << name);
   return solver_.MakeIntVar(0, 31,
                             name + "-offset-" + std::to_string(unique_id()));
-}
-
-IntExpr *Solver::MakeByte(IntVar *offset) {
-  return nullptr;
-//return solver_.MakeSum(
-//  std::vector<IntVar*>({{solver_.MakeIsGreaterCstVar(offset, 7),
-//                         solver_.MakeIsGreaterCstVar(offset, 15),
-//                         solver_.MakeIsGreaterCstVar(offset, 23)}}));
 }
 
 IntExpr *Solver::MakeDeparserGroupFlag(const int &group_num,
