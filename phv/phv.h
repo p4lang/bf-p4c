@@ -190,5 +190,10 @@ class Byte : public ::std::array<Bit, 8> {
     return it;
   }
 };
+
+class Bits : public std::vector<PHV::Bit> {
+ public:
+  template<class T> Bits(T b, T e) : std::vector<PHV::Bit>(b, e) { }
+};
 }  // namespace PHV
 #endif /* _TOFINO_PHV_PHV_H_ */

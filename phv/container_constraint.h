@@ -5,9 +5,10 @@
 class Constraints;
 class ContainerConstraint : public Inspector, public BitExtractor {
  public:
-  ContainerConstraint(Constraints &ec) : equality_constraints_(ec) { }
-  bool preorder(const IR::Primitive *prim) override;
+  ContainerConstraint(Constraints &ec) : constraints_(ec) { }
  private:
-  Constraints &equality_constraints_;
+  bool preorder(const IR::Primitive *prim) override;
+  bool preorder(const IR::Tofino::Deparser *dp) override;
+  Constraints &constraints_;
 };
 #endif

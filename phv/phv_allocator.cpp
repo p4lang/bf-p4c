@@ -138,7 +138,7 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
 
 bool PhvAllocator::Solve(const IR::Tofino::Pipe *pipe, PhvInfo *phv_info) {
   LOG1("Trying MIN_VALUE");
-  ORTools::RandomValueSolver solver;
+  ORTools::MinValueSolver solver;
   constraints_.SetConstraints(solver);
   if (solver.Solve()) {
     PopulatePhvInfo ppi(solver, phv_info);

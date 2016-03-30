@@ -37,9 +37,9 @@ class Constraints {
     auto it = (begin == end ? end : std::next(begin, 1));
     for (;it != end; std::advance(it, 1)) SetEqual_(*begin, *it, eq);
   }
-
-  // This function sets DeparserGroupConstraints::is_t_phv to false for the
-  // deparsed byte that contains this bit.
+  void SetOffset(const PHV::Bit &bit, const int &min, const int &max);
+  void SetContiguousBits(const PHV::Bits &bits);
+  // This function sets is_t_phv_ for bit to false.
   void SetNoTPhv(const PHV::Bit &bit);
 
   // These functions are used to specify the bits that are used at match keys
@@ -60,6 +60,11 @@ class Constraints {
   // Data structures to store constraints.
   std::map<PHV::Bit, std::set<PHV::Bit>> equalities_[NUM_EQUALITIES];
   std::set<PHV::Byte> byte_equalities_;
+  std::map<PHV::Bit, std::pair<int, int>> bit_offset_range_;
+  std::map<PHV::Bit, std::vector<int>> bit_offset_domain_;
+  // The bits in every PHV::Bits object must be assigned to contiguous offsets.
+  // However, they need not be assigned to the same PHV container.
+  std::list<PHV::Bits> contiguous_bits_;
   std::array<std::set<std::vector<PHV::Byte>>, 2> deparsed_headers_;
   std::vector<bool> is_t_phv_;
   // TODO: Change these to use BitId instead of PHV::Bit.

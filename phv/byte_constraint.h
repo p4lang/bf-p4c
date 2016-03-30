@@ -5,9 +5,10 @@
 class Constraints;
 class ByteConstraint : public PardeInspector, public BitExtractor {
  public:
-  ByteConstraint(Constraints &eq_c) : equality_constraints_(eq_c) { }
-  bool preorder(const IR::Primitive *prim) override;
+  ByteConstraint(Constraints &eq_c) : constraints_(eq_c) { }
  private:
-  Constraints &equality_constraints_;
+  bool preorder(const IR::Primitive *prim) override;
+  bool preorder(const IR::Tofino::Deparser *dp) override;
+  Constraints &constraints_;
 };
 #endif

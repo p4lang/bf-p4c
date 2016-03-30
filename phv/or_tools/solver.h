@@ -20,6 +20,14 @@ class Solver : public SolverInterface {
   // Creates variables/constraints to allocate all members of bits to the same
   // byte within a PHV container.
   void SetByte(const PHV::Byte &byte) override;
+  // Creates variables/constraints on offset of bit in a PHV container.
+  void SetOffset(const PHV::Bit &pbit, const int &min, const int &max) override;
+  // Creates variables/constraints to allocate bits to contiguous bits offsets.
+  // This function does not constrain them to be allocated to contiguous bit
+  // offsets in the same PHV container. However, all bits are *usually*
+  // allocated to the same PHV container because they appear in a set passed to
+  // SetEqualContainer. 
+  void SetContiguousBits(const PHV::Bit &pbit1, const PHV::Bit &pbit2) override;
   // Creates variables/constraints to allocate all members of bits to the same
   // bit offset. The members of bits are probably allocated to different PHV
   // containers (not overlayed).
@@ -56,7 +64,9 @@ class Solver : public SolverInterface {
   // solution has been found.
   void allocation(const PHV::Bit &bit, PHV::Container *c, int *container_bit);
  protected:
-  bool Solve1(operations_research::Solver::IntValueStrategy int_val);
+  bool
+  Solve1(operations_research::Solver::IntValueStrategy int_val,
+         const bool &is_luby_restart = true);
  private:
   std::vector<operations_research::IntVar*> GetIntVars() const;
   std::vector<operations_research::IntVar*> mau_groups() const;
@@ -83,9 +93,12 @@ class Solver : public SolverInterface {
   MakeContainer(operations_research::IntVar *group,
                 operations_research::IntVar *container_in_group);
   operations_research::IntVar *MakeByteAlignedOffset(const cstring &name);
-  operations_research::IntVar *MakeOffset(const cstring &name);
+  operations_research::IntVar *
+  MakeOffset(const cstring &name, const int &min = 0, const int &max = 31);
   operations_research::IntExpr *MakeDeparserGroupFlag(
     const int &group_num, operations_research::IntExpr *container);
+  // Creates (if needed) and returns a pointer to an object of ORTools::Bit.
+  Bit *MakeBit(const PHV::Bit &phv_bit);
   // Returns an array of Bit* objects for a PHV::Byte.
   std::array<ORTools::Bit *, 8> get_bits(const PHV::Byte &byte) {
     std::array<ORTools::Bit *, 8> bits;

@@ -103,18 +103,8 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         &defuse,
         new MauPhvConstraints(phv),
         new PhvAllocate(phv, defuse.conflicts()),
-        new SplitExtractEmit,
-        new LoadMatchKeys(phv),   // depends on SplitExtractEmit
-        new SplitPhvUse(phv),     // depends on SplitExtractEmit
-        new DumpPipe("Final table graph"),
-        new CheckTableNameDuplicate,
-        &summary,
-        new VisitFunctor([&summary]() { if (verbose) std::cout << summary; }),
-        &mauasm
     };
     maupipe = maupipe->apply(backend);
-    if (ErrorReporter::instance.getErrorCount() > 0)
-        return;
     PhvInfo gort_phv_allocation;
     maupipe->apply(gort_phv_allocation);
     gort_phv_allocation.allocatePOV();
@@ -127,6 +117,19 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
       std::cout << (iter)->name << (iter)->alloc[1] << "\n";
     }
     PhvInfo *phv_ptr = &gort_phv_allocation;
+    PassManager post_phv_allocation_backend = {
+      new SplitExtractEmit,
+      new LoadMatchKeys(*phv_ptr),   // depends on SplitExtractEmit
+      new SplitPhvUse(*phv_ptr),     // depends on SplitExtractEmit
+      new DumpPipe("Final table graph"),
+      new CheckTableNameDuplicate,
+      &summary,
+      new VisitFunctor([&summary]() { if (verbose) std::cout << summary; }),
+      &mauasm
+    };
+    maupipe = maupipe->apply(post_phv_allocation_backend);
+    if (ErrorReporter::instance.getErrorCount() > 0)
+        return;
     std::ostream *out = &std::cout;
     if (options->outputFile)
         out = new std::ofstream(options->outputFile);

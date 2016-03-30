@@ -5,9 +5,10 @@
 class Constraints;
 class MauGroupConstraint : public Inspector, public BitExtractor {
  public:
-  MauGroupConstraint(Constraints &ec) : equality_constraints_(ec) { }
-  bool preorder(const IR::Primitive *prim) override;
+  MauGroupConstraint(Constraints &ec) : constraints_(ec) { }
  private:
-  Constraints &equality_constraints_;
+  bool preorder(const IR::Primitive *prim) override;
+  bool preorder(const IR::Tofino::Deparser *dp) override;
+  Constraints &constraints_;
 };
 #endif

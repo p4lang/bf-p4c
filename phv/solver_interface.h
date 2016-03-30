@@ -6,6 +6,10 @@
 class SolverInterface {
  public:
   virtual void SetByte(const PHV::Byte &byte) = 0;
+  virtual void
+  SetOffset(const PHV::Bit &pbit, const int &min, const int &max) = 0;
+  virtual void
+  SetContiguousBits(const PHV::Bit &pbit1, const PHV::Bit &pbit2) = 0;
   virtual void SetEqualMauGroup(const std::set<PHV::Bit> &bits) = 0;
   virtual void SetEqualContainer(const std::set<PHV::Bit> &bits) = 0;
   virtual void SetEqualOffset(const std::set<PHV::Bit> &bits) = 0;

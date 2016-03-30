@@ -63,6 +63,25 @@ Constraints::SetConstraints(const Equal &e,
   }
 }
 
+void
+Constraints::SetOffset(const PHV::Bit &bit, const int &min, const int &max) {
+  if (bit_offset_domain_.count(bit) != 0) {
+    // TODO: bit_offset_domain_ is not yet being populated and used.
+  }
+  else {
+    int new_min = min;
+    int new_max = max;
+    if (bit_offset_range_.count(bit) != 0) {
+      new_min = std::max(min, bit_offset_range_.at(bit).first);
+      new_max = std::min(max, bit_offset_range_.at(bit).second);
+    }
+    bit_offset_range_[bit] = std::make_pair(min, max);
+  }
+}
+void Constraints::SetContiguousBits(const PHV::Bits &bits) {
+  contiguous_bits_.push_back(bits);
+}
+
 void Constraints::SetNoTPhv(const PHV::Bit &bit) {
   BitId bit_id = unique_bit_id(bit);
   is_t_phv_[bit_id] = false;
@@ -90,6 +109,17 @@ void Constraints::SetConstraints(SolverInterface &solver) {
                  std::bind(&SolverInterface::SetEqualContainer, &solver, _1));
   for (auto &byte : byte_equalities_) {
     solver.SetByte(byte);
+  }
+  for (auto &b : bit_offset_range_) {
+    solver.SetOffset(b.first, b.second.first, b.second.second);
+  }
+  for (auto &bits : contiguous_bits_) {
+    CHECK(false == bits.empty()) << "; Got empty contiguous bits";
+    PHV::Bits::const_iterator b1 = bits.cbegin(), b2 = std::next(b1);
+    while (b2 != bits.cend()) {
+      solver.SetContiguousBits(*b1, *b2);
+      ++b1; ++b2;
+    }
   }
   SetConstraints(Equal::OFFSET,
                  std::bind(&SolverInterface::SetEqualOffset, &solver, _1));
