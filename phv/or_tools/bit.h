@@ -32,9 +32,12 @@ class Bit {
                   const int &relative_offset);
   void CopyOffset(const Bit &bit);
   operations_research::IntExpr *offset() const { return offset_; }
-  operations_research::IntExpr *offset_bytes() const;
   operations_research::IntVar *base_offset() const { return base_offset_; }
   int relative_offset() const { return relative_offset_; }
+  // These functions create (if needed) and return objects which are member of
+  // byte_.
+  operations_research::IntExpr *offset_bytes() const;
+  std::array<operations_research::IntVar*, 4> byte_flags() const;
   // Setter/getter for byte object.
   void set_byte(Byte *byte) { byte_ = byte; }
   Byte *byte() const { return byte_; }

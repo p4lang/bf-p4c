@@ -142,7 +142,7 @@ void Solver::SetDeparserGroups(const PHV::Byte &i_phv_byte,
 }
 
 void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_phv_bits,
-                               const std::array<int, 4> &width) {
+                               const std::array<int, 4> &widths) {
   std::vector<Bit*> match_bits;
   for (auto &b : match_phv_bits) {
     match_bits.push_back(&bits_.at(b));
@@ -150,7 +150,7 @@ void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_phv_bits,
   std::vector<IntVar*> is_unique_flags;
   for (auto bit1 = match_bits.begin(); bit1 != match_bits.end(); ++bit1) {
     std::vector<IntVar*> is_equal_vars;
-    for (auto bit2 = std::next(bit1, 1); bit2 != match_bits.end(); ++bit2) {
+    for (auto bit2 = match_bits.begin(); bit2 != bit2; ++bit2) {
       is_equal_vars.push_back(
         solver_.MakeIsDifferentVar((*bit1)->offset_bytes(),
                                    (*bit2)->offset_bytes()));
@@ -158,12 +158,11 @@ void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_phv_bits,
     if (is_equal_vars.size() > 0) {
       IntExpr *sum = solver_.MakeSum(is_equal_vars);
       is_unique_flags.push_back(
-        solver_.MakeIsEqualCstVar(sum,
-                                  std::distance(bit1, match_bits.end()) - 1));
+        solver_.MakeIsEqualCstVar(sum, is_equal_vars.size()));
     }
   }
   // This constraint enforces the limit on the total width of the match xbar.
-  int total_bits = std::accumulate(width.begin(), width.end(),
+  int total_bits = std::accumulate(widths.begin(), widths.end(),
                                    0, std::plus<int>());
   LOG2("Fitting " << is_unique_flags.size() << " flags into " <<
          total_bits << "B");
@@ -171,6 +170,68 @@ void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_phv_bits,
   solver_.AddConstraint(
     solver_.MakeLessOrEqual(
       solver_.MakeSum(is_unique_flags), total_bits));
+  // Express constraints on match fields extracted from 32b containers.
+  for (std::size_t i = 0; i < widths.size() &&
+                          (int)is_unique_flags.size() > widths[i]; ++i) {
+    std::vector<operations_research::IntVar*> is_unique_and_nth_byte;
+    for (std::size_t b = 0; b < is_unique_flags.size(); ++b) {
+      operations_research::IntVar *v = is_unique_flags[b];
+      Bit *bit = match_bits.at(b);
+      is_unique_and_nth_byte.push_back(
+        solver_.MakeIsEqualCstVar(
+          solver_.MakeSum(
+            solver_.MakeSum(bit->is_32b(), bit->byte_flags()[i]), v),
+          3));
+    }
+    LOG2("Constraining " << is_unique_and_nth_byte.size() << " to " <<
+           widths[i] << "B in match xbar");
+    solver_.AddConstraint(
+      solver_.MakeLessOrEqual(
+        solver_.MakeSum(is_unique_and_nth_byte), widths[i]));
+  }
+  SetUniqueConstraint(is_unique_flags, match_bits, widths, {{0, 2}});
+  SetUniqueConstraint(is_unique_flags, match_bits, widths, {{1, 3}});
+}
+
+void
+Solver::SetUniqueConstraint(
+  const std::vector<operations_research::IntVar*> &is_unique_flags,
+  const std::vector<Bit*> &bits,
+  const std::array<int, 4> &unique_bytes,
+  const std::array<std::size_t, 2> &byte_offsets) {
+  int max_unique_bytes = 0;
+  for (std::size_t i = 0; i < byte_offsets.size(); ++i) {
+    max_unique_bytes += unique_bytes[byte_offsets[i]];
+  }
+  std::vector<operations_research::IntVar*> is_unique_and_nth_byte;
+  for (std::size_t i = 0; i < byte_offsets.size(); ++i) {
+    for (std::size_t b = 0; b < is_unique_flags.size(); ++b) {
+      operations_research::IntVar *v = is_unique_flags.at(b);
+      Bit *bit = bits.at(b);
+      CHECK(bit->byte_flags().size() > byte_offsets[i]);
+      // This if-else statement is just an optimization. In the else block, we
+      // do not need to check if the byte is allocated to 16b or 32b container
+      // because the byte offset > 0.
+      if (byte_offsets[i] == 0) {
+        is_unique_and_nth_byte.push_back(
+          solver_.MakeIsEqualCstVar(
+            solver_.MakeSum(
+              solver_.MakeSum(bit->is_32b(), bit->is_16b()),
+              solver_.MakeSum(v, bit->byte_flags()[byte_offsets[i]])),
+            3));
+      }
+      else {
+        is_unique_and_nth_byte.push_back(
+          solver_.MakeIsEqualCstVar(
+            solver_.MakeSum(v, bit->byte_flags()[byte_offsets[i]]), 2));
+      }
+    }
+  }
+  LOG2("Constraining " << is_unique_and_nth_byte.size() << " to " <<
+         max_unique_bytes << "B in match xbar");
+  solver_.AddConstraint(
+    solver_.MakeLessOrEqual(
+      solver_.MakeSum(is_unique_and_nth_byte), max_unique_bytes));
 }
 
 void Solver::SetNoTPhv(const PHV::Bit &bit) {

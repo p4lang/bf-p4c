@@ -65,6 +65,25 @@ IntExpr *Bit::offset_bytes() const {
   return byte_->offset();
 }
 
+std::array<IntVar *, 4> Bit::byte_flags() const {
+  auto rv = byte()->flags();
+  if (std::find(rv.cbegin(), rv.cend(), nullptr) != rv.end()) {
+    auto solver = base_offset_->solver();
+    rv[0] = solver->MakeIsLessCstVar(base_offset_, 8);
+    rv[1] = solver->MakeIsEqualCstVar(
+              solver->MakeSum(
+                solver->MakeIsLessCstVar(base_offset_, 8),
+                solver->MakeIsLessCstVar(base_offset_, 16)), 1);
+    rv[2] = solver->MakeIsEqualCstVar(
+              solver->MakeSum(
+                solver->MakeIsLessCstVar(base_offset_, 16),
+                solver->MakeIsLessCstVar(base_offset_, 24)), 1);
+    rv[3] = solver->MakeIsGreaterOrEqualCstVar(base_offset_, 24);
+    byte()->set_flags(rv);
+  }
+  return rv;
+}
+
 void Bit::SetContainerWidthConstraints() {
   CHECK(nullptr != base_offset_);
   operations_research::Solver *solver = base_offset_->solver();
