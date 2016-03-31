@@ -120,21 +120,6 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
 //  }
 //  return vars;
 }
-//
-//class PrintFailure : public SearchMonitor {
-// public:
-//  explicit PrintFailure(Solver* const s, const std::vector<IntVar*> &vars) :
-//    SearchMonitor(s), vars_(vars) {}
-//  void BeginFail() {
-//    LOG1("Inspecting failure");
-//    for (auto v : vars_) {
-//      if (v->Size() == 1)
-//        LOG1("Found " << v->name() << " value is " << v->Value());
-//    }
-//  }
-// private:
-//  const std::vector<IntVar*> vars_;
-//};
 
 bool PhvAllocator::Solve(const IR::Tofino::Pipe *pipe, PhvInfo *phv_info) {
   LOG1("Trying MIN_VALUE");

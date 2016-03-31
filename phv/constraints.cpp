@@ -151,9 +151,9 @@ void Constraints::SetConstraints(SolverInterface &solver) {
     solver.SetMatchXbarWidth(v, {{17, 17, 16, 16}});
   }
   // Set T-PHV constraint.
-//for (auto &b : uniq_bit_ids_) {
-//  if (false == is_t_phv_.at(b.second)) solver.SetNoTPhv(b.first);
-//}
+  for (auto &b : uniq_bit_ids_) {
+    if (false == is_t_phv_.at(b.second)) solver.SetNoTPhv(b.first);
+  }
 }
 
 Constraints::BitId Constraints::unique_bit_id(const PHV::Bit &bit) {

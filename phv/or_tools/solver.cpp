@@ -201,16 +201,18 @@ void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_phv_bits,
   }
   std::vector<IntVar*> is_unique_flags;
   for (auto bit1 = match_bits.begin(); bit1 != match_bits.end(); ++bit1) {
-    std::vector<IntVar*> is_equal_vars;
+    std::vector<IntVar*> is_different_vars;
     for (auto bit2 = match_bits.begin(); bit2 != bit1; ++bit2) {
-      is_equal_vars.push_back(
+      CHECK((*bit1)->byte() != (*bit2)->byte()) << "; " << (*bit1)->name() <<
+              " and " << (*bit2)->name() << " belong to same byte";
+      is_different_vars.push_back(
         solver_.MakeIsDifferentVar((*bit1)->offset_bytes(),
                                    (*bit2)->offset_bytes()));
     }
-    if (is_equal_vars.size() > 0) {
-      IntExpr *sum = solver_.MakeSum(is_equal_vars);
+    if (is_different_vars.size() > 0) {
+      IntExpr *sum = solver_.MakeSum(is_different_vars);
       is_unique_flags.push_back(
-        solver_.MakeIsEqualCstVar(sum, is_equal_vars.size()));
+        solver_.MakeIsEqualCstVar(sum, is_different_vars.size()));
     }
     // The else block will be executed for the first bit. It will always be
     // unique.
@@ -333,6 +335,24 @@ void Solver::allocation(const PHV::Bit &bit, PHV::Container *container,
   }
 }
 
+class PrintFailure : public SearchMonitor {
+ public:
+  explicit PrintFailure(operations_research::Solver* const s, const std::vector<IntVar*> &vars) :
+    SearchMonitor(s), vars_(vars) {}
+  void BeginFail() {
+    LOG2("Inspecting failure");
+    for (auto v : vars_) {
+      if (v->Size() == 1)
+        LOG2("Found " << v->name() << " value is " << v->Value());
+      else {
+        LOG1("Failure " << v->name());
+        break; }
+    }
+  }
+ private:
+  const std::vector<IntVar*> vars_;
+};
+
 bool
 Solver::Solve1(operations_research::Solver::IntValueStrategy int_val,
                const bool &is_luby_restart) {
@@ -341,8 +361,10 @@ Solver::Solve1(operations_research::Solver::IntValueStrategy int_val,
                               operations_research::Solver::CHOOSE_FIRST_UNBOUND,
                               int_val);
   std::vector<SearchMonitor*> monitors;
+  PrintFailure pf(&solver_, int_vars);
   if (is_luby_restart) monitors.push_back(solver_.MakeLubyRestart(1000));
   monitors.push_back(solver_.MakeTimeLimit(120000));
+  monitors.push_back(&pf);
   solver_.NewSearch(db, monitors);
   return solver_.NextSolution();
 }

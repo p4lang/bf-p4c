@@ -19,8 +19,9 @@ bool ContainerConstraint::preorder(const IR::Primitive *prim) {
   }
   // FIXME: We still do not handle the case where an operands can be split
   // across to adjacent PHVs.
-  if ("add" == prim->name || "subtract" == prim->name) {
-    LOG2("Setting constraints for " << (*prim));
+  if ("add" == prim->name || "subtract" == prim->name ||
+      "add_to_field" == prim->name || "subtract_from_field" == prim->name) {
+    LOG2("Setting constraint for " << (*prim));
     for (auto &op : prim->operands) {
       std::list<PHV::Bit> bits = GetBits(op);
       constraints_.SetEqual(bits.cbegin(), bits.cend(), Constraints::CONTAINER);
