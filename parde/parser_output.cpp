@@ -27,6 +27,7 @@ class OutputExtracts : public Inspector {
             out << indent << "/* " << *prim << " */"; }
         out << std::endl;
         return false; }
+
  public:
     OutputExtracts(std::ostream &o, const PhvInfo &phv, indent_t i) : out(o), phv(phv), indent(i) {}
 };

@@ -13,7 +13,7 @@ class SplitPhvUse : public Transform {
     IR::Node *preorder(IR::HeaderSliceRef *p) override;
     IR::Expression *preorder(IR::Slice *p) override;
  public:
-    SplitPhvUse(const PhvInfo &phv) : phv(phv) {}
+    explicit SplitPhvUse(const PhvInfo &phv) : phv(phv) {}
 };
 
 #endif /* _TOFINO_PHV_SPLIT_PHV_USE_H_ */
