@@ -27,6 +27,7 @@
 #include "tofino/parde/split_header.h"
 #include "tofino/phv/asm_output.h"
 #include "tofino/phv/phv_allocate.h"
+#include "tofino/phv/split_phv_use.h"
 #include "tofino/phv/create_thread_local_instances.h"
 #include "tofino/phv/header_fragment_creator.h"
 #include "tofino/common/copy_header_eliminator.h"
@@ -81,7 +82,6 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new VisitFunctor([&deps]() { if (verbose) std::cout << deps; }),
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),
-        new SplitExtractEmit,
         options->phv_alloc ? new CopyHeaderEliminator : 0,
         options->phv_alloc ? new HeaderFragmentCreator : 0,
         new TypeCheck,
@@ -97,11 +97,13 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new CheckTableNameDuplicate,
         new InstructionSelection,
         new ComputeShifts,
-        new LoadMatchKeys(phv),
         new DumpPipe,
         &defuse,
         new MauPhvConstraints(phv),
         new PhvAllocate(phv, defuse.conflicts()),
+        new SplitExtractEmit,
+        new LoadMatchKeys(phv),
+        new SplitPhvUse(phv),
         new DumpPipe("Final table graph"),
         new CheckTableNameDuplicate,
         &summary,

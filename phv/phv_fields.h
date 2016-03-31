@@ -27,7 +27,8 @@ class PhvInfo : public Inspector {
             int         field_bit, container_bit, width;
             alloc_slice(PHV::Container c, int fb, int cb, int w) : container(c), field_bit(fb),
                 container_bit(cb), width(w) {} };
-        vector<alloc_slice>     alloc[2]; };
+        vector<alloc_slice>     alloc[2];   // sorted MSB (field) first
+    };
 
  private:
     map<cstring, Info>                  all_fields;

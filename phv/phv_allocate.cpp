@@ -50,17 +50,16 @@ void PhvAllocate::do_alloc(PhvInfo::Info *i, gress_t thread, Regs *use) {
     /* greedy allocate space for field */
     LOG2(i->id << ": " << (i->metadata ? "metadata " : "header ") << i->name <<
          " size=" << i->size);
-    int size = i->size, bit = 0;
+    int size = i->size;
     while (size > 32) {
-        i->alloc[thread].emplace_back(use->W++, bit, 0, 32);
-        bit += 32;
+        i->alloc[thread].emplace_back(use->W++, size-32, 0, 32);
         size -= 32; }
     if (size > 16)
-        i->alloc[thread].emplace_back(use->W++, bit, 0, size);
+        i->alloc[thread].emplace_back(use->W++, 0, 0, size);
     else if (size > 8)
-        i->alloc[thread].emplace_back(use->H++, bit, 0, size);
+        i->alloc[thread].emplace_back(use->H++, 0, 0, size);
     else
-        i->alloc[thread].emplace_back(use->B++, bit, 0, size);
+        i->alloc[thread].emplace_back(use->B++, 0, 0, size);
     LOG3("   allocated " << i->alloc[thread] << " for " << thread);
 }
 
