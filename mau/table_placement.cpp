@@ -118,6 +118,22 @@ TablePlacement::Placed *gateway_merge(TablePlacement::Placed *pl) {
     return pl;
 }
 
+static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::Placed *done,
+                            const PhvInfo &phv, TableResourceAlloc *resources) {
+    IXBar current_ixbar;
+    for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
+        current_ixbar.update(p->resources->match_ixbar);
+        current_ixbar.update(p->resources->gateway_ixbar); }
+    if (!current_ixbar.allocTable(next->table, phv, resources->match_ixbar,
+                                  resources->gateway_ixbar) ||
+        !current_ixbar.allocTable(next->gw, phv, resources->match_ixbar,
+                                  resources->gateway_ixbar)) {
+        resources->match_ixbar.clear();
+        resources->gateway_ixbar.clear();
+        return false; }
+    return true;
+}
+
 static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Placed *done,
                           int &entries, TableResourceAlloc *resources) {
     Memories current_mem;
@@ -159,21 +175,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             rv->stage++; } }
     assert(!rv->placed[table_uids.at(rv->name)]);
 
-    IXBar current_ixbar;
-    for (auto *p = done; p && p->stage == rv->stage; p = p->prev) {
-        current_ixbar.update(p->resources->match_ixbar);
-        current_ixbar.update(p->resources->gateway_ixbar); }
-    if (!current_ixbar.allocTable(rv->table, phv, resources->match_ixbar,
-                                  resources->gateway_ixbar) ||
-        !current_ixbar.allocTable(rv->gw, phv, resources->match_ixbar,
-                                  resources->gateway_ixbar)) {
+    if (!try_alloc_ixbar(rv, done, phv, resources)) {
         rv->stage++;
-        current_ixbar.clear();
-        resources->clear();
-        if (!current_ixbar.allocTable(rv->table, phv, resources->match_ixbar,
-                                      resources->gateway_ixbar) ||
-            !current_ixbar.allocTable(rv->gw, phv, resources->match_ixbar,
-                                      resources->gateway_ixbar))
+        if (!try_alloc_ixbar(rv, done, phv, resources))
             BUG("Can't fit table %s in ixbar by itself", rv->name); }
 
     LOG3(" - will try " << rv->entries << " of " << t->name << " in stage " << rv->stage);

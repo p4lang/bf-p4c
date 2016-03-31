@@ -8,13 +8,12 @@
 
 struct Memories {
     /* track memory allocations within a single stage */
-    enum {
-        SRAM_ROWS = 8,
-        SRAM_COLUMNS = 10,
-        MAPRAM_COLUMNS = 6,
-        TCAM_ROWS = 12,
-        TCAM_COLUMNS = 2,
-    };
+    static constexpr int SRAM_ROWS = 8;
+    static constexpr int SRAM_COLUMNS = 10;
+    static constexpr int LEFT_SIDE_COLUMNS = 4;
+    static constexpr int MAPRAM_COLUMNS = 6;
+    static constexpr int TCAM_ROWS = 12;
+    static constexpr int TCAM_COLUMNS = 2;
 
     Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>           sram_use;
     Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>           tcam_use;
@@ -42,6 +41,7 @@ struct Memories {
 
     void clear();
     bool alloc2Port(cstring table_name, int entries, int entries_per_word, Use &alloc);
+    bool allocActionRams(cstring table_name, int width, int depth, Use &alloc);
     bool allocRams(cstring table_name, int width, int depth,
                    Alloc2Dbase<cstring> &use, Alloc2Dbase<cstring> *bus, Use &alloc);
     bool allocTable(const IR::MAU::Table *table, int &entries, map<cstring, Use> &alloc,

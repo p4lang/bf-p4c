@@ -102,8 +102,8 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new MauPhvConstraints(phv),
         new PhvAllocate(phv, defuse.conflicts()),
         new SplitExtractEmit,
-        new LoadMatchKeys(phv),
-        new SplitPhvUse(phv),
+        new LoadMatchKeys(phv),   // depends on SplitExtractEmit
+        new SplitPhvUse(phv),     // depends on SplitExtractEmit
         new DumpPipe("Final table graph"),
         new CheckTableNameDuplicate,
         &summary,

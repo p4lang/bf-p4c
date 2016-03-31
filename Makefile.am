@@ -138,10 +138,6 @@ XFAIL_TESTS += \
     tofino/testdata/v1_samples/07-MultiProtocol.p4.test \
     tofino/testdata/v1_samples/02-FullPHV1.p4.test \
     tofino/testdata/v1_samples/03-FullPHV2.p4.test \
-    tofino/testdata/v1_samples/05-FullTPHV.p4.test \
-    tofino/testdata/v1_samples/06-FullTPHV1.p4.test \
-    tofino/testdata/v1_samples/07-FullTPHV2.p4.test \
-    tofino/testdata/v1_samples/08-FullTPHV3.p4.test \
     tofino/testdata/v1_samples/truncate.p4.test \
     bmv2/backends/tofino/v1_samples/01-FlexCounter.p4.test \
     bmv2/backends/tofino/v1_samples/03-VlanProfile.p4.test \
