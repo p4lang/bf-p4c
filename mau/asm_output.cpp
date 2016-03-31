@@ -192,11 +192,15 @@ std::ostream &operator<<(std::ostream &out, const memory_vector &v) {
 
 void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memories::Use &mem) const {
     vector<int> row, bus;
-    bool have_bus = true;
+    bool logical = mem.type >= Memories::Use::TWOPORT;
+    bool have_bus = !logical;
     for (auto &r : mem.row) {
-        row.push_back(r.row);
-        bus.push_back(r.bus);
-        if (r.bus < 0) have_bus = false; }
+        if (logical) {
+            row.push_back(2*r.row + (r.col[0] >= Memories::LEFT_SIDE_COLUMNS));
+        } else {
+            row.push_back(r.row);
+            bus.push_back(r.bus);
+            if (r.bus < 0) have_bus = false; } }
     if (row.size() > 1) {
         out << indent << "row: " << row << std::endl;
         if (have_bus) out << indent << "bus: " << bus << std::endl;
@@ -516,6 +520,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
 bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
     indent_t    indent(1);
     out << indent++ << "action " << ad->name << ':' << std::endl;
+    if (tbl->match_table)
+        out << indent << "p4: { name: " << tbl->match_table->name << "$action }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(ad->name));
     for (auto act : Values(tbl->actions)) {
         if (act->args.empty()) continue;

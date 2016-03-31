@@ -1,4 +1,5 @@
 #include "lib/bitops.h"
+#include "lib/range.h"
 #include "memories.h"
 #include "resource_estimate.h"
 
@@ -13,6 +14,7 @@ void Memories::clear() {
 }
 
 bool Memories::alloc2Port(cstring name, int entries, int entries_per_word, Use &alloc) {
+    LOG3("alloc2Port(" << name << ", " << entries << ", " << entries_per_word << ")");
     int rams = (entries + 1024*entries_per_word - 1) / (1024*entries_per_word);
     alloc.type = Use::TWOPORT;
     for (int row = 0; row < SRAM_ROWS; row++) {
@@ -31,12 +33,37 @@ bool Memories::alloc2Port(cstring name, int entries, int entries_per_word, Use &
             if (!--rams) return true; } }
     remove(name, alloc);
     alloc.row.clear();
+    LOG3("failed");
     return false;
 }
 
-bool Memories::allocRams(cstring name, int width, int depth,
-                         Alloc2Dbase<cstring> &use, Alloc2Dbase<cstring> *bus,
-                         Use &alloc) {
+bool Memories::allocActionRams(cstring name, int width, int depth, Use &alloc) {
+    LOG3("allocActionRams(" << name << ", " << width << 'x' << depth << ")");
+    int count = 0;
+    auto left = Range(0, LEFT_SIDE_COLUMNS-1);
+    auto right = Range(LEFT_SIDE_COLUMNS, SRAM_COLUMNS-1);
+    for (int row : Range(sram_use.rows()-1, 0)) {
+        for (int side : Range(1, 0)) {
+            Use::Row *current = nullptr;
+            for (int col : side ? right : left) {
+                if (sram_use[row][col]) continue;
+                if (!current) {
+                    alloc.row.emplace_back(row);
+                    current = &alloc.row.back(); }
+                current->col.push_back(col);
+                sram_use[row][col] = name;
+                if (++count == depth) {
+                    count = 0;
+                    if (!--width) return true; } } } }
+    remove(name, alloc);
+    alloc.row.clear();
+    LOG3("failed");
+    return false;
+}
+
+bool Memories::allocRams(cstring name, int width, int depth, Alloc2Dbase<cstring> &use,
+                         Alloc2Dbase<cstring> *bus, Use &alloc) {
+    LOG3("allocRams(" << name << ", " << width << 'x' << depth << ")");
     vector<int> free(use.rows()), free_bus(use.rows());
     for (int row = 0; row < use.rows(); row++) {
         for (auto col : use[row]) if (!col) free[row]++;
@@ -73,6 +100,7 @@ bool Memories::allocRams(cstring name, int width, int depth,
         if (!(depth -= max)) return true; }
     remove(name, alloc);
     alloc.row.clear();
+    LOG3("failed");
     return false;
 }
 
@@ -124,8 +152,7 @@ class AllocAttached : public Inspector {
         alloc[ad->name].type = Memories::Use::ACTIONDATA;
         int width = sz > 7 ? 1 << (sz - 7) : 1;
         int per_ram = sz > 7 ? 10 : 17 - sz;
-        if (!mem.allocRams(ad->name, width, ((entries - 1) >> per_ram) + 1, mem.sram_use,
-                           nullptr, alloc[ad->name]))
+        if (!mem.allocActionRams(ad->name, width, ((entries - 1) >> per_ram) + 1, alloc[ad->name]))
             ok = false;
         return false; }
     bool preorder(const IR::ActionProfile *ap) override {
@@ -167,8 +194,7 @@ bool Memories::allocTable(const IR::MAU::Table *table, int &entries,  map<cstrin
         entries = depth * groups * 1024U;
     } else {
         width = depth = entries = 0; }
-    for (auto at : table->attached)
-        at->apply(AllocAttached(this, table, &ok, entries, alloc));
+    LOG3("   " << width << 'x' << depth << " entries=" << entries);
     assert(!alloc.count(table->name));
     if (table->layout.ternary) {
         alloc[table->name].type = Use::TERNARY;
@@ -201,6 +227,9 @@ bool Memories::allocTable(const IR::MAU::Table *table, int &entries,  map<cstrin
             alloc[table->name].ways.emplace_back(sz, mask);
             if ((depth -= sz) < 1) depth = 1; }
         entries = alloc_depth * groups * 1024U; }
+    if (ok)
+        for (auto at : table->attached)
+            at->apply(AllocAttached(this, table, &ok, entries, alloc));
     return ok;
 }
 

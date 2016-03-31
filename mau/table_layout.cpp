@@ -157,8 +157,8 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
                 ways = 2;
             else if (ways < 1)
                 ways = 1; }
-        if (ways * width > 16)
-            ways = 16/width;
+        if ((ways+1)/2 * width > 8)
+            ways = (8/width) * 2;
         tbl->ways.resize(ways);
         int entries = (tbl->layout.entries + match_groups - 1)/ match_groups;
         for (auto &way : tbl->ways) {
