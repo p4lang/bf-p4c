@@ -51,13 +51,17 @@ Constraints::SetEqual<PHV::Bit>(const PHV::Bit &bit1, const PHV::Bit &bit2,
   SetEqual_(bit1, bit2, eq);
 }
 
-void
-Constraints::SetConstraints(const Equal &e,
-                            SolverInterface::SetEqual set_equal) {
+template<class T> void
+Constraints::SetConstraints(const Equal &e, T set_equal) {
+                            //SolverInterface::SetEqual set_equal) {
   std::set<PHV::Bit> bits;
   for (auto &p : equalities_[e]) {
     if (bits.count(p.first) == 0) {
-      set_equal(p.second);
+      bool is_t_phv = std::accumulate(p.second.begin(), p.second.end(), true,
+                                      [this](const bool &f, PHV::Bit b) {
+                                        BitId bit_id = unique_bit_id(b);
+                                        return f && is_t_phv_.at(bit_id); });
+      set_equal(p.second, is_t_phv);
       bits.insert(p.second.begin(), p.second.end());
     }
   }
@@ -103,8 +107,8 @@ void Constraints::SetTcamMatchBits(const int &stage,
 
 void Constraints::SetConstraints(SolverInterface &solver) {
   using namespace std::placeholders;
-  SetConstraints(Equal::MAU_GROUP,
-                 std::bind(&SolverInterface::SetEqualMauGroup, &solver, _1));
+  SetConstraints(Equal::MAU_GROUP, std::bind(&SolverInterface::SetEqualMauGroup,
+                                             &solver, _1, _2));
   SetConstraints(Equal::CONTAINER,
                  std::bind(&SolverInterface::SetEqualContainer, &solver, _1));
   for (auto &byte : byte_equalities_) {

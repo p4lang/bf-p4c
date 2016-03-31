@@ -46,6 +46,18 @@ class CheckTableNameDuplicate : public MauInspector {
         return true; }
 };
 
+struct DumpPipe2 : public Inspector {
+  bool preorder(const IR::ActionFunction *a) override {
+    for (auto i : a->action)
+      LOG1("AAD: func: " << a->name << " :: " << (*i));
+    return true;
+  }
+  bool preorder(const IR::Primitive *p) override {
+    LOG1("AAD2: func: " << *p);
+    return true;
+  }
+};
+
 struct DumpPipe : public Inspector {
     const char *heading;
     DumpPipe() : heading(nullptr) {}
@@ -103,6 +115,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         &defuse,
         new MauPhvConstraints(phv),
         new PhvAllocate(phv, defuse.conflicts()),
+      new DumpPipe2,
     };
     maupipe = maupipe->apply(backend);
     PhvInfo gort_phv_allocation;

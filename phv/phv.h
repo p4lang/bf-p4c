@@ -7,11 +7,12 @@
 #include <array>
 
 namespace PHV {
-constexpr int kNumMauPhvGroups = 14;
+constexpr int kPhvMauGroupOffset = 0;
+constexpr int kNumPhvMauGroups = 14;
 constexpr int kNumMauUnusedGroups = 2;
-constexpr int kTPhvMauGroupOffset = kNumMauPhvGroups + kNumMauUnusedGroups;
+constexpr int kTPhvMauGroupOffset = kNumPhvMauGroups + kNumMauUnusedGroups;
 constexpr int kNumTPhvMauGroups = 7;
-constexpr int kNumMauGroups = (kNumMauPhvGroups + kNumMauUnusedGroups +
+constexpr int kNumMauGroups = (kNumPhvMauGroups + kNumMauUnusedGroups +
                                kNumTPhvMauGroups);
 constexpr int kTPhvContainerOffset = 256;
 constexpr int kNumTPhvContainers = 256;

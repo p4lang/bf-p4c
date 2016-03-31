@@ -48,7 +48,7 @@ class Constraints {
   void SetTcamMatchBits(const int &stage, const std::set<PHV::Bit> &bits);
 
   void SetConstraints(SolverInterface &solver);
-  void SetConstraints(const Equal &e, SolverInterface::SetEqual set_equal);
+  template<class T> void SetConstraints(const Equal &e, T set_equal);
  private:
   // This type is used to identify a bit in the internal data structures of
   // this class.

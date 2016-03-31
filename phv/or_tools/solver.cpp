@@ -6,10 +6,12 @@ int Solver::unique_id_ = 0;
 using operations_research::IntVar;
 using operations_research::IntExpr;
 using operations_research::SearchMonitor;
-void Solver::SetEqualMauGroup(const std::set<PHV::Bit> &bits) {
+void
+Solver::SetEqualMauGroup(const std::set<PHV::Bit> &bits, const bool &is_t_phv) {
   CHECK(bits.size() > 0) << "; Received empty set";
   std::array<IntVar*, 3> size_flags;
-  IntVar *group = MakeMauGroup(bits.begin()->name(), &size_flags);
+  int max = is_t_phv ? PHV::kNumMauGroups - 1 : 13;
+  IntVar *group = MakeMauGroup(bits.begin()->name(), &size_flags, max);
   for (auto &b : bits) {
     if (bits_.count(b) == 0) bits_.insert(std::make_pair(b, Bit(b.name())));
     Bit &bit = bits_.find(b)->second;
@@ -294,10 +296,17 @@ Solver::SetUniqueConstraint(
 
 void Solver::SetNoTPhv(const PHV::Bit &bit) {
   LOG2("Forbidding allocation of " << bit.name() << " to T-PHV");
-  Bit &b = bits_.at(bit);
-  for (int i = 0; i < PHV::kNumTPhvMauGroups; ++i) {
-    b.mau_group()->RemoveValue(i + PHV::kTPhvMauGroupOffset);
+  if (bits_.count(bit) != 0) {
+    Bit &b = bits_.at(bit);
+    for (int i = 0; i < PHV::kNumTPhvMauGroups; ++i) {
+      IntVar *v = b.mau_group();
+      CHECK(nullptr != v) << "; Cannot find MAU group for " << bit.name();
+      if (v->Contains(i + PHV::kTPhvMauGroupOffset)) {
+        v->RemoveValue(i + PHV::kTPhvMauGroupOffset);
+      }
+    }
   }
+  else WARNING("Cannot find Bit for " << bit.name());
 }
 
 void Solver::SetContainerWidthConstraints() {
@@ -356,6 +365,7 @@ class PrintFailure : public SearchMonitor {
 bool
 Solver::Solve1(operations_research::Solver::IntValueStrategy int_val,
                const bool &is_luby_restart) {
+  LOG1("Starting new search");
   auto int_vars = GetIntVars();
   auto db = solver_.MakePhase(int_vars,
                               operations_research::Solver::CHOOSE_FIRST_UNBOUND,
@@ -363,10 +373,12 @@ Solver::Solve1(operations_research::Solver::IntValueStrategy int_val,
   std::vector<SearchMonitor*> monitors;
   PrintFailure pf(&solver_, int_vars);
   if (is_luby_restart) monitors.push_back(solver_.MakeLubyRestart(1000));
-  monitors.push_back(solver_.MakeTimeLimit(120000));
+  monitors.push_back(solver_.MakeFailuresLimit(150000));
   monitors.push_back(&pf);
   solver_.NewSearch(db, monitors);
-  return solver_.NextSolution();
+  bool result = solver_.NextSolution();
+  if (false == result) solver_.EndSearch();
+  return result;
 }
 
 std::vector<IntVar*> Solver::GetIntVars() const {
@@ -420,8 +432,9 @@ Solver::containers_and_offsets(IntVar *mau_group) const {
 }
 
 IntVar *
-Solver::MakeMauGroup(const cstring &name, std::array<IntVar*, 3> *flags) {
-  auto v = solver_.MakeIntVar(0, PHV::kNumMauGroups - 1,
+Solver::MakeMauGroup(const cstring &name, std::array<IntVar*, 3> *flags,
+                     const int &max) {
+  auto v = solver_.MakeIntVar(0, max,
                               name + "-group-" + std::to_string(unique_id()));
   v->RemoveValues(std::vector<int64>(PHV::kInvalidMauGroups.begin(),
                                      PHV::kInvalidMauGroups.end()));
@@ -492,7 +505,10 @@ Bit *Solver::MakeBit(const PHV::Bit &phv_bit) {
   Bit &bit = bits_.at(phv_bit);
   if (nullptr == bit.mau_group()) {
     std::array<IntVar*, 3> size_flags;
-    IntVar *mau_group = MakeMauGroup(bit.name(), &size_flags);
+    // MAU groups created here will be restricted to PHV (no T-PHV).
+    IntVar *mau_group =
+      MakeMauGroup(bit.name(), &size_flags,
+                   PHV::kPhvMauGroupOffset + PHV::kNumPhvMauGroups - 1);
     bit.set_mau_group(mau_group, size_flags);
   }
   if (nullptr == bit.container_in_group()) {

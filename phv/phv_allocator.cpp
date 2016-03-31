@@ -125,10 +125,16 @@ bool PhvAllocator::Solve(const IR::Tofino::Pipe *pipe, PhvInfo *phv_info) {
   LOG1("Trying MIN_VALUE");
   ORTools::MinValueSolver solver;
   constraints_.SetConstraints(solver);
-  if (solver.Solve()) {
-    PopulatePhvInfo ppi(solver, phv_info);
-    pipe->apply(ppi);
-    return true;
+  int count = 0;
+  while (count < 10) {
+    if (true == solver.Solve()) {
+      PopulatePhvInfo ppi(solver, phv_info);
+      pipe->apply(ppi);
+      return true;
+    }
+    else {
+      ++count;
+    }
   }
-  else return false;
+  return false;
 }

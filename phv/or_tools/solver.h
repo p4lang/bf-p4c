@@ -13,7 +13,8 @@ class Solver : public SolverInterface {
   Solver() : solver_("phv-allocator") { }
   // Creates variables/constraints to allocate all members of bits to the same
   // MAU group.
-  void SetEqualMauGroup(const std::set<PHV::Bit> &bits) override;
+  void SetEqualMauGroup(const std::set<PHV::Bit> &bits,
+                        const bool &is_t_phv) override;
   // Creates variables/constraints to allocate all members of bits to the same
   // container.
   void SetEqualContainer(const std::set<PHV::Bit> &bits) override;
@@ -84,7 +85,8 @@ class Solver : public SolverInterface {
   // Functions for creating IntVar objects for a bit.
   operations_research::IntVar *
   MakeMauGroup(const cstring &name,
-               std::array<operations_research::IntVar*, 3> *flags);
+               std::array<operations_research::IntVar*, 3> *flags,
+               const int &max = PHV::kNumMauGroups - 1);
   operations_research::IntVar *
   GetWidthFlag(operations_research::IntVar *mau_group,
                const std::vector<int> &groups);
