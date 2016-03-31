@@ -1,4 +1,4 @@
-#include "stdlib.h"
+#include "core.p4"
 
 struct standard_metadata {
     bit<16>     ingress_port;

@@ -1,3 +1,47 @@
+# Dependences
+
+- C++ Google OR-Tools library.
+  `https://developers.google.com/optimization/installing?hl=en#c`.
+  Unfortunately the binary download does not install itself, so we
+  suggest the following installation procedure for Ubuntu 64-bit:
+
+```
+wget -O ortools.tar.gz 'https://drive.google.com/uc?id=0B5afcYJzk8ivdnV1Z2IzeExaQzA&export=download'
+tar xvfz ortools.tar.gz
+sudo mv or-tools.Linux64/lib/* /usr/local/lib/
+sudo ldconfig
+sudo mv or-tools.Linux64/include/* /usr/local/include/
+```
+
+- Tofino assembler and Harlyn model for testing the output of
+  the Tofino backend.  The test scripts will look for sibling repos
+  (in preference to installed versions), so the easiest is to
+  check out these repos in parent of the `P4` folder and build them
+  there:
+
+```
+git clone git@github.com:barefootnetworks/tofino-asm.git
+git clone git@github.com:barefootnetworks/model.git
+cd tofino-asm
+make all
+cd ..
+cd model
+./autogen.sh
+./configure
+make
+```
+
+- It may be desirable to checkout the "cdodd-simple_harness" branch of
+  the model to get the latest code for the test harness we're using.
+
+- The Harlyn model requires additional dependences; please refer to
+  its own documentation:
+  https://barefootnetworks.atlassian.net/wiki/pages/viewpage.action?pageId=17006668.
+  Only the dependences required by the "model" are needed (i.e., we
+  don't use the driver in the compiler tests).  (Currently there is a
+  bug that causes the model to crash; in that case you may need to
+  install the following branch: `git checkout cdodd-simple_harness`)
+
 # Tofino mid-end and back-end design
 
 The mid-end and back-end of the compiler are where all the Tofino-specific

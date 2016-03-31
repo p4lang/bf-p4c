@@ -99,6 +99,116 @@ cpplint_FILES += $(tofino_backend_SOURCES)
 
 -include $(srcdir)/tofinotests.am
 -include $(srcdir)/backends/tofino/v1_2_tests.am
+-include $(srcdir)/backends/tofino/v1to12tests.am
+-include $(srcdir)/backends/tofino/bmv2tests.am
 
-$(srcdir)/tofinotests.am: $(srcdir)/testdata/v1_samples/*.p4 $(srcdir)/testdata/v1_errors/*.p4 $(srcdir)/backends/tofino/v1_2_test/*.p4
+$(srcdir)/tofinotests.am: \
+   $(srcdir)/testdata/v1_samples/*.p4 \
+   $(srcdir)/testdata/v1_errors/*.p4 \
+   $(srcdir)/backends/tofino/v1_2_test/*.p4 \
+   $(srcdir)/backends/tofino/v1_samples/*.p4
 	@$(srcdir)/gen-tests.py $(srcdir) tofino $(srcdir)/backends/tofino/run-tofino-sample.py $^ >$@
+
+# We have additional test inputs that are used to test the other (standard) back-ends
+# These test input programs depend on Tofino in some way.
+
+# Exercise v12test back-end on Tofino-specific programs
+$(srcdir)/backends/tofino/v1to12tests.am: $(srcdir)/backends/tofino/v1_samples/*.p4 
+	@$(srcdir)/gen-tests.py $(srcdir) v1to12 $(srcdir)/backends/tofino/test-v12-sample.sh $^ >$@
+
+# Exercise bmv2 back-end on Tofino-specific programs
+$(srcdir)/backends/tofino/bmv2tests.am: $(srcdir)/backends/tofino/v1_samples/*.p4 
+	@$(srcdir)/gen-tests.py $(srcdir) bmv2 $(srcdir)/backends/tofino/test-bmv2.sh $^ >$@
+
+CLEANFILES += \
+	$(srcdir)/tofinotests.am \
+	$(srcdir)/backends/tofino/v1_2_tests.am \
+	$(srcdir)/backends/tofino/v1to12tests.am \
+	$(srcdir)/backends/tofino/bmv2tests.am
+
+# Some of these failures are still P4 v1.0 front-end bugs.
+# Others are due to non-standard extensions to P4:
+# The *meter* tests use direct meters and execute_meter calls with 4 arguments (not in spec)
+# The *stateful* tests use extensions to P4 not in spec
+# FlexCounter, action_profile use a non-standard Algorithm
+# TwoReferences invokes a table twice - maybe it should become a negative test?
+# *range* match type is not supported by BMv2 (used also in error_detection*.p4)
+XFAIL_TESTS += \
+    tofino/testdata/v1_samples/16-TwoReferences.p4.test \
+    tofino/testdata/v1_samples/07-MultiProtocol.p4.test \
+    tofino/testdata/v1_samples/02-FullPHV1.p4.test \
+    tofino/testdata/v1_samples/03-FullPHV2.p4.test \
+    tofino/testdata/v1_samples/05-FullTPHV.p4.test \
+    tofino/testdata/v1_samples/06-FullTPHV1.p4.test \
+    tofino/testdata/v1_samples/07-FullTPHV2.p4.test \
+    tofino/testdata/v1_samples/08-FullTPHV3.p4.test \
+    tofino/testdata/v1_samples/truncate.p4.test \
+    bmv2/backends/tofino/v1_samples/01-FlexCounter.p4.test \
+    bmv2/backends/tofino/v1_samples/03-VlanProfile.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_168_meter_bug.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_124_meter_3.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_123_meter_2.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_125_meter_pre_color.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_126_meter_pre_color_2.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_127_meter_pre_color_3.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_132_meter_pre_color_4.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_152_stateful_simple_cntr.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_153_stateful_simple_cntr_with_output.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_154_stateful_sampling.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_155_stateful_3_alus.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_156_indirect_stateful_cntr.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_157_random_number_generator.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_159_stateful_using_phv_field.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_160_stateful_single_bit_mode.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_161_new_primitives.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_163_stateful_table_math_unit.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_164_stateful_deterministic_sampling.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_165_stateful_bfd_failure_detection.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_166_stateful_generic_counter.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_167_stateful_flowlet_switching.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_169_stateful_sflow_sequence.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_170_stateful_selection_table_update.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_171_stateful_conga.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_172_stateful_heavy_hitter.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_173_stateful_bloom_filter.p4.test \
+    bmv2/backends/tofino/v1_samples/02-FlexCounterActionProfile.p4.test \
+    bmv2/backends/tofino/v1_samples/action_profile.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_118_tcam_range_2.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_119_tcam_range_3.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_120_tcam_range_4.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_121_tcam_range_5.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_122_tcam_range_6.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_135_tcam_range_7.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_136_tcam_error_detection.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_137_tcam_error_detection_2.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_138_tcam_error_detection_3.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_139_tcam_error_detection_4.p4.test \
+    bmv2/backends/tofino/v1_samples/test_config_117_first_tcam_range.p4.test \
+    bmv2/backends/tofino/v1_samples/vk_basic_ipv4_20150706.p4.test \
+    bmv2/backends/tofino/v1_samples/13-ResubmitMetadataSize.p4.test \
+    v1to12/backends/tofino/v1_samples/02-FlexCounterActionProfile.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_123_meter_2.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_125_meter_pre_color.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_124_meter_3.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_126_meter_pre_color_2.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_127_meter_pre_color_3.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_132_meter_pre_color_4.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_152_stateful_simple_cntr.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_153_stateful_simple_cntr_with_output.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_155_stateful_3_alus.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_154_stateful_sampling.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_159_stateful_using_phv_field.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_156_indirect_stateful_cntr.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_163_stateful_table_math_unit.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_160_stateful_single_bit_mode.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_164_stateful_deterministic_sampling.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_165_stateful_bfd_failure_detection.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_167_stateful_flowlet_switching.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_166_stateful_generic_counter.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_168_meter_bug.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_169_stateful_sflow_sequence.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_170_stateful_selection_table_update.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_171_stateful_conga.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_172_stateful_heavy_hitter.p4.test \
+    v1to12/backends/tofino/v1_samples/test_config_173_stateful_bloom_filter.p4.test \
+    v1to12/backends/tofino/v1_samples/vk_basic_ipv4_subset.p4.test

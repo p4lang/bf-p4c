@@ -73,11 +73,11 @@ def run_timeout(options, args, timeout, stderr):
 
 def process_file(options, argv):
     assert isinstance(options, Options)
-    args = ["./p4c-tofino"]
+    args = ["./p4c-tofino", "-D__TARGET_TOFINO__"]
     if "v1_2" in options.p4filename:
         args.extend(["--p4v", "1.2"]);
     else:
-        args.extend(["-I" + options.compilerSrcdir + "/testdata/v1_samples/p4_lib"]);
+        args.extend(["-I" + options.compilerSrcdir + "/backends/tofino/v1_samples/p4_lib"]);
     args.extend(argv)
     if options.testName:
         args.extend(['-o', options.testName + '.tfa'])
