@@ -5,7 +5,7 @@
 #include "ir/ir.h"
 #include "ir/dbprint.h"
 #include "lib/log.h"
-#include "frontends/common/typecheck.h"
+#include "frontends/p4v1/typecheck.h"
 #include "tofinoOptions.h"
 #include "tofino/common/extract_maupipe.h"
 #include "tofino/common/field_defuse.h"
