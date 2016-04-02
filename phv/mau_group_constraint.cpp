@@ -41,6 +41,7 @@ MauGroupConstraint::preorder(const IR::Primitive *prim) {
   }
   else {
     WARNING("Unhandled primitive " << (*prim));
+    return true;
   }
   return false;
 }
