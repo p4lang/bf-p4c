@@ -3,7 +3,7 @@
 bool ContainerConstraint::preorder(const IR::Primitive *prim) {
   // FIXME: This should include the extract instruction too. But extract() has
   // to be fixed in the IR.
-  if (prim->name == "emit") {
+  if (prim->name == "emit" || prim->name == "extract") {
     LOG2("Setting constraints for " << (*prim));
     for (auto &byte : GetBytes(prim->operands[0], nullptr)) {
       constraints_.SetEqual(byte.cfirst(), byte.clast(),

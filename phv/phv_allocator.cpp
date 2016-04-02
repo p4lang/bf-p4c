@@ -16,10 +16,17 @@ class PopulatePhvInfo : public Inspector {
  public:
   PopulatePhvInfo(SolverInterface &solver, PhvInfo *phv_info) :
     solver_(solver), phv_info_(phv_info) { }
-  bool preorder(const IR::HeaderRef *hr) override {
-    GetAllocation(IR::HeaderSliceRef(hr->srcInfo, hr,
-                                     hr->type->width_bits() - 1, 0));
-    return false;
+  bool preorder(const IR::Primitive *prim) override {
+    bool rv = true;
+    if (prim->name == "extract") {
+      const IR::HeaderRef *hr = prim->operands[0]->to<IR::HeaderRef>();
+      if (nullptr != hr) {
+        GetAllocation(IR::HeaderSliceRef(hr->srcInfo, hr,
+                                         hr->type->width_bits() - 1, 0));
+        rv = false;
+      }
+    }
+    return rv;
   }
   bool preorder(const IR::HeaderSliceRef *hsr) {
     GetAllocation(*hsr);

@@ -10,6 +10,8 @@ class TPhvConstraint : public MauInspector {
  public:
   TPhvConstraint(Constraints &c) : constraints_(c) { }
   bool preorder(const IR::HeaderSliceRef *hsr) {
+    if (auto prim = findContext<IR::Primitive>())
+      LOG2("Setting no T-PHV for " << *prim);
     for (int i = hsr->lsb(); i <= hsr->msb(); ++i) {
       PHV::Bit bit = PHV::Bit(hsr->header_ref()->toString(), i);
       constraints_.SetNoTPhv(bit);

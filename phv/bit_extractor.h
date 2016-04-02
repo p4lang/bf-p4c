@@ -26,6 +26,5 @@ class BitExtractor {
   std::list<PHV::Byte>
   GetBytes(const IR::HeaderSliceRef *hsr1, const IR::Expression *e2);
   std::list<PHV::Byte> GetBytes(const IR::HeaderRef *hr);
-  const IR::HeaderSliceRef *header_slice_ref(const IR::Expression *e) const;
 };
 #endif
