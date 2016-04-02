@@ -32,7 +32,7 @@ mkdir -p $name.out
 rm -f $name.out/*.cfg.json
 if time $TFAS -vvvvl $name.out/tfas.config.log $name.tfa; then
     if time $TFLN $name.out/*.cfg.json -o $name.out/tofino.bin; then
-        if time $STF $test; then
+        if time $STF -l $name.out/tofino.bin -l $name.out/tbl-cfg -l $name.out/p4_name_lookup.json $test; then
             exit 0
         fi
     fi
