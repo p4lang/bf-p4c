@@ -16,16 +16,25 @@ class PopulatePhvInfo : public Inspector {
  public:
   PopulatePhvInfo(SolverInterface &solver, PhvInfo *phv_info) :
     solver_(solver), phv_info_(phv_info) { }
-  bool
-  preorder(const IR::HeaderSliceRef *hsr) {
-    for (auto field : hsr->fields()) {
+  bool preorder(const IR::HeaderRef *hr) override {
+    GetAllocation(IR::HeaderSliceRef(hr->srcInfo, hr,
+                                     hr->type->width_bits() - 1, 0));
+    return false;
+  }
+  bool preorder(const IR::HeaderSliceRef *hsr) {
+    GetAllocation(*hsr);
+    return false;
+  }
+ private:
+  void GetAllocation(const IR::HeaderSliceRef hsr) {
+    for (auto field : hsr.fields()) {
       vector<PhvInfo::Info::alloc_slice> *alloc = phv_info_->alloc(field);
       for (int i = field->lsb(); i <= field->msb(); ++i) {
         int field_bit = i - field->lsb();
         // Check if this bit has already been added to phv_info_.
         PHV::Container container;
         int container_bit;
-        solver_.allocation(PHV::Bit(hsr->header_ref()->toString(), i),
+        solver_.allocation(PHV::Bit(hsr.header_ref()->toString(), i),
                            &container, &container_bit);
         auto iter = alloc->begin();
         for (; iter != alloc->end(); ++iter) {
@@ -37,17 +46,17 @@ class PopulatePhvInfo : public Inspector {
           if (iter->container.index() == container.index() &&
               iter->width + iter->container_bit == container_bit &&
               iter->width + iter->field_bit == field_bit) {
-              iter->width += 1;
-              break;
+            iter->width += 1;
+            break;
           }
           // Prepend the bit to an existing alloc structure.
           if (iter->container.index() == container.index() &&
               iter->container_bit == container_bit + 1 &&
               iter->field_bit == (field_bit + 1)) {
-              --(iter->field_bit);
-              --(iter->container_bit);
-              iter->width += 1;
-              break;
+            --(iter->field_bit);
+            --(iter->container_bit);
+            iter->width += 1;
+            break;
           }
         }
         if (iter == alloc->end()) {
@@ -55,9 +64,7 @@ class PopulatePhvInfo : public Inspector {
         }
       }
     }
-    return false;
   }
- private:
   SolverInterface &solver_;
   PhvInfo *phv_info_;
 };
@@ -68,6 +75,14 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
   pipe->apply(mgc);
   ContainerConstraint cc(constraints_);
   pipe->apply(cc);
+  SourceContainerConstraint scc(constraints_);
+  // This loop should keep iterating until Constraints::SetEqual() has been
+  // invoked on all pairs of source containers that have a common destination
+  // container.
+  do {
+    scc.reset_updated();
+    pipe->apply(scc);
+  } while (true == scc.is_updated());
   ByteConstraint bc(constraints_);
   pipe->apply(bc);
   OffsetConstraint oc(constraints_);
@@ -87,13 +102,6 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
 //SetDeparserConstraints sdc(header_bits_);
 //maupipe_->apply(sdc);
 
-//SetEqualDstContainerConstraint sedcc(header_bits_);
-//// This loop should keep iterating until SetEqualityConstraint has been set
-//// between all pairs of sources that have a common destination container.
-//do {
-//  sedcc.reset_updated();
-//  maupipe_->apply(sedcc);
-//} while (true == sedcc.is_updated());
 //// Set single write constraint on primitives in an action.
 //SetWriteConstraints sswc(header_bits_);
 //maupipe_->apply(sswc);

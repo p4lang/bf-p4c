@@ -18,17 +18,17 @@ class Solver : public SolverInterface {
   // Creates variables/constraints to allocate all members of bits to the same
   // container.
   void SetEqualContainer(const std::set<PHV::Bit> &bits) override;
-  // Creates variables/constraints to allocate all members of bits to the same
-  // byte within a PHV container.
-  void SetByte(const PHV::Byte &byte) override;
-  // Creates variables/constraints on offset of bit in a PHV container.
+  // Creates variables/constraints for offset of bit in a PHV container.
+  void SetOffset(const PHV::Bit &pbit, const std::vector<int> &values) override;
+  // Creates variables/constraints for offset of bit in a PHV container.
   void SetOffset(const PHV::Bit &pbit, const int &min, const int &max) override;
   // Creates variables/constraints to allocate bits to contiguous bits offsets.
   // This function does not constrain them to be allocated to contiguous bit
   // offsets in the same PHV container. However, all bits are *usually*
   // allocated to the same PHV container because they appear in a set passed to
   // SetEqualContainer. 
-  void SetContiguousBits(const PHV::Bit &pbit1, const PHV::Bit &pbit2) override;
+  void SetBitDistance(const PHV::Bit &pbit1, const PHV::Bit &pbit2,
+                      const int &distance) override;
   // Creates variables/constraints to allocate all members of bits to the same
   // bit offset. The members of bits are probably allocated to different PHV
   // containers (not overlayed).
@@ -73,6 +73,9 @@ class Solver : public SolverInterface {
   std::vector<operations_research::IntVar*> mau_groups() const;
   std::vector<operations_research::IntVar*>
   containers_and_offsets(operations_research::IntVar *mau_group) const;
+  // Creates variables/constraints to allocate all members of bits to the same
+  // byte within a PHV container.
+  ORTools::Byte *SetByte(const PHV::Byte &byte);
   void SetUniqueConstraint(
     const std::vector<operations_research::IntVar*> &is_unique_flags,
     const std::vector<Bit*> &bits,
@@ -94,7 +97,8 @@ class Solver : public SolverInterface {
   operations_research::IntExpr *
   MakeContainer(operations_research::IntVar *group,
                 operations_research::IntVar *container_in_group);
-  operations_research::IntVar *MakeByteAlignedOffset(const cstring &name);
+  operations_research::IntVar *
+  MakeOffset(const cstring &name, const std::vector<int> &values);
   operations_research::IntVar *
   MakeOffset(const cstring &name, const int &min = 0, const int &max = 31);
   operations_research::IntExpr *MakeDeparserGroupFlag(
@@ -113,7 +117,7 @@ class Solver : public SolverInterface {
   std::map<PHV::Bit, ORTools::Bit> bits_;
 
   // Variable for generating unique names for IntVar objects.
-  int unique_id() { return ++unique_id_; }
+  std::string unique_id() { return std::to_string(++unique_id_); }
   static int unique_id_;
 };
 }

@@ -5,11 +5,14 @@
 #include <set>
 class SolverInterface {
  public:
-  virtual void SetByte(const PHV::Byte &byte) = 0;
+  //virtual void SetByte(const PHV::Byte &byte) = 0;
+  virtual void
+  SetOffset(const PHV::Bit &pbit, const std::vector<int> &values) = 0;
   virtual void
   SetOffset(const PHV::Bit &pbit, const int &min, const int &max) = 0;
   virtual void
-  SetContiguousBits(const PHV::Bit &pbit1, const PHV::Bit &pbit2) = 0;
+  SetBitDistance(const PHV::Bit &pbit1, const PHV::Bit &pbit2,
+                 const int &distance) = 0;
   virtual void
   SetEqualMauGroup(const std::set<PHV::Bit> &bits, const bool &is_t_phv) = 0;
   virtual void SetEqualContainer(const std::set<PHV::Bit> &bits) = 0;

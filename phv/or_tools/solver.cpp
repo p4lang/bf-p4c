@@ -25,7 +25,6 @@ void Solver::SetEqualContainer(const std::set<PHV::Bit> &bits) {
   IntVar *mau_group = bits_.at(*bits.begin()).mau_group();
   IntVar *container_in_group = MakeContainerInGroup(bits.begin()->name());
   IntExpr *container = MakeContainer(mau_group, container_in_group);
-  LOG2("Equ container bits");
   for (auto &b : bits) {
     Bit &bit = bits_.at(b);
     CHECK(bit.mau_group() == mau_group);
@@ -35,27 +34,35 @@ void Solver::SetEqualContainer(const std::set<PHV::Bit> &bits) {
   }
 }
 
-void Solver::SetByte(const PHV::Byte &phv_byte) {
-  LOG2("Setting byte-constraint for " << phv_byte.name());
-  IntVar *base_offset = MakeByteAlignedOffset(phv_byte.cfirst()->name());
-  Byte *byte = new Byte();
-  for (auto it = phv_byte.cfirst(); it != phv_byte.clast(); ++it) {
-    Bit &bit = bits_.at(*it);
-    CHECK(nullptr != bit.container());
-    const int relative_offset = std::distance(phv_byte.cbegin(), it);
-    bit.set_offset(base_offset, relative_offset);
-    bit.set_byte(byte);
+void Solver::SetOffset(const PHV::Bit &pbit, const std::vector<int> &values) {
+  Bit &bit = bits_.at(pbit);
+  if (nullptr != bit.base_offset()) {
+    std::vector<int64> v(32);
+    std::iota(v.begin(), v.end(), 0);
+    for (auto i : values) {
+      v.erase(std::find(v.begin(), v.end(), i - bit.relative_offset()));
+    }
+    // At this point, bit cannot be allocated a base_offset from v. So, remove
+    // v from the domain of bit.base_offset().
+    bit.base_offset()->RemoveValues(v);
   }
+  else bit.set_offset(MakeOffset(bit.name(), values), 0);
 }
 
 void Solver::SetOffset(const PHV::Bit &pbit, const int &min, const int &max) {
   Bit &bit = bits_.at(pbit);
   if (nullptr != bit.base_offset()) {
     for (int i = 0; i < min - bit.relative_offset(); ++i) {
-      bit.base_offset()->RemoveValue(i);
+      if (bit.base_offset()->Contains(i)) {
+        LOG3("Remove " << i << " from domain of " << bit.base_offset());
+        bit.base_offset()->RemoveValue(i);
+      }
     }
     for (int i = max + 1 - bit.relative_offset(); i <= 31; ++i) {
-      bit.base_offset()->RemoveValue(i);
+      if (bit.base_offset()->Contains(i)) {
+        LOG3("Remove " << i << " from domain of " << bit.base_offset());
+        bit.base_offset()->RemoveValue(i);
+      }
     }
   }
   else {
@@ -63,9 +70,14 @@ void Solver::SetOffset(const PHV::Bit &pbit, const int &min, const int &max) {
   }
 }
 
-void Solver::SetContiguousBits(const PHV::Bit &pbit1, const PHV::Bit &pbit2) {
+void Solver::SetBitDistance(const PHV::Bit &pbit1, const PHV::Bit &pbit2,
+                            const int &distance) {
+  LOG2("Setting bits " << pbit1 << " and " << pbit2 << " at distance " <<
+         distance);
   Bit &bit1 = bits_.at(pbit1);
   Bit &bit2 = bits_.at(pbit2);
+  CHECK(distance >= 0) << ": Invalid distance " << distance;
+  SetOffset(pbit1, 0, 31 - distance);
   CHECK(nullptr != bit1.offset()) << "; Offset not set for " << bit1.name();
   if (nullptr != bit2.offset()) {
     CHECK(bit1.base_offset() != nullptr) << "; Cannot find base_offset for " <<
@@ -76,7 +88,7 @@ void Solver::SetContiguousBits(const PHV::Bit &pbit1, const PHV::Bit &pbit2) {
       // FIXME: This assert will be hit if a program has conflicting
       // constraints. It must be eventually changed into a sensible error
       // message for the user.
-      CHECK(bit1.relative_offset() + 1 == bit2.relative_offset()) <<
+      CHECK(bit1.relative_offset() + distance == bit2.relative_offset()) <<
               "; Invalid relative offsets for " << bit1.name() << " and " <<
               bit2.name();
     }
@@ -86,20 +98,26 @@ void Solver::SetContiguousBits(const PHV::Bit &pbit1, const PHV::Bit &pbit2) {
       // base_offset() variables. Adding a constraints between the
       // base_offset() may result in faster execution because they are directly
       // assigned values from their domain by the solver.
-      int difference = bit1.relative_offset() + 1 - bit2.relative_offset();
+      int diff = bit1.relative_offset() + distance - bit2.relative_offset();
       solver_.AddConstraint(
         solver_.MakeEquality(
-          solver_.MakeSum(bit1.base_offset(), difference), bit2.base_offset()));
+          solver_.MakeSum(bit1.base_offset(), diff), bit2.base_offset()));
     }
   }
   else {
     CHECK(bit2.base_offset() == nullptr) << "; Invalid base offset for " <<
             bit2.name();
-    bit2.set_offset(bit1.base_offset(), bit1.relative_offset() + 1);
+    bit2.set_offset(bit1.base_offset(), bit1.relative_offset() + distance);
   }
 }
 
+// This function tries to avoid creating a new IntVar object in the solver. If
+// we did not care about creating an extra IntVar object, this function could
+// have just consisted of the for-loop that is at the end of the function.
 void Solver::SetEqualOffset(const std::set<PHV::Bit> &bits) {
+  CHECK(bits.size() > 0) << ": Set of PHV::Bit is empty";
+  // Try to find a Bit object which has a non-NULL offset and store the offset
+  // information (i.e base_offset, relative_offset and offset) in base_bit.
   Bit base_bit("");
   for (auto &b : bits) {
     Bit &bit = bits_.at(b);
@@ -108,29 +126,33 @@ void Solver::SetEqualOffset(const std::set<PHV::Bit> &bits) {
       break;
     }
   }
+  // This if-elseif statement ensures that the first item in bits has a
+  // non-NULL offset and base_offset. That way, the for-loop at the end of the
+  // function never creates a new IntVar object.
+  Bit &first_bit = bits_.at(*bits.begin());
   if (nullptr == base_bit.offset()) {
-    base_bit.set_offset(MakeOffset(bits.begin()->name()), 0);
+    // If we cannot find such a bit in bits, we have not choice but to create a
+    // new IntVar object for base_offset.
+    first_bit.set_offset(MakeOffset(first_bit.name()), 0);
   }
-  CHECK(nullptr != base_bit.offset());
-  for (auto &b : bits) {
-    Bit &bit = bits_.at(b);
-    if (nullptr == bit.offset()) {
-      CHECK(nullptr == bit.base_offset()) << "; Invalid offset for " <<
-        bit.name();
-      bit.CopyOffset(base_bit);
-    }
-    else {
-      solver_.AddConstraint(
-        solver_.MakeEquality(base_bit.offset(), bit.offset()));
-    }
+  else if (first_bit.offset() == nullptr) {
+    CHECK(nullptr != base_bit.offset());
+    first_bit.CopyOffset(base_bit);
+  }
+  auto b1 = bits.cbegin();
+  for (auto b2 = std::next(b1, 1); b2 != bits.cend(); ++b2) {
+    // This check is just to ensure that the call to SetBitDistance never
+    // creates a new IntVar object for base_offset.
+    CHECK(nullptr != bits_.at(*b1).offset());
+    CHECK(nullptr != bits_.at(*b1).base_offset());
+    SetBitDistance(*b1, *b2, 0);
   }
 }
 
 void Solver::SetFirstDeparsedHeaderByte(const PHV::Byte &phv_byte) {
-  Byte *byte = bits_.at(phv_byte.at(0)).byte();
-  // Just doing sanity check to make sure all Bit objects have a pointer to the
-  // same Byte object.
-  for (auto b : phv_byte) CHECK(bits_.at(b).byte() == byte);
+  Byte *byte = SetByte(phv_byte);
+  CHECK(nullptr != byte) << ": Cannot find ORTools::Byte object for " <<
+    phv_byte.name();
   // For the last bit of a header, is_last_byte_ must be true.
   Bit &bit = bits_.at(phv_byte.at(0));
   byte->set_last_byte(bit.SetFirstDeparsedHeaderByte());
@@ -139,8 +161,7 @@ void Solver::SetFirstDeparsedHeaderByte(const PHV::Byte &phv_byte) {
 void Solver::SetDeparsedHeader(const PHV::Byte &byte1, const PHV::Byte &byte2) {
   Bit &bit = bits_.at(byte2.at(0));
   Bit &prev_bit = bits_.at(byte1.at(7));
-  Byte *byte = bits_.at(byte2.at(0)).byte();
-  for (auto &b : byte2) CHECK(bits_.at(b).byte() == byte);
+  Byte *byte = SetByte(byte2);
   byte->set_last_byte(bit.SetDeparsedHeader(prev_bit, *(prev_bit.byte())));
 }
 
@@ -207,6 +228,9 @@ void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_phv_bits,
     for (auto bit2 = match_bits.begin(); bit2 != bit1; ++bit2) {
       CHECK((*bit1)->byte() != (*bit2)->byte()) << "; " << (*bit1)->name() <<
               " and " << (*bit2)->name() << " belong to same byte";
+      // FIXME: If we know that bit1 and bit2 cannot go into the same container
+      // (by looking at container-conflict matrix) we can simply push
+      // MakeIntConst(1) into is_different_vars.
       is_different_vars.push_back(
         solver_.MakeIsDifferentVar((*bit1)->offset_bytes(),
                                    (*bit2)->offset_bytes()));
@@ -251,6 +275,27 @@ void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_phv_bits,
   }
   SetUniqueConstraint(is_unique_flags, match_bits, widths, {{0, 2}});
   SetUniqueConstraint(is_unique_flags, match_bits, widths, {{1, 3}});
+}
+
+ORTools::Byte *Solver::SetByte(const PHV::Byte &phv_byte) {
+  Byte *byte = bits_.at(phv_byte.at(0)).byte();
+  // Just doing sanity check to make sure all Bit objects have a pointer to the
+  // same Byte object.
+  for (auto b : phv_byte) CHECK(bits_.at(b).byte() == byte);
+  for (auto it = phv_byte.cfirst(); it != phv_byte.clast(); ++it) {
+    CHECK(bits_.at(*it).byte() == byte) << ": Invalid Byte* in " << (*it);
+  }
+  // Create a new Byte* object if needed.
+  if (nullptr == byte) {
+    LOG2("Setting byte object for " << phv_byte.name());
+    byte = new Byte();
+    for (auto it = phv_byte.cfirst(); it != phv_byte.clast(); ++it) {
+      Bit &bit = bits_.at(*it);
+      CHECK(nullptr != bit.container());
+      bit.set_byte(byte);
+    }
+  }
+  return byte;
 }
 
 void
@@ -337,6 +382,13 @@ void Solver::allocation(const PHV::Bit &bit, PHV::Container *container,
                                     b.container_in_group()->Value());
       if (nullptr != b.base_offset())
         (*container_bit) = b.base_offset()->Value() + b.relative_offset();
+      else WARNING("Cannot find offset for "  << bit);
+    }
+    else {
+      WARNING("Missing " <<
+                (nullptr == b.container_in_group() ? "container" : "") <<
+                (nullptr == b.mau_group() ? " and MAU group" : "") <<
+                " for " << bit);
     }
   }
   else {
@@ -349,14 +401,14 @@ class PrintFailure : public SearchMonitor {
   explicit PrintFailure(operations_research::Solver* const s, const std::vector<IntVar*> &vars) :
     SearchMonitor(s), vars_(vars) {}
   void BeginFail() {
-    LOG2("Inspecting failure");
-    for (auto v : vars_) {
-      if (v->Size() == 1)
-        LOG2("Found " << v->name() << " value is " << v->Value());
-      else {
-        LOG1("Failure " << v->name());
-        break; }
-    }
+//  LOG2("Inspecting failure");
+//  for (auto v : vars_) {
+//    if (v->Size() == 1)
+//      LOG2("Found " << v->name() << " value is " << v->Value());
+//    else {
+//      LOG1("Failure " << v->name());
+//      break; }
+//  }
   }
  private:
   const std::vector<IntVar*> vars_;
@@ -435,7 +487,7 @@ IntVar *
 Solver::MakeMauGroup(const cstring &name, std::array<IntVar*, 3> *flags,
                      const int &max) {
   auto v = solver_.MakeIntVar(0, max,
-                              name + "-group-" + std::to_string(unique_id()));
+                              name + "-group-" + unique_id());
   v->RemoveValues(std::vector<int64>(PHV::kInvalidMauGroups.begin(),
                                      PHV::kInvalidMauGroups.end()));
   std::array<const std::vector<int>, 3> mau_groups =
@@ -458,9 +510,8 @@ Solver::GetWidthFlag(IntVar *mau_group, const std::vector<int> &groups) {
 }
 
 IntVar *Solver::MakeContainerInGroup(const cstring &name) {
-  auto uid = std::to_string(unique_id());
   return solver_.MakeIntVar(0, PHV::kNumContainersPerMauGroup - 1,
-                            name + "-containeringroup-" + uid);
+                            name + "-containeringroup-" + unique_id());
 }
 
 IntExpr *Solver::MakeContainer(IntVar *group, IntVar *container_in_group) {
@@ -469,18 +520,18 @@ IntExpr *Solver::MakeContainer(IntVar *group, IntVar *container_in_group) {
                          container_in_group);
 }
 
-IntVar *Solver::MakeByteAlignedOffset(const cstring &name) {
+IntVar *
+Solver::MakeOffset(const cstring &name, const std::vector<int> &values) {
   // FIXME: For some reason, no name is being assigned to IntVar objects
   // created below.
-  return solver_.MakeIntVar(std::vector<int>({0, 8, 16, 24}),
-                            name + "-ba-offset-" + std::to_string(unique_id()));
+  return solver_.MakeIntVar(values, name + "-voffset-" + unique_id());
 }
 
 IntVar *
 Solver::MakeOffset(const cstring &name, const int &min, const int &max) {
   LOG2("Making offset " << name);
   return solver_.MakeIntVar(min, max,
-                            name + "-offset-" + std::to_string(unique_id()));
+                            name + "-offset-" + unique_id());
 }
 
 IntExpr *Solver::MakeDeparserGroupFlag(const int &group_num,

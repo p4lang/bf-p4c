@@ -1,6 +1,43 @@
 #include "constraints.h"
 #include <base/logging.h>
 #include "lib/log.h"
+#include <set>
+void Constraints::SetEqualByte(const PHV::Byte &byte) {
+  LOG2("Setting byte constraint " << byte.name());
+  // All the valid bits of byte must be contiguous.
+  // TODO: This does not handle the case where byte can have "holes" of invalid
+  // bits.
+  SetContiguousBits(byte.valid_bits());
+  const int d = std::distance(byte.cbegin(), byte.cfirst());
+  std::vector<int> v({{0, 8, 16, 24}});
+  for (auto &i : v) i += d;
+  const PHV::Bit &bit = *(byte.cfirst());
+  if (bit_offset_domain_.count(bit) != 0) {
+    const std::vector<int> &v2 = bit_offset_domain_.at(bit);
+    for (int i = 0; i < 32; ++i) {
+      auto e = std::find(v.begin(), v.end(), i);
+      if (e != v.end() && std::find(v2.begin(), v2.end(), i) == v2.end()) {
+        v.erase(e);
+      }
+    }
+    bit_offset_domain_.erase(bit);
+  }
+  if (bit_offset_range_.count(bit) != 0) {
+    while (v.front() < bit_offset_range_.at(bit).first) v.erase(v.begin());
+    while (v.back() > bit_offset_range_.at(bit).second) v.pop_back();
+    bit_offset_range_.erase(bit);
+  }
+  CHECK(bit_offset_domain_.count(bit) == 0);
+  // TODO: Change this to compiler error message.
+  CHECK(v.size() > 0) << ": No valid offset found for " << bit;
+  bit_offset_domain_.insert(std::make_pair(bit, v));
+  // TODO: byte_equalities_ is currently used to determine if 2 bits must be
+  // allocated to the same byte of a PHV container. This is redundant. We could
+  // use the offset constraints and contiguous bits constraints to figure this
+  // out.
+  byte_equalities_.insert(byte);
+}
+
 void
 Constraints::SetEqual_(const PHV::Bit &bit1, const PHV::Bit &bit2,
                        const Equal &eq) {
@@ -45,6 +82,16 @@ inline void Constraints::SetMatchBits(const std::set<PHV::Bit> &bits,
   CHECK(v->size() == uniq_bytes.size());
 }
 
+bool Constraints::IsContiguous(const PHV::Bits &pbits) const {
+  for (auto &c : contiguous_bits_) {
+    if (std::search(c.cbegin(), c.cend(),
+                    pbits.cbegin(), pbits.cend()) != c.cend()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 template<> void
 Constraints::SetEqual<PHV::Bit>(const PHV::Bit &bit1, const PHV::Bit &bit2,
                                 const Equal &eq) {
@@ -52,9 +99,8 @@ Constraints::SetEqual<PHV::Bit>(const PHV::Bit &bit1, const PHV::Bit &bit2,
 }
 
 template<class T> void
-Constraints::SetConstraints(const Equal &e, T set_equal) {
-                            //SolverInterface::SetEqual set_equal) {
-  std::set<PHV::Bit> bits;
+Constraints::SetConstraints(const Equal &e, T set_equal,
+                            std::set<PHV::Bit> bits) {
   for (auto &p : equalities_[e]) {
     if (bits.count(p.first) == 0) {
       bool is_t_phv = std::accumulate(p.second.begin(), p.second.end(), true,
@@ -83,7 +129,10 @@ Constraints::SetOffset(const PHV::Bit &bit, const int &min, const int &max) {
   }
 }
 void Constraints::SetContiguousBits(const PHV::Bits &bits) {
-  contiguous_bits_.push_back(bits);
+  if (false == bits.empty()) {
+    LOG2("Setting contiguous bits " << bits << " of size " << bits.size());
+    contiguous_bits_.push_back(bits);
+  }
 }
 
 void Constraints::SetNoTPhv(const PHV::Bit &bit) {
@@ -106,33 +155,62 @@ void Constraints::SetTcamMatchBits(const int &stage,
 }
 
 void Constraints::SetConstraints(SolverInterface &solver) {
+  struct {
+    void SetEqualOffset(const PHV::Bit &b,
+                        const std::map<PHV::Bit, std::set<PHV::Bit>> &offset_eq,
+                        SolverInterface &solver) {
+      if (prev_bits.count(b) == 0 && offset_eq.count(b) != 0) {
+        solver.SetEqualOffset(offset_eq.at(b));
+      }
+      prev_bits.insert(b);
+    }
+   std::set<PHV::Bit> prev_bits;
+  } eq_offsets;
   using namespace std::placeholders;
   SetConstraints(Equal::MAU_GROUP, std::bind(&SolverInterface::SetEqualMauGroup,
-                                             &solver, _1, _2));
+                                             &solver, _1, _2),
+                 std::set<PHV::Bit>());
   SetConstraints(Equal::CONTAINER,
-                 std::bind(&SolverInterface::SetEqualContainer, &solver, _1));
-  for (auto &byte : byte_equalities_) {
-    solver.SetByte(byte);
+                 std::bind(&SolverInterface::SetEqualContainer, &solver, _1),
+                 std::set<PHV::Bit>());
+//for (auto &byte : byte_equalities_) {
+//  solver.SetByte(byte);
+//}
+  for (auto &b : bit_offset_domain_) {
+    solver.SetOffset(b.first, b.second);
+    eq_offsets.SetEqualOffset(b.first, equalities_[Equal::OFFSET], solver);
   }
   for (auto &b : bit_offset_range_) {
     solver.SetOffset(b.first, b.second.first, b.second.second);
+    eq_offsets.SetEqualOffset(b.first, equalities_[Equal::OFFSET], solver);
   }
   for (auto &bits : contiguous_bits_) {
-    CHECK(false == bits.empty()) << "; Got empty contiguous bits";
-    PHV::Bits::const_iterator b1 = bits.cbegin(), b2 = std::next(b1);
+    CHECK(false == bits.empty()) << ": PHV::Bits is empty";
+    const PHV::Bit b1 = bits.front();
+    PHV::Bits::const_iterator b2 = std::next(bits.cbegin());
+    eq_offsets.SetEqualOffset(b1, equalities_[Equal::OFFSET], solver);
     while (b2 != bits.cend()) {
-      solver.SetContiguousBits(*b1, *b2);
-      ++b1; ++b2;
+      solver.SetBitDistance(b1, *b2, std::distance(bits.cbegin(), b2));
+      eq_offsets.SetEqualOffset(*b2, equalities_[Equal::OFFSET], solver);
+      ++b2;
     }
   }
   SetConstraints(Equal::OFFSET,
-                 std::bind(&SolverInterface::SetEqualOffset, &solver, _1));
+                 std::bind(&SolverInterface::SetEqualOffset, &solver, _1),
+                 eq_offsets.prev_bits);
   for (size_t i = 0; i < deparsed_headers_.size(); ++i) {
     for (auto &hdr : deparsed_headers_[i]) {
       CHECK(hdr.size() > 0) << "; Deparsing zero sized header";
       auto it = hdr.begin();
       solver.SetFirstDeparsedHeaderByte(*it);
       for (auto it2 = std::next(it, 1); it2 != hdr.end(); ++it, ++it2) {
+        // Sanity check: All eight bits must be valid since the deparser can
+        // only deparse whole containers.
+        const PHV::Bits bits = it2->valid_bits();
+        CHECK(8 == bits.size()) << ": Invalid byte size " << it2->name();
+        // This is just a sanity check. There must be an entry in
+        // contiguous_bits_ for every deparsed byte.
+        CHECK(IsContiguous(bits)) << ": Non-contiguous bits in " << it2->name();
         solver.SetDeparsedHeader(*it, *it2);
       }
       CHECK(hdr.end() != it);
@@ -168,5 +246,10 @@ Constraints::BitId Constraints::unique_bit_id(const PHV::Bit &bit) {
     CHECK(is_t_phv_.size() == (unique_bit_id_counter_++));
     is_t_phv_.push_back(true);
   }
+  return const_cast<const Constraints*>(this)->uniq_bit_ids_.at(bit);
+}
+
+Constraints::BitId Constraints::unique_bit_id(const PHV::Bit &bit) const {
+  CHECK(uniq_bit_ids_.count(bit) != 0) << ": Cannot find BitId for " << bit;
   return uniq_bit_ids_.at(bit);
 }

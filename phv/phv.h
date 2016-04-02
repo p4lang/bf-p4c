@@ -156,6 +156,21 @@ inline std::ostream &operator<<(std::ostream &out, const PHV::Bit &b) {
   return out << b.first << "[" << b.second << "]";
 }
 
+class Bits : public std::vector<PHV::Bit> {
+ public:
+  template<class T> Bits(T b, T e) : std::vector<PHV::Bit>(b, e) { }
+};
+
+inline std::ostream &operator<<(std::ostream &out, const PHV::Bits &b) {
+  if (b.size() > 0) {
+    // FIXME: This must be fixed to print bit sequence of bits from different
+    // headers and non-contiguous bits offsets.
+    out << b.front().first << "[" << b.front().second << ":" <<
+      b.back().second << "]";
+  }
+  return out;
+}
+
 class Byte : public ::std::array<Bit, 8> {
  public:
   std::string name() const {
@@ -182,19 +197,17 @@ class Byte : public ::std::array<Bit, 8> {
   }
   iterator last() {
     auto it = first();
-    while (it->second >= 0 && it != end()) ++it;
+    while (it != end() && it->second >= 0) ++it;
     return it;
   }
   const_iterator clast() const {
     auto it = cfirst();
-    while (it->second >= 0 && it != end()) ++it;
+    while (it != cend() && it->second >= 0) ++it;
     return it;
   }
-};
-
-class Bits : public std::vector<PHV::Bit> {
- public:
-  template<class T> Bits(T b, T e) : std::vector<PHV::Bit>(b, e) { }
+  Bits valid_bits() const {
+    return Bits(cfirst(), clast());
+  }
 };
 }  // namespace PHV
 #endif /* _TOFINO_PHV_PHV_H_ */

@@ -9,16 +9,14 @@
 class Constraints {
  public:
   Constraints() : unique_bit_id_counter_(0) { }
-  void SetEqualByte(const PHV::Bit &bit, const int &offset, const int &width) {
-    PHV::Byte byte;
-    for (int i = 0; i < width; ++i) {
-      byte[offset + i] = PHV::Bit(bit.first, bit.second + i);
-    }
-    byte_equalities_.insert(byte);
-  }
+  // This functions modifies the internal data structures to express the
+  // constraint that byte must be byte-aligned in a PHV container.
+  void SetEqualByte(const PHV::Byte &byte);
   template<class T> void
   SetEqualByte(const T &begin, const T &end) {
-    byte_equalities_.insert(begin, end);
+    for (auto it = begin; it != end; std::advance(it, 1)) {
+      SetEqualByte(*it);
+    }
   }
 
   template<class T> void SetDeparsedHeader(const T &begin, const T &end,
@@ -48,7 +46,8 @@ class Constraints {
   void SetTcamMatchBits(const int &stage, const std::set<PHV::Bit> &bits);
 
   void SetConstraints(SolverInterface &solver);
-  template<class T> void SetConstraints(const Equal &e, T set_equal);
+  template<class T> void
+  SetConstraints(const Equal &e, T set_equal, std::set<PHV::Bit> bits);
  private:
   // This type is used to identify a bit in the internal data structures of
   // this class.
@@ -65,7 +64,12 @@ class Constraints {
   // The bits in every PHV::Bits object must be assigned to contiguous offsets.
   // However, they need not be assigned to the same PHV container.
   std::list<PHV::Bits> contiguous_bits_;
+  // Returns true if all the bits in pbits must be allocated to contiguous bits
+  // in a PHV container. False otherwise.
+  bool IsContiguous(const PHV::Bits &pbits) const;
   std::array<std::set<std::vector<PHV::Byte>>, 2> deparsed_headers_;
+  // A vector of flags to indicate if a bit can be assigned to T-PHV. This
+  // vector is indexed by BitId.
   std::vector<bool> is_t_phv_;
   // TODO: Change these to use BitId instead of PHV::Bit.
   std::array<std::vector<PHV::Bit>, StageUse::MAX_STAGES> exact_match_bits_;
@@ -75,6 +79,7 @@ class Constraints {
   std::map<PHV::Bit, BitId> uniq_bit_ids_;
   std::vector<PHV::Bit> bits_;
   BitId unique_bit_id(const PHV::Bit &bit);
+  BitId unique_bit_id(const PHV::Bit &bit) const;
 };
 template<> void
 Constraints::SetEqual<PHV::Bit>(const PHV::Bit &bit1, const PHV::Bit &bit2,

@@ -8,6 +8,7 @@ using operations_research::IntVar;
 using operations_research::IntExpr;
 void Bit::set_mau_group(IntVar *const mau_group,
                         const std::array<IntVar*, 3> &size_flags) {
+  LOG2("Setting MAU group for " << name() << " to " << mau_group);
   mau_group_ = mau_group;
   is_8b_ = size_flags[0];
   is_16b_ = size_flags[1];
@@ -30,7 +31,8 @@ void Bit::set_container(operations_research::IntVar *const container_in_group,
 }
 
 void Bit::set_offset(IntVar *base_offset, const int &relative_offset) {
-  LOG2("Setting offset for " << name());
+  LOG2("Setting offset for " << name() << " to " << base_offset <<
+         " with relative offset " << relative_offset);
   base_offset_ = base_offset;
   relative_offset_ = relative_offset;
   if (0 == relative_offset) offset_ = base_offset_;

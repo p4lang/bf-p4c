@@ -25,12 +25,22 @@ bool ByteConstraint::preorder(const IR::Primitive *prim) {
     auto bytes(GetBytes(prim->operands[0], prim->operands[1]));
     constraints_.SetEqualByte(bytes.begin(), bytes.end());
   }
+  if ("add" == prim->name || "subtract" == prim->name ||
+      "add_to_field" == prim->name || "subtract_from_field" == prim->name) {
+    LOG2("Setting constraint for " << (*prim));
+    for (auto &op : prim->operands) {
+      std::list<PHV::Bit> bits = GetBits(op);
+      constraints_.SetContiguousBits(PHV::Bits(bits.begin(), bits.end()));
+    }
+  }
   return false;
 }
 
 bool ByteConstraint::preorder(const IR::Tofino::Deparser *dp) {
   std::list<PHV::Bit> bits = GetBits(dp->egress_port);
   constraints_.SetOffset(*bits.begin(), 0, 7);
+  LOG2("Setting deparser egress port constraint for " <<
+         PHV::Bits(bits.begin(), bits.end()));
   constraints_.SetContiguousBits(PHV::Bits(bits.begin(), bits.end()));
   return true;
 }
