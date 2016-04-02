@@ -13,8 +13,8 @@ class TableSummary: public MauInspector {
         assert(order.count(t->logical_id) == 0);
         order[t->logical_id] = t;
         if (t->resources) {
-            ixbar[t->logical_id/16].update(t->resources->match_ixbar);
-            ixbar[t->logical_id/16].update(t->resources->gateway_ixbar);
+            ixbar[t->logical_id/16].update(t->name, t->resources->match_ixbar);
+            ixbar[t->logical_id/16].update(t->name + "$gw", t->resources->gateway_ixbar);
             memory[t->logical_id/16].update(t->resources->memuse); }
         return true; }
     friend std::ostream &operator<<(std::ostream &out, const TableSummary &ts);

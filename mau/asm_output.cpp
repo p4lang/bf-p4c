@@ -1,5 +1,6 @@
-#include "lib/algorithm.h"
 #include "asm_output.h"
+#include "gateway.h"
+#include "lib/algorithm.h"
 #include "lib/bitops.h"
 #include "lib/bitrange.h"
 #include "lib/hex.h"
@@ -400,7 +401,52 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         if (tbl->match_table)
             out << gw_indent++ << "gateway:" << std::endl;
         emit_ixbar(out, gw_indent, tbl->gress, tbl->resources->gateway_ixbar, 0, &fmt);
-    }
+        for (auto &use : Values(tbl->resources->memuse))
+            if (use.type == Memories::Use::GATEWAY) {
+                out << gw_indent << "row: " << use.row[0].row << std::endl;
+                out << gw_indent << "bus: " << use.row[0].bus << std::endl;
+                break; }
+        CollectGatewayFields collect(phv);
+        tbl->apply(collect);
+        if (collect.compute_offsets()) {
+            bool have_xor;
+            out << gw_indent << "match: {";
+            const char *sep = " ";
+            for (auto &f : collect.info) {
+                if (f.second.xor_with) {
+                    have_xor = true;
+                    continue; }
+                out << sep << f.second.offset << ": " << Slice(f.first, tbl->gress);
+                sep = ", "; }
+            out << (sep+1) << "}" << std::endl;
+            if (have_xor) {
+                out << gw_indent << "xor: {";
+                sep = " ";
+                for (auto &f : collect.info) {
+                    if (f.second.xor_with) {
+                        out << sep << f.second.offset << ": " << Slice(f.first, tbl->gress);
+                        sep = ", "; } }
+                out << (sep+1) << "}" << std::endl; }
+            for (auto &line : tbl->gateway_rows) {
+                out << gw_indent;
+                if (line.first) {
+                    BuildGatewayMatch match(phv, collect);
+                    line.first->apply(match);
+                    out << match << ": ";
+                } else {
+                    out << "miss: "; }
+                if (line.second) {
+                    if (tbl->next.count(line.second) && !tbl->next[line.second]->empty())
+                        out << tbl->next[line.second]->front()->name;
+                    else
+                        out << default_next.next_in_thread(tbl);
+                } else {
+                    out << "run_table"; }
+                out << std::endl; }
+            if (tbl->gateway_rows.back().first)
+                out << gw_indent << "miss: run_table" << std::endl;
+        } else {
+            WARNING("Failed to fit gateway expression for " << tbl->name); } }
 
     /* FIXME -- this is a mess and needs to be rewritten to be sane */
     bool have_action = false, have_indirect = false;

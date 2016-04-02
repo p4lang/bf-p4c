@@ -61,6 +61,16 @@ bool Memories::allocActionRams(cstring name, int width, int depth, Use &alloc) {
     return false;
 }
 
+bool Memories::allocBus(cstring name, Alloc2Dbase<cstring> &bus_use, Use &alloc) {
+    for (int row : Range(0, bus_use.rows()-1)) {
+        for (int bus : Range(0, bus_use.cols()-1)) {
+            if (bus_use[row][bus]) continue;
+            bus_use[row][bus] = name;
+            alloc.row.emplace_back(row, bus);
+            return true; } }
+    return false;
+}
+
 bool Memories::allocRams(cstring name, int width, int depth, Alloc2Dbase<cstring> &use,
                          Alloc2Dbase<cstring> *bus, Use &alloc) {
     LOG3("allocRams(" << name << ", " << width << 'x' << depth << ")");
@@ -172,10 +182,10 @@ class AllocAttached : public Inspector {
 };
 }  // namespace
 
-bool Memories::allocTable(const IR::MAU::Table *table, int &entries,  map<cstring, Use> &alloc,
-                          const IXBar::Use &match_ixbar) {
+bool Memories::allocTable(cstring name, const IR::MAU::Table *table, int &entries,
+                          map<cstring, Use> &alloc, const IXBar::Use &match_ixbar) {
     if (!table) return true;
-    LOG2("Memories::allocTable(" << table->name << ", &" << entries << ")");
+    LOG2("Memories::allocTable(" << name << ", &" << entries << ")");
     bool ok = true;
     int width, depth, groups = 1;
     if (table->layout.ternary) {
@@ -195,10 +205,10 @@ bool Memories::allocTable(const IR::MAU::Table *table, int &entries,  map<cstrin
     } else {
         width = depth = entries = 0; }
     LOG3("   " << width << 'x' << depth << " entries=" << entries);
-    assert(!alloc.count(table->name));
     if (table->layout.ternary) {
-        alloc[table->name].type = Use::TERNARY;
-        ok &= allocRams(table->name, width, depth, tcam_use, 0, alloc[table->name]);
+        assert(!alloc.count(name));
+        alloc[name].type = Use::TERNARY;
+        ok &= allocRams(name, width, depth, tcam_use, 0, alloc[name]);
     } else if (!table->ways.empty()) {
         assert(match_ixbar.way_use.size() == table->ways.size());
         struct waybits {
@@ -208,33 +218,40 @@ bool Memories::allocTable(const IR::MAU::Table *table, int &entries,  map<cstrin
         std::map<int, waybits> alloc_bits;
         for (auto &way : match_ixbar.way_use)
             alloc_bits[way.group].bits |= way.mask;
-        alloc[table->name].type = Use::EXACT;
+        assert(!alloc.count(name));
+        alloc[name].type = Use::EXACT;
         int alloc_depth = 0;
         auto ixbar_way = match_ixbar.way_use.begin();
         for (int i = table->ways.size(); i > 0; --i, ++ixbar_way) {
             int log2size = std::max(ceil_log2((depth+i-1)/i), 0);
             int sz = 1 << log2size;
-            ok &= allocRams(table->name, width, sz, sram_use, &sram_match_bus, alloc[table->name]);
+            ok &= allocRams(name, width, sz, sram_use, &sram_match_bus, alloc[name]);
             alloc_depth += sz;
             unsigned mask = 0;
             auto &bits = alloc_bits[ixbar_way->group];
             for (int bit = 0; bit < log2size; bit++) {
                 if (!++bits.next) ++bits.next;
-                if (!bits.next || (mask & (1 << *bits.next)))
-                    BUG("Not enough way select bits allocated in group %d for table %s",
-                        ixbar_way->group, table->name);
+                if (!bits.next || (mask & (1 << *bits.next))) {
+                    ok = false;
+                    WARNING("Not enough way select bits allocated in group " <<
+                            ixbar_way->group << " for table " << name);
+                    break; }
                 mask |= 1 << *bits.next; }
-            alloc[table->name].ways.emplace_back(sz, mask);
+            alloc[name].ways.emplace_back(sz, mask);
             if ((depth -= sz) < 1) depth = 1; }
         entries = alloc_depth * groups * 1024U; }
-    if (ok)
+    if (ok) {
         for (auto at : table->attached)
             at->apply(AllocAttached(this, table, &ok, entries, alloc));
+        if (table->uses_gateway()) {
+            auto gwname = name + "$gw";
+            alloc[gwname].type = Use::GATEWAY;
+            ok &= allocBus(gwname, sram_match_bus, alloc[gwname]); } }
     return ok;
 }
 
 void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) const {
-    Alloc2Dbase<cstring> *use, *mapuse = 0, *bus = 0;
+    Alloc2Dbase<cstring> *use = 0, *mapuse = 0, *bus = 0;
     switch (type) {
     case EXACT:
         use = &mem.sram_use;
@@ -242,6 +259,9 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
         break;
     case TERNARY:
         use = &mem.tcam_use;
+        break;
+    case GATEWAY:
+        bus = &mem.sram_match_bus;
         break;
     case TIND:
         use = &mem.sram_use;

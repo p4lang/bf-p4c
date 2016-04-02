@@ -74,7 +74,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new AddMetadataShims,
         &phv,
         new VisitFunctor([&phv]() { phv.allocatePOV(); }),
-        new CanonGatewayExpr,
+        new CanonGatewayExpr,   // must be before TableLayout?  or just TablePlacement?
         new TableLayout,
         new TableFindSeqDependencies,
         new DumpPipe("Initial table graph"),

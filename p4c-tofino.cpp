@@ -43,11 +43,7 @@ int main(int ac, char **av) {
     const IR::Tofino::Pipe *maupipe = nullptr;
 
     bool v1 = options.langVersion == CompilerOptions::FrontendVersion::P4v1;
-#if 0
-    auto program = parseP4File(options);
-#else
-    switch (options.langVersion) {
-    case CompilerOptions::FrontendVersion::P4v1: {
+    if (v1 && !options.v12_path) {
         auto program = parse_p4v1_file(options, in);
         options.closeInput(in);
         PassManager fe = {
@@ -67,10 +63,8 @@ int main(int ac, char **av) {
             else
                 std::cout << *program << std::endl; }
         maupipe = extract_maupipe(program);
-        break; }
-    case CompilerOptions::FrontendVersion::P4v1_2: {
-        auto program = parse_p4v1_2_file(options.file, in);
-#endif
+    } else {
+        auto program = parseP4File(options);
         program = run_frontend(options, program, v1);
         if (verbose) {
             std::cout << "-------------------------------------------------" << std::endl
@@ -94,12 +88,7 @@ int main(int ac, char **av) {
                 dump(program);
             else
                 std::cout << *program << std::endl; }
-        maupipe = extract_maupipe(program);
-#if 1
-        break; }
-    default:
-        BUG("Unexpected frontend"); }
-#endif
+        maupipe = extract_maupipe(program); }
 
     if (ErrorReporter::instance.getErrorCount() > 0)
         return 1;
