@@ -116,7 +116,11 @@ Constraints::SetConstraints(const Equal &e, T set_equal,
 void
 Constraints::SetOffset(const PHV::Bit &bit, const int &min, const int &max) {
   if (bit_offset_domain_.count(bit) != 0) {
-    // TODO: bit_offset_domain_ is not yet being populated and used.
+    // This bit already has an entry in bit_offset_domain_. Just prune values
+    // outside the [min, max] range.
+    std::vector<int> &domain = bit_offset_domain_.at(bit);
+    while (domain.front() < min) domain.erase(domain.begin());
+    while (domain.back() > max) domain.pop_back();
   }
   else {
     int new_min = min;

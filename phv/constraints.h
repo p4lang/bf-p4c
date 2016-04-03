@@ -59,7 +59,13 @@ class Constraints {
   // Data structures to store constraints.
   std::map<PHV::Bit, std::set<PHV::Bit>> equalities_[NUM_EQUALITIES];
   std::set<PHV::Byte> byte_equalities_;
+  // The 2 std::map objects below store constraints on bits. A bit can contain
+  // an entry in either of the 2 maps but not both.
+  // This is a bit-to-offset range map. The bit must be allocated an offset
+  // within the range (inclusive).
   std::map<PHV::Bit, std::pair<int, int>> bit_offset_range_;
+  // The domain of possible offset that a bit can be allocated. The values must
+  // be stored in sorted order in the vector.
   std::map<PHV::Bit, std::vector<int>> bit_offset_domain_;
   // The bits in every PHV::Bits object must be assigned to contiguous offsets.
   // However, they need not be assigned to the same PHV container.
@@ -67,6 +73,9 @@ class Constraints {
   // Returns true if all the bits in pbits must be allocated to contiguous bits
   // in a PHV container. False otherwise.
   bool IsContiguous(const PHV::Bits &pbits) const;
+  // Each element in this list stores a set of destination-source pairs of an
+  // action. This list expresses the single-source PHV container constraint.
+  std::list<std::set<std::pair<PHV::Bit, PHV::Bit>>> dst_src_pairs_;
   std::array<std::set<std::vector<PHV::Byte>>, 2> deparsed_headers_;
   // A vector of flags to indicate if a bit can be assigned to T-PHV. This
   // vector is indexed by BitId.
