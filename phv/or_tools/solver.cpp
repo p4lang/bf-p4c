@@ -94,7 +94,7 @@ void Solver::SetBitDistance(const PHV::Bit &pbit1, const PHV::Bit &pbit2,
     }
     else {
       // Adding a constraints between bit1.offset() and bit2.offset() will be
-      // easier. However, those variables are derived from their respective
+      // simpler. However, those variables are derived from their respective
       // base_offset() variables. Adding a constraints between the
       // base_offset() may result in faster execution because they are directly
       // assigned values from their domain by the solver.
@@ -468,13 +468,16 @@ Solver::containers_and_offsets(IntVar *mau_group) const {
     }
   }
   container_in_groups.erase(nullptr);
+  // We could have made rv a std::set but we want to maintain the order of
+  // variables.
   std::vector<IntVar*> rv;
   while (false == container_in_groups.empty()) {
     auto c = container_in_groups.begin();
     rv.push_back(*c);
     for (auto &b : bits_) {
       if (b.second.container_in_group() == *c &&
-          b.second.base_offset() != nullptr) {
+          b.second.base_offset() != nullptr &&
+          rv.end() == std::find(rv.begin(), rv.end(), b.second.base_offset())) {
         rv.push_back(b.second.base_offset());
       }
     }

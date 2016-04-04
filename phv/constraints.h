@@ -37,6 +37,11 @@ class Constraints {
   }
   void SetOffset(const PHV::Bit &bit, const int &min, const int &max);
   void SetContiguousBits(const PHV::Bits &bits);
+  // The bits are being passed by value since we might need to swap them inside
+  // the function body.
+  void SetDistance(PHV::Bit b1, PHV::Bit b2, const int &d);
+  std::pair<int, bool>
+  GetDistance(const PHV::Bit &b1, const PHV::Bit &b2) const;
   // This function sets is_t_phv_ for bit to false.
   void SetNoTPhv(const PHV::Bit &bit);
 

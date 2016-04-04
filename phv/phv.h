@@ -150,6 +150,7 @@ class Bit : public std::pair<cstring, int> {
   Bit(const cstring &n, const int &i) : std::pair<cstring, int>(n, i) { }
   std::string name() const {
     return first + "[" + std::to_string(second) + "]"; }
+  bool IsValid() const { return (second >= 0) && (first.size() > 0); }
 };
 
 inline std::ostream &operator<<(std::ostream &out, const PHV::Bit &b) {
@@ -158,6 +159,7 @@ inline std::ostream &operator<<(std::ostream &out, const PHV::Bit &b) {
 
 class Bits : public std::vector<PHV::Bit> {
  public:
+  Bits(std::vector<PHV::Bits>::size_type c) : std::vector<PHV::Bit>(c) { }
   template<class T> Bits(T b, T e) : std::vector<PHV::Bit>(b, e) { }
 };
 

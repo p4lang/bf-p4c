@@ -6,6 +6,7 @@
 #include "match_xbar_constraint.h"
 #include "mau_group_constraint.h"
 #include "offset_constraint.h"
+#include "source_container_constraint.h"
 #include "t_phv_constraint.h"
 #include "or_tools/min_value_solver.h"
 #include "or_tools/random_value_solver.h"
@@ -82,6 +83,10 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
   pipe->apply(mgc);
   ContainerConstraint cc(constraints_);
   pipe->apply(cc);
+  ByteConstraint bc(constraints_);
+  pipe->apply(bc);
+  OffsetConstraint oc(constraints_);
+  pipe->apply(oc);
   SourceContainerConstraint scc(constraints_);
   // This loop should keep iterating until Constraints::SetEqual() has been
   // invoked on all pairs of source containers that have a common destination
@@ -90,16 +95,14 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
     scc.reset_updated();
     pipe->apply(scc);
   } while (true == scc.is_updated());
-  ByteConstraint bc(constraints_);
-  pipe->apply(bc);
-  OffsetConstraint oc(constraints_);
-  pipe->apply(oc);
   // Set bits which cannot be allocated to T-PHV.
   TPhvConstraint tphvc(constraints_);
   pipe->apply(tphvc);
   // Set MAU match xbar constraints.
   MatchXbarConstraint smxc(constraints_);
   pipe->apply(smxc);
+//BitOffsetConstraint boc(constraints_);
+//pipe->apply(boc);
 
 
 //// Set TPHV constraints. Fields used in MAU cannot go into T-PHV.

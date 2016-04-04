@@ -2,6 +2,8 @@
 #include <base/logging.h>
 #include "lib/log.h"
 #include <set>
+#include <cmath>
+#include <climits>
 void Constraints::SetEqualByte(const PHV::Byte &byte) {
   LOG2("Setting byte constraint " << byte.name());
   // All the valid bits of byte must be contiguous.
@@ -139,6 +141,41 @@ void Constraints::SetContiguousBits(const PHV::Bits &bits) {
   }
 }
 
+void
+Constraints::SetDistance(PHV::Bit b1, PHV::Bit b2, const int &d) {
+  bool is_valid;
+  int d2;
+  std::tie(d2, is_valid) = GetDistance(b1, b2);
+  if (is_valid) {
+    // FIXME: This should become a compiler error message.
+    CHECK(d == d2) << ": Contradicting offsets for " << b1 << " and " << b2;
+  }
+  else {
+    if (d < 0) std::swap(b1, b2);
+    if (d == 0) SetEqual(b1, b2, Equal::OFFSET);
+    else {
+      LOG2("Setting distance " << std::abs(d) << " between " << b1 << " and " <<
+             b2);
+      PHV::Bits bits(std::abs(d) + 1);
+      bits.front() = b1;
+      bits.back() = b2;
+      SetContiguousBits(bits);
+    }
+  }
+}
+
+std::pair<int, bool>
+Constraints::GetDistance(const PHV::Bit &b1, const PHV::Bit &b2) const {
+  for (auto bits : contiguous_bits_) {
+    auto it1 = std::find(bits.begin(), bits.end(), b1);
+    auto it2 = std::find(bits.begin(), bits.end(), b2);
+    if (bits.end() != it1 && bits.end() != it2) {
+      return std::make_pair(std::distance(it1, it2), true);
+    }
+  }
+  return std::make_pair(INT_MAX, false);
+}
+
 void Constraints::SetNoTPhv(const PHV::Bit &bit) {
   BitId bit_id = unique_bit_id(bit);
   is_t_phv_[bit_id] = false;
@@ -168,6 +205,8 @@ void Constraints::SetConstraints(SolverInterface &solver) {
       }
       prev_bits.insert(b);
     }
+   // Stores the PHV::Bit objects for which the equal offset constraint has
+   // been added in the solver.
    std::set<PHV::Bit> prev_bits;
   } eq_offsets;
   using namespace std::placeholders;
@@ -177,9 +216,6 @@ void Constraints::SetConstraints(SolverInterface &solver) {
   SetConstraints(Equal::CONTAINER,
                  std::bind(&SolverInterface::SetEqualContainer, &solver, _1),
                  std::set<PHV::Bit>());
-//for (auto &byte : byte_equalities_) {
-//  solver.SetByte(byte);
-//}
   for (auto &b : bit_offset_domain_) {
     solver.SetOffset(b.first, b.second);
     eq_offsets.SetEqualOffset(b.first, equalities_[Equal::OFFSET], solver);
@@ -191,11 +227,14 @@ void Constraints::SetConstraints(SolverInterface &solver) {
   for (auto &bits : contiguous_bits_) {
     CHECK(false == bits.empty()) << ": PHV::Bits is empty";
     const PHV::Bit b1 = bits.front();
+    CHECK(true == b1.IsValid()) << ": First bit in sequence is invalid";
     PHV::Bits::const_iterator b2 = std::next(bits.cbegin());
     eq_offsets.SetEqualOffset(b1, equalities_[Equal::OFFSET], solver);
     while (b2 != bits.cend()) {
-      solver.SetBitDistance(b1, *b2, std::distance(bits.cbegin(), b2));
-      eq_offsets.SetEqualOffset(*b2, equalities_[Equal::OFFSET], solver);
+      if (true == b2->IsValid()) {
+        solver.SetBitDistance(b1, *b2, std::distance(bits.cbegin(), b2));
+        eq_offsets.SetEqualOffset(*b2, equalities_[Equal::OFFSET], solver);
+      }
       ++b2;
     }
   }
