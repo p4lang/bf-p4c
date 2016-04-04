@@ -18,6 +18,7 @@
 #include "frontends/common/parseInput.h"
 #include "common/extract_maupipe.h"
 #include "common/blockmap.h"
+#include "midend/actionsInlining.h"
 #include "tofinoOptions.h"
 
 extern void test_tofino_backend(const IR::Tofino::Pipe *, const Tofino_Options *);
@@ -54,6 +55,7 @@ int main(int ac, char **av) {
             new CheckHeaderTypes,
             new HeaderTypeMaxLengthCalculator,
             new TypeCheck,
+            new P4v1::InlineActions,
         };
         program = program->apply(fe);
         if (verbose) {
