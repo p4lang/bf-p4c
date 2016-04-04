@@ -181,7 +181,8 @@ void Solver::SetDeparserGroups(const PHV::Byte &i_phv_byte,
     if (i_mau_group == nullptr) i_mau_group = bits_.at(b).mau_group();
     if (i_byte == nullptr) i_byte = bits_.at(b).byte();
     CHECK(nullptr != i_container) << "; Cannot find container for " << b.name();
-    CHECK(i_container == bits_.at(b).container());
+    CHECK(i_container == bits_.at(b).container())
+      ": Container mismatch in " << i_phv_byte.name() << " for " << b;
   }
   for (auto &b : e_phv_byte) {
     if (e_container == nullptr) e_container = bits_.at(b).container();
@@ -189,7 +190,7 @@ void Solver::SetDeparserGroups(const PHV::Byte &i_phv_byte,
     if (e_byte == nullptr) e_byte = bits_.at(b).byte();
     CHECK(nullptr != e_container) << "; Cannot find container for " << b.name();
     CHECK(e_container == bits_.at(b).container()) <<
-      "; Container mismatch in " << e_phv_byte.name() << " for " << b.name();
+      ": Container mismatch in " << e_phv_byte.name() << " for " << b;
   }
   CHECK(i_container != e_container);
   // Remove statically assigned MAU groups.
