@@ -1,0 +1,2 @@
+AC_CHECK_LIB([ortools], [_init], [],
+             [AC_MSG_ERROR([Missing Google OR-Tools library])])
