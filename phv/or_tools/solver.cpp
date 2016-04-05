@@ -171,50 +171,38 @@ void Solver::SetLastDeparsedHeaderByte(const PHV::Byte &phv_byte) {
   solver_.AddConstraint(solver_.MakeEquality(byte->is_last_byte(), 1));
 }
 
-void Solver::SetDeparserGroups(const PHV::Byte &i_phv_byte,
-                               const PHV::Byte &e_phv_byte) {
+void Solver::SetDeparserGroups(const PHV::Byte &i_pbyte,
+                               const PHV::Byte &e_pbyte) {
   IntExpr *i_container = nullptr, *e_container = nullptr;
   IntVar *i_mau_group = nullptr, *e_mau_group = nullptr;
   Byte *i_byte = nullptr, *e_byte = nullptr;
-  for (auto &b : i_phv_byte) {
+  for (auto &b : i_pbyte) {
     if (i_container == nullptr) i_container = bits_.at(b).container();
     if (i_mau_group == nullptr) i_mau_group = bits_.at(b).mau_group();
     if (i_byte == nullptr) i_byte = bits_.at(b).byte();
     CHECK(nullptr != i_container) << "; Cannot find container for " << b.name();
     CHECK(i_container == bits_.at(b).container())
-      ": Container mismatch in " << i_phv_byte.name() << " for " << b;
+      ": Container mismatch in " << i_pbyte.name() << " for " << b;
   }
-  for (auto &b : e_phv_byte) {
+  for (auto &b : e_pbyte) {
     if (e_container == nullptr) e_container = bits_.at(b).container();
     if (e_mau_group == nullptr) e_mau_group = bits_.at(b).mau_group();
     if (e_byte == nullptr) e_byte = bits_.at(b).byte();
     CHECK(nullptr != e_container) << "; Cannot find container for " << b.name();
     CHECK(e_container == bits_.at(b).container()) <<
-      ": Container mismatch in " << e_phv_byte.name() << " for " << b;
+      ": Container mismatch in " << e_pbyte.name() << " for " << b;
   }
   CHECK(i_container != e_container);
   // Remove statically assigned MAU groups.
   for (auto i : PHV::kEgressMauGroups) i_mau_group->RemoveValue(i);
   for (auto i : PHV::kIngressMauGroups) e_mau_group->RemoveValue(i);
-  // FIXME: Currently, we only set deparser groups for T-PHV. This can be done
-  // differently (and more efficiently) for PHV deparser groups.
-  for (int i = 17; i < PHV::kNumDeparserGroups; ++i) {
-    IntExpr *i_dprsr_group_flag = i_byte->deparser_flag((size_t)i);
-    IntExpr *e_dprsr_group_flag = e_byte->deparser_flag((size_t)i);
-    if (nullptr == i_dprsr_group_flag) {
-      LOG2("Creating deparser flag for " << i_phv_byte.name());
-      i_dprsr_group_flag = MakeDeparserGroupFlag(i, i_container);
-      i_byte->set_deparser_flag(i, i_dprsr_group_flag);
-    }
-    if (nullptr == e_dprsr_group_flag) {
-      LOG2("Creating deparser flag for " << e_phv_byte.name());
-      e_dprsr_group_flag = MakeDeparserGroupFlag(i, e_container);
-      e_byte->set_deparser_flag(i, e_dprsr_group_flag);
-    }
-    solver_.AddConstraint(
-      solver_.MakeNonEquality(
-        solver_.MakeSum(i_dprsr_group_flag, e_dprsr_group_flag), 2));
-  }
+  // Get the deparser group number and make them non-equal.
+  auto i_dprsr_group = MakeDeparserGroup(i_byte, i_mau_group, i_container,
+                                         INGRESS, i_pbyte.name());
+  auto e_dprsr_group = MakeDeparserGroup(e_byte, e_mau_group, e_container,
+                                         EGRESS, e_pbyte.name());
+  solver_.AddConstraint(
+    solver_.MakeNonEquality(i_dprsr_group, e_dprsr_group));
 }
 
 void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_phv_bits,
@@ -538,19 +526,68 @@ Solver::MakeOffset(const cstring &name, const int &min, const int &max) {
                             name + "-offset-" + unique_id());
 }
 
-IntExpr *Solver::MakeDeparserGroupFlag(const int &group_num,
-                                       IntExpr *container) {
-  std::vector<int> containers;
-  for (auto &c : PHV::kContainerToDeparserGroup) {
-    if (group_num == c.second) {
-      containers.push_back(c.first);
+IntExpr *
+Solver::MakeDeparserGroup(Byte *byte, IntVar *mau_group, IntExpr *container,
+                          const gress_t &thread, const cstring &name) {
+  if (nullptr == byte->deparser_group()) {
+    LOG2("Making deparser group flags for " << name);
+    std::vector<IntVar*> flags;
+    flags.reserve(PHV::kNumDeparserGroups);
+    auto lt_flags = std::array<IntVar*, PHV::kMaxContainer>();
+    for (auto boundaries : PHV::kDeparserGroups) {
+      if (boundaries.at(0) < PHV::kTPhvContainerOffset ||
+          true == mau_group->Contains(PHV::kTPhvMauGroupOffset)) {
+        flags.push_back(
+          MakeDeparserGroupFlags(container, boundaries, &lt_flags));
+      }
     }
+    IntExpr *deparser_group = solver_.MakeSum(flags);
+    // If the container is allocated to one of the "shared deparser groups", we
+    // want to make sure that domain of byte->deparser_group_ does not overlap
+    // for ingress and egress.
+    if (thread == INGRESS) {
+      std::vector<IntVar*> v;
+      for (auto i : PHV::kSharedDeparserGroups) {
+        v.push_back(solver_.MakeIsEqualCstVar(container, i));
+      }
+      deparser_group = solver_.MakeSum(deparser_group,
+                         solver_.MakeProd(solver_.MakeSum(v),
+                                          PHV::kNumDeparserGroups + 1));
+    }
+    byte->set_deparser_group(deparser_group);
   }
-  std::vector<IntVar*> container_flags;
-  for (auto i : containers) {
-    container_flags.push_back(solver_.MakeIsEqualCstVar(container, i));
+  return byte->deparser_group();
+}
+
+IntVar *
+Solver::MakeDeparserGroupFlags(IntExpr *container,
+                               const std::vector<int> &boundaries,
+                               std::array<IntVar*, PHV::kMaxContainer> *lt) {
+  CHECK(1 == boundaries.size() || 3 == boundaries.size() ||
+          5 == boundaries.size() || 7 == boundaries.size()) << ": Found " <<
+    boundaries.size() << " elements in boundary vector";
+  bool is_lt = false;
+  int expected_sum = 0;
+  std::vector<IntVar*> cmp_flags;
+  auto it = boundaries.begin();
+  while (boundaries.end() != it) {
+    if (true == is_lt) {
+      if (nullptr == lt->at(*it)) {
+        lt->at(*it) = solver_.MakeIsLessCstVar(container, *it);
+      }
+      cmp_flags.push_back(lt->at(*it));
+    }
+    else {
+      ++expected_sum;
+      cmp_flags.push_back(solver_.MakeIsGreaterOrEqualCstVar(container, *it));
+    }
+    is_lt = (!is_lt);
+    ++it;
   }
-  return solver_.MakeSum(container_flags);
+  IntExpr *sum = nullptr;
+  if (cmp_flags.size() == 1) sum = cmp_flags.front();
+  else sum = solver_.MakeSum(cmp_flags);
+  return solver_.MakeIsEqualCstVar(sum, expected_sum);
 }
 
 Bit *Solver::MakeBit(const PHV::Bit &phv_bit) {

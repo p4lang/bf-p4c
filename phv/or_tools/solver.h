@@ -4,6 +4,7 @@
 #include "bit.h"
 #include "byte.h"
 #include "backends/tofino/phv/phv.h"
+#include "ir/ir.h"
 #include <constraint_solver/constraint_solver.h>
 #include <set>
 #include <vector>
@@ -50,8 +51,8 @@ class Solver : public SolverInterface {
   // containers that are statically assigned to the other thread. For example,
   // i_hdr_byte will never be allocated to PHV containers 16-31 because these
   // are assigned to egress thread.
-  void SetDeparserGroups(const PHV::Byte &i_hdr_byte,
-                         const PHV::Byte &e_hdr_byte) override;
+  void SetDeparserGroups(const PHV::Byte &i_pbyte,
+                         const PHV::Byte &e_pbyte) override;
   // Creates constraints for the match xbar width. match_phv_bits is a set of
   // PHV::Bit objects that are used as keys for match tables in the same stage.
   // match_phv_bits must be byte de-duplicated. For example, if a table does a
@@ -103,6 +104,15 @@ class Solver : public SolverInterface {
   MakeOffset(const cstring &name, const int &min = 0, const int &max = 31);
   operations_research::IntExpr *MakeDeparserGroupFlag(
     const int &group_num, operations_research::IntExpr *container);
+  operations_research::IntExpr *
+  MakeDeparserGroup(Byte *byte, operations_research::IntVar *mau_group,
+                    operations_research::IntExpr *container,
+                    const gress_t &thread, const cstring &name);
+  operations_research::IntVar *
+  MakeDeparserGroupFlags(
+    operations_research::IntExpr *container,
+    const std::vector<int> &boundaries,
+    std::array<operations_research::IntVar*, PHV::kMaxContainer> *lt);
   // Creates (if needed) and returns a pointer to an object of ORTools::Bit.
   Bit *MakeBit(const PHV::Bit &phv_bit);
   // Returns an array of Bit* objects for a PHV::Byte.
@@ -112,9 +122,7 @@ class Solver : public SolverInterface {
                    [this](const PHV::Bit &b) -> Bit * {
                      return &bits_.at(b); });
     return bits;
-  }
-  operations_research::Solver solver_;
-  std::map<PHV::Bit, ORTools::Bit> bits_;
+  } operations_research::Solver solver_; std::map<PHV::Bit, ORTools::Bit> bits_;
 
   // Variable for generating unique names for IntVar objects.
   std::string unique_id() { return std::to_string(++unique_id_); }

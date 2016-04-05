@@ -12,13 +12,14 @@ typedef std::array<operations_research::IntExpr*,
                    PHV::kNumDeparserGroups> DeparserFlags;
 class Byte {
  public:
-  Byte() : deparser_flags_(), offset_(nullptr), is_last_byte_(nullptr) { }
+  Byte() :
+    deparser_group_(nullptr), offset_(nullptr), is_last_byte_(nullptr) { }
   //cstring name() const { return phv_byte_.name(); }
-  void set_deparser_flag(const size_t &i, operations_research::IntExpr *e) {
-    assert(deparser_flags_.at(i) == nullptr);
-    deparser_flags_[i] = e; }
-  operations_research::IntExpr *deparser_flag(const size_t &i) const {
-    return deparser_flags_.at(i); }
+  void set_deparser_group(operations_research::IntExpr *e) {
+    assert(nullptr == deparser_group_);
+    deparser_group_ = e; }
+  operations_research::IntExpr *deparser_group() const {
+    return deparser_group_; }
   void set_offset(operations_research::IntExpr *offset) { offset_ = offset; }
   operations_research::IntExpr *offset() const { return offset_; }
   void set_flags(const std::array<operations_research::IntVar*, 4> &v) {
@@ -28,7 +29,12 @@ class Byte {
   void set_last_byte(operations_research::IntVar *l) { is_last_byte_ = l; }
   operations_research::IntVar *is_last_byte() const { return is_last_byte_; }
  private:
-  DeparserFlags deparser_flags_;
+  // This variable has different domains depending on whether this byte belongs
+  // to an ingress or egress thread. For egress, it can take values in the
+  // range [0, PHV::kNumDeparserGroups]. For ingress, it can take values
+  // greater than PHV::kNumDeparserGroups but cannot take values in
+  // PHV::kSharedDeparserGroups.
+  operations_research::IntExpr *deparser_group_;
   // An expression that uniquely identifies the PHV byte where this variable is
   // allocated. It is computed as (container_ * 4) + byte_inside_container.
   operations_research::IntExpr *offset_;
