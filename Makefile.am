@@ -99,8 +99,8 @@ cpplint_FILES += $(tofino_backend_SOURCES)
 
 -include $(srcdir)/tofinotests.am
 -include $(srcdir)/backends/tofino/v1_2_tests.am
--include $(srcdir)/backends/tofino/v1to12tests.am
--include $(srcdir)/backends/tofino/bmv2tests.am
+#-include $(srcdir)/backends/tofino/v1to12tests.am
+#-include $(srcdir)/backends/tofino/bmv2tests.am
 
 $(srcdir)/tofinotests.am: \
    $(srcdir)/testdata/v1_samples/*.p4 \
@@ -111,14 +111,15 @@ $(srcdir)/tofinotests.am: \
 
 # We have additional test inputs that are used to test the other (standard) back-ends
 # These test input programs depend on Tofino in some way.
+# FIXME -- temporarily disabled until we bring the barefoot internal and p4lang tress back in sync
 
 # Exercise v12test back-end on Tofino-specific programs
-$(srcdir)/backends/tofino/v1to12tests.am: $(srcdir)/backends/tofino/v1_samples/*.p4 
-	@$(srcdir)/tools/gen-tests.py $(srcdir) v1to12 $(srcdir)/backends/tofino/test-v12-sample.sh $^ >$@
+#$(srcdir)/backends/tofino/v1to12tests.am: $(srcdir)/backends/tofino/v1_samples/*.p4 
+#	@$(srcdir)/tools/gen-tests.py $(srcdir) v1to12 $(srcdir)/backends/tofino/test-v12-sample.sh $^ >$@
 
 # Exercise bmv2 back-end on Tofino-specific programs
-$(srcdir)/backends/tofino/bmv2tests.am: $(srcdir)/backends/tofino/v1_samples/*.p4 
-	@$(srcdir)/tools/gen-tests.py $(srcdir) bmv2 $(srcdir)/backends/tofino/test-bmv2.sh $^ >$@
+#$(srcdir)/backends/tofino/bmv2tests.am: $(srcdir)/backends/tofino/v1_samples/*.p4 
+#	@$(srcdir)/tools/gen-tests.py $(srcdir) bmv2 $(srcdir)/backends/tofino/test-bmv2.sh $^ >$@
 
 CLEANFILES += \
 	$(srcdir)/tofinotests.am \
