@@ -107,18 +107,18 @@ $(srcdir)/tofinotests.am: \
    $(srcdir)/testdata/v1_errors/*.p4 \
    $(srcdir)/backends/tofino/v1_2_test/*.p4 \
    $(srcdir)/backends/tofino/v1_samples/*.p4
-	@$(srcdir)/gen-tests.py $(srcdir) tofino $(srcdir)/backends/tofino/run-tofino-sample.py $^ >$@
+	@$(srcdir)/tools/gen-tests.py $(srcdir) tofino $(srcdir)/backends/tofino/run-tofino-sample.py $^ >$@
 
 # We have additional test inputs that are used to test the other (standard) back-ends
 # These test input programs depend on Tofino in some way.
 
 # Exercise v12test back-end on Tofino-specific programs
 $(srcdir)/backends/tofino/v1to12tests.am: $(srcdir)/backends/tofino/v1_samples/*.p4 
-	@$(srcdir)/gen-tests.py $(srcdir) v1to12 $(srcdir)/backends/tofino/test-v12-sample.sh $^ >$@
+	@$(srcdir)/tools/gen-tests.py $(srcdir) v1to12 $(srcdir)/backends/tofino/test-v12-sample.sh $^ >$@
 
 # Exercise bmv2 back-end on Tofino-specific programs
 $(srcdir)/backends/tofino/bmv2tests.am: $(srcdir)/backends/tofino/v1_samples/*.p4 
-	@$(srcdir)/gen-tests.py $(srcdir) bmv2 $(srcdir)/backends/tofino/test-bmv2.sh $^ >$@
+	@$(srcdir)/tools/gen-tests.py $(srcdir) bmv2 $(srcdir)/backends/tofino/test-bmv2.sh $^ >$@
 
 CLEANFILES += \
 	$(srcdir)/tofinotests.am \
