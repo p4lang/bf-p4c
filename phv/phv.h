@@ -29,8 +29,8 @@ static const std::vector<int> k32bMauGroups({0, 1, 2, 3, 16, 17});
 static const std::vector<int> kInvalidMauGroups({14, 15});
 
 // These variables are used for deparser group constraints.
-static const std::vector<int> kIngressMauGroups({0, 4, 8});
-static const std::vector<int> kEgressMauGroups({1, 5, 9});
+static const std::vector<int> kIngressOnlyMauGroups({0, 4, 8});
+static const std::vector<int> kEgressOnlyMauGroups({1, 5, 9});
 static constexpr int kNumDeparserGroups = 23;
 static const
 std::array<std::vector<int>, kNumDeparserGroups> kDeparserGroups =

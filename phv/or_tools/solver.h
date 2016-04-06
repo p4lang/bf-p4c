@@ -13,12 +13,12 @@ class Solver : public SolverInterface {
  public:
   Solver() : solver_("phv-allocator") { }
   // Creates variables/constraints to allocate all members of bits to the same
+  // container.
+  void SetEqualContainer(const std::set<PHV::Bit> &bits) override;
+  // Creates variables/constraints to allocate all members of bits to the same
   // MAU group.
   void SetEqualMauGroup(const std::set<PHV::Bit> &bits,
                         const bool &is_t_phv) override;
-  // Creates variables/constraints to allocate all members of bits to the same
-  // container.
-  void SetEqualContainer(const std::set<PHV::Bit> &bits) override;
   // Creates variables/constraints for offset of bit in a PHV container.
   void SetOffset(const PHV::Bit &pbit, const std::vector<int> &values) override;
   // Creates variables/constraints for offset of bit in a PHV container.
@@ -88,12 +88,7 @@ class Solver : public SolverInterface {
   void SetContainerWidthConstraints();
   // Functions for creating IntVar objects for a bit.
   operations_research::IntVar *
-  MakeMauGroup(const cstring &name,
-               std::array<operations_research::IntVar*, 3> *flags,
-               const int &max = PHV::kNumMauGroups - 1);
-  operations_research::IntVar *
-  GetWidthFlag(operations_research::IntVar *mau_group,
-               const std::vector<int> &groups);
+  MakeMauGroup(const cstring &name, const int &max = PHV::kNumMauGroups - 1);
   operations_research::IntVar *MakeContainerInGroup(const cstring &name);
   operations_research::IntExpr *
   MakeContainer(operations_research::IntVar *group,
@@ -104,15 +99,6 @@ class Solver : public SolverInterface {
   MakeOffset(const cstring &name, const int &min = 0, const int &max = 31);
   operations_research::IntExpr *MakeDeparserGroupFlag(
     const int &group_num, operations_research::IntExpr *container);
-  operations_research::IntExpr *
-  MakeDeparserGroup(Byte *byte, operations_research::IntVar *mau_group,
-                    operations_research::IntExpr *container,
-                    const gress_t &thread, const cstring &name);
-  operations_research::IntVar *
-  MakeDeparserGroupFlags(
-    operations_research::IntExpr *container,
-    const std::vector<int> &boundaries,
-    std::array<operations_research::IntVar*, PHV::kMaxContainer> *lt);
   // Creates (if needed) and returns a pointer to an object of ORTools::Bit.
   Bit *MakeBit(const PHV::Bit &phv_bit);
   // Returns an array of Bit* objects for a PHV::Byte.
@@ -122,7 +108,9 @@ class Solver : public SolverInterface {
                    [this](const PHV::Bit &b) -> Bit * {
                      return &bits_.at(b); });
     return bits;
-  } operations_research::Solver solver_; std::map<PHV::Bit, ORTools::Bit> bits_;
+  }
+  operations_research::Solver solver_;
+  std::map<PHV::Bit, ORTools::Bit> bits_;
 
   // Variable for generating unique names for IntVar objects.
   std::string unique_id() { return std::to_string(++unique_id_); }

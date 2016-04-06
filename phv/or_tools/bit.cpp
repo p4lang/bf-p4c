@@ -1,34 +1,24 @@
 #include "bit.h"
 #include "byte.h"
+#include "container.h"
+#include "mau_group.h"
 #include "lib/log.h"
 #include <constraint_solver/constraint_solver.h>
 
 namespace ORTools {
 using operations_research::IntVar;
 using operations_research::IntExpr;
-void Bit::set_mau_group(IntVar *const mau_group,
-                        const std::array<IntVar*, 3> &size_flags) {
-  LOG2("Setting MAU group for " << name() << " to " << mau_group);
-  mau_group_ = mau_group;
-  is_8b_ = size_flags[0];
-  is_16b_ = size_flags[1];
-  is_32b_ = size_flags[2];
-}
 
-void Bit::set_container(operations_research::IntVar *const container_in_group,
-                        operations_research::IntExpr *const container) {
-  LOG2("Setting container for " << name() << " to " << container_in_group);
-  CHECK(nullptr == container_in_group_) <<
-    "; Cannot reassign container in group for " << name();
+void Bit::set_container(Container *container) {
+  LOG2("Setting container object for " << name());
   CHECK(nullptr == container_) <<
-    "; Cannot reassign container for " << name();
-  CHECK(nullptr != container_in_group) <<
-    "; Invalid container in group for " << name();
+    ": Cannot reassign container for " << name();
   CHECK(nullptr != container) <<
-    "; Invalid container in group for " << name();
-  container_in_group_ = container_in_group;
+    ": Invalid container in group for " << name();
   container_ = container;
 }
+
+MauGroup *Bit::mau_group() const { return container()->mau_group(); }
 
 void Bit::set_offset(IntVar *base_offset, const int &relative_offset) {
   LOG2("Setting offset for " << name() << " to " << base_offset <<
@@ -94,12 +84,12 @@ void Bit::SetContainerWidthConstraints() {
   }
   solver->AddConstraint(
     solver->MakeLessOrEqual(
-      solver->MakeSum(is_8b(),
+      solver->MakeSum(mau_group()->is_8b(),
                       base_offset()->IsGreaterOrEqual(8 - relative_offset_)),
       1));
   solver->AddConstraint(
     solver->MakeLessOrEqual(
-      solver->MakeSum(is_16b(),
+      solver->MakeSum(mau_group()->is_16b(),
                       base_offset()->IsGreaterOrEqual(16 - relative_offset_)),
       1));
 }
@@ -108,16 +98,26 @@ IntVar *Bit::SetFirstDeparsedHeaderByte() {
   LOG2("Setting first deparsed byte for " << name());
   auto solver = base_offset_->solver();
   solver->AddConstraint(solver->MakeEquality(base_offset(), 0));
-  return is_8b_;
+  return mau_group()->is_8b();
 }
 
 IntVar *Bit::SetDeparsedHeader(const Bit &prev_bit, const Byte &prev_byte) {
+  CHECK(nullptr != base_offset_) << ": No base offset for " << name();
   auto solver = base_offset_->solver();
+  CHECK(nullptr != solver) << ": No solver for " << name();
+  CHECK(nullptr != prev_bit.container()) << ": No previous container for " <<
+    name();
+  CHECK(nullptr != prev_bit.base_offset()) << ": No previous offset for " <<
+    name();
+  CHECK(nullptr != container()) << ": No container for " << name();
+  CHECK(nullptr != container()->container()) << ": No container expr for " <<
+    name();
   operations_research::IntExpr *is_next_byte =
     solver->MakeIsDifferentVar(
       solver->MakeSum(
-        solver->MakeIsEqualVar(container(), prev_bit.container()),
-        solver->MakeIsEqualVar(base_offset(),
+        solver->MakeIsEqualVar(container()->container(),
+                               prev_bit.container()->container()),
+        solver->MakeIsEqualVar(base_offset_,
                                solver->MakeSum(prev_bit.base_offset(), 8))),
       solver->MakeIntConst(2));
   // is_next_byte and prev_byte.is_last_byte() must be equal.
@@ -130,12 +130,15 @@ IntVar *Bit::SetDeparsedHeader(const Bit &prev_bit, const Byte &prev_byte) {
                       solver->MakeIsDifferentCstVar(base_offset(), 0)), 1));
   // This block of code sets the constraints for byte->is_last_byte_.
   auto last_byte_16b = solver->MakeIsEqualVar(
-                         is_16b_, solver->MakeDifference(
-                                    solver->MakeIntConst(9), base_offset()));
+                         mau_group()->is_16b(),
+                         solver->MakeDifference(
+                           solver->MakeIntConst(9), base_offset()));
   auto last_byte_32b = solver->MakeIsEqualVar(
-                         is_32b_, solver->MakeDifference(
-                                    solver->MakeIntConst(25), base_offset()));
-  std::vector<IntVar*> last_bytes({is_8b_, last_byte_16b, last_byte_32b});
+                         mau_group()->is_32b(),
+                         solver->MakeDifference(
+                           solver->MakeIntConst(25), base_offset()));
+  std::vector<IntVar*> last_bytes({mau_group()->is_8b(), last_byte_16b,
+                                   last_byte_32b});
 
   return solver->MakeIsEqualVar(solver->MakeSum(last_bytes),
                                 solver->MakeIntConst(1));

@@ -1,0 +1,40 @@
+#include "mau_group.h"
+#include "backends/tofino/phv/phv.h"
+#include <constraint_solver/constraint_solver.h>
+namespace ORTools {
+using operations_research::IntVar;
+using operations_research::Solver;
+MauGroup::MauGroup(IntVar *mg) : mau_group_(mg), is_t_phv_(true) {
+  std::array<const std::vector<int>, 3> groups =
+    {{PHV::k8bMauGroups, PHV::k16bMauGroups, PHV::k32bMauGroups}};
+  for (decltype(width_flags_.size()) i = 0; i < width_flags_.size(); ++i) {
+    std::vector<IntVar *> is_equal_vars;
+    const std::vector<int> &width_groups = groups.at(i);
+    for (auto it = width_groups.begin(); it != width_groups.end(); ++it) {
+      is_equal_vars.push_back(mau_group_->IsEqual(*it));
+    }
+    width_flags_.at(i) = mau_group_->solver()->MakeSum(is_equal_vars)->Var();
+  }
+}
+
+void MauGroup::SetIngressDeparser() {
+  for (auto i : PHV::kEgressOnlyMauGroups) {
+    if (true == mau_group_->Contains(i)) mau_group_->RemoveValue(i);
+  }
+}
+
+void MauGroup::SetEgressDeparser() {
+  for (auto i : PHV::kIngressOnlyMauGroups) {
+    if (true == mau_group_->Contains(i)) mau_group_->RemoveValue(i);
+  }
+}
+
+void MauGroup::SetNoTPhv() {
+  for (int i = 0; i < PHV::kNumTPhvMauGroups; ++i) {
+    if (mau_group_->Contains(i + PHV::kTPhvMauGroupOffset)) {
+      mau_group_->RemoveValue(i + PHV::kTPhvMauGroupOffset);
+    }
+  }
+  is_t_phv_ = false;
+}
+}

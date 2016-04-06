@@ -8,25 +8,17 @@ namespace operations_research {
 }
 namespace ORTools {
 class Byte;
+class Container;
+class MauGroup;
 class Bit {
  public:
   Bit(const cstring &name) :
-    mau_group_(nullptr), container_in_group_(nullptr), base_offset_(nullptr),
-    offset_(nullptr), container_(nullptr), byte_(nullptr), name_(name) { }
+    container_(nullptr), base_offset_(nullptr), offset_(nullptr),
+    byte_(nullptr), name_(name) { }
   cstring name() const { return name_; }
-  void set_mau_group(operations_research::IntVar *const group,
-                     const std::array<operations_research::IntVar*, 3> &is_xb);
-  operations_research::IntVar *mau_group() const { return mau_group_; }
-  operations_research::IntVar* is_8b() const { return is_8b_; }
-  operations_research::IntVar* is_16b() const { return is_16b_; }
-  operations_research::IntVar* is_32b() const { return is_32b_; }
-
-  void set_container(operations_research::IntVar *const container_in_group,
-                     operations_research::IntExpr *const container);
-  operations_research::IntVar *
-  container_in_group() const { return container_in_group_; }
-  operations_research::IntExpr *container() const { return container_; }
-
+  void set_container(Container *container);
+  Container *container() const { return container_; }
+  MauGroup *mau_group() const;
   // Variables for offset within a container.
   void set_offset(operations_research::IntVar *base_offset,
                   const int &relative_offset);
@@ -50,10 +42,9 @@ class Bit {
   bool operator!=(const Bit &bit) const { return bit.name() != name(); }
  private:
   void CreateByte(const std::array<Bit *, 8> &bits);
-  // PHV group of this byte.
-  operations_research::IntVar *mau_group_;
-  // Container in PHV group of this byte. For Tofino, this has range [0, 15].
-  operations_research::IntVar *container_in_group_;
+  // Container-specific constraint variables. Bits that are constrained to the
+  // same container must point to the same ORTools::Container object.
+  ORTools::Container *container_;
   // Offset within a PHV container of first bit of the byte where this bit
   // resides.
   operations_research::IntVar *base_offset_;
@@ -63,10 +54,6 @@ class Bit {
   // Offset from base_offset_. For packet header bits, it has to be in range
   // [0, 7].
   int relative_offset_;
-  operations_research::IntExpr *container_;
-  // These are flags to indicate if the bit has been allocated to a 8b, 16b
-  // or 32b container.
-  operations_research::IntVar *is_8b_, *is_16b_, *is_32b_;
   // Pointer to ORTools::Byte object for this bit.
   Byte *byte_;
 

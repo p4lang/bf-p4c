@@ -210,11 +210,11 @@ void Constraints::SetConstraints(SolverInterface &solver) {
    std::set<PHV::Bit> prev_bits;
   } eq_offsets;
   using namespace std::placeholders;
-  SetConstraints(Equal::MAU_GROUP, std::bind(&SolverInterface::SetEqualMauGroup,
-                                             &solver, _1, _2),
-                 std::set<PHV::Bit>());
   SetConstraints(Equal::CONTAINER,
                  std::bind(&SolverInterface::SetEqualContainer, &solver, _1),
+                 std::set<PHV::Bit>());
+  SetConstraints(Equal::MAU_GROUP, std::bind(&SolverInterface::SetEqualMauGroup,
+                                             &solver, _1, _2),
                  std::set<PHV::Bit>());
   for (auto &b : bit_offset_domain_) {
     solver.SetOffset(b.first, b.second);

@@ -1,4 +1,6 @@
 #include "solver.h"
+#include "mau_group.h"
+#include "container.h"
 #include "lib/log.h"
 namespace ORTools {
 int Solver::unique_id_ = 0;
@@ -6,31 +8,33 @@ int Solver::unique_id_ = 0;
 using operations_research::IntVar;
 using operations_research::IntExpr;
 using operations_research::SearchMonitor;
-void
-Solver::SetEqualMauGroup(const std::set<PHV::Bit> &bits, const bool &is_t_phv) {
-  CHECK(bits.size() > 0) << "; Received empty set";
-  std::array<IntVar*, 3> size_flags;
-  int max = is_t_phv ? PHV::kNumMauGroups - 1 : 13;
-  IntVar *group = MakeMauGroup(bits.begin()->name(), &size_flags, max);
+void Solver::SetEqualContainer(const std::set<PHV::Bit> &bits) {
+  Container *c = new Container(MakeContainerInGroup(bits.begin()->name()));
   for (auto &b : bits) {
     if (bits_.count(b) == 0) bits_.insert(std::make_pair(b, Bit(b.name())));
-    Bit &bit = bits_.find(b)->second;
-    CHECK(bit.mau_group() == nullptr);
-    LOG2("Setting group for " << bit.name() << " to " << group->name());
-    bit.set_mau_group(group, size_flags);
+    Bit &bit = bits_.at(b);
+    LOG2("Setting container for " << bit.name());
+    bit.set_container(c);
   }
 }
 
-void Solver::SetEqualContainer(const std::set<PHV::Bit> &bits) {
-  IntVar *mau_group = bits_.at(*bits.begin()).mau_group();
-  IntVar *container_in_group = MakeContainerInGroup(bits.begin()->name());
-  IntExpr *container = MakeContainer(mau_group, container_in_group);
+void
+Solver::SetEqualMauGroup(const std::set<PHV::Bit> &bits, const bool &is_t_phv) {
+  CHECK(bits.size() > 0) << "; Received empty set";
+  int max = is_t_phv ? PHV::kNumMauGroups - 1 : 13;
+  MauGroup *group = new MauGroup(MakeMauGroup(bits.begin()->name(), max));
   for (auto &b : bits) {
+    if (bits_.count(b) == 0) bits_.insert(std::make_pair(b, Bit(b.name())));
     Bit &bit = bits_.at(b);
-    CHECK(bit.mau_group() == mau_group);
-    LOG2("Setting container in group for " << bit.name() << " to " <<
-         container_in_group->name());
-    bit.set_container(container_in_group, container);
+    LOG2("Setting group for " << bit.name() << " to " <<
+           group->mau_group()->name());
+    Container *container = bit.container();
+    if (nullptr == container) {
+      SetEqualContainer(std::set<PHV::Bit>({b}));
+      container = bit.container();
+    }
+    CHECK(nullptr != container) << ": Cannot find container for " << b;
+    container->set_mau_group(group);
   }
 }
 
@@ -173,12 +177,10 @@ void Solver::SetLastDeparsedHeaderByte(const PHV::Byte &phv_byte) {
 
 void Solver::SetDeparserGroups(const PHV::Byte &i_pbyte,
                                const PHV::Byte &e_pbyte) {
-  IntExpr *i_container = nullptr, *e_container = nullptr;
-  IntVar *i_mau_group = nullptr, *e_mau_group = nullptr;
+  Container *i_container = nullptr, *e_container = nullptr;
   Byte *i_byte = nullptr, *e_byte = nullptr;
   for (auto &b : i_pbyte) {
     if (i_container == nullptr) i_container = bits_.at(b).container();
-    if (i_mau_group == nullptr) i_mau_group = bits_.at(b).mau_group();
     if (i_byte == nullptr) i_byte = bits_.at(b).byte();
     CHECK(nullptr != i_container) << "; Cannot find container for " << b.name();
     CHECK(i_container == bits_.at(b).container())
@@ -186,23 +188,23 @@ void Solver::SetDeparserGroups(const PHV::Byte &i_pbyte,
   }
   for (auto &b : e_pbyte) {
     if (e_container == nullptr) e_container = bits_.at(b).container();
-    if (e_mau_group == nullptr) e_mau_group = bits_.at(b).mau_group();
     if (e_byte == nullptr) e_byte = bits_.at(b).byte();
     CHECK(nullptr != e_container) << "; Cannot find container for " << b.name();
     CHECK(e_container == bits_.at(b).container()) <<
       ": Container mismatch in " << e_pbyte.name() << " for " << b;
   }
   CHECK(i_container != e_container);
-  // Remove statically assigned MAU groups.
-  for (auto i : PHV::kEgressMauGroups) i_mau_group->RemoveValue(i);
-  for (auto i : PHV::kIngressMauGroups) e_mau_group->RemoveValue(i);
+  // Remove statically assigned deparser groups from domain.
+  i_container->mau_group()->SetIngressDeparser();
+  e_container->mau_group()->SetEgressDeparser();
   // Get the deparser group number and make them non-equal.
-  auto i_dprsr_group = MakeDeparserGroup(i_byte, i_mau_group, i_container,
-                                         INGRESS, i_pbyte.name());
-  auto e_dprsr_group = MakeDeparserGroup(e_byte, e_mau_group, e_container,
-                                         EGRESS, e_pbyte.name());
+//auto i_dprsr_group = MakeDeparserGroup(i_byte, i_container,
+//                                       INGRESS, i_pbyte.name());
+//auto e_dprsr_group = MakeDeparserGroup(e_byte, e_container,
+//                                       EGRESS, e_pbyte.name());
   solver_.AddConstraint(
-    solver_.MakeNonEquality(i_dprsr_group, e_dprsr_group));
+    solver_.MakeNonEquality(i_container->deparser_group(INGRESS),
+                            e_container->deparser_group(EGRESS)));
 }
 
 void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_phv_bits,
@@ -250,10 +252,11 @@ void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_phv_bits,
     for (std::size_t b = 0; b < is_unique_flags.size(); ++b) {
       operations_research::IntVar *v = is_unique_flags[b];
       Bit *bit = match_bits.at(b);
+      IntVar *is_32b = bit->mau_group()->is_32b();
       is_unique_and_nth_byte.push_back(
         solver_.MakeIsEqualCstVar(
           solver_.MakeSum(
-            solver_.MakeSum(bit->is_32b(), bit->byte_flags()[i]), v),
+            solver_.MakeSum(is_32b, bit->byte_flags()[i]), v),
           3));
     }
     LOG2("Constraining " << is_unique_and_nth_byte.size() << " to " <<
@@ -302,6 +305,8 @@ Solver::SetUniqueConstraint(
     for (std::size_t b = 0; b < is_unique_flags.size(); ++b) {
       operations_research::IntVar *v = is_unique_flags.at(b);
       Bit *bit = bits.at(b);
+      IntVar *is_32b = bit->mau_group()->is_32b();
+      IntVar *is_16b = bit->mau_group()->is_16b();
       CHECK(bit->byte_flags().size() > byte_offsets[i]);
       // This if-else statement is just an optimization. In the else block, we
       // do not need to check if the byte is allocated to 16b or 32b container
@@ -310,7 +315,7 @@ Solver::SetUniqueConstraint(
         is_unique_and_nth_byte.push_back(
           solver_.MakeIsEqualCstVar(
             solver_.MakeSum(
-              solver_.MakeSum(bit->is_32b(), bit->is_16b()),
+              solver_.MakeSum(is_32b, is_16b),
               solver_.MakeSum(v, bit->byte_flags()[byte_offsets[i]])),
             3));
       }
@@ -331,14 +336,7 @@ Solver::SetUniqueConstraint(
 void Solver::SetNoTPhv(const PHV::Bit &bit) {
   LOG2("Forbidding allocation of " << bit.name() << " to T-PHV");
   if (bits_.count(bit) != 0) {
-    Bit &b = bits_.at(bit);
-    for (int i = 0; i < PHV::kNumTPhvMauGroups; ++i) {
-      IntVar *v = b.mau_group();
-      CHECK(nullptr != v) << "; Cannot find MAU group for " << bit.name();
-      if (v->Contains(i + PHV::kTPhvMauGroupOffset)) {
-        v->RemoveValue(i + PHV::kTPhvMauGroupOffset);
-      }
-    }
+    bits_.at(bit).mau_group()->SetNoTPhv();
   }
   else WARNING("Cannot find Bit for " << bit.name());
 }
@@ -347,7 +345,7 @@ void Solver::SetContainerWidthConstraints() {
   std::map<std::pair<IntVar*, IntVar*>, Bit*> mau_group_offsets;
   for (auto &b : bits_) {
     Bit &bit = b.second;
-    auto p = std::make_pair(bit.mau_group(), bit.base_offset());
+    auto p = std::make_pair(bit.mau_group()->mau_group(), bit.base_offset());
     if (mau_group_offsets.count(p) == 0) {
       mau_group_offsets.insert(std::make_pair(p, &bit));
     }
@@ -366,16 +364,15 @@ void Solver::allocation(const PHV::Bit &bit, PHV::Container *container,
   (*container_bit) = 0;
   if (0 != bits_.count(bit)) {
     const Bit &b(bits_.at(bit));
-    if ((nullptr != b.mau_group()) && (nullptr != b.container_in_group())) {
-      (*container) = PHV::Container(b.mau_group()->Value(),
-                                    b.container_in_group()->Value());
+    if (nullptr != b.container()) {
+      (*container) = b.container()->Value();
       if (nullptr != b.base_offset())
         (*container_bit) = b.base_offset()->Value() + b.relative_offset();
       else WARNING("Cannot find offset for "  << bit);
     }
     else {
       WARNING("Missing " <<
-                (nullptr == b.container_in_group() ? "container" : "") <<
+                (nullptr == b.container() ? "container" : "") <<
                 (nullptr == b.mau_group() ? " and MAU group" : "") <<
                 " for " << bit);
     }
@@ -443,7 +440,7 @@ std::vector<IntVar*> Solver::GetIntVars() const {
 std::vector<IntVar*> Solver::mau_groups() const {
   std::set<IntVar*> rv;
   for (auto &b : bits_) {
-    rv.insert(b.second.mau_group());
+    rv.insert(b.second.mau_group()->mau_group());
   }
   return std::vector<IntVar*>(rv.begin(), rv.end());
 }
@@ -452,8 +449,8 @@ std::vector<IntVar*>
 Solver::containers_and_offsets(IntVar *mau_group) const {
   std::set<IntVar*> container_in_groups;
   for (auto &b : bits_) {
-    if (b.second.mau_group() == mau_group) {
-      container_in_groups.insert(b.second.container_in_group());
+    if (b.second.mau_group()->mau_group() == mau_group) {
+      container_in_groups.insert(b.second.container()->container_in_group());
     }
   }
   container_in_groups.erase(nullptr);
@@ -464,7 +461,7 @@ Solver::containers_and_offsets(IntVar *mau_group) const {
     auto c = container_in_groups.begin();
     rv.push_back(*c);
     for (auto &b : bits_) {
-      if (b.second.container_in_group() == *c &&
+      if (b.second.container()->container_in_group() == *c &&
           b.second.base_offset() != nullptr &&
           rv.end() == std::find(rv.begin(), rv.end(), b.second.base_offset())) {
         rv.push_back(b.second.base_offset());
@@ -475,41 +472,17 @@ Solver::containers_and_offsets(IntVar *mau_group) const {
   return rv;
 }
 
-IntVar *
-Solver::MakeMauGroup(const cstring &name, std::array<IntVar*, 3> *flags,
-                     const int &max) {
+IntVar *Solver::MakeMauGroup(const cstring &name, const int &max) {
   auto v = solver_.MakeIntVar(0, max,
                               name + "-group-" + unique_id());
   v->RemoveValues(std::vector<int64>(PHV::kInvalidMauGroups.begin(),
                                      PHV::kInvalidMauGroups.end()));
-  std::array<const std::vector<int>, 3> mau_groups =
-    {{PHV::k8bMauGroups, PHV::k16bMauGroups, PHV::k32bMauGroups}};
-  for (decltype(flags->size()) i = 0; i < flags->size(); ++i) {
-    (*flags)[i] = GetWidthFlag(v, mau_groups[i]);
-  }
   return v;
-}
-
-IntVar *
-Solver::GetWidthFlag(IntVar *mau_group, const std::vector<int> &groups) {
-  // This function sets constraints between is_8b or is_16b or is_32b and the
-  // mau_group_ variable.
-  std::vector<IntVar *> is_equal_vars;
-  for (auto it = groups.begin(); it != groups.end(); ++it) {
-    is_equal_vars.push_back(mau_group->IsEqual(*it));
-  }
-  return solver_.MakeSum(is_equal_vars)->Var();
 }
 
 IntVar *Solver::MakeContainerInGroup(const cstring &name) {
   return solver_.MakeIntVar(0, PHV::kNumContainersPerMauGroup - 1,
                             name + "-containeringroup-" + unique_id());
-}
-
-IntExpr *Solver::MakeContainer(IntVar *group, IntVar *container_in_group) {
-  return solver_.MakeSum(solver_.MakeProd(group,
-                                          PHV::kNumContainersPerMauGroup),
-                         container_in_group);
 }
 
 IntVar *
@@ -526,87 +499,20 @@ Solver::MakeOffset(const cstring &name, const int &min, const int &max) {
                             name + "-offset-" + unique_id());
 }
 
-IntExpr *
-Solver::MakeDeparserGroup(Byte *byte, IntVar *mau_group, IntExpr *container,
-                          const gress_t &thread, const cstring &name) {
-  if (nullptr == byte->deparser_group()) {
-    LOG2("Making deparser group flags for " << name);
-    std::vector<IntVar*> flags;
-    flags.reserve(PHV::kNumDeparserGroups);
-    auto lt_flags = std::array<IntVar*, PHV::kMaxContainer>();
-    for (auto boundaries : PHV::kDeparserGroups) {
-      if (boundaries.at(0) < PHV::kTPhvContainerOffset ||
-          true == mau_group->Contains(PHV::kTPhvMauGroupOffset)) {
-        flags.push_back(
-          MakeDeparserGroupFlags(container, boundaries, &lt_flags));
-      }
-    }
-    IntExpr *deparser_group = solver_.MakeSum(flags);
-    // If the container is allocated to one of the "shared deparser groups", we
-    // want to make sure that domain of byte->deparser_group_ does not overlap
-    // for ingress and egress.
-    if (thread == INGRESS) {
-      std::vector<IntVar*> v;
-      for (auto i : PHV::kSharedDeparserGroups) {
-        v.push_back(solver_.MakeIsEqualCstVar(container, i));
-      }
-      deparser_group = solver_.MakeSum(deparser_group,
-                         solver_.MakeProd(solver_.MakeSum(v),
-                                          PHV::kNumDeparserGroups + 1));
-    }
-    byte->set_deparser_group(deparser_group);
-  }
-  return byte->deparser_group();
-}
-
-IntVar *
-Solver::MakeDeparserGroupFlags(IntExpr *container,
-                               const std::vector<int> &boundaries,
-                               std::array<IntVar*, PHV::kMaxContainer> *lt) {
-  CHECK(1 == boundaries.size() || 3 == boundaries.size() ||
-          5 == boundaries.size() || 7 == boundaries.size()) << ": Found " <<
-    boundaries.size() << " elements in boundary vector";
-  bool is_lt = false;
-  int expected_sum = 0;
-  std::vector<IntVar*> cmp_flags;
-  auto it = boundaries.begin();
-  while (boundaries.end() != it) {
-    if (true == is_lt) {
-      if (nullptr == lt->at(*it)) {
-        lt->at(*it) = solver_.MakeIsLessCstVar(container, *it);
-      }
-      cmp_flags.push_back(lt->at(*it));
-    }
-    else {
-      ++expected_sum;
-      cmp_flags.push_back(solver_.MakeIsGreaterOrEqualCstVar(container, *it));
-    }
-    is_lt = (!is_lt);
-    ++it;
-  }
-  IntExpr *sum = nullptr;
-  if (cmp_flags.size() == 1) sum = cmp_flags.front();
-  else sum = solver_.MakeSum(cmp_flags);
-  return solver_.MakeIsEqualCstVar(sum, expected_sum);
-}
 
 Bit *Solver::MakeBit(const PHV::Bit &phv_bit) {
   if (bits_.count(phv_bit) == 0) {
     bits_.emplace(std::make_pair(phv_bit, Bit(phv_bit.name())));
   }
   Bit &bit = bits_.at(phv_bit);
-  if (nullptr == bit.mau_group()) {
-    std::array<IntVar*, 3> size_flags;
-    // MAU groups created here will be restricted to PHV (no T-PHV).
-    IntVar *mau_group =
-      MakeMauGroup(bit.name(), &size_flags,
-                   PHV::kPhvMauGroupOffset + PHV::kNumPhvMauGroups - 1);
-    bit.set_mau_group(mau_group, size_flags);
+  if (nullptr == bit.container()) {
+    bit.set_container(new Container(MakeContainerInGroup(bit.name())));
   }
-  if (nullptr == bit.container_in_group()) {
-    IntVar *container_in_group = MakeContainerInGroup(bit.name());
-    IntExpr *container = MakeContainer(bit.mau_group(), container_in_group);
-    bit.set_container(container_in_group, container);
+  if (nullptr == bit.mau_group()) {
+    // MAU groups created here will be restricted to PHV (no T-PHV).
+    const int max = PHV::kPhvMauGroupOffset + PHV::kNumPhvMauGroups - 1;
+    MauGroup *group = new MauGroup(MakeMauGroup(bit.name(), max));
+    bit.container()->set_mau_group(group);
   }
   if (nullptr == bit.base_offset()) {
     CHECK(bit.offset() == nullptr) << "; Invalid offset in " << bit.name();

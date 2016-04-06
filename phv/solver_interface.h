@@ -13,9 +13,9 @@ class SolverInterface {
   virtual void
   SetBitDistance(const PHV::Bit &pbit1, const PHV::Bit &pbit2,
                  const int &distance) = 0;
+  virtual void SetEqualContainer(const std::set<PHV::Bit> &bits) = 0;
   virtual void
   SetEqualMauGroup(const std::set<PHV::Bit> &bits, const bool &is_t_phv) = 0;
-  virtual void SetEqualContainer(const std::set<PHV::Bit> &bits) = 0;
   virtual void SetEqualOffset(const std::set<PHV::Bit> &bits) = 0;
 
   virtual void SetFirstDeparsedHeaderByte(const PHV::Byte &byte) = 0;
