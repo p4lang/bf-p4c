@@ -2,7 +2,7 @@
 #define _TOFINO_PHV_ORTOOLS_TPHV_CONSTRAINTS_H_
 #include "backends/tofino/phv/t_phv_constraint.h"
 #include "backends/tofino/phv/header_bits.h"
-namespace ORTools {
+namespace or_tools {
 class TPhvConstraint : public ::TPhvConstraint {
  public:
   TPhvConstraint(HeaderBits &header_bits) : header_bits_(header_bits) { }

@@ -2,7 +2,7 @@
 #define _TOFINO_PHV_ORTOOLS_MIN_VALUE_SOLVER_H_
 #include "solver.h"
 class PhvInfo;
-namespace ORTools {
+namespace or_tools {
 class MinValueSolver : public Solver {
  public:
   bool Solve() {

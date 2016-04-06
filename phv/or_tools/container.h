@@ -7,7 +7,7 @@ class IntExpr;
 class IntVar;
 class Solver;
 }
-namespace ORTools {
+namespace or_tools {
 class MauGroup;
 class Container {
  public:

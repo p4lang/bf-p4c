@@ -106,7 +106,7 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
 
 
 //// Set TPHV constraints. Fields used in MAU cannot go into T-PHV.
-//ORTools::TPhvConstraint stphvc(header_bits_);
+//or_tools::TPhvConstraint stphvc(header_bits_);
 //maupipe_->apply(stphvc);
 //// Set deparser constraints including deparser groups.
 //SetDeparserConstraints sdc(header_bits_);
@@ -141,7 +141,7 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
 
 bool PhvAllocator::Solve(const IR::Tofino::Pipe *pipe, PhvInfo *phv_info) {
   LOG1("Trying MIN_VALUE");
-  ORTools::MinValueSolver solver;
+  or_tools::RandomValueSolver solver;
   constraints_.SetConstraints(solver);
   int count = 0;
   while (count < 10) {

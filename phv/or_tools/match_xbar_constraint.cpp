@@ -4,7 +4,7 @@
 #include <constraint_solver/constraint_solver.h>
 
 void
-ORTools::MatchXbarConstraint::SetUniqueConstraint(
+or_tools::MatchXbarConstraint::SetUniqueConstraint(
   std::vector<operations_research::IntVar*> &is_unique_flags,
   const std::vector<HeaderBit*> &phv_bytes,
   const std::array<int, 4> &unique_bytes,
@@ -43,7 +43,7 @@ ORTools::MatchXbarConstraint::SetUniqueConstraint(
 }
 
 void
-ORTools::MatchXbarConstraint::EnforceConstraint(
+or_tools::MatchXbarConstraint::EnforceConstraint(
   const std::set<PHV::Bit> &match_bits, const std::array<int, 4> &byte_limits) {
   std::vector<HeaderBit*> phv_bytes;
   for (auto bit : match_bits) {

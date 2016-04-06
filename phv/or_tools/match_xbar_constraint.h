@@ -8,7 +8,7 @@ namespace operations_research {
 }
 class HeaderBits;
 class HeaderBit;
-namespace ORTools {
+namespace or_tools {
 class MatchXbarConstraint : public ::MatchXbarConstraint {
  public:
   MatchXbarConstraint(HeaderBits &header_bits) : header_bits_(header_bits) { }

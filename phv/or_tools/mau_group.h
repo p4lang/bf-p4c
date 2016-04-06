@@ -4,7 +4,7 @@
 namespace operations_research {
 class IntVar;
 }
-namespace ORTools {
+namespace or_tools {
 class MauGroup {
  public:
   MauGroup(operations_research::IntVar *mg);

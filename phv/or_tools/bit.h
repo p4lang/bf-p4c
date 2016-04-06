@@ -6,7 +6,7 @@ namespace operations_research {
   class IntExpr;
   class IntVar;
 }
-namespace ORTools {
+namespace or_tools {
 class Byte;
 class Container;
 class MauGroup;
@@ -43,8 +43,8 @@ class Bit {
  private:
   void CreateByte(const std::array<Bit *, 8> &bits);
   // Container-specific constraint variables. Bits that are constrained to the
-  // same container must point to the same ORTools::Container object.
-  ORTools::Container *container_;
+  // same container must point to the same or_tools::Container object.
+  or_tools::Container *container_;
   // Offset within a PHV container of first bit of the byte where this bit
   // resides.
   operations_research::IntVar *base_offset_;
@@ -54,7 +54,7 @@ class Bit {
   // Offset from base_offset_. For packet header bits, it has to be in range
   // [0, 7].
   int relative_offset_;
-  // Pointer to ORTools::Byte object for this bit.
+  // Pointer to or_tools::Byte object for this bit.
   Byte *byte_;
 
   const cstring name_;

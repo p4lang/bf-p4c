@@ -7,7 +7,7 @@ namespace operations_research {
 class IntExpr;
 class IntVar;
 }
-namespace ORTools {
+namespace or_tools {
 class Byte {
  public:
   Byte() :

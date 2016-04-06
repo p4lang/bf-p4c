@@ -8,7 +8,7 @@
 #include <constraint_solver/constraint_solver.h>
 #include <set>
 #include <vector>
-namespace ORTools {
+namespace or_tools {
 class Solver : public SolverInterface {
  public:
   Solver() : solver_("phv-allocator") { }
@@ -76,7 +76,7 @@ class Solver : public SolverInterface {
   containers_and_offsets(operations_research::IntVar *mau_group) const;
   // Creates variables/constraints to allocate all members of bits to the same
   // byte within a PHV container.
-  ORTools::Byte *SetByte(const PHV::Byte &byte);
+  or_tools::Byte *SetByte(const PHV::Byte &byte);
   void SetUniqueConstraint(
     const std::vector<operations_research::IntVar*> &is_unique_flags,
     const std::vector<Bit*> &bits,
@@ -99,18 +99,18 @@ class Solver : public SolverInterface {
   MakeOffset(const cstring &name, const int &min = 0, const int &max = 31);
   operations_research::IntExpr *MakeDeparserGroupFlag(
     const int &group_num, operations_research::IntExpr *container);
-  // Creates (if needed) and returns a pointer to an object of ORTools::Bit.
+  // Creates (if needed) and returns a pointer to an object of or_tools::Bit.
   Bit *MakeBit(const PHV::Bit &phv_bit);
   // Returns an array of Bit* objects for a PHV::Byte.
-  std::array<ORTools::Bit *, 8> get_bits(const PHV::Byte &byte) {
-    std::array<ORTools::Bit *, 8> bits;
+  std::array<or_tools::Bit *, 8> get_bits(const PHV::Byte &byte) {
+    std::array<or_tools::Bit *, 8> bits;
     std::transform(byte.begin(), byte.end(), bits.begin(),
                    [this](const PHV::Bit &b) -> Bit * {
                      return &bits_.at(b); });
     return bits;
   }
   operations_research::Solver solver_;
-  std::map<PHV::Bit, ORTools::Bit> bits_;
+  std::map<PHV::Bit, or_tools::Bit> bits_;
 
   // Variable for generating unique names for IntVar objects.
   std::string unique_id() { return std::to_string(++unique_id_); }

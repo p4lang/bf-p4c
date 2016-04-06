@@ -5,7 +5,7 @@
 #include "lib/log.h"
 #include <constraint_solver/constraint_solver.h>
 
-namespace ORTools {
+namespace or_tools {
 using operations_research::IntVar;
 using operations_research::IntExpr;
 

@@ -2,7 +2,7 @@
 #include "mau_group.h"
 #include "container.h"
 #include "lib/log.h"
-namespace ORTools {
+namespace or_tools {
 int Solver::unique_id_ = 0;
 
 using operations_research::IntVar;
@@ -155,7 +155,7 @@ void Solver::SetEqualOffset(const std::set<PHV::Bit> &bits) {
 
 void Solver::SetFirstDeparsedHeaderByte(const PHV::Byte &phv_byte) {
   Byte *byte = SetByte(phv_byte);
-  CHECK(nullptr != byte) << ": Cannot find ORTools::Byte object for " <<
+  CHECK(nullptr != byte) << ": Cannot find or_tools::Byte object for " <<
     phv_byte.name();
   // For the last bit of a header, is_last_byte_ must be true.
   Bit &bit = bits_.at(phv_byte.at(0));
@@ -269,7 +269,7 @@ void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_phv_bits,
   SetUniqueConstraint(is_unique_flags, match_bits, widths, {{1, 3}});
 }
 
-ORTools::Byte *Solver::SetByte(const PHV::Byte &phv_byte) {
+Byte *Solver::SetByte(const PHV::Byte &phv_byte) {
   Byte *byte = bits_.at(phv_byte.at(0)).byte();
   // Just doing sanity check to make sure all Bit objects have a pointer to the
   // same Byte object.
