@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -160,16 +160,16 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action action_0(bit<16> param0) {
+    @name("action_0") action action_0(bit<16> param0) {
         hdr.pkt.field_e_16 = param0;
         hash(hdr.pkt.field_a_28, HashAlgorithm.crc32, 32w0, { hdr.pkt.field_a_28, hdr.pkt.field_b_32, hdr.pkt.field_i_8 }, 64w16384);
     }
-    action action_1() {
+    @name("action_1") action action_1() {
         hash(hdr.pkt.field_l_8, HashAlgorithm.crc16, 16w0, { hdr.pkt.field_c_32, hdr.pkt.field_g_16, hdr.pkt.field_h_16, hdr.pkt.field_k_8 }, 32w256);
     }
-    action do_nothing() {
+    @name("do_nothing") action do_nothing() {
     }
-    action action_2(bit<16> param0) {
+    @name("action_2") action action_2(bit<16> param0) {
         hdr.pkt.field_h_16 = param0;
     }
     @name("table_0") table table_0() {
@@ -210,13 +210,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_f_16: selector;
         }
         size = 2048;
-        implementation = ActionSelector(HashAlgorithm.random, 32w512, 32w72);
+        @name("table_2_action_profile") implementation = ActionSelector(HashAlgorithm.random, 32w512, 32w72);
     }
 
     apply {
-        if (hdr.pkt.valid) 
+        if (hdr.pkt.isValid()) 
             table_0.apply();
-        if (hdr.pkt.valid) 
+        if (hdr.pkt.isValid()) 
             table_1.apply();
         table_2.apply();
     }

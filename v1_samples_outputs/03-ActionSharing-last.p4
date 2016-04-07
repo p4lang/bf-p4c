@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct metadata_t {
     bit<1>  field1_1;
@@ -189,97 +189,97 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action set_field1_1(bit<1> value) {
+    @name("set_field1_1") action set_field1_1(bit<1> value) {
         meta.md.field1_1 = value;
     }
-    action set_field1_2(bit<1> value) {
+    @name("set_field1_2") action set_field1_2(bit<1> value) {
         meta.md.field1_2 = value;
     }
-    action set_field1_3(bit<1> value) {
+    @name("set_field1_3") action set_field1_3(bit<1> value) {
         meta.md.field1_3 = value;
     }
-    action set_field1_4(bit<1> value) {
+    @name("set_field1_4") action set_field1_4(bit<1> value) {
         meta.md.field1_4 = value;
     }
-    action set_field1_5(bit<1> value) {
+    @name("set_field1_5") action set_field1_5(bit<1> value) {
         meta.md.field1_5 = value;
     }
-    action set_field1_6(bit<1> value) {
+    @name("set_field1_6") action set_field1_6(bit<1> value) {
         meta.md.field1_6 = value;
     }
-    action set_field1_7(bit<1> value) {
+    @name("set_field1_7") action set_field1_7(bit<1> value) {
         meta.md.field1_7 = value;
     }
-    action set_field1_8(bit<1> value) {
+    @name("set_field1_8") action set_field1_8(bit<1> value) {
         meta.md.field1_8 = value;
     }
-    action set_field8_1(bit<8> value) {
+    @name("set_field8_1") action set_field8_1(bit<8> value) {
         meta.md.field8_1 = value;
     }
-    action set_field8_2(bit<8> value) {
+    @name("set_field8_2") action set_field8_2(bit<8> value) {
         meta.md.field8_2 = value;
     }
-    action set_field8_3(bit<8> value) {
+    @name("set_field8_3") action set_field8_3(bit<8> value) {
         meta.md.field8_3 = value;
     }
-    action set_field8_4(bit<8> value) {
+    @name("set_field8_4") action set_field8_4(bit<8> value) {
         meta.md.field8_4 = value;
     }
-    action set_field8_5(bit<8> value) {
+    @name("set_field8_5") action set_field8_5(bit<8> value) {
         meta.md.field8_5 = value;
     }
-    action set_field8_6(bit<8> value) {
+    @name("set_field8_6") action set_field8_6(bit<8> value) {
         meta.md.field8_6 = value;
     }
-    action set_field8_7(bit<8> value) {
+    @name("set_field8_7") action set_field8_7(bit<8> value) {
         meta.md.field8_7 = value;
     }
-    action set_field8_8(bit<8> value) {
+    @name("set_field8_8") action set_field8_8(bit<8> value) {
         meta.md.field8_8 = value;
     }
-    action set_field16_1(bit<64> value) {
+    @name("set_field16_1") action set_field16_1(bit<64> value) {
         meta.md.field16_1 = value;
     }
-    action set_field16_2(bit<64> value) {
+    @name("set_field16_2") action set_field16_2(bit<64> value) {
         meta.md.field16_2 = value;
     }
-    action set_field16_3(bit<64> value) {
+    @name("set_field16_3") action set_field16_3(bit<64> value) {
         meta.md.field16_3 = value;
     }
-    action set_field16_4(bit<64> value) {
+    @name("set_field16_4") action set_field16_4(bit<64> value) {
         meta.md.field16_4 = value;
     }
-    action set_field16_5(bit<64> value) {
+    @name("set_field16_5") action set_field16_5(bit<64> value) {
         meta.md.field16_5 = value;
     }
-    action set_field16_6(bit<64> value) {
+    @name("set_field16_6") action set_field16_6(bit<64> value) {
         meta.md.field16_6 = value;
     }
-    action set_field16_7(bit<64> value) {
+    @name("set_field16_7") action set_field16_7(bit<64> value) {
         meta.md.field16_7 = value;
     }
-    action set_field16_8(bit<64> value) {
+    @name("set_field16_8") action set_field16_8(bit<64> value) {
         meta.md.field16_8 = value;
     }
-    action set_field32_1(bit<32> value) {
+    @name("set_field32_1") action set_field32_1(bit<32> value) {
         meta.md.field32_1 = value;
     }
-    action set_field32_2(bit<32> value) {
+    @name("set_field32_2") action set_field32_2(bit<32> value) {
         meta.md.field32_2 = value;
     }
-    action set_field32_3(bit<32> value) {
+    @name("set_field32_3") action set_field32_3(bit<32> value) {
         meta.md.field32_3 = value;
     }
-    action set_field32_4(bit<32> value) {
+    @name("set_field32_4") action set_field32_4(bit<32> value) {
         meta.md.field32_4 = value;
     }
-    action set_field32_5(bit<32> value) {
+    @name("set_field32_5") action set_field32_5(bit<32> value) {
         meta.md.field32_5 = value;
     }
-    action set_field32_6(bit<32> value) {
+    @name("set_field32_6") action set_field32_6(bit<32> value) {
         meta.md.field32_6 = value;
     }
-    action set_field32_7(bit<32> value) {
+    @name("set_field32_7") action set_field32_7(bit<32> value) {
         meta.md.field32_7 = value;
     }
     @name("dmac1") table dmac1() {

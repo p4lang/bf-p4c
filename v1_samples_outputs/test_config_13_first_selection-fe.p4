@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -177,18 +177,18 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action action_select(bit<8> base, bit<8> hash_size) {
+    @name("action_select") action action_select(bit<8> base, bit<8> hash_size) {
         hash(hdr.ipv4.blah2, HashAlgorithm.random, (bit<72>)base, { hdr.ipv4.blah1, hdr.ipv4.blah2, hdr.ipv4.blah3 }, (bit<144>)hash_size);
     }
-    action action_0(bit<16> param0) {
+    @name("action_0") action action_0(bit<16> param0) {
         hdr.ipv4.hdrChecksum = param0;
     }
-    action big_action(bit<32> param0, bit<32> param1, bit<48> param2) {
+    @name("big_action") action big_action(bit<32> param0, bit<32> param1, bit<48> param2) {
         hdr.ipv4.dstAddr = param0;
         hdr.ipv4.srcAddr = param1;
         hdr.ethernet.dstAddr = param2;
     }
-    action do_nothing() {
+    @name("do_nothing") action do_nothing() {
     }
     @name("table_group") table table_group() {
         actions = {
@@ -214,7 +214,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.blah3        : selector;
         }
         size = 8192;
-        implementation = ActionSelector(HashAlgorithm.random, 32w512, 32w72);
+        @name("some_action_profile") implementation = ActionSelector(HashAlgorithm.random, 32w512, 32w72);
     }
 
     apply {

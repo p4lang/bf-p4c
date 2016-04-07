@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -160,49 +160,49 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action action_0() {
+    @name("action_0") action action_0() {
         hdr.pkt.field_a_32 = (bit<32>)~(hdr.pkt.field_b_32 | (int<32>)hdr.pkt.field_c_32);
     }
-    action action_1(bit<32> param0) {
+    @name("action_1") action action_1(bit<32> param0) {
         hdr.pkt.field_a_32 = ~(param0 & hdr.pkt.field_c_32);
     }
-    action action_2(bit<32> param0) {
+    @name("action_2") action action_2(bit<32> param0) {
         hdr.pkt.field_a_32 = (bit<32>)~(hdr.pkt.field_b_32 ^ (int<32>)param0);
     }
-    action action_3() {
+    @name("action_3") action action_3() {
         hdr.pkt.field_a_32 = ~hdr.pkt.field_d_32;
     }
-    action action_4(bit<32> param0) {
+    @name("action_4") action action_4(bit<32> param0) {
         hdr.pkt.field_a_32 = (hdr.pkt.field_d_32 <= param0 ? hdr.pkt.field_d_32 : param0);
     }
-    action action_5(bit<32> param0) {
+    @name("action_5") action action_5(bit<32> param0) {
         hdr.pkt.field_a_32 = (param0 >= hdr.pkt.field_d_32 ? param0 : hdr.pkt.field_d_32);
     }
-    action action_6() {
+    @name("action_6") action action_6() {
         hdr.pkt.field_b_32 = (int<32>)(hdr.pkt.field_d_32 <= 32w7 ? hdr.pkt.field_d_32 : 32w7);
     }
-    action action_7(int<32> param0) {
+    @name("action_7") action action_7(int<32> param0) {
         hdr.pkt.field_b_32 = (param0 >= (int<32>)hdr.pkt.field_d_32 ? param0 : (int<32>)hdr.pkt.field_d_32);
     }
-    action action_8(int<32> param0) {
+    @name("action_8") action action_8(int<32> param0) {
         hdr.pkt.field_x_32 = (hdr.pkt.field_x_32 >= param0 ? hdr.pkt.field_x_32 : param0);
     }
-    action action_9() {
+    @name("action_9") action action_9() {
         hdr.pkt.field_x_32 = hdr.pkt.field_x_32 >> 7;
     }
-    action action_10(bit<32> param0) {
+    @name("action_10") action action_10(bit<32> param0) {
         hdr.pkt.field_a_32 = ~param0 & hdr.pkt.field_a_32;
     }
-    action action_11(bit<32> param0) {
+    @name("action_11") action action_11(bit<32> param0) {
         hdr.pkt.field_a_32 = param0 & ~hdr.pkt.field_a_32;
     }
-    action action_12(bit<32> param0) {
+    @name("action_12") action action_12(bit<32> param0) {
         hdr.pkt.field_a_32 = ~param0 | hdr.pkt.field_a_32;
     }
-    action action_13(bit<32> param0) {
+    @name("action_13") action action_13(bit<32> param0) {
         hdr.pkt.field_a_32 = param0 | ~hdr.pkt.field_a_32;
     }
-    action do_nothing() {
+    @name("do_nothing") action do_nothing() {
     }
     @name("table_0") table table_0() {
         actions = {

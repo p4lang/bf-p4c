@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct metadata_t {
     bit<13> flex_counter_index;
@@ -174,10 +174,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     Counter(32w8192, CounterType.Packets) @name("flex_counter") flex_counter;
-    action update_flex_counter() {
+    @name("update_flex_counter") action update_flex_counter() {
         flex_counter.increment((bit<32>)meta.md.flex_counter_index);
     }
-    action set_flex_counter_index(bit<13> flex_counter_base) {
+    @name("set_flex_counter_index") action set_flex_counter_index(bit<13> flex_counter_base) {
         meta.md.flex_counter_index = flex_counter_base + (bit<13>)hdr.vlan_tag.prio;
     }
     @name("update_counters") table update_counters() {

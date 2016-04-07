@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct metadata_t {
     bit<1>  field_1_1_1;
@@ -285,251 +285,251 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action action_1_1(bit<1> value) {
+    @name("action_1_1") action action_1_1(bit<1> value) {
         meta.md.field_1_1_1 = value;
         meta.md.field_2_1_1 = 1w1;
     }
-    action action_1_2(bit<1> value) {
+    @name("action_1_2") action action_1_2(bit<1> value) {
         meta.md.field_1_1_2 = value;
         meta.md.field_2_1_2 = 1w0;
     }
-    action action_1_3(bit<1> value) {
+    @name("action_1_3") action action_1_3(bit<1> value) {
         meta.md.field_1_1_3 = value;
         meta.md.field_2_1_3 = 1w1;
     }
-    action action_1_4(bit<1> value) {
+    @name("action_1_4") action action_1_4(bit<1> value) {
         meta.md.field_1_1_4 = value;
         meta.md.field_2_1_4 = 1w0;
     }
-    action action_1_5(bit<1> value) {
+    @name("action_1_5") action action_1_5(bit<1> value) {
         meta.md.field_1_1_5 = value;
         meta.md.field_2_1_5 = 1w1;
     }
-    action action_1_6(bit<1> value) {
+    @name("action_1_6") action action_1_6(bit<1> value) {
         meta.md.field_1_1_6 = value;
         meta.md.field_2_1_6 = 1w0;
     }
-    action action_1_7(bit<1> value) {
+    @name("action_1_7") action action_1_7(bit<1> value) {
         meta.md.field_1_1_7 = value;
         meta.md.field_2_1_7 = 1w1;
     }
-    action action_1_8(bit<1> value) {
+    @name("action_1_8") action action_1_8(bit<1> value) {
         meta.md.field_1_1_8 = value;
         meta.md.field_2_1_8 = 1w0;
     }
-    action action_1_9(bit<1> value) {
+    @name("action_1_9") action action_1_9(bit<1> value) {
         meta.md.field_1_1_9 = value;
         meta.md.field_2_1_9 = 1w1;
     }
-    action action_1_10(bit<1> value) {
+    @name("action_1_10") action action_1_10(bit<1> value) {
         meta.md.field_1_1_10 = value;
         meta.md.field_2_1_10 = 1w0;
     }
-    action action_1_11(bit<1> value) {
+    @name("action_1_11") action action_1_11(bit<1> value) {
         meta.md.field_1_1_11 = value;
         meta.md.field_2_1_11 = 1w1;
     }
-    action action_1_12(bit<1> value) {
+    @name("action_1_12") action action_1_12(bit<1> value) {
         meta.md.field_1_1_12 = value;
         meta.md.field_2_1_12 = 1w0;
     }
-    action action_1_13(bit<1> value) {
+    @name("action_1_13") action action_1_13(bit<1> value) {
         meta.md.field_1_1_13 = value;
         meta.md.field_2_1_13 = 1w1;
     }
-    action action_1_14(bit<1> value) {
+    @name("action_1_14") action action_1_14(bit<1> value) {
         meta.md.field_1_1_14 = value;
         meta.md.field_2_1_14 = 1w0;
     }
-    action action_1_15(bit<1> value) {
+    @name("action_1_15") action action_1_15(bit<1> value) {
         meta.md.field_1_1_15 = value;
         meta.md.field_2_1_15 = 1w1;
     }
-    action action_1_16(bit<1> value) {
+    @name("action_1_16") action action_1_16(bit<1> value) {
         meta.md.field_1_1_16 = value;
         meta.md.field_2_1_16 = 1w0;
     }
-    action action_8_1(bit<8> value) {
+    @name("action_8_1") action action_8_1(bit<8> value) {
         meta.md.field_1_8_1 = value;
         meta.md.field_2_8_1 = 8w81;
     }
-    action action_8_2(bit<8> value) {
+    @name("action_8_2") action action_8_2(bit<8> value) {
         meta.md.field_1_8_2 = value;
         meta.md.field_2_8_2 = 8w82;
     }
-    action action_8_3(bit<8> value) {
+    @name("action_8_3") action action_8_3(bit<8> value) {
         meta.md.field_1_8_3 = value;
         meta.md.field_2_8_3 = 8w83;
     }
-    action action_8_4(bit<8> value) {
+    @name("action_8_4") action action_8_4(bit<8> value) {
         meta.md.field_1_8_4 = value;
         meta.md.field_2_8_4 = 8w84;
     }
-    action action_8_5(bit<8> value) {
+    @name("action_8_5") action action_8_5(bit<8> value) {
         meta.md.field_1_8_5 = value;
         meta.md.field_2_8_5 = 8w85;
     }
-    action action_8_6(bit<8> value) {
+    @name("action_8_6") action action_8_6(bit<8> value) {
         meta.md.field_1_8_6 = value;
         meta.md.field_2_8_6 = 8w86;
     }
-    action action_8_7(bit<8> value) {
+    @name("action_8_7") action action_8_7(bit<8> value) {
         meta.md.field_1_8_7 = value;
         meta.md.field_2_8_7 = 8w87;
     }
-    action action_8_8(bit<8> value) {
+    @name("action_8_8") action action_8_8(bit<8> value) {
         meta.md.field_1_8_8 = value;
         meta.md.field_2_8_8 = 8w88;
     }
-    action action_8_9(bit<8> value) {
+    @name("action_8_9") action action_8_9(bit<8> value) {
         meta.md.field_1_8_9 = value;
         meta.md.field_2_8_9 = 8w89;
     }
-    action action_8_10(bit<8> value) {
+    @name("action_8_10") action action_8_10(bit<8> value) {
         meta.md.field_1_8_10 = value;
         meta.md.field_2_8_10 = 8w42;
     }
-    action action_8_11(bit<8> value) {
+    @name("action_8_11") action action_8_11(bit<8> value) {
         meta.md.field_1_8_11 = value;
         meta.md.field_2_8_11 = 8w43;
     }
-    action action_8_12(bit<8> value) {
+    @name("action_8_12") action action_8_12(bit<8> value) {
         meta.md.field_1_8_12 = value;
         meta.md.field_2_8_12 = 8w44;
     }
-    action action_8_13(bit<8> value) {
+    @name("action_8_13") action action_8_13(bit<8> value) {
         meta.md.field_1_8_13 = value;
         meta.md.field_2_8_13 = 8w45;
     }
-    action action_8_14(bit<8> value) {
+    @name("action_8_14") action action_8_14(bit<8> value) {
         meta.md.field_1_8_14 = value;
         meta.md.field_2_8_14 = 8w46;
     }
-    action action_8_15(bit<8> value) {
+    @name("action_8_15") action action_8_15(bit<8> value) {
         meta.md.field_1_8_15 = value;
         meta.md.field_2_8_15 = 8w47;
     }
-    action action_8_16(bit<8> value) {
+    @name("action_8_16") action action_8_16(bit<8> value) {
         meta.md.field_1_8_16 = value;
         meta.md.field_2_8_16 = 8w48;
     }
-    action action_16_1(bit<16> value) {
+    @name("action_16_1") action action_16_1(bit<16> value) {
         meta.md.field_1_16_1 = value;
         meta.md.field_2_16_1 = 16w161;
     }
-    action action_16_2(bit<16> value) {
+    @name("action_16_2") action action_16_2(bit<16> value) {
         meta.md.field_1_16_2 = value;
         meta.md.field_2_16_2 = 16w162;
     }
-    action action_16_3(bit<16> value) {
+    @name("action_16_3") action action_16_3(bit<16> value) {
         meta.md.field_1_16_3 = value;
         meta.md.field_2_16_3 = 16w163;
     }
-    action action_16_4(bit<16> value) {
+    @name("action_16_4") action action_16_4(bit<16> value) {
         meta.md.field_1_16_4 = value;
         meta.md.field_2_16_4 = 16w164;
     }
-    action action_16_5(bit<16> value) {
+    @name("action_16_5") action action_16_5(bit<16> value) {
         meta.md.field_1_16_5 = value;
         meta.md.field_2_16_5 = 16w165;
     }
-    action action_16_6(bit<16> value) {
+    @name("action_16_6") action action_16_6(bit<16> value) {
         meta.md.field_1_16_6 = value;
         meta.md.field_2_16_6 = 16w166;
     }
-    action action_16_7(bit<16> value) {
+    @name("action_16_7") action action_16_7(bit<16> value) {
         meta.md.field_1_16_7 = value;
         meta.md.field_2_16_7 = 16w167;
     }
-    action action_16_8(bit<16> value) {
+    @name("action_16_8") action action_16_8(bit<16> value) {
         meta.md.field_1_16_8 = value;
         meta.md.field_2_16_8 = 16w168;
     }
-    action action_16_9(bit<16> value) {
+    @name("action_16_9") action action_16_9(bit<16> value) {
         meta.md.field_1_16_9 = value;
         meta.md.field_2_16_9 = 16w169;
     }
-    action action_16_10(bit<16> value) {
+    @name("action_16_10") action action_16_10(bit<16> value) {
         meta.md.field_1_16_10 = value;
         meta.md.field_2_16_10 = 16w1610;
     }
-    action action_16_11(bit<16> value) {
+    @name("action_16_11") action action_16_11(bit<16> value) {
         meta.md.field_1_16_11 = value;
         meta.md.field_2_16_11 = 16w1611;
     }
-    action action_16_12(bit<16> value) {
+    @name("action_16_12") action action_16_12(bit<16> value) {
         meta.md.field_1_16_12 = value;
         meta.md.field_2_16_12 = 16w1612;
     }
-    action action_16_13(bit<16> value) {
+    @name("action_16_13") action action_16_13(bit<16> value) {
         meta.md.field_1_16_13 = value;
         meta.md.field_2_16_13 = 16w1613;
     }
-    action action_16_14(bit<16> value) {
+    @name("action_16_14") action action_16_14(bit<16> value) {
         meta.md.field_1_16_14 = value;
         meta.md.field_2_16_14 = 16w1614;
     }
-    action action_16_15(bit<16> value) {
+    @name("action_16_15") action action_16_15(bit<16> value) {
         meta.md.field_1_16_15 = value;
         meta.md.field_2_16_15 = 16w1615;
     }
-    action action_16_16(bit<16> value) {
+    @name("action_16_16") action action_16_16(bit<16> value) {
         meta.md.field_1_16_16 = value;
         meta.md.field_2_16_16 = 16w1616;
     }
-    action action_32_1(bit<32> value) {
+    @name("action_32_1") action action_32_1(bit<32> value) {
         meta.md.field_1_32_1 = value;
         meta.md.field_2_32_1 = 32w321;
     }
-    action action_32_2(bit<32> value) {
+    @name("action_32_2") action action_32_2(bit<32> value) {
         meta.md.field_1_32_2 = value;
         meta.md.field_2_32_2 = 32w322;
     }
-    action action_32_3(bit<32> value) {
+    @name("action_32_3") action action_32_3(bit<32> value) {
         meta.md.field_1_32_3 = value;
         meta.md.field_2_32_3 = 32w323;
     }
-    action action_32_4(bit<32> value) {
+    @name("action_32_4") action action_32_4(bit<32> value) {
         meta.md.field_1_32_4 = value;
         meta.md.field_2_32_4 = 32w324;
     }
-    action action_32_5(bit<32> value) {
+    @name("action_32_5") action action_32_5(bit<32> value) {
         meta.md.field_1_32_5 = value;
         meta.md.field_2_32_5 = 32w325;
     }
-    action action_32_6(bit<32> value) {
+    @name("action_32_6") action action_32_6(bit<32> value) {
         meta.md.field_1_32_6 = value;
         meta.md.field_2_32_6 = 32w326;
     }
-    action action_32_7(bit<32> value) {
+    @name("action_32_7") action action_32_7(bit<32> value) {
         meta.md.field_1_32_7 = value;
         meta.md.field_2_32_7 = 32w327;
     }
-    action action_32_8(bit<32> value) {
+    @name("action_32_8") action action_32_8(bit<32> value) {
         meta.md.field_1_32_8 = value;
         meta.md.field_2_32_8 = 32w328;
     }
-    action action_32_9(bit<32> value) {
+    @name("action_32_9") action action_32_9(bit<32> value) {
         meta.md.field_1_32_9 = value;
         meta.md.field_2_32_9 = 32w329;
     }
-    action action_32_10(bit<32> value) {
+    @name("action_32_10") action action_32_10(bit<32> value) {
         meta.md.field_1_32_10 = value;
         meta.md.field_2_32_10 = 32w3210;
     }
-    action action_32_11(bit<32> value) {
+    @name("action_32_11") action action_32_11(bit<32> value) {
         meta.md.field_1_32_11 = value;
         meta.md.field_2_32_11 = 32w3211;
     }
-    action action_32_12(bit<32> value) {
+    @name("action_32_12") action action_32_12(bit<32> value) {
         meta.md.field_1_32_12 = value;
         meta.md.field_2_32_12 = 32w3212;
     }
-    action action_32_13(bit<32> value) {
+    @name("action_32_13") action action_32_13(bit<32> value) {
         meta.md.field_1_32_13 = value;
         meta.md.field_2_32_13 = 32w3213;
     }
-    action action_32_14(bit<32> value) {
+    @name("action_32_14") action action_32_14(bit<32> value) {
         meta.md.field_1_32_14 = value;
         meta.md.field_2_32_14 = 32w3214;
     }

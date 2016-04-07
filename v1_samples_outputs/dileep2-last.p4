@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -222,31 +222,31 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action nop() {
+    @name("nop") action nop() {
     }
-    action hop(inout bit<8> ttl, in bit<9> egress_port) {
+    @name("hop") action hop(inout bit<8> ttl, in bit<9> egress_port) {
         ttl = ttl + 8w255;
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    action hop_ipv4(bit<9> egress_port) {
+    @name("hop_ipv4") action hop_ipv4(bit<9> egress_port) {
         hop(hdr.ipv4.ttl, egress_port);
     }
-    action next_hop_ipv4(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
+    @name("next_hop_ipv4") action next_hop_ipv4(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
         hop(hdr.ipv4.ttl, egress_port);
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    action mod_mac_adr(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
+    @name("mod_mac_adr") action mod_mac_adr(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    action tcp_hdr_rm(bit<9> egress_port) {
+    @name("tcp_hdr_rm") action tcp_hdr_rm(bit<9> egress_port) {
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.tcp.setValid(false);
         hdr.ipv4.protocol = 8w0;
     }
-    action udp_hdr_add(bit<9> egress_port) {
+    @name("udp_hdr_add") action udp_hdr_add(bit<9> egress_port) {
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.udp.setValid(true);
         hdr.ipv4.protocol = 8w17;

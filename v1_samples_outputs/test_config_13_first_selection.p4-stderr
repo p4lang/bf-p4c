@@ -1,9 +1,9 @@
-../backends/tofino/v1_samples/test_config_13_first_selection.p4(114): warning: resilient: Action selector attribute ignored
+../extensions/tofino/v1_samples/test_config_13_first_selection.p4(114): warning: resilient: Action selector attribute ignored
     selection_mode : resilient;
                      ^^^^^^^^^
-../backends/tofino/v1_samples/test_config_13_first_selection.p4(82): warning: Could not infer type for base, using bit<8>
+../extensions/tofino/v1_samples/test_config_13_first_selection.p4(82): warning: Could not infer type for base, using bit<8>
 action action_select(base, hash_size){
                      ^^^^
-../backends/tofino/v1_samples/test_config_13_first_selection.p4(82): warning: Could not infer type for hash_size, using bit<8>
+../extensions/tofino/v1_samples/test_config_13_first_selection.p4(82): warning: Could not infer type for hash_size, using bit<8>
 action action_select(base, hash_size){
                            ^^^^^^^^^

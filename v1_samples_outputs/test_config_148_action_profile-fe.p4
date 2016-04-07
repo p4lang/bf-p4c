@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -159,12 +159,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action do_nothing() {
+    @name("do_nothing") action do_nothing() {
     }
-    action action_0(bit<32> param0) {
+    @name("action_0") action action_0(bit<32> param0) {
         hdr.pkt.field_a_32 = hdr.pkt.field_a_32 - param0;
     }
-    action action_1() {
+    @name("action_1") action action_1() {
         hdr.pkt.field_i_8 = hdr.pkt.field_j_8 - hdr.pkt.field_k_8;
     }
     @name("table_0") table table_0() {
@@ -177,7 +177,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_a_32: exact;
         }
         size = 3072;
-        implementation = ActionProfile(32w3072);
+        @name("table_0_action_profile") implementation = ActionProfile(32w3072);
     }
 
     apply {

@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct vlan_tag_t {
     bit<3>  pri;
@@ -175,12 +175,12 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action a1(bit<3> p1, bit<12> p2) {
+    @name("a1") action a1(bit<3> p1, bit<12> p2) {
         meta.vtag.pri = p1;
         meta.vtag.cfi = 1w1;
         meta.vtag.vid = meta.vtag.vid + p2;
     }
-    action a2(bit<3> p1) {
+    @name("a2") action a2(bit<3> p1) {
         hdr.vlan_tag.pri = p1;
         hdr.vlan_tag.cfi = meta.vtag.cfi;
         hdr.vlan_tag.vid = meta.vtag.vid;

@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -158,10 +158,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action a1(bit<60> p1) {
+    @name("a1") action a1(bit<60> p1) {
         meta.m1.f1 = p1;
     }
-    action a2() {
+    @name("a2") action a2() {
         hdr.ethernet.dstAddr[7:0] = meta.m1.f1[7:0];
     }
     @name("t1") table t1() {

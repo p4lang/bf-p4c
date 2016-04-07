@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -159,10 +159,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action egr_action() {
+    @name("egr_action") action egr_action() {
         clone3(CloneType.E2E, (bit<32>)7, { meta.m.foo });
     }
-    action egr_action2() {
+    @name("egr_action2") action egr_action2() {
         clone(CloneType.E2E, (bit<32>)8);
     }
     @name("egr_null_table") table egr_null_table() {
@@ -183,10 +183,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action ingr_action() {
+    @name("ingr_action") action ingr_action() {
         clone3(CloneType.I2E, (bit<32>)5, { meta.m.foo });
     }
-    action ingr_action2() {
+    @name("ingr_action2") action ingr_action2() {
         clone(CloneType.I2E, (bit<32>)6);
     }
     @name("ingr_null_table") table ingr_null_table() {

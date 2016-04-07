@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct bfd_t {
     bit<8> bfd_tx_or_rx;
@@ -166,9 +166,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action bfd_rx() {
+    @name("bfd_rx") action bfd_rx() {
     }
-    action bfd_tx() {
+    @name("bfd_tx") action bfd_tx() {
     }
     @name("bfd") table bfd() {
         actions = {

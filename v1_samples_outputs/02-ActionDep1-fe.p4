@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct ingress_metadata_t {
     bit<1> drop;
@@ -154,7 +154,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action nop() {
+    @name("nop") action nop() {
     }
     @name("e_t1") table e_t1() {
         actions = {
@@ -171,12 +171,12 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action nop() {
+    @name("nop") action nop() {
     }
-    action ing_drop() {
+    @name("ing_drop") action ing_drop() {
         mark_to_drop();
     }
-    action set_egress_port(bit<8> egress_port) {
+    @name("set_egress_port") action set_egress_port(bit<8> egress_port) {
         meta.ing_metadata.egress_port = egress_port;
     }
     @name("dmac") table dmac() {

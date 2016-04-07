@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -261,38 +261,38 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action nop() {
+    @name("nop") action nop() {
     }
-    action hop(inout bit<8> ttl, in bit<9> egress_port) {
+    @name("hop") action hop(inout bit<8> ttl, in bit<9> egress_port) {
         ttl = ttl + 8w255;
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    action next_hop_ipv4(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
+    @name("next_hop_ipv4") action next_hop_ipv4(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
         hop(hdr.ipv4.ttl, egress_port);
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    action custom_action_1(bit<9> egress_port, bit<32> ipAddr, bit<48> dstAddr, bit<16> tcpPort) {
+    @name("custom_action_1") action custom_action_1(bit<9> egress_port, bit<32> ipAddr, bit<48> dstAddr, bit<16> tcpPort) {
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ipv4.srcAddr = ipAddr;
         hdr.ethernet.dstAddr = dstAddr;
         hdr.tcp.dstPort = tcpPort;
     }
-    action modify_tcp_dst_port_1(bit<16> dstPort, bit<9> egress_port) {
+    @name("modify_tcp_dst_port_1") action modify_tcp_dst_port_1(bit<16> dstPort, bit<9> egress_port) {
         hdr.tcp.dstPort = dstPort;
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    action custom_action_3(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
+    @name("custom_action_3") action custom_action_3(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
         hdr.ipv4.dstAddr = dstIp;
         hdr.ethernet.dstAddr = dstAddr;
         hop(hdr.ipv4.ttl, egress_port);
     }
-    action custom_action_2(bit<9> egress_port, bit<32> ipAddr, bit<16> tcpPort) {
+    @name("custom_action_2") action custom_action_2(bit<9> egress_port, bit<32> ipAddr, bit<16> tcpPort) {
         hdr.ipv4.srcAddr = ipAddr;
         hdr.tcp.dstPort = tcpPort;
         hop(hdr.ipv4.ttl, egress_port);
     }
-    action mod_mac_addr(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
+    @name("mod_mac_addr") action mod_mac_addr(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;

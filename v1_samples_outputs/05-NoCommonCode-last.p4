@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct metadata_t {
     bit<1> field1;
@@ -159,16 +159,16 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action action1_1(in bit<1> value) {
+    @name("action1_1") action action1_1(in bit<1> value) {
         meta.md.field1 = value;
     }
-    action action1() {
+    @name("action1") action action1() {
         action1_1(1w0);
     }
-    action action2() {
+    @name("action2") action action2() {
         action1_1(1w1);
     }
-    action action2_1(bit<1> value) {
+    @name("action2_1") action action2_1(bit<1> value) {
         meta.md.field2 = value;
     }
     @name("dmac1") table dmac1() {

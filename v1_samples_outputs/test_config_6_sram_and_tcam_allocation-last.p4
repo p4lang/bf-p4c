@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -180,10 +180,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action eg_drop() {
+    @name("eg_drop") action eg_drop() {
         standard_metadata.egress_spec = 9w0;
     }
-    action permit() {
+    @name("permit") action permit() {
     }
     @name("egress_acl") table egress_acl() {
         actions = {
@@ -201,19 +201,19 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action do_nothing() {
+    @name("do_nothing") action do_nothing() {
     }
-    action l3_set_index(bit<8> index) {
+    @name("l3_set_index") action l3_set_index(bit<8> index) {
         hdr.ipv4.diffserv = index;
     }
-    action ig_drop() {
+    @name("ig_drop") action ig_drop() {
         meta.routing_metadata.drop = 1w1;
     }
-    action hop(inout bit<8> ttl, in bit<9> egress_port) {
+    @name("hop") action hop(inout bit<8> ttl, in bit<9> egress_port) {
         ttl = ttl + 8w255;
         standard_metadata.egress_port = egress_port;
     }
-    action hop_ipv4(bit<48> srcmac, bit<32> srcip, bit<48> dstmac, bit<9> egress_port) {
+    @name("hop_ipv4") action hop_ipv4(bit<48> srcmac, bit<32> srcip, bit<48> dstmac, bit<9> egress_port) {
         hop(hdr.ipv4.ttl, egress_port);
         hdr.ipv4.srcAddr = srcip;
         hdr.ethernet.srcAddr = srcmac;

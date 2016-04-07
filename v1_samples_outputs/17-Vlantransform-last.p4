@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct metadata_t {
     bit<16> new_outer_tpid;
@@ -192,33 +192,33 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action do_new_inner_cfi() {
+    @name("do_new_inner_cfi") action do_new_inner_cfi() {
         hdr.vlan_tag[1].cfi = meta.meta.new_inner_cfi;
     }
-    action do_new_inner_pri() {
+    @name("do_new_inner_pri") action do_new_inner_pri() {
         hdr.vlan_tag[1].pri = meta.meta.new_inner_pri;
     }
-    action do_new_inner_tpid() {
+    @name("do_new_inner_tpid") action do_new_inner_tpid() {
         hdr.vlan_tag[0].ethertype = meta.meta.new_inner_tpid;
     }
-    action do_new_inner_vid() {
+    @name("do_new_inner_vid") action do_new_inner_vid() {
         hdr.vlan_tag[1].vid = meta.meta.new_inner_vid;
     }
-    action do_new_outer_cfi() {
+    @name("do_new_outer_cfi") action do_new_outer_cfi() {
         hdr.vlan_tag[0].cfi = meta.meta.new_outer_cfi;
     }
-    action do_new_outer_pri() {
+    @name("do_new_outer_pri") action do_new_outer_pri() {
         hdr.vlan_tag[0].pri = meta.meta.new_outer_pri;
     }
-    action do_new_outer_tpid() {
+    @name("do_new_outer_tpid") action do_new_outer_tpid() {
         hdr.ethernet.ethertype = meta.meta.new_outer_tpid;
     }
-    action do_new_outer_vid() {
+    @name("do_new_outer_vid") action do_new_outer_vid() {
         hdr.vlan_tag[0].vid = meta.meta.new_outer_vid;
     }
-    action nop() {
+    @name("nop") action nop() {
     }
-    action rewrite_tags(bit<16> new_outer_tpid, bit<1> new_outer_tpid_en, bit<3> new_outer_pri, bit<1> new_outer_pri_en, bit<1> new_outer_cfi, bit<1> new_outer_cfi_en, bit<12> new_outer_vid, bit<1> new_outer_vid_en, bit<16> new_inner_tpid, bit<1> new_inner_tpid_en, bit<3> new_inner_pri, bit<1> new_inner_pri_en, bit<1> new_inner_cfi, bit<1> new_inner_cfi_en, bit<12> new_inner_vid, bit<1> new_inner_vid_en) {
+    @name("rewrite_tags") action rewrite_tags(bit<16> new_outer_tpid, bit<1> new_outer_tpid_en, bit<3> new_outer_pri, bit<1> new_outer_pri_en, bit<1> new_outer_cfi, bit<1> new_outer_cfi_en, bit<12> new_outer_vid, bit<1> new_outer_vid_en, bit<16> new_inner_tpid, bit<1> new_inner_tpid_en, bit<3> new_inner_pri, bit<1> new_inner_pri_en, bit<1> new_inner_cfi, bit<1> new_inner_cfi_en, bit<12> new_inner_vid, bit<1> new_inner_vid_en) {
         meta.meta.new_outer_tpid = new_outer_tpid;
         meta.meta.new_outer_tpid_en = new_outer_tpid_en;
         meta.meta.new_outer_pri = new_outer_pri;
@@ -290,10 +290,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             rewrite_tags;
         }
         key = {
-            hdr.vlan_tag[0].valid: exact;
-            hdr.vlan_tag[0].vid  : exact;
-            hdr.vlan_tag[1].valid: exact;
-            hdr.vlan_tag[1].vid  : exact;
+            hdr.vlan_tag[0].isValid(): exact;
+            hdr.vlan_tag[0].vid      : exact;
+            hdr.vlan_tag[1].isValid(): exact;
+            hdr.vlan_tag[1].vid      : exact;
         }
     }
 

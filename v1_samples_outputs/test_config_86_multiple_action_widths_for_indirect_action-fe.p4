@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -159,26 +159,26 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action action_0(bit<8> my_param_a) {
+    @name("action_0") action action_0(bit<8> my_param_a) {
         hdr.pkt.field_a = my_param_a;
     }
-    action action_1(bit<16> my_param_c) {
+    @name("action_1") action action_1(bit<16> my_param_c) {
         hdr.pkt.field_c = my_param_c;
     }
-    action action_2(bit<32> my_param_e) {
+    @name("action_2") action action_2(bit<32> my_param_e) {
         hdr.pkt.field_e = my_param_e;
     }
-    action action_3(bit<32> my_param_f, bit<32> my_param_g) {
+    @name("action_3") action action_3(bit<32> my_param_f, bit<32> my_param_g) {
         hdr.pkt.field_f = my_param_f;
         hdr.pkt.field_g = my_param_g;
     }
-    action action_4(bit<32> my_param_h, bit<32> my_param_i, bit<32> my_param_j, bit<32> my_param_k) {
+    @name("action_4") action action_4(bit<32> my_param_h, bit<32> my_param_i, bit<32> my_param_j, bit<32> my_param_k) {
         hdr.pkt.field_h = my_param_h;
         hdr.pkt.field_i = my_param_i;
         hdr.pkt.field_j = my_param_j;
         hdr.pkt.field_k = my_param_k;
     }
-    action action_5(bit<32> my_param_h, bit<32> my_param_i, bit<32> my_param_j, bit<32> my_param_k, bit<32> my_param_l) {
+    @name("action_5") action action_5(bit<32> my_param_h, bit<32> my_param_i, bit<32> my_param_j, bit<32> my_param_k, bit<32> my_param_l) {
         hdr.pkt.field_h = my_param_h;
         hdr.pkt.field_i = my_param_i;
         hdr.pkt.field_j = my_param_j;

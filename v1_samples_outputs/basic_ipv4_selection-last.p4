@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -245,10 +245,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action nhop_set(bit<16> port) {
+    @name("nhop_set") action nhop_set(bit<16> port) {
         hdr.ipv4.identification = port;
     }
-    action nop() {
+    @name("nop") action nop() {
     }
     @name("ipv4_routing_select_2") table ipv4_routing_select_2() {
         actions = {
@@ -263,7 +263,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.protocol      : selector;
         }
         size = 512;
-        implementation = ActionSelector(HashAlgorithm.crc16, 32w4096, 32w14);
+        @name("ecmp_action_profile") implementation = ActionSelector(HashAlgorithm.crc16, 32w4096, 32w14);
     }
 
     apply {

@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct ingress_metadata_t {
     bit<1> flag;
@@ -161,16 +161,16 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action assign_egress1_action() {
+    @name("assign_egress1_action") action assign_egress1_action() {
         meta.ing_metadata.egress_port1 = meta.ing_metadata.tmp;
     }
-    action assign_egress2_action() {
+    @name("assign_egress2_action") action assign_egress2_action() {
         meta.ing_metadata.egress_port2 = meta.ing_metadata.tmp;
     }
-    action assign_egress_interfaces(bit<9> value) {
+    @name("assign_egress_interfaces") action assign_egress_interfaces(bit<9> value) {
         meta.ing_metadata.tmp = value;
     }
-    action set_ingress_port_props(bit<1> port_type) {
+    @name("set_ingress_port_props") action set_ingress_port_props(bit<1> port_type) {
         meta.ing_metadata.flag = port_type;
     }
     @name("assign_egress1") table assign_egress1() {

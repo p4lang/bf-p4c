@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -238,9 +238,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action nop() {
+    @name("nop") action nop() {
     }
-    action udp_set_src(bit<16> port) {
+    @name("udp_set_src") action udp_set_src(bit<16> port) {
         hdr.udp.srcPort = port;
     }
     @name("eg_udp") table eg_udp() {
@@ -249,10 +249,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             udp_set_src;
         }
         key = {
-            hdr.ethernet.valid: exact;
-            hdr.ipv4.valid    : exact;
-            hdr.udp.valid     : exact;
-            hdr.udp.srcPort   : exact;
+            hdr.ethernet.isValid(): exact;
+            hdr.ipv4.isValid()    : exact;
+            hdr.udp.isValid()     : exact;
+            hdr.udp.srcPort       : exact;
         }
     }
 
@@ -262,13 +262,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action nop() {
+    @name("nop") action nop() {
     }
-    action hop(inout bit<8> ttl, in bit<9> egress_port) {
+    @name("hop") action hop(inout bit<8> ttl, in bit<9> egress_port) {
         ttl = ttl + 8w255;
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    action hop_ipv4(bit<9> egress_port) {
+    @name("hop_ipv4") action hop_ipv4(bit<9> egress_port) {
         hop(hdr.ipv4.ttl, egress_port);
     }
     @name("tcam_range") table tcam_range() {

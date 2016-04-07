@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 header egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -191,7 +191,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action forward_trill(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
+    @name("forward_trill") action forward_trill(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
         hdr.outer_ethernet.dstAddr = new_mac_da;
         hdr.outer_ethernet.srcAddr = new_mac_sa;
         hdr.vlan_tag.vid = new_vlan_id;

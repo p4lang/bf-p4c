@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -181,19 +181,19 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action do_new_cfi() {
+    @name("do_new_cfi") action do_new_cfi() {
         hdr.vlan_tag.cfi = meta.meta.new_cfi;
     }
-    action do_new_pri() {
+    @name("do_new_pri") action do_new_pri() {
         hdr.vlan_tag.pri = meta.meta.new_pri;
     }
-    action do_new_tpid() {
+    @name("do_new_tpid") action do_new_tpid() {
         hdr.ethernet.ethertype = meta.meta.new_tpid;
     }
-    action do_new_vid() {
+    @name("do_new_vid") action do_new_vid() {
         hdr.vlan_tag.vid = meta.meta.new_vid;
     }
-    action rewrite_tag(bit<16> new_tpid, bit<1> new_tpid_en, bit<3> new_pri, bit<1> new_pri_en, bit<1> new_cfi, bit<1> new_cfi_en, bit<12> new_vid, bit<1> new_vid_en) {
+    @name("rewrite_tag") action rewrite_tag(bit<16> new_tpid, bit<1> new_tpid_en, bit<3> new_pri, bit<1> new_pri_en, bit<1> new_cfi, bit<1> new_cfi_en, bit<12> new_vid, bit<1> new_vid_en) {
         meta.meta.new_tpid = new_tpid;
         meta.meta.new_tpid_en = new_tpid_en;
         meta.meta.new_pri = new_pri;

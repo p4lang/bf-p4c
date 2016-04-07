@@ -1,3 +1,3 @@
-../backends/tofino/v1_samples/19-SimpleTrill.p4(76): warning: -1: negative value with unsigned type
+../extensions/tofino/v1_samples/19-SimpleTrill.p4(76): warning: -1: negative value with unsigned type
     add_to_field(trill.hopCount, -1);
                                   ^

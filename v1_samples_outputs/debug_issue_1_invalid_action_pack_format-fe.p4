@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -180,9 +180,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action nop() {
+    @name("nop") action nop() {
     }
-    action mod_mac_adr(bit<8> egress_port, bit<48> srcmac, bit<48> dstmac) {
+    @name("mod_mac_adr") action mod_mac_adr(bit<8> egress_port, bit<48> srcmac, bit<48> dstmac) {
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }

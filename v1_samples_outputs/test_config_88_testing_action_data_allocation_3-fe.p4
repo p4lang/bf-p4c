@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -168,30 +168,30 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action action_0(bit<32> param_a_32) {
+    @name("action_0") action action_0(bit<32> param_a_32) {
         hdr.pkt.field_a_32 = param_a_32;
     }
-    action action_1(bit<16> param_e_16) {
+    @name("action_1") action action_1(bit<16> param_e_16) {
         hdr.pkt.field_e_16 = param_e_16;
     }
-    action action_2(bit<8> param_i_8) {
+    @name("action_2") action action_2(bit<8> param_i_8) {
         hdr.pkt.field_i_8 = param_i_8;
     }
-    action action_3(bit<32> param_b_32) {
+    @name("action_3") action action_3(bit<32> param_b_32) {
         hdr.pkt.field_b_32 = hdr.pkt.field_b_32 & 32w0x5000 | param_b_32 & 32w0xffffafff;
     }
-    action action_4(bit<16> param_f_16) {
+    @name("action_4") action action_4(bit<16> param_f_16) {
         hdr.pkt.field_f_16 = hdr.pkt.field_f_16 & 16w0x500 | param_f_16 & 16w0xfaff;
     }
-    action action_5(bit<8> param_j_8) {
+    @name("action_5") action action_5(bit<8> param_j_8) {
         hdr.pkt.field_j_8 = hdr.pkt.field_j_8 & 8w0x55 | param_j_8 & 8w0xaa;
     }
-    action action_6(bit<32> param_c_32, bit<16> param_g_16, bit<8> param_k_8) {
+    @name("action_6") action action_6(bit<32> param_c_32, bit<16> param_g_16, bit<8> param_k_8) {
         hdr.pkt.field_c_32 = param_c_32;
         hdr.pkt.field_g_16 = param_g_16;
         hdr.pkt.field_k_8 = param_k_8;
     }
-    action action_7(bit<32> param_c_32, bit<32> param_d_32, bit<16> param_h_16, bit<8> param_l_8, bit<32> param_a_32, bit<16> param_e_16) {
+    @name("action_7") action action_7(bit<32> param_c_32, bit<32> param_d_32, bit<16> param_h_16, bit<8> param_l_8, bit<32> param_a_32, bit<16> param_e_16) {
         hdr.pkt.field_c_32 = param_c_32;
         hdr.pkt.field_d_32 = param_d_32;
         hdr.pkt.field_h_16 = param_h_16;
@@ -199,23 +199,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.field_a_32 = hdr.pkt.field_a_32 & 32w0xffff0030 | param_a_32 & 32w0xffcf;
         hdr.pkt.field_e_16 = hdr.pkt.field_e_16 & 16w0x300 | param_e_16 & 16w0xfcff;
     }
-    action action_8(bit<8> param_i_8, bit<8> param_j_8, bit<8> param_k_8) {
+    @name("action_8") action action_8(bit<8> param_i_8, bit<8> param_j_8, bit<8> param_k_8) {
         hdr.pkt.field_i_8 = param_i_8;
         hdr.pkt.field_j_8 = param_j_8;
         hdr.pkt.field_k_8 = param_k_8;
     }
-    action action_9(bit<16> param_e_16, bit<16> param_f_16, bit<16> param_g_16) {
+    @name("action_9") action action_9(bit<16> param_e_16, bit<16> param_f_16, bit<16> param_g_16) {
         hdr.pkt.field_e_16 = param_e_16;
         hdr.pkt.field_f_16 = param_f_16;
         hdr.pkt.field_g_16 = param_g_16;
     }
-    action action_10(bit<32> param_a_32, bit<32> param_b_32, bit<32> param_c_32, bit<32> param_d_32) {
+    @name("action_10") action action_10(bit<32> param_a_32, bit<32> param_b_32, bit<32> param_c_32, bit<32> param_d_32) {
         hdr.pkt.field_a_32 = param_a_32;
         hdr.pkt.field_b_32 = param_b_32;
         hdr.pkt.field_c_32 = param_c_32;
         hdr.pkt.field_d_32 = param_d_32;
     }
-    action action_11(bit<32> param_a_32, bit<32> param_b_32, bit<32> param_c_32, bit<16> param_e_16, bit<16> param_f_16, bit<16> param_g_16, bit<8> param_i_8, bit<8> param_j_8, bit<8> param_k_8, bit<8> param_l_8) {
+    @name("action_11") action action_11(bit<32> param_a_32, bit<32> param_b_32, bit<32> param_c_32, bit<16> param_e_16, bit<16> param_f_16, bit<16> param_g_16, bit<8> param_i_8, bit<8> param_j_8, bit<8> param_k_8, bit<8> param_l_8) {
         hdr.pkt.field_a_32 = param_a_32;
         hdr.pkt.field_b_32 = param_b_32;
         hdr.pkt.field_c_32 = param_c_32;
@@ -227,7 +227,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.field_k_8 = param_k_8;
         hdr.pkt.field_l_8 = param_l_8;
     }
-    action action_12(bit<32> param_a_32, bit<32> param_b_32, bit<32> param_c_32, bit<8> param_i_8, bit<8> param_j_8, bit<8> param_k_8, bit<8> param_l_8) {
+    @name("action_12") action action_12(bit<32> param_a_32, bit<32> param_b_32, bit<32> param_c_32, bit<8> param_i_8, bit<8> param_j_8, bit<8> param_k_8, bit<8> param_l_8) {
         hdr.pkt.field_a_32 = hdr.pkt.field_a_32 & 32w0xffff0030 | param_a_32 & 32w0xffcf;
         hdr.pkt.field_b_32 = hdr.pkt.field_b_32 & 32w0xffff0300 | param_b_32 & 32w0xfcff;
         hdr.pkt.field_c_32 = param_c_32;
@@ -236,7 +236,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.field_k_8 = param_k_8;
         hdr.pkt.field_l_8 = param_l_8;
     }
-    action action_13(bit<32> param_a_32, bit<32> param_b_32, bit<32> param_c_32, bit<16> param_e_16, bit<16> param_f_16, bit<16> param_g_16, bit<16> param_h_16) {
+    @name("action_13") action action_13(bit<32> param_a_32, bit<32> param_b_32, bit<32> param_c_32, bit<16> param_e_16, bit<16> param_f_16, bit<16> param_g_16, bit<16> param_h_16) {
         hdr.pkt.field_a_32 = hdr.pkt.field_a_32 & 32w0xffff0030 | param_a_32 & 32w0xffcf;
         hdr.pkt.field_b_32 = hdr.pkt.field_b_32 & 32w0xffff0300 | param_b_32 & 32w0xfcff;
         hdr.pkt.field_c_32 = param_c_32;
@@ -245,14 +245,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.field_g_16 = param_g_16;
         hdr.pkt.field_h_16 = param_h_16;
     }
-    action action_14(bit<32> param_a_32, bit<32> param_b_32, bit<32> param_c_32, bit<32> param_d_32, bit<32> param_meta_a_32) {
+    @name("action_14") action action_14(bit<32> param_a_32, bit<32> param_b_32, bit<32> param_c_32, bit<32> param_d_32, bit<32> param_meta_a_32) {
         hdr.pkt.field_a_32 = hdr.pkt.field_a_32 & 32w0xffff0030 | param_a_32 & 32w0xffcf;
         hdr.pkt.field_b_32 = hdr.pkt.field_b_32 & 32w0xffff0300 | param_b_32 & 32w0xfcff;
         hdr.pkt.field_c_32 = param_c_32;
         hdr.pkt.field_d_32 = param_d_32;
         meta.meta.meta_a_32 = param_meta_a_32;
     }
-    action action_15() {
+    @name("action_15") action action_15() {
     }
     @name("table_0") table table_0() {
         actions = {

@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -166,17 +166,17 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action set_hi() {
+    @name("set_hi") action set_hi() {
         hdr.pkt.field_i_bit_7 = 1w1;
         hdr.pkt.field_i_bit_6 = 1w0;
         hdr.pkt.field_i_bit_5 = 1w1;
     }
-    action set_mid() {
+    @name("set_mid") action set_mid() {
         hdr.pkt.field_i_bit_5 = 1w1;
         hdr.pkt.field_i_bit_4 = 1w0;
         hdr.pkt.field_i_bit_3 = 1w1;
     }
-    action set_lo() {
+    @name("set_lo") action set_lo() {
         hdr.pkt.field_i_bit_2 = 1w1;
         hdr.pkt.field_i_bit_1 = 1w0;
         hdr.pkt.field_i_bit_0 = 1w1;

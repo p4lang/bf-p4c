@@ -1,3 +1,3 @@
-../backends/tofino/v1_samples/basic_ipv4_selection.p4(210): warning: fair: Action selector attribute ignored
+../extensions/tofino/v1_samples/basic_ipv4_selection.p4(210): warning: fair: Action selector attribute ignored
     selection_mode : fair;
                      ^^^^

@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 header egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -152,12 +152,12 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action nop() {
+    @name("nop") action nop() {
     }
-    action ing_drop() {
+    @name("ing_drop") action ing_drop() {
         mark_to_drop();
     }
-    action set_egress_port(bit<9> egress_port) {
+    @name("set_egress_port") action set_egress_port(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
     @name("dmac") table dmac() {
