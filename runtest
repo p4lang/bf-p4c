@@ -1,7 +1,16 @@
 #!/bin/sh
 
-test=$1
-name=$2
+die() {
+    echo >&2 "$@"
+    exit 1
+}
+
+run() {
+    if $verbose; then
+        echo "$@"
+    fi
+    timeout 30 $@
+}
 
 findbin() {
     dir=$(pwd -P)
@@ -23,18 +32,77 @@ findbin() {
     echo $2
 }
 
-TFAS=$(findbin tofino-asm tfas)
-TFLN=$(findbin tofino-asm tflink)
-STF=$(findbin model simple_test_harness)
-
-mkdir -p $name.out
-
-rm -f $name.out/*.cfg.json
-if time $TFAS -vvvvl $name.out/tfas.config.log $name.tfa; then
-    if time $TFLN $name.out/*.cfg.json -o $name.out/tofino.bin; then
-        if time $STF -l $name.out/tofino.bin -l $name.out/tbl-cfg -l $name.out/p4_name_lookup.json $test; then
-            exit 0
-        fi
-    fi
+srcdir=${1%/}
+execdir=$(dirname $0)
+if [ ! -d "$srcdir" ]; then
+    die "Usage: $0 <srcdir> <test-source>"
 fi
-exit 1
+shift
+
+tofinodir=${execdir#$srcdir/}
+if [ "$tofinodir" = "$execdir" -a "$srcdir" != "." ]; then
+    die "$tofinodir is not under $srcdir"
+fi
+
+verbose=false;
+
+while [ $# -gt 1 ]; do
+    case $1 in
+    -v) verbose=true
+        ;;
+    *)  echo >&2 "unknown argument $1"
+        exit 1
+        ;;
+    esac
+    shift
+done
+
+if [ ! -r $1 ]; then
+    die "Can't read $1"
+fi
+file=$1
+
+if [ "${file#$srcdir/}" = "$file" -a "$srcdir" != "." ]; then
+    die "$file is not under $srcdir"
+fi
+
+testdir=tofino/$(dirname ${file#$srcdir/})
+name=$(basename $file .p4)
+
+P4C=./p4c-tofino
+P4C_ARGS="-D__TARGET_TOFINO__"
+if [ $(expr "$file" : ".*v1_2") -gt 0 ]; then
+    P4C_ARGS="$P4C_ARGS --p4v 1.2"
+else
+    P4C_ARGS="$P4C_ARGS -I$execdir/v1_samples/p4_lib"
+fi
+
+if [ ! -x $P4C ]; then
+    die "Can't find $P4C"
+fi
+
+if [ $(expr "$file" : ".*_errors") -gt 0 ]; then
+    if run $P4C $P4C_ARGS $file -o $testdir/$name.tfa; then
+        echo >&2 "$P4C did not give an error when expected"
+        exit 1
+    fi
+    exit 0
+fi
+
+
+run $P4C $P4C_ARGS $file -o $testdir/$name.tfa || die "$P4C failed"
+
+if [ -r ${file%.p4}.stf ]; then
+    TFAS=$(findbin tofino-asm tfas)
+    TFLN=$(findbin tofino-asm tflink)
+    STF=$(findbin model simple_test_harness)
+
+    test=`pwd`/${file%.p4}.stf
+    cd $testdir
+    mkdir -p $name.out
+
+    rm -f $name.out/*.cfg.json
+    run $TFAS -vvvvl $name.out/tfas.config.log $name.tfa || die "$TFAS failed"
+    run $TFLN $name.out/*.cfg.json -o $name.out/tofino.bin || die "$TFLN failed"
+    run $STF -l $name.out/tofino.bin -l $name.out/tbl-cfg -l $name.out/p4_name_lookup.json $test || die "$STF failed"
+fi

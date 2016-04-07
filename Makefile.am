@@ -107,7 +107,7 @@ $(srcdir)/tofinotests.am: \
    $(srcdir)/testdata/v1_errors/*.p4 \
    $(srcdir)/%reldir%/v1_2_test/*.p4 \
    $(srcdir)/%reldir%/v1_samples/*.p4
-	@$(srcdir)/tools/gen-tests.py $(srcdir) tofino $(srcdir)/%reldir%/run-tofino-sample.py $^ >$@
+	@$(srcdir)/tools/gen-tests.py $(srcdir) tofino $(srcdir)/%reldir%/runtest $^ >$@
 
 # We have additional test inputs that are used to test the other (standard) back-ends
 # These test input programs depend on Tofino in some way.
