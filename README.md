@@ -10,7 +10,7 @@ the extensions subdirectory as 'tofino':
     cd <local-name>
     mkdir -p extensions
     cd extensions
-    git clone git@github.com:barefoot/p4c-extension-tofino.git tofino
+    git clone git@github.com:barefootnetworks/p4c-extension-tofino.git tofino
     cd ..
     ./bootstrap.sh
     cd build
