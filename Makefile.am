@@ -90,7 +90,7 @@ ir_DEF_FILES += \
     $(srcdir)/%reldir%/ir/parde.def
 
 bin_PROGRAMS += p4c-tofino
-p4c_tofino_LDADD = -lgc libfrontend.a libp4ctoolkit.a 
+p4c_tofino_LDADD = -lgc libfrontend.a libp4ctoolkit.a
 p4c_tofino_SOURCES = $(tofino_backend_SOURCES)
 
 cpplint_FILES += $(tofino_backend_SOURCES)
@@ -99,8 +99,8 @@ cpplint_FILES += $(tofino_backend_SOURCES)
 
 -include $(srcdir)/tofinotests.am
 -include $(srcdir)/%reldir%/v1_2_tests.am
-#-include $(srcdir)/%reldir%/v1to12tests.am
-#-include $(srcdir)/%reldir%/bmv2tests.am
+-include $(srcdir)/%reldir%/v1to12tests.am
+-include $(srcdir)/%reldir%/bmv2tests.am
 
 $(srcdir)/tofinotests.am: \
    $(srcdir)/testdata/v1_samples/*.p4 \
@@ -114,12 +114,12 @@ $(srcdir)/tofinotests.am: \
 # FIXME -- temporarily disabled until we bring the barefoot internal and p4lang tress back in sync
 
 # Exercise v12test back-end on Tofino-specific programs
-#$(srcdir)/%reldir%/v1to12tests.am: $(srcdir)/%reldir%/v1_samples/*.p4 
-#	@$(srcdir)/tools/gen-tests.py $(srcdir) v1to12 $(srcdir)/%reldir%/test-v12-sample.sh $^ >$@
+$(srcdir)/%reldir%/v1to12tests.am: $(srcdir)/%reldir%/v1_samples/*.p4
+	@$(srcdir)/tools/gen-tests.py $(srcdir) v1to12 $(srcdir)/%reldir%/test-v12-sample.sh $^ >$@
 
 # Exercise bmv2 back-end on Tofino-specific programs
-#$(srcdir)/%reldir%/bmv2tests.am: $(srcdir)/%reldir%/v1_samples/*.p4 
-#	@$(srcdir)/tools/gen-tests.py $(srcdir) bmv2 $(srcdir)/%reldir%/test-bmv2.sh $^ >$@
+$(srcdir)/%reldir%/bmv2tests.am: $(srcdir)/%reldir%/v1_samples/*.p4
+	@$(srcdir)/tools/gen-tests.py $(srcdir) bmv2 $(srcdir)/%reldir%/test-bmv2.sh $^ >$@
 
 CLEANFILES += \
 	$(srcdir)/tofinotests.am \
@@ -140,15 +140,11 @@ XFAIL_TESTS += \
     tofino/testdata/v1_samples/02-FullPHV1.p4.test \
     tofino/testdata/v1_samples/03-FullPHV2.p4.test \
     tofino/testdata/v1_samples/truncate.p4.test \
-    bmv2/%reldir%/v1_samples/01-FlexCounter.p4.test \
-    bmv2/%reldir%/v1_samples/03-VlanProfile.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_168_meter_bug.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_124_meter_3.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_123_meter_2.p4.test \
     bmv2/%reldir%/v1_samples/test_config_125_meter_pre_color.p4.test \
     bmv2/%reldir%/v1_samples/test_config_126_meter_pre_color_2.p4.test \
     bmv2/%reldir%/v1_samples/test_config_127_meter_pre_color_3.p4.test \
     bmv2/%reldir%/v1_samples/test_config_132_meter_pre_color_4.p4.test \
+    bmv2/%reldir%/v1_samples/test_config_144_recirculate.p4.test \
     bmv2/%reldir%/v1_samples/test_config_152_stateful_simple_cntr.p4.test \
     bmv2/%reldir%/v1_samples/test_config_153_stateful_simple_cntr_with_output.p4.test \
     bmv2/%reldir%/v1_samples/test_config_154_stateful_sampling.p4.test \
@@ -157,7 +153,6 @@ XFAIL_TESTS += \
     bmv2/%reldir%/v1_samples/test_config_157_random_number_generator.p4.test \
     bmv2/%reldir%/v1_samples/test_config_159_stateful_using_phv_field.p4.test \
     bmv2/%reldir%/v1_samples/test_config_160_stateful_single_bit_mode.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_161_new_primitives.p4.test \
     bmv2/%reldir%/v1_samples/test_config_163_stateful_table_math_unit.p4.test \
     bmv2/%reldir%/v1_samples/test_config_164_stateful_deterministic_sampling.p4.test \
     bmv2/%reldir%/v1_samples/test_config_165_stateful_bfd_failure_detection.p4.test \
@@ -182,14 +177,12 @@ XFAIL_TESTS += \
     bmv2/%reldir%/v1_samples/test_config_139_tcam_error_detection_4.p4.test \
     bmv2/%reldir%/v1_samples/test_config_117_first_tcam_range.p4.test \
     bmv2/%reldir%/v1_samples/vk_basic_ipv4_20150706.p4.test \
-    bmv2/%reldir%/v1_samples/13-ResubmitMetadataSize.p4.test \
     v1to12/%reldir%/v1_samples/02-FlexCounterActionProfile.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_123_meter_2.p4.test \
     v1to12/%reldir%/v1_samples/test_config_125_meter_pre_color.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_124_meter_3.p4.test \
     v1to12/%reldir%/v1_samples/test_config_126_meter_pre_color_2.p4.test \
     v1to12/%reldir%/v1_samples/test_config_127_meter_pre_color_3.p4.test \
     v1to12/%reldir%/v1_samples/test_config_132_meter_pre_color_4.p4.test \
+    v1to12/%reldir%/v1_samples/test_config_144_recirculate.p4.test \
     v1to12/%reldir%/v1_samples/test_config_152_stateful_simple_cntr.p4.test \
     v1to12/%reldir%/v1_samples/test_config_153_stateful_simple_cntr_with_output.p4.test \
     v1to12/%reldir%/v1_samples/test_config_155_stateful_3_alus.p4.test \
@@ -202,7 +195,6 @@ XFAIL_TESTS += \
     v1to12/%reldir%/v1_samples/test_config_165_stateful_bfd_failure_detection.p4.test \
     v1to12/%reldir%/v1_samples/test_config_167_stateful_flowlet_switching.p4.test \
     v1to12/%reldir%/v1_samples/test_config_166_stateful_generic_counter.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_168_meter_bug.p4.test \
     v1to12/%reldir%/v1_samples/test_config_169_stateful_sflow_sequence.p4.test \
     v1to12/%reldir%/v1_samples/test_config_170_stateful_selection_table_update.p4.test \
     v1to12/%reldir%/v1_samples/test_config_171_stateful_conga.p4.test \
