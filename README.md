@@ -1,3 +1,25 @@
+# Setup
+
+This repo contains the tofino backend for p4c v1.2 compiler.  It contains
+*just* the backend, and can only be built within the p4c build infrastructure
+in git@github.com:p4lang/p4c.  To use this repo, first clone the
+git@github.com:p4lang/p4c.git repository, then clone this repository in
+the extensions subdirectory as 'tofino':
+
+    git clone git@github.com:p4lang/p4c.git <local-name>
+    cd <local-name>
+    mkdir -p extensions
+    cd extensions
+    git clone git@github.com:barefoot/p4c-extension-tofino.git tofino
+    cd ..
+    ./bootstrap.sh
+    cd build
+    make
+
+By having this repo present in the 'extensions' subdirectory, the p4c
+bootstrap process will automatically include the tofino backend in its
+build and testing process.
+
 # Dependences
 
 - C++ Google OR-Tools library.
@@ -16,7 +38,7 @@ sudo mv or-tools.Linux64/include/* /usr/local/include/
 - Tofino assembler and Harlyn model for testing the output of
   the Tofino backend.  The test scripts will look for sibling repos
   (in preference to installed versions), so the easiest is to
-  check out these repos in parent of the `P4` folder and build them
+  check out these repos in parent of the `p4c` folder and build them
   there:
 
 ```
