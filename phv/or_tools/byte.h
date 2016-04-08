@@ -1,7 +1,7 @@
 #ifndef _TOFINO_PHV_ORTOOLS_BYTE_H_
 #define _TOFINO_PHV_ORTOOLS_BYTE_H_
 #include "lib/cstring.h"
-#include "backends/tofino/phv/phv.h"
+#include "tofino/phv/phv.h"
 #include <cassert>
 namespace operations_research {
 class IntExpr;

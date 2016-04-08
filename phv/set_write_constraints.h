@@ -1,7 +1,7 @@
 #ifndef _TOFINO_PHV_SET_WRITE_CONSTRAINTS_H_
 #define _TOFINO_PHV_SET_WRITE_CONSTRAINTS_H_
 #include "ir/ir.h"
-#include "backends/tofino/mau/mau_visitor.h"
+#include "tofino/mau/mau_visitor.h"
 #include <set>
 namespace operations_research {
   class IntExpr;

@@ -1,9 +1,9 @@
 #ifndef _TOFINO_PHV_ORTOOLS_SOLVER_H_
 #define _TOFINO_PHV_ORTOOLS_SOLVER_H_
-#include "backends/tofino/phv/solver_interface.h"
+#include "tofino/phv/solver_interface.h"
 #include "bit.h"
 #include "byte.h"
-#include "backends/tofino/phv/phv.h"
+#include "tofino/phv/phv.h"
 #include "ir/ir.h"
 #include <constraint_solver/constraint_solver.h>
 #include <set>

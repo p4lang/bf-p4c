@@ -1,6 +1,6 @@
 #ifndef _TOFINO_PHV_EQUALITY_CONSTRAINTS_H_
 #define _TOFINO_PHV_EQUALITY_CONSTRAINTS_H_
-#include "backends/tofino/phv/phv.h"
+#include "phv.h"
 #include "solver_interface.h"
 #include "ir/ir.h"
 #include <map>
@@ -87,13 +87,22 @@ class Constraints {
   // in a PHV container. False otherwise.
   bool IsContiguous(const PHV::Bits &pbits) const;
   // Each element in this list stores a set of destination-source pairs of an
-  // action. This list expresses the single-source PHV container constraint.
+  // action. This list is used for the single-source PHV container constraint.
   std::list<std::set<std::pair<PHV::Bit, PHV::Bit>>> dst_src_pairs_;
+  // An array with 2 elements, one for ingress and one for egress. We need the
+  // thread-specific mapping because we need to add the deparser-group
+  // constraint between the bytes of two headers that belong to different
+  // threads.
   std::array<std::set<std::vector<PHV::Byte>>, 2> deparsed_headers_;
   // A vector of flags to indicate if a bit can be assigned to T-PHV. This
   // vector is indexed by BitId.
   std::vector<bool> is_t_phv_;
-  // TODO: Change these to use BitId instead of PHV::Bit.
+  // TODO: Change these to use BitId instead of PHV::Bit to save memory.
+  // The std::vector<PHV::Bit> is a vector of bits extracted by the exact match
+  // and TCAM xbar in each stage. Each vector does not contain any duplicates
+  // and does not even contain two bits that must appear in the same PHV byte.
+  // For example, if ipv4.srcAddr is used as a key in a match lookup, only 4
+  // bits (one from each byte) will appear in the std::vector<PHV::Bit>.
   std::array<std::vector<PHV::Bit>, StageUse::MAX_STAGES> exact_match_bits_;
   std::array<std::vector<PHV::Bit>, StageUse::MAX_STAGES> tcam_match_bits_;
   // Conflict matrices: A "true" indicates the the corresponding bits cannot be
@@ -113,6 +122,20 @@ class Constraints {
   // 4. They are written from actions in different tables in the same stage and
   // these tables may match on the same packet.
   std::vector<std::vector<bool>> container_conflicts_;
+  // Two bits can have bit conflicts if any of the following conditions
+  // are true:
+  // 1. They are alive in the same stage in the MAU and can be accessed by the
+  // same packet and may carry different data.
+  // 2. They appear in headers that are reachable in the parse graph.
+  // TODO: Data flow analysis: If two fields are active at the same time but
+  // are guaranteed to carry the same data, we should not add a bit conflict
+  // between them. Example: When we do set_metadata(ipv4.version, m.v); in the
+  // parser, we should not add a conflict between the corresponding bits of
+  // ipv4.version bits and m.v even though they are alive at the same time in
+  // the header and MAU stages. Only if we modify either field in the pipeline,
+  // we should add a bit-conflict. If we don't add a conflict between them and
+  // the solver overlays the 2 bits, a subsequent pass should remove the
+  // redundant "set_metadata" primitive from the IR.
   std::vector<std::vector<bool>> bit_conflicts_;
   // Helper functions to generate/retrieve a unique ID for a bit.
   BitId unique_bit_id(const PHV::Bit &bit);

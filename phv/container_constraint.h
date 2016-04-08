@@ -1,7 +1,7 @@
 #ifndef _TOFINO_PHV_CONTAINER_CONSTRAINT_H_
 #define _TOFINO_PHV_CONTAINER_CONSTRAINT_H_
 #include "ir/ir.h"
-#include "backends/tofino/mau/mau_visitor.h"
+#include "tofino/mau/mau_visitor.h"
 #include "bit_extractor.h"
 #include <set>
 class Constraints;

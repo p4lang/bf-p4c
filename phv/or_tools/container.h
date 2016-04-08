@@ -1,6 +1,6 @@
 #ifndef _TOFINO_PHV_ORTOOLS_CONTAINER_H_
 #define _TOFINO_PHV_ORTOOLS_CONTAINER_H_
-#include "backends/tofino/phv/phv.h"
+#include "tofino/phv/phv.h"
 #include "ir/ir.h"
 namespace operations_research {
 class IntExpr;

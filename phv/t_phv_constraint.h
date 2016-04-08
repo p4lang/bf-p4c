@@ -3,7 +3,7 @@
 #include "ir/ir.h"
 #include "phv.h"
 #include "constraints.h"
-#include "backends/tofino/mau/mau_visitor.h"
+#include "tofino/mau/mau_visitor.h"
 // This class inspects every IR::HeaderSliceRef object that appears in IR::MAU
 // and and prevents all bits its bits from being allocated to T-PHV.
 class TPhvConstraint : public MauInspector {

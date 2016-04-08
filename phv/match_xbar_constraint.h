@@ -1,6 +1,6 @@
 #ifndef _TOFINO_PHV_MATCH_XBAR_CONSTRAINT_H_
 #define _TOFINO_PHV_MATCH_XBAR_CONSTRAINT_H_
-#include "backends/tofino/mau/mau_visitor.h"
+#include "tofino/mau/mau_visitor.h"
 #include "ir/ir.h"
 #include "phv.h"
 #include <set>

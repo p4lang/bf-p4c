@@ -69,13 +69,51 @@ tofino_backend_SOURCES = \
 	%reldir%/parde/split_header.h \
 	%reldir%/phv/asm_output.cpp \
 	%reldir%/phv/asm_output.h \
+	%reldir%/phv/bit_extractor.cpp \
+	%reldir%/phv/bit_extractor.h \
+	%reldir%/phv/byte_constraint.cpp \
+	%reldir%/phv/byte_constraint.h \
+	%reldir%/phv/container_constraint.cpp \
+	%reldir%/phv/container_constraint.h \
 	%reldir%/phv/create_thread_local_instances.cpp \
 	%reldir%/phv/create_thread_local_instances.h \
+	%reldir%/phv/constraints.cpp \
+	%reldir%/phv/constraints.h \
+	%reldir%/phv/match_xbar_constraint.cpp \
+	%reldir%/phv/match_xbar_constraint.h \
+	%reldir%/phv/mau_group_constraint.cpp \
+	%reldir%/phv/mau_group_constraint.h \
+	%reldir%/phv/offset_constraint.cpp \
+	%reldir%/phv/offset_constraint.h \
+	%reldir%/phv/parse_graph_constraint.cpp \
+	%reldir%/phv/parse_graph_constraint.h \
+	%reldir%/phv/source_container_constraint.cpp \
+	%reldir%/phv/source_container_constraint.h \
+	%reldir%/phv/set_write_constraints.cpp \
+	%reldir%/phv/set_write_constraints.h \
+	%reldir%/phv/t_phv_constraint.h \
+	%reldir%/phv/header_bit.cpp \
+	%reldir%/phv/header_bit.h \
+	%reldir%/phv/header_bits.cpp \
+	%reldir%/phv/header_bits.h \
+	%reldir%/phv/header_bit_creator.h \
 	%reldir%/phv/header_fragment_creator.cpp \
 	%reldir%/phv/header_fragment_creator.h \
+	%reldir%/phv/or_tools/bit.cpp \
+	%reldir%/phv/or_tools/bit.h \
+	%reldir%/phv/or_tools/container.cpp \
+	%reldir%/phv/or_tools/container.h \
+	%reldir%/phv/or_tools/mau_group.cpp \
+	%reldir%/phv/or_tools/mau_group.h \
+	%reldir%/phv/or_tools/min_value_solver.h \
+	%reldir%/phv/or_tools/random_value_solver.h \
+	%reldir%/phv/or_tools/solver.cpp \
+	%reldir%/phv/or_tools/solver.h \
 	%reldir%/phv/phv.h \
 	%reldir%/phv/phv_allocate.cpp \
 	%reldir%/phv/phv_allocate.h \
+	%reldir%/phv/phv_allocator.cpp \
+	%reldir%/phv/phv_allocator.h \
 	%reldir%/phv/phv_fields.cpp \
 	%reldir%/phv/phv_fields.h \
 	%reldir%/phv/split_phv_use.h \
