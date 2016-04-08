@@ -14,7 +14,7 @@ class Bit {
  public:
   Bit(const cstring &name) :
     container_(nullptr), base_offset_(nullptr), offset_(nullptr),
-    byte_(nullptr), name_(name) { }
+    byte_(nullptr), bit_(nullptr), name_(name) { }
   cstring name() const { return name_; }
   void set_container(Container *container);
   Container *container() const { return container_; }
@@ -38,6 +38,8 @@ class Bit {
   operations_research::IntVar *SetFirstDeparsedHeaderByte();
   operations_research::IntVar *
   SetDeparsedHeader(const Bit &prev_bit, const Byte &prev_byte);
+  // Sets conflicts between 2 bits from the bit-conflict matrix.
+  void SetConflict(Bit &bit);
   // Compare two bit objects.
   bool operator!=(const Bit &bit) const { return bit.name() != name(); }
  private:
@@ -56,6 +58,11 @@ class Bit {
   int relative_offset_;
   // Pointer to or_tools::Byte object for this bit.
   Byte *byte_;
+  // This is a value in the range [0, MaxContainerNumber * 32). It is unique
+  // for every bit in every PHV container.
+  operations_research::IntExpr *bit_;
+  // Returns bit_. If bit_ was nullptr, it creates an IntExpr object.
+  operations_research::IntExpr *MakeBit();
 
   const cstring name_;
 };

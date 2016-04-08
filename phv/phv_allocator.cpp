@@ -6,6 +6,7 @@
 #include "match_xbar_constraint.h"
 #include "mau_group_constraint.h"
 #include "offset_constraint.h"
+#include "parse_graph_constraint.h"
 #include "source_container_constraint.h"
 #include "t_phv_constraint.h"
 #include "or_tools/min_value_solver.h"
@@ -101,6 +102,8 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
   // Set MAU match xbar constraints.
   MatchXbarConstraint smxc(constraints_);
   pipe->apply(smxc);
+  ParseGraphConstraint pgc(constraints_);
+  pipe->apply(pgc);
 //BitOffsetConstraint boc(constraints_);
 //pipe->apply(boc);
 
@@ -141,7 +144,7 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
 
 bool PhvAllocator::Solve(const IR::Tofino::Pipe *pipe, PhvInfo *phv_info) {
   LOG1("Trying MIN_VALUE");
-  or_tools::RandomValueSolver solver;
+  or_tools::MinValueSolver solver;
   constraints_.SetConstraints(solver);
   int count = 0;
   while (count < 10) {

@@ -29,8 +29,14 @@ void SourceContainerConstraint::postorder(const IR::ActionFunction *af) {
   // set() primitives in an action.
   for (auto it = dst_src_pairs_.begin(); it != dst_src_pairs_.end(); ++it) {
     for (auto it2 = dst_src_pairs_.begin(); it2 != it; ++it2) {
+      // Note that when is_equal() returns false, it means that the two bits
+      // may or may not be in the same container.
       auto is_equal = std::bind(&Constraints::IsEqual, &constraints_, _1, _2,
                                 Constraints::CONTAINER);
+      // For every pair of source-destination pairs, we need to handle 3 cases:
+      // Case 1. Both destinations must be allocated to the same PHV container.
+      // In this case is_equal(dst1, dst2) is true. Both sources must go into
+      // same container.
       if ((true == is_equal(it->first, it2->first)) &&
           (false == is_equal(it->second, it2->second))) {
         LOG2("Setting sources " << it->second << " and " << it2->second <<
@@ -39,14 +45,45 @@ void SourceContainerConstraint::postorder(const IR::ActionFunction *af) {
         // The distance between the source bits and destination bits must be
         // equal.
         bool is_valid;
-        int distance;
-        std::tie(distance, is_valid) = constraints_.GetDistance(it->first,
+        int dst_dist, src_dist;
+        std::tie(dst_dist, is_valid) = constraints_.GetDistance(it->first,
                                                                 it2->first);
         CHECK(true == is_valid) << ": Unknown distance between " << it->first <<
           " and " << it2->first;
-        constraints_.SetDistance(it->second, it2->second, distance);
+        std::tie(src_dist, is_valid) = constraints_.GetDistance(it->second,
+                                                                it2->second);
+        if (true == is_valid) {
+          // FIXME: This must be changed into a compiler error message.
+          CHECK(src_dist == dst_dist) << ": Conflicting write constraints";
+        }
         is_updated_ = true;
       }
+      // Case 2. Destinations must be allocated to different containers. This is
+      // usually because there is a container conflict between the two sources.
+      // IsContainerConflict(src1, src2) is true. Now, both destinations must
+      // go into different containers.
+      if ((true == constraints_.IsContainerConflict(it->second, it2->second)) &&
+          (false == constraints_.IsContainerConflict(it->first, it2->first))) {
+        // FIXME: The assertion below fails if the source containers must be
+        // unequal and the destination containers must be equal. This violates
+        // single write constraint. This must be changed into a compiler error
+        // message.
+        CHECK(false == is_equal(it->first, it2->first)) <<
+          ": Different distination containers for " << it->second << " and " <<
+          it2->second << " in " << (*af);
+        LOG2("Setting destination container conflict for " << it->first <<
+               " and " << it2->first);
+        constraints_.SetContainerConflict(it->first, it2->first);
+        is_updated_ = true;
+      }
+      // Case 3. The sources and destinations may or may not be in same PHV
+      // container. Under this case, is_equal(dst1, dst2) is false and
+      // IsContainerConflict(src1, src2) is false. We need to add a conditional
+      // constraint: If dst1 and dst2 got into same container, src1 and src2
+      // must be in same container. Also:
+      //  offset of dst1 - offset of src1 == offset of dst2 - offset of src2.
+      // This case must be handled in a subsequent pass after all case 1 and
+      // case 2 have been identified.
     }
   }
   dst_src_pairs_.clear();

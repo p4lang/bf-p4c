@@ -37,9 +37,6 @@ class Constraints {
   }
   void SetOffset(const PHV::Bit &bit, const int &min, const int &max);
   void SetContiguousBits(const PHV::Bits &bits);
-  // The bits are being passed by value since we might need to swap them inside
-  // the function body.
-  void SetDistance(PHV::Bit b1, PHV::Bit b2, const int &d);
   std::pair<int, bool>
   GetDistance(const PHV::Bit &b1, const PHV::Bit &b2) const;
   // This function sets is_t_phv_ for bit to false.
@@ -49,6 +46,11 @@ class Constraints {
   // in TCAM and exact match tables.
   void SetExactMatchBits(const int &stage, const std::set<PHV::Bit> &bits);
   void SetTcamMatchBits(const int &stage, const std::set<PHV::Bit> &bits);
+
+  // Sets/get conflict between the two bits.
+  void SetContainerConflict(const PHV::Bit &b1, const PHV::Bit &b2);
+  bool IsContainerConflict(const PHV::Bit &b1, const PHV::Bit &b2) const;
+  void SetBitConflict(const PHV::Bit &b1, const PHV::Bit &b2);
 
   void SetConstraints(SolverInterface &solver);
   template<class T> void
@@ -62,6 +64,12 @@ class Constraints {
   PHV::Byte GetByte(const PHV::Bit &b) const;
   void SetMatchBits(const std::set<PHV::Bit> &bits, std::vector<PHV::Bit> *v);
   // Data structures to store constraints.
+  // Each map in the array stores an equality constraint (equality of MAU
+  // groups, containers or offsets inside a container). For example, if
+  // equalities_[Equal::OFFSET] has an entry ipv4[0] : std::set({inner_ipv4[0],
+  // ipv6[0]}), then it means that the first bit of ipv4, inner_ipv4 and ipv6
+  // needs to be allocated at the same offset inside a container. However, they
+  // need not be allocated to the same container.
   std::map<PHV::Bit, std::set<PHV::Bit>> equalities_[NUM_EQUALITIES];
   std::set<PHV::Byte> byte_equalities_;
   // The 2 std::map objects below store constraints on bits. A bit can contain
@@ -88,12 +96,30 @@ class Constraints {
   // TODO: Change these to use BitId instead of PHV::Bit.
   std::array<std::vector<PHV::Bit>, StageUse::MAX_STAGES> exact_match_bits_;
   std::array<std::vector<PHV::Bit>, StageUse::MAX_STAGES> tcam_match_bits_;
-  // Helper function to generate/retrieve a unique ID for a bit.
+  // Conflict matrices: A "true" indicates the the corresponding bits cannot be
+  // allocated to the same PHV container/bit. The inner and outer vectors in
+  // both conflict matrices are indexed by BitId. Example: If
+  // container_conflicts_[i][j] is true, bits_[i] and bits_[j] cannot be
+  // allocated to the same PHV container.
+  // Two bits can have container conflicts if any of the following conditions
+  // are true:
+  // 1.They appear in different headers which are deparsed and may appear in
+  // the same packet.
+  // 2. They are written to (using modify_field) in the same action from two
+  // bits which have a container conflict. See case 2 in
+  // source_container_constraint.cpp.
+  // 3. They appear in a header that is deparsed but they are more than 32b
+  // apart in the header.
+  // 4. They are written from actions in different tables in the same stage and
+  // these tables may match on the same packet.
+  std::vector<std::vector<bool>> container_conflicts_;
+  std::vector<std::vector<bool>> bit_conflicts_;
+  // Helper functions to generate/retrieve a unique ID for a bit.
+  BitId unique_bit_id(const PHV::Bit &bit);
+  BitId unique_bit_id(const PHV::Bit &bit) const;
   BitId unique_bit_id_counter_;
   std::map<PHV::Bit, BitId> uniq_bit_ids_;
   std::vector<PHV::Bit> bits_;
-  BitId unique_bit_id(const PHV::Bit &bit);
-  BitId unique_bit_id(const PHV::Bit &bit) const;
 };
 template<> void
 Constraints::SetEqual<PHV::Bit>(const PHV::Bit &bit1, const PHV::Bit &bit2,

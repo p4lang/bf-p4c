@@ -34,8 +34,12 @@ class SolverInterface {
   // exist in the same container can never share the same match xbar byte.
   virtual void SetMatchXbarWidth(const std::vector<PHV::Bit> &bits,
                                  const std::array<int, 4> &width) = 0;
-  // This function must prevent the bit from being allocated to T-PHV.
+  // Prevents the bit from being allocated to T-PHV.
   virtual void SetNoTPhv(const PHV::Bit &bit) = 0;
+  // Tells the solver not to allocate pb1 and pb2 to the same PHV container.
+  virtual void
+  SetContainerConflict(const PHV::Bit &pb1, const PHV::Bit &pb2) = 0;
+  virtual void SetBitConflict(const PHV::Bit &pb1, const PHV::Bit &pb2) = 0;
   // Function for getting the allocation that a bit that satisfies all
   // constraints.
   virtual void

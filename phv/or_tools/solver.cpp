@@ -2,6 +2,7 @@
 #include "mau_group.h"
 #include "container.h"
 #include "lib/log.h"
+#include <list>
 namespace or_tools {
 int Solver::unique_id_ = 0;
 
@@ -43,12 +44,23 @@ void Solver::SetOffset(const PHV::Bit &pbit, const std::vector<int> &values) {
   if (nullptr != bit.base_offset()) {
     std::vector<int64> v(32);
     std::iota(v.begin(), v.end(), 0);
+    CHECK(bit.relative_offset() >= 0) << ": Wrong relative offset for " << pbit;
     for (auto i : values) {
-      v.erase(std::find(v.begin(), v.end(), i - bit.relative_offset()));
+      const int value = i - bit.relative_offset();
+      if (value >= 0) {
+        auto it = std::find(v.begin(), v.end(), value);
+        CHECK(v.end() != it) << ": No offset " << value << " for " << pbit;
+        v.erase(it);
+      }
     }
-    // At this point, bit cannot be allocated a base_offset from v. So, remove
-    // v from the domain of bit.base_offset().
-    bit.base_offset()->RemoveValues(v);
+    for (auto i : v) {
+      if (true == bit.base_offset()->Contains(i)) {
+        LOG2("Removing " << i << " from domain of " << bit.base_offset());
+        // At this point, bit cannot be allocated a base_offset from v. So,
+        // remove v from the domain of bit.base_offset().
+        bit.base_offset()->RemoveValue(i);
+      }
+    }
   }
   else bit.set_offset(MakeOffset(bit.name(), values), 0);
 }
@@ -341,6 +353,17 @@ void Solver::SetNoTPhv(const PHV::Bit &bit) {
   else WARNING("Cannot find Bit for " << bit.name());
 }
 
+void Solver::SetContainerConflict(const PHV::Bit &pb1, const PHV::Bit &pb2) {
+  LOG2("Setting container conflict between " << pb1 << " and " << pb2);
+  bits_.at(pb2).container()->SetConflict(bits_.at(pb1).container());
+}
+
+void Solver::SetBitConflict(const PHV::Bit &pb1, const PHV::Bit &pb2) {
+  LOG2("Setting bit conflict between " << pb1 << " and " << pb2);
+  Bit *b1 = MakeBit(pb1), *b2 = MakeBit(pb2);
+  b1->SetConflict(*b2);
+}
+
 void Solver::SetContainerWidthConstraints() {
   std::map<std::pair<IntVar*, IntVar*>, Bit*> mau_group_offsets;
   for (auto &b : bits_) {
@@ -420,10 +443,9 @@ Solver::Solve1(operations_research::Solver::IntValueStrategy int_val,
 }
 
 std::vector<IntVar*> Solver::GetIntVars() const {
-  std::vector<IntVar*> rv;
+  std::list<IntVar*> rv;
   // Collect constraint variables.
-  std::vector<IntVar*> group_vars(mau_groups());
-  std::random_shuffle(group_vars.begin(), group_vars.end());
+  std::vector<IntVar*> group_vars(GetMauGroups());
   while (group_vars.size() != 0) {
     rv.push_back(*group_vars.begin());
     auto vars2 = containers_and_offsets(*group_vars.begin());
@@ -432,17 +454,29 @@ std::vector<IntVar*> Solver::GetIntVars() const {
   }
   for (auto &v : rv) {
     CHECK(nullptr != v) << "; Found nullptr in variable vector";
-    LOG2("intvar vec: " << v->name());
-  }
-  return rv;
-}
-
-std::vector<IntVar*> Solver::mau_groups() const {
-  std::set<IntVar*> rv;
-  for (auto &b : bits_) {
-    rv.insert(b.second.mau_group()->mau_group());
+    LOG2("intvar vec: " << v->name() << v);
   }
   return std::vector<IntVar*>(rv.begin(), rv.end());
+}
+
+std::vector<IntVar*> Solver::GetMauGroups() const {
+  std::set<IntVar*> t_phv_groups, phv_groups;
+  for (auto &b : bits_) {
+    MauGroup *mg = b.second.mau_group();
+    std::set<IntVar*> *l = &phv_groups;
+    if (mg->is_t_phv()) l = &t_phv_groups;
+    l->insert(mg->mau_group());
+  }
+  std::vector<IntVar*> rv(phv_groups.begin(), phv_groups.end());
+  // FIXME: Set the seed.
+  std::random_shuffle(rv.begin(), rv.end());
+  // Push the T-PHV eligible MAU groups to the end of the list.
+  // TODO: This is just a heuristic. We must try other strategies that allocate
+  // T-PHV container before PHV.
+  std::vector<IntVar*> rv2(t_phv_groups.begin(), t_phv_groups.end());
+  std::random_shuffle(rv2.begin(), rv2.end());
+  rv.insert(rv.end(), rv2.begin(), rv2.end());
+  return rv;
 }
 
 std::vector<IntVar*>

@@ -57,6 +57,22 @@ void Container::set_mau_group(MauGroup *mg) {
   mau_group_ = mg;
 }
 
+void Container::SetConflict(Container *c) {
+  Solver *solver = container_in_group_->solver();
+  CHECK(this != c) << ": Cannot set conflict between equal containers" <<
+    container_in_group()->name();
+  CHECK(container_in_group() != c->container_in_group()) <<
+    ": Cannot set non-equality with " << container_in_group()->name();
+  if (c->mau_group() == mau_group()) {
+    solver->AddConstraint(
+      solver->MakeNonEquality(container_in_group(), c->container_in_group()));
+  }
+  else {
+    solver->AddConstraint(
+      solver->MakeNonEquality(container(), c->container()));
+  }
+}
+
 PHV::Container Container::Value() const {
   return PHV::Container(mau_group()->mau_group()->Value(),
                         container_in_group()->Value());

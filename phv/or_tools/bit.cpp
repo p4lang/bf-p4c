@@ -143,4 +143,26 @@ IntVar *Bit::SetDeparsedHeader(const Bit &prev_bit, const Byte &prev_byte) {
   return solver->MakeIsEqualVar(solver->MakeSum(last_bytes),
                                 solver->MakeIntConst(1));
 }
+
+void Bit::SetConflict(Bit &bit) {
+  operations_research::Solver *s = base_offset()->solver();
+  CHECK(nullptr != s) << ": No solver for " << name();
+  if (bit.container() != container()) {
+    s->AddConstraint(s->MakeNonEquality(MakeBit(), bit.MakeBit()));
+  }
+  else if (bit.base_offset() == base_offset_) {
+    CHECK(bit.relative_offset() != relative_offset()) <<
+      ": Cannot add conflict between " << bit.name() << " and " << name();
+  }
+  else s->AddConstraint(s->MakeNonEquality(offset(), bit.offset()));
+}
+
+IntExpr *Bit::MakeBit() {
+  if (nullptr == bit_) {
+    operations_research::Solver *s = base_offset()->solver();
+    bit_ = s->MakeSum(
+             s->MakeProd(container_->container(), PHV::kMaxContainer), offset_);
+  }
+  return bit_;
+}
 }

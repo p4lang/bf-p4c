@@ -19,6 +19,7 @@ class Container {
   operations_research::IntExpr *deparser_group(const gress_t &thread);
   void set_mau_group(MauGroup *mg);
   MauGroup *mau_group() const { return mau_group_; }
+  void SetConflict(Container *c);
   // Returns the value assigned to this container by the solver. Must be called
   // only after a solution has been found.
   PHV::Container Value() const;
@@ -37,7 +38,9 @@ class Container {
   // greater than PHV::kNumDeparserGroups but cannot take values in
   // PHV::kSharedDeparserGroups.
   operations_research::IntExpr *deparser_group_;
-  // This object store MAU group related constraint variables.
+  // This object store MAU group related constraint variables. Container
+  // objects that are constrained to the same MAU group must point to the same
+  // or_tools::MauGroup object.
   MauGroup *mau_group_;
 };
 }

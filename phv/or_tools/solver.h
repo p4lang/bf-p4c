@@ -62,6 +62,10 @@ class Solver : public SolverInterface {
                          const std::array<int, 4> &width) override;
   // Creates constraints to prevent allocating bit to T-PHV.
   void SetNoTPhv(const PHV::Bit &bit) override;
+  // Creates a constraints to prevent allocating the two bits into the same PHV
+  // container.
+  void SetContainerConflict(const PHV::Bit &pb1, const PHV::Bit &pb2) override;
+  void SetBitConflict(const PHV::Bit &pb1, const PHV::Bit &pb2) override;
   // Retrieve the allocation for bit. This function can be called only after a
   // solution has been found.
   void allocation(const PHV::Bit &bit, PHV::Container *c, int *container_bit);
@@ -71,7 +75,7 @@ class Solver : public SolverInterface {
          const bool &is_luby_restart = true);
  private:
   std::vector<operations_research::IntVar*> GetIntVars() const;
-  std::vector<operations_research::IntVar*> mau_groups() const;
+  std::vector<operations_research::IntVar*> GetMauGroups() const;
   std::vector<operations_research::IntVar*>
   containers_and_offsets(operations_research::IntVar *mau_group) const;
   // Creates variables/constraints to allocate all members of bits to the same

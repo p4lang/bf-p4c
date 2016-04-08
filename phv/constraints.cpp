@@ -11,28 +11,31 @@ void Constraints::SetEqualByte(const PHV::Byte &byte) {
   // bits.
   SetContiguousBits(byte.valid_bits());
   const int d = std::distance(byte.cbegin(), byte.cfirst());
-  std::vector<int> v({{0, 8, 16, 24}});
-  for (auto &i : v) i += d;
+  std::vector<int> domain({{0, 8, 16, 24}});
+  for (auto &i : domain) i += d;
   const PHV::Bit &bit = *(byte.cfirst());
   if (bit_offset_domain_.count(bit) != 0) {
     const std::vector<int> &v2 = bit_offset_domain_.at(bit);
     for (int i = 0; i < 32; ++i) {
-      auto e = std::find(v.begin(), v.end(), i);
-      if (e != v.end() && std::find(v2.begin(), v2.end(), i) == v2.end()) {
-        v.erase(e);
+      auto e = std::find(domain.begin(), domain.end(), i);
+      if (e != domain.end() && std::find(v2.begin(), v2.end(), i) == v2.end()) {
+        domain.erase(e);
       }
     }
     bit_offset_domain_.erase(bit);
   }
   if (bit_offset_range_.count(bit) != 0) {
-    while (v.front() < bit_offset_range_.at(bit).first) v.erase(v.begin());
-    while (v.back() > bit_offset_range_.at(bit).second) v.pop_back();
+    while (domain.front() < bit_offset_range_.at(bit).first) {
+      domain.erase(domain.begin());
+    }
+    while (domain.back() > bit_offset_range_.at(bit).second) domain.pop_back();
     bit_offset_range_.erase(bit);
   }
   CHECK(bit_offset_domain_.count(bit) == 0);
   // TODO: Change this to compiler error message.
-  CHECK(v.size() > 0) << ": No valid offset found for " << bit;
-  bit_offset_domain_.insert(std::make_pair(bit, v));
+  CHECK(domain.size() > 0) << ": No valid offset found for " << bit;
+  LOG2("Setting bit-offset domain for " << bit.name());
+  bit_offset_domain_.insert(std::make_pair(bit, domain));
   // TODO: byte_equalities_ is currently used to determine if 2 bits must be
   // allocated to the same byte of a PHV container. This is redundant. We could
   // use the offset constraints and contiguous bits constraints to figure this
@@ -117,6 +120,7 @@ Constraints::SetConstraints(const Equal &e, T set_equal,
 
 void
 Constraints::SetOffset(const PHV::Bit &bit, const int &min, const int &max) {
+  LOG2("Setting range for " << bit);
   if (bit_offset_domain_.count(bit) != 0) {
     // This bit already has an entry in bit_offset_domain_. Just prune values
     // outside the [min, max] range.
@@ -138,29 +142,6 @@ void Constraints::SetContiguousBits(const PHV::Bits &bits) {
   if (false == bits.empty()) {
     LOG2("Setting contiguous bits " << bits << " of size " << bits.size());
     contiguous_bits_.push_back(bits);
-  }
-}
-
-void
-Constraints::SetDistance(PHV::Bit b1, PHV::Bit b2, const int &d) {
-  bool is_valid;
-  int d2;
-  std::tie(d2, is_valid) = GetDistance(b1, b2);
-  if (is_valid) {
-    // FIXME: This should become a compiler error message.
-    CHECK(d == d2) << ": Contradicting offsets for " << b1 << " and " << b2;
-  }
-  else {
-    if (d < 0) std::swap(b1, b2);
-    if (d == 0) SetEqual(b1, b2, Equal::OFFSET);
-    else {
-      LOG2("Setting distance " << std::abs(d) << " between " << b1 << " and " <<
-             b2);
-      PHV::Bits bits(std::abs(d) + 1);
-      bits.front() = b1;
-      bits.back() = b2;
-      SetContiguousBits(bits);
-    }
   }
 }
 
@@ -195,6 +176,32 @@ void Constraints::SetTcamMatchBits(const int &stage,
          " TCAM match bits in stage " << stage);
 }
 
+void
+Constraints::SetContainerConflict(const PHV::Bit &b1, const PHV::Bit &b2) {
+  LOG2("Setting container conflict between " << b1 << " and " << b2);
+  BitId bit_min = std::min(unique_bit_id(b1), unique_bit_id(b2));
+  BitId bit_max = std::max(unique_bit_id(b1), unique_bit_id(b2));
+  container_conflicts_.at(bit_max).at(bit_min) = true;
+}
+
+bool
+Constraints::IsContainerConflict(const PHV::Bit &b1, const PHV::Bit &b2) const {
+  // If either bit does not have an entry in the conflict matrix, just return
+  // false. It probably does not have any conflicting constraints.
+  if (uniq_bit_ids_.count(b1) == 0) return false;
+  if (uniq_bit_ids_.count(b2) == 0) return false;
+  BitId bit_min = std::min(unique_bit_id(b1), unique_bit_id(b2));
+  BitId bit_max = std::max(unique_bit_id(b1), unique_bit_id(b2));
+  return container_conflicts_.at(bit_max).at(bit_min);
+}
+
+void Constraints::SetBitConflict(const PHV::Bit &b1, const PHV::Bit &b2) {
+  LOG2("Setting bit conflict between " << b1 << " and " << b2);
+  BitId bit_min = std::min(unique_bit_id(b1), unique_bit_id(b2));
+  BitId bit_max = std::max(unique_bit_id(b1), unique_bit_id(b2));
+  bit_conflicts_.at(bit_max).at(bit_min) = true;
+}
+
 void Constraints::SetConstraints(SolverInterface &solver) {
   struct {
     void SetEqualOffset(const PHV::Bit &b,
@@ -216,18 +223,22 @@ void Constraints::SetConstraints(SolverInterface &solver) {
   SetConstraints(Equal::MAU_GROUP, std::bind(&SolverInterface::SetEqualMauGroup,
                                              &solver, _1, _2),
                  std::set<PHV::Bit>());
+  LOG1("Setting bit-offset domains");
   for (auto &b : bit_offset_domain_) {
     solver.SetOffset(b.first, b.second);
     eq_offsets.SetEqualOffset(b.first, equalities_[Equal::OFFSET], solver);
   }
+  LOG1("Setting bit-offset ranges");
   for (auto &b : bit_offset_range_) {
     solver.SetOffset(b.first, b.second.first, b.second.second);
     eq_offsets.SetEqualOffset(b.first, equalities_[Equal::OFFSET], solver);
   }
+  LOG1("Setting contiguous bits constraints");
   for (auto &bits : contiguous_bits_) {
     CHECK(false == bits.empty()) << ": PHV::Bits is empty";
     const PHV::Bit b1 = bits.front();
     CHECK(true == b1.IsValid()) << ": First bit in sequence is invalid";
+    CHECK(b1 == *(bits.cbegin())) << ": Unexpected first bit " << b1;
     PHV::Bits::const_iterator b2 = std::next(bits.cbegin());
     eq_offsets.SetEqualOffset(b1, equalities_[Equal::OFFSET], solver);
     while (b2 != bits.cend()) {
@@ -279,15 +290,81 @@ void Constraints::SetConstraints(SolverInterface &solver) {
   for (auto &b : uniq_bit_ids_) {
     if (false == is_t_phv_.at(b.second)) solver.SetNoTPhv(b.first);
   }
+  // Set container conflicts.
+  std::set<std::pair<PHV::Bit, PHV::Bit>> conflicts;
+  for (BitId bid = 0; bid < bits_.size(); ++bid) {
+    for (BitId bid2 = 0; bid2 < bid; ++bid2) {
+      PHV::Bit b1 = bits_.at(bid);
+      PHV::Bit b2 = bits_.at(bid2);
+      if (true == container_conflicts_.at(bid).at(bid2) &&
+          conflicts.count(std::make_pair(b1, b2)) == 0 &&
+          conflicts.count(std::make_pair(b2, b1)) == 0) {
+        auto &ceq = equalities_[Equal::CONTAINER];
+        // FIXME: This has to be changed to a compiler error message. The user
+        // has probably written a program which imposes conflicting constraints
+        // on b1 and b2.
+        CHECK(ceq.count(b1) == 0 || ceq.at(b1).count(b2) == 0) <<
+          ": Cannot add conflict between " << b1.name() << " and " << b2.name();
+        solver.SetContainerConflict(b1, b2);
+        // The following code is needed to prevent reporting redundant
+        // conflicts. After setting a conflict between b1 and b2, we do not
+        // need to set a container conflict between any bits that share a
+        // container with b1 and any bits that share a container with b2. So,
+        // we add combinations of b1's and b2's container-mates to the reported
+        // conflicts set.
+        std::set<PHV::Bit> b1_set({b1});
+        std::set<PHV::Bit> b2_set({b2});
+        if (ceq.count(b1) != 0) {
+          b1_set.insert(ceq.at(b1).begin(), ceq.at(b1).end());
+        }
+        if (ceq.count(b2) != 0) {
+          b2_set.insert(ceq.at(b2).begin(), ceq.at(b2).end());
+        }
+        for (auto e1 : b1_set) {
+          for (auto e2 : b2_set) conflicts.insert(std::make_pair(e1, e2));
+        }
+      }
+      else if (true == container_conflicts_.at(bid).at(bid2)) {
+        LOG2("Ignoring redundant conflict between " << bits_.at(bid) <<
+               " and " << bits_.at(bid2));
+      }
+    }
+  }
+  for (BitId bid = 0; bid < bits_.size(); ++bid) {
+    for (BitId bid2 = 0; bid2 < bid; ++bid2) {
+      PHV::Bit b1 = bits_.at(bid);
+      PHV::Bit b2 = bits_.at(bid2);
+      if (true == bit_conflicts_.at(bid).at(bid2) &&
+          conflicts.count(std::make_pair(b1, b2)) == 0 &&
+          conflicts.count(std::make_pair(b2, b1)) == 0) {
+        solver.SetBitConflict(b1, b2);
+      }
+    }
+  }
 }
 
 Constraints::BitId Constraints::unique_bit_id(const PHV::Bit &bit) {
   if (uniq_bit_ids_.count(bit) == 0) {
     uniq_bit_ids_.insert(std::make_pair(bit, unique_bit_id_counter_));
+    // Check that the initial sizes of all vectors were OK.
     CHECK(bits_.size() == unique_bit_id_counter_);
+    CHECK(is_t_phv_.size() == (unique_bit_id_counter_));
     bits_.push_back(bit);
-    CHECK(is_t_phv_.size() == (unique_bit_id_counter_++));
     is_t_phv_.push_back(true);
+    // Set the container-conflict vector for the new bit.
+    CHECK(container_conflicts_.size() == (unique_bit_id_counter_));
+    container_conflicts_.push_back(std::vector<bool>());
+    auto &v = container_conflicts_.at(unique_bit_id_counter_);
+    v.resize(unique_bit_id_counter_);
+    std::fill(v.begin(), v.end(), false);
+    // Set the bit-conflict vector for the new bit.
+    CHECK(bit_conflicts_.size() == (unique_bit_id_counter_));
+    bit_conflicts_.push_back(std::vector<bool>());
+    auto &v2 = bit_conflicts_.at(unique_bit_id_counter_);
+    v2.resize(unique_bit_id_counter_);
+    std::fill(v2.begin(), v2.end(), false);
+    CHECK(v.size() == unique_bit_id_counter_) << ": Wrong size " << v.size();
+    ++unique_bit_id_counter_;
   }
   return const_cast<const Constraints*>(this)->uniq_bit_ids_.at(bit);
 }

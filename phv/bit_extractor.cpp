@@ -23,11 +23,22 @@ BitExtractor::GetBitPairs(const IR::Expression *e1,
 }
 
 std::list<PHV::Bit> BitExtractor::GetBits(const IR::Expression *e1) const {
+  int lsb = 0, msb = -1;
+  cstring header_name;
   const IR::HeaderSliceRef *hsr = e1->to<IR::HeaderSliceRef>();
+  const IR::HeaderRef *hr = e1->to<IR::HeaderRef>();
+  if (nullptr != hsr) {
+    lsb = hsr->lsb();
+    msb = hsr->msb();
+    header_name = hsr->header_ref()->toString();
+  }
+  else if (hr != nullptr) {
+    msb = hr->type->width_bits() - 1;
+    header_name = hr->toString();
+  }
   std::list<PHV::Bit> bits;
-  if (nullptr == hsr) return bits;
-  for (int i = hsr->lsb(); i <= hsr->msb(); ++i) {
-    bits.emplace_back(hsr->header_ref()->toString(), i);
+  for (int i = lsb; i <= msb; ++i) {
+    bits.emplace_back(header_name, i);
   }
   return bits;
 }
