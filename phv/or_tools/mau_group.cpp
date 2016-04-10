@@ -1,5 +1,6 @@
 #include "mau_group.h"
 #include "tofino/phv/phv.h"
+#include "lib/log.h"
 #include <constraint_solver/constraint_solver.h>
 namespace or_tools {
 using operations_research::IntVar;
@@ -18,14 +19,21 @@ MauGroup::MauGroup(IntVar *mg) : mau_group_(mg), is_t_phv_(true) {
 }
 
 void MauGroup::SetIngressDeparser() {
+  CHECK(PHV::kEgressOnlyMauGroups.size() == 3) << ": Wrong egress group size";
   for (auto i : PHV::kEgressOnlyMauGroups) {
-    if (true == mau_group_->Contains(i)) mau_group_->RemoveValue(i);
+    if (true == mau_group_->Contains(i)) {
+      LOG2("Removing egress-only group " << i << " for " << mau_group_);
+      mau_group_->RemoveValue(i);
+    }
   }
 }
 
 void MauGroup::SetEgressDeparser() {
   for (auto i : PHV::kIngressOnlyMauGroups) {
-    if (true == mau_group_->Contains(i)) mau_group_->RemoveValue(i);
+    if (true == mau_group_->Contains(i)) {
+      LOG2("Removing ingress-only group " << i << " for " << mau_group_);
+      mau_group_->RemoveValue(i);
+    }
   }
 }
 

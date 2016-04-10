@@ -81,10 +81,12 @@ void SourceContainerConstraint::postorder(const IR::ActionFunction *af) {
       // IsContainerConflict(src1, src2) is false. We need to add a conditional
       // constraint: If dst1 and dst2 got into same container, src1 and src2
       // must be in same container. Also:
-      //  offset of dst1 - offset of src1 == offset of dst2 - offset of src2.
-      // This case must be handled in a subsequent pass after all case 1 and
-      // case 2 have been identified.
+      // offset of dst1 - offset of src1 == offset of dst2 - offset of src2.
+      // This case must be handled in the solver.
+      // For now, just store this source-destination pair in the constraints
+      // object.
     }
+    constraints_.SetDstSrcPair(af->name, *it);
   }
   dst_src_pairs_.clear();
 }

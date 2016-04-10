@@ -30,7 +30,7 @@ IntExpr *Container::deparser_group(const gress_t &thread) {
     if (thread == INGRESS) {
       std::vector<IntVar*> v;
       for (auto i : PHV::kSharedDeparserGroups) {
-        v.push_back(solver->MakeIsEqualCstVar(container_, i));
+        v.push_back(solver->MakeIsEqualCstVar(deparser_group_, i));
       }
       deparser_group_ = solver->MakeSum(deparser_group_,
                           solver->MakeProd(solver->MakeSum(v),

@@ -135,7 +135,7 @@ Constraints::SetOffset(const PHV::Bit &bit, const int &min, const int &max) {
       new_min = std::max(min, bit_offset_range_.at(bit).first);
       new_max = std::min(max, bit_offset_range_.at(bit).second);
     }
-    bit_offset_range_[bit] = std::make_pair(min, max);
+    bit_offset_range_[bit] = std::make_pair(new_min, new_max);
   }
 }
 void Constraints::SetContiguousBits(const PHV::Bits &bits) {
@@ -196,10 +196,34 @@ Constraints::IsContainerConflict(const PHV::Bit &b1, const PHV::Bit &b2) const {
 }
 
 void Constraints::SetBitConflict(const PHV::Bit &b1, const PHV::Bit &b2) {
-  LOG2("Setting bit conflict between " << b1 << " and " << b2);
   BitId bit_min = std::min(unique_bit_id(b1), unique_bit_id(b2));
   BitId bit_max = std::max(unique_bit_id(b1), unique_bit_id(b2));
-  bit_conflicts_.at(bit_max).at(bit_min) = true;
+  if (false == bit_conflicts_.at(bit_max).at(bit_min)) {
+    LOG2("Setting bit conflict between " << b1 << " and " << b2);
+    bit_conflicts_.at(bit_max).at(bit_min) = true;
+  }
+}
+
+void Constraints::SetDstSrcPair(const cstring &af_name,
+                                const std::pair<PHV::Bit, PHV::Bit> &p) {
+  auto &s = dst_src_pairs_[af_name];
+  s.insert(p);
+}
+
+void Constraints::SetParseConflict(const PHV::Bits &old_bits,
+                                   const PHV::Bits &new_bits) {
+  CHECK(new_bits.size() % 8 == 0) << ": Bad size " << new_bits.size();
+  CHECK(old_bits.size() % 8 == 0) << ": Bad size " << old_bits.size();
+  for (auto it = new_bits.cbegin(); it != new_bits.cend(); std::advance(it, 8)) {
+    for (auto it2 = new_bits.cbegin(); it2 != it;) {
+      SetBitConflict(*it, *it2);
+      std::advance(it2, 8);
+    }
+    for (auto it2 = old_bits.cbegin(); it2 != old_bits.cend();) {
+      SetBitConflict(*it, *it2);
+      std::advance(it2, 8);
+    }
+  }
 }
 
 void Constraints::SetConstraints(SolverInterface &solver) {

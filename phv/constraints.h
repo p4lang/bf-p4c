@@ -52,6 +52,11 @@ class Constraints {
   bool IsContainerConflict(const PHV::Bit &b1, const PHV::Bit &b2) const;
   void SetBitConflict(const PHV::Bit &b1, const PHV::Bit &b2);
 
+  // Add a dst-src pair for the action function.
+  void
+  SetDstSrcPair(const cstring &af_name, const std::pair<PHV::Bit, PHV::Bit> &p);
+  // The bits extracted in one path of the parse graph.
+  void SetParseConflict(const PHV::Bits &old_bits, const PHV::Bits &new_bits);
   void SetConstraints(SolverInterface &solver);
   template<class T> void
   SetConstraints(const Equal &e, T set_equal, std::set<PHV::Bit> bits);
@@ -86,9 +91,10 @@ class Constraints {
   // Returns true if all the bits in pbits must be allocated to contiguous bits
   // in a PHV container. False otherwise.
   bool IsContiguous(const PHV::Bits &pbits) const;
-  // Each element in this list stores a set of destination-source pairs of an
-  // action. This list is used for the single-source PHV container constraint.
-  std::list<std::set<std::pair<PHV::Bit, PHV::Bit>>> dst_src_pairs_;
+  // Each element in this map stores a set of destination-source pairs of an
+  // action. This map is used for the single-source PHV container constraint.
+  // The key is the name of the ActionFunction.
+  std::map<cstring, std::set<std::pair<PHV::Bit, PHV::Bit>>> dst_src_pairs_;
   // An array with 2 elements, one for ingress and one for egress. We need the
   // thread-specific mapping because we need to add the deparser-group
   // constraint between the bytes of two headers that belong to different
