@@ -191,9 +191,8 @@ class Byte : public ::std::array<Bit, 8> {
     while (it != cend() && it->second >= 0) ++it;
     return it;
   }
-  Bits valid_bits() const {
-    return Bits(cfirst(), clast());
-  }
+  Bits valid_bits() const { return Bits(cfirst(), clast()); }
+  Bits bits() const { return Bits(cbegin(), cend()); }
 };
 }  // namespace PHV
 #endif /* _TOFINO_PHV_PHV_H_ */
