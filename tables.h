@@ -251,7 +251,7 @@ public:
     virtual void write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args) { assert(0); }
     virtual void write_regs() = 0;
     virtual void gen_tbl_cfg(json::vector &out) = 0;
-    virtual void gen_name_lookup(json::map &out);
+    virtual void gen_name_lookup(json::map &out) {}
     json::map *base_tbl_cfg(json::vector &out, const char *type, int size);
     json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size);
     virtual std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(
@@ -365,6 +365,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
 public:
     const AttachedTables *get_attached() const { return &attached; }
     const GatewayTable *get_gateway() const { return gateway; }
+    void gen_name_lookup(json::map &out);
     bool run_at_eop() { return attached.run_at_eop(); }
     virtual bool is_ternary() { return false; }
 )

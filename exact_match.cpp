@@ -703,11 +703,14 @@ std::unique_ptr<json::map> ExactMatchTable::gen_memory_resource_allocation_tbl_c
     int hash_id = -1;
     unsigned hash_groups = 0, vpn_ctr = 0;
     unsigned fmt_width = (format->size + 127)/128;
-    for (auto &w : ways) {
-        if (!((hash_groups >> w.group) & 1)) {
-            ++hash_id;
-            hash_groups |= 1 << w.group; }
-        if (&w == &way) break; }
+    if (options.match_compiler) {
+        for (auto &w : ways) {
+            if (!((hash_groups >> w.group) & 1)) {
+                ++hash_id;
+                hash_groups |= 1 << w.group; }
+            if (&w == &way) break; }
+    } else
+        hash_id = way.group;
     mra["hash_function_id"] = hash_id;
     mra["hash_entry_bit_lo"] = way.subgroup*10;
     mra["hash_entry_bit_hi"] = way.subgroup*10 + 9;

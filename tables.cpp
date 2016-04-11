@@ -784,8 +784,9 @@ void Table::Actions::write_regs(Table *tbl) {
 }
 
 void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
-    for (auto &act : *this)
-        cfg.push_back(json::map{{ "name", json::string(act.name) }});
+    for (auto &act : *this) {
+        cfg.push_back(json::map{{ "name", json::string(act.name) },
+                                { "address_to_use", json::number(act.code) }}); }
 }
 
 void Table::Actions::add_immediate_mapping(json::map &tbl) {
@@ -1182,7 +1183,7 @@ json::map &Table::add_pack_format(json::map &stage_tbl, const Table::Format *for
     return pack_format.back()->to<json::map>();
 }
 
-void Table::gen_name_lookup(json::map &out) {
+void MatchTable::gen_name_lookup(json::map &out) {
     if (p4_table && p4_table->p4_name())
         out["table_name"] = p4_table->p4_name();
     else
