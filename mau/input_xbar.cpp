@@ -102,7 +102,7 @@ static bool find_alloc(IXBar::Use &alloc, int groups, int bytes_per_group,
     return /* alloc */ true;
 }
 
-bool IXBar::allocTable(bool ternary, const IR::Table *tbl, const PhvInfo &phv, Use &alloc) {
+bool IXBar::allocTable(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc) {
     LOG2("IXBar::allocTable(" << tbl->name << ")");
     alloc.ternary = ternary;
     if (!tbl->reads) return true;

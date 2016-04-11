@@ -4,11 +4,11 @@
 #include "ir/ir.h"
 
 class GetTofinoParser : public Inspector {
-  const IR::Global                            *program = 0;
-  const IR::ParserContainer                   *container = 0;
+  const IR::V1Program                        *program = 0;
+  const IR::P4Parser                         *container = 0;
   map<cstring, IR::Tofino::ParserState *>     states;
   IR::ID                                      ingress_control;
-  bool preorder(const IR::Parser *) override;
+  bool preorder(const IR::V1Parser *) override;
   bool preorder(const IR::ParserState *) override;
 
   struct Context {
@@ -31,8 +31,8 @@ class GetTofinoParser : public Inspector {
   IR::Tofino::ParserState *state(cstring, const Context *);
 
  public:
-  explicit GetTofinoParser(const IR::Global *g) : program(g) {}
-  explicit GetTofinoParser(const IR::ParserContainer *p) : container(p) {}
+  explicit GetTofinoParser(const IR::V1Program *g) : program(g) {}
+  explicit GetTofinoParser(const IR::P4Parser *p) : container(p) {}
   IR::Tofino::Parser *parser(gress_t);
   cstring ingress_entry();
 };
