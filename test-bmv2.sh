@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -x
 srcdir=$1
 execdir=$(dirname $0)
 shift

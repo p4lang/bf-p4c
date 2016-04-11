@@ -1,7 +1,7 @@
 #include "extract_parser.h"
 #include "lib/log.h"
 
-bool GetTofinoParser::preorder(const IR::Parser *p) {
+bool GetTofinoParser::preorder(const IR::V1Parser *p) {
   auto *s = states[p->name] = new IR::Tofino::ParserState(p);
   if (s->name != p->name)
     states[s->name] = s;
@@ -171,7 +171,7 @@ void GetTofinoParser::addMatch(IR::Tofino::ParserState *s, match_t match_val,
     // If there is a parser state with this name, but we couldn't generate it, its probably
     // because we've unrolled a loop filling a header stack completely.  Should set some
     // parser error code?
-  } else if (program->get<IR::Control>(action)) {
+  } else if (program->get<IR::V1Control>(action)) {
     if (ingress_control) {
       if (ingress_control != action)
         error("%s: Multiple ingress entry points %s and %s",
@@ -179,7 +179,7 @@ void GetTofinoParser::addMatch(IR::Tofino::ParserState *s, match_t match_val,
     } else {
       ingress_control = action; }
   } else if ((match->except = program->get<IR::ParserException>(action))) {
-  } else if (program->get<IR::Parser>(action)) {
+  } else if (program->get<IR::V1Parser>(action)) {
     // there is a parser state with this name, but we couldn't generate it, probably
     // because we've unrolled a loop filling a header stack completely.  Should set some
     // parser error code?
@@ -198,7 +198,7 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
   if (!rv->match.empty()) return rv;
   RewriteExtractNext rewrite(*this, ctxt);
   const IR::Vector<IR::Expression> *stmts;
-  auto *v1_0 = rv->p4state->to<IR::Parser>();
+  auto *v1_0 = rv->p4state->to<IR::V1Parser>();
   auto *v1_2 = rv->p4state->to<IR::ParserState>();
   if (v1_0)
     stmts = v1_0->stmts.apply(rewrite);

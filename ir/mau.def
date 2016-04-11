@@ -1,3 +1,5 @@
+/* -*-c++-*- */
+
 #emit
 struct TableResourceAlloc;
 #end
@@ -21,7 +23,7 @@ class Table {
      * (taken if no gateway rows match).  If this last row NULL expression
      * is not present, the default action is to run the table. */
     NullOK ActionFunction                       gateway_payload;
-    NullOK IR::Table                            match_table;
+    NullOK IR::V1Table                          match_table;
     inline Vector<Attached>                     attached;
     inline NameMap<ActionFunction, ordered_map> actions;
     inline NameMap<TableSeq>                    next;
@@ -54,7 +56,7 @@ class Table {
     std::vector<Way>    ways;
     const TableResourceAlloc            *resources = nullptr;
 
-    Table(cstring n, gress_t gr, const IR::Table *t)
+    Table(cstring n, gress_t gr, const IR::V1Table *t)
     : name(n), gress(gr), match_table(t) {}
     Table(cstring n, gress_t gr, const Expression *gw)
     : name(n), gress(gr), gateway_rows{ std::make_pair(gw, "true"),

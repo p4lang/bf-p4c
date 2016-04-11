@@ -5,7 +5,7 @@
 
 class CanonGatewayExpr : public MauTransform {
     IR::ActionFunction *preorder(IR::ActionFunction *af) override { prune(); return af; }
-    IR::Table *preorder(IR::Table *t) override { prune(); return t; }
+    IR::V1Table *preorder(IR::V1Table *t) override { prune(); return t; }
     const IR::Expression *postorder(IR::Operation::Relation *) override;
     const IR::Expression *postorder(IR::Leq *) override;
     const IR::Expression *postorder(IR::Lss *) override;
