@@ -22,6 +22,9 @@ constexpr int kNumContainersPerMauGroup = 16;
 static const std::vector<int> kMauGroupSizes({2, 2, 2, 2, 0, 0, 0, 0, 1, 1,
                                               1, 1, 1, 1, 3, 3, 2, 2, 0, 0,
                                               1, 1, 1});
+static const std::vector<int> kMauGroupBase( {0, 1, 2, 3, 0, 1, 2, 3, 0, 1,
+                                              2, 3, 4, 5,-1,-1, 0, 1, 0, 1,
+                                              0, 1, 2});
 static const std::vector<int> k8bMauGroups({4, 5, 6, 7, 18, 19});
 static const std::vector<int> k16bMauGroups({8, 9, 10, 11, 12, 13, 20, 21,
                                              22});
@@ -98,13 +101,9 @@ class Container {
         index_ = v;
         if (*n || index_ != v)
             BUG("Invalid register '%s'", name); }
-    Container(unsigned mau_group, unsigned container_in_group) :
-      tagalong_(false), log2sz_(kMauGroupSizes.at(mau_group)), index_(0) {
-      index_ = mau_group * kNumContainersPerMauGroup + container_in_group;
-      if (index_ >= kTPhvContainerOffset &&
-          index_ < kTPhvContainerOffset + kNumTPhvContainers) tagalong_ = true;
-    }
-
+    Container(unsigned mau_group, unsigned container_in_group)
+    : tagalong_(mau_group >= kNumPhvMauGroups), log2sz_(kMauGroupSizes.at(mau_group)),
+      index_(kMauGroupBase.at(mau_group) * kNumContainersPerMauGroup + container_in_group) {}
     size_t size() const { return 8U << log2sz_; }
     unsigned index() const { return index_; }
     explicit operator bool() const { return log2sz_ != 3; }

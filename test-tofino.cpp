@@ -84,8 +84,8 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new VisitFunctor([&deps]() { if (verbose) std::cout << deps; }),
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),
-        options->phv_alloc ? new CopyHeaderEliminator : 0,
-        options->phv_alloc ? new HeaderFragmentCreator : 0,
+        new CopyHeaderEliminator,
+        new HeaderFragmentCreator,
         new TypeCheck,
         new SplitGateways,
         new CheckTableNameDuplicate,
@@ -101,31 +101,29 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new ComputeShifts,
         new DumpPipe,
         &defuse,
-        new MauPhvConstraints(phv),
-        new PhvAllocate(phv, defuse.conflicts()),
     };
     maupipe = maupipe->apply(backend);
-    PhvInfo gort_phv_allocation;
-    maupipe->apply(gort_phv_allocation);
-    gort_phv_allocation.allocatePOV();
-    PhvAllocator phv_allocator(maupipe);
-    CHECK(true == phv_allocator.Solve(maupipe, &gort_phv_allocation));
-    std::cout << "Printing PHV fields:\n";
-    for (auto iter = gort_phv_allocation.begin();
-         iter != gort_phv_allocation.end(); ++iter) {
-      std::cout << (iter)->name << (iter)->alloc[0] << "\n";
-      std::cout << (iter)->name << (iter)->alloc[1] << "\n";
-    }
-    PhvInfo *phv_ptr = &gort_phv_allocation;
+    if (options->phv_alloc) {
+        PhvAllocator phv_allocator(maupipe);
+        CHECK(true == phv_allocator.Solve(maupipe, &phv));
+        std::cout << "Printing PHV fields:\n";
+        for (auto iter = phv.begin(); iter != phv.end(); ++iter) {
+            std::cout << iter->name << iter->alloc[0] << "\n";
+            std::cout << iter->name << iter->alloc[1] << "\n";
+        }
+    } else {
+        maupipe = maupipe
+            ->apply(MauPhvConstraints(phv))
+            ->apply(PhvAllocate(phv, defuse.conflicts())); }
     PassManager post_phv_allocation_backend = {
-      new SplitExtractEmit,
-      new LoadMatchKeys(*phv_ptr),   // depends on SplitExtractEmit
-      new SplitPhvUse(*phv_ptr),     // depends on SplitExtractEmit
-      new DumpPipe("Final table graph"),
-      new CheckTableNameDuplicate,
-      &summary,
-      new VisitFunctor([&summary]() { if (verbose) std::cout << summary; }),
-      &mauasm
+        new SplitExtractEmit,
+        new LoadMatchKeys(phv),   // depends on SplitExtractEmit
+        new SplitPhvUse(phv),     // depends on SplitExtractEmit
+        new DumpPipe("Final table graph"),
+        new CheckTableNameDuplicate,
+        &summary,
+        new VisitFunctor([&summary]() { if (verbose) std::cout << summary; }),
+        &mauasm
     };
     maupipe = maupipe->apply(post_phv_allocation_backend);
     if (ErrorReporter::instance.getErrorCount() > 0)
@@ -133,10 +131,10 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     std::ostream *out = &std::cout;
     if (options->outputFile)
         out = new std::ofstream(options->outputFile);
-    *out << PhvAsmOutput(*phv_ptr)
-         << ParserAsmOutput(maupipe, *phv_ptr, INGRESS)
-         << DeparserAsmOutput(maupipe, *phv_ptr, INGRESS)
-         << ParserAsmOutput(maupipe, *phv_ptr, EGRESS)
-         << DeparserAsmOutput(maupipe, *phv_ptr, EGRESS)
+    *out << PhvAsmOutput(phv)
+         << ParserAsmOutput(maupipe, phv, INGRESS)
+         << DeparserAsmOutput(maupipe, phv, INGRESS)
+         << ParserAsmOutput(maupipe, phv, EGRESS)
+         << DeparserAsmOutput(maupipe, phv, EGRESS)
          << mauasm << std::flush;
 }
