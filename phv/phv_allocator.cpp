@@ -52,14 +52,14 @@ class PopulatePhvInfo : public Inspector {
             break;
           }
           // Append the bit to an existing alloc structure.
-          if (iter->container.index() == container.index() &&
+          if (iter->container == container &&
               iter->width + iter->container_bit == container_bit &&
               iter->width + iter->field_bit == field_bit) {
             iter->width += 1;
             break;
           }
           // Prepend the bit to an existing alloc structure.
-          if (iter->container.index() == container.index() &&
+          if (iter->container == container &&
               iter->container_bit == container_bit + 1 &&
               iter->field_bit == (field_bit + 1)) {
             --(iter->field_bit);
