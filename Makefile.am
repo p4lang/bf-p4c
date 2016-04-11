@@ -75,7 +75,6 @@ tofino_backend_SOURCES = \
 	%reldir%/phv/byte_constraint.h \
 	%reldir%/phv/container_constraint.cpp \
 	%reldir%/phv/container_constraint.h \
-	%reldir%/phv/create_thread_local_instances.cpp \
 	%reldir%/phv/create_thread_local_instances.h \
 	%reldir%/phv/constraints.cpp \
 	%reldir%/phv/constraints.h \

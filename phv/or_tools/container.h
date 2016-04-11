@@ -36,7 +36,9 @@ class Container {
   // to an ingress or egress thread. For egress, it can take values in the
   // range [0, PHV::kNumDeparserGroups]. For ingress, it can take values
   // greater than PHV::kNumDeparserGroups but cannot take values in
-  // PHV::kSharedDeparserGroups.
+  // PHV::kSharedDeparserGroups. That way, the solver can simply add a
+  // constraint ingress_bit->container()->deparser_group() !=
+  // egress_bit->container()->deparser_groups().
   operations_research::IntExpr *deparser_group_;
   // This object store MAU group related constraint variables. Container
   // objects that are constrained to the same MAU group must point to the same

@@ -209,9 +209,9 @@ void Solver::SetDeparserGroups(const PHV::Byte &i_pbyte,
   i_container->mau_group()->SetIngressDeparser();
   e_container->mau_group()->SetEgressDeparser();
   // Get the deparser group number and make them non-equal.
-//solver_.AddConstraint(
-//  solver_.MakeNonEquality(i_container->deparser_group(INGRESS),
-//                          e_container->deparser_group(EGRESS)));
+  solver_.AddConstraint(
+    solver_.MakeNonEquality(i_container->deparser_group(INGRESS),
+                            e_container->deparser_group(EGRESS)));
 }
 
 void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_phv_bits,
@@ -429,7 +429,7 @@ Solver::Solve1(operations_research::Solver::IntValueStrategy int_val,
   std::vector<SearchMonitor*> monitors;
   PrintFailure pf(&solver_, int_vars);
   if (is_luby_restart) monitors.push_back(solver_.MakeLubyRestart(1000));
-  monitors.push_back(solver_.MakeFailuresLimit(1500000));
+  monitors.push_back(solver_.MakeTimeLimit(20000));
   monitors.push_back(&pf);
   solver_.NewSearch(db, monitors);
   const std::clock_t begin_time = clock();

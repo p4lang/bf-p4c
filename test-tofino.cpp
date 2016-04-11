@@ -110,11 +110,17 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     gort_phv_allocation.allocatePOV();
     PhvAllocator phv_allocator(maupipe);
     CHECK(true == phv_allocator.Solve(maupipe, &gort_phv_allocation));
-    std::cout << "Printing PHV fields:\n";
+    LOG2("Printing PHV fields:");
     for (auto iter = gort_phv_allocation.begin();
          iter != gort_phv_allocation.end(); ++iter) {
-      std::cout << (iter)->name << (iter)->alloc[0] << "\n";
-      std::cout << (iter)->name << (iter)->alloc[1] << "\n";
+      if (iter->alloc[0].size() == 0) {
+        LOG2("result:" << (iter)->name << (iter)->alloc[1]);
+      }
+      else {
+        CHECK(iter->alloc[1].size() == 0) << ": Wrong allocation for " <<
+          iter->name;
+        LOG2("result:" << (iter)->name << (iter)->alloc[0]);
+      }
     }
     PhvInfo *phv_ptr = &gort_phv_allocation;
     PassManager post_phv_allocation_backend = {

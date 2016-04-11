@@ -210,16 +210,43 @@ void Constraints::SetDstSrcPair(const cstring &af_name,
   s.insert(p);
 }
 
+// FIXME: This function does not handle set_metadata extractions. For
+// set_metadata, the first few and last few bits of a byte might be invalid. In
+// that case, we must set conflicts between the first pair of valid bits of
+// every bytes. For, just adding a spurious CHECK(true==it->IsValid()) so that
+// compiler crashes.
 void Constraints::SetParseConflict(const PHV::Bits &old_bits,
                                    const PHV::Bits &new_bits) {
   CHECK(new_bits.size() % 8 == 0) << ": Bad size " << new_bits.size();
   CHECK(old_bits.size() % 8 == 0) << ": Bad size " << old_bits.size();
+  // We are setting bit-conflicts between every 8th bit. We do not need to set
+  // a conflict between every pair of bits because the following statements are
+  // true:
+  // 1. Every 8th bit will be allocated at offset 0 or 8 or 16 or 24 in a PHV
+  //    container.
+  // 2. Since the parser extracts bytes, the bits in old_bits and new_bits are
+  //    allocated in sets of 8.
+  // Because of this, when we set a bit-conflict between every 8th bit, we are
+  // guaranteed that no bits in old_bits will be overlayed with any bits in
+  // new_bits.
   for (auto it = new_bits.cbegin(); it != new_bits.cend(); std::advance(it, 8)) {
+    // FIXME: Remove after inserting code for set_metadata.
+    CHECK(true == it->IsValid());
     for (auto it2 = new_bits.cbegin(); it2 != it;) {
+      // FIXME: Remove after inserting code for set_metadata.
+      CHECK(true == it2->IsValid());
+      // TODO: If *it and *it2 are being deparsed in the same emit() and they
+      // are atleast 32b apart, then we must set a container-conflict between
+      // them. If they are being deparsd in different emit() and they use
+      // different POV bits, then we can set a container-conflict between them.
+      // This might speed up the solver.
       SetBitConflict(*it, *it2);
       std::advance(it2, 8);
     }
     for (auto it2 = old_bits.cbegin(); it2 != old_bits.cend();) {
+      // FIXME: Remove after inserting code for set_metadata.
+      CHECK(true == it2->IsValid());
+      // TODO: Same TODO as above.
       SetBitConflict(*it, *it2);
       std::advance(it2, 8);
     }
@@ -358,6 +385,8 @@ void Constraints::SetConstraints(SolverInterface &solver) {
     for (BitId bid2 = 0; bid2 < bid; ++bid2) {
       PHV::Bit b1 = bits_.at(bid);
       PHV::Bit b2 = bits_.at(bid2);
+      // A bit-conflict is set in the solver if there wasn't already a
+      // container-conflict between the two bits.
       if (true == bit_conflicts_.at(bid).at(bid2) &&
           conflicts.count(std::make_pair(b1, b2)) == 0 &&
           conflicts.count(std::make_pair(b2, b1)) == 0) {

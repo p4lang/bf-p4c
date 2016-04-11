@@ -55,7 +55,17 @@ class Constraints {
   // Add a dst-src pair for the action function.
   void
   SetDstSrcPair(const cstring &af_name, const std::pair<PHV::Bit, PHV::Bit> &p);
-  // The bits extracted in one path of the parse graph.
+  // The bits extracted in one path of the parse graph. This function sets a
+  // bit-conflict between:
+  // 1. All pairs of bits (b1, b2) such that b1 is in old_bits and b2 is in
+  // new_bits.
+  // 2. All pairs of bits(b1, b2) such that both b1 and b2 are in new_bits.
+  // We could have had just 1 function parameter:
+  // SetParseConflict(const PHV::Bits &all_bits)
+  // and set bit-conflicts between every pair of bits in all_bits. But, this
+  // would have been inefficient. We would end up setting conflicts between the
+  // same pair of bits multiple times if they appeared in the different paths
+  // together.
   void SetParseConflict(const PHV::Bits &old_bits, const PHV::Bits &new_bits);
   void SetConstraints(SolverInterface &solver);
   template<class T> void

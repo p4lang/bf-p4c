@@ -2,21 +2,27 @@
 #define _TOFINO_PHV_PARSE_GRAPH_CONSTRAINT_H_
 #include "tofino/parde/parde_visitor.h"
 #include "bit_extractor.h"
-#include <stack>
+#include <unordered_map>
 class Constraints;
 class ParseGraphConstraint : public PardeInspector, public BitExtractor {
  public:
-  ParseGraphConstraint(Constraints &c) : extracts_(0), extract_widths_({0}), constraints_(c) {
-    visitDagOnce = false;}
+  ParseGraphConstraint(Constraints &c) : constraints_(c) { }
  private:
-  bool preorder(const IR::Primitive *prim) override;
-  // Just create a new item in the stack.
-  bool preorder(const IR::Tofino::ParserMatch *) override {
-    extract_widths_.push(extract_widths_.top());
-    return true; }
+  // This function inserts parse conflicts between all its local extracts and
+  // extracts reachable from ParserMatch::next.
   void postorder(const IR::Tofino::ParserMatch *pm) override;
-  PHV::Bits extracts_;
-  std::stack<int> extract_widths_;
+  // This function creates an entry for ps in the subtree_extracts_ map. The
+  // value for that entry is composed from all its ParserMatch entries in
+  // local_extracts_ and their next entries in subtree_extracts_.
+  void postorder(const IR::Tofino::ParserState *ps) override;
+  // This function adds new_bits into bits if they are not already present.
+  void CheckAndAppendBits(const PHV::Bits &new_bits, PHV::Bits *bits);
+  // The key is the name of a parse state (ParserState::name). The value
+  // contains all the bits that might be extracted in this parse state or any
+  // parse state reachable from it.
+  std::unordered_map<cstring, PHV::Bits> subtree_extracts_;
+  // Each item contains the bits extracted in its ParserMatch object.
+  std::unordered_map<const IR::Tofino::ParserMatch*, PHV::Bits> local_extracts_;
   Constraints &constraints_;
 };
 #endif
