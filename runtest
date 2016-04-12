@@ -45,12 +45,16 @@ if [ "$tofinodir" = "$execdir" -a "$srcdir" != "." ]; then
 fi
 
 verbose=false;
+debug=false
 
 P4C_ARGS=""
 
 while [ $# -gt 1 ]; do
     case $1 in
-    -v) if $verbose; then
+    -db)
+        debug=true
+        ;;
+    -v) if $verbose || $debug; then
             P4C_ARGS="$P4C_ARGS $1"
         fi
         verbose=true
@@ -88,6 +92,10 @@ if [ ! -x $P4C ]; then
     die "Can't find $P4C"
 fi
 
+if $debug; then
+    exec gdb --args $P4C $P4C_ARGS $file -o $testdir/$name.tfa
+fi
+
 if [ $(expr "$file" : ".*_errors") -gt 0 ]; then
     if run $P4C $P4C_ARGS $file -o $testdir/$name.tfa; then
         echo >&2 "$P4C did not give an error when expected"
@@ -95,7 +103,6 @@ if [ $(expr "$file" : ".*_errors") -gt 0 ]; then
     fi
     exit 0
 fi
-
 
 run $P4C $P4C_ARGS $file -o $testdir/$name.tfa || die "$P4C failed"
 
