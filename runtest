@@ -50,7 +50,10 @@ P4C_ARGS=""
 
 while [ $# -gt 1 ]; do
     case $1 in
-    -v) verbose=true
+    -v) if $verbose; then
+            P4C_ARGS="$P4C_ARGS $1"
+        fi
+        verbose=true
         ;;
     -*) P4C_ARGS="$P4C_ARGS $1"
         ;;
@@ -108,5 +111,5 @@ if [ -r ${file%.p4}.stf ]; then
     rm -f $name.out/*.cfg.json
     run $TFAS -vvvvl $name.out/tfas.config.log $name.tfa || die "$TFAS failed"
     run $TFLN $name.out/*.cfg.json -o $name.out/tofino.bin || die "$TFLN failed"
-    run $STF -l $name.out/tofino.bin -l $name.out/tbl-cfg -l $name.out/p4_name_lookup.json $test || die "$STF failed"
+    run $STF -l $name.out $test || die "$STF failed"
 fi
