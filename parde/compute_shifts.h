@@ -12,7 +12,7 @@ class ComputeShifts : public PardeModifier {
         explicit CountExtracts(int &c) : count(c) {}
     };
     void postorder(IR::Tofino::ParserMatch *match) override {
-        if (findContext<IR::Tofino::ParserState>()->name[0] != '$') {
+        if (match->shift < 0) {
             match->shift = 0;
             match->stmts.apply(CountExtracts(match->shift)); } }
 };
