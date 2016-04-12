@@ -349,12 +349,12 @@ void Solver::SetNoTPhv(const PHV::Bit &bit) {
 }
 
 void Solver::SetContainerConflict(const PHV::Bit &pb1, const PHV::Bit &pb2) {
-  LOG2("Setting container conflict between " << pb1 << " and " << pb2);
+  LOG2("Setting container-conflict between " << pb1 << " and " << pb2);
   bits_.at(pb2).container()->SetConflict(bits_.at(pb1).container());
 }
 
 void Solver::SetBitConflict(const PHV::Bit &pb1, const PHV::Bit &pb2) {
-  LOG2("Setting bit conflict between " << pb1 << " and " << pb2);
+  LOG2("Setting bit-conflict between " << pb1 << " and " << pb2);
   Bit *b1 = MakeBit(pb1), *b2 = MakeBit(pb2);
   b1->SetConflict(*b2);
 }
@@ -429,11 +429,11 @@ Solver::Solve1(operations_research::Solver::IntValueStrategy int_val,
   std::vector<SearchMonitor*> monitors;
   PrintFailure pf(&solver_, int_vars);
   if (is_luby_restart) monitors.push_back(solver_.MakeLubyRestart(1000));
-  monitors.push_back(solver_.MakeTimeLimit(20000));
+  monitors.push_back(solver_.MakeTimeLimit(5000));
   monitors.push_back(&pf);
   solver_.NewSearch(db, monitors);
   const std::clock_t begin_time = clock();
-  bool result = solver_.NextSolution();
+  const bool result = solver_.NextSolution();
   LOG2("Time=" << (clock() - begin_time) / (CLOCKS_PER_SEC / 1000) << "msecs");
   if (false == result) solver_.EndSearch();
   return result;

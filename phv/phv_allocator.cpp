@@ -147,7 +147,7 @@ bool PhvAllocator::Solve(const IR::Tofino::Pipe *pipe, PhvInfo *phv_info) {
   or_tools::MinValueSolver solver;
   constraints_.SetConstraints(solver);
   int count = 0;
-  while (count < 100) {
+  while (count < 400) {
     if (true == solver.Solve()) {
       PopulatePhvInfo ppi(solver, phv_info);
       pipe->apply(ppi);

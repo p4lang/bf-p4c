@@ -88,13 +88,7 @@ tofino_backend_SOURCES = \
 	%reldir%/phv/parse_graph_constraint.h \
 	%reldir%/phv/source_container_constraint.cpp \
 	%reldir%/phv/source_container_constraint.h \
-	%reldir%/phv/set_write_constraints.cpp \
-	%reldir%/phv/set_write_constraints.h \
 	%reldir%/phv/t_phv_constraint.h \
-	%reldir%/phv/header_bit.cpp \
-	%reldir%/phv/header_bit.h \
-	%reldir%/phv/header_bits.cpp \
-	%reldir%/phv/header_bits.h \
 	%reldir%/phv/header_bit_creator.h \
 	%reldir%/phv/header_fragment_creator.cpp \
 	%reldir%/phv/header_fragment_creator.h \

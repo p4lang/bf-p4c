@@ -43,6 +43,21 @@ void Constraints::SetEqualByte(const PHV::Byte &byte) {
   byte_equalities_.insert(byte);
 }
 
+bool Constraints::IsDeparsed(const PHV::Byte &byte) const {
+  for (auto hdrs : deparsed_headers_) {
+    for (auto hdr : hdrs) {
+      if (hdr.end() != std::find(hdr.begin(), hdr.end(), byte)) return true;
+    }
+  }
+  return false;
+}
+
+std::set<PHV::Bit>
+Constraints::GetEqual(const PHV::Bit &b, const Equal &e) const {
+  if (0 == equalities_[e].count(b)) return std::set<PHV::Bit>({b});
+  else return equalities_[e].at(b);
+}
+
 void
 Constraints::SetEqual_(const PHV::Bit &bit1, const PHV::Bit &bit2,
                        const Equal &eq) {
@@ -178,14 +193,27 @@ void Constraints::SetTcamMatchBits(const int &stage,
 
 void
 Constraints::SetContainerConflict(const PHV::Bit &b1, const PHV::Bit &b2) {
+  CHECK(true == b1.IsValid()) << ": First bit is invalid";
+  CHECK(true == b2.IsValid()) << ": Second bit is invalid";
+  // Just return if there is already a container conflict between the two bits.
+  // The two for-loops below are time consuming.
+  if (true == IsContainerConflict(b1, b2)) return;
   LOG2("Setting container conflict between " << b1 << " and " << b2);
-  BitId bit_min = std::min(unique_bit_id(b1), unique_bit_id(b2));
-  BitId bit_max = std::max(unique_bit_id(b1), unique_bit_id(b2));
-  container_conflicts_.at(bit_max).at(bit_min) = true;
+  // Set container conflicts between all bits that must share containers with
+  // b1 and b2.
+  for (auto x : GetEqual(b1, Equal::CONTAINER)) {
+    for (auto y : GetEqual(b2, Equal::CONTAINER)) {
+      BitId bit_min = std::min(unique_bit_id(x), unique_bit_id(y));
+      BitId bit_max = std::max(unique_bit_id(x), unique_bit_id(y));
+      container_conflicts_.at(bit_max).at(bit_min) = true;
+    }
+  }
 }
 
 bool
 Constraints::IsContainerConflict(const PHV::Bit &b1, const PHV::Bit &b2) const {
+  // Assume there is no container conflict between a bit and itself.
+  if (b1 == b2) return false;
   // If either bit does not have an entry in the conflict matrix, just return
   // false. It probably does not have any conflicting constraints.
   if (uniq_bit_ids_.count(b1) == 0) return false;
@@ -214,7 +242,7 @@ void Constraints::SetDstSrcPair(const cstring &af_name,
 // set_metadata, the first few and last few bits of a byte might be invalid. In
 // that case, we must set conflicts between the first pair of valid bits of
 // every bytes. For, just adding a spurious CHECK(true==it->IsValid()) so that
-// compiler crashes.
+// compiler crashes if this is not fixed.
 void Constraints::SetParseConflict(const PHV::Bits &old_bits,
                                    const PHV::Bits &new_bits) {
   CHECK(new_bits.size() % 8 == 0) << ": Bad size " << new_bits.size();
@@ -230,6 +258,14 @@ void Constraints::SetParseConflict(const PHV::Bits &old_bits,
   // guaranteed that no bits in old_bits will be overlayed with any bits in
   // new_bits.
   for (auto it = new_bits.cbegin(); it != new_bits.cend(); std::advance(it, 8)) {
+    // We want to set a container-conflict if both bits are being deparsed and:
+    // 1. distance > 31 OR
+    // 2. Bits are being emitted with different POV bits. The assumption here
+    // is that if bits are being emitted in different emit primitives, use
+    // different POV bits. is_valid is false if the bits are being emitted in
+    // different primitives.
+    int distance;
+    bool is_valid;
     // FIXME: Remove after inserting code for set_metadata.
     CHECK(true == it->IsValid());
     for (auto it2 = new_bits.cbegin(); it2 != it;) {
@@ -237,17 +273,22 @@ void Constraints::SetParseConflict(const PHV::Bits &old_bits,
       CHECK(true == it2->IsValid());
       // TODO: If *it and *it2 are being deparsed in the same emit() and they
       // are atleast 32b apart, then we must set a container-conflict between
-      // them. If they are being deparsd in different emit() and they use
-      // different POV bits, then we can set a container-conflict between them.
-      // This might speed up the solver.
+      // them. This might speed up the solver.
       SetBitConflict(*it, *it2);
       std::advance(it2, 8);
     }
     for (auto it2 = old_bits.cbegin(); it2 != old_bits.cend();) {
       // FIXME: Remove after inserting code for set_metadata.
       CHECK(true == it2->IsValid());
-      // TODO: Same TODO as above.
-      SetBitConflict(*it, *it2);
+      std::tie(distance, is_valid) = GetDistance(*it, *it2);
+      if (((is_valid == false) || distance >= 32) &&
+          true == IsDeparsed(PHV::Byte(it, std::next(it, 8))) &&
+          true == IsDeparsed(PHV::Byte(it2, std::next(it2, 8)))) {
+        SetContainerConflict(*it, *it2);
+      }
+      else {
+        SetBitConflict(*it, *it2);
+      }
       std::advance(it2, 8);
     }
   }
@@ -350,11 +391,10 @@ void Constraints::SetConstraints(SolverInterface &solver) {
       if (true == container_conflicts_.at(bid).at(bid2) &&
           conflicts.count(std::make_pair(b1, b2)) == 0 &&
           conflicts.count(std::make_pair(b2, b1)) == 0) {
-        auto &ceq = equalities_[Equal::CONTAINER];
         // FIXME: This has to be changed to a compiler error message. The user
         // has probably written a program which imposes conflicting constraints
         // on b1 and b2.
-        CHECK(ceq.count(b1) == 0 || ceq.at(b1).count(b2) == 0) <<
+        CHECK(IsEqual(b1, b2, Equal::CONTAINER) == false) <<
           ": Cannot add conflict between " << b1.name() << " and " << b2.name();
         solver.SetContainerConflict(b1, b2);
         // The following code is needed to prevent reporting redundant
@@ -363,16 +403,10 @@ void Constraints::SetConstraints(SolverInterface &solver) {
         // container with b1 and any bits that share a container with b2. So,
         // we add combinations of b1's and b2's container-mates to the reported
         // conflicts set.
-        std::set<PHV::Bit> b1_set({b1});
-        std::set<PHV::Bit> b2_set({b2});
-        if (ceq.count(b1) != 0) {
-          b1_set.insert(ceq.at(b1).begin(), ceq.at(b1).end());
-        }
-        if (ceq.count(b2) != 0) {
-          b2_set.insert(ceq.at(b2).begin(), ceq.at(b2).end());
-        }
-        for (auto e1 : b1_set) {
-          for (auto e2 : b2_set) conflicts.insert(std::make_pair(e1, e2));
+        for (auto e1 : GetEqual(b1, Equal::CONTAINER)) {
+          for (auto e2 : GetEqual(b2, Equal::CONTAINER)) {
+            conflicts.insert(std::make_pair(e1, e2));
+          }
         }
       }
       else if (true == container_conflicts_.at(bid).at(bid2)) {

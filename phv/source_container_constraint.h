@@ -28,11 +28,4 @@ class SourceContainerConstraint : public MauInspector {
   virtual void postorder(const IR::ActionFunction *af) override;
   bool is_updated_;
 };
-// TODO: This class is currently not used. Remove it.
-class BitOffsetConstraint : public SourceContainerConstraint {
- public:
-  BitOffsetConstraint(Constraints &c) : SourceContainerConstraint(c) { }
- private:
-  void postorder(const IR::ActionFunction *) override { }
-};
 #endif

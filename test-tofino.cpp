@@ -109,8 +109,10 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         if (verbose) {
             std::cout << "Printing PHV fields:\n";
             for (auto iter = phv.begin(); iter != phv.end(); ++iter) {
-                std::cout << iter->name << iter->alloc[0] << "\n";
-                std::cout << iter->name << iter->alloc[1] << "\n"; } }
+                LOG2("result:" << iter->name << iter->alloc[0]);
+                LOG2("result:" << iter->name << iter->alloc[1]);
+            }
+        }
     } else {
         maupipe = maupipe
             ->apply(MauPhvConstraints(phv))

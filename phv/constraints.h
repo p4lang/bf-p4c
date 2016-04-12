@@ -23,6 +23,7 @@ class Constraints {
                                            const gress_t gress) {
     deparsed_headers_.at(gress).insert(std::vector<PHV::Byte>(begin, end));
   }
+  bool IsDeparsed(const PHV::Byte &byte) const;
 
   enum Equal {OFFSET, CONTAINER, MAU_GROUP, NUM_EQUALITIES};
   bool
@@ -30,6 +31,7 @@ class Constraints {
     return (equalities_[e].count(bit1) != 0) &&
            (equalities_[e].at(bit1).count(bit2) != 0);
   }
+  std::set<PHV::Bit> GetEqual(const PHV::Bit &b, const Equal &e) const;
   template<class T>
   void SetEqual(const T &begin, const T &end, const Equal &eq) {
     auto it = (begin == end ? end : std::next(begin, 1));
@@ -37,6 +39,9 @@ class Constraints {
   }
   void SetOffset(const PHV::Bit &bit, const int &min, const int &max);
   void SetContiguousBits(const PHV::Bits &bits);
+  // If b1 and b2 appear in an element of contiguous_bits_ object, this
+  // function return a tuple of the distance between them and true. Otherwise,
+  // it returns an invalid integer and false.
   std::pair<int, bool>
   GetDistance(const PHV::Bit &b1, const PHV::Bit &b2) const;
   // This function sets is_t_phv_ for bit to false.

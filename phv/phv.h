@@ -34,7 +34,10 @@ static const std::vector<int> kInvalidMauGroups({14, 15});
 // These variables are used for deparser group constraints.
 static const std::vector<int> kIngressOnlyMauGroups({0, 4, 8});
 static const std::vector<int> kEgressOnlyMauGroups({1, 5, 9});
-static constexpr int kNumDeparserGroups = 23;
+// This must be equal to the number of elements in kDeparserGroups.
+static constexpr int kNumDeparserGroups = 47;
+// Keep this array as small as possible. It seems to have a big impact on
+// memory usage.
 static const
 std::array<std::vector<int>, kNumDeparserGroups> kDeparserGroups =
   {{{32},
@@ -42,9 +45,25 @@ std::array<std::vector<int>, kNumDeparserGroups> kDeparserGroups =
     {40},
     {44},
     {48},
+    {52},
+    {56},
+    {60},
+    {61},
+    {62},
+    {63},
+    {64},
     {96},
     {104},
     {112},
+    {120},
+    {121},
+    {122},
+    {123},
+    {124},
+    {125},
+    {126},
+    {127},
+    {128},
     {160},
     {168},
     {176},
@@ -52,22 +71,14 @@ std::array<std::vector<int>, kNumDeparserGroups> kDeparserGroups =
     {192},
     {200},
     {208},
-////{{36, 60, 96, 120, 160, 216, 224}},
-////{{40, 60, 96, 120, 160, 216, 224}},
-////{{44, 60, 96, 120, 160, 216, 224}},
-////{{48, 60, 96, 120, 160, 216, 224}},
-////{{52, 60, 96, 120, 160, 216, 224}},
-////{{56, 60, 96, 120, 160, 216, 224}},
-////{{96, 120, 160, 216, 224}},
-////{{104, 120, 160, 216, 224}},
-////{{112, 120, 160, 216, 224}},
-////{{160, 216, 224}},
-////{{168, 216, 224}},
-////{{176, 216, 224}},
-////{{184, 216, 224}},
-////{{192, 216, 224}},
-////{{200, 216, 224}},
-////{{208, 216, 224}},
+    {216},
+    {217},
+    {218},
+    {219},
+    {220},
+    {221},
+    {222},
+    {223},
     {256},
     {260, 288, 292, 320, 326},
     {264, 288, 296, 320, 332},
@@ -76,7 +87,12 @@ std::array<std::vector<int>, kNumDeparserGroups> kDeparserGroups =
     {276, 288, 308, 320, 350},
     {280, 288, 312, 320, 356},
     {284, 288, 316, 320, 362}}};
-const std::array<int, 4> kSharedDeparserGroups = {{0, 5, 8, 15}};
+// Shared deparser group is a group of PHVs that might contain fields from both
+// threads. For example, deparser group 12 contains PHVs 64 to 95. Of those
+// PHVs 64 to 79 are for ingress thread and 80 to 95 for egress thread. The
+// domain of the mau_group_ variable should ensure that ingress variables are
+// not allocated to the egress MAU group and vice versa.
+const std::array<int, 4> kSharedDeparserGroups = {{0, 12, 24}};
 class Container {
     bool        tagalong_ : 1;
     unsigned    log2sz_ : 2;   // 3 (8 byte) means invalid
@@ -158,6 +174,9 @@ inline std::ostream &operator<<(std::ostream &out, const PHV::Bits &b) {
 
 class Byte : public ::std::array<Bit, 8> {
  public:
+  Byte() { }
+  template<class T> Byte(T b, T e) {
+    for (auto it = b; it != e; ++it) { at(std::distance(b, it)) = *it; } }
   std::string name() const {
     auto last_bit = cfirst();
     while (std::next(last_bit, 1) != end() &&
