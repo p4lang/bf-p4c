@@ -48,13 +48,18 @@ static void output_match(std::ostream &out, const PhvInfo &phv, gress_t gress, i
     match->stmts.apply(OutputExtracts(out, phv, gress, indent));
     if (match->shift)
         out << indent << "shift: " << match->shift << std::endl;
-    out << indent << "next: " << (match->next ? match->next->name : "end") << std::endl;
+    out << indent << "next: ";
+    if (match->next)
+        out << canon_name(match->next->name);
+    else
+        out << "end";
+    out << std::endl;
     --indent;
 }
 
 static void output_state(std::ostream &out, const PhvInfo &phv, gress_t gress, indent_t indent,
                          const IR::Tofino::ParserState *state) {
-    out << indent++ << state->name << ':' << std::endl;
+    out << indent++ << canon_name(state->name) << ':' << std::endl;
     if (!state->select.empty()) {
         out << indent << "match: ";
         const char *sep = "[ ";
@@ -78,7 +83,7 @@ std::ostream &operator<<(std::ostream &out, const ParserAsmOutput &parser) {
     indent_t    indent(1);
     out << "parser " << parser.gress << ":" << std::endl;
     if (parser.parser && parser.parser->start)
-        out << indent << "start: " << parser.parser->start->name << std::endl;
+        out << indent << "start: " << canon_name(parser.parser->start->name) << std::endl;
     for (auto state : parser.states)
         output_state(out, parser.phv, parser.gress, indent, state);
     return out;

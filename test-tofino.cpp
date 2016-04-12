@@ -103,14 +103,14 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         &defuse,
     };
     maupipe = maupipe->apply(backend);
-    if (options->phv_alloc) {
+    if (options->phv_newalloc) {
         PhvAllocator phv_allocator(maupipe);
         CHECK(true == phv_allocator.Solve(maupipe, &phv));
-        std::cout << "Printing PHV fields:\n";
-        for (auto iter = phv.begin(); iter != phv.end(); ++iter) {
-            std::cout << iter->name << iter->alloc[0] << "\n";
-            std::cout << iter->name << iter->alloc[1] << "\n";
-        }
+        if (verbose) {
+            std::cout << "Printing PHV fields:\n";
+            for (auto iter = phv.begin(); iter != phv.end(); ++iter) {
+                std::cout << iter->name << iter->alloc[0] << "\n";
+                std::cout << iter->name << iter->alloc[1] << "\n"; } }
     } else {
         maupipe = maupipe
             ->apply(MauPhvConstraints(phv))
