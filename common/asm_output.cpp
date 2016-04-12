@@ -10,7 +10,10 @@ StringRef trim_asm_name(StringRef name) {
 }
 
 std::ostream &operator<<(std::ostream &out, canon_name n) {
-    for (auto ch : n.name) {
+    auto name = n.name;
+    if (auto cl = name.findstr("::"))
+        name = name.after(cl);
+    for (auto ch : name) {
         if (ch & ~0x7f) continue;
         if (isalnum(ch) || ch == '_' || ch == '.' || ch == '$' || ch == '-')
             out << ch;

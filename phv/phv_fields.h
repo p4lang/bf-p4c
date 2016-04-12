@@ -31,6 +31,11 @@ class PhvInfo : public Inspector {
             int field_hi() const { return field_bit + width - 1; }
             int container_hi() const { return container_bit + width - 1; } };
         vector<alloc_slice>     alloc[2];   // sorted MSB (field) first
+        const alloc_slice &for_bit(gress_t gr, int bit) const {
+            for (auto &sl : alloc[gr])
+                if (bit >= sl.field_bit && bit < sl.field_bit + sl.width)
+                    return sl;
+            BUG("No allocation for bit %d in %s", bit, name); }
         struct bitrange {
             int         lo, hi;         // range of bits within a container or field
             int size() const { return hi - lo + 1; }

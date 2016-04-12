@@ -79,15 +79,15 @@ const PhvInfo::Info *PhvInfo::field(const IR::Member *fr, Info::bitrange *bits) 
     if (bits) {
         bits->lo = 0;
         bits->hi = fr->type->width_bits() - 1; }
-    if (auto *rv = getref(all_fields, name))
-        return rv;
-    if (auto *p = name.findstr("::"))
-        name = name.after(p+2);
     if (auto *p = name.find('[')) {
         if (name.after(p).find(':'))
             name = name.before(p); }
     if (auto *rv = getref(all_fields, name))
         return rv;
+    if (auto *p = name.findstr("::")) {
+        name = name.after(p+2);
+        if (auto *rv = getref(all_fields, name))
+            return rv; }
     warning("can't find field '%s'", name);
     return nullptr;
 }
@@ -106,24 +106,41 @@ const std::pair<int, int> *PhvInfo::header(cstring name_) const {
     StringRef name = name_;
     if (auto *rv = getref(all_headers, name))
         return rv;
-    if (auto *p = name.findstr("::"))
+    if (auto *p = name.findstr("::")) {
         name = name.after(p+2);
-    if (auto *rv = getref(all_headers, name))
-        return rv;
+        if (auto *rv = getref(all_headers, name))
+            return rv; }
     return nullptr;
 }
 
 void PhvInfo::allocatePOV() {
-    if (all_fields.count("$POV"))
+    if (all_fields.count("$POV") || all_fields.count("ingress::$POV"))
         BUG("trying to reallocate POV");
-    int size = 0;
+    int ingress_size = 0, egress_size = 0, generic_size = 0;
     for (auto &hdr : all_headers)
-        if (!field(hdr.second.first)->metadata)
-            ++size;
-    add("$POV", size, false);
-    for (auto &hdr : all_headers)
-        if (!field(hdr.second.first)->metadata)
-            add(hdr.first + ".$valid", 1, false);
+        if (!field(hdr.second.first)->metadata) {
+            if (hdr.first.startsWith("ingress::"))
+                ++ingress_size;
+            else if (hdr.first.startsWith("egress::"))
+                ++egress_size;
+            else
+                ++generic_size; }
+    assert(generic_size == 0 || ingress_size+egress_size == 0);
+    if (generic_size > 0) {
+        add("$POV", generic_size, false);
+        for (auto &hdr : all_headers)
+            if (!field(hdr.second.first)->metadata)
+                add(hdr.first + ".$valid", 1, false); }
+    if (ingress_size > 0) {
+        add("ingress::$POV", ingress_size, false);
+        for (auto &hdr : all_headers)
+            if (!field(hdr.second.first)->metadata && hdr.first.startsWith("ingress::"))
+                add(hdr.first + ".$valid", 1, false); }
+    if (egress_size > 0) {
+        add("egress::$POV", egress_size, false);
+        for (auto &hdr : all_headers)
+            if (!field(hdr.second.first)->metadata && hdr.first.startsWith("egress::"))
+                add(hdr.first + ".$valid", 1, false); }
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo::Info::alloc_slice &sl) {

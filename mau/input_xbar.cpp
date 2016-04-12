@@ -1,3 +1,4 @@
+#include "gateway.h"
 #include "input_xbar.h"
 #include "lib/algorithm.h"
 #include "lib/bitvec.h"
@@ -101,7 +102,7 @@ static bool find_alloc(IXBar::Use &alloc, int groups, int bytes_per_group,
     return /* alloc */ true;
 }
 
-bool IXBar::allocTable(bool ternary, const IR::Table *tbl, const PhvInfo &phv, Use &alloc) {
+bool IXBar::allocTable(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc) {
     LOG2("IXBar::allocTable(" << tbl->name << ")");
     alloc.ternary = ternary;
     if (!tbl->reads) return true;
@@ -167,7 +168,10 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const IR::MAU::Table::Way &w
         if (!(hash_index_inuse[group] & alloc.hash_table_input))
             break; }
     if (group >= HASH_INDEX_GROUPS) {
-        group = alloc.way_use[alloc.way_use.size() % way_groups_allocated(alloc)].slice;
+        if (alloc.way_use.empty())
+            group = 0;  // share with another table?
+        else
+            group = alloc.way_use[alloc.way_use.size() % way_groups_allocated(alloc)].slice;
         LOG3("all hash slices in use, reusing " << group); }
     for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
         if (way_bits <= 0) break;
@@ -187,12 +191,26 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const IR::MAU::Table::Way &w
     return true;
 }
 
-bool IXBar::allocGateway(const IR::Expression * /*tbl*/, const PhvInfo &/*phv*/, Use &/*alloc*/) {
-    // TODO(cdodd)
-    return true;
+bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc) {
+    CollectGatewayFields collect(phv);
+    tbl->apply(collect);
+    if (collect.info.empty()) return true;
+    for (auto &info : collect.info) {
+        int size = (info.first->size + 7)/8U;
+        for (int i = 0; i < size; i++) {
+            alloc.use.emplace_back(info.first->name, i);
+            if (info.second.xor_with)
+                alloc.use.back().flags |= IXBar::Use::NeedXor;
+            if (info.second.need_range)
+                alloc.use.back().flags |= IXBar::Use::NeedRange; } }
+    if (find_alloc(alloc, EXACT_GROUPS, EXACT_BYTES_PER_GROUP, exact_use, exact_fields, false) ||
+        find_alloc(alloc, EXACT_GROUPS, EXACT_BYTES_PER_GROUP, exact_use, exact_fields, true))
+        return true;
+    alloc.clear();
+    return false;
 }
 
-void IXBar::update(const Use &alloc) {
+void IXBar::update(cstring name, const Use &alloc) {
     auto &use = alloc.ternary ? ternary_use.base() : exact_use.base();
     auto &fields = alloc.ternary ? ternary_fields : exact_fields;
     for (auto &byte : alloc.use) {
@@ -211,6 +229,17 @@ void IXBar::update(const Use &alloc) {
                 BUG("conflicting ixbar allocation");
             use[byte.loc] = byte; }
         fields.emplace(byte.field, byte.loc); }
+    for (auto &way : alloc.way_use) {
+        if (!hash_group_use[way.group])
+            hash_group_use[way.group] = name;
+        hash_index_inuse[way.slice] |= alloc.hash_table_input;
+        for (int hash : bitvec(alloc.hash_table_input)) {
+            if (!hash_index_use[hash][way.slice])
+                hash_index_use[hash][way.slice] = name;
+            for (auto bit : bitvec(way.mask)) {
+                hash_single_bit_inuse[bit] |= alloc.hash_table_input;
+                if (!hash_single_bit_use[hash][bit])
+                    hash_single_bit_use[hash][bit] = name; } } }
 }
 
 bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv,
@@ -222,11 +251,10 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv,
         if (!allocHashWay(tbl, way, tbl_alloc)) {
             tbl_alloc.clear();
             return false; } }
-    for (auto &gw : tbl->gateway_rows) {
-        if (!allocGateway(gw.first, phv, gw_alloc)) {
-            tbl_alloc.clear();
-            gw_alloc.clear();
-            return false; } }
+    if (!allocGateway(tbl, phv, gw_alloc)) {
+        tbl_alloc.clear();
+        gw_alloc.clear();
+        return false; }
     return true;
 }
 

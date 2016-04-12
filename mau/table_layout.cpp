@@ -2,7 +2,7 @@
 #include "lib/bitops.h"
 #include "lib/log.h"
 
-static void setup_match_layout(IR::MAU::Table::Layout &layout, const IR::Table *tbl) {
+static void setup_match_layout(IR::MAU::Table::Layout &layout, const IR::V1Table *tbl) {
     layout.entries = tbl->size;
     for (auto t : tbl->reads_types)
         if (t == "ternary" || t == "lpm") {

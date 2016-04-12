@@ -2,7 +2,7 @@
 
 IR::Tofino::ParserState::ParserState(const IR::Node *p4state) {
     this->p4state = p4state;
-    if (auto *v1_0 = p4state->to<IR::Parser>()) {
+    if (auto *v1_0 = p4state->to<IR::V1Parser>()) {
         name = v1_0->name;
         if (v1_0->select)
             select = *v1_0->select;

@@ -74,16 +74,16 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     MauAsmOutput mauasm(phv);
     PassManager backend = {
         new AddMetadataShims,
+        new CreateThreadLocalInstances(INGRESS),
+        new CreateThreadLocalInstances(EGRESS),
         &phv,
         new VisitFunctor([&phv]() { phv.allocatePOV(); }),
-        new CanonGatewayExpr,
+        new CanonGatewayExpr,   // must be before TableLayout?  or just TablePlacement?
         new TableLayout,
         new TableFindSeqDependencies,
         new DumpPipe("Initial table graph"),
         new FindDependencyGraph(&deps),
         new VisitFunctor([&deps]() { if (verbose) std::cout << deps; }),
-        new CreateThreadLocalInstances(INGRESS),
-        new CreateThreadLocalInstances(EGRESS),
         new CopyHeaderEliminator,
         new HeaderFragmentCreator,
         new TypeCheck,

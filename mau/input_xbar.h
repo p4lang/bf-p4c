@@ -48,11 +48,13 @@ struct IXBar {
  public:
     /* IXbar::Use tracks the input xbar use of a single table */
     struct Use {
+        enum flags_t { NeedRange=1, NeedXor=2 };
         bool            ternary;
         struct Byte {
             cstring     field;
             int         byte;
             Loc         loc;
+            int         flags;  // flags describing gateway use/requirements
             Byte(cstring f, int b) : field(f), byte(b) {}
             Byte(cstring f, int b, int g, int gb) : field(f), byte(b), loc(g, gb) {}
             operator std::pair<cstring, int>() const { return std::make_pair(field, byte); }
@@ -74,11 +76,11 @@ struct IXBar {
     };
 
     void clear();
-    bool allocTable(bool ternary, const IR::Table *tbl, const PhvInfo &phv, Use &alloc);
+    bool allocTable(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc);
     bool allocHashWay(const IR::MAU::Table *, const IR::MAU::Table::Way &, Use &);
-    bool allocGateway(const IR::Expression *gw, const PhvInfo &phv, Use &alloc);
+    bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_alloc, Use &gw_alloc);
-    void update(const Use &alloc);
+    void update(cstring name, const Use &alloc);
     friend std::ostream &operator<<(std::ostream &, const IXBar &);
 };
 

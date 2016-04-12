@@ -122,8 +122,8 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
                             const PhvInfo &phv, TableResourceAlloc *resources) {
     IXBar current_ixbar;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
-        current_ixbar.update(p->resources->match_ixbar);
-        current_ixbar.update(p->resources->gateway_ixbar); }
+        current_ixbar.update(p->name, p->resources->match_ixbar);
+        current_ixbar.update(p->name + "$gw", p->resources->gateway_ixbar); }
     if (!current_ixbar.allocTable(next->table, phv, resources->match_ixbar,
                                   resources->gateway_ixbar) ||
         !current_ixbar.allocTable(next->gw, phv, resources->match_ixbar,
@@ -141,8 +141,10 @@ static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Pl
         current_mem.update(p->resources->memuse);
     int gw_entries = 1;
     resources->memuse.clear();
-    if (!current_mem.allocTable(next->table, entries, resources->memuse, resources->match_ixbar) ||
-        !current_mem.allocTable(next->gw, gw_entries, resources->memuse, resources->match_ixbar)) {
+    if (!current_mem.allocTable(next->name, next->table, entries,
+                                resources->memuse, resources->match_ixbar) ||
+        !current_mem.allocTable(next->name, next->gw, gw_entries,
+                                resources->memuse, resources->match_ixbar)) {
         resources->memuse.clear();
         return false; }
     return true;

@@ -1,6 +1,7 @@
 #include "ir/ir.h"
 
-IR::InstanceRef::InstanceRef(IR::ID name, const IR::Type *t) : name(name) {
+IR::InstanceRef::InstanceRef(IR::ID name, const IR::Type *t) {
+    if (name.srcInfo.isValid()) srcInfo = name.srcInfo;
     this->type = t;
     if (auto *hdr = t->to<IR::Type_Header>()) {
         obj = new IR::Header(name, hdr);

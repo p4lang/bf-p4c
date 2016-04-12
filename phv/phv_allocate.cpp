@@ -80,6 +80,7 @@ bool PhvAllocate::preorder(const IR::Tofino::Pipe *pipe) {
     Uses uses(phv);
     Regs normal = { "B0", "H0", "W0" },
          tagalong = { "TB0", "TH0", "TW0" };
+    cstring gress_pfx[] = { "ingress::", "egress::" };
     pipe->apply(uses);
     for (auto gr : Range(INGRESS, EGRESS)) {
         PhvInfo::Info *pov = nullptr;
@@ -95,10 +96,12 @@ bool PhvAllocate::preorder(const IR::Tofino::Pipe *pipe) {
         tagalong.W = PHV::Container::TW(tagalong_group * 4);
 
         for (auto &field : phv) {
+            if (field.name.startsWith(gress_pfx[!gr]))
+                continue;
             if (field.alloc[gr].empty()) {
                 if (pov)
                     alloc_pov(&field, gr, pov, pov_bit++);
-                else if (field.name == "$POV")
+                else if (field.name.endsWith("$POV"))
                     do_alloc((pov = &field), gr, &normal);
                 else if (uses.use[1][gr][field.id])
                     do_alloc(&field, gr, &normal);

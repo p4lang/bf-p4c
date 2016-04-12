@@ -45,13 +45,12 @@ class Tofino::Pipe {
 }
 
 class InstanceRef : HeaderRef {
-    ID                          name;
     HeaderOrMetadata            obj;
     inline NameMap<InstanceRef> nested;
 #noconstructor
 #emit
     InstanceRef(ID n, const Type *t);
 #end
-    toString { return name; }
+    toString { return obj->name; }
     dbprint { out << obj; }
 }
