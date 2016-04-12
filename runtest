@@ -47,7 +47,7 @@ fi
 verbose=false;
 debug=false
 
-P4C_ARGS=""
+#P4C_ARGS=""
 
 while [ $# -gt 1 ]; do
     case $1 in
