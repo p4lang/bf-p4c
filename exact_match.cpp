@@ -754,13 +754,16 @@ void ExactMatchTable::add_field_to_pack_format(json::vector &field_list, int bas
     for (auto &piece : field.bits) {
         auto mw = --match_by_bit.upper_bound(bit);
         int lo = bit - mw->first;
+        int offset = piece.lo - 1;
         while(mw != match_by_bit.end() &&  mw->first < bit + piece.size()) {
             int hi = std::min((unsigned)mw->second->size()-1, bit+piece.size()-mw->first-1);
+            int width = hi - lo + 1;
+            offset += width;
             field_list.push_back( json::map {
                 { "name", json::string(mw->second.name()) },
-                { "start_offset", json::number(basebit - piece.hi) },
+                { "start_offset", json::number(basebit - offset) },
                 { "start_bit", json::number(lo + mw->second.lobit()) },
-                { "bit_width", json::number(hi - lo + 1) }});
+                { "bit_width", json::number(width) }});
             lo = 0;
             ++mw; }
         bit += piece.size(); }
@@ -783,6 +786,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
             { "start_offset", json::number(1023 - field.first*128 - field.second.hi) },
             { "start_bit", json::number(field.second.what->lo) },
             { "bit_width", json::number(field.second.hi - field.second.lo + 1) }});
+    canon_field_list(match_field_list);
     stage_tbl["match_group_resource_allocation"] = json::map {
         { "field_list", std::move(match_field_list) } };
     // FIXME -- need action_to_immediate_mapping -- need extra asmgen?
