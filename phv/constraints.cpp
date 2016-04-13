@@ -10,6 +10,15 @@ void Constraints::SetEqualByte(const PHV::Byte &byte) {
   // TODO: This does not handle the case where byte can have "holes" of invalid
   // bits.
   SetContiguousBits(byte.valid_bits());
+  // The rest of the function essentially sets possible offset values for the
+  // first valid bit in byte. It has to handle 2 complexities:
+  // 1. The domain of possible values is for the first valid bit is {0+i, 8+i,
+  // 16+i, 24+i} when i is the distance of the first valid bit from the
+  // beginning of the byte.
+  // 2. The first valid bit might already have an entry in bit_offset_domain_
+  // or bit_offset_range_. In that case, we must remove the origin entry insert
+  // an entry in bit_offset_domain_ which is the intersection of step 1 and the
+  // original entry.
   const int d = std::distance(byte.cbegin(), byte.cfirst());
   std::vector<int> domain({{0, 8, 16, 24}});
   for (auto &i : domain) i += d;
@@ -329,16 +338,18 @@ void Constraints::SetConstraints(SolverInterface &solver) {
   for (auto &bits : contiguous_bits_) {
     CHECK(false == bits.empty()) << ": PHV::Bits is empty";
     const PHV::Bit b1 = bits.front();
+    CHECK(bits.size() > 1) << ": Found 1-bit sequence " << b1;
     CHECK(true == b1.IsValid()) << ": First bit in sequence is invalid";
     CHECK(b1 == *(bits.cbegin())) << ": Unexpected first bit " << b1;
-    PHV::Bits::const_iterator b2 = std::next(bits.cbegin());
     eq_offsets.SetEqualOffset(b1, equalities_[Equal::OFFSET], solver);
-    while (b2 != bits.cend()) {
-      if (true == b2->IsValid()) {
-        solver.SetBitDistance(b1, *b2, std::distance(bits.cbegin(), b2));
-        eq_offsets.SetEqualOffset(*b2, equalities_[Equal::OFFSET], solver);
+    PHV::Bits::const_iterator first = bits.cbegin();
+    while (std::next(first, 1) != bits.cend()) {
+      PHV::Bits::const_iterator second = std::next(first, 1);
+      if (true == second->IsValid()) {
+        solver.SetBitDistance(*first, *second, 1);
+        eq_offsets.SetEqualOffset(*second, equalities_[Equal::OFFSET], solver);
       }
-      ++b2;
+      std::advance(first, 1);
     }
   }
   SetConstraints(Equal::OFFSET,
@@ -410,7 +421,7 @@ void Constraints::SetConstraints(SolverInterface &solver) {
         }
       }
       else if (true == container_conflicts_.at(bid).at(bid2)) {
-        LOG2("Ignoring redundant conflict between " << bits_.at(bid) <<
+        LOG3("Ignoring redundant conflict between " << bits_.at(bid) <<
                " and " << bits_.at(bid2));
       }
     }

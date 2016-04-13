@@ -114,7 +114,7 @@ IntVar *Bit::SetDeparsedHeader(const Bit &prev_bit, const Byte &prev_byte) {
     name();
   operations_research::IntExpr *is_next_byte = nullptr;
   if (prev_bit.container() == container()) {
-    is_next_byte = solver->MakeIntConst(1);
+    is_next_byte = solver->MakeIntConst(0);
   }
   else {
     is_next_byte =
