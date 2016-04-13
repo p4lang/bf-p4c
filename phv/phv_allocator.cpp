@@ -104,42 +104,6 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
   pipe->apply(smxc);
   ParseGraphConstraint pgc(constraints_);
   pipe->apply(pgc);
-//BitOffsetConstraint boc(constraints_);
-//pipe->apply(boc);
-
-
-//// Set TPHV constraints. Fields used in MAU cannot go into T-PHV.
-//or_tools::TPhvConstraint stphvc(header_bits_);
-//maupipe_->apply(stphvc);
-//// Set deparser constraints including deparser groups.
-//SetDeparserConstraints sdc(header_bits_);
-//maupipe_->apply(sdc);
-
-//// Set single write constraint on primitives in an action.
-//SetWriteConstraints sswc(header_bits_);
-//maupipe_->apply(sswc);
-
-//  // Collect constraint variables.
-//  auto group_vars(header_bits_.GetGroupVars());
-//  std::random_shuffle(group_vars.begin(), group_vars.end());
-//  std::vector<IntVar*> vars;
-//  while (group_vars.size() != 0) {
-//    // Insert all group variables equal to first group.
-//    const std::set<IntVar*> equal_groups =
-//      header_bits_.Equals(*group_vars.begin());
-//    vars.insert(vars.end(), equal_groups.begin(), equal_groups.end());
-//    auto vars2 = header_bits_.containers_and_offsets(equal_groups);
-//    vars.insert(vars.end(), vars2.begin(), vars2.end());
-//    for (auto v : equal_groups) {
-//      auto it = std::find(group_vars.begin(), group_vars.end(), v);
-//      CHECK(it != group_vars.end());
-//      group_vars.erase(it);
-//    }
-//  }
-//  for (auto &v : vars) {
-//    LOG1("Inserting " << v->name() << std::endl);
-//  }
-//  return vars;
 }
 
 bool PhvAllocator::Solve(const IR::Tofino::Pipe *pipe, PhvInfo *phv_info) {
