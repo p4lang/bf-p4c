@@ -36,6 +36,10 @@ void ParseGraphConstraint::postorder(const IR::Tofino::ParserMatch *pm) {
   // We need to call this function even if there is no next state. Otherwise,
   // there is no way to set conflicts between bits extracted in this
   // ParserMatch.
+  // TODO: After adding support for set_metadata(), SetParseConflict will also
+  // need to be modified because we do not want to add a bit-conflict (or
+  // container-conflict) between pkt.f1 and meta.f2 when we do
+  // set_metadata(meta.f2, pkt.f1);
   constraints_.SetParseConflict(old_bits, new_item->second);
 }
 

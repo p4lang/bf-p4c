@@ -112,14 +112,20 @@ IntVar *Bit::SetDeparsedHeader(const Bit &prev_bit, const Byte &prev_byte) {
   CHECK(nullptr != container()) << ": No container for " << name();
   CHECK(nullptr != container()->container()) << ": No container expr for " <<
     name();
-  operations_research::IntExpr *is_next_byte =
-    solver->MakeIsDifferentVar(
-      solver->MakeSum(
-        solver->MakeIsEqualVar(container()->container(),
-                               prev_bit.container()->container()),
-        solver->MakeIsEqualVar(base_offset_,
-                               solver->MakeSum(prev_bit.base_offset(), 8))),
-      solver->MakeIntConst(2));
+  operations_research::IntExpr *is_next_byte = nullptr;
+  if (prev_bit.container() == container()) {
+    is_next_byte = solver->MakeIntConst(1);
+  }
+  else {
+    is_next_byte =
+      solver->MakeIsDifferentVar(
+        solver->MakeSum(
+          solver->MakeIsEqualVar(container()->container(),
+                                 prev_bit.container()->container()),
+          solver->MakeIsEqualVar(base_offset_,
+                                 solver->MakeSum(prev_bit.base_offset(), 8))),
+        solver->MakeIntConst(2));
+  }
   // is_next_byte and prev_byte.is_last_byte() must be equal.
   solver->AddConstraint(
     solver->MakeEquality(is_next_byte, prev_byte.is_last_byte()));
