@@ -233,6 +233,7 @@ Constraints::IsContainerConflict(const PHV::Bit &b1, const PHV::Bit &b2) const {
 }
 
 void Constraints::SetBitConflict(const PHV::Bit &b1, const PHV::Bit &b2) {
+  CHECK(b1 != b2) << ": " << b1 << " conflicting with self";
   BitId bit_min = std::min(unique_bit_id(b1), unique_bit_id(b2));
   BitId bit_max = std::max(unique_bit_id(b1), unique_bit_id(b2));
   if (false == bit_conflicts_.at(bit_max).at(bit_min)) {
