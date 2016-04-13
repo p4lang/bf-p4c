@@ -112,6 +112,7 @@ IntVar *Bit::SetDeparsedHeader(const Bit &prev_bit, const Byte &prev_byte) {
   CHECK(nullptr != container()) << ": No container for " << name();
   CHECK(nullptr != container()->container()) << ": No container expr for " <<
     name();
+  // is_next_byte is a misnomer. It should really be is_not_next_byte.
   operations_research::IntExpr *is_next_byte = nullptr;
   if (prev_bit.container() == container()) {
     is_next_byte = solver->MakeIntConst(0);

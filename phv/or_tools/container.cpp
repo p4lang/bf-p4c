@@ -13,6 +13,9 @@ IntExpr *Container::deparser_group(const gress_t &thread) {
   if (nullptr == deparser_group_) {
     LOG2("Making deparser group flags for " << container_in_group_);
     Solver *solver = container_in_group_->solver();
+    // flags is a vector of PHV::kNumDeparserGroups elements. flags[i] == 1 if
+    // the deparser group of this container is greater than i. For deparser
+    // group boundaries see PHV::kDeparserGroups.
     std::vector<IntVar*> flags;
     flags.reserve(PHV::kNumDeparserGroups);
     auto lt_flags = std::array<IntVar*, PHV::kMaxContainer>();
