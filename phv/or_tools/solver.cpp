@@ -400,24 +400,6 @@ void Solver::allocation(const PHV::Bit &bit, PHV::Container *container,
   }
 }
 
-class PrintFailure : public SearchMonitor {
- public:
-  explicit PrintFailure(operations_research::Solver* const s, const std::vector<IntVar*> &vars) :
-    SearchMonitor(s), vars_(vars) {}
-  void BeginFail() {
-//  LOG2("Inspecting failure");
-//  for (auto v : vars_) {
-//    if (v->Size() == 1)
-//      LOG2("Found " << v->name() << " value is " << v->Value());
-//    else {
-//      LOG1("Failure " << v->name());
-//      break; }
-//  }
-  }
- private:
-  const std::vector<IntVar*> vars_;
-};
-
 bool
 Solver::Solve1(operations_research::Solver::IntValueStrategy int_val,
                const bool &is_luby_restart) {
@@ -427,10 +409,8 @@ Solver::Solve1(operations_research::Solver::IntValueStrategy int_val,
                               operations_research::Solver::CHOOSE_FIRST_UNBOUND,
                               int_val);
   std::vector<SearchMonitor*> monitors;
-  PrintFailure pf(&solver_, int_vars);
   if (is_luby_restart) monitors.push_back(solver_.MakeLubyRestart(1000));
   monitors.push_back(solver_.MakeTimeLimit(5000));
-  monitors.push_back(&pf);
   solver_.NewSearch(db, monitors);
   const std::clock_t begin_time = clock();
   const bool result = solver_.NextSolution();
