@@ -12,6 +12,7 @@ using operations_research::IntExpr;
 using operations_research::SearchMonitor;
 void Solver::SetEqualContainer(const std::set<PHV::Bit> &bits) {
   Container *c = new Container(MakeContainerInGroup(bits.begin()->name()));
+  LOG2("Setting equal container for " << bits.size() << " bits");
   for (auto &b : bits) {
     if (bits_.count(b) == 0) bits_.insert(std::make_pair(b, Bit(b.name())));
     Bit &bit = bits_.at(b);
@@ -110,6 +111,7 @@ void Solver::SetBitDistance(const PHV::Bit &pbit1, const PHV::Bit &pbit2,
               bit2.name();
     }
     else {
+      LOG2("Adding offset constraint between " << pbit1 << " and " << pbit2);
       // Adding a constraints between bit1.offset() and bit2.offset() will be
       // simpler. However, those variables are derived from their respective
       // base_offset() variables. Adding a constraints between the
