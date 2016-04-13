@@ -151,6 +151,11 @@ bool PhvAllocator::Solve(const IR::Tofino::Pipe *pipe, PhvInfo *phv_info) {
     if (true == solver.Solve()) {
       PopulatePhvInfo ppi(solver, phv_info);
       pipe->apply(ppi);
+      for (auto &field : *phv_info)
+        for (auto &alloc : field.alloc)
+          std::sort(alloc.begin(), alloc.end(), [](const PhvInfo::Info::alloc_slice &a,
+                                                   const PhvInfo::Info::alloc_slice &b) -> bool {
+            return a.field_bit > b.field_bit; });
       return true;
     }
     else {

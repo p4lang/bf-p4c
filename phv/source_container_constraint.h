@@ -33,6 +33,6 @@ class BitOffsetConstraint : public SourceContainerConstraint {
  public:
   BitOffsetConstraint(Constraints &c) : SourceContainerConstraint(c) { }
  private:
-  void postorder(const IR::ActionFunction *af) override { }
+  void postorder(const IR::ActionFunction *) override { }
 };
 #endif
