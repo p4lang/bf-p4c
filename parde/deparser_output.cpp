@@ -13,9 +13,16 @@ class OutputDictionary : public Inspector {
             /* not allocated to header -- happens with Varbits currently */
             return false; }
         auto field = phv.field(prim->operands[0], &bits);
-        out << indent << canon_name(field->name);
-        if (bits.lo != 0 || bits.hi + 1 != field->size)
-            out << '.' << bits.lo << '-' << bits.hi;
+        auto &alloc = field->for_bit(gress, bits.lo);
+        if (size_t(alloc.container_bit + alloc.width) != alloc.container.size())
+            return false;
+        int size = alloc.container.size() / 8;
+        if (bits.size() != size * 8) {
+            out << indent << alloc.container;
+        } else {
+            out << indent << canon_name(field->name);
+            if (bits.lo != 0 || bits.hi + 1 != field->size)
+                out << '.' << bits.lo << '-' << bits.hi; }
         out << ": " << canon_name(trim_asm_name(hsr->header_ref()->toString())) << ".$valid"
             << std::endl;
         return false; }

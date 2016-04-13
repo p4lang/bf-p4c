@@ -9,14 +9,22 @@ class OutputExtracts : public Inspector {
     gress_t             gress;
     indent_t            indent;
     int                 offset = 0;
+    PHV::Container      last;
     bool preorder(const IR::Primitive *prim) {
+        if (prim->operands[0]->type->is<IR::Type::Varbits>()) {
+            WARNING("ignoring varbits type in parser");
+            return false; }
         PhvInfo::Info::bitrange bits;
         auto dest = phv.field(prim->operands[0], &bits);
         if (dest && prim->name == "extract") {
-            int size = (prim->operands[0]->type->width_bits() + 7) / 8U;
+            auto &alloc = dest->for_bit(gress, bits.lo);
+            if (alloc.container == last)
+                return false;
+            last = alloc.container;
+            int size = alloc.container.size() / 8;
             out << indent << Range(offset, offset+size-1) << ": ";
             if (bits.size() != size * 8) {
-                out << dest->for_bit(gress, bits.lo).container;
+                out << alloc.container;
             } else {
                 out << canon_name(dest->name);
                 if (bits.lo != 0 || bits.hi + 1 != dest->size)
