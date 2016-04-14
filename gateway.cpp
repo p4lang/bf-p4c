@@ -153,9 +153,11 @@ void check_match_key(std::vector<GatewayTable::MatchKey> &vec, const char *name,
         if (!vec[i].val.check())
             break;
         if (vec[i].offset >= 0) {
-            if (i && vec[i].offset < vec[i-1].offset + (int)vec[i-1].val->size())
-                error(vec[i].val.lineno, "Gateway %s key at offset %d overlaps previous value(s)",
-                      name, vec[i].offset);
+            for (unsigned j = 0; j < i; ++j) {
+                if (vec[i].offset < vec[j].offset + (int)vec[j].val->size() &&
+                    vec[j].offset < vec[i].offset + (int)vec[i].val->size())
+                    error(vec[i].val.lineno, "Gateway %s key at offset %d overlaps previous "
+                          "value at offset %d", name, vec[i].offset, vec[j].offset); }
         } else
             vec[i].offset = i ? vec[i-1].offset + vec[i-1].val->size() : 0;
         if (vec[i].offset + vec[i].val->size() > max) {
@@ -260,12 +262,12 @@ void GatewayTable::payload_write_regs(int row, int type, int bus) {
 
 void GatewayTable::write_regs() {
     LOG1("### Gateway table " << name() << " write_regs");
-    if (input_xbar) input_xbar->write_regs();
     auto &row = layout[0];
-    if (!setup_vh_xbar(this, row, 0, match, input_xbar->match_group()) ||
-        !setup_vh_xbar(this, row, 4, xor_match, input_xbar->match_group()))
-        return;
-
+    if (input_xbar) {
+        input_xbar->write_regs();
+        if (!setup_vh_xbar(this, row, 0, match, input_xbar->match_group()) ||
+            !setup_vh_xbar(this, row, 4, xor_match, input_xbar->match_group()))
+            return; }
     auto &row_reg = stage->regs.rams.array.row[row.row];
     auto &gw_reg = row_reg.gateway_table[gw_unit];
     auto &merge = stage->regs.rams.match.merge;
@@ -276,10 +278,10 @@ void GatewayTable::write_regs() {
         assert(row.bus == 1);
         gw_reg.gateway_table_ctl.gateway_table_input_data1_select = 1;
         gw_reg.gateway_table_ctl.gateway_table_input_hash1_select = 1; }
-    if (input_xbar->hash_group() >= 0)
+    if (input_xbar && input_xbar->hash_group() >= 0)
         setup_muxctl(row_reg.vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus],
                      input_xbar->hash_group());
-    if (input_xbar->match_group() >= 0) {
+    if (input_xbar && input_xbar->match_group() >= 0) {
         auto &vh_xbar_ctl = row_reg.vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl;
         setup_muxctl(vh_xbar_ctl, input_xbar->match_group());
         /* vh_xbar_ctl.exactmatch_row_vh_xbar_thread = gress; */ }
