@@ -10,103 +10,104 @@
 #include <iostream>
 
 class bitvec {
-    size_t		size;
+    size_t              size;
     union {
-	uintptr_t	data;
-	uintptr_t	*ptr;
+        uintptr_t       data;
+        uintptr_t       *ptr;
     };
 public:
     static constexpr size_t bits_per_unit = CHAR_BIT * sizeof(uintptr_t);
 
     class bitref {
-	friend class bitvec;
-	bitvec		&self;
-	int		idx;
-	bitref(bitvec &s, int i) : self(s), idx(i) {}
+        friend class bitvec;
+        bitvec          &self;
+        int             idx;
+        bitref(bitvec &s, int i) : self(s), idx(i) {}
     public:
-	bitref(const bitref &a) = default;
-	bitref(bitref &&a) = default;
-	explicit operator bool() const { return self.getbit(idx); }
-	operator int() const { return self.getbit(idx) ? 1 : 0; }
-	int index() const { return idx; }
+        bitref(const bitref &a) = default;
+        bitref(bitref &&a) = default;
+        explicit operator bool() const { return self.getbit(idx); }
+        operator int() const { return self.getbit(idx) ? 1 : 0; }
+        int index() const { return idx; }
         int operator*() const { return idx; }
-	bool operator=(bool b) const {
-	    assert(idx >= 0);
-	    return b ? self.setbit(idx) : self.clrbit(idx); }
+        bool operator=(bool b) const {
+            assert(idx >= 0);
+            return b ? self.setbit(idx) : self.clrbit(idx); }
         bool set(bool b = true) {
-	    assert(idx >= 0);
+            assert(idx >= 0);
             bool rv = self.getbit(idx);
-	    b ? self.setbit(idx) : self.clrbit(idx);
+            b ? self.setbit(idx) : self.clrbit(idx);
             return rv; }
-	bitref &operator++() {
-	    while ((size_t)++idx < self.size * bitvec::bits_per_unit)
-		if (self.getbit(idx)) return *this;
-	    idx = -1;
-	    return *this; }
-	bitref &operator--() {
-	    while (--idx >= 0)
-		if (self.getbit(idx)) return *this;
-	    return *this; }
+        bitref &operator++() {
+            while ((size_t)++idx < self.size * bitvec::bits_per_unit)
+                if (self.getbit(idx)) return *this;
+            idx = -1;
+            return *this; }
+        bitref &operator--() {
+            while (--idx >= 0)
+                if (self.getbit(idx)) return *this;
+            return *this; }
     };
     class const_bitref {
-	friend class bitvec;
-	const bitvec	&self;
-	int		idx;
-	const_bitref(const bitvec &s, int i) : self(s), idx(i) {}
+        friend class bitvec;
+        const bitvec    &self;
+        int             idx;
+        const_bitref(const bitvec &s, int i) : self(s), idx(i) {}
     public:
-	const_bitref(const const_bitref &a) = default;
-	const_bitref(const_bitref &&a) = default;
-	explicit operator bool() const { return self.getbit(idx); }
-	operator int() const { return self.getbit(idx) ? 1 : 0; }
-	int index() const { return idx; }
+        const_bitref(const const_bitref &a) = default;
+        const_bitref(const_bitref &&a) = default;
+        explicit operator bool() const { return self.getbit(idx); }
+        operator int() const { return self.getbit(idx) ? 1 : 0; }
+        int index() const { return idx; }
         int operator*() const { return idx; }
-	const_bitref &operator++() {
-	    while ((size_t)++idx < self.size * bitvec::bits_per_unit)
-		if (self.getbit(idx)) return *this;
-	    idx = -1;
-	    return *this; }
-	const_bitref &operator--() {
-	    while (--idx >= 0)
-		if (self.getbit(idx)) return *this;
-	    return *this; }
+        const_bitref &operator++() {
+            while ((size_t)++idx < self.size * bitvec::bits_per_unit)
+                if (self.getbit(idx)) return *this;
+            idx = -1;
+            return *this; }
+        const_bitref &operator--() {
+            while (--idx >= 0)
+                if (self.getbit(idx)) return *this;
+            return *this; }
     };
 
     bitvec() : size(1), data(0) {}
-    bitvec(unsigned long v) : size(1), data(v) {}
-    bitvec(size_t lo, size_t hi) : size(1), data(0) { setrange(lo, hi); }
+    bitvec(uintptr_t v) : size(1), data(v) {}
+    bitvec(size_t lo, size_t cnt) : size(1), data(0) { setrange(lo, cnt); }
     bitvec(const bitvec &a) : size(a.size) {
-	if (size > 1) {
-	    ptr = new uintptr_t[size];
-	    memcpy(ptr, a.ptr, size * sizeof(*ptr));
-	} else
-	    data = a.data; }
+        if (size > 1) {
+            ptr = new uintptr_t[size];
+            memcpy(ptr, a.ptr, size * sizeof(*ptr));
+        } else
+            data = a.data; }
     bitvec(bitvec &&a) : size(a.size), data(a.data) { a.size = 1; }
     bitvec &operator=(const bitvec &a) {
-	if (this == &a) return *this;
-	if (size > 1) delete [] ptr;
-	if ((size = a.size) > 1) {
-	    ptr = new uintptr_t[size];
-	    memcpy(ptr, a.ptr, size * sizeof(*ptr));
-	} else
-	    data = a.data;
-	return *this; }
+        if (this == &a) return *this;
+        if (size > 1) delete [] ptr;
+        if ((size = a.size) > 1) {
+            ptr = new uintptr_t[size];
+            memcpy(ptr, a.ptr, size * sizeof(*ptr));
+        } else
+            data = a.data;
+        return *this; }
     bitvec &operator=(bitvec &&a) {
-	std::swap(*this, a);
-	return *this; }
+        std::swap(size, a.size);
+        std::swap(data, a.data);
+        return *this; }
     ~bitvec() { if (size > 1) delete [] ptr; }
 
     void clear() {
-	if (size > 1) memset(ptr, 0, size * sizeof(*ptr));
-	else data = 0; }
+        if (size > 1) memset(ptr, 0, size * sizeof(*ptr));
+        else data = 0; }
     bool setbit(size_t idx) {
-	if (idx >= size * bits_per_unit) expand(1 + idx/bits_per_unit);
-	if (size > 1)
-	    ptr[idx/bits_per_unit] |= (uintptr_t)1 << (idx%bits_per_unit);
-	else
-	    data |= (uintptr_t)1 << idx;
-	return true; }
+        if (idx >= size * bits_per_unit) expand(1 + idx/bits_per_unit);
+        if (size > 1)
+            ptr[idx/bits_per_unit] |= (uintptr_t)1 << (idx%bits_per_unit);
+        else
+            data |= (uintptr_t)1 << idx;
+        return true; }
     void setrange(size_t idx, size_t sz) {
-	if (idx+sz > size * bits_per_unit) expand(1 + (idx+sz-1)/bits_per_unit);
+        if (idx+sz > size * bits_per_unit) expand(1 + (idx+sz-1)/bits_per_unit);
         if (size == 1) {
             data |= ~(~(uintptr_t)1 << (sz-1)) << idx;
         } else if (idx/bits_per_unit == (idx+sz-1)/bits_per_unit) {
@@ -136,14 +137,14 @@ public:
             for (size_t i = sz; i < size; i++)
                 ptr[i] = 0; } }
     bool clrbit(size_t idx) {
-	if (idx >= size * bits_per_unit) return false;
-	if (size > 1)
-	    ptr[idx/bits_per_unit] &= ~((uintptr_t)1 << (idx%bits_per_unit));
-	else
-	    data &= ~((uintptr_t)1 << idx);
-	return false; }
+        if (idx >= size * bits_per_unit) return false;
+        if (size > 1)
+            ptr[idx/bits_per_unit] &= ~((uintptr_t)1 << (idx%bits_per_unit));
+        else
+            data &= ~((uintptr_t)1 << idx);
+        return false; }
     void clrrange(size_t idx, size_t sz) {
-	if (idx >= size * bits_per_unit) return;
+        if (idx >= size * bits_per_unit) return;
         if (size == 1) {
             if (idx + sz < bits_per_unit)
                 data &= ~(~(~(uintptr_t)1 << (sz-1)) << idx);
@@ -161,117 +162,120 @@ public:
             if (i < size)
                 ptr[i] &= ~(((uintptr_t)1 << (idx%bits_per_unit)) - 1); } }
     bool getbit(size_t idx) const {
-	if (idx >= size * bits_per_unit) return false;
-	if (size > 1)
-	    return (ptr[idx/bits_per_unit] >> (idx%bits_per_unit)) & 1;
-	else
-	    return (data >> idx) & 1;
-	return false; }
+        if (idx >= size * bits_per_unit) return false;
+        if (size > 1)
+            return (ptr[idx/bits_per_unit] >> (idx%bits_per_unit)) & 1;
+        else
+            return (data >> idx) & 1;
+        return false; }
     uintptr_t getrange(size_t idx, size_t sz) const {
         assert(sz > 0 && sz <= bits_per_unit);
-	if (idx >= size * bits_per_unit) return 0;
+        if (idx >= size * bits_per_unit) return 0;
         if (size > 1) {
             unsigned shift = idx % bits_per_unit;
             idx /= bits_per_unit;
             uintptr_t rv = ptr[idx] >> shift;
             if (shift != 0 && idx + 1 < size)
                 rv |= ptr[idx + 1] << (bits_per_unit - shift);
-	    return rv & ~(~(uintptr_t)1 << (sz-1)); 
+            return rv & ~(~(uintptr_t)1 << (sz-1));
         } else
-	    return (data >> idx) & ~(~(uintptr_t)1 << (sz-1)); }
+            return (data >> idx) & ~(~(uintptr_t)1 << (sz-1)); }
+    bitvec getslice(size_t idx, size_t sz) const;
     bitref operator[](int idx) { return bitref(*this, idx); }
     bool operator[](int idx) const { return getbit(idx); }
-    const_bitref min() const { return ++const_bitref(*this, -1); }
+    int ffs(unsigned start = 0) const;
+    unsigned ffz(unsigned start = 0) const;
+    const_bitref min() const { return const_bitref(*this, ffs()); }
     const_bitref max() const {
         return --const_bitref(*this, size * bits_per_unit); }
     const_bitref begin() const { return min(); }
     const_bitref end() const { return const_bitref(*this, -1); }
-    bitref min() { return ++bitref(*this, -1); }
+    bitref min() { return bitref(*this, ffs()); }
     bitref max() { return --bitref(*this, size * bits_per_unit); }
     bitref begin() { return min(); }
     bitref end() { return bitref(*this, -1); }
     bool empty() const {
-	if (size > 1) {
-	    for (size_t i = 0; i < size; i++)
-		if (ptr[i] != 0) return false;
-	    return true;
-	} else return data == 0; }
+        if (size > 1) {
+            for (size_t i = 0; i < size; i++)
+                if (ptr[i] != 0) return false;
+            return true;
+        } else return data == 0; }
     explicit operator bool() const { return !empty(); }
     bool operator&=(const bitvec &a) {
-	bool rv = false;
-	if (size > 1) {
-	    if (a.size > 1) {
-		for (size_t i = 0; i < size && i < a.size; i++) {
-		    rv |= ((ptr[i] & a.ptr[i]) != ptr[i]);
-		    ptr[i] &= a.ptr[i]; }
-	    } else {
-		rv |= ((*ptr & a.data) != *ptr);
-		*ptr &= a.data; }
-	    if (size > a.size) {
-		if (!rv)
-		    for (size_t i = a.size; i < size; i++)
-			if (ptr[i]) { rv = true; break; }
-		memset(ptr + a.size, 0, (size-a.size) * sizeof(*ptr)); }
-	} else if (a.size > 1) {
-	    rv |= ((data & a.ptr[0]) != data);
-	    data &= a.ptr[0];
-	} else {
-	    rv |= ((data & a.data) != data);
-	    data &= a.data; }
-	return rv; }
+        bool rv = false;
+        if (size > 1) {
+            if (a.size > 1) {
+                for (size_t i = 0; i < size && i < a.size; i++) {
+                    rv |= ((ptr[i] & a.ptr[i]) != ptr[i]);
+                    ptr[i] &= a.ptr[i]; }
+            } else {
+                rv |= ((*ptr & a.data) != *ptr);
+                *ptr &= a.data; }
+            if (size > a.size) {
+                if (!rv)
+                    for (size_t i = a.size; i < size; i++)
+                        if (ptr[i]) { rv = true; break; }
+                memset(ptr + a.size, 0, (size-a.size) * sizeof(*ptr)); }
+        } else if (a.size > 1) {
+            rv |= ((data & a.ptr[0]) != data);
+            data &= a.ptr[0];
+        } else {
+            rv |= ((data & a.data) != data);
+            data &= a.data; }
+        return rv; }
     bitvec operator&(const bitvec &a) const {
         if (size <= a.size) {
             bitvec rv(*this); rv &= a; return rv;
         } else {
             bitvec rv(a); rv &= *this; return rv; } }
     bool operator|=(const bitvec &a) {
-	bool rv = false;
-	if (size < a.size) expand(a.size);
-	if (size > 1) {
-	    if (a.size > 1) {
-		for (size_t i = 0; i < a.size; i++) {
-		    rv |= ((ptr[i] | a.ptr[i]) != ptr[i]);
-		    ptr[i] |= a.ptr[i]; }
-	    } else {
-		rv |= ((*ptr | a.data) != *ptr);
-		*ptr |= a.data; }
-	} else {
-	    rv |= ((data | a.data) != data);
-	    data |= a.data; }
-	return rv; }
+        bool rv = false;
+        if (size < a.size) expand(a.size);
+        if (size > 1) {
+            if (a.size > 1) {
+                for (size_t i = 0; i < a.size; i++) {
+                    rv |= ((ptr[i] | a.ptr[i]) != ptr[i]);
+                    ptr[i] |= a.ptr[i]; }
+            } else {
+                rv |= ((*ptr | a.data) != *ptr);
+                *ptr |= a.data; }
+        } else {
+            rv |= ((data | a.data) != data);
+            data |= a.data; }
+        return rv; }
     bitvec operator|(const bitvec &a) const {
-	bitvec rv(*this); rv |= a; return rv; }
+        bitvec rv(*this); rv |= a; return rv; }
     bitvec &operator^=(const bitvec &a) {
-	if (size < a.size) expand(a.size);
-	if (size > 1) {
-	    if (a.size > 1)
-		for (size_t i = 0; i < a.size; i++) ptr[i] ^= a.ptr[i];
-	    else
-		*ptr ^= a.data;
-	} else
-	    data ^= a.data;
-	return *this; }
+        if (size < a.size) expand(a.size);
+        if (size > 1) {
+            if (a.size > 1)
+                for (size_t i = 0; i < a.size; i++) ptr[i] ^= a.ptr[i];
+            else
+                *ptr ^= a.data;
+        } else
+            data ^= a.data;
+        return *this; }
     bitvec operator^(const bitvec &a) const {
-	bitvec rv(*this); rv ^= a; return rv; }
+        bitvec rv(*this); rv ^= a; return rv; }
     bool operator-=(const bitvec &a) {
-	bool rv = false;
-	if (size > 1) {
-	    if (a.size > 1) {
-		for (size_t i = 0; i < size && i < a.size; i++) {
-		    rv |= ((ptr[i] & ~a.ptr[i]) != ptr[i]);
-		    ptr[i] &= ~a.ptr[i]; }
-	    } else {
-		rv |= ((*ptr & ~a.data) != *ptr);
-		*ptr &= ~a.data; }
-	} else if (a.size > 1) {
-	    rv |= ((data & ~a.ptr[0]) != data);
-	    data &= ~a.ptr[0];
-	} else {
-	    rv |= ((data & ~a.data) != data);
-	    data &= ~a.data; }
-	return rv; }
+        bool rv = false;
+        if (size > 1) {
+            if (a.size > 1) {
+                for (size_t i = 0; i < size && i < a.size; i++) {
+                    rv |= ((ptr[i] & ~a.ptr[i]) != ptr[i]);
+                    ptr[i] &= ~a.ptr[i]; }
+            } else {
+                rv |= ((*ptr & ~a.data) != *ptr);
+                *ptr &= ~a.data; }
+        } else if (a.size > 1) {
+            rv |= ((data & ~a.ptr[0]) != data);
+            data &= ~a.ptr[0];
+        } else {
+            rv |= ((data & ~a.data) != data);
+            data &= ~a.data; }
+        return rv; }
     bitvec operator-(const bitvec &a) const {
-	bitvec rv(*this); rv -= a; return rv; }
+        bitvec rv(*this); rv -= a; return rv; }
     bool operator==(const bitvec &a) const {
         if (size > 1) {
             if (a.size > 1) {
@@ -305,39 +309,39 @@ public:
             return (data & a.ptr[0]) != 0;
         else
             return (data & a.data) != 0; }
-    bitvec &operator>>=(unsigned count);
-    bitvec &operator<<=(unsigned count);
-    bitvec operator>>(unsigned count) const { bitvec rv(*this); rv >>= count; return rv; }
-    bitvec operator<<(unsigned count) const { bitvec rv(*this); rv <<= count; return rv; }
+    bitvec &operator>>=(size_t count);
+    bitvec &operator<<=(size_t count);
+    bitvec operator>>(size_t count) const { bitvec rv(*this); rv >>= count; return rv; }
+    bitvec operator<<(size_t count) const { bitvec rv(*this); rv <<= count; return rv; }
 private:
     void expand(size_t newsize) {
-	assert(newsize > size);
-	if (size > 1) {
+        assert(newsize > size);
+        if (size > 1) {
             uintptr_t *old = ptr;
-	    ptr = new uintptr_t[newsize];
+            ptr = new uintptr_t[newsize];
             memcpy(ptr, old, size * sizeof(*ptr));
-	    memset(ptr + size, 0, (newsize - size) * sizeof(*ptr));
+            memset(ptr + size, 0, (newsize - size) * sizeof(*ptr));
             delete [] old;
-	} else {
-	    uintptr_t d = data;
-	    ptr = new uintptr_t[newsize];
-	    *ptr = d;
-	    memset(ptr + size, 0, (newsize - size) * sizeof(*ptr));
-	}
-	size = newsize;
+        } else {
+            uintptr_t d = data;
+            ptr = new uintptr_t[newsize];
+            *ptr = d;
+            memset(ptr + size, 0, (newsize - size) * sizeof(*ptr));
+        }
+        size = newsize;
     }
 public:
     friend std::ostream &operator<<(std::ostream &, const bitvec &);
 };
 
 inline bitvec operator|(bitvec &&a, const bitvec &b) {
-    bitvec rv(a); rv |= b; return rv; }
+    bitvec rv(std::move(a)); rv |= b; return rv; }
 inline bitvec operator&(bitvec &&a, const bitvec &b) {
-    bitvec rv(a); rv &= b; return rv; }
+    bitvec rv(std::move(a)); rv &= b; return rv; }
 inline bitvec operator^(bitvec &&a, const bitvec &b) {
-    bitvec rv(a); rv ^= b; return rv; }
+    bitvec rv(std::move(a)); rv ^= b; return rv; }
 inline bitvec operator-(bitvec &&a, const bitvec &b) {
-    bitvec rv(a); rv -= b; return rv; }
+    bitvec rv(std::move(a)); rv -= b; return rv; }
 
 
 #endif // _bitvec_h_
