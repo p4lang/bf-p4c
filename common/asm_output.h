@@ -18,9 +18,10 @@ class canon_name {
 class Slice {
     const PhvInfo::Info *field;
     gress_t             gress;
+    PHV::Container      reg;
     int                 lo, hi;
     friend std::ostream &operator<<(std::ostream &, const Slice &);
-    Slice &invalidate() { field=0; lo=-1; hi=-2; return *this; }
+    Slice &invalidate() { field = 0; reg = PHV::Container(); lo = -1; hi = -2; return *this; }
 
  public:
     Slice() : field(0), lo(-1), hi(-2) {}   // hi = -2 to make width() = 0
@@ -30,34 +31,43 @@ class Slice {
     Slice(const PhvInfo &phv, gress_t gr, cstring n)
     : field(phv.field(n)), gress(gr), lo(0), hi(field->size-1) {}
     Slice(const PhvInfo &phv, gress_t gr, cstring n, int bit)
-    : field(phv.field(n)), gress(gr), lo(bit), hi(bit) {}
+    : field(phv.field(n)), gress(gr), lo(bit), hi(bit) {
+        BUG_CHECK(bit >= 0 && bit < field->size, "Slice out of range for field"); }
     Slice(const PhvInfo &phv, gress_t gr, cstring n, int l, int h)
-    : field(phv.field(n)), gress(gr), lo(l), hi(h) {}
-    Slice(const Slice &s, int bit) : field(s.field), gress(s.gress), lo(s.lo + bit), hi(lo) {}
+    : field(phv.field(n)), gress(gr), lo(l), hi(h) {
+        BUG_CHECK(lo < field->size, "Slice out of range for field");
+        if (lo < 0) lo = 0;
+        if (hi >= field->size) hi = field->size-1; }
+    Slice(PHV::Container r) : field(0), reg(r), lo(0), hi(r.size()-1) {}
+    Slice(PHV::Container r, int bit) : field(0), reg(r), lo(bit), hi(bit) {}
+    Slice(PHV::Container r, int lo, int hi) : field(0), reg(r), lo(lo), hi(hi) {}
+    Slice(const Slice &s, int bit)
+    : field(s.field), gress(s.gress), reg(s.reg), lo(s.lo + bit), hi(lo) {}
     Slice(const Slice &s, int l, int h)
-    : field(s.field), gress(s.gress), lo(s.lo + l), hi(s.lo + h) {
+    : field(s.field), gress(s.gress), reg(s.reg), lo(s.lo + l), hi(s.lo + h) {
         if (hi > s.hi) hi = s.hi;
         if (!field || lo > hi) invalidate(); }
-    explicit operator bool() const { return field != nullptr; }
+    explicit operator bool() const { return field != nullptr || reg; }
     Slice operator()(int bit) const { return Slice(*this, bit); }
     Slice operator()(int l, int h) const { return Slice(*this, l, h); }
     Slice join(Slice &a) const;
     Slice &operator-=(const Slice &a) {
-        if (field != a.field || hi < a.lo || lo > a.hi) return *this;
+        if (field != a.field || reg != a.reg || hi < a.lo || lo > a.hi) return *this;
         if (a.lo <= lo) lo = a.hi+1;
         if (a.hi >= hi) hi = a.lo-1;
         if (lo > hi) invalidate();
         return *this; }
     Slice operator-(const Slice &a) const { auto tmp = *this; tmp -= a; return tmp; }
     Slice &operator&=(const Slice &a) {
-        if (field != a.field) return invalidate();
+        if (field != a.field || reg != a.reg) return invalidate();
         if (a.lo > lo) lo = a.lo;
         if (a.hi < hi) hi = a.hi;
         if (lo > hi) invalidate();
         return *this; }
     Slice operator&(const Slice &a) const { auto tmp = *this; tmp &= a; return tmp; }
     int width() const { return hi - lo + 1; }
-    int bytealign() const { return lo & 7; }
+    int bytealign() const;
+    Slice fullbyte() const;
 };
 
 /* The rest of this is pretty generic formatting stuff -- should be in lib somewhere? */

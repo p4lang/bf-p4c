@@ -79,6 +79,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         &phv,
         new VisitFunctor([&phv]() { phv.allocatePOV(); }),
         new CanonGatewayExpr,   // must be before TableLayout?  or just TablePlacement?
+        new CheckGatewayExpr(phv),
         new TableLayout,
         new TableFindSeqDependencies,
         new DumpPipe("Initial table graph"),
@@ -102,6 +103,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new DumpPipe,
         &defuse,
     };
+    backend.setStopOnError(true);
     maupipe = maupipe->apply(backend);
     if (options->phv_newalloc) {
         PhvAllocator phv_allocator(maupipe);

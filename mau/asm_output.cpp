@@ -93,9 +93,11 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, gress_t gress,
     map<int, map<int, Slice>> sort;
     if (use.use.empty()) return;
     for (auto &b : use.use) {
-        bool n = sort[b.loc.group].emplace(b.loc.byte*8,
-            Slice(phv, gress, b.field, b.byte*8, b.byte*8 + 7)).second;
-        assert(n); }
+        auto n = sort[b.loc.group].emplace(b.loc.byte*8,
+            Slice(phv, gress, b.field, b.byte*8, b.byte*8 + 7));
+        assert(n.second);
+        if (n.first->second.width() != 8)
+            n.first->second = n.first->second.fullbyte(); }
     for (auto &group : sort) {
         auto it = group.second.begin();
         while (it != group.second.end()) {
@@ -162,6 +164,14 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, gress_t gress,
                     if (ghost) out << " ^ "; }
                 if (ghost) out << "stripe(" << ghost << ")";
                 out << std::endl; }
+            for (auto ident : use.bit_use) {
+                out << indent << (40 + ident.bit);
+                if (ident.width > 1)
+                    out << ".." << (39 + ident.bit + ident.width);
+                out << ": " << Slice(phv, gress, ident.field, ident.lo, ident.lo + ident.width - 1)
+                    << std:: endl;
+                assert(hash_group == -1 || hash_group == ident.group);
+                hash_group = ident.group; }
             --indent; } }
     if (hash_group >= 0) {
         out << indent++ << "hash group " << hash_group << ":" << std::endl;
@@ -417,6 +427,9 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
                     have_xor = true;
                     continue; }
                 out << sep << f.second.offset << ": " << Slice(f.first, tbl->gress);
+                sep = ", "; }
+            for (auto &valid : collect.valid_offsets) {
+                out << sep << valid.second << ": " << canon_name(valid.first) << ".$valid";
                 sep = ", "; }
             out << (sep+1) << "}" << std::endl;
             if (have_xor) {

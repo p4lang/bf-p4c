@@ -57,10 +57,10 @@ class Table {
     const TableResourceAlloc            *resources = nullptr;
 
     Table(cstring n, gress_t gr, const IR::V1Table *t)
-    : name(n), gress(gr), match_table(t) {}
+    : Node(t->srcInfo), name(n), gress(gr), match_table(t) {}
     Table(cstring n, gress_t gr, const Expression *gw)
-    : name(n), gress(gr), gateway_rows{ std::make_pair(gw, "true"),
-                                        std::make_pair(nullptr, "false") } {}
+    : Node(gw->srcInfo), name(n), gress(gr), gateway_rows{ std::make_pair(gw, "true"),
+                                                           std::make_pair(nullptr, "false") } {}
 
     int logical_order() const { return logical_id + gress * 4096; }
     Table *clone_rename(const char *ext) const {
