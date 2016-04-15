@@ -1,11 +1,11 @@
-#ifndef _TOFINO_PHV_EQUALITY_CONSTRAINTS_H_
-#define _TOFINO_PHV_EQUALITY_CONSTRAINTS_H_
-#include "phv.h"
-#include "solver_interface.h"
-#include "ir/ir.h"
+#ifndef TOFINO_PHV_CONSTRAINTS_H_
+#define TOFINO_PHV_CONSTRAINTS_H_
 #include <map>
 #include <set>
 #include <cstdint>
+#include "phv.h"
+#include "solver_interface.h"
+#include "ir/ir.h"
 class Constraints {
  public:
   Constraints() : unique_bit_id_counter_(0) { }
@@ -35,7 +35,7 @@ class Constraints {
   template<class T>
   void SetEqual(const T &begin, const T &end, const Equal &eq) {
     auto it = (begin == end ? end : std::next(begin, 1));
-    for (;it != end; std::advance(it, 1)) SetEqual_(*begin, *it, eq);
+    for (; it != end; std::advance(it, 1)) SetEqual_(*begin, *it, eq);
   }
   void SetOffset(const PHV::Bit &bit, const int &min, const int &max);
   void SetContiguousBits(const PHV::Bits &bits);
@@ -75,6 +75,7 @@ class Constraints {
   void SetConstraints(SolverInterface &solver);
   template<class T> void
   SetConstraints(const Equal &e, T set_equal, std::set<PHV::Bit> bits);
+
  private:
   // This type is used to identify a bit in the internal data structures of
   // this class.
@@ -168,4 +169,4 @@ class Constraints {
 template<> void
 Constraints::SetEqual<PHV::Bit>(const PHV::Bit &bit1, const PHV::Bit &bit2,
                                 const Equal &eq);
-#endif
+#endif /* TOFINO_PHV_CONSTRAINTS_H_ */

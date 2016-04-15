@@ -2,7 +2,7 @@
 #include "constraints.h"
 class HeaderSliceRefInspector : public Inspector {
  public:
-  HeaderSliceRefInspector(const IR::Node *node) { node->apply(*this); }
+  explicit HeaderSliceRefInspector(const IR::Node *node) { node->apply(*this); }
   bool preorder(const IR::HeaderSliceRef *hsr) {
     for (int i = hsr->lsb(); i <= hsr->msb(); ++i) {
       match_bits_.insert(PHV::Bit(hsr->header_ref()->toString(), i));

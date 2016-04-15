@@ -1,9 +1,9 @@
+#include <list>
+#include <ctime>
 #include "solver.h"
 #include "mau_group.h"
 #include "container.h"
 #include "lib/log.h"
-#include <list>
-#include <ctime>
 namespace or_tools {
 int Solver::unique_id_ = 0;
 
@@ -64,8 +64,8 @@ void Solver::SetOffset(const PHV::Bit &pbit, const std::vector<int> &values) {
         bit.base_offset()->RemoveValue(i);
       }
     }
-  }
-  else bit.set_offset(MakeOffset(bit.name(), values), 0);
+  } else {
+    bit.set_offset(MakeOffset(bit.name(), values), 0); }
 }
 
 void Solver::SetOffset(const PHV::Bit &pbit, const int &min, const int &max) {
@@ -83,8 +83,7 @@ void Solver::SetOffset(const PHV::Bit &pbit, const int &min, const int &max) {
         bit.base_offset()->RemoveValue(i);
       }
     }
-  }
-  else {
+  } else {
     bit.set_offset(MakeOffset(bit.name(), min, max), 0);
   }
 }
@@ -110,8 +109,7 @@ void Solver::SetBitDistance(const PHV::Bit &pbit1, const PHV::Bit &pbit2,
       CHECK(bit1.relative_offset() + distance == bit2.relative_offset()) <<
               "; Invalid relative offsets for " << bit1.name() << " and " <<
               bit2.name();
-    }
-    else {
+    } else {
       LOG2("Adding offset constraint between " << pbit1 << " and " << pbit2);
       // Adding a constraints between bit1.offset() and bit2.offset() will be
       // simpler. However, those variables are derived from their respective
@@ -123,10 +121,8 @@ void Solver::SetBitDistance(const PHV::Bit &pbit1, const PHV::Bit &pbit2,
         solver_.MakeEquality(
           solver_.MakeSum(bit1.base_offset(), diff), bit2.base_offset()));
     }
-  }
-  else {
-    CHECK(bit2.base_offset() == nullptr) << "; Invalid base offset for " <<
-            bit2.name();
+  } else {
+    CHECK(bit2.base_offset() == nullptr) << "; Invalid base offset for " << bit2.name();
     bit2.set_offset(bit1.base_offset(), bit1.relative_offset() + distance);
   }
 }
@@ -154,8 +150,7 @@ void Solver::SetEqualOffset(const std::set<PHV::Bit> &bits) {
     // If we cannot find such a bit in bits, we have not choice but to create a
     // new IntVar object for base_offset.
     first_bit.set_offset(MakeOffset(first_bit.name()), 0);
-  }
-  else if (first_bit.offset() == nullptr) {
+  } else if (first_bit.offset() == nullptr) {
     CHECK(nullptr != base_bit.offset());
     first_bit.CopyOffset(base_bit);
   }
@@ -240,10 +235,9 @@ void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_phv_bits,
       IntExpr *sum = solver_.MakeSum(is_different_vars);
       is_unique_flags.push_back(
         solver_.MakeIsEqualCstVar(sum, is_different_vars.size()));
-    }
-    // The else block will be executed for the first bit. It will always be
-    // unique.
-    else is_unique_flags.push_back(solver_.MakeIntConst(1));
+    } else {
+      // The else block will be executed for the first bit. It will always be unique.
+      is_unique_flags.push_back(solver_.MakeIntConst(1)); }
   }
   // This constraint enforces the limit on the total width of the match xbar.
   int total_bits = std::accumulate(widths.begin(), widths.end(),
@@ -256,8 +250,7 @@ void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_phv_bits,
     solver_.MakeLessOrEqual(
       solver_.MakeSum(is_unique_flags), total_bits));
   // Express constraints on match fields extracted from 32b containers.
-  for (std::size_t i = 0; i < widths.size() &&
-                          (int)is_unique_flags.size() > widths[i]; ++i) {
+  for (std::size_t i = 0; i < widths.size() && is_unique_flags.size() > size_t(widths[i]); ++i) {
     std::vector<operations_research::IntVar*> is_unique_and_nth_byte;
     for (std::size_t b = 0; b < is_unique_flags.size(); ++b) {
       operations_research::IntVar *v = is_unique_flags[b];
@@ -328,8 +321,7 @@ Solver::SetUniqueConstraint(
               solver_.MakeSum(is_32b, is_16b),
               solver_.MakeSum(v, bit->byte_flags()[byte_offsets[i]])),
             3));
-      }
-      else {
+      } else {
         is_unique_and_nth_byte.push_back(
           solver_.MakeIsEqualCstVar(
             solver_.MakeSum(v, bit->byte_flags()[byte_offsets[i]]), 2));
@@ -345,10 +337,10 @@ Solver::SetUniqueConstraint(
 
 void Solver::SetNoTPhv(const PHV::Bit &bit) {
   LOG2("Forbidding allocation of " << bit.name() << " to T-PHV");
-  if (bits_.count(bit) != 0) {
+  if (bits_.count(bit) != 0)
     bits_.at(bit).mau_group()->SetNoTPhv();
-  }
-  else WARNING("Cannot find Bit for " << bit.name());
+  else
+    WARNING("Cannot find Bit for " << bit.name());
 }
 
 void Solver::SetContainerConflict(const PHV::Bit &pb1, const PHV::Bit &pb2) {
@@ -389,16 +381,15 @@ void Solver::allocation(const PHV::Bit &bit, PHV::Container *container,
       (*container) = b.container()->Value();
       if (nullptr != b.base_offset())
         (*container_bit) = b.base_offset()->Value() + b.relative_offset();
-      else WARNING("Cannot find offset for "  << bit);
-    }
-    else {
+      else
+        WARNING("Cannot find offset for "  << bit);
+    } else {
       WARNING("Missing " <<
                 (nullptr == b.container() ? "container" : "") <<
                 (nullptr == b.mau_group() ? " and MAU group" : "") <<
                 " for " << bit);
     }
-  }
-  else {
+  } else {
     LOG1("Cannot find allocation for " << bit);
   }
 }
@@ -537,4 +528,4 @@ Bit *Solver::MakeBit(const PHV::Bit &phv_bit) {
   }
   return &bit;
 }
-}
+}  // namespace or_tools

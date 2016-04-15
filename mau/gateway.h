@@ -38,7 +38,7 @@ class CollectGatewayFields : public Inspector {
             if (!rel->is<IR::Equ>() && !rel->is<IR::Neq>()) {
                 info.need_range = true;
             } else if (ctxt->child_index > 1) {
-                info.xor_with = xor_match; 
+                info.xor_with = xor_match;
             } else {
                 xor_match = finfo; } }
         return false; }
@@ -49,7 +49,7 @@ class CollectGatewayFields : public Inspector {
         else
             Util::CompilationError("valid of non-header: %s", prim);
         return false; }
-    void postorder(const IR::Operation::Relation *) { xor_match = nullptr; }
+    void postorder(const IR::Operation::Relation *) override { xor_match = nullptr; }
 
  public:
     struct info_t {
@@ -68,15 +68,15 @@ class BuildGatewayMatch : public Inspector {
     const PhvInfo               &phv;
     CollectGatewayFields        &fields;
     match_t                     match;
-    bool preorder(const IR::Expression *);
-    bool preorder(const IR::Primitive *);
-    bool preorder(const IR::LAnd *) { return true; }
-    bool preorder(const IR::LNot *) { return true; }
-    bool preorder(const IR::BAnd *) { return true; }
-    bool preorder(const IR::BOr *) { return true; }
-    bool preorder(const IR::Constant *);
-    bool preorder(const IR::Equ *);
-    bool preorder(const IR::Geq *);
+    bool preorder(const IR::Expression *) override;
+    bool preorder(const IR::Primitive *) override;
+    bool preorder(const IR::LAnd *) override { return true; }
+    bool preorder(const IR::LNot *) override { return true; }
+    bool preorder(const IR::BAnd *) override { return true; }
+    bool preorder(const IR::BOr *) override { return true; }
+    bool preorder(const IR::Constant *) override;
+    bool preorder(const IR::Equ *) override;
+    bool preorder(const IR::Geq *) override;
     friend std::ostream &operator<<(std::ostream &, const BuildGatewayMatch &);
     const PhvInfo::Info         *match_field;
     PhvInfo::Info::bitrange     match_field_bits;

@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PHV_CREATE_THREAD_LOCAL_INSTANCES_H_
-#define _TOFINO_PHV_CREATE_THREAD_LOCAL_INSTANCES_H_
+#ifndef TOFINO_PHV_CREATE_THREAD_LOCAL_INSTANCES_H_
+#define TOFINO_PHV_CREATE_THREAD_LOCAL_INSTANCES_H_
 #include "ir/ir.h"
 #include "tofino/ir/thread_visitor.h"
 
@@ -25,4 +25,4 @@ class CreateThreadLocalInstances : public Modifier, ThreadVisitor {
   gress_t gress_;
 };
 
-#endif /* _TOFINO_PHV_CREATE_THREAD_LOCAL_INSTANCES_H_ */
+#endif /* TOFINO_PHV_CREATE_THREAD_LOCAL_INSTANCES_H_ */

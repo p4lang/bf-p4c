@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PHV_T_PHV_CONSTRAINT_H_
-#define _TOFINO_PHV_T_PHV_CONSTRAINT_H_
+#ifndef TOFINO_PHV_T_PHV_CONSTRAINT_H_
+#define TOFINO_PHV_T_PHV_CONSTRAINT_H_
 #include "ir/ir.h"
 #include "phv.h"
 #include "constraints.h"
@@ -8,7 +8,7 @@
 // and and prevents all bits its bits from being allocated to T-PHV.
 class TPhvConstraint : public MauInspector {
  public:
-  TPhvConstraint(Constraints &c) : constraints_(c) { }
+  explicit TPhvConstraint(Constraints &c) : constraints_(c) { }
   bool preorder(const IR::HeaderSliceRef *hsr) {
     if (auto prim = findContext<IR::Primitive>())
       LOG2("Setting no T-PHV for " << *prim);
@@ -21,4 +21,4 @@ class TPhvConstraint : public MauInspector {
  private:
   Constraints &constraints_;
 };
-#endif
+#endif /* TOFINO_PHV_T_PHV_CONSTRAINT_H_ */

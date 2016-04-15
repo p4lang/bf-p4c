@@ -1,10 +1,10 @@
-#ifndef _TOFINO_PHV_PHV_H_
-#define _TOFINO_PHV_PHV_H_
+#ifndef TOFINO_PHV_PHV_H_
+#define TOFINO_PHV_PHV_H_
 
 #include <string.h>
 #include <iostream>
-#include "lib/exceptions.h"
 #include <array>
+#include "lib/exceptions.h"
 
 namespace PHV {
 constexpr int kPhvMauGroupOffset = 0;
@@ -22,7 +22,7 @@ constexpr int kNumContainersPerMauGroup = 16;
 static const std::vector<int> kMauGroupSizes({2, 2, 2, 2, 0, 0, 0, 0, 1, 1,
                                               1, 1, 1, 1, 3, 3, 2, 2, 0, 0,
                                               1, 1, 1});
-static const std::vector<int> kMauGroupBase( {0, 1, 2, 3, 0, 1, 2, 3, 0, 1,
+static const std::vector<int> kMauGroupBase({ 0, 1, 2, 3, 0, 1, 2, 3, 0, 1,
                                               2, 3, 4, 5,-1,-1, 0, 1, 0, 1,
                                               0, 1, 2});
 static const std::vector<int> k8bMauGroups({4, 5, 6, 7, 18, 19});
@@ -145,7 +145,7 @@ inline std::ostream &operator<<(std::ostream &out, PHV::Container c) {
 // name of the header and the int is the offset of the bit within the header.
 class Bit : public std::pair<cstring, int> {
  public:
-  Bit() : std::pair<cstring, int>("", -1) { } // This creates an invalid bit.
+  Bit() : std::pair<cstring, int>("", -1) {}  // This creates an invalid bit.
   Bit(const cstring &n, const int &i) : std::pair<cstring, int>(n, i) { }
   std::string name() const {
     return first + "[" + std::to_string(second) + "]"; }
@@ -213,4 +213,4 @@ class Byte : public ::std::array<Bit, 8> {
   Bits bits() const { return Bits(cbegin(), cend()); }
 };
 }  // namespace PHV
-#endif /* _TOFINO_PHV_PHV_H_ */
+#endif /* TOFINO_PHV_PHV_H_ */

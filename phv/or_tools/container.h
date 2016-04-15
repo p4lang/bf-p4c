@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PHV_ORTOOLS_CONTAINER_H_
-#define _TOFINO_PHV_ORTOOLS_CONTAINER_H_
+#ifndef TOFINO_PHV_OR_TOOLS_CONTAINER_H_
+#define TOFINO_PHV_OR_TOOLS_CONTAINER_H_
 #include "tofino/phv/phv.h"
 #include "ir/ir.h"
 namespace operations_research {
@@ -11,7 +11,7 @@ namespace or_tools {
 class MauGroup;
 class Container {
  public:
-  Container(operations_research::IntVar *cig);
+  explicit Container(operations_research::IntVar *cig);
   operations_research::IntVar *
   container_in_group() const { return container_in_group_; }
   void set_container(operations_research::IntExpr *container);
@@ -23,6 +23,7 @@ class Container {
   // Returns the value assigned to this container by the solver. Must be called
   // only after a solution has been found.
   PHV::Container Value() const;
+
  private:
   operations_research::IntVar *
   MakeDeparserGroupFlags(
@@ -45,5 +46,5 @@ class Container {
   // or_tools::MauGroup object.
   MauGroup *mau_group_;
 };
-}
-#endif
+}  // namespace or_tools
+#endif /* TOFINO_PHV_OR_TOOLS_CONTAINER_H_ */

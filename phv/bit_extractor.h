@@ -1,8 +1,8 @@
-#ifndef _TOFINO_PHV_BIT_EXTRACTOR_H_
-#define _TOFINO_PHV_BIT_EXTRACTOR_H_
-#include "phv.h"
+#ifndef TOFINO_PHV_BIT_EXTRACTOR_H_
+#define TOFINO_PHV_BIT_EXTRACTOR_H_
 #include <list>
 #include <set>
+#include "phv.h"
 namespace IR {
 class Expression;
 class HeaderRef;
@@ -27,4 +27,4 @@ class BitExtractor {
   GetBytes(const IR::HeaderSliceRef *hsr1, const IR::Expression *e2);
   std::list<PHV::Byte> GetBytes(const IR::HeaderRef *hr);
 };
-#endif
+#endif /* TOFINO_PHV_BIT_EXTRACTOR_H_ */

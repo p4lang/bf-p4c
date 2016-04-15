@@ -10,14 +10,12 @@ MauGroupConstraint::preorder(const IR::Primitive *prim) {
       constraints_.SetEqual(byte.cfirst(), byte.clast(),
                             Constraints::MAU_GROUP);
     }
-  }
-  else if (prim->name == "set_metadata") {
+  } else if (prim->name == "set_metadata") {
     for (auto &byte : GetBytes(prim->operands[0], prim->operands[1])) {
       constraints_.SetEqual(byte.cfirst(), byte.clast(),
                             Constraints::MAU_GROUP);
     }
-  }
-  else if ("set" == prim->name || "bit_xor" == prim->name ||
+  } else if ("set" == prim->name || "bit_xor" == prim->name ||
            "bit_or" == prim->name || "bit_and" == prim->name) {
     LOG2("Setting constraint for " << (*prim));
     for (auto &bit_pair : GetBitPairs(prim->operands[0], prim->operands[1])) {
@@ -31,15 +29,13 @@ MauGroupConstraint::preorder(const IR::Primitive *prim) {
                               Constraints::MAU_GROUP);
       }
     }
-  }
-  else if ("add" == prim->name || "add_to_field" == prim->name ||
+  } else if ("add" == prim->name || "add_to_field" == prim->name ||
            "subtract" == prim->name || "subtract_from_field" == prim->name) {
     LOG2("Setting constraint for " << (*prim));
     std::list<PHV::Bit> bits = GetBits(prim->operands.begin(),
                                        prim->operands.end());
     constraints_.SetEqual(bits.begin(), bits.end(), Constraints::MAU_GROUP);
-  }
-  else {
+  } else {
     WARNING("Unhandled primitive " << (*prim));
     return true;
   }

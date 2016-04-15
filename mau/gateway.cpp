@@ -6,7 +6,7 @@ class CanonGatewayExpr::NeedNegate : public Inspector {
     bool preorder(const IR::Neq *) override { rv = true; return false; }
 
  public:
-    NeedNegate(const IR::Expression *e) { e->apply(*this); }
+    explicit NeedNegate(const IR::Expression *e) { e->apply(*this); }
     explicit operator bool() const { return rv; }
 };
 

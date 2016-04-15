@@ -8,10 +8,10 @@ class ParamBinding : public Transform {
     const P4::BlockMap *blockMap;
     std::map<const IR::Type*, const IR::InstanceRef *>          by_type;
     std::map<const IR::Parameter *, const IR::InstanceRef *>    by_param;
-    const IR::Node *preorder(IR::Type_Parser *n) { prune(); return n; }
-    const IR::Node *preorder(IR::Type_Control *n) { prune(); return n; }
-    const IR::Expression *postorder(IR::PathExpression *pe);
-    const IR::Expression *postorder(IR::Member *mem);
+    const IR::Node *preorder(IR::Type_Parser *n) override { prune(); return n; }
+    const IR::Node *preorder(IR::Type_Control *n) override { prune(); return n; }
+    const IR::Expression *postorder(IR::PathExpression *pe) override;
+    const IR::Expression *postorder(IR::Member *mem) override;
 
  public:
     explicit ParamBinding(const P4::BlockMap *bm) : blockMap(bm) {}

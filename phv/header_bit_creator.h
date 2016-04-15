@@ -1,5 +1,5 @@
-#ifndef _TOFINO_PHV_HEADER_BIT_CREATOR_H_
-#define _TOFINO_PHV_HEADER_BIT_CREATOR_H_
+#ifndef TOFINO_PHV_HEADER_BIT_CREATOR_H_
+#define TOFINO_PHV_HEADER_BIT_CREATOR_H_
 #include "header_bits.h"
 #include "ir/ir.h"
 class HeaderBitCreator : public Inspector {
@@ -17,4 +17,4 @@ class HeaderBitCreator : public Inspector {
  private:
   HeaderBits &header_bits_;
 };
-#endif
+#endif /* TOFINO_PHV_HEADER_BIT_CREATOR_H_ */

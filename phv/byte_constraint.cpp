@@ -1,7 +1,7 @@
 #include "byte_constraint.h"
+#include <base/logging.h>
 #include "constraints.h"
 #include "ir/ir.h"
-#include <base/logging.h>
 
 bool ByteConstraint::preorder(const IR::Primitive *prim) {
   if ("emit" == prim->name) {
@@ -13,15 +13,13 @@ bool ByteConstraint::preorder(const IR::Primitive *prim) {
     CHECK(false == bytes.empty()) << "; Cannot find bytes in " << (*prim);
     constraints_.SetEqualByte(bytes.begin(), bytes.end());
     constraints_.SetDeparsedHeader(bytes.begin(), bytes.end(), gress);
-  }
-  else if ("extract" == prim->name) {
+  } else if ("extract" == prim->name) {
     // FIXME: When extract primitive has been changed to
     // extract(IR::HeaderSliceRef*) where the HeaderSliceRef object points to
     // the whole header, uncomment the code below.
     // auto bytes(GetBytes(prim->operands[0], nullptr));
     // constraints_.SetEqualByte(bytes.begin(), bytes.end());
-  }
-  else if (prim->name == "set_metadata") {
+  } else if (prim->name == "set_metadata") {
     auto bytes(GetBytes(prim->operands[0], prim->operands[1]));
     constraints_.SetEqualByte(bytes.begin(), bytes.end());
   }

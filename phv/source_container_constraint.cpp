@@ -1,6 +1,6 @@
+#include <base/logging.h>
 #include "source_container_constraint.h"
 #include "constraints.h"
-#include <base/logging.h>
 bool SourceContainerConstraint::preorder(const IR::Primitive *primitive) {
   if (primitive->name == "set") {
     auto dst = primitive->operands[0]->to<IR::HeaderSliceRef>();

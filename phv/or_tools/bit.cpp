@@ -1,9 +1,9 @@
+#include <constraint_solver/constraint_solver.h>
 #include "bit.h"
 #include "byte.h"
 #include "container.h"
 #include "mau_group.h"
 #include "lib/log.h"
-#include <constraint_solver/constraint_solver.h>
 
 namespace or_tools {
 using operations_research::IntVar;
@@ -25,10 +25,10 @@ void Bit::set_offset(IntVar *base_offset, const int &relative_offset) {
          " with relative offset " << relative_offset);
   base_offset_ = base_offset;
   relative_offset_ = relative_offset;
-  if (0 == relative_offset) offset_ = base_offset_;
-  else {
-    offset_ = base_offset->solver()->MakeSum(base_offset,
-                                             (int64)relative_offset);
+  if (0 == relative_offset) {
+    offset_ = base_offset_;
+  } else {
+    offset_ = base_offset->solver()->MakeSum(base_offset, static_cast<int64>(relative_offset));
   }
 }
 
@@ -116,8 +116,7 @@ IntVar *Bit::SetDeparsedHeader(const Bit &prev_bit, const Byte &prev_byte) {
   operations_research::IntExpr *is_next_byte = nullptr;
   if (prev_bit.container() == container()) {
     is_next_byte = solver->MakeIntConst(0);
-  }
-  else {
+  } else {
     is_next_byte =
       solver->MakeIsDifferentVar(
         solver->MakeSum(
@@ -156,12 +155,11 @@ void Bit::SetConflict(Bit &bit) {
   CHECK(nullptr != s) << ": No solver for " << name();
   if (bit.container() != container()) {
     s->AddConstraint(s->MakeNonEquality(MakeBit(), bit.MakeBit()));
-  }
-  else if (bit.base_offset() == base_offset_) {
+  } else if (bit.base_offset() == base_offset_) {
     CHECK(bit.relative_offset() != relative_offset()) <<
       ": Cannot add conflict between " << bit.name() << " and " << name();
-  }
-  else s->AddConstraint(s->MakeNonEquality(offset(), bit.offset()));
+  } else {
+    s->AddConstraint(s->MakeNonEquality(offset(), bit.offset())); }
 }
 
 IntExpr *Bit::MakeBit() {
@@ -172,4 +170,4 @@ IntExpr *Bit::MakeBit() {
   }
   return bit_;
 }
-}
+}  // namespace or_tools

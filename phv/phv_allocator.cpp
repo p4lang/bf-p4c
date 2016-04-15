@@ -32,8 +32,8 @@ class PopulatePhvInfo : public Inspector {
   }
   bool preorder(const IR::HeaderSliceRef *hsr) {
     GetAllocation(*hsr);
-    return false;
-  }
+    return false; }
+
  private:
   void GetAllocation(const IR::HeaderSliceRef hsr) {
     for (auto field : hsr.fields()) {
@@ -121,8 +121,7 @@ bool PhvAllocator::Solve(const IR::Tofino::Pipe *pipe, PhvInfo *phv_info) {
                                                    const PhvInfo::Info::alloc_slice &b) -> bool {
             return a.field_bit > b.field_bit; });
       return true;
-    }
-    else {
+    } else {
       ++count;
     }
   }

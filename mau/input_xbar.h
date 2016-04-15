@@ -48,7 +48,7 @@ struct IXBar {
  public:
     /* IXbar::Use tracks the input xbar use of a single table */
     struct Use {
-        enum flags_t { NeedRange=1, NeedXor=2 };
+        enum flags_t { NeedRange = 1, NeedXor = 2 };
         bool            ternary;
         struct Byte {
             cstring     field;

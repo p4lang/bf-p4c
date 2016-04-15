@@ -1,9 +1,9 @@
 #include "constraints.h"
 #include <base/logging.h>
-#include "lib/log.h"
 #include <set>
 #include <cmath>
 #include <climits>
+#include "lib/log.h"
 void Constraints::SetEqualByte(const PHV::Byte &byte) {
   LOG2("Setting byte constraint " << byte.name());
   // All the valid bits of byte must be contiguous.
@@ -63,8 +63,9 @@ bool Constraints::IsDeparsed(const PHV::Byte &byte) const {
 
 std::set<PHV::Bit>
 Constraints::GetEqual(const PHV::Bit &b, const Equal &e) const {
-  if (0 == equalities_[e].count(b)) return std::set<PHV::Bit>({b});
-  else return equalities_[e].at(b);
+  if (0 == equalities_[e].count(b))
+      return std::set<PHV::Bit>({b});
+  return equalities_[e].at(b);
 }
 
 void
@@ -151,8 +152,7 @@ Constraints::SetOffset(const PHV::Bit &bit, const int &min, const int &max) {
     std::vector<int> &domain = bit_offset_domain_.at(bit);
     while (domain.front() < min) domain.erase(domain.begin());
     while (domain.back() > max) domain.pop_back();
-  }
-  else {
+  } else {
     int new_min = min;
     int new_max = max;
     if (bit_offset_range_.count(bit) != 0) {
@@ -295,8 +295,7 @@ void Constraints::SetParseConflict(const PHV::Bits &old_bits,
           true == IsDeparsed(PHV::Byte(it, std::next(it, 8))) &&
           true == IsDeparsed(PHV::Byte(it2, std::next(it2, 8)))) {
         SetContainerConflict(*it, *it2);
-      }
-      else {
+      } else {
         SetBitConflict(*it, *it2);
       }
       std::advance(it2, 8);
@@ -314,9 +313,9 @@ void Constraints::SetConstraints(SolverInterface &solver) {
       }
       prev_bits.insert(b);
     }
-   // Stores the PHV::Bit objects for which the equal offset constraint has
-   // been added in the solver.
-   std::set<PHV::Bit> prev_bits;
+    // Stores the PHV::Bit objects for which the equal offset constraint has
+    // been added in the solver.
+    std::set<PHV::Bit> prev_bits;
   } eq_offsets;
   using namespace std::placeholders;
   SetConstraints(Equal::CONTAINER,
@@ -420,8 +419,7 @@ void Constraints::SetConstraints(SolverInterface &solver) {
             conflicts.insert(std::make_pair(e1, e2));
           }
         }
-      }
-      else if (true == container_conflicts_.at(bid).at(bid2)) {
+      } else if (true == container_conflicts_.at(bid).at(bid2)) {
         LOG3("Ignoring redundant conflict between " << bits_.at(bid) <<
                " and " << bits_.at(bid2));
       }

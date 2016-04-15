@@ -48,8 +48,12 @@ class AddDependencies : public MauInspector, P4WriteContext {
             for (auto t : access[field].write)
                 if (table->data_dep[t->name] < type)
                     table->data_dep[t->name] = type; } }
-    bool preorder(const IR::Member *f) { add_dependency(f->toString()); return false; }
-    bool preorder(const IR::HeaderStackItemRef *f) { add_dependency(f->toString()); return false; }
+    bool preorder(const IR::Member *f) override {
+        add_dependency(f->toString());
+        return false; }
+    bool preorder(const IR::HeaderStackItemRef *f) override {
+        add_dependency(f->toString());
+        return false; }
 };
 
 class UpdateAccess : public MauInspector , P4WriteContext {

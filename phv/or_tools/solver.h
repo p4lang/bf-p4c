@@ -1,13 +1,13 @@
-#ifndef _TOFINO_PHV_ORTOOLS_SOLVER_H_
-#define _TOFINO_PHV_ORTOOLS_SOLVER_H_
+#ifndef TOFINO_PHV_OR_TOOLS_SOLVER_H_
+#define TOFINO_PHV_OR_TOOLS_SOLVER_H_
+#include <constraint_solver/constraint_solver.h>
+#include <set>
+#include <vector>
 #include "tofino/phv/solver_interface.h"
 #include "bit.h"
 #include "byte.h"
 #include "tofino/phv/phv.h"
 #include "ir/ir.h"
-#include <constraint_solver/constraint_solver.h>
-#include <set>
-#include <vector>
 namespace or_tools {
 class Solver : public SolverInterface {
  public:
@@ -27,7 +27,7 @@ class Solver : public SolverInterface {
   // This function does not constrain them to be allocated to contiguous bit
   // offsets in the same PHV container. However, all bits are *usually*
   // allocated to the same PHV container because they appear in a set passed to
-  // SetEqualContainer. 
+  // SetEqualContainer.
   void SetBitDistance(const PHV::Bit &pbit1, const PHV::Bit &pbit2,
                       const int &distance) override;
   // Creates variables/constraints to allocate all members of bits to the same
@@ -69,10 +69,12 @@ class Solver : public SolverInterface {
   // Retrieve the allocation for bit. This function can be called only after a
   // solution has been found.
   void allocation(const PHV::Bit &bit, PHV::Container *c, int *container_bit);
+
  protected:
   bool
   Solve1(operations_research::Solver::IntValueStrategy int_val,
          const bool &is_luby_restart = true);
+
  private:
   std::vector<operations_research::IntVar*> GetIntVars() const;
   std::vector<operations_research::IntVar*> GetMauGroups() const;
@@ -120,5 +122,5 @@ class Solver : public SolverInterface {
   std::string unique_id() { return std::to_string(++unique_id_); }
   static int unique_id_;
 };
-}
-#endif
+}  // namespace or_tools
+#endif /* TOFINO_PHV_OR_TOOLS_SOLVER_H_ */

@@ -1,7 +1,7 @@
 #include "parse_graph_constraint.h"
+#include <base/logging.h>
 #include "phv.h"
 #include "constraints.h"
-#include <base/logging.h>
 
 void ParseGraphConstraint::postorder(const IR::Tofino::ParserMatch *pm) {
   decltype(local_extracts_)::iterator new_item;

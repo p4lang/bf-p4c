@@ -1,7 +1,7 @@
-#include "container.h"
-#include "mau_group.h"
 #include <base/logging.h>
 #include <constraint_solver/constraint_solver.h>
+#include "container.h"
+#include "mau_group.h"
 namespace or_tools {
 using operations_research::IntVar;
 using operations_research::IntExpr;
@@ -69,8 +69,7 @@ void Container::SetConflict(Container *c) {
   if (c->mau_group() == mau_group()) {
     solver->AddConstraint(
       solver->MakeNonEquality(container_in_group(), c->container_in_group()));
-  }
-  else {
+  } else {
     solver->AddConstraint(
       solver->MakeNonEquality(container(), c->container()));
   }
@@ -98,20 +97,17 @@ Container::MakeDeparserGroupFlags(const std::vector<int> &boundaries,
         lt->at(*it) = s->MakeIsLessCstVar(container_, *it);
       }
       cmp_flags.push_back(lt->at(*it));
-    }
-    else {
+    } else {
       ++expected_sum;
       cmp_flags.push_back(s->MakeIsGreaterOrEqualCstVar(container_, *it));
     }
     is_lt = (!is_lt);
     ++it;
   }
-  IntExpr *sum = nullptr;
-  if (cmp_flags.size() == 1) sum = cmp_flags.front();
-  else sum = s->MakeSum(cmp_flags);
+  IntExpr *sum = cmp_flags.size() == 1 ? cmp_flags.front() : s->MakeSum(cmp_flags);
   return s->MakeIsEqualCstVar(sum, expected_sum);
 }
 
 operations_research::Solver *Container::solver() const {
   return container_in_group_->solver(); }
-}
+}  // namespace or_tools

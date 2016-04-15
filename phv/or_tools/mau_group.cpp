@@ -1,7 +1,7 @@
+#include <constraint_solver/constraint_solver.h>
 #include "mau_group.h"
 #include "tofino/phv/phv.h"
 #include "lib/log.h"
-#include <constraint_solver/constraint_solver.h>
 namespace or_tools {
 using operations_research::IntVar;
 using operations_research::Solver;
@@ -45,4 +45,4 @@ void MauGroup::SetNoTPhv() {
   }
   is_t_phv_ = false;
 }
-}
+}  // namespace or_tools

@@ -1,12 +1,12 @@
-#ifndef _TOFINO_PHV_PARSE_GRAPH_CONSTRAINT_H_
-#define _TOFINO_PHV_PARSE_GRAPH_CONSTRAINT_H_
+#ifndef TOFINO_PHV_PARSE_GRAPH_CONSTRAINT_H_
+#define TOFINO_PHV_PARSE_GRAPH_CONSTRAINT_H_
+#include <unordered_map>
 #include "tofino/parde/parde_visitor.h"
 #include "bit_extractor.h"
-#include <unordered_map>
 class Constraints;
 class ParseGraphConstraint : public PardeInspector, public BitExtractor {
  public:
-  ParseGraphConstraint(Constraints &c) : constraints_(c) { }
+  explicit ParseGraphConstraint(Constraints &c) : constraints_(c) { }
  private:
   // This function inserts parse conflicts between all its local extracts and
   // extracts reachable from ParserMatch::next.
@@ -25,4 +25,4 @@ class ParseGraphConstraint : public PardeInspector, public BitExtractor {
   std::unordered_map<const IR::Tofino::ParserMatch*, PHV::Bits> local_extracts_;
   Constraints &constraints_;
 };
-#endif
+#endif /* TOFINO_PHV_PARSE_GRAPH_CONSTRAINT_H_ */

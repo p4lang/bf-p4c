@@ -5,7 +5,7 @@ namespace {
 struct FieldsReferenced : public Inspector {
     PhvInfo                     &phv;
     set<PhvInfo::Info *>        fields;
-    bool preorder(const IR::Member *f) { fields.insert(phv.field(f)); return false; }
+    bool preorder(const IR::Member *f) override { fields.insert(phv.field(f)); return false; }
     FieldsReferenced(PhvInfo &p, const IR::Expression *e) : phv(p) { e->apply(*this); }
 };
 }  // end anon namespace

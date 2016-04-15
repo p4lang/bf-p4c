@@ -1,10 +1,10 @@
-#ifndef _TOFINO_PHV_ORTOOLS_BIT_H_
-#define _TOFINO_PHV_ORTOOLS_BIT_H_
-#include "lib/cstring.h"
+#ifndef TOFINO_PHV_OR_TOOLS_BIT_H_
+#define TOFINO_PHV_OR_TOOLS_BIT_H_
 #include <array>
+#include "lib/cstring.h"
 namespace operations_research {
-  class IntExpr;
-  class IntVar;
+class IntExpr;
+class IntVar;
 }
 namespace or_tools {
 class Byte;
@@ -12,7 +12,7 @@ class Container;
 class MauGroup;
 class Bit {
  public:
-  Bit(const cstring &name) :
+  explicit Bit(const cstring &name) :
     container_(nullptr), base_offset_(nullptr), offset_(nullptr),
     byte_(nullptr), bit_(nullptr), name_(name) { }
   cstring name() const { return name_; }
@@ -42,6 +42,7 @@ class Bit {
   void SetConflict(Bit &bit);
   // Compare two bit objects.
   bool operator!=(const Bit &bit) const { return bit.name() != name(); }
+
  private:
   void CreateByte(const std::array<Bit *, 8> &bits);
   // Container-specific constraint variables. Bits that are constrained to the
@@ -66,5 +67,5 @@ class Bit {
 
   const cstring name_;
 };
-}
-#endif
+}  // namespace or_tools
+#endif /* TOFINO_PHV_OR_TOOLS_BIT_H_ */

@@ -1,6 +1,6 @@
 #include "bit_extractor.h"
-#include "ir/ir.h"
 #include <base/logging.h>
+#include "ir/ir.h"
 std::set<std::pair<PHV::Bit, PHV::Bit>>
 BitExtractor::GetBitPairs(const IR::Expression *e1,
                           const IR::Expression *e2) {
@@ -31,8 +31,7 @@ std::list<PHV::Bit> BitExtractor::GetBits(const IR::Expression *e1) const {
     lsb = hsr->lsb();
     msb = hsr->msb();
     header_name = hsr->header_ref()->toString();
-  }
-  else if (hr != nullptr) {
+  } else if (hr != nullptr) {
     msb = hr->type->width_bits() - 1;
     header_name = hr->toString();
   }
@@ -45,10 +44,10 @@ std::list<PHV::Bit> BitExtractor::GetBits(const IR::Expression *e1) const {
 
 std::list<PHV::Byte>
 BitExtractor::GetBytes(const IR::Expression *e1, const IR::Expression *e2) {
-  auto hsr1 = e1->to<IR::HeaderSliceRef>();
+  if (auto hsr1 = e1->to<IR::HeaderSliceRef>())
+      return GetBytes(hsr1, e2);
   // Exit the function if we do not have a HeaderSliceRef for the source.
-  if (nullptr == hsr1) return GetBytes(e1->to<IR::HeaderRef>());
-  else return GetBytes(hsr1, e2);
+  return GetBytes(e1->to<IR::HeaderRef>());
 }
 
 std::list<PHV::Byte>
