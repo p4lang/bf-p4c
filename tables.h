@@ -16,10 +16,10 @@
 #include <vector>
 
 class ActionBus;
-class AttachedTables;
+struct AttachedTables;
 class GatewayTable;
 class IdletimeTable;
-class Instruction;
+struct Instruction;
 class InputXbar;
 class MatchTable;
 class SelectionTable;
@@ -359,7 +359,9 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     enum { NONE=0, TABLE_MISS=1, TABLE_HIT=2, GATEWAY_MISS=3, GATEWAY_HIT=4,
 	   GATEWAY_INHIBIT=5 }  table_counter = NONE;
 
+    using Table::pass1;
     void pass1(int type);
+    using Table::write_regs;
     void write_regs(int type, Table *result);
     bool common_setup(pair_t &, const VECTOR(pair_t) &);
 public:
@@ -433,6 +435,7 @@ DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
 public:
     SelectionTable *get_selector() const { return attached.get_selector(); }
     void write_merge_regs(int type, int bus) { attached.write_merge_regs(this, type, bus); }
+    using Table::gen_memory_resource_allocation_tbl_cfg;
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(Way &);
     void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                   const Table::Format::Field &field);

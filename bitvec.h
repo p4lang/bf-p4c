@@ -26,7 +26,7 @@ public:
     public:
 	bitref(const bitref &a) = default;
 	bitref(bitref &&a) = default;
-	operator bool() const { return self.getbit(idx); }
+	explicit operator bool() const { return self.getbit(idx); }
 	operator int() const { return self.getbit(idx) ? 1 : 0; }
 	int index() const { return idx; }
         int operator*() const { return idx; }
@@ -56,7 +56,7 @@ public:
     public:
 	const_bitref(const const_bitref &a) = default;
 	const_bitref(const_bitref &&a) = default;
-	operator bool() const { return self.getbit(idx); }
+	explicit operator bool() const { return self.getbit(idx); }
 	operator int() const { return self.getbit(idx) ? 1 : 0; }
 	int index() const { return idx; }
         int operator*() const { return idx; }

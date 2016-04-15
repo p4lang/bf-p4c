@@ -474,8 +474,7 @@ Table::Format::Format(VECTOR(pair_t) &data, bool may_overlap) {
         value_t &name = kv.key.type == tSTR ? kv.key : kv.key[0];
         unsigned idx = 0;
         if (kv.key.type == tCMD &&
-            (kv.key.vec.size != 2 || !CHECKTYPE(kv.key[1], tINT) ||
-             (idx = kv.key[1].i) < 0 || idx > 15)) {
+            (kv.key.vec.size != 2 || !CHECKTYPE(kv.key[1], tINT) || (idx = kv.key[1].i) > 15)) {
             error(kv.key.lineno, "Invalid field group");
             continue; }
         if (kv.value.type != tVEC &&

@@ -515,7 +515,7 @@ InputXbar::Input *InputXbar::find(Phv::Slice sl, int grp) {
 
 bitvec InputXbar::hash_group_bituse() {
     bitvec rv;
-    unsigned tables;
+    unsigned tables = 0;
     for (auto &grp : hash_groups) {
         tables |= grp.second.tables;
         rv |= grp.second.seed; }

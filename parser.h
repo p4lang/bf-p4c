@@ -130,7 +130,7 @@ class Parser : public Section {
         void write_lookup_config(Parser *, State *, int, const std::vector<State *> &);
         void write_config(Parser *);
     };
-    friend class State;
+    friend struct State;
 public:
     std::map<std::string, State>        states[2];
     std::vector<State *>                all;
