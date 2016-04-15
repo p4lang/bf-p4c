@@ -133,7 +133,8 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     std::ostream *out = &std::cout;
     if (options->outputFile)
         out = new std::ofstream(options->outputFile);
-    *out << PhvAsmOutput(phv)
+    *out << "version: 1.0.0" << std::endl
+         << PhvAsmOutput(phv)
          << ParserAsmOutput(maupipe, phv, INGRESS)
          << DeparserAsmOutput(maupipe, phv, INGRESS)
          << ParserAsmOutput(maupipe, phv, EGRESS)

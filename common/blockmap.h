@@ -6,12 +6,12 @@
 
 class FillFromBlockMap : public Transform {
     P4::EvaluatorPass *eval;
-    const IR::Expression *preorder(IR::Expression *exp) {
+    const IR::Expression *preorder(IR::Expression *exp) override {
         if (exp->type == IR::Type::Unknown::get())
             if (auto type = eval->getBlockMap()->typeMap->getType(getOriginal()))
                 exp->type = type;
         return exp; }
-    const IR::Type *preorder(IR::Type_Name *type) {
+    const IR::Type *preorder(IR::Type_Name *type) override {
         if (auto decl = eval->getBlockMap()->refMap->getDeclaration(type->path)) {
             if (auto tdecl = decl->getNode()->to<IR::Type_Declaration>())
                 return transform_child(tdecl)->to<IR::Type>();

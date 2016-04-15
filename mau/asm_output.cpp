@@ -501,7 +501,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         if (next_miss != next_hit) {
             out << indent << "hit: " << next_hit << std::endl;
             out << indent << "miss: " << next_miss << std::endl;
-        } else {
+        } else if (tbl->match_table) {
             out << indent << "next: " << default_next.next_in_thread(tbl) << std::endl; } }
 
     if (!have_indirect)

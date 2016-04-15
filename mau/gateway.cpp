@@ -194,7 +194,17 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
         BUG("Unhandled expression in BuildGatewayMatch: %s", e);
     if (!match_field) {
         match_field = field;
-        match_field_bits = bits; }
+        match_field_bits = bits;
+    } else {
+        size_t size = std::max(bits.size(), match_field_bits.size());
+        uint64_t mask = (1U << size) - 1;
+        mask &= andmask & ~ormask;
+        int lo = fields.info.at(match_field).offset + match_field_bits.lo;
+        if (lo != fields.info.at(field).offset + bits.lo)
+            BUG("field equality comparison misaligned in gateway");
+        mask <<= lo;
+        match.word1 &= ~mask;
+        match_field = nullptr; }
     return false;
 }
 
@@ -228,6 +238,7 @@ bool BuildGatewayMatch::preorder(const IR::Constant *c) {
         val <<= lo;
         match.word0 &= ~val | ~mask;
         match.word1 &= val | ~mask;
+        match_field = nullptr;
     } else {
         BUG("Invalid context for constant in BuildGatewayMatch"); }
     return true;
