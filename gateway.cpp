@@ -16,7 +16,7 @@ GatewayTable::Match::Match(value_t *v, value_t &data, range_match_t range_match)
         for (unsigned i = 0; i < range_match_info[range_match].units; i++)
             range[i] = range_match_info[range_match].mask;
     if (v) {
-	lineno = v->lineno;
+        lineno = v->lineno;
         if (v->type == tVEC) {
             int last = v->vec.size - 1;
             if (last > (int)range_match_info[range_match].units)
@@ -101,8 +101,8 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
                 error(kv.value.lineno, "gateway unit %d out of range", kv.value.i);
             gw_unit = kv.value.i;
         } else if (kv.key == "input_xbar") {
-	    if (CHECKTYPE(kv.value, tMAP))
-		input_xbar = new InputXbar(this, false, kv.value.map);
+            if (CHECKTYPE(kv.value, tMAP))
+                input_xbar = new InputXbar(this, false, kv.value.map);
         } else if (kv.key == "miss") {
             miss = Match(0, kv.value, range_match);
         } else if (kv.key == "payload") {
@@ -168,7 +168,7 @@ void check_match_key(std::vector<GatewayTable::MatchKey> &vec, const char *name,
 void GatewayTable::pass1() {
     LOG1("### Gateway table " << name() << " pass1");
     alloc_id("logical", logical_id, stage->pass1_logical_id,
-	     LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
+             LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
     alloc_busses(stage->sram_match_bus_use);
     if (layout.empty() || layout[0].row < 0)
         error(lineno, "No row specified in gateway");
@@ -180,9 +180,14 @@ void GatewayTable::pass1() {
     } else if (have_payload && !match_table)
         error(have_payload, "payload on standalone gateway requires explicit payload_row");
     if (gw_unit < 0) gw_unit = layout[0].bus;
-    if (input_xbar) input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
+    if (input_xbar)
+        input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
+    else
+        error(lineno, "input_xbar required for gateway");
     check_match_key(match, "match", 44);
     check_match_key(xor_match, "xor", 32);
+    std::sort(match.begin(), match.end());
+    std::sort(xor_match.begin(), xor_match.end());
     if (table.size() > 4)
         error(lineno, "Gateway can only have 4 match entries max");
     for (auto &line : table)
@@ -204,10 +209,10 @@ void GatewayTable::pass1() {
     if (shift < 0) shift = 0;
     for (auto &line : table) {
 #if 0
-	if ((line.val.word0 & (ignore >> shift)) != (ignore >> shift))
-	    error(line.lineno, "Not ignoring bits not in match of gateway");
-	if ((line.val.word1 & (ignore >> shift)) != (ignore >> shift))
-	    warning(line.lineno, "Not wildcarding bits not in match of gateway");
+        if ((line.val.word0 & (ignore >> shift)) != (ignore >> shift))
+            error(line.lineno, "Not ignoring bits not in match of gateway");
+        if ((line.val.word1 & (ignore >> shift)) != (ignore >> shift))
+            warning(line.lineno, "Not wildcarding bits not in match of gateway");
 #endif
         line.val.word0 = (line.val.word0 << shift) | ignore;
         line.val.word1 = (line.val.word1 << shift) | ignore; }
@@ -229,10 +234,10 @@ static bool setup_vh_xbar(Table *table, Table::Layout &row, int base,
     for (auto &r : match) {
         if (r.offset >= 32) break; /* skip hash matches */
         unsigned byte = base + r.offset / 8;
-	int ibyte = table->find_on_ixbar(*r.val, group);
+        int ibyte = table->find_on_ixbar(*r.val, group);
         for (unsigned b = 0; b < (r.val->size()+7)/8; b++, byte++, ibyte++)
-	    for (unsigned bit = 0; bit < 8; bit++)
-		byteswizzle_ctl[byte][bit] = 0x10 + ibyte; }
+            for (unsigned bit = 0; bit < 8; bit++)
+                byteswizzle_ctl[byte][bit] = 0x10 + ibyte; }
     return true;
 }
 
