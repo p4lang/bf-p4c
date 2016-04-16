@@ -13,16 +13,16 @@ Table::Table(int line, std::string &&n, gress_t gr, Stage *s, int lid) :
     name_(n), stage(s), gress(gr), lineno(line), logical_id(lid)
 {
     if (lineno >= 0) {
-	assert(all.find(name_) == all.end());
-	all.emplace(name_, this); }
+        assert(all.find(name_) == all.end());
+        all.emplace(name_, this); }
     if (stage)
-	stage->all_refs.insert(&stage);
+        stage->all_refs.insert(&stage);
 }
 Table::~Table() {
     if (lineno >= 0)
-	all.erase(name_);
+        all.erase(name_);
     if (stage)
-	stage->all_refs.erase(&stage);
+        stage->all_refs.erase(&stage);
 }
 
 Table::Type::Type(std::string &&name) {
@@ -54,15 +54,15 @@ void Table::Call::setup(const value_t &val, Table *tbl) {
             ; // ok
         else if (val[i].type == tCMD && val[i] == "hash_dist") {
             if (PCHECKTYPE(val[i].vec.size > 1, val[i][1], tINT)) {
-		bool ok = false;
-		for (auto &hd : tbl->hash_dist)
-		    if (hd.id == val[i][1].i) {
-			args.emplace_back(&hd);
-			ok = true;
-			break; }
-		if (!ok)
-		    error(val[i].lineno, "hash_dist %d not defined in table %s", val[i][1].i,
-			  tbl->name()); }
+                bool ok = false;
+                for (auto &hd : tbl->hash_dist)
+                    if (hd.id == val[i][1].i) {
+                        args.emplace_back(&hd);
+                        ok = true;
+                        break; }
+                if (!ok)
+                    error(val[i].lineno, "hash_dist %d not defined in table %s", val[i][1].i,
+                          tbl->name()); }
             continue; }
         else if (CHECKTYPE(val[i], tSTR) &&
             !(arg = tbl->lookup_field(val[i].s)))
@@ -76,11 +76,11 @@ void Table::Call::setup(const value_t &val, Table *tbl) {
 unsigned Table::Call::Arg::size() const {
     switch(type) {
     case Field:
-	return fld ? fld->size : 0;
+        return fld ? fld->size : 0;
     case HashDist:
-	return hd ? hd->expand >= 0 ? 23 : 16 : 0;
+        return hd ? hd->expand >= 0 ? 23 : 16 : 0;
     default:
-	assert(0);
+        assert(0);
     }
 }
 
@@ -260,8 +260,8 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data) {
     } else if (kv.key == "action_enable") {
         if (CHECKTYPE(kv.value, tINT))
             action_enable = kv.value.i;
-	if (get(data, "action"))
-	    enable_action_data_enable = true;
+        if (get(data, "action"))
+            enable_action_data_enable = true;
         enable_action_instruction_enable = true;
     } else if (kv.key == "enable_action_data_enable") {
         enable_action_data_enable = get_bool(kv.value);
@@ -388,15 +388,15 @@ void Table::alloc_busses(Alloc2Dbase<Table *> &bus_use) {
 }
 
 void Table::alloc_id(const char *idname, int &id, int &next_id, int max_id,
-		     bool order, Alloc1Dbase<Table *> &use)
+                     bool order, Alloc1Dbase<Table *> &use)
 {
     if (id >= 0) {
         next_id = id;
         return; }
     while (++next_id < max_id && use[next_id]);
     if (next_id >= max_id && !order) {
-	next_id = -1;
-	while (++next_id < max_id && use[next_id]); }
+        next_id = -1;
+        while (++next_id < max_id && use[next_id]); }
     if (next_id < max_id)
         use[id = next_id] = this;
     else
@@ -615,8 +615,8 @@ void Table::Format::pass2(Table *tbl) {
 bool Table::Actions::Action::equiv(Action *a) {
     if (instr.size() != a->instr.size()) return false;
     for (unsigned i = 0; i < instr.size(); i++)
-	if (!instr[i]->equiv(a->instr[i]))
-	    return false;
+        if (!instr[i]->equiv(a->instr[i]))
+            return false;
     return true;
 }
 
@@ -675,10 +675,10 @@ void Table::Actions::pass1(Table *tbl) {
         int iaddr = -1;
         if (act.addr >= 0) {
             if (auto old = tbl->stage->imem_addr_use[tbl->gress][act.addr]) {
-		if (act.equiv(old)) {
-		    continue; }
+                if (act.equiv(old)) {
+                    continue; }
                 error(act.lineno, "action instruction addr %d in use elsewhere", act.addr);
-		warning(old->lineno, "also defined here"); }
+                warning(old->lineno, "also defined here"); }
             tbl->stage->imem_addr_use[tbl->gress][act.addr] = &act;
             iaddr = act.addr/ACTION_IMEM_COLORS; }
         for (auto &inst : act.instr) {
@@ -709,10 +709,10 @@ void Table::Actions::pass2(Table *tbl) {
                 if (inst->slot >= 0) use[inst->slot] = 1; }
             for (int i = 0; i < ACTION_IMEM_ADDR_MAX; i++) {
                 if (auto old = tbl->stage->imem_addr_use[tbl->gress][i]) {
-		    if (act.equiv(old)) {
-			act.addr = i;
-			break; }
-		    continue; }
+                    if (act.equiv(old)) {
+                        act.addr = i;
+                        break; }
+                    continue; }
                 if (tbl->stage->imem_use[i/ACTION_IMEM_COLORS].intersects(use))
                     continue;
                 act.addr = i;
@@ -748,8 +748,8 @@ static int parity(unsigned v) {
 void Table::Actions::write_regs(Table *tbl) {
     auto &imem = tbl->stage->regs.dp.imem;
     for (auto &act : *this) {
-	if (&act != tbl->stage->imem_addr_use[tbl->gress][act.addr])
-	    continue;
+        if (&act != tbl->stage->imem_addr_use[tbl->gress][act.addr])
+            continue;
         int iaddr = act.addr/ACTION_IMEM_COLORS;
         int color = act.addr%ACTION_IMEM_COLORS;
         for (auto *inst : act.instr) {
@@ -836,13 +836,13 @@ void MatchTable::write_regs(int type, Table *result) {
     auto &adrdist = stage->regs.rams.match.adrdist;
     merge.predication_ctl[gress].table_thread |= 1 << logical_id;
     if (gress) {
-	merge.logical_table_thread[0].logical_table_thread_egress |= 1 << logical_id;
-	merge.logical_table_thread[1].logical_table_thread_egress |= 1 << logical_id;
-	merge.logical_table_thread[2].logical_table_thread_egress |= 1 << logical_id;
+        merge.logical_table_thread[0].logical_table_thread_egress |= 1 << logical_id;
+        merge.logical_table_thread[1].logical_table_thread_egress |= 1 << logical_id;
+        merge.logical_table_thread[2].logical_table_thread_egress |= 1 << logical_id;
     } else {
-	merge.logical_table_thread[0].logical_table_thread_ingress |= 1 << logical_id;
-	merge.logical_table_thread[1].logical_table_thread_ingress |= 1 << logical_id;
-	merge.logical_table_thread[2].logical_table_thread_ingress |= 1 << logical_id; }
+        merge.logical_table_thread[0].logical_table_thread_ingress |= 1 << logical_id;
+        merge.logical_table_thread[1].logical_table_thread_ingress |= 1 << logical_id;
+        merge.logical_table_thread[2].logical_table_thread_ingress |= 1 << logical_id; }
     adrdist.adr_dist_table_thread[gress][0] |= 1 << logical_id;
     adrdist.adr_dist_table_thread[gress][1] |= 1 << logical_id;
     if (result) {
@@ -857,21 +857,21 @@ void MatchTable::write_regs(int type, Table *result) {
             if (result->action.args.size() >= 1 && result->action.args[0].field()) {
                 merge.mau_action_instruction_adr_mask[type][bus] =
                     ((1U << result->action.args[0].size()) - 1) & ~action_enable;
-		shift_en.action_instruction_adr_payload_shifter_en = 1;
+                shift_en.action_instruction_adr_payload_shifter_en = 1;
             } else {
                 merge.mau_action_instruction_adr_mask[type][bus] = 0;
-		if (options.match_compiler)
-		    shift_en.action_instruction_adr_payload_shifter_en = 1; }
+                if (options.match_compiler)
+                    shift_en.action_instruction_adr_payload_shifter_en = 1; }
             merge.mau_action_instruction_adr_default[type][bus] =
                 result->enable_action_instruction_enable ? 0 : 0x40;
             if (action_enable) {
-		if (result->enable_action_instruction_enable)
-		    merge.mau_action_instruction_adr_per_entry_en_mux_ctl[type][bus] =
-			result->action_enable;
-		if (enable_action_data_enable)
-		    merge.mau_actiondata_adr_per_entry_en_mux_ctl[type][bus] =
-		        result->action_enable + 5;
-	    }
+                if (result->enable_action_instruction_enable)
+                    merge.mau_action_instruction_adr_per_entry_en_mux_ctl[type][bus] =
+                        result->action_enable;
+                if (enable_action_data_enable)
+                    merge.mau_actiondata_adr_per_entry_en_mux_ctl[type][bus] =
+                        result->action_enable + 5;
+            }
             if (idletime)
                 idletime->write_merge_regs(type, bus);
             if (result->action) {
@@ -948,9 +948,9 @@ void MatchTable::write_regs(int type, Table *result) {
         for (auto &row : result->layout) {
             int bus = row.row*2 | row.bus;
             merge.mau_immediate_data_mask[type][bus] = (1UL << result->format->immed_size)-1;
-	    if (result->format->immed_size > 0)
-		merge.mau_payload_shifter_enable[type][bus]
-		    .immediate_data_payload_shifter_en = 1; } }
+            if (result->format->immed_size > 0)
+                merge.mau_payload_shifter_enable[type][bus]
+                    .immediate_data_payload_shifter_en = 1; } }
     if (result->action_bus)
         result->action_bus->write_immed_regs(result);
 
@@ -1060,8 +1060,8 @@ void AttachedTables::pass1(MatchTable *self) {
             error(s.lineno, "%s is not a counter table", s->name());
         if (s.args.size() > 1)
             error(s.lineno, "Stats table requires zero or one args");
-	if (s.args.size() > 0 && s.args[0].hash_dist())
-	    s.args[0].hash_dist()->xbar_use = HashDistribution::STATISTICS_ADDRESS;
+        if (s.args.size() > 0 && s.args[0].hash_dist())
+            s.args[0].hash_dist()->xbar_use = HashDistribution::STATISTICS_ADDRESS;
         else if (s.args != stats[0].args)
             error(s.lineno, "Must pass same args to all stats tables in a single table");
         if (s->stage != self->stage)
@@ -1073,8 +1073,8 @@ void AttachedTables::pass1(MatchTable *self) {
             error(m.lineno, "%s is not a meter table", m->name());
         if (m.args.size() > 1)
             error(m.lineno, "Meter table requires zero or one args");
-	if (m.args.size() > 0 && m.args[0].hash_dist())
-	    m.args[0].hash_dist()->xbar_use = HashDistribution::METER_ADDRESS;
+        if (m.args.size() > 0 && m.args[0].hash_dist())
+            m.args[0].hash_dist()->xbar_use = HashDistribution::METER_ADDRESS;
         else if (m.args != meter[0].args)
             error(m.lineno, "Must pass same args to all meter tables in a single table");
         if (m->stage != self->stage)
@@ -1132,7 +1132,7 @@ void Table::canon_field_list(json::vector &field_list) {
             field["start_bit"]->to<json::number>().val += lo; } }
 }
 
-void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std::string name, 
+void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                      const Table::Format::Field &field) {
     int lobit = 0;
     for (auto &bits : field.bits) {

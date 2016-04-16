@@ -98,10 +98,10 @@ void CounterTable::write_merge_regs(MatchTable *match, int type, int bus, const 
     auto &merge =  stage->regs.rams.match.merge;
     auto pfe_bit = 19;
     if (options.match_compiler && dynamic_cast<HashActionTable *>(match)) {
-	/* FIXME -- for some reason the compiler does not set the stats_adr_mask
-	 * for hash_action tables.  Is it not needed? */
+        /* FIXME -- for some reason the compiler does not set the stats_adr_mask
+         * for hash_action tables.  Is it not needed? */
     } else
-	merge.mau_stats_adr_mask[type][bus] = 0xfffff & ~counter_masks[format->groups()];
+        merge.mau_stats_adr_mask[type][bus] = 0xfffff & ~counter_masks[format->groups()];
     merge.mau_stats_adr_default[type][bus] = per_flow_enable ? 0 : (1U << pfe_bit);
     if (per_flow_enable)
         merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = pfe_bit;
@@ -119,13 +119,13 @@ void CounterTable::write_regs() {
     DataSwitchboxSetup swbox(stage, home->row/2U);
     int minvpn = 1000000, maxvpn = -1;
     if (options.match_compiler) {
-	minvpn = 0;
-	maxvpn = layout_size() - 1;
+        minvpn = 0;
+        maxvpn = layout_size() - 1;
     } else
-	for (Layout &logical_row : layout)
-	    for (auto v : logical_row.vpns) {
-		if (v < minvpn) minvpn = v;
-		if (v > maxvpn) maxvpn = v; }
+        for (Layout &logical_row : layout)
+            for (auto v : logical_row.vpns) {
+                if (v < minvpn) minvpn = v;
+                if (v > maxvpn) maxvpn = v; }
     for (Layout &logical_row : layout) {
         unsigned row = logical_row.row/2U;
         unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
@@ -190,19 +190,19 @@ void CounterTable::write_regs() {
                 stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row); }
             ++mapram, ++vpn; }
         if (&logical_row == home) {
-	    int stats_group_index = row/2;
+            int stats_group_index = row/2;
             auto &stat_ctl = map_alu.stats_wrap[stats_group_index].stats.statistics_ctl;
             stat_ctl.stats_entries_per_word = format->groups();
             if (type & BYTES) stat_ctl.stats_process_bytes = 1;
             if (type & PACKETS) stat_ctl.stats_process_packets = 1;
             stat_ctl.lrt_enable = 0;
             stat_ctl.stats_alu_egress = gress;
-	    stat_ctl.stats_bytecount_adjust = 0; // TODO
-	    stat_ctl.stats_alu_error_enable = 0; // TODO
+            stat_ctl.stats_bytecount_adjust = 0; // TODO
+            stat_ctl.stats_alu_error_enable = 0; // TODO
             stage->regs.cfg_regs.mau_cfg_stats_alu_lt[stats_group_index] = logical_id;
             //setup_muxctl(adrdist.stats_alu_phys_to_logical_ixbar_ctl[row/2], logical_id);
-	    map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_base = minvpn;
-	    map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_limit = maxvpn;
+            map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_base = minvpn;
+            map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_limit = maxvpn;
         } else {
             auto &adr_ctl = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
             if (home->row >= 8 && logical_row.row < 8) {
@@ -229,14 +229,14 @@ void CounterTable::write_regs() {
         if (type == PACKETS || type == BOTH)
             dump_ctl.stats_dump_has_packets = 1;
         dump_ctl.stats_dump_size = layout_size() - 1;  // FIXME
-	if (direct) {
-	    adrdist.movereg_ad_direct[MoveReg::STATS] |= 1U << m->logical_id;
+        if (direct) {
+            adrdist.movereg_ad_direct[MoveReg::STATS] |= 1U << m->logical_id;
             if (m->is_ternary())
                 movereg_stats_ctl.movereg_stats_ctl_tcam = 1; }
-	movereg_stats_ctl.movereg_stats_ctl_lt = m->logical_id;
-	adrdist.movereg_ad_stats_alu_to_logical_xbar_ctl[m->logical_id/8U]
-	    .set_subfield(4+stats_group_index, 3*(m->logical_id%8U), 3);
-	adrdist.mau_ad_stats_virt_lt[stats_group_index] |= 1U << m->logical_id; }
+        movereg_stats_ctl.movereg_stats_ctl_lt = m->logical_id;
+        adrdist.movereg_ad_stats_alu_to_logical_xbar_ctl[m->logical_id/8U]
+            .set_subfield(4+stats_group_index, 3*(m->logical_id%8U), 3);
+        adrdist.mau_ad_stats_virt_lt[stats_group_index] |= 1U << m->logical_id; }
     movereg_stats_ctl.movereg_stats_ctl_size = counter_size[format->groups()];
     movereg_stats_ctl.movereg_stats_ctl_direct = direct;
     if (run_at_eop) {
@@ -244,9 +244,9 @@ void CounterTable::write_regs() {
         adrdist.deferred_ram_ctl[MoveReg::STATS][stats_group_index].deferred_ram_thread = gress;
         if (gress)
             stage->regs.cfg_regs.mau_cfg_dram_thread |= 1 << stats_group_index;
-	movereg_stats_ctl.movereg_stats_ctl_deferred = 1;
+        movereg_stats_ctl.movereg_stats_ctl_deferred = 1;
     } else
-	adrdist.packet_action_at_headertime[0][stats_group_index] = 1;
+        adrdist.packet_action_at_headertime[0][stats_group_index] = 1;
     if (push_on_overflow) {
         adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U);
         adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::STATISTICS; }

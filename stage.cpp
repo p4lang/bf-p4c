@@ -81,17 +81,17 @@ void AsmStage::input(VECTOR(value_t) args, value_t data) {
                 error(kv.value.lineno, "Invalid stage dependency %s", value_desc(kv.value));
             continue;
         } else if (kv.key == "error_mode") {
-	    if (kv.value == "no_config")
-		stage[stageno].error_mode[gress] = Stage::NO_CONFIG;
-	    else if (kv.value == "propagate")
-		stage[stageno].error_mode[gress] = Stage::PROPAGATE;
-	    else if (kv.value == "map_to_immediate")
-		stage[stageno].error_mode[gress] = Stage::MAP_TO_IMMEDIATE;
-	    else if (kv.value == "disable")
-		stage[stageno].error_mode[gress] = Stage::DISABLE_ALL_TABLES;
-	    else
-		error(kv.value.lineno, "Unknown error mode %s", value_desc(kv.value));
-	    continue; }
+            if (kv.value == "no_config")
+                stage[stageno].error_mode[gress] = Stage::NO_CONFIG;
+            else if (kv.value == "propagate")
+                stage[stageno].error_mode[gress] = Stage::PROPAGATE;
+            else if (kv.value == "map_to_immediate")
+                stage[stageno].error_mode[gress] = Stage::MAP_TO_IMMEDIATE;
+            else if (kv.value == "disable")
+                stage[stageno].error_mode[gress] = Stage::DISABLE_ALL_TABLES;
+            else
+                error(kv.value.lineno, "Unknown error mode %s", value_desc(kv.value));
+            continue; }
         if (!CHECKTYPEM(kv.key, tCMD, "table declaration")) continue;
         if (!CHECKTYPE(kv.value, tMAP)) continue;
         auto tt = Table::Type::get(kv.key[0].s);
@@ -203,7 +203,7 @@ Stage::Stage() {
             out << "mau[" << stageno << "]";
             regs.emit_fieldname(out, addr, end); });
     for (int i = 0; i < SRAM_ROWS; i++)
-	sram_use[i][0] = sram_use[i][1] = &invalid_rams;
+        sram_use[i][0] = sram_use[i][1] = &invalid_rams;
 }
 
 Stage::~Stage() {
@@ -255,10 +255,10 @@ void Stage::write_regs() {
     //merge.exact_match_delay_config.exact_match_delay_ingress = tcam_delay(INGRESS);
     //merge.exact_match_delay_config.exact_match_delay_egress = tcam_delay(EGRESS);
     for (gress_t gress : Range(INGRESS, EGRESS)) {
-	if (tcam_delay(gress) > 0) {
-	    merge.exact_match_delay_thread[0] |= 1U << gress;
-	    merge.exact_match_delay_thread[1] |= 1U << gress;
-	    merge.exact_match_delay_thread[2] |= 1U << gress; }
+        if (tcam_delay(gress) > 0) {
+            merge.exact_match_delay_thread[0] |= 1U << gress;
+            merge.exact_match_delay_thread[1] |= 1U << gress;
+            merge.exact_match_delay_thread[2] |= 1U << gress; }
         if (stageno == 0) {
             merge.predication_ctl[gress].start_table_fifo_delay0 = pred_cycle(gress) - 1;
             merge.predication_ctl[gress].start_table_fifo_delay1 = 0;
@@ -350,35 +350,35 @@ void Stage::write_regs() {
 
     /* Error handling related */
     for (gress_t gress : Range(INGRESS, EGRESS)) {
-	int err_delay = tcam_delay(gress) ? 1 : 0;
-	switch (error_mode[gress]) {
-	case NO_CONFIG:
-	    break;
-	case PROPAGATE:
-	    merge.tcam_match_error_ctl[gress].tcam_match_error_ctl_o_err_en = 1;
-	    merge.tind_ecc_error_ctl[gress].tind_ecc_error_ctl_o_err_en = 1;
-	    merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_o_err_en = 1;
-	    merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_o_err_en = 1;
-	    merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_delay = err_delay;
-	    merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_delay = err_delay;
-	    break;
-	case MAP_TO_IMMEDIATE:
-	    merge.tcam_match_error_ctl[gress].tcam_match_error_ctl_idata_ovr = 1;
-	    merge.tind_ecc_error_ctl[gress].tind_ecc_error_ctl_idata_ovr = 1;
-	    merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_idata_ovr = 1;
-	    merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_idata_ovr = 1;
-	    merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_delay = err_delay;
-	    merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_delay = err_delay;
-	    break;
-	case DISABLE_ALL_TABLES:
-	    merge.tcam_match_error_ctl[gress].tcam_match_error_ctl_dis_pred = 1;
-	    merge.tind_ecc_error_ctl[gress].tind_ecc_error_ctl_dis_pred = 1;
-	    merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_dis_pred = 1;
-	    merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_dis_pred = 1;
-	    merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_delay = err_delay;
-	    merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_delay = err_delay;
-	    break;
-	default:
-	    assert(false); } }
+        int err_delay = tcam_delay(gress) ? 1 : 0;
+        switch (error_mode[gress]) {
+        case NO_CONFIG:
+            break;
+        case PROPAGATE:
+            merge.tcam_match_error_ctl[gress].tcam_match_error_ctl_o_err_en = 1;
+            merge.tind_ecc_error_ctl[gress].tind_ecc_error_ctl_o_err_en = 1;
+            merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_o_err_en = 1;
+            merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_o_err_en = 1;
+            merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_delay = err_delay;
+            merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_delay = err_delay;
+            break;
+        case MAP_TO_IMMEDIATE:
+            merge.tcam_match_error_ctl[gress].tcam_match_error_ctl_idata_ovr = 1;
+            merge.tind_ecc_error_ctl[gress].tind_ecc_error_ctl_idata_ovr = 1;
+            merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_idata_ovr = 1;
+            merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_idata_ovr = 1;
+            merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_delay = err_delay;
+            merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_delay = err_delay;
+            break;
+        case DISABLE_ALL_TABLES:
+            merge.tcam_match_error_ctl[gress].tcam_match_error_ctl_dis_pred = 1;
+            merge.tind_ecc_error_ctl[gress].tind_ecc_error_ctl_dis_pred = 1;
+            merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_dis_pred = 1;
+            merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_dis_pred = 1;
+            merge.gfm_parity_error_ctl[gress].gfm_parity_error_ctl_delay = err_delay;
+            merge.emm_ecc_error_ctl[gress].emm_ecc_error_ctl_delay = err_delay;
+            break;
+        default:
+            assert(false); } }
 
 }

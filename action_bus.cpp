@@ -6,8 +6,8 @@
 ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
     lineno = data.size ? data[0].key.lineno : -1;
     for (auto &kv : data) {
-	if (!CHECKTYPE2(kv.key, tINT, tRANGE)) continue;
-	if (!CHECKTYPE2M(kv.value, tSTR, tCMD, "field name or slice")) continue;
+        if (!CHECKTYPE2(kv.key, tINT, tRANGE)) continue;
+        if (!CHECKTYPE2M(kv.value, tSTR, tCMD, "field name or slice")) continue;
         const char *name = kv.value.s;
         unsigned off = 0, sz = 0;
         if (kv.value.type == tCMD) {
@@ -20,11 +20,11 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
             name = kv.value[0].s;
             off = kv.value[1].lo >> 3;
             sz = kv.value[1].hi - kv.value[1].lo + 1; }
-	Table::Format::Field *f = tbl->lookup_field(name, "*");
+        Table::Format::Field *f = tbl->lookup_field(name, "*");
         const char *p = name-1;
         while (!f && (p = strchr(p+1, '.')))
             f = tbl->lookup_field(p+1, std::string(name, p-name));
-	if (!f) {
+        if (!f) {
             if (kv.value == "meter") {
                 // FIXME -- meter color could be ORed into any byte of the immediate?
                 if (!sz) off = 3, sz = 8;
@@ -32,15 +32,15 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                 error(kv.value.lineno, "No field %s in format", name);
                 continue; } }
         if (f && !sz) sz = f->size;
-	unsigned idx = kv.key.i;
-	if (kv.key.type == tRANGE) {
-	    idx = kv.key.lo;
-	    unsigned size = (kv.key.hi-idx+1) * 8;
+        unsigned idx = kv.key.i;
+        if (kv.key.type == tRANGE) {
+            idx = kv.key.lo;
+            unsigned size = (kv.key.hi-idx+1) * 8;
             if (!sz) sz = size;
-	    if (f && size != f->size) {
-		error(kv.key.lineno, "Byte range doesn't match size %d of %s",
-		      f->size, name);
-		continue; }
+            if (f && size != f->size) {
+                error(kv.key.lineno, "Byte range doesn't match size %d of %s",
+                      f->size, name);
+                continue; }
         } else if (!sz)
             sz = idx < ACTION_DATA_8B_SLOTS ? 8 :
                  idx < ACTION_DATA_8B_SLOTS + 2*ACTION_DATA_16B_SLOTS ? 16 : 32;
@@ -51,7 +51,7 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
             error(kv.key.lineno, "Multiple action bus entries at %d", idx);
             continue; }
         by_byte.emplace(idx, Slot{name, idx, sz, f, off});
-	//by_name[name].push_back(&by_byte[idx]);
+        //by_name[name].push_back(&by_byte[idx]);
         tbl->apply_to_field(name, [](Table::Format::Field *f){
             f->flags |= Table::Format::Field::USED_IMMED; });
     }
@@ -202,7 +202,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
             error(lineno, "Action bus setup can't deal with field %s split across "
                   "SRAM rows", el.second.name.c_str());
             continue; }
-	unsigned bytemask = ((1U << (el.second.size/8U)) - 1) << (el.second.offset/8U);
+        unsigned bytemask = ((1U << (el.second.size/8U)) - 1) << (el.second.offset/8U);
         switch (Stage::action_bus_slot_size[slot]) {
         case 8:
             for (unsigned sbyte = bit/8; sbyte <= (bit+f->size-1)/8; sbyte++, byte++, slot++) {
@@ -216,33 +216,33 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
                     error(lineno, "Can't put field %s into byte %d on action xbar",
                           el.second.name.c_str(), byte);
                     break; }
-		auto &ctl = action_hv_xbar.action_hv_ixbar_ctl_byte[side];
-		switch (code) {
-		case 0:
-		    ctl.action_hv_ixbar_ctl_byte_1to0_ctl = slot/2;
-		    ctl.action_hv_ixbar_ctl_byte_1to0_enable = 1;
-		    break;
-		case 1:
-		    ctl.action_hv_ixbar_ctl_byte_3to2_ctl = slot/2;
-		    ctl.action_hv_ixbar_ctl_byte_3to2_enable = 1;
-		    break;
-		case 2:
-		    ctl.action_hv_ixbar_ctl_byte_7to4_ctl = slot/4;
-		    ctl.action_hv_ixbar_ctl_byte_7to4_enable = 1;
-		    break;
-		case 3:
-		    ctl.action_hv_ixbar_ctl_byte_15to8_ctl = slot/8;
-		    ctl.action_hv_ixbar_ctl_byte_15to8_enable = 1;
-		    break; }
-		if (!(bytemask & 1))
-		    WARNING(SrcInfo(lineno) << ": putting " << el.second.name << " on action bus "
-			    "byte " << byte << " even though bit in bytemask is not set");
-		action_hv_xbar.action_hv_ixbar_input_bytemask[side] |= 1 << sbyte;
-		bytemask >>= 1; }
+                auto &ctl = action_hv_xbar.action_hv_ixbar_ctl_byte[side];
+                switch (code) {
+                case 0:
+                    ctl.action_hv_ixbar_ctl_byte_1to0_ctl = slot/2;
+                    ctl.action_hv_ixbar_ctl_byte_1to0_enable = 1;
+                    break;
+                case 1:
+                    ctl.action_hv_ixbar_ctl_byte_3to2_ctl = slot/2;
+                    ctl.action_hv_ixbar_ctl_byte_3to2_enable = 1;
+                    break;
+                case 2:
+                    ctl.action_hv_ixbar_ctl_byte_7to4_ctl = slot/4;
+                    ctl.action_hv_ixbar_ctl_byte_7to4_enable = 1;
+                    break;
+                case 3:
+                    ctl.action_hv_ixbar_ctl_byte_15to8_ctl = slot/8;
+                    ctl.action_hv_ixbar_ctl_byte_15to8_enable = 1;
+                    break; }
+                if (!(bytemask & 1))
+                    WARNING(SrcInfo(lineno) << ": putting " << el.second.name << " on action bus "
+                            "byte " << byte << " even though bit in bytemask is not set");
+                action_hv_xbar.action_hv_ixbar_input_bytemask[side] |= 1 << sbyte;
+                bytemask >>= 1; }
             break;
         case 16:
             slot -= ACTION_DATA_8B_SLOTS;
-	// last_halfword_group:
+        // last_halfword_group:
             bytemask <<= ((bit/8) & 1);
             for (unsigned word = bit/16; word <= (bit+f->size-1)/16; word++, byte+=2, slot++) {
                 unsigned code, mask;
@@ -255,32 +255,32 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
                     error(lineno, "Can't put field %s into byte %d on action xbar",
                           el.second.name.c_str(), byte);
                     break; }
-		auto &ctl = action_hv_xbar.action_hv_ixbar_ctl_halfword[slot/8][side];
-		unsigned subslot = slot%8U;
-		switch (code) {
-		case 1:
-		    ctl.action_hv_ixbar_ctl_halfword_3to0_ctl = subslot/2;
-		    ctl.action_hv_ixbar_ctl_halfword_3to0_enable = 1;
-		    break;
-		case 2:
-		    ctl.action_hv_ixbar_ctl_halfword_7to4_ctl = subslot/2;
-		    ctl.action_hv_ixbar_ctl_halfword_7to4_enable = 1;
-		    break;
-		case 3:
-		    ctl.action_hv_ixbar_ctl_halfword_15to8_ctl = subslot/4;
-		    ctl.action_hv_ixbar_ctl_halfword_15to8_enable = 1;
-		    break; }
-		action_hv_xbar.action_hv_ixbar_input_bytemask[side] |= (bytemask&3) << (word*2);
-		bytemask >>= 2; }
+                auto &ctl = action_hv_xbar.action_hv_ixbar_ctl_halfword[slot/8][side];
+                unsigned subslot = slot%8U;
+                switch (code) {
+                case 1:
+                    ctl.action_hv_ixbar_ctl_halfword_3to0_ctl = subslot/2;
+                    ctl.action_hv_ixbar_ctl_halfword_3to0_enable = 1;
+                    break;
+                case 2:
+                    ctl.action_hv_ixbar_ctl_halfword_7to4_ctl = subslot/2;
+                    ctl.action_hv_ixbar_ctl_halfword_7to4_enable = 1;
+                    break;
+                case 3:
+                    ctl.action_hv_ixbar_ctl_halfword_15to8_ctl = subslot/4;
+                    ctl.action_hv_ixbar_ctl_halfword_15to8_enable = 1;
+                    break; }
+                action_hv_xbar.action_hv_ixbar_input_bytemask[side] |= (bytemask&3) << (word*2);
+                bytemask >>= 2; }
             break;
         case 32: {
             slot -= ACTION_DATA_8B_SLOTS + ACTION_DATA_16B_SLOTS;
 #if 0
-	    if (slot < 2) {
-		/* FIXME -- nasty hack to deal with the weird mixed encoding */
-		slot = slot * 2 + ACTION_DATA_16B_SLOTS;
-		goto last_halfword_group; }
-	    slot -= 2;
+            if (slot < 2) {
+                /* FIXME -- nasty hack to deal with the weird mixed encoding */
+                slot = slot * 2 + ACTION_DATA_16B_SLOTS;
+                goto last_halfword_group; }
+            slot -= 2;
 #endif
             unsigned word = bit/32;
             unsigned code = 1 + word/2;
@@ -289,26 +289,26 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
             if (((word << 2)^byte) & 7) {
                 error(lineno, "Can't put field %s into byte %d on action xbar",
                       el.second.name.c_str(), byte);
-		break; }
-	    auto &ctl = action_hv_xbar.action_hv_ixbar_ctl_word[slot/4][side];
-	    slot %= 4U;
-	    switch (code) {
-	    case 1:
-		ctl.action_hv_ixbar_ctl_word_7to0_ctl = slot/2;
-		ctl.action_hv_ixbar_ctl_word_7to0_enable = 1;
-		break;
-	    case 2:
-		ctl.action_hv_ixbar_ctl_word_15to8_ctl = slot/2;
-		ctl.action_hv_ixbar_ctl_word_15to8_enable = 1;
-		break; }
-	    action_hv_xbar.action_hv_ixbar_input_bytemask[side] |= (bytemask&15) << (word*4);
-	    bytemask >>= 4;
+                break; }
+            auto &ctl = action_hv_xbar.action_hv_ixbar_ctl_word[slot/4][side];
+            slot %= 4U;
+            switch (code) {
+            case 1:
+                ctl.action_hv_ixbar_ctl_word_7to0_ctl = slot/2;
+                ctl.action_hv_ixbar_ctl_word_7to0_enable = 1;
+                break;
+            case 2:
+                ctl.action_hv_ixbar_ctl_word_15to8_ctl = slot/2;
+                ctl.action_hv_ixbar_ctl_word_15to8_enable = 1;
+                break; }
+            action_hv_xbar.action_hv_ixbar_input_bytemask[side] |= (bytemask&15) << (word*4);
+            bytemask >>= 4;
             break; }
         default:
             assert(0); }
-	if (bytemask)
-	    WARNING(SrcInfo(lineno) << ": excess bits " << hex(bytemask) <<
-		    " set in bytemask for " << el.second.name);
+        if (bytemask)
+            WARNING(SrcInfo(lineno) << ": excess bits " << hex(bytemask) <<
+                    " set in bytemask for " << el.second.name);
     }
 }
 
@@ -329,7 +329,7 @@ void ActionBus::write_immed_regs(Table *tbl) {
             for (unsigned b = off/8; b <= (off + size - 1)/8; b++) {
                 assert((b&3) == (slot&3));
                 adrdist.immediate_data_8b_enable[tid/8] |= 1U << ((tid&7)*4 + b);
-                // FIXME -- we write these ctl regs twice if we use both bytes in a pair 
+                // FIXME -- we write these ctl regs twice if we use both bytes in a pair
                 setup_muxctl(adrdist.immediate_data_8b_ixbar_ctl[tid*2 + b/2], slot++/4); }
             break;
         case 16:

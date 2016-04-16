@@ -21,8 +21,8 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
     for (auto &kv : MapIterChecked(data)) {
         if (common_setup(kv, data)) {
         } else if (kv.key == "input_xbar") {
-	    if (CHECKTYPE(kv.value, tMAP))
-		input_xbar = new InputXbar(this, false, kv.value.map);
+            if (CHECKTYPE(kv.value, tMAP))
+                input_xbar = new InputXbar(this, false, kv.value.map);
         } else if (kv.key == "format") {
             /* done above to be done before action_bus and vpns */
         } else if (kv.key == "row" || kv.key == "column" || kv.key == "bus") {
@@ -77,9 +77,9 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
     fini(p4_info);
     alloc_rams(false, stage->sram_use, &stage->sram_match_bus_use);
     if (action.set() && actions)
-	error(lineno, "Table %s has both action table and immediate actions", name());
+        error(lineno, "Table %s has both action table and immediate actions", name());
     if (!action.set() && !actions)
-	error(lineno, "Table %s has neither action table nor immediate actions", name());
+        error(lineno, "Table %s has neither action table nor immediate actions", name());
     if (action.args.size() > 2)
         error(lineno, "Unexpected number of action table arguments %zu", action.args.size());
     if (actions && !action_bus) action_bus = new ActionBus();
@@ -99,7 +99,7 @@ void ExactMatchTable::pass1() {
     if (!p4_table) p4_table = P4Table::alloc(P4Table::MatchEntry, this);
     else p4_table->check(this);
     alloc_id("logical", logical_id, stage->pass1_logical_id,
-	     LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
+             LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
     alloc_busses(stage->sram_match_bus_use);
     alloc_vpns();
     check_next();
@@ -550,10 +550,10 @@ void ExactMatchTable::write_regs() {
                 ram.match_bytemask[word_group].mask_nibbles_28_to_31 = 0xf; }
             if (gress)
                 stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row.row);
-	    rams_row.emm_ecc_error_uram_ctl[gress] |= 1U << (col - 2); }
+            rams_row.emm_ecc_error_uram_ctl[gress] |= 1U << (col - 2); }
         /* setup input xbars to get data to the right places on the bus(es) */
         bool using_match = false;
-	auto &byteswizzle_ctl = rams_row.exactmatch_row_vh_xbar_byteswizzle_ctl[row.bus];
+        auto &byteswizzle_ctl = rams_row.exactmatch_row_vh_xbar_byteswizzle_ctl[row.bus];
         for (unsigned i = 0; i < format->groups(); i++) {
             Format::Field *match = format->field("match", i);
             if (!match) continue;
@@ -572,15 +572,15 @@ void ExactMatchTable::write_regs() {
                     Phv::Slice sl(*it->second, bit-it->first, bit-it->first+bits_in_byte-1);
                     int bus_loc = find_on_ixbar(sl, word_ixbar_group[word]);
                     assert(bus_loc >= 0 && bus_loc < 16);
-		    for (unsigned b = 0; b < bits_in_byte; b++, fmt_bit++)
-			byteswizzle_ctl[byte][fmt_bit%8U] = 0x10 + bus_loc;
+                    for (unsigned b = 0; b < bits_in_byte; b++, fmt_bit++)
+                        byteswizzle_ctl[byte][fmt_bit%8U] = 0x10 + bus_loc;
                     bit += bits_in_byte; } }
             assert(bit == match->size);
             if (Format::Field *version = format->field("version", i)) {
                 if (version->bits[0].lo/128U != word) continue;
-		for (unsigned bit = version->bits[0].lo; bit <= version->bits[0].hi; bit++) {
+                for (unsigned bit = version->bits[0].lo; bit <= version->bits[0].hi; bit++) {
                     unsigned byte = (bit%128)/8;
-		    byteswizzle_ctl[byte][bit%8U] = 8; } } }
+                    byteswizzle_ctl[byte][bit%8U] = 8; } } }
         if (using_match) {
             auto &vh_xbar_ctl = rams_row.vh_xbar[row.bus].exactmatch_row_vh_xbar_ctl;
             setup_muxctl(vh_xbar_ctl,  word_ixbar_group[word]);
@@ -630,7 +630,7 @@ void ExactMatchTable::write_regs() {
                         action.args[1].field()->by_group[group]->bits[0].lo%128 + 5 - lo_huffman_bits; } }
             if (attached.selector) {
                 if (group_info[group].overhead_word == (int)word) {
-                    merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 
+                    merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
                         attached.selector.args[0].field()->by_group[group]->bits[0].lo%128 + 23 -
                             get_selector()->address_shift(); } }
             if (idletime)
@@ -641,7 +641,7 @@ void ExactMatchTable::write_regs() {
                     merge.mau_stats_adr_exact_shiftcount[bus][word_group] = st->direct_shiftcount();
                 else if (group_info[group].overhead_word == (int)word) {
                     assert(st.args[0].field()->by_group[group]->bits[0].lo/128U == word);
-                    merge.mau_stats_adr_exact_shiftcount[bus][word_group] = 
+                    merge.mau_stats_adr_exact_shiftcount[bus][word_group] =
                         st.args[0].field()->by_group[group]->bits[0].lo%128U + 7;
                 } else if (options.match_compiler) {
                     /* unused, so should not be set... */
@@ -653,9 +653,9 @@ void ExactMatchTable::write_regs() {
                     merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = m->direct_shiftcount();
                 } else if (group_info[group].overhead_word == (int)word) {
                     assert(m.args[0].field()->by_group[group]->bits[0].lo/128U == word);
-                    merge.mau_meter_adr_exact_shiftcount[bus][word_group] = 
+                    merge.mau_meter_adr_exact_shiftcount[bus][word_group] =
                         m.args[0].field()->by_group[group]->bits[0].lo%128U + 16;
-                    merge.mau_idletime_adr_exact_shiftcount[bus][word_group] = 
+                    merge.mau_idletime_adr_exact_shiftcount[bus][word_group] =
                         m.args[0].field()->by_group[group]->bits[0].lo%128U;
                 } else if (options.match_compiler) {
                     /* unused, so should not be set... */
@@ -682,16 +682,16 @@ void ExactMatchTable::write_regs() {
                            layout[index+word].row*2 + layout[index+word].bus); */ }
         //if (gress == EGRESS)
         //    merge.exact_match_delay_config.exact_match_bus_thread |= 1 << bus;
-	merge.exact_match_phys_result_en[bus/8U] |= 1U << (bus%8U);
-	merge.exact_match_phys_result_thread[bus/8U] |= gress << (bus%8U);
-	if (stage->tcam_delay(gress))
-	    merge.exact_match_phys_result_delay[bus/8U] |= 1U << (bus%8U);
+        merge.exact_match_phys_result_en[bus/8U] |= 1U << (bus%8U);
+        merge.exact_match_phys_result_thread[bus/8U] |= gress << (bus%8U);
+        if (stage->tcam_delay(gress))
+            merge.exact_match_phys_result_delay[bus/8U] |= 1U << (bus%8U);
 
         if (word-- == 0) { word = fmt_width-1; } }
 
     merge.exact_match_logical_result_en |= 1 << logical_id;
     if (stage->tcam_delay(gress) > 0)
-	merge.exact_match_logical_result_delay |= 1 << logical_id;
+        merge.exact_match_logical_result_delay |= 1 << logical_id;
     if (actions) actions->write_regs(this);
     if (gateway) gateway->write_regs();
     if (idletime) idletime->write_regs();

@@ -56,7 +56,7 @@ public:
     Alloc2D<Table *, TCAM_ROWS, 2>                      tcam_match_bus_use;
     Alloc2D<Table *, SRAM_ROWS, 2>                      tcam_indirect_bus_use;
     Alloc1D<Table *, LOGICAL_TABLES_PER_STAGE>          logical_id_use;
-    Alloc1D<Table *, TCAM_TABLES_PER_STAGE>          	tcam_id_use;
+    Alloc1D<Table *, TCAM_TABLES_PER_STAGE>             tcam_id_use;
     Alloc1D<std::vector<InputXbar *>, EXACT_XBAR_GROUPS>exact_ixbar;
     Alloc1D<std::vector<InputXbar *>, TCAM_XBAR_GROUPS> tcam_ixbar;
     Alloc1D<std::vector<HashDistribution *>, 6>         hash_dist_use;
@@ -65,7 +65,7 @@ public:
                                                         meter_bus_use,
                                                         stats_bus_use,
                                                         overflow_bus_use;
-    Alloc2D<Table::Actions::Action *, 2, ACTION_IMEM_ADDR_MAX>		imem_addr_use;
+    Alloc2D<Table::Actions::Action *, 2, ACTION_IMEM_ADDR_MAX>          imem_addr_use;
     bitvec      imem_use[ACTION_IMEM_SLOTS];
     enum { USE_TCAM=1, USE_TCAM_PIPED=2, USE_STATEFUL=4, USE_METER=8,
            USE_SELECTOR=16, USE_WIDE_SELECTOR=32 };
@@ -73,7 +73,7 @@ public:
     enum { NONE=0, CONCURRENT=1, ACTION_DEP=2, MATCH_DEP=3 } stage_dep[2];
     bitvec              match_use[2], action_use[2], action_set[2];
     enum { NO_CONFIG=0, PROPAGATE, MAP_TO_IMMEDIATE, DISABLE_ALL_TABLES }
-    			error_mode[2];
+                        error_mode[2];
 
     int                         pass1_logical_id, pass1_tcam_id;
     regs_match_action_stage_    regs;
@@ -178,9 +178,9 @@ namespace BusHashGroup {
 }
 namespace MoveReg {
     enum {
-	STATS = 0,
-	METER = 1,
-	IDLE = 2,
+        STATS = 0,
+        METER = 1,
+        IDLE = 2,
     };
 }
 

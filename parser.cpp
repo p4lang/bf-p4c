@@ -309,7 +309,7 @@ Parser::State::Ref &Parser::State::Ref::operator=(const value_t &v) {
             error(lineno, "Parser state out of range");
             pattern.word0 &= PARSER_STATE_MASK;
             pattern.word1 &= PARSER_STATE_MASK;
-        } else 
+        } else
             pattern.word1 |= ~(pattern.word0 | pattern.word1) & PARSER_STATE_MASK; }
     return *this;
 }
@@ -501,7 +501,7 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
             if (!CHECKTYPE(kv.value, tINT)) continue;
             shift = kv.value.i;
         } else if (kv.key == "buf_req") {
-	    if (buf_req >= 0)
+            if (buf_req >= 0)
                 error(kv.key.lineno, "Multiple buf_req settings in match");
             if (!CHECKTYPE(kv.value, tINT)) continue;
             buf_req = kv.value.i;
@@ -666,11 +666,11 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
                 warning(s.where.lineno, "Not writing all bits of phv slice"); }
     }
     for (auto &m : state->match) {
-	if (&m == this) break;
-	if (m.match == match) {
-	    warning(lineno, "Can't match parser state due to previous match");
-	    warning(m.lineno, "here");
-	    break; } }
+        if (&m == this) break;
+        if (m.match == match) {
+            warning(lineno, "Can't match parser state due to previous match");
+            warning(m.lineno, "here");
+            break; } }
 }
 
 void Parser::State::pass1(Parser *pa) {
@@ -945,21 +945,21 @@ void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
             *output_map[i].dst = 0x1ff;
 
     if (buf_req < 0) {
-	/* this tries to more or less match how the compiler computes buf_req, but it is
-	 * pretty much impossible -- the compiler should set it explicitly */
-	buf_req = ea_row.shift_amt;
-	if (ea_row.lookup_offset_16 + 2 > (unsigned)buf_req)
-	    buf_req = ea_row.lookup_offset_16 + 2;
-	if (ea_row.lookup_offset_8[0] + 1 > (unsigned)buf_req)
-	    buf_req = ea_row.lookup_offset_8[0] + 1;
-	if (ea_row.lookup_offset_8[1] + 1 > (unsigned)buf_req)
-	    buf_req = ea_row.lookup_offset_8[1] + 1;
-	for (int i = 0; i < phv_output_map_size; i++)
-	    if (!output_map[i].src_type || 0 == *output_map[i].src_type)
-		if (*output_map[i].src < 32) {
-		    unsigned off = *output_map[i].src + output_map[i].size/8;
-		    if (off > (unsigned)buf_req) buf_req = off; }
-	assert(buf_req <= 32); }
+        /* this tries to more or less match how the compiler computes buf_req, but it is
+         * pretty much impossible -- the compiler should set it explicitly */
+        buf_req = ea_row.shift_amt;
+        if (ea_row.lookup_offset_16 + 2 > (unsigned)buf_req)
+            buf_req = ea_row.lookup_offset_16 + 2;
+        if (ea_row.lookup_offset_8[0] + 1 > (unsigned)buf_req)
+            buf_req = ea_row.lookup_offset_8[0] + 1;
+        if (ea_row.lookup_offset_8[1] + 1 > (unsigned)buf_req)
+            buf_req = ea_row.lookup_offset_8[1] + 1;
+        for (int i = 0; i < phv_output_map_size; i++)
+            if (!output_map[i].src_type || 0 == *output_map[i].src_type)
+                if (*output_map[i].src < 32) {
+                    unsigned off = *output_map[i].src + output_map[i].size/8;
+                    if (off > (unsigned)buf_req) buf_req = off; }
+        assert(buf_req <= 32); }
     ea_row.buf_req = buf_req;
 }
 

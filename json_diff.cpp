@@ -36,7 +36,7 @@ void add_ignore(const char *a) {
         else {
             std::cerr << "Unknown ignore expression " << a << std::endl;
             return; }
-        if (a[end]) 
+        if (a[end])
             std::cerr << "extra text after ignore " << (a+end) << std::endl;
         return; }
     ignore_keys.insert(a);
@@ -399,7 +399,7 @@ void print_diff(json::obj *a, json::obj *b, int indent) {
             return;
         } else if (typeid(*a) == typeid(json::map)) {
             print_diff(static_cast<json::map *>(a), static_cast<json::map *>(b), indent);
-            return; } } 
+            return; } }
     do_output(a, indent, "-");
     do_output(b, indent, "+");
 }

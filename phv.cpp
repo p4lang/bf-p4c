@@ -90,19 +90,19 @@ void Phv::output_names(json::map &out) {
 
 Phv::Ref::Ref(gress_t g, const value_t &n) : gress(g), lo(-1), hi(-1), lineno(n.lineno) {
     if (CHECKTYPE2M(n, tSTR, tCMD, "phv or register reference or slice")) {
-	if (n.type == tSTR) {
-	    name_ = n.s;
-	} else {
-	    name_ = n[0].s;
-	    if (PCHECKTYPE2M(n.vec.size == 2, n[1], tINT, tRANGE, "register slice")) {
-		if (n[1].type == tINT)
-		    lo = hi = n[1].i;
-		else {
-		    lo = n[1].lo;
-		    hi = n[1].hi;
-		    if (lo > hi) {
-			lo = n[1].hi;
-			hi = n[1].lo; } } } } }
+        if (n.type == tSTR) {
+            name_ = n.s;
+        } else {
+            name_ = n[0].s;
+            if (PCHECKTYPE2M(n.vec.size == 2, n[1], tINT, tRANGE, "register slice")) {
+                if (n[1].type == tINT)
+                    lo = hi = n[1].i;
+                else {
+                    lo = n[1].lo;
+                    hi = n[1].hi;
+                    if (lo > hi) {
+                        lo = n[1].hi;
+                        hi = n[1].lo; } } } } }
 }
 
 Phv::Ref::Ref(const Phv::Register &r) : gress(EGRESS), lo(-1), hi(-1), lineno(-1) {
@@ -164,7 +164,7 @@ std::vector<Phv::Ref> split_phv_bytes(const std::vector<Phv::Ref> &v) {
 
 void Phv::Ref::dbprint(std::ostream &out) const {
     out << name_;
-    if (lo >= 0) { 
+    if (lo >= 0) {
         out << '(' << lo;
         if (hi != lo) out << ".." << hi;
         out << ')'; }

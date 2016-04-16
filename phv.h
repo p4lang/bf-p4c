@@ -35,12 +35,12 @@ public:
         unsigned short index, size;
     };
     class Slice {
-	static const Register invalid;
+        static const Register invalid;
     public:
         const Register  &reg;
         int             lo, hi;
         bool            valid;
-	Slice() : reg(invalid), valid(false) {}
+        Slice() : reg(invalid), valid(false) {}
         Slice(const Register &r, int l, int h) : reg(r), lo(l), hi(h) {
             valid = lo >= 0 && hi >= lo && hi < reg.size; }
         Slice(const Register &r, int b) : reg(r), lo(b), hi(b) {
@@ -50,7 +50,7 @@ public:
         Slice(const Slice &) = default;
         explicit operator bool() { return valid; }
         Slice &operator=(const Slice &a) { new(this) Slice(a.reg, a.lo, a.hi); return *this; }
-	const Slice *operator->() const { return this; }
+        const Slice *operator->() const { return this; }
         bool operator==(const Slice &s) const {
             return valid && s.valid && reg.index == s.reg.index &&
                    lo == s.lo && hi == s.hi; }
@@ -72,38 +72,38 @@ public:
         return get(gress, std::string(name)); }
     class Ref {
     protected:
-	gress_t		gress;
-	std::string	name_;
-	int		lo, hi;
+        gress_t         gress;
+        std::string     name_;
+        int             lo, hi;
     public:
-	int		lineno;
+        int             lineno;
         Ref() : gress(INGRESS), lineno(-1) {}
-	Ref(gress_t g, const value_t &n);
-	Ref(gress_t g, int line, const std::string &n, int l, int h) :
+        Ref(gress_t g, const value_t &n);
+        Ref(gress_t g, int line, const std::string &n, int l, int h) :
             gress(g), name_(n), lo(l), hi(h), lineno(line) {}
         Ref(const Ref &r, int l, int h) : gress(r.gress), name_(r.name_),
             lo(r.lo < 0 ? l : r.lo + l), hi(r.lo < 0 ? h : r.lo + h),
             lineno(r.lineno) { assert(r.hi < 0 || hi <= r.hi); }
         Ref(const Register &r);
         explicit operator bool() { return lineno >= 0; }
-	Slice operator*() const {
-	    if (auto *s = phv.get(gress, name_)) {
-		if (hi >= 0) return Slice(*s, lo, hi);
-		return *s;
-	    } else {
+        Slice operator*() const {
+            if (auto *s = phv.get(gress, name_)) {
+                if (hi >= 0) return Slice(*s, lo, hi);
+                return *s;
+            } else {
                 error(lineno, "No phv record %s", name_.c_str());
-		return Slice(); } }
-	Slice operator->() const { return **this; }
+                return Slice(); } }
+        Slice operator->() const { return **this; }
         bool operator==(const Ref &a) const {
             if (name_ == a.name_ && lo == a.lo && hi == a.hi)
                 return true;
             return **this == *a; }
-	bool check() const {
-	    if (auto *s = phv.get(gress, name_)) {
-		if (hi >= 0 && !Slice(*s, lo, hi).valid) {
-		    error(lineno, "Invalid slice of %s", name_.c_str());
+        bool check() const {
+            if (auto *s = phv.get(gress, name_)) {
+                if (hi >= 0 && !Slice(*s, lo, hi).valid) {
+                    error(lineno, "Invalid slice of %s", name_.c_str());
                     return false; }
-	    } else {
+            } else {
                 if (lineno >= 0)
                     error(lineno, "No phv record %s", name_.c_str());
                 return false; }
@@ -112,7 +112,7 @@ public:
         int lobit() const { return lo < 0 ? 0 : lo; }
         unsigned size() const {
             if (lo >= 0) return hi - lo + 1;
-	    if (auto *s = phv.get(gress, name_)) return s->size();
+            if (auto *s = phv.get(gress, name_)) return s->size();
             return 0; }
         bool merge(const Ref &r);
         void dbprint(std::ostream &out) const;

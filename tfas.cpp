@@ -135,7 +135,7 @@ int main(int ac, char **av) {
                     verbose++;
                     break;
                 default:
-                    std::cerr << "Unknown option " << (flag ? '+' : '-') 
+                    std::cerr << "Unknown option " << (flag ? '+' : '-')
                               << arg[-1] << std::endl;
                     std::cerr << "usage: " << av[0] << " [-l:D:Mo:qv] file..."
                               << std::endl;

@@ -14,7 +14,7 @@ void print_regname(std::ostream &out, const void *addr, const void *end);
 struct ubits_base;
 
 struct ubits_base {
-    unsigned long	value;
+    unsigned long       value;
     mutable bool        read, write;
 
     ubits_base() : value(0), read(false), write(false) {}
@@ -34,13 +34,13 @@ inline std::ostream &operator<<(std::ostream &out, const ubits_base *u) {
 template<int N> struct ubits : ubits_base {
     ubits() : ubits_base() {}
     const ubits &check(std::true_type) {
-	if (value >= (1UL << N)) {
+        if (value >= (1UL << N)) {
             ERROR(value << " out of range for " << N << " bits in " << this);
-	    value &= (1UL << N) - 1; }
+            value &= (1UL << N) - 1; }
         return *this; }
     const ubits &check(std::false_type) { return *this; }
     const ubits &check() {
-	return check(std::integral_constant<bool, (N != sizeof(unsigned long) * CHAR_BIT)>{}); }
+        return check(std::integral_constant<bool, (N != sizeof(unsigned long) * CHAR_BIT)>{}); }
     ubits(unsigned long v) : ubits_base(v) { check(); }
     ubits(const ubits &) = delete;
     ubits(ubits &&) = default;

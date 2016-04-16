@@ -7,31 +7,31 @@ namespace json {
 std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json) {
     while (in) {
         bool neg = false;
-	char ch;
-	in >> ch;
-	switch(ch) {
+        char ch;
+        in >> ch;
+        switch(ch) {
         case '-':
             neg = true;
             in >> ch;
             /* fall through */
-	case '0': case '1': case '2': case '3': case '4':
-	case '5': case '6': case '7': case '8': case '9': {
-	    long l = 0;
+        case '0': case '1': case '2': case '3': case '4':
+        case '5': case '6': case '7': case '8': case '9': {
+            long l = 0;
             while (in && isdigit(ch)) {
                 /* FIXME -- deal with overflow ... and hex? */
                 l = l * 10 + ch - '0';
                 in >> ch; }
             if (in) in.unget();
             if (neg) l = -l;
-	    json.reset(new number(l));
-	    return in; }
-	case '"': {
-	    std::string s;
-	    getline(in, s, '"');
-	    json.reset(new string(std::move(s)));
-	    return in; }
-	case '[': {
-	    std::unique_ptr<vector> rv(new vector());
+            json.reset(new number(l));
+            return in; }
+        case '"': {
+            std::string s;
+            getline(in, s, '"');
+            json.reset(new string(std::move(s)));
+            return in; }
+        case '[': {
+            std::unique_ptr<vector> rv(new vector());
             in >> ch;
             if (ch != ']') {
                 in.unget();
@@ -43,10 +43,10 @@ std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json) {
                         std::cerr << "missing ',' in vector (saw '" << ch << "')" << std::endl;
                         in.unget(); }
                 } while (in && ch != ']'); }
-	    json = std::move(rv);
-	    return in; }
-	case '{': {
-	    std::unique_ptr<map> rv(new map());
+            json = std::move(rv);
+            return in; }
+        case '{': {
+            std::unique_ptr<map> rv(new map());
             in >> ch;
             if (ch != '}') {
                 in.unget();
@@ -68,9 +68,9 @@ std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json) {
                         std::cerr << "missing ',' in map (saw '" << ch << "')" << std::endl;
                         in.unget(); }
                 } while (in && ch != '}'); }
-	    json = std::move(rv);
-	    return in; }
-	default:
+            json = std::move(rv);
+            return in; }
+        default:
             if (isalpha(ch) || ch == '_') {
                 std::string s;
                 while (isalnum(ch) || ch == '_') {
@@ -83,7 +83,7 @@ std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json) {
                 return in;
             } else
                 std::cerr << "unexpected character '" << ch << "'" << std::endl;
-	}
+        }
     }
     return in;
 }
@@ -95,11 +95,11 @@ void vector::print_on(std::ostream &out, int indent, int width, const char *pfx)
     out << '[';
     indent += 2;
     for (auto &e : *this) {
-	if (!first) out << ',';
-	if (!oneline) out << '\n' << pfx << std::setw(indent);
-	out << ' ' << std::setw(0);
-	e->print_on(out, indent, width - 2, pfx);
-	first = false;
+        if (!first) out << ',';
+        if (!oneline) out << '\n' << pfx << std::setw(indent);
+        out << ' ' << std::setw(0);
+        e->print_on(out, indent, width - 2, pfx);
+        first = false;
     }
     indent -= 2;
     if (!first) out << ' ';
@@ -114,13 +114,13 @@ void map::print_on(std::ostream &out, int indent, int width, const char *pfx) co
     out << '{';
     indent += 2;
     for (auto &e : *this) {
-	if (!first) out << ',';
-	if (!oneline) out << '\n' << pfx << std::setw(indent);
-	out << ' ' << std::setw(0);
-	e.first->print_on(out, indent, width - 2, pfx);
-	out << ": ";
-	e.second->print_on(out, indent, width - 2, pfx);
-	first = false;
+        if (!first) out << ',';
+        if (!oneline) out << '\n' << pfx << std::setw(indent);
+        out << ' ' << std::setw(0);
+        e.first->print_on(out, indent, width - 2, pfx);
+        out << ": ";
+        e.second->print_on(out, indent, width - 2, pfx);
+        first = false;
     }
     indent -= 2;
     if (!first) out << ' ';

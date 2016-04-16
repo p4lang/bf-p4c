@@ -26,7 +26,7 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
         if (!(rv = by_handle[handle])) {
             if (!n || !CHECKTYPE(*n, tSTR) || !by_name.count(n->s) ||
                 (rv = by_name[n->s])->handle != (unsigned)t << 24)
-                rv = by_handle[handle] = new P4Table; 
+                rv = by_handle[handle] = new P4Table;
             rv->handle = handle; }
     } else if (n) {
         if (!CHECKTYPE(*n, tSTR)) return 0;
@@ -72,7 +72,7 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
 
 P4Table *P4Table::alloc(P4Table::type t, Table *tbl) {
     unsigned handle = ++max_handle[t] | (t << 24);
-    P4Table *rv = by_handle[handle] = new P4Table; 
+    P4Table *rv = by_handle[handle] = new P4Table;
     rv->handle = handle;
     rv->name = tbl->name();
     return rv;

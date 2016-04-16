@@ -15,28 +15,28 @@ mod_definitions[2][3] = {
 
 static bool test_sanity(json::obj *data, std::string name, bool sizes=true) {
     if (json::vector *v = dynamic_cast<json::vector *>(data)) {
-	data = 0;
-	for (auto &a : *v) {
-	    if (!data) data = a.get();
-	    else if (*data != *a) {
-		std::cerr << "array element mismatch: " << name << std::endl;
-		return false; } }
-	return test_sanity(data, name+"[]", sizes); }
+        data = 0;
+        for (auto &a : *v) {
+            if (!data) data = a.get();
+            else if (*data != *a) {
+                std::cerr << "array element mismatch: " << name << std::endl;
+                return false; } }
+        return test_sanity(data, name+"[]", sizes); }
     if (json::map *m = dynamic_cast<json::map *>(data)) {
-	for (auto &a : *m) {
-	    if (json::string *key = dynamic_cast<json::string *>(a.first)) {
-		if ((*key)[0] == '_') continue;
-		for (char ch : *key)
-		    if (!isalnum(ch) && ch != '_') {
-			std::cerr << "field not identifier: " << name << '.' << *key << std::endl;
-			return false; }
-		if (name.size()) name += '.';
-		name += *key;
-	    } else {
-		std::cerr << "field not string: " << name << std::endl;
-		return false; }
-	    if (!test_sanity(a.second.get(), name, sizes)) return false; }
-	return true; }
+        for (auto &a : *m) {
+            if (json::string *key = dynamic_cast<json::string *>(a.first)) {
+                if ((*key)[0] == '_') continue;
+                for (char ch : *key)
+                    if (!isalnum(ch) && ch != '_') {
+                        std::cerr << "field not identifier: " << name << '.' << *key << std::endl;
+                        return false; }
+                if (name.size()) name += '.';
+                name += *key;
+            } else {
+                std::cerr << "field not string: " << name << std::endl;
+                return false; }
+            if (!test_sanity(a.second.get(), name, sizes)) return false; }
+        return true; }
     if (json::number *n = dynamic_cast<json::number *>(data)) {
         if (!sizes ||
             (n->val >= 0 && (size_t)n->val <= sizeof(unsigned long) * CHAR_BIT))
@@ -49,19 +49,19 @@ static bool test_sanity(json::obj *data, std::string name, bool sizes=true) {
 
 static json::obj *get_indexes(json::obj *t, std::vector<int> &indexes) {
     while (json::vector *v = dynamic_cast<json::vector *>(t)) {
-	indexes.push_back(v->size());
-	t = v->begin()->get(); }
+        indexes.push_back(v->size());
+        t = v->begin()->get(); }
     return t;
 }
 static /*const*/ json::obj *skip_indexes(const json::obj *t) {
     while (const json::vector *v = dynamic_cast<const json::vector *>(t)) {
-	t = v->begin()->get(); }
+        t = v->begin()->get(); }
     return const_cast<json::obj *>(t); // return is const if argument was
 }
 
 static json::obj *singleton_obj(json::obj *t, json::string *name) {
     if (json::map *m = dynamic_cast<json::map *>(t))
-	if (m->size() == 1 && m->find(name) != m->end()) {
+        if (m->size() == 1 && m->find(name) != m->end()) {
             json::obj *o = m->find(name)->second.get();
             /* FIXME -- could deal with vectors here?  Callers need to be changed */
             if (!dynamic_cast<json::vector *>(o))
@@ -105,9 +105,9 @@ static void gen_emit_method(std::ostream &out, json::map *m, indent_t indent,
     out << indent << "out << '{' << std::endl;" << std::endl;
     bool first = true;
     for (auto &a : *m) {
-	if (!first)
-	    out << indent << "out << \", \\n\";" << std::endl;
-	json::string *name = dynamic_cast<json::string *>(a.first);
+        if (!first)
+            out << indent << "out << \", \\n\";" << std::endl;
+        json::string *name = dynamic_cast<json::string *>(a.first);
         if (objname && *name == "_name") {
             if (nameargs.size() > 0) {
                 int tmplen = strlen(objname) + nameargs.size()*10 + 32;
@@ -124,18 +124,18 @@ static void gen_emit_method(std::ostream &out, json::map *m, indent_t indent,
             out << "\\\"\";" << std::endl;
             first = false;
             continue;
-	} else if ((*name)[0] == '_') {
+        } else if ((*name)[0] == '_') {
             json::string *val = dynamic_cast<json::string *>(a.second.get());
             if (!val) continue;
             out << indent << "out << indent << \"\\\"" << *name << "\\\": \\\""
                 << escape(*val) << "\\\"\";" << std::endl;
             first = false;
             continue; }
-	out << indent << "out << indent << \"\\\"" << *name << "\\\": \";" << std::endl;
-	std::vector<int> indexes;
-	json::obj *type = get_indexes(a.second.get(), indexes);
-	int index_num = 0;
-	for (int idx : indexes) {
+        out << indent << "out << indent << \"\\\"" << *name << "\\\": \";" << std::endl;
+        std::vector<int> indexes;
+        json::obj *type = get_indexes(a.second.get(), indexes);
+        int index_num = 0;
+        for (int idx : indexes) {
             if (enable_disable && checked_array) {
                 out << indent++ << "if (" << *name;
                 for (int i = 0; i < index_num; i++)
@@ -143,35 +143,35 @@ static void gen_emit_method(std::ostream &out, json::map *m, indent_t indent,
                 out << ".disabled()) {" << std::endl;
                 out << indent << "out << \"0\";" << std::endl;
                 out << indent-1 << "} else {" << std::endl; }
-	    out << indent << "out << \"[\\n\" << ++indent;" << std::endl;
-	    out << indent++ << "for (int i" << index_num << " = 0; i" << index_num << " < "
+            out << indent << "out << \"[\\n\" << ++indent;" << std::endl;
+            out << indent++ << "for (int i" << index_num << " = 0; i" << index_num << " < "
                 << idx << "; i" << index_num << "++) { " << std::endl;
-	    out << indent << "if (i" << index_num << ") out << \", \\n\" << indent;" << std::endl;
-	    index_num++; }
-	json::obj *single = singleton_obj(type, name);
-	if (single != type) {
-	    out << indent << "out << \"{\\n\" << indent+1 << \"\\\"" << *name
+            out << indent << "if (i" << index_num << ") out << \", \\n\" << indent;" << std::endl;
+            index_num++; }
+        json::obj *single = singleton_obj(type, name);
+        if (single != type) {
+            out << indent << "out << \"{\\n\" << indent+1 << \"\\\"" << *name
                 << "\\\": \" << " << *name;
-	    for (int i = 0; i < index_num; i++)
-		out << "[i" << i << ']';
-	    out << " << '\\n';" << std::endl;
-	    out << indent << "out << indent << '}';" << std::endl;
-	} else if (dynamic_cast<json::map *>(type)) {
-	    out << indent << *name;
-	    for (int i = 0; i < index_num; i++)
-		out << "[i" << i << ']';
-	    out << ".emit_json(out, indent+1);" << std::endl;
-	} else {
-	    out << indent << "out << " << *name;
-	    for (int i = 0; i < index_num; i++)
-		out << "[i" << i << ']';
-	    out << ';' << std::endl; }
-	while (--index_num >= 0) {
-	    out << --indent << "}" << std::endl;
-	    out << indent << "out << '\\n' << --indent << ']';" << std::endl;
+            for (int i = 0; i < index_num; i++)
+                out << "[i" << i << ']';
+            out << " << '\\n';" << std::endl;
+            out << indent << "out << indent << '}';" << std::endl;
+        } else if (dynamic_cast<json::map *>(type)) {
+            out << indent << *name;
+            for (int i = 0; i < index_num; i++)
+                out << "[i" << i << ']';
+            out << ".emit_json(out, indent+1);" << std::endl;
+        } else {
+            out << indent << "out << " << *name;
+            for (int i = 0; i < index_num; i++)
+                out << "[i" << i << ']';
+            out << ';' << std::endl; }
+        while (--index_num >= 0) {
+            out << --indent << "}" << std::endl;
+            out << indent << "out << '\\n' << --indent << ']';" << std::endl;
             if (enable_disable && checked_array)
                 out << --indent << "}" << std::endl; }
-	first = false; }
+        first = false; }
     out << indent << "out << '\\n' << indent-1 << \"}\";" << std::endl;
     out << --indent << '}' << std::endl;
 }
@@ -190,10 +190,10 @@ static void gen_fieldname_method(std::ostream &out, json::map *m, indent_t inden
         out << indent << "if ((void *)addr == this && end == this+1) return;" << std::endl;
     bool first = true;
     for (auto it = m->rbegin(); it != m->rend(); it++) {
-	std::vector<int> indexes;
-	json::string *name = dynamic_cast<json::string *>(it->first);
-	if ((*name)[0] == '_') continue;
-	json::obj *type = get_indexes(it->second.get(), indexes);
+        std::vector<int> indexes;
+        json::string *name = dynamic_cast<json::string *>(it->first);
+        if ((*name)[0] == '_') continue;
+        json::obj *type = get_indexes(it->second.get(), indexes);
         out << indent;
         if (first) first = false;
         else out << "} else ";
@@ -215,12 +215,12 @@ static void gen_fieldname_method(std::ostream &out, json::map *m, indent_t inden
                     out << " == end) return;" << std::endl; }
             out << indent << "out << '[' << i" << i << " << ']';" << std::endl;
             i++; }
-	json::obj *single = singleton_obj(type, name);
-	if (dynamic_cast<json::map *>(single)) {
-	    out << indent << *name;
-	    for (size_t i = 0; i < indexes.size(); i++)
-		out << "[i" << i << ']';
-	    out << ".emit_fieldname" << "(out, addr, end);" << std::endl; }
+        json::obj *single = singleton_obj(type, name);
+        if (dynamic_cast<json::map *>(single)) {
+            out << indent << *name;
+            for (size_t i = 0; i < indexes.size(); i++)
+                out << "[i" << i << ']';
+            out << ".emit_fieldname" << "(out, addr, end);" << std::endl; }
         indent--; }
     out << indent-- << "}" << std::endl;
     out << indent << "}" << std::endl;
@@ -240,58 +240,58 @@ static void gen_unpack_method(std::ostream &out, json::map *m, indent_t indent,
     out << indent << "json::map *m = dynamic_cast<json::map *>(obj);" << std::endl;
     out << indent << "if (!m) return -1;" << std::endl;
     for (auto &a : *m) {
-	std::vector<int> indexes;
-	json::string *name = dynamic_cast<json::string *>(a.first);
-	if ((*name)[0] == '_') continue;
-	json::obj *type = get_indexes(a.second.get(), indexes);
-	int index_num = 0;
-	for (int idx : indexes) {
-	    out << indent++ << "if (json::vector *v" << index_num
+        std::vector<int> indexes;
+        json::string *name = dynamic_cast<json::string *>(a.first);
+        if ((*name)[0] == '_') continue;
+        json::obj *type = get_indexes(a.second.get(), indexes);
+        int index_num = 0;
+        for (int idx : indexes) {
+            out << indent++ << "if (json::vector *v" << index_num
                 << " = dynamic_cast<json::vector *>(";
-	    if (index_num) {
+            if (index_num) {
                 out << "(*v" << (index_num-1) << ")[i" << (index_num-1) << "].get()";
-	    } else out << "(*m)[" << name << "].get()";
-	    out << "))" << std::endl;
-	    out << indent++ << "for (int i" << index_num << " = 0; i" << index_num << " < "
+            } else out << "(*m)[" << name << "].get()";
+            out << "))" << std::endl;
+            out << indent++ << "for (int i" << index_num << " = 0; i" << index_num << " < "
                 << idx << "; i" << index_num << "++)" << std::endl;
-	    index_num++; }
-	json::obj *single = singleton_obj(type, name);
-	if (single != type) {
-	    out << indent++ << "if (json::map *s = dynamic_cast<json::map *>(";
-	    if (index_num) {
+            index_num++; }
+        json::obj *single = singleton_obj(type, name);
+        if (single != type) {
+            out << indent++ << "if (json::map *s = dynamic_cast<json::map *>(";
+            if (index_num) {
                 out << "(*v" << (index_num-1) << ")[i" << (index_num-1) << "].get()";
-	    } else out << "(*m)[" << name << "].get()";
-	    out << "))" << std::endl;
-	    out << indent++ << "if (json::number *n = dynamic_cast<json::number *>((*s)["
-		<< name << "].get()))" << std::endl;
-	    out << indent << *name;
-	    for (int i = 0; i < index_num; i++)
-		out << "[i" << i << ']';
-	    out << " = n->val;" << std::endl;
-	    out << --indent << "else rv = -1;" << std::endl;
-	    out << --indent << "else rv = -1;" << std::endl;
-	} else if (dynamic_cast<json::map *>(type)) {
-	    out << indent << "rv |= " << *name;
-	    for (int i = 0; i < index_num; i++)
-		out << "[i" << i << ']';
-	    out << ".unpack_json(";
-	    if (index_num) {
+            } else out << "(*m)[" << name << "].get()";
+            out << "))" << std::endl;
+            out << indent++ << "if (json::number *n = dynamic_cast<json::number *>((*s)["
+                << name << "].get()))" << std::endl;
+            out << indent << *name;
+            for (int i = 0; i < index_num; i++)
+                out << "[i" << i << ']';
+            out << " = n->val;" << std::endl;
+            out << --indent << "else rv = -1;" << std::endl;
+            out << --indent << "else rv = -1;" << std::endl;
+        } else if (dynamic_cast<json::map *>(type)) {
+            out << indent << "rv |= " << *name;
+            for (int i = 0; i < index_num; i++)
+                out << "[i" << i << ']';
+            out << ".unpack_json(";
+            if (index_num) {
                 out << "(*v" << (index_num-1) << ")[i" << (index_num-1) << "].get()";
-	    } else out << "(*m)[" << name << "].get()";
-	    out << ");" << std::endl;
-	} else {
+            } else out << "(*m)[" << name << "].get()";
+            out << ");" << std::endl;
+        } else {
             const char *jtype = "json::number", *access = "n->val";
             if (dynamic_cast<json::string *>(type))
                 jtype = "json::string", access = "*n";
-	    out << indent++ << "if (" << jtype << " *n = dynamic_cast<" << jtype << " *>(";
-	    if (index_num)
+            out << indent++ << "if (" << jtype << " *n = dynamic_cast<" << jtype << " *>(";
+            if (index_num)
                 out << "(*v" << (index_num-1) << ")[i" << (index_num-1) << "].get()";
-	    else out << "(*m)[" << name << "].get()";
-	    out << ")) {" << std::endl;
-	    out << indent << *name;
-	    for (int i = 0; i < index_num; i++)
-		out << "[i" << i << ']';
-	    out << " = " << access << ";" << std::endl;
+            else out << "(*m)[" << name << "].get()";
+            out << ")) {" << std::endl;
+            out << indent << *name;
+            for (int i = 0; i < index_num; i++)
+                out << "[i" << i << ']';
+            out << " = " << access << ";" << std::endl;
             if (dynamic_cast<json::string *>(type)) {
                 out << indent++ << "else if (json::number *n = dynamic_cast<json::number *>(";
                 if (index_num)
@@ -299,9 +299,9 @@ static void gen_unpack_method(std::ostream &out, json::map *m, indent_t indent,
                 else out << "(*m)[" << name << "].get()";
                 out << ")) {" << std::endl;
                 out << indent << "if (n->v) rv = -1;" << std::endl; }
-	    out << --indent << "} else rv = -1;" << std::endl; }
-	while (--index_num >= 0)
-	    out << ----indent << "else rv = -1;" << std::endl;
+            out << --indent << "} else rv = -1;" << std::endl; }
+        while (--index_num >= 0)
+            out << ----indent << "else rv = -1;" << std::endl;
     }
     out << indent << "return rv;" << std::endl;
     out << --indent << '}' << std::endl;
@@ -321,23 +321,23 @@ static void gen_dump_unread_method(std::ostream &out, json::map *m,
     out << " {" << std::endl;
     bool need_lpfx = true;
     for (auto &a : *m) {
-	std::vector<int> indexes;
-	json::string *name = dynamic_cast<json::string *>(a.first);
-	if ((*name)[0] == '_') continue;
-	json::obj *type = get_indexes(a.second.get(), indexes);
-	json::obj *single = singleton_obj(type, name);
-	if (dynamic_cast<json::map *>(single)) {
+        std::vector<int> indexes;
+        json::string *name = dynamic_cast<json::string *>(a.first);
+        if ((*name)[0] == '_') continue;
+        json::obj *type = get_indexes(a.second.get(), indexes);
+        json::obj *single = singleton_obj(type, name);
+        if (dynamic_cast<json::map *>(single)) {
             if (need_lpfx) {
                 out << indent << "prefix lpfx(pfx, 0);" << std::endl;
                 need_lpfx = false; }
-	    out << indent << "lpfx.str = \"" << *name;
+            out << indent << "lpfx.str = \"" << *name;
             for (int idx : indexes) out << "[" << idx << "]";
             out << "\";" << std::endl;
-	    out << indent << *name;
+            out << indent << *name;
             for (int idx : indexes) out << "[0]";
             out << ".dump_unread(out, &lpfx);" << std::endl;
         } else {
-	    out << indent << "if (!" << *name;
+            out << indent << "if (!" << *name;
             for (int idx : indexes) out << "[0]";
             out << ".read) out << pfx << \"." << *name;
             for (int idx : indexes) out << "[" << idx << "]";
@@ -359,8 +359,8 @@ static void gen_modified_method(std::ostream &out, json::map *m, indent_t indent
         return; }
     out << " {" << std::endl;
     for (auto &a : *m) {
-	json::string *name = dynamic_cast<json::string *>(a.first);
-	if ((*name)[0] == '_') continue;
+        json::string *name = dynamic_cast<json::string *>(a.first);
+        if ((*name)[0] == '_') continue;
         if (!checked_array) {
             std::vector<int> indexes;
             get_indexes(a.second.get(), indexes);
@@ -411,8 +411,8 @@ static void gen_disable_if_zero_method(std::ostream &out, json::map *m, indent_t
     out << " {" << std::endl;
     out << indent << "bool rv = true;" << std::endl;
     for (auto &a : *m) {
-	json::string *name = dynamic_cast<json::string *>(a.first);
-	if ((*name)[0] == '_') continue;
+        json::string *name = dynamic_cast<json::string *>(a.first);
+        if ((*name)[0] == '_') continue;
         if (!checked_array) {
             std::vector<int> indexes;
             get_indexes(a.second.get(), indexes);
@@ -446,7 +446,7 @@ static bool need_ctor(const json::map *m_init) {
     for (auto &a : *m_init) {
         json::string *name = dynamic_cast<json::string *>(a.first);
         auto *n_init = dynamic_cast<json::number *>
-	    (singleton_obj(skip_indexes(a.second.get()), name));
+            (singleton_obj(skip_indexes(a.second.get()), name));
         if (n_init && n_init->val) return true; }
     return false;
 }
@@ -462,7 +462,7 @@ static void gen_ctor(std::ostream &out, const std::string &namestr, const json::
         json::string *name = dynamic_cast<json::string *>(a.first);
         if ((*name)[0] == '_') continue;
         auto *n_init = dynamic_cast<json::number *>
-	    (singleton_obj(skip_indexes(a.second.get()), name));
+            (singleton_obj(skip_indexes(a.second.get()), name));
         if (n_init && n_init->val) {
             if (first) first = false; else out << ", ";
             out << *name << '(' << n_init->val << ')'; } }
@@ -569,7 +569,7 @@ static void gen_type(std::ostream &out, const std::string &parent,
         if (gen_definitions != DEFN_ONLY)
             out << "ustring";
     } else
-	assert(0);
+        assert(0);
 }
 
 static int gen_global_types(std::ostream &out, json::obj *t, const json::obj *init)
@@ -649,14 +649,14 @@ int main(int ac, char **av) {
                               << std::endl;
                     exit(1); }
             continue; }
-	std::ifstream file(av[i]);
-	json::obj *data = 0;
-	file >> data;
-	if (!file || !test_sanity(data, "")) {
-	    std::cerr << av[i] << ": not valid template" << std::endl;
+        std::ifstream file(av[i]);
+        json::obj *data = 0;
+        file >> data;
+        if (!file || !test_sanity(data, "")) {
+            std::cerr << av[i] << ": not valid template" << std::endl;
             name = declare = 0;
             error = 1;
-	    continue; }
+            continue; }
         std::cout << "/* Autogenerated from " << av[i] << " -- DO NOT EDIT */" << std::endl;
         if (name && !*name && !declare)
             name = 0;
@@ -677,7 +677,7 @@ int main(int ac, char **av) {
             gen_hdrs = false; }
         if (!global_types.empty() && gen_global_types(std::cout, data, initvals) < 0)
             exit(1);
-	gen_type(std::cout, "", name, data, initvals);
+        gen_type(std::cout, "", name, data, initvals);
         if (test && !declare) declare = "table";
         if (declare) std::cout << " " << declare;
         std::cout << ";" << std::endl;

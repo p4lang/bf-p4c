@@ -27,7 +27,7 @@ class InputXbar {
         unsigned        tables = 0;
         uint64_t        seed = 0;
     };
-    Table	*table;
+    Table       *table;
     bool        ternary;
     std::map<unsigned, std::vector<Input>>              groups;
     std::vector<std::map<unsigned, std::vector<Input>>::iterator>   group_order;
@@ -38,7 +38,7 @@ class InputXbar {
     static bool conflict(const HashGrp &a, const HashGrp &b);
     uint64_t hash_columns_used(unsigned hash);
     bool can_merge(HashGrp &a, HashGrp &b,
-		   Alloc1Dbase<std::vector<InputXbar *>> &use);
+                   Alloc1Dbase<std::vector<InputXbar *>> &use);
     void add_use(unsigned &byte_use, std::vector<Input> &a);
     void setup_hash(std::map<int, HashCol> &, int, gress_t, value_t &, int lineno, int lo, int hi);
     struct GroupSet {
@@ -50,7 +50,7 @@ class InputXbar {
         Input *find(Phv::Slice sl) const;
     };
 public:
-    const int	lineno;
+    const int   lineno;
     InputXbar(Table *table, bool ternary, VECTOR(pair_t) &data);
     void pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size);
     void pass2(Alloc1Dbase<std::vector<InputXbar *>> &use, int size);
@@ -97,7 +97,7 @@ public:
             if (inner_valid && ++inner == (**outer).second.end()) {
                 ++outer;
                 inner_valid = false;
-                mk_inner_valid(); } 
+                mk_inner_valid(); }
             return *this; }
         std::pair<unsigned, Input &> operator*() {
             return std::pair<unsigned, Input &>((**outer).first, *inner); }

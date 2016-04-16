@@ -142,13 +142,13 @@ void SelectionTable::write_regs() {
     DataSwitchboxSetup swbox(stage, home->row/2U);
     int minvpn = 1000000, maxvpn = -1;
     if (options.match_compiler) {
-	minvpn = 0;
-	maxvpn = layout_size() - 1;
+        minvpn = 0;
+        maxvpn = layout_size() - 1;
     } else
-	for (Layout &logical_row : layout)
-	    for (auto v : logical_row.vpns) {
-		if (v < minvpn) minvpn = v;
-		if (v > maxvpn) maxvpn = v; }
+        for (Layout &logical_row : layout)
+            for (auto v : logical_row.vpns) {
+                if (v < minvpn) minvpn = v;
+                if (v > maxvpn) maxvpn = v; }
     for (Layout &logical_row : layout) {
         unsigned row = logical_row.row/2U;
         unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
@@ -217,7 +217,7 @@ void SelectionTable::write_regs() {
             vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
                 bitmask2bytemask(input_xbar->hash_group_bituse());
             map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_base = minvpn;
-	    map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_limit = maxvpn;
+            map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_limit = maxvpn;
         } else {
             auto &adr_ctl = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
             if (home->row >= 8 && logical_row.row < 8) {

@@ -6,9 +6,9 @@
 #include <vector>
 
 class hex {
-    intmax_t	val;
-    int		width;
-    char	fill;
+    intmax_t    val;
+    int         width;
+    char        fill;
 public:
     hex(intmax_t v, int w=0, char f=' ') : val(v), width(w), fill(f) {}
     hex(void *v, int w=0, char f=' ') : val((intmax_t)v), width(w), fill(f) {}
@@ -24,8 +24,8 @@ inline std::ostream &operator<<(std::ostream &os, const hex &h) {
 class hexvec {
     void        *data;
     size_t      elsize, len;
-    int		width;
-    char	fill;
+    int         width;
+    char        fill;
 public:
     template<typename I> hexvec(I *d, size_t l, int w=0, char f=' ') :
         data(d), elsize(sizeof(I)), len(l), width(w), fill(f) {}

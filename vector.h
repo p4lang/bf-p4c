@@ -4,26 +4,26 @@
 /* C code and macros for VECTOR objects similar to C++ std::vector */
 #include <stddef.h>
 
-#define CAT(A,B)	A##B
-#define VECTOR(NAME)	CAT(NAME,_VECTOR)
-#define DECLARE_VECTOR(TYPE)		\
-typedef struct {			\
-    int		capacity, size;		\
-    TYPE	*data;			\
+#define CAT(A,B)        A##B
+#define VECTOR(NAME)    CAT(NAME,_VECTOR)
+#define DECLARE_VECTOR(TYPE)            \
+typedef struct {                        \
+    int         capacity, size;         \
+    TYPE        *data;                  \
 } CAT(TYPE,_VECTOR);
-#define DECLARE_VECTOR2(NAME, ELTYPE) 	\
-typedef struct {			\
-    int		capacity, size;		\
-    ELTYPE	*data;			\
+#define DECLARE_VECTOR2(NAME, ELTYPE)   \
+typedef struct {                        \
+    int         capacity, size;         \
+    ELTYPE      *data;                  \
 } CAT(NAME,_VECTOR);
-#define DECLARE_VECTOR3(NAME, ELTYPE, EXTRA) 	\
-typedef struct {			\
-    int		capacity, size;		\
-    ELTYPE	*data;			\
+#define DECLARE_VECTOR3(NAME, ELTYPE, EXTRA)    \
+typedef struct {                        \
+    int         capacity, size;         \
+    ELTYPE      *data;                  \
     EXTRA                               \
 } CAT(NAME,_VECTOR);
 
-#define RAW(X)		X
+#define RAW(X)          X
 
 /* VECTOR constructors/destrutor
  * can safely use memset(&vec, 0, sizeof(vec)) for initial capacity of 0,
@@ -45,9 +45,9 @@ typedef struct {			\
     init_raw_vector(&(vec), sizeof((vec).data[0]), RAW(__VA_ARGS__+0))
 
 #define VECTOR_initcopy(vec, from) \
-    (init_raw_vector(&(vec), sizeof((vec).data[0]), (from).size) ? -1 :	\
-     (memcpy((vec).data, (from).data,					\
-	     ((vec).size = (from).size) * sizeof((vec).data[0])), 0))
+    (init_raw_vector(&(vec), sizeof((vec).data[0]), (from).size) ? -1 : \
+     (memcpy((vec).data, (from).data,                                   \
+             ((vec).size = (from).size) * sizeof((vec).data[0])), 0))
 
 #define VECTOR_init1(vec, v1) \
     (init_raw_vector(&(vec), sizeof((vec).data[0]), 1) ? -1 : \
@@ -75,7 +75,7 @@ typedef struct {			\
  * RETURNS
  *   void
  */
-#define VECTOR_fini(vec)	free((vec).data)
+#define VECTOR_fini(vec)        free((vec).data)
 
 /* VECTOR methods */
 
@@ -92,21 +92,21 @@ typedef struct {			\
  *   -1 failure (out of memory), vector is unchanged
  */
 #define VECTOR_add(vec, val) \
-    (((vec).size == (vec).capacity &&				\
-      expand_raw_vector(&(vec), sizeof((vec).data[0])))	? -1 :	\
+    (((vec).size == (vec).capacity &&                           \
+      expand_raw_vector(&(vec), sizeof((vec).data[0]))) ? -1 :  \
      ((vec).data[(vec).size++] = (val), 0))
 #define VECTOR_addcopy(vec, ptr, n) \
-    (VECTOR_reserve(vec, (vec).size + (n)) ? -1 : (	\
+    (VECTOR_reserve(vec, (vec).size + (n)) ? -1 : (     \
      memcpy((vec).data + (vec).size, (ptr), (n) * sizeof((vec).data[0])), \
      (vec).size += (n), 0))
 #define VECTOR_copy(vec, from) \
-    (VECTOR_reserve(vec, (from).size) ? -1 : (	\
+    (VECTOR_reserve(vec, (from).size) ? -1 : (  \
      memcpy((vec).data, (from).data, (from).size * sizeof((vec).data[0])), \
      (vec).size = (from).size, 0))
 
-#define VECTOR_begin(vec)	((vec).data)
-#define VECTOR_end(vec)		((vec).data + (vec).size)
-#define VECTOR_empty(vec)	((vec).size == 0)
+#define VECTOR_begin(vec)       ((vec).data)
+#define VECTOR_end(vec)         ((vec).data + (vec).size)
+#define VECTOR_empty(vec)       ((vec).size == 0)
 
 /* VECTOR_erase(vec, idx, cnt)
  *   erase cnt elements from a vector (defaults to 1).  If there are fewer
@@ -146,8 +146,8 @@ typedef struct {			\
 #define VECTOR_insert(vec, idx, ...) \
     insert_raw_vector(&(vec), sizeof((vec).data[0]), idx, RAW(__VA_ARGS__+0))
 
-#define VECTOR_pop(vec)		((vec).data[--(vec).size])
-#define VECTOR_push(vec, val)	VECTOR_add(vec, val)
+#define VECTOR_pop(vec)         ((vec).data[--(vec).size])
+#define VECTOR_push(vec, val)   VECTOR_add(vec, val)
 
 /* VECTOR_reserve(vec, size, shrink)
  *   change the capacity of a vector.  If shrink is false (default), will only
@@ -186,10 +186,10 @@ typedef struct {			\
  *   -1 failure (out of memory), vector is unchanged
  */
 #define VECTOR_terminate(vec, val) \
-    (((vec).size == (vec).capacity &&				\
-      expand_raw_vector(&(vec), sizeof((vec).data[0])))	? -1 :	\
+    (((vec).size == (vec).capacity &&                           \
+      expand_raw_vector(&(vec), sizeof((vec).data[0]))) ? -1 :  \
      ((vec).data[(vec).size] = (val), 0))
-#define VECTOR_top(vec)		((vec).data[(vec).size-1])
+#define VECTOR_top(vec)         ((vec).data[(vec).size-1])
 
 extern int erase_raw_vector(void *vec, size_t elsize, int idx, unsigned cnt);
 extern int expand_raw_vector(void *vec, size_t elsize);

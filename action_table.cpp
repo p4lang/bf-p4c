@@ -242,7 +242,7 @@ void ActionTable::write_regs() {
             /* too many rows for timing -- need to create a second "home" row */
             home = nullptr; }
         if (home) {
-	    // FIXME use DataSwitchboxSetup for this somehow?
+            // FIXME use DataSwitchboxSetup for this somehow?
             if (&switch_ctl == home_switch_ctl) {
                 /* overflow from L to R action */
                 switch_ctl.r_action_o_mux_select.r_action_o_sel_oflo_rd_l_i = 1;
@@ -322,29 +322,29 @@ void ActionTable::write_regs() {
             auto &ram_mux = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
             auto &adr_mux_sel = ram_mux.ram_unitram_adr_mux_select;
             if (SelectionTable *sel = get_selector()) {
-		int shift = format->log2size - 2;
-		auto &shift_ctl = stage->regs.rams.map_alu.mau_selector_action_adr_shift[row];
+                int shift = format->log2size - 2;
+                auto &shift_ctl = stage->regs.rams.map_alu.mau_selector_action_adr_shift[row];
                 if (logical_row.row == sel->layout[0].row) {
                     /* we're on the home row of the selector, so use it directly */
                     if (home == &logical_row)
                         adr_mux_sel = UnitRam::AdrMux::SELECTOR_ALU;
                     else
                         adr_mux_sel = UnitRam::AdrMux::SELECTOR_ACTION_OVERFLOW;
-		    if (side)
-			shift_ctl.mau_selector_action_adr_shift_right = shift;
-		    else
-			shift_ctl.mau_selector_action_adr_shift_left = shift;
+                    if (side)
+                        shift_ctl.mau_selector_action_adr_shift_right = shift;
+                    else
+                        shift_ctl.mau_selector_action_adr_shift_left = shift;
                 } else {
                     /* not on the home row -- use overflows */
                     if (home == &logical_row)
                         adr_mux_sel = UnitRam::AdrMux::SELECTOR_OVERFLOW;
                     else
                         adr_mux_sel = UnitRam::AdrMux::SELECTOR_ACTION_OVERFLOW;
-		    if (side)
-			shift_ctl.mau_selector_action_adr_shift_right_oflo = shift;
-		    else
-			shift_ctl.mau_selector_action_adr_shift_left_oflo = shift;
-		}
+                    if (side)
+                        shift_ctl.mau_selector_action_adr_shift_right_oflo = shift;
+                    else
+                        shift_ctl.mau_selector_action_adr_shift_left_oflo = shift;
+                }
             } else {
                 if (home == &logical_row)
                     adr_mux_sel = UnitRam::AdrMux::ACTION;

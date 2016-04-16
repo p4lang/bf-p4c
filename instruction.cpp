@@ -26,8 +26,8 @@ private:
     public:
         Base(int line) : lineno(line) {}
         Base(const Base &a) : lineno(a.lineno) {}
-	virtual ~Base() {}
-	virtual Base *clone() = 0;
+        virtual ~Base() {}
+        virtual Base *clone() = 0;
         virtual Base *lookup(Base *&ref) { return this; }
         virtual bool check() { return true; }
         virtual int phvGroup() { return -1; }
@@ -35,20 +35,20 @@ private:
         virtual unsigned bitoffset(int group) const { return 0; }
         virtual void mark_use(Table *tbl) {}
         virtual void dbprint(std::ostream &) const = 0;
-	virtual bool equiv(const Base *) const = 0;
+        virtual bool equiv(const Base *) const = 0;
         virtual void phvRead(std::function<void (const ::Phv::Slice &sl)>) {}
         virtual void pass2(Table *, int) const {}
     } *op;
     class Const : public Base {
-	long		value;
+        long            value;
     public:
-	Const(int line, long v) : Base(line), value(v) {}
-	bool equiv(const Base *a_) const {
-	    if (auto *a = dynamic_cast<const Const *>(a_)) {
-		return value == a->value;
-	    } else return false; }
+        Const(int line, long v) : Base(line), value(v) {}
+        bool equiv(const Base *a_) const {
+            if (auto *a = dynamic_cast<const Const *>(a_)) {
+                return value == a->value;
+            } else return false; }
     private:
-	virtual Const *clone() { return new Const(*this); }
+        virtual Const *clone() { return new Const(*this); }
         int bits(int group) {
             if (value >= -8 || value < 8)
                 return value+24;
@@ -57,18 +57,18 @@ private:
         virtual void dbprint(std::ostream &out) const { out << value; }
     };
     class Phv : public Base {
-	::Phv::Ref	reg;
+        ::Phv::Ref      reg;
     public:
-	Phv(int line, gress_t g, const value_t &n) : Base(line), reg(g, n) {}
-	Phv(int line, gress_t g, const std::string &n, int l, int h) :
+        Phv(int line, gress_t g, const value_t &n) : Base(line), reg(g, n) {}
+        Phv(int line, gress_t g, const std::string &n, int l, int h) :
             Base(line), reg(g, line, n, l, h) {}
         Phv(const ::Phv::Ref &r) : Base(r.lineno), reg(r) {}
-	bool equiv(const Base *a_) const {
-	    if (auto *a = dynamic_cast<const Phv *>(a_)) {
-		return reg == a->reg;
-	    } else return false; }
+        bool equiv(const Base *a_) const {
+            if (auto *a = dynamic_cast<const Phv *>(a_)) {
+                return reg == a->reg;
+            } else return false; }
     private:
-	virtual Phv *clone() { return new Phv(*this); }
+        virtual Phv *clone() { return new Phv(*this); }
         bool check() { return reg.check(); }
         int phvGroup() { return reg->reg.index / 16; }
         int bits(int group) {
@@ -83,36 +83,36 @@ private:
         void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) override { fn(*reg); }
     };
     class Action : public Base {
-	std::string		name;
+        std::string             name;
         Table                   *table;
-	Table::Format::Field	*field;
+        Table::Format::Field    *field;
         unsigned                lo, hi;
     public:
-	Action(int line, const std::string &n, Table *tbl, Table::Format::Field *f,
+        Action(int line, const std::string &n, Table *tbl, Table::Format::Field *f,
                unsigned l, unsigned h) : Base(line), name(n), table(tbl), field(f), lo(l), hi(h) {}
-	bool equiv(const Base *a_) const {
-	    if (auto *a = dynamic_cast<const Action *>(a_)) {
-		return name == a->name && table == a->table && field == a->field &&
-		       lo == a->lo && hi == a->hi;
-	    } else return false; }
+        bool equiv(const Base *a_) const {
+            if (auto *a = dynamic_cast<const Action *>(a_)) {
+                return name == a->name && table == a->table && field == a->field &&
+                       lo == a->lo && hi == a->hi;
+            } else return false; }
     private:
-	virtual Action *clone() { return new Action(*this); }
-        int bits(int group) { 
+        virtual Action *clone() { return new Action(*this); }
+        int bits(int group) {
             int size = group_size[group]/8U;
             int byte = field ? table->find_on_actionbus(field, lo, size)
                              : table->find_on_actionbus(name, lo, size);
             if (byte < 0) {
-		if (lo > 0 || (field && hi+1 < field->size))
-		    error(lineno, "%s(%d..%d) is not on the action bus", name.c_str(), lo, hi);
-		else
-		    error(lineno, "%s is not on the action bus", name.c_str());
+                if (lo > 0 || (field && hi+1 < field->size))
+                    error(lineno, "%s(%d..%d) is not on the action bus", name.c_str(), lo, hi);
+                else
+                    error(lineno, "%s is not on the action bus", name.c_str());
                 return -1; }
             int byte_value = byte;
             if (size == 2) byte -= 32;
             if (byte < 0 || byte > 32*size)
                 error(lineno, "action bus entry %d(%s) out of range for %d-bit access",
                       byte_value, name.c_str(), size*8);
-            //else if (byte % size != 0) 
+            //else if (byte % size != 0)
             //    error(lineno, "action bus entry %d(%s) misaligned for %d-bit access",
             //          byte_value, name.c_str(), size*8);
             else
@@ -142,12 +142,12 @@ private:
         unsigned        offset;
     public:
         RawAction(int line, int idx, unsigned off) : Base(line), index(idx), offset(off) {}
-	bool equiv(const Base *a_) const {
-	    if (auto *a = dynamic_cast<const RawAction *>(a_)) {
-		return index == a->index && offset == a->offset;
-	    } else return false; }
+        bool equiv(const Base *a_) const {
+            if (auto *a = dynamic_cast<const RawAction *>(a_)) {
+                return index == a->index && offset == a->offset;
+            } else return false; }
     private:
-	virtual RawAction *clone() { return new RawAction(*this); }
+        virtual RawAction *clone() { return new RawAction(*this); }
         int bits(int group) { return 0x40 + index; }
         virtual unsigned bitoffset(int group) const { return offset; }
         void dbprint(std::ostream &out) const { out << 'A' << index; }
@@ -160,20 +160,20 @@ private:
     public:
         Named(int line, const std::string &n, int l, int h, Table *t, const std::string &act)
         : Base(line), name(n), lo(l), hi(h), tbl(t), action(act) {}
-	bool equiv(const Base *a_) const {
-	    if (auto *a = dynamic_cast<const Named *>(a_)) {
-		return name == a->name && lo == a->lo && hi == a->hi && tbl == a->tbl &&
-		       action == a->action;
-	    } else return false; }
+        bool equiv(const Base *a_) const {
+            if (auto *a = dynamic_cast<const Named *>(a_)) {
+                return name == a->name && lo == a->lo && hi == a->hi && tbl == a->tbl &&
+                       action == a->action;
+            } else return false; }
     private:
         Base *lookup(Base *&ref);
-	Named *clone() { return new Named(*this); }
+        Named *clone() { return new Named(*this); }
         bool check() { assert(0); return true; }
         int phvGroup() { assert(0); return -1; }
         int bits(int group) { assert(0); return 0; }
         unsigned bitoffset(int group) const { assert(0); return 0; }
         void mark_use(Table *tbl) { assert(0); }
-        void dbprint(std::ostream &out) const { 
+        void dbprint(std::ostream &out) const {
             out << name;
             if (lo >= 0) {
                 out << '(' << lo;
@@ -202,7 +202,7 @@ public:
     operand(const ::Phv::Ref &r) : op(new Phv(r)) {}
     bool valid() const { return op != 0; }
     bool operator==(operand &a) {
-	return op == a.op || (op && a.op && op->lookup(op)->equiv(a.op->lookup(a.op))); }
+        return op == a.op || (op && a.op && op->lookup(op)->equiv(a.op->lookup(a.op))); }
     unsigned bitoffset(int group) { return op->lookup(op)->bitoffset(group); }
     bool check() { return op && op->lookup(op) ? op->check() : false; }
     int phvGroup() { return op->lookup(op)->phvGroup(); }
@@ -215,9 +215,9 @@ public:
 
 operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v) : op(0) {
     if (v.type == tINT) {
-	op = new Const(v.lineno, v.i);
+        op = new Const(v.lineno, v.i);
     } else if (CHECKTYPE2(v, tSTR, tCMD)) {
-	std::string name = v.type == tSTR ? v.s : v[0].s;
+        std::string name = v.type == tSTR ? v.s : v[0].s;
         int lo = -1, hi = -1;
         if (v.type == tCMD) {
             if (!CHECKTYPE2(v[1], tINT, tRANGE)) return;
@@ -347,9 +347,9 @@ int AluOP::encode() {
 }
 bool AluOP::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<AluOP *>(a_)) {
-	return opc == a->opc && dest == a->dest && src1 == a->src1 && src2 == a->src2;
+        return opc == a->opc && dest == a->dest && src1 == a->src1 && src2 == a->src2;
     } else
-	return false;
+        return false;
 }
 
 struct LoadConst : public Instruction {
@@ -361,7 +361,7 @@ struct LoadConst : public Instruction {
     Phv::Ref    dest;
     int         src;
     LoadConst(Table *tbl, const Table::Actions::Action *act, const value_t &d, int&s)
-	: Instruction(d.lineno), dest(tbl->gress, d), src(s) {}
+        : Instruction(d.lineno), dest(tbl->gress, d), src(s) {}
     Instruction *pass1(Table *tbl);
     void pass2(Table *) {}
     int encode();
@@ -402,9 +402,9 @@ int LoadConst::encode() {
 }
 bool LoadConst::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<LoadConst *>(a_)) {
-	return dest == a->dest && src == a->src;
+        return dest == a->dest && src == a->src;
     } else
-	return false;
+        return false;
 }
 
 struct CondMoveMux : public Instruction {
@@ -452,9 +452,9 @@ Instruction *CondMoveMux::Decode::decode(Table *tbl, const Table::Actions::Actio
         return 0; }
     CondMoveMux *rv;
     if (op.size == 5)
-	rv = new CondMoveMux(tbl, this, act, op[1], op[2], op[3]);
+        rv = new CondMoveMux(tbl, this, act, op[1], op[2], op[3]);
     else
-	rv = new CondMoveMux(tbl, this, act, op[1], op[2]);
+        rv = new CondMoveMux(tbl, this, act, op[1], op[2]);
     rv->cond = op[op.size-1].i;
     if (!rv->src1.valid())
         error(op[2].lineno, "invalid src1");
@@ -477,15 +477,15 @@ Instruction *CondMoveMux::pass1(Table *tbl) {
 int CondMoveMux::encode() {
     /* funny cond test on src2 is to match the compiler output -- if we're not testing
      * src2 validity, what we specify as src2 is irrelevant */
-    return (cond << 15) | (opc->opcode << 10) | (src1.bits(slot/16) << 4) | 
+    return (cond << 15) | (opc->opcode << 10) | (src1.bits(slot/16) << 4) |
         (cond & 0x40 ? src2.bits(slot/16) : 0);
 }
 bool CondMoveMux::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<CondMoveMux *>(a_)) {
-	return opc == a->opc && dest == a->dest && src1 == a->src1 && src2 == a->src2 &&
-	       cond == a->cond;
+        return opc == a->opc && dest == a->dest && src1 == a->src1 && src2 == a->src2 &&
+               cond == a->cond;
     } else
-	return false;
+        return false;
 }
 
 struct Set;
@@ -523,9 +523,9 @@ Instruction *DepositField::Decode::decode(Table *tbl, const Table::Actions::Acti
         return 0; }
     DepositField *rv;
     if (op.size == 4)
-	rv = new DepositField(tbl, act, op[1], op[2], op[3]);
+        rv = new DepositField(tbl, act, op[1], op[2], op[3]);
     else
-	rv = new DepositField(tbl, act, op[1], op[2]);
+        rv = new DepositField(tbl, act, op[1], op[2]);
     if (!rv->src1.valid())
         error(op[2].lineno, "invalid src1");
     else if (!rv->src2.valid())
@@ -567,9 +567,9 @@ int DepositField::encode() {
 }
 bool DepositField::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<DepositField *>(a_)) {
-	return dest == a->dest && src1 == a->src1 && src2 == a->src2;
+        return dest == a->dest && src1 == a->src1 && src2 == a->src2;
     } else
-	return false;
+        return false;
 }
 
 struct Set : public Instruction {
@@ -581,7 +581,7 @@ struct Set : public Instruction {
     Phv::Ref    dest;
     operand     src;
     Set(Table *tbl, const Table::Actions::Action *act, const value_t &d, const value_t &s)
-	: Instruction(d.lineno), dest(tbl->gress, d), src(tbl, act, s) {}
+        : Instruction(d.lineno), dest(tbl->gress, d), src(tbl, act, s) {}
     Instruction *pass1(Table *tbl);
     void pass2(Table *tbl) { src->pass2(tbl, slot/16); }
     int encode();
@@ -625,9 +625,9 @@ int Set::encode() {
 }
 bool Set::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<Set *>(a_)) {
-	return dest == a->dest && src == a->src;
+        return dest == a->dest && src == a->src;
     } else
-	return false;
+        return false;
 }
 
 struct NulOP : public Instruction {
@@ -672,9 +672,9 @@ int NulOP::encode() {
 }
 bool NulOP::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<NulOP *>(a_)) {
-	return opc == a->opc && dest == a->dest;
+        return opc == a->opc && dest == a->dest;
     } else
-	return false;
+        return false;
 }
 
 Instruction *Instruction::decode(Table *tbl, const Table::Actions::Action *act,
@@ -759,8 +759,8 @@ int ShiftOP::encode() {
 }
 bool ShiftOP::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<ShiftOP *>(a_)) {
-	return opc == a->opc && dest == a->dest && src1 == a->src1 && src2 == a->src2 &&
-	       shift == a->shift;
+        return opc == a->opc && dest == a->dest && src1 == a->src1 && src2 == a->src2 &&
+               shift == a->shift;
     } else
-	return false;
+        return false;
 }

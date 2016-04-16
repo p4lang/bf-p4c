@@ -45,10 +45,10 @@ public:
     virtual bool operator ==(long val) const { return false; }
     bool operator !=(long val) const { return !(*this == val); }
     struct ptrless {
-	bool operator()(const obj *a, const obj *b) const
-	    { return b ? a ? *a < *b : true : false; }
-	bool operator()(const std::unique_ptr<obj> &a, const std::unique_ptr<obj> &b) const
-	    { return b ? a ? *a < *b : true : false; }
+        bool operator()(const obj *a, const obj *b) const
+            { return b ? a ? *a < *b : true : false; }
+        bool operator()(const std::unique_ptr<obj> &a, const std::unique_ptr<obj> &b) const
+            { return b ? a ? *a < *b : true : false; }
     };
     virtual void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const = 0;
     virtual bool test_width(int &limit) const = 0;
@@ -70,7 +70,7 @@ public:
 
 class True : public obj {
     bool operator <(const obj &a) const {
-	return std::type_index(typeid(*this)) < std::type_index(typeid(a)); }
+        return std::type_index(typeid(*this)) < std::type_index(typeid(a)); }
     bool operator ==(const obj &a) const { return dynamic_cast<const True *>(&a) != 0; }
     void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const
         { out << "true"; }
@@ -80,7 +80,7 @@ class True : public obj {
 
 class False : public obj {
     bool operator <(const obj &a) const {
-	return std::type_index(typeid(*this)) < std::type_index(typeid(a)); }
+        return std::type_index(typeid(*this)) < std::type_index(typeid(a)); }
     bool operator ==(const obj &a) const { return dynamic_cast<const False *>(&a) != 0; }
     void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const
         { out << "false"; }
@@ -90,20 +90,20 @@ class False : public obj {
 
 class number : public obj {
 public:
-    long	val;
+    long        val;
     number(long l) : val(l) {}
     ~number() {}
     bool operator <(const obj &a) const {
-	if (auto *b = dynamic_cast<const number *>(&a)) return val < b->val;
-	return std::type_index(typeid(*this)) < std::type_index(typeid(a)); }
+        if (auto *b = dynamic_cast<const number *>(&a)) return val < b->val;
+        return std::type_index(typeid(*this)) < std::type_index(typeid(a)); }
     bool operator ==(const obj &a) const {
-	if (auto *b = dynamic_cast<const number *>(&a)) return val == b->val;
-	return false; }
+        if (auto *b = dynamic_cast<const number *>(&a)) return val == b->val;
+        return false; }
     bool operator==(long v) const { return val == v; }
     void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const {
         out << val; }
     bool test_width(int &limit) const
-	{ char buf[32]; limit -= sprintf(buf, "%ld", val); return limit >= 0; }
+        { char buf[32]; limit -= sprintf(buf, "%ld", val); return limit >= 0; }
     number *as_number() { return this; }
     const number *as_number() const { return this; }
     std::unique_ptr<obj> copy() && { return make_unique<number>(std::move(*this)); }
@@ -121,19 +121,19 @@ public:
     string &operator=(string &&) & = default;
     ~string() {}
     bool operator <(const obj &a) const {
-	if (const string *b = dynamic_cast<const string *>(&a))
-	    return static_cast<const std::string &>(*this) <
-		   static_cast<const std::string &>(*b);
-	return std::type_index(typeid(*this)) < std::type_index(typeid(a)); }
+        if (const string *b = dynamic_cast<const string *>(&a))
+            return static_cast<const std::string &>(*this) <
+                   static_cast<const std::string &>(*b);
+        return std::type_index(typeid(*this)) < std::type_index(typeid(a)); }
     bool operator ==(const obj &a) const {
-	if (const string *b = dynamic_cast<const string *>(&a))
-	    return static_cast<const std::string &>(*this) ==
-		   static_cast<const std::string &>(*b);
-	return false; }
+        if (const string *b = dynamic_cast<const string *>(&a))
+            return static_cast<const std::string &>(*this) ==
+                   static_cast<const std::string &>(*b);
+        return false; }
     bool operator ==(const char *str) const {
         return static_cast<const std::string &>(*this) == str; }
     void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const {
-	out << '"' << *this << '"'; }
+        out << '"' << *this << '"'; }
     bool test_width(int &limit) const { limit -= size()+2; return limit >= 0; }
     const char *c_str() const { return std::string::c_str(); }
     string *as_string() { return this; }
@@ -156,33 +156,33 @@ public:
     vector &operator=(vector &&) & = default;
     ~vector() {}
     bool operator <(const obj &a) const {
-	if (const vector *b = dynamic_cast<const vector *>(&a)) {
-	    auto p1 = begin(), p2 = b->begin();
-	    while (p1 != end() && p2 != b->end()) {
-		if (**p1 < **p2) return true;
-		if (**p1 != **p2) return false;
-		p1++; p2++; }
-	    return p2 != b->end(); }
-	return std::type_index(typeid(*this)) < std::type_index(typeid(a)); }
+        if (const vector *b = dynamic_cast<const vector *>(&a)) {
+            auto p1 = begin(), p2 = b->begin();
+            while (p1 != end() && p2 != b->end()) {
+                if (**p1 < **p2) return true;
+                if (**p1 != **p2) return false;
+                p1++; p2++; }
+            return p2 != b->end(); }
+        return std::type_index(typeid(*this)) < std::type_index(typeid(a)); }
     using obj::operator <=;
     using obj::operator >=;
     using obj::operator >;
     bool operator ==(const obj &a) const {
-	if (const vector *b = dynamic_cast<const vector *>(&a)) {
-	    auto p1 = begin(), p2 = b->begin();
-	    while (p1 != end() && p2 != b->end()) {
-		if (**p1 != **p2) return false;
-		p1++; p2++; } 
-	    return (p1 == end() && p2 == b->end()); }
-	return false; }
+        if (const vector *b = dynamic_cast<const vector *>(&a)) {
+            auto p1 = begin(), p2 = b->begin();
+            while (p1 != end() && p2 != b->end()) {
+                if (**p1 != **p2) return false;
+                p1++; p2++; }
+            return (p1 == end() && p2 == b->end()); }
+        return false; }
     using obj::operator !=;
     void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const;
     bool test_width(int &limit) const {
-	limit -= 2;
-	for (auto &e : *this) {
-	    if (!e->test_width(limit)) return false;
-	    if ((limit -= 2) < 0 ) return false; }
-	return true; }
+        limit -= 2;
+        for (auto &e : *this) {
+            if (!e->test_width(limit)) return false;
+            if ((limit -= 2) < 0 ) return false; }
+        return true; }
     using vector_base::push_back;
     void push_back(bool t) {
         if (t) push_back(make_unique<True>(True()));
@@ -212,64 +212,64 @@ public:
     map &operator=(map &&) & = default;
     ~map() { for (auto &e : *this) delete e.first; }
     bool operator <(const obj &a) const {
-	if (const map *b = dynamic_cast<const map *>(&a)) {
-	    auto p1 = begin(), p2 = b->begin();
-	    while (p1 != end() && p2 != b->end()) {
-		if (*p1->first < *p2->first) return true;
-		if (*p1->first != *p2->first) return false;
-		if (*p1->second < *p2->second) return true;
-		if (*p1->second != *p2->second) return false;
-		p1++; p2++; }
-	    return p2 != b->end(); }
-	return std::type_index(typeid(*this)) < std::type_index(typeid(a)); }
+        if (const map *b = dynamic_cast<const map *>(&a)) {
+            auto p1 = begin(), p2 = b->begin();
+            while (p1 != end() && p2 != b->end()) {
+                if (*p1->first < *p2->first) return true;
+                if (*p1->first != *p2->first) return false;
+                if (*p1->second < *p2->second) return true;
+                if (*p1->second != *p2->second) return false;
+                p1++; p2++; }
+            return p2 != b->end(); }
+        return std::type_index(typeid(*this)) < std::type_index(typeid(a)); }
     using obj::operator <=;
     using obj::operator >=;
     using obj::operator >;
     bool operator ==(const obj &a) const {
-	if (const map *b = dynamic_cast<const map *>(&a)) {
-	    auto p1 = begin(), p2 = b->begin();
-	    while (p1 != end() && p2 != b->end()) {
-		if (*p1->first != *p2->first) return false;
-		if (*p1->second != *p2->second) return false;
-		p1++; p2++; }
-	    return (p1 == end() && p2 == b->end()); }
-	return false; }
+        if (const map *b = dynamic_cast<const map *>(&a)) {
+            auto p1 = begin(), p2 = b->begin();
+            while (p1 != end() && p2 != b->end()) {
+                if (*p1->first != *p2->first) return false;
+                if (*p1->second != *p2->second) return false;
+                p1++; p2++; }
+            return (p1 == end() && p2 == b->end()); }
+        return false; }
     using obj::operator !=;
     void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const;
     bool test_width(int &limit) const {
-	limit -= 2;
-	for (auto &e : *this) {
-	    if (!e.first->test_width(limit)) return false;
-	    if (!e.second->test_width(limit)) return false;
-	    if ((limit -= 4) < 0 ) return false; }
-	return true; }
+        limit -= 2;
+        for (auto &e : *this) {
+            if (!e.first->test_width(limit)) return false;
+            if (!e.second->test_width(limit)) return false;
+            if ((limit -= 4) < 0 ) return false; }
+        return true; }
     using map_base::count;
     map_base::size_type count(const char *str) const {
-	string tmp(str);
+        string tmp(str);
         return count(&tmp); }
     map_base::size_type count(long n) const {
-	number tmp(n);
+        number tmp(n);
         return count(&tmp); }
     //using map_base::operator[];
     obj *operator[](const std::unique_ptr<obj> &i) const {
-	auto rv = find(i.get());
-	if (rv != end()) return rv->second.get();
-	return 0; }
+        auto rv = find(i.get());
+        if (rv != end()) return rv->second.get();
+        return 0; }
     obj *operator[](const char *str) const {
-	string tmp(str);
-	auto rv = find(&tmp);
-	if (rv != end()) return rv->second.get();
-	return 0; }
+        string tmp(str);
+        auto rv = find(&tmp);
+        if (rv != end()) return rv->second.get();
+        return 0; }
     obj *operator[](const std::string &str) const {
-	string tmp(str);
-	auto rv = find(&tmp);
-	if (rv != end()) return rv->second.get();
-	return 0; }
+        string tmp(str);
+        auto rv = find(&tmp);
+        if (rv != end()) return rv->second.get();
+        return 0; }
     obj *operator[](long n) const {
-	number tmp(n);
-	auto rv = find(&tmp);
-	if (rv != end()) return rv->second.get();
-	return 0; }
+        number tmp(n);
+        auto rv = find(&tmp);
+        if (rv != end()) return rv->second.get();
+        return 0; }
 private:
     class element_ref {
         map                     &self;
@@ -378,10 +378,10 @@ public:
     element_ref operator[](long n) { return element_ref(*this, n); }
     element_ref operator[](std::unique_ptr<obj> &&i) { return element_ref(*this, std::move(i)); }
     map_base::size_type erase(const char *str) {
-	string tmp(str);
+        string tmp(str);
         return map_base::erase(&tmp); }
     map_base::size_type erase(long n) {
-	number tmp(n);
+        number tmp(n);
         return map_base::erase(&tmp); }
     map *as_map() { return this; }
     const map *as_map() const { return this; }

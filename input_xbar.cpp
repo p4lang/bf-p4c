@@ -41,12 +41,12 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
 {
     int numgroups = ternary ? TCAM_XBAR_GROUPS : EXACT_XBAR_GROUPS;
     for (auto &kv : data) {
-	if (!CHECKTYPEM(kv.key, tCMD, "group or hash descriptor"))
-	    continue;
-	if (kv.key[0] == "group") {
-	    if (kv.key.vec.size != 2 || kv.key[1].type != tINT || kv.key[1].i >= numgroups) {
-		error(kv.key.lineno, "invalid group descriptor");
-		continue; }
+        if (!CHECKTYPEM(kv.key, tCMD, "group or hash descriptor"))
+            continue;
+        if (kv.key[0] == "group") {
+            if (kv.key.vec.size != 2 || kv.key[1].type != tINT || kv.key[1].i >= numgroups) {
+                error(kv.key.lineno, "invalid group descriptor");
+                continue; }
             if (groups.count(kv.key[1].i)) {
                 error(kv.key[1].lineno, "group %d duplicated", kv.key[1].i);
                 continue; }
@@ -65,7 +65,7 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
                                            reg.key.lo, reg.key.hi); }
             } else
                 group.emplace_back(Phv::Ref(t->gress, kv.value));
-	} else if (!ternary && kv.key[0] == "hash") {
+        } else if (!ternary && kv.key[0] == "hash") {
             if (kv.key.vec.size == 3 && kv.key[1] == "group") {
                 if (kv.key[2].type != tINT || kv.key[2].i >= EXACT_HASH_GROUPS) {
                     error(kv.key.lineno, "invalid hash group descriptor");
@@ -109,9 +109,9 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
                 free_value(&kv.key[1]);
                 kv.key[1] = kv.key[2];
                 kv.key.vec.size = 2; }
-	    if (kv.key.vec.size != 2 || kv.key[1].type != tINT || kv.key[1].i >= HASH_TABLES) {
-		error(kv.key.lineno, "invalid hash descriptor");
-		continue; }
+            if (kv.key.vec.size != 2 || kv.key[1].type != tINT || kv.key[1].i >= HASH_TABLES) {
+                error(kv.key.lineno, "invalid hash descriptor");
+                continue; }
             if (!CHECKTYPE(kv.value, tMAP)) continue;
             int id = kv.key[1].i;
             for (auto &c : kv.value.map) {
@@ -136,9 +136,9 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
                         error(c.value.lineno, "Hash valid value out of range");
                     else
                         hash_tables[id][col].valid = c.value.i; } }
-	} else {
-	    error(kv.key.lineno, "expecting a group %sdescriptor",
-		  ternary ? "" : "or hash "); }
+        } else {
+            error(kv.key.lineno, "expecting a group %sdescriptor",
+                  ternary ? "" : "or hash "); }
     }
 }
 
@@ -209,31 +209,31 @@ bool InputXbar::conflict(const HashGrp &a, const HashGrp &b) {
 uint64_t InputXbar::hash_columns_used(unsigned hash) {
     uint64_t rv = 0;
     if (hash_tables.count(hash))
-	for (auto &col : hash_tables[hash])
-	    rv |= 1UL << col.first;
+        for (auto &col : hash_tables[hash])
+            rv |= 1UL << col.first;
     return rv;
 }
 
 /* FIXME -- this is questionable, but the compiler produces hash groups that conflict
  * FIXME -- so we try to tag ones that may be ok as merely warnings */
 bool InputXbar::can_merge(HashGrp &a, HashGrp &b,
-			  Alloc1Dbase<std::vector<InputXbar *>> &use)
+                          Alloc1Dbase<std::vector<InputXbar *>> &use)
 {
     unsigned both = a.tables & b.tables;
     uint64_t both_cols = 0, a_cols = 0, b_cols = 0;
     for (unsigned i = 0; i < 16; i++) {
-	unsigned mask = 1U << i;
-	if (!((a.tables|b.tables) & mask)) continue;
-	for (InputXbar *other : use[i]) {
-	    if (both & mask) both_cols |= other->hash_columns_used(i);
-	    if (a.tables & mask) a_cols |= other->hash_columns_used(i);
-	    if (b.tables & mask) b_cols |= other->hash_columns_used(i); } }
+        unsigned mask = 1U << i;
+        if (!((a.tables|b.tables) & mask)) continue;
+        for (InputXbar *other : use[i]) {
+            if (both & mask) both_cols |= other->hash_columns_used(i);
+            if (a.tables & mask) a_cols |= other->hash_columns_used(i);
+            if (b.tables & mask) b_cols |= other->hash_columns_used(i); } }
     a_cols &= ~both_cols;
     b_cols &= ~both_cols;
     if (a_cols & b_cols)
-	return false;
+        return false;
     if ((a_cols & b.seed & ~a.seed) || (b_cols & a.seed & ~b.seed))
-	return false;
+        return false;
     a.tables |= b.tables;
     b.tables |= a.tables;
     a.seed |= b.seed;
@@ -302,8 +302,8 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
                 conflict(other->hash_groups[group.first], group.second)) {
                 if (can_merge(other->hash_groups[group.first], group.second, use))
                     warning(group.second.lineno, "Input xbar hash group %d mergeable conflict "
-			    "in stage %d", group.first, table->stage->stageno);
-                else 
+                            "in stage %d", group.first, table->stage->stageno);
+                else
                     error(group.second.lineno, "Input xbar hash group %d conflict in stage %d",
                           group.first, table->stage->stageno);
                 warning(other->hash_groups[group.first].lineno,

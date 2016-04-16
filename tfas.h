@@ -42,7 +42,7 @@ public:
     VersionIter end() { return VersionIter(); }
     int operator*() const { return bit; }
     bool operator==(VersionIter &a) { return (left << bit) == (a.left << a.bit); }
-    VersionIter &operator++() { left &= ~1; check(); return *this; } 
+    VersionIter &operator++() { left &= ~1; check(); return *this; }
 };
 
 #endif /* _tfas_h_ */

@@ -10,7 +10,7 @@ void HashActionTable::setup(VECTOR(pair_t) &data) {
         if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
             format = new Format(fmt->map);
     if (auto *fmt = get(data, "hash_dist"))
-	HashDistribution::parse(hash_dist, *fmt, HashDistribution::ACTION_DATA_ADDRESS);
+        HashDistribution::parse(hash_dist, *fmt, HashDistribution::ACTION_DATA_ADDRESS);
     for (auto &kv : MapIterChecked(data)) {
         if (common_setup(kv, data)) {
         } else if (kv.key == "format") {
@@ -27,7 +27,7 @@ void HashActionTable::setup(VECTOR(pair_t) &data) {
                 if ((bus = kv.value.i) >= 4)
                     error(kv.value.lineno, "Invalid bus %d", row);
         } else if (kv.key == "hash_dist") {
-	    /* done above to be dnoe before parsing table calls */
+            /* done above to be dnoe before parsing table calls */
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }

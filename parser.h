@@ -93,14 +93,14 @@ class Parser : public Section {
             };
             std::vector<Save>               save;
             struct Set {
-                Phv::Ref	where;
-                int		what;
+                Phv::Ref        where;
+                int             what;
                 int             flags;
                 Set(gress_t gress, value_t &data, int v, int flgs=0);
                 void write_output_config(phv_output_map *, unsigned &) const;
                 OutputUse output_use() const;
             };
-            std::vector<Set>   		set;
+            std::vector<Set>            set;
             Match(int lineno, gress_t, match_t m, VECTOR(pair_t) &data);
             Match(int lineno, gress_t, State *n);
             void unmark_reachable(Parser *, State *state, bitvec &unreach);

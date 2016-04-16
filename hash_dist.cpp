@@ -52,25 +52,25 @@ void HashDistribution::pass1(Table *tbl) {
             error(lineno, "hash_dist unit %d in table %s not compatible with", id, tbl->name());
             warning(use->lineno, "previous use in table %s", use->tbl->name()); } }
     if (expand >= 0) {
-	int min_shift = 7, diff = 7, other = id-1;
-	switch(id%3) {
-	case '0':
-	    min_shift = 0; diff = -7; other = id+1;
-	    // fall through
-	case '1':
-	    if (expand < min_shift || expand >= min_shift + 16) {
-		error(lineno, "hash_dist unit %d expand can't pull from bit %d", id, expand);
-		err = true; }
-	    break;
-	case '2':
-	    error(lineno, "hash_dist unit %d cannot be expanded", id);
-	    err = true; }
-	if (!err) {
-	    for (auto *use : tbl->stage->hash_dist_use[other])
-		if (use->expand != expand - diff) {
-		    error(lineno, "hash_dist unit %d int table %s expand not compatible with",
-			  id, tbl->name());
-		    warning(use->lineno, "previous use in table %s", use->tbl->name()); } } }
+        int min_shift = 7, diff = 7, other = id-1;
+        switch(id%3) {
+        case '0':
+            min_shift = 0; diff = -7; other = id+1;
+            // fall through
+        case '1':
+            if (expand < min_shift || expand >= min_shift + 16) {
+                error(lineno, "hash_dist unit %d expand can't pull from bit %d", id, expand);
+                err = true; }
+            break;
+        case '2':
+            error(lineno, "hash_dist unit %d cannot be expanded", id);
+            err = true; }
+        if (!err) {
+            for (auto *use : tbl->stage->hash_dist_use[other])
+                if (use->expand != expand - diff) {
+                    error(lineno, "hash_dist unit %d int table %s expand not compatible with",
+                          id, tbl->name());
+                    warning(use->lineno, "previous use in table %s", use->tbl->name()); } } }
     if (err) return;
     tbl->stage->hash_dist_use[id].push_back(this);
     for (int i = 0; i < 3; i++) {
@@ -103,13 +103,13 @@ void HashDistribution::write_regs(Table *tbl, int type, bool non_linear) {
     merge.mau_hash_group_mask[id] |= mask;
     if (expand >= 0) switch (id % 3) {
     case 0:
-	merge.mau_hash_group_expand[id/3].hash_slice_group0_expand = 1;
-	merge.mau_hash_group_expand[id/3].hash_slice_group2_expand = expand;
-	break;
+        merge.mau_hash_group_expand[id/3].hash_slice_group0_expand = 1;
+        merge.mau_hash_group_expand[id/3].hash_slice_group2_expand = expand;
+        break;
     case 1:
-	merge.mau_hash_group_expand[id/3].hash_slice_group1_expand = 1;
-	merge.mau_hash_group_expand[id/3].hash_slice_group2_expand = expand - 7;
-	break;
+        merge.mau_hash_group_expand[id/3].hash_slice_group1_expand = 1;
+        merge.mau_hash_group_expand[id/3].hash_slice_group2_expand = expand - 7;
+        break;
     default: assert(0); }
     if (xbar_use >= 0)
         merge.mau_hash_group_xbar_ctl[xbar_use][tbl->logical_id/8U].set_subfield(
