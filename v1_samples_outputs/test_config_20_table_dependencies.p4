@@ -1,5 +1,5 @@
-#include "/home/cdodd/p4c/build/../p4include/core.p4"
-#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -193,46 +193,54 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_0;
             do_nothing;
+            NoAction;
         }
         key = {
             hdr.ethernet.etherType: lpm;
             hdr.ipv4.diffserv     : exact;
         }
         max_size = 1024;
+        default_action = NoAction();
     }
 
     @name("table_1") table table_1() {
         actions = {
             action_1;
             do_nothing;
+            NoAction;
         }
         key = {
             hdr.ipv4.srcAddr: exact;
             hdr.ipv4.dstAddr: exact;
         }
         max_size = 16384;
+        default_action = NoAction();
     }
 
     @name("table_2") table table_2() {
         actions = {
             action_2;
             do_nothing;
+            NoAction;
         }
         key = {
             hdr.ipv4.srcAddr : exact;
             hdr.ipv4.totalLen: exact;
         }
         max_size = 4096;
+        default_action = NoAction();
     }
 
     @name("table_3") table table_3() {
         actions = {
             action_3;
+            NoAction;
         }
         key = {
             hdr.ipv4.srcAddr: exact;
         }
         max_size = 2048;
+        default_action = NoAction();
     }
 
     apply {

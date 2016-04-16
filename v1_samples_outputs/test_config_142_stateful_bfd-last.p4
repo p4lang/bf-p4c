@@ -1,5 +1,5 @@
-#include "/home/cdodd/p4c/build/../p4include/core.p4"
-#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
 
 struct bfd_t {
     bit<8> bfd_tx_or_rx;
@@ -174,12 +174,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             bfd_rx;
             bfd_tx;
+            NoAction;
         }
         key = {
             meta.bfd_md.bfd_tx_or_rx     : exact;
             meta.bfd_md.bfd_discriminator: exact;
         }
         size = 16384;
+        default_action = NoAction();
     }
 
     apply {

@@ -1,5 +1,5 @@
-#include "/home/cdodd/p4c/build/../p4include/core.p4"
-#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
 
 struct metadata_t {
     bit<1> field1;
@@ -175,21 +175,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action1;
             action2;
+            NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 16536;
+        default_action = NoAction();
     }
 
     @name("dmac2") table dmac2() {
         actions = {
             action2_1;
+            NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 16536;
+        default_action = NoAction();
     }
 
     apply {

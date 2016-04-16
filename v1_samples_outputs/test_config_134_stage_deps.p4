@@ -1,5 +1,5 @@
-#include "/home/cdodd/p4c/build/../p4include/core.p4"
-#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -179,51 +179,61 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_a") table table_a() {
         actions = {
             action_a;
+            NoAction;
         }
         key = {
             hdr.pkt.field_a_32: exact;
         }
         size = 256;
+        default_action = NoAction();
     }
 
     @name("table_b") table table_b() {
         actions = {
             action_b;
+            NoAction;
         }
         key = {
             hdr.pkt.field_a_32: exact;
         }
         size = 256;
+        default_action = NoAction();
     }
 
     @name("table_c") table table_c() {
         actions = {
             action_c;
+            NoAction;
         }
         key = {
             hdr.pkt.field_a_32: exact;
         }
         size = 256;
+        default_action = NoAction();
     }
 
     @name("table_d") table table_d() {
         actions = {
             action_d;
+            NoAction;
         }
         key = {
             hdr.pkt.field_e_16: exact;
         }
         size = 256;
+        default_action = NoAction();
     }
 
     @name("table_e") table table_e() {
         actions = {
             action_e;
+            NoAction;
         }
         key = {
             hdr.pkt.field_g_16: exact;
         }
         size = 256;
+        default_action = NoAction();
     }
 
     apply {

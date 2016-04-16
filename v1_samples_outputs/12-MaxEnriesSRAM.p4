@@ -1,5 +1,5 @@
-#include "/home/cdodd/p4c/build/../p4include/core.p4"
-#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
 
 header egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -169,23 +169,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("port_bd") table port_bd() {
         actions = {
             set_bd;
+            NoAction;
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact;
         }
         size = 288;
+        default_action = NoAction();
     }
 
     @name("vlan_port_tab") table vlan_port_tab() {
         actions = {
             nop;
             ing_drop;
+            NoAction;
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact;
             hdr.l2_metadata.bd         : exact;
         }
         size = 409600;
+        default_action = NoAction();
     }
 
     apply {

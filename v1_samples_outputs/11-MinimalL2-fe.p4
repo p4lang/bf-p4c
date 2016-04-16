@@ -1,5 +1,5 @@
-#include "/home/cdodd/p4c/build/../p4include/core.p4"
-#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
 
 header egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -170,22 +170,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             set_egress_port;
+            NoAction;
         }
         key = {
             hdr.l2_metadata.bd  : exact;
             hdr.ethernet.dstAddr: exact;
         }
         size = 131072;
+        default_action = NoAction();
     }
 
     @name("port_bd") table port_bd() {
         actions = {
             set_bd;
+            NoAction;
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact;
         }
         size = 288;
+        default_action = NoAction();
     }
 
     apply {

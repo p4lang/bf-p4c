@@ -1,5 +1,5 @@
-#include "/home/cdodd/p4c/build/../p4include/core.p4"
-#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -274,49 +274,58 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             nop;
             hop_ipv4;
             drop_ipv4;
+            NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
         }
+        default_action = NoAction();
     }
 
     @name("ipv4_routing_exm_ways_3_pack_3") table ipv4_routing_exm_ways_3_pack_3() {
         actions = {
             nop;
             custom_action_1;
+            NoAction;
         }
         key = {
             hdr.ipv4.dstAddr    : exact;
             hdr.ethernet.dstAddr: exact;
         }
+        default_action = NoAction();
     }
 
     @name("ipv4_routing_exm_ways_3_pack_5") table ipv4_routing_exm_ways_3_pack_5() {
         actions = {
             nop;
             modify_tcp_dst_port;
+            NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
             hdr.ipv4.srcAddr: exact;
         }
+        default_action = NoAction();
     }
 
     @name("ipv4_routing_exm_ways_4_pack_3_stage_1") table ipv4_routing_exm_ways_4_pack_3_stage_1() {
         actions = {
             nop;
             next_hop_ipv4;
+            NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
             hdr.ipv4.srcAddr: exact;
         }
+        default_action = NoAction();
     }
 
     @name("ipv4_routing_exm_ways_4_pack_7_stage_2") table ipv4_routing_exm_ways_4_pack_7_stage_2() {
         actions = {
             nop;
             custom_action_2;
+            NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
@@ -324,68 +333,81 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.dstPort : exact;
             hdr.tcp.srcPort : exact;
         }
+        default_action = NoAction();
     }
 
     @name("ipv4_routing_exm_ways_5_pack_3_stage_3") table ipv4_routing_exm_ways_5_pack_3_stage_3() {
         actions = {
             nop;
             next_hop_ipv4;
+            NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
         }
+        default_action = NoAction();
     }
 
     @name("ipv4_routing_exm_ways_6_pack_3_stage_4") table ipv4_routing_exm_ways_6_pack_3_stage_4() {
         actions = {
             nop;
             next_hop_ipv4;
+            NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
         }
+        default_action = NoAction();
     }
 
     @name("ipv4_routing_stage_1") table ipv4_routing_stage_1() {
         actions = {
             nop;
             hop_ipv4;
+            NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
             hdr.ipv4.srcAddr: exact;
         }
         size = 1024;
+        default_action = NoAction();
     }
 
     @name("tcam_tbl_stage_2") table tcam_tbl_stage_2() {
         actions = {
             nop;
             mod_mac_adr;
+            NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
         }
+        default_action = NoAction();
     }
 
     @name("tcp_rm_tbl_stage_4") table tcp_rm_tbl_stage_4() {
         actions = {
             nop;
             tcp_hdr_rm;
+            NoAction;
         }
         key = {
             hdr.ethernet.srcAddr: ternary;
         }
+        default_action = NoAction();
     }
 
     @name("udp_add_tbl_stage_3") table udp_add_tbl_stage_3() {
         actions = {
             nop;
             udp_hdr_add;
+            NoAction;
         }
         key = {
             hdr.ethernet.srcAddr: ternary;
         }
+        default_action = NoAction();
     }
 
     apply {

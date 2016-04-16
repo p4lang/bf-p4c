@@ -1,5 +1,5 @@
-#include "/home/cdodd/p4c/build/../p4include/core.p4"
-#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
 
 struct vlan_tag_t {
     bit<3>  pri;
@@ -188,13 +188,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("t1") table t1() {
         actions = {
             a1;
+            NoAction;
         }
+        default_action = NoAction();
     }
 
     @name("t2") table t2() {
         actions = {
             a2;
+            NoAction;
         }
+        default_action = NoAction();
     }
 
     apply {

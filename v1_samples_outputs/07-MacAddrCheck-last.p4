@@ -1,5 +1,5 @@
-#include "/home/cdodd/p4c/build/../p4include/core.p4"
-#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
 
 struct ingress_metadata_t {
     bit<1> drop;
@@ -164,7 +164,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("bad_mac_drop") table bad_mac_drop() {
         actions = {
             ing_drop;
+            NoAction;
         }
+        default_action = NoAction();
     }
 
     apply {

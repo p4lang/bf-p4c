@@ -1,5 +1,5 @@
-#include "/home/cdodd/p4c/build/../p4include/core.p4"
-#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -177,11 +177,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             modify_from_constant;
             modify_from_field;
             modify_from_param;
+            NoAction;
         }
         key = {
             hdr.my_test_config_1.a_32: lpm;
         }
         max_size = 1024;
+        default_action = NoAction();
     }
 
     apply {

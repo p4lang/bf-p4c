@@ -1,5 +1,5 @@
-#include "/home/cdodd/p4c/build/../p4include/core.p4"
-#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
 
 struct my_metadata_t {
     bit<6> hopCount;
@@ -211,16 +211,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("fix_trill_header") table fix_trill_header() {
         actions = {
             copy_hopCount;
+            NoAction;
         }
+        default_action = NoAction();
     }
 
     @name("trill_forward") table trill_forward() {
         actions = {
             forward_trill;
+            NoAction;
         }
         key = {
             hdr.trill.egressRbridge: exact;
         }
+        default_action = NoAction();
     }
 
     apply {

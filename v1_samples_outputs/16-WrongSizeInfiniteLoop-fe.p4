@@ -1,5 +1,5 @@
-#include "/home/cdodd/p4c/build/../p4include/core.p4"
-#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
 
 struct m1_t {
     bit<1> f1;
@@ -239,10 +239,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             a14;
             a15;
             a16;
+            NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
+        default_action = NoAction();
     }
 
     apply {

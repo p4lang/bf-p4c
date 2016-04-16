@@ -1,5 +1,5 @@
-#include "/home/cdodd/p4c/build/../p4include/core.p4"
-#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -256,75 +256,89 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             hop_ipv4;
+            NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
         }
+        default_action = NoAction();
     }
 
     @name("ipv4_routing_exm_stage_5") table ipv4_routing_exm_stage_5() {
         actions = {
             nop;
             next_hop_ipv4;
+            NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
             hdr.ipv4.srcAddr: exact;
         }
         size = 28672;
+        default_action = NoAction();
     }
 
     @name("ipv4_routing_exm_stage_6") table ipv4_routing_exm_stage_6() {
         actions = {
             nop;
             next_hop_ipv4;
+            NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
         }
         size = 8192;
+        default_action = NoAction();
     }
 
     @name("ipv4_routing_stage_1") table ipv4_routing_stage_1() {
         actions = {
             nop;
             hop_ipv4;
+            NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
             hdr.ipv4.srcAddr: exact;
         }
         size = 1024;
+        default_action = NoAction();
     }
 
     @name("tcam_tbl_stage_2") table tcam_tbl_stage_2() {
         actions = {
             nop;
             mod_mac_adr;
+            NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
         }
+        default_action = NoAction();
     }
 
     @name("tcp_rm_tbl_stage_4") table tcp_rm_tbl_stage_4() {
         actions = {
             nop;
             tcp_hdr_rm;
+            NoAction;
         }
         key = {
             hdr.ethernet.srcAddr: ternary;
         }
+        default_action = NoAction();
     }
 
     @name("udp_add_tbl_stage_3") table udp_add_tbl_stage_3() {
         actions = {
             nop;
             udp_hdr_add;
+            NoAction;
         }
         key = {
             hdr.ethernet.srcAddr: ternary;
         }
+        default_action = NoAction();
     }
 
     apply {

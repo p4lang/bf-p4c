@@ -1,5 +1,5 @@
-#include "/home/cdodd/p4c/build/../p4include/core.p4"
-#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -254,6 +254,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nhop_set;
             nop;
+            NoAction;
         }
         key = {
             hdr.ipv4.dstAddr       : lpm;
@@ -263,6 +264,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.protocol      : selector;
         }
         size = 512;
+        default_action = NoAction();
         @name("ecmp_action_profile") implementation = ActionSelector(HashAlgorithm.crc16, 32w4096, 32w14);
     }
 

@@ -1,5 +1,5 @@
-#include "/home/cdodd/p4c/build/../p4include/core.p4"
-#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
 
 struct ingress_metadata_t {
     bit<1>  drop;
@@ -161,10 +161,12 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name("e_t1") table e_t1() {
         actions = {
             nop;
+            NoAction;
         }
         key = {
             hdr.ethernet.srcAddr: exact;
         }
+        default_action = NoAction();
     }
 
     apply {
@@ -188,33 +190,39 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             set_egress_port;
+            NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
             meta.ing_metadata.bd: exact;
         }
         size = 131072;
+        default_action = NoAction();
     }
 
     @name("port_bd") table port_bd() {
         actions = {
             set_bd;
+            NoAction;
         }
         key = {
             meta.ing_metadata.ingress_port: exact;
         }
         size = 256;
+        default_action = NoAction();
     }
 
     @name("smac_filter") table smac_filter() {
         actions = {
             nop;
             ing_drop;
+            NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 256;
+        default_action = NoAction();
     }
 
     apply {

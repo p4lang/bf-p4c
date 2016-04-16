@@ -1,11 +1,7 @@
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/P4/p4c/build/../p4include/v1model.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
 
-struct routing_metadata_t {
-    bit<1> drop;
-}
-
-header egress_intrinsic_metadata_t {
+struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
     bit<5>  _pad1;
     bit<19> enq_qdepth;
@@ -30,14 +26,14 @@ header egress_intrinsic_metadata_t {
     bit<16> pkt_length;
 }
 
-header egress_intrinsic_metadata_for_mirror_buffer_t {
+struct egress_intrinsic_metadata_for_mirror_buffer_t {
     bit<6>  _pad1;
     bit<10> egress_mirror_id;
     bit<1>  coalesce_flush;
     bit<7>  coalesce_length;
 }
 
-header egress_intrinsic_metadata_for_output_port_t {
+struct egress_intrinsic_metadata_for_output_port_t {
     bit<2> _pad1;
     bit<1> capture_tstamp_on_tx;
     bit<1> update_delay_on_tx;
@@ -45,7 +41,7 @@ header egress_intrinsic_metadata_for_output_port_t {
     bit<3> drop_ctl;
 }
 
-header egress_intrinsic_metadata_from_parser_aux_t {
+struct egress_intrinsic_metadata_from_parser_aux_t {
     bit<48> egress_global_tstamp;
     bit<32> egress_global_ver;
     bit<16> egress_parser_err;
@@ -53,13 +49,7 @@ header egress_intrinsic_metadata_from_parser_aux_t {
     bit<8>  coalesce_sample_count;
 }
 
-header ethernet_t {
-    bit<48> dstAddr;
-    bit<48> srcAddr;
-    bit<16> etherType;
-}
-
-header ingress_intrinsic_metadata_t {
+struct ingress_intrinsic_metadata_t {
     bit<1>  resubmit_flag;
     bit<1>  _pad1;
     bit<2>  _pad2;
@@ -68,12 +58,12 @@ header ingress_intrinsic_metadata_t {
     bit<48> ingress_mac_tstamp;
 }
 
-header ingress_intrinsic_metadata_for_mirror_buffer_t {
+struct ingress_intrinsic_metadata_for_mirror_buffer_t {
     bit<6>  _pad1;
     bit<10> ingress_mirror_id;
 }
 
-header ingress_intrinsic_metadata_for_tm_t {
+struct ingress_intrinsic_metadata_for_tm_t {
     bit<7>  _pad1;
     bit<9>  ucast_egress_port;
     bit<3>  drop_ctl;
@@ -99,20 +89,30 @@ header ingress_intrinsic_metadata_for_tm_t {
     bit<16> rid;
 }
 
-header ingress_intrinsic_metadata_from_parser_aux_t {
+struct ingress_intrinsic_metadata_from_parser_aux_t {
     bit<48> ingress_global_tstamp;
     bit<32> ingress_global_ver;
     bit<16> ingress_parser_err;
 }
 
-header generator_metadata_t {
+struct generator_metadata_t {
     bit<16> app_id;
     bit<16> batch_id;
     bit<16> instance_id;
 }
 
-header ingress_parser_control_signals {
+struct ingress_parser_control_signals {
     bit<3> priority;
+}
+
+struct routing_metadata_t {
+    bit<1> drop;
+}
+
+header ethernet_t {
+    bit<48> dstAddr;
+    bit<48> srcAddr;
+    bit<16> etherType;
 }
 
 header ipv4_t {
@@ -159,11 +159,6 @@ header vlan_tag_t {
 }
 
 struct metadata {
-    @name("routing_metadata") 
-    routing_metadata_t routing_metadata;
-}
-
-struct headers {
     @name("eg_intr_md") 
     egress_intrinsic_metadata_t                    eg_intr_md;
     @name("eg_intr_md_for_mb") 
@@ -172,8 +167,6 @@ struct headers {
     egress_intrinsic_metadata_for_output_port_t    eg_intr_md_for_oport;
     @name("eg_intr_md_from_parser_aux") 
     egress_intrinsic_metadata_from_parser_aux_t    eg_intr_md_from_parser_aux;
-    @name("ethernet") 
-    ethernet_t                                     ethernet;
     @name("ig_intr_md") 
     ingress_intrinsic_metadata_t                   ig_intr_md;
     @name("ig_intr_md_for_mb") 
@@ -186,14 +179,21 @@ struct headers {
     generator_metadata_t                           ig_pg_md;
     @name("ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
+    @name("routing_metadata") 
+    routing_metadata_t                             routing_metadata;
+}
+
+struct headers {
+    @name("ethernet") 
+    ethernet_t ethernet;
     @name("ipv4") 
-    ipv4_t                                         ipv4;
+    ipv4_t     ipv4;
     @name("tcp") 
-    tcp_t                                          tcp;
+    tcp_t      tcp;
     @name("udp") 
-    udp_t                                          udp;
+    udp_t      udp;
     @name("vlan_tag") 
-    vlan_tag_t                                     vlan_tag;
+    vlan_tag_t vlan_tag;
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
@@ -234,11 +234,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action nop() {
+    @name("nop") action nop() {
     }
-    action modify_ip_id(bit<9> port, bit<16> id, bit<48> srcAddr, bit<48> dstAddr) {
+    @name("modify_ip_id") action modify_ip_id(bit<9> port, bit<16> id, bit<48> srcAddr, bit<48> dstAddr) {
         hdr.ipv4.identification = id;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = port;
+        meta.ig_intr_md_for_tm.ucast_egress_port = port;
         hdr.ethernet.srcAddr = srcAddr;
         hdr.ethernet.dstAddr = dstAddr;
     }
@@ -246,6 +246,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             modify_ip_id;
+            NoAction;
         }
         key = {
             hdr.ethernet.srcAddr  : ternary;
@@ -257,11 +258,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.version      : exact;
         }
         size = 2048;
-        implementation = ActionProfile(32w2048);
+        default_action = NoAction();
+        @name("indirect_action_profile") implementation = ActionProfile(32w2048);
     }
 
     apply {
-        if (hdr.ipv4.valid) 
+        if (hdr.ipv4.isValid()) 
             tcam_indirect_action.apply();
     }
 }

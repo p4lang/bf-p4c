@@ -1,5 +1,5 @@
-#include "/home/cdodd/p4c/build/../p4include/core.p4"
-#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -193,11 +193,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             action_3;
             action_4;
             action_5;
+            NoAction;
         }
         key = {
             hdr.pkt.field_b: exact;
         }
         size = 4096;
+        default_action = NoAction();
     }
 
     apply {

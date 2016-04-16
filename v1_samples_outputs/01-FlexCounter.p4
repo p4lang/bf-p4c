@@ -1,5 +1,5 @@
-#include "/home/cdodd/p4c/build/../p4include/core.p4"
-#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
+#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
 
 struct metadata_t {
     bit<13> flex_counter_index;
@@ -183,17 +183,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("update_counters") table update_counters() {
         actions = {
             update_flex_counter;
+            NoAction;
         }
+        default_action = NoAction();
     }
 
     @name("vlan") table vlan() {
         actions = {
             set_flex_counter_index;
+            NoAction;
         }
         key = {
             hdr.vlan_tag.vlan_id: exact;
         }
         size = 4096;
+        default_action = NoAction();
     }
 
     apply {
