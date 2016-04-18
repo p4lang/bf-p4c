@@ -160,6 +160,9 @@ void check_match_key(std::vector<GatewayTable::MatchKey> &vec, const char *name,
                           "value at offset %d", name, vec[i].offset, vec[j].offset); }
         } else
             vec[i].offset = i ? vec[i-1].offset + vec[i-1].val->size() : 0;
+        if (vec[i].offset < 32 && (vec[i].offset & 7) != (vec[i].val->lo & 7))
+            error(vec[i].val.lineno, "Gateway %s key %s misaligned within byte", name,
+                  vec[i].val.name());
         if (vec[i].offset + vec[i].val->size() > max) {
             error(vec[i].val.lineno, "Gateway %s key too big", name);
             break; } }
