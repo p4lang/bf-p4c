@@ -156,26 +156,26 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("assign_egress1_action") action assign_egress1_action() {
-        bool hasReturned_2 = false;
+        bool hasReturned_0 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = meta.ing_metadata.tmp1;
     }
     @name("assign_egress2_action") action assign_egress2_action() {
-        bool hasReturned_3 = false;
+        bool hasReturned_1 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = meta.ing_metadata.tmp2;
     }
     @name("assign_egress_interfaces") action assign_egress_interfaces(bit<9> value1, bit<9> value2) {
-        bool hasReturned_4 = false;
+        bool hasReturned_2 = false;
         meta.ing_metadata.tmp1 = value1;
         meta.ing_metadata.tmp2 = value2;
     }
     @name("set_ingress_port_props") action set_ingress_port_props(bit<1> port_type) {
-        bool hasReturned_5 = false;
+        bool hasReturned_3 = false;
         meta.ing_metadata.flag = port_type;
     }
     @name("assign_egress1") table assign_egress1() {
@@ -218,7 +218,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_1 = false;
+        bool hasExited_0 = false;
         if (hdr.ig_intr_md.resubmit_flag == 1w0) {
             ingress_port_map.apply();
             switch (dmac.apply().action_run) {
@@ -236,20 +236,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_6 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.ethernet);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_7 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_8 = false;
+        bool hasExited_3 = false;
     }
 }
 

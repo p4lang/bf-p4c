@@ -160,11 +160,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("egr_action") action egr_action() {
-        bool hasReturned_1 = false;
+        bool hasReturned_0 = false;
         clone3(CloneType.E2E, 32w7, { meta.m.foo });
     }
     @name("egr_action2") action egr_action2() {
-        bool hasReturned_2 = false;
+        bool hasReturned_1 = false;
         clone(CloneType.E2E, 32w8);
     }
     @name("egr_null_table") table egr_null_table() {
@@ -182,18 +182,18 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
         egr_null_table.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("ingr_action") action ingr_action() {
-        bool hasReturned_4 = false;
+        bool hasReturned_2 = false;
         clone3(CloneType.I2E, 32w5, { meta.m.foo });
     }
     @name("ingr_action2") action ingr_action2() {
-        bool hasReturned_5 = false;
+        bool hasReturned_3 = false;
         clone(CloneType.I2E, 32w6);
     }
     @name("ingr_null_table") table ingr_null_table() {
@@ -209,27 +209,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_3 = false;
+        bool hasExited_0 = false;
         ingr_null_table.apply();
     }
 }
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_6 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.ethernet);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_7 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_8 = false;
+        bool hasExited_3 = false;
     }
 }
 

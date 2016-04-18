@@ -169,73 +169,73 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("a1") action a1() {
-        bool hasReturned_2 = false;
+        bool hasReturned_0 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f1;
     }
     @name("a2") action a2() {
-        bool hasReturned_3 = false;
+        bool hasReturned_1 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f2;
     }
     @name("a3") action a3() {
-        bool hasReturned_4 = false;
+        bool hasReturned_2 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f3;
     }
     @name("a4") action a4() {
-        bool hasReturned_5 = false;
+        bool hasReturned_3 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f4;
     }
     @name("a5") action a5() {
-        bool hasReturned_6 = false;
+        bool hasReturned_4 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f5;
     }
     @name("a6") action a6() {
-        bool hasReturned_7 = false;
+        bool hasReturned_5 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f6;
     }
     @name("a7") action a7() {
-        bool hasReturned_8 = false;
+        bool hasReturned_6 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f7;
     }
     @name("a8") action a8() {
-        bool hasReturned_9 = false;
+        bool hasReturned_7 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f8;
     }
     @name("a9") action a9() {
-        bool hasReturned_10 = false;
+        bool hasReturned_8 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f9;
     }
     @name("a10") action a10() {
-        bool hasReturned_11 = false;
+        bool hasReturned_9 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f10;
     }
     @name("a11") action a11() {
-        bool hasReturned_12 = false;
+        bool hasReturned_10 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f11;
     }
     @name("a12") action a12() {
-        bool hasReturned_13 = false;
+        bool hasReturned_11 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f12;
     }
     @name("a13") action a13() {
-        bool hasReturned_14 = false;
+        bool hasReturned_12 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f13;
     }
     @name("a14") action a14() {
-        bool hasReturned_15 = false;
+        bool hasReturned_13 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f14;
     }
     @name("a15") action a15() {
-        bool hasReturned_16 = false;
+        bool hasReturned_14 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f15;
     }
     @name("a16") action a16() {
-        bool hasReturned_17 = false;
+        bool hasReturned_15 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f16;
     }
     @name("t1") table t1() {
@@ -265,27 +265,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_1 = false;
+        bool hasExited_0 = false;
         t1.apply();
     }
 }
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_18 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.ethernet);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_19 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_20 = false;
+        bool hasExited_3 = false;
     }
 }
 

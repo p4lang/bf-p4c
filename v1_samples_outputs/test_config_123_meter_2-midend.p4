@@ -167,18 +167,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     DirectMeter<bit<16>>(CounterType.Bytes) @name("meter_0") meter_0;
     Meter(32w4097, CounterType.Bytes) @name("meter_1") meter_1;
     @name("do_nothing") action do_nothing() {
-        bool hasReturned_1 = false;
+        bool hasReturned_0 = false;
     }
     @name("action_1") action action_1(bit<8> param0) {
-        bool hasReturned_2 = false;
+        bool hasReturned_1 = false;
         meter_1.meter(32w7, hdr.pkt.color_1);
     }
     @name("action_0") action action_0_0(bit<8> param0) {
-        bool hasReturned_3 = false;
+        bool hasReturned_2 = false;
         meter_0.read(hdr.pkt.lpf);
     }
     @name("do_nothing") action do_nothing_0() {
-        bool hasReturned_4 = false;
+        bool hasReturned_3 = false;
         meter_0.read(hdr.pkt.lpf);
     }
     @name("table_0") table table_0() {
@@ -212,7 +212,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
         table_0.apply();
         table_1.apply();
     }
@@ -220,26 +220,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_5 = false;
+        bool hasExited_0 = false;
     }
 }
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_6 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.pkt);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_7 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_8 = false;
+        bool hasExited_3 = false;
     }
 }
 

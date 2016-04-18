@@ -157,13 +157,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("set_ingress_port_props") action set_ingress_port_props(bit<8> f1, bit<16> f2, bit<32> f3) {
-        bool hasReturned_2 = false;
+        bool hasReturned_0 = false;
         meta.ing_metadata.f1 = f1;
         meta.ing_metadata.f2 = f2;
         meta.ing_metadata.f3 = f3;
@@ -181,7 +181,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_1 = false;
+        bool hasExited_0 = false;
         if (hdr.ig_intr_md.resubmit_flag == 1w0) 
             ingress_port_map.apply();
     }
@@ -189,20 +189,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_3 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.ethernet);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_4 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_5 = false;
+        bool hasExited_3 = false;
     }
 }
 

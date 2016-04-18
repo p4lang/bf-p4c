@@ -160,27 +160,27 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("action_0") action action_0() {
-        bool hasReturned_1 = false;
+        bool hasReturned_0 = false;
         hdr.pkt.field_a_signed = hdr.pkt.field_a_signed + (int<32>)hdr.pkt.field_b_32;
     }
     @name("action_1") action action_1() {
-        bool hasReturned_2 = false;
+        bool hasReturned_1 = false;
         hdr.pkt.field_e_sat = hdr.pkt.field_e_sat + hdr.pkt.field_f_16;
     }
     @name("action_2") action action_2() {
-        bool hasReturned_3 = false;
+        bool hasReturned_2 = false;
         hdr.pkt.field_i_signed_sat = hdr.pkt.field_i_signed_sat + (int<8>)hdr.pkt.field_j_8;
     }
     @name("action_3") action action_3() {
-        bool hasReturned_4 = false;
+        bool hasReturned_3 = false;
         hdr.pkt.field_a_signed = hdr.pkt.field_a_signed - (int<32>)hdr.pkt.field_b_32;
     }
     @name("action_4") action action_4() {
-        bool hasReturned_5 = false;
+        bool hasReturned_4 = false;
         hdr.pkt.field_e_sat = hdr.pkt.field_e_sat - hdr.pkt.field_f_16;
     }
     @name("action_5") action action_5() {
-        bool hasReturned_6 = false;
+        bool hasReturned_5 = false;
         hdr.pkt.field_i_signed_sat = hdr.pkt.field_i_signed_sat - (int<8>)hdr.pkt.field_j_8;
     }
     @name("table_0") table table_0() {
@@ -201,33 +201,33 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
         table_0.apply();
     }
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_7 = false;
+        bool hasExited_0 = false;
     }
 }
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_8 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.pkt);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_9 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_10 = false;
+        bool hasExited_3 = false;
     }
 }
 

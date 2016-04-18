@@ -185,133 +185,133 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("set_field1_1") action set_field1_1(bit<1> value) {
-        bool hasReturned_2 = false;
+        bool hasReturned_0 = false;
         meta.md.field1_1 = value;
     }
     @name("set_field1_2") action set_field1_2(bit<1> value) {
-        bool hasReturned_3 = false;
+        bool hasReturned_1 = false;
         meta.md.field1_2 = value;
     }
     @name("set_field1_3") action set_field1_3(bit<1> value) {
-        bool hasReturned_4 = false;
+        bool hasReturned_2 = false;
         meta.md.field1_3 = value;
     }
     @name("set_field1_4") action set_field1_4(bit<1> value) {
-        bool hasReturned_5 = false;
+        bool hasReturned_3 = false;
         meta.md.field1_4 = value;
     }
     @name("set_field1_5") action set_field1_5(bit<1> value) {
-        bool hasReturned_6 = false;
+        bool hasReturned_4 = false;
         meta.md.field1_5 = value;
     }
     @name("set_field1_6") action set_field1_6(bit<1> value) {
-        bool hasReturned_7 = false;
+        bool hasReturned_5 = false;
         meta.md.field1_6 = value;
     }
     @name("set_field1_7") action set_field1_7(bit<1> value) {
-        bool hasReturned_8 = false;
+        bool hasReturned_6 = false;
         meta.md.field1_7 = value;
     }
     @name("set_field1_8") action set_field1_8(bit<1> value) {
-        bool hasReturned_9 = false;
+        bool hasReturned_7 = false;
         meta.md.field1_8 = value;
     }
     @name("set_field8_1") action set_field8_1(bit<8> value) {
-        bool hasReturned_10 = false;
+        bool hasReturned_8 = false;
         meta.md.field8_1 = value;
     }
     @name("set_field8_2") action set_field8_2(bit<8> value) {
-        bool hasReturned_11 = false;
+        bool hasReturned_9 = false;
         meta.md.field8_2 = value;
     }
     @name("set_field8_3") action set_field8_3(bit<8> value) {
-        bool hasReturned_12 = false;
+        bool hasReturned_10 = false;
         meta.md.field8_3 = value;
     }
     @name("set_field8_4") action set_field8_4(bit<8> value) {
-        bool hasReturned_13 = false;
+        bool hasReturned_11 = false;
         meta.md.field8_4 = value;
     }
     @name("set_field8_5") action set_field8_5(bit<8> value) {
-        bool hasReturned_14 = false;
+        bool hasReturned_12 = false;
         meta.md.field8_5 = value;
     }
     @name("set_field8_6") action set_field8_6(bit<8> value) {
-        bool hasReturned_15 = false;
+        bool hasReturned_13 = false;
         meta.md.field8_6 = value;
     }
     @name("set_field8_7") action set_field8_7(bit<8> value) {
-        bool hasReturned_16 = false;
+        bool hasReturned_14 = false;
         meta.md.field8_7 = value;
     }
     @name("set_field8_8") action set_field8_8(bit<8> value) {
-        bool hasReturned_17 = false;
+        bool hasReturned_15 = false;
         meta.md.field8_8 = value;
     }
     @name("set_field16_1") action set_field16_1(bit<64> value) {
-        bool hasReturned_18 = false;
+        bool hasReturned_16 = false;
         meta.md.field16_1 = value;
     }
     @name("set_field16_2") action set_field16_2(bit<64> value) {
-        bool hasReturned_19 = false;
+        bool hasReturned_17 = false;
         meta.md.field16_2 = value;
     }
     @name("set_field16_3") action set_field16_3(bit<64> value) {
-        bool hasReturned_20 = false;
+        bool hasReturned_18 = false;
         meta.md.field16_3 = value;
     }
     @name("set_field16_4") action set_field16_4(bit<64> value) {
-        bool hasReturned_21 = false;
+        bool hasReturned_19 = false;
         meta.md.field16_4 = value;
     }
     @name("set_field16_5") action set_field16_5(bit<64> value) {
-        bool hasReturned_22 = false;
+        bool hasReturned_20 = false;
         meta.md.field16_5 = value;
     }
     @name("set_field16_6") action set_field16_6(bit<64> value) {
-        bool hasReturned_23 = false;
+        bool hasReturned_21 = false;
         meta.md.field16_6 = value;
     }
     @name("set_field16_7") action set_field16_7(bit<64> value) {
-        bool hasReturned_24 = false;
+        bool hasReturned_22 = false;
         meta.md.field16_7 = value;
     }
     @name("set_field16_8") action set_field16_8(bit<64> value) {
-        bool hasReturned_25 = false;
+        bool hasReturned_23 = false;
         meta.md.field16_8 = value;
     }
     @name("set_field32_1") action set_field32_1(bit<32> value) {
-        bool hasReturned_26 = false;
+        bool hasReturned_24 = false;
         meta.md.field32_1 = value;
     }
     @name("set_field32_2") action set_field32_2(bit<32> value) {
-        bool hasReturned_27 = false;
+        bool hasReturned_25 = false;
         meta.md.field32_2 = value;
     }
     @name("set_field32_3") action set_field32_3(bit<32> value) {
-        bool hasReturned_28 = false;
+        bool hasReturned_26 = false;
         meta.md.field32_3 = value;
     }
     @name("set_field32_4") action set_field32_4(bit<32> value) {
-        bool hasReturned_29 = false;
+        bool hasReturned_27 = false;
         meta.md.field32_4 = value;
     }
     @name("set_field32_5") action set_field32_5(bit<32> value) {
-        bool hasReturned_30 = false;
+        bool hasReturned_28 = false;
         meta.md.field32_5 = value;
     }
     @name("set_field32_6") action set_field32_6(bit<32> value) {
-        bool hasReturned_31 = false;
+        bool hasReturned_29 = false;
         meta.md.field32_6 = value;
     }
     @name("set_field32_7") action set_field32_7(bit<32> value) {
-        bool hasReturned_32 = false;
+        bool hasReturned_30 = false;
         meta.md.field32_7 = value;
     }
     @name("dmac1") table dmac1() {
@@ -399,7 +399,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_1 = false;
+        bool hasExited_0 = false;
         if ((hdr.ig_intr_md.ingress_port & 9w0x1) == 9w0x1) 
             dmac1.apply();
         else 
@@ -409,20 +409,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_33 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.ethernet);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_34 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_35 = false;
+        bool hasExited_3 = false;
     }
 }
 

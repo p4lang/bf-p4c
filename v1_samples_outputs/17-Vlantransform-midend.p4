@@ -188,48 +188,48 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("do_new_inner_cfi") action do_new_inner_cfi() {
-        bool hasReturned_2 = false;
+        bool hasReturned_0 = false;
         hdr.vlan_tag[1].cfi = meta.meta.new_inner_cfi;
     }
     @name("do_new_inner_pri") action do_new_inner_pri() {
-        bool hasReturned_3 = false;
+        bool hasReturned_1 = false;
         hdr.vlan_tag[1].pri = meta.meta.new_inner_pri;
     }
     @name("do_new_inner_tpid") action do_new_inner_tpid() {
-        bool hasReturned_4 = false;
+        bool hasReturned_2 = false;
         hdr.vlan_tag[0].ethertype = meta.meta.new_inner_tpid;
     }
     @name("do_new_inner_vid") action do_new_inner_vid() {
-        bool hasReturned_5 = false;
+        bool hasReturned_3 = false;
         hdr.vlan_tag[1].vid = meta.meta.new_inner_vid;
     }
     @name("do_new_outer_cfi") action do_new_outer_cfi() {
-        bool hasReturned_6 = false;
+        bool hasReturned_4 = false;
         hdr.vlan_tag[0].cfi = meta.meta.new_outer_cfi;
     }
     @name("do_new_outer_pri") action do_new_outer_pri() {
-        bool hasReturned_7 = false;
+        bool hasReturned_5 = false;
         hdr.vlan_tag[0].pri = meta.meta.new_outer_pri;
     }
     @name("do_new_outer_tpid") action do_new_outer_tpid() {
-        bool hasReturned_8 = false;
+        bool hasReturned_6 = false;
         hdr.ethernet.ethertype = meta.meta.new_outer_tpid;
     }
     @name("do_new_outer_vid") action do_new_outer_vid() {
-        bool hasReturned_9 = false;
+        bool hasReturned_7 = false;
         hdr.vlan_tag[0].vid = meta.meta.new_outer_vid;
     }
     @name("nop") action nop() {
-        bool hasReturned_10 = false;
+        bool hasReturned_8 = false;
     }
     @name("rewrite_tags") action rewrite_tags(bit<16> new_outer_tpid, bit<1> new_outer_tpid_en, bit<3> new_outer_pri, bit<1> new_outer_pri_en, bit<1> new_outer_cfi, bit<1> new_outer_cfi_en, bit<12> new_outer_vid, bit<1> new_outer_vid_en, bit<16> new_inner_tpid, bit<1> new_inner_tpid_en, bit<3> new_inner_pri, bit<1> new_inner_pri_en, bit<1> new_inner_cfi, bit<1> new_inner_cfi_en, bit<12> new_inner_vid, bit<1> new_inner_vid_en) {
-        bool hasReturned_11 = false;
+        bool hasReturned_9 = false;
         meta.meta.new_outer_tpid = new_outer_tpid;
         meta.meta.new_outer_tpid_en = new_outer_tpid_en;
         meta.meta.new_outer_pri = new_outer_pri;
@@ -327,7 +327,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_1 = false;
+        bool hasExited_0 = false;
         vlan_xlate.apply();
         if (meta.meta.new_outer_tpid_en == 1w1) 
             new_outer_tpid.apply();
@@ -350,7 +350,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_12 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.ethernet);
         packet.emit(hdr.vlan_tag);
     }
@@ -358,13 +358,13 @@ control DeparserImpl(packet_out packet, in headers hdr) {
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_13 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_14 = false;
+        bool hasExited_3 = false;
     }
 }
 

@@ -161,7 +161,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("action_160") action action_160(bit<32> param_1_32, bit<32> param_2_32, bit<32> param_3_32, bit<8> param_4_32, bit<16> param_5_16, bit<8> param_6_8) {
-        bool hasReturned_1 = false;
+        bool hasReturned_0 = false;
         hdr.my_test_config_1.a_32 = param_1_32;
         hdr.my_test_config_1.e_32 = param_2_32;
         hdr.my_test_config_1.f_32 = param_3_32;
@@ -169,7 +169,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.my_test_config_1.c_8 = param_6_8;
     }
     @name("action_8") action action_8(bit<8> param_1_8) {
-        bool hasReturned_2 = false;
+        bool hasReturned_1 = false;
         hdr.my_test_config_1.b_8 = param_1_8;
     }
     @name("my_test_config_1_table") table my_test_config_1_table() {
@@ -189,33 +189,33 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
         my_test_config_1_table.apply();
     }
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_3 = false;
+        bool hasExited_0 = false;
     }
 }
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_4 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.my_test_config_1);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_5 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_6 = false;
+        bool hasExited_3 = false;
     }
 }
 

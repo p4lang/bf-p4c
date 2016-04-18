@@ -155,25 +155,29 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action1_1") action action1_1(in bit<1> value) {
-        bool hasReturned_2 = false;
-        meta.md.field1 = value;
-    }
     @name("action1") action action1() {
-        bool hasReturned_3 = false;
-        action1_1(1w0);
+        bool hasReturned_0 = false;
+        @name("value_0") bit<1> value_0_0;
+        {
+            value_0_0 = 1w0;
+            meta.md.field1 = value_0_0;
+        }
     }
     @name("action2") action action2() {
-        bool hasReturned_4 = false;
-        action1_1(1w1);
+        bool hasReturned_1 = false;
+        @name("value_1") bit<1> value_1_0;
+        {
+            value_1_0 = 1w1;
+            meta.md.field1 = value_1_0;
+        }
     }
     @name("action2_1") action action2_1(bit<1> value) {
-        bool hasReturned_5 = false;
+        bool hasReturned_2 = false;
         meta.md.field2 = value;
     }
     @name("dmac1") table dmac1() {
@@ -202,7 +206,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_1 = false;
+        bool hasExited_0 = false;
         dmac1.apply();
         dmac2.apply();
     }
@@ -210,20 +214,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_6 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.ethernet);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_7 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_8 = false;
+        bool hasExited_3 = false;
     }
 }
 

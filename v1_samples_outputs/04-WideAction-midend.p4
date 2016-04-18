@@ -185,13 +185,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("action1") action action1(bit<1> value1_1, bit<1> value1_2, bit<1> value1_3, bit<1> value1_4, bit<1> value1_5, bit<1> value1_6, bit<1> value1_7, bit<1> value1_8, bit<8> value8_1, bit<8> value8_2, bit<8> value8_3, bit<8> value8_4, bit<8> value8_5, bit<8> value8_6, bit<8> value8_7, bit<8> value8_8, bit<16> value16_1, bit<16> value16_2, bit<16> value16_3, bit<16> value16_4, bit<16> value16_5, bit<16> value16_6, bit<16> value16_7, bit<16> value16_8, bit<32> value32_1, bit<32> value32_2, bit<32> value32_3, bit<32> value32_4, bit<32> value32_5, bit<32> value32_6, bit<32> value32_7, bit<32> value32_8) {
-        bool hasReturned_2 = false;
+        bool hasReturned_0 = false;
         meta.md.field1_1 = value1_1;
         meta.md.field1_2 = value1_2;
         meta.md.field1_3 = value1_3;
@@ -238,27 +238,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_1 = false;
+        bool hasExited_0 = false;
         dmac.apply();
     }
 }
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_3 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.ethernet);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_4 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_5 = false;
+        bool hasExited_3 = false;
     }
 }
 

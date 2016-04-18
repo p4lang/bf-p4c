@@ -218,43 +218,54 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("nop") action nop() {
-        bool hasReturned_2 = false;
-    }
-    @name("hop") action hop(inout bit<8> ttl, in bit<9> egress_port) {
-        bool hasReturned_3 = false;
-        ttl = ttl + 8w255;
-        meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+        bool hasReturned_0 = false;
     }
     @name("hop_ipv4") action hop_ipv4(bit<9> egress_port) {
-        bool hasReturned_4 = false;
-        hop(hdr.ipv4.ttl, egress_port);
+        bool hasReturned_1 = false;
+        @name("ttl_0") bit<8> ttl_0_0;
+        @name("egress_port_0") bit<9> egress_port_0_0;
+        {
+            ttl_0_0 = hdr.ipv4.ttl;
+            egress_port_0_0 = egress_port;
+            ttl_0_0 = ttl_0_0 + 8w255;
+            meta.ig_intr_md_for_tm.ucast_egress_port = egress_port_0_0;
+            hdr.ipv4.ttl = ttl_0_0;
+        }
     }
     @name("next_hop_ipv4") action next_hop_ipv4(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
-        bool hasReturned_5 = false;
-        hop(hdr.ipv4.ttl, egress_port);
+        bool hasReturned_2 = false;
+        @name("ttl_1") bit<8> ttl_1_0;
+        @name("egress_port_1") bit<9> egress_port_1_0;
+        {
+            ttl_1_0 = hdr.ipv4.ttl;
+            egress_port_1_0 = egress_port;
+            ttl_1_0 = ttl_1_0 + 8w255;
+            meta.ig_intr_md_for_tm.ucast_egress_port = egress_port_1_0;
+            hdr.ipv4.ttl = ttl_1_0;
+        }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
     @name("mod_mac_adr") action mod_mac_adr(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
-        bool hasReturned_6 = false;
+        bool hasReturned_3 = false;
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
     @name("tcp_hdr_rm") action tcp_hdr_rm(bit<9> egress_port) {
-        bool hasReturned_7 = false;
+        bool hasReturned_4 = false;
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.tcp.setValid(false);
         hdr.ipv4.protocol = 8w0;
     }
     @name("udp_hdr_add") action udp_hdr_add(bit<9> egress_port) {
-        bool hasReturned_8 = false;
+        bool hasReturned_5 = false;
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.udp.setValid(true);
         hdr.ipv4.protocol = 8w17;
@@ -350,7 +361,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_1 = false;
+        bool hasExited_0 = false;
         ipv4_routing.apply();
         ipv4_routing_stage_1.apply();
         tcam_tbl_stage_2.apply();
@@ -363,7 +374,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_9 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.ethernet);
         packet.emit(hdr.ipv4);
         packet.emit(hdr.udp);
@@ -373,13 +384,13 @@ control DeparserImpl(packet_out packet, in headers hdr) {
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_10 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_11 = false;
+        bool hasExited_3 = false;
     }
 }
 

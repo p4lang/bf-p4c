@@ -160,24 +160,24 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("action_a") action action_a(bit<16> param0, bit<16> param1, bit<16> param2) {
-        bool hasReturned_1 = false;
+        bool hasReturned_0 = false;
         hdr.pkt.field_e_16 = param0;
         hdr.pkt.field_f_16 = param1;
         hdr.pkt.field_g_16 = param2;
     }
     @name("action_b") action action_b(bit<16> param0) {
-        bool hasReturned_2 = false;
+        bool hasReturned_1 = false;
         hdr.pkt.field_f_16 = param0;
     }
     @name("action_c") action action_c(bit<16> param0) {
-        bool hasReturned_3 = false;
+        bool hasReturned_2 = false;
         hdr.pkt.field_f_16 = param0;
     }
     @name("action_d") action action_d() {
-        bool hasReturned_4 = false;
+        bool hasReturned_3 = false;
     }
     @name("action_e") action action_e() {
-        bool hasReturned_5 = false;
+        bool hasReturned_4 = false;
     }
     @name("table_a") table table_a() {
         actions = {
@@ -240,7 +240,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
         table_a.apply();
         table_b.apply();
         table_c.apply();
@@ -251,26 +251,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_6 = false;
+        bool hasExited_0 = false;
     }
 }
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_7 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.pkt);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_8 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_9 = false;
+        bool hasExited_3 = false;
     }
 }
 

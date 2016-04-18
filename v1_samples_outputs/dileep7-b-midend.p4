@@ -235,24 +235,27 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("nop") action nop() {
-        bool hasReturned_2 = false;
-    }
-    @name("hop") action hop(inout bit<8> ttl, in bit<9> egress_port) {
-        bool hasReturned_3 = false;
-        ttl = ttl + 8w255;
-        meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+        bool hasReturned_0 = false;
     }
     @name("custom_action_3") action custom_action_3(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
-        bool hasReturned_4 = false;
+        bool hasReturned_1 = false;
+        @name("ttl_0") bit<8> ttl_0_0;
+        @name("egress_port_0") bit<9> egress_port_0_0;
         hdr.ipv4.dstAddr = dstIp;
         hdr.ethernet.dstAddr = dstAddr;
-        hop(hdr.ipv4.ttl, egress_port);
+        {
+            ttl_0_0 = hdr.ipv4.ttl;
+            egress_port_0_0 = egress_port;
+            ttl_0_0 = ttl_0_0 + 8w255;
+            meta.ig_intr_md_for_tm.ucast_egress_port = egress_port_0_0;
+            hdr.ipv4.ttl = ttl_0_0;
+        }
     }
     @name("exm_5ways_1Entries_stage_2") table exm_5ways_1Entries_stage_2() {
         actions = {
@@ -268,14 +271,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_1 = false;
+        bool hasExited_0 = false;
+        @name("ttl_0") bit<8> ttl_0_0;
+        @name("egress_port_0") bit<9> egress_port_0_0;
         exm_5ways_1Entries_stage_2.apply();
     }
 }
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_5 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.ethernet);
         packet.emit(hdr.vlan_tag);
         packet.emit(hdr.ipv4);
@@ -286,13 +291,13 @@ control DeparserImpl(packet_out packet, in headers hdr) {
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_6 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_7 = false;
+        bool hasExited_3 = false;
     }
 }
 

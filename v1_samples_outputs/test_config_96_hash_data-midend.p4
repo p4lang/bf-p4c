@@ -161,19 +161,19 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("action_0") action action_0(bit<16> param0) {
-        bool hasReturned_1 = false;
+        bool hasReturned_0 = false;
         hdr.pkt.field_e_16 = param0;
         hash(hdr.pkt.field_a_28, HashAlgorithm.crc32, 32w0, { hdr.pkt.field_a_28, hdr.pkt.field_b_32, hdr.pkt.field_i_8 }, 64w16384);
     }
     @name("action_1") action action_1() {
-        bool hasReturned_2 = false;
+        bool hasReturned_1 = false;
         hash(hdr.pkt.field_l_8, HashAlgorithm.crc16, 16w0, { hdr.pkt.field_c_32, hdr.pkt.field_g_16, hdr.pkt.field_h_16, hdr.pkt.field_k_8 }, 32w256);
     }
     @name("do_nothing") action do_nothing() {
-        bool hasReturned_3 = false;
+        bool hasReturned_2 = false;
     }
     @name("action_2") action action_2(bit<16> param0) {
-        bool hasReturned_4 = false;
+        bool hasReturned_3 = false;
         hdr.pkt.field_h_16 = param0;
     }
     @name("table_0") table table_0() {
@@ -224,7 +224,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
         if (hdr.pkt.isValid()) 
             table_0.apply();
         if (hdr.pkt.isValid()) 
@@ -235,26 +235,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_5 = false;
+        bool hasExited_0 = false;
     }
 }
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_6 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.pkt);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_7 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_8 = false;
+        bool hasExited_3 = false;
     }
 }
 

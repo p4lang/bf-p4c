@@ -193,13 +193,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("do_trill_forward") action do_trill_forward(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
-        bool hasReturned_2 = false;
+        bool hasReturned_0 = false;
         hdr.outer_ethernet.dstAddr = new_mac_da;
         hdr.outer_ethernet.srcAddr = new_mac_sa;
         hdr.vlan_tag.vid = new_vlan_id;
@@ -207,11 +207,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.m.hopCount = hdr.trill.hopCount;
     }
     @name("do_trill_forward_1") action do_trill_forward_1() {
-        bool hasReturned_3 = false;
+        bool hasReturned_1 = false;
         meta.m.hopCount = meta.m.hopCount + 6w63;
     }
     @name("do_trill_forward_2") action do_trill_forward_2() {
-        bool hasReturned_4 = false;
+        bool hasReturned_2 = false;
         hdr.trill.hopCount = meta.m.hopCount;
     }
     @name("trill_forward") table trill_forward() {
@@ -242,7 +242,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_1 = false;
+        bool hasExited_0 = false;
         switch (trill_forward.apply().action_run) {
             do_trill_forward: {
                 trill_forward_1.apply();
@@ -255,7 +255,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_5 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.outer_ethernet);
         packet.emit(hdr.vlan_tag);
         packet.emit(hdr.trill);
@@ -265,13 +265,13 @@ control DeparserImpl(packet_out packet, in headers hdr) {
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_6 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_7 = false;
+        bool hasExited_3 = false;
     }
 }
 

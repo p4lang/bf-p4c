@@ -177,29 +177,29 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("do_new_cfi") action do_new_cfi() {
-        bool hasReturned_2 = false;
+        bool hasReturned_0 = false;
         hdr.vlan_tag.cfi = meta.meta.new_cfi;
     }
     @name("do_new_pri") action do_new_pri() {
-        bool hasReturned_3 = false;
+        bool hasReturned_1 = false;
         hdr.vlan_tag.pri = meta.meta.new_pri;
     }
     @name("do_new_tpid") action do_new_tpid() {
-        bool hasReturned_4 = false;
+        bool hasReturned_2 = false;
         hdr.ethernet.ethertype = meta.meta.new_tpid;
     }
     @name("do_new_vid") action do_new_vid() {
-        bool hasReturned_5 = false;
+        bool hasReturned_3 = false;
         hdr.vlan_tag.vid = meta.meta.new_vid;
     }
     @name("rewrite_tag") action rewrite_tag(bit<16> new_tpid, bit<1> new_tpid_en, bit<3> new_pri, bit<1> new_pri_en, bit<1> new_cfi, bit<1> new_cfi_en, bit<12> new_vid, bit<1> new_vid_en) {
-        bool hasReturned_6 = false;
+        bool hasReturned_4 = false;
         meta.meta.new_tpid = new_tpid;
         meta.meta.new_tpid_en = new_tpid_en;
         meta.meta.new_pri = new_pri;
@@ -253,7 +253,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_1 = false;
+        bool hasExited_0 = false;
         switch (vlan_xlate.apply().action_run) {
             rewrite_tag: {
                 if (meta.meta.new_tpid_en == 1w1) 
@@ -272,7 +272,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_7 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.ethernet);
         packet.emit(hdr.vlan_tag);
     }
@@ -280,13 +280,13 @@ control DeparserImpl(packet_out packet, in headers hdr) {
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_8 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_9 = false;
+        bool hasExited_3 = false;
     }
 }
 

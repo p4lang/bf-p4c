@@ -160,31 +160,31 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("action_0") action action_0(bit<8> my_param_a) {
-        bool hasReturned_1 = false;
+        bool hasReturned_0 = false;
         hdr.pkt.field_a = my_param_a;
     }
     @name("action_1") action action_1(bit<16> my_param_c) {
-        bool hasReturned_2 = false;
+        bool hasReturned_1 = false;
         hdr.pkt.field_c = my_param_c;
     }
     @name("action_2") action action_2(bit<32> my_param_e) {
-        bool hasReturned_3 = false;
+        bool hasReturned_2 = false;
         hdr.pkt.field_e = my_param_e;
     }
     @name("action_3") action action_3(bit<32> my_param_f, bit<32> my_param_g) {
-        bool hasReturned_4 = false;
+        bool hasReturned_3 = false;
         hdr.pkt.field_f = my_param_f;
         hdr.pkt.field_g = my_param_g;
     }
     @name("action_4") action action_4(bit<32> my_param_h, bit<32> my_param_i, bit<32> my_param_j, bit<32> my_param_k) {
-        bool hasReturned_5 = false;
+        bool hasReturned_4 = false;
         hdr.pkt.field_h = my_param_h;
         hdr.pkt.field_i = my_param_i;
         hdr.pkt.field_j = my_param_j;
         hdr.pkt.field_k = my_param_k;
     }
     @name("action_5") action action_5(bit<32> my_param_h, bit<32> my_param_i, bit<32> my_param_j, bit<32> my_param_k, bit<32> my_param_l) {
-        bool hasReturned_6 = false;
+        bool hasReturned_5 = false;
         hdr.pkt.field_h = my_param_h;
         hdr.pkt.field_i = my_param_i;
         hdr.pkt.field_j = my_param_j;
@@ -209,33 +209,33 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
         table_0.apply();
     }
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_7 = false;
+        bool hasExited_0 = false;
     }
 }
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_8 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.pkt);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_9 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_10 = false;
+        bool hasExited_3 = false;
     }
 }
 

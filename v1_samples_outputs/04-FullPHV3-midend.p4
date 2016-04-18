@@ -377,25 +377,25 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("a1") action a1() {
-        bool hasReturned_2 = false;
+        bool hasReturned_0 = false;
     }
     @name("a2") action a2() {
-        bool hasReturned_3 = false;
+        bool hasReturned_1 = false;
     }
     @name("a3") action a3() {
-        bool hasReturned_4 = false;
+        bool hasReturned_2 = false;
     }
     @name("a4") action a4() {
-        bool hasReturned_5 = false;
+        bool hasReturned_3 = false;
     }
     @name("a5") action a5() {
-        bool hasReturned_6 = false;
+        bool hasReturned_4 = false;
     }
     @name("t1") table t1() {
         actions = {
@@ -667,7 +667,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_1 = false;
+        bool hasExited_0 = false;
         t1.apply();
         t2.apply();
         t3.apply();
@@ -678,20 +678,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_7 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.ethernet);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_8 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_9 = false;
+        bool hasExited_3 = false;
     }
 }
 

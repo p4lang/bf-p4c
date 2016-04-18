@@ -169,76 +169,76 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("nop") action nop() {
-        bool hasReturned_2 = false;
+        bool hasReturned_0 = false;
     }
     @name("action_1_1") action action_1_1() {
-        bool hasReturned_3 = false;
+        bool hasReturned_1 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_1;
     }
     @name("action_1_2") action action_1_2() {
-        bool hasReturned_4 = false;
+        bool hasReturned_2 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_2;
     }
     @name("action_1_3") action action_1_3() {
-        bool hasReturned_5 = false;
+        bool hasReturned_3 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_3;
     }
     @name("action_1_4") action action_1_4() {
-        bool hasReturned_6 = false;
+        bool hasReturned_4 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_4;
     }
     @name("action_1_5") action action_1_5() {
-        bool hasReturned_7 = false;
+        bool hasReturned_5 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_5;
     }
     @name("action_1_6") action action_1_6() {
-        bool hasReturned_8 = false;
+        bool hasReturned_6 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_6;
     }
     @name("action_1_7") action action_1_7() {
-        bool hasReturned_9 = false;
+        bool hasReturned_7 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_7;
     }
     @name("action_1_8") action action_1_8() {
-        bool hasReturned_10 = false;
+        bool hasReturned_8 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_8;
     }
     @name("action_1_9") action action_1_9() {
-        bool hasReturned_11 = false;
+        bool hasReturned_9 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_9;
     }
     @name("action_1_10") action action_1_10() {
-        bool hasReturned_12 = false;
+        bool hasReturned_10 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_10;
     }
     @name("action_1_11") action action_1_11() {
-        bool hasReturned_13 = false;
+        bool hasReturned_11 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_11;
     }
     @name("action_1_12") action action_1_12() {
-        bool hasReturned_14 = false;
+        bool hasReturned_12 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_12;
     }
     @name("action_1_13") action action_1_13() {
-        bool hasReturned_15 = false;
+        bool hasReturned_13 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_13;
     }
     @name("action_1_14") action action_1_14() {
-        bool hasReturned_16 = false;
+        bool hasReturned_14 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_14;
     }
     @name("action_1_15") action action_1_15() {
-        bool hasReturned_17 = false;
+        bool hasReturned_15 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_15;
     }
     @name("action_1_16") action action_1_16() {
-        bool hasReturned_18 = false;
+        bool hasReturned_16 = false;
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_16;
     }
     @name("t1") table t1() {
@@ -269,27 +269,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_1 = false;
+        bool hasExited_0 = false;
         t1.apply();
     }
 }
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_19 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.ethernet);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_20 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_21 = false;
+        bool hasExited_3 = false;
     }
 }
 

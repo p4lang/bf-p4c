@@ -157,25 +157,25 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_0 = false;
+        bool hasExited = false;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("action1") action action1() {
-        bool hasReturned_2 = false;
+        bool hasReturned_0 = false;
         meta.ing_metadata.field1 = 1w1;
     }
     @name("action2") action action2() {
-        bool hasReturned_3 = false;
+        bool hasReturned_1 = false;
         meta.ing_metadata.field2 = 1w1;
     }
     @name("action3") action action3() {
-        bool hasReturned_4 = false;
+        bool hasReturned_2 = false;
         meta.ing_metadata.field3 = 1w1;
     }
     @name("action4") action action4(bit<48> newAddr) {
-        bool hasReturned_5 = false;
+        bool hasReturned_3 = false;
         hdr.ethernet.srcAddr = newAddr;
     }
     @name("table1") table table1() {
@@ -224,7 +224,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
 
     apply {
-        bool hasReturned_1 = false;
+        bool hasExited_0 = false;
         switch (table1.apply().action_run) {
             action1: {
                 table2.apply();
@@ -240,20 +240,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasReturned_6 = false;
+        bool hasExited_1 = false;
         packet.emit(hdr.ethernet);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasReturned_7 = false;
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasReturned_8 = false;
+        bool hasExited_3 = false;
     }
 }
 
