@@ -45,7 +45,7 @@ action action_1(){
 register sampling_cntr {
     width : 32;
     static: table_0;
-    instance_count : 192512; /* Fills 47 + 1 spare RAMs (max size) */
+    instance_count : 139264; /* Fills 34 + 1 spare RAMs (max size - 1) */
 }
 
 /* Note the extra complexity of this ALU program is required so that if C2C was

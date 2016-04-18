@@ -42,8 +42,9 @@ parser parse_ethernet {
 }
 
 register stateful_cntr_1{
-    width : 16;
+    width : 32;
     direct : match_cntr_1;
+    //attributes: signed, saturating;
     /* instance_count : 8192; */
 }
 
@@ -67,6 +68,7 @@ blackbox stateful_alu cntr_1 {
 }
 
 action cnt_1() {
+    /* cntr_1.execute_stateful_alu(pkt.field_i_8); */
     cntr_1.execute_stateful_alu();
 }
 

@@ -51,7 +51,7 @@ blackbox stateful_alu sampler_alu {
     condition_lo: register_lo == 10;  /* sample limit */
     update_lo_1_predicate: condition_lo;
     update_lo_1_value: 1;
-    update_lo_2_predicate: !condition_lo;
+    update_lo_2_predicate: not condition_lo;
     update_lo_2_value:  register_lo + 1;
     output_predicate: condition_lo;
     output_value : alu_lo;

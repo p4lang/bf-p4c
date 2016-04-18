@@ -34,12 +34,12 @@ parser parse_ethernet {
 }
 
 action action_0(param0){
-    modify_field_from_rng(pkt.field_a_32, 16);
+    modify_field_rng_uniform(pkt.field_a_32, 0, 65535);
     modify_field(pkt.field_e_16, param0); 
 }
 
 action action_1(){
-    modify_field_from_rng(pkt.field_d_32, 24, 0xffffff00);
+    modify_field_rng_uniform(pkt.field_d_32, 0, 0xffffff);
 }
 
 action do_nothing(){}

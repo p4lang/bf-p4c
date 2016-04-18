@@ -94,6 +94,24 @@ table table_1 {
     reads {
         pkt.field_g_16 : exact;
         pkt.color_0 : exact;
+
+        meta.field_a0_1 : exact;
+        meta.field_a1_1 : exact;
+        meta.field_a2_1 : exact;
+        meta.field_a3_1 : exact;
+
+        meta.field_b_4 : exact;
+        meta.field_c_4 : exact;
+        meta.field_d_4 : exact;
+        meta.field_e_4 : exact;
+        meta.field_f_4 : exact;
+        meta.field_g_4 : exact;
+
+        meta.field_h0_1 : exact;
+        meta.field_h1_1 : exact;
+        meta.field_h2_1 : exact;
+        meta.field_h3_1 : exact;
+
     }
     actions {
         action_1;

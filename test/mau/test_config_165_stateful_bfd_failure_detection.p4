@@ -59,7 +59,8 @@ parser parse_ipv4 {
 
 register bfd_cnt {
     width : 8;
-    direct : bfd;
+    /* direct : bfd; */
+    instance_count : 1024;
 }
 
 blackbox stateful_alu bfd_cnt_rx_alu {

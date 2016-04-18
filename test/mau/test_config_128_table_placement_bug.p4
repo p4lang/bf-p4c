@@ -60,9 +60,11 @@ table table_0 {
     size : 1024;
 }
 
+//@pragma no_versioning 1
 table table_1 {
     reads {
         pkt.field_e_16: exact;
+        pkt.field_f_16 mask 0xfffc : exact;
     }
     actions {
        action_1;
@@ -72,12 +74,28 @@ table table_1 {
     size : 1024;
 }
 
+table table_2 {
+    reads {
+        pkt.field_i_8: ternary;
+    }
+    actions {
+       do_nothing;
+
+    }
+    size : 256;
+}
+
+
 /* Main control flow */
 
 control ingress {
       if (valid(pkt)){
           apply(table_0);
       } else {
-          apply(table_1);
+          apply(table_1) {
+              action_1 {
+                  apply(table_2);
+              }
+          }
       }
 }

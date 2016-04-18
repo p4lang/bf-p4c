@@ -46,8 +46,8 @@ parser parse_ethernet {
 @pragma stateful_table_counter table_hit
 register port_liveness_update {
     width : 1;
-    direct : port_liveness_update_match_tbl;
-    /* instance_count : 65536; */
+    /* direct : port_liveness_update_match_tbl; */
+    instance_count : 65536;
 }
 
 blackbox stateful_alu make_port_live {

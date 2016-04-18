@@ -1,4 +1,6 @@
 #include "tofino/intrinsic_metadata.p4"
+#include "tofino/wred_blackbox.p4"
+#include "tofino/lpf_blackbox.p4"
 
 /* Sample P4 program */
 header_type pkt_t {
@@ -39,6 +41,7 @@ header pkt_t pkt;
 parser parse_ethernet {
     extract(pkt);
     return ingress;
+    //return ACCEPT;
 }
 
 @pragma meter_per_flow_enable 1
@@ -62,20 +65,17 @@ meter meter_1 {
     instance_count : 500;
 }
 
-meter meter_2 {
-    type : bytes;
+blackbox wred meter_2 {
+    wred_input: pkt.pre_color_2;
     direct : table_2;
-    result : pkt.color_2;
-    pre_color : pkt.pre_color_2;
-    implementation : red;
+    drop_value : 127;
+    no_drop_value : 63;
 }
 
-meter meter_3 {
-    type : bytes;
-    direct : table_3;
-    result : pkt.color_3;
-    //pre_color : pkt.pre_color_3;
-    implementation : lpf;
+
+blackbox lpf meter_3 {
+   filter_input : pkt.pre_color_3;
+   direct : table_3;
 }
 
 
@@ -95,8 +95,16 @@ action do_nothing(){
     no_op();
 }
 
+action do_nothing_2(){
+   meter_2.execute(pkt.pre_color_2);
+}
 
-// @pragma include_stash 1
+action do_nothing_3(){
+   meter_3.execute(pkt.color_3);
+}
+
+
+@pragma include_stash 1
 table table_0 {
     reads {
         pkt.field_e_16 : ternary;
@@ -119,7 +127,7 @@ table table_0 {
 
 //@pragma include_idletime 1
 @pragma idletime_two_way_notification 1
-// @pragma include_stash 1
+@pragma include_stash 1
 table table_1 {
     reads {
         pkt.field_e_16: exact;
@@ -136,7 +144,7 @@ table table_2 {
         pkt.field_e_16: ternary;
     }
     actions {
-       do_nothing;
+       do_nothing_2;
     }
     size : 512;
 }
@@ -146,7 +154,7 @@ table table_3 {
         pkt.field_e_16: ternary;
     }
     actions {
-       do_nothing;
+       do_nothing_3;
     }
     size : 512;
 }

@@ -185,7 +185,7 @@ action set_hash_1_and_2(){
 }
 
 action set_hash_3(){
-    modify_field_with_hash_based_offset(meta.hash_3, 0, hash_3, 4294967295);//4096);
+    modify_field_with_hash_based_offset(meta.hash_3, 0, hash_3, 4294967296);//4096);
 }
 
 action drop_me(){

@@ -29,7 +29,7 @@ field_list_calculation sel_hash {
         sel_fields;
     }
     algorithm : crc16;
-    output_width : 14;
+    output_width : 16;
 }
 
 action_selector sel {
@@ -37,7 +37,7 @@ action_selector sel {
     selection_mode : fair;
 }
 
-action noop() { }
+action noop(param0) { modify_field(data.b1, param0); }
 
 action_profile sel_profile {
     actions {

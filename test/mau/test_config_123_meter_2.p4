@@ -42,9 +42,9 @@ meter meter_0 {
     type : bytes;
     //static : table_0;
     direct : table_0;
-    result : pkt.lpf;  // Over-loading the meaning of result to be the input and output
+    result : pkt.color_0;  // Over-loading the meaning of result to be the input and output
     //instance_count : 500;
-    implementation : lpf;
+    //implementation : red;
 }
 
 
@@ -89,7 +89,7 @@ table table_0 {
     }
     actions {
         action_0;
-        do_nothing;
+        //do_nothing;
     }
     size : 6000;
 }
