@@ -313,9 +313,12 @@ void Stage::write_regs() {
     }
     /* FIXME -- need to set based on interstage dependencies */
     regs.dp.phv_fifo_enable.phv_fifo_ingress_action_output_enable = stage_dep[INGRESS] != ACTION_DEP;
-    regs.dp.phv_fifo_enable.phv_fifo_ingress_final_output_enable = stage_dep[INGRESS] == ACTION_DEP;
     regs.dp.phv_fifo_enable.phv_fifo_egress_action_output_enable = stage_dep[EGRESS] != ACTION_DEP;
-    regs.dp.phv_fifo_enable.phv_fifo_egress_final_output_enable = stage_dep[EGRESS] == ACTION_DEP;
+    if (stageno != AsmStage::numstages()-1) {
+        regs.dp.phv_fifo_enable.phv_fifo_ingress_final_output_enable =
+            this[1].stage_dep[INGRESS] == ACTION_DEP;
+        regs.dp.phv_fifo_enable.phv_fifo_egress_final_output_enable =
+            this[1].stage_dep[EGRESS] == ACTION_DEP; }
     bitvec in_use = match_use[INGRESS] | action_use[INGRESS] | action_set[INGRESS];
     bitvec eg_use = match_use[EGRESS] | action_use[EGRESS] | action_set[EGRESS];
     if (options.match_compiler) {

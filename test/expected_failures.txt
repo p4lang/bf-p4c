@@ -1,10 +1,6 @@
 - current compiler failures on some tests.
 10-AssignChooseSource.p4 mismatch
 acl1.p4 mismatch
-exact_match9.p4 mismatch
-gateway2.p4 compile
-gateway3.p4 compile
-gateway5.p4 compile
 hash_index5.p4 mismatch
 proxy_hash1.p4 tfas
 selector0.p4 compile

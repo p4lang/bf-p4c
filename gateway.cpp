@@ -340,11 +340,24 @@ void GatewayTable::write_regs() {
             xbar_ctl.tind_logical_select = logical_id;
             xbar_ctl.tind_inhibit_enable = 1; }
     } else {
-        if (gress == EGRESS)
-            stage->regs.dp.imem_table_addr_egress |= 1 << logical_id;
         merge.predication_ctl[gress].table_thread |= 1 << logical_id;
+        if (gress) {
+            stage->regs.dp.imem_table_addr_egress |= 1 << logical_id;
+            merge.logical_table_thread[0].logical_table_thread_egress |= 1 << logical_id;
+            merge.logical_table_thread[1].logical_table_thread_egress |= 1 << logical_id;
+            merge.logical_table_thread[2].logical_table_thread_egress |= 1 << logical_id;
+        } else {
+            merge.logical_table_thread[0].logical_table_thread_ingress |= 1 << logical_id;
+            merge.logical_table_thread[1].logical_table_thread_ingress |= 1 << logical_id;
+            merge.logical_table_thread[2].logical_table_thread_ingress |= 1 << logical_id; }
+        auto &adrdist = stage->regs.rams.match.adrdist;
+        adrdist.adr_dist_table_thread[gress][0] |= 1 << logical_id;
+        adrdist.adr_dist_table_thread[gress][1] |= 1 << logical_id;
         if (layout.size() > 1)
-            payload_write_regs(layout[1].row, layout[1].bus >> 1, layout[1].bus & 1); }
+            payload_write_regs(layout[1].row, layout[1].bus >> 1, layout[1].bus & 1);
+        // FIXME -- allow table_counter on standalone gateay?  What can it count?
+        if (options.match_compiler)
+            merge.mau_table_counter_ctl[logical_id/8U].set_subfield(4, 3 * (logical_id%8U), 3); }
 }
 
 void GatewayTable::gen_tbl_cfg(json::vector &out) {
