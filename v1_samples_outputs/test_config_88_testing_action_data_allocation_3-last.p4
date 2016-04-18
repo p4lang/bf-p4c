@@ -272,11 +272,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             action_13;
             action_14;
             action_15;
+            NoAction;
         }
         key = {
             hdr.pkt.field_b_32: exact;
         }
         size = 1024;
+        default_action = NoAction();
     }
 
     apply {

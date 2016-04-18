@@ -183,27 +183,33 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing;
             action_0;
+            NoAction;
         }
         key = {
             hdr.pkt.field_i_8: exact;
         }
         size = 256;
+        default_action = NoAction();
     }
 
     @name("table_1") table table_1() {
         actions = {
             action_1;
+            NoAction;
         }
         key = {
             hdr.pkt.field_g_16: exact;
         }
         size = 65536;
+        default_action = NoAction();
     }
 
     @name("table_2") table table_2() {
         actions = {
             action_2;
+            NoAction;
         }
+        default_action = NoAction();
     }
 
     apply {

@@ -201,10 +201,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("trill_forward") table trill_forward() {
         actions = {
             forward_trill;
+            NoAction;
         }
         key = {
             hdr.trill.egressRbridge: exact;
         }
+        default_action = NoAction();
     }
 
     apply {

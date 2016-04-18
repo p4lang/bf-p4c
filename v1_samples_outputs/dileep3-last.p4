@@ -235,10 +235,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             hop_ipv4;
+            NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
         }
+        default_action = NoAction();
     }
 
     apply {

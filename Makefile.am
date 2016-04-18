@@ -233,5 +233,4 @@ XFAIL_TESTS += \
     v1to12/%reldir%/v1_samples/test_config_170_stateful_selection_table_update.p4.test \
     v1to12/%reldir%/v1_samples/test_config_171_stateful_conga.p4.test \
     v1to12/%reldir%/v1_samples/test_config_172_stateful_heavy_hitter.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_173_stateful_bloom_filter.p4.test \
-    v1to12/%reldir%/v1_samples/vk_basic_ipv4_subset.p4.test
+    v1to12/%reldir%/v1_samples/test_config_173_stateful_bloom_filter.p4.test

@@ -178,6 +178,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_0") table table_0() {
         actions = {
             action_0_0;
+            NoAction;
         }
         key = {
             hdr.pkt.field_e_16: ternary;
@@ -185,6 +186,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.color_1   : exact;
         }
         size = 6000;
+        default_action = NoAction();
         meters = meter_0;
     }
 
@@ -192,11 +194,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing;
             action_1;
+            NoAction;
         }
         key = {
             hdr.pkt.field_e_16: exact;
         }
         size = 32768;
+        default_action = NoAction();
     }
 
     apply {

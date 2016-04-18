@@ -315,11 +315,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             set_field32_5;
             set_field32_6;
             set_field32_7;
+            NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 32768;
+        default_action = NoAction();
     }
 
     @name("dmac2") table dmac2() {
@@ -355,11 +357,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             set_field32_5;
             set_field32_6;
             set_field32_7;
+            NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 32768;
+        default_action = NoAction();
     }
 
     apply {

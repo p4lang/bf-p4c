@@ -162,6 +162,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             modify_b;
             just_no_op;
+            NoAction;
         }
         key = {
             hdr.my_test_config_1.a_32    : lpm;
@@ -170,6 +171,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.my_test_config_1.c_8     : ternary;
         }
         max_size = 2048;
+        default_action = NoAction();
     }
 
     apply {

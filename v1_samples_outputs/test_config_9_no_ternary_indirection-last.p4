@@ -189,21 +189,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_0") table table_0() {
         actions = {
             action_0;
+            NoAction;
         }
         key = {
             hdr.ethernet.etherType: ternary;
         }
         max_size = 4096;
+        default_action = NoAction();
     }
 
     @name("table_1") table table_1() {
         actions = {
             action_1;
+            NoAction;
         }
         key = {
             hdr.ethernet.etherType: ternary;
         }
         max_size = 4096;
+        default_action = NoAction();
     }
 
     apply {

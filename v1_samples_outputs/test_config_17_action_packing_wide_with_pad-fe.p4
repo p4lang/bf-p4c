@@ -188,10 +188,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_0;
             action_1;
+            NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
         }
+        default_action = NoAction();
     }
 
     apply {

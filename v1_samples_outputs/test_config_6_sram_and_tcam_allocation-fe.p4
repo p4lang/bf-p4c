@@ -189,10 +189,12 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             eg_drop;
             permit;
+            NoAction;
         }
         key = {
             meta.routing_metadata.drop: ternary;
         }
+        default_action = NoAction();
     }
 
     apply {
@@ -223,23 +225,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing;
             l3_set_index;
+            NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
         }
         max_size = 16384;
+        default_action = NoAction();
     }
 
     @name("ipv4_routing") table ipv4_routing() {
         actions = {
             ig_drop;
             hop_ipv4;
+            NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
             hdr.ipv4.srcAddr: exact;
         }
         max_size = 2048;
+        default_action = NoAction();
     }
 
     apply {

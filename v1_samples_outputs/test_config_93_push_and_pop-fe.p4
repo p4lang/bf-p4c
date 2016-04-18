@@ -179,11 +179,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             push_action;
             pop_action;
+            NoAction;
         }
         key = {
             hdr.pkt.field_a_32: exact;
         }
         size = 1024;
+        default_action = NoAction();
     }
 
     apply {

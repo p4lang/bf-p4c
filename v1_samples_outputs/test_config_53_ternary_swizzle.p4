@@ -158,11 +158,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_0") table table_0() {
         actions = {
             action_0;
+            NoAction;
         }
         key = {
             hdr.test.field_a      : ternary;
             hdr.test.field_b[15:8]: ternary;
         }
+        default_action = NoAction();
     }
 
     apply {

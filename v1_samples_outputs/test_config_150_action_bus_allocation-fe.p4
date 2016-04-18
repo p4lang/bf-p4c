@@ -182,11 +182,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             action_0;
             action_1;
             action_2;
+            NoAction;
         }
         key = {
             hdr.pkt.field_c_32: ternary;
         }
         size = 512;
+        default_action = NoAction();
     }
 
     @name("table_1") table table_1() {
@@ -194,11 +196,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             action_3;
             action_4;
             action_5;
+            NoAction;
         }
         key = {
             hdr.pkt.field_d_32: ternary;
         }
         size = 512;
+        default_action = NoAction();
     }
 
     apply {

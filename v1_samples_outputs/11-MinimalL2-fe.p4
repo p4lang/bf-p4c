@@ -170,22 +170,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             set_egress_port;
+            NoAction;
         }
         key = {
             hdr.l2_metadata.bd  : exact;
             hdr.ethernet.dstAddr: exact;
         }
         size = 131072;
+        default_action = NoAction();
     }
 
     @name("port_bd") table port_bd() {
         actions = {
             set_bd;
+            NoAction;
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact;
         }
         size = 288;
+        default_action = NoAction();
     }
 
     apply {

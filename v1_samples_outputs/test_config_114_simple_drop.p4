@@ -167,10 +167,12 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             action_1;
             nop;
+            NoAction;
         }
         key = {
             hdr.pkt.field_d: exact;
         }
+        default_action = NoAction();
     }
 
     apply {
@@ -189,11 +191,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_0;
             nop;
+            NoAction;
         }
         key = {
             hdr.pkt.field_b: exact;
         }
         size = 256000;
+        default_action = NoAction();
     }
 
     apply {

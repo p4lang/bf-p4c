@@ -200,22 +200,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_0") table table_0() {
         actions = {
             action_0;
+            NoAction;
         }
         key = {
             meta.ig_intr_md.ingress_port: exact;
         }
         size = 128;
+        default_action = NoAction();
     }
 
     @name("table_1") table table_1() {
         actions = {
             action_1;
+            NoAction;
         }
         key = {
             hdr.pkt.field_g_16: exact;
             hdr.pkt.color_0   : exact;
         }
         size = 65536;
+        default_action = NoAction();
     }
 
     apply {

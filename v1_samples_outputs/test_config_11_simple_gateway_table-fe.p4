@@ -189,34 +189,40 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_0;
             do_nothing;
+            NoAction;
         }
         key = {
             hdr.ethernet.etherType: lpm;
         }
         max_size = 1024;
+        default_action = NoAction();
     }
 
     @name("table_1") table table_1() {
         actions = {
             action_1;
             do_nothing;
+            NoAction;
         }
         key = {
             hdr.ipv4.srcAddr: exact;
             hdr.ipv4.dstAddr: exact;
         }
         max_size = 16384;
+        default_action = NoAction();
     }
 
     @name("table_2") table table_2() {
         actions = {
             action_2;
             do_nothing;
+            NoAction;
         }
         key = {
             hdr.ipv4.srcAddr: exact;
         }
         max_size = 4096;
+        default_action = NoAction();
     }
 
     apply {
