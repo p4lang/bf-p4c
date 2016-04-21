@@ -57,6 +57,14 @@ const PhvInfo::Info *PhvInfo::field(const IR::Expression *e, Info::bitrange *bit
         return field(hsr, bits);
     if (auto *fr = e->to<IR::Member>())
         return field(fr, bits);
+    if (auto *sl = e->to<IR::Slice>()) {
+        auto *rv = field(sl->e0, bits);
+        if (rv && bits) {
+            bits->lo += sl->getL();
+            int width = sl->getH() - sl->getL() + 1;
+            assert(bits->hi >= bits->lo + width - 1);
+            bits->hi = bits->lo + width - 1; }
+        return rv; }
     return 0;
 }
 
