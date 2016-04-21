@@ -155,8 +155,14 @@ class GetTofinoTables : public Inspector {
       error("%s: Can only switch on table.apply().action_run", s->expression->srcInfo);
       return; }
     auto tt = tables[s] = tables.at(exp->expr);
-    for (auto c : *s->cases)
-      tt->next[c->label] = seqs.at(c->statement); }
+    for (auto c : *s->cases) {
+        cstring label;
+        if (c->label->is<IR::DefaultExpression>())
+            label = "default";
+        else
+            label = c->label->to<IR::PathExpression>()->path->name.name;
+        tt->next[label] = seqs.at(c->statement); }}
+    
 
   bool preorder(const IR::NamedCond *c) override {
     if (!tables.count(c))

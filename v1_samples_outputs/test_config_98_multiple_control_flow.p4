@@ -229,7 +229,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
 
-    pipe_0() pipe_0_0;
+    pipe_0() @name("pipe_0") pipe_0_0;
     apply {
         table_0.apply();
         pipe_0_0.apply(hdr, meta, standard_metadata);
