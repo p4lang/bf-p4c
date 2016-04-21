@@ -187,6 +187,29 @@ void GetTofinoParser::addMatch(IR::Tofino::ParserState *s, match_t match_val,
     error("%s: No definition for %s", action.srcInfo, action); }
 }
 
+static match_t buildListMatch(const IR::Vector<IR::Expression> *list) {
+  match_t     rv;
+  for (auto el : *list) {
+    int width = el->type->width_bits();
+    rv.word0 <<= width;
+    rv.word1 <<= width;
+    uintmax_t mask = -1, v;
+    mask = ~(mask << width);
+    if (auto k = el->to<IR::Constant>()) {
+      v = k->asLong();
+    } else if (auto mval = el->to<IR::Mask>()) {
+      v = mval->right->to<IR::Constant>()->asLong();
+      rv.word0 |= mask & ~v;
+      rv.word1 |= mask & ~v;
+      mask &= v;
+      v = mval->left->to<IR::Constant>()->asLong();
+    } else {
+      BUG("Invalid select case expression %1%", el); }
+    rv.word0 |= mask & ~v;
+    rv.word1 |= mask & v; }
+  return rv;
+}
+
 IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctxt) {
   if (states.count(name) == 0) return nullptr;
   if (ctxt && ctxt->depth >= 256) return nullptr;
@@ -239,6 +262,8 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
           addMatch(rv, match_t(match_size, mask->left->to<IR::Constant>()->asLong(),
                                            mask->right->to<IR::Constant>()->asLong()),
                    *stmts, ce->state->path->name, ctxt);
+        else if (auto list = ce->keyset->to<IR::ListExpression>())
+          addMatch(rv, buildListMatch(list->components), *stmts, ce->state->path->name, ctxt);
         else
           BUG("Invalid select case expression %1%", ce); }
     } else if (v1_2->selectExpression) {

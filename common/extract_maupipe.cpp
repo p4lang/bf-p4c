@@ -10,6 +10,8 @@
 #include "tofino/parde/extract_parser.h"
 #include "lib/algorithm.h"
 #include "lib/error.h"
+#include "blockmap.h"
+#include "rewrite.h"
 
 class FindAttached : public Inspector {
   map<cstring, vector<const IR::Attached *>>    &attached;
@@ -41,6 +43,21 @@ struct AttachTables : public Modifier {
     program->apply(FindAttached(attached)); }
 };
 
+static const IR::MethodCallExpression *isApplyHit(const IR::Expression *e, bool *lnot = 0) {
+  if (auto *n = e->to<IR::LNot>()) {
+    e = n->expr;
+    if (lnot) *lnot = true;
+  } else if (lnot)
+    *lnot = false;
+  if (auto *mem = e->to<IR::Member>()) {
+    if (mem->member != "hit") return nullptr;
+    if (auto *mc = mem->expr->to<IR::MethodCallExpression>()) {
+      mem = mc->method->to<IR::Member>();
+      if (mem && mem->member == "apply")
+        return mc; } }
+  return nullptr;
+}
+
 class GetTofinoTables : public Inspector {
   const IR::V1Program                          *program;
   const P4::BlockMap                           *blockMap;
@@ -48,6 +65,10 @@ class GetTofinoTables : public Inspector {
   IR::Tofino::Pipe                              *pipe;
   map<const IR::Node *, IR::MAU::Table *>       tables;
   map<const IR::Node *, IR::MAU::TableSeq *>    seqs;
+  IR::MAU::TableSeq *getseq(const IR::Node *n) {
+    if (!seqs.count(n) && tables.count(n))
+        seqs[n] = new IR::MAU::TableSeq(tables.at(n));
+    return seqs.at(n); }
 
  public:
   GetTofinoTables(const IR::V1Program *gl, gress_t gr, IR::Tofino::Pipe *p)
@@ -92,6 +113,7 @@ class GetTofinoTables : public Inspector {
   }
 
   bool preorder(const IR::Vector<IR::Declaration> *) override { return false; }
+  bool preorder(const IR::P4Table *) override { return false; }
 
   bool preorder(const IR::Vector<IR::Expression> *v) override {
     assert(!seqs.count(v));
@@ -132,9 +154,9 @@ class GetTofinoTables : public Inspector {
             name = "$miss";
           else if (name != "default")
             error("%s: no action %s in table %s", a->srcInfo, name, tt->name); }
-      tt->next[name] = seqs.at(act.second); } }
+      tt->next[name] = getseq(act.second); } }
   bool preorder(const IR::MethodCallExpression *m) override {
-      auto mi = P4::MethodInstance::resolve(m, blockMap->refMap, blockMap->typeMap, true);
+    auto mi = P4::MethodInstance::resolve(m, blockMap->refMap, blockMap->typeMap, true);
     if (!mi || !mi->isApply())
       BUG("Method Call %1% not apply", m);
     auto table = mi->object->to<IR::P4Table>();
@@ -161,9 +183,8 @@ class GetTofinoTables : public Inspector {
             label = "default";
         else
             label = c->label->to<IR::PathExpression>()->path->name.name;
-        tt->next[label] = seqs.at(c->statement); }}
+        tt->next[label] = getseq(c->statement); } }
     
-
   bool preorder(const IR::NamedCond *c) override {
     if (!tables.count(c))
       tables[c] = new IR::MAU::Table(c->name, gress, c->pred);
@@ -172,32 +193,39 @@ class GetTofinoTables : public Inspector {
     return true; }
   void postorder(const IR::NamedCond *c) override {
     if (c->ifTrue)
-      tables.at(c)->next["true"] = seqs.at(c->ifTrue);
+      tables.at(c)->next["true"] = getseq(c->ifTrue);
     if (c->ifFalse)
-      tables.at(c)->next["false"] = seqs.at(c->ifFalse); }
+      tables.at(c)->next["false"] = getseq(c->ifFalse); }
   bool preorder(const IR::If *) override {
     BUG("unnamed condition in control flow"); }
   bool preorder(const IR::IfStatement *c) {
-    static int uid = 0;
-    char buf[16];
-    snprintf(buf, sizeof(buf), "cond-%d", ++uid);
-    tables[c] = new IR::MAU::Table(buf, gress, c->condition);
+    if (!isApplyHit(c->condition)) {
+      static int uid = 0;
+      char buf[16];
+      snprintf(buf, sizeof(buf), "cond-%d", ++uid);
+      tables[c] = new IR::MAU::Table(buf, gress, c->condition); }
     return true; }
   void postorder(const IR::IfStatement *c) {
-    if (c->ifTrue)
-      tables.at(c)->next["true"] = seqs.at(c->ifTrue);
-    if (c->ifFalse)
-      tables.at(c)->next["false"] = seqs.at(c->ifFalse); }
-
+    bool lnot;
+    cstring T = "true", F = "false";
+    if (auto *mc = isApplyHit(c->condition, &lnot)) {
+      tables[c] = tables.at(mc);
+      T = lnot ? "$miss" : "$hit";
+      F = lnot ? "$hit" : "$miss"; }
+    if (c->ifTrue && !c->ifTrue->is<IR::EmptyStatement>())
+      tables.at(c)->next[T] = getseq(c->ifTrue);
+    if (c->ifFalse && !c->ifFalse->is<IR::EmptyStatement>())
+      tables.at(c)->next[F] = getseq(c->ifFalse); }
   void postorder(const IR::V1Control *cf) override {
     assert(!pipe->thread[gress].mau);
-    pipe->thread[gress].mau = seqs.at(cf->code); }
+    pipe->thread[gress].mau = getseq(cf->code); }
   bool preorder(const IR::P4Control *cf) override {
     visit(cf->body);
     assert(!pipe->thread[gress].mau);
-    pipe->thread[gress].mau = seqs.at(cf->body);
+    pipe->thread[gress].mau = getseq(cf->body);
     return false; }
 
+  bool preorder(const IR::EmptyStatement *) { return false; }
   void postorder(const IR::Statement *st) {
     BUG("Unhandled statement %1%", st); }
 };
@@ -280,7 +308,8 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
     PassManager fixups = {
         &bindings,
         new RemoveInstanceRef,
-        new ConvertIndexToHeaderStackItemRef
+        new ConvertIndexToHeaderStackItemRef,
+        new RewriteForTofino,
     };
     parser = parser->apply(fixups);
     ingress = ingress->apply(fixups);

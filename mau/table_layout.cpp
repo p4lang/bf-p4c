@@ -11,17 +11,16 @@ static void setup_match_layout(IR::MAU::Table::Layout &layout, const IR::V1Table
     layout.match_width_bits = 0;
     if (tbl->reads) {
         for (auto r : *tbl->reads) {
-            if (auto mask = dynamic_cast<const IR::Mask *>(r)) {
-                auto fval = dynamic_cast<const IR::Member *>(mask->left);
-                auto mval = dynamic_cast<const IR::Constant *>(mask->right);
+            if (auto mask = r->to<IR::Mask>()) {
+                auto mval = mask->right->to<IR::Constant>();
                 layout.match_width_bits += bitcount(mval->value);
                 if (!layout.ternary)
-                    layout.ixbar_bytes += (fval->type->width_bits()+7)/8;
-            } else if (auto prim = dynamic_cast<const IR::Primitive *>(r)) {
+                    layout.ixbar_bytes += (mask->left->type->width_bits()+7)/8;
+            } else if (auto prim = r->to<IR::Primitive>()) {
                 if (prim->name != "valid")
                     BUG("unexpected reads expression %s", r);
                 layout.match_width_bits += 1;
-            } else if (dynamic_cast<const IR::Member *>(r)) {
+            } else if (r->is<IR::Member>() || r->is<IR::Slice>()) {
                 layout.match_width_bits += r->type->width_bits();
                 if (!layout.ternary)
                     layout.ixbar_bytes += (r->type->width_bits() + 7)/8;

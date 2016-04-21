@@ -73,6 +73,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     TableSummary summary;
     MauAsmOutput mauasm(phv);
     PassManager backend = {
+        new DumpPipe("Initial table graph"),
         new AddMetadataShims,
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),
@@ -82,7 +83,6 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new CheckGatewayExpr(phv),
         new TableLayout,
         new TableFindSeqDependencies,
-        new DumpPipe("Initial table graph"),
         new FindDependencyGraph(&deps),
         new VisitFunctor([&deps]() { if (verbose) std::cout << deps; }),
         new CopyHeaderEliminator,

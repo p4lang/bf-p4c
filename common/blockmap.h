@@ -12,6 +12,7 @@ class FillFromBlockMap : public Transform {
                 exp->type = type;
         return exp; }
     const IR::Type *preorder(IR::Type_Name *type) override {
+        if (getContext()->node->is<IR::TypeNameExpression>()) return type;
         if (auto decl = eval->getBlockMap()->refMap->getDeclaration(type->path)) {
             if (auto tdecl = decl->getNode()->to<IR::Type_Declaration>())
                 return transform_child(tdecl)->to<IR::Type>();

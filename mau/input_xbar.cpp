@@ -299,8 +299,8 @@ void IXBar::update(cstring name, const Use &alloc) {
     for (auto &bits : alloc.bit_use) {
         const Loc *loc = nullptr;
         for (int b = 0; b < bits.width; b++) {
-            if ((!loc || loc->byte != (b + bits.lo)/8U) &&
-                !(loc = findExactByte(bits.field, (b + bits.lo)/8U)))
+            if ((!loc || loc->byte != (b + bits.lo)/8) &&
+                !(loc = findExactByte(bits.field, (b + bits.lo)/8)))
                 BUG("ixbar hashing bits from %s, but they're not on the bus", bits.field);
             for (auto ht : bitvec(alloc.hash_table_input)) {
                 if (hash_single_bit_use.at(ht, b + bits.bit))

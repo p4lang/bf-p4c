@@ -1,13 +1,13 @@
 #emit
 enum gress_t { INGRESS, EGRESS };
 struct StageUse {
-    static constexpr unsigned MAX_STAGES = 12;
-    static constexpr unsigned MAX_LOGICAL_IDS = 16;
-    static constexpr unsigned MAX_SRAMS = 80;
-    static constexpr unsigned MAX_TCAMS = 24;
-    static constexpr unsigned MAX_MAPRAMS = 48;
-    static constexpr unsigned MAX_IXBAR_BYTES = 128;
-    static constexpr unsigned MAX_TERNARY_GROUPS = 12;
+    static constexpr int MAX_STAGES = 12;
+    static constexpr int MAX_LOGICAL_IDS = 16;
+    static constexpr int MAX_SRAMS = 80;
+    static constexpr int MAX_TCAMS = 24;
+    static constexpr int MAX_MAPRAMS = 48;
+    static constexpr int MAX_IXBAR_BYTES = 128;
+    static constexpr int MAX_TERNARY_GROUPS = 12;
 };
 inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
     return out << (gress ? "egress" : "ingress"); }
