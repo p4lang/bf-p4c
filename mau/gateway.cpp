@@ -179,11 +179,7 @@ bool CollectGatewayFields::compute_offsets() {
             field.second.offset = bytes*8;
             bytes += size; } }
     for (auto &valid : valid_offsets)
-        valid.second = bits++ + bytes*8;
-    if (bytes < 4)
-        for (auto &field : info)
-            if (field.second.offset >= 32)
-                field.second.offset -= 8*(4-bytes);
+        valid.second = bits++ + 32;
     return bits <= 12;
 }
 

@@ -49,7 +49,8 @@ class CollectGatewayFields : public Inspector {
         else
             Util::CompilationError("valid of non-header: %s", prim);
         return false; }
-    void postorder(const IR::Operation::Relation *) override { xor_match = nullptr; }
+    void postorder(const IR::Operation::Relation *) override {
+        xor_match = nullptr; }
 
  public:
     struct info_t {
@@ -62,6 +63,18 @@ class CollectGatewayFields : public Inspector {
     int                                       bytes, bits;
     explicit CollectGatewayFields(const PhvInfo &phv) : phv(phv) {}
     bool compute_offsets();
+};
+
+class CheckGatewayExpr : public Inspector {
+    const PhvInfo       &phv;
+    bool preorder(const IR::MAU::Table *tbl) override {
+        CollectGatewayFields collect(phv);
+        tbl->apply(collect);
+        if (!collect.compute_offsets())
+            error("%s: condition too complex", tbl->srcInfo);
+        return true; }
+ public:
+    explicit CheckGatewayExpr(const PhvInfo &phv) : phv(phv) {}
 };
 
 class BuildGatewayMatch : public Inspector {

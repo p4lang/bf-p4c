@@ -129,6 +129,7 @@ class Container {
     Container operator++(int) { Container rv = *this; ++*this; return rv; }
     bool operator==(Container c) const {
         return tagalong_ == c.tagalong_ && log2sz_ == c.log2sz_ && index_ == c.index_; }
+    bool operator!=(Container c) const { return !(*this == c); }
     friend std::ostream &operator<<(std::ostream &out, Container c);
     static Container B(unsigned idx) { return Container(false, 0, idx); }
     static Container H(unsigned idx) { return Container(false, 1, idx); }

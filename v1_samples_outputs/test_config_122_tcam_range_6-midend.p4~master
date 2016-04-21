@@ -105,57 +105,21 @@ struct ingress_parser_control_signals {
     bit<3> priority;
 }
 
-struct routing_metadata_t {
-    bit<1> drop;
-}
-
-header ethernet_t {
-    bit<48> dstAddr;
-    bit<48> srcAddr;
-    bit<16> etherType;
-}
-
-header ipv4_t {
-    bit<4>  version;
-    bit<4>  ihl;
-    bit<8>  diffserv;
-    bit<16> totalLen;
-    bit<16> identification;
-    bit<3>  flags;
-    bit<13> fragOffset;
-    bit<8>  ttl;
-    bit<8>  protocol;
-    bit<16> hdrChecksum;
-    bit<32> srcAddr;
-    bit<32> dstAddr;
-}
-
-header tcp_t {
-    bit<16> srcPort;
-    bit<16> dstPort;
-    bit<32> seqNo;
-    bit<32> ackNo;
-    bit<4>  dataOffset;
-    bit<3>  res;
-    bit<3>  ecn;
-    bit<6>  ctrl;
-    bit<16> window;
-    bit<16> checksum;
-    bit<16> urgentPtr;
-}
-
-header udp_t {
-    bit<16> srcPort;
-    bit<16> dstPort;
-    bit<16> hdr_length;
-    bit<16> checksum;
-}
-
-header vlan_tag_t {
-    bit<3>  pri;
-    bit<1>  cfi;
-    bit<12> vlan_id;
-    bit<16> etherType;
+header pkt_t {
+    bit<32> field_a_32;
+    bit<32> field_b_32;
+    bit<32> field_c_32;
+    bit<32> field_d_32;
+    bit<16> field_e_16;
+    bit<16> field_f_16;
+    bit<16> field_g_16;
+    bit<16> field_h_16;
+    bit<8>  field_i_8;
+    bit<8>  field_j_8;
+    bit<8>  field_k_8;
+    bit<8>  field_l_8;
+    bit<32> field_m_32;
+    bit<32> field_n_32;
 }
 
 struct metadata {
@@ -179,119 +143,74 @@ struct metadata {
     generator_metadata_t                           ig_pg_md;
     @name("ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
-    @name("routing_metadata") 
-    routing_metadata_t                             routing_metadata;
 }
 
 struct headers {
-    @name("ethernet") 
-    ethernet_t ethernet;
-    @name("ipv4") 
-    ipv4_t     ipv4;
-    @name("tcp") 
-    tcp_t      tcp;
-    @name("udp") 
-    udp_t      udp;
-    @name("vlan_tag") 
-    vlan_tag_t vlan_tag;
+    @name("pkt") 
+    pkt_t pkt;
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("parse_ethernet") state parse_ethernet {
-        packet.extract(hdr.ethernet);
-        transition select(hdr.ethernet.etherType) {
-            16w0x8100: parse_vlan_tag;
-            16w0x800: parse_ipv4;
-            default: accept;
-        }
-    }
-    @name("parse_ipv4") state parse_ipv4 {
-        packet.extract(hdr.ipv4);
-        transition select(hdr.ipv4.fragOffset, hdr.ipv4.protocol) {
-            (13w0, 8w6): parse_tcp;
-            (13w0, 8w17): parse_udp;
-            default: accept;
-        }
-    }
-    @name("parse_tcp") state parse_tcp {
-        packet.extract(hdr.tcp);
+    @name("parse_pkt") state parse_pkt {
+        packet.extract(hdr.pkt);
         transition accept;
-    }
-    @name("parse_udp") state parse_udp {
-        packet.extract(hdr.udp);
-        transition accept;
-    }
-    @name("parse_vlan_tag") state parse_vlan_tag {
-        packet.extract(hdr.vlan_tag);
-        transition select(hdr.vlan_tag.etherType) {
-            16w0x800: parse_ipv4;
-            default: accept;
-        }
     }
     @name("start") state start {
-        transition parse_ethernet;
+        transition parse_pkt;
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("nop") action nop() {
+    @name("do_nothing") action do_nothing() {
+        bool hasReturned_0 = false;
     }
-    @name("modify_ip_id") action modify_ip_id(bit<9> port, bit<16> id, bit<48> srcAddr, bit<48> dstAddr) {
-        hdr.ipv4.identification = id;
-        meta.ig_intr_md_for_tm.ucast_egress_port = port;
-        hdr.ethernet.srcAddr = srcAddr;
-        hdr.ethernet.dstAddr = dstAddr;
+    @name("action_0") action action_0() {
+        bool hasReturned_1 = false;
+        hdr.pkt.field_f_16 = 16w1;
     }
-    @name("tcam_indirect_action") table tcam_indirect_action() {
+    @name("table_0") table table_0() {
         actions = {
-            nop;
-            modify_ip_id;
+            do_nothing;
+            action_0;
             NoAction;
         }
         key = {
-            hdr.ethernet.srcAddr  : ternary;
-            hdr.ethernet.dstAddr  : ternary;
-            hdr.ethernet.etherType: exact;
-            hdr.ipv4.srcAddr      : ternary;
-            hdr.ipv4.dstAddr      : ternary;
-            hdr.ipv4.protocol     : exact;
-            hdr.ipv4.version      : exact;
+            hdr.pkt.field_e_16: range;
+            hdr.pkt.field_f_16: range;
+            hdr.pkt.field_g_16: exact;
         }
-        size = 2048;
+        size = 512;
         default_action = NoAction();
-        @name("indirect_action_profile") implementation = ActionProfile(32w2048);
     }
 
     apply {
-        if (hdr.ipv4.isValid()) {
-            tcam_indirect_action.apply();
-        }
+        bool hasExited = false;
+        table_0.apply();
     }
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
+        bool hasExited_0 = false;
     }
 }
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        packet.emit(hdr.ethernet);
-        packet.emit(hdr.vlan_tag);
-        packet.emit(hdr.ipv4);
-        packet.emit(hdr.udp);
-        packet.emit(hdr.tcp);
+        bool hasExited_1 = false;
+        packet.emit(hdr.pkt);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
+        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
-    Checksum16() ipv4_chksum_calc;
     apply {
+        bool hasExited_3 = false;
     }
 }
 

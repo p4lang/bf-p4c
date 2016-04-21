@@ -234,3 +234,11 @@ XFAIL_TESTS += \
     v1to12/%reldir%/v1_samples/test_config_171_stateful_conga.p4.test \
     v1to12/%reldir%/v1_samples/test_config_172_stateful_heavy_hitter.p4.test \
     v1to12/%reldir%/v1_samples/test_config_173_stateful_bloom_filter.p4.test
+
+# These currently fail gateway check with 'expression too complex'
+XFAIL_TESTS += \
+    tofino/testdata/v1_samples/14-GatewayGreaterThan.p4.test \
+    tofino/testdata/v1_samples/flowlet_switching.p4.test \
+    tofino/testdata/v1_samples/switch.p4.test \
+    tofino/%reldir%/v1_samples/07-MacAddrCheck.p4.test \
+    tofino/%reldir%/v1_samples/08-MacAddrCheck1.p4.test

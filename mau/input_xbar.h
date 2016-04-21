@@ -38,7 +38,8 @@ struct IXBar {
     std::multimap<cstring, Loc>         exact_fields;
     std::multimap<cstring, Loc>         ternary_fields;
 
-    /* Track the use of hashtables/groups too -- FIXME -- should it be a separate data structure? */
+    /* Track the use of hashtables/groups too -- FIXME -- should it be a separate data structure?
+     * strings here are table names */
     Alloc2D<cstring, HASH_TABLES, HASH_INDEX_GROUPS>    hash_index_use;
     unsigned                                    hash_index_inuse[HASH_INDEX_GROUPS] = { 0 };
     Alloc2D<cstring, HASH_TABLES, HASH_SINGLE_BITS>     hash_single_bit_use;
@@ -48,8 +49,10 @@ struct IXBar {
  public:
     /* IXbar::Use tracks the input xbar use of a single table */
     struct Use {
+        /* everything is public so anyone can read it, but only IXBar should write to this */
         enum flags_t { NeedRange = 1, NeedXor = 2 };
         bool            ternary;
+        /* tracking individual bytes placed on the ixbar */
         struct Byte {
             cstring     field;
             int         byte;
@@ -59,35 +62,57 @@ struct IXBar {
             Byte(cstring f, int b, int g, int gb) : field(f), byte(b), loc(g, gb) {}
             operator std::pair<cstring, int>() const { return std::make_pair(field, byte); }
             bool operator==(const std::pair<cstring, int> &a) const {
-                return field == a.first && byte == a.second; }
-        };
+                return field == a.first && byte == a.second; } };
         vector<Byte>    use;
+
+        /* which of the 16 hash tables we are using (bitvec) */
         unsigned        hash_table_input = 0;
+
+        /* values fed through the hash tables onto the upper 12 bits of the hash bus via
+         * an identity matrix */
+        struct Bits {
+            cstring     field;
+            int         group;
+            int         lo, bit, width;
+            Bits(cstring f, int g, int l, int b, int w)
+            : field(f), group(g), lo(l), bit(b), width(w) {} };
+        vector<Bits>    bit_use;
+
+        /* hash tables used for way address computation */
         struct Way {
             int         group, slice;
             unsigned    mask;
             Way() = delete;
-            Way(int g, int s, unsigned m) : group(g), slice(s), mask(m) {}
-        };
+            Way(int g, int s, unsigned m) : group(g), slice(s), mask(m) {} };
         vector<Way>     way_use;
+
         void clear() { use.clear(); hash_table_input = 0; way_use.clear(); }
         void compute_hash_tables();
         int groups() const;  // how many different groups in this use
     };
 
     void clear();
-    bool allocTable(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc);
+    bool allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc);
+    int getHashGroup(cstring name);
     bool allocHashWay(const IR::MAU::Table *, const IR::MAU::Table::Way &, Use &);
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_alloc, Use &gw_alloc);
     void update(cstring name, const Use &alloc);
     friend std::ostream &operator<<(std::ostream &, const IXBar &);
+    const Loc *findExactByte(cstring name, int byte) const {
+        for (auto &p : Values(exact_fields.equal_range(name)))
+            if (exact_use.at(p.group, p.byte).second == byte)
+                return &p;
+        /* FIXME -- what if it's in more than one place? */
+        return nullptr; }
 };
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {
     return out << '(' << l.group << ',' << l.byte << ')'; }
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Use::Byte &b) {
-    return out << b.field << ',' << b.byte << ' ' << b.loc; }
+    out << b.field << '[' << b.byte << ']';
+    if (b.loc) out << b.loc;
+    return out; }
 
 #endif /* _TOFINO_MAU_INPUT_XBAR_H_ */
