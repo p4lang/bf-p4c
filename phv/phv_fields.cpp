@@ -101,13 +101,11 @@ const PhvInfo::Info *PhvInfo::field(const IR::Member *fr, Info::bitrange *bits) 
 }
 
 vector<PhvInfo::Info::alloc_slice> *PhvInfo::alloc(const IR::Member *member) {
-  PhvInfo::Info *info = field(member);
-  CHECK(nullptr != info) << "; Cannot find PHV allocation for " <<
-    member->toString();
-  gress_t gress = INGRESS;
-  const cstring egress_str = cstring::to_cstring(EGRESS) + "::";
-  if (info->name.substr(0, egress_str.size()) == egress_str) gress = EGRESS;
-  return &(info->alloc[gress]);
+    PhvInfo::Info *info = field(member);
+    CHECK(nullptr != info) << "; Cannot find PHV allocation for " <<
+        member->toString();
+    gress_t gress = info->name.startsWith("egress::") ? EGRESS : INGRESS;
+    return &(info->alloc[gress]);
 }
 
 const std::pair<int, int> *PhvInfo::header(cstring name_) const {
