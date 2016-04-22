@@ -18,6 +18,7 @@
 #include "frontends/common/parseInput.h"
 #include "common/extract_maupipe.h"
 #include "common/blockmap.h"
+#include "midend.h"
 #include "midend/actionsInlining.h"
 #include "tofinoOptions.h"
 
@@ -74,12 +75,10 @@ int main(int ac, char **av) {
                 dump(program);
             else
                 std::cout << *program << std::endl; }
-        P4::EvaluatorPass evaluator(v1);
-        PassManager midend = {
-            &evaluator,
-            new FillFromBlockMap(&evaluator),
-        };
+        Tofino::MidEnd midend(v1);
         program = program->apply(midend);
+        if (!program)
+            return 1;
         if (verbose) {
             std::cout << "-------------------------------------------------" << std::endl
                       << "After midend" << std::endl

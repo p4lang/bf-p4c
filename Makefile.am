@@ -111,6 +111,8 @@ tofino_backend_SOURCES = \
 	%reldir%/phv/phv_fields.h \
 	%reldir%/phv/split_phv_use.h \
 	%reldir%/phv/split_phv_use.cpp \
+	%reldir%/midend.h \
+	%reldir%/midend.cpp \
 	%reldir%/test-tofino.cpp \
 	%reldir%/tofinoOptions.h \
 	%reldir%/p4c-tofino.cpp
