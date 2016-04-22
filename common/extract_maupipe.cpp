@@ -47,8 +47,8 @@ static const IR::MethodCallExpression *isApplyHit(const IR::Expression *e, bool 
   if (auto *n = e->to<IR::LNot>()) {
     e = n->expr;
     if (lnot) *lnot = true;
-  } else if (lnot)
-    *lnot = false;
+  } else if (lnot) {
+    *lnot = false; }
   if (auto *mem = e->to<IR::Member>()) {
     if (mem->member != "hit") return nullptr;
     if (auto *mc = mem->expr->to<IR::MethodCallExpression>()) {
@@ -184,7 +184,7 @@ class GetTofinoTables : public Inspector {
         else
             label = c->label->to<IR::PathExpression>()->path->name.name;
         tt->next[label] = getseq(c->statement); } }
-    
+
   bool preorder(const IR::NamedCond *c) override {
     if (!tables.count(c))
       tables[c] = new IR::MAU::Table(c->name, gress, c->pred);
@@ -225,8 +225,8 @@ class GetTofinoTables : public Inspector {
     pipe->thread[gress].mau = getseq(cf->body);
     return false; }
 
-  bool preorder(const IR::EmptyStatement *) { return false; }
-  void postorder(const IR::Statement *st) {
+  bool preorder(const IR::EmptyStatement *) override { return false; }
+  void postorder(const IR::Statement *st) override {
     BUG("Unhandled statement %1%", st); }
 };
 

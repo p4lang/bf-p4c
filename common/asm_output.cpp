@@ -72,6 +72,6 @@ Slice Slice::fullbyte() const {
     } else {
         rv = *this; }
     rv.lo &= ~7;
-    rv.hi |= 7; 
+    rv.hi |= 7;
     return rv;
 }
