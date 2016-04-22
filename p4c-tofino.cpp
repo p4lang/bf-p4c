@@ -65,7 +65,7 @@ int main(int ac, char **av) {
         maupipe = extract_maupipe(program);
     } else {
         auto program = parseP4File(options);
-        program = run_frontend(options, program, v1);
+        program = FrontEnd().run(options, program);
         if (verbose) {
             std::cout << "-------------------------------------------------" << std::endl
                       << "Initial program" << std::endl
