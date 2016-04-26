@@ -179,7 +179,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("table_b") table table_b() {
         actions = {
             do_nothing;
@@ -191,7 +190,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-
     @name("table_c") table table_c() {
         actions = {
             do_nothing;
@@ -203,7 +201,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-
     @name("table_d") table table_d() {
         actions = {
             do_nothing;
@@ -215,7 +212,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-
     @name("table_e") table table_e() {
         actions = {
             do_nothing;
@@ -230,7 +226,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-
     @name("table_f") table table_f() {
         actions = {
             do_nothing;
@@ -242,9 +237,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-
     apply {
-        bool hasExited = false;
         table_a.apply();
         table_b.apply();
         table_c.apply();
@@ -256,26 +249,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasExited_0 = false;
     }
 }
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasExited_1 = false;
         packet.emit(hdr.pkt);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasExited_3 = false;
     }
 }
 

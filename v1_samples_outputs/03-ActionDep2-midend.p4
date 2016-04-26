@@ -166,9 +166,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         default_action = NoAction();
     }
-
     apply {
-        bool hasExited = false;
         e_t1.apply();
     }
 }
@@ -198,7 +196,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 131072;
         default_action = NoAction();
     }
-
     @name("do_drop") table do_drop() {
         actions = {
             hw_drop;
@@ -206,7 +203,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("smac_filter") table smac_filter() {
         actions = {
             nop;
@@ -218,9 +214,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     apply {
-        bool hasExited_0 = false;
         dmac.apply();
         smac_filter.apply();
         if (meta.ing_metadata.drop == 1w1) 
@@ -230,20 +224,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasExited_1 = false;
         packet.emit(hdr.ethernet);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasExited_3 = false;
     }
 }
 

@@ -1300,7 +1300,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 512;
         default_action = NoAction();
     }
-
     @name("vlan_decap_nop") action process_vlan_decap_vlan_decap_nop() {
         hdr_2_0.ethernet.etherType = meta_2_0.i_fabric_header.lkp_mac_type;
     }
@@ -1334,7 +1333,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 256;
         default_action = NoAction();
     }
-
     @name("nop") action process_egress_bd_nop() {
     }
     @name("set_egress_bd_properties") action process_egress_bd_set_egress_bd_properties(bit<2> nat_mode) {
@@ -1352,7 +1350,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 16384;
         default_action = NoAction();
     }
-
     @name("nop") action process_rewrite_nop() {
     }
     @name("set_l2_rewrite") action process_rewrite_set_l2_rewrite() {
@@ -1379,7 +1376,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 1024;
         default_action = NoAction();
     }
-
     @name("nop") action process_mac_rewrite_nop() {
     }
     @name("rewrite_unicast_mac") action process_mac_rewrite_rewrite_unicast_mac(bit<48> smac) {
@@ -1405,7 +1401,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 512;
         default_action = NoAction();
     }
-
     @name("set_egress_packet_vlan_tagged") action process_vlan_xlate_set_egress_packet_vlan_tagged(bit<12> vlan_id) {
         hdr_10_0.vlan_tag_[0].setValid(true);
         hdr_10_0.vlan_tag_[0].etherType = hdr_10_0.ethernet.etherType;
@@ -1427,102 +1422,172 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 32768;
         default_action = NoAction();
     }
-
+    action act() {
+        hdr_0_0 = hdr;
+        meta_0_0 = meta;
+        standard_metadata_0_0 = standard_metadata;
+    }
+    action act_0() {
+        hdr_1_0 = hdr;
+        meta_1_0 = meta;
+        standard_metadata_1_0 = standard_metadata;
+        hdr = hdr_1_0;
+        meta = meta_1_0;
+        standard_metadata = standard_metadata_1_0;
+        hdr_2_0 = hdr;
+        meta_2_0 = meta;
+        standard_metadata_2_0 = standard_metadata;
+    }
+    action act_1() {
+        hdr = hdr_2_0;
+        meta = meta_2_0;
+        standard_metadata = standard_metadata_2_0;
+        hdr_3_0 = hdr;
+        meta_3_0 = meta;
+        standard_metadata_3_0 = standard_metadata;
+        hdr = hdr_3_0;
+        meta = meta_3_0;
+        standard_metadata = standard_metadata_3_0;
+        hdr_4_0 = hdr;
+        meta_4_0 = meta;
+        standard_metadata_4_0 = standard_metadata;
+    }
+    action act_2() {
+        hdr = hdr_4_0;
+        meta = meta_4_0;
+        standard_metadata = standard_metadata_4_0;
+        hdr_5_0 = hdr;
+        meta_5_0 = meta;
+        standard_metadata_5_0 = standard_metadata;
+        hdr = hdr_5_0;
+        meta = meta_5_0;
+        standard_metadata = standard_metadata_5_0;
+        hdr_6_0 = hdr;
+        meta_6_0 = meta;
+        standard_metadata_6_0 = standard_metadata;
+    }
+    action act_3() {
+        hdr = hdr_6_0;
+        meta = meta_6_0;
+        standard_metadata = standard_metadata_6_0;
+        hdr_7_0 = hdr;
+        meta_7_0 = meta;
+        standard_metadata_7_0 = standard_metadata;
+    }
+    action act_4() {
+        hdr = hdr_7_0;
+        meta = meta_7_0;
+        standard_metadata = standard_metadata_7_0;
+        hdr_8_0 = hdr;
+        meta_8_0 = meta;
+        standard_metadata_8_0 = standard_metadata;
+        hdr = hdr_8_0;
+        meta = meta_8_0;
+        standard_metadata = standard_metadata_8_0;
+        hdr_9_0 = hdr;
+        meta_9_0 = meta;
+        standard_metadata_9_0 = standard_metadata;
+        hdr = hdr_9_0;
+        meta = meta_9_0;
+        standard_metadata = standard_metadata_9_0;
+        hdr_10_0 = hdr;
+        meta_10_0 = meta;
+        standard_metadata_10_0 = standard_metadata;
+    }
+    action act_5() {
+        hdr = hdr_10_0;
+        meta = meta_10_0;
+        standard_metadata = standard_metadata_10_0;
+        hdr_11_0 = hdr;
+        meta_11_0 = meta;
+        standard_metadata_11_0 = standard_metadata;
+        hdr = hdr_11_0;
+        meta = meta_11_0;
+        standard_metadata = standard_metadata_11_0;
+        hdr_12_0 = hdr;
+        meta_12_0 = meta;
+        standard_metadata_12_0 = standard_metadata;
+        hdr = hdr_12_0;
+        meta = meta_12_0;
+        standard_metadata = standard_metadata_12_0;
+        hdr_13_0 = hdr;
+        meta_13_0 = meta;
+        standard_metadata_13_0 = standard_metadata;
+        hdr = hdr_13_0;
+        meta = meta_13_0;
+        standard_metadata = standard_metadata_13_0;
+    }
+    action act_6() {
+        hdr = hdr_0_0;
+        meta = meta_0_0;
+        standard_metadata = standard_metadata_0_0;
+    }
+    table tbl_act() {
+        actions = {
+            act;
+        }
+        const default_action = act();
+    }
+    table tbl_act_6() {
+        actions = {
+            act_6;
+        }
+        const default_action = act_6();
+    }
+    table tbl_act_0() {
+        actions = {
+            act_0;
+        }
+        const default_action = act_0();
+    }
+    table tbl_act_1() {
+        actions = {
+            act_1;
+        }
+        const default_action = act_1();
+    }
+    table tbl_act_2() {
+        actions = {
+            act_2;
+        }
+        const default_action = act_2();
+    }
+    table tbl_act_3() {
+        actions = {
+            act_3;
+        }
+        const default_action = act_3();
+    }
+    table tbl_act_4() {
+        actions = {
+            act_4;
+        }
+        const default_action = act_4();
+    }
+    table tbl_act_5() {
+        actions = {
+            act_5;
+        }
+        const default_action = act_5();
+    }
     apply {
-        bool hasExited = false;
         if (meta.egress_metadata.egress_bypass == 1w0) {
-            hdr_0_0 = hdr;
-            meta_0_0 = meta;
-            standard_metadata_0_0 = standard_metadata;
+            tbl_act.apply();
             process_fabric_egress_fabric_rewrite.apply();
-            hdr = hdr_0_0;
-            meta = meta_0_0;
-            standard_metadata = standard_metadata_0_0;
+            tbl_act_6.apply();
             if (meta.egress_metadata.fabric_bypass == 1w0) {
-                hdr_1_0 = hdr;
-                meta_1_0 = meta;
-                standard_metadata_1_0 = standard_metadata;
-                hdr = hdr_1_0;
-                meta = meta_1_0;
-                standard_metadata = standard_metadata_1_0;
-                hdr_2_0 = hdr;
-                meta_2_0 = meta;
-                standard_metadata_2_0 = standard_metadata;
+                tbl_act_0.apply();
                 process_vlan_decap_vlan_decap.apply();
-                hdr = hdr_2_0;
-                meta = meta_2_0;
-                standard_metadata = standard_metadata_2_0;
-                hdr_3_0 = hdr;
-                meta_3_0 = meta;
-                standard_metadata_3_0 = standard_metadata;
-                hdr = hdr_3_0;
-                meta = meta_3_0;
-                standard_metadata = standard_metadata_3_0;
-                hdr_4_0 = hdr;
-                meta_4_0 = meta;
-                standard_metadata_4_0 = standard_metadata;
+                tbl_act_1.apply();
                 process_egress_bd_egress_bd_map.apply();
-                hdr = hdr_4_0;
-                meta = meta_4_0;
-                standard_metadata = standard_metadata_4_0;
-                hdr_5_0 = hdr;
-                meta_5_0 = meta;
-                standard_metadata_5_0 = standard_metadata;
-                hdr = hdr_5_0;
-                meta = meta_5_0;
-                standard_metadata = standard_metadata_5_0;
-                hdr_6_0 = hdr;
-                meta_6_0 = meta;
-                standard_metadata_6_0 = standard_metadata;
+                tbl_act_2.apply();
                 process_rewrite_rewrite.apply();
-                hdr = hdr_6_0;
-                meta = meta_6_0;
-                standard_metadata = standard_metadata_6_0;
-                hdr_7_0 = hdr;
-                meta_7_0 = meta;
-                standard_metadata_7_0 = standard_metadata;
+                tbl_act_3.apply();
                 if (meta_7_0.i_fabric_header.routed == 1w1) 
                     process_mac_rewrite_mac_rewrite.apply();
-                hdr = hdr_7_0;
-                meta = meta_7_0;
-                standard_metadata = standard_metadata_7_0;
-                hdr_8_0 = hdr;
-                meta_8_0 = meta;
-                standard_metadata_8_0 = standard_metadata;
-                hdr = hdr_8_0;
-                meta = meta_8_0;
-                standard_metadata = standard_metadata_8_0;
-                hdr_9_0 = hdr;
-                meta_9_0 = meta;
-                standard_metadata_9_0 = standard_metadata;
-                hdr = hdr_9_0;
-                meta = meta_9_0;
-                standard_metadata = standard_metadata_9_0;
-                hdr_10_0 = hdr;
-                meta_10_0 = meta;
-                standard_metadata_10_0 = standard_metadata;
+                tbl_act_4.apply();
                 process_vlan_xlate_egress_vlan_xlate.apply();
-                hdr = hdr_10_0;
-                meta = meta_10_0;
-                standard_metadata = standard_metadata_10_0;
-                hdr_11_0 = hdr;
-                meta_11_0 = meta;
-                standard_metadata_11_0 = standard_metadata;
-                hdr = hdr_11_0;
-                meta = meta_11_0;
-                standard_metadata = standard_metadata_11_0;
-                hdr_12_0 = hdr;
-                meta_12_0 = meta;
-                standard_metadata_12_0 = standard_metadata;
-                hdr = hdr_12_0;
-                meta = meta_12_0;
-                standard_metadata = standard_metadata_12_0;
-                hdr_13_0 = hdr;
-                meta_13_0 = meta;
-                standard_metadata_13_0 = standard_metadata;
-                hdr = hdr_13_0;
-                meta = meta_13_0;
-                standard_metadata = standard_metadata_13_0;
+                tbl_act_5.apply();
             }
         }
     }
@@ -1644,7 +1709,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-
     @name("set_valid_outer_unicast_packet_untagged") action validate_outer_ethernet_header_set_valid_outer_unicast_packet_untagged() {
         @name("etherType_0") bit<16> etherType_0_0;
         meta_15_0.l2_metadata.lkp_pkt_type = 3w1;
@@ -1813,7 +1877,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 64;
         default_action = NoAction();
     }
-
     @name("set_valid_outer_ipv4_packet") action validate_outer_ipv4_header_set_valid_outer_ipv4_packet() {
         meta_16_0.l3_metadata.lkp_ip_type = 2w1;
         meta_16_0.ipv4_metadata.lkp_ipv4_sa = hdr_16_0.ipv4.srcAddr;
@@ -1840,7 +1903,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 64;
         default_action = NoAction();
     }
-
     @name("set_ifindex") action process_port_mapping_set_ifindex(bit<16> ifindex, bit<16> if_label, bit<9> exclusion_id) {
         meta_19_0.ingress_metadata.ifindex = ifindex;
         hdr_19_0.ig_intr_md_for_tm.level2_exclusion_id = exclusion_id;
@@ -1857,7 +1919,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction();
     }
-
     @name("set_bd") action process_port_vlan_mapping_set_bd(bit<16> bd, bit<2> vrf, bit<10> rmac_group, bit<16> bd_label, bit<16> uuc_mc_index, bit<16> bcast_mc_index, bit<16> umc_mc_index, bit<1> ipv4_unicast_enabled, bit<1> igmp_snooping_enabled, bit<10> stp_group, bit<16> exclusion_id, bit<16> stats_idx) {
         meta_21_0.ingress_metadata.vrf = vrf;
         meta_21_0.ipv4_metadata.ipv4_unicast_enabled = ipv4_unicast_enabled;
@@ -1997,7 +2058,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("bd_action_profile") implementation = ActionProfile(32w16384);
     }
-
     @name("nop") action process_validate_packet_nop() {
     }
     @name("set_unicast") action process_validate_packet_set_unicast() {
@@ -2037,7 +2097,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 64;
         default_action = NoAction();
     }
-
     @name("on_miss") action process_ipv4_fib_on_miss() {
     }
     @name("fib_hit_exm_prefix_length_23_nexthop") action process_ipv4_fib_fib_hit_exm_prefix_length_23_nexthop(bit<10> nexthop_index) {
@@ -2164,7 +2223,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 30720;
         default_action = NoAction();
     }
-
     @name("ipv4_fib_exm_prefix_length_24") table process_ipv4_fib_ipv4_fib_exm_prefix_length_24() {
         actions = {
             process_ipv4_fib_on_miss;
@@ -2179,7 +2237,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 38400;
         default_action = NoAction();
     }
-
     @name("ipv4_fib_exm_prefix_length_25") table process_ipv4_fib_ipv4_fib_exm_prefix_length_25() {
         actions = {
             process_ipv4_fib_on_miss;
@@ -2194,7 +2251,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 3840;
         default_action = NoAction();
     }
-
     @name("ipv4_fib_exm_prefix_length_26") table process_ipv4_fib_ipv4_fib_exm_prefix_length_26() {
         actions = {
             process_ipv4_fib_on_miss;
@@ -2209,7 +2265,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 7680;
         default_action = NoAction();
     }
-
     @name("ipv4_fib_exm_prefix_length_27") table process_ipv4_fib_ipv4_fib_exm_prefix_length_27() {
         actions = {
             process_ipv4_fib_on_miss;
@@ -2224,7 +2279,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 7680;
         default_action = NoAction();
     }
-
     @name("ipv4_fib_exm_prefix_length_28") table process_ipv4_fib_ipv4_fib_exm_prefix_length_28() {
         actions = {
             process_ipv4_fib_on_miss;
@@ -2239,7 +2293,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 30720;
         default_action = NoAction();
     }
-
     @name("ipv4_fib_exm_prefix_length_29") table process_ipv4_fib_ipv4_fib_exm_prefix_length_29() {
         actions = {
             process_ipv4_fib_on_miss;
@@ -2254,7 +2307,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 15360;
         default_action = NoAction();
     }
-
     @name("ipv4_fib_exm_prefix_length_30") table process_ipv4_fib_ipv4_fib_exm_prefix_length_30() {
         actions = {
             process_ipv4_fib_on_miss;
@@ -2269,7 +2321,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 23040;
         default_action = NoAction();
     }
-
     @name("ipv4_fib_exm_prefix_length_31") table process_ipv4_fib_ipv4_fib_exm_prefix_length_31() {
         actions = {
             process_ipv4_fib_on_miss;
@@ -2284,7 +2335,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-
     @name("ipv4_fib_exm_prefix_length_32") table process_ipv4_fib_ipv4_fib_exm_prefix_length_32() {
         actions = {
             process_ipv4_fib_on_miss;
@@ -2299,7 +2349,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 19200;
         default_action = NoAction();
     }
-
     @name("ipv4_fib_lpm_prefix_range_22_to_0") table process_ipv4_fib_ipv4_fib_lpm_prefix_range_22_to_0() {
         actions = {
             process_ipv4_fib_on_miss;
@@ -2314,7 +2363,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-
     @name("nop") action process_merge_results_nop() {
     }
     @name("set_l2_redirect_action") action process_merge_results_set_l2_redirect_action() {
@@ -2433,7 +2481,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-
     @name("nop") action process_nexthop_nop() {
     }
     @name("set_ecmp_nexthop_details") action process_nexthop_set_ecmp_nexthop_details(bit<16> ifindex, bit<16> bd, bit<16> nhop_index) {
@@ -2477,7 +2524,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("ecmp_action_profile") implementation = ActionSelector(HashAlgorithm.crc16, 32w16384, 32w10);
     }
-
     @name("nexthop") table process_nexthop_nexthop() {
         actions = {
             process_nexthop_nop;
@@ -2491,7 +2537,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-
     Counter(32w16384, CounterType.Both) @name("ingress_bd_stats") process_ingress_bd_stats_ingress_bd_stats;
     @name("update_ingress_bd_stats") action process_ingress_bd_stats_update_ingress_bd_stats() {
         process_ingress_bd_stats_ingress_bd_stats.increment((bit<32>)meta_40_0.l2_metadata.bd_stats_idx);
@@ -2504,7 +2549,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 64;
         default_action = NoAction();
     }
-
     @name("nop") action process_lag_nop() {
     }
     @name("set_lag_port") action process_lag_set_lag_port(bit<9> port) {
@@ -2531,7 +2575,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("lag_action_profile") implementation = ActionSelector(HashAlgorithm.crc16, 32w1024, 32w8);
     }
-
     @name("nop") action process_system_acl_nop() {
     }
     @name("redirect_to_cpu") action process_system_acl_redirect_to_cpu() {
@@ -2584,142 +2627,438 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-
+    action act_7() {
+        hdr_14_0 = hdr;
+        meta_14_0 = meta;
+        standard_metadata_14_0 = standard_metadata;
+        hdr = hdr_14_0;
+        meta = meta_14_0;
+        standard_metadata = standard_metadata_14_0;
+    }
+    action act_8() {
+        hdr_15_0 = hdr;
+        meta_15_0 = meta;
+        standard_metadata_15_0 = standard_metadata;
+    }
+    action act_9() {
+        hdr_16_0 = hdr;
+        meta_16_0 = meta;
+        standard_metadata_16_0 = standard_metadata;
+    }
+    action act_10() {
+        hdr = hdr_16_0;
+        meta = meta_16_0;
+        standard_metadata = standard_metadata_16_0;
+    }
+    action act_11() {
+        hdr_17_0 = hdr;
+        meta_17_0 = meta;
+        standard_metadata_17_0 = standard_metadata;
+        hdr = hdr_17_0;
+        meta = meta_17_0;
+        standard_metadata = standard_metadata_17_0;
+    }
+    action act_12() {
+        hdr = hdr_15_0;
+        meta = meta_15_0;
+        standard_metadata = standard_metadata_15_0;
+    }
+    action act_13() {
+        hdr_18_0 = hdr;
+        meta_18_0 = meta;
+        standard_metadata_18_0 = standard_metadata;
+        hdr = hdr_18_0;
+        meta = meta_18_0;
+        standard_metadata = standard_metadata_18_0;
+    }
+    action act_14() {
+        hdr_19_0 = hdr;
+        meta_19_0 = meta;
+        standard_metadata_19_0 = standard_metadata;
+    }
+    action act_15() {
+        hdr = hdr_19_0;
+        meta = meta_19_0;
+        standard_metadata = standard_metadata_19_0;
+        hdr_20_0 = hdr;
+        meta_20_0 = meta;
+        standard_metadata_20_0 = standard_metadata;
+        hdr = hdr_20_0;
+        meta = meta_20_0;
+        standard_metadata = standard_metadata_20_0;
+        hdr_21_0 = hdr;
+        meta_21_0 = meta;
+        standard_metadata_21_0 = standard_metadata;
+    }
+    action act_16() {
+        hdr = hdr_21_0;
+        meta = meta_21_0;
+        standard_metadata = standard_metadata_21_0;
+        hdr_22_0 = hdr;
+        meta_22_0 = meta;
+        standard_metadata_22_0 = standard_metadata;
+        hdr = hdr_22_0;
+        meta = meta_22_0;
+        standard_metadata = standard_metadata_22_0;
+        hdr_23_0 = hdr;
+        meta_23_0 = meta;
+        standard_metadata_23_0 = standard_metadata;
+        hdr = hdr_23_0;
+        meta = meta_23_0;
+        standard_metadata = standard_metadata_23_0;
+        hdr_24_0 = hdr;
+        meta_24_0 = meta;
+        standard_metadata_24_0 = standard_metadata;
+    }
+    action act_17() {
+        hdr_26_0 = hdr;
+        meta_26_0 = meta;
+        standard_metadata_26_0 = standard_metadata;
+        hdr = hdr_26_0;
+        meta = meta_26_0;
+        standard_metadata = standard_metadata_26_0;
+    }
+    action act_18() {
+        hdr_27_0 = hdr;
+        meta_27_0 = meta;
+        standard_metadata_27_0 = standard_metadata;
+        hdr = hdr_27_0;
+        meta = meta_27_0;
+        standard_metadata = standard_metadata_27_0;
+    }
+    action act_19() {
+        hdr = hdr_24_0;
+        meta = meta_24_0;
+        standard_metadata = standard_metadata_24_0;
+        hdr_25_0 = hdr;
+        meta_25_0 = meta;
+        standard_metadata_25_0 = standard_metadata;
+        hdr = hdr_25_0;
+        meta = meta_25_0;
+        standard_metadata = standard_metadata_25_0;
+    }
+    action act_20() {
+        hdr_29_0 = hdr;
+        meta_29_0 = meta;
+        standard_metadata_29_0 = standard_metadata;
+        hdr = hdr_29_0;
+        meta = meta_29_0;
+        standard_metadata = standard_metadata_29_0;
+        hdr_30_0 = hdr;
+        meta_30_0 = meta;
+        standard_metadata_30_0 = standard_metadata;
+        hdr = hdr_30_0;
+        meta = meta_30_0;
+        standard_metadata = standard_metadata_30_0;
+        hdr_31_0 = hdr;
+        meta_31_0 = meta;
+        standard_metadata_31_0 = standard_metadata;
+        hdr = hdr_31_0;
+        meta = meta_31_0;
+        standard_metadata = standard_metadata_31_0;
+        hdr_32_0 = hdr;
+        meta_32_0 = meta;
+        standard_metadata_32_0 = standard_metadata;
+    }
+    action act_21() {
+        hdr = hdr_32_0;
+        meta = meta_32_0;
+        standard_metadata = standard_metadata_32_0;
+    }
+    action act_22() {
+        hdr_33_0 = hdr;
+        meta_33_0 = meta;
+        standard_metadata_33_0 = standard_metadata;
+        hdr = hdr_33_0;
+        meta = meta_33_0;
+        standard_metadata = standard_metadata_33_0;
+        hdr_34_0 = hdr;
+        meta_34_0 = meta;
+        standard_metadata_34_0 = standard_metadata;
+        hdr = hdr_34_0;
+        meta = meta_34_0;
+        standard_metadata = standard_metadata_34_0;
+        hdr_35_0 = hdr;
+        meta_35_0 = meta;
+        standard_metadata_35_0 = standard_metadata;
+        hdr = hdr_35_0;
+        meta = meta_35_0;
+        standard_metadata = standard_metadata_35_0;
+    }
+    action act_23() {
+        hdr_36_0 = hdr;
+        meta_36_0 = meta;
+        standard_metadata_36_0 = standard_metadata;
+        hdr = hdr_36_0;
+        meta = meta_36_0;
+        standard_metadata = standard_metadata_36_0;
+    }
+    action act_24() {
+        hdr_37_0 = hdr;
+        meta_37_0 = meta;
+        standard_metadata_37_0 = standard_metadata;
+        hdr = hdr_37_0;
+        meta = meta_37_0;
+        standard_metadata = standard_metadata_37_0;
+    }
+    action act_25() {
+        hdr_28_0 = hdr;
+        meta_28_0 = meta;
+        standard_metadata_28_0 = standard_metadata;
+        hdr = hdr_28_0;
+        meta = meta_28_0;
+        standard_metadata = standard_metadata_28_0;
+    }
+    action act_26() {
+        hdr_38_0 = hdr;
+        meta_38_0 = meta;
+        standard_metadata_38_0 = standard_metadata;
+    }
+    action act_27() {
+        hdr = hdr_38_0;
+        meta = meta_38_0;
+        standard_metadata = standard_metadata_38_0;
+        hdr_39_0 = hdr;
+        meta_39_0 = meta;
+        standard_metadata_39_0 = standard_metadata;
+    }
+    action act_28() {
+        hdr = hdr_39_0;
+        meta = meta_39_0;
+        standard_metadata = standard_metadata_39_0;
+        hdr_40_0 = hdr;
+        meta_40_0 = meta;
+        standard_metadata_40_0 = standard_metadata;
+    }
+    action act_29() {
+        hdr = hdr_40_0;
+        meta = meta_40_0;
+        standard_metadata = standard_metadata_40_0;
+        hdr_41_0 = hdr;
+        meta_41_0 = meta;
+        standard_metadata_41_0 = standard_metadata;
+    }
+    action act_30() {
+        hdr = hdr_41_0;
+        meta = meta_41_0;
+        standard_metadata = standard_metadata_41_0;
+        hdr_42_0 = hdr;
+        meta_42_0 = meta;
+        standard_metadata_42_0 = standard_metadata;
+        hdr = hdr_42_0;
+        meta = meta_42_0;
+        standard_metadata = standard_metadata_42_0;
+    }
+    action act_31() {
+        hdr_43_0 = hdr;
+        meta_43_0 = meta;
+        standard_metadata_43_0 = standard_metadata;
+        hdr = hdr_43_0;
+        meta = meta_43_0;
+        standard_metadata = standard_metadata_43_0;
+        hdr_44_0 = hdr;
+        meta_44_0 = meta;
+        standard_metadata_44_0 = standard_metadata;
+    }
+    action act_32() {
+        hdr = hdr_44_0;
+        meta = meta_44_0;
+        standard_metadata = standard_metadata_44_0;
+    }
+    table tbl_act_7() {
+        actions = {
+            act_7;
+        }
+        const default_action = act_7();
+    }
+    table tbl_act_8() {
+        actions = {
+            act_8;
+        }
+        const default_action = act_8();
+    }
+    table tbl_act_12() {
+        actions = {
+            act_12;
+        }
+        const default_action = act_12();
+    }
+    table tbl_act_9() {
+        actions = {
+            act_9;
+        }
+        const default_action = act_9();
+    }
+    table tbl_act_10() {
+        actions = {
+            act_10;
+        }
+        const default_action = act_10();
+    }
+    table tbl_act_11() {
+        actions = {
+            act_11;
+        }
+        const default_action = act_11();
+    }
+    table tbl_act_13() {
+        actions = {
+            act_13;
+        }
+        const default_action = act_13();
+    }
+    table tbl_act_14() {
+        actions = {
+            act_14;
+        }
+        const default_action = act_14();
+    }
+    table tbl_act_15() {
+        actions = {
+            act_15;
+        }
+        const default_action = act_15();
+    }
+    table tbl_act_16() {
+        actions = {
+            act_16;
+        }
+        const default_action = act_16();
+    }
+    table tbl_act_19() {
+        actions = {
+            act_19;
+        }
+        const default_action = act_19();
+    }
+    table tbl_act_17() {
+        actions = {
+            act_17;
+        }
+        const default_action = act_17();
+    }
+    table tbl_act_18() {
+        actions = {
+            act_18;
+        }
+        const default_action = act_18();
+    }
+    table tbl_act_25() {
+        actions = {
+            act_25;
+        }
+        const default_action = act_25();
+    }
+    table tbl_act_20() {
+        actions = {
+            act_20;
+        }
+        const default_action = act_20();
+    }
+    table tbl_act_21() {
+        actions = {
+            act_21;
+        }
+        const default_action = act_21();
+    }
+    table tbl_act_22() {
+        actions = {
+            act_22;
+        }
+        const default_action = act_22();
+    }
+    table tbl_act_23() {
+        actions = {
+            act_23;
+        }
+        const default_action = act_23();
+    }
+    table tbl_act_24() {
+        actions = {
+            act_24;
+        }
+        const default_action = act_24();
+    }
+    table tbl_act_26() {
+        actions = {
+            act_26;
+        }
+        const default_action = act_26();
+    }
+    table tbl_act_27() {
+        actions = {
+            act_27;
+        }
+        const default_action = act_27();
+    }
+    table tbl_act_28() {
+        actions = {
+            act_28;
+        }
+        const default_action = act_28();
+    }
+    table tbl_act_29() {
+        actions = {
+            act_29;
+        }
+        const default_action = act_29();
+    }
+    table tbl_act_30() {
+        actions = {
+            act_30;
+        }
+        const default_action = act_30();
+    }
+    table tbl_act_31() {
+        actions = {
+            act_31;
+        }
+        const default_action = act_31();
+    }
+    table tbl_act_32() {
+        actions = {
+            act_32;
+        }
+        const default_action = act_32();
+    }
     apply {
-        bool hasExited_0 = false;
         if (hdr.fabric_header.isValid()) {
-            hdr_14_0 = hdr;
-            meta_14_0 = meta;
-            standard_metadata_14_0 = standard_metadata;
-            hdr = hdr_14_0;
-            meta = meta_14_0;
-            standard_metadata = standard_metadata_14_0;
+            tbl_act_7.apply();
         }
         else {
-            hdr_15_0 = hdr;
-            meta_15_0 = meta;
-            standard_metadata_15_0 = standard_metadata;
+            tbl_act_8.apply();
             validate_outer_ethernet_header_validate_outer_ethernet.apply();
-            hdr = hdr_15_0;
-            meta = meta_15_0;
-            standard_metadata = standard_metadata_15_0;
+            tbl_act_12.apply();
             if (hdr.ipv4.isValid()) {
-                hdr_16_0 = hdr;
-                meta_16_0 = meta;
-                standard_metadata_16_0 = standard_metadata;
+                tbl_act_9.apply();
                 validate_outer_ipv4_header_validate_outer_ipv4_packet.apply();
-                hdr = hdr_16_0;
-                meta = meta_16_0;
-                standard_metadata = standard_metadata_16_0;
+                tbl_act_10.apply();
             }
             else 
                 if (hdr.ipv6.isValid()) {
-                    hdr_17_0 = hdr;
-                    meta_17_0 = meta;
-                    standard_metadata_17_0 = standard_metadata;
-                    hdr = hdr_17_0;
-                    meta = meta_17_0;
-                    standard_metadata = standard_metadata_17_0;
+                    tbl_act_11.apply();
                 }
             if (hdr.mpls[0].isValid()) {
-                hdr_18_0 = hdr;
-                meta_18_0 = meta;
-                standard_metadata_18_0 = standard_metadata;
-                hdr = hdr_18_0;
-                meta = meta_18_0;
-                standard_metadata = standard_metadata_18_0;
+                tbl_act_13.apply();
             }
-            hdr_19_0 = hdr;
-            meta_19_0 = meta;
-            standard_metadata_19_0 = standard_metadata;
+            tbl_act_14.apply();
             process_port_mapping_port_mapping.apply();
-            hdr = hdr_19_0;
-            meta = meta_19_0;
-            standard_metadata = standard_metadata_19_0;
-            hdr_20_0 = hdr;
-            meta_20_0 = meta;
-            standard_metadata_20_0 = standard_metadata;
-            hdr = hdr_20_0;
-            meta = meta_20_0;
-            standard_metadata = standard_metadata_20_0;
-            hdr_21_0 = hdr;
-            meta_21_0 = meta;
-            standard_metadata_21_0 = standard_metadata;
+            tbl_act_15.apply();
             process_port_vlan_mapping_port_vlan_mapping.apply();
-            hdr = hdr_21_0;
-            meta = meta_21_0;
-            standard_metadata = standard_metadata_21_0;
-            hdr_22_0 = hdr;
-            meta_22_0 = meta;
-            standard_metadata_22_0 = standard_metadata;
-            hdr = hdr_22_0;
-            meta = meta_22_0;
-            standard_metadata = standard_metadata_22_0;
-            hdr_23_0 = hdr;
-            meta_23_0 = meta;
-            standard_metadata_23_0 = standard_metadata;
-            hdr = hdr_23_0;
-            meta = meta_23_0;
-            standard_metadata = standard_metadata_23_0;
-            hdr_24_0 = hdr;
-            meta_24_0 = meta;
-            standard_metadata_24_0 = standard_metadata;
+            tbl_act_16.apply();
             process_validate_packet_validate_packet.apply();
-            hdr = hdr_24_0;
-            meta = meta_24_0;
-            standard_metadata = standard_metadata_24_0;
-            hdr_25_0 = hdr;
-            meta_25_0 = meta;
-            standard_metadata_25_0 = standard_metadata;
-            hdr = hdr_25_0;
-            meta = meta_25_0;
-            standard_metadata = standard_metadata_25_0;
+            tbl_act_19.apply();
             if (meta.l3_metadata.lkp_ip_type == 2w0) {
-                hdr_26_0 = hdr;
-                meta_26_0 = meta;
-                standard_metadata_26_0 = standard_metadata;
-                hdr = hdr_26_0;
-                meta = meta_26_0;
-                standard_metadata = standard_metadata_26_0;
+                tbl_act_17.apply();
             }
             else {
-                hdr_27_0 = hdr;
-                meta_27_0 = meta;
-                standard_metadata_27_0 = standard_metadata;
-                hdr = hdr_27_0;
-                meta = meta_27_0;
-                standard_metadata = standard_metadata_27_0;
+                tbl_act_18.apply();
             }
-            hdr_28_0 = hdr;
-            meta_28_0 = meta;
-            standard_metadata_28_0 = standard_metadata;
-            hdr = hdr_28_0;
-            meta = meta_28_0;
-            standard_metadata = standard_metadata_28_0;
+            tbl_act_25.apply();
             switch (rmac.apply().action_run) {
                 default: {
                     if (meta.l3_metadata.lkp_ip_type == 2w1 && meta.ipv4_metadata.ipv4_unicast_enabled == 1w1) {
-                        hdr_29_0 = hdr;
-                        meta_29_0 = meta;
-                        standard_metadata_29_0 = standard_metadata;
-                        hdr = hdr_29_0;
-                        meta = meta_29_0;
-                        standard_metadata = standard_metadata_29_0;
-                        hdr_30_0 = hdr;
-                        meta_30_0 = meta;
-                        standard_metadata_30_0 = standard_metadata;
-                        hdr = hdr_30_0;
-                        meta = meta_30_0;
-                        standard_metadata = standard_metadata_30_0;
-                        hdr_31_0 = hdr;
-                        meta_31_0 = meta;
-                        standard_metadata_31_0 = standard_metadata;
-                        hdr = hdr_31_0;
-                        meta = meta_31_0;
-                        standard_metadata = standard_metadata_31_0;
-                        hdr_32_0 = hdr;
-                        meta_32_0 = meta;
-                        standard_metadata_32_0 = standard_metadata;
+                        tbl_act_20.apply();
                         process_ipv4_fib_ipv4_fib_exm_prefix_length_32.apply();
                         process_ipv4_fib_ipv4_fib_exm_prefix_length_31.apply();
                         process_ipv4_fib_ipv4_fib_exm_prefix_length_30.apply();
@@ -2731,105 +3070,40 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
                         process_ipv4_fib_ipv4_fib_exm_prefix_length_24.apply();
                         process_ipv4_fib_ipv4_fib_exm_prefix_length_23.apply();
                         process_ipv4_fib_ipv4_fib_lpm_prefix_range_22_to_0.apply();
-                        hdr = hdr_32_0;
-                        meta = meta_32_0;
-                        standard_metadata = standard_metadata_32_0;
+                        tbl_act_21.apply();
                     }
                     else 
                         if (meta.l3_metadata.lkp_ip_type == 2w2 && meta.ipv6_metadata.ipv6_unicast_enabled == 1w1) {
-                            hdr_33_0 = hdr;
-                            meta_33_0 = meta;
-                            standard_metadata_33_0 = standard_metadata;
-                            hdr = hdr_33_0;
-                            meta = meta_33_0;
-                            standard_metadata = standard_metadata_33_0;
-                            hdr_34_0 = hdr;
-                            meta_34_0 = meta;
-                            standard_metadata_34_0 = standard_metadata;
-                            hdr = hdr_34_0;
-                            meta = meta_34_0;
-                            standard_metadata = standard_metadata_34_0;
-                            hdr_35_0 = hdr;
-                            meta_35_0 = meta;
-                            standard_metadata_35_0 = standard_metadata;
-                            hdr = hdr_35_0;
-                            meta = meta_35_0;
-                            standard_metadata = standard_metadata_35_0;
+                            tbl_act_22.apply();
                         }
-                    hdr_36_0 = hdr;
-                    meta_36_0 = meta;
-                    standard_metadata_36_0 = standard_metadata;
-                    hdr = hdr_36_0;
-                    meta = meta_36_0;
-                    standard_metadata = standard_metadata_36_0;
+                    tbl_act_23.apply();
                 }
                 rmac_miss: {
-                    hdr_37_0 = hdr;
-                    meta_37_0 = meta;
-                    standard_metadata_37_0 = standard_metadata;
-                    hdr = hdr_37_0;
-                    meta = meta_37_0;
-                    standard_metadata = standard_metadata_37_0;
+                    tbl_act_24.apply();
                 }
             }
 
-            hdr_38_0 = hdr;
-            meta_38_0 = meta;
-            standard_metadata_38_0 = standard_metadata;
+            tbl_act_26.apply();
             process_merge_results_fwd_result.apply();
-            hdr = hdr_38_0;
-            meta = meta_38_0;
-            standard_metadata = standard_metadata_38_0;
-            hdr_39_0 = hdr;
-            meta_39_0 = meta;
-            standard_metadata_39_0 = standard_metadata;
+            tbl_act_27.apply();
             if (meta_39_0.nexthop_metadata.nexthop_type == 1w1) 
                 process_nexthop_ecmp_group.apply();
             else 
                 process_nexthop_nexthop.apply();
-            hdr = hdr_39_0;
-            meta = meta_39_0;
-            standard_metadata = standard_metadata_39_0;
-            hdr_40_0 = hdr;
-            meta_40_0 = meta;
-            standard_metadata_40_0 = standard_metadata;
+            tbl_act_28.apply();
             process_ingress_bd_stats_ingress_bd_stats_0.apply();
-            hdr = hdr_40_0;
-            meta = meta_40_0;
-            standard_metadata = standard_metadata_40_0;
-            hdr_41_0 = hdr;
-            meta_41_0 = meta;
-            standard_metadata_41_0 = standard_metadata;
+            tbl_act_29.apply();
             process_lag_lag_group.apply();
-            hdr = hdr_41_0;
-            meta = meta_41_0;
-            standard_metadata = standard_metadata_41_0;
-            hdr_42_0 = hdr;
-            meta_42_0 = meta;
-            standard_metadata_42_0 = standard_metadata;
-            hdr = hdr_42_0;
-            meta = meta_42_0;
-            standard_metadata = standard_metadata_42_0;
+            tbl_act_30.apply();
         }
-        hdr_43_0 = hdr;
-        meta_43_0 = meta;
-        standard_metadata_43_0 = standard_metadata;
-        hdr = hdr_43_0;
-        meta = meta_43_0;
-        standard_metadata = standard_metadata_43_0;
-        hdr_44_0 = hdr;
-        meta_44_0 = meta;
-        standard_metadata_44_0 = standard_metadata;
+        tbl_act_31.apply();
         process_system_acl_system_acl.apply();
-        hdr = hdr_44_0;
-        meta = meta_44_0;
-        standard_metadata = standard_metadata_44_0;
+        tbl_act_32.apply();
     }
 }
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasExited_1 = false;
         packet.emit(hdr.ethernet);
         packet.emit(hdr.fabric_header);
         packet.emit(hdr.fabric_header_cpu);
@@ -2871,22 +3145,47 @@ control DeparserImpl(packet_out packet, in headers hdr) {
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     Checksum16() inner_ipv4_checksum;
     Checksum16() ipv4_checksum;
+    action act_33() {
+        standard_metadata.drop = 1w1;
+    }
+    action act_34() {
+        standard_metadata.drop = 1w1;
+    }
+    table tbl_act_33() {
+        actions = {
+            act_33;
+        }
+        const default_action = act_33();
+    }
+    table tbl_act_34() {
+        actions = {
+            act_34;
+        }
+        const default_action = act_34();
+    }
     apply {
-        bool hasExited_2 = false;
         if (hdr.inner_ipv4.hdrChecksum == inner_ipv4_checksum.get({ hdr.inner_ipv4.version, hdr.inner_ipv4.ihl, hdr.inner_ipv4.diffserv, hdr.inner_ipv4.totalLen, hdr.inner_ipv4.identification, hdr.inner_ipv4.flags, hdr.inner_ipv4.fragOffset, hdr.inner_ipv4.ttl, hdr.inner_ipv4.protocol, hdr.inner_ipv4.srcAddr, hdr.inner_ipv4.dstAddr })) 
-            standard_metadata.drop = 1w1;
+            tbl_act_33.apply();
         if (hdr.ipv4.hdrChecksum == ipv4_checksum.get({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr })) 
-            standard_metadata.drop = 1w1;
+            tbl_act_34.apply();
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     Checksum16() inner_ipv4_checksum;
     Checksum16() ipv4_checksum;
-    apply {
-        bool hasExited_3 = false;
+    action act_35() {
         hdr.inner_ipv4.hdrChecksum = inner_ipv4_checksum.get({ hdr.inner_ipv4.version, hdr.inner_ipv4.ihl, hdr.inner_ipv4.diffserv, hdr.inner_ipv4.totalLen, hdr.inner_ipv4.identification, hdr.inner_ipv4.flags, hdr.inner_ipv4.fragOffset, hdr.inner_ipv4.ttl, hdr.inner_ipv4.protocol, hdr.inner_ipv4.srcAddr, hdr.inner_ipv4.dstAddr });
         hdr.ipv4.hdrChecksum = ipv4_checksum.get({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr });
+    }
+    table tbl_act_35() {
+        actions = {
+            act_35;
+        }
+        const default_action = act_35();
+    }
+    apply {
+        tbl_act_35.apply();
     }
 }
 

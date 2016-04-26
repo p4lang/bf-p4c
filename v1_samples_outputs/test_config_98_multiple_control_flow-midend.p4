@@ -175,7 +175,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         default_action = NoAction();
     }
-
     @name("table_3") table table_3() {
         actions = {
             do_nothing;
@@ -186,9 +185,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         default_action = NoAction();
     }
-
     apply {
-        bool hasExited = false;
         table_2.apply();
         table_3.apply();
     }
@@ -211,7 +208,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("action_1") action pipe_0_action_1(bit<32> param0) {
         hdr_0_0.pkt.field_c_32 = param0;
     }
@@ -225,36 +221,49 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
-    apply {
-        bool hasExited_0 = false;
-        table_0.apply();
+    action act() {
         hdr_0_0 = hdr;
         meta_0_0 = meta;
         standard_metadata_0_0 = standard_metadata;
-        pipe_0_table_1.apply();
+    }
+    action act_0() {
         hdr = hdr_0_0;
         meta = meta_0_0;
         standard_metadata = standard_metadata_0_0;
+    }
+    table tbl_act() {
+        actions = {
+            act;
+        }
+        const default_action = act();
+    }
+    table tbl_act_0() {
+        actions = {
+            act_0;
+        }
+        const default_action = act_0();
+    }
+    apply {
+        table_0.apply();
+        tbl_act.apply();
+        pipe_0_table_1.apply();
+        tbl_act_0.apply();
     }
 }
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasExited_1 = false;
         packet.emit(hdr.pkt);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasExited_3 = false;
     }
 }
 

@@ -235,7 +235,6 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasExited = false;
     }
 }
 
@@ -299,7 +298,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("exm_3ways_1Entries") table exm_3ways_1Entries() {
         actions = {
             nop;
@@ -312,7 +310,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("exm_3ways_2Entries_stage_3") table exm_3ways_2Entries_stage_3() {
         actions = {
             nop;
@@ -326,7 +323,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("exm_4ways_16k_stage_5") table exm_4ways_16k_stage_5() {
         actions = {
             nop;
@@ -342,7 +338,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction();
     }
-
     @name("exm_4ways_1Entries") table exm_4ways_1Entries() {
         actions = {
             nop;
@@ -355,7 +350,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("exm_4ways_2Entries_stage_4") table exm_4ways_2Entries_stage_4() {
         actions = {
             nop;
@@ -368,7 +362,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("exm_5ways_2Entries_stage_4") table exm_5ways_2Entries_stage_4() {
         actions = {
             nop;
@@ -382,7 +375,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("exm_5ways_7Entries") table exm_5ways_7Entries() {
         actions = {
             nop;
@@ -395,7 +387,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("exm_6ways_1Entries_stage_3") table exm_6ways_1Entries_stage_3() {
         actions = {
             nop;
@@ -408,7 +399,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("exm_6ways_2Entries_stage_4") table exm_6ways_2Entries_stage_4() {
         actions = {
             nop;
@@ -420,7 +410,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("exm_6ways_7Entries_stage_1") table exm_6ways_7Entries_stage_1() {
         actions = {
             nop;
@@ -434,7 +423,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("exm_6ways_8Entries_stage_2") table exm_6ways_8Entries_stage_2() {
         actions = {
             nop;
@@ -448,9 +436,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     apply {
-        bool hasExited_0 = false;
         exm_5ways_7Entries.apply();
         exm_3ways_1Entries.apply();
         exm_4ways_1Entries.apply();
@@ -468,7 +454,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasExited_1 = false;
         packet.emit(hdr.ethernet);
         packet.emit(hdr.vlan_tag);
         packet.emit(hdr.ipv4);
@@ -479,13 +464,11 @@ control DeparserImpl(packet_out packet, in headers hdr) {
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasExited_3 = false;
     }
 }
 

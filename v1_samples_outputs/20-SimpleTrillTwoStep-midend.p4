@@ -194,7 +194,6 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasExited = false;
     }
 }
 
@@ -216,7 +215,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("trill_forward") table trill_forward() {
         actions = {
             forward_trill;
@@ -227,9 +225,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     apply {
-        bool hasExited_0 = false;
         trill_forward.apply();
         fix_trill_header.apply();
     }
@@ -237,7 +233,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasExited_1 = false;
         packet.emit(hdr.outer_ethernet);
         packet.emit(hdr.vlan_tag);
         packet.emit(hdr.trill);
@@ -247,13 +242,11 @@ control DeparserImpl(packet_out packet, in headers hdr) {
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasExited_3 = false;
     }
 }
 

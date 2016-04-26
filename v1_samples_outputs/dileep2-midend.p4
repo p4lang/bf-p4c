@@ -218,7 +218,6 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasExited = false;
     }
 }
 
@@ -276,7 +275,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("ipv4_routing_exm_ways_3_pack_3") table ipv4_routing_exm_ways_3_pack_3() {
         actions = {
             nop;
@@ -288,7 +286,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("ipv4_routing_exm_ways_3_pack_4_stage_5") table ipv4_routing_exm_ways_3_pack_4_stage_5() {
         actions = {
             nop;
@@ -300,7 +297,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("ipv4_routing_exm_ways_4_pack_3_stage_1") table ipv4_routing_exm_ways_4_pack_3_stage_1() {
         actions = {
             nop;
@@ -312,7 +308,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("ipv4_routing_exm_ways_4_pack_7_stage_2") table ipv4_routing_exm_ways_4_pack_7_stage_2() {
         actions = {
             nop;
@@ -324,7 +319,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("ipv4_routing_exm_ways_5_pack_3_stage_3") table ipv4_routing_exm_ways_5_pack_3_stage_3() {
         actions = {
             nop;
@@ -336,7 +330,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("ipv4_routing_exm_ways_6_pack_3_stage_4") table ipv4_routing_exm_ways_6_pack_3_stage_4() {
         actions = {
             nop;
@@ -348,7 +341,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("ipv4_routing_stage_1") table ipv4_routing_stage_1() {
         actions = {
             nop;
@@ -362,7 +354,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-
     @name("tcam_tbl_stage_2") table tcam_tbl_stage_2() {
         actions = {
             nop;
@@ -374,7 +365,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("tcp_rm_tbl_stage_4") table tcp_rm_tbl_stage_4() {
         actions = {
             nop;
@@ -386,7 +376,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("udp_add_tbl_stage_3") table udp_add_tbl_stage_3() {
         actions = {
             nop;
@@ -398,9 +387,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     apply {
-        bool hasExited_0 = false;
         ipv4_routing.apply();
         ipv4_routing_exm_ways_3_pack_3.apply();
         ipv4_routing_exm_ways_4_pack_3_stage_1.apply();
@@ -417,7 +404,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasExited_1 = false;
         packet.emit(hdr.ethernet);
         packet.emit(hdr.ipv4);
         packet.emit(hdr.udp);
@@ -427,13 +413,11 @@ control DeparserImpl(packet_out packet, in headers hdr) {
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasExited_3 = false;
     }
 }
 

@@ -157,7 +157,6 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasExited = false;
     }
 }
 
@@ -181,7 +180,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("assign_egress2") table assign_egress2() {
         actions = {
             assign_egress2_action;
@@ -189,7 +187,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("dmac") table dmac() {
         actions = {
             assign_egress_interfaces;
@@ -200,7 +197,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("ingress_port_map") table ingress_port_map() {
         actions = {
             set_ingress_port_props;
@@ -212,9 +208,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction();
     }
-
     apply {
-        bool hasExited_0 = false;
         if (hdr.ig_intr_md.resubmit_flag == 1w0) {
             ingress_port_map.apply();
             dmac.apply();
@@ -228,20 +222,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        bool hasExited_1 = false;
         packet.emit(hdr.ethernet);
     }
 }
 
 control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     apply {
-        bool hasExited_2 = false;
     }
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
-        bool hasExited_3 = false;
     }
 }
 
