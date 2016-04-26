@@ -14,72 +14,58 @@
 
 using namespace std::placeholders;
 
-class PopulatePhvInfo : public Inspector {
- public:
-  PopulatePhvInfo(SolverInterface &solver, PhvInfo *phv_info) :
-    solver_(solver), phv_info_(phv_info) { }
-  bool preorder(const IR::Primitive *prim) override {
-    bool rv = true;
-    if (prim->name == "extract") {
-      const IR::HeaderRef *hr = prim->operands[0]->to<IR::HeaderRef>();
-      if (nullptr != hr) {
-        GetAllocation(IR::HeaderSliceRef(hr->srcInfo, hr,
-                                         hr->type->width_bits() - 1, 0));
-        rv = false;
+void PopulatePhvInfo(SolverInterface &solver, PhvInfo *phv_info) {
+  for (auto &field : *phv_info) {
+    gress_t gress;
+    if (field.name.startsWith("ingress::"))
+      gress = INGRESS;
+    else if (field.name.startsWith("egress::"))
+      gress = EGRESS;
+    else
+      assert(0);
+    cstring hdr;
+    if (field.pov) {
+      continue;
+    } else {
+      hdr = field.name.before(strrchr(field.name, '.')); }
+    LOG3("PopulatePhvInfo " << field.name << " [" << hdr << "(" << field.offset << ")]");
+    auto &alloc = field.alloc;
+    for (int field_bit = 0; field_bit < field.size; field_bit++) {
+      PHV::Container container;
+      int container_bit;
+      solver.allocation(PHV::Bit(hdr, field.offset + field_bit), &container, &container_bit);
+      if (!container) continue;
+      auto iter = alloc.begin();
+      for (; iter != alloc.end(); ++iter) {
+        if (iter->field_bit <= field_bit &&
+            field_bit < iter->field_bit + iter->width) {
+          break;
+        }
+        // Append the bit to an existing alloc structure.
+        if (iter->container == container &&
+            iter->width + iter->container_bit == container_bit &&
+            iter->width + iter->field_bit == field_bit) {
+          iter->width += 1;
+          break;
+        }
+        // Prepend the bit to an existing alloc structure.
+        if (iter->container == container &&
+            iter->container_bit == container_bit + 1 &&
+            iter->field_bit == (field_bit + 1)) {
+          --(iter->field_bit);
+          --(iter->container_bit);
+          iter->width += 1;
+          break;
+        }
       }
-    }
-    return rv;
-  }
-  bool preorder(const IR::HeaderSliceRef *hsr) {
-    GetAllocation(*hsr);
-    return false; }
-
- private:
-  void GetAllocation(const IR::HeaderSliceRef hsr) {
-    for (auto field : hsr.fields()) {
-      vector<PhvInfo::Info::alloc_slice> *alloc = phv_info_->alloc(field);
-      for (int i = field->lsb(); i <= field->msb(); ++i) {
-        int field_bit = i - field->lsb();
-        // Check if this bit has already been added to phv_info_.
-        PHV::Container container;
-        int container_bit;
-        solver_.allocation(PHV::Bit(hsr.header_ref()->toString(), i),
-                           &container, &container_bit);
-        if (!container) continue;
-        auto iter = alloc->begin();
-        for (; iter != alloc->end(); ++iter) {
-          if (iter->field_bit <= field_bit &&
-              field_bit < iter->field_bit + iter->width) {
-            break;
-          }
-          // Append the bit to an existing alloc structure.
-          if (iter->container == container &&
-              iter->width + iter->container_bit == container_bit &&
-              iter->width + iter->field_bit == field_bit) {
-            iter->width += 1;
-            break;
-          }
-          // Prepend the bit to an existing alloc structure.
-          if (iter->container == container &&
-              iter->container_bit == container_bit + 1 &&
-              iter->field_bit == (field_bit + 1)) {
-            --(iter->field_bit);
-            --(iter->container_bit);
-            iter->width += 1;
-            break;
-          }
-        }
-        if (iter == alloc->end()) {
-          LOG3("adding " << container << "(" << container_bit << ") for " <<
-               phv_info_->field(field)->name << "(" << field_bit << ")");
-          alloc->emplace_back(container, field_bit, container_bit, 1);
-        }
+      if (iter == alloc.end()) {
+        LOG3("adding " << container << "(" << container_bit << ") for " << field.name <<
+             "(" << field_bit << ")");
+        alloc.emplace_back(container, field_bit, container_bit, 1);
       }
     }
   }
-  SolverInterface &solver_;
-  PhvInfo *phv_info_;
-};
+}
 
 void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
   // TODO: The code below can be written more elegantly.
@@ -109,8 +95,7 @@ bool PhvAllocator::Solve(const IR::Tofino::Pipe *pipe, PhvInfo *phv_info) {
   int count = 0;
   while (count < 400) {
     if (true == solver.Solve()) {
-      PopulatePhvInfo ppi(solver, phv_info);
-      pipe->apply(ppi);
+      PopulatePhvInfo(solver, phv_info);
       for (auto &field : *phv_info)
         std::sort(field.alloc.begin(), field.alloc.end(),
             [](const PhvInfo::Info::alloc_slice &a, const PhvInfo::Info::alloc_slice &b) -> bool {
