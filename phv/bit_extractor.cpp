@@ -45,7 +45,12 @@ std::list<PHV::Bit> BitExtractor::GetBits(const IR::Expression *e1) const {
 std::list<PHV::Byte>
 BitExtractor::GetBytes(const IR::Expression *e1, const IR::Expression *e2) {
   if (auto hsr1 = e1->to<IR::HeaderSliceRef>())
-      return GetBytes(hsr1, e2);
+    return GetBytes(hsr1, e2);
+  if (auto mem1 = e1->to<IR::Member>()) {
+    if (mem1->member.name == "$valid") {
+      // FIXME -- POV bit
+      return std::list<PHV::Byte>(); }
+    return GetBytes(new IR::HeaderSliceRef(mem1), e2); }
   // Exit the function if we do not have a HeaderSliceRef for the source.
   return GetBytes(e1->to<IR::HeaderRef>());
 }

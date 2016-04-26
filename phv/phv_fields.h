@@ -21,7 +21,9 @@ class PhvInfo : public Inspector {
         cstring         name;
         int             id;
         int             size;
+        int             offset;  // offset from the start of the containing header in bits
         bool            metadata;
+        bool            pov;
         set<constraint> constraints;
         struct alloc_slice {
             PHV::Container         container;
@@ -46,7 +48,7 @@ class PhvInfo : public Inspector {
     map<cstring, Info>                  all_fields;
     vector<Info *>                      by_id;
     map<cstring, std::pair<int, int>>   all_headers;
-    void add(cstring, int, bool);
+    void add(cstring, int, int, bool, bool);
     void add_hdr(cstring, const IR::Type_StructLike *, bool);
     bool preorder(const IR::Header *h) override;
     bool preorder(const IR::HeaderStack *) override;

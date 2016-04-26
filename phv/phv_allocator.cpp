@@ -45,6 +45,7 @@ class PopulatePhvInfo : public Inspector {
         int container_bit;
         solver_.allocation(PHV::Bit(hsr.header_ref()->toString(), i),
                            &container, &container_bit);
+        if (!container) continue;
         auto iter = alloc->begin();
         for (; iter != alloc->end(); ++iter) {
           if (iter->field_bit <= field_bit &&
@@ -69,6 +70,8 @@ class PopulatePhvInfo : public Inspector {
           }
         }
         if (iter == alloc->end()) {
+          LOG3("adding " << container << "(" << container_bit << ") for " <<
+               phv_info_->field(field)->name << "(" << field_bit << ")");
           alloc->emplace_back(container, field_bit, container_bit, 1);
         }
       }
@@ -80,14 +83,10 @@ class PopulatePhvInfo : public Inspector {
 
 void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
   // TODO: The code below can be written more elegantly.
-  MauGroupConstraint mgc(constraints_);
-  pipe->apply(mgc);
-  ContainerConstraint cc(constraints_);
-  pipe->apply(cc);
-  ByteConstraint bc(constraints_);
-  pipe->apply(bc);
-  OffsetConstraint oc(constraints_);
-  pipe->apply(oc);
+  pipe->apply(MauGroupConstraint(constraints_));
+  pipe->apply(ContainerConstraint(constraints_));
+  pipe->apply(ByteConstraint(constraints_));
+  pipe->apply(OffsetConstraint(constraints_));
   SourceContainerConstraint scc(constraints_);
   // This loop should keep iterating until Constraints::SetEqual() has been
   // invoked on all pairs of source containers that have a common destination
@@ -97,13 +96,10 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
     pipe->apply(scc);
   } while (true == scc.is_updated());
   // Set bits which cannot be allocated to T-PHV.
-  TPhvConstraint tphvc(constraints_);
-  pipe->apply(tphvc);
+  pipe->apply(TPhvConstraint(constraints_));
   // Set MAU match xbar constraints.
-  MatchXbarConstraint smxc(constraints_);
-  pipe->apply(smxc);
-  ParseGraphConstraint pgc(constraints_);
-  pipe->apply(pgc);
+  pipe->apply(MatchXbarConstraint(constraints_));
+  pipe->apply(ParseGraphConstraint(constraints_));
 }
 
 bool PhvAllocator::Solve(const IR::Tofino::Pipe *pipe, PhvInfo *phv_info) {
