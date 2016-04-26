@@ -5,6 +5,7 @@
 #include "midend/uniqueNames.h"
 #include "midend/removeReturns.h"
 #include "midend/moveConstructors.h"
+#include "midend/actionSynthesis.h"
 #include "frontends/common/typeMap.h"
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/typeChecking/typeChecker.h"
@@ -57,13 +58,21 @@ Tofino::MidEnd::MidEnd(bool v1) : isv1(v1), evaluator0(v1), evaluator1(v1) {
         },
         new P4::SimplifyControlFlow(),
         new P4::ResolveReferences(&refMap, isv1),
+        new P4::RemoveReturns(&refMap, false),  // remove exits
+        new P4::ResolveReferences(&refMap, isv1),
         new P4::TypeChecker(&refMap, &typeMap),
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::StrengthReduction(),
         new P4::UniqueNames(isv1),
-        new P4::MoveDeclarations(),
+        new P4::MoveDeclarations(),  // more may have been introduced
+        // Create actions for statements that can't be done in control blocks.
         new P4::ResolveReferences(&refMap, isv1),
-        new P4::RemoveReturns(&refMap, false),  // remove exits
+        new P4::TypeChecker(&refMap, &typeMap),
+        new P4::SynthesizeActions(&refMap, &typeMap),
+        // Move all stand-alone actions to custom tables
+        new P4::ResolveReferences(&refMap, isv1),
+        new P4::TypeChecker(&refMap, &typeMap),
+        new P4::MoveActionsToTables(&refMap, &typeMap),
         &evaluator1,
         new FillFromBlockMap(&evaluator1),
     });
