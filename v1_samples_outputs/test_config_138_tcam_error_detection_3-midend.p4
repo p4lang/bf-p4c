@@ -163,14 +163,14 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("do_nothing") action do_nothing() {
+    @name("do_nothing") action do_nothing_0() {
     }
-    @name("action_0") action action_0() {
+    @name("action_0") action action() {
         hdr.pkt.field_f_16 = 16w1;
     }
-    @name("table_a") table table_a() {
+    @name("table_a") table table_a_0() {
         actions = {
-            do_nothing;
+            do_nothing_0;
             NoAction;
         }
         key = {
@@ -179,9 +179,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_b") table table_b() {
+    @name("table_b") table table_b_0() {
         actions = {
-            do_nothing;
+            do_nothing_0;
             NoAction;
         }
         key = {
@@ -190,9 +190,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_c") table table_c() {
+    @name("table_c") table table_c_0() {
         actions = {
-            do_nothing;
+            do_nothing_0;
             NoAction;
         }
         key = {
@@ -201,9 +201,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_d") table table_d() {
+    @name("table_d") table table_d_0() {
         actions = {
-            do_nothing;
+            do_nothing_0;
             NoAction;
         }
         key = {
@@ -212,10 +212,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_e") table table_e() {
+    @name("table_e") table table_e_0() {
         actions = {
-            do_nothing;
-            action_0;
+            do_nothing_0;
+            action;
             NoAction;
         }
         key = {
@@ -226,9 +226,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-    @name("table_f") table table_f() {
+    @name("table_f") table table_f_0() {
         actions = {
-            do_nothing;
+            do_nothing_0;
             NoAction;
         }
         key = {
@@ -237,9 +237,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-    @name("table_z") table table_z() {
+    @name("table_z") table table_z_0() {
         actions = {
-            do_nothing;
+            do_nothing_0;
             NoAction;
         }
         key = {
@@ -249,13 +249,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        table_z.apply();
-        table_a.apply();
-        table_b.apply();
-        table_c.apply();
-        table_d.apply();
-        table_e.apply();
-        table_f.apply();
+        table_z_0.apply();
+        table_a_0.apply();
+        table_b_0.apply();
+        table_c_0.apply();
+        table_d_0.apply();
+        table_e_0.apply();
+        table_f_0.apply();
     }
 }
 

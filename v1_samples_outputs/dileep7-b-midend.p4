@@ -239,25 +239,23 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("nop") action nop() {
+    bit<8> ttl_0;
+    bit<9> egress_port_0;
+    @name("nop") action nop_0() {
     }
-    @name("custom_action_3") action custom_action_3(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
-        @name("ttl_0") bit<8> ttl_0_0;
-        @name("egress_port_0") bit<9> egress_port_0_0;
+    @name("custom_action_3") action custom_action(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
         hdr.ipv4.dstAddr = dstIp;
         hdr.ethernet.dstAddr = dstAddr;
-        {
-            ttl_0_0 = hdr.ipv4.ttl;
-            egress_port_0_0 = egress_port;
-            ttl_0_0 = ttl_0_0 + 8w255;
-            meta.ig_intr_md_for_tm.ucast_egress_port = egress_port_0_0;
-            hdr.ipv4.ttl = ttl_0_0;
-        }
+        ttl_0 = hdr.ipv4.ttl;
+        egress_port_0 = egress_port;
+        ttl_0 = ttl_0 + 8w255;
+        meta.ig_intr_md_for_tm.ucast_egress_port = egress_port_0;
+        hdr.ipv4.ttl = ttl_0;
     }
-    @name("exm_5ways_1Entries_stage_2") table exm_5ways_1Entries_stage_2() {
+    @name("exm_5ways_1Entries_stage_2") table exm_5ways_1Entries_stage() {
         actions = {
-            nop;
-            custom_action_3;
+            nop_0;
+            custom_action;
             NoAction;
         }
         key = {
@@ -267,7 +265,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        exm_5ways_1Entries_stage_2.apply();
+        exm_5ways_1Entries_stage.apply();
     }
 }
 

@@ -154,11 +154,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("nop") action nop() {
+    @name("nop") action nop_0() {
     }
-    @name("e_t1") table e_t1() {
+    @name("e_t1") table e_t1_0() {
         actions = {
-            nop;
+            nop_0;
             NoAction;
         }
         key = {
@@ -167,27 +167,27 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction();
     }
     apply {
-        e_t1.apply();
+        e_t1_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("nop") action nop() {
+    @name("nop") action nop_1() {
     }
-    @name("ing_drop") action ing_drop() {
+    @name("ing_drop") action ing_drop_0() {
         meta.ing_metadata.drop = 1w1;
     }
-    @name("set_egress_port") action set_egress_port(bit<9> egress_port) {
+    @name("set_egress_port") action set_egress_port_0(bit<9> egress_port) {
         standard_metadata.egress_spec = egress_port;
     }
-    @name("hw_drop") action hw_drop() {
+    @name("hw_drop") action hw_drop_0() {
         mark_to_drop();
     }
-    @name("dmac") table dmac() {
+    @name("dmac") table dmac_0() {
         actions = {
-            nop;
-            ing_drop;
-            set_egress_port;
+            nop_1;
+            ing_drop_0;
+            set_egress_port_0;
             NoAction;
         }
         key = {
@@ -196,17 +196,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 131072;
         default_action = NoAction();
     }
-    @name("do_drop") table do_drop() {
+    @name("do_drop") table do_drop_0() {
         actions = {
-            hw_drop;
+            hw_drop_0;
             NoAction;
         }
         default_action = NoAction();
     }
-    @name("smac_filter") table smac_filter() {
+    @name("smac_filter") table smac_filter_0() {
         actions = {
-            nop;
-            ing_drop;
+            nop_1;
+            ing_drop_0;
             NoAction;
         }
         key = {
@@ -215,10 +215,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        dmac.apply();
-        smac_filter.apply();
+        dmac_0.apply();
+        smac_filter_0.apply();
         if (meta.ing_metadata.drop == 1w1) 
-            do_drop.apply();
+            do_drop_0.apply();
     }
 }
 

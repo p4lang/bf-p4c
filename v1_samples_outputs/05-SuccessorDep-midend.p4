@@ -156,11 +156,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("nop") action nop() {
+    @name("nop") action nop_0() {
     }
-    @name("e_t1") table e_t1() {
+    @name("e_t1") table e_t1_0() {
         actions = {
-            nop;
+            nop_0;
             NoAction;
         }
         key = {
@@ -169,27 +169,27 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction();
     }
     apply {
-        e_t1.apply();
+        e_t1_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("nop") action nop() {
+    @name("nop") action nop_1() {
     }
-    @name("ing_drop") action ing_drop() {
+    @name("ing_drop") action ing_drop_0() {
         meta.ing_metadata.drop = 1w1;
     }
-    @name("set_egress_port") action set_egress_port(bit<8> egress_port) {
+    @name("set_egress_port") action set_egress_port_0(bit<8> egress_port) {
         meta.ing_metadata.egress_port = egress_port;
     }
-    @name("set_bd") action set_bd(bit<16> bd) {
+    @name("set_bd") action set_bd_0(bit<16> bd) {
         meta.ing_metadata.bd = bd;
     }
-    @name("dmac") table dmac() {
+    @name("dmac") table dmac_0() {
         actions = {
-            nop;
-            ing_drop;
-            set_egress_port;
+            nop_1;
+            ing_drop_0;
+            set_egress_port_0;
             NoAction;
         }
         key = {
@@ -199,9 +199,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 131072;
         default_action = NoAction();
     }
-    @name("port_bd") table port_bd() {
+    @name("port_bd") table port_bd_0() {
         actions = {
-            set_bd;
+            set_bd_0;
             NoAction;
         }
         key = {
@@ -210,10 +210,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction();
     }
-    @name("smac_filter") table smac_filter() {
+    @name("smac_filter") table smac_filter_0() {
         actions = {
-            nop;
-            ing_drop;
+            nop_1;
+            ing_drop_0;
             NoAction;
         }
         key = {
@@ -222,11 +222,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        port_bd.apply();
+        port_bd_0.apply();
         if (meta.ing_metadata.bd != 16w0) 
-            dmac.apply();
+            dmac_0.apply();
         else 
-            smac_filter.apply();
+            smac_filter_0.apply();
     }
 }
 

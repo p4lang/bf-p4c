@@ -188,12 +188,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_0") action action_0(bit<8> my_param0, bit<8> my_param1) {
+    @name("action_0") action action(bit<8> my_param0, bit<8> my_param1) {
         hdr.ethernet.dstAddr = 48w0xcba987654321;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table() {
         actions = {
-            action_0;
+            action;
             NoAction;
         }
         key = {
@@ -203,7 +203,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        table_0.apply();
+        table.apply();
     }
 }
 

@@ -161,23 +161,23 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("do_nothing") action do_nothing() {
+    @name("do_nothing") action do_nothing_0() {
     }
-    @name("action_0") action action_0(bit<16> param0) {
+    @name("action_0") action action(bit<16> param0) {
         hdr.pkt.field_f_16 = param0;
     }
-    @name("do_nothing_1") action do_nothing_1() {
+    @name("do_nothing_1") action do_nothing_2() {
     }
-    @name("action_1") action action_1(bit<16> param0) {
+    @name("action_1") action action_3(bit<16> param0) {
         hdr.pkt.field_f_16 = param0;
     }
-    @name("action_2") action action_2(bit<16> param0) {
+    @name("action_2") action action_4(bit<16> param0) {
         hdr.pkt.field_f_16 = param0;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table() {
         actions = {
-            do_nothing;
-            action_0;
+            do_nothing_0;
+            action;
             NoAction;
         }
         key = {
@@ -186,10 +186,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction();
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_3() {
         actions = {
-            do_nothing_1;
-            action_1;
+            do_nothing_2;
+            action_3;
             NoAction;
         }
         key = {
@@ -198,10 +198,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction();
     }
-    @name("table_2") table table_2() {
+    @name("table_2") table table_4() {
         actions = {
-            do_nothing;
-            action_2;
+            do_nothing_0;
+            action_4;
             NoAction;
         }
         key = {
@@ -211,13 +211,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        switch (table_0.apply().action_run) {
-            do_nothing: {
+        switch (table.apply().action_run) {
+            do_nothing_0: {
                 if (hdr.pkt.isValid()) 
-                    switch (table_1.apply().action_run) {
-                        do_nothing_1: {
+                    switch (table_3.apply().action_run) {
+                        do_nothing_2: {
                             if (hdr.pkt.isValid()) 
-                                table_2.apply();
+                                table_4.apply();
                         }
                     }
 

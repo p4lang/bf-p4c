@@ -162,14 +162,14 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("do_nothing") action do_nothing() {
+    @name("do_nothing") action do_nothing_0() {
     }
-    @name("action_1") action action_1(bit<16> param0) {
+    @name("action_1") action action(bit<16> param0) {
         hdr.pkt.field_g_16 = param0;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table() {
         actions = {
-            do_nothing;
+            do_nothing_0;
             NoAction;
         }
         key = {
@@ -178,9 +178,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction();
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_3() {
         actions = {
-            do_nothing;
+            do_nothing_0;
             NoAction;
         }
         key = {
@@ -188,25 +188,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_f_16[15:0]: exact;
         }
         size = 16384;
-        default_action = action_1(16w0xf);
+        default_action = action(16w0xf);
     }
-    @name("table_2") table table_2() {
+    @name("table_2") table table_4() {
         actions = {
-            do_nothing;
+            do_nothing_0;
             NoAction;
         }
         key = {
             hdr.pkt.field_f_16: ternary;
         }
         size = 2048;
-        default_action = do_nothing();
+        default_action = do_nothing_0();
     }
     apply {
         if (hdr.pkt.isValid()) 
-            table_0.apply();
+            table.apply();
         else 
-            table_1.apply();
-        table_2.apply();
+            table_3.apply();
+        table_4.apply();
     }
 }
 

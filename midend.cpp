@@ -37,7 +37,7 @@ Tofino::MidEnd::MidEnd(bool v1) : isv1(v1), evaluator0(v1), evaluator1(v1) {
 
     auto inliner = new P4::GeneralInliner();
     auto actInl = new P4::DiscoverActionsInlining(&actionsToInline, &refMap, &typeMap);
-    actInl->allowDirectActionCalls = true;
+    actInl->allowDirectActionCalls = true;  // these will be eliminated by 'SynthesizeActions'
 
     addPasses({
         new P4::DiscoverInlining(&toInline, evaluator0.getBlockMap()),
@@ -63,7 +63,6 @@ Tofino::MidEnd::MidEnd(bool v1) : isv1(v1), evaluator0(v1), evaluator1(v1) {
         new P4::TypeChecker(&refMap, &typeMap),
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::StrengthReduction(),
-        new P4::UniqueNames(isv1),
         new P4::MoveDeclarations(),  // more may have been introduced
         // Create actions for statements that can't be done in control blocks.
         new P4::ResolveReferences(&refMap, isv1),

@@ -164,23 +164,23 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    DirectMeter<bit<16>>(CounterType.Bytes) @name("meter_0") meter_0;
-    Meter(32w4097, CounterType.Bytes) @name("meter_1") meter_1;
-    @name("do_nothing") action do_nothing() {
+    DirectMeter<bit<16>>(CounterType.Bytes) @name("meter_0") meter;
+    Meter(32w4097, CounterType.Bytes) @name("meter_1") meter_2;
+    @name("do_nothing") action do_nothing_1() {
     }
-    @name("action_1") action action_1(bit<8> param0) {
-        meter_1.meter(32w7, hdr.pkt.color_1);
+    @name("action_1") action action(bit<8> param0) {
+        meter_2.meter(32w7, hdr.pkt.color_1);
     }
-    @name("action_0") action action_0_0(bit<8> param0) {
-        meter_0.read(hdr.pkt.lpf);
+    @name("action_0") action action_0(bit<8> param0) {
+        meter.read(hdr.pkt.lpf);
     }
-    @name("do_nothing") action do_nothing_0() {
-        meter_0.read(hdr.pkt.lpf);
+    @name("do_nothing") action do_nothing_2() {
+        meter.read(hdr.pkt.lpf);
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table() {
         actions = {
-            action_0_0;
-            do_nothing_0;
+            action_0;
+            do_nothing_2;
             NoAction;
         }
         key = {
@@ -191,12 +191,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 6000;
         default_action = NoAction();
-        meters = meter_0;
+        meters = meter;
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_2() {
         actions = {
-            do_nothing;
-            action_1;
+            do_nothing_1;
+            action;
             NoAction;
         }
         key = {
@@ -206,8 +206,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        table_0.apply();
-        table_1.apply();
+        table.apply();
+        table_2.apply();
     }
 }
 

@@ -160,36 +160,36 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("assign_egress1_action") action assign_egress1_action() {
+    @name("assign_egress1_action") action assign_egress1_action_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = meta.ing_metadata.tmp1;
     }
-    @name("assign_egress2_action") action assign_egress2_action() {
+    @name("assign_egress2_action") action assign_egress2_action_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = meta.ing_metadata.tmp2;
     }
-    @name("assign_egress_interfaces") action assign_egress_interfaces(bit<9> value1, bit<9> value2) {
+    @name("assign_egress_interfaces") action assign_egress_interfaces_0(bit<9> value1, bit<9> value2) {
         meta.ing_metadata.tmp1 = value1;
         meta.ing_metadata.tmp2 = value2;
     }
-    @name("set_ingress_port_props") action set_ingress_port_props(bit<1> port_type) {
+    @name("set_ingress_port_props") action set_ingress_port_props_0(bit<1> port_type) {
         meta.ing_metadata.flag = port_type;
     }
-    @name("assign_egress1") table assign_egress1() {
+    @name("assign_egress1") table assign_egress1_0() {
         actions = {
-            assign_egress1_action;
+            assign_egress1_action_0;
             NoAction;
         }
         default_action = NoAction();
     }
-    @name("assign_egress2") table assign_egress2() {
+    @name("assign_egress2") table assign_egress2_0() {
         actions = {
-            assign_egress2_action;
+            assign_egress2_action_0;
             NoAction;
         }
         default_action = NoAction();
     }
-    @name("dmac") table dmac() {
+    @name("dmac") table dmac_0() {
         actions = {
-            assign_egress_interfaces;
+            assign_egress_interfaces_0;
             NoAction;
         }
         key = {
@@ -197,9 +197,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("ingress_port_map") table ingress_port_map() {
+    @name("ingress_port_map") table ingress_port_map_0() {
         actions = {
-            set_ingress_port_props;
+            set_ingress_port_props_0;
             NoAction;
         }
         key = {
@@ -210,13 +210,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) {
-            ingress_port_map.apply();
-            switch (dmac.apply().action_run) {
-                assign_egress_interfaces: {
+            ingress_port_map_0.apply();
+            switch (dmac_0.apply().action_run) {
+                assign_egress_interfaces_0: {
                     if (meta.ing_metadata.flag == 1w1) 
-                        assign_egress1.apply();
+                        assign_egress1_0.apply();
                     else 
-                        assign_egress2.apply();
+                        assign_egress2_0.apply();
                 }
             }
 

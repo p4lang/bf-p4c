@@ -159,27 +159,23 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action1") action action1() {
-        @name("value_0") bit<1> value_0_0;
-        {
-            value_0_0 = 1w0;
-            meta.md.field1 = value_0_0;
-        }
+    bit<1> value_0;
+    bit<1> value_1;
+    @name("action1") action action1_2() {
+        value_0 = 1w0;
+        meta.md.field1 = value_0;
     }
-    @name("action2") action action2() {
-        @name("value_1") bit<1> value_1_0;
-        {
-            value_1_0 = 1w1;
-            meta.md.field1 = value_1_0;
-        }
+    @name("action2") action action2_0() {
+        value_1 = 1w1;
+        meta.md.field1 = value_1;
     }
-    @name("action2_1") action action2_1(bit<1> value) {
+    @name("action2_1") action action2_2(bit<1> value) {
         meta.md.field2 = value;
     }
-    @name("dmac1") table dmac1() {
+    @name("dmac1") table dmac1_0() {
         actions = {
-            action1;
-            action2;
+            action1_2;
+            action2_0;
             NoAction;
         }
         key = {
@@ -188,9 +184,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16536;
         default_action = NoAction();
     }
-    @name("dmac2") table dmac2() {
+    @name("dmac2") table dmac2_0() {
         actions = {
-            action2_1;
+            action2_2;
             NoAction;
         }
         key = {
@@ -200,8 +196,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        dmac1.apply();
-        dmac2.apply();
+        dmac1_0.apply();
+        dmac2_0.apply();
     }
 }
 

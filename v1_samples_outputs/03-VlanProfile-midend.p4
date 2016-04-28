@@ -173,23 +173,23 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    Counter(32w8192, CounterType.Packets) @name("flex_counter") flex_counter;
-    @name("update_flex_counter") action update_flex_counter() {
-        flex_counter.increment((bit<32>)meta.md.flex_counter_index);
+    Counter(32w8192, CounterType.Packets) @name("flex_counter") flex_counter_0;
+    @name("update_flex_counter") action update_flex_counter_0() {
+        flex_counter_0.increment((bit<32>)meta.md.flex_counter_index);
     }
-    @name("set_flex_counter_index") action set_flex_counter_index(bit<13> flex_counter_base) {
+    @name("set_flex_counter_index") action set_flex_counter_index_0(bit<13> flex_counter_base) {
         meta.md.flex_counter_index = flex_counter_base + (bit<13>)hdr.vlan_tag.prio;
     }
-    @name("update_counters") table update_counters() {
+    @name("update_counters") table update_counters_0() {
         actions = {
-            update_flex_counter;
+            update_flex_counter_0;
             NoAction;
         }
         default_action = NoAction();
     }
-    @name("vlan") table vlan() {
+    @name("vlan") table vlan_0() {
         actions = {
-            set_flex_counter_index;
+            set_flex_counter_index_0;
             NoAction;
         }
         key = {
@@ -199,8 +199,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        if (vlan.apply().hit) 
-            update_counters.apply();
+        if (vlan_0.apply().hit) 
+            update_counters_0.apply();
     }
 }
 

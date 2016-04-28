@@ -262,7 +262,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 32768;
         default_action = NoAction();
     }
-
     apply {
         exm_3ways_32k.apply();
     }

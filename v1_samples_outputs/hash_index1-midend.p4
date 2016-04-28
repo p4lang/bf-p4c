@@ -152,12 +152,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("setf1") action setf1(bit<32> val) {
+    @name("setf1") action setf1_0(bit<32> val) {
         hdr.data.f1 = val;
     }
-    @name("test1") table test1() {
+    @name("test1") table test1_0() {
         actions = {
-            setf1;
+            setf1_0;
             NoAction;
         }
         key = {
@@ -168,7 +168,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.data.b2 == 8w4) 
-            test1.apply();
+            test1_0.apply();
     }
 }
 

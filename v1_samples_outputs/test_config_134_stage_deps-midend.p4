@@ -159,24 +159,24 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_a") action action_a(bit<16> param0, bit<16> param1, bit<16> param2) {
+    @name("action_a") action action_a_0(bit<16> param0, bit<16> param1, bit<16> param2) {
         hdr.pkt.field_e_16 = param0;
         hdr.pkt.field_f_16 = param1;
         hdr.pkt.field_g_16 = param2;
     }
-    @name("action_b") action action_b(bit<16> param0) {
+    @name("action_b") action action_b_0(bit<16> param0) {
         hdr.pkt.field_f_16 = param0;
     }
-    @name("action_c") action action_c(bit<16> param0) {
+    @name("action_c") action action_c_0(bit<16> param0) {
         hdr.pkt.field_f_16 = param0;
     }
-    @name("action_d") action action_d() {
+    @name("action_d") action action_d_0() {
     }
-    @name("action_e") action action_e() {
+    @name("action_e") action action_e_0() {
     }
-    @name("table_a") table table_a() {
+    @name("table_a") table table_a_0() {
         actions = {
-            action_a;
+            action_a_0;
             NoAction;
         }
         key = {
@@ -185,9 +185,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction();
     }
-    @name("table_b") table table_b() {
+    @name("table_b") table table_b_0() {
         actions = {
-            action_b;
+            action_b_0;
             NoAction;
         }
         key = {
@@ -196,9 +196,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction();
     }
-    @name("table_c") table table_c() {
+    @name("table_c") table table_c_0() {
         actions = {
-            action_c;
+            action_c_0;
             NoAction;
         }
         key = {
@@ -207,9 +207,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction();
     }
-    @name("table_d") table table_d() {
+    @name("table_d") table table_d_0() {
         actions = {
-            action_d;
+            action_d_0;
             NoAction;
         }
         key = {
@@ -218,9 +218,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction();
     }
-    @name("table_e") table table_e() {
+    @name("table_e") table table_e_0() {
         actions = {
-            action_e;
+            action_e_0;
             NoAction;
         }
         key = {
@@ -230,11 +230,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        table_a.apply();
-        table_b.apply();
-        table_c.apply();
-        table_d.apply();
-        table_e.apply();
+        table_a_0.apply();
+        table_b_0.apply();
+        table_c_0.apply();
+        table_d_0.apply();
+        table_e_0.apply();
     }
 }
 
