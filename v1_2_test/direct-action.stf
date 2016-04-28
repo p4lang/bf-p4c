@@ -1,6 +1,3 @@
-load direct-action.out/tofino.bin
-load direct-action.out/tbl-cfg
-load direct-action.out/p4_name_lookup.json
 
 expect 3 00000101 ******** **** 55 66 77 88
 packet 0 00000101 00000202 0303 55 66 77 88

@@ -1,6 +1,3 @@
-load synth-action.out/tofino.bin
-load synth-action.out/tbl-cfg
-load synth-action.out/p4_name_lookup.json
 
 expect 3 00000101 ******** **** 55 66 77 88
 packet 0 00000101 00000202 0303 55 66 77 88

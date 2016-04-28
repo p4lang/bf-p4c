@@ -26,17 +26,17 @@ void IR::MAU::Table::dbprint(std::ostream &out) const {
             for (auto &way : ways) out << " " << (way.entries/1024U) << "K";
             out << "]"; }
         out << " }"; }
-    if (!(dbgetflags(out) & TableNoActions))
+    if (!(dbgetflags(out) & TableNoActions)) {
         for (auto &a : Values(actions))
             out << endl << a;
         if (match_table && match_table->default_action) {
             out << endl << "default_action " << match_table->default_action << '(';
             const char *sep = "";
-            if (match_table->default_action_args)
+            if (match_table->default_action_args) {
                 for (auto a : *match_table->default_action_args) {
                     out << sep << *a;
-                    sep = ", "; }
-            out << ")"; }
+                    sep = ", "; } }
+            out << ")"; } }
     for (auto &n : next)
         out << endl << n.first << ": " << indent << n.second << unindent;
     if (!attached.empty())
