@@ -105,9 +105,9 @@ class GetTofinoTables : public Inspector {
       if (auto action = blockMap->refMap->getDeclaration(act->name->path)
                                 ->to<IR::P4Action>()) {
         auto newaction = new IR::ActionFunction(action, act->arguments);
-        if (!tt->actions.count(newaction->name)) 
+        if (!tt->actions.count(newaction->name))
           tt->actions.addUnique(newaction->name, newaction);
-        else 
+        else
           error("%s: action %s appears multiple times in table %s", action->name.srcInfo,
                 action->name, tt->name); }
     // action_profile already pulled into TableContainer?
@@ -163,7 +163,8 @@ class GetTofinoTables : public Inspector {
     auto table = mi->object->to<IR::P4Table>();
     if (!table) BUG("%1% not apllied to table", m);
     if (!tables.count(m)) {
-      auto tt = tables[m] = new IR::MAU::Table(table->name, gress, new IR::V1Table(table));
+      auto tt = tables[m] = new IR::MAU::Table(table->name, gress,
+                                  new IR::V1Table(table, blockMap->refMap));
       setup_tt_actions(tt, table);
     } else {
       error("%s: Multiple applies of table %s not supported", m->srcInfo, table->name); }

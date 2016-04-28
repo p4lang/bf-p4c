@@ -100,7 +100,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new CheckTableNameDuplicate,
         new InstructionSelection,
         new ComputeShifts,
-        new DumpPipe,
+        new DumpPipe("Before PA alloc"),
         &defuse,
     };
     backend.setStopOnError(true);
