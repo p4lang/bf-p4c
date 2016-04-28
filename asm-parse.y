@@ -239,6 +239,7 @@ key : ID { $$ = VAL($1); }
     | MATCH { $$ = VAL($1); }
     | INT DOTDOT INT { $$ = VAL($1, $3); }
     | ID '(' value_list ')' { $$ = CMD($1, $3); }
+    | ID '(' ')' { $$ = VAL($1); }
     ;
 
 value: key

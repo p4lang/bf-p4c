@@ -273,6 +273,16 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data) {
     } else if (kv.key == "action_bus") {
         if (CHECKTYPE(kv.value, tMAP))
             action_bus = new ActionBus(this, kv.value.map);
+    } else if (kv.key == "default_action") {
+        default_action_lineno = kv.value.lineno;
+        if (CHECKTYPE2(kv.value, tSTR, tCMD)) {
+            if (kv.value.type == tSTR)
+                default_action = kv.value.s;
+            else {
+                default_action = kv.value[0].s;
+                for (int i = 1; i < kv.value.vec.size; ++i)
+                    if (CHECKTYPE(kv.value[i], tINT))
+                        default_action_args.push_back(kv.value[i].i); } }
     } else if (kv.key == "hit") {
         if (!hit_next.empty())
             error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
@@ -734,6 +744,9 @@ void Table::Actions::pass2(Table *tbl) {
         while (code >= 0 && code_use[code]) code++; }
     actions.sort([](const value_type &a, const value_type &b) -> bool {
         return a.second.code < b.second.code; });
+    if (!tbl->default_action.empty() && !exists(tbl->default_action))
+        error(tbl->default_action_lineno, "no action %s in table %s", tbl->default_action.c_str(),
+              tbl->name());
 }
 
 static int parity(unsigned v) {
@@ -914,6 +927,12 @@ void MatchTable::write_regs(int type, Table *result) {
         for (auto &act : *actions)
             merge.mau_action_instruction_adr_map_data[type][logical_id][act.code/4]
                 .set_subfield(act.addr + 0x40, (act.code%4) * 7, 7); }
+    if (!default_action.empty()) {
+        auto *act = actions->action(default_action);
+        merge.mau_action_instruction_adr_miss_value[logical_id] = 0x40 + act->addr;
+    } else if (!result->default_action.empty()) {
+        auto *act = actions->action(result->default_action);
+        merge.mau_action_instruction_adr_miss_value[logical_id] = 0x40 + act->addr; }
 
     /*------------------------
      * Next Table
@@ -953,6 +972,10 @@ void MatchTable::write_regs(int type, Table *result) {
                     .immediate_data_payload_shifter_en = 1; } }
     if (result->action_bus)
         result->action_bus->write_immed_regs(result);
+    if (default_action_args.size() > 0)
+        merge.mau_immediate_data_miss_value[logical_id] = default_action_args[0];
+    else if (result->default_action_args.size() > 0)
+        merge.mau_immediate_data_miss_value[logical_id] = result->default_action_args[0];
 
     if (input_xbar) input_xbar->write_regs();
 

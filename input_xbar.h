@@ -51,6 +51,7 @@ class InputXbar {
     };
 public:
     const int   lineno;
+    InputXbar(Table *table, bool ternary) : table(table), ternary(ternary), lineno(-1) {}
     InputXbar(Table *table, bool ternary, VECTOR(pair_t) &data);
     void pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size);
     void pass2(Alloc1Dbase<std::vector<InputXbar *>> &use, int size);

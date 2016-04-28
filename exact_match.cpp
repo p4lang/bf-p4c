@@ -83,6 +83,8 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
     if (action.args.size() > 2)
         error(lineno, "Unexpected number of action table arguments %zu", action.args.size());
     if (actions && !action_bus) action_bus = new ActionBus();
+    if (!input_xbar)
+        input_xbar = new InputXbar(this, false);
 }
 
 /* calculate the 18-bit byte/nybble mask tofino uses for matching in a 128-bit word */
@@ -124,9 +126,6 @@ void ExactMatchTable::pass1() {
     format->pass1(this);
     group_info.resize(format->groups());
     unsigned fmt_width = (format->size + 127)/128;
-    if (!format->field("match")) {
-        error(format->lineno, "No 'match' field in format for table %s", name());
-        return; }
     for (unsigned i = 0; i < format->groups(); i++) {
         auto &info = group_info[i];
         info.tofino_mask.resize(fmt_width);
@@ -451,10 +450,9 @@ void ExactMatchTable::write_regs() {
     match_mask.setrange(0, 128*fmt_width);
     version_nibble_mask.setrange(0, 32*fmt_width);
     for (unsigned i = 0; i < format->groups(); i++) {
-        Format::Field *match = format->field("match", i);
-        if (!match) continue;
-        for (auto &piece : match->bits)
-            match_mask.clrrange(piece.lo, piece.hi+1-piece.lo);
+        if (Format::Field *match = format->field("match", i)) {
+            for (auto &piece : match->bits)
+                match_mask.clrrange(piece.lo, piece.hi+1-piece.lo); }
         if (Format::Field *version = format->field("version", i)) {
             match_mask.clrrange(version->bits[0].lo, version->size);
             version_nibble_mask.clrrange(version->bits[0].lo/4, 1); } }
@@ -555,29 +553,29 @@ void ExactMatchTable::write_regs() {
         bool using_match = false;
         auto &byteswizzle_ctl = rams_row.exactmatch_row_vh_xbar_byteswizzle_ctl[row.bus];
         for (unsigned i = 0; i < format->groups(); i++) {
-            Format::Field *match = format->field("match", i);
-            if (!match) continue;
-            unsigned bit = 0;
-            for (auto &piece : match->bits) {
-                if (piece.lo/128U != word) {
-                    bit += piece.size();
-                    continue; }
-                using_match = true;
-                for (unsigned fmt_bit = piece.lo; fmt_bit <= piece.hi;) {
-                    unsigned byte = (fmt_bit%128)/8;
-                    unsigned bits_in_byte = (byte+1)*8 - (fmt_bit%128);
-                    if (fmt_bit + bits_in_byte > piece.hi + 1)
-                        bits_in_byte = piece.hi + 1 - fmt_bit;
-                    auto it = --match_by_bit.upper_bound(bit);
-                    Phv::Slice sl(*it->second, bit-it->first, bit-it->first+bits_in_byte-1);
-                    int bus_loc = find_on_ixbar(sl, word_ixbar_group[word]);
-                    assert(bus_loc >= 0 && bus_loc < 16);
-                    for (unsigned b = 0; b < bits_in_byte; b++, fmt_bit++)
-                        byteswizzle_ctl[byte][fmt_bit%8U] = 0x10 + bus_loc;
-                    bit += bits_in_byte; } }
-            assert(bit == match->size);
+            if (Format::Field *match = format->field("match", i)) {
+                unsigned bit = 0;
+                for (auto &piece : match->bits) {
+                    if (piece.lo/128U != word) {
+                        bit += piece.size();
+                        continue; }
+                    using_match = true;
+                    for (unsigned fmt_bit = piece.lo; fmt_bit <= piece.hi;) {
+                        unsigned byte = (fmt_bit%128)/8;
+                        unsigned bits_in_byte = (byte+1)*8 - (fmt_bit%128);
+                        if (fmt_bit + bits_in_byte > piece.hi + 1)
+                            bits_in_byte = piece.hi + 1 - fmt_bit;
+                        auto it = --match_by_bit.upper_bound(bit);
+                        Phv::Slice sl(*it->second, bit-it->first, bit-it->first+bits_in_byte-1);
+                        int bus_loc = find_on_ixbar(sl, word_ixbar_group[word]);
+                        assert(bus_loc >= 0 && bus_loc < 16);
+                        for (unsigned b = 0; b < bits_in_byte; b++, fmt_bit++)
+                            byteswizzle_ctl[byte][fmt_bit%8U] = 0x10 + bus_loc;
+                        bit += bits_in_byte; } }
+                assert(bit == match->size); }
             if (Format::Field *version = format->field("version", i)) {
                 if (version->bits[0].lo/128U != word) continue;
+                using_match = true;
                 for (unsigned bit = version->bits[0].lo; bit <= version->bits[0].hi; bit++) {
                     unsigned byte = (bit%128)/8;
                     byteswizzle_ctl[byte][bit%8U] = 8; } } }

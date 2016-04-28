@@ -233,6 +233,7 @@ public:
         iterator end() { return iterator(actions.end()); }
         const_iterator end() const { return const_iterator(actions.end()); }
         int count() { return actions.size(); }
+        Action *action(const std::string &n) { return actions.getref(n); }
         bool exists(const std::string &n) { return actions.count(n) > 0; }
         void pass1(Table *);
         void pass2(Table *);
@@ -286,6 +287,9 @@ public:
     Call                        action;
     Actions                     *actions = 0;
     ActionBus                   *action_bus = 0;
+    std::string                 default_action;
+    int                         default_action_lineno = -1;
+    std::vector<int>            default_action_args;
     std::vector<Ref>            hit_next;
     Ref                         miss_next;
     std::vector<HashDistribution>       hash_dist;

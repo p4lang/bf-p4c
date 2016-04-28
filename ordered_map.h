@@ -6,6 +6,7 @@
 #include <map>
 #include <utility>
 
+// Map is ordered by order of element insertion.
 template <class K, class V, class COMP = std::less<K>,
           class ALLOC = std::allocator<std::pair<const K, V>>>
 class ordered_map {
@@ -90,6 +91,7 @@ public:
     size_type   max_size() const noexcept { return data_map.max_size(); }
     bool operator==(const ordered_map &a) const { return data == a.data; }
     bool operator!=(const ordered_map &a) const { return data != a.data; }
+    void clear() { data.clear(); data_map.clear(); }
 
     iterator        find(const key_type &a) { return tr_iter(data_map.find(&a)); }
     const_iterator  find(const key_type &a) const { return tr_iter(data_map.find(&a)); }
@@ -130,13 +132,6 @@ public:
         if (it == data.end()) throw std::out_of_range("ordered_map");
         return it->second; }
 
-    std::pair<iterator, bool> insert(const value_type &v) {
-        auto it = find(v.first);
-        if (it == data.end()) {
-            it = data.insert(data.end(), v);
-            data_map.emplace(&it->first, it);
-            return std::make_pair(it, true); }
-        return std::make_pair(it, false); }
     std::pair<iterator, bool> emplace(K &&k, V &&v) {
         auto it = find(k);
         if (it == data.end()) {
@@ -144,9 +139,38 @@ public:
             data_map.emplace(&it->first, it);
             return std::make_pair(it, true); }
         return std::make_pair(it, false); }
+    std::pair<iterator, bool> emplace_hint(iterator pos, K &&k, V &&v) {
+        /* should be const_iterator pos, but glibc++ std::list is broken */
+        auto it = find(k);
+        if (it == data.end()) {
+            it = data.emplace(pos, std::move(k), std::move(v));
+            data_map.emplace(&it->first, it);
+            return std::make_pair(it, true); }
+        return std::make_pair(it, false); }
+
+    std::pair<iterator, bool> insert(const value_type &v) {
+        auto it = find(v.first);
+        if (it == data.end()) {
+            it = data.insert(data.end(), v);
+            data_map.emplace(&it->first, it);
+            return std::make_pair(it, true); }
+        return std::make_pair(it, false); }
+    std::pair<iterator, bool> insert(iterator pos, const value_type &v) {
+        /* should be const_iterator pos, but glibc++ std::list is broken */
+        auto it = find(v.first);
+        if (it == data.end()) {
+            it = data.insert(pos, v);
+            data_map.emplace(&it->first, it);
+            return std::make_pair(it, true); }
+        return std::make_pair(it, false); }
     template<class InputIterator> void insert(InputIterator b, InputIterator e) {
         while (b != e) insert(*b++); }
+    template<class InputIterator>
+    void insert(iterator pos, InputIterator b, InputIterator e) {
+        /* should be const_iterator pos, but glibc++ std::list is broken */
+        while (b != e) insert(pos, *b++); }
 
+    /* should be erase(const_iterator), but glibc++ std::list::erase is broken */
     iterator erase(iterator pos) {
         data_map.erase(&pos->first);
         return data.erase(pos); }
@@ -159,6 +183,17 @@ public:
         return 0; }
 
     template<class Compare> void sort(Compare comp) { data.sort(comp); }
+
+    /* helper methods that should be present in std::map, but aren't */
+    V *getref(const K &k) {
+        auto it = find(k);
+        return it == end() ? nullptr : &it->second; }
+    const V *getref(const K &k) const {
+        auto it = find(k);
+        return it == end() ? nullptr : &it->second; }
+    V getdefault(const K &k, V def = V()) const {
+        auto it = find(k);
+        return it == end() ? def : it->second; }
 };
 
 #endif /* _ordered_map_h_ */
