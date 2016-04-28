@@ -53,6 +53,7 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
             setb1;
             noop;
         }
+        default_action = noop;
     }
     table ex1() {
         key = { hdrs.extra[0].h : ternary; }
@@ -63,17 +64,20 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
             act3;
             noop;
         }
+        default_action = noop;
     }
     table tbl1() {
         key = { hdrs.data.f2 : ternary; }
-        actions = { setbyte(hdrs.data.b2); noop; } }
+        actions = { setbyte(hdrs.data.b2); noop; } 
+        default_action = noop; }
     table tbl2() {
         key = { hdrs.data.f2 : ternary; }
-        actions = { setbyte(hdrs.extra[1].b1); noop; } }
+        actions = { setbyte(hdrs.extra[1].b1); noop; }
+        default_action = noop; }        
     table tbl3() {
         key = { hdrs.data.f2 : ternary; }
-        actions = { setbyte(hdrs.extra[2].b2); noop; } }
-
+        actions = { setbyte(hdrs.extra[2].b2); noop; } 
+        default_action = noop; }
     apply {
         test1.apply();
         switch (ex1.apply().action_run) {

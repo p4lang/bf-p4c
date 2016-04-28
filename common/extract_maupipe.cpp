@@ -104,9 +104,10 @@ class GetTofinoTables : public Inspector {
                           ->to<IR::ActionList>()->actionList)
       if (auto action = blockMap->refMap->getDeclaration(act->name->path)
                                 ->to<IR::P4Action>()) {
-        if (!tt->actions.count(action->name))
-          tt->actions.add(action->name, new IR::ActionFunction(action, act->arguments));
-        else
+        auto newaction = new IR::ActionFunction(action, act->arguments);
+        if (!tt->actions.count(newaction->name)) 
+          tt->actions.addUnique(newaction->name, newaction);
+        else 
           error("%s: action %s appears multiple times in table %s", action->name.srcInfo,
                 action->name, tt->name); }
     // action_profile already pulled into TableContainer?

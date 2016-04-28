@@ -17,7 +17,8 @@
 #include "frontends/p4/strengthReduction.h"
 #include "common/blockmap.h"
 
-Tofino::MidEnd::MidEnd(bool v1) : isv1(v1), evaluator0(v1), evaluator1(v1) {
+Tofino::MidEnd::MidEnd(const CompilerOptions& options)
+        : isv1(options.isv1()), evaluator(options.isv1()) {
     stop_on_error = true;
     addPasses({
         // Give each local declaration a unique internal name
@@ -30,24 +31,25 @@ Tofino::MidEnd::MidEnd(bool v1) : isv1(v1), evaluator0(v1), evaluator1(v1) {
         new P4::MoveConstructors(isv1),
         new P4::ResolveReferences(&refMap, isv1),
         new P4::RemoveUnusedDeclarations(&refMap),
-        &evaluator0,
+        &evaluator,
         new VisitFunctor([this](const IR::Node *n)->const IR::Node *{
-            return evaluator0.getBlockMap()->getMain() ? n : nullptr; }),
+            return evaluator.getBlockMap()->getMain() ? n : nullptr; }),
     });
 
     auto inliner = new P4::GeneralInliner();
     auto actInl = new P4::DiscoverActionsInlining(&actionsToInline, &refMap, &typeMap);
     actInl->allowDirectActionCalls = true;  // these will be eliminated by 'SynthesizeActions'
 
+    auto midStream = options.dumpStream("midend");
+    
     addPasses({
-        new P4::DiscoverInlining(&toInline, evaluator0.getBlockMap()),
+        new P4::DiscoverInlining(&toInline, evaluator.getBlockMap()),
         new P4::InlineDriver(&toInline, inliner, isv1),
         new PassRepeated {
             // remove useless callees
             new P4::ResolveReferences(&refMap, isv1),
             new P4::RemoveUnusedDeclarations(&refMap),
         },
-        // new P4::ToP4(debugStream, options.file),
         new P4::ResolveReferences(&refMap, isv1),
         new P4::TypeChecker(&refMap, &typeMap, true, true),
         actInl,
@@ -72,7 +74,8 @@ Tofino::MidEnd::MidEnd(bool v1) : isv1(v1), evaluator0(v1), evaluator1(v1) {
         new P4::ResolveReferences(&refMap, isv1),
         new P4::TypeChecker(&refMap, &typeMap),
         new P4::MoveActionsToTables(&refMap, &typeMap),
-        &evaluator1,
-        new FillFromBlockMap(&evaluator1),
+        new P4::ToP4(midStream, options.file),
+        &evaluator,
+        new FillFromBlockMap(&evaluator),
     });
 }

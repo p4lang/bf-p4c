@@ -43,7 +43,7 @@ int main(int ac, char **av) {
         return 1; }
     const IR::Tofino::Pipe *maupipe = nullptr;
 
-    bool v1 = options.langVersion == CompilerOptions::FrontendVersion::P4v1;
+    bool v1 = options.isv1();
     if (v1 && !options.v12_path) {
         auto program = parse_p4v1_file(options, in);
         options.closeInput(in);
@@ -75,7 +75,7 @@ int main(int ac, char **av) {
                 dump(program);
             else
                 std::cout << *program << std::endl; }
-        Tofino::MidEnd midend(v1);
+        Tofino::MidEnd midend(options);
         program = program->apply(midend);
         if (!program)
             return 1;
