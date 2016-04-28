@@ -183,7 +183,8 @@ class GetTofinoTables : public Inspector {
         if (c->label->is<IR::DefaultExpression>())
             label = "default";
         else
-            label = c->label->to<IR::PathExpression>()->path->name.name;
+            label = blockMap->refMap->getDeclaration(c->label->to<IR::PathExpression>()->path)
+                            ->externName();
         tt->next[label] = getseq(c->statement); } }
 
   bool preorder(const IR::NamedCond *c) override {
