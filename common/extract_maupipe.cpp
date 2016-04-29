@@ -13,6 +13,115 @@
 #include "blockmap.h"
 #include "rewrite.h"
 
+namespace {
+class ActionArgSetup : public Transform {
+    /* FIXME -- use ParameterSubstitution for this somehow? */
+    std::map<cstring, const IR::Expression *>    args;
+    const IR::Node *preorder(IR::PathExpression *pe) override {
+        if (args.count(pe->path->name))
+            return args.at(pe->path->name);
+        return pe; }
+
+ public:
+    void add_arg(const IR::ActionArg *a) { args[a->name] = a; }
+    void add_arg(cstring name, const IR::Expression *e) { args[name] = e; }
+};
+
+class ActionBodySetup : public Inspector {
+    IR::ActionFunction      *af;
+    ActionArgSetup          &setup;
+    bool preorder(const IR::Vector<IR::StatOrDecl> *) override { return true; }
+    bool preorder(const IR::BlockStatement *) override { return true; }
+    bool preorder(const IR::AssignmentStatement *assign) override {
+        cstring pname = "modify_field";
+        if (assign->left->type->is<IR::Type_Header>())
+            pname = "copy_header";
+        auto prim = new IR::Primitive(assign->srcInfo, pname, assign->left, assign->right);
+        af->action.push_back(prim->apply(setup));
+        return false; }
+    bool preorder(const IR::MethodCallStatement *mc) override {
+        ERROR("extern method call " << mc << " not yet implemented");
+        return false; }
+    bool preorder(const IR::Declaration *) override {
+        // FIXME -- for now, ignoring local variables?  Need copy prop + dead code elim
+        return false; }
+    bool preorder(const IR::Node *n) override {
+        BUG("un-handled node %1% in action", n);
+        return false; }
+
+ public:
+    ActionBodySetup(IR::ActionFunction *af, ActionArgSetup &setup) : af(af), setup(setup) {}
+};
+}  // anonymous namespace
+
+const IR::ActionFunction *createActionFunction(const IR::P4Action *ac, const IR::Vector<IR::Expression> *args) {
+    IR::ActionFunction *rv = new IR::ActionFunction;
+    rv->srcInfo = ac->srcInfo;
+    rv->name = ac->externName();
+    ActionArgSetup setup;
+    size_t arg_idx = 0;
+    for (auto param : *ac->parameters->getEnumerator()) {
+        if (param->direction == IR::Direction::None) {
+            auto arg = new IR::ActionArg(param->srcInfo, param->type, param->name);
+            setup.add_arg(arg);
+            rv->args.push_back(arg);
+        } else {
+            if (!args || arg_idx >= args->size())
+                error("%s: Not enough args for %s", args->srcInfo, ac);
+            else
+                setup.add_arg(param->name, args->at(arg_idx++)); } }
+    if (arg_idx != (args ? args->size(): 0))
+        error("%s: Too many args for %s", args->srcInfo, ac);
+    ac->body->apply(ActionBodySetup(rv, setup));
+    return rv;
+}
+
+static void setIntProperty(cstring name, int *val, const IR::PropertyValue *pval) {
+    if (auto *ev = pval->to<IR::ExpressionValue>()) {
+        if (auto *cv = ev->expression->to<IR::Constant>()) {
+            *val = cv->asInt();
+            return; } }
+    error("%s: %s property must be a constant", pval->srcInfo, name);
+}
+
+const IR::V1Table *createV1Table(const IR::P4Table *tc, const P4::ReferenceMap *refMap) {
+    IR::V1Table *rv = new IR::V1Table;
+    rv->srcInfo = tc->srcInfo;
+    rv->name = tc->externName();
+    for (auto prop : *tc->properties->getEnumerator()) {
+        if (prop->name == "key") {
+            auto reads = new IR::Vector<IR::Expression>();
+            for (auto el : *prop->value->to<IR::Key>()->keyElements) {
+                reads->push_back(el->expression);
+                rv->reads_types.push_back(el->matchType->path->name); }
+            rv->reads = reads;
+        } else if (prop->name == "actions") {
+            for (auto el : *prop->value->to<IR::ActionList>()->actionList)
+                rv->actions.push_back(refMap->getDeclaration(el->name->path)->externName());
+        } else if (prop->name == "default_action") {
+            auto v = prop->value->to<IR::ExpressionValue>();
+            if (!v) {
+            } else if (auto pe = v->expression->to<IR::PathExpression>()) {
+                rv->default_action = refMap->getDeclaration(pe->path)->externName();
+                rv->default_action.srcInfo = pe->srcInfo;
+                continue;
+            } else if (auto mc = v->expression->to<IR::MethodCallExpression>()) {
+                if (auto pe = mc->method->to<IR::PathExpression>()) {
+                    rv->default_action = refMap->getDeclaration(pe->path)->externName();
+                    rv->default_action.srcInfo = mc->srcInfo;
+                    rv->default_action_args = mc->arguments;
+                    continue; } }
+            BUG("default action %1% is not an action or call", prop->value);
+        } else if (prop->name == "size") {
+            setIntProperty(prop->name, &rv->size, prop->value);
+        } else if (prop->name == "min_size") {
+            setIntProperty(prop->name, &rv->min_size, prop->value);
+        } else if (prop->name == "max_size") {
+            setIntProperty(prop->name, &rv->max_size, prop->value); } }
+    return rv;
+}
+
+namespace {
 class FindAttached : public Inspector {
   map<cstring, vector<const IR::Attached *>>    &attached;
   void postorder(const IR::Stateful *st) override {
@@ -104,7 +213,7 @@ class GetTofinoTables : public Inspector {
                           ->to<IR::ActionList>()->actionList)
       if (auto action = blockMap->refMap->getDeclaration(act->name->path)
                                 ->to<IR::P4Action>()) {
-        auto newaction = new IR::ActionFunction(action, act->arguments);
+        auto newaction = createActionFunction(action, act->arguments);
         if (!tt->actions.count(newaction->name))
           tt->actions.addUnique(newaction->name, newaction);
         else
@@ -164,7 +273,7 @@ class GetTofinoTables : public Inspector {
     if (!table) BUG("%1% not apllied to table", m);
     if (!tables.count(m)) {
       auto tt = tables[m] = new IR::MAU::Table(table->name, gress,
-                                  new IR::V1Table(table, blockMap->refMap));
+                                               createV1Table(table, blockMap->refMap));
       setup_tt_actions(tt, table);
     } else {
       error("%s: Multiple applies of table %s not supported", m->srcInfo, table->name); }
@@ -232,6 +341,7 @@ class GetTofinoTables : public Inspector {
   void postorder(const IR::Statement *st) override {
     BUG("Unhandled statement %1%", st); }
 };
+}  // anonymous namespace
 
 const IR::Tofino::Pipe *extract_maupipe(const IR::V1Program *program) {
   auto rv = new IR::Tofino::Pipe();
