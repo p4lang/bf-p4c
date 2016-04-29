@@ -91,7 +91,6 @@ class MauAsmOutput::ImmedFormat {
 void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, gress_t gress,
         const IXBar::Use &use, const Memories::Use *mem, const TableFormat *fmt) const {
     map<int, map<int, Slice>> sort;
-    if (use.use.empty()) return;
     for (auto &b : use.use) {
         auto n = sort[b.loc.group].emplace(b.loc.byte*8,
             Slice(phv, gress, b.field, b.byte*8, b.byte*8 + 7));
@@ -120,6 +119,7 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, gress_t gress,
             out << indent << "- [" << way.group << ", " << way.slice << ", 0x"
                 << hex(memway->second) << "]" << std::endl;
             ++memway; } }
+    if (use.use.empty()) return;
     out << indent++ << "input_xbar:" << std::endl;
     for (auto &group : sort)
         out << indent << "group " << group.first << ": " << group.second << std::endl;
@@ -258,6 +258,7 @@ class MauAsmOutput::EmitAction : public Inspector {
     void postorder(const IR::MAU::Instruction *) override {
         sep = nullptr;
         out << std::endl; }
+    bool preorder(const IR::Cast *) override { return true; }
     bool preorder(const IR::Expression *exp) override {
         if (sep) {
             PhvInfo::Info::bitrange bits;
@@ -539,6 +540,15 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         for (auto act : Values(tbl->actions))
             act->apply(EmitAction(*this, out, tbl, indent));
         --indent; }
+    if (tbl->match_table && tbl->match_table->default_action) {
+        out << indent << "default_action: " << tbl->match_table->default_action;
+        if (tbl->match_table->default_action_args) {
+            const char *sep = "(";
+            for (auto a : *tbl->match_table->default_action_args) {
+                out << sep << *a;
+                sep = ", "; }
+            if (*sep != '(') out << ")"; }
+        out << std::endl; }
 }
 
 void emit_fmt_nonimmed(std::ostream &out, const IR::MAU::Table *tbl, const IR::ActionFunction *act,

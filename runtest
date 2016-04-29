@@ -20,6 +20,8 @@ run() {
     status=$?
     if [ $status -eq 124 ]; then
         echo >&2 $1 TIMEOUT
+    elif [ $status -gt 128 ]; then
+        echo >&2 $1 CRASH with signal $(expr $status - 128)
     elif [ $status -gt 0 ]; then
         echo >&2 $1 FAILED
     fi
@@ -74,6 +76,9 @@ while [ $# -gt 1 ]; do
         ;;
     -db|-gdb)
         debug=true
+        if $verbose; then
+            P4C_ARGS="$P4C_ARGS -v"
+        fi
         ;;
     -to)
         TIMEOUT=$2
@@ -128,7 +133,13 @@ if [ $(expr "$file" : ".*_errors") -gt 0 ]; then
     exit 0
 fi
 
+rm -f $testdir/$name.tfa
 run $P4C $P4C_ARGS $file -o $testdir/$name.tfa || die
+
+if [ ! -r $testdir/$name.tfa ]; then
+    echo >&2 "$P4C did not give an error but did not generate output either"
+    exit 1
+fi
 
 if [ -r ${file%.p4}.stf ]; then
     TFAS=$(findbin tofino-asm tfas)

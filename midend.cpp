@@ -45,34 +45,23 @@ Tofino::MidEnd::MidEnd(const CompilerOptions& options)
     addPasses({
         new P4::DiscoverInlining(&toInline, evaluator.getBlockMap()),
         new P4::InlineDriver(&toInline, inliner, isv1),
-        new PassRepeated {
-            // remove useless callees
-            new P4::ResolveReferences(&refMap, isv1),
-            new P4::RemoveUnusedDeclarations(&refMap),
-        },
-        new P4::ResolveReferences(&refMap, isv1),
-        new P4::TypeChecker(&refMap, &typeMap, true, true),
+        new P4::RemoveAllUnusedDeclarations(isv1),
+        new P4::TypeChecking(&refMap, &typeMap, isv1),
         actInl,
         new P4::InlineActionsDriver(&actionsToInline, new P4::ActionsInliner(), isv1),
-        new PassRepeated {
-            new P4::ResolveReferences(&refMap, isv1),
-            new P4::RemoveUnusedDeclarations(&refMap),
-        },
+        new P4::RemoveAllUnusedDeclarations(isv1),
         new P4::SimplifyControlFlow(),
         new P4::ResolveReferences(&refMap, isv1),
         new P4::RemoveReturns(&refMap, false),  // remove exits
-        new P4::ResolveReferences(&refMap, isv1),
-        new P4::TypeChecker(&refMap, &typeMap),
+        new P4::TypeChecking(&refMap, &typeMap, isv1),
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::StrengthReduction(),
         new P4::MoveDeclarations(),  // more may have been introduced
         // Create actions for statements that can't be done in control blocks.
-        new P4::ResolveReferences(&refMap, isv1),
-        new P4::TypeChecker(&refMap, &typeMap),
+        new P4::TypeChecking(&refMap, &typeMap, isv1),
         new P4::SynthesizeActions(&refMap, &typeMap),
         // Move all stand-alone actions to custom tables
-        new P4::ResolveReferences(&refMap, isv1),
-        new P4::TypeChecker(&refMap, &typeMap),
+        new P4::TypeChecking(&refMap, &typeMap, isv1),
         new P4::MoveActionsToTables(&refMap, &typeMap),
         new P4::ToP4(midStream, options.file),
         &evaluator,

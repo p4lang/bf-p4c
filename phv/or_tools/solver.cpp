@@ -373,7 +373,7 @@ void Solver::SetContainerWidthConstraints() {
 
 void Solver::allocation(const PHV::Bit &bit, PHV::Container *container,
                         int *container_bit) {
-  (*container) = PHV::Container(0, 0);
+  (*container) = PHV::Container();
   (*container_bit) = 0;
   if (0 != bits_.count(bit)) {
     const Bit &b(bits_.at(bit));
@@ -381,8 +381,9 @@ void Solver::allocation(const PHV::Bit &bit, PHV::Container *container,
       (*container) = b.container()->Value();
       if (nullptr != b.base_offset())
         (*container_bit) = b.base_offset()->Value() + b.relative_offset();
-      else
+      else {
         WARNING("Cannot find offset for "  << bit);
+        (*container) = PHV::Container(); }
     } else {
       WARNING("Missing " <<
                 (nullptr == b.container() ? "container" : "") <<

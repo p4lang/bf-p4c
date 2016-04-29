@@ -145,6 +145,7 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
                                tbl->layout.overhead_bits + 4;
         int width = (match_group_bits+127)/128U;
         int match_groups = width > 1 ? 1 : 128 / match_group_bits;
+        if (match_groups > 5*width) match_groups = 5*width;
         int ways = tbl->layout.entries / 1024U / match_groups;
         // FIXME -- quick hack to choose a non-silly number of ways.  Should do for real
         if (ways > 6) {
