@@ -41,7 +41,7 @@ Tofino::MidEnd::MidEnd(const CompilerOptions& options)
     actInl->allowDirectActionCalls = true;  // these will be eliminated by 'SynthesizeActions'
 
     auto midStream = options.dumpStream("midend");
-    
+
     addPasses({
         new P4::DiscoverInlining(&toInline, evaluator.getBlockMap()),
         new P4::InlineDriver(&toInline, inliner, isv1),

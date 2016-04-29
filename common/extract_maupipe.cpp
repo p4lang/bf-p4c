@@ -105,9 +105,9 @@ class GetTofinoTables : public Inspector {
       if (auto action = blockMap->refMap->getDeclaration(act->name->path)
                                 ->to<IR::P4Action>()) {
         auto newaction = new IR::ActionFunction(action, act->arguments);
-        if (!tt->actions.count(newaction->name)) 
+        if (!tt->actions.count(newaction->name))
           tt->actions.addUnique(newaction->name, newaction);
-        else 
+        else
           error("%s: action %s appears multiple times in table %s", action->name.srcInfo,
                 action->name, tt->name); }
     // action_profile already pulled into TableContainer?
@@ -184,7 +184,7 @@ class GetTofinoTables : public Inspector {
             label = "default";
         else
             label = blockMap->refMap->getDeclaration(c->label->to<IR::PathExpression>()->path)
-                            ->externName();
+                            ->externalName();
         tt->next[label] = getseq(c->statement); } }
 
   bool preorder(const IR::NamedCond *c) override {
