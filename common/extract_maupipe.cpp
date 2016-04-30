@@ -54,7 +54,8 @@ class ActionBodySetup : public Inspector {
 };
 }  // anonymous namespace
 
-const IR::ActionFunction *createActionFunction(const IR::P4Action *ac, const IR::Vector<IR::Expression> *args) {
+const IR::ActionFunction *createActionFunction(const IR::P4Action *ac,
+                                               const IR::Vector<IR::Expression> *args) {
     IR::ActionFunction *rv = new IR::ActionFunction;
     rv->srcInfo = ac->srcInfo;
     rv->name = ac->externalName();

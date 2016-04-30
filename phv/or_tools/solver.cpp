@@ -379,9 +379,9 @@ void Solver::allocation(const PHV::Bit &bit, PHV::Container *container,
     const Bit &b(bits_.at(bit));
     if (nullptr != b.container()) {
       (*container) = b.container()->Value();
-      if (nullptr != b.base_offset())
+      if (nullptr != b.base_offset()) {
         (*container_bit) = b.base_offset()->Value() + b.relative_offset();
-      else {
+      } else {
         WARNING("Cannot find offset for "  << bit);
         (*container) = PHV::Container(); }
     } else {
