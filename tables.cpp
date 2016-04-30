@@ -716,7 +716,11 @@ void Table::Actions::pass2(Table *tbl) {
             bitvec use;
             for (auto *inst : act.instr) {
                 inst->pass2(tbl);
-                if (inst->slot >= 0) use[inst->slot] = 1; }
+                if (inst->slot >= 0) {
+                    if (use[inst->slot])
+                        error(inst->lineno, "action instructions slot %d already in use",
+                              inst->slot);
+                    use[inst->slot] = 1; } }
             for (int i = 0; i < ACTION_IMEM_ADDR_MAX; i++) {
                 if (auto old = tbl->stage->imem_addr_use[tbl->gress][i]) {
                     if (act.equiv(old)) {
