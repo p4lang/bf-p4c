@@ -21,6 +21,10 @@ Tofino::MidEnd::MidEnd(const CompilerOptions& options)
         : isv1(options.isv1()), evaluator(options.isv1()) {
     stop_on_error = true;
     addPasses({
+        // Proper semantics for uninitialzed local variables in parser states:
+        // headers must be invalidated
+        new P4::TypeChecking(&refMap, &typeMap, isv1),
+        new P4::ResetHeaders(&typeMap),
         // Give each local declaration a unique internal name
         new P4::UniqueNames(isv1),
         // Move all local declarations to the beginning
