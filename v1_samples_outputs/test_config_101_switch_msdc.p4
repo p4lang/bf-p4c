@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct acl_metadata_t {
     bit<1>  acl_deny;
@@ -1312,7 +1312,6 @@ control process_fabric_egress(inout headers hdr, inout metadata meta, inout stan
         size = 512;
         default_action = NoAction();
     }
-
     apply {
         fabric_rewrite.apply();
     }
@@ -1357,7 +1356,6 @@ control process_vlan_decap(inout headers hdr, inout metadata meta, inout standar
         size = 256;
         default_action = NoAction();
     }
-
     apply {
         vlan_decap.apply();
     }
@@ -1386,7 +1384,6 @@ control process_egress_bd(inout headers hdr, inout metadata meta, inout standard
         size = 16384;
         default_action = NoAction();
     }
-
     apply {
         egress_bd_map.apply();
     }
@@ -1424,7 +1421,6 @@ control process_rewrite(inout headers hdr, inout metadata meta, inout standard_m
         size = 1024;
         default_action = NoAction();
     }
-
     apply {
         rewrite.apply();
     }
@@ -1456,7 +1452,6 @@ control process_mac_rewrite(inout headers hdr, inout metadata meta, inout standa
         size = 512;
         default_action = NoAction();
     }
-
     apply {
         if (meta.i_fabric_header.routed == 1w1) {
             mac_rewrite.apply();
@@ -1496,7 +1491,6 @@ control process_vlan_xlate(inout headers hdr, inout metadata meta, inout standar
         size = 32768;
         default_action = NoAction();
     }
-
     apply {
         egress_vlan_xlate.apply();
     }
@@ -1672,7 +1666,6 @@ control validate_outer_ethernet_header(inout headers hdr, inout metadata meta, i
         size = 64;
         default_action = NoAction();
     }
-
     apply {
         validate_outer_ethernet.apply();
     }
@@ -1705,7 +1698,6 @@ control validate_outer_ipv4_header(inout headers hdr, inout metadata meta, inout
         size = 64;
         default_action = NoAction();
     }
-
     apply {
         validate_outer_ipv4_packet.apply();
     }
@@ -1738,7 +1730,6 @@ control process_port_mapping(inout headers hdr, inout metadata meta, inout stand
         size = 288;
         default_action = NoAction();
     }
-
     apply {
         port_mapping.apply();
     }
@@ -1889,7 +1880,6 @@ control process_port_vlan_mapping(inout headers hdr, inout metadata meta, inout 
         default_action = NoAction();
         @name("bd_action_profile") implementation = ActionProfile(32w16384);
     }
-
     apply {
         port_vlan_mapping.apply();
     }
@@ -1945,7 +1935,6 @@ control process_validate_packet(inout headers hdr, inout metadata meta, inout st
         size = 64;
         default_action = NoAction();
     }
-
     apply {
         validate_packet.apply();
     }
@@ -2113,7 +2102,6 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
         size = 30720;
         default_action = NoAction();
     }
-
     @name("ipv4_fib_exm_prefix_length_24") table ipv4_fib_exm_prefix_length_24() {
         actions = {
             on_miss;
@@ -2128,7 +2116,6 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
         size = 38400;
         default_action = NoAction();
     }
-
     @name("ipv4_fib_exm_prefix_length_25") table ipv4_fib_exm_prefix_length_25() {
         actions = {
             on_miss;
@@ -2143,7 +2130,6 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
         size = 3840;
         default_action = NoAction();
     }
-
     @name("ipv4_fib_exm_prefix_length_26") table ipv4_fib_exm_prefix_length_26() {
         actions = {
             on_miss;
@@ -2158,7 +2144,6 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
         size = 7680;
         default_action = NoAction();
     }
-
     @name("ipv4_fib_exm_prefix_length_27") table ipv4_fib_exm_prefix_length_27() {
         actions = {
             on_miss;
@@ -2173,7 +2158,6 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
         size = 7680;
         default_action = NoAction();
     }
-
     @name("ipv4_fib_exm_prefix_length_28") table ipv4_fib_exm_prefix_length_28() {
         actions = {
             on_miss;
@@ -2188,7 +2172,6 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
         size = 30720;
         default_action = NoAction();
     }
-
     @name("ipv4_fib_exm_prefix_length_29") table ipv4_fib_exm_prefix_length_29() {
         actions = {
             on_miss;
@@ -2203,7 +2186,6 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
         size = 15360;
         default_action = NoAction();
     }
-
     @name("ipv4_fib_exm_prefix_length_30") table ipv4_fib_exm_prefix_length_30() {
         actions = {
             on_miss;
@@ -2218,7 +2200,6 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
         size = 23040;
         default_action = NoAction();
     }
-
     @name("ipv4_fib_exm_prefix_length_31") table ipv4_fib_exm_prefix_length_31() {
         actions = {
             on_miss;
@@ -2233,7 +2214,6 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
         size = 1024;
         default_action = NoAction();
     }
-
     @name("ipv4_fib_exm_prefix_length_32") table ipv4_fib_exm_prefix_length_32() {
         actions = {
             on_miss;
@@ -2248,7 +2228,6 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
         size = 19200;
         default_action = NoAction();
     }
-
     @name("ipv4_fib_lpm_prefix_range_22_to_0") table ipv4_fib_lpm_prefix_range_22_to_0() {
         actions = {
             on_miss;
@@ -2263,7 +2242,6 @@ control process_ipv4_fib(inout headers hdr, inout metadata meta, inout standard_
         size = 512;
         default_action = NoAction();
     }
-
     apply {
         ipv4_fib_exm_prefix_length_32.apply();
         ipv4_fib_exm_prefix_length_31.apply();
@@ -2423,7 +2401,6 @@ control process_merge_results(inout headers hdr, inout metadata meta, inout stan
         size = 512;
         default_action = NoAction();
     }
-
     apply {
         fwd_result.apply();
     }
@@ -2473,7 +2450,6 @@ control process_nexthop(inout headers hdr, inout metadata meta, inout standard_m
         default_action = NoAction();
         @name("ecmp_action_profile") implementation = ActionSelector(HashAlgorithm.crc16, 32w16384, 32w10);
     }
-
     @name("nexthop") table nexthop() {
         actions = {
             nop;
@@ -2487,7 +2463,6 @@ control process_nexthop(inout headers hdr, inout metadata meta, inout standard_m
         size = 1024;
         default_action = NoAction();
     }
-
     apply {
         if (meta.nexthop_metadata.nexthop_type == 1w1) {
             ecmp_group.apply();
@@ -2511,7 +2486,6 @@ control process_ingress_bd_stats(inout headers hdr, inout metadata meta, inout s
         size = 64;
         default_action = NoAction();
     }
-
     apply {
         ingress_bd_stats_0.apply();
     }
@@ -2544,7 +2518,6 @@ control process_lag(inout headers hdr, inout metadata meta, inout standard_metad
         default_action = NoAction();
         @name("lag_action_profile") implementation = ActionSelector(HashAlgorithm.crc16, 32w1024, 32w8);
     }
-
     apply {
         lag_group.apply();
     }
@@ -2613,7 +2586,6 @@ control process_system_acl(inout headers hdr, inout metadata meta, inout standar
         size = 512;
         default_action = NoAction();
     }
-
     apply {
         system_acl.apply();
     }
@@ -2642,7 +2614,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-
     process_fabric_ingress() @name("process_fabric_ingress") process_fabric_ingress_0;
     validate_outer_ethernet_header() @name("validate_outer_ethernet_header") validate_outer_ethernet_header_0;
     validate_outer_ipv4_header() @name("validate_outer_ipv4_header") validate_outer_ipv4_header_0;

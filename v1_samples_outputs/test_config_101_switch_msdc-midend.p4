@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct acl_metadata_t {
     bit<1>  acl_deny;
@@ -1600,18 +1600,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     headers hdr_15;
     metadata meta_15;
     standard_metadata_t standard_metadata_15;
-    bit<16> etherType_0;
-    bit<16> etherType_1;
-    bit<16> etherType_2;
-    bit<16> etherType_3;
-    bit<16> etherType_4;
-    bit<16> etherType_5;
-    bit<16> etherType_6;
-    bit<16> etherType_7;
-    bit<16> etherType_8;
-    bit<16> etherType_9;
-    bit<16> etherType_10;
-    bit<16> etherType_11;
     headers hdr_16;
     metadata meta_16;
     standard_metadata_t standard_metadata_16;
@@ -1726,108 +1714,96 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta_15.l2_metadata.lkp_mac_sa = hdr_15.ethernet.srcAddr;
         meta_15.l2_metadata.lkp_mac_da = hdr_15.ethernet.dstAddr;
         hdr_15.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        etherType_0 = hdr_15.ethernet.etherType;
         meta_15.i_fabric_header.ingress_tunnel_type = meta_15.tunnel_metadata.ingress_tunnel_type;
-        meta_15.i_fabric_header.lkp_mac_type = etherType_0;
+        meta_15.i_fabric_header.lkp_mac_type = hdr_15.ethernet.etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_unicast_packet_single_tagged") action validate_outer_ethernet_header_set_valid_outer_unicast_packet_single_tagged() {
         meta_15.l2_metadata.lkp_pkt_type = 3w1;
         meta_15.l2_metadata.lkp_mac_sa = hdr_15.ethernet.srcAddr;
         meta_15.l2_metadata.lkp_mac_da = hdr_15.ethernet.dstAddr;
         hdr_15.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        etherType_1 = hdr_15.vlan_tag_[0].etherType;
         meta_15.i_fabric_header.ingress_tunnel_type = meta_15.tunnel_metadata.ingress_tunnel_type;
-        meta_15.i_fabric_header.lkp_mac_type = etherType_1;
+        meta_15.i_fabric_header.lkp_mac_type = hdr_15.vlan_tag_[0].etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_unicast_packet_double_tagged") action validate_outer_ethernet_header_set_valid_outer_unicast_packet_double_tagged() {
         meta_15.l2_metadata.lkp_pkt_type = 3w1;
         meta_15.l2_metadata.lkp_mac_sa = hdr_15.ethernet.srcAddr;
         meta_15.l2_metadata.lkp_mac_da = hdr_15.ethernet.dstAddr;
         hdr_15.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        etherType_2 = hdr_15.vlan_tag_[1].etherType;
         meta_15.i_fabric_header.ingress_tunnel_type = meta_15.tunnel_metadata.ingress_tunnel_type;
-        meta_15.i_fabric_header.lkp_mac_type = etherType_2;
+        meta_15.i_fabric_header.lkp_mac_type = hdr_15.vlan_tag_[1].etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_unicast_packet_qinq_tagged") action validate_outer_ethernet_header_set_valid_outer_unicast_packet_qinq_tagged() {
         meta_15.l2_metadata.lkp_pkt_type = 3w1;
         meta_15.l2_metadata.lkp_mac_sa = hdr_15.ethernet.srcAddr;
         meta_15.l2_metadata.lkp_mac_da = hdr_15.ethernet.dstAddr;
         hdr_15.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        etherType_3 = hdr_15.ethernet.etherType;
         meta_15.i_fabric_header.ingress_tunnel_type = meta_15.tunnel_metadata.ingress_tunnel_type;
-        meta_15.i_fabric_header.lkp_mac_type = etherType_3;
+        meta_15.i_fabric_header.lkp_mac_type = hdr_15.ethernet.etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_multicast_packet_untagged") action validate_outer_ethernet_header_set_valid_outer_multicast_packet_untagged() {
         meta_15.l2_metadata.lkp_pkt_type = 3w2;
         meta_15.l2_metadata.lkp_mac_sa = hdr_15.ethernet.srcAddr;
         meta_15.l2_metadata.lkp_mac_da = hdr_15.ethernet.dstAddr;
         hdr_15.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        etherType_4 = hdr_15.ethernet.etherType;
         meta_15.i_fabric_header.ingress_tunnel_type = meta_15.tunnel_metadata.ingress_tunnel_type;
-        meta_15.i_fabric_header.lkp_mac_type = etherType_4;
+        meta_15.i_fabric_header.lkp_mac_type = hdr_15.ethernet.etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_multicast_packet_single_tagged") action validate_outer_ethernet_header_set_valid_outer_multicast_packet_single_tagged() {
         meta_15.l2_metadata.lkp_pkt_type = 3w2;
         meta_15.l2_metadata.lkp_mac_sa = hdr_15.ethernet.srcAddr;
         meta_15.l2_metadata.lkp_mac_da = hdr_15.ethernet.dstAddr;
         hdr_15.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        etherType_5 = hdr_15.vlan_tag_[0].etherType;
         meta_15.i_fabric_header.ingress_tunnel_type = meta_15.tunnel_metadata.ingress_tunnel_type;
-        meta_15.i_fabric_header.lkp_mac_type = etherType_5;
+        meta_15.i_fabric_header.lkp_mac_type = hdr_15.vlan_tag_[0].etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_multicast_packet_double_tagged") action validate_outer_ethernet_header_set_valid_outer_multicast_packet_double_tagged() {
         meta_15.l2_metadata.lkp_pkt_type = 3w2;
         meta_15.l2_metadata.lkp_mac_sa = hdr_15.ethernet.srcAddr;
         meta_15.l2_metadata.lkp_mac_da = hdr_15.ethernet.dstAddr;
         hdr_15.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        etherType_6 = hdr_15.vlan_tag_[1].etherType;
         meta_15.i_fabric_header.ingress_tunnel_type = meta_15.tunnel_metadata.ingress_tunnel_type;
-        meta_15.i_fabric_header.lkp_mac_type = etherType_6;
+        meta_15.i_fabric_header.lkp_mac_type = hdr_15.vlan_tag_[1].etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_multicast_packet_qinq_tagged") action validate_outer_ethernet_header_set_valid_outer_multicast_packet_qinq_tagged() {
         meta_15.l2_metadata.lkp_pkt_type = 3w2;
         meta_15.l2_metadata.lkp_mac_sa = hdr_15.ethernet.srcAddr;
         meta_15.l2_metadata.lkp_mac_da = hdr_15.ethernet.dstAddr;
         hdr_15.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        etherType_7 = hdr_15.ethernet.etherType;
         meta_15.i_fabric_header.ingress_tunnel_type = meta_15.tunnel_metadata.ingress_tunnel_type;
-        meta_15.i_fabric_header.lkp_mac_type = etherType_7;
+        meta_15.i_fabric_header.lkp_mac_type = hdr_15.ethernet.etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_broadcast_packet_untagged") action validate_outer_ethernet_header_set_valid_outer_broadcast_packet_untagged() {
         meta_15.l2_metadata.lkp_pkt_type = 3w4;
         meta_15.l2_metadata.lkp_mac_sa = hdr_15.ethernet.srcAddr;
         meta_15.l2_metadata.lkp_mac_da = hdr_15.ethernet.dstAddr;
         hdr_15.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        etherType_8 = hdr_15.ethernet.etherType;
         meta_15.i_fabric_header.ingress_tunnel_type = meta_15.tunnel_metadata.ingress_tunnel_type;
-        meta_15.i_fabric_header.lkp_mac_type = etherType_8;
+        meta_15.i_fabric_header.lkp_mac_type = hdr_15.ethernet.etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_broadcast_packet_single_tagged") action validate_outer_ethernet_header_set_valid_outer_broadcast_packet_single_tagged() {
         meta_15.l2_metadata.lkp_pkt_type = 3w4;
         meta_15.l2_metadata.lkp_mac_sa = hdr_15.ethernet.srcAddr;
         meta_15.l2_metadata.lkp_mac_da = hdr_15.ethernet.dstAddr;
         hdr_15.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        etherType_9 = hdr_15.vlan_tag_[0].etherType;
         meta_15.i_fabric_header.ingress_tunnel_type = meta_15.tunnel_metadata.ingress_tunnel_type;
-        meta_15.i_fabric_header.lkp_mac_type = etherType_9;
+        meta_15.i_fabric_header.lkp_mac_type = hdr_15.vlan_tag_[0].etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_broadcast_packet_double_tagged") action validate_outer_ethernet_header_set_valid_outer_broadcast_packet_double_tagged() {
         meta_15.l2_metadata.lkp_pkt_type = 3w4;
         meta_15.l2_metadata.lkp_mac_sa = hdr_15.ethernet.srcAddr;
         meta_15.l2_metadata.lkp_mac_da = hdr_15.ethernet.dstAddr;
         hdr_15.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        etherType_10 = hdr_15.vlan_tag_[1].etherType;
         meta_15.i_fabric_header.ingress_tunnel_type = meta_15.tunnel_metadata.ingress_tunnel_type;
-        meta_15.i_fabric_header.lkp_mac_type = etherType_10;
+        meta_15.i_fabric_header.lkp_mac_type = hdr_15.vlan_tag_[1].etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_broadcast_packet_qinq_tagged") action validate_outer_ethernet_header_set_valid_outer_broadcast_packet_qinq_tagged() {
         meta_15.l2_metadata.lkp_pkt_type = 3w4;
         meta_15.l2_metadata.lkp_mac_sa = hdr_15.ethernet.srcAddr;
         meta_15.l2_metadata.lkp_mac_da = hdr_15.ethernet.dstAddr;
         hdr_15.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        etherType_11 = hdr_15.ethernet.etherType;
         meta_15.i_fabric_header.ingress_tunnel_type = meta_15.tunnel_metadata.ingress_tunnel_type;
-        meta_15.i_fabric_header.lkp_mac_type = etherType_11;
+        meta_15.i_fabric_header.lkp_mac_type = hdr_15.ethernet.etherType;
     }
     @name("validate_outer_ethernet_header.validate_outer_ethernet") table validate_outer_ethernet_header_validate_outer_ethernet() {
         actions = {
