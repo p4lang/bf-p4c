@@ -62,8 +62,8 @@ Tofino::MidEnd::MidEnd(const CompilerOptions& options)
         new P4::TypeChecking(&refMap, &typeMap, isv1),
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::StrengthReduction(),
-        new P4::TypeChecking(&refMap, &typeMap, isv1),
-        new P4::LocalCopyPropagation(&typeMap),
+        new P4::TypeChecking(&refMap, &typeMap, isv1, true),
+        new P4::LocalCopyPropagation(),
         new P4::MoveDeclarations(),  // more may have been introduced
         // Create actions for statements that can't be done in control blocks.
         new P4::TypeChecking(&refMap, &typeMap, isv1),
@@ -72,6 +72,7 @@ Tofino::MidEnd::MidEnd(const CompilerOptions& options)
         new P4::TypeChecking(&refMap, &typeMap, isv1),
         new P4::MoveActionsToTables(&refMap, &typeMap),
         new P4::ToP4(midStream, options.file),
+        new P4::TypeChecking(&refMap, &typeMap, isv1, true),
         &evaluator,
         new FillFromBlockMap(&evaluator),
     });
