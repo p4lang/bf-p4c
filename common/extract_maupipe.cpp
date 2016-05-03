@@ -62,13 +62,14 @@ const IR::ActionFunction *createActionFunction(const IR::P4Action *ac,
     ActionArgSetup setup;
     size_t arg_idx = 0;
     for (auto param : *ac->parameters->getEnumerator()) {
-        if (param->direction == IR::Direction::None) {
+        if ((param->direction == IR::Direction::None) ||
+            ((!args || arg_idx >= args->size()) && param->direction == IR::Direction::In)) {
             auto arg = new IR::ActionArg(param->srcInfo, param->type, param->name);
             setup.add_arg(arg);
             rv->args.push_back(arg);
         } else {
             if (!args || arg_idx >= args->size())
-                error("%s: Not enough args for %s", args->srcInfo, ac);
+                error("%s: Not enough args for %s", args ? args->srcInfo : ac->srcInfo, ac);
             else
                 setup.add_arg(param->name, args->at(arg_idx++)); } }
     if (arg_idx != (args ? args->size(): 0))
