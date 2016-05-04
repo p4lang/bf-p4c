@@ -234,8 +234,6 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> ttl_0;
-    bit<9> egress_port_0;
     action NoAction_0() {
     }
     @name("nop") action nop_0() {
@@ -243,11 +241,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("custom_action_3") action custom_action(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
         hdr.ipv4.dstAddr = dstIp;
         hdr.ethernet.dstAddr = dstAddr;
-        ttl_0 = hdr.ipv4.ttl;
-        egress_port_0 = egress_port;
-        ttl_0 = ttl_0 + 8w255;
-        meta.ig_intr_md_for_tm.ucast_egress_port = egress_port_0;
-        hdr.ipv4.ttl = ttl_0;
+        meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
     @name("exm_3ways_32k") table exm_3ways_32k_0() {
         actions = {

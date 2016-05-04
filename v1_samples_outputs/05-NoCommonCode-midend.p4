@@ -159,17 +159,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<1> value_0;
-    bit<1> value_1;
     action NoAction_0() {
     }
     @name("action1") action action1_2() {
-        value_0 = 1w0;
-        meta.md.field1 = value_0;
+        meta.md.field1 = 1w0;
     }
     @name("action2") action action2_0() {
-        value_1 = 1w1;
-        meta.md.field1 = value_1;
+        meta.md.field1 = 1w1;
     }
     @name("action2_1") action action2_2(bit<1> value) {
         meta.md.field2 = value;

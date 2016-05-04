@@ -222,27 +222,17 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> ttl_0;
-    bit<9> egress_port_0;
-    bit<8> ttl_1;
-    bit<9> egress_port_1;
     action NoAction_0() {
     }
     @name("nop") action nop_0() {
     }
     @name("hop_ipv4") action hop_ipv4_0(bit<9> egress_port) {
-        ttl_0 = hdr.ipv4.ttl;
-        egress_port_0 = egress_port;
-        ttl_0 = ttl_0 + 8w255;
-        meta.ig_intr_md_for_tm.ucast_egress_port = egress_port_0;
-        hdr.ipv4.ttl = ttl_0;
+        meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
     @name("next_hop_ipv4") action next_hop_ipv4_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
-        ttl_1 = hdr.ipv4.ttl;
-        egress_port_1 = egress_port;
-        ttl_1 = ttl_1 + 8w255;
-        meta.ig_intr_md_for_tm.ucast_egress_port = egress_port_1;
-        hdr.ipv4.ttl = ttl_1;
+        meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }

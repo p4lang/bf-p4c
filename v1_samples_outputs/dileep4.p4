@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -281,7 +281,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("ipv4_routing_exm_ways_3_pack_3") table ipv4_routing_exm_ways_3_pack_3() {
         actions = {
             nop;
@@ -294,7 +293,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("ipv4_routing_exm_ways_3_pack_5") table ipv4_routing_exm_ways_3_pack_5() {
         actions = {
             nop;
@@ -307,7 +305,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("ipv4_routing_exm_ways_4_pack_3_stage_1") table ipv4_routing_exm_ways_4_pack_3_stage_1() {
         actions = {
             nop;
@@ -320,7 +317,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("ipv4_routing_exm_ways_4_pack_7_stage_2") table ipv4_routing_exm_ways_4_pack_7_stage_2() {
         actions = {
             nop;
@@ -335,7 +331,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("ipv4_routing_exm_ways_5_pack_3_stage_3") table ipv4_routing_exm_ways_5_pack_3_stage_3() {
         actions = {
             nop;
@@ -347,7 +342,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("ipv4_routing_exm_ways_6_pack_3_stage_4") table ipv4_routing_exm_ways_6_pack_3_stage_4() {
         actions = {
             nop;
@@ -359,7 +353,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("ipv4_routing_stage_1") table ipv4_routing_stage_1() {
         actions = {
             nop;
@@ -373,7 +366,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-
     @name("tcam_tbl_stage_2") table tcam_tbl_stage_2() {
         actions = {
             nop;
@@ -385,7 +377,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("tcp_rm_tbl_stage_4") table tcp_rm_tbl_stage_4() {
         actions = {
             nop;
@@ -397,7 +388,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("udp_add_tbl_stage_3") table udp_add_tbl_stage_3() {
         actions = {
             nop;
@@ -409,7 +399,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     apply {
         ipv4_routing.apply();
         ipv4_routing_exm_ways_3_pack_5.apply();

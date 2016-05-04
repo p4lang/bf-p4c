@@ -1,5 +1,5 @@
-#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/core.p4"
-#include "/home/mbudiu/barefoot/git/p4c/build/../p4include/v1model.p4"
+#include "/home/cdodd/p4c/build/../p4include/core.p4"
+#include "/home/cdodd/p4c/build/../p4include/v1model.p4"
 
 struct egress_intrinsic_metadata_t {
     bit<16> egress_port;
@@ -196,7 +196,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         default_action = NoAction();
     }
-
     apply {
         egress_acl.apply();
     }
@@ -233,7 +232,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 16384;
         default_action = NoAction();
     }
-
     @name("ipv4_routing") table ipv4_routing() {
         actions = {
             ig_drop;
@@ -247,7 +245,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 2048;
         default_action = NoAction();
     }
-
     apply {
         ipv4_routing.apply();
         host_ip.apply();
