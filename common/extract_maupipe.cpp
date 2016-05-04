@@ -373,7 +373,7 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::V1Program *program) {
 class ConvertIndexToHeaderStackItemRef : public Transform {
     const IR::Expression *preorder(IR::ArrayIndex *idx) override {
         auto type = idx->type->to<IR::Type_Header>();
-        if (!type) BUG("%1% is not a header stack ref");
+        if (!type) BUG("%1% is not a header stack ref", idx->type);
         return new IR::HeaderStackItemRef(idx->srcInfo, type, idx->left, idx->right); }
 };
 
