@@ -163,6 +163,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("set_flag") action set_flag_0() {
         hdr.my_test_config_1.o_1 = 1w1;
     }
@@ -172,7 +174,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             set_flag_0;
             do_nothing_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.my_test_config_1.a_32: exact;
@@ -183,7 +185,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.my_test_config_1.i_32: exact;
         }
         max_size = 16384;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         test_exact_table_0.apply();

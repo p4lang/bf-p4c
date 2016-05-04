@@ -285,6 +285,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("action_1_1") action action_1(bit<1> value) {
         meta.md.field_1_1_1 = value;
         meta.md.field_2_32_16 = 32w11;
@@ -442,12 +444,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             action_8_26;
             action_8_27;
             action_8_28;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         dmac_0.apply();

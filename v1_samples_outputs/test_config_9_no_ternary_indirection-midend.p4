@@ -180,6 +180,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("action_0") action action(bit<8> param_0) {
         hdr.ipv4.diffserv = param_0;
     }
@@ -189,24 +191,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_0") table table() {
         actions = {
             action;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ethernet.etherType: ternary;
         }
         max_size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("table_1") table table_2() {
         actions = {
             action_2;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ethernet.etherType: ternary;
         }
         max_size = 4096;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         table.apply();

@@ -159,6 +159,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("egr_action") action egr_action_0() {
         clone3(CloneType.E2E, 32w7, { meta.m.foo });
     }
@@ -169,14 +171,14 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             egr_action_0;
             egr_action2_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             meta.eg_intr_md_from_parser_aux.egress_parser_err: exact;
             hdr.ethernet.dstAddr                             : exact;
             meta.m.foo                                       : exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         egr_null_table_0.apply();
@@ -184,6 +186,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_1() {
+    }
     @name("ingr_action") action ingr_action_0() {
         clone3(CloneType.I2E, 32w5, { meta.m.foo });
     }
@@ -194,12 +198,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             ingr_action_0;
             ingr_action2_0;
-            NoAction;
+            NoAction_1;
         }
         key = {
             meta.ig_intr_md_from_parser_aux.ingress_parser_err: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
     apply {
         ingr_null_table_0.apply();

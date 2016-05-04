@@ -163,6 +163,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("do_nothing") action do_nothing_0() {
     }
     @name("action_0") action action() {
@@ -171,52 +173,52 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_a") table table_a_0() {
         actions = {
             do_nothing_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.pkt.field_a_32: ternary;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("table_b") table table_b_0() {
         actions = {
             do_nothing_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.pkt.field_b_32: ternary;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("table_c") table table_c_0() {
         actions = {
             do_nothing_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.pkt.field_c_32: ternary;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("table_d") table table_d_0() {
         actions = {
             do_nothing_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.pkt.field_d_32: ternary;
         }
         size = 512;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("table_e") table table_e_0() {
         actions = {
             do_nothing_0;
             action;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.pkt.field_o_10: range;
@@ -224,18 +226,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_h_16: exact;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("table_f") table table_f_0() {
         actions = {
             do_nothing_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.pkt.field_g_16: ternary;
         }
         size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         table_a_0.apply();

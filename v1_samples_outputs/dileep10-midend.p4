@@ -236,6 +236,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<8> ttl_0;
     bit<9> egress_port_0;
+    action NoAction_0() {
+    }
     @name("nop") action nop_0() {
     }
     @name("custom_action_3") action custom_action(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
@@ -251,7 +253,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_0;
             custom_action;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ipv4.dstAddr    : exact;
@@ -262,7 +264,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.dstPort     : exact;
         }
         size = 32768;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         exm_3ways_32k_0.apply();

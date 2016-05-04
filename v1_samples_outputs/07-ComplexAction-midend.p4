@@ -159,6 +159,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("action1") action action1_0() {
         meta.md.field1 = meta.md.field1 + meta.md.field2;
         meta.md.field2 = 8w5;
@@ -166,12 +168,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table1") table table1_0() {
         actions = {
             action1_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         table1_0.apply();

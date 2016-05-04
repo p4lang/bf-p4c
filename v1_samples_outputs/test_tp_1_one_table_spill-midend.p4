@@ -174,6 +174,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("action_e") action action_e_0(bit<8> param2, bit<16> param_3) {
         hdr.ipv4.diffserv = param2;
         hdr.ipv4.hdrChecksum = param_3;
@@ -181,13 +183,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name("table_e") table table_e_0() {
         actions = {
             action_e_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ipv4.srcAddr : exact;
             hdr.ipv4.diffserv: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         table_e_0.apply();
@@ -195,6 +197,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_1() {
+    }
     @name("action_0") action action(bit<8> param0) {
         hdr.ipv4.diffserv = param0;
     }
@@ -205,23 +209,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action;
             action_2;
-            NoAction;
+            NoAction_1;
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
         }
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
     @name("table_1") table table_2() {
         actions = {
             action_2;
-            NoAction;
+            NoAction_1;
         }
         key = {
             hdr.ipv4.dstAddr : exact;
             hdr.ipv4.protocol: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
     apply {
         table.apply();

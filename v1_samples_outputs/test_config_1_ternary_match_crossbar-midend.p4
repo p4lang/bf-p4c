@@ -152,6 +152,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("modify_b") action modify_b_0(bit<8> my_param) {
         hdr.my_test_config_1.b_8 = my_param;
     }
@@ -161,7 +163,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             modify_b_0;
             just_no_op_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.my_test_config_1.a_32    : lpm;
@@ -170,7 +172,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.my_test_config_1.c_8     : ternary;
         }
         max_size = 2048;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         my_test_config_1_table_0.apply();

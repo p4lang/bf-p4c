@@ -160,6 +160,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("assign_egress1_action") action assign_egress1_action_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = meta.ing_metadata.tmp1;
     }
@@ -176,37 +178,37 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("assign_egress1") table assign_egress1_0() {
         actions = {
             assign_egress1_action_0;
-            NoAction;
+            NoAction_0;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("assign_egress2") table assign_egress2_0() {
         actions = {
             assign_egress2_action_0;
-            NoAction;
+            NoAction_0;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("dmac") table dmac_0() {
         actions = {
             assign_egress_interfaces_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("ingress_port_map") table ingress_port_map_0() {
         actions = {
             set_ingress_port_props_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact;
         }
         size = 288;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) {

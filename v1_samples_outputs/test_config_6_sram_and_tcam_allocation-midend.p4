@@ -180,6 +180,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("eg_drop") action eg_drop_0() {
         standard_metadata.egress_spec = 9w0;
     }
@@ -189,12 +191,12 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             eg_drop_0;
             permit_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             meta.routing_metadata.drop: ternary;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         egress_acl_0.apply();
@@ -204,6 +206,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<8> ttl_0;
     bit<9> egress_port_0;
+    action NoAction_1() {
+    }
     @name("do_nothing") action do_nothing_0() {
     }
     @name("l3_set_index") action l3_set_index_0(bit<8> index) {
@@ -226,26 +230,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing_0;
             l3_set_index_0;
-            NoAction;
+            NoAction_1;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
         }
         max_size = 16384;
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
     @name("ipv4_routing") table ipv4_routing_0() {
         actions = {
             ig_drop_0;
             hop_ipv4_0;
-            NoAction;
+            NoAction_1;
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
             hdr.ipv4.srcAddr: exact;
         }
         max_size = 2048;
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
     apply {
         ipv4_routing_0.apply();

@@ -241,6 +241,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<8> ttl_0;
     bit<9> egress_port_0;
+    action NoAction_0() {
+    }
     @name("nop") action nop_0() {
     }
     @name("custom_action_3") action custom_action(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
@@ -256,13 +258,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_0;
             custom_action;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
             hdr.tcp.srcPort     : exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         exm_5ways_1Entries_stage.apply();

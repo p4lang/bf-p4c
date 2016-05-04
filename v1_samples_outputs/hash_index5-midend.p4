@@ -152,6 +152,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     Counter(32w256, CounterType.Packets) @name("simple") simple_0;
     @name("countb2") action countb2_0(bit<8> val) {
         simple_0.increment((bit<32>)hdr.data.b2);
@@ -159,9 +161,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test1") table test1_0() {
         actions = {
             countb2_0;
-            NoAction;
+            NoAction_0;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         test1_0.apply();

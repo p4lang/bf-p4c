@@ -236,6 +236,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<8> ttl_0;
     bit<9> egress_port_0;
+    action NoAction_0() {
+    }
     @name("nop") action nop_0() {
     }
     @name("next_hop_ipv4") action next_hop_ipv4_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
@@ -251,14 +253,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_0;
             next_hop_ipv4_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ethernet.srcAddr: exact;
             hdr.ethernet.dstAddr: exact;
             hdr.tcp.srcPort     : exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         ipv4_routing_exm_ways_4_pack_4_stage.apply();

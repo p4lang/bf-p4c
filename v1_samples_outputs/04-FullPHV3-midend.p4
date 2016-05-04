@@ -381,6 +381,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("a1") action a1_0() {
     }
     @name("a2") action a2_0() {
@@ -394,7 +396,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("t1") table t1_0() {
         actions = {
             a1_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             meta.m.field_8_01: exact;
@@ -462,12 +464,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.m.field_8_63: exact;
             meta.m.field_8_64: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("t2") table t2_0() {
         actions = {
             a2_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             meta.m.field_16_01: exact;
@@ -503,12 +505,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.m.field_16_31: exact;
             meta.m.field_16_32: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("t3") table t3_0() {
         actions = {
             a3_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             meta.m.field_16_33: exact;
@@ -576,12 +578,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.m.field_16_95: exact;
             meta.m.field_16_96: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("t4") table t4_0() {
         actions = {
             a4_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             meta.m.field_32_01: exact;
@@ -617,12 +619,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.m.field_32_31: exact;
             meta.m.field_32_32: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("t5") table t5_0() {
         actions = {
             a5_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             meta.m.field_32_33: exact;
@@ -653,7 +655,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             meta.m.field_32_58: exact;
             meta.m.field_32_59: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         t1_0.apply();

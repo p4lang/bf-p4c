@@ -161,6 +161,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("action1") action action1_0() {
         meta.ing_metadata.field1 = 1w1;
     }
@@ -177,42 +179,42 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action1_0;
             action2_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ethernet.srcAddr: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("table2") table table2_0() {
         actions = {
             action3_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("table3") table table3_0() {
         actions = {
             action3_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("table4") table table4_0() {
         actions = {
             action4_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ethernet.ethertype: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         switch (table1_0.apply().action_run) {

@@ -188,19 +188,21 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("action_0") action action(bit<16> my_param_0) {
         hdr.vlan.etherType = hdr.vlan.etherType + my_param_0;
     }
     @name("table_0") table table() {
         actions = {
             action;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ipv4.srcAddr: lpm;
         }
         max_size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         table.apply();

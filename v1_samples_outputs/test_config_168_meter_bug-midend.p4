@@ -174,6 +174,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     DirectMeter<bit<8>>(CounterType.Bytes) @name("exm_meter2") exm_meter2_0;
     @name("action_0") action action_0() {
         hdr.ipv4.ttl = 8w4;
@@ -191,14 +193,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             action_0;
             action_1;
             nop;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ipv4.srcAddr : exact;
             hdr.ipv4.dstAddr : exact;
             hdr.ipv4.diffserv: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
         meters = exm_meter2_0;
     }
     apply {

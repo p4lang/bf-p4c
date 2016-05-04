@@ -156,17 +156,19 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("nop") action nop_0() {
     }
     @name("e_t1") table e_t1_0() {
         actions = {
             nop_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ethernet.srcAddr: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         e_t1_0.apply();
@@ -174,6 +176,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_1() {
+    }
     @name("nop") action nop_1() {
     }
     @name("set_egress_port") action set_egress_port_0(bit<8> egress_port) {
@@ -189,37 +193,37 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_1;
             set_egress_port_0;
-            NoAction;
+            NoAction_1;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
             meta.ing_metadata.bd: exact;
         }
         size = 131072;
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
     @name("port_bd") table port_bd_0() {
         actions = {
             set_bd_0;
-            NoAction;
+            NoAction_1;
         }
         key = {
             meta.ing_metadata.ingress_port: exact;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
     @name("smac_filter") table smac_filter_0() {
         actions = {
             nop_1;
             ing_drop_0;
-            NoAction;
+            NoAction_1;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
     apply {
         port_bd_0.apply();

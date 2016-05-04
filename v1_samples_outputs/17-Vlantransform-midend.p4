@@ -192,6 +192,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("do_new_inner_cfi") action do_new_inner_cfi_0() {
         hdr.vlan_tag[1].cfi = meta.meta.new_inner_cfi;
     }
@@ -239,64 +241,64 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("new_inner_cfi") table new_inner_cfi_0() {
         actions = {
             do_new_inner_cfi_0;
-            NoAction;
+            NoAction_0;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("new_inner_pri") table new_inner_pri_0() {
         actions = {
             do_new_inner_pri_0;
-            NoAction;
+            NoAction_0;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("new_inner_tpid") table new_inner_tpid_0() {
         actions = {
             do_new_inner_tpid_0;
-            NoAction;
+            NoAction_0;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("new_inner_vid") table new_inner_vid_0() {
         actions = {
             do_new_inner_vid_0;
-            NoAction;
+            NoAction_0;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("new_outer_cfi") table new_outer_cfi_0() {
         actions = {
             do_new_outer_cfi_0;
-            NoAction;
+            NoAction_0;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("new_outer_pri") table new_outer_pri_0() {
         actions = {
             do_new_outer_pri_0;
-            NoAction;
+            NoAction_0;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("new_outer_tpid") table new_outer_tpid_0() {
         actions = {
             do_new_outer_tpid_0;
-            NoAction;
+            NoAction_0;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("new_outer_vid") table new_outer_vid_0() {
         actions = {
             do_new_outer_vid_0;
-            NoAction;
+            NoAction_0;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("vlan_xlate") table vlan_xlate_0() {
         actions = {
             nop_0;
             rewrite_tags_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.vlan_tag[0].isValid(): exact;
@@ -304,7 +306,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.vlan_tag[1].isValid(): exact;
             hdr.vlan_tag[1].vid      : exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         vlan_xlate_0.apply();

@@ -163,6 +163,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     DirectMeter<bit<8>>(CounterType.Bytes) @name("meter_0") meter;
     Meter(32w500, CounterType.Bytes) @name("meter_1") meter_2;
     @name("do_nothing") action do_nothing_0() {
@@ -176,7 +178,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_0") table table() {
         actions = {
             action_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.pkt.field_e_16: ternary;
@@ -184,20 +186,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.color_1   : exact;
         }
         size = 6000;
-        default_action = NoAction();
+        default_action = NoAction_0();
         meters = meter;
     }
     @name("table_1") table table_2() {
         actions = {
             do_nothing_0;
             action;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.pkt.field_e_16: exact;
         }
         size = 32768;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         table.apply();

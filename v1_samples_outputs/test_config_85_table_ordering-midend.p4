@@ -157,6 +157,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("action_0") action action(bit<32> my_param_0, bit<32> my_param_4) {
         hdr.pkt.field_a = my_param_0;
         hdr.pkt.field_g = my_param_4;
@@ -179,57 +181,57 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action;
             nop_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.pkt.field_b: exact;
         }
         size = 256000;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("table_1") table table_5() {
         actions = {
             action_5;
             nop_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.pkt.field_d: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("table_2") table table_6() {
         actions = {
             action_6;
             nop_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.pkt.field_f: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("table_3") table table_7() {
         actions = {
             action_7;
             nop_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.pkt.field_h: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("table_4") table table_8() {
         actions = {
             action_8;
             nop_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.pkt.field_e: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         switch (table.apply().action_run) {

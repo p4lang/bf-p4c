@@ -178,6 +178,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("action_0") action action(bit<1> param0, bit<1> param1, bit<4> param2, bit<4> param3, bit<1> param4, bit<1> param5) {
         meta.meta.field_a0_1 = 1w0;
         meta.meta.field_a1_1 = param0;
@@ -200,25 +202,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_0") table table() {
         actions = {
             action;
-            NoAction;
+            NoAction_0;
         }
         key = {
             meta.ig_intr_md.ingress_port: exact;
         }
         size = 128;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("table_1") table table_2() {
         actions = {
             action_2;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.pkt.field_g_16: exact;
             hdr.pkt.color_0   : exact;
         }
         size = 65536;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         if (1w0 == meta.ig_intr_md.resubmit_flag) {

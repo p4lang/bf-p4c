@@ -245,6 +245,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<9> egress_port_1;
     bit<8> ttl_2;
     bit<9> egress_port_2;
+    action NoAction_0() {
+    }
     @name("nop") action nop_0() {
     }
     @name("next_hop_ipv4") action next_hop_ipv4_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
@@ -283,45 +285,45 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_0;
             next_hop_ipv4_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
             hdr.ethernet.srcAddr: exact;
             hdr.ipv4.dstAddr    : exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("exm_3ways_1Entries") table exm_3ways_1Entries_0() {
         actions = {
             nop_0;
             next_hop_ipv4_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
             hdr.ethernet.srcAddr: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("exm_3ways_2Entries_stage_3") table exm_3ways_2Entries_stage() {
         actions = {
             nop_0;
             next_hop_ipv4_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ipv4.srcAddr: exact;
             hdr.ipv4.dstAddr: exact;
             hdr.tcp.dstPort : exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("exm_4ways_16k_stage_5") table exm_4ways_16k_stage() {
         actions = {
             nop_0;
             next_hop_ipv4_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ipv4.dstAddr    : exact;
@@ -330,105 +332,105 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.srcAddr: exact;
         }
         size = 16384;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("exm_4ways_1Entries") table exm_4ways_1Entries_0() {
         actions = {
             nop_0;
             custom_action;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
             hdr.tcp.dstPort : exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("exm_4ways_2Entries_stage_4") table exm_4ways_2Entries_stage() {
         actions = {
             nop_0;
             next_hop_ipv4_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
             hdr.tcp.srcPort : exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("exm_5ways_2Entries_stage_4") table exm_5ways_2Entries_stage() {
         actions = {
             nop_0;
             custom_action_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
             hdr.ipv4.srcAddr: exact;
             hdr.tcp.dstPort : exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("exm_5ways_7Entries") table exm_5ways_7Entries_0() {
         actions = {
             nop_0;
             custom_action_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ipv4.dstAddr    : exact;
             hdr.ethernet.dstAddr: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("exm_6ways_1Entries_stage_3") table exm_6ways_1Entries_stage() {
         actions = {
             nop_0;
             next_hop_ipv4_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
             hdr.ipv4.dstAddr    : exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("exm_6ways_2Entries_stage_4") table exm_6ways_2Entries_stage() {
         actions = {
             nop_0;
             custom_action;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("exm_6ways_7Entries_stage_1") table exm_6ways_7Entries_stage() {
         actions = {
             nop_0;
             next_hop_ipv4_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ipv4.dstAddr    : exact;
             hdr.ipv4.srcAddr    : exact;
             hdr.ethernet.srcAddr: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("exm_6ways_8Entries_stage_2") table exm_6ways_8Entries_stage() {
         actions = {
             nop_0;
             mod_mac_addr_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
             hdr.ethernet.srcAddr: exact;
             hdr.tcp.srcPort     : exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         exm_5ways_7Entries_0.apply();

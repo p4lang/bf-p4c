@@ -154,17 +154,19 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("nop") action nop_0() {
     }
     @name("e_t1") table e_t1_0() {
         actions = {
             nop_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ethernet.srcAddr: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         e_t1_0.apply();
@@ -172,6 +174,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_1() {
+    }
     @name("nop") action nop_1() {
     }
     @name("ing_drop") action ing_drop_0() {
@@ -188,31 +192,31 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             nop_1;
             ing_drop_0;
             set_egress_port_0;
-            NoAction;
+            NoAction_1;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 131072;
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
     @name("do_drop") table do_drop_0() {
         actions = {
             hw_drop_0;
-            NoAction;
+            NoAction_1;
         }
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
     @name("smac_filter") table smac_filter_0() {
         actions = {
             nop_1;
             ing_drop_0;
-            NoAction;
+            NoAction_1;
         }
         key = {
             hdr.ethernet.srcAddr: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_1();
     }
     apply {
         dmac_0.apply();

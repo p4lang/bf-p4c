@@ -174,6 +174,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("action_0") action action(bit<8> param0) {
         hdr.ipv4.diffserv = param0;
     }
@@ -184,13 +186,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action;
             action_2;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ipv4.srcAddr: lpm;
         }
         max_size = 8192;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         table.apply();

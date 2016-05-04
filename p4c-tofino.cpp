@@ -55,6 +55,8 @@ int main(int ac, char **av) {
             new P4v1::InlineActions,
         };
         program = program->apply(fe);
+        if (!program)
+            return 1;
         if (verbose) {
             std::cout << "-------------------------------------------------" << std::endl
                       << "Initial program" << std::endl
@@ -67,6 +69,8 @@ int main(int ac, char **av) {
     } else {
         auto program = parseP4File(options);
         program = FrontEnd().run(options, program);
+        if (!program)
+            return 1;
         if (verbose) {
             std::cout << "-------------------------------------------------" << std::endl
                       << "Initial program" << std::endl

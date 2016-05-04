@@ -224,6 +224,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<8> ttl_0;
     bit<9> egress_port_0;
+    action NoAction_0() {
+    }
     @name("nop") action nop_0() {
     }
     @name("hop_ipv4") action hop_ipv4_0(bit<9> egress_port) {
@@ -237,12 +239,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_0;
             hop_ipv4_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         ipv4_routing_exm_ways_3_pack.apply();

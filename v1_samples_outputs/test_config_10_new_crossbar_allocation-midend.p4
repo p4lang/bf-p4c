@@ -180,6 +180,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("action_0") action action() {
         hdr.ipv4.diffserv = 8w1;
     }
@@ -192,20 +194,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action;
             do_nothing_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ethernet.etherType    : ternary;
             hdr.ethernet.srcAddr[39:8]: ternary;
         }
         max_size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("table_1") table table_2() {
         actions = {
             action_2;
             do_nothing_0;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.ipv4.srcAddr    : exact;
@@ -215,7 +217,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ethernet.dstAddr: exact;
         }
         max_size = 40960;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         table.apply();

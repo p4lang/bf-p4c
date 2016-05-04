@@ -156,6 +156,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    action NoAction_0() {
+    }
     @name("action_0") action action() {
     }
     @name("action_1") action action_3(bit<32> my_param_0) {
@@ -172,13 +174,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             action;
             action_3;
             action_4;
-            NoAction;
+            NoAction_0;
         }
         key = {
             hdr.pkt.field_a: ternary;
         }
         min_size = 2049;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         table.apply();
