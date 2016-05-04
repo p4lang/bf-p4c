@@ -37,7 +37,7 @@ class CollectGatewayFields : public Inspector {
         if (auto *rel = findContext<IR::Operation::Relation>(ctxt)) {
             if (!rel->is<IR::Equ>() && !rel->is<IR::Neq>()) {
                 info.need_range = true;
-            } else if (ctxt->child_index > 1) {
+            } else if (ctxt->child_index > 0) {
                 info.xor_with = xor_match;
             } else {
                 xor_match = finfo; } }

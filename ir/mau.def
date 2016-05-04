@@ -184,7 +184,7 @@ class Instruction : Primitive {
 #emit
     using Primitive::Primitive;
     explicit Instruction(const Primitive &p) : Primitive(p) {}
-    bool isOutput(int operand_index) const { return operand_index == 1; }
+    bool isOutput(int operand_index) const { return operand_index == 0; }
 #end
 }
 

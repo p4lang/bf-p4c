@@ -25,7 +25,7 @@ build and testing process.
 - C++ Google OR-Tools library.
   `https://developers.google.com/optimization/installing?hl=en#c`.
   Unfortunately the binary download does not install itself, so we
-  suggest the following installation procedure for Ubuntu 64-bit:
+  suggest the following installation procedure for Ubuntu 14.04 64-bit:
 
 ```
 wget -O ortools.tar.gz 'https://drive.google.com/uc?id=0B5afcYJzk8ivdnV1Z2IzeExaQzA&export=download'
@@ -34,6 +34,8 @@ sudo mv or-tools.Linux64/lib/* /usr/local/lib/
 sudo ldconfig
 sudo mv or-tools.Linux64/include/* /usr/local/include/
 ```
+
+  Later versions (those that use gcc 5?) likely require installing from source.
 
 - Tofino assembler and Harlyn model for testing the output of
   the Tofino backend.  The test scripts will look for sibling repos
