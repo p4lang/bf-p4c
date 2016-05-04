@@ -75,14 +75,18 @@ class UpdateAccess : public MauInspector , P4WriteContext {
     void postorder(const IR::Primitive *prim) {
         if (prim->isOutput(0)) {
             cstring name;
-            if (auto f = dynamic_cast<const IR::Member *>(prim->operands[0])) {
+            if (auto f = prim->operands[0]->to<IR::Member>()) {
                 name = f->toString();
-            } else if (auto i = dynamic_cast<const IR::HeaderStackItemRef *>(prim->operands[0])) {
+            } else if (auto i = prim->operands[0]->to<IR::HeaderStackItemRef>()) {
                 name = i->toString();
-            } else if (auto i = dynamic_cast<const IR::HeaderSliceRef *>(prim->operands[0])) {
+            } else if (auto i = prim->operands[0]->to<IR::HeaderSliceRef>()) {
                 name = i->toString();
+            } else if (auto i = prim->operands[0]->to<IR::ConcreteHeaderRef>()) {
+                // FIXME -- do something
+                return;
             } else {
-                error("%s: Destination of %s is not a field", prim->srcInfo, prim->name);
+                // FIXME -- counters, meters, ???
+                warning("%s: Destination of %s is not a field", prim->srcInfo, prim->name);
                 return; }
             LOG3("update_access write " << name);
             auto &a = access[name];
