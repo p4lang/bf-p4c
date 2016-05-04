@@ -65,7 +65,7 @@ struct DumpPipe : public Inspector {
 
 void force_link_dump(const IR::Node *n) { dump(n); }
 
-static void debug_hook(const char *manager, unsigned seqNo, const char *pass, const IR::Node *n) {
+static void debug_hook(const char *, unsigned, const char *pass, const IR::Node *n) {
     LOG4(pass << ": " << std::endl << *n << std::endl);
 }
 
