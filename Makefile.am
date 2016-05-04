@@ -176,6 +176,7 @@ XFAIL_TESTS += \
     tofino/testdata/v1_samples/02-FullPHV1.p4.test \
     tofino/testdata/v1_samples/03-FullPHV2.p4.test \
     tofino/testdata/v1_samples/truncate.p4.test \
+    tofino/%reldir%/v1_2_test/flowlet_switching.p4.test \
     bmv2/%reldir%/v1_samples/test_config_125_meter_pre_color.p4.test \
     bmv2/%reldir%/v1_samples/test_config_126_meter_pre_color_2.p4.test \
     bmv2/%reldir%/v1_samples/test_config_127_meter_pre_color_3.p4.test \

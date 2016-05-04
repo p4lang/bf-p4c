@@ -1,4 +1,4 @@
-/* Sample P4 program using stateful memories for flowlet switching */
+/* Sample P4 program fragment using stateful memories for flowlet switching */
 
 // compare current - next with threshold, with wrap-around
 extern bool WrapCompare<T>(in T current, in T next, in T threshold);

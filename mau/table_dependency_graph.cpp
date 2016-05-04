@@ -81,7 +81,7 @@ class UpdateAccess : public MauInspector , P4WriteContext {
                 name = i->toString();
             } else if (auto i = prim->operands[0]->to<IR::HeaderSliceRef>()) {
                 name = i->toString();
-            } else if (auto i = prim->operands[0]->to<IR::ConcreteHeaderRef>()) {
+            } else if (prim->operands[0]->to<IR::ConcreteHeaderRef>()) {
                 // FIXME -- do something
                 return;
             } else {
