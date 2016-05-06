@@ -68,8 +68,8 @@ class GetTofinoParser::RewriteExtractNext : public Transform {
                 mem->type = f->type; } }
     return mem; }
 
-  const IR::Vector<IR::Expression> *preorder(IR::Vector<IR::StatOrDecl> *vec) override {
-    auto *rv = new IR::Vector<IR::Expression>;
+  const IR::Vector<IR::Expression> *preorder(IR::IndexedVector<IR::StatOrDecl> *vec) override {
+    auto *rv = new IR::IndexedVector<IR::Expression>;
     for (auto stmt : *vec) {
       auto *n = apply_visitor(stmt);
       if (!n) continue;
