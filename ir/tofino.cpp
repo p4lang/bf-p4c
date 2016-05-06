@@ -7,7 +7,7 @@ IR::InstanceRef::InstanceRef(IR::ID name, const IR::Type *t) {
         obj = new IR::Header(name, hdr);
     } else if (auto *meta = t->to<IR::Type_Struct>()) {
         obj = new IR::Metadata(name, meta);
-        for (auto field : *meta->getEnumerator())
+        for (auto field : *meta->fields)
             if (field->type->is<IR::Type_StructLike>() || field->type->is<IR::Type_Stack>())
                 nested.add(field->name, new InstanceRef(field->name, field->type));
     } else if (auto *stk = t->to<IR::Type_Stack>()) {
@@ -15,4 +15,3 @@ IR::InstanceRef::InstanceRef(IR::ID name, const IR::Type *t) {
     } else {
         BUG("Unhandled InstanceRef type %1%", t); }
 }
-

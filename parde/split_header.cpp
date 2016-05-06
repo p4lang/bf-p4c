@@ -9,7 +9,7 @@ IR::Node *SplitExtractEmit::preorder(IR::Primitive *p) {
     auto *rv = new IR::Vector<IR::Expression>;
     auto *hdr_type = hdr->type->to<IR::Type_StructLike>();
     assert(hdr_type);
-    for (auto field : *hdr_type->getEnumerator()) {
+    for (auto field : *hdr_type->fields) {
         IR::Expression *fref = new IR::Member(field->type, hdr, field->name);
         if (!field->type->is<IR::Type::Varbits>())
             fref = new IR::HeaderSliceRef(fref->to<IR::Member>());

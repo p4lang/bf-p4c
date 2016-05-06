@@ -30,7 +30,7 @@ class ActionArgSetup : public Transform {
 class ActionBodySetup : public Inspector {
     IR::ActionFunction      *af;
     ActionArgSetup          &setup;
-    bool preorder(const IR::Vector<IR::StatOrDecl> *) override { return true; }
+    bool preorder(const IR::IndexedVector<IR::StatOrDecl> *) override { return true; }
     bool preorder(const IR::BlockStatement *) override { return true; }
     bool preorder(const IR::AssignmentStatement *assign) override {
         cstring pname = "modify_field";
@@ -90,7 +90,7 @@ const IR::V1Table *createV1Table(const IR::P4Table *tc, const P4::ReferenceMap *
     IR::V1Table *rv = new IR::V1Table;
     rv->srcInfo = tc->srcInfo;
     rv->name = tc->externalName();
-    for (auto prop : *tc->properties->getEnumerator()) {
+    for (auto prop : *tc->properties->properties) {
         if (prop->name == "key") {
             auto reads = new IR::Vector<IR::Expression>();
             for (auto el : *prop->value->to<IR::Key>()->keyElements) {
@@ -224,7 +224,7 @@ class GetTofinoTables : public Inspector {
     // action_profile already pulled into TableContainer?
   }
 
-  bool preorder(const IR::Vector<IR::Declaration> *) override { return false; }
+  bool preorder(const IR::IndexedVector<IR::Declaration> *) override { return false; }
   bool preorder(const IR::P4Table *) override { return false; }
 
   bool preorder(const IR::Vector<IR::Expression> *v) override {
@@ -417,9 +417,9 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
         if (param->type->is<IR::Type_StructLike>())
             bindings.bind(param);
 
-    auto it = ingress->type->applyParams->parameters.rbegin();
+    auto it = ingress->type->applyParams->parameters->rbegin();
     rv->standard_metadata =
-        bindings.get(it->second)->obj->to<IR::Metadata>();
+        bindings.get(*it)->obj->to<IR::Metadata>();
     PassManager fixups = {
         &bindings,
         new RemoveInstanceRef,

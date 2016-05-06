@@ -72,7 +72,7 @@ class HeaderSliceRef : Slice {
     return e0->to<const HeaderRef>(); }
   Vector<Member> fields() const {
     Vector<Member> rv;
-    for (auto field : *header_ref()->type->to<IR::Type_StructLike>()->getEnumerator()) {
+    for (auto field : *header_ref()->type->to<IR::Type_StructLike>()->fields) {
       const IR::Member fr(srcInfo, field->type, header_ref(), field->name);
       if (fr.lsb() >= lsb() && fr.msb() <= msb())
         rv.push_back(new Member(fr));
