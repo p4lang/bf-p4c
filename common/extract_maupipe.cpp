@@ -30,7 +30,7 @@ class ActionArgSetup : public Transform {
 class ActionBodySetup : public Inspector {
     IR::ActionFunction      *af;
     ActionArgSetup          &setup;
-    bool preorder(const IR::Vector<IR::StatOrDecl> *) override { return true; }
+    bool preorder(const IR::IndexedVector<IR::StatOrDecl> *) override { return true; }
     bool preorder(const IR::BlockStatement *) override { return true; }
     bool preorder(const IR::AssignmentStatement *assign) override {
         cstring pname = "modify_field";
