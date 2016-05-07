@@ -159,11 +159,27 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     action NoAction_0() {
     }
+    action NoAction_1() {
+    }
+    action NoAction_2() {
+    }
+    action NoAction_3() {
+    }
+    action NoAction_4() {
+    }
     @name("action_0") action action(bit<32> my_param_0, bit<32> my_param_4) {
         hdr.pkt.field_a = my_param_0;
         hdr.pkt.field_g = my_param_4;
     }
     @name("nop") action nop_0() {
+    }
+    @name("nop") action nop() {
+    }
+    @name("nop") action nop_1() {
+    }
+    @name("nop") action nop_2() {
+    }
+    @name("nop") action nop_3() {
     }
     @name("action_1") action action_5(bit<32> my_param_1) {
         hdr.pkt.field_c = my_param_1;
@@ -192,8 +208,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_1") table table_5() {
         actions = {
             action_5;
-            nop_0;
-            NoAction_0;
+            nop;
+            NoAction_1;
         }
         key = {
             hdr.pkt.field_d: exact;
@@ -203,8 +219,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_2") table table_6() {
         actions = {
             action_6;
-            nop_0;
-            NoAction_0;
+            nop_1;
+            NoAction_2;
         }
         key = {
             hdr.pkt.field_f: exact;
@@ -214,8 +230,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_3") table table_7() {
         actions = {
             action_7;
-            nop_0;
-            NoAction_0;
+            nop_2;
+            NoAction_3;
         }
         key = {
             hdr.pkt.field_h: exact;
@@ -225,8 +241,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_4") table table_8() {
         actions = {
             action_8;
-            nop_0;
-            NoAction_0;
+            nop_3;
+            NoAction_4;
         }
         key = {
             hdr.pkt.field_e: exact;

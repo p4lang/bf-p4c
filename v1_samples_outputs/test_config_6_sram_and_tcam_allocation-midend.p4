@@ -206,6 +206,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     action NoAction_1() {
     }
+    action NoAction_2() {
+    }
     @name("do_nothing") action do_nothing_0() {
     }
     @name("l3_set_index") action l3_set_index_0(bit<8> index) {
@@ -237,7 +239,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             ig_drop_0;
             hop_ipv4_0;
-            NoAction_1;
+            NoAction_2;
         }
         key = {
             hdr.ipv4.dstAddr: lpm;

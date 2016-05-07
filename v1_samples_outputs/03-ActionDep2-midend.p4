@@ -176,9 +176,18 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     action NoAction_1() {
     }
+    action NoAction_2() {
+    }
+    action NoAction_3() {
+    }
     @name("nop") action nop_1() {
     }
+    @name("nop") action nop() {
+    }
     @name("ing_drop") action ing_drop_0() {
+        meta.ing_metadata.drop = 1w1;
+    }
+    @name("ing_drop") action ing_drop() {
         meta.ing_metadata.drop = 1w1;
     }
     @name("set_egress_port") action set_egress_port_0(bit<9> egress_port) {
@@ -203,15 +212,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("do_drop") table do_drop_0() {
         actions = {
             hw_drop_0;
-            NoAction_1;
+            NoAction_2;
         }
         default_action = NoAction_1();
     }
     @name("smac_filter") table smac_filter_0() {
         actions = {
-            nop_1;
-            ing_drop_0;
-            NoAction_1;
+            nop;
+            ing_drop;
+            NoAction_3;
         }
         key = {
             hdr.ethernet.srcAddr: exact;

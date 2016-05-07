@@ -160,6 +160,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     action NoAction_0() {
     }
+    action NoAction_1() {
+    }
     @name("set_bd") action set_bd_0(bit<16> bd) {
         hdr.l2_metadata.bd = bd;
     }
@@ -180,7 +182,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("vlan_port_tab") table vlan_port_tab_0() {
         actions = {
             ing_drop_0;
-            NoAction_0;
+            NoAction_1;
         }
         key = {
             hdr.ig_intr_md.ingress_port: ternary;

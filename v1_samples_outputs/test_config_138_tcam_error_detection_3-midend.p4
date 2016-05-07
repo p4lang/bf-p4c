@@ -165,7 +165,31 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     action NoAction_0() {
     }
+    action NoAction_1() {
+    }
+    action NoAction_2() {
+    }
+    action NoAction_3() {
+    }
+    action NoAction_4() {
+    }
+    action NoAction_5() {
+    }
+    action NoAction_6() {
+    }
     @name("do_nothing") action do_nothing_0() {
+    }
+    @name("do_nothing") action do_nothing() {
+    }
+    @name("do_nothing") action do_nothing_1() {
+    }
+    @name("do_nothing") action do_nothing_2() {
+    }
+    @name("do_nothing") action do_nothing_3() {
+    }
+    @name("do_nothing") action do_nothing_4() {
+    }
+    @name("do_nothing") action do_nothing_5() {
     }
     @name("action_0") action action() {
         hdr.pkt.field_f_16 = 16w1;
@@ -183,8 +207,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_b") table table_b_0() {
         actions = {
-            do_nothing_0;
-            NoAction_0;
+            do_nothing;
+            NoAction_1;
         }
         key = {
             hdr.pkt.field_b_32: ternary;
@@ -194,8 +218,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_c") table table_c_0() {
         actions = {
-            do_nothing_0;
-            NoAction_0;
+            do_nothing_1;
+            NoAction_2;
         }
         key = {
             hdr.pkt.field_c_32: ternary;
@@ -205,8 +229,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_d") table table_d_0() {
         actions = {
-            do_nothing_0;
-            NoAction_0;
+            do_nothing_2;
+            NoAction_3;
         }
         key = {
             hdr.pkt.field_d_32: ternary;
@@ -216,9 +240,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_e") table table_e_0() {
         actions = {
-            do_nothing_0;
+            do_nothing_3;
             action;
-            NoAction_0;
+            NoAction_4;
         }
         key = {
             hdr.pkt.field_o_10: range;
@@ -230,8 +254,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_f") table table_f_0() {
         actions = {
-            do_nothing_0;
-            NoAction_0;
+            do_nothing_4;
+            NoAction_5;
         }
         key = {
             hdr.pkt.field_g_16: ternary;
@@ -241,8 +265,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_z") table table_z_0() {
         actions = {
-            do_nothing_0;
-            NoAction_0;
+            do_nothing_5;
+            NoAction_6;
         }
         key = {
             hdr.pkt.field_l_8: ternary;

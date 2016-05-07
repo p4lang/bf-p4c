@@ -263,9 +263,39 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     action NoAction_0() {
     }
+    action NoAction_1() {
+    }
+    action NoAction_2() {
+    }
+    action NoAction_3() {
+    }
+    action NoAction_4() {
+    }
+    action NoAction_5() {
+    }
+    action NoAction_6() {
+    }
     @name("nop") action nop_0() {
     }
+    @name("nop") action nop() {
+    }
+    @name("nop") action nop_1() {
+    }
+    @name("nop") action nop_2() {
+    }
+    @name("nop") action nop_3() {
+    }
+    @name("nop") action nop_4() {
+    }
+    @name("nop") action nop_5() {
+    }
     @name("next_hop_ipv4") action next_hop_ipv4_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
+        meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+        hdr.ethernet.srcAddr = srcmac;
+        hdr.ethernet.dstAddr = dstmac;
+    }
+    @name("next_hop_ipv4") action next_hop_ipv4(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
         hdr.ethernet.srcAddr = srcmac;
@@ -312,9 +342,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("exm_4ways_6Entries") table exm_4ways_6Entries_0() {
         actions = {
-            nop_0;
+            nop;
             custom_action;
-            NoAction_0;
+            NoAction_1;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
@@ -325,9 +355,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("exm_4ways_8Entries") table exm_4ways_8Entries_0() {
         actions = {
-            nop_0;
+            nop_1;
             modify_tcp_dst_port;
-            NoAction_0;
+            NoAction_2;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
@@ -338,9 +368,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("exm_5ways_5Entries") table exm_5ways_5Entries_0() {
         actions = {
-            nop_0;
+            nop_2;
             custom_action_0;
-            NoAction_0;
+            NoAction_3;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
@@ -352,9 +382,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("exm_5ways_6Entries") table exm_5ways_6Entries_0() {
         actions = {
-            nop_0;
+            nop_3;
             custom_action_4;
-            NoAction_0;
+            NoAction_4;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
@@ -364,9 +394,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("exm_6ways_5Entries") table exm_6ways_5Entries_0() {
         actions = {
-            nop_0;
-            next_hop_ipv4_0;
-            NoAction_0;
+            nop_4;
+            next_hop_ipv4;
+            NoAction_5;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
@@ -378,9 +408,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("exm_6ways_6Entries") table exm_6ways_6Entries_0() {
         actions = {
-            nop_0;
+            nop_5;
             mod_mac_addr_0;
-            NoAction_0;
+            NoAction_6;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
