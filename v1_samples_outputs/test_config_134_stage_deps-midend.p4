@@ -161,6 +161,14 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     action NoAction_0() {
     }
+    action NoAction_1() {
+    }
+    action NoAction_2() {
+    }
+    action NoAction_3() {
+    }
+    action NoAction_4() {
+    }
     @name("action_a") action action_a_0(bit<16> param0, bit<16> param1, bit<16> param2) {
         hdr.pkt.field_e_16 = param0;
         hdr.pkt.field_f_16 = param1;
@@ -190,7 +198,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_b") table table_b_0() {
         actions = {
             action_b_0;
-            NoAction_0;
+            NoAction_1;
         }
         key = {
             hdr.pkt.field_a_32: exact;
@@ -201,7 +209,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_c") table table_c_0() {
         actions = {
             action_c_0;
-            NoAction_0;
+            NoAction_2;
         }
         key = {
             hdr.pkt.field_a_32: exact;
@@ -212,7 +220,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_d") table table_d_0() {
         actions = {
             action_d_0;
-            NoAction_0;
+            NoAction_3;
         }
         key = {
             hdr.pkt.field_e_16: exact;
@@ -223,7 +231,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_e") table table_e_0() {
         actions = {
             action_e_0;
-            NoAction_0;
+            NoAction_4;
         }
         key = {
             hdr.pkt.field_g_16: exact;

@@ -161,7 +161,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     action NoAction_0() {
     }
+    action NoAction_1() {
+    }
     @name("action_0") action action() {
+        hdr.pkt.field_a_32 = hdr.pkt.field_b_32 + hdr.pkt.field_c_32;
+        hdr.pkt.field_j_8 = 8w3;
+    }
+    @name("action_0") action action_0() {
         hdr.pkt.field_a_32 = hdr.pkt.field_b_32 + hdr.pkt.field_c_32;
         hdr.pkt.field_j_8 = 8w3;
     }
@@ -169,7 +175,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.field_a_32 = hdr.pkt.field_b_32 - hdr.pkt.field_c_32;
         hdr.pkt.field_e_16 = hdr.pkt.field_e_16 << 5;
     }
+    @name("action_1") action action_1() {
+        hdr.pkt.field_a_32 = hdr.pkt.field_b_32 - hdr.pkt.field_c_32;
+        hdr.pkt.field_e_16 = hdr.pkt.field_e_16 << 5;
+    }
     @name("do_nothing") action do_nothing_0() {
+    }
+    @name("do_nothing") action do_nothing() {
     }
     @name("table_0") table table() {
         actions = {
@@ -186,10 +198,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_1") table table_2() {
         actions = {
-            action;
-            action_2;
-            do_nothing_0;
-            NoAction_0;
+            action_0;
+            action_1;
+            do_nothing;
+            NoAction_1;
         }
         key = {
             hdr.pkt.field_c_32: ternary;

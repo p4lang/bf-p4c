@@ -199,6 +199,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     action NoAction_0() {
     }
+    action NoAction_1() {
+    }
+    action NoAction_2() {
+    }
     @name("do_copy_hopCount_from_m") action do_copy_hopCount_from_m_0() {
         hdr.trill.hopCount = meta.m.hopCount;
     }
@@ -222,14 +226,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("copy_hopCount_to_m") table copy_hopCount_to_m_0() {
         actions = {
             do_copy_hopCount_to_m_0;
-            NoAction_0;
+            NoAction_1;
         }
         default_action = NoAction_0();
     }
     @name("trill_forward") table trill_forward_0() {
         actions = {
             forward_trill_0;
-            NoAction_0;
+            NoAction_2;
         }
         key = {
             hdr.trill.egressRbridge: exact;

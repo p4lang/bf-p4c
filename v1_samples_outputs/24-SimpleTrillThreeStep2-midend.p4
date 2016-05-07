@@ -199,6 +199,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     action NoAction_0() {
     }
+    action NoAction_1() {
+    }
+    action NoAction_2() {
+    }
     @name("do_trill_forward") action do_trill_forward_0(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
         hdr.outer_ethernet.dstAddr = new_mac_da;
         hdr.outer_ethernet.srcAddr = new_mac_sa;
@@ -225,14 +229,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("trill_forward_1") table trill_forward_3() {
         actions = {
             do_trill_forward_3;
-            NoAction_0;
+            NoAction_1;
         }
         default_action = NoAction_0();
     }
     @name("trill_forward_2") table trill_forward_4() {
         actions = {
             do_trill_forward_4;
-            NoAction_0;
+            NoAction_2;
         }
         default_action = NoAction_0();
     }

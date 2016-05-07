@@ -162,6 +162,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     action NoAction_0() {
     }
+    action NoAction_2() {
+    }
     @name("action_2") action action(bit<32> param0) {
         hdr.pkt.field_d_32 = param0;
     }
@@ -180,7 +182,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name("table_3") table table_4() {
         actions = {
             do_nothing_0;
-            NoAction_0;
+            NoAction_2;
         }
         key = {
             hdr.pkt.field_g_16: exact;
@@ -198,6 +200,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     metadata meta_0;
     standard_metadata_t standard_metadata_0;
     action NoAction_1() {
+    }
+    action NoAction_3() {
     }
     @name("action_0") action action_4(bit<32> param0) {
         hdr.pkt.field_b_32 = param0;
@@ -218,7 +222,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("pipe_0.table_1") table pipe_0_table() {
         actions = {
             pipe_0_action;
-            NoAction_1;
+            NoAction_3;
         }
         key = {
             hdr_0.pkt.field_f_16: exact;

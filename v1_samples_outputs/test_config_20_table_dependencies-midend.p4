@@ -176,10 +176,20 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     action NoAction_0() {
     }
+    action NoAction_1() {
+    }
+    action NoAction_2() {
+    }
+    action NoAction_3() {
+    }
     @name("action_0") action action() {
         hdr.ipv4.diffserv = 8w1;
     }
     @name("do_nothing") action do_nothing_0() {
+    }
+    @name("do_nothing") action do_nothing() {
+    }
+    @name("do_nothing") action do_nothing_1() {
     }
     @name("action_1") action action_4() {
         hdr.ipv4.totalLen = 16w2;
@@ -206,8 +216,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_1") table table_4() {
         actions = {
             action_4;
-            do_nothing_0;
-            NoAction_0;
+            do_nothing;
+            NoAction_1;
         }
         key = {
             hdr.ipv4.srcAddr: exact;
@@ -219,8 +229,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_2") table table_5() {
         actions = {
             action_5;
-            do_nothing_0;
-            NoAction_0;
+            do_nothing_1;
+            NoAction_2;
         }
         key = {
             hdr.ipv4.srcAddr : exact;
@@ -232,7 +242,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_3") table table_6() {
         actions = {
             action_6;
-            NoAction_0;
+            NoAction_3;
         }
         key = {
             hdr.ipv4.srcAddr: exact;

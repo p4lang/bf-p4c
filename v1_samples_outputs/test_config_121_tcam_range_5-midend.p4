@@ -165,7 +165,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     action NoAction_0() {
     }
+    action NoAction_1() {
+    }
     @name("do_nothing") action do_nothing_0() {
+    }
+    @name("do_nothing") action do_nothing() {
     }
     @name("action_0") action action() {
         hdr.pkt.field_g_16 = 16w1;
@@ -188,9 +192,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_1") table table_2() {
         actions = {
-            do_nothing_0;
+            do_nothing;
             action_2;
-            NoAction_0;
+            NoAction_1;
         }
         key = {
             hdr.pkt.field_p_15: range;

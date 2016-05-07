@@ -166,18 +166,20 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     action NoAction_0() {
     }
-    DirectMeter<bit<16>>(CounterType.Bytes) @name("meter_0") meter;
-    Meter(32w4097, CounterType.Bytes) @name("meter_1") meter_2;
+    action NoAction_1() {
+    }
+    DirectMeter<bit<16>>(CounterType.Bytes) @name("meter_0") meter_2;
+    Meter(32w4097, CounterType.Bytes) @name("meter_1") meter_3;
     @name("do_nothing") action do_nothing_1() {
     }
     @name("action_1") action action(bit<8> param0) {
-        meter_2.meter(32w7, hdr.pkt.color_1);
+        meter_3.meter(32w7, hdr.pkt.color_1);
     }
     @name("action_0") action action_0(bit<8> param0) {
-        meter.read(hdr.pkt.lpf);
+        meter_2.read(hdr.pkt.lpf);
     }
     @name("do_nothing") action do_nothing_2() {
-        meter.read(hdr.pkt.lpf);
+        meter_2.read(hdr.pkt.lpf);
     }
     @name("table_0") table table() {
         actions = {
@@ -193,13 +195,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 6000;
         default_action = NoAction_0();
-        meters = meter;
+        meters = meter_2;
     }
     @name("table_1") table table_2() {
         actions = {
             do_nothing_1;
             action;
-            NoAction_0;
+            NoAction_1;
         }
         key = {
             hdr.pkt.field_e_16: exact;
