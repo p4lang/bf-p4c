@@ -13,6 +13,7 @@ void PhvInfo::add(cstring name, int offset, int size, bool meta, bool pov) {
     auto *info = &all_fields[name];
     info->name = name;
     info->id = by_id.size();
+    info->gress = gress;
     info->size = size;
     info->offset = offset;
     info->metadata = meta;
@@ -108,8 +109,7 @@ vector<PhvInfo::Info::alloc_slice> *PhvInfo::alloc(const IR::Member *member) {
     PhvInfo::Info *info = field(member);
     CHECK(nullptr != info) << "; Cannot find PHV allocation for " <<
         member->toString();
-    gress_t gress = info->name.startsWith("egress::") ? EGRESS : INGRESS;
-    return &(info->alloc[gress]);
+    return &info->alloc;
 }
 
 const std::pair<int, int> *PhvInfo::header(cstring name_) const {
@@ -124,9 +124,9 @@ const std::pair<int, int> *PhvInfo::header(cstring name_) const {
 }
 
 void PhvInfo::allocatePOV() {
-    if (all_fields.count("$POV") || all_fields.count("ingress::$POV"))
+    if (all_fields.count("ingress::$POV") || all_fields.count("egress::$POV"))
         BUG("trying to reallocate POV");
-    int ingress_size = 0, egress_size = 0, generic_size = 0;
+    int ingress_size = 0, egress_size = 0;
     for (auto &hdr : all_headers)
         if (!field(hdr.second.first)->metadata) {
             if (hdr.first.startsWith("ingress::"))
@@ -134,21 +134,16 @@ void PhvInfo::allocatePOV() {
             else if (hdr.first.startsWith("egress::"))
                 ++egress_size;
             else
-                ++generic_size; }
-    assert(generic_size == 0 || ingress_size+egress_size == 0);
-    if (generic_size > 0) {
-        add("$POV", 0, generic_size, false, true);
-        int offset = 0;
-        for (auto &hdr : all_headers)
-            if (!field(hdr.second.first)->metadata)
-                add(hdr.first + ".$valid", offset++, 1, false, true); }
+                BUG("Header %s neither ingress or egress", hdr.first); }
     if (ingress_size > 0) {
+        gress = INGRESS;
         add("ingress::$POV", 0, ingress_size, false, true);
         int offset = 0;
         for (auto &hdr : all_headers)
             if (!field(hdr.second.first)->metadata && hdr.first.startsWith("ingress::"))
                 add(hdr.first + ".$valid", offset++, 1, false, true); }
     if (egress_size > 0) {
+        gress = EGRESS;
         add("egress::$POV", 0, egress_size, false, true);
         int offset = 0;
         for (auto &hdr : all_headers)

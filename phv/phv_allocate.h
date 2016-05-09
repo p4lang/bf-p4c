@@ -10,7 +10,7 @@ class PhvAllocate : public Inspector {
     const vector<bitvec>        &conflict;
     struct Regs;
     class Uses;
-    void do_alloc(PhvInfo::Info *, gress_t, Regs *);
+    void do_alloc(PhvInfo::Info *, Regs *);
     bool preorder(const IR::Tofino::Pipe *p) override;
 
  public:

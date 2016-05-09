@@ -25,7 +25,7 @@ std::ostream &operator<<(std::ostream &out, canon_name n) {
 std::ostream &operator<<(std::ostream &out, const Slice &sl) {
     if (sl.field) {
         out << canon_name(trim_asm_name(sl.field->name));
-        for (auto &alloc : sl.field->alloc[sl.gress]) {
+        for (auto &alloc : sl.field->alloc) {
             if (sl.lo < alloc.field_bit) continue;
             if (sl.hi > alloc.field_hi())
                 WARNING("Slice not contained within a single PHV container");
@@ -46,18 +46,18 @@ std::ostream &operator<<(std::ostream &out, const Slice &sl) {
 }
 
 Slice Slice::join(Slice &a) const {
-    if (field != a.field || reg != a.reg || hi + 1 != a.lo || gress != a.gress) return Slice();
+    if (field != a.field || reg != a.reg || hi + 1 != a.lo) return Slice();
     /* don't join if the slices were allocated to different PHV containers */
-    for (auto &alloc : field->alloc[gress]) {
+    for (auto &alloc : field->alloc) {
         if (lo < alloc.field_bit) continue;
         if (a.hi > alloc.field_hi()) return Slice();
         break; }
-    return Slice(field, gress, lo, a.hi);
+    return Slice(field, lo, a.hi);
 }
 
 int Slice::bytealign() const {
     if (field) {
-        auto &alloc = field->for_bit(gress, lo);
+        auto &alloc = field->for_bit(lo);
         return (lo - alloc.field_bit + alloc.container_bit) & 7; }
     return lo & 7;
 }
@@ -65,7 +65,7 @@ int Slice::bytealign() const {
 Slice Slice::fullbyte() const {
     Slice rv;
     if (field) {
-        auto &alloc = field->for_bit(gress, lo);
+        auto &alloc = field->for_bit(lo);
         rv.reg = alloc.container;
         rv.lo = lo - alloc.field_bit + alloc.container_bit;
         rv.hi = rv.lo + hi - lo;

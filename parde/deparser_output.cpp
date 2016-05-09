@@ -13,7 +13,7 @@ class OutputDictionary : public Inspector {
             /* not allocated to header -- happens with Varbits currently */
             return false; }
         auto field = phv.field(prim->operands[0], &bits);
-        auto &alloc = field->for_bit(gress, bits.lo);
+        auto &alloc = field->for_bit(bits.lo);
         if (size_t(alloc.container_bit + alloc.width) != alloc.container.size())
             return false;
         int size = alloc.container.size() / 8;

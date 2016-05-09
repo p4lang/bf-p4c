@@ -4,6 +4,8 @@ tofino_ir_SOURCES = \
 	%reldir%/ir/dbprint-tofino.cpp \
 	%reldir%/ir/mau.cpp \
 	%reldir%/ir/parde.cpp \
+	%reldir%/ir/thread_visitor.cpp \
+	%reldir%/ir/thread_visitor.h \
 	%reldir%/ir/tofino.cpp
 
 ir_SOURCES += $(tofino_ir_SOURCES)

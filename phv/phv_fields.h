@@ -4,6 +4,7 @@
 #include "phv.h"
 #include "ir/ir.h"
 #include "lib/map.h"
+#include "tofino/ir/thread_visitor.h"
 
 class PhvInfo : public Inspector {
  public:
@@ -20,6 +21,7 @@ class PhvInfo : public Inspector {
     struct Info {
         cstring         name;
         int             id;
+        gress_t         gress;
         int             size;
         int             offset;  // offset from the start of the containing header in bits
         bool            metadata;
@@ -32,9 +34,9 @@ class PhvInfo : public Inspector {
                 container_bit(cb), width(w) {}
             int field_hi() const { return field_bit + width - 1; }
             int container_hi() const { return container_bit + width - 1; } };
-        vector<alloc_slice>     alloc[2];   // sorted MSB (field) first
-        const alloc_slice &for_bit(gress_t gr, int bit) const {
-            for (auto &sl : alloc[gr])
+        vector<alloc_slice>     alloc;   // sorted MSB (field) first
+        const alloc_slice &for_bit(int bit) const {
+            for (auto &sl : alloc)
                 if (bit >= sl.field_bit && bit < sl.field_bit + sl.width)
                     return sl;
             BUG("No allocation for bit %d in %s", bit, name); }
@@ -48,8 +50,11 @@ class PhvInfo : public Inspector {
     map<cstring, Info>                  all_fields;
     vector<Info *>                      by_id;
     map<cstring, std::pair<int, int>>   all_headers;
+    gress_t                             gress;
     void add(cstring, int, int, bool, bool);
     void add_hdr(cstring, const IR::Type_StructLike *, bool);
+    bool preorder(const IR::Tofino::Parser *) override {
+        gress = VisitingThread(this); return true; }
     bool preorder(const IR::Header *h) override;
     bool preorder(const IR::HeaderStack *) override;
     bool preorder(const IR::Metadata *h) override;

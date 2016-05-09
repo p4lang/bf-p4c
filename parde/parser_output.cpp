@@ -17,7 +17,7 @@ class OutputExtracts : public Inspector {
         PhvInfo::Info::bitrange bits;
         auto dest = phv.field(prim->operands[0], &bits);
         if (dest && prim->name == "extract") {
-            auto &alloc = dest->for_bit(gress, bits.lo);
+            auto &alloc = dest->for_bit(bits.lo);
             if (alloc.container == last)
                 return false;
             last = alloc.container;
