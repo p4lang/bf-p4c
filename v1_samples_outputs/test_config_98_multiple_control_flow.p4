@@ -176,7 +176,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         default_action = NoAction();
     }
-
     @name("table_3") table table_3() {
         actions = {
             do_nothing;
@@ -187,7 +186,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         default_action = NoAction();
     }
-
     apply {
         table_2.apply();
         table_3.apply();
@@ -208,7 +206,6 @@ control pipe_0(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         default_action = NoAction();
     }
-
     apply {
         table_1.apply();
     }
@@ -228,7 +225,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     pipe_0() @name("pipe_0") pipe_0_0;
     apply {
         table_0.apply();

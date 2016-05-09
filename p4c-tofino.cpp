@@ -31,6 +31,7 @@ int main(int ac, char **av) {
     Tofino_Options options;
     if (options.process(ac, av) != nullptr)
         options.setInputFile();
+    auto hook = options.getDebugHook();
     if (ErrorReporter::instance.getErrorCount() > 0)
         return 1;
     options.preprocessor_options += " -D__TARGET_TOFINO__";
@@ -54,6 +55,8 @@ int main(int ac, char **av) {
             new TypeCheck,
             new P4v1::InlineActions,
         };
+        fe.setName("V1FrontEnd");
+        fe.addDebugHook(hook);
         program = program->apply(fe);
         if (!program)
             return 1;
@@ -80,6 +83,7 @@ int main(int ac, char **av) {
             else
                 std::cout << *program << std::endl; }
         Tofino::MidEnd midend(options);
+        midend.addDebugHook(hook);
         program = program->apply(midend);
         if (!program)
             return 1;

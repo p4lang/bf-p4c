@@ -202,7 +202,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 1024;
         default_action = NoAction();
     }
-
     @name("table_1") table table_1() {
         actions = {
             action_1;
@@ -216,7 +215,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 16384;
         default_action = NoAction();
     }
-
     @name("table_2") table table_2() {
         actions = {
             action_2;
@@ -230,7 +228,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 4096;
         default_action = NoAction();
     }
-
     @name("table_3") table table_3() {
         actions = {
             action_3;
@@ -242,7 +239,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 2048;
         default_action = NoAction();
     }
-
     apply {
         table_0.apply();
         table_1.apply();

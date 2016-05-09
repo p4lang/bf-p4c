@@ -243,7 +243,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("new_inner_pri") table new_inner_pri() {
         actions = {
             do_new_inner_pri;
@@ -251,7 +250,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("new_inner_tpid") table new_inner_tpid() {
         actions = {
             do_new_inner_tpid;
@@ -259,7 +257,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("new_inner_vid") table new_inner_vid() {
         actions = {
             do_new_inner_vid;
@@ -267,7 +264,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("new_outer_cfi") table new_outer_cfi() {
         actions = {
             do_new_outer_cfi;
@@ -275,7 +271,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("new_outer_pri") table new_outer_pri() {
         actions = {
             do_new_outer_pri;
@@ -283,7 +278,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("new_outer_tpid") table new_outer_tpid() {
         actions = {
             do_new_outer_tpid;
@@ -291,7 +285,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("new_outer_vid") table new_outer_vid() {
         actions = {
             do_new_outer_vid;
@@ -299,7 +292,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("vlan_xlate") table vlan_xlate() {
         actions = {
             nop;
@@ -314,7 +306,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     apply {
         vlan_xlate.apply();
         if (meta.meta.new_outer_tpid_en == 1w1) {

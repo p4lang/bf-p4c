@@ -177,7 +177,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction();
     }
-
     @name("vlan_port_tab") table vlan_port_tab() {
         actions = {
             nop;
@@ -191,7 +190,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 409600;
         default_action = NoAction();
     }
-
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) {
             port_bd.apply();

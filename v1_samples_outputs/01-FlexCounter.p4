@@ -187,7 +187,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("vlan") table vlan() {
         actions = {
             set_flex_counter_index;
@@ -199,7 +198,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction();
     }
-
     apply {
         if (vlan.apply().hit) {
             update_counters.apply();

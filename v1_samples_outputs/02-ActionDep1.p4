@@ -166,7 +166,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         default_action = NoAction();
     }
-
     apply {
         e_t1.apply();
     }
@@ -194,7 +193,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 131072;
         default_action = NoAction();
     }
-
     @name("smac_filter") table smac_filter() {
         actions = {
             nop;
@@ -206,7 +204,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     apply {
         dmac.apply();
         smac_filter.apply();

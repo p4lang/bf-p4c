@@ -234,7 +234,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16536;
         default_action = NoAction();
     }
-
     apply {
         dmac.apply();
     }

@@ -208,7 +208,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 128;
         default_action = NoAction();
     }
-
     @name("table_1") table table_1() {
         actions = {
             action_1;
@@ -221,7 +220,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = NoAction();
     }
-
     apply {
         if (1w0 == meta.ig_intr_md.resubmit_flag) {
             table_0.apply();

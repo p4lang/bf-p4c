@@ -174,7 +174,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         default_action = NoAction();
     }
-
     apply {
         table_1.apply();
     }
@@ -199,7 +198,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256000;
         default_action = NoAction();
     }
-
     apply {
         table_0.apply();
     }

@@ -183,7 +183,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) {
             t1.apply();

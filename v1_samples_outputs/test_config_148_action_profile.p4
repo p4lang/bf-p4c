@@ -182,7 +182,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("table_0_action_profile") implementation = ActionProfile(32w3072);
     }
-
     apply {
         table_0.apply();
     }

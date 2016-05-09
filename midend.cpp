@@ -21,6 +21,7 @@
 Tofino::MidEnd::MidEnd(const CompilerOptions& options)
         : isv1(options.isv1()), evaluator(options.isv1()) {
     stop_on_error = true;
+    setName("Midend");
     addPasses({
         // Proper semantics for uninitialzed local variables in parser states:
         // headers must be invalidated
@@ -31,7 +32,7 @@ Tofino::MidEnd::MidEnd(const CompilerOptions& options)
         // Move all local declarations to the beginning
         new P4::MoveDeclarations(),
         new P4::ResolveReferences(&refMap, isv1),
-        new P4::RemoveReturns(&refMap, true),
+        new P4::RemoveReturns(&refMap),
         // Move some constructor calls into temporaries
         new P4::MoveConstructors(isv1),
         new P4::ResolveReferences(&refMap, isv1),
@@ -45,8 +46,6 @@ Tofino::MidEnd::MidEnd(const CompilerOptions& options)
     auto actInl = new P4::DiscoverActionsInlining(&actionsToInline, &refMap, &typeMap);
     actInl->allowDirectActionCalls = true;  // these will be eliminated by 'SynthesizeActions'
 
-    auto midStream = options.dumpStream("midend");
-
     addPasses({
         new P4::DiscoverInlining(&toInline, evaluator.getBlockMap()),
         new P4::InlineDriver(&toInline, inliner, isv1),
@@ -57,8 +56,8 @@ Tofino::MidEnd::MidEnd(const CompilerOptions& options)
         new P4::RemoveAllUnusedDeclarations(&refMap, isv1),
         new P4::TypeChecking(&refMap, &typeMap, isv1),
         new P4::SimplifyControlFlow(&refMap, &typeMap),
-        new P4::ResolveReferences(&refMap, isv1),
-        new P4::RemoveReturns(&refMap, false),  // remove exits
+        new P4::TypeChecking(&refMap, &typeMap, isv1),
+        new P4::RemoveExits(&refMap, &typeMap),
         new P4::TypeChecking(&refMap, &typeMap, isv1),
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::StrengthReduction(),
@@ -71,7 +70,6 @@ Tofino::MidEnd::MidEnd(const CompilerOptions& options)
         // Move all stand-alone actions to custom tables
         new P4::TypeChecking(&refMap, &typeMap, isv1),
         new P4::MoveActionsToTables(&refMap, &typeMap),
-        new P4::ToP4(midStream, options.file),
         new P4::TypeChecking(&refMap, &typeMap, isv1, true),
         &evaluator,
         new FillFromBlockMap(&evaluator),

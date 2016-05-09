@@ -201,7 +201,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("test_select") table test_select() {
         actions = {
             action_0;
@@ -221,7 +220,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("some_action_profile") implementation = ActionSelector(HashAlgorithm.random, 32w512, 32w72);
     }
-
     apply {
         test_select.apply();
         table_group.apply();

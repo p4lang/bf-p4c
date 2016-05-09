@@ -186,7 +186,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 16384;
         default_action = NoAction();
     }
-
     apply {
         test_exact_table.apply();
     }

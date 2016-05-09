@@ -170,7 +170,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     apply {
         if (hdr.ethernet.srcAddr16 == hdr.ethernet.dstAddr16 && hdr.ethernet.srcAddr32 == hdr.ethernet.dstAddr32) {
             bad_mac_drop.apply();

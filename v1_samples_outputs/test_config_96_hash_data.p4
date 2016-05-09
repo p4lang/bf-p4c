@@ -183,7 +183,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("table_1") table table_1() {
         actions = {
             action_1;
@@ -200,7 +199,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 2048;
         default_action = NoAction();
     }
-
     @name("table_2") table table_2() {
         actions = {
             action_2;
@@ -219,7 +217,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("table_2_action_profile") implementation = ActionSelector(HashAlgorithm.random, 32w512, 32w72);
     }
-
     apply {
         if (hdr.pkt.isValid()) {
             table_0.apply();

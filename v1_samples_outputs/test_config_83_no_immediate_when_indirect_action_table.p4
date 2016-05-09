@@ -174,7 +174,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 2048;
         default_action = NoAction();
     }
-
     apply {
         table_0.apply();
     }

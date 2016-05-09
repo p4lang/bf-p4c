@@ -220,7 +220,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("trill_forward_1") table trill_forward_1() {
         actions = {
             do_trill_forward_1;
@@ -228,7 +227,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("trill_forward_2") table trill_forward_2() {
         actions = {
             do_trill_forward_2;
@@ -236,7 +234,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     apply {
         switch (trill_forward.apply().action_run) {
             do_trill_forward: {

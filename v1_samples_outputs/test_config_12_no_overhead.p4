@@ -188,7 +188,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 1024;
         default_action = NoAction();
     }
-
     apply {
         if (hdr.ethernet.etherType == 16w0x800) {
             table_0.apply();

@@ -267,7 +267,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("ecmp_action_profile") implementation = ActionSelector(HashAlgorithm.crc16, 32w4096, 32w14);
     }
-
     apply {
         ipv4_routing_select_2.apply();
     }

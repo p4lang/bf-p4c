@@ -169,7 +169,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction();
     }
-
     @name("test2") table test2() {
         actions = {
             setf3;
@@ -180,7 +179,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("test3") table test3() {
         actions = {
             setf3;
@@ -191,7 +189,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     apply {
         if (hdr.data.b2 == 8w10) {
             test1.apply();

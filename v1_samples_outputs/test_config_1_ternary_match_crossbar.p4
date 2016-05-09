@@ -173,7 +173,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 2048;
         default_action = NoAction();
     }
-
     apply {
         my_test_config_1_table.apply();
     }

@@ -210,7 +210,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("new_pri") table new_pri() {
         actions = {
             do_new_pri;
@@ -218,7 +217,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("new_tpid") table new_tpid() {
         actions = {
             do_new_tpid;
@@ -226,7 +224,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("new_vid") table new_vid() {
         actions = {
             do_new_vid;
@@ -234,7 +231,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("vlan_xlate") table vlan_xlate() {
         actions = {
             rewrite_tag;
@@ -245,7 +241,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     apply {
         switch (vlan_xlate.apply().action_run) {
             rewrite_tag: {

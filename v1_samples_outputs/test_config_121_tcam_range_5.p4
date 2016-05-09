@@ -185,7 +185,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-
     @name("table_1") table table_1() {
         actions = {
             do_nothing;
@@ -199,7 +198,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-
     apply {
         table_0.apply();
         table_1.apply();

@@ -217,7 +217,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("copy_hopCount_to_m") table copy_hopCount_to_m() {
         actions = {
             do_copy_hopCount_to_m;
@@ -225,7 +224,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     @name("trill_forward") table trill_forward() {
         actions = {
             forward_trill;
@@ -236,7 +234,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-
     apply {
         copy_hopCount_to_m.apply();
         trill_forward.apply();

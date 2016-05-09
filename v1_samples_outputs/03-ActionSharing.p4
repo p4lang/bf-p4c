@@ -323,7 +323,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 32768;
         default_action = NoAction();
     }
-
     @name("dmac2") table dmac2() {
         actions = {
             set_field1_1;
@@ -365,7 +364,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 32768;
         default_action = NoAction();
     }
-
     apply {
         if ((hdr.ig_intr_md.ingress_port & 9w0x1) == 9w0x1) {
             dmac1.apply();
