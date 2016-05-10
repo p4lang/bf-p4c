@@ -281,7 +281,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     action NoAction_0() {
     }
     @name("action_0") action action() {
-        hdr.to_add.setValid(true);
+        hdr.to_add.setValid();
         hdr.to_add.field_two = 8w15;
     }
     @name("do_nothing") action do_nothing_0() {

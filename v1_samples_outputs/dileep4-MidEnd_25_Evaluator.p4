@@ -420,12 +420,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("tcp_hdr_rm") action tcp_hdr_rm_0(bit<9> egress_port) {
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-        hdr.tcp.setValid(false);
+        hdr.tcp.setInvalid();
         hdr.ipv4.protocol = 8w0;
     }
     @name("udp_hdr_add") action udp_hdr_add_0(bit<9> egress_port) {
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-        hdr.udp.setValid(true);
+        hdr.udp.setValid();
         hdr.ipv4.protocol = 8w17;
         hdr.ipv4.totalLen = hdr.ipv4.totalLen + 16w8;
     }

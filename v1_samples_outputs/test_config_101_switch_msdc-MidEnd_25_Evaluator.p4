@@ -1390,21 +1390,21 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name("process_fabric_egress.cpu_tx_rewrite") action process_fabric_egress_cpu_tx_rewrite() {
         hdr_0.ethernet.etherType = hdr_0.fabric_payload_header.etherType;
-        hdr_0.fabric_header.setValid(false);
-        hdr_0.fabric_header_cpu.setValid(false);
-        hdr_0.fabric_payload_header.setValid(false);
+        hdr_0.fabric_header.setInvalid();
+        hdr_0.fabric_header_cpu.setInvalid();
+        hdr_0.fabric_payload_header.setInvalid();
         meta_0.egress_metadata.fabric_bypass = 1w1;
     }
     @name("process_fabric_egress.cpu_rx_rewrite") action process_fabric_egress_cpu_rx_rewrite() {
-        hdr_0.fabric_header.setValid(true);
-        hdr_0.fabric_header_cpu.setValid(true);
+        hdr_0.fabric_header.setValid();
+        hdr_0.fabric_header_cpu.setValid();
         hdr_0.fabric_header.headerVersion = 2w0;
         hdr_0.fabric_header.packetVersion = 2w0;
         hdr_0.fabric_header.pad1 = 1w0;
         hdr_0.fabric_header.packetType = 3w6;
         hdr_0.fabric_header_cpu.port = (bit<16>)hdr_0.ig_intr_md.ingress_port;
         meta_0.egress_metadata.fabric_bypass = 1w1;
-        hdr_0.fabric_payload_header.setValid(true);
+        hdr_0.fabric_payload_header.setValid();
         hdr_0.fabric_payload_header.etherType = hdr_0.ethernet.etherType;
         hdr_0.ethernet.etherType = 16w0x9000;
     }
@@ -1426,17 +1426,17 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr_2.ethernet.etherType = meta_2.i_fabric_header.lkp_mac_type;
     }
     @name("process_vlan_decap.remove_vlan_single_tagged") action process_vlan_decap_remove_vlan_single_tagged() {
-        hdr_2.vlan_tag_[0].setValid(false);
+        hdr_2.vlan_tag_[0].setInvalid();
         hdr_2.ethernet.etherType = meta_2.i_fabric_header.lkp_mac_type;
     }
     @name("process_vlan_decap.remove_vlan_double_tagged") action process_vlan_decap_remove_vlan_double_tagged() {
-        hdr_2.vlan_tag_[0].setValid(false);
-        hdr_2.vlan_tag_[1].setValid(false);
+        hdr_2.vlan_tag_[0].setInvalid();
+        hdr_2.vlan_tag_[1].setInvalid();
         hdr_2.ethernet.etherType = meta_2.i_fabric_header.lkp_mac_type;
     }
     @name("process_vlan_decap.remove_vlan_qinq_tagged") action process_vlan_decap_remove_vlan_qinq_tagged() {
-        hdr_2.vlan_tag_[0].setValid(false);
-        hdr_2.vlan_tag_[1].setValid(false);
+        hdr_2.vlan_tag_[0].setInvalid();
+        hdr_2.vlan_tag_[1].setInvalid();
         hdr_2.ethernet.etherType = meta_2.i_fabric_header.lkp_mac_type;
     }
     @name("process_vlan_decap.vlan_decap") table process_vlan_decap_vlan_decap() {
@@ -1524,7 +1524,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction_0();
     }
     @name("process_vlan_xlate.set_egress_packet_vlan_tagged") action process_vlan_xlate_set_egress_packet_vlan_tagged(bit<12> vlan_id) {
-        hdr_10.vlan_tag_[0].setValid(true);
+        hdr_10.vlan_tag_[0].setValid();
         hdr_10.vlan_tag_[0].etherType = hdr_10.ethernet.etherType;
         hdr_10.vlan_tag_[0].vid = vlan_id;
         hdr_10.ethernet.etherType = 16w0x8100;

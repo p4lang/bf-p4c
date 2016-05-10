@@ -260,7 +260,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     action NoAction_0() {
     }
     @name("action_0") action action() {
-        hdr.test.setValid(true);
+        hdr.test.setValid();
     }
     @name("table_0") table table() {
         actions = {
