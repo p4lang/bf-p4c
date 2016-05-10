@@ -6,7 +6,6 @@
 class OutputExtracts : public Inspector {
     std::ostream        &out;
     const PhvInfo       &phv;
-    gress_t             gress;
     indent_t            indent;
     int                 offset = 0;
     PHV::Container      last;
@@ -42,18 +41,17 @@ class OutputExtracts : public Inspector {
         return false; }
 
  public:
-    OutputExtracts(std::ostream &o, const PhvInfo &phv, gress_t gress, indent_t i)
-    : out(o), phv(phv), gress(gress), indent(i) {}
+    OutputExtracts(std::ostream &o, const PhvInfo &phv, indent_t i) : out(o), phv(phv), indent(i) {}
 };
 
-static void output_match(std::ostream &out, const PhvInfo &phv, gress_t gress, indent_t indent,
+static void output_match(std::ostream &out, const PhvInfo &phv, indent_t indent,
                          const IR::Tofino::ParserMatch *match) {
     if (match->value)
         out << indent << match->value << ':' << std::endl;
     else
         out << indent << "0x*:" << std::endl;
     ++indent;
-    match->stmts.apply(OutputExtracts(out, phv, gress, indent));
+    match->stmts.apply(OutputExtracts(out, phv, indent));
     if (match->shift)
         out << indent << "shift: " << match->shift << std::endl;
     out << indent << "next: ";
@@ -65,7 +63,7 @@ static void output_match(std::ostream &out, const PhvInfo &phv, gress_t gress, i
     --indent;
 }
 
-static void output_state(std::ostream &out, const PhvInfo &phv, gress_t gress, indent_t indent,
+static void output_state(std::ostream &out, const PhvInfo &phv, indent_t indent,
                          const IR::Tofino::ParserState *state) {
     out << indent++ << canon_name(state->name) << ':' << std::endl;
     if (!state->select.empty()) {
@@ -83,7 +81,7 @@ static void output_state(std::ostream &out, const PhvInfo &phv, gress_t gress, i
             sep = ", "; }
         out << " ]" << std::endl; }
     for (auto m : state->match)
-        output_match(out, phv, gress, indent, m);
+        output_match(out, phv, indent, m);
     --indent;
 }
 
@@ -93,6 +91,6 @@ std::ostream &operator<<(std::ostream &out, const ParserAsmOutput &parser) {
     if (parser.parser && parser.parser->start)
         out << indent << "start: " << canon_name(parser.parser->start->name) << std::endl;
     for (auto state : parser.states)
-        output_state(out, parser.phv, parser.gress, indent, state);
+        output_state(out, parser.phv, indent, state);
     return out;
 }

@@ -3,7 +3,6 @@
 class OutputDictionary : public Inspector {
     std::ostream        &out;
     const PhvInfo       &phv;
-    gress_t             gress;
     indent_t            indent;
     bool preorder(const IR::Primitive *prim) {
         if (prim->name != "emit") return true;
@@ -28,8 +27,8 @@ class OutputDictionary : public Inspector {
         return false; }
 
  public:
-    OutputDictionary(std::ostream &out, const PhvInfo &phv, gress_t gress, indent_t indent)
-    : out(out), phv(phv), gress(gress), indent(indent) {}
+    OutputDictionary(std::ostream &out, const PhvInfo &phv, indent_t indent)
+    : out(out), phv(phv), indent(indent) {}
 };
 
 std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
@@ -37,7 +36,7 @@ std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
     out << "deparser " << d.gress << ":" << std::endl;
     out << indent << "dictionary:" << std::endl;
     if (d.deparser) {
-        d.deparser->emits.apply(OutputDictionary(out, d.phv, d.gress, ++indent));
+        d.deparser->emits.apply(OutputDictionary(out, d.phv, ++indent));
         --indent;
         if (d.deparser->egress_port)
             out << indent << "egress_unicast_port: "
