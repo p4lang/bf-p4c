@@ -5,9 +5,9 @@ IR::Node *SplitPhvUse::preorder(IR::Primitive *p) {
     IR::Vector<IR::Primitive> *rv = nullptr;
     PhvInfo::Info::bitrange bits;
     if (auto field = phv.field(p->operands[0], &bits)) {
-        if (field->alloc[gress].size() <= 1) return p;
+        if (field->alloc.size() <= 1) return p;
         LOG3("split " << *p << "into");
-        for (auto &alloc : field->alloc[gress]) {
+        for (auto &alloc : field->alloc) {
             if (alloc.field_bit > bits.hi || alloc.field_hi() < bits.lo)
                 continue;
             int lo = alloc.field_bit - bits.lo;
@@ -32,9 +32,9 @@ IR::Node *SplitPhvUse::preorder(IR::HeaderSliceRef *hsr) {
     PhvInfo::Info::bitrange bits;
     IR::Vector<IR::Expression> *rv = nullptr;
     if (auto field = phv.field(hsr, &bits)) {
-        if (field->alloc[gress].size() <= 1) return hsr;
+        if (field->alloc.size() <= 1) return hsr;
         LOG3("split " << *hsr << " into");
-        for (auto &alloc : field->alloc[gress]) {
+        for (auto &alloc : field->alloc) {
             if (alloc.field_bit > bits.hi || alloc.field_hi() < bits.lo)
                 continue;
             int lo = alloc.field_bit - bits.lo;

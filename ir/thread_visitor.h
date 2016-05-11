@@ -8,6 +8,9 @@ class ThreadVisitor : public virtual Visitor {
   gress_t       thread;
  public:
   explicit ThreadVisitor(gress_t th) : thread(th) {}
+  friend gress_t VisitingThread(ThreadVisitor *v) { return v->thread; }
 };
+
+extern gress_t VisitingThread(Visitor *v);
 
 #endif /* _TOFINO_IR_THREAD_VISITOR_H_ */

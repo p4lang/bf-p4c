@@ -17,7 +17,6 @@ class canon_name {
 
 class Slice {
     const PhvInfo::Info *field;
-    gress_t             gress;
     PHV::Container      reg;
     int                 lo, hi;
     friend std::ostream &operator<<(std::ostream &, const Slice &);
@@ -25,16 +24,16 @@ class Slice {
 
  public:
     Slice() : field(0), lo(-1), hi(-2) {}   // hi = -2 to make width() = 0
-    Slice(const PhvInfo::Info *f, gress_t gr) : field(f), gress(gr), lo(0), hi(f->size-1) {}
-    Slice(const PhvInfo::Info *f, gress_t gr, int bit) : field(f), gress(gr), lo(bit), hi(bit) {}
-    Slice(const PhvInfo::Info *f, gress_t gr, int l, int h) : field(f), gress(gr), lo(l), hi(h) {}
-    Slice(const PhvInfo &phv, gress_t gr, cstring n)
-    : field(phv.field(n)), gress(gr), lo(0), hi(field->size-1) {}
-    Slice(const PhvInfo &phv, gress_t gr, cstring n, int bit)
-    : field(phv.field(n)), gress(gr), lo(bit), hi(bit) {
+    Slice(const PhvInfo::Info *f) : field(f), lo(0), hi(f->size-1) {}
+    Slice(const PhvInfo::Info *f, int bit) : field(f), lo(bit), hi(bit) {}
+    Slice(const PhvInfo::Info *f, int l, int h) : field(f), lo(l), hi(h) {}
+    Slice(const PhvInfo &phv, cstring n)
+    : field(phv.field(n)), lo(0), hi(field->size-1) {}
+    Slice(const PhvInfo &phv, cstring n, int bit)
+    : field(phv.field(n)), lo(bit), hi(bit) {
         BUG_CHECK(bit >= 0 && bit < field->size, "Slice out of range for field"); }
-    Slice(const PhvInfo &phv, gress_t gr, cstring n, int l, int h)
-    : field(phv.field(n)), gress(gr), lo(l), hi(h) {
+    Slice(const PhvInfo &phv, cstring n, int l, int h)
+    : field(phv.field(n)), lo(l), hi(h) {
         BUG_CHECK(lo < field->size, "Slice out of range for field");
         if (lo < 0) lo = 0;
         if (hi >= field->size) hi = field->size-1; }
@@ -42,9 +41,9 @@ class Slice {
     Slice(PHV::Container r, int bit) : field(0), reg(r), lo(bit), hi(bit) {}
     Slice(PHV::Container r, int lo, int hi) : field(0), reg(r), lo(lo), hi(hi) {}
     Slice(const Slice &s, int bit)
-    : field(s.field), gress(s.gress), reg(s.reg), lo(s.lo + bit), hi(lo) {}
+    : field(s.field), reg(s.reg), lo(s.lo + bit), hi(lo) {}
     Slice(const Slice &s, int l, int h)
-    : field(s.field), gress(s.gress), reg(s.reg), lo(s.lo + l), hi(s.lo + h) {
+    : field(s.field), reg(s.reg), lo(s.lo + l), hi(s.lo + h) {
         if (hi > s.hi) hi = s.hi;
         if (!field || lo > hi) invalidate(); }
     explicit operator bool() const { return field != nullptr || reg; }

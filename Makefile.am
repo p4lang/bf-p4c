@@ -4,6 +4,8 @@ tofino_ir_SOURCES = \
 	%reldir%/ir/dbprint-tofino.cpp \
 	%reldir%/ir/mau.cpp \
 	%reldir%/ir/parde.cpp \
+	%reldir%/ir/thread_visitor.cpp \
+	%reldir%/ir/thread_visitor.h \
 	%reldir%/ir/tofino.cpp
 
 ir_SOURCES += $(tofino_ir_SOURCES)
@@ -135,6 +137,8 @@ cpplint_FILES += $(tofino_backend_SOURCES)
 -include $(srcdir)/%reldir%/v1_2_tests.am
 -include $(srcdir)/%reldir%/v1to12tests.am
 -include $(srcdir)/%reldir%/bmv2tests.am
+#-include $(srcdir)/%reldir%/newpa-tofinotests.am
+
 
 $(srcdir)/tofinotests.am: \
    $(srcdir)/testdata/v1_samples/*.p4 \
@@ -145,6 +149,12 @@ $(srcdir)/tofinotests.am: \
 
 #$(srcdir)/%reldir%/v12-tofinotests.am: $(srcdir)/testdata/v1_2_samples/*.stf
 #	@$(GENTESTS) $(srcdir) tofino $(srcdir)/%reldir%/runtest $(^:%.stf=%.p4) >$@
+
+$(srcdir)/%reldir%/newpa-tofinotests.am: \
+   $(srcdir)/testdata/v1_samples/*.stf \
+   $(srcdir)/%reldir%/v1_2_test/*.stf \
+   # $(srcdir)/%reldir%/v1_samples/*.stf
+	@$(GENTESTS) $(srcdir) tofino-newpa $(srcdir)/%reldir%/runtest --newpa $(^:%.stf=%.p4) >$@
 
 # We have additional test inputs that are used to test the other (standard) back-ends
 # These test input programs depend on Tofino in some way.
@@ -161,7 +171,9 @@ CLEANFILES += \
 	$(srcdir)/tofinotests.am \
 	$(srcdir)/%reldir%/v1_2_tests.am \
 	$(srcdir)/%reldir%/v1to12tests.am \
-	$(srcdir)/%reldir%/bmv2tests.am
+	$(srcdir)/%reldir%/bmv2tests.am \
+	$(srcdir)/%reldir%/v12-tofinotests.am \
+	$(srcdir)/%reldir%/newpa-tofinotests.am
 
 # Some of these failures are still P4 v1.0 front-end bugs.
 # Others are due to non-standard extensions to P4:

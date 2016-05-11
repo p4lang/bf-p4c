@@ -6,15 +6,16 @@
 #include "base/logging.h"
 
 
-void PhvInfo::add(cstring name, int offset, int size, bool meta, bool pov) {
+void PhvInfo::add(cstring name, int size, bool meta, bool pov) {
     LOG3("PhvInfo adding " << (meta ? "metadata" : "header") << " field " << name <<
          " size " << size);
     assert(all_fields.count(name) == 0);
     auto *info = &all_fields[name];
     info->name = name;
     info->id = by_id.size();
+    info->gress = gress;
     info->size = size;
-    info->offset = offset;
+    info->offset = 0;
     info->metadata = meta;
     info->pov = pov;
     by_id.push_back(info);
@@ -26,12 +27,14 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, bool meta) 
         return; }
     LOG2("PhvInfo adding " << (meta ? "metadata" : "header") << " " << name);
     int start = by_id.size();
-    int offset = 0;
-    for (auto f : *type->fields) {
-        add(name + '.' + f->name, offset, f->type->width_bits(), meta, false);
-        offset += f->type->width_bits(); }
+    for (auto f : *type->fields)
+        add(name + '.' + f->name, f->type->width_bits(), meta, false);
     int end = by_id.size() - 1;
     all_headers.emplace(name, std::make_pair(start, end));
+    int offset = 0;
+    for (int i = end; i >= start; --i) {
+        by_id[i]->offset = offset;
+        offset += by_id[i]->size; }
 }
 
 bool PhvInfo::preorder(const IR::Header *h) {
@@ -108,8 +111,7 @@ vector<PhvInfo::Info::alloc_slice> *PhvInfo::alloc(const IR::Member *member) {
     PhvInfo::Info *info = field(member);
     CHECK(nullptr != info) << "; Cannot find PHV allocation for " <<
         member->toString();
-    gress_t gress = info->name.startsWith("egress::") ? EGRESS : INGRESS;
-    return &(info->alloc[gress]);
+    return &info->alloc;
 }
 
 const std::pair<int, int> *PhvInfo::header(cstring name_) const {
@@ -124,9 +126,9 @@ const std::pair<int, int> *PhvInfo::header(cstring name_) const {
 }
 
 void PhvInfo::allocatePOV() {
-    if (all_fields.count("$POV") || all_fields.count("ingress::$POV"))
+    if (all_fields.count("ingress::$POV") || all_fields.count("egress::$POV"))
         BUG("trying to reallocate POV");
-    int ingress_size = 0, egress_size = 0, generic_size = 0;
+    int ingress_size = 0, egress_size = 0;
     for (auto &hdr : all_headers)
         if (!field(hdr.second.first)->metadata) {
             if (hdr.first.startsWith("ingress::"))
@@ -134,26 +136,19 @@ void PhvInfo::allocatePOV() {
             else if (hdr.first.startsWith("egress::"))
                 ++egress_size;
             else
-                ++generic_size; }
-    assert(generic_size == 0 || ingress_size+egress_size == 0);
-    if (generic_size > 0) {
-        add("$POV", 0, generic_size, false, true);
-        int offset = 0;
-        for (auto &hdr : all_headers)
-            if (!field(hdr.second.first)->metadata)
-                add(hdr.first + ".$valid", offset++, 1, false, true); }
+                BUG("Header %s neither ingress or egress", hdr.first); }
     if (ingress_size > 0) {
-        add("ingress::$POV", 0, ingress_size, false, true);
-        int offset = 0;
+        gress = INGRESS;
+        add("ingress::$POV", ingress_size, false, true);
         for (auto &hdr : all_headers)
             if (!field(hdr.second.first)->metadata && hdr.first.startsWith("ingress::"))
-                add(hdr.first + ".$valid", offset++, 1, false, true); }
+                add(hdr.first + ".$valid", 1, false, true); }
     if (egress_size > 0) {
-        add("egress::$POV", 0, egress_size, false, true);
-        int offset = 0;
+        gress = EGRESS;
+        add("egress::$POV", egress_size, false, true);
         for (auto &hdr : all_headers)
             if (!field(hdr.second.first)->metadata && hdr.first.startsWith("egress::"))
-                add(hdr.first + ".$valid", offset++, 1, false, true); }
+                add(hdr.first + ".$valid", 1, false, true); }
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo::Info::alloc_slice &sl) {

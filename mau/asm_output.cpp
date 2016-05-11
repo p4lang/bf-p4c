@@ -88,12 +88,12 @@ class MauAsmOutput::ImmedFormat {
             sep = ", "; } }
 };
 
-void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, gress_t gress,
+void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
         const IXBar::Use &use, const Memories::Use *mem, const TableFormat *fmt) const {
     map<int, map<int, Slice>> sort;
     for (auto &b : use.use) {
         auto n = sort[b.loc.group].emplace(b.loc.byte*8,
-            Slice(phv, gress, b.field, b.byte*8, b.byte*8 + 7));
+            Slice(phv, b.field, b.byte*8, b.byte*8 + 7));
         assert(n.second);
         if (n.first->second.width() != 8)
             n.first->second = n.first->second.fullbyte(); }
@@ -168,7 +168,7 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent, gress_t gress,
                 out << indent << (40 + ident.bit);
                 if (ident.width > 1)
                     out << ".." << (39 + ident.bit + ident.width);
-                out << ": " << Slice(phv, gress, ident.field, ident.lo, ident.lo + ident.width - 1)
+                out << ": " << Slice(phv, ident.field, ident.lo, ident.lo + ident.width - 1)
                     << std:: endl;
                 assert(hash_group == -1 || hash_group == ident.group);
                 hash_group = ident.group; }
@@ -297,7 +297,7 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
             PhvInfo::Info::bitrange bits;
             if (!field || !(finfo = self.phv.field(field, &bits)))
                 BUG("unexpected reads expression %s", r);
-            match_fields.emplace_back(finfo, tbl->gress, bits.lo, bits.hi); } }
+            match_fields.emplace_back(finfo, bits.lo, bits.hi); } }
 
     if (!tbl->layout.ternary && !match_fields.empty())
         ghost_bits = match_fields[0](0, 9);
@@ -392,7 +392,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
             out << ", size: " << tbl->match_table->size;
         out << " }" << std::endl;
         emit_memory(out, indent, tbl->resources->memuse.at(tbl->name));
-        emit_ixbar(out, indent, tbl->gress, tbl->resources->match_ixbar,
+        emit_ixbar(out, indent, tbl->resources->match_ixbar,
                    &tbl->resources->memuse.at(tbl->name), &fmt);
         if (!tbl->layout.ternary) {
             out << indent << fmt << std::endl;
@@ -411,7 +411,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         indent_t gw_indent = indent;
         if (tbl->match_table)
             out << gw_indent++ << "gateway:" << std::endl;
-        emit_ixbar(out, gw_indent, tbl->gress, tbl->resources->gateway_ixbar, 0, &fmt);
+        emit_ixbar(out, gw_indent, tbl->resources->gateway_ixbar, 0, &fmt);
         for (auto &use : Values(tbl->resources->memuse))
             if (use.type == Memories::Use::GATEWAY) {
                 out << gw_indent << "row: " << use.row[0].row << std::endl;
@@ -427,7 +427,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
                 if (f.second.xor_with) {
                     have_xor = true;
                     continue; }
-                out << sep << f.second.offset << ": " << Slice(f.first, tbl->gress);
+                out << sep << f.second.offset << ": " << Slice(f.first);
                 sep = ", "; }
             for (auto &valid : collect.valid_offsets) {
                 out << sep << valid.second << ": " << canon_name(valid.first) << ".$valid";
@@ -438,7 +438,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
                 sep = " ";
                 for (auto &f : collect.info) {
                     if (f.second.xor_with) {
-                        out << sep << f.second.offset << ": " << Slice(f.first, tbl->gress);
+                        out << sep << f.second.offset << ": " << Slice(f.first);
                         sep = ", "; } }
                 out << (sep+1) << "}" << std::endl; }
             for (auto &line : tbl->gateway_rows) {

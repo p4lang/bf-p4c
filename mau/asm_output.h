@@ -21,7 +21,7 @@ class MauAsmOutput : public MauInspector {
     friend std::ostream &operator<<(std::ostream &, const MauAsmOutput &);
     class TableFormat;
     class ImmedFormat;
-    void emit_ixbar(std::ostream &out, indent_t, gress_t gress, const IXBar::Use &,
+    void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use &,
                     const Memories::Use *, const TableFormat *) const;
     void emit_memory(std::ostream &out, indent_t, const Memories::Use &) const;
     void emit_table(std::ostream &out, const IR::MAU::Table *tbl) const;

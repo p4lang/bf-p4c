@@ -1,14 +1,14 @@
 #include "core.p4"
 
 struct standard_metadata {
-    bit<16>     ingress_port;
-    bit<16>     packet_length;
-    bit<9>      egress_spec;
-    bit<16>     egress_port;
-    bit<16>     egress_instance;
-    bit<8>      instance_type;
-    bit<8>      parser_status;
-    bit<8>      parser_error_location;
+    bit<9>      ingress_port;           // 114-122
+    bit<32>     packet_length;          // 82-113
+    bit<9>      egress_spec;            // 73-81
+    bit<9>      egress_port;            // 64-72
+    bit<16>     egress_instance;        // 48-63 
+    bit<32>     instance_type;          // 16-47
+    bit<8>      parser_status;          // 8-15
+    bit<8>      parser_error_location;  // 0-7
 }
 
 parser parse<H>(packet_in packet, out H headers, inout standard_metadata meta);

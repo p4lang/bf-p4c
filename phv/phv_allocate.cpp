@@ -46,32 +46,32 @@ struct PhvAllocate::Regs {
     PHV::Container      B, H, W;
 };
 
-void PhvAllocate::do_alloc(PhvInfo::Info *i, gress_t thread, Regs *use) {
+void PhvAllocate::do_alloc(PhvInfo::Info *i, Regs *use) {
     /* greedy allocate space for field */
     LOG2(i->id << ": " << (i->metadata ? "metadata " : "header ") << i->name <<
          " size=" << i->size);
     int size = i->size;
     while (size > 32) {
-        i->alloc[thread].emplace_back(use->W++, size-32, 0, 32);
+        i->alloc.emplace_back(use->W++, size-32, 0, 32);
         size -= 32; }
     if (size > 16)
-        i->alloc[thread].emplace_back(use->W++, 0, 0, size);
+        i->alloc.emplace_back(use->W++, 0, 0, size);
     else if (size > 8)
-        i->alloc[thread].emplace_back(use->H++, 0, 0, size);
+        i->alloc.emplace_back(use->H++, 0, 0, size);
     else
-        i->alloc[thread].emplace_back(use->B++, 0, 0, size);
-    LOG3("   allocated " << i->alloc[thread] << " for " << thread);
+        i->alloc.emplace_back(use->B++, 0, 0, size);
+    LOG3("   allocated " << i->alloc << " for " << i->gress);
 }
 
-void alloc_pov(PhvInfo::Info *i, gress_t thread, PhvInfo::Info *pov, int pov_bit) {
+void alloc_pov(PhvInfo::Info *i, PhvInfo::Info *pov, int pov_bit) {
     LOG2(i->id << ": POV " << i->name << " bit=" << pov_bit);
     if (i->size != 1)
         BUG("more than 1 bit for POV bit %s", i->name);
-    for (auto &sl : pov->alloc[thread]) {
+    for (auto &sl : pov->alloc) {
         int bit = pov_bit - sl.field_bit;
         if (bit >= 0 && bit < sl.width) {
-            i->alloc[thread].emplace_back(sl.container, 0, bit + sl.container_bit, 1);
-            LOG3("   allocated " << i->alloc[thread] << " for " << thread);
+            i->alloc.emplace_back(sl.container, 0, bit + sl.container_bit, 1);
+            LOG3("   allocated " << i->alloc << " for " << i->gress);
             return; } }
     BUG("Failed to allocate POV bit for %s, POV too small?", i->name);
 }
@@ -80,7 +80,6 @@ bool PhvAllocate::preorder(const IR::Tofino::Pipe *pipe) {
     Uses uses(phv);
     Regs normal = { "B0", "H0", "W0" },
          tagalong = { "TB0", "TH0", "TW0" };
-    cstring gress_pfx[] = { "ingress::", "egress::" };
     pipe->apply(uses);
     for (auto gr : Range(INGRESS, EGRESS)) {
         PhvInfo::Info *pov = nullptr;
@@ -96,17 +95,17 @@ bool PhvAllocate::preorder(const IR::Tofino::Pipe *pipe) {
         tagalong.W = PHV::Container::TW(tagalong_group * 4);
 
         for (auto &field : phv) {
-            if (field.name.startsWith(gress_pfx[!gr]))
+            if (field.gress != gr)
                 continue;
-            if (field.alloc[gr].empty()) {
+            if (field.alloc.empty()) {
                 if (pov)
-                    alloc_pov(&field, gr, pov, pov_bit++);
+                    alloc_pov(&field, pov, pov_bit++);
                 else if (field.name.endsWith("$POV"))
-                    do_alloc((pov = &field), gr, &normal);
+                    do_alloc((pov = &field), &normal);
                 else if (uses.use[1][gr][field.id])
-                    do_alloc(&field, gr, &normal);
+                    do_alloc(&field, &normal);
                 else if (uses.use[0][gr][field.id])
-                    do_alloc(&field, gr, &tagalong);
+                    do_alloc(&field, &tagalong);
                 else
                     LOG2(field.id << ": " << field.name << " unused in " << gr); } } }
     return false;
