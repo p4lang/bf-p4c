@@ -171,7 +171,8 @@ static const IR::MethodCallExpression *isApplyHit(const IR::Expression *e, bool 
 
 class GetTofinoTables : public Inspector {
   const IR::V1Program                          *program;
-  const P4::BlockMap                           *blockMap;
+  const P4::ReferenceMap                       *refMap;
+  const P4::TypeMap                            *typeMap;
   gress_t                                       gress;
   IR::Tofino::Pipe                              *pipe;
   map<const IR::Node *, IR::MAU::Table *>       tables;
@@ -182,10 +183,11 @@ class GetTofinoTables : public Inspector {
     return seqs.at(n); }
 
  public:
-  GetTofinoTables(const IR::V1Program *gl, gress_t gr, IR::Tofino::Pipe *p)
-  : program(gl), blockMap(nullptr), gress(gr), pipe(p) {}
-  GetTofinoTables(const P4::BlockMap *bm, gress_t gr, IR::Tofino::Pipe *p)
-  : program(nullptr), blockMap(bm), gress(gr), pipe(p) {}
+    GetTofinoTables(const IR::V1Program *prog, gress_t gr, IR::Tofino::Pipe *p)
+            : program(prog), refMap(nullptr), typeMap(nullptr), gress(gr), pipe(p) {}
+    GetTofinoTables(const P4::ReferenceMap* refMap, const P4::TypeMap* typeMap,
+                    gress_t gr, IR::Tofino::Pipe *p)
+            : program(nullptr), refMap(refMap), typeMap(typeMap), gress(gr), pipe(p) {}
 
  private:
   void add_tt_action(IR::MAU::Table *tt, IR::ID name) {
@@ -213,7 +215,7 @@ class GetTofinoTables : public Inspector {
   void setup_tt_actions(IR::MAU::Table *tt, const IR::P4Table *table) {
     for (auto act : *table->properties->getProperty("actions")->value
                           ->to<IR::ActionList>()->actionList)
-      if (auto action = blockMap->refMap->getDeclaration(act->name->path)
+      if (auto action = refMap->getDeclaration(act->name->path)
                                 ->to<IR::P4Action>()) {
         auto newaction = createActionFunction(action, act->arguments);
         if (!tt->actions.count(newaction->name))
@@ -268,14 +270,14 @@ class GetTofinoTables : public Inspector {
             error("%s: no action %s in table %s", a->srcInfo, name, tt->name); }
       tt->next[name] = getseq(act.second); } }
   bool preorder(const IR::MethodCallExpression *m) override {
-    auto mi = P4::MethodInstance::resolve(m, blockMap->refMap, blockMap->typeMap, true);
+    auto mi = P4::MethodInstance::resolve(m, refMap, typeMap, true);
     if (!mi || !mi->isApply())
       BUG("Method Call %1% not apply", m);
     auto table = mi->object->to<IR::P4Table>();
     if (!table) BUG("%1% not apllied to table", m);
     if (!tables.count(m)) {
       auto tt = tables[m] = new IR::MAU::Table(table->name, gress,
-                                               createV1Table(table, blockMap->refMap));
+                                               createV1Table(table, refMap));
       setup_tt_actions(tt, table);
     } else {
       error("%s: Multiple applies of table %s not supported", m->srcInfo, table->name); }
@@ -295,7 +297,7 @@ class GetTofinoTables : public Inspector {
         if (c->label->is<IR::DefaultExpression>())
             label = "default";
         else
-            label = blockMap->refMap->getDeclaration(c->label->to<IR::PathExpression>()->path)
+            label = refMap->getDeclaration(c->label->to<IR::PathExpression>()->path)
                             ->externalName();
         tt->next[label] = getseq(c->statement); } }
 
@@ -378,7 +380,9 @@ class ConvertIndexToHeaderStackItemRef : public Transform {
 };
 
 const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
-    P4::EvaluatorPass evaluator(true);
+    P4::ReferenceMap  refMap;
+    P4::TypeMap       typeMap;
+    P4::EvaluatorPass evaluator(&refMap, &typeMap, true);
     program = program->apply(evaluator);
     auto blockMap = evaluator.getBlockMap();
     auto top = blockMap->getMain();
@@ -402,7 +406,7 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
 
     auto rv = new IR::Tofino::Pipe();
 
-    ParamBinding bindings(blockMap);
+    ParamBinding bindings(&refMap);
 
     for (auto param : *parser->type->applyParams->getEnumerator())
         if (param->type->is<IR::Type_StructLike>())
@@ -438,10 +442,10 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
     if (auto eg = rv->thread[EGRESS].parser = make_parser.parser(EGRESS))
         rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, eg);
 
-    ingress = ingress->apply(InlineControlFlow(blockMap));
-    ingress->apply(GetTofinoTables(blockMap, INGRESS, rv));
-    egress = egress->apply(InlineControlFlow(blockMap));
-    egress->apply(GetTofinoTables(blockMap, EGRESS, rv));
+    //ingress = ingress->apply(InlineControlFlow(blockMap));
+    ingress->apply(GetTofinoTables(&refMap, &typeMap, INGRESS, rv));
+    //egress = egress->apply(InlineControlFlow(blockMap));
+    egress->apply(GetTofinoTables(&refMap, &typeMap, EGRESS, rv));
 
     // AttachTables...
 

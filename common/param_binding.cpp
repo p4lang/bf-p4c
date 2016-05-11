@@ -9,7 +9,7 @@ void ParamBinding::bind(const IR::Parameter *param) {
 }
 
 const IR::Expression *ParamBinding::postorder(IR::PathExpression *pe) {
-    if (auto decl = blockMap->refMap->getDeclaration(pe->path)) {
+    if (auto decl = refMap->getDeclaration(pe->path)) {
         if (auto param = decl->getNode()->to<IR::Parameter>()) {
             if (auto ref = get(param)) {
                 LOG2("binding " << pe << " to " << ref);
