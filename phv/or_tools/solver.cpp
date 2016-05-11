@@ -345,7 +345,8 @@ void Solver::SetNoTPhv(const PHV::Bit &bit) {
 
 void Solver::SetContainerConflict(const PHV::Bit &pb1, const PHV::Bit &pb2) {
   LOG2("Setting container-conflict between " << pb1 << " and " << pb2);
-  bits_.at(pb2).container()->SetConflict(bits_.at(pb1).container());
+  Bit *b1 = MakeBit(pb1), *b2 = MakeBit(pb2);
+  b1->container()->SetConflict(b2->container());
 }
 
 void Solver::SetBitConflict(const PHV::Bit &pb1, const PHV::Bit &pb2) {

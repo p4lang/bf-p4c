@@ -233,6 +233,13 @@ class IXBarUsePrinter(object):
             rv += "[%d:%d:%x]" % (way['group'], way['slice'], way['mask'])
         return rv;
 
+class PHVBitPrinter(object):
+    "Print a PHV::Bit object"
+    def __init__(self, val):
+        self.val = val
+    def to_string(self):
+        return self.val['first']['str'].string() + "[" + str(self.val['second']) + "]"
+
 def find_pp(val):
     if val.type.tag == 'bitvec':
         return bitvecPrinter(val)
@@ -248,6 +255,8 @@ def find_pp(val):
         return MemoriesUsePrinter(val)
     if val.type.tag == 'Util::SourceInfo':
         return SourceInfoPrinter(val)
+    if val.type.tag == 'PHV::Bit':
+        return PHVBitPrinter(val)
     return None
 gdb.pretty_printers.append(find_pp)
 end

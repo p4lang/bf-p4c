@@ -9,8 +9,9 @@ class Pipe;
 }
 }
 class PhvAllocator {
+  PhvInfo &phv;
  public:
-  explicit PhvAllocator(const IR::Tofino::Pipe *pipe) { SetConstraints(pipe); }
+  PhvAllocator(PhvInfo &phv, const IR::Tofino::Pipe *pipe) : phv(phv) { SetConstraints(pipe); }
   bool Solve(const IR::Tofino::Pipe *pipe, PhvInfo *phv_info);
 
  private:

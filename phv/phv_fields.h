@@ -28,6 +28,9 @@ class PhvInfo : public Inspector {
         bool            pov;
         set<constraint> constraints;
         cstring header() const { return name.before(strrchr(name, '.')); }
+        cstring bitgroup() const {
+            if (pov) return gress ? "egress::$POV" : "ingress::$POV";
+            return header(); }
         struct alloc_slice {
             PHV::Container         container;
             int         field_bit, container_bit, width;
@@ -52,7 +55,7 @@ class PhvInfo : public Inspector {
     vector<Info *>                      by_id;
     map<cstring, std::pair<int, int>>   all_headers;
     gress_t                             gress;
-    void add(cstring, int, bool, bool);
+    void add(cstring, int, int, bool, bool);
     void add_hdr(cstring, const IR::Type_StructLike *, bool);
     bool preorder(const IR::Tofino::Parser *) override {
         gress = VisitingThread(this); return true; }
