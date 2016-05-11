@@ -8,10 +8,10 @@ class FillFromBlockMap : public Transform {
     P4::EvaluatorPass *eval = 0;
     P4::ReferenceMap* refMap = nullptr;
     P4::TypeMap* typeMap = nullptr;
-    P4::BlockMap *blockMap = 0;
+    IR::ToplevelBlock *toplevel = nullptr;
 
     profile_t init_apply(const IR::Node *root) override {
-        if (eval) blockMap = eval->getBlockMap();
+        if (eval) toplevel = eval->getToplevelBlock();
         return Transform::init_apply(root); }
     const IR::Expression *preorder(IR::Expression *exp) override {
         if (exp->type == IR::Type::Unknown::get())
@@ -29,8 +29,8 @@ class FillFromBlockMap : public Transform {
             BUG("Type_Name %1% doesn't map to a declaration", type, decl); } }
 
  public:
-    FillFromBlockMap(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, P4::BlockMap *bm) :
-            refMap(refMap), typeMap(typeMap), blockMap(bm) {}
+    FillFromBlockMap(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, IR::ToplevelBlock *top) :
+            refMap(refMap), typeMap(typeMap), toplevel(top) {}
 };
 
 #endif /* _TOFINO_COMMON_BLOCKMAP_H_ */

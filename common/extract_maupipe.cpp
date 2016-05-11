@@ -10,7 +10,6 @@
 #include "tofino/parde/extract_parser.h"
 #include "lib/algorithm.h"
 #include "lib/error.h"
-#include "blockmap.h"
 #include "rewrite.h"
 
 namespace {
@@ -384,19 +383,19 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
     P4::TypeMap       typeMap;
     P4::EvaluatorPass evaluator(&refMap, &typeMap, true);
     program = program->apply(evaluator);
-    auto blockMap = evaluator.getBlockMap();
-    auto top = blockMap->getMain();
+    auto toplevel = evaluator.getToplevelBlock();
+    auto top = toplevel->getMain();
     if (!top) {
         error("No main switch");
         return nullptr; }
 
-    auto parser_blk = blockMap->getBlockBoundToParameter(top, "p");
+    auto parser_blk = top->getParameterValue("p");
     auto parser = parser_blk->to<IR::ParserBlock>()->container;
-    auto ingress_blk = blockMap->getBlockBoundToParameter(top, "ig");
+    auto ingress_blk = top->getParameterValue("ig");
     auto ingress = ingress_blk->to<IR::ControlBlock>()->container;
-    auto egress_blk = blockMap->getBlockBoundToParameter(top, "eg");
+    auto egress_blk = top->getParameterValue("eg");
     auto egress = egress_blk->to<IR::ControlBlock>()->container;
-    auto deparser_blk = blockMap->getBlockBoundToParameter(top, "dep");
+    auto deparser_blk = top->getParameterValue("dep");
     auto deparser = deparser_blk->to<IR::ControlBlock>()->container;
     LOG1("parser:" << parser);
     LOG1("ingress:" << ingress);

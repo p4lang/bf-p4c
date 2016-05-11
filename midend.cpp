@@ -19,7 +19,7 @@
 #include "common/blockmap.h"
 
 Tofino::MidEnd::MidEnd(const CompilerOptions& options)
-        : isv1(options.isv1()), evaluator(&refMap, &typeMap, options.isv1()) {
+        : isv1(options.isv1()), evaluator(&refMap, &typeMap) {
     stop_on_error = true;
     setName("Midend");
     addPasses({
@@ -37,21 +37,15 @@ Tofino::MidEnd::MidEnd(const CompilerOptions& options)
         new P4::MoveConstructors(isv1),
         new P4::ResolveReferences(&refMap, isv1),
         new P4::RemoveUnusedDeclarations(&refMap),
+        new P4::TypeChecking(&refMap, &typeMap, isv1),
         &evaluator,
         new VisitFunctor([this](const IR::Node *n)->const IR::Node *{
-            return evaluator.getBlockMap()->getMain() ? n : nullptr; }),
-    });
-
-    auto inliner = new P4::GeneralInliner();
-    auto actInl = new P4::DiscoverActionsInlining(&actionsToInline, &refMap, &typeMap);
-    actInl->allowDirectActionCalls = true;  // these will be eliminated by 'SynthesizeActions'
-
-    addPasses({
-        new P4::DiscoverInlining(&toInline, &refMap, &typeMap, evaluator.getBlockMap()),
-        new P4::InlineDriver(&toInline, inliner, isv1),
+            return evaluator.getToplevelBlock()->getMain() ? n : nullptr; }),
+        new P4::DiscoverInlining(&toInline, &refMap, &typeMap, &evaluator),
+        new P4::InlineDriver(&toInline, new P4::GeneralInliner(), isv1),
         new P4::RemoveAllUnusedDeclarations(&refMap, isv1),
         new P4::TypeChecking(&refMap, &typeMap, isv1),
-        actInl,
+        new P4::DiscoverActionsInlining(&actionsToInline, &refMap, &typeMap),
         new P4::InlineActionsDriver(&actionsToInline, new P4::ActionsInliner(), isv1),
         new P4::RemoveAllUnusedDeclarations(&refMap, isv1),
         new P4::TypeChecking(&refMap, &typeMap, isv1),
@@ -72,6 +66,6 @@ Tofino::MidEnd::MidEnd(const CompilerOptions& options)
         new P4::MoveActionsToTables(&refMap, &typeMap),
         new P4::TypeChecking(&refMap, &typeMap, isv1, true),
         &evaluator,
-        new FillFromBlockMap(&refMap, &typeMap, evaluator.getBlockMap()),
+        new FillFromBlockMap(&refMap, &typeMap, evaluator.getToplevelBlock()),
     });
 }

@@ -11,7 +11,7 @@ namespace Tofino {
 
 class MidEnd : public PassManager {
     const bool                  isv1;
-    P4::EvaluatorPass           evaluator;
+    P4::Evaluator               evaluator;
     P4::ReferenceMap            refMap;
     P4::TypeMap                 typeMap;
     P4::InlineWorkList          toInline;
@@ -19,7 +19,7 @@ class MidEnd : public PassManager {
 
  public:
     explicit MidEnd(const CompilerOptions &options);
-    P4::BlockMap *getBlockMap() { return evaluator.getBlockMap(); }
+    IR::ToplevelBlock *getToplevelBlock() { return evaluator.getToplevelBlock(); }
 };
 
 }  // namespace Tofino
