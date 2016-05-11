@@ -66,6 +66,6 @@ Tofino::MidEnd::MidEnd(const CompilerOptions& options)
         new P4::MoveActionsToTables(&refMap, &typeMap),
         new P4::TypeChecking(&refMap, &typeMap, isv1, true),
         &evaluator,
-        new FillFromBlockMap(&refMap, &typeMap, evaluator.getToplevelBlock()),
+        new FillFromBlockMap(&refMap, &typeMap),
     });
 }

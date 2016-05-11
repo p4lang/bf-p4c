@@ -5,14 +5,9 @@
 #include "frontends/p4/evaluator/evaluator.h"
 
 class FillFromBlockMap : public Transform {
-    P4::EvaluatorPass *eval = 0;
     P4::ReferenceMap* refMap = nullptr;
     P4::TypeMap* typeMap = nullptr;
-    IR::ToplevelBlock *toplevel = nullptr;
 
-    profile_t init_apply(const IR::Node *root) override {
-        if (eval) toplevel = eval->getToplevelBlock();
-        return Transform::init_apply(root); }
     const IR::Expression *preorder(IR::Expression *exp) override {
         if (exp->type == IR::Type::Unknown::get())
             if (auto type = typeMap->getType(getOriginal()))
@@ -29,8 +24,8 @@ class FillFromBlockMap : public Transform {
             BUG("Type_Name %1% doesn't map to a declaration", type, decl); } }
 
  public:
-    FillFromBlockMap(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, IR::ToplevelBlock *top) :
-            refMap(refMap), typeMap(typeMap), toplevel(top) {}
+    FillFromBlockMap(P4::ReferenceMap* refMap, P4::TypeMap* typeMap)
+    : refMap(refMap), typeMap(typeMap) {}
 };
 
 #endif /* _TOFINO_COMMON_BLOCKMAP_H_ */
