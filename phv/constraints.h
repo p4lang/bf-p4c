@@ -23,6 +23,8 @@ class Constraints {
                                            const gress_t gress) {
     deparsed_headers_.at(gress).insert(std::vector<PHV::Byte>(begin, end));
   }
+  void SetDeparsedPOV(const PHV::Bit &bit, const gress_t gress) {
+    deparsed_pov_.at(gress).insert(bit); }
   bool IsDeparsed(const PHV::Byte &byte) const;
 
   enum Equal {OFFSET, CONTAINER, MAU_GROUP, NUM_EQUALITIES};
@@ -114,8 +116,9 @@ class Constraints {
   // An array with 2 elements, one for ingress and one for egress. We need the
   // thread-specific mapping because we need to add the deparser-group
   // constraint between the bytes of two headers that belong to different
-  // threads.
+  // threads.  We also need the POV bits for the headers.
   std::array<std::set<std::vector<PHV::Byte>>, 2> deparsed_headers_;
+  std::array<std::set<PHV::Bit>, 2> deparsed_pov_;
   // A vector of flags to indicate if a bit can be assigned to T-PHV. This
   // vector is indexed by BitId.
   std::vector<bool> is_t_phv_;

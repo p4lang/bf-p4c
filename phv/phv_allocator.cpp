@@ -17,7 +17,6 @@ using namespace std::placeholders;
 
 void PopulatePhvInfo(SolverInterface &solver, PhvInfo *phv_info) {
   for (auto &field : *phv_info) {
-    gress_t gress = field.gress;
     cstring hdr = field.bitgroup();
     LOG3("PopulatePhvInfo " << field.name << " [" << hdr << "(" << field.offset << ")]");
     for (int field_bit = 0; field_bit < field.size; field_bit++) {
@@ -61,7 +60,7 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
   // TODO: The code below can be written more elegantly.
   pipe->apply(MauGroupConstraint(constraints_));
   pipe->apply(ContainerConstraint(constraints_));
-  pipe->apply(ByteConstraint(constraints_));
+  pipe->apply(ByteConstraint(phv, constraints_));
   pipe->apply(OffsetConstraint(constraints_));
   pipe->apply(ThreadConstraint(phv, constraints_));
   SourceContainerConstraint scc(constraints_);
@@ -79,7 +78,7 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
   pipe->apply(ParseGraphConstraint(constraints_));
 }
 
-bool PhvAllocator::Solve(const IR::Tofino::Pipe *pipe, PhvInfo *phv_info) {
+bool PhvAllocator::Solve(const IR::Tofino::Pipe *, PhvInfo *phv_info) {
   LOG1("Trying MIN_VALUE");
   or_tools::MinValueSolver solver;
   constraints_.SetConstraints(solver);

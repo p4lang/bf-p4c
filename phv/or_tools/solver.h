@@ -51,8 +51,8 @@ class Solver : public SolverInterface {
   // containers that are statically assigned to the other thread. For example,
   // i_hdr_byte will never be allocated to PHV containers 16-31 because these
   // are assigned to egress thread.
-  void SetDeparserGroups(const PHV::Byte &i_pbyte,
-                         const PHV::Byte &e_pbyte) override;
+  void SetDeparserGroups(const PHV::Byte &i_pbyte, const PHV::Byte &e_pbyte) override;
+  void SetDeparserGroups(const PHV::Bit &i_pbit, const PHV::Bit &e_pbit) override;
   // Creates constraints for the match xbar width. match_phv_bits is a set of
   // PHV::Bit objects that are used as keys for match tables in the same stage.
   // match_phv_bits must be byte de-duplicated. For example, if a table does a

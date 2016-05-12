@@ -27,8 +27,8 @@ class SolverInterface {
   // This function must be called just once (for the last byte) per deparsed
   // header.
   virtual void SetLastDeparsedHeaderByte(const PHV::Byte &last_byte) = 0;
-  virtual void SetDeparserGroups(const PHV::Byte &i_hdr_byte,
-                                 const PHV::Byte &e_hdr_byte) = 0;
+  virtual void SetDeparserGroups(const PHV::Byte &i_hdr_byte, const PHV::Byte &e_hdr_byte) = 0;
+  virtual void SetDeparserGroups(const PHV::Bit &i_pov_bit, const PHV::Bit &e_pov_bit) = 0;
   // This function specifies the match bits used for exact/TCAM matches.
   // FIXME: We must send the container conflict matrix too. Bits which cannot
   // exist in the same container can never share the same match xbar byte.

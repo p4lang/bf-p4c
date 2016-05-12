@@ -13,6 +13,13 @@ bool ByteConstraint::preorder(const IR::Primitive *prim) {
     CHECK(false == bytes.empty()) << "; Cannot find bytes in " << (*prim);
     constraints_.SetEqualByte(bytes.begin(), bytes.end());
     constraints_.SetDeparsedHeader(bytes.begin(), bytes.end(), gress);
+    if (auto *hdr = prim->operands[0]->to<IR::HeaderRef>()) {
+      if (auto *pov = phv.field(hdr->toString() + ".$valid"))
+        constraints_.SetDeparsedPOV(pov->bit(0), gress);
+      else
+        BUG("header %s doesn't have POV bit?", hdr);
+    } else {
+      BUG("emit of non-header %s"); }
   } else if ("extract" == prim->name) {
     // FIXME: When extract primitive has been changed to
     // extract(IR::HeaderSliceRef*) where the HeaderSliceRef object points to

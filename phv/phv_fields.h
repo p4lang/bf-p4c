@@ -31,6 +31,7 @@ class PhvInfo : public Inspector {
         cstring bitgroup() const {
             if (pov) return gress ? "egress::$POV" : "ingress::$POV";
             return header(); }
+        PHV::Bit bit(unsigned i) const { return PHV::Bit(bitgroup(), i+offset); }
         struct alloc_slice {
             PHV::Container         container;
             int         field_bit, container_bit, width;
