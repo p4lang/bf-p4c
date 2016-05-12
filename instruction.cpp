@@ -119,11 +119,12 @@ private:
                 return 0x20 + byte/size;
             return -1; }
         virtual void pass2(Table *, int group) const {
-            int size = group_size[group]/8U;
-            if (field && table->find_on_actionbus(field, lo, size) < 0) {
-                if (lo % (size*8) != 0 || lo >= 32)
+            unsigned bits = group_size[group];
+            unsigned bytes = bits/8U;
+            if (field && table->find_on_actionbus(field, lo, bytes) < 0) {
+                if (lo%bits != 0 && lo/bits != hi/bits)
                     error(lineno, "%s misaligned for action bus", name.c_str());
-                table->need_on_actionbus(field, lo, size); } }
+                table->need_on_actionbus(field, lo, bytes); } }
         virtual void mark_use(Table *tbl) {
             if (field) field->flags |= Table::Format::Field::USED_IMMED; }
         virtual unsigned bitoffset(int group) const {

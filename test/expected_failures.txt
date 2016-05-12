@@ -1,14 +1,13 @@
 - current compiler failures on some tests.
 10-AssignChooseSource.p4 mismatch
 acl1.p4 mismatch
-checksum1.p4 tfas
 counter5.p4 mismatch
 exact_match5.p4 tfas
-exact_match8.p4 compile
+exact_match9.p4 mismatch
 hash_index5.p4 mismatch
-instruct5.p4 tfas
 mac_rewrite.p4 tfas
-proxy_hash1.p4 tfas
+parser2.p4 tfas
+proxy_hash1.p4 mismatch
 selector0.p4 compile
 selector1.p4 mismatch
 selector2.p4 mismatch
