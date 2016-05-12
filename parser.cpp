@@ -1007,7 +1007,7 @@ void Parser::State::Match::Save::write_output_config(phv_output_map *map, unsign
         if ((flags & ROTATE) && !map[slot.idx].offset_rot)
             continue;
         int byte = lo;
-        for (int i = slot.idx; slot.usemask & (1U << i); i++, byte++) {
+        for (int i = slot.idx; slot.usemask & (1U << i); i++, byte += slot.size/8U) {
             *map[i].dst = where->reg.index;
             *map[i].src = byte;
             if (flags & OFFSET) *map[i].offset_add = 1;

@@ -25,6 +25,7 @@ struct ubits_base {
     void rewrite() { write = false; }
     virtual unsigned long operator=(unsigned long v) = 0;
     virtual unsigned size() = 0;
+    void log(const char *op, unsigned long v) const;
 };
 
 inline std::ostream &operator<<(std::ostream &out, const ubits_base *u) {
@@ -44,10 +45,6 @@ template<int N> struct ubits : ubits_base {
     ubits(unsigned long v) : ubits_base(v) { check(); }
     ubits(const ubits &) = delete;
     ubits(ubits &&) = default;
-    void log(const char *op, unsigned long v) const {
-        std::ostringstream tmp;
-        LOG1(this << ' ' << op << ' ' << v <<
-             (v != value ?  tmp << " (now " << value << ")", tmp : tmp).str()); }
     unsigned long operator=(unsigned long v) {
         if (write)
             ERRWARN(value != v, "Overwriting " << value << " with " << v << " in " << this);
@@ -119,7 +116,7 @@ public:
             ERRWARN(value != a, "Overwriting \"" << value << "\" with \"" << a <<
                     "\" in " << this);
         value = a;
-        LOG1(this << " = \"" << value << "\"");
+        log();
         write = true;
         return *this; }
     ustring &operator=(const char *a) {
@@ -127,7 +124,7 @@ public:
             ERRWARN(value != a, "Overwriting \"" << value << "\" with \"" << a <<
                     "\" in " << this);
         value = a;
-        LOG1(this << " = \"" << value << "\"");
+        log();
         write = true;
         return *this; }
     operator const std::string&() const { read = true; return value; }
@@ -136,6 +133,7 @@ public:
     void rewrite() { write = false; }
     friend std::ostream &operator<<(std::ostream &out, const ustring &u);
     bool disable_if_zero() { return false; }
+    void log() const;
 };
 
 inline std::ostream &operator<<(std::ostream &out, const ustring *u) {

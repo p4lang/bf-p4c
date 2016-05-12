@@ -6,7 +6,6 @@ exact_match5.p4 tfas
 exact_match9.p4 mismatch
 hash_index5.p4 mismatch
 mac_rewrite.p4 tfas
-parser2.p4 tfas
 proxy_hash1.p4 mismatch
 selector0.p4 compile
 selector1.p4 mismatch

@@ -36,3 +36,11 @@ void print_regname(std::ostream &out, const void *addr_, const void *end) {
             return; } }
     out << "???";
 }
+
+void ubits_base::log(const char *op, unsigned long v) const {
+    std::ostringstream tmp;
+    LOG1(this << ' ' << op << ' ' << v <<
+         (v != value ?  tmp << " (now " << value << ")", tmp : tmp).str()); }
+
+void ustring::log() const { LOG1(this << " = \"" << value << "\""); }
+
