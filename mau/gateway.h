@@ -24,11 +24,11 @@ class CanonGatewayExpr : public MauTransform {
 class CollectGatewayFields : public Inspector {
     const PhvInfo       &phv;
     const PhvInfo::Info *xor_match = nullptr;
-    bool preorder(const IR::MAU::Table *tbl) {
+    bool preorder(const IR::MAU::Table *tbl) override {
         for (auto &gw : tbl->gateway_rows)
             visit(gw.first, "gateway_row");
         return false; }
-    bool preorder(const IR::Expression *e) {
+    bool preorder(const IR::Expression *e) override {
         auto finfo = phv.field(e);
         if (!finfo) return true;
         info_t &info = this->info[finfo];
@@ -42,7 +42,7 @@ class CollectGatewayFields : public Inspector {
             } else {
                 xor_match = finfo; } }
         return false; }
-    bool preorder(const IR::Primitive *prim) {
+    bool preorder(const IR::Primitive *prim) override {
         if (prim->name != "valid") return true;
         if (auto *hdr = prim->operands[0]->to<IR::HeaderRef>())
             valid_offsets[hdr->toString()] = -1;

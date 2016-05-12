@@ -68,7 +68,7 @@ class Solver : public SolverInterface {
   void SetBitConflict(const PHV::Bit &pb1, const PHV::Bit &pb2) override;
   // Retrieve the allocation for bit. This function can be called only after a
   // solution has been found.
-  void allocation(const PHV::Bit &bit, PHV::Container *c, int *container_bit);
+  void allocation(const PHV::Bit &bit, PHV::Container *c, int *container_bit) override;
 
  protected:
   bool

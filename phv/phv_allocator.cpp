@@ -88,7 +88,7 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
   pipe->apply(ParseGraphConstraint(constraints_));
 }
 
-bool PhvAllocator::Solve(const IR::Tofino::Pipe *pipe, PhvInfo *phv_info) {
+bool PhvAllocator::Solve(const IR::Tofino::Pipe *, PhvInfo *phv_info) {
   LOG1("Trying MIN_VALUE");
   or_tools::MinValueSolver solver;
   constraints_.SetConstraints(solver);

@@ -68,7 +68,7 @@ class Table {
         rv->name += ext;
         for (auto &at : rv->attached) at = at->clone_rename(ext);
         return rv; }
-    bool operator==(const Table &a) const;
+    bool operator==(const Table &a) const override;
     bool uses_gateway() const { return !gateway_rows.empty(); }
     int stage() const { return logical_id < 0 ? -1 : logical_id / StageUse::MAX_LOGICAL_IDS; }
 #end
@@ -135,7 +135,7 @@ class TernaryIndirect : Attached {
 #nodbprint
 #emit
     explicit TernaryIndirect(cstring tbl_name) { name = IR::ID(tbl_name + "$tind"); }
-    const char *kind() const { return "indirect"; }
+    const char *kind() const override { return "indirect"; }
 #end
 }
 
@@ -145,8 +145,8 @@ class ActionData : Attached {
 #nodbprint
 #emit
     explicit ActionData(cstring tbl_name) { name = IR::ID(tbl_name + "$action"); }
-    const char *kind() const { return "action"; }
-    bool indexed() const { return !direct; }
+    const char *kind() const override { return "action"; }
+    bool indexed() const override { return !direct; }
 #end
 }
 
@@ -184,7 +184,7 @@ class Instruction : Primitive {
 #emit
     using Primitive::Primitive;
     explicit Instruction(const Primitive &p) : Primitive(p) {}
-    bool isOutput(int operand_index) const { return operand_index == 0; }
+    bool isOutput(int operand_index) const override { return operand_index == 0; }
 #end
 }
 

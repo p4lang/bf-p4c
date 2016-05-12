@@ -313,14 +313,14 @@ class GetTofinoTables : public Inspector {
       tables.at(c)->next["false"] = getseq(c->ifFalse); }
   bool preorder(const IR::If *) override {
     BUG("unnamed condition in control flow"); }
-  bool preorder(const IR::IfStatement *c) {
+  bool preorder(const IR::IfStatement *c) override {
     if (!isApplyHit(c->condition)) {
       static int uid = 0;
       char buf[16];
       snprintf(buf, sizeof(buf), "cond-%d", ++uid);
       tables[c] = new IR::MAU::Table(buf, gress, c->condition); }
     return true; }
-  void postorder(const IR::IfStatement *c) {
+  void postorder(const IR::IfStatement *c) override {
     bool lnot;
     cstring T = "true", F = "false";
     if (auto *mc = isApplyHit(c->condition, &lnot)) {
@@ -441,9 +441,9 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
     if (auto eg = rv->thread[EGRESS].parser = make_parser.parser(EGRESS))
         rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, eg);
 
-    //ingress = ingress->apply(InlineControlFlow(blockMap));
+    // ingress = ingress->apply(InlineControlFlow(blockMap));
     ingress->apply(GetTofinoTables(&refMap, &typeMap, INGRESS, rv));
-    //egress = egress->apply(InlineControlFlow(blockMap));
+    // egress = egress->apply(InlineControlFlow(blockMap));
     egress->apply(GetTofinoTables(&refMap, &typeMap, EGRESS, rv));
 
     // AttachTables...

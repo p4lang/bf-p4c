@@ -70,8 +70,8 @@ class HeaderSliceRef : Slice {
     type = Type_Bits::get(fr->srcInfo, fr->msb() - fr->lsb() + 1); }
   const HeaderRef* header_ref() const {
     return e0->to<const HeaderRef>(); }
-  Vector<Member> fields() const {
-    Vector<Member> rv;
+  vector<const Member*> fields() const {
+    vector<const Member*> rv;
     for (auto field : *header_ref()->type->to<IR::Type_StructLike>()->fields) {
       const IR::Member fr(srcInfo, field->type, header_ref(), field->name);
       if (fr.lsb() >= lsb() && fr.msb() <= msb())
