@@ -9,6 +9,7 @@
 #include "parse_graph_constraint.h"
 #include "source_container_constraint.h"
 #include "t_phv_constraint.h"
+#include "thread_constraint.h"
 #include "or_tools/min_value_solver.h"
 #include "or_tools/random_value_solver.h"
 
@@ -16,27 +17,15 @@ using namespace std::placeholders;
 
 void PopulatePhvInfo(SolverInterface &solver, PhvInfo *phv_info) {
   for (auto &field : *phv_info) {
-    gress_t gress;
-    if (field.name.startsWith("ingress::"))
-      gress = INGRESS;
-    else if (field.name.startsWith("egress::"))
-      gress = EGRESS;
-    else
-      assert(0);
-    cstring hdr;
-    if (field.pov) {
-      continue;
-    } else {
-      hdr = field.name.before(strrchr(field.name, '.')); }
+    cstring hdr = field.bitgroup();
     LOG3("PopulatePhvInfo " << field.name << " [" << hdr << "(" << field.offset << ")]");
-    auto &alloc = field.alloc;
     for (int field_bit = 0; field_bit < field.size; field_bit++) {
       PHV::Container container;
       int container_bit;
       solver.allocation(PHV::Bit(hdr, field.offset + field_bit), &container, &container_bit);
       if (!container) continue;
-      auto iter = alloc.begin();
-      for (; iter != alloc.end(); ++iter) {
+      auto iter = field.alloc.begin();
+      for (; iter != field.alloc.end(); ++iter) {
         if (iter->field_bit <= field_bit &&
             field_bit < iter->field_bit + iter->width) {
           break;
@@ -58,10 +47,10 @@ void PopulatePhvInfo(SolverInterface &solver, PhvInfo *phv_info) {
           break;
         }
       }
-      if (iter == alloc.end()) {
+      if (iter == field.alloc.end()) {
         LOG3("adding " << container << "(" << container_bit << ") for " << field.name <<
              "(" << field_bit << ")");
-        alloc.emplace_back(container, field_bit, container_bit, 1);
+        field.alloc.emplace_back(container, field_bit, container_bit, 1);
       }
     }
   }
@@ -71,8 +60,9 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
   // TODO: The code below can be written more elegantly.
   pipe->apply(MauGroupConstraint(constraints_));
   pipe->apply(ContainerConstraint(constraints_));
-  pipe->apply(ByteConstraint(constraints_));
+  pipe->apply(ByteConstraint(phv, constraints_));
   pipe->apply(OffsetConstraint(constraints_));
+  pipe->apply(ThreadConstraint(phv, constraints_));
   SourceContainerConstraint scc(constraints_);
   // This loop should keep iterating until Constraints::SetEqual() has been
   // invoked on all pairs of source containers that have a common destination

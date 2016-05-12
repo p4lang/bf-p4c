@@ -211,6 +211,20 @@ void Solver::SetDeparserGroups(const PHV::Byte &i_pbyte,
     solver_.MakeNonEquality(i_container->deparser_group(INGRESS),
                             e_container->deparser_group(EGRESS)));
 }
+void Solver::SetDeparserGroups(const PHV::Bit &i_pbit,
+                               const PHV::Bit &e_pbit) {
+  LOG2("Setting deparser groups for " << i_pbit.name() << " and " << e_pbit.name());
+  Container *i_container = MakeBit(i_pbit)->container();
+  Container *e_container = MakeBit(e_pbit)->container();
+  CHECK(i_container != e_container);
+  // Remove statically assigned deparser groups from domain.
+  i_container->mau_group()->SetIngressDeparser();
+  e_container->mau_group()->SetEgressDeparser();
+  // Get the deparser group number and make them non-equal.
+  solver_.AddConstraint(
+    solver_.MakeNonEquality(i_container->deparser_group(INGRESS),
+                            e_container->deparser_group(EGRESS)));
+}
 
 void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_phv_bits,
                                const std::array<int, 4> &widths) {
@@ -345,7 +359,8 @@ void Solver::SetNoTPhv(const PHV::Bit &bit) {
 
 void Solver::SetContainerConflict(const PHV::Bit &pb1, const PHV::Bit &pb2) {
   LOG2("Setting container-conflict between " << pb1 << " and " << pb2);
-  bits_.at(pb2).container()->SetConflict(bits_.at(pb1).container());
+  Bit *b1 = MakeBit(pb1), *b2 = MakeBit(pb2);
+  b1->container()->SetConflict(b2->container());
 }
 
 void Solver::SetBitConflict(const PHV::Bit &pb1, const PHV::Bit &pb2) {

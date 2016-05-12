@@ -375,11 +375,17 @@ void Constraints::SetConstraints(SolverInterface &solver) {
     }
   }
   for (auto &i_hdr : deparsed_headers_[0]) {
-    for (auto &e_hdr : deparsed_headers_[1]) {
-      for (auto &i_hdr_byte : i_hdr) {
+    for (auto &i_hdr_byte : i_hdr) {
+      for (auto &e_hdr : deparsed_headers_[1]) {
         for (auto &e_hdr_byte : e_hdr) {
           solver.SetDeparserGroups(i_hdr_byte, e_hdr_byte);
+          for (auto &i_pov : deparsed_pov_[0]) {
+            solver.SetDeparserGroups(i_pov, e_hdr_byte[0]);
+          }
         }
+      }
+      for (auto &e_pov : deparsed_pov_[1]) {
+        solver.SetDeparserGroups(i_hdr_byte[0], e_pov);
       }
     }
   }

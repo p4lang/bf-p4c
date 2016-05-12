@@ -6,7 +6,7 @@
 #include "base/logging.h"
 
 
-void PhvInfo::add(cstring name, int size, bool meta, bool pov) {
+void PhvInfo::add(cstring name, int size, int offset, bool meta, bool pov) {
     LOG3("PhvInfo adding " << (meta ? "metadata" : "header") << " field " << name <<
          " size " << size);
     assert(all_fields.count(name) == 0);
@@ -15,7 +15,7 @@ void PhvInfo::add(cstring name, int size, bool meta, bool pov) {
     info->id = by_id.size();
     info->gress = gress;
     info->size = size;
-    info->offset = 0;
+    info->offset = offset;
     info->metadata = meta;
     info->pov = pov;
     by_id.push_back(info);
@@ -27,14 +27,14 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, bool meta) 
         return; }
     LOG2("PhvInfo adding " << (meta ? "metadata" : "header") << " " << name);
     int start = by_id.size();
+    int offset = 0;
     for (auto f : *type->fields)
-        add(name + '.' + f->name, f->type->width_bits(), meta, false);
+        offset += f->type->width_bits();
+    for (auto f : *type->fields) {
+        int size = f->type->width_bits();
+        add(name + '.' + f->name, size, offset -= size, meta, false); }
     int end = by_id.size() - 1;
     all_headers.emplace(name, std::make_pair(start, end));
-    int offset = 0;
-    for (int i = end; i >= start; --i) {
-        by_id[i]->offset = offset;
-        offset += by_id[i]->size; }
 }
 
 bool PhvInfo::preorder(const IR::Header *h) {
@@ -139,16 +139,16 @@ void PhvInfo::allocatePOV() {
                 BUG("Header %s neither ingress or egress", hdr.first); }
     if (ingress_size > 0) {
         gress = INGRESS;
-        add("ingress::$POV", ingress_size, false, true);
+        add("ingress::$POV", ingress_size, 0, false, true);
         for (auto &hdr : all_headers)
             if (!field(hdr.second.first)->metadata && hdr.first.startsWith("ingress::"))
-                add(hdr.first + ".$valid", 1, false, true); }
+                add(hdr.first + ".$valid", 1, --ingress_size, false, true); }
     if (egress_size > 0) {
         gress = EGRESS;
-        add("egress::$POV", egress_size, false, true);
+        add("egress::$POV", egress_size, 0, false, true);
         for (auto &hdr : all_headers)
             if (!field(hdr.second.first)->metadata && hdr.first.startsWith("egress::"))
-                add(hdr.first + ".$valid", 1, false, true); }
+                add(hdr.first + ".$valid", 1, --egress_size, false, true); }
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo::Info::alloc_slice &sl) {
