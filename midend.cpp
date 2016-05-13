@@ -28,7 +28,7 @@ Tofino::MidEnd::MidEnd(const CompilerOptions& options)
         new P4::TypeChecking(&refMap, &typeMap, isv1),
         new P4::ResetHeaders(&typeMap),
         // Give each local declaration a unique internal name
-        new P4::UniqueNames(isv1),
+        new P4::UniqueNames(&refMap, isv1),
         // Move all local declarations to the beginning
         new P4::MoveDeclarations(),
         new P4::ResolveReferences(&refMap, isv1),
