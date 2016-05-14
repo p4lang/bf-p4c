@@ -261,53 +261,53 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
-    }
     action NoAction_1() {
     }
-    @name("action_0") action action(int<32> param0) {
+    action NoAction_2() {
+    }
+    @name("action_0") action action_0(int<32> param0) {
         hdr.pkt.field_a_signed = hdr.pkt.field_a_signed + param0;
     }
-    @name("action_1") action action_6(bit<16> param0) {
+    @name("action_1") action action_1(bit<16> param0) {
         hdr.pkt.field_e_sat = hdr.pkt.field_e_sat + param0;
     }
-    @name("action_2") action action_7(int<8> param0) {
+    @name("action_2") action action_2(int<8> param0) {
         hdr.pkt.field_i_signed_sat = hdr.pkt.field_i_signed_sat + param0;
     }
-    @name("action_3") action action_8(bit<32> param0) {
+    @name("action_3") action action_3(bit<32> param0) {
         hdr.pkt.field_c_32 = param0;
     }
-    @name("action_4") action action_9(bit<16> param0) {
+    @name("action_4") action action_4(bit<16> param0) {
         hdr.pkt.field_g_16 = param0;
     }
-    @name("action_5") action action_10(bit<8> param0) {
+    @name("action_5") action action_5(bit<8> param0) {
         hdr.pkt.field_k_8 = param0;
     }
     @name("table_0") table table() {
         actions = {
-            action;
-            action_6;
-            action_7;
-            NoAction_0;
+            action_0;
+            action_1;
+            action_2;
+            NoAction_1;
         }
         key = {
             hdr.pkt.field_c_32: ternary;
         }
         size = 512;
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     @name("table_1") table table_2() {
         actions = {
-            action_8;
-            action_9;
-            action_10;
-            NoAction_1;
+            action_3;
+            action_4;
+            action_5;
+            NoAction_2;
         }
         key = {
             hdr.pkt.field_d_32: ternary;
         }
         size = 512;
-        default_action = NoAction_0();
+        default_action = NoAction_2();
     }
     apply {
         table.apply();

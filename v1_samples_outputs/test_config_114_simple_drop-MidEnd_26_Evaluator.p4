@@ -260,23 +260,23 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
+    action NoAction_2() {
     }
-    @name("action_1") action action() {
+    @name("action_1") action action_0() {
         mark_to_drop();
     }
-    @name("nop") action nop_0() {
+    @name("nop") action nop() {
     }
     @name("table_1") table table() {
         actions = {
-            action;
-            nop_0;
-            NoAction_0;
+            action_0;
+            nop;
+            NoAction_2;
         }
         key = {
             hdr.pkt.field_d: exact;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_2();
     }
     apply {
         table.apply();
@@ -284,24 +284,24 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    action NoAction_3() {
     }
-    @name("action_0") action action_2() {
+    @name("action_0") action action_1() {
         mark_to_drop();
     }
-    @name("nop") action nop_1() {
+    @name("nop") action nop_2() {
     }
     @name("table_0") table table_2() {
         actions = {
-            action_2;
-            nop_1;
-            NoAction_1;
+            action_1;
+            nop_2;
+            NoAction_3;
         }
         key = {
             hdr.pkt.field_b: exact;
         }
         size = 256000;
-        default_action = NoAction_1();
+        default_action = NoAction_3();
     }
     apply {
         table_2.apply();

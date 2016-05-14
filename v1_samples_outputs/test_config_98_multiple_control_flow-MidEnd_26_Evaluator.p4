@@ -262,34 +262,34 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
-    }
     action NoAction_2() {
     }
-    @name("action_2") action action(bit<32> param0) {
+    action NoAction_3() {
+    }
+    @name("action_2") action action_0(bit<32> param0) {
         hdr.pkt.field_d_32 = param0;
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name("do_nothing") action do_nothing() {
     }
     @name("table_2") table table() {
         actions = {
-            action;
-            NoAction_0;
-        }
-        key = {
-            hdr.pkt.field_g_16: exact;
-        }
-        default_action = NoAction_0();
-    }
-    @name("table_3") table table_4() {
-        actions = {
-            do_nothing_0;
+            action_0;
             NoAction_2;
         }
         key = {
             hdr.pkt.field_g_16: exact;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_2();
+    }
+    @name("table_3") table table_4() {
+        actions = {
+            do_nothing;
+            NoAction_3;
+        }
+        key = {
+            hdr.pkt.field_g_16: exact;
+        }
+        default_action = NoAction_3();
     }
     apply {
         table.apply();
@@ -301,35 +301,35 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     headers hdr_0;
     metadata meta_0;
     standard_metadata_t standard_metadata_0;
-    action NoAction_1() {
+    action NoAction_4() {
     }
-    action NoAction_3() {
+    action NoAction_5() {
     }
-    @name("action_0") action action_4(bit<32> param0) {
+    @name("action_0") action action_1(bit<32> param0) {
         hdr.pkt.field_b_32 = param0;
     }
     @name("table_0") table table_6() {
         actions = {
-            action_4;
-            NoAction_1;
+            action_1;
+            NoAction_4;
         }
         key = {
             hdr.pkt.field_e_16: exact;
         }
-        default_action = NoAction_1();
+        default_action = NoAction_4();
     }
-    @name("pipe_0.action_1") action pipe_0_action(bit<32> param0) {
+    @name("pipe_0.action_1") action pipe_0_action_0(bit<32> param0) {
         hdr_0.pkt.field_c_32 = param0;
     }
     @name("pipe_0.table_1") table pipe_0_table() {
         actions = {
-            pipe_0_action;
-            NoAction_3;
+            pipe_0_action_0;
+            NoAction_5;
         }
         key = {
             hdr_0.pkt.field_f_16: exact;
         }
-        default_action = NoAction_1();
+        default_action = NoAction_5();
     }
     action act() {
         hdr_0 = hdr;

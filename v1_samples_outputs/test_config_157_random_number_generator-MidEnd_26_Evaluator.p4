@@ -263,45 +263,45 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<32> tmp_0;
-    action NoAction_0() {
-    }
     action NoAction_1() {
     }
-    @name("action_0") action action(bit<16> param0) {
+    action NoAction_2() {
+    }
+    @name("action_0") action action_0(bit<16> param0) {
         hdr.pkt.field_a_32 = random(5w16);
         hdr.pkt.field_e_16 = param0;
     }
-    @name("do_nothing") action do_nothing_0() {
-    }
     @name("do_nothing") action do_nothing() {
     }
-    @name("action_1") action action_2() {
+    @name("do_nothing") action do_nothing_1() {
+    }
+    @name("action_1") action action_1() {
         tmp_0 = random(5w24);
         hdr.pkt.field_d_32[31:8] = tmp_0[31:8];
     }
     @name("table_0") table table() {
         actions = {
-            action;
-            do_nothing_0;
-            NoAction_0;
+            action_0;
+            do_nothing;
+            NoAction_1;
         }
         key = {
             hdr.pkt.field_b_32: ternary;
         }
         size = 512;
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     @name("table_1") table table_2() {
         actions = {
-            action_2;
-            do_nothing;
-            NoAction_1;
+            action_1;
+            do_nothing_1;
+            NoAction_2;
         }
         key = {
             hdr.pkt.field_c_32: ternary;
         }
         size = 512;
-        default_action = NoAction_0();
+        default_action = NoAction_2();
     }
     apply {
         table.apply();

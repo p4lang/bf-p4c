@@ -276,63 +276,63 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
-    }
     action NoAction_1() {
     }
     action NoAction_2() {
     }
-    @name("action_0") action action() {
-        hdr.ipv4.diffserv = 8w1;
+    action NoAction_3() {
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name("action_0") action action_0() {
+        hdr.ipv4.diffserv = 8w1;
     }
     @name("do_nothing") action do_nothing() {
     }
     @name("do_nothing") action do_nothing_1() {
     }
-    @name("action_1") action action_3() {
+    @name("do_nothing") action do_nothing_2() {
+    }
+    @name("action_1") action action_1() {
         hdr.ipv4.totalLen = 16w2;
     }
-    @name("action_2") action action_4() {
+    @name("action_2") action action_2() {
         hdr.ipv4.ttl = 8w3;
     }
     @name("table_0") table table() {
         actions = {
-            action;
-            do_nothing_0;
-            NoAction_0;
+            action_0;
+            do_nothing;
+            NoAction_1;
         }
         key = {
             hdr.ethernet.etherType: lpm;
         }
         max_size = 1024;
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     @name("table_1") table table_3() {
         actions = {
-            action_3;
-            do_nothing;
-            NoAction_1;
+            action_1;
+            do_nothing_1;
+            NoAction_2;
         }
         key = {
             hdr.ipv4.srcAddr: exact;
             hdr.ipv4.dstAddr: exact;
         }
         max_size = 16384;
-        default_action = NoAction_0();
+        default_action = NoAction_2();
     }
     @name("table_2") table table_4() {
         actions = {
-            action_4;
-            do_nothing_1;
-            NoAction_2;
+            action_2;
+            do_nothing_2;
+            NoAction_3;
         }
         key = {
             hdr.ipv4.srcAddr: exact;
         }
         max_size = 4096;
-        default_action = NoAction_0();
+        default_action = NoAction_3();
     }
     apply {
         if (hdr.ethernet.etherType == 16w0x800) 

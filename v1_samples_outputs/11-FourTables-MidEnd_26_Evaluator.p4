@@ -263,51 +263,41 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
-    }
     action NoAction_1() {
     }
     action NoAction_2() {
     }
     action NoAction_3() {
     }
-    @name("action1") action action1_0() {
+    action NoAction_4() {
+    }
+    @name("action1") action action1() {
         meta.ing_metadata.field1 = 1w1;
     }
-    @name("action2") action action2_0() {
+    @name("action2") action action2() {
         meta.ing_metadata.field2 = 1w1;
-    }
-    @name("action3") action action3_0() {
-        meta.ing_metadata.field3 = 1w1;
     }
     @name("action3") action action3() {
         meta.ing_metadata.field3 = 1w1;
     }
-    @name("action4") action action4_0(bit<48> newAddr) {
+    @name("action3") action action3_1() {
+        meta.ing_metadata.field3 = 1w1;
+    }
+    @name("action4") action action4(bit<48> newAddr) {
         hdr.ethernet.srcAddr = newAddr;
     }
     @name("table1") table table1_0() {
         actions = {
-            action1_0;
-            action2_0;
-            NoAction_0;
+            action1;
+            action2;
+            NoAction_1;
         }
         key = {
             hdr.ethernet.srcAddr: exact;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     @name("table2") table table2_0() {
-        actions = {
-            action3_0;
-            NoAction_1;
-        }
-        key = {
-            hdr.ethernet.dstAddr: exact;
-        }
-        default_action = NoAction_0();
-    }
-    @name("table3") table table3_0() {
         actions = {
             action3;
             NoAction_2;
@@ -315,24 +305,34 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         key = {
             hdr.ethernet.dstAddr: exact;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_2();
+    }
+    @name("table3") table table3_0() {
+        actions = {
+            action3_1;
+            NoAction_3;
+        }
+        key = {
+            hdr.ethernet.dstAddr: exact;
+        }
+        default_action = NoAction_3();
     }
     @name("table4") table table4_0() {
         actions = {
-            action4_0;
-            NoAction_3;
+            action4;
+            NoAction_4;
         }
         key = {
             hdr.ethernet.ethertype: exact;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_4();
     }
     apply {
         switch (table1_0.apply().action_run) {
-            action1_0: {
+            action1: {
                 table2_0.apply();
             }
-            action2_0: {
+            action2: {
                 table3_0.apply();
             }
         }

@@ -182,6 +182,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_1") table table_1() {
         actions = {
             do_nothing;
+            action_1;
             NoAction;
         }
         key = {

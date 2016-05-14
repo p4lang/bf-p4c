@@ -336,11 +336,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
+    action NoAction_1() {
     }
-    @name("nop") action nop_0() {
+    @name("nop") action nop() {
     }
-    @name("modify_ip_id") action modify_ip_id_0(bit<9> port, bit<16> id, bit<48> srcAddr, bit<48> dstAddr) {
+    @name("modify_ip_id") action modify_ip_id(bit<9> port, bit<16> id, bit<48> srcAddr, bit<48> dstAddr) {
         hdr.ipv4.identification = id;
         meta.ig_intr_md_for_tm.ucast_egress_port = port;
         hdr.ethernet.srcAddr = srcAddr;
@@ -348,9 +348,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("tcam_indirect_action") table tcam_indirect_action_0() {
         actions = {
-            nop_0;
-            modify_ip_id_0;
-            NoAction_0;
+            nop;
+            modify_ip_id;
+            NoAction_1;
         }
         key = {
             hdr.ethernet.srcAddr  : ternary;
@@ -362,7 +362,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.version      : exact;
         }
         size = 2048;
-        default_action = NoAction_0();
+        default_action = NoAction_1();
         @name("indirect_action_profile") implementation = ActionProfile(32w2048);
     }
     apply {

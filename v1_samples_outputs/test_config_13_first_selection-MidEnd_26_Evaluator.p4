@@ -280,39 +280,39 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
-    }
     action NoAction_1() {
     }
-    @name("action_select") action action_select_0(bit<8> base, bit<8> hash_size) {
+    action NoAction_2() {
+    }
+    @name("action_select") action action_select(bit<8> base, bit<8> hash_size) {
         hash(hdr.ipv4.blah2, HashAlgorithm.random, (bit<72>)base, { hdr.ipv4.blah1, hdr.ipv4.blah2, hdr.ipv4.blah3 }, (bit<144>)hash_size);
     }
-    @name("action_0") action action(bit<16> param0) {
+    @name("action_0") action action_0(bit<16> param0) {
         hdr.ipv4.hdrChecksum = param0;
     }
-    @name("big_action") action big_action_0(bit<32> param0, bit<32> param1, bit<48> param2) {
+    @name("big_action") action big_action(bit<32> param0, bit<32> param1, bit<48> param2) {
         hdr.ipv4.dstAddr = param0;
         hdr.ipv4.srcAddr = param1;
         hdr.ethernet.dstAddr = param2;
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name("do_nothing") action do_nothing() {
     }
     @name("table_group") table table_group_0() {
         actions = {
-            action_select_0;
-            NoAction_0;
+            action_select;
+            NoAction_1;
         }
         key = {
             hdr.ipv4.blah1: ternary;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     @name("test_select") table test_select_0() {
         actions = {
-            action;
-            big_action_0;
-            do_nothing_0;
-            NoAction_1;
+            action_0;
+            big_action;
+            do_nothing;
+            NoAction_2;
         }
         key = {
             hdr.ethernet.etherType: exact;
@@ -323,7 +323,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.blah3        : selector;
         }
         size = 8192;
-        default_action = NoAction_0();
+        default_action = NoAction_2();
         @name("some_action_profile") implementation = ActionSelector(HashAlgorithm.random, 32w512, 32w72);
     }
     apply {

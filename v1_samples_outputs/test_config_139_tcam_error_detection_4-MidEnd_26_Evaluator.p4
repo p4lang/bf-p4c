@@ -265,8 +265,6 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
-    }
     action NoAction_1() {
     }
     action NoAction_2() {
@@ -277,11 +275,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     action NoAction_5() {
     }
-    Counter(32w16384, CounterType.Packets) @name("simple_stats") simple_stats_0;
-    @name("count_it") action count_it_0() {
-        simple_stats_0.increment((bit<32>)hdr.pkt.field_h_16);
+    action NoAction_6() {
     }
-    @name("do_nothing") action do_nothing_0() {
+    Counter(32w16384, CounterType.Packets) @name("simple_stats") simple_stats_0;
+    @name("count_it") action count_it() {
+        simple_stats_0.increment((bit<32>)hdr.pkt.field_h_16);
     }
     @name("do_nothing") action do_nothing() {
     }
@@ -291,54 +289,56 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("do_nothing") action do_nothing_3() {
     }
-    @name("action_0") action action() {
+    @name("do_nothing") action do_nothing_4() {
+    }
+    @name("action_0") action action_0() {
         hdr.pkt.field_f_16 = 16w1;
     }
     @name("table_a") table table_a_0() {
         actions = {
-            count_it_0;
-            NoAction_0;
-        }
-        default_action = NoAction_0();
-    }
-    @name("table_b") table table_b_0() {
-        actions = {
-            do_nothing_0;
+            count_it;
             NoAction_1;
         }
-        key = {
-            hdr.pkt.field_b_32: ternary;
-        }
-        size = 512;
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
-    @name("table_c") table table_c_0() {
+    @name("table_b") table table_b_0() {
         actions = {
             do_nothing;
             NoAction_2;
         }
         key = {
-            hdr.pkt.field_c_32: ternary;
+            hdr.pkt.field_b_32: ternary;
         }
         size = 512;
-        default_action = NoAction_0();
+        default_action = NoAction_2();
     }
-    @name("table_d") table table_d_0() {
+    @name("table_c") table table_c_0() {
         actions = {
             do_nothing_1;
             NoAction_3;
         }
         key = {
+            hdr.pkt.field_c_32: ternary;
+        }
+        size = 512;
+        default_action = NoAction_3();
+    }
+    @name("table_d") table table_d_0() {
+        actions = {
+            do_nothing_2;
+            NoAction_4;
+        }
+        key = {
             hdr.pkt.field_d_32: ternary;
         }
         size = 512;
-        default_action = NoAction_0();
+        default_action = NoAction_4();
     }
     @name("table_e") table table_e_0() {
         actions = {
-            do_nothing_2;
-            action;
-            NoAction_4;
+            do_nothing_3;
+            action_0;
+            NoAction_5;
         }
         key = {
             hdr.pkt.field_o_10: range;
@@ -346,18 +346,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_h_16: exact;
         }
         size = 1024;
-        default_action = NoAction_0();
+        default_action = NoAction_5();
     }
     @name("table_f") table table_f_0() {
         actions = {
-            do_nothing_3;
-            NoAction_5;
+            do_nothing_4;
+            NoAction_6;
         }
         key = {
             hdr.pkt.field_g_16: ternary;
         }
         size = 1024;
-        default_action = NoAction_0();
+        default_action = NoAction_6();
     }
     apply {
         table_a_0.apply();

@@ -262,37 +262,37 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
-    }
     action NoAction_1() {
     }
-    @name("action_0") action action() {
+    action NoAction_2() {
+    }
+    @name("action_0") action action_0() {
         mark_to_drop();
     }
-    @name("action_1") action action_2() {
+    @name("action_1") action action_1() {
         mark_to_drop();
     }
     @name("table_0") table table() {
         actions = {
-            action;
-            NoAction_0;
+            action_0;
+            NoAction_1;
         }
         key = {
             hdr.pkt.field_a_32: ternary;
         }
         size = 512;
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     @name("table_1") table table_2() {
         actions = {
-            action_2;
-            NoAction_1;
+            action_1;
+            NoAction_2;
         }
         key = {
             hdr.pkt.field_b_32: ternary;
         }
         size = 512;
-        default_action = NoAction_0();
+        default_action = NoAction_2();
     }
     apply {
         table.apply();

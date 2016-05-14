@@ -261,41 +261,41 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
-    }
     action NoAction_1() {
     }
-    @name("action1") action action1_2() {
+    action NoAction_2() {
+    }
+    @name("action1") action action1() {
         meta.md.field1 = 1w0;
     }
-    @name("action2") action action2_0() {
+    @name("action2") action action2() {
         meta.md.field1 = 1w1;
     }
-    @name("action2_1") action action2_2(bit<1> value) {
+    @name("action2_1") action action2_1(bit<1> value) {
         meta.md.field2 = value;
     }
     @name("dmac1") table dmac1_0() {
         actions = {
-            action1_2;
-            action2_0;
-            NoAction_0;
-        }
-        key = {
-            hdr.ethernet.dstAddr: exact;
-        }
-        size = 16536;
-        default_action = NoAction_0();
-    }
-    @name("dmac2") table dmac2_0() {
-        actions = {
-            action2_2;
+            action1;
+            action2;
             NoAction_1;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 16536;
-        default_action = NoAction_0();
+        default_action = NoAction_1();
+    }
+    @name("dmac2") table dmac2_0() {
+        actions = {
+            action2_1;
+            NoAction_2;
+        }
+        key = {
+            hdr.ethernet.dstAddr: exact;
+        }
+        size = 16536;
+        default_action = NoAction_2();
     }
     apply {
         dmac1_0.apply();

@@ -282,23 +282,23 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
+    action NoAction_2() {
     }
-    @name("eg_drop") action eg_drop_0() {
+    @name("eg_drop") action eg_drop() {
         standard_metadata.egress_spec = 9w0;
     }
-    @name("permit") action permit_0() {
+    @name("permit") action permit() {
     }
     @name("egress_acl") table egress_acl_0() {
         actions = {
-            eg_drop_0;
-            permit_0;
-            NoAction_0;
+            eg_drop;
+            permit;
+            NoAction_2;
         }
         key = {
             meta.routing_metadata.drop: ternary;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_2();
     }
     apply {
         egress_acl_0.apply();
@@ -306,19 +306,19 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    action NoAction_3() {
     }
-    action NoAction_2() {
+    action NoAction_4() {
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name("do_nothing") action do_nothing() {
     }
-    @name("l3_set_index") action l3_set_index_0(bit<8> index) {
+    @name("l3_set_index") action l3_set_index(bit<8> index) {
         hdr.ipv4.diffserv = index;
     }
-    @name("ig_drop") action ig_drop_0() {
+    @name("ig_drop") action ig_drop() {
         meta.routing_metadata.drop = 1w1;
     }
-    @name("hop_ipv4") action hop_ipv4_0(bit<48> srcmac, bit<32> srcip, bit<48> dstmac, bit<9> egress_port) {
+    @name("hop_ipv4") action hop_ipv4(bit<48> srcmac, bit<32> srcip, bit<48> dstmac, bit<9> egress_port) {
         standard_metadata.egress_port = egress_port;
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
         hdr.ipv4.srcAddr = srcip;
@@ -327,28 +327,28 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("host_ip") table host_ip_0() {
         actions = {
-            do_nothing_0;
-            l3_set_index_0;
-            NoAction_1;
+            do_nothing;
+            l3_set_index;
+            NoAction_3;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
         }
         max_size = 16384;
-        default_action = NoAction_1();
+        default_action = NoAction_3();
     }
     @name("ipv4_routing") table ipv4_routing_0() {
         actions = {
-            ig_drop_0;
-            hop_ipv4_0;
-            NoAction_2;
+            ig_drop;
+            hop_ipv4;
+            NoAction_4;
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
             hdr.ipv4.srcAddr: exact;
         }
         max_size = 2048;
-        default_action = NoAction_1();
+        default_action = NoAction_4();
     }
     apply {
         ipv4_routing_0.apply();
