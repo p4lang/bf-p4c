@@ -76,6 +76,12 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
   // Set MAU match xbar constraints.
   pipe->apply(MatchXbarConstraint(constraints_));
   pipe->apply(ParseGraphConstraint(constraints_));
+  for (auto &f1 : phv)
+    for (auto &f2 : phv)
+      if (conflict[f1.id][f2.id])
+        for (int b1 : Range(0, f1.size-1))
+          for (int b2 : Range(0, f2.size-1))
+            constraints_.SetBitConflict(f1.bit(b1), f2.bit(b2));
 }
 
 bool PhvAllocator::Solve(const IR::Tofino::Pipe *, PhvInfo *phv_info) {

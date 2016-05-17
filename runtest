@@ -4,6 +4,7 @@ TIMEOUT=30
 TIME_COMMAND="" # don't time commands
 verbose=false
 debug=false
+run_stf=true
 
 die() {
     if [ $# -gt 0 ]; then
@@ -87,6 +88,9 @@ while [ $# -gt 1 ]; do
     -time)
         TIME_COMMAND="time"
         ;;
+    -norun)
+        run_stf=false
+        ;;
     -v) if $verbose || $debug; then
             P4C_ARGS="$P4C_ARGS $1"
         fi
@@ -141,7 +145,7 @@ if [ ! -r $testdir/$name.tfa ]; then
     exit 1
 fi
 
-if [ -r ${file%.p4}.stf ]; then
+if $run_stf && [ -r ${file%.p4}.stf ]; then
     TFAS=$(findbin tofino-asm tfas)
     TFLN=$(findbin tofino-asm tflink)
     STF=$(findbin model simple_test_harness)

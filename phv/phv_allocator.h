@@ -9,9 +9,11 @@ class Pipe;
 }
 }
 class PhvAllocator {
-  PhvInfo &phv;
+  PhvInfo               &phv;
+  const vector<bitvec>  &conflict;
  public:
-  PhvAllocator(PhvInfo &phv, const IR::Tofino::Pipe *pipe) : phv(phv) { SetConstraints(pipe); }
+  PhvAllocator(PhvInfo &phv, const IR::Tofino::Pipe *pipe, const vector<bitvec> &c)
+  : phv(phv), conflict(c) { SetConstraints(pipe); }
   bool Solve(const IR::Tofino::Pipe *pipe, PhvInfo *phv_info);
 
  private:

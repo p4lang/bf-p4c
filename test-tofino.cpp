@@ -112,7 +112,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         backend.addDebugHook(debug_hook);
     maupipe = maupipe->apply(backend);
     if (options->phv_newalloc) {
-        PhvAllocator phv_allocator(phv, maupipe);
+        PhvAllocator phv_allocator(phv, maupipe, defuse.conflicts());
         CHECK(true == phv_allocator.Solve(maupipe, &phv));
         if (verbose) {
             std::cout << "Printing PHV fields:\n";

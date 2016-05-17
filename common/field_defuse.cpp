@@ -4,32 +4,10 @@
 #include "lib/map.h"
 #include "lib/range.h"
 
-#if 0
-class FieldDefUse::Init : public Inspector {
-    FieldDefUse &self;
-    void add_field(cstring field);
-    bool preorder(const IR::Member *f) override { add_field(self.phv.field(f)); return false; }
-    bool preorder(const IR::HeaderStackItemRef *f) override {
-        /*add_field(f->toString());*/ return false; }
- public:
-    explicit Init(FieldDefUse &s) : self(s) {}
-};
-
-void FieldDefUse::Init::add_field(cstring field) {
-    assert(field);
-    auto *info = self.phv.field(field);
-    if (info && !self.defuse.count(field)) {
-        self.defuse[field].name = field;
-        self.defuse[field].id = info->id;
-        self.defuse[field].def.insert(nullptr); }
-}
-#endif
-
 Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
     auto rv = Inspector::init_apply(root);
     conflict.clear();
     conflict.resize(phv.num_fields());
-    // root->apply(Init(*this));
     return rv;
 }
 
@@ -37,12 +15,12 @@ void FieldDefUse::check_conflicts(const info &read, int when) {
     int firstdef = INT_MAX;
     for (auto def : read.def) {
         if (!def) firstdef = -1;
-        else if (def->logical_order() < firstdef)
-            firstdef = def->logical_order(); }
+        else if (def->stage() < firstdef)
+            firstdef = def->stage(); }
     for (auto &other : Values(defuse)) {
         if (other.field == read.field) continue;
         for (auto use : other.use) {
-            int use_when = use ? use->logical_order() : INT_MAX;
+            int use_when = use ? use->stage() : INT_MAX;
             if (use_when > firstdef && use_when <= when) {
                     conflict[read.field->id][other.field->id] = true;
                     conflict[other.field->id][read.field->id] = true; } } }
@@ -55,61 +33,60 @@ FieldDefUse::info &FieldDefUse::field(const PhvInfo::Info *f) {
     return info;
 }
 
-void FieldDefUse::access_field(const PhvInfo::Info *f) {
+void FieldDefUse::read(const PhvInfo::Info *f, const IR::MAU::Table *table) {
+    if (!f) return;
+    auto &info = field(f);
+    LOG3("FieldDefUse(" << (void *)this << "): " << (table ? "table " : "deparser ") <<
+         (table ? table->name : "") << " reading " << f->name);
+    info.use.clear();
+    info.use.insert(table);
+    check_conflicts(info, table ? table->stage() : INT_MAX);
+}
+void FieldDefUse::read(const IR::HeaderRef *hr, const IR::MAU::Table *table) {
+    if (!hr) return;
+    for (int id : Range(*phv.header(hr)))
+        read(phv.field(id), table);
+    read(phv.field(hr->toString() + ".$valid"), table);
+}
+void FieldDefUse::write(const PhvInfo::Info *f, const IR::MAU::Table *table) {
+    if (!f) return;
+    auto &info = field(f);
+    LOG3("FieldDefUse(" << (void *)this << "): " << (table ? "table " : "parser ") <<
+         (table ? table->name : "") << " writing " << f->name);
+    info.def.clear();
+    info.def.insert(table);
+    if (!table) {
+        // parser can't rewrite PHV (it ors), so need to treat it as a read too
+        info.use.clear();
+        info.use.insert(table);
+        check_conflicts(info, -1); }
+}
+void FieldDefUse::write(const IR::HeaderRef *hr, const IR::MAU::Table *table) {
+    if (!hr) return;
+    for (int id : Range(*phv.header(hr)))
+        write(phv.field(id), table);
+    write(phv.field(hr->toString() + ".$valid"), table);
+}
+
+bool FieldDefUse::preorder(const IR::Expression *e) {
+    auto *f = phv.field(e);
+    auto *hr = e->to<IR::HeaderRef>();
+    if (!f && !hr) return true;
     if (auto table = findContext<IR::MAU::Table>()) {
-        auto &info = field(f);
         if (isWrite()) {
-            LOG3("FieldDefUse(" << (void *)this << "): table " << table->name <<
-                 " writing " << f->name);
-            info.def.clear();
-            info.def.insert(table);
+            write(f, table);
+            write(hr, table);
         } else {
-            LOG3("FieldDefUse(" << (void *)this << "): table " << table->name <<
-                 " reading " << f->name);
-            info.use.clear();
-            info.use.insert(table);
-            check_conflicts(info, table->logical_order()); }
+            read(f, table);
+            read(hr, table); }
+    } else if (findContext<IR::Tofino::ParserState>()) {
+        write(f, nullptr);
+        write(hr, nullptr);
+    } else if (findContext<IR::Tofino::Deparser>()) {
+        read(f, nullptr);
+        read(hr, nullptr);
     } else {
         assert(0); }
-}
-
-bool FieldDefUse::preorder(const IR::Member *f) {
-    if (auto *field = phv.field(f))
-        access_field(field);
-    return false;
-}
-
-bool FieldDefUse::preorder(const IR::HeaderSliceRef *h) {
-  access_field(phv.field(h));
-  return false;
-}
-
-bool FieldDefUse::preorder(const IR::HeaderStackItemRef *) {
-    // access_field(f->toString());
-    return false;
-}
-
-bool FieldDefUse::preorder(const IR::Tofino::Parser *) {
-    return false;
-}
-
-static const char *output_metadata[2][4] = { {
-    "ig_intr_md_for_tm", "ig_intr_md_for_mb", 0,
-}, {
-    "eg_intr_md_for_deparser", "eg_intr_md_for_mb", "eg_intr_md_for_oport", 0,
-} };
-
-bool FieldDefUse::preorder(const IR::Tofino::Deparser *d) {
-    for (auto hdr : output_metadata[d->gress]) {
-        if (!hdr) break;
-        if (auto hdr_fields = phv.header(hdr)) {
-            for (int id : Range(hdr_fields->first, hdr_fields->second)) {
-                auto *f = phv.field(id);
-                if (defuse.count(f->id)) {
-                    auto &info = defuse[f->id];
-                    info.use.clear();
-                    info.use.insert(nullptr);
-                    check_conflicts(info, INT_MAX); } } } }
     return false;
 }
 
@@ -155,4 +132,30 @@ std::ostream &operator<<(std::ostream &out, const FieldDefUse &a) {
             out << (a.conflict[i][j] ? '1' : '0');
         out << std::endl; }
     return out;
+}
+
+struct code { int id; };
+std::ostream &operator<<(std::ostream &out, const code &c) {
+    return out << char('a' + c.id/26) << char('a' + c.id%26);
+}
+
+void FieldDefUse::end_apply(const IR::Node *) {
+    if (!LOGGING(2)) return;
+    int count = phv.num_fields();
+    if (count >= 40) {
+        for (auto f : phv)
+            std::clog << code{f.id} << " " << f.name << std::endl; }
+    std::clog << "  ";
+    for (int i = 0; i < count; i++)
+        std::clog << char('a' + i/26);
+    std::clog << "\n  ";
+    for (int i = 0; i < count; i++)
+        std::clog << char('a' + i%26);
+    for (int i = 0; i < count; i++) {
+        std::clog << '\n' << code{i};
+        for (int j = 0; j < count; j++)
+            std::clog << char('0' + conflict[i][j]);
+        if (count < 40)
+            std::clog << " " << phv.field(i)->name; }
+    std::clog << std::endl;
 }

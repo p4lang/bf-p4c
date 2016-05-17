@@ -18,14 +18,18 @@ class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
     // class Init;
 
     profile_t init_apply(const IR::Node *root) override;
+    void end_apply(const IR::Node *root) override;
     void check_conflicts(const info &read, int when);
+    void read(const PhvInfo::Info *, const IR::MAU::Table *);
+    void read(const IR::HeaderRef *, const IR::MAU::Table *);
+    void write(const PhvInfo::Info *, const IR::MAU::Table *);
+    void write(const IR::HeaderRef *, const IR::MAU::Table *);
     info &field(const PhvInfo::Info *);
+    info &field(int id) { return field(phv.field(id)); }
     void access_field(const PhvInfo::Info *);
-    bool preorder(const IR::Tofino::Parser *p) override;
-    bool preorder(const IR::Tofino::Deparser *p) override;
-    bool preorder(const IR::Member *f) override;
-    bool preorder(const IR::HeaderSliceRef *h) override;
-    bool preorder(const IR::HeaderStackItemRef *f) override;
+    // bool preorder(const IR::Tofino::Parser *p) override;
+    // bool preorder(const IR::Tofino::Deparser *p) override;
+    bool preorder(const IR::Expression *e) override;
     FieldDefUse *clone() const override { return new FieldDefUse(*this); }
     void flow_merge(Visitor &) override;
     FieldDefUse(const FieldDefUse &) = default;
