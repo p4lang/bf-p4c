@@ -436,11 +436,51 @@ void Table::alloc_vpns() {
     setup_vpns(layout, 0);
 }
 
+void Table::check_next(Table::Ref &n) {
+    if (n == "END") return;
+    if (n.check()) {
+        if (logical_id >= 0 && n->logical_id >= 0 ? table_id() > n->table_id()
+                                                  : stage->stageno > n->stage->stageno)
+            error(n.lineno, "Next table %s comes before %s", n->name(), name());
+        n->pred.insert(this); }
+}
+
 void Table::check_next() {
     for (auto &n : hit_next)
-        if (n != "END") n.check();
-    if (miss_next != "END")
-        miss_next.check();
+        check_next(n);
+    check_next(miss_next);
+}
+
+bool Table::choose_logical_id(const slist<Table *> *work) {
+    if (logical_id >= 0) return true;
+    if (work && find(*work, this) != work->end()) {
+        error(lineno, "Logical table loop with table %s", name());
+        for (auto *tbl : *work) {
+            if (tbl == this) break;
+            warning(tbl->lineno, "loop involves table %s", tbl->name()); }
+        return false; }
+    slist<Table *> local(this, work);
+    for (auto *p : pred) 
+        if (!p->choose_logical_id(&local))
+            return false;
+    int min_id = 0, max_id = LOGICAL_TABLES_PER_STAGE-1;
+    for (auto *p : pred)
+        if (p->stage->stageno == stage->stageno && p->logical_id >= min_id)
+            min_id = p->logical_id + 1;
+    for (auto &n : hit_next)
+        if (n && n->stage->stageno == stage->stageno &&
+            n->logical_id >= 0 && n->logical_id <= max_id)
+            max_id = n->logical_id - 1;
+    if (miss_next && miss_next->stage->stageno == stage->stageno &&
+        miss_next->logical_id >= 0 && miss_next->logical_id <= max_id)
+        max_id = miss_next->logical_id - 1;
+    for (int id = min_id; id <= max_id; ++id) {
+        if (!stage->logical_id_use[id]) {
+            logical_id = id;
+            stage->logical_id_use[id] = this;
+            return true; } }
+    error(lineno, "Can't find a logcial id for table %s", name());
+    return false;
 }
 
 void Table::need_bus(int lineno, Alloc1Dbase<Table *> &use, int idx, const char *busname)
@@ -693,11 +733,17 @@ void Table::Actions::pass1(Table *tbl) {
             iaddr = act.addr/ACTION_IMEM_COLORS; }
         for (auto &inst : act.instr) {
             inst = inst->pass1(tbl);
+            if (inst->slot >= 0) {
+                if (act.slot_use[inst->slot])
+                    error(inst->lineno, "instruction slot %d used multiple times in action %s",
+                          inst->slot, act.name.c_str());
+                act.slot_use[inst->slot] = 1; }
             if (inst->slot >= 0 && iaddr >= 0) {
                 if (tbl->stage->imem_use[iaddr][inst->slot])
                     error(act.lineno, "action instruction slot %d.%d in use elsewhere",
                           iaddr, inst->slot);
                 tbl->stage->imem_use[iaddr][inst->slot] = 1; } }
+        slot_use |= act.slot_use;
         for (auto &a : act.alias) {
             if (auto *f = tbl->lookup_field(a.second.name, act.name)) {
                 if (a.second.hi < 0)
@@ -707,30 +753,32 @@ void Table::Actions::pass1(Table *tbl) {
                       tbl->name()); } }
 }
 
+static void find_pred_in_stage(int stageno, std::set<MatchTable *> &pred, Table *tbl) {
+    for (auto *mt : tbl->get_match_tables()) {
+        if (mt->stage->stageno != stageno || pred.count(mt)) continue;
+        pred.insert(mt);
+        for (auto *t : tbl->pred)
+            find_pred_in_stage(stageno, pred, t); }
+}
+
 void Table::Actions::pass2(Table *tbl) {
     int code = tbl->get_gateway() ? 1 : 0;
     if (code + actions.size() > ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH)
         code = -1;
     for (auto &act : *this) {
+        for (auto *inst : act.instr)
+            inst->pass2(tbl);
         if (act.addr < 0) {
-            bitvec use;
-            for (auto *inst : act.instr) {
-                inst->pass2(tbl);
-                if (inst->slot >= 0) {
-                    if (use[inst->slot])
-                        error(inst->lineno, "action instructions slot %d already in use",
-                              inst->slot);
-                    use[inst->slot] = 1; } }
             for (int i = 0; i < ACTION_IMEM_ADDR_MAX; i++) {
                 if (auto old = tbl->stage->imem_addr_use[tbl->gress][i]) {
                     if (act.equiv(old)) {
                         act.addr = i;
                         break; }
                     continue; }
-                if (tbl->stage->imem_use[i/ACTION_IMEM_COLORS].intersects(use))
+                if (tbl->stage->imem_use[i/ACTION_IMEM_COLORS].intersects(act.slot_use))
                     continue;
                 act.addr = i;
-                tbl->stage->imem_use[i/ACTION_IMEM_COLORS] |= use;
+                tbl->stage->imem_use[i/ACTION_IMEM_COLORS] |= act.slot_use;
                 tbl->stage->imem_addr_use[tbl->gress][i] = &act;
                 break; } }
         if (act.addr < 0)
@@ -751,6 +799,22 @@ void Table::Actions::pass2(Table *tbl) {
     if (!tbl->default_action.empty() && !exists(tbl->default_action))
         error(tbl->default_action_lineno, "no action %s in table %s", tbl->default_action.c_str(),
               tbl->name());
+    std::set<MatchTable *> pred;
+    find_pred_in_stage(tbl->stage->stageno, pred, tbl);
+    for (auto *t : pred) {
+        auto *actions = t->get_actions();
+        if (!actions || actions == this) continue;
+        if (!slot_use.intersects(actions->slot_use)) continue;
+        for (auto &a1 : *this) {
+            bool first = false;
+            for (auto &a2 : *actions) {
+                if (a1.slot_use.intersects(a2.slot_use)) {
+                    if (!first)
+                        warning(a1.lineno, "Conflicting instruction slot usage for non-exlusive "
+                                "table %s action %s", tbl->name(), a1.name.c_str());
+                    first = true;
+                    warning(a2.lineno, "and table %s action %s", t->name(), a2.name.c_str()); } } }
+    }
 }
 
 static int parity(unsigned v) {

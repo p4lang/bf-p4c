@@ -237,6 +237,7 @@ void TernaryMatchTable::pass1() {
 }
 void TernaryMatchTable::pass2() {
     LOG1("### Ternary match table " << name() << " pass2");
+    if (logical_id < 0) choose_logical_id();
     if (input_xbar) input_xbar->pass2(stage->tcam_ixbar, TCAM_XBAR_GROUP_SIZE);
     if (!indirect && indirect_bus < 0) {
         for (int i = 0; i < 16; i++)
@@ -554,6 +555,7 @@ void TernaryIndirectTable::pass1() {
 
 void TernaryIndirectTable::pass2() {
     LOG1("### Ternary indirect table " << name() << " pass2");
+    if (logical_id < 0 && match_table) logical_id = match_table->logical_id;
     if (!match_table)
         error(lineno, "No match table for ternary indirect table %s", name());
     if (actions) actions->pass2(this);

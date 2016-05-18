@@ -13,6 +13,7 @@
 #include <string>
 #include "phv.h"
 #include "p4_table.h"
+#include "slist.h"
 #include <vector>
 
 class ActionBus;
@@ -61,7 +62,6 @@ protected:
                   bool order, Alloc1Dbase<Table *> &use);
     void alloc_maprams();
     virtual void alloc_vpns();
-    void check_next();
     void need_bus(int lineno, Alloc1Dbase<Table *> &use, int idx, const char *name);
 public:
 
@@ -214,6 +214,7 @@ public:
             int                                 lineno = -1, addr = -1, code = -1;
             std::map<std::string, alias_t>      alias;
             std::vector<Instruction *>          instr;
+            bitvec                              slot_use;
             Action(Table *, Actions *, pair_t &);
             Action(const char *n, int l) : name(n), lineno(l) {}
             bool equiv(Action *a);
@@ -222,6 +223,7 @@ public:
         typedef ordered_map<std::string, Action> map_t;
         map_t           actions;
         bitvec          code_use;
+        bitvec          slot_use;
     public:
         int                                     max_code = -1;
         Actions(Table *tbl, VECTOR(pair_t) &);
@@ -261,6 +263,8 @@ public:
                         METER, IDLETIME };
     virtual table_type_t table_type() { return OTHER; }
     virtual table_type_t set_match_table(MatchTable *m, bool indirect) { assert(0); }
+    virtual MatchTable *get_match_table() { assert(0); }
+    virtual std::set<MatchTable *> get_match_tables() { assert(0); }
     virtual const AttachedTables *get_attached() const { return 0; }
     virtual const GatewayTable *get_gateway() const { return 0; }
     virtual SelectionTable *get_selector() const { return 0; }
@@ -292,6 +296,7 @@ public:
     std::vector<int>            default_action_args;
     std::vector<Ref>            hit_next;
     Ref                         miss_next;
+    std::set<Table *>           pred;
     std::vector<HashDistribution>       hash_dist;
 
     static std::map<std::string, Table *>       all;
@@ -322,11 +327,15 @@ public:
     int find_on_actionbus(const std::string &n, int off, int size, int *len = 0) {
         return find_on_actionbus(n.c_str(), off, size, len); }
     virtual Call &action_call() { return action; }
+    virtual Actions *get_actions() { return actions; }
     json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries = -1);
     json::map &add_pack_format(json::map &stage_tbl, const Table::Format *format);
     virtual void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                           const Table::Format::Field &field);
     void canon_field_list(json::vector &field_list);
+    void check_next();
+    void check_next(Ref &next);
+    bool choose_logical_id(const slist<Table *> *work = nullptr);
 };
 
 class FakeTable : public Table {
@@ -371,6 +380,8 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
 public:
     const AttachedTables *get_attached() const { return &attached; }
     const GatewayTable *get_gateway() const { return gateway; }
+    MatchTable *get_match_table() { return this; }
+    std::set<MatchTable *> get_match_tables() { return std::set<MatchTable *>{this}; }
     void gen_name_lookup(json::map &out);
     bool run_at_eop() { return attached.run_at_eop(); }
     virtual bool is_ternary() { return false; }
@@ -479,6 +490,7 @@ public:
         return indirect ? indirect->find_on_actionbus(n, off, size, len)
                         : Table::find_on_actionbus(n, off, size, len); }
     const Call &get_action() const { return indirect ? indirect->get_action() : action; }
+    Actions *get_actions() { return actions ? actions : indirect ? indirect->actions : 0; }
     const AttachedTables *get_attached() const { return indirect ? indirect->get_attached() : &attached; }
     SelectionTable *get_selector() const { return indirect ? indirect->get_selector() : 0; }
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(const char *type, bool skip_spare_bank=false);
@@ -507,8 +519,14 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
         depth = layout_size() / width;
         period = 1;
         period_name = 0; }
+    Actions *get_actions() { return actions ? actions : match_table->actions; }
     const AttachedTables *get_attached() const { return &attached; }
     const GatewayTable *get_gateway() const { return match_table->get_gateway(); }
+    MatchTable *get_match_table() { return match_table; }
+    std::set<MatchTable *> get_match_tables() {
+        std::set<MatchTable *> rv; 
+        if (match_table) rv.insert(match_table);
+        return rv; }
     SelectionTable *get_selector() const { return attached.get_selector(); }
     void write_merge_regs(int type, int bus) { attached.write_merge_regs(match_table, type, bus); }
     void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
@@ -529,6 +547,9 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
         return table_type(); }
     const GatewayTable *get_gateway() const {
         return match_tables.size() == 1 ? (*match_tables.begin())->get_gateway() : 0; }
+    MatchTable *get_match_table() {
+        return match_tables.size() == 1 ? *match_tables.begin() : 0; }
+    std::set<MatchTable *> get_match_tables() { return match_tables; }
     SelectionTable *get_selector() const {
         return match_tables.size() == 1 ? (*match_tables.begin())->get_selector() : 0; }
     Call &action_call() {
@@ -582,6 +603,11 @@ private:
     void payload_write_regs(int row, int type, int bus);
 public:
     table_type_t table_type() { return GATEWAY; }
+    MatchTable *get_match_table() { return match_table; }
+    std::set<MatchTable *> get_match_tables() {
+        std::set<MatchTable *> rv; 
+        if (match_table) rv.insert(match_table);
+        return rv; }
     table_type_t set_match_table(MatchTable *m, bool indirect) {
         match_table = m;
         if ((unsigned)m->logical_id < (unsigned)logical_id) logical_id = m->logical_id;

@@ -222,6 +222,9 @@ void GatewayTable::pass1() {
 }
 void GatewayTable::pass2() {
     LOG1("### Gateway table " << name() << " pass2");
+    if (logical_id < 0)  {
+        if (match_table) logical_id = match_table->logical_id;
+        else choose_logical_id(); }
     if (input_xbar) input_xbar->pass2(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
 }
 

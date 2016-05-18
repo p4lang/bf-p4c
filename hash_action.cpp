@@ -74,6 +74,7 @@ void HashActionTable::pass1() {
 
 void HashActionTable::pass2() {
     LOG1("### Hash Action " << name() << " pass2");
+    if (logical_id < 0) choose_logical_id();
     if (row < 0 || bus < 0)
         error(lineno, "Need explicit row/bus in hash_action table"); // FIXME
     //if (hash_dist.empty())

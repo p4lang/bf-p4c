@@ -192,6 +192,8 @@ static void crash_shutdown(int sig, siginfo_t *info, void *uctxt)
                 pthread_exit(0);
             } else
                 lock.unlock(); )
+    if (!LOGGING(1))
+        std::clog << "exiting with SIG" << signames[sig] << std::endl;
     _exit(sig + 0x80);
 }
 
