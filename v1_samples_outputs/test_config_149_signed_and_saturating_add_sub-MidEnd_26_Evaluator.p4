@@ -261,41 +261,41 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
+    action NoAction_1() {
     }
-    @name("action_0") action action() {
+    @name("action_0") action action_0() {
         hdr.pkt.field_a_signed = hdr.pkt.field_a_signed + (int<32>)hdr.pkt.field_b_32;
     }
-    @name("action_1") action action_6() {
+    @name("action_1") action action_1() {
         hdr.pkt.field_e_sat = hdr.pkt.field_e_sat + hdr.pkt.field_f_16;
     }
-    @name("action_2") action action_7() {
+    @name("action_2") action action_2() {
         hdr.pkt.field_i_signed_sat = hdr.pkt.field_i_signed_sat + (int<8>)hdr.pkt.field_j_8;
     }
-    @name("action_3") action action_8() {
+    @name("action_3") action action_3() {
         hdr.pkt.field_a_signed = hdr.pkt.field_a_signed - (int<32>)hdr.pkt.field_b_32;
     }
-    @name("action_4") action action_9() {
+    @name("action_4") action action_4() {
         hdr.pkt.field_e_sat = hdr.pkt.field_e_sat - hdr.pkt.field_f_16;
     }
-    @name("action_5") action action_10() {
+    @name("action_5") action action_5() {
         hdr.pkt.field_i_signed_sat = hdr.pkt.field_i_signed_sat - (int<8>)hdr.pkt.field_j_8;
     }
     @name("table_0") table table() {
         actions = {
-            action;
-            action_6;
-            action_7;
-            action_8;
-            action_9;
-            action_10;
-            NoAction_0;
+            action_0;
+            action_1;
+            action_2;
+            action_3;
+            action_4;
+            action_5;
+            NoAction_1;
         }
         key = {
             hdr.pkt.field_c_32: ternary;
         }
         size = 512;
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     apply {
         table.apply();

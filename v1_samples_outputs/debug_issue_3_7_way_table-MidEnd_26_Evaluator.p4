@@ -282,23 +282,23 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
+    action NoAction_1() {
     }
-    @name("nop") action nop_0() {
+    @name("nop") action nop() {
     }
-    @name("mod_mac_adr") action mod_mac_adr_0(bit<48> dstmac) {
+    @name("mod_mac_adr") action mod_mac_adr(bit<48> dstmac) {
         hdr.ethernet.dstAddr = dstmac;
     }
     @name("table_0") table table() {
         actions = {
-            nop_0;
-            mod_mac_adr_0;
-            NoAction_0;
+            nop;
+            mod_mac_adr;
+            NoAction_1;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     apply {
         table.apply();

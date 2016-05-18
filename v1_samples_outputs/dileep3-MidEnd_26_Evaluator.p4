@@ -324,24 +324,24 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
+    action NoAction_1() {
     }
-    @name("nop") action nop_0() {
+    @name("nop") action nop() {
     }
-    @name("hop_ipv4") action hop_ipv4_0(bit<9> egress_port) {
+    @name("hop_ipv4") action hop_ipv4(bit<9> egress_port) {
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
     @name("ipv4_routing_exm_ways_3_pack_5") table ipv4_routing_exm_ways_3_pack() {
         actions = {
-            nop_0;
-            hop_ipv4_0;
-            NoAction_0;
+            nop;
+            hop_ipv4;
+            NoAction_1;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     apply {
         ipv4_routing_exm_ways_3_pack.apply();

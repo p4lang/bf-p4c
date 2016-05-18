@@ -347,18 +347,18 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
+    action NoAction_1() {
     }
-    @name("nhop_set") action nhop_set_0(bit<16> port) {
+    @name("nhop_set") action nhop_set(bit<16> port) {
         hdr.ipv4.identification = port;
     }
-    @name("nop") action nop_0() {
+    @name("nop") action nop() {
     }
     @name("ipv4_routing_select_2") table ipv4_routing_select() {
         actions = {
-            nhop_set_0;
-            nop_0;
-            NoAction_0;
+            nhop_set;
+            nop;
+            NoAction_1;
         }
         key = {
             hdr.ipv4.dstAddr       : lpm;
@@ -368,7 +368,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.protocol      : selector;
         }
         size = 512;
-        default_action = NoAction_0();
+        default_action = NoAction_1();
         @name("ecmp_action_profile") implementation = ActionSelector(HashAlgorithm.crc16, 32w4096, 32w14);
     }
     apply {

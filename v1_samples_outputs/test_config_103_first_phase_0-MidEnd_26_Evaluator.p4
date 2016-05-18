@@ -280,11 +280,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
-    }
     action NoAction_1() {
     }
-    @name("action_0") action action(bit<1> param0, bit<1> param1, bit<4> param2, bit<4> param3, bit<1> param4, bit<1> param5) {
+    action NoAction_2() {
+    }
+    @name("action_0") action action_0(bit<1> param0, bit<1> param1, bit<4> param2, bit<4> param3, bit<1> param4, bit<1> param5) {
         meta.meta.field_a0_1 = 1w0;
         meta.meta.field_a1_1 = param0;
         meta.meta.field_a2_1 = 1w1;
@@ -300,31 +300,31 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.field_h2_1 = param5;
         meta.meta.field_h3_1 = 1w1;
     }
-    @name("action_1") action action_2(bit<16> param0) {
+    @name("action_1") action action_1(bit<16> param0) {
         hdr.pkt.field_f_16 = param0;
     }
     @name("table_0") table table() {
         actions = {
-            action;
-            NoAction_0;
+            action_0;
+            NoAction_1;
         }
         key = {
             meta.ig_intr_md.ingress_port: exact;
         }
         size = 128;
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     @name("table_1") table table_2() {
         actions = {
-            action_2;
-            NoAction_1;
+            action_1;
+            NoAction_2;
         }
         key = {
             hdr.pkt.field_g_16: exact;
             hdr.pkt.color_0   : exact;
         }
         size = 65536;
-        default_action = NoAction_0();
+        default_action = NoAction_2();
     }
     apply {
         if (1w0 == meta.ig_intr_md.resubmit_flag) {

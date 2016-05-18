@@ -260,17 +260,17 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
+    action NoAction_1() {
     }
-    @name("a1") action a1_0() {
+    @name("a1") action a1() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f1;
     }
     @name("t1") table t1_0() {
         actions = {
-            a1_0;
-            NoAction_0;
+            a1;
+            NoAction_1;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     apply {
         t1_0.apply();

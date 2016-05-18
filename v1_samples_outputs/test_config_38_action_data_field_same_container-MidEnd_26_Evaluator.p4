@@ -257,20 +257,20 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
+    action NoAction_1() {
     }
-    @name("action_0") action action(bit<8> my_param_0) {
+    @name("action_0") action action_0(bit<8> my_param_0) {
         hdr.test.field_a = hdr.test.field_b;
     }
     @name("table_0") table table() {
         actions = {
-            action;
-            NoAction_0;
+            action_0;
+            NoAction_1;
         }
         key = {
             hdr.test.field_e: ternary;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     apply {
         table.apply();

@@ -71,7 +71,7 @@ table table_1 {
     }
     actions {
        do_nothing;
-
+       action_1;
     }
     default_action : action_1(16w0xf);
     size : 16384;

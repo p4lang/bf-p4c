@@ -336,11 +336,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
+    action NoAction_1() {
     }
-    @name("nop") action nop_0() {
+    @name("nop") action nop() {
     }
-    @name("next_hop_ipv4") action next_hop_ipv4_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
+    @name("next_hop_ipv4") action next_hop_ipv4(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
         hdr.ethernet.srcAddr = srcmac;
@@ -348,16 +348,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("ipv4_routing_exm_ways_4_pack_4_stage_6") table ipv4_routing_exm_ways_4_pack_4_stage() {
         actions = {
-            nop_0;
-            next_hop_ipv4_0;
-            NoAction_0;
+            nop;
+            next_hop_ipv4;
+            NoAction_1;
         }
         key = {
             hdr.ethernet.srcAddr: exact;
             hdr.ethernet.dstAddr: exact;
             hdr.tcp.srcPort     : exact;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     apply {
         ipv4_routing_exm_ways_4_pack_4_stage.apply();

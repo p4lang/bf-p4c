@@ -276,33 +276,33 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
+    action NoAction_1() {
     }
     DirectMeter<bit<8>>(CounterType.Bytes) @name("exm_meter2") exm_meter2_0;
-    @name("action_0") action action_0() {
+    @name("action_0") action action() {
         hdr.ipv4.ttl = 8w4;
         exm_meter2_0.read(hdr.ipv4.diffserv);
     }
-    @name("action_1") action action_1() {
+    @name("action_1") action action_2() {
         hdr.ipv4.ttl = 8w5;
         exm_meter2_0.read(hdr.ipv4.diffserv);
     }
-    @name("nop") action nop() {
+    @name("nop") action nop_0() {
         exm_meter2_0.read(hdr.ipv4.diffserv);
     }
     @name("table_0") table table() {
         actions = {
-            action_0;
-            action_1;
-            nop;
-            NoAction_0;
+            action;
+            action_2;
+            nop_0;
+            NoAction_1;
         }
         key = {
             hdr.ipv4.srcAddr : exact;
             hdr.ipv4.dstAddr : exact;
             hdr.ipv4.diffserv: exact;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_1();
         meters = exm_meter2_0;
     }
     apply {

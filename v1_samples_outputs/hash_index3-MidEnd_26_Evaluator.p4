@@ -254,51 +254,51 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
-    }
     action NoAction_1() {
     }
     action NoAction_2() {
     }
-    @name("setf1") action setf1_0(bit<32> val) {
-        hdr.data.f1 = val;
+    action NoAction_3() {
     }
-    @name("setf3") action setf3_0(bit<32> val) {
-        hdr.data.f3 = val;
+    @name("setf1") action setf1(bit<32> val) {
+        hdr.data.f1 = val;
     }
     @name("setf3") action setf3(bit<32> val) {
         hdr.data.f3 = val;
     }
+    @name("setf3") action setf3_1(bit<32> val) {
+        hdr.data.f3 = val;
+    }
     @name("test1") table test1_0() {
         actions = {
-            setf1_0;
-            NoAction_0;
+            setf1;
+            NoAction_1;
         }
         key = {
             hdr.data.b1: exact;
         }
         size = 256;
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     @name("test2") table test2_0() {
-        actions = {
-            setf3_0;
-            NoAction_1;
-        }
-        key = {
-            hdr.data.f2: ternary;
-        }
-        default_action = NoAction_0();
-    }
-    @name("test3") table test3_0() {
         actions = {
             setf3;
             NoAction_2;
         }
         key = {
+            hdr.data.f2: ternary;
+        }
+        default_action = NoAction_2();
+    }
+    @name("test3") table test3_0() {
+        actions = {
+            setf3_1;
+            NoAction_3;
+        }
+        key = {
             hdr.data.f4: ternary;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_3();
     }
     apply {
         if (hdr.data.b2 == 8w10) 

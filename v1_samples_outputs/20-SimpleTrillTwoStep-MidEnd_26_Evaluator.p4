@@ -300,14 +300,14 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
-    }
     action NoAction_1() {
     }
-    @name("copy_hopCount") action copy_hopCount_0() {
+    action NoAction_2() {
+    }
+    @name("copy_hopCount") action copy_hopCount() {
         hdr.trill.hopCount = meta.m.hopCount;
     }
-    @name("forward_trill") action forward_trill_0(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
+    @name("forward_trill") action forward_trill(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
         hdr.outer_ethernet.dstAddr = new_mac_da;
         hdr.outer_ethernet.srcAddr = new_mac_sa;
         hdr.vlan_tag.vid = new_vlan_id;
@@ -316,20 +316,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("fix_trill_header") table fix_trill_header_0() {
         actions = {
-            copy_hopCount_0;
-            NoAction_0;
+            copy_hopCount;
+            NoAction_1;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     @name("trill_forward") table trill_forward_0() {
         actions = {
-            forward_trill_0;
-            NoAction_1;
+            forward_trill;
+            NoAction_2;
         }
         key = {
             hdr.trill.egressRbridge: exact;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_2();
     }
     apply {
         trill_forward_0.apply();

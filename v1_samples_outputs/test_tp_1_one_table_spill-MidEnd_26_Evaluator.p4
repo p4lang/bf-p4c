@@ -276,22 +276,22 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
+    action NoAction_2() {
     }
-    @name("action_e") action action_e_0(bit<8> param2, bit<16> param_3) {
+    @name("action_e") action action_e(bit<8> param2, bit<16> param_3) {
         hdr.ipv4.diffserv = param2;
         hdr.ipv4.hdrChecksum = param_3;
     }
     @name("table_e") table table_e_0() {
         actions = {
-            action_e_0;
-            NoAction_0;
+            action_e;
+            NoAction_2;
         }
         key = {
             hdr.ipv4.srcAddr : exact;
             hdr.ipv4.diffserv: exact;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_2();
     }
     apply {
         table_e_0.apply();
@@ -299,40 +299,40 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    action NoAction_3() {
     }
-    action NoAction_2() {
+    action NoAction_4() {
     }
-    @name("action_0") action action(bit<8> param0) {
+    @name("action_0") action action_0(bit<8> param0) {
         hdr.ipv4.diffserv = param0;
     }
-    @name("action_1") action action_2(bit<16> param1) {
+    @name("action_1") action action_1(bit<16> param1) {
         hdr.ipv4.hdrChecksum = param1;
     }
-    @name("action_1") action action_0(bit<16> param1) {
+    @name("action_1") action action_3(bit<16> param1) {
         hdr.ipv4.hdrChecksum = param1;
     }
     @name("table_0") table table() {
         actions = {
-            action;
-            action_2;
-            NoAction_1;
+            action_0;
+            action_1;
+            NoAction_3;
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
         }
-        default_action = NoAction_1();
+        default_action = NoAction_3();
     }
     @name("table_1") table table_2() {
         actions = {
-            action_0;
-            NoAction_2;
+            action_3;
+            NoAction_4;
         }
         key = {
             hdr.ipv4.dstAddr : exact;
             hdr.ipv4.protocol: exact;
         }
-        default_action = NoAction_1();
+        default_action = NoAction_4();
     }
     apply {
         table.apply();

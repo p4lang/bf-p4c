@@ -276,21 +276,21 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
+    action NoAction_1() {
     }
-    @name("action_0") action action() {
+    @name("action_0") action action_0() {
         hdr.ipv4.diffserv = 8w1;
     }
     @name("table_0") table table() {
         actions = {
-            action;
-            NoAction_0;
+            action_0;
+            NoAction_1;
         }
         key = {
             hdr.ethernet.etherType: exact;
         }
         max_size = 1024;
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     apply {
         if (hdr.ethernet.etherType == 16w0x800) 

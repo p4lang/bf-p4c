@@ -294,8 +294,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
-    }
     action NoAction_1() {
     }
     action NoAction_2() {
@@ -312,33 +310,35 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     action NoAction_8() {
     }
-    @name("do_new_inner_cfi") action do_new_inner_cfi_0() {
+    action NoAction_9() {
+    }
+    @name("do_new_inner_cfi") action do_new_inner_cfi() {
         hdr.vlan_tag[1].cfi = meta.meta.new_inner_cfi;
     }
-    @name("do_new_inner_pri") action do_new_inner_pri_0() {
+    @name("do_new_inner_pri") action do_new_inner_pri() {
         hdr.vlan_tag[1].pri = meta.meta.new_inner_pri;
     }
-    @name("do_new_inner_tpid") action do_new_inner_tpid_0() {
+    @name("do_new_inner_tpid") action do_new_inner_tpid() {
         hdr.vlan_tag[0].ethertype = meta.meta.new_inner_tpid;
     }
-    @name("do_new_inner_vid") action do_new_inner_vid_0() {
+    @name("do_new_inner_vid") action do_new_inner_vid() {
         hdr.vlan_tag[1].vid = meta.meta.new_inner_vid;
     }
-    @name("do_new_outer_cfi") action do_new_outer_cfi_0() {
+    @name("do_new_outer_cfi") action do_new_outer_cfi() {
         hdr.vlan_tag[0].cfi = meta.meta.new_outer_cfi;
     }
-    @name("do_new_outer_pri") action do_new_outer_pri_0() {
+    @name("do_new_outer_pri") action do_new_outer_pri() {
         hdr.vlan_tag[0].pri = meta.meta.new_outer_pri;
     }
-    @name("do_new_outer_tpid") action do_new_outer_tpid_0() {
+    @name("do_new_outer_tpid") action do_new_outer_tpid() {
         hdr.ethernet.ethertype = meta.meta.new_outer_tpid;
     }
-    @name("do_new_outer_vid") action do_new_outer_vid_0() {
+    @name("do_new_outer_vid") action do_new_outer_vid() {
         hdr.vlan_tag[0].vid = meta.meta.new_outer_vid;
     }
-    @name("nop") action nop_0() {
+    @name("nop") action nop() {
     }
-    @name("rewrite_tags") action rewrite_tags_0(bit<16> new_outer_tpid, bit<1> new_outer_tpid_en, bit<3> new_outer_pri, bit<1> new_outer_pri_en, bit<1> new_outer_cfi, bit<1> new_outer_cfi_en, bit<12> new_outer_vid, bit<1> new_outer_vid_en, bit<16> new_inner_tpid, bit<1> new_inner_tpid_en, bit<3> new_inner_pri, bit<1> new_inner_pri_en, bit<1> new_inner_cfi, bit<1> new_inner_cfi_en, bit<12> new_inner_vid, bit<1> new_inner_vid_en) {
+    @name("rewrite_tags") action rewrite_tags(bit<16> new_outer_tpid, bit<1> new_outer_tpid_en, bit<3> new_outer_pri, bit<1> new_outer_pri_en, bit<1> new_outer_cfi, bit<1> new_outer_cfi_en, bit<12> new_outer_vid, bit<1> new_outer_vid_en, bit<16> new_inner_tpid, bit<1> new_inner_tpid_en, bit<3> new_inner_pri, bit<1> new_inner_pri_en, bit<1> new_inner_cfi, bit<1> new_inner_cfi_en, bit<12> new_inner_vid, bit<1> new_inner_vid_en) {
         meta.meta.new_outer_tpid = new_outer_tpid;
         meta.meta.new_outer_tpid_en = new_outer_tpid_en;
         meta.meta.new_outer_pri = new_outer_pri;
@@ -358,65 +358,65 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("new_inner_cfi") table new_inner_cfi_0() {
         actions = {
-            do_new_inner_cfi_0;
-            NoAction_0;
+            do_new_inner_cfi;
+            NoAction_1;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     @name("new_inner_pri") table new_inner_pri_0() {
         actions = {
-            do_new_inner_pri_0;
-            NoAction_1;
+            do_new_inner_pri;
+            NoAction_2;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_2();
     }
     @name("new_inner_tpid") table new_inner_tpid_0() {
         actions = {
-            do_new_inner_tpid_0;
-            NoAction_2;
+            do_new_inner_tpid;
+            NoAction_3;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_3();
     }
     @name("new_inner_vid") table new_inner_vid_0() {
         actions = {
-            do_new_inner_vid_0;
-            NoAction_3;
+            do_new_inner_vid;
+            NoAction_4;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_4();
     }
     @name("new_outer_cfi") table new_outer_cfi_0() {
         actions = {
-            do_new_outer_cfi_0;
-            NoAction_4;
+            do_new_outer_cfi;
+            NoAction_5;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_5();
     }
     @name("new_outer_pri") table new_outer_pri_0() {
         actions = {
-            do_new_outer_pri_0;
-            NoAction_5;
+            do_new_outer_pri;
+            NoAction_6;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_6();
     }
     @name("new_outer_tpid") table new_outer_tpid_0() {
         actions = {
-            do_new_outer_tpid_0;
-            NoAction_6;
+            do_new_outer_tpid;
+            NoAction_7;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_7();
     }
     @name("new_outer_vid") table new_outer_vid_0() {
         actions = {
-            do_new_outer_vid_0;
-            NoAction_7;
+            do_new_outer_vid;
+            NoAction_8;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_8();
     }
     @name("vlan_xlate") table vlan_xlate_0() {
         actions = {
-            nop_0;
-            rewrite_tags_0;
-            NoAction_8;
+            nop;
+            rewrite_tags;
+            NoAction_9;
         }
         key = {
             hdr.vlan_tag[0].isValid(): exact;
@@ -424,7 +424,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.vlan_tag[1].isValid(): exact;
             hdr.vlan_tag[1].vid      : exact;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_9();
     }
     apply {
         vlan_xlate_0.apply();

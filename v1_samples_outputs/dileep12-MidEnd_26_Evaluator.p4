@@ -363,8 +363,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
-    }
     action NoAction_1() {
     }
     action NoAction_2() {
@@ -377,7 +375,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     action NoAction_6() {
     }
-    @name("nop") action nop_0() {
+    action NoAction_7() {
     }
     @name("nop") action nop() {
     }
@@ -391,11 +389,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("nop") action nop_5() {
     }
-    @name("next_hop_ipv4") action next_hop_ipv4_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
-        meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
-        hdr.ethernet.srcAddr = srcmac;
-        hdr.ethernet.dstAddr = dstmac;
+    @name("nop") action nop_6() {
     }
     @name("next_hop_ipv4") action next_hop_ipv4(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
@@ -403,76 +397,82 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    @name("custom_action_1") action custom_action(bit<9> egress_port, bit<32> ipAddr, bit<48> dstAddr, bit<16> tcpPort) {
+    @name("next_hop_ipv4") action next_hop_ipv4_1(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
+        meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+        hdr.ethernet.srcAddr = srcmac;
+        hdr.ethernet.dstAddr = dstmac;
+    }
+    @name("custom_action_1") action custom_action_1(bit<9> egress_port, bit<32> ipAddr, bit<48> dstAddr, bit<16> tcpPort) {
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ipv4.srcAddr = ipAddr;
         hdr.ethernet.dstAddr = dstAddr;
         hdr.tcp.dstPort = tcpPort;
     }
-    @name("modify_tcp_dst_port_1") action modify_tcp_dst_port(bit<16> dstPort, bit<9> egress_port) {
+    @name("modify_tcp_dst_port_1") action modify_tcp_dst_port_0(bit<16> dstPort, bit<9> egress_port) {
         hdr.tcp.dstPort = dstPort;
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @name("custom_action_3") action custom_action_0(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
+    @name("custom_action_3") action custom_action_2(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
         hdr.ipv4.dstAddr = dstIp;
         hdr.ethernet.dstAddr = dstAddr;
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
-    @name("custom_action_2") action custom_action_4(bit<9> egress_port, bit<32> ipAddr, bit<16> tcpPort) {
+    @name("custom_action_2") action custom_action_3(bit<9> egress_port, bit<32> ipAddr, bit<16> tcpPort) {
         hdr.ipv4.srcAddr = ipAddr;
         hdr.tcp.dstPort = tcpPort;
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
-    @name("mod_mac_addr") action mod_mac_addr_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
+    @name("mod_mac_addr") action mod_mac_addr(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
     @name("exm_3ways_7Entries") table exm_3ways_7Entries_0() {
         actions = {
-            nop_0;
-            next_hop_ipv4_0;
-            NoAction_0;
+            nop;
+            next_hop_ipv4;
+            NoAction_1;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
         }
         size = 21504;
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     @name("exm_4ways_6Entries") table exm_4ways_6Entries_0() {
         actions = {
-            nop;
-            custom_action;
-            NoAction_1;
+            nop_1;
+            custom_action_1;
+            NoAction_2;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
             hdr.ethernet.srcAddr: exact;
         }
         size = 24576;
-        default_action = NoAction_0();
+        default_action = NoAction_2();
     }
     @name("exm_4ways_8Entries") table exm_4ways_8Entries_0() {
         actions = {
-            nop_1;
-            modify_tcp_dst_port;
-            NoAction_2;
+            nop_2;
+            modify_tcp_dst_port_0;
+            NoAction_3;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
             hdr.ipv4.srcAddr: exact;
         }
         size = 32768;
-        default_action = NoAction_0();
+        default_action = NoAction_3();
     }
     @name("exm_5ways_5Entries") table exm_5ways_5Entries_0() {
         actions = {
-            nop_2;
-            custom_action_0;
-            NoAction_3;
+            nop_3;
+            custom_action_2;
+            NoAction_4;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
@@ -480,25 +480,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.srcPort : exact;
         }
         size = 25600;
-        default_action = NoAction_0();
+        default_action = NoAction_4();
     }
     @name("exm_5ways_6Entries") table exm_5ways_6Entries_0() {
         actions = {
-            nop_3;
-            custom_action_4;
-            NoAction_4;
+            nop_4;
+            custom_action_3;
+            NoAction_5;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 30720;
-        default_action = NoAction_0();
+        default_action = NoAction_5();
     }
     @name("exm_6ways_5Entries") table exm_6ways_5Entries_0() {
         actions = {
-            nop_4;
-            next_hop_ipv4;
-            NoAction_5;
+            nop_5;
+            next_hop_ipv4_1;
+            NoAction_6;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
@@ -506,20 +506,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.dstPort     : exact;
         }
         size = 30720;
-        default_action = NoAction_0();
+        default_action = NoAction_6();
     }
     @name("exm_6ways_6Entries") table exm_6ways_6Entries_0() {
         actions = {
-            nop_5;
-            mod_mac_addr_0;
-            NoAction_6;
+            nop_6;
+            mod_mac_addr;
+            NoAction_7;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
             hdr.tcp.srcPort     : exact;
         }
         size = 36864;
-        default_action = NoAction_0();
+        default_action = NoAction_7();
     }
     apply {
         exm_5ways_5Entries_0.apply();

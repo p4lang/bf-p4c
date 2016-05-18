@@ -268,9 +268,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
+    action NoAction_1() {
     }
-    @name("a1") action a1_0(bit<32> d1, bit<32> d2, bit<32> d3, bit<32> d4, bit<32> d5, bit<32> d6, bit<32> d7, bit<32> d8) {
+    @name("a1") action a1(bit<32> d1, bit<32> d2, bit<32> d3, bit<32> d4, bit<32> d5, bit<32> d6, bit<32> d7, bit<32> d8) {
         meta.meta.f1 = d1;
         meta.meta.f2 = d2;
         meta.meta.f3 = d3;
@@ -283,10 +283,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("t1") table t1_0() {
         actions = {
-            a1_0;
-            NoAction_0;
+            a1;
+            NoAction_1;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) 

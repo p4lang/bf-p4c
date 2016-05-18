@@ -266,28 +266,28 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
-    }
     action NoAction_1() {
+    }
+    action NoAction_2() {
     }
     DirectMeter<bit<16>>(CounterType.Bytes) @name("meter_0") meter_2;
     Meter(32w4097, CounterType.Bytes) @name("meter_1") meter_3;
-    @name("do_nothing") action do_nothing_1() {
+    @name("do_nothing") action do_nothing_0() {
     }
-    @name("action_1") action action(bit<8> param0) {
+    @name("action_1") action action_2(bit<8> param0) {
         meter_3.meter(32w7, hdr.pkt.color_1);
     }
-    @name("action_0") action action_0(bit<8> param0) {
+    @name("action_0") action action_1(bit<8> param0) {
         meter_2.read(hdr.pkt.lpf);
     }
-    @name("do_nothing") action do_nothing_2() {
+    @name("do_nothing") action do_nothing() {
         meter_2.read(hdr.pkt.lpf);
     }
     @name("table_0") table table() {
         actions = {
-            action_0;
-            do_nothing_2;
-            NoAction_0;
+            action_1;
+            do_nothing;
+            NoAction_1;
         }
         key = {
             hdr.pkt.field_e_16: ternary;
@@ -296,20 +296,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.lpf       : exact;
         }
         size = 6000;
-        default_action = NoAction_0();
+        default_action = NoAction_1();
         meters = meter_2;
     }
     @name("table_1") table table_2() {
         actions = {
-            do_nothing_1;
-            action;
-            NoAction_1;
+            do_nothing_0;
+            action_2;
+            NoAction_2;
         }
         key = {
             hdr.pkt.field_e_16: exact;
         }
         size = 32768;
-        default_action = NoAction_0();
+        default_action = NoAction_2();
     }
     apply {
         table.apply();

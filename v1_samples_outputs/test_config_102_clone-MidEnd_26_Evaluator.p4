@@ -268,26 +268,26 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_0() {
+    action NoAction_2() {
     }
-    @name("egr_action") action egr_action_0() {
+    @name("egr_action") action egr_action() {
         clone3(CloneType.E2E, 32w7, { meta.m.foo });
     }
-    @name("egr_action2") action egr_action2_0() {
+    @name("egr_action2") action egr_action2() {
         clone(CloneType.E2E, 32w8);
     }
     @name("egr_null_table") table egr_null_table_0() {
         actions = {
-            egr_action_0;
-            egr_action2_0;
-            NoAction_0;
+            egr_action;
+            egr_action2;
+            NoAction_2;
         }
         key = {
             meta.eg_intr_md_from_parser_aux.egress_parser_err: exact;
             hdr.ethernet.dstAddr                             : exact;
             meta.m.foo                                       : exact;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_2();
     }
     apply {
         egr_null_table_0.apply();
@@ -295,24 +295,24 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    action NoAction_3() {
     }
-    @name("ingr_action") action ingr_action_0() {
+    @name("ingr_action") action ingr_action() {
         clone3(CloneType.I2E, 32w5, { meta.m.foo });
     }
-    @name("ingr_action2") action ingr_action2_0() {
+    @name("ingr_action2") action ingr_action2() {
         clone(CloneType.I2E, 32w6);
     }
     @name("ingr_null_table") table ingr_null_table_0() {
         actions = {
-            ingr_action_0;
-            ingr_action2_0;
-            NoAction_1;
+            ingr_action;
+            ingr_action2;
+            NoAction_3;
         }
         key = {
             meta.ig_intr_md_from_parser_aux.ingress_parser_err: exact;
         }
-        default_action = NoAction_1();
+        default_action = NoAction_3();
     }
     apply {
         ingr_null_table_0.apply();

@@ -345,7 +345,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("nop") action nop() {
     }
-    @name("hop") action hop(inout bit<8> ttl, in bit<9> egress_port) {
+    @name("hop") action hop(inout bit<8> ttl, bit<9> egress_port) {
         ttl = ttl + 8w255;
         meta.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
