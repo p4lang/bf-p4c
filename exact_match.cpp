@@ -782,7 +782,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
         match_field_list.push_back( json::map {
             { "name", json::string(field.second.what.name()) },
             { "start_offset", json::number(1023 - field.first*128 - field.second.hi) },
-            { "start_bit", json::number(field.second.what->lo) },
+            { "start_bit", json::number(field.second.what.lobit()) },
             { "bit_width", json::number(field.second.hi - field.second.lo + 1) }});
     canon_field_list(match_field_list);
     stage_tbl["match_group_resource_allocation"] = json::map {
