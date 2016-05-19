@@ -2,6 +2,7 @@
 #define _alloc_h_
 
 #include <stdlib.h>
+#include <stdexcept>
 
 template<class T> class Alloc1Dbase {
     int         size;
