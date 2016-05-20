@@ -1,17 +1,18 @@
 #include "phv_allocator.h"
-#include "constraints.h"
-#include "phv_fields.h"
 #include "byte_constraint.h"
+#include "constraints.h"
 #include "container_constraint.h"
+#include "lib/range.h"
 #include "match_xbar_constraint.h"
 #include "mau_group_constraint.h"
 #include "offset_constraint.h"
-#include "parse_graph_constraint.h"
-#include "source_container_constraint.h"
-#include "t_phv_constraint.h"
-#include "thread_constraint.h"
 #include "or_tools/min_value_solver.h"
 #include "or_tools/random_value_solver.h"
+#include "parse_graph_constraint.h"
+#include "phv_fields.h"
+#include "source_container_constraint.h"
+#include "thread_constraint.h"
+#include "t_phv_constraint.h"
 
 using namespace std::placeholders;
 
@@ -78,7 +79,7 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
   pipe->apply(ParseGraphConstraint(constraints_));
   for (auto &f1 : phv)
     for (auto &f2 : phv)
-      if (conflict[f1.id][f2.id])
+      if (conflict(f1.id, f2.id))
         for (int b1 : Range(0, f1.size-1))
           for (int b2 : Range(0, f2.size-1))
             constraints_.SetBitConflict(f1.bit(b1), f2.bit(b2));

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-TIMEOUT=30
+TIMEOUT=60
 TIME_COMMAND="" # don't time commands
 verbose=false
 debug=false

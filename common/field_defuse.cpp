@@ -7,7 +7,6 @@
 Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
     auto rv = Inspector::init_apply(root);
     conflict.clear();
-    conflict.resize(phv.num_fields());
     return rv;
 }
 
@@ -21,9 +20,8 @@ void FieldDefUse::check_conflicts(const info &read, int when) {
         if (other.field == read.field) continue;
         for (auto use : other.use) {
             int use_when = use ? use->stage() : INT_MAX;
-            if (use_when > firstdef && use_when <= when) {
-                    conflict[read.field->id][other.field->id] = true;
-                    conflict[other.field->id][read.field->id] = true; } } }
+            if (use_when > firstdef && use_when <= when)
+                conflict(read.field->id, other.field->id) = true; } }
 }
 
 FieldDefUse::info &FieldDefUse::field(const PhvInfo::Info *f) {

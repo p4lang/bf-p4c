@@ -3,18 +3,18 @@
 
 #include <iostream>
 #include "ir/ir.h"
-#include "lib/bitvec.h"
+#include "lib/symbitmatrix.h"
 #include "lib/ltbitmatrix.h"
 #include "tofino/phv/phv_fields.h"
 
 class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
-    const PhvInfo               &phv;
-    vector<bitvec>              &conflict;
+    const PhvInfo       &phv;
+    SymBitMatrix        &conflict;
     struct info {
         const PhvInfo::Info             *field = 0;
         set<const IR::MAU::Table *>     def, use;
     };
-    map<int, info>          defuse;
+    std::unordered_map<int, info> defuse;
     // class Init;
 
     profile_t init_apply(const IR::Node *root) override;
@@ -38,9 +38,8 @@ class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
 
  public:
     explicit FieldDefUse(const PhvInfo &p)
-    : phv(p), conflict(*new vector<bitvec>) { visitDagOnce = false; }
-    const vector<bitvec> &conflicts() { return conflict; }
+    : phv(p), conflict(*new SymBitMatrix) { visitDagOnce = false; }
+    const SymBitMatrix &conflicts() { return conflict; }
 };
-
 
 #endif /* _FIELD_DEFUSE_H_ */

@@ -1,57 +1,65 @@
 namespace Tofino {
 
 class ParserMatch {
-  match_t                       value;
-  int                           shift;
-  inline Vector<Expression>     stmts;
-  NullOK ParserState            next;
-  NullOK ParserException        except;
+    match_t                     value;
+    int                         shift;
+    inline Vector<Expression>   stmts;
+    NullOK ParserState          next;
+    NullOK ParserException      except;
 #noconstructor
 #emit
-  ParserMatch(match_t v, const Vector<Expression> &e)
-  : value(v), shift(-1), stmts(e), next(0), except(0) {}
-  ParserMatch(match_t v, int sh, const std::initializer_list<const Expression *> &st,
-                     const ParserState *n, const ParserException *ex = nullptr)
-  : value(v), shift(sh), stmts(st), next(n), except(ex) {}
+    ParserMatch(match_t v, const Vector<Expression> &e)
+    : value(v), shift(-1), stmts(e), next(0), except(0) {}
+    ParserMatch(match_t v, int sh, const std::initializer_list<const Expression *> &st,
+                const ParserState *n, const ParserException *ex = nullptr)
+    : value(v), shift(sh), stmts(st), next(n), except(ex) {}
 #end
 }
 
 class ParserState {
-  cstring                       name;
-  inline Vector<Expression>     select;
-  inline Vector<ParserMatch>    match;
+    cstring                     name;
+    inline Vector<Expression>   select;
+    inline Vector<ParserMatch>  match;
 #noconstructor
 #emit
-  const IR::Node *p4state = 0; /* informational only! not visited or compared for equal */
-  explicit ParserState(const IR::Node *);
-  ParserState(cstring n, const std::initializer_list<const Expression *> &sel,
-              const std::initializer_list<const ParserMatch *> &m)
-  : name(n), select(sel), match(m) {}
+    const IR::Node *p4state = 0; /* informational only! not visited or compared for equal */
+    explicit ParserState(const IR::Node *);
+    ParserState(cstring n, const std::initializer_list<const Expression *> &sel,
+                const std::initializer_list<const ParserMatch *> &m)
+    : name(n), select(sel), match(m) {}
 #end
-  toString { return name; }
+    toString { return name; }
+    visit_children {
+        select.visit_children(v);
+        auto &start(v.flow_clone());
+        for (auto &m : match) {
+            /* FIXME -- support transforms that remove or split matches? */
+            auto &clone(start.flow_clone());
+            clone.visit(m);
+            v.flow_merge(clone); } }
 }
 
 class Parser {
-  gress_t               gress;
-  ParserState           start;
+    gress_t     gress;
+    ParserState start;
 #noconstructor
 #emit
-  Parser(gress_t gr, const ParserState *s) : gress(gr), start(s) {}
+    Parser(gress_t gr, const ParserState *s) : gress(gr), start(s) {}
 #end
 #apply
-  toString { return gress ? "egress parser" : "ingress parser"; }
+    toString { return gress ? "egress parser" : "ingress parser"; }
 }
 
 class Deparser {
-  gress_t                       gress;
-  inline Vector<Expression>     emits;
-  NullOK Expression             egress_port;
+    gress_t                     gress;
+    inline Vector<Expression>   emits;
+    NullOK Expression           egress_port;
 #noconstructor
 #emit
-  Deparser(gress_t gr, const Parser *s);
+    Deparser(gress_t gr, const Parser *s);
 #end
 #apply
-  toString { return gress ? "egress deparser" : "ingress deparser"; }
+    toString { return gress ? "egress deparser" : "ingress deparser"; }
 }
 
 }  // end namespace Tofino

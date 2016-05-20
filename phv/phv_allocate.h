@@ -3,18 +3,18 @@
 
 #include "ir/ir.h"
 #include "phv_fields.h"
-#include "lib/bitvec.h"
+#include "lib/symbitmatrix.h"
 
 class PhvAllocate : public Inspector {
     PhvInfo                     &phv;
-    const vector<bitvec>        &conflict;
+    const SymBitMatrix          &conflict;
     struct Regs;
     class Uses;
     void do_alloc(PhvInfo::Info *, Regs *);
     bool preorder(const IR::Tofino::Pipe *p) override;
 
  public:
-    PhvAllocate(PhvInfo &p, const vector<bitvec> &c) : phv(p), conflict(c) {}
+    PhvAllocate(PhvInfo &p, const SymBitMatrix &c) : phv(p), conflict(c) {}
 };
 
 
