@@ -12,6 +12,7 @@ class ActionBus {
     };
     std::map<unsigned, Slot>                        by_byte;
     std::map<Table::Format::Field *, unsigned>      need_place;
+    int find_merge(int offset, int bytes);
 public:
     int             lineno;
     ActionBus() : lineno(-1) {}
