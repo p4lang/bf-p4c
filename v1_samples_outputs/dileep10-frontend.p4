@@ -351,9 +351,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("exm_3ways_32k") table exm_3ways_32k() {
         actions = {
-            nop;
-            custom_action_3;
-            NoAction;
+            nop();
+            custom_action_3();
+            NoAction();
         }
         key = {
             hdr.ipv4.dstAddr    : exact;

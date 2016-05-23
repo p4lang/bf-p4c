@@ -269,9 +269,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name("table_1") table table_2() {
         actions = {
-            action_0;
-            nop;
-            NoAction_2;
+            action_0();
+            nop();
+            NoAction_2();
         }
         key = {
             hdr.pkt.field_d: exact;
@@ -293,9 +293,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_0") table table_3() {
         actions = {
-            action_1;
-            nop_2;
-            NoAction_3;
+            action_1();
+            nop_2();
+            NoAction_3();
         }
         key = {
             hdr.pkt.field_b: exact;

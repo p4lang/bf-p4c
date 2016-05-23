@@ -269,8 +269,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("test1") table test1_0() {
         actions = {
-            setf1;
-            NoAction_1;
+            setf1();
+            NoAction_1();
         }
         key = {
             hdr.data.b1: exact;
@@ -280,9 +280,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("test2") table test2_0() {
         actions = {
-            setf2;
-            setf3;
-            NoAction_2;
+            setf2();
+            setf3();
+            NoAction_2();
         }
         key = {
             hdr.data.f1: ternary;

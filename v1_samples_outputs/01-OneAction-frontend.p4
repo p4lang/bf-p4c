@@ -267,10 +267,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("dmac") table dmac() {
         actions = {
-            nop;
-            ing_drop;
-            set_egress_port;
-            NoAction;
+            nop();
+            ing_drop();
+            set_egress_port();
+            NoAction();
         }
         key = {
             hdr.ethernet.dstAddr: exact;

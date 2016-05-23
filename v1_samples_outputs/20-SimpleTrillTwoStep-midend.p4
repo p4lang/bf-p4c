@@ -316,15 +316,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("fix_trill_header") table fix_trill_header_0() {
         actions = {
-            copy_hopCount;
-            NoAction_1;
+            copy_hopCount();
+            NoAction_1();
         }
         default_action = NoAction_1();
     }
     @name("trill_forward") table trill_forward_0() {
         actions = {
-            forward_trill;
-            NoAction_2;
+            forward_trill();
+            NoAction_2();
         }
         key = {
             hdr.trill.egressRbridge: exact;

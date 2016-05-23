@@ -291,9 +291,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name("egress_acl") table egress_acl_0() {
         actions = {
-            eg_drop;
-            permit;
-            NoAction_2;
+            eg_drop();
+            permit();
+            NoAction_2();
         }
         key = {
             meta.routing_metadata.drop: ternary;
@@ -306,6 +306,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    bit<8> ttl_0;
     action NoAction_3() {
     }
     action NoAction_4() {
@@ -319,17 +320,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.routing_metadata.drop = 1w1;
     }
     @name("hop_ipv4") action hop_ipv4(bit<48> srcmac, bit<32> srcip, bit<48> dstmac, bit<9> egress_port) {
+        ttl_0 = hdr.ipv4.ttl;
+        ttl_0 = ttl_0 + 8w255;
         standard_metadata.egress_port = egress_port;
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+        hdr.ipv4.ttl = ttl_0;
         hdr.ipv4.srcAddr = srcip;
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
     @name("host_ip") table host_ip_0() {
         actions = {
-            do_nothing;
-            l3_set_index;
-            NoAction_3;
+            do_nothing();
+            l3_set_index();
+            NoAction_3();
         }
         key = {
             hdr.ipv4.dstAddr: exact;
@@ -339,9 +342,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("ipv4_routing") table ipv4_routing_0() {
         actions = {
-            ig_drop;
-            hop_ipv4;
-            NoAction_4;
+            ig_drop();
+            hop_ipv4();
+            NoAction_4();
         }
         key = {
             hdr.ipv4.dstAddr: lpm;

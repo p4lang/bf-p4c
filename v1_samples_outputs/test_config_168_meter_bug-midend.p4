@@ -292,10 +292,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_0") table table_1() {
         actions = {
-            action_2;
-            action_3;
-            nop_0;
-            NoAction_1;
+            action_2();
+            action_3();
+            nop_0();
+            NoAction_1();
         }
         key = {
             hdr.ipv4.srcAddr : exact;

@@ -291,9 +291,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_0") table table_0() {
         actions = {
-            nop;
-            mod_mac_adr;
-            NoAction;
+            nop();
+            mod_mac_adr();
+            NoAction();
         }
         key = {
             hdr.ipv4.hdrChecksum: exact;

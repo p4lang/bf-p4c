@@ -288,9 +288,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table1") table table1_0() {
         actions = {
-            action1;
-            action2;
-            NoAction_1;
+            action1();
+            action2();
+            NoAction_1();
         }
         key = {
             hdr.ethernet.srcAddr: exact;
@@ -299,8 +299,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table2") table table2_0() {
         actions = {
-            action3;
-            NoAction_2;
+            action3();
+            NoAction_2();
         }
         key = {
             hdr.ethernet.dstAddr: exact;
@@ -309,8 +309,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table3") table table3_0() {
         actions = {
-            action3_1;
-            NoAction_3;
+            action3_1();
+            NoAction_3();
         }
         key = {
             hdr.ethernet.dstAddr: exact;
@@ -319,8 +319,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table4") table table4_0() {
         actions = {
-            action4;
-            NoAction_4;
+            action4();
+            NoAction_4();
         }
         key = {
             hdr.ethernet.ethertype: exact;

@@ -275,8 +275,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("port_bd") table port_bd_0() {
         actions = {
-            set_bd;
-            NoAction_1;
+            set_bd();
+            NoAction_1();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact;
@@ -286,9 +286,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("vlan_port_tab") table vlan_port_tab_0() {
         actions = {
-            nop;
-            ing_drop;
-            NoAction_2;
+            nop();
+            ing_drop();
+            NoAction_2();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact;

@@ -345,24 +345,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("t1") table t1() {
         actions = {
-            nop;
-            action_1_1;
-            action_1_2;
-            action_1_3;
-            action_1_4;
-            action_1_5;
-            action_1_6;
-            action_1_7;
-            action_1_8;
-            action_1_9;
-            action_1_10;
-            action_1_11;
-            action_1_12;
-            action_1_13;
-            action_1_14;
-            action_1_15;
-            action_1_16;
-            NoAction;
+            nop();
+            action_1_1();
+            action_1_2();
+            action_1_3();
+            action_1_4();
+            action_1_5();
+            action_1_6();
+            action_1_7();
+            action_1_8();
+            action_1_9();
+            action_1_10();
+            action_1_11();
+            action_1_12();
+            action_1_13();
+            action_1_14();
+            action_1_15();
+            action_1_16();
+            NoAction();
         }
         key = {
             hdr.ethernet.dstAddr: exact;

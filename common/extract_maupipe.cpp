@@ -98,7 +98,7 @@ const IR::V1Table *createV1Table(const IR::P4Table *tc, const P4::ReferenceMap *
             rv->reads = reads;
         } else if (prop->name == "actions") {
             for (auto el : *prop->value->to<IR::ActionList>()->actionList)
-                rv->actions.push_back(refMap->getDeclaration(el->name->path, true)->externalName());
+                rv->actions.push_back(refMap->getDeclaration(el->getPath(), true)->externalName());
         } else if (prop->name == "default_action") {
             auto v = prop->value->to<IR::ExpressionValue>();
             if (!v) {
@@ -213,15 +213,15 @@ class GetTofinoTables : public Inspector {
             table->action_profile.name); } }
   void setup_tt_actions(IR::MAU::Table *tt, const IR::P4Table *table) {
     for (auto act : *table->properties->getProperty("actions")->value
-                          ->to<IR::ActionList>()->actionList)
-      if (auto action = refMap->getDeclaration(act->name->path)
-                                ->to<IR::P4Action>()) {
-        auto newaction = createActionFunction(action, act->arguments);
+                          ->to<IR::ActionList>()->actionList) {
+      if (auto action = refMap->getDeclaration(act->getPath())->to<IR::P4Action>()) {
+        auto mce = act->expression->to<IR::MethodCallExpression>();
+        auto newaction = createActionFunction(action, mce->arguments);
         if (!tt->actions.count(newaction->name))
           tt->actions.addUnique(newaction->name, newaction);
         else
           error("%s: action %s appears multiple times in table %s", action->name.srcInfo,
-                action->name, tt->name); }
+                action->name, tt->name); } }
     // action_profile already pulled into TableContainer?
   }
 

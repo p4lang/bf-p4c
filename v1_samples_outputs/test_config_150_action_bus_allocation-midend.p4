@@ -285,10 +285,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_0") table table_2() {
         actions = {
-            action_0;
-            action_1;
-            action_2;
-            NoAction_1;
+            action_0();
+            action_1();
+            action_2();
+            NoAction_1();
         }
         key = {
             hdr.pkt.field_c_32: ternary;
@@ -298,10 +298,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_1") table table_3() {
         actions = {
-            action_3;
-            action_4;
-            action_5;
-            NoAction_2;
+            action_3();
+            action_4();
+            action_5();
+            NoAction_2();
         }
         key = {
             hdr.pkt.field_d_32: ternary;

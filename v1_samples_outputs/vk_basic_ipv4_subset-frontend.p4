@@ -348,9 +348,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("tcam_indirect_action") table tcam_indirect_action() {
         actions = {
-            nop;
-            modify_ip_id;
-            NoAction;
+            nop();
+            modify_ip_id();
+            NoAction();
         }
         key = {
             hdr.ethernet.srcAddr  : ternary;

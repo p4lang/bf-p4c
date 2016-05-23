@@ -351,9 +351,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("ipv4_routing_exm_ways_4_pack_4_stage_6") table ipv4_routing_exm_ways_4_pack_4_stage_6() {
         actions = {
-            nop;
-            next_hop_ipv4;
-            NoAction;
+            nop();
+            next_hop_ipv4();
+            NoAction();
         }
         key = {
             hdr.ethernet.srcAddr: exact;

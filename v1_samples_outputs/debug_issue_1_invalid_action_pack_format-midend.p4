@@ -292,9 +292,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("tcam_tbl_stage_2") table tcam_tbl_stage() {
         actions = {
-            nop;
-            mod_mac_adr;
-            NoAction_1;
+            nop();
+            mod_mac_adr();
+            NoAction_1();
         }
         key = {
             hdr.ipv4.dstAddr: lpm;

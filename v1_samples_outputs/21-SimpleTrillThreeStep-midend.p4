@@ -320,22 +320,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("copy_hopCount_from_m") table copy_hopCount_from_m_0() {
         actions = {
-            do_copy_hopCount_from_m;
-            NoAction_1;
+            do_copy_hopCount_from_m();
+            NoAction_1();
         }
         default_action = NoAction_1();
     }
     @name("copy_hopCount_to_m") table copy_hopCount_to_m_0() {
         actions = {
-            do_copy_hopCount_to_m;
-            NoAction_2;
+            do_copy_hopCount_to_m();
+            NoAction_2();
         }
         default_action = NoAction_2();
     }
     @name("trill_forward") table trill_forward_0() {
         actions = {
-            forward_trill;
-            NoAction_3;
+            forward_trill();
+            NoAction_3();
         }
         key = {
             hdr.trill.egressRbridge: exact;

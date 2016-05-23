@@ -287,8 +287,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name("table_2") table table_2() {
         actions = {
-            action_2;
-            NoAction;
+            action_2();
+            NoAction();
         }
         key = {
             hdr.pkt.field_g_16: exact;
@@ -297,8 +297,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name("table_3") table table_3() {
         actions = {
-            do_nothing;
-            NoAction;
+            do_nothing();
+            NoAction();
         }
         key = {
             hdr.pkt.field_g_16: exact;
@@ -317,8 +317,8 @@ control pipe_0(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name("table_1") table table_1() {
         actions = {
-            action_1;
-            NoAction;
+            action_1();
+            NoAction();
         }
         key = {
             hdr.pkt.field_f_16: exact;
@@ -336,8 +336,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_0") table table_0() {
         actions = {
-            action_0;
-            NoAction;
+            action_0();
+            NoAction();
         }
         key = {
             hdr.pkt.field_e_16: exact;

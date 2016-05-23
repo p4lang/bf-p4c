@@ -358,65 +358,65 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("new_inner_cfi") table new_inner_cfi_0() {
         actions = {
-            do_new_inner_cfi;
-            NoAction_1;
+            do_new_inner_cfi();
+            NoAction_1();
         }
         default_action = NoAction_1();
     }
     @name("new_inner_pri") table new_inner_pri_0() {
         actions = {
-            do_new_inner_pri;
-            NoAction_2;
+            do_new_inner_pri();
+            NoAction_2();
         }
         default_action = NoAction_2();
     }
     @name("new_inner_tpid") table new_inner_tpid_0() {
         actions = {
-            do_new_inner_tpid;
-            NoAction_3;
+            do_new_inner_tpid();
+            NoAction_3();
         }
         default_action = NoAction_3();
     }
     @name("new_inner_vid") table new_inner_vid_0() {
         actions = {
-            do_new_inner_vid;
-            NoAction_4;
+            do_new_inner_vid();
+            NoAction_4();
         }
         default_action = NoAction_4();
     }
     @name("new_outer_cfi") table new_outer_cfi_0() {
         actions = {
-            do_new_outer_cfi;
-            NoAction_5;
+            do_new_outer_cfi();
+            NoAction_5();
         }
         default_action = NoAction_5();
     }
     @name("new_outer_pri") table new_outer_pri_0() {
         actions = {
-            do_new_outer_pri;
-            NoAction_6;
+            do_new_outer_pri();
+            NoAction_6();
         }
         default_action = NoAction_6();
     }
     @name("new_outer_tpid") table new_outer_tpid_0() {
         actions = {
-            do_new_outer_tpid;
-            NoAction_7;
+            do_new_outer_tpid();
+            NoAction_7();
         }
         default_action = NoAction_7();
     }
     @name("new_outer_vid") table new_outer_vid_0() {
         actions = {
-            do_new_outer_vid;
-            NoAction_8;
+            do_new_outer_vid();
+            NoAction_8();
         }
         default_action = NoAction_8();
     }
     @name("vlan_xlate") table vlan_xlate_0() {
         actions = {
-            nop;
-            rewrite_tags;
-            NoAction_9;
+            nop();
+            rewrite_tags();
+            NoAction_9();
         }
         key = {
             hdr.vlan_tag[0].isValid(): exact;

@@ -349,9 +349,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name("eg_udp") table eg_udp() {
         actions = {
-            nop;
-            udp_set_src;
-            NoAction;
+            nop();
+            udp_set_src();
+            NoAction();
         }
         key = {
             hdr.ethernet.isValid(): exact;
@@ -378,9 +378,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("tcam_range") table tcam_range() {
         actions = {
-            nop;
-            hop_ipv4;
-            NoAction;
+            nop();
+            hop_ipv4();
+            NoAction();
         }
         key = {
             hdr.ipv4.dstAddr: ternary;

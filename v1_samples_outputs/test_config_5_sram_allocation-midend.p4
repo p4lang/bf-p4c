@@ -274,9 +274,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("test_exact_table") table test_exact_table_0() {
         actions = {
-            set_flag;
-            do_nothing;
-            NoAction_1;
+            set_flag();
+            do_nothing();
+            NoAction_1();
         }
         key = {
             hdr.my_test_config_1.a_32: exact;

@@ -262,8 +262,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name("t2") table t2_0() {
         actions = {
-            a2;
-            NoAction_2;
+            a2();
+            NoAction_2();
         }
         default_action = NoAction_2();
     }
@@ -280,8 +280,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("t1") table t1_0() {
         actions = {
-            a1;
-            NoAction_3;
+            a1();
+            NoAction_3();
         }
         default_action = NoAction_3();
     }

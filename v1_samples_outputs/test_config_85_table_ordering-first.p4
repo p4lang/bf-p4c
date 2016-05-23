@@ -297,9 +297,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_0") table table_0() {
         actions = {
-            action_0;
-            nop;
-            NoAction;
+            action_0();
+            nop();
+            NoAction();
         }
         key = {
             hdr.pkt.field_b: exact;
@@ -309,9 +309,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_1") table table_1() {
         actions = {
-            action_1;
-            nop;
-            NoAction;
+            action_1();
+            nop();
+            NoAction();
         }
         key = {
             hdr.pkt.field_d: exact;
@@ -320,9 +320,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_2") table table_2() {
         actions = {
-            action_2;
-            nop;
-            NoAction;
+            action_2();
+            nop();
+            NoAction();
         }
         key = {
             hdr.pkt.field_f: exact;
@@ -331,9 +331,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_3") table table_3() {
         actions = {
-            action_3;
-            nop;
-            NoAction;
+            action_3();
+            nop();
+            NoAction();
         }
         key = {
             hdr.pkt.field_h: exact;
@@ -342,9 +342,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_4") table table_4() {
         actions = {
-            action_4;
-            nop;
-            NoAction;
+            action_4();
+            nop();
+            NoAction();
         }
         key = {
             hdr.pkt.field_e: exact;

@@ -287,9 +287,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name("egr_null_table") table egr_null_table() {
         actions = {
-            egr_action;
-            egr_action2;
-            NoAction;
+            egr_action();
+            egr_action2();
+            NoAction();
         }
         key = {
             meta.eg_intr_md_from_parser_aux.egress_parser_err: exact;
@@ -312,9 +312,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("ingr_null_table") table ingr_null_table() {
         actions = {
-            ingr_action;
-            ingr_action2;
-            NoAction;
+            ingr_action();
+            ingr_action2();
+            NoAction();
         }
         key = {
             meta.ig_intr_md_from_parser_aux.ingress_parser_err: exact;

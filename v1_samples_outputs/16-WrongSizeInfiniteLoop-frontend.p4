@@ -327,23 +327,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("t1") table t1() {
         actions = {
-            a1;
-            a2;
-            a3;
-            a4;
-            a5;
-            a6;
-            a7;
-            a8;
-            a9;
-            a10;
-            a11;
-            a12;
-            a13;
-            a14;
-            a15;
-            a16;
-            NoAction;
+            a1();
+            a2();
+            a3();
+            a4();
+            a5();
+            a6();
+            a7();
+            a8();
+            a9();
+            a10();
+            a11();
+            a12();
+            a13();
+            a14();
+            a15();
+            a16();
+            NoAction();
         }
         key = {
             hdr.ethernet.dstAddr: exact;

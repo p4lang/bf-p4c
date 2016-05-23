@@ -268,8 +268,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("bad_mac_drop") table bad_mac_drop_0() {
         actions = {
-            ing_drop;
-            NoAction_1;
+            ing_drop();
+            NoAction_1();
         }
         default_action = NoAction_1();
     }

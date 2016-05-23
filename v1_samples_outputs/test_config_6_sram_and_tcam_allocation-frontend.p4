@@ -291,9 +291,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
     @name("egress_acl") table egress_acl() {
         actions = {
-            eg_drop;
-            permit;
-            NoAction;
+            eg_drop();
+            permit();
+            NoAction();
         }
         key = {
             meta.routing_metadata.drop: ternary;
@@ -326,9 +326,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("host_ip") table host_ip() {
         actions = {
-            do_nothing;
-            l3_set_index;
-            NoAction;
+            do_nothing();
+            l3_set_index();
+            NoAction();
         }
         key = {
             hdr.ipv4.dstAddr: exact;
@@ -338,9 +338,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("ipv4_routing") table ipv4_routing() {
         actions = {
-            ig_drop;
-            hop_ipv4;
-            NoAction;
+            ig_drop();
+            hop_ipv4();
+            NoAction();
         }
         key = {
             hdr.ipv4.dstAddr: lpm;

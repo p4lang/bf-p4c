@@ -356,9 +356,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("exm_5ways_1Entries_stage_2") table exm_5ways_1Entries_stage_2() {
         actions = {
-            nop;
-            custom_action_3;
-            NoAction;
+            nop();
+            custom_action_3();
+            NoAction();
         }
         key = {
             hdr.ethernet.dstAddr: exact;

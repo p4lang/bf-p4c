@@ -274,9 +274,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("dmac") table dmac_0() {
         actions = {
-            nop;
-            set_egress_port;
-            NoAction_1;
+            nop();
+            set_egress_port();
+            NoAction_1();
         }
         key = {
             hdr.l2_metadata.bd  : exact;
@@ -287,8 +287,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("port_bd") table port_bd_0() {
         actions = {
-            set_bd;
-            NoAction_2;
+            set_bd();
+            NoAction_2();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact;

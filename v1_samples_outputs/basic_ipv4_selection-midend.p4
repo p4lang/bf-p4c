@@ -356,9 +356,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("ipv4_routing_select_2") table ipv4_routing_select() {
         actions = {
-            nhop_set;
-            nop;
-            NoAction_1;
+            nhop_set();
+            nop();
+            NoAction_1();
         }
         key = {
             hdr.ipv4.dstAddr       : lpm;

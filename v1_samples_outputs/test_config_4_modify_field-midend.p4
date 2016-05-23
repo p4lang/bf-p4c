@@ -278,10 +278,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("my_test_config_1_table") table my_test_config_1_table_0() {
         actions = {
-            modify_from_constant;
-            modify_from_field;
-            modify_from_param;
-            NoAction_1;
+            modify_from_constant();
+            modify_from_field();
+            modify_from_param();
+            NoAction_1();
         }
         key = {
             hdr.my_test_config_1.a_32: lpm;

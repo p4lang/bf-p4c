@@ -293,9 +293,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("dmac1") table dmac1() {
         actions = {
-            action1;
-            action2;
-            NoAction;
+            action1();
+            action2();
+            NoAction();
         }
         key = {
             hdr.ethernet.dstAddr: exact;
@@ -305,8 +305,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("dmac2") table dmac2() {
         actions = {
-            action2_1;
-            NoAction;
+            action2_1();
+            NoAction();
         }
         key = {
             hdr.ethernet.dstAddr: exact;

@@ -267,9 +267,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_0") table table_1() {
         actions = {
-            action_0;
-            action_3;
-            NoAction_1;
+            action_0();
+            action_3();
+            NoAction_1();
         }
         key = {
             hdr.pkt.field_a_32: ternary;

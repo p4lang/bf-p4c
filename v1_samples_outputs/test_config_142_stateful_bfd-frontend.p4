@@ -276,9 +276,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("bfd") table bfd() {
         actions = {
-            bfd_rx;
-            bfd_tx;
-            NoAction;
+            bfd_rx();
+            bfd_tx();
+            NoAction();
         }
         key = {
             meta.bfd_md.bfd_tx_or_rx     : exact;

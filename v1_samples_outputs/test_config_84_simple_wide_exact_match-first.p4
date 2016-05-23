@@ -282,9 +282,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_0") table table_0() {
         actions = {
-            action_0;
-            action_1;
-            NoAction;
+            action_0();
+            action_1();
+            NoAction();
         }
         key = {
             hdr.pkt.field_a: exact;

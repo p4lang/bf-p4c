@@ -337,9 +337,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("ipv4_routing_exm_ways_3_pack_5") table ipv4_routing_exm_ways_3_pack_5() {
         actions = {
-            nop;
-            hop_ipv4;
-            NoAction;
+            nop();
+            hop_ipv4();
+            NoAction();
         }
         key = {
             hdr.ipv4.dstAddr: exact;
