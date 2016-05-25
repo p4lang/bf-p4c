@@ -1,5 +1,6 @@
 #include "gateway.h"
 #include "input_xbar.h"
+#include "resource.h"
 #include "lib/algorithm.h"
 #include "lib/bitvec.h"
 #include "lib/bitops.h"
@@ -322,6 +323,11 @@ void IXBar::update(cstring name, const Use &alloc) {
                 hash_single_bit_inuse[bit] |= alloc.hash_table_input;
                 if (!hash_single_bit_use[hash][bit])
                     hash_single_bit_use[hash][bit] = name; } } }
+}
+
+void IXBar::update(cstring name, const TableResourceAlloc *rsrc) {
+    update(name + "$gw", rsrc->gateway_ixbar);
+    update(name, rsrc->match_ixbar);
 }
 
 static void write_one(std::ostream &out, const std::pair<cstring, int> &f,

@@ -35,6 +35,8 @@ tofino_backend_SOURCES = \
 	%reldir%/mau/input_xbar.h \
 	%reldir%/mau/instruction_selection.cpp \
 	%reldir%/mau/instruction_selection.h \
+	%reldir%/mau/ixbar_realign.cpp \
+	%reldir%/mau/ixbar_realign.h \
 	%reldir%/mau/memories.cpp \
 	%reldir%/mau/memories.h \
 	%reldir%/mau/phv_constraints.cpp \

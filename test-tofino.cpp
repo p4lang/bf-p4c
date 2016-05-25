@@ -13,6 +13,7 @@
 #include "tofino/mau/asm_output.h"
 #include "tofino/mau/gateway.h"
 #include "tofino/mau/instruction_selection.h"
+#include "tofino/mau/ixbar_realign.h"
 #include "tofino/mau/phv_constraints.h"
 #include "tofino/mau/split_gateways.h"
 #include "tofino/mau/table_dependency_graph.h"
@@ -126,6 +127,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
             ->apply(MauPhvConstraints(phv))
             ->apply(PhvAllocate(phv, defuse.conflicts())); }
     PassManager post_phv_allocation_backend = {
+        new IXBarRealign(phv),
         new SplitExtractEmit,
         new LoadMatchKeys(phv),   // depends on SplitExtractEmit
         new SplitPhvUse(phv),     // depends on SplitExtractEmit

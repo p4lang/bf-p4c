@@ -299,9 +299,13 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
                 BUG("unexpected reads expression %s", r);
             match_fields.emplace_back(finfo, bits.lo, bits.hi); } }
 
-    if (!tbl->layout.ternary && !match_fields.empty())
-        ghost_bits = match_fields[0](0, 9);
-
+    if (!tbl->layout.ternary) {
+        for (auto &field : match_fields)
+            if (field.width() >= 10) {
+                ghost_bits = field(0, 9);
+                break; }
+        if (!ghost_bits && !match_fields.empty())
+            ghost_bits = match_fields[0]; }
     if (!tbl->ways.empty()) {
         bitvec used;
         action_bits = ceil_log2(tbl->actions.size());

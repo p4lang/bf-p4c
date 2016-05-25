@@ -121,6 +121,7 @@ class Container {
     : tagalong_(mau_group >= kNumPhvMauGroups), log2sz_(kMauGroupSizes.at(mau_group)),
       index_(kMauGroupBase.at(mau_group) * kNumContainersPerMauGroup + container_in_group) {}
     size_t size() const { return 8U << log2sz_; }
+    unsigned log2sz() const { return log2sz_; }
     unsigned index() const { return index_; }
     explicit operator bool() const { return log2sz_ != 3; }
     Container operator++() {

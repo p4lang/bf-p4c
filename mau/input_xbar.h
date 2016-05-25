@@ -5,6 +5,8 @@
 #include "ir/ir.h"
 
 class PhvInfo;
+class IXBarRealign;
+struct TableResourceAlloc;
 
 struct IXBar {
     enum {
@@ -45,6 +47,7 @@ struct IXBar {
     Alloc2D<cstring, HASH_TABLES, HASH_SINGLE_BITS>     hash_single_bit_use;
     unsigned                                    hash_single_bit_inuse[HASH_SINGLE_BITS] = { 0 };
     Alloc1D<cstring, HASH_GROUPS>                       hash_group_use;
+    friend class IXBarRealign;
 
  public:
     /* IXbar::Use tracks the input xbar use of a single table */
@@ -98,6 +101,9 @@ struct IXBar {
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_alloc, Use &gw_alloc);
     void update(cstring name, const Use &alloc);
+    void update(cstring name, const TableResourceAlloc *alloc);
+    void update(const IR::MAU::Table *tbl) {
+        if (tbl->resources) update(tbl->name, tbl->resources); }
     friend std::ostream &operator<<(std::ostream &, const IXBar &);
     const Loc *findExactByte(cstring name, int byte) const {
         for (auto &p : Values(exact_fields.equal_range(name)))
