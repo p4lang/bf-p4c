@@ -414,23 +414,26 @@ void InputXbar::write_regs() {
             bool hi_enable = false;
             switch (input.what->reg.size) {
             case 8:
-                word_group = (input.what->reg.index-FIRST_8BIT_PHV) / 16U;
-                word_index = (input.what->reg.index-FIRST_8BIT_PHV) % 16U;
+                word_group = (input.what->reg.index-FIRST_8BIT_PHV) / 8U;
+                word_index = (input.what->reg.index-FIRST_8BIT_PHV) % 8U
+                           + (word_group & 4) * 2;
                 swizzle_mask = 0;
                 break;
             case 16:
-                word_group = (input.what->reg.index-FIRST_16BIT_PHV) / 24U;
-                word_index = (input.what->reg.index-FIRST_16BIT_PHV) % 24U + 16;
+                word_group = (input.what->reg.index-FIRST_16BIT_PHV) / 12;
+                word_index = (input.what->reg.index-FIRST_16BIT_PHV) % 12 + 16
+                           + (word_group & 4) * 3;
                 swizzle_mask = 1;
                 break;
             case 32:
-                word_group = (input.what->reg.index / 8U) % 4U;
+                word_group = input.what->reg.index / 8U;
                 word_index = input.what->reg.index % 8U;
-                hi_enable = input.what->reg.index >= 32;
+                hi_enable = word_group & 4;
                 swizzle_mask = 3;
                 break;
             default:
                 assert(0); }
+            word_group &= 3;
             unsigned phv_byte = input.what->lo/8U;
             unsigned phv_size = input.what->reg.size/8U;
             for (unsigned byte = input.lo/8U; byte <= input.hi/8U; byte++, phv_byte++) {

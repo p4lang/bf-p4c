@@ -41,7 +41,6 @@ dileep11.p4 mismatch
 dileep12.p4 mismatch
 selector1.p4 mismatch
 test_config_100_hash_action.p4 mismatch
-test_config_102_clone.p4 mismatch
 test_config_103_first_phase_0.p4 mismatch
 test_config_10_new_crossbar_allocation.p4 tfas
 test_config_13_first_selection.p4 compile
@@ -99,12 +98,9 @@ test_config_23_same_container_modified.p4 mismatch
 test_config_2_action_data_table_sizing.p4 mismatch
 test_config_45_action_data_immediate_param_and_constant.p4 mismatch
 test_config_48_action_data_bit_masked_set.p4 mismatch
-test_config_6_sram_and_tcam_allocation.p4 mismatch
 test_config_78_tcam_with_220_bits_high_nibble_and_version.p4 mismatch
 test_config_91_gateway_with_split_table.p4 mismatch
-test_config_98_multiple_control_flow.p4 mismatch
 test_config_99_share_exact_match_key.p4 mismatch
 test_config_9_no_ternary_indirection.p4 mismatch
-test_tp_1_one_table_spill.p4 mismatch
 vk_basic_ipv4_20150706.p4 mismatch
 vk_basic_ipv4_subset.p4 mismatch
