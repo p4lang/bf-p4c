@@ -218,7 +218,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 8192;
         default_action = NoAction();
-        @name("some_action_profile") implementation = ActionSelector(HashAlgorithm.random, 32w512, 32w72);
+        @name("some_action_profile") implementation = action_selector(HashAlgorithm.random, 32w512, 32w72);
     }
     apply {
         test_select.apply();

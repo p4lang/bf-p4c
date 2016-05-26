@@ -141,7 +141,9 @@ cpplint_FILES += $(tofino_backend_SOURCES)
 -include $(srcdir)/%reldir%/v1_2_tests.am
 -include $(srcdir)/%reldir%/v1to12tests.am
 -include $(srcdir)/%reldir%/bmv2tests.am
+#ifeq ($(MAKECMDGOALS),check-tofino-newpa)
 #-include $(srcdir)/%reldir%/newpa-tofinotests.am
+#endif
 
 
 $(srcdir)/tofinotests.am: \

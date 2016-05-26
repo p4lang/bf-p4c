@@ -51,38 +51,38 @@ extern Checksum16 {
 }
 
 enum CounterType {
-    Packets,
-    Bytes,
-    Both
+    packets,
+    bytes,
+    packets_and_bytes
 }
 
-extern Counter {
-    Counter(bit<32> size, CounterType type);
-    void increment(in bit<32> index);
+extern counter {
+    counter(bit<32> size, CounterType type);
+    void count(in bit<32> index);
 }
 
-extern DirectCounter {
-    DirectCounter(CounterType type);
+extern direct_counter {
+    direct_counter(CounterType type);
 }
 
-extern Meter {
-    Meter(bit<32> size, CounterType type);
-    void meter<T>(in bit<32> index, out T result);
+extern meter {
+    meter(bit<32> size, CounterType type);
+    void execute_meter<T>(in bit<32> index, out T result);
 }
 
-extern DirectMeter<T> {
-    DirectMeter(CounterType type);
+extern direct_meter<T> {
+    direct_meter(CounterType type);
     void read(out T result);
 }
 
-extern Register<T> {
-    Register(bit<32> size);
+extern register<T> {
+    register(bit<32> size);
     void read(out T result, in bit<32> index);
     void write(in bit<32> index, in T value);
 }
 
-extern ActionProfile {
-    ActionProfile(bit<32> size);
+extern action_profile {
+    action_profile(bit<32> size);
 }
 
 enum HashAlgorithm {
@@ -92,8 +92,8 @@ enum HashAlgorithm {
     identity
 }
 
-extern ActionSelector {
-    ActionSelector(HashAlgorithm algorithm, bit<32> size, bit<32> outputWidth);
+extern action_selector {
+    action_selector(HashAlgorithm algorithm, bit<32> size, bit<32> outputWidth);
 }
 
 parser Parser<H, M>(packet_in b, out H parsedHdr, inout M meta, inout standard_metadata_t standard_metadata);
@@ -277,9 +277,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     action NoAction_6() {
     }
-    Counter(32w16384, CounterType.Packets) @name("simple_stats") simple_stats_0;
+    counter(32w16384, CounterType.packets) @name("simple_stats") simple_stats_0;
     @name("count_it") action count_it() {
-        simple_stats_0.increment((bit<32>)hdr.pkt.field_h_16);
+        simple_stats_0.count((bit<32>)hdr.pkt.field_h_16);
     }
     @name("do_nothing") action do_nothing() {
     }

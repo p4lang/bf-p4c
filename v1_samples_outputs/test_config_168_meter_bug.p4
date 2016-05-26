@@ -174,7 +174,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    DirectMeter<bit<8>>(CounterType.Bytes) @name("exm_meter2") exm_meter2;
+    direct_meter<bit<8>>(CounterType.bytes) @name("exm_meter2") exm_meter2;
     @name("action_0") action action_0() {
         hdr.ipv4.ttl = 8w4;
     }

@@ -259,7 +259,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 2048;
         default_action = NoAction();
-        @name("indirect_action_profile") implementation = ActionProfile(32w2048);
+        @name("indirect_action_profile") implementation = action_profile(32w2048);
     }
     apply {
         if (hdr.ipv4.isValid()) {
