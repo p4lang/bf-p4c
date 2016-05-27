@@ -1,7 +1,7 @@
 #include <assert.h>
 #include "ir/ir.h"
 #include "ir/dbprint.h"
-#include "frontends/p4v1/inline_control_flow.h"
+#include "frontends/p4-14/inline_control_flow.h"
 #include "common/name_gateways.h"
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/methodInstance.h"
