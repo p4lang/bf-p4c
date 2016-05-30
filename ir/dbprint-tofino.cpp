@@ -10,6 +10,8 @@ void IR::MAU::Table::dbprint(std::ostream &out) const {
     out << "table " << name;
     if (logical_id >= 0)
         out << '[' << gress << ' ' << hex(logical_id) << ']';
+    if (dbgetflags(out) & Brief)
+        return;
     for (auto &gw : gateway_rows) {
         out << endl << "gw: ";
         if (gw.first)
@@ -68,7 +70,10 @@ void IR::Tofino::ParserMatch::dbprint(std::ostream &out) const {
 }
 
 void IR::Tofino::ParserState::dbprint(std::ostream &out) const {
-    out << "parser " << name << ':' << indent;
+    out << "parser " << name;
+    if (dbgetflags(out) & Brief)
+        return;
+    out << ':' << indent;
     if (!select.empty()) {
         out << endl << "select(" << setprec(Prec_Low);
         const char *sep = "";
@@ -95,7 +100,10 @@ void IR::Tofino::Parser::dbprint(std::ostream &out) const {
 }
 
 void IR::Tofino::Deparser::dbprint(std::ostream &out) const {
-    out << "deparser:" << indent;
+    out << gress << " deparser";
+    if (dbgetflags(out) & Brief)
+        return;
+    out << ':' << indent;
     for (auto st : emits)
         out << endl << *st;
     if (egress_port)

@@ -7,20 +7,19 @@
 Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
     auto rv = Inspector::init_apply(root);
     conflict.clear();
+    uses.clear();
     return rv;
 }
 
 void FieldDefUse::check_conflicts(const info &read, int when) {
     int firstdef = INT_MAX;
-    for (auto def : read.def) {
-        if (!def) firstdef = -1;
-        else if (def->stage() < firstdef)
-            firstdef = def->stage(); }
+    for (auto def : read.def)
+        firstdef = std::min(firstdef, def.first->stage());
     for (auto &other : Values(defuse)) {
         if (other.field == read.field) continue;
         for (auto use : other.use) {
-            int use_when = use ? use->stage() : INT_MAX;
-            if (use_when > firstdef && use_when <= when)
+            int use_when = use.first->stage();
+            if (use_when >= firstdef && use_when <= when)
                 conflict(read.field->id, other.field->id) = true; } }
 }
 
@@ -31,58 +30,58 @@ FieldDefUse::info &FieldDefUse::field(const PhvInfo::Info *f) {
     return info;
 }
 
-void FieldDefUse::read(const PhvInfo::Info *f, const IR::MAU::Table *table) {
+void FieldDefUse::read(const PhvInfo::Info *f, const IR::Tofino::Unit *unit, const IR::Expression *e) {
     if (!f) return;
     auto &info = field(f);
-    LOG3("FieldDefUse(" << (void *)this << "): " << (table ? "table " : "deparser ") <<
-         (table ? table->name : "") << " reading " << f->name);
+    LOG3("FieldDefUse(" << (void *)this << "): " << DBPrint::Brief << *unit <<
+         " reading " << f->name);
     info.use.clear();
-    info.use.insert(table);
-    check_conflicts(info, table ? table->stage() : INT_MAX);
+    info.use.emplace(unit, e);
+    check_conflicts(info, unit->stage());
+    for (auto def : info.def)
+        if (def.second != e)
+            uses[def.second].emplace(unit, e);
 }
-void FieldDefUse::read(const IR::HeaderRef *hr, const IR::MAU::Table *table) {
+void FieldDefUse::read(const IR::HeaderRef *hr, const IR::Tofino::Unit *unit, const IR::Expression *e) {
     if (!hr) return;
     for (int id : Range(*phv.header(hr)))
-        read(phv.field(id), table);
-    read(phv.field(hr->toString() + ".$valid"), table);
+        read(phv.field(id), unit, e);
+    read(phv.field(hr->toString() + ".$valid"), unit, e);
 }
-void FieldDefUse::write(const PhvInfo::Info *f, const IR::MAU::Table *table) {
+void FieldDefUse::write(const PhvInfo::Info *f, const IR::Tofino::Unit *unit, const IR::Expression *e) {
     if (!f) return;
     auto &info = field(f);
-    LOG3("FieldDefUse(" << (void *)this << "): " << (table ? "table " : "parser ") <<
-         (table ? table->name : "") << " writing " << f->name);
-    info.def.clear();
-    info.def.insert(table);
-    if (!table) {
-        // parser can't rewrite PHV (it ors), so need to treat it as a read too
+    LOG3("FieldDefUse(" << (void *)this << "): " << DBPrint::Brief << *unit <<
+         " writing " << f->name);
+    if (unit->is<IR::Tofino::ParserState>()) {
+        // parser can't rewrite PHV (it ors), so need to treat it as a read for conflicts, but
+        // we don't mark it as a use of previous writes, and don't clobber those previous writes.
         info.use.clear();
-        info.use.insert(table);
-        check_conflicts(info, -1); }
+        info.use.emplace(unit, e);
+        check_conflicts(info, unit->stage());
+    } else {
+        info.def.clear(); }
+    info.def.emplace(unit, e);
+    uses[e];
 }
-void FieldDefUse::write(const IR::HeaderRef *hr, const IR::MAU::Table *table) {
+void FieldDefUse::write(const IR::HeaderRef *hr, const IR::Tofino::Unit *unit, const IR::Expression *e) {
     if (!hr) return;
     for (int id : Range(*phv.header(hr)))
-        write(phv.field(id), table);
-    write(phv.field(hr->toString() + ".$valid"), table);
+        write(phv.field(id), unit, e);
+    write(phv.field(hr->toString() + ".$valid"), unit, e);
 }
 
 bool FieldDefUse::preorder(const IR::Expression *e) {
     auto *f = phv.field(e);
     auto *hr = e->to<IR::HeaderRef>();
     if (!f && !hr) return true;
-    if (auto table = findContext<IR::MAU::Table>()) {
-        if (isWrite()) {
-            write(f, table);
-            write(hr, table);
+    if (auto unit = findContext<IR::Tofino::Unit>()) {
+        if (unit->is<IR::Tofino::ParserState>() || isWrite()) {
+            write(f, unit, e);
+            write(hr, unit, e);
         } else {
-            read(f, table);
-            read(hr, table); }
-    } else if (findContext<IR::Tofino::ParserState>()) {
-        write(f, nullptr);
-        write(hr, nullptr);
-    } else if (findContext<IR::Tofino::Deparser>()) {
-        read(f, nullptr);
-        read(hr, nullptr);
+            read(f, unit, e);
+            read(hr, unit, e); }
     } else {
         assert(0); }
     return false;
@@ -97,23 +96,28 @@ void FieldDefUse::flow_merge(Visitor &a_) {
         info.use.insert(i.use.begin(), i.use.end()); }
 }
 
+std::ostream &operator<<(std::ostream &out, const FieldDefUse::info &i) {
+    out << DBPrint::Brief;
+    out << i.field->name << ": def:";
+    const char *sep = "";
+    for (auto u : i.def) {
+        out << sep << *u.first;
+        sep = ","; }
+    out << " use:";
+    sep = "";
+    for (auto u : i.use) {
+        out << sep << *u.first;
+        sep = ","; }
+    out << std::endl;
+    out << DBPrint::Reset;
+    return out;
+}
+void dump(const FieldDefUse::info &a) { std::cout << a; }
+
 std::ostream &operator<<(std::ostream &out, const FieldDefUse &a) {
-    for (auto &i : Values(a.defuse)) {
-        out << i.field->name << ": def:";
-        const char *sep = "";
-        for (auto t : i.def) {
-            out << sep << (t ? t->name : "<init>");
-            if (t && t->logical_id >= 0)
-                out << '(' << t->gress << ' ' << hex(t->logical_id) << ')';
-            sep = ","; }
-        out << " use:";
-        sep = "";
-        for (auto t : i.use) {
-            out << sep << (t ? t->name : "<fini>");
-            if (t && t->logical_id >= 0)
-                out << '(' << t->gress << ' ' << hex(t->logical_id) << ')';
-            sep = ","; }
-        out << std::endl; }
+    for (auto &i : Values(a.defuse))
+        out << i;
+    out << DBPrint::Brief;
     unsigned maxw = 0;
     for (unsigned i = 0; i < a.phv.num_fields(); i++) {
         unsigned sz = a.phv.field(i)->name.size();
@@ -129,8 +133,10 @@ std::ostream &operator<<(std::ostream &out, const FieldDefUse &a) {
         for (unsigned j = 0; j <= i; j++)
             out << (a.conflict[i][j] ? '1' : '0');
         out << std::endl; }
+    out << DBPrint::Reset;
     return out;
 }
+void dump(const FieldDefUse &a) { std::cout << a; }
 
 struct code { int id; };
 std::ostream &operator<<(std::ostream &out, const code &c) {

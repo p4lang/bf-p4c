@@ -16,7 +16,7 @@ class ParserMatch {
 #end
 }
 
-class ParserState {
+class ParserState : Unit {
     cstring                     name;
     inline Vector<Expression>   select;
     inline Vector<ParserMatch>  match;
@@ -27,6 +27,7 @@ class ParserState {
     ParserState(cstring n, const std::initializer_list<const Expression *> &sel,
                 const std::initializer_list<const ParserMatch *> &m)
     : name(n), select(sel), match(m) {}
+    int stage() const override { return -1; }
 #end
     toString { return name; }
     visit_children {
@@ -50,13 +51,14 @@ class Parser {
     toString { return gress ? "egress parser" : "ingress parser"; }
 }
 
-class Deparser {
+class Deparser : Unit {
     gress_t                     gress;
     inline Vector<Expression>   emits;
     NullOK Expression           egress_port;
 #noconstructor
 #emit
     Deparser(gress_t gr, const Parser *s);
+    int stage() const override { return 999999; /* assumed larger than the number of stages */ }
 #end
 #apply
     toString { return gress ? "egress deparser" : "ingress deparser"; }

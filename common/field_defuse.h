@@ -8,11 +8,16 @@
 #include "tofino/phv/phv_fields.h"
 
 class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
-    const PhvInfo       &phv;
-    SymBitMatrix        &conflict;
+ public:
+    typedef std::pair<const IR::Tofino::Unit *, const IR::Expression*>  locpair;
+
+ private:
+    const PhvInfo                               &phv;
+    SymBitMatrix                                &conflict;
+    map<const IR::Expression *, set<locpair>>   &uses;
     struct info {
-        const PhvInfo::Info             *field = 0;
-        set<const IR::MAU::Table *>     def, use;
+        const PhvInfo::Info     *field = 0;
+        set<locpair>            def, use;
     };
     std::unordered_map<int, info> defuse;
     // class Init;
@@ -20,10 +25,10 @@ class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
     profile_t init_apply(const IR::Node *root) override;
     void end_apply(const IR::Node *root) override;
     void check_conflicts(const info &read, int when);
-    void read(const PhvInfo::Info *, const IR::MAU::Table *);
-    void read(const IR::HeaderRef *, const IR::MAU::Table *);
-    void write(const PhvInfo::Info *, const IR::MAU::Table *);
-    void write(const IR::HeaderRef *, const IR::MAU::Table *);
+    void read(const PhvInfo::Info *, const IR::Tofino::Unit *, const IR::Expression *);
+    void read(const IR::HeaderRef *, const IR::Tofino::Unit *, const IR::Expression *);
+    void write(const PhvInfo::Info *, const IR::Tofino::Unit *, const IR::Expression *);
+    void write(const IR::HeaderRef *, const IR::Tofino::Unit *, const IR::Expression *);
     info &field(const PhvInfo::Info *);
     info &field(int id) { return field(phv.field(id)); }
     void access_field(const PhvInfo::Info *);
@@ -34,12 +39,16 @@ class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
     void flow_merge(Visitor &) override;
     FieldDefUse(const FieldDefUse &) = default;
     FieldDefUse(FieldDefUse &&) = default;
+    friend std::ostream &operator<<(std::ostream &, const FieldDefUse::info &);
+    friend void dump(const FieldDefUse::info &);
     friend std::ostream &operator<<(std::ostream &, const FieldDefUse &);
 
  public:
     explicit FieldDefUse(const PhvInfo &p)
-    : phv(p), conflict(*new SymBitMatrix) { visitDagOnce = false; }
+    : phv(p), conflict(*new SymBitMatrix), uses(*new std::remove_reference<decltype(uses)>::type)
+    { visitDagOnce = false; }
     const SymBitMatrix &conflicts() { return conflict; }
+    const set<locpair> &getUses(const IR::Expression *e) const { return uses.at(e); }
 };
 
 #endif /* _FIELD_DEFUSE_H_ */

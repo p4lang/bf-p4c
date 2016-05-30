@@ -9,6 +9,7 @@
 #include "frontends/p4-14/typecheck.h"
 #include "tofinoOptions.h"
 #include "tofino/common/extract_maupipe.h"
+#include "tofino/common/elim_unused.h"
 #include "tofino/common/field_defuse.h"
 #include "tofino/mau/asm_output.h"
 #include "tofino/mau/gateway.h"
@@ -107,6 +108,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new ComputeShifts,
         new DumpPipe("Before PA alloc"),
         &defuse,
+        new ElimUnused(phv, defuse),
     };
     backend.setStopOnError(true);
     if (LOGGING(4))

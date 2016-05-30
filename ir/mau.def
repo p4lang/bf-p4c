@@ -11,7 +11,7 @@ namespace MAU {
  * unit for tofino; there are 16 such 'logical' tables available in
  * each stage, which will run simultaneously and have their results
  * predicated by the predicate mask calculated from the next tables */
-class Table {
+class Table : Tofino::Unit {
     cstring                                     name;
     gress_t                                     gress;
     int                                         logical_id = -1;
@@ -57,10 +57,10 @@ class Table {
     const TableResourceAlloc            *resources = nullptr;
 
     Table(cstring n, gress_t gr, const IR::V1Table *t)
-    : Node(t->srcInfo), name(n), gress(gr), match_table(t) {}
+    : Tofino::Unit(t->srcInfo), name(n), gress(gr), match_table(t) {}
     Table(cstring n, gress_t gr, const Expression *gw)
-    : Node(gw->srcInfo), name(n), gress(gr), gateway_rows{ std::make_pair(gw, "true"),
-                                                           std::make_pair(nullptr, "false") } {}
+    : Tofino::Unit(gw->srcInfo), name(n), gress(gr),
+      gateway_rows{ std::make_pair(gw, "true"), std::make_pair(nullptr, "false") } {}
 
     int logical_order() const { return logical_id + gress * 4096; }
     Table *clone_rename(const char *ext) const {
@@ -70,7 +70,8 @@ class Table {
         return rv; }
     bool operator==(const Table &a) const override;
     bool uses_gateway() const { return !gateway_rows.empty(); }
-    int stage() const { return logical_id < 0 ? -1 : logical_id / StageUse::MAX_LOGICAL_IDS; }
+    int stage() const override {
+        return logical_id < 0 ? -1 : logical_id / StageUse::MAX_LOGICAL_IDS; }
 #end
     validate {
         std::set<cstring> gw_next;

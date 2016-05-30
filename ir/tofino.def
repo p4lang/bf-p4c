@@ -44,6 +44,20 @@ class Tofino::Pipe {
                 v.visit(th.deparser, "deparser"); } } }
 }
 
+abstract Tofino::Unit {
+    /* Abstract base class for any of
+       - parser state
+       - mau logical table
+       - deparser
+       A packet running through a tofino pipe executes a sequence of Units in order;
+       each Unit completes before the next executes.  All accesses of PHV containers
+       are associated with a particular Unit.  */
+#emit
+    Unit() {}
+    virtual int stage() const = 0;
+#end
+}
+
 class InstanceRef : HeaderRef {
     HeaderOrMetadata            obj;
     inline NameMap<InstanceRef> nested;
