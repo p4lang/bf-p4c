@@ -109,6 +109,8 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new DumpPipe("Before PA alloc"),
         &defuse,
         new ElimUnused(phv, defuse),
+        new DumpPipe("After ElimUnused"),
+        new PhvInfo::SetReferenced(phv),
     };
     backend.setStopOnError(true);
     if (LOGGING(4))
@@ -135,6 +137,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new SplitPhvUse(phv),     // depends on SplitExtractEmit
         new DumpPipe("Final table graph"),
         new CheckTableNameDuplicate,
+        new PhvInfo::SetReferenced(phv),
         &summary,
         new VisitFunctor([&summary]() { if (verbose) std::cout << summary; }),
         &mauasm

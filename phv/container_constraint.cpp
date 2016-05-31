@@ -33,5 +33,12 @@ bool ContainerConstraint::preorder(const IR::Primitive *prim) {
 bool ContainerConstraint::preorder(const IR::Tofino::Deparser *dp) {
   std::list<PHV::Bit> bits = GetBits(dp->egress_port);
   constraints_.SetEqual(bits.cbegin(), bits.cend(), Constraints::CONTAINER);
+  auto ep_field = phv.field(dp->egress_port);
+  for (auto &f : phv) {
+    if (!f.referenced) continue;
+    if (&f == ep_field) continue;
+    for (auto b : bits)
+      for (int i = 0; i < f.size; ++i)
+        constraints_.SetContainerConflict(b, f.bit(i)); }
   return true;
 }

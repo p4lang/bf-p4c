@@ -4,6 +4,7 @@
 #include "phv.h"
 #include "ir/ir.h"
 #include "lib/map.h"
+#include "lib/range.h"
 #include "tofino/ir/thread_visitor.h"
 
 class PhvInfo : public Inspector {
@@ -24,6 +25,7 @@ class PhvInfo : public Inspector {
         gress_t         gress;
         int             size;
         int             offset;  // offset lsb from lsb (last) bit of container
+        bool            referenced;
         bool            metadata;
         bool            pov;
         set<constraint> constraints;
@@ -49,6 +51,15 @@ class PhvInfo : public Inspector {
             int         lo, hi;         // range of bits within a container or field
             int size() const { return hi - lo + 1; }
         };
+    };
+    class SetReferenced : public Inspector {
+        PhvInfo &self;
+        bool preorder(const IR::Expression *e) override;
+        profile_t init_apply(const IR::Node *root) override {
+            for (auto &field : self) field.referenced = false;
+            return Inspector::init_apply(root); }
+     public:
+        explicit SetReferenced(PhvInfo &phv) : self(phv) {}
     };
 
  private:
@@ -83,6 +94,7 @@ class PhvInfo : public Inspector {
     const Info *field(const IR::Member *, Info::bitrange *bits = 0) const;
     const Info *field(const IR::HeaderSliceRef *, Info::bitrange *bits = 0) const;
     Info *field(int idx) { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
+    Info *field(cstring name) { return all_fields.count(name) ? &all_fields.at(name) : 0; }
     Info *field(const IR::Expression *e, Info::bitrange *bits = 0) {
         return const_cast<Info *>(const_cast<const PhvInfo *>(this)->field(e, bits)); }
     Info *field(const IR::Member *fr, Info::bitrange *bits = 0) {

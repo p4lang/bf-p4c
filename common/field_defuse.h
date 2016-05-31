@@ -7,7 +7,7 @@
 #include "lib/ltbitmatrix.h"
 #include "tofino/phv/phv_fields.h"
 
-class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
+class FieldDefUse : public ControlFlowVisitor, public Inspector, P4WriteContext {
  public:
     typedef std::pair<const IR::Tofino::Unit *, const IR::Expression*>  locpair;
 
@@ -37,6 +37,8 @@ class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
     bool preorder(const IR::Expression *e) override;
     FieldDefUse *clone() const override { return new FieldDefUse(*this); }
     void flow_merge(Visitor &) override;
+    bool filter_join_point(const IR::Node *n) override {
+        return !n->is<IR::Tofino::ParserState>(); }
     FieldDefUse(const FieldDefUse &) = default;
     FieldDefUse(FieldDefUse &&) = default;
     friend std::ostream &operator<<(std::ostream &, const FieldDefUse::info &);
@@ -46,7 +48,7 @@ class FieldDefUse : public ControlFlowVisitor, Inspector, P4WriteContext {
  public:
     explicit FieldDefUse(const PhvInfo &p)
     : phv(p), conflict(*new SymBitMatrix), uses(*new std::remove_reference<decltype(uses)>::type)
-    { visitDagOnce = false; }
+    { joinFlows = true; visitDagOnce = false; }
     const SymBitMatrix &conflicts() { return conflict; }
     const set<locpair> &getUses(const IR::Expression *e) const { return uses.at(e); }
 };

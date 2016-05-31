@@ -60,7 +60,7 @@ void PopulatePhvInfo(SolverInterface &solver, PhvInfo *phv_info) {
 void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
   // TODO: The code below can be written more elegantly.
   pipe->apply(MauGroupConstraint(constraints_));
-  pipe->apply(ContainerConstraint(constraints_));
+  pipe->apply(ContainerConstraint(phv, constraints_));
   pipe->apply(ByteConstraint(phv, constraints_));
   pipe->apply(OffsetConstraint(constraints_));
   pipe->apply(ThreadConstraint(phv, constraints_));

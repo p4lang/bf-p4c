@@ -5,6 +5,20 @@
 #include "lib/range.h"
 #include "base/logging.h"
 
+bool PhvInfo::SetReferenced::preorder(const IR::Expression *e) {
+    if (auto *field = self.field(e)) {
+        field->referenced = true;
+        if (auto *povbit = self.field(field->header() + ".$valid"))
+            povbit->referenced = true;
+        return false; }
+    if (auto *hr = e->to<IR::HeaderRef>()) {
+        for (auto id : Range(*self.header(hr)))
+            self.field(id)->referenced = true;
+        if (auto *povbit = self.field(hr->toString() + ".$valid"))
+            povbit->referenced = true;
+        return false; }
+    return true;
+}
 
 void PhvInfo::add(cstring name, int size, int offset, bool meta, bool pov) {
     LOG3("PhvInfo adding " << (meta ? "metadata" : "header") << " field " << name <<
