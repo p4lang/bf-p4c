@@ -12,7 +12,7 @@ class IXBarRealign::GetCurrentUse : public MauInspector {
         self.stage[stage].update(t);
         return true; }
  public:
-    GetCurrentUse(IXBarRealign &s) : self(s) {}
+    explicit GetCurrentUse(IXBarRealign &s) : self(s) {}
 };
 
 IXBarRealign::Realign::Realign(const PhvInfo &phv, int stage, const IXBar &ixbar) {

@@ -40,7 +40,7 @@ void Constraints::SetEqualByte(const PHV::Byte &byte) {
     while (domain.back() > bit_offset_range_.at(bit).second) domain.pop_back();
     bit_offset_range_.erase(bit);
   }
-  CHECK(bit_offset_domain_.count(bit) == 0);
+  CHECK(!bit_offset_domain_.count(bit));
   // TODO: Change this to compiler error message.
   CHECK(domain.size() > 0) << ": No valid offset found for " << bit;
   LOG2("Setting bit-offset domain for " << bit.name());

@@ -30,7 +30,8 @@ FieldDefUse::info &FieldDefUse::field(const PhvInfo::Info *f) {
     return info;
 }
 
-void FieldDefUse::read(const PhvInfo::Info *f, const IR::Tofino::Unit *unit, const IR::Expression *e) {
+void FieldDefUse::read(const PhvInfo::Info *f, const IR::Tofino::Unit *unit,
+                       const IR::Expression *e) {
     if (!f) return;
     auto &info = field(f);
     LOG3("FieldDefUse(" << (void *)this << "): " << DBPrint::Brief << *unit <<
@@ -42,13 +43,15 @@ void FieldDefUse::read(const PhvInfo::Info *f, const IR::Tofino::Unit *unit, con
         if (def.second != e)
             uses[def.second].emplace(unit, e);
 }
-void FieldDefUse::read(const IR::HeaderRef *hr, const IR::Tofino::Unit *unit, const IR::Expression *e) {
+void FieldDefUse::read(const IR::HeaderRef *hr, const IR::Tofino::Unit *unit,
+                       const IR::Expression *e) {
     if (!hr) return;
     for (int id : Range(*phv.header(hr)))
         read(phv.field(id), unit, e);
     read(phv.field(hr->toString() + ".$valid"), unit, e);
 }
-void FieldDefUse::write(const PhvInfo::Info *f, const IR::Tofino::Unit *unit, const IR::Expression *e) {
+void FieldDefUse::write(const PhvInfo::Info *f, const IR::Tofino::Unit *unit,
+                        const IR::Expression *e) {
     if (!f) return;
     auto &info = field(f);
     LOG3("FieldDefUse(" << (void *)this << "): " << DBPrint::Brief << *unit <<
@@ -64,7 +67,8 @@ void FieldDefUse::write(const PhvInfo::Info *f, const IR::Tofino::Unit *unit, co
     info.def.emplace(unit, e);
     uses[e];
 }
-void FieldDefUse::write(const IR::HeaderRef *hr, const IR::Tofino::Unit *unit, const IR::Expression *e) {
+void FieldDefUse::write(const IR::HeaderRef *hr, const IR::Tofino::Unit *unit,
+                        const IR::Expression *e) {
     if (!hr) return;
     for (int id : Range(*phv.header(hr)))
         write(phv.field(id), unit, e);
