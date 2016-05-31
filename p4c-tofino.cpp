@@ -46,14 +46,14 @@ int main(int ac, char **av) {
 
     bool v1 = options.isv1();
     if (v1 && !options.v12_path) {
-        auto program = parse_p4v1_file(options, in);
+        auto program = parse_P4_14_file(options, in);
         options.closeInput(in);
         PassManager fe = {
             new P4::ConstantFolding(nullptr, nullptr),
             new CheckHeaderTypes,
             new HeaderTypeMaxLengthCalculator,
             new TypeCheck,
-            new P4v1::InlineActions,
+            new P4_14::InlineActions,
         };
         fe.setName("V1FrontEnd");
         fe.addDebugHook(hook);
