@@ -136,7 +136,9 @@ public:
     std::vector<State *>                all;
     bitvec                              state_use[2];
     State::Ref                          start_state[2][4];
-    int                                 tcam_row_use[2];
+    int                                 priority[2][4] = {{0}};
+    int                                 pri_thresh[2][4] = { {3,3,3,3}, {3,3,3,3} };
+    int                                 tcam_row_use[2] = { 0 };
     Phv::Ref                            parser_error[2];
     std::vector<Phv::Ref>               multi_write, init_zero;
     bitvec                              phv_use[2], phv_allow_multi_write, phv_init_valid;

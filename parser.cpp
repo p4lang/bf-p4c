@@ -66,6 +66,25 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
                     for (int i = 0; i < 4; i++)
                         start_state[gress][i] = kv.value;
                 continue; }
+            if (kv.key == "priority" && (kv.value.type == tVEC || kv.value.type == tINT)) {
+                if (kv.value.type == tVEC) {
+                    for (int i = 0; i < 4 && i < kv.value.vec.size; i++)
+                        if (CHECKTYPE(kv.value[i], tINT))
+                            priority[gress][i] = kv.value[i].i;
+                } else
+                    for (int i = 0; i < 4; i++)
+                        priority[gress][i] = kv.value.i;
+                continue; }
+            if (kv.key == "priority_threshold" &&
+                (kv.value.type == tVEC || kv.value.type == tINT)) {
+                if (kv.value.type == tVEC) {
+                    for (int i = 0; i < 4 && i < kv.value.vec.size; i++)
+                        if (CHECKTYPE(kv.value[i], tINT))
+                            pri_thresh[gress][i] = kv.value[i].i;
+                } else
+                    for (int i = 0; i < 4; i++)
+                        pri_thresh[gress][i] = kv.value.i;
+                continue; }
             if (kv.key == "parser_error") {
                 if (parser_error[gress].lineno >= 0) {
                     error(kv.key.lineno, "Multiple parser_error declarations");
@@ -190,8 +209,8 @@ template <class COMMON> void init_common_regs(Parser *p, COMMON &regs, gress_t g
         if (p->start_state[gress][i]) {
             regs.start_state.state[i] = p->start_state[gress][i]->stateno.word1;
             regs.enable.enable[i] = 1; }
-        regs.pri_start.pri[i] = 0;
-        regs.pri_thresh.pri[i] = 3; }
+        regs.pri_start.pri[i] = p->priority[gress][i];
+        regs.pri_thresh.pri[i] = p->pri_thresh[gress][i]; }
     regs.mode = 4;
     regs.max_iter.max = 128;
     if (p->parser_error[gress].lineno >= 0) {
