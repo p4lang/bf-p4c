@@ -186,10 +186,12 @@ void Parser::process() {
 
 template <class COMMON> void init_common_regs(Parser *p, COMMON &regs, gress_t gress) {
     // TODO: fixed config copied from compiler -- needs to be controllable
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < 4; i++) {
         if (p->start_state[gress][i]) {
             regs.start_state.state[i] = p->start_state[gress][i]->stateno.word1;
             regs.enable.enable[i] = 1; }
+        regs.pri_start.pri[i] = 0;
+        regs.pri_thresh.pri[i] = 3; }
     regs.mode = 4;
     regs.max_iter.max = 128;
     if (p->parser_error[gress].lineno >= 0) {
