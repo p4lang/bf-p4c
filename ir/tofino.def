@@ -53,7 +53,6 @@ abstract Tofino::Unit {
        each Unit completes before the next executes.  All accesses of PHV containers
        are associated with a particular Unit.  */
 #emit
-    Unit() {}
     virtual int stage() const = 0;
 #end
 }
