@@ -7,9 +7,9 @@ class ParserMatch {
     NullOK ParserState          next;
     NullOK ParserException      except;
 #noconstructor
-#emit
     ParserMatch(match_t v, const Vector<Expression> &e)
     : value(v), shift(-1), stmts(e), next(0), except(0) {}
+#emit
     ParserMatch(match_t v, int sh, const std::initializer_list<const Expression *> &st,
                 const ParserState *n, const ParserException *ex = nullptr)
     : value(v), shift(sh), stmts(st), next(n), except(ex) {}
@@ -21,14 +21,12 @@ class ParserState : Unit {
     inline Vector<Expression>   select;
     inline Vector<ParserMatch>  match;
 #noconstructor
-#emit
-    const IR::Node *p4state = 0; /* informational only! not visited or compared for equal */
-    explicit ParserState(const IR::Node *);
-    ParserState(cstring n, const std::initializer_list<const Expression *> &sel,
-                const std::initializer_list<const ParserMatch *> &m)
+    NullOK Node p4state = 0; /* informational only! not visited or compared for equal */
+    ParserState(Node n);
+    ParserState(cstring n, const std::initializer_list<Expression> &sel,
+                const std::initializer_list<ParserMatch> &m)
     : name(n), select(sel), match(m) {}
     int stage() const override { return -1; }
-#end
     toString { return name; }
     visit_children {
         select.visit_children(v);
@@ -44,9 +42,7 @@ class Parser {
     gress_t     gress;
     ParserState start;
 #noconstructor
-#emit
-    Parser(gress_t gr, const ParserState *s) : gress(gr), start(s) {}
-#end
+    Parser(gress_t gr, ParserState s) : gress(gr), start(s) {}
 #apply
     toString { return gress ? "egress parser" : "ingress parser"; }
 }
@@ -56,10 +52,8 @@ class Deparser : Unit {
     inline Vector<Expression>   emits;
     NullOK Expression           egress_port;
 #noconstructor
-#emit
-    Deparser(gress_t gr, const Parser *s);
+    Deparser(gress_t gr, Parser s);
     int stage() const override { return 999999; /* assumed larger than the number of stages */ }
-#end
 #apply
     toString { return gress ? "egress deparser" : "ingress deparser"; }
 }

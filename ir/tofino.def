@@ -20,15 +20,13 @@ inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
 class Tofino::Pipe {
     Metadata    standard_metadata; // not visited
 #noconstructor
-#emit
-    struct thread_t {
-        const Tofino::Parser    *parser;
-        const MAU::TableSeq     *mau;
-        const Tofino::Deparser  *deparser;
-        bool operator==(const thread_t &a) const {
-            return parser == a.parser && mau == a.mau && deparser == a.deparser; }
-    } thread[2] = { { nullptr, nullptr, nullptr } };  // INGRESS and EGRESS
-#end
+    class thread_t {
+        Tofino::Parser    parser = nullptr;
+        MAU::TableSeq     mau = nullptr;
+        Tofino::Deparser  deparser = nullptr;
+        operator== { return parser == a.parser && mau == a.mau && deparser == a.deparser; }
+    }
+    thread_t[2] thread = {};  // INGRESS and EGRESS
 #apply
     operator== { return standard_metadata == a.standard_metadata &&
                         thread[0] == a.thread[0] && thread[1] == a.thread[1]; }
@@ -52,18 +50,14 @@ abstract Tofino::Unit {
        A packet running through a tofino pipe executes a sequence of Units in order;
        each Unit completes before the next executes.  All accesses of PHV containers
        are associated with a particular Unit.  */
-#emit
     virtual int stage() const = 0;
-#end
 }
 
 class InstanceRef : HeaderRef {
     HeaderOrMetadata            obj;
     inline NameMap<InstanceRef> nested;
 #noconstructor
-#emit
-    InstanceRef(ID n, const Type *t);
-#end
+    InstanceRef(ID n, Type t);
     toString { return obj->name; }
     dbprint { out << obj; }
 }
@@ -71,21 +65,20 @@ class InstanceRef : HeaderRef {
 class HeaderSliceRef : Slice {
 #nodbprint
 #noconstructor
-#emit
-  HeaderSliceRef(Util::SourceInfo si, const IR::HeaderRef* header_ref,
+  HeaderSliceRef(Util::SourceInfo si, HeaderRef header_ref,
                  const int &msb, const int &lsb) :
-    Slice(si, header_ref, new IR::Constant(msb), new IR::Constant(lsb)) {
+    Slice(si, header_ref, new Constant(msb), new Constant(lsb)) {
     assert(lsb <= msb);
     type = Type_Bits::get(si, msb - lsb + 1); }
-  HeaderSliceRef(const Member *fr) :
+  HeaderSliceRef(Member fr) :
     Slice(fr->srcInfo, fr->expr, new Constant(fr->msb()), new Constant(fr->lsb())) {
     assert(fr->lsb() <= fr->msb());
     type = Type_Bits::get(fr->srcInfo, fr->msb() - fr->lsb() + 1); }
-  const HeaderRef* header_ref() const {
+  HeaderRef header_ref() const {
     return e0->to<const HeaderRef>(); }
-  vector<const Member*> fields() const {
+  vector<Member> fields() const {
     vector<const Member*> rv;
-    for (auto field : *header_ref()->type->to<IR::Type_StructLike>()->fields) {
+    for (auto field : *header_ref()->type->to<Type_StructLike>()->fields) {
       const IR::Member fr(srcInfo, field->type, header_ref(), field->name);
       if (fr.lsb() >= lsb() && fr.msb() <= msb())
         rv.push_back(new Member(fr));
@@ -94,5 +87,4 @@ class HeaderSliceRef : Slice {
   int offset_bits() const { return e2->to<const Constant>()->asInt(); }
   int lsb() const { return offset_bits(); }
   int msb() const { return offset_bits() + type->width_bits() - 1; }
-#end
 }
