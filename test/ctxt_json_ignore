@@ -1,3 +1,6 @@
+HashJsonNode
+# FIXME -- need to figure out what should be in HashJsonNode and implement it
+
 actions
 action_pack_format_map
 action_parameter_map

@@ -185,8 +185,12 @@ void AsmStage::output() {
         char buf[64];
         sprintf(buf, "regs.match_action_stage.%02x", i);
         TopLevel::all.reg_pipe.mau[i] = buf; }
-    *open_output("tbl-cfg") << '[' << &tbl_cfg << (options.match_compiler ? ",\n[] " : "")
-                            << ']' << std::endl;
+    auto json_out = open_output("tbl-cfg");
+    if (options.match_compiler)
+        *json_out << "{ \"ContextJsonNode\": ";
+    *json_out << '[' << &tbl_cfg << (options.match_compiler ? ",\n[] " : "") << ']' << std::endl;
+    if (options.match_compiler)
+        *json_out << '}' << std::endl;
     TopLevel::all.mem_pipe.mau.disable();
 }
 
