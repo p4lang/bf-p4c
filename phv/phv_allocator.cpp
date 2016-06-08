@@ -77,30 +77,40 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
   // Set MAU match xbar constraints.
   pipe->apply(MatchXbarConstraint(constraints_));
   pipe->apply(ParseGraphConstraint(constraints_));
-  for (auto &f1 : phv)
-    for (auto &f2 : phv)
-      if (conflict(f1.id, f2.id))
-        for (int b1 : Range(0, f1.size-1))
-          for (int b2 : Range(0, f2.size-1))
-            constraints_.SetBitConflict(f1.bit(b1), f2.bit(b2));
+  for (auto f1 = phv.begin(); f1 != phv.end(); ++f1) {
+    if (!f1->referenced) continue;
+    for (auto f2 = f1; ++f2 != phv.end();) {
+      if (!f2->referenced) continue;
+      if (conflict(f1->id, f2->id))
+        for (int b1 : Range(0, f1->size-1))
+          for (int b2 : Range(0, f2->size-1))
+            constraints_.SetBitConflict(f1->bit(b1), f2->bit(b2)); } }
 }
 
-bool PhvAllocator::Solve(const IR::Tofino::Pipe *, PhvInfo *phv_info, cstring opt) {
-  or_tools::Solver *solver;
-  if (opt == "min" || opt == "default") {
-    LOG1("Trying MIN_VALUE");
-    solver = new or_tools::MinValueSolver;
-  } else if (opt == "random") {
-    LOG1("Trying RANDOM");
-    solver = new or_tools::RandomValueSolver;
-  } else {
-    error("Unknown solver %s", opt);
-    return false; }
-  constraints_.SetConstraints(*solver);
+bool PhvAllocator::Solve(const IR::Tofino::Pipe *, PhvInfo *phv_info, StringRef opt) {
+  or_tools::Solver solver;
+  auto strategy = operations_research::Solver::ASSIGN_MIN_VALUE;
+  bool luby_restart = false;
+  int timeout = 5;
+  for (auto p : opt.split(',')) {
+    p = p.trim();
+    if (p == "min" || p == "default") {
+      LOG1("Trying MIN_VALUE");
+      strategy = operations_research::Solver::ASSIGN_MIN_VALUE;
+      luby_restart = false;
+    } else if (opt == "random") {
+      LOG1("Trying RANDOM");
+      strategy = operations_research::Solver::ASSIGN_RANDOM_VALUE;
+      luby_restart = true;
+    } else if (isdigit(*p)) {
+      timeout = atoi(p.p);
+    } else {
+      error("Unknown solver option %s", p); } }
+  constraints_.SetConstraints(solver);
   int count = 0;
   while (count < 20) {
-    if (true == solver->Solve()) {
-      PopulatePhvInfo(*solver, phv_info);
+    if (true == solver.Solve1(strategy, luby_restart, timeout)) {
+      PopulatePhvInfo(solver, phv_info);
       for (auto &field : *phv_info)
         std::sort(field.alloc.begin(), field.alloc.end(),
             [](const PhvInfo::Info::alloc_slice &a, const PhvInfo::Info::alloc_slice &b) -> bool {

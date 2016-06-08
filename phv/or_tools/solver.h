@@ -70,11 +70,10 @@ class Solver : public SolverInterface {
   // solution has been found.
   void allocation(const PHV::Bit &bit, PHV::Container *c, int *container_bit) override;
 
-  virtual bool Solve() = 0;
- protected:
   bool
   Solve1(operations_research::Solver::IntValueStrategy int_val,
-         const bool &is_luby_restart = true);
+         const bool &is_luby_restart = true,
+         int timeout = 5);
 
  private:
   std::vector<operations_research::IntVar*> GetIntVars() const;

@@ -16,7 +16,7 @@ class PhvAllocator {
  public:
   PhvAllocator(PhvInfo &phv, const IR::Tofino::Pipe *pipe, const SymBitMatrix &c)
   : phv(phv), conflict(c) { SetConstraints(pipe); }
-  bool Solve(const IR::Tofino::Pipe *pipe, PhvInfo *phv_info, cstring opt);
+  bool Solve(const IR::Tofino::Pipe *pipe, PhvInfo *phv_info, StringRef opt);
 
  private:
   void SetConstraints(const IR::Tofino::Pipe *pipe);

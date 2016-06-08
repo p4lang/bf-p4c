@@ -120,6 +120,8 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     if (LOGGING(4))
         backend.addDebugHook(debug_hook);
     maupipe = maupipe->apply(backend);
+    if (ErrorReporter::instance.getErrorCount() > 0)
+        return;
     if (options->phv_newalloc) {
         PhvAllocator phv_allocator(phv, maupipe, defuse.conflicts());
         CHECK(true == phv_allocator.Solve(maupipe, &phv, options->phv_newalloc));
@@ -134,6 +136,8 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         maupipe = maupipe
             ->apply(MauPhvConstraints(phv))
             ->apply(PHV::GreedyAlloc(phv, defuse.conflicts())); }
+    if (ErrorReporter::instance.getErrorCount() > 0)
+        return;
     PassManager post_phv_allocation_backend = {
         new IXBarRealign(phv),
         new SplitExtractEmit,

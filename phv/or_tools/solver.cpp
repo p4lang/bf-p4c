@@ -12,11 +12,11 @@ using operations_research::IntExpr;
 using operations_research::SearchMonitor;
 void Solver::SetEqualContainer(const std::set<PHV::Bit> &bits) {
   Container *c = new Container(MakeContainerInGroup(bits.begin()->name()));
-  LOG2("Setting equal container for " << bits.size() << " bits");
+  LOG4("Setting equal container for " << bits.size() << " bits");
   for (auto &b : bits) {
     if (bits_.count(b) == 0) bits_.insert(std::make_pair(b, Bit(b.name())));
     Bit &bit = bits_.at(b);
-    LOG2("Setting container for " << bit.name());
+    LOG5("Setting container for " << bit.name());
     bit.set_container(c);
   }
 }
@@ -29,7 +29,7 @@ Solver::SetEqualMauGroup(const std::set<PHV::Bit> &bits, const bool &is_t_phv) {
   for (auto &b : bits) {
     if (bits_.count(b) == 0) bits_.insert(std::make_pair(b, Bit(b.name())));
     Bit &bit = bits_.at(b);
-    LOG2("Setting group for " << bit.name() << " to " <<
+    LOG4("Setting group for " << bit.name() << " to " <<
            group->mau_group()->name());
     Container *container = bit.container();
     if (nullptr == container) {
@@ -58,7 +58,7 @@ void Solver::SetOffset(const PHV::Bit &pbit, const std::vector<int> &values) {
     }
     for (auto i : v) {
       if (true == bit.base_offset()->Contains(i)) {
-        LOG2("Removing " << i << " from domain of " << bit.base_offset());
+        LOG4("Removing " << i << " from domain of " << bit.base_offset());
         // At this point, bit cannot be allocated a base_offset from v. So,
         // remove v from the domain of bit.base_offset().
         bit.base_offset()->RemoveValue(i);
@@ -73,13 +73,13 @@ void Solver::SetOffset(const PHV::Bit &pbit, const int &min, const int &max) {
   if (nullptr != bit.base_offset()) {
     for (int i = 0; i < min - bit.relative_offset(); ++i) {
       if (bit.base_offset()->Contains(i)) {
-        LOG3("Remove " << i << " from domain of " << bit.base_offset());
+        LOG5("Remove " << i << " from domain of " << bit.base_offset());
         bit.base_offset()->RemoveValue(i);
       }
     }
     for (int i = max + 1 - bit.relative_offset(); i <= 31; ++i) {
       if (bit.base_offset()->Contains(i)) {
-        LOG3("Remove " << i << " from domain of " << bit.base_offset());
+        LOG5("Remove " << i << " from domain of " << bit.base_offset());
         bit.base_offset()->RemoveValue(i);
       }
     }
@@ -90,7 +90,7 @@ void Solver::SetOffset(const PHV::Bit &pbit, const int &min, const int &max) {
 
 void Solver::SetBitDistance(const PHV::Bit &pbit1, const PHV::Bit &pbit2,
                             const int &distance) {
-  LOG2("Setting bits " << pbit1 << " and " << pbit2 << " at distance " <<
+  LOG4("Setting bits " << pbit1 << " and " << pbit2 << " at distance " <<
          distance);
   Bit &bit1 = bits_.at(pbit1);
   Bit &bit2 = bits_.at(pbit2);
@@ -110,7 +110,7 @@ void Solver::SetBitDistance(const PHV::Bit &pbit1, const PHV::Bit &pbit2,
               "; Invalid relative offsets for " << bit1.name() << " and " <<
               bit2.name();
     } else {
-      LOG2("Adding offset constraint between " << pbit1 << " and " << pbit2);
+      LOG4("Adding offset constraint between " << pbit1 << " and " << pbit2);
       // Adding a constraints between bit1.offset() and bit2.offset() will be
       // simpler. However, those variables are derived from their respective
       // base_offset() variables. Adding a constraints between the
@@ -188,7 +188,7 @@ void Solver::SetLastDeparsedHeaderByte(const PHV::Byte &phv_byte) {
 
 void Solver::SetDeparserGroups(const PHV::Byte &i_pbyte,
                                const PHV::Byte &e_pbyte) {
-  LOG2("Setting deparser groups for " << i_pbyte.name() << " and " << e_pbyte.name());
+  LOG4("Setting deparser groups for " << i_pbyte.name() << " and " << e_pbyte.name());
   Container *i_container = nullptr, *e_container = nullptr;
   for (auto &b : i_pbyte) {
     if (i_container == nullptr) i_container = bits_.at(b).container();
@@ -213,7 +213,7 @@ void Solver::SetDeparserGroups(const PHV::Byte &i_pbyte,
 }
 void Solver::SetDeparserGroups(const PHV::Bit &i_pbit,
                                const PHV::Bit &e_pbit) {
-  LOG2("Setting deparser groups for " << i_pbit.name() << " and " << e_pbit.name());
+  LOG4("Setting deparser groups for " << i_pbit.name() << " and " << e_pbit.name());
   Container *i_container = MakeBit(i_pbit)->container();
   Container *e_container = MakeBit(e_pbit)->container();
   CHECK(i_container != e_container);
@@ -256,7 +256,7 @@ void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_phv_bits,
   // This constraint enforces the limit on the total width of the match xbar.
   int total_bits = std::accumulate(widths.begin(), widths.end(),
                                    0, std::plus<int>());
-  LOG2("Fitting " << is_unique_flags.size() << " flags into " <<
+  LOG4("Fitting " << is_unique_flags.size() << " flags into " <<
          total_bits << "B");
   CHECK(match_bits.size() == is_unique_flags.size()) <<
           "; Incorrect match bits " << match_bits.size();
@@ -276,7 +276,7 @@ void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_phv_bits,
             solver_.MakeSum(is_32b, bit->byte_flags()[i]), v),
           3));
     }
-    LOG2("Constraining " << is_unique_and_nth_byte.size() << " to " <<
+    LOG4("Constraining " << is_unique_and_nth_byte.size() << " to " <<
            widths[i] << "B in match xbar");
     solver_.AddConstraint(
       solver_.MakeLessOrEqual(
@@ -296,7 +296,7 @@ Byte *Solver::SetByte(const PHV::Byte &phv_byte) {
   }
   // Create a new Byte* object if needed.
   if (nullptr == byte) {
-    LOG2("Setting byte object for " << phv_byte.name());
+    LOG4("Setting byte object for " << phv_byte.name());
     byte = new Byte();
     for (auto it = phv_byte.cfirst(); it != phv_byte.clast(); ++it) {
       Bit &bit = bits_.at(*it);
@@ -342,7 +342,7 @@ Solver::SetUniqueConstraint(
       }
     }
   }
-  LOG2("Constraining " << is_unique_and_nth_byte.size() << " to " <<
+  LOG4("Constraining " << is_unique_and_nth_byte.size() << " to " <<
          max_unique_bytes << "B in match xbar");
   solver_.AddConstraint(
     solver_.MakeLessOrEqual(
@@ -350,7 +350,7 @@ Solver::SetUniqueConstraint(
 }
 
 void Solver::SetNoTPhv(const PHV::Bit &bit) {
-  LOG2("Forbidding allocation of " << bit.name() << " to T-PHV");
+  LOG4("Forbidding allocation of " << bit.name() << " to T-PHV");
   if (bits_.count(bit) != 0)
     bits_.at(bit).mau_group()->SetNoTPhv();
   else
@@ -358,13 +358,13 @@ void Solver::SetNoTPhv(const PHV::Bit &bit) {
 }
 
 void Solver::SetContainerConflict(const PHV::Bit &pb1, const PHV::Bit &pb2) {
-  LOG2("Setting container-conflict between " << pb1 << " and " << pb2);
+  LOG4("Setting container-conflict between " << pb1 << " and " << pb2);
   Bit *b1 = MakeBit(pb1), *b2 = MakeBit(pb2);
   b1->container()->SetConflict(b2->container());
 }
 
 void Solver::SetBitConflict(const PHV::Bit &pb1, const PHV::Bit &pb2) {
-  LOG2("Setting bit-conflict between " << pb1 << " and " << pb2);
+  LOG4("Setting bit-conflict between " << pb1 << " and " << pb2);
   Bit *b1 = MakeBit(pb1), *b2 = MakeBit(pb2);
   b1->SetConflict(*b2);
 }
@@ -412,19 +412,22 @@ void Solver::allocation(const PHV::Bit &bit, PHV::Container *container,
 
 bool
 Solver::Solve1(operations_research::Solver::IntValueStrategy int_val,
-               const bool &is_luby_restart) {
-  LOG1("Starting new search");
+               const bool &is_luby_restart, int timeout) {
   auto int_vars = GetIntVars();
+  LOG1("Starting new search with " << int_vars.size() << " variables and " <<
+       solver_.constraints() << " constraints");
   auto db = solver_.MakePhase(int_vars,
-                              operations_research::Solver::CHOOSE_FIRST_UNBOUND,
+                              operations_research::Solver::CHOOSE_RANDOM,
                               int_val);
   std::vector<SearchMonitor*> monitors;
   if (is_luby_restart) monitors.push_back(solver_.MakeLubyRestart(1000));
-  monitors.push_back(solver_.MakeTimeLimit(50000));
+  monitors.push_back(solver_.MakeTimeLimit(timeout * 1000));
   solver_.NewSearch(db, monitors);
   const std::clock_t begin_time = clock();
   const bool result = solver_.NextSolution();
-  LOG2("Time=" << (clock() - begin_time) / (CLOCKS_PER_SEC / 1000) << "msecs");
+  LOG2("Time=" << (clock() - begin_time) / (CLOCKS_PER_SEC / 1000) << "msecs  Mem=" <<
+       solver_.MemoryUsage());
+  LOG2(solver_.DebugString());
   if (false == result) solver_.EndSearch();
   return result;
 }
@@ -441,7 +444,7 @@ std::vector<IntVar*> Solver::GetIntVars() const {
   }
   for (auto &v : rv) {
     CHECK(nullptr != v) << "; Found nullptr in variable vector";
-    LOG2("intvar vec: " << v->name() << v);
+    LOG4("intvar vec: " << v->name() << v);
   }
   return std::vector<IntVar*>(rv.begin(), rv.end());
 }
@@ -515,7 +518,7 @@ Solver::MakeOffset(const cstring &name, const std::vector<int> &values) {
 
 IntVar *
 Solver::MakeOffset(const cstring &name, const int &min, const int &max) {
-  LOG2("Making offset " << name);
+  LOG4("Making offset " << name);
   return solver_.MakeIntVar(min, max,
                             name + "-offset-" + unique_id());
 }
