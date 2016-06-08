@@ -26,6 +26,8 @@ bool MatchXbarConstraint::preorder(const IR::MAU::Table *mau_table) {
     match_bits = HeaderSliceRefInspector(match_table->reads).match_bits();
   }
   if (true == mau_table->layout.ternary) {
+    if (tcam_match_bits_.size() <= size_t(stage))
+      tcam_match_bits_.resize(stage+1);
     tcam_match_bits_.at(stage).insert(match_bits.begin(), match_bits.end());
     match_bits.clear();
   }
@@ -33,13 +35,17 @@ bool MatchXbarConstraint::preorder(const IR::MAU::Table *mau_table) {
     auto new_match_bits = HeaderSliceRefInspector(gw_row.first).match_bits();
     match_bits.insert(new_match_bits.begin(), new_match_bits.end());
   }
+  if (exact_match_bits_.size() <= size_t(stage))
+    exact_match_bits_.resize(stage+1);
   exact_match_bits_.at(stage).insert(match_bits.begin(), match_bits.end());
   return true;
 }
 
 void MatchXbarConstraint::postorder(const IR::Tofino::Pipe *) {
-  for (unsigned i = 0; i < StageUse::MAX_STAGES; ++i) {
-    constraints_.SetTcamMatchBits(i, tcam_match_bits_.at(i));
-    constraints_.SetExactMatchBits(i, exact_match_bits_.at(i));
-  }
+  unsigned i = 0;
+  for (auto &mb : tcam_match_bits_)
+    constraints_.SetTcamMatchBits(i++, mb);
+  i = 0;
+  for (auto &mb : exact_match_bits_)
+    constraints_.SetExactMatchBits(i++, mb);
 }

@@ -29,7 +29,7 @@
 #include "tofino/parde/match_keys.h"
 #include "tofino/parde/split_header.h"
 #include "tofino/phv/asm_output.h"
-#include "tofino/phv/phv_allocate.h"
+#include "tofino/phv/greedy_alloc.h"
 #include "tofino/phv/split_phv_use.h"
 #include "tofino/phv/create_thread_local_instances.h"
 #include "tofino/phv/header_fragment_creator.h"
@@ -86,6 +86,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         &phv,
         new VisitFunctor([&phv]() { phv.allocatePOV(); }),
         new CanonGatewayExpr,   // must be before TableLayout?  or just TablePlacement?
+        new SplitComplexGateways(phv),
         new CheckGatewayExpr(phv),
         new TableLayout,
         new TableFindSeqDependencies,
@@ -94,12 +95,13 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new CopyHeaderEliminator,
         new HeaderFragmentCreator,
         new TypeCheck,
-        new SplitGateways,
+        new SpreadGatewayAcrossSeq,
         new CheckTableNameDuplicate,
         new TableFindSeqDependencies,
         new CheckTableNameDuplicate,
         new FindDependencyGraph(&deps),
         &mutex,
+        new DumpPipe("Before table placement"),
         new TablePlacement(deps, mutex, phv),
         new CheckTableNameDuplicate,
         new TableFindSeqDependencies,  // not needed?
@@ -111,6 +113,8 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new ElimUnused(phv, defuse),
         new DumpPipe("After ElimUnused"),
         new PhvInfo::SetReferenced(phv),
+        &summary,
+        new VisitFunctor([&summary]() { if (verbose) std::cout << summary; }),
     };
     backend.setStopOnError(true);
     if (LOGGING(4))
@@ -118,7 +122,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     maupipe = maupipe->apply(backend);
     if (options->phv_newalloc) {
         PhvAllocator phv_allocator(phv, maupipe, defuse.conflicts());
-        CHECK(true == phv_allocator.Solve(maupipe, &phv));
+        CHECK(true == phv_allocator.Solve(maupipe, &phv, options->phv_newalloc));
         if (verbose) {
             std::cout << "Printing PHV fields:\n";
             for (auto iter = phv.begin(); iter != phv.end(); ++iter) {
@@ -129,7 +133,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     } else {
         maupipe = maupipe
             ->apply(MauPhvConstraints(phv))
-            ->apply(PhvAllocate(phv, defuse.conflicts())); }
+            ->apply(PHV::GreedyAlloc(phv, defuse.conflicts())); }
     PassManager post_phv_allocation_backend = {
         new IXBarRealign(phv),
         new SplitExtractEmit,
@@ -138,8 +142,6 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new DumpPipe("Final table graph"),
         new CheckTableNameDuplicate,
         new PhvInfo::SetReferenced(phv),
-        &summary,
-        new VisitFunctor([&summary]() { if (verbose) std::cout << summary; }),
         &mauasm
     };
     maupipe = maupipe->apply(post_phv_allocation_backend);

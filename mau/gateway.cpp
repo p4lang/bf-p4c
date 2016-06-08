@@ -159,8 +159,13 @@ const IR::MAU::Table *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
 
 bool CollectGatewayFields::compute_offsets() {
     bytes = bits = 0;
-    for (auto &field : info)
-        field.second.offset = -1;
+    std::vector<decltype(info)::value_type *> sort_by_size;
+    for (auto &field : info) {
+        sort_by_size.push_back(&field);
+        field.second.offset = -1; }
+    std::sort(sort_by_size.begin(), sort_by_size.end(),
+              [](decltype(info)::value_type *a, decltype(info)::value_type *b) -> bool {
+                  return a->first->size > b->first->size; });
     for (auto &field : info) {
         if (field.second.xor_with) {
             auto &with = info[field.second.xor_with];
@@ -169,14 +174,14 @@ bool CollectGatewayFields::compute_offsets() {
             field.second.offset = with.offset = bytes*8;
             bytes += (std::max(field.first->size, field.second.xor_with->size) + 7)/8U; } }
     if (bytes > 4) return false;
-    for (auto &field : info) {
-        if (field.second.offset >= 0) continue;
-        int size = (field.first->size + 7)/8U;
-        if (bytes+size > 4 || field.second.need_range) {
-            field.second.offset = bits + 32;
-            bits += field.first->size;
+    for (auto field : sort_by_size) {
+        if (field->second.offset >= 0) continue;
+        int size = (field->first->size + 7)/8U;
+        if (bytes+size > 4 || field->second.need_range) {
+            field->second.offset = bits + 32;
+            bits += field->first->size;
         } else {
-            field.second.offset = bytes*8;
+            field->second.offset = bytes*8;
             bytes += size; } }
     for (auto &valid : valid_offsets)
         valid.second = bits++ + 32;

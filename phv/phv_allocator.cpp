@@ -85,14 +85,22 @@ void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
             constraints_.SetBitConflict(f1.bit(b1), f2.bit(b2));
 }
 
-bool PhvAllocator::Solve(const IR::Tofino::Pipe *, PhvInfo *phv_info) {
-  LOG1("Trying MIN_VALUE");
-  or_tools::MinValueSolver solver;
-  constraints_.SetConstraints(solver);
+bool PhvAllocator::Solve(const IR::Tofino::Pipe *, PhvInfo *phv_info, cstring opt) {
+  or_tools::Solver *solver;
+  if (opt == "min" || opt == "default") {
+    LOG1("Trying MIN_VALUE");
+    solver = new or_tools::MinValueSolver;
+  } else if (opt == "random") {
+    LOG1("Trying RANDOM");
+    solver = new or_tools::RandomValueSolver;
+  } else {
+    error("Unknown solver %s", opt);
+    return false; }
+  constraints_.SetConstraints(*solver);
   int count = 0;
-  while (count < 400) {
-    if (true == solver.Solve()) {
-      PopulatePhvInfo(solver, phv_info);
+  while (count < 20) {
+    if (true == solver->Solve()) {
+      PopulatePhvInfo(*solver, phv_info);
       for (auto &field : *phv_info)
         std::sort(field.alloc.begin(), field.alloc.end(),
             [](const PhvInfo::Info::alloc_slice &a, const PhvInfo::Info::alloc_slice &b) -> bool {

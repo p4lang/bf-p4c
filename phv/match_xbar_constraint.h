@@ -11,8 +11,8 @@ class MatchXbarConstraint : public MauInspector {
   bool preorder(const IR::MAU::Table *mau_table) override;
   void postorder(const IR::Tofino::Pipe *) override;
  private:
-  std::array<std::set<PHV::Bit>, StageUse::MAX_STAGES> exact_match_bits_;
-  std::array<std::set<PHV::Bit>, StageUse::MAX_STAGES> tcam_match_bits_;
+  std::vector<std::set<PHV::Bit>> exact_match_bits_;
+  std::vector<std::set<PHV::Bit>> tcam_match_bits_;
   Constraints &constraints_;
 };
 #endif /* TOFINO_PHV_MATCH_XBAR_CONSTRAINT_H_ */

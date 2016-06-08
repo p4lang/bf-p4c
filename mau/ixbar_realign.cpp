@@ -1,5 +1,6 @@
 #include "ixbar_realign.h"
 #include "tofino/phv/phv_fields.h"
+#include "lib/hex.h"
 
 class IXBarRealign::GetCurrentUse : public MauInspector {
     IXBarRealign        &self;
@@ -35,6 +36,8 @@ IXBarRealign::Realign::Realign(const PhvInfo &phv, int stage, const IXBar &ixbar
                 do_remap |= 1 << i; } }
         if (!do_remap) continue;
         need_remap = true;
+        LOG2("need realignment for stage " << stage << " group " << grp <<
+             " inuse=" << hex(inuse) << " do_remap=" << hex(do_remap));
         for (int i = 0; i < IXBar::EXACT_BYTES_PER_GROUP; ++i, do_remap >>= 1) {
             if (!(do_remap & 1)) continue;
             int byte = remap[grp][i] >> 4;

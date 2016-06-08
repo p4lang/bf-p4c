@@ -420,7 +420,7 @@ Solver::Solve1(operations_research::Solver::IntValueStrategy int_val,
                               int_val);
   std::vector<SearchMonitor*> monitors;
   if (is_luby_restart) monitors.push_back(solver_.MakeLubyRestart(1000));
-  monitors.push_back(solver_.MakeTimeLimit(5000));
+  monitors.push_back(solver_.MakeTimeLimit(50000));
   solver_.NewSearch(db, monitors);
   const std::clock_t begin_time = clock();
   const bool result = solver_.NextSolution();

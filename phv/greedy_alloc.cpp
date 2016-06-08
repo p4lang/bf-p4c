@@ -1,8 +1,8 @@
-#include "phv_allocate.h"
+#include "greedy_alloc.h"
 #include "lib/range.h"
 #include "lib/exceptions.h"
 
-class PhvAllocate::Uses : public Inspector {
+class PHV::GreedyAlloc::Uses : public Inspector {
  public:
     bitvec      use[2][2];
     /*              |  ^- gress                 */
@@ -42,11 +42,11 @@ class PhvAllocate::Uses : public Inspector {
         return false; }
 };
 
-struct PhvAllocate::Regs {
+struct PHV::GreedyAlloc::Regs {
     PHV::Container      B, H, W;
 };
 
-void PhvAllocate::do_alloc(PhvInfo::Info *i, Regs *use) {
+void PHV::GreedyAlloc::do_alloc(PhvInfo::Info *i, Regs *use) {
     /* greedy allocate space for field */
     LOG2(i->id << ": " << (i->metadata ? "metadata " : "header ") << i->name <<
          " size=" << i->size);
@@ -76,7 +76,7 @@ void alloc_pov(PhvInfo::Info *i, PhvInfo::Info *pov, int pov_bit) {
     BUG("Failed to allocate POV bit for %s, POV too small?", i->name);
 }
 
-bool PhvAllocate::preorder(const IR::Tofino::Pipe *pipe) {
+bool PHV::GreedyAlloc::preorder(const IR::Tofino::Pipe *pipe) {
     Uses uses(phv);
     Regs normal = { "B0", "H0", "W0" },
          tagalong = { "TB0", "TH0", "TW0" };

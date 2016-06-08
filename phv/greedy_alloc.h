@@ -1,11 +1,13 @@
-#ifndef _TOFINO_PHV_PHV_ALLOCATE_H_
-#define _TOFINO_PHV_PHV_ALLOCATE_H_
+#ifndef TOFINO_PHV_GREEDY_ALLOC_H_
+#define TOFINO_PHV_GREEDY_ALLOC_H_
 
 #include "ir/ir.h"
 #include "phv_fields.h"
 #include "lib/symbitmatrix.h"
 
-class PhvAllocate : public Inspector {
+namespace PHV {
+
+class GreedyAlloc : public Inspector {
     PhvInfo                     &phv;
     const SymBitMatrix          &conflict;
     struct Regs;
@@ -14,8 +16,10 @@ class PhvAllocate : public Inspector {
     bool preorder(const IR::Tofino::Pipe *p) override;
 
  public:
-    PhvAllocate(PhvInfo &p, const SymBitMatrix &c) : phv(p), conflict(c) {}
+    GreedyAlloc(PhvInfo &p, const SymBitMatrix &c) : phv(p), conflict(c) {}
 };
 
+}  // namespace PHV
 
-#endif /* _TOFINO_PHV_PHV_ALLOCATE_H_ */
+
+#endif /* TOFINO_PHV_PHV_GREEDY_ALLOC_H_ */

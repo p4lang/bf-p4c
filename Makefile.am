@@ -58,9 +58,12 @@ tofino_backend_SOURCES = \
 	%reldir%/mau/table_seqdeps.h \
 	%reldir%/mau/table_summary.cpp \
 	%reldir%/mau/table_summary.h \
-	%reldir%/parde/asm_output.h \
-	%reldir%/parde/add_parde_metadata.h \
+	%reldir%/midend.cpp \
+	%reldir%/midend.h \
+	%reldir%/p4c-tofino.cpp \
 	%reldir%/parde/add_parde_metadata.cpp \
+	%reldir%/parde/add_parde_metadata.h \
+	%reldir%/parde/asm_output.h \
 	%reldir%/parde/compute_shifts.h \
 	%reldir%/parde/deparser_output.cpp \
 	%reldir%/parde/extract_parser.cpp \
@@ -77,27 +80,22 @@ tofino_backend_SOURCES = \
 	%reldir%/phv/bit_extractor.h \
 	%reldir%/phv/byte_constraint.cpp \
 	%reldir%/phv/byte_constraint.h \
+	%reldir%/phv/constraints.cpp \
+	%reldir%/phv/constraints.h \
 	%reldir%/phv/container_constraint.cpp \
 	%reldir%/phv/container_constraint.h \
 	%reldir%/phv/create_thread_local_instances.h \
-	%reldir%/phv/constraints.cpp \
-	%reldir%/phv/constraints.h \
+	%reldir%/phv/greedy_alloc.cpp \
+	%reldir%/phv/greedy_alloc.h \
+	%reldir%/phv/header_bit_creator.h \
+	%reldir%/phv/header_fragment_creator.cpp \
+	%reldir%/phv/header_fragment_creator.h \
 	%reldir%/phv/match_xbar_constraint.cpp \
 	%reldir%/phv/match_xbar_constraint.h \
 	%reldir%/phv/mau_group_constraint.cpp \
 	%reldir%/phv/mau_group_constraint.h \
 	%reldir%/phv/offset_constraint.cpp \
 	%reldir%/phv/offset_constraint.h \
-	%reldir%/phv/parse_graph_constraint.cpp \
-	%reldir%/phv/parse_graph_constraint.h \
-	%reldir%/phv/source_container_constraint.cpp \
-	%reldir%/phv/source_container_constraint.h \
-	%reldir%/phv/thread_constraint.cpp \
-	%reldir%/phv/thread_constraint.h \
-	%reldir%/phv/t_phv_constraint.h \
-	%reldir%/phv/header_bit_creator.h \
-	%reldir%/phv/header_fragment_creator.cpp \
-	%reldir%/phv/header_fragment_creator.h \
 	%reldir%/phv/or_tools/bit.cpp \
 	%reldir%/phv/or_tools/bit.h \
 	%reldir%/phv/or_tools/container.cpp \
@@ -108,20 +106,22 @@ tofino_backend_SOURCES = \
 	%reldir%/phv/or_tools/random_value_solver.h \
 	%reldir%/phv/or_tools/solver.cpp \
 	%reldir%/phv/or_tools/solver.h \
-	%reldir%/phv/phv.h \
-	%reldir%/phv/phv_allocate.cpp \
-	%reldir%/phv/phv_allocate.h \
+	%reldir%/phv/parse_graph_constraint.cpp \
+	%reldir%/phv/parse_graph_constraint.h \
 	%reldir%/phv/phv_allocator.cpp \
 	%reldir%/phv/phv_allocator.h \
 	%reldir%/phv/phv_fields.cpp \
 	%reldir%/phv/phv_fields.h \
-	%reldir%/phv/split_phv_use.h \
+	%reldir%/phv/phv.h \
+	%reldir%/phv/source_container_constraint.cpp \
+	%reldir%/phv/source_container_constraint.h \
 	%reldir%/phv/split_phv_use.cpp \
-	%reldir%/midend.h \
-	%reldir%/midend.cpp \
+	%reldir%/phv/split_phv_use.h \
+	%reldir%/phv/thread_constraint.cpp \
+	%reldir%/phv/thread_constraint.h \
+	%reldir%/phv/t_phv_constraint.h \
 	%reldir%/test-tofino.cpp \
-	%reldir%/tofinoOptions.h \
-	%reldir%/p4c-tofino.cpp
+	%reldir%/tofinoOptions.h
 
 ir_DEF_FILES += \
     $(srcdir)/%reldir%/ir/tofino.def \
@@ -148,7 +148,8 @@ $(srcdir)/tofinotests.am: \
    $(srcdir)/testdata/v1_samples/*.p4 \
    $(srcdir)/testdata/v1_errors/*.p4 \
    $(srcdir)/%reldir%/v1_2_test/*.p4 \
-   $(srcdir)/%reldir%/v1_samples/*.p4
+   $(srcdir)/%reldir%/v1_samples/*.p4 \
+   $(srcdir)/%reldir%/v1_samples/switch_*/switch.p4
 	@$(GENTESTS) $(srcdir) tofino $(srcdir)/%reldir%/runtest $^ >$@ || rm $@ && false
 
 #$(srcdir)/%reldir%/v12-tofinotests.am: $(srcdir)/testdata/v1_2_samples/*.stf
@@ -191,7 +192,6 @@ XFAIL_TESTS += \
     tofino/testdata/v1_samples/07-MultiProtocol.p4.test \
     tofino/testdata/v1_samples/02-FullPHV1.p4.test \
     tofino/testdata/v1_samples/03-FullPHV2.p4.test \
-    tofino/testdata/v1_samples/truncate.p4.test \
     tofino/%reldir%/v1_2_test/flowlet_switching.p4.test \
     tofino/%reldir%/v1_2_test/bfd_offload.p4.test \
     tofino/%reldir%/v1_2_test/bloom_filter.p4.test \

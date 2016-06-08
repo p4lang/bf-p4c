@@ -23,10 +23,14 @@ class CanonGatewayExpr : public MauTransform {
 
 class CollectGatewayFields : public Inspector {
     const PhvInfo       &phv;
+    unsigned            row_limit;
     const PhvInfo::Info *xor_match = nullptr;
     bool preorder(const IR::MAU::Table *tbl) override {
-        for (auto &gw : tbl->gateway_rows)
-            visit(gw.first, "gateway_row");
+        unsigned row = 0;
+        for (auto &gw : tbl->gateway_rows) {
+            if (++row > row_limit)
+                return false;
+            visit(gw.first, "gateway_row"); }
         return false; }
     bool preorder(const IR::Expression *e) override {
         auto finfo = phv.field(e);
@@ -61,7 +65,8 @@ class CollectGatewayFields : public Inspector {
     map<const PhvInfo::Info *, info_t>        info;
     map<cstring, int>                         valid_offsets;
     int                                       bytes, bits;
-    explicit CollectGatewayFields(const PhvInfo &phv) : phv(phv) {}
+    explicit CollectGatewayFields(const PhvInfo &phv, unsigned rl = ~0U)
+    : phv(phv), row_limit(rl) {}
     bool compute_offsets();
 };
 

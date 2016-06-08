@@ -128,8 +128,8 @@ class Constraints {
   // and does not even contain two bits that must appear in the same PHV byte.
   // For example, if ipv4.srcAddr is used as a key in a match lookup, only 4
   // bits (one from each byte) will appear in the std::vector<PHV::Bit>.
-  std::array<std::vector<PHV::Bit>, StageUse::MAX_STAGES> exact_match_bits_;
-  std::array<std::vector<PHV::Bit>, StageUse::MAX_STAGES> tcam_match_bits_;
+  std::vector<std::vector<PHV::Bit>> exact_match_bits_;
+  std::vector<std::vector<PHV::Bit>> tcam_match_bits_;
   // Conflict matrices: A "true" indicates the the corresponding bits cannot be
   // allocated to the same PHV container/bit. The inner and outer vectors in
   // both conflict matrices are indexed by BitId. Example: If

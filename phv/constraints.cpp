@@ -188,6 +188,8 @@ void Constraints::SetNoTPhv(const PHV::Bit &bit) {
 
 void Constraints::SetExactMatchBits(const int &stage,
                                     const std::set<PHV::Bit> &bits) {
+  if (exact_match_bits_.size() <= size_t(stage))
+    exact_match_bits_.resize(stage+1);
   SetMatchBits(bits, &exact_match_bits_.at(stage));
   LOG2("Found " << exact_match_bits_.at(stage).size() <<
          " exact match bits in stage " << stage);
@@ -195,6 +197,8 @@ void Constraints::SetExactMatchBits(const int &stage,
 
 void Constraints::SetTcamMatchBits(const int &stage,
                                    const std::set<PHV::Bit> &bits) {
+  if (tcam_match_bits_.size() <= size_t(stage))
+    tcam_match_bits_.resize(stage+1);
   SetMatchBits(bits, &tcam_match_bits_.at(stage));
   LOG2("Found " << tcam_match_bits_.at(stage).size() <<
          " TCAM match bits in stage " << stage);

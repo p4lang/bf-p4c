@@ -6,16 +6,16 @@
 
 class Tofino_Options : public CompilerOptions {
  public:
-    int phv_newalloc = 0;
+    cstring phv_newalloc = cstring();
     int v12_path = 0;
 
     Tofino_Options() {
         registerOption("--newpa", nullptr,
-                       [this](const char*) { phv_newalloc = 1; return true; },
-                       "use ortools-based PHV allocation");
+            [this](const char *arg) { phv_newalloc = arg ? arg : "default"; return true; },
+            "use ortools-based PHV allocation");
         registerOption("--v12_path", nullptr,
-                       [this](const char*) { v12_path = 1; return true; },
-                       "Use v1->v1.2 conversion path");
+            [this](const char*) { v12_path = 1; return true; },
+            "Use v1->v1.2 conversion path");
         target = "tofino";
     }
 };
