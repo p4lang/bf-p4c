@@ -2,7 +2,7 @@
 
 set -o pipefail
 
-TIMEOUT=60
+TIMEOUT=${P4C_TIMEOUT:-60}
 TIME_COMMAND="" # don't time commands
 verbose=false
 debug=false

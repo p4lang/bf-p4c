@@ -79,6 +79,26 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     FieldDefUse defuse(phv);
     TableSummary summary;
     MauAsmOutput mauasm(phv);
+    PassManager *phv_alloc;
+
+    if (options->phv_newalloc) {
+        auto *newpa = new PhvAllocator(phv, defuse.conflicts());
+        phv_alloc = new PassManager({
+            newpa,
+            new VisitFunctor([newpa, options]() { 
+                if (!newpa->Solve(options->phv_newalloc))
+                    error("or-tools failed to find PHV allocation"); }),
+            verbose ? new VisitFunctor([&phv]() {
+                std::cout << "Printing PHV fields:\n";
+                for (auto iter = phv.begin(); iter != phv.end(); ++iter) {
+                    LOG2("result:" << iter->name << iter->alloc[0]);
+                    LOG2("result:" << iter->name << iter->alloc[1]); }}) : nullptr });
+    } else {
+        phv_alloc = new PassManager({
+            new MauPhvConstraints(phv),
+            new PHV::GreedyAlloc(phv, defuse.conflicts()) });
+    }
+
     PassManager backend = {
         new DumpPipe("Initial table graph"),
         new AddMetadataShims,
@@ -92,7 +112,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new TableLayout,
         new TableFindSeqDependencies,
         new FindDependencyGraph(&deps),
-        new VisitFunctor([&deps]() { if (verbose) std::cout << deps; }),
+        verbose ? new VisitFunctor([&deps]() { std::cout << deps; }) : nullptr,
         new CopyHeaderEliminator,
         new HeaderFragmentCreator,
         new TypeCheck,
@@ -115,31 +135,10 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new DumpPipe("After ElimUnused"),
         new PhvInfo::SetReferenced(phv),
         &summary,
-        new VisitFunctor([&summary]() { if (verbose) std::cout << summary; }),
-    };
-    backend.setStopOnError(true);
-    if (LOGGING(4))
-        backend.addDebugHook(debug_hook);
-    maupipe = maupipe->apply(backend);
-    if (ErrorReporter::instance.getErrorCount() > 0)
-        return;
-    if (options->phv_newalloc) {
-        PhvAllocator phv_allocator(phv, maupipe, defuse.conflicts());
-        CHECK(true == phv_allocator.Solve(maupipe, &phv, options->phv_newalloc));
-        if (verbose) {
-            std::cout << "Printing PHV fields:\n";
-            for (auto iter = phv.begin(); iter != phv.end(); ++iter) {
-                LOG2("result:" << iter->name << iter->alloc[0]);
-                LOG2("result:" << iter->name << iter->alloc[1]);
-            }
-        }
-    } else {
-        maupipe = maupipe
-            ->apply(MauPhvConstraints(phv))
-            ->apply(PHV::GreedyAlloc(phv, defuse.conflicts())); }
-    if (ErrorReporter::instance.getErrorCount() > 0)
-        return;
-    PassManager post_phv_allocation_backend = {
+        verbose ? new VisitFunctor([&summary]() { std::cout << summary; }) : nullptr,
+
+        phv_alloc,
+
         new IXBarRealign(phv),
         new SplitExtractEmit,
         new LoadMatchKeys(phv),   // depends on SplitExtractEmit
@@ -150,7 +149,9 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new PhvInfo::SetReferenced(phv),
         &mauasm
     };
-    maupipe = maupipe->apply(post_phv_allocation_backend);
+    if (LOGGING(4))
+        backend.addDebugHook(debug_hook);
+    maupipe = maupipe->apply(backend);
     if (ErrorReporter::instance.getErrorCount() > 0)
         return;
     std::ostream *out = &std::cout;

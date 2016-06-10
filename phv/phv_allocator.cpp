@@ -57,37 +57,40 @@ void PopulatePhvInfo(SolverInterface &solver, PhvInfo *phv_info) {
   }
 }
 
-void PhvAllocator::SetConstraints(const IR::Tofino::Pipe *pipe) {
-  // TODO: The code below can be written more elegantly.
-  pipe->apply(MauGroupConstraint(constraints_));
-  pipe->apply(ContainerConstraint(phv, constraints_));
-  pipe->apply(ByteConstraint(phv, constraints_));
-  pipe->apply(OffsetConstraint(constraints_));
-  pipe->apply(ThreadConstraint(phv, constraints_));
-  SourceContainerConstraint scc(constraints_);
-  // This loop should keep iterating until Constraints::SetEqual() has been
-  // invoked on all pairs of source containers that have a common destination
-  // container.
-  do {
-    scc.reset_updated();
-    pipe->apply(scc);
-  } while (true == scc.is_updated());
-  // Set bits which cannot be allocated to T-PHV.
-  pipe->apply(TPhvConstraint(constraints_));
-  // Set MAU match xbar constraints.
-  pipe->apply(MatchXbarConstraint(constraints_));
-  pipe->apply(ParseGraphConstraint(constraints_));
-  for (auto f1 = phv.begin(); f1 != phv.end(); ++f1) {
-    if (!f1->referenced) continue;
-    for (auto f2 = f1; ++f2 != phv.end();) {
-      if (!f2->referenced) continue;
-      if (conflict(f1->id, f2->id))
-        for (int b1 : Range(0, f1->size-1))
-          for (int b2 : Range(0, f2->size-1))
-            constraints_.SetBitConflict(f1->bit(b1), f2->bit(b2)); } }
+PhvAllocator::PhvAllocator(PhvInfo &p, const SymBitMatrix &c) : phv(p), conflict(c) {
+  auto *scc = new SourceContainerConstraint(constraints_);
+  addPasses({
+    new MauGroupConstraint(constraints_),
+    new ContainerConstraint(phv, constraints_),
+    new ByteConstraint(phv, constraints_),
+    new OffsetConstraint(constraints_),
+    new ThreadConstraint(phv, constraints_),
+    // This loop should keep iterating until Constraints::SetEqual() has been
+    // invoked on all pairs of source containers that have a common destination
+    // container.
+    new PassRepeatUntil({ scc }, [scc]()->bool { return !scc->is_updated(); }),
+    // Set bits which cannot be allocated to T-PHV.
+    new TPhvConstraint(constraints_),
+    // Set MAU match xbar constraints.
+    new MatchXbarConstraint(constraints_),
+    new VisitFunctor([this]() {
+      for (auto f1 = phv.begin(); f1 != phv.end(); ++f1) {
+        if (!f1->referenced) continue;
+        if (f1->size >= 2)
+          for (int b1 : Range(0, f1->size-2))
+            for (int b2 : Range(b1+1, f1->size-1))
+              constraints_.SetBitConflict(f1->bit(b1), f1->bit(b2));
+        for (auto f2 = f1; ++f2 != phv.end();) {
+          if (!f2->referenced) continue;
+          if (conflict(f1->id, f2->id))
+            for (int b1 : Range(0, f1->size-1))
+              for (int b2 : Range(0, f2->size-1))
+                constraints_.SetBitConflict(f1->bit(b1), f2->bit(b2)); } }
+    })
+  });
 }
 
-bool PhvAllocator::Solve(const IR::Tofino::Pipe *, PhvInfo *phv_info, StringRef opt) {
+bool PhvAllocator::Solve(StringRef opt) {
   or_tools::Solver solver;
   auto strategy = operations_research::Solver::ASSIGN_MIN_VALUE;
   bool luby_restart = false;
@@ -110,8 +113,8 @@ bool PhvAllocator::Solve(const IR::Tofino::Pipe *, PhvInfo *phv_info, StringRef 
   int count = 0;
   while (count < 20) {
     if (true == solver.Solve1(strategy, luby_restart, timeout)) {
-      PopulatePhvInfo(solver, phv_info);
-      for (auto &field : *phv_info)
+      PopulatePhvInfo(solver, &phv);
+      for (auto &field : phv)
         std::sort(field.alloc.begin(), field.alloc.end(),
             [](const PhvInfo::Info::alloc_slice &a, const PhvInfo::Info::alloc_slice &b) -> bool {
           return a.field_bit > b.field_bit; });

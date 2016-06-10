@@ -10,16 +10,14 @@ namespace Tofino {
 class Pipe;
 }
 }
-class PhvAllocator {
+class PhvAllocator : public PassManager {
   PhvInfo               &phv;
   const SymBitMatrix    &conflict;
  public:
-  PhvAllocator(PhvInfo &phv, const IR::Tofino::Pipe *pipe, const SymBitMatrix &c)
-  : phv(phv), conflict(c) { SetConstraints(pipe); }
-  bool Solve(const IR::Tofino::Pipe *pipe, PhvInfo *phv_info, StringRef opt);
+  PhvAllocator(PhvInfo &phv, const SymBitMatrix &c);
+  bool Solve(StringRef opt);
 
  private:
-  void SetConstraints(const IR::Tofino::Pipe *pipe);
   Constraints constraints_;
 };
 #endif /* TOFINO_PHV_PHV_ALLOCATOR_H_ */
