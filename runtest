@@ -1,4 +1,6 @@
-#!/bin/sh
+#!/bin/bash
+
+set -o pipefail
 
 TIMEOUT=60
 TIME_COMMAND="" # don't time commands
@@ -145,6 +147,7 @@ if [ ! -r $testdir/$name.tfa ]; then
     exit 1
 fi
 
+
 if $run_stf && [ -r ${file%.p4}.stf ]; then
     TFAS=$(findbin tofino-asm tfas)
     TFLN=$(findbin tofino-asm tflink)
@@ -157,5 +160,7 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
     rm -f $name.out/*.cfg.json
     run $TFAS -vvvvl $name.out/tfas.config.log $name.tfa || die
     run $TFLN $name.out/*.cfg.json -o $name.out/tofino.bin || die
-    run $STF -l $name.out $test || die
+    run $STF -l $name.out $test $STF_OUTPUT_FILTER | \
+        grep -v 'WARN MAU::process_match Time gone backwards!' \
+        || die
 fi

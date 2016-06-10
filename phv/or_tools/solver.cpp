@@ -405,8 +405,6 @@ void Solver::allocation(const PHV::Bit &bit, PHV::Container *container,
                 (nullptr == b.mau_group() ? " and MAU group" : "") <<
                 " for " << bit);
     }
-  } else {
-    LOG1("Cannot find allocation for " << bit);
   }
 }
 
@@ -417,7 +415,7 @@ Solver::Solve1(operations_research::Solver::IntValueStrategy int_val,
   LOG1("Starting new search with " << int_vars.size() << " variables and " <<
        solver_.constraints() << " constraints");
   auto db = solver_.MakePhase(int_vars,
-                              operations_research::Solver::CHOOSE_RANDOM,
+                              operations_research::Solver::CHOOSE_FIRST_UNBOUND,
                               int_val);
   std::vector<SearchMonitor*> monitors;
   if (is_luby_restart) monitors.push_back(solver_.MakeLubyRestart(1000));
