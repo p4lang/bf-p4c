@@ -72,6 +72,8 @@ tofino_backend_SOURCES = \
 	%reldir%/parde/match_keys.cpp \
 	%reldir%/parde/match_keys.h \
 	%reldir%/parde/parser_output.cpp \
+	%reldir%/parde/split_big_states.cpp \
+	%reldir%/parde/split_big_states.h \
 	%reldir%/parde/split_header.cpp \
 	%reldir%/parde/split_header.h \
 	%reldir%/phv/asm_output.cpp \

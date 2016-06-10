@@ -27,6 +27,7 @@
 #include "tofino/parde/asm_output.h"
 #include "tofino/parde/compute_shifts.h"
 #include "tofino/parde/match_keys.h"
+#include "tofino/parde/split_big_states.h"
 #include "tofino/parde/split_header.h"
 #include "tofino/phv/asm_output.h"
 #include "tofino/phv/greedy_alloc.h"
@@ -143,6 +144,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new SplitExtractEmit,
         new LoadMatchKeys(phv),   // depends on SplitExtractEmit
         new SplitPhvUse(phv),     // depends on SplitExtractEmit
+        new SplitBigStates(phv),  // depends on SplitPhvUse
         new DumpPipe("Final table graph"),
         new CheckTableNameDuplicate,
         new PhvInfo::SetReferenced(phv),
