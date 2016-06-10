@@ -286,6 +286,9 @@ function test_stf() {
             else
                 echo -n " fail"
                 let fail++
+                echo "$1:" >> $FAILLOG
+                sed -e '/WARN MAU::process_match Time gone backwards!/d' -e 's/^/  /' \
+                    stf.txt >> $FAILLOG
             fi
         else
             echo -n " failed"

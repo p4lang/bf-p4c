@@ -966,20 +966,18 @@ void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
             *output_map[i].dst = 0x1ff;
 
     if (buf_req < 0) {
-        /* this tries to more or less match how the compiler computes buf_req, but it is
-         * pretty much impossible -- the compiler should set it explicitly */
         buf_req = ea_row.shift_amt;
-        if (ea_row.lookup_offset_16 + 2 > (unsigned)buf_req)
+        if (ea_row.ld_lookup_16 && ea_row.lookup_offset_16 + 2 > (unsigned)buf_req)
             buf_req = ea_row.lookup_offset_16 + 2;
-        if (ea_row.lookup_offset_8[0] + 1 > (unsigned)buf_req)
+        if (ea_row.ld_lookup_8[0] && ea_row.lookup_offset_8[0] + 1 > (unsigned)buf_req)
             buf_req = ea_row.lookup_offset_8[0] + 1;
-        if (ea_row.lookup_offset_8[1] + 1 > (unsigned)buf_req)
+        if (ea_row.ld_lookup_8[0] && ea_row.lookup_offset_8[1] + 1 > (unsigned)buf_req)
             buf_req = ea_row.lookup_offset_8[1] + 1;
         for (int i = 0; i < phv_output_map_size; i++)
-            if (!output_map[i].src_type || 0 == *output_map[i].src_type)
-                if (*output_map[i].src < 32) {
-                    unsigned off = *output_map[i].src + output_map[i].size/8;
-                    if (off > (unsigned)buf_req) buf_req = off; }
+            if ((used & (1U << i)) && *output_map[i].src < 32 &&
+                (!output_map[i].src_type || 0 == *output_map[i].src_type)) {
+                unsigned off = *output_map[i].src + output_map[i].size/8;
+                if (off > (unsigned)buf_req) buf_req = off; }
         assert(buf_req <= 32); }
     ea_row.buf_req = buf_req;
 }
