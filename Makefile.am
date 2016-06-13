@@ -138,25 +138,24 @@ cpplint_FILES += $(tofino_backend_SOURCES)
 
 # Tests
 
--include $(srcdir)/tofinotests.am
-#-include $(srcdir)/%reldir%/v12-tofinotests.am
--include $(srcdir)/%reldir%/v1_2_tests.am
--include $(srcdir)/%reldir%/p14_to_16_tests.am
--include $(srcdir)/%reldir%/bmv2tests.am
--include $(srcdir)/%reldir%/newpa-tofinotests.am
+-include tofinotests.mk
+#-include p4-16-tofinotests.mk
+-include tofino-p14_to_16_tests.mk
+-include tofino-bmv2tests.mk
+-include newpa-tofinotests.mk
 
 
-$(srcdir)/tofinotests.am: $(wildcard \
+tofinotests.mk: $(wildcard \
    $(srcdir)/testdata/p4_14_samples/*.p4 \
    $(srcdir)/%reldir%/v1_2_test/*.p4 \
    $(srcdir)/%reldir%/v1_samples/*.p4 \
    $(srcdir)/%reldir%/v1_samples/switch_*/switch.p4)
 	@$(GENTESTS) $(srcdir) tofino $(srcdir)/%reldir%/runtest $^ >$@ || rm $@ && false
 
-#$(srcdir)/%reldir%/v12-tofinotests.am: $(wildcard $(srcdir)/testdata/v1_2_samples/*.stf)
+#p4-16-tofinotests.mk: $(wildcard $(srcdir)/testdata/p4_16_samples/*.stf)
 #	@$(GENTESTS) $(srcdir) tofino $(srcdir)/%reldir%/runtest $(^:%.stf=%.p4) >$@ || rm $@ && false
 
-$(srcdir)/%reldir%/newpa-tofinotests.am: $(wildcard \
+newpa-tofinotests.mk: $(wildcard \
    $(srcdir)/testdata/p4_14_samples/*.stf \
    $(srcdir)/%reldir%/v1_2_test/*.stf \
    $(srcdir)/%reldir%/v1_samples/*.stf)
@@ -166,20 +165,19 @@ $(srcdir)/%reldir%/newpa-tofinotests.am: $(wildcard \
 # These test input programs depend on Tofino in some way.
 
 # Exercise v12test back-end on Tofino-specific programs
-$(srcdir)/%reldir%/p14_to_16_tests.am: $(wildcard $(srcdir)/%reldir%/v1_samples/*.p4)
+tofino-p14_to_16_tests.mk: $(wildcard $(srcdir)/%reldir%/v1_samples/*.p4)
 	@$(GENTESTS) $(srcdir) p14_to_16 $(srcdir)/%reldir%/test-v12-sample.sh $^ >$@ || rm $@ && false
 
 # Exercise bmv2 back-end on Tofino-specific programs
-$(srcdir)/%reldir%/bmv2tests.am: $(wildcard $(srcdir)/%reldir%/v1_samples/*.p4)
+tofino-bmv2tests.mk: $(wildcard $(srcdir)/%reldir%/v1_samples/*.p4)
 	@$(GENTESTS) $(srcdir) bmv2 $(srcdir)/%reldir%/test-bmv2.sh $^ >$@ || rm $@ && false
 
 CLEANFILES += \
-	$(srcdir)/tofinotests.am \
-	$(srcdir)/%reldir%/v1_2_tests.am \
-	$(srcdir)/%reldir%/p14_to_16_tests.am \
-	$(srcdir)/%reldir%/bmv2tests.am \
-	$(srcdir)/%reldir%/v12-tofinotests.am \
-	$(srcdir)/%reldir%/newpa-tofinotests.am
+	tofinotests.mk \
+	tofino-p14_to_16_tests.mk \
+	tofino-bmv2tests.mk \
+	p4-16-tofinotests.mk \
+	newpa-tofinotests.mk
 
 # Some of these failures are still P4 v1.0 front-end bugs.
 # Others are due to non-standard extensions to P4:
