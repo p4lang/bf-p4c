@@ -139,14 +139,14 @@ cpplint_FILES += $(tofino_backend_SOURCES)
 -include $(srcdir)/tofinotests.am
 #-include $(srcdir)/%reldir%/v12-tofinotests.am
 -include $(srcdir)/%reldir%/v1_2_tests.am
--include $(srcdir)/%reldir%/v1to12tests.am
+-include $(srcdir)/%reldir%/p14_to_16_tests.am
 -include $(srcdir)/%reldir%/bmv2tests.am
 -include $(srcdir)/%reldir%/newpa-tofinotests.am
 
 
 $(srcdir)/tofinotests.am: \
-   $(srcdir)/testdata/v1_samples/*.p4 \
-   $(srcdir)/testdata/v1_errors/*.p4 \
+   $(srcdir)/testdata/p4_14_samples/*.p4 \
+   $(srcdir)/testdata/p4_14_errors/*.p4 \
    $(srcdir)/%reldir%/v1_2_test/*.p4 \
    $(srcdir)/%reldir%/v1_samples/*.p4 \
    $(srcdir)/%reldir%/v1_samples/switch_*/switch.p4
@@ -156,7 +156,7 @@ $(srcdir)/tofinotests.am: \
 #	@$(GENTESTS) $(srcdir) tofino $(srcdir)/%reldir%/runtest $(^:%.stf=%.p4) >$@ || rm $@ && false
 
 $(srcdir)/%reldir%/newpa-tofinotests.am: \
-   $(srcdir)/testdata/v1_samples/*.stf \
+   $(srcdir)/testdata/p4_14_samples/*.stf \
    $(srcdir)/%reldir%/v1_2_test/*.stf \
    # $(srcdir)/%reldir%/v1_samples/*.stf
 	@$(GENTESTS) -extra $(srcdir) tofino-newpa $(srcdir)/%reldir%/runtest --newpa $(^:%.stf=%.p4) >$@ || rm $@ && false
@@ -165,8 +165,8 @@ $(srcdir)/%reldir%/newpa-tofinotests.am: \
 # These test input programs depend on Tofino in some way.
 
 # Exercise v12test back-end on Tofino-specific programs
-$(srcdir)/%reldir%/v1to12tests.am: $(srcdir)/%reldir%/v1_samples/*.p4
-	@$(GENTESTS) $(srcdir) v1to12 $(srcdir)/%reldir%/test-v12-sample.sh $^ >$@ || rm $@ && false
+$(srcdir)/%reldir%/p14_to_16_tests.am: $(srcdir)/%reldir%/v1_samples/*.p4
+	@$(GENTESTS) $(srcdir) p14_to_16 $(srcdir)/%reldir%/test-v12-sample.sh $^ >$@ || rm $@ && false
 
 # Exercise bmv2 back-end on Tofino-specific programs
 $(srcdir)/%reldir%/bmv2tests.am: $(srcdir)/%reldir%/v1_samples/*.p4
@@ -175,7 +175,7 @@ $(srcdir)/%reldir%/bmv2tests.am: $(srcdir)/%reldir%/v1_samples/*.p4
 CLEANFILES += \
 	$(srcdir)/tofinotests.am \
 	$(srcdir)/%reldir%/v1_2_tests.am \
-	$(srcdir)/%reldir%/v1to12tests.am \
+	$(srcdir)/%reldir%/p14_to_16_tests.am \
 	$(srcdir)/%reldir%/bmv2tests.am \
 	$(srcdir)/%reldir%/v12-tofinotests.am \
 	$(srcdir)/%reldir%/newpa-tofinotests.am
@@ -234,35 +234,35 @@ XFAIL_TESTS += \
     bmv2/%reldir%/v1_samples/test_config_117_first_tcam_range.p4.test \
     bmv2/%reldir%/v1_samples/vk_basic_ipv4_20150706.p4.test \
     bmv2/%reldir%/v1_samples/test_config_101_switch_msdc.p4.test \
-    v1to12/%reldir%/v1_samples/02-FlexCounterActionProfile.p4.test \
-    v1to12/%reldir%/v1_samples/dileep.p4.test \
-    v1to12/%reldir%/v1_samples/dileep2.p4.test \
-    v1to12/%reldir%/v1_samples/dileep4.p4.test \
-    v1to12/%reldir%/v1_samples/dileep8.p4.test \
-    v1to12/%reldir%/v1_samples/dileep12.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_125_meter_pre_color.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_126_meter_pre_color_2.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_127_meter_pre_color_3.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_132_meter_pre_color_4.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_144_recirculate.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_152_stateful_simple_cntr.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_153_stateful_simple_cntr_with_output.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_155_stateful_3_alus.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_154_stateful_sampling.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_159_stateful_using_phv_field.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_156_indirect_stateful_cntr.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_163_stateful_table_math_unit.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_160_stateful_single_bit_mode.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_164_stateful_deterministic_sampling.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_165_stateful_bfd_failure_detection.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_167_stateful_flowlet_switching.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_166_stateful_generic_counter.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_169_stateful_sflow_sequence.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_170_stateful_selection_table_update.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_171_stateful_conga.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_172_stateful_heavy_hitter.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_173_stateful_bloom_filter.p4.test \
-    v1to12/%reldir%/v1_samples/test_config_101_switch_msdc.p4.test
+    p14_to_16/%reldir%/v1_samples/02-FlexCounterActionProfile.p4.test \
+    p14_to_16/%reldir%/v1_samples/dileep.p4.test \
+    p14_to_16/%reldir%/v1_samples/dileep2.p4.test \
+    p14_to_16/%reldir%/v1_samples/dileep4.p4.test \
+    p14_to_16/%reldir%/v1_samples/dileep8.p4.test \
+    p14_to_16/%reldir%/v1_samples/dileep12.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_125_meter_pre_color.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_126_meter_pre_color_2.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_127_meter_pre_color_3.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_132_meter_pre_color_4.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_144_recirculate.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_152_stateful_simple_cntr.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_153_stateful_simple_cntr_with_output.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_155_stateful_3_alus.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_154_stateful_sampling.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_159_stateful_using_phv_field.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_156_indirect_stateful_cntr.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_163_stateful_table_math_unit.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_160_stateful_single_bit_mode.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_164_stateful_deterministic_sampling.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_165_stateful_bfd_failure_detection.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_167_stateful_flowlet_switching.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_166_stateful_generic_counter.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_169_stateful_sflow_sequence.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_170_stateful_selection_table_update.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_171_stateful_conga.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_172_stateful_heavy_hitter.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_173_stateful_bloom_filter.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_101_switch_msdc.p4.test
 
 # These currently fail gateway check with 'expression too complex'
 XFAIL_TESTS += \
