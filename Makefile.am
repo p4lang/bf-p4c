@@ -146,32 +146,31 @@ cpplint_FILES += $(tofino_backend_SOURCES)
 -include $(srcdir)/%reldir%/newpa-tofinotests.am
 
 
-$(srcdir)/tofinotests.am: \
+$(srcdir)/tofinotests.am: $(wildcard \
    $(srcdir)/testdata/p4_14_samples/*.p4 \
-   $(srcdir)/testdata/p4_14_errors/*.p4 \
    $(srcdir)/%reldir%/v1_2_test/*.p4 \
    $(srcdir)/%reldir%/v1_samples/*.p4 \
-   $(srcdir)/%reldir%/v1_samples/switch_*/switch.p4
+   $(srcdir)/%reldir%/v1_samples/switch_*/switch.p4)
 	@$(GENTESTS) $(srcdir) tofino $(srcdir)/%reldir%/runtest $^ >$@ || rm $@ && false
 
-#$(srcdir)/%reldir%/v12-tofinotests.am: $(srcdir)/testdata/v1_2_samples/*.stf
+#$(srcdir)/%reldir%/v12-tofinotests.am: $(wildcard $(srcdir)/testdata/v1_2_samples/*.stf)
 #	@$(GENTESTS) $(srcdir) tofino $(srcdir)/%reldir%/runtest $(^:%.stf=%.p4) >$@ || rm $@ && false
 
-$(srcdir)/%reldir%/newpa-tofinotests.am: \
+$(srcdir)/%reldir%/newpa-tofinotests.am: $(wildcard \
    $(srcdir)/testdata/p4_14_samples/*.stf \
    $(srcdir)/%reldir%/v1_2_test/*.stf \
-   # $(srcdir)/%reldir%/v1_samples/*.stf
+   $(srcdir)/%reldir%/v1_samples/*.stf)
 	@$(GENTESTS) -extra $(srcdir) tofino-newpa $(srcdir)/%reldir%/runtest --newpa $(^:%.stf=%.p4) >$@ || rm $@ && false
 
 # We have additional test inputs that are used to test the other (standard) back-ends
 # These test input programs depend on Tofino in some way.
 
 # Exercise v12test back-end on Tofino-specific programs
-$(srcdir)/%reldir%/p14_to_16_tests.am: $(srcdir)/%reldir%/v1_samples/*.p4
+$(srcdir)/%reldir%/p14_to_16_tests.am: $(wildcard $(srcdir)/%reldir%/v1_samples/*.p4)
 	@$(GENTESTS) $(srcdir) p14_to_16 $(srcdir)/%reldir%/test-v12-sample.sh $^ >$@ || rm $@ && false
 
 # Exercise bmv2 back-end on Tofino-specific programs
-$(srcdir)/%reldir%/bmv2tests.am: $(srcdir)/%reldir%/v1_samples/*.p4
+$(srcdir)/%reldir%/bmv2tests.am: $(wildcard $(srcdir)/%reldir%/v1_samples/*.p4)
 	@$(GENTESTS) $(srcdir) bmv2 $(srcdir)/%reldir%/test-bmv2.sh $^ >$@ || rm $@ && false
 
 CLEANFILES += \
@@ -190,10 +189,10 @@ CLEANFILES += \
 # TwoReferences invokes a table twice - maybe it should become a negative test?
 # *range* match type is not supported by BMv2 (used also in error_detection*.p4)
 XFAIL_TESTS += \
-    tofino/testdata/v1_samples/16-TwoReferences.p4.test \
-    tofino/testdata/v1_samples/07-MultiProtocol.p4.test \
-    tofino/testdata/v1_samples/02-FullPHV1.p4.test \
-    tofino/testdata/v1_samples/03-FullPHV2.p4.test \
+    tofino/testdata/p4_14_samples/16-TwoReferences.p4.test \
+    tofino/testdata/p4_14_samples/07-MultiProtocol.p4.test \
+    tofino/testdata/p4_14_samples/02-FullPHV1.p4.test \
+    tofino/testdata/p4_14_samples/03-FullPHV2.p4.test \
     tofino/%reldir%/v1_2_test/flowlet_switching.p4.test \
     tofino/%reldir%/v1_2_test/bfd_offload.p4.test \
     tofino/%reldir%/v1_2_test/bloom_filter.p4.test \
@@ -268,8 +267,8 @@ XFAIL_TESTS += \
 
 # These currently fail gateway check with 'expression too complex'
 XFAIL_TESTS += \
-    tofino/testdata/v1_samples/14-GatewayGreaterThan.p4.test \
-    tofino/testdata/v1_samples/flowlet_switching.p4.test \
-    tofino/testdata/v1_samples/switch.p4.test \
+    tofino/testdata/p4_14_samples/14-GatewayGreaterThan.p4.test \
+    tofino/testdata/p4_14_samples/flowlet_switching.p4.test \
+    tofino/testdata/p4_14_samples/switch.p4.test \
     tofino/%reldir%/v1_samples/07-MacAddrCheck.p4.test \
     tofino/%reldir%/v1_samples/08-MacAddrCheck1.p4.test
