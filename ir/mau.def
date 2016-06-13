@@ -27,8 +27,7 @@ class Table : Tofino::Unit {
     inline Vector<Attached>                     attached;
     inline NameMap<ActionFunction, ordered_map> actions;
     inline NameMap<TableSeq>                    next;
-#noconstructor
-#nooperator==
+
     class Layout {
         /* POD type */
         int             entries = 0;
@@ -39,36 +38,34 @@ class Table : Tofino::Unit {
         int             action_data_bytes = 0;
         int             action_data_bytes_in_overhead = 0;
         int             overhead_bits = 0;
-#emit
         Layout() { memset(this, 0, sizeof(*this)); }
-        bool operator==(const Layout &a) const {
-            return memcmp(this, &a, sizeof(Layout)) == 0; }
+        operator== { return memcmp(this, &a, sizeof(Layout)) == 0; }
+#emit
         Layout &operator+=(const Layout &a);
 #end
     }
 #emit
-    Layout layout;
+    Layout layout;  // need operator<< to remove #emit here.
 #end
     class Way {
         /* POD type */
         int             match_groups = 0;
         int             entries = 0;
         int             width = 0;
-#emit
         Way() { memset(this, 0, sizeof(*this)); }
-        bool operator==(const Way &a) const {
-            return memcmp(this, &a, sizeof(Way)) == 0; }
-#end
+        operator== { return memcmp(this, &a, sizeof(Way)) == 0; }
     }
     std::vector<Way>    ways;
     const TableResourceAlloc            *resources = nullptr;
 
+#noconstructor
     Table(cstring n, gress_t gr, IR::V1Table t)
     : Tofino::Unit(t->srcInfo), name(n), gress(gr), match_table(t) {}
 #emit
     Table(cstring n, gress_t gr, const Expression *gw)
     : Tofino::Unit(gw->srcInfo), name(n), gress(gr),
       gateway_rows{ std::make_pair(gw, "true"), std::make_pair(nullptr, "false") } {}
+    // ir-generator can't parse {}-initializer (thinks it is the ctor body
 #end
 
     int logical_order() const { return logical_id + gress * 4096; }
@@ -77,6 +74,7 @@ class Table : Tofino::Unit {
         rv->name += ext;
         for (auto &at : rv->attached) at = at->clone_rename(ext);
         return rv; }
+#nooperator==
 #emit
     bool operator==(const Table &a) const override;
 #end
@@ -164,9 +162,7 @@ class TableSeq {
     inline Vector<Table>        tables;
     LTBitMatrix                 deps;
 #noconstructor
-#emit
     TableSeq() = default;
-#end
     TableSeq(Table a) { if (a) tables.push_back(a); }
     TableSeq(Table a, Table b) {
         if (a) tables.push_back(a);
@@ -191,9 +187,9 @@ class Instruction : Primitive {
 #nodbprint
 #emit
     using Primitive::Primitive;
-    explicit Instruction(const Primitive &p) : Primitive(p) {}
-    bool isOutput(int operand_index) const override { return operand_index == 0; }
 #end
+    Instruction(const Primitive &p) : Primitive(p) {}
+    bool isOutput(int operand_index) const override { return operand_index == 0; }
 }
 
 }  // end namespace MAU
