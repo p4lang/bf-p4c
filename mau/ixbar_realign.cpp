@@ -49,8 +49,22 @@ IXBarRealign::Realign::Realign(const PhvInfo &phv, int stage, const IXBar &ixbar
                     inuse |= 1 << j;
                     done = true;
                     break; } }
-            BUG_CHECK(done, "Failed to remap ixbar for alignment, stage %d group %d",
-                            stage, grp); } }
+            if (!done) {
+                LOG2("Failed to remap ixbar for alignment");
+                throw IXBar::failure(stage, grp); } } }
+    for (int grp = 0; grp < IXBar::TERNARY_GROUPS; ++grp) {
+        int off = (grp * 11 + 1)/2U;
+        for (int i = 0; i < IXBar::TERNARY_BYTES_PER_GROUP; ++i) {
+            auto &use = ixbar.ternary_use.at(grp, i);
+            if (!use.first) continue;
+            auto *field = phv.field(use.first);
+            BUG_CHECK(field, "%s on ixbar but not in phv?", use.first);
+            auto &alloc = field->for_bit(use.second * 8);
+            unsigned mask = (1 << alloc.container.log2sz()) - 1;
+            int byte = (use.second*8 - alloc.field_bit + alloc.container_bit)/8;
+            if ((((i + off) ^ byte) & mask) != 0) {
+                LOG1("Ternary ixbar needs realignment stage " << stage << " group " << grp);
+                throw IXBar::failure(stage, grp); } } }
 }
 
 bool IXBarRealign::Realign::remap_use(IXBar::Use &use) {
@@ -66,10 +80,13 @@ bool IXBarRealign::Realign::remap_use(IXBar::Use &use) {
 
 Visitor::profile_t IXBarRealign::init_apply(const IR::Node *root) {
     auto rv = MauModifier::init_apply(root);
-    root->apply(GetCurrentUse(*this));
-    int stageno = 0;
-    for (auto &ixbar : stage)
-        stage_fix.emplace_back(phv, stageno++, ixbar);
+    if (!skip) {
+        stage.clear();
+        stage_fix.clear();
+        root->apply(GetCurrentUse(*this));
+        int stageno = 0;
+        for (auto &ixbar : stage)
+            stage_fix.emplace_back(phv, stageno++, ixbar); }
     return rv;
 }
 

@@ -7,6 +7,7 @@ set python print-stack full
 
 break ErrorReporter::emit_message
 disable
+break Util::CompilerBug::CompilerBug<>
 
 define pn
     call ::dbprint($arg0)

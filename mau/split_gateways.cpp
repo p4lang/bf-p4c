@@ -30,7 +30,9 @@ const IR::Node *SpreadGatewayAcrossSeq::postorder(IR::MAU::Table *t) {
         for (auto &table : seq->tables) {
             if (splitting) {
                 snprintf(suffix, sizeof(suffix), ".%d", ++counter);
-                rv->push_back(t->clone_rename(suffix)); }
+                newtable = t->clone_rename(suffix);
+                newtable->next.clear();
+                rv->push_back(newtable); }
             newtable->next[it->first] =
                 new IR::MAU::TableSeq(newtable->next[it->first], table);
             if (uses.tables_modify(table) & uses.table_reads(t))

@@ -7,6 +7,10 @@
 #include "lib/range.h"
 #include "tofino/ir/thread_visitor.h"
 
+namespace PHV {
+class GreedyAlloc;
+}  // end namespace PHV
+
 class PhvInfo : public Inspector {
  public:
     struct Info;
@@ -67,6 +71,7 @@ class PhvInfo : public Inspector {
     vector<Info *>                      by_id;
     map<cstring, std::pair<int, int>>   all_headers;
     gress_t                             gress;
+    bool                                alloc_done_ = false;
     void add(cstring, int, int, bool, bool);
     void add_hdr(cstring, const IR::Type_StructLike *, bool);
     bool preorder(const IR::Tofino::Parser *) override {
@@ -85,6 +90,8 @@ class PhvInfo : public Inspector {
         iterator &operator--() { --it; return *this; }
         decltype(**it) operator*() { return **it; }
         decltype(*it) operator->() { return *it; } };
+    friend class PhvAllocator;
+    friend class PHV::GreedyAlloc;
 
  public:
     const Info *field(int idx) const { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
@@ -111,6 +118,7 @@ class PhvInfo : public Inspector {
     iterator<vector<Info *>::const_iterator> begin() const { return by_id.begin(); }
     iterator<vector<Info *>::const_iterator> end() const { return by_id.end(); }
     void allocatePOV();
+    bool alloc_done() const { return alloc_done_; }
 };
 
 std::ostream &operator<<(std::ostream &, const PhvInfo::Info::alloc_slice &);

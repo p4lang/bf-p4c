@@ -6,8 +6,10 @@
 
 class IXBarRealign : public MauModifier {
     const PhvInfo       &phv;
-    vector<IXBar>       stage;
+    bool                skip = false;
     profile_t init_apply(const IR::Node *) override;
+    void end_apply() override { skip = true; }  // don't rerun
+    bool preorder(IR::Tofino::Pipe *) override { return !skip; }
     bool preorder(IR::Expression *) override { return false; }
     void postorder(IR::MAU::Table *) override;
     class GetCurrentUse;
@@ -17,6 +19,7 @@ class IXBarRealign : public MauModifier {
         Realign(const PhvInfo &phv, int stage, const IXBar &ixbar);
         bool remap_use(IXBar::Use &);
     };
+    vector<IXBar>       stage;
     vector<Realign>     stage_fix;
 
  public:

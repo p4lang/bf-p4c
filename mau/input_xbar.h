@@ -94,6 +94,13 @@ struct IXBar {
         int groups() const;  // how many different groups in this use
     };
 
+    /* A problem occurred with the way the IXbar was allocated that requires backtracking
+     * and trying something else */
+    struct failure : public Backtrack::trigger {
+        int     stage = -1, group = -1;
+        failure(int stg, int grp) : trigger(OTHER), stage(stg), group(grp) {}
+    };
+
     void clear();
     bool allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc);
     int getHashGroup(cstring name);

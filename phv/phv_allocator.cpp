@@ -60,6 +60,7 @@ void PopulatePhvInfo(SolverInterface &solver, PhvInfo *phv_info) {
 PhvAllocator::PhvAllocator(PhvInfo &p, const SymBitMatrix &c) : phv(p), conflict(c) {
   auto *scc = new SourceContainerConstraint(constraints_);
   addPasses({
+    new VisitFunctor([this]() { if (phv.alloc_done()) early_exit(); }),
     new MauGroupConstraint(constraints_),
     new ContainerConstraint(phv, constraints_),
     new ByteConstraint(phv, constraints_),
@@ -91,6 +92,7 @@ PhvAllocator::PhvAllocator(PhvInfo &p, const SymBitMatrix &c) : phv(p), conflict
 }
 
 bool PhvAllocator::Solve(StringRef opt) {
+  if (phv.alloc_done()) return true;
   or_tools::Solver solver;
   auto strategy = operations_research::Solver::ASSIGN_MIN_VALUE;
   bool luby_restart = false;
@@ -118,6 +120,7 @@ bool PhvAllocator::Solve(StringRef opt) {
         std::sort(field.alloc.begin(), field.alloc.end(),
             [](const PhvInfo::Info::alloc_slice &a, const PhvInfo::Info::alloc_slice &b) -> bool {
           return a.field_bit > b.field_bit; });
+      phv.alloc_done_ = true;
       return true;
     } else {
       ++count;

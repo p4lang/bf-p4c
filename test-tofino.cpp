@@ -85,7 +85,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         auto *newpa = new PhvAllocator(phv, defuse.conflicts());
         phv_alloc = new PassManager({
             newpa,
-            new VisitFunctor([newpa, options]() { 
+            new VisitFunctor([newpa, options]() {
                 if (!newpa->Solve(options->phv_newalloc))
                     error("or-tools failed to find PHV allocation"); }),
             verbose ? new VisitFunctor([&phv]() {

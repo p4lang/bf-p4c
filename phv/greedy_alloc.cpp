@@ -77,6 +77,7 @@ void alloc_pov(PhvInfo::Info *i, PhvInfo::Info *pov, int pov_bit) {
 }
 
 bool PHV::GreedyAlloc::preorder(const IR::Tofino::Pipe *pipe) {
+    if (phv.alloc_done()) return false;
     Uses uses(phv);
     Regs normal = { "B0", "H0", "W0" },
          tagalong = { "TB0", "TH0", "TW0" };
