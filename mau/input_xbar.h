@@ -36,9 +36,14 @@ struct IXBar {
     Alloc2D<std::pair<cstring, int>, EXACT_GROUPS, EXACT_BYTES_PER_GROUP>       exact_use;
     Alloc2D<std::pair<cstring, int>, TERNARY_GROUPS, TERNARY_BYTES_PER_GROUP>   ternary_use;
     Alloc1D<std::pair<cstring, int>, BYTE_GROUPS>                               byte_group_use;
+    Alloc2Dbase<std::pair<cstring, int>> &use(bool ternary) {
+        if (ternary) return ternary_use;
+        return exact_use; }
     /* reverse maps of the above, mapping field names to sets of group+byte */
     std::multimap<cstring, Loc>         exact_fields;
     std::multimap<cstring, Loc>         ternary_fields;
+    std::multimap<cstring, Loc> &fields(bool ternary) {
+        return ternary ? ternary_fields : exact_fields; }
 
     /* Track the use of hashtables/groups too -- FIXME -- should it be a separate data structure?
      * strings here are table names */
@@ -53,14 +58,15 @@ struct IXBar {
     /* IXbar::Use tracks the input xbar use of a single table */
     struct Use {
         /* everything is public so anyone can read it, but only IXBar should write to this */
-        enum flags_t { NeedRange = 1, NeedXor = 2 };
+        enum flags_t { NeedRange = 1, NeedXor = 2,
+                       Align16lo = 4, Align16hi = 8, Align32lo = 16, Align32hi = 32 };
         bool            ternary;
         /* tracking individual bytes placed on the ixbar */
         struct Byte {
             cstring     field;
             int         byte;
             Loc         loc;
-            int         flags;  // flags describing gateway use/requirements
+            int         flags;  // flags describing alignment and gateway use/requirements
             Byte(cstring f, int b) : field(f), byte(b) {}
             Byte(cstring f, int b, int g, int gb) : field(f), byte(b), loc(g, gb) {}
             operator std::pair<cstring, int>() const { return std::make_pair(field, byte); }
@@ -118,6 +124,9 @@ struct IXBar {
                 return &p;
         /* FIXME -- what if it's in more than one place? */
         return nullptr; }
+
+ private:
+    bool find_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
 };
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {

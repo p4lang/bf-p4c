@@ -40,11 +40,21 @@ void IXBar::Use::compute_hash_tables() {
         hash_table_input |= grp; }
 }
 
-static bool find_alloc(IXBar::Use &alloc, int groups, int bytes_per_group,
-                       Alloc2Dbase<std::pair<cstring, int>>     &use,
-                       std::multimap<cstring, IXBar::Loc>       &fields,
-                       bool second_try) {
+static int align_flags[4] = {
+    /* these flags are the alignment restrictions that FAIL for each byte in 4 */
+    IXBar::Use::Align16hi | IXBar::Use::Align32hi,
+    IXBar::Use::Align16lo | IXBar::Use::Align32hi,
+    IXBar::Use::Align16hi | IXBar::Use::Align32lo,
+    IXBar::Use::Align16lo | IXBar::Use::Align32lo,
+};
+
+bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try) {
+    int groups = ternary ? TERNARY_GROUPS : EXACT_GROUPS;
+    int bytes_per_group = ternary ? TERNARY_BYTES_PER_GROUP : EXACT_BYTES_PER_GROUP;
+    auto &use = this->use(ternary);
+    auto &fields = this->fields(ternary);
     int groups_needed = (alloc.use.size() + bytes_per_group - 1)/bytes_per_group;
+
     if (groups_needed > groups)
         return false;
     struct grp_use {
@@ -87,13 +97,16 @@ static bool find_alloc(IXBar::Use &alloc, int groups, int bytes_per_group,
         if (found) continue;
         for (auto &grp : order) {
             if (!groups_to_use[grp.group]) break;
-            if (!grp.free) continue;
-            need_alloc[&need - &alloc.use[0]] = true;
-            need.loc.group = grp.group;
-            need.loc.byte = *grp.free.min();
-            grp.free.min() = false;
-            found = true;
-            break; }
+            int align = (ternary ? (grp.group * 11 + 1)/2 : 0) & 3;
+            for (auto byte : grp.free) {
+                if (align_flags[(byte+align)&3] & need.flags) continue;
+                need_alloc[&need - &alloc.use[0]] = true;
+                need.loc.group = grp.group;
+                need.loc.byte = byte;
+                grp.free[byte] = false;
+                found = true;
+                break; }
+            if (found) break; }
         if (!found) {
             LOG3("failed to fit");
             return false; } }
@@ -102,6 +115,34 @@ static bool find_alloc(IXBar::Use &alloc, int groups, int bytes_per_group,
         fields.emplace(alloc.use[i].field, alloc.use[i].loc);
         use[alloc.use[i].loc] = alloc.use[i]; }
     return /* alloc */ true;
+}
+
+int need_align_flags[3][4] = { { 0, 0, 0, 0 },  // 8bit -- no alignment needed
+    { IXBar::Use::Align16lo, IXBar::Use::Align16hi, IXBar::Use::Align16lo, IXBar::Use::Align16hi },
+    { IXBar::Use::Align16lo | IXBar::Use::Align32lo,
+      IXBar::Use::Align16hi | IXBar::Use::Align32lo,
+      IXBar::Use::Align16lo | IXBar::Use::Align32hi,
+      IXBar::Use::Align16hi | IXBar::Use::Align32hi } };
+
+
+static void add_use(IXBar::Use &alloc, const PhvInfo::Info *field, int flags) {
+    if (field->alloc.empty()) {
+        int size = (field->size + 7)/8U;
+        for (int i = 0; i < size; i++) {
+            alloc.use.emplace_back(field->name, i);
+            alloc.use.back().flags = flags; }
+    } else {
+        int byte = 0;
+        for (auto it = field->alloc.rbegin(); it != field->alloc.rend(); ++it) {
+            if (it->container.tagalong()) continue;
+            for (int cbyte = it->container_bit/8U;
+                 cbyte <= (it->container_bit + it->width - 1)/8U;
+                 ++cbyte, ++byte) {
+                alloc.use.emplace_back(field->name, byte);
+                alloc.use.back().flags =
+                    flags | need_align_flags[it->container.log2sz()][cbyte & 3];; } }
+        if (!byte)
+            BUG("field %s allocated to tagalong but used in MAU pipe", field->name); }
 }
 
 bool IXBar::allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc) {
@@ -121,27 +162,15 @@ bool IXBar::allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv,
         const PhvInfo::Info *finfo;
         if (!field || !(finfo = phv.field(field)))
             BUG("unexpected reads expression %s", r);
-        cstring fname = finfo->name;
-        if (fields_needed.count(fname))
-            throw Util::CompilationError("field %s read twice by table %s", fname, tbl->name);
-        fields_needed.insert(fname);
-        int size = (field->type->width_bits() + 7)/8U;
-        for (int i = 0; i < size; i++)
-            alloc.use.emplace_back(fname, i); }
+        if (fields_needed.count(finfo->name))
+            throw Util::CompilationError("field %s read twice by table %s", finfo->name, tbl->name);
+        fields_needed.insert(finfo->name);
+        add_use(alloc, finfo, 0); }
     LOG1("need " << alloc.use.size() << " bytes for table " << tbl->name);
     LOG3("need fields " << fields_needed);
-    if (ternary) {
-        rv = find_alloc(alloc, TERNARY_GROUPS, TERNARY_BYTES_PER_GROUP,
-                        ternary_use, ternary_fields, false)
-          || find_alloc(alloc, TERNARY_GROUPS, TERNARY_BYTES_PER_GROUP,
-                        ternary_use, ternary_fields, true);
-    } else {
-        rv = find_alloc(alloc, EXACT_GROUPS, EXACT_BYTES_PER_GROUP,
-                        exact_use, exact_fields, false)
-          || find_alloc(alloc, EXACT_GROUPS, EXACT_BYTES_PER_GROUP,
-                        exact_use, exact_fields, true);
-        if (rv) alloc.compute_hash_tables();
-    }
+    rv = find_alloc(alloc, ternary , false) || find_alloc(alloc, ternary , true);
+    if (!ternary && rv)
+        alloc.compute_hash_tables();
     if (!rv) alloc.clear();
     return rv;
 }
@@ -204,18 +233,16 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     tbl->apply(collect);
     if (collect.info.empty() && collect.valid_offsets.empty()) return true;
     for (auto &info : collect.info) {
-        int size = (info.first->size + 7)/8U;
-        for (int i = 0; i < size; i++) {
-            alloc.use.emplace_back(info.first->name, i);
-            if (info.second.xor_with)
-                alloc.use.back().flags |= IXBar::Use::NeedXor;
-            if (info.second.need_range)
-                alloc.use.back().flags |= IXBar::Use::NeedRange; } }
+        int flags = 0;
+        if (info.second.xor_with)
+            flags |= IXBar::Use::NeedXor;
+        if (info.second.need_range)
+            flags |= IXBar::Use::NeedRange;
+        add_use(alloc, info.first, flags); }
     for (auto &valid : collect.valid_offsets) {
         alloc.use.emplace_back(valid.first + ".$valid", 0); }
     LOG3("gw needs alloc: " << alloc.use);
-    if (!find_alloc(alloc, EXACT_GROUPS, EXACT_BYTES_PER_GROUP, exact_use, exact_fields, false) &&
-        !find_alloc(alloc, EXACT_GROUPS, EXACT_BYTES_PER_GROUP, exact_use, exact_fields, true)) {
+    if (!find_alloc(alloc, false, false) && !find_alloc(alloc, false, true)) {
         alloc.clear();
         return false; }
     if (!collect.compute_offsets()) {

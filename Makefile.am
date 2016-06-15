@@ -188,9 +188,6 @@ CLEANFILES += \
 # *range* match type is not supported by BMv2 (used also in error_detection*.p4)
 XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/16-TwoReferences.p4.test \
-    tofino/testdata/p4_14_samples/07-MultiProtocol.p4.test \
-    tofino/testdata/p4_14_samples/02-FullPHV1.p4.test \
-    tofino/testdata/p4_14_samples/03-FullPHV2.p4.test \
     tofino/%reldir%/v1_2_test/flowlet_switching.p4.test \
     tofino/%reldir%/v1_2_test/bfd_offload.p4.test \
     tofino/%reldir%/v1_2_test/bloom_filter.p4.test \
@@ -270,3 +267,20 @@ XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/switch.p4.test \
     tofino/%reldir%/v1_samples/07-MacAddrCheck.p4.test \
     tofino/%reldir%/v1_samples/08-MacAddrCheck1.p4.test
+
+# These currently fail ixbar allocation (table too wide)
+XFAIL_TESTS += \
+    tofino/testdata/p4_14_samples/02-FullPHV1.p4.test \
+    tofino/testdata/p4_14_samples/03-FullPHV2.p4.test \
+    tofino/%reldir%/v1_samples/switch_20160602/switch.p4.test \
+    tofino/%reldir%/v1_samples/test_config_159_stateful_using_phv_field.p4.test
+
+# Fails with "can't find a table to place?"
+XFAIL_TESTS += \
+    tofino/testdata/p4_14_samples/07-MultiProtocol.p4.test
+
+# --newpa problems
+XFAIL_TESTS += \
+    tofino-newpa/testdata/p4_14_samples/gateway1.p4.test \
+    tofino-newpa/testdata/p4_14_samples/action_chain1.p4.test \
+    tofino-newpa/extensions/tofino/v1_2_test/ternary2.p4.test

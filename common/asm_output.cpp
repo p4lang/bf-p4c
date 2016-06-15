@@ -47,6 +47,8 @@ std::ostream &operator<<(std::ostream &out, const Slice &sl) {
 
 Slice Slice::join(Slice &a) const {
     if (field != a.field || reg != a.reg || hi + 1 != a.lo) return Slice();
+    if (!field)
+        return Slice(reg, lo, a.hi);
     /* don't join if the slices were allocated to different PHV containers */
     for (auto &alloc : field->alloc) {
         if (lo < alloc.field_bit) continue;
