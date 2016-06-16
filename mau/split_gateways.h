@@ -5,20 +5,23 @@
 #include "field_use.h"
 #include "gateway.h"
 
-class reason : public Backtrack::trigger {
-};
-
 class SpreadGatewayAcrossSeq : public MauTransform, public Backtrack {
     FieldUse    uses;
     bool do_splitting = false;
-    bool backtrack(trigger &) override { do_splitting = !do_splitting; return do_splitting; }
+    struct enable : public Backtrack::trigger { };
+    bool backtrack(trigger &trig) override {
+        if (!do_splitting && trig.is<enable>()) {
+            do_splitting = true;
+            return true; }
+        return false; }
     Visitor::profile_t init_apply(const IR::Node *) override;
     const IR::Node *postorder(IR::MAU::Table *) override;
+
 };
 
 class SplitComplexGateways : public Transform {
     const PhvInfo       &phv;
-    const IR::MAU::Table *preorder(IR::MAU::Table *tbl) override;
+    const IR::MAU::Table  *preorder(IR::MAU::Table *tbl) override;
  public:
     explicit SplitComplexGateways(const PhvInfo &phv) : phv(phv) {}
 };

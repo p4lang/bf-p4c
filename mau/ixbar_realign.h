@@ -6,10 +6,7 @@
 
 class IXBarRealign : public MauModifier {
     const PhvInfo       &phv;
-    bool                skip = false;
     profile_t init_apply(const IR::Node *) override;
-    void end_apply() override { skip = true; }  // don't rerun
-    bool preorder(IR::Tofino::Pipe *) override { return !skip; }
     bool preorder(IR::Expression *) override { return false; }
     void postorder(IR::MAU::Table *) override;
     class GetCurrentUse;

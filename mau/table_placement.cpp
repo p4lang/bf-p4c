@@ -12,6 +12,12 @@
 #include "lib/bitvec.h"
 #include "lib/log.h"
 #include "field_use.h"
+#include "tofino/phv/phv_fields.h"
+
+Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
+    alloc_done = phv.alloc_done();
+    return MauTransform::init_apply(root);
+}
 
 class SetupUids : public Inspector {
     map<cstring, unsigned>      &table_uids;

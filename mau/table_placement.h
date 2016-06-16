@@ -9,20 +9,29 @@ class TablesMutuallyExclusive;
 struct StageUseEstimate;
 class PhvInfo;
 
-class TablePlacement : public MauTransform {
+class TablePlacement : public MauTransform, public Backtrack {
  public:
     TablePlacement(const DependencyGraph &d, const TablesMutuallyExclusive &m, const PhvInfo &p)
     : deps(d), mutex(m), phv(p) {}
     struct GroupPlace;
     struct Placed;
+
  private:
     map<cstring, unsigned>      table_uids;
     const DependencyGraph &deps;
     const TablesMutuallyExclusive &mutex;
     const PhvInfo &phv;
+    bool alloc_done = false;
+    profile_t init_apply(const IR::Node *root) override;
+    bool backtrack(trigger &trig) {
+        return trig.is<IXBar::failure>() && !alloc_done; }
     IR::Node *preorder(IR::Tofino::Pipe *) override;
     IR::Node *preorder(IR::MAU::TableSeq *) override;
     IR::Node *preorder(IR::MAU::Table *) override;
+    IR::Node *postorder(IR::Tofino::Pipe *pipe) override {
+        table_uids.clear();
+        table_placed.clear();
+        return pipe; }
     const Placed *placement;
     bool is_better(const Placed *a, const Placed *b);
     Placed *try_place_table(const IR::MAU::Table *t, const Placed *done,

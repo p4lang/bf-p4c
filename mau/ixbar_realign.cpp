@@ -80,13 +80,12 @@ bool IXBarRealign::Realign::remap_use(IXBar::Use &use) {
 
 Visitor::profile_t IXBarRealign::init_apply(const IR::Node *root) {
     auto rv = MauModifier::init_apply(root);
-    if (!skip) {
-        stage.clear();
-        stage_fix.clear();
-        root->apply(GetCurrentUse(*this));
-        int stageno = 0;
-        for (auto &ixbar : stage)
-            stage_fix.emplace_back(phv, stageno++, ixbar); }
+    stage.clear();
+    stage_fix.clear();
+    root->apply(GetCurrentUse(*this));
+    int stageno = 0;
+    for (auto &ixbar : stage)
+        stage_fix.emplace_back(phv, stageno++, ixbar);
     return rv;
 }
 
