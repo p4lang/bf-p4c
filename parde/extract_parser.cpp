@@ -252,7 +252,7 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
     if (auto *path = dynamic_cast<const IR::PathExpression *>(v1_2->selectExpression)) {
       addMatch(rv, match_t(), *stmts, path->path->name, ctxt);
     } else if (auto *sel = dynamic_cast<const IR::SelectExpression *>(v1_2->selectExpression)) {
-      for (auto ce : *sel->selectCases) {
+      for (auto ce : sel->selectCases) {
         if (ce->keyset->is<IR::DefaultExpression>())
           addMatch(rv, match_t(), *stmts, ce->state->path->name, ctxt);
         else if (auto k = ce->keyset->to<IR::Constant>())

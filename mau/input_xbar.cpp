@@ -132,10 +132,10 @@ static void add_use(IXBar::Use &alloc, const PhvInfo::Info *field, int flags) {
             alloc.use.emplace_back(field->name, i);
             alloc.use.back().flags = flags; }
     } else {
-        int byte = 0;
+        unsigned byte = 0;
         for (auto it = field->alloc.rbegin(); it != field->alloc.rend(); ++it) {
             if (it->container.tagalong()) continue;
-            for (int cbyte = it->container_bit/8U;
+            for (unsigned cbyte = it->container_bit/8U;
                  cbyte <= (it->container_bit + it->width - 1)/8U;
                  ++cbyte, ++byte) {
                 alloc.use.emplace_back(field->name, byte);

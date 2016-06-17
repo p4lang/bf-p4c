@@ -291,7 +291,7 @@ class GetTofinoTables : public Inspector {
       error("%s: Can only switch on table.apply().action_run", s->expression->srcInfo);
       return; }
     auto tt = tables[s] = tables.at(exp->expr);
-    for (auto c : *s->cases) {
+    for (auto c : s->cases) {
         cstring label;
         if (c->label->is<IR::DefaultExpression>())
             label = "default";
