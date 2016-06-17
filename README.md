@@ -62,9 +62,7 @@ make
   its own documentation:
   https://barefootnetworks.atlassian.net/wiki/pages/viewpage.action?pageId=17006668.
   Only the dependences required by the "model" are needed (i.e., we
-  don't use the driver in the compiler tests).  (Currently there is a
-  bug that causes the model to crash; in that case you may need to
-  install the following branch: `git checkout cdodd-simple_harness`)
+  don't use the driver in the compiler tests).
 
 # Tofino mid-end and back-end design
 
