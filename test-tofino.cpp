@@ -82,7 +82,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     PassManager *phv_alloc;
 
     if (options->phv_newalloc) {
-        auto *newpa = new PhvAllocator(phv, defuse.conflicts());
+        auto *newpa = new PhvAllocator(phv, defuse.conflicts(), std::ref(mutex));
         phv_alloc = new PassManager({
             newpa,
             new VisitFunctor([newpa, options]() {
@@ -134,6 +134,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new ElimUnused(phv, defuse),
         new DumpPipe("After ElimUnused"),
         new PhvInfo::SetReferenced(phv),
+        &mutex,
         &summary,
         verbose ? new VisitFunctor([&summary]() { std::cout << summary; }) : nullptr,
 

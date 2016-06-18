@@ -159,7 +159,7 @@ newpa-tofinotests.mk: $(wildcard \
    $(srcdir)/testdata/p4_14_samples/*.stf \
    $(srcdir)/%reldir%/v1_2_test/*.stf \
    $(srcdir)/%reldir%/v1_samples/*.stf)
-	@$(GENTESTS) -extra $(srcdir) tofino-newpa $(srcdir)/%reldir%/runtest --newpa $(^:%.stf=%.p4) >$@ || rm $@ && false
+	@$(GENTESTS) $(srcdir) tofino-newpa $(srcdir)/%reldir%/runtest --newpa $(^:%.stf=%.p4) >$@ || rm $@ && false
 
 # We have additional test inputs that are used to test the other (standard) back-ends
 # These test input programs depend on Tofino in some way.
@@ -278,9 +278,3 @@ XFAIL_TESTS += \
 # Fails with "can't find a table to place?"
 XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/07-MultiProtocol.p4.test
-
-# --newpa problems
-XFAIL_TESTS += \
-    tofino-newpa/testdata/p4_14_samples/gateway1.p4.test \
-    tofino-newpa/testdata/p4_14_samples/action_chain1.p4.test \
-    tofino-newpa/extensions/tofino/v1_2_test/ternary2.p4.test

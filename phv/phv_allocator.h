@@ -11,13 +11,15 @@ class Pipe;
 }
 }
 class PhvAllocator : public PassManager {
-  PhvInfo               &phv;
-  const SymBitMatrix    &conflict;
+    PhvInfo               &phv;
+    const SymBitMatrix    &conflict;
+    std::function<bool(const IR::MAU::Table *, const IR::MAU::Table *)>   mutex;
  public:
-  PhvAllocator(PhvInfo &phv, const SymBitMatrix &c);
-  bool Solve(StringRef opt);
+    PhvAllocator(PhvInfo &phv, const SymBitMatrix &c,
+                 std::function<bool(const IR::MAU::Table *, const IR::MAU::Table *)> m);
+    bool Solve(StringRef opt);
 
  private:
-  Constraints constraints_;
+    Constraints constraints_;
 };
 #endif /* TOFINO_PHV_PHV_ALLOCATOR_H_ */

@@ -2,12 +2,12 @@
 #define _TOFINO_MAU_TABLE_MUTEX_H_
 
 #include "mau_visitor.h"
-#include "lib/ltbitmatrix.h"
+#include "lib/symbitmatrix.h"
 
 class TablesMutuallyExclusive : public MauInspector {
     map<const IR::MAU::Table *, int>    table_ids;
     map<const IR::MAU::Table *, bitvec> table_succ;
-    LTBitMatrix                         mutex;
+    SymBitMatrix                        mutex;
     bool preorder(const IR::MAU::Table *t) override {
         assert(!table_ids.count(t));
         table_ids.emplace(t, table_ids.size());
@@ -23,9 +23,7 @@ class TablesMutuallyExclusive : public MauInspector {
 
  public:
     bool operator()(const IR::MAU::Table *a, const IR::MAU::Table *b) const {
-        int a_id = table_ids.at(a);
-        int b_id = table_ids.at(b);
-        return a_id < b_id ? mutex(b_id, a_id) : mutex(a_id, b_id); }
+        return mutex(table_ids.at(a), table_ids.at(b)); }
 };
 
 #endif /* _TOFINO_MAU_TABLE_MUTEX_H_ */
