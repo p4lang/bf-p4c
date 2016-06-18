@@ -16,7 +16,6 @@ class SpreadGatewayAcrossSeq : public MauTransform, public Backtrack {
         return false; }
     Visitor::profile_t init_apply(const IR::Node *) override;
     const IR::Node *postorder(IR::MAU::Table *) override;
-
 };
 
 class SplitComplexGateways : public Transform {
@@ -25,7 +24,6 @@ class SplitComplexGateways : public Transform {
  public:
     explicit SplitComplexGateways(const PhvInfo &phv) : phv(phv) {}
 };
-
 
 
 #endif /* _TOFINO_MAU_SPLIT_GATEWAYS_H_ */

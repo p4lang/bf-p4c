@@ -58,10 +58,10 @@ const IR::MAU::Table *SplitComplexGateways::preorder(IR::MAU::Table *tbl) {
         tbl->apply(collect);
         if (collect.compute_offsets()) {
 #if 0
-        FIXME -- this is actually wrong as it effectively duplicates the table in the
-        dependency tree, which is ok in some cases, but won't work in others.  Need to
-        figure out how the change the representation to make use of this pattern correctly
-        in the general case, without having to introduce new metadata.
+        // FIXME -- this is actually wrong as it effectively duplicates the table in the
+        // dependency tree, which is ok in some cases, but won't work in others.  Need to
+        // figure out how the change the representation to make use of this pattern correctly
+        // in the general case, without having to introduce new metadata.
             LOG1("Splitting " << i << " rows into " << tbl->name);
             auto rest = tbl->clone_rename("-split");
             rest->gateway_rows.erase(rest->gateway_rows.begin(), rest->gateway_rows.begin() + i);
