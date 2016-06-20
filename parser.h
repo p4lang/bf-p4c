@@ -19,6 +19,7 @@ enum {
     PARSER_STATE_MASK = 0xff,
     PARSER_TCAM_DEPTH = 256,
     PARSER_CHECKSUM_ROWS = 32,
+    PARSER_CTRINIT_ROWS = 16,
 };
 
 class Parser : public Section {
@@ -49,6 +50,16 @@ class Parser : public Section {
         void write_config(Parser *);
     private:
         template <typename ROW> void write_row_config(ROW &row_regs);
+    };
+    struct CounterInit {
+        int             lineno = -1, offset = -1;
+        int             add = 0, mask = 7, rot = 0, max = 255, src = -1;
+        CounterInit(value_t &data);
+        bool parse(value_t &exp, int what = 0);
+        void write_config(Parser *, gress_t, int);
+        bool equiv(const CounterInit &a) const {
+            /* ignoring lineno and offset fields */
+            return add == a.add && mask == a.mask && rot == a.rot && max == a.max && src == a.src; }
     };
     struct State {
         struct Ref {
@@ -95,7 +106,11 @@ class Parser : public Section {
             int         lineno;
             match_t     match;
             int         counter = 0, offset = 0, shift = 0, buf_req = -1;
-            bool        counter_reset = false, offset_reset = false;
+            bool        counter_load = false, counter_reset = false, offset_reset = false;
+            CounterInit *counter_exp;
+
+            //int         load_offset = -1, load_unit = -1, load_add = 0, load_shift = 0,
+            //            load_mask = 0xff, load_max = 0xff;
             Ref         next;
             MatchKey    future;
             enum flags_t { OFFSET=1, ROTATE=2 };
@@ -148,7 +163,6 @@ class Parser : public Section {
         void write_lookup_config(Parser *, State *, int, const std::vector<State *> &);
         void write_config(Parser *);
     };
-    friend struct State;
 public:
     std::map<std::string, State>        states[2];
     std::vector<State *>                all;
@@ -163,6 +177,7 @@ public:
     // FIXME -- multi_write stuff should be split by gress?
     int                                 hdr_len_adj[2], meta_opt;
     Alloc1D<Checksum *, PARSER_CHECKSUM_ROWS>   checksum_use[2];
+    Alloc1D<CounterInit *, PARSER_CTRINIT_ROWS> counter_init[2];
 
 private:
     /* remapping structure for getting at the config bits for phv output

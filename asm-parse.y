@@ -92,6 +92,7 @@ static value_t list_map_expand(VECTOR(value_t) &v);
 
 %left '|' '^'
 %left '&'
+%left '<' '>'
 %nonassoc UNARY
 
 %union {
@@ -249,6 +250,8 @@ value: key
     | value '^' value { $$ = CMD(strdup("^"), $1, $3); }
     | value '|' value { $$ = CMD(strdup("|"), $1, $3); }
     | value '&' value { $$ = CMD(strdup("&"), $1, $3); }
+    | value '<' '<' value { $$ = CMD(strdup("<<"), $1, $4); }
+    | value '>' '>' value { $$ = CMD(strdup(">>"), $1, $4); }
     | '(' value ')' { $$ = $2; }
     ;
 

@@ -92,6 +92,26 @@ void Parser::input(VECTOR(value_t) args, value_t data) {
                 } else
                     parser_error[gress] = Phv::Ref(gress, kv.value);
                 continue; }
+            if (kv.key == "counter_init") {
+                if (!CHECKTYPE2(kv.value, tVEC, tMAP)) continue;
+                if (kv.value.type == tVEC) {
+                    int i = 0;
+                    for (auto &v : kv.value.vec) {
+                        if (i >= PARSER_CTRINIT_ROWS) {
+                            error(v.lineno, "too many counter init rows");
+                            break; }
+                        counter_init[gress][i++] = new CounterInit(v); }
+                    continue; }
+                for (auto &el : kv.value.map) {
+                    if (!CHECKTYPE(el.key, tINT)) continue;
+                    if (el.key.i < 0 || el.key.i >= PARSER_CTRINIT_ROWS)
+                        error(el.key.lineno, "invalid counter init row");
+                    else if (auto *old = counter_init[gress][el.key.i]) {
+                        error(el.key.lineno, "duplicate counter init row");
+                        warning(old->lineno, "previous counter init row");
+                    } else
+                        counter_init[gress][el.key.i] = new CounterInit(el.value); }
+                continue; }
             if (kv.key == "multi_write") {
                 if (kv.value.type == tVEC)
                     for (auto &el : kv.value.vec)
@@ -237,7 +257,10 @@ void Parser::output() {
     for (auto st : all) st->write_config(this);
     if (error_count > 0) return;
     for (gress_t gress : Range(INGRESS, EGRESS)) {
-        // TODO: write ctr_init_ram
+        int i = 0;
+        for (auto ctr : counter_init[gress]) {
+            if (ctr) ctr->write_config(this, gress, i);
+            ++i; }
         for (auto csum : checksum_use[gress])
             if (csum) csum->write_config(this); }
 
@@ -407,6 +430,125 @@ void Parser::Checksum::write_config(Parser *parser) {
         write_row_config(parser->mem[gress].po_csum_ctrl_1_row[addr]);
     else
         error(lineno, "invalid unit for checksum");
+}
+
+Parser::CounterInit::CounterInit(value_t &data) : lineno(data.lineno) {
+    if (data.type != tMAP) {
+        if (!parse(data))
+            error(lineno, "synatx error in parser counter expression");
+    } else {
+        for (auto &kv : MapIterChecked(data.map)) {
+            if (kv.key == "add") {
+                if (CHECKTYPE(kv.value, tINT))
+                    if ((add = kv.value.i) < 0 || add > 255 )
+                        error(kv.value.lineno, "counter add value out of range");
+            } else if (kv.key == "max") {
+                if (CHECKTYPE(kv.value, tINT))
+                    if ((max = kv.value.i) < 0 || max > 255)
+                        error(kv.value.lineno, "counter max value out of range");
+            } else if (kv.key == "mask") {
+                if (CHECKTYPE(kv.value, tINT)) {
+                    if (kv.value.i <= 0 || (kv.value.i & (kv.value.i + 1)))
+                        error(kv.value.lineno, "counter mask must be one less than a power of 2");
+                    else if ((max = bitcount(kv.value.i) - 1) > 7)
+                        error(kv.value.lineno, "counter mask value out of range"); }
+            } else if (kv.key == "src" || kv.key == "source") {
+                if (kv.value.type == tINT && kv.value.i >= 0 && kv.value.i < 4) src = kv.value.i;
+                else if (kv.value == "half" && kv.value.type == tCMD && kv.value.vec.size == 2) {
+                    if (kv.value[1] == "lo") src = 0;
+                    else if (kv.value[1] == "hi") src = 1;
+                    else error(kv.value.lineno, "unknown counter source");
+                } else if (kv.value == "half_lo") src = 0;
+                else if (kv.value == "half_hi") src = 1;
+                else if (kv.value == "byte0") src = 2;
+                else if (kv.value == "byte1") src = 3;
+                else error(kv.value.lineno, "unknown counter source");
+            } else if (kv.key == "rot" || kv.key == "rotate") {
+                if (CHECKTYPE(kv.value, tINT))
+                    if ((rot == kv.value.i) < 0 || rot > 7)
+                        error(kv.value.lineno, "counter rotate value out of range");
+            } else {
+                error(kv.key.lineno, "Unknown field %s in counter", kv.key.s); } } }
+}
+
+bool Parser::CounterInit::parse(value_t &exp, int what) {
+    enum { START, OFFSET, RSHIFT, LSHIFT, MASK, ADD };
+    if (exp.type == tCMD) {
+        if (what == START) {
+            for (int i = exp[0] == "load"; i < exp.vec.size; i++) {
+                if (exp[i] == "max") {
+                    if (++i >= exp.vec.size || exp[i].type != tINT)
+                        return false;
+                    max = exp[2].i;
+                } else if (exp[i] == "half_lo") {
+                    if (src >= 0 || offset >= 0) return false;
+                    src = 1;
+                } else if (exp[i] == "half_hi") {
+                    if (src >= 0 || offset >= 0) return false;
+                    src = 1;
+                } else if (exp[i] == "byte0") {
+                    if (src >= 0 || offset >= 0) return false;
+                    src = 2;
+                } else if (exp[i] == "byte1") {
+                    if (src >= 0 || offset >= 0) return false;
+                    src = 3;
+                } else if (exp[i] == "half") {
+                    if (src >= 0 || offset >= 0 || ++i >= exp.vec.size) return false;
+                    if (exp[i] == "lo") src = 0;
+                    if (exp[i] == "hi") src = 1;
+                    else return false;
+                } else {
+                    if (!parse(exp[i], OFFSET))
+                        return false; } }
+            return true; }
+        if (what == OFFSET && exp[0] == ">>") {
+            if (exp.vec.size != 3) return false;
+            return parse(exp[1], what) && parse(exp[2], RSHIFT); }
+        if (what == OFFSET && exp[0] == "<<") {
+            if (exp.vec.size != 3) return false;
+            return parse(exp[1], what) && parse(exp[2], LSHIFT); }
+        if (what == OFFSET && exp[0] == "&") {
+            if (exp.vec.size != 3) return false;
+            return parse(exp[1], what) && parse(exp[2], MASK); }
+        if (what == OFFSET && exp[0] == "+") {
+            if (exp.vec.size != 3) return false;
+            return parse(exp[1], what) && parse(exp[2], ADD); }
+    } else if (exp.type == tINT) {
+        switch (what) {
+        case OFFSET:
+            if (offset >= 0 || src >= 0) return false;
+            offset = exp.i;
+            return true;
+        case RSHIFT:
+            if (rot) return false;
+            rot = exp.i & 7;
+            return true;
+        case LSHIFT:
+            if (rot) return false;
+            rot = -exp.i & 7;
+            return true;
+        case MASK:
+            if (mask != 7) return false;
+            mask = bitcount(exp.i) - 1;
+            if ((exp.i & (exp.i + 1)) || mask < 0 || mask > 7) {
+                error(lineno, "mask must one less than a power of 2");
+                return false; }
+            return true;
+        case ADD:
+            if (add) return false;
+            add = exp.i;
+            return true;
+        default: return false; } }
+    return false;
+}
+
+void Parser::CounterInit::write_config(Parser *parser, gress_t gress, int idx) {
+    auto &ctr_init_ram = parser->mem[gress].ml_ctr_init_ram[idx];
+    ctr_init_ram.add = add;
+    ctr_init_ram.mask = mask;
+    ctr_init_ram.rotate = rot;
+    ctr_init_ram.max = max;
+    ctr_init_ram.src = src;
 }
 
 Parser::State::Ref &Parser::State::Ref::operator=(const value_t &v) {
@@ -588,6 +730,12 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
             if (kv.value.type == tINT) {
                 counter = kv.value.i;
                 counter_reset = true;
+            } else if (kv.value[0] == "load") {
+                counter_load = true;
+                if (kv.value.vec.size == 3 && kv.value[1] == "@" && kv.value[2].type == tINT)
+                    counter = kv.value[2].i;
+                else
+                    counter_exp = new CounterInit(kv.value);
             } else if (CHECKTYPEM(kv.value[1], tINT, "set, inc or dec value")) {
                 counter = kv.value.i;
                 counter_reset = false;
@@ -891,6 +1039,23 @@ void Parser::State::Match::merge_outputs(OutputUse use) {
 void Parser::State::Match::pass2(Parser *pa, State *state) {
     for (auto &c : csum)
         c.pass2(pa);
+    if (counter < 0 && counter_exp) {
+        if (counter_exp->src < 0)
+            error(counter_exp->lineno, "can't allocate match unit for counter load"
+                  " (unimplemented)");
+        else {
+            int i = 0, free = -1;
+            for (auto init : pa->counter_init[state->gress]) {
+                if (init && init->equiv(*counter_exp)) {
+                    counter = i;
+                    break; }
+                if (free < 0 && !init) free = i;
+                ++i; }
+            if (counter < 0) {
+                if (free >= 0)
+                    pa->counter_init[state->gress][counter = free] = counter_exp;
+                else
+                    error(counter_exp->lineno, "no space left in counter init ram"); } } }
 }
 
 void Parser::State::pass2(Parser *pa) {
@@ -1032,11 +1197,13 @@ void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
     word0.ver_1 = word1.ver_1 = 1;
 
     auto &ea_row = pa->mem[state->gress].ml_ea_row[row];
-    if (counter | counter_reset) {
+    if (counter | counter_reset | counter_load) {
         ea_row.ctr_amt_idx = counter;
+        ea_row.ctr_ld_src = counter_load;
         ea_row.ctr_load = counter_reset;
     } else if (def) {
         ea_row.ctr_amt_idx = def->counter;
+        ea_row.ctr_ld_src = def->counter_load;
         ea_row.ctr_load = def->counter_reset; }
     if (shift) ea_row.shift_amt = shift;
     else if (def) ea_row.shift_amt = def->shift;
