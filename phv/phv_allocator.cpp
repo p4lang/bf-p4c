@@ -113,8 +113,8 @@ bool PhvAllocator::Solve(StringRef opt) {
             PopulatePhvInfo(solver, &phv);
             for (auto &field : phv)
                 std::sort(field.alloc.begin(), field.alloc.end(),
-                          [](const PhvInfo::Info::alloc_slice &a,
-                             const PhvInfo::Info::alloc_slice &b) -> bool {
+                          [](const PhvInfo::Field::alloc_slice &a,
+                             const PhvInfo::Field::alloc_slice &b) -> bool {
                     return a.field_bit > b.field_bit; });
             phv.alloc_done_ = true;
             return true;

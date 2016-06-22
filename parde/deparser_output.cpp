@@ -6,7 +6,7 @@ class OutputDictionary : public Inspector {
     indent_t            indent;
     bool preorder(const IR::Primitive *prim) {
         if (prim->name != "emit") return true;
-        PhvInfo::Info::bitrange bits;
+        PhvInfo::Field::bitrange bits;
         auto hsr = prim->operands[0]->to<IR::HeaderSliceRef>();
         if (!hsr) {
             /* not allocated to header -- happens with Varbits currently */

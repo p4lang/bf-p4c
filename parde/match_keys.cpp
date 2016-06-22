@@ -3,30 +3,30 @@
 namespace {
 
 class FindExtractOffset : public Inspector {
-    const PhvInfo       &phv;
-    const PhvInfo::Info *info;
-    int                 offset, &out_offset;
+    const PhvInfo               &phv;
+    const PhvInfo::Field        *field;
+    int                         offset, &out_offset;
     bool preorder(const IR::Primitive *prim) override {
         if (prim->name != "extract") return true;
         int size = (prim->operands[0]->type->width_bits() + 7) / 8U;
-        if (phv.field(prim->operands[0]) == info)
+        if (phv.field(prim->operands[0]) == field)
             out_offset = offset;
         offset += size;
         return true; }
 
  public:
-    FindExtractOffset(const PhvInfo &phv, const PhvInfo::Info *info, int *offset)
-    : phv(phv), info(info), offset(0), out_offset(*offset) {} };
+    FindExtractOffset(const PhvInfo &phv, const PhvInfo::Field *field, int *offset)
+    : phv(phv), field(field), offset(0), out_offset(*offset) {} };
 
 }  // end of anon namespace
 
 
 bool LoadMatchKeys::preorder(IR::Tofino::ParserState *st) {
     for (auto &sel : st->select)
-        if (auto info = phv.field(sel)) {
+        if (auto field = phv.field(sel)) {
             int offset = -1;
             for (auto match : st->match) {
-                match->stmts.apply(FindExtractOffset(phv, info, &offset));
+                match->stmts.apply(FindExtractOffset(phv, field, &offset));
                 if (offset >= 0)
                     break; }
             if (offset >= 0) {

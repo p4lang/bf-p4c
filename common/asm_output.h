@@ -16,17 +16,17 @@ class canon_name {
 };
 
 class Slice {
-    const PhvInfo::Info *field;
-    PHV::Container      reg;
-    int                 lo, hi;
+    const PhvInfo::Field        *field;
+    PHV::Container              reg;
+    int                         lo, hi;
     friend std::ostream &operator<<(std::ostream &, const Slice &);
     Slice &invalidate() { field = 0; reg = PHV::Container(); lo = -1; hi = -2; return *this; }
 
  public:
     Slice() : field(0), lo(-1), hi(-2) {}   // hi = -2 to make width() = 0
-    Slice(const PhvInfo::Info *f) : field(f), lo(0), hi(f->size-1) {}
-    Slice(const PhvInfo::Info *f, int bit) : field(f), lo(bit), hi(bit) {}
-    Slice(const PhvInfo::Info *f, int l, int h) : field(f), lo(l), hi(h) {}
+    Slice(const PhvInfo::Field *f) : field(f), lo(0), hi(f->size-1) {}
+    Slice(const PhvInfo::Field *f, int bit) : field(f), lo(bit), hi(bit) {}
+    Slice(const PhvInfo::Field *f, int l, int h) : field(f), lo(l), hi(h) {}
     Slice(const PhvInfo &phv, cstring n)
     : field(phv.field(n)), lo(0), hi(field->size-1) {}
     Slice(const PhvInfo &phv, cstring n, int bit)

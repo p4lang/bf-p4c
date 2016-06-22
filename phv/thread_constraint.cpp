@@ -3,7 +3,7 @@
 #include "lib/range.h"
 
 bool ThreadConstraint::preorder(const IR::Expression *e) {
-    PhvInfo::Info::bitrange bits;
+    PhvInfo::Field::bitrange bits;
     if (auto *i = phv.field(e, &bits)) {
         auto &use = used[VisitingThread(this)];
         for (int bit : Range(bits.lo + i->offset, bits.hi + i->offset))

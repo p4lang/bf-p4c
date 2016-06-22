@@ -46,7 +46,7 @@ struct PHV::GreedyAlloc::Regs {
     PHV::Container      B, H, W;
 };
 
-void PHV::GreedyAlloc::do_alloc(PhvInfo::Info *i, Regs *use) {
+void PHV::GreedyAlloc::do_alloc(PhvInfo::Field *i, Regs *use) {
     /* greedy allocate space for field */
     LOG2(i->id << ": " << (i->metadata ? "metadata " : "header ") << i->name <<
          " size=" << i->size);
@@ -63,7 +63,7 @@ void PHV::GreedyAlloc::do_alloc(PhvInfo::Info *i, Regs *use) {
     LOG3("   allocated " << i->alloc << " for " << i->gress);
 }
 
-void alloc_pov(PhvInfo::Info *i, PhvInfo::Info *pov, int pov_bit) {
+void alloc_pov(PhvInfo::Field *i, PhvInfo::Field *pov, int pov_bit) {
     LOG2(i->id << ": POV " << i->name << " bit=" << pov_bit);
     if (i->size != 1)
         BUG("more than 1 bit for POV bit %s", i->name);
@@ -83,7 +83,7 @@ bool PHV::GreedyAlloc::preorder(const IR::Tofino::Pipe *pipe) {
          tagalong = { "TB0", "TH0", "TW0" };
     pipe->apply(uses);
     for (auto gr : Range(INGRESS, EGRESS)) {
-        PhvInfo::Info *pov = nullptr;
+        PhvInfo::Field *pov = nullptr;
         int pov_bit = 0;
         /* enforce group splitting limits between ingress and egress */
         while (normal.B.index() % 8) ++normal.B;

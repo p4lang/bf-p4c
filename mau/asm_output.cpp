@@ -261,7 +261,7 @@ class MauAsmOutput::EmitAction : public Inspector {
     bool preorder(const IR::Cast *) override { return true; }
     bool preorder(const IR::Expression *exp) override {
         if (sep) {
-            PhvInfo::Info::bitrange bits;
+            PhvInfo::Field::bitrange bits;
             if (auto f = self.phv.field(exp, &bits)) {
                 out << sep << canon_name(f->name);
                 if (bits.lo || bits.size() != f->size)
@@ -293,8 +293,8 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
                     BUG("unexpected reads expression %s", r);
                 // FIXME -- for now just assuming we can fit the valid bit reads in as needed
                 continue; }
-            const PhvInfo::Info *finfo;
-            PhvInfo::Info::bitrange bits;
+            const PhvInfo::Field *finfo;
+            PhvInfo::Field::bitrange bits;
             if (!field || !(finfo = self.phv.field(field, &bits)))
                 BUG("unexpected reads expression %s", r);
             match_fields.emplace_back(finfo, bits.lo, bits.hi); } }

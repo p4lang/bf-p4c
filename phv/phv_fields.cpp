@@ -73,7 +73,7 @@ bool PhvInfo::preorder(const IR::Metadata *h) {
     return false;
 }
 
-const PhvInfo::Info *PhvInfo::field(const IR::Expression *e, Info::bitrange *bits) const {
+const PhvInfo::Field *PhvInfo::field(const IR::Expression *e, Field::bitrange *bits) const {
     if (auto *hsr = e->to<IR::HeaderSliceRef>())
         return field(hsr, bits);
     if (auto *fr = e->to<IR::Member>())
@@ -89,7 +89,7 @@ const PhvInfo::Info *PhvInfo::field(const IR::Expression *e, Info::bitrange *bit
     return 0;
 }
 
-const PhvInfo::Info *PhvInfo::field(const IR::HeaderSliceRef *hsr, Info::bitrange *bits) const {
+const PhvInfo::Field *PhvInfo::field(const IR::HeaderSliceRef *hsr, Field::bitrange *bits) const {
     auto hdr = header(hsr->header_ref()->toString());
     int offset = hsr->offset_bits();
     for (auto idx : Range(hdr->second, hdr->first)) {
@@ -103,7 +103,7 @@ const PhvInfo::Info *PhvInfo::field(const IR::HeaderSliceRef *hsr, Info::bitrang
     BUG("can't find field at offset %d of %s", hsr->offset_bits(), hsr->header_ref()->toString());
 }
 
-const PhvInfo::Info *PhvInfo::field(const IR::Member *fr, Info::bitrange *bits) const {
+const PhvInfo::Field *PhvInfo::field(const IR::Member *fr, Field::bitrange *bits) const {
     StringRef name = fr->toString();
     if (bits) {
         bits->lo = 0;
@@ -121,8 +121,8 @@ const PhvInfo::Info *PhvInfo::field(const IR::Member *fr, Info::bitrange *bits) 
     return nullptr;
 }
 
-vector<PhvInfo::Info::alloc_slice> *PhvInfo::alloc(const IR::Member *member) {
-    PhvInfo::Info *info = field(member);
+vector<PhvInfo::Field::alloc_slice> *PhvInfo::alloc(const IR::Member *member) {
+    PhvInfo::Field *info = field(member);
     CHECK(nullptr != info) << "; Cannot find PHV allocation for " <<
         member->toString();
     return &info->alloc;
@@ -165,7 +165,7 @@ void PhvInfo::allocatePOV() {
                 add(hdr.first + ".$valid", 1, --egress_size, false, true); }
 }
 
-std::ostream &operator<<(std::ostream &out, const PhvInfo::Info::alloc_slice &sl) {
+std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &sl) {
     out << (sl.field_bit+sl.width-1) << ':' << sl.field_bit << "->" << sl.container;
     if (sl.container_bit || size_t(sl.width) != sl.container.size()) {
         out << '(' << sl.container_bit;

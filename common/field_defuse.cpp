@@ -23,14 +23,14 @@ void FieldDefUse::check_conflicts(const info &read, int when) {
                 conflict(read.field->id, other.field->id) = true; } }
 }
 
-FieldDefUse::info &FieldDefUse::field(const PhvInfo::Info *f) {
+FieldDefUse::info &FieldDefUse::field(const PhvInfo::Field *f) {
     auto &info = defuse[f->id];
     assert(!info.field || info.field == f);
     info.field = f;
     return info;
 }
 
-void FieldDefUse::read(const PhvInfo::Info *f, const IR::Tofino::Unit *unit,
+void FieldDefUse::read(const PhvInfo::Field *f, const IR::Tofino::Unit *unit,
                        const IR::Expression *e) {
     if (!f) return;
     auto &info = field(f);
@@ -50,7 +50,7 @@ void FieldDefUse::read(const IR::HeaderRef *hr, const IR::Tofino::Unit *unit,
         read(phv.field(id), unit, e);
     read(phv.field(hr->toString() + ".$valid"), unit, e);
 }
-void FieldDefUse::write(const PhvInfo::Info *f, const IR::Tofino::Unit *unit,
+void FieldDefUse::write(const PhvInfo::Field *f, const IR::Tofino::Unit *unit,
                         const IR::Expression *e) {
     if (!f) return;
     auto &info = field(f);
@@ -149,6 +149,7 @@ std::ostream &operator<<(std::ostream &out, const code &c) {
 
 void FieldDefUse::end_apply(const IR::Node *) {
     if (!LOGGING(2)) return;
+    LOG2("FieldDefUse result:");
     int count = phv.num_fields();
     if (count >= 40) {
         for (auto f : phv)

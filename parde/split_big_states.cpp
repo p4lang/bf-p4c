@@ -11,7 +11,7 @@ const IR::Tofino::ParserMatch *SplitBigStates::preorder(IR::Tofino::ParserMatch 
         if (prim->operands[0]->type->is<IR::Type::Varbits>()) {
             /* FIXME -- ignoring varbits for now (not properly dealt with in general) */
             continue; }
-        PhvInfo::Info::bitrange bits;
+        PhvInfo::Field::bitrange bits;
         auto dest = phv.field(prim->operands[0], &bits);
         if (!dest) BUG("%s not in phv?", prim->operands[0]);
         auto &alloc = dest->for_bit(bits.lo);

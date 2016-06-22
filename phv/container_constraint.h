@@ -20,7 +20,7 @@ class ContainerConstraint : public Inspector, public BitExtractor {
     void postorder(const IR::MAU::Table *tbl) override;
     const PhvInfo &phv;
     std::function<bool(const IR::MAU::Table *, const IR::MAU::Table *)> mutex;
-    vector<std::map<const IR::MAU::Table *, std::set<const PhvInfo::Info *>>> uses;
+    vector<std::map<const IR::MAU::Table *, std::set<const PhvInfo::Field *>>> uses;
     Constraints &constraints_;
 };
 #endif /* TOFINO_PHV_CONTAINER_CONSTRAINT_H_ */

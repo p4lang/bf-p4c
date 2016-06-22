@@ -12,7 +12,7 @@ class GreedyAlloc : public Inspector {
     const SymBitMatrix          &conflict;
     struct Regs;
     class Uses;
-    void do_alloc(PhvInfo::Info *, Regs *);
+    void do_alloc(PhvInfo::Field *, Regs *);
     bool preorder(const IR::Tofino::Pipe *p) override;
     void end_apply(const IR::Node *) override { phv.alloc_done_ = false; }
 

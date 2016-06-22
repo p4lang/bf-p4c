@@ -47,13 +47,13 @@ bool ContainerConstraint::preorder(const IR::Tofino::Deparser *dp) {
 namespace {
 class FindDests : public Inspector {
     const PhvInfo                       &phv;
-    std::set<const PhvInfo::Info *>     &out;
+    std::set<const PhvInfo::Field *>    &out;
     bool preorder(const IR::MAU::Instruction *inst) override {
         out.insert(phv.field(inst->operands[0]));
         return false; }
     bool preorder(const IR::MAU::TableSeq *) override { return false; }
  public:
-    FindDests(const PhvInfo &phv, std::set<const PhvInfo::Info *> &out) : phv(phv), out(out) {}
+    FindDests(const PhvInfo &phv, std::set<const PhvInfo::Field *> &out) : phv(phv), out(out) {}
 };
 }  // namespace
 
@@ -71,6 +71,6 @@ void ContainerConstraint::postorder(const IR::MAU::Table *tbl) {
                 for (auto f2 : other.second) {
                     if (f1 == f2)
                         continue;
-                    for (int j = 0; j < f1->size; ++j)
+                    for (int j = 0; j < f2->size; ++j)
                         constraints_.SetContainerConflict(f1->bit(i), f2->bit(j)); } }
 }

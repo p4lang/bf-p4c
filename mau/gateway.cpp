@@ -189,7 +189,7 @@ bool CollectGatewayFields::compute_offsets() {
 }
 
 bool BuildGatewayMatch::preorder(const IR::Expression *e) {
-    PhvInfo::Info::bitrange bits;
+    PhvInfo::Field::bitrange bits;
     auto field = phv.field(e, &bits);
     if (!field)
         BUG("Unhandled expression in BuildGatewayMatch: %s", e);

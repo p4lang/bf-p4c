@@ -16,7 +16,7 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, P4WriteContext 
     SymBitMatrix                                &conflict;
     map<const IR::Expression *, set<locpair>>   &uses;
     struct info {
-        const PhvInfo::Info     *field = 0;
+        const PhvInfo::Field    *field = 0;
         set<locpair>            def, use;
     };
     std::unordered_map<int, info> defuse;
@@ -25,13 +25,13 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, P4WriteContext 
     profile_t init_apply(const IR::Node *root) override;
     void end_apply(const IR::Node *root) override;
     void check_conflicts(const info &read, int when);
-    void read(const PhvInfo::Info *, const IR::Tofino::Unit *, const IR::Expression *);
+    void read(const PhvInfo::Field *, const IR::Tofino::Unit *, const IR::Expression *);
     void read(const IR::HeaderRef *, const IR::Tofino::Unit *, const IR::Expression *);
-    void write(const PhvInfo::Info *, const IR::Tofino::Unit *, const IR::Expression *);
+    void write(const PhvInfo::Field *, const IR::Tofino::Unit *, const IR::Expression *);
     void write(const IR::HeaderRef *, const IR::Tofino::Unit *, const IR::Expression *);
-    info &field(const PhvInfo::Info *);
+    info &field(const PhvInfo::Field *);
     info &field(int id) { return field(phv.field(id)); }
-    void access_field(const PhvInfo::Info *);
+    void access_field(const PhvInfo::Field *);
     // bool preorder(const IR::Tofino::Parser *p) override;
     // bool preorder(const IR::Tofino::Deparser *p) override;
     bool preorder(const IR::Expression *e) override;

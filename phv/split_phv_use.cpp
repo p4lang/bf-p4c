@@ -3,7 +3,7 @@
 IR::Node *SplitPhvUse::preorder(IR::Primitive *p) {
     if (p->operands.empty()) return p;
     IR::Vector<IR::Primitive> *rv = nullptr;
-    PhvInfo::Info::bitrange bits;
+    PhvInfo::Field::bitrange bits;
     if (auto field = phv.field(p->operands[0], &bits)) {
         if (field->alloc.size() <= 1) return p;
         LOG3("split " << *p << "into");
@@ -29,7 +29,7 @@ IR::Node *SplitPhvUse::preorder(IR::Primitive *p) {
 }
 
 IR::Node *SplitPhvUse::preorder(IR::HeaderSliceRef *hsr) {
-    PhvInfo::Info::bitrange bits;
+    PhvInfo::Field::bitrange bits;
     IR::Vector<IR::Expression> *rv = nullptr;
     if (auto field = phv.field(hsr, &bits)) {
         if (field->alloc.size() <= 1) return hsr;
