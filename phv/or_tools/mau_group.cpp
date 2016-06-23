@@ -5,7 +5,7 @@
 namespace or_tools {
 using operations_research::IntVar;
 using operations_research::Solver;
-MauGroup::MauGroup(IntVar *mg) : mau_group_(mg), is_t_phv_(true) {
+MauGroup::MauGroup(IntVar *mg, cstring name) : mau_group_(mg), is_t_phv_(true), name_(name) {
   std::array<const std::vector<int>, 3> groups =
     {{PHV::k8bMauGroups, PHV::k16bMauGroups, PHV::k32bMauGroups}};
   for (decltype(width_flags_.size()) i = 0; i < width_flags_.size(); ++i) {

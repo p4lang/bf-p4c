@@ -25,7 +25,7 @@ void
 Solver::SetEqualMauGroup(const std::set<PHV::Bit> &bits, const bool &is_t_phv) {
   CHECK(bits.size() > 0) << "; Received empty set";
   int max = is_t_phv ? PHV::kNumMauGroups - 1 : 13;
-  MauGroup *group = new MauGroup(MakeMauGroup(bits.begin()->name(), max));
+  MauGroup *group = new MauGroup(MakeMauGroup(bits.begin()->name(), max), bits.begin()->name());
   for (auto &b : bits) {
     if (bits_.count(b) == 0) bits_.insert(std::make_pair(b, Bit(b.name())));
     Bit &bit = bits_.at(b);
@@ -533,7 +533,7 @@ Bit *Solver::MakeBit(const PHV::Bit &phv_bit) {
   if (nullptr == bit.mau_group()) {
     // MAU groups created here will be restricted to PHV (no T-PHV).
     const int max = PHV::kPhvMauGroupOffset + PHV::kNumPhvMauGroups - 1;
-    MauGroup *group = new MauGroup(MakeMauGroup(bit.name(), max));
+    MauGroup *group = new MauGroup(MakeMauGroup(bit.name(), max), bit.name());
     bit.container()->set_mau_group(group);
   }
   if (nullptr == bit.base_offset()) {

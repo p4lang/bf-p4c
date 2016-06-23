@@ -168,6 +168,7 @@ class Constraints {
   BitId unique_bit_id_counter_;
   std::map<PHV::Bit, BitId> uniq_bit_ids_;
   std::vector<PHV::Bit> bits_;
+  void UnionEqualities(const Equal &a, const Equal &b);
 };
 template<> void
 Constraints::SetEqual<PHV::Bit>(const PHV::Bit &bit1, const PHV::Bit &bit2,

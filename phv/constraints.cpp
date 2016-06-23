@@ -144,6 +144,13 @@ Constraints::SetConstraints(const Equal &e, T set_equal,
 }
 
 void
+Constraints::UnionEqualities(const Equal &a, const Equal &b) {
+  for (auto &p : equalities_[b])
+    for (auto &bit : p.second)
+      SetEqual_(p.first, bit, a);
+}
+
+void
 Constraints::SetOffset(const PHV::Bit &bit, const int &min, const int &max) {
   LOG2("Setting range for " << bit);
   if (bit_offset_domain_.count(bit) != 0) {
@@ -322,9 +329,9 @@ void Constraints::SetConstraints(SolverInterface &solver) {
     std::set<PHV::Bit> prev_bits;
   } eq_offsets;
   using namespace std::placeholders;
-  SetConstraints(Equal::CONTAINER,
-                 std::bind(&SolverInterface::SetEqualContainer, &solver, _1),
+  SetConstraints(Equal::CONTAINER, std::bind(&SolverInterface::SetEqualContainer, &solver, _1),
                  std::set<PHV::Bit>());
+  UnionEqualities(Equal::MAU_GROUP, Equal::CONTAINER);
   SetConstraints(Equal::MAU_GROUP, std::bind(&SolverInterface::SetEqualMauGroup,
                                              &solver, _1, _2),
                  std::set<PHV::Bit>());

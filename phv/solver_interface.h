@@ -6,16 +6,12 @@
 class SolverInterface {
  public:
   //virtual void SetByte(const PHV::Byte &byte) = 0;
-  virtual void
-  SetOffset(const PHV::Bit &pbit, const std::vector<int> &values) = 0;
-  virtual void
-  SetOffset(const PHV::Bit &pbit, const int &min, const int &max) = 0;
-  virtual void
-  SetBitDistance(const PHV::Bit &pbit1, const PHV::Bit &pbit2,
-                 const int &distance) = 0;
+  virtual void SetOffset(const PHV::Bit &pbit, const std::vector<int> &values) = 0;
+  virtual void SetOffset(const PHV::Bit &pbit, const int &min, const int &max) = 0;
+  virtual void SetBitDistance(const PHV::Bit &pbit1, const PHV::Bit &pbit2,
+                              const int &distance) = 0;
   virtual void SetEqualContainer(const std::set<PHV::Bit> &bits) = 0;
-  virtual void
-  SetEqualMauGroup(const std::set<PHV::Bit> &bits, const bool &is_t_phv) = 0;
+  virtual void SetEqualMauGroup(const std::set<PHV::Bit> &bits, const bool &is_t_phv) = 0;
   virtual void SetEqualOffset(const std::set<PHV::Bit> &bits) = 0;
 
   virtual void SetFirstDeparsedHeaderByte(const PHV::Byte &byte) = 0;
@@ -37,13 +33,11 @@ class SolverInterface {
   // Prevents the bit from being allocated to T-PHV.
   virtual void SetNoTPhv(const PHV::Bit &bit) = 0;
   // Tells the solver not to allocate pb1 and pb2 to the same PHV container.
-  virtual void
-  SetContainerConflict(const PHV::Bit &pb1, const PHV::Bit &pb2) = 0;
+  virtual void SetContainerConflict(const PHV::Bit &pb1, const PHV::Bit &pb2) = 0;
   virtual void SetBitConflict(const PHV::Bit &pb1, const PHV::Bit &pb2) = 0;
   // Function for getting the allocation that a bit that satisfies all
   // constraints.
-  virtual void
-  allocation(const PHV::Bit &bit, PHV::Container *c, int *container_bit) = 0;
+  virtual void allocation(const PHV::Bit &bit, PHV::Container *c, int *container_bit) = 0;
 
   typedef std::function<void(const std::set<PHV::Bit> &)> SetEqual;
 };

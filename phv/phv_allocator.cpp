@@ -18,12 +18,12 @@ using namespace std::placeholders;
 
 void PopulatePhvInfo(SolverInterface &solver, PhvInfo *phv_info) {
     for (auto &field : *phv_info) {
-        cstring hdr = field.bitgroup();
-        LOG3("PopulatePhvInfo " << field.name << " [" << hdr << "(" << field.offset << ")]");
+        LOG3("PopulatePhvInfo " << field.name << " size=" << field.size <<
+             " offset=" << field.offset);
         for (int field_bit = 0; field_bit < field.size; field_bit++) {
             PHV::Container container;
             int container_bit;
-            solver.allocation(PHV::Bit(hdr, field.offset + field_bit), &container, &container_bit);
+            solver.allocation(field.bit(field_bit), &container, &container_bit);
             if (!container) continue;
             auto iter = field.alloc.begin();
             for (; iter != field.alloc.end(); ++iter) {

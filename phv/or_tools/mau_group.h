@@ -1,13 +1,15 @@
 #ifndef TOFINO_PHV_OR_TOOLS_MAU_GROUP_H_
 #define TOFINO_PHV_OR_TOOLS_MAU_GROUP_H_
 #include <array>
+#include "lib/cstring.h"
+
 namespace operations_research {
 class IntVar;
 }
 namespace or_tools {
 class MauGroup {
  public:
-  explicit MauGroup(operations_research::IntVar *mg);
+  MauGroup(operations_research::IntVar *mg, cstring name);
   operations_research::IntVar *mau_group() const { return mau_group_; }
   operations_research::IntVar *is_8b() const { return width_flags_.at(0); }
   operations_research::IntVar *is_16b() const { return width_flags_.at(1); }
@@ -26,6 +28,7 @@ class MauGroup {
   // or 32b container.
   std::array<operations_research::IntVar*, 3> width_flags_;
   bool is_t_phv_;
+  cstring name_;
 };
 }  // namespace or_tools
 #endif /* TOFINO_PHV_OR_TOOLS_MAU_GROUP_H_ */

@@ -34,10 +34,13 @@ class PhvInfo : public Inspector {
         bool            pov;
         set<constraint> constraints;
         cstring header() const { return name.before(strrchr(name, '.')); }
-        cstring bitgroup() const {
-            if (pov) return gress ? "egress::$POV" : "ingress::$POV";
-            return header(); }
-        PHV::Bit bit(unsigned i) const { return PHV::Bit(bitgroup(), i+offset); }
+        PHV::Bit bit(unsigned i) const {
+            BUG_CHECK(i < size_t(size), "bit out of range for field");
+            if (pov) {
+                assert(i == 0 || offset == 0);
+                cstring povname = gress ? "egress::$POV" : "ingress::$POV";
+                return PHV::Bit(povname, i+offset); }
+            return PHV::Bit(name, i); }
         struct alloc_slice {
             PHV::Container         container;
             int         field_bit, container_bit, width;
