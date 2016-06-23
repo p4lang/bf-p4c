@@ -6,7 +6,7 @@
 class Constraints;
 class ParseGraphConstraint : public PardeInspector, public BitExtractor {
  public:
-  explicit ParseGraphConstraint(Constraints &c) : constraints_(c) { }
+  ParseGraphConstraint(const PhvInfo &phv, Constraints &c) : BitExtractor(phv), constraints_(c) { }
  private:
   // This function inserts parse conflicts between all its local extracts and
   // extracts reachable from ParserMatch::next.

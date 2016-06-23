@@ -54,6 +54,7 @@ class PhvInfo : public Inspector {
         struct bitrange {
             int         lo, hi;         // range of bits within a container or field
             int size() const { return hi - lo + 1; }
+            operator std::pair<int, int>() { return std::make_pair(lo, hi); }
         };
     };
     class SetReferenced : public Inspector {
@@ -99,15 +100,12 @@ class PhvInfo : public Inspector {
         return all_fields.count(name) ? &all_fields.at(name) : 0; }
     const Field *field(const IR::Expression *, Field::bitrange *bits = 0) const;
     const Field *field(const IR::Member *, Field::bitrange *bits = 0) const;
-    const Field *field(const IR::HeaderSliceRef *, Field::bitrange *bits = 0) const;
     Field *field(int idx) { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
     Field *field(cstring name) { return all_fields.count(name) ? &all_fields.at(name) : 0; }
     Field *field(const IR::Expression *e, Field::bitrange *bits = 0) {
         return const_cast<Field *>(const_cast<const PhvInfo *>(this)->field(e, bits)); }
     Field *field(const IR::Member *fr, Field::bitrange *bits = 0) {
         return const_cast<Field *>(const_cast<const PhvInfo *>(this)->field(fr, bits)); }
-    Field *field(const IR::HeaderSliceRef *hsr, Field::bitrange *bits = 0) {
-        return const_cast<Field *>(const_cast<const PhvInfo *>(this)->field(hsr, bits)); }
     vector<Field::alloc_slice> *alloc(const IR::Member *member);
     const std::pair<int, int> *header(cstring name) const;
     const std::pair<int, int> *header(const IR::HeaderRef *hr) const {

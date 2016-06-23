@@ -6,9 +6,8 @@
 
 class Constraints;
 class ByteConstraint : public Inspector, public BitExtractor {
-  PhvInfo &phv;
  public:
-  ByteConstraint(PhvInfo &phv, Constraints &eq_c) : phv(phv), constraints_(eq_c) { }
+  ByteConstraint(PhvInfo &phv, Constraints &eq_c) : BitExtractor(phv), constraints_(eq_c) { }
  private:
   bool preorder(const IR::Primitive *prim) override;
   bool preorder(const IR::Tofino::Deparser *dp) override;

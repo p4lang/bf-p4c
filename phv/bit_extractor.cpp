@@ -1,19 +1,19 @@
 #include "bit_extractor.h"
 #include <base/logging.h>
 #include "ir/ir.h"
+
 std::set<std::pair<PHV::Bit, PHV::Bit>>
 BitExtractor::GetBitPairs(const IR::Expression *e1,
                           const IR::Expression *e2) {
   std::set<std::pair<PHV::Bit, PHV::Bit>> bit_pairs;
-  auto hsr1 = e1->to<IR::HeaderSliceRef>();
-  auto hsr2 = (nullptr == e2 ? nullptr : e2->to<IR::HeaderSliceRef>());
-  if (hsr1 != nullptr && hsr2 != nullptr) {
-    int width = std::min(hsr1->type->width_bits(), hsr2->type->width_bits());
+  PhvInfo::Field::bitrange f1_bits, f2_bits;
+  auto *f1 = phv.field(e1, &f1_bits);
+  auto *f2 = phv.field(e2, &f2_bits);
+  if (f1 && f2) {
+    int width = std::min(f1_bits.size(), f2_bits.size());
     for (int i = 0; i < width; ++i) {
-      PHV::Bit bit1 = PHV::Bit(hsr1->header_ref()->toString(),
-                               hsr1->offset_bits() + i);
-      PHV::Bit bit2 = PHV::Bit(hsr2->header_ref()->toString(),
-                               hsr2->offset_bits() + i);
+      PHV::Bit bit1 = f1->bit(i + f1_bits.lo);
+      PHV::Bit bit2 = f2->bit(i + f2_bits.lo);
       if (bit_pairs.count(std::make_pair(bit1, bit2)) == 0) {
         bit_pairs.insert(std::make_pair(bit2, bit1));
       }
@@ -23,60 +23,44 @@ BitExtractor::GetBitPairs(const IR::Expression *e1,
 }
 
 std::list<PHV::Bit> BitExtractor::GetBits(const IR::Expression *e1) const {
-  int lsb = 0, msb = -1;
-  cstring header_name;
-  const IR::HeaderSliceRef *hsr = e1->to<IR::HeaderSliceRef>();
-  const IR::HeaderRef *hr = e1->to<IR::HeaderRef>();
-  if (nullptr != hsr) {
-    lsb = hsr->lsb();
-    msb = hsr->msb();
-    header_name = hsr->header_ref()->toString();
-  } else if (hr != nullptr) {
-    msb = hr->type->width_bits() - 1;
-    header_name = hr->toString();
-  }
-  std::list<PHV::Bit> bits;
-  for (int i = lsb; i <= msb; ++i) {
-    bits.emplace_back(header_name, i);
-  }
-  return bits;
+  PhvInfo::Field::bitrange bits;
+  std::list<PHV::Bit> rv;
+  if (auto *f = phv.field(e1, &bits)) {
+    for (int i = bits.lo; i <= bits.hi; ++i)
+      rv.push_back(f->bit(i));
+  } else if (auto *hr = e1->to<IR::HeaderRef>()) {
+    for (auto fid : ReverseRange(*phv.header(hr))) {
+      auto *f = phv.field(fid);
+      for (int i = 0; i <= f->size; ++i)
+        rv.push_back(f->bit(i)); } }
+  return rv;
 }
 
 std::list<PHV::Byte>
 BitExtractor::GetBytes(const IR::Expression *e1, const IR::Expression *e2) {
-  if (auto hsr1 = e1->to<IR::HeaderSliceRef>())
-    return GetBytes(hsr1, e2);
-  if (auto mem1 = e1->to<IR::Member>()) {
-    if (mem1->member.name == "$valid") {
-      // FIXME -- POV bit
-      return std::list<PHV::Byte>(); }
-    return GetBytes(new IR::HeaderSliceRef(mem1), e2); }
-  // Exit the function if we do not have a HeaderSliceRef for the source.
-  return GetBytes(e1->to<IR::HeaderRef>());
-}
-
-std::list<PHV::Byte>
-BitExtractor::GetBytes(const IR::HeaderRef *hr) {
-  CHECK(nullptr != hr);
-  const IR::HeaderSliceRef hsr(hr->srcInfo, hr, hr->type->width_bits() - 1, 0);
-  return GetBytes(&hsr);
-}
-
-std::list<PHV::Byte>
-BitExtractor::GetBytes(const IR::HeaderSliceRef *hsr1,
-                       const IR::Expression *e2) {
-  auto hsr2 = (nullptr == e2 ? nullptr : e2->to<IR::HeaderSliceRef>());
-  int offset = 0;
-  if (nullptr != hsr2) offset = (hsr2->offset_bits() % 8);
+  PhvInfo::Field::bitrange f1_bits, f2_bits;
+  auto *f1 = phv.field(e1, &f1_bits);
+  auto *f2 = phv.field(e2, &f2_bits);
   std::list<PHV::Byte> bytes;
-  for (int i = hsr1->lsb(); i <= hsr1->msb(); offset=0) {
-    PHV::Byte new_byte;
-    for (int j = 0; j < std::min(8 - offset, hsr1->msb() - i + 1); ++j) {
-      new_byte.at(j + offset).first = hsr1->header_ref()->toString();
-      new_byte.at(j + offset).second = i + j;
+  if (f1) {
+    int offset = 0;
+    if (f2) offset = (f2->offset + f2_bits.lo) % 8;
+    for (int i = f1_bits.lo; i <= f1_bits.hi; offset=0) {
+      PHV::Byte new_byte;
+      for (int j = 0; j < std::min(8 - offset, f1_bits.hi - i + 1); ++j) {
+        new_byte.at(j + offset) = f1->bit(i + j); }
+      bytes.push_back(new_byte);
+      i += (8 - offset);
     }
-    bytes.push_back(new_byte);
-    i += (8 - offset);
-  }
+  } else if (auto *hr = e1->to<IR::HeaderRef>()) {
+    int i = 0;
+    for (auto fid : ReverseRange(*phv.header(hr))) {
+      auto *f = phv.field(fid);
+      for (int j = 0; j < f->size; ++j, ++i) {
+        if (i % 8U == 0)
+          bytes.emplace_back();
+        bytes.back().at(i % 8U) = f->bit(j); } }
+  } else {
+    BUG("Unexpected in BitExtractor::GetBytes: %s", e1); }
   return bytes;
 }

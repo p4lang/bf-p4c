@@ -5,7 +5,7 @@
 class Constraints;
 class MauGroupConstraint : public Inspector, public BitExtractor {
  public:
-  explicit MauGroupConstraint(Constraints &ec) : constraints_(ec) { }
+  MauGroupConstraint(const PhvInfo &phv, Constraints &ec) : BitExtractor(phv), constraints_(ec) { }
  private:
   bool preorder(const IR::Primitive *prim) override;
   bool preorder(const IR::Tofino::Deparser *dp) override;

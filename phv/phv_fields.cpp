@@ -74,8 +74,7 @@ bool PhvInfo::preorder(const IR::Metadata *h) {
 }
 
 const PhvInfo::Field *PhvInfo::field(const IR::Expression *e, Field::bitrange *bits) const {
-    if (auto *hsr = e->to<IR::HeaderSliceRef>())
-        return field(hsr, bits);
+    if (!e) return nullptr;
     if (auto *fr = e->to<IR::Member>())
         return field(fr, bits);
     if (auto *sl = e->to<IR::Slice>()) {
@@ -83,24 +82,10 @@ const PhvInfo::Field *PhvInfo::field(const IR::Expression *e, Field::bitrange *b
         if (rv && bits) {
             bits->lo += sl->getL();
             int width = sl->getH() - sl->getL() + 1;
-            assert(bits->hi >= bits->lo + width - 1);
-            bits->hi = bits->lo + width - 1; }
+            if (bits->hi >= bits->lo + width - 1)
+                bits->hi = bits->lo + width - 1; }
         return rv; }
     return 0;
-}
-
-const PhvInfo::Field *PhvInfo::field(const IR::HeaderSliceRef *hsr, Field::bitrange *bits) const {
-    auto hdr = header(hsr->header_ref()->toString());
-    int offset = hsr->offset_bits();
-    for (auto idx : Range(hdr->second, hdr->first)) {
-        auto *info = field(idx);
-        if (offset < info->size) {
-            if (bits) {
-                bits->lo = offset;
-                bits->hi = offset + hsr->type->width_bits() - 1; }
-            return info; }
-        offset -= info->size; }
-    BUG("can't find field at offset %d of %s", hsr->offset_bits(), hsr->header_ref()->toString());
 }
 
 const PhvInfo::Field *PhvInfo::field(const IR::Member *fr, Field::bitrange *bits) const {

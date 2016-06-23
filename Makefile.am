@@ -89,9 +89,6 @@ tofino_backend_SOURCES = \
 	%reldir%/phv/create_thread_local_instances.h \
 	%reldir%/phv/greedy_alloc.cpp \
 	%reldir%/phv/greedy_alloc.h \
-	%reldir%/phv/header_bit_creator.h \
-	%reldir%/phv/header_fragment_creator.cpp \
-	%reldir%/phv/header_fragment_creator.h \
 	%reldir%/phv/match_xbar_constraint.cpp \
 	%reldir%/phv/match_xbar_constraint.h \
 	%reldir%/phv/mau_group_constraint.cpp \
@@ -272,7 +269,6 @@ XFAIL_TESTS += \
 XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/02-FullPHV1.p4.test \
     tofino/testdata/p4_14_samples/03-FullPHV2.p4.test \
-    tofino/%reldir%/v1_samples/switch_20160602/switch.p4.test \
     tofino/%reldir%/v1_samples/test_config_159_stateful_using_phv_field.p4.test
 
 # Fails with "can't find a table to place?"

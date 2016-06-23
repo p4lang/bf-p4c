@@ -33,7 +33,6 @@
 #include "tofino/phv/greedy_alloc.h"
 #include "tofino/phv/split_phv_use.h"
 #include "tofino/phv/create_thread_local_instances.h"
-#include "tofino/phv/header_fragment_creator.h"
 #include "tofino/phv/phv_allocator.h"
 #include "tofino/common/copy_header_eliminator.h"
 
@@ -114,7 +113,6 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new FindDependencyGraph(&deps),
         verbose ? new VisitFunctor([&deps]() { std::cout << deps; }) : nullptr,
         new CopyHeaderEliminator,
-        new HeaderFragmentCreator,
         new TypeCheck,
         new SpreadGatewayAcrossSeq,
         new CheckTableNameDuplicate,
@@ -127,7 +125,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new CheckTableNameDuplicate,
         new TableFindSeqDependencies,  // not needed?
         new CheckTableNameDuplicate,
-        new InstructionSelection,
+        new InstructionSelection(phv),
         new ComputeShifts,
         new DumpPipe("Before PA alloc"),
         &defuse,

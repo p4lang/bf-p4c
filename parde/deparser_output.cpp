@@ -7,11 +7,10 @@ class OutputDictionary : public Inspector {
     bool preorder(const IR::Primitive *prim) {
         if (prim->name != "emit") return true;
         PhvInfo::Field::bitrange bits;
-        auto hsr = prim->operands[0]->to<IR::HeaderSliceRef>();
-        if (!hsr) {
-            /* not allocated to header -- happens with Varbits currently */
-            return false; }
         auto field = phv.field(prim->operands[0], &bits);
+        if (!field->size) {
+            /* varbits? not supported */
+            return false; }
         auto &alloc = field->for_bit(bits.lo);
         if (size_t(alloc.container_bit + alloc.width) != alloc.container.size())
             return false;
@@ -22,7 +21,7 @@ class OutputDictionary : public Inspector {
             out << indent << canon_name(field->name);
             if (bits.lo != 0 || bits.hi + 1 != field->size)
                 out << '.' << bits.lo << '-' << bits.hi; }
-        out << ": " << canon_name(trim_asm_name(hsr->header_ref()->toString())) << ".$valid"
+        out << ": " << canon_name(trim_asm_name(field->header())) << ".$valid"
             << std::endl;
         return false; }
 

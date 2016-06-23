@@ -16,16 +16,15 @@ CopyHeaderEliminator::preorder(IR::Primitive *primitive) {
     CHECK_EQ(dst_hdr_ref->type, src_hdr_ref->type) <<
       "Type mismatch in copy_header: " << dst_hdr_ref->type->toString() <<
       " and " << src_hdr_ref->type->toString();
-    // TODO: Use modify_field to copy POVRef too.
+    auto *hdr_type = dst_hdr_ref->type->to<IR::Type_StructLike>();
     auto rv = new IR::Vector<IR::Primitive>;
-    auto dst_slice = new IR::HeaderSliceRef(dst_hdr_ref->srcInfo, dst_hdr_ref,
-                                            dst_hdr_ref->type->width_bits() - 1,
-                                            0);
-    auto src_slice = new IR::HeaderSliceRef(src_hdr_ref->srcInfo, src_hdr_ref,
-                                            src_hdr_ref->type->width_bits() - 1,
-                                            0);
-    rv->push_back(new IR::Primitive(primitive->srcInfo, "modify_field",
-                                    dst_slice, src_slice));
+    for (auto field : *hdr_type->fields) {
+      auto dst = new IR::Member(dst_hdr_ref->srcInfo, field->type, dst_hdr_ref, field->name);
+      auto src = new IR::Member(src_hdr_ref->srcInfo, field->type, src_hdr_ref, field->name);
+      rv->push_back(new IR::Primitive(primitive->srcInfo, "modify_field", dst, src)); }
+    auto dst = new IR::Member(dst_hdr_ref->srcInfo, IR::Type::Bits::get(1), dst_hdr_ref, "$valid");
+    auto src = new IR::Member(src_hdr_ref->srcInfo, IR::Type::Bits::get(1), src_hdr_ref, "$valid");
+    rv->push_back(new IR::Primitive(primitive->srcInfo, "modify_field", dst, src));
     return rv;
   }
   return primitive;

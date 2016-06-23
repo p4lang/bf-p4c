@@ -6,7 +6,8 @@
 class Constraints;
 class OffsetConstraint : public Inspector, public BitExtractor {
  public:
-  explicit OffsetConstraint(Constraints &ec) : equality_constraints_(ec) { }
+  OffsetConstraint(const PhvInfo &phv, Constraints &ec)
+  : BitExtractor(phv), equality_constraints_(ec) { }
   bool preorder(const IR::Primitive *prim) override;
  private:
   Constraints &equality_constraints_;

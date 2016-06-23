@@ -153,7 +153,7 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
                 if (!match_data.empty()) {
                     out << "random(" << emit_vector(match_data, ", ") << ")";
                     if (ghost) out << " ^ "; }
-                if (ghost) out << ghost;
+                if (ghost) out << "stripe(" << ghost << ")";
                 out << std::endl; }
             for (auto range : bitranges(mask_bits)) {
                 out << indent << (range.first+40);

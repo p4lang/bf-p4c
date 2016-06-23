@@ -53,22 +53,22 @@ void PopulatePhvInfo(SolverInterface &solver, PhvInfo *phv_info) {
 PhvAllocator::PhvAllocator(PhvInfo &p, const SymBitMatrix &c,
     std::function<bool(const IR::MAU::Table *, const IR::MAU::Table *)> m)
 : phv(p), conflict(c), mutex(m) {
-    auto *scc = new SourceContainerConstraint(constraints_);
+    auto *scc = new SourceContainerConstraint(phv, constraints_);
     addPasses({
         new VisitFunctor([this]() { if (phv.alloc_done()) early_exit(); }),
-        new MauGroupConstraint(constraints_),
+        new MauGroupConstraint(phv, constraints_),
         new ContainerConstraint(phv, mutex, constraints_),
         new ByteConstraint(phv, constraints_),
-        new OffsetConstraint(constraints_),
+        new OffsetConstraint(phv, constraints_),
         new ThreadConstraint(phv, constraints_),
         // This loop should keep iterating until Constraints::SetEqual() has been
         // invoked on all pairs of source containers that have a common destination
         // container.
         new PassRepeatUntil({ scc }, [scc]()->bool { return !scc->is_updated(); }),
         // Set bits which cannot be allocated to T-PHV.
-        new TPhvConstraint(constraints_),
+        new TPhvConstraint(phv, constraints_),
         // Set MAU match xbar constraints.
-        new MatchXbarConstraint(constraints_),
+        new MatchXbarConstraint(phv, constraints_),
         new VisitFunctor([this]() {
             for (auto f1 = phv.begin(); f1 != phv.end(); ++f1) {
                 if (!f1->referenced) continue;

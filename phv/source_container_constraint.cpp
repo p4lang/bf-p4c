@@ -1,22 +1,21 @@
 #include <base/logging.h>
 #include "source_container_constraint.h"
 #include "constraints.h"
+
 bool SourceContainerConstraint::preorder(const IR::Primitive *primitive) {
   if (primitive->name == "set") {
-    auto dst = primitive->operands[0]->to<IR::HeaderSliceRef>();
-    auto src = primitive->operands[1]->to<IR::HeaderSliceRef>();
-    if (nullptr != src && nullptr != dst) {
+    PhvInfo::Field::bitrange dst_bits, src_bits;
+    auto dst = phv.field(primitive->operands[0], &dst_bits);
+    auto src = phv.field(primitive->operands[1], &src_bits);
+    if (src && dst) {
       // Just print a warning. This should have been handled in an earlier pass.
-      if (src->type->width_bits() != dst->type->width_bits()) {
+      if (src_bits.size() != dst_bits.size()) {
         WARNING("Source and destination are different width: " << primitive);
       }
-      int width_bits = std::min(src->type->width_bits(),
-                                dst->type->width_bits());
+      int width_bits = std::min(src_bits.size(), dst_bits.size());
       LOG2("Setting write constraint for " << primitive);
       for (int i = 0; i < width_bits; ++i) {
-        PHV::Bit src_bit(src->header_ref()->toString(), src->offset_bits() + i);
-        PHV::Bit dst_bit(dst->header_ref()->toString(), dst->offset_bits() + i);
-        dst_src_pairs_.insert(std::make_pair(dst_bit, src_bit));
+        dst_src_pairs_.emplace(dst->bit(i + dst_bits.lo), src->bit(i + src_bits.lo));
       }
     }
   }

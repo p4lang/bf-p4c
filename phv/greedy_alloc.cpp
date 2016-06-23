@@ -32,14 +32,11 @@ class PHV::GreedyAlloc::Uses : public Inspector {
         if (auto head = phv.header(hr))
             use[in_mau][thread].setrange(head->first, head->second - head->first + 1);
         return false; }
-    bool preorder(const IR::Member *fr) {
-        if (auto info = phv.field(fr))
+    bool preorder(const IR::Expression *e) {
+        if (auto info = phv.field(e)) {
             use[in_mau][thread][info->id] = true;
-        return false; }
-    bool preorder(const IR::HeaderSliceRef *hs) {
-        if (auto info = phv.field(hs))
-            use[in_mau][thread][info->id] = true;
-        return false; }
+            return false; }
+        return true; }
 };
 
 struct PHV::GreedyAlloc::Regs {

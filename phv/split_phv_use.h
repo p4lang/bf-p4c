@@ -10,7 +10,7 @@ class SplitPhvUse : public Transform {
     IR::Node *preorder(IR::Tofino::Parser *p) override { gress = p->gress; return p; }
     IR::Node *preorder(IR::Tofino::Deparser *d) override { gress = d->gress; return d; }
     IR::Node *preorder(IR::Primitive *p) override;
-    IR::Node *preorder(IR::HeaderSliceRef *p) override;
+    IR::Node *preorder(IR::Expression *p) override;
     IR::Expression *preorder(IR::Slice *p) override;
  public:
     explicit SplitPhvUse(const PhvInfo &phv) : phv(phv) {}
