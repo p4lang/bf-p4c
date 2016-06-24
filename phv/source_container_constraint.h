@@ -18,20 +18,21 @@ class Constraints;
 // and F6 must go to the same PHV container.
 class SourceContainerConstraint : public MauInspector {
  public:
-  SourceContainerConstraint(PhvInfo &phv, Constraints &ec)
-  : phv(phv), constraints_(ec), is_updated_(true) { }
-  bool is_updated() const { return is_updated_; }
-  void reset_updated() { is_updated_ = false; }
+    SourceContainerConstraint(PhvInfo &phv, Constraints &ec)
+    : phv(phv), constraints_(ec), is_updated_(true) { }
+    bool is_updated() const { return is_updated_; }
+    void reset_updated() { is_updated_ = false; }
  protected:
-  const PhvInfo &phv;
-  std::set<std::pair<PHV::Bit, PHV::Bit>> dst_src_pairs_;
-  Constraints &constraints_;
+    const PhvInfo &phv;
+    std::set<std::pair<PHV::Bit, PHV::Bit>> dst_src_pairs_;
+    Constraints &constraints_;
  private:
-  profile_t init_apply(const IR::Node *root) {
-    reset_updated();
-    return MauInspector::init_apply(root); }
-  bool preorder(const IR::Primitive *primitive) override;
-  void postorder(const IR::ActionFunction *af) override;
-  bool is_updated_;
+    profile_t init_apply(const IR::Node *root) {
+        reset_updated();
+        return MauInspector::init_apply(root); }
+    bool preorder(const IR::Primitive *primitive) override;
+    void postorder(const IR::ActionFunction *af) override;
+    bool is_updated_;
 };
+
 #endif /* TOFINO_PHV_SOURCE_CONTAINER_CONSTRAINT_H_ */

@@ -4,7 +4,7 @@
 #include "ir/ir.h"
 class CopyHeaderEliminator : public Transform {
  public:
-  const IR::Node *preorder(IR::Primitive *primitive) override;
+    const IR::Node *preorder(IR::Primitive *primitive) override;
 };
 
 #endif /* TOFINO_COMMON_COPY_HEADER_ELIMINATOR_H_ */

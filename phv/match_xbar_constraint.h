@@ -9,13 +9,13 @@
 class Constraints;
 class MatchXbarConstraint : public MauInspector {
  public:
-  MatchXbarConstraint(const PhvInfo &phv, Constraints &c) : phv(phv), constraints_(c) { }
-  bool preorder(const IR::MAU::Table *mau_table) override;
-  void postorder(const IR::Tofino::Pipe *) override;
+    MatchXbarConstraint(const PhvInfo &phv, Constraints &c) : phv(phv), constraints_(c) { }
+    bool preorder(const IR::MAU::Table *mau_table) override;
+    void postorder(const IR::Tofino::Pipe *) override;
  private:
-  const PhvInfo &phv;
-  std::vector<std::set<PHV::Bit>> exact_match_bits_;
-  std::vector<std::set<PHV::Bit>> tcam_match_bits_;
-  Constraints &constraints_;
+    const PhvInfo &phv;
+    std::vector<std::set<PHV::Bit>> exact_match_bits_;
+    std::vector<std::set<PHV::Bit>> tcam_match_bits_;
+    Constraints &constraints_;
 };
 #endif /* TOFINO_PHV_MATCH_XBAR_CONSTRAINT_H_ */
