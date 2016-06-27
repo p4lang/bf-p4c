@@ -193,30 +193,22 @@ void Constraints::SetContainerConflict(const PHV::Bit &b1, const PHV::Bit &b2) {
     // b1 and b2.
     for (auto x : GetEqual(b1, Equal::CONTAINER)) {
         for (auto y : GetEqual(b2, Equal::CONTAINER)) {
-            BitId bit_min = std::min(unique_bit_id(x), unique_bit_id(y));
-            BitId bit_max = std::max(unique_bit_id(x), unique_bit_id(y));
-            container_conflicts_.at(bit_max).at(bit_min) = true; } }
+            container_conflicts_(unique_bit_id(x), unique_bit_id(y)) = true; } }
 }
 
 bool Constraints::IsContainerConflict(const PHV::Bit &b1, const PHV::Bit &b2) const {
-    // Assume there is no container conflict between a bit and itself.
-    if (b1 == b2) return false;
-    // If either bit does not have an entry in the conflict matrix, just return
+    // If either bit does not have an entry in unique_bit_ids_, just return
     // false. It probably does not have any conflicting constraints.
     if (uniq_bit_ids_.count(b1) == 0) return false;
     if (uniq_bit_ids_.count(b2) == 0) return false;
-    BitId bit_min = std::min(unique_bit_id(b1), unique_bit_id(b2));
-    BitId bit_max = std::max(unique_bit_id(b1), unique_bit_id(b2));
-    return container_conflicts_.at(bit_max).at(bit_min);
+    return container_conflicts_(unique_bit_id(b1), unique_bit_id(b2));
 }
 
 void Constraints::SetBitConflict(const PHV::Bit &b1, const PHV::Bit &b2) {
     CHECK(b1 != b2) << ": " << b1 << " conflicting with self";
-    BitId bit_min = std::min(unique_bit_id(b1), unique_bit_id(b2));
-    BitId bit_max = std::max(unique_bit_id(b1), unique_bit_id(b2));
-    if (false == bit_conflicts_.at(bit_max).at(bit_min)) {
+    if (LOGGING(2) && !bit_conflicts_(unique_bit_id(b1), unique_bit_id(b2)))
         LOG2("Setting bit conflict between " << b1 << " and " << b2);
-        bit_conflicts_.at(bit_max).at(bit_min) = true; }
+    bit_conflicts_(unique_bit_id(b1), unique_bit_id(b2)) = true;
 }
 
 void Constraints::SetDstSrcPair(const cstring &af_name, const std::pair<PHV::Bit, PHV::Bit> &p) {
@@ -357,7 +349,7 @@ void Constraints::SetConstraints(SolverInterface &solver) {
         for (BitId bid2 = 0; bid2 < bid; ++bid2) {
             PHV::Bit b1 = bits_.at(bid);
             PHV::Bit b2 = bits_.at(bid2);
-            if (true == container_conflicts_.at(bid).at(bid2) &&
+            if (container_conflicts_(bid, bid2) &&
                 conflicts.count(std::make_pair(b1, b2)) == 0 &&
                 conflicts.count(std::make_pair(b2, b1)) == 0) {
                 // FIXME: This has to be changed to a compiler error message. The user
@@ -375,7 +367,7 @@ void Constraints::SetConstraints(SolverInterface &solver) {
                 for (auto e1 : GetEqual(b1, Equal::CONTAINER)) {
                     for (auto e2 : GetEqual(b2, Equal::CONTAINER)) {
                         conflicts.insert(std::make_pair(e1, e2)); } }
-            } else if (true == container_conflicts_.at(bid).at(bid2)) {
+            } else if (container_conflicts_(bid, bid2)) {
                 LOG3("Ignoring redundant conflict between " << bits_.at(bid) <<
                      " and " << bits_.at(bid2)); } } }
     for (BitId bid = 0; bid < bits_.size(); ++bid) {
@@ -384,7 +376,7 @@ void Constraints::SetConstraints(SolverInterface &solver) {
             PHV::Bit b2 = bits_.at(bid2);
             // A bit-conflict is set in the solver if there wasn't already a
             // container-conflict between the two bits.
-            if (true == bit_conflicts_.at(bid).at(bid2) &&
+            if (bit_conflicts_(bid, bid2) &&
                 conflicts.count(std::make_pair(b1, b2)) == 0 &&
                 conflicts.count(std::make_pair(b2, b1)) == 0) {
                 solver.SetBitConflict(b1, b2); } } }
@@ -398,19 +390,6 @@ Constraints::BitId Constraints::unique_bit_id(const PHV::Bit &bit) {
         CHECK(is_t_phv_.size() == (unique_bit_id_counter_));
         bits_.push_back(bit);
         is_t_phv_.push_back(true);
-        // Set the container-conflict vector for the new bit.
-        CHECK(container_conflicts_.size() == (unique_bit_id_counter_));
-        container_conflicts_.push_back(std::vector<bool>());
-        auto &v = container_conflicts_.at(unique_bit_id_counter_);
-        v.resize(unique_bit_id_counter_);
-        std::fill(v.begin(), v.end(), false);
-        // Set the bit-conflict vector for the new bit.
-        CHECK(bit_conflicts_.size() == (unique_bit_id_counter_));
-        bit_conflicts_.push_back(std::vector<bool>());
-        auto &v2 = bit_conflicts_.at(unique_bit_id_counter_);
-        v2.resize(unique_bit_id_counter_);
-        std::fill(v2.begin(), v2.end(), false);
-        CHECK(v.size() == unique_bit_id_counter_) << ": Wrong size " << v.size();
         ++unique_bit_id_counter_; }
     return const_cast<const Constraints*>(this)->uniq_bit_ids_.at(bit);
 }

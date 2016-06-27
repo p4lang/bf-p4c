@@ -6,6 +6,7 @@
 #include "phv.h"
 #include "solver_interface.h"
 #include "ir/ir.h"
+#include "lib/symbitmatrix.h"
 
 class Constraints {
  public:
@@ -138,7 +139,7 @@ class Constraints {
     // apart in the header.
     // 4. They are written from actions in different tables in the same stage and
     // these tables may match on the same packet.
-    std::vector<std::vector<bool>> container_conflicts_;
+    SymBitMatrix container_conflicts_;
     // Two bits can have bit conflicts if any of the following conditions
     // are true:
     // 1. They are alive in the same stage in the MAU and can be accessed by the
@@ -153,7 +154,7 @@ class Constraints {
     // we should add a bit-conflict. If we don't add a conflict between them and
     // the solver overlays the 2 bits, a subsequent pass should remove the
     // redundant "set_metadata" primitive from the IR.
-    std::vector<std::vector<bool>> bit_conflicts_;
+    SymBitMatrix bit_conflicts_;
     // Helper functions to generate/retrieve a unique ID for a bit.
     BitId unique_bit_id(const PHV::Bit &bit);
     BitId unique_bit_id(const PHV::Bit &bit) const;
