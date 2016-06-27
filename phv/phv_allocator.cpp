@@ -60,7 +60,7 @@ PhvAllocator::PhvAllocator(PhvInfo &p, const SymBitMatrix &c,
         new ContainerConstraint(phv, mutex, constraints_),
         new ByteConstraint(phv, constraints_),
         new OffsetConstraint(phv, constraints_),
-        new ThreadConstraint(phv, constraints_),
+        // new ThreadConstraint(phv, constraints_),  Not needed any more?  Very slow.
         // This loop should keep iterating until Constraints::SetEqual() has been
         // invoked on all pairs of source containers that have a common destination
         // container.
