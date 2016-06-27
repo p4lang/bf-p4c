@@ -303,6 +303,8 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
         for (auto &field : match_fields)
             if (field.width() >= 10) {
                 ghost_bits = field(0, 9);
+                if (&field != &match_fields[0])
+                    std::swap(field, match_fields[0]);
                 break; }
         if (!ghost_bits && !match_fields.empty())
             ghost_bits = match_fields[0]; }
