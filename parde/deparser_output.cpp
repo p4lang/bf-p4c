@@ -33,7 +33,10 @@ class OutputDictionary : public Inspector {
 std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
     indent_t    indent(1);
     out << "deparser " << d.gress << ":" << std::endl;
-    out << indent << "dictionary:" << std::endl;
+    out << indent << "dictionary:";
+    if (!d.deparser || d.deparser->emits.empty())
+        out << " {}";
+    out << std::endl;
     if (d.deparser) {
         d.deparser->emits.apply(OutputDictionary(out, d.phv, ++indent));
         --indent;

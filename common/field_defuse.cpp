@@ -39,9 +39,9 @@ void FieldDefUse::read(const PhvInfo::Field *f, const IR::Tofino::Unit *unit,
     info.use.clear();
     info.use.emplace(unit, e);
     check_conflicts(info, unit->stage());
-    for (auto def : info.def)
-        if (def.second != e)
-            uses[def.second].emplace(unit, e);
+    for (auto def : info.def) {
+        LOG4("  " << e << " in " << *unit << " uses " << def.second << " from " << *def.first);
+        uses[def.second].emplace(unit, e); }
 }
 void FieldDefUse::read(const IR::HeaderRef *hr, const IR::Tofino::Unit *unit,
                        const IR::Expression *e) {

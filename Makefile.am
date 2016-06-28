@@ -16,6 +16,8 @@ tofino_backend_SOURCES = \
 	%reldir%/common/blockmap.h \
 	%reldir%/common/copy_header_eliminator.cpp \
 	%reldir%/common/copy_header_eliminator.h \
+	%reldir%/common/elim_unused.cpp \
+	%reldir%/common/elim_unused.h \
 	%reldir%/common/extract_maupipe.cpp \
 	%reldir%/common/extract_maupipe.h \
 	%reldir%/common/field_defuse.cpp \

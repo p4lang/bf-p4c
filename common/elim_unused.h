@@ -3,22 +3,16 @@
 
 #include "field_defuse.h"
 
-class ElimUnused : public Transform {
+class ElimUnused : public PassManager {
     const PhvInfo       &phv;
     const FieldDefUse   &defuse;
+    std::set<cstring>   hdr_use;
 
-    IR::Primitive *preorder(IR::Primitive *prim) override {
-        if (prim->name == "extract" && phv.field(prim->operands[0]) &&
-            defuse.getUses(prim->operands[0]).empty()) {
-            return nullptr; }
-        return prim; }
-    IR::MAU::Instruction *preorder(IR::MAU::Instruction *i) override {
-        if (defuse.getUses(i->operands[0]).empty())
-            return nullptr;
-        return i; }
-
+    class ParserMetadata;
+    class FindHeaderUse;
+    class Headers;
  public:
-    ElimUnused(const PhvInfo &phv, const FieldDefUse &defuse) : phv(phv), defuse(defuse) {}
+    ElimUnused(const PhvInfo &phv, const FieldDefUse &defuse);
 };
 
 #endif /* TOFINO_COMMON_ELIM_UNUSED_H_ */

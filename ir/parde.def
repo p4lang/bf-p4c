@@ -30,12 +30,7 @@ class ParserState : Unit {
     toString { return name; }
     visit_children {
         select.visit_children(v);
-        auto &start(v.flow_clone());
-        for (auto &m : match) {
-            /* FIXME -- support transforms that remove or split matches? */
-            auto &clone(start.flow_clone());
-            clone.visit(m);
-            v.flow_merge(clone); } }
+        match.parallel_visit_children(v); }
 }
 
 class Parser {

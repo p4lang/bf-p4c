@@ -127,7 +127,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new CheckTableNameDuplicate,
         new InstructionSelection(phv),
         new ComputeShifts,
-        new DumpPipe("Before PA alloc"),
+        new DumpPipe("Before ElimUnused"),
         &defuse,
         new ElimUnused(phv, defuse),
         new DumpPipe("After ElimUnused"),
