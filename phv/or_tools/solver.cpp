@@ -177,9 +177,6 @@ void Solver::SetDeparserGroups(const PHV::Byte &i_pbyte, const PHV::Byte &e_pbyt
         CHECK(e_container == bits_.at(b).container())
             << ": Container mismatch in " << e_pbyte.name() << " for " << b; }
     CHECK(i_container != e_container);
-    // Remove statically assigned deparser groups from domain.
-    i_container->mau_group()->SetIngressDeparser();
-    e_container->mau_group()->SetEgressDeparser();
     // Get the deparser group number and make them non-equal.
     solver_.AddConstraint(
         solver_.MakeNonEquality(i_container->deparser_group(INGRESS),
@@ -191,13 +188,43 @@ void Solver::SetDeparserGroups(const PHV::Bit &i_pbit, const PHV::Bit &e_pbit) {
     Container *i_container = MakeBit(i_pbit)->container();
     Container *e_container = MakeBit(e_pbit)->container();
     CHECK(i_container != e_container);
-    // Remove statically assigned deparser groups from domain.
-    i_container->mau_group()->SetIngressDeparser();
-    e_container->mau_group()->SetEgressDeparser();
-    // Get the deparser group number and make them non-equal.
     solver_.AddConstraint(
         solver_.MakeNonEquality(i_container->deparser_group(INGRESS),
                                 e_container->deparser_group(EGRESS)));
+}
+
+void Solver::SetDeparserIngress(const PHV::Byte &pbyte) {
+    LOG4("Setting ingress deparser groups for " << pbyte.name());
+    Container *container = nullptr;
+    for (auto &b : pbyte) {
+        if (container == nullptr) container = bits_.at(b).container();
+        CHECK(nullptr != container) << "; Cannot find container for " << b.name();
+        CHECK(container == bits_.at(b).container())
+            << ": Container mismatch in " << pbyte.name() << " for " << b; }
+    container->mau_group()->SetIngressDeparser();
+}
+
+void Solver::SetDeparserIngress(const PHV::Bit &pbit) {
+    LOG4("Setting ingress deparser groups for " << pbit.name());
+    Container *container = MakeBit(pbit)->container();
+    container->mau_group()->SetIngressDeparser();
+}
+
+void Solver::SetDeparserEgress(const PHV::Byte &pbyte) {
+    LOG4("Setting egress deparser groups for " << pbyte.name());
+    Container *container = nullptr;
+    for (auto &b : pbyte) {
+        if (container == nullptr) container = bits_.at(b).container();
+        CHECK(nullptr != container) << "; Cannot find container for " << b.name();
+        CHECK(container == bits_.at(b).container())
+            << ": Container mismatch in " << pbyte.name() << " for " << b; }
+    container->mau_group()->SetEgressDeparser();
+}
+
+void Solver::SetDeparserEgress(const PHV::Bit &pbit) {
+    LOG4("Setting egress deparser groups for " << pbit.name());
+    Container *container = MakeBit(pbit)->container();
+    container->mau_group()->SetEgressDeparser();
 }
 
 void Solver::SetMatchXbarWidth(const std::vector<PHV::Bit> &match_phv_bits,

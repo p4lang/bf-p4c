@@ -311,6 +311,7 @@ void Constraints::SetConstraints(SolverInterface &solver) {
     SetConstraints(Equal::OFFSET,
                    std::bind(&SolverInterface::SetEqualOffset, &solver, _1),
                    eq_offsets.prev_bits);
+    LOG1("Setting deparser constraints");
     for (size_t i = 0; i < deparsed_headers_.size(); ++i) {
         for (auto &hdr : deparsed_headers_[i]) {
             CHECK(hdr.size() > 0) << "; Deparsing zero sized header";
@@ -329,6 +330,7 @@ void Constraints::SetConstraints(SolverInterface &solver) {
             solver.SetLastDeparsedHeaderByte(*it); } }
     for (auto &i_hdr : deparsed_headers_[0]) {
         for (auto &i_hdr_byte : i_hdr) {
+            solver.SetDeparserIngress(i_hdr_byte);
             for (auto &e_hdr : deparsed_headers_[1]) {
                 for (auto &e_hdr_byte : e_hdr) {
                     solver.SetDeparserGroups(i_hdr_byte, e_hdr_byte);
@@ -336,6 +338,14 @@ void Constraints::SetConstraints(SolverInterface &solver) {
                         solver.SetDeparserGroups(i_pov, e_hdr_byte[0]); } } }
             for (auto &e_pov : deparsed_pov_[1]) {
                 solver.SetDeparserGroups(i_hdr_byte[0], e_pov); } } }
+    for (auto &i_pov : deparsed_pov_[0])
+        solver.SetDeparserIngress(i_pov);
+    for (auto &e_hdr : deparsed_headers_[1])
+        for (auto &e_hdr_byte : e_hdr)
+            solver.SetDeparserEgress(e_hdr_byte);
+    for (auto &e_pov : deparsed_pov_[1])
+        solver.SetDeparserEgress(e_pov);
+    LOG1("Setting xbar constraints");
     for (auto &v : exact_match_bits_) {
         solver.SetMatchXbarWidth(v, {{32, 32, 32, 32}}); }
     for (auto &v : tcam_match_bits_) {
