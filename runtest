@@ -19,7 +19,7 @@ run() {
     if $verbose; then
         echo "$@"
     fi
-    $TIME_COMMAND timeout $TIMEOUT "$@"
+    $TIME_COMMAND timeout --foreground $TIMEOUT "$@"
     status=$?
     if [ $status -eq 124 ]; then
         echo >&2 $1 TIMEOUT

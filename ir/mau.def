@@ -183,7 +183,6 @@ class TableSeq {
 // TODO(cdodd) -- stateful ALU has its own disctinct instruction set -- should use a different
 // class for those or reuse this?
 class Instruction : Primitive {
-#noconstructor
 #nodbprint
 #emit
     using Primitive::Primitive;

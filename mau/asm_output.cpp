@@ -272,6 +272,13 @@ class MauAsmOutput::EmitAction : public Inspector {
         } else {
             out << indent << "# " << *exp << std::endl; }
         return false; }
+    bool preorder(const IR::Slice *sl) override {
+        if (sep && sl->e0->is<IR::ActionArg>()) {
+            out << sep << *sl->e0 << '(' << *sl->e2 << ".." << *sl->e1 << ')';
+            sep = ", ";
+            return false; }
+        return preorder(static_cast<const IR::Expression *>(sl));
+    }
 
  public:
     EmitAction(const MauAsmOutput &s, std::ostream &o, const IR::MAU::Table *tbl, indent_t i)
