@@ -268,19 +268,19 @@ struct headers {
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("parse_trill") state parse_trill {
-        packet.extract(hdr.trill);
-        packet.extract(hdr.inner_ethernet);
+        packet.extract<trill_t>(hdr.trill);
+        packet.extract<ethernet_t>(hdr.inner_ethernet);
         transition accept;
     }
     @name("parse_vlan_tag") state parse_vlan_tag {
-        packet.extract(hdr.vlan_tag);
+        packet.extract<vlan_tag_t>(hdr.vlan_tag);
         transition select(hdr.vlan_tag.ethertype) {
             16w0x2222: parse_trill;
             default: accept;
         }
     }
     @name("start") state start {
-        packet.extract(hdr.outer_ethernet);
+        packet.extract<ethernet_t>(hdr.outer_ethernet);
         transition select(hdr.outer_ethernet.ethertype) {
             16w0x8100: parse_vlan_tag;
             16w0x2222: parse_trill;
@@ -319,10 +319,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        packet.emit(hdr.outer_ethernet);
-        packet.emit(hdr.vlan_tag);
-        packet.emit(hdr.trill);
-        packet.emit(hdr.inner_ethernet);
+        packet.emit<ethernet_t>(hdr.outer_ethernet);
+        packet.emit<vlan_tag_t>(hdr.vlan_tag);
+        packet.emit<trill_t>(hdr.trill);
+        packet.emit<ethernet_t>(hdr.inner_ethernet);
     }
 }
 
@@ -336,4 +336,4 @@ control computeChecksum(inout headers hdr, inout metadata meta, inout standard_m
     }
 }
 
-V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;

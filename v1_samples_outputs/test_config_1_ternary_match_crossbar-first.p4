@@ -263,7 +263,7 @@ struct headers {
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("parse_my_test_config_1") state parse_my_test_config_1 {
-        packet.extract(hdr.my_test_config_1);
+        packet.extract<my_test_config_1_t>(hdr.my_test_config_1);
         transition accept;
     }
     @name("start") state start {
@@ -304,7 +304,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        packet.emit(hdr.my_test_config_1);
+        packet.emit<my_test_config_1_t>(hdr.my_test_config_1);
     }
 }
 
@@ -318,4 +318,4 @@ control computeChecksum(inout headers hdr, inout metadata meta, inout standard_m
     }
 }
 
-V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;

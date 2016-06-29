@@ -2,7 +2,7 @@
 #define TOFINO_MIDEND_H_
 
 #include "frontends/common/options.h"
-#include "frontends/common/typeMap.h"
+#include "frontends/p4/typeMap.h"
 #include "frontends/p4/evaluator/evaluator.h"
 #include "midend/inlining.h"
 #include "midend/actionsInlining.h"

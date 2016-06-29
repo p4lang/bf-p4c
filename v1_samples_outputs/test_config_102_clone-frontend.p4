@@ -258,20 +258,24 @@ struct headers {
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("abc") state abc {
-        packet.extract(hdr.ethernet);
+        packet.extract<ethernet_t>(hdr.ethernet);
         transition accept;
     }
     @name("start") state start {
-        transition select(packet.lookahead<bit<1>>()[0:0]) {
+        transition select((packet.lookahead<bit<1>>())[0:0]) {
             default: abc;
             default: accept;
         }
     }
 }
 
+struct struct_0 {
+    bit<8> field;
+}
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("egr_action") action egr_action() {
-        clone3(CloneType.E2E, 32w7, { meta.m.foo });
+        clone3<struct_0>(CloneType.E2E, 32w7, { meta.m.foo });
     }
     @name("egr_action2") action egr_action2() {
         clone(CloneType.E2E, 32w8);
@@ -294,9 +298,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
+struct struct_1 {
+    bit<8> field_0;
+}
+
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("ingr_action") action ingr_action() {
-        clone3(CloneType.I2E, 32w5, { meta.m.foo });
+        clone3<struct_1>(CloneType.I2E, 32w5, { meta.m.foo });
     }
     @name("ingr_action2") action ingr_action2() {
         clone(CloneType.I2E, 32w6);
@@ -319,7 +327,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        packet.emit(hdr.ethernet);
+        packet.emit<ethernet_t>(hdr.ethernet);
     }
 }
 
@@ -333,4 +341,4 @@ control computeChecksum(inout headers hdr, inout metadata meta, inout standard_m
     }
 }
 
-V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
