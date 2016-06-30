@@ -283,7 +283,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    counter(32w16384, CounterType.packets) @name("simple_stats") simple_stats;
+    @name("simple_stats") counter(32w16384, CounterType.packets) simple_stats;
     @name("count_it") action count_it() {
         simple_stats.count((bit<32>)hdr.pkt.field_h_16);
     }

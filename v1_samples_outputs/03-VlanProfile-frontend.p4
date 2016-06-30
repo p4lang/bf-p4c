@@ -277,7 +277,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    counter(32w8192, CounterType.packets) @name("flex_counter") flex_counter;
+    @name("flex_counter") counter(32w8192, CounterType.packets) flex_counter;
     @name("update_flex_counter") action update_flex_counter() {
         flex_counter.count((bit<32>)meta.md.flex_counter_index);
     }
