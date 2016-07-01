@@ -71,7 +71,7 @@ void Constraints::SetEqual_(const PHV::Bit &bit1, const PHV::Bit &bit2, const Eq
         equality.insert(std::make_pair(bit2, std::set<PHV::Bit>({{bit2}})));
     auto &bit1_set = equality.at(bit1);
     if (bit1_set.count(bit2) == 0) {
-        LOG2("Setting " << static_cast<int>(eq) << " for " << bit1 << ", " << bit2);
+        LOG2("Setting " << eq << " for " << bit1 << ", " << bit2);
         bit1_set.insert(equality.at(bit2).begin(), equality.at(bit2).end());
         for (auto b : bit1_set) {
             equality.at(b).insert(bit1_set.begin(), bit1_set.end()); } }

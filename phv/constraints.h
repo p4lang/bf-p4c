@@ -166,4 +166,13 @@ class Constraints {
 template<> void
 Constraints::SetEqual<PHV::Bit>(const PHV::Bit &bit1, const PHV::Bit &bit2,
                                 const Equal &eq);
+
+inline std::ostream &operator<<(std::ostream &out, Constraints::Equal eq) {
+    switch (eq) {
+    case Constraints::Equal::OFFSET: return out << "Equal::OFFSET";
+    case Constraints::Equal::CONTAINER: return out << "Equal::CONTAINER";
+    case Constraints::Equal::MAU_GROUP: return out << "Equal::MAU_GROUP";
+    case Constraints::Equal::NUM_EQUALITIES: return out << "Equal::NUM_EQUALITIES";
+    default: return out << "<invalid Equal>"; } }
+
 #endif /* TOFINO_PHV_CONSTRAINTS_H_ */
