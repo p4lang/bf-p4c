@@ -228,7 +228,6 @@ XFAIL_TESTS += \
     bmv2/%reldir%/v1_samples/test_config_139_tcam_error_detection_4.p4.test \
     bmv2/%reldir%/v1_samples/test_config_117_first_tcam_range.p4.test \
     bmv2/%reldir%/v1_samples/vk_basic_ipv4_20150706.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_101_switch_msdc.p4.test \
     p14_to_16/%reldir%/v1_samples/02-FlexCounterActionProfile.p4.test \
     p14_to_16/%reldir%/v1_samples/dileep.p4.test \
     p14_to_16/%reldir%/v1_samples/dileep2.p4.test \
@@ -256,8 +255,7 @@ XFAIL_TESTS += \
     p14_to_16/%reldir%/v1_samples/test_config_170_stateful_selection_table_update.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_171_stateful_conga.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_172_stateful_heavy_hitter.p4.test \
-    p14_to_16/%reldir%/v1_samples/test_config_173_stateful_bloom_filter.p4.test \
-    p14_to_16/%reldir%/v1_samples/test_config_101_switch_msdc.p4.test
+    p14_to_16/%reldir%/v1_samples/test_config_173_stateful_bloom_filter.p4.test
 
 # These currently fail gateway check with 'expression too complex'
 XFAIL_TESTS += \
