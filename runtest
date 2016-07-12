@@ -158,9 +158,10 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
     mkdir -p $name.out
 
     rm -f $name.out/*.cfg.json
+    cp $name.tfa $name.out
     run $TFAS -vvvvl $name.out/tfas.config.log $name.tfa || die
     run $TFLN $name.out/*.cfg.json -o $name.out/tofino.bin || die
-    run $STF -l $name.out $test $STF_OUTPUT_FILTER | \
+    run $STF -l $name.out $test | \
         grep -v 'WARN MAU::process_match Time gone backwards!' \
         || die
 fi
