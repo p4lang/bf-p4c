@@ -20,9 +20,13 @@ class Constraints {
             SetEqualByte(*it); } }
 
     template<class T> void SetDeparsedHeader(const T &begin, const T &end, const gress_t gress) {
-      deparsed_headers_.at(gress).insert(std::vector<PHV::Byte>(begin, end)); }
+        deparsed_headers_.at(gress).insert(std::vector<PHV::Byte>(begin, end)); }
     void SetDeparsedPOV(const PHV::Bit &bit, const gress_t gress) {
-      deparsed_pov_.at(gress).insert(bit); }
+        deparsed_pov_.at(gress).insert(bit); }
+    template<class T> void SetDeparserBits(const T &begin, const T &end, const gress_t gress) {
+        /* FIXME -- do we need a distinction between POV bits and other bits? */
+        for (auto it = begin; it != end; ++it)
+            deparsed_pov_.at(gress).insert(*it); }
     bool IsDeparsed(const PHV::Byte &byte) const;
 
     enum Equal {OFFSET, CONTAINER, MAU_GROUP, NUM_EQUALITIES};

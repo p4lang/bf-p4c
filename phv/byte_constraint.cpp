@@ -43,5 +43,6 @@ bool ByteConstraint::preorder(const IR::Tofino::Deparser *dp) {
     constraints_.SetOffset(*bits.begin(), 0, 7);
     LOG2("Setting deparser egress port constraint for " << PHV::Bits(bits.begin(), bits.end()));
     constraints_.SetContiguousBits(PHV::Bits(bits.begin(), bits.end()));
+    constraints_.SetDeparserBits(bits.begin(), bits.end(), dp->gress);
     return true;
 }
