@@ -5,6 +5,7 @@ enum config_version_t { CONFIG_OLD=1, CONFIG_NEW=2, CONFIG_BOTH=3 };
 extern struct option_t {
     config_version_t    version;
     bool                match_compiler;
+    bool                condense_json;
 } options;
 
 #include "stdarg.h"

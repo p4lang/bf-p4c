@@ -12,6 +12,7 @@
 option_t options = {
     .version = CONFIG_OLD,
     .match_compiler = false,
+    .condense_json = true,
 };
 
 int verbose = 0;
@@ -114,8 +115,12 @@ int main(int ac, char **av) {
                                       << " for writing" << std::endl;
                             delete tmp; } }
                     break;
+                case 'C':
+                    options.condense_json = true;
+                    break;
                 case 'M':
                     options.match_compiler = true;
+                    options.condense_json = false;
                     break;
                 case 'o':
                     if (stat(av[++i], &st)) {

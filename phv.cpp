@@ -7,9 +7,9 @@ const Phv::Register Phv::Slice::invalid = { 0, 0 };
 
 static bitvec tagalong_group(int n) {
     bitvec rv;
-    rv.setrange(256+n*4, 4);
-    rv.setrange(288+n*4, 4);
-    rv.setrange(320+n*6, 6);
+    rv.setrange(FIRST_8BIT_TPHV + n*(COUNT_8BIT_TPHV/8), COUNT_8BIT_TPHV/8);
+    rv.setrange(FIRST_16BIT_TPHV + n*(COUNT_16BIT_TPHV/8), COUNT_16BIT_TPHV/8);
+    rv.setrange(FIRST_32BIT_TPHV + n*(COUNT_32BIT_TPHV/8), COUNT_32BIT_TPHV/8);
     return rv; }
 const bitvec Phv::tagalong_groups[8] = { tagalong_group(0), tagalong_group(1), tagalong_group(2),
     tagalong_group(3), tagalong_group(4), tagalong_group(5), tagalong_group(6), tagalong_group(7) };

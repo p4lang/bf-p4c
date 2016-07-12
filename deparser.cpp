@@ -222,20 +222,23 @@ void Deparser::process() {
                     error(ent.lineno, "Can only do checksums on full phv registers, not slices"); }
     for (auto &intrin : intrinsics) {
         for (auto &el : intrin.second)
-            el.check();
+            if (el.check())
+                phv_use[intrin.first->gress][el->reg.index] = 1;
         if (intrin.second.size() > (size_t)intrin.first->max)
             error(intrin.second[0].lineno, "Too many values for %s", intrin.first->name.c_str()); }
     if (phv_use[INGRESS].intersects(phv_use[EGRESS]))
         error(lineno[INGRESS], "Registers used in both ingress and egress in deparser: %s",
               Phv::db_regset(phv_use[INGRESS] & phv_use[EGRESS]).c_str());
+    for (auto &digest : digests) {
+        if (digest.select.check())
+            phv_use[digest.type->gress][digest.select->reg.index] = 1;
+        for (auto &set : digest.layout)
+            for (auto &reg : set.second)
+                if (reg.check())
+                    phv_use[digest.type->gress][reg->reg.index] = 1; }
     if (options.match_compiler) {
         Phv::setuse(INGRESS, phv_use[INGRESS]);
         Phv::setuse(EGRESS, phv_use[EGRESS]); }
-    for (auto &digest : digests) {
-        digest.select.check();
-        for (auto &set : digest.layout)
-            for (auto &reg : set.second)
-                reg.check(); }
 }
 
 static short phv2cksum[NUM_PHV_REGS][2] = {
@@ -419,15 +422,23 @@ void output_phv_ownership(bitvec phv_use[2],
         int count = 0;
         if (phv_use[INGRESS].getrange(reg, group_size)) {
             in_grp.val |= 1U << i;
-            count++; }
+            if (i * group_size >= 16 && i * group_size < 32)
+                error(0, "R%d..R%d used by ingress deparser but only available to egress",
+                      reg, reg+group_size-1);
+            else
+                count++; }
         if (phv_use[EGRESS].getrange(reg, group_size)) {
             eg_grp.val |= 1U << i;
-            count++; }
+            if (i * group_size < 16)
+                error(0, "R%d..R%d used by egress deparser but only available to ingress",
+                      reg, reg+group_size-1);
+            else
+                count++; }
         if (count > 1)
-            error(0, "phv regs in %d..%d used by both ingress and egress",
+            error(0, "R%d..R%d used by both ingress and egress deparser",
                   reg, reg+group_size-1); }
     in_split.val = phv_use[INGRESS].getrange(reg, group_size);
-    eg_split.val = phv_use[INGRESS].getrange(reg, group_size);
+    eg_split.val = phv_use[EGRESS].getrange(reg, group_size);
 }
 
 void Deparser::output() {
@@ -451,7 +462,7 @@ void Deparser::output() {
                 Phv::db_regset(phv_use[INGRESS] & phv_use[EGRESS]).c_str());
         /* FIXME -- this only (sort-of) works because 'deparser' comes first in the alphabet,
          * FIXME -- so is the first section to have its 'output' method run.  Its a hack
-         * FIXME -- anyways to attaempt to correct broken asm that should be an error */
+         * FIXME -- anyways to attempt to correct broken asm that should be an error */
         Phv::unsetuse(INGRESS, phv_use[EGRESS]);
         Phv::unsetuse(EGRESS, phv_use[INGRESS]);
     }

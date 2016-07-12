@@ -1,6 +1,7 @@
 #include "sections.h"
 #include "stage.h"
 #include "phv.h"
+#include "deparser.h"
 #include "range.h"
 #include "input_xbar.h"
 #include "top_level.h"
@@ -179,7 +180,7 @@ void AsmStage::output() {
             if (table->logical_id >= 0)
                 table->gen_name_lookup(table_names[std::to_string(table->logical_id)]); }
         stage[i].write_regs();
-        if (!options.match_compiler)
+        if (options.condense_json)
             stage[i].regs.disable_if_zero();
         stage[i].regs.emit_json(*open_output("regs.match_action_stage.%02x.cfg.json", i) , i);
         char buf[64];
@@ -331,10 +332,15 @@ void Stage::write_regs() {
          * are in use by the other thread, so rely on the deparser to correctly
          * set the Phv::use info and strip out registers it says are used by
          * the other thread */
-        in_use -= Phv::use(EGRESS);
-        eg_use -= Phv::use(INGRESS);
-        in_use |= Phv::use(INGRESS);
-        eg_use |= Phv::use(EGRESS); }
+        in_use -= Deparser::PhvUse(EGRESS);
+        eg_use -= Deparser::PhvUse(INGRESS); }
+    /* FIXME -- if the regs are live across a stage (even if not used in that stage) they
+     * need to be set in the thread registers.  For now we just assume if the deparser uses
+     * them, they are live in every stage */
+    in_use |= Deparser::PhvUse(INGRESS);
+    eg_use |= Deparser::PhvUse(EGRESS);
+    //in_use |= Phv::use(INGRESS);
+    //eg_use |= Phv::use(EGRESS);
     static const int phv_use_transpose[2][14] = {
         {  0,  1,  2,  3,  8,  9, 10, 11, 16, 17, 18, 19, 20, 21 },
         {  4,  5,  6,  7, 12, 13, 14, 15, 22, 23, 24, 25, 26, 27 } };

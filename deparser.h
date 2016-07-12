@@ -15,6 +15,7 @@ enum {
 };
 
 class Deparser : public Section {
+    static Deparser singleton_object;
 public:
     class RefOrChksum : public Phv::Ref {
         static Phv::Register checksum_units[2*DEPARSER_CHECKSUM_UNITS];
@@ -48,7 +49,8 @@ public:
     void input(VECTOR(value_t) args, value_t data);
     void process();
     void output();
-    static Deparser singleton_object;
+    static const bitvec &PhvUse(gress_t gr) {
+        return singleton_object.phv_use[gr]; }
 };
 
 #endif /* _deparser_h_ */
