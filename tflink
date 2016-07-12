@@ -23,6 +23,22 @@ fi
 SCHEMA=$(findfile chip.schema)
 
 OUT="tofino.bin"
+objs=""
+tmpdir=""
+
+tempfile() {
+    if [ -z "$tmpdir" ]; then
+        tmpdir=$(mktemp -d)
+    fi
+    file=$(basename $1 $2)
+    orig=file
+    ctr=1
+    while [ -r $tmpdir/$file ]; do
+        file=$ctr-$file
+        ctr=$((ctr + 1))
+    done
+    echo $file
+}
 
 while [ $# -gt 0 ]; do
     case $1 in
@@ -32,11 +48,32 @@ while [ $# -gt 0 ]; do
     --schema|-s)
         SCHEMA="$2"
         shift ; shift ;;
-    -*)
-        echo >&2 "Unknown argument $1"
+    *.json.Z)
+        file=$(tempfile $1 .Z)
+        gunzip -c $1 >$tmpdir/$file
+        objs="$objs $tmpdir/$file"
+        shift ;;
+    *.json.gz)
+        file=$(tempfile $1 .gz)
+        gunzip -c $1 >$tmpdir/$file
+        objs="$objs $tmpdir/$file"
+        shift ;;
+    *.json.bz)
+        file=$(tempfile $1 .bz)
+        bzcat $1 >$tmpdir/$file
+        objs="$objs $tmpdir/$file"
+        shift ;;
+    *.json.bz2)
+        file=$(tempfile $1 .bz2)
+        bzcat $1 >$tmpdir/$file
+        objs="$objs $tmpdir/$file"
+        shift ;;
+    *.json)
+        objs="$objs $1"
         shift ;;
     *)
-        break
+        echo >&2 "Unknown argument $1"
+        shift ;;
     esac
 done
 
@@ -49,4 +86,8 @@ if [ ! -r "$SCHEMA" ]; then
     exit 1
 fi
 
-$WALLE --schema $SCHEMA -o $OUT "$@"
+$WALLE --schema $SCHEMA -o $OUT $objs
+
+if [ -d "$tmpdir" ]; then
+    rm -rf $tmpdir
+fi

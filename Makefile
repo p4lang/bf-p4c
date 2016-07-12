@@ -25,7 +25,7 @@ all: default reflow json_diff
 tfas: $(TFAS_OBJS) json.o $(GEN:%=gen/%.o) $(TEST_SRCS:%.cpp=%.o)
 
 json2cpp: json.o
-json_diff: json.o
+json_diff: json.o fdstream.o
 hashdump: json.o ubits.o
 reflow: reflow.o
 

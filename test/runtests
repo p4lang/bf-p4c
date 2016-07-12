@@ -3,6 +3,7 @@
 fast=false;
 
 shopt -s nullglob
+set -o pipefail
 
 TESTDIR=$(cd $(dirname $0); pwd -P)
 
@@ -116,7 +117,7 @@ if [ ! -x "$JSON_DIFF" ]; then
     JSON_DIFF=$(findbin json_diff)
 fi
 if [ -z "$DIFF" ]; then
-    DIFF="diff -u"
+    DIFF="zdiff -u"
 fi
 
 if [ -r $TESTDIR/ctxt_json_ignore ]; then
@@ -142,11 +143,10 @@ function test_p4() {
     echo -n $p4file
     start=`date +%s`
     if $fast && [ -r $name.tfa ]; then
-        need_reflow=false
+        true
     else 
         rm -f $name.tfa
         if $GLSC -o . --verbose 2 -vl 2 -S -G $glsc_args ../$name.p4 </dev/null >glsc.log 2>&1; then
-            need_reflow=true
             if [ out.tfa -nt $name.tfa ]; then
                 rm -f $name.tfa
                 ln -s out.tfa $name.tfa
@@ -175,19 +175,23 @@ function test_p4() {
             glsc_cfg=cfg
         fi
     fi
+    for f in $glsc_cfg/*.json; do
+        if $REFLOW $f | gzip -9 > $f.gz; then
+            rm $f
+        fi
+    done
     tfas_succeeded=false
     if $ok && $TFAS -Mvvvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
         tfas_succeeded=true
         for f in $name.out/*.cfg.json; do
-            if [ "$f" = "$name.out/regs.pipe.cfg.json" ]; then
+            if $REFLOW $f | gzip -9 > $f.gz; then
+                rm $f
+            fi
+        done
+        for f in $name.out/*.cfg.json.gz; do
+            if [ "$f" = "$name.out/regs.pipe.cfg.json.gz" ]; then
                 $JSON_DIFF -i mau $f $glsc_cfg/$(basename $f)
                 continue
-            fi
-            if $REFLOW $f >tmp.json 2>/dev/null; then
-                mv tmp.json $f
-            fi
-            if $need_reflow && $REFLOW $glsc_cfg/$(basename $f) >tmp.json 2>/dev/null; then
-                mv tmp.json $glsc_cfg/$(basename $f)
             fi
             $DIFF $f $glsc_cfg/$(basename $f)
         done > json_diff.txt
@@ -221,15 +225,6 @@ function test_p4() {
 	    sed -e 's/^/ /' -e '/\n/!a\' tfas.log >> $FAILLOG
 	fi
         ok=false
-        if $need_reflow; then
-            # we ran the compiler and tfas failed, so reflow the compiler outputs
-            # so that later -f runs will work
-            for f in $glsc_cfg/*.json; do
-                if $REFLOW $f >tmp.json 2>/dev/null; then
-                    mv tmp.json $f
-                fi
-            done
-        fi
     fi
     if [ "$expect_fail" != "" ]; then
         if $ok; then
@@ -277,7 +272,7 @@ function test_stf() {
                 fi
             done
         fi
-        if $linked || $TFLINK -o $name.out/tofino.bin $name.out/*.cfg.json >/dev/null 2>&1; then
+        if $linked || $TFLINK -o $name.out/tofino.bin $name.out/*.cfg.json* >/dev/null 2>&1; then
             export TOFINO_BIN=$name.out/tofino.bin
             export TABLE_CONFIG=$name.out/tbl-cfg
             if "$STF" ../$name.stf >stf.txt 2>&1; then

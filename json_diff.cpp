@@ -1,7 +1,9 @@
 #include <fstream>
+#include "fdstream.h"
 #include <iomanip>
 #include "json.h"
 #include <set>
+#include <string.h>
 
 static bool show_deletion = true;
 static bool show_addition = true;
@@ -418,7 +420,7 @@ int do_diff(const char *a_name, std::unique_ptr<json::obj> &a, const char *b_nam
 int main(int ac, char **av) {
     int error = 0;
     std::unique_ptr<json::obj>  file1;
-    const char                  *file1_name = 0;
+    const char                  *file1_name = 0, *ext;
     for (int i = 1; i < ac; i++)
         if (av[i][0] == '-' && av[i][1] == 0) {
             if (file1) {
@@ -454,21 +456,36 @@ int main(int ac, char **av) {
                     std::cerr << "Unknown option " << (flag ? '+' : '-') << arg[-1] << std::endl;
                     error = 2; }
         } else {
-            std::ifstream file(av[i]);
-            if (!file) {
+            std::istream *in = nullptr;
+            if (auto ext = strrchr(av[i], '.')) {
+                std::string cmd;
+                if (!strcmp(ext, ".gz") || !strcmp(ext, ".Z"))
+                    cmd = "zcat ";
+                else if (!strcmp(ext, ".bz") || !strcmp(ext, ".bz2"))
+                    cmd = "bzcat ";
+                if (!cmd.empty()) {
+                    cmd += av[i];
+                    auto *pipe = popen(cmd.c_str(), "r");
+                    auto *pstream = new fdstream(fileno(pipe));
+                    pstream->setclose([pipe]() { pclose(pipe); });
+                    in = pstream; } }
+            if (!in)
+                in = new std::ifstream(av[i]);
+            if (!in || !*in) {
                 std::cerr << "Can't open " << av[i] << " for reading" << std::endl;
                 error = 2;
             } else if (file1) {
                 std::unique_ptr<json::obj> file2;
-                if (!(file >> file2) || !file2) {
+                if (!(*in >> file2) || !file2) {
                     std::cerr << "Failed reading json from " << av[i] << std::endl;
                     error = 2;
                 } else if (!(error & 2))
                     error |= do_diff(file1_name, file1, av[i], file2);
-            } else if (!(file >> file1) || !file1) {
+            } else if (!(*in >> file1) || !file1) {
                 std::cerr << "Failed reading json from " << av[i] << std::endl;
                 error = 2;
-            } else file1_name = av[i]; }
+            } else file1_name = av[i];
+            delete in; }
     if (error & 2)
         std::cerr << "usage: " << av[0] << " [-adi:l:] file1 file2" << std::endl;
     return error;
