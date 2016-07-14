@@ -1,5 +1,6 @@
+# FIXME -- need to figure out what should be in these and implement it
+EntryFormatNode
 HashJsonNode
-# FIXME -- need to figure out what should be in HashJsonNode and implement it
 
 actions
 action_pack_format_map
