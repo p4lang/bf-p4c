@@ -28,7 +28,7 @@ class PhvInfo : public Inspector {
         int             id;
         gress_t         gress;
         int             size;
-        int             offset;  // offset lsb from lsb (last) bit of container
+        int             offset;  // offset of lsb from lsb (last) bit of containing header
         bool            referenced;
         bool            metadata;
         bool            pov;

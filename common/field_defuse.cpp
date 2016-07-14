@@ -163,7 +163,7 @@ void FieldDefUse::end_apply(const IR::Node *) {
     for (int i = 0; i < count; i++) {
         std::clog << '\n' << code{i};
         for (int j = 0; j < count; j++)
-            std::clog << char('0' + conflict[i][j]);
+            std::clog << (conflict[i][j] ? '1' : '0');
         if (count < 40)
             std::clog << " " << phv.field(i)->name; }
     std::clog << std::endl;

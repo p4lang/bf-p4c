@@ -146,6 +146,7 @@ cpplint_FILES += $(tofino_backend_SOURCES)
 
 tofinotests.mk: $(wildcard \
    $(srcdir)/testdata/p4_14_samples/*.p4 \
+   $(srcdir)/testdata/p4_14_samples/switch_*/switch.p4 \
    $(srcdir)/%reldir%/v1_2_test/*.p4 \
    $(srcdir)/%reldir%/v1_samples/*.p4 \
    $(srcdir)/%reldir%/v1_samples/switch_*/switch.p4)
@@ -263,6 +264,8 @@ XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/14-GatewayGreaterThan.p4.test \
     tofino/testdata/p4_14_samples/flowlet_switching.p4.test \
     tofino/testdata/p4_14_samples/switch.p4.test \
+    tofino/testdata/p4_14_samples/switch_20160226/switch.p4.test \
+    tofino/testdata/p4_14_samples/switch_20160512/switch.p4.test \
     tofino/%reldir%/v1_samples/07-MacAddrCheck.p4.test \
     tofino/%reldir%/v1_samples/08-MacAddrCheck1.p4.test
 
