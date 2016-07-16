@@ -408,18 +408,22 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
 
     ParamBinding bindings(&refMap);
 
-    for (auto param : *parser->type->applyParams->getEnumerator())
-        if (param->type->is<IR::Type_StructLike>())
-            bindings.bind(param);
-    for (auto param : *ingress->type->applyParams->getEnumerator())
-        if (param->type->is<IR::Type_StructLike>())
-            bindings.bind(param);
-    for (auto param : *egress->type->applyParams->getEnumerator())
-        if (param->type->is<IR::Type_StructLike>())
-            bindings.bind(param);
-    for (auto param : *deparser->type->applyParams->getEnumerator())
-        if (param->type->is<IR::Type_StructLike>())
-            bindings.bind(param);
+    for (auto param : *parser->type->applyParams->getEnumerator()) {
+        auto *type = typeMap.getType(param);
+        if (type->is<IR::Type_StructLike>())
+            bindings.bind(param, type); }
+    for (auto param : *ingress->type->applyParams->getEnumerator()) {
+        auto *type = typeMap.getType(param);
+        if (type->is<IR::Type_StructLike>())
+            bindings.bind(param, type); }
+    for (auto param : *egress->type->applyParams->getEnumerator()) {
+        auto *type = typeMap.getType(param);
+        if (type->is<IR::Type_StructLike>())
+            bindings.bind(param, type); }
+    for (auto param : *deparser->type->applyParams->getEnumerator()) {
+        auto *type = typeMap.getType(param);
+        if (type->is<IR::Type_StructLike>())
+            bindings.bind(param, type); }
 
     auto it = ingress->type->applyParams->parameters->rbegin();
     rv->standard_metadata =
@@ -441,6 +445,7 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
         rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, in);
     if (auto eg = rv->thread[EGRESS].parser = make_parser.parser(EGRESS))
         rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, eg);
+    // FIXME -- use the deparser rather than always inferring it from the parser
 
     // ingress = ingress->apply(InlineControlFlow(blockMap));
     ingress->apply(GetTofinoTables(&refMap, &typeMap, INGRESS, rv));

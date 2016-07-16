@@ -1,11 +1,11 @@
 #include "param_binding.h"
 
-void ParamBinding::bind(const IR::Parameter *param) {
-    if (!by_type.count(param->type)) {
-        LOG1("adding param binding for " << param->name << ": " << param->type->toString());
-        by_type.emplace(param->type, new IR::InstanceRef(param->name, param->type)); }
-    LOG2("adding param binding for node " << param->id << ": " << param->type->toString());
-    by_param[param] = by_type.at(param->type);
+void ParamBinding::bind(const IR::Parameter *param, const IR::Type *type) {
+    if (!by_type.count(type)) {
+        LOG1("adding param binding for " << param->name << ": " << type->toString());
+        by_type.emplace(type, new IR::InstanceRef(param->name, type)); }
+    LOG2("adding param binding for node " << param->id << ": " << type->toString());
+    by_param[param] = by_type.at(type);
 }
 
 const IR::Expression *ParamBinding::postorder(IR::PathExpression *pe) {

@@ -33,6 +33,9 @@ class GetTofinoParser : public Inspector {
  public:
     explicit GetTofinoParser(const IR::V1Program *g) : program(g) {}
     explicit GetTofinoParser(const IR::P4Parser *p) : container(p) {}
+    explicit GetTofinoParser(const IR::Node *n)
+    : program(n->to<IR::V1Program>()), container(n->to<IR::P4Parser>()) {
+        BUG_CHECK(program || container, "Invalid top level for GetTofinoParser"); }
     IR::Tofino::Parser *parser(gress_t);
     cstring ingress_entry();
 };

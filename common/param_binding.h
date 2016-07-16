@@ -15,7 +15,7 @@ class ParamBinding : public Transform {
 
  public:
     explicit ParamBinding(const P4::ReferenceMap *refMap) : refMap(refMap) {}
-    void bind(const IR::Parameter *param);
+    void bind(const IR::Parameter *param, const IR::Type *type);
     const IR::InstanceRef *get(const IR::Parameter *param) {
         return by_param.count(param) ? by_param.at(param) : nullptr; }
 };
