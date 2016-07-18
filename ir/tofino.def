@@ -57,7 +57,9 @@ class InstanceRef : HeaderRef {
     HeaderOrMetadata            obj;
     inline NameMap<InstanceRef> nested;
 #noconstructor
-    InstanceRef(ID n, Type t);
+    InstanceRef(cstring prefix, ID n, Type t, bool forceMeta = false);
+    InstanceRef(ID n, Type t, bool forceMeta = false) : InstanceRef(cstring(), n, t, forceMeta) {}
+    HeaderOrMetadata baseRef() const override { return obj; }
     toString { return obj->name; }
     dbprint { out << obj; }
 }

@@ -40,6 +40,7 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, bool meta) 
         LOG2("PhvInfo no type for " << name);
         return; }
     LOG2("PhvInfo adding " << (meta ? "metadata" : "header") << " " << name);
+    assert(all_headers.count(name) == 0);
     int start = by_id.size();
     int offset = 0;
     for (auto f : *type->fields)

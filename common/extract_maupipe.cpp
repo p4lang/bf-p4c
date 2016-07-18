@@ -406,30 +406,23 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
 
     auto rv = new IR::Tofino::Pipe();
 
-    ParamBinding bindings(&refMap);
+    ParamBinding bindings(&refMap, &typeMap);
 
-    for (auto param : *parser->type->applyParams->getEnumerator()) {
-        auto *type = typeMap.getType(param);
-        if (type->is<IR::Type_StructLike>())
-            bindings.bind(param, type); }
-    for (auto param : *ingress->type->applyParams->getEnumerator()) {
-        auto *type = typeMap.getType(param);
-        if (type->is<IR::Type_StructLike>())
-            bindings.bind(param, type); }
-    for (auto param : *egress->type->applyParams->getEnumerator()) {
-        auto *type = typeMap.getType(param);
-        if (type->is<IR::Type_StructLike>())
-            bindings.bind(param, type); }
-    for (auto param : *deparser->type->applyParams->getEnumerator()) {
-        auto *type = typeMap.getType(param);
-        if (type->is<IR::Type_StructLike>())
-            bindings.bind(param, type); }
+    for (auto param : *parser->type->applyParams->getEnumerator())
+        bindings.bind(param);
+    for (auto param : *ingress->type->applyParams->getEnumerator())
+        bindings.bind(param);
+    for (auto param : *egress->type->applyParams->getEnumerator())
+        bindings.bind(param);
+    for (auto param : *deparser->type->applyParams->getEnumerator())
+        bindings.bind(param);
 
     auto it = ingress->type->applyParams->parameters->rbegin();
     rv->standard_metadata =
         bindings.get(*it)->obj->to<IR::Metadata>();
     PassManager fixups = {
         &bindings,
+        new SplitComplexInstanceRef,
         new RemoveInstanceRef,
         new ConvertIndexToHeaderStackItemRef,
         new RewriteForTofino,
