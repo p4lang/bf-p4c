@@ -122,7 +122,11 @@ control Egress<H, M>(inout H hdr, inout M meta, inout standard_metadata_t standa
 control ComputeCkecksum<H, M>(inout H hdr, inout M meta, inout standard_metadata_t standard_metadata);
 control Deparser<H>(packet_out b, in H hdr);
 package V1Switch<H, M>(Parser<H, M> p, VerifyChecksum<H, M> vr, Ingress<H, M> ig, Egress<H, M> eg, ComputeCkecksum<H, M> ck, Deparser<H> dep);
-struct egress_intrinsic_metadata_t {
+struct metadata_h {
+    bit<8> foo;
+}
+
+header egress_intrinsic_metadata_t {
     bit<16> egress_port;
     bit<5>  _pad1;
     bit<19> enq_qdepth;
@@ -147,14 +151,14 @@ struct egress_intrinsic_metadata_t {
     bit<16> pkt_length;
 }
 
-struct egress_intrinsic_metadata_for_mirror_buffer_t {
+header egress_intrinsic_metadata_for_mirror_buffer_t {
     bit<6>  _pad1;
     bit<10> egress_mirror_id;
     bit<1>  coalesce_flush;
     bit<7>  coalesce_length;
 }
 
-struct egress_intrinsic_metadata_for_output_port_t {
+header egress_intrinsic_metadata_for_output_port_t {
     bit<2> _pad1;
     bit<1> capture_tstamp_on_tx;
     bit<1> update_delay_on_tx;
@@ -162,7 +166,7 @@ struct egress_intrinsic_metadata_for_output_port_t {
     bit<3> drop_ctl;
 }
 
-struct egress_intrinsic_metadata_from_parser_aux_t {
+header egress_intrinsic_metadata_from_parser_aux_t {
     bit<48> egress_global_tstamp;
     bit<32> egress_global_ver;
     bit<16> egress_parser_err;
@@ -170,7 +174,13 @@ struct egress_intrinsic_metadata_from_parser_aux_t {
     bit<8>  coalesce_sample_count;
 }
 
-struct ingress_intrinsic_metadata_t {
+header ethernet_t {
+    bit<48> dstAddr;
+    bit<48> srcAddr;
+    bit<16> etherType;
+}
+
+header ingress_intrinsic_metadata_t {
     bit<1>  resubmit_flag;
     bit<1>  _pad1;
     bit<2>  _pad2;
@@ -179,12 +189,12 @@ struct ingress_intrinsic_metadata_t {
     bit<48> ingress_mac_tstamp;
 }
 
-struct ingress_intrinsic_metadata_for_mirror_buffer_t {
+header ingress_intrinsic_metadata_for_mirror_buffer_t {
     bit<6>  _pad1;
     bit<10> ingress_mirror_id;
 }
 
-struct ingress_intrinsic_metadata_for_tm_t {
+header ingress_intrinsic_metadata_for_tm_t {
     bit<7>  _pad1;
     bit<9>  ucast_egress_port;
     bit<3>  drop_ctl;
@@ -210,33 +220,28 @@ struct ingress_intrinsic_metadata_for_tm_t {
     bit<16> rid;
 }
 
-struct ingress_intrinsic_metadata_from_parser_aux_t {
+header ingress_intrinsic_metadata_from_parser_aux_t {
     bit<48> ingress_global_tstamp;
     bit<32> ingress_global_ver;
     bit<16> ingress_parser_err;
 }
 
-struct generator_metadata_t {
+header generator_metadata_t {
     bit<16> app_id;
     bit<16> batch_id;
     bit<16> instance_id;
 }
 
-struct ingress_parser_control_signals {
+header ingress_parser_control_signals {
     bit<3> priority;
 }
 
-struct metadata_h {
-    bit<8> foo;
-}
-
-header ethernet_t {
-    bit<48> dstAddr;
-    bit<48> srcAddr;
-    bit<16> etherType;
-}
-
 struct metadata {
+    @name("m") 
+    metadata_h m;
+}
+
+struct headers {
     @name("eg_intr_md") 
     egress_intrinsic_metadata_t                    eg_intr_md;
     @name("eg_intr_md_for_mb") 
@@ -245,6 +250,8 @@ struct metadata {
     egress_intrinsic_metadata_for_output_port_t    eg_intr_md_for_oport;
     @name("eg_intr_md_from_parser_aux") 
     egress_intrinsic_metadata_from_parser_aux_t    eg_intr_md_from_parser_aux;
+    @name("ethernet") 
+    ethernet_t                                     ethernet;
     @name("ig_intr_md") 
     ingress_intrinsic_metadata_t                   ig_intr_md;
     @name("ig_intr_md_for_mb") 
@@ -257,13 +264,6 @@ struct metadata {
     generator_metadata_t                           ig_pg_md;
     @name("ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
-    @name("m") 
-    metadata_h                                     m;
-}
-
-struct headers {
-    @name("ethernet") 
-    ethernet_t ethernet;
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
@@ -297,9 +297,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             NoAction();
         }
         key = {
-            meta.eg_intr_md_from_parser_aux.egress_parser_err: exact;
-            hdr.ethernet.dstAddr                             : exact;
-            meta.m.foo                                       : exact;
+            hdr.eg_intr_md_from_parser_aux.egress_parser_err: exact;
+            hdr.ethernet.dstAddr                            : exact;
+            meta.m.foo                                      : exact;
         }
         default_action = NoAction();
     }
@@ -326,7 +326,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             NoAction();
         }
         key = {
-            meta.ig_intr_md_from_parser_aux.ingress_parser_err: exact;
+            hdr.ig_intr_md_from_parser_aux.ingress_parser_err: exact;
         }
         default_action = NoAction();
     }
