@@ -16,13 +16,13 @@ bool AddMetadataShims::preorder(IR::Tofino::Parser *parser) {
     if (!std_meta) return false;
     if (parser->gress == INGRESS) {
         parser->start = new IR::Tofino::ParserState(
-            "$ingress_metadata_shim", {}, {
+            "$ingress_metadata_shim", parser->gress, {}, {
             new IR::Tofino::ParserMatch(match_t(), 16, {
                 new IR::Primitive("extract", gen_fieldref(std_meta, "ingress_port")) },
                 parser->start) });
     } else if (parser->gress == EGRESS) {
         parser->start = new IR::Tofino::ParserState(
-            "$egress_metadata_shim", {}, {
+            "$egress_metadata_shim", parser->gress, {}, {
             new IR::Tofino::ParserMatch(match_t(), 2, {
                 new IR::Primitive("extract", gen_fieldref(std_meta, "egress_port")) },
                 parser->start) });

@@ -27,7 +27,7 @@ const IR::Tofino::ParserMatch *SplitBigStates::preorder(IR::Tofino::ParserMatch 
     rest->stmts.insert(rest->stmts.begin(), it, state->stmts.end());
     state->stmts.erase(it, state->stmts.end());
     auto name = names.newname(findContext<IR::Tofino::ParserState>()->name);
-    state->next = new IR::Tofino::ParserState(name, {}, { rest });
+    state->next = new IR::Tofino::ParserState(name, VisitingThread(this), {}, { rest });
     state->except = nullptr;
     state->shift = size;
     return state;

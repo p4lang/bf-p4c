@@ -81,6 +81,7 @@ class Table : Tofino::Unit {
     bool uses_gateway() const { return !gateway_rows.empty(); }
     int stage() const override {
         return logical_id < 0 ? -1 : logical_id / StageUse::MAX_LOGICAL_IDS; }
+    gress_t thread() const override { return gress; }
     validate {
         std::set<cstring> gw_next;
         for (auto &gw : gateway_rows) {

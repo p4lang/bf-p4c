@@ -76,13 +76,16 @@ class PhvInfo : public Inspector {
     map<cstring, std::pair<int, int>>   all_headers;
     gress_t                             gress;
     bool                                alloc_done_ = false;
+    bool                                need_bridge_meta_pov = false;
     void add(cstring, int, int, bool, bool);
     void add_hdr(cstring, const IR::Type_StructLike *, bool);
+    profile_t init_apply(const IR::Node *root) override;
     bool preorder(const IR::Tofino::Parser *) override {
         gress = VisitingThread(this); return true; }
     bool preorder(const IR::Header *h) override;
     bool preorder(const IR::HeaderStack *) override;
     bool preorder(const IR::Metadata *h) override;
+    bool preorder(const IR::NamedRef *h) override;
     template<typename Iter>
     class iterator {
         Iter    it;

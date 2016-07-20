@@ -1,6 +1,6 @@
 #include "ir/ir.h"
 
-IR::Tofino::ParserState::ParserState(const IR::Node *p4state) {
+IR::Tofino::ParserState::ParserState(const IR::Node *p4state, gress_t gr) : gress(gr) {
     this->p4state = p4state;
     if (auto *v1_0 = p4state->to<IR::V1Parser>()) {
         srcInfo = v1_0->srcInfo;

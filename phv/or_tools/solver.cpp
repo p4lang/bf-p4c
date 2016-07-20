@@ -39,7 +39,7 @@ Solver::SetEqualMauGroup(const std::set<PHV::Bit> &bits, const bool &is_t_phv) {
 }
 
 void Solver::SetOffset(const PHV::Bit &pbit, const std::vector<int> &values) {
-    CHECK(0 != bits_.count(pbit)) << ": Cannot find " << pbit;
+    if (bits_.count(pbit) == 0) bits_.insert(std::make_pair(pbit, Bit(pbit.name())));
     Bit &bit = bits_.at(pbit);
     if (nullptr != bit.base_offset()) {
         std::vector<int64> v(32);

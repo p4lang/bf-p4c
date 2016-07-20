@@ -66,6 +66,8 @@ tofino_backend_SOURCES = \
 	%reldir%/parde/add_parde_metadata.cpp \
 	%reldir%/parde/add_parde_metadata.h \
 	%reldir%/parde/asm_output.h \
+	%reldir%/parde/bridge_metadata.cpp \
+	%reldir%/parde/bridge_metadata.h \
 	%reldir%/parde/compute_shifts.h \
 	%reldir%/parde/deparser_output.cpp \
 	%reldir%/parde/extract_parser.cpp \
@@ -278,3 +280,7 @@ XFAIL_TESTS += \
 # Fails with "can't find a table to place?"
 XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/07-MultiProtocol.p4.test
+
+# newpa fails to lay out bridged data properly
+XFAIL_TESTS += \
+    tofino-newpa/testdata/p4_14_samples/bridge1.p4.test

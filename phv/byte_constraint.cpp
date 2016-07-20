@@ -18,8 +18,8 @@ bool ByteConstraint::preorder(const IR::Primitive *prim) {
                 constraints_.SetDeparsedPOV(pov->bit(0), gress);
             else
                 BUG("header %s doesn't have POV bit?", hdr);
-        } else {
-            BUG("emit of non-header %s"); }
+        } else if (auto *pov = phv.field("$bridge-metadata")) {
+            constraints_.SetDeparsedPOV(pov->bit(0), gress); }
     } else if ("extract" == prim->name) {
         // FIXME: When extract primitive has been changed to
         // extract(IR::HeaderSliceRef*) where the HeaderSliceRef object points to

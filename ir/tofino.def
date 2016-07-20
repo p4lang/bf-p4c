@@ -50,6 +50,7 @@ abstract Tofino::Unit {
        A packet running through a tofino pipe executes a sequence of Units in order;
        each Unit completes before the next executes.  All accesses of PHV containers
        are associated with a particular Unit.  */
+    virtual gress_t thread() const = 0;
     virtual int stage() const = 0;
 }
 

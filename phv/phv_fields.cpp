@@ -52,6 +52,15 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, bool meta) 
     all_headers.emplace(name, std::make_pair(start, end));
 }
 
+Visitor::profile_t PhvInfo::init_apply(const IR::Node *root) {
+    auto rv = Inspector::init_apply(root);
+    all_fields.clear();
+    by_id.clear();
+    all_headers.clear();
+    alloc_done_ = false;
+    return rv;
+}
+
 bool PhvInfo::preorder(const IR::Header *h) {
     add_hdr(h->name, h->type, false);
     return false;
@@ -74,6 +83,15 @@ bool PhvInfo::preorder(const IR::Metadata *h) {
     return false;
 }
 
+bool PhvInfo::preorder(const IR::NamedRef *n) {
+    if(n->name == "$bridge-metadata") {
+        /* FIXME -- nasty hack -- we recognize this name specially as the single fixed 1 bit we
+         * need in the POV to make bridged metadata work.  Should have a more general mechanism
+         * for managing POV bits (need a way to shift them properly for header stack operations) */
+        need_bridge_meta_pov = true; }
+    return false;
+}
+
 const PhvInfo::Field *PhvInfo::field(const IR::Expression *e, Field::bitrange *bits) const {
     if (!e) return nullptr;
     if (auto *fr = e->to<IR::Member>())
@@ -86,6 +104,12 @@ const PhvInfo::Field *PhvInfo::field(const IR::Expression *e, Field::bitrange *b
             if (bits->hi >= bits->lo + width - 1)
                 bits->hi = bits->lo + width - 1; }
         return rv; }
+    if (auto *n = e->to<IR::NamedRef>()) {
+        if (auto *rv = getref(all_fields, n->name)) {
+            if (bits) {
+                bits->lo = 0;
+                bits->hi = rv->size - 1; }
+            return rv; } }
     return 0;
 }
 
@@ -137,18 +161,24 @@ void PhvInfo::allocatePOV() {
                 ++egress_size;
             else
                 BUG("Header %s neither ingress or egress", hdr.first); }
+    if (need_bridge_meta_pov)
+        ++ingress_size;
     if (ingress_size > 0) {
         gress = INGRESS;
         add("ingress::$POV", ingress_size, 0, false, true);
         for (auto &hdr : all_headers)
             if (!field(hdr.second.first)->metadata && hdr.first.startsWith("ingress::"))
-                add(hdr.first + ".$valid", 1, --ingress_size, false, true); }
+                add(hdr.first + ".$valid", 1, --ingress_size, false, true);
+        if (need_bridge_meta_pov)
+            add("$bridge-metadata", 1, --ingress_size, false, true);
+        assert(ingress_size == 0); }
     if (egress_size > 0) {
         gress = EGRESS;
         add("egress::$POV", egress_size, 0, false, true);
         for (auto &hdr : all_headers)
             if (!field(hdr.second.first)->metadata && hdr.first.startsWith("egress::"))
-                add(hdr.first + ".$valid", 1, --egress_size, false, true); }
+                add(hdr.first + ".$valid", 1, --egress_size, false, true);
+        assert(egress_size == 0); }
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &sl) {

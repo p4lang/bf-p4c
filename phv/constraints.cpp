@@ -148,7 +148,7 @@ Constraints::SetOffset(const PHV::Bit &bit, const int &min, const int &max) {
         bit_offset_range_[bit] = std::make_pair(new_min, new_max); }
 }
 void Constraints::SetContiguousBits(const PHV::Bits &bits) {
-    if (false == bits.empty()) {
+    if (bits.size() > 1) {
         LOG2("Setting contiguous bits " << bits << " of size " << bits.size());
         contiguous_bits_.push_back(bits); }
 }

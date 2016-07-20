@@ -8,7 +8,7 @@ class PHV::GreedyAlloc::Uses : public Inspector {
     /*              |  ^- gress                 */
     /*              0 == use in parser/deparser */
     /*              1 == use in mau             */
-    explicit Uses(const PhvInfo &p) : phv(p) {}
+    explicit Uses(const PhvInfo &p) : phv(p) { }
 
  private:
     const PhvInfo       &phv;
@@ -17,16 +17,20 @@ class PHV::GreedyAlloc::Uses : public Inspector {
     bool preorder(const IR::Tofino::Parser *p) {
         in_mau = false;
         thread = p->gress;
+        revisit_visited();
         return true; }
     bool preorder(const IR::Tofino::Deparser *d) {
         thread = d->gress;
         in_mau = true;  // treat egress_port as in mau as it can't go in TPHV
+        revisit_visited();
         visit(d->egress_port);
         in_mau = false;
+        revisit_visited();
         d->emits.visit_children(*this);
         return false; }
     bool preorder(const IR::MAU::TableSeq *) {
         in_mau = true;
+        revisit_visited();
         return true; }
     bool preorder(const IR::HeaderRef *hr) {
         if (auto head = phv.header(hr))
@@ -34,6 +38,7 @@ class PHV::GreedyAlloc::Uses : public Inspector {
         return false; }
     bool preorder(const IR::Expression *e) {
         if (auto info = phv.field(e)) {
+            LOG3("use " << info->name << " in " << thread << (in_mau ? " mau" : ""));
             use[in_mau][thread][info->id] = true;
             return false; }
         return true; }

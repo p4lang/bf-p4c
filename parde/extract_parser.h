@@ -6,6 +6,7 @@
 class GetTofinoParser : public Inspector {
     const IR::V1Program                        *program = 0;
     const IR::P4Parser                         *container = 0;
+    gress_t                                     gress = INGRESS;
     map<cstring, IR::Tofino::ParserState *>     states;
     IR::ID                                      ingress_control;
     bool preorder(const IR::V1Parser *) override;

@@ -21,8 +21,12 @@ class OutputDictionary : public Inspector {
             out << indent << canon_name(field->name);
             if (bits.lo != 0 || bits.hi + 1 != field->size)
                 out << '.' << bits.lo << '-' << bits.hi; }
-        out << ": " << canon_name(trim_asm_name(field->header())) << ".$valid"
-            << std::endl;
+        out << ": ";
+        if (field->metadata)
+            out << "$bridge-metadata";
+        else
+            out << canon_name(trim_asm_name(field->header())) << ".$valid";
+        out << std::endl;
         return false; }
 
  public:

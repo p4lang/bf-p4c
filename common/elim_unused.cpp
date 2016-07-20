@@ -7,12 +7,14 @@ class ElimUnused::ParserMetadata : public Transform {
     ElimUnused &self;
     IR::Primitive *preorder(IR::Primitive *prim) override {
         if (prim->name == "extract" && self.phv.field(prim->operands[0]) &&
-            self.defuse.getUses(prim->operands[0]).empty()) {
+            self.defuse.getUses(this, prim->operands[0]).empty()) {
+            LOG1("elim unused extract metadata " << prim);
             return nullptr; }
         return prim; }
     IR::MAU::Instruction *preorder(IR::MAU::Instruction *i) override {
-        if (self.defuse.getUses(i->operands[0]).empty())
-            return nullptr;
+        if (self.defuse.getUses(this, i->operands[0]).empty()) {
+            LOG1("elim unused instruction " << i);
+            return nullptr; }
         return i; }
  public:
     ParserMetadata(ElimUnused &self) : self(self) {}
@@ -84,8 +86,9 @@ class ElimUnused::Headers : public PardeTransform, ThreadVisitor {
         if (!parser) {
             if (prim->name == "emit") {
                 auto *hr = prim->operands[0]->to<IR::HeaderRef>();
-                if (hr && !self.hdr_use.count(hr->toString()))
-                    return nullptr;
+                if (hr && !self.hdr_use.count(hr->toString())) {
+                    LOG1("eliminating " << prim);
+                    return nullptr; }
             } else {
                 BUG("unexpected primitive %s in deparser", prim); } }
         return prim; }

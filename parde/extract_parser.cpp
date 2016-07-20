@@ -2,7 +2,7 @@
 #include "lib/log.h"
 
 bool GetTofinoParser::preorder(const IR::V1Parser *p) {
-    auto *s = states[p->name] = new IR::Tofino::ParserState(p);
+    auto *s = states[p->name] = new IR::Tofino::ParserState(p, gress);
     if (s->name != p->name)
         states[s->name] = s;
     return true;
@@ -11,7 +11,7 @@ bool GetTofinoParser::preorder(const IR::V1Parser *p) {
 bool GetTofinoParser::preorder(const IR::ParserState *p) {
     if (p->name == "accept" || p->name == "reject")
         return false;
-    auto *s = states[p->name] = new IR::Tofino::ParserState(p);
+    auto *s = states[p->name] = new IR::Tofino::ParserState(p, gress);
     if (s->name != p->name)
         states[s->name] = s;
     return true;
@@ -215,7 +215,7 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
     if (ctxt && ctxt->depth >= 256) return nullptr;
     auto rv = states[name];
     if (ctxt->find(rv)) {
-        rv = new IR::Tofino::ParserState(rv->p4state);
+        rv = new IR::Tofino::ParserState(rv->p4state, gress);
         rv->name = cstring::make_unique(states, name);
         states[rv->name] = rv; }
     if (!rv->match.empty()) return rv;
@@ -273,15 +273,25 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
 }
 
 IR::Tofino::Parser *GetTofinoParser::parser(gress_t gress) {
-    auto timer = program ? init_apply(program) : init_apply(container);
-    LOG1("#GetTofinoParser");
+    if (this->gress != gress) {
+        states.clear();
+        this->gress = gress; }
+    if (states.empty()) {
+        LOG1("#GetTofinoParser");
+        if (program)
+            program->apply(*this);
+        else
+            container->apply(*this); }
     return new IR::Tofino::Parser(gress, state("start", nullptr));
 }
 
 cstring GetTofinoParser::ingress_entry() {
-    auto timer = program ? init_apply(program) : init_apply(container);
-    if (!ingress_control) {
+    if (!ingress_control && states.empty()) {
         LOG1("#GetTofinoParser");
+        if (program)
+            program->apply(*this);
+        else
+            container->apply(*this);
         state("start", nullptr); }
     return ingress_control.name;
 }

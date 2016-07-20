@@ -4,10 +4,26 @@
 #include "lib/map.h"
 #include "lib/range.h"
 
+class FieldDefUse::ClearBeforeEgress : public Inspector {
+    FieldDefUse &self;
+    bool preorder(const IR::Expression *e) override {
+        if (auto *f = self.phv.field(e)) {
+            self.defuse.erase(f->id);
+            return false; }
+        return true; }
+    bool preorder(const IR::HeaderRef *hr) override {
+        for (int id : Range(*self.phv.header(hr)))
+            self.defuse.erase(id);
+        return false; }
+ public:
+    explicit ClearBeforeEgress(FieldDefUse &self) : self(self) {}
+};
+
 Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
     auto rv = Inspector::init_apply(root);
     conflict.clear();
     uses.clear();
+    defuse.clear();
     return rv;
 }
 
@@ -35,44 +51,61 @@ void FieldDefUse::read(const PhvInfo::Field *f, const IR::Tofino::Unit *unit,
     if (!f) return;
     auto &info = field(f);
     LOG3("FieldDefUse(" << (void *)this << "): " << DBPrint::Brief << *unit <<
-         " reading " << f->name);
+         " reading " << f->name << " [" << e->id << "]");
     info.use.clear();
     info.use.emplace(unit, e);
     check_conflicts(info, unit->stage());
     for (auto def : info.def) {
-        LOG4("  " << e << " in " << *unit << " uses " << def.second << " from " << *def.first);
-        uses[def.second].emplace(unit, e); }
+        LOG4("  " << e << " [" << e->id << "]" << " in " << *unit << " uses " << def.second <<
+             " from " << *def.first << " [" << def.first->id << "]");
+        uses[def].emplace(unit, e); }
 }
 void FieldDefUse::read(const IR::HeaderRef *hr, const IR::Tofino::Unit *unit,
                        const IR::Expression *e) {
     if (!hr) return;
-    for (int id : Range(*phv.header(hr)))
+    auto hdr_ids = *phv.header(hr);
+    for (int id : Range(hdr_ids))
         read(phv.field(id), unit, e);
-    read(phv.field(hr->toString() + ".$valid"), unit, e);
+    if (!phv.field(hdr_ids.first)->metadata)
+        read(phv.field(hr->toString() + ".$valid"), unit, e);
 }
 void FieldDefUse::write(const PhvInfo::Field *f, const IR::Tofino::Unit *unit,
                         const IR::Expression *e) {
     if (!f) return;
     auto &info = field(f);
     LOG3("FieldDefUse(" << (void *)this << "): " << DBPrint::Brief << *unit <<
-         " writing " << f->name);
+         " writing " << f->name << " [" << e->id << "]");
     if (unit->is<IR::Tofino::ParserState>()) {
         // parser can't rewrite PHV (it ors), so need to treat it as a read for conflicts, but
         // we don't mark it as a use of previous writes, and don't clobber those previous writes.
         info.use.clear();
         info.use.emplace(unit, e);
         check_conflicts(info, unit->stage());
+        for (auto def : info.def)
+            LOG4("  " << e << " [" << e->id << "]" << " in " << *unit << " combines with " <<
+                 def.second << " from " << *def.first << " [" << def.first->id << "]");
     } else {
         info.def.clear(); }
     info.def.emplace(unit, e);
-    uses[e];
 }
 void FieldDefUse::write(const IR::HeaderRef *hr, const IR::Tofino::Unit *unit,
                         const IR::Expression *e) {
     if (!hr) return;
-    for (int id : Range(*phv.header(hr)))
+    auto hdr_ids = *phv.header(hr);
+    for (int id : Range(hdr_ids))
         write(phv.field(id), unit, e);
-    write(phv.field(hr->toString() + ".$valid"), unit, e);
+    if (!phv.field(hdr_ids.first)->metadata)
+        write(phv.field(hr->toString() + ".$valid"), unit, e);
+}
+
+bool FieldDefUse::preorder(const IR::Tofino::Parser *p) {
+    if (p->gress == EGRESS) {
+        /* after processing the ingress pipe, before proceeding to the egress pipe, we
+         * clear everything mentioned in the egress parser.  We want to ensure that nothing
+         * that might be set by the egress parser is considered for bridging -- if it might
+         * be set but isn't, it should be left unset in the egress pipe (not bridged) */
+        p->apply(ClearBeforeEgress(*this)); }
+    return true;
 }
 
 bool FieldDefUse::preorder(const IR::Expression *e) {
@@ -80,7 +113,7 @@ bool FieldDefUse::preorder(const IR::Expression *e) {
     auto *hr = e->to<IR::HeaderRef>();
     if (!f && !hr) return true;
     if (auto unit = findContext<IR::Tofino::Unit>()) {
-        if (unit->is<IR::Tofino::ParserState>() || isWrite()) {
+        if (isWrite()) {
             write(f, unit, e);
             write(hr, unit, e);
         } else {

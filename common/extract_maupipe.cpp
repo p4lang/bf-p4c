@@ -351,7 +351,6 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::V1Program *program) {
     auto rv = new IR::Tofino::Pipe();
     rv->standard_metadata = program->get<IR::Metadata>("standard_metadata");
     GetTofinoParser parser(program);
-    program->apply(parser);
     auto ingress = program->get<IR::V1Control>(parser.ingress_entry());
     if (!ingress) ingress = new IR::V1Control(IR::ID("ingress"));
     ingress = ingress->apply(InlineControlFlow(program));
@@ -433,7 +432,6 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
     deparser = deparser->apply(fixups);
 
     GetTofinoParser make_parser(parser);
-    parser->apply(make_parser);
     if (auto in = rv->thread[INGRESS].parser = make_parser.parser(INGRESS))
         rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, in);
     if (auto eg = rv->thread[EGRESS].parser = make_parser.parser(EGRESS))

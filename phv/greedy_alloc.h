@@ -14,7 +14,7 @@ class GreedyAlloc : public Inspector {
     class Uses;
     void do_alloc(PhvInfo::Field *, Regs *, Regs *);
     bool preorder(const IR::Tofino::Pipe *p) override;
-    void end_apply(const IR::Node *) override { phv.alloc_done_ = false; }
+    void end_apply(const IR::Node *) override { phv.alloc_done_ = true; }
 
  public:
     GreedyAlloc(PhvInfo &p, const SymBitMatrix &c) : phv(p), conflict(c) {}
