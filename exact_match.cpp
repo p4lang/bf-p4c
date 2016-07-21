@@ -258,7 +258,7 @@ void ExactMatchTable::pass1() {
                             group_info[group].tofino_mask[word] |= 1 << (14 + nibble);
                             LOG1("      adding to group " << group); } } } } }
     setup_ways();
-    for (auto &r : match) r.check();
+    for (auto &r : match) r.check(true);
     if (error_count > 0) return;
     auto match_format = format->field("match");
     if (match_format && match.empty())

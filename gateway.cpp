@@ -150,7 +150,7 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
 
 void check_match_key(std::vector<GatewayTable::MatchKey> &vec, const char *name, unsigned max) {
     for (unsigned i = 0; i < vec.size(); i++) {
-        if (!vec[i].val.check())
+        if (!vec[i].val.check(true))
             break;
         if (vec[i].offset >= 0) {
             for (unsigned j = 0; j < i; ++j) {

@@ -15,7 +15,7 @@ static unsigned crc(unsigned poly, bitvec val) {
 }
 
 static bool check_ixbar(Phv::Ref &ref, InputXbar *ix, int grp) {
-    if (!ref.check()) return false;
+    if (!ref.check(true)) return false;
     if (auto *in = ix->find(*ref, grp))
         return in->lo >= 0;
     else error(ref.lineno, "%s not in group %d", ref.name(), grp);

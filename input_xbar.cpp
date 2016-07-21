@@ -244,7 +244,7 @@ bool InputXbar::can_merge(HashGrp &a, HashGrp &b,
 void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
     for (auto &group : groups) {
         for (auto &input : group.second) {
-            if (!input.what.check()) continue;
+            if (!input.what.check(true)) continue;
             if (ternary && (input.lo == 40 || input.lo < 0)) {
                 // can do a single nybble in a ternary group, so different error message?
                 if (input.what->lo % 4U != 0 || input.what->hi % 4U != 3)

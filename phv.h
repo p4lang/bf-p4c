@@ -15,6 +15,7 @@ enum {
     COUNT_16BIT_PHV = 96,
     FIRST_32BIT_PHV = 0,
     COUNT_32BIT_PHV = 64,
+    FIRST_TPHV = 256,
     FIRST_8BIT_TPHV = 288,
     COUNT_8BIT_TPHV = 32,
     FIRST_16BIT_TPHV = 320,
@@ -98,16 +99,18 @@ public:
             if (name_ == a.name_ && lo == a.lo && hi == a.hi)
                 return true;
             return **this == *a; }
-        bool check() const {
+        bool check(bool mau = false) const {
             if (auto *s = phv.get(gress, name_)) {
                 if (hi >= 0 && !Slice(*s, lo, hi).valid) {
                     error(lineno, "Invalid slice of %s", name_.c_str());
                     return false; }
-            } else {
-                if (lineno >= 0)
-                    error(lineno, "No phv record %s", name_.c_str());
-                return false; }
-            return true; }
+                if (mau && s->reg.index >= FIRST_TPHV) {
+                    error(lineno, "Can't access tagalong phv in mau: %s", name_.c_str());
+                    return false; }
+                return true;
+            } else if (lineno >= 0)
+                error(lineno, "No phv record %s", name_.c_str());
+            return false; }
         const char *name() const { return name_.c_str(); }
         int lobit() const { return lo < 0 ? 0 : lo; }
         unsigned size() const {

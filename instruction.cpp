@@ -69,7 +69,7 @@ private:
             } else return false; }
     private:
         virtual Phv *clone() { return new Phv(*this); }
-        bool check() { return reg.check(); }
+        bool check() { return reg.check(true); }
         int phvGroup() { return reg->reg.index / 16; }
         int bits(int group) {
             if (group != phvGroup()) {
@@ -328,7 +328,7 @@ Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
 }
 
 Instruction *AluOP::pass1(Table *tbl) {
-    if (!dest.check() || !src1.check() || !src2.check()) return this;
+    if (!dest.check(true) || !src1.check() || !src2.check()) return this;
     if (dest->lo || dest->hi != dest->reg.size-1) {
         error(lineno, "ALU ops cannot operate on slices");
         return this; }
@@ -385,7 +385,7 @@ Instruction *LoadConst::Decode::decode(Table *tbl, const Table::Actions::Action 
 }
 
 Instruction *LoadConst::pass1(Table *tbl) {
-    if (!dest.check()) return this;
+    if (!dest.check(true)) return this;
     if (dest->lo || dest->hi != dest->reg.size-1) {
         error(lineno, "load-const cannot operate on slices");
         return this; }
@@ -468,7 +468,7 @@ Instruction *CondMoveMux::Decode::decode(Table *tbl, const Table::Actions::Actio
 }
 
 Instruction *CondMoveMux::pass1(Table *tbl) {
-    if (!dest.check() || !src1.check() || !src2.check()) return this;
+    if (!dest.check(true) || !src1.check() || !src2.check()) return this;
     slot = dest->reg.index;
     tbl->stage->action_set[tbl->gress][slot] = true;
     src1.mark_use(tbl);
@@ -538,7 +538,7 @@ Instruction *DepositField::Decode::decode(Table *tbl, const Table::Actions::Acti
 }
 
 Instruction *DepositField::pass1(Table *tbl) {
-    if (!dest.check() || !src1.check() || !src2.check()) return this;
+    if (!dest.check(true) || !src1.check() || !src2.check()) return this;
     slot = dest->reg.index;
     tbl->stage->action_set[tbl->gress][slot] = true;
     src1.mark_use(tbl);
@@ -613,7 +613,7 @@ Instruction *Set::Decode::decode(Table *tbl, const Table::Actions::Action *act,
 }
 
 Instruction *Set::pass1(Table *tbl) {
-    if (!dest.check() || !src.check()) return this;
+    if (!dest.check(true) || !src.check()) return this;
     if (dest->lo || dest->hi != dest->reg.size-1)
         return (new DepositField(*this))->pass1(tbl);
     slot = dest->reg.index;
@@ -662,7 +662,7 @@ Instruction *NulOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
 }
 
 Instruction *NulOP::pass1(Table *tbl) {
-    if (!dest.check()) return this;
+    if (!dest.check(true)) return this;
     slot = dest->reg.index;
     if (opc->opcode || !options.match_compiler) {
         tbl->stage->action_set[tbl->gress][slot] = true; }
@@ -741,7 +741,7 @@ Instruction *ShiftOP::Decode::decode(Table *tbl, const Table::Actions::Action *a
 }
 
 Instruction *ShiftOP::pass1(Table *tbl) {
-    if (!dest.check() || !src1.check() || !src2.check()) return this;
+    if (!dest.check(true) || !src1.check() || !src2.check()) return this;
     if (dest->lo || dest->hi != dest->reg.size-1) {
         error(lineno, "shift ops cannot operate on slices");
         return this; }
