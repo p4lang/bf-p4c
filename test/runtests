@@ -63,6 +63,9 @@ count=$#
 rm -rf faillog.txt
 FAILLOG=$(pwd -P)/faillog.txt
 
+echo -n "Test run started at " >$FAILLOG
+date >> $FAILLOG
+
 if [ ! -x "$GLSC" ]; then
     for f in $TRY_GLSC; do
         if [ -x $f ]; then
@@ -317,6 +320,7 @@ for file in "$@"; do
 done
 
 echo "$pass tests passed, $fail tests failed ($expected_fail expected)"
+echo "$pass tests passed, $fail tests failed ($expected_fail expected)" >>$FAILLOG
 
 if [ $fail -ne $expected_fail ]; then
     exit 1
