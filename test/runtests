@@ -268,7 +268,7 @@ function test_stf() {
         linked=false
         if [ -r $name.out/tofino.bin ]; then
             linked=true
-            for f in $name.out/*.cfg.json; do
+            for f in $name.out/*.cfg.json*; do
                 if [ $f -nt $name.out/tofino.bin ]; then
                     linked=false
                     break

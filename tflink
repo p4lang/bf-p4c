@@ -27,9 +27,6 @@ objs=""
 tmpdir=""
 
 tempfile() {
-    if [ -z "$tmpdir" ]; then
-        tmpdir=$(mktemp -d)
-    fi
     file=$(basename $1 $2)
     orig=file
     ctr=1
@@ -49,21 +46,33 @@ while [ $# -gt 0 ]; do
         SCHEMA="$2"
         shift ; shift ;;
     *.json.Z)
+        if [ -z "$tmpdir" ]; then
+            tmpdir=$(mktemp -d)
+        fi
         file=$(tempfile $1 .Z)
         gunzip -c $1 >$tmpdir/$file
         objs="$objs $tmpdir/$file"
         shift ;;
     *.json.gz)
+        if [ -z "$tmpdir" ]; then
+            tmpdir=$(mktemp -d)
+        fi
         file=$(tempfile $1 .gz)
         gunzip -c $1 >$tmpdir/$file
         objs="$objs $tmpdir/$file"
         shift ;;
     *.json.bz)
+        if [ -z "$tmpdir" ]; then
+            tmpdir=$(mktemp -d)
+        fi
         file=$(tempfile $1 .bz)
         bzcat $1 >$tmpdir/$file
         objs="$objs $tmpdir/$file"
         shift ;;
     *.json.bz2)
+        if [ -z "$tmpdir" ]; then
+            tmpdir=$(mktemp -d)
+        fi
         file=$(tempfile $1 .bz2)
         bzcat $1 >$tmpdir/$file
         objs="$objs $tmpdir/$file"
