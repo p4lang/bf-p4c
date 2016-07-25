@@ -49,8 +49,8 @@ void Constraints::SetEqualByte(const PHV::Byte &byte) {
 }
 
 bool Constraints::IsDeparsed(const PHV::Byte &byte) const {
-    for (auto hdrs : deparsed_headers_) {
-        for (auto hdr : hdrs) {
+    for (const auto &hdrs : deparsed_headers_) {
+        for (const auto &hdr : hdrs) {
             if (hdr.end() != std::find(hdr.begin(), hdr.end(), byte))
                 return true; } }
     return false;
@@ -313,7 +313,7 @@ void Constraints::SetConstraints(SolverInterface &solver) {
                    eq_offsets.prev_bits);
     LOG1("Setting deparser constraints");
     for (size_t i = 0; i < deparsed_headers_.size(); ++i) {
-        for (auto &hdr : deparsed_headers_[i]) {
+        for (const auto &hdr : deparsed_headers_[i]) {
             CHECK(hdr.size() > 0) << "; Deparsing zero sized header";
             auto it = hdr.begin();
             solver.SetFirstDeparsedHeaderByte(*it);
@@ -327,11 +327,27 @@ void Constraints::SetConstraints(SolverInterface &solver) {
                 CHECK(IsContiguous(bits)) << ": Non-contiguous bits in " << it2->name();
                 solver.SetDeparsedHeader(*it, *it2); }
             CHECK(hdr.end() != it);
+            solver.SetLastDeparsedHeaderByte(*it); }
+        for (const auto &hdr : parsed_headers_[i]) {
+            if (deparsed_headers_[i].count(hdr)) continue;  // already dealt with
+            CHECK(hdr.size() > 0) << "; Parsing zero sized header";
+            auto it = hdr.begin();
+            solver.SetFirstDeparsedHeaderByte(*it);
+            for (auto it2 = std::next(it, 1); it2 != hdr.end(); ++it, ++it2) {
+                // Sanity check: All eight bits must be valid since the deparser can
+                // only deparse whole containers.
+                const PHV::Bits bits = it2->valid_bits();
+                //CHECK(8 == bits.size()) << ": Invalid byte size " << it2->name();
+                // This is just a sanity check. There must be an entry in
+                // contiguous_bits_ for every deparsed byte.
+                CHECK(IsContiguous(bits)) << ": Non-contiguous bits in " << it2->name();
+                solver.SetDeparsedHeader(*it, *it2); }
+            CHECK(hdr.end() != it);
             solver.SetLastDeparsedHeaderByte(*it); } }
-    for (auto &i_hdr : deparsed_headers_[0]) {
+    for (const auto &i_hdr : deparsed_headers_[0]) {
         for (auto &i_hdr_byte : i_hdr) {
             solver.SetDeparserIngress(i_hdr_byte);
-            for (auto &e_hdr : deparsed_headers_[1]) {
+            for (const auto &e_hdr : deparsed_headers_[1]) {
                 for (auto &e_hdr_byte : e_hdr) {
                     solver.SetDeparserGroups(i_hdr_byte, e_hdr_byte);
                     for (auto &i_pov : deparsed_pov_[0]) {
@@ -340,7 +356,7 @@ void Constraints::SetConstraints(SolverInterface &solver) {
                 solver.SetDeparserGroups(i_hdr_byte[0], e_pov); } } }
     for (auto &i_pov : deparsed_pov_[0])
         solver.SetDeparserIngress(i_pov);
-    for (auto &e_hdr : deparsed_headers_[1])
+    for (const auto &e_hdr : deparsed_headers_[1])
         for (auto &e_hdr_byte : e_hdr)
             solver.SetDeparserEgress(e_hdr_byte);
     for (auto &e_pov : deparsed_pov_[1])

@@ -284,7 +284,6 @@ Byte *Solver::SetByte(const PHV::Byte &phv_byte) {
     Byte *byte = bits_.at(phv_byte.at(0)).byte();
     // Just doing sanity check to make sure all Bit objects have a pointer to the
     // same Byte object.
-    for (auto b : phv_byte) CHECK(bits_.at(b).byte() == byte);
     for (auto it = phv_byte.cfirst(); it != phv_byte.clast(); ++it) {
         CHECK(bits_.at(*it).byte() == byte) << ": Invalid Byte* in " << (*it); }
     // Create a new Byte* object if needed.

@@ -19,6 +19,8 @@ class Constraints {
         for (auto it = begin; it != end; std::advance(it, 1)) {
             SetEqualByte(*it); } }
 
+    template<class T> void SetParsedHeader(const T &begin, const T &end, const gress_t gress) {
+        parsed_headers_.at(gress).insert(std::vector<PHV::Byte>(begin, end)); }
     template<class T> void SetDeparsedHeader(const T &begin, const T &end, const gress_t gress) {
         deparsed_headers_.at(gress).insert(std::vector<PHV::Byte>(begin, end)); }
     void SetDeparsedPOV(const PHV::Bit &bit, const gress_t gress) {
@@ -114,6 +116,8 @@ class Constraints {
     // thread-specific mapping because we need to add the deparser-group
     // constraint between the bytes of two headers that belong to different
     // threads.  We also need the POV bits for the headers.
+    // metadata that is parsed without being deparsed has slightly weaker constraints
+    std::array<std::set<std::vector<PHV::Byte>>, 2> parsed_headers_;
     std::array<std::set<std::vector<PHV::Byte>>, 2> deparsed_headers_;
     std::array<std::set<PHV::Bit>, 2> deparsed_pov_;
     // A vector of flags to indicate if a bit can be assigned to T-PHV. This

@@ -285,6 +285,3 @@ XFAIL_TESTS += \
 XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/07-MultiProtocol.p4.test
 
-# newpa fails to lay out bridged data properly
-XFAIL_TESTS += \
-    tofino-newpa/testdata/p4_14_samples/bridge1.p4.test
