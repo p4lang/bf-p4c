@@ -4,6 +4,10 @@
 struct TableResourceAlloc;
 #end
 
+#emit_impl
+#include "resource.h"
+#end
+
 namespace MAU {
 
 /* A Tofino logical table (group) -- a gateway and/or match table
@@ -54,6 +58,13 @@ class Table : Tofino::Unit {
         int             width = 0;
         Way() { memset(this, 0, sizeof(*this)); }
         operator== { return memcmp(this, &a, sizeof(Way)) == 0; }
+        toJSON {
+        std::stringstream ss;
+        ss  << indent << "\"match_groups\" : " << match_groups << "," << std::endl
+            << indent << "\"entries\" : " << entries << "," << std::endl
+            << indent << "\"width\" : " << width << std::endl;
+        return ss.str();
+        }
     }
     std::vector<Way>    ways;
     const TableResourceAlloc            *resources = nullptr;

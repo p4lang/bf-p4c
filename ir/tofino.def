@@ -25,6 +25,13 @@ class Tofino::Pipe {
         MAU::TableSeq     mau = nullptr;
         Tofino::Deparser  deparser = nullptr;
         operator== { return parser == a.parser && mau == a.mau && deparser == a.deparser; }
+        toJSON {
+            std::stringstream ss;
+            ss  << indent << "\"parser\" : " << JSONGenerator::generate<Tofino::Parser>(parser, indent + "    ", node_refs) << "," << std::endl
+                << indent << "\"mau\" : " << JSONGenerator::generate<MAU::TableSeq>(mau, indent + "    ", node_refs) << "," << std::endl
+                << indent << "\"parser\" : " << JSONGenerator::generate<Tofino::Deparser>(deparser, indent + "    ", node_refs) << std::endl;
+            return ss.str();
+        }
     }
     thread_t[2] thread = {};  // INGRESS and EGRESS
 #apply
