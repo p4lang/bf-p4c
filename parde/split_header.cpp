@@ -11,8 +11,6 @@ IR::Node *SplitExtractEmit::preorder(IR::Primitive *p) {
     assert(hdr_type);
     for (auto field : *hdr_type->fields) {
         IR::Expression *fref = new IR::Member(field->type, hdr, field->name);
-        if (!field->type->is<IR::Type::Varbits>())
-            fref = new IR::HeaderSliceRef(fref->to<IR::Member>());
         rv->push_back(new IR::Primitive(p->srcInfo, p->name, fref)); }
     if (p->name == "extract") {
         rv->push_back(new IR::Primitive(p->srcInfo, "set_metadata",

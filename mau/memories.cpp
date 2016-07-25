@@ -213,7 +213,7 @@ bool Memories::allocTable(cstring name, const IR::MAU::Table *table, int &entrie
         assert(match_ixbar.way_use.size() == table->ways.size());
         struct waybits {
             bitvec              bits;
-            bitvec::bitref      next;
+            decltype(bits.end()) next;
             waybits() : next(bits.end()) {} };
         std::map<int, waybits> alloc_bits;
         for (auto &way : match_ixbar.way_use)

@@ -17,7 +17,6 @@
 #include "frontends/p4-14/typecheck.h"
 #include "frontends/common/parseInput.h"
 #include "common/extract_maupipe.h"
-#include "common/blockmap.h"
 #include "midend.h"
 #include "midend/actionsInlining.h"
 #include "tofinoOptions.h"

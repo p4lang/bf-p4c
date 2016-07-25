@@ -16,6 +16,8 @@ tofino_backend_SOURCES = \
 	%reldir%/common/blockmap.h \
 	%reldir%/common/copy_header_eliminator.cpp \
 	%reldir%/common/copy_header_eliminator.h \
+	%reldir%/common/elim_unused.cpp \
+	%reldir%/common/elim_unused.h \
 	%reldir%/common/extract_maupipe.cpp \
 	%reldir%/common/extract_maupipe.h \
 	%reldir%/common/field_defuse.cpp \
@@ -64,6 +66,8 @@ tofino_backend_SOURCES = \
 	%reldir%/parde/add_parde_metadata.cpp \
 	%reldir%/parde/add_parde_metadata.h \
 	%reldir%/parde/asm_output.h \
+	%reldir%/parde/bridge_metadata.cpp \
+	%reldir%/parde/bridge_metadata.h \
 	%reldir%/parde/compute_shifts.h \
 	%reldir%/parde/deparser_output.cpp \
 	%reldir%/parde/extract_parser.cpp \
@@ -89,9 +93,6 @@ tofino_backend_SOURCES = \
 	%reldir%/phv/create_thread_local_instances.h \
 	%reldir%/phv/greedy_alloc.cpp \
 	%reldir%/phv/greedy_alloc.h \
-	%reldir%/phv/header_bit_creator.h \
-	%reldir%/phv/header_fragment_creator.cpp \
-	%reldir%/phv/header_fragment_creator.h \
 	%reldir%/phv/match_xbar_constraint.cpp \
 	%reldir%/phv/match_xbar_constraint.h \
 	%reldir%/phv/mau_group_constraint.cpp \
@@ -147,6 +148,7 @@ cpplint_FILES += $(tofino_backend_SOURCES)
 
 tofinotests.mk: $(wildcard \
    $(srcdir)/testdata/p4_14_samples/*.p4 \
+   $(srcdir)/testdata/p4_14_samples/switch_*/switch.p4 \
    $(srcdir)/%reldir%/v1_2_test/*.p4 \
    $(srcdir)/%reldir%/v1_samples/*.p4 \
    $(srcdir)/%reldir%/v1_samples/switch_*/switch.p4)
@@ -229,13 +231,13 @@ XFAIL_TESTS += \
     bmv2/%reldir%/v1_samples/test_config_139_tcam_error_detection_4.p4.test \
     bmv2/%reldir%/v1_samples/test_config_117_first_tcam_range.p4.test \
     bmv2/%reldir%/v1_samples/vk_basic_ipv4_20150706.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_101_switch_msdc.p4.test \
     p14_to_16/%reldir%/v1_samples/02-FlexCounterActionProfile.p4.test \
     p14_to_16/%reldir%/v1_samples/dileep.p4.test \
     p14_to_16/%reldir%/v1_samples/dileep2.p4.test \
     p14_to_16/%reldir%/v1_samples/dileep4.p4.test \
     p14_to_16/%reldir%/v1_samples/dileep8.p4.test \
     p14_to_16/%reldir%/v1_samples/dileep12.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_101_switch_msdc.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_125_meter_pre_color.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_126_meter_pre_color_2.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_127_meter_pre_color_3.p4.test \
@@ -257,14 +259,15 @@ XFAIL_TESTS += \
     p14_to_16/%reldir%/v1_samples/test_config_170_stateful_selection_table_update.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_171_stateful_conga.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_172_stateful_heavy_hitter.p4.test \
-    p14_to_16/%reldir%/v1_samples/test_config_173_stateful_bloom_filter.p4.test \
-    p14_to_16/%reldir%/v1_samples/test_config_101_switch_msdc.p4.test
+    p14_to_16/%reldir%/v1_samples/test_config_173_stateful_bloom_filter.p4.test
 
 # These currently fail gateway check with 'expression too complex'
 XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/14-GatewayGreaterThan.p4.test \
     tofino/testdata/p4_14_samples/flowlet_switching.p4.test \
     tofino/testdata/p4_14_samples/switch.p4.test \
+    tofino/testdata/p4_14_samples/switch_20160226/switch.p4.test \
+    tofino/testdata/p4_14_samples/switch_20160512/switch.p4.test \
     tofino/%reldir%/v1_samples/07-MacAddrCheck.p4.test \
     tofino/%reldir%/v1_samples/08-MacAddrCheck1.p4.test
 
@@ -272,9 +275,12 @@ XFAIL_TESTS += \
 XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/02-FullPHV1.p4.test \
     tofino/testdata/p4_14_samples/03-FullPHV2.p4.test \
-    tofino/%reldir%/v1_samples/switch_20160602/switch.p4.test \
     tofino/%reldir%/v1_samples/test_config_159_stateful_using_phv_field.p4.test
 
 # Fails with "can't find a table to place?"
 XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/07-MultiProtocol.p4.test
+
+# newpa fails to lay out bridged data properly
+XFAIL_TESTS += \
+    tofino-newpa/testdata/p4_14_samples/bridge1.p4.test

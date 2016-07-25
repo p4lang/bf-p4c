@@ -3,30 +3,35 @@
 
 const IR::Node *
 CopyHeaderEliminator::preorder(IR::Primitive *primitive) {
-  if (primitive->name == "copy_header") {
-    // replace with a sequence of modify_field primitives
-    auto dst_hdr_ref = primitive->operands[0]->to<const IR::HeaderRef>();
-    auto src_hdr_ref = primitive->operands[1]->to<const IR::HeaderRef>();
-    CHECK_NE(nullptr, dst_hdr_ref) << "Invalid destination header in " <<
-      primitive->toString();
-    CHECK_NE(nullptr, src_hdr_ref) << "Invalid source header in " <<
-      primitive->toString();
-    // Assuming that type-checker has ensured that both src and dst have same
-    // header type.
-    CHECK_EQ(dst_hdr_ref->type, src_hdr_ref->type) <<
-      "Type mismatch in copy_header: " << dst_hdr_ref->type->toString() <<
-      " and " << src_hdr_ref->type->toString();
-    // TODO: Use modify_field to copy POVRef too.
-    auto rv = new IR::Vector<IR::Primitive>;
-    auto dst_slice = new IR::HeaderSliceRef(dst_hdr_ref->srcInfo, dst_hdr_ref,
-                                            dst_hdr_ref->type->width_bits() - 1,
-                                            0);
-    auto src_slice = new IR::HeaderSliceRef(src_hdr_ref->srcInfo, src_hdr_ref,
-                                            src_hdr_ref->type->width_bits() - 1,
-                                            0);
-    rv->push_back(new IR::Primitive(primitive->srcInfo, "modify_field",
-                                    dst_slice, src_slice));
-    return rv;
-  }
-  return primitive;
+    if (primitive->name == "copy_header" || primitive->name == "modify_field") {
+        auto dst_hdr_ref = primitive->operands[0]->to<const IR::HeaderRef>();
+        auto src_hdr_ref = primitive->operands[1]->to<const IR::HeaderRef>();
+        if (primitive->name == "modify_field" && !dst_hdr_ref) return primitive;
+        // replace with a sequence of modify_field primitives for each field
+        CHECK_NE(nullptr, dst_hdr_ref)
+            << "Invalid destination header in " << primitive->toString();
+        CHECK_NE(nullptr, src_hdr_ref)
+            << "Invalid source header in " << primitive->toString();
+        // Assuming that type-checker has ensured that both src and dst have same
+        // header type.
+        CHECK_EQ(dst_hdr_ref->type, src_hdr_ref->type)
+            << "Type mismatch in copy_header: " << dst_hdr_ref->type->toString()
+            << " and " << src_hdr_ref->type->toString();
+        auto *hdr_type = dst_hdr_ref->type->to<IR::Type_StructLike>();
+        auto rv = new IR::Vector<IR::Primitive>;
+        for (auto field : *hdr_type->fields) {
+            auto dst = new IR::Member(dst_hdr_ref->srcInfo, field->type, dst_hdr_ref, field->name);
+            auto src = new IR::Member(src_hdr_ref->srcInfo, field->type, src_hdr_ref, field->name);
+            rv->push_back(new IR::Primitive(primitive->srcInfo, "modify_field", dst, src)); }
+        if (dst_hdr_ref->baseRef()->is<IR::Header>()) {
+            auto validtype = IR::Type::Bits::get(1);
+            auto dst = new IR::Member(dst_hdr_ref->srcInfo, validtype, dst_hdr_ref, "$valid");
+            IR::Expression *src;
+            if (src_hdr_ref->baseRef()->is<IR::Header>())
+                src = new IR::Member(src_hdr_ref->srcInfo, validtype, src_hdr_ref, "$valid");
+            else
+                src = new IR::Constant(validtype, 1);
+            rv->push_back(new IR::Primitive(primitive->srcInfo, "modify_field", dst, src)); }
+        return rv; }
+    return primitive;
 }

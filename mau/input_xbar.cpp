@@ -125,7 +125,7 @@ int need_align_flags[3][4] = { { 0, 0, 0, 0 },  // 8bit -- no alignment needed
       IXBar::Use::Align16hi | IXBar::Use::Align32hi } };
 
 
-static void add_use(IXBar::Use &alloc, const PhvInfo::Info *field, int flags) {
+static void add_use(IXBar::Use &alloc, const PhvInfo::Field *field, int flags) {
     if (field->alloc.empty()) {
         int size = (field->size + 7)/8U;
         for (int i = 0; i < size; i++) {
@@ -159,7 +159,7 @@ bool IXBar::allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv,
                 BUG("unexpected reads expression %s", r);
             // FIXME -- for now just assuming we can fit the valid bit reads in as needed
             continue; }
-        const PhvInfo::Info *finfo;
+        const PhvInfo::Field *finfo;
         if (!field || !(finfo = phv.field(field)))
             BUG("unexpected reads expression %s", r);
         if (fields_needed.count(finfo->name))

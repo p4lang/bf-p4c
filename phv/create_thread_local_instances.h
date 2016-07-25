@@ -10,19 +10,17 @@
 // object.
 class CreateThreadLocalInstances : public Modifier, ThreadVisitor {
  public:
-  explicit CreateThreadLocalInstances(gress_t th) : ThreadVisitor(th), gress_(th) {}
-  // Always returns false. It prepends "thread-name::" to named_ref->name.
-  bool preorder(IR::HeaderOrMetadata *hdr_ref) override {
-    hdr_ref->name = IR::ID(cstring::to_cstring(gress_) + "::" + hdr_ref->name);
-    return false;
-  }
-  // It prepends "thread-name::" to every parse state.
-  bool preorder(IR::Tofino::ParserState *ps) override {
-    ps->name = cstring::to_cstring(gress_) + "::" + ps->name;
-    return true;
-  }
+    explicit CreateThreadLocalInstances(gress_t th) : ThreadVisitor(th), gress_(th) {}
+    // Always returns false. It prepends "thread-name::" to named_ref->name.
+    bool preorder(IR::HeaderOrMetadata *hdr_ref) override {
+        hdr_ref->name = IR::ID(cstring::to_cstring(gress_) + "::" + hdr_ref->name);
+        return false; }
+    // It prepends "thread-name::" to every parse state.
+    bool preorder(IR::Tofino::ParserState *ps) override {
+        ps->name = cstring::to_cstring(gress_) + "::" + ps->name;
+        return true; }
  private:
-  gress_t gress_;
+    gress_t gress_;
 };
 
 #endif /* TOFINO_PHV_CREATE_THREAD_LOCAL_INSTANCES_H_ */

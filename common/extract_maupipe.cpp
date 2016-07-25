@@ -124,251 +124,251 @@ const IR::V1Table *createV1Table(const IR::P4Table *tc, const P4::ReferenceMap *
 
 namespace {
 class FindAttached : public Inspector {
-  map<cstring, vector<const IR::Attached *>>    &attached;
-  void postorder(const IR::Stateful *st) override {
-    if (!contains(attached[st->table], st))
-      attached[st->table].push_back(st); }
+    map<cstring, vector<const IR::Attached *>>    &attached;
+    void postorder(const IR::Stateful *st) override {
+        if (!contains(attached[st->table], st))
+          attached[st->table].push_back(st); }
  public:
-  explicit FindAttached(map<cstring, vector<const IR::Attached *>> &a) : attached(a) {}
+    explicit FindAttached(map<cstring, vector<const IR::Attached *>> &a) : attached(a) {}
 };
 
 struct AttachTables : public Modifier {
-  const IR::V1Program                          *program;
-  map<cstring, vector<const IR::Attached *>>    attached;
+    const IR::V1Program                          *program;
+    map<cstring, vector<const IR::Attached *>>    attached;
 
-  void postorder(IR::MAU::Table *tbl) override {
-    if (attached.count(tbl->name))
-      for (auto a : attached[tbl->name])
-        if (!contains(tbl->attached, a))
-          tbl->attached.push_back(a); }
-  void postorder(IR::Primitive *prim) override {
-    if (prim->name == "count" || prim->name == "execute_meter")
-      if (auto at = program->get<IR::Attached>(prim->operands[0]->toString())) {
-        if (auto tt = findContext<IR::MAU::Table>())
-          if (!contains(attached[tt->name], at))
-            attached[tt->name].push_back(at); }
-    /* various error check should be here */ }
+    void postorder(IR::MAU::Table *tbl) override {
+        if (attached.count(tbl->name))
+            for (auto a : attached[tbl->name])
+                if (!contains(tbl->attached, a))
+                    tbl->attached.push_back(a); }
+    void postorder(IR::Primitive *prim) override {
+        if (prim->name == "count" || prim->name == "execute_meter") {
+            if (auto at = program->get<IR::Attached>(prim->operands[0]->toString())) {
+                if (auto tt = findContext<IR::MAU::Table>()) {
+                    if (!contains(attached[tt->name], at))
+                        attached[tt->name].push_back(at); } } }
+        /* various error check should be here */ }
 
-  explicit AttachTables(const IR::V1Program *prg) : program(prg) {
-    program->apply(FindAttached(attached)); }
+    explicit AttachTables(const IR::V1Program *prg) : program(prg) {
+        program->apply(FindAttached(attached)); }
 };
 
 static const IR::MethodCallExpression *isApplyHit(const IR::Expression *e, bool *lnot = 0) {
-  if (auto *n = e->to<IR::LNot>()) {
-    e = n->expr;
-    if (lnot) *lnot = true;
-  } else if (lnot) {
-    *lnot = false; }
-  if (auto *mem = e->to<IR::Member>()) {
-    if (mem->member != "hit") return nullptr;
-    if (auto *mc = mem->expr->to<IR::MethodCallExpression>()) {
-      mem = mc->method->to<IR::Member>();
-      if (mem && mem->member == "apply")
-        return mc; } }
-  return nullptr;
+    if (auto *n = e->to<IR::LNot>()) {
+        e = n->expr;
+        if (lnot) *lnot = true;
+    } else if (lnot) {
+        *lnot = false; }
+    if (auto *mem = e->to<IR::Member>()) {
+        if (mem->member != "hit") return nullptr;
+        if (auto *mc = mem->expr->to<IR::MethodCallExpression>()) {
+            mem = mc->method->to<IR::Member>();
+            if (mem && mem->member == "apply")
+                return mc; } }
+    return nullptr;
 }
 
 class GetTofinoTables : public Inspector {
-  const IR::V1Program                          *program;
-  const P4::ReferenceMap                       *refMap;
-  const P4::TypeMap                            *typeMap;
-  gress_t                                       gress;
-  IR::Tofino::Pipe                              *pipe;
-  map<const IR::Node *, IR::MAU::Table *>       tables;
-  map<const IR::Node *, IR::MAU::TableSeq *>    seqs;
-  IR::MAU::TableSeq *getseq(const IR::Node *n) {
-    if (!seqs.count(n) && tables.count(n))
-        seqs[n] = new IR::MAU::TableSeq(tables.at(n));
-    return seqs.at(n); }
+    const IR::V1Program                        *program;
+    const P4::ReferenceMap                     *refMap;
+    const P4::TypeMap                          *typeMap;
+    gress_t                                     gress;
+    IR::Tofino::Pipe                            *pipe;
+    map<const IR::Node *, IR::MAU::Table *>     tables;
+    map<const IR::Node *, IR::MAU::TableSeq *>  seqs;
+    IR::MAU::TableSeq *getseq(const IR::Node *n) {
+        if (!seqs.count(n) && tables.count(n))
+            seqs[n] = new IR::MAU::TableSeq(tables.at(n));
+        return seqs.at(n); }
 
  public:
     GetTofinoTables(const IR::V1Program *prog, gress_t gr, IR::Tofino::Pipe *p)
-            : program(prog), refMap(nullptr), typeMap(nullptr), gress(gr), pipe(p) {}
+    : program(prog), refMap(nullptr), typeMap(nullptr), gress(gr), pipe(p) {}
     GetTofinoTables(const P4::ReferenceMap* refMap, const P4::TypeMap* typeMap,
                     gress_t gr, IR::Tofino::Pipe *p)
-            : program(nullptr), refMap(refMap), typeMap(typeMap), gress(gr), pipe(p) {}
+    : program(nullptr), refMap(refMap), typeMap(typeMap), gress(gr), pipe(p) {}
 
  private:
-  void add_tt_action(IR::MAU::Table *tt, IR::ID name) {
-    if (auto action = program->get<IR::ActionFunction>(name)) {
-      if (!tt->actions.count(name))
-        tt->actions.add(name, action);
-      else
-        error("%s: action %s appears multiple times in table %s", name.srcInfo, name, tt->name);
-    } else {
-      error("%s: no action %s for table %s", name.srcInfo, name, tt->name); } }
-  void setup_tt_actions(IR::MAU::Table *tt, const IR::V1Table *table) {
-    for (auto act : table->actions)
-      add_tt_action(tt, act);
-    if (auto ap = program->get<IR::ActionProfile>(table->action_profile.name)) {
-      tt->attached.push_back(ap);
-      for (auto act : ap->actions)
-        add_tt_action(tt, act);
-      if (auto sel = program->get<IR::ActionSelector>(ap->selector.name))
-        tt->attached.push_back(sel);
-      else if (ap->selector)
-        error("%s: no action_selector %s", ap->selector.srcInfo, ap->selector.name);
-    } else if (table->action_profile) {
-      error("%s: no action_profile %s", table->action_profile.srcInfo,
-            table->action_profile.name); } }
-  void setup_tt_actions(IR::MAU::Table *tt, const IR::P4Table *table) {
-    for (auto act : *table->properties->getProperty("actions")->value
-                          ->to<IR::ActionList>()->actionList) {
-      if (auto action = refMap->getDeclaration(act->getPath())->to<IR::P4Action>()) {
-        auto mce = act->expression->to<IR::MethodCallExpression>();
-        auto newaction = createActionFunction(action, mce->arguments);
-        if (!tt->actions.count(newaction->name))
-          tt->actions.addUnique(newaction->name, newaction);
-        else
-          error("%s: action %s appears multiple times in table %s", action->name.srcInfo,
-                action->name, tt->name); } }
-    // action_profile already pulled into TableContainer?
-  }
+    void add_tt_action(IR::MAU::Table *tt, IR::ID name) {
+        if (auto action = program->get<IR::ActionFunction>(name)) {
+            if (!tt->actions.count(name)) {
+                tt->actions.add(name, action);
+            } else {
+                error("%s: action %s appears multiple times in table %s",
+                      name.srcInfo, name, tt->name); }
+        } else {
+            error("%s: no action %s for table %s", name.srcInfo, name, tt->name); } }
+    void setup_tt_actions(IR::MAU::Table *tt, const IR::V1Table *table) {
+        for (auto act : table->actions)
+            add_tt_action(tt, act);
+        if (auto ap = program->get<IR::ActionProfile>(table->action_profile.name)) {
+            tt->attached.push_back(ap);
+            for (auto act : ap->actions)
+                add_tt_action(tt, act);
+            if (auto sel = program->get<IR::ActionSelector>(ap->selector.name))
+                tt->attached.push_back(sel);
+            else if (ap->selector)
+                error("%s: no action_selector %s", ap->selector.srcInfo, ap->selector.name);
+        } else if (table->action_profile) {
+            error("%s: no action_profile %s", table->action_profile.srcInfo,
+                  table->action_profile.name); } }
+    void setup_tt_actions(IR::MAU::Table *tt, const IR::P4Table *table) {
+        for (auto act : *table->properties->getProperty("actions")->value
+                              ->to<IR::ActionList>()->actionList) {
+            if (auto action = refMap->getDeclaration(act->getPath())->to<IR::P4Action>()) {
+                auto mce = act->expression->to<IR::MethodCallExpression>();
+                auto newaction = createActionFunction(action, mce->arguments);
+                if (!tt->actions.count(newaction->name))
+                    tt->actions.addUnique(newaction->name, newaction);
+                else
+                    error("%s: action %s appears multiple times in table %s", action->name.srcInfo,
+                          action->name, tt->name); } }
+        // action_profile already pulled into TableContainer?
+    }
 
-  bool preorder(const IR::IndexedVector<IR::Declaration> *) override { return false; }
-  bool preorder(const IR::P4Table *) override { return false; }
+    bool preorder(const IR::IndexedVector<IR::Declaration> *) override { return false; }
+    bool preorder(const IR::P4Table *) override { return false; }
 
-  bool preorder(const IR::Vector<IR::Expression> *v) override {
-    assert(!seqs.count(v));
-    seqs[v] = new IR::MAU::TableSeq();
-    return true; }
-  void postorder(const IR::Vector<IR::Expression> *v) override {
-    for (auto el : *v)
-      if (tables.count(el))
-        seqs.at(v)->tables.push_back(tables.at(el)); }
-  bool preorder(const IR::BlockStatement *b) override {
-    assert(!seqs.count(b));
-    seqs[b] = new IR::MAU::TableSeq();
-    return true; }
-  void postorder(const IR::BlockStatement *b) override {
-    for (auto el : *b->components)
-      if (tables.count(el))
-        seqs.at(b)->tables.push_back(tables.at(el)); }
-
-  bool preorder(const IR::Apply *a) override {
-    auto table = program->get<IR::V1Table>(a->name);
-    if (!tables.count(a)) {
-      if (!table) {
-        error("%s: No table named %s", a->srcInfo, a->name);
+    bool preorder(const IR::Vector<IR::Expression> *v) override {
+        assert(!seqs.count(v));
+        seqs[v] = new IR::MAU::TableSeq();
         return true; }
-      auto tt = tables[a] = new IR::MAU::Table(a->name, gress, table);
-      setup_tt_actions(tt, table);
-    } else {
-      error("%s: Multiple applies of table %s not supported", a->srcInfo, a->name); }
-    return true; }
-  void postorder(const IR::Apply *a) override {
-    auto tt = tables.at(a);
-    for (auto &act : a->actions) {
-      auto name = act.first;
-      if (!tt->actions.count(name)) {
-          if (name == "hit")
-            name = "$hit";
-          else if (name == "miss")
-            name = "$miss";
-          else if (name != "default")
-            error("%s: no action %s in table %s", a->srcInfo, name, tt->name); }
-      tt->next[name] = getseq(act.second); } }
-  bool preorder(const IR::MethodCallExpression *m) override {
-    auto mi = P4::MethodInstance::resolve(m, refMap, typeMap, true);
-    if (!mi || !mi->isApply())
-      BUG("Method Call %1% not apply", m);
-    auto table = mi->object->to<IR::P4Table>();
-    if (!table) BUG("%1% not apllied to table", m);
-    if (!tables.count(m)) {
-      auto tt = tables[m] = new IR::MAU::Table(table->name, gress,
-                                               createV1Table(table, refMap));
-      setup_tt_actions(tt, table);
-    } else {
-      error("%s: Multiple applies of table %s not supported", m->srcInfo, table->name); }
-    return true; }
-  void postorder(const IR::MethodCallStatement *m) override {
-    if (!tables.count(m->methodCall))
-        BUG("MethodCall %1% is not apply", m);
-    tables[m] = tables.at(m->methodCall); }
-  void postorder(const IR::SwitchStatement *s) override {
-    auto exp = s->expression->to<IR::Member>();
-    if (!exp || exp->member != "action_run" || !tables.count(exp->expr)) {
-      error("%s: Can only switch on table.apply().action_run", s->expression->srcInfo);
-      return; }
-    auto tt = tables[s] = tables.at(exp->expr);
-    for (auto c : s->cases) {
-        cstring label;
-        if (c->label->is<IR::DefaultExpression>())
-            label = "default";
+    void postorder(const IR::Vector<IR::Expression> *v) override {
+        for (auto el : *v)
+            if (tables.count(el))
+                seqs.at(v)->tables.push_back(tables.at(el)); }
+    bool preorder(const IR::BlockStatement *b) override {
+        assert(!seqs.count(b));
+        seqs[b] = new IR::MAU::TableSeq();
+        return true; }
+    void postorder(const IR::BlockStatement *b) override {
+        for (auto el : *b->components)
+            if (tables.count(el))
+                seqs.at(b)->tables.push_back(tables.at(el)); }
+
+    bool preorder(const IR::Apply *a) override {
+        auto table = program->get<IR::V1Table>(a->name);
+        if (!tables.count(a)) {
+            if (!table) {
+                error("%s: No table named %s", a->srcInfo, a->name);
+                return true; }
+            auto tt = tables[a] = new IR::MAU::Table(a->name, gress, table);
+            setup_tt_actions(tt, table);
+        } else {
+            error("%s: Multiple applies of table %s not supported", a->srcInfo, a->name); }
+        return true; }
+    void postorder(const IR::Apply *a) override {
+        auto tt = tables.at(a);
+        for (auto &act : a->actions) {
+            auto name = act.first;
+            if (!tt->actions.count(name)) {
+                if (name == "hit")
+                    name = "$hit";
+                else if (name == "miss")
+                    name = "$miss";
+                else if (name != "default")
+                    error("%s: no action %s in table %s", a->srcInfo, name, tt->name); }
+            tt->next[name] = getseq(act.second); } }
+    bool preorder(const IR::MethodCallExpression *m) override {
+        auto mi = P4::MethodInstance::resolve(m, refMap, typeMap, true);
+        if (!mi || !mi->isApply())
+            BUG("Method Call %1% not apply", m);
+        auto table = mi->object->to<IR::P4Table>();
+        if (!table) BUG("%1% not apllied to table", m);
+        if (!tables.count(m)) {
+            auto tt = tables[m] = new IR::MAU::Table(table->name, gress,
+                                                     createV1Table(table, refMap));
+            setup_tt_actions(tt, table);
+        } else {
+            error("%s: Multiple applies of table %s not supported", m->srcInfo, table->name); }
+        return true; }
+    void postorder(const IR::MethodCallStatement *m) override {
+        if (!tables.count(m->methodCall))
+            BUG("MethodCall %1% is not apply", m);
+        tables[m] = tables.at(m->methodCall); }
+    void postorder(const IR::SwitchStatement *s) override {
+        auto exp = s->expression->to<IR::Member>();
+        if (!exp || exp->member != "action_run" || !tables.count(exp->expr)) {
+            error("%s: Can only switch on table.apply().action_run", s->expression->srcInfo);
+            return; }
+        auto tt = tables[s] = tables.at(exp->expr);
+        for (auto c : s->cases) {
+            cstring label;
+            if (c->label->is<IR::DefaultExpression>())
+                label = "default";
+            else
+                label = refMap->getDeclaration(c->label->to<IR::PathExpression>()->path)
+                              ->externalName();
+            tt->next[label] = getseq(c->statement); } }
+
+    bool preorder(const IR::NamedCond *c) override {
+        if (!tables.count(c))
+            tables[c] = new IR::MAU::Table(c->name, gress, c->pred);
         else
-            label = refMap->getDeclaration(c->label->to<IR::PathExpression>()->path)
-                            ->externalName();
-        tt->next[label] = getseq(c->statement); } }
+            BUG("duplicated unique name?");
+        return true; }
+    void postorder(const IR::NamedCond *c) override {
+        if (c->ifTrue)
+            tables.at(c)->next["true"] = getseq(c->ifTrue);
+        if (c->ifFalse)
+            tables.at(c)->next["false"] = getseq(c->ifFalse); }
+    bool preorder(const IR::If *) override {
+        BUG("unnamed condition in control flow"); }
+    bool preorder(const IR::IfStatement *c) override {
+        if (!isApplyHit(c->condition)) {
+            static int uid = 0;
+            char buf[16];
+            snprintf(buf, sizeof(buf), "cond-%d", ++uid);
+            tables[c] = new IR::MAU::Table(buf, gress, c->condition); }
+        return true; }
+    void postorder(const IR::IfStatement *c) override {
+        bool lnot;
+        cstring T = "true", F = "false";
+        if (auto *mc = isApplyHit(c->condition, &lnot)) {
+            tables[c] = tables.at(mc);
+            T = lnot ? "$miss" : "$hit";
+            F = lnot ? "$hit" : "$miss"; }
+        if (c->ifTrue && !c->ifTrue->is<IR::EmptyStatement>())
+            tables.at(c)->next[T] = getseq(c->ifTrue);
+        if (c->ifFalse && !c->ifFalse->is<IR::EmptyStatement>())
+            tables.at(c)->next[F] = getseq(c->ifFalse); }
+    void postorder(const IR::V1Control *cf) override {
+        assert(!pipe->thread[gress].mau);
+        pipe->thread[gress].mau = getseq(cf->code); }
+    bool preorder(const IR::P4Control *cf) override {
+        visit(cf->body);
+        assert(!pipe->thread[gress].mau);
+        pipe->thread[gress].mau = getseq(cf->body);
+        return false; }
 
-  bool preorder(const IR::NamedCond *c) override {
-    if (!tables.count(c))
-      tables[c] = new IR::MAU::Table(c->name, gress, c->pred);
-    else
-      BUG("duplicated unique name?");
-    return true; }
-  void postorder(const IR::NamedCond *c) override {
-    if (c->ifTrue)
-      tables.at(c)->next["true"] = getseq(c->ifTrue);
-    if (c->ifFalse)
-      tables.at(c)->next["false"] = getseq(c->ifFalse); }
-  bool preorder(const IR::If *) override {
-    BUG("unnamed condition in control flow"); }
-  bool preorder(const IR::IfStatement *c) override {
-    if (!isApplyHit(c->condition)) {
-      static int uid = 0;
-      char buf[16];
-      snprintf(buf, sizeof(buf), "cond-%d", ++uid);
-      tables[c] = new IR::MAU::Table(buf, gress, c->condition); }
-    return true; }
-  void postorder(const IR::IfStatement *c) override {
-    bool lnot;
-    cstring T = "true", F = "false";
-    if (auto *mc = isApplyHit(c->condition, &lnot)) {
-      tables[c] = tables.at(mc);
-      T = lnot ? "$miss" : "$hit";
-      F = lnot ? "$hit" : "$miss"; }
-    if (c->ifTrue && !c->ifTrue->is<IR::EmptyStatement>())
-      tables.at(c)->next[T] = getseq(c->ifTrue);
-    if (c->ifFalse && !c->ifFalse->is<IR::EmptyStatement>())
-      tables.at(c)->next[F] = getseq(c->ifFalse); }
-  void postorder(const IR::V1Control *cf) override {
-    assert(!pipe->thread[gress].mau);
-    pipe->thread[gress].mau = getseq(cf->code); }
-  bool preorder(const IR::P4Control *cf) override {
-    visit(cf->body);
-    assert(!pipe->thread[gress].mau);
-    pipe->thread[gress].mau = getseq(cf->body);
-    return false; }
-
-  bool preorder(const IR::EmptyStatement *) override { return false; }
-  void postorder(const IR::Statement *st) override {
-    BUG("Unhandled statement %1%", st); }
+    bool preorder(const IR::EmptyStatement *) override { return false; }
+    void postorder(const IR::Statement *st) override {
+        BUG("Unhandled statement %1%", st); }
 };
 }  // anonymous namespace
 
 const IR::Tofino::Pipe *extract_maupipe(const IR::V1Program *program) {
-  auto rv = new IR::Tofino::Pipe();
-  rv->standard_metadata = program->get<IR::Metadata>("standard_metadata");
-  GetTofinoParser parser(program);
-  program->apply(parser);
-  auto ingress = program->get<IR::V1Control>(parser.ingress_entry());
-  if (!ingress) ingress = new IR::V1Control(IR::ID("ingress"));
-  ingress = ingress->apply(InlineControlFlow(program));
-  ingress = ingress->apply(NameGateways());
-  auto egress = program->get<IR::V1Control>("egress");
-  if (!egress) egress = new IR::V1Control(IR::ID("egress"));
-  egress = egress->apply(InlineControlFlow(program));
-  egress = egress->apply(NameGateways());
-  ingress->apply(GetTofinoTables(program, INGRESS, rv));
-  egress->apply(GetTofinoTables(program, EGRESS, rv));
-  if (auto in = rv->thread[INGRESS].parser = parser.parser(INGRESS))
-    rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, in);
-  if (auto eg = rv->thread[EGRESS].parser = parser.parser(EGRESS))
-    rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, eg);
-  AttachTables toAttach(program);
-  for (auto &th : rv->thread)
-    th.mau = th.mau->apply(toAttach);
-  return rv;
+    auto rv = new IR::Tofino::Pipe();
+    rv->standard_metadata = program->get<IR::Metadata>("standard_metadata");
+    GetTofinoParser parser(program);
+    auto ingress = program->get<IR::V1Control>(parser.ingress_entry());
+    if (!ingress) ingress = new IR::V1Control(IR::ID("ingress"));
+    ingress = ingress->apply(InlineControlFlow(program));
+    ingress = ingress->apply(NameGateways());
+    auto egress = program->get<IR::V1Control>("egress");
+    if (!egress) egress = new IR::V1Control(IR::ID("egress"));
+    egress = egress->apply(InlineControlFlow(program));
+    egress = egress->apply(NameGateways());
+    ingress->apply(GetTofinoTables(program, INGRESS, rv));
+    egress->apply(GetTofinoTables(program, EGRESS, rv));
+    if (auto in = rv->thread[INGRESS].parser = parser.parser(INGRESS))
+        rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, in);
+    if (auto eg = rv->thread[EGRESS].parser = parser.parser(EGRESS))
+        rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, eg);
+    AttachTables toAttach(program);
+    for (auto &th : rv->thread)
+        th.mau = th.mau->apply(toAttach);
+    return rv;
 }
 
 class ConvertIndexToHeaderStackItemRef : public Transform {
@@ -405,26 +405,23 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
 
     auto rv = new IR::Tofino::Pipe();
 
-    ParamBinding bindings(&refMap);
+    ParamBinding bindings(&refMap, &typeMap);
 
     for (auto param : *parser->type->applyParams->getEnumerator())
-        if (param->type->is<IR::Type_StructLike>())
-            bindings.bind(param);
+        bindings.bind(param);
     for (auto param : *ingress->type->applyParams->getEnumerator())
-        if (param->type->is<IR::Type_StructLike>())
-            bindings.bind(param);
+        bindings.bind(param);
     for (auto param : *egress->type->applyParams->getEnumerator())
-        if (param->type->is<IR::Type_StructLike>())
-            bindings.bind(param);
+        bindings.bind(param);
     for (auto param : *deparser->type->applyParams->getEnumerator())
-        if (param->type->is<IR::Type_StructLike>())
-            bindings.bind(param);
+        bindings.bind(param);
 
     auto it = ingress->type->applyParams->parameters->rbegin();
     rv->standard_metadata =
         bindings.get(*it)->obj->to<IR::Metadata>();
     PassManager fixups = {
         &bindings,
+        new SplitComplexInstanceRef,
         new RemoveInstanceRef,
         new ConvertIndexToHeaderStackItemRef,
         new RewriteForTofino,
@@ -435,11 +432,11 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
     deparser = deparser->apply(fixups);
 
     GetTofinoParser make_parser(parser);
-    parser->apply(make_parser);
     if (auto in = rv->thread[INGRESS].parser = make_parser.parser(INGRESS))
         rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, in);
     if (auto eg = rv->thread[EGRESS].parser = make_parser.parser(EGRESS))
         rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, eg);
+    // FIXME -- use the deparser rather than always inferring it from the parser
 
     // ingress = ingress->apply(InlineControlFlow(blockMap));
     ingress->apply(GetTofinoTables(&refMap, &typeMap, INGRESS, rv));

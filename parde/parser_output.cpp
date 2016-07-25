@@ -13,7 +13,7 @@ class OutputExtracts : public Inspector {
         if (prim->operands[0]->type->is<IR::Type::Varbits>()) {
             WARNING("ignoring varbits type in parser");
             return false; }
-        PhvInfo::Info::bitrange bits;
+        PhvInfo::Field::bitrange bits;
         auto dest = phv.field(prim->operands[0], &bits);
         if (dest && prim->name == "extract") {
             auto &alloc = dest->for_bit(bits.lo);

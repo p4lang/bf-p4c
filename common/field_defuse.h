@@ -9,31 +9,34 @@
 
 class FieldDefUse : public ControlFlowVisitor, public Inspector, P4WriteContext {
  public:
+    /* A given expression for a field might appear multiple places in the IR dag (eg, an
+     * action used by mulitple tables), so we use a pair<Unit,Expr> to denote a particular
+     * use or definition in the code */
     typedef std::pair<const IR::Tofino::Unit *, const IR::Expression*>  locpair;
 
  private:
-    const PhvInfo                               &phv;
-    SymBitMatrix                                &conflict;
-    map<const IR::Expression *, set<locpair>>   &uses;
+    const PhvInfo               &phv;
+    SymBitMatrix                &conflict;
+    map<locpair, set<locpair>>  &uses;
     struct info {
-        const PhvInfo::Info     *field = 0;
+        const PhvInfo::Field    *field = 0;
         set<locpair>            def, use;
     };
     std::unordered_map<int, info> defuse;
+    class ClearBeforeEgress;
     // class Init;
 
     profile_t init_apply(const IR::Node *root) override;
     void end_apply(const IR::Node *root) override;
     void check_conflicts(const info &read, int when);
-    void read(const PhvInfo::Info *, const IR::Tofino::Unit *, const IR::Expression *);
+    void read(const PhvInfo::Field *, const IR::Tofino::Unit *, const IR::Expression *);
     void read(const IR::HeaderRef *, const IR::Tofino::Unit *, const IR::Expression *);
-    void write(const PhvInfo::Info *, const IR::Tofino::Unit *, const IR::Expression *);
+    void write(const PhvInfo::Field *, const IR::Tofino::Unit *, const IR::Expression *);
     void write(const IR::HeaderRef *, const IR::Tofino::Unit *, const IR::Expression *);
-    info &field(const PhvInfo::Info *);
+    info &field(const PhvInfo::Field *);
     info &field(int id) { return field(phv.field(id)); }
-    void access_field(const PhvInfo::Info *);
-    // bool preorder(const IR::Tofino::Parser *p) override;
-    // bool preorder(const IR::Tofino::Deparser *p) override;
+    void access_field(const PhvInfo::Field *);
+    bool preorder(const IR::Tofino::Parser *p) override;
     bool preorder(const IR::Expression *e) override;
     FieldDefUse *clone() const override { return new FieldDefUse(*this); }
     void flow_merge(Visitor &) override;
@@ -50,7 +53,14 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, P4WriteContext 
     : phv(p), conflict(*new SymBitMatrix), uses(*new std::remove_reference<decltype(uses)>::type)
     { joinFlows = true; visitDagOnce = false; }
     const SymBitMatrix &conflicts() { return conflict; }
-    const set<locpair> &getUses(const IR::Expression *e) const { return uses.at(e); }
+
+    const set<locpair> &getUses(locpair def) const {
+        static const set<locpair> emptyset;
+        return uses.count(def) ? uses.at(def) : emptyset; }
+    const set<locpair> &getUses(const IR::Tofino::Unit *u, const IR::Expression *e) const {
+        return getUses(locpair(u, e)); }
+    const set<locpair> &getUses(const Visitor *v, const IR::Expression *e) const {
+        return getUses(locpair(v->findOrigCtxt<IR::Tofino::Unit>(), e)); }
 };
 
 #endif /* _FIELD_DEFUSE_H_ */

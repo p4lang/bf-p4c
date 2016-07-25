@@ -10,12 +10,13 @@ error {
     NoMatch,
     EmptyStack,
     FullStack,
-    OverwritingHeader
+    OverwritingHeader,
+    HeaderTooShort
 }
 
 extern packet_in {
     void extract<T>(out T hdr);
-    void extract<T>(out T variableSizeHeader, in bit<32> sizeInBits);
+    void extract<T>(out T variableSizeHeader, in bit<32> variableFieldSizeInBits);
     T lookahead<T>();
     void advance(in bit<32> sizeInBits);
     bit<32> length();
@@ -121,7 +122,7 @@ control Egress<H, M>(inout H hdr, inout M meta, inout standard_metadata_t standa
 control ComputeCkecksum<H, M>(inout H hdr, inout M meta, inout standard_metadata_t standard_metadata);
 control Deparser<H>(packet_out b, in H hdr);
 package V1Switch<H, M>(Parser<H, M> p, VerifyChecksum<H, M> vr, Ingress<H, M> ig, Egress<H, M> eg, ComputeCkecksum<H, M> ck, Deparser<H> dep);
-struct egress_intrinsic_metadata_t {
+header egress_intrinsic_metadata_t {
     bit<16> egress_port;
     bit<5>  _pad1;
     bit<19> enq_qdepth;
@@ -146,14 +147,14 @@ struct egress_intrinsic_metadata_t {
     bit<16> pkt_length;
 }
 
-struct egress_intrinsic_metadata_for_mirror_buffer_t {
+header egress_intrinsic_metadata_for_mirror_buffer_t {
     bit<6>  _pad1;
     bit<10> egress_mirror_id;
     bit<1>  coalesce_flush;
     bit<7>  coalesce_length;
 }
 
-struct egress_intrinsic_metadata_for_output_port_t {
+header egress_intrinsic_metadata_for_output_port_t {
     bit<2> _pad1;
     bit<1> capture_tstamp_on_tx;
     bit<1> update_delay_on_tx;
@@ -161,7 +162,7 @@ struct egress_intrinsic_metadata_for_output_port_t {
     bit<3> drop_ctl;
 }
 
-struct egress_intrinsic_metadata_from_parser_aux_t {
+header egress_intrinsic_metadata_from_parser_aux_t {
     bit<48> egress_global_tstamp;
     bit<32> egress_global_ver;
     bit<16> egress_parser_err;
@@ -169,7 +170,7 @@ struct egress_intrinsic_metadata_from_parser_aux_t {
     bit<8>  coalesce_sample_count;
 }
 
-struct ingress_intrinsic_metadata_t {
+header ingress_intrinsic_metadata_t {
     bit<1>  resubmit_flag;
     bit<1>  _pad1;
     bit<2>  _pad2;
@@ -178,12 +179,12 @@ struct ingress_intrinsic_metadata_t {
     bit<48> ingress_mac_tstamp;
 }
 
-struct ingress_intrinsic_metadata_for_mirror_buffer_t {
+header ingress_intrinsic_metadata_for_mirror_buffer_t {
     bit<6>  _pad1;
     bit<10> ingress_mirror_id;
 }
 
-struct ingress_intrinsic_metadata_for_tm_t {
+header ingress_intrinsic_metadata_for_tm_t {
     bit<7>  _pad1;
     bit<9>  ucast_egress_port;
     bit<3>  drop_ctl;
@@ -209,19 +210,19 @@ struct ingress_intrinsic_metadata_for_tm_t {
     bit<16> rid;
 }
 
-struct ingress_intrinsic_metadata_from_parser_aux_t {
+header ingress_intrinsic_metadata_from_parser_aux_t {
     bit<48> ingress_global_tstamp;
     bit<32> ingress_global_ver;
     bit<16> ingress_parser_err;
 }
 
-struct generator_metadata_t {
+header generator_metadata_t {
     bit<16> app_id;
     bit<16> batch_id;
     bit<16> instance_id;
 }
 
-struct ingress_parser_control_signals {
+header ingress_parser_control_signals {
     bit<3> priority;
 }
 
@@ -235,6 +236,9 @@ header test_t {
 }
 
 struct metadata {
+}
+
+struct headers {
     @name("eg_intr_md") 
     egress_intrinsic_metadata_t                    eg_intr_md;
     @name("eg_intr_md_for_mb") 
@@ -255,19 +259,16 @@ struct metadata {
     generator_metadata_t                           ig_pg_md;
     @name("ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
-}
-
-struct headers {
     @name("test_dest") 
-    test_t test_dest;
+    test_t                                         test_dest;
     @name("test_src") 
-    test_t test_src;
+    test_t                                         test_src;
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("parse_test") state parse_test {
-        packet.extract(hdr.test_dest);
-        packet.extract(hdr.test_src);
+        packet.extract<test_t>(hdr.test_dest);
+        packet.extract<test_t>(hdr.test_src);
         transition accept;
     }
     @name("start") state start {
@@ -301,8 +302,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        packet.emit(hdr.test_dest);
-        packet.emit(hdr.test_src);
+        packet.emit<test_t>(hdr.test_dest);
+        packet.emit<test_t>(hdr.test_src);
     }
 }
 
@@ -316,4 +317,4 @@ control computeChecksum(inout headers hdr, inout metadata meta, inout standard_m
     }
 }
 
-V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;

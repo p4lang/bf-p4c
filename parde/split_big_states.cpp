@@ -11,7 +11,7 @@ const IR::Tofino::ParserMatch *SplitBigStates::preorder(IR::Tofino::ParserMatch 
         if (prim->operands[0]->type->is<IR::Type::Varbits>()) {
             /* FIXME -- ignoring varbits for now (not properly dealt with in general) */
             continue; }
-        PhvInfo::Info::bitrange bits;
+        PhvInfo::Field::bitrange bits;
         auto dest = phv.field(prim->operands[0], &bits);
         if (!dest) BUG("%s not in phv?", prim->operands[0]);
         auto &alloc = dest->for_bit(bits.lo);
@@ -27,7 +27,7 @@ const IR::Tofino::ParserMatch *SplitBigStates::preorder(IR::Tofino::ParserMatch 
     rest->stmts.insert(rest->stmts.begin(), it, state->stmts.end());
     state->stmts.erase(it, state->stmts.end());
     auto name = names.newname(findContext<IR::Tofino::ParserState>()->name);
-    state->next = new IR::Tofino::ParserState(name, {}, { rest });
+    state->next = new IR::Tofino::ParserState(name, VisitingThread(this), {}, { rest });
     state->except = nullptr;
     state->shift = size;
     return state;

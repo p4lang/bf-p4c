@@ -3,7 +3,7 @@
 IR::Node *SplitPhvUse::preorder(IR::Primitive *p) {
     if (p->operands.empty()) return p;
     IR::Vector<IR::Primitive> *rv = nullptr;
-    PhvInfo::Info::bitrange bits;
+    PhvInfo::Field::bitrange bits;
     if (auto field = phv.field(p->operands[0], &bits)) {
         if (field->alloc.size() <= 1) return p;
         LOG3("split " << *p << "into");
@@ -28,12 +28,12 @@ IR::Node *SplitPhvUse::preorder(IR::Primitive *p) {
     return p;
 }
 
-IR::Node *SplitPhvUse::preorder(IR::HeaderSliceRef *hsr) {
-    PhvInfo::Info::bitrange bits;
+IR::Node *SplitPhvUse::preorder(IR::Expression *e) {
+    PhvInfo::Field::bitrange bits;
     IR::Vector<IR::Expression> *rv = nullptr;
-    if (auto field = phv.field(hsr, &bits)) {
-        if (field->alloc.size() <= 1) return hsr;
-        LOG3("split " << *hsr << " into");
+    if (auto field = phv.field(e, &bits)) {
+        if (field->alloc.size() <= 1) return e;
+        LOG3("split " << *e << " into");
         for (auto &alloc : field->alloc) {
             if (alloc.field_bit > bits.hi || alloc.field_hi() < bits.lo)
                 continue;
@@ -44,30 +44,22 @@ IR::Node *SplitPhvUse::preorder(IR::HeaderSliceRef *hsr) {
                 hi = bits.hi - bits.lo;
             if (lo == 0 && hi == bits.hi - bits.lo) {
                 LOG3("-- already split");
-                return hsr; }
+                return e; }
             if (getContext()->node->is<IR::Expression>()) {
                 /* FIXME -- trying to split a child of an expression -- need to be splitting
                  * that expression, or issuing an error about that expression earlier */
-                WARNING("want to split " << *hsr << " but can't");
-                return hsr; }
+                WARNING("want to split " << *e << " but can't");
+                return e; }
             if (!rv) rv = new IR::Vector<IR::Expression>;
-            auto *sl = new IR::Slice(hsr, hi, lo);
+            auto *sl = new IR::Slice(e, hi, lo);
             LOG3("   " << *sl);
             rv->push_back(preorder(sl)); }
         if (rv) return rv; }
-    return hsr;
+    return e;
 }
 
 IR::Expression *SplitPhvUse::preorder(IR::Slice *sl) {
-    if (auto *hsr = sl->e0->to<IR::HeaderSliceRef>()) {
-        int lo = sl->getL() + hsr->getL();
-        int hi = sl->getH() + hsr->getL();
-        if (lo > hsr->getH())
-            return new IR::Constant(0);
-        if (hi > hsr->getH())
-            hi = hsr->getH();
-        return new IR::HeaderSliceRef(hsr->srcInfo, hsr->header_ref(), hi, lo);
-    } else if (auto *of = sl->e0->to<IR::Slice>()) {
+    if (auto *of = sl->e0->to<IR::Slice>()) {
         int lo = sl->getL() + of->getL();
         int hi = sl->getH() + of->getL();
         if (lo > of->getH())

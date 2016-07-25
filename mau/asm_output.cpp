@@ -153,7 +153,7 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
                 if (!match_data.empty()) {
                     out << "random(" << emit_vector(match_data, ", ") << ")";
                     if (ghost) out << " ^ "; }
-                if (ghost) out << ghost;
+                if (ghost) out << "stripe(" << ghost << ")";
                 out << std::endl; }
             for (auto range : bitranges(mask_bits)) {
                 out << indent << (range.first+40);
@@ -261,7 +261,7 @@ class MauAsmOutput::EmitAction : public Inspector {
     bool preorder(const IR::Cast *) override { return true; }
     bool preorder(const IR::Expression *exp) override {
         if (sep) {
-            PhvInfo::Info::bitrange bits;
+            PhvInfo::Field::bitrange bits;
             if (auto f = self.phv.field(exp, &bits)) {
                 out << sep << canon_name(f->name);
                 if (bits.lo || bits.size() != f->size)
@@ -272,6 +272,13 @@ class MauAsmOutput::EmitAction : public Inspector {
         } else {
             out << indent << "# " << *exp << std::endl; }
         return false; }
+    bool preorder(const IR::Slice *sl) override {
+        if (sep && sl->e0->is<IR::ActionArg>()) {
+            out << sep << *sl->e0 << '(' << *sl->e2 << ".." << *sl->e1 << ')';
+            sep = ", ";
+            return false; }
+        return preorder(static_cast<const IR::Expression *>(sl));
+    }
 
  public:
     EmitAction(const MauAsmOutput &s, std::ostream &o, const IR::MAU::Table *tbl, indent_t i)
@@ -293,8 +300,8 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
                     BUG("unexpected reads expression %s", r);
                 // FIXME -- for now just assuming we can fit the valid bit reads in as needed
                 continue; }
-            const PhvInfo::Info *finfo;
-            PhvInfo::Info::bitrange bits;
+            const PhvInfo::Field *finfo;
+            PhvInfo::Field::bitrange bits;
             if (!field || !(finfo = self.phv.field(field, &bits)))
                 BUG("unexpected reads expression %s", r);
             match_fields.emplace_back(finfo, bits.lo, bits.hi); } }
@@ -303,6 +310,8 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
         for (auto &field : match_fields)
             if (field.width() >= 10) {
                 ghost_bits = field(0, 9);
+                if (&field != &match_fields[0])
+                    std::swap(field, match_fields[0]);
                 break; }
         if (!ghost_bits && !match_fields.empty())
             ghost_bits = match_fields[0]; }

@@ -9,12 +9,13 @@ error {
     NoMatch,
     EmptyStack,
     FullStack,
-    OverwritingHeader
+    OverwritingHeader,
+    HeaderTooShort
 }
 
 extern packet_in {
     void extract<T>(out T hdr);
-    void extract<T>(out T variableSizeHeader, in bit<32> sizeInBits);
+    void extract<T>(out T variableSizeHeader, in bit<32> variableFieldSizeInBits);
     T lookahead<T>();
     void advance(in bit<32> sizeInBits);
     bit<32> length();
@@ -105,7 +106,15 @@ control Egress<H, M>(inout H hdr, inout M meta, inout standard_metadata_t standa
 control ComputeCkecksum<H, M>(inout H hdr, inout M meta, inout standard_metadata_t standard_metadata);
 control Deparser<H>(packet_out b, in H hdr);
 package V1Switch<H, M>(Parser<H, M> p, VerifyChecksum<H, M> vr, Ingress<H, M> ig, Egress<H, M> eg, ComputeCkecksum<H, M> ck, Deparser<H> dep);
-struct egress_intrinsic_metadata_t {
+struct ingress_metadata_t {
+    bit<16> port;
+}
+
+struct routing_metadata_t {
+    bit<1> drop;
+}
+
+header egress_intrinsic_metadata_t {
     bit<16> egress_port;
     bit<5>  _pad1;
     bit<19> enq_qdepth;
@@ -130,14 +139,14 @@ struct egress_intrinsic_metadata_t {
     bit<16> pkt_length;
 }
 
-struct egress_intrinsic_metadata_for_mirror_buffer_t {
+header egress_intrinsic_metadata_for_mirror_buffer_t {
     bit<6>  _pad1;
     bit<10> egress_mirror_id;
     bit<1>  coalesce_flush;
     bit<7>  coalesce_length;
 }
 
-struct egress_intrinsic_metadata_for_output_port_t {
+header egress_intrinsic_metadata_for_output_port_t {
     bit<2> _pad1;
     bit<1> capture_tstamp_on_tx;
     bit<1> update_delay_on_tx;
@@ -145,7 +154,7 @@ struct egress_intrinsic_metadata_for_output_port_t {
     bit<3> drop_ctl;
 }
 
-struct egress_intrinsic_metadata_from_parser_aux_t {
+header egress_intrinsic_metadata_from_parser_aux_t {
     bit<48> egress_global_tstamp;
     bit<32> egress_global_ver;
     bit<16> egress_parser_err;
@@ -153,7 +162,13 @@ struct egress_intrinsic_metadata_from_parser_aux_t {
     bit<8>  coalesce_sample_count;
 }
 
-struct ingress_intrinsic_metadata_t {
+header ethernet_t {
+    bit<48> dstAddr;
+    bit<48> srcAddr;
+    bit<16> etherType;
+}
+
+header ingress_intrinsic_metadata_t {
     bit<1>  resubmit_flag;
     bit<1>  _pad1;
     bit<2>  _pad2;
@@ -162,12 +177,12 @@ struct ingress_intrinsic_metadata_t {
     bit<48> ingress_mac_tstamp;
 }
 
-struct ingress_intrinsic_metadata_for_mirror_buffer_t {
+header ingress_intrinsic_metadata_for_mirror_buffer_t {
     bit<6>  _pad1;
     bit<10> ingress_mirror_id;
 }
 
-struct ingress_intrinsic_metadata_for_tm_t {
+header ingress_intrinsic_metadata_for_tm_t {
     bit<7>  _pad1;
     bit<9>  ucast_egress_port;
     bit<3>  drop_ctl;
@@ -193,34 +208,20 @@ struct ingress_intrinsic_metadata_for_tm_t {
     bit<16> rid;
 }
 
-struct ingress_intrinsic_metadata_from_parser_aux_t {
+header ingress_intrinsic_metadata_from_parser_aux_t {
     bit<48> ingress_global_tstamp;
     bit<32> ingress_global_ver;
     bit<16> ingress_parser_err;
 }
 
-struct generator_metadata_t {
+header generator_metadata_t {
     bit<16> app_id;
     bit<16> batch_id;
     bit<16> instance_id;
 }
 
-struct ingress_parser_control_signals {
+header ingress_parser_control_signals {
     bit<3> priority;
-}
-
-struct ingress_metadata_t {
-    bit<16> port;
-}
-
-struct routing_metadata_t {
-    bit<1> drop;
-}
-
-header ethernet_t {
-    bit<48> dstAddr;
-    bit<48> srcAddr;
-    bit<16> etherType;
 }
 
 header ipv4_t {
@@ -267,6 +268,13 @@ header vlan_tag_t {
 }
 
 struct metadata {
+    @name("ingress_metadata") 
+    ingress_metadata_t ingress_metadata;
+    @name("routing_metadata") 
+    routing_metadata_t routing_metadata;
+}
+
+struct headers {
     @name("eg_intr_md") 
     egress_intrinsic_metadata_t                    eg_intr_md;
     @name("eg_intr_md_for_mb") 
@@ -275,6 +283,8 @@ struct metadata {
     egress_intrinsic_metadata_for_output_port_t    eg_intr_md_for_oport;
     @name("eg_intr_md_from_parser_aux") 
     egress_intrinsic_metadata_from_parser_aux_t    eg_intr_md_from_parser_aux;
+    @name("ethernet") 
+    ethernet_t                                     ethernet;
     @name("ig_intr_md") 
     ingress_intrinsic_metadata_t                   ig_intr_md;
     @name("ig_intr_md_for_mb") 
@@ -287,28 +297,19 @@ struct metadata {
     generator_metadata_t                           ig_pg_md;
     @name("ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
-    @name("ingress_metadata") 
-    ingress_metadata_t                             ingress_metadata;
-    @name("routing_metadata") 
-    routing_metadata_t                             routing_metadata;
-}
-
-struct headers {
-    @name("ethernet") 
-    ethernet_t ethernet;
     @name("ipv4") 
-    ipv4_t     ipv4;
+    ipv4_t                                         ipv4;
     @name("tcp") 
-    tcp_t      tcp;
+    tcp_t                                          tcp;
     @name("udp") 
-    udp_t      udp;
+    udp_t                                          udp;
     @name("vlan_tag") 
-    vlan_tag_t vlan_tag;
+    vlan_tag_t                                     vlan_tag;
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("parse_ethernet") state parse_ethernet {
-        packet.extract(hdr.ethernet);
+        packet.extract<ethernet_t>(hdr.ethernet);
         transition select(hdr.ethernet.etherType) {
             16w0x8100: parse_vlan_tag;
             16w0x800: parse_ipv4;
@@ -316,7 +317,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
     @name("parse_ipv4") state parse_ipv4 {
-        packet.extract(hdr.ipv4);
+        packet.extract<ipv4_t>(hdr.ipv4);
         transition select(hdr.ipv4.fragOffset, hdr.ipv4.protocol) {
             (13w0, 8w6): parse_tcp;
             (13w0, 8w17): parse_udp;
@@ -324,15 +325,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
     @name("parse_tcp") state parse_tcp {
-        packet.extract(hdr.tcp);
+        packet.extract<tcp_t>(hdr.tcp);
         transition accept;
     }
     @name("parse_udp") state parse_udp {
-        packet.extract(hdr.udp);
+        packet.extract<udp_t>(hdr.udp);
         transition accept;
     }
     @name("parse_vlan_tag") state parse_vlan_tag {
-        packet.extract(hdr.vlan_tag);
+        packet.extract<vlan_tag_t>(hdr.vlan_tag);
         transition select(hdr.vlan_tag.etherType) {
             16w0x800: parse_ipv4;
             default: accept;
@@ -378,11 +379,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        packet.emit(hdr.ethernet);
-        packet.emit(hdr.vlan_tag);
-        packet.emit(hdr.ipv4);
-        packet.emit(hdr.udp);
-        packet.emit(hdr.tcp);
+        packet.emit<ethernet_t>(hdr.ethernet);
+        packet.emit<vlan_tag_t>(hdr.vlan_tag);
+        packet.emit<ipv4_t>(hdr.ipv4);
+        packet.emit<udp_t>(hdr.udp);
+        packet.emit<tcp_t>(hdr.tcp);
     }
 }
 
@@ -396,4 +397,4 @@ control computeChecksum(inout headers hdr, inout metadata meta, inout standard_m
     }
 }
 
-V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;

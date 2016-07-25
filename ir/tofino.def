@@ -57,6 +57,7 @@ abstract Tofino::Unit {
        A packet running through a tofino pipe executes a sequence of Units in order;
        each Unit completes before the next executes.  All accesses of PHV containers
        are associated with a particular Unit.  */
+    virtual gress_t thread() const = 0;
     virtual int stage() const = 0;
 }
 
@@ -64,34 +65,10 @@ class InstanceRef : HeaderRef {
     HeaderOrMetadata            obj;
     inline NameMap<InstanceRef> nested;
 #noconstructor
-    InstanceRef(ID n, Type t);
+    InstanceRef(cstring prefix, ID n, Type t, bool forceMeta = false);
+    InstanceRef(ID n, Type t, bool forceMeta = false) : InstanceRef(cstring(), n, t, forceMeta) {}
+    HeaderOrMetadata baseRef() const override { return obj; }
     toString { return obj->name; }
     dbprint { out << obj; }
 }
 
-class HeaderSliceRef : Slice {
-#nodbprint
-#noconstructor
-  HeaderSliceRef(Util::SourceInfo si, HeaderRef header_ref,
-                 const int &msb, const int &lsb) :
-    Slice(si, header_ref, new Constant(msb), new Constant(lsb)) {
-    assert(lsb <= msb);
-    type = Type_Bits::get(si, msb - lsb + 1); }
-  HeaderSliceRef(Member fr) :
-    Slice(fr->srcInfo, fr->expr, new Constant(fr->msb()), new Constant(fr->lsb())) {
-    assert(fr->lsb() <= fr->msb());
-    type = Type_Bits::get(fr->srcInfo, fr->msb() - fr->lsb() + 1); }
-  HeaderRef header_ref() const {
-    return e0->to<const HeaderRef>(); }
-  vector<Member> fields() const {
-    vector<const Member*> rv;
-    for (auto field : *header_ref()->type->to<Type_StructLike>()->fields) {
-      const IR::Member fr(srcInfo, field->type, header_ref(), field->name);
-      if (fr.lsb() >= lsb() && fr.msb() <= msb())
-        rv.push_back(new Member(fr));
-    }
-    return rv; }
-  int offset_bits() const { return e2->to<const Constant>()->asInt(); }
-  int lsb() const { return offset_bits(); }
-  int msb() const { return offset_bits() + type->width_bits() - 1; }
-}

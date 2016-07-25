@@ -40,6 +40,7 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, bool meta) 
         LOG2("PhvInfo no type for " << name);
         return; }
     LOG2("PhvInfo adding " << (meta ? "metadata" : "header") << " " << name);
+    assert(all_headers.count(name) == 0);
     int start = by_id.size();
     int offset = 0;
     for (auto f : *type->fields)
@@ -49,6 +50,15 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, bool meta) 
         add(name + '.' + f->name, size, offset -= size, meta, false); }
     int end = by_id.size() - 1;
     all_headers.emplace(name, std::make_pair(start, end));
+}
+
+Visitor::profile_t PhvInfo::init_apply(const IR::Node *root) {
+    auto rv = Inspector::init_apply(root);
+    all_fields.clear();
+    by_id.clear();
+    all_headers.clear();
+    alloc_done_ = false;
+    return rv;
 }
 
 bool PhvInfo::preorder(const IR::Header *h) {
@@ -73,9 +83,17 @@ bool PhvInfo::preorder(const IR::Metadata *h) {
     return false;
 }
 
-const PhvInfo::Info *PhvInfo::field(const IR::Expression *e, Info::bitrange *bits) const {
-    if (auto *hsr = e->to<IR::HeaderSliceRef>())
-        return field(hsr, bits);
+bool PhvInfo::preorder(const IR::NamedRef *n) {
+    if(n->name == "$bridge-metadata") {
+        /* FIXME -- nasty hack -- we recognize this name specially as the single fixed 1 bit we
+         * need in the POV to make bridged metadata work.  Should have a more general mechanism
+         * for managing POV bits (need a way to shift them properly for header stack operations) */
+        need_bridge_meta_pov = true; }
+    return false;
+}
+
+const PhvInfo::Field *PhvInfo::field(const IR::Expression *e, Field::bitrange *bits) const {
+    if (!e) return nullptr;
     if (auto *fr = e->to<IR::Member>())
         return field(fr, bits);
     if (auto *sl = e->to<IR::Slice>()) {
@@ -83,27 +101,19 @@ const PhvInfo::Info *PhvInfo::field(const IR::Expression *e, Info::bitrange *bit
         if (rv && bits) {
             bits->lo += sl->getL();
             int width = sl->getH() - sl->getL() + 1;
-            assert(bits->hi >= bits->lo + width - 1);
-            bits->hi = bits->lo + width - 1; }
+            if (bits->hi >= bits->lo + width - 1)
+                bits->hi = bits->lo + width - 1; }
         return rv; }
+    if (auto *n = e->to<IR::NamedRef>()) {
+        if (auto *rv = getref(all_fields, n->name)) {
+            if (bits) {
+                bits->lo = 0;
+                bits->hi = rv->size - 1; }
+            return rv; } }
     return 0;
 }
 
-const PhvInfo::Info *PhvInfo::field(const IR::HeaderSliceRef *hsr, Info::bitrange *bits) const {
-    auto hdr = header(hsr->header_ref()->toString());
-    int offset = hsr->offset_bits();
-    for (auto idx : Range(hdr->second, hdr->first)) {
-        auto *info = field(idx);
-        if (offset < info->size) {
-            if (bits) {
-                bits->lo = offset;
-                bits->hi = offset + hsr->type->width_bits() - 1; }
-            return info; }
-        offset -= info->size; }
-    BUG("can't find field at offset %d of %s", hsr->offset_bits(), hsr->header_ref()->toString());
-}
-
-const PhvInfo::Info *PhvInfo::field(const IR::Member *fr, Info::bitrange *bits) const {
+const PhvInfo::Field *PhvInfo::field(const IR::Member *fr, Field::bitrange *bits) const {
     StringRef name = fr->toString();
     if (bits) {
         bits->lo = 0;
@@ -121,8 +131,8 @@ const PhvInfo::Info *PhvInfo::field(const IR::Member *fr, Info::bitrange *bits) 
     return nullptr;
 }
 
-vector<PhvInfo::Info::alloc_slice> *PhvInfo::alloc(const IR::Member *member) {
-    PhvInfo::Info *info = field(member);
+vector<PhvInfo::Field::alloc_slice> *PhvInfo::alloc(const IR::Member *member) {
+    PhvInfo::Field *info = field(member);
     CHECK(nullptr != info) << "; Cannot find PHV allocation for " <<
         member->toString();
     return &info->alloc;
@@ -151,21 +161,27 @@ void PhvInfo::allocatePOV() {
                 ++egress_size;
             else
                 BUG("Header %s neither ingress or egress", hdr.first); }
+    if (need_bridge_meta_pov)
+        ++ingress_size;
     if (ingress_size > 0) {
         gress = INGRESS;
         add("ingress::$POV", ingress_size, 0, false, true);
         for (auto &hdr : all_headers)
             if (!field(hdr.second.first)->metadata && hdr.first.startsWith("ingress::"))
-                add(hdr.first + ".$valid", 1, --ingress_size, false, true); }
+                add(hdr.first + ".$valid", 1, --ingress_size, false, true);
+        if (need_bridge_meta_pov)
+            add("$bridge-metadata", 1, --ingress_size, false, true);
+        assert(ingress_size == 0); }
     if (egress_size > 0) {
         gress = EGRESS;
         add("egress::$POV", egress_size, 0, false, true);
         for (auto &hdr : all_headers)
             if (!field(hdr.second.first)->metadata && hdr.first.startsWith("egress::"))
-                add(hdr.first + ".$valid", 1, --egress_size, false, true); }
+                add(hdr.first + ".$valid", 1, --egress_size, false, true);
+        assert(egress_size == 0); }
 }
 
-std::ostream &operator<<(std::ostream &out, const PhvInfo::Info::alloc_slice &sl) {
+std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &sl) {
     out << (sl.field_bit+sl.width-1) << ':' << sl.field_bit << "->" << sl.container;
     if (sl.container_bit || size_t(sl.width) != sl.container.size()) {
         out << '(' << sl.container_bit;

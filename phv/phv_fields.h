@@ -13,31 +13,34 @@ class GreedyAlloc;
 
 class PhvInfo : public Inspector {
  public:
-    struct Info;
+    struct Field;
     struct constraint {
         /* FIXME -- example only -- this isn't actually used for anything yet */
         enum kind_t { SAME_GROUP, FULL_UNIT } kind;
-        const Info    *with;
-        explicit constraint(kind_t k, const Info *w = nullptr) : kind(k), with(w) {}
+        const Field     *with;
+        explicit constraint(kind_t k, const Field *w = nullptr) : kind(k), with(w) {}
         bool operator<(const constraint &a) const {
             return kind == a.kind ? (with ? with->id : 0) < (a.with ? a.with->id : 0)
                                   : kind < a.kind; }
     };
-    struct Info {
+    struct Field {
         cstring         name;
         int             id;
         gress_t         gress;
         int             size;
-        int             offset;  // offset lsb from lsb (last) bit of container
+        int             offset;  // offset of lsb from lsb (last) bit of containing header
         bool            referenced;
         bool            metadata;
         bool            pov;
         set<constraint> constraints;
         cstring header() const { return name.before(strrchr(name, '.')); }
-        cstring bitgroup() const {
-            if (pov) return gress ? "egress::$POV" : "ingress::$POV";
-            return header(); }
-        PHV::Bit bit(unsigned i) const { return PHV::Bit(bitgroup(), i+offset); }
+        PHV::Bit bit(unsigned i) const {
+            BUG_CHECK(i < size_t(size), "bit out of range for field");
+            if (pov) {
+                assert(i == 0 || offset == 0);
+                cstring povname = gress ? "egress::$POV" : "ingress::$POV";
+                return PHV::Bit(povname, i+offset); }
+            return PHV::Bit(name, i); }
         struct alloc_slice {
             PHV::Container         container;
             int         field_bit, container_bit, width;
@@ -54,6 +57,7 @@ class PhvInfo : public Inspector {
         struct bitrange {
             int         lo, hi;         // range of bits within a container or field
             int size() const { return hi - lo + 1; }
+            operator std::pair<int, int>() { return std::make_pair(lo, hi); }
         };
     };
     class SetReferenced : public Inspector {
@@ -67,18 +71,21 @@ class PhvInfo : public Inspector {
     };
 
  private:
-    map<cstring, Info>                  all_fields;
-    vector<Info *>                      by_id;
+    map<cstring, Field>                 all_fields;
+    vector<Field *>                     by_id;
     map<cstring, std::pair<int, int>>   all_headers;
     gress_t                             gress;
     bool                                alloc_done_ = false;
+    bool                                need_bridge_meta_pov = false;
     void add(cstring, int, int, bool, bool);
     void add_hdr(cstring, const IR::Type_StructLike *, bool);
+    profile_t init_apply(const IR::Node *root) override;
     bool preorder(const IR::Tofino::Parser *) override {
         gress = VisitingThread(this); return true; }
     bool preorder(const IR::Header *h) override;
     bool preorder(const IR::HeaderStack *) override;
     bool preorder(const IR::Metadata *h) override;
+    bool preorder(const IR::NamedRef *h) override;
     template<typename Iter>
     class iterator {
         Iter    it;
@@ -94,33 +101,30 @@ class PhvInfo : public Inspector {
     friend class PHV::GreedyAlloc;
 
  public:
-    const Info *field(int idx) const { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
-    const Info *field(cstring name) const {
+    const Field *field(int idx) const { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
+    const Field *field(cstring name) const {
         return all_fields.count(name) ? &all_fields.at(name) : 0; }
-    const Info *field(const IR::Expression *, Info::bitrange *bits = 0) const;
-    const Info *field(const IR::Member *, Info::bitrange *bits = 0) const;
-    const Info *field(const IR::HeaderSliceRef *, Info::bitrange *bits = 0) const;
-    Info *field(int idx) { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
-    Info *field(cstring name) { return all_fields.count(name) ? &all_fields.at(name) : 0; }
-    Info *field(const IR::Expression *e, Info::bitrange *bits = 0) {
-        return const_cast<Info *>(const_cast<const PhvInfo *>(this)->field(e, bits)); }
-    Info *field(const IR::Member *fr, Info::bitrange *bits = 0) {
-        return const_cast<Info *>(const_cast<const PhvInfo *>(this)->field(fr, bits)); }
-    Info *field(const IR::HeaderSliceRef *hsr, Info::bitrange *bits = 0) {
-        return const_cast<Info *>(const_cast<const PhvInfo *>(this)->field(hsr, bits)); }
-    vector<Info::alloc_slice> *alloc(const IR::Member *member);
+    const Field *field(const IR::Expression *, Field::bitrange *bits = 0) const;
+    const Field *field(const IR::Member *, Field::bitrange *bits = 0) const;
+    Field *field(int idx) { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
+    Field *field(cstring name) { return all_fields.count(name) ? &all_fields.at(name) : 0; }
+    Field *field(const IR::Expression *e, Field::bitrange *bits = 0) {
+        return const_cast<Field *>(const_cast<const PhvInfo *>(this)->field(e, bits)); }
+    Field *field(const IR::Member *fr, Field::bitrange *bits = 0) {
+        return const_cast<Field *>(const_cast<const PhvInfo *>(this)->field(fr, bits)); }
+    vector<Field::alloc_slice> *alloc(const IR::Member *member);
     const std::pair<int, int> *header(cstring name) const;
     const std::pair<int, int> *header(const IR::HeaderRef *hr) const {
         return header(hr->toString()); }
     size_t num_fields() const { return all_fields.size(); }
-    iterator<vector<Info *>::iterator> begin() { return by_id.begin(); }
-    iterator<vector<Info *>::iterator> end() { return by_id.end(); }
-    iterator<vector<Info *>::const_iterator> begin() const { return by_id.begin(); }
-    iterator<vector<Info *>::const_iterator> end() const { return by_id.end(); }
+    iterator<vector<Field *>::iterator> begin() { return by_id.begin(); }
+    iterator<vector<Field *>::iterator> end() { return by_id.end(); }
+    iterator<vector<Field *>::const_iterator> begin() const { return by_id.begin(); }
+    iterator<vector<Field *>::const_iterator> end() const { return by_id.end(); }
     void allocatePOV();
     bool alloc_done() const { return alloc_done_; }
 };
 
-std::ostream &operator<<(std::ostream &, const PhvInfo::Info::alloc_slice &);
+std::ostream &operator<<(std::ostream &, const PhvInfo::Field::alloc_slice &);
 
 #endif /* _TOFINO_PHV_PHV_FIELDS_H_ */

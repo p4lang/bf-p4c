@@ -4,7 +4,7 @@
 namespace {
 struct FieldsReferenced : public Inspector {
     PhvInfo                     &phv;
-    set<PhvInfo::Info *>        fields;
+    set<PhvInfo::Field *>       fields;
     bool preorder(const IR::Member *f) override { fields.insert(phv.field(f)); return false; }
     FieldsReferenced(PhvInfo &p, const IR::Expression *e) : phv(p) { e->apply(*this); }
 };

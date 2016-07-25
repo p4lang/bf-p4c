@@ -18,24 +18,22 @@ class ParserMatch {
 
 class ParserState : Unit {
     cstring                     name;
+    gress_t                     gress;
     inline Vector<Expression>   select;
     inline Vector<ParserMatch>  match;
 #noconstructor
     NullOK Node p4state = 0; /* informational only! not visited or compared for equal */
-    ParserState(Node n);
-    ParserState(cstring n, const std::initializer_list<Expression> &sel,
+    ParserState(Node n, gress_t gr);
+    ParserState(cstring n, gress_t gr,
+                const std::initializer_list<Expression> &sel,
                 const std::initializer_list<ParserMatch> &m)
-    : name(n), select(sel), match(m) {}
+    : name(n), gress(gr), select(sel), match(m) {}
     int stage() const override { return -1; }
+    gress_t thread() const override { return gress; }
     toString { return name; }
     visit_children {
         select.visit_children(v);
-        auto &start(v.flow_clone());
-        for (auto &m : match) {
-            /* FIXME -- support transforms that remove or split matches? */
-            auto &clone(start.flow_clone());
-            clone.visit(m);
-            v.flow_merge(clone); } }
+        match.parallel_visit_children(v); }
 }
 
 class Parser {
@@ -54,6 +52,7 @@ class Deparser : Unit {
 #noconstructor
     Deparser(gress_t gr, Parser s);
     int stage() const override { return 999999; /* assumed larger than the number of stages */ }
+    gress_t thread() const override { return gress; }
 #apply
     toString { return gress ? "egress deparser" : "ingress deparser"; }
 }

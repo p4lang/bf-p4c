@@ -70,7 +70,7 @@ void IR::Tofino::ParserMatch::dbprint(std::ostream &out) const {
 }
 
 void IR::Tofino::ParserState::dbprint(std::ostream &out) const {
-    out << "parser " << name;
+    out << gress << " parser " << name;
     if (dbgetflags(out) & Brief)
         return;
     out << ':' << indent;

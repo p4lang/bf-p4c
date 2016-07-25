@@ -25,6 +25,7 @@
 #include "tofino/mau/table_summary.h"
 #include "tofino/parde/add_parde_metadata.h"
 #include "tofino/parde/asm_output.h"
+#include "tofino/parde/bridge_metadata.h"
 #include "tofino/parde/compute_shifts.h"
 #include "tofino/parde/match_keys.h"
 #include "tofino/parde/split_big_states.h"
@@ -33,7 +34,6 @@
 #include "tofino/phv/greedy_alloc.h"
 #include "tofino/phv/split_phv_use.h"
 #include "tofino/phv/create_thread_local_instances.h"
-#include "tofino/phv/header_fragment_creator.h"
 #include "tofino/phv/phv_allocator.h"
 #include "tofino/common/copy_header_eliminator.h"
 
@@ -101,6 +101,9 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
 
     PassManager backend = {
         new DumpPipe("Initial table graph"),
+        &phv,
+        &defuse,
+        new AddBridgedMetadata(phv, defuse),
         new AddMetadataShims,
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),
@@ -114,7 +117,6 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new FindDependencyGraph(&deps),
         verbose ? new VisitFunctor([&deps]() { std::cout << deps; }) : nullptr,
         new CopyHeaderEliminator,
-        new HeaderFragmentCreator,
         new TypeCheck,
         new SpreadGatewayAcrossSeq,
         new CheckTableNameDuplicate,
@@ -127,9 +129,9 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new CheckTableNameDuplicate,
         new TableFindSeqDependencies,  // not needed?
         new CheckTableNameDuplicate,
-        new InstructionSelection,
+        new InstructionSelection(phv),
         new ComputeShifts,
-        new DumpPipe("Before PA alloc"),
+        new DumpPipe("Before ElimUnused"),
         &defuse,
         new ElimUnused(phv, defuse),
         new DumpPipe("After ElimUnused"),

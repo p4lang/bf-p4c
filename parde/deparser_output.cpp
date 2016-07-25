@@ -6,12 +6,11 @@ class OutputDictionary : public Inspector {
     indent_t            indent;
     bool preorder(const IR::Primitive *prim) {
         if (prim->name != "emit") return true;
-        PhvInfo::Info::bitrange bits;
-        auto hsr = prim->operands[0]->to<IR::HeaderSliceRef>();
-        if (!hsr) {
-            /* not allocated to header -- happens with Varbits currently */
-            return false; }
+        PhvInfo::Field::bitrange bits;
         auto field = phv.field(prim->operands[0], &bits);
+        if (!field->size) {
+            /* varbits? not supported */
+            return false; }
         auto &alloc = field->for_bit(bits.lo);
         if (size_t(alloc.container_bit + alloc.width) != alloc.container.size())
             return false;
@@ -22,8 +21,12 @@ class OutputDictionary : public Inspector {
             out << indent << canon_name(field->name);
             if (bits.lo != 0 || bits.hi + 1 != field->size)
                 out << '.' << bits.lo << '-' << bits.hi; }
-        out << ": " << canon_name(trim_asm_name(hsr->header_ref()->toString())) << ".$valid"
-            << std::endl;
+        out << ": ";
+        if (field->metadata)
+            out << "$bridge-metadata";
+        else
+            out << canon_name(trim_asm_name(field->header())) << ".$valid";
+        out << std::endl;
         return false; }
 
  public:
@@ -34,7 +37,10 @@ class OutputDictionary : public Inspector {
 std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
     indent_t    indent(1);
     out << "deparser " << d.gress << ":" << std::endl;
-    out << indent << "dictionary:" << std::endl;
+    out << indent << "dictionary:";
+    if (!d.deparser || d.deparser->emits.empty())
+        out << " {}";
+    out << std::endl;
     if (d.deparser) {
         d.deparser->emits.apply(OutputDictionary(out, d.phv, ++indent));
         --indent;
