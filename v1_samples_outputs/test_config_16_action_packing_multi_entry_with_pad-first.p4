@@ -123,7 +123,8 @@ control ComputeCkecksum<H, M>(inout H hdr, inout M meta, inout standard_metadata
 control Deparser<H>(packet_out b, in H hdr);
 package V1Switch<H, M>(Parser<H, M> p, VerifyChecksum<H, M> vr, Ingress<H, M> ig, Egress<H, M> eg, ComputeCkecksum<H, M> ck, Deparser<H> dep);
 header egress_intrinsic_metadata_t {
-    bit<16> egress_port;
+    bit<7>  _pad0;
+    bit<9>  egress_port;
     bit<5>  _pad1;
     bit<19> enq_qdepth;
     bit<6>  _pad2;
