@@ -3,6 +3,9 @@
 #emit
 struct TableResourceAlloc;
 #end
+#emit_impl
+#include "tofino/mau/resource.h"
+#end
 
 namespace MAU {
 
@@ -40,6 +43,7 @@ class Table : Tofino::Unit {
         int             overhead_bits = 0;
         Layout() { memset(this, 0, sizeof(*this)); }
         operator== { return memcmp(this, &a, sizeof(Layout)) == 0; }
+        toJSON { return ""; }
 #emit
         Layout &operator+=(const Layout &a);
 #end
@@ -54,8 +58,9 @@ class Table : Tofino::Unit {
         int             width = 0;
         Way() { memset(this, 0, sizeof(*this)); }
         operator== { return memcmp(this, &a, sizeof(Way)) == 0; }
+        toJSON { return ""; }
     }
-    std::vector<Way>    ways;
+    vector<Way>    ways;
     const TableResourceAlloc            *resources = nullptr;
 
 #noconstructor
