@@ -50,7 +50,7 @@ while expr "$1" : - >/dev/null; do
 done
 
 #glsc_args="--placement-order ingress_before_egress --libpd --placement secret"
-glsc_args="--placement-order ingress_before_egress --libpd --no-bin"
+glsc_args="--placement-order ingress_before_egress --no-bin"
 
 trap 'exit' 2
 
