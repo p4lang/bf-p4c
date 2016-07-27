@@ -152,8 +152,17 @@ void Solver::SetFirstDeparsedHeaderByte(const PHV::Byte &phv_byte) {
 
 void Solver::SetDeparsedHeader(const PHV::Byte &byte1, const PHV::Byte &byte2) {
     Bit &bit = bits_.at(byte2.at(0));
+    MakeBit(byte2.at(0));       // ensure it has container() and such.
     Bit &prev_bit = bits_.at(byte1.at(7));
     Byte *byte = SetByte(byte2);
+    // FIXME -- copied from MakeBit to ensure these are exist as SetDeparsedHeader needs them
+    if (nullptr == bit.container()) {
+        bit.set_container(new Container(MakeContainerInGroup(bit.name()))); }
+    if (nullptr == bit.mau_group()) {
+        // MAU groups created here will be restricted to PHV (no T-PHV).
+        const int max = PHV::kPhvMauGroupOffset + PHV::kNumPhvMauGroups - 1;
+        MauGroup *group = new MauGroup(MakeMauGroup(bit.name(), max), bit.name());
+        bit.container()->set_mau_group(group); }
     byte->set_last_byte(bit.SetDeparsedHeader(prev_bit, *(prev_bit.byte())));
 }
 
@@ -285,6 +294,8 @@ Byte *Solver::SetByte(const PHV::Byte &phv_byte) {
     // Just doing sanity check to make sure all Bit objects have a pointer to the
     // same Byte object.
     for (auto it = phv_byte.cfirst(); it != phv_byte.clast(); ++it) {
+        if (byte && !bits_.at(*it).byte())
+            bits_.at(*it).set_byte(byte);
         CHECK(bits_.at(*it).byte() == byte) << ": Invalid Byte* in " << (*it); }
     // Create a new Byte* object if needed.
     if (nullptr == byte) {
@@ -292,7 +303,6 @@ Byte *Solver::SetByte(const PHV::Byte &phv_byte) {
         byte = new Byte();
         for (auto it = phv_byte.cfirst(); it != phv_byte.clast(); ++it) {
             Bit &bit = bits_.at(*it);
-            CHECK(nullptr != bit.container());
             bit.set_byte(byte); } }
     return byte;
 }

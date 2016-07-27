@@ -101,6 +101,7 @@ inline void Constraints::SetMatchBits(const std::set<PHV::Bit> &bits,
 }
 
 bool Constraints::IsContiguous(const PHV::Bits &pbits) const {
+    if (pbits.size() == 1) return true;  // single bits always 'contiguous' with themselves
     for (auto &c : contiguous_bits_) {
         if (std::search(c.cbegin(), c.cend(), pbits.cbegin(), pbits.cend()) != c.cend()) {
             return true; } }
