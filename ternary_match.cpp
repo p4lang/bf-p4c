@@ -457,6 +457,8 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
             break; }
     tbl["uses_versioning"] = uses_versioning;
     tbl["tcam_error_detect"] = false;
+    tbl["match_type"] = p4_table->match_type.empty() ? "ternary" : p4_table->match_type;
+    tbl["action_profile"] = p4_table->action_profile.empty() ? "null" : p4_table->action_profile;
 }
 
 void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {

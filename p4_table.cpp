@@ -62,6 +62,12 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
                 } else {
                     rv->size = kv.value.i;
                     rv->explicit_size = true; } }
+        } else if (kv.key == "action_profile") {
+            if (CHECKTYPE(kv.value, tSTR))
+                rv->action_profile = kv.value.s;
+        } else if (kv.key == "match_type") {
+            if (CHECKTYPE(kv.value, tSTR))
+                rv->match_type = kv.value.s;
         } else if (kv.key == "preferred_match_type") {
             if (CHECKTYPE(kv.value, tSTR))
                 rv->preferred_match_type = kv.value.s;

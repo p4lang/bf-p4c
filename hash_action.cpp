@@ -151,4 +151,6 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
     tbl["performs_hash_action"] = !hash_dist.empty();
     tbl["uses_versioning"] = true;  // FIXME
     tbl["tcam_error_detect"] = false;
+    tbl["match_type"] = p4_table->match_type.empty() ? "exact" : p4_table->match_type;
+    tbl["action_profile"] = p4_table->action_profile.empty() ? "null" : p4_table->action_profile;
 }

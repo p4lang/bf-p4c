@@ -17,6 +17,7 @@ class P4Table {
     P4Table() {}
 public:
     unsigned            size = 0;
+    std::string         match_type, action_profile;
     enum type { MatchEntry=1, ActionData=2, Selection=3, Statistics=4, Meter=5, Stateful=6 };
     static const char *type_name[];
 private:
