@@ -281,4 +281,10 @@ void CounterTable::gen_tbl_cfg(json::vector &out) {
     tbl["lrt_enable"] = false;
     tbl["saturating"] = false;  // FIXME?
     tbl["enable_per_flow_enable"] = per_flow_enable;
+    json::vector &bindings = tbl["binding"];
+    bindings.push_back(indirect ? "static" : "direct");
+    for (auto table : match_tables) {
+        const char *name = table->p4_name();
+        if (!name) name = table->name();
+        bindings.push_back(name); }
 }
