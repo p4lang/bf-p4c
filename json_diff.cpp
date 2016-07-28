@@ -10,6 +10,7 @@ static bool show_addition = true;
 static bool sort_map = true;
 static std::vector<const char *> list_map_keys;
 static std::set<std::string> ignore_keys;
+static std::map<std::string, std::set<long>>    ignore_key_indexes;
 static std::vector<std::pair<long, long>>       ignore_intkeys;
 
 bool is_list_map(json::vector *v, const char *key) {
@@ -24,6 +25,7 @@ bool is_list_map(json::vector *v, const char *key) {
 
 void add_ignore(const char *a) {
     while (isspace(*a)) a++;
+    if (*a == '#' || *a == 0) return;
     if (*a == '&' || *a == '=' || *a == '|' || isdigit(*a)) {
         long mask, val;
         int end = 0;
@@ -41,6 +43,20 @@ void add_ignore(const char *a) {
         if (a[end])
             std::cerr << "extra text after ignore " << (a+end) << std::endl;
         return; }
+    if (auto *idx = strchr(a, '[')) {
+        long val;
+        int end = 0;
+        if (sscanf(idx, "[%li ] %n", &val, &end) >= 1 && end > 0) {
+            end += idx - a;
+            while (idx > a && isspace(idx[-1])) --idx;
+            std::string key(a, idx - a);
+            ignore_key_indexes[key].insert(val);
+        } else {
+            std::cerr << "Unknown ignore expression " << a << std::endl;
+            return; }
+        if (a[end])
+            std::cerr << "extra text after ignore " << (a+end) << std::endl;
+        return; }
     ignore_keys.insert(a);
 }
 bool ignore(json::obj *o) {
@@ -52,6 +68,13 @@ bool ignore(json::obj *o) {
     return false;
 }
 bool ignore(std::unique_ptr<json::obj> &o) { return ignore(o.get()); }
+
+const std::set<long> &ignore_indexes_for_key(json::obj *key) {
+    if (key && key->as_string() && ignore_key_indexes.count(*key->as_string()))
+        return ignore_key_indexes.at(*key->as_string());
+    static std::set<long> empty;
+    return empty;
+}
 
 std::map<json::obj *, json::map *, json::obj::ptrless> build_list_map(json::vector *v, const char *key) {
     std::map<json::obj *, json::map *, json::obj::ptrless> rv;
@@ -101,14 +124,16 @@ void do_output(std::map<json::obj *, json::obj *, json::obj::ptrless>::iterator 
     p->second->print_on(std::cout, indent, 80-indent, prefix);
 }
 
-bool equiv(json::obj *a, json::obj *b);
-bool equiv(std::unique_ptr<json::obj> &a, json::obj *b) {
-    return equiv(a.get(), b); }
-bool equiv(std::unique_ptr<json::obj> &a, std::unique_ptr<json::obj> &b) {
-    return equiv(a.get(), b.get()); }
-void print_diff(json::obj *a, json::obj *b, int indent);
-void print_diff(std::unique_ptr<json::obj> &a, std::unique_ptr<json::obj> &b, int indent) {
-    return print_diff(a.get(), b.get(), indent); }
+bool equiv(json::obj *a, json::obj *b, json::obj *key = nullptr);
+bool equiv(std::unique_ptr<json::obj> &a, json::obj *b, json::obj *key = nullptr) {
+    return equiv(a.get(), b, key); }
+bool equiv(std::unique_ptr<json::obj> &a, std::unique_ptr<json::obj> &b,
+           json::obj *key = nullptr) {
+    return equiv(a.get(), b.get(), key); }
+void print_diff(json::obj *a, json::obj *b, int indent, json::obj *key = nullptr);
+void print_diff(std::unique_ptr<json::obj> &a, std::unique_ptr<json::obj> &b,
+                int indent, json::obj *key = nullptr) {
+    return print_diff(a.get(), b.get(), indent, key); }
 
 json::vector::iterator find(json::vector::iterator p, json::vector::iterator end, json::obj *m) {
     while (p < end && !equiv(*p, m)) ++p;
@@ -123,7 +148,7 @@ bool list_map_equiv(json::vector *a, json::vector *b, const char *key) {
         if (!bmap.count(ekey)) {
             if (show_deletion && !ignore(ekey)) return false;
             continue; }
-        if (!ignore(ekey) && !equiv(m, bmap[ekey])) return false;
+        if (!ignore(ekey) && !equiv(m, bmap[ekey], ekey)) return false;
         bmap.erase(ekey); }
     if (show_addition)
         for (auto &e : bmap)
@@ -147,7 +172,7 @@ void list_map_print_diff(json::vector *a, json::vector *b, int indent, const cha
                 do_output(p2, indent, "+");
             p2++;
             continue; }
-        if (!ignore(p1->first) && !equiv(p1->second, p2->second)) {
+        if (!ignore(p1->first) && !equiv(p1->second, p2->second, p1->first)) {
             int width = 80-indent, copy;
             if (p1->first->test_width(width) && (copy = width) &&
                 p1->second->test_width(width) && p2->second->test_width(copy)
@@ -158,7 +183,7 @@ void list_map_print_diff(json::vector *a, json::vector *b, int indent, const cha
                 std::cout << p2->second;
             } else {
                 do_output(p1->first, indent, " ", ":");
-                print_diff(p1->second, p2->second, indent); } }
+                print_diff(p1->second, p2->second, indent, p1->first); } }
         p1++;
         p2++; }
     if (show_deletion) while (p1 != amap.end()) {
@@ -174,13 +199,13 @@ void list_map_print_diff(json::vector *a, json::vector *b, int indent, const cha
     std::cout << ']';
 }
 
-bool equiv(json::vector *a, json::vector *b) {
+bool equiv(json::vector *a, json::vector *b, const std::set<long> &ignore_idx) {
     for (auto key : list_map_keys)
         if (is_list_map(a, key) && is_list_map(b, key))
             return list_map_equiv(a, b, key);
     auto p1 = a->begin(), p2 = b->begin();
     while (p1 != a->end() && p2 != b->end()) {
-        if (!equiv(*p1, *p2)) {
+        if (!ignore_idx.count(p1 - a->begin()) && !equiv(*p1, *p2)) {
             auto s1 = find(p1, a->end(), p2->get());
             auto s2 = find(p2, b->end(), p1->get());
             if (typeid(**p1) == typeid(**p2) && p1 - a->begin() == p2 - b->begin() &&
@@ -196,11 +221,13 @@ bool equiv(json::vector *a, json::vector *b) {
         } else {
             ++p1;
             ++p2; } }
+    while (p1 != a->end() && ignore_idx.count(p1 - a->begin())) ++p1;
     if (p1 != a->end() && show_deletion) return false;
+    while (p2 != b->end() && ignore_idx.count(p2 - b->begin())) ++p2;
     if (p2 != b->end() && show_addition) return false;
     return true;
 }
-void print_diff(json::vector *a, json::vector *b, int indent) {
+void print_diff(json::vector *a, json::vector *b, const std::set<long> &ignore_idx, int indent) {
     for (auto key : list_map_keys)
         if (is_list_map(a, key) && is_list_map(b, key)) {
             list_map_print_diff(a, b, indent, key);
@@ -209,7 +236,7 @@ void print_diff(json::vector *a, json::vector *b, int indent) {
     std::cout << " [";
     indent += 2;
     while (p1 != a->end() && p2 != b->end()) {
-        if (!equiv(*p1, *p2)) {
+        if (!ignore_idx.count(p1 - a->begin()) && !equiv(*p1, *p2)) {
             auto s1 = find(p1, a->end(), p2->get());
             auto s2 = find(p2, b->end(), p1->get());
             if ((p1 + 1 != a->end() && p2 + 1 != b->end() && equiv(p1[1], p2[1])) ||
@@ -234,10 +261,12 @@ void print_diff(json::vector *a, json::vector *b, int indent) {
         ++p1;
         ++p2; }
     if (show_deletion) while (p1 != a->end()) {
-        do_output(p1 - a->begin(), p1, indent, "-");
+        if (!ignore_idx.count(p1 - a->begin()))
+            do_output(p1 - a->begin(), p1, indent, "-");
         ++p1; }
     if (show_addition) while (p2 != b->end()) {
-        do_output(p2 - b->begin(), p2, indent, "+");
+        if (!ignore_idx.count(p2 - b->begin()))
+            do_output(p2 - b->begin(), p2, indent, "+");
         ++p2; }
     indent -= 2;
     do_prefix(indent, " ");
@@ -257,7 +286,7 @@ bool sort_map_equiv(json::map *a, json::map *b) {
         if (!bmap.count(ekey)) {
             if (show_deletion && !ignore(ekey)) return false;
             continue; }
-        if (!ignore(ekey) && !equiv(e.second.get(), bmap[ekey])) return false;
+        if (!ignore(ekey) && !equiv(e.second.get(), bmap[ekey], ekey)) return false;
         bmap.erase(ekey); }
     if (show_addition)
         for (auto &e : bmap)
@@ -281,7 +310,7 @@ void sort_map_print_diff(json::map *a, json::map *b, int indent) {
                 do_output(p2, indent, "+");
             p2++;
             continue; }
-        if (!ignore(p1->first) && !equiv(p1->second, p2->second)) {
+        if (!ignore(p1->first) && !equiv(p1->second, p2->second, p1->first)) {
             int width = 80-indent, copy;
             if (p1->first->test_width(width) && (copy = width) &&
                 p1->second->test_width(width) && p2->second->test_width(copy)
@@ -292,7 +321,7 @@ void sort_map_print_diff(json::map *a, json::map *b, int indent) {
                 std::cout << p2->second;
             } else {
                 do_output(p1->first, indent, " ", ":");
-                print_diff(p1->second, p2->second, indent); } }
+                print_diff(p1->second, p2->second, indent, p1->first); } }
         p1++;
         p2++; }
     if (show_deletion) while (p1 != amap.end()) {
@@ -318,7 +347,7 @@ bool equiv(json::map *a, json::map *b) {
         } else if (*p2->first < *p1->first) {
             if (show_addition && !ignore(p2->first)) return false;
             ++p2;
-        } else if (!ignore(p1->first) && !(equiv(p1->second, p2->second))) {
+        } else if (!ignore(p1->first) && !(equiv(p1->second, p2->second, p1->first))) {
             return false;
         } else {
             ++p1;
@@ -349,7 +378,7 @@ void print_diff(json::map *a, json::map *b, int indent) {
                 do_output(p2, indent, "+");
             p2++;
             continue; }
-        if (!ignore(p1->first) && !equiv(p1->second, p2->second)) {
+        if (!ignore(p1->first) && !equiv(p1->second, p2->second, p1->first)) {
             int width = 80-indent, copy;
             if (p1->first->test_width(width) && (copy = width) &&
                 p1->second->test_width(width) && p2->second->test_width(copy)
@@ -360,7 +389,7 @@ void print_diff(json::map *a, json::map *b, int indent) {
                 std::cout << p2->second;
             } else {
                 do_output(p1->first, indent, " ", ":");
-                print_diff(p1->second, p2->second, indent); } }
+                print_diff(p1->second, p2->second, indent, p1->first); } }
         p1++;
         p2++; }
     if (show_deletion)
@@ -374,20 +403,20 @@ void print_diff(json::map *a, json::map *b, int indent) {
     indent -= 2;
     do_prefix(indent, " ");
     std::cout << '}';
-
 }
 
-bool equiv(json::obj *a, json::obj *b) {
+bool equiv(json::obj *a, json::obj *b, json::obj *key) {
     if (a == b) return true;
     if (!a || !b) return false;
     if (typeid(*a) != typeid(*b)) return false;
     if (typeid(*a) == typeid(json::vector))
-        return equiv(static_cast<json::vector *>(a), static_cast<json::vector *>(b));
+        return equiv(static_cast<json::vector *>(a), static_cast<json::vector *>(b),
+                     ignore_indexes_for_key(key));
     if (typeid(*a) == typeid(json::map))
         return equiv(static_cast<json::map *>(a), static_cast<json::map *>(b));
     return *a == *b;
 }
-void print_diff(json::obj *a, json::obj *b, int indent) {
+void print_diff(json::obj *a, json::obj *b, int indent, json::obj *key) {
     if (equiv(a, b)) return;
     else if (!a) {
         if (show_deletion) do_output(b, indent, "+");
@@ -397,7 +426,8 @@ void print_diff(json::obj *a, json::obj *b, int indent) {
         return;
     } else if (typeid(*a) == typeid(*b)) {
         if (typeid(*a) == typeid(json::vector)) {
-            print_diff(static_cast<json::vector *>(a), static_cast<json::vector *>(b), indent);
+            print_diff(static_cast<json::vector *>(a), static_cast<json::vector *>(b),
+                       ignore_indexes_for_key(key), indent);
             return;
         } else if (typeid(*a) == typeid(json::map)) {
             print_diff(static_cast<json::map *>(a), static_cast<json::map *>(b), indent);
@@ -420,7 +450,7 @@ int do_diff(const char *a_name, std::unique_ptr<json::obj> &a, const char *b_nam
 int main(int ac, char **av) {
     int error = 0;
     std::unique_ptr<json::obj>  file1;
-    const char                  *file1_name = 0, *ext;
+    const char                  *file1_name = 0;
     for (int i = 1; i < ac; i++)
         if (av[i][0] == '-' && av[i][1] == 0) {
             if (file1) {

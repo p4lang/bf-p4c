@@ -1,6 +1,9 @@
 # FIXME -- need to figure out what should be in these and implement it
 EntryFormatNode
 HashJsonNode
+ContextJsonNode[2]
+ContextJsonNode[3]
+ContextJsonNode[4]
 
 actions
 action_pack_format_map
@@ -9,6 +12,7 @@ action_to_constant_mapping
 action_to_immediate_mapping
 action_to_next_table_mapping
 action_to_perform
+ap_bind_indirect_res_to_match
 bound_to_stateful_table
 bound_to_stateful_table_handle
 color_aware_per_flow_enable_address_type_bit_position
@@ -66,6 +70,7 @@ statistics_precision
 sweep_interval
 table_type
 ternary_mode
+timeout
 uses_range
 vliw_resource_allocation
 way_match_group_map
