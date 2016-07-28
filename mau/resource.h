@@ -19,7 +19,7 @@ struct TableResourceAlloc {
         match_ixbar.clear();
         gateway_ixbar.clear();
         memuse.clear(); }
-    cstring toJSON(cstring, std::unordered_set<int> &) const { return ""; }
+    cstring toJSON(JSONGenerator *) const { return ""; }
 };
 
 #endif /* _TOFINO_MAU_RESOURCE_H_ */
