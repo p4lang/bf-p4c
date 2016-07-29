@@ -43,7 +43,16 @@ class Table : Tofino::Unit {
         int             overhead_bits = 0;
         Layout() { memset(this, 0, sizeof(*this)); }
         operator== { return memcmp(this, &a, sizeof(Layout)) == 0; }
-        toJSON { return ""; }
+        toJSON {
+            json << json.indent << "\"entries\" : " << entries << ",\n"
+                 << json.indent << "\"gateway\" : " << gateway << ",\n"
+                 << json.indent << "\"ternary\" : " << ternary << ",\n"
+                 << json.indent << "\"ixbar_bytes\" : " << ixbar_bytes << ",\n"
+                 << json.indent << "\"match_width_bits\" : " << match_width_bits << ",\n"
+                 << json.indent << "\"action_data_bytes\" : " << action_data_bytes << ",\n"
+                 << json.indent << "\"action_data_bytes_in_overhead\" : "
+                                << action_data_bytes_in_overhead << ",\n"
+                 << json.indent << "\"overhead_bits\" : " << overhead_bits; }
 #emit
         Layout &operator+=(const Layout &a);
 #end
@@ -58,7 +67,10 @@ class Table : Tofino::Unit {
         int             width = 0;
         Way() { memset(this, 0, sizeof(*this)); }
         operator== { return memcmp(this, &a, sizeof(Way)) == 0; }
-        toJSON { return ""; }
+        toJSON {
+            json << json.indent << "\"match_groups\" : " << match_groups << ",\n"
+                 << json.indent << "\"entries\" : " << entries << ",\n"
+                 << json.indent << "\"width\" : " << width; }
     }
     vector<Way>    ways;
     const TableResourceAlloc            *resources = nullptr;

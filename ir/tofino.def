@@ -25,7 +25,10 @@ class Tofino::Pipe {
         MAU::TableSeq     mau = nullptr;
         Tofino::Deparser  deparser = nullptr;
         operator== { return parser == a.parser && mau == a.mau && deparser == a.deparser; }
-        toJSON { return ""; }
+        toJSON {
+            json << json.indent << "\"parser\" : " << parser << "," << std::endl
+                 << json.indent << "\"mau\" : " << mau << "," << std::endl
+                 << json.indent << "\"deparser\" : " << deparser; }
     }
     thread_t[2] thread = {};  // INGRESS and EGRESS
 #apply
