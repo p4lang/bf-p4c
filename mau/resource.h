@@ -19,7 +19,7 @@ struct TableResourceAlloc {
         match_ixbar.clear();
         gateway_ixbar.clear();
         memuse.clear(); }
-    cstring toJSON(JSONGenerator *) const { return ""; }
+    cstring toJSON(JSONGenerator &) const { return ""; }
 };
 
 #endif /* _TOFINO_MAU_RESOURCE_H_ */
