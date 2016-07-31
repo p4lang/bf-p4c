@@ -241,6 +241,19 @@ class PHVBitPrinter(object):
     def to_string(self):
         return self.val['first']['str'].string() + "[" + str(self.val['second']) + "]"
 
+class PHVContainerPrinter(object):
+    "Print a PHV::Container object"
+    def __init__(self, val):
+        self.val = val
+    def to_string(self):
+        sz = self.val['log2sz_']
+        if sz == 3:
+            return "<invalid PHV::Container>"
+        rv = "BHW"[int(sz)] + str(self.val['index_'])
+        if self.val['tagalong_']:
+            rv = "T" + rv;
+        return rv;
+
 def find_pp(val):
     if val.type.tag == 'bitvec':
         return bitvecPrinter(val)
@@ -258,6 +271,8 @@ def find_pp(val):
         return SourceInfoPrinter(val)
     if val.type.tag == 'PHV::Bit':
         return PHVBitPrinter(val)
+    if val.type.tag == 'PHV::Container':
+        return PHVContainerPrinter(val)
     return None
 gdb.pretty_printers.append(find_pp)
 end
