@@ -123,9 +123,9 @@ void ActionBus::do_alloc(Table *tbl, Table::Format::Field *f, unsigned use, int 
 }
 
 void ActionBus::pass2(Table *tbl) {
-    int immed_offset = tbl->format->immed ? tbl->format->immed->bits[0].lo : 0;
+    int immed_offset = tbl->format->immed ? tbl->format->immed->bit(0) : 0;
     for (auto f : need_place) {
-        int offset = f.first->bits[0].lo - immed_offset;
+        int offset = f.first->bit(0) - immed_offset;
         int bytes = (offset+f.first->size-1)/8U - offset/8U + 1;
         int use;
         if (f.second & 0x1010101) {
@@ -187,7 +187,7 @@ void ActionBus::pass2(Table *tbl) {
                 do_alloc(tbl, f.first, use, bytes, 0); } }
 }
 
-int slot_sizes[] = {
+static int slot_sizes[] = {
     5,  /* 8-bit or 32-bit */
     6,  /* 16-bit or 32-bit */
     6,  /* 16-bit or 32-bit */
@@ -215,6 +215,7 @@ int ActionBus::find(const char *name, int off, int size, int *len) {
 void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action_slice) {
     LOG2("--- ActionBus write_action_regs(" << tbl->name() << ", " << home_row << ", " <<
          action_slice << ")");
+    int line = lineno < 0 ? tbl->format->lineno : lineno;
     auto &action_hv_xbar = tbl->stage->regs.rams.array.row[home_row/2].action_hv_xbar;
     unsigned side = home_row%2;  /* 0 == left,  1 == right */
     for (auto &el : by_byte) {
@@ -228,7 +229,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
              "[" << bit << ".." << (bit+f->size-1) << "] size=" << el.second.size <<
              " offset=" << el.second.offset);
         if (bit + f->size > 128) {
-            error(lineno, "Action bus setup can't deal with field %s split across "
+            error(line, "Action bus setup can't deal with field %s split across "
                   "SRAM rows", el.second.name.c_str());
             continue; }
         unsigned bytemask = ((1U << (el.second.size/8U)) - 1) << (el.second.offset/8U);
@@ -242,7 +243,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
                 case 2: case 3: code = 3; mask = 7; break;
                 default: assert(0); }
                 if ((sbyte^byte) & mask) {
-                    error(lineno, "Can't put field %s into byte %d on action xbar",
+                    error(line, "Can't put field %s into byte %d on action xbar",
                           el.second.name.c_str(), byte);
                     break; }
                 auto &ctl = action_hv_xbar.action_hv_ixbar_ctl_byte[side];
@@ -264,7 +265,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
                     ctl.action_hv_ixbar_ctl_byte_15to8_enable = 1;
                     break; }
                 if (!(bytemask & 1))
-                    WARNING(SrcInfo(lineno) << ": putting " << el.second.name << " on action bus "
+                    WARNING(SrcInfo(line) << ": putting " << el.second.name << " on action bus "
                             "byte " << byte << " even though bit in bytemask is not set");
                 action_hv_xbar.action_hv_ixbar_input_bytemask[side] |= 1 << sbyte;
                 bytemask >>= 1; }
@@ -284,7 +285,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
                 case 2: case 3: code = 3; mask = 7; break;
                 default: assert(0); }
                 if (((word << 1)^byte) & mask) {
-                    error(lineno, "Can't put field %s into byte %d on action xbar",
+                    error(line, "Can't put field %s into byte %d on action xbar",
                           el.second.name.c_str(), byte);
                     break; }
                 auto &ctl = action_hv_xbar.action_hv_ixbar_ctl_halfword[slot/8][side];
@@ -322,7 +323,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
                 /* FIXME -- old compiler currently generates these wrong */
                 byte -= bit/8;
             if (((word << 2)^byte) & 7) {
-                error(lineno, "Can't put field %s into byte %d on action xbar",
+                error(line, "Can't put field %s into byte %d on action xbar",
                       el.second.name.c_str(), byte);
                 break; }
             auto &ctl = action_hv_xbar.action_hv_ixbar_ctl_word[slot/4][side];
@@ -342,7 +343,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
         default:
             assert(0); }
         if (bytemask)
-            WARNING(SrcInfo(lineno) << ": excess bits " << hex(bytemask) <<
+            WARNING(SrcInfo(line) << ": excess bits " << hex(bytemask) <<
                     " set in bytemask for " << el.second.name);
     }
 }
