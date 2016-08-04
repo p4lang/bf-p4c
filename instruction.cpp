@@ -247,15 +247,17 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
     int slot, len = -1;
     if (tbl->action) tbl = tbl->action;
     if (auto *field = tbl->lookup_field(name, action)) {
-#if 0
-        if (lo >= 0 && (unsigned)lo >= field->size) {
-            error(lineno, "Bit %d out of range for field %s", lo, name.c_str());
-            ref = 0;
-        } else if (hi >= 0 && (unsigned)hi >= field->size) {
-            error(lineno, "Bit %d out of range for field %s", hi, name.c_str());
-            ref = 0;
-        } else
-#endif
+        if (!options.match_compiler) {
+            /* FIXME -- The old compiler generates refs past the end of action table fields
+             * like these, and just accesses whatever bits happen to be there.  So we
+             * supress these error checks for compatibility (ex: tests/action_bus1.p4) */
+            if (lo >= 0 && (unsigned)lo >= field->size) {
+                error(lineno, "Bit %d out of range for field %s", lo, name.c_str());
+                ref = 0;
+            } else if (hi >= 0 && (unsigned)hi >= field->size) {
+                error(lineno, "Bit %d out of range for field %s", hi, name.c_str());
+                ref = 0; } }
+        if (ref)
             ref = new Action(lineno, name, tbl, field, lo >= 0 ? lo : 0,
                              hi >= 0 ? hi : field->size - 1);
     } else if (tbl->find_on_actionbus(name, 0, 7, &len) >= 0) {

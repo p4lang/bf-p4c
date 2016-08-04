@@ -18,7 +18,7 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                 error(kv.value.lineno, "Slice must be byte slice");
                 continue; }
             name = kv.value[0].s;
-            off = kv.value[1].lo >> 3;
+            off = kv.value[1].lo;
             sz = kv.value[1].hi - kv.value[1].lo + 1; }
         Table::Format::Field *f = tbl->lookup_field(name, "*");
         const char *p = name-1;
@@ -27,7 +27,7 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
         if (!f) {
             if (kv.value == "meter") {
                 // FIXME -- meter color could be ORed into any byte of the immediate?
-                if (!sz) off = 3, sz = 8;
+                if (!sz) off = 24, sz = 8;
             } else if (tbl->format) {
                 error(kv.value.lineno, "No field %s in format", name);
                 continue; } }
@@ -100,16 +100,16 @@ int ActionBus::find_merge(int offset, int bytes) {
         int slot = Stage::action_bus_slot_map[alloc.first];
         int slotsize = Stage::action_bus_slot_size[slot];
         int slotbyte = alloc.first & ~(slotsize/8U - 1);
-        int slotoffset = alloc.second.offset & ~(slotsize/8U - 1);
-        if (offset > slotoffset && offset + bytes <= slotoffset + slotsize)
-            return slotbyte + offset - slotoffset; }
+        int slotoffset = alloc.second.offset & ~(slotsize - 1);
+        if (offset > slotoffset && offset + bytes*8 <= slotoffset + slotsize)
+            return slotbyte + (offset - slotoffset)/8U; }
     return -1;
 }
 
 void ActionBus::do_alloc(Table *tbl, Table::Format::Field *f, unsigned use, int bytes,
                          unsigned offset) {
     auto name = tbl->format->find_field(f);
-    LOG2("putting " << name << '(' << (offset*8) << ".." << ((offset+bytes)*8 - 1) <<
+    LOG2("putting " << name << '(' << offset << ".." << (offset + bytes*8 - 1) <<
          ") at action_bus " << use);
     while (bytes > 0) {
         int slot = Stage::action_bus_slot_map[use];
@@ -117,74 +117,76 @@ void ActionBus::do_alloc(Table *tbl, Table::Format::Field *f, unsigned use, int 
         assert(!tbl->stage->action_bus_use[slot] || tbl->stage->action_bus_use[slot] == tbl);
         tbl->stage->action_bus_use[slot] = tbl;
         by_byte.emplace(use, Slot{name, use, bytes*8U, f, offset});
-        offset += slotsize/8U;
+        offset += slotsize;
         bytes -= slotsize/8U;
         use += slotsize/8U; }
 }
 
 void ActionBus::pass2(Table *tbl) {
     int immed_offset = tbl->format->immed ? tbl->format->immed->bit(0) : 0;
-    for (auto f : need_place) {
-        int offset = f.first->bit(0) - immed_offset;
-        int bytes = (offset+f.first->size-1)/8U - offset/8U + 1;
-        int use;
-        if (f.second & 0x1010101) {
-            /* need 8-bit */
-            if (offset % 8U) {
-                if (offset/8U != (offset+f.first->size-1)/8U) {
-                    error(tbl->format->lineno, "field %s not correctly aligned for 8-bit use on "
-                          "action bus", tbl->format->find_field(f.first).c_str());
-                    continue; } }
-            if (f.second & 4) {
-                if ((use = find_free(tbl->stage, 0, 31, 4, bytes)) >= 0)
-                    do_alloc(tbl, f.first, use, bytes, 0);
-            } else {
-                unsigned start = (offset/8U) % 4U;
-                for (int byte = 0; byte < 4; byte++, start++) {
-                    if (((f.second >> (byte*8)) & 1) &&
-                        (use = find_free(tbl->stage, start, 31, 4, 1)) >= 0)
-                        do_alloc(tbl, f.first, use, 1, byte); } } }
-        if (f.second & 0x20002) {
-            /* need 16-bit */
-            if (offset % 16U) {
-                if (offset/16U != (offset+f.first->size-1)/16U) {
-                    error(tbl->format->lineno, "field %s not correctly aligned for 16-bit use on "
-                          "action bus", tbl->format->find_field(f.first).c_str());
-                    continue; }
-                if ((use = find_merge(offset/8U, bytes)) >= 0) {
-                    do_alloc(tbl, f.first, use, bytes, 0);
-                    continue; } }
-            if (f.second & 4) {
-                unsigned odd = (offset/8U) & 4;
-                if ((use = find_free(tbl->stage, 32, 63, 4, bytes)) >= 0 ||
-                    (use = find_free(tbl->stage, 64+odd, 95, 8, bytes)) >= 0)
-                    do_alloc(tbl, f.first, use, bytes, 0);
-            } else {
-                unsigned start = 32 + (offset/8U) % 4U;
-                for (int byte = 0; byte < 4; byte += 2, start += 2) {
-                    if (((f.second >> (byte*8)) & 2) &&
-                        ((use = find_free(tbl->stage, start, 63, 4, 2)) >= 0 ||
-                         (use = find_free(tbl->stage, start+32, 95, 8, 2)) >= 0))
-                        do_alloc(tbl, f.first, use, 2, byte); } } }
-        if (f.second == 4) {
-            /* need only 32-bit */
-            unsigned odd = (offset/8U) & 4;
-            if (offset % 32U) {
-                if (offset/32U != (offset+f.first->size-1)/32U) {
+    for (auto &f : need_place) {
+        auto field = f.first;
+        for (auto &bits : f.second) {
+            int offset = bits.first;
+            int lo = field->bit(bits.first) - immed_offset;
+            int hi = field->bit(field->size) - 1 - immed_offset;
+            int bytes = hi/8U - lo/8U + 1;
+            int use;
+            if (bytes > 4) bytes = 4;
+            if ((bits.second & 4) && (lo % 32U))
+                if (lo/32U != hi/32U) {
                     error(tbl->format->lineno, "field %s not correctly aligned for 32-bit use on "
-                          "action bus", tbl->format->find_field(f.first).c_str());
+                          "action bus", tbl->format->find_field(field).c_str());
                     continue; }
-                if ((use = find_merge(offset/8U, bytes)) >= 0) {
-                    do_alloc(tbl, f.first, use, bytes, 0);
-                    continue; } }
-            if ((use = find_free(tbl->stage, 96+odd, 127, 8, bytes)) >= 0)
-                do_alloc(tbl, f.first, use, bytes, 0);
-            else if ((use = find_free(tbl->stage, 64+odd, 95, 8, bytes)) >= 0)
-                do_alloc(tbl, f.first, use, bytes, 0);
-            else if ((use = find_free(tbl->stage, 32, 63, 4, bytes)) >= 0)
-                do_alloc(tbl, f.first, use, bytes, 0);
-            else if ((use = find_free(tbl->stage, 0, 31, 4, bytes)) >= 0)
-                do_alloc(tbl, f.first, use, bytes, 0); } }
+            if (bits.second & 1) {
+                /* need 8-bit */
+                if ((lo % 8U) && (lo/8U != hi/8U)) {
+                    error(tbl->format->lineno, "field %s not correctly aligned for 8-bit use on "
+                          "action bus", tbl->format->find_field(field).c_str());
+                    continue; }
+                if (bits.second & 4) {
+                    if ((use = find_free(tbl->stage, 0, 31, 4, bytes)) >= 0)
+                        do_alloc(tbl, field, use, bytes, offset);
+                } else {
+                    unsigned start = (lo/8U) % 4U;
+                    if ((use = find_free(tbl->stage, start, 31, 4, 1)) >= 0)
+                        do_alloc(tbl, field, use, 1, offset); } }
+            if (bits.second & 2) {
+                /* need 16-bit */
+                if (lo % 16U) {
+                    if (lo/16U != hi/16U) {
+                        error(tbl->format->lineno, "field %s not correctly aligned for 16-bit use "
+                              "on action bus", tbl->format->find_field(field).c_str());
+                        continue; }
+                    if ((use = find_merge(lo, bytes)) >= 0) {
+                        do_alloc(tbl, field, use, bytes, offset);
+                        continue; } }
+                if (bits.second & 4) {
+                    unsigned odd = (lo/8U) & 4;
+                    if ((use = find_free(tbl->stage, 32, 63, 4, bytes)) >= 0 ||
+                        (use = find_free(tbl->stage, 64+odd, 95, 8, bytes)) >= 0)
+                        do_alloc(tbl, field, use, bytes, offset);
+                } else {
+                    if (bytes > 2) bytes = 2;
+                    unsigned start = 32 + (lo/8U) % 4U;
+                    if ((use = find_free(tbl->stage, start, 63, 4, bytes)) >= 0 ||
+                        (use = find_free(tbl->stage, start+32, 95, 8, bytes)) >= 0)
+                        do_alloc(tbl, field, use, 2, offset); } }
+            if (bits.second == 4) {
+                /* need only 32-bit */
+                unsigned odd = (lo/8U) & 4;
+                if (lo % 32U) {
+                    if ((use = find_merge(lo, bytes)) >= 0) {
+                        do_alloc(tbl, field, use, bytes, 0);
+                        continue; } }
+                if ((use = find_free(tbl->stage, 96+odd, 127, 8, bytes)) >= 0)
+                    do_alloc(tbl, field, use, bytes, offset);
+                else if ((use = find_free(tbl->stage, 64+odd, 95, 8, bytes)) >= 0)
+                    do_alloc(tbl, field, use, bytes, offset);
+                else if ((use = find_free(tbl->stage, 32, 63, 4, bytes)) >= 0)
+                    do_alloc(tbl, field, use, bytes, offset);
+                else if ((use = find_free(tbl->stage, 0, 31, 4, bytes)) >= 0)
+                    do_alloc(tbl, field, use, bytes, offset); } } }
 }
 
 static int slot_sizes[] = {
@@ -194,13 +196,15 @@ static int slot_sizes[] = {
     4   /* 32-bit only */
 };
 
-int ActionBus::find(Table::Format::Field *f, int off, int size) {
+int ActionBus::find(Table::Format::Field *f, int off, int size /* in bytes */) {
     for (auto &slot : by_byte) {
         if (slot.second.data != f) continue;
-        if ((int)slot.second.offset * 8 > off) continue;
-        if (off/8 - slot.second.offset >= slot.second.size) continue;
+        if ((int)slot.second.offset > off) continue;
+        /* FIXME -- off < f->size check is wrong, but needed for old compiler broken asm */
+        /* FIXME -- see test/action_bus1.p4 */
+        if (off < (int)f->size && off - slot.second.offset >= slot.second.size) continue;
         if (!(size & slot_sizes[slot.first/32U])) continue;
-        return slot.first + off/8 - slot.second.offset; }
+        return slot.first + (off - slot.second.offset)/8U; }
     return -1;
 }
 int ActionBus::find(const char *name, int off, int size, int *len) {
@@ -220,22 +224,24 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
     unsigned side = home_row%2;  /* 0 == left,  1 == right */
     for (auto &el : by_byte) {
         unsigned byte = el.first;
+        assert(byte == el.second.byte);
         Table::Format::Field *f = el.second.data;
-        if ((f->bits[0].lo >> 7) != action_slice)
+        if ((f->bit(el.second.offset) >> 7) != action_slice)
             continue;
         unsigned slot = Stage::action_bus_slot_map[byte];
-        unsigned bit = f->bits[0].lo & 0x7f;
+        unsigned bit = f->bit(el.second.offset) & 0x7f;
+        unsigned size = std::min(el.second.size, f->size - el.second.offset);
         LOG3("    byte " << byte << " (slot " << slot << "): field " << tbl->find_field(f) <<
-             "[" << bit << ".." << (bit+f->size-1) << "] size=" << el.second.size <<
-             " offset=" << el.second.offset);
-        if (bit + f->size > 128) {
+             "(" << el.second.offset << ".." << (el.second.offset + size - 1) << ")" <<
+             " [" << bit << ".." << (bit+size-1) << "]");
+        if (bit + size > 128) {
             error(line, "Action bus setup can't deal with field %s split across "
                   "SRAM rows", el.second.name.c_str());
             continue; }
-        unsigned bytemask = ((1U << (el.second.size/8U)) - 1) << (el.second.offset/8U);
+        unsigned bytemask = (1U << (size/8U)) - 1;
         switch (Stage::action_bus_slot_size[slot]) {
         case 8:
-            for (unsigned sbyte = bit/8; sbyte <= (bit+f->size-1)/8; sbyte++, byte++, slot++) {
+            for (unsigned sbyte = bit/8; sbyte <= (bit+size-1)/8; sbyte++, byte++, slot++) {
                 unsigned code, mask;
                 switch (sbyte >> 2) {
                 case 0: code = sbyte>>1; mask = 1; break;
@@ -277,7 +283,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
             if (!options.match_compiler)
                 /* FIXME -- old compiler currently generates these wrong */
                 byte -= ((bit/8) & 1);
-            for (unsigned word = bit/16; word <= (bit+f->size-1)/16; word++, byte+=2, slot++) {
+            for (unsigned word = bit/16; word <= (bit+size-1)/16; word++, byte+=2, slot++) {
                 unsigned code, mask;
                 switch (word >> 1) {
                 case 0: code = 1; mask = 3; break;
@@ -354,7 +360,7 @@ void ActionBus::write_immed_regs(Table *tbl) {
     int tid = tbl->logical_id;
     for (auto &f : by_byte) {
         int slot = Stage::action_bus_slot_map[f.first];
-        unsigned off = f.second.offset*8;
+        unsigned off = f.second.offset;
         if (f.second.data) {
             off += f.second.data->bits[0].lo;
             assert(tbl->format && tbl->format->immed);

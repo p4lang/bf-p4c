@@ -8,10 +8,10 @@ class ActionBus {
         std::string                 name;
         unsigned                    byte, size;  // size in bits
         Table::Format::Field        *data;
-        unsigned                    offset;      // offset in bytes
+        unsigned                    offset;      // offset in bits
     };
     std::map<unsigned, Slot>                        by_byte;
-    std::map<Table::Format::Field *, unsigned>      need_place;
+    std::map<Table::Format::Field *, std::map<unsigned, unsigned>>      need_place;
     int find_merge(int offset, int bytes);
 public:
     int             lineno;
@@ -23,8 +23,8 @@ public:
     void write_action_regs(Table *tbl, unsigned homerow, unsigned action_slice);
     int find(Table::Format::Field *f, int off, int size);
     void do_alloc(Table *tbl, Table::Format::Field *f, unsigned use, int bytes, unsigned offset);
-    void need_alloc(Table *tbl, Table::Format::Field *f, int off, int size) {
-        need_place[f] |= size<<off; }
+    void need_alloc(Table *tbl, Table::Format::Field *f, unsigned off, unsigned size) {
+        need_place[f][off] |= size; }
     int find(const char *name, int off, int size, int *len = 0);
     int find(const std::string &name, int off, int size, int *len = 0) {
         return find(name.c_str(), off, size, len); }
