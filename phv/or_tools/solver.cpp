@@ -147,6 +147,15 @@ void Solver::SetFirstDeparsedHeaderByte(const PHV::Byte &phv_byte) {
     CHECK(nullptr != byte) << ": Cannot find or_tools::Byte object for " << phv_byte.name();
     // For the last bit of a header, is_last_byte_ must be true.
     Bit &bit = bits_.at(phv_byte.at(0));
+    // FIXME -- copied from MakeBit to ensure these are exist as SetFirstDeparsedHeaderByte
+    // needs them
+    if (nullptr == bit.container()) {
+        bit.set_container(new Container(MakeContainerInGroup(bit.name()))); }
+    if (nullptr == bit.mau_group()) {
+        // MAU groups created here will be restricted to PHV (no T-PHV).
+        const int max = PHV::kPhvMauGroupOffset + PHV::kNumPhvMauGroups - 1;
+        MauGroup *group = new MauGroup(MakeMauGroup(bit.name(), max), bit.name());
+        bit.container()->set_mau_group(group); }
     byte->set_last_byte(bit.SetFirstDeparsedHeaderByte());
 }
 
@@ -175,12 +184,12 @@ void Solver::SetLastDeparsedHeaderByte(const PHV::Byte &phv_byte) {
 void Solver::SetDeparserGroups(const PHV::Byte &i_pbyte, const PHV::Byte &e_pbyte) {
     LOG4("Setting deparser groups for " << i_pbyte.name() << " and " << e_pbyte.name());
     Container *i_container = nullptr, *e_container = nullptr;
-    for (auto &b : i_pbyte) {
+    for (auto &b : PHV::Byte::Valid(i_pbyte)) {
         if (i_container == nullptr) i_container = bits_.at(b).container();
         CHECK(nullptr != i_container) << "; Cannot find container for " << b.name();
         CHECK(i_container == bits_.at(b).container())
             << ": Container mismatch in " << i_pbyte.name() << " for " << b; }
-    for (auto &b : e_pbyte) {
+    for (auto &b : PHV::Byte::Valid(e_pbyte)) {
         if (e_container == nullptr) e_container = bits_.at(b).container();
         CHECK(nullptr != e_container) << "; Cannot find container for " << b.name();
         CHECK(e_container == bits_.at(b).container())
@@ -205,7 +214,7 @@ void Solver::SetDeparserGroups(const PHV::Bit &i_pbit, const PHV::Bit &e_pbit) {
 void Solver::SetDeparserIngress(const PHV::Byte &pbyte) {
     LOG4("Setting ingress deparser groups for " << pbyte.name());
     Container *container = nullptr;
-    for (auto &b : pbyte) {
+    for (auto &b : PHV::Byte::Valid(pbyte)) {
         if (container == nullptr) container = bits_.at(b).container();
         CHECK(nullptr != container) << "; Cannot find container for " << b.name();
         CHECK(container == bits_.at(b).container())
@@ -222,7 +231,7 @@ void Solver::SetDeparserIngress(const PHV::Bit &pbit) {
 void Solver::SetDeparserEgress(const PHV::Byte &pbyte) {
     LOG4("Setting egress deparser groups for " << pbyte.name());
     Container *container = nullptr;
-    for (auto &b : pbyte) {
+    for (auto &b : PHV::Byte::Valid(pbyte)) {
         if (container == nullptr) container = bits_.at(b).container();
         CHECK(nullptr != container) << "; Cannot find container for " << b.name();
         CHECK(container == bits_.at(b).container())

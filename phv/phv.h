@@ -170,6 +170,13 @@ class Byte : public ::std::array<Bit, 8> {
         return it; }
     Bits valid_bits() const { return Bits(cfirst(), clast()); }
     Bits bits() const { return Bits(cbegin(), cend()); }
+    class Valid {
+        const Byte &self;
+    public:
+        const_iterator begin() { return self.cfirst(); }
+        const_iterator end() { return self.clast(); }
+        Valid(const Byte &s) : self(s) {}
+    };
 };
 }  // namespace PHV
 #endif /* TOFINO_PHV_PHV_H_ */
