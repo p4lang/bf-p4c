@@ -53,6 +53,10 @@ struct TablePlacement::GroupPlace {
             for (auto o : work)
                 if (o->parent == parent) return;
             work.insert(parent); } }
+    static bool in_work(ordered_set<const GroupPlace*> &work, const IR::MAU::TableSeq *s) {
+        for (auto pl : work)
+            if (pl->seq == s) return true;
+        return false; }
 };
 
 struct TablePlacement::Placed {
@@ -265,6 +269,7 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const GroupPla
             bool found_match = false;
             for (auto n : Values(pl->gw->next)) {
                 if (!n || n->tables.size() == 0) continue;
+                if (GroupPlace::in_work(work, n)) continue;
                 if (n->tables.size() == 1 && n->tables.at(0) == pl->table) {
                     assert(!found_match && !match_grp);
                     found_match = true;
@@ -279,7 +284,7 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const GroupPla
             if (match_grp)
                 grp = match_grp; }
         for (auto n : Values(pl->table->next))
-            if (n && n->tables.size() > 0)
+            if (n && n->tables.size() > 0 && !GroupPlace::in_work(work, n))
                 new GroupPlace(work, grp, n);
     }
     return pl;
