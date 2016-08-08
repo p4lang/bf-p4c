@@ -29,12 +29,12 @@ class FillFromBlockMap : public Transform {
         return tn; }
     const IR::Type_Specialized *preorder(IR::Type_Specialized *ts) override {
         visit(ts->arguments, "arguments");
-        prune(); // don't visit baseType, but visit everything else
+        prune();  // don't visit baseType, but visit everything else
         return ts; }
     const IR::ConstructorCallExpression *preorder(IR::ConstructorCallExpression *ts) override {
         preorder(static_cast<IR::Expression *>(ts));
         visit(ts->arguments, "arguments");
-        prune(); // don't visit constructedType, but visit everything else
+        prune();  // don't visit constructedType, but visit everything else
         return ts; }
 
  public:

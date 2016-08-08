@@ -172,10 +172,10 @@ class Byte : public ::std::array<Bit, 8> {
     Bits bits() const { return Bits(cbegin(), cend()); }
     class Valid {
         const Byte &self;
-    public:
+     public:
         const_iterator begin() { return self.cfirst(); }
         const_iterator end() { return self.clast(); }
-        Valid(const Byte &s) : self(s) {}
+        explicit Valid(const Byte &s) : self(s) {}
     };
 };
 }  // namespace PHV

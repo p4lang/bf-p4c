@@ -84,7 +84,7 @@ bool PhvInfo::preorder(const IR::Metadata *h) {
 }
 
 bool PhvInfo::preorder(const IR::NamedRef *n) {
-    if(n->name == "$bridge-metadata") {
+    if (n->name == "$bridge-metadata") {
         /* FIXME -- nasty hack -- we recognize this name specially as the single fixed 1 bit we
          * need in the POV to make bridged metadata work.  Should have a more general mechanism
          * for managing POV bits (need a way to shift them properly for header stack operations) */

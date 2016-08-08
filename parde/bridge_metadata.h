@@ -1,5 +1,5 @@
-#ifndef TOFINO_COMMON_BRIDGE_METADATA_H_
-#define TOFINO_COMMON_BRIDGE_METADATA_H_
+#ifndef TOFINO_PARDE_BRIDGE_METADATA_H_
+#define TOFINO_PARDE_BRIDGE_METADATA_H_
 
 #include "ir/ir.h"
 #include "tofino/common/field_defuse.h"
@@ -15,4 +15,4 @@ class AddBridgedMetadata : public PassManager {
     AddBridgedMetadata(const PhvInfo &phv, const FieldDefUse &defuse);
 };
 
-#endif /* TOFINO_COMMON_BRIDGE_METADATA_H_ */
+#endif /* TOFINO_PARDE_BRIDGE_METADATA_H_ */

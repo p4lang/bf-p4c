@@ -322,7 +322,6 @@ void Constraints::SetConstraints(SolverInterface &solver) {
                 // Sanity check: All eight bits must be valid since the deparser can
                 // only deparse whole containers.
                 const PHV::Bits bits = it2->valid_bits();
-                //CHECK(8 == bits.size()) << ": Invalid byte size " << it2->name();
                 // This is just a sanity check. There must be an entry in
                 // contiguous_bits_ for every deparsed byte.
                 CHECK(IsContiguous(bits)) << ": Non-contiguous bits in " << it2->name();
@@ -338,7 +337,6 @@ void Constraints::SetConstraints(SolverInterface &solver) {
                 // Sanity check: All eight bits must be valid since the deparser can
                 // only deparse whole containers.
                 const PHV::Bits bits = it2->valid_bits();
-                //CHECK(8 == bits.size()) << ": Invalid byte size " << it2->name();
                 // This is just a sanity check. There must be an entry in
                 // contiguous_bits_ for every deparsed byte.
                 CHECK(IsContiguous(bits)) << ": Non-contiguous bits in " << it2->name();

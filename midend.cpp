@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 #include "midend.h"
-//#include "lower.h"
 #include "backends/bmv2/inlining.h"
 #include "midend/actionsInlining.h"
 #include "midend/uniqueNames.h"
