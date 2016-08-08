@@ -22,6 +22,8 @@ tofino_backend_SOURCES = \
 	%reldir%/common/extract_maupipe.h \
 	%reldir%/common/field_defuse.cpp \
 	%reldir%/common/field_defuse.h \
+	%reldir%/common/remap_intrin.cpp \
+	%reldir%/common/remap_intrin.h \
 	%reldir%/common/param_binding.cpp \
 	%reldir%/common/param_binding.h \
 	%reldir%/common/phv.cpp \

@@ -17,6 +17,7 @@
 #include "frontends/p4-14/typecheck.h"
 #include "frontends/common/parseInput.h"
 #include "common/extract_maupipe.h"
+#include "common/remap_intrin.h"
 #include "midend.h"
 #include "midend/actionsInlining.h"
 #include "tofinoOptions.h"
@@ -48,6 +49,7 @@ int main(int ac, char **av) {
         auto program = parse_P4_14_file(options, in);
         options.closeInput(in);
         PassManager fe = {
+            new RemapIntrinsics,
             new P4::ConstantFolding(nullptr, nullptr),
             new CheckHeaderTypes,
             new HeaderTypeMaxLengthCalculator,
