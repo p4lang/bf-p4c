@@ -1,6 +1,7 @@
 # FIXME -- need to figure out what should be in these and implement it
 EntryFormatNode
 HashJsonNode
+ProgramInfo
 ContextJsonNode[2]
 ContextJsonNode[3]
 ContextJsonNode[4]
