@@ -90,8 +90,8 @@ bool PhvAllocator::Solve(StringRef opt) {
     if (phv.alloc_done()) return true;
     or_tools::Solver solver;
     auto strategy = operations_research::Solver::ASSIGN_MIN_VALUE;
-    bool luby_restart = false;
-    int timeout = 5;
+    bool luby_restart = false, firstnum=true;
+    int timeout = 5, maxcount = 10;
     for (auto p : opt.split(',')) {
         p = p.trim();
         if (p == "min" || p == "default") {
@@ -103,12 +103,16 @@ bool PhvAllocator::Solve(StringRef opt) {
             strategy = operations_research::Solver::ASSIGN_RANDOM_VALUE;
             luby_restart = true;
         } else if (isdigit(*p)) {
-            timeout = atoi(p.p);
+            if (firstnum) {
+                timeout = atoi(p.p);
+                firstnum = false;
+            } else {
+                maxcount = atoi(p.p); }
         } else {
             error("Unknown solver option %s", p); } }
     constraints_.SetConstraints(solver);
     int count = 0;
-    while (count < 20) {
+    while (count < maxcount) {
         if (true == solver.Solve1(strategy, luby_restart, timeout)) {
             PopulatePhvInfo(solver, &phv);
             for (auto &field : phv)

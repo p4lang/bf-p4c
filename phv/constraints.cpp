@@ -360,11 +360,14 @@ void Constraints::SetConstraints(SolverInterface &solver) {
             solver.SetDeparserEgress(e_hdr_byte);
     for (auto &e_pov : deparsed_pov_[1])
         solver.SetDeparserEgress(e_pov);
+#if 0
+    // These constraints cause problems (massive memory use, fail to find solution)
     LOG1("Setting xbar constraints");
     for (auto &v : exact_match_bits_) {
         solver.SetMatchXbarWidth(v, {{32, 32, 32, 32}}); }
     for (auto &v : tcam_match_bits_) {
         solver.SetMatchXbarWidth(v, {{17, 17, 16, 16}}); }
+#endif
     // Set T-PHV constraint.
     for (auto &b : uniq_bit_ids_) {
         if (false == is_t_phv_.at(b.second)) solver.SetNoTPhv(b.first); }

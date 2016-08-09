@@ -258,7 +258,7 @@ class MauAsmOutput::EmitAction : public Inspector {
     void postorder(const IR::MAU::Instruction *) override {
         sep = nullptr;
         out << std::endl; }
-    bool preorder(const IR::Cast *) override { return true; }
+    bool preorder(const IR::Cast *c) override { visit(c->expr); return false; }
     bool preorder(const IR::Expression *exp) override {
         if (sep) {
             PhvInfo::Field::bitrange bits;
@@ -282,8 +282,8 @@ class MauAsmOutput::EmitAction : public Inspector {
             out << sep << *sl->e0 << '(' << *sl->e2 << ".." << *sl->e1 << ')';
             sep = ", ";
             return false; }
-        return preorder(static_cast<const IR::Expression *>(sl));
-    }
+        return preorder(static_cast<const IR::Expression *>(sl)); }
+    bool preorder(const IR::Node *n) override { BUG("Unexpected node %s in EmitAction", n); }
 
  public:
     EmitAction(const MauAsmOutput &s, std::ostream &o, const IR::MAU::Table *tbl, indent_t i)
