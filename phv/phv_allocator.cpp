@@ -120,6 +120,7 @@ bool PhvAllocator::Solve(StringRef opt) {
                           [](const PhvInfo::Field::alloc_slice &a,
                              const PhvInfo::Field::alloc_slice &b) -> bool {
                     return a.field_bit > b.field_bit; });
+            repack_metadata(phv);
             phv.alloc_done_ = true;
             return true;
         } else {

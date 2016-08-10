@@ -118,6 +118,7 @@ tofino_backend_SOURCES = \
 	%reldir%/phv/phv_fields.cpp \
 	%reldir%/phv/phv_fields.h \
 	%reldir%/phv/phv.h \
+	%reldir%/phv/repack_metadata.cpp \
 	%reldir%/phv/source_container_constraint.cpp \
 	%reldir%/phv/source_container_constraint.h \
 	%reldir%/phv/split_phv_use.cpp \

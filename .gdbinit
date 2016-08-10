@@ -143,14 +143,14 @@ class IXBarPrinter(object):
         pfx = [ "", "   ", " ", " " ]
         for r in range(0, 8):
             for t in range(0, len(indir)):
-                if r > 6 and t > 0:
+                if r > 5 and t > 0:
                     break
                 rv += pfx[t]
                 for c in range(0, cols[indir[t]]):
                     field = ptrs[indir[t]].dereference()
                     if field['first']['str']:
                         name = field['first']['str'].string()
-                        if name not in tables:
+                        if name not in fields:
                             if (len(fields) > 26):
                                 fields[name] = chr(ord('A') + len(fields) - 26)
                             else:
@@ -215,7 +215,7 @@ class IXBarUsePrinter(object):
             rv += "\n        "
             byte = vec_at(self.val['use'], i)
             rv += byte['field']['str'].string()
-            rv += "[" + str(byte['byte']) + "]("
+            rv += "[" + str(byte['lo']) + ".." + str(byte['hi']) + "]("
             rv += str(byte['loc']['group']) + ','
             rv += str(byte['loc']['byte']) + ')'
         rv += ")"

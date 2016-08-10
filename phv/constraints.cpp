@@ -362,6 +362,7 @@ void Constraints::SetConstraints(SolverInterface &solver) {
         solver.SetDeparserEgress(e_pov);
 #if 0
     // These constraints cause problems (massive memory use, fail to find solution)
+    // and not actually needed?
     LOG1("Setting xbar constraints");
     for (auto &v : exact_match_bits_) {
         solver.SetMatchXbarWidth(v, {{32, 32, 32, 32}}); }
