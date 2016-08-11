@@ -394,4 +394,29 @@ void Stage::write_regs() {
         default:
             assert(false); } }
 
+    /*--------------------
+    * Since a stats ALU enable bit is missing from mau_cfg_stats_alu_lt, need to make sure that for
+    * unused stats ALUs, they are programmed to point to a logical table that is either unused or
+    * to one that does not use a stats table. */
+
+    bool unused_stats_alus = false;
+    for (auto &salu : regs.cfg_regs.mau_cfg_stats_alu_lt)
+        if (!salu.modified())
+            unused_stats_alus = true;
+    if (unused_stats_alus) {
+        unsigned avail = 0xffff;
+        int no_stats = -1;
+        /* odd pattern of tests to replicate what the old compiler does */
+        for (auto tbl : tables) {
+            avail &= ~(1U << tbl->logical_id);
+            if (no_stats < 0 && (!tbl->get_attached() || tbl->get_attached()->stats.empty()))
+                no_stats = tbl->logical_id; }
+        if (avail) {
+            for (int i = 15; i >= 0; --i)
+                if ((avail >> i) & 1) {
+                    no_stats = i;
+                    break; } }
+        for (auto &salu : regs.cfg_regs.mau_cfg_stats_alu_lt)
+            if (!salu.modified())
+                salu = no_stats; }
 }
