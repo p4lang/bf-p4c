@@ -244,7 +244,6 @@ XFAIL_TESTS += \
     p14_to_16/%reldir%/v1_samples/dileep8.p4.test \
     p14_to_16/%reldir%/v1_samples/dileep.p4.test \
     p14_to_16/%reldir%/v1_samples/switch_20160602/switch.p4.test \
-    p14_to_16/%reldir%/v1_samples/test_config_101_switch_msdc.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_125_meter_pre_color.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_126_meter_pre_color_2.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_127_meter_pre_color_3.p4.test \
