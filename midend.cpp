@@ -15,30 +15,31 @@ limitations under the License.
 */
 
 #include "midend.h"
-//#include "lower.h"
 #include "backends/bmv2/inlining.h"
-#include "midend/actionsInlining.h"
-#include "midend/uniqueNames.h"
-#include "midend/moveDeclarations.h"
-#include "midend/removeReturns.h"
-#include "midend/moveConstructors.h"
-#include "midend/localizeActions.h"
-#include "midend/removeParameters.h"
-#include "midend/actionSynthesis.h"
-#include "midend/local_copyprop.h"
-#include "midend/removeLeftSlices.h"
-#include "midend/convertEnums.h"
-#include "midend/simplifyKey.h"
-#include "frontends/p4/strengthReduction.h"
-#include "frontends/p4/typeMap.h"
-#include "frontends/p4/evaluator/evaluator.h"
-#include "frontends/p4/typeChecking/typeChecker.h"
-#include "frontends/common/resolveReferences/resolveReferences.h"
-#include "frontends/p4/toP4/toP4.h"
-#include "frontends/p4/simplify.h"
-#include "frontends/p4/unusedDeclarations.h"
 #include "frontends/common/constantFolding.h"
+#include "frontends/common/resolveReferences/resolveReferences.h"
+#include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/fromv1.0/v1model.h"
+#include "frontends/p4/simplify.h"
+#include "frontends/p4/strengthReduction.h"
+#include "frontends/p4/toP4/toP4.h"
+#include "frontends/p4/typeChecking/typeChecker.h"
+#include "frontends/p4/typeMap.h"
+#include "frontends/p4/unusedDeclarations.h"
+#include "midend/actionsInlining.h"
+#include "midend/actionSynthesis.h"
+#include "midend/convertEnums.h"
+#include "midend/local_copyprop.h"
+#include "midend/localizeActions.h"
+#include "midend/moveConstructors.h"
+#include "midend/moveDeclarations.h"
+#include "midend/removeLeftSlices.h"
+#include "midend/removeParameters.h"
+#include "midend/removeReturns.h"
+#include "midend/simplifyExpressions.h"
+#include "midend/simplifyKey.h"
+#include "midend/uniqueNames.h"
+#include "midend/unreachableStates.h"
 
 namespace Tofino {
 
@@ -66,6 +67,8 @@ MidEnd::MidEnd(CompilerOptions& options) {
     setName("MidEnd");
 
     addPasses({
+        new P4::ResolveReferences(&refMap, isv1),
+        new P4::UnreachableParserStates(&refMap),
         new P4::TypeChecking(&refMap, &typeMap, false, isv1),
         new P4::ConvertEnums(new EnumOn32Bits(), &typeMap),
         // Proper semantics for uninitialzed local variables in parser states:
@@ -76,6 +79,9 @@ MidEnd::MidEnd(CompilerOptions& options) {
         new P4::UniqueNames(&refMap, isv1),
         // Move all local declarations to the beginning
         new P4::MoveDeclarations(),
+        new P4::MoveInitializers(),
+        new P4::TypeChecking(&refMap, &typeMap, false, isv1),
+        new P4::SimplifyExpressions(&refMap, &typeMap),
         new P4::ResolveReferences(&refMap, isv1),
         new P4::RemoveReturns(&refMap),
         // Move some constructor calls into temporaries
@@ -93,7 +99,7 @@ MidEnd::MidEnd(CompilerOptions& options) {
 
         // Inlining
         new P4::DiscoverInlining(&controlsToInline, &refMap, &typeMap, evaluator),
-        new P4::InlineDriver(&controlsToInline, new P4::GeneralInliner(), isv1),
+        new P4::InlineDriver(&controlsToInline, new P4::GeneralInliner(isv1), isv1),
         new P4::RemoveAllUnusedDeclarations(&refMap, isv1),
         new P4::TypeChecking(&refMap, &typeMap, false, isv1),
         new P4::DiscoverActionsInlining(&actionsToInline, &refMap, &typeMap),

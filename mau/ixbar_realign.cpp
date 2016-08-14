@@ -25,9 +25,9 @@ IXBarRealign::Realign::Realign(const PhvInfo &phv, int stage, const IXBar &ixbar
             if (!use.first) continue;
             auto *field = phv.field(use.first);
             BUG_CHECK(field, "%s on ixbar but not in phv?", use.first);
-            auto &alloc = field->for_bit(use.second * 8);
+            auto &alloc = field->for_bit(use.second);
             unsigned mask = (1 << alloc.container.log2sz()) - 1;
-            int byte = (use.second*8 - alloc.field_bit + alloc.container_bit)/8;
+            int byte = (use.second - alloc.field_bit + alloc.container_bit)/8;
             if (((i ^ byte) & mask) == 0) {
                 remap[grp][i] = i;
                 inuse |= 1 << i;
@@ -59,9 +59,9 @@ IXBarRealign::Realign::Realign(const PhvInfo &phv, int stage, const IXBar &ixbar
             if (!use.first) continue;
             auto *field = phv.field(use.first);
             BUG_CHECK(field, "%s on ixbar but not in phv?", use.first);
-            auto &alloc = field->for_bit(use.second * 8);
+            auto &alloc = field->for_bit(use.second);
             unsigned mask = (1 << alloc.container.log2sz()) - 1;
-            int byte = (use.second*8 - alloc.field_bit + alloc.container_bit)/8;
+            int byte = (use.second - alloc.field_bit + alloc.container_bit)/8;
             if ((((i + off) ^ byte) & mask) != 0) {
                 LOG1("Ternary ixbar needs realignment stage " << stage << " group " << grp);
                 throw IXBar::failure(stage, grp); } } }

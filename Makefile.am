@@ -22,6 +22,8 @@ tofino_backend_SOURCES = \
 	%reldir%/common/extract_maupipe.h \
 	%reldir%/common/field_defuse.cpp \
 	%reldir%/common/field_defuse.h \
+	%reldir%/common/remap_intrin.cpp \
+	%reldir%/common/remap_intrin.h \
 	%reldir%/common/param_binding.cpp \
 	%reldir%/common/param_binding.h \
 	%reldir%/common/phv.cpp \
@@ -116,6 +118,7 @@ tofino_backend_SOURCES = \
 	%reldir%/phv/phv_fields.cpp \
 	%reldir%/phv/phv_fields.h \
 	%reldir%/phv/phv.h \
+	%reldir%/phv/repack_metadata.cpp \
 	%reldir%/phv/source_container_constraint.cpp \
 	%reldir%/phv/source_container_constraint.h \
 	%reldir%/phv/split_phv_use.cpp \
@@ -241,7 +244,6 @@ XFAIL_TESTS += \
     p14_to_16/%reldir%/v1_samples/dileep8.p4.test \
     p14_to_16/%reldir%/v1_samples/dileep.p4.test \
     p14_to_16/%reldir%/v1_samples/switch_20160602/switch.p4.test \
-    p14_to_16/%reldir%/v1_samples/test_config_101_switch_msdc.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_125_meter_pre_color.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_126_meter_pre_color_2.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_127_meter_pre_color_3.p4.test \
@@ -280,8 +282,4 @@ XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/02-FullPHV1.p4.test \
     tofino/testdata/p4_14_samples/03-FullPHV2.p4.test \
     tofino/%reldir%/v1_samples/test_config_159_stateful_using_phv_field.p4.test
-
-# Fails with "can't find a table to place?"
-XFAIL_TESTS += \
-    tofino/testdata/p4_14_samples/07-MultiProtocol.p4.test
 

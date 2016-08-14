@@ -39,8 +39,15 @@ void IR::MAU::Table::dbprint(std::ostream &out) const {
                     out << sep << *a;
                     sep = ", "; } }
             out << ")"; } }
-    for (auto &n : next)
-        out << endl << n.first << ": " << indent << n.second << unindent;
+    std::set<const IR::MAU::TableSeq *> done;
+    for (auto it = next.begin(); it != next.end(); ++it) {
+        if (done.count(it->second)) continue;
+        out << endl << it->first;
+        for (auto it2 = std::next(it); it2 != next.end(); ++it2)
+            if (it->second == it2->second)
+                out << ", " << it2->first;
+        out << ": " << indent << it->second << unindent;
+        done.insert(it->second); }
     if (!attached.empty())
         out << endl;
     const char *sep = ": ";

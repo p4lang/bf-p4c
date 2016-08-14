@@ -91,7 +91,9 @@ extern action_profile {
 extern bit<32> random(in bit<5> logRange);
 enum HashAlgorithm {
     crc32,
+    crc32_custom,
     crc16,
+    crc16_custom,
     random,
     identity
 }

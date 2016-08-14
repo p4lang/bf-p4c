@@ -93,9 +93,11 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
     map<int, map<int, Slice>> sort;
     for (auto &b : use.use) {
         auto n = sort[b.loc.group].emplace(b.loc.byte*8,
-            Slice(phv, b.field, b.byte*8, b.byte*8 + 7));
+            Slice(phv, b.field, b.lo, b.hi));
         assert(n.second);
         if (n.first->second.width() != 8)
+            /* FIXME -- we want this for ixbar layout (must be full bytes) but we DON'T want
+             * this for hash function generation. */
             n.first->second = n.first->second.fullbyte(); }
     for (auto &group : sort) {
         auto it = group.second.begin();
@@ -258,13 +260,18 @@ class MauAsmOutput::EmitAction : public Inspector {
     void postorder(const IR::MAU::Instruction *) override {
         sep = nullptr;
         out << std::endl; }
-    bool preorder(const IR::Cast *) override { return true; }
+    bool preorder(const IR::Cast *c) override { visit(c->expr); return false; }
     bool preorder(const IR::Expression *exp) override {
         if (sep) {
             PhvInfo::Field::bitrange bits;
             if (auto f = self.phv.field(exp, &bits)) {
+                auto &alloc = f->for_bit(bits.lo);
                 out << sep << canon_name(f->name);
-                if (bits.lo || bits.size() != f->size)
+                if (alloc.field_bit > 0 || alloc.width != f->size) {
+                    out << '.' << alloc.field_bit << '-' << alloc.field_hi();
+                    bits.lo -= alloc.field_bit;
+                    bits.hi -= alloc.field_bit; }
+                if (bits.lo || bits.size() != alloc.width)
                     out << '(' << bits.lo << ".." << bits.hi << ')';
             } else {
                 out << sep << "/* " << *exp << " */"; }
@@ -277,8 +284,8 @@ class MauAsmOutput::EmitAction : public Inspector {
             out << sep << *sl->e0 << '(' << *sl->e2 << ".." << *sl->e1 << ')';
             sep = ", ";
             return false; }
-        return preorder(static_cast<const IR::Expression *>(sl));
-    }
+        return preorder(static_cast<const IR::Expression *>(sl)); }
+    bool preorder(const IR::Node *n) override { BUG("Unexpected node %s in EmitAction", n); }
 
  public:
     EmitAction(const MauAsmOutput &s, std::ostream &o, const IR::MAU::Table *tbl, indent_t i)
@@ -564,21 +571,42 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         out << std::endl; }
 }
 
+int find_slot(bitvec &inuse, int sz, int align, int align_off) {
+    int bit = 0;
+    while (1) {
+        bit = inuse.ffz(bit);
+        while ((bit & (align-1)) != align_off) ++bit;
+        int space = inuse.ffs(bit);
+        if (space < 0 || space - bit >= sz)
+            return bit;
+        bit = space; }
+}
+
 void emit_fmt_nonimmed(std::ostream &out, const IR::MAU::Table *tbl, const IR::ActionFunction *act,
                        const char *sep) {
-    vector<std::pair<int, cstring>> sorted_args;
+    bitvec inuse;
+    std::multimap<int, std::pair<int, cstring>> placed_args;
+    LOG3("laying out action data for " << tbl->name << ":" << act->name);
     for (auto arg : act->args) {
         int size = (arg->type->width_bits() + 7) / 8U;  // in bytes
-        sorted_args.emplace_back(size, arg->name); }
-    std::stable_sort(sorted_args.begin(), sorted_args.end(),
-        [](const std::pair<int, cstring> &a, const std::pair<int, cstring> &b)->bool {
-            return a.first > b.first; });
+        int align = size > 2 ? 4 : size > 1 ? 2 : 1;
+        int at = find_slot(inuse, size, align, size & (align-1));
+        LOG4(arg->name << " " << size << " bytes at offset " << at << " (align=" << align << ")");
+        if (size > 0)
+            inuse.setrange(at, size);
+        placed_args.emplace(at, std::make_pair(size, arg->name)); }
     int byte = 0;
-    for (auto &arg : sorted_args) {
-        if (byte + arg.first <= tbl->layout.action_data_bytes_in_overhead) {
-            byte += arg.first;
-            continue; }
-        out << sep << arg.second << ": " << arg.first*8;
+    for (auto &arg : placed_args) {
+        int end =  arg.first + arg.second.first;
+        if (end > tbl->layout.action_data_bytes_in_overhead) {
+            if (byte < tbl->layout.action_data_bytes_in_overhead)
+                byte = tbl->layout.action_data_bytes_in_overhead;
+            out << sep << arg.second.second << ": ";
+            if (byte == arg.first || arg.second.first == 0)
+                out << arg.second.first*8;
+            else
+                out << arg.first*8 << ".." << end*8-1; }
+        byte = end;
         sep = ", "; }
 }
 

@@ -143,14 +143,14 @@ class IXBarPrinter(object):
         pfx = [ "", "   ", " ", " " ]
         for r in range(0, 8):
             for t in range(0, len(indir)):
-                if r > 6 and t > 0:
+                if r > 5 and t > 0:
                     break
                 rv += pfx[t]
                 for c in range(0, cols[indir[t]]):
                     field = ptrs[indir[t]].dereference()
                     if field['first']['str']:
                         name = field['first']['str'].string()
-                        if name not in tables:
+                        if name not in fields:
                             if (len(fields) > 26):
                                 fields[name] = chr(ord('A') + len(fields) - 26)
                             else:
@@ -215,7 +215,7 @@ class IXBarUsePrinter(object):
             rv += "\n        "
             byte = vec_at(self.val['use'], i)
             rv += byte['field']['str'].string()
-            rv += "[" + str(byte['byte']) + "]("
+            rv += "[" + str(byte['lo']) + ".." + str(byte['hi']) + "]("
             rv += str(byte['loc']['group']) + ','
             rv += str(byte['loc']['byte']) + ')'
         rv += ")"
@@ -241,6 +241,19 @@ class PHVBitPrinter(object):
     def to_string(self):
         return self.val['first']['str'].string() + "[" + str(self.val['second']) + "]"
 
+class PHVContainerPrinter(object):
+    "Print a PHV::Container object"
+    def __init__(self, val):
+        self.val = val
+    def to_string(self):
+        sz = self.val['log2sz_']
+        if sz == 3:
+            return "<invalid PHV::Container>"
+        rv = "BHW"[int(sz)] + str(self.val['index_'])
+        if self.val['tagalong_']:
+            rv = "T" + rv;
+        return rv;
+
 def find_pp(val):
     if val.type.tag == 'bitvec':
         return bitvecPrinter(val)
@@ -258,6 +271,8 @@ def find_pp(val):
         return SourceInfoPrinter(val)
     if val.type.tag == 'PHV::Bit':
         return PHVBitPrinter(val)
+    if val.type.tag == 'PHV::Container':
+        return PHVContainerPrinter(val)
     return None
 gdb.pretty_printers.append(find_pp)
 end

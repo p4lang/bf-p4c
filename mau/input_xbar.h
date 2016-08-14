@@ -30,7 +30,7 @@ struct IXBar {
 
  private:
     /* IXBar tracks the use of all the input xbar bytes in a single stage.  Each byte use is set
-     * to record the name of the field it will be getting and the byte offset within the field.
+     * to record the name of the field it will be getting and the bit offset within the field.
      * cstrings here are field names as used in PhvInfo (so PhvInfo::field can be used to find
      * out details about the field) */
     Alloc2D<std::pair<cstring, int>, EXACT_GROUPS, EXACT_BYTES_PER_GROUP>       exact_use;
@@ -61,17 +61,17 @@ struct IXBar {
         enum flags_t { NeedRange = 1, NeedXor = 2,
                        Align16lo = 4, Align16hi = 8, Align32lo = 16, Align32hi = 32 };
         bool            ternary;
-        /* tracking individual bytes placed on the ixbar */
+        /* tracking individual bytes (or parts of bytes) placed on the ixbar */
         struct Byte {
             cstring     field;
-            int         byte;
+            int         lo, hi;
             Loc         loc;
             int         flags;  // flags describing alignment and gateway use/requirements
-            Byte(cstring f, int b) : field(f), byte(b) {}
-            Byte(cstring f, int b, int g, int gb) : field(f), byte(b), loc(g, gb) {}
-            operator std::pair<cstring, int>() const { return std::make_pair(field, byte); }
+            Byte(cstring f, int l, int h) : field(f), lo(l), hi(h) {}
+            Byte(cstring f, int l, int h, int g, int gb) : field(f), lo(l), hi(h), loc(g, gb) {}
+            operator std::pair<cstring, int>() const { return std::make_pair(field, lo); }
             bool operator==(const std::pair<cstring, int> &a) const {
-                return field == a.first && byte == a.second; } };
+                return field == a.first && lo == a.second; } };
         vector<Byte>    use;
 
         /* which of the 16 hash tables we are using (bitvec) */
@@ -133,7 +133,7 @@ inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {
     return out << '(' << l.group << ',' << l.byte << ')'; }
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Use::Byte &b) {
-    out << b.field << '[' << b.byte << ']';
+    out << b.field << '[' << b.lo << ".." << b.hi << ']';
     if (b.loc) out << b.loc;
     return out; }
 

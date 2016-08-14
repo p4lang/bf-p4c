@@ -84,7 +84,7 @@ bool PhvInfo::preorder(const IR::Metadata *h) {
 }
 
 bool PhvInfo::preorder(const IR::NamedRef *n) {
-    if(n->name == "$bridge-metadata") {
+    if (n->name == "$bridge-metadata") {
         /* FIXME -- nasty hack -- we recognize this name specially as the single fixed 1 bit we
          * need in the POV to make bridged metadata work.  Should have a more general mechanism
          * for managing POV bits (need a way to shift them properly for header stack operations) */
@@ -102,7 +102,11 @@ const PhvInfo::Field *PhvInfo::field(const IR::Expression *e, Field::bitrange *b
             bits->lo += sl->getL();
             int width = sl->getH() - sl->getL() + 1;
             if (bits->hi >= bits->lo + width - 1)
-                bits->hi = bits->lo + width - 1; }
+                bits->hi = bits->lo + width - 1;
+            if (bits->hi < bits->lo) {
+                warning("slice %d..%d invalid for field %s of size %d", sl->getL(), sl->getH(),
+                        sl->e0, bits->hi);
+                return 0; } }
         return rv; }
     if (auto *n = e->to<IR::NamedRef>()) {
         if (auto *rv = getref(all_fields, n->name)) {

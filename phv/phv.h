@@ -97,6 +97,9 @@ class Container {
     bool operator==(Container c) const {
         return tagalong_ == c.tagalong_ && log2sz_ == c.log2sz_ && index_ == c.index_; }
     bool operator!=(Container c) const { return !(*this == c); }
+    bool operator<(Container c) const {
+        return (tagalong_ << 15) + (log2sz_ << 13) + index_ <
+               (c.tagalong_ << 15) + (c.log2sz_ << 13) + c.index_; }
     friend std::ostream &operator<<(std::ostream &out, Container c);
     static Container B(unsigned idx) { return Container(false, 0, idx); }
     static Container H(unsigned idx) { return Container(false, 1, idx); }
@@ -104,6 +107,10 @@ class Container {
     static Container TB(unsigned idx) { return Container(true, 0, idx); }
     static Container TH(unsigned idx) { return Container(true, 1, idx); }
     static Container TW(unsigned idx) { return Container(true, 2, idx); }
+    cstring toString() const {
+        std::stringstream tmp;
+        tmp << *this;
+        return tmp.str(); }
 };
 
 inline std::ostream &operator<<(std::ostream &out, PHV::Container c) {
@@ -170,6 +177,13 @@ class Byte : public ::std::array<Bit, 8> {
         return it; }
     Bits valid_bits() const { return Bits(cfirst(), clast()); }
     Bits bits() const { return Bits(cbegin(), cend()); }
+    class Valid {
+        const Byte &self;
+     public:
+        const_iterator begin() { return self.cfirst(); }
+        const_iterator end() { return self.clast(); }
+        explicit Valid(const Byte &s) : self(s) {}
+    };
 };
 }  // namespace PHV
 #endif /* TOFINO_PHV_PHV_H_ */

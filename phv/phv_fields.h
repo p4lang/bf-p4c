@@ -127,4 +127,6 @@ class PhvInfo : public Inspector {
 
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field::alloc_slice &);
 
+extern void repack_metadata(PhvInfo &phv);
+
 #endif /* _TOFINO_PHV_PHV_FIELDS_H_ */
