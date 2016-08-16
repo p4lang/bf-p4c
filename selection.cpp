@@ -143,7 +143,7 @@ void SelectionTable::write_regs() {
     int minvpn = 1000000, maxvpn = -1;
     if (options.match_compiler) {
         minvpn = 0;
-        maxvpn = layout_size() - 1;
+        maxvpn = layout_size() - 2;
     } else
         for (Layout &logical_row : layout)
             for (auto v : logical_row.vpns) {

@@ -35,7 +35,6 @@ test_config_147_subtract_primitive.p4 mismatch
 14-Counter.p4 tfas
 16-NoHeaders.p4 tfas
 22-BigToSmallFieldWithMask8.p4 compile
-basic_ipv4_selection.p4 mismatch
 dileep10.p4 mismatch
 dileep11.p4 mismatch
 dileep12.p4 mismatch

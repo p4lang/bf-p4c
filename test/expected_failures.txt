@@ -8,6 +8,3 @@ hash_index5.p4 mismatch
 mac_rewrite.p4 tfas
 proxy_hash1.p4 mismatch
 selector0.p4 compile
-selector1.p4 mismatch
-selector2.p4 mismatch
-selector3.p4 mismatch
