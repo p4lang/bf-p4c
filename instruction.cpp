@@ -126,7 +126,7 @@ private:
                 int l = field->bit(lo) - immed_offset, h = field->bit(hi) - immed_offset;
                 if (l%bits != 0 && l/bits != h/bits)
                     error(lineno, "%s misaligned for action bus", name.c_str());
-                table->need_on_actionbus(field, lo & 0x18, bytes); } }
+                table->need_on_actionbus(field, lo & ~7, bytes); } }
         virtual void mark_use(Table *tbl) {
             if (field) field->flags |= Table::Format::Field::USED_IMMED; }
         virtual unsigned bitoffset(int group) const {

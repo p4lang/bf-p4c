@@ -120,7 +120,8 @@ if [ ! -x "$JSON_DIFF" ]; then
     JSON_DIFF=$(findbin json_diff)
 fi
 if [ -z "$DIFF" ]; then
-    DIFF="zdiff -u"
+    #DIFF="zdiff -u"
+    DIFF=$JSON_DIFF
 fi
 
 if [ -r $TESTDIR/ctxt_json_ignore ]; then
@@ -192,7 +193,9 @@ function test_p4() {
             fi
         done
         for f in $name.out/*.cfg.json.gz; do
-            if [ "$f" = "$name.out/regs.pipe.cfg.json.gz" ]; then
+            if zcmp -s $f $glsc_cfg/$(basename $f); then
+                continue
+            elif [ "$f" = "$name.out/regs.pipe.cfg.json.gz" ]; then
                 $JSON_DIFF -i mau $f $glsc_cfg/$(basename $f)
                 continue
             fi
