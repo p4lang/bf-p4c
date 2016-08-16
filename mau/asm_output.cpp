@@ -88,6 +88,75 @@ class MauAsmOutput::ImmedFormat {
             sep = ", "; } }
 };
 
+class MauAsmOutput::ActionDataFormat : public Inspector {
+    const MauAsmOutput          &self;
+    const IR::MAU::Table        *tbl;
+    const IR::ActionFunction    *act;
+    bitvec inuse;
+    std::multimap<int, std::pair<int, cstring>> placed_args;
+    std::map<const IR::ActionArg *, std::pair<int, int>> arg_use;
+
+    bool preorder(const IR::ActionArg *a) override {
+        if (auto *inst = findContext<IR::MAU::Instruction>()) {
+            PhvInfo::Field::bitrange bits;
+            if (auto f = self.phv.field(inst->operands[0], &bits)) {
+                auto &alloc = f->for_bit(bits.lo);
+                int sz = alloc.container.size() / 8U;
+                if (arg_use[a].first < sz)
+                    arg_use[a].first = sz;
+                if (auto sl = getParent<IR::Slice>()) {
+                    /* FIXME -- deal with mulitple slices with conflicting uses */
+                    if (int align = (sl->getL() / 8U) % sz)
+                        arg_use[a].second = align; } } }
+        return false; }
+    int find_slot(int sz, int align, int align_off) {
+        int bit = 0;
+        while (1) {
+            bit = inuse.ffz(bit);
+            while ((bit & (align-1)) != align_off) ++bit;
+            int space = inuse.ffs(bit);
+            if (space < 0 || space - bit >= sz)
+                return bit;
+            bit = space; } }
+
+ public:
+    ActionDataFormat(const MauAsmOutput &s, const IR::MAU::Table *t, const IR::ActionFunction *a)
+    : self(s), tbl(t), act(a) {
+        visitDagOnce = false;
+        LOG3("laying out action data for " << tbl->name << ":" << act->name);
+        a->apply(*this);
+        for (auto arg : act->args) {
+            int size = (arg->type->width_bits() + 7) / 8U;  // in bytes
+            int align = size > 2 ? 4 : size > 1 ? 2 : 1;
+            int align_off = size & (align-1);
+            if (arg_use.count(arg)) {
+                align = arg_use[arg].first;
+                align_off = arg_use[arg].second; }
+            int at = find_slot(size, align, align_off);
+            LOG4(arg->name << " " << size << " bytes at offset " << at <<
+                 " (align=" << align << ")");
+            if (size > 0)
+                inuse.setrange(at, size);
+            placed_args.emplace(at, std::make_pair(size, arg->name)); } }
+    void print(std::ostream &out) const {
+        const char *sep = " ";
+        int byte = 0;
+        out << "format " << act->name << ": {";
+        for (auto &arg : placed_args) {
+            int end =  arg.first + arg.second.first;
+            if (end > tbl->layout.action_data_bytes_in_overhead) {
+                if (byte < tbl->layout.action_data_bytes_in_overhead)
+                    byte = tbl->layout.action_data_bytes_in_overhead;
+                out << sep << arg.second.second << ": ";
+                if (byte == arg.first || arg.second.first == 0)
+                    out << arg.second.first*8;
+                else
+                    out << arg.first*8 << ".." << end*8-1; }
+            byte = end;
+            sep = ", "; }
+        out << (sep+1) << " }"; }
+};
+
 void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
         const IXBar::Use &use, const Memories::Use *mem, const TableFormat *fmt) const {
     map<int, map<int, Slice>> sort;
@@ -571,44 +640,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         out << std::endl; }
 }
 
-int find_slot(bitvec &inuse, int sz, int align, int align_off) {
-    int bit = 0;
-    while (1) {
-        bit = inuse.ffz(bit);
-        while ((bit & (align-1)) != align_off) ++bit;
-        int space = inuse.ffs(bit);
-        if (space < 0 || space - bit >= sz)
-            return bit;
-        bit = space; }
-}
 
-void emit_fmt_nonimmed(std::ostream &out, const IR::MAU::Table *tbl, const IR::ActionFunction *act,
-                       const char *sep) {
-    bitvec inuse;
-    std::multimap<int, std::pair<int, cstring>> placed_args;
-    LOG3("laying out action data for " << tbl->name << ":" << act->name);
-    for (auto arg : act->args) {
-        int size = (arg->type->width_bits() + 7) / 8U;  // in bytes
-        int align = size > 2 ? 4 : size > 1 ? 2 : 1;
-        int at = find_slot(inuse, size, align, size & (align-1));
-        LOG4(arg->name << " " << size << " bytes at offset " << at << " (align=" << align << ")");
-        if (size > 0)
-            inuse.setrange(at, size);
-        placed_args.emplace(at, std::make_pair(size, arg->name)); }
-    int byte = 0;
-    for (auto &arg : placed_args) {
-        int end =  arg.first + arg.second.first;
-        if (end > tbl->layout.action_data_bytes_in_overhead) {
-            if (byte < tbl->layout.action_data_bytes_in_overhead)
-                byte = tbl->layout.action_data_bytes_in_overhead;
-            out << sep << arg.second.second << ": ";
-            if (byte == arg.first || arg.second.first == 0)
-                out << arg.second.first*8;
-            else
-                out << arg.first*8 << ".." << end*8-1; }
-        byte = end;
-        sep = ", "; }
-}
 
 bool MauAsmOutput::EmitAttached::preorder(const IR::Stateful *) {
     return false; }
@@ -635,9 +667,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
     self.emit_memory(out, indent, tbl->resources->memuse.at(ad->name));
     for (auto act : Values(tbl->actions)) {
         if (act->args.empty()) continue;
-        out << indent << "format " << act->name << ": {";
-        emit_fmt_nonimmed(out, tbl, act, " ");
-        out << " }" << std::endl; }
+        out << indent << ActionDataFormat(self, tbl, act) << std::endl; }
     if (!tbl->actions.empty()) {
         out << indent++ << "actions:" << std::endl;
         for (auto act : Values(tbl->actions))
