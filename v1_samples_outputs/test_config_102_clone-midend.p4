@@ -154,10 +154,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
     @name("start") state start {
         tmp = packet.lookahead<bit<1>>();
-        transition select(tmp[0:0]) {
-            default: abc;
-            default: accept;
-        }
+        transition abc;
     }
 }
 

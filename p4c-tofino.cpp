@@ -50,7 +50,7 @@ int main(int ac, char **av) {
         options.closeInput(in);
         PassManager fe = {
             new RemapIntrinsics,
-            new P4::ConstantFolding(nullptr, nullptr),
+            new P4::ConstantFolding(nullptr, nullptr, true),
             new CheckHeaderTypes,
             new HeaderTypeMaxLengthCalculator,
             new TypeCheck,
@@ -72,7 +72,7 @@ int main(int ac, char **av) {
         maupipe = extract_maupipe(program);
     } else {
         auto program = parseP4File(options);
-        program = FrontEnd().run(options, program);
+        program = P4::FrontEnd().run(options, program);
         if (!program)
             return 1;
         if (verbose) {
