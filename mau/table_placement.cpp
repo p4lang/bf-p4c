@@ -188,6 +188,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     assert(!rv->placed[table_uids.at(rv->name)]);
 
     if (!try_alloc_ixbar(rv, done, phv, resources)) {
+retry_next_stage:
         rv->stage++;
         if (!try_alloc_ixbar(rv, done, phv, resources))
             BUG("Can't fit table %s in ixbar by itself", rv->name); }
@@ -208,8 +209,11 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 
     auto avail = StageUseEstimate::max();
     if (rv->stage == (done ? done->stage : 0)) {
-        if (!(min_use + current <= avail) || !try_alloc_mem(rv, done, min_entries, resources))
-            rv->stage++;
+        if (!(min_use + current <= avail) || !try_alloc_mem(rv, done, min_entries, resources)) {
+            LOG4("   can't fit min_entries(" << min_entries << ") in stage " << rv->stage <<
+                 ", advancing to next stage");
+            resources->clear();
+            goto retry_next_stage; }
         resources->memuse.clear(); }
     if (done && rv->stage == done->stage) {
         avail.srams -= current.srams;
