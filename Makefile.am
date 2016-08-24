@@ -280,6 +280,5 @@ XFAIL_TESTS += \
 # These currently fail ixbar allocation (table too wide)
 XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/02-FullPHV1.p4.test \
-    tofino/testdata/p4_14_samples/03-FullPHV2.p4.test \
-    tofino/%reldir%/v1_samples/test_config_159_stateful_using_phv_field.p4.test
+    tofino/testdata/p4_14_samples/03-FullPHV2.p4.test
 

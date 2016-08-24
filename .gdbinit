@@ -218,6 +218,7 @@ class IXBarUsePrinter(object):
             rv += "[" + str(byte['lo']) + ".." + str(byte['hi']) + "]("
             rv += str(byte['loc']['group']) + ','
             rv += str(byte['loc']['byte']) + ')'
+            rv += " flags=" + hex(int(byte['flags']))
         rv += ")"
         for i in range(0, vec_size(self.val['bit_use'])):
             rv += "\n     "
