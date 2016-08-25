@@ -45,28 +45,72 @@ class PHV::GreedyAlloc::Uses : public Inspector {
 };
 
 struct PHV::GreedyAlloc::Regs {
-    PHV::Container      B, H, W;
+    union {
+        struct {
+            PHV::Container      B, H, W;
+        };
+        PHV::Container          for_size[3];
+    };
+    Regs(PHV::Container B, PHV::Container H, PHV::Container W) : B(B), H(H), W(W) {}
 };
 
-void PHV::GreedyAlloc::do_alloc(PhvInfo::Field *i, Regs *use, Regs *skip) {
+void PHV::GreedyAlloc::do_alloc(PhvInfo::Field *i, Regs *use, Regs *skip, int merge_follow) {
     /* greedy allocate space for field */
+    int size = i->size;
+    int isize = i->size;
     LOG2(i->id << ": " << (i->metadata ? "metadata " : "header ") << i->name <<
          " size=" << i->size);
-    int size = i->size;
-    while (size > 32) {
-        i->alloc.emplace_back(use->W++, size-32, 0, 32);
+    for (int m = 1; m <= merge_follow; ++m) {
+        size += phv.field(i->id + m)->size;
+        LOG2("+ " << (i->id+m) << " : " << phv.field(i->id + m)->name << " size=" <<
+             phv.field(i->id + m)->size); }
+    /* FIXME -- reduce repetition here -- make GreedyAlloc::Regs an array rather than a struct? */
+    while (size > 24 || (size > 16 && i->metadata)) {
+        int abits = 32;
+        while (isize < abits && merge_follow) {
+            i->alloc.emplace_back(use->W, 0, abits-isize, isize);
+            LOG3("   allocated " << i->alloc << " for " << i->gress);
+            abits -= isize;
+            i = phv.field(i->id + 1);
+            merge_follow--;
+            isize = i->size; }
+        if ((isize -= abits) < 0) {
+            abits += isize;
+            isize = 0; }
+        i->alloc.emplace_back(use->W++, isize, 0, abits);
         if (skip && use->W == skip[0].W) use->W = skip[1].W;
         size -= 32; }
-    if (size > 16) {
-        i->alloc.emplace_back(use->W++, 0, 0, size);
-        if (skip && use->W == skip[0].W) use->W = skip[1].W;
-    } else if (size > 8) {
-        i->alloc.emplace_back(use->H++, 0, 0, size);
+    while (size > 8) {
+        int abits = 16;
+        while (isize < abits && merge_follow) {
+            i->alloc.emplace_back(use->H, 0, abits-isize, isize);
+            LOG3("   allocated " << i->alloc << " for " << i->gress);
+            abits -= isize;
+            i = phv.field(i->id + 1);
+            merge_follow--;
+            isize = i->size; }
+        if ((isize -= abits) < 0) {
+            abits += isize;
+            isize = 0; }
+        i->alloc.emplace_back(use->H++, isize, 0, abits);
         if (skip && use->H == skip[0].H) use->H = skip[1].H;
-    } else {
-        i->alloc.emplace_back(use->B++, 0, 0, size);
-        if (skip && use->B == skip[0].B) use->B = skip[1].B; }
-    LOG3("   allocated " << i->alloc << " for " << i->gress);
+        size -= 16; }
+    while (size > 0) {
+        int abits = 8;
+        while (isize < abits && merge_follow) {
+            i->alloc.emplace_back(use->B, 0, abits-isize, isize);
+            LOG3("   allocated " << i->alloc << " for " << i->gress);
+            abits -= isize;
+            i = phv.field(i->id + 1);
+            merge_follow--;
+            isize = i->size; }
+        if ((isize -= abits) < 0) {
+            abits += isize;
+            isize = 0; }
+        i->alloc.emplace_back(use->B++, isize, 0, abits);
+        if (skip && use->B == skip[0].B) use->B = skip[1].B;
+        size -= 8; }
+    LOG3("   allocated " << i->alloc << " for " << i->name);
 }
 
 void alloc_pov(PhvInfo::Field *i, PhvInfo::Field *pov, int pov_bit) {
@@ -77,7 +121,7 @@ void alloc_pov(PhvInfo::Field *i, PhvInfo::Field *pov, int pov_bit) {
         int bit = pov_bit - sl.field_bit;
         if (bit >= 0 && bit < sl.width) {
             i->alloc.emplace_back(sl.container, 0, bit + sl.container_bit, 1);
-            LOG3("   allocated " << i->alloc << " for " << i->gress);
+            LOG3("   allocated " << i->alloc << " for " << i->name);
             return; } }
     BUG("Failed to allocate POV bit for %s, POV too small?", i->name);
 }
@@ -123,16 +167,29 @@ bool PHV::GreedyAlloc::preorder(const IR::Tofino::Pipe *pipe) {
             if (field.gress != gr)
                 continue;
             if (field.alloc.empty()) {
-                if (pov)
+                if (pov) {
                     alloc_pov(&field, pov, pov_bit++);
-                else if (field.name.endsWith("$POV"))
+                } else if (field.name.endsWith("$POV")) {
                     do_alloc((pov = &field), &normal, skip);
-                else if (uses.use[1][gr][field.id])
-                    do_alloc(&field, &normal, skip);
-                else if (uses.use[0][gr][field.id])
-                    do_alloc(&field, &tagalong, nullptr);
-                else
-                    LOG2(field.id << ": " << field.name << " unused in " << gr); } } }
+                } else {
+                    bool use_mau = uses.use[1][gr][field.id];
+                    bool use_any = uses.use[0][gr][field.id];
+                    int merge_follow = 0;
+                    if (!field.metadata && field.size % 8U != 0 && field.offset > 0) {
+                        int size = field.size;
+                        while (size % 8U != 0) {
+                            auto mfield = phv.field(field.id + ++merge_follow);
+                            use_mau |= uses.use[1][gr][mfield->id];
+                            use_any |= uses.use[0][gr][mfield->id];
+                            size += mfield->size;
+                            assert(!mfield->metadata);
+                            if (mfield->offset == 0) break; } }
+                    if (use_mau)
+                        do_alloc(&field, &normal, skip, merge_follow);
+                    else if (use_any)
+                        do_alloc(&field, &tagalong, nullptr, merge_follow);
+                    else
+                        LOG2(field.id << ": " << field.name << " unused in " << gr); } } } }
     return false;
 }
 
