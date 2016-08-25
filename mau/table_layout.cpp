@@ -13,14 +13,17 @@ static void setup_match_layout(IR::MAU::Table::Layout &layout, const IR::V1Table
         for (auto r : *tbl->reads) {
             if (auto mask = r->to<IR::Mask>()) {
                 auto mval = mask->right->to<IR::Constant>();
+                layout.match_bytes += (mask->left->type->width_bits()+7)/8;
                 layout.match_width_bits += bitcount(mval->value);
                 if (!layout.ternary)
                     layout.ixbar_bytes += (mask->left->type->width_bits()+7)/8;
             } else if (auto prim = r->to<IR::Primitive>()) {
                 if (prim->name != "valid")
                     BUG("unexpected reads expression %s", r);
+                layout.match_bytes += 1;   // FIXME don't always need a whole byte
                 layout.match_width_bits += 1;
             } else if (r->is<IR::Member>() || r->is<IR::Slice>()) {
+                layout.match_bytes += (r->type->width_bits() + 7)/8;
                 layout.match_width_bits += r->type->width_bits();
                 if (!layout.ternary)
                     layout.ixbar_bytes += (r->type->width_bits() + 7)/8;
@@ -96,7 +99,7 @@ class VisitAttached : public Inspector {
 
 bool TableLayout::preorder(IR::MAU::Table *tbl) {
     LOG1("## layout table " << tbl->name);
-    tbl->layout.ixbar_bytes = tbl->layout.match_width_bits =
+    tbl->layout.ixbar_bytes = tbl->layout.match_bytes = tbl->layout.match_width_bits =
     tbl->layout.action_data_bytes = tbl->layout.overhead_bits = 0;
     if (tbl->match_table)
         setup_match_layout(tbl->layout, tbl->match_table);
@@ -141,7 +144,10 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
             tern_indir->apply(attached); }
     } else if (tbl->match_table) {
         // determine ways and match groups?
-        int match_group_bits = std::max(tbl->layout.match_width_bits-10, 0) +
+        int match_group_bits = std::max(tbl->layout.match_bytes-1, 0)*8 +
+                               tbl->layout.overhead_bits + 4;
+        if (match_group_bits > 128)
+            match_group_bits = std::max(tbl->layout.match_width_bits-10, 0) +
                                tbl->layout.overhead_bits + 4;
         int width = (match_group_bits+127)/128U;
         int match_groups = width > 1 ? 1 : 128 / match_group_bits;

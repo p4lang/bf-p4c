@@ -423,6 +423,9 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
                     while (used.getslice(bit, field.width())) {
                         bit = used.ffz(used.ffs(bit));
                         bit += (field.bytealign() - bit) & 7; }
+                    if (bit + field.width() > width*128)
+                        BUG("match group packing overflow for table %s (groups=%d, width=%d)",
+                            tbl->name, groups, width);
                     if (format[i].match.empty() || format[i].match.back().second != bit - 1)
                         format[i].match.emplace_back(bit, bit + field.width() - 1);
                     else
