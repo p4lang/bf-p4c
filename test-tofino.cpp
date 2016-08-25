@@ -112,7 +112,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new CanonGatewayExpr,   // must be before TableLayout?  or just TablePlacement?
         new SplitComplexGateways(phv),
         new CheckGatewayExpr(phv),
-        new TableLayout,
+        new TableLayout(phv),
         new TableFindSeqDependencies,
         new FindDependencyGraph(&deps),
         verbose ? new VisitFunctor([&deps]() { std::cout << deps; }) : nullptr,

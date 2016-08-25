@@ -1,8 +1,19 @@
 #include "table_layout.h"
 #include "lib/bitops.h"
 #include "lib/log.h"
+#include "input_xbar.h"
+#include "tofino/phv/phv_fields.h"
 
-static void setup_match_layout(IR::MAU::Table::Layout &layout, const IR::V1Table *tbl) {
+Visitor::profile_t TableLayout::init_apply(const IR::Node *root) {
+    alloc_done = phv.alloc_done();
+    return MauModifier::init_apply(root);
+}
+
+bool TableLayout::backtrack(trigger &trig) {
+    return trig.is<IXBar::failure>() && !alloc_done;
+}
+
+void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::V1Table *tbl) {
     layout.entries = tbl->size;
     for (auto t : tbl->reads_types)
         if (t == "ternary" || t == "lpm") {
@@ -11,22 +22,51 @@ static void setup_match_layout(IR::MAU::Table::Layout &layout, const IR::V1Table
     layout.match_width_bits = 0;
     if (tbl->reads) {
         for (auto r : *tbl->reads) {
+            PhvInfo::Field::bitrange bits;
+            auto *field = phv.field(r, &bits);
             if (auto mask = r->to<IR::Mask>()) {
-                auto mval = mask->right->to<IR::Constant>();
-                layout.match_bytes += (mask->left->type->width_bits()+7)/8;
-                layout.match_width_bits += bitcount(mval->value);
+                if (auto mval = mask->right->to<IR::Constant>()) {
+                    /* find highest and lowest set bit in the mask, and use them to slice
+                     * down the field */
+                    field = phv.field(mask->left, &bits);
+                    int hi = floor_log2(mval->value);
+                    if (hi >= 0 && hi < bits.size())
+                        bits.hi = bits.lo + hi;
+                    int lo = ffs(mval->value);
+                    if (lo > 0)
+                        bits.lo = lo; } }
+            if (field) {
+                int bytes = (bits.size() + 7)/8;
+                if (!field->alloc.empty()) {
+                    /* count the number of actual distinct PHV bytes alloced for these bits */
+                    /* FIXME -- factor this into a PhvInfo::Field method? or iterator? */
+                    bytes = 0;
+                    for (auto &sl : field->alloc) {
+                        /* we want to iterate over just the part of the allocation covered by
+                         * 'bits' (a slice), so we skip parts entirely above and chops down parts
+                         * that overlap as needed, so as to just count the bytes in the slice */
+                        /* FIXME -- if a field is allocated to non-contiguous bits of a byte,
+                         * this will count that byte twice, when it is only needed once.  The
+                         * match layout in asm_output will likewise lay it out twice, so this
+                         * is consistent.  Should fix PHV alloc to not make such bad allocations */
+                        if (sl.field_bit > bits.hi) continue;
+                        if (sl.field_hi() < bits.lo) break;
+                        PhvInfo::Field::bitrange cbits = { sl.container_bit, sl.container_hi() };
+                        if (bits.hi < sl.field_hi())
+                            cbits.hi -= sl.field_hi() - bits.hi;
+                        if (bits.lo > sl.field_bit)
+                            cbits.lo += bits.lo - sl.field_bit;
+                        assert(cbits.hi >= cbits.lo);
+                        bytes += cbits.hi/8U + 1 - cbits.lo/8U; } }
+                layout.match_bytes += bytes;
+                layout.match_width_bits += bits.size();
                 if (!layout.ternary)
-                    layout.ixbar_bytes += (mask->left->type->width_bits()+7)/8;
+                    layout.ixbar_bytes += bytes;
             } else if (auto prim = r->to<IR::Primitive>()) {
                 if (prim->name != "valid")
                     BUG("unexpected reads expression %s", r);
                 layout.match_bytes += 1;   // FIXME don't always need a whole byte
                 layout.match_width_bits += 1;
-            } else if (r->is<IR::Member>() || r->is<IR::Slice>()) {
-                layout.match_bytes += (r->type->width_bits() + 7)/8;
-                layout.match_width_bits += r->type->width_bits();
-                if (!layout.ternary)
-                    layout.ixbar_bytes += (r->type->width_bits() + 7)/8;
             } else {
                 BUG("unexpected reads expression %s", r); } } }
     layout.overhead_bits = ceil_log2(tbl->actions.size());
@@ -46,8 +86,7 @@ class GatewayLayout : public MauInspector {
     explicit GatewayLayout(IR::MAU::Table::Layout &l) : layout(l) {}
 };
 
-static void
-setup_gateway_layout(IR::MAU::Table::Layout &layout, IR::MAU::Table *tbl) {
+void TableLayout::setup_gateway_layout(IR::MAU::Table::Layout &layout, IR::MAU::Table *tbl) {
     for (auto &gw : tbl->gateway_rows)
         gw.first->apply(GatewayLayout(layout));
     // should count gw tcam width and depth to support gw splitting when needed
@@ -175,8 +214,4 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
                 entries = 0;
             way.entries *= match_groups; } }
     return true;
-}
-
-bool TableLayout::backtrack(trigger &) {
-    return false;
 }
