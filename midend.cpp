@@ -65,21 +65,21 @@ class EnumOn32Bits : public P4::ChooseEnumRepresentation {
 
 MidEnd::MidEnd(CompilerOptions& options) {
     // we may come through this path even if the program is actually a P4 v1.0 program
-    bool isv1 = options.isv1();
-    auto evaluator = new P4::EvaluatorPass(&refMap, &typeMap, isv1);
+    refMap.setIsV1(options.isv1());
+    auto evaluator = new P4::EvaluatorPass(&refMap, &typeMap);
     setName("MidEnd");
 
     addPasses({
-        new P4::SimplifyParsers(&refMap, isv1),
-        new P4::ConvertEnums(&refMap, &typeMap, isv1, new EnumOn32Bits()),
-        new P4::ResetHeaders(&refMap, &typeMap, isv1),
-        new P4::UniqueNames(&refMap, isv1),
+        new P4::SimplifyParsers(&refMap),
+        new P4::ConvertEnums(&refMap, &typeMap, new EnumOn32Bits()),
+        new P4::ResetHeaders(&refMap, &typeMap),
+        new P4::UniqueNames(&refMap),
         new P4::MoveDeclarations(),
         new P4::MoveInitializers(),
-        new P4::SimplifyExpressions(&refMap, &typeMap, isv1),
-        new P4::RemoveReturns(&refMap, isv1),
-        new P4::MoveConstructors(&refMap, isv1),
-        new P4::RemoveAllUnusedDeclarations(&refMap, isv1),
+        new P4::SimplifyExpressions(&refMap, &typeMap),
+        new P4::RemoveReturns(&refMap),
+        new P4::MoveConstructors(&refMap),
+        new P4::RemoveAllUnusedDeclarations(&refMap),
         new P4::ClearTypeMap(&typeMap),
         evaluator,
 
@@ -90,29 +90,29 @@ MidEnd::MidEnd(CompilerOptions& options) {
                 return nullptr;
             return root; }),
 
-        new P4::Inline(&refMap, &typeMap, evaluator, isv1),
-        new P4::InlineActions(&refMap, &typeMap, isv1),
+        new P4::Inline(&refMap, &typeMap, evaluator),
+        new P4::InlineActions(&refMap, &typeMap),
 #if 0
-        new P4::LocalizeAllActions(&refMap, isv1),
-        new P4::UniqueParameters(&refMap, isv1),
+        new P4::LocalizeAllActions(&refMap),
+        new P4::UniqueParameters(&refMap),
         new P4::ClearTypeMap(&typeMap),
-        new P4::SimplifyControlFlow(&refMap, &typeMap, isv1),
-        new P4::RemoveParameters(&refMap, &typeMap, isv1),
+        new P4::SimplifyControlFlow(&refMap, &typeMap),
+        new P4::RemoveParameters(&refMap, &typeMap),
         new P4::ClearTypeMap(&typeMap),
-        new P4::SimplifyKey(&refMap, &typeMap, isv1,
+        new P4::SimplifyKey(&refMap, &typeMap,
                             new P4::NonLeftValue(&refMap, &typeMap)),
 #endif
-        new P4::ConstantFolding(&refMap, &typeMap, isv1),
+        new P4::ConstantFolding(&refMap, &typeMap),
         new P4::StrengthReduction(),
-        new P4::SimplifySelect(&refMap, &typeMap, isv1, true), // constant keysets
-        new P4::SimplifyParsers(&refMap, isv1),
-        new P4::LocalCopyPropagation(&refMap, &typeMap, isv1),
+        new P4::SimplifySelect(&refMap, &typeMap, true), // constant keysets
+        new P4::SimplifyParsers(&refMap),
+        new P4::LocalCopyPropagation(&refMap, &typeMap),
         new P4::MoveDeclarations(),
-        new P4::SimplifyControlFlow(&refMap, &typeMap, isv1),
-        new P4::SynthesizeActions(&refMap, &typeMap, isv1),
-        new P4::MoveActionsToTables(&refMap, &typeMap, isv1),
+        new P4::SimplifyControlFlow(&refMap, &typeMap),
+        new P4::SynthesizeActions(&refMap, &typeMap),
+        new P4::MoveActionsToTables(&refMap, &typeMap),
 
-        new P4::TypeChecking(&refMap, &typeMap, isv1, true),
+        new P4::TypeChecking(&refMap, &typeMap, true),
         evaluator,
     });
 }

@@ -50,7 +50,7 @@ int main(int ac, char **av) {
         options.closeInput(in);
         PassManager fe = {
             new RemapIntrinsics,
-            new P4::ConstantFolding(nullptr, nullptr, true),
+            new P4::ConstantFolding(nullptr, nullptr),
             new CheckHeaderTypes,
             new HeaderTypeMaxLengthCalculator,
             new TypeCheck,
