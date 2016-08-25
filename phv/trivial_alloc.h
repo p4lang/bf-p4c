@@ -1,5 +1,5 @@
-#ifndef TOFINO_PHV_GREEDY_ALLOC_H_
-#define TOFINO_PHV_GREEDY_ALLOC_H_
+#ifndef TOFINO_PHV_TRIVIAL_ALLOC_H_
+#define TOFINO_PHV_TRIVIAL_ALLOC_H_
 
 #include "ir/ir.h"
 #include "phv_fields.h"
@@ -7,7 +7,7 @@
 
 namespace PHV {
 
-class GreedyAlloc : public Inspector {
+class TrivialAlloc : public Inspector {
     PhvInfo                     &phv;
     const SymBitMatrix          &conflict;
     struct Regs;
@@ -17,10 +17,10 @@ class GreedyAlloc : public Inspector {
     void end_apply(const IR::Node *) override { phv.alloc_done_ = true; }
 
  public:
-    GreedyAlloc(PhvInfo &p, const SymBitMatrix &c) : phv(p), conflict(c) {}
+    TrivialAlloc(PhvInfo &p, const SymBitMatrix &c) : phv(p), conflict(c) {}
 };
 
 }  // namespace PHV
 
 
-#endif /* TOFINO_PHV_GREEDY_ALLOC_H_ */
+#endif /* TOFINO_PHV_TRIVIAL_ALLOC_H_ */

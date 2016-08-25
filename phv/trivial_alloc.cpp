@@ -1,8 +1,8 @@
-#include "greedy_alloc.h"
+#include "trivial_alloc.h"
 #include "lib/range.h"
 #include "lib/exceptions.h"
 
-class PHV::GreedyAlloc::Uses : public Inspector {
+class PHV::TrivialAlloc::Uses : public Inspector {
  public:
     bitvec      use[2][2];
     /*              |  ^- gress                 */
@@ -44,7 +44,7 @@ class PHV::GreedyAlloc::Uses : public Inspector {
         return true; }
 };
 
-struct PHV::GreedyAlloc::Regs {
+struct PHV::TrivialAlloc::Regs {
     union {
         struct {
             PHV::Container      B, H, W;
@@ -54,7 +54,7 @@ struct PHV::GreedyAlloc::Regs {
     Regs(PHV::Container B, PHV::Container H, PHV::Container W) : B(B), H(H), W(W) {}
 };
 
-void PHV::GreedyAlloc::do_alloc(PhvInfo::Field *i, Regs *use, Regs *skip, int merge_follow) {
+void PHV::TrivialAlloc::do_alloc(PhvInfo::Field *i, Regs *use, Regs *skip, int merge_follow) {
     /* greedy allocate space for field */
     int size = i->size;
     int isize = i->size;
@@ -64,7 +64,7 @@ void PHV::GreedyAlloc::do_alloc(PhvInfo::Field *i, Regs *use, Regs *skip, int me
         size += phv.field(i->id + m)->size;
         LOG2("+ " << (i->id+m) << " : " << phv.field(i->id + m)->name << " size=" <<
              phv.field(i->id + m)->size); }
-    /* FIXME -- reduce repetition here -- make GreedyAlloc::Regs an array rather than a struct? */
+    /* FIXME -- reduce repetition here -- make TrivialAlloc::Regs an array rather than a struct? */
     while (size > 24 || (size > 16 && i->metadata)) {
         int abits = 32;
         while (isize < abits && merge_follow) {
@@ -141,7 +141,7 @@ static void adjust_skip_for_egress(PHV::Container &reg, unsigned group_size,
         reg = skip1 = skip0; }
 }
 
-bool PHV::GreedyAlloc::preorder(const IR::Tofino::Pipe *pipe) {
+bool PHV::TrivialAlloc::preorder(const IR::Tofino::Pipe *pipe) {
     if (phv.alloc_done()) return false;
     Uses uses(phv);
     Regs normal = { "B0", "H0", "W0" },

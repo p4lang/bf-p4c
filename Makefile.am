@@ -93,8 +93,6 @@ tofino_backend_SOURCES = \
 	%reldir%/phv/container_constraint.cpp \
 	%reldir%/phv/container_constraint.h \
 	%reldir%/phv/create_thread_local_instances.h \
-	%reldir%/phv/greedy_alloc.cpp \
-	%reldir%/phv/greedy_alloc.h \
 	%reldir%/phv/match_xbar_constraint.cpp \
 	%reldir%/phv/match_xbar_constraint.h \
 	%reldir%/phv/mau_group_constraint.cpp \
@@ -125,6 +123,8 @@ tofino_backend_SOURCES = \
 	%reldir%/phv/split_phv_use.h \
 	%reldir%/phv/thread_constraint.cpp \
 	%reldir%/phv/thread_constraint.h \
+	%reldir%/phv/trivial_alloc.cpp \
+	%reldir%/phv/trivial_alloc.h \
 	%reldir%/phv/t_phv_constraint.h \
 	%reldir%/test-tofino.cpp \
 	%reldir%/tofinoOptions.h
