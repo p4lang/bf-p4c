@@ -363,7 +363,7 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::V1Program *program) {
     egress->apply(GetTofinoTables(program, EGRESS, rv));
     if (auto in = rv->thread[INGRESS].parser = parser.parser(INGRESS))
         rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, in);
-    if (auto eg = rv->thread[EGRESS].parser = parser.parser(EGRESS))
+    if (auto eg = rv->thread[EGRESS].parser = parser.parser(EGRESS)->apply(RemoveSetMetadata()))
         rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, eg);
     AttachTables toAttach(program);
     for (auto &th : rv->thread)
@@ -434,7 +434,8 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
     GetTofinoParser make_parser(parser);
     if (auto in = rv->thread[INGRESS].parser = make_parser.parser(INGRESS))
         rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, in);
-    if (auto eg = rv->thread[EGRESS].parser = make_parser.parser(EGRESS))
+    if (auto eg = rv->thread[EGRESS].parser
+                = make_parser.parser(EGRESS)->apply(RemoveSetMetadata()))
         rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, eg);
     // FIXME -- use the deparser rather than always inferring it from the parser
 
