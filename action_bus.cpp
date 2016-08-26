@@ -132,6 +132,7 @@ void ActionBus::pass2(Table *tbl) {
             int hi = field->bit(field->size) - 1 - immed_offset;
             int bytes = hi/8U - lo/8U + 1;
             int use;
+            int step = lo < 64 ? 4 : 8;
             if (bytes > 4) bytes = 4;
             if ((bits.second & 4) && (lo % 32U))
                 if (lo/32U != hi/32U) {
@@ -145,11 +146,11 @@ void ActionBus::pass2(Table *tbl) {
                           "action bus", tbl->format->find_field(field).c_str());
                     continue; }
                 if (bits.second & 4) {
-                    if ((use = find_free(tbl->stage, 0, 31, 4, bytes)) >= 0)
+                    if ((use = find_free(tbl->stage, 0, 31, step, bytes)) >= 0)
                         do_alloc(tbl, field, use, bytes, offset);
                 } else {
                     unsigned start = (lo/8U) % 4U;
-                    if ((use = find_free(tbl->stage, start, 31, 4, 1)) >= 0)
+                    if ((use = find_free(tbl->stage, start, 31, step, 1)) >= 0)
                         do_alloc(tbl, field, use, 1, offset); } }
             if (bits.second & 2) {
                 /* need 16-bit */
@@ -163,13 +164,13 @@ void ActionBus::pass2(Table *tbl) {
                         continue; } }
                 if (bits.second & 4) {
                     unsigned odd = (lo/8U) & 4;
-                    if ((use = find_free(tbl->stage, 32, 63, 4, bytes)) >= 0 ||
+                    if ((use = find_free(tbl->stage, 32, 63, step, bytes)) >= 0 ||
                         (use = find_free(tbl->stage, 64+odd, 95, 8, bytes)) >= 0)
                         do_alloc(tbl, field, use, bytes, offset);
                 } else {
                     if (bytes > 2) bytes = 2;
                     unsigned start = 32 + (lo/8U) % 4U;
-                    if ((use = find_free(tbl->stage, start, 63, 4, bytes)) >= 0 ||
+                    if ((use = find_free(tbl->stage, start, 63, step, bytes)) >= 0 ||
                         (use = find_free(tbl->stage, start+32, 95, 8, bytes)) >= 0)
                         do_alloc(tbl, field, use, 2, offset); } }
             if (bits.second == 4) {
@@ -183,9 +184,9 @@ void ActionBus::pass2(Table *tbl) {
                     do_alloc(tbl, field, use, bytes, offset);
                 else if ((use = find_free(tbl->stage, 64+odd, 95, 8, bytes)) >= 0)
                     do_alloc(tbl, field, use, bytes, offset);
-                else if ((use = find_free(tbl->stage, 32, 63, 4, bytes)) >= 0)
+                else if ((use = find_free(tbl->stage, 32, 63, step, bytes)) >= 0)
                     do_alloc(tbl, field, use, bytes, offset);
-                else if ((use = find_free(tbl->stage, 0, 31, 4, bytes)) >= 0)
+                else if ((use = find_free(tbl->stage, 0, 31, step, bytes)) >= 0)
                     do_alloc(tbl, field, use, bytes, offset); } } }
 }
 
