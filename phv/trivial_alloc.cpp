@@ -45,17 +45,20 @@ class PHV::TrivialAlloc::Uses : public Inspector {
 };
 
 struct PHV::TrivialAlloc::Regs {
-    union {
-        struct {
-            PHV::Container      B, H, W;
-        };
-        PHV::Container          for_size[3];
-    };
-    Regs(PHV::Container B, PHV::Container H, PHV::Container W) : B(B), H(H), W(W) {}
+    PHV::Container      B, H, W;
 };
 
 void PHV::TrivialAlloc::do_alloc(PhvInfo::Field *i, Regs *use, Regs *skip, int merge_follow) {
     /* greedy allocate space for field */
+    static struct {
+        PHV::Container PHV::TrivialAlloc::Regs::*   alloc;
+        int                                         size;
+    } alloc_types[3] = {
+        { &PHV::TrivialAlloc::Regs::W, 32 },
+        { &PHV::TrivialAlloc::Regs::H, 16 },
+        { &PHV::TrivialAlloc::Regs::B, 8 },
+    };
+
     int size = i->size;
     int isize = i->size;
     LOG2(i->id << ": " << (i->metadata ? "metadata " : "header ") << i->name <<
@@ -64,52 +67,23 @@ void PHV::TrivialAlloc::do_alloc(PhvInfo::Field *i, Regs *use, Regs *skip, int m
         size += phv.field(i->id + m)->size;
         LOG2("+ " << (i->id+m) << " : " << phv.field(i->id + m)->name << " size=" <<
              phv.field(i->id + m)->size); }
-    /* FIXME -- reduce repetition here -- make TrivialAlloc::Regs an array rather than a struct? */
-    while (size > 24 || (size > 16 && i->metadata)) {
-        int abits = 32;
-        while (isize < abits && merge_follow) {
-            i->alloc.emplace_back(use->W, 0, abits-isize, isize);
-            LOG3("   allocated " << i->alloc << " for " << i->gress);
-            abits -= isize;
-            i = phv.field(i->id + 1);
-            merge_follow--;
-            isize = i->size; }
-        if ((isize -= abits) < 0) {
-            abits += isize;
-            isize = 0; }
-        i->alloc.emplace_back(use->W++, isize, 0, abits);
-        if (skip && use->W == skip[0].W) use->W = skip[1].W;
-        size -= 32; }
-    while (size > 8) {
-        int abits = 16;
-        while (isize < abits && merge_follow) {
-            i->alloc.emplace_back(use->H, 0, abits-isize, isize);
-            LOG3("   allocated " << i->alloc << " for " << i->gress);
-            abits -= isize;
-            i = phv.field(i->id + 1);
-            merge_follow--;
-            isize = i->size; }
-        if ((isize -= abits) < 0) {
-            abits += isize;
-            isize = 0; }
-        i->alloc.emplace_back(use->H++, isize, 0, abits);
-        if (skip && use->H == skip[0].H) use->H = skip[1].H;
-        size -= 16; }
-    while (size > 0) {
-        int abits = 8;
-        while (isize < abits && merge_follow) {
-            i->alloc.emplace_back(use->B, 0, abits-isize, isize);
-            LOG3("   allocated " << i->alloc << " for " << i->gress);
-            abits -= isize;
-            i = phv.field(i->id + 1);
-            merge_follow--;
-            isize = i->size; }
-        if ((isize -= abits) < 0) {
-            abits += isize;
-            isize = 0; }
-        i->alloc.emplace_back(use->B++, isize, 0, abits);
-        if (skip && use->B == skip[0].B) use->B = skip[1].B;
-        size -= 8; }
+    for (auto &rtype : alloc_types) {
+        while (size > rtype.size - 8 || (size > 16 && i->metadata)) {
+            int abits = rtype.size;
+            while (isize < abits && merge_follow) {
+                i->alloc.emplace_back(use->*rtype.alloc, 0, abits-isize, isize);
+                LOG3("   allocated " << i->alloc << " for " << i->gress);
+                abits -= isize;
+                i = phv.field(i->id + 1);
+                merge_follow--;
+                isize = i->size; }
+            if ((isize -= abits) < 0) {
+                abits += isize;
+                isize = 0; }
+            i->alloc.emplace_back((use->*rtype.alloc)++, isize, 0, abits);
+            if (skip && use->*rtype.alloc == skip[0].*rtype.alloc)
+                use->*rtype.alloc = skip[1].*rtype.alloc;
+            size -= rtype.size; } }
     LOG3("   allocated " << i->alloc << " for " << i->name);
 }
 
