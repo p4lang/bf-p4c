@@ -19,7 +19,7 @@ IR::InstanceRef::InstanceRef(cstring prefix, IR::ID name, const IR::Type *t, boo
     } else if (auto *stk = t->to<IR::Type_Stack>()) {
         if (forceMeta)
             BUG("metadata arrays not handled in InstanceRef::InstanceRef");
-        obj = new IR::HeaderStack(iname, stk->baseType->to<IR::Type_Header>(), stk->getSize());
+        obj = new IR::HeaderStack(iname, stk->elementType->to<IR::Type_Header>(), stk->getSize());
     } else {
         BUG("Unhandled InstanceRef type %1%", t); }
 }

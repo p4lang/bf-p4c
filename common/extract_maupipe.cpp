@@ -381,7 +381,7 @@ class ConvertIndexToHeaderStackItemRef : public Transform {
 const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
     P4::ReferenceMap  refMap;
     P4::TypeMap       typeMap;
-    P4::EvaluatorPass evaluator(&refMap, &typeMap, true);
+    P4::EvaluatorPass evaluator(&refMap, &typeMap);
     program = program->apply(evaluator);
     auto toplevel = evaluator.getToplevelBlock();
     auto top = toplevel->getMain();
