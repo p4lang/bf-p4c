@@ -615,8 +615,7 @@ void ExactMatchTable::write_regs() {
                 if (!action.args.empty() && action.args[0]) {
                     assert(action.args[0].field()->by_group[group]->bits[0].lo/128U == word);
                     merge.mau_action_instruction_adr_exact_shiftcount[bus][word_group] =
-                        action.args[0].field()->by_group[group]->bits[0].lo % 128; }
-            } else if (!options.match_compiler) continue;
+                        action.args[0].field()->by_group[group]->bits[0].lo % 128; } }
             /* FIXME -- factor this where possible with ternary match code */
             if (action) {
                 int lo_huffman_bits = std::min(action->format->log2size-2, 5U);
