@@ -423,20 +423,20 @@ void output_phv_ownership(bitvec phv_use[2],
         if (phv_use[INGRESS].getrange(reg, group_size)) {
             in_grp.val |= 1U << i;
             if (i * group_size >= 16 && i * group_size < 32)
-                error(0, "R%d..R%d used by ingress deparser but only available to egress",
-                      reg, reg+group_size-1);
+                error(0, "%s..%s(R%d..R%d) used by ingress deparser but only available to egress",
+                      Phv::reg(reg).name, Phv::reg(reg+group_size-1).name, reg, reg+group_size-1);
             else
                 count++; }
         if (phv_use[EGRESS].getrange(reg, group_size)) {
             eg_grp.val |= 1U << i;
             if (i * group_size < 16)
-                error(0, "R%d..R%d used by egress deparser but only available to ingress",
-                      reg, reg+group_size-1);
+                error(0, "%s..%s(R%d..R%d) used by egress deparser but only available to ingress",
+                      Phv::reg(reg).name, Phv::reg(reg+group_size-1).name, reg, reg+group_size-1);
             else
                 count++; }
         if (count > 1)
-            error(0, "R%d..R%d used by both ingress and egress deparser",
-                  reg, reg+group_size-1); }
+            error(0, "%s..%s(R%d..R%d) used by both ingress and egress deparser",
+                  Phv::reg(reg).name, Phv::reg(reg+group_size-1).name, reg, reg+group_size-1); }
     in_split.val = phv_use[INGRESS].getrange(reg, group_size);
     eg_split.val = phv_use[EGRESS].getrange(reg, group_size);
 }
@@ -514,8 +514,9 @@ bool Deparser::RefOrChksum::check() const {
 }
 
 Phv::Register Deparser::RefOrChksum::checksum_units[12] = {
-    { 224, 16 }, { 225, 16 }, { 226, 16 }, { 227, 16 }, { 228, 16 }, { 229, 16 },
-    { 230, 16 }, { 231, 16 }, { 232, 16 }, { 233, 16 }, { 234, 16 }, { 235, 16 } };
+    { "csum0", 224, 16 }, { "csum1", 225, 16 }, { "csum2", 226, 16 }, { "csum3", 227, 16 },
+    { "csum4", 228, 16 }, { "csum5", 229, 16 }, { "csum6", 230, 16 }, { "csum7", 231, 16 },
+    { "csum8", 232, 16 }, { "csum9", 233, 16 }, { "csum10", 234, 16 }, { "csum11", 235, 16 } };
 
 Phv::Slice Deparser::RefOrChksum::operator *() const {
     if (name_ == "checksum") {

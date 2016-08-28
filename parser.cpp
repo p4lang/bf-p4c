@@ -191,7 +191,8 @@ void Parser::process() {
         bitvec tmp = phv_use[INGRESS];
         tmp &= phv_use[EGRESS];
         for (int reg : tmp)
-            error(lineno[0], "Phv register R%d used by both ingress and egress", reg); }
+            error(lineno[0], "Phv register %s(R%d) used by both ingress and egress",
+                  Phv::reg(reg).name, reg); }
     for (auto &reg : multi_write)
         if (reg.check())
             phv_allow_multi_write[reg->reg.index] = 1;

@@ -33,7 +33,8 @@ class Phv : public Section {
     static Phv phv;
 public:
     struct Register {
-        unsigned short index, size;
+        char            name[8];
+        unsigned short  index, size;
     };
     class Slice {
         static const Register invalid;

@@ -22,6 +22,7 @@ Phv::Phv() : Section("phv") {
     for (unsigned i = 0; i < sizeof sizes/sizeof *sizes; i++) {
         for (unsigned j = 0; j < sizes[i].count; j++, idx++) {
             char buf[8];
+            memset(regs[idx].name, 0, sizeof(regs[idx].name));
             regs[idx].index = idx;
             regs[idx].size = sizes[i].size;
             if (sizes[i].size) {
@@ -29,6 +30,7 @@ Phv::Phv() : Section("phv") {
                 names[INGRESS].emplace(buf, Slice(regs[idx], 0, sizes[i].size - 1));
                 names[EGRESS].emplace(buf, Slice(regs[idx], 0, sizes[i].size - 1));
                 sprintf(buf, "%s%d", sizes[i].code, j);
+                strcpy(regs[idx].name, buf);
                 names[INGRESS].emplace(buf, Slice(regs[idx], 0, sizes[i].size - 1));
                 names[EGRESS].emplace(buf, Slice(regs[idx], 0, sizes[i].size - 1)); } } }
     assert(idx == NUM_PHV_REGS);
@@ -106,9 +108,7 @@ Phv::Ref::Ref(gress_t g, const value_t &n) : gress(g), lo(-1), hi(-1), lineno(n.
 }
 
 Phv::Ref::Ref(const Phv::Register &r) : gress(EGRESS), lo(-1), hi(-1), lineno(-1) {
-    char buf[8];
-    sprintf(buf, "R%d", r.index);
-    name_ = buf;
+    name_ = r.name;
 }
 
 bool Phv::Ref::merge(const Phv::Ref &r) {
@@ -189,9 +189,7 @@ void Phv::Slice::dbprint(std::ostream &out) const {
 std::string Phv::db_regset(const bitvec &s) {
     std::string rv;
     for (int reg : s) {
-        char tmp[16];
         if (!rv.empty()) rv += ", ";
-        sprintf(tmp, "R%d", reg);
-        rv += tmp; }
+        rv += Phv::reg(reg).name; }
     return rv;
 }
