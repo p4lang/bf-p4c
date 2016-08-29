@@ -762,7 +762,8 @@ static void find_pred_in_stage(int stageno, std::set<MatchTable *> &pred, Table 
 }
 
 void Table::Actions::pass2(Table *tbl) {
-    int code = tbl->get_gateway() ? 1 : 0;
+    int code = tbl->get_gateway() ? 1 : 0;  // if there's a gateway, reserve code 0 for a NOP
+                                            // to run when the gateway inhibits the table
     if (code + actions.size() > ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH)
         code = -1;
     for (auto &act : *this) {
@@ -926,7 +927,10 @@ void MatchTable::write_regs(int type, Table *result) {
         merge.logical_table_thread[2].logical_table_thread_ingress |= 1 << logical_id; }
     adrdist.adr_dist_table_thread[gress][0] |= 1 << logical_id;
     adrdist.adr_dist_table_thread[gress][1] |= 1 << logical_id;
+
+    Actions *actions = action ? action->actions : this->actions;
     if (result) {
+        actions = result->action ? result->action->actions : result->actions;
         unsigned action_enable = 0;
         if (result->action_enable >= 0)
             action_enable = 1 << result->action_enable;
@@ -935,16 +939,25 @@ void MatchTable::write_regs(int type, Table *result) {
             auto &shift_en = merge.mau_payload_shifter_enable[type][bus];
             setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[type][bus], logical_id);
             setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[type+2][bus], logical_id);
+
+            int default_action = result->enable_action_instruction_enable ? 0 : 0x40;
             if (result->action.args.size() >= 1 && result->action.args[0].field()) {
                 merge.mau_action_instruction_adr_mask[type][bus] =
                     ((1U << result->action.args[0].size()) - 1) & ~action_enable;
                 shift_en.action_instruction_adr_payload_shifter_en = 1;
             } else {
                 merge.mau_action_instruction_adr_mask[type][bus] = 0;
+                if (actions->count() > 0) {
+                    if (actions->count() > 1) {
+                        /* FIXME -- if there's more than one action and no overhead bits to
+                         * select, which should be the one used by the table?  We use the first */
+                        warning(actions->begin()->lineno, "More than one possible action, but no "
+                                "action in table %s overhead", name()); }
+                    default_action |= actions->begin()->code; }
                 if (options.match_compiler)
                     shift_en.action_instruction_adr_payload_shifter_en = 1; }
-            merge.mau_action_instruction_adr_default[type][bus] =
-                result->enable_action_instruction_enable ? 0 : 0x40;
+            merge.mau_action_instruction_adr_default[type][bus] = default_action;
+
             if (action_enable) {
                 if (result->enable_action_instruction_enable)
                     merge.mau_action_instruction_adr_per_entry_en_mux_ctl[type][bus] =
@@ -980,12 +993,6 @@ void MatchTable::write_regs(int type, Table *result) {
     /*------------------------
      * Action instruction Address
      *-----------------------*/
-    Actions *actions = result->actions;
-    if (result->action) {
-        assert(!actions);
-        actions = result->action->actions; }
-    assert(actions);
-
     int max_code = actions->max_code;
     if (options.match_compiler)
         if (auto *action_format = lookup_field("action"))

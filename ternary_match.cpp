@@ -546,7 +546,10 @@ void TernaryIndirectTable::pass1() {
         else if (actions->count() > 1)
             error(lineno, "No field 'action' to select between mulitple actions in "
                   "table %s format", name());
-        actions->pass1(this); }
+        actions->pass1(this);
+    } else if (action.args.size() == 0) {
+        if (auto *sel = lookup_field("action"))
+            action.args.push_back(sel); }
     // attached.pass1(match_table); -- done in set_match_table, called from
     // TernaryMatchTable::pass1()
     if (action_enable >= 0)

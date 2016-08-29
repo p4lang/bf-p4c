@@ -116,7 +116,10 @@ void ExactMatchTable::pass1() {
         else if (actions->count() > 1)
             error(lineno, "No field 'action' to select between mulitple actions in "
                   "table %s format", name());
-        actions->pass1(this); }
+        actions->pass1(this);
+    } else if (action.args.size() == 0) {
+        if (auto *sel = lookup_field("action"))
+            action.args.push_back(sel); }
     if (action_enable >= 0)
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
