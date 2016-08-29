@@ -65,7 +65,7 @@ class Table : Tofino::Unit {
 #emit
     Table(cstring n, gress_t gr, const Expression *gw)
     : Tofino::Unit(gw->srcInfo), name(n), gress(gr),
-      gateway_rows{ std::make_pair(gw, "true"), std::make_pair(nullptr, "false") } {}
+      gateway_rows{ std::make_pair(gw, "$true"), std::make_pair(nullptr, "$false") } {}
     // ir-generator can't parse {}-initializer (thinks it is the ctor body
 #end
 
@@ -98,7 +98,7 @@ class Table : Tofino::Unit {
         if (match_table && uses_gateway() && !gw_next.count(cstring()))
             BUG("gateway always overrides match table");
         for (auto &nxt : next) {
-            if (nxt.first == "default") {
+            if (nxt.first == "$default") {
             } else if (nxt.first == "$hit" || nxt.first == "$miss") {
                 if (!match_table)
                     BUG("%s next on table with no match_table", nxt.first);
@@ -112,23 +112,28 @@ class Table : Tofino::Unit {
         v.visit(match_table, "match_table");
         auto &clone(v.flow_clone());
         if (match_table) {
+            auto &default_action(clone.flow_clone());
+            bool need_default_action = false;
             for (auto &action : Values(actions)) {
                 auto &clone2(clone.flow_clone());
                 clone2.visit(action);
-                if (next.count(action->name))
+                if (next.count(action->name)) {
                     clone2.visit(next.at(action->name), action->name.name);
-                v.flow_merge(clone2); }
-            if (next.count("default")) {
-                auto &clone2(clone.flow_clone());
-                clone2.visit(next.at("default"), "default");
-                v.flow_merge(clone2); }
+                    v.flow_merge(clone2);
+                } else {
+                    default_action.flow_merge(clone2);
+                    need_default_action = true; } }
+            if (next.count("$default")) {
+                default_action.visit(next.at("$default"), "$default");
+                need_default_action = true; }
+            else if (next.count("$hit")) {
+                default_action.visit(next.at("$hit"), "$hit");
+                need_default_action = true; }
+            if (need_default_action)
+                v.flow_merge(default_action);
             if (next.count("$miss")) {
                 auto &clone2(clone.flow_clone());
                 clone2.visit(next.at("$miss"), "$miss");
-                v.flow_merge(clone2); }
-            if (next.count("$hit")) {
-                auto &clone2(clone.flow_clone());
-                clone2.visit(next.at("$hit"), "$hit");
                 v.flow_merge(clone2); } }
         std::set<cstring> gw_next;
         for (auto &gw : gateway_rows) {

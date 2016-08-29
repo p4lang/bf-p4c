@@ -266,7 +266,9 @@ class GetTofinoTables : public Inspector {
                     name = "$hit";
                 else if (name == "miss")
                     name = "$miss";
-                else if (name != "default")
+                else if (name == "default")
+                    name = "$default";
+                else
                     error("%s: no action %s in table %s", a->srcInfo, name, tt->name); }
             tt->next[name] = getseq(act.second); } }
     bool preorder(const IR::MethodCallExpression *m) override {
@@ -295,7 +297,7 @@ class GetTofinoTables : public Inspector {
         for (auto c : s->cases) {
             cstring label;
             if (c->label->is<IR::DefaultExpression>())
-                label = "default";
+                label = "$default";
             else
                 label = refMap->getDeclaration(c->label->to<IR::PathExpression>()->path)
                               ->externalName();
@@ -309,9 +311,9 @@ class GetTofinoTables : public Inspector {
         return true; }
     void postorder(const IR::NamedCond *c) override {
         if (c->ifTrue)
-            tables.at(c)->next["true"] = getseq(c->ifTrue);
+            tables.at(c)->next["$true"] = getseq(c->ifTrue);
         if (c->ifFalse)
-            tables.at(c)->next["false"] = getseq(c->ifFalse); }
+            tables.at(c)->next["$false"] = getseq(c->ifFalse); }
     bool preorder(const IR::If *) override {
         BUG("unnamed condition in control flow"); }
     bool preorder(const IR::IfStatement *c) override {
@@ -323,7 +325,7 @@ class GetTofinoTables : public Inspector {
         return true; }
     void postorder(const IR::IfStatement *c) override {
         bool lnot;
-        cstring T = "true", F = "false";
+        cstring T = "$true", F = "$false";
         if (auto *mc = isApplyHit(c->condition, &lnot)) {
             tables[c] = tables.at(mc);
             T = lnot ? "$miss" : "$hit";

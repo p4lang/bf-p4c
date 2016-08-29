@@ -455,7 +455,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         bool have_default = false;
         for (auto &next : match->next) {
             assert(tbl->next.count(next.first) == 0);
-            if (next.first == "default")
+            if (next.first == "$default")
                 have_default = true;
             if (seq) {
                 auto *new_next = next.second->clone();
@@ -465,7 +465,11 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
             } else {
                 tbl->next[next.first] = next.second; } }
         if (!have_default && seq)
-            tbl->next["default"] = seq; }
+            tbl->next["$default"] = seq;
+        if (have_default || seq)
+            for (auto &gw : tbl->gateway_rows)
+                if (gw.second && !tbl->next.count(gw.second))
+                    tbl->next[gw.second] = new IR::MAU::TableSeq(); }
     if (table_placed.count(tbl->name) == 1) {
         table_set_resources(tbl, it->second->resources, it->second->entries);
         return tbl; }

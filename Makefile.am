@@ -282,3 +282,5 @@ XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/02-FullPHV1.p4.test \
     tofino/testdata/p4_14_samples/03-FullPHV2.p4.test
 
+# Generates broken PHV alloc (regs used by both ingress & egress)
+XFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/basic_routing.p4.test

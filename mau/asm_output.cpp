@@ -469,6 +469,16 @@ void MauAsmOutput::TableFormat::print(std::ostream &out) const {
     out << (fmt.sep + 1) << "}";
 }
 
+static cstring next_for(const IR::MAU::Table *tbl, cstring what, const DefaultNext &def) {
+    if (tbl->next.count(what)) { 
+        if (!tbl->next[what]->empty())
+            return tbl->next[what]->front()->name;
+    } else if (tbl->next.count("$default")) { 
+        if (!tbl->next["$default"]->empty())
+            return tbl->next["$default"]->front()->name; }
+    return def.next_in_thread(tbl);
+}
+
 void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) const {
     /* FIXME -- some of this should be method(s) in IR::MAU::Table? */
     TableFormat fmt(*this, tbl);
@@ -541,18 +551,17 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
                     out << match << ": ";
                 } else {
                     out << "miss: "; }
-                if (line.second) {
-                    if (tbl->next.count(line.second) && !tbl->next[line.second]->empty())
-                        out << tbl->next[line.second]->front()->name;
-                    else
-                        out << default_next.next_in_thread(tbl);
-                } else {
-                    out << "run_table"; }
+                if (line.second)
+                    out << next_for(tbl, line.second, default_next);
+                else
+                    out << "run_table";
                 out << std::endl; }
             if (tbl->gateway_rows.back().first)
                 out << gw_indent << "miss: run_table" << std::endl;
         } else {
-            WARNING("Failed to fit gateway expression for " << tbl->name); } }
+            WARNING("Failed to fit gateway expression for " << tbl->name); }
+        if (!tbl->match_table)
+            return; }
 
     /* FIXME -- this is a mess and needs to be rewritten to be sane */
     bool have_action = false, have_indirect = false;
@@ -569,46 +578,27 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
     assert(have_action || (tbl->layout.action_data_bytes <=
                            tbl->layout.action_data_bytes_in_overhead));
 
-    cstring     next_hit, next_miss, next_default;
     bool        need_next_hit_map = false;
-    next_hit = next_miss = next_default = default_next.next_in_thread(tbl);
     for (auto &next : tbl->next) {
-        if (next.first == "true" || next.first == "false") {
-            continue;  // for the gateway
-        } else if (next.first == "$miss") {
-            if (!next.second->empty())
-                next_miss = next.second->front()->name;
-        } else if (next.first == "$hit") {
-            if (!next.second->empty())
-                next_hit = next.second->front()->name;
-        } else if (next.first == "default") {
-            if (!next.second->empty())
-                next_default = next.second->front()->name;
-        } else {
-            need_next_hit_map = true; } }
+        if (next.first[0] != '$') {
+            need_next_hit_map = true;
+            break; } }
     if (need_next_hit_map) {
         out << indent << "hit: [ ";
         const char *sep = "";
         for (auto act : Values(tbl->actions)) {
-            out << sep;
-            if (tbl->next.count(act->name)) {
-                auto seq = tbl->next.at(act->name);
-                if (seq->empty())
-                    default_next.next_in_thread(tbl);
-                else
-                    out << seq->front()->name;
-            } else {
-                out << next_default;
-            }
+            out << sep << next_for(tbl, act->name, default_next);
             sep = ", "; }
         out << " ]" << std::endl;
-        out << indent << "miss: " << next_miss << std::endl;
+        out << indent << "miss: " << next_for(tbl, "$miss", default_next)  << std::endl;
     } else {
+        auto next_hit = next_for(tbl, "$hit", default_next);
+        auto next_miss = next_for(tbl, "$miss", default_next);
         if (next_miss != next_hit) {
             out << indent << "hit: " << next_hit << std::endl;
             out << indent << "miss: " << next_miss << std::endl;
-        } else if (tbl->match_table) {
-            out << indent << "next: " << default_next.next_in_thread(tbl) << std::endl; } }
+        } else {
+            out << indent << "next: " << next_hit << std::endl; } }
 
     if (!have_indirect)
         emit_table_indir(out, indent, tbl);
