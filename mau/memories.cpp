@@ -45,10 +45,12 @@ bool Memories::allocActionRams(cstring name, int width, int depth, Use &alloc) {
     for (int row : Range(sram_use.rows()-1, 0)) {
         for (int side : Range(1, 0)) {
             Use::Row *current = nullptr;
+            if (action_data_bus[row][side]) continue;
+            action_data_bus[row][side] = name;
             for (int col : side ? right : left) {
                 if (sram_use[row][col]) continue;
                 if (!current) {
-                    alloc.row.emplace_back(row);
+                    alloc.row.emplace_back(row, side);
                     current = &alloc.row.back(); }
                 current->col.push_back(col);
                 sram_use[row][col] = name;
@@ -273,6 +275,7 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
         break;
     case ACTIONDATA:
         use = &mem.sram_use;
+        bus = &mem.action_data_bus;
         break;
     default:
         BUG("Unhandled memory use type %d in Memories::Use::visit", type); }

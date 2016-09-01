@@ -266,7 +266,9 @@ class GetTofinoTables : public Inspector {
                     name = "$hit";
                 else if (name == "miss")
                     name = "$miss";
-                else if (name != "default")
+                else if (name == "default")
+                    name = "$default";
+                else
                     error("%s: no action %s in table %s", a->srcInfo, name, tt->name); }
             tt->next[name] = getseq(act.second); } }
     bool preorder(const IR::MethodCallExpression *m) override {
@@ -295,7 +297,7 @@ class GetTofinoTables : public Inspector {
         for (auto c : s->cases) {
             cstring label;
             if (c->label->is<IR::DefaultExpression>())
-                label = "default";
+                label = "$default";
             else
                 label = refMap->getDeclaration(c->label->to<IR::PathExpression>()->path)
                               ->externalName();
@@ -309,9 +311,9 @@ class GetTofinoTables : public Inspector {
         return true; }
     void postorder(const IR::NamedCond *c) override {
         if (c->ifTrue)
-            tables.at(c)->next["true"] = getseq(c->ifTrue);
+            tables.at(c)->next["$true"] = getseq(c->ifTrue);
         if (c->ifFalse)
-            tables.at(c)->next["false"] = getseq(c->ifFalse); }
+            tables.at(c)->next["$false"] = getseq(c->ifFalse); }
     bool preorder(const IR::If *) override {
         BUG("unnamed condition in control flow"); }
     bool preorder(const IR::IfStatement *c) override {
@@ -323,7 +325,7 @@ class GetTofinoTables : public Inspector {
         return true; }
     void postorder(const IR::IfStatement *c) override {
         bool lnot;
-        cstring T = "true", F = "false";
+        cstring T = "$true", F = "$false";
         if (auto *mc = isApplyHit(c->condition, &lnot)) {
             tables[c] = tables.at(mc);
             T = lnot ? "$miss" : "$hit";
@@ -363,7 +365,7 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::V1Program *program) {
     egress->apply(GetTofinoTables(program, EGRESS, rv));
     if (auto in = rv->thread[INGRESS].parser = parser.parser(INGRESS))
         rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, in);
-    if (auto eg = rv->thread[EGRESS].parser = parser.parser(EGRESS))
+    if (auto eg = rv->thread[EGRESS].parser = parser.parser(EGRESS)->apply(RemoveSetMetadata()))
         rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, eg);
     AttachTables toAttach(program);
     for (auto &th : rv->thread)
@@ -381,7 +383,7 @@ class ConvertIndexToHeaderStackItemRef : public Transform {
 const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
     P4::ReferenceMap  refMap;
     P4::TypeMap       typeMap;
-    P4::EvaluatorPass evaluator(&refMap, &typeMap, true);
+    P4::EvaluatorPass evaluator(&refMap, &typeMap);
     program = program->apply(evaluator);
     auto toplevel = evaluator.getToplevelBlock();
     auto top = toplevel->getMain();
@@ -434,7 +436,8 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
     GetTofinoParser make_parser(parser);
     if (auto in = rv->thread[INGRESS].parser = make_parser.parser(INGRESS))
         rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, in);
-    if (auto eg = rv->thread[EGRESS].parser = make_parser.parser(EGRESS))
+    if (auto eg = rv->thread[EGRESS].parser
+                = make_parser.parser(EGRESS)->apply(RemoveSetMetadata()))
         rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, eg);
     // FIXME -- use the deparser rather than always inferring it from the parser
 

@@ -72,7 +72,7 @@ int main(int ac, char **av) {
         maupipe = extract_maupipe(program);
     } else {
         auto program = parseP4File(options);
-        program = FrontEnd().run(options, program);
+        program = P4::FrontEnd().run(options, program);
         if (!program)
             return 1;
         if (verbose) {

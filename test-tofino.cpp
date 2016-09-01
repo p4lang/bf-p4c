@@ -31,7 +31,7 @@
 #include "tofino/parde/split_big_states.h"
 #include "tofino/parde/split_header.h"
 #include "tofino/phv/asm_output.h"
-#include "tofino/phv/greedy_alloc.h"
+#include "tofino/phv/trivial_alloc.h"
 #include "tofino/phv/split_phv_use.h"
 #include "tofino/phv/create_thread_local_instances.h"
 #include "tofino/phv/phv_allocator.h"
@@ -96,7 +96,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     } else {
         phv_alloc = new PassManager({
             new MauPhvConstraints(phv),
-            new PHV::GreedyAlloc(phv, defuse.conflicts()) });
+            new PHV::TrivialAlloc(phv, defuse.conflicts()) });
     }
 
     PassManager backend = {
@@ -112,7 +112,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new CanonGatewayExpr,   // must be before TableLayout?  or just TablePlacement?
         new SplitComplexGateways(phv),
         new CheckGatewayExpr(phv),
-        new TableLayout,
+        new TableLayout(phv),
         new TableFindSeqDependencies,
         new FindDependencyGraph(&deps),
         verbose ? new VisitFunctor([&deps]() { std::cout << deps; }) : nullptr,
