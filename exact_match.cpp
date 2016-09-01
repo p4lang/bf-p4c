@@ -803,9 +803,11 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
     if (actions) {
         actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
         actions->add_immediate_mapping(stage_tbl);
+        actions->add_next_table_mapping(this, stage_tbl);
     } else if (action && action->actions) {
         action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-        action->actions->add_immediate_mapping(stage_tbl); }
+        action->actions->add_immediate_mapping(stage_tbl);
+        action->actions->add_next_table_mapping(this, stage_tbl); }
     if (idletime)
         idletime->gen_stage_tbl_cfg(stage_tbl);
     else if (options.match_compiler)

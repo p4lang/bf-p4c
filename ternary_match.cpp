@@ -440,9 +440,11 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         if (indirect->actions) {
             indirect->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
             indirect->actions->add_immediate_mapping(stage_tbl);
+            indirect->actions->add_next_table_mapping(indirect, stage_tbl);
         } else if (indirect->action && indirect->action->actions) {
             indirect->action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-            indirect->action->actions->add_immediate_mapping(stage_tbl); } }
+            indirect->action->actions->add_immediate_mapping(stage_tbl);
+            indirect->action->actions->add_next_table_mapping(indirect, stage_tbl); } }
     if (actions)
         actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
     else if (action && action->actions)

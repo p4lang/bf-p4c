@@ -242,6 +242,7 @@ public:
         void write_regs(Table *);
         void gen_tbl_cfg(json::vector &);
         void add_immediate_mapping(json::map &);
+        void add_next_table_mapping(Table *, json::map &);
     };
 public:
     const char *name() const { return name_.c_str(); }

@@ -460,7 +460,7 @@ bool Table::choose_logical_id(const slist<Table *> *work) {
             warning(tbl->lineno, "loop involves table %s", tbl->name()); }
         return false; }
     slist<Table *> local(this, work);
-    for (auto *p : pred) 
+    for (auto *p : pred)
         if (!p->choose_logical_id(&local))
             return false;
     int min_id = 0, max_id = LOGICAL_TABLES_PER_STAGE-1;
@@ -882,6 +882,22 @@ void Table::Actions::add_immediate_mapping(json::map &tbl) {
                 { "immediate_least_significant_bit", json::number(a.second.lo) },
                 { "immediate_most_significant_bit", json::number(a.second.hi) },
                 { "field_called", json::string(a.second.name) } } } ); } }
+}
+
+void Table::Actions::add_next_table_mapping(Table *table, json::map &tbl) {
+    /* FIXME -- this is mostly a hack, since the actions need not map 1-to-1 to the
+     * hit_next entries.  Need a way of speicfying next table in the actual action */
+    if (table->hit_next.size() <= 1) return;
+    unsigned hit_index = 0;
+    for (auto &act : *this) {
+        if (hit_index >= table->hit_next.size()) break;
+        auto next = table->hit_next[hit_index++];
+        json::map &map = tbl["action_to_next_table_mapping"][act.name];
+        map["next_table_address_to_use"] = hit_index;
+        map["action_name"] = act.name;
+        map["next_table_full_address"] = next ? next->table_id() : 0xff;
+        if (next)
+            map["next_table_name"] = next->name(); }
 }
 
 int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable) {
