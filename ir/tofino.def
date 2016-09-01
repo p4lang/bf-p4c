@@ -31,6 +31,7 @@ class Tofino::Pipe {
                  << json.indent << "\"deparser\" : " << deparser; }
     }
     thread_t[2] thread = {};  // INGRESS and EGRESS
+    Pipe() = default;
 #apply
     operator== { return standard_metadata == a.standard_metadata &&
                         thread[0] == a.thread[0] && thread[1] == a.thread[1]; }
