@@ -127,6 +127,7 @@ struct IXBar {
 
  private:
     bool find_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
+    bool find_ternary_alloc(IXBar::Use &alloc, bool second_try);
 };
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {

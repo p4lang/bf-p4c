@@ -22,6 +22,7 @@
 #include "tofino/mau/table_mutex.h"
 #include "tofino/mau/table_placement.h"
 #include "tofino/mau/table_seqdeps.h"
+#include "tofino/mau/table_statistics.h"
 #include "tofino/mau/table_summary.h"
 #include "tofino/parde/add_parde_metadata.h"
 #include "tofino/parde/asm_output.h"
@@ -80,6 +81,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     TableSummary summary;
     MauAsmOutput mauasm(phv);
     PassManager *phv_alloc;
+    TableStats tstats;
 
     if (options->phv_newalloc) {
         auto *newpa = new PhvAllocator(phv, defuse.conflicts(), std::ref(mutex));
@@ -112,6 +114,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new CanonGatewayExpr,   // must be before TableLayout?  or just TablePlacement?
         new SplitComplexGateways(phv),
         new CheckGatewayExpr(phv),
+        new TableStatistics(tstats),
         new TableLayout(phv),
         new TableFindSeqDependencies,
         new FindDependencyGraph(&deps),

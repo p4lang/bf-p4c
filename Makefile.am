@@ -60,6 +60,8 @@ tofino_backend_SOURCES = \
 	%reldir%/mau/table_placement.h \
 	%reldir%/mau/table_seqdeps.cpp \
 	%reldir%/mau/table_seqdeps.h \
+	%reldir%/mau/table_statistics.cpp \
+	%reldir%/mau/table_statistics.h \
 	%reldir%/mau/table_summary.cpp \
 	%reldir%/mau/table_summary.h \
 	%reldir%/midend.cpp \
