@@ -245,7 +245,7 @@ pushd p4c >/dev/null
     if $reuse_asis && [ -r build/Makefile ]; then
         echo "Reusing $PWD/build as is"
     else
-        if [ ! -d build?makefile ]; then
+        if [ ! -d build ]; then
             ./find-makefiles.sh
             autoreconf -i
             mkdir -p build
