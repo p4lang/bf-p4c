@@ -992,14 +992,11 @@ void MatchTable::write_regs(int type, Table *result) {
                 if (enable_action_data_enable || !dynamic_cast<HashActionTable *>(this))
                     /* HACK -- HashAction tables with no action data don't need this? */
                     shift_en.actiondata_adr_payload_shifter_en = 1; }
-            if (!dynamic_cast<HashActionTable *>(this)) {
-                /* FIXME -- hash action tables don't enable these.  Should figure out when they
-                 * are actually needed and just enable them then.  Only needed for indirect
-                 * that extract an overhead field from the match bus, and not for direct? */
-                if (!attached.stats.empty())
-                    shift_en.stats_adr_payload_shifter_en = 1;
-                if (!attached.meter.empty())
-                    shift_en.meter_adr_payload_shifter_en = 1; }
+            if (!get_attached()->stats.empty())
+                shift_en.stats_adr_payload_shifter_en = 1;
+            if (!get_attached()->meter.empty())
+                shift_en.meter_adr_payload_shifter_en = 1;
+
             result->write_merge_regs(type, bus); }
     } else {
         /* ternary match with no indirection table */
@@ -1070,10 +1067,10 @@ void MatchTable::write_regs(int type, Table *result) {
 
     if (input_xbar) input_xbar->write_regs();
 
-    if (options.match_compiler && dynamic_cast<HashActionTable *>(this))
-        return; // skip the rest
     if (gress == EGRESS)
         stage->regs.cfg_regs.mau_cfg_lt_thread |= 1U << logical_id;
+    if (options.match_compiler && dynamic_cast<HashActionTable *>(this))
+        return; // skip the rest
 
     if (table_counter)
         merge.mau_table_counter_ctl[logical_id/8U].set_subfield(

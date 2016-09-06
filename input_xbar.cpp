@@ -234,10 +234,12 @@ bool InputXbar::can_merge(HashGrp &a, HashGrp &b,
         return false;
     if ((a_cols & b.seed & ~a.seed) || (b_cols & a.seed & ~b.seed))
         return false;
-    a.tables |= b.tables;
-    b.tables |= a.tables;
-    a.seed |= b.seed;
-    b.seed |= a.seed;
+    if (a.tables && b.tables) {
+        a.tables |= b.tables;
+        b.tables |= a.tables; }
+    if (a.seed && b.seed) {
+        a.seed |= b.seed;
+        b.seed |= a.seed; }
     return true;
 }
 

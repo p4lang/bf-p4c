@@ -125,7 +125,8 @@ void HashActionTable::write_regs() {
     if (gateway) gateway->write_regs();
     for (auto &hd : hash_dist)
         hd.write_regs(this, 1, false);
-    if (options.match_compiler && !enable_action_data_enable) {
+    if (options.match_compiler && !enable_action_data_enable &&
+        (!gateway || gateway->empty_match())) {
         /* this seems unneeded? (won't actually be used...) */
         merge.next_table_format_data[logical_id].match_next_table_adr_default =
             merge.next_table_format_data[logical_id].match_next_table_adr_miss_value.value;

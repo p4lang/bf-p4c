@@ -30,7 +30,6 @@ test_config_147_subtract_primitive.p4 mismatch
 08-MacAddrCheck1.p4 compile
 08-MultiProtocolIfElse.p4 mismatch
 09-MacAddrCheck2.p4 mismatch
-10-AssignChooseSource.p4 mismatch
 12-Counters.p4 compile
 14-Counter.p4 tfas
 16-NoHeaders.p4 tfas

@@ -616,8 +616,9 @@ public:
     static GatewayTable *create(int lineno, const std::string &name, gress_t gress,
                                 Stage *stage, int lid, VECTOR(pair_t) &data)
         { return table_type_singleton.create(lineno, name.c_str(), gress, stage, lid, data); }
-   const GatewayTable *get_gateway() const { return this; }
-   SelectionTable *get_selector() const { return match_table ? match_table->get_selector() : 0; }
+    const GatewayTable *get_gateway() const { return this; }
+    SelectionTable *get_selector() const { return match_table ? match_table->get_selector() : 0; }
+    bool empty_match() const { return match.empty() && xor_match.empty(); }
 )
 
 DECLARE_TABLE_TYPE(SelectionTable, AttachedTable, "selection",

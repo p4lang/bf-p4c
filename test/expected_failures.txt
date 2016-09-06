@@ -1,5 +1,4 @@
 - current compiler failures on some tests.
-10-AssignChooseSource.p4 mismatch
 acl1.p4 mismatch
 counter5.p4 mismatch
 exact_match5.p4 tfas
