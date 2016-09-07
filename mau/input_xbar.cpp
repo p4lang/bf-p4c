@@ -78,27 +78,54 @@ bool IXBar::find_ternary_alloc(IXBar::Use &alloc, bool second_try) {
         mid_bytes_needed = big_groups_needed;
     }
 
+    struct ternary_grp_use {
+        int group;
+        bitvec found;
+        bitvec free;
+        void dbprint(std::ostream &out) const {
+            out << group << " found: " << found << " free: " << free;
+        };
+    };
     struct ternary_big_grp_use {
         int big_group;
-        bitvec first_found;
-        bitvec second_found;
-        bitvec first_free;
-        bitvec second_free;
+        ternary_grp_use first;
+        ternary_grp_use second;
         bool mid_byte_found;
         bool mid_byte_free;
         void dbprint(std::ostream &out) const {
-            out << big_group << " : found=" << first_found << " " << mid_byte_found << " " << second_found 
-                           << " : free= " << first_free  << " " << mid_byte_free  << " " << second_free; }
+            out << big_group << " : found=" << first.found << " " << mid_byte_found << " " << second.found 
+                           << " : free= " << first.free  << " " << mid_byte_free  << " " << second.free; }
+        int total_found() const { return first.found.popcount() + second.found.popcount() + mid_byte_found; }
+        int total_free() const { return first.free.popcount() + second.free.popcount() + mid_byte_free; }
+        int total_used() const { return total_found() + total_free(); }
+        int better_group() const {
+            int first_open = first.free.popcount() + first.found.popcount();
+            int second_open = second.free.popcount() + second.found.popcount();
+            if (first_open >= second_open)
+                 return first_open;
+            return second_open;
+        }
     };
 
     vector<ternary_big_grp_use> order(big_groups);
+    vector<ternary_grp_use *> small_order;
     for (int i = 0; i < big_groups; i++) { 
         order[i].big_group = i;
+        order[i].first.group = i*2;
+        order[i].second.group = 2*i+1;
         order[i].mid_byte_found = false;
         order[i].mid_byte_free = false;
     }
+
+    for (int i = 0; i < big_groups; i++) {
+        small_order.push_back(&order[i].first);
+        small_order.push_back(&order[i].second);
+    }
+
+
+    vector<IXBar::Use::Byte> unalloced = alloc.use;
     /* figure out how many needed bytes have already been allocated to each group the xbar */
-    for (auto &need : alloc.use) {
+    for (auto &need : unalloced) {
         for (auto &p : Values(fields.equal_range(need.field))) {
             
             if (p.byte == 5) {
@@ -110,36 +137,157 @@ bool IXBar::find_ternary_alloc(IXBar::Use &alloc, bool second_try) {
 
             if (use[p.group][p.byte].second == need.lo) {
                 if (p.group % 2) {
-                    order[p.group/2].first_found[&need - alloc.use.data()] = true;
+                    order[p.group/2].first.found[&need - alloc.use.data()] = true;
                 } else {
-                    order[p.group/2].second_found[&need - alloc.use.data()] = true;
+                    order[p.group/2].second.found[&need - alloc.use.data()] = true;
                 }
             }
         }
     }
+
+
     /* and how many (and which) bytes are still free in each group */
     for (int grp = 0; grp < big_groups; grp++) {
         for (int byte = 0; byte < bytes_per_big_group/2; byte++) {
 	    if (!use[2*grp][byte].first)
-                order[grp].first_free[byte] = true;
+                order[grp].first.free[byte] = true;
             if (!use[2*grp + 1][byte].first)
-                order[grp].second_free[byte] = true;
+                order[grp].second.free[byte] = true;
             if (!byte_group_use[grp].first)
                 order[grp].mid_byte_free = true; 
-       } 
+        } 
+    }
+  
+    LOG3("Ternary Check 1");
+  
+    for (int grp = 0; grp < big_groups; grp++)
+        LOG3("Big Group " << order[grp]);
+
+    for (int grp = 0; grp < groups; grp++)
+        LOG3("Small Group " << *(small_order[grp]));
+    
+   while (mid_bytes_needed > 1) {
+      
+       int reduced_bytes_needed = total_bytes_needed % bytes_per_big_group;
+       if (reduced_bytes_needed == 0)
+           reduced_bytes_needed += bytes_per_big_group;
+
+       std::sort(order.begin(), order.end(), [=](const ternary_big_grp_use &a, const ternary_big_grp_use &b) {
+           if (!second_try && (a.total_found() + a.total_free() < reduced_bytes_needed))
+               return false;
+           if (!second_try && (b.total_found() + b.total_free() < reduced_bytes_needed))
+               return true;
+
+           int t;
+           if (!second_try && (t = a.total_found() - b.total_found()) != 0) return t > 0;
+
+           if ((t = a.total_free() - b.total_free()) != 0) return t > 0;
+           return a.big_group < b.big_group; });   
+
+
+       int found_bytes = order[0].total_found();
+       int bytes_placed = 0;
+       /* Remove all bytes previously found */
+       for (size_t i = 0; i < unalloced.size(); i++)
+       {
+           auto &need = unalloced[i];
+           if (found_bytes == 0)
+               break;
+           for (auto &p : Values(fields.equal_range(need.field))) {
+               if (p.byte == 5) {
+                   if ((order[0].big_group == p.group/2) && (byte_group_use[p.group].second == need.lo)) {
+                       found_bytes--; bytes_placed++;
+                       unalloced.erase(unalloced.begin() + i);
+                       i--;
+                   }
+                   break;
+               }
+
+               if ((order[0].big_group == p.group/2) && (use[p.group][p.byte].second == need.lo)) {
+                   found_bytes--; bytes_placed++;
+                   unalloced.erase(unalloced.begin() + i);
+                   i--;
+               }
+           }
+       }
+
+       int free_bytes = order[0].total_free();
+       bitvec need_alloc;
+       for (size_t i = 0; i < unalloced.size(); i++) {
+           auto &need = unalloced[i];
+           int align = (order[0].big_group * 11) & 3;
+           for (auto byte : order[0].first.free) {
+               if (align_flags[(byte+align) & 3] & need.flags) continue;
+               need_alloc[i] = true;
+               need.loc.group = order[0].big_group * 2;
+               need.loc.byte = byte;
+               order[0].first.free[byte] = false;
+               free_bytes--;
+               break;
+           }
+
+           for (auto byte : order[0].second.free) {
+               if (align_flags[(byte+6+align) & 3] & need.flags) continue;
+               need_alloc[i] = true;
+               need.loc.group = order[0].big_group * 2;
+               need.loc.byte = byte;
+               order[0].second.free[byte] = false;
+               free_bytes--;
+               break;
+           }
+
+           if (order[0].mid_byte_free) {
+               if (align_flags[(5+align) & 3] & need.flags) continue;
+               need_alloc[i] = true;
+               need.loc.group = order[0].big_group * 2;
+               //FIXME  need to check this
+               need.loc.byte = 5;
+               order[0].mid_byte_free = false;
+               free_bytes--;
+               break;
+           }
+       }
+
+       int already_placed = 0;
+       for (int i : need_alloc) {
+           int j = i - already_placed;
+           fields.emplace(unalloced[j].field, alloc.use[j].loc);
+           use[unalloced[j].loc] = unalloced[j];
+           unalloced.erase(unalloced.begin() + j);
+           already_placed--; bytes_placed++;
+       }
+
+       total_bytes_needed -= bytes_placed;
+       /* Need some calculations for 88 bit multiples */
+       mid_bytes_needed = total_bytes_needed / bytes_per_big_group;
+
+
    }
+   
+
+   int bytes_needed = total_bytes_needed;
   
-   LOG3("Ternary Check 1");
+   std::sort(small_order.begin(), small_order.end(), [=](const ternary_grp_use *ap, const ternary_grp_use *bp) {
+      
+       if (ap->free.popcount() + ap->found.popcount() < bytes_needed) 
+           return false;
+       if (bp->free.popcount() + bp->found.popcount() < bytes_needed)
+           return true;
+       int t;
+       if (!second_try && (t = ap->found.popcount() - bp->found.popcount()) != 0)
+          return t > 0;
+      
+       int r = total_bytes_needed - ap->found.popcount();
+       int s = total_bytes_needed - bp->found.popcount();
+       
+       //Best fit in terms of free bits left
+       if ((t = (bp->free.popcount() - s) - (ap->free.popcount() - r)) != 0)
+           return t > 0;
+       
+       return (ap->group < bp->group); 
+   });
   
-   for (int grp = 0; grp < big_groups; grp++)
-       LOG3("Big Group " << order[grp]);
-
-
-
-
-   return true;    
-
-
+   return true;
 }
 
 
