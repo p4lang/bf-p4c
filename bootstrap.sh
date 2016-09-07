@@ -28,10 +28,10 @@ gitclone() {
 
 
 curdir=$(basename $PWD)
-topdir=$(dirname $PWD)
+topdir=$PWD
 
-if [ "$curdir" = "tofino" -a "$(basename $topdir)" = "extensions" ]; then
-    p4cdir=$(dirname $topdir)
+if [ "$curdir" = "tofino" -a "$(basename $(dirname $topdir))" = "extensions" ]; then
+    p4cdir=$(dirname $(dirname $topdir))
     if [ "$(basename $p4cdir)" = "p4c" ]; then
         topdir=$(dirname $p4cdir)
     else
