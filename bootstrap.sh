@@ -80,10 +80,12 @@ else
     fi
 fi
 
-apt_packages="g++ git pkg-config automake libtool python2.7 python cmake bison flex libboost-dev libboost-test-dev libboost-program-options-dev libboost-system-dev libboost-filesystem-dev libboost-thread-dev libcli-dev libedit-dev libeditline-dev libevent-dev libjudy-dev libgc-dev libgmp-dev libjson0 libjson0-dev libmoose-perl libnl-route-3-dev libpcap0.8-dev libssl-dev autopoint doxygen texinfo python-scapy python-yaml python-ipaddr python-thrift"
+apt_packages="g++ git pkg-config automake libtool python2.7 python cmake bison flex libboost-dev libboost-test-dev libboost-program-options-dev libboost-system-dev libboost-filesystem-dev libboost-thread-dev libcli-dev libedit-dev libeditline-dev libevent-dev libjudy-dev libgc-dev libgmp-dev libjson0 libjson0-dev libmoose-perl libnl-route-3-dev libpcap0.8-dev libssl-dev autopoint doxygen texinfo python-scapy python-yaml python-ipaddr python-pip"
 
 echo "Need sudo privs to install apt packages"
 sudo apt-get install $apt_packages
+sudo apt-get remove -y python-thrift    # remove this broken package in case it was installed
+sudo pip install thrift                 # need this one instead
 
 echo "Using $topdir as top level directory for git repositories"
 echo Using MAKEFLAGS=${MAKEFLAGS:=-j 4}
