@@ -101,7 +101,7 @@ pushd behavioral-model >/dev/null
     if $reuse_asis && [ -x "$(which simple_switch_CLI)" ]; then
         echo "Reusing installed $(which simple_switch_CLI) as is"
     else
-        if $clean_before_rebuild || [ ! -x "$(which simple_switch_CLI)" ]; then
+        if $clean_before_rebuild || [ ! -r Makefile ]; then
             ./install_deps.sh
             ./autogen.sh
             ./configure
@@ -109,7 +109,7 @@ pushd behavioral-model >/dev/null
                 make clean
             fi
         fi
-        make
+        make || die "BMV2 build failed"
         sudo make install
     fi
 popd >/dev/null
@@ -167,7 +167,7 @@ pushd model >/dev/null
         if $clean_before_rebuild; then
             make clean
         fi
-        make
+        make || die "harlyn model build failed"
     fi
 popd >/dev/null
 
@@ -187,7 +187,7 @@ pushd tofino-asm >/dev/null
         if $clean_before_rebuild; then
             make clean
         fi
-        make all
+        make all || die "assembler build failed"
     fi
 popd >/dev/null
 
