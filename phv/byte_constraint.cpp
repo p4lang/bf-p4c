@@ -5,6 +5,7 @@
 
 bool ByteConstraint::preorder(const IR::Primitive *prim) {
     if ("emit" == prim->name) {
+        // FIXME consecutive emits with the same POV bit should be considered one 'header'
         LOG2("Adding byte/deparser constraints for " << (*prim));
         const IR::Tofino::Deparser *deparser = findContext<IR::Tofino::Deparser>();
         CHECK(nullptr != deparser) << "; Cannot find context for " << (*prim);
@@ -21,11 +22,14 @@ bool ByteConstraint::preorder(const IR::Primitive *prim) {
         } else if (auto *pov = phv.field("$bridge-metadata")) {
             constraints_.SetDeparsedPOV(pov->bit(0), gress); }
     } else if ("extract" == prim->name) {
-        // FIXME: When extract primitive has been changed to
-        // extract(IR::HeaderSliceRef*) where the HeaderSliceRef object points to
-        // the whole header, uncomment the code below.
-        // auto bytes(GetBytes(prim->operands[0], nullptr));
-        // constraints_.SetEqualByte(bytes.begin(), bytes.end());
+        // FIXME consecutive extracts in a single state should be considered one 'header'
+        LOG2("Adding byte/parser constraints for " << (*prim));
+        const IR::Tofino::Parser *parser = findContext<IR::Tofino::Parser>();
+        CHECK(nullptr != parser) << "; Cannot find context for " << (*prim);
+        const gress_t gress = parser->gress;
+        auto bytes(GetBytes(prim->operands[0], nullptr));
+        constraints_.SetEqualByte(bytes.begin(), bytes.end());
+        constraints_.SetParsedHeader(bytes.begin(), bytes.end(), gress);
     } else if (prim->name == "set_metadata") {
         auto bytes(GetBytes(prim->operands[0], prim->operands[1]));
         constraints_.SetEqualByte(bytes.begin(), bytes.end()); }

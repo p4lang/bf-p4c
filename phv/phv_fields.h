@@ -8,7 +8,7 @@
 #include "tofino/ir/thread_visitor.h"
 
 namespace PHV {
-class GreedyAlloc;
+class TrivialAlloc;
 }  // end namespace PHV
 
 class PhvInfo : public Inspector {
@@ -98,7 +98,7 @@ class PhvInfo : public Inspector {
         decltype(**it) operator*() { return **it; }
         decltype(*it) operator->() { return *it; } };
     friend class PhvAllocator;
-    friend class PHV::GreedyAlloc;
+    friend class PHV::TrivialAlloc;
 
  public:
     const Field *field(int idx) const { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
@@ -126,5 +126,7 @@ class PhvInfo : public Inspector {
 };
 
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field::alloc_slice &);
+
+extern void repack_metadata(PhvInfo &phv);
 
 #endif /* _TOFINO_PHV_PHV_FIELDS_H_ */

@@ -53,6 +53,10 @@ struct TablePlacement::GroupPlace {
             for (auto o : work)
                 if (o->parent == parent) return;
             work.insert(parent); } }
+    static bool in_work(ordered_set<const GroupPlace*> &work, const IR::MAU::TableSeq *s) {
+        for (auto pl : work)
+            if (pl->seq == s) return true;
+        return false; }
 };
 
 struct TablePlacement::Placed {
@@ -184,6 +188,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     assert(!rv->placed[table_uids.at(rv->name)]);
 
     if (!try_alloc_ixbar(rv, done, phv, resources)) {
+retry_next_stage:
         rv->stage++;
         if (!try_alloc_ixbar(rv, done, phv, resources))
             BUG("Can't fit table %s in ixbar by itself", rv->name); }
@@ -204,8 +209,11 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 
     auto avail = StageUseEstimate::max();
     if (rv->stage == (done ? done->stage : 0)) {
-        if (!(min_use + current <= avail) || !try_alloc_mem(rv, done, min_entries, resources))
-            rv->stage++;
+        if (!(min_use + current <= avail) || !try_alloc_mem(rv, done, min_entries, resources)) {
+            LOG4("   can't fit min_entries(" << min_entries << ") in stage " << rv->stage <<
+                 ", advancing to next stage");
+            resources->clear();
+            goto retry_next_stage; }
         resources->memuse.clear(); }
     if (done && rv->stage == done->stage) {
         avail.srams -= current.srams;
@@ -265,6 +273,7 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const GroupPla
             bool found_match = false;
             for (auto n : Values(pl->gw->next)) {
                 if (!n || n->tables.size() == 0) continue;
+                if (GroupPlace::in_work(work, n)) continue;
                 if (n->tables.size() == 1 && n->tables.at(0) == pl->table) {
                     assert(!found_match && !match_grp);
                     found_match = true;
@@ -279,7 +288,7 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const GroupPla
             if (match_grp)
                 grp = match_grp; }
         for (auto n : Values(pl->table->next))
-            if (n && n->tables.size() > 0)
+            if (n && n->tables.size() > 0 && !GroupPlace::in_work(work, n))
                 new GroupPlace(work, grp, n);
     }
     return pl;
@@ -446,7 +455,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         bool have_default = false;
         for (auto &next : match->next) {
             assert(tbl->next.count(next.first) == 0);
-            if (next.first == "default")
+            if (next.first == "$default")
                 have_default = true;
             if (seq) {
                 auto *new_next = next.second->clone();
@@ -456,7 +465,11 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
             } else {
                 tbl->next[next.first] = next.second; } }
         if (!have_default && seq)
-            tbl->next["default"] = seq; }
+            tbl->next["$default"] = seq;
+        if (have_default || seq)
+            for (auto &gw : tbl->gateway_rows)
+                if (gw.second && !tbl->next.count(gw.second))
+                    tbl->next[gw.second] = new IR::MAU::TableSeq(); }
     if (table_placed.count(tbl->name) == 1) {
         table_set_resources(tbl, it->second->resources, it->second->entries);
         return tbl; }

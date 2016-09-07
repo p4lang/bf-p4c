@@ -22,6 +22,8 @@ tofino_backend_SOURCES = \
 	%reldir%/common/extract_maupipe.h \
 	%reldir%/common/field_defuse.cpp \
 	%reldir%/common/field_defuse.h \
+	%reldir%/common/remap_intrin.cpp \
+	%reldir%/common/remap_intrin.h \
 	%reldir%/common/param_binding.cpp \
 	%reldir%/common/param_binding.h \
 	%reldir%/common/phv.cpp \
@@ -91,8 +93,6 @@ tofino_backend_SOURCES = \
 	%reldir%/phv/container_constraint.cpp \
 	%reldir%/phv/container_constraint.h \
 	%reldir%/phv/create_thread_local_instances.h \
-	%reldir%/phv/greedy_alloc.cpp \
-	%reldir%/phv/greedy_alloc.h \
 	%reldir%/phv/match_xbar_constraint.cpp \
 	%reldir%/phv/match_xbar_constraint.h \
 	%reldir%/phv/mau_group_constraint.cpp \
@@ -116,12 +116,15 @@ tofino_backend_SOURCES = \
 	%reldir%/phv/phv_fields.cpp \
 	%reldir%/phv/phv_fields.h \
 	%reldir%/phv/phv.h \
+	%reldir%/phv/repack_metadata.cpp \
 	%reldir%/phv/source_container_constraint.cpp \
 	%reldir%/phv/source_container_constraint.h \
 	%reldir%/phv/split_phv_use.cpp \
 	%reldir%/phv/split_phv_use.h \
 	%reldir%/phv/thread_constraint.cpp \
 	%reldir%/phv/thread_constraint.h \
+	%reldir%/phv/trivial_alloc.cpp \
+	%reldir%/phv/trivial_alloc.h \
 	%reldir%/phv/t_phv_constraint.h \
 	%reldir%/test-tofino.cpp \
 	%reldir%/tofinoOptions.h
@@ -152,27 +155,29 @@ tofinotests.mk: $(wildcard \
    $(srcdir)/%reldir%/v1_2_test/*.p4 \
    $(srcdir)/%reldir%/v1_samples/*.p4 \
    $(srcdir)/%reldir%/v1_samples/switch_*/switch.p4)
-	@$(GENTESTS) $(srcdir) tofino $(srcdir)/%reldir%/runtest $^ >$@ || rm $@ && false
+	@$(GENTESTS) $(srcdir) tofino $(srcdir)/%reldir%/runtest $^ >$@ || ( rm $@ && false )
 
 #p4-16-tofinotests.mk: $(wildcard $(srcdir)/testdata/p4_16_samples/*.stf)
-#	@$(GENTESTS) $(srcdir) tofino $(srcdir)/%reldir%/runtest $(^:%.stf=%.p4) >$@ || rm $@ && false
+#	@$(GENTESTS) $(srcdir) tofino $(srcdir)/%reldir%/runtest $(^:%.stf=%.p4) >$@ || ( rm $@ && false )
 
 newpa-tofinotests.mk: $(wildcard \
    $(srcdir)/testdata/p4_14_samples/*.stf \
    $(srcdir)/%reldir%/v1_2_test/*.stf \
    $(srcdir)/%reldir%/v1_samples/*.stf)
-	@$(GENTESTS) $(srcdir) tofino-newpa $(srcdir)/%reldir%/runtest --newpa $(^:%.stf=%.p4) >$@ || rm $@ && false
+	@$(GENTESTS) $(srcdir) tofino-newpa $(srcdir)/%reldir%/runtest --newpa $(^:%.stf=%.p4) >$@ || ( rm $@ && false )
 
 # We have additional test inputs that are used to test the other (standard) back-ends
 # These test input programs depend on Tofino in some way.
 
 # Exercise v12test back-end on Tofino-specific programs
-tofino-p14_to_16_tests.mk: $(wildcard $(srcdir)/%reldir%/v1_samples/*.p4)
-	@$(GENTESTS) $(srcdir) p14_to_16 $(srcdir)/%reldir%/test-v12-sample.sh $^ >$@ || rm $@ && false
+tofino-p14_to_16_tests.mk: $(wildcard $(srcdir)/%reldir%/v1_samples/*.p4 \
+				      $(srcdir)/%reldir%/v1_samples/switch_*/switch.p4)
+	@$(GENTESTS) $(srcdir) p14_to_16 $(srcdir)/%reldir%/test-v12-sample.sh $^ >$@ || ( rm $@ && false )
 
 # Exercise bmv2 back-end on Tofino-specific programs
-tofino-bmv2tests.mk: $(wildcard $(srcdir)/%reldir%/v1_samples/*.p4)
-	@$(GENTESTS) $(srcdir) bmv2 $(srcdir)/%reldir%/test-bmv2.sh $^ >$@ || rm $@ && false
+tofino-bmv2tests.mk: $(wildcard $(srcdir)/%reldir%/v1_samples/*.p4 \
+				$(srcdir)/%reldir%/v1_samples/switch_*/switch.p4)
+	@$(GENTESTS) $(srcdir) bmv2 $(srcdir)/%reldir%/test-bmv2.sh $^ >$@ || ( rm $@ && false )
 
 CLEANFILES += \
 	tofinotests.mk \
@@ -194,10 +199,24 @@ XFAIL_TESTS += \
     tofino/%reldir%/v1_2_test/bfd_offload.p4.test \
     tofino/%reldir%/v1_2_test/bloom_filter.p4.test \
     tofino/%reldir%/v1_2_test/stateful_alu.p4.test \
+    bmv2/%reldir%/v1_samples/02-FlexCounterActionProfile.p4.test \
+    bmv2/%reldir%/v1_samples/action_profile.p4.test \
+    bmv2/%reldir%/v1_samples/switch_20160602/switch.p4.test \
+    bmv2/%reldir%/v1_samples/test_config_117_first_tcam_range.p4.test \
+    bmv2/%reldir%/v1_samples/test_config_118_tcam_range_2.p4.test \
+    bmv2/%reldir%/v1_samples/test_config_119_tcam_range_3.p4.test \
+    bmv2/%reldir%/v1_samples/test_config_120_tcam_range_4.p4.test \
+    bmv2/%reldir%/v1_samples/test_config_121_tcam_range_5.p4.test \
+    bmv2/%reldir%/v1_samples/test_config_122_tcam_range_6.p4.test \
     bmv2/%reldir%/v1_samples/test_config_125_meter_pre_color.p4.test \
     bmv2/%reldir%/v1_samples/test_config_126_meter_pre_color_2.p4.test \
     bmv2/%reldir%/v1_samples/test_config_127_meter_pre_color_3.p4.test \
     bmv2/%reldir%/v1_samples/test_config_132_meter_pre_color_4.p4.test \
+    bmv2/%reldir%/v1_samples/test_config_135_tcam_range_7.p4.test \
+    bmv2/%reldir%/v1_samples/test_config_136_tcam_error_detection.p4.test \
+    bmv2/%reldir%/v1_samples/test_config_137_tcam_error_detection_2.p4.test \
+    bmv2/%reldir%/v1_samples/test_config_138_tcam_error_detection_3.p4.test \
+    bmv2/%reldir%/v1_samples/test_config_139_tcam_error_detection_4.p4.test \
     bmv2/%reldir%/v1_samples/test_config_144_recirculate.p4.test \
     bmv2/%reldir%/v1_samples/test_config_152_stateful_simple_cntr.p4.test \
     bmv2/%reldir%/v1_samples/test_config_153_stateful_simple_cntr_with_output.p4.test \
@@ -217,27 +236,14 @@ XFAIL_TESTS += \
     bmv2/%reldir%/v1_samples/test_config_171_stateful_conga.p4.test \
     bmv2/%reldir%/v1_samples/test_config_172_stateful_heavy_hitter.p4.test \
     bmv2/%reldir%/v1_samples/test_config_173_stateful_bloom_filter.p4.test \
-    bmv2/%reldir%/v1_samples/02-FlexCounterActionProfile.p4.test \
-    bmv2/%reldir%/v1_samples/action_profile.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_118_tcam_range_2.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_119_tcam_range_3.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_120_tcam_range_4.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_121_tcam_range_5.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_122_tcam_range_6.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_135_tcam_range_7.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_136_tcam_error_detection.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_137_tcam_error_detection_2.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_138_tcam_error_detection_3.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_139_tcam_error_detection_4.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_117_first_tcam_range.p4.test \
     bmv2/%reldir%/v1_samples/vk_basic_ipv4_20150706.p4.test \
     p14_to_16/%reldir%/v1_samples/02-FlexCounterActionProfile.p4.test \
-    p14_to_16/%reldir%/v1_samples/dileep.p4.test \
+    p14_to_16/%reldir%/v1_samples/dileep12.p4.test \
     p14_to_16/%reldir%/v1_samples/dileep2.p4.test \
     p14_to_16/%reldir%/v1_samples/dileep4.p4.test \
     p14_to_16/%reldir%/v1_samples/dileep8.p4.test \
-    p14_to_16/%reldir%/v1_samples/dileep12.p4.test \
-    p14_to_16/%reldir%/v1_samples/test_config_101_switch_msdc.p4.test \
+    p14_to_16/%reldir%/v1_samples/dileep.p4.test \
+    p14_to_16/%reldir%/v1_samples/switch_20160602/switch.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_125_meter_pre_color.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_126_meter_pre_color_2.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_127_meter_pre_color_3.p4.test \
@@ -245,16 +251,16 @@ XFAIL_TESTS += \
     p14_to_16/%reldir%/v1_samples/test_config_144_recirculate.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_152_stateful_simple_cntr.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_153_stateful_simple_cntr_with_output.p4.test \
-    p14_to_16/%reldir%/v1_samples/test_config_155_stateful_3_alus.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_154_stateful_sampling.p4.test \
-    p14_to_16/%reldir%/v1_samples/test_config_159_stateful_using_phv_field.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_155_stateful_3_alus.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_156_indirect_stateful_cntr.p4.test \
-    p14_to_16/%reldir%/v1_samples/test_config_163_stateful_table_math_unit.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_159_stateful_using_phv_field.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_160_stateful_single_bit_mode.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_163_stateful_table_math_unit.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_164_stateful_deterministic_sampling.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_165_stateful_bfd_failure_detection.p4.test \
-    p14_to_16/%reldir%/v1_samples/test_config_167_stateful_flowlet_switching.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_166_stateful_generic_counter.p4.test \
+    p14_to_16/%reldir%/v1_samples/test_config_167_stateful_flowlet_switching.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_169_stateful_sflow_sequence.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_170_stateful_selection_table_update.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_171_stateful_conga.p4.test \
@@ -274,13 +280,7 @@ XFAIL_TESTS += \
 # These currently fail ixbar allocation (table too wide)
 XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/02-FullPHV1.p4.test \
-    tofino/testdata/p4_14_samples/03-FullPHV2.p4.test \
-    tofino/%reldir%/v1_samples/test_config_159_stateful_using_phv_field.p4.test
+    tofino/testdata/p4_14_samples/03-FullPHV2.p4.test
 
-# Fails with "can't find a table to place?"
-XFAIL_TESTS += \
-    tofino/testdata/p4_14_samples/07-MultiProtocol.p4.test
-
-# newpa fails to lay out bridged data properly
-XFAIL_TESTS += \
-    tofino-newpa/testdata/p4_14_samples/bridge1.p4.test
+# Generates broken PHV alloc (regs used by both ingress & egress)
+XFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/basic_routing.p4.test

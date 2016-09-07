@@ -78,7 +78,7 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
         else if (auto *k = prim->operands[1]->to<IR::Constant>())
             return new IR::MAU::Instruction(prim->srcInfo, "add", dest, dest, (-*k).clone());
         else
-            return new IR::MAU::Instruction(prim->srcInfo, "sub", dest, dest, prim->operands[1]); 
+            return new IR::MAU::Instruction(prim->srcInfo, "sub", dest, dest, prim->operands[1]);
     }
     return prim;
 }

@@ -13,13 +13,13 @@ IR::InstanceRef::InstanceRef(cstring prefix, IR::ID name, const IR::Type *t, boo
             obj = new IR::Header(iname, hdr);
     } else if (auto *meta = t->to<IR::Type_Struct>()) {
         obj = new IR::Metadata(iname, meta);
-        for (auto field : *meta->fields)
-            if (field->type->is<IR::Type_StructLike>() || field->type->is<IR::Type_Stack>())
-                nested.add(field->name, new InstanceRef(iname, field->name, field->type, forceMeta));
+        for (auto f : *meta->fields)
+            if (f->type->is<IR::Type_StructLike>() || f->type->is<IR::Type_Stack>())
+                nested.add(f->name, new InstanceRef(iname, f->name, f->type, forceMeta));
     } else if (auto *stk = t->to<IR::Type_Stack>()) {
         if (forceMeta)
             BUG("metadata arrays not handled in InstanceRef::InstanceRef");
-        obj = new IR::HeaderStack(iname, stk->baseType->to<IR::Type_Header>(), stk->getSize());
+        obj = new IR::HeaderStack(iname, stk->elementType->to<IR::Type_Header>(), stk->getSize());
     } else {
         BUG("Unhandled InstanceRef type %1%", t); }
 }

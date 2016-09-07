@@ -17,7 +17,7 @@ class ElimUnused::ParserMetadata : public Transform {
             return nullptr; }
         return i; }
  public:
-    ParserMetadata(ElimUnused &self) : self(self) {}
+    explicit ParserMetadata(ElimUnused &self) : self(self) {}
 };
 
 class ElimUnused::FindHeaderUse : public Inspector, ThreadVisitor {

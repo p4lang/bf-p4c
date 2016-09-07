@@ -247,7 +247,8 @@ header ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb;
 header_type egress_intrinsic_metadata_t {
     fields {
 
-        egress_port : 16;               // egress port id. 
+        _pad0 : 7;
+        egress_port : 9;                // egress port id. 
                                         // this field is passed to the deparser
 
         _pad1: 5;

@@ -1,3 +1,5 @@
+#include "or_tools/min_value_solver.h"
+#include "or_tools/random_value_solver.h"
 #include "phv_allocator.h"
 #include "byte_constraint.h"
 #include "constraints.h"
@@ -6,8 +8,6 @@
 #include "match_xbar_constraint.h"
 #include "mau_group_constraint.h"
 #include "offset_constraint.h"
-#include "or_tools/min_value_solver.h"
-#include "or_tools/random_value_solver.h"
 #include "parse_graph_constraint.h"
 #include "phv_fields.h"
 #include "source_container_constraint.h"
@@ -90,8 +90,8 @@ bool PhvAllocator::Solve(StringRef opt) {
     if (phv.alloc_done()) return true;
     or_tools::Solver solver;
     auto strategy = operations_research::Solver::ASSIGN_MIN_VALUE;
-    bool luby_restart = false;
-    int timeout = 5;
+    bool luby_restart = false, firstnum=true;
+    int timeout = 5, maxcount = 10;
     for (auto p : opt.split(',')) {
         p = p.trim();
         if (p == "min" || p == "default") {
@@ -103,12 +103,16 @@ bool PhvAllocator::Solve(StringRef opt) {
             strategy = operations_research::Solver::ASSIGN_RANDOM_VALUE;
             luby_restart = true;
         } else if (isdigit(*p)) {
-            timeout = atoi(p.p);
+            if (firstnum) {
+                timeout = atoi(p.p);
+                firstnum = false;
+            } else {
+                maxcount = atoi(p.p); }
         } else {
             error("Unknown solver option %s", p); } }
     constraints_.SetConstraints(solver);
     int count = 0;
-    while (count < 20) {
+    while (count < maxcount) {
         if (true == solver.Solve1(strategy, luby_restart, timeout)) {
             PopulatePhvInfo(solver, &phv);
             for (auto &field : phv)
@@ -116,6 +120,7 @@ bool PhvAllocator::Solve(StringRef opt) {
                           [](const PhvInfo::Field::alloc_slice &a,
                              const PhvInfo::Field::alloc_slice &b) -> bool {
                     return a.field_bit > b.field_bit; });
+            repack_metadata(phv);
             phv.alloc_done_ = true;
             return true;
         } else {

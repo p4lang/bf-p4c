@@ -88,14 +88,85 @@ class MauAsmOutput::ImmedFormat {
             sep = ", "; } }
 };
 
+class MauAsmOutput::ActionDataFormat : public Inspector {
+    const MauAsmOutput          &self;
+    const IR::MAU::Table        *tbl;
+    const IR::ActionFunction    *act;
+    bitvec inuse;
+    std::multimap<int, std::pair<int, cstring>> placed_args;
+    std::map<const IR::ActionArg *, std::pair<int, int>> arg_use;
+
+    bool preorder(const IR::ActionArg *a) override {
+        if (auto *inst = findContext<IR::MAU::Instruction>()) {
+            PhvInfo::Field::bitrange bits;
+            if (auto f = self.phv.field(inst->operands[0], &bits)) {
+                auto &alloc = f->for_bit(bits.lo);
+                int sz = alloc.container.size() / 8U;
+                if (arg_use[a].first < sz)
+                    arg_use[a].first = sz;
+                if (auto sl = getParent<IR::Slice>()) {
+                    /* FIXME -- deal with mulitple slices with conflicting uses */
+                    if (int align = (sl->getL() / 8U) % sz)
+                        arg_use[a].second = align; } } }
+        return false; }
+    int find_slot(int sz, int align, int align_off) {
+        int bit = 0;
+        while (1) {
+            bit = inuse.ffz(bit);
+            while ((bit & (align-1)) != align_off) ++bit;
+            int space = inuse.ffs(bit);
+            if (space < 0 || space - bit >= sz)
+                return bit;
+            bit = space; } }
+
+ public:
+    ActionDataFormat(const MauAsmOutput &s, const IR::MAU::Table *t, const IR::ActionFunction *a)
+    : self(s), tbl(t), act(a) {
+        visitDagOnce = false;
+        LOG3("laying out action data for " << tbl->name << ":" << act->name);
+        a->apply(*this);
+        for (auto arg : act->args) {
+            int size = (arg->type->width_bits() + 7) / 8U;  // in bytes
+            int align = size > 2 ? 4 : size > 1 ? 2 : 1;
+            int align_off = size & (align-1);
+            if (arg_use.count(arg)) {
+                align = arg_use[arg].first;
+                align_off = arg_use[arg].second; }
+            int at = find_slot(size, align, align_off);
+            LOG4(arg->name << " " << size << " bytes at offset " << at <<
+                 " (align=" << align << ")");
+            if (size > 0)
+                inuse.setrange(at, size);
+            placed_args.emplace(at, std::make_pair(size, arg->name)); } }
+    void print(std::ostream &out) const {
+        const char *sep = " ";
+        int byte = 0;
+        out << "format " << act->name << ": {";
+        for (auto &arg : placed_args) {
+            int end =  arg.first + arg.second.first;
+            if (end > tbl->layout.action_data_bytes_in_overhead) {
+                if (byte < tbl->layout.action_data_bytes_in_overhead)
+                    byte = tbl->layout.action_data_bytes_in_overhead;
+                out << sep << arg.second.second << ": ";
+                if (byte == arg.first || arg.second.first == 0)
+                    out << arg.second.first*8;
+                else
+                    out << arg.first*8 << ".." << end*8-1; }
+            byte = end;
+            sep = ", "; }
+        out << (sep+1) << " }"; }
+};
+
 void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
         const IXBar::Use &use, const Memories::Use *mem, const TableFormat *fmt) const {
     map<int, map<int, Slice>> sort;
     for (auto &b : use.use) {
         auto n = sort[b.loc.group].emplace(b.loc.byte*8,
-            Slice(phv, b.field, b.byte*8, b.byte*8 + 7));
+            Slice(phv, b.field, b.lo, b.hi));
         assert(n.second);
         if (n.first->second.width() != 8)
+            /* FIXME -- we want this for ixbar layout (must be full bytes) but we DON'T want
+             * this for hash function generation. */
             n.first->second = n.first->second.fullbyte(); }
     for (auto &group : sort) {
         auto it = group.second.begin();
@@ -258,13 +329,18 @@ class MauAsmOutput::EmitAction : public Inspector {
     void postorder(const IR::MAU::Instruction *) override {
         sep = nullptr;
         out << std::endl; }
-    bool preorder(const IR::Cast *) override { return true; }
+    bool preorder(const IR::Cast *c) override { visit(c->expr); return false; }
     bool preorder(const IR::Expression *exp) override {
         if (sep) {
             PhvInfo::Field::bitrange bits;
             if (auto f = self.phv.field(exp, &bits)) {
+                auto &alloc = f->for_bit(bits.lo);
                 out << sep << canon_name(f->name);
-                if (bits.lo || bits.size() != f->size)
+                if (alloc.field_bit > 0 || alloc.width != f->size) {
+                    out << '.' << alloc.field_bit << '-' << alloc.field_hi();
+                    bits.lo -= alloc.field_bit;
+                    bits.hi -= alloc.field_bit; }
+                if (bits.lo || bits.size() != alloc.width)
                     out << '(' << bits.lo << ".." << bits.hi << ')';
             } else {
                 out << sep << "/* " << *exp << " */"; }
@@ -277,8 +353,8 @@ class MauAsmOutput::EmitAction : public Inspector {
             out << sep << *sl->e0 << '(' << *sl->e2 << ".." << *sl->e1 << ')';
             sep = ", ";
             return false; }
-        return preorder(static_cast<const IR::Expression *>(sl));
-    }
+        return preorder(static_cast<const IR::Expression *>(sl)); }
+    bool preorder(const IR::Node *n) override { BUG("Unexpected node %s in EmitAction", n); }
 
  public:
     EmitAction(const MauAsmOutput &s, std::ostream &o, const IR::MAU::Table *tbl, indent_t i)
@@ -347,6 +423,9 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
                     while (used.getslice(bit, field.width())) {
                         bit = used.ffz(used.ffs(bit));
                         bit += (field.bytealign() - bit) & 7; }
+                    if (bit + field.width() > width*128)
+                        BUG("match group packing overflow for table %s (groups=%d, width=%d)",
+                            tbl->name, groups, width);
                     if (format[i].match.empty() || format[i].match.back().second != bit - 1)
                         format[i].match.emplace_back(bit, bit + field.width() - 1);
                     else
@@ -388,6 +467,16 @@ void MauAsmOutput::TableFormat::print(std::ostream &out) const {
         fmt.emit(out, "match", i, group.match);
         ++i; }
     out << (fmt.sep + 1) << "}";
+}
+
+static cstring next_for(const IR::MAU::Table *tbl, cstring what, const DefaultNext &def) {
+    if (tbl->next.count(what)) { 
+        if (!tbl->next[what]->empty())
+            return tbl->next[what]->front()->name;
+    } else if (tbl->next.count("$default")) { 
+        if (!tbl->next["$default"]->empty())
+            return tbl->next["$default"]->front()->name; }
+    return def.next_in_thread(tbl);
 }
 
 void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) const {
@@ -462,18 +551,17 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
                     out << match << ": ";
                 } else {
                     out << "miss: "; }
-                if (line.second) {
-                    if (tbl->next.count(line.second) && !tbl->next[line.second]->empty())
-                        out << tbl->next[line.second]->front()->name;
-                    else
-                        out << default_next.next_in_thread(tbl);
-                } else {
-                    out << "run_table"; }
+                if (line.second)
+                    out << next_for(tbl, line.second, default_next);
+                else
+                    out << "run_table";
                 out << std::endl; }
             if (tbl->gateway_rows.back().first)
                 out << gw_indent << "miss: run_table" << std::endl;
         } else {
-            WARNING("Failed to fit gateway expression for " << tbl->name); } }
+            WARNING("Failed to fit gateway expression for " << tbl->name); }
+        if (!tbl->match_table)
+            return; }
 
     /* FIXME -- this is a mess and needs to be rewritten to be sane */
     bool have_action = false, have_indirect = false;
@@ -490,46 +578,27 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
     assert(have_action || (tbl->layout.action_data_bytes <=
                            tbl->layout.action_data_bytes_in_overhead));
 
-    cstring     next_hit, next_miss, next_default;
     bool        need_next_hit_map = false;
-    next_hit = next_miss = next_default = default_next.next_in_thread(tbl);
     for (auto &next : tbl->next) {
-        if (next.first == "true" || next.first == "false") {
-            continue;  // for the gateway
-        } else if (next.first == "$miss") {
-            if (!next.second->empty())
-                next_miss = next.second->front()->name;
-        } else if (next.first == "$hit") {
-            if (!next.second->empty())
-                next_hit = next.second->front()->name;
-        } else if (next.first == "default") {
-            if (!next.second->empty())
-                next_default = next.second->front()->name;
-        } else {
-            need_next_hit_map = true; } }
+        if (next.first[0] != '$') {
+            need_next_hit_map = true;
+            break; } }
     if (need_next_hit_map) {
         out << indent << "hit: [ ";
         const char *sep = "";
         for (auto act : Values(tbl->actions)) {
-            out << sep;
-            if (tbl->next.count(act->name)) {
-                auto seq = tbl->next.at(act->name);
-                if (seq->empty())
-                    default_next.next_in_thread(tbl);
-                else
-                    out << seq->front()->name;
-            } else {
-                out << next_default;
-            }
+            out << sep << next_for(tbl, act->name, default_next);
             sep = ", "; }
         out << " ]" << std::endl;
-        out << indent << "miss: " << next_miss << std::endl;
+        out << indent << "miss: " << next_for(tbl, "$miss", default_next)  << std::endl;
     } else {
+        auto next_hit = next_for(tbl, "$hit", default_next);
+        auto next_miss = next_for(tbl, "$miss", default_next);
         if (next_miss != next_hit) {
             out << indent << "hit: " << next_hit << std::endl;
             out << indent << "miss: " << next_miss << std::endl;
-        } else if (tbl->match_table) {
-            out << indent << "next: " << default_next.next_in_thread(tbl) << std::endl; } }
+        } else {
+            out << indent << "next: " << next_hit << std::endl; } }
 
     if (!have_indirect)
         emit_table_indir(out, indent, tbl);
@@ -564,23 +633,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         out << std::endl; }
 }
 
-void emit_fmt_nonimmed(std::ostream &out, const IR::MAU::Table *tbl, const IR::ActionFunction *act,
-                       const char *sep) {
-    vector<std::pair<int, cstring>> sorted_args;
-    for (auto arg : act->args) {
-        int size = (arg->type->width_bits() + 7) / 8U;  // in bytes
-        sorted_args.emplace_back(size, arg->name); }
-    std::stable_sort(sorted_args.begin(), sorted_args.end(),
-        [](const std::pair<int, cstring> &a, const std::pair<int, cstring> &b)->bool {
-            return a.first > b.first; });
-    int byte = 0;
-    for (auto &arg : sorted_args) {
-        if (byte + arg.first <= tbl->layout.action_data_bytes_in_overhead) {
-            byte += arg.first;
-            continue; }
-        out << sep << arg.second << ": " << arg.first*8;
-        sep = ", "; }
-}
+
 
 bool MauAsmOutput::EmitAttached::preorder(const IR::Stateful *) {
     return false; }
@@ -607,9 +660,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
     self.emit_memory(out, indent, tbl->resources->memuse.at(ad->name));
     for (auto act : Values(tbl->actions)) {
         if (act->args.empty()) continue;
-        out << indent << "format " << act->name << ": {";
-        emit_fmt_nonimmed(out, tbl, act, " ");
-        out << " }" << std::endl; }
+        out << indent << ActionDataFormat(self, tbl, act) << std::endl; }
     if (!tbl->actions.empty()) {
         out << indent++ << "actions:" << std::endl;
         for (auto act : Values(tbl->actions))

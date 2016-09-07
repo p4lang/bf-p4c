@@ -41,4 +41,9 @@ class GetTofinoParser : public Inspector {
     cstring ingress_entry();
 };
 
+class RemoveSetMetadata : public Transform {
+    IR::Primitive *preorder(IR::Primitive *prim) override {
+        return prim->name == "set_metadata" ? nullptr : prim; }
+};
+
 #endif /* _TOFINO_PARDE_EXTRACT_PARSER_H_ */

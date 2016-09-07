@@ -65,6 +65,8 @@ fi
 
 P4C=./p4c-tofino
 
+testdir=tofino
+
 while [ $# -gt 1 ]; do
     case $1 in
     -h|-help|--help)
@@ -98,6 +100,10 @@ while [ $# -gt 1 ]; do
         fi
         verbose=true
         ;;
+    --newpa)
+        testdir=tofino-newpa
+        P4C_ARGS="$P4C_ARGS $1"
+        ;;
     *) P4C_ARGS="$P4C_ARGS $1"
         ;;
     esac
@@ -113,7 +119,7 @@ if [ "${file#$srcdir/}" = "$file" -a "$srcdir" != "." ]; then
     die "$file is not under $srcdir"
 fi
 
-testdir=tofino/$(dirname ${file#$srcdir/})
+testdir=$testdir/$(dirname ${file#$srcdir/})
 name=$(basename $file .p4)
 
 P4C_ARGS="$P4C_ARGS -D__TARGET_TOFINO__"

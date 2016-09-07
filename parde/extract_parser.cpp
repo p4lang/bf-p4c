@@ -150,7 +150,7 @@ const IR::Expression *GetTofinoParser::RewriteExtractNext::preorder(IR::Member *
         if (prim->name == "extract")
             adjust[hdrname]++;
     return new IR::HeaderStackItemRef(m->srcInfo,
-        m->expr->type->to<IR::Type_Stack>()->baseType->to<IR::Type_Header>(),
+        m->expr->type->to<IR::Type_Stack>()->elementType->to<IR::Type_Header>(),
         m->expr, new IR::Constant(index));
 }
 

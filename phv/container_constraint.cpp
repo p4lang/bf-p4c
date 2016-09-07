@@ -22,6 +22,17 @@ bool ContainerConstraint::preorder(const IR::Primitive *prim) {
 }
 
 bool ContainerConstraint::preorder(const IR::MAU::Instruction *inst) {
+    if (inst->name == "set" ||
+        inst->name == "and" || inst->name == "or" || inst->name == "xor" ||
+        inst->name == "nand" || inst->name == "nor" || inst->name == "xnor" ||
+        inst->name == "andca" || inst->name == "andcb" ||
+        inst->name == "orca" || inst->name == "orcb" ||
+        inst->name == "alu_a" || inst->name == "alu_b" ||
+        inst->name == "nota" || inst->name == "notb" ||
+        inst->name == "setz" || inst->name == "sethi") {
+        // these instructions can all be split into multiple parallel instructions
+        return false; }
+
     // FIXME: We still do not handle the case where an operands can be split
     // across to adjacent PHVs.
     LOG2("Setting constraint for " << (*inst));

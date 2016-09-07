@@ -138,10 +138,14 @@ blackbox_type stateful_alu {
 
     attribute output_value {
         /* Output result expression.
-           Allowed references are 'alu_lo', 'alu_hi', 'predicate', and 'combined_predicate'.
+           Allowed references are 'alu_lo', 'alu_hi', 'register_lo', 'register_hi',
+           'predicate', and 'combined_predicate'.
+           In the case of 'register_lo' and 'register_hi', these are the values
+           fetched from memory on this access, not the value to be written back
+           computed by the ALU(s).
          */
         type: expression;
-        expression_local_variables {alu_lo, alu_hi, predicate, combined_predicate}
+        expression_local_variables {alu_lo, alu_hi, register_lo, register_hi, predicate, combined_predicate}
         optional;
     }
 
@@ -198,6 +202,33 @@ blackbox_type stateful_alu {
         optional;
     }
 
+    attribute reduction_or_group {
+        /* Specifies that the output value to be written belongs to a group of stateful ALU
+           outputs that are all OR'd together.  Using a reduction OR group breaks what
+           would normally be considered a dependency.
+           A typical use case is to perform a membership check in, e.g., a Bloom filter.
+           For example, n unique hash functions may be used to check for membership in
+           n unique registers.  If any of the hashed locations are active,
+           the member is active.
+         */
+        type: string;
+        optional;
+    }
+
+    attribute stateful_logging_mode {
+        /*  Specify that stateful logging should be performed.
+            Stateful logging writes a result to consecutive addresses in a register based on the mode
+            of logging being performed.
+            Allowed values are:
+               table_hit - performing logging if the match table hits and is predicated on.
+               table_miss - performing logging if the match table misses and is predicated on.
+               gateway_inhibit - performing logging if the gateway table inhibits a match table and is predicated on.
+               address - any time the table is predicated on.
+         */
+        type: string;
+        optional;
+    }
+
     /*
     Executes this stateful alu instance.
 
@@ -212,7 +243,7 @@ blackbox_type stateful_alu {
     - index: The offset into the stateful register to access.
       May be a constant or an address provided by the run time.
     */
-    method execute_stateful_alu(optional in bit<7> index){
+    method execute_stateful_alu(optional in bit<32> index){
         reads {condition_hi, condition_lo,
                update_lo_1_predicate, update_lo_1_value,
                update_lo_2_predicate, update_lo_2_value,
@@ -220,6 +251,25 @@ blackbox_type stateful_alu {
                update_hi_2_predicate, update_hi_2_value,
                math_unit_input}
         writes {output_dst}
+    }
+
+    method execute_stateful_alu_from_hash(in field_list_calculation hash_field_list){
+        reads {condition_hi, condition_lo,
+               update_lo_1_predicate, update_lo_1_value,
+               update_lo_2_predicate, update_lo_2_value,
+               update_hi_1_predicate, update_hi_1_value,
+               update_hi_2_predicate, update_hi_2_value,
+               math_unit_input}
+        writes {output_dst}
+    }
+
+    method execute_stateful_log(){
+        reads {condition_hi, condition_lo,
+               update_lo_1_predicate, update_lo_1_value,
+               update_lo_2_predicate, update_lo_2_value,
+               update_hi_1_predicate, update_hi_1_value,
+               update_hi_2_predicate, update_hi_2_value,
+               math_unit_input}
     }
 }
 

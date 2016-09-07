@@ -1,12 +1,13 @@
-#include "/home/cdodd/p4c/p4include/core.p4"
-#include "/home/cdodd/p4c/p4include/v1model.p4"
+#include <core.p4>
+#include <v1model.p4>
 
 struct ingress_metadata_t {
     bit<1> drop;
 }
 
 header egress_intrinsic_metadata_t {
-    bit<16> egress_port;
+    bit<7>  _pad0;
+    bit<9>  egress_port;
     bit<5>  _pad1;
     bit<19> enq_qdepth;
     bit<6>  _pad2;

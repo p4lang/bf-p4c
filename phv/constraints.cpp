@@ -49,8 +49,8 @@ void Constraints::SetEqualByte(const PHV::Byte &byte) {
 }
 
 bool Constraints::IsDeparsed(const PHV::Byte &byte) const {
-    for (auto hdrs : deparsed_headers_) {
-        for (auto hdr : hdrs) {
+    for (const auto &hdrs : deparsed_headers_) {
+        for (const auto &hdr : hdrs) {
             if (hdr.end() != std::find(hdr.begin(), hdr.end(), byte))
                 return true; } }
     return false;
@@ -101,6 +101,7 @@ inline void Constraints::SetMatchBits(const std::set<PHV::Bit> &bits,
 }
 
 bool Constraints::IsContiguous(const PHV::Bits &pbits) const {
+    if (pbits.size() == 1) return true;  // single bits always 'contiguous' with themselves
     for (auto &c : contiguous_bits_) {
         if (std::search(c.cbegin(), c.cend(), pbits.cbegin(), pbits.cend()) != c.cend()) {
             return true; } }
@@ -313,7 +314,7 @@ void Constraints::SetConstraints(SolverInterface &solver) {
                    eq_offsets.prev_bits);
     LOG1("Setting deparser constraints");
     for (size_t i = 0; i < deparsed_headers_.size(); ++i) {
-        for (auto &hdr : deparsed_headers_[i]) {
+        for (const auto &hdr : deparsed_headers_[i]) {
             CHECK(hdr.size() > 0) << "; Deparsing zero sized header";
             auto it = hdr.begin();
             solver.SetFirstDeparsedHeaderByte(*it);
@@ -321,17 +322,31 @@ void Constraints::SetConstraints(SolverInterface &solver) {
                 // Sanity check: All eight bits must be valid since the deparser can
                 // only deparse whole containers.
                 const PHV::Bits bits = it2->valid_bits();
-                CHECK(8 == bits.size()) << ": Invalid byte size " << it2->name();
+                // This is just a sanity check. There must be an entry in
+                // contiguous_bits_ for every deparsed byte.
+                CHECK(IsContiguous(bits)) << ": Non-contiguous bits in " << it2->name();
+                solver.SetDeparsedHeader(*it, *it2); }
+            CHECK(hdr.end() != it);
+            solver.SetLastDeparsedHeaderByte(*it); }
+        for (const auto &hdr : parsed_headers_[i]) {
+            if (deparsed_headers_[i].count(hdr)) continue;  // already dealt with
+            CHECK(hdr.size() > 0) << "; Parsing zero sized header";
+            auto it = hdr.begin();
+            solver.SetFirstDeparsedHeaderByte(*it);
+            for (auto it2 = std::next(it, 1); it2 != hdr.end(); ++it, ++it2) {
+                // Sanity check: All eight bits must be valid since the deparser can
+                // only deparse whole containers.
+                const PHV::Bits bits = it2->valid_bits();
                 // This is just a sanity check. There must be an entry in
                 // contiguous_bits_ for every deparsed byte.
                 CHECK(IsContiguous(bits)) << ": Non-contiguous bits in " << it2->name();
                 solver.SetDeparsedHeader(*it, *it2); }
             CHECK(hdr.end() != it);
             solver.SetLastDeparsedHeaderByte(*it); } }
-    for (auto &i_hdr : deparsed_headers_[0]) {
+    for (const auto &i_hdr : deparsed_headers_[0]) {
         for (auto &i_hdr_byte : i_hdr) {
             solver.SetDeparserIngress(i_hdr_byte);
-            for (auto &e_hdr : deparsed_headers_[1]) {
+            for (const auto &e_hdr : deparsed_headers_[1]) {
                 for (auto &e_hdr_byte : e_hdr) {
                     solver.SetDeparserGroups(i_hdr_byte, e_hdr_byte);
                     for (auto &i_pov : deparsed_pov_[0]) {
@@ -340,16 +355,20 @@ void Constraints::SetConstraints(SolverInterface &solver) {
                 solver.SetDeparserGroups(i_hdr_byte[0], e_pov); } } }
     for (auto &i_pov : deparsed_pov_[0])
         solver.SetDeparserIngress(i_pov);
-    for (auto &e_hdr : deparsed_headers_[1])
+    for (const auto &e_hdr : deparsed_headers_[1])
         for (auto &e_hdr_byte : e_hdr)
             solver.SetDeparserEgress(e_hdr_byte);
     for (auto &e_pov : deparsed_pov_[1])
         solver.SetDeparserEgress(e_pov);
+#if 0
+    // These constraints cause problems (massive memory use, fail to find solution)
+    // and not actually needed?
     LOG1("Setting xbar constraints");
     for (auto &v : exact_match_bits_) {
         solver.SetMatchXbarWidth(v, {{32, 32, 32, 32}}); }
     for (auto &v : tcam_match_bits_) {
         solver.SetMatchXbarWidth(v, {{17, 17, 16, 16}}); }
+#endif
     // Set T-PHV constraint.
     for (auto &b : uniq_bit_ids_) {
         if (false == is_t_phv_.at(b.second)) solver.SetNoTPhv(b.first); }
