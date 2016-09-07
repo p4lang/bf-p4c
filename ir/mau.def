@@ -5,7 +5,7 @@ struct TableResourceAlloc;
 #end
 
 #emit_impl
-#include "resource.h"
+#include "extensions/tofino/mau/resource.h"
 #end
 
 namespace MAU {
@@ -59,11 +59,16 @@ class Table : Tofino::Unit {
         Way() { memset(this, 0, sizeof(*this)); }
         operator== { return memcmp(this, &a, sizeof(Way)) == 0; }
         toJSON {
-        std::stringstream ss;
-        ss  << indent << "\"match_groups\" : " << match_groups << "," << std::endl
-            << indent << "\"entries\" : " << entries << "," << std::endl
-            << indent << "\"width\" : " << width << std::endl;
-        return ss.str();
+        json    << json.indent << "\"match_groups\" : " << match_groups << "," << std::endl
+                << json.indent << "\"entries\" : " << entries << "," << std::endl
+                << json.indent << "\"width\" : " << width << std::endl;
+        }
+        static IR::MAU::Table::Way* fromJSON(JSONLoader& json) {
+            Way* way = new Way();
+            json.load("match_groups", way->match_groups);
+            json.load("entries", way->entries);
+            json.load("width", way->width);
+            return way;
         }
     }
     std::vector<Way>    ways;

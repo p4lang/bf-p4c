@@ -20,17 +20,16 @@ inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
 class Tofino::Pipe {
     Metadata    standard_metadata; // not visited
 #noconstructor
+    Pipe() = default;
     class thread_t {
         Tofino::Parser    parser = nullptr;
         MAU::TableSeq     mau = nullptr;
         Tofino::Deparser  deparser = nullptr;
         operator== { return parser == a.parser && mau == a.mau && deparser == a.deparser; }
         toJSON {
-            std::stringstream ss;
-            ss  << indent << "\"parser\" : " << JSONGenerator::generate<Tofino::Parser>(parser, indent + "    ", node_refs) << "," << std::endl
-                << indent << "\"mau\" : " << JSONGenerator::generate<MAU::TableSeq>(mau, indent + "    ", node_refs) << "," << std::endl
-                << indent << "\"parser\" : " << JSONGenerator::generate<Tofino::Deparser>(deparser, indent + "    ", node_refs) << std::endl;
-            return ss.str();
+            json    << json.indent << "\"parser\" : " << parser << "," << std::endl
+                    << json.indent << "\"mau\" : " << mau << "," << std::endl
+                    << json.indent << "\"parser\" : " << deparser << std::endl;
         }
     }
     thread_t[2] thread = {};  // INGRESS and EGRESS
