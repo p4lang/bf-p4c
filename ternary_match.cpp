@@ -189,7 +189,7 @@ void TernaryMatchTable::pass1() {
             for (unsigned i = 0; i < match.size(); i++) {
                 match[i].word_group = input_xbar->tcam_word_group(i);
                 match[i].byte_group = input_xbar->tcam_byte_group(i/2);
-                match[i].byte_config = (i&1) + 1; }
+                match[i].byte_config = i&1; }
             match.back().byte_config = 3; } }
     alloc_vpns();
     check_next();
