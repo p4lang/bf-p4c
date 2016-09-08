@@ -64,10 +64,10 @@ if [ -z "$found" ]; then
     echo >&2 "No exisiting repositories found"
 else
     echo "Found:$found"
-    if confirm "Use these repositories as is?"; then
-        reuse_asis=true
-    else
+    if confirm "Rebuild these repositories before using them?"; then
         reuse_asis=false
+    else
+        reuse_asis=true
     fi
     if ! $reuse_asis && confirm "Pull latest changes from master?"; then
         pull_before_rebuild=true
@@ -83,9 +83,10 @@ fi
 apt_packages="g++ git pkg-config automake libtool python2.7 python cmake bison flex libboost-dev libboost-test-dev libboost-program-options-dev libboost-system-dev libboost-filesystem-dev libboost-thread-dev libcli-dev libedit-dev libeditline-dev libevent-dev libjudy-dev libgc-dev libgmp-dev libjson0 libjson0-dev libmoose-perl libnl-route-3-dev libpcap0.8-dev libssl-dev autopoint doxygen texinfo python-scapy python-yaml python-ipaddr python-pip"
 
 echo "Need sudo privs to install apt packages"
-sudo apt-get install $apt_packages
+sudo apt-get update || die "Failed to update apt"
+sudo apt-get install $apt_packages || die "Failed to install needed packages"
 sudo apt-get remove -y python-thrift    # remove this broken package in case it was installed
-sudo pip install thrift                 # need this one instead
+sudo pip install thrift || die "Failed to install needed packages"  # need this one instead
 
 echo "Using $topdir as top level directory for git repositories"
 echo Using MAKEFLAGS=${MAKEFLAGS:=-j 4}
@@ -122,7 +123,7 @@ if [ ! -r /usr/local/include/crafter.h -o ! -x /usr/local/lib/libcrafter.so ]; t
     git clone https://github.com/pellegre/libcrafter
     cd libcrafter/libcrafter
     ./autogen.sh 
-    make -j4
+    make -j4 || die "Failed to build libcrafter"
     sudo make install
     sudo ldconfig
     cd ../..
@@ -134,7 +135,7 @@ fi
 if [ ! -r /usr/local/include/libcli.h -o ! -x /usr/local/lib/libcli.so ]; then
     git clone git@github.com:dparrish/libcli.git
     cd libcli
-    make
+    make || die "Failed to build libcli"
     sudo make install
     sudo ldconfig
     cd ..
