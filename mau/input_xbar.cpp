@@ -81,11 +81,18 @@ struct ternary_big_grp_use {
 
 void IXBar::calculate_ternary_found(vector<IXBar::Use::Byte *> unalloced,
                                     vector<ternary_big_grp_use> &order) { 
+    LOG1("Calculating is starting");
     auto &use = this->use(true);
     auto &fields = this->fields(true);
+    for (size_t i = 0; i < order.size(); i++) {
+        order[i].first.found.clear();
+        order[i].second.found.clear();
+        order[i].mid_byte_found = false;
+    }
+
     for (auto &need : unalloced) {
         for (auto &p : Values(fields.equal_range(need->field))) {
-            
+           
             if (p.byte == 5) {
                 if (byte_group_use[p.group/2].second == need->lo) {
                     order[p.group/2].mid_byte_found = true;
@@ -95,13 +102,15 @@ void IXBar::calculate_ternary_found(vector<IXBar::Use::Byte *> unalloced,
 
             if (use[p.group][p.byte].second == need->lo) {
                 if (p.group % 2) {
-                    order[p.group/2].first.found[&need - unalloced.data()] = true;
+                    order[p.group/2].second.found[p.byte] = true;
                 } else {
-                    order[p.group/2].second.found[&need - unalloced.data()] = true;
+                                                 //&need - unalloced.data()
+                    order[p.group/2].first.found[p.byte] = true;
                 }
             }
         }
     }
+    LOG1("Calculating is finished");
 }
 
 
@@ -109,7 +118,7 @@ void IXBar::calculate_ternary_found(vector<IXBar::Use::Byte *> unalloced,
 void IXBar::delete_placement(vector<IXBar::Use::Byte *> alloced) {
     LOG1("We are deleting this sucka");
 
-    //auto &use = this->use(true);
+    auto &use = this->use(true);
     auto &fields = this->fields(true);
     std::pair <std::multimap<cstring, IXBar::Loc>::iterator, std::multimap<cstring, IXBar::Loc>::iterator> ret;
     for (auto &need : alloced) {
@@ -120,27 +129,32 @@ void IXBar::delete_placement(vector<IXBar::Use::Byte *> alloced) {
                 break;
             }
         }
-        /*
+        
         if (need->loc.byte == 5)
-            byte_group_use[need->loc.group/2] = IXBar::Use::Byte();
+            byte_group_use[need->loc.group/2].first = cstring();
         else   
-            use[need->loc] = IXBar::Use::Byte();
-       */
+            use[need->loc].first = cstring();   
     }
 }
 
 int IXBar::found_bytes(vector<ternary_grp_use *> &small_order, vector<IXBar::Use::Byte *> &unalloced) {
+    LOG1("Before");
     auto &use = this->use(true);
     auto &fields = this->fields(true);
     int found_bytes = small_order[0]->found.popcount();
     int bytes_placed = 0;
+    LOG1("The length of unalloced is " << unalloced.size());
+
     for (size_t i = 0; i < unalloced.size(); i++)
     {
         auto &need = *(unalloced[i]);
         if (found_bytes == 0)
             break;
         for (auto &p : Values(fields.equal_range(need.field))) {
- 
+            
+            LOG1("group and byte are " << p.group << " " << p.byte); 
+
+
             if ((small_order[0]->group == p.group) && (use[p.group][p.byte].second == need.lo)) {
                 unalloced[i]->loc = p;
                 found_bytes--; bytes_placed++;
@@ -149,6 +163,7 @@ int IXBar::found_bytes(vector<ternary_grp_use *> &small_order, vector<IXBar::Use
             }
         }
     }
+    LOG1("After");
     return bytes_placed;
 }
 
@@ -174,10 +189,8 @@ bool IXBar::find_ternary_alloc(IXBar::Use &alloc, bool second_try) {
     int groups_needed = 2 * big_groups_needed;
 
     if (total_bytes_needed - big_groups_needed * bytes_per_big_group <= 5)
-        groups_needed += 1;
-    else
-        groups_needed += 2;
-
+        groups_needed -= 1;
+    
     if (big_groups_needed > big_groups || groups_needed > groups)
         return false;
 
@@ -234,8 +247,6 @@ bool IXBar::find_ternary_alloc(IXBar::Use &alloc, bool second_try) {
         LOG1("Small Group " << *(small_order[grp]));
     
    while (mid_bytes_needed >= 1) {
-       if (extra_log)
-           LOG1("I am here and proud");
  
      
        int reduced_bytes_needed = total_bytes_needed % bytes_per_big_group;
@@ -257,14 +268,13 @@ bool IXBar::find_ternary_alloc(IXBar::Use &alloc, bool second_try) {
            if ((t = a.total_free() - b.total_free()) != 0) return t > 0;
            return a.big_group < b.big_group; });   
 
-       if (extra_log)
-           LOG1("The group that I want is " << order[0].big_group);
 
        int found_bytes = order[0].total_found();
        int bytes_placed = 0;
+
  
        /* Remove all bytes previously found */
-       for (size_t i = 0; i < unalloced.size(); i++)
+       for (int i = 0; i < (int) unalloced.size(); i++)
        {
            auto &need = *(unalloced[i]);
            if (found_bytes == 0)
@@ -272,24 +282,29 @@ bool IXBar::find_ternary_alloc(IXBar::Use &alloc, bool second_try) {
            for (auto &p : Values(fields.equal_range(need.field))) {
                if (p.byte == 5) {
                    if ((order[0].big_group == p.group/2) && (byte_group_use[p.group].second == need.lo)) {
-                       unalloced[i]->loc = p;
+                       need.loc = p;
                        found_bytes--; bytes_placed++;
                        unalloced.erase(unalloced.begin() + i);
                        i--;
+                       break;
                    }
-                   break;
+                   continue;
                }
-
                if ((order[0].big_group == p.group/2) && (use[p.group][p.byte].second == need.lo)) {
-                   unalloced[i]->loc = p;
+                   need.loc = p;
                    found_bytes--; bytes_placed++;
                    unalloced.erase(unalloced.begin() + i);
                    i--;
+                   break;
                }
            }
        }
-    
 
+       if (found_bytes != 0)
+           LOG1("This is strange");
+       
+       LOG3("Bytes placed is " << bytes_placed); 
+       
        int free_bytes = order[0].total_free();
        bitvec need_alloc;
 
@@ -344,12 +359,11 @@ bool IXBar::find_ternary_alloc(IXBar::Use &alloc, bool second_try) {
            int j = i - already_placed;
            fields.emplace(unalloced[j]->field, unalloced[j]->loc);
            if (unalloced[j]->loc.byte == 5) {
-               LOG1("Before");
                byte_group_use[unalloced[j]->loc.group/2] = *(unalloced[j]);
-               LOG1("After");
            } else {
                use[unalloced[j]->loc] = *(unalloced[j]);
            }
+           LOG1("The location is now " << unalloced[j]->loc);
            alloced.push_back(unalloced[j]);
            unalloced.erase(unalloced.begin() + j);
            already_placed++; bytes_placed++;
@@ -371,10 +385,6 @@ bool IXBar::find_ternary_alloc(IXBar::Use &alloc, bool second_try) {
        
        LOG1("Total/Mid " << total_bytes_needed << " " << mid_bytes_needed);
        calculate_ternary_found(unalloced, order);
-   }
-
-   if (extra_log) {
-       LOG1("Outside the loop");
    }
 
 
@@ -411,6 +421,7 @@ bool IXBar::find_ternary_alloc(IXBar::Use &alloc, bool second_try) {
        int bytes_placed = 0;
        /* Remove all bytes previously found */
        bytes_placed += found_bytes(small_order, unalloced);
+       LOG3("Found bytes = " << bytes_placed);
        /* Place all free locations */
        int free_bytes = small_order[0]->free.popcount();
        bitvec need_alloc;
@@ -434,13 +445,13 @@ bool IXBar::find_ternary_alloc(IXBar::Use &alloc, bool second_try) {
        int already_placed = 0;
        for (int i : need_alloc) {
            int j = i - already_placed;
-           LOG1("The size is now " << unalloced.size());
-           LOG1("The location is now " << i << " " << j);
            fields.emplace(unalloced[j]->field, unalloced[j]->loc);
+           LOG1("The location is now " << unalloced[j]->loc);
            use[unalloced[j]->loc] = *(unalloced[j]);
            alloced.push_back(unalloced[j]); 
            unalloced.erase(unalloced.begin() + j);
            already_placed++; bytes_placed++;
+           
        }
 
        /* No bytes placed in the xbar.  You're finished */
