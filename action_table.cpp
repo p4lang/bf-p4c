@@ -70,15 +70,22 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
     setup_layout(layout, row, get(data, "column"), 0);
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "format") {
-            if (CHECKTYPEPM(kv.value, tMAP, kv.value.map.size > 0, "non-empty map"))
+            if (CHECKTYPEPM(kv.value, tMAP, kv.value.map.size > 0, "non-empty map")) {
                 format = new Format(kv.value.map, true);
+                if (format->size < 8) {  // pad out to minimum size
+                    format->size = 8;
+                    format->log2size = 3; } }
         } else if (kv.key.type == tCMD && kv.key[0] == "format") {
             if (!PCHECKTYPE(kv.key.vec.size > 1, kv.key[1], tSTR)) continue;
             if (action_formats.count(kv.key[1].s)) {
                 error(kv.key.lineno, "Multiple formats for action %s", kv.key[1].s);
                 return; }
-            if (CHECKTYPEPM(kv.value, tMAP, kv.value.map.size > 0, "non-empty map"))
-                action_formats[kv.key[1].s] = new Format(kv.value.map); } }
+            if (CHECKTYPEPM(kv.value, tMAP, kv.value.map.size > 0, "non-empty map")) {
+                auto *fmt = new Format(kv.value.map);
+                if (fmt->size < 8) {  // pad out to minimum size
+                    fmt->size = 8;
+                    fmt->log2size = 3; }
+                action_formats[kv.key[1].s] = fmt; } } }
     VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "format") {
