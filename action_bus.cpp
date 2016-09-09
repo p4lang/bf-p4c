@@ -239,7 +239,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
             error(line, "Action bus setup can't deal with field %s split across "
                   "SRAM rows", el.second.name.c_str());
             continue; }
-        unsigned bytemask = (1U << (size/8U)) - 1;
+        unsigned bytemask = (1U << ((size+7)/8U)) - 1;
         switch (Stage::action_bus_slot_size[slot]) {
         case 8:
             for (unsigned sbyte = bit/8; sbyte <= (bit+size-1)/8; sbyte++, byte++, slot++) {
