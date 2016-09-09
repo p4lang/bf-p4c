@@ -134,3 +134,6 @@ std::string obj::toString() const {
 }
 
 }
+
+void dump(const json::obj &o) { std::cout << &o << std::endl; }
+void dump(const json::obj *o) { std::cout << o << std::endl; }

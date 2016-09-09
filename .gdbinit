@@ -2,6 +2,11 @@ set print object
 set unwindonsignal on
 set unwind-on-terminating-exception on
 
+define d
+    call ::dump($arg0)
+end
+
+
 python
 class bitvecPrinter(object):
     "Print a bitvec"

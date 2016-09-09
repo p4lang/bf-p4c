@@ -424,4 +424,7 @@ public:
 
 }  // end namespace json
 
+extern void dump(const json::obj *);
+extern void dump(const json::obj &);
+
 #endif /* _json_h_ */
