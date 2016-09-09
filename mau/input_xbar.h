@@ -7,6 +7,10 @@
 class PhvInfo;
 class IXBarRealign;
 struct TableResourceAlloc;
+//FIXME: Maybe a different format
+struct ternary_grp_use;
+struct ternary_big_grp_use;
+
 
 struct IXBar {
     enum {
@@ -128,6 +132,9 @@ struct IXBar {
  private:
     bool find_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
     bool find_ternary_alloc(IXBar::Use &alloc, bool second_try);
+    void calculate_ternary_found(vector<IXBar::Use::Byte *> unalloced, vector<ternary_big_grp_use> &order);
+    void delete_placement(vector<IXBar::Use::Byte *> alloced);
+    int found_bytes(vector<ternary_grp_use *> &small_order, vector<IXBar::Use::Byte *> &unalloced);
 };
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {
