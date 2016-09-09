@@ -115,25 +115,11 @@ void IXBar::calculate_ternary_found(vector<IXBar::Use::Byte *> unalloced,
 
 
 
-void IXBar::delete_placement(vector<IXBar::Use::Byte *> alloced) {
-    LOG1("We are deleting this sucka");
-
-    auto &use = this->use(true);
-    auto &fields = this->fields(true);
-    std::pair <std::multimap<cstring, IXBar::Loc>::iterator, std::multimap<cstring, IXBar::Loc>::iterator> ret;
-    for (auto &need : alloced) {
-        ret = fields.equal_range(need->field);
-        for (std::multimap<cstring, IXBar::Loc>::iterator it=ret.first; it!=ret.second; ++it) {
-            if (it->second.group == need->loc.group && it->second.byte == need->loc.byte) {
-                fields.erase(it);
-                break;
-            }
-        }
-        
-        if (need->loc.byte == 5)
-            byte_group_use[need->loc.group/2].first = cstring();
-        else   
-            use[need->loc].first = cstring();   
+void IXBar::delete_placement(IXBar::Use &alloc) {
+    LOG1("We deleting this sucka");
+    for (auto &need : alloc.use) {
+        need.loc.byte = -1;
+        need.loc.group = -1;
     }
 }
 
@@ -164,6 +150,71 @@ int IXBar::found_bytes(vector<ternary_grp_use *> &small_order, vector<IXBar::Use
         }
     }
     LOG1("After");
+    return bytes_placed;
+}
+
+void IXBar::allocate_free_byte(ternary_grp_use *grp, vector<IXBar::Use::Byte *> &unalloced,
+                               vector<IXBar::Use::Byte *> &alloced, IXBar::Use::Byte &need,
+                               int group, int byte, int &index, int &free_bytes, int &bytes_placed)
+{
+    need.loc.group = group;
+    need.loc.byte = byte;
+    //FIXME: Necessary for non-ternary change
+    if (grp != nullptr)
+        grp->free[byte] = false;
+   
+    alloced.push_back(unalloced[index]);
+    unalloced.erase(unalloced.begin() + index);
+    index--;
+    free_bytes--;
+    bytes_placed++;
+}
+
+int IXBar::free_bytes_large_ternary(ternary_big_grp_use &grp, vector<IXBar::Use::Byte*> &unalloced,
+                                    vector<IXBar::Use::Byte *> &alloced) {
+    int bytes_placed = 0;
+    int free_bytes = grp.total_free();
+
+    for (int i = 0; i < (int) unalloced.size(); i++) {
+        bool found = false;
+        if (free_bytes == 0)
+            break;
+
+        auto &need = *(unalloced[i]);
+        int align = (grp.big_group * 11) & 3;
+
+        /* Allocate free bytes within the first ternary group */
+        for (auto byte : grp.first.free) {
+            if (align_flags[(byte+align) & 3] & need.flags) continue;
+            allocate_free_byte(&(grp.first), unalloced, alloced, need, 
+                               grp.big_group * 2, byte, i, free_bytes, bytes_placed);
+
+            found = true;
+            break;
+        }
+        if (found)
+            continue;
+
+        /* Allocate free bytes within the second ternary group */
+        for (auto byte : grp.second.free) {
+            if (align_flags[(byte+6+align) & 3] & need.flags) continue;
+            allocate_free_byte(&(grp.second), unalloced, alloced, need,
+                               grp.big_group * 2 + 1, byte, i, free_bytes, bytes_placed);  
+            found = true;
+            break;
+        }
+    
+        if (found)
+            continue;
+       
+        /* Allocate middle bytes of the ternary big group */
+        if (grp.mid_byte_free) {
+            if (align_flags[(5+align) & 3] & need.flags) continue;
+            allocate_free_byte(nullptr, unalloced, alloced, need, 
+                               grp.big_group * 2, 5, i, free_bytes, bytes_placed);
+            grp.mid_byte_free = false;
+        }
+    }
     return bytes_placed;
 }
 
@@ -247,14 +298,9 @@ bool IXBar::find_ternary_alloc(IXBar::Use &alloc, bool second_try) {
         LOG1("Small Group " << *(small_order[grp]));
     
    while (mid_bytes_needed >= 1) {
- 
-     
        int reduced_bytes_needed = total_bytes_needed % bytes_per_big_group;
        if (reduced_bytes_needed == 0)
            reduced_bytes_needed += bytes_per_big_group;
-
-       if (extra_log)
-           LOG1("Reduced bytes needed is " << reduced_bytes_needed);
 
        std::sort(order.begin(), order.end(), [=](const ternary_big_grp_use &a, const ternary_big_grp_use &b) {
            if (!second_try && (a.total_found() + a.total_free() < reduced_bytes_needed))
@@ -299,75 +345,10 @@ bool IXBar::find_ternary_alloc(IXBar::Use &alloc, bool second_try) {
                }
            }
        }
-
-       if (found_bytes != 0)
-           LOG1("This is strange");
-       
+ 
        LOG3("Bytes placed is " << bytes_placed); 
-       
-       int free_bytes = order[0].total_free();
-       bitvec need_alloc;
 
-       for (size_t i = 0; i < unalloced.size(); i++) {
-           bool found = false;
-           if (free_bytes == 0)
-               break;
-
-           auto &need = *(unalloced[i]);
-           int align = (order[0].big_group * 11) & 3;
-           for (auto byte : order[0].first.free) {
-               if (align_flags[(byte+align) & 3] & need.flags) continue;
-               need_alloc[i] = true;
-               need.loc.group = order[0].big_group * 2;
-               need.loc.byte = byte;
-               order[0].first.free[byte] = false;
-               free_bytes--;
-               found = true;
-               break;
-           }
-           if (found)
-               continue;
-
-           for (auto byte : order[0].second.free) {
-               if (align_flags[(byte+6+align) & 3] & need.flags) continue;
-               need_alloc[i] = true;
-               need.loc.group = order[0].big_group * 2 + 1;
-               need.loc.byte = byte;
-               order[0].second.free[byte] = false;
-               free_bytes--;
-               found = true;
-               break;
-           }
-   
-           if (found)
-               continue;
-
-           if (order[0].mid_byte_free) {
-               if (align_flags[(5+align) & 3] & need.flags) continue;
-               need_alloc[i] = true;
-               need.loc.group = order[0].big_group * 2;
-               //FIXME  need to check this
-               need.loc.byte = 5;
-               order[0].mid_byte_free = false;
-               free_bytes--;
-               
-           }
-       }
-
-       int already_placed = 0;
-       for (int i : need_alloc) {
-           int j = i - already_placed;
-           fields.emplace(unalloced[j]->field, unalloced[j]->loc);
-           if (unalloced[j]->loc.byte == 5) {
-               byte_group_use[unalloced[j]->loc.group/2] = *(unalloced[j]);
-           } else {
-               use[unalloced[j]->loc] = *(unalloced[j]);
-           }
-           LOG1("The location is now " << unalloced[j]->loc);
-           alloced.push_back(unalloced[j]);
-           unalloced.erase(unalloced.begin() + j);
-           already_placed++; bytes_placed++;
-       }
+       bytes_placed += free_bytes_large_ternary(order[0], unalloced, alloced);       
 
        if (extra_log) {
            LOG1("Hello from the otter slide");
@@ -375,7 +356,7 @@ bool IXBar::find_ternary_alloc(IXBar::Use &alloc, bool second_try) {
        }
        /* No bytes placed in the xbar.  You're finished */
        if (bytes_placed == 0) {
-           delete_placement(alloced);
+           delete_placement(alloc);
            return false;
        }
 
@@ -432,31 +413,20 @@ bool IXBar::find_ternary_alloc(IXBar::Use &alloc, bool second_try) {
            int align = ((small_order[0]->group * 11 + 1)/2) & 3;
            for (auto byte : small_order[0]->free) {
                if (align_flags[(byte+align) & 3] & need.flags) continue;
-               need_alloc[i] = true;
                need.loc.group = small_order[0]->group;
+               alloced.push_back(unalloced[i]); 
+               unalloced.erase(unalloced.begin() + i);
+               i--;
                need.loc.byte = byte;
                small_order[0]->free[byte] = false;
-               free_bytes--;
+               free_bytes--; bytes_placed++;
                break;
            }
        }
  
-       LOG1("The need_alloc length is " << need_alloc.popcount());
-       int already_placed = 0;
-       for (int i : need_alloc) {
-           int j = i - already_placed;
-           fields.emplace(unalloced[j]->field, unalloced[j]->loc);
-           LOG1("The location is now " << unalloced[j]->loc);
-           use[unalloced[j]->loc] = *(unalloced[j]);
-           alloced.push_back(unalloced[j]); 
-           unalloced.erase(unalloced.begin() + j);
-           already_placed++; bytes_placed++;
-           
-       }
-
        /* No bytes placed in the xbar.  You're finished */
        if (bytes_placed == 0) {
-           delete_placement(alloced);
+           delete_placement(alloc);
            return false;
        }
 
@@ -464,8 +434,14 @@ bool IXBar::find_ternary_alloc(IXBar::Use &alloc, bool second_try) {
        calculate_ternary_found(unalloced, order);
    }
 
-   if (extra_log)
-       LOG1("We outta here"); 
+   for (auto &need : alloced) {
+       fields.emplace(need->field, need->loc);
+       if (need->loc.byte == 5)
+           byte_group_use[need->loc.group/2] = *(need);
+       else
+           use[need->loc] = *(need);
+   }
+
    return true;
 }
 
