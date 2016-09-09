@@ -219,3 +219,29 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &s
         out << ')'; }
     return out;
 }
+
+std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &fld) {
+    out << fld.name << '[' << fld.size << ']' << std::endl;
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const PhvInfo &phv) {
+    for (auto iter = phv.begin(); iter != phv.end(); ++iter) {
+         std::cout << *iter;
+    }
+    return out;
+}
+
+//
+bool Cluster::preorder(const IR::Operation_Binary* expression) {
+    const PhvInfo::Field *left = phv.field(expression->left);
+    const PhvInfo::Field *right = phv.field(expression->right);
+
+    std::cout << '(' << std::endl;
+    if(left) std::cout << *left; else std::cout << '-' << std::endl;
+    if(right) std:: cout << *right; else std::cout << '-' << std::endl;
+    std::cout << ')' << std::endl;
+
+    return true;
+}
+//

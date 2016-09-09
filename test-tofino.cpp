@@ -74,6 +74,7 @@ static void debug_hook(const char *, unsigned, const char *pass, const IR::Node 
 
 void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *options) {
     PhvInfo phv;
+    Cluster cluster(phv);
     DependencyGraph deps;
     TablesMutuallyExclusive mutex;
     FieldDefUse defuse(phv);
@@ -103,6 +104,15 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new DumpPipe("Initial table graph"),
         &phv,
         &defuse,
+        //
+        &cluster, 
+        new VisitFunctor([&phv, &defuse, &cluster]() {
+		std::cout << "+++++ All Fields(name,size) +++++:\n";
+		std::cout << phv;
+		//std::cout << "+++++ Def-Use +++++:\n";
+		//std::cout << defuse;
+	}),
+        //
         new AddBridgedMetadata(phv, defuse),
         new AddMetadataShims,
         new InstructionSelection(phv),

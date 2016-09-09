@@ -128,6 +128,19 @@ class PhvInfo : public Inspector {
 };
 
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field::alloc_slice &);
+std::ostream &operator<<(std::ostream &, const PhvInfo::Field &);
+std::ostream &operator<<(std::ostream &, const PhvInfo &);
+
+//
+class Cluster : public Inspector {
+    PhvInfo                     &phv;
+    vector<PhvInfo::Field *>	fields;
+    bool preorder(const IR::Operation_Binary* expression) override;
+
+ public:
+    Cluster(PhvInfo &p) : phv(p){}
+};
+//
 
 extern void repack_metadata(PhvInfo &phv);
 
