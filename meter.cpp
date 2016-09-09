@@ -66,6 +66,8 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "sweep_interval") {
             if (CHECKTYPE(kv.value, tINT))
                 sweep_interval = kv.value.i;
+        } else if (kv.key == "global_binding") {
+            global_binding = get_bool(kv.value);
         } else if (kv.key == "per_flow_enable") {
             per_flow_enable = get_bool(kv.value);
         } else if (kv.key == "row" || kv.key == "logical_row" ||

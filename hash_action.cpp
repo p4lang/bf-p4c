@@ -136,6 +136,7 @@ void HashActionTable::write_regs() {
 void HashActionTable::gen_tbl_cfg(json::vector &out) {
     int size = hash_dist.empty() ? 1 : 1 + hash_dist[0].mask;
     json::map &tbl = *base_tbl_cfg(out, "match_entry", size);
+    size = tbl["number_entries"].get()->as_number()->val;
     if (!tbl.count("preferred_match_type"))
         tbl["preferred_match_type"] = "exact";
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, hash_dist.empty() ? "match_with_no_key"

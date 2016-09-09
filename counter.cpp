@@ -45,6 +45,8 @@ void CounterTable::setup(VECTOR(pair_t) &data) {
             else if (kv.value == "both" || kv.value == "packets_and_bytes")
                 type = BOTH;
             else error(kv.value.lineno, "Unknown counter type %s", value_desc(kv.value));
+        } else if (kv.key == "global_binding") {
+            global_binding = get_bool(kv.value);
         } else if (kv.key == "per_flow_enable") {
             per_flow_enable = get_bool(kv.value);
         } else if (kv.key == "row" || kv.key == "logical_row" ||
@@ -97,6 +99,10 @@ int CounterTable::direct_shiftcount() {
 void CounterTable::write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge =  stage->regs.rams.match.merge;
     auto pfe_bit = 19;
+    if (dynamic_cast<HashActionTable *>(match)) {
+        /* FIXME -- This should be cleaner -- rather than checking the match table type, have
+         * the pfe bit stored in the CounterTable and hve the match table set it in some pass? */
+        pfe_bit = 7; }
     if (options.match_compiler && dynamic_cast<HashActionTable *>(match)) {
         /* FIXME -- for some reason the compiler does not set the stats_adr_mask
          * for hash_action tables.  Is it not needed? */
@@ -282,9 +288,25 @@ void CounterTable::gen_tbl_cfg(json::vector &out) {
     tbl["saturating"] = false;  // FIXME?
     tbl["enable_per_flow_enable"] = per_flow_enable;
     json::vector &bindings = tbl["binding"];
-    bindings.push_back(indirect ? "static" : "direct");
-    for (auto table : match_tables) {
-        const char *name = table->p4_name();
-        if (!name) name = table->name();
-        bindings.push_back(name); }
+    if (global_binding) {
+        if (bindings.empty()) {
+            bindings.push_back("global");
+            bindings.push_back("null");
+        } else if (*bindings[0] != (indirect ? "static" : "direct"))
+            ERROR("Incompatible bindings for " << name());
+    } else {
+        if (bindings.empty())
+            bindings.push_back(indirect ? "static" : "direct");
+        else if (*bindings[0] != (indirect ? "static" : "direct"))
+            ERROR("Incompatible bindings for " << name());
+        for (auto table : match_tables) {
+            const char *name = table->p4_name();
+            if (!name) name = table->name();
+            size_t i;
+            for (i = 1; i < bindings.size(); ++i)
+                if (*bindings[i] == name)
+                    break;
+            if (i == bindings.size())
+                bindings.push_back(name); } }
+
 }
