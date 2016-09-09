@@ -37,8 +37,7 @@ class InputXbar {
     static bool conflict(const std::map<int, HashCol> &a, const std::map<int, HashCol> &b);
     static bool conflict(const HashGrp &a, const HashGrp &b);
     uint64_t hash_columns_used(unsigned hash);
-    bool can_merge(HashGrp &a, HashGrp &b,
-                   Alloc1Dbase<std::vector<InputXbar *>> &use);
+    bool can_merge(HashGrp &a, HashGrp &b);
     void add_use(unsigned &byte_use, std::vector<Input> &a);
     void setup_hash(std::map<int, HashCol> &, int, gress_t, value_t &, int lineno, int lo, int hi);
     struct GroupSet {

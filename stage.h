@@ -59,6 +59,8 @@ public:
     Alloc1D<Table *, TCAM_TABLES_PER_STAGE>             tcam_id_use;
     Alloc1D<std::vector<InputXbar *>, EXACT_XBAR_GROUPS>exact_ixbar;
     Alloc1D<std::vector<InputXbar *>, TCAM_XBAR_GROUPS> tcam_ixbar;
+    Alloc1D<std::vector<InputXbar *>, HASH_TABLES>      hash_table_use;
+    Alloc1D<std::vector<InputXbar *>, EXACT_HASH_GROUPS>hash_group_use;
     Alloc1D<std::vector<HashDistribution *>, 6>         hash_dist_use;
     Alloc1D<Table *, ACTION_DATA_BUS_SLOTS>             action_bus_use;
     Alloc1D<Table *, LOGICAL_SRAM_ROWS>                 action_data_use,

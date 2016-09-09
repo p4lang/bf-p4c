@@ -683,6 +683,7 @@ DECLARE_TABLE_TYPE(CounterTable, StatsTable, "counter",
     table_type_t table_type() { return COUNTER; }
     void write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args);
     bool                per_flow_enable = false;
+    bool                global_binding = false;
 public:
     int direct_shiftcount();
     bool run_at_eop() { return (type&BYTES) != 0; }
@@ -696,6 +697,7 @@ DECLARE_TABLE_TYPE(MeterTable, StatsTable, "meter",
     void write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args);
     int                 sweep_interval = 2;
     bool                per_flow_enable = false;
+    bool                global_binding = false;
 public:
     int direct_shiftcount();
     bool                color_aware = false;

@@ -216,15 +216,14 @@ uint64_t InputXbar::hash_columns_used(unsigned hash) {
 
 /* FIXME -- this is questionable, but the compiler produces hash groups that conflict
  * FIXME -- so we try to tag ones that may be ok as merely warnings */
-bool InputXbar::can_merge(HashGrp &a, HashGrp &b,
-                          Alloc1Dbase<std::vector<InputXbar *>> &use)
+bool InputXbar::can_merge(HashGrp &a, HashGrp &b)
 {
     unsigned both = a.tables & b.tables;
     uint64_t both_cols = 0, a_cols = 0, b_cols = 0;
     for (unsigned i = 0; i < 16; i++) {
         unsigned mask = 1U << i;
         if (!((a.tables|b.tables) & mask)) continue;
-        for (InputXbar *other : use[i]) {
+        for (InputXbar *other : table->stage->hash_group_use[i]) {
             if (both & mask) both_cols |= other->hash_columns_used(i);
             if (a.tables & mask) a_cols |= other->hash_columns_used(i);
             if (b.tables & mask) b_cols |= other->hash_columns_used(i); } }
@@ -283,7 +282,7 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
             if (ok && col.second.fn)
                 col.second.fn->gen_data(col.second.data, col.second.bit, this, hash.first/2U); }
         bool add_to_use = true;
-        for (InputXbar *other : use[hash.first]) {
+        for (InputXbar *other : table->stage->hash_table_use[hash.first]) {
             if (other == this) {
                 add_to_use = false;
                 break; }
@@ -293,16 +292,16 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
                       table->stage->stageno);
                 warning(other->lineno, "conflicting hash definition here"); } }
         if (add_to_use)
-            use[hash.first].push_back(this); }
+            table->stage->hash_table_use[hash.first].push_back(this); }
     for (auto &group : hash_groups) {
         bool add_to_use = true;
-        for (InputXbar *other : use[group.first]) {
+        for (InputXbar *other : table->stage->hash_group_use[group.first]) {
             if (other == this) {
                 add_to_use = false;
                 break; }
             if (other->hash_groups.count(group.first) &&
                 conflict(other->hash_groups[group.first], group.second)) {
-                if (can_merge(other->hash_groups[group.first], group.second, use))
+                if (can_merge(other->hash_groups[group.first], group.second))
                     warning(group.second.lineno, "Input xbar hash group %d mergeable conflict "
                             "in stage %d", group.first, table->stage->stageno);
                 else
@@ -311,7 +310,7 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
                 warning(other->hash_groups[group.first].lineno,
                         "conflicting hash group definition here"); } }
         if (add_to_use)
-            use[group.first].push_back(this); }
+            table->stage->hash_group_use[group.first].push_back(this); }
 }
 
 void InputXbar::add_use(unsigned &byte_use, std::vector<Input> &inputs) {
