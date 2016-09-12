@@ -232,16 +232,3 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo &phv) {
     return out;
 }
 
-//
-bool Cluster::preorder(const IR::Operation_Binary* expression) {
-    const PhvInfo::Field *left = phv.field(expression->left);
-    const PhvInfo::Field *right = phv.field(expression->right);
-
-    std::cout << '(' << std::endl;
-    if(left) std::cout << *left; else std::cout << '-' << std::endl;
-    if(right) std:: cout << *right; else std::cout << '-' << std::endl;
-    std::cout << ')' << std::endl;
-
-    return true;
-}
-//
