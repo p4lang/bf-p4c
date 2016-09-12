@@ -133,6 +133,7 @@ fi
 pass=0
 fail=0
 expected_fail=0
+unexpected_pass=0
 
 function test_p4() {
     p4file="$1"
@@ -235,6 +236,7 @@ function test_p4() {
     if [ "$expect_fail" != "" ]; then
         if $ok; then
             echo -n " (UNEXPECTED PASS -- expected $expect_fail failure)"
+            let unexpected_pass++
         elif [ "$expect_fail" != "$fail_type" ]; then
             echo -n " (expected $expect_fail failure)"
             if [ "$fail_type" = "mismatch" -o "$expect_fail" = "compile" ]; then
@@ -322,8 +324,27 @@ for file in "$@"; do
     fi
 done
 
-echo "$pass tests passed, $fail tests failed ($expected_fail expected)"
-echo "$pass tests passed, $fail tests failed ($expected_fail expected)" >>$FAILLOG
+if [ $pass -ne 1 ]; then
+    pmsg="$pass tests passed"
+else
+    pmsg="1 test passed"
+fi
+if [ $fail -ne 1 ]; then
+    fmsg="$fail tests failed"
+else
+    fmsg="1 test failed"
+fi
+
+if [ $unexpected_pass -gt 1 ]; then
+    uxp=" ($unexpected_pass tests unexpectedly pass)"
+elif [ $unexpected_pass -gt 0 ]; then
+    uxp=" ($unexpected_pass test unexpectedly passes)"
+else
+    uxp=""
+fi
+
+echo "$pmsg, $fmsg ($expected_fail expected) $uxp"
+echo "$pmsg, $fmsg ($expected_fail expected) $uxp" >>$FAILLOG
 
 if [ $fail -ne $expected_fail ]; then
     exit 1

@@ -82,6 +82,11 @@ void ActionBus::pass1(Table *tbl) {
             use[slotno] = &slot; } }
 }
 
+void ActionBus::need_alloc(Table *tbl, Table::Format::Field *f, unsigned off, unsigned size) {
+    LOG3("need_alloc " << tbl->find_field(f) << " off=" << off << " size=0x" << hex(size));
+    need_place[f][off] |= size;
+}
+
 static int find_free(Stage *stage, int min, int max, int step, int bytes) {
     int avail;
     for (int i = min; i + bytes - 1 <= max; i += step) {
@@ -133,12 +138,10 @@ void ActionBus::pass2(Table *tbl) {
             int bytes = hi/8U - lo/8U + 1;
             int use;
             int step = lo < 64 ? 4 : 8;
-            if (bytes > 4) bytes = 4;
-            if ((bits.second & 4) && (lo % 32U))
-                if (lo/32U != hi/32U) {
-                    error(tbl->format->lineno, "field %s not correctly aligned for 32-bit use on "
-                          "action bus", tbl->format->find_field(field).c_str());
-                    continue; }
+            if (lo/32U != hi/32U) {
+                /* Can't go across 32-bit boundary so chop it down as needed */
+                hi = lo|31U;
+                bytes = (hi + 1 - lo + 7)/8U; }
             if (bits.second & 1) {
                 /* need 8-bit */
                 if ((lo % 8U) && (lo/8U != hi/8U)) {
@@ -279,7 +282,6 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
             break;
         case 16:
             slot -= ACTION_DATA_8B_SLOTS;
-        // last_halfword_group:
             bytemask <<= ((bit/8) & 1);
             if (!options.match_compiler)
                 /* FIXME -- old compiler currently generates these wrong */
@@ -315,20 +317,10 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
             break;
         case 32: {
             slot -= ACTION_DATA_8B_SLOTS + ACTION_DATA_16B_SLOTS;
-#if 0
-            if (slot < 2) {
-                /* FIXME -- nasty hack to deal with the weird mixed encoding */
-                slot = slot * 2 + ACTION_DATA_16B_SLOTS;
-                goto last_halfword_group; }
-            slot -= 2;
-#endif
             unsigned word = bit/32;
             unsigned code = 1 + word/2;
             bit %= 32;
             bytemask <<= bit/8;
-            if (!options.match_compiler)
-                /* FIXME -- old compiler currently generates these wrong */
-                byte -= bit/8;
             if (((word << 2)^byte) & 7) {
                 error(line, "Can't put field %s into byte %d on action xbar",
                       el.second.name.c_str(), byte);
