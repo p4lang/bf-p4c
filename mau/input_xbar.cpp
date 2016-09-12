@@ -228,10 +228,6 @@ bool IXBar::find_ternary_alloc(IXBar::Use &alloc, bool second_try) {
     auto &fields = this->fields(true);
     LOG1("Total bytes is " << alloc.use.size());
 
-    bool extra_log = false;
-    if (alloc.use.size() == 35)
-        extra_log = true;
-
     int big_groups_needed = (alloc.use.size() + bytes_per_big_group - 1)/bytes_per_big_group;
 
     int mid_bytes_needed = 0;
@@ -244,12 +240,12 @@ bool IXBar::find_ternary_alloc(IXBar::Use &alloc, bool second_try) {
     
     if (big_groups_needed > big_groups || groups_needed > groups)
         return false;
-
     
     mid_bytes_needed = big_groups_needed - 1;
 
     LOG1("The # of mid bytes needed is " << mid_bytes_needed);
 
+    /* Initialize all required information */
     vector<ternary_big_grp_use> order(big_groups);
     vector<ternary_grp_use *> small_order;
     for (int i = 0; i < big_groups; i++) { 
@@ -296,153 +292,144 @@ bool IXBar::find_ternary_alloc(IXBar::Use &alloc, bool second_try) {
 
     for (int grp = 0; grp < groups; grp++)
         LOG1("Small Group " << *(small_order[grp]));
+
+    /* While a middle byte in a ternary group is definitely necessary */ 
+    while (mid_bytes_needed >= 1) {
+        int reduced_bytes_needed = total_bytes_needed % bytes_per_big_group;
+        if (reduced_bytes_needed == 0)
+            reduced_bytes_needed += bytes_per_big_group;
+
+        std::sort(order.begin(), order.end(), [=](const ternary_big_grp_use &a, const ternary_big_grp_use &b) {
+            if (!second_try && (a.total_found() + a.total_free() < reduced_bytes_needed))
+                return false;
+            if (!second_try && (b.total_found() + b.total_free() < reduced_bytes_needed))
+                return true;
+
+            int t;
+            if (!second_try && (t = a.total_found() - b.total_found()) != 0) return t > 0;
+
+            if ((t = a.total_free() - b.total_free()) != 0) return t > 0;
+            return a.big_group < b.big_group; });   
+
+
+        int found_bytes = order[0].total_found();
+        int bytes_placed = 0;
+
+ 
+        /* Remove all bytes previously found */
+        for (int i = 0; i < (int) unalloced.size(); i++)
+        {
+            auto &need = *(unalloced[i]);
+            if (found_bytes == 0)
+                break;
+            for (auto &p : Values(fields.equal_range(need.field))) {
+                if (p.byte == 5) {
+                    if ((order[0].big_group == p.group/2) && (byte_group_use[p.group].second == need.lo)) {
+                        need.loc = p;
+                        found_bytes--; bytes_placed++;
+                        unalloced.erase(unalloced.begin() + i);
+                        i--;
+                        break;
+                    }
+                    continue;
+                }
+                if ((order[0].big_group == p.group/2) && (use[p.group][p.byte].second == need.lo)) {
+                    need.loc = p;
+                    found_bytes--; bytes_placed++;
+                    unalloced.erase(unalloced.begin() + i);
+                    i--;
+                    break;
+                }
+            }
+        }
+
+        bytes_placed += free_bytes_large_ternary(order[0], unalloced, alloced);       
+
+        /* No bytes placed in the xbar.  You're finished */
+        if (bytes_placed == 0) {
+            delete_placement(alloc);
+            return false;
+        }
+
+        total_bytes_needed -= bytes_placed;
+        /* FIXME: Need some calculations for 88 bit multiples */
+        mid_bytes_needed = total_bytes_needed / bytes_per_big_group;
+        
+        LOG1("Total/Mid " << total_bytes_needed << " " << mid_bytes_needed);
+        calculate_ternary_found(unalloced, order);
+    }
+
+
     
-   while (mid_bytes_needed >= 1) {
-       int reduced_bytes_needed = total_bytes_needed % bytes_per_big_group;
-       if (reduced_bytes_needed == 0)
-           reduced_bytes_needed += bytes_per_big_group;
 
-       std::sort(order.begin(), order.end(), [=](const ternary_big_grp_use &a, const ternary_big_grp_use &b) {
-           if (!second_try && (a.total_found() + a.total_free() < reduced_bytes_needed))
-               return false;
-           if (!second_try && (b.total_found() + b.total_free() < reduced_bytes_needed))
-               return true;
-
-           int t;
-           if (!second_try && (t = a.total_found() - b.total_found()) != 0) return t > 0;
-
-           if ((t = a.total_free() - b.total_free()) != 0) return t > 0;
-           return a.big_group < b.big_group; });   
-
-
-       int found_bytes = order[0].total_found();
-       int bytes_placed = 0;
-
- 
-       /* Remove all bytes previously found */
-       for (int i = 0; i < (int) unalloced.size(); i++)
-       {
-           auto &need = *(unalloced[i]);
-           if (found_bytes == 0)
-               break;
-           for (auto &p : Values(fields.equal_range(need.field))) {
-               if (p.byte == 5) {
-                   if ((order[0].big_group == p.group/2) && (byte_group_use[p.group].second == need.lo)) {
-                       need.loc = p;
-                       found_bytes--; bytes_placed++;
-                       unalloced.erase(unalloced.begin() + i);
-                       i--;
-                       break;
-                   }
-                   continue;
-               }
-               if ((order[0].big_group == p.group/2) && (use[p.group][p.byte].second == need.lo)) {
-                   need.loc = p;
-                   found_bytes--; bytes_placed++;
-                   unalloced.erase(unalloced.begin() + i);
-                   i--;
-                   break;
-               }
-           }
-       }
- 
-       LOG3("Bytes placed is " << bytes_placed); 
-
-       bytes_placed += free_bytes_large_ternary(order[0], unalloced, alloced);       
-
-       if (extra_log) {
-           LOG1("Hello from the otter slide");
-           LOG1("Bytes placed is " << bytes_placed);
-       }
-       /* No bytes placed in the xbar.  You're finished */
-       if (bytes_placed == 0) {
-           delete_placement(alloc);
-           return false;
-       }
-
-       total_bytes_needed -= bytes_placed;
-       /* Need some calculations for 88 bit multiples */
-       mid_bytes_needed = total_bytes_needed / bytes_per_big_group;
-       
-       LOG1("Total/Mid " << total_bytes_needed << " " << mid_bytes_needed);
-       calculate_ternary_found(unalloced, order);
-   }
-
-
-   
-
-   int bytes_needed = total_bytes_needed;
-   if (bytes_needed > 5) {
-       bytes_needed /= 2;
-   }
+    int bytes_needed = total_bytes_needed;
+    if (bytes_needed > 5) {
+        bytes_needed /= 2;
+    }
   
-   while (total_bytes_needed != 0) {
+    while (total_bytes_needed != 0) {
 
-       std::sort(small_order.begin(), small_order.end(), [=](const ternary_grp_use *ap, const ternary_grp_use *bp) {
-      
-           if (ap->free.popcount() + ap->found.popcount() < bytes_needed) 
-               return false;
-           if (bp->free.popcount() + bp->found.popcount() < bytes_needed)
-               return true;
-           int t;
-           if (!second_try && (t = ap->found.popcount() - bp->found.popcount()) != 0)
-               return t > 0;
-      
-           int r = total_bytes_needed - ap->found.popcount();
-           int s = total_bytes_needed - bp->found.popcount();
+        std::sort(small_order.begin(), small_order.end(), [=](const ternary_grp_use *ap, const ternary_grp_use *bp) {
        
-           //Best fit in terms of free bits left
-           if ((t = (bp->free.popcount() - s) - (ap->free.popcount() - r)) != 0)
-               return t > 0;
+            if (ap->free.popcount() + ap->found.popcount() < bytes_needed) 
+                return false;
+            if (bp->free.popcount() + bp->found.popcount() < bytes_needed)
+                return true;
+            int t;
+            if (!second_try && (t = ap->found.popcount() - bp->found.popcount()) != 0)
+                return t > 0;
        
-           return (ap->group < bp->group); 
-       });
+            int r = total_bytes_needed - ap->found.popcount();
+            int s = total_bytes_needed - bp->found.popcount();
+        
+            //Best fit in terms of free bits left
+            if ((t = (bp->free.popcount() - s) - (ap->free.popcount() - r)) != 0)
+                return t > 0;
+        
+            return (ap->group < bp->group); 
+        });
 
-       
-       int bytes_placed = 0;
-       /* Remove all bytes previously found */
-       bytes_placed += found_bytes(small_order, unalloced);
-       LOG3("Found bytes = " << bytes_placed);
-       /* Place all free locations */
-       int free_bytes = small_order[0]->free.popcount();
-       bitvec need_alloc;
-       for (size_t i = 0; i < unalloced.size(); i++) {
-           if (free_bytes == 0)
-               break;
-           auto &need = *(unalloced[i]);
-           int align = ((small_order[0]->group * 11 + 1)/2) & 3;
-           for (auto byte : small_order[0]->free) {
-               if (align_flags[(byte+align) & 3] & need.flags) continue;
-               need.loc.group = small_order[0]->group;
-               alloced.push_back(unalloced[i]); 
-               unalloced.erase(unalloced.begin() + i);
-               i--;
-               need.loc.byte = byte;
-               small_order[0]->free[byte] = false;
-               free_bytes--; bytes_placed++;
-               break;
-           }
-       }
+        
+        int bytes_placed = 0;
+        /* Remove all bytes previously found */
+        bytes_placed += found_bytes(small_order, unalloced);
+        LOG3("Found bytes = " << bytes_placed);
+        /* Place all free locations */
+        int free_bytes = small_order[0]->free.popcount();
+        bitvec need_alloc;
+        for (int i = 0; i < (int) unalloced.size(); i++) {
+            if (free_bytes == 0)
+                break;
+            auto &need = *(unalloced[i]);
+            int align = ((small_order[0]->group * 11 + 1)/2) & 3;
+            for (auto byte : small_order[0]->free) {
+                if (align_flags[(byte+align) & 3] & need.flags) continue;
+                allocate_free_byte(small_order[0], unalloced, alloced, need,
+                                   small_order[0]->group, byte, i, free_bytes, bytes_placed);
+                break;
+            }
+        }
  
-       /* No bytes placed in the xbar.  You're finished */
-       if (bytes_placed == 0) {
-           delete_placement(alloc);
-           return false;
-       }
+        /* No bytes placed in the xbar.  You're finished */
+        if (bytes_placed == 0) {
+            delete_placement(alloc);
+            return false;
+        }
 
-       total_bytes_needed -= bytes_placed;
-       calculate_ternary_found(unalloced, order);
-   }
+        total_bytes_needed -= bytes_placed;
+        calculate_ternary_found(unalloced, order);
+    }
 
-   for (auto &need : alloced) {
-       fields.emplace(need->field, need->loc);
-       if (need->loc.byte == 5)
-           byte_group_use[need->loc.group/2] = *(need);
-       else
-           use[need->loc] = *(need);
-   }
+    /* Place all of the newly allocated fields into their new spot */
+    for (auto &need : alloced) {
+        fields.emplace(need->field, need->loc);
+        if (need->loc.byte == 5)
+            byte_group_use[need->loc.group/2] = *(need);
+        else
+            use[need->loc] = *(need);
+    }
 
-   return true;
+    return true;
 }
 
 
