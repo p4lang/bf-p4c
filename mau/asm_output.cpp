@@ -106,7 +106,7 @@ class MauAsmOutput::ActionDataFormat : public Inspector {
                     arg_use[a].first = sz;
                 if (auto sl = getParent<IR::Slice>()) {
                     /* FIXME -- deal with mulitple slices with conflicting uses */
-                    if (int align = (sl->getL() / 8U) % sz)
+                    if (int align = -(sl->getL() / 8U) % sz)
                         arg_use[a].second = align; } } }
         return false; }
     int find_slot(int sz, int align, int align_off) {
@@ -134,7 +134,7 @@ class MauAsmOutput::ActionDataFormat : public Inspector {
                 align_off = arg_use[arg].second; }
             int at = find_slot(size, align, align_off);
             LOG4(arg->name << " " << size << " bytes at offset " << at <<
-                 " (align=" << align << ")");
+                 " (align=" << align << " align_off=" << align_off << ")");
             if (size > 0)
                 inuse.setrange(at, size);
             placed_args.emplace(at, std::make_pair(size, arg->name)); } }
