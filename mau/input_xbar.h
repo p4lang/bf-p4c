@@ -134,8 +134,11 @@ struct IXBar {
     bool find_ternary_alloc(IXBar::Use &alloc, bool second_try);
     void calculate_ternary_found(vector<IXBar::Use::Byte *> unalloced, vector<ternary_big_grp_use> &order);
     void delete_placement(IXBar::Use &alloc);
-    int found_bytes(vector<ternary_grp_use *> &small_order, vector<IXBar::Use::Byte *> &unalloced);
-    int free_bytes_large_ternary(ternary_big_grp_use &grp, vector<IXBar::Use::Byte *> &unalloced,
+    int found_bytes(ternary_grp_use *grp, vector<IXBar::Use::Byte *> &unalloced);
+    int free_bytes(ternary_grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, 
+                   vector<IXBar::Use::Byte *> &alloced);
+    int found_bytes_big_group(ternary_big_grp_use *grp, vector<IXBar::Use::Byte *> &unalloced);
+    int free_bytes_big_group(ternary_big_grp_use *grp, vector<IXBar::Use::Byte *> &unalloced,
                                  vector<IXBar::Use::Byte *> &alloced);
     void allocate_free_byte(ternary_grp_use *grp, vector<IXBar::Use::Byte *> &unalloced,
                             vector<IXBar::Use::Byte *> &alloced, IXBar::Use::Byte &need,
