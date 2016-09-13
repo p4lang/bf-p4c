@@ -12,7 +12,7 @@ class ElimUnused::ParserMetadata : public Transform {
             return nullptr; }
         return prim; }
     IR::MAU::Instruction *preorder(IR::MAU::Instruction *i) override {
-        if (self.defuse.getUses(this, i->operands[0]).empty()) {
+        if (i->operands[0] && self.defuse.getUses(this, i->operands[0]).empty()) {
             LOG1("elim unused instruction " << i);
             return nullptr; }
         return i; }
