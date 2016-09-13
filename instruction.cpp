@@ -279,16 +279,19 @@ struct AluOP : public Instruction {
         Decode *swap_args;
         Decode(const char *n, unsigned opc, bool assoc = false) : Idecode(n), name(n),
             opcode(opc), swap_args(assoc ? this : 0) {}
-        Decode(const char *n, unsigned opc, Decode *sw) : Idecode(n), name(n), opcode(opc),
-            swap_args(sw) { if (!sw->swap_args) sw->swap_args = this; }
+        Decode(const char *n, unsigned opc, Decode *sw, const char *alias_name = 0)
+        : Idecode(n), name(n), opcode(opc), swap_args(sw) {
+            if (sw && !sw->swap_args) sw->swap_args = this;
+            if (alias_name) alias(alias_name); }
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op);
     } *opc;
     Phv::Ref    dest;
     operand     src1, src2;
-    AluOP(Decode *d, Table *tbl, const Table::Actions::Action *act, const value_t *ops) :
-            Instruction(ops->lineno), opc(d), dest(tbl->gress, ops[0]),
-            src1(tbl, act, ops[1]), src2(tbl, act, ops[2]) {}
+    AluOP(Decode *op, Table *tbl, const Table::Actions::Action *act, const value_t &d,
+          const value_t &s1, const value_t &s2)
+    : Instruction(d.lineno), opc(op), dest(tbl->gress, d),
+      src1(tbl, act, s1), src2(tbl, act, s2) {}
     Instruction *pass1(Table *tbl);
     void pass2(Table *tbl) { src1->pass2(tbl, slot/16); src2->pass2(tbl, slot/16); }
     int encode();
@@ -307,7 +310,7 @@ static AluOP::Decode opADD("add", 0x23e, true), opADDC("addc", 0x2be, true),
                      opMAXU("maxu", 0x1be, true), opMAXS("maxs", 0x1fe, true),
                      opSETZ("setz", 0x01e, true), opNOR("nor", 0x05e, true),
                      opANDCA("andca", 0x09e), opNOTA("nota", 0x0de),
-                     opANDCB("andcb", 0x11e, &opANDCA), opNOTB("notb", 0x15e, &opNOTA),
+                     opANDCB("andcb", 0x11e, &opANDCA), opNOTB("notb", 0x15e, &opNOTA, "not"),
                      opXOR("xor", 0x19e, true), opNAND("nand", 0x19e, true),
                      opAND("and", 0x21e, true), opXNOR("xnor", 0x25e, true),
                      opB("alu_b", 0x29e), opORCA("orca", 0x29e),
@@ -317,10 +320,14 @@ static AluOP::Decode opADD("add", 0x23e, true), opADDC("addc", 0x2be, true),
 
 Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act,
                                    const VECTOR(value_t) &op) {
-    if (op.size != 4) {
-        error(op[0].lineno, "%s requires 3 operands", op[0].s);
+    AluOP *rv;
+    if (op.size == 4)
+        rv = new AluOP(this, tbl, act, op.data[1], op.data[2], op.data[3]);
+    else if (op.size == 3)
+        rv = new AluOP(this, tbl, act, op.data[1], op.data[1], op.data[2]);
+    else {
+        error(op[0].lineno, "%s requires 2 or 3 operands", op[0].s);
         return 0; }
-    AluOP *rv = new AluOP(this, tbl, act, op.data + 1);
     if (!rv->src1.valid())
         error(op[2].lineno, "invalid src1");
     else if (!rv->src2.valid())
