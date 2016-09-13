@@ -8,8 +8,8 @@ class PhvInfo;
 class IXBarRealign;
 struct TableResourceAlloc;
 //FIXME: Maybe a different format
-struct ternary_grp_use;
-struct ternary_big_grp_use;
+struct grp_use;
+struct big_grp_use;
 
 
 struct IXBar {
@@ -131,16 +131,18 @@ struct IXBar {
 
  private:
     bool find_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
-    bool find_ternary_alloc(IXBar::Use &alloc, bool second_try);
-    void calculate_ternary_found(vector<IXBar::Use::Byte *> unalloced, vector<ternary_big_grp_use> &order);
+    bool find_ternary_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
+    void calculate_found(vector<IXBar::Use::Byte *> unalloced, vector<big_grp_use> &order, bool ternary);
+    void calculate_ternary_free(vector<big_grp_use> &order, int big_groups, int bytes_per_big_group);
+    void calculate_exact_free(vector<big_grp_use> &order, int big_groups, int bytes_per_big_group);
     void delete_placement(IXBar::Use &alloc);
-    int found_bytes(ternary_grp_use *grp, vector<IXBar::Use::Byte *> &unalloced);
-    int free_bytes(ternary_grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, 
-                   vector<IXBar::Use::Byte *> &alloced);
-    int found_bytes_big_group(ternary_big_grp_use *grp, vector<IXBar::Use::Byte *> &unalloced);
-    int free_bytes_big_group(ternary_big_grp_use *grp, vector<IXBar::Use::Byte *> &unalloced,
+    int found_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, bool ternary);
+    int free_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, 
+                   vector<IXBar::Use::Byte *> &alloced, bool ternary);
+    int found_bytes_big_group(big_grp_use *grp, vector<IXBar::Use::Byte *> &unalloced);
+    int free_bytes_big_group(big_grp_use *grp, vector<IXBar::Use::Byte *> &unalloced,
                                  vector<IXBar::Use::Byte *> &alloced);
-    void allocate_free_byte(ternary_grp_use *grp, vector<IXBar::Use::Byte *> &unalloced,
+    void allocate_free_byte(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced,
                             vector<IXBar::Use::Byte *> &alloced, IXBar::Use::Byte &need,
                             int group, int byte, int &index, int &free_bytes, int &bytes_placed);
 };
