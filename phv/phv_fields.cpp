@@ -221,13 +221,13 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &s
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &fld) {
-    out << fld.name << '[' << fld.size << ']' << std::endl;
+    out << fld.name << '[' << fld.size << ']';
     return out;
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo &phv) {
     for (auto iter = phv.begin(); iter != phv.end(); ++iter) {
-         std::cout << *iter;
+         std::cout << *iter << std::endl;
     }
     return out;
 }

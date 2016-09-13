@@ -16,6 +16,7 @@ class Cluster : public Inspector {
     bool preorder(const IR::Operation_Unary* expression) override;
     bool preorder(const IR::Operation_Binary* expression) override;
     bool preorder(const IR::Operation_Ternary* expression) override;
+    bool preorder(const IR::Primitive* primitive) override;
     bool preorder(const IR::Operation* operation) override;
 
  public:
