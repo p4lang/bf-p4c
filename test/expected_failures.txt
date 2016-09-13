@@ -1,7 +1,5 @@
 - current compiler failures on some tests.
-acl1.p4 mismatch
 counter5.p4 mismatch
-exact_match9.p4 mismatch
 hash_index5.p4 mismatch
 mac_rewrite.p4 tfas
 proxy_hash1.p4 mismatch

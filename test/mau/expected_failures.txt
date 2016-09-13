@@ -37,7 +37,6 @@ test_config_147_subtract_primitive.p4 mismatch
 dileep10.p4 mismatch
 dileep11.p4 mismatch
 dileep12.p4 mismatch
-selector1.p4 mismatch
 test_config_100_hash_action.p4 mismatch
 test_config_103_first_phase_0.p4 mismatch
 test_config_10_new_crossbar_allocation.p4 tfas
@@ -46,7 +45,6 @@ test_config_140_table_counter.p4 mismatch
 test_config_142_stateful_bfd.p4 compile
 test_config_148_action_profile.p4 mismatch
 test_config_149_signed_and_saturating_add_sub.p4 mismatch
-test_config_151_action_bus_allocation_2.p4 mismatch
 test_config_152_stateful_simple_cntr.p4 mismatch
 test_config_153_stateful_simple_cntr_with_output.p4 mismatch
 test_config_154_stateful_sampling.p4 mismatch
@@ -96,9 +94,7 @@ test_config_23_same_container_modified.p4 mismatch
 test_config_2_action_data_table_sizing.p4 mismatch
 test_config_45_action_data_immediate_param_and_constant.p4 mismatch
 test_config_48_action_data_bit_masked_set.p4 mismatch
-test_config_78_tcam_with_220_bits_high_nibble_and_version.p4 mismatch
 test_config_91_gateway_with_split_table.p4 mismatch
 test_config_99_share_exact_match_key.p4 mismatch
-test_config_9_no_ternary_indirection.p4 mismatch
 vk_basic_ipv4_20150706.p4 mismatch
 vk_basic_ipv4_subset.p4 mismatch
