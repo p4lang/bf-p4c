@@ -246,12 +246,14 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
     for (auto &group : groups) {
         for (auto &input : group.second) {
             if (!input.what.check(true)) continue;
+#if 0
             if (ternary && (input.lo == 40 || input.lo < 0)) {
                 // can do a single nybble in a ternary group, so different error message?
                 if (input.what->lo % 4U != 0 || input.what->hi % 4U != 3)
                     error(input.what.lineno, "input_xbar can only manipulate whole bytes");
             } else if (input.what->lo % 8U != 0 || input.what->hi % 8U != 7)
                 error(input.what.lineno, "input_xbar can only manipulate whole bytes");
+#endif
             table->stage->match_use[table->gress][input.what->reg.index] = 1;
             if (input.lo >= 0) {
                 if (input.lo % 8U != 0)
@@ -264,7 +266,11 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
                 if (input.lo >= size)
                     error(input.what.lineno, "placing %s off the top of the input xbar",
                           input.what.name()); }
-                if (!ternary && (input.lo % input.what->reg.size != input.what->lo))
+                if (ternary) {
+                    unsigned align_mask = input.lo >= 40 ? 3 : 7;
+                    if ((input.lo ^ input.what->lo) & align_mask)
+                        error(input.what.lineno, "%s misaligned on input_xbar", input.what.name());
+                } else if (input.lo % input.what->reg.size != input.what->lo)
                     error(input.what.lineno, "%s misaligned on input_xbar", input.what.name()); }
         for (InputXbar *other : use[group.first]) {
             if (other->groups.count(group.first) &&
