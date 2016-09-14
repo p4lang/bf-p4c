@@ -246,18 +246,8 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
     for (auto &group : groups) {
         for (auto &input : group.second) {
             if (!input.what.check(true)) continue;
-#if 0
-            if (ternary && (input.lo == 40 || input.lo < 0)) {
-                // can do a single nybble in a ternary group, so different error message?
-                if (input.what->lo % 4U != 0 || input.what->hi % 4U != 3)
-                    error(input.what.lineno, "input_xbar can only manipulate whole bytes");
-            } else if (input.what->lo % 8U != 0 || input.what->hi % 8U != 7)
-                error(input.what.lineno, "input_xbar can only manipulate whole bytes");
-#endif
             table->stage->match_use[table->gress][input.what->reg.index] = 1;
             if (input.lo >= 0) {
-                if (input.lo % 8U != 0)
-                    error(input.what.lineno, "input_xbar can only manipulate whole bytes");
                 if (input.hi >= 0) {
                     if (input.hi - input.lo != input.what->hi - input.what->lo)
                         error(input.what.lineno, "Input xbar size doesn't match register size");
