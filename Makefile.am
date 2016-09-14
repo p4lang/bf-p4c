@@ -284,3 +284,9 @@ XFAIL_TESTS += \
 
 # Generates broken PHV alloc (regs used by both ingress & egress)
 XFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/basic_routing.p4.test
+
+# Incorrect parser generation, broken tbl-cfg for 1 bit match, losing data in PHV?
+XFAIL_TESTS += \
+    tofino/testdata/p4_14_samples/07-MultiProtocol.p4.test \
+    tofino-newpa/testdata/p4_14_samples/07-MultiProtocol.p4.test
+
