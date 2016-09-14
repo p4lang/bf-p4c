@@ -161,13 +161,9 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
         const IXBar::Use &use, const Memories::Use *mem, const TableFormat *fmt) const {
     map<int, map<int, Slice>> sort;
     for (auto &b : use.use) {
-        auto n = sort[b.loc.group].emplace(b.loc.byte*8,
-            Slice(phv, b.field, b.lo, b.hi));
-        assert(n.second);
-        if (n.first->second.width() != 8)
-            /* FIXME -- we want this for ixbar layout (must be full bytes) but we DON'T want
-             * this for hash function generation. */
-            n.first->second = n.first->second.fullbyte(); }
+        Slice sl(phv, b.field, b.lo, b.hi);
+        auto n = sort[b.loc.group].emplace(b.loc.byte*8 + sl.bytealign(), sl);
+        assert(n.second); }
     for (auto &group : sort) {
         auto it = group.second.begin();
         while (it != group.second.end()) {
