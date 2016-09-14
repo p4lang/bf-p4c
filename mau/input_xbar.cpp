@@ -140,12 +140,13 @@ void IXBar::calculate_exact_free(vector<big_grp_use> &order, int big_groups, int
     }
 }
 
-void IXBar::delete_placement(IXBar::Use &alloc) {
+void IXBar::delete_placement(IXBar::Use &alloc, vector<IXBar::Use::Byte *> &alloced) {
     LOG1("We deleting this sucka");
     for (auto &need : alloc.use) {
         need.loc.byte = -1;
         need.loc.group = -1;
     }
+    alloced.clear();
 }
 
 int IXBar::found_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, bool ternary) {
@@ -294,10 +295,23 @@ int IXBar::free_bytes_big_group(big_grp_use *grp, vector<IXBar::Use::Byte*> &una
     return bytes_placed;
 }
 
-bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try) {
+
+void IXBar::fill_out_use(vector<IXBar::Use::Byte *> &alloced, bool ternary) {
+    auto &use = this->use(ternary);
+    auto &fields = this->fields(ternary);
+    for (auto &need : alloced) {
+        LOG1("Allocating new space for need " << need);
+        fields.emplace(need->field, need->loc);
+        if (ternary && need->loc.byte == 5)
+            byte_group_use[need->loc.group/2] = *(need);
+        else
+            use[need->loc] = *(need);
+    }
+}
+
+bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try, vector<IXBar::Use::Byte *> alloced) {
     int groups = ternary ? TERNARY_GROUPS : EXACT_GROUPS;
     int big_groups = ternary ? TERNARY_GROUPS/2 : EXACT_GROUPS;
-    //int bytes_per_group = ternary ? TERNARY_BYTES_PER_GROUP : EXACT_BYTES_PER_GROUP;
     int bytes_per_big_group = ternary ? 11 : EXACT_BYTES_PER_GROUP;
     auto &use = this->use(ternary);
     auto &fields = this->fields(ternary);
@@ -316,35 +330,8 @@ bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try) {
         groups_needed = big_groups_needed;
     }
 
-
-/*    int groups = 12;
-    int big_groups = 6;
-    int bytes_per_big_group = 11;
-
-    
-    auto &use = this->use(true);
-    auto &fields = this->fields(true);
-    LOG1("Total bytes is " << alloc.use.size());
-
-    int big_groups_needed = (alloc.use.size() + bytes_per_big_group - 1)/bytes_per_big_group;
-
-    int mid_bytes_needed = 0;
-
-    int total_bytes_needed = alloc.use.size();
-    int groups_needed = 2 * big_groups_needed;
-
-    if (total_bytes_needed - big_groups_needed * bytes_per_big_group <= 5)
-        groups_needed -= 1;
-    
     if (big_groups_needed > big_groups || groups_needed > groups)
         return false;
-    
-    mid_bytes_needed = big_groups_needed - 1;
-*/
-
-    if (big_groups_needed > big_groups || groups_needed > groups)
-        return false;
-
 
     /* Initialize all required information */
     vector<big_grp_use> order(big_groups);
@@ -368,10 +355,8 @@ bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try) {
             small_order.push_back(&order[i].second);
     }
 
-
-
     vector<IXBar::Use::Byte *> unalloced;
-    vector<IXBar::Use::Byte *> alloced;
+    //vector<IXBar::Use::Byte *> alloced;
     for (auto &need : alloc.use) {
         unalloced.push_back(&need);
     }
@@ -426,7 +411,7 @@ bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try) {
 
         /* No bytes placed in the xbar.  You're finished */
         if (bytes_placed == 0) {
-            delete_placement(alloc);
+            delete_placement(alloc, alloced);
             return false;
         }
 
@@ -449,9 +434,9 @@ bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try) {
 
         std::sort(small_order.begin(), small_order.end(), [=](const grp_use *ap, const grp_use *bp) {
        
-            if (ap->free.popcount() + ap->found.popcount() < bytes_needed) 
+            if (!second_try && (ap->free.popcount() + ap->found.popcount() < bytes_needed))
                 return false;
-            if (bp->free.popcount() + bp->found.popcount() < bytes_needed)
+            if (!second_try && (bp->free.popcount() + bp->found.popcount() < bytes_needed))
                 return true;
             int t;
             if (!second_try && (t = ap->found.popcount() - bp->found.popcount()) != 0)
@@ -461,9 +446,10 @@ bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try) {
             int s = total_bytes_needed - bp->found.popcount();
         
             //Best fit in terms of free bits left
-            if ((t = (bp->free.popcount() - s) - (ap->free.popcount() - r)) != 0)
+            if (!second_try && (t = (bp->free.popcount() - s) - (ap->free.popcount() - r)) != 0)
                 return t > 0;
         
+            if ((t = ap->free.popcount() - bp->free.popcount()) != 0) return t > 0;
             return (ap->group < bp->group); 
         });
 
@@ -476,7 +462,7 @@ bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try) {
  
         /* No bytes placed in the xbar.  You're finished */
         if (bytes_placed == 0) {
-            delete_placement(alloc);
+            delete_placement(alloc, alloced);
             return false;
         }
 
@@ -485,15 +471,8 @@ bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try) {
     }
 
     /* Place all of the newly allocated fields into their new spot */
+    //fill_out_use(alloced, ternary);
 
-    for (auto &need : alloced) {
-        LOG1("Allocating new space for need " << need);
-        fields.emplace(need->field, need->loc);
-        if (ternary && need->loc.byte == 5)
-            byte_group_use[need->loc.group/2] = *(need);
-        else
-            use[need->loc] = *(need);
-    }
     LOG1("The thing is done");
     if (ternary) {
         for (int grp = 0; grp < big_groups; grp++)
@@ -506,7 +485,7 @@ bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try) {
 }
 
 /*
-bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try) {
+bool IXBar::find_original_alloc(IXBar::Use &alloc, bool ternary, bool second_try) {
     int groups = ternary ? TERNARY_GROUPS : EXACT_GROUPS;
     int bytes_per_group = ternary ? TERNARY_BYTES_PER_GROUP : EXACT_BYTES_PER_GROUP;
     auto &use = this->use(ternary);
@@ -520,14 +499,14 @@ bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try) {
 
     if (groups_needed > groups)
         return false;
-    struct grp_use {
+    struct original_grp_use {
         int     group;
         bitvec  found,  // bytes from alloc found already allocated in this group
                 free;   // bytes in this group available for use
         void dbprint(std::ostream &out) const {
             out << group << ": found=" << found << " free=" << free; }
     };
-    vector<grp_use> order(groups);
+    vector<original_grp_use> order(groups);
     for (int i = 0; i < groups; i++) order[i].group = i;
     // figure out how many needed bytes have already been allocated to each group the xbar
     for (auto &need : alloc.use)
@@ -547,7 +526,7 @@ bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try) {
 
     }
     // sort group pref order: prefer groups with most bytes already in, then most free
-    std::sort(order.begin(), order.end(), [=](const grp_use &a, const grp_use &b) {
+    std::sort(order.begin(), order.end(), [=](const original_grp_use &a, const original_grp_use &b) {
         int t;
         if (!second_try && (t = a.found.popcount() - b.found.popcount()) != 0) return t > 0;
         if ((t = a.free.popcount() - b.free.popcount()) != 0) return t > 0;
@@ -606,9 +585,11 @@ bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try) {
     for (int i : need_alloc) {
         fields.emplace(alloc.use[i].field, alloc.use[i].loc);
         use[alloc.use[i].loc] = alloc.use[i]; }
+    for (int grp = 0; grp < groups; grp++)
+         LOG1("Small Group " << order[grp]);
     return  true;
-}
-*/
+}*/
+
 int need_align_flags[3][4] = { { 0, 0, 0, 0 },  // 8bit -- no alignment needed
     { IXBar::Use::Align16lo, IXBar::Use::Align16hi, IXBar::Use::Align16lo, IXBar::Use::Align16hi },
     { IXBar::Use::Align16lo | IXBar::Use::Align32lo,
@@ -723,6 +704,7 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const IR::MAU::Table::Way &w
         LOG3("failed to allocate enough way mask bits, will need to reuse some");
     alloc.way_use.emplace_back(Use::Way{ hash_group, group, way_mask });
     hash_index_inuse[group] |= alloc.hash_table_input;
+    LOG3("The way_mask is " << way_mask);
     for (auto bit : bitvec(way_mask))
         hash_single_bit_inuse[bit] |= alloc.hash_table_input;
     for (auto ht : bitvec(alloc.hash_table_input)) {
@@ -732,7 +714,7 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const IR::MAU::Table::Way &w
     return true;
 }
 
-bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc) {
+bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc, bool second_try) {
     CollectGatewayFields collect(phv);
     tbl->apply(collect);
     if (collect.info.empty() && collect.valid_offsets.empty()) return true;
@@ -746,7 +728,8 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     for (auto &valid : collect.valid_offsets) {
         alloc.use.emplace_back(valid.first + ".$valid", 0, 0); }
     LOG3("gw needs alloc: " << alloc.use);
-    if (!find_alloc(alloc, false, false) && !find_alloc(alloc, false, true)) {
+    vector<IXBar::Use::Byte *> xbar_alloced;
+    if (!find_alloc(alloc, false, second_try, xbar_alloced) && !find_alloc(alloc, false, true, xbar_alloced)) {
         alloc.clear();
         return false; }
     if (!collect.compute_offsets()) {
@@ -756,7 +739,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     if (collect.bits > 0) {
         int hash_group = getHashGroup(tbl->name + "$gw");
         if (hash_group < 0) {
-            alloc.clear();
+            delete_placement(alloc, xbar_alloced);
             return false; }
         /* FIXME -- don't need use all hash tables that we're using the ixbar for -- just those
          * tables for bytes we want to put through the hash table to get into the upper gw bits */
@@ -767,10 +750,12 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             if ((hash_single_bit_inuse[i] & alloc.hash_table_input) == 0)
                 avail |= (1U << i); }
         int shift = 0;
-        while (((avail >> shift) & need) != need && avail < need)
+        while (((avail >> shift) & need) != need && shift < 12) {
             shift += 4;
+            LOG3("Still looping");
+        }
         if (((avail >> shift) & need) != need) {
-            alloc.clear();
+            delete_placement(alloc, xbar_alloced);
             LOG3("failed to find " << collect.bits << " continuous nibble aligend bits in 0x" <<
                  hex(avail));
             return false; }
@@ -789,6 +774,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
                 hash_single_bit_use[ht][shift + i] = tbl->name + "$gw";
         for (int i = 0; i < collect.bits; ++i)
             hash_single_bit_inuse[shift + i] |= alloc.hash_table_input; }
+    LOG1("Totally allocated");
     return true;
 }
 
@@ -803,9 +789,11 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv,
             tbl_alloc.clear();
             return false; } }
     if (!allocGateway(tbl, phv, gw_alloc)) {
-        tbl_alloc.clear();
+        
         gw_alloc.clear();
+        tbl_alloc.clear();
         return false; }
+
     return true;
 }
 
