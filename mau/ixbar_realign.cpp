@@ -16,6 +16,17 @@ class IXBarRealign::GetCurrentUse : public MauInspector {
     explicit GetCurrentUse(IXBarRealign &s) : self(s) {}
 };
 
+static std::function<std::ostream &(std::ostream&)>
+use_info(const PhvInfo &phv, std::pair<cstring, int> use) {
+    return [=](std::ostream &out) -> std::ostream & {
+        out << use.first << '[' << use.second << ']';
+        auto *field = phv.field(use.first);
+        auto &alloc = field->for_bit(use.second);
+        out << "  " << alloc.field_bit << ".." << alloc.field_hi() << " in " << alloc.container
+            << "(" << alloc.container_bit << ".." << alloc.container_hi() << ')';
+        return out; };
+}
+
 IXBarRealign::Realign::Realign(const PhvInfo &phv, int stage, const IXBar &ixbar) {
     for (int grp = 0; grp < IXBar::EXACT_GROUPS; ++grp) {
         unsigned inuse = 0, do_remap = 0;
@@ -40,11 +51,13 @@ IXBarRealign::Realign::Realign(const PhvInfo &phv, int stage, const IXBar &ixbar
              " inuse=" << hex(inuse) << " do_remap=" << hex(do_remap));
         for (int i = 0; i < IXBar::EXACT_BYTES_PER_GROUP; ++i, do_remap >>= 1) {
             if (!(do_remap & 1)) continue;
+            LOG3("  remap " << i << ": " << use_info(phv, ixbar.exact_use.at(grp, i)));
             int byte = remap[grp][i] >> 4;
             int step = (remap[grp][i] & 0xf) + 1;
             bool done = false;
             for (int j = byte; j < IXBar::EXACT_BYTES_PER_GROUP; j += step) {
                 if (!((inuse >> j) & 1)) {
+                    LOG3("  remap to " << j);
                     remap[grp][i] = j;
                     inuse |= 1 << j;
                     done = true;
