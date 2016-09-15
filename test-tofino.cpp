@@ -105,13 +105,24 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new DumpPipe("Initial table graph"),
         &phv,
         &defuse,
-        //
+        new AddBridgedMetadata(phv, defuse),
+        new AddMetadataShims,
+        new CreateThreadLocalInstances(INGRESS),
+        new CreateThreadLocalInstances(EGRESS),
+        &phv,
+	//
+	// cluster accumulates set<field*>
+	// these field pointers are not part of IR, they are calculated by &phv
+	// perform cluster analysis after last &phv pass 
+	//
         &cluster, 
         new VisitFunctor([&phv, &defuse, &cluster]() {
 		std::cout << "+++++ All Fields(name,size) +++++:\n";
 		std::cout << phv;
 		//std::cout << "+++++ Def-Use +++++:\n";
 		//std::cout << defuse;
+		std::cout << "+++++ Clusters +++++:\n";
+		std::cout << cluster;
 	}),
         //
         new AddBridgedMetadata(phv, defuse),

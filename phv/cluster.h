@@ -9,8 +9,9 @@
 #include "tofino/ir/thread_visitor.h"
 
 class Cluster : public Inspector {
-    PhvInfo	&phv;
-    vector<vector<PhvInfo::Field *>>	fields;
+    PhvInfo	&phv_i;
+    std::map<PhvInfo::Field *, std::set<const PhvInfo::Field *>> dst_map_i;
+    PhvInfo::Field *dst_i;
 
     bool preorder(const IR::Member* expression) override;
     bool preorder(const IR::Operation_Unary* expression) override;
@@ -20,7 +21,10 @@ class Cluster : public Inspector {
     bool preorder(const IR::Operation* operation) override;
 
  public:
-    Cluster(PhvInfo &p) : phv(p){}
+    Cluster(PhvInfo &p) : phv_i(p){}
+    std::map<PhvInfo::Field *, std::set<const PhvInfo::Field *>>& dst_map() {return dst_map_i;}
 };
+
+std::ostream &operator<<(std::ostream &, Cluster &);
 
 #endif /* _TOFINO_PHV_CLUSTER_H_ */
