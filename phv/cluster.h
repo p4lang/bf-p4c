@@ -10,8 +10,8 @@
 
 class Cluster : public Inspector {
     PhvInfo	&phv_i;
-    std::map<PhvInfo::Field *, std::set<const PhvInfo::Field *>> dst_map_i;
-    PhvInfo::Field *dst_i;
+    std::unordered_map<PhvInfo::Field *, std::unordered_set<const PhvInfo::Field *>> dst_map_i;
+    PhvInfo::Field *dst_i = nullptr;
 
     bool preorder(const IR::Member* expression) override;
     bool preorder(const IR::Operation_Unary* expression) override;
@@ -22,7 +22,7 @@ class Cluster : public Inspector {
 
  public:
     Cluster(PhvInfo &p) : phv_i(p){}
-    std::map<PhvInfo::Field *, std::set<const PhvInfo::Field *>>& dst_map() {return dst_map_i;}
+    std::unordered_map<PhvInfo::Field *, std::unordered_set<const PhvInfo::Field *>>& dst_map() {return dst_map_i;}
 };
 
 std::ostream &operator<<(std::ostream &, Cluster &);

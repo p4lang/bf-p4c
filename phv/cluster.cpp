@@ -22,7 +22,10 @@ bool Cluster::preorder(const IR::Operation_Unary* expression)
     if(field)
     {
         LOG3('(');
-        dst_map_i[dst_i].insert(field);
+        if(dst_i)
+        {
+            dst_map_i[dst_i].insert(field);
+        }
         LOG3(*field);
         LOG3(')');
     }
@@ -42,13 +45,19 @@ bool Cluster::preorder(const IR::Operation_Binary* expression)
         LOG3('(');
         if(left)
         {
-            dst_map_i[dst_i].insert(left);
+            if(dst_i)
+            {
+                dst_map_i[dst_i].insert(left);
+            }
             LOG3(*left);
         }
         else LOG3('-');
         if(right)
         {
-            dst_map_i[dst_i].insert(right);
+            if(dst_i)
+            {
+                dst_map_i[dst_i].insert(right);
+            }
             LOG3(*right);
         }
         else LOG3('-');
@@ -72,19 +81,28 @@ bool Cluster::preorder(const IR::Operation_Ternary* expression)
         LOG3('(');
         if(e0)
         {
-            dst_map_i[dst_i].insert(e0);
+            if(dst_i)
+            {
+                dst_map_i[dst_i].insert(e0);
+            }
             LOG3(*e0);
         }
         else LOG3('-');
         if(e1)
         {
-            dst_map_i[dst_i].insert(e1);
+            if(dst_i)
+            {
+                dst_map_i[dst_i].insert(e1);
+            }
             LOG3(*e1);
         }
         else LOG3('-');
         if(e2)
         {
-            dst_map_i[dst_i].insert(e2);
+            if(dst_i)
+            {
+                dst_map_i[dst_i].insert(e2);
+            }
             LOG3(*e2);
         }
         else LOG3('-');
@@ -97,6 +115,7 @@ bool Cluster::preorder(const IR::Operation_Ternary* expression)
 bool Cluster::preorder(const IR::Primitive* primitive)
 {
     LOG3(".....Primitive:Operation....." << primitive->name);
+    dst_i = nullptr; 
     if (! primitive->operands.empty())
     {
         dst_i = phv_i.field(primitive->operands[0]);
@@ -107,7 +126,10 @@ bool Cluster::preorder(const IR::Primitive* primitive)
             const PhvInfo::Field *field = phv_i.field(operand);
             if(field)
             {
-                dst_map_i[dst_i].insert(field);
+                if(dst_i)
+                {
+                    dst_map_i[dst_i].insert(field);
+                }
                 LOG3(*field);
             }
             else LOG3('-');
@@ -129,16 +151,23 @@ bool Cluster::preorder(const IR::Operation* operation)
 std::ostream &operator<<(std::ostream &out, Cluster &cluster)
 {
     // iterate through all elements in std::map
-    for(std::map<PhvInfo::Field *, std::set<const PhvInfo::Field *>>::iterator it = cluster.dst_map().begin();
-	it != cluster.dst_map().end();
-	it++)
+    for(auto iter = cluster.dst_map().begin(); iter != cluster.dst_map().end(); iter++)
     {
-        std::cout << it->first << "-->"<< it->second << std::endl;
+	// ignore singleton clusters
+        if(iter->second.size() > 1)
+        {
+            std::cout << *(iter->first) << "-->(";
+            auto it = iter->second.begin();
+                std::cout << *(*it);
+                ++it;
+            for (; it != iter->second.end(); ++it)
+            {
+                std::cout << ", ";
+                std::cout << *(*it);
+            }
+            std::cout << ')' << std::endl;
+        }
     }
-    //for (std::set<std::string>::iterator it=setOfNumbers.begin(); it!=setOfNumbers.end(); ++it)
-    //{
-        //std::cout << ' ' << *it;
-    //}
 
     return out;
 }
