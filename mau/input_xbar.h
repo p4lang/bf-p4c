@@ -115,7 +115,7 @@ struct IXBar {
     bool allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc);
     int getHashGroup(cstring name);
     bool allocHashWay(const IR::MAU::Table *, const IR::MAU::Table::Way &, Use &);
-    bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc);
+    bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_alloc, Use &gw_alloc);
     void update(cstring name, const Use &alloc);
     void update(cstring name, const TableResourceAlloc *alloc);
@@ -130,13 +130,14 @@ struct IXBar {
         return nullptr; }
 
  private:
-    bool find_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
+    bool find_alloc(IXBar::Use &alloc, bool ternary, bool second_try, 
+                    vector<IXBar::Use::Byte *> &alloced);
     bool find_original_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
     bool find_ternary_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
     void calculate_found(vector<IXBar::Use::Byte *> unalloced, vector<big_grp_use> &order, bool ternary);
     void calculate_ternary_free(vector<big_grp_use> &order, int big_groups, int bytes_per_big_group);
     void calculate_exact_free(vector<big_grp_use> &order, int big_groups, int bytes_per_big_group);
-    void delete_placement(IXBar::Use &alloc);
+    void delete_placement(IXBar::Use &alloc, vector<IXBar::Use::Byte *> &alloced);
     int found_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, bool ternary);
     int free_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, 
                    vector<IXBar::Use::Byte *> &alloced, bool ternary);
@@ -146,7 +147,7 @@ struct IXBar {
     void allocate_free_byte(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced,
                             vector<IXBar::Use::Byte *> &alloced, IXBar::Use::Byte &need,
                             int group, int byte, int &index, int &free_bytes, int &bytes_placed);
-    void fill_out_use(Vector<IXBar::Use::Byte *> &alloced, bool ternary);
+    void fill_out_use(vector<IXBar::Use::Byte *> &alloced, bool ternary);
 };
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {

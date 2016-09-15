@@ -155,19 +155,25 @@ int IXBar::found_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, bool
     int found_bytes = grp->found.popcount();
     int bytes_placed = 0;
 
-    for (size_t i = 0; i < unalloced.size(); i++)
+    
+    for (int i = 0; i < (int) unalloced.size(); i++)
     {
+        LOG3("Unalloced size is " << unalloced.size());
         auto &need = *(unalloced[i]);
         if (found_bytes == 0)
             break;
         for (auto &p : Values(fields.equal_range(need.field))) {
             
-
+            
             if ((grp->group == p.group) && (use[p.group][p.byte].second == need.lo)) {
+                LOG3("unalloced[i]->loc before " << unalloced[i]->loc);
                 unalloced[i]->loc = p;
+                LOG3("unalloced[i]->loc after " << unalloced[i]->loc);
                 found_bytes--; bytes_placed++;
                 unalloced.erase(unalloced.begin() + i);
                 i--;
+                LOG3("unalloced.size is now " << unalloced.size());
+                break;
             }
         }
     }
@@ -237,7 +243,11 @@ int IXBar::free_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced,
         auto &need = *(unalloced[i]);
         int align = ternary ? ((grp->group * 11 + 1)/2) & 3 : 0;
         for (auto byte : grp->free) {
-            if (align_flags[(byte+align) & 3] & need.flags) continue;
+            if (align_flags[(byte+align) & 3] & need.flags) {
+                 
+                 LOG1("We are not in a correct alignment");
+                 continue;
+            } 
             allocate_free_byte(grp, unalloced, alloced, need,
                                grp->group, byte, i, free_bytes, bytes_placed);
             break;
@@ -300,7 +310,6 @@ void IXBar::fill_out_use(vector<IXBar::Use::Byte *> &alloced, bool ternary) {
     auto &use = this->use(ternary);
     auto &fields = this->fields(ternary);
     for (auto &need : alloced) {
-        LOG1("Allocating new space for need " << need);
         fields.emplace(need->field, need->loc);
         if (ternary && need->loc.byte == 5)
             byte_group_use[need->loc.group/2] = *(need);
@@ -309,12 +318,12 @@ void IXBar::fill_out_use(vector<IXBar::Use::Byte *> &alloced, bool ternary) {
     }
 }
 
-bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try, vector<IXBar::Use::Byte *> alloced) {
+bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try, vector<IXBar::Use::Byte *> &alloced) {
     int groups = ternary ? TERNARY_GROUPS : EXACT_GROUPS;
     int big_groups = ternary ? TERNARY_GROUPS/2 : EXACT_GROUPS;
     int bytes_per_big_group = ternary ? 11 : EXACT_BYTES_PER_GROUP;
-    auto &use = this->use(ternary);
-    auto &fields = this->fields(ternary);
+    //auto &use = this->use(ternary);
+    //auto &fields = this->fields(ternary);
     
     int total_bytes_needed = alloc.use.size();
     LOG1("Total Bytes needed to allocate is " << total_bytes_needed);
@@ -652,7 +661,9 @@ bool IXBar::allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv,
         add_use(alloc, finfo, 0); }
     LOG1("need " << alloc.use.size() << " bytes for table " << tbl->name);
     LOG3("need fields " << fields_needed);
-    rv = find_alloc(alloc, ternary, false) || find_alloc(alloc, ternary, true);
+    vector<IXBar::Use::Byte *> xbar_alloced;
+    rv = find_alloc(alloc, ternary, false, xbar_alloced) || find_alloc(alloc, ternary, true, xbar_alloced);
+    fill_out_use(xbar_alloced, ternary);
     if (!ternary && rv)
         alloc.compute_hash_tables();
     if (!rv) alloc.clear();
@@ -730,7 +741,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     LOG3("gw needs alloc: " << alloc.use);
     vector<IXBar::Use::Byte *> xbar_alloced;
     if (!find_alloc(alloc, false, second_try, xbar_alloced) && !find_alloc(alloc, false, true, xbar_alloced)) {
-        alloc.clear();
+        delete_placement(alloc, xbar_alloced);
         return false; }
     if (!collect.compute_offsets()) {
         alloc.clear();
@@ -775,6 +786,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
         for (int i = 0; i < collect.bits; ++i)
             hash_single_bit_inuse[shift + i] |= alloc.hash_table_input; }
     LOG1("Totally allocated");
+    fill_out_use(xbar_alloced, false);
     return true;
 }
 
@@ -788,7 +800,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv,
         if (!allocHashWay(tbl, way, tbl_alloc)) {
             tbl_alloc.clear();
             return false; } }
-    if (!allocGateway(tbl, phv, gw_alloc)) {
+    if (!allocGateway(tbl, phv, gw_alloc, false) && !allocGateway(tbl, phv, gw_alloc, true)) {
         
         gw_alloc.clear();
         tbl_alloc.clear();
@@ -798,7 +810,6 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv,
 }
 
 void IXBar::update(cstring name, const Use &alloc) {
-    LOG1("Calling update");
     auto &use = alloc.ternary ? ternary_use.base() : exact_use.base();
     auto &fields = alloc.ternary ? ternary_fields : exact_fields;
     for (auto &byte : alloc.use) {
@@ -813,7 +824,6 @@ void IXBar::update(cstring name, const Use &alloc) {
                 BUG("conflicting ixbar allocation");
             byte_group_use[byte_group] = byte;
         } else {
-            LOG1("Alloc.use " << byte << " location " << byte.loc << " ternary " << alloc.ternary);
             if (byte == use[byte.loc]) continue;
             if (use[byte.loc].first)
                 BUG("conflicting ixbar allocation");
