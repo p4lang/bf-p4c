@@ -124,10 +124,11 @@ void AsmStage::process() {
             /* to turn the corner, the middle stage must always be match dependent */
             for (auto gress : Range(INGRESS, EGRESS))
                 stage[i].stage_dep[gress] = Stage::MATCH_DEP; }
-        if (options.match_compiler) {
+        if (options.match_compiler || 1) {
             /* FIXME -- do we really want to do this?  In theory different stages could
              * FIXME -- use the same PHV slots differently, but the compiler always uses them
-             * FIXME -- consistently, so we need this to get bit-identical results */
+             * FIXME -- consistently, so we need this to get bit-identical results
+             * FIXME -- we also don't correctly determine liveness, so need this */
             for (auto gress : Range(INGRESS, EGRESS)) {
                 Phv::setuse(gress, stage[i].match_use[gress]);
                 Phv::setuse(gress, stage[i].action_use[gress]);
@@ -335,12 +336,10 @@ void Stage::write_regs() {
         in_use -= Deparser::PhvUse(EGRESS);
         eg_use -= Deparser::PhvUse(INGRESS); }
     /* FIXME -- if the regs are live across a stage (even if not used in that stage) they
-     * need to be set in the thread registers.  For now we just assume if the deparser uses
-     * them, they are live in every stage */
-    in_use |= Deparser::PhvUse(INGRESS);
-    eg_use |= Deparser::PhvUse(EGRESS);
-    //in_use |= Phv::use(INGRESS);
-    //eg_use |= Phv::use(EGRESS);
+     * need to be set in the thread registers.  For now we just assume if they are used
+     * anywhere, they need to be marked as live */
+    in_use |= Phv::use(INGRESS);
+    eg_use |= Phv::use(EGRESS);
     static const int phv_use_transpose[2][14] = {
         {  0,  1,  2,  3,  8,  9, 10, 11, 16, 17, 18, 19, 20, 21 },
         {  4,  5,  6,  7, 12, 13, 14, 15, 22, 23, 24, 25, 26, 27 } };

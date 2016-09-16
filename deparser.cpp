@@ -236,7 +236,7 @@ void Deparser::process() {
             for (auto &reg : set.second)
                 if (reg.check())
                     phv_use[digest.type->gress][reg->reg.index] = 1; }
-    if (options.match_compiler) {
+    if (options.match_compiler || 1) {  /* FIXME -- need proper liveness analysis */
         Phv::setuse(INGRESS, phv_use[INGRESS]);
         Phv::setuse(EGRESS, phv_use[EGRESS]); }
 }
