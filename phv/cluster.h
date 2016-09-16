@@ -10,7 +10,7 @@
 
 class Cluster : public Inspector {
     PhvInfo	&phv_i;
-    std::unordered_map<PhvInfo::Field *, std::unordered_set<const PhvInfo::Field *>> dst_map_i;
+    std::map<const PhvInfo::Field *, std::set<const PhvInfo::Field *>*> dst_map_i;
     PhvInfo::Field *dst_i = nullptr;
 
     bool preorder(const IR::Member* expression) override;
@@ -21,8 +21,29 @@ class Cluster : public Inspector {
     bool preorder(const IR::Operation* operation) override;
 
  public:
-    Cluster(PhvInfo &p) : phv_i(p){}
-    std::unordered_map<PhvInfo::Field *, std::unordered_set<const PhvInfo::Field *>>& dst_map() {return dst_map_i;}
+    Cluster(PhvInfo &p) : phv_i(p)
+    {
+        for (auto iter = phv_i.begin(); iter != phv_i.end(); ++iter)
+        {
+            dst_map_i[&(*iter)] = nullptr;
+        }
+    }
+    ~Cluster()
+    {
+       for(auto iter = dst_map_i.begin(); iter != dst_map_i.end(); iter++)
+       {
+           if(iter->second)
+           {
+               delete iter->second;
+               iter->second = nullptr;
+           }
+       }
+    }
+    std::map<const PhvInfo::Field *, std::set<const PhvInfo::Field *>*>& dst_map()
+    {
+        return dst_map_i;
+    }
+    void insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rhs);
 };
 
 std::ostream &operator<<(std::ostream &, Cluster &);

@@ -21,11 +21,8 @@ bool Cluster::preorder(const IR::Operation_Unary* expression)
 	<< '(' << expression->expr->toString() << ')');
     if(field)
     {
+        insert_cluster(dst_i, field);
         LOG3('(');
-        if(dst_i)
-        {
-            dst_map_i[dst_i].insert(field);
-        }
         LOG3(*field);
         LOG3(')');
     }
@@ -45,19 +42,13 @@ bool Cluster::preorder(const IR::Operation_Binary* expression)
         LOG3('(');
         if(left)
         {
-            if(dst_i)
-            {
-                dst_map_i[dst_i].insert(left);
-            }
+            insert_cluster(dst_i, left);
             LOG3(*left);
         }
         else LOG3('-');
         if(right)
         {
-            if(dst_i)
-            {
-                dst_map_i[dst_i].insert(right);
-            }
+            insert_cluster(dst_i, right);
             LOG3(*right);
         }
         else LOG3('-');
@@ -81,28 +72,19 @@ bool Cluster::preorder(const IR::Operation_Ternary* expression)
         LOG3('(');
         if(e0)
         {
-            if(dst_i)
-            {
-                dst_map_i[dst_i].insert(e0);
-            }
+            insert_cluster(dst_i, e0);
             LOG3(*e0);
         }
         else LOG3('-');
         if(e1)
         {
-            if(dst_i)
-            {
-                dst_map_i[dst_i].insert(e1);
-            }
+            insert_cluster(dst_i, e1);
             LOG3(*e1);
         }
         else LOG3('-');
         if(e2)
         {
-            if(dst_i)
-            {
-                dst_map_i[dst_i].insert(e2);
-            }
+            insert_cluster(dst_i, e2);
             LOG3(*e2);
         }
         else LOG3('-');
@@ -120,16 +102,17 @@ bool Cluster::preorder(const IR::Primitive* primitive)
     {
         dst_i = phv_i.field(primitive->operands[0]);
         // assert dst_i;
+        if(! dst_map_i[dst_i])
+        {
+            dst_map_i[dst_i] = new std::set<const PhvInfo::Field *>; 
+        }
         LOG3('(');
         for (auto &operand : primitive->operands)
         {
             const PhvInfo::Field *field = phv_i.field(operand);
             if(field)
             {
-                if(dst_i)
-                {
-                    dst_map_i[dst_i].insert(field);
-                }
+                insert_cluster(dst_i, field);
                 LOG3(*field);
             }
             else LOG3('-');
@@ -148,19 +131,66 @@ bool Cluster::preorder(const IR::Operation* operation)
     return true;
 }
 
+void Cluster::insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rhs)
+{
+    // a, b
+    // if (b == a)
+    //     (a) = a
+    // if(b --> ==  a-->)
+    //     do nothing
+    // if(b --> nullptr)
+    //     (a) = (a) U b
+    //     b --> (a) 
+    // if(b == (b d ...))
+    //     (a) = (a) U (b)
+    //     (b) --> (a)
+    //     del (b) -- no opd points to (b) 
+    //
+    if(lhs && dst_map_i[lhs] && rhs)
+    {
+        if(rhs == lhs)
+        {   // (a) = a
+            dst_map_i[lhs]->insert(rhs);
+        }
+        else
+        {
+            if(dst_map_i[rhs] != dst_map_i[lhs])
+            {
+                // b --> nullptr
+                if(! dst_map_i[rhs])
+                {
+                    dst_map_i[lhs]->insert(rhs);
+                    dst_map_i[rhs] = dst_map_i[lhs];
+                }
+                else
+                {
+                    // b = (b d ...)
+                    dst_map_i[lhs]->insert(dst_map_i[rhs]->begin(), dst_map_i[rhs]->end());
+                    // all rhs set members must point to lhs set
+                    //for(auto iter = dst_map_i[rhs]->begin(); iter != dst_map_i[rhs]->end(); iter++)
+                    {
+                        //dst_map_i[*iter] = dst_map_i[lhs];
+                    }
+                    //delete dst_map_i[rhs];
+                }
+            }
+        }
+    }
+}
+
 std::ostream &operator<<(std::ostream &out, Cluster &cluster)
 {
     // iterate through all elements in std::map
     for(auto iter = cluster.dst_map().begin(); iter != cluster.dst_map().end(); iter++)
     {
 	// ignore singleton clusters
-        if(iter->second.size() > 1)
+        if(iter->second && iter->second->size() > 1)
         {
             std::cout << *(iter->first) << "-->(";
-            auto it = iter->second.begin();
+            auto it = iter->second->begin();
                 std::cout << *(*it);
-                ++it;
-            for (; it != iter->second.end(); ++it)
+                it++;
+            for (; it != iter->second->end(); it++)
             {
                 std::cout << ", ";
                 std::cout << *(*it);
