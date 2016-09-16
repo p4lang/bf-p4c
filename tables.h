@@ -337,6 +337,7 @@ public:
     void check_next();
     void check_next(Ref &next);
     bool choose_logical_id(const slist<Table *> *work = nullptr);
+    virtual int hit_next_size() const { return hit_next.size(); }
 };
 
 class FakeTable : public Table {
@@ -498,6 +499,10 @@ public:
     Call &action_call() { return indirect ? indirect->action : action; }
     int memunit(int r, int c) { return r + c*12; }
     bool is_ternary() { return true; }
+    int hit_next_size() const override {
+        if (indirect && indirect->hit_next.size() > 0)
+            return indirect->hit_next.size();
+        return hit_next.size(); }
 )
 
 DECLARE_TABLE_TYPE(Phase0MatchTable, Table, "phase0_match",

@@ -113,6 +113,7 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
                 payload = kv.value.bigi.data[0] + ((uint64_t)kv.value.bigi.data[1] << 32);
             else if (CHECKTYPE(kv.value, tINT))
                 payload = kv.value.i;
+            /* FIXME -- should also be able to specify payload as <action name>(<args>) */
             have_payload = kv.key.lineno;
         } else if (kv.key == "match_address") {
             if (CHECKTYPE(kv.value, tINT))

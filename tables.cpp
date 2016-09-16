@@ -764,8 +764,35 @@ static void find_pred_in_stage(int stageno, std::set<MatchTable *> &pred, Table 
 void Table::Actions::pass2(Table *tbl) {
     int code = tbl->get_gateway() ? 1 : 0;  // if there's a gateway, reserve code 0 for a NOP
                                             // to run when the gateway inhibits the table
-    if (code + actions.size() > ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH)
-        code = -1;
+
+    /* figure out how many codes we can encode in the match table(s), and if we need a distinct
+     * code for every action to handle next_table properly */
+    int code_limit = 0x10000;
+    MatchTable *limit_match_table = nullptr;
+    bool have_next_hit_map = false;
+    for (auto match : tbl->get_match_tables()) {
+        auto &args = match->get_action().args;
+        if (args.size() > 0 && (1 << args[0].size()) < code_limit) {
+            code_limit = 1 << args[0].size();
+            limit_match_table = match; }
+        if (match->hit_next_size() > 1)
+            have_next_hit_map = true; }
+
+    /* figure out if we need more codes than can fit in the action_instruction_adr_map.
+     * use code = -1 to signal that condition. */
+    if (have_next_hit_map) {
+        if (code + actions.size() > ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH)
+            code = -1;
+    } else {
+        int non_nop_actions = 0;
+        for (auto &act : *this)
+            if (act.instr.empty())
+                code = 1;   // nop action -- always uses code 0
+            else
+                ++non_nop_actions;  // FIXME -- should combine identical actions
+        if (code + non_nop_actions > ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH)
+            code = -1; }
+
     for (auto &act : *this) {
         for (auto *inst : act.instr)
             inst->pass2(tbl);
@@ -784,8 +811,13 @@ void Table::Actions::pass2(Table *tbl) {
                 break; } }
         if (act.addr < 0)
             error(act.lineno, "Can't find an available instruction address");
-        if (act.code < 0)
-            act.code = code < 0 && !code_use[act.addr] ? act.addr : code;
+        if (act.code < 0) {
+            if (code < 0 && !code_use[act.addr])
+                act.code = act.addr;
+            else if (act.instr.empty() && !have_next_hit_map)
+                act.code = 0;
+            else
+                act.code = code; }
         else if (code < 0 && act.code != act.addr) {
             error(act.lineno, "Action code must be the same as action instruction address "
                   "when there are more than %d actions", ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH);
@@ -793,6 +825,9 @@ void Table::Actions::pass2(Table *tbl) {
                 warning(act.lineno, "Code %d is already in use by another action", act.addr); }
         if (act.code >= 0)
             code_use[act.code] = true;
+        if (act.code >= code_limit)
+            warning(act.lineno, "Code %d for %s too large for action specifier in table %s",
+                    code, act.name.c_str(), limit_match_table->name());
         if (act.code > max_code) max_code = act.code;
         while (code >= 0 && code_use[code]) code++; }
     actions.sort([](const value_type &a, const value_type &b) -> bool {
@@ -830,8 +865,10 @@ static int parity(unsigned v) {
 void Table::Actions::write_regs(Table *tbl) {
     auto &imem = tbl->stage->regs.dp.imem;
     for (auto &act : *this) {
-        if (&act != tbl->stage->imem_addr_use[tbl->gress][act.addr])
-            continue;
+        if (&act != tbl->stage->imem_addr_use[tbl->gress][act.addr]) {
+            LOG3("skipping " << tbl->name() << '.' << act.name << " as its imem is used by " <<
+                 tbl->stage->imem_addr_use[tbl->gress][act.addr]->name);
+            continue; }
         int iaddr = act.addr/ACTION_IMEM_COLORS;
         int color = act.addr%ACTION_IMEM_COLORS;
         for (auto *inst : act.instr) {
