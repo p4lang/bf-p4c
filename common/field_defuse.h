@@ -17,7 +17,7 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, P4WriteContext 
  private:
     const PhvInfo               &phv;
     SymBitMatrix                &conflict;
-    map<locpair, set<locpair>>  &uses;
+    map<locpair, set<locpair>>  &uses, &defs;
     struct info {
         const PhvInfo::Field    *field = 0;
         set<locpair>            def, use;
@@ -50,10 +50,18 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, P4WriteContext 
 
  public:
     explicit FieldDefUse(const PhvInfo &p)
-    : phv(p), conflict(*new SymBitMatrix), uses(*new std::remove_reference<decltype(uses)>::type)
+    : phv(p), conflict(*new SymBitMatrix), uses(*new std::remove_reference<decltype(uses)>::type),
+      defs(*new std::remove_reference<decltype(defs)>::type)
     { joinFlows = true; visitDagOnce = false; }
     const SymBitMatrix &conflicts() { return conflict; }
 
+    const set<locpair> &getDefs(locpair use) const {
+        static const set<locpair> emptyset;
+        return defs.count(use) ? uses.at(use) : emptyset; }
+    const set<locpair> &getDefs(const IR::Tofino::Unit *u, const IR::Expression *e) const {
+        return getDefs(locpair(u, e)); }
+    const set<locpair> &getDefs(const Visitor *v, const IR::Expression *e) const {
+        return getDefs(locpair(v->findOrigCtxt<IR::Tofino::Unit>(), e)); }
     const set<locpair> &getUses(locpair def) const {
         static const set<locpair> emptyset;
         return uses.count(def) ? uses.at(def) : emptyset; }

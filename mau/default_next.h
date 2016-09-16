@@ -17,7 +17,6 @@ class DefaultNext : public MauInspector, ControlFlowVisitor {
         prev_tbls.clear();
         return true; }
     void postorder(const IR::MAU::Table *tbl) override {
-        prev_tbls.clear();
         prev_tbls.insert(tbl); }
     DefaultNext *clone() const override { return new DefaultNext(*this); }
     void flow_merge(Visitor &a_) override {

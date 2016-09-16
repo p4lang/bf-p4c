@@ -21,7 +21,7 @@ IR::Node *SplitPhvUse::preorder(IR::Primitive *p) {
             if (!rv) rv = new IR::Vector<IR::Primitive>;
             IR::Primitive *cl = p->clone();
             for (auto &operand : cl->operands)
-                operand = preorder(new IR::Slice(operand, hi, lo));
+                operand = new IR::Slice(operand, hi, lo);
             LOG3("   " << *cl);
             rv->push_back(cl); }
         if (rv) return rv; }
@@ -32,6 +32,7 @@ IR::Node *SplitPhvUse::preorder(IR::Expression *e) {
     PhvInfo::Field::bitrange bits;
     IR::Vector<IR::Expression> *rv = nullptr;
     if (auto field = phv.field(e, &bits)) {
+        prune();
         if (field->alloc.size() <= 1) return e;
         LOG3("split " << *e << " into");
         for (auto &alloc : field->alloc) {
@@ -53,12 +54,13 @@ IR::Node *SplitPhvUse::preorder(IR::Expression *e) {
             if (!rv) rv = new IR::Vector<IR::Expression>;
             auto *sl = new IR::Slice(e, hi, lo);
             LOG3("   " << *sl);
-            rv->push_back(preorder(sl)); }
+            rv->push_back(preorder(sl)->to<IR::Expression>());
+            assert(rv->back()); }
         if (rv) return rv; }
     return e;
 }
 
-IR::Expression *SplitPhvUse::preorder(IR::Slice *sl) {
+IR::Node *SplitPhvUse::preorder(IR::Slice *sl) {
     if (auto *of = sl->e0->to<IR::Slice>()) {
         int lo = sl->getL() + of->getL();
         int hi = sl->getH() + of->getL();
@@ -72,5 +74,5 @@ IR::Expression *SplitPhvUse::preorder(IR::Slice *sl) {
         int hi = sl->getH();
         return ((*k >> lo) & IR::Constant((1U << (hi-lo+1)) - 1)).clone();
     } else {
-        return sl; }
+        return preorder(static_cast<IR::Expression *>(sl)); }
 }
