@@ -148,13 +148,10 @@ void ActionBus::pass2(Table *tbl) {
                     error(tbl->format->lineno, "field %s not correctly aligned for 8-bit use on "
                           "action bus", tbl->format->find_field(field).c_str());
                     continue; }
-                if (bits.second & 4) {
-                    if ((use = find_free(tbl->stage, 0, 31, step, bytes)) >= 0)
-                        do_alloc(tbl, field, use, bytes, offset);
-                } else {
-                    unsigned start = (lo/8U) % 4U;
-                    if ((use = find_free(tbl->stage, start, 31, step, 1)) >= 0)
-                        do_alloc(tbl, field, use, 1, offset); } }
+                unsigned start = (lo/8U) % step;
+                if (!(bits.second & 4)) bytes = 1;
+                if ((use = find_free(tbl->stage, start, 31, step, bytes)) >= 0)
+                    do_alloc(tbl, field, use, bytes, offset); }
             if (bits.second & 2) {
                 /* need 16-bit */
                 if (lo % 16U) {
@@ -165,31 +162,23 @@ void ActionBus::pass2(Table *tbl) {
                     if ((use = find_merge(lo, bytes)) >= 0) {
                         do_alloc(tbl, field, use, bytes, offset);
                         continue; } }
-                if (bits.second & 4) {
-                    unsigned odd = (lo/8U) & 4;
-                    if ((use = find_free(tbl->stage, 32, 63, step, bytes)) >= 0 ||
-                        (use = find_free(tbl->stage, 64+odd, 95, 8, bytes)) >= 0)
-                        do_alloc(tbl, field, use, bytes, offset);
-                } else {
-                    if (bytes > 2) bytes = 2;
-                    unsigned start = 32 + (lo/8U) % 4U;
-                    if ((use = find_free(tbl->stage, start, 63, step, bytes)) >= 0 ||
-                        (use = find_free(tbl->stage, start+32, 95, 8, bytes)) >= 0)
-                        do_alloc(tbl, field, use, 2, offset); } }
+                if (!(bits.second & 4) && bytes > 2) bytes = 2;
+                unsigned start = 32 + (lo/8U) % step;
+                if ((use = find_free(tbl->stage, start, 63, step, bytes)) >= 0 ||
+                    (use = find_free(tbl->stage, start+32, 95, 8, bytes)) >= 0)
+                    do_alloc(tbl, field, use, bytes, offset); }
             if (bits.second == 4) {
                 /* need only 32-bit */
-                unsigned odd = (lo/8U) & 4;
+                unsigned odd = (lo/8U) & (4 & step);
+                unsigned start = (lo/8U) % step;
                 if (lo % 32U) {
                     if ((use = find_merge(lo, bytes)) >= 0) {
                         do_alloc(tbl, field, use, bytes, 0);
                         continue; } }
-                if ((use = find_free(tbl->stage, 96+odd, 127, 8, bytes)) >= 0)
-                    do_alloc(tbl, field, use, bytes, offset);
-                else if ((use = find_free(tbl->stage, 64+odd, 95, 8, bytes)) >= 0)
-                    do_alloc(tbl, field, use, bytes, offset);
-                else if ((use = find_free(tbl->stage, 32, 63, step, bytes)) >= 0)
-                    do_alloc(tbl, field, use, bytes, offset);
-                else if ((use = find_free(tbl->stage, 0, 31, step, bytes)) >= 0)
+                if ((use = find_free(tbl->stage, 96+start+odd, 127, 8, bytes)) >= 0 ||
+                    (use = find_free(tbl->stage, 64+start+odd, 95, 8, bytes)) >= 0 ||
+                    (use = find_free(tbl->stage, 32+start, 63, step, bytes)) >= 0 ||
+                    (use = find_free(tbl->stage, 0+start, 31, step, bytes)) >= 0)
                     do_alloc(tbl, field, use, bytes, offset); } } }
 }
 
@@ -281,11 +270,9 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
                 bytemask >>= 1; }
             break;
         case 16:
+            byte &= ~1;
             slot -= ACTION_DATA_8B_SLOTS;
             bytemask <<= ((bit/8) & 1);
-            if (!options.match_compiler)
-                /* FIXME -- old compiler currently generates these wrong */
-                byte -= ((bit/8) & 1);
             for (unsigned word = bit/16; word <= (bit+size-1)/16; word++, byte+=2, slot++) {
                 unsigned code, mask;
                 switch (word >> 1) {
@@ -316,6 +303,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
                 bytemask >>= 2; }
             break;
         case 32: {
+            byte &= ~3;
             slot -= ACTION_DATA_8B_SLOTS + ACTION_DATA_16B_SLOTS;
             unsigned word = bit/32;
             unsigned code = 1 + word/2;
