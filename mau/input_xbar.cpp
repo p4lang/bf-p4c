@@ -55,6 +55,8 @@ struct grp_use {
     int group;
     bitvec found;
     bitvec free;
+    bool first_hash_open;
+    bool second_hash_open;
     void dbprint(std::ostream &out) const {
         out << group << " found: " << found << " free: " << free;
     };
@@ -84,23 +86,27 @@ struct big_grp_use {
     }
 };
 
-void IXBar::calculate_found_hash(vector<IXBar::Use::Byte *> unalloced, vector<big_grp_use>, &order,
-                                 int hash_groups_needed) {
-    auto &use = this->use(ternary);
-    auto &fields = this->fields(ternary);
-     
-    for (size_t i = 0; i < order.size(); i++) {
-        order[i].first.found.clear();
-        order[i].second.found.clear();
-        order[i].mid_byte_found = false;
+void IXBar::calculate_available_groups(vector<big_grp_use> &order, int hash_groups_needed) {
+    
+    for (auto &big_grp : order) {
+        big_grp.first.first_hash_open = true;
+        big_grp.first.second_hash_open = true; 
     }
 
-    for (auto &need : unalloced) {
-        for (auto &p : Values(fields.equal_range(need->field)) {
-            if (use[p.group].first.found[p.byte]) {
-                
-            }
+    for (auto &big_grp : order) {
+
+        int first_ways_available = 0; int second_ways_available = 0;
+        for (int hash_group = 0; hash_group < HASH_INDEX_GROUPS; hash_group++) {
+            if(!(hash_index_inuse[hash_group] & (1 << (2 * big_grp.big_group))))
+                first_ways_available++;
+            if(!(hash_index_inuse[hash_group] & (1 << (2 * big_grp.big_group + 1))))
+                second_ways_available++;
         }
+
+        if (first_ways_available < hash_groups_needed)
+            big_grp.first.first_hash_open = false;
+        if (second_ways_available < hash_groups_needed)
+            big_grp.first.second_hash_open = false;
     }
 }
 
@@ -126,6 +132,10 @@ void IXBar::calculate_found(vector<IXBar::Use::Byte *> unalloced, vector<big_grp
 
             if (use[p.group][p.byte].second == need->lo) {
                 if (!ternary) {
+                    if (p.byte / 8 == 0 && !order[p.group].first.first_hash_open)
+                        continue;
+                    if (p.byte / 8 == 1 && !order[p.group].first.second_hash_open)
+                        continue;
                     order[p.group].first.found[p.byte] = true;
                     continue;
                 }
@@ -163,8 +173,13 @@ void IXBar::calculate_exact_free(vector<big_grp_use> &order, int big_groups, int
     auto &use = this->use(false);
     for (int grp = 0; grp < big_groups; grp++) {
         for (int byte = 0; byte < bytes_per_big_group; byte++) {
+            if (byte < 8 && !order[grp].first.first_hash_open)
+                continue;
+            if (byte > 8 && !order[grp].first.second_hash_open)
+                continue;
             if (!use[grp][byte].first)
                 order[grp].first.free[byte] = true;
+
         }
     }
 }
@@ -197,6 +212,12 @@ int IXBar::found_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, bool
             break;
         for (auto &p : Values(fields.equal_range(need.field))) {
             if ((grp->group == p.group) && (use[p.group][p.byte].second == need.lo)) {
+
+                if (!ternary && (p.byte / 8 == 0) && !grp->first_hash_open)
+                    continue;
+                if (!ternary && (p.byte / 8 == 1) && !grp->second_hash_open)
+                    continue;
+
                 unalloced[i]->loc = p;
                 found_bytes--; bytes_placed++;
                 unalloced.erase(unalloced.begin() + i);
@@ -359,7 +380,7 @@ void IXBar::fill_out_use(vector<IXBar::Use::Byte *> &alloced, bool ternary) {
    spans a group, tries to minimize total number of groups while finding the best groups to fill.
    If the allocation is less than a group, tries to find the best fit  */
 bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try, 
-                       vector<IXBar::Use::Byte *> &alloced) {
+                       vector<IXBar::Use::Byte *> &alloced, int hash_groups_needed) {
 
     /* Initial sizing calculations*/
     int groups = ternary ? TERNARY_GROUPS : EXACT_GROUPS;
@@ -408,6 +429,10 @@ bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try,
     vector<IXBar::Use::Byte *> unalloced;
     for (auto &need : alloc.use) {
         unalloced.push_back(&need);
+    }
+
+    if (!ternary) {
+        calculate_available_groups(order, hash_groups_needed);
     }
 
     /* Initial found and free calculations */
@@ -578,7 +603,7 @@ static void add_use(IXBar::Use &alloc, const PhvInfo::Field *field, int flags) {
 }
 
 bool IXBar::allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc, 
-                       vector<IXBar::Use::Byte *> &alloced, bool second_try) {
+                       vector<IXBar::Use::Byte *> &alloced, bool second_try, int hash_groups) {
     alloc.ternary = ternary;
     if (!tbl->reads) return true;
     set<cstring>                        fields_needed;
@@ -601,7 +626,8 @@ bool IXBar::allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv,
         add_use(alloc, finfo, 0); }
     LOG3("need " << alloc.use.size() << " bytes for table " << tbl->name);
     LOG3("need fields " << fields_needed);
-    rv = find_alloc(alloc, ternary, second_try, alloced);
+
+    rv = find_alloc(alloc, ternary, second_try, alloced, hash_groups);
     fill_out_use(alloced, ternary);
     if (!ternary && rv)
         alloc.compute_hash_tables();
@@ -739,7 +765,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     for (auto &valid : collect.valid_offsets) {
        add_use(alloc, phv.field(valid.first + ".$valid"), 0); }
     vector<IXBar::Use::Byte *> xbar_alloced;
-    if (!find_alloc(alloc, false, second_try, xbar_alloced)) {
+    if (!find_alloc(alloc, false, second_try, xbar_alloced, 0)) {
         delete_placement(alloc, xbar_alloced);
         return false; }
     if (!collect.compute_offsets()) {
@@ -793,11 +819,12 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv,
     if (!tbl) return true;
     LOG1("IXBar::allocTable(" << tbl->name << ")");
     if (tbl->match_table) {
+        int hash_groups = tbl->ways.size() > 4 ? 4 : tbl->ways.size();
         bool ternary = tbl->layout.ternary;
         vector <IXBar::Use::Byte *> alloced;
-        if (!(allocMatch(ternary, tbl->match_table, phv, tbl_alloc, alloced, false) 
+        if (!(allocMatch(ternary, tbl->match_table, phv, tbl_alloc, alloced, false, hash_groups) 
               && allocAllHashWays(ternary, tbl, tbl_alloc, alloced))
-            && !(allocMatch(ternary, tbl->match_table, phv, tbl_alloc, alloced, true) 
+            && !(allocMatch(ternary, tbl->match_table, phv, tbl_alloc, alloced, true, hash_groups) 
                && allocAllHashWays(ternary, tbl, tbl_alloc, alloced))) {
             tbl_alloc.clear();
             return false; }

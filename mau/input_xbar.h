@@ -113,7 +113,7 @@ struct IXBar {
 
     void clear();
     bool allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc,
-                    vector<IXBar::Use::Byte *> &alloced, bool second_try);
+                    vector<IXBar::Use::Byte *> &alloced, bool second_try, int hash_groups);
     int getHashGroup(cstring name);
     bool allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc, 
                           vector<IXBar::Use::Byte *> &alloced);
@@ -134,12 +134,16 @@ struct IXBar {
 
  private:
     bool find_alloc(IXBar::Use &alloc, bool ternary, bool second_try, 
-                    vector<IXBar::Use::Byte *> &alloced);
+                    vector<IXBar::Use::Byte *> &alloced, int hash_groups_needed);
     bool find_original_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
     bool find_ternary_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
-    void calculate_found(vector<IXBar::Use::Byte *> unalloced, vector<big_grp_use> &order, bool ternary);
-    void calculate_ternary_free(vector<big_grp_use> &order, int big_groups, int bytes_per_big_group);
-    void calculate_exact_free(vector<big_grp_use> &order, int big_groups, int bytes_per_big_group);
+    void calculate_available_groups(vector<big_grp_use> &order, int hash_groups_needed);
+    void calculate_found(vector<IXBar::Use::Byte *> unalloced, vector<big_grp_use> &order, 
+                         bool ternary);
+    void calculate_ternary_free(vector<big_grp_use> &order, int big_groups, 
+                                int bytes_per_big_group);
+    void calculate_exact_free(vector<big_grp_use> &order, int big_groups, 
+                              int bytes_per_big_group);
     void delete_placement(IXBar::Use &alloc, vector<IXBar::Use::Byte *> &alloced);
     int found_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, bool ternary);
     int free_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, 
