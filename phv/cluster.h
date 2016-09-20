@@ -14,12 +14,12 @@ class Cluster : public Inspector {
     std::map<const PhvInfo::Field *, std::set<const PhvInfo::Field *>*> dst_map_i;
     PhvInfo::Field *dst_i = nullptr;
 
-    bool preorder(const IR::Member* expression) override;
-    bool preorder(const IR::Operation_Unary* expression) override;
-    bool preorder(const IR::Operation_Binary* expression) override;
-    bool preorder(const IR::Operation_Ternary* expression) override;
-    bool preorder(const IR::Primitive* primitive) override;
-    bool preorder(const IR::Operation* operation) override;
+    bool preorder(const IR::Member*) override;
+    bool preorder(const IR::Operation_Unary*) override;
+    bool preorder(const IR::Operation_Binary*) override;
+    bool preorder(const IR::Operation_Ternary*) override;
+    bool preorder(const IR::Primitive*) override;
+    bool preorder(const IR::Operation*) override;
     void end_apply() override;
 
  public:
@@ -45,12 +45,13 @@ class Cluster : public Inspector {
     {
         return lhs_cluster_set_i;
     }
-    void dump_lhs_cluster_set();
     std::map<const PhvInfo::Field *, std::set<const PhvInfo::Field *>*>& dst_map()
     {
         return dst_map_i;
     }
-    void insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rhs);
+    void insert_cluster(const PhvInfo::Field *, const PhvInfo::Field *);
+    void dump_lhs_cluster_set(const std::string&);
+    void dump_field(const PhvInfo::Field *);
 };
 
 std::ostream &operator<<(std::ostream &, Cluster &);

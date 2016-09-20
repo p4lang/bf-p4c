@@ -15,81 +15,47 @@ bool Cluster::preorder(const IR::Member* expression)
 
 bool Cluster::preorder(const IR::Operation_Unary* expression)
 {
-    const PhvInfo::Field *field = phv_i.field(expression->expr);
-
     LOG3(".....Unary Operation....." << expression->toString()
 	<< '(' << expression->expr->toString() << ')');
-    if(field)
-    {
-        insert_cluster(dst_i, field);
-        LOG3('(');
-        LOG3(*field);
-        LOG3(')');
-    }
+    const PhvInfo::Field *field = phv_i.field(expression->expr);
+    dump_field(field);
+
+    insert_cluster(dst_i, field);
 
     return true;
 }
 
 bool Cluster::preorder(const IR::Operation_Binary* expression)
 {
-    const PhvInfo::Field *left = phv_i.field(expression->left);
-    const PhvInfo::Field *right = phv_i.field(expression->right);
-
     LOG3(".....Binary Operation....." << expression->toString()
 	<< '(' << expression->left->toString() << ',' << expression->right->toString() << ')');
-    if(left || right)
-    {
-        LOG3('(');
-        if(left)
-        {
-            insert_cluster(dst_i, left);
-            LOG3(*left);
-        }
-        else LOG3('-');
-        if(right)
-        {
-            insert_cluster(dst_i, right);
-            LOG3(*right);
-        }
-        else LOG3('-');
-        LOG3(')');
-    }
+    const PhvInfo::Field *left = phv_i.field(expression->left);
+    const PhvInfo::Field *right = phv_i.field(expression->right);
+    dump_field(left);
+    dump_field(right);
+
+    insert_cluster(dst_i, left);
+    insert_cluster(dst_i, right);
 
     return true;
 }
 
 bool Cluster::preorder(const IR::Operation_Ternary* expression)
 {
-    const PhvInfo::Field *e0 = phv_i.field(expression->e0);
-    const PhvInfo::Field *e1 = phv_i.field(expression->e1);
-    const PhvInfo::Field *e2 = phv_i.field(expression->e2);
 
     LOG3(".....Ternary Operation....." << expression->toString() 
 	<< '(' << expression->e0->toString() << ',' << expression->e1->toString() << ',' << expression->e2->toString()
         << ')');
-    if(e0 || e1 || e2)
-    {
-        LOG3('(');
-        if(e0)
-        {
-            insert_cluster(dst_i, e0);
-            LOG3(*e0);
-        }
-        else LOG3('-');
-        if(e1)
-        {
-            insert_cluster(dst_i, e1);
-            LOG3(*e1);
-        }
-        else LOG3('-');
-        if(e2)
-        {
-            insert_cluster(dst_i, e2);
-            LOG3(*e2);
-        }
-        else LOG3('-');
-        LOG3(')');
-    }
+    const PhvInfo::Field *e0 = phv_i.field(expression->e0);
+    const PhvInfo::Field *e1 = phv_i.field(expression->e1);
+    const PhvInfo::Field *e2 = phv_i.field(expression->e2);
+    dump_field(e0);
+    dump_field(e1);
+    dump_field(e2);
+
+    insert_cluster(dst_i, e0);
+    insert_cluster(dst_i, e1);
+    insert_cluster(dst_i, e2);
 
     return true;
 }
@@ -97,6 +63,11 @@ bool Cluster::preorder(const IR::Operation_Ternary* expression)
 bool Cluster::preorder(const IR::Primitive* primitive)
 {
     LOG3(".....Primitive:Operation....." << primitive->name);
+    for (auto &operand : primitive->operands)
+    {
+        const PhvInfo::Field *field = phv_i.field(operand);
+        dump_field(field);
+    }
     dst_i = nullptr; 
     if (! primitive->operands.empty())
     {
@@ -107,21 +78,13 @@ bool Cluster::preorder(const IR::Primitive* primitive)
             {
                 dst_map_i[dst_i] = new std::set<const PhvInfo::Field *>; 
                 lhs_cluster_set_i.insert(dst_i);
-                LOG3(".....lhs_cluster_set_i .....insert.....");
-                dump_lhs_cluster_set();
+                dump_lhs_cluster_set("insert");
             }
-            LOG3('(');
             for (auto &operand : primitive->operands)
             {
                 const PhvInfo::Field *field = phv_i.field(operand);
-                if(field)
-                {
-                    insert_cluster(dst_i, field);
-                    LOG3(*field);
-                }
-                else LOG3('-');
+                insert_cluster(dst_i, field);
             }
-            LOG3(')');
         }
     }
 
@@ -182,8 +145,7 @@ void Cluster::insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rh
             }
             // remove rhs from lhs_cluster_set as rhs cluster subsumed by lhs'
             lhs_cluster_set_i.erase(rhs);
-            LOG3(".....lhs_cluster_set_i.....erase.....");
-            dump_lhs_cluster_set();
+            dump_lhs_cluster_set("erase");
         }
     }
 }
@@ -194,12 +156,6 @@ void Cluster::end_apply()
     // (i) b elem (b, d, e)
     // (ii) forall x elem (b, d, e), x --> (b, d, e)
     //
-    // form unique clusters
-    // forall x not elem lhs_cluster_set_i, dst_map_i[x] = 0
-    //
-    // sanity check dst_map_i[] contains unique clusters
-    //
-    // sanity check clusters
     for(auto iter = dst_map_i.begin(); iter != dst_map_i.end(); iter++)
     {
         const PhvInfo::Field *lhs = iter->first;
@@ -220,9 +176,11 @@ void Cluster::end_apply()
                 }
             }
         }
-    }//for
+    }
+    //
     // form unique clusters
     // forall x not elem lhs_cluster_set_i, dst_map_i[x] = 0
+    //
     for(auto iter = dst_map_i.begin(); iter != dst_map_i.end(); iter++)
     {
         const PhvInfo::Field *lhs = iter->first;
@@ -230,17 +188,52 @@ void Cluster::end_apply()
         {
             dst_map_i[lhs] = nullptr;
         }
-    }//for
+    }
+    //
     // sanity check dst_map_i[] contains unique clusters only
+    // forall clusters x, y  x intersection y = 0
+    //
+    for(auto iter = dst_map_i.begin(); iter != dst_map_i.end(); iter++)
+    {
+        const PhvInfo::Field *lhs = iter->first;
+        if(lhs && dst_map_i[lhs])
+        {
+            for(auto it = dst_map_i.begin(); it != dst_map_i.end(); it++)
+            {
+                const PhvInfo::Field *lhs_2 = it->first;
+                if(lhs_2 && dst_map_i[lhs_2] && lhs != lhs_2)
+                {
+                    std::set<const PhvInfo::Field *> s1 = *dst_map_i[lhs];
+                    std::set<const PhvInfo::Field *> s2 = *dst_map_i[lhs_2];
+                    std::vector<const PhvInfo::Field *> s3;
+                    set_intersection(s1.begin(),s1.end(),s2.begin(),s2.end(), std::back_inserter(s3));
+                    if(s3.size())
+                    {
+                        //std::cout << "*****cluster.cpp:end_apply():sanity_check_3 failed*****" << s1 << "intersect" << s2 << '=' << s3 << std::endl;
+                    }
+                }
+            }//for
+        }
+    }
 }//end_apply
 
-void Cluster::dump_lhs_cluster_set()
+void Cluster::dump_field(const PhvInfo::Field *field)
 {
-    LOG3(".....lhs_cluster_set....." << lhs_cluster_set_i);
+    if(field)
+    {
+        LOG3("..........." << *field);
+    }
+    else LOG3("..........." << '-');
+}
+
+void Cluster::dump_lhs_cluster_set(const std::string& msg)
+{
+    LOG3(".....lhs_cluster_set....." << msg << '[');
     for(auto iter = lhs_cluster_set_i.begin(); iter != lhs_cluster_set_i.end(); iter++)
     {
-        LOG3("..." << *(*iter)); 
+        dump_field(*iter); 
     }
+    LOG3(".....lhs_cluster_set.....]");
 }
 
 std::ostream &operator<<(std::ostream &out, Cluster &cluster)
@@ -251,16 +244,16 @@ std::ostream &operator<<(std::ostream &out, Cluster &cluster)
 	// ignore singleton clusters
         if(iter->second && iter->second->size() > 1)
         {
-            std::cout << *(iter->first) << "-->(";
+            out << *(iter->first) << "-->(";
             auto it = iter->second->begin();
-                std::cout << *(*it);
+                out << *(*it);
                 it++;
             for (; it != iter->second->end(); it++)
             {
-                std::cout << ", ";
-                std::cout << *(*it);
+                out << ", ";
+                out << *(*it);
             }
-            std::cout << ')' << std::endl;
+            out << ')' << std::endl;
         }
     }
 

@@ -227,7 +227,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &fld) {
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo &phv) {
     for (auto iter = phv.begin(); iter != phv.end(); ++iter) {
-         std::cout << *iter << std::endl;
+         out << *iter << std::endl;
     }
     return out;
 }
