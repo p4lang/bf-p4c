@@ -4,12 +4,32 @@ template<class T> static
 T *clone(const T *ir) { return ir ? ir->clone() : nullptr; }
 
 const IR::ActionFunction *InstructionSelection::preorder(IR::ActionFunction *af) {
+    LOG2("InstructionSelection processing action " << af->name);
     this->af = af;
     return af;
 }
 
+class InstructionSelection::SplitInstructions : public Transform {
+    PhvInfo &phv;
+    IR::Vector<IR::Primitive> &split;
+    const IR::Expression *postorder(IR::MAU::Instruction *inst) override {
+        if (inst->operands[0]) return inst;
+        auto *tmp = phv.createTempField(inst->type);
+        inst->operands[0] = tmp;
+        LOG3("splitting instruction " << inst);
+        split.push_back(inst);
+        return tmp; }
+ public:
+    SplitInstructions(PhvInfo &p, IR::Vector<IR::Primitive> &s) : phv(p), split(s) {}
+};
+
 const IR::ActionFunction *InstructionSelection::postorder(IR::ActionFunction *af) {
     this->af = nullptr;
+    IR::Vector<IR::Primitive> split;
+    for (auto *p : af->action)
+        split.push_back(p->apply(SplitInstructions(phv, split)));
+    if (split.size() > af->action.size())
+        af->action = std::move(split);
     return af;
 }
 
@@ -48,7 +68,7 @@ const IR::Expression *InstructionSelection::postorder(IR::BAnd *e) {
     } else if (r && r->name == "not") {
         right = r->operands[1];
         op = "andcb"; }
-    return new IR::MAU::Instruction(e->srcInfo, "and", nullptr, left, right);
+    return (new IR::MAU::Instruction(e->srcInfo, "and", nullptr, left, right))->setType(e->type);
 }
 const IR::Expression *InstructionSelection::postorder(IR::BOr *e) {
     if (!af) return e;
@@ -66,7 +86,7 @@ const IR::Expression *InstructionSelection::postorder(IR::BOr *e) {
     } else if (r && r->name == "not") {
         right = r->operands[1];
         op = "orcb"; }
-    return new IR::MAU::Instruction(e->srcInfo, "or", nullptr, left, right);
+    return (new IR::MAU::Instruction(e->srcInfo, "or", nullptr, left, right))->setType(e->type);
 }
 const IR::Expression *InstructionSelection::postorder(IR::BXor *e) {
     if (!af) return e;
@@ -83,7 +103,7 @@ const IR::Expression *InstructionSelection::postorder(IR::BXor *e) {
     } else if (r && r->name == "not") {
         right = r->operands[1];
         op = "xnor"; }
-    return new IR::MAU::Instruction(e->srcInfo, "xor", nullptr, left, right);
+    return (new IR::MAU::Instruction(e->srcInfo, "xor", nullptr, left, right))->setType(e->type);
 }
 const IR::Expression *InstructionSelection::postorder(IR::Cmpl *e) {
     if (!af) return e;
@@ -100,26 +120,26 @@ const IR::Expression *InstructionSelection::postorder(IR::Cmpl *e) {
         else if (fold->name == "xor") fold->name = "xnor";
         else fold = nullptr;
         if (fold) return fold; }
-    return new IR::MAU::Instruction(e->srcInfo, "not", nullptr, e->expr);
+    return (new IR::MAU::Instruction(e->srcInfo, "not", nullptr, e->expr))->setType(e->type);
 }
 
 const IR::Expression *InstructionSelection::postorder(IR::Add *e) {
     if (!af) return e;
-    return new IR::MAU::Instruction(e->srcInfo, "add", nullptr, e->left, e->right);
+    return (new IR::MAU::Instruction(e->srcInfo, "add", nullptr, e->left, e->right))->setType(e->type);
 }
 
 const IR::Expression *InstructionSelection::postorder(IR::Sub *e) {
     if (!af) return e;
     if (auto *k = e->right->to<IR::Constant>())
-        return new IR::MAU::Instruction(e->srcInfo, "add", nullptr, (-*k).clone(), e->left);
-    return new IR::MAU::Instruction(e->srcInfo, "sub", nullptr, e->left, e->right);
+        return (new IR::MAU::Instruction(e->srcInfo, "add", nullptr, (-*k).clone(), e->left))->setType(e->type);
+    return (new IR::MAU::Instruction(e->srcInfo, "sub", nullptr, e->left, e->right))->setType(e->type);
 }
 
 const IR::Expression *InstructionSelection::postorder(IR::Shl *e) {
     if (!af) return e;
     if (!e->right->is<IR::Constant>())
         error("%s: shift count must be a constant in %s", e->srcInfo, e);
-    return new IR::MAU::Instruction(e->srcInfo, "shl", nullptr, e->left, e->right);
+    return (new IR::MAU::Instruction(e->srcInfo, "shl", nullptr, e->left, e->right))->setType(e->type);
 }
 
 const IR::Expression *InstructionSelection::postorder(IR::Shr *e) {
@@ -129,7 +149,7 @@ const IR::Expression *InstructionSelection::postorder(IR::Shr *e) {
     const char *shr = "shru";
     if (e->type->is<IR::Type_Bits>() && e->type->to<IR::Type_Bits>()->isSigned)
         shr = "shrs";
-    return new IR::MAU::Instruction(e->srcInfo, shr, nullptr, e->left, e->right);
+    return (new IR::MAU::Instruction(e->srcInfo, shr, nullptr, e->left, e->right))->setType(e->type);
 }
 
 static const IR::MAU::Instruction *fillInstDest(const IR::Expression *in,
