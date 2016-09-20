@@ -112,8 +112,11 @@ struct IXBar {
     };
 
     void clear();
-    bool allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc);
+    bool allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc,
+                    vector<IXBar::Use::Byte *> &alloced, bool second_try);
     int getHashGroup(cstring name);
+    bool allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc, 
+                          vector<IXBar::Use::Byte *> &alloced);
     bool allocHashWay(const IR::MAU::Table *, const IR::MAU::Table::Way &, Use &);
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_alloc, Use &gw_alloc);
