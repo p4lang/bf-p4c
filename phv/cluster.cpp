@@ -101,23 +101,28 @@ bool Cluster::preorder(const IR::Primitive* primitive)
     if (! primitive->operands.empty())
     {
         dst_i = phv_i.field(primitive->operands[0]);
-        // assert dst_i;
-        if(! dst_map_i[dst_i])
+        if(dst_i)
         {
-            dst_map_i[dst_i] = new std::set<const PhvInfo::Field *>; 
-        }
-        LOG3('(');
-        for (auto &operand : primitive->operands)
-        {
-            const PhvInfo::Field *field = phv_i.field(operand);
-            if(field)
+            if(! dst_map_i[dst_i])
             {
-                insert_cluster(dst_i, field);
-                LOG3(*field);
+                dst_map_i[dst_i] = new std::set<const PhvInfo::Field *>; 
+                lhs_cluster_set_i.insert(dst_i);
+                LOG3(".....lhs_cluster_set_i .....insert.....");
+                dump_lhs_cluster_set();
             }
-            else LOG3('-');
+            LOG3('(');
+            for (auto &operand : primitive->operands)
+            {
+                const PhvInfo::Field *field = phv_i.field(operand);
+                if(field)
+                {
+                    insert_cluster(dst_i, field);
+                    LOG3(*field);
+                }
+                else LOG3('-');
+            }
+            LOG3(')');
         }
-        LOG3(')');
     }
 
     return true;
@@ -167,14 +172,74 @@ void Cluster::insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rh
                     // b = (b d ...)
                     dst_map_i[lhs]->insert(dst_map_i[rhs]->begin(), dst_map_i[rhs]->end());
                     // all rhs set members must point to lhs set
-                    //for(auto iter = dst_map_i[rhs]->begin(); iter != dst_map_i[rhs]->end(); iter++)
+                    std::set<const PhvInfo::Field *>* dst_map_i_rhs = dst_map_i[rhs];
+                    for(auto iter = dst_map_i_rhs->begin(); iter != dst_map_i_rhs->end(); iter++)
                     {
-                        //dst_map_i[*iter] = dst_map_i[lhs];
+                        dst_map_i[*iter] = dst_map_i[lhs];
                     }
-                    //delete dst_map_i[rhs];
+                    delete dst_map_i_rhs;
+                }
+            }
+            // remove rhs from lhs_cluster_set as rhs cluster subsumed by lhs'
+            lhs_cluster_set_i.erase(rhs);
+            LOG3(".....lhs_cluster_set_i.....erase.....");
+            dump_lhs_cluster_set();
+        }
+    }
+}
+
+void Cluster::end_apply()
+{
+    // sanity check clusters
+    // (i) b elem (b, d, e)
+    // (ii) forall x elem (b, d, e), x --> (b, d, e)
+    //
+    // form unique clusters
+    // forall x not elem lhs_cluster_set_i, dst_map_i[x] = 0
+    //
+    // sanity check dst_map_i[] contains unique clusters
+    //
+    // sanity check clusters
+    for(auto iter = dst_map_i.begin(); iter != dst_map_i.end(); iter++)
+    {
+        const PhvInfo::Field *lhs = iter->first;
+        if(lhs && iter->second)
+        {
+            // b elem (b, d, e)
+            if(iter->second->count(lhs) != 1)
+            {
+                std::cout << "*****cluster.cpp:end_apply():sanity_check_1 failed*****" << *lhs;
+            }
+            // forall x elem (b, d, e), x --> (b, d, e)
+            for(auto it = iter->second->begin(); it != iter->second->end(); it++)
+            {
+                const PhvInfo::Field *rhs = *it;
+                if(dst_map_i[rhs] != dst_map_i[lhs])
+                {
+                    std::cout << "*****cluster.cpp:end_apply():sanity_check_2 failed*****" << *lhs << "-->" << *rhs;
                 }
             }
         }
+    }//for
+    // form unique clusters
+    // forall x not elem lhs_cluster_set_i, dst_map_i[x] = 0
+    for(auto iter = dst_map_i.begin(); iter != dst_map_i.end(); iter++)
+    {
+        const PhvInfo::Field *lhs = iter->first;
+        if(lhs && lhs_cluster_set_i.count(lhs) == 0)
+        {
+            dst_map_i[lhs] = nullptr;
+        }
+    }//for
+    // sanity check dst_map_i[] contains unique clusters only
+}//end_apply
+
+void Cluster::dump_lhs_cluster_set()
+{
+    LOG3(".....lhs_cluster_set....." << lhs_cluster_set_i);
+    for(auto iter = lhs_cluster_set_i.begin(); iter != lhs_cluster_set_i.end(); iter++)
+    {
+        LOG3("..." << *(*iter)); 
     }
 }
 
