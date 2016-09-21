@@ -96,6 +96,11 @@ const PhvInfo::Field *PhvInfo::field(const IR::Expression *e, Field::bitrange *b
     if (!e) return nullptr;
     if (auto *fr = e->to<IR::Member>())
         return field(fr, bits);
+    if (auto *cast = e->to<IR::Cast>()) {
+        auto *rv = field(cast->expr, bits);
+        if (rv && bits && bits->size() > cast->type->width_bits())
+            bits->hi = bits->lo + cast->type->width_bits() - 1;
+        return rv; }
     if (auto *sl = e->to<IR::Slice>()) {
         auto *rv = field(sl->e0, bits);
         if (rv && bits) {

@@ -154,7 +154,10 @@ tofinotests.mk: $(wildcard \
    $(srcdir)/testdata/p4_14_samples/switch_*/switch.p4 \
    $(srcdir)/%reldir%/v1_2_test/*.p4 \
    $(srcdir)/%reldir%/v1_samples/*.p4 \
-   $(srcdir)/%reldir%/v1_samples/switch_*/switch.p4)
+   $(srcdir)/%reldir%/v1_samples/switch_*/switch.p4) \
+   $(srcdir)/testdata/p4_14_samples \
+   $(srcdir)/%reldir%/v1_2_test \
+   $(srcdir)/%reldir%/v1_samples
 	@$(GENTESTS) $(srcdir) tofino $(srcdir)/%reldir%/runtest $^ >$@ || ( rm $@ && false )
 
 #p4-16-tofinotests.mk: $(wildcard $(srcdir)/testdata/p4_16_samples/*.stf)
@@ -170,13 +173,17 @@ newpa-tofinotests.mk: $(wildcard \
 # These test input programs depend on Tofino in some way.
 
 # Exercise v12test back-end on Tofino-specific programs
-tofino-p14_to_16_tests.mk: $(wildcard $(srcdir)/%reldir%/v1_samples/*.p4 \
-				      $(srcdir)/%reldir%/v1_samples/switch_*/switch.p4)
+tofino-p14_to_16_tests.mk: $(wildcard \
+    $(srcdir)/%reldir%/v1_samples/*.p4 \
+    $(srcdir)/%reldir%/v1_samples/switch_*/switch.p4) \
+    $(srcdir)/%reldir%/v1_samples
 	@$(GENTESTS) $(srcdir) p14_to_16 $(srcdir)/%reldir%/test-v12-sample.sh $^ >$@ || ( rm $@ && false )
 
 # Exercise bmv2 back-end on Tofino-specific programs
-tofino-bmv2tests.mk: $(wildcard $(srcdir)/%reldir%/v1_samples/*.p4 \
-				$(srcdir)/%reldir%/v1_samples/switch_*/switch.p4)
+tofino-bmv2tests.mk: $(wildcard \
+    $(srcdir)/%reldir%/v1_samples/*.p4 \
+    $(srcdir)/%reldir%/v1_samples/switch_*/switch.p4) \
+    $(srcdir)/%reldir%/v1_samples
 	@$(GENTESTS) $(srcdir) bmv2 $(srcdir)/%reldir%/test-bmv2.sh $^ >$@ || ( rm $@ && false )
 
 CLEANFILES += \
@@ -287,6 +294,5 @@ XFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/basic_routing.p4.test
 
 # Incorrect parser generation, broken tbl-cfg for 1 bit match, losing data in PHV?
 XFAIL_TESTS += \
-    tofino/testdata/p4_14_samples/07-MultiProtocol.p4.test \
     tofino-newpa/testdata/p4_14_samples/07-MultiProtocol.p4.test
 
