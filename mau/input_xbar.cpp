@@ -661,7 +661,6 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
                              vector<IXBar::Use::Byte *> &alloced) {
     if (ternary)
         return true;
-    LOG1("Called it betch");
     int hash_group = getHashGroup(tbl->name);
     if (hash_group < 0) return false;
     //int number_of_ways = tbl->ways.size();
@@ -677,14 +676,14 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
         return false;
     }
 
-    int way_bits_needed = 0;
+    //int way_bits_needed = 0;
 
     /*
     for (auto &way : tbl->ways) {
         way_bits_needed += ceil_log2(way.entries/1024U/way.match_groups);
     }*/
 
-    LOG3("Way bits needed " << way_bits_needed);
+//  LOG3("Way bits needed " << way_bits_needed);
 
     int way_bits = 0;
     for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
@@ -693,21 +692,25 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
         }
     }
 
-    LOG3("Way bits " << way_bits);
+//    LOG3("Way bits " << way_bits);
 
     if (way_bits == 0) {
-        LOG3("The way bits cannot fit in this hash group ");
+        //LOG3("The way bits cannot fit in this hash group ");
         delete_placement(alloc, alloced);
         return false;
     }
 
-    LOG1("The number of ways is " << tbl->ways.size());
+    //LOG1("The number of ways is " << tbl->ways.size());
     //Currently never returns false
     for (auto &way : tbl->ways) {
-        LOG1("Here");
+        //LOG1("Here");
         if (!allocHashWay(tbl, way, alloc)) {
             delete_placement(alloc, alloced);
             return false; } }
+
+    for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
+        LOG3("Hash bit at bit " << bit << " is " << hash_single_bit_inuse[bit]);
+    }
     return true;
 }
 
@@ -772,6 +775,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
         delete_placement(alloc, xbar_alloced);
         LOG3("collect.compute_offsets failed?");
         return false; }
+    LOG3("Collect bits is " << collect.bits);
     if (collect.bits > 0) {
         int hash_group = getHashGroup(tbl->name + "$gw");
         if (hash_group < 0) {
@@ -786,6 +790,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             if ((hash_single_bit_inuse[i] & alloc.hash_table_input) == 0)
                 avail |= (1U << i); }
         int shift = 0;
+        LOG3("Avail is " << avail);
         while (((avail >> shift) & need) != need && shift < 12) {
             shift += 4;
         }
@@ -800,10 +805,12 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             alloc.bit_use.emplace_back(info.first->name, hash_group, 0,
                                        info.second.offset - 32, info.first->size); }
         for (auto &valid : collect.valid_offsets) {
+            LOG3("Valid.second " << valid.second);
             if (valid.second < 32) continue;
             valid.second += shift;
             alloc.bit_use.emplace_back(valid.first + ".$valid", hash_group, 0,
                                        valid.second - 32, 1); }
+            LOG3("Before bit_use size is " << alloc.bit_use.size());
         for (auto ht : bitvec(alloc.hash_table_input))
             for (int i = 0; i < collect.bits; ++i)
                 hash_single_bit_use[ht][shift + i] = tbl->name + "$gw";
@@ -811,6 +818,9 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             hash_single_bit_inuse[shift + i] |= alloc.hash_table_input; }
     LOG1("Totally allocated");
     fill_out_use(xbar_alloced, false);
+    for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
+        LOG3("Hash bit at bit " << bit << " is " << hash_single_bit_inuse[bit]);
+    }
     return true;
 }
 
@@ -867,6 +877,7 @@ void IXBar::update(cstring name, const Use &alloc) {
                 BUG("conflicting ixbar allocation");
             use[byte.loc] = byte; }
         fields.emplace(byte.field, byte.loc); }
+    LOG3("Bit_use size is " << alloc.bit_use.size());
     for (auto &bits : alloc.bit_use) {
         const Loc *loc = nullptr;
         for (int b = 0; b < bits.width; b++) {
@@ -874,6 +885,7 @@ void IXBar::update(cstring name, const Use &alloc) {
                 !(loc = findExactByte(bits.field, (b + bits.lo)/8)))
                 BUG("ixbar hashing bits from %s, but they're not on the bus", bits.field);
             for (auto ht : bitvec(alloc.hash_table_input)) {
+ 
                 if (hash_single_bit_use.at(ht, b + bits.bit))
                     BUG("conflicting ixbar hash bit allocation");
                 hash_single_bit_use.at(ht, b + bits.bit) = name; }
