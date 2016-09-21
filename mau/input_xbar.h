@@ -155,6 +155,16 @@ struct IXBar {
                             vector<IXBar::Use::Byte *> &alloced, IXBar::Use::Byte &need,
                             int group, int byte, int &index, int &free_bytes, int &bytes_placed);
     void fill_out_use(vector<IXBar::Use::Byte *> &alloced, bool ternary);
+    bool big_grp_alloc(IXBar::Use &alloc, bool ternary, bool second_try,
+                       vector<IXBar::Use::Byte *> &unalloced, 
+                       vector<IXBar::Use::Byte *> &alloced,
+                       vector<big_grp_use> &order,
+                       int big_groups_needed, int &total_bytes_needed, int bytes_per_big_group);
+    bool small_grp_alloc(IXBar::Use &alloc, bool ternary, bool second_try,
+                         vector<IXBar::Use::Byte *> &unalloced,
+                         vector<IXBar::Use::Byte *> &alloced,
+                         vector<grp_use *> &small_order, vector<big_grp_use> &order, 
+                         int &total_bytes_needed);
 };
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {

@@ -375,6 +375,112 @@ void IXBar::fill_out_use(vector<IXBar::Use::Byte *> &alloced, bool ternary) {
     }
 }
 
+bool IXBar::big_grp_alloc(IXBar::Use &alloc, bool ternary, bool second_try,
+                          vector<IXBar::Use::Byte *> &unalloced, vector<IXBar::Use::Byte *> &alloced,
+                          vector<big_grp_use> &order, int big_groups_needed,
+                          int &total_bytes_needed, int bytes_per_big_group) {
+
+    while (big_groups_needed > 1) {
+        int reduced_bytes_needed = total_bytes_needed % bytes_per_big_group;
+        if (reduced_bytes_needed == 0)
+            reduced_bytes_needed += bytes_per_big_group;
+
+        /* Find the best group that still lowers the total number of groups */
+        std::sort(order.begin(), order.end(), [=](const big_grp_use &a, const big_grp_use &b) {
+            if (!second_try && (a.total_found() + a.total_free() < reduced_bytes_needed))
+                return false;
+            if (!second_try && (b.total_found() + b.total_free() < reduced_bytes_needed))
+                return true;
+
+            int t;
+            if (!second_try && (t = a.total_found() - b.total_found()) != 0) return t > 0;
+
+            if ((t = a.total_free() - b.total_free()) != 0) return t > 0;
+            return a.big_group < b.big_group; });   
+
+
+        int bytes_placed = 0;
+
+        if (ternary) {
+            LOG4("TCAM big group selected was " << order[0].big_group);
+            bytes_placed += found_bytes_big_group(&order[0], unalloced);
+            bytes_placed += free_bytes_big_group(&order[0], unalloced, alloced);       
+        } else {
+            LOG4("SRAM group selected was " << order[0].first.group);
+            bytes_placed += found_bytes(&order[0].first, unalloced, ternary);
+            bytes_placed += free_bytes(&order[0].first, unalloced, alloced, ternary);
+        }
+
+        /* No bytes placed in the xbar.  You're finished */
+        if (bytes_placed == 0) {
+            delete_placement(alloc, alloced);
+            return false;
+        }
+
+        total_bytes_needed -= bytes_placed;
+        /* FIXME: Need some calculations for 88 bit multiples */
+        big_groups_needed = (total_bytes_needed + bytes_per_big_group - 1)/bytes_per_big_group;
+        
+        calculate_found(unalloced, order, ternary);
+    }
+    return true;
+}
+
+
+bool IXBar::small_grp_alloc(IXBar::Use &alloc, bool ternary, bool second_try,
+                            vector<IXBar::Use::Byte *> &unalloced, vector<IXBar::Use::Byte *> &alloced,
+                            vector<grp_use *> &small_order, vector<big_grp_use> &order, 
+                            int &total_bytes_needed) {
+
+    while (total_bytes_needed != 0) {
+
+        int bytes_needed = total_bytes_needed;
+        if (ternary && bytes_needed > 5) {
+            bytes_needed /= 2;
+        }
+        //Find the best fit for the group that still fits within only one group
+        std::sort(small_order.begin(), small_order.end(), [=](const grp_use *ap, const grp_use *bp) {
+       
+            if (!second_try && (ap->free.popcount() + ap->found.popcount() < bytes_needed))
+                return false;
+            if (!second_try && (bp->free.popcount() + bp->found.popcount() < bytes_needed))
+                return true;
+            int t;
+            if (!second_try && (t = ap->found.popcount() - bp->found.popcount()) != 0)
+                return t > 0;
+       
+            int r = total_bytes_needed - ap->found.popcount();
+            int s = total_bytes_needed - bp->found.popcount();
+        
+            if (!second_try && (t = (bp->free.popcount() - s) - (ap->free.popcount() - r)) != 0)
+                return t > 0;
+        
+            if ((t = ap->free.popcount() - bp->free.popcount()) != 0) return t > 0;
+            return (ap->group < bp->group); 
+        });
+
+        
+        int bytes_placed = 0;
+        if (ternary)
+            LOG4("TCAM small group selected was " << small_order[0]->group);
+        else
+            LOG4("SRAM group selected was " << small_order[0]->group);
+
+        bytes_placed += found_bytes(small_order[0], unalloced, ternary);
+        bytes_placed += free_bytes(small_order[0], unalloced, alloced, ternary);
+ 
+        /* No bytes placed in the xbar.  You're finished */
+        if (bytes_placed == 0) {
+            delete_placement(alloc, alloced);
+            return false;
+        }
+
+        total_bytes_needed -= bytes_placed;
+        calculate_found(unalloced, order, ternary);
+    }
+    return true;
+
+}
 /* The algorithm for allocation of bytes from the table on to the input xbar.  Both for
    TCAM and SRAM xbar.  Overall algorithm looks at the size of the allocation.  If the allocation
    spans a group, tries to minimize total number of groups while finding the best groups to fill.
@@ -455,102 +561,15 @@ bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try,
     }
 
     /* While more than one individual group is necessary for the number of unallocated bytes */ 
-    while (big_groups_needed > 1) {
-        int reduced_bytes_needed = total_bytes_needed % bytes_per_big_group;
-        if (reduced_bytes_needed == 0)
-            reduced_bytes_needed += bytes_per_big_group;
+    if (!big_grp_alloc(alloc, ternary, second_try, unalloced, alloced, order, big_groups_needed,
+                       total_bytes_needed, bytes_per_big_group)) {
+        return false; }
 
-        /* Find the best group that still lowers the total number of groups */
-        std::sort(order.begin(), order.end(), [=](const big_grp_use &a, const big_grp_use &b) {
-            if (!second_try && (a.total_found() + a.total_free() < reduced_bytes_needed))
-                return false;
-            if (!second_try && (b.total_found() + b.total_free() < reduced_bytes_needed))
-                return true;
-
-            int t;
-            if (!second_try && (t = a.total_found() - b.total_found()) != 0) return t > 0;
-
-            if ((t = a.total_free() - b.total_free()) != 0) return t > 0;
-            return a.big_group < b.big_group; });   
-
-
-        int bytes_placed = 0;
-
-        if (ternary) {
-            LOG4("TCAM big group selected was " << order[0].big_group);
-            bytes_placed += found_bytes_big_group(&order[0], unalloced);
-            bytes_placed += free_bytes_big_group(&order[0], unalloced, alloced);       
-        } else {
-            LOG4("SRAM group selected was " << order[0].first.group);
-            bytes_placed += found_bytes(&order[0].first, unalloced, ternary);
-            bytes_placed += free_bytes(&order[0].first, unalloced, alloced, ternary);
-        }
-
-        /* No bytes placed in the xbar.  You're finished */
-        if (bytes_placed == 0) {
-            delete_placement(alloc, alloced);
-            return false;
-        }
-
-        total_bytes_needed -= bytes_placed;
-        /* FIXME: Need some calculations for 88 bit multiples */
-        big_groups_needed = (total_bytes_needed + bytes_per_big_group - 1)/bytes_per_big_group;
-        
-        calculate_found(unalloced, order, ternary);
-    }
-
-
-    
-
-    int bytes_needed = total_bytes_needed;
-    if (ternary && bytes_needed > 5) {
-        bytes_needed /= 2;
-    }
-  
     // Only one large group at most is necessary
-    while (total_bytes_needed != 0) {
 
-        //Find the best fit for the group that still fits within only one group
-        std::sort(small_order.begin(), small_order.end(), [=](const grp_use *ap, const grp_use *bp) {
-       
-            if (!second_try && (ap->free.popcount() + ap->found.popcount() < bytes_needed))
-                return false;
-            if (!second_try && (bp->free.popcount() + bp->found.popcount() < bytes_needed))
-                return true;
-            int t;
-            if (!second_try && (t = ap->found.popcount() - bp->found.popcount()) != 0)
-                return t > 0;
-       
-            int r = total_bytes_needed - ap->found.popcount();
-            int s = total_bytes_needed - bp->found.popcount();
-        
-            if (!second_try && (t = (bp->free.popcount() - s) - (ap->free.popcount() - r)) != 0)
-                return t > 0;
-        
-            if ((t = ap->free.popcount() - bp->free.popcount()) != 0) return t > 0;
-            return (ap->group < bp->group); 
-        });
-
-        
-        int bytes_placed = 0;
-        if (ternary)
-            LOG4("TCAM small group selected was " << small_order[0]->group);
-        else
-            LOG4("SRAM group selected was " << small_order[0]->group);
-
-        bytes_placed += found_bytes(small_order[0], unalloced, ternary);
-        bytes_placed += free_bytes(small_order[0], unalloced, alloced, ternary);
- 
-        /* No bytes placed in the xbar.  You're finished */
-        if (bytes_placed == 0) {
-            delete_placement(alloc, alloced);
-            return false;
-        }
-
-        total_bytes_needed -= bytes_placed;
-        calculate_found(unalloced, order, ternary);
-    }
-
+    if (!small_grp_alloc(alloc, ternary, second_try, unalloced, alloced, small_order, order, 
+                         total_bytes_needed)) {
+         return false; }
 
     if (ternary) {
         for (int grp = 0; grp < big_groups; grp++)
