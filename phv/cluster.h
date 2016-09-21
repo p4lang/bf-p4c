@@ -10,7 +10,7 @@
 
 class Cluster : public Inspector {
     PhvInfo	&phv_i;
-    std::set<const PhvInfo::Field *> lhs_cluster_set_i;	// unique clusters indexed by lhs
+    std::set<const PhvInfo::Field *> lhs_cluster_set_i;	// unique cluster ptrs
     std::map<const PhvInfo::Field *, std::set<const PhvInfo::Field *>*> dst_map_i;
     PhvInfo::Field *dst_i = nullptr;
 
@@ -19,6 +19,7 @@ class Cluster : public Inspector {
     bool preorder(const IR::Operation_Binary*) override;
     bool preorder(const IR::Operation_Ternary*) override;
     bool preorder(const IR::Primitive*) override;
+    void postorder(const IR::Primitive*) override;
     bool preorder(const IR::Operation*) override;
     void end_apply() override;
 
@@ -32,12 +33,12 @@ class Cluster : public Inspector {
     }
     ~Cluster()
     {
-       for(auto iter = dst_map_i.begin(); iter != dst_map_i.end(); iter++)
+       for(auto entry: dst_map_i)
        {
-           if(iter->second)
+           if(entry.second)
            {
-               delete iter->second;
-               iter->second = nullptr;
+               delete entry.second;
+               entry.second = nullptr;
            }
        }
     }
@@ -50,7 +51,9 @@ class Cluster : public Inspector {
         return dst_map_i;
     }
     void insert_cluster(const PhvInfo::Field *, const PhvInfo::Field *);
-    void dump_lhs_cluster_set(const std::string&);
+    void sanity_check_clusters(const std::string&, const PhvInfo::Field *);
+    void sanity_check_clusters_unique(const std::string&);
+    void dump_cluster_set(const std::string&, std::set<const PhvInfo::Field *>*);
     void dump_field(const PhvInfo::Field *);
 };
 
