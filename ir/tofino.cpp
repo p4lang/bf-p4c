@@ -23,3 +23,5 @@ IR::InstanceRef::InstanceRef(cstring prefix, IR::ID name, const IR::Type *t, boo
     } else {
         BUG("Unhandled InstanceRef type %1%", t); }
 }
+
+int IR::TempVar::uid = 0;
