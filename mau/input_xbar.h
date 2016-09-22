@@ -143,7 +143,6 @@ struct IXBar {
                                 int bytes_per_big_group);
     void calculate_exact_free(vector<big_grp_use> &order, int big_groups, 
                               int bytes_per_big_group);
-    // void delete_placement(IXBar::Use &alloc, vector<IXBar::Use::Byte *> &alloced);
     int found_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, bool ternary);
     int free_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, 
                    vector<IXBar::Use::Byte *> &alloced, bool ternary);
