@@ -132,18 +132,20 @@ public:
         if (it == data.end()) throw std::out_of_range("ordered_map");
         return it->second; }
 
-    std::pair<iterator, bool> emplace(K &&k, V &&v) {
+    template<typename KK, typename VV>
+    std::pair<iterator, bool> emplace(KK &&k, VV &&v) {
         auto it = find(k);
         if (it == data.end()) {
-            it = data.emplace(data.end(), std::move(k), std::move(v));
+            it = data.emplace(data.end(), std::forward<KK>(k), std::forward<VV>(v));
             data_map.emplace(&it->first, it);
             return std::make_pair(it, true); }
         return std::make_pair(it, false); }
-    std::pair<iterator, bool> emplace_hint(iterator pos, K &&k, V &&v) {
+    template<typename KK, typename VV>
+    std::pair<iterator, bool> emplace_hint(iterator pos, KK &&k, VV &&v) {
         /* should be const_iterator pos, but glibc++ std::list is broken */
         auto it = find(k);
         if (it == data.end()) {
-            it = data.emplace(pos, std::move(k), std::move(v));
+            it = data.emplace(pos, std::forward<KK>(k), std::forward<VV>(v));
             data_map.emplace(&it->first, it);
             return std::make_pair(it, true); }
         return std::make_pair(it, false); }
@@ -195,5 +197,35 @@ public:
         auto it = find(k);
         return it == end() ? def : it->second; }
 };
+
+template<class K, class T, class V, class Comp, class Alloc>
+inline V get(const ordered_map<K, V, Comp, Alloc> &m, T key, V def = V()) {
+    auto it = m.find(key);
+    if (it != m.end()) return it->second;
+    return def; }
+
+template<class K, class T, class V, class Comp, class Alloc>
+inline V *getref(ordered_map<K, V, Comp, Alloc> &m, T key) {
+    auto it = m.find(key);
+    if (it != m.end()) return &it->second;
+    return 0; }
+
+template<class K, class T, class V, class Comp, class Alloc>
+inline const V *getref(const ordered_map<K, V, Comp, Alloc> &m, T key) {
+    auto it = m.find(key);
+    if (it != m.end()) return &it->second;
+    return 0; }
+
+template<class K, class T, class V, class Comp, class Alloc>
+inline V get(const ordered_map<K, V, Comp, Alloc> *m, T key, V def = V()) {
+    return m ? get(*m, key, def) : def; }
+
+template<class K, class T, class V, class Comp, class Alloc>
+inline V *getref(ordered_map<K, V, Comp, Alloc> *m, T key) {
+    return m ? getref(*m, key) : 0; }
+
+template<class K, class T, class V, class Comp, class Alloc>
+inline const V *getref(const ordered_map<K, V, Comp, Alloc> *m, T key) {
+    return m ? getref(*m, key) : 0; }
 
 #endif /* _ordered_map_h_ */
