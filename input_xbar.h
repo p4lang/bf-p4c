@@ -4,6 +4,7 @@
 #include "tables.h"
 #include "stage.h"
 #include "phv.h"
+#include "ordered_map.h"
 
 class HashExpr;
 
@@ -29,8 +30,7 @@ class InputXbar {
     };
     Table       *table;
     bool        ternary;
-    std::map<unsigned, std::vector<Input>>              groups;
-    std::vector<std::map<unsigned, std::vector<Input>>::iterator>   group_order;
+    ordered_map<unsigned, std::vector<Input>>           groups;
     std::map<unsigned, std::map<int, HashCol>>          hash_tables;
     std::map<unsigned, HashGrp>                         hash_groups;
     static bool conflict(const std::vector<Input> &a, const std::vector<Input> &b);
@@ -71,40 +71,40 @@ public:
     int tcam_word_group(int n);
 
     class all_iter {
-        decltype(group_order)::const_iterator   outer, outer_end;
+        decltype(groups)::const_iterator        outer, outer_end;
         bool                                    inner_valid;
-        std::vector<Input>::iterator            inner;
+        std::vector<Input>::const_iterator      inner;
         void mk_inner_valid() {
             if (!inner_valid) {
                 if (outer == outer_end) return;
-                inner = (**outer).second.begin(); }
-            while (inner == (**outer).second.end()) {
+                inner = outer->second.begin(); }
+            while (inner == outer->second.end()) {
                 if (++outer == outer_end) return;
-                inner = (**outer).second.begin(); }
+                inner = outer->second.begin(); }
             inner_valid = true; }
-        struct iter_deref : public std::pair<unsigned, Input &> {
-            iter_deref(const std::pair<unsigned, Input &> &a) : std::pair<unsigned, Input &>(a) {}
+        struct iter_deref : public std::pair<unsigned, const Input &> {
+            iter_deref(const std::pair<unsigned, const Input &> &a)
+            : std::pair<unsigned, const Input &>(a) {}
             iter_deref *operator->() { return this; } };
     public:
-        all_iter(decltype(group_order)::const_iterator o,
-                 decltype(group_order)::const_iterator oend) :
-            outer(o), outer_end(oend), inner_valid(false) { mk_inner_valid(); }
+        all_iter(decltype(groups)::const_iterator o, decltype(groups)::const_iterator oend)
+        : outer(o), outer_end(oend), inner_valid(false) { mk_inner_valid(); }
         bool operator==(const all_iter &a) {
             if (outer != a.outer) return false;
             if (inner_valid != a.inner_valid) return false;
             return inner_valid ? inner == a.inner : true; }
         all_iter &operator++() {
-            if (inner_valid && ++inner == (**outer).second.end()) {
+            if (inner_valid && ++inner == outer->second.end()) {
                 ++outer;
                 inner_valid = false;
                 mk_inner_valid(); }
             return *this; }
-        std::pair<unsigned, Input &> operator*() {
-            return std::pair<unsigned, Input &>((**outer).first, *inner); }
+        std::pair<unsigned, const Input &> operator*() {
+            return std::pair<unsigned, const Input &>(outer->first, *inner); }
         iter_deref operator->() { return iter_deref(**this); }
     };
-    all_iter begin() const { return all_iter(group_order.begin(), group_order.end()); }
-    all_iter end() const { return all_iter(group_order.end(), group_order.end()); }
+    all_iter begin() const { return all_iter(groups.begin(), groups.end()); }
+    all_iter end() const { return all_iter(groups.end(), groups.end()); }
 
     Input *find(Phv::Slice sl, int group);
 };

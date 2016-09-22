@@ -51,7 +51,6 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
                 error(kv.key[1].lineno, "group %d duplicated", kv.key[1].i);
                 continue; }
             auto &group = groups[kv.key[1].i];
-            group_order.push_back(groups.find(kv.key[1].i));
             if (kv.value.type == tVEC) {
                 for (auto &reg : kv.value.vec)
                     group.emplace_back(Phv::Ref(t->gress, reg));
@@ -144,9 +143,9 @@ InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
 
 unsigned InputXbar::tcam_width() {
     unsigned words = 0, bytes = 0;
-    for (auto group : group_order) {
+    for (auto &group : groups) {
         unsigned in_word = 0, in_byte = 0;
-        for (auto &input : group->second) {
+        for (auto &input : group.second) {
             if (input.lo < 40)
                 in_word = 1;
             if (input.lo >= 40 || input.hi >= 40)
@@ -159,19 +158,19 @@ unsigned InputXbar::tcam_width() {
 }
 
 int InputXbar::tcam_byte_group(int idx) {
-    for (auto group : group_order)
-        for (auto &input : group->second)
+    for (auto &group : groups)
+        for (auto &input : group.second)
             if (input.lo >= 40 || input.hi >= 40) {
-                if (--idx < 0) return group->first/2;
+                if (--idx < 0) return group.first/2;
                 break; }
     return -1;
 }
 
 int InputXbar::tcam_word_group(int idx) {
-    for (auto group : group_order)
-        for (auto &input : group->second)
+    for (auto &group : groups)
+        for (auto &input : group.second)
             if (input.lo < 40) {
-                if (--idx < 0) return group->first;
+                if (--idx < 0) return group.first;
                 break; }
     return -1;
 }
