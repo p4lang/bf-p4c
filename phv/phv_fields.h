@@ -77,6 +77,7 @@ class PhvInfo : public Inspector {
     gress_t                             gress;
     bool                                alloc_done_ = false;
     bool                                need_bridge_meta_pov = false;
+    int                                 tmp_alloc_uid = 0;
     void add(cstring, int, int, bool, bool);
     void add_hdr(cstring, const IR::Type_StructLike *, bool);
     profile_t init_apply(const IR::Node *root) override;
@@ -101,6 +102,7 @@ class PhvInfo : public Inspector {
     friend class PHV::TrivialAlloc;
 
  public:
+    const IR::Expression *createTempField(const IR::Type *type, const char *extname = 0);
     const Field *field(int idx) const { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
     const Field *field(cstring name) const {
         return all_fields.count(name) ? &all_fields.at(name) : 0; }

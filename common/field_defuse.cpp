@@ -4,6 +4,10 @@
 #include "lib/map.h"
 #include "lib/range.h"
 
+static std::ostream &operator<<(std::ostream &out, const FieldDefUse::locpair &loc) {
+    return out << *loc.second << " [" << loc.second->id << " in " << *loc.first << "]";
+}
+
 class FieldDefUse::ClearBeforeEgress : public Inspector {
     FieldDefUse &self;
     bool preorder(const IR::Expression *e) override {
@@ -22,6 +26,7 @@ class FieldDefUse::ClearBeforeEgress : public Inspector {
 Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
     auto rv = Inspector::init_apply(root);
     conflict.clear();
+    defs.clear();
     uses.clear();
     defuse.clear();
     return rv;
@@ -53,12 +58,13 @@ void FieldDefUse::read(const PhvInfo::Field *f, const IR::Tofino::Unit *unit,
     LOG3("FieldDefUse(" << (void *)this << "): " << DBPrint::Brief << *unit <<
          " reading " << f->name << " [" << e->id << "]");
     info.use.clear();
-    info.use.emplace(unit, e);
+    locpair use(unit, e);
+    info.use.emplace(use);
     check_conflicts(info, unit->stage());
     for (auto def : info.def) {
-        LOG4("  " << e << " [" << e->id << "]" << " in " << *unit << " uses " << def.second <<
-             " from " << *def.first << " [" << def.first->id << "]");
-        uses[def].emplace(unit, e); }
+        LOG4("  " << use << " uses " << def);
+        uses[def].emplace(use);
+        defs[use].emplace(def); }
 }
 void FieldDefUse::read(const IR::HeaderRef *hr, const IR::Tofino::Unit *unit,
                        const IR::Expression *e) {

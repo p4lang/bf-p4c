@@ -212,6 +212,7 @@ class Instruction : Primitive {
 #end
     Instruction(const Primitive &p) : Primitive(p) {}
     bool isOutput(int operand_index) const override { return operand_index == 0; }
+    Instruction *setType(const IR::Type *t) { type = t; return this; }
 }
 
 }  // end namespace MAU
