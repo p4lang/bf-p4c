@@ -99,7 +99,7 @@ struct IXBar {
             Way(int g, int s, unsigned m) : group(g), slice(s), mask(m) {} };
         vector<Way>     way_use;
 
-        void clear() { use.clear(); hash_table_input = 0; way_use.clear(); }
+        void clear() { use.clear(); hash_table_input = 0; bit_use.clear();  way_use.clear(); }
         void compute_hash_tables();
         int groups() const;  // how many different groups in this use
     };
@@ -115,8 +115,7 @@ struct IXBar {
     bool allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc,
                     vector<IXBar::Use::Byte *> &alloced, bool second_try, int hash_groups);
     int getHashGroup(cstring name);
-    bool allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc, 
-                          vector<IXBar::Use::Byte *> &alloced);
+    bool allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc);
     bool allocHashWay(const IR::MAU::Table *, const IR::MAU::Table::Way &, Use &);
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_alloc, Use &gw_alloc);
@@ -144,7 +143,7 @@ struct IXBar {
                                 int bytes_per_big_group);
     void calculate_exact_free(vector<big_grp_use> &order, int big_groups, 
                               int bytes_per_big_group);
-    void delete_placement(IXBar::Use &alloc, vector<IXBar::Use::Byte *> &alloced);
+    // void delete_placement(IXBar::Use &alloc, vector<IXBar::Use::Byte *> &alloced);
     int found_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, bool ternary);
     int free_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, 
                    vector<IXBar::Use::Byte *> &alloced, bool ternary);
@@ -155,16 +154,12 @@ struct IXBar {
                             vector<IXBar::Use::Byte *> &alloced, IXBar::Use::Byte &need,
                             int group, int byte, int &index, int &free_bytes, int &bytes_placed);
     void fill_out_use(vector<IXBar::Use::Byte *> &alloced, bool ternary);
-    bool big_grp_alloc(IXBar::Use &alloc, bool ternary, bool second_try,
-                       vector<IXBar::Use::Byte *> &unalloced, 
-                       vector<IXBar::Use::Byte *> &alloced,
-                       vector<big_grp_use> &order,
+    bool big_grp_alloc(bool ternary, bool second_try, vector<IXBar::Use::Byte *> &unalloced, 
+                       vector<IXBar::Use::Byte *> &alloced, vector<big_grp_use> &order,
                        int big_groups_needed, int &total_bytes_needed, int bytes_per_big_group);
-    bool small_grp_alloc(IXBar::Use &alloc, bool ternary, bool second_try,
-                         vector<IXBar::Use::Byte *> &unalloced,
-                         vector<IXBar::Use::Byte *> &alloced,
-                         vector<grp_use *> &small_order, vector<big_grp_use> &order, 
-                         int &total_bytes_needed);
+    bool small_grp_alloc(bool ternary, bool second_try, vector<IXBar::Use::Byte *> &unalloced,
+                         vector<IXBar::Use::Byte *> &alloced, vector<grp_use *> &small_order, 
+                         vector<big_grp_use> &order, int &total_bytes_needed);
 };
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {
