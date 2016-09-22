@@ -885,7 +885,7 @@ static void write_one(std::ostream &out, const std::pair<cstring, int> &f,
                 fields.emplace(f.first, 'a' + fields.size() - 26);
             else
                 fields.emplace(f.first, 'A' + fields.size()); }
-        out << fields[f.first] << hex(f.second);
+        out << fields[f.first] << hex(f.second/8);
     } else {
         out << ".."; }
 }
