@@ -82,6 +82,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     TableSummary summary;
     MauAsmOutput mauasm(phv);
     PassManager *phv_alloc;
+    PassManager *phv_analysis;
 
     if (options->phv_newalloc) {
         auto *newpa = new PhvAllocator(phv, defuse.conflicts(), std::ref(mutex));
@@ -101,36 +102,31 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
             new PHV::TrivialAlloc(phv, defuse.conflicts()) });
     }
 
+    phv_analysis = new PassManager({
+        &cluster, 
+        new VisitFunctor([&phv, &defuse, &cluster]() {
+		LOG3("++++++++++ All Fields(name,size) ++++++++++:\n");
+		LOG3(phv);
+		//LOG3("++++++++++ Def-Use ++++++++++:\n");
+		//LOG3(defuse);
+		LOG3("++++++++++ Clusters ++++++++++:\n");
+		LOG3(cluster);
+	}),
+    });
+
     PassManager backend = {
         new DumpPipe("Initial table graph"),
         &phv,
         &defuse,
         new AddBridgedMetadata(phv, defuse),
         new AddMetadataShims,
-        new CreateThreadLocalInstances(INGRESS),
-        new CreateThreadLocalInstances(EGRESS),
-        &phv,
-	//
-	// cluster accumulates set<field*>
-	// these field pointers are not part of IR, they are calculated by &phv
-	// perform cluster analysis after last &phv pass 
-	//
-        &cluster, 
-        new VisitFunctor([&phv, &defuse, &cluster]() {
-		std::cout << "+++++ All Fields(name,size) +++++:\n";
-		std::cout << phv;
-		//std::cout << "+++++ Def-Use +++++:\n";
-		//std::cout << defuse;
-		std::cout << "+++++ Clusters +++++:\n";
-		std::cout << cluster;
-	}),
-        //
-        new AddBridgedMetadata(phv, defuse),
-        new AddMetadataShims,
         new InstructionSelection(phv),
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),
         &phv,
+
+        phv_analysis,	// perform cluster analysis after last &phv pass
+
         new VisitFunctor([&phv]() { phv.allocatePOV(); }),
         new CanonGatewayExpr,   // must be before TableLayout?  or just TablePlacement?
         new SplitComplexGateways(phv),

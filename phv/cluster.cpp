@@ -3,6 +3,12 @@
 #include "lib/stringref.h"
 #include "base/logging.h"
 
+//***********************************************************************************
+//
+// preorder walk on IR tree to insert field operands in cluster set
+// 
+//***********************************************************************************
+
 bool Cluster::preorder(const IR::Member* expression)
 {
     // class Member : Operation_Unary
@@ -76,9 +82,9 @@ bool Cluster::preorder(const IR::Primitive* primitive)
         {
             if(! dst_map_i[dst_i])
             {
-                dst_map_i[dst_i] = new std::set<const PhvInfo::Field *>; 
-                lhs_cluster_set_i.insert(dst_i);
-                dump_cluster_set("lhs_cluster_set..insert", &lhs_cluster_set_i);
+                dst_map_i[dst_i] = new std::set<const PhvInfo::Field *>; 	// new std::set
+                lhs_unique_i.insert(dst_i);					// lhs_unique set insert field
+                dump_cluster_set("lhs_unique..insert", &lhs_unique_i);
             }
             for (auto &operand : primitive->operands)
             {
@@ -91,6 +97,20 @@ bool Cluster::preorder(const IR::Primitive* primitive)
     return true;
 }
 
+bool Cluster::preorder(const IR::Operation* operation)
+{
+    // should not reach here
+    std::cout << "*****sanity FAIL**********Operation*****" << operation->toString() << std::endl;
+
+    return true;
+}
+
+//***********************************************************************************
+//
+// postorder walk on IR tree
+// 
+//***********************************************************************************
+
 void Cluster::postorder(const IR::Primitive* primitive)
 {
     if(dst_i)
@@ -100,86 +120,122 @@ void Cluster::postorder(const IR::Primitive* primitive)
     dst_i = nullptr;
 }
 
-bool Cluster::preorder(const IR::Operation* operation)
-{
-    // should not reach here
-    LOG3("*****Operation*****" << operation->toString());
+//***********************************************************************************
+//
+// end of IR walk epilogue
+// perform sanity checks
+// obtain unique clusters
+// 
+//***********************************************************************************
 
-    return true;
-}
+void Cluster::end_apply()
+{
+    for(auto entry: dst_map_i)
+    {
+        const PhvInfo::Field *lhs = entry.first;
+        sanity_check_clusters("end_apply..", lhs);
+    }
+    //
+    // form unique clusters
+    // forall x not elem lhs_unique_i, dst_map_i[x] = 0
+    //
+    std::list<const PhvInfo::Field *> delete_list;
+    for(auto entry: dst_map_i)
+    {
+        const PhvInfo::Field *lhs = entry.first;
+        if(lhs && lhs_unique_i.count(lhs) == 0)
+        {
+            dst_map_i[lhs] = nullptr;
+            delete_list.push_back(lhs);
+        }
+    }
+    for(auto fp : delete_list)
+    {
+        dst_map_i.erase(fp);						// erase map key
+    }
+    sanity_check_clusters_unique("end_apply..");
+}//end_apply
+
+//***********************************************************************************
+//
+// insert field in cluster
+//
+// map[a]--> cluster(a,x) + insert b
+// if b == a
+//     [a] --> (a,x)
+// if [b]--> ==  [a]-->
+//     do nothing
+// if [b]-->nullptr
+//     (a,x) = (a,x) U b
+//     [a],[b] --> (a,x,b) 
+// if [b]-->(b,d,x)
+//     [a]--> (a,u,v) U (b,d,x)
+//     [b(=rhs)] set members --> [a(=lhs)], rhs cluster subsumed by lhs'
+//     [b],[d],[x],[a],[u],[v] --> (a,u,v,b,d,x)
+//     lhs_unique set - remove(b,d,x)
+//     note: [b]-->(b,d,x) & op c d => [c]-->(c,b,d,x), lhs_unique set - insert(c),remove(b,d,x)
+//     del (b,d,x) as no map[] key points to (b,d,x) 
+// 
+//***********************************************************************************
 
 void Cluster::insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rhs)
 {
-    // a, b
-    // if (b == a)
-    //     (a) = a
-    // if(b --> ==  a-->)
-    //     do nothing
-    // if(b --> nullptr)
-    //     (a) = (a) U b
-    //     b --> (a) 
-    // if(b == (b d ...))
-    //     (a) = (a) U (b)
-    //     (b) --> (a)
-    //     del (b) -- no opd points to (b) 
-    //
     if(lhs && dst_map_i[lhs] && rhs)
     {
         if(rhs == lhs)
-        {   // (a) = a
+        {   // b == a
             dst_map_i[lhs]->insert(rhs);
         }
         else
         {
             if(dst_map_i[rhs] != dst_map_i[lhs])
-            {
-                // b --> nullptr
+            {   // [b]-->nullptr
                 if(! dst_map_i[rhs])
                 {
                     dst_map_i[lhs]->insert(rhs);
                     dst_map_i[rhs] = dst_map_i[lhs];
                 }
                 else
-                {
-                    // b = (b d ...)
+                {   // [b]-->(b,d,x)
                     dst_map_i[lhs]->insert(dst_map_i[rhs]->begin(), dst_map_i[rhs]->end());
-                    //
-                    // a --> (a r)
-                    // op b r => b --> (b r a)
-                    // all rhs set members must point to lhs set
-                    // b, r, a --> (b r a)
-                    // remove r, a from lhs set
-                    // remove rhs cluster from lhs_cluster_set as rhs cluster subsumed by lhs'
                     //
                     std::set<const PhvInfo::Field *>* dst_map_i_rhs = dst_map_i[rhs];
                     for(auto field: *(dst_map_i[rhs]))
                     {
                         dst_map_i[field] = dst_map_i[lhs];
-                        lhs_cluster_set_i.erase(field);
+                        lhs_unique_i.erase(field);				// lhs_unique set erase field
                     }
-                    delete dst_map_i_rhs;
+                    delete dst_map_i_rhs;					// delete std::set
                 }
             }
-            dump_cluster_set("lhs_cluster_set..erase", &lhs_cluster_set_i);
+            dump_cluster_set("lhs_unique..erase", &lhs_unique_i);
         }
     }
 }
+
+//***********************************************************************************
+//
+// sanity checks
+// 
+//***********************************************************************************
 
 void Cluster::sanity_check_clusters(const std::string& msg, const PhvInfo::Field *lhs)
 {
     if(lhs && dst_map_i[lhs])
     {
-        // b --> (b, d, e),	count b in (b, d, e) = 1
+        // b --> (b,d,e); count b=1 in (b,d,e)
         if(dst_map_i[lhs]->count(lhs) != 1)
         {
-            std::cout << "*****sanity FAIL*****cluster member count > 1.." << msg << *lhs << "-->" << *(dst_map_i[lhs]);
+            std::cout << "*****sanity_FAIL*****cluster member count > 1.."
+		<< msg << *lhs << "-->" << *(dst_map_i[lhs]) << std::endl;
         }
-        // forall x elem (b, d, e),	x --> (b, d, e)
+        // forall x elem (b,d,e), x-->(b,d,e)
         for(auto rhs: *(dst_map_i[lhs]))
         {
             if(dst_map_i[rhs] != dst_map_i[lhs])
             {
-                std::cout << "*****sanity FAIL*****cluster member pointers inconsistent.." << msg << *lhs << "-->" << *rhs;
+                std::cout << "*****sanity_FAIL*****cluster member pointers inconsistent.."
+		<< msg << *lhs << "-->" << *rhs << std::endl;
             }
         }
     }
@@ -188,7 +244,8 @@ void Cluster::sanity_check_clusters(const std::string& msg, const PhvInfo::Field
 void Cluster::sanity_check_clusters_unique(const std::string& msg)
 {
     // sanity check dst_map_i[] contains unique clusters only
-    // forall clusters x,y	x intersect y = 0
+    // forall clusters x,y
+    //		x intersect y = 0
     //
     for(auto entry: dst_map_i)
     {
@@ -207,7 +264,8 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg)
                     set_intersection(s1.begin(),s1.end(),s2.begin(),s2.end(), std::back_inserter(s3));
                     if(s3.size())
                     {
-                        std::cout << "*****sanity FAIL*****uniqueness.." << msg << *lhs << s1 << "..intersect.." << *lhs_2 << s2 << '=' << s3 << std::endl;
+                        std::cout << "*****sanity_FAIL*****uniqueness.."
+				<< msg << *lhs << s1 << "..intersect.." << *lhs_2 << s2 << '=' << s3 << std::endl;
                         dump_cluster_set("lhs", &s1);
                         dump_cluster_set("lhs_2", &s2);
                     }
@@ -217,33 +275,11 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg)
     }
 }
 
-void Cluster::end_apply()
-{
-    for(auto entry: dst_map_i)
-    {
-        const PhvInfo::Field *lhs = entry.first;
-        sanity_check_clusters("end_apply..", lhs);
-    }
-    //
-    // form unique clusters
-    // forall x not elem lhs_cluster_set_i, dst_map_i[x] = 0
-    //
-    std::list<const PhvInfo::Field *> delete_list;
-    for(auto entry: dst_map_i)
-    {
-        const PhvInfo::Field *lhs = entry.first;
-        if(lhs && lhs_cluster_set_i.count(lhs) == 0)
-        {
-            dst_map_i[lhs] = nullptr;
-            delete_list.push_back(lhs);
-        }
-    }
-    for(auto fp : delete_list)
-    {
-        dst_map_i.erase(fp);
-    }
-    sanity_check_clusters_unique("end_apply..");
-}//end_apply
+//***********************************************************************************
+//
+// dumps
+// 
+//***********************************************************************************
 
 void Cluster::dump_field(const PhvInfo::Field *field)
 {
@@ -266,6 +302,12 @@ void Cluster::dump_cluster_set(const std::string& msg, std::set<const PhvInfo::F
         LOG3(msg << ']');
     }
 }
+
+//***********************************************************************************
+//
+// output stream <<
+// 
+//***********************************************************************************
 
 std::ostream &operator<<(std::ostream &out, Cluster &cluster)
 {

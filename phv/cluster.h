@@ -8,11 +8,26 @@
 #include "lib/range.h"
 #include "tofino/ir/thread_visitor.h"
 
+//***********************************************************************************
+//
+// class Cluster computes the cluster set belonging to a field
+// input:
+// fields computed by PhvInfo phv
+// these field pointers are not part of IR, they are calculated by &phv
+// must perform cluster analysis after last &phv pass 
+// output:
+// accumulated map< field*, pointer to cluster_set of field* >
+// 
+//***********************************************************************************
+
 class Cluster : public Inspector {
-    PhvInfo	&phv_i;
-    std::set<const PhvInfo::Field *> lhs_cluster_set_i;	// unique cluster ptrs
+    PhvInfo	&phv_i;		// phv object referenced through constructor
     std::map<const PhvInfo::Field *, std::set<const PhvInfo::Field *>*> dst_map_i;
+				// map of field to cluster it belongs
+    std::set<const PhvInfo::Field *> lhs_unique_i;
+				// maintains unique cluster ptrs
     PhvInfo::Field *dst_i = nullptr;
+				// destination of current statement
 
     bool preorder(const IR::Member*) override;
     bool preorder(const IR::Operation_Unary*) override;
@@ -41,10 +56,6 @@ class Cluster : public Inspector {
                entry.second = nullptr;
            }
        }
-    }
-    std::set<const PhvInfo::Field *>& lhs_cluster_set()
-    {
-        return lhs_cluster_set_i;
     }
     std::map<const PhvInfo::Field *, std::set<const PhvInfo::Field *>*>& dst_map()
     {
