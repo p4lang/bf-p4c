@@ -56,11 +56,12 @@ public:
     void pass2(Alloc1Dbase<std::vector<InputXbar *>> &use, int size);
     void write_regs();
 
-    int hash_group() {
+    int hash_group() const {
         /* used by gateways to get the associated hash group */
         if (hash_groups.size() != 1) return -1;
         return hash_groups.begin()->first; }
-    bitvec hash_group_bituse();
+    bitvec hash_group_bituse() const;
+    std::vector<const HashCol *> hash_column(int col, int grp = -1) const;
     int match_group() {
         /* used by gateways to get the associated match group */
         if (groups.size() != 1) return -1;
@@ -106,7 +107,7 @@ public:
     all_iter begin() const { return all_iter(groups.begin(), groups.end()); }
     all_iter end() const { return all_iter(groups.end(), groups.end()); }
 
-    Input *find(Phv::Slice sl, int group);
+    Input *find(Phv::Slice sl, int group = -1);
 };
 
 #endif /* _input_xbar_h_ */

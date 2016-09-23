@@ -19,6 +19,7 @@ public:
     virtual bool check_ixbar(InputXbar *ix, int grp) = 0;
     virtual void gen_data(bitvec &data, int bit, InputXbar *ix, int grp) = 0;
     virtual int width() = 0;
+    virtual bool match_phvref(Phv::Ref &ref) { return false; }
 };
 
 #endif /* _hashexpr_h_ */

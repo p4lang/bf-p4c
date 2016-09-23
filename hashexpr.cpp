@@ -26,22 +26,26 @@ class HashExpr::PhvRef : HashExpr {
     Phv::Ref what;
     PhvRef(gress_t gr, const value_t &v) : HashExpr(v.lineno), what(gr, v) {}
     friend class HashExpr;
-    bool check_ixbar(InputXbar *ix, int grp) { return ::check_ixbar(what, ix, grp); }
-    void gen_data(bitvec &data, int bit, InputXbar *ix, int grp);
-    int width() { return what.size(); }
+    bool check_ixbar(InputXbar *ix, int grp) override { return ::check_ixbar(what, ix, grp); }
+    void gen_data(bitvec &data, int bit, InputXbar *ix, int grp) override;
+    int width() override { return what.size(); }
+    bool match_phvref(Phv::Ref &ref) {
+        if (what->reg != ref->reg || what->lo != ref->lo)
+            return false;
+        return true; }
 };
 
 class HashExpr::Random : HashExpr {
     std::vector<Phv::Ref>       what;
     Random(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
-    bool check_ixbar(InputXbar *ix, int grp) {
+    bool check_ixbar(InputXbar *ix, int grp) override {
         bool rv = true;
         for (auto &ref : what)
             rv |= ::check_ixbar(ref, ix, grp);
         return rv; }
-    void gen_data(bitvec &data, int bit, InputXbar *ix, int grp);
-    int width() { return 0; }
+    void gen_data(bitvec &data, int bit, InputXbar *ix, int grp) override;
+    int width() override { return 0; }
 };
 
 class HashExpr::Crc : HashExpr {
@@ -49,26 +53,26 @@ class HashExpr::Crc : HashExpr {
     std::vector<Phv::Ref>       what;
     Crc(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
-    bool check_ixbar(InputXbar *ix, int grp) {
+    bool check_ixbar(InputXbar *ix, int grp) override {
         bool rv = true;
         for (auto &ref : what)
             rv |= ::check_ixbar(ref, ix, grp);
         return rv; }
-    void gen_data(bitvec &data, int bit, InputXbar *ix, int grp);
-    int width() { return floor_log2(poly) - 1; }
+    void gen_data(bitvec &data, int bit, InputXbar *ix, int grp) override;
+    int width() override { return floor_log2(poly) - 1; }
 };
 
 class HashExpr::Xor : HashExpr {
     std::vector<HashExpr *>     what;
     Xor(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
-    bool check_ixbar(InputXbar *ix, int grp) {
+    bool check_ixbar(InputXbar *ix, int grp) override {
         bool rv = true;
         for (auto *e : what)
             rv |= e->check_ixbar(ix, grp);
         return rv; }
-    void gen_data(bitvec &data, int bit, InputXbar *ix, int grp);
-    int width() {
+    void gen_data(bitvec &data, int bit, InputXbar *ix, int grp) override;
+    int width() override {
         int rv = 0;
         for (auto *e : what) {
             int w = e->width();
@@ -80,13 +84,13 @@ class HashExpr::Stripe : HashExpr {
     std::vector<HashExpr *>     what;
     Stripe(int lineno) : HashExpr(lineno) {}
     friend class HashExpr;
-    bool check_ixbar(InputXbar *ix, int grp) {
+    bool check_ixbar(InputXbar *ix, int grp) override {
         bool rv = true;
         for (auto *e : what)
             rv |= e->check_ixbar(ix, grp);
         return rv; }
-    void gen_data(bitvec &data, int bit, InputXbar *ix, int grp);
-    int width() { return 0; }
+    void gen_data(bitvec &data, int bit, InputXbar *ix, int grp) override;
+    int width() override { return 0; }
 };
 
 HashExpr *HashExpr::create(gress_t gress, const value_t &what) {

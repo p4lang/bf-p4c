@@ -35,6 +35,8 @@ public:
     struct Register {
         char            name[8];
         unsigned short  index, size;
+        bool operator==(const Register &a) const { return index == a.index; }
+        bool operator!=(const Register &a) const { return index != a.index; }
     };
     class Slice {
         static const Register invalid;

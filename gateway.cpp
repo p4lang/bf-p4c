@@ -4,6 +4,7 @@
 #include "misc.h"
 #include "stage.h"
 #include "tables.h"
+#include "hashexpr.h"
 
 DEFINE_TABLE_TYPE(GatewayTable)
 
@@ -149,7 +150,9 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
                     value_desc(kv.key), name()); }
 }
 
-void check_match_key(std::vector<GatewayTable::MatchKey> &vec, const char *name, unsigned max) {
+static void check_match_key(Table *tbl, std::vector<GatewayTable::MatchKey> &vec,
+                            const char *name, unsigned max)
+{
     for (unsigned i = 0; i < vec.size(); i++) {
         if (!vec[i].val.check(true))
             break;
@@ -164,9 +167,16 @@ void check_match_key(std::vector<GatewayTable::MatchKey> &vec, const char *name,
         if (vec[i].offset < 32 && (vec[i].offset & 7) != (vec[i].val->lo & 7))
             error(vec[i].val.lineno, "Gateway %s key %s misaligned within byte", name,
                   vec[i].val.name());
+
         if (vec[i].offset + vec[i].val->size() > max) {
             error(vec[i].val.lineno, "Gateway %s key too big", name);
-            break; } }
+            break; }
+        if (vec[i].offset >= 32) {
+            auto hash = tbl->input_xbar->hash_column(vec[i].offset + 8);
+            if (hash.size() != 1 || hash[0]->bit || !hash[0]->fn ||
+                !hash[0]->fn->match_phvref(vec[i].val))
+                error(vec[i].val.lineno, "Gateway %s key %s not in matching hash column", name,
+                      vec[i].val.name()); } }
 }
 
 void GatewayTable::pass1() {
@@ -188,8 +198,8 @@ void GatewayTable::pass1() {
         input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
     else
         error(lineno, "input_xbar required for gateway");
-    check_match_key(match, "match", 44);
-    check_match_key(xor_match, "xor", 32);
+    check_match_key(this, match, "match", 44);
+    check_match_key(this, xor_match, "xor", 32);
     std::sort(match.begin(), match.end());
     std::sort(xor_match.begin(), xor_match.end());
     if (table.size() > 4)

@@ -502,6 +502,8 @@ void InputXbar::write_regs() {
 }
 
 InputXbar::Input *InputXbar::find(Phv::Slice sl, int grp) {
+    if (grp == -1 && groups.size() == 1)
+        grp = groups.begin()->first;
     if (groups.count(grp))
         for (auto &in : groups[grp]) {
             if (in.lo < 0) continue;
@@ -512,7 +514,7 @@ InputXbar::Input *InputXbar::find(Phv::Slice sl, int grp) {
     return 0;
 }
 
-bitvec InputXbar::hash_group_bituse() {
+bitvec InputXbar::hash_group_bituse() const {
     bitvec rv;
     unsigned tables = 0;
     for (auto &grp : hash_groups) {
@@ -522,5 +524,18 @@ bitvec InputXbar::hash_group_bituse() {
         if (!((tables >> tbl.first) & 1)) continue;
         for (auto &col : tbl.second)
             rv[col.first] = 1; }
+    return rv;
+}
+
+std::vector<const InputXbar::HashCol *> InputXbar::hash_column(int col, int grp) const {
+    unsigned tables = 0;
+    std::vector<const HashCol *> rv;
+    for (auto &g : hash_groups)
+        if (grp == -1 || (int)g.first == grp)
+            tables |= g.second.tables;
+    for (auto &tbl : hash_tables) {
+        if (!((tables >> tbl.first) & 1)) continue;
+        if (const HashCol *c = getref(tbl.second, col))
+            rv.push_back(c); }
     return rv;
 }
