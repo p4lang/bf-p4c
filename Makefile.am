@@ -88,6 +88,8 @@ tofino_backend_SOURCES = \
 	%reldir%/phv/bit_extractor.h \
 	%reldir%/phv/byte_constraint.cpp \
 	%reldir%/phv/byte_constraint.h \
+	%reldir%/phv/cluster.cpp \
+	%reldir%/phv/cluster.h \
 	%reldir%/phv/constraints.cpp \
 	%reldir%/phv/constraints.h \
 	%reldir%/phv/container_constraint.cpp \
@@ -284,15 +286,13 @@ XFAIL_TESTS += \
     tofino/%reldir%/v1_samples/07-MacAddrCheck.p4.test \
     tofino/%reldir%/v1_samples/08-MacAddrCheck1.p4.test
 
-# These currently fail ixbar allocation (table too wide)
-XFAIL_TESTS += \
-    tofino/testdata/p4_14_samples/02-FullPHV1.p4.test \
-    tofino/testdata/p4_14_samples/03-FullPHV2.p4.test
+# Gateway match key misalignment
+XFAIL_TESTS += tofino/testdata/p4_14_samples/basic_routing.p4.test \
+    tofino/testdata/p4_14_samples/07-MultiProtocol.p4.test 
 
 # Generates broken PHV alloc (regs used by both ingress & egress)
 XFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/basic_routing.p4.test
 
 # Incorrect parser generation, broken tbl-cfg for 1 bit match, losing data in PHV?
-XFAIL_TESTS += \
-    tofino-newpa/testdata/p4_14_samples/07-MultiProtocol.p4.test
+XFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/07-MultiProtocol.p4.test
 

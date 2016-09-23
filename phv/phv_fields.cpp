@@ -202,7 +202,13 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
     return out;
 }
 
-void dump(PhvInfo *phv) {
-    for (auto &field : *phv)
-        std::cout << field << std::endl;
+std::ostream &operator<<(std::ostream &out, const PhvInfo &phv) {
+    for (auto &field : phv)
+        out << field << std::endl;
+    return out;
 }
+
+void dump(PhvInfo *phv) {
+    std::cout << *phv;
+}
+

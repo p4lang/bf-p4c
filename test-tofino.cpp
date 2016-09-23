@@ -35,6 +35,7 @@
 #include "tofino/phv/split_phv_use.h"
 #include "tofino/phv/create_thread_local_instances.h"
 #include "tofino/phv/phv_allocator.h"
+#include "tofino/phv/cluster.h"
 #include "tofino/common/copy_header_eliminator.h"
 
 class CheckTableNameDuplicate : public MauInspector {
@@ -74,12 +75,14 @@ static void debug_hook(const char *, unsigned, const char *pass, const IR::Node 
 
 void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *options) {
     PhvInfo phv;
+    Cluster cluster(phv);
     DependencyGraph deps;
     TablesMutuallyExclusive mutex;
     FieldDefUse defuse(phv);
     TableSummary summary;
     MauAsmOutput mauasm(phv);
     PassManager *phv_alloc;
+    PassManager *phv_analysis;
 
     if (options->phv_newalloc) {
         auto *newpa = new PhvAllocator(phv, defuse.conflicts(), std::ref(mutex));
@@ -99,6 +102,18 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
             new PHV::TrivialAlloc(phv, defuse.conflicts()) });
     }
 
+    phv_analysis = new PassManager({
+        &cluster, 
+        new VisitFunctor([&phv, &defuse, &cluster]() {
+		LOG3("++++++++++ All Fields(name,size) ++++++++++:\n");
+		LOG3(phv);
+		//LOG3("++++++++++ Def-Use ++++++++++:\n");
+		//LOG3(defuse);
+		LOG3("++++++++++ Clusters ++++++++++:\n");
+		LOG3(cluster);
+	}),
+    });
+
     PassManager backend = {
         new DumpPipe("Initial table graph"),
         &phv,
@@ -109,6 +124,9 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),
         &phv,
+
+        phv_analysis,	// perform cluster analysis after last &phv pass
+
         new VisitFunctor([&phv]() { phv.allocatePOV(); }),
         new CanonGatewayExpr,   // must be before TableLayout?  or just TablePlacement?
         new SplitComplexGateways(phv),
