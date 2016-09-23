@@ -105,6 +105,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         &defuse,
         new AddBridgedMetadata(phv, defuse),
         new AddMetadataShims,
+        new InstructionSelection(phv),
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),
         &phv,
@@ -129,7 +130,6 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new CheckTableNameDuplicate,
         new TableFindSeqDependencies,  // not needed?
         new CheckTableNameDuplicate,
-        new InstructionSelection(phv),
         new ComputeShifts,
         new DumpPipe("Before ElimUnused"),
         &defuse,

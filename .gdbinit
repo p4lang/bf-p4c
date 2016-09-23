@@ -156,7 +156,7 @@ class IXBarPrinter(object):
                             else:
                                 fields[name] = chr(ord('a') + len(fields))
                         rv += fields[name]
-                        rv += str(field['second'])
+                        rv += hex(int(field['second'])/8)[2]
                     else:
                         rv += '..'
                     ptrs[indir[t]] += 1
@@ -179,8 +179,13 @@ class MemoriesUsePrinter(object):
     def __init__(self, val):
         self.val = val
     def to_string(self):
-        types = [ 'EXACT', 'TERNARY', 'TIND', '2PORT', 'ADATA' ]
-        rv = "MemUse " + types[int(self.val['type'])] + '('
+        types = [ 'EXACT', 'TERNARY', 'GATEWAY', 'TIND', '2PORT', 'ADATA' ]
+        t = int(self.val['type'])
+        if t >= 0 and t < len(types):
+            t = types[t]
+        else:
+            t = "<type " + str(t) + ">"
+        rv = "MemUse " + t + "("
         #import pydb
         #pydb.debugger()
         rows = vec_size(self.val['row'])
@@ -218,7 +223,8 @@ class IXBarUsePrinter(object):
             rv += "[" + str(byte['lo']) + ".." + str(byte['hi']) + "]("
             rv += str(byte['loc']['group']) + ','
             rv += str(byte['loc']['byte']) + ')'
-            rv += " flags=" + hex(int(byte['flags']))
+            if int(byte['flags']) != 0:
+                rv += " flags=" + hex(int(byte['flags']))
         rv += ")"
         for i in range(0, vec_size(self.val['bit_use'])):
             rv += "\n     "

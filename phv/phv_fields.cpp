@@ -58,6 +58,7 @@ Visitor::profile_t PhvInfo::init_apply(const IR::Node *root) {
     by_id.clear();
     all_headers.clear();
     alloc_done_ = false;
+    tmp_alloc_uid = 0;
     return rv;
 }
 
@@ -84,18 +85,42 @@ bool PhvInfo::preorder(const IR::Metadata *h) {
 }
 
 bool PhvInfo::preorder(const IR::NamedRef *n) {
-    if (n->name == "$bridge-metadata") {
-        /* FIXME -- nasty hack -- we recognize this name specially as the single fixed 1 bit we
-         * need in the POV to make bridged metadata work.  Should have a more general mechanism
-         * for managing POV bits (need a way to shift them properly for header stack operations) */
-        need_bridge_meta_pov = true; }
+    if (n->name.name[0] == '$') {
+        if (n->name == "$bridge-metadata") {
+            /* FIXME -- nasty hack -- we recognize this name specially as the single fixed 1 bit
+             * we need in the POV to make bridged metadata work.  Should have a more general
+             * mechanism for managing POV bits (need a way to shift them properly for header
+             * stack operations) */
+            need_bridge_meta_pov = true;
+            return false; }
+        int id;
+        if (sscanf(n->name.name, "$tmp%d", &id) >= 1 && id > tmp_alloc_uid)
+            tmp_alloc_uid = id;
+        add(n->name, n->type->width_bits(), 0, 1, 0); }
     return false;
+}
+
+const IR::Expression *PhvInfo::createTempField(const IR::Type *type, const char *extname) {
+    BUG_CHECK(type->is<IR::Type::Bits>(), "Can't create temp of type %s", type);
+    BUG_CHECK(!alloc_done_, "Can't create temp after phv allocation");
+    char name[256];
+    if (extname)
+        snprintf(name, sizeof(name), "$tmp%d-%s", ++tmp_alloc_uid, extname);
+    else
+        snprintf(name, sizeof(name), "$tmp%d", ++tmp_alloc_uid);
+    add(name, type->width_bits(), 0, 1, 0);
+    return new IR::NamedRef(type, name);
 }
 
 const PhvInfo::Field *PhvInfo::field(const IR::Expression *e, Field::bitrange *bits) const {
     if (!e) return nullptr;
     if (auto *fr = e->to<IR::Member>())
         return field(fr, bits);
+    if (auto *cast = e->to<IR::Cast>()) {
+        auto *rv = field(cast->expr, bits);
+        if (rv && bits && bits->size() > cast->type->width_bits())
+            bits->hi = bits->lo + cast->type->width_bits() - 1;
+        return rv; }
     if (auto *sl = e->to<IR::Slice>()) {
         auto *rv = field(sl->e0, bits);
         if (rv && bits) {

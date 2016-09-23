@@ -20,6 +20,7 @@ inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
 class Tofino::Pipe {
     Metadata    standard_metadata; // not visited
 #noconstructor
+    Pipe() = default;
     class thread_t {
         Tofino::Parser    parser = nullptr;
         MAU::TableSeq     mau = nullptr;
@@ -29,9 +30,15 @@ class Tofino::Pipe {
             json << json.indent << "\"parser\" : " << parser << "," << std::endl
                  << json.indent << "\"mau\" : " << mau << "," << std::endl
                  << json.indent << "\"deparser\" : " << deparser; }
+        static IR::Tofino::Pipe::thread_t* fromJSON(JSONLoader& json) {
+            IR::Tofino::Pipe::thread_t * thread = new IR::Tofino::Pipe::thread_t();
+            json.load("parser", thread->parser);
+            json.load("mau", thread->mau);
+            json.load("deparser", thread->deparser);
+            return thread;
+        }
     }
     thread_t[2] thread = {};  // INGRESS and EGRESS
-    Pipe() = default;
 #apply
     operator== { return standard_metadata == a.standard_metadata &&
                         thread[0] == a.thread[0] && thread[1] == a.thread[1]; }

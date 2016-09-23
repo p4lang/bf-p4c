@@ -28,10 +28,10 @@ gitclone() {
 
 
 curdir=$(basename $PWD)
-topdir=$(dirname $PWD)
+topdir=$PWD
 
-if [ "$curdir" = "tofino" -a "$(basename $topdir)" = "extensions" ]; then
-    p4cdir=$(dirname $topdir)
+if [ "$curdir" = "tofino" -a "$(basename $(dirname $topdir))" = "extensions" ]; then
+    p4cdir=$(dirname $(dirname $topdir))
     if [ "$(basename $p4cdir)" = "p4c" ]; then
         topdir=$(dirname $p4cdir)
     else
@@ -64,10 +64,10 @@ if [ -z "$found" ]; then
     echo >&2 "No exisiting repositories found"
 else
     echo "Found:$found"
-    if confirm "Use these repositories as is?"; then
-        reuse_asis=true
-    else
+    if confirm "Rebuild these repositories before using them?"; then
         reuse_asis=false
+    else
+        reuse_asis=true
     fi
     if ! $reuse_asis && confirm "Pull latest changes from master?"; then
         pull_before_rebuild=true
@@ -80,10 +80,13 @@ else
     fi
 fi
 
-apt_packages="g++ git pkg-config automake libtool python2.7 python cmake bison flex libboost-dev libboost-test-dev libboost-program-options-dev libboost-system-dev libboost-filesystem-dev libboost-thread-dev libcli-dev libedit-dev libeditline-dev libevent-dev libjudy-dev libgc-dev libgmp-dev libjson0 libjson0-dev libmoose-perl libnl-route-3-dev libpcap0.8-dev libssl-dev autopoint doxygen texinfo python-scapy python-yaml python-ipaddr python-thrift"
+apt_packages="g++ git pkg-config automake libtool python2.7 python cmake bison flex libboost-dev libboost-test-dev libboost-program-options-dev libboost-system-dev libboost-filesystem-dev libboost-thread-dev libcli-dev libedit-dev libeditline-dev libevent-dev libjudy-dev libgc-dev libgmp-dev libjson0 libjson0-dev libmoose-perl libnl-route-3-dev libpcap0.8-dev libssl-dev autopoint doxygen texinfo python-scapy python-yaml python-ipaddr python-pip"
 
 echo "Need sudo privs to install apt packages"
-sudo apt-get install $apt_packages
+sudo apt-get update || die "Failed to update apt"
+sudo apt-get install $apt_packages || die "Failed to install needed packages"
+sudo apt-get remove -y python-thrift    # remove this broken package in case it was installed
+sudo pip install thrift || die "Failed to install needed packages"  # need this one instead
 
 echo "Using $topdir as top level directory for git repositories"
 echo Using MAKEFLAGS=${MAKEFLAGS:=-j 4}
@@ -101,7 +104,7 @@ pushd behavioral-model >/dev/null
     if $reuse_asis && [ -x "$(which simple_switch_CLI)" ]; then
         echo "Reusing installed $(which simple_switch_CLI) as is"
     else
-        if $clean_before_rebuild || [ ! -x "$(which simple_switch_CLI)" ]; then
+        if $clean_before_rebuild || [ ! -r Makefile ]; then
             ./install_deps.sh
             ./autogen.sh
             ./configure
@@ -109,7 +112,7 @@ pushd behavioral-model >/dev/null
                 make clean
             fi
         fi
-        make
+        make || die "BMV2 build failed"
         sudo make install
     fi
 popd >/dev/null
@@ -120,7 +123,7 @@ if [ ! -r /usr/local/include/crafter.h -o ! -x /usr/local/lib/libcrafter.so ]; t
     git clone https://github.com/pellegre/libcrafter
     cd libcrafter/libcrafter
     ./autogen.sh 
-    make -j4
+    make -j4 || die "Failed to build libcrafter"
     sudo make install
     sudo ldconfig
     cd ../..
@@ -132,7 +135,7 @@ fi
 if [ ! -r /usr/local/include/libcli.h -o ! -x /usr/local/lib/libcli.so ]; then
     git clone git@github.com:dparrish/libcli.git
     cd libcli
-    make
+    make || die "Failed to build libcli"
     sudo make install
     sudo ldconfig
     cd ..
@@ -167,7 +170,7 @@ pushd model >/dev/null
         if $clean_before_rebuild; then
             make clean
         fi
-        make
+        make || die "harlyn model build failed"
     fi
 popd >/dev/null
 
@@ -187,7 +190,7 @@ pushd tofino-asm >/dev/null
         if $clean_before_rebuild; then
             make clean
         fi
-        make all
+        make all || die "assembler build failed"
     fi
 popd >/dev/null
 
@@ -245,7 +248,7 @@ pushd p4c >/dev/null
     if $reuse_asis && [ -r build/Makefile ]; then
         echo "Reusing $PWD/build as is"
     else
-        if [ ! -d build?makefile ]; then
+        if [ ! -d build ]; then
             ./find-makefiles.sh
             autoreconf -i
             mkdir -p build

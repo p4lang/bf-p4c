@@ -5,18 +5,18 @@ namespace {
 class FindExtractOffset : public Inspector {
     const PhvInfo               &phv;
     const PhvInfo::Field        *field;
-    int                         offset, &out_offset;
+    int                         bit_offset, &out_offset;
     bool preorder(const IR::Primitive *prim) override {
         if (prim->name != "extract") return true;
-        int size = (prim->operands[0]->type->width_bits() + 7) / 8U;
+        int size = prim->operands[0]->type->width_bits();
         if (phv.field(prim->operands[0]) == field)
-            out_offset = offset;
-        offset += size;
+            out_offset = bit_offset / 8U;
+        bit_offset += size;
         return true; }
 
  public:
     FindExtractOffset(const PhvInfo &phv, const PhvInfo::Field *field, int *offset)
-    : phv(phv), field(field), offset(0), out_offset(*offset) {} };
+    : phv(phv), field(field), bit_offset(0), out_offset(*offset) {} };
 
 }  // end of anon namespace
 

@@ -7,6 +7,10 @@ struct TableResourceAlloc;
 #include "tofino/mau/resource.h"
 #end
 
+#emit_impl
+#include "extensions/tofino/mau/resource.h"
+#end
+
 namespace MAU {
 
 /* A Tofino logical table (group) -- a gateway and/or match table
@@ -72,6 +76,13 @@ class Table : Tofino::Unit {
             json << json.indent << "\"match_groups\" : " << match_groups << ",\n"
                  << json.indent << "\"entries\" : " << entries << ",\n"
                  << json.indent << "\"width\" : " << width; }
+        static IR::MAU::Table::Way* fromJSON(JSONLoader& json) {
+            Way* way = new Way();
+            json.load("match_groups", way->match_groups);
+            json.load("entries", way->entries);
+            json.load("width", way->width);
+            return way;
+        }
     }
     vector<Way>    ways;
     const TableResourceAlloc            *resources = nullptr;
@@ -213,6 +224,7 @@ class Instruction : Primitive {
 #end
     Instruction(const Primitive &p) : Primitive(p) {}
     bool isOutput(int operand_index) const override { return operand_index == 0; }
+    Instruction *setType(const IR::Type *t) { type = t; return this; }
 }
 
 }  // end namespace MAU
