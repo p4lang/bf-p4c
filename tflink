@@ -1,6 +1,11 @@
 #!/bin/sh
 
-script=$(readlink -f $0)
+READLINK=readlink
+if [ `uname -s` == "Darwin" ]; then
+    READLINK=greadlink
+fi
+
+script=$($READLINK -f $0)
 
 findfile () {
     dir=$(dirname $script)

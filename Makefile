@@ -1,6 +1,10 @@
 CC = g++
 OPTFLAGS = -O0
 CPPFLAGS = -std=gnu++11 $(OPTFLAGS) -Wall -g -MMD -I.
+BUILD_OS := $(shell uname -s)
+ifeq ($(BUILD_OS), Darwin)
+	CPPFLAGS += -DNO_UCONTEXT
+endif
 YFLAGS = -v
 WALLE := $(shell  \
     for f in . $(HOME)/walle ../walle submodules/walle; do \

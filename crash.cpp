@@ -73,7 +73,12 @@ const char *addr2line(void *addr, const char *text)
         p += strlen(p); }
     strcpy(p, ") | c++filt");
     p += strlen(p);
+#ifdef __linux__
     if (pipe2(pfd, O_CLOEXEC) < 0) return 0;
+#else
+    // pipe2 is Linux specific
+    if (pipe(pfd) < 0) return 0;
+#endif // __linux__
     while ((child = fork()) == -1 && errno == EAGAIN);
     if (child == -1) return 0;
     if (child == 0) {
