@@ -153,15 +153,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("setf1") action setf1(bit<32> val) {
+    @name("setf1") action setf1_0(bit<32> val) {
         hdr.data.f1 = val;
     }
-    @name("setf3") action setf3(bit<32> val) {
+    @name("setf3") action setf3_0(bit<32> val) {
         hdr.data.f3 = val;
     }
-    @name("test1") table test1() {
+    @name("test1") table test1_0() {
         actions = {
-            setf1();
+            setf1_0();
             NoAction();
         }
         key = {
@@ -170,9 +170,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction();
     }
-    @name("test2") table test2() {
+    @name("test2") table test2_0() {
         actions = {
-            setf3();
+            setf3_0();
             NoAction();
         }
         key = {
@@ -180,9 +180,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("test3") table test3() {
+    @name("test3") table test3_0() {
         actions = {
-            setf3();
+            setf3_0();
             NoAction();
         }
         key = {
@@ -192,10 +192,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.data.b2 == 8w10) 
-            test1.apply();
+            test1_0.apply();
         else 
-            test2.apply();
-        test3.apply();
+            test2_0.apply();
+        test3_0.apply();
     }
 }
 

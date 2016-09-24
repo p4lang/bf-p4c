@@ -232,7 +232,6 @@ XFAIL_TESTS += \
     bmv2/%reldir%/v1_samples/test_config_154_stateful_sampling.p4.test \
     bmv2/%reldir%/v1_samples/test_config_155_stateful_3_alus.p4.test \
     bmv2/%reldir%/v1_samples/test_config_156_indirect_stateful_cntr.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_157_random_number_generator.p4.test \
     bmv2/%reldir%/v1_samples/test_config_159_stateful_using_phv_field.p4.test \
     bmv2/%reldir%/v1_samples/test_config_160_stateful_single_bit_mode.p4.test \
     bmv2/%reldir%/v1_samples/test_config_163_stateful_table_math_unit.p4.test \
@@ -247,11 +246,6 @@ XFAIL_TESTS += \
     bmv2/%reldir%/v1_samples/test_config_173_stateful_bloom_filter.p4.test \
     bmv2/%reldir%/v1_samples/vk_basic_ipv4_20150706.p4.test \
     p14_to_16/%reldir%/v1_samples/02-FlexCounterActionProfile.p4.test \
-    p14_to_16/%reldir%/v1_samples/dileep12.p4.test \
-    p14_to_16/%reldir%/v1_samples/dileep2.p4.test \
-    p14_to_16/%reldir%/v1_samples/dileep4.p4.test \
-    p14_to_16/%reldir%/v1_samples/dileep8.p4.test \
-    p14_to_16/%reldir%/v1_samples/dileep.p4.test \
     p14_to_16/%reldir%/v1_samples/switch_20160602/switch.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_125_meter_pre_color.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_126_meter_pre_color_2.p4.test \

@@ -177,9 +177,9 @@ struct struct_0 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    @name("a1") action a1(bit<32> d1, bit<32> d2, bit<32> d3, bit<32> d4, bit<32> d5, bit<32> d6, bit<32> d7, bit<32> d8) {
+    @name("a1") action a1_0(bit<32> d1, bit<32> d2, bit<32> d3, bit<32> d4, bit<32> d5, bit<32> d6, bit<32> d7, bit<32> d8) {
         meta.meta.f1 = d1;
         meta.meta.f2 = d2;
         meta.meta.f3 = d3;
@@ -190,16 +190,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.f8 = d8;
         resubmit<struct_0>({ meta.meta.f1, meta.meta.f2, meta.meta.f3, meta.meta.f4, meta.meta.f5, meta.meta.f6, meta.meta.f7, meta.meta.f8 });
     }
-    @name("t1") table t1_0() {
+    @name("t1") table t1() {
         actions = {
-            a1();
-            NoAction_1();
+            a1_0();
+            NoAction();
         }
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) 
-            t1_0.apply();
+            t1.apply();
     }
 }
 

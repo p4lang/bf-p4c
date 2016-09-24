@@ -164,16 +164,16 @@ struct struct_0 {
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("egr_action") action egr_action() {
+    @name("egr_action") action egr_action_0() {
         clone3<struct_0>(CloneType.E2E, 32w7, { meta.m.foo });
     }
-    @name("egr_action2") action egr_action2() {
+    @name("egr_action2") action egr_action2_0() {
         clone(CloneType.E2E, 32w8);
     }
-    @name("egr_null_table") table egr_null_table() {
+    @name("egr_null_table") table egr_null_table_0() {
         actions = {
-            egr_action();
-            egr_action2();
+            egr_action_0();
+            egr_action2_0();
             NoAction();
         }
         key = {
@@ -184,7 +184,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction();
     }
     apply {
-        egr_null_table.apply();
+        egr_null_table_0.apply();
     }
 }
 
@@ -193,16 +193,16 @@ struct struct_1 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("ingr_action") action ingr_action() {
+    @name("ingr_action") action ingr_action_0() {
         clone3<struct_1>(CloneType.I2E, 32w5, { meta.m.foo });
     }
-    @name("ingr_action2") action ingr_action2() {
+    @name("ingr_action2") action ingr_action2_0() {
         clone(CloneType.I2E, 32w6);
     }
-    @name("ingr_null_table") table ingr_null_table() {
+    @name("ingr_null_table") table ingr_null_table_0() {
         actions = {
-            ingr_action();
-            ingr_action2();
+            ingr_action_0();
+            ingr_action2_0();
             NoAction();
         }
         key = {
@@ -211,7 +211,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        ingr_null_table.apply();
+        ingr_null_table_0.apply();
     }
 }
 

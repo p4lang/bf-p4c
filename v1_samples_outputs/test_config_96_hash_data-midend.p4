@@ -174,41 +174,41 @@ struct struct_1 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    action NoAction_2() {
+    @name("NoAction_2") action NoAction_0() {
     }
-    action NoAction_3() {
+    @name("NoAction_3") action NoAction_4() {
     }
-    @name("action_0") action action_0(bit<16> param0) {
+    @name("action_0") action action_3(bit<16> param0) {
         hdr.pkt.field_e_16 = param0;
         hash<bit<28>, bit<32>, struct_0, bit<64>>(hdr.pkt.field_a_28, HashAlgorithm.crc32, 32w0, { hdr.pkt.field_a_28, hdr.pkt.field_b_32, hdr.pkt.field_i_8 }, 64w16384);
     }
-    @name("action_1") action action_1() {
+    @name("action_1") action action_4() {
         hash<bit<8>, bit<16>, struct_1, bit<32>>(hdr.pkt.field_l_8, HashAlgorithm.crc16, 16w0, { hdr.pkt.field_c_32, hdr.pkt.field_g_16, hdr.pkt.field_h_16, hdr.pkt.field_k_8 }, 32w256);
     }
-    @name("do_nothing") action do_nothing() {
+    @name("do_nothing") action do_nothing_0() {
     }
-    @name("do_nothing") action do_nothing_1() {
+    @name("do_nothing") action do_nothing_2() {
     }
-    @name("action_2") action action_2(bit<16> param0) {
+    @name("action_2") action action_5(bit<16> param0) {
         hdr.pkt.field_h_16 = param0;
     }
-    @name("table_0") table table_3() {
+    @name("table_0") table table_0() {
         actions = {
-            action_0();
-            NoAction_1();
+            action_3();
+            NoAction();
         }
         key = {
             hdr.pkt.field_a_28: exact;
         }
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
-    @name("table_1") table table_4() {
+    @name("table_1") table table_1() {
         actions = {
-            action_1();
-            do_nothing();
-            NoAction_2();
+            action_4();
+            do_nothing_0();
+            NoAction_0();
         }
         key = {
             hdr.pkt.field_c_32: exact;
@@ -218,13 +218,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_h_16: exact;
         }
         size = 2048;
-        default_action = NoAction_2();
+        default_action = NoAction_0();
     }
-    @name("table_2") table table_5() {
+    @name("table_2") table table_2() {
         actions = {
-            action_2();
-            do_nothing_1();
-            NoAction_3();
+            action_5();
+            do_nothing_2();
+            NoAction_4();
         }
         key = {
             hdr.pkt.field_b_32: ternary;
@@ -235,15 +235,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.field_f_16: selector;
         }
         size = 2048;
-        default_action = NoAction_3();
+        default_action = NoAction_4();
         @name("table_2_action_profile") implementation = action_selector(HashAlgorithm.random, 32w512, 32w72);
     }
     apply {
         if (hdr.pkt.isValid()) 
-            table_3.apply();
+            table_0.apply();
         if (hdr.pkt.isValid()) 
-            table_4.apply();
-        table_5.apply();
+            table_1.apply();
+        table_2.apply();
     }
 }
 

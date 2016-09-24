@@ -155,84 +155,84 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_2() {
+    @name("NoAction_2") action NoAction() {
     }
-    @name("nop") action nop() {
+    @name("nop") action nop_0() {
     }
-    @name("e_t1") table e_t1_0() {
+    @name("e_t1") table e_t1() {
         actions = {
-            nop();
-            NoAction_2();
+            nop_0();
+            NoAction();
         }
         key = {
             hdr.ethernet.srcAddr: exact;
         }
-        default_action = NoAction_2();
+        default_action = NoAction();
     }
     apply {
-        e_t1_0.apply();
+        e_t1.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_3() {
+    @name("NoAction_3") action NoAction_0() {
     }
-    action NoAction_4() {
+    @name("NoAction_4") action NoAction_1() {
     }
-    action NoAction_5() {
+    @name("NoAction_5") action NoAction_6() {
     }
-    @name("nop") action nop_2() {
+    @name("nop") action nop_1() {
     }
-    @name("nop") action nop_3() {
+    @name("nop") action nop_4() {
     }
-    @name("ing_drop") action ing_drop() {
+    @name("ing_drop") action ing_drop_0() {
         meta.ing_metadata.drop = 1w1;
     }
-    @name("ing_drop") action ing_drop_1() {
+    @name("ing_drop") action ing_drop_2() {
         meta.ing_metadata.drop = 1w1;
     }
-    @name("set_egress_port") action set_egress_port(bit<9> egress_port) {
+    @name("set_egress_port") action set_egress_port_0(bit<9> egress_port) {
         standard_metadata.egress_spec = egress_port;
     }
-    @name("hw_drop") action hw_drop() {
+    @name("hw_drop") action hw_drop_0() {
         mark_to_drop();
     }
-    @name("dmac") table dmac_0() {
+    @name("dmac") table dmac() {
         actions = {
-            nop_2();
-            ing_drop();
-            set_egress_port();
-            NoAction_3();
+            nop_1();
+            ing_drop_0();
+            set_egress_port_0();
+            NoAction_0();
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 131072;
-        default_action = NoAction_3();
+        default_action = NoAction_0();
     }
-    @name("do_drop") table do_drop_0() {
+    @name("do_drop") table do_drop() {
         actions = {
-            hw_drop();
-            NoAction_4();
+            hw_drop_0();
+            NoAction_1();
         }
-        default_action = NoAction_4();
+        default_action = NoAction_1();
     }
-    @name("smac_filter") table smac_filter_0() {
+    @name("smac_filter") table smac_filter() {
         actions = {
-            nop_3();
-            ing_drop_1();
-            NoAction_5();
+            nop_4();
+            ing_drop_2();
+            NoAction_6();
         }
         key = {
             hdr.ethernet.srcAddr: exact;
         }
-        default_action = NoAction_5();
+        default_action = NoAction_6();
     }
     apply {
-        dmac_0.apply();
-        smac_filter_0.apply();
+        dmac.apply();
+        smac_filter.apply();
         if (meta.ing_metadata.drop == 1w1) 
-            do_drop_0.apply();
+            do_drop.apply();
     }
 }
 
