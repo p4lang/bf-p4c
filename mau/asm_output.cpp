@@ -466,10 +466,10 @@ void MauAsmOutput::TableFormat::print(std::ostream &out) const {
 }
 
 static cstring next_for(const IR::MAU::Table *tbl, cstring what, const DefaultNext &def) {
-    if (tbl->next.count(what)) { 
+    if (tbl->next.count(what)) {
         if (!tbl->next[what]->empty())
             return tbl->next[what]->front()->name;
-    } else if (tbl->next.count("$default")) { 
+    } else if (tbl->next.count("$default")) {
         if (!tbl->next["$default"]->empty())
             return tbl->next["$default"]->front()->name; }
     return def.next_in_thread(tbl);

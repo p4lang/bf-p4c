@@ -159,18 +159,18 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("nop") action nop() {
+    @name("nop") action nop_0() {
     }
-    @name("set_egress_port") action set_egress_port(bit<9> egress_port) {
+    @name("set_egress_port") action set_egress_port_0(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @name("set_bd") action set_bd(bit<12> bd) {
+    @name("set_bd") action set_bd_0(bit<12> bd) {
         hdr.l2_metadata.bd = bd;
     }
-    @name("dmac") table dmac() {
+    @name("dmac") table dmac_0() {
         actions = {
-            nop();
-            set_egress_port();
+            nop_0();
+            set_egress_port_0();
             NoAction();
         }
         key = {
@@ -180,9 +180,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 131072;
         default_action = NoAction();
     }
-    @name("port_bd") table port_bd() {
+    @name("port_bd") table port_bd_0() {
         actions = {
-            set_bd();
+            set_bd_0();
             NoAction();
         }
         key = {
@@ -193,8 +193,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) {
-            port_bd.apply();
-            dmac.apply();
+            port_bd_0.apply();
+            dmac_0.apply();
         }
     }
 }

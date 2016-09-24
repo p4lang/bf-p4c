@@ -235,24 +235,26 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> ttl_0;
-    action NoAction_1() {
+    @name("ttl_0") bit<8> ttl_1;
+    @name("NoAction_1") action NoAction() {
     }
-    @name("nop") action nop() {
+    @name("nop") action nop_0() {
     }
-    @name("custom_action_3") action custom_action_0(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
+    @name("custom_action_3") action custom_action(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
         hdr.ipv4.dstAddr = dstIp;
         hdr.ethernet.dstAddr = dstAddr;
-        ttl_0 = hdr.ipv4.ttl;
-        ttl_0 = ttl_0 + 8w255;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-        hdr.ipv4.ttl = ttl_0;
+        @name("hop") {
+            ttl_1 = hdr.ipv4.ttl;
+            ttl_1 = ttl_1 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_1;
+        }
     }
-    @name("exm_3ways_32k") table exm_3ways_32k_0() {
+    @name("exm_3ways_32k") table exm_3ways_32k() {
         actions = {
-            nop();
-            custom_action_0();
-            NoAction_1();
+            nop_0();
+            custom_action();
+            NoAction();
         }
         key = {
             hdr.ipv4.dstAddr    : exact;
@@ -263,10 +265,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.tcp.dstPort     : exact;
         }
         size = 32768;
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
     apply {
-        exm_3ways_32k_0.apply();
+        exm_3ways_32k.apply();
     }
 }
 

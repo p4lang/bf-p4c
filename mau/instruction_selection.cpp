@@ -10,24 +10,22 @@ const IR::ActionFunction *InstructionSelection::preorder(IR::ActionFunction *af)
 }
 
 class InstructionSelection::SplitInstructions : public Transform {
-    PhvInfo &phv;
     IR::Vector<IR::Primitive> &split;
     const IR::Expression *postorder(IR::MAU::Instruction *inst) override {
-        if (inst->operands[0]) return inst;
-        auto *tmp = phv.createTempField(inst->type);
-        inst->operands[0] = tmp;
-        LOG3("splitting instruction " << inst);
-        split.push_back(inst);
-        return tmp; }
+        if (inst->operands[0]->is<IR::TempVar>() && getContext() != nullptr) {
+            LOG3("splitting instruction " << inst);
+            split.push_back(inst);
+            return inst->operands[0]; }
+        return inst; }
  public:
-    SplitInstructions(PhvInfo &p, IR::Vector<IR::Primitive> &s) : phv(p), split(s) {}
+    explicit SplitInstructions(IR::Vector<IR::Primitive> &s) : split(s) {}
 };
 
 const IR::ActionFunction *InstructionSelection::postorder(IR::ActionFunction *af) {
     this->af = nullptr;
     IR::Vector<IR::Primitive> split;
     for (auto *p : af->action)
-        split.push_back(p->apply(SplitInstructions(phv, split)));
+        split.push_back(p->apply(SplitInstructions(split)));
     if (split.size() > af->action.size())
         af->action = std::move(split);
     return af;
@@ -68,7 +66,7 @@ const IR::Expression *InstructionSelection::postorder(IR::BAnd *e) {
     } else if (r && r->name == "not") {
         right = r->operands[1];
         op = "andcb"; }
-    return (new IR::MAU::Instruction(e->srcInfo, "and", nullptr, left, right))->setType(e->type);
+    return new IR::MAU::Instruction(e->srcInfo, "and", new IR::TempVar(e->type), left, right);
 }
 const IR::Expression *InstructionSelection::postorder(IR::BOr *e) {
     if (!af) return e;
@@ -86,7 +84,7 @@ const IR::Expression *InstructionSelection::postorder(IR::BOr *e) {
     } else if (r && r->name == "not") {
         right = r->operands[1];
         op = "orcb"; }
-    return (new IR::MAU::Instruction(e->srcInfo, "or", nullptr, left, right))->setType(e->type);
+    return new IR::MAU::Instruction(e->srcInfo, "or", new IR::TempVar(e->type), left, right);
 }
 const IR::Expression *InstructionSelection::postorder(IR::BXor *e) {
     if (!af) return e;
@@ -103,7 +101,7 @@ const IR::Expression *InstructionSelection::postorder(IR::BXor *e) {
     } else if (r && r->name == "not") {
         right = r->operands[1];
         op = "xnor"; }
-    return (new IR::MAU::Instruction(e->srcInfo, "xor", nullptr, left, right))->setType(e->type);
+    return new IR::MAU::Instruction(e->srcInfo, "xor", new IR::TempVar(e->type), left, right);
 }
 const IR::Expression *InstructionSelection::postorder(IR::Cmpl *e) {
     if (!af) return e;
@@ -118,28 +116,30 @@ const IR::Expression *InstructionSelection::postorder(IR::Cmpl *e) {
         else if (fold->name == "orcb") fold->name = "andca";
         else if (fold->name == "xnor") fold->name = "xor";
         else if (fold->name == "xor") fold->name = "xnor";
-        else fold = nullptr;
+        else
+            fold = nullptr;
         if (fold) return fold; }
-    return (new IR::MAU::Instruction(e->srcInfo, "not", nullptr, e->expr))->setType(e->type);
+    return new IR::MAU::Instruction(e->srcInfo, "not", new IR::TempVar(e->type), e->expr);
 }
 
 const IR::Expression *InstructionSelection::postorder(IR::Add *e) {
     if (!af) return e;
-    return (new IR::MAU::Instruction(e->srcInfo, "add", nullptr, e->left, e->right))->setType(e->type);
+    return new IR::MAU::Instruction(e->srcInfo, "add", new IR::TempVar(e->type), e->left, e->right);
 }
 
 const IR::Expression *InstructionSelection::postorder(IR::Sub *e) {
     if (!af) return e;
     if (auto *k = e->right->to<IR::Constant>())
-        return (new IR::MAU::Instruction(e->srcInfo, "add", nullptr, (-*k).clone(), e->left))->setType(e->type);
-    return (new IR::MAU::Instruction(e->srcInfo, "sub", nullptr, e->left, e->right))->setType(e->type);
+        return new IR::MAU::Instruction(e->srcInfo, "add", new IR::TempVar(e->type),
+                                        (-*k).clone(), e->left);
+    return new IR::MAU::Instruction(e->srcInfo, "sub", new IR::TempVar(e->type), e->left, e->right);
 }
 
 const IR::Expression *InstructionSelection::postorder(IR::Shl *e) {
     if (!af) return e;
     if (!e->right->is<IR::Constant>())
         error("%s: shift count must be a constant in %s", e->srcInfo, e);
-    return (new IR::MAU::Instruction(e->srcInfo, "shl", nullptr, e->left, e->right))->setType(e->type);
+    return new IR::MAU::Instruction(e->srcInfo, "shl", new IR::TempVar(e->type), e->left, e->right);
 }
 
 const IR::Expression *InstructionSelection::postorder(IR::Shr *e) {
@@ -149,16 +149,20 @@ const IR::Expression *InstructionSelection::postorder(IR::Shr *e) {
     const char *shr = "shru";
     if (e->type->is<IR::Type_Bits>() && e->type->to<IR::Type_Bits>()->isSigned)
         shr = "shrs";
-    return (new IR::MAU::Instruction(e->srcInfo, shr, nullptr, e->left, e->right))->setType(e->type);
+    return new IR::MAU::Instruction(e->srcInfo, shr, new IR::TempVar(e->type), e->left, e->right);
 }
 
 static const IR::MAU::Instruction *fillInstDest(const IR::Expression *in,
                                                 const IR::Expression *dest) {
     auto *inst = in ? in->to<IR::MAU::Instruction>() : nullptr;
-    if (!inst || inst->operands[0]) return nullptr;
-    auto *rv = inst->clone();
-    rv->operands[0] = dest;
-    return rv;
+    auto *tv = inst ? inst->operands[0]->to<IR::TempVar>() : nullptr;
+    if (tv) {
+        int id;
+        if (sscanf(tv->name, "$tmp%d", &id) > 0 && id == tv->uid) --tv->uid;
+        auto *rv = inst->clone();
+        rv->operands[0] = dest;
+        return rv; }
+    return nullptr;
 }
 
 static bool isDepositMask(long) {
@@ -194,13 +198,13 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
         else
             return new IR::MAU::Instruction(prim->srcInfo, "bitmask-set", &prim->operands);
     } else if (prim->name == "add" || prim->name == "sub") {
-        if (prim->operands.size() != 3)
+        if (prim->operands.size() != 3) {
             error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);
-        else if (!phv.field(dest))
+        } else if (!phv.field(dest)) {
             error("%s: destination of %s must be a field", prim->srcInfo, prim->name);
-        else if (!checkSrc1(prim->operands[1]))
+        } else if (!checkSrc1(prim->operands[1])) {
             error("%s: source 1 of %s invalid", prim->srcInfo, prim->name);
-        else if (!checkPHV(prim->operands[2])) {
+        } else if (!checkPHV(prim->operands[2])) {
             long value;
             if (prim->name == "add" && checkSrc1(prim->operands[2]) && checkPHV(prim->operands[1]))
                 return new IR::MAU::Instruction(prim->srcInfo, "add", dest,
@@ -209,8 +213,8 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
                 return new IR::MAU::Instruction(prim->srcInfo, "add", dest,
                                                 prim->operands[2], new IR::Constant(-value));
             error("%s: source 2 of %s invalid", prim->srcInfo, prim->name);
-        } else
-            return new IR::MAU::Instruction(*prim);
+        } else {
+            return new IR::MAU::Instruction(*prim); }
     } else if (prim->name == "add_to_field") {
         if (prim->operands.size() != 2)
             error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);

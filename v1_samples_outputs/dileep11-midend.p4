@@ -235,34 +235,36 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> ttl_0;
-    action NoAction_1() {
+    @name("ttl_0") bit<8> ttl_1;
+    @name("NoAction_1") action NoAction() {
     }
-    @name("nop") action nop() {
+    @name("nop") action nop_0() {
     }
-    @name("next_hop_ipv4") action next_hop_ipv4(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
-        ttl_0 = hdr.ipv4.ttl;
-        ttl_0 = ttl_0 + 8w255;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-        hdr.ipv4.ttl = ttl_0;
+    @name("next_hop_ipv4") action next_hop_ipv4_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
+        @name("hop") {
+            ttl_1 = hdr.ipv4.ttl;
+            ttl_1 = ttl_1 + 8w255;
+            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+            hdr.ipv4.ttl = ttl_1;
+        }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    @name("ipv4_routing_exm_ways_4_pack_4_stage_6") table ipv4_routing_exm_ways_4_pack_4_stage() {
+    @name("ipv4_routing_exm_ways_4_pack_4_stage_6") table ipv4_routing_exm_ways_4_pack_4_stage_0() {
         actions = {
-            nop();
-            next_hop_ipv4();
-            NoAction_1();
+            nop_0();
+            next_hop_ipv4_0();
+            NoAction();
         }
         key = {
             hdr.ethernet.srcAddr: exact;
             hdr.ethernet.dstAddr: exact;
             hdr.tcp.srcPort     : exact;
         }
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
     apply {
-        ipv4_routing_exm_ways_4_pack_4_stage.apply();
+        ipv4_routing_exm_ways_4_pack_4_stage_0.apply();
     }
 }
 

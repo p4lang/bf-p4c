@@ -161,14 +161,14 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_2") action action_2(bit<32> param0) {
+    @name("action_2") action action_3(bit<32> param0) {
         hdr.pkt.field_d_32 = param0;
     }
-    @name("do_nothing") action do_nothing() {
+    @name("do_nothing") action do_nothing_0() {
     }
-    @name("table_2") table table_2() {
+    @name("table_2") table table_4() {
         actions = {
-            action_2();
+            action_3();
             NoAction();
         }
         key = {
@@ -176,9 +176,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         default_action = NoAction();
     }
-    @name("table_3") table table_3() {
+    @name("table_3") table table_5() {
         actions = {
-            do_nothing();
+            do_nothing_0();
             NoAction();
         }
         key = {
@@ -187,18 +187,18 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction();
     }
     apply {
-        table_2.apply();
-        table_3.apply();
+        table_4.apply();
+        table_5.apply();
     }
 }
 
 control pipe_0(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_1") action action_1(bit<32> param0) {
+    @name("action_1") action action_4(bit<32> param0) {
         hdr.pkt.field_c_32 = param0;
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_6() {
         actions = {
-            action_1();
+            action_4();
             NoAction();
         }
         key = {
@@ -207,17 +207,17 @@ control pipe_0(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction();
     }
     apply {
-        table_1.apply();
+        table_6.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_0") action action_0(bit<32> param0) {
+    @name("action_0") action action_5(bit<32> param0) {
         hdr.pkt.field_b_32 = param0;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_7() {
         actions = {
-            action_0();
+            action_5();
             NoAction();
         }
         key = {
@@ -225,10 +225,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("pipe_0") pipe_0() pipe_0_0;
+    @name("pipe_0") pipe_0() pipe_0_1;
     apply {
-        table_0.apply();
-        pipe_0_0.apply(hdr, meta, standard_metadata);
+        table_7.apply();
+        pipe_0_1.apply(hdr, meta, standard_metadata);
     }
 }
 

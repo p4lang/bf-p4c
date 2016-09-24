@@ -2,11 +2,16 @@
 #define _TOFINO_MAU_INPUT_XBAR_H_
 
 #include "lib/alloc.h"
+#include "lib/hex.h"
 #include "ir/ir.h"
 
 class PhvInfo;
 class IXBarRealign;
 struct TableResourceAlloc;
+//FIXME: Maybe a different format
+struct grp_use;
+struct big_grp_use;
+
 
 struct IXBar {
     enum {
@@ -95,7 +100,7 @@ struct IXBar {
             Way(int g, int s, unsigned m) : group(g), slice(s), mask(m) {} };
         vector<Way>     way_use;
 
-        void clear() { use.clear(); hash_table_input = 0; way_use.clear(); }
+        void clear() { use.clear(); hash_table_input = 0; bit_use.clear(); way_use.clear(); }
         void compute_hash_tables();
         int groups() const;  // how many different groups in this use
     };
@@ -108,10 +113,12 @@ struct IXBar {
     };
 
     void clear();
-    bool allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc);
+    bool allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc,
+                    vector<IXBar::Use::Byte *> &alloced, bool second_try, int hash_groups);
     int getHashGroup(cstring name);
+    bool allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc);
     bool allocHashWay(const IR::MAU::Table *, const IR::MAU::Table::Way &, Use &);
-    bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc);
+    bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_alloc, Use &gw_alloc);
     void update(cstring name, const Use &alloc);
     void update(cstring name, const TableResourceAlloc *alloc);
@@ -126,7 +133,33 @@ struct IXBar {
         return nullptr; }
 
  private:
-    bool find_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
+    bool find_alloc(IXBar::Use &alloc, bool ternary, bool second_try, 
+                    vector<IXBar::Use::Byte *> &alloced, int hash_groups_needed);
+    bool find_original_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
+    bool find_ternary_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
+    void calculate_available_groups(vector<big_grp_use> &order, int hash_groups_needed);
+    void calculate_found(vector<IXBar::Use::Byte *> unalloced, vector<big_grp_use> &order, 
+                         bool ternary);
+    void calculate_ternary_free(vector<big_grp_use> &order, int big_groups, 
+                                int bytes_per_big_group);
+    void calculate_exact_free(vector<big_grp_use> &order, int big_groups, 
+                              int bytes_per_big_group);
+    int found_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, bool ternary);
+    int free_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, 
+                   vector<IXBar::Use::Byte *> &alloced, bool ternary);
+    int found_bytes_big_group(big_grp_use *grp, vector<IXBar::Use::Byte *> &unalloced);
+    int free_bytes_big_group(big_grp_use *grp, vector<IXBar::Use::Byte *> &unalloced,
+                                 vector<IXBar::Use::Byte *> &alloced);
+    void allocate_free_byte(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced,
+                            vector<IXBar::Use::Byte *> &alloced, IXBar::Use::Byte &need,
+                            int group, int byte, int &index, int &free_bytes, int &bytes_placed);
+    void fill_out_use(vector<IXBar::Use::Byte *> &alloced, bool ternary);
+    bool big_grp_alloc(bool ternary, bool second_try, vector<IXBar::Use::Byte *> &unalloced, 
+                       vector<IXBar::Use::Byte *> &alloced, vector<big_grp_use> &order,
+                       int big_groups_needed, int &total_bytes_needed, int bytes_per_big_group);
+    bool small_grp_alloc(bool ternary, bool second_try, vector<IXBar::Use::Byte *> &unalloced,
+                         vector<IXBar::Use::Byte *> &alloced, vector<grp_use *> &small_order, 
+                         vector<big_grp_use> &order, int &total_bytes_needed);
 };
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {
@@ -135,6 +168,7 @@ inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Use::Byte &b) {
     out << b.field << '[' << b.lo << ".." << b.hi << ']';
     if (b.loc) out << b.loc;
+    if (b.flags) out << " flags=" << hex(b.flags);
     return out; }
 
 #endif /* _TOFINO_MAU_INPUT_XBAR_H_ */

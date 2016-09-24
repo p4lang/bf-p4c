@@ -77,3 +77,18 @@ class InstanceRef : HeaderRef {
     dbprint { out << obj; }
 }
 
+class TempVar : Expression {
+    bool        POV;
+    cstring     name;
+    static int  uid;
+#noconstructor
+    TempVar(Type t, bool p = false, const char *n = 0) : Expression(t), POV(p), name(n) {
+        if (!name) {
+            std::string n("$tmp");
+            n += std::to_string(++uid);
+            name = n; } }
+    TempVar(Type t, const char *n) : TempVar(t, false, n) {}
+    toString { return name; }
+    dbprint { out << name; }
+}
+

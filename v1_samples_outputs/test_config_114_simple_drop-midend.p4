@@ -158,51 +158,51 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_2() {
+    @name("NoAction_2") action NoAction() {
     }
-    @name("action_1") action action_0() {
+    @name("action_1") action action_2() {
         mark_to_drop();
     }
-    @name("nop") action nop() {
+    @name("nop") action nop_0() {
     }
-    @name("table_1") table table_2() {
+    @name("table_1") table table_0() {
         actions = {
-            action_0();
-            nop();
-            NoAction_2();
+            action_2();
+            nop_0();
+            NoAction();
         }
         key = {
             hdr.pkt.field_d: exact;
         }
-        default_action = NoAction_2();
+        default_action = NoAction();
     }
     apply {
-        table_2.apply();
+        table_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_3() {
+    @name("NoAction_3") action NoAction_0() {
     }
-    @name("action_0") action action_1() {
+    @name("action_0") action action_3() {
         mark_to_drop();
     }
-    @name("nop") action nop_2() {
+    @name("nop") action nop_1() {
     }
-    @name("table_0") table table_3() {
+    @name("table_0") table table_1() {
         actions = {
-            action_1();
-            nop_2();
-            NoAction_3();
+            action_3();
+            nop_1();
+            NoAction_0();
         }
         key = {
             hdr.pkt.field_b: exact;
         }
         size = 256000;
-        default_action = NoAction_3();
+        default_action = NoAction_0();
     }
     apply {
-        table_3.apply();
+        table_1.apply();
     }
 }
 

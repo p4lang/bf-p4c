@@ -158,110 +158,110 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    action NoAction_2() {
+    @name("NoAction_2") action NoAction_0() {
     }
-    action NoAction_3() {
+    @name("NoAction_3") action NoAction_6() {
     }
-    action NoAction_4() {
+    @name("NoAction_4") action NoAction_7() {
     }
-    action NoAction_5() {
+    @name("NoAction_5") action NoAction_8() {
     }
-    @name("action_0") action action_0(bit<32> my_param_0, bit<32> my_param_4) {
+    @name("action_0") action action_5(bit<32> my_param_0, bit<32> my_param_4) {
         hdr.pkt.field_a = my_param_0;
         hdr.pkt.field_g = my_param_4;
     }
-    @name("nop") action nop() {
+    @name("nop") action nop_0() {
     }
-    @name("nop") action nop_1() {
+    @name("nop") action nop_5() {
     }
-    @name("nop") action nop_2() {
+    @name("nop") action nop_6() {
     }
-    @name("nop") action nop_3() {
+    @name("nop") action nop_7() {
     }
-    @name("nop") action nop_4() {
+    @name("nop") action nop_8() {
     }
-    @name("action_1") action action_1(bit<32> my_param_1) {
+    @name("action_1") action action_6(bit<32> my_param_1) {
         hdr.pkt.field_c = my_param_1;
     }
-    @name("action_2") action action_2(bit<32> my_param_2) {
+    @name("action_2") action action_7(bit<32> my_param_2) {
         hdr.pkt.field_e = my_param_2;
     }
-    @name("action_3") action action_3(bit<32> my_param_3) {
+    @name("action_3") action action_8(bit<32> my_param_3) {
         hdr.pkt.field_i = my_param_3;
     }
-    @name("action_4") action action_4(bit<32> my_param_4) {
+    @name("action_4") action action_9(bit<32> my_param_4) {
         hdr.pkt.field_j = my_param_4;
     }
-    @name("table_0") table table_5() {
+    @name("table_0") table table_0() {
         actions = {
-            action_0();
-            nop();
-            NoAction_1();
+            action_5();
+            nop_0();
+            NoAction();
         }
         key = {
             hdr.pkt.field_b: exact;
         }
         size = 256000;
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
-    @name("table_1") table table_6() {
+    @name("table_1") table table_1() {
         actions = {
-            action_1();
-            nop_1();
-            NoAction_2();
+            action_6();
+            nop_5();
+            NoAction_0();
         }
         key = {
             hdr.pkt.field_d: exact;
         }
-        default_action = NoAction_2();
+        default_action = NoAction_0();
     }
-    @name("table_2") table table_7() {
+    @name("table_2") table table_2() {
         actions = {
-            action_2();
-            nop_2();
-            NoAction_3();
+            action_7();
+            nop_6();
+            NoAction_6();
         }
         key = {
             hdr.pkt.field_f: exact;
         }
-        default_action = NoAction_3();
+        default_action = NoAction_6();
     }
-    @name("table_3") table table_8() {
+    @name("table_3") table table_3() {
         actions = {
-            action_3();
-            nop_3();
-            NoAction_4();
+            action_8();
+            nop_7();
+            NoAction_7();
         }
         key = {
             hdr.pkt.field_h: exact;
         }
-        default_action = NoAction_4();
+        default_action = NoAction_7();
     }
-    @name("table_4") table table_9() {
+    @name("table_4") table table_4() {
         actions = {
-            action_4();
-            nop_4();
-            NoAction_5();
+            action_9();
+            nop_8();
+            NoAction_8();
         }
         key = {
             hdr.pkt.field_e: exact;
         }
-        default_action = NoAction_5();
+        default_action = NoAction_8();
     }
     apply {
-        switch (table_5.apply().action_run) {
-            nop: {
-                table_6.apply();
+        switch (table_0.apply().action_run) {
+            nop_0: {
+                table_1.apply();
             }
         }
 
         if (hdr.pkt.isValid()) 
-            table_7.apply();
+            table_2.apply();
         else 
-            table_8.apply();
-        table_9.apply();
+            table_3.apply();
+        table_4.apply();
     }
 }
 

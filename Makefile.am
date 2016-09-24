@@ -88,6 +88,8 @@ tofino_backend_SOURCES = \
 	%reldir%/phv/bit_extractor.h \
 	%reldir%/phv/byte_constraint.cpp \
 	%reldir%/phv/byte_constraint.h \
+	%reldir%/phv/cluster.cpp \
+	%reldir%/phv/cluster.h \
 	%reldir%/phv/constraints.cpp \
 	%reldir%/phv/constraints.h \
 	%reldir%/phv/container_constraint.cpp \
@@ -230,7 +232,6 @@ XFAIL_TESTS += \
     bmv2/%reldir%/v1_samples/test_config_154_stateful_sampling.p4.test \
     bmv2/%reldir%/v1_samples/test_config_155_stateful_3_alus.p4.test \
     bmv2/%reldir%/v1_samples/test_config_156_indirect_stateful_cntr.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_157_random_number_generator.p4.test \
     bmv2/%reldir%/v1_samples/test_config_159_stateful_using_phv_field.p4.test \
     bmv2/%reldir%/v1_samples/test_config_160_stateful_single_bit_mode.p4.test \
     bmv2/%reldir%/v1_samples/test_config_163_stateful_table_math_unit.p4.test \
@@ -245,11 +246,6 @@ XFAIL_TESTS += \
     bmv2/%reldir%/v1_samples/test_config_173_stateful_bloom_filter.p4.test \
     bmv2/%reldir%/v1_samples/vk_basic_ipv4_20150706.p4.test \
     p14_to_16/%reldir%/v1_samples/02-FlexCounterActionProfile.p4.test \
-    p14_to_16/%reldir%/v1_samples/dileep12.p4.test \
-    p14_to_16/%reldir%/v1_samples/dileep2.p4.test \
-    p14_to_16/%reldir%/v1_samples/dileep4.p4.test \
-    p14_to_16/%reldir%/v1_samples/dileep8.p4.test \
-    p14_to_16/%reldir%/v1_samples/dileep.p4.test \
     p14_to_16/%reldir%/v1_samples/switch_20160602/switch.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_125_meter_pre_color.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_126_meter_pre_color_2.p4.test \
@@ -284,15 +280,13 @@ XFAIL_TESTS += \
     tofino/%reldir%/v1_samples/07-MacAddrCheck.p4.test \
     tofino/%reldir%/v1_samples/08-MacAddrCheck1.p4.test
 
-# These currently fail ixbar allocation (table too wide)
-XFAIL_TESTS += \
-    tofino/testdata/p4_14_samples/02-FullPHV1.p4.test \
-    tofino/testdata/p4_14_samples/03-FullPHV2.p4.test
+# Gateway match key misalignment
+XFAIL_TESTS += tofino/testdata/p4_14_samples/basic_routing.p4.test \
+    tofino/testdata/p4_14_samples/07-MultiProtocol.p4.test 
 
 # Generates broken PHV alloc (regs used by both ingress & egress)
 XFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/basic_routing.p4.test
 
 # Incorrect parser generation, broken tbl-cfg for 1 bit match, losing data in PHV?
-XFAIL_TESTS += \
-    tofino-newpa/testdata/p4_14_samples/07-MultiProtocol.p4.test
+XFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/07-MultiProtocol.p4.test
 
