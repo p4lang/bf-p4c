@@ -11,6 +11,12 @@ struct StageUse {
 };
 inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
     return out << (gress ? "egress" : "ingress"); }
+inline bool operator>>(cstring s, gress_t &gress) {
+    if (s == "ingress") gress = INGRESS;
+    else if (s == "egress") gress = EGRESS;
+    else return false;
+    return true;
+}
 #end
 
 #emit_impl
