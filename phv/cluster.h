@@ -14,20 +14,20 @@
 // input:
 // fields computed by PhvInfo phv
 // these field pointers are not part of IR, they are calculated by &phv
-// must perform cluster analysis after last &phv pass 
+// must perform cluster analysis after last &phv pass
 // output:
 // accumulated map< field*, pointer to cluster_set of field* >
-// 
+//
 //***********************************************************************************
 
 class Cluster : public Inspector {
-    PhvInfo	&phv_i;		// phv object referenced through constructor
+    PhvInfo     &phv_i;         // phv object referenced through constructor
     std::map<const PhvInfo::Field *, std::set<const PhvInfo::Field *>*> dst_map_i;
-				// map of field to cluster it belongs
+                                // map of field to cluster it belongs
     std::set<const PhvInfo::Field *> lhs_unique_i;
-				// maintains unique cluster ptrs
+                                // maintains unique cluster ptrs
     PhvInfo::Field *dst_i = nullptr;
-				// destination of current statement
+                                // destination of current statement
 
     bool preorder(const IR::Member*) override;
     bool preorder(const IR::Operation_Unary*) override;

@@ -116,7 +116,8 @@ const IR::Expression *InstructionSelection::postorder(IR::Cmpl *e) {
         else if (fold->name == "orcb") fold->name = "andca";
         else if (fold->name == "xnor") fold->name = "xor";
         else if (fold->name == "xor") fold->name = "xnor";
-        else fold = nullptr;
+        else
+            fold = nullptr;
         if (fold) return fold; }
     return new IR::MAU::Instruction(e->srcInfo, "not", new IR::TempVar(e->type), e->expr);
 }
@@ -197,13 +198,13 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
         else
             return new IR::MAU::Instruction(prim->srcInfo, "bitmask-set", &prim->operands);
     } else if (prim->name == "add" || prim->name == "sub") {
-        if (prim->operands.size() != 3)
+        if (prim->operands.size() != 3) {
             error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);
-        else if (!phv.field(dest))
+        } else if (!phv.field(dest)) {
             error("%s: destination of %s must be a field", prim->srcInfo, prim->name);
-        else if (!checkSrc1(prim->operands[1]))
+        } else if (!checkSrc1(prim->operands[1])) {
             error("%s: source 1 of %s invalid", prim->srcInfo, prim->name);
-        else if (!checkPHV(prim->operands[2])) {
+        } else if (!checkPHV(prim->operands[2])) {
             long value;
             if (prim->name == "add" && checkSrc1(prim->operands[2]) && checkPHV(prim->operands[1]))
                 return new IR::MAU::Instruction(prim->srcInfo, "add", dest,
@@ -212,8 +213,8 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
                 return new IR::MAU::Instruction(prim->srcInfo, "add", dest,
                                                 prim->operands[2], new IR::Constant(-value));
             error("%s: source 2 of %s invalid", prim->srcInfo, prim->name);
-        } else
-            return new IR::MAU::Instruction(*prim);
+        } else {
+            return new IR::MAU::Instruction(*prim); }
     } else if (prim->name == "add_to_field") {
         if (prim->operands.size() != 2)
             error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);

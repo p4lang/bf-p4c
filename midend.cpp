@@ -102,7 +102,7 @@ MidEnd::MidEnd(CompilerOptions& options) {
 #endif
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::StrengthReduction(),
-        new P4::SimplifySelect(&refMap, &typeMap, true), // constant keysets
+        new P4::SimplifySelect(&refMap, &typeMap, true),  // constant keysets
         new P4::SimplifyParsers(&refMap),
         new P4::LocalCopyPropagation(&refMap, &typeMap),
         new P4::MoveDeclarations(),

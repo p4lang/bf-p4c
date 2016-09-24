@@ -103,15 +103,15 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     }
 
     phv_analysis = new PassManager({
-        &cluster, 
+        &cluster,
         new VisitFunctor([&phv, &defuse, &cluster]() {
-		LOG3("++++++++++ All Fields(name,size) ++++++++++:\n");
-		LOG3(phv);
-		//LOG3("++++++++++ Def-Use ++++++++++:\n");
-		//LOG3(defuse);
-		LOG3("++++++++++ Clusters ++++++++++:\n");
-		LOG3(cluster);
-	}),
+                LOG3("++++++++++ All Fields(name,size) ++++++++++:\n");
+                LOG3(phv);
+                // LOG3("++++++++++ Def-Use ++++++++++:\n");
+                // LOG3(defuse);
+                LOG3("++++++++++ Clusters ++++++++++:\n");
+                LOG3(cluster);
+        }),
     });
 
     PassManager backend = {
@@ -125,7 +125,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new CreateThreadLocalInstances(EGRESS),
         &phv,
 
-        phv_analysis,	// perform cluster analysis after last &phv pass
+        phv_analysis,   // perform cluster analysis after last &phv pass
 
         new VisitFunctor([&phv]() { phv.allocatePOV(); }),
         new CanonGatewayExpr,   // must be before TableLayout?  or just TablePlacement?
