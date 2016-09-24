@@ -220,14 +220,18 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &s
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &fld) {
-    out << fld.name << '[' << fld.size << ']';
+std::ostream &operator<<(std::ostream &out, const PhvInfo::Field *fld) {
+    if(fld)
+        out << fld->name << '[' << fld->size << ']';
+    else
+        out << '-';	// fld is nil
     return out;
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo &phv) {
-    for (auto iter = phv.begin(); iter != phv.end(); ++iter) {
-         out << *iter << std::endl;
+    for (auto field: phv)
+    {
+         out << &field << std::endl;
     }
     return out;
 }

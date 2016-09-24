@@ -82,7 +82,6 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     TableSummary summary;
     MauAsmOutput mauasm(phv);
     PassManager *phv_alloc;
-    PassManager *phv_analysis;
 
     if (options->phv_newalloc) {
         auto *newpa = new PhvAllocator(phv, defuse.conflicts(), std::ref(mutex));
@@ -102,15 +101,9 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
             new PHV::TrivialAlloc(phv, defuse.conflicts()) });
     }
 
-    phv_analysis = new PassManager({
+    PassManager *phv_analysis = new PassManager({
         &cluster, 
         new VisitFunctor([&phv, &defuse, &cluster]() {
-		LOG3("++++++++++ All Fields(name,size) ++++++++++:\n");
-		LOG3(phv);
-		//LOG3("++++++++++ Def-Use ++++++++++:\n");
-		//LOG3(defuse);
-		LOG3("++++++++++ Clusters ++++++++++:\n");
-		LOG3(cluster);
 	}),
     });
 

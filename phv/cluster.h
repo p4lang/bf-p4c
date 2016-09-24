@@ -34,40 +34,41 @@ class Cluster : public Inspector {
     bool preorder(const IR::Operation_Binary*) override;
     bool preorder(const IR::Operation_Ternary*) override;
     bool preorder(const IR::Primitive*) override;
-    void postorder(const IR::Primitive*) override;
     bool preorder(const IR::Operation*) override;
+    void postorder(const IR::Primitive*) override;
     void end_apply() override;
+
+    void insert_cluster(const PhvInfo::Field *, const PhvInfo::Field *);
+    void sanity_check_clusters(const std::string&, const PhvInfo::Field *);
+    void sanity_check_clusters_unique(const std::string&);
 
  public:
     Cluster(PhvInfo &p) : phv_i(p)
     {
-        for (auto iter = phv_i.begin(); iter != phv_i.end(); ++iter)
+        for (auto field: phv_i)
         {
-            dst_map_i[&(*iter)] = nullptr;
+            dst_map_i[&field] = nullptr;
         }
     }
     ~Cluster()
     {
-       for(auto entry: dst_map_i)
-       {
-           if(entry.second)
-           {
-               delete entry.second;
-               entry.second = nullptr;
-           }
-       }
+       //garbage collector will clean this up
+       //for(auto entry: dst_map_i)
+       //{
+           //if(entry.second)
+           //{
+               //delete entry.second;
+               //entry.second = nullptr;
+           //}
+       //}
     }
     std::map<const PhvInfo::Field *, std::set<const PhvInfo::Field *>*>& dst_map()
     {
         return dst_map_i;
     }
-    void insert_cluster(const PhvInfo::Field *, const PhvInfo::Field *);
-    void sanity_check_clusters(const std::string&, const PhvInfo::Field *);
-    void sanity_check_clusters_unique(const std::string&);
-    void dump_cluster_set(const std::string&, std::set<const PhvInfo::Field *>*);
-    void dump_field(const PhvInfo::Field *);
 };
 
+std::ostream &operator<<(std::ostream &, std::set<const PhvInfo::Field *>*);
 std::ostream &operator<<(std::ostream &, Cluster &);
 
 #endif /* _TOFINO_PHV_CLUSTER_H_ */
