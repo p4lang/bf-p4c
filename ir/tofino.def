@@ -36,7 +36,7 @@ class Tofino::Pipe {
             json << json.indent << "\"parser\" : " << parser << "," << std::endl
                  << json.indent << "\"mau\" : " << mau << "," << std::endl
                  << json.indent << "\"deparser\" : " << deparser; }
-        static IR::Tofino::Pipe::thread_t* fromJSON(JSONLoader& json) {
+        fromJSON {
             IR::Tofino::Pipe::thread_t * thread = new IR::Tofino::Pipe::thread_t();
             json.load("parser", thread->parser);
             json.load("mau", thread->mau);

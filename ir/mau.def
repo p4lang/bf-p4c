@@ -58,6 +58,17 @@ class Table : Tofino::Unit {
                  << json.indent << "\"action_data_bytes_in_overhead\" : "
                                 << action_data_bytes_in_overhead << ",\n"
                  << json.indent << "\"overhead_bits\" : " << overhead_bits; }
+        fromJSON {
+            Layout *rv = new Layout();
+            json.load("entries", rv->entries);
+            json.load("gateway", rv->gateway);
+            json.load("ternary", rv->ternary);
+            json.load("ixbar_bytes", rv->ixbar_bytes);
+            json.load("match_width_bits", rv->match_width_bits);
+            json.load("action_data_bytes", rv->action_data_bytes);
+            json.load("action_data_bytes_in_overhead", rv->action_data_bytes_in_overhead);
+            json.load("overhead_bits", rv->overhead_bits);
+            return rv; }
 #emit
         Layout &operator+=(const Layout &a);
 #end
@@ -76,13 +87,12 @@ class Table : Tofino::Unit {
             json << json.indent << "\"match_groups\" : " << match_groups << ",\n"
                  << json.indent << "\"entries\" : " << entries << ",\n"
                  << json.indent << "\"width\" : " << width; }
-        static IR::MAU::Table::Way* fromJSON(JSONLoader& json) {
+        fromJSON {
             Way* way = new Way();
             json.load("match_groups", way->match_groups);
             json.load("entries", way->entries);
             json.load("width", way->width);
-            return way;
-        }
+            return way; }
     }
     vector<Way>    ways;
     const TableResourceAlloc            *resources = nullptr;
