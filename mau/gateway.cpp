@@ -157,6 +157,36 @@ const IR::MAU::Table *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
     return postorder(tbl);
 }
 
+
+bool CollectGatewayFields::preorder(const IR::Expression *e) {
+    bitrange bits;
+    auto finfo = phv.field(e, &bits);
+    if (!finfo) return true;
+    info_t &info = this->info[finfo];
+    const Context *ctxt = nullptr;
+    if (info.bits.lo >= 0) {
+        if (bits.lo < info.bits.lo) info.bits.lo = bits.lo;
+        if (bits.hi > info.bits.hi) info.bits.hi = bits.hi;
+    } else {
+        info.bits = bits; }
+    info.need_mask = -1;  // FIXME -- should look for mask ops and extract them
+    if (auto *rel = findContext<IR::Operation::Relation>(ctxt)) {
+        if (!rel->is<IR::Equ>() && !rel->is<IR::Neq>()) {
+            info.need_range = true;
+        } else if (ctxt->child_index > 0) {
+            info.xor_with = xor_match;
+        } else {
+            xor_match = finfo; } }
+    return false; }
+
+bool CollectGatewayFields::preorder(const IR::Primitive *prim) {
+    if (prim->name != "valid") return true;
+    if (auto *hdr = prim->operands[0]->to<IR::HeaderRef>())
+        valid_offsets[hdr->toString()] = -1;
+    else
+        Util::CompilationError("valid of non-header: %s", prim);
+    return false; }
+
 bool CollectGatewayFields::compute_offsets() {
     bytes = bits = 0;
     std::vector<decltype(info)::value_type *> sort_by_size;
@@ -174,17 +204,38 @@ bool CollectGatewayFields::compute_offsets() {
             field.second.offset = with.offset = bytes*8;
             bytes += (std::max(field.first->size, field.second.xor_with->size) + 7)/8U; } }
     if (bytes > 4) return false;
-    for (auto field : sort_by_size) {
-        if (field->second.offset >= 0) continue;
-        int size = (field->first->size + 7)/8U;
-        if (bytes+size > 4 || field->second.need_range) {
-            field->second.offset = bits + 32;
-            bits += field->first->size;
+    for (auto *it : sort_by_size) {
+        const PhvInfo::Field &field = *it->first;
+        info_t &info = it->second;
+        if (info.offset >= 0) continue;
+        int size = field.container_bytes(info.bits);
+        if (ixbar) {
+            for (auto &f : ixbar->bit_use) {
+                if (f.field == field.name && f.lo == info.bits.lo)
+                    info.offset = f.bit + 32;
+                    if (f.bit + info.bits.size() > bits)
+                        bits = f.bit + info.bits.size();
+                    break; } }
+        if (info.offset >= 0) continue;
+        if (bytes+size > 4 || info.need_range) {
+            info.offset = bits + 32;
+            bits += info.bits.size();
         } else {
-            field->second.offset = bytes*8;
+            info.offset = bytes*8;
             bytes += size; } }
-    for (auto &valid : valid_offsets)
-        valid.second = bits++ + 32;
+    for (auto &valid : valid_offsets) {
+        if (valid.second >= 0) continue;
+        const PhvInfo::Field *field = phv.field(valid.first + ".$valid");
+        BUG_CHECK(field, "Can't find POV bit for %s", valid.first);
+        if (ixbar) {
+            for (auto &f : ixbar->bit_use) {
+                if (f.field == field->name && f.lo == 0)
+                    valid.second = f.bit + 32;
+                    if (f.bit >= bits)
+                        bits = f.bit + 1;
+                    break; } }
+        if (valid.second >= 0) continue;
+        valid.second = bits++ + 32; }
     return bits <= 12;
 }
 

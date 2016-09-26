@@ -89,6 +89,22 @@ bool PhvInfo::preorder(const IR::TempVar *tv) {
     return false;
 }
 
+/* figure out how many disinct container bytes contain info from a bitrange of a particular field */
+int PhvInfo::Field::container_bytes(PhvInfo::Field::bitrange bits) const {
+    if (bits.hi < 0) bits.hi = size - 1;
+    if (alloc.empty())
+        return bits.hi/8U + bits.lo/8U + 1;
+    int rv = 0, w;
+    for (int bit = bits.lo; bit <= bits.hi; bit += w) {
+        auto &sl = for_bit(bit);
+        w = sl.width - (bit - sl.field_bit);
+        if (bit + w > bits.hi)
+            w = bits.hi - bit + 1;
+        int cbit = bit + sl.container_bit - sl.field_bit;
+        rv += (cbit+w-1)/8U - cbit/8U + 1; }
+    return rv;
+}
+
 const PhvInfo::Field *PhvInfo::field(const IR::Expression *e, Field::bitrange *bits) const {
     if (!e) return nullptr;
     if (auto *fr = e->to<IR::Member>())

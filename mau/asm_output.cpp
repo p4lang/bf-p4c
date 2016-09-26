@@ -515,7 +515,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
                 out << gw_indent << "row: " << use.row[0].row << std::endl;
                 out << gw_indent << "bus: " << use.row[0].bus << std::endl;
                 break; }
-        CollectGatewayFields collect(phv);
+        CollectGatewayFields collect(phv, &tbl->resources->gateway_ixbar);
         tbl->apply(collect);
         if (collect.compute_offsets()) {
             bool have_xor;
