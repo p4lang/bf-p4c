@@ -32,7 +32,9 @@ const IR::ActionFunction *InstructionSelection::postorder(IR::ActionFunction *af
 }
 
 bool InstructionSelection::checkPHV(const IR::Expression *e) {
-    return phv.field(e); }
+    return phv.field(e);
+}
+
 bool InstructionSelection::checkSrc1(const IR::Expression *e) {
     if (e->is<IR::Constant>()) return true;
     if (e->is<IR::ActionArg>()) return true;
@@ -40,7 +42,9 @@ bool InstructionSelection::checkSrc1(const IR::Expression *e) {
         if (cast->expr->is<IR::ActionArg>()) return true;
     if (auto slice = e->to<IR::Slice>())
         if (slice->e0->is<IR::ActionArg>()) return true;
-    return phv.field(e); }
+    return phv.field(e);
+}
+
 bool InstructionSelection::checkConst(const IR::Expression *ex, long &value) {
     if (auto *k = ex->to<IR::Constant>()) {
         value = k->asLong();
@@ -66,8 +70,9 @@ const IR::Expression *InstructionSelection::postorder(IR::BAnd *e) {
     } else if (r && r->name == "not") {
         right = r->operands[1];
         op = "andcb"; }
-    return new IR::MAU::Instruction(e->srcInfo, "and", new IR::TempVar(e->type), left, right);
+    return new IR::MAU::Instruction(e->srcInfo, op, new IR::TempVar(e->type), left, right);
 }
+
 const IR::Expression *InstructionSelection::postorder(IR::BOr *e) {
     if (!af) return e;
     auto *left = e->left, *right = e->right;
@@ -84,8 +89,9 @@ const IR::Expression *InstructionSelection::postorder(IR::BOr *e) {
     } else if (r && r->name == "not") {
         right = r->operands[1];
         op = "orcb"; }
-    return new IR::MAU::Instruction(e->srcInfo, "or", new IR::TempVar(e->type), left, right);
+    return new IR::MAU::Instruction(e->srcInfo, op, new IR::TempVar(e->type), left, right);
 }
+
 const IR::Expression *InstructionSelection::postorder(IR::BXor *e) {
     if (!af) return e;
     auto *left = e->left, *right = e->right;
@@ -101,8 +107,9 @@ const IR::Expression *InstructionSelection::postorder(IR::BXor *e) {
     } else if (r && r->name == "not") {
         right = r->operands[1];
         op = "xnor"; }
-    return new IR::MAU::Instruction(e->srcInfo, "xor", new IR::TempVar(e->type), left, right);
+    return new IR::MAU::Instruction(e->srcInfo, op, new IR::TempVar(e->type), left, right);
 }
+
 const IR::Expression *InstructionSelection::postorder(IR::Cmpl *e) {
     if (!af) return e;
     if (auto *fold = clone(e->expr->to<IR::MAU::Instruction>())) {
