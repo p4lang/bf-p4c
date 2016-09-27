@@ -13,6 +13,69 @@ void Memories::clear() {
     stateful_bus.clear();
 }
 
+void Memories::add_table(const IR::MAU::Table *t, int entries) {
+    if (!t)
+        tables.push_back(std::make_pair(t, entries));
+}
+
+bool Memories::analyze_tables(mem_info &mi) {
+
+    for (auto &t_p : tables) {
+        if (t_p.second == -1) continue;
+        auto table = t_p.first;
+        int entries = t_p.second;
+        if (!table->layout.ternary) {
+            mi.match_tables++;
+            int width = table->ways[0].width;
+            int groups = table->ways[0].match_groups;
+            int depth = ((entries + groups - 1U)/groups + 1023)/1024U;
+            mi.match_bus_min += width;
+            mi.match_RAMs += depth;
+        }
+        for (auto at : table->attached) {
+            if (at->is<IR::MAU::ActionData>()) {
+                mi.action_tables++;
+                int sz = ceil_log2(table->layout.action_data_bytes) + 3;
+                int width = sz > 7 ? 1 << (sz - 7) : 1;
+                mi.action_bus_min += width;
+                int per_ram = sz > 7 ? 10 : 17 - sz;
+                int depth = ((entries - 1) >> per_ram) + 1;
+                mi.action_RAMs += depth;
+            } else if (at->is<IR::MAU::TernaryIndirect>()) {
+                mi.tind_tables++;
+                mi.tind_RAMs += (entries + 1023U) / 1024U; 
+            }
+        }
+    }
+
+    if (mi.match_tables > 16 || mi.match_bus_min > 16 || mi.tind_tables > 8 
+        || mi.action_tables > 16 || mi.action_bus_min > 16 
+        || mi.match_RAMs + mi.action_RAMs + mi.tind_RAMs > 80) {
+        return false;
+    }
+    return true;    
+}
+
+bool Memories::allocate_all_exact(Memories::mem_info &mi) {
+    return true;
+
+}
+
+bool Memories::allocate_all() {
+    mem_info mi;
+    if (!analyze_tables(mi)) {
+        return false;
+    }
+
+    if (!allocate_all_exact(mi)) {
+        return false;
+    }
+
+    return true;
+}
+
+
+
 bool Memories::alloc2Port(cstring name, int entries, int entries_per_word, Use &alloc) {
     LOG3("alloc2Port(" << name << ", " << entries << ", " << entries_per_word << ")");
     int rams = (entries + 1024*entries_per_word - 1) / (1024*entries_per_word);
@@ -92,6 +155,7 @@ bool Memories::allocRams(cstring name, int width, int depth, Alloc2Dbase<cstring
             if (free_bus[row+i] < 0) max = 0;
             if (free[row+i] < max) max = free[row+i]; }
         if (!max) continue;
+        LOG3("The max rows available " << max);
         if (max > depth) max = depth;
         for (int i = 0; i < width; i++) {
             alloc.row.emplace_back(row+i);
@@ -105,6 +169,7 @@ bool Memories::allocRams(cstring name, int width, int depth, Alloc2Dbase<cstring
                 ++col_idx;
                 if (!col) {
                     col = name;
+                    LOG3("Allocating the RAM at " << row << "," << col_idx);
                     alloc_row.col.push_back(col_idx);
                     if (++cnt == max)
                         break; } } }
@@ -218,8 +283,10 @@ bool Memories::allocTable(cstring name, const IR::MAU::Table *table, int &entrie
             decltype(bits.end()) next;
             waybits() : next(bits.end()) {} };
         std::map<int, waybits> alloc_bits;
-        for (auto &way : match_ixbar.way_use)
+        for (auto &way : match_ixbar.way_use) {
+            LOG3("The way is m|s|g " << way.mask << " " << way.slice << " " << way.group);
             alloc_bits[way.group].bits |= way.mask;
+        }
         assert(!alloc.count(name));
         alloc[name].type = Use::EXACT;
         int alloc_depth = 0;

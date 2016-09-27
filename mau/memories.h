@@ -15,13 +15,29 @@ struct Memories {
     static constexpr int TCAM_ROWS = 12;
     static constexpr int TCAM_COLUMNS = 2;
 
+
+    vector<std::pair<const IR::MAU::Table *, int>>            tables;
     Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>           sram_use;
     Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>           tcam_use;
     Alloc2D<cstring, SRAM_ROWS, MAPRAM_COLUMNS>         mapram_use;
+    Alloc2D<cstring, SRAM_ROWS, 2>                      sram_search_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                      sram_match_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                      tind_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                      action_data_bus;
     Alloc1D<cstring, SRAM_ROWS>                         stateful_bus;
+    Alloc2D<cstring, SRAM_ROWS, 2>                      overflow_bus;
+    Alloc1D<cstring, SRAM_ROWS - 1>                     vert_overflow_bus;
+
+    struct mem_info {
+        int match_tables;
+        int match_bus_min;
+        int match_RAMs;
+        int tind_tables;
+        int tind_RAMs;
+        int action_tables;
+        int action_bus_min;
+        int action_RAMs;
+    };
 
     /* Memories::Use tracks memory use of a single table */
     struct Use {
@@ -40,6 +56,11 @@ struct Memories {
     };
 
     void clear();
+    void add_table(const IR::MAU::Table *t, int entries);
+    bool analyze_tables(mem_info &mi);
+    bool allocate_all();
+    bool allocate_all_exact(mem_info &mi);
+      
     bool alloc2Port(cstring table_name, int entries, int entries_per_word, Use &alloc);
     bool allocActionRams(cstring table_name, int width, int depth, Use &alloc);
     bool allocBus(cstring table_name, Alloc2Dbase<cstring> &bus_use, Use &alloc);

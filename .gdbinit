@@ -2,6 +2,8 @@
 set print static-members off
 set print object
 set unwindonsignal on
+add-auto-load-safe-path /home/vagrant
+add-auto-load-safe-path /usr
 set unwind-on-terminating-exception on
 set python print-stack full
 
