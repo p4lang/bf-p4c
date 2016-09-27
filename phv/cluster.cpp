@@ -23,8 +23,8 @@ bool Cluster::preorder(const IR::Operation_Unary* expression)
 {
     LOG3(".....Unary Operation....." << expression->toString()
 	<< '(' << expression->expr->toString() << ')');
-    const PhvInfo::Field *field = phv_i.field(expression->expr);
-    LOG3("..........." << field);
+    auto field = phv_i.field(expression->expr);
+    LOG3(field);
 
     insert_cluster(dst_i, field);
 
@@ -35,10 +35,10 @@ bool Cluster::preorder(const IR::Operation_Binary* expression)
 {
     LOG3(".....Binary Operation....." << expression->toString()
 	<< '(' << expression->left->toString() << ',' << expression->right->toString() << ')');
-    const PhvInfo::Field *left = phv_i.field(expression->left);
-    const PhvInfo::Field *right = phv_i.field(expression->right);
-    LOG3("..........." << left);
-    LOG3("..........." << right);
+    auto left = phv_i.field(expression->left);
+    auto right = phv_i.field(expression->right);
+    LOG3(left);
+    LOG3(right);
 
     insert_cluster(dst_i, left);
     insert_cluster(dst_i, right);
@@ -52,12 +52,12 @@ bool Cluster::preorder(const IR::Operation_Ternary* expression)
     LOG3(".....Ternary Operation....." << expression->toString() 
 	<< '(' << expression->e0->toString() << ',' << expression->e1->toString() << ',' << expression->e2->toString()
         << ')');
-    const PhvInfo::Field *e0 = phv_i.field(expression->e0);
-    const PhvInfo::Field *e1 = phv_i.field(expression->e1);
-    const PhvInfo::Field *e2 = phv_i.field(expression->e2);
-    LOG3("..........." << e0);
-    LOG3("..........." << e1);
-    LOG3("..........." << e2);
+    auto e0 = phv_i.field(expression->e0);
+    auto e1 = phv_i.field(expression->e1);
+    auto e2 = phv_i.field(expression->e2);
+    LOG3(e0);
+    LOG3(e1);
+    LOG3(e2);
 
     insert_cluster(dst_i, e0);
     insert_cluster(dst_i, e1);
@@ -71,8 +71,8 @@ bool Cluster::preorder(const IR::Primitive* primitive)
     LOG3(".....Primitive:Operation....." << primitive->name);
     for (auto &operand : primitive->operands)
     {
-        const PhvInfo::Field *field = phv_i.field(operand);
-        LOG3("..........." << field);
+        auto field = phv_i.field(operand);
+        LOG3(field);
     }
     dst_i = nullptr; 
     if (! primitive->operands.empty())
@@ -88,7 +88,7 @@ bool Cluster::preorder(const IR::Primitive* primitive)
             }
             for (auto &operand : primitive->operands)
             {
-                const PhvInfo::Field *field = phv_i.field(operand);
+                auto field = phv_i.field(operand);
                 insert_cluster(dst_i, field);
             }
         }
@@ -132,35 +132,75 @@ void Cluster::end_apply()
 {
     for(auto entry: dst_map_i)
     {
-        const PhvInfo::Field *lhs = entry.first;
+        auto lhs = entry.first;
         sanity_check_clusters("end_apply..", lhs);
     }
     //
     // form unique clusters
     // forall x not elem lhs_unique_i, dst_map_i[x] = 0
+    // remove singleton clusters
+    // forall x, dst_map_i[x] == (x), dst_map_i[x] = 0
     //
     std::list<const PhvInfo::Field *> delete_list;
     for(auto entry: dst_map_i)
     {
-        const PhvInfo::Field *lhs = entry.first;
-        if(lhs && lhs_unique_i.count(lhs) == 0)
+        auto lhs = entry.first;
+        if(lhs && (lhs_unique_i.count(lhs) == 0 || entry.second->size() <= 1))
         {
             dst_map_i[lhs] = nullptr;
             delete_list.push_back(lhs);
         }
     }
-    for(auto fp : delete_list)
+    for(auto fp: delete_list)
     {
         dst_map_i.erase(fp);						// erase map key
     }
     sanity_check_clusters_unique("end_apply..");
     //
+    // create MAU Requirements from clusters
+    //
+    for (auto p: Values(dst_map_i))
+    {
+        new MAU_Req(*this, p);
+    }
+    //
+    // first sort based on width requirement
+    // then sort based on quantity requirement
+    //
+    sort(MAU_Req_32_i.begin(), MAU_Req_32_i.end(), [](MAU_Req *l, MAU_Req *r) { return l->width() > r->width(); }); 
+    //
+    sort(MAU_Req_16_i.begin(), MAU_Req_16_i.end(), [](MAU_Req *l, MAU_Req *r) { return l->width() > r->width(); }); 
+    //
+    sort(MAU_Req_8_i.begin(), MAU_Req_8_i.end(), [](MAU_Req *l, MAU_Req *r) { return l->width() > r->width(); }); 
+    //
     // output logs
     //
-    LOG3("++++++++++ All Fields(name,size) ++++++++++:\n");
+    LOG3("++++++++++ All Fields(name,size) ++++++++++\n");
     LOG3(phv_i);
-    LOG3("++++++++++ Clusters ++++++++++:\n");
+    LOG3("++++++++++ Clusters ++++++++++\n");
     LOG3(*this);
+    LOG3("++++++++++ MAU Requirements ++++++++++\n");
+    LOG3("++++++++++ 32-bit (#clusters=" << MAU_Req_32_i.size() << ") ++++++++++");
+    for(auto m: MAU_Req_32_i)
+    {
+        LOG3('[' << m->num_fields() << ',' << m->width() << "]("
+          << std::endl << m->cluster_set()
+          << '[' << m->num_fields() << ',' << m->width() << "])");
+    } 
+    LOG3("++++++++++ 16-bit (#clusters=" << MAU_Req_16_i.size() << ") ++++++++++");
+    for(auto m: MAU_Req_16_i)
+    {
+        LOG3('[' << m->num_fields() << ',' << m->width() << "]("
+          << std::endl << m->cluster_set()
+          << '[' << m->num_fields() << ',' << m->width() << "])");
+    } 
+    LOG3("++++++++++ 8-bit (#clusters=" << MAU_Req_8_i.size() << ") ++++++++++");
+    for(auto m: MAU_Req_8_i)
+    {
+        LOG3('[' << m->num_fields() << ',' << m->width() << "]("
+          << std::endl << m->cluster_set()
+          << '[' << m->num_fields() << ',' << m->width() << "])");
+    } 
 }//end_apply
 
 //***********************************************************************************
@@ -294,12 +334,12 @@ std::ostream &operator<<(std::ostream &out, std::set<const PhvInfo::Field *>* cl
     {
         for(auto field: *cluster_set)
         {
-            LOG3("..........." << field);
+            LOG3(field);
         }
     }
     else
     {
-        LOG3("...........[X]");
+        LOG3("[X]");
     }
 
     return out;
@@ -310,8 +350,7 @@ std::ostream &operator<<(std::ostream &out, Cluster &cluster)
     // iterate through all elements in std::map
     for(auto entry: cluster.dst_map())
     {
-	// ignore singleton clusters
-        if(entry.second && entry.second->size() > 1)
+        if(entry.second)
         {
             out << entry.first << "-->(";
             for (auto entry_2: *(entry.second))
