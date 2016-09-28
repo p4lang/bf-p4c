@@ -13,22 +13,30 @@ void Memories::clear() {
     stateful_bus.clear();
 }
 
-void Memories::add_table(const IR::MAU::Table *t, int entries) {
-    if (!t)
-        tables.push_back(std::make_pair(t, entries));
+void Memories::add_table(const IR::MAU::Table *t, const IXBar::Use mi, int entries) {
+    if (t != nullptr) {
+        LOG3("Adding a table " << t->name);
+        auto *ta = new table_alloc(t, mi, entries);
+        tables.push_back(ta);
+    }
 }
 
 bool Memories::analyze_tables(mem_info &mi) {
 
-    for (auto &t_p : tables) {
-        if (t_p.second == -1) continue;
-        auto table = t_p.first;
-        int entries = t_p.second;
+    mi.clear();
+    for (auto *ta : tables) {
+
+        if (ta->entries == -1) continue;
+        auto table = ta->table;
+        int entries = ta->entries;
         if (!table->layout.ternary) {
+            LOG3("It ain't ternary");
+            exact_tables.push_back(ta);
             mi.match_tables++;
             int width = table->ways[0].width;
             int groups = table->ways[0].match_groups;
             int depth = ((entries + groups - 1U)/groups + 1023)/1024U;
+            LOG3("depth is " << depth);
             mi.match_bus_min += width;
             mi.match_RAMs += depth;
         }
@@ -56,12 +64,80 @@ bool Memories::analyze_tables(mem_info &mi) {
     return true;    
 }
 
-bool Memories::allocate_all_exact(Memories::mem_info &mi) {
-    return true;
+
+vector<int> Memories::way_size_calculator (int ways, int RAMs_needed) {
+    vector<int> vec;
+    if (ways == -1) {
+    //FIXME: If the number of ways are not provided, not yet considered
+
+
+    } else {
+        for (int i = 0; i < ways; i++) {
+            if (RAMs_needed < ways - i) {
+                RAMs_needed = ways - i;
+            }
+
+            int depth = (RAMs_needed + ways - i - 1)/(ways - i);
+            int log2sz = floor_log2(depth);
+            if (depth != (1 << log2sz))
+                depth = 1 << (log2sz + 1);
+
+            RAMs_needed -= depth;
+            LOG3 ("RAMs_needed / depth " << RAMs_needed << " " << depth);
+            vec.push_back(depth); 
+        }
+    }
+    return vec;
+}
+
+bool Memories::allocate_exact(table_alloc *ta, mem_info &mi, int average_depth) {
+    LOG3("Allocating the table " << ta->table->name << " with " << ta->entries << " entries!");
+    int number_of_ways = ta->table->ways.size();
+    int width = ta->table->ways[0].width;
+    int groups = ta->table->ways[0].match_groups;
+    int RAMs_needed = ((ta->entries + groups - 1U)/groups + 1023)/1024U;
+    LOG3("RAMs necessary is " << RAMs_needed);
+
+    int total_depth = (RAMs_needed + groups - 1) / groups;
+    
+    vector<int> way_sizes = way_size_calculator(number_of_ways, total_depth);
+
+    for (int i = 0; i < (int) way_sizes.size(); i++) {
+
+       if (way_sizes[i] < average_depth) {
+           
+       }   
+    }
+    return true; 
 
 }
 
-bool Memories::allocate_all() {
+
+bool Memories::allocate_all_exact(Memories::mem_info &mi) {
+    LOG3("Hello govna");
+    std::sort(exact_tables.begin(), exact_tables.end(),
+              [=](const Memories::table_alloc *a, const Memories::table_alloc *b) {
+         
+         int t;
+
+         if ((t = a->table->ways[0].width - b->table->ways[0].width) != 0) return t > 0;
+        
+         if ((t = a->entries - b->entries) != 0) return t > 0;
+
+         return true;
+    });
+    
+    int average_depth = (mi.match_RAMs + 11) / 12;
+    for (auto *ta : exact_tables) {
+        allocate_exact(ta, mi, average_depth);
+    }
+
+    
+   
+    return true;
+}
+
+bool Memories::allocate_all() { 
     mem_info mi;
     if (!analyze_tables(mi)) {
         return false;
@@ -77,7 +153,7 @@ bool Memories::allocate_all() {
 
 
 bool Memories::alloc2Port(cstring name, int entries, int entries_per_word, Use &alloc) {
-    LOG3("alloc2Port(" << name << ", " << entries << ", " << entries_per_word << ")");
+    //LOG3("alloc2Port(" << name << ", " << entries << ", " << entries_per_word << ")");
     int rams = (entries + 1024*entries_per_word - 1) / (1024*entries_per_word);
     alloc.type = Use::TWOPORT;
     for (int row = 0; row < SRAM_ROWS; row++) {
@@ -96,12 +172,12 @@ bool Memories::alloc2Port(cstring name, int entries, int entries_per_word, Use &
             if (!--rams) return true; } }
     remove(name, alloc);
     alloc.row.clear();
-    LOG3("failed");
+    //LOG3("failed");
     return false;
 }
 
 bool Memories::allocActionRams(cstring name, int width, int depth, Use &alloc) {
-    LOG3("allocActionRams(" << name << ", " << width << 'x' << depth << ")");
+    //LOG3("allocActionRams(" << name << ", " << width << 'x' << depth << ")");
     int count = 0;
     auto left = Range(0, LEFT_SIDE_COLUMNS-1);
     auto right = Range(LEFT_SIDE_COLUMNS, SRAM_COLUMNS-1);
@@ -122,7 +198,7 @@ bool Memories::allocActionRams(cstring name, int width, int depth, Use &alloc) {
                     if (!--width) return true; } } } }
     remove(name, alloc);
     alloc.row.clear();
-    LOG3("failed");
+    //LOG3("failed");
     return false;
 }
 
@@ -138,7 +214,7 @@ bool Memories::allocBus(cstring name, Alloc2Dbase<cstring> &bus_use, Use &alloc)
 
 bool Memories::allocRams(cstring name, int width, int depth, Alloc2Dbase<cstring> &use,
                          Alloc2Dbase<cstring> *bus, Use &alloc) {
-    LOG3("allocRams(" << name << ", " << width << 'x' << depth << ")");
+    //LOG3("allocRams(" << name << ", " << width << 'x' << depth << ")");
     vector<int> free(use.rows()), free_bus(use.rows());
     for (int row = 0; row < use.rows(); row++) {
         for (auto col : use[row]) if (!col) free[row]++;
@@ -155,7 +231,7 @@ bool Memories::allocRams(cstring name, int width, int depth, Alloc2Dbase<cstring
             if (free_bus[row+i] < 0) max = 0;
             if (free[row+i] < max) max = free[row+i]; }
         if (!max) continue;
-        LOG3("The max rows available " << max);
+        //LOG3("The max rows available " << max);
         if (max > depth) max = depth;
         for (int i = 0; i < width; i++) {
             alloc.row.emplace_back(row+i);
@@ -169,7 +245,7 @@ bool Memories::allocRams(cstring name, int width, int depth, Alloc2Dbase<cstring
                 ++col_idx;
                 if (!col) {
                     col = name;
-                    LOG3("Allocating the RAM at " << row << "," << col_idx);
+                    //LOG3("Allocating the RAM at " << row << "," << col_idx);
                     alloc_row.col.push_back(col_idx);
                     if (++cnt == max)
                         break; } } }
@@ -177,7 +253,7 @@ bool Memories::allocRams(cstring name, int width, int depth, Alloc2Dbase<cstring
         if (!(depth -= max)) return true; }
     remove(name, alloc);
     alloc.row.clear();
-    LOG3("failed");
+    //LOG3("failed");
     return false;
 }
 
@@ -252,7 +328,7 @@ class AllocAttached : public Inspector {
 bool Memories::allocTable(cstring name, const IR::MAU::Table *table, int &entries,
                           map<cstring, Use> &alloc, const IXBar::Use &match_ixbar) {
     if (!table) return true;
-    LOG2("Memories::allocTable(" << name << ", &" << entries << ")");
+    //LOG2("Memories::allocTable(" << name << ", &" << entries << ")");
     bool ok = true;
     int width, depth, groups = 1;
     if (table->layout.ternary) {
@@ -271,7 +347,7 @@ bool Memories::allocTable(cstring name, const IR::MAU::Table *table, int &entrie
         entries = depth * groups * 1024U;
     } else {
         width = depth = entries = 0; }
-    LOG3("   " << width << 'x' << depth << " entries=" << entries);
+    //LOG3("   " << width << 'x' << depth << " entries=" << entries);
     if (table->layout.ternary) {
         assert(!alloc.count(name));
         alloc[name].type = Use::TERNARY;
@@ -284,7 +360,7 @@ bool Memories::allocTable(cstring name, const IR::MAU::Table *table, int &entrie
             waybits() : next(bits.end()) {} };
         std::map<int, waybits> alloc_bits;
         for (auto &way : match_ixbar.way_use) {
-            LOG3("The way is m|s|g " << way.mask << " " << way.slice << " " << way.group);
+            //LOG3("The way is m|s|g " << way.mask << " " << way.slice << " " << way.group);
             alloc_bits[way.group].bits |= way.mask;
         }
         assert(!alloc.count(name));

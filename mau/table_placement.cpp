@@ -147,15 +147,18 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
 static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Placed *done,
                           int &entries, TableResourceAlloc *resources) {
     Memories current_mem;
+    Memories current_mem2;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
-        current_mem.add_table(p->table,p->entries);
-        current_mem.add_table(p->gw, -1);
-    //    current_mem.update(p->resources->memuse);
+        current_mem2.add_table(p->table, p->resources->match_ixbar, p->entries);
+        current_mem2.add_table(p->gw, p->resources->match_ixbar, -1);
+        current_mem.update(p->resources->memuse);
     }
 
-    current_mem.add_table(next->table, entries);
-    current_mem.add_table(next->gw, -1);
+    current_mem2.add_table(next->table, resources->match_ixbar, entries);
+    current_mem2.add_table(next->gw, resources->match_ixbar, -1);
    
+    current_mem2.allocate_all();
+
     int gw_entries = 1;
     resources->memuse.clear();
     

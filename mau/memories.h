@@ -15,8 +15,7 @@ struct Memories {
     static constexpr int TCAM_ROWS = 12;
     static constexpr int TCAM_COLUMNS = 2;
 
-
-    vector<std::pair<const IR::MAU::Table *, int>>            tables;
+ 
     Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>           sram_use;
     Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>           tcam_use;
     Alloc2D<cstring, SRAM_ROWS, MAPRAM_COLUMNS>         mapram_use;
@@ -37,7 +36,14 @@ struct Memories {
         int action_tables;
         int action_bus_min;
         int action_RAMs;
+
+        void clear() {
+            match_tables = 0; match_bus_min = 0; match_RAMs = 0; tind_tables = 0;
+            tind_RAMs = 0; action_tables = 0; action_bus_min = 0; action_RAMs = 0;
+        }
     };
+
+
 
     /* Memories::Use tracks memory use of a single table */
     struct Use {
@@ -55,12 +61,26 @@ struct Memories {
         void visit(Memories &mem, std::function<void(cstring &)>) const;
     };
 
+    struct table_alloc {
+        const IR::MAU::Table *table;
+        const IXBar::Use match_ixbar;
+        map<cstring, Memories::Use> alloc;
+        int entries;
+        explicit table_alloc(const IR::MAU::Table *t, const IXBar::Use mi, int e) 
+                : table(t), match_ixbar(mi), entries(e) {}
+    };
+
+    vector<table_alloc *>      tables;
+    vector<table_alloc *>      exact_tables;
+
     void clear();
-    void add_table(const IR::MAU::Table *t, int entries);
+    void add_table(const IR::MAU::Table *t, const IXBar::Use mi,  int entries);
     bool analyze_tables(mem_info &mi);
     bool allocate_all();
     bool allocate_all_exact(mem_info &mi);
-      
+    bool allocate_exact(table_alloc *ta, mem_info &mi, int average_depth);    
+    vector<int> way_size_calculator(int ways, int RAMs_needed);
+  
     bool alloc2Port(cstring table_name, int entries, int entries_per_word, Use &alloc);
     bool allocActionRams(cstring table_name, int width, int depth, Use &alloc);
     bool allocBus(cstring table_name, Alloc2Dbase<cstring> &bus_use, Use &alloc);
