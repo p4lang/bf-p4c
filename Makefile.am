@@ -286,4 +286,5 @@ XFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/basic_routing.p4.test
 # Incorrect data layour in ixbar -- fails to get entire 128-bit value in one group.
 # intermittent failure?
 XFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/07-MultiProtocol.p4.test
+IFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/07-MultiProtocol.p4.test
 
