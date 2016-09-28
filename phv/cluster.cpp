@@ -157,50 +157,14 @@ void Cluster::end_apply()
     }
     sanity_check_clusters_unique("end_apply..");
     //
-    // create MAU Requirements from clusters
-    //
-    for (auto p: Values(dst_map_i))
-    {
-        new MAU_Req(*this, p);
-    }
-    //
-    // first sort based on width requirement
-    // then sort based on quantity requirement
-    //
-    sort(MAU_Req_32_i.begin(), MAU_Req_32_i.end(), [](MAU_Req *l, MAU_Req *r) { return l->width() > r->width(); }); 
-    //
-    sort(MAU_Req_16_i.begin(), MAU_Req_16_i.end(), [](MAU_Req *l, MAU_Req *r) { return l->width() > r->width(); }); 
-    //
-    sort(MAU_Req_8_i.begin(), MAU_Req_8_i.end(), [](MAU_Req *l, MAU_Req *r) { return l->width() > r->width(); }); 
+    MAU_Requirements(*this);
     //
     // output logs
     //
-    LOG3("++++++++++ All Fields(name,size) ++++++++++\n");
+    // all fields
     LOG3(phv_i);
-    LOG3("++++++++++ Clusters ++++++++++\n");
+    // all clusters
     LOG3(*this);
-    LOG3("++++++++++ MAU Requirements ++++++++++\n");
-    LOG3("++++++++++ 32-bit (#clusters=" << MAU_Req_32_i.size() << ") ++++++++++");
-    for(auto m: MAU_Req_32_i)
-    {
-        LOG3('[' << m->num_fields() << ',' << m->width() << "]("
-          << std::endl << m->cluster_set()
-          << '[' << m->num_fields() << ',' << m->width() << "])");
-    } 
-    LOG3("++++++++++ 16-bit (#clusters=" << MAU_Req_16_i.size() << ") ++++++++++");
-    for(auto m: MAU_Req_16_i)
-    {
-        LOG3('[' << m->num_fields() << ',' << m->width() << "]("
-          << std::endl << m->cluster_set()
-          << '[' << m->num_fields() << ',' << m->width() << "])");
-    } 
-    LOG3("++++++++++ 8-bit (#clusters=" << MAU_Req_8_i.size() << ") ++++++++++");
-    for(auto m: MAU_Req_8_i)
-    {
-        LOG3('[' << m->num_fields() << ',' << m->width() << "]("
-          << std::endl << m->cluster_set()
-          << '[' << m->num_fields() << ',' << m->width() << "])");
-    } 
 }//end_apply
 
 //***********************************************************************************
@@ -347,7 +311,8 @@ std::ostream &operator<<(std::ostream &out, std::set<const PhvInfo::Field *>* cl
 
 std::ostream &operator<<(std::ostream &out, Cluster &cluster)
 {
-    // iterate through all elements in std::map
+    LOG3("++++++++++ Clusters ++++++++++");
+    // iterate through all elements in dst_map
     for(auto entry: cluster.dst_map())
     {
         if(entry.second)
@@ -360,6 +325,17 @@ std::ostream &operator<<(std::ostream &out, Cluster &cluster)
             out << ')' << std::endl;
         }
     }
+    LOG3("++++++++++ MAU Requirements ++++++++++");
+    for (auto &p: Values(cluster.mau_req_map()))
+    {
+        LOG3("++++++++++ X-bit (#clusters=" << p.size() << ") ++++++++++");
+        for (auto m: p)
+        {
+            LOG3('[' << m->num_fields() << ',' << m->width() << "]("
+              << std::endl << m->cluster_set()
+              << '[' << m->num_fields() << ',' << m->width() << "])");
+        }
+    } 
 
     return out;
 }
