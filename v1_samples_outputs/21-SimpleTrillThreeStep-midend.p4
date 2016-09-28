@@ -198,53 +198,53 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    action NoAction_2() {
+    @name("NoAction_2") action NoAction_0() {
     }
-    action NoAction_3() {
+    @name("NoAction_3") action NoAction_4() {
     }
-    @name("do_copy_hopCount_from_m") action do_copy_hopCount_from_m() {
+    @name("do_copy_hopCount_from_m") action do_copy_hopCount_from_m_0() {
         hdr.trill.hopCount = meta.m.hopCount;
     }
-    @name("do_copy_hopCount_to_m") action do_copy_hopCount_to_m() {
+    @name("do_copy_hopCount_to_m") action do_copy_hopCount_to_m_0() {
         meta.m.hopCount = hdr.trill.hopCount;
     }
-    @name("forward_trill") action forward_trill(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
+    @name("forward_trill") action forward_trill_0(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
         hdr.outer_ethernet.dstAddr = new_mac_da;
         hdr.outer_ethernet.srcAddr = new_mac_sa;
         hdr.vlan_tag.vid = new_vlan_id;
         hdr.ig_intr_md_for_tm.ucast_egress_port = new_port;
         meta.m.hopCount = meta.m.hopCount + 6w63;
     }
-    @name("copy_hopCount_from_m") table copy_hopCount_from_m_0() {
+    @name("copy_hopCount_from_m") table copy_hopCount_from_m() {
         actions = {
-            do_copy_hopCount_from_m();
-            NoAction_1();
+            do_copy_hopCount_from_m_0();
+            NoAction();
         }
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
-    @name("copy_hopCount_to_m") table copy_hopCount_to_m_0() {
+    @name("copy_hopCount_to_m") table copy_hopCount_to_m() {
         actions = {
-            do_copy_hopCount_to_m();
-            NoAction_2();
+            do_copy_hopCount_to_m_0();
+            NoAction_0();
         }
-        default_action = NoAction_2();
+        default_action = NoAction_0();
     }
-    @name("trill_forward") table trill_forward_0() {
+    @name("trill_forward") table trill_forward() {
         actions = {
-            forward_trill();
-            NoAction_3();
+            forward_trill_0();
+            NoAction_4();
         }
         key = {
             hdr.trill.egressRbridge: exact;
         }
-        default_action = NoAction_3();
+        default_action = NoAction_4();
     }
     apply {
-        copy_hopCount_to_m_0.apply();
-        trill_forward_0.apply();
-        copy_hopCount_from_m_0.apply();
+        copy_hopCount_to_m.apply();
+        trill_forward.apply();
+        copy_hopCount_from_m.apply();
     }
 }
 

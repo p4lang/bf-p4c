@@ -160,22 +160,23 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_0") action action_0(bit<16> param0) {
-        hdr.pkt.field_a_32 = random(5w16);
+    @name("tmp") bit<32> tmp_1;
+    @name("tmp_0") bit<32> tmp_2;
+    @name("action_0") action action_2(bit<16> param0) {
+        random(5w16, tmp_1);
+        hdr.pkt.field_a_32 = tmp_1;
         hdr.pkt.field_e_16 = param0;
     }
-    @name("do_nothing") action do_nothing() {
+    @name("do_nothing") action do_nothing_0() {
     }
-    @name("action_1") action action_1() {
-        {
-            bit<32> tmp = random(5w24);
-            hdr.pkt.field_d_32[31:8] = tmp[31:8];
-        }
+    @name("action_1") action action_3() {
+        random(5w24, tmp_2);
+        hdr.pkt.field_d_32[31:8] = tmp_2[31:8];
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_2() {
         actions = {
-            action_0();
-            do_nothing();
+            action_2();
+            do_nothing_0();
             NoAction();
         }
         key = {
@@ -184,10 +185,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_3() {
         actions = {
-            action_1();
-            do_nothing();
+            action_3();
+            do_nothing_0();
             NoAction();
         }
         key = {
@@ -197,8 +198,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        table_0.apply();
-        table_1.apply();
+        table_2.apply();
+        table_3.apply();
     }
 }
 

@@ -190,283 +190,283 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    action NoAction_2() {
+    @name("NoAction_2") action NoAction_0() {
     }
-    @name("set_field1_1") action set_field1_1(bit<1> value) {
+    @name("set_field1_1") action set_field1(bit<1> value) {
         meta.md.field1_1 = value;
     }
-    @name("set_field1_1") action set_field1_15(bit<1> value) {
+    @name("set_field1_1") action set_field1_0(bit<1> value) {
         meta.md.field1_1 = value;
     }
-    @name("set_field1_2") action set_field1_2(bit<1> value) {
+    @name("set_field1_2") action set_field1_9(bit<1> value) {
         meta.md.field1_2 = value;
     }
-    @name("set_field1_2") action set_field1_16(bit<1> value) {
+    @name("set_field1_2") action set_field1_10(bit<1> value) {
         meta.md.field1_2 = value;
     }
-    @name("set_field1_3") action set_field1_3(bit<1> value) {
+    @name("set_field1_3") action set_field1_11(bit<1> value) {
         meta.md.field1_3 = value;
     }
-    @name("set_field1_3") action set_field1_17(bit<1> value) {
+    @name("set_field1_3") action set_field1_12(bit<1> value) {
         meta.md.field1_3 = value;
     }
-    @name("set_field1_4") action set_field1_4(bit<1> value) {
+    @name("set_field1_4") action set_field1_13(bit<1> value) {
         meta.md.field1_4 = value;
     }
-    @name("set_field1_4") action set_field1_18(bit<1> value) {
+    @name("set_field1_4") action set_field1_14(bit<1> value) {
         meta.md.field1_4 = value;
     }
-    @name("set_field1_5") action set_field1_5(bit<1> value) {
+    @name("set_field1_5") action set_field1_23(bit<1> value) {
         meta.md.field1_5 = value;
     }
-    @name("set_field1_5") action set_field1_19(bit<1> value) {
+    @name("set_field1_5") action set_field1_24(bit<1> value) {
         meta.md.field1_5 = value;
     }
-    @name("set_field1_6") action set_field1_6(bit<1> value) {
+    @name("set_field1_6") action set_field1_25(bit<1> value) {
         meta.md.field1_6 = value;
     }
-    @name("set_field1_6") action set_field1_20(bit<1> value) {
+    @name("set_field1_6") action set_field1_26(bit<1> value) {
         meta.md.field1_6 = value;
     }
-    @name("set_field1_7") action set_field1_7(bit<1> value) {
+    @name("set_field1_7") action set_field1_27(bit<1> value) {
         meta.md.field1_7 = value;
     }
-    @name("set_field1_7") action set_field1_21(bit<1> value) {
+    @name("set_field1_7") action set_field1_28(bit<1> value) {
         meta.md.field1_7 = value;
     }
-    @name("set_field1_8") action set_field1_8(bit<1> value) {
+    @name("set_field1_8") action set_field1_29(bit<1> value) {
         meta.md.field1_8 = value;
     }
-    @name("set_field1_8") action set_field1_22(bit<1> value) {
+    @name("set_field1_8") action set_field1_30(bit<1> value) {
         meta.md.field1_8 = value;
     }
-    @name("set_field8_1") action set_field8_1(bit<8> value) {
+    @name("set_field8_1") action set_field8(bit<8> value) {
         meta.md.field8_1 = value;
     }
-    @name("set_field8_1") action set_field8_15(bit<8> value) {
+    @name("set_field8_1") action set_field8_0(bit<8> value) {
         meta.md.field8_1 = value;
     }
-    @name("set_field8_2") action set_field8_2(bit<8> value) {
+    @name("set_field8_2") action set_field8_9(bit<8> value) {
         meta.md.field8_2 = value;
     }
-    @name("set_field8_2") action set_field8_16(bit<8> value) {
+    @name("set_field8_2") action set_field8_10(bit<8> value) {
         meta.md.field8_2 = value;
     }
-    @name("set_field8_3") action set_field8_3(bit<8> value) {
+    @name("set_field8_3") action set_field8_11(bit<8> value) {
         meta.md.field8_3 = value;
     }
-    @name("set_field8_3") action set_field8_17(bit<8> value) {
+    @name("set_field8_3") action set_field8_12(bit<8> value) {
         meta.md.field8_3 = value;
     }
-    @name("set_field8_4") action set_field8_4(bit<8> value) {
+    @name("set_field8_4") action set_field8_13(bit<8> value) {
         meta.md.field8_4 = value;
     }
-    @name("set_field8_4") action set_field8_18(bit<8> value) {
+    @name("set_field8_4") action set_field8_14(bit<8> value) {
         meta.md.field8_4 = value;
     }
-    @name("set_field8_5") action set_field8_5(bit<8> value) {
+    @name("set_field8_5") action set_field8_23(bit<8> value) {
         meta.md.field8_5 = value;
     }
-    @name("set_field8_5") action set_field8_19(bit<8> value) {
+    @name("set_field8_5") action set_field8_24(bit<8> value) {
         meta.md.field8_5 = value;
     }
-    @name("set_field8_6") action set_field8_6(bit<8> value) {
+    @name("set_field8_6") action set_field8_25(bit<8> value) {
         meta.md.field8_6 = value;
     }
-    @name("set_field8_6") action set_field8_20(bit<8> value) {
+    @name("set_field8_6") action set_field8_26(bit<8> value) {
         meta.md.field8_6 = value;
     }
-    @name("set_field8_7") action set_field8_7(bit<8> value) {
+    @name("set_field8_7") action set_field8_27(bit<8> value) {
         meta.md.field8_7 = value;
     }
-    @name("set_field8_7") action set_field8_21(bit<8> value) {
+    @name("set_field8_7") action set_field8_28(bit<8> value) {
         meta.md.field8_7 = value;
     }
-    @name("set_field8_8") action set_field8_8(bit<8> value) {
+    @name("set_field8_8") action set_field8_29(bit<8> value) {
         meta.md.field8_8 = value;
     }
-    @name("set_field8_8") action set_field8_22(bit<8> value) {
+    @name("set_field8_8") action set_field8_30(bit<8> value) {
         meta.md.field8_8 = value;
     }
-    @name("set_field16_1") action set_field16_1(bit<64> value) {
+    @name("set_field16_1") action set_field16(bit<64> value) {
         meta.md.field16_1 = value;
     }
-    @name("set_field16_1") action set_field16_15(bit<64> value) {
+    @name("set_field16_1") action set_field16_0(bit<64> value) {
         meta.md.field16_1 = value;
     }
-    @name("set_field16_2") action set_field16_2(bit<64> value) {
+    @name("set_field16_2") action set_field16_9(bit<64> value) {
         meta.md.field16_2 = value;
     }
-    @name("set_field16_2") action set_field16_16(bit<64> value) {
+    @name("set_field16_2") action set_field16_10(bit<64> value) {
         meta.md.field16_2 = value;
     }
-    @name("set_field16_3") action set_field16_3(bit<64> value) {
+    @name("set_field16_3") action set_field16_11(bit<64> value) {
         meta.md.field16_3 = value;
     }
-    @name("set_field16_3") action set_field16_17(bit<64> value) {
+    @name("set_field16_3") action set_field16_12(bit<64> value) {
         meta.md.field16_3 = value;
     }
-    @name("set_field16_4") action set_field16_4(bit<64> value) {
+    @name("set_field16_4") action set_field16_13(bit<64> value) {
         meta.md.field16_4 = value;
     }
-    @name("set_field16_4") action set_field16_18(bit<64> value) {
+    @name("set_field16_4") action set_field16_14(bit<64> value) {
         meta.md.field16_4 = value;
     }
-    @name("set_field16_5") action set_field16_5(bit<64> value) {
+    @name("set_field16_5") action set_field16_23(bit<64> value) {
         meta.md.field16_5 = value;
     }
-    @name("set_field16_5") action set_field16_19(bit<64> value) {
+    @name("set_field16_5") action set_field16_24(bit<64> value) {
         meta.md.field16_5 = value;
     }
-    @name("set_field16_6") action set_field16_6(bit<64> value) {
+    @name("set_field16_6") action set_field16_25(bit<64> value) {
         meta.md.field16_6 = value;
     }
-    @name("set_field16_6") action set_field16_20(bit<64> value) {
+    @name("set_field16_6") action set_field16_26(bit<64> value) {
         meta.md.field16_6 = value;
     }
-    @name("set_field16_7") action set_field16_7(bit<64> value) {
+    @name("set_field16_7") action set_field16_27(bit<64> value) {
         meta.md.field16_7 = value;
     }
-    @name("set_field16_7") action set_field16_21(bit<64> value) {
+    @name("set_field16_7") action set_field16_28(bit<64> value) {
         meta.md.field16_7 = value;
     }
-    @name("set_field16_8") action set_field16_8(bit<64> value) {
+    @name("set_field16_8") action set_field16_29(bit<64> value) {
         meta.md.field16_8 = value;
     }
-    @name("set_field16_8") action set_field16_22(bit<64> value) {
+    @name("set_field16_8") action set_field16_30(bit<64> value) {
         meta.md.field16_8 = value;
     }
-    @name("set_field32_1") action set_field32_1(bit<32> value) {
+    @name("set_field32_1") action set_field32(bit<32> value) {
         meta.md.field32_1 = value;
     }
-    @name("set_field32_1") action set_field32_13(bit<32> value) {
+    @name("set_field32_1") action set_field32_0(bit<32> value) {
         meta.md.field32_1 = value;
     }
-    @name("set_field32_2") action set_field32_2(bit<32> value) {
+    @name("set_field32_2") action set_field32_8(bit<32> value) {
         meta.md.field32_2 = value;
     }
-    @name("set_field32_2") action set_field32_14(bit<32> value) {
+    @name("set_field32_2") action set_field32_9(bit<32> value) {
         meta.md.field32_2 = value;
     }
-    @name("set_field32_3") action set_field32_3(bit<32> value) {
+    @name("set_field32_3") action set_field32_10(bit<32> value) {
         meta.md.field32_3 = value;
     }
-    @name("set_field32_3") action set_field32_15(bit<32> value) {
+    @name("set_field32_3") action set_field32_11(bit<32> value) {
         meta.md.field32_3 = value;
     }
-    @name("set_field32_4") action set_field32_4(bit<32> value) {
+    @name("set_field32_4") action set_field32_12(bit<32> value) {
         meta.md.field32_4 = value;
     }
-    @name("set_field32_4") action set_field32_16(bit<32> value) {
+    @name("set_field32_4") action set_field32_20(bit<32> value) {
         meta.md.field32_4 = value;
     }
-    @name("set_field32_5") action set_field32_5(bit<32> value) {
+    @name("set_field32_5") action set_field32_21(bit<32> value) {
         meta.md.field32_5 = value;
     }
-    @name("set_field32_5") action set_field32_17(bit<32> value) {
+    @name("set_field32_5") action set_field32_22(bit<32> value) {
         meta.md.field32_5 = value;
     }
-    @name("set_field32_6") action set_field32_6(bit<32> value) {
+    @name("set_field32_6") action set_field32_23(bit<32> value) {
         meta.md.field32_6 = value;
     }
-    @name("set_field32_6") action set_field32_18(bit<32> value) {
+    @name("set_field32_6") action set_field32_24(bit<32> value) {
         meta.md.field32_6 = value;
     }
-    @name("set_field32_7") action set_field32_7(bit<32> value) {
+    @name("set_field32_7") action set_field32_25(bit<32> value) {
         meta.md.field32_7 = value;
     }
-    @name("set_field32_7") action set_field32_19(bit<32> value) {
+    @name("set_field32_7") action set_field32_26(bit<32> value) {
         meta.md.field32_7 = value;
     }
-    @name("dmac1") table dmac1_0() {
+    @name("dmac1") table dmac1() {
         actions = {
-            set_field1_1();
-            set_field1_2();
-            set_field1_3();
-            set_field1_4();
-            set_field1_5();
-            set_field1_6();
-            set_field1_7();
-            set_field1_8();
-            set_field8_1();
-            set_field8_2();
-            set_field8_3();
-            set_field8_4();
-            set_field8_5();
-            set_field8_6();
-            set_field8_7();
-            set_field8_8();
-            set_field16_1();
-            set_field16_2();
-            set_field16_3();
-            set_field16_4();
-            set_field16_5();
-            set_field16_6();
-            set_field16_7();
-            set_field16_8();
-            set_field32_1();
-            set_field32_2();
-            set_field32_3();
-            set_field32_4();
-            set_field32_5();
-            set_field32_6();
-            set_field32_7();
-            NoAction_1();
+            set_field1();
+            set_field1_9();
+            set_field1_11();
+            set_field1_13();
+            set_field1_23();
+            set_field1_25();
+            set_field1_27();
+            set_field1_29();
+            set_field8();
+            set_field8_9();
+            set_field8_11();
+            set_field8_13();
+            set_field8_23();
+            set_field8_25();
+            set_field8_27();
+            set_field8_29();
+            set_field16();
+            set_field16_9();
+            set_field16_11();
+            set_field16_13();
+            set_field16_23();
+            set_field16_25();
+            set_field16_27();
+            set_field16_29();
+            set_field32();
+            set_field32_8();
+            set_field32_10();
+            set_field32_12();
+            set_field32_21();
+            set_field32_23();
+            set_field32_25();
+            NoAction();
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 32768;
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
-    @name("dmac2") table dmac2_0() {
+    @name("dmac2") table dmac2() {
         actions = {
-            set_field1_15();
-            set_field1_16();
-            set_field1_17();
-            set_field1_18();
-            set_field1_19();
-            set_field1_20();
-            set_field1_21();
-            set_field1_22();
-            set_field8_15();
-            set_field8_16();
-            set_field8_17();
-            set_field8_18();
-            set_field8_19();
-            set_field8_20();
-            set_field8_21();
-            set_field8_22();
-            set_field16_15();
-            set_field16_16();
-            set_field16_17();
-            set_field16_18();
-            set_field16_19();
-            set_field16_20();
-            set_field16_21();
-            set_field16_22();
-            set_field32_13();
-            set_field32_14();
-            set_field32_15();
-            set_field32_16();
-            set_field32_17();
-            set_field32_18();
-            set_field32_19();
-            NoAction_2();
+            set_field1_0();
+            set_field1_10();
+            set_field1_12();
+            set_field1_14();
+            set_field1_24();
+            set_field1_26();
+            set_field1_28();
+            set_field1_30();
+            set_field8_0();
+            set_field8_10();
+            set_field8_12();
+            set_field8_14();
+            set_field8_24();
+            set_field8_26();
+            set_field8_28();
+            set_field8_30();
+            set_field16_0();
+            set_field16_10();
+            set_field16_12();
+            set_field16_14();
+            set_field16_24();
+            set_field16_26();
+            set_field16_28();
+            set_field16_30();
+            set_field32_0();
+            set_field32_9();
+            set_field32_11();
+            set_field32_20();
+            set_field32_22();
+            set_field32_24();
+            set_field32_26();
+            NoAction_0();
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 32768;
-        default_action = NoAction_2();
+        default_action = NoAction_0();
     }
     apply {
         if ((hdr.ig_intr_md.ingress_port & 9w0x1) == 9w0x1) 
-            dmac1_0.apply();
+            dmac1.apply();
         else 
-            dmac2_0.apply();
+            dmac2.apply();
     }
 }
 

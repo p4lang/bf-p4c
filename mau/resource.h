@@ -19,6 +19,8 @@ struct TableResourceAlloc {
         match_ixbar.clear();
         gateway_ixbar.clear();
         memuse.clear(); }
+    void toJSON(JSONGenerator &json) const { json << "null"; }
+    static TableResourceAlloc *fromJSON(JSONLoader &) { return nullptr; }
 };
 
 #endif /* _TOFINO_MAU_RESOURCE_H_ */

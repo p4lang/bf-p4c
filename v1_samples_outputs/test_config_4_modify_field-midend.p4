@@ -164,32 +164,32 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    @name("modify_from_constant") action modify_from_constant() {
+    @name("modify_from_constant") action modify_from_constant_0() {
         hdr.my_test_config_1.e_32 = 32w3;
     }
-    @name("modify_from_field") action modify_from_field() {
+    @name("modify_from_field") action modify_from_field_0() {
         hdr.my_test_config_1.h_32 = hdr.my_test_config_1.g_32;
     }
-    @name("modify_from_param") action modify_from_param(bit<32> param1_32) {
+    @name("modify_from_param") action modify_from_param_0(bit<32> param1_32) {
         hdr.my_test_config_1.f_32 = param1_32;
     }
-    @name("my_test_config_1_table") table my_test_config_1_table_0() {
+    @name("my_test_config_1_table") table my_test_config_1_table() {
         actions = {
-            modify_from_constant();
-            modify_from_field();
-            modify_from_param();
-            NoAction_1();
+            modify_from_constant_0();
+            modify_from_field_0();
+            modify_from_param_0();
+            NoAction();
         }
         key = {
             hdr.my_test_config_1.a_32: lpm;
         }
         max_size = 1024;
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
     apply {
-        my_test_config_1_table_0.apply();
+        my_test_config_1_table.apply();
     }
 }
 

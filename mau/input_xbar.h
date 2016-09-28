@@ -2,6 +2,7 @@
 #define _TOFINO_MAU_INPUT_XBAR_H_
 
 #include "lib/alloc.h"
+#include "lib/hex.h"
 #include "ir/ir.h"
 
 class PhvInfo;
@@ -99,7 +100,7 @@ struct IXBar {
             Way(int g, int s, unsigned m) : group(g), slice(s), mask(m) {} };
         vector<Way>     way_use;
 
-        void clear() { use.clear(); hash_table_input = 0; bit_use.clear();  way_use.clear(); }
+        void clear() { use.clear(); hash_table_input = 0; bit_use.clear(); way_use.clear(); }
         void compute_hash_tables();
         int groups() const;  // how many different groups in this use
     };
@@ -167,6 +168,7 @@ inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Use::Byte &b) {
     out << b.field << '[' << b.lo << ".." << b.hi << ']';
     if (b.loc) out << b.loc;
+    if (b.flags) out << " flags=" << hex(b.flags);
     return out; }
 
 #endif /* _TOFINO_MAU_INPUT_XBAR_H_ */

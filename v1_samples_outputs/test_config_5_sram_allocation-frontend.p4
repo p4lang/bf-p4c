@@ -164,15 +164,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("set_flag") action set_flag() {
+    @name("set_flag") action set_flag_0() {
         hdr.my_test_config_1.o_1 = 1w1;
     }
-    @name("do_nothing") action do_nothing() {
+    @name("do_nothing") action do_nothing_0() {
     }
-    @name("test_exact_table") table test_exact_table() {
+    @name("test_exact_table") table test_exact_table_0() {
         actions = {
-            set_flag();
-            do_nothing();
+            set_flag_0();
+            do_nothing_0();
             NoAction();
         }
         key = {
@@ -187,7 +187,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        test_exact_table.apply();
+        test_exact_table_0.apply();
     }
 }
 

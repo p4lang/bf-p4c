@@ -147,13 +147,11 @@ struct headers {
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<1> tmp;
     @name("abc") state abc {
         packet.extract<ethernet_t>(hdr.ethernet);
         transition accept;
     }
     @name("start") state start {
-        tmp = packet.lookahead<bit<1>>();
         transition abc;
     }
 }
@@ -163,29 +161,29 @@ struct struct_0 {
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_2() {
+    @name("NoAction_2") action NoAction() {
     }
-    @name("egr_action") action egr_action() {
+    @name("egr_action") action egr_action_0() {
         clone3<struct_0>(CloneType.E2E, 32w7, { meta.m.foo });
     }
-    @name("egr_action2") action egr_action2() {
+    @name("egr_action2") action egr_action2_0() {
         clone(CloneType.E2E, 32w8);
     }
-    @name("egr_null_table") table egr_null_table_0() {
+    @name("egr_null_table") table egr_null_table() {
         actions = {
-            egr_action();
-            egr_action2();
-            NoAction_2();
+            egr_action_0();
+            egr_action2_0();
+            NoAction();
         }
         key = {
             hdr.eg_intr_md_from_parser_aux.egress_parser_err: exact;
             hdr.ethernet.dstAddr                            : exact;
             meta.m.foo                                      : exact;
         }
-        default_action = NoAction_2();
+        default_action = NoAction();
     }
     apply {
-        egr_null_table_0.apply();
+        egr_null_table.apply();
     }
 }
 
@@ -194,27 +192,27 @@ struct struct_1 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_3() {
+    @name("NoAction_3") action NoAction_0() {
     }
-    @name("ingr_action") action ingr_action() {
+    @name("ingr_action") action ingr_action_0() {
         clone3<struct_1>(CloneType.I2E, 32w5, { meta.m.foo });
     }
-    @name("ingr_action2") action ingr_action2() {
+    @name("ingr_action2") action ingr_action2_0() {
         clone(CloneType.I2E, 32w6);
     }
-    @name("ingr_null_table") table ingr_null_table_0() {
+    @name("ingr_null_table") table ingr_null_table() {
         actions = {
-            ingr_action();
-            ingr_action2();
-            NoAction_3();
+            ingr_action_0();
+            ingr_action2_0();
+            NoAction_0();
         }
         key = {
             hdr.ig_intr_md_from_parser_aux.ingress_parser_err: exact;
         }
-        default_action = NoAction_3();
+        default_action = NoAction_0();
     }
     apply {
-        ingr_null_table_0.apply();
+        ingr_null_table.apply();
     }
 }
 

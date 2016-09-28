@@ -161,22 +161,22 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    @name("ing_drop") action ing_drop() {
+    @name("ing_drop") action ing_drop_0() {
         mark_to_drop();
     }
-    @name("bad_mac_drop") table bad_mac_drop_0() {
+    @name("bad_mac_drop") table bad_mac_drop() {
         actions = {
-            ing_drop();
-            NoAction_1();
+            ing_drop_0();
+            NoAction();
         }
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
     apply {
         if (hdr.ethernet.srcAddr16 == hdr.ethernet.dstAddr16) 
             if (hdr.ethernet.srcAddr32 == hdr.ethernet.dstAddr32) 
-                bad_mac_drop_0.apply();
+                bad_mac_drop.apply();
     }
 }
 

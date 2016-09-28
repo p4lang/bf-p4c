@@ -164,24 +164,24 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    action NoAction_2() {
+    @name("NoAction_2") action NoAction_0() {
     }
-    @name("meter_0") direct_meter<bit<8>>(CounterType.bytes) meter_2;
-    @name("meter_1") meter(32w500, CounterType.bytes) meter_3;
-    @name("do_nothing") action do_nothing() {
+    @name("meter_0") direct_meter<bit<8>>(CounterType.bytes) meter_0;
+    @name("meter_1") meter(32w500, CounterType.bytes) meter_1;
+    @name("do_nothing") action do_nothing_0() {
     }
-    @name("action_1") action action_1(bit<8> param0) {
-        meter_3.execute_meter<bit<8>>(32w7, hdr.pkt.color_1);
+    @name("action_1") action action_0(bit<8> param0) {
+        meter_1.execute_meter<bit<8>>(32w7, hdr.pkt.color_1);
     }
-    @name("action_0") action action_0_0(bit<8> param0) {
-        meter_2.read(hdr.pkt.color_0);
+    @name("action_0") action action_0_1(bit<8> param0) {
+        meter_0.read(hdr.pkt.color_0);
     }
-    @name("table_0") table table_2() {
+    @name("table_0") table table_0() {
         actions = {
-            action_0_0();
-            NoAction_1();
+            action_0_1();
+            NoAction();
         }
         key = {
             hdr.pkt.field_e_16: ternary;
@@ -189,24 +189,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.color_1   : exact;
         }
         size = 6000;
-        default_action = NoAction_1();
-        meters = meter_2;
+        default_action = NoAction();
+        meters = meter_0;
     }
-    @name("table_1") table table_3() {
+    @name("table_1") table table_1() {
         actions = {
-            do_nothing();
-            action_1();
-            NoAction_2();
+            do_nothing_0();
+            action_0();
+            NoAction_0();
         }
         key = {
             hdr.pkt.field_e_16: exact;
         }
         size = 32768;
-        default_action = NoAction_2();
+        default_action = NoAction_0();
     }
     apply {
-        table_2.apply();
-        table_3.apply();
+        table_0.apply();
+        table_1.apply();
     }
 }
 

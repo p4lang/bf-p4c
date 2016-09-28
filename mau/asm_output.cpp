@@ -466,10 +466,10 @@ void MauAsmOutput::TableFormat::print(std::ostream &out) const {
 }
 
 static cstring next_for(const IR::MAU::Table *tbl, cstring what, const DefaultNext &def) {
-    if (tbl->next.count(what)) { 
+    if (tbl->next.count(what)) {
         if (!tbl->next[what]->empty())
             return tbl->next[what]->front()->name;
-    } else if (tbl->next.count("$default")) { 
+    } else if (tbl->next.count("$default")) {
         if (!tbl->next["$default"]->empty())
             return tbl->next["$default"]->front()->name; }
     return def.next_in_thread(tbl);
@@ -515,7 +515,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
                 out << gw_indent << "row: " << use.row[0].row << std::endl;
                 out << gw_indent << "bus: " << use.row[0].bus << std::endl;
                 break; }
-        CollectGatewayFields collect(phv);
+        CollectGatewayFields collect(phv, &tbl->resources->gateway_ixbar);
         tbl->apply(collect);
         if (collect.compute_offsets()) {
             bool have_xor;

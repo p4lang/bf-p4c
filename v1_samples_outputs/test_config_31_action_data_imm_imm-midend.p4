@@ -189,25 +189,25 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    @name("action_0") action action_0() {
+    @name("action_0") action action_1() {
         hdr.ipv4.protocol = 8w0xa5;
         hdr.ipv4.ttl = 8w0x81;
     }
-    @name("table_0") table table_1() {
+    @name("table_0") table table_0() {
         actions = {
-            action_0();
-            NoAction_1();
+            action_1();
+            NoAction();
         }
         key = {
             hdr.ipv4.srcAddr: exact;
         }
         max_size = 4096;
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
     apply {
-        table_1.apply();
+        table_0.apply();
     }
 }
 

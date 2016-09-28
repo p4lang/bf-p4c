@@ -184,39 +184,39 @@ struct struct_0 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    action NoAction_2() {
+    @name("NoAction_2") action NoAction_0() {
     }
-    @name("action_select") action action_select(bit<8> base, bit<8> hash_size) {
+    @name("action_select") action action_select_0(bit<8> base, bit<8> hash_size) {
         hash<bit<8>, bit<72>, struct_0, bit<144>>(hdr.ipv4.blah2, HashAlgorithm.random, (bit<72>)base, { hdr.ipv4.blah1, hdr.ipv4.blah2, hdr.ipv4.blah3 }, (bit<144>)hash_size);
     }
-    @name("action_0") action action_0(bit<16> param0) {
+    @name("action_0") action action_1(bit<16> param0) {
         hdr.ipv4.hdrChecksum = param0;
     }
-    @name("big_action") action big_action(bit<32> param0, bit<32> param1, bit<48> param2) {
+    @name("big_action") action big_action_0(bit<32> param0, bit<32> param1, bit<48> param2) {
         hdr.ipv4.dstAddr = param0;
         hdr.ipv4.srcAddr = param1;
         hdr.ethernet.dstAddr = param2;
     }
-    @name("do_nothing") action do_nothing() {
+    @name("do_nothing") action do_nothing_0() {
     }
-    @name("table_group") table table_group_0() {
+    @name("table_group") table table_group() {
         actions = {
-            action_select();
-            NoAction_1();
+            action_select_0();
+            NoAction();
         }
         key = {
             hdr.ipv4.blah1: ternary;
         }
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
-    @name("test_select") table test_select_0() {
+    @name("test_select") table test_select() {
         actions = {
-            action_0();
-            big_action();
-            do_nothing();
-            NoAction_2();
+            action_1();
+            big_action_0();
+            do_nothing_0();
+            NoAction_0();
         }
         key = {
             hdr.ethernet.etherType: exact;
@@ -227,12 +227,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.blah3        : selector;
         }
         size = 8192;
-        default_action = NoAction_2();
+        default_action = NoAction_0();
         @name("some_action_profile") implementation = action_selector(HashAlgorithm.random, 32w512, 32w72);
     }
     apply {
-        test_select_0.apply();
-        table_group_0.apply();
+        test_select.apply();
+        table_group.apply();
     }
 }
 

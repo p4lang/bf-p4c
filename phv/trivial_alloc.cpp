@@ -87,17 +87,13 @@ void PHV::TrivialAlloc::do_alloc(PhvInfo::Field *i, Regs *use, Regs *skip, int m
     LOG3("   allocated " << i->alloc << " for " << i->name);
 }
 
-void alloc_pov(PhvInfo::Field *i, PhvInfo::Field *pov, int pov_bit) {
-    LOG2(i->id << ": POV " << i->name << " bit=" << pov_bit);
+void alloc_pov(PhvInfo::Field *i, PhvInfo::Field *pov) {
+    LOG2(i->id << ": POV " << i->name << " bit=" << i->offset);
     if (i->size != 1)
         BUG("more than 1 bit for POV bit %s", i->name);
-    for (auto &sl : pov->alloc) {
-        int bit = pov_bit - sl.field_bit;
-        if (bit >= 0 && bit < sl.width) {
-            i->alloc.emplace_back(sl.container, 0, bit + sl.container_bit, 1);
-            LOG3("   allocated " << i->alloc << " for " << i->name);
-            return; } }
-    BUG("Failed to allocate POV bit for %s, POV too small?", i->name);
+    auto &sl = pov->for_bit(i->offset);
+    i->alloc.emplace_back(sl.container, 0, i->offset - sl.field_bit, 1);
+    LOG3("   allocated " << i->alloc << " for " << i->name);
 }
 
 static void adjust_skip_for_egress(PHV::Container &reg, unsigned group_size,
@@ -125,7 +121,6 @@ bool PHV::TrivialAlloc::preorder(const IR::Tofino::Pipe *pipe) {
     pipe->apply(uses);
     for (auto gr : Range(INGRESS, EGRESS)) {
         PhvInfo::Field *pov = nullptr;
-        int pov_bit = 0;
         /* enforce group splitting limits between ingress and egress */
         if (gr == EGRESS) {
             adjust_skip_for_egress(normal.B, 8, skip[0].B, skip[1].B);
@@ -137,14 +132,20 @@ bool PHV::TrivialAlloc::preorder(const IR::Tofino::Pipe *pipe) {
             tagalong.H = PHV::Container::TH(tagalong_group * 6);
             tagalong.W = PHV::Container::TW(tagalong_group * 4); }
 
+        std::vector<PhvInfo::Field *> pov_fields;
         for (auto &field : phv) {
             if (field.gress != gr)
                 continue;
             if (field.alloc.empty()) {
                 if (pov) {
-                    alloc_pov(&field, pov, pov_bit++);
+                    BUG_CHECK(field.pov, "Non POV field after POV");
+                    alloc_pov(&field, pov);
                 } else if (field.name.endsWith("$POV")) {
                     do_alloc((pov = &field), &normal, skip);
+                    for (auto *f : pov_fields)
+                        alloc_pov(f, pov);
+                } else if (field.pov) {
+                    pov_fields.push_back(&field);
                 } else {
                     bool use_mau = uses.use[1][gr][field.id];
                     bool use_any = uses.use[0][gr][field.id];

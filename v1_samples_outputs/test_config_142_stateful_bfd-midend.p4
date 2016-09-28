@@ -167,27 +167,27 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    @name("bfd_rx") action bfd_rx() {
+    @name("bfd_rx") action bfd_rx_0() {
     }
-    @name("bfd_tx") action bfd_tx() {
+    @name("bfd_tx") action bfd_tx_0() {
     }
-    @name("bfd") table bfd_0() {
+    @name("bfd") table bfd() {
         actions = {
-            bfd_rx();
-            bfd_tx();
-            NoAction_1();
+            bfd_rx_0();
+            bfd_tx_0();
+            NoAction();
         }
         key = {
             meta.bfd_md.bfd_tx_or_rx     : exact;
             meta.bfd_md.bfd_discriminator: exact;
         }
         size = 16384;
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
     apply {
-        bfd_0.apply();
+        bfd.apply();
     }
 }
 

@@ -160,92 +160,92 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    action NoAction_2() {
+    @name("NoAction_2") action NoAction_0() {
     }
-    action NoAction_3() {
+    @name("NoAction_3") action NoAction_6() {
     }
-    action NoAction_4() {
+    @name("NoAction_4") action NoAction_7() {
     }
-    action NoAction_5() {
+    @name("NoAction_5") action NoAction_8() {
     }
-    @name("action_a") action action_a(bit<16> param0, bit<16> param1, bit<16> param2) {
+    @name("action_a") action action_a_0(bit<16> param0, bit<16> param1, bit<16> param2) {
         hdr.pkt.field_e_16 = param0;
         hdr.pkt.field_f_16 = param1;
         hdr.pkt.field_g_16 = param2;
     }
-    @name("action_b") action action_b(bit<16> param0) {
+    @name("action_b") action action_b_0(bit<16> param0) {
         hdr.pkt.field_f_16 = param0;
     }
-    @name("action_c") action action_c(bit<16> param0) {
+    @name("action_c") action action_c_0(bit<16> param0) {
         hdr.pkt.field_f_16 = param0;
     }
-    @name("action_d") action action_d() {
+    @name("action_d") action action_d_0() {
     }
-    @name("action_e") action action_e() {
+    @name("action_e") action action_e_0() {
     }
-    @name("table_a") table table_a_0() {
+    @name("table_a") table table_a() {
         actions = {
-            action_a();
-            NoAction_1();
+            action_a_0();
+            NoAction();
         }
         key = {
             hdr.pkt.field_a_32: exact;
         }
         size = 256;
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
-    @name("table_b") table table_b_0() {
+    @name("table_b") table table_b() {
         actions = {
-            action_b();
-            NoAction_2();
+            action_b_0();
+            NoAction_0();
         }
         key = {
             hdr.pkt.field_a_32: exact;
         }
         size = 256;
-        default_action = NoAction_2();
+        default_action = NoAction_0();
     }
-    @name("table_c") table table_c_0() {
+    @name("table_c") table table_c() {
         actions = {
-            action_c();
-            NoAction_3();
+            action_c_0();
+            NoAction_6();
         }
         key = {
             hdr.pkt.field_a_32: exact;
         }
         size = 256;
-        default_action = NoAction_3();
+        default_action = NoAction_6();
     }
-    @name("table_d") table table_d_0() {
+    @name("table_d") table table_d() {
         actions = {
-            action_d();
-            NoAction_4();
+            action_d_0();
+            NoAction_7();
         }
         key = {
             hdr.pkt.field_e_16: exact;
         }
         size = 256;
-        default_action = NoAction_4();
+        default_action = NoAction_7();
     }
-    @name("table_e") table table_e_0() {
+    @name("table_e") table table_e() {
         actions = {
-            action_e();
-            NoAction_5();
+            action_e_0();
+            NoAction_8();
         }
         key = {
             hdr.pkt.field_g_16: exact;
         }
         size = 256;
-        default_action = NoAction_5();
+        default_action = NoAction_8();
     }
     apply {
-        table_a_0.apply();
-        table_b_0.apply();
-        table_c_0.apply();
-        table_d_0.apply();
-        table_e_0.apply();
+        table_a.apply();
+        table_b.apply();
+        table_c.apply();
+        table_d.apply();
+        table_e.apply();
     }
 }
 

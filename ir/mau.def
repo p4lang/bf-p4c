@@ -3,6 +3,13 @@
 #emit
 struct TableResourceAlloc;
 #end
+#emit_impl
+#include "tofino/mau/resource.h"
+#end
+
+#emit_impl
+#include "extensions/tofino/mau/resource.h"
+#end
 
 namespace MAU {
 
@@ -41,6 +48,27 @@ class Table : Tofino::Unit {
         int             overhead_bits = 0;
         Layout() { memset(this, 0, sizeof(*this)); }
         operator== { return memcmp(this, &a, sizeof(Layout)) == 0; }
+        toJSON {
+            json << json.indent << "\"entries\" : " << entries << ",\n"
+                 << json.indent << "\"gateway\" : " << gateway << ",\n"
+                 << json.indent << "\"ternary\" : " << ternary << ",\n"
+                 << json.indent << "\"ixbar_bytes\" : " << ixbar_bytes << ",\n"
+                 << json.indent << "\"match_width_bits\" : " << match_width_bits << ",\n"
+                 << json.indent << "\"action_data_bytes\" : " << action_data_bytes << ",\n"
+                 << json.indent << "\"action_data_bytes_in_overhead\" : "
+                                << action_data_bytes_in_overhead << ",\n"
+                 << json.indent << "\"overhead_bits\" : " << overhead_bits; }
+        fromJSON {
+            Layout *rv = new Layout();
+            json.load("entries", rv->entries);
+            json.load("gateway", rv->gateway);
+            json.load("ternary", rv->ternary);
+            json.load("ixbar_bytes", rv->ixbar_bytes);
+            json.load("match_width_bits", rv->match_width_bits);
+            json.load("action_data_bytes", rv->action_data_bytes);
+            json.load("action_data_bytes_in_overhead", rv->action_data_bytes_in_overhead);
+            json.load("overhead_bits", rv->overhead_bits);
+            return rv; }
 #emit
         Layout &operator+=(const Layout &a);
 #end
@@ -55,8 +83,18 @@ class Table : Tofino::Unit {
         int             width = 0;
         Way() { memset(this, 0, sizeof(*this)); }
         operator== { return memcmp(this, &a, sizeof(Way)) == 0; }
+        toJSON {
+            json << json.indent << "\"match_groups\" : " << match_groups << ",\n"
+                 << json.indent << "\"entries\" : " << entries << ",\n"
+                 << json.indent << "\"width\" : " << width; }
+        fromJSON {
+            Way* way = new Way();
+            json.load("match_groups", way->match_groups);
+            json.load("entries", way->entries);
+            json.load("width", way->width);
+            return way; }
     }
-    std::vector<Way>    ways;
+    vector<Way>    ways;
     const TableResourceAlloc            *resources = nullptr;
 
 #noconstructor
@@ -196,7 +234,6 @@ class Instruction : Primitive {
 #end
     Instruction(const Primitive &p) : Primitive(p) {}
     bool isOutput(int operand_index) const override { return operand_index == 0; }
-    Instruction *setType(const IR::Type *t) { type = t; return this; }
 }
 
 }  // end namespace MAU

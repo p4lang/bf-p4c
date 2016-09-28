@@ -59,6 +59,7 @@ class PhvInfo : public Inspector {
             int size() const { return hi - lo + 1; }
             operator std::pair<int, int>() { return std::make_pair(lo, hi); }
         };
+        int container_bytes(bitrange bits = {0, -1}) const;
     };
     class SetReferenced : public Inspector {
         PhvInfo &self;
@@ -76,8 +77,6 @@ class PhvInfo : public Inspector {
     map<cstring, std::pair<int, int>>   all_headers;
     gress_t                             gress;
     bool                                alloc_done_ = false;
-    bool                                need_bridge_meta_pov = false;
-    int                                 tmp_alloc_uid = 0;
     void add(cstring, int, int, bool, bool);
     void add_hdr(cstring, const IR::Type_StructLike *, bool);
     profile_t init_apply(const IR::Node *root) override;
@@ -86,7 +85,7 @@ class PhvInfo : public Inspector {
     bool preorder(const IR::Header *h) override;
     bool preorder(const IR::HeaderStack *) override;
     bool preorder(const IR::Metadata *h) override;
-    bool preorder(const IR::NamedRef *h) override;
+    bool preorder(const IR::TempVar *h) override;
     template<typename Iter>
     class iterator {
         Iter    it;
@@ -102,7 +101,6 @@ class PhvInfo : public Inspector {
     friend class PHV::TrivialAlloc;
 
  public:
-    const IR::Expression *createTempField(const IR::Type *type, const char *extname = 0);
     const Field *field(int idx) const { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
     const Field *field(cstring name) const {
         return all_fields.count(name) ? &all_fields.at(name) : 0; }
@@ -128,7 +126,10 @@ class PhvInfo : public Inspector {
 };
 
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field::alloc_slice &);
+std::ostream &operator<<(std::ostream &, const PhvInfo::Field &);
+std::ostream &operator<<(std::ostream &, const PhvInfo &);
 
+void dump(const PhvInfo *);
 extern void repack_metadata(PhvInfo &phv);
 
 #endif /* _TOFINO_PHV_PHV_FIELDS_H_ */

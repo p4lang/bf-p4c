@@ -3,6 +3,7 @@
 
 #include "mau_visitor.h"
 #include "tofino/phv/phv_fields.h"
+#include "input_xbar.h"
 
 class CanonGatewayExpr : public MauTransform {
     IR::ActionFunction *preorder(IR::ActionFunction *af) override { prune(); return af; }
@@ -23,7 +24,8 @@ class CanonGatewayExpr : public MauTransform {
 
 class CollectGatewayFields : public Inspector {
     const PhvInfo       &phv;
-    unsigned            row_limit;
+    const IXBar::Use    *ixbar = nullptr;
+    unsigned            row_limit = ~0U;   // FIXME -- needed?  only use by SplitComplexGateways
     const PhvInfo::Field *xor_match = nullptr;
     bool preorder(const IR::MAU::Table *tbl) override {
         unsigned row = 0;
@@ -32,41 +34,25 @@ class CollectGatewayFields : public Inspector {
                 return false;
             visit(gw.first, "gateway_row"); }
         return false; }
-    bool preorder(const IR::Expression *e) override {
-        auto finfo = phv.field(e);
-        if (!finfo) return true;
-        info_t &info = this->info[finfo];
-        const Context *ctxt = nullptr;
-        info.need_mask = -1;  // FIXME -- should look for mask ops and extract them
-        if (auto *rel = findContext<IR::Operation::Relation>(ctxt)) {
-            if (!rel->is<IR::Equ>() && !rel->is<IR::Neq>()) {
-                info.need_range = true;
-            } else if (ctxt->child_index > 0) {
-                info.xor_with = xor_match;
-            } else {
-                xor_match = finfo; } }
-        return false; }
-    bool preorder(const IR::Primitive *prim) override {
-        if (prim->name != "valid") return true;
-        if (auto *hdr = prim->operands[0]->to<IR::HeaderRef>())
-            valid_offsets[hdr->toString()] = -1;
-        else
-            Util::CompilationError("valid of non-header: %s", prim);
-        return false; }
+    bool preorder(const IR::Expression *e) override;
+    bool preorder(const IR::Primitive *prim) override;
     void postorder(const IR::Operation::Relation *) override {
         xor_match = nullptr; }
 
  public:
+    typedef PhvInfo::Field::bitrange    bitrange;
     struct info_t {
         const PhvInfo::Field    *xor_with = nullptr;
+        bitrange                bits = { -1, -1 };
         bool                    need_range = false;
         uint64_t                need_mask = 0;
         int                     offset = -1; };
     map<const PhvInfo::Field *, info_t>       info;
     map<cstring, int>                         valid_offsets;
     int                                       bytes, bits;
-    explicit CollectGatewayFields(const PhvInfo &phv, unsigned rl = ~0U)
-    : phv(phv), row_limit(rl) {}
+    explicit CollectGatewayFields(const PhvInfo &phv, const IXBar::Use *ix = nullptr)
+    : phv(phv), ixbar(ix) {}
+    CollectGatewayFields(const PhvInfo &phv, unsigned rl) : phv(phv), row_limit(rl) {}
     bool compute_offsets();
 };
 

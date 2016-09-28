@@ -44,6 +44,9 @@ class ActionBodySetup : public Inspector {
     bool preorder(const IR::Declaration *) override {
         // FIXME -- for now, ignoring local variables?  Need copy prop + dead code elim
         return false; }
+    bool preorder(const IR::Annotations *) override {
+        // FIXME -- for now, ignoring annotations.
+        return false; }
     bool preorder(const IR::Node *n) override {
         BUG("un-handled node %1% in action", n);
         return false; }
@@ -85,7 +88,7 @@ static void setIntProperty(cstring name, int *val, const IR::PropertyValue *pval
     error("%s: %s property must be a constant", pval->srcInfo, name);
 }
 
-const IR::V1Table *createV1Table(const IR::P4Table *tc, const P4::ReferenceMap *refMap) {
+const IR::V1Table *createV1Table(const IR::P4Table *tc, P4::ReferenceMap *refMap) {
     IR::V1Table *rv = new IR::V1Table;
     rv->srcInfo = tc->srcInfo;
     rv->name = tc->externalName();
@@ -169,9 +172,9 @@ static const IR::MethodCallExpression *isApplyHit(const IR::Expression *e, bool 
 }
 
 class GetTofinoTables : public Inspector {
-    const IR::V1Program                        *program;
-    const P4::ReferenceMap                     *refMap;
-    const P4::TypeMap                          *typeMap;
+    const IR::V1Program                         *program;
+    P4::ReferenceMap                            *refMap;
+    P4::TypeMap                                 *typeMap;
     gress_t                                     gress;
     IR::Tofino::Pipe                            *pipe;
     map<const IR::Node *, IR::MAU::Table *>     tables;
@@ -184,7 +187,7 @@ class GetTofinoTables : public Inspector {
  public:
     GetTofinoTables(const IR::V1Program *prog, gress_t gr, IR::Tofino::Pipe *p)
     : program(prog), refMap(nullptr), typeMap(nullptr), gress(gr), pipe(p) {}
-    GetTofinoTables(const P4::ReferenceMap* refMap, const P4::TypeMap* typeMap,
+    GetTofinoTables(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                     gress_t gr, IR::Tofino::Pipe *p)
     : program(nullptr), refMap(refMap), typeMap(typeMap), gress(gr), pipe(p) {}
 
