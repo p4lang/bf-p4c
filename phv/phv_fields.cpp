@@ -224,7 +224,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field *fld) {
     if(fld)
         out << fld->name << '[' << fld->size << ']';
     else
-        out << '-';	// fld is nil
+        out << "-f-";	// fld is nil
     return out;
 }
 

@@ -25,7 +25,7 @@ class MAU_Req;
 class Cluster : public Inspector
 {
 public:
-    enum class MAU_width {b32, b16, b8};
+    enum class MAU_width {b32=32, b16=16, b8=8};
 private:
     PhvInfo	&phv_i;		// phv object referenced through constructor
     //
@@ -88,34 +88,62 @@ private:
 //
 class MAU_Req
 {
-    std::set<const PhvInfo::Field *>* cluster_set_i;
-    				// ptr to cluster set
-    int id_i;			// cluster id
-    int num_fields_i;		// number of fields in cluster
-    int width_i;		// max width of field in cluster
-    int num_containers_i;	// number of containers
-    int container_width_i;	// container width in MAU group
-    bool sliceable_i;		// can split cluster, move-based ops only ?
-    bool uniform_width_i;	// widths of fields in clusters different ?
+    std::vector<const PhvInfo::Field *> cluster_vec_i;
+    						// cluster vec sorted by decreasing field width
+    int id_i;					// cluster id
+    int width_i;				// max width of field in cluster
+    int num_containers_i;			// number of containers
+    Cluster::MAU_width container_width_i;	// container width in MAU group
+    bool uniform_width_i;			// widths of fields in clusters different ?
+    bool sliceable_i;				// can split cluster, move-based ops only ?
     //
     public:
-    MAU_Req(std::set<const PhvInfo::Field *> *p) : cluster_set_i(p)
+    MAU_Req(std::set<const PhvInfo::Field *> *p) : cluster_vec_i(p->begin(), p->end())
     {
-        BUG_CHECK(p, "**********MAU_Req called w/ nullptr cluster_set***********");
-        num_fields_i = cluster_set_i->size();
+        if(!p)
+        {
+            WARNING("*****MAU_Req called w/ nullptr cluster_set******");
+        }
+        // cluster vector = sorted cluster set, decreasing field width
+        std::sort(cluster_vec_i.begin(), cluster_vec_i.end(), [](const PhvInfo::Field *l, const PhvInfo::Field *r) {
+            return l->size > r->size;
+        });
+        // max width of field
         width_i = 0;
-        for(auto pfield: *cluster_set_i)
+        for(auto pfield: cluster_vec_i)
         {
            if(pfield->size > width_i)
            {
                width_i = pfield->size;
            }
         }
+        // container width
+        if(width_i > 16)
+        {
+            container_width_i = Cluster::MAU_width::b32;
+        }
+        else if(width_i > 8) 
+        {
+            container_width_i = Cluster::MAU_width::b16;
+        }
+        else
+        {
+            container_width_i = Cluster::MAU_width::b8;
+        }
+        // num containers of container_width
+        num_containers_i = 0;
+        for(auto pfield: cluster_vec_i)
+        {
+            num_containers_i += pfield->size/(int)container_width_i + (pfield->size%(int)container_width_i? 1 : 0);
+        }
     }
     //
-    int width()		{ return width_i; }
-    int num_fields()	{ return num_fields_i; }
-    std::set<const PhvInfo::Field *>* cluster_set() { return cluster_set_i; }
+    int width()						{ return width_i; }
+    int num_containers()				{ return num_containers_i; }
+    Cluster::MAU_width container_width()		{ return container_width_i; }
+    bool uniform_width()				{ return uniform_width_i; }
+    bool sliceable()					{ return sliceable_i; }
+    std::vector<const PhvInfo::Field *>& cluster_vec()	{ return cluster_vec_i; }
 };
 //
 class MAU_Requirements
@@ -126,26 +154,18 @@ class MAU_Requirements
     MAU_Requirements(Cluster &c) : cluster_i(c)
     {
         // create MAU Requirements from clusters
-        //
-        BUG_CHECK(cluster_i.dst_map().size(), "**********MAU_Req called w/ 0 clusters***********");
+        if(! cluster_i.dst_map().size())
+        {
+            WARNING("*****MAU_Req called w/ 0 clusters******");
+        }
         //
         for (auto p: Values(cluster_i.dst_map()))
         {
             MAU_Req *m = new MAU_Req(p);
-            if(m->width() > 16)
-            {
-                cluster_i.mau_req_map()[Cluster::MAU_width::b32].push_back(m);
-            }
-            else if(m->width() > 8) 
-            {
-                cluster_i.mau_req_map()[Cluster::MAU_width::b16].push_back(m);
-            }
-            else
-            {
-                cluster_i.mau_req_map()[Cluster::MAU_width::b8].push_back(m);
-            }
+            cluster_i.mau_req_map()[m->container_width()].push_back(m);
         }
         //
+        // cluster MAU requirement = [qty, width]
         // sort based on width requirement, greatest width first
         // for each width sort based on quantity requirement
         //
@@ -154,7 +174,7 @@ class MAU_Requirements
             std::sort(p.begin(), p.end(), [](MAU_Req *l, MAU_Req *r) {
                 if(l->width() == r->width())
                 {
-                    return l->num_fields() > r->num_fields();
+                    return l->cluster_vec().size() > r->cluster_vec().size();
                 }
                 return l->width() > r->width();
             });
@@ -162,7 +182,11 @@ class MAU_Requirements
     }
 };
 //
+std::ostream &operator<<(std::ostream &, MAU_Req*);
+std::ostream &operator<<(std::ostream &, std::vector<MAU_Req *>&);
+std::ostream &operator<<(std::ostream &, std::map<Cluster::MAU_width, std::vector<MAU_Req *>>&);
 std::ostream &operator<<(std::ostream &, std::set<const PhvInfo::Field *>*);
+std::ostream &operator<<(std::ostream &, std::vector<const PhvInfo::Field *>&);
 std::ostream &operator<<(std::ostream &, Cluster &);
 //
 #endif /* _TOFINO_PHV_CLUSTER_H_ */

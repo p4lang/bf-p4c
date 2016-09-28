@@ -48,7 +48,6 @@ bool Cluster::preorder(const IR::Operation_Binary* expression)
 
 bool Cluster::preorder(const IR::Operation_Ternary* expression)
 {
-
     LOG3(".....Ternary Operation....." << expression->toString() 
 	<< '(' << expression->e0->toString() << ',' << expression->e1->toString() << ',' << expression->e2->toString()
         << ')');
@@ -100,7 +99,7 @@ bool Cluster::preorder(const IR::Primitive* primitive)
 bool Cluster::preorder(const IR::Operation* operation)
 {
     // should not reach here
-    std::cout << "*****sanity FAIL**********Operation*****" << operation->toString() << std::endl;
+    WARNING("*****cluster.cpp: sanity_FAIL Operation*****" << operation->toString());
 
     return true;
 }
@@ -239,16 +238,14 @@ void Cluster::sanity_check_clusters(const std::string& msg, const PhvInfo::Field
         // b --> (b,d,e); count b=1 in (b,d,e)
         if(dst_map_i[lhs]->count(lhs) != 1)
         {
-            std::cout << "*****sanity_FAIL*****cluster member count > 1.."
-		<< msg << lhs << "-->" << *(dst_map_i[lhs]) << std::endl;
+            WARNING("*****cluster.cpp:sanity_FAIL*****cluster member count > 1.." << msg << lhs << "-->" << *(dst_map_i[lhs]));
         }
         // forall x elem (b,d,e), x-->(b,d,e)
         for(auto rhs: *(dst_map_i[lhs]))
         {
             if(dst_map_i[rhs] != dst_map_i[lhs])
             {
-                std::cout << "*****sanity_FAIL*****cluster member pointers inconsistent.."
-		<< msg << lhs << "-->" << rhs << std::endl;
+                WARNING("*****cluster.cpp:sanity_FAIL*****cluster member pointers inconsistent.." << msg << lhs << "-->" << rhs);
             }
         }
     }
@@ -275,8 +272,8 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg)
                     set_intersection(s1.begin(),s1.end(),s2.begin(),s2.end(), std::back_inserter(s3));
                     if(s3.size())
                     {
-                        std::cout << "*****sanity_FAIL*****uniqueness.." << msg
-				<< entry.first << s1 << "..^.." << entry_2.first << s2 << '=' << s3 << std::endl;
+                        WARNING("*****cluster.cpp:sanity_FAIL*****uniqueness.." << msg
+				<< entry.first << s1 << "..^.." << entry_2.first << s2 << '=' << s3);
                         LOG3("lhs[" << std::endl << &s1 << "lhs]");
                         LOG3("lhs_2[" << std::endl << &s2 << "lhs_2]");
                     }
@@ -292,18 +289,68 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg)
 // 
 //***********************************************************************************
 
-std::ostream &operator<<(std::ostream &out, std::set<const PhvInfo::Field *>* cluster_set)
+std::ostream &operator<<(std::ostream &out, MAU_Req *m)
+{
+    if(m)
+    {
+        out << "[<" << m->cluster_vec().size() << ',' << m->width()
+            << ">{" << m->num_containers() << '*' << (int)(m->container_width()) << "}](" << std::endl
+            << m->cluster_vec()
+            << "[<" << m->cluster_vec().size() << ',' << m->width()
+            << ">{" << m->num_containers() << '*' << (int)(m->container_width()) << "}])" << std::endl;
+    }
+    else
+    {
+        out << "-m-";
+    }
+
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, std::vector<MAU_Req *> &mau_req_vec)
+{
+    out << "++++++++++ #clusters=" << mau_req_vec.size() << " ++++++++++" << std::endl;
+    for (auto m: mau_req_vec)
+    {
+        out << m;
+    }
+
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, std::map<Cluster::MAU_width, std::vector<MAU_Req *>> &mau_req_map)
+{
+    out << "++++++++++ MAU Requirements ++++++++++" << std::endl;
+    for (auto &p: Values(mau_req_map))
+    {
+        out << p;
+    } 
+
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, std::set<const PhvInfo::Field *> *cluster_set)
 {
     if(cluster_set)
     {
         for(auto field: *cluster_set)
         {
-            LOG3(field);
+            out << field << std::endl;
         }
     }
     else
     {
-        LOG3("[X]");
+        out << "[X]" << std::endl;
+    }
+
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, std::vector<const PhvInfo::Field *>& cluster_vec)
+{
+    for(auto field: cluster_vec)
+    {
+        out << field << std::endl;
     }
 
     return out;
@@ -311,7 +358,7 @@ std::ostream &operator<<(std::ostream &out, std::set<const PhvInfo::Field *>* cl
 
 std::ostream &operator<<(std::ostream &out, Cluster &cluster)
 {
-    LOG3("++++++++++ Clusters ++++++++++");
+    out << "++++++++++ Clusters ++++++++++" << std::endl;
     // iterate through all elements in dst_map
     for(auto entry: cluster.dst_map())
     {
@@ -325,17 +372,8 @@ std::ostream &operator<<(std::ostream &out, Cluster &cluster)
             out << ')' << std::endl;
         }
     }
-    LOG3("++++++++++ MAU Requirements ++++++++++");
-    for (auto &p: Values(cluster.mau_req_map()))
-    {
-        LOG3("++++++++++ X-bit (#clusters=" << p.size() << ") ++++++++++");
-        for (auto m: p)
-        {
-            LOG3('[' << m->num_fields() << ',' << m->width() << "]("
-              << std::endl << m->cluster_set()
-              << '[' << m->num_fields() << ',' << m->width() << "])");
-        }
-    } 
+    // mau_req_map
+    out << cluster.mau_req_map();
 
     return out;
 }
