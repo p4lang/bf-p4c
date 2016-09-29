@@ -104,18 +104,28 @@ class MAU_Req
         {
             WARNING("*****MAU_Req called w/ nullptr cluster_set******");
         }
-        // cluster vector = sorted cluster set, decreasing field width
-        std::sort(cluster_vec_i.begin(), cluster_vec_i.end(), [](const PhvInfo::Field *l, const PhvInfo::Field *r) {
-            return l->size > r->size;
-        });
-        // max width of field
-        width_i = 0;
-        for(auto pfield: cluster_vec_i)
+        if((std::adjacent_find (cluster_vec_i.begin(), cluster_vec_i.end(),
+		[](const PhvInfo::Field *l, const PhvInfo::Field *r) { return l->size != r->size; }))
+           == cluster_vec_i.end())
         {
-           if(pfield->size > width_i)
-           {
-               width_i = pfield->size;
-           }
+            uniform_width_i = true;
+            width_i = cluster_vec_i.front()->size;
+        }
+        else
+        {
+            uniform_width_i = false;
+            // get max field_width
+            width_i = 0;
+            for(auto pfield: cluster_vec_i)
+            {
+               if(pfield->size > width_i)
+               {
+                   width_i = pfield->size;
+               }
+            }
+            // cluster vector = sorted cluster set, decreasing field width
+            std::sort(cluster_vec_i.begin(), cluster_vec_i.end(),
+		[](const PhvInfo::Field *l, const PhvInfo::Field *r) { return l->size > r->size; });
         }
         // container width
         if(width_i > 16)
@@ -134,6 +144,11 @@ class MAU_Req
         num_containers_i = 0;
         for(auto pfield: cluster_vec_i)
         {
+            // fields can span containers  (e.g., 48b = 2*32b)
+            // no sharing of containers with cohabitant fields
+            // sharing needs analyses:
+            // (i)  container single-write table interference
+            // (ii) surround interference 
             num_containers_i += pfield->size/(int)container_width_i + (pfield->size%(int)container_width_i? 1 : 0);
         }
     }
@@ -172,11 +187,23 @@ class MAU_Requirements
         for (auto &p: Values(cluster_i.mau_req_map()))
         {
             std::sort(p.begin(), p.end(), [](MAU_Req *l, MAU_Req *r) {
-                if(l->width() == r->width())
+                if(l->container_width() == r->container_width())
                 {
-                    return l->cluster_vec().size() > r->cluster_vec().size();
+                    if(l->num_containers() == r->num_containers())
+                    {
+                        if(l->width() == r->width())
+                        {
+                            if(l->cluster_vec().size() == r->cluster_vec().size())
+                            {   // sort by uniform_width first
+                                return l->uniform_width() && !r->uniform_width();
+                            }
+                            return l->cluster_vec().size() > r->cluster_vec().size();
+                        }
+                        return l->width() > r->width();
+                    }
+                    return l->num_containers() > r->num_containers();
                 }
-                return l->width() > r->width();
+                return l->container_width() > r->container_width();
             });
         } 
     }

@@ -293,11 +293,15 @@ std::ostream &operator<<(std::ostream &out, MAU_Req *m)
 {
     if(m)
     {
+        std::string attrib = ">";
+        if(m->uniform_width()) attrib += "u";
+        attrib += "{";
+        //
         out << "[<" << m->cluster_vec().size() << ',' << m->width()
-            << ">{" << m->num_containers() << '*' << (int)(m->container_width()) << "}](" << std::endl
+            << attrib << m->num_containers() << '*' << (int)(m->container_width()) << "}](" << std::endl
             << m->cluster_vec()
             << "[<" << m->cluster_vec().size() << ',' << m->width()
-            << ">{" << m->num_containers() << '*' << (int)(m->container_width()) << "}])" << std::endl;
+            << attrib << m->num_containers() << '*' << (int)(m->container_width()) << "}])" << std::endl;
     }
     else
     {
