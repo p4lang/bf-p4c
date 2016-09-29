@@ -210,7 +210,6 @@ XFAIL_TESTS += \
     tofino/%reldir%/v1_2_test/stateful_alu.p4.test \
     bmv2/%reldir%/v1_samples/02-FlexCounterActionProfile.p4.test \
     bmv2/%reldir%/v1_samples/action_profile.p4.test \
-    bmv2/%reldir%/v1_samples/switch_20160602/switch.p4.test \
     bmv2/%reldir%/v1_samples/test_config_117_first_tcam_range.p4.test \
     bmv2/%reldir%/v1_samples/test_config_118_tcam_range_2.p4.test \
     bmv2/%reldir%/v1_samples/test_config_119_tcam_range_3.p4.test \
