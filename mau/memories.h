@@ -17,6 +17,7 @@ struct Memories {
 
  
     Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>           sram_use;
+    unsigned                                     sram_inuse[SRAM_ROWS] = { 0 };
     Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>           tcam_use;
     Alloc2D<cstring, SRAM_ROWS, MAPRAM_COLUMNS>         mapram_use;
     Alloc2D<cstring, SRAM_ROWS, 2>                      sram_search_bus;
@@ -70,8 +71,21 @@ struct Memories {
                 : table(t), match_ixbar(mi), entries(e) {}
     };
 
+    struct way_group {
+        table_alloc *ta;
+        int depth;
+        int width;
+        int placed;
+        explicit way_group (table_alloc *t, int d, int w) : ta(t), depth(d), width(w), placed(0) {}
+    };
+
+    Alloc2D<std::pair<table_alloc *, int> *, SRAM_ROWS, 2>   sram_match_bus2;
+    Alloc2D<std::pair<table_alloc *, int> *, SRAM_ROWS, 2>   sram_search_bus2;
+    Alloc2D<table_alloc *, SRAM_ROWS, SRAM_COLUMNS>          sram_use2;
+
     vector<table_alloc *>      tables;
     vector<table_alloc *>      exact_tables;
+    vector<way_group *>        exact_match_ways;
 
     void clear();
     void add_table(const IR::MAU::Table *t, const IXBar::Use mi,  int entries);
@@ -80,7 +94,16 @@ struct Memories {
     bool allocate_all_exact(mem_info &mi);
     bool allocate_exact(table_alloc *ta, mem_info &mi, int average_depth);    
     vector<int> way_size_calculator(int ways, int RAMs_needed);
-  
+    vector<std::pair<int, int>> available_SRAMs_per_row(unsigned mask, table_alloc *ta,
+                                                        int depth);  
+    vector<int> available_match_SRAMs_per_row(unsigned row_mask, unsigned total_mask, int row,
+                                                 table_alloc *ta, int width_sect);
+    void break_exact_tables_into_ways();
+    bool find_best_row_and_fill_out();
+    bool fill_out_row(way_group *placed_wa, int row);
+    way_group * find_best_candidate(way_group *placed_wa, int row);
+
+
     bool alloc2Port(cstring table_name, int entries, int entries_per_word, Use &alloc);
     bool allocActionRams(cstring table_name, int width, int depth, Use &alloc);
     bool allocBus(cstring table_name, Alloc2Dbase<cstring> &bus_use, Use &alloc);

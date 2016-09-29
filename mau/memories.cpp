@@ -64,6 +64,31 @@ bool Memories::analyze_tables(mem_info &mi) {
     return true;    
 }
 
+/*
+bool Memories::analyze_exact_match () {
+
+    std::sort(exact_tables.begin(), exact_tables.end(),
+              [=](const Memories::table_alloc *a, const Memories::table_alloc *b) {
+         
+         int t;
+         if ((t = a->table->ways[0].width - b->table->ways[0].width) != 0) return t > 0;
+         if ((t = a->entries - b->entries) != 0) return t > 0;
+         return true;
+    });
+
+
+    for (auto *ta : exact_tables) {
+        
+        int number_of_ways = ta->table->ways.size();
+        int width = ta->table->ways[0].width;
+        int groups = ta->table->ways[0].match_groups;
+        int RAMs_needed = ((ta->entries + groups - 1U)/groups + 1023)/1024U;
+        int total_depth = (RAMs_needed + groups - 1) / groups;
+        vector<int> way_sizes = way_size_calculator(number_of_ways, total_depth);
+
+    }
+    
+}*/
 
 vector<int> Memories::way_size_calculator (int ways, int RAMs_needed) {
     vector<int> vec;
@@ -83,13 +108,104 @@ vector<int> Memories::way_size_calculator (int ways, int RAMs_needed) {
                 depth = 1 << (log2sz + 1);
 
             RAMs_needed -= depth;
-            LOG3 ("RAMs_needed / depth " << RAMs_needed << " " << depth);
+            LOG3("RAMs_needed / depth " << RAMs_needed << " " << depth);
             vec.push_back(depth); 
         }
     }
     return vec;
 }
 
+vector<std::pair<int, int>> Memories::available_SRAMs_per_row(unsigned mask, table_alloc *ta,
+                                                                int width_sect) {
+    vector<std::pair<int, int>> available_rams;
+    for (int i = 0; i < SRAM_ROWS; i++) {
+        std::pair<table_alloc *, int> *first_bus, *second_bus;
+        first_bus = sram_match_bus2[i][0];  second_bus = sram_match_bus2[i][1];
+        //if the first bus or the second bus match up to what is 
+        if (!(first_bus == nullptr || second_bus == nullptr ||
+            (first_bus->first == ta && first_bus->second == width_sect) ||
+            (second_bus->first == ta && second_bus->second == width_sect))) continue; 
+        available_rams.push_back(std::make_pair(i, __builtin_popcount(mask & sram_inuse[i])));
+    }
+
+    std::sort(available_rams.begin(), available_rams.end(),
+             [=](const std::pair<int, int> a, const std::pair<int, int> b) {
+                 
+         int t;
+         if ((t = a.second - b.second) != 0) return t > 0;
+         if ((t = a.first - b.first) != 0) return t > 0;
+         return true;
+    });
+    return available_rams;
+}
+
+/* Simple now.  Just find rows with the available RAMs that it is asking for */
+vector<int> Memories::available_match_SRAMs_per_row(unsigned row_mask, unsigned total_mask,
+                                                    int row, table_alloc *ta, int width_sect) {
+    vector<int> matching_rows;
+    for (int i = 0; i < SRAM_ROWS; i++) {
+        std::pair<table_alloc *, int> *first_bus, *second_bus;
+        first_bus = sram_match_bus2[i][0];  second_bus = sram_match_bus2[i][1];
+        if (row == i) continue;
+        if (!(first_bus == nullptr || second_bus == nullptr ||
+            (first_bus->first == ta && first_bus->second == width_sect) ||
+            (second_bus->first == ta && second_bus->second == width_sect))) continue;
+
+        if (__builtin_popcount(row_mask & sram_inuse[i]) == __builtin_popcount(row_mask))
+            matching_rows.push_back(i);
+    }
+    
+    std::sort(matching_rows.begin(), matching_rows.end(),
+              [=] (const int a, const int b) {
+
+        int t;
+        if ((t = __builtin_popcount(sram_inuse[a] & total_mask) - 
+                 __builtin_popcount(sram_inuse[b] & total_mask)) != 0)
+            return t < 0;
+        
+        std::pair<table_alloc *, int> *first_bus, *second_bus;
+        first_bus = sram_match_bus2[a][0]; second_bus = sram_match_bus2[a][1];
+
+        if ((first_bus->first == ta && first_bus->second == width_sect) ||
+            (second_bus->first == ta && second_bus->second == width_sect)) return true;
+      
+        first_bus = sram_match_bus2[b][0]; second_bus = sram_match_bus2[b][1];
+        
+        if ((first_bus->first == ta && first_bus->second == width_sect) ||
+            (second_bus->first == ta && second_bus->second == width_sect)) return false;
+
+        return a < b;
+    });
+    return matching_rows;
+}
+
+void Memories::break_exact_tables_into_ways() {
+    for (auto *ta : exact_tables) {
+        
+        int number_of_ways = ta->table->ways.size();
+        int width = ta->table->ways[0].width;
+        int groups = ta->table->ways[0].match_groups;
+	int RAMs_needed = ((ta->entries + groups - 1U)/groups + 1023)/1024U;
+        int total_depth = (RAMs_needed + groups - 1) / groups;
+        vector<int> way_sizes = way_size_calculator(number_of_ways, total_depth);
+        for (size_t i = 0; i < way_sizes.size(); i++) {
+            exact_match_ways.push_back(new way_group(ta, way_sizes[i], width));
+        }
+    }
+
+    std::sort(exact_match_ways.begin(), exact_match_ways.end(),
+              [=](const way_group *a, const way_group *b) {
+         
+         int t;
+         if ((t = a->width - b->width) != 0) return t > 0;
+         if ((t = (a->depth - a->placed) - (b->depth - b->placed)) != 0) return t > 0;
+         if ((t = a->ta->entries - b->ta->entries) != 0) return t < 0;
+         return true;
+    }); 
+
+}
+
+/*
 bool Memories::allocate_exact(table_alloc *ta, mem_info &mi, int average_depth) {
     LOG3("Allocating the table " << ta->table->name << " with " << ta->entries << " entries!");
     int number_of_ways = ta->table->ways.size();
@@ -102,38 +218,136 @@ bool Memories::allocate_exact(table_alloc *ta, mem_info &mi, int average_depth) 
     
     vector<int> way_sizes = way_size_calculator(number_of_ways, total_depth);
 
-    for (int i = 0; i < (int) way_sizes.size(); i++) {
-
-       if (way_sizes[i] < average_depth) {
-           
-       }   
-    }
+    int last_placed = 0;
     return true; 
+}
+*/
+Memories::way_group * Memories::find_best_candidate (way_group *placed_wa, int row) {
+    return nullptr;
+}
 
+bool Memories::fill_out_row(way_group *placed_wa, int row) {
+
+    while (__builtin_popcount(sram_inuse[row]) > 0) {
+        way_group *wa = find_best_candidate (placed_wa, row);
+
+        int cols = 0;
+        unsigned row_mask = 0;
+        vector<int> selected_cols;
+        for (int i = 0; i < SRAM_COLUMNS || cols < wa->depth - wa->placed; i++) {        
+            if (sram_use[row][i] && ((1 << i) & 0x3ff)) {
+                row_mask |= (1 << i);
+                selected_cols.push_back(i);
+                cols++;
+            }
+        }
+
+        vector<int> selected_rows;
+        selected_rows.push_back(row);
+        //Fairly simple stuff
+        for (int i = 1; i < wa->width; i++) {
+            vector<int> matching_rows = available_match_SRAMs_per_row(row_mask, 0x3ff, row, wa->ta, i);
+            size_t j = 0;
+            while (j < matching_rows.size()) {
+                int test_row = matching_rows[j];
+                if (std::find(selected_rows.begin(), selected_rows.end(), test_row) 
+                    == selected_rows.end()) {
+                    matching_rows.push_back(test_row);
+                    break;
+                }
+                j++; 
+            }
+            //This needs to be better checked
+            if (j == matching_rows.size()) {
+                return false;
+            }
+        }
+
+        for (size_t i = 0; i < selected_rows.size(); i++) {
+            for (size_t j = 0; j < selected_cols.size(); j++) {
+                sram_use2[selected_rows[i]][selected_cols[j]] = wa->ta;
+            }
+            sram_inuse[i] |= row_mask;
+        }
+        if (cols >= wa->depth - wa->placed) {
+            exact_match_ways.erase(exact_match_ways.begin());
+        } else {
+            wa->placed += cols;
+        }
+    }
+    return true;
+}
+
+
+bool Memories::find_best_row_and_fill_out() {
+    LOG4("Allocating a way");
+    way_group *wa = exact_match_ways[0];
+    //FIXME: Obviously the mask has to change
+    vector<std::pair<int, int>> available_rams = available_SRAMs_per_row(0x3ff, wa->ta, 0);
+    //No memories left to place anything
+    if (available_rams.size() == 0) {
+        return false;
+    }
+
+    int row = available_rams[0].first;
+    unsigned row_mask = 0;
+    vector<int> selected_cols;
+    int cols = 0;
+    for (int i = 0; i < SRAM_COLUMNS || cols < wa->depth - wa->placed; i++) {
+        //FIXME: Path change
+        if (sram_use[row][i] && ((1 << i) & 0x3ff)) {
+            row_mask |= (1 << i);
+            selected_cols.push_back(i);
+            cols++;
+        }
+    }
+
+    vector<int> selected_rows;
+    selected_rows.push_back(row);
+    //Fairly simple stuff
+    for (int i = 1; i < wa->width; i++) {
+        vector<int> matching_rows = available_match_SRAMs_per_row(row_mask, 0x3ff, row, wa->ta, i);
+        size_t j = 0;
+        while (j < matching_rows.size()) {
+            int test_row = matching_rows[j];
+            if (std::find(selected_rows.begin(), selected_rows.end(), test_row) 
+                == selected_rows.end()) {
+                matching_rows.push_back(test_row);
+                break;
+            }
+            j++; 
+        }
+        //This needs to be better checked
+        if (j == matching_rows.size()) {
+            return false;
+        }
+    }
+
+    for (size_t i = 0; i < selected_rows.size(); i++) {
+        for (size_t j = 0; j < selected_cols.size(); j++) {
+            sram_use2[selected_rows[i]][selected_cols[j]] = wa->ta;
+        }
+        sram_inuse[i] |= row_mask;
+    }
+
+    if (cols >= wa->depth - wa->placed) {
+        exact_match_ways.erase(exact_match_ways.begin());
+        if (cols == wa->depth - wa->placed)
+           return fill_out_row (wa, row);
+        else
+           return true;
+    } else {
+        wa->placed += cols;
+        return true;
+    }
 }
 
 
 bool Memories::allocate_all_exact(Memories::mem_info &mi) {
-    LOG3("Hello govna");
-    std::sort(exact_tables.begin(), exact_tables.end(),
-              [=](const Memories::table_alloc *a, const Memories::table_alloc *b) {
-         
-         int t;
-
-         if ((t = a->table->ways[0].width - b->table->ways[0].width) != 0) return t > 0;
-        
-         if ((t = a->entries - b->entries) != 0) return t > 0;
-
-         return true;
-    });
-    
-    int average_depth = (mi.match_RAMs + 11) / 12;
-    for (auto *ta : exact_tables) {
-        allocate_exact(ta, mi, average_depth);
+    break_exact_tables_into_ways();
+    while (exact_match_ways.size() > 0) {
+        find_best_row_and_fill_out();
     }
-
-    
-   
     return true;
 }
 
