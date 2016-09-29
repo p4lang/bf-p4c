@@ -69,11 +69,16 @@ class ElimUnused::Headers : public PardeTransform, ThreadVisitor {
             } else {
                 BUG("unexpected primitive %s in parse state %s", prim, state->name);
                 return match; } }
-        LOG1("eliminating match from " << state->name);
-        return nullptr; }
+        LOG1("removing statements from match in " << state->name);
+        match->stmts.clear();
+        match->shift = 0;
+        return match; }
 
     IR::Tofino::ParserState *postorder(IR::Tofino::ParserState *state) override {
-        if (!state->match.empty()) return state;
+        for (auto match : state->match)
+            if (match->next || match->except || match->shift ||
+                !match->stmts.empty())
+                return state;
         LOG1("eliminating parser state " << state->name);
         return nullptr; }
 
