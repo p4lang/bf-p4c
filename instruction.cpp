@@ -303,7 +303,7 @@ struct AluOP : public Instruction {
 };
 
 static AluOP::Decode opADD("add", 0x23e, true), opADDC("addc", 0x2be, true),
-                     opSUB("sub", 0x33e), opSUBC("sub", 0x3be),
+                     opSUB("sub", 0x33e), opSUBC("subc", 0x3be),
                      opSADDU("saddu", 0x03e), opSADDS("sadds", 0x07e),
                      opSSUBU("ssubu", 0x0be), opSSUBS("ssubs", 0x0fe),
                      opMINU("minu", 0x13e, true), opMINS("mins", 0x17e, true),
