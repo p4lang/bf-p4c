@@ -36,7 +36,7 @@ action do_nothing(){
 }
 
 action action_0(param0) {
-    subtract(pkt.field_a_32, pkt.field_a_32, param0);
+    subtract(pkt.field_a_32, param0, pkt.field_a_32);
 }
 
 action action_1() {

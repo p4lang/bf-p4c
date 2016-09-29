@@ -38,7 +38,9 @@ blackbox stateful_alu flowlet_alu {
 }
 
 action flowlet_lookup() {
+#ifndef __TARGET_BMV2__
     flowlet_alu.execute_stateful_alu_from_hash(flowlet_hash);
+#endif
 }
 #endif /* HARLYN */
 

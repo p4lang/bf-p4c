@@ -120,14 +120,15 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         &defuse,
         new AddBridgedMetadata(phv, defuse),
         new AddMetadataShims,
-        new InstructionSelection(phv),
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),
         &phv,
+        new VisitFunctor([&phv]() { phv.allocatePOV(); }),
+        new CopyHeaderEliminator,    // needs to be after POV alloc and before InstSel
+        new InstructionSelection(phv),
 
         phv_analysis,   // perform cluster analysis after last &phv pass
 
-        new VisitFunctor([&phv]() { phv.allocatePOV(); }),
         new CanonGatewayExpr,   // must be before TableLayout?  or just TablePlacement?
         new SplitComplexGateways(phv),
         new CheckGatewayExpr(phv),
@@ -135,7 +136,6 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new TableFindSeqDependencies,
         new FindDependencyGraph(&deps),
         verbose ? new VisitFunctor([&deps]() { std::cout << deps; }) : nullptr,
-        new CopyHeaderEliminator,
         new TypeCheck,
         new SpreadGatewayAcrossSeq,
         new CheckTableNameDuplicate,

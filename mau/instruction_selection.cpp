@@ -204,7 +204,7 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
             return makeDepositField(prim, mask);
         else
             return new IR::MAU::Instruction(prim->srcInfo, "bitmask-set", &prim->operands);
-    } else if (prim->name == "add" || prim->name == "sub") {
+    } else if (prim->name == "add" || prim->name == "sub" || prim->name == "subtract") {
         if (prim->operands.size() != 3) {
             error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);
         } else if (!phv.field(dest)) {
@@ -242,7 +242,24 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
             return new IR::MAU::Instruction(prim->srcInfo, "add", dest, dest, (-*k).clone());
         else
             return new IR::MAU::Instruction(prim->srcInfo, "sub", dest, dest, prim->operands[1]);
-    }
+    } else if (prim->name == "bit_and" || prim->name == "bit_andca" || prim->name == "bit_andcb" ||
+               prim->name == "bit_nand" || prim->name == "bit_or" || prim->name == "bit_orca" ||
+               prim->name == "bit_orcb" || prim->name == "bit_xor" || prim->name == "bit_xnor") {
+        if (prim->operands.size() != 3) {
+            error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);
+        } else if (!phv.field(dest)) {
+            error("%s: destination of %s must be a field", prim->srcInfo, prim->name);
+        } else if (!checkSrc1(prim->operands[1])) {
+            error("%s: source 1 of %s invalid", prim->srcInfo, prim->name);
+        } else if (!checkSrc1(prim->operands[2])) {
+            error("%s: source 2 of %s invalid", prim->srcInfo, prim->name);
+        } else if (!checkPHV(prim->operands[1]) && !checkPHV(prim->operands[2])) {
+            error("%s: one source of %s must be a simple field", prim->srcInfo, prim->name);
+        } else {
+            auto rv = new IR::MAU::Instruction(*prim);
+            rv->name = rv->name + 4;  // strip off bit_ prefix
+            return rv; } }
+    WARNING("unhandled in InstSel: " << *prim);
     return prim;
 }
 

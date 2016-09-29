@@ -417,7 +417,7 @@ parser parse_icmp {
 
 header tcp_t tcp;
 
-#ifndef HARLYN
+#if defined(__TARGET_BMV2__) || !defined(HARLYN)
 field_list tcp_checksum_list {
     ipv4.srcAddr;
     ipv4.dstAddr;
