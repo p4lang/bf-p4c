@@ -76,7 +76,13 @@ struct Memories {
         int depth;
         int width;
         int placed;
-        explicit way_group (table_alloc *t, int d, int w) : ta(t), depth(d), width(w), placed(0) {}
+        int number;
+        explicit way_group (table_alloc *t, int d, int w, int n)  
+            : ta(t), depth(d), width(w), placed(0), number(n) {}
+        void dbprint(std::ostream &out) const {
+            out << ta->table->name << " way #" << number << " depth: " << depth 
+                << " width: " << width << " placed: " << placed;
+        };
     };
 
     Alloc2D<std::pair<table_alloc *, int> *, SRAM_ROWS, 2>   sram_match_bus2;
@@ -101,7 +107,7 @@ struct Memories {
     void break_exact_tables_into_ways();
     bool find_best_row_and_fill_out();
     bool fill_out_row(way_group *placed_wa, int row);
-    way_group * find_best_candidate(way_group *placed_wa, int row);
+    way_group * find_best_candidate(way_group *placed_wa, int row, int &loc);
 
 
     bool alloc2Port(cstring table_name, int entries, int entries_per_word, Use &alloc);
