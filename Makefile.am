@@ -22,6 +22,8 @@ tofino_backend_SOURCES = \
 	%reldir%/common/extract_maupipe.h \
 	%reldir%/common/field_defuse.cpp \
 	%reldir%/common/field_defuse.h \
+	%reldir%/common/header_stack.cpp \
+	%reldir%/common/header_stack.h \
 	%reldir%/common/remap_intrin.cpp \
 	%reldir%/common/remap_intrin.h \
 	%reldir%/common/param_binding.cpp \
@@ -45,6 +47,7 @@ tofino_backend_SOURCES = \
 	%reldir%/mau/memories.h \
 	%reldir%/mau/phv_constraints.cpp \
 	%reldir%/mau/phv_constraints.h \
+	%reldir%/mau/push_pop.h \
 	%reldir%/mau/resource_estimate.cpp \
 	%reldir%/mau/resource_estimate.h \
 	%reldir%/mau/resource.h \

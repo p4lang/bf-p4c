@@ -6,6 +6,7 @@
 #include "lib/map.h"
 #include "lib/range.h"
 #include "tofino/ir/thread_visitor.h"
+#include "tofino/common/header_stack.h"
 
 namespace PHV {
 class TrivialAlloc;
@@ -75,6 +76,7 @@ class PhvInfo : public Inspector {
     map<cstring, Field>                 all_fields;
     vector<Field *>                     by_id;
     map<cstring, std::pair<int, int>>   all_headers;
+    map<cstring, std::pair<int, int>>   simple_headers;
     gress_t                             gress;
     bool                                alloc_done_ = false;
     void add(cstring, int, int, bool, bool);
@@ -121,7 +123,7 @@ class PhvInfo : public Inspector {
     iterator<vector<Field *>::iterator> end() { return by_id.end(); }
     iterator<vector<Field *>::const_iterator> begin() const { return by_id.begin(); }
     iterator<vector<Field *>::const_iterator> end() const { return by_id.end(); }
-    void allocatePOV();
+    void allocatePOV(const HeaderStackInfo &);
     bool alloc_done() const { return alloc_done_; }
 };
 

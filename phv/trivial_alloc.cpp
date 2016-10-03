@@ -89,10 +89,13 @@ void PHV::TrivialAlloc::do_alloc(PhvInfo::Field *i, Regs *use, Regs *skip, int m
 
 void alloc_pov(PhvInfo::Field *i, PhvInfo::Field *pov) {
     LOG2(i->id << ": POV " << i->name << " bit=" << i->offset);
-    if (i->size != 1)
-        BUG("more than 1 bit for POV bit %s", i->name);
-    auto &sl = pov->for_bit(i->offset);
-    i->alloc.emplace_back(sl.container, 0, i->offset - sl.field_bit, 1);
+    int width = i->size, use = 0;
+    while ((use = width) > 0) {
+        auto &sl = pov->for_bit(i->offset + width - 1);
+        if (i->offset < sl.field_bit)
+            use -= sl.field_bit - i->offset;
+        width -= use;
+        i->alloc.emplace_back(sl.container, width, i->offset + width - sl.field_bit, use); }
     LOG3("   allocated " << i->alloc << " for " << i->name);
 }
 

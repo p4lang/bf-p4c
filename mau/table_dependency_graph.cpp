@@ -74,14 +74,17 @@ class UpdateAccess : public MauInspector , P4WriteContext {
         return false; }
     void postorder(const IR::Primitive *prim) {
         if (prim->isOutput(0)) {
+            auto dest = prim->operands[0];
             cstring name;
-            if (auto f = prim->operands[0]->to<IR::Member>()) {
+            if (auto sl = dest->to<IR::Slice>())
+                dest = sl->e0;
+            if (auto f = dest->to<IR::Member>()) {
                 name = f->toString();
-            } else if (auto i = prim->operands[0]->to<IR::HeaderStackItemRef>()) {
+            } else if (auto i = dest->to<IR::HeaderStackItemRef>()) {
                 name = i->toString();
-            } else if (auto i = prim->operands[0]->to<IR::NamedRef>()) {
+            } else if (auto i = dest->to<IR::NamedRef>()) {
                 name = i->toString();
-            } else if (prim->operands[0]->to<IR::ConcreteHeaderRef>()) {
+            } else if (dest->to<IR::ConcreteHeaderRef>()) {
                 // FIXME -- do something
                 return;
             } else {

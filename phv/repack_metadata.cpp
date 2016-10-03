@@ -3,7 +3,7 @@
 
 void repack_metadata(PhvInfo &phv) {
     for (auto &field : phv) {
-        if (!field.metadata) continue;
+        if (!field.metadata || field.pov) continue;
         std::map<PHV::Container, uint64_t>      uses;
         bool                                    repack = false;
         for (auto &alloc : field.alloc) {
