@@ -25,11 +25,11 @@ bool Memories::analyze_tables(mem_info &mi) {
 
     mi.clear();
     for (auto *ta : tables) {
-        LOG3 ("Entries is " << ta->entries);
+        LOG3 ("Entries is " << ta->provided_entries);
         //TODO: Ask Chris about this?
-        if (ta->entries == -1 || ta->entries == 0) continue;
+        if (ta->provided_entries == -1 || ta->provided_entries == 0) continue;
         auto table = ta->table;
-        int entries = ta->entries;
+        int entries = ta->provided_entries;
         if (!table->layout.ternary) {
             LOG3("It ain't ternary");
             exact_tables.push_back(ta);
@@ -40,9 +40,30 @@ bool Memories::analyze_tables(mem_info &mi) {
             LOG3("depth is " << depth);
             mi.match_bus_min += width;
             mi.match_RAMs += depth;
+        } else {
+           ternary_tables.push_back(ta);
+           mi.ternary_tables++;
+           int bytes = table->layout.match_bytes;
+           int TCAMs_needed = 0;
+           while (bytes > 11) {
+               bytes -= 11;
+               TCAMs_needed += 2;
+           }
+
+           if (bytes == 11)
+               TCAMs_needed += 3;
+           else if (bytes > 5)
+               TCAMs_needed += 2;
+           else
+               TCAMs_needed += 1;
+
+           int depth = (entries + 511)/512U;
+           mi.ternary_TCAMs += TCAMs_needed * depth;
+           ta->calculated_entries = depth * 512;
         }
         for (auto at : table->attached) {
             if (at->is<IR::MAU::ActionData>()) {
+                action_tables.push_back(ta);
                 mi.action_tables++;
                 int sz = ceil_log2(table->layout.action_data_bytes) + 3;
                 int width = sz > 7 ? 1 << (sz - 7) : 1;
@@ -59,37 +80,12 @@ bool Memories::analyze_tables(mem_info &mi) {
 
     if (mi.match_tables > 16 || mi.match_bus_min > 16 || mi.tind_tables > 8 
         || mi.action_tables > 16 || mi.action_bus_min > 16 
-        || mi.match_RAMs + mi.action_RAMs + mi.tind_RAMs > 80) {
+        || mi.match_RAMs + mi.action_RAMs + mi.tind_RAMs > 80
+        || mi.ternary_tables > 8 || mi.ternary_TCAMs > 24) {
         return false;
     }
     return true;    
 }
-
-/*
-bool Memories::analyze_exact_match () {
-
-    std::sort(exact_tables.begin(), exact_tables.end(),
-              [=](const Memories::table_alloc *a, const Memories::table_alloc *b) {
-         
-         int t;
-         if ((t = a->table->ways[0].width - b->table->ways[0].width) != 0) return t > 0;
-         if ((t = a->entries - b->entries) != 0) return t > 0;
-         return true;
-    });
-
-
-    for (auto *ta : exact_tables) {
-        
-        int number_of_ways = ta->table->ways.size();
-        int width = ta->table->ways[0].width;
-        int groups = ta->table->ways[0].match_groups;
-        int RAMs_needed = ((ta->entries + groups - 1U)/groups + 1023)/1024U;
-        int total_depth = (RAMs_needed + groups - 1) / groups;
-        vector<int> way_sizes = way_size_calculator(number_of_ways, total_depth);
-
-    }
-    
-}*/
 
 vector<int> Memories::way_size_calculator (int ways, int RAMs_needed) {
     vector<int> vec;
@@ -192,7 +188,7 @@ void Memories::break_exact_tables_into_ways() {
         int number_of_ways = ta->table->ways.size();
         int width = ta->table->ways[0].width;
         int groups = ta->table->ways[0].match_groups;
-	int RAMs_needed = ((ta->entries + groups - 1U)/groups + 1023)/1024U;
+	int RAMs_needed = ((ta->provided_entries + groups - 1U)/groups + 1023)/1024U;
         int total_depth = (RAMs_needed + width - 1) / width;
         LOG3("number of ways " << number_of_ways);
         LOG3("RAMs_needed " << RAMs_needed);
@@ -201,6 +197,7 @@ void Memories::break_exact_tables_into_ways() {
         for (size_t i = 0; i < way_sizes.size(); i++) {
             LOG3("Way sizes is " << way_sizes[i]);
             exact_match_ways.push_back(new way_group(ta, way_sizes[i], width, i));
+            ta->calculated_entries += way_sizes[i] * 1024U * groups;
         }
     }
 
@@ -210,10 +207,9 @@ void Memories::break_exact_tables_into_ways() {
          int t;
          if ((t = a->width - b->width) != 0) return t > 0;
          if ((t = (a->depth - a->placed) - (b->depth - b->placed)) != 0) return t > 0;
-         if ((t = a->ta->entries - b->ta->entries) != 0) return t < 0;
+         if ((t = a->ta->calculated_entries - b->ta->calculated_entries) != 0) return t < 0;
          return true;
-    }); 
-
+    });
 }
 
 Memories::way_group * Memories::find_best_candidate (way_group *placed_wa, int row, int &loc) {
@@ -388,6 +384,10 @@ bool Memories::find_best_row_and_fill_out() {
     }
 }
 
+void Memories::calculate_column_balance(mem_info &mi) {
+    return;
+}
+
 
 bool Memories::allocate_all_exact(Memories::mem_info &mi) {
     break_exact_tables_into_ways();
@@ -405,15 +405,111 @@ bool Memories::allocate_all() {
         return false;
     }
 
+    calculate_column_balance(mi);
+
+
     LOG3("Bout to allocate all exact");
     if (!allocate_all_exact(mi)) {
+        return false;
+    }
+
+    if (!allocate_all_ternary()) {
         return false;
     }
 
     return true;
 }
 
+//FIXME: Have to at some point coordinate this with the actual XBAR lol
+int Memories::ternary_TCAMs_necessary(table_alloc *ta, int &mid_bytes_needed) {
+    int bytes = ta->table->layout.match_bytes;
+    int TCAMs_necessary = 0;
+    while (bytes > 11) {
+        bytes -= 11;
+        mid_bytes_needed++;
+        TCAMs_necessary += 2;
+    }
 
+    if (bytes == 11)
+        TCAMs_necessary += 3;
+    else if (bytes > 5)
+        TCAMs_necessary += 2;
+    else
+        TCAMs_necessary += 1;   
+    return TCAMs_necessary;
+}
+
+bool Memories::find_ternary_stretch(int TCAMs_necessary, int mid_bytes_needed,
+                                    int &row, int &col) {
+
+    for (int j = 0; j < SRAM_COLUMNS; j++) {
+        int clear_cols = 0;
+        for (int i = 0; i < SRAM_ROWS; i++) {
+            if (tcam_use2[i][j] != nullptr) {
+                clear_cols = 0;
+                continue;
+            }
+
+            if (clear_cols == 0 && mid_bytes_needed == TCAMs_necessary / 2 
+                && TCAMs_necessary % 2 == 0 && i % 2 == 0)
+                 continue;
+            
+            clear_cols++;
+            if (clear_cols == TCAMs_necessary) {
+                col = j;
+                row = i - clear_cols + 1;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+//Allocate all ternary entries
+bool Memories::allocate_all_ternary() {
+    std::sort(ternary_tables.begin(), ternary_tables.end(),
+        [=](const table_alloc *a, table_alloc *b) {
+        int t;
+        if ((t = a->table->layout.match_bytes - b->table->layout.match_bytes) != 0) return t > 0;
+        if ((t = a->calculated_entries - b->calculated_entries) != 0) return t > 0;
+        return true;
+    });
+
+    //All of this needs to be changed on this to match up with xbar
+    for (auto *ta : ternary_tables) {
+        int mid_bytes_needed = 0;
+        int TCAMs_necessary = ternary_TCAMs_necessary(ta, mid_bytes_needed);
+        int row = 0; int col = 0;
+        for (int i = 0; i < ta->calculated_entries / 512; i++) {
+            if (!find_ternary_stretch(TCAMs_necessary, mid_bytes_needed, row, col))
+                return false;
+            for (int i = row; i < row + TCAMs_necessary; i++) {
+                 tcam_use2[i][col] = ta;
+            }
+        }
+    }
+    return true;
+}
+
+void Memories::find_action_bus_users() {
+    for (auto *ta : action_tables) {
+        int sz = ceil_log2(ta->table->layout.action_data_bytes) + 3;
+        int width = sz > 7 ? 1 << (sz - 7) : 1;
+
+        int per_ram = sz > 7 ? 10 : 17 - sz;
+        int depth = ((ta->calculated_entries - 1) >> per_ram) + 1;
+
+        for (int i = 0; i < width; i++) {
+            action_bus_users.push_back(new action_group(ta, depth, i));
+        }
+    }
+}
+
+bool Memories::allocate_all_actions() {
+    find_action_bus_users();
+    return true;
+     
+}
 
 bool Memories::alloc2Port(cstring name, int entries, int entries_per_word, Use &alloc) {
     //LOG3("alloc2Port(" << name << ", " << entries << ", " << entries_per_word << ")");

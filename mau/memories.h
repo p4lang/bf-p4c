@@ -37,10 +37,14 @@ struct Memories {
         int action_tables;
         int action_bus_min;
         int action_RAMs;
+        int ternary_tables;
+        int ternary_TCAMs;
+        
 
         void clear() {
             match_tables = 0; match_bus_min = 0; match_RAMs = 0; tind_tables = 0;
             tind_RAMs = 0; action_tables = 0; action_bus_min = 0; action_RAMs = 0;
+            ternary_tables = 0; ternary_TCAMs = 0;
         }
     };
 
@@ -66,9 +70,10 @@ struct Memories {
         const IR::MAU::Table *table;
         const IXBar::Use match_ixbar;
         map<cstring, Memories::Use> alloc;
-        int entries;
+        int provided_entries;
+        int calculated_entries;
         explicit table_alloc(const IR::MAU::Table *t, const IXBar::Use mi, int e) 
-                : table(t), match_ixbar(mi), entries(e) {}
+                : table(t), match_ixbar(mi), provided_entries(e), calculated_entries(0) {}
     };
 
     struct way_group {
@@ -85,17 +90,31 @@ struct Memories {
         };
     };
 
+    struct action_group {
+        table_alloc *ta;
+        int depth;
+        int placed;
+        int number;
+        explicit action_group (table_alloc *t, int d, int n) : ta(t), depth(d), placed(0), number(n) {}
+    };
+
     Alloc2D<std::pair<table_alloc *, int> *, SRAM_ROWS, 2>   sram_match_bus2;
     Alloc2D<std::pair<table_alloc *, int> *, SRAM_ROWS, 2>   sram_search_bus2;
     Alloc2D<table_alloc *, SRAM_ROWS, SRAM_COLUMNS>          sram_use2;
+    Alloc2D<table_alloc *, TCAM_ROWS, TCAM_COLUMNS>          tcam_use2;
+
 
     vector<table_alloc *>      tables;
     vector<table_alloc *>      exact_tables;
+    vector<table_alloc *>      ternary_tables;
+    vector<table_alloc *>      action_tables;
     vector<way_group *>        exact_match_ways;
+    vector<action_group *>     action_bus_users;
 
     void clear();
     void add_table(const IR::MAU::Table *t, const IXBar::Use mi,  int entries);
     bool analyze_tables(mem_info &mi);
+    void calculate_column_balance(mem_info &mi);
     bool allocate_all();
     bool allocate_all_exact(mem_info &mi);
     bool allocate_exact(table_alloc *ta, mem_info &mi, int average_depth);    
@@ -109,7 +128,14 @@ struct Memories {
     bool fill_out_row(way_group *placed_wa, int row);
     way_group * find_best_candidate(way_group *placed_wa, int row, int &loc);
 
+    bool allocate_all_ternary();
+    int ternary_TCAMs_necessary(table_alloc *ta, int &mid_bytes_needed);
+    bool find_ternary_stretch(int TCAMs_necessary, int mid_bytes_needed, int &row, int &col);
 
+    bool allocate_all_actions();
+    void find_action_bus_users();   
+
+ 
     bool alloc2Port(cstring table_name, int entries, int entries_per_word, Use &alloc);
     bool allocActionRams(cstring table_name, int width, int depth, Use &alloc);
     bool allocBus(cstring table_name, Alloc2Dbase<cstring> &bus_use, Use &alloc);
