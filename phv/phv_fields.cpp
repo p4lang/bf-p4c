@@ -222,7 +222,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &s
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo::Field *fld) {
     if(fld)
-        out << fld->name << '[' << fld->size << ']';
+        out << fld->name << '[' << fld->size << ']' << '{' << fld->phv_use_lo << ".." << fld->phv_use_hi << '}';
     else
         out << "-f-";	// fld is nil
     return out;
