@@ -151,7 +151,7 @@ cpplint_FILES += $(tofino_backend_SOURCES)
 -include newpa-tofinotests.mk
 
 
-tofinotests.mk: $(wildcard \
+tofinotests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
    $(srcdir)/testdata/p4_14_samples/*.p4 \
    $(srcdir)/testdata/p4_14_samples/switch_*/switch.p4 \
    $(srcdir)/%reldir%/v1_2_test/*.p4 \
@@ -165,7 +165,7 @@ tofinotests.mk: $(wildcard \
 #p4-16-tofinotests.mk: $(wildcard $(srcdir)/testdata/p4_16_samples/*.stf)
 #	@$(GENTESTS) $(srcdir) tofino $(srcdir)/%reldir%/runtest $(^:%.stf=%.p4) >$@ || ( rm $@ && false )
 
-newpa-tofinotests.mk: $(wildcard \
+newpa-tofinotests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
    $(srcdir)/testdata/p4_14_samples/*.stf \
    $(srcdir)/%reldir%/v1_2_test/*.stf \
    $(srcdir)/%reldir%/v1_samples/*.stf)
@@ -175,14 +175,14 @@ newpa-tofinotests.mk: $(wildcard \
 # These test input programs depend on Tofino in some way.
 
 # Exercise v12test back-end on Tofino-specific programs
-tofino-p14_to_16_tests.mk: $(wildcard \
+tofino-p14_to_16_tests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
     $(srcdir)/%reldir%/v1_samples/*.p4 \
     $(srcdir)/%reldir%/v1_samples/switch_*/switch.p4) \
     $(srcdir)/%reldir%/v1_samples
 	@$(GENTESTS) $(srcdir) p14_to_16 $(srcdir)/%reldir%/test-v12-sample.sh $^ >$@ || ( rm $@ && false )
 
 # Exercise bmv2 back-end on Tofino-specific programs
-tofino-bmv2tests.mk: $(wildcard \
+tofino-bmv2tests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
     $(srcdir)/%reldir%/v1_samples/*.p4 \
     $(srcdir)/%reldir%/v1_samples/switch_*/switch.p4) \
     $(srcdir)/%reldir%/v1_samples
@@ -284,6 +284,8 @@ XFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/basic_routing.p4.test
 
 # Incorrect data layour in ixbar -- fails to get entire 128-bit value in one group.
 # intermittent failure?
-XFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/07-MultiProtocol.p4.test
 IFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/07-MultiProtocol.p4.test
+
+# Sometimes splits ternary match data across two groups when it shouldn't
+IFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/hitmiss.p4.test
 
