@@ -13,10 +13,11 @@ void Memories::clear() {
     stateful_bus.clear();
 }
 
-void Memories::add_table(const IR::MAU::Table *t, const IXBar::Use mi, int entries) {
+void Memories::add_table(const IR::MAU::Table *t, const IXBar::Use &mi, 
+                         map<cstring, Memories::Use> &mu, int entries) {
     if (t != nullptr) {
         LOG3("Adding a table " << t->name);
-        auto *ta = new table_alloc(t, mi, entries);
+        auto *ta = new table_alloc(t, mi, mu, entries);
         tables.push_back(ta);
     }
 }
@@ -72,6 +73,7 @@ bool Memories::analyze_tables(mem_info &mi) {
                 int depth = ((entries - 1) >> per_ram) + 1;
                 mi.action_RAMs += depth;
             } else if (at->is<IR::MAU::TernaryIndirect>()) {
+                tind_tables.push_back(ta);
                 mi.tind_tables++;
                 mi.tind_RAMs += (entries + 1023U) / 1024U; 
             }
@@ -149,7 +151,7 @@ vector<int> Memories::available_match_SRAMs_per_row(unsigned row_mask, unsigned 
             (first_bus->first == ta && first_bus->second == width_sect) ||
             (second_bus->first == ta && second_bus->second == width_sect))) continue;
 
-        if (__builtin_popcount((row_mask ^ sram_inuse[i]) & row_mask) == __builtin_popcount(row_mask))
+        if (__builtin_popcount(row_mask & ~sram_inuse[i]) == __builtin_popcount(row_mask))
             matching_rows.push_back(i); 
     }
 
@@ -159,8 +161,8 @@ vector<int> Memories::available_match_SRAMs_per_row(unsigned row_mask, unsigned 
               [=] (const int a, const int b) {
 
         int t;
-        if ((t = __builtin_popcount(sram_inuse[a] & total_mask) - 
-                 __builtin_popcount(sram_inuse[b] & total_mask)) != 0)
+        if ((t = __builtin_popcount(~sram_inuse[a] & total_mask) - 
+                 __builtin_popcount(~sram_inuse[b] & total_mask)) != 0)
             return t < 0;
         
         std::pair<table_alloc *, int> *first_bus, *second_bus;
@@ -417,6 +419,17 @@ bool Memories::allocate_all() {
         return false;
     }
 
+    if (!allocate_all_tind()) {
+        return false;
+    }
+
+    if (!allocate_all_action()) {
+        return false;
+    }
+
+    if (!allocate_all_gw()) {
+        return false;
+    }
     return true;
 }
 
@@ -491,6 +504,29 @@ bool Memories::allocate_all_ternary() {
     return true;
 }
 
+
+bool Memories::allocate_all_tind() {
+    std::sort(tind_tables.begin(), tind_tables.end(),
+        [=] (const table_alloc *a, const table_alloc *b) {
+        int t;
+        if ((t = a->calculated_entries - b->calculated_entries) != 0) return t > 0;
+        return true;
+    });
+
+    int left_mask = 0xf;
+    for (int i = 0; i < SRAM_ROWS; i++) {
+        int RAMs_available = __builtin_popcount(left_mask & ~sram_inuse[i]);
+        if (RAMs_available == 0) continue;
+        
+        for (int i = 0; i < SRAM_ROWS; i++) {
+            
+        }         
+          
+    }
+
+    return true;
+}
+
 void Memories::find_action_bus_users() {
     for (auto *ta : action_tables) {
         int sz = ceil_log2(ta->table->layout.action_data_bytes) + 3;
@@ -505,10 +541,192 @@ void Memories::find_action_bus_users() {
     }
 }
 
-bool Memories::allocate_all_actions() {
+void Memories::find_action_candidates(int row, int mask, action_group **a_group, unsigned &a_mask,
+                                      int &a_index, action_group **oflow_group,
+                                      unsigned &oflow_mask, int &oflow_index) {
+    if (action_bus_users.empty())
+        return;
+
+    int RAMs_available = __builtin_popcount(mask & ~sram_inuse[row]);
+
+    bool on_right_side = false;
+    if (mask == 0x3f0)
+        on_right_side = true;
+
+    action_group *best_fit = nullptr;
+    int best_fit_index = -1;
+    action_group *over_fit = nullptr;
+    int over_fit_index = -1;
+
+    int i = 0;
+    int max = 0;
+    for (auto *ag : action_bus_users) {
+        if (ag->left_to_place() <= RAMs_available && ag->left_to_place() > max) {
+            best_fit = ag;
+            best_fit_index = i;
+            max = ag->left_to_place();
+        }
+        i++;
+    }
+
+
+    i = 0;
+    for (auto *ag : action_bus_users) {
+        if (ag->left_to_place() > RAMs_available) {
+            over_fit = ag;
+            over_fit_index = i;
+            break;
+        }
+        i++;
+    }
+
+    //FIXME: Ignoring overflow for the time being
+    //vector <action_group *> overflow_candidates = candidates_for_overflow(row, on_right_side);
+    //if (overflow_candidates.empty()) {
+        if (best_fit != nullptr && best_fit->left_to_place() == RAMs_available) {
+            a_index = best_fit_index;
+            a_mask = sram_inuse[row];
+            *a_group = best_fit;
+            return;
+        }
+        if (over_fit != nullptr) {
+            a_index = over_fit_index;
+            a_mask = sram_inuse[row];
+            *a_group = over_fit;
+            return;
+        }
+
+        int RAMs_filled = 0;
+        for (int i = 0; i < 10 && RAMs_filled < RAMs_available; i++) {
+            if (((1 << i) & mask) == 0)
+                continue;
+            if ((1 << i) & ~sram_inuse[row]) {
+                a_mask |= (1 << i);
+                RAMs_filled++;
+            }
+        }
+        a_index = best_fit_index;
+        *a_group = best_fit;
+   /* } else {
+
+    }*/
+
+}
+
+vector<Memories::action_group *> Memories::candidates_for_overflow(int row, bool on_right_side) {
+    vector<action_group *> overflow_candidates;
+
+    for (int i = row - 1; i > 0 && i > row - 5;  i--) {
+        for (int j = 0; j < 2; j++) {
+            if (action_data_bus2[i][j] != nullptr && !action_data_bus2[i][j]->all_placed()) {
+                overflow_candidates.push_back(action_data_bus2[i][j]);
+            }
+            
+            if (vert_overflow_bus2[i - 1] != nullptr && !vert_overflow_bus2[i - 1]->all_placed()) {
+                if (i != row - 5) {
+                    overflow_candidates.push_back(vert_overflow_bus2[i - 1]);
+                }
+                break;
+            }
+        }
+    }
+
+    if (!on_right_side && action_data_bus2[row][1] != nullptr 
+                       && !action_data_bus2[row][1]->all_placed()) {
+        overflow_candidates.push_back(action_data_bus2[row][1]);
+    }
+
+    return overflow_candidates; 
+}
+
+
+bool Memories::allocate_all_action() {
     find_action_bus_users();
+    std::sort(action_bus_users.begin(), action_bus_users.end(),
+        [=](const action_group *a, action_group *b) {
+        int t;
+        if ((t = a->depth - b->depth) != 0) return t > 0;
+        return a->number < b->number;
+    });
+
+
+
+    
+    for (int i = 0; i < SRAM_ROWS; i++) {
+        for (int j = 0; j < 2; j++) {
+            int mask = 0;
+            if (j == 0) 
+                mask = 0x3f0;
+            else
+                mask = 0xf;
+
+            action_group **a_group = nullptr;
+            action_group **oflow_group = nullptr;
+            unsigned a_mask = 0; unsigned oflow_mask = 0;
+            int a_index = 0; int oflow_index = 0;
+
+            find_action_candidates(i, mask, a_group, a_mask, a_index,
+                                   oflow_group, oflow_mask, oflow_index);
+            /*
+            int placed = 0;
+            int added_mask = 0;
+            int SRAMs_filled = 0;
+            for (int k = 0; k < 10; k++) {
+                if ((1 << k) & mask == 0)
+                    continue;
+                //Nothing currently at that place, put the table in
+                if (sram_use2[row][k] != nullptr) {
+                    sram_use2[row][k] = ta;
+                    added_mask |= (1 << k);
+                    SRAMs_filled++;
+                }
+            }
+            sram_inuse[row] |= added_mask;
+            if (SRAMs_filled < ag->depth - ag->placed) {
+                ag->placed += SRAMs_filled;
+            } else {
+                action_bus_users.erase(action_group_users.begin() + index);
+            }
+            */
+            if (a_group == nullptr && oflow_group == nullptr)
+                return true;
+
+            bool action_group_removed = false;
+            for (int k = 0; k < 10; k++) {
+                if (((1 << k) & mask) == 0)
+                    continue;
+
+                if ((1 << k) & a_mask)
+                    sram_use2[i][k] = (*a_group)->ta;
+                else if ((1 << k) & oflow_mask)
+                    sram_use2[i][k] = (*oflow_group)->ta;
+            }
+            sram_inuse[i] |= a_mask | oflow_mask;
+            if (a_group != nullptr) {
+                (*a_group)->placed += __builtin_popcount(a_mask);
+                if ((*a_group)->all_placed()) {
+                    action_bus_users.erase(action_bus_users.begin() + a_index);
+                    action_group_removed = true;
+                }
+            }
+
+            if (oflow_group != nullptr) {
+                (*oflow_group)->placed += __builtin_popcount(oflow_mask);
+                if (action_group_removed && a_index < oflow_index) {
+                    oflow_index--;
+                }
+                action_bus_users.erase(action_bus_users.begin() + oflow_index);
+            }
+        }
+    }
+
+    if (!action_bus_users.empty())
+        return false; 
     return true;
-     
+}
+
+bool Memories::allocate_all_gw() {
+    return true;
 }
 
 bool Memories::alloc2Port(cstring name, int entries, int entries_per_word, Use &alloc) {
@@ -562,7 +780,7 @@ bool Memories::allocActionRams(cstring name, int width, int depth, Use &alloc) {
 }
 
 bool Memories::allocBus(cstring name, Alloc2Dbase<cstring> &bus_use, Use &alloc) {
-    for (int row : Range(0, bus_use.rows()-1)) {
+    for  (int row : Range(0, bus_use.rows()-1)) {
         for (int bus : Range(0, bus_use.cols()-1)) {
             if (bus_use[row][bus]) continue;
             bus_use[row][bus] = name;
