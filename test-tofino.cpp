@@ -104,6 +104,13 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     PassManager *phv_analysis = new PassManager({
         &cluster, 
         new VisitFunctor([&phv, &defuse, &cluster]() {
+            LOG3(phv);						// all Fields
+            LOG3(cluster);					// all Clusters
+            //
+            Cluster_PHV_Requirements phv_req(cluster);		// Cluster PHV requirements
+            LOG3(phv_req);
+            PHV_MAU_Group_Assignments phv_mau_grps(phv_req);	// PHV MAU Group assignments
+            LOG3(phv_mau_grps);
 	}),
     });
 

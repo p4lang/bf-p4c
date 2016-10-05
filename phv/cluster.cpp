@@ -187,21 +187,6 @@ void Cluster::end_apply()
         dst_map_i.erase(fp);						// erase map key
     }
     sanity_check_clusters_unique("end_apply..");
-    //
-    PHV_Cluster_Requirements phv_req(*this);
-    //
-    PHV_MAU_Group_Assignments phv_mau_grps(phv_req);
-    //
-    // output logs
-    //
-    // all fields
-    LOG3(phv_i);
-    // all clusters
-    LOG3(*this);
-    // phv requirements
-    LOG3(phv_req);
-    // phv mau group assignments
-    LOG3(phv_mau_grps);
 }//end_apply
 
 //***********************************************************************************
@@ -352,32 +337,32 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg)
 
 //***********************************************************************************
 //
-// PHV_Cluster_Requirements::PHV_Cluster_Requirements constructor
+// Cluster_PHV_Requirements::Cluster_PHV_Requirements constructor
 // 
 //***********************************************************************************
 
-PHV_Cluster_Requirements::PHV_Cluster_Requirements(Cluster &c) : cluster_i(c)
+Cluster_PHV_Requirements::Cluster_PHV_Requirements(Cluster &c) : cluster_i(c)
 {
     // create PHV Requirements from clusters
     if(! cluster_i.dst_map().size())
     {
-        WARNING("*****PHV_Cluster_Requirements called w/ 0 clusters******");
+        WARNING("*****Cluster_PHV_Requirements called w/ 0 clusters******");
     }
     //
     for (auto p: Values(cluster_i.dst_map()))
     {
-        PHV_Cluster *m = new PHV_Cluster(p);
-        PHV_Cluster_i[m->container_width()].push_back(m);
+        Cluster_PHV *m = new Cluster_PHV(p);
+        Cluster_PHV_i[m->width()].push_back(m);
     }
     //
     // cluster PHV requirement = [qty, width]
     // sort based on width requirement, greatest width first
     // for each width sort based on quantity requirement
     //
-    for (auto &p: Values(PHV_Cluster_i))
+    for (auto &p: Values(Cluster_PHV_i))
     {
-        std::sort(p.begin(), p.end(), [](PHV_Cluster *l, PHV_Cluster *r) {
-            if(l->container_width() == r->container_width())
+        std::sort(p.begin(), p.end(), [](Cluster_PHV *l, Cluster_PHV *r) {
+            if(l->width() == r->width())
             {
                 if(l->num_containers() == r->num_containers())
                 {
@@ -393,22 +378,22 @@ PHV_Cluster_Requirements::PHV_Cluster_Requirements(Cluster &c) : cluster_i(c)
                 }
                 return l->num_containers() > r->num_containers();
             }
-            return l->container_width() > r->container_width();
+            return l->width() > r->width();
         });
     }
-}//PHV_Cluster_Requirements
+}//Cluster_PHV_Requirements
 
 //***********************************************************************************
 //
-// PHV_Cluster::PHV_Cluster constructor
+// Cluster_PHV::Cluster_PHV constructor
 // 
 //***********************************************************************************
 
-PHV_Cluster::PHV_Cluster(std::set<const PhvInfo::Field *> *p) : cluster_vec_i(p->begin(), p->end())
+Cluster_PHV::Cluster_PHV(std::set<const PhvInfo::Field *> *p) : cluster_vec_i(p->begin(), p->end())
 {
     if(!p)
     {
-        WARNING("*****PHV_Cluster called w/ nullptr cluster_set******");
+        WARNING("*****Cluster_PHV called w/ nullptr cluster_set******");
     }
     if((std::adjacent_find (cluster_vec_i.begin(), cluster_vec_i.end(),
 		[](const PhvInfo::Field *l, const PhvInfo::Field *r) { return l->size != r->size; }))
@@ -433,17 +418,17 @@ PHV_Cluster::PHV_Cluster(std::set<const PhvInfo::Field *> *p) : cluster_vec_i(p-
     // container width
     if(max_width_i > 16)
     {
-        container_width_i = PHV_Cluster_Requirements::PHV_width::b32;
+        width_i = PHV_Container::PHV_Word::b32;
     }
     else if(max_width_i > 8) 
     {
-        container_width_i = PHV_Cluster_Requirements::PHV_width::b16;
+        width_i = PHV_Container::PHV_Word::b16;
     }
     else
     {
-        container_width_i = PHV_Cluster_Requirements::PHV_width::b8;
+        width_i = PHV_Container::PHV_Word::b8;
     }
-    // num containers of container_width
+    // num containers of width
     num_containers_i = 0;
     for(auto pfield: cluster_vec_i)
     {
@@ -452,9 +437,9 @@ PHV_Cluster::PHV_Cluster(std::set<const PhvInfo::Field *> *p) : cluster_vec_i(p-
         // sharing needs analyses:
         // (i)  container single-write table interference
         // (ii) surround interference 
-        num_containers_i += pfield->size/(int)container_width_i + (pfield->size%(int)container_width_i? 1 : 0);
+        num_containers_i += pfield->size/(int)width_i + (pfield->size%(int)width_i? 1 : 0);
     }
-}//PHV_Cluster
+}//Cluster_PHV
 
 //***********************************************************************************
 //
@@ -462,22 +447,22 @@ PHV_Cluster::PHV_Cluster(std::set<const PhvInfo::Field *> *p) : cluster_vec_i(p-
 // 
 //***********************************************************************************
 
-PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(PHV_Cluster_Requirements &phv_r) : phv_requirements_i(phv_r)
+PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &phv_r) : phv_requirements_i(phv_r)
 {
     // create PHV Group Assignments from PHV Requirements
-    if(! phv_requirements_i.phv_cluster_map().size())
+    if(! phv_requirements_i.cluster_phv_map().size())
     {
         WARNING("*****PHV_MAU_Group_Assignments called w/ 0 Requirements******");
     }
+    // create MAU Groups
     for (auto &x: num_groups_i)
     {
         for (int i=1; i <= x.second; i++)
         {
             PHV_MAU_Group *g = new PHV_MAU_Group(x.first, i);
-            PHV_MAU_i[g->container_width()].push_back(g);
+            PHV_MAU_i[g->width()].push_back(g);
         }
     }
-    //
 }//PHV_MAU_Group_Assignments
 
 //***********************************************************************************
@@ -486,103 +471,34 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(PHV_Cluster_Requirements &p
 // 
 //***********************************************************************************
 
-PHV_MAU_Group::PHV_MAU_Group(PHV_Cluster_Requirements::PHV_width w, int n) : container_width_i(w), group_number_i(n)
+PHV_MAU_Group::PHV_MAU_Group(PHV_Container::PHV_Word w, int n) : width_i(w), number_i(n)
 {
+    // create containers within group
+    for (int i=1; i <= (int)Containers::MAX; i++)
+    {
+        PHV_Container *c = new PHV_Container(width_i, i);
+        phv_containers_i.push_back(c);
+    }
 }//PHV_MAU_Group
+
+//***********************************************************************************
+//
+// PHV_Container::PHV_Container constructor
+// 
+//***********************************************************************************
+
+PHV_Container::PHV_Container(PHV_Word w, int n) : width_i(w), number_i(n)
+{
+}//PHV_Container
 
 //***********************************************************************************
 //
 // output stream <<
 // 
 //***********************************************************************************
-
-std::ostream &operator<<(std::ostream &out, PHV_Cluster *m)
-{
-    if(m)
-    {
-        out << "[<" << m->cluster_vec().size() << ':';
-        if(m->uniform_width())
-        {
-            out << m->max_width();
-        }
-        else
-        {
-            for(auto f: m->cluster_vec())
-            {
-                out << '_' << f->size;
-            }
-        }
-        out << ">{" << m->num_containers() << '*' << (int)(m->container_width()) << "}](" << std::endl
-            << m->cluster_vec()
-            << ')' << std::endl;
-    }
-    else
-    {
-        out << "-m-";
-    }
-
-    return out;
-}
-
-std::ostream &operator<<(std::ostream &out, std::vector<PHV_Cluster *> &phv_cluster_vec)
-{
-    out << "++++++++++ #clusters=" << phv_cluster_vec.size() << " ++++++++++" << std::endl;
-    for (auto m: phv_cluster_vec)
-    {
-        out << m;
-    }
-
-    return out;
-}
-
-std::ostream &operator<<(std::ostream &out, PHV_Cluster_Requirements &phv_requirements)
-{
-    out << "++++++++++ PHV Requirements ++++++++++" << std::endl;
-    for (auto &p: Values(phv_requirements.phv_cluster_map()))
-    {
-        out << p;
-    } 
-
-    return out;
-}
-
-std::ostream &operator<<(std::ostream &out, PHV_MAU_Group *g)
-{
-    if(g)
-    {
-        out << 'G' << g->group_number() << '[' << (int)(g->container_width()) << "]:";
-    }
-    else
-    {
-        out << "-g-";
-    }
-    out << std::endl;
-
-    return out;
-}
-
-std::ostream &operator<<(std::ostream &out, std::vector<PHV_MAU_Group *> &phv_mau_vec)
-{
-    out << "++++++++++ #mau_groups=" << phv_mau_vec.size() << " ++++++++++" << std::endl;
-    for (auto m: phv_mau_vec)
-    {
-        out << m;
-    }
-
-    return out;
-}
-
-std::ostream &operator<<(std::ostream &out, PHV_MAU_Group_Assignments &phv_mau_grps)
-{
-    out << "++++++++++ PHV MAU Group Assignments ++++++++++" << std::endl;
-    for (auto &p: Values(phv_mau_grps.phv_mau_map()))
-    {
-        out << p;
-    } 
-
-    return out;
-}
-
+//
+// cluster output
+//
 std::ostream &operator<<(std::ostream &out, std::set<const PhvInfo::Field *> *cluster_set)
 {
     if(cluster_set)
@@ -626,6 +542,134 @@ std::ostream &operator<<(std::ostream &out, Cluster &cluster)
             out << ')' << std::endl;
         }
     }
+
+    return out;
+}
+//
+// cluster_phv output
+//
+std::ostream &operator<<(std::ostream &out, Cluster_PHV *m)
+{
+    if(m)
+    {
+        out << "[<" << m->cluster_vec().size() << ':';
+        if(m->uniform_width())
+        {
+            out << m->max_width();
+        }
+        else
+        {
+            for(auto f: m->cluster_vec())
+            {
+                out << '_' << f->size;
+            }
+        }
+        out << ">{" << m->num_containers() << '*' << (int)(m->width()) << "}](" << std::endl
+            << m->cluster_vec()
+            << ')' << std::endl;
+    }
+    else
+    {
+        out << "-m-";
+    }
+
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, std::vector<Cluster_PHV *> &cluster_phv_vec)
+{
+    out << "++++++++++ #clusters=" << cluster_phv_vec.size() << " ++++++++++" << std::endl;
+    for (auto m: cluster_phv_vec)
+    {
+        out << m;
+    }
+
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, Cluster_PHV_Requirements &phv_requirements)
+{
+    out << "++++++++++ PHV Requirements ++++++++++" << std::endl;
+    for (auto &p: Values(phv_requirements.cluster_phv_map()))
+    {
+        out << p;
+    } 
+
+    return out;
+}
+//
+// phv_mau_group output
+//
+std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container::content>& c)
+{
+    for (auto s: c)
+    {
+        out << s.field() << '{' << s.lo() << ".." << s.hi() << '[' << s.width() << ']';
+    }
+
+    return out;
+}
+std::ostream &operator<<(std::ostream &out, PHV_Container *c)
+{
+    if(c)
+    {
+        out << "\tC" << c->number() << '[' << (int)(c->width()) << ']'
+            << '(' << (char)(c->status()) << c->fields() << ')';
+    }
+    else
+    {
+        out << "-c-";
+    }
+    out << std::endl;
+
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container *> &phv_containers)
+{
+    for (auto m: phv_containers)
+    {
+        out << m;
+    }
+
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, PHV_MAU_Group *g)
+{
+    if(g)
+    {
+        out << 'G' << g->number() << '[' << (int)(g->width()) << ']'
+            << '(' << g->avail_containers() << ')' << std::endl
+            << g->phv_containers();
+    }
+    else
+    {
+        out << "-g-";
+    }
+    out << std::endl;
+
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, std::vector<PHV_MAU_Group *> &phv_mau_vec)
+{
+    out << "++++++++++ #mau_groups=" << phv_mau_vec.size() << " ++++++++++" << std::endl;
+    for (auto m: phv_mau_vec)
+    {
+        out << m;
+    }
+
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, PHV_MAU_Group_Assignments &phv_mau_grps)
+{
+    out << "++++++++++ PHV MAU Group Assignments ++++++++++" << std::endl;
+    for (auto &p: Values(phv_mau_grps.phv_mau_map()))
+    {
+        out << p;
+    } 
 
     return out;
 }

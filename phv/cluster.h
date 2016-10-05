@@ -11,11 +11,12 @@
 //
 //***********************************************************************************
 //
-// class Cluster computes cluster sets belonging fields
+// class Cluster computes cluster sets of fields
+// conditions:
+// must perform cluster analysis after last &phv pass 
 // input:
 // fields computed by PhvInfo phv
 // these field pointers are not part of IR, they are calculated by &phv
-// must perform cluster analysis after last &phv pass 
 // output:
 // accumulated map<field*, pointer to cluster_set of field*>
 // 
@@ -64,46 +65,63 @@ class Cluster : public Inspector
     }
 };
 //
+//
 //***********************************************************************************
 //
-// class PHV_Cluster_Requirements computes Cluster Requirements (width & number of containers)
+// class PHV_Container represents the state of a PHV container word
+// after PHV Assignment, Fields are mapped to PHV_Containers
+//
+//***********************************************************************************
+//
+//
+class PHV_Container
+{
+ public:
+    enum class PHV_Word {b32=32, b16=16, b8=8};
+    enum class Container_status {EMPTY='E', PARTIAL='P', FULL='F'};
+    struct content
+    {
+        int lo_i, hi_i;					// range of bits within container used by field
+        const PhvInfo::Field *field_i;
+        int lo() const			{ return lo_i; }
+        int hi() const			{ return hi_i; }
+        int width() const		{ return hi_i - lo_i + 1; }
+        const PhvInfo::Field *field()	{ return field_i; }
+    };
+    //
+ private:
+    PHV_Word width_i;					// width of container
+    int number_i;					// 1..16 within group
+    Container_status status_i = Container_status::EMPTY;
+    std::vector<content> fields_i;			// fields in this container
+ public:
+    PHV_Container(PHV_Word w, int n);
+    //
+    PHV_Word width()					{ return width_i; }
+    int number()					{ return number_i; }
+    Container_status status()				{ return status_i; }
+    void status(Container_status s)			{ status_i = s; }
+    std::vector<content>& fields()			{ return fields_i; }
+};
+//
+//
+//***********************************************************************************
+//
+// class Cluster_PHV_Requirements computes Cluster Requirements (width & number of containers)
 // for every computed cluster after Cluster analysis
-// class PHV_Cluster computes requirements for each cluster
+// class Cluster_PHV computes requirements for each cluster
+// conditions:
+// must perform Cluster_PHV_Requirements analysis after &cluster pass 
 // input:
 // cluster.dst_map() computed by Cluster
-// must perform PHV_Cluster_Requirements analysis after &cluster pass 
+// accumulated map<field*, pointer to cluster_set of field*>
 // output:
-// accumulated vector<PHV_Cluster*> for each of PHV_width (32,16,8-bit) widths
-// PHV_Cluster_i filled after PHV_Cluster_Requirements analysis, post pass to Cluster analysis
+// accumulated vector<Cluster_PHV*> for each of PHV_Word (32,16,8-bit) widths
 // 
 //***********************************************************************************
 //
 //
-class PHV_Cluster;
-//
-//
-class PHV_Cluster_Requirements
-{
- public:
-    enum class PHV_width {b32=32, b16=16, b8=8};
-    //
- private:
-    Cluster &cluster_i;					// reference to parent cluster
-    //
-    std::map<PHV_width, std::vector<PHV_Cluster *>> PHV_Cluster_i;
-							// sorted PHV requirements <num, width>,
-							// num decreasing then width decreasing
- public:
-    PHV_Cluster_Requirements(Cluster &c);
-    //
-    std::map<PHV_width, std::vector<PHV_Cluster *>>& phv_cluster_map()
-    {
-        return PHV_Cluster_i;
-    }
-};
-//
-//
-class PHV_Cluster
+class Cluster_PHV
 {
  private:
     std::vector<const PhvInfo::Field *> cluster_vec_i;
@@ -111,70 +129,111 @@ class PHV_Cluster
     int id_i;						// cluster id
     int max_width_i;					// max width of field in cluster
     int num_containers_i;				// number of containers
-    PHV_Cluster_Requirements::PHV_width container_width_i;	// container width in PHV group
+    PHV_Container::PHV_Word width_i;			// container width in PHV group
     bool uniform_width_i;				// widths of fields in clusters different ?
     bool sliceable_i;					// can split cluster, move-based ops only ?
     //
  public:
-    PHV_Cluster(std::set<const PhvInfo::Field *> *p);
+    Cluster_PHV(std::set<const PhvInfo::Field *> *p);
     //
     int max_width()					{ return max_width_i; }
     int num_containers()				{ return num_containers_i; }
-    PHV_Cluster_Requirements::PHV_width container_width()	{ return container_width_i; }
+    PHV_Container::PHV_Word width()			{ return width_i; }
     bool uniform_width()				{ return uniform_width_i; }
     bool sliceable()					{ return sliceable_i; }
     std::vector<const PhvInfo::Field *>& cluster_vec()	{ return cluster_vec_i; }
 };
 //
 //
-class PHV_MAU_Group;
+class Cluster_PHV_Requirements
+{
+ private:
+    Cluster &cluster_i;					// reference to parent cluster
+    //
+    std::map<PHV_Container::PHV_Word, std::vector<Cluster_PHV *>> Cluster_PHV_i;
+							// sorted PHV requirements <num, width>,
+							// num decreasing then width decreasing
+ public:
+    Cluster_PHV_Requirements(Cluster &c);
+    //
+    std::map<PHV_Container::PHV_Word, std::vector<Cluster_PHV *>>& cluster_phv_map()
+    {
+        return Cluster_PHV_i;
+    }
+};
+//
+//
+//***********************************************************************************
+//
+// class PHV_MAU_Group_Assignments computes MAU Group Assignments to clusters
+// conditions:
+// must perform PHV_MAU_Group_Assigments after Cluster_PHV_Requirements pass 
+// input:
+// cluster_phv_requirements.cluster_phv_map()
+// sorted requirements computed by Cluster_PHV_Requirements
+// accumulated vector<Cluster_PHV*> for each of PHV_Word (32,16,8-bit) widths
+// output:
+// cluster fields mapped to MAU Groups with Container Assignments
+// 
+//***********************************************************************************
+//
+//
+class PHV_MAU_Group
+{
+ public:
+    enum class Containers {MAX=16};
+    //
+ private:
+    PHV_Container::PHV_Word width_i;			// container width in PHV group
+    int number_i;					// 1..4 [32], 1..6 [16], 1..4 [8]
+    int avail_containers_i = (int)Containers::MAX;	// number of available containers
+    std::vector<PHV_Container *> phv_containers_i;	// containers in this MAU group
+    std::vector<Cluster_PHV *> cluster_phv_i;		// clusters in this MAU group
+ public:
+    PHV_MAU_Group(PHV_Container::PHV_Word w, int n);
+    //
+    PHV_Container::PHV_Word width()			{ return width_i; }
+    int number()					{ return number_i; }
+    int avail_containers()				{ return avail_containers_i; }
+    std::vector<PHV_Container *>& phv_containers()	{ return phv_containers_i; }
+};
 //
 //
 class PHV_MAU_Group_Assignments
 {
  private:
-    PHV_Cluster_Requirements &phv_requirements_i;	// reference to parent PHV Requirements
+    Cluster_PHV_Requirements &phv_requirements_i;	// reference to parent PHV Requirements
     //
-    const std::map<PHV_Cluster_Requirements::PHV_width, int> num_groups_i {
-        {PHV_Cluster_Requirements::PHV_width::b32, 4},
-        {PHV_Cluster_Requirements::PHV_width::b16, 6},
-        {PHV_Cluster_Requirements::PHV_width::b8, 4},
+    const std::map<PHV_Container::PHV_Word, int> num_groups_i
+    {
+        {PHV_Container::PHV_Word::b32, 4},
+        {PHV_Container::PHV_Word::b16, 6},
+        {PHV_Container::PHV_Word::b8, 4},
     };
-    std::map<PHV_Cluster_Requirements::PHV_width, std::vector<PHV_MAU_Group *>> PHV_MAU_i;
+    std::map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>> PHV_MAU_i;
 							// sorted PHV requirements <num, width>,
 							// num decreasing then width decreasing
  public:
-    PHV_MAU_Group_Assignments(PHV_Cluster_Requirements &phv_r);
+    PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &phv_r);
     //
-    std::map<PHV_Cluster_Requirements::PHV_width, std::vector<PHV_MAU_Group *>>& phv_mau_map()
+    std::map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>& phv_mau_map()
     {
         return PHV_MAU_i;
     }
 };
 //
 //
-class PHV_MAU_Group
-{
- private:
-    PHV_Cluster_Requirements::PHV_width container_width_i;	// container width in PHV group
-    int group_number_i;					// 1..4 [32], 1..6 [16], 1..4 [8]
-    int avail_containers_i = 16;			// number of available containers
-    std::vector<PHV_Cluster *> phv_clusters_i;		// clusters in this MAU group
- public:
-    PHV_MAU_Group(PHV_Cluster_Requirements::PHV_width w, int n);
-    //
-    PHV_Cluster_Requirements::PHV_width container_width()	{ return container_width_i; }
-    int group_number()					{ return group_number_i; }
-    int avail_containers()				{ return avail_containers_i; }
-};
-//
-//
-std::ostream &operator<<(std::ostream &, PHV_Cluster*);
-std::ostream &operator<<(std::ostream &, std::vector<PHV_Cluster *>&);
-std::ostream &operator<<(std::ostream &, PHV_Cluster_Requirements &);
-std::ostream &operator<<(std::ostream &, PHV_MAU_Group *);
+std::ostream &operator<<(std::ostream &, std::vector<PHV_Container::content>&);
+std::ostream &operator<<(std::ostream &, PHV_Container*);
+std::ostream &operator<<(std::ostream &, std::vector<PHV_Container *> &);
+std::ostream &operator<<(std::ostream &, PHV_MAU_Group*);
 std::ostream &operator<<(std::ostream &, std::vector<PHV_MAU_Group *> &);
 std::ostream &operator<<(std::ostream &, PHV_MAU_Group_Assignments &);
+//
+std::ostream &operator<<(std::ostream &, Cluster_PHV*);
+std::ostream &operator<<(std::ostream &, std::vector<Cluster_PHV *>&);
+std::ostream &operator<<(std::ostream &, Cluster_PHV_Requirements &);
+//
 std::ostream &operator<<(std::ostream &, std::set<const PhvInfo::Field *>*);
 std::ostream &operator<<(std::ostream &, std::vector<const PhvInfo::Field *>&);
 std::ostream &operator<<(std::ostream &, Cluster &);
