@@ -2718,7 +2718,7 @@ struct struct_2 {
     bit<32> field_23;
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     @name("inner_ipv4_checksum") Checksum16() inner_ipv4_checksum_0;
     @name("ipv4_checksum") Checksum16() ipv4_checksum_0;
     apply {
@@ -2757,7 +2757,7 @@ struct struct_4 {
     bit<32> field_45;
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     @name("inner_ipv4_checksum") Checksum16() inner_ipv4_checksum_1;
     @name("ipv4_checksum") Checksum16() ipv4_checksum_1;
     apply {
