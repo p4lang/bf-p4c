@@ -124,6 +124,7 @@ struct Memories {
     vector<table_alloc *>      action_tables;
     vector<way_group *>        exact_match_ways;
     vector<action_group *>     action_bus_users;
+    vector<table_alloc *>      gw_tables;
 
     void clear();
     void add_table(const IR::MAU::Table *t, const IXBar::Use &mi, 

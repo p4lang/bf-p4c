@@ -28,7 +28,10 @@ bool Memories::analyze_tables(mem_info &mi) {
     for (auto *ta : tables) {
         LOG3 ("Entries is " << ta->provided_entries);
         //TODO: Ask Chris about this?
-        if (ta->provided_entries == -1 || ta->provided_entries == 0) continue;
+        if (ta->provided_entries == -1 || ta->provided_entries == 0){
+            gw_tables.push_back(ta);
+            continue;
+        }
         auto table = ta->table;
         int entries = ta->provided_entries;
         if (!table->layout.ternary) {
@@ -299,9 +302,12 @@ bool Memories::fill_out_row(way_group *placed_wa, int row) {
         Memories::Use &alloc = wa->ta->memuse[name];
         for (size_t i = 0; i < selected_rows.size(); i++) {
             int bus = -1;
+            int width = -1;
             for (size_t j = 0; j < buses.size(); j++) {
-                if (buses[j].first == selected_rows[i])
+                if (buses[j].first == selected_rows[i]) {
                     bus = buses[j].second;
+                    width = j;
+                }
             }
 
             alloc.row.emplace_back(selected_rows[i], bus);
@@ -311,6 +317,9 @@ bool Memories::fill_out_row(way_group *placed_wa, int row) {
                 alloc_row.col.push_back(selected_cols[j]);
             }
             sram_inuse[selected_rows[i]] |= row_mask;
+            if (sram_match_bus2[selected_rows[i]][bus] == nullptr) {
+                sram_match_bus2[selected_rows[i]][bus] = new std::pair<table_alloc *, int>(wa->ta, width);
+            }
         }
 
         LOG3("Sram inuse " << sram_inuse[row]);
@@ -394,9 +403,12 @@ bool Memories::find_best_row_and_fill_out() {
 
     for (size_t i = 0; i < selected_rows.size(); i++) {
         int bus = -1;
+        int width = -1;
         for (size_t j = 0; j < buses.size(); j++) {
-            if (buses[j].first == selected_rows[i])
+            if (buses[j].first == selected_rows[i]) {
                 bus = buses[j].second;
+                width = j;
+            }
         }
 
         alloc.row.emplace_back(selected_rows[i], bus);
@@ -406,6 +418,9 @@ bool Memories::find_best_row_and_fill_out() {
             alloc_row.col.push_back(selected_cols[j]);
         }
         sram_inuse[selected_rows[i]] |= row_mask;
+        if (sram_match_bus2[selected_rows[i]][bus] == nullptr) {
+            sram_match_bus2[selected_rows[i]][bus] = new std::pair<table_alloc *, int>(wa->ta, width);
+        }
     }
 
     LOG3("Cols is " << cols << " we are placing " << wa->depth - wa->placed);
@@ -806,6 +821,24 @@ bool Memories::allocate_all_action() {
 }
 
 bool Memories::allocate_all_gw() {
+
+    int row = 0; int column = 0;    
+    for (auto *ta : gw_tables) {
+        for (int i = row; i < SRAM_ROWS; i++) {
+            for (int j = column; j < 2; j++) {
+                if (sram_match_bus2[i][j] == nullptr) {
+                    sram_match_bus2[i][j] = new std::pair<table_alloc *, int>(ta, 0);
+                    auto name = ta->table->name + "$gw";
+                    auto &alloc = ta->memuse[name];
+                    alloc.row.emplace_back(i, j);
+                    row = i;
+                    column = j+1;
+                }
+            }
+        }
+    }
+    if (!gw_tables.empty())
+        return false;
     return true;
 }
 
