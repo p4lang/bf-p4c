@@ -22,7 +22,8 @@ public:
     void write_immed_regs(Table *tbl);
     void write_action_regs(Table *tbl, unsigned homerow, unsigned action_slice);
     int find(Table::Format::Field *f, int off, int size);
-    void do_alloc(Table *tbl, Table::Format::Field *f, unsigned use, int bytes, unsigned offset);
+    void do_alloc(Table *tbl, Table::Format::Field *f, unsigned use, int lobyte,
+                  int bytes, unsigned offset);
     void need_alloc(Table *tbl, Table::Format::Field *f, unsigned off, unsigned size);
     int find(const char *name, int off, int size, int *len = 0);
     int find(const std::string &name, int off, int size, int *len = 0) {

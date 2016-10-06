@@ -87,13 +87,23 @@ void ActionBus::need_alloc(Table *tbl, Table::Format::Field *f, unsigned off, un
     need_place[f][off] |= size;
 }
 
-static int find_free(Stage *stage, int min, int max, int step, int bytes) {
+static int find_free(Table *tbl, int min, int max, int step, int bytes) {
     int avail;
+    LOG4("find_free(" << min << ", " << max << ", " << step << ", " << bytes << ")");
     for (int i = min; i + bytes - 1 <= max; i += step) {
-        if (stage->action_bus_use[Stage::action_bus_slot_map[i]])
-            continue;
+        bool inuse = false;
+        if (tbl->stage->action_bus_use[Stage::action_bus_slot_map[i]])
+            inuse = true;
+        /* FIXME -- this is a hack and probably incorrect -- need to figure out when an
+         * allocation is going to copy adjacent data into adjacent slots and do the right
+         * thing (use it if it is the right data, or use a different slot) */
+        for (int j = i & -step; j < (i & -step) + step; ++j)
+            if (tbl->stage->action_bus_use[Stage::action_bus_slot_map[j]] &&
+                tbl->stage->action_bus_use[Stage::action_bus_slot_map[j]] != tbl)
+                inuse = true;
+        if (inuse) continue;
         for (avail = 1; avail < bytes; avail++)
-            if (stage->action_bus_use[Stage::action_bus_slot_map[i+avail]])
+            if (tbl->stage->action_bus_use[Stage::action_bus_slot_map[i+avail]])
                 break;
         if (avail >= bytes)
             return i; }
@@ -111,11 +121,11 @@ int ActionBus::find_merge(int offset, int bytes) {
     return -1;
 }
 
-void ActionBus::do_alloc(Table *tbl, Table::Format::Field *f, unsigned use, int bytes,
-                         unsigned offset) {
+void ActionBus::do_alloc(Table *tbl, Table::Format::Field *f, unsigned use, int lobyte,
+                         int bytes, unsigned offset) {
     auto name = tbl->format->find_field(f);
     LOG2("putting " << name << '(' << offset << ".." << (offset + bytes*8 - 1) <<
-         ") at action_bus " << use);
+         ")[" << (lobyte*8) << ".." << ((lobyte+bytes)*8 - 1) << "] at action_bus " << use);
     while (bytes > 0) {
         int slot = Stage::action_bus_slot_map[use];
         int slotsize = Stage::action_bus_slot_size[slot];
@@ -133,15 +143,14 @@ void ActionBus::pass2(Table *tbl) {
         auto field = f.first;
         for (auto &bits : f.second) {
             int offset = bits.first;
-            int lo = field->bit(bits.first) - immed_offset;
+            int lo = (field->bit(bits.first) - immed_offset) % 128U;
             int hi = field->bit(field->size) - 1 - immed_offset;
-            int bytes = hi/8U - lo/8U + 1;
             int use;
-            int step = lo < 64 ? 4 : 8;
             if (lo/32U != hi/32U) {
                 /* Can't go across 32-bit boundary so chop it down as needed */
-                hi = lo|31U;
-                bytes = (hi + 1 - lo + 7)/8U; }
+                hi = lo|31U; }
+            int bytes = hi/8U - lo/8U + 1;
+            int step = lo < 32 && !tbl->format->immed ? 2 : lo < 64 ? 4 : 8;
             if (bits.second & 1) {
                 /* need 8-bit */
                 if ((lo % 8U) && (lo/8U != hi/8U)) {
@@ -150,8 +159,9 @@ void ActionBus::pass2(Table *tbl) {
                     continue; }
                 unsigned start = (lo/8U) % step;
                 if (!(bits.second & 4)) bytes = 1;
-                if ((use = find_free(tbl->stage, start, 31, step, bytes)) >= 0)
-                    do_alloc(tbl, field, use, bytes, offset); }
+                if ((use = find_free(tbl, start, 31, step, bytes)) >= 0)
+                    do_alloc(tbl, field, use, lo/8U, bytes, offset); }
+            step = lo < 64 ? 4 : 8;
             if (bits.second & 2) {
                 /* need 16-bit */
                 if (lo % 16U) {
@@ -160,26 +170,26 @@ void ActionBus::pass2(Table *tbl) {
                               "on action bus", tbl->format->find_field(field).c_str());
                         continue; }
                     if ((use = find_merge(lo, bytes)) >= 0) {
-                        do_alloc(tbl, field, use, bytes, offset);
+                        do_alloc(tbl, field, use, lo/8U, bytes, offset);
                         continue; } }
                 if (!(bits.second & 4) && bytes > 2) bytes = 2;
                 unsigned start = 32 + (lo/8U) % step;
-                if ((use = find_free(tbl->stage, start, 63, step, bytes)) >= 0 ||
-                    (use = find_free(tbl->stage, start+32, 95, 8, bytes)) >= 0)
-                    do_alloc(tbl, field, use, bytes, offset); }
+                if ((use = find_free(tbl, start, 63, step, bytes)) >= 0 ||
+                    (use = find_free(tbl, start+32, 95, 8, bytes)) >= 0)
+                    do_alloc(tbl, field, use, lo/8U, bytes, offset); }
             if (bits.second == 4) {
                 /* need only 32-bit */
                 unsigned odd = (lo/8U) & (4 & step);
                 unsigned start = (lo/8U) % step;
                 if (lo % 32U) {
                     if ((use = find_merge(lo, bytes)) >= 0) {
-                        do_alloc(tbl, field, use, bytes, 0);
+                        do_alloc(tbl, field, use, lo/8U, bytes, 0);
                         continue; } }
-                if ((use = find_free(tbl->stage, 96+start+odd, 127, 8, bytes)) >= 0 ||
-                    (use = find_free(tbl->stage, 64+start+odd, 95, 8, bytes)) >= 0 ||
-                    (use = find_free(tbl->stage, 32+start, 63, step, bytes)) >= 0 ||
-                    (use = find_free(tbl->stage, 0+start, 31, step, bytes)) >= 0)
-                    do_alloc(tbl, field, use, bytes, offset); } } }
+                if ((use = find_free(tbl, 96+start+odd, 127, 8, bytes)) >= 0 ||
+                    (use = find_free(tbl, 64+start+odd, 95, 8, bytes)) >= 0 ||
+                    (use = find_free(tbl, 32+start, 63, step, bytes)) >= 0 ||
+                    (use = find_free(tbl, 0+start, 31, step, bytes)) >= 0)
+                    do_alloc(tbl, field, use, lo/8U, bytes, offset); } } }
 }
 
 static int slot_sizes[] = {

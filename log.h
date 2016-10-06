@@ -23,6 +23,8 @@ extern int verbose;
 #define LOG1(X) LOG(1, X)
 #define LOG2(X) LOG(2, X)
 #define LOG3(X) LOG(3, X)
+#define LOG4(X) LOG(4, X)
+#define LOG5(X) LOG(5, X)
 
 #define ERROR(X) (std::clog << "ERROR: " << X << std::endl)
 #define WARNING(X) (verbose > 0 ? (std::clog << "WARNING: " << X << std::endl) : std::clog)
