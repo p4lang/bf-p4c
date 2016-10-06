@@ -150,13 +150,13 @@ class Cluster_PHV_Requirements
  private:
     Cluster &cluster_i;					// reference to parent cluster
     //
-    std::map<PHV_Container::PHV_Word, std::vector<Cluster_PHV *>> Cluster_PHV_i;
+    std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>> Cluster_PHV_i;
 							// sorted PHV requirements <num, width>,
 							// num decreasing then width decreasing
  public:
     Cluster_PHV_Requirements(Cluster &c);
     //
-    std::map<PHV_Container::PHV_Word, std::vector<Cluster_PHV *>>& cluster_phv_map()
+    std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map()
     {
         return Cluster_PHV_i;
     }
@@ -213,6 +213,7 @@ class PHV_MAU_Group_Assignments
     std::map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>> PHV_MAU_i;
 							// sorted PHV requirements <num, width>,
 							// num decreasing then width decreasing
+    bool allocate_containers(std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map);
  public:
     PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &phv_r);
     //
@@ -230,8 +231,10 @@ std::ostream &operator<<(std::ostream &, PHV_MAU_Group*);
 std::ostream &operator<<(std::ostream &, std::vector<PHV_MAU_Group *> &);
 std::ostream &operator<<(std::ostream &, PHV_MAU_Group_Assignments &);
 //
+std::ostream &operator<<(std::ostream &, Cluster_PHV&);
 std::ostream &operator<<(std::ostream &, Cluster_PHV*);
 std::ostream &operator<<(std::ostream &, std::vector<Cluster_PHV *>&);
+std::ostream &operator<<(std::ostream &, std::map<int, std::vector<Cluster_PHV *>>&);
 std::ostream &operator<<(std::ostream &, Cluster_PHV_Requirements &);
 //
 std::ostream &operator<<(std::ostream &, std::set<const PhvInfo::Field *>*);
