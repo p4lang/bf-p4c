@@ -57,12 +57,16 @@ Visitor::profile_t PhvInfo::init_apply(const IR::Node *root) {
     all_fields.clear();
     by_id.clear();
     all_headers.clear();
+    simple_headers.clear();
     alloc_done_ = false;
     return rv;
 }
 
 bool PhvInfo::preorder(const IR::Header *h) {
+    int start = by_id.size();
     add_hdr(h->name, h->type, false);
+    int end = by_id.size() - 1;
+    simple_headers.emplace(h->name, std::make_pair(start, end));
     return false;
 }
 
@@ -171,11 +175,16 @@ const std::pair<int, int> *PhvInfo::header(cstring name_) const {
     return nullptr;
 }
 
-void PhvInfo::allocatePOV() {
+void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
     if (all_fields.count("ingress::$POV") || all_fields.count("egress::$POV"))
         BUG("trying to reallocate POV");
     int size[2] = { 0, 0 };
-    for (auto &hdr : all_headers) {
+    for (auto &stack : stacks) {
+        auto *ff = field(all_headers.at(stack.name).first);
+        BUG_CHECK(!ff->metadata, "metadata stack?");
+        size[ff->gress] += stack.size + stack.maxpush + stack.maxpop;
+        /* FIXME all bits for a stack must end up in one container */ }
+    for (auto &hdr : simple_headers) {
         auto *ff = field(hdr.second.first);
         if (!ff->metadata)
             ++size[ff->gress]; }
@@ -190,10 +199,25 @@ void PhvInfo::allocatePOV() {
             if (field.pov && field.metadata && field.gress == gress) {
                 size[gress] -= field.size;
                 field.offset = size[gress]; }
-        for (auto &hdr : all_headers) {
+        for (auto &hdr : simple_headers) {
             auto *ff = field(hdr.second.first);
             if (!ff->metadata && ff->gress == gress)
                 add(hdr.first + ".$valid", 1, --size[gress], false, true); }
+        for (auto &stack : stacks) {
+            auto *ff = field(all_headers.at(stack.name).first);
+            if (ff->gress == gress) {
+                if (stack.maxpush) {
+                    size[gress] -= stack.maxpush;
+                    add(stack.name + ".$push", stack.maxpush, size[gress], true, true); }
+                char buffer[16];
+                for (int i = 0; i < stack.size; ++i) {
+                    snprintf(buffer, sizeof(buffer), "[%d]", i);
+                    add(stack.name + buffer + ".$valid", 1, --size[gress], false, true); }
+                if (stack.maxpop) {
+                    size[gress] -= stack.maxpop;
+                    add(stack.name + ".$pop", stack.maxpush, size[gress], true, true); }
+                add(stack.name + ".$stkvalid", stack.size + stack.maxpush + stack.maxpop,
+                    size[gress], true, true); } }
         assert(size[gress] == 0); }
 }
 

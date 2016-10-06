@@ -11,11 +11,13 @@
 #include "tofino/common/extract_maupipe.h"
 #include "tofino/common/elim_unused.h"
 #include "tofino/common/field_defuse.h"
+#include "tofino/common/header_stack.h"
 #include "tofino/mau/asm_output.h"
 #include "tofino/mau/gateway.h"
 #include "tofino/mau/instruction_selection.h"
 #include "tofino/mau/ixbar_realign.h"
 #include "tofino/mau/phv_constraints.h"
+#include "tofino/mau/push_pop.h"
 #include "tofino/mau/split_gateways.h"
 #include "tofino/mau/table_dependency_graph.h"
 #include "tofino/mau/table_layout.h"
@@ -30,6 +32,7 @@
 #include "tofino/parde/match_keys.h"
 #include "tofino/parde/split_big_states.h"
 #include "tofino/parde/split_header.h"
+#include "tofino/parde/stack_push_shims.h"
 #include "tofino/phv/asm_output.h"
 #include "tofino/phv/trivial_alloc.h"
 #include "tofino/phv/split_phv_use.h"
@@ -79,6 +82,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     DependencyGraph deps;
     TablesMutuallyExclusive mutex;
     FieldDefUse defuse(phv);
+    HeaderStackInfo stacks;
     TableSummary summary;
     MauAsmOutput mauasm(phv);
     PassManager *phv_alloc;
@@ -122,8 +126,11 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new AddMetadataShims,
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),
+        &stacks,
+        new StackPushShims(stacks),
         &phv,
-        new VisitFunctor([&phv]() { phv.allocatePOV(); }),
+        new VisitFunctor([&phv, &stacks]() { phv.allocatePOV(stacks); }),
+        new HeaderPushPop(stacks),
         new CopyHeaderEliminator,    // needs to be after POV alloc and before InstSel
         new InstructionSelection(phv),
 
@@ -159,6 +166,8 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         verbose ? new VisitFunctor([&summary]() { std::cout << summary; }) : nullptr,
 
         phv_alloc,
+
+        verbose ? new VisitFunctor([&phv]() { std::cout << phv; }) : nullptr,
 
         new IXBarRealign(phv),
         new SplitExtractEmit,
