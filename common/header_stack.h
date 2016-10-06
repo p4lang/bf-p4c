@@ -8,6 +8,7 @@ class HeaderStackInfo : public Inspector {
  public:
     struct Info {
         cstring name;
+        gress_t gress;
         int     size = 0, maxpush = 0, maxpop = 0;
     };
 

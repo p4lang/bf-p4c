@@ -32,6 +32,7 @@
 #include "tofino/parde/match_keys.h"
 #include "tofino/parde/split_big_states.h"
 #include "tofino/parde/split_header.h"
+#include "tofino/parde/stack_push_shims.h"
 #include "tofino/phv/asm_output.h"
 #include "tofino/phv/trivial_alloc.h"
 #include "tofino/phv/split_phv_use.h"
@@ -126,6 +127,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),
         &stacks,
+        new StackPushShims(stacks),
         &phv,
         new VisitFunctor([&phv, &stacks]() { phv.allocatePOV(stacks); }),
         new HeaderPushPop(stacks),

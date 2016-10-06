@@ -38,7 +38,6 @@ class PhvInfo : public Inspector {
         PHV::Bit bit(unsigned i) const {
             BUG_CHECK(i < size_t(size), "bit out of range for field");
             if (pov) {
-                assert(i == 0 || offset == 0);
                 cstring povname = gress ? "egress::$POV" : "ingress::$POV";
                 return PHV::Bit(povname, i+offset); }
             return PHV::Bit(name, i); }

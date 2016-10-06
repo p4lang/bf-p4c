@@ -6,8 +6,16 @@ Visitor::profile_t HeaderStackInfo::init_apply(const IR::Node *root) {
 }
 
 bool HeaderStackInfo::preorder(const IR::HeaderStack *hs) {
-    info[hs->name].name = hs->name;
-    info[hs->name].size = hs->size;
+    auto &i = info[hs->name];
+    i.name = hs->name;
+    i.size = hs->size;
+    i.maxpush = i.maxpop = 0;
+    if (i.name.startsWith("ingress::"))
+        i.gress = INGRESS;
+    else if (i.name.startsWith("egress::"))
+        i.gress = EGRESS;
+    else
+        BUG("Can't determine thread");
     return false;  // can't have stacks of stacks!
 }
 
