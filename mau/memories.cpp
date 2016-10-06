@@ -250,13 +250,16 @@ bool Memories::fill_out_row(way_group *placed_wa, int row) {
 
     LOG3("Filling out a row");
     int loc = 0;
+    vector<std::pair<int, int>> buses;
     //FIXME: Need to adjust to the proper mask provided by earlier function
     while (SRAM_COLUMNS - __builtin_popcount(sram_inuse[row]) > 0) {
+        buses.clear();
         LOG3("Builtin popcount " << __builtin_popcount(sram_inuse[row]));
         way_group *wa = find_best_candidate(placed_wa, row, loc);
         LOG3("Found a candidate on row " << row);
 	if (wa == nullptr)
             return true;
+        buses.emplace_back(row, match_bus_available(wa->ta, 0, row));
         LOG3("The way group is " << wa);
         int cols = 0;
         unsigned row_mask = 0;
@@ -281,6 +284,7 @@ bool Memories::fill_out_row(way_group *placed_wa, int row) {
                 if (std::find(selected_rows.begin(), selected_rows.end(), test_row) 
                     == selected_rows.end()) {
                     matching_rows.push_back(test_row);
+                    buses.emplace_back(test_row, match_bus_available(wa->ta, i, test_row));
                     break;
                 }
                 j++; 
@@ -291,9 +295,20 @@ bool Memories::fill_out_row(way_group *placed_wa, int row) {
             }
         }
 
+        auto name = wa->ta->table->name;
+        Memories::Use &alloc = wa->ta->memuse[name];
         for (size_t i = 0; i < selected_rows.size(); i++) {
+            int bus = -1;
+            for (size_t j = 0; j < buses.size(); j++) {
+                if (buses[j].first == selected_rows[i])
+                    bus = buses[j].second;
+            }
+
+            alloc.row.emplace_back(selected_rows[i], bus);
+            auto &alloc_row = alloc.row.back();
             for (size_t j = 0; j < selected_cols.size(); j++) {
                 sram_use2[selected_rows[i]][selected_cols[j]] = wa->ta;
+                alloc_row.col.push_back(selected_cols[j]);
             }
             sram_inuse[selected_rows[i]] |= row_mask;
         }
@@ -308,11 +323,19 @@ bool Memories::fill_out_row(way_group *placed_wa, int row) {
     return true;
 }
 
+int Memories::match_bus_available(table_alloc *ta, int width, int row) {
+     if (sram_match_bus2[row][0] == nullptr 
+         || (sram_match_bus2[row][0]->first == ta && sram_match_bus2[row][0]->second == width))
+         return 0;
+     else
+         return 1;
+}
 
 bool Memories::find_best_row_and_fill_out() {
     LOG3("Allocating a way");
     way_group *wa = exact_match_ways[0];
     //FIXME: Obviously the mask has to change
+    vector<std::pair<int, int>> buses;
     vector<std::pair<int, int>> available_rams = available_SRAMs_per_row(0x3ff, wa->ta, 0);
     //No memories left to place anything
     if (available_rams.size() == 0) {
@@ -320,6 +343,7 @@ bool Memories::find_best_row_and_fill_out() {
     }
 
     int row = available_rams[0].first;
+    buses.emplace_back(row, match_bus_available(wa->ta, 0, row));
     if (available_rams[0].second == 0)
         return false;
     LOG3("We found a row at " << row);
@@ -353,6 +377,7 @@ bool Memories::find_best_row_and_fill_out() {
             if (std::find(selected_rows.begin(), selected_rows.end(), test_row) 
                 == selected_rows.end()) {
                 matching_rows.push_back(test_row);
+                buses.emplace_back(test_row, match_bus_available(wa->ta, i, test_row));
                 break;
             }
             j++; 
@@ -364,9 +389,21 @@ bool Memories::find_best_row_and_fill_out() {
     }
 
     LOG3("About to allocate some shiz");
+    auto name = wa->ta->table->name;
+    Memories::Use &alloc = wa->ta->memuse[name];
+
     for (size_t i = 0; i < selected_rows.size(); i++) {
+        int bus = -1;
+        for (size_t j = 0; j < buses.size(); j++) {
+            if (buses[j].first == selected_rows[i])
+                bus = buses[j].second;
+        }
+
+        alloc.row.emplace_back(selected_rows[i], bus);
+        auto &alloc_row = alloc.row.back();
         for (size_t j = 0; j < selected_cols.size(); j++) {
             sram_use2[selected_rows[i]][selected_cols[j]] = wa->ta;
+            alloc_row.col.push_back(selected_cols[j]);
         }
         sram_inuse[selected_rows[i]] |= row_mask;
     }
@@ -493,34 +530,55 @@ bool Memories::allocate_all_ternary() {
         int mid_bytes_needed = 0;
         int TCAMs_necessary = ternary_TCAMs_necessary(ta, mid_bytes_needed);
         int row = 0; int col = 0;
+        auto name = ta->table->name;
+        Memories::Use &alloc = ta->memuse[name];
         for (int i = 0; i < ta->calculated_entries / 512; i++) {
             if (!find_ternary_stretch(TCAMs_necessary, mid_bytes_needed, row, col))
                 return false;
             for (int i = row; i < row + TCAMs_necessary; i++) {
                  tcam_use2[i][col] = ta;
+                 alloc.row.emplace_back(i, col);
             }
         }
     }
     return true;
 }
 
+void Memories::find_tind_groups() {
+    for (auto *ta : tind_tables) {
+        int depth = (ta->calculated_entries + 2047) / 2048;
+        tind_groups.push_back(new action_group(ta, depth, 0));
+    }
+}
 
+//This is extremely basic for right now
 bool Memories::allocate_all_tind() {
+    
     std::sort(tind_tables.begin(), tind_tables.end(),
         [=] (const table_alloc *a, const table_alloc *b) {
         int t;
         if ((t = a->calculated_entries - b->calculated_entries) != 0) return t > 0;
         return true;
     });
-
+  
+    find_tind_groups();
+     
+    //Keep it really simple for first iteration, just reserve the 1st column and then fill it out
     int left_mask = 0xf;
     for (int i = 0; i < SRAM_ROWS; i++) {
-        int RAMs_available = __builtin_popcount(left_mask & ~sram_inuse[i]);
-        if (RAMs_available == 0) continue;
-        
-        for (int i = 0; i < SRAM_ROWS; i++) {
-            
-        }         
+        if (tind_groups.empty())
+            return true;
+        action_group *next_tind = tind_groups[0];
+
+
+        if (sram_use2[i][0] == nullptr) {
+            sram_use2[i][0] = next_tind->ta;
+            tind_bus2[i][0] = next_tind->ta;
+            auto name = next_tind->ta->table->name + "$tind";
+            auto alloc = next_tind->ta->memuse[name];
+            alloc.row.emplace_back(i, 0);
+            alloc.row.back().col.push_back(0);
+        } 
           
     }
 
@@ -688,18 +746,40 @@ bool Memories::allocate_all_action() {
                 action_bus_users.erase(action_group_users.begin() + index);
             }
             */
+            Memories::Use::Row *a_row, *oflow_row = nullptr;
+
             if (a_group == nullptr && oflow_group == nullptr)
                 return true;
+            
+            if (a_group != nullptr) {
+                auto a_name = (*a_group)->ta->table->name + "$action";
+                auto &a_alloc = (*a_group)->ta->memuse[a_name];
+                a_alloc.row.emplace_back(i, j);
+                a_row = &a_alloc.row.back();
+                action_data_bus2[i][j] = (*a_group);
+            }
+
+            if (oflow_group != nullptr) {
+                auto oflow_name = (*oflow_group)->ta->table->name + "$action";
+                auto oflow_alloc = (*oflow_group)->ta->memuse[oflow_name];
+                oflow_alloc.row.emplace_back(i, j);
+                oflow_row = &oflow_alloc.row.back();
+                overflow_bus2[i][j] = (*oflow_group);
+            }
 
             bool action_group_removed = false;
             for (int k = 0; k < 10; k++) {
                 if (((1 << k) & mask) == 0)
                     continue;
 
-                if ((1 << k) & a_mask)
+                if ((1 << k) & a_mask) {
                     sram_use2[i][k] = (*a_group)->ta;
-                else if ((1 << k) & oflow_mask)
+                    a_row->col.push_back(k);   
+                }
+                else if ((1 << k) & oflow_mask) {
                     sram_use2[i][k] = (*oflow_group)->ta;
+                    oflow_row->col.push_back(k);
+                }
             }
             sram_inuse[i] |= a_mask | oflow_mask;
             if (a_group != nullptr) {

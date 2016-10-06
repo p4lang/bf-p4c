@@ -86,12 +86,10 @@ struct TablePlacement::Placed {
                 Placed *new_p = new Placed(self, nullptr, nullptr);
                 new_p->copy (prev_p);
                 //Potential to change this later!
-                /*
-                TableResourcesAlloc *resources = new TableResourcesAlloc();
-                resources->match_ixbar = prev_p->match_ixbar;
-                resources->gateway_ixbar = prev_p->gateway_ixbar;
+                TableResourceAlloc *resources = new TableResourceAlloc();
+                resources->match_ixbar = prev_p->resources->match_ixbar;
+                resources->gateway_ixbar = prev_p->resources->gateway_ixbar;
                 new_p->resources = resources;
-                */
                 curr_p->prev = new_p;
                 curr_p = new_p;
                 prev_p = prev_p->prev;
@@ -178,17 +176,16 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
 }
 
 static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Placed *done,
-                          int &entries, TableResourceAlloc *resources,
-                          vector<TableResourceAlloc *> prev_resources) {
+                          int &entries, TableResourceAlloc *resources) {
     Memories current_mem;
     Memories current_mem2;
     int i = 0;
-    for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
-        current_mem2.add_table(p->table, prev_resources[i]->match_ixbar, 
-                               prev_resources[i]->memuse, p->entries);
-        current_mem2.add_table(p->gw, prev_resources[i]->match_ixbar, 
-                               prev_resources[i]->memuse, -1);
-        current_mem.update(p->resources->memuse);
+    for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
+        current_mem2.add_table(p->table, p->resources->match_ixbar, 
+                               p->resources->memuse, p->entries);
+        current_mem2.add_table(p->gw, p->resources->match_ixbar, 
+                               p->resources->memuse, -1);
+        //current_mem.update(p->resources->memuse);
         i++;
     }
 
@@ -196,17 +193,31 @@ static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Pl
                            resources->memuse, entries);
     current_mem2.add_table(next->gw, resources->match_ixbar, resources->memuse, -1);
    
-    current_mem2.allocate_all();
-
-    int gw_entries = 1;
     resources->memuse.clear();
+    for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
+        p->resources->memuse.clear();
+    }
+    if (!current_mem2.allocate_all()) {
+        resources->memuse.clear();
+        for (auto *p = next->prev; p && p->stage == next->stage; p = p->prev) {
+            p->resources->memuse.clear();
+        }
+        return false;
+    }
+    return false;
+
+  
+   // int gw_entries = 1;
+    //resources->memuse.clear();
     
+    /*
     if (!current_mem.allocTable(next->name, next->table, entries,
                                 resources->memuse, resources->match_ixbar) ||
         !current_mem.allocTable(next->name, next->gw, gw_entries,
                                 resources->memuse, resources->match_ixbar)) {
         resources->memuse.clear();
         return false; }
+    */
     return true;
 }
 
@@ -214,15 +225,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
                                                         const StageUseEstimate &current) {
     LOG2("try_place_table(" << t->name << ", stage=" << (done ? done->stage : 0) << ")");
     auto *rv = gateway_merge(new Placed(*this, done, t));
-    vector<TableResourceAlloc *> prev_resources;
-    //Updating the split Placed list with the xbar allocation, as that is currently done
-    //a table at a time
-    for (auto *p = done; p && p->stage == rv->stage; p = p->prev) {
-        TableResourceAlloc *prev_resource = new TableResourceAlloc();
-        prev_resource->match_ixbar = p->resources->match_ixbar;
-        prev_resource->gateway_ixbar = p->resources->gateway_ixbar;
-        prev_resources.push_back(prev_resource);
-    }
     TableResourceAlloc *resources = new TableResourceAlloc;
     rv->resources = resources;
     t = rv->table;
@@ -271,7 +273,7 @@ retry_next_stage:
     auto avail = StageUseEstimate::max();
     if (rv->stage == (done ? done->stage : 0)) {
         if (!(min_use + current <= avail) 
-            || !try_alloc_mem(rv, done, min_entries, resources, prev_resources)) {
+            || !try_alloc_mem(rv, done, min_entries, resources)) {
             LOG4("   can't fit min_entries(" << min_entries << ") in stage " << rv->stage <<
                  ", advancing to next stage");
             resources->clear();
@@ -283,7 +285,7 @@ retry_next_stage:
         avail.maprams -= current.maprams; }
     assert(min_use <= avail);
     int last_try = rv->entries;
-    while (!(rv->use <= avail) || !try_alloc_mem(rv, done, rv->entries, resources, prev_resources)) {
+    while (!(rv->use <= avail) || !try_alloc_mem(rv, done, rv->entries, resources)) {
         rv->need_more = true;
         int scale = 0;
         if (rv->use.tcams > avail.tcams)

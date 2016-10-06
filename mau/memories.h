@@ -69,12 +69,12 @@ struct Memories {
     struct table_alloc {
         const IR::MAU::Table *table;
         const IXBar::Use match_ixbar;
-        map<cstring, Memories::Use> alloc;
+        map<cstring, Memories::Use> memuse;
         int provided_entries;
         int calculated_entries;
         explicit table_alloc(const IR::MAU::Table *t, const IXBar::Use &mi, 
                              map<cstring, Memories::Use> &mu, int e) 
-                : table(t), match_ixbar(mi), alloc(mu), provided_entries(e), calculated_entries(0) {}
+                : table(t), match_ixbar(mi), memuse(mu), provided_entries(e), calculated_entries(0) {}
     };
 
     struct way_group {
@@ -120,6 +120,7 @@ struct Memories {
     vector<table_alloc *>      exact_tables;
     vector<table_alloc *>      ternary_tables;
     vector<table_alloc *>      tind_tables;
+    vector<action_group *>     tind_groups;
     vector<table_alloc *>      action_tables;
     vector<way_group *>        exact_match_ways;
     vector<action_group *>     action_bus_users;
@@ -138,6 +139,7 @@ struct Memories {
     vector<int> available_match_SRAMs_per_row(unsigned row_mask, unsigned total_mask, int row,
                                                  table_alloc *ta, int width_sect);
     void break_exact_tables_into_ways();
+    int match_bus_available(table_alloc *ta, int width, int row);
     bool find_best_row_and_fill_out();
     bool fill_out_row(way_group *placed_wa, int row);
     way_group * find_best_candidate(way_group *placed_wa, int row, int &loc);
@@ -147,6 +149,7 @@ struct Memories {
     bool find_ternary_stretch(int TCAMs_necessary, int mid_bytes_needed, int &row, int &col);
 
     bool allocate_all_tind();
+    void find_tind_groups();
 
     bool allocate_all_action();
     void find_action_bus_users();
