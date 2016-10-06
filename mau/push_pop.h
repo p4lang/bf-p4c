@@ -18,8 +18,8 @@ class HeaderPushPop : public MauTransform {
         auto *rv = new IR::Vector<IR::Primitive>;
         for (int i = info.size-1; i >= count; --i)
             copy_hdr(rv, stack->baseRef()->type,
-                     new IR::HeaderStackItemRef(stack, new IR::Constant(i - count)),
-                     new IR::HeaderStackItemRef(stack, new IR::Constant(i)));
+                     new IR::HeaderStackItemRef(stack, new IR::Constant(i)),
+                     new IR::HeaderStackItemRef(stack, new IR::Constant(i - count)));
         auto *valid = new IR::Member(IR::Type::Bits::get(info.size + info.maxpop + info.maxpush),
                                      stack, "$stkvalid");
         rv->push_back(new IR::Primitive("modify_field",
@@ -31,8 +31,8 @@ class HeaderPushPop : public MauTransform {
         auto *rv = new IR::Vector<IR::Primitive>;
         for (int i = count; i < info.size; ++i)
             copy_hdr(rv, stack->baseRef()->type,
-                     new IR::HeaderStackItemRef(stack, new IR::Constant(i)),
-                     new IR::HeaderStackItemRef(stack, new IR::Constant(i - count)));
+                     new IR::HeaderStackItemRef(stack, new IR::Constant(i - count)),
+                     new IR::HeaderStackItemRef(stack, new IR::Constant(i)));
         auto *valid = new IR::Member(IR::Type::Bits::get(info.size + info.maxpop + info.maxpush),
                                      stack, "$stkvalid");
         rv->push_back(new IR::Primitive("modify_field",
