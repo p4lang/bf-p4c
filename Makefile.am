@@ -90,6 +90,12 @@ tofino_backend_SOURCES = \
 	%reldir%/phv/byte_constraint.h \
 	%reldir%/phv/cluster.cpp \
 	%reldir%/phv/cluster.h \
+	%reldir%/phv/cluster_phv_container.cpp \
+	%reldir%/phv/cluster_phv_container.h \
+	%reldir%/phv/cluster_phv_mau.cpp \
+	%reldir%/phv/cluster_phv_mau.h \
+	%reldir%/phv/cluster_phv_req.cpp \
+	%reldir%/phv/cluster_phv_req.h \
 	%reldir%/phv/constraints.cpp \
 	%reldir%/phv/constraints.h \
 	%reldir%/phv/container_constraint.cpp \

@@ -5,6 +5,20 @@
 
 //***********************************************************************************
 //
+// Cluster::Cluster constructor
+// 
+//***********************************************************************************
+
+Cluster::Cluster(PhvInfo &p) : phv_i(p)
+{
+    for (auto field: phv_i)
+    {
+        dst_map_i[&field] = nullptr;
+    }
+}
+
+//***********************************************************************************
+//
 // preorder walk on IR tree to insert field operands in cluster set
 // 
 //***********************************************************************************
@@ -187,6 +201,11 @@ void Cluster::end_apply()
         dst_map_i.erase(fp);						// erase map key
     }
     sanity_check_clusters_unique("end_apply..");
+    //
+    // output logs
+    //
+    LOG3(phv_i);							// all Fields
+    LOG3(*this);							// all Clusters
 }//end_apply
 
 //***********************************************************************************
@@ -337,194 +356,6 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg)
 
 //***********************************************************************************
 //
-// Cluster_PHV_Requirements::Cluster_PHV_Requirements constructor
-// 
-//***********************************************************************************
-
-Cluster_PHV_Requirements::Cluster_PHV_Requirements(Cluster &c) : cluster_i(c)
-{
-    // create PHV Requirements from clusters
-    if(! cluster_i.dst_map().size())
-    {
-        WARNING("*****Cluster_PHV_Requirements called w/ 0 clusters******");
-    }
-    //
-    for (auto p: Values(cluster_i.dst_map()))
-    {
-        Cluster_PHV *m = new Cluster_PHV(p);
-        Cluster_PHV_i[m->width()][m->num_containers()].push_back(m);
-    }
-    //
-    // cluster PHV requirement = [qty, width]
-    // sort based on width requirement, greatest width first
-    // for each width sort based on quantity requirement
-    //
-    for (auto &x: Values(Cluster_PHV_i))
-    {
-        for (auto &p: Values(x))
-        {
-            std::sort(p.begin(), p.end(), [](Cluster_PHV *l, Cluster_PHV *r) {
-                if(l->width() == r->width())
-                {
-                    if(l->num_containers() == r->num_containers())
-                    {
-                        if(l->max_width() == r->max_width())
-                        {
-                            if(l->cluster_vec().size() == r->cluster_vec().size())
-                            {   // sort by uniform_width first
-                                if(! l->uniform_width() && ! r->uniform_width())
-                                {   // same size, descending widths <2:_16_10> <2:_16_9> <2:_16_5>
-                                    auto differ = std::mismatch(l->cluster_vec().begin(), l->cluster_vec().end(), r->cluster_vec().begin(),
-                                                   [](const PhvInfo::Field *f1, const PhvInfo::Field *f2) {
-                                                       return f1->size == f2->size;
-                                               });
-                                    return *differ.first >= *differ.second;
-                                }
-                                return l->uniform_width() && ! r->uniform_width();
-                            }
-                            return l->cluster_vec().size() > r->cluster_vec().size();
-                        }
-                        return l->max_width() > r->max_width();
-                    }
-                    return l->num_containers() > r->num_containers();
-                }
-                return l->width() > r->width();
-            });
-        }
-    }
-}//Cluster_PHV_Requirements
-
-//***********************************************************************************
-//
-// Cluster_PHV::Cluster_PHV constructor
-// 
-//***********************************************************************************
-
-Cluster_PHV::Cluster_PHV(std::set<const PhvInfo::Field *> *p) : cluster_vec_i(p->begin(), p->end())
-{
-    if(!p)
-    {
-        WARNING("*****Cluster_PHV called w/ nullptr cluster_set******");
-    }
-    if((std::adjacent_find (cluster_vec_i.begin(), cluster_vec_i.end(),
-		[](const PhvInfo::Field *l, const PhvInfo::Field *r) { return l->size != r->size; }))
-       == cluster_vec_i.end())
-    {
-        uniform_width_i = true;
-        max_width_i = cluster_vec_i.front()->size;
-    }
-    else
-    {
-        uniform_width_i = false;
-        // get max field_width
-        max_width_i = 0;
-        for(auto pfield: cluster_vec_i)
-        {
-            max_width_i = std::max(pfield->size, max_width_i);
-        }
-        // cluster vector = sorted cluster set, decreasing field width
-        std::sort(cluster_vec_i.begin(), cluster_vec_i.end(),
-		[](const PhvInfo::Field *l, const PhvInfo::Field *r) { return l->size > r->size; });
-    }
-    // container width
-    if(max_width_i > 16)
-    {
-        width_i = PHV_Container::PHV_Word::b32;
-    }
-    else if(max_width_i > 8) 
-    {
-        width_i = PHV_Container::PHV_Word::b16;
-    }
-    else
-    {
-        width_i = PHV_Container::PHV_Word::b8;
-    }
-    // num containers of width
-    num_containers_i = 0;
-    for(auto pfield: cluster_vec_i)
-    {
-        // fields can span containers  (e.g., 48b = 2*32b)
-        // no sharing of containers with cohabitant fields
-        // sharing needs analyses:
-        // (i)  container single-write table interference
-        // (ii) surround interference 
-        num_containers_i += pfield->size/(int)width_i + (pfield->size%(int)width_i? 1 : 0);
-    }
-}//Cluster_PHV
-
-//***********************************************************************************
-//
-// PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments
-// 
-//***********************************************************************************
-
-PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &phv_r) : phv_requirements_i(phv_r)
-{
-    // create PHV Group Assignments from PHV Requirements
-    if(! phv_requirements_i.cluster_phv_map().size())
-    {
-        WARNING("*****PHV_MAU_Group_Assignments called w/ 0 Requirements******");
-    }
-    // create MAU Groups
-    for (auto &x: num_groups_i)
-    {
-        for (int i=1; i <= x.second; i++)
-        {
-            PHV_MAU_Group *g = new PHV_MAU_Group(x.first, i);
-            PHV_MAU_i[g->width()].push_back(g);
-        }
-    }
-    // allocate containers to clusters
-    allocate_containers(phv_requirements_i.cluster_phv_map());
-    //
-}//PHV_MAU_Group_Assignments
-
-bool
-PHV_MAU_Group_Assignments::allocate_containers(std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map)
-{
-    // fill PHV_MAU_Groups in reverse order 32, 16, 8
-    // map cluster_phv_map in reverse order 32 --> 16 --> 8 to corresponding PHV_MAU_Groups
-    //
-    std::map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>::reverse_iterator rit;
-    for (rit=PHV_MAU_i.rbegin(); rit!=PHV_MAU_i.rend(); ++rit)
-    {
-        std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>::reverse_iterator rit_2;
-        for (rit_2=cluster_phv_map.rbegin(); rit_2!=cluster_phv_map.rend(); ++rit_2)
-        {
-        }
-    }
-
-    return false;
-}
-
-//***********************************************************************************
-//
-// PHV_MAU_Group::PHV_MAU_Group constructor
-// 
-//***********************************************************************************
-
-PHV_MAU_Group::PHV_MAU_Group(PHV_Container::PHV_Word w, int n) : width_i(w), number_i(n)
-{
-    // create containers within group
-    for (int i=1; i <= (int)Containers::MAX; i++)
-    {
-        PHV_Container *c = new PHV_Container(width_i, i);
-        phv_containers_i.push_back(c);
-    }
-}//PHV_MAU_Group
-
-//***********************************************************************************
-//
-// PHV_Container::PHV_Container constructor
-// 
-//***********************************************************************************
-
-PHV_Container::PHV_Container(PHV_Word w, int n) : width_i(w), number_i(n)
-{
-}//PHV_Container
-
-//***********************************************************************************
-//
 // output stream <<
 // 
 //***********************************************************************************
@@ -574,180 +405,6 @@ std::ostream &operator<<(std::ostream &out, Cluster &cluster)
             out << ')' << std::endl;
         }
     }
-
-    return out;
-}
-//
-// cluster_phv output
-//
-std::ostream &operator<<(std::ostream &out, Cluster_PHV &cp)
-{
-    // cluster summary
-    //
-    out << "<" << cp.cluster_vec().size() << ':';
-    if(cp.uniform_width())
-    {
-        out << cp.max_width();
-    }
-    else
-    {
-        for(auto f: cp.cluster_vec())
-        {
-            out << '_' << f->size;
-        }
-    }
-    out << '>';
-
-    return out;
-}
-
-std::ostream &operator<<(std::ostream &out, Cluster_PHV *cp)
-{
-    if(cp)
-    {
-        // cluster summary
-        out << *cp;
-        // fields in cluster
-        out << "{" << cp->num_containers() << '*' << (int)(cp->width()) << "}(" << std::endl
-            << cp->cluster_vec()
-            << ')' << std::endl;
-    }
-    else
-    {
-        out << "-cp-";
-    }
-
-    return out;
-}
-
-std::ostream &operator<<(std::ostream &out, std::vector<Cluster_PHV *> &cluster_phv_vec)
-{
-    out << "++++++++++ #clusters=" << cluster_phv_vec.size() << " ++++++++++" << std::endl;
-    for (auto cp: cluster_phv_vec)
-    {
-        out << cp;
-    }
-
-    return out;
-}
-
-std::ostream &operator<<(std::ostream &out, std::map<int, std::vector<Cluster_PHV *>>& phv_req_map)
-{
-    std::map<int, std::vector<Cluster_PHV *>>::reverse_iterator rit;
-    for (rit=phv_req_map.rbegin(); rit!=phv_req_map.rend(); ++rit)
-    {
-        // print key <number> of phv_req_map 
-        out << '[' << rit->first << "]*" << rit->second.size() << "   \t= ";
-        // summarize clusters
-        for (auto &cp: rit->second)
-        {
-            // cluster summary
-            out << *cp << ' ';
-        }
-        out << std::endl;
-    }
-
-    return out; 
-}
-
-std::ostream &operator<<(std::ostream &out, Cluster_PHV_Requirements &phv_requirements)
-{
-    out << "++++++++++ Cluster PHV Requirements ++++++++++" << std::endl << std::endl;
-    std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>::reverse_iterator rit;
-    for (rit=phv_requirements.cluster_phv_map().rbegin(); rit!=phv_requirements.cluster_phv_map().rend(); ++rit)
-    {
-        out << "[----" << (int) rit->first << "----]" << std::endl;
-        std::map<int, std::vector<Cluster_PHV *>>::reverse_iterator rit_2;
-        for (rit_2=rit->second.rbegin(); rit_2!=rit->second.rend(); ++rit_2)
-        {
-            out << rit_2->second;
-        }
-    }
-    //
-    out << "++++++++++ PHV Container Requirements ++++++++++" << std::endl << std::endl;
-    for (rit=phv_requirements.cluster_phv_map().rbegin(); rit!=phv_requirements.cluster_phv_map().rend(); ++rit)
-    {
-        out << "[----" << (int) rit->first << "----]" << std::endl;
-        out << rit->second;
-    }
-
-    return out;
-}
-//
-// phv_mau_group output
-//
-std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container::content>& c)
-{
-    for (auto s: c)
-    {
-        out << s.field() << '{' << s.lo() << ".." << s.hi() << '[' << s.width() << ']';
-    }
-
-    return out;
-}
-std::ostream &operator<<(std::ostream &out, PHV_Container *c)
-{
-    if(c)
-    {
-        out << "\tC" << c->number() << '[' << (int)(c->width()) << ']'
-            << '(' << (char)(c->status()) << c->fields() << ')';
-        out << '\t';
-        for (int i=0; i < (int) c->width(); i++) out << '0';
-    }
-    else
-    {
-        out << "-c-";
-    }
-    out << std::endl;
-
-    return out;
-}
-
-std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container *> &phv_containers)
-{
-    for (auto m: phv_containers)
-    {
-        out << m;
-    }
-
-    return out;
-}
-
-std::ostream &operator<<(std::ostream &out, PHV_MAU_Group *g)
-{
-    if(g)
-    {
-        out << 'G' << g->number() << '[' << (int)(g->width()) << ']'
-            << '(' << g->avail_containers() << ')' << std::endl
-            << g->phv_containers();
-    }
-    else
-    {
-        out << "-g-";
-    }
-    out << std::endl;
-
-    return out;
-}
-
-std::ostream &operator<<(std::ostream &out, std::vector<PHV_MAU_Group *> &phv_mau_vec)
-{
-    out << "++++++++++ #mau_groups=" << phv_mau_vec.size() << " ++++++++++" << std::endl;
-    for (auto m: phv_mau_vec)
-    {
-        out << m;
-    }
-
-    return out;
-}
-
-std::ostream &operator<<(std::ostream &out, PHV_MAU_Group_Assignments &phv_mau_grps)
-{
-    out << "++++++++++ PHV MAU Group Assignments ++++++++++" << std::endl;
-    for (auto &p: Values(phv_mau_grps.phv_mau_map()))
-    {
-        out << p;
-    } 
 
     return out;
 }

@@ -35,7 +35,7 @@
 #include "tofino/phv/split_phv_use.h"
 #include "tofino/phv/create_thread_local_instances.h"
 #include "tofino/phv/phv_allocator.h"
-#include "tofino/phv/cluster.h"
+#include "tofino/phv/cluster_phv_mau.h"
 #include "tofino/common/copy_header_eliminator.h"
 
 class CheckTableNameDuplicate : public MauInspector {
@@ -104,8 +104,6 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     PassManager *phv_analysis = new PassManager({
         &cluster, 
         new VisitFunctor([&phv, &defuse, &cluster]() {
-            LOG3(phv);						// all Fields
-            LOG3(cluster);					// all Clusters
             //
             Cluster_PHV_Requirements phv_req(cluster);		// Cluster PHV requirements
             LOG3(phv_req);
