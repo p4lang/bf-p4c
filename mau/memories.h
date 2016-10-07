@@ -59,6 +59,9 @@ struct Memories {
             int         row, bus;
             vector<int> col, mapcol;
             explicit Row(int r, int b = -1) : row(r), bus(b) {}
+            void dbprint(std::ostream &out) const {
+                out << "Row " << row << " with bus " << bus;
+            }
         };
         vector<Row>     row;
         vector<std::pair<int, unsigned>>     ways;
@@ -69,12 +72,13 @@ struct Memories {
     struct table_alloc {
         const IR::MAU::Table *table;
         const IXBar::Use match_ixbar;
-        map<cstring, Memories::Use> memuse;
+        map<cstring, Memories::Use>* memuse;
         int provided_entries;
         int calculated_entries;
         explicit table_alloc(const IR::MAU::Table *t, const IXBar::Use &mi, 
-                             map<cstring, Memories::Use> &mu, int e) 
-                : table(t), match_ixbar(mi), memuse(mu), provided_entries(e), calculated_entries(0) {}
+                             map<cstring, Memories::Use> *mu, int e) 
+                : table(t), match_ixbar(mi), memuse(mu), provided_entries(e), 
+                  calculated_entries(0) {}
     };
 
     struct way_group {
@@ -96,7 +100,8 @@ struct Memories {
         int depth;
         int placed;
         int number;
-        explicit action_group (table_alloc *t, int d, int n) : ta(t), depth(d), placed(0), number(n) {}
+        explicit action_group (table_alloc *t, int d, int n) 
+                     : ta(t), depth(d), placed(0), number(n) {}
 
         void dbprint(std::ostream &out) const {
             out << ta->table->name << " action #" << number << " depth: " << depth 
@@ -128,7 +133,7 @@ struct Memories {
 
     void clear();
     void add_table(const IR::MAU::Table *t, const IXBar::Use &mi, 
-                   map<cstring, Memories::Use> &mu, int entries);
+                   map<cstring, Memories::Use> *mu, int entries);
     bool analyze_tables(mem_info &mi);
     void calculate_column_balance(mem_info &mi);
     bool allocate_all();

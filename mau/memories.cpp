@@ -14,7 +14,7 @@ void Memories::clear() {
 }
 
 void Memories::add_table(const IR::MAU::Table *t, const IXBar::Use &mi, 
-                         map<cstring, Memories::Use> &mu, int entries) {
+                         map<cstring, Memories::Use> *mu, int entries) {
     if (t != nullptr) {
         LOG3("Adding a table " << t->name);
         auto *ta = new table_alloc(t, mi, mu, entries);
@@ -204,6 +204,28 @@ void Memories::break_exact_tables_into_ways() {
             exact_match_ways.push_back(new way_group(ta, way_sizes[i], width, i));
             ta->calculated_entries += way_sizes[i] * 1024U * groups;
         }
+        
+        struct waybits {
+            bitvec bits;
+            decltype(bits.end()) next;
+            waybits() : next(bits.end()) {}
+        };
+        std::map<int, waybits> alloc_bits;
+        for (size_t i = 0; i < way_sizes.size(); i++) {
+            int log2sz = ceil_log2(way_sizes[i]);
+            auto &bits = alloc_bits[ta->match_ixbar.way_use[i].group];
+            unsigned mask = 0;
+            for (int bit = 0; bit < log2sz; bit++) {
+               if(!++bits.next) ++bits.next;
+               if(!bits.next || (mask & (1 << *bits.next))) {
+                   WARNING("Not enough way bits");
+                   break;
+               }
+               mask |= 1 << *bits.next;      
+            }
+           (*ta->memuse)[ta->table->name].ways.emplace_back(way_sizes[i], mask);
+        }
+        
     }
 
     std::sort(exact_match_ways.begin(), exact_match_ways.end(),
@@ -213,8 +235,9 @@ void Memories::break_exact_tables_into_ways() {
          if ((t = a->width - b->width) != 0) return t > 0;
          if ((t = (a->depth - a->placed) - (b->depth - b->placed)) != 0) return t > 0;
          if ((t = a->ta->calculated_entries - b->ta->calculated_entries) != 0) return t < 0;
-         return true;
+         return a->number < b->number;
     });
+
 }
 
 Memories::way_group * Memories::find_best_candidate (way_group *placed_wa, int row, int &loc) {
@@ -298,8 +321,9 @@ bool Memories::fill_out_row(way_group *placed_wa, int row) {
             }
         }
 
+        LOG3("Allocating way " << wa);
         auto name = wa->ta->table->name;
-        Memories::Use &alloc = wa->ta->memuse[name];
+        Memories::Use &alloc = (*wa->ta->memuse)[name];
         for (size_t i = 0; i < selected_rows.size(); i++) {
             int bus = -1;
             int width = -1;
@@ -310,6 +334,7 @@ bool Memories::fill_out_row(way_group *placed_wa, int row) {
                 }
             }
 
+            LOG3("Selected row " << selected_rows[i] << " with bus " << bus);
             alloc.row.emplace_back(selected_rows[i], bus);
             auto &alloc_row = alloc.row.back();
             for (size_t j = 0; j < selected_cols.size(); j++) {
@@ -318,7 +343,8 @@ bool Memories::fill_out_row(way_group *placed_wa, int row) {
             }
             sram_inuse[selected_rows[i]] |= row_mask;
             if (sram_match_bus2[selected_rows[i]][bus] == nullptr) {
-                sram_match_bus2[selected_rows[i]][bus] = new std::pair<table_alloc *, int>(wa->ta, width);
+                sram_match_bus2[selected_rows[i]][bus] 
+                    = new std::pair<table_alloc *, int>(wa->ta, width);
             }
         }
 
@@ -376,13 +402,10 @@ bool Memories::find_best_row_and_fill_out() {
     LOG3("Hello before");
     //Fairly simple stuff
     for (int i = 1; i < wa->width; i++) {
-        LOG3("Hello");
         vector<int> matching_rows = available_match_SRAMs_per_row(row_mask, 0x3ff, row, wa->ta, i);
-        LOG3("available_match_found");
         size_t j = 0;
         while (j < matching_rows.size()) {
             int test_row = matching_rows[j];
-            LOG3("Test row is " << test_row);
             if (std::find(selected_rows.begin(), selected_rows.end(), test_row) 
                 == selected_rows.end()) {
                 matching_rows.push_back(test_row);
@@ -397,10 +420,11 @@ bool Memories::find_best_row_and_fill_out() {
         }
     }
 
-    LOG3("About to allocate some shiz");
     auto name = wa->ta->table->name;
-    Memories::Use &alloc = wa->ta->memuse[name];
+    //assert(!wa->ta->memuse->count(name));
+    Memories::Use &alloc = (*wa->ta->memuse)[name];
 
+    LOG3("Allocating way " << wa);
     for (size_t i = 0; i < selected_rows.size(); i++) {
         int bus = -1;
         int width = -1;
@@ -411,22 +435,27 @@ bool Memories::find_best_row_and_fill_out() {
             }
         }
 
+        LOG3("Selected row " << selected_rows[i] << " with bus " << bus);
         alloc.row.emplace_back(selected_rows[i], bus);
         auto &alloc_row = alloc.row.back();
         for (size_t j = 0; j < selected_cols.size(); j++) {
             sram_use2[selected_rows[i]][selected_cols[j]] = wa->ta;
             alloc_row.col.push_back(selected_cols[j]);
         }
+        LOG3("SRAM use at 0,0 is " << sram_use2[0][0]);
         sram_inuse[selected_rows[i]] |= row_mask;
         if (sram_match_bus2[selected_rows[i]][bus] == nullptr) {
-            sram_match_bus2[selected_rows[i]][bus] = new std::pair<table_alloc *, int>(wa->ta, width);
+            sram_match_bus2[selected_rows[i]][bus] 
+                = new std::pair<table_alloc *, int>(wa->ta, width);
         }
     }
 
     LOG3("Cols is " << cols << " we are placing " << wa->depth - wa->placed);
     if (cols >= wa->depth - wa->placed) {
         LOG3("In first");
+        LOG3("size before " << exact_match_ways.size());
         exact_match_ways.erase(exact_match_ways.begin());
+        LOG3("size after " << exact_match_ways.size());
         if (cols == wa->depth - wa->placed)
            return fill_out_row (wa, row);
         else
@@ -482,6 +511,7 @@ bool Memories::allocate_all() {
     if (!allocate_all_gw()) {
         return false;
     }
+    LOG3("Testing");
     return true;
 }
 
@@ -532,6 +562,7 @@ bool Memories::find_ternary_stretch(int TCAMs_necessary, int mid_bytes_needed,
 
 //Allocate all ternary entries
 bool Memories::allocate_all_ternary() {
+    LOG3("Allocating ternary");
     std::sort(ternary_tables.begin(), ternary_tables.end(),
         [=](const table_alloc *a, table_alloc *b) {
         int t;
@@ -546,16 +577,20 @@ bool Memories::allocate_all_ternary() {
         int TCAMs_necessary = ternary_TCAMs_necessary(ta, mid_bytes_needed);
         int row = 0; int col = 0;
         auto name = ta->table->name;
-        Memories::Use &alloc = ta->memuse[name];
+        Memories::Use &alloc = (*ta->memuse)[name];
         for (int i = 0; i < ta->calculated_entries / 512; i++) {
             if (!find_ternary_stretch(TCAMs_necessary, mid_bytes_needed, row, col))
                 return false;
             for (int i = row; i < row + TCAMs_necessary; i++) {
                  tcam_use2[i][col] = ta;
                  alloc.row.emplace_back(i, col);
+                 LOG3("It's before the new col " << col);
+                 alloc.row.back().col.push_back(col);
+                 LOG3("It's after the new col " << col);
             }
         }
     }
+    LOG3("Allocated ternary");
     return true;
 }
 
@@ -568,7 +603,8 @@ void Memories::find_tind_groups() {
 
 //This is extremely basic for right now
 bool Memories::allocate_all_tind() {
-    
+   
+    LOG3("Allocating tind"); 
     std::sort(tind_tables.begin(), tind_tables.end(),
         [=] (const table_alloc *a, const table_alloc *b) {
         int t;
@@ -589,14 +625,18 @@ bool Memories::allocate_all_tind() {
         if (sram_use2[i][0] == nullptr) {
             sram_use2[i][0] = next_tind->ta;
             tind_bus2[i][0] = next_tind->ta;
+            next_tind->placed++;
+            if (next_tind->all_placed()) { 
+                tind_groups.erase(tind_groups.begin()); 
+            }
             auto name = next_tind->ta->table->name + "$tind";
-            auto alloc = next_tind->ta->memuse[name];
+            auto &alloc = (*next_tind->ta->memuse)[name];
             alloc.row.emplace_back(i, 0);
             alloc.row.back().col.push_back(0);
         } 
           
     }
-
+    LOG3("Allocated tind");
     return true;
 }
 
@@ -617,8 +657,11 @@ void Memories::find_action_bus_users() {
 void Memories::find_action_candidates(int row, int mask, action_group **a_group, unsigned &a_mask,
                                       int &a_index, action_group **oflow_group,
                                       unsigned &oflow_mask, int &oflow_index) {
-    if (action_bus_users.empty())
+    LOG3("Finding action candidates");
+    if (action_bus_users.empty()) {
+        LOG3("Empty");
         return;
+    }
 
     int RAMs_available = __builtin_popcount(mask & ~sram_inuse[row]);
 
@@ -657,18 +700,20 @@ void Memories::find_action_candidates(int row, int mask, action_group **a_group,
     //vector <action_group *> overflow_candidates = candidates_for_overflow(row, on_right_side);
     //if (overflow_candidates.empty()) {
         if (best_fit != nullptr && best_fit->left_to_place() == RAMs_available) {
+            LOG3("Best fit first");
             a_index = best_fit_index;
             a_mask = sram_inuse[row];
             *a_group = best_fit;
             return;
         }
         if (over_fit != nullptr) {
+            LOG3("Over fit first");
             a_index = over_fit_index;
             a_mask = sram_inuse[row];
             *a_group = over_fit;
             return;
         }
-
+        LOG3("Best fit last");
         int RAMs_filled = 0;
         for (int i = 0; i < 10 && RAMs_filled < RAMs_available; i++) {
             if (((1 << i) & mask) == 0)
@@ -723,7 +768,7 @@ bool Memories::allocate_all_action() {
     });
 
 
-
+  
     
     for (int i = 0; i < SRAM_ROWS; i++) {
         for (int j = 0; j < 2; j++) {
@@ -737,9 +782,10 @@ bool Memories::allocate_all_action() {
             action_group **oflow_group = nullptr;
             unsigned a_mask = 0; unsigned oflow_mask = 0;
             int a_index = 0; int oflow_index = 0;
-
+            
             find_action_candidates(i, mask, a_group, a_mask, a_index,
                                    oflow_group, oflow_mask, oflow_index);
+            LOG3("Found action candidates");
             /*
             int placed = 0;
             int added_mask = 0;
@@ -761,25 +807,31 @@ bool Memories::allocate_all_action() {
                 action_bus_users.erase(action_group_users.begin() + index);
             }
             */
+
             Memories::Use::Row *a_row, *oflow_row = nullptr;
 
-            if (a_group == nullptr && oflow_group == nullptr)
+            if (a_group == nullptr && oflow_group == nullptr) {
+                LOG3("Help");
                 return true;
-            
+            }            
             if (a_group != nullptr) {
+                LOG3("Before");
                 auto a_name = (*a_group)->ta->table->name + "$action";
-                auto &a_alloc = (*a_group)->ta->memuse[a_name];
+                auto &a_alloc = (*(*a_group)->ta->memuse)[a_name];
                 a_alloc.row.emplace_back(i, j);
                 a_row = &a_alloc.row.back();
                 action_data_bus2[i][j] = (*a_group);
+                LOG3("After");
             }
 
             if (oflow_group != nullptr) {
+                LOG3("Test1");
                 auto oflow_name = (*oflow_group)->ta->table->name + "$action";
-                auto oflow_alloc = (*oflow_group)->ta->memuse[oflow_name];
+                auto oflow_alloc = (*(*oflow_group)->ta->memuse)[oflow_name];
                 oflow_alloc.row.emplace_back(i, j);
                 oflow_row = &oflow_alloc.row.back();
                 overflow_bus2[i][j] = (*oflow_group);
+                LOG3("Test2");
             }
 
             bool action_group_removed = false;
@@ -829,7 +881,7 @@ bool Memories::allocate_all_gw() {
                 if (sram_match_bus2[i][j] == nullptr) {
                     sram_match_bus2[i][j] = new std::pair<table_alloc *, int>(ta, 0);
                     auto name = ta->table->name + "$gw";
-                    auto &alloc = ta->memuse[name];
+                    auto &alloc = (*ta->memuse)[name];
                     alloc.row.emplace_back(i, j);
                     row = i;
                     column = j+1;
@@ -1130,7 +1182,8 @@ void Memories::update(cstring name, const Memories::Use &alloc) {
         use = name; });
 }
 void Memories::update(const map<cstring, Use> &alloc) {
-    for (auto &a : alloc) update(a.first, a.second);
+    return; 
+//    for (auto &a : alloc) update(a.first, a.second);
 }
 
 void Memories::remove(cstring name, const Memories::Use &alloc) {

@@ -184,21 +184,23 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
 static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Placed *done,
                           int &entries, TableResourceAlloc *resources,
                           vector<TableResourceAlloc *> &prev_resources) {
+
+    LOG3("Try alloc mem with " << entries << " entries");
     Memories current_mem;
     Memories current_mem2;
     int i = 0;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
         current_mem2.add_table(p->table, prev_resources[i]->match_ixbar, 
-                               prev_resources[i]->memuse, p->entries);
+                               &prev_resources[i]->memuse, p->entries);
         current_mem2.add_table(p->gw, prev_resources[i]->match_ixbar, 
-                               prev_resources[i]->memuse, -1);
+                               &prev_resources[i]->memuse, -1);
         //current_mem.update(p->resources->memuse);
         i++;
     }
 
     current_mem2.add_table(next->table, resources->match_ixbar, 
-                           resources->memuse, entries);
-    current_mem2.add_table(next->gw, resources->match_ixbar, resources->memuse, -1);
+                           &resources->memuse, entries);
+    current_mem2.add_table(next->gw, resources->match_ixbar, &resources->memuse, -1);
    
     resources->memuse.clear();
     for (auto *prev_resource : prev_resources) {
@@ -210,8 +212,14 @@ static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Pl
             prev_resource->memuse.clear();
         }
         return false;
+    } else {
+        LOG3("Hello just allocated " << next->name);
+        LOG3("Resources size is " << resources->memuse[next->name].row.size());
+        for (auto row : resources->memuse[next->name].row) {
+             LOG3("Row is " << row);
+        }
     }
-    return false;
+    return true;
 
   
    // int gw_entries = 1;
@@ -225,7 +233,6 @@ static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Pl
         resources->memuse.clear();
         return false; }
     */
-    return true;
 }
 
 TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t, const Placed *done,
@@ -327,7 +334,7 @@ retry_next_stage:
     assert((rv->logical_id / StageUse::MAX_LOGICAL_IDS) == rv->stage);
     LOG2("try_place_table returning " << rv->entries << " of " << rv->name <<
          " in stage " << rv->stage);
-    if (rv->stage == done->stage) {
+    if (done && rv->stage == done->stage) {
         rv->set_prev(done, true, prev_resources);
     } else {
         rv->prev = done;
@@ -488,6 +495,7 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
         if (p->gw) {
             assert(p->need_more || table_placed.count(p->gw->name) == 0);
             table_placed.emplace_hint(table_placed.find(p->gw->name), p->gw->name, p); } }
+    LOG3("Finished table placement");
     return pipe;
 }
 
