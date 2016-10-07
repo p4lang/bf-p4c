@@ -243,9 +243,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("next_hop_ipv4") action next_hop_ipv4_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
         @name("hop") {
             ttl_1 = hdr.ipv4.ttl;
-            ttl_1 = ttl_1 + 8w255;
+            ttl_1 = hdr.ipv4.ttl + 8w255;
             hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-            hdr.ipv4.ttl = ttl_1;
+            hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
         }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;

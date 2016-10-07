@@ -35,6 +35,7 @@ limitations under the License.
 #include "midend/local_copyprop.h"
 #include "midend/localizeActions.h"
 #include "midend/moveConstructors.h"
+#include "midend/parserControlFlow.h"
 #include "midend/removeLeftSlices.h"
 #include "midend/removeParameters.h"
 #include "midend/removeReturns.h"
@@ -68,12 +69,8 @@ MidEnd::MidEnd(CompilerOptions& options) {
     setName("MidEnd");
 
     addPasses({
-        // new P4::SimplifyParsers(&refMap),
+        new P4::RemoveParserControlFlow(&refMap, &typeMap),
         new P4::ConvertEnums(&refMap, &typeMap, new EnumOn32Bits()),
-        // new P4::UniqueNames(&refMap),
-        // new P4::MoveDeclarations(),
-        // new P4::MoveInitializers(),
-        // new P4::SimplifyExpressions(&refMap, &typeMap),
         new P4::RemoveReturns(&refMap),
         new P4::MoveConstructors(&refMap),
         new P4::RemoveAllUnusedDeclarations(&refMap),
@@ -95,8 +92,8 @@ MidEnd::MidEnd(CompilerOptions& options) {
         new P4::UniqueParameters(&refMap),
         new P4::ClearTypeMap(&typeMap),
         new P4::SimplifyControlFlow(&refMap, &typeMap),
-        new P4::RemoveParameters(&refMap, &typeMap),
-        new P4::ClearTypeMap(&typeMap),
+        new P4::RemoveTableParameters(&refMap, &typeMap),
+        new P4::RemoveActionParameters(&refMap, &typeMap),
         new P4::SimplifyKey(&refMap, &typeMap,
                             new P4::NonLeftValue(&refMap, &typeMap)),
 #endif

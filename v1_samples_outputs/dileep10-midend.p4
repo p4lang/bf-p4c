@@ -245,9 +245,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ethernet.dstAddr = dstAddr;
         @name("hop") {
             ttl_1 = hdr.ipv4.ttl;
-            ttl_1 = ttl_1 + 8w255;
+            ttl_1 = hdr.ipv4.ttl + 8w255;
             hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-            hdr.ipv4.ttl = ttl_1;
+            hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
         }
     }
     @name("exm_3ways_32k") table exm_3ways_32k() {
