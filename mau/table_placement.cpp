@@ -74,7 +74,8 @@ struct TablePlacement::Placed {
     StageUseEstimate            use;
     const TableResourceAlloc    *resources;
     Placed(TablePlacement &self, const IR::MAU::Table *t)
-        : self(self), name(t->name), table(t) {
+        : self(self), table(t) {
+        if (t) { name = t->name; }
     }
 
 
@@ -105,7 +106,6 @@ struct TablePlacement::Placed {
             while (stage != -1) {
                 Placed *new_p = new Placed(self, nullptr);
                 new_p->copy (prev_p);
-                //Potential to change this later!
                 new_p->resources = prev_resources[index];
                 index++;
                 curr_p->prev = new_p;
@@ -213,11 +213,13 @@ static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Pl
         }
         return false;
     } else {
+        /*
         LOG3("Hello just allocated " << next->name);
         LOG3("Resources size is " << resources->memuse[next->name].row.size());
         for (auto row : resources->memuse[next->name].row) {
              LOG3("Row is " << row);
         }
+        */
     }
     return true;
 
@@ -243,12 +245,12 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     rv->resources = resources;
     vector<TableResourceAlloc *> prev_resources;
     for (auto *p = done; p && p->stage == done->stage; p = p->prev) {
+        LOG3("Mic check");
         TableResourceAlloc *prev_resource = new TableResourceAlloc;
         prev_resource->match_ixbar = p->resources->match_ixbar;
         prev_resource->gateway_ixbar = p->resources->gateway_ixbar;
         prev_resources.push_back(prev_resource);
     }
-
     t = rv->table;
     rv->stage = done ? done->stage : 0;
     int min_entries = 1;
@@ -585,6 +587,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
             prev->next["$miss"] = new IR::MAU::TableSeq(table_part); }
         prev = table_part; }
     assert(rv);
+    LOG3("Table in stage");
     return rv;
 }
 

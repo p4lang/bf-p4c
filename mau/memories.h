@@ -149,7 +149,8 @@ struct Memories {
     bool find_best_row_and_fill_out();
     bool fill_out_row(way_group *placed_wa, int row);
     way_group * find_best_candidate(way_group *placed_wa, int row, int &loc);
-
+    void compress_ways();
+ 
     bool allocate_all_ternary();
     int ternary_TCAMs_necessary(table_alloc *ta, int &mid_bytes_needed);
     bool find_ternary_stretch(int TCAMs_necessary, int mid_bytes_needed, int &row, int &col);
