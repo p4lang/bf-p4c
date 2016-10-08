@@ -42,7 +42,9 @@ class PHV_MAU_Group
     PHV_Container::PHV_Word width()			{ return width_i; }
     int number()					{ return number_i; }
     int avail_containers()				{ return avail_containers_i; }
+    void avail_containers(int n)			{ avail_containers_i = n; }
     std::vector<PHV_Container *>& phv_containers()	{ return phv_containers_i; }
+    std::vector<Cluster_PHV *>& clusters()		{ return cluster_phv_i; }
 };
 //
 //
@@ -69,13 +71,11 @@ class PHV_MAU_Group_Assignments
         return PHV_MAU_i;
     }
 };
-//
-//
-std::ostream &operator<<(std::ostream &, std::vector<PHV_Container::content>&);
-std::ostream &operator<<(std::ostream &, PHV_Container*);
-std::ostream &operator<<(std::ostream &, std::vector<PHV_Container *> &);
+std::ostream &operator<<(std::ostream &, PHV_MAU_Group&);
 std::ostream &operator<<(std::ostream &, PHV_MAU_Group*);
-std::ostream &operator<<(std::ostream &, std::vector<PHV_MAU_Group *> &);
-std::ostream &operator<<(std::ostream &, PHV_MAU_Group_Assignments &);
+std::ostream &operator<<(std::ostream &, std::list<PHV_MAU_Group *>&);
+std::ostream &operator<<(std::ostream &, std::vector<PHV_MAU_Group *>&);
+std::ostream &operator<<(std::ostream &, std::vector<PHV_MAU_Group *>*);
+std::ostream &operator<<(std::ostream &, PHV_MAU_Group_Assignments&);
 //
 #endif /* _TOFINO_PHV_CLUSTER_PHV_MAU_H_ */

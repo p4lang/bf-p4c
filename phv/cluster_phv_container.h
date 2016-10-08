@@ -36,7 +36,8 @@ class PHV_Container
     PHV_Word width_i;					// width of container
     int number_i;					// 1..16 within group
     Container_status status_i = Container_status::EMPTY;
-    std::vector<content> fields_i;			// fields in this container
+    std::vector<content> fields_i;			// fields mapped to this container
+    char *bits_i;
  public:
     PHV_Container(PHV_Word w, int n);
     //
@@ -45,7 +46,13 @@ class PHV_Container
     Container_status status()				{ return status_i; }
     void status(Container_status s)			{ status_i = s; }
     std::vector<content>& fields()			{ return fields_i; }
+    void taint(int start, int width);
+    char *bits()					{ return bits_i; }
 };
 //
+//
+std::ostream &operator<<(std::ostream &, std::vector<PHV_Container::content>&);
+std::ostream &operator<<(std::ostream &, PHV_Container*);
+std::ostream &operator<<(std::ostream &, std::vector<PHV_Container *>&);
 //
 #endif /* _TOFINO_PHV_CLUSTER_PHV_CONTAINER_H_ */

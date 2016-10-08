@@ -150,8 +150,21 @@ std::ostream &operator<<(std::ostream &out, Cluster_PHV &cp)
     return out;
 }
 
+std::ostream &operator<<(std::ostream &out, std::list<Cluster_PHV *> &cluster_list)
+{
+    for (auto c: cluster_list)
+    {
+        // cluster summary
+        out << *c << std::endl;
+    }
+
+    return out;
+}
+
 std::ostream &operator<<(std::ostream &out, Cluster_PHV *cp)
 {
+    // cluster details
+    //
     if(cp)
     {
         // cluster summary
@@ -192,7 +205,7 @@ std::ostream &operator<<(std::ostream &out, std::vector<Cluster_PHV *> *cluster_
 
 std::ostream &operator<<(std::ostream &out, std::vector<Cluster_PHV *> &cluster_phv_vec)
 {
-    out << "...{" << cluster_phv_vec.front()->num_containers() << ',' << (int) cluster_phv_vec.front()->width() << "}#" << cluster_phv_vec.size() << " ..." << std::endl;
+    out << ".....{" << cluster_phv_vec.front()->num_containers() << ',' << (int) cluster_phv_vec.front()->width() << "}#" << cluster_phv_vec.size() << " ....." << std::endl;
     for (auto cp: cluster_phv_vec)
     {
         // cluster details

@@ -71,9 +71,10 @@ class Cluster_PHV_Requirements
 //
 std::ostream &operator<<(std::ostream &, Cluster_PHV&);
 std::ostream &operator<<(std::ostream &, Cluster_PHV*);
-std::ostream &operator<<(std::ostream &, std::vector<Cluster_PHV *> *);
+std::ostream &operator<<(std::ostream &, std::list<Cluster_PHV *>&);
+std::ostream &operator<<(std::ostream &, std::vector<Cluster_PHV *>*);
 std::ostream &operator<<(std::ostream &, std::vector<Cluster_PHV *>&);
 std::ostream &operator<<(std::ostream &, std::map<int, std::vector<Cluster_PHV *>>&);
-std::ostream &operator<<(std::ostream &, Cluster_PHV_Requirements &);
+std::ostream &operator<<(std::ostream &, Cluster_PHV_Requirements&);
 //
 #endif /* _TOFINO_PHV_CLUSTER_PHV_REQ_H_ */
