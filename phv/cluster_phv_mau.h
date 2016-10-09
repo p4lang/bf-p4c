@@ -27,13 +27,11 @@
 //
 class PHV_MAU_Group
 {
- public:
-    enum class Containers {MAX=16};
-    //
  private:
     PHV_Container::PHV_Word width_i;			// container width in PHV group
     int number_i;					// 1..4 [32], 1..6 [16], 1..4 [8]
-    int avail_containers_i = (int)Containers::MAX;	// number of available containers
+    int avail_containers_i = (int)PHV_Container::Containers::MAX;
+							// number of available containers
     std::vector<PHV_Container *> phv_containers_i;	// containers in this MAU group
     std::vector<Cluster_PHV *> cluster_phv_i;		// clusters in this MAU group
  public:

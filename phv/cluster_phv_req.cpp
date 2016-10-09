@@ -108,17 +108,32 @@ Cluster_PHV::Cluster_PHV(std::set<const PhvInfo::Field *> *p) : cluster_vec_i(p-
         width_i = PHV_Container::PHV_Word::b8;
     }
     // num containers of width
-    num_containers_i = 0;
-    for(auto pfield: cluster_vec_i)
+    //
+    num_containers_i = num_containers(cluster_vec_i, width_i);
+    //
+}//Cluster_PHV
+
+int
+Cluster_PHV::num_containers(std::vector<const PhvInfo::Field *>& cluster_vec, PHV_Container::PHV_Word width)
+{
+    // num containers of width
+    int num_containers = 0;
+    for(auto pfield: cluster_vec)
     {
-        // fields can span containers  (e.g., 48b = 2*32b)
+        // fields can span containers  (e.g., 48b = 2*32b or 3*16b = 6*8b)
         // no sharing of containers with cohabitant fields
         // sharing needs analyses:
         // (i)  container single-write table interference
         // (ii) surround interference 
-        num_containers_i += pfield->size/(int)width_i + (pfield->size%(int)width_i? 1 : 0);
+        num_containers += pfield->size/(int)width + (pfield->size%(int)width? 1 : 0);
     }
-}//Cluster_PHV
+    if(num_containers > (int) PHV_Container::Containers::MAX)
+    {
+        WARNING("*****Cluster_PHV::get_num_containers: num_containers = " << num_containers << " > " << (int) (PHV_Container::Containers::MAX) << " ******");
+    }
+
+    return num_containers;
+}
 
 //***********************************************************************************
 //

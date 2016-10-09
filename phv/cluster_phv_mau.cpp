@@ -84,11 +84,17 @@ PHV_MAU_Group_Assignments::allocate_containers(std::map<PHV_Container::PHV_Word,
             auto req_containers = cl->num_containers();
             if(g->width() < cl->width())
             {
-                req_containers *= (int) cl->width() / (int) g->width();
+                // scale cl width down
+                // <2:_48_32>{3*32} => <2:_48_32>{5*16}
+                req_containers = cl->num_containers(cl->cluster_vec(), g->width());
             }
             if(req_containers <= avail_containers && avail_containers - req_containers != 1)
             {
                 // assign cl to g
+                //
+                // if scaled width, update num_containers
+                cl->num_containers(req_containers);
+                cl->width(g->width());
                 //
                 LOG3("....." << *g << " <-- " << *cl);
                 g->clusters().push_back(cl);
@@ -96,7 +102,7 @@ PHV_MAU_Group_Assignments::allocate_containers(std::map<PHV_Container::PHV_Word,
                 //
                 // for each container assigned to cluster, taint bits that are filled
                 //
-                int container_index = (int) PHV_MAU_Group::Containers::MAX - g->avail_containers();
+                int container_index = (int) PHV_Container::Containers::MAX - g->avail_containers();
                 for (auto i=0, j=0; i < (int) cl->cluster_vec().size(); i++)
                 {
                     auto field_width = cl->cluster_vec()[i]->size;
@@ -127,7 +133,7 @@ PHV_MAU_Group_Assignments::allocate_containers(std::map<PHV_Container::PHV_Word,
     //
     // all mau groups exhausted
     // clusters not yet assigned
-    LOG3("----------clusters not assigned-----");
+    LOG3("----------clusters not assigned (" << clusters_to_be_assigned.size() << ")-----");
     LOG3(clusters_to_be_assigned);
 
     return false;
@@ -142,7 +148,7 @@ PHV_MAU_Group_Assignments::allocate_containers(std::map<PHV_Container::PHV_Word,
 PHV_MAU_Group::PHV_MAU_Group(PHV_Container::PHV_Word w, int n) : width_i(w), number_i(n)
 {
     // create containers within group
-    for (int i=1; i <= (int)Containers::MAX; i++)
+    for (int i=1; i <= (int)PHV_Container::Containers::MAX; i++)
     {
         PHV_Container *c = new PHV_Container(width_i, i);
         phv_containers_i.push_back(c);

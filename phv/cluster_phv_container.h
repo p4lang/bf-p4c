@@ -21,6 +21,7 @@ class PHV_Container
 {
  public:
     enum class PHV_Word {b32=32, b16=16, b8=8};
+    enum class Containers {MAX=16};
     enum class Container_status {EMPTY='E', PARTIAL='P', FULL='F'};
     struct content
     {
