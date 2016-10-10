@@ -86,7 +86,6 @@ MidEnd::MidEnd(CompilerOptions& options) {
 
         new P4::Inline(&refMap, &typeMap, evaluator),
         new P4::InlineActions(&refMap, &typeMap),
-#if 0
         new P4::LocalizeAllActions(&refMap),
         new P4::UniqueNames(&refMap),
         new P4::UniqueParameters(&refMap),
@@ -96,12 +95,12 @@ MidEnd::MidEnd(CompilerOptions& options) {
         new P4::RemoveActionParameters(&refMap, &typeMap),
         new P4::SimplifyKey(&refMap, &typeMap,
                             new P4::NonLeftValue(&refMap, &typeMap)),
-#endif
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::StrengthReduction(),
         new P4::SimplifySelect(&refMap, &typeMap, true),  // constant keysets
         new P4::SimplifyParsers(&refMap),
         new P4::LocalCopyPropagation(&refMap, &typeMap),
+        new P4::ConstantFolding(&refMap, &typeMap),
         new P4::MoveDeclarations(),
         new P4::SimplifyControlFlow(&refMap, &typeMap),
         new P4::SynthesizeActions(&refMap, &typeMap),

@@ -42,7 +42,9 @@ class RemoveInstanceRef : public Transform {
  public:
     RemoveInstanceRef() { dontForwardChildrenBeforePreorder = true; }
     const IR::Expression *preorder(IR::InstanceRef *ir) override {
-        if (!ir->obj->is<IR::HeaderStack>())
+        if (!ir->obj) {
+            return new IR::TempVar(ir->type, ir->name.name);
+        } else if (!ir->obj->is<IR::HeaderStack>())
             return new IR::ConcreteHeaderRef(ir->obj);
         return ir; }
 };
