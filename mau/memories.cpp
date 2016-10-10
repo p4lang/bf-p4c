@@ -32,6 +32,7 @@ bool Memories::analyze_tables(mem_info &mi) {
             auto name = ta->table->name + "$gw";
             (*ta->memuse)[name].type = Use::GATEWAY;
             gw_tables.push_back(ta);
+            LOG4("Gateway table for " << ta->table->name);
             continue;
         }
         auto table = ta->table;
@@ -202,7 +203,7 @@ void Memories::break_exact_tables_into_ways() {
         int number_of_ways = ta->table->ways.size();
         int width = ta->table->ways[0].width;
         int groups = ta->table->ways[0].match_groups;
-	int RAMs_needed = width * ((ta->provided_entries + groups - 1U)/groups + 1023)/1024U;
+	int RAMs_needed = width * (((ta->provided_entries + groups - 1U)/groups + 1023)/1024U);
         int total_depth = (RAMs_needed + width - 1) / width;
         LOG3("number of ways " << number_of_ways);
         LOG3("RAMs_needed " << RAMs_needed);
@@ -211,6 +212,7 @@ void Memories::break_exact_tables_into_ways() {
         for (size_t i = 0; i < way_sizes.size(); i++) {
             exact_match_ways.push_back(new way_group(ta, way_sizes[i], width, i));
             ta->calculated_entries += way_sizes[i] * 1024U * groups;
+            LOG3("Way size is " << way_sizes[i]);
         }
         
         struct waybits {
@@ -461,7 +463,7 @@ void Memories::calculate_column_balance(mem_info &mi) {
 }
 
 
-bool Memories::allocate_all_exact(Memories::mem_info &mi) {
+bool Memories::allocate_all_exact() {
     break_exact_tables_into_ways();
     while (exact_match_ways.size() > 0) {
         if (find_best_row_and_fill_out() == false) {
@@ -497,7 +499,7 @@ void Memories::compress_ways() {
     for (auto *ta : exact_tables) {
         auto name = ta->table->name;
         auto &alloc = (*ta->memuse)[name];
-        for (size_t i = 0; (int) i < alloc.row.size(); i++) {
+        for (size_t i = 0; i < alloc.row.size(); i++) {
              LOG3("Table " << name << " on row " << alloc.row[i].row << " has " 
                   << alloc.row[i].col.size() << " columns");
         }
@@ -513,7 +515,7 @@ bool Memories::allocate_all() {
     calculate_column_balance(mi);
 
 
-    if (!allocate_all_exact(mi)) {
+    if (!allocate_all_exact()) {
         return false;
     }
     compress_ways();
@@ -538,7 +540,7 @@ bool Memories::allocate_all() {
     for (auto *ta : action_tables) {
         auto name = ta->table->name + "$action";
         auto &alloc = (*ta->memuse)[name];
-        for (int i = 0; (int) i < alloc.row.size(); i++) {
+        for (size_t i = 0; i < alloc.row.size(); i++) {
              LOG3("Table " << name << " on row " << alloc.row[i].row << " has " 
                   << alloc.row[i].col.size() << " columns");
         }
@@ -573,9 +575,9 @@ int Memories::ternary_TCAMs_necessary(table_alloc *ta, int &mid_bytes_needed) {
 bool Memories::find_ternary_stretch(int TCAMs_necessary, int mid_bytes_needed,
                                     int &row, int &col) {
 
-    for (int j = 0; j < SRAM_COLUMNS; j++) {
+    for (int j = 0; j < TCAM_COLUMNS; j++) {
         int clear_cols = 0;
-        for (int i = 0; i < SRAM_ROWS; i++) {
+        for (int i = 0; i < TCAM_ROWS; i++) {
             if (tcam_use2[i][j] != nullptr) {
                 clear_cols = 0;
                 continue;
@@ -589,6 +591,7 @@ bool Memories::find_ternary_stretch(int TCAMs_necessary, int mid_bytes_needed,
             if (clear_cols == TCAMs_necessary) {
                 col = j;
                 row = i - clear_cols + 1;
+                LOG3("Row and col " << row << " " << col);
                 return true;
             }
         }
@@ -610,6 +613,7 @@ bool Memories::allocate_all_ternary() {
     for (auto *ta : ternary_tables) {
         int mid_bytes_needed = 0;
         int TCAMs_necessary = ternary_TCAMs_necessary(ta, mid_bytes_needed);
+        LOG3("TCAMs_necessary is " << TCAMs_necessary);
         int row = 0; int col = 0;
         auto name = ta->table->name;
         Memories::Use &alloc = (*ta->memuse)[name];
@@ -629,6 +633,8 @@ bool Memories::allocate_all_ternary() {
 void Memories::find_tind_groups() {
     for (auto *ta : tind_tables) {
         int depth = (ta->calculated_entries + 2047) / 2048;
+        LOG3("Depth of the tind is " << depth << " as calculated entries is " << 
+             ta->calculated_entries);
         tind_groups.push_back(new action_group(ta, depth, 0));
     }
 }
@@ -657,7 +663,7 @@ bool Memories::allocate_all_tind() {
             sram_use2[i][0] = next_tind->ta;
             tind_bus2[i][0] = next_tind->ta;
             next_tind->placed++;
-            if (next_tind->all_placed()) { 
+            if (next_tind->all_placed()) {
                 tind_groups.erase(tind_groups.begin()); 
             }
             auto name = next_tind->ta->table->name + "$tind";
@@ -886,23 +892,32 @@ bool Memories::allocate_all_action() {
 }
 
 bool Memories::allocate_all_gw() {
-
-    int row = 0; int column = 0;    
+    LOG3("Allocating gateways");
+    int row = 0; int column = 0;
+    size_t index = 0;
     for (auto *ta : gw_tables) {
+        bool found = false;
         for (int i = row; i < SRAM_ROWS; i++) {
             for (int j = column; j < 2; j++) {
                 if (sram_match_bus2[i][j] == nullptr) {
+                    LOG3("Time to allocate");
                     sram_match_bus2[i][j] = new std::pair<table_alloc *, int>(ta, 0);
                     auto name = ta->table->name + "$gw";
                     auto &alloc = (*ta->memuse)[name];
-                    alloc.row.emplace_back(i, j);
+                    alloc.row.emplace_back(i, j); 
                     row = i;
                     column = j+1;
+                    index++;
+                    found = true;
+                    break;
                 }
             }
+            if (found) break;
         }
+        if (!found) break;
     }
-    if (!gw_tables.empty())
+    LOG3("Index is " << index << " and the size is " << gw_tables.size());
+    if (gw_tables.size() != index)
         return false;
     return true;
 }

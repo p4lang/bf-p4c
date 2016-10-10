@@ -245,7 +245,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     rv->resources = resources;
     vector<TableResourceAlloc *> prev_resources;
     for (auto *p = done; p && p->stage == done->stage; p = p->prev) {
-        LOG3("Mic check");
         TableResourceAlloc *prev_resource = new TableResourceAlloc;
         prev_resource->match_ixbar = p->resources->match_ixbar;
         prev_resource->gateway_ixbar = p->resources->gateway_ixbar;
@@ -339,6 +338,7 @@ retry_next_stage:
     if (done && rv->stage == done->stage) {
         rv->set_prev(done, true, prev_resources);
     } else {
+        LOG3("In here");
         rv->prev = done;
     }
     if (!rv->need_more) {
@@ -358,6 +358,7 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const GroupPla
          pl->stage << (pl->need_more ? " (need more)" : ""));
     if (!pl->need_more) {
         while (grp && pl->is_placed(grp->seq)) {
+            LOG3("Finished a sequence");
             grp->finish(work);
             grp = grp->parent; }
         if (pl->gw)  {

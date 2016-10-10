@@ -108,7 +108,7 @@ struct Memories {
                 << " placed: " << placed;
         };
         int left_to_place() { return depth - placed; } 
-        bool all_placed() { return (depth - placed != 0); };
+        bool all_placed() { return (depth == placed); };
 
     };
 
@@ -137,7 +137,7 @@ struct Memories {
     bool analyze_tables(mem_info &mi);
     void calculate_column_balance(mem_info &mi);
     bool allocate_all();
-    bool allocate_all_exact(mem_info &mi);
+    bool allocate_all_exact();
     bool allocate_exact(table_alloc *ta, mem_info &mi, int average_depth);    
     vector<int> way_size_calculator(int ways, int RAMs_needed);
     vector<std::pair<int, int>> available_SRAMs_per_row(unsigned mask, table_alloc *ta,
