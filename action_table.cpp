@@ -375,13 +375,8 @@ void ActionTable::gen_tbl_cfg(json::vector &out) {
     json::map &tbl = *base_tbl_cfg(out, "action_data", number_entries);
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "action_data", number_entries);
     stage_tbl["stage_table_handle"] = action_id;
-    int pack_fmt_count = 0;
     for (auto &act : *actions) {
         auto *fmt = ::get(action_formats, act.name);
-        if (!options.match_compiler) {
-            while (pack_fmt_count++ < act.code)
-                add_pack_format(stage_tbl, format);
-            assert(act.code == pack_fmt_count-1); }  // should have issued error and not got here
         add_pack_format(stage_tbl, fmt ? fmt : format); }
     stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("sram");
     if (actions)
