@@ -26,12 +26,39 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
         }
     }
     // allocate containers to clusters
-    allocate_containers(phv_requirements_i.cluster_phv_map());
+    std::list<Cluster_PHV *> clusters_to_be_assigned;
+    std::set<PHV_MAU_Group *> mau_group_containers_avail;
+    allocate_containers(phv_requirements_i.cluster_phv_map(), clusters_to_be_assigned, mau_group_containers_avail);
+    //
+    if(clusters_to_be_assigned.size())
+    {
+        container_pack_cohabit(clusters_to_be_assigned, mau_group_containers_avail);
+    }
     //
 }//PHV_MAU_Group_Assignments
 
-bool
-PHV_MAU_Group_Assignments::allocate_containers(std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map)
+//***********************************************************************************
+//
+// PHV_MAU_Group_Assignments::allocate_containers
+// 
+// 1. sorted clusters requirement decreasing, sorted mau groups width decreasing
+// 
+// 2. each cluster field in separate containers
+//    addresses single-write constraint, surround effects within container, alignment issues (start @ 0)
+// 
+// 3. pick next cl, put in Group with available non-occupied <container, width>
+//    s.t., after assignment, G.remaining_containers != 1 as forall cl, |cl| >= 2
+//    field f may need several containers, e.g., f:128 --> C1<32>,C2,C3,C4
+//    but each C single or partial field only => C does not contain 2 fields
+// 
+// 4. when all G exhausted
+//    clusters_to_be_assigned contains clusters not assigned
+//    mau_group_containers_avail contains mau groups that have partially available containers 
+// 
+//***********************************************************************************
+
+void
+PHV_MAU_Group_Assignments::allocate_containers(std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map, std::list<Cluster_PHV *>& clusters_to_be_assigned, std::set<PHV_MAU_Group *>& mau_group_containers_avail)
 {
     //
     // 1. sorted clusters requirement decreasing, sorted mau groups width decreasing
@@ -39,7 +66,6 @@ PHV_MAU_Group_Assignments::allocate_containers(std::map<PHV_Container::PHV_Word,
     // traverse in reverse cluster_phv_map requirements for [32], [16], [8]
     // populate sorted queue of clusters
     //
-    std::list<Cluster_PHV *> clusters_to_be_assigned;
     for (auto rit=cluster_phv_map.rbegin(); rit!=cluster_phv_map.rend(); ++rit)
     {
         for (auto rit_2=rit->second.rbegin(); rit_2!=rit->second.rend(); ++rit_2)
@@ -57,7 +83,7 @@ PHV_MAU_Group_Assignments::allocate_containers(std::map<PHV_Container::PHV_Word,
     // map cluster_phv_map in reverse order 32 --> 16 --> 8 to corresponding PHV_MAU_Groups
     // populate sorted queue of mau containers
     //
-    std::list<PHV_MAU_Group *> mau_groups_to_be_filled;;
+    std::list<PHV_MAU_Group *> mau_groups_to_be_filled;
     for (auto rit=PHV_MAU_i.rbegin(); rit!=PHV_MAU_i.rend(); ++rit)
     {
         // groups within this word size
@@ -80,6 +106,9 @@ PHV_MAU_Group_Assignments::allocate_containers(std::map<PHV_Container::PHV_Word,
         {
             // 3. pick next cl, put in Group with available non-occupied <container, width>
             //    s.t., after assignment, G.remaining_containers != 1 as forall cl, |cl| >= 2
+            //    field f may need several containers, e.g., f:128 --> C1<32>,C2,C3,C4
+            //    but each C single or partial field only => C does not contain 2 fields
+            //
             auto avail_containers = g->avail_containers();
             auto req_containers = cl->num_containers();
             if(g->width() < cl->width())
@@ -113,8 +142,16 @@ PHV_MAU_Group_Assignments::allocate_containers(std::map<PHV_Container::PHV_Word,
                         {
                             taint_bits = field_width;
                         }
-                        g->phv_containers()[container_index++]->taint(0, taint_bits);
                         field_width -= (int) g->width();
+                        //
+                        g->phv_containers()[container_index]->taint(0, taint_bits, cl->cluster_vec()[i]);
+                        if(g->phv_containers()[container_index]->status() == PHV_Container::Container_status::PARTIAL)
+                        {   // MAU group has container packing potential
+                            //
+                            g->containers_pack().push_back(g->phv_containers()[container_index]);
+                            mau_group_containers_avail.insert(g);
+                        }
+                        container_index++;
                     }
                 }
                 g->avail_containers(avail_containers - req_containers);
@@ -123,6 +160,10 @@ PHV_MAU_Group_Assignments::allocate_containers(std::map<PHV_Container::PHV_Word,
                     break;
                 }
             }
+        }
+        if(g->avail_containers())
+        {
+            mau_group_containers_avail.insert(g);
         }
         // remove clusters already assigned
         for (auto cl: clusters_remove)
@@ -135,9 +176,92 @@ PHV_MAU_Group_Assignments::allocate_containers(std::map<PHV_Container::PHV_Word,
     // clusters not yet assigned
     LOG3("----------clusters not assigned (" << clusters_to_be_assigned.size() << ")-----");
     LOG3(clusters_to_be_assigned);
+    //
+}//allocate_containers
 
-    return false;
-}
+//***********************************************************************************
+//
+// PHV_MAU_Group_Assignments::container_pack_cohabit
+//
+// 4. when all G exhausted, attempt to pack C with available widths
+//    (i)  co-habit         (need Table "single-write", surround(move op))
+//    (ii) no overlay       (need liveness, ifce graph)
+//    e.g., 
+//    clusters remain              G.avail
+//    --------------               -------
+//        <num, width>                <num containers, bit width>
+//         7 1                     G1: 1:3
+//         6 8                     G2: 1:7
+//         5 8                     G3: 1:1, 1:1
+//         5 4                     G4: 1:1, 1:7
+//         5 1                     G5: 1:8, 1:13
+//         4 3                     G6: 1:3, 1:6, 1:7
+//         4 1                     G7: 4:8
+//         3 8                     G8: 4:12
+//         3 8                     G9: 5:8, 5:16
+//         3 8 8 5                 G10: 1:1, 10:16
+//         3 5
+//         3 5
+//         3 2
+//         3 1
+//         3 1
+//         3 1
+//         2 9
+//         2 8
+//         2 1
+// 
+//   (i) Pack co-habit 
+//       sort remaining cl n decreasing, width decreasing
+//       sort avail G:<n,w>, G:n increasing, and within G, w increasing
+//       fill from Container MSB, aligment honored
+//       G.singleton C use later if necessary for
+//       (i) horizontal pack
+//       (ii) status bits e.g., POVs for headers that honor single-write constraint
+//
+// 5. vertical distribution => no horizontal distribution
+//        x.y => sigma Ca.y where x = number of containers = sigma Ca
+//        addresses
+//        (i)   sibling operands cannot reside in same container
+//        (ii)  single-write constraint for cluster members
+//        (iii) single-write constraint across clusters cohabiting container may exist
+//              these fields are output as a recommedation to Table-Placement
+//        within new cl selected for co-habit, packing should ensure no G.rem = 1.X
+//        as no future cl can use this remnant unless horizontal packing enabled  
+// 
+// 
+//***********************************************************************************
+
+void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>& clusters_to_be_assigned, std::set<PHV_MAU_Group *>& mau_group_containers_avail)
+{
+    BUG_CHECK(mau_group_containers_avail.size(), "*****container_pack_cohabit: MAU Groups no space left*****");
+    //
+    // sort clusters number decreasing, width decreasing
+    //
+    clusters_to_be_assigned.sort([](Cluster_PHV *l, Cluster_PHV *r) {
+        if(l->num_containers() == r->num_containers())
+        {
+            return l->width() > r->width();
+        }
+        return l->num_containers() > r->num_containers();
+    });
+    LOG3("----------sorted clusters to be assigned (" << clusters_to_be_assigned.size() << ")-----");
+    LOG3(clusters_to_be_assigned);
+    //
+    // sort mau groups with available containers, num containers increasing, width increasing
+    //
+    std::vector<PHV_MAU_Group *> mau_group_avail_vec(mau_group_containers_avail.begin(), mau_group_containers_avail.end());
+    sort(mau_group_avail_vec.begin(), mau_group_avail_vec.end(), [](PHV_MAU_Group *l, PHV_MAU_Group *r) {
+        if(l->containers_pack().size() == r->containers_pack().size())
+        {   // sort by total width within G
+            //
+        }
+        return l->containers_pack().size() < r->containers_pack().size();
+    });
+    //
+    LOG3("----------sorted MAU Groups avail (" << mau_group_avail_vec.size() << ")-----");
+    LOG3(mau_group_avail_vec);
+    //
+}//container_pack_cohabit
 
 //***********************************************************************************
 //

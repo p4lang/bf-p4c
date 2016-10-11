@@ -34,7 +34,10 @@ class PHV_MAU_Group
 							// number of available containers
     std::vector<PHV_Container *> phv_containers_i;	// containers in this MAU group
     std::vector<Cluster_PHV *> cluster_phv_i;		// clusters in this MAU group
+    std::vector<PHV_Container *> containers_pack_i;	// containers available for packing
+    //
  public:
+    //
     PHV_MAU_Group(PHV_Container::PHV_Word w, int n);
     //
     PHV_Container::PHV_Word width()			{ return width_i; }
@@ -43,6 +46,7 @@ class PHV_MAU_Group
     void avail_containers(int n)			{ avail_containers_i = n; }
     std::vector<PHV_Container *>& phv_containers()	{ return phv_containers_i; }
     std::vector<Cluster_PHV *>& clusters()		{ return cluster_phv_i; }
+    std::vector<PHV_Container *>& containers_pack()	{ return containers_pack_i; }
 };
 //
 //
@@ -60,8 +64,11 @@ class PHV_MAU_Group_Assignments
     std::map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>> PHV_MAU_i;
 							// sorted PHV requirements <num, width>,
 							// num decreasing then width decreasing
-    bool allocate_containers(std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map);
+    void allocate_containers(std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map, std::list<Cluster_PHV *>& clusters_to_be_assigned, std::set<PHV_MAU_Group *>& mau_group_containers_avail);
+    void container_pack_cohabit(std::list<Cluster_PHV *>& clusters_to_be_assigned, std::set<PHV_MAU_Group *>& mau_group_containers_avail);
+    //
  public:
+    //
     PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &phv_r);
     //
     std::map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>& phv_mau_map()

@@ -23,36 +23,43 @@ class PHV_Container
     enum class PHV_Word {b32=32, b16=16, b8=8};
     enum class Containers {MAX=16};
     enum class Container_status {EMPTY='E', PARTIAL='P', FULL='F'};
-    struct content
+    class Container_Content
     {
-        int lo_i, hi_i;					// range of bits within container used by field
+      private:
+        int lo_i;						// low of bit range in container for field
+        int hi_i;						// high of bit range in container for field
         const PhvInfo::Field *field_i;
+      public:
+        //
+        Container_Content(int l, int h, const PhvInfo::Field *f);
+        //
         int lo() const			{ return lo_i; }
+        void lo(int l)			{ lo_i = l; }
         int hi() const			{ return hi_i; }
+        void hi(int h)			{ hi_i = h; }
         int width() const		{ return hi_i - lo_i + 1; }
         const PhvInfo::Field *field()	{ return field_i; }
     };
     //
  private:
-    PHV_Word width_i;					// width of container
-    int number_i;					// 1..16 within group
+    PHV_Word width_i;						// width of container
+    int number_i;						// container number 1..16 within MAU group
     Container_status status_i = Container_status::EMPTY;
-    std::vector<content> fields_i;			// fields mapped to this container
-    char *bits_i;
+    std::vector<Container_Content *> fields_in_container_i;	// fields binned in this container
+    char *bits_i;						// tainted bits in container
  public:
     PHV_Container(PHV_Word w, int n);
     //
-    PHV_Word width()					{ return width_i; }
-    int number()					{ return number_i; }
-    Container_status status()				{ return status_i; }
-    void status(Container_status s)			{ status_i = s; }
-    std::vector<content>& fields()			{ return fields_i; }
-    void taint(int start, int width);
-    char *bits()					{ return bits_i; }
+    PHV_Word width()						{ return width_i; }
+    int number()						{ return number_i; }
+    Container_status status()					{ return status_i; }
+    char *bits()						{ return bits_i; }
+    void taint(int start, int width, const PhvInfo::Field *field_i);
+    std::vector<Container_Content *>& fields_in_container()	{ return fields_in_container_i; }
 };
 //
 //
-std::ostream &operator<<(std::ostream &, std::vector<PHV_Container::content>&);
+std::ostream &operator<<(std::ostream &, std::vector<PHV_Container::Container_Content *>&);
 std::ostream &operator<<(std::ostream &, PHV_Container*);
 std::ostream &operator<<(std::ostream &, std::vector<PHV_Container *>&);
 //
