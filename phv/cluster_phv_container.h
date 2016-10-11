@@ -47,6 +47,8 @@ class PHV_Container
     Container_status status_i = Container_status::EMPTY;
     std::vector<Container_Content *> fields_in_container_i;	// fields binned in this container
     char *bits_i;						// tainted bits in container
+    int avail_bits_lo_i = 0;					// available bit range lo
+    int avail_bits_hi_i;					// available bit range hi
  public:
     PHV_Container(PHV_Word w, int n);
     //
@@ -55,12 +57,15 @@ class PHV_Container
     Container_status status()					{ return status_i; }
     char *bits()						{ return bits_i; }
     void taint(int start, int width, const PhvInfo::Field *field_i);
+    int avail_bits_lo()						{ return avail_bits_lo_i; }
+    int avail_bits_hi()						{ return avail_bits_hi_i; }
     std::vector<Container_Content *>& fields_in_container()	{ return fields_in_container_i; }
 };
 //
 //
 std::ostream &operator<<(std::ostream &, std::vector<PHV_Container::Container_Content *>&);
 std::ostream &operator<<(std::ostream &, PHV_Container*);
+std::ostream &operator<<(std::ostream &, PHV_Container&);
 std::ostream &operator<<(std::ostream &, std::vector<PHV_Container *>&);
 //
 #endif /* _TOFINO_PHV_CLUSTER_PHV_CONTAINER_H_ */

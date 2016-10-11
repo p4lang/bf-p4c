@@ -5,6 +5,82 @@
 
 //***********************************************************************************
 //
+// PHV_MAU_Group::Container_Content::Container_Content constructor
+// 
+//***********************************************************************************
+
+PHV_MAU_Group::Container_Content::Container_Content(int l, int w, PHV_Container *c) : lo_i(l), hi_i(l+w-1), container_i(c)
+{
+    BUG_CHECK(container_i, "*****PHV_MAU_Group::Container_Content constructor called with null container ptr*****");
+}
+
+//***********************************************************************************
+//
+// PHV_MAU_Group::PHV_MAU_Group
+// 
+//***********************************************************************************
+
+PHV_MAU_Group::PHV_MAU_Group(PHV_Container::PHV_Word w, int n) : width_i(w), number_i(n)
+{
+    // create containers within group
+    for (int i=1; i <= (int)PHV_Container::Containers::MAX; i++)
+    {
+        PHV_Container *c = new PHV_Container(width_i, i);
+        phv_containers_i.push_back(c);
+    }
+}//PHV_MAU_Group
+
+
+//***********************************************************************************
+//
+// PHV_MAU_Group::create_aligned_container_slices
+// 
+// slice partially filled containers
+// to obtain larger number of sub-containers with reduced width
+// 
+//***********************************************************************************
+
+void PHV_MAU_Group::create_aligned_container_slices()
+{
+    // larger n in <n:w> possible only when 2 or more containers
+    //
+    if(containers_pack_i.size() > 1)
+    {
+        // for each slice group, obtain max of all lows in each partial container
+        //
+        std::list<PHV_Container *> container_list(containers_pack_i.begin(), containers_pack_i.end());
+        int lo = (int) width_i; 
+        for (;container_list.size() > 0;)
+        {
+            int hi = lo - 1;
+            lo = 0;
+            for (auto c: container_list)
+            {
+               lo = std::max(lo, c->avail_bits_lo()); 
+            }
+            // for each partial container slice lo .. hi 
+            //
+            int width = hi - lo + 1;
+            std::list<PHV_Container *> c_remove;
+            for (auto c: container_list)
+            {
+                aligned_container_slices_i[width].insert(new Container_Content(lo, width, c));
+                if(c->avail_bits_lo() == lo)
+                {
+                    c_remove.push_back(c);
+                }
+            }
+            // remove containers completely sliced
+            for (auto c: c_remove)
+            {
+                container_list.remove(c);
+            }
+        }
+    }
+}
+
+//***********************************************************************************
+//
 // PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments
 // 
 //***********************************************************************************
@@ -25,13 +101,20 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
             PHV_MAU_i[g->width()].push_back(g);
         }
     }
-    // allocate containers to clusters
+    // cluster placement in containers conforming to MAU group constraints
+    //
     std::list<Cluster_PHV *> clusters_to_be_assigned;
     std::set<PHV_MAU_Group *> mau_group_containers_avail;
-    allocate_containers(phv_requirements_i.cluster_phv_map(), clusters_to_be_assigned, mau_group_containers_avail);
+    cluster_placement_containers(phv_requirements_i.cluster_phv_map(), clusters_to_be_assigned, mau_group_containers_avail);
+    //
+    // pack remaining clusters to partially filled containers
     //
     if(clusters_to_be_assigned.size())
     {
+        // slice containers to form groups that can accommodate larger number for given width in <n:w>
+        //
+        create_aligned_container_slices(mau_group_containers_avail);
+        //
         container_pack_cohabit(clusters_to_be_assigned, mau_group_containers_avail);
     }
     //
@@ -39,7 +122,7 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
 
 //***********************************************************************************
 //
-// PHV_MAU_Group_Assignments::allocate_containers
+// PHV_MAU_Group_Assignments::cluster_placement_containers
 // 
 // 1. sorted clusters requirement decreasing, sorted mau groups width decreasing
 // 
@@ -58,7 +141,7 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
 //***********************************************************************************
 
 void
-PHV_MAU_Group_Assignments::allocate_containers(std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map, std::list<Cluster_PHV *>& clusters_to_be_assigned, std::set<PHV_MAU_Group *>& mau_group_containers_avail)
+PHV_MAU_Group_Assignments::cluster_placement_containers(std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map, std::list<Cluster_PHV *>& clusters_to_be_assigned, std::set<PHV_MAU_Group *>& mau_group_containers_avail)
 {
     //
     // 1. sorted clusters requirement decreasing, sorted mau groups width decreasing
@@ -99,6 +182,7 @@ PHV_MAU_Group_Assignments::allocate_containers(std::map<PHV_Container::PHV_Word,
     // 2. each cluster field in separate containers
     //    addresses single-write constraint, surround effects within container, alignment issues (start @ 0)
     //
+    LOG3("..........container placements ..........");
     for (auto g: mau_groups_to_be_filled)
     {
         std::list<Cluster_PHV *> clusters_remove;
@@ -173,18 +257,33 @@ PHV_MAU_Group_Assignments::allocate_containers(std::map<PHV_Container::PHV_Word,
     }
     //
     // all mau groups exhausted
-    // clusters not yet assigned
-    LOG3("----------clusters not assigned (" << clusters_to_be_assigned.size() << ")-----");
-    LOG3(clusters_to_be_assigned);
     //
-}//allocate_containers
+}//cluster_placement_containers
+
+
+//***********************************************************************************
+//
+// PHV_MAU_Group_Assignments::create_aligned_container_slices
+//
+// for all MAU groups with partially filled containers
+// slice to obtain larger number of sub-containers with reduced width
+// 
+//***********************************************************************************
+
+void PHV_MAU_Group_Assignments::create_aligned_container_slices(std::set<PHV_MAU_Group *>& mau_group_containers_avail)
+{
+    for (auto g: mau_group_containers_avail)
+    {
+        g->create_aligned_container_slices();
+    }
+}
 
 //***********************************************************************************
 //
 // PHV_MAU_Group_Assignments::container_pack_cohabit
 //
 // 4. when all G exhausted, attempt to pack C with available widths
-//    (i)  co-habit         (need Table "single-write", surround(move op))
+//    (i)  co-habit         (need Table "single-write", surround side-effects (move-based ops))
 //    (ii) no overlay       (need liveness, ifce graph)
 //    e.g., 
 //    clusters remain              G.avail
@@ -228,7 +327,6 @@ PHV_MAU_Group_Assignments::allocate_containers(std::map<PHV_Container::PHV_Word,
 //        within new cl selected for co-habit, packing should ensure no G.rem = 1.X
 //        as no future cl can use this remnant unless horizontal packing enabled  
 // 
-// 
 //***********************************************************************************
 
 void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>& clusters_to_be_assigned, std::set<PHV_MAU_Group *>& mau_group_containers_avail)
@@ -259,25 +357,9 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
     });
     //
     LOG3("----------sorted MAU Groups avail (" << mau_group_avail_vec.size() << ")-----");
-    LOG3(mau_group_avail_vec);
+    LOG3(&mau_group_avail_vec);
     //
 }//container_pack_cohabit
-
-//***********************************************************************************
-//
-// PHV_MAU_Group::PHV_MAU_Group constructor
-// 
-//***********************************************************************************
-
-PHV_MAU_Group::PHV_MAU_Group(PHV_Container::PHV_Word w, int n) : width_i(w), number_i(n)
-{
-    // create containers within group
-    for (int i=1; i <= (int)PHV_Container::Containers::MAX; i++)
-    {
-        PHV_Container *c = new PHV_Container(width_i, i);
-        phv_containers_i.push_back(c);
-    }
-}//PHV_MAU_Group
 
 //***********************************************************************************
 //
@@ -285,14 +367,49 @@ PHV_MAU_Group::PHV_MAU_Group(PHV_Container::PHV_Word w, int n) : width_i(w), num
 // 
 //***********************************************************************************
 //
+// Container_Content output
+//
+std::ostream &operator<<(std::ostream &out, std::set<PHV_MAU_Group::Container_Content *>& slices)
+{
+    for (auto c: slices)
+    {
+        out << c->container() << '<' << c->width() << '>' << '{' << c->lo() << ".." << c->hi() << '}';
+    }
+
+    return out;
+}
+//
 // phv_mau_group output
 //
 std::ostream &operator<<(std::ostream &out, PHV_MAU_Group &g)
 {
     // mau group summary
     //
-    out << 'G' << g.number() << '[' << (int)(g.width()) << ']'
-        << '(' << g.avail_containers() << ')';
+    out << 'G' << g.number() << '[' << (int)(g.width()) << ']';
+    if(g.avail_containers())
+    {
+        out << '(' << g.avail_containers() << ')';
+    }
+    // summarize packable containers
+    if(g.containers_pack().size())
+    {
+        out << "{ ";
+        for (auto c: g.containers_pack())
+        {
+            out << c << ' ';
+        }
+        out << '}';
+    }
+    // summarize container slice groups
+    if(! g.aligned_container_slices().empty())
+    {
+        out << '|';
+        for (auto s: g.aligned_container_slices())
+        {
+            out << '[' << s.first << "](" << s.second << "); ";
+        }
+        out << '|';
+    }
 
     return out;
 }

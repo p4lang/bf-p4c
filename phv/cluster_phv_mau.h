@@ -27,6 +27,26 @@
 //
 class PHV_MAU_Group
 {
+ public:
+    class Container_Content
+    {
+      private:
+        int lo_i;						// low of bit range in container for packing
+        int hi_i;						// high of bit range in container for packing
+        PHV_Container *container_i;
+        //
+      public:
+        //
+        Container_Content(int l, int h, PHV_Container *c);
+        //
+        int lo() const			{ return lo_i; }
+        void lo(int l)			{ lo_i = l; }
+        int hi() const			{ return hi_i; }
+        void hi(int h)			{ hi_i = h; }
+        int width() const		{ return hi_i - lo_i + 1; }
+        PHV_Container *container()	{ return container_i; }
+    };
+    //
  private:
     PHV_Container::PHV_Word width_i;			// container width in PHV group
     int number_i;					// 1..4 [32], 1..6 [16], 1..4 [8]
@@ -35,7 +55,9 @@ class PHV_MAU_Group
     std::vector<PHV_Container *> phv_containers_i;	// containers in this MAU group
     std::vector<Cluster_PHV *> cluster_phv_i;		// clusters in this MAU group
     std::vector<PHV_Container *> containers_pack_i;	// containers available for packing
-    //
+    std::map<int, std::set<Container_Content *>> aligned_container_slices_i;
+							// [8..15] [3..15] => 2[8..15] [3..7]
+							// [2..7] [1..7] [5..7] => 3[5..7] 2[2..4] [1..1]
  public:
     //
     PHV_MAU_Group(PHV_Container::PHV_Word w, int n);
@@ -47,6 +69,9 @@ class PHV_MAU_Group
     std::vector<PHV_Container *>& phv_containers()	{ return phv_containers_i; }
     std::vector<Cluster_PHV *>& clusters()		{ return cluster_phv_i; }
     std::vector<PHV_Container *>& containers_pack()	{ return containers_pack_i; }
+    void create_aligned_container_slices();
+    std::map<int, std::set<Container_Content *>>& aligned_container_slices()
+							{ return aligned_container_slices_i; }
 };
 //
 //
@@ -64,7 +89,8 @@ class PHV_MAU_Group_Assignments
     std::map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>> PHV_MAU_i;
 							// sorted PHV requirements <num, width>,
 							// num decreasing then width decreasing
-    void allocate_containers(std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map, std::list<Cluster_PHV *>& clusters_to_be_assigned, std::set<PHV_MAU_Group *>& mau_group_containers_avail);
+    void cluster_placement_containers(std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map, std::list<Cluster_PHV *>& clusters_to_be_assigned, std::set<PHV_MAU_Group *>& mau_group_containers_avail);
+    void create_aligned_container_slices(std::set<PHV_MAU_Group *>& mau_group_containers_avail);
     void container_pack_cohabit(std::list<Cluster_PHV *>& clusters_to_be_assigned, std::set<PHV_MAU_Group *>& mau_group_containers_avail);
     //
  public:
@@ -76,6 +102,9 @@ class PHV_MAU_Group_Assignments
         return PHV_MAU_i;
     }
 };
+//
+//
+std::ostream &operator<<(std::ostream &, std::set<PHV_MAU_Group::Container_Content *>&);
 std::ostream &operator<<(std::ostream &, PHV_MAU_Group&);
 std::ostream &operator<<(std::ostream &, PHV_MAU_Group*);
 std::ostream &operator<<(std::ostream &, std::list<PHV_MAU_Group *>&);

@@ -11,7 +11,7 @@
 
 PHV_Container::Container_Content::Container_Content(int l, int w, const PhvInfo::Field *f) : lo_i(l), hi_i(w-l-1), field_i(f)
 {
-    BUG_CHECK(field_i, "*****Container_Content constructor called with null field ptr*****");
+    BUG_CHECK(field_i, "*****PHV_Container::Container_Content constructor called with null field ptr*****");
 }
 
 //***********************************************************************************
@@ -27,6 +27,7 @@ PHV_Container::PHV_Container(PHV_Word w, int n) : width_i(w), number_i(n)
     {
         bits_i[i] = '0';
     }
+    avail_bits_hi_i = (int) width_i - 1;
 }//PHV_Container
 
 void
@@ -44,6 +45,7 @@ PHV_Container::taint(int start, int width, const PhvInfo::Field *field_i)
    else
    {
        status_i = Container_status::PARTIAL;
+       avail_bits_lo_i = start + width;
    }
    //
    // track fields in this container
@@ -57,7 +59,7 @@ PHV_Container::taint(int start, int width, const PhvInfo::Field *field_i)
 // 
 //***********************************************************************************
 //
-// Container_content output
+// Container_Content output
 //
 std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container::Container_Content *>& c)
 {
@@ -73,17 +75,35 @@ std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container::Container
 //
 std::ostream &operator<<(std::ostream &out, PHV_Container *c)
 {
+    // summary output 
+    //
     if(c)
     {
-        out << "\tC" << c->number() << '[' << (int)(c->width()) << ']'
-            << '(' << (char)(c->status()) << ')'
-            << '\t' << c->bits()
-            << '\t' << c->fields_in_container();
+        out << "C" << c->number();
+        if(c->status() != PHV_Container::Container_status::FULL)
+        {
+            out << '[' << c->avail_bits_lo() << ".." << c->avail_bits_hi() << ']';
+        }
+        else
+        {
+            out << "    \t";
+        }
     }
     else
     {
         out << "-c-";
     }
+
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, PHV_Container &c)
+{
+    // detailed output
+    //
+    out << '\t' << &c
+        << '\t' << c.bits()
+        << '\t' << c.fields_in_container();
     out << std::endl;
 
     return out;
@@ -93,7 +113,7 @@ std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container *> &phv_co
 {
     for (auto m: phv_containers)
     {
-        out << m;
+        out << *m;
     }
 
     return out;
