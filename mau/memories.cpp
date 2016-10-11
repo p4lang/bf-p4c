@@ -664,7 +664,7 @@ bool Memories::allocate_all_tind() {
             tind_bus2[i][0] = next_tind->ta;
             next_tind->placed++;
             if (next_tind->all_placed()) {
-                tind_groups.erase(tind_groups.begin()); 
+             tind_groups.erase(tind_groups.begin()); 
             }
             auto name = next_tind->ta->table->name + "$tind";
             auto &alloc = (*next_tind->ta->memuse)[name];
@@ -687,10 +687,130 @@ void Memories::find_action_bus_users() {
 
         for (int i = 0; i < width; i++) {
             action_bus_users.push_back(new action_group(ta, depth, i));
+            LOG3("Depth of action table " << ta->table->name << "$action is " << depth);
         }
     }
 }
 
+
+
+void Memories::find_action_candidates(int row, int mask, action_group **a_group, unsigned &a_mask,
+                                      int &a_index, action_group **oflow_group,
+                                      unsigned &oflow_mask, int &oflow_index) {
+
+    LOG3("Finding action candidates");
+    if (action_bus_users.empty()) {
+        LOG3("Empty");
+        return;
+    }
+
+    int RAMs_available = __builtin_popcount(mask & ~sram_inuse[row]);
+
+    int best_fit_index = 0;
+
+    //action_group *two_bus_group;
+    action_group *best_a_group = nullptr;
+    action_group *best_oflow_group = nullptr;
+
+    action_group *curr_oflow_group = (action_bus_users[0]->placed == 0) ? 
+                                         nullptr : action_bus_users[0];
+    action_group *best_fit_group = nullptr;
+    for (size_t i = 1; i < action_bus_users.size(); i++) {
+        if (action_bus_users[i]->depth <= RAMs_available) {
+            best_fit_group = action_bus_users[i];
+            break;
+        }
+    }
+
+    bool oflow_first = false;
+
+    if (curr_oflow_group == nullptr) {
+        if (!best_fit_group) { 
+            best_a_group = action_bus_users[0];
+            a_index = 0;
+        } else if (best_fit_group->left_to_place() == RAMs_available) {
+            best_a_group = best_fit_group;
+            a_index = best_fit_index;
+        } else {
+            best_a_group = action_bus_users[0];
+            a_index = 0;
+        }
+
+    } else {
+        if (!best_fit_group) {
+            best_oflow_group = curr_oflow_group;
+            oflow_index = 0;
+            if (action_bus_users.size() > 1 
+                && curr_oflow_group->left_to_place() < RAMs_available) {
+                best_a_group = action_bus_users[1];
+                a_index = 1;
+            }
+            oflow_first = true;
+        }
+        else if (curr_oflow_group->left_to_place() + best_fit_group->left_to_place() 
+            < RAMs_available) {
+           best_oflow_group = curr_oflow_group;
+           oflow_index = 0;
+        } else {
+            best_oflow_group = curr_oflow_group;
+            oflow_index = 0;
+            if (action_bus_users.size() > 1 
+                && curr_oflow_group->left_to_place() < RAMs_available) {
+                best_a_group = action_bus_users[1];
+                a_index = 1;
+            }
+            oflow_first = true;
+        }
+    }
+    LOG3("Candidates selected");
+
+    unsigned first_mask = 0; unsigned second_mask = 0;
+    int first_RAMs = 0;
+    int second_RAMs = 0;
+    if (oflow_first) {
+        first_RAMs = best_oflow_group->left_to_place();
+        if (best_a_group)
+            second_RAMs = best_a_group->left_to_place();
+    } else {
+        first_RAMs = best_a_group->left_to_place();
+        if (best_oflow_group)
+            second_RAMs = best_oflow_group->left_to_place();
+    }
+
+    int RAMs_filled = 0;
+    for (int i = 0; i < SRAM_COLUMNS && RAMs_filled < first_RAMs + second_RAMs; i++) {
+        if (((1 << i) & mask) == 0)
+            continue;
+        if ((1 << i) & ~sram_inuse[row]) {
+            if (RAMs_filled <= first_RAMs)
+                first_mask |= (1 << i);
+            else
+                second_mask |= (1 << i);
+            RAMs_filled++;
+        }   
+    }
+    LOG3("First mask " << first_mask << ".  Second mask " << second_mask << ".");
+
+    if (oflow_first) {
+        oflow_mask = first_mask;
+        a_mask = second_mask;
+    } else {
+        oflow_mask = second_mask;
+        a_mask = first_mask;
+    }
+
+    if (best_a_group) { 
+        *a_group = best_a_group;
+        LOG3("Action assignment");
+    }
+    if (best_oflow_group) {
+        *oflow_group = best_oflow_group;
+        LOG3("Overflow assignment");
+    }
+    LOG3("Action candidates found"); 
+}
+
+/*
 void Memories::find_action_candidates(int row, int mask, action_group **a_group, unsigned &a_mask,
                                       int &a_index, action_group **oflow_group,
                                       unsigned &oflow_mask, int &oflow_index) {
@@ -762,11 +882,12 @@ void Memories::find_action_candidates(int row, int mask, action_group **a_group,
         }
         a_index = best_fit_index;
         *a_group = best_fit;
-   /* } else {
+   // } else {
 
-    }*/
+   // }
 
 }
+*/
 
 vector<Memories::action_group *> Memories::candidates_for_overflow(int row, bool on_right_side) {
     vector<action_group *> overflow_candidates;
@@ -806,7 +927,7 @@ bool Memories::allocate_all_action() {
     });
 
 
-  
+    bool completed = false;
     
     for (int i = 0; i < SRAM_ROWS; i++) {
         for (int j = 0; j < 2; j++) {
@@ -828,11 +949,13 @@ bool Memories::allocate_all_action() {
             find_action_candidates(i, mask, &a_group, a_mask, a_index,
                                    &oflow_group, oflow_mask, oflow_index);
 
+            LOG3("Masks " << a_mask << " " << oflow_mask);
             Memories::Use::Row *a_row, *oflow_row = nullptr;
 
             if (a_group == nullptr && oflow_group == nullptr) {
-                LOG3("Help");
-                return true;
+                LOG3("Finished");
+                completed = true;
+                break;
             }            
             if (a_group != nullptr) {
                 LOG3("Before");
@@ -884,10 +1007,22 @@ bool Memories::allocate_all_action() {
                 action_bus_users.erase(action_bus_users.begin() + oflow_index);
             }
         }
+        if (completed) break;
     }
 
     if (!action_bus_users.empty())
         return false; 
+
+    LOG3("Done allocating actions");
+    for (auto *ta : action_tables) {
+         auto name = ta->table->name + "$action";
+         auto &alloc =(*ta->memuse)[name];
+         for (auto row : alloc.row) {
+             LOG3("Row " << row.row << " and bus " << row.bus << " has " 
+                         << row.col.size() << " cols.");
+         }
+    }
+
     return true;
 }
 

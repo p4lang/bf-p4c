@@ -83,7 +83,7 @@ struct TablePlacement::Placed {
     bool is_placed(const IR::MAU::Table *tbl) const { return is_placed(tbl->name); }
     bool is_placed(const IR::MAU::TableSeq *seq) const {
         for (auto tbl : seq->tables)
-            if (!is_placed(tbl)) return false;
+            if (!is_placed(tbl)) { LOG3("Unplaced " << tbl->name); return false;};
         return true; }
     void copy (const Placed *p) {
         name = p->name; entries = p->entries; placed = p->placed;
@@ -94,6 +94,9 @@ struct TablePlacement::Placed {
     void set_prev (const Placed *p, bool make_new, vector<TableResourceAlloc *> &prev_resources) {
         if (!make_new) {
             prev = p;
+            if (p) {
+                placed = p->placed;
+            }
         } else {
             int stage = -1;
             int index = 0;
@@ -338,10 +341,10 @@ retry_next_stage:
     if (done && rv->stage == done->stage) {
         rv->set_prev(done, true, prev_resources);
     } else {
-        LOG3("In here");
-        rv->prev = done;
+        rv->set_prev(done, false, prev_resources);
     }
     if (!rv->need_more) {
+        LOG3("Setting placed variable");
         rv->placed[table_uids.at(rv->name)] = true;
         if (rv->gw)
             rv->placed[table_uids.at(rv->gw->name)] = true; }
