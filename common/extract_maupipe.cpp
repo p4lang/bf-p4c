@@ -8,6 +8,7 @@
 #include "tofino/common/param_binding.h"
 #include "tofino/mau/table_dependency_graph.h"
 #include "tofino/parde/extract_parser.h"
+#include "tofino/tofinoOptions.h"
 #include "lib/algorithm.h"
 #include "lib/error.h"
 #include "rewrite.h"
@@ -352,7 +353,7 @@ class GetTofinoTables : public Inspector {
 };
 }  // anonymous namespace
 
-const IR::Tofino::Pipe *extract_maupipe(const IR::V1Program *program) {
+const IR::Tofino::Pipe *extract_maupipe(const IR::V1Program *program, Tofino_Options &) {
     auto rv = new IR::Tofino::Pipe();
     rv->standard_metadata = program->get<IR::Metadata>("standard_metadata");
     GetTofinoParser parser(program);
@@ -383,9 +384,10 @@ class ConvertIndexToHeaderStackItemRef : public Transform {
         return new IR::HeaderStackItemRef(idx->srcInfo, type, idx->left, idx->right); }
 };
 
-const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
+const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program, Tofino_Options &options) {
     P4::ReferenceMap  refMap;
     P4::TypeMap       typeMap;
+    refMap.setIsV1(options.isv1());
     P4::EvaluatorPass evaluator(&refMap, &typeMap);
     program = program->apply(evaluator);
     auto toplevel = evaluator.getToplevelBlock();

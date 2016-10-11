@@ -56,7 +56,11 @@ class Slice {
         if (a.hi >= hi) hi = a.lo-1;
         if (lo > hi) invalidate();
         return *this; }
+    Slice &operator-=(const std::vector<Slice> &a) {
+        for (auto &v : a) *this -= v;
+        return *this; }
     Slice operator-(const Slice &a) const { auto tmp = *this; tmp -= a; return tmp; }
+    Slice operator-(const std::vector<Slice> &a) const { auto tmp = *this; tmp -= a; return tmp; }
     Slice &operator&=(const Slice &a) {
         if (field != a.field || reg != a.reg) return invalidate();
         if (a.lo > lo) lo = a.lo;

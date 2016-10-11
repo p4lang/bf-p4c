@@ -64,9 +64,9 @@ class EnumOn32Bits : public P4::ChooseEnumRepresentation {
 
 MidEnd::MidEnd(CompilerOptions& options) {
     // we may come through this path even if the program is actually a P4 v1.0 program
+    setName("MidEnd");
     refMap.setIsV1(options.isv1());
     auto evaluator = new P4::EvaluatorPass(&refMap, &typeMap);
-    setName("MidEnd");
 
     addPasses({
         new P4::RemoveParserControlFlow(&refMap, &typeMap),
