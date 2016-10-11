@@ -165,17 +165,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
-struct struct_0 {
-    bit<32> field;
-    bit<32> field_0;
-    bit<32> field_1;
-    bit<32> field_2;
-    bit<32> field_3;
-    bit<32> field_4;
-    bit<32> field_5;
-    bit<32> field_6;
-}
-
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction_1") action NoAction() {
     }
@@ -188,7 +177,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.f6 = d6;
         meta.meta.f7 = d7;
         meta.meta.f8 = d8;
-        resubmit<struct_0>({ meta.meta.f1, meta.meta.f2, meta.meta.f3, meta.meta.f4, meta.meta.f5, meta.meta.f6, meta.meta.f7, meta.meta.f8 });
+        resubmit<tuple<bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>>>({ meta.meta.f1, meta.meta.f2, meta.meta.f3, meta.meta.f4, meta.meta.f5, meta.meta.f6, meta.meta.f7, meta.meta.f8 });
     }
     @name("t1") table t1() {
         actions = {

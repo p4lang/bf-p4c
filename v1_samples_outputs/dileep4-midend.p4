@@ -276,17 +276,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("hop_ipv4") action hop_ipv4_0(bit<9> egress_port) {
         @name("hop") {
             ttl_3 = hdr.ipv4.ttl;
-            ttl_3 = ttl_3 + 8w255;
+            ttl_3 = hdr.ipv4.ttl + 8w255;
             hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-            hdr.ipv4.ttl = ttl_3;
+            hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
         }
     }
     @name("hop_ipv4") action hop_ipv4_2(bit<9> egress_port) {
         @name("hop") {
             ttl_4 = hdr.ipv4.ttl;
-            ttl_4 = ttl_4 + 8w255;
+            ttl_4 = hdr.ipv4.ttl + 8w255;
             hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-            hdr.ipv4.ttl = ttl_4;
+            hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
         }
     }
     @name("drop_ipv4") action drop_ipv4_0() {
@@ -304,9 +304,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("next_hop_ipv4") action next_hop_ipv4_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
         @name("hop") {
             ttl_5 = hdr.ipv4.ttl;
-            ttl_5 = ttl_5 + 8w255;
+            ttl_5 = hdr.ipv4.ttl + 8w255;
             hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-            hdr.ipv4.ttl = ttl_5;
+            hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
         }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
@@ -314,9 +314,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("next_hop_ipv4") action next_hop_ipv4_3(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
         @name("hop") {
             ttl_6 = hdr.ipv4.ttl;
-            ttl_6 = ttl_6 + 8w255;
+            ttl_6 = hdr.ipv4.ttl + 8w255;
             hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-            hdr.ipv4.ttl = ttl_6;
+            hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
         }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
@@ -324,9 +324,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("next_hop_ipv4") action next_hop_ipv4_4(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
         @name("hop") {
             ttl_7 = hdr.ipv4.ttl;
-            ttl_7 = ttl_7 + 8w255;
+            ttl_7 = hdr.ipv4.ttl + 8w255;
             hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-            hdr.ipv4.ttl = ttl_7;
+            hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
         }
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
@@ -336,9 +336,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.tcp.dstPort = tcpPort;
         @name("hop") {
             ttl_8 = hdr.ipv4.ttl;
-            ttl_8 = ttl_8 + 8w255;
+            ttl_8 = hdr.ipv4.ttl + 8w255;
             hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-            hdr.ipv4.ttl = ttl_8;
+            hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
         }
     }
     @name("mod_mac_adr") action mod_mac_adr_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
@@ -516,24 +516,10 @@ control verifyChecksum(in headers hdr, inout metadata meta) {
     }
 }
 
-struct struct_0 {
-    bit<4>  field;
-    bit<4>  field_0;
-    bit<8>  field_1;
-    bit<16> field_2;
-    bit<16> field_3;
-    bit<3>  field_4;
-    bit<13> field_5;
-    bit<8>  field_6;
-    bit<8>  field_7;
-    bit<32> field_8;
-    bit<32> field_9;
-}
-
 control computeChecksum(inout headers hdr, inout metadata meta) {
     @name("ipv4_chksum_calc") Checksum16() ipv4_chksum_calc;
     action act() {
-        hdr.ipv4.hdrChecksum = ipv4_chksum_calc.get<struct_0>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr });
+        hdr.ipv4.hdrChecksum = ipv4_chksum_calc.get<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr });
     }
     table tbl_act() {
         actions = {

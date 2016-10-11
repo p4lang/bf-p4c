@@ -1605,12 +1605,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
-struct struct_0 {
-    bit<16> field;
-    bit<8>  field_0;
-    bit<8>  field_1;
-}
-
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("hdr_14") headers hdr_59;
     @name("meta_14") metadata meta_59;
@@ -2652,7 +2646,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("process_system_acl.negative_mirror") action process_system_acl_negative_mirror(bit<8> clone_spec, bit<8> drop_reason) {
         meta_89.ingress_metadata.drop_reason = drop_reason;
-        clone3<struct_0>(CloneType.I2E, (bit<32>)clone_spec, { meta_89.ingress_metadata.ifindex, meta_89.ingress_metadata.drop_reason, meta_89.l3_metadata.lkp_ip_ttl });
+        clone3<tuple<bit<16>, bit<8>, bit<8>>>(CloneType.I2E, (bit<32>)clone_spec, { meta_89.ingress_metadata.ifindex, meta_89.ingress_metadata.drop_reason, meta_89.l3_metadata.lkp_ip_ttl });
         mark_to_drop();
     }
     @name("process_system_acl.system_acl") table process_system_acl_system_acl_0() {
@@ -3204,34 +3198,6 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-struct struct_1 {
-    bit<4>  field_2;
-    bit<4>  field_3;
-    bit<8>  field_4;
-    bit<16> field_5;
-    bit<16> field_6;
-    bit<3>  field_7;
-    bit<13> field_8;
-    bit<8>  field_9;
-    bit<8>  field_10;
-    bit<32> field_11;
-    bit<32> field_12;
-}
-
-struct struct_2 {
-    bit<4>  field_13;
-    bit<4>  field_14;
-    bit<8>  field_15;
-    bit<16> field_16;
-    bit<16> field_17;
-    bit<3>  field_18;
-    bit<13> field_19;
-    bit<8>  field_20;
-    bit<8>  field_21;
-    bit<32> field_22;
-    bit<32> field_23;
-}
-
 control verifyChecksum(in headers hdr, inout metadata meta) {
     @name("inner_ipv4_checksum") Checksum16() inner_ipv4_checksum;
     @name("ipv4_checksum") Checksum16() ipv4_checksum;
@@ -3254,47 +3220,19 @@ control verifyChecksum(in headers hdr, inout metadata meta) {
         const default_action = act_34();
     }
     apply {
-        if (hdr.inner_ipv4.hdrChecksum == (inner_ipv4_checksum.get<struct_1>({ hdr.inner_ipv4.version, hdr.inner_ipv4.ihl, hdr.inner_ipv4.diffserv, hdr.inner_ipv4.totalLen, hdr.inner_ipv4.identification, hdr.inner_ipv4.flags, hdr.inner_ipv4.fragOffset, hdr.inner_ipv4.ttl, hdr.inner_ipv4.protocol, hdr.inner_ipv4.srcAddr, hdr.inner_ipv4.dstAddr }))) 
+        if (hdr.inner_ipv4.hdrChecksum == (inner_ipv4_checksum.get<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.inner_ipv4.version, hdr.inner_ipv4.ihl, hdr.inner_ipv4.diffserv, hdr.inner_ipv4.totalLen, hdr.inner_ipv4.identification, hdr.inner_ipv4.flags, hdr.inner_ipv4.fragOffset, hdr.inner_ipv4.ttl, hdr.inner_ipv4.protocol, hdr.inner_ipv4.srcAddr, hdr.inner_ipv4.dstAddr }))) 
             tbl_act_33.apply();
-        if (hdr.ipv4.hdrChecksum == (ipv4_checksum.get<struct_2>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr }))) 
+        if (hdr.ipv4.hdrChecksum == (ipv4_checksum.get<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr }))) 
             tbl_act_34.apply();
     }
-}
-
-struct struct_3 {
-    bit<4>  field_24;
-    bit<4>  field_25;
-    bit<8>  field_26;
-    bit<16> field_27;
-    bit<16> field_28;
-    bit<3>  field_29;
-    bit<13> field_30;
-    bit<8>  field_31;
-    bit<8>  field_32;
-    bit<32> field_33;
-    bit<32> field_34;
-}
-
-struct struct_4 {
-    bit<4>  field_35;
-    bit<4>  field_36;
-    bit<8>  field_37;
-    bit<16> field_38;
-    bit<16> field_39;
-    bit<3>  field_40;
-    bit<13> field_41;
-    bit<8>  field_42;
-    bit<8>  field_43;
-    bit<32> field_44;
-    bit<32> field_45;
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
     @name("inner_ipv4_checksum") Checksum16() inner_ipv4_checksum_2;
     @name("ipv4_checksum") Checksum16() ipv4_checksum_2;
     action act_35() {
-        hdr.inner_ipv4.hdrChecksum = inner_ipv4_checksum_2.get<struct_3>({ hdr.inner_ipv4.version, hdr.inner_ipv4.ihl, hdr.inner_ipv4.diffserv, hdr.inner_ipv4.totalLen, hdr.inner_ipv4.identification, hdr.inner_ipv4.flags, hdr.inner_ipv4.fragOffset, hdr.inner_ipv4.ttl, hdr.inner_ipv4.protocol, hdr.inner_ipv4.srcAddr, hdr.inner_ipv4.dstAddr });
-        hdr.ipv4.hdrChecksum = ipv4_checksum_2.get<struct_4>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr });
+        hdr.inner_ipv4.hdrChecksum = inner_ipv4_checksum_2.get<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.inner_ipv4.version, hdr.inner_ipv4.ihl, hdr.inner_ipv4.diffserv, hdr.inner_ipv4.totalLen, hdr.inner_ipv4.identification, hdr.inner_ipv4.flags, hdr.inner_ipv4.fragOffset, hdr.inner_ipv4.ttl, hdr.inner_ipv4.protocol, hdr.inner_ipv4.srcAddr, hdr.inner_ipv4.dstAddr });
+        hdr.ipv4.hdrChecksum = ipv4_checksum_2.get<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr });
     }
     table tbl_act_35() {
         actions = {

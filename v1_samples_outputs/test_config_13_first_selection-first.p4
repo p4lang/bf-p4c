@@ -177,15 +177,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
-struct struct_0 {
-    bit<32> field;
-    bit<8>  field_0;
-    bit<64> field_1;
-}
-
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("action_select") action action_select(bit<8> base, bit<8> hash_size) {
-        hash<bit<8>, bit<72>, struct_0, bit<144>>(hdr.ipv4.blah2, HashAlgorithm.random, (bit<72>)base, { hdr.ipv4.blah1, hdr.ipv4.blah2, hdr.ipv4.blah3 }, (bit<144>)hash_size);
+        hash<bit<8>, bit<72>, tuple<bit<32>, bit<8>, bit<64>>, bit<144>>(hdr.ipv4.blah2, HashAlgorithm.random, (bit<72>)base, { hdr.ipv4.blah1, hdr.ipv4.blah2, hdr.ipv4.blah3 }, (bit<144>)hash_size);
     }
     @name("action_0") action action_0(bit<16> param0) {
         hdr.ipv4.hdrChecksum = param0;
