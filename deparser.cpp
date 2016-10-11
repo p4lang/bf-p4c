@@ -276,7 +276,7 @@ static short phv2cksum[NUM_PHV_REGS][2] = {
     { -1,  -1}, { -1,  -1}, { -1,  -1}, { -1,  -1}, { -1,  -1}, { -1,  -1}, { -1,  -1}, { -1,  -1},
     { -1,  -1}, { -1,  -1}, { -1,  -1}, { -1,  -1}, { -1,  -1}, { -1,  -1}, { -1,  -1}, { -1,  -1},
 
-    /* TODO rewrite tagalong mappings once they're given to us by the HW team */
+    /* TODO: rewrite tagalong mappings once they're given to us by the HW team */
     {  0,   1}, {  2,   3}, {  4,   5}, {  6,   7}, {  8,   9}, { 10,  11}, { 12,  13}, { 14,  15},
     { 16,  17}, { 18,  19}, { 20,  21}, { 22,  23}, { 24,  25}, { 26,  27}, { 28,  29}, { 30,  31},
     { 32,  33}, { 34,  35}, { 36,  37}, { 38,  39}, { 40,  41}, { 42,  43}, { 44,  45}, { 46,  47},
@@ -303,7 +303,9 @@ void dump_checksum_units(checked_array_base<IPO> &main_csum_units,
 {
     assert(phv2cksum[NUM_PHV_REGS-1][0] == 143);
     for (int i = 0; i < DEPARSER_CHECKSUM_UNITS; i++) {
-        if (checksum[i].empty()) continue;
+        if (checksum[i].empty()) {
+            if (!options.match_compiler || gress == EGRESS || i > 1)
+                continue; }
         auto &main_unit = main_csum_units[i].csum_cfg_entry;
         auto &tagalong_unit = tagalong_csum_units[i].csum_cfg_entry;
         for (auto &ent : main_unit) {
@@ -316,6 +318,8 @@ void dump_checksum_units(checked_array_base<IPO> &main_csum_units,
             ent.zero_l_s_b.rewrite();
             ent.zero_m_s_b = 1;
             ent.zero_m_s_b.rewrite(); }
+        if (checksum[i].empty())
+            continue;
         int polarity = 0;
         for (auto &reg : checksum[i]) {
             int idx = reg->reg.index;

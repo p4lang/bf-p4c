@@ -236,11 +236,13 @@ void Parser::output() {
     tcam_row_use[INGRESS] = tcam_row_use[EGRESS] = PARSER_TCAM_DEPTH;
     for (auto st : all) st->write_config(this);
     if (error_count > 0) return;
+#if 0
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         // TODO: write ctr_init_ram
         // TODO: write checksum units
         mem[gress].po_csum_ctrl_0_row.disable();
         mem[gress].po_csum_ctrl_1_row.disable(); }
+#endif
 
     init_common_regs(this, reg_in.prsr_reg, INGRESS);
     reg_in.ing_buf_regs.glb_group.disable();

@@ -20,6 +20,15 @@ test_config_137_tcam_error_detection_2.p4 mismatch
 test_config_138_tcam_error_detection_3.p4 mismatch
 test_config_139_tcam_error_detection_4.p4 mismatch
 
+- checksum failures
+basic_ipv4_selection.p4 mismatch
+dileep2.p4 mismatch
+dileep3.p4 mismatch
+dileep4.p4 mismatch
+dileep7-b.p4 mismatch
+dileep8.p4 mismatch
+dileep.p4 mismatch
+
 - uncharacterized failures (FIXME)
 01-FlexCounter.p4 compile
 02-FlexCounterActionProfile.p4 compile

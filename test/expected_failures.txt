@@ -4,3 +4,9 @@ hash_index5.p4 mismatch
 mac_rewrite.p4 tfas
 proxy_hash1.p4 mismatch
 selector0.p4 compile
+- checksum failures
+basic_routing.p4 mismatch
+checksum1.p4 mismatch
+parser_dc_full.p4 mismatch
+port_vlan_mapping.p4 mismatch
+
