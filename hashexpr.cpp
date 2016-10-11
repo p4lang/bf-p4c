@@ -159,12 +159,12 @@ void HashExpr::Xor::gen_data(bitvec &data, int bit, InputXbar *ix, int grp) {
 }
 
 void HashExpr::Stripe::gen_data(bitvec &data, int bit, InputXbar *ix, int grp) {
-    int total_size = 0;
     while (1) {
+        int total_size = 0;
         for (auto *e : what) {
             int sz = e->width();
-            if (bit < sz) {
-                e->gen_data(data, bit, ix, grp);
+            if (bit < total_size + sz) {
+                e->gen_data(data, bit - total_size, ix, grp);
                 return; }
             total_size += sz; }
         if (total_size == 0)
