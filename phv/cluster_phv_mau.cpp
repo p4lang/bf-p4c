@@ -38,46 +38,61 @@ PHV_MAU_Group::PHV_MAU_Group(PHV_Container::PHV_Word w, int n) : width_i(w), num
 // slice partially filled containers
 // to obtain larger number of sub-containers with reduced width
 // 
+// (a) within MAU group, aligned container slices
+//     (i)  honor alignment across members of cluster
+//     (ii) increase number (albeit decreased width)
+//
+// (b) sort aligned slices to match clusters fast with available Containers <w, n>
+//     slicing algorithm 
+//     (i)   can produce several <container_packs> for given w
+//     (ii)  a container can be member of several <container_packs>
+//     (iii) guarantees that for given w, given n only one <container_pack> in G
+//           as every slice reduces n by 1 from previous slicing operation
+//
+//     container packs sorted with increasing w, increasing n
+//     map[width][number]--> <G:container_packs>  
+// 
 //***********************************************************************************
 
 void PHV_MAU_Group::create_aligned_container_slices()
 {
     // larger n in <n:w> possible only when 2 or more containers
+    // however, track singleton containers with available space
+    // useful for horizontal packing where possible, e.g., POV bits
     //
-    if(containers_pack_i.size() > 1)
+    // for each slice group, obtain max of all lows in each partial container
+    //
+    std::list<PHV_Container *> container_list(containers_pack_i.begin(), containers_pack_i.end());
+    int lo = (int) width_i; 
+    for (;container_list.size() > 0;)
     {
-        // for each slice group, obtain max of all lows in each partial container
-        //
-        std::list<PHV_Container *> container_list(containers_pack_i.begin(), containers_pack_i.end());
-        int lo = (int) width_i; 
-        for (;container_list.size() > 0;)
+        int hi = lo - 1;
+        lo = 0;
+        for (auto c: container_list)
         {
-            int hi = lo - 1;
-            lo = 0;
-            for (auto c: container_list)
+           lo = std::max(lo, c->avail_bits_lo()); 
+        }
+        // for each partial container slice lo .. hi 
+        //
+        int width = hi - lo + 1;
+        std::list<PHV_Container *> c_remove;
+        for (auto c: container_list)
+        {
+            aligned_container_slices_i[width][container_list.size()].insert(new Container_Content(lo, width, c));	// insert in map[w][n]
+            if(c->avail_bits_lo() == lo)
             {
-               lo = std::max(lo, c->avail_bits_lo()); 
-            }
-            // for each partial container slice lo .. hi 
-            //
-            int width = hi - lo + 1;
-            std::list<PHV_Container *> c_remove;
-            for (auto c: container_list)
-            {
-                aligned_container_slices_i[width].insert(new Container_Content(lo, width, c));
-                if(c->avail_bits_lo() == lo)
-                {
-                    c_remove.push_back(c);
-                }
-            }
-            // remove containers completely sliced
-            for (auto c: c_remove)
-            {
-                container_list.remove(c);
+                c_remove.push_back(c);
             }
         }
+        // remove containers completely sliced
+        for (auto c: c_remove)
+        {
+            container_list.remove(c);
+        }
     }
-}
+    sanity_check_container_packs("PHV_MAU_Group::create_aligned_container_slices()..");
+    //
+}//create_aligned_container_slices
 
 //***********************************************************************************
 //
@@ -115,7 +130,7 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
         //
         create_aligned_container_slices(mau_group_containers_avail);
         //
-        container_pack_cohabit(clusters_to_be_assigned, mau_group_containers_avail);
+        container_pack_cohabit(clusters_to_be_assigned);
     }
     //
 }//PHV_MAU_Group_Assignments
@@ -267,6 +282,9 @@ PHV_MAU_Group_Assignments::cluster_placement_containers(std::map<PHV_Container::
 //
 // for all MAU groups with partially filled containers
 // slice to obtain larger number of sub-containers with reduced width
+//
+// input: mau_groups_containers_avail
+// output: in each PHV_MAU_Group, map[width][number] of aligned_container_slices
 // 
 //***********************************************************************************
 
@@ -310,8 +328,10 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices(std::set<PHV_MAU
 //         2 1
 // 
 //   (i) Pack co-habit 
-//       sort remaining cl n decreasing, width decreasing
+//       remaining clusters sorted with decreasing n, decreasing w
 //       sort avail G:<n,w>, G:n increasing, and within G, w increasing
+//       already available as map[w][n]--> <G:container_pack>
+//       create composite map[w][n]--> <set of <container_pack>> as several G's can produce map[w][n]--> <G:container_pack>
 //       fill from Container MSB, aligment honored
 //       G.singleton C use later if necessary for
 //       (i) horizontal pack
@@ -326,13 +346,33 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices(std::set<PHV_MAU
 //              these fields are output as a recommedation to Table-Placement
 //        within new cl selected for co-habit, packing should ensure no G.rem = 1.X
 //        as no future cl can use this remnant unless horizontal packing enabled  
+//
+// input:
+//        (i)  clusters_to_be_assigned
+//        (ii) all PHV_MAU_Groups w/ std::map<int, std::map<int, std::set<Container_Content *>>> aligned_container_slices_i 
+//             forall G,C sorted aligned_slices
+//             --------------------------------
+//             map[width][number]
+//             [1][1]
+//             [1][2]*2        
+//             [1][11]         
+//             [3][1]          
+//             [3][2]          
+//             [3][3]          
+//             [5][1]         
+//             [6][1]          
+//             [7][1]         
+//             [8][2]          
+//             [8][4]         
+//             [8][5]         
+//             [8][10]         
+//             [12][4]        
+//             [15][10]
 // 
 //***********************************************************************************
 
-void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>& clusters_to_be_assigned, std::set<PHV_MAU_Group *>& mau_group_containers_avail)
+void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>& clusters_to_be_assigned)
 {
-    BUG_CHECK(mau_group_containers_avail.size(), "*****container_pack_cohabit: MAU Groups no space left*****");
-    //
     // sort clusters number decreasing, width decreasing
     //
     clusters_to_be_assigned.sort([](Cluster_PHV *l, Cluster_PHV *r) {
@@ -345,21 +385,71 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
     LOG3("----------sorted clusters to be assigned (" << clusters_to_be_assigned.size() << ")-----");
     LOG3(clusters_to_be_assigned);
     //
-    // sort mau groups with available containers, num containers increasing, width increasing
+    // create composite map[width][number] --> <set of <set of container_packs>>
+    // from all mau groups aligned_container_slices
+    // map automatically has sorted order width increasing, number increasing
     //
-    std::vector<PHV_MAU_Group *> mau_group_avail_vec(mau_group_containers_avail.begin(), mau_group_containers_avail.end());
-    sort(mau_group_avail_vec.begin(), mau_group_avail_vec.end(), [](PHV_MAU_Group *l, PHV_MAU_Group *r) {
-        if(l->containers_pack().size() == r->containers_pack().size())
-        {   // sort by total width within G
-            //
+    for (auto rit=PHV_MAU_i.rbegin(); rit!=PHV_MAU_i.rend(); ++rit)
+    {
+        // groups within this word size
+        for(auto g: rit->second)
+        {
+            for (auto w: g->aligned_container_slices())
+            {
+                for (auto n: w.second)
+                {
+                    aligned_container_slices_i[w.first][n.first].insert(n.second);					// insert in map[w][n]
+                }
+            }
         }
-        return l->containers_pack().size() < r->containers_pack().size();
-    });
-    //
-    LOG3("----------sorted MAU Groups avail (" << mau_group_avail_vec.size() << ")-----");
-    LOG3(&mau_group_avail_vec);
+    }
+    LOG3("----------sorted MAU Container Packs avail----------");
+    LOG3(aligned_container_slices_i);
     //
 }//container_pack_cohabit
+
+//***********************************************************************************
+//
+// sanity checks
+// 
+//***********************************************************************************
+
+void PHV_MAU_Group::sanity_check_container_packs(const std::string& msg)
+{
+    // for all aligned container_packs in MAU Group
+    // check width of each slice
+    // check only one slice range per map[w][n]
+    //
+    for (auto w: aligned_container_slices_i)
+    {
+        for (auto n: w.second)
+        {
+            // for all members check width and range lo .. hi
+            //
+            std::set<int> lo;
+            std::set<int> hi;
+            lo.clear();
+            hi.clear();
+            for (auto cc: n.second)
+            {
+                if(cc->width() != w.first)
+                {
+                    WARNING("*****cluster_phv_mau.cpp:sanity_FAIL*****cluster_pack width differs .." << w.first << " vs " << cc << ' ' << msg);
+                }
+                lo.insert(cc->lo());
+                hi.insert(cc->hi());
+            }
+            if(lo.size() != 1)
+            {
+                WARNING("*****cluster_phv_mau.cpp:sanity_FAIL*****cluster_pack lo differs .." << '[' << w.first << "][" << n.first << ' ' << msg);
+            }
+            if(hi.size() != 1)
+            {
+                WARNING("*****cluster_phv_mau.cpp:sanity_FAIL*****cluster_pack hi differs .." << '[' << w.first << "][" << n.first << ' ' << msg);
+            }
+        }
+    }
+}
 
 //***********************************************************************************
 //
@@ -367,14 +457,57 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
 // 
 //***********************************************************************************
 //
-// Container_Content output
+// PHV_MAU_Group Container_Content output
 //
-std::ostream &operator<<(std::ostream &out, std::set<PHV_MAU_Group::Container_Content *>& slices)
+std::ostream &operator<<(std::ostream &out, PHV_MAU_Group::Container_Content *c)
 {
-    for (auto c: slices)
+    if(c)
     {
         out << c->container() << '<' << c->width() << '>' << '{' << c->lo() << ".." << c->hi() << '}';
     }
+    else
+    {
+        out << "--cc--";
+    }
+
+    return out;
+}
+//
+//
+std::ostream &operator<<(std::ostream &out, std::set<PHV_MAU_Group::Container_Content *>& slices)
+{
+    out << '(';
+    for (auto c: slices)
+    {
+        out << c << ' ';
+    }
+    out << ')';
+
+    return out;
+}
+//
+//
+std::ostream &operator<<(std::ostream &out, std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>& all_container_packs)
+{
+    // map[w][n] --> <set of <set of container_packs>>
+    //
+    for (auto w: all_container_packs)
+    {
+        for (auto n: w.second)
+        {
+            out << std::endl << "\t" << '[' << w.first << "][" << n.first << ']';
+            if(n.second.size() > 1)
+            {
+                out << '*' << n.second.size();
+            }
+            out << "    \t";
+            for(auto s: n.second)
+            {
+                out << s;
+            }
+        }
+    }
+    out << std::endl;
 
     return out;
 }
@@ -393,7 +526,7 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group &g)
     // summarize packable containers
     if(g.containers_pack().size())
     {
-        out << "{ ";
+        out << "\t{ ";
         for (auto c: g.containers_pack())
         {
             out << c << ' ';
@@ -403,12 +536,13 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group &g)
     // summarize container slice groups
     if(! g.aligned_container_slices().empty())
     {
-        out << '|';
-        for (auto s: g.aligned_container_slices())
+        for (auto w: g.aligned_container_slices())
         {
-            out << '[' << s.first << "](" << s.second << "); ";
+            for (auto n: w.second)
+            {
+                out << std::endl << "\t" << '[' << w.first << "][" << n.first << "]    \t" << n.second;
+            }
         }
-        out << '|';
     }
 
     return out;
@@ -473,7 +607,9 @@ std::ostream &operator<<(std::ostream &out, std::vector<PHV_MAU_Group *> &phv_ma
 
     return out;
 }
-
+//
+// phv_mau_group_assignments output
+//
 std::ostream &operator<<(std::ostream &out, PHV_MAU_Group_Assignments &phv_mau_grps)
 {
     out << "++++++++++ PHV MAU Group Assignments ++++++++++" << std::endl;
