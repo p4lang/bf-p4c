@@ -663,7 +663,7 @@ bool Memories::allocate_all_tind() {
     int left_mask = 0xf;
     for (int i = 0; i < SRAM_ROWS; i++) {
         if (tind_groups.empty())
-            return true;
+            break;
         action_group *next_tind = tind_groups[0];
 
 
@@ -673,7 +673,7 @@ bool Memories::allocate_all_tind() {
             tind_bus2[i][0] = next_tind->ta;
             next_tind->placed++;
             if (next_tind->all_placed()) {
-             tind_groups.erase(tind_groups.begin()); 
+                tind_groups.erase(tind_groups.begin()); 
             }
             auto name = next_tind->ta->table->name + "$tind";
             auto &alloc = (*next_tind->ta->memuse)[name];
@@ -682,7 +682,25 @@ bool Memories::allocate_all_tind() {
         } 
           
     }
+
+    if (!tind_groups.empty())
+        return false;
+
     LOG3("Allocated tind");
+    LOG2("Tind check");
+    for (auto *ta : tind_tables) {
+         auto name = ta->table->name + "$tind";
+         auto &alloc =(*ta->memuse)[name];
+         if (alloc.row.size() == 0)
+             LOG2("Tind problem");
+         for (auto row : alloc.row) {
+             LOG2("row " << row.row << " and bus " << row.bus << " has " 
+                         << row.col.size() << " cols.");
+             for (auto col : row.col) {
+                 LOG2("col is " << col);
+             }
+         }
+    }
     return true;
 }
 
@@ -1063,10 +1081,10 @@ bool Memories::allocate_all_action() {
          auto name = ta->table->name + "$action";
          auto &alloc =(*ta->memuse)[name];
          for (auto row : alloc.row) {
-             LOG3("Row " << row.row << " and bus " << row.bus << " has " 
+             LOG3("row " << row.row << " and bus " << row.bus << " has " 
                          << row.col.size() << " cols.");
              for (auto col : row.col) {
-                 LOG3("Col is " << col);
+                 LOG3("col is " << col);
              }
          }
     }
@@ -1096,6 +1114,7 @@ bool Memories::allocate_all_gw() {
                 }
             }
             if (found) break;
+            column = 0;
         }
         if (!found) break;
     }
