@@ -214,7 +214,7 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
     if (states.count(name) == 0) return nullptr;
     if (ctxt && ctxt->depth >= 256) return nullptr;
     auto rv = states[name];
-    if (ctxt->find(rv)) {
+    if (ctxt && ctxt->find(rv)) {
         rv = new IR::Tofino::ParserState(rv->p4state, gress);
         rv->name = cstring::make_unique(states, name);
         states[rv->name] = rv; }
