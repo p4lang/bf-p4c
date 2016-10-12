@@ -17,6 +17,8 @@ public:
     T &operator[](int i) {
         if (i < 0 || i >= size) throw std::out_of_range("Alloc1D");
         return data[i]; }
+    const T *begin() const { return data; }
+    const T *end() const { return data + size; }
 };
 
 template<class T, int S> class Alloc1D : public Alloc1Dbase<T> {

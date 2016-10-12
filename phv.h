@@ -52,7 +52,7 @@ public:
         Slice(const Slice &s, int l, int h) : reg(s.reg), lo(s.lo + l), hi(s.lo + h) {
             valid = lo >= 0 && hi >= lo && hi <= s.hi && hi < reg.size; }
         Slice(const Slice &) = default;
-        explicit operator bool() { return valid; }
+        explicit operator bool() const { return valid; }
         Slice &operator=(const Slice &a) { new(this) Slice(a.reg, a.lo, a.hi); return *this; }
         const Slice *operator->() const { return this; }
         bool operator==(const Slice &s) const {
@@ -89,7 +89,7 @@ public:
             lo(r.lo < 0 ? l : r.lo + l), hi(r.lo < 0 ? h : r.lo + h),
             lineno(r.lineno) { assert(r.hi < 0 || hi <= r.hi); }
         Ref(const Register &r);
-        explicit operator bool() { return lineno >= 0; }
+        explicit operator bool() const { return lineno >= 0; }
         Slice operator*() const {
             if (auto *s = phv.get(gress, name_)) {
                 if (hi >= 0) return Slice(*s, lo, hi);

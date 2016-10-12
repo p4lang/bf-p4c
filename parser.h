@@ -10,6 +10,7 @@
 #include <map>
 #include <vector>
 #include <set>
+#include "alloc.h"
 #include "bitvec.h"
 
 enum {
@@ -17,6 +18,7 @@ enum {
     PARSER_STATE_WIDTH = 8,
     PARSER_STATE_MASK = 0xff,
     PARSER_TCAM_DEPTH = 256,
+    PARSER_CHECKSUM_ROWS = 32,
 };
 
 class Parser : public Section {
@@ -34,6 +36,20 @@ class Parser : public Section {
     static Parser singleton_object;
     struct phv_output_map;
 
+    struct Checksum {
+        int             lineno, addr = -1, unit = -1;
+        gress_t         gress;
+        Phv::Ref        dest;
+        unsigned        add = 0, mask = 0, swap = 0, end_pos = 0;
+        bool            start = false, end = false, shift = false, residual = false; 
+        Checksum(gress_t, pair_t);
+        bool equiv(const Checksum &) const;
+        void pass1(Parser *);
+        void pass2(Parser *);
+        void write_config(Parser *);
+    private:
+        template <typename ROW> void write_row_config(ROW &row_regs);
+    };
     struct State {
         struct Ref {
             int                         lineno;
@@ -101,10 +117,12 @@ class Parser : public Section {
                 OutputUse output_use() const;
             };
             std::vector<Set>            set;
+            std::vector<Checksum>       csum;
             Match(int lineno, gress_t, match_t m, VECTOR(pair_t) &data);
             Match(int lineno, gress_t, State *n);
             void unmark_reachable(Parser *, State *state, bitvec &unreach);
             void pass1(Parser *pa, State *state);
+            void pass2(Parser *pa, State *state);
             OutputUse output_use() const;
             void merge_outputs(OutputUse);
             void write_future_config(Parser *, State *, int) const;
@@ -144,6 +162,7 @@ public:
     bitvec                              phv_use[2], phv_allow_multi_write, phv_init_valid;
     // FIXME -- multi_write stuff should be split by gress?
     int                                 hdr_len_adj[2], meta_opt;
+    Alloc1D<Checksum *, PARSER_CHECKSUM_ROWS>   checksum_use[2];
 
 private:
     /* remapping structure for getting at the config bits for phv output

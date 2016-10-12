@@ -236,13 +236,10 @@ void Parser::output() {
     tcam_row_use[INGRESS] = tcam_row_use[EGRESS] = PARSER_TCAM_DEPTH;
     for (auto st : all) st->write_config(this);
     if (error_count > 0) return;
-#if 0
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         // TODO: write ctr_init_ram
-        // TODO: write checksum units
-        mem[gress].po_csum_ctrl_0_row.disable();
-        mem[gress].po_csum_ctrl_1_row.disable(); }
-#endif
+        for (auto csum : checksum_use[gress])
+            if (csum) csum->write_config(this); }
 
     init_common_regs(this, reg_in.prsr_reg, INGRESS);
     reg_in.ing_buf_regs.glb_group.disable();
@@ -314,6 +311,102 @@ void Parser::output() {
     for (auto st : all)
         TopLevel::all.name_lookup["directions"][st->gress ? "1" : "0"]
                 ["parser_states"][std::to_string(st->stateno.word1)] = st->name;
+}
+
+Parser::Checksum::Checksum(gress_t gress, pair_t data) : lineno(data.key.lineno), gress(gress) {
+    if (!CHECKTYPE2(data.key, tSTR, tCMD)) return;
+    if (!CHECKTYPE(data.value, tMAP)) return;
+    if (data.key.type == tCMD)
+        for (int i = 1; i < data.key.vec.size; ++i) {
+            if (i == 1 && data.key[i].type == tINT) {
+                if ((unit = data.key[i].i) > 1)
+                    error(lineno, "invalid checksum unit %d", unit); }
+            else if (data.key[i] == "start") start = true;
+            else if (data.key[i] == "end") end = true;
+            else if (data.key[i] == "verify") residual = false;
+            else if (data.key[i] == "residual") residual = false;
+            else error(data.key[i].lineno, "Syntax error"); }
+    for (auto &kv : MapIterChecked(data.value.map, true)) {
+        if (kv.key == "addr") {
+            if (CHECKTYPE(kv.value, tINT)) addr = kv.value.i;
+        } else if (kv.key == "add") {
+            if (CHECKTYPE(kv.value, tINT)) add = kv.value.i;
+        } else if (kv.key == "dest") {
+            dest = Phv::Ref(gress, kv.value);
+        } else if (kv.key == "end") {
+            if (CHECKTYPE(kv.value, tINT)) end_pos = kv.value.i;
+        } else if (kv.key == "mask") {
+            if (CHECKTYPE(kv.value, tINT)) mask = kv.value.i;
+        } else if (kv.key == "shift") {
+            shift = get_bool(kv.value);
+        } else if (kv.key == "swap") {
+            if (CHECKTYPE(kv.value, tINT)) swap = kv.value.i;
+        } else {
+             warning(kv.key.lineno, "ignoring unknown item %s in checksum", value_desc(kv.key)); } }
+}
+
+bool Parser::Checksum::equiv(const Checksum &a) const {
+    if (unit != a.unit) return false;
+    if (dest && a.dest) {
+        if (dest != a.dest) return false;
+    } else if (dest || a.dest) return false;
+    return add == a.add && mask == a.mask && swap == a.swap && start == a.start &&
+           end == a.end && shift == a.shift && residual == a.residual;
+}
+
+void Parser::Checksum::pass1(Parser *parser) {
+    if (addr >= 0) {
+        if (addr >= PARSER_CHECKSUM_ROWS)
+            error(lineno, "invalid %sgress parser checksum address %d", gress ? "e" : "in", addr);
+        else if (parser->checksum_use[gress][addr]) {
+            if (!equiv(*parser->checksum_use[gress][addr])) {
+                error(lineno, "incompatible %sgress parser checksum use at address %d",
+                      gress ? "e" : "in", addr);
+                warning(parser->checksum_use[gress][addr]->lineno, "previous use"); }
+        } else
+            parser->checksum_use[gress][addr] = this; }
+}
+void Parser::Checksum::pass2(Parser *parser) {
+    if (addr < 0) {
+        int avail = -1;
+        for (int i = 0; i < PARSER_CHECKSUM_ROWS; ++i) {
+            if (parser->checksum_use[gress][i]) {
+                if (equiv(*parser->checksum_use[gress][i])) {
+                    addr = i;
+                    break; }
+            } else if (avail < 0)
+                avail = i; }
+        if (addr < 0) {
+            if (avail >= 0)
+                parser->checksum_use[gress][addr = avail] = this;
+            else
+                error(lineno, "Ran out of room in %sgress parser checksum", gress ? "e" : "in"); } }
+}
+
+template<class ROW>
+void Parser::Checksum::write_row_config(ROW &row) {
+    row.add = add;
+    if (dest) row.dst = dest->reg.index;
+    row.dst_bit_hdr_end_pos = end_pos;
+    row.hdr_end = end;
+    int rsh = 0;
+    for (auto &el : row.mask)
+         el = (mask >> rsh++) & 1;
+    row.shr = shift;
+    row.start = start;
+    rsh = 0;
+    for (auto &el : row.swap)
+         el = (swap >> rsh++) & 1;
+    row.type = residual;
+}
+
+void Parser::Checksum::write_config(Parser *parser) {
+    if (unit == 0)
+        write_row_config(parser->mem[gress].po_csum_ctrl_0_row[addr]);
+    else if (unit == 1)
+        write_row_config(parser->mem[gress].po_csum_ctrl_1_row[addr]);
+    else
+        error(lineno, "invalid unit for checksum");
 }
 
 Parser::State::Ref &Parser::State::Ref::operator=(const value_t &v) {
@@ -540,6 +633,8 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
                 error(future.lineno, "previous specified here");
             } else
                 future.setup(kv.value);
+        } else if (kv.key == "checksum") {
+            csum.emplace_back(gress, kv);
         } else if (kv.key.type == tINT) {
             save.emplace_back(gress, kv.key.i, kv.key.i, kv.value);
         } else if (kv.key.type == tRANGE) {
@@ -695,6 +790,8 @@ void Parser::State::Match::pass1(Parser *pa, State *state) {
             warning(lineno, "Can't match parser state due to previous match");
             warning(m.lineno, "here");
             break; } }
+    for (auto &c : csum)
+        c.pass1(pa);
 }
 
 void Parser::State::pass1(Parser *pa) {
@@ -791,6 +888,11 @@ void Parser::State::Match::merge_outputs(OutputUse use) {
             use.b16 -= 2; } }
 }
 
+void Parser::State::Match::pass2(Parser *pa, State *state) {
+    for (auto &c : csum)
+        c.pass2(pa);
+}
+
 void Parser::State::pass2(Parser *pa) {
     if (!stateno) {
         unsigned s;
@@ -812,6 +914,7 @@ void Parser::State::pass2(Parser *pa) {
     OutputUse defuse;
     if (def) defuse = def->output_use();
     for (auto &m : match) {
+        m.pass2(pa, this);
         unsigned saved = def_saved;
         if (m.future.lineno)
             for (int i = 0; i < 4; i++)
@@ -950,7 +1053,9 @@ void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
         ea_row.done = 1;
 
     auto &action_row = pa->mem[state->gress].po_action_row[row];
-    /* FIXME -- checksum setup? */
+    for (auto &c : csum) {
+        action_row.csum_en[c.unit] = 1;
+        action_row.csum_addr[c.unit] = c.addr; }
     if (offset || offset_reset) {
         action_row.dst_offset_inc = offset;
         action_row.dst_offset_rst = offset_reset;
