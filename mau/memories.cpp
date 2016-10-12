@@ -401,7 +401,8 @@ bool Memories::find_best_row_and_fill_out() {
     selected_rows.push_back(row);
     //Fairly simple stuff
     for (int i = 1; i < wa->width; i++) {
-        vector<int> matching_rows = available_match_SRAMs_per_row(row_mask, 0x3ff, row, wa->ta, i);
+        vector<int> matching_rows = available_match_SRAMs_per_row(row_mask, 0x3ff, row, 
+                                                                  wa->ta, i);
         size_t j = 0;
         while (j < matching_rows.size()) {
             int test_row = matching_rows[j];
@@ -555,6 +556,11 @@ bool Memories::allocate_all() {
 
 //FIXME: Have to at some point coordinate this with the actual XBAR lol
 int Memories::ternary_TCAMs_necessary(table_alloc *ta, int &mid_bytes_needed) {
+    int groups = ta->match_ixbar.groups();
+    LOG3("Groups needed for " << ta->table->name << " is " << groups << ".");
+    mid_bytes_needed = groups/2;
+    return groups;
+    /*
     int bytes = ta->table->layout.match_bytes;
     int TCAMs_necessary = 0;
     while (bytes > 11) {
@@ -570,6 +576,7 @@ int Memories::ternary_TCAMs_necessary(table_alloc *ta, int &mid_bytes_needed) {
     else
         TCAMs_necessary += 1;   
     return TCAMs_necessary;
+   */
 }
 
 bool Memories::find_ternary_stretch(int TCAMs_necessary, int mid_bytes_needed,
@@ -584,7 +591,7 @@ bool Memories::find_ternary_stretch(int TCAMs_necessary, int mid_bytes_needed,
             }
 
             if (clear_cols == 0 && mid_bytes_needed == TCAMs_necessary / 2 
-                && TCAMs_necessary % 2 == 0 && i % 2 == 0)
+                && TCAMs_necessary % 2 == 0 && i % 2 == 1)
                  continue;
             
             clear_cols++;
@@ -596,6 +603,7 @@ bool Memories::find_ternary_stretch(int TCAMs_necessary, int mid_bytes_needed,
             }
         }
     }
+    LOG3("No ternary stretch");
     return false;
 }
 
@@ -661,6 +669,7 @@ bool Memories::allocate_all_tind() {
 
         if (sram_use2[i][0] == nullptr) {
             sram_use2[i][0] = next_tind->ta;
+            sram_inuse[i] |= 1;
             tind_bus2[i][0] = next_tind->ta;
             next_tind->placed++;
             if (next_tind->all_placed()) {
@@ -718,6 +727,7 @@ void Memories::find_action_candidates(int row, int mask, action_group **a_group,
     for (size_t i = 1; i < action_bus_users.size(); i++) {
         if (action_bus_users[i]->depth <= RAMs_available) {
             best_fit_group = action_bus_users[i];
+            best_fit_index = i;
             break;
         }
     }
@@ -726,33 +736,56 @@ void Memories::find_action_candidates(int row, int mask, action_group **a_group,
 
     if (curr_oflow_group == nullptr) {
         if (!best_fit_group) { 
+            LOG3("First");
             best_a_group = action_bus_users[0];
             a_index = 0;
         } else if (best_fit_group->left_to_place() == RAMs_available) {
+            LOG3("Second");
             best_a_group = best_fit_group;
             a_index = best_fit_index;
         } else {
+            LOG3("Third");
             best_a_group = action_bus_users[0];
             a_index = 0;
         }
 
     } else {
         if (!best_fit_group) {
+            LOG3("Fourth");
             best_oflow_group = curr_oflow_group;
             oflow_index = 0;
             if (action_bus_users.size() > 1 
                 && curr_oflow_group->left_to_place() < RAMs_available) {
+                LOG3(curr_oflow_group->left_to_place() << " " << RAMs_available);
                 best_a_group = action_bus_users[1];
                 a_index = 1;
             }
             oflow_first = true;
         }
         else if (curr_oflow_group->left_to_place() + best_fit_group->left_to_place() 
-            < RAMs_available) {
-           best_oflow_group = curr_oflow_group;
-           oflow_index = 0;
-        } else {
+            >= RAMs_available) {
             best_oflow_group = curr_oflow_group;
+            oflow_index = 0;
+            LOG3("Fifth");
+            if (curr_oflow_group->left_to_place() < RAMs_available) {
+                oflow_first = true;
+                best_a_group = best_fit_group;
+                a_index = best_fit_index;
+            } else {
+                if (best_fit_group->left_to_place() <= RAMs_available) {
+                    best_a_group = best_fit_group;
+                    a_index = best_fit_index;
+                    if (best_fit_group->left_to_place() == RAMs_available)
+                        best_oflow_group = nullptr;
+                } else {
+                    oflow_first = true;
+                }
+            }
+        } else {
+            LOG3("Sixth");
+            best_oflow_group = curr_oflow_group;
+            if (best_oflow_group->left_to_place() == 0)
+                LOG3("Yeehaw dude");
             oflow_index = 0;
             if (action_bus_users.size() > 1 
                 && curr_oflow_group->left_to_place() < RAMs_available) {
@@ -768,6 +801,7 @@ void Memories::find_action_candidates(int row, int mask, action_group **a_group,
     int first_RAMs = 0;
     int second_RAMs = 0;
     if (oflow_first) {
+        LOG3("Oflow is first");
         first_RAMs = best_oflow_group->left_to_place();
         if (best_a_group)
             second_RAMs = best_a_group->left_to_place();
@@ -776,13 +810,15 @@ void Memories::find_action_candidates(int row, int mask, action_group **a_group,
         if (best_oflow_group)
             second_RAMs = best_oflow_group->left_to_place();
     }
+ 
+    LOG3("First and second RAMs " << first_RAMs << " " << second_RAMs);
 
     int RAMs_filled = 0;
     for (int i = 0; i < SRAM_COLUMNS && RAMs_filled < first_RAMs + second_RAMs; i++) {
         if (((1 << i) & mask) == 0)
             continue;
         if ((1 << i) & ~sram_inuse[row]) {
-            if (RAMs_filled <= first_RAMs)
+            if (RAMs_filled < first_RAMs)
                 first_mask |= (1 << i);
             else
                 second_mask |= (1 << i);
@@ -802,9 +838,13 @@ void Memories::find_action_candidates(int row, int mask, action_group **a_group,
     if (best_a_group) { 
         *a_group = best_a_group;
         LOG3("Action assignment");
+        if (__builtin_popcount(a_mask) == 0)
+            LOG3("Problem");
     }
     if (best_oflow_group) {
         *oflow_group = best_oflow_group;
+        if (__builtin_popcount(oflow_mask) == 0)
+            LOG3("Problem2");
         LOG3("Overflow assignment");
     }
     LOG3("Action candidates found"); 
@@ -950,7 +990,6 @@ bool Memories::allocate_all_action() {
                                    &oflow_group, oflow_mask, oflow_index);
 
             LOG3("Masks " << a_mask << " " << oflow_mask);
-            Memories::Use::Row *a_row, *oflow_row = nullptr;
 
             if (a_group == nullptr && oflow_group == nullptr) {
                 LOG3("Finished");
@@ -962,38 +1001,42 @@ bool Memories::allocate_all_action() {
                 auto a_name = a_group->ta->table->name + "$action";
                 auto &a_alloc = (*a_group->ta->memuse)[a_name];
                 a_alloc.row.emplace_back(i, j);
-                a_row = &(a_alloc.row.back());
                 action_data_bus2[i][j] = a_group;
+                for (int k = 0; k < 10; k++) {
+                    if (((1 << k) & mask) == 0)
+                        continue;
+
+                    if ((1 << k) & a_mask) {
+                        sram_use2[i][k] = a_group->ta;
+                        a_alloc.row.back().col.push_back(k);
+                    }
+                }
                 LOG3("After");
             }
 
             if (oflow_group != nullptr) {
                 auto oflow_name = oflow_group->ta->table->name + "$action";
                 auto &oflow_alloc = (*oflow_group->ta->memuse)[oflow_name];
-                oflow_alloc.row.emplace_back(i, j);
-                oflow_row = &oflow_alloc.row.back();
+                oflow_alloc.row.emplace_back(i);
                 overflow_bus2[i][j] = oflow_group;
+                for (int k = 0; k < 10; k++) {
+                    if (((1 << k) & mask) == 0)
+                        continue;
+
+                    if ((1 << k) & oflow_mask) {
+                        sram_use2[i][k] = oflow_group->ta;
+                        oflow_alloc.row.back().col.push_back(k);
+                    }
+                }
             }
+            
 
             bool action_group_removed = false;
-            for (int k = 0; k < 10; k++) {
-                if (((1 << k) & mask) == 0)
-                    continue;
-
-                if ((1 << k) & a_mask) {
-                    sram_use2[i][k] = a_group->ta;
-                   
-                    a_row->col.push_back(k);   
-                }
-                else if ((1 << k) & oflow_mask) {
-                    sram_use2[i][k] = oflow_group->ta;
-                    oflow_row->col.push_back(k);
-                }
-            }
             sram_inuse[i] |= a_mask | oflow_mask;
             if (a_group != nullptr) {
                 a_group->placed += __builtin_popcount(a_mask);
                 if (a_group->all_placed()) {
+                    LOG3("Removal at " << a_index);
                     action_bus_users.erase(action_bus_users.begin() + a_index);
                     action_group_removed = true;
                 }
@@ -1004,7 +1047,9 @@ bool Memories::allocate_all_action() {
                 if (action_group_removed && a_index < oflow_index) {
                     oflow_index--;
                 }
-                action_bus_users.erase(action_bus_users.begin() + oflow_index);
+                if (oflow_group->all_placed()) {
+                    action_bus_users.erase(action_bus_users.begin() + oflow_index);
+                }
             }
         }
         if (completed) break;
@@ -1020,6 +1065,9 @@ bool Memories::allocate_all_action() {
          for (auto row : alloc.row) {
              LOG3("Row " << row.row << " and bus " << row.bus << " has " 
                          << row.col.size() << " cols.");
+             for (auto col : row.col) {
+                 LOG3("Col is " << col);
+             }
          }
     }
 
@@ -1328,12 +1376,15 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
     default:
         BUG("Unhandled memory use type %d in Memories::Use::visit", type); }
     for (auto &r : row) {
-        if (bus)
+        if (bus && r.bus != -1)
             fn((*bus)[r.row][r.bus]);
         if (type == TWOPORT)
             fn(mem.stateful_bus[r.row]);
-        for (auto col : r.col)
+        for (auto col : r.col) {
+            LOG3("Row,Bus,Col " << r.row << "," << r.bus << "," << col);
             fn((*use)[r.row][col]);
+            LOG3("Test");
+        }
         for (auto col : r.mapcol)
             fn((*mapuse)[r.row][col]); }
 }
@@ -1345,6 +1396,16 @@ void Memories::update(cstring name, const Memories::Use &alloc) {
         use = name; });
 }
 void Memories::update(const map<cstring, Use> &alloc) {
+    for (auto &a : alloc) {
+        LOG3("Table " << a.first);
+        for (auto row : a.second.row) {
+            LOG3("Row " << row.row << " and bus " << row.bus << " has " 
+                  << row.col.size() << " cols.");
+            for (auto col : row.col) {
+                LOG3("Col is " << col << ".");
+            }
+        }
+    }
     for (auto &a : alloc) update(a.first, a.second);
 }
 

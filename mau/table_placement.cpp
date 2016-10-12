@@ -507,6 +507,21 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
 
 static void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *resources,
                                 int entries) {
+    LOG3("nutso");
+    LOG3("Set resources for " << tbl->name);
+    auto alloc = resources->memuse;
+      
+    for (auto &a : alloc) {
+        LOG3("Table " << a.first);
+        for (auto row : a.second.row) {
+            LOG3("Row " << row.row << " and bus " << row.bus << " has " 
+                  << row.col.size() << " cols.");
+            for (auto col : row.col) {
+                LOG3("Col is " << col << ".");
+            }
+        }
+    }
+ 
     tbl->resources = resources;
     tbl->layout.entries = entries;
     if (!tbl->ways.empty()) {
