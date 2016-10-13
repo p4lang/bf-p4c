@@ -564,12 +564,14 @@ DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
 )
 
 DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
-    int action_id;
+    int                                 action_id;
+    std::vector<int>                    home_rows;
+    int                                 home_lineno = -1;
+    std::map<std::string, Format *>     action_formats;
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
         width = 1; depth = layout_size();
         period = 1 << std::max((int)format->log2size - 7, 0);
         period_name = "action data width"; }
-    std::map<std::string, Format *>     action_formats;
     std::string find_field(Format::Field *field);
     Format::Field *lookup_field(const std::string &name, const std::string &action);
     void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn);

@@ -106,6 +106,14 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
                 no_vpns = true;
             else if (CHECKTYPE(kv.value, tVEC))
                 setup_vpns(layout, &kv.value.vec);
+        } else if (kv.key == "home_row") {
+            home_lineno = kv.value.lineno;
+            if (CHECKTYPE2(kv.value, tINT, tVEC)) {
+                if (kv.value.type == tINT)
+                    home_rows.push_back(kv.value.i);
+                else for (auto &v : kv.value.vec)
+                    if (CHECKTYPE(v, tINT))
+                        home_rows.push_back(v.i); }
         } else if (kv.key == "p4") {
             if (CHECKTYPE(kv.value, tMAP))
                 p4_table = P4Table::get(P4Table::ActionData, kv.value.map);
@@ -139,6 +147,8 @@ void ActionTable::pass1() {
     alloc_vpns();
     std::sort(layout.begin(), layout.end(),
               [](const Layout &a, const Layout &b)->bool { return a.row > b.row; });
+    std::sort(home_rows.begin(), home_rows.end(),
+              [](const int &a, const int &b)->bool { return a > b; });
     unsigned width = format ? (format->size-1)/128 + 1 : 1;
     for (auto &fmt : action_formats) {
         if (!actions->exists(fmt.first)) {
@@ -162,13 +172,27 @@ void ActionTable::pass1() {
     unsigned depth = layout_size()/width;
     unsigned idx = 0; // ram index within depth
     int prev_row = -1;
+    int *home = home_rows.empty() ? nullptr : &home_rows[0];
+    int *home_end = home ? home + home_rows.size() : nullptr;
     for (auto &row : layout) {
-        if (idx != 0)
-            need_bus(lineno, stage->overflow_bus_use, row.row, "Overflow");
-        if (idx == 0 || idx + row.cols.size() > depth)
-            need_bus(lineno, stage->action_data_use, row.row, "Action data");
-        for (int r = (row.row + 1) | 1; r < prev_row; r += 2)
-            need_bus(lineno, stage->overflow_bus_use, r, "Overflow");
+        if (idx == 0 || idx + row.cols.size() > depth) {
+            if (!home)
+                home_rows.push_back(row.row);
+            else if (home == home_end || *home++ != row.row)
+                error(home_lineno, "invalid home rows for table %s", name());
+            need_bus(lineno, stage->action_data_use, row.row, "Action data"); }
+        if (idx != 0) {
+            if (home < home_end && *home == row.row) {
+                home++;
+            } else if (!home && home_rows.back() - row.row > 10) {
+                /* can't go over >10 rows for timing */
+                home_rows.push_back(row.row);
+            } else if (home && home[-1] - row.row > 10) {
+                error(home_lineno, "Can't propagate over more than 10 rows to home row");
+            } else {
+                need_bus(lineno, stage->overflow_bus_use, row.row, "Overflow");
+                for (int r = (row.row + 1) | 1; r < prev_row; r += 2)
+                    need_bus(lineno, stage->overflow_bus_use, r, "Overflow"); } }
         if ((idx += row.cols.size()) >= depth) idx -= depth;
         prev_row = row.row; }
     action_bus->pass1(this);
@@ -234,6 +258,7 @@ void ActionTable::write_regs() {
     int idx = 0;
     int word = 0;
     Layout *home = nullptr;
+    auto home_row = home_rows.begin();
     int prev_logical_row = -1;
     decltype(stage->regs.rams.array.switchbox.row[0].ctl) *home_switch_ctl = 0,
                                                           *prev_switch_ctl = 0;
@@ -245,9 +270,10 @@ void ActionTable::write_regs() {
         auto vpn = logical_row.vpns.begin();
         auto &switch_ctl = stage->regs.rams.array.switchbox.row[row].ctl;
         auto &map_alu_row =  stage->regs.rams.map_alu.row[row];
-        if (home && home->row > logical_row.row + 10) {
-            /* too many rows for timing -- need to create a second "home" row */
-            home = nullptr; }
+        if (home_row != home_rows.end() && *home_row == logical_row.row) {
+            /* FIXME -- won't work if new home row starts in the middle of this row */
+            home = nullptr;
+            ++home_row; }
         if (home) {
             // FIXME use DataSwitchboxSetup for this somehow?
             if (&switch_ctl == home_switch_ctl) {
