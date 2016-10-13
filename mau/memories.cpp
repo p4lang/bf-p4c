@@ -11,8 +11,18 @@ void Memories::clear() {
     tind_bus.clear();
     action_data_bus.clear();
     stateful_bus.clear();
+
+    sram_match_bus2.clear();
+    sram_search_bus2.clear();
+    sram_use2.clear();
+    tcam_use2.clear();
+    action_data_bus2.clear();
+    tind_bus2.clear();
+    overflow_bus2.clear();
+    vert_overflow_bus2.clear();
 }
 
+/* Creates a new table_alloc object for each of the tables within the memory allocation */
 void Memories::add_table(const IR::MAU::Table *t, const IXBar::Use &mi, 
                          map<cstring, Memories::Use> *mu, int entries) {
     if (t != nullptr) {
@@ -22,6 +32,8 @@ void Memories::add_table(const IR::MAU::Table *t, const IXBar::Use &mi,
     }
 }
 
+/* Run a quick analysis on all tables added by the table placement algorithm, 
+   and add the tables to their corresponding lists */
 bool Memories::analyze_tables(mem_info &mi) {
 
     mi.clear();
@@ -106,6 +118,7 @@ bool Memories::analyze_tables(mem_info &mi) {
     return true;    
 }
 
+/* Calculate the size of the ways given the number of RAMs necessary */
 vector<int> Memories::way_size_calculator (int ways, int RAMs_needed) {
     vector<int> vec;
     if (ways == -1) {
@@ -130,6 +143,8 @@ vector<int> Memories::way_size_calculator (int ways, int RAMs_needed) {
     return vec;
 }
 
+/* Find the rows of SRAMs that can hold the table, verified as well by the busses set in SRAM
+*/
 vector<std::pair<int, int>> Memories::available_SRAMs_per_row(unsigned mask, table_alloc *ta,
                                                                 int width_sect) {
     vector<std::pair<int, int>> available_rams;
@@ -196,6 +211,9 @@ vector<int> Memories::available_match_SRAMs_per_row(unsigned row_mask, unsigned 
     return matching_rows;
 }
 
+/* Based on the number of ways provided to the table, this function calculates the
+   way sizes based on the number of entries desired by the table, and recalculates
+   the same number of entries */
 void Memories::break_exact_tables_into_ways() {
     LOG3("Breaking the tables into ways");
 
@@ -253,6 +271,9 @@ void Memories::break_exact_tables_into_ways() {
 
 }
 
+/* Selects the best way to begin placing on the row, based on what was previously placed 
+   within this row 
+*/
 Memories::way_group * Memories::find_best_candidate (way_group *placed_wa, int row, int &loc) {
     if (exact_match_ways.empty()) return nullptr;
     
@@ -284,6 +305,7 @@ Memories::way_group * Memories::find_best_candidate (way_group *placed_wa, int r
     return exact_match_ways[0];
 }
 
+/* Fill out the remainder of the row with other ways! */
 bool Memories::fill_out_row(way_group *placed_wa, int row) {
 
     int loc = 0;
@@ -294,66 +316,9 @@ bool Memories::fill_out_row(way_group *placed_wa, int row) {
         way_group *wa = find_best_candidate(placed_wa, row, loc);
 	if (wa == nullptr)
             return true;
-        buses.emplace_back(row, match_bus_available(wa->ta, 0, row));
         int cols = 0;
-        unsigned row_mask = 0;
-        vector<int> selected_cols;
-        for (int i = 0; i < SRAM_COLUMNS && cols < wa->depth - wa->placed; i++) {        
-            if (sram_use2[row][i] == nullptr && ((1 << i) & 0x3ff)) {
-                row_mask |= (1 << i);
-                selected_cols.push_back(i);
-                cols++;
-            }
-        }
-
-        vector<int> selected_rows;
-        selected_rows.push_back(row);
-        //Fairly simple stuff
-        for (int i = 1; i < wa->width; i++) {
-            vector<int> matching_rows = available_match_SRAMs_per_row(row_mask, 0x3ff, 
-								      row, wa->ta, i);
-            size_t j = 0;
-            while (j < matching_rows.size()) {
-                int test_row = matching_rows[j];
-                if (std::find(selected_rows.begin(), selected_rows.end(), test_row) 
-                    == selected_rows.end()) {
-                    selected_rows.push_back(test_row);
-                    buses.emplace_back(test_row, match_bus_available(wa->ta, i, test_row));
-                    break;
-                }
-                j++; 
-            }
-            //This needs to be better checked
-            if (j == matching_rows.size()) {
-                return false;
-            }
-        }
-
-        auto name = wa->ta->table->name;
-        Memories::Use &alloc = (*wa->ta->memuse)[name];
-        for (size_t i = 0; i < selected_rows.size(); i++) {
-            int bus = -1;
-            int width = -1;
-            for (size_t j = 0; j < buses.size(); j++) {
-                if (buses[j].first == selected_rows[i]) {
-                    bus = buses[j].second;
-                    width = j;
-                }
-            }
-
-            alloc.row.emplace_back(selected_rows[i], bus);
-            auto &alloc_row = alloc.row.back();
-            for (size_t j = 0; j < selected_cols.size(); j++) {
-                sram_use2[selected_rows[i]][selected_cols[j]] = wa->ta;
-                alloc_row.col.push_back(selected_cols[j]);
-            }
-            sram_inuse[selected_rows[i]] |= row_mask;
-            if (sram_match_bus2[selected_rows[i]][bus] == nullptr) {
-                sram_match_bus2[selected_rows[i]][bus] 
-                    = new std::pair<table_alloc *, int>(wa->ta, width);
-            }
-        }
-
+        if (!pack_way_into_RAMs(wa, row, cols))
+            return false;
         if (cols >= wa->depth - wa->placed) {
             exact_match_ways.erase(exact_match_ways.begin() + loc);
         } else {
@@ -363,6 +328,7 @@ bool Memories::fill_out_row(way_group *placed_wa, int row) {
     return true;
 }
 
+/* Returns the match bus that we are selecting on this row */
 int Memories::match_bus_available(table_alloc *ta, int width, int row) {
      if (sram_match_bus2[row][0] == nullptr 
          || (sram_match_bus2[row][0]->first == ta && sram_match_bus2[row][0]->second == width))
@@ -371,23 +337,14 @@ int Memories::match_bus_available(table_alloc *ta, int width, int row) {
          return 1;
 }
 
-bool Memories::find_best_row_and_fill_out() {
-    way_group *wa = exact_match_ways[0];
-    //FIXME: Obviously the mask has to change
-    vector<std::pair<int, int>> buses;
-    vector<std::pair<int, int>> available_rams = available_SRAMs_per_row(0x3ff, wa->ta, 0);
-    //No memories left to place anything
-    if (available_rams.size() == 0) {
-        return false;
-    }
+/* Put the selected way group into the RAM row as much as possible */
+bool Memories::pack_way_into_RAMs(way_group *wa, int row, int &cols) {
 
-    int row = available_rams[0].first;
+    vector<std::pair<int, int>> buses;
     buses.emplace_back(row, match_bus_available(wa->ta, 0, row));
-    if (available_rams[0].second == 0)
-        return false;
     unsigned row_mask = 0;
     vector<int> selected_cols;
-    int cols = 0;
+
     for (int i = 0; i < SRAM_COLUMNS && cols < wa->depth - wa->placed; i++) {
         //FIXME: Path change
         if (sram_use2[row][i] == nullptr && ((1 << i) & 0x3ff)) {
@@ -421,7 +378,6 @@ bool Memories::find_best_row_and_fill_out() {
     }
 
     auto name = wa->ta->table->name;
-    //assert(!wa->ta->memuse->count(name));
     Memories::Use &alloc = (*wa->ta->memuse)[name];
 
     for (size_t i = 0; i < selected_rows.size(); i++) {
@@ -446,6 +402,26 @@ bool Memories::find_best_row_and_fill_out() {
                 = new std::pair<table_alloc *, int>(wa->ta, width);
         }
     }
+    return true;
+}
+
+/* Picks an empty/most open row, and begins to fill it in within a way */
+bool Memories::find_best_row_and_fill_out() {
+    way_group *wa = exact_match_ways[0];
+    //FIXME: Obviously the mask has to change
+    vector<std::pair<int, int>> available_rams = available_SRAMs_per_row(0x3ff, wa->ta, 0);
+    //No memories left to place anything
+    if (available_rams.size() == 0) {
+        return false;
+    }
+
+    int row = available_rams[0].first;
+    int cols = 0;
+    if (available_rams[0].second == 0)
+        return false;
+
+    if (!pack_way_into_RAMs(wa, row, cols))
+        return false;
 
     if (cols >= wa->depth - wa->placed) {
         exact_match_ways.erase(exact_match_ways.begin());
@@ -459,11 +435,13 @@ bool Memories::find_best_row_and_fill_out() {
     }
 }
 
+//FIXME: Needs to actually be calculated for exact match row placement
 void Memories::calculate_column_balance(mem_info &mi) {
     return;
 }
 
 
+/* Allocates all of the ways */
 bool Memories::allocate_all_exact() {
     break_exact_tables_into_ways();
     while (exact_match_ways.size() > 0) {
@@ -474,6 +452,8 @@ bool Memories::allocate_all_exact() {
     return true;
 }
 
+/* For assembly generation, ways from the same table that are on the same row need
+   to be adjusted in the Memories::Use, as multiple entries appear o/w  */
 void Memories::compress_ways() {
     for (auto *ta : exact_tables) {
         auto name = ta->table->name;
@@ -507,6 +487,7 @@ void Memories::compress_ways() {
     }
 }
 
+/* Function that tests whether all added tables can be allocated to the stage */
 bool Memories::allocate_all() { 
     mem_info mi;
     if (!analyze_tables(mi)) {
@@ -554,31 +535,15 @@ bool Memories::allocate_all() {
     return true;
 }
 
-//FIXME: Have to at some point coordinate this with the actual XBAR lol
+/* Number of continuous TCAMs needed for table width */
 int Memories::ternary_TCAMs_necessary(table_alloc *ta, int &mid_bytes_needed) {
     int groups = ta->match_ixbar.groups();
     LOG3("Groups needed for " << ta->table->name << " is " << groups << ".");
     mid_bytes_needed = groups/2;
     return groups;
-    /*
-    int bytes = ta->table->layout.match_bytes;
-    int TCAMs_necessary = 0;
-    while (bytes > 11) {
-        bytes -= 11;
-        mid_bytes_needed++;
-        TCAMs_necessary += 2;
-    }
-
-    if (bytes == 11)
-        TCAMs_necessary += 3;
-    else if (bytes > 5)
-        TCAMs_necessary += 2;
-    else
-        TCAMs_necessary += 1;   
-    return TCAMs_necessary;
-   */
 }
 
+/* Finds the stretch on the ternary array that can hold entries */
 bool Memories::find_ternary_stretch(int TCAMs_necessary, int mid_bytes_needed,
                                     int &row, int &col) {
 
@@ -603,11 +568,10 @@ bool Memories::find_ternary_stretch(int TCAMs_necessary, int mid_bytes_needed,
             }
         }
     }
-    LOG3("No ternary stretch");
     return false;
 }
 
-//Allocate all ternary entries
+/* Allocates all ternary entries within the stage */
 bool Memories::allocate_all_ternary() {
     std::sort(ternary_tables.begin(), ternary_tables.end(),
         [=](const table_alloc *a, table_alloc *b) {
@@ -617,7 +581,7 @@ bool Memories::allocate_all_ternary() {
         return true;
     });
 
-    //All of this needs to be changed on this to match up with xbar
+    //FIXME: All of this needs to be changed on this to match up with xbar
     for (auto *ta : ternary_tables) {
         int mid_bytes_needed = 0;
         int TCAMs_necessary = ternary_TCAMs_necessary(ta, mid_bytes_needed);
@@ -638,6 +602,8 @@ bool Memories::allocate_all_ternary() {
     return true;
 }
 
+/* Breaks up the tables requiring tinds into groups that can be allocated within the 
+   SRAM array */
 void Memories::find_tind_groups() {
     for (auto *ta : tind_tables) {
         int depth = (ta->calculated_entries + 2047) / 2048;
@@ -686,24 +652,11 @@ bool Memories::allocate_all_tind() {
     if (!tind_groups.empty())
         return false;
 
-    LOG3("Allocated tind");
-    LOG2("Tind check");
-    for (auto *ta : tind_tables) {
-         auto name = ta->table->name + "$tind";
-         auto &alloc =(*ta->memuse)[name];
-         if (alloc.row.size() == 0)
-             LOG2("Tind problem");
-         for (auto row : alloc.row) {
-             LOG2("row " << row.row << " and bus " << row.bus << " has " 
-                         << row.col.size() << " cols.");
-             for (auto col : row.col) {
-                 LOG2("col is " << col);
-             }
-         }
-    }
     return true;
 }
 
+/* Breaks up all tables requiring an action to be parsed into action_groups, a structure
+   designed for adding to SRAM array  */
 void Memories::find_action_bus_users() {
     for (auto *ta : action_tables) {
         int sz = ceil_log2(ta->table->layout.action_data_bytes) + 3;
@@ -719,7 +672,75 @@ void Memories::find_action_bus_users() {
     }
 }
 
+bool Memories::best_a_oflow_pair(action_group **best_a_group, action_group **best_oflow_group,
+                                 int &a_index, int &oflow_index, int RAMs_available,
+                                 action_group *best_fit_group, int best_fit_index,
+                                 action_group *curr_oflow_group) {
+    bool oflow_first = false;
 
+    if (curr_oflow_group == nullptr) {
+        if (!best_fit_group) { 
+            LOG3("First");
+            *best_a_group = action_bus_users[0];
+            a_index = 0;
+        } else if (best_fit_group->left_to_place() == RAMs_available) {
+            LOG3("Second");
+            *best_a_group = best_fit_group;
+            a_index = best_fit_index;
+        } else {
+            LOG3("Third");
+            *best_a_group = action_bus_users[0];
+            a_index = 0;
+        }
+
+    } else {
+        if (!best_fit_group) {
+            LOG3("Fourth");
+            *best_oflow_group = curr_oflow_group;
+            oflow_index = 0;
+            if (action_bus_users.size() > 1 
+                && curr_oflow_group->left_to_place() < RAMs_available) {
+                LOG3(curr_oflow_group->left_to_place() << " " << RAMs_available);
+                *best_a_group = action_bus_users[1];
+                a_index = 1;
+            }
+            oflow_first = true;
+        }
+        else if (curr_oflow_group->left_to_place() + best_fit_group->left_to_place() 
+            >= RAMs_available) {
+            *best_oflow_group = curr_oflow_group;
+            oflow_index = 0;
+            LOG3("Fifth");
+            if (curr_oflow_group->left_to_place() < RAMs_available) {
+                oflow_first = true;
+                *best_a_group = best_fit_group;
+                a_index = best_fit_index;
+            } else {
+                if (best_fit_group->left_to_place() <= RAMs_available) {
+                    *best_a_group = best_fit_group;
+                    a_index = best_fit_index;
+                    if (best_fit_group->left_to_place() == RAMs_available)
+                        *best_oflow_group = nullptr;
+                } else {
+                    oflow_first = true;
+                }
+            }
+        } else {
+            LOG3("Sixth");
+            *best_oflow_group = curr_oflow_group;
+            oflow_index = 0;
+            if (action_bus_users.size() > 1 
+                && curr_oflow_group->left_to_place() < RAMs_available) {
+                *best_a_group = action_bus_users[1];
+                a_index = 1;
+            }
+            oflow_first = true;
+        }
+    }
+
+    return oflow_first;
+
+}
 
 void Memories::find_action_candidates(int row, int mask, action_group **a_group, unsigned &a_mask,
                                       int &a_index, action_group **oflow_group,
@@ -750,69 +771,10 @@ void Memories::find_action_candidates(int row, int mask, action_group **a_group,
         }
     }
 
-    bool oflow_first = false;
+    bool oflow_first = best_a_oflow_pair(&best_a_group, &best_oflow_group, a_index, oflow_index,
+                                         RAMs_available, best_fit_group, best_fit_index,
+                                         curr_oflow_group);
 
-    if (curr_oflow_group == nullptr) {
-        if (!best_fit_group) { 
-            LOG3("First");
-            best_a_group = action_bus_users[0];
-            a_index = 0;
-        } else if (best_fit_group->left_to_place() == RAMs_available) {
-            LOG3("Second");
-            best_a_group = best_fit_group;
-            a_index = best_fit_index;
-        } else {
-            LOG3("Third");
-            best_a_group = action_bus_users[0];
-            a_index = 0;
-        }
-
-    } else {
-        if (!best_fit_group) {
-            LOG3("Fourth");
-            best_oflow_group = curr_oflow_group;
-            oflow_index = 0;
-            if (action_bus_users.size() > 1 
-                && curr_oflow_group->left_to_place() < RAMs_available) {
-                LOG3(curr_oflow_group->left_to_place() << " " << RAMs_available);
-                best_a_group = action_bus_users[1];
-                a_index = 1;
-            }
-            oflow_first = true;
-        }
-        else if (curr_oflow_group->left_to_place() + best_fit_group->left_to_place() 
-            >= RAMs_available) {
-            best_oflow_group = curr_oflow_group;
-            oflow_index = 0;
-            LOG3("Fifth");
-            if (curr_oflow_group->left_to_place() < RAMs_available) {
-                oflow_first = true;
-                best_a_group = best_fit_group;
-                a_index = best_fit_index;
-            } else {
-                if (best_fit_group->left_to_place() <= RAMs_available) {
-                    best_a_group = best_fit_group;
-                    a_index = best_fit_index;
-                    if (best_fit_group->left_to_place() == RAMs_available)
-                        best_oflow_group = nullptr;
-                } else {
-                    oflow_first = true;
-                }
-            }
-        } else {
-            LOG3("Sixth");
-            best_oflow_group = curr_oflow_group;
-            if (best_oflow_group->left_to_place() == 0)
-                LOG3("Yeehaw dude");
-            oflow_index = 0;
-            if (action_bus_users.size() > 1 
-                && curr_oflow_group->left_to_place() < RAMs_available) {
-                best_a_group = action_bus_users[1];
-                a_index = 1;
-            }
-            oflow_first = true;
-        }
-    }
     LOG3("Candidates selected");
 
     unsigned first_mask = 0; unsigned second_mask = 0;

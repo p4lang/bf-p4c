@@ -148,6 +148,7 @@ struct Memories {
     int match_bus_available(table_alloc *ta, int width, int row);
     bool find_best_row_and_fill_out();
     bool fill_out_row(way_group *placed_wa, int row);
+    bool pack_way_into_RAMs(way_group *wa, int row, int &cols);
     way_group * find_best_candidate(way_group *placed_wa, int row, int &loc);
     void compress_ways();
  
@@ -163,7 +164,10 @@ struct Memories {
     void find_action_candidates(int row, int mask, action_group ** a_group, unsigned &a_mask,
                                 int &a_index, action_group ** oflow_group,
                                 unsigned &oflow_mask, int &oflow_index);
-
+    bool best_a_oflow_pair(action_group **best_a_group, action_group **best_oflow_group,
+                           int &a_index, int &oflow_index, int RAMs_available,
+                           action_group *best_fit_group, int best_fit_index,
+                           action_group *curr_oflow_group);
     vector<action_group *> candidates_for_overflow(int row, bool on_right_side);
 
     bool allocate_all_gw();
