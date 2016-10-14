@@ -262,10 +262,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("ttl_0") bit<8> ttl_3;
-    @name("ttl_0") bit<8> ttl_4;
-    @name("ttl_1") bit<8> ttl_5;
-    @name("ttl_2") bit<8> ttl_6;
+    bit<8> ttl_3;
+    bit<8> ttl_4;
+    bit<8> ttl_5;
+    bit<8> ttl_6;
     @name("NoAction_1") action NoAction() {
     }
     @name("NoAction_2") action NoAction_0() {
@@ -295,22 +295,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("nop") action nop_12() {
     }
     @name("next_hop_ipv4") action next_hop_ipv4_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
-        @name("hop") {
-            ttl_3 = hdr.ipv4.ttl;
-            ttl_3 = hdr.ipv4.ttl + 8w255;
-            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-            hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
-        }
+        ttl_3 = hdr.ipv4.ttl;
+        ttl_3 = hdr.ipv4.ttl + 8w255;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
     @name("next_hop_ipv4") action next_hop_ipv4_2(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
-        @name("hop") {
-            ttl_4 = hdr.ipv4.ttl;
-            ttl_4 = hdr.ipv4.ttl + 8w255;
-            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-            hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
-        }
+        ttl_4 = hdr.ipv4.ttl;
+        ttl_4 = hdr.ipv4.ttl + 8w255;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
@@ -327,22 +323,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("custom_action_3") action custom_action_0(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
         hdr.ipv4.dstAddr = dstIp;
         hdr.ethernet.dstAddr = dstAddr;
-        @name("hop") {
-            ttl_5 = hdr.ipv4.ttl;
-            ttl_5 = hdr.ipv4.ttl + 8w255;
-            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-            hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
-        }
+        ttl_5 = hdr.ipv4.ttl;
+        ttl_5 = hdr.ipv4.ttl + 8w255;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
     @name("custom_action_2") action custom_action_4(bit<9> egress_port, bit<32> ipAddr, bit<16> tcpPort) {
         hdr.ipv4.srcAddr = ipAddr;
         hdr.tcp.dstPort = tcpPort;
-        @name("hop") {
-            ttl_6 = hdr.ipv4.ttl;
-            ttl_6 = hdr.ipv4.ttl + 8w255;
-            hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-            hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
-        }
+        ttl_6 = hdr.ipv4.ttl;
+        ttl_6 = hdr.ipv4.ttl + 8w255;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
     @name("mod_mac_addr") action mod_mac_addr_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;

@@ -881,7 +881,9 @@ static void write_one(std::ostream &out, const std::pair<cstring, int> &f,
                       std::map<cstring, char> &fields) {
     if (f.first) {
         if (!fields.count(f.first)) {
-            if (fields.size() >= 26)
+            if (fields.size() >= 52)
+                fields.emplace(f.first, '?');
+            else if (fields.size() >= 26)
                 fields.emplace(f.first, 'a' + fields.size() - 26);
             else
                 fields.emplace(f.first, 'A' + fields.size()); }
@@ -892,7 +894,9 @@ static void write_one(std::ostream &out, const std::pair<cstring, int> &f,
 static void write_one(std::ostream &out, cstring n, std::map<cstring, char> &names) {
     if (n) {
         if (!names.count(n)) {
-            if (names.size() >= 26)
+            if (names.size() >= 52)
+                names.emplace(n, '?');
+            else if (names.size() >= 26)
                 names.emplace(n, 'a' + names.size() - 26);
             else
                 names.emplace(n, 'A' + names.size()); }

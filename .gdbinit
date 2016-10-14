@@ -263,6 +263,18 @@ class PHVContainerPrinter(object):
             rv = "T" + rv;
         return rv;
 
+class SlicePrinter(object):
+    "Print a Slice object"
+    def __init__(self, val):
+        self.val = val
+    def to_string(self):
+        field = self.val['field']
+        if field == 0:
+            name = PHVContainerPrinter(self.val['reg']).to_string()
+        else:
+            name = str(field['name']['str'])
+        return name + '(' + str(self.val['lo']) + ".." + str(self.val['hi']) + ')'
+
 def find_pp(val):
     if val.type.tag == 'bitvec':
         return bitvecPrinter(val)
@@ -282,6 +294,8 @@ def find_pp(val):
         return PHVBitPrinter(val)
     if val.type.tag == 'PHV::Container':
         return PHVContainerPrinter(val)
+    if val.type.tag == 'Slice':
+        return SlicePrinter(val)
     return None
 gdb.pretty_printers.append(find_pp)
 end

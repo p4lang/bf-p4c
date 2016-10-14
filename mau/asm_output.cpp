@@ -45,7 +45,7 @@ class MauAsmOutput::TableFormat {
     vector<match_group> format;
  public:
     vector<Slice>       match_fields;
-    Slice               ghost_bits;
+    vector<Slice>       ghost_bits;
     TableFormat(const MauAsmOutput &s, const IR::MAU::Table *tbl);
     void print(std::ostream &) const;
 };
@@ -157,6 +157,21 @@ class MauAsmOutput::ActionDataFormat : public Inspector {
         out << (sep+1) << " }"; }
 };
 
+struct FormatHash {
+    vector<Slice> match_data;
+    vector<Slice> ghost;
+    FormatHash(vector<Slice> md, vector<Slice> g) : match_data(md), ghost(g) {}
+};
+
+std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
+    if (!hash.match_data.empty()) {
+        out << "random(" << emit_vector(hash.match_data, ", ") << ")";
+        if (!hash.ghost.empty()) out << " ^ "; }
+    if (!hash.ghost.empty())
+        out << "stripe(" << emit_vector(hash.ghost, ", ") << ")";
+    return out;
+}
+
 void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
         const IXBar::Use &use, const Memories::Use *mem, const TableFormat *fmt) const {
     map<int, map<int, Slice>> sort;
@@ -196,7 +211,7 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
             unsigned half = ht & 1;
             unsigned done = 0, mask_bits = 0;
             vector<Slice> match_data;
-            Slice ghost;
+            vector<Slice> ghost;
             for (auto &match : sort.at(ht/2)) {
                 Slice reg = match.second;
                 if (match.first/64U != half) {
@@ -208,29 +223,21 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
                     assert(!half);
                     reg = reg(0, 63 - match.first); }
                 if (!reg) continue;
-                if (!ghost) ghost = fmt->ghost_bits & reg;
-                reg -= fmt->ghost_bits;
-                if (!reg) continue;
-                match_data.emplace_back(reg); }
+                auto reg_hash = reg - fmt->ghost_bits;
+                if (auto reg_ghost = reg - reg_hash)
+                    ghost.push_back(reg_ghost);
+                if (reg_hash)
+                    match_data.emplace_back(reg_hash); }
             for (auto &way : use.way_use) {
                 mask_bits |= way.mask;
                 if (done & (1 << way.slice)) continue;
                 done |= 1 << way.slice;
-                out << indent << (way.slice*10) << ".." << (way.slice*10 + 9) << ": ";
-                if (!match_data.empty()) {
-                    out << "random(" << emit_vector(match_data, ", ") << ")";
-                    if (ghost) out << " ^ "; }
-                if (ghost) out << "stripe(" << ghost << ")";
-                out << std::endl; }
+                out << indent << (way.slice*10) << ".." << (way.slice*10 + 9) << ": "
+                    << FormatHash(match_data, ghost) << std::endl; }
             for (auto range : bitranges(mask_bits)) {
                 out << indent << (range.first+40);
                 if (range.second != range.first) out << ".." << (range.second+40);
-                out << ": ";
-                if (!match_data.empty()) {
-                    out << "random(" << emit_vector(match_data, ", ") << ")";
-                    if (ghost) out << " ^ "; }
-                if (ghost) out << "stripe(" << ghost << ")";
-                out << std::endl; }
+                out << ": " << FormatHash(match_data, ghost) << std::endl; }
             for (auto ident : use.bit_use) {
                 out << indent << (40 + ident.bit);
                 if (ident.width > 1)
@@ -379,14 +386,14 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
             match_fields.emplace_back(finfo, bits.lo, bits.hi); } }
 
     if (!tbl->layout.ternary) {
-        for (auto &field : match_fields)
-            if (field.width() >= 10) {
-                ghost_bits = field(0, 9);
-                if (&field != &match_fields[0])
-                    std::swap(field, match_fields[0]);
-                break; }
-        if (!ghost_bits && !match_fields.empty())
-            ghost_bits = match_fields[0]; }
+        int ghost_bits_needed = 10;  // FIXME -- should depend on way depth
+        for (auto &field : match_fields) {
+            if (ghost_bits_needed >= field.width()) {
+                ghost_bits.push_back(field);
+                ghost_bits_needed -= field.width();
+            } else if (ghost_bits_needed > 0) {
+                ghost_bits.push_back(field(0, ghost_bits_needed-1));
+                ghost_bits_needed = 0; } } }
     if (!tbl->ways.empty()) {
         bitvec used;
         action_bits = ceil_log2(tbl->actions.size());

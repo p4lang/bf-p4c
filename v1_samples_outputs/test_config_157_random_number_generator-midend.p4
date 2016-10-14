@@ -160,8 +160,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("tmp") bit<32> tmp;
-    @name("tmp_0") bit<32> tmp_0;
+    bit<32> tmp;
+    bit<32> tmp_0;
     @name("NoAction_1") action NoAction() {
     }
     @name("NoAction_2") action NoAction_0() {

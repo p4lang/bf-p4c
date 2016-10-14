@@ -1222,48 +1222,48 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("hdr_0") headers hdr_45;
-    @name("meta_0") metadata meta_45;
-    @name("standard_metadata_0") standard_metadata_t standard_metadata_45;
-    @name("hdr_1") headers hdr_46;
-    @name("meta_1") metadata meta_46;
-    @name("standard_metadata_1") standard_metadata_t standard_metadata_46;
-    @name("hdr_2") headers hdr_47;
-    @name("meta_2") metadata meta_47;
-    @name("standard_metadata_2") standard_metadata_t standard_metadata_47;
-    @name("hdr_3") headers hdr_48;
-    @name("meta_3") metadata meta_48;
-    @name("standard_metadata_3") standard_metadata_t standard_metadata_48;
-    @name("hdr_4") headers hdr_49;
-    @name("meta_4") metadata meta_49;
-    @name("standard_metadata_4") standard_metadata_t standard_metadata_49;
-    @name("hdr_5") headers hdr_50;
-    @name("meta_5") metadata meta_50;
-    @name("standard_metadata_5") standard_metadata_t standard_metadata_50;
-    @name("hdr_6") headers hdr_51;
-    @name("meta_6") metadata meta_51;
-    @name("standard_metadata_6") standard_metadata_t standard_metadata_51;
-    @name("hdr_7") headers hdr_52;
-    @name("meta_7") metadata meta_52;
-    @name("standard_metadata_7") standard_metadata_t standard_metadata_52;
-    @name("hdr_8") headers hdr_53;
-    @name("meta_8") metadata meta_53;
-    @name("standard_metadata_8") standard_metadata_t standard_metadata_53;
-    @name("hdr_9") headers hdr_54;
-    @name("meta_9") metadata meta_54;
-    @name("standard_metadata_9") standard_metadata_t standard_metadata_54;
-    @name("hdr_10") headers hdr_55;
-    @name("meta_10") metadata meta_55;
-    @name("standard_metadata_10") standard_metadata_t standard_metadata_55;
-    @name("hdr_11") headers hdr_56;
-    @name("meta_11") metadata meta_56;
-    @name("standard_metadata_11") standard_metadata_t standard_metadata_56;
-    @name("hdr_12") headers hdr_57;
-    @name("meta_12") metadata meta_57;
-    @name("standard_metadata_12") standard_metadata_t standard_metadata_57;
-    @name("hdr_13") headers hdr_58;
-    @name("meta_13") metadata meta_58;
-    @name("standard_metadata_13") standard_metadata_t standard_metadata_58;
+    headers hdr_45;
+    metadata meta_45;
+    standard_metadata_t standard_metadata_45;
+    headers hdr_46;
+    metadata meta_46;
+    standard_metadata_t standard_metadata_46;
+    headers hdr_47;
+    metadata meta_47;
+    standard_metadata_t standard_metadata_47;
+    headers hdr_48;
+    metadata meta_48;
+    standard_metadata_t standard_metadata_48;
+    headers hdr_49;
+    metadata meta_49;
+    standard_metadata_t standard_metadata_49;
+    headers hdr_50;
+    metadata meta_50;
+    standard_metadata_t standard_metadata_50;
+    headers hdr_51;
+    metadata meta_51;
+    standard_metadata_t standard_metadata_51;
+    headers hdr_52;
+    metadata meta_52;
+    standard_metadata_t standard_metadata_52;
+    headers hdr_53;
+    metadata meta_53;
+    standard_metadata_t standard_metadata_53;
+    headers hdr_54;
+    metadata meta_54;
+    standard_metadata_t standard_metadata_54;
+    headers hdr_55;
+    metadata meta_55;
+    standard_metadata_t standard_metadata_55;
+    headers hdr_56;
+    metadata meta_56;
+    standard_metadata_t standard_metadata_56;
+    headers hdr_57;
+    metadata meta_57;
+    standard_metadata_t standard_metadata_57;
+    headers hdr_58;
+    metadata meta_58;
+    standard_metadata_t standard_metadata_58;
     @name("NoAction_2") action NoAction() {
     }
     @name("NoAction_3") action NoAction_0() {
@@ -1606,99 +1606,99 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("hdr_14") headers hdr_59;
-    @name("meta_14") metadata meta_59;
-    @name("standard_metadata_14") standard_metadata_t standard_metadata_59;
-    @name("hdr_15") headers hdr_60;
-    @name("meta_15") metadata meta_60;
-    @name("standard_metadata_15") standard_metadata_t standard_metadata_60;
-    @name("hdr_16") headers hdr_61;
-    @name("meta_16") metadata meta_61;
-    @name("standard_metadata_16") standard_metadata_t standard_metadata_61;
-    @name("hdr_17") headers hdr_62;
-    @name("meta_17") metadata meta_62;
-    @name("standard_metadata_17") standard_metadata_t standard_metadata_62;
-    @name("hdr_18") headers hdr_63;
-    @name("meta_18") metadata meta_63;
-    @name("standard_metadata_18") standard_metadata_t standard_metadata_63;
-    @name("hdr_19") headers hdr_64;
-    @name("meta_19") metadata meta_64;
-    @name("standard_metadata_19") standard_metadata_t standard_metadata_64;
-    @name("hdr_20") headers hdr_65;
-    @name("meta_20") metadata meta_65;
-    @name("standard_metadata_20") standard_metadata_t standard_metadata_65;
-    @name("hdr_21") headers hdr_66;
-    @name("meta_21") metadata meta_66;
-    @name("standard_metadata_21") standard_metadata_t standard_metadata_66;
-    @name("hdr_22") headers hdr_67;
-    @name("meta_22") metadata meta_67;
-    @name("standard_metadata_22") standard_metadata_t standard_metadata_67;
-    @name("hdr_23") headers hdr_68;
-    @name("meta_23") metadata meta_68;
-    @name("standard_metadata_23") standard_metadata_t standard_metadata_68;
-    @name("hdr_24") headers hdr_69;
-    @name("meta_24") metadata meta_69;
-    @name("standard_metadata_24") standard_metadata_t standard_metadata_69;
-    @name("hdr_25") headers hdr_70;
-    @name("meta_25") metadata meta_70;
-    @name("standard_metadata_25") standard_metadata_t standard_metadata_70;
-    @name("hdr_26") headers hdr_71;
-    @name("meta_26") metadata meta_71;
-    @name("standard_metadata_26") standard_metadata_t standard_metadata_71;
-    @name("hdr_27") headers hdr_72;
-    @name("meta_27") metadata meta_72;
-    @name("standard_metadata_27") standard_metadata_t standard_metadata_72;
-    @name("hdr_28") headers hdr_73;
-    @name("meta_28") metadata meta_73;
-    @name("standard_metadata_28") standard_metadata_t standard_metadata_73;
-    @name("hdr_29") headers hdr_74;
-    @name("meta_29") metadata meta_74;
-    @name("standard_metadata_29") standard_metadata_t standard_metadata_74;
-    @name("hdr_30") headers hdr_75;
-    @name("meta_30") metadata meta_75;
-    @name("standard_metadata_30") standard_metadata_t standard_metadata_75;
-    @name("hdr_31") headers hdr_76;
-    @name("meta_31") metadata meta_76;
-    @name("standard_metadata_31") standard_metadata_t standard_metadata_76;
-    @name("hdr_32") headers hdr_77;
-    @name("meta_32") metadata meta_77;
-    @name("standard_metadata_32") standard_metadata_t standard_metadata_77;
-    @name("hdr_33") headers hdr_78;
-    @name("meta_33") metadata meta_78;
-    @name("standard_metadata_33") standard_metadata_t standard_metadata_78;
-    @name("hdr_34") headers hdr_79;
-    @name("meta_34") metadata meta_79;
-    @name("standard_metadata_34") standard_metadata_t standard_metadata_79;
-    @name("hdr_35") headers hdr_80;
-    @name("meta_35") metadata meta_80;
-    @name("standard_metadata_35") standard_metadata_t standard_metadata_80;
-    @name("hdr_36") headers hdr_81;
-    @name("meta_36") metadata meta_81;
-    @name("standard_metadata_36") standard_metadata_t standard_metadata_81;
-    @name("hdr_37") headers hdr_82;
-    @name("meta_37") metadata meta_82;
-    @name("standard_metadata_37") standard_metadata_t standard_metadata_82;
-    @name("hdr_38") headers hdr_83;
-    @name("meta_38") metadata meta_83;
-    @name("standard_metadata_38") standard_metadata_t standard_metadata_83;
-    @name("hdr_39") headers hdr_84;
-    @name("meta_39") metadata meta_84;
-    @name("standard_metadata_39") standard_metadata_t standard_metadata_84;
-    @name("hdr_40") headers hdr_85;
-    @name("meta_40") metadata meta_85;
-    @name("standard_metadata_40") standard_metadata_t standard_metadata_85;
-    @name("hdr_41") headers hdr_86;
-    @name("meta_41") metadata meta_86;
-    @name("standard_metadata_41") standard_metadata_t standard_metadata_86;
-    @name("hdr_42") headers hdr_87;
-    @name("meta_42") metadata meta_87;
-    @name("standard_metadata_42") standard_metadata_t standard_metadata_87;
-    @name("hdr_43") headers hdr_88;
-    @name("meta_43") metadata meta_88;
-    @name("standard_metadata_43") standard_metadata_t standard_metadata_88;
-    @name("hdr_44") headers hdr_89;
-    @name("meta_44") metadata meta_89;
-    @name("standard_metadata_44") standard_metadata_t standard_metadata_89;
+    headers hdr_59;
+    metadata meta_59;
+    standard_metadata_t standard_metadata_59;
+    headers hdr_60;
+    metadata meta_60;
+    standard_metadata_t standard_metadata_60;
+    headers hdr_61;
+    metadata meta_61;
+    standard_metadata_t standard_metadata_61;
+    headers hdr_62;
+    metadata meta_62;
+    standard_metadata_t standard_metadata_62;
+    headers hdr_63;
+    metadata meta_63;
+    standard_metadata_t standard_metadata_63;
+    headers hdr_64;
+    metadata meta_64;
+    standard_metadata_t standard_metadata_64;
+    headers hdr_65;
+    metadata meta_65;
+    standard_metadata_t standard_metadata_65;
+    headers hdr_66;
+    metadata meta_66;
+    standard_metadata_t standard_metadata_66;
+    headers hdr_67;
+    metadata meta_67;
+    standard_metadata_t standard_metadata_67;
+    headers hdr_68;
+    metadata meta_68;
+    standard_metadata_t standard_metadata_68;
+    headers hdr_69;
+    metadata meta_69;
+    standard_metadata_t standard_metadata_69;
+    headers hdr_70;
+    metadata meta_70;
+    standard_metadata_t standard_metadata_70;
+    headers hdr_71;
+    metadata meta_71;
+    standard_metadata_t standard_metadata_71;
+    headers hdr_72;
+    metadata meta_72;
+    standard_metadata_t standard_metadata_72;
+    headers hdr_73;
+    metadata meta_73;
+    standard_metadata_t standard_metadata_73;
+    headers hdr_74;
+    metadata meta_74;
+    standard_metadata_t standard_metadata_74;
+    headers hdr_75;
+    metadata meta_75;
+    standard_metadata_t standard_metadata_75;
+    headers hdr_76;
+    metadata meta_76;
+    standard_metadata_t standard_metadata_76;
+    headers hdr_77;
+    metadata meta_77;
+    standard_metadata_t standard_metadata_77;
+    headers hdr_78;
+    metadata meta_78;
+    standard_metadata_t standard_metadata_78;
+    headers hdr_79;
+    metadata meta_79;
+    standard_metadata_t standard_metadata_79;
+    headers hdr_80;
+    metadata meta_80;
+    standard_metadata_t standard_metadata_80;
+    headers hdr_81;
+    metadata meta_81;
+    standard_metadata_t standard_metadata_81;
+    headers hdr_82;
+    metadata meta_82;
+    standard_metadata_t standard_metadata_82;
+    headers hdr_83;
+    metadata meta_83;
+    standard_metadata_t standard_metadata_83;
+    headers hdr_84;
+    metadata meta_84;
+    standard_metadata_t standard_metadata_84;
+    headers hdr_85;
+    metadata meta_85;
+    standard_metadata_t standard_metadata_85;
+    headers hdr_86;
+    metadata meta_86;
+    standard_metadata_t standard_metadata_86;
+    headers hdr_87;
+    metadata meta_87;
+    standard_metadata_t standard_metadata_87;
+    headers hdr_88;
+    metadata meta_88;
+    standard_metadata_t standard_metadata_88;
+    headers hdr_89;
+    metadata meta_89;
+    standard_metadata_t standard_metadata_89;
     @name("NoAction_8") action NoAction_34() {
     }
     @name("NoAction_9") action NoAction_35() {
@@ -1772,120 +1772,96 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta_60.l2_metadata.lkp_mac_sa = hdr_60.ethernet.srcAddr;
         meta_60.l2_metadata.lkp_mac_da = hdr_60.ethernet.dstAddr;
         hdr_60.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        @name("validate_outer_ethernet_header.add_i_fabric_header") {
-            meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
-            meta_60.i_fabric_header.lkp_mac_type = hdr_60.ethernet.etherType;
-        }
+        meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
+        meta_60.i_fabric_header.lkp_mac_type = hdr_60.ethernet.etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_unicast_packet_single_tagged") action validate_outer_ethernet_header_set_valid_outer_unicast_packet_single_tagged() {
         meta_60.l2_metadata.lkp_pkt_type = 3w1;
         meta_60.l2_metadata.lkp_mac_sa = hdr_60.ethernet.srcAddr;
         meta_60.l2_metadata.lkp_mac_da = hdr_60.ethernet.dstAddr;
         hdr_60.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        @name("validate_outer_ethernet_header.add_i_fabric_header") {
-            meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
-            meta_60.i_fabric_header.lkp_mac_type = hdr_60.vlan_tag_[0].etherType;
-        }
+        meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
+        meta_60.i_fabric_header.lkp_mac_type = hdr_60.vlan_tag_[0].etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_unicast_packet_double_tagged") action validate_outer_ethernet_header_set_valid_outer_unicast_packet_double_tagged() {
         meta_60.l2_metadata.lkp_pkt_type = 3w1;
         meta_60.l2_metadata.lkp_mac_sa = hdr_60.ethernet.srcAddr;
         meta_60.l2_metadata.lkp_mac_da = hdr_60.ethernet.dstAddr;
         hdr_60.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        @name("validate_outer_ethernet_header.add_i_fabric_header") {
-            meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
-            meta_60.i_fabric_header.lkp_mac_type = hdr_60.vlan_tag_[1].etherType;
-        }
+        meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
+        meta_60.i_fabric_header.lkp_mac_type = hdr_60.vlan_tag_[1].etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_unicast_packet_qinq_tagged") action validate_outer_ethernet_header_set_valid_outer_unicast_packet_qinq_tagged() {
         meta_60.l2_metadata.lkp_pkt_type = 3w1;
         meta_60.l2_metadata.lkp_mac_sa = hdr_60.ethernet.srcAddr;
         meta_60.l2_metadata.lkp_mac_da = hdr_60.ethernet.dstAddr;
         hdr_60.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        @name("validate_outer_ethernet_header.add_i_fabric_header") {
-            meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
-            meta_60.i_fabric_header.lkp_mac_type = hdr_60.ethernet.etherType;
-        }
+        meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
+        meta_60.i_fabric_header.lkp_mac_type = hdr_60.ethernet.etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_multicast_packet_untagged") action validate_outer_ethernet_header_set_valid_outer_multicast_packet_untagged() {
         meta_60.l2_metadata.lkp_pkt_type = 3w2;
         meta_60.l2_metadata.lkp_mac_sa = hdr_60.ethernet.srcAddr;
         meta_60.l2_metadata.lkp_mac_da = hdr_60.ethernet.dstAddr;
         hdr_60.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        @name("validate_outer_ethernet_header.add_i_fabric_header") {
-            meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
-            meta_60.i_fabric_header.lkp_mac_type = hdr_60.ethernet.etherType;
-        }
+        meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
+        meta_60.i_fabric_header.lkp_mac_type = hdr_60.ethernet.etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_multicast_packet_single_tagged") action validate_outer_ethernet_header_set_valid_outer_multicast_packet_single_tagged() {
         meta_60.l2_metadata.lkp_pkt_type = 3w2;
         meta_60.l2_metadata.lkp_mac_sa = hdr_60.ethernet.srcAddr;
         meta_60.l2_metadata.lkp_mac_da = hdr_60.ethernet.dstAddr;
         hdr_60.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        @name("validate_outer_ethernet_header.add_i_fabric_header") {
-            meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
-            meta_60.i_fabric_header.lkp_mac_type = hdr_60.vlan_tag_[0].etherType;
-        }
+        meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
+        meta_60.i_fabric_header.lkp_mac_type = hdr_60.vlan_tag_[0].etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_multicast_packet_double_tagged") action validate_outer_ethernet_header_set_valid_outer_multicast_packet_double_tagged() {
         meta_60.l2_metadata.lkp_pkt_type = 3w2;
         meta_60.l2_metadata.lkp_mac_sa = hdr_60.ethernet.srcAddr;
         meta_60.l2_metadata.lkp_mac_da = hdr_60.ethernet.dstAddr;
         hdr_60.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        @name("validate_outer_ethernet_header.add_i_fabric_header") {
-            meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
-            meta_60.i_fabric_header.lkp_mac_type = hdr_60.vlan_tag_[1].etherType;
-        }
+        meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
+        meta_60.i_fabric_header.lkp_mac_type = hdr_60.vlan_tag_[1].etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_multicast_packet_qinq_tagged") action validate_outer_ethernet_header_set_valid_outer_multicast_packet_qinq_tagged() {
         meta_60.l2_metadata.lkp_pkt_type = 3w2;
         meta_60.l2_metadata.lkp_mac_sa = hdr_60.ethernet.srcAddr;
         meta_60.l2_metadata.lkp_mac_da = hdr_60.ethernet.dstAddr;
         hdr_60.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        @name("validate_outer_ethernet_header.add_i_fabric_header") {
-            meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
-            meta_60.i_fabric_header.lkp_mac_type = hdr_60.ethernet.etherType;
-        }
+        meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
+        meta_60.i_fabric_header.lkp_mac_type = hdr_60.ethernet.etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_broadcast_packet_untagged") action validate_outer_ethernet_header_set_valid_outer_broadcast_packet_untagged() {
         meta_60.l2_metadata.lkp_pkt_type = 3w4;
         meta_60.l2_metadata.lkp_mac_sa = hdr_60.ethernet.srcAddr;
         meta_60.l2_metadata.lkp_mac_da = hdr_60.ethernet.dstAddr;
         hdr_60.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        @name("validate_outer_ethernet_header.add_i_fabric_header") {
-            meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
-            meta_60.i_fabric_header.lkp_mac_type = hdr_60.ethernet.etherType;
-        }
+        meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
+        meta_60.i_fabric_header.lkp_mac_type = hdr_60.ethernet.etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_broadcast_packet_single_tagged") action validate_outer_ethernet_header_set_valid_outer_broadcast_packet_single_tagged() {
         meta_60.l2_metadata.lkp_pkt_type = 3w4;
         meta_60.l2_metadata.lkp_mac_sa = hdr_60.ethernet.srcAddr;
         meta_60.l2_metadata.lkp_mac_da = hdr_60.ethernet.dstAddr;
         hdr_60.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        @name("validate_outer_ethernet_header.add_i_fabric_header") {
-            meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
-            meta_60.i_fabric_header.lkp_mac_type = hdr_60.vlan_tag_[0].etherType;
-        }
+        meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
+        meta_60.i_fabric_header.lkp_mac_type = hdr_60.vlan_tag_[0].etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_broadcast_packet_double_tagged") action validate_outer_ethernet_header_set_valid_outer_broadcast_packet_double_tagged() {
         meta_60.l2_metadata.lkp_pkt_type = 3w4;
         meta_60.l2_metadata.lkp_mac_sa = hdr_60.ethernet.srcAddr;
         meta_60.l2_metadata.lkp_mac_da = hdr_60.ethernet.dstAddr;
         hdr_60.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        @name("validate_outer_ethernet_header.add_i_fabric_header") {
-            meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
-            meta_60.i_fabric_header.lkp_mac_type = hdr_60.vlan_tag_[1].etherType;
-        }
+        meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
+        meta_60.i_fabric_header.lkp_mac_type = hdr_60.vlan_tag_[1].etherType;
     }
     @name("validate_outer_ethernet_header.set_valid_outer_broadcast_packet_qinq_tagged") action validate_outer_ethernet_header_set_valid_outer_broadcast_packet_qinq_tagged() {
         meta_60.l2_metadata.lkp_pkt_type = 3w4;
         meta_60.l2_metadata.lkp_mac_sa = hdr_60.ethernet.srcAddr;
         meta_60.l2_metadata.lkp_mac_da = hdr_60.ethernet.dstAddr;
         hdr_60.ig_intr_md_for_tm.ucast_egress_port = 9w511;
-        @name("validate_outer_ethernet_header.add_i_fabric_header") {
-            meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
-            meta_60.i_fabric_header.lkp_mac_type = hdr_60.ethernet.etherType;
-        }
+        meta_60.i_fabric_header.ingress_tunnel_type = meta_60.tunnel_metadata.ingress_tunnel_type;
+        meta_60.i_fabric_header.lkp_mac_type = hdr_60.ethernet.etherType;
     }
     @name("validate_outer_ethernet_header.validate_outer_ethernet") table validate_outer_ethernet_header_validate_outer_ethernet_0() {
         actions = {

@@ -165,14 +165,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("NoAction_2") action NoAction_0() {
     }
     @name("action1") action action1_0() {
-        @name("action1_1") {
-            meta.md.field1 = 1w0;
-        }
+        meta.md.field1 = 1w0;
     }
     @name("action2") action action2_0() {
-        @name("action1_1") {
-            meta.md.field1 = 1w1;
-        }
+        meta.md.field1 = 1w1;
     }
     @name("action2_1") action action2_2(bit<1> value) {
         meta.md.field2 = value;

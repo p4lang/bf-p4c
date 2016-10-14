@@ -69,7 +69,7 @@ int main(int ac, char **av) {
                 dump(program);
             else
                 std::cout << *program << std::endl; }
-        maupipe = extract_maupipe(program);
+        maupipe = extract_maupipe(program, options);
     } else {
         auto program = parseP4File(options);
         program = P4::FrontEnd().run(options, program);
@@ -96,7 +96,7 @@ int main(int ac, char **av) {
                 dump(program);
             else
                 std::cout << *program << std::endl; }
-        maupipe = extract_maupipe(program); }
+        maupipe = extract_maupipe(program, options); }
 
     if (ErrorReporter::instance.getErrorCount() > 0)
         return 1;
