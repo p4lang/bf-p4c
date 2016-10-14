@@ -8,7 +8,7 @@
 class PhvInfo;
 class IXBarRealign;
 struct TableResourceAlloc;
-//FIXME: Maybe a different format
+// FIXME: Maybe a different format
 struct grp_use;
 struct big_grp_use;
 
@@ -133,19 +133,19 @@ struct IXBar {
         return nullptr; }
 
  private:
-    bool find_alloc(IXBar::Use &alloc, bool ternary, bool second_try, 
+    bool find_alloc(IXBar::Use &alloc, bool ternary, bool second_try,
                     vector<IXBar::Use::Byte *> &alloced, int hash_groups_needed);
     bool find_original_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
     bool find_ternary_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
     void calculate_available_groups(vector<big_grp_use> &order, int hash_groups_needed);
-    void calculate_found(vector<IXBar::Use::Byte *> unalloced, vector<big_grp_use> &order, 
+    void calculate_found(vector<IXBar::Use::Byte *> unalloced, vector<big_grp_use> &order,
                          bool ternary);
-    void calculate_ternary_free(vector<big_grp_use> &order, int big_groups, 
+    void calculate_ternary_free(vector<big_grp_use> &order, int big_groups,
                                 int bytes_per_big_group);
-    void calculate_exact_free(vector<big_grp_use> &order, int big_groups, 
+    void calculate_exact_free(vector<big_grp_use> &order, int big_groups,
                               int bytes_per_big_group);
     int found_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, bool ternary);
-    int free_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, 
+    int free_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced,
                    vector<IXBar::Use::Byte *> &alloced, bool ternary);
     int found_bytes_big_group(big_grp_use *grp, vector<IXBar::Use::Byte *> &unalloced);
     int free_bytes_big_group(big_grp_use *grp, vector<IXBar::Use::Byte *> &unalloced,
@@ -154,11 +154,11 @@ struct IXBar {
                             vector<IXBar::Use::Byte *> &alloced, IXBar::Use::Byte &need,
                             int group, int byte, int &index, int &free_bytes, int &bytes_placed);
     void fill_out_use(vector<IXBar::Use::Byte *> &alloced, bool ternary);
-    bool big_grp_alloc(bool ternary, bool second_try, vector<IXBar::Use::Byte *> &unalloced, 
+    bool big_grp_alloc(bool ternary, bool second_try, vector<IXBar::Use::Byte *> &unalloced,
                        vector<IXBar::Use::Byte *> &alloced, vector<big_grp_use> &order,
                        int big_groups_needed, int &total_bytes_needed, int bytes_per_big_group);
     bool small_grp_alloc(bool ternary, bool second_try, vector<IXBar::Use::Byte *> &unalloced,
-                         vector<IXBar::Use::Byte *> &alloced, vector<grp_use *> &small_order, 
+                         vector<IXBar::Use::Byte *> &alloced, vector<grp_use *> &small_order,
                          vector<big_grp_use> &order, int &total_bytes_needed);
 };
 

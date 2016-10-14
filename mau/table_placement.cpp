@@ -83,15 +83,15 @@ struct TablePlacement::Placed {
     bool is_placed(const IR::MAU::Table *tbl) const { return is_placed(tbl->name); }
     bool is_placed(const IR::MAU::TableSeq *seq) const {
         for (auto tbl : seq->tables)
-            if (!is_placed(tbl)) { LOG3("Unplaced " << tbl->name); return false;};
+            if (!is_placed(tbl)) { LOG3("Unplaced " << tbl->name); return false; }
         return true; }
-    void copy (const Placed *p) {
+    void copy(const Placed *p) {
         name = p->name; entries = p->entries; placed = p->placed;
         need_more = p->need_more; gw_result_tag = p->gw_result_tag; table = p->table;
         gw = p->gw; stage = p->stage; logical_id = p->logical_id; use = p->use;
     }
 
-    void set_prev (const Placed *p, bool make_new, vector<TableResourceAlloc *> &prev_resources) {
+    void set_prev(const Placed *p, bool make_new, vector<TableResourceAlloc *> &prev_resources) {
         if (!make_new) {
             prev = p;
             if (p) {
@@ -108,13 +108,12 @@ struct TablePlacement::Placed {
             auto *prev_p = p;
             while (stage != -1) {
                 Placed *new_p = new Placed(self, nullptr);
-                new_p->copy (prev_p);
+                new_p->copy(prev_p);
                 new_p->resources = prev_resources[index];
                 index++;
                 curr_p->prev = new_p;
                 curr_p = new_p;
                 prev_p = prev_p->prev;
-                
                 if (prev_p == nullptr || prev_p->stage != curr_p->stage) {
                     curr_p->prev = prev_p;
                     stage = -1;
@@ -187,24 +186,21 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
 static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Placed *done,
                           int &entries, TableResourceAlloc *resources,
                           vector<TableResourceAlloc *> &prev_resources) {
-
     LOG3("Try alloc mem with " << entries << " entries");
     Memories current_mem;
     Memories current_mem2;
     int i = 0;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
-        current_mem2.add_table(p->table, &prev_resources[i]->match_ixbar, 
+        current_mem2.add_table(p->table, &prev_resources[i]->match_ixbar,
                                &prev_resources[i]->memuse, p->entries);
-        current_mem2.add_table(p->gw, &prev_resources[i]->match_ixbar, 
+        current_mem2.add_table(p->gw, &prev_resources[i]->match_ixbar,
                                &prev_resources[i]->memuse, -1);
-        //current_mem.update(p->resources->memuse);
         i++;
     }
 
-    current_mem2.add_table(next->table, &resources->match_ixbar, 
+    current_mem2.add_table(next->table, &resources->match_ixbar,
                            &resources->memuse, entries);
     current_mem2.add_table(next->gw, &resources->match_ixbar, &resources->memuse, -1);
-   
     resources->memuse.clear();
     for (auto *prev_resource : prev_resources) {
         prev_resource->memuse.clear();
@@ -215,29 +211,8 @@ static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Pl
             prev_resource->memuse.clear();
         }
         return false;
-    } else {
-        /*
-        LOG3("Hello just allocated " << next->name);
-        LOG3("Resources size is " << resources->memuse[next->name].row.size());
-        for (auto row : resources->memuse[next->name].row) {
-             LOG3("Row is " << row);
-        }
-        */
     }
     return true;
-
-  
-   // int gw_entries = 1;
-    //resources->memuse.clear();
-    
-    /*
-    if (!current_mem.allocTable(next->name, next->table, entries,
-                                resources->memuse, resources->match_ixbar) ||
-        !current_mem.allocTable(next->name, next->gw, gw_entries,
-                                resources->memuse, resources->match_ixbar)) {
-        resources->memuse.clear();
-        return false; }
-    */
 }
 
 TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t, const Placed *done,
@@ -277,7 +252,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     if (!try_alloc_ixbar(rv, done, phv, resources)) {
 retry_next_stage:
         rv->stage++;
-        //The placed list is onto the next stage, and we don't need to use memories.
+        // The placed list is onto the next stage, and we don't need to use memories.
         if (!try_alloc_ixbar(rv, done, phv, resources))
             BUG("Can't fit table %s in ixbar by itself", rv->name); }
 
@@ -297,7 +272,7 @@ retry_next_stage:
 
     auto avail = StageUseEstimate::max();
     if (rv->stage == (done ? done->stage : 0)) {
-        if (!(min_use + current <= avail) 
+        if (!(min_use + current <= avail)
             || !try_alloc_mem(rv, done, min_entries, resources, prev_resources)) {
             LOG4("   can't fit min_entries(" << min_entries << ") in stage " << rv->stage <<
                  ", advancing to next stage");
@@ -310,7 +285,8 @@ retry_next_stage:
         avail.maprams -= current.maprams; }
     assert(min_use <= avail);
     int last_try = rv->entries;
-    while (!(rv->use <= avail) || !try_alloc_mem(rv, done, rv->entries, resources, prev_resources)) {
+    while (!(rv->use <= avail) ||
+           !try_alloc_mem(rv, done, rv->entries, resources, prev_resources)) {
         rv->need_more = true;
         int scale = 0;
         if (rv->use.tcams > avail.tcams)
@@ -507,21 +483,6 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
 
 static void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *resources,
                                 int entries) {
-    LOG3("nutso");
-    LOG3("Set resources for " << tbl->name);
-    auto alloc = resources->memuse;
-      
-    for (auto &a : alloc) {
-        LOG3("Table " << a.first);
-        for (auto row : a.second.row) {
-            LOG3("Row " << row.row << " and bus " << row.bus << " has " 
-                  << row.col.size() << " cols.");
-            for (auto col : row.col) {
-                LOG3("Col is " << col << ".");
-            }
-        }
-    }
- 
     tbl->resources = resources;
     tbl->layout.entries = entries;
     if (!tbl->ways.empty()) {
