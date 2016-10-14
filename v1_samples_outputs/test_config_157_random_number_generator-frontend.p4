@@ -160,8 +160,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("tmp") bit<32> tmp_1;
-    @name("tmp_0") bit<32> tmp_2;
+    bit<32> tmp_1;
+    bit<32> tmp_2;
     @name("action_0") action action_2(bit<16> param0) {
         random(5w16, tmp_1);
         hdr.pkt.field_a_32 = tmp_1;

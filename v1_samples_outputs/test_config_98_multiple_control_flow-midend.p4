@@ -197,9 +197,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("hdr_0") headers hdr_1;
-    @name("meta_0") metadata meta_1;
-    @name("standard_metadata_0") standard_metadata_t standard_metadata_1;
+    headers hdr_1;
+    metadata meta_1;
+    standard_metadata_t standard_metadata_1;
     @name("NoAction_4") action NoAction_1() {
     }
     @name("NoAction_5") action NoAction_6() {
