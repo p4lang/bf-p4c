@@ -15,19 +15,19 @@ struct Memories {
     static constexpr int TCAM_ROWS = 12;
     static constexpr int TCAM_COLUMNS = 2;
 
+    Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>          sram_use;
+    unsigned                                           sram_inuse[SRAM_ROWS] = { 0 };
+    Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>          tcam_use;
+    Alloc2D<std::pair<cstring, int> *, SRAM_ROWS, 2>   sram_match_bus;
+    Alloc2D<std::pair<cstring, int> *, SRAM_ROWS, 2>   sram_search_bus;
+    Alloc2D<cstring, SRAM_ROWS, 2>                     sram_print_match_bus;
+    Alloc2D<cstring, SRAM_ROWS, 2>                     action_data_bus;
+    Alloc2D<cstring,  SRAM_ROWS, 2>                    tind_bus;
+    Alloc2D<cstring, SRAM_ROWS, 2>                     overflow_bus;
+    Alloc1D<cstring, SRAM_ROWS - 1>                    vert_overflow_bus;
+    Alloc2D<cstring, SRAM_ROWS, MAPRAM_COLUMNS>        mapram_use;
+    Alloc1D<cstring, SRAM_ROWS>                        stateful_bus;
  
-    Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>           sram_use;
-    unsigned                                     sram_inuse[SRAM_ROWS] = { 0 };
-    Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>           tcam_use;
-    Alloc2D<cstring, SRAM_ROWS, MAPRAM_COLUMNS>         mapram_use;
-    Alloc2D<cstring, SRAM_ROWS, 2>                      sram_search_bus;
-    Alloc2D<cstring, SRAM_ROWS, 2>                      sram_match_bus;
-    Alloc2D<cstring, SRAM_ROWS, 2>                      tind_bus;
-    Alloc2D<cstring, SRAM_ROWS, 2>                      action_data_bus;
-    Alloc1D<cstring, SRAM_ROWS>                         stateful_bus;
-    Alloc2D<cstring, SRAM_ROWS, 2>                      overflow_bus;
-    Alloc1D<cstring, SRAM_ROWS - 1>                     vert_overflow_bus;
-
     struct mem_info {
         int match_tables;
         int match_bus_min;
@@ -100,22 +100,13 @@ struct Memories {
         bool all_placed() { return (depth == placed); };
     };
 
-    Alloc2D<std::pair<cstring, int> *, SRAM_ROWS, 2>   sram_match_bus2;
-    Alloc2D<std::pair<cstring, int> *, SRAM_ROWS, 2>   sram_search_bus2;
-    Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>          sram_use2;
-    Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>          tcam_use2;
-    Alloc2D<cstring, SRAM_ROWS, 2>                     action_data_bus2;
-    Alloc2D<cstring,  SRAM_ROWS, 2>                    tind_bus2;
-    Alloc2D<cstring, SRAM_ROWS, 2>                     overflow_bus2;
-    Alloc1D<cstring, SRAM_ROWS - 1>                    vert_overflow_bus2;
-
     vector<table_alloc *>      tables;
     vector<table_alloc *>      exact_tables;
+    vector<SRAM_group *>       exact_match_ways;
     vector<table_alloc *>      ternary_tables;
     vector<table_alloc *>      tind_tables;
     vector<SRAM_group *>       tind_groups;
     vector<table_alloc *>      action_tables;
-    vector<SRAM_group *>       exact_match_ways;
     vector<SRAM_group *>       action_bus_users;
     vector<table_alloc *>      gw_tables;
 
@@ -123,7 +114,7 @@ struct Memories {
     void add_table(const IR::MAU::Table *t, const IXBar::Use *mi, 
                    map<cstring, Memories::Use> *mu, int entries);
     bool analyze_tables(mem_info &mi);
-    void calculate_column_balance(mem_info &mi);
+    void calculate_column_balance();
     bool allocate_all();
     bool allocate_all_exact();
     bool allocate_exact(table_alloc *ta, mem_info &mi, int average_depth);    
@@ -158,6 +149,7 @@ struct Memories {
                            SRAM_group *curr_oflow_group);
     bool fill_out_action_row(SRAM_group *a_group, unsigned a_mask, int a_index,
                              int row, int side, unsigned mask, bool is_oflow);
+
     bool allocate_all_gw();
 
     bool alloc2Port(cstring table_name, int entries, int entries_per_word, Use &alloc);
