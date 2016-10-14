@@ -149,12 +149,13 @@ vector<std::pair<int, int>> Memories::available_SRAMs_per_row(unsigned mask, tab
                                                                 int width_sect) {
     vector<std::pair<int, int>> available_rams;
     for (int i = 0; i < SRAM_ROWS; i++) {
-        std::pair<table_alloc *, int> *first_bus, *second_bus;
+        std::pair<cstring, int> *first_bus, *second_bus;
         first_bus = sram_match_bus2[i][0];  second_bus = sram_match_bus2[i][1];
         //if the first bus or the second bus match up to what is 
         if (!(first_bus == nullptr || second_bus == nullptr ||
-            (first_bus->first == ta && first_bus->second == width_sect) ||
-            (second_bus->first == ta && second_bus->second == width_sect))) continue; 
+            (first_bus->first == ta->table->name && first_bus->second == width_sect) ||
+            (second_bus->first == ta->table->name && second_bus->second == width_sect))) 
+            continue; 
         available_rams.push_back(std::make_pair(i, 
                                  __builtin_popcount((mask ^ sram_inuse[i]) & mask)));
     }
@@ -174,12 +175,12 @@ vector<int> Memories::available_match_SRAMs_per_row(unsigned row_mask, unsigned 
                                                     int row, table_alloc *ta, int width_sect) {
     vector<int> matching_rows;
     for (int i = 0; i < SRAM_ROWS; i++) {
-        std::pair<table_alloc *, int> *first_bus, *second_bus;
+        std::pair<cstring, int> *first_bus, *second_bus;
         first_bus = sram_match_bus2[i][0];  second_bus = sram_match_bus2[i][1];
         if (row == i) continue;
         if (!(first_bus == nullptr || second_bus == nullptr ||
-            (first_bus->first == ta && first_bus->second == width_sect) ||
-            (second_bus->first == ta && second_bus->second == width_sect))) continue;
+            (first_bus->first == ta->table->name && first_bus->second == width_sect) ||
+            (second_bus->first == ta->table->name && second_bus->second == width_sect))) continue;
 
         if (__builtin_popcount(row_mask & ~sram_inuse[i]) == __builtin_popcount(row_mask))
             matching_rows.push_back(i); 
@@ -193,17 +194,21 @@ vector<int> Memories::available_match_SRAMs_per_row(unsigned row_mask, unsigned 
                  __builtin_popcount(~sram_inuse[b] & total_mask)) != 0)
             return t < 0;
         
-        std::pair<table_alloc *, int> *first_bus, *second_bus;
+        std::pair<cstring, int> *first_bus, *second_bus;
         first_bus = sram_match_bus2[a][0]; second_bus = sram_match_bus2[a][1];
 
-        if ((first_bus != nullptr && first_bus->first == ta && first_bus->second == width_sect) ||
-            (second_bus != nullptr && second_bus->first == ta && second_bus->second == width_sect)) 
+        if ((first_bus != nullptr && first_bus->first == ta->table->name
+            && first_bus->second == width_sect) ||
+            (second_bus != nullptr && second_bus->first == ta->table->name
+            && second_bus->second == width_sect)) 
             return true;
       
         first_bus = sram_match_bus2[b][0]; second_bus = sram_match_bus2[b][1];
         
-        if ((first_bus != nullptr && first_bus->first == ta && first_bus->second == width_sect) ||
-            (second_bus != nullptr && second_bus->first == ta && second_bus->second == width_sect)) 
+        if ((first_bus != nullptr && first_bus->first == ta->table->name
+            && first_bus->second == width_sect) ||
+            (second_bus != nullptr && second_bus->first == ta->table->name 
+            && second_bus->second == width_sect)) 
             return false;
 
         return a < b;
@@ -277,7 +282,7 @@ void Memories::break_exact_tables_into_ways() {
 Memories::SRAM_group * Memories::find_best_candidate (SRAM_group *placed_wa, int row, int &loc) {
     if (exact_match_ways.empty()) return nullptr;
     
-    std::pair<table_alloc *, int> *first_bus, *second_bus;
+    std::pair<cstring, int> *first_bus, *second_bus;
     first_bus = sram_match_bus2[row][0];  second_bus = sram_match_bus2[row][1];
 
     loc = 0;
@@ -290,8 +295,8 @@ Memories::SRAM_group * Memories::find_best_candidate (SRAM_group *placed_wa, int
 
     loc = 0;
     for (auto emw : exact_match_ways) {
-        if ((first_bus != nullptr && first_bus->first == emw->ta) ||
-            (second_bus != nullptr && second_bus->first == emw->ta)) 
+        if ((first_bus != nullptr && first_bus->first == emw->ta->table->name) ||
+            (second_bus != nullptr && second_bus->first == emw->ta->table->name)) 
             return emw;
         loc++;
     }
@@ -331,7 +336,8 @@ bool Memories::fill_out_row(SRAM_group *placed_wa, int row) {
 /* Returns the match bus that we are selecting on this row */
 int Memories::match_bus_available(table_alloc *ta, int width, int row) {
      if (sram_match_bus2[row][0] == nullptr 
-         || (sram_match_bus2[row][0]->first == ta && sram_match_bus2[row][0]->second == width))
+         || (sram_match_bus2[row][0]->first == ta->table->name 
+         && sram_match_bus2[row][0]->second == width))
          return 0;
      else
          return 1;
@@ -347,7 +353,7 @@ bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols) {
 
     for (int i = 0; i < SRAM_COLUMNS && cols < wa->depth - wa->placed; i++) {
         //FIXME: Path change
-        if (sram_use2[row][i] == nullptr && ((1 << i) & 0x3ff)) {
+        if (!sram_use2[row][i]  && ((1 << i) & 0x3ff)) {
             row_mask |= (1 << i);
             selected_cols.push_back(i);
             cols++;
@@ -393,13 +399,13 @@ bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols) {
         alloc.row.emplace_back(selected_rows[i], bus);
         auto &alloc_row = alloc.row.back();
         for (size_t j = 0; j < selected_cols.size(); j++) {
-            sram_use2[selected_rows[i]][selected_cols[j]] = wa->ta;
+            sram_use2[selected_rows[i]][selected_cols[j]] = wa->ta->table->name;
             alloc_row.col.push_back(selected_cols[j]);
         }
         sram_inuse[selected_rows[i]] |= row_mask;
         if (sram_match_bus2[selected_rows[i]][bus] == nullptr) {
             sram_match_bus2[selected_rows[i]][bus] 
-                = new std::pair<table_alloc *, int>(wa->ta, width);
+                = new std::pair<cstring, int>(wa->ta->table->name, width);
         }
     }
     return true;
@@ -538,7 +544,7 @@ bool Memories::find_ternary_stretch(int TCAMs_necessary, int mid_bytes_needed,
     for (int j = 0; j < TCAM_COLUMNS; j++) {
         int clear_cols = 0;
         for (int i = 0; i < TCAM_ROWS; i++) {
-            if (tcam_use2[i][j] != nullptr) {
+            if (tcam_use2[i][j]) {
                 clear_cols = 0;
                 continue;
             }
@@ -581,7 +587,7 @@ bool Memories::allocate_all_ternary() {
             if (!find_ternary_stretch(TCAMs_necessary, mid_bytes_needed, row, col))
                 return false;
             for (int i = row; i < row + TCAMs_necessary; i++) {
-                 tcam_use2[i][col] = ta;
+                 tcam_use2[i][col] = ta->table->name;
                  alloc.row.emplace_back(i, col);
                  alloc.row.back().col.push_back(col);
             }
@@ -622,15 +628,15 @@ bool Memories::allocate_all_tind() {
         SRAM_group *next_tind = tind_groups[0];
 
 
-        if (sram_use2[i][0] == nullptr) {
-            sram_use2[i][0] = next_tind->ta;
+        if (!sram_use2[i][0]) {
+            auto name = next_tind->ta->table->name + "$tind";
+            sram_use2[i][0] = name;
             sram_inuse[i] |= 1;
-            tind_bus2[i][0] = next_tind->ta;
+            tind_bus2[i][0] = name;
             next_tind->placed++;
             if (next_tind->all_placed()) {
                 tind_groups.erase(tind_groups.begin()); 
             }
-            auto name = next_tind->ta->table->name + "$tind";
             auto &alloc = (*next_tind->ta->memuse)[name];
             alloc.row.emplace_back(i, 0);
             alloc.row.back().col.push_back(0);
@@ -828,10 +834,10 @@ bool Memories::fill_out_action_row(SRAM_group *a_group, unsigned a_mask, int a_i
     auto a_name = a_group->ta->table->name + "$action";
     auto &a_alloc = (*a_group->ta->memuse)[a_name];
     if (is_oflow) {
-        overflow_bus2[row][side] = a_group;
+        overflow_bus2[row][side] = a_name;
         a_alloc.row.emplace_back(row);
     } else {
-        action_data_bus2[row][side] = a_group;
+        action_data_bus2[row][side] = a_name;
         a_alloc.row.emplace_back(row, side);
     }
     for (int k = 0; k < 10; k++) {
@@ -839,7 +845,7 @@ bool Memories::fill_out_action_row(SRAM_group *a_group, unsigned a_mask, int a_i
             continue;
 
         if ((1 << k) & a_mask) {
-            sram_use2[row][k] = a_group->ta;
+            sram_use2[row][k] = a_name;
             a_alloc.row.back().col.push_back(k);
         }
     }
@@ -927,8 +933,8 @@ bool Memories::allocate_all_gw() {
             for (int j = column; j < 2; j++) {
                 if (sram_match_bus2[i][j] == nullptr) {
                     LOG3("Time to allocate");
-                    sram_match_bus2[i][j] = new std::pair<table_alloc *, int>(ta, 0);
                     auto name = ta->table->name + "$gw";
+                    sram_match_bus2[i][j] = new std::pair<cstring, int>(name, 0);
                     auto &alloc = (*ta->memuse)[name];
                     alloc.row.emplace_back(i, j); 
                     row = i;
