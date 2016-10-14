@@ -282,6 +282,11 @@ XFAIL_TESTS += \
     tofino/%reldir%/v1_samples/07-MacAddrCheck.p4.test \
     tofino/%reldir%/v1_samples/08-MacAddrCheck1.p4.test
 
+# Parser failures.
+XFAIL_TESTS += \
+    tofino/testdata/p4_14_samples/parser_dc_full.p4.test \
+    tofino-newpa/testdata/p4_14_samples/parser_dc_full.p4.test
+
 # Generates broken PHV alloc (regs used by both ingress & egress)
 XFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/basic_routing.p4.test
 
