@@ -317,7 +317,7 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices(std::set<PHV_MAU
             }
         }
     }
-    LOG3("----------sorted MAU Container Packs avail----------");
+    LOG3(std::endl << "----------sorted MAU Container Packs avail----------");
     LOG3(aligned_container_slices_i);
 }
 
@@ -363,18 +363,12 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices(std::set<PHV_MAU
 //           pick top member<cn, cw> from sorted list
 //           search map[cw] upto end of map
 //               if map[mw][mn] accommodates member<cn, cw>
-//                   if mw > cw
-//                        split container_pack<mw, mn> : <mw-cw, mn>, <cw, mn>
-//                        map.insert container_pack<mw-cw, mn>
-//                        G.map.insert container_pack<mw-cw, mn>
-//                   if mn > cn
-//                        split container_pack<cw, mn> : <cw, mn-cn>, <cw, cn>
-//                        map.insert container_pack<cw, mn-cn>
-//                        G.map.insert container_pack<cw, mn-cn>
+//                   if mw > cw, mn > cn
+//                       split container_pack <mw, mn> --> <mw, mn-cn>, (<mw, cn> --> <mw-cw, cn>, <cw, cn>)  
+//                       map.insert new container_packs
 //                   allocate member<cn, cw> to container_pack<cw, cn>
-//                        C.update_record member<cn, cw>
-//                        map.remove container_pack<mw, mn>
-//                        G.remove container_pack<mw, mn>
+//                       C.update_record member<cn, cw>
+//                       map.remove container_pack<mw, mn>
 //           if member not allocated then "cannot pack member"
 //
 //       G.singleton C use later if necessary for
@@ -435,31 +429,99 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
     //
     LOG3("..........packing..........");
     //
+    std::list<Cluster_PHV *> clusters_remove;
     for (auto cl: clusters_to_be_assigned)
     {
         int cl_w = cl->max_width();		// ?? assert width < container_width, also consider non uniform widths of fields
         int cl_n = cl->num_containers();
         //
-        for (auto i : aligned_container_slices_i)
+        bool found_match = false;
+        for (auto &i : aligned_container_slices_i)
         {
-            int w = i.first;
-            if(w >= cl_w)
+            int m_w = i.first;
+            if(m_w >= cl_w)
             {
-                for (auto j : i.second)
+                for (auto &j : i.second)
                 {
-                    int n = j.first;
-                    if(n >= cl_n)
+                    // split container_pack <mw, mn> --> <mw, mn-cn>, (<mw, cn> --> <mw-cw, cn>, <cw, cn>)
+                    //
+                    int m_n = j.first;
+                    if(m_n >= cl_n)
                     {
-                        LOG3(".....<" << cl_n << ',' << cl_w << ">...[" << w << "][" << n << ']');
+                        std::set<PHV_MAU_Group::Container_Content *> cc_set = *(j.second.begin());
+                        LOG3(".....<" << cl_n << ',' << cl_w << ">...[" << m_w << "][" << m_n << ']');
+                        if(m_n > cl_n)
+                        {   // create new container pack <mw, mn-cn>
+                            // n = m_n - cl_n containers
+                            // insert in map[n]
+                            //
+                            std::set<PHV_MAU_Group::Container_Content *>* cc_n = new std::set<PHV_MAU_Group::Container_Content *>;
+                            auto n = m_n - cl_n;
+                            for (auto i=0; i < n; i++)
+                            {
+                                cc_n->insert(*(cc_set.begin()));
+                                cc_set.erase(cc_set.begin());
+                            }
+                            i.second[n].insert(*cc_n);
+                            LOG3(".............[" << m_w << "][" << n << "]-->" << *cc_n);
+                        }
+                        if(m_w > cl_w)
+                        {   // create new container pack <mw-cw, cn>
+                            // new width w = m_w - cl_w;
+                            // insert in map[m_w-cl_w][cl_n]
+                            //
+                            std::set<PHV_MAU_Group::Container_Content *>* cc_w = new std::set<PHV_MAU_Group::Container_Content *>;
+                            *cc_w = cc_set;
+                            for (auto cc: *cc_w)
+                            {
+                                cc->hi(cc->hi() - cl_w);
+                            }
+                            auto w = m_w - cl_w;
+                            aligned_container_slices_i[w][cl_n].insert(*cc_w);
+                            LOG3(".............[" << w << "][" << cl_n << "]-->" << *cc_w);
+                        }
+                        //
+                        // update container tracking records based on cc_set ... <cl_n, cl_w>;
+                        auto field = 0;
+                        for (auto cc : cc_set)
+                        {
+                            cc->container()->taint(cc->hi()-cl_w, cl_w, cl->cluster_vec()[field++]);
+                        }
+                        //
+                        // remove cl
+                        // remove matching PHV_MAU_Group Container Content from set_of_sets
+                        // if set_of_sets empty then remove map[m_w] entry
+                        //
+                        clusters_remove.push_back(cl);
+                        j.second.erase(j.second.begin());
+                        if(j.second.empty())
+                        {
+                            i.second.erase(j.first);
+                        }
+                        //
+                        found_match = true;	// next cluster cl
                         break;
                     }
                 }
+            }
+            if(found_match)
+            {
                 break;
             }
         }
     }
+    // remove clusters already assigned
+    for (auto cl: clusters_remove)
+    {
+        clusters_to_be_assigned.remove(cl);
+    }
+    LOG3(std::endl << "----------after packing ..... clusters not assigned (" << clusters_to_be_assigned.size() << ")-----");
+    LOG3(clusters_to_be_assigned);
+    LOG3("----------after packing ..... sorted MAU Container Packs avail----------");
+    LOG3(aligned_container_slices_i);
     //
 }//container_pack_cohabit
+
 
 //***********************************************************************************
 //
