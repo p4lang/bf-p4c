@@ -489,6 +489,7 @@ void InputXbar::write_regs() {
         if (hg.second.tables) {
             hash.parity_group_mask[grp][0] = hg.second.tables & 0xff;
             hash.parity_group_mask[grp][1] = (hg.second.tables >> 8) & 0xff;
+            dp.mau_match_input_xbar_exact_match_enable[table->gress].rewrite();
             dp.mau_match_input_xbar_exact_match_enable[table->gress] |= hg.second.tables; }
         if (hg.second.seed) {
             for (int bit = 0; bit < 52; ++bit)

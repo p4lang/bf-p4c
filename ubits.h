@@ -55,7 +55,7 @@ template<int N> struct ubits : ubits_base {
         return v; }
     unsigned size() { return N; }
     const ubits &operator|=(unsigned long v) {
-        if (value & v)
+        if (write && (value & v))
             ERRWARN(value != (v|value), "Overwriting " << value << " with " << (v|value) <<
                     " in " << this);
         value |= v;
@@ -71,7 +71,7 @@ template<int N> struct ubits : ubits_base {
         if (bit + size > N)
             ERROR("subfield " << bit << ".." << (bit+size-1) <<
                   " out of range in " << this);
-        else if ((value >> bit) & ((1U << size)-1))
+        else if (write && ((value >> bit) & ((1U << size)-1)))
             ERRWARN(((value >> bit) & ((1U << size)-1)) != v,
                     "Overwriting subfield(" << bit << ".." << (bit+size-1) <<
                     ") value " << ((value >> bit) & ((1U << size)-1)) <<
