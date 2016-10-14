@@ -7,6 +7,14 @@
 //
 // Cluster_PHV_Requirements::Cluster_PHV_Requirements constructor
 // 
+// input:
+//	clusters: cluster.dst_map()
+// output:
+//	creates sorted PHV container requirements for clusters
+//	std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>> Cluster_PHV_i;
+//	sorted PHV requirements <number_of_containers, width_of_containers>
+//	number decreasing then width decreasing
+// 
 //***********************************************************************************
 
 Cluster_PHV_Requirements::Cluster_PHV_Requirements(Cluster &c) : cluster_i(c)
@@ -65,6 +73,12 @@ Cluster_PHV_Requirements::Cluster_PHV_Requirements(Cluster &c) : cluster_i(c)
 //***********************************************************************************
 //
 // Cluster_PHV::Cluster_PHV constructor
+//
+// input
+//	cluster set of fields
+// output
+//	sorted cluster vector of fields, width decreasing
+//	std::vector<const PhvInfo::Field *> cluster_vec_i
 // 
 //***********************************************************************************
 
@@ -112,7 +126,15 @@ Cluster_PHV::Cluster_PHV(std::set<const PhvInfo::Field *> *p) : cluster_vec_i(p-
     num_containers_i = num_containers(cluster_vec_i, width_i);
     //
 }//Cluster_PHV
-
+//
+//
+// Cluster_PHV::num_containers()
+// input
+//	cluster vector of fields*, container width
+// output
+//	num_containers based on field width
+//
+//
 int
 Cluster_PHV::num_containers(std::vector<const PhvInfo::Field *>& cluster_vec, PHV_Container::PHV_Word width)
 {

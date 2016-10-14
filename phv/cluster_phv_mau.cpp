@@ -283,8 +283,12 @@ PHV_MAU_Group_Assignments::cluster_placement_containers(std::map<PHV_Container::
 // for all MAU groups with partially filled containers
 // slice to obtain larger number of sub-containers with reduced width
 //
-// input: mau_groups_containers_avail
-// output: in each PHV_MAU_Group, map[width][number] of aligned_container_slices
+// input:
+//	mau_groups_containers_avail
+// output:
+//	in each PHV_MAU_Group, map[width][number] of aligned_container_slices
+//	consider all PHV_MAU_Groups, create composite map[width][number] --> <set of <set of container_packs>>
+//	map has sorted order width increasing, number increasing
 // 
 //***********************************************************************************
 
@@ -294,6 +298,27 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices(std::set<PHV_MAU
     {
         g->create_aligned_container_slices();
     }
+    //
+    // create composite map[width][number] --> <set of <set of container_packs>>
+    // from all mau groups aligned_container_slices
+    // map automatically has sorted order width increasing, number increasing
+    //
+    for (auto rit=PHV_MAU_i.rbegin(); rit!=PHV_MAU_i.rend(); ++rit)
+    {
+        // groups within this word size
+        for(auto g: rit->second)
+        {
+            for (auto w: g->aligned_container_slices())
+            {
+                for (auto n: w.second)
+                {
+                    aligned_container_slices_i[w.first][n.first].insert(n.second);					// insert in map[w][n]
+                }
+            }
+        }
+    }
+    LOG3("----------sorted MAU Container Packs avail----------");
+    LOG3(aligned_container_slices_i);
 }
 
 //***********************************************************************************
@@ -306,7 +331,7 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices(std::set<PHV_MAU
 //    e.g., 
 //    clusters remain              G.avail
 //    --------------               -------
-//        <num, width>                <num containers, bit width>
+//        <num, width>             <num containers, bit width>
 //         7 1                     G1: 1:3
 //         6 8                     G2: 1:7
 //         5 8                     G3: 1:1, 1:1
@@ -332,7 +357,26 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices(std::set<PHV_MAU
 //       sort avail G:<n,w>, G:n increasing, and within G, w increasing
 //       already available as map[w][n]--> <G:container_pack>
 //       create composite map[w][n]--> <set of <container_pack>> as several G's can produce map[w][n]--> <G:container_pack>
-//       fill from Container MSB, aligment honored
+//       fill container packs, automatically aligment honored
+//
+//       for members in cluster
+//           pick top member<cn, cw> from sorted list
+//           search map[cw] upto end of map
+//               if map[mw][mn] accommodates member<cn, cw>
+//                   if mw > cw
+//                        split container_pack<mw, mn> : <mw-cw, mn>, <cw, mn>
+//                        map.insert container_pack<mw-cw, mn>
+//                        G.map.insert container_pack<mw-cw, mn>
+//                   if mn > cn
+//                        split container_pack<cw, mn> : <cw, mn-cn>, <cw, cn>
+//                        map.insert container_pack<cw, mn-cn>
+//                        G.map.insert container_pack<cw, mn-cn>
+//                   allocate member<cn, cw> to container_pack<cw, cn>
+//                        C.update_record member<cn, cw>
+//                        map.remove container_pack<mw, mn>
+//                        G.remove container_pack<mw, mn>
+//           if member not allocated then "cannot pack member"
+//
 //       G.singleton C use later if necessary for
 //       (i) horizontal pack
 //       (ii) status bits e.g., POVs for headers that honor single-write constraint
@@ -368,6 +412,8 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices(std::set<PHV_MAU
 //             [8][10]         
 //             [12][4]        
 //             [15][10]
+// output:
+//	clusters (cohabit) packed into available containers
 // 
 //***********************************************************************************
 
@@ -385,26 +431,33 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
     LOG3("----------sorted clusters to be assigned (" << clusters_to_be_assigned.size() << ")-----");
     LOG3(clusters_to_be_assigned);
     //
-    // create composite map[width][number] --> <set of <set of container_packs>>
-    // from all mau groups aligned_container_slices
-    // map automatically has sorted order width increasing, number increasing
+    // pack sorted clusters<n,w> to containers[w][n]
     //
-    for (auto rit=PHV_MAU_i.rbegin(); rit!=PHV_MAU_i.rend(); ++rit)
+    LOG3("..........packing..........");
+    //
+    for (auto cl: clusters_to_be_assigned)
     {
-        // groups within this word size
-        for(auto g: rit->second)
+        int cl_w = cl->max_width();		// ?? assert width < container_width, also consider non uniform widths of fields
+        int cl_n = cl->num_containers();
+        //
+        for (auto i : aligned_container_slices_i)
         {
-            for (auto w: g->aligned_container_slices())
+            int w = i.first;
+            if(w >= cl_w)
             {
-                for (auto n: w.second)
+                for (auto j : i.second)
                 {
-                    aligned_container_slices_i[w.first][n.first].insert(n.second);					// insert in map[w][n]
+                    int n = j.first;
+                    if(n >= cl_n)
+                    {
+                        LOG3(".....<" << cl_n << ',' << cl_w << ">...[" << w << "][" << n << ']');
+                        break;
+                    }
                 }
+                break;
             }
         }
     }
-    LOG3("----------sorted MAU Container Packs avail----------");
-    LOG3(aligned_container_slices_i);
     //
 }//container_pack_cohabit
 
