@@ -48,6 +48,13 @@ struct PHV::TrivialAlloc::Regs {
     PHV::Container      B, H, W;
 };
 
+static bool tagalong_full(int size, PHV::TrivialAlloc::Regs *use) {
+    unsigned bytes = (size+7)/8U;
+    return  (bytes >= 4 && use->W.index() + bytes/4 > 32) ||
+            ((bytes & 2) && use->H.index() >= 48) ||
+            ((bytes & 1) && use->B.index() >= 32);
+}
+
 void PHV::TrivialAlloc::do_alloc(PhvInfo::Field *i, Regs *use, Regs *skip, int merge_follow) {
     /* greedy allocate space for field */
     static struct {
@@ -162,12 +169,15 @@ bool PHV::TrivialAlloc::preorder(const IR::Tofino::Pipe *pipe) {
                             size += mfield->size;
                             assert(!mfield->metadata);
                             if (mfield->offset == 0) break; } }
-                    if (use_mau)
+                    if (use_mau) {
                         do_alloc(&field, &normal, skip, merge_follow);
-                    else if (use_any)
-                        do_alloc(&field, &tagalong, nullptr, merge_follow);
-                    else
-                        LOG2(field.id << ": " << field.name << " unused in " << gr); } } } }
+                    } else if (use_any) {
+                        if (tagalong_full(field.size, &tagalong))
+                            do_alloc(&field, &normal, skip, merge_follow);
+                        else
+                            do_alloc(&field, &tagalong, nullptr, merge_follow);
+                    } else {
+                        LOG2(field.id << ": " << field.name << " unused in " << gr); } } } } }
     return false;
 }
 
