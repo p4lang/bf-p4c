@@ -71,68 +71,56 @@ struct Memories {
 
     struct table_alloc {
         const IR::MAU::Table *table;
-        const IXBar::Use match_ixbar;
+        const IXBar::Use *match_ixbar;
         map<cstring, Memories::Use>* memuse;
         int provided_entries;
         int calculated_entries;
-        explicit table_alloc(const IR::MAU::Table *t, const IXBar::Use &mi, 
+
+        explicit table_alloc(const IR::MAU::Table *t, const IXBar::Use *mi, 
                              map<cstring, Memories::Use> *mu, int e) 
                 : table(t), match_ixbar(mi), memuse(mu), provided_entries(e), 
-                  calculated_entries(0) {}
+                  calculated_entries(0) {} 
     };
 
-    struct way_group {
+    struct SRAM_group { 
         table_alloc *ta;
         int depth;
         int width;
         int placed;
         int number;
-        explicit way_group (table_alloc *t, int d, int w, int n)  
+        explicit SRAM_group (table_alloc *t, int d, int w, int n)  
             : ta(t), depth(d), width(w), placed(0), number(n) {}
+        explicit SRAM_group (table_alloc *t, int d, int n) 
+                     : ta(t), depth(d), width(0),  placed(0), number(n) {}
         void dbprint(std::ostream &out) const {
             out << ta->table->name << " way #" << number << " depth: " << depth 
                 << " width: " << width << " placed: " << placed;
         };
-    };
-
-    struct action_group {
-        table_alloc *ta;
-        int depth;
-        int placed;
-        int number;
-        explicit action_group (table_alloc *t, int d, int n) 
-                     : ta(t), depth(d), placed(0), number(n) {}
-
-        void dbprint(std::ostream &out) const {
-            out << ta->table->name << " action #" << number << " depth: " << depth 
-                << " placed: " << placed;
-        };
         int left_to_place() { return depth - placed; } 
         bool all_placed() { return (depth == placed); };
-
     };
 
     Alloc2D<std::pair<table_alloc *, int> *, SRAM_ROWS, 2>   sram_match_bus2;
     Alloc2D<std::pair<table_alloc *, int> *, SRAM_ROWS, 2>   sram_search_bus2;
     Alloc2D<table_alloc *, SRAM_ROWS, SRAM_COLUMNS>          sram_use2;
     Alloc2D<table_alloc *, TCAM_ROWS, TCAM_COLUMNS>          tcam_use2;
-    Alloc2D<action_group *, SRAM_ROWS, 2>                    action_data_bus2;
+    Alloc2D<SRAM_group *, SRAM_ROWS, 2>                    action_data_bus2;
     Alloc2D<table_alloc *,  SRAM_ROWS, 2>                    tind_bus2;
-    Alloc2D<action_group *, SRAM_ROWS, 2>                    overflow_bus2;
-    Alloc1D<action_group *, SRAM_ROWS - 1>                   vert_overflow_bus2;
+    Alloc2D<SRAM_group*, SRAM_ROWS, 2>                    overflow_bus2;
+    Alloc1D<SRAM_group*, SRAM_ROWS - 1>                   vert_overflow_bus2;
 
     vector<table_alloc *>      tables;
     vector<table_alloc *>      exact_tables;
     vector<table_alloc *>      ternary_tables;
     vector<table_alloc *>      tind_tables;
-    vector<action_group *>     tind_groups;
+    vector<SRAM_group *>       tind_groups;
     vector<table_alloc *>      action_tables;
-    vector<way_group *>        exact_match_ways;
-    vector<action_group *>     action_bus_users;
+    vector<SRAM_group *>       exact_match_ways;
+    vector<SRAM_group *>       action_bus_users;
     vector<table_alloc *>      gw_tables;
 
     void clear();
-    void add_table(const IR::MAU::Table *t, const IXBar::Use &mi, 
+    void add_table(const IR::MAU::Table *t, const IXBar::Use *mi, 
                    map<cstring, Memories::Use> *mu, int entries);
     bool analyze_tables(mem_info &mi);
     void calculate_column_balance(mem_info &mi);
@@ -147,9 +135,9 @@ struct Memories {
     void break_exact_tables_into_ways();
     int match_bus_available(table_alloc *ta, int width, int row);
     bool find_best_row_and_fill_out();
-    bool fill_out_row(way_group *placed_wa, int row);
-    bool pack_way_into_RAMs(way_group *wa, int row, int &cols);
-    way_group * find_best_candidate(way_group *placed_wa, int row, int &loc);
+    bool fill_out_row(SRAM_group *placed_wa, int row);
+    bool pack_way_into_RAMs(SRAM_group *wa, int row, int &cols);
+    SRAM_group *find_best_candidate(SRAM_group *placed_wa, int row, int &loc);
     void compress_ways();
  
     bool allocate_all_ternary();
@@ -161,15 +149,15 @@ struct Memories {
 
     bool allocate_all_action();
     void find_action_bus_users();
-    void find_action_candidates(int row, int mask, action_group ** a_group, unsigned &a_mask,
-                                int &a_index, action_group ** oflow_group,
+    void find_action_candidates(int row, int mask, SRAM_group **a_group, unsigned &a_mask,
+                                int &a_index, SRAM_group** oflow_group,
                                 unsigned &oflow_mask, int &oflow_index);
-    bool best_a_oflow_pair(action_group **best_a_group, action_group **best_oflow_group,
+    bool best_a_oflow_pair(SRAM_group **best_a_group, SRAM_group **best_oflow_group,
                            int &a_index, int &oflow_index, int RAMs_available,
-                           action_group *best_fit_group, int best_fit_index,
-                           action_group *curr_oflow_group);
-    vector<action_group *> candidates_for_overflow(int row, bool on_right_side);
-
+                           SRAM_group *best_fit_group, int best_fit_index,
+                           SRAM_group *curr_oflow_group);
+    bool fill_out_action_row(SRAM_group *a_group, unsigned a_mask, int a_index,
+                             int row, int side, unsigned mask, bool is_oflow);
     bool allocate_all_gw();
 
     bool alloc2Port(cstring table_name, int entries, int entries_per_word, Use &alloc);
