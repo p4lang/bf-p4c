@@ -485,7 +485,11 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
                         auto field = 0;
                         for (auto cc : cc_set)
                         {
-                            cc->container()->taint(cc->hi()-cl_w, cl_w, cl->cluster_vec()[field++]);
+                            // to honor alignment of fields in clusters
+                            // start with rightmost vertical slice
+                            //
+                            int start = cc->container()->avail_bits_hi() + 1 - cl_w;
+                            cc->container()->taint(start, cl_w, cl->cluster_vec()[field++]);
                         }
                         //
                         // remove cl

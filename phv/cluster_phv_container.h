@@ -47,6 +47,8 @@ class PHV_Container
     Container_status status_i = Container_status::EMPTY;
     std::vector<Container_Content *> fields_in_container_i;	// fields binned in this container
     char *bits_i;						// tainted bits in container
+    char taint_color_i='0';					// color represented by 'number' to taint bits for fields
+								// highest taint number = number of fields represented by container
     int avail_bits_lo_i = 0;					// available bit range lo
     int avail_bits_hi_i;					// available bit range hi
  public:

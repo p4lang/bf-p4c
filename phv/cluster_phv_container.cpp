@@ -9,7 +9,7 @@
 // 
 //***********************************************************************************
 
-PHV_Container::Container_Content::Container_Content(int l, int w, const PhvInfo::Field *f) : lo_i(l), hi_i(w-l-1), field_i(f)
+PHV_Container::Container_Content::Container_Content(int l, int w, const PhvInfo::Field *f) : lo_i(l), hi_i(l+w-1), field_i(f)
 {
     BUG_CHECK(field_i, "*****PHV_Container::Container_Content constructor called with null field ptr*****");
 }
@@ -25,27 +25,41 @@ PHV_Container::PHV_Container(PHV_Word w, int n) : width_i(w), number_i(n)
     bits_i = new char[(int) width_i];
     for (auto i=0; i < (int) width_i; i++)
     {
-        bits_i[i] = '0';
+        bits_i[i] = taint_color_i;
     }
+    avail_bits_lo_i = 0;
     avail_bits_hi_i = (int) width_i - 1;
 }//PHV_Container
 
 void
 PHV_Container::taint(int start, int width, const PhvInfo::Field *field_i)
 {
+   taint_color_i += '1' - '0';
    for (auto i=start; i < start+width; i++)
    {
-        bits_i[i] = '1';
+        bits_i[i] = taint_color_i;
+   }
+   if(start == 0)
+   {   // first use: container placement
+       //
+       avail_bits_lo_i = start + width;
+   }
+   else
+   {
+       // packing from right most slice to honor alignment
+       //
+       avail_bits_hi_i -= width;
    }
    //
-   if(width == (int) width_i)
+   //?? assert avail_bits_lo_i <= avail_bits_hi_i + 1
+   //
+   if(avail_bits_lo_i == avail_bits_hi_i + 1)
    {
        status_i = Container_status::FULL;
    }
    else
    {
        status_i = Container_status::PARTIAL;
-       avail_bits_lo_i = start + width;
    }
    //
    // track fields in this container
