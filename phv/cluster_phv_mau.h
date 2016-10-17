@@ -54,7 +54,7 @@ class PHV_MAU_Group
 							// number of available containers
     std::vector<PHV_Container *> phv_containers_i;	// containers in this MAU group
     std::vector<Cluster_PHV *> cluster_phv_i;		// clusters in this MAU group
-    std::vector<PHV_Container *> containers_pack_i;	// containers available for packing
+    std::set<PHV_Container *> containers_pack_i;	// containers available for packing
     std::map<int, std::map<int, std::set<Container_Content *>>> aligned_container_slices_i;
 							// [8..15] [3..15] => 2[8..15] [3..7]
 							// map[8][2] --> (Cx[8..15], Cy[8..15]
@@ -73,7 +73,7 @@ class PHV_MAU_Group
     void avail_containers(int n)			{ avail_containers_i = n; }
     std::vector<PHV_Container *>& phv_containers()	{ return phv_containers_i; }
     std::vector<Cluster_PHV *>& clusters()		{ return cluster_phv_i; }
-    std::vector<PHV_Container *>& containers_pack()	{ return containers_pack_i; }
+    std::set<PHV_Container *>& containers_pack()	{ return containers_pack_i; }
     void create_aligned_container_slices();
     std::map<int, std::map<int, std::set<Container_Content *>>>& aligned_container_slices()
 							{ return aligned_container_slices_i; }
@@ -104,6 +104,7 @@ class PHV_MAU_Group_Assignments
     void cluster_placement_containers(std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map, std::list<Cluster_PHV *>& clusters_to_be_assigned, std::set<PHV_MAU_Group *>& mau_group_containers_avail);
     void create_aligned_container_slices(std::set<PHV_MAU_Group *>& mau_group_containers_avail);
     void container_pack_cohabit(std::list<Cluster_PHV *>& clusters_to_be_assigned);
+    void update_PHV_MAU_Group_container_slices();
     //
  public:
     //

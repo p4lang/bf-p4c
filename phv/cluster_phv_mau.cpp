@@ -25,7 +25,7 @@ PHV_MAU_Group::PHV_MAU_Group(PHV_Container::PHV_Word w, int n) : width_i(w), num
     // create containers within group
     for (int i=1; i <= (int)PHV_Container::Containers::MAX; i++)
     {
-        PHV_Container *c = new PHV_Container(width_i, i);
+        PHV_Container *c = new PHV_Container(this, width_i, i);
         phv_containers_i.push_back(c);
     }
 }//PHV_MAU_Group
@@ -131,6 +131,10 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
         create_aligned_container_slices(mau_group_containers_avail);
         //
         container_pack_cohabit(clusters_to_be_assigned);
+        // 
+        // update PHV_MAU_Group info pertaining to available containers
+        //
+        update_PHV_MAU_Group_container_slices(); 
     }
     //
 }//PHV_MAU_Group_Assignments
@@ -247,7 +251,7 @@ PHV_MAU_Group_Assignments::cluster_placement_containers(std::map<PHV_Container::
                         if(g->phv_containers()[container_index]->status() == PHV_Container::Container_status::PARTIAL)
                         {   // MAU group has container packing potential
                             //
-                            g->containers_pack().push_back(g->phv_containers()[container_index]);
+                            g->containers_pack().insert(g->phv_containers()[container_index]);
                             mau_group_containers_avail.insert(g);
                         }
                         container_index++;
@@ -321,6 +325,40 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices(std::set<PHV_MAU
     LOG3(aligned_container_slices_i);
 }
 
+//
+// update PHV MAU Group container slice information
+// after container cohabit packing pass completed
+//
+
+void PHV_MAU_Group_Assignments::update_PHV_MAU_Group_container_slices()
+{
+    for (auto &gg: PHV_MAU_i)
+    {
+        // groups within this word size
+        for(auto g: gg.second)
+        {
+            g->aligned_container_slices().clear();
+        }
+    }
+    // update PHV MAU Group map from updated composite map[width][number] --> <set of <set of container_packs>>
+    //
+    for (auto &w: aligned_container_slices_i)
+    {
+        for (auto &n: w.second)
+        {
+            for (auto &cc_set: n.second)
+            {
+                for (auto &cc: cc_set)
+                {
+                    PHV_Container *c = cc->container();
+                    PHV_MAU_Group *g = c->phv_mau_group();
+                    g->aligned_container_slices()[w.first][n.first].insert(cc);	// insert in PHV_MAU_Group map[w][n]
+                }
+            }
+        }
+    }
+}
+
 //***********************************************************************************
 //
 // PHV_MAU_Group_Assignments::container_pack_cohabit
@@ -368,6 +406,9 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices(std::set<PHV_MAU
 //                       map.insert new container_packs
 //                   allocate member<cn, cw> to container_pack<cw, cn>
 //                       C.update_record member<cn, cw>
+//                       for each cohabit field, taint bits packing from righmost slice
+//                       -- honors alignment among cluster members
+//                       -- ref: PHV_MAU_Group::create_aligned_container_slices()
 //                       map.remove container_pack<mw, mn>
 //           if member not allocated then "cannot pack member"
 //
@@ -598,7 +639,10 @@ std::ostream &operator<<(std::ostream &out, std::set<PHV_MAU_Group::Container_Co
     out << '(';
     for (auto c: slices)
     {
-        out << c << ' ';
+        if(c->container()->status() != PHV_Container::Container_status::FULL)
+        {
+            out << c << ' ';
+        }
     }
     out << ')';
 
@@ -648,7 +692,10 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group &g)
         out << "\t{ ";
         for (auto c: g.containers_pack())
         {
-            out << c << ' ';
+            if(c->status() != PHV_Container::Container_status::FULL)
+            {
+                out << c << ' ';
+            }
         }
         out << '}';
     }

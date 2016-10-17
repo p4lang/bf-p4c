@@ -17,6 +17,9 @@
 //***********************************************************************************
 //
 //
+class PHV_MAU_Group;
+//
+//
 class PHV_Container
 {
  public:
@@ -42,6 +45,7 @@ class PHV_Container
     };
     //
  private:
+    PHV_MAU_Group *phv_mau_group_i;				// parent PHV MAU Group this container belongs
     PHV_Word width_i;						// width of container
     int number_i;						// container number 1..16 within MAU group
     Container_status status_i = Container_status::EMPTY;
@@ -52,8 +56,9 @@ class PHV_Container
     int avail_bits_lo_i = 0;					// available bit range lo
     int avail_bits_hi_i;					// available bit range hi
  public:
-    PHV_Container(PHV_Word w, int n);
+    PHV_Container(PHV_MAU_Group *g, PHV_Word w, int n);
     //
+    PHV_MAU_Group *phv_mau_group()				{ return phv_mau_group_i; }
     PHV_Word width()						{ return width_i; }
     int number()						{ return number_i; }
     Container_status status()					{ return status_i; }

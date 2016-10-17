@@ -20,7 +20,7 @@ PHV_Container::Container_Content::Container_Content(int l, int w, const PhvInfo:
 // 
 //***********************************************************************************
 
-PHV_Container::PHV_Container(PHV_Word w, int n) : width_i(w), number_i(n)
+PHV_Container::PHV_Container(PHV_MAU_Group *g, PHV_Word w, int n) : phv_mau_group_i(g), width_i(w), number_i(n)
 {
     bits_i = new char[(int) width_i];
     for (auto i=0; i < (int) width_i; i++)
@@ -79,6 +79,7 @@ std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container::Container
 {
     for (auto f: c)
     {
+        out << std::endl << "\t\t\t\t\t\t";
         out << f->field() << '<' << f->width() << '>' << '{' << f->lo() << ".." << f->hi() << '}';
     }
 
