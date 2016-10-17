@@ -14,15 +14,19 @@ struct Memories {
     static constexpr int MAPRAM_COLUMNS = 6;
     static constexpr int TCAM_ROWS = 12;
     static constexpr int TCAM_COLUMNS = 2;
+    static constexpr int EXACT_TABLES_MAX = 16;
+    static constexpr int TERNARY_TABLES_MAX = 8;
+    static constexpr int ACTION_TABLES_MAX = 16;
+    static constexpr int BUS_COUNT = 2;
 
     Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>          sram_use;
     unsigned                                           sram_inuse[SRAM_ROWS] = { 0 };
     Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>          tcam_use;
-    Alloc2D<std::pair<cstring, int> *, SRAM_ROWS, 2>   sram_match_bus;
-    Alloc2D<std::pair<cstring, int> *, SRAM_ROWS, 2>   sram_search_bus;
+    Alloc2D<std::pair<cstring, int>, SRAM_ROWS, 2>     sram_match_bus;
+    Alloc2D<std::pair<cstring, int>, SRAM_ROWS, 2>     sram_search_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     sram_print_match_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     action_data_bus;
-    Alloc2D<cstring,  SRAM_ROWS, 2>                    tind_bus;
+    Alloc2D<cstring, SRAM_ROWS, 2>                     tind_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     overflow_bus;
     Alloc1D<cstring, SRAM_ROWS - 1>                    vert_overflow_bus;
     Alloc2D<cstring, SRAM_ROWS, MAPRAM_COLUMNS>        mapram_use;
@@ -110,10 +114,11 @@ struct Memories {
     vector<table_alloc *>      gw_tables;
 
     void clear();
+    void clear_table_vectors();
     void add_table(const IR::MAU::Table *t, const IXBar::Use *mi,
                    map<cstring, Memories::Use> *mu, int entries);
     bool analyze_tables(mem_info &mi);
-    void calculate_column_balance();
+    void calculate_column_balance(mem_info &mi);
     bool allocate_all();
     bool allocate_all_exact();
     bool allocate_exact(table_alloc *ta, mem_info &mi, int average_depth);

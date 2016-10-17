@@ -15,6 +15,11 @@ struct TableResourceAlloc {
         for (auto &use : memuse)
             rv->memuse.emplace(use.first + ext, use.second);
         return rv; }
+    TableResourceAlloc *clone_ixbar() const {
+        TableResourceAlloc *rv = new TableResourceAlloc;
+        rv->match_ixbar = match_ixbar;
+        rv->gateway_ixbar = gateway_ixbar;
+        return rv; }
     void clear() {
         match_ixbar.clear();
         gateway_ixbar.clear();

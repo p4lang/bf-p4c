@@ -107,8 +107,7 @@ struct TablePlacement::Placed {
             auto *curr_p = this;
             auto *prev_p = p;
             while (stage != -1) {
-                Placed *new_p = new Placed(self, nullptr);
-                new_p->copy(prev_p);
+                auto *new_p = new Placed(*prev_p);
                 new_p->resources = prev_resources[index];
                 index++;
                 curr_p->prev = new_p;
@@ -188,24 +187,23 @@ static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Pl
                           vector<TableResourceAlloc *> &prev_resources) {
     LOG3("Try alloc mem with " << entries << " entries");
     Memories current_mem;
-    Memories current_mem2;
     int i = 0;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
-        current_mem2.add_table(p->table, &prev_resources[i]->match_ixbar,
+        current_mem.add_table(p->table, &prev_resources[i]->match_ixbar,
                                &prev_resources[i]->memuse, p->entries);
-        current_mem2.add_table(p->gw, &prev_resources[i]->match_ixbar,
+        current_mem.add_table(p->gw, &prev_resources[i]->match_ixbar,
                                &prev_resources[i]->memuse, -1);
         i++;
     }
 
-    current_mem2.add_table(next->table, &resources->match_ixbar,
+    current_mem.add_table(next->table, &resources->match_ixbar,
                            &resources->memuse, entries);
-    current_mem2.add_table(next->gw, &resources->match_ixbar, &resources->memuse, -1);
+    current_mem.add_table(next->gw, &resources->match_ixbar, &resources->memuse, -1);
     resources->memuse.clear();
     for (auto *prev_resource : prev_resources) {
         prev_resource->memuse.clear();
     }
-    if (!current_mem2.allocate_all()) {
+    if (!current_mem.allocate_all()) {
         resources->memuse.clear();
         for (auto *prev_resource : prev_resources) {
             prev_resource->memuse.clear();
@@ -223,10 +221,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     rv->resources = resources;
     vector<TableResourceAlloc *> prev_resources;
     for (auto *p = done; p && p->stage == done->stage; p = p->prev) {
-        TableResourceAlloc *prev_resource = new TableResourceAlloc;
-        prev_resource->match_ixbar = p->resources->match_ixbar;
-        prev_resource->gateway_ixbar = p->resources->gateway_ixbar;
-        prev_resources.push_back(prev_resource);
+        prev_resources.push_back(p->resources->clone_ixbar());
     }
     t = rv->table;
     rv->stage = done ? done->stage : 0;
