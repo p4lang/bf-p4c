@@ -100,11 +100,15 @@ class PHV_MAU_Group_Assignments
 							// for all PHV_MAU_Groups
 							// sorted map <width increasing, num increasing>
 							// containing <set of <set of container_packs>>
+    std::vector<std::set<const PhvInfo::Field *> *> cohabit_fields_i;
+							// ranked set of container cohabits
+							// requests to TP to avoid single-write issue
     //
     void cluster_placement_containers(std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map, std::list<Cluster_PHV *>& clusters_to_be_assigned, std::set<PHV_MAU_Group *>& mau_group_containers_avail);
     void create_aligned_container_slices(std::set<PHV_MAU_Group *>& mau_group_containers_avail);
     void container_pack_cohabit(std::list<Cluster_PHV *>& clusters_to_be_assigned);
     void update_PHV_MAU_Group_container_slices();
+    void container_cohabit_summary();
     //
  public:
     //
@@ -116,6 +120,7 @@ class PHV_MAU_Group_Assignments
     }
     std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>& aligned_container_slices()
 							{ return aligned_container_slices_i; }
+    std::vector<std::set<const PhvInfo::Field *> *>& cohabit_fields() { return cohabit_fields_i; }
 };
 //
 //

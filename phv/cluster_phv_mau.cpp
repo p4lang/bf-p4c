@@ -135,6 +135,8 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
         // update PHV_MAU_Group info pertaining to available containers
         //
         update_PHV_MAU_Group_container_slices(); 
+        //
+        container_cohabit_summary();
     }
     //
 }//PHV_MAU_Group_Assignments
@@ -352,7 +354,7 @@ void PHV_MAU_Group_Assignments::update_PHV_MAU_Group_container_slices()
                 {
                     PHV_Container *c = cc->container();
                     PHV_MAU_Group *g = c->phv_mau_group();
-                    g->aligned_container_slices()[w.first][n.first].insert(cc);	// insert in PHV_MAU_Group map[w][n]
+                    g->aligned_container_slices()[w.first][n.first].insert(cc);						// insert in PHV_MAU_Group map[w][n]
                 }
             }
         }
@@ -566,6 +568,34 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
     LOG3(aligned_container_slices_i);
     //
 }//container_pack_cohabit
+
+//
+// container cohabit summary
+// input to TP phase to honor single write issue avoidance
+//
+
+void PHV_MAU_Group_Assignments::container_cohabit_summary()
+{
+    for (auto &gg: PHV_MAU_i)
+    {
+        // groups within this word size
+        for (auto g: gg.second)
+        {
+            for (auto c: g->phv_containers())
+            {
+                if(c->fields_in_container().size() > 1)
+                {
+                    std::set<const PhvInfo::Field *> *p_set = new std::set<const PhvInfo::Field *>;
+                    for (auto cc: c->fields_in_container())
+                    {
+                        p_set->insert(cc->field());
+                    }
+                    cohabit_fields_i.push_back(p_set);
+                }
+            }
+        }
+    }
+}
 
 
 //***********************************************************************************
@@ -782,7 +812,18 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group_Assignments &phv_mau_g
     for (auto rit=phv_mau_grps.phv_mau_map().rbegin(); rit!=phv_mau_grps.phv_mau_map().rend(); ++rit)
     {
         out << rit->second;
-    } 
+    }
+    // 
+    out << "++++++++++ Container Cohabit Summary ++++++++++" << std::endl;
+    for (auto cof: phv_mau_grps.cohabit_fields())
+    {
+        out << '<' << std::endl;
+        for (auto f: *cof)
+        {
+            out << '\t' << f << std::endl; // summary only
+        }
+        out << '>' << std::endl;
+    }
 
     return out;
 }
