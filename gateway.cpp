@@ -5,6 +5,7 @@
 #include "stage.h"
 #include "tables.h"
 #include "hashexpr.h"
+#include "hex.h"
 
 DEFINE_TABLE_TYPE(GatewayTable)
 
@@ -210,6 +211,10 @@ void GatewayTable::pass1() {
     if (miss.next != "END")
         miss.next.check();
     if (error_count > 0) return;
+    /* FIXME -- the rest of this function is a hack -- sometimes the compiler wants to
+     * generate matches just covering the bits it names in the match and other times it wants
+     * to create the whole tcam value.  Need to fix the asm syntax to be sensible and fix the
+     * compiler's output */
     unsigned long ignore = ~0UL;
     int shift = -1;
     for (auto &r : match) {
@@ -221,6 +226,7 @@ void GatewayTable::pass1() {
         ignore ^= ((1UL << r.val->size()) - 1) << r.offset;
         if (shift < 0 || shift > r.offset) shift = r.offset; }
     if (shift < 0) shift = 0;
+    LOG3("shift=" << shift << " ignore=0x" << hex(ignore));
     for (auto &line : table) {
 #if 0
         if ((line.val.word0 & (ignore >> shift)) != (ignore >> shift))
