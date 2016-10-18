@@ -532,8 +532,9 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
                 if (f.second.xor_with) {
                     have_xor = true;
                     continue; }
-                out << sep << f.second.offset << ": " << Slice(f.first);
-                sep = ", "; }
+                for (auto &offset : f.second.offsets) {
+                    out << sep << offset.first << ": " << Slice(f.first, offset.second);
+                    sep = ", "; } }
             for (auto &valid : collect.valid_offsets) {
                 out << sep << valid.second << ": " << canon_name(valid.first) << ".$valid";
                 sep = ", "; }
@@ -543,13 +544,14 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
                 sep = " ";
                 for (auto &f : collect.info) {
                     if (f.second.xor_with) {
-                        out << sep << f.second.offset << ": " << Slice(f.first);
-                        sep = ", "; } }
+                        for (auto &offset : f.second.offsets) {
+                            out << sep << offset.first << ": " << Slice(f.first, offset.second);
+                            sep = ", "; } } }
                 out << (sep+1) << "}" << std::endl; }
+            BuildGatewayMatch match(phv, collect);
             for (auto &line : tbl->gateway_rows) {
                 out << gw_indent;
                 if (line.first) {
-                    BuildGatewayMatch match(phv, collect);
                     line.first->apply(match);
                     out << match << ": ";
                 } else {

@@ -282,10 +282,8 @@ XFAIL_TESTS += \
     tofino/%reldir%/v1_samples/07-MacAddrCheck.p4.test \
     tofino/%reldir%/v1_samples/08-MacAddrCheck1.p4.test
 
-# more failing gateway tests (odd bit alignments and range tests)
+# gateway doesn't yet support range match
 XFAIL_TESTS += \
-    tofino/testdata/p4_14_samples/gateway5.p4.test \
-    tofino-newpa/testdata/p4_14_samples/gateway5.p4.test \
     tofino/testdata/p4_14_samples/gateway7.p4.test \
     tofino-newpa/testdata/p4_14_samples/gateway7.p4.test
 

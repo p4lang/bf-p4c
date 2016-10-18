@@ -89,7 +89,8 @@ struct IXBar {
             int         group;
             int         lo, bit, width;
             Bits(cstring f, int g, int l, int b, int w)
-            : field(f), group(g), lo(l), bit(b), width(w) {} };
+            : field(f), group(g), lo(l), bit(b), width(w) {}
+            int hi() const { return lo + width - 1; } };
         vector<Bits>    bit_use;
 
         /* hash tables used for way address computation */
