@@ -656,14 +656,18 @@ static int way_groups_allocated(const IXBar::Use &alloc) {
 }
 
 int IXBar::getHashGroup(unsigned hash_table_input) {
-   int hash_group = -1;
+    LOG2("Hash_table_input is " << hash_table_input);
     for (int i = 0; i < HASH_GROUPS; i++) {
          if (hash_group_use[i] == hash_table_input) {
+             LOG2("We are in the same group " << i);
+             hash_group_use[i] = hash_table_input;
              return i;
          }
     }
     for (int i = 0; i < HASH_GROUPS; i++) {
          if (hash_group_use[i] == 0) {
+             hash_group_use[i] = hash_table_input;
+             LOG2("We have a new group at " << i);
              return i;
          }
     }
@@ -895,15 +899,18 @@ void IXBar::update(cstring name, const Use &alloc) {
                     BUG("conflicting ixbar hash bit allocation");
                 hash_single_bit_use.at(ht, b + bits.bit) = name; }
             hash_single_bit_inuse[b + bits.bit] |= alloc.hash_table_input; }
-        if (!hash_group_print_use[bits.group])
+        if (hash_group_use[bits.group] == 0) {
+            hash_group_use[bits.group] = alloc.hash_table_input;
             hash_group_print_use[bits.group] = name;
-        /*else if (hash_group_use[bits.group] != name)
-            BUG("conflicting hash group use between %s and %s", name, hash_group_use[bits.group]); }
-        */
+        } else if (hash_group_use[bits.group] != alloc.hash_table_input) {
+            BUG("conflicting hash group use between %s and %s", name, hash_group_use[bits.group]); 
+        }        
     }
     for (auto &way : alloc.way_use) {
-        if (!hash_group_print_use[way.group])
+        if (hash_group_use[way.group] == 0) {
+            hash_group_use[way.group] = alloc.hash_table_input;
             hash_group_print_use[way.group] = name;
+        }
         hash_index_inuse[way.slice] |= alloc.hash_table_input;
         for (int hash : bitvec(alloc.hash_table_input)) {
             if (!hash_index_use[hash][way.slice])
