@@ -15,6 +15,7 @@ void Memories::clear() {
     stateful_bus.clear();
     overflow_bus.clear();
     vert_overflow_bus.clear();
+    memset(sram_inuse, 0, sizeof(sram_inuse));
     tables.clear();
     clear_table_vectors();
 }
@@ -627,22 +628,64 @@ void Memories::find_tind_groups() {
 int Memories::find_best_tind_row(SRAM_group *tg, int &bus) {
     int open_space = 0;
     unsigned left_mask = 0xf;
+    vector<int> available_rows;
+    auto name = tg->ta->table->name + "$tind";
     for (int i = 0; i < SRAM_ROWS; i++) {
-        open_space += __builtin_popcount(sram_inuse[i] & left_mask);
+        open_space += __builtin_popcount(~sram_inuse[i] & left_mask);
+        auto tbus = tind_bus[i];
+        if (!tbus[0] || tbus[0] == name || !tbus[1] || tbus[1] == name)
+            available_rows.push_back(i);
     }
+
     if (open_space == 0)
         return -1;
 
-    int avg_open = open_space / SRAM_ROWS;
+    std::sort(available_rows.begin(), available_rows.end(),
+        [=] (const int a, const int b) {
+        int t;
+        if ((t = __builtin_popcount(~sram_inuse[a] & left_mask)
+               - __builtin_popcount(~sram_inuse[b] & left_mask)) != 0) return t > 0;
 
-    int best_row = 0;
-    for (int i = 1; i < SRAM_ROWS; i++) {
-        auto t_bus = tind_bus[i];
-        if (!t_bus[0] || !t_bus[1]) {
+        auto tbus = tind_bus[a];
+        if (tbus[0] == name || tbus[1] == name)
+            return true;
+        tbus = tind_bus[b];
+        if (tbus[0] == name || tbus[1] == name)
+            return false;
 
-        } 
+        return a < b;
+        
+    });
+    int best_row = available_rows[0];
+    if (!tind_bus[best_row][0] || tind_bus[best_row][0] == name)
+        bus = 0;
+    else
+        bus = 1;
+
+    return best_row;
+}
+
+void Memories::compress_tind_groups() {
+    for (auto *ta : tind_tables) {
+        auto name = ta->table->name + "$tind";
+        auto &alloc = (*ta->memuse)[name];
+        std::sort(alloc.row.begin(), alloc.row.end(),
+            [=](const Memories::Use::Row a, const Memories::Use::Row b) {
+                int t;
+                if ((t = a.row - b.row) != 0) return t < 0;
+                if ((t = a.bus - b.bus) != 0) return t < 0;
+                return false;
+            });
+        for (size_t i = 0; i < alloc.row.size() - 1; i++) {
+            if (alloc.row[i].row == alloc.row[i+1].row &&
+                alloc.row[i].bus == alloc.row[i+1].bus) {
+                alloc.row[i].col.insert(alloc.row[i].col.end(), alloc.row[i+1].col.begin(),
+                                        alloc.row[i+1].col.end());
+                alloc.row.erase(alloc.row.begin() + i + 1);
+                i--;
+            }
+        }
     }
-    return 0;
 }
 
 /* Allocates all of the ternary indirect tables into the first column if they fit.
@@ -664,7 +707,7 @@ bool Memories::allocate_all_tind() {
         int best_row = find_best_tind_row(tg, best_bus);
         if (best_row == -1) return false;
         for (int i = 0; i < LEFT_SIDE_COLUMNS; i++) {
-            if (~(sram_inuse[best_row] & (1 << i))) {
+            if (~sram_inuse[best_row] & (1 << i)) {
                 auto name = tg->ta->table->name + "$tind";
                 sram_inuse[best_row] |= (1 << i);
                 sram_use[best_row][i] = name;
@@ -672,11 +715,25 @@ bool Memories::allocate_all_tind() {
                 if (tg->all_placed()) {
                     tind_groups.erase(tind_groups.begin());
                 }
+                tind_bus[best_row][best_bus] = name;
 
                 auto &alloc = (*tg->ta->memuse)[name];
                 alloc.row.emplace_back(best_row, best_bus);
                 alloc.row.back().col.push_back(i);
                 break;
+            }
+        }
+    }
+    compress_tind_groups();
+
+    for (auto *ta : tind_tables) {
+        auto name = ta->table->name + "$tind";
+        auto alloc = (*ta->memuse)[name];
+        LOG3("Table allocation for " << name);
+        for (auto row : alloc.row) {
+            LOG3("Row is " << row.row << " and bus is " << row.bus);
+            for (auto col : row.col) {
+                LOG3("Col is " << col);
             }
         }
     }

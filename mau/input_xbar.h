@@ -56,7 +56,8 @@ struct IXBar {
     unsigned                                    hash_index_inuse[HASH_INDEX_GROUPS] = { 0 };
     Alloc2D<cstring, HASH_TABLES, HASH_SINGLE_BITS>     hash_single_bit_use;
     unsigned                                    hash_single_bit_inuse[HASH_SINGLE_BITS] = { 0 };
-    Alloc1D<cstring, HASH_GROUPS>                       hash_group_use;
+    Alloc1D<cstring, HASH_GROUPS>                      hash_group_print_use;
+    unsigned                                    hash_group_use[HASH_GROUPS] = { 0 };
     friend class IXBarRealign;
 
  public:
@@ -116,7 +117,7 @@ struct IXBar {
     void clear();
     bool allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc,
                     vector<IXBar::Use::Byte *> &alloced, bool second_try, int hash_groups);
-    int getHashGroup(cstring name);
+    int getHashGroup(unsigned hash_table_input);
     bool allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc);
     bool allocHashWay(const IR::MAU::Table *, const IR::MAU::Table::Way &, Use &);
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);
