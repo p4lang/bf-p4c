@@ -22,6 +22,7 @@ struct Memories {
     Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>          sram_use;
     unsigned                                           sram_inuse[SRAM_ROWS] = { 0 };
     Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>          tcam_use;
+    Alloc2D<cstring, SRAM_ROWS, 2>                     gateway_use;              
     Alloc2D<std::pair<cstring, int>, SRAM_ROWS, 2>     sram_match_bus;
     Alloc2D<std::pair<cstring, int>, SRAM_ROWS, 2>     sram_search_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     sram_print_match_bus;
@@ -78,7 +79,7 @@ struct Memories {
         map<cstring, Memories::Use>* memuse;
         int provided_entries;
         int calculated_entries;
-        cstring name;
+        int attached_gw_bytes;
         explicit table_alloc(const IR::MAU::Table *t, const IXBar::Use *mi,
                              map<cstring, Memories::Use> *mu, int e)
                 : table(t), match_ixbar(mi), memuse(mu), provided_entries(e),
@@ -118,10 +119,9 @@ struct Memories {
     void add_table(const IR::MAU::Table *t, const IXBar::Use *mi,
                    map<cstring, Memories::Use> *mu, int entries);
     bool analyze_tables(mem_info &mi);
-    void calculate_column_balance(mem_info &mi);
+    void calculate_column_balance(mem_info &mi, unsigned &row);
     bool allocate_all();
-    bool allocate_all_exact();
-    bool allocate_exact(table_alloc *ta, mem_info &mi, int average_depth);
+    bool allocate_all_exact(unsigned column_mask);
     vector<int> way_size_calculator(int ways, int RAMs_needed);
     vector<std::pair<int, int>> available_SRAMs_per_row(unsigned mask, table_alloc *ta,
                                                         int depth);
@@ -129,9 +129,9 @@ struct Memories {
                                                  table_alloc *ta, int width_sect);
     void break_exact_tables_into_ways();
     int match_bus_available(table_alloc *ta, int width, int row);
-    bool find_best_row_and_fill_out();
-    bool fill_out_row(SRAM_group *placed_wa, int row);
-    bool pack_way_into_RAMs(SRAM_group *wa, int row, int &cols);
+    bool find_best_row_and_fill_out(unsigned column_mask);
+    bool fill_out_row(SRAM_group *placed_wa, int row, unsigned column_mask);
+    bool pack_way_into_RAMs(SRAM_group *wa, int row, int &cols, unsigned column_mask);
     SRAM_group *find_best_candidate(SRAM_group *placed_wa, int row, int &loc);
     void compress_ways();
 
@@ -141,6 +141,8 @@ struct Memories {
 
     bool allocate_all_tind();
     void find_tind_groups();
+    int find_best_tind_row(SRAM_group *tg, int &bus);
+    void compress_tind_groups();
 
     bool allocate_all_action();
     void find_action_bus_users();
@@ -155,6 +157,7 @@ struct Memories {
                              int row, int side, unsigned mask, bool is_oflow);
 
     bool allocate_all_gw();
+    table_alloc *find_correspond_exact_match();
 
     bool alloc2Port(cstring table_name, int entries, int entries_per_word, Use &alloc);
     bool allocActionRams(cstring table_name, int width, int depth, Use &alloc);

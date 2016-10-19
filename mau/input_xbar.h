@@ -103,6 +103,7 @@ struct IXBar {
         void clear() { use.clear(); hash_table_input = 0; bit_use.clear(); way_use.clear(); }
         void compute_hash_tables();
         int groups() const;  // how many different groups in this use
+        bool exact_comp(Use exact_use, int width) const;
     };
 
     /* A problem occurred with the way the IXbar was allocated that requires backtracking

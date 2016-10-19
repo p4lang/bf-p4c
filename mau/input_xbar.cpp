@@ -32,6 +32,35 @@ int IXBar::Use::groups() const {
             counted |= 1U << b.loc.group; } }
     return rv;
 }
+
+bool IXBar::Use::exact_comp(IXBar::Use exact_use, int width) const {
+    unsigned gw_counted = 0, exact_counted = 0; 
+    for (auto &b : use) {
+        assert(b.loc.group >= 0 && b.loc.group < 16);
+        if (!(1 & (gw_counted >> b.loc.group))) {
+            gw_counted |= 1U << b.loc.group; } }
+
+    int exact_groups = 0;
+    for (auto &b : exact_use.use) {
+        if (!(1 & (exact_counted >> b.loc.group))) {
+            ++exact_groups;
+            exact_counted |= 1U << b.loc.group; } }
+
+    if (width != 0) {
+        int groups_found = 0, index = 0;
+        while (groups_found < exact_groups) {
+            if ((1 << index) & exact_counted) {
+                if (groups_found == width) {
+                    exact_counted &= ~(1 << index);
+                }
+                groups_found++;
+            }
+        }
+    }
+    return exact_counted & gw_counted;
+}
+
+
 void IXBar::Use::compute_hash_tables() {
     hash_table_input = 0;
     for (auto &b : use) {
@@ -643,6 +672,7 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
     if (ternary)
         return true;
     int hash_group = getHashGroup(tbl->name);
+    LOG3("Table " << tbl->name << " got hash group " << hash_group);
     if (hash_group < 0) return false;
     int free_groups = 0;
     int group;

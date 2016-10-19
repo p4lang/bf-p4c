@@ -49,10 +49,22 @@ bool Memories::allocate_all() {
         return false;
     }
 
-    LOG3("Allocating all exact tables");
-    if (!allocate_all_exact()) {
+    
+    unsigned row = 0;
+    bool finished = false;
+
+    do {
+        calculate_column_balance(mi, row);
+        LOG3("Allocating all exact tables");
+        if (allocate_all_exact(row)) {
+           finished = true;
+        }
+        LOG3("Row size " << __builtin_popcount(row));
+
+    } while (__builtin_popcount(row) < 10 && !finished);
+
+    if (!finished)
         return false;
-    }
 
     LOG3("Allocating all ternary tables");
     if (!allocate_all_ternary()) {
@@ -100,6 +112,9 @@ bool Memories::analyze_tables(mem_info &mi) {
             exact_tables.push_back(ta);
             mi.match_tables++;
             int width = table->ways[0].width;
+            LOG3("Width/groups " << width << "/" << ta->match_ixbar->groups());
+            //FIXME: Non-working valid bits
+            assert(width == ta->match_ixbar->groups() || ta->match_ixbar->groups() == 0);
             int groups = table->ways[0].match_groups;
             int depth = ((entries + groups - 1U)/groups + 1023)/1024U;
             mi.match_bus_min += width;
@@ -258,6 +273,7 @@ vector<int> Memories::available_match_SRAMs_per_row(unsigned row_mask, unsigned 
    way sizes based on the number of entries desired by the table, and recalculates
    the same number of entries */
 void Memories::break_exact_tables_into_ways() {
+    exact_match_ways.clear();
     for (auto *ta : exact_tables) {
         int number_of_ways = ta->table->ways.size();
         int width = ta->table->ways[0].width;
@@ -338,17 +354,17 @@ Memories::SRAM_group * Memories::find_best_candidate(SRAM_group *placed_wa, int 
 }
 
 /* Fill out the remainder of the row with other ways! */
-bool Memories::fill_out_row(SRAM_group *placed_wa, int row) {
+bool Memories::fill_out_row(SRAM_group *placed_wa, int row, unsigned column_mask) {
     int loc = 0;
     vector<std::pair<int, int>> buses;
     // FIXME: Need to adjust to the proper mask provided by earlier function
-    while (SRAM_COLUMNS - __builtin_popcount(sram_inuse[row]) > 0) {
+    while (__builtin_popcount(column_mask) - __builtin_popcount(sram_inuse[row]) > 0) {
         buses.clear();
         SRAM_group *wa = find_best_candidate(placed_wa, row, loc);
         if (wa == nullptr)
             return true;
         int cols = 0;
-        if (!pack_way_into_RAMs(wa, row, cols))
+        if (!pack_way_into_RAMs(wa, row, cols, column_mask))
             return false;
         if (cols >= wa->depth - wa->placed) {
             exact_match_ways.erase(exact_match_ways.begin() + loc);
@@ -370,7 +386,7 @@ int Memories::match_bus_available(table_alloc *ta, int width, int row) {
 }
 
 /* Put the selected way group into the RAM row as much as possible */
-bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols) {
+bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols, unsigned column_mask) {
     vector<std::pair<int, int>> buses;
     buses.emplace_back(row, match_bus_available(wa->ta, 0, row));
     unsigned row_mask = 0;
@@ -378,7 +394,7 @@ bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols) {
 
     for (int i = 0; i < SRAM_COLUMNS && cols < wa->depth - wa->placed; i++) {
         // FIXME: Path change
-        if (!sram_use[row][i]  && ((1 << i) & 0x3ff)) {
+        if (!sram_use[row][i]  && ((1 << i) & column_mask)) {
             row_mask |= (1 << i);
             selected_cols.push_back(i);
             cols++;
@@ -389,7 +405,7 @@ bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols) {
     selected_rows.push_back(row);
     // Fairly simple stuff
     for (int i = 1; i < wa->width; i++) {
-        vector<int> matching_rows = available_match_SRAMs_per_row(row_mask, 0x3ff, row,
+        vector<int> matching_rows = available_match_SRAMs_per_row(row_mask, column_mask, row,
                                                                   wa->ta, i);
         size_t j = 0;
         while (j < matching_rows.size()) {
@@ -438,10 +454,12 @@ bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols) {
 }
 
 /* Picks an empty/most open row, and begins to fill it in within a way */
-bool Memories::find_best_row_and_fill_out() {
+bool Memories::find_best_row_and_fill_out(unsigned column_mask) {
     SRAM_group *wa = exact_match_ways[0];
     // FIXME: Obviously the mask has to change
-    vector<std::pair<int, int>> available_rams = available_SRAMs_per_row(0x3ff, wa->ta, 0);
+    vector<std::pair<int, int>> available_rams
+        = available_SRAMs_per_row(column_mask, wa->ta, 0);
+    LOG3("Past available");
     // No memories left to place anything
     if (available_rams.size() == 0) {
         return false;
@@ -452,13 +470,14 @@ bool Memories::find_best_row_and_fill_out() {
     if (available_rams[0].second == 0)
         return false;
 
-    if (!pack_way_into_RAMs(wa, row, cols))
+    if (!pack_way_into_RAMs(wa, row, cols, column_mask))
         return false;
+    LOG3("Past pack way into RAMs");
 
     if (cols >= wa->depth - wa->placed) {
         exact_match_ways.erase(exact_match_ways.begin());
         if (cols == wa->depth - wa->placed)
-           return fill_out_row (wa, row);
+           return fill_out_row (wa, row, column_mask);
         else
            return true;
     } else {
@@ -468,15 +487,38 @@ bool Memories::find_best_row_and_fill_out() {
 }
 
 // FIXME: Needs to actually be calculated for exact match row placement
-void Memories::calculate_column_balance(mem_info &mi) {
+void Memories::calculate_column_balance(mem_info &mi, unsigned &row) {
+    int min_columns_required = (mi.match_RAMs + SRAM_ROWS - 1) / SRAM_ROWS; 
+    int total_RAMs = mi.match_RAMs + mi.tind_RAMs + mi.action_RAMs; 
+    int total_columns_required = (total_RAMs + SRAM_ROWS - 1) / SRAM_ROWS; 
+    int mask_columns = 0; 
+    if (__builtin_popcount(row) == 0) { 
+        // FIXME: Making things up. Need good statistics  
+        if (total_columns_required < 7 || min_columns_required < 5) { 
+            mask_columns = 8; 
+        } else { 
+            mask_columns = min_columns_required; 
+        } 
+    } else { 
+        mask_columns = __builtin_popcount(row) + 1; 
+    } 
+ 
+    switch (mask_columns) { 
+        case 5 : row = 0x0f8; break; 
+        case 6 : row = 0x0fc; break; 
+        case 7 : row = 0x1fc; break; 
+        case 8 : row = 0x1fe; break; 
+        case 9 : row = 0x1ff; break; 
+        default : row = 0x3ff; break; 
+    }
 }
 
 
 /* Allocates all of the ways */
-bool Memories::allocate_all_exact() {
+bool Memories::allocate_all_exact(unsigned column_mask) {
     break_exact_tables_into_ways();
     while (exact_match_ways.size() > 0) {
-        if (find_best_row_and_fill_out() == false) {
+        if (find_best_row_and_fill_out(column_mask) == false) {
             return false;
         }
     }
@@ -581,6 +623,28 @@ void Memories::find_tind_groups() {
     }
 }
 
+
+int Memories::find_best_tind_row(SRAM_group *tg, int &bus) {
+    int open_space = 0;
+    unsigned left_mask = 0xf;
+    for (int i = 0; i < SRAM_ROWS; i++) {
+        open_space += __builtin_popcount(sram_inuse[i] & left_mask);
+    }
+    if (open_space == 0)
+        return -1;
+
+    int avg_open = open_space / SRAM_ROWS;
+
+    int best_row = 0;
+    for (int i = 1; i < SRAM_ROWS; i++) {
+        auto t_bus = tind_bus[i];
+        if (!t_bus[0] || !t_bus[1]) {
+
+        } 
+    }
+    return 0;
+}
+
 /* Allocates all of the ternary indirect tables into the first column if they fit.
    FIXME: This is obviously a punt and needs to be adjusted. */
 bool Memories::allocate_all_tind() {
@@ -593,6 +657,32 @@ bool Memories::allocate_all_tind() {
     find_tind_groups();
 
     // Keep it really simple for first iteration, just reserve the 1st column and then fill it out
+
+    while (!tind_groups.empty()) {
+        auto *tg = tind_groups[0];
+        int best_bus = 0;
+        int best_row = find_best_tind_row(tg, best_bus);
+        if (best_row == -1) return false;
+        for (int i = 0; i < LEFT_SIDE_COLUMNS; i++) {
+            if (~(sram_inuse[best_row] & (1 << i))) {
+                auto name = tg->ta->table->name + "$tind";
+                sram_inuse[best_row] |= (1 << i);
+                sram_use[best_row][i] = name;
+                tg->placed++;
+                if (tg->all_placed()) {
+                    tind_groups.erase(tind_groups.begin());
+                }
+
+                auto &alloc = (*tg->ta->memuse)[name];
+                alloc.row.emplace_back(best_row, best_bus);
+                alloc.row.back().col.push_back(i);
+                break;
+            }
+        }
+    }
+
+    return true;
+    /*
     for (int i = 0; i < SRAM_ROWS; i++) {
         if (tind_groups.empty())
             break;
@@ -616,6 +706,7 @@ bool Memories::allocate_all_tind() {
         return false;
 
     return true;
+    */
 }
 
 /* Breaks up all tables requiring an action to be parsed into SRAM_group, a structure
@@ -860,6 +951,34 @@ bool Memories::allocate_all_action() {
 
 /* Allocates all gateways */
 bool Memories::allocate_all_gw() {
+/*
+    for (auto *ta : gw_tables) {
+        for (int i = 0; i < SRAM_ROWS; i++) {
+            for (int j = 0; j < BUS_COUNT; j++) {
+                if (gateway_use[i][j]) continue;
+                auto bus = sram_match_bus[i][j];
+                if (!bus.first) continue;
+                table_alloc *exact_ta = find_corresponding_exact_match(bus.first);
+                if (!ta->match_ixbar->exact_comp(exact_ta->match_ixbar, bus.second)) continue;
+
+                //FIXME: Needs to better orient with the layout
+                int bytes_needed = exact_ta->table->layout.match_bytes;
+                bytes_needed = (exact_ta->table->layout.overhead_bits + 7) / 8;
+                int groups = exact_ta->table->ways[0].groups;
+                int width = exact_ta->table->ways[0].width;
+                bytes_needed *= groups * width;
+                //FIXME: For version bits
+                bytes_needed += groups / 2 * width; 
+                int total_bytes = 16 * width;
+                int remaining_bytes = total_bytes - bytes_needed - exact_ta->gw_bytes;
+                if (remaining_bytes){
+                }
+                
+            }
+        }
+    }
+*/
+
     int row = 0; int column = 0;
     size_t index = 0;
     for (auto *ta : gw_tables) {
