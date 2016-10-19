@@ -63,8 +63,9 @@ bool Memories::allocate_all() {
 
     } while (__builtin_popcount(row) < 10 && !finished);
 
-    if (!finished)
+    if (!finished) {
         return false;
+    }
 
     LOG3("Allocating all ternary tables");
     if (!allocate_all_ternary()) {
@@ -512,7 +513,6 @@ void Memories::calculate_column_balance(mem_info &mi, unsigned &row) {
         default : row = 0x3ff; break; 
     }
 }
-
 
 /* Allocates all of the ways */
 bool Memories::allocate_all_exact(unsigned column_mask) {
