@@ -28,6 +28,7 @@
 class PHV_MAU_Group
 {
  public:
+    //
     class Container_Content
     {
       private:
@@ -48,6 +49,7 @@ class PHV_MAU_Group
     };
     //
  private:
+    //
     PHV_Container::PHV_Word width_i;			// container width in PHV group
     int number_i;					// 1..4 [32], 1..6 [16], 1..4 [8]
     int avail_containers_i = (int)PHV_Container::Containers::MAX;
@@ -65,7 +67,7 @@ class PHV_MAU_Group
 							// map[1][1] --> (Cy [1..1])
  public:
     //
-    PHV_MAU_Group(PHV_Container::PHV_Word w, int n);
+    PHV_MAU_Group(PHV_Container::PHV_Word w, int n, int& phv_number, PHV_Container::Ingress_Egress gress);
     //
     PHV_Container::PHV_Word width()			{ return width_i; }
     int number()					{ return number_i; }
@@ -93,6 +95,24 @@ class PHV_MAU_Group_Assignments
         {PHV_Container::PHV_Word::b16, 6},
         {PHV_Container::PHV_Word::b8, 4},
     };
+    //
+    std::map<PHV_Container::PHV_Word, int> phv_number_start_i
+    {
+        {PHV_Container::PHV_Word::b32, 0},
+        {PHV_Container::PHV_Word::b16, 128},
+        {PHV_Container::PHV_Word::b8, 64},
+    };
+    //
+    std::map<std::pair<int, int>, PHV_Container::Ingress_Egress> ingress_egress_i
+    {
+        {std::make_pair(0, 15), PHV_Container::Ingress_Egress::Ingress_Only},
+        {std::make_pair(16, 31), PHV_Container::Ingress_Egress::Egress_Only},
+        {std::make_pair(64, 79), PHV_Container::Ingress_Egress::Ingress_Only},
+        {std::make_pair(80, 95), PHV_Container::Ingress_Egress::Egress_Only},
+        {std::make_pair(128, 143), PHV_Container::Ingress_Egress::Ingress_Only},
+        {std::make_pair(144, 159), PHV_Container::Ingress_Egress::Egress_Only},
+    };
+    //
     std::map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>> PHV_MAU_i;
 							// sorted PHV requirements <num, width>,
 							// num decreasing then width decreasing
@@ -100,7 +120,7 @@ class PHV_MAU_Group_Assignments
 							// for all PHV_MAU_Groups
 							// sorted map <width increasing, num increasing>
 							// containing <set of <set of container_packs>>
-    std::vector<std::set<const PhvInfo::Field *> *> cohabit_fields_i;
+    std::map<int, std::set<const PhvInfo::Field *> *> cohabit_fields_i;
 							// ranked set of container cohabits
 							// requests to TP to avoid single-write issue
     //
@@ -120,7 +140,8 @@ class PHV_MAU_Group_Assignments
     }
     std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>& aligned_container_slices()
 							{ return aligned_container_slices_i; }
-    std::vector<std::set<const PhvInfo::Field *> *>& cohabit_fields() { return cohabit_fields_i; }
+    std::map<int, std::set<const PhvInfo::Field *> *>& cohabit_fields()
+							{ return cohabit_fields_i; }
 };
 //
 //

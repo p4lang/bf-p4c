@@ -20,7 +20,8 @@ PHV_Container::Container_Content::Container_Content(int l, int w, const PhvInfo:
 // 
 //***********************************************************************************
 
-PHV_Container::PHV_Container(PHV_MAU_Group *g, PHV_Word w, int n) : phv_mau_group_i(g), width_i(w), number_i(n)
+PHV_Container::PHV_Container(PHV_MAU_Group *g, PHV_Word w, int n, int phv_n, Ingress_Egress gress)
+	: phv_mau_group_i(g), width_i(w), number_i(n), phv_number_i(phv_n), gress_i(gress)
 {
     bits_i = new char[(int) width_i];
     for (auto i=0; i < (int) width_i; i++)
@@ -79,7 +80,7 @@ std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container::Container
 {
     for (auto f: c)
     {
-        out << std::endl << "\t\t\t\t\t\t";
+        out << std::endl << "\t\t\t\t\t";
         out << f->field() << '<' << f->width() << '>' << '{' << f->lo() << ".." << f->hi() << '}';
     }
 
@@ -94,14 +95,18 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c)
     //
     if(c)
     {
-        out << "C" << c->number();
+        out << "PHV-" << c->phv_number() << " C" << c->number() << (char) c->gress();
+        if(c->fields_in_container().size() > 1)
+        {
+            out << "p";
+        }
         if(c->status() != PHV_Container::Container_status::FULL)
         {
             out << '[' << c->avail_bits_lo() << ".." << c->avail_bits_hi() << ']';
         }
         else
         {
-            out << "    \t";
+            out << '\t';
         }
     }
     else
@@ -118,7 +123,7 @@ std::ostream &operator<<(std::ostream &out, PHV_Container &c)
     //
     out << '\t' << &c
         << '\t' << c.bits()
-        << '\t' << c.fields_in_container();
+        << c.fields_in_container();
     out << std::endl;
 
     return out;

@@ -20,12 +20,13 @@ PHV_MAU_Group::Container_Content::Container_Content(int l, int w, PHV_Container 
 // 
 //***********************************************************************************
 
-PHV_MAU_Group::PHV_MAU_Group(PHV_Container::PHV_Word w, int n) : width_i(w), number_i(n)
+PHV_MAU_Group::PHV_MAU_Group(PHV_Container::PHV_Word w, int n, int& phv_number, PHV_Container::Ingress_Egress gress)
+	: width_i(w), number_i(n)
 {
     // create containers within group
     for (int i=1; i <= (int)PHV_Container::Containers::MAX; i++)
     {
-        PHV_Container *c = new PHV_Container(this, width_i, i);
+        PHV_Container *c = new PHV_Container(this, width_i, i, phv_number++, gress);
         phv_containers_i.push_back(c);
     }
 }//PHV_MAU_Group
@@ -110,9 +111,28 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
     // create MAU Groups
     for (auto &x: num_groups_i)
     {
+        int phv_number = phv_number_start_i[x.first];
+        //
         for (int i=1; i <= x.second; i++)
         {
-            PHV_MAU_Group *g = new PHV_MAU_Group(x.first, i);
+            // does this group phv containers fall in ingress_only or egress_only category
+            //
+            PHV_Container::Ingress_Egress gress = PHV_Container::Ingress_Egress::Ingress_Or_Egress;
+            for (auto ie: ingress_egress_i)
+            {
+                std::pair<int, int> limits = ie.first;
+                if(phv_number < limits.first)
+                {
+                    break;
+                }
+                if(phv_number >= limits.first && phv_number <= limits.second)
+                {
+                    gress = ie.second;
+                    break;
+                }
+            }
+            //
+            PHV_MAU_Group *g = new PHV_MAU_Group(x.first, i, phv_number, gress);
             PHV_MAU_i[g->width()].push_back(g);
         }
     }
@@ -590,7 +610,7 @@ void PHV_MAU_Group_Assignments::container_cohabit_summary()
                     {
                         p_set->insert(cc->field());
                     }
-                    cohabit_fields_i.push_back(p_set);
+                    cohabit_fields_i[c->phv_number()] = p_set;
                 }
             }
         }
@@ -814,11 +834,13 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group_Assignments &phv_mau_g
         out << rit->second;
     }
     // 
-    out << "++++++++++ Container Cohabit Summary ++++++++++" << std::endl;
+    out << std::endl
+        << "++++++++++ Container Cohabit Summary .....(" << phv_mau_grps.cohabit_fields().size() << ")..... ++++++++++"
+        << std::endl;
     for (auto cof: phv_mau_grps.cohabit_fields())
     {
-        out << '<' << std::endl;
-        for (auto f: *cof)
+        out << "<PHV-" << cof.first << ':' << cof.second->size() << std::endl;
+        for (auto f: *(cof.second))
         {
             out << '\t' << f << std::endl; // summary only
         }
