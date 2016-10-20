@@ -33,7 +33,7 @@ class PhvInfo : public Inspector {
         bool            referenced;
         bool            metadata;
         bool            pov;
-        set<constraint> constraints;
+        set<constraint> constraints;    // unused -- get rid of it?
         cstring header() const { return name.before(strrchr(name, '.')); }
         PHV::Bit bit(unsigned i) const {
             BUG_CHECK(i < size_t(size), "bit out of range for field");
@@ -41,25 +41,48 @@ class PhvInfo : public Inspector {
                 cstring povname = gress ? "egress::$POV" : "ingress::$POV";
                 return PHV::Bit(povname, i+offset); }
             return PHV::Bit(name, i); }
+        struct bitrange {
+            int         lo, hi;         // range of bits within a container or field
+            int size() const { return hi - lo + 1; }
+            operator std::pair<int, int>() { return std::make_pair(lo, hi); }
+            bool contains(int bit) const { return bit >= lo && bit <= hi; }
+            bool overlaps(bitrange a) const { return contains(a.lo) || a.contains(lo); }
+            bool overlaps(int l, int h) const { return contains(l) || (lo >= l && lo <= h); }
+            bitrange intersect(bitrange a) const {
+                bitrange rv = { std::min(lo, a.lo), std::max(hi, a.hi) };
+                BUG_CHECK(rv.lo <= rv.hi, "invalid bitrange::intersect");
+                return rv; }
+            bitrange intersect(int l, int h) const {
+                bitrange rv = { std::min(lo, l), std::max(hi, h) };
+                BUG_CHECK(rv.lo <= rv.hi, "invalid bitrange::intersect");
+                return rv; } };
+
         struct alloc_slice {
             PHV::Container         container;
             int         field_bit, container_bit, width;
             alloc_slice(PHV::Container c, int fb, int cb, int w) : container(c), field_bit(fb),
                 container_bit(cb), width(w) {}
+            bitrange field_bits() const { return { field_bit, field_bit+width-1 }; }
+            bitrange container_bits() const { return { container_bit, container_bit+width-1 }; }
             int field_hi() const { return field_bit + width - 1; }
             int container_hi() const { return container_bit + width - 1; } };
         vector<alloc_slice>     alloc;   // sorted MSB (field) first
-        const alloc_slice &for_bit(int bit) const {
-            for (auto &sl : alloc)
-                if (bit >= sl.field_bit && bit < sl.field_bit + sl.width)
-                    return sl;
-            BUG("No allocation for bit %d in %s", bit, name); }
-        struct bitrange {
-            int         lo, hi;         // range of bits within a container or field
-            int size() const { return hi - lo + 1; }
-            operator std::pair<int, int>() { return std::make_pair(lo, hi); }
-        };
         int container_bytes(bitrange bits = {0, -1}) const;
+        const alloc_slice &for_bit(int bit) const;
+        void foreach_alloc(int lo, int hi, std::function<void(const alloc_slice &)> fn) const;
+        void foreach_alloc(std::function<void(const alloc_slice &)> fn) const {
+            foreach_alloc(0, size-1, fn); }
+        void foreach_alloc(bitrange r, std::function<void(const alloc_slice &)> fn) const {
+            foreach_alloc(r.lo, r.hi, fn); }
+        void foreach_alloc(const bitrange *r, std::function<void(const alloc_slice &)> fn) const {
+            foreach_alloc(r ? r->lo : 0, r ? r->hi : size-1, fn); }
+        void foreach_byte(int lo, int hi, std::function<void(const alloc_slice &)> fn) const;
+        void foreach_byte(std::function<void(const alloc_slice &)> fn) const {
+            foreach_byte(0, size-1, fn); }
+        void foreach_byte(bitrange r, std::function<void(const alloc_slice &)> fn) const {
+            foreach_byte(r.lo, r.hi, fn); }
+        void foreach_byte(const bitrange *r, std::function<void(const alloc_slice &)> fn) const {
+            foreach_byte(r ? r->lo : 0, r ? r->hi : size-1, fn); }
     };
     class SetReferenced : public Inspector {
         PhvInfo &self;

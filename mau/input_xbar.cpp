@@ -576,43 +576,25 @@ bool IXBar::find_alloc(IXBar::Use &alloc, bool ternary, bool second_try,
 }
 
 
-int need_align_flags[3][4] = { { 0, 0, 0, 0 },  // 8bit -- no alignment needed
+int need_align_flags[4][4] = { { 0, 0, 0, 0 },  // 8bit -- no alignment needed
     { IXBar::Use::Align16lo, IXBar::Use::Align16hi, IXBar::Use::Align16lo, IXBar::Use::Align16hi },
     { IXBar::Use::Align16lo | IXBar::Use::Align32lo,
       IXBar::Use::Align16hi | IXBar::Use::Align32lo,
       IXBar::Use::Align16lo | IXBar::Use::Align32hi,
-      IXBar::Use::Align16hi | IXBar::Use::Align32hi } };
+      IXBar::Use::Align16hi | IXBar::Use::Align32hi },
+    { 0, 0, 0, 0, },  // Not yet allocated -- assume no alignment required
+};
 
-static void add_use(IXBar::Use &alloc, const PhvInfo::Field *field, int flags) {
-    if (field->alloc.empty()) {
-        for (int i = 0; i < field->size; i += 8) {
-            alloc.use.emplace_back(field->name, i, std::min(i + 7, field->size - 1));
-            alloc.use.back().flags = flags; }
-    } else {
-        bool ok = false;
-        PHV::Container prev_container;
-        unsigned prev_cbyte = 0;
-        /* DANGER: field->alloc is sort msb to lsb and we want lsb to msb */
-        for (auto it = field->alloc.rbegin(); it != field->alloc.rend(); ++it) {
-            if (it->container.tagalong()) continue;
-            ok = true;  // FIXME -- better sanity check?
-            unsigned lo = it->container_bit, hi = it->container_hi(), sz = it->container.log2sz();
-            for (unsigned cbyte = lo/8U; cbyte <= hi/8U; ++cbyte) {
-                if (it->container != prev_container || cbyte != prev_cbyte) {
-                    int flo = it->field_bit;
-                    if (cbyte*8 > lo) flo += cbyte*8 - lo;
-                    int fhi = it->field_hi();
-                    if (cbyte*8+7 < hi) fhi -= hi - (cbyte*8+7);
-                    alloc.use.emplace_back(field->name, flo, fhi);
-                    alloc.use.back().flags |=  flags | need_align_flags[sz][cbyte & 3];
-                    prev_container = it->container;
-                    prev_cbyte = cbyte;
-                } else {
-                    int fhi = it->field_hi();
-                    if (cbyte*8+7 < hi) fhi -= hi - (cbyte*8+7);
-                    alloc.use.back().hi = fhi; } } }
-        if (!ok)
-            BUG("field %s allocated to tagalong but used in MAU pipe", field->name); }
+static void add_use(IXBar::Use &alloc, const PhvInfo::Field *field,
+                    const PhvInfo::Field::bitrange *bits = nullptr, int flags = 0) {
+    bool ok = false;
+    field->foreach_byte(bits, [&](const PhvInfo::Field::alloc_slice &sl) {
+        ok = true;  // FIXME -- better sanity check?
+        alloc.use.emplace_back(field->name, sl.field_bit, sl.field_hi());
+        alloc.use.back().flags |=
+            flags | need_align_flags[sl.container.log2sz()][(sl.container_bit/8U) & 3]; });
+    if (!ok)
+        BUG("field %s allocated to tagalong but used in MAU pipe", field->name);
 }
 
 bool IXBar::allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc,
@@ -631,12 +613,13 @@ bool IXBar::allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv,
             // FIXME -- for now just assuming we can fit the valid bit reads in as needed
             continue; }
         const PhvInfo::Field *finfo;
-        if (!field || !(finfo = phv.field(field)))
+        PhvInfo::Field::bitrange bits;
+        if (!field || !(finfo = phv.field(field, &bits)))
             BUG("unexpected reads expression %s", r);
         if (fields_needed.count(finfo->name))
             throw Util::CompilationError("field %s read twice by table %s", finfo->name, tbl->name);
         fields_needed.insert(finfo->name);
-        add_use(alloc, finfo, 0); }
+        add_use(alloc, finfo, &bits); }
     LOG3("need " << alloc.use.size() << " bytes for table " << tbl->name);
     LOG3("need fields " << fields_needed);
 
@@ -790,10 +773,10 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             flags |= IXBar::Use::NeedRange;
             alloc.gw_hash_group = true;
         }
-        add_use(alloc, info.first, flags); }
+        add_use(alloc, info.first, &info.second.bits, flags); }
     for (auto &valid : collect.valid_offsets) {
-       add_use(alloc, phv.field(valid.first + ".$valid"), 0); 
-       alloc.gw_hash_group = true;
+        add_use(alloc, phv.field(valid.first + ".$valid")); 
+        alloc.gw_hash_group = true;
     }
     vector<IXBar::Use::Byte *> xbar_alloced;
     if (!find_alloc(alloc, false, second_try, xbar_alloced, 0)) {
@@ -828,17 +811,18 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
                  hex(avail));
             return false; }
         for (auto &info : collect.info) {
-            if (info.second.offset < 32) continue;
-            info.second.offset += shift;
-            alloc.bit_use.emplace_back(info.first->name, hash_group, 0,
-                                       info.second.offset - 32, info.first->size); }
+            for (auto &offset : info.second.offsets) {
+                if (offset.first < 32) continue;
+                offset.first += shift;
+                alloc.bit_use.emplace_back(info.first->name, hash_group, 0,
+                                           offset.first - 32, offset.second.size()); } }
         for (auto &valid : collect.valid_offsets) {
             LOG3("Valid.second " << valid.second);
             if (valid.second < 32) continue;
             valid.second += shift;
             alloc.bit_use.emplace_back(valid.first + ".$valid", hash_group, 0,
                                        valid.second - 32, 1); }
-            LOG3("Before bit_use size is " << alloc.bit_use.size());
+        LOG3("Before bit_use size is " << alloc.bit_use.size());
         for (auto ht : bitvec(alloc.hash_table_input))
             for (int i = 0; i < collect.bits; ++i)
                 hash_single_bit_use[ht][shift + i] = tbl->name + "$gw";

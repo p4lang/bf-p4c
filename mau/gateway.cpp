@@ -192,37 +192,41 @@ bool CollectGatewayFields::compute_offsets() {
     std::vector<decltype(info)::value_type *> sort_by_size;
     for (auto &field : info) {
         sort_by_size.push_back(&field);
-        field.second.offset = -1; }
+        field.second.offsets.clear(); }
     std::sort(sort_by_size.begin(), sort_by_size.end(),
               [](decltype(info)::value_type *a, decltype(info)::value_type *b) -> bool {
                   return a->first->size > b->first->size; });
-    for (auto &field : info) {
-        if (field.second.xor_with) {
-            auto &with = info[field.second.xor_with];
-            if (with.offset >= 0 && with.offset != bytes) return false;
-            if (with.need_range || field.second.need_range) return false;
-            field.second.offset = with.offset = bytes*8;
-            bytes += (std::max(field.first->size, field.second.xor_with->size) + 7)/8U; } }
+    for (auto &info : Values(info)) {
+        if (info.xor_with) {
+            auto &with = this->info[info.xor_with];
+            info.xor_with->foreach_byte(with.bits, [&](const PhvInfo::Field::alloc_slice &sl) {
+                with.offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
+                info.offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
+                ++bytes;
+            }); } }
     if (bytes > 4) return false;
     for (auto *it : sort_by_size) {
         const PhvInfo::Field &field = *it->first;
         info_t &info = it->second;
-        if (info.offset >= 0) continue;
+        if (!info.offsets.empty()) continue;
         int size = field.container_bytes(info.bits);
         if (ixbar) {
             for (auto &f : ixbar->bit_use) {
-                if (f.field == field.name && f.lo == info.bits.lo)
-                    info.offset = f.bit + 32;
-                    if (f.bit + info.bits.size() > bits)
-                        bits = f.bit + info.bits.size();
-                    break; } }
-        if (info.offset >= 0) continue;
+                if (f.field == field.name && info.bits.overlaps(f.lo, f.hi())) {
+                    auto b = info.bits.intersect(f.lo, f.hi());
+                    info.offsets.emplace_back(f.bit + b.lo - f.lo + 32, b);
+                    if (f.bit + b.hi - f.lo >= bits)
+                        bits = f.bit + b.hi - f.lo + 1; } } }
+        if (!info.offsets.empty()) continue;
         if (bytes+size > 4 || info.need_range) {
-            info.offset = bits + 32;
+            info.offsets.emplace_back(bits + 32, info.bits);
             bits += info.bits.size();
         } else {
-            info.offset = bytes*8;
-            bytes += size; } }
+            field.foreach_byte(info.bits, [&](const PhvInfo::Field::alloc_slice &sl) {
+                info.offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
+                ++bytes;
+            }); } }
+    if (bytes > 4) return false;
     for (auto &valid : valid_offsets) {
         if (valid.second >= 0) continue;
         const PhvInfo::Field *field = phv.field(valid.first + ".$valid");
@@ -239,6 +243,28 @@ bool CollectGatewayFields::compute_offsets() {
     return bits <= 12;
 }
 
+BuildGatewayMatch:: BuildGatewayMatch(const PhvInfo &phv, CollectGatewayFields &f)
+: phv(phv), fields(f) {
+    shift = INT_MAX;
+    for (auto &info : fields.info)
+        for (auto &off : info.second.offsets)
+            if (off.first < shift)
+                shift = off.first;
+    for (auto &off : fields.valid_offsets)
+        if (off.second < shift)
+            shift = off.second;
+}
+
+
+Visitor::profile_t BuildGatewayMatch::init_apply(const IR::Node *root) {
+    match.setwidth(0);  // clear out old value
+    match.setwidth(fields.bytes*8 + fields.bits - shift);
+    match_field = nullptr;
+    andmask = ~0U;
+    ormask = 0;
+    return Inspector::init_apply(root);
+}
+
 bool BuildGatewayMatch::preorder(const IR::Expression *e) {
     PhvInfo::Field::bitrange bits;
     auto field = phv.field(e, &bits);
@@ -251,11 +277,21 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
         size_t size = std::max(bits.size(), match_field_bits.size());
         uint64_t mask = (1U << size) - 1;
         mask &= andmask & ~ormask;
-        int lo = fields.info.at(match_field).offset + match_field_bits.lo;
-        if (lo != fields.info.at(field).offset + bits.lo)
-            BUG("field equality comparison misaligned in gateway");
-        mask <<= lo;
-        match.word1 &= ~mask;
+        auto &field_info = fields.info.at(field);
+        auto &match_info = fields.info.at(match_field);
+        auto it = field_info.offsets.begin();
+        auto end = field_info.offsets.end();
+        for (auto &off : match_info.offsets) {
+            if (it == end || it->first != off.first || it->second.size() != off.second.size() ||
+                it->second.lo - field_info.bits.lo != off.second.lo - match_info.bits.lo) {
+                BUG("field equality comparison misaligned in gateway"); }
+            uint64_t elmask = ((1U << off.second.size()) - 1) <<
+                              (off.second.lo - match_info.bits.lo);
+            elmask &= mask;
+            int lo = off.first + match_field_bits.lo;
+            elmask <<= lo;
+            match.word1 &= ~(elmask >> shift);
+            ++it; }
         match_field = nullptr; }
     return false;
 }
@@ -267,9 +303,9 @@ bool BuildGatewayMatch::preorder(const IR::Primitive *prim) {
     if (!fields.valid_offsets.count(hdr))
         BUG("Failed to get valid bit in BuildGatewayMatch");
     if (getContext() && getContext()->node->is<IR::LNot>())
-        match.word1 &= ~(1U << fields.valid_offsets[hdr]);
+        match.word1 &= ~(1U << fields.valid_offsets[hdr] >> shift);
     else
-        match.word0 &= ~(1U << fields.valid_offsets[hdr]);
+        match.word0 &= ~(1U << fields.valid_offsets[hdr] >> shift);
     return false;
 }
 
@@ -285,11 +321,15 @@ bool BuildGatewayMatch::preorder(const IR::Constant *c) {
         if ((val & mask & ~andmask) || (~val & mask & ormask))
             BUG("masked comparison in gateway can never match");
         mask &= andmask & ~ormask;
-        int lo = fields.info.at(match_field).offset + match_field_bits.lo;
-        mask <<= lo;
-        val <<= lo;
-        match.word0 &= ~val | ~mask;
-        match.word1 &= val | ~mask;
+        auto &match_info = fields.info.at(match_field);
+        for (auto &off : match_info.offsets) {
+            uint64_t elmask = ((1U << off.second.size()) - 1) <<
+                              (off.second.lo - match_info.bits.lo);
+            elmask &= mask;
+            int lo = off.first + match_field_bits.lo - shift;
+            elmask <<= lo;
+            match.word0 &= ~(val << lo) | ~elmask;
+            match.word1 &= (val << lo) | ~elmask; }
         match_field = nullptr;
     } else {
         BUG("Invalid context for constant in BuildGatewayMatch"); }
