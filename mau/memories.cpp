@@ -16,6 +16,7 @@ void Memories::clear() {
     overflow_bus.clear();
     vert_overflow_bus.clear();
     memset(sram_inuse, 0, sizeof(sram_inuse));
+    memset(gw_bytes_per_sb, 0, sizeof(gw_bytes_per_sb));
     tables.clear();
     clear_table_vectors();
 }
@@ -1033,8 +1034,8 @@ Memories::table_alloc *Memories::find_corresponding_exact_match(cstring name) {
     return nullptr;
 }
 
-bool Memories::gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int width_sect) {
-
+bool Memories::gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int width_sect,
+                                 int row, int col) {
     if (!ta->match_ixbar->exact_comp(exact_ta->match_ixbar, width_sect)) return false;
 
     //FIXME: Needs to better orient with the layout
@@ -1047,10 +1048,12 @@ bool Memories::gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int wid
     bytes_needed += groups / 2 * width; 
     int total_bytes = 16 * width;
     int remaining_bytes = total_bytes - bytes_needed - exact_ta->attached_gw_bytes;
-    if (remaining_bytes >= ta->match_ixbar->gw_search_bus_bytes)
-        return true;
-    else
+    if (remaining_bytes < ta->match_ixbar->gw_search_bus_bytes)
         return false;
+    if (gw_bytes_per_sb[row][col] + ta->match_ixbar->gw_search_bus > 4)
+        return false;
+    
+    return true;
 }
 
 /* Allocates all gateways */
@@ -1069,8 +1072,12 @@ bool Memories::allocate_all_gw() {
                 auto bus = sram_match_bus[i][j];
                 if (!bus.first) continue;
                 table_alloc *exact_ta = find_corresponding_exact_match(bus.first);
+                //FIXME: this is just a temporary patch
+                if (exact_ta == nullptr) {
+                    continue;
+                }
                 if (ta->match_ixbar->gw_search_bus) {
-                    if (!gw_search_bus_fit(ta, exact_ta, bus.second)) continue;
+                    if (!gw_search_bus_fit(ta, exact_ta, bus.second, i, j)) continue;
                 }
                 if (ta->match_ixbar->gw_hash_group) {
                     //FIXME: Currently all ways shared the same hash_group
@@ -1083,6 +1090,7 @@ bool Memories::allocate_all_gw() {
                 if (ta->match_ixbar->gw_hash_group) {
                     exact_ta->attached_gw_bytes += ta->match_ixbar->gw_search_bus_bytes;
                 }
+                gw_bytes_per_sb[i][j] += ta->match_ixbar->gw_search_bus;
                 gateway_use[i][current_gw] = name;
                 alloc.row.emplace_back(i, j);
                 alloc.row.back().col.push_back(current_gw);
@@ -1214,9 +1222,10 @@ void Memories::remove(const map<cstring, Use> &alloc) {
 /* MemoriesPrinter in .gdbinit should match this */
 std::ostream &operator<<(std::ostream &out, const Memories &mem) {
     const Alloc2Dbase<cstring> *arrays[] = { &mem.tcam_use, &mem.sram_print_match_bus,
-                   &mem.tind_bus, &mem.action_data_bus, &mem.sram_use, &mem.mapram_use };
+                   &mem.tind_bus, &mem.action_data_bus, &mem.sram_use, &mem.mapram_use,
+                   &mem.gateway_use };
     std::map<cstring, char>     tables;
-    out << "tc  eb  tib ab  srams       mapram  sb" << std::endl;
+    out << "tc  eb  tib ab  srams       mapram  sb  gw" << std::endl;
     for (int r = 0; r < Memories::TCAM_ROWS; r++) {
         for (auto arr : arrays) {
             for (int c = 0; c < arr->cols(); c++) {

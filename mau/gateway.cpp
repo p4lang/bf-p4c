@@ -196,7 +196,7 @@ bool CollectGatewayFields::compute_offsets() {
     std::sort(sort_by_size.begin(), sort_by_size.end(),
               [](decltype(info)::value_type *a, decltype(info)::value_type *b) -> bool {
                   return a->first->size > b->first->size; });
-    for (auto &info : Values(info)) {
+    for (auto &info : Values(this->info)) {
         if (info.xor_with) {
             auto &with = this->info[info.xor_with];
             info.xor_with->foreach_byte(with.bits, [&](const PhvInfo::Field::alloc_slice &sl) {

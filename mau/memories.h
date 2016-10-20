@@ -32,7 +32,7 @@ struct Memories {
     Alloc1D<cstring, SRAM_ROWS - 1>                    vert_overflow_bus;
     Alloc2D<cstring, SRAM_ROWS, MAPRAM_COLUMNS>        mapram_use;
     Alloc1D<cstring, SRAM_ROWS>                        stateful_bus;
-
+    int gw_bytes_per_sb [SRAM_ROWS][BUS_COUNT];
     struct mem_info {
         int match_tables;
         int match_bus_min;
@@ -158,7 +158,8 @@ struct Memories {
 
     bool allocate_all_gw();
     table_alloc *find_corresponding_exact_match(cstring name);
-    bool gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int width_sect);
+    bool gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int width_sect,
+                           int row, int col);
 
     bool alloc2Port(cstring table_name, int entries, int entries_per_word, Use &alloc);
     bool allocActionRams(cstring table_name, int width, int depth, Use &alloc);
