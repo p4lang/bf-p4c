@@ -246,18 +246,18 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    @name("nhop_set") action nhop_set(bit<16> port) {
+    @name("nhop_set") action nhop_set_0(bit<16> port) {
         hdr.ipv4.identification = port;
     }
-    @name("nop") action nop() {
+    @name("nop") action nop_0() {
     }
-    @name("ipv4_routing_select_2") table ipv4_routing_select() {
+    @name("ipv4_routing_select_2") table ipv4_routing_select_0() {
         actions = {
-            nhop_set();
-            nop();
-            NoAction_1();
+            nhop_set_0();
+            nop_0();
+            NoAction();
         }
         key = {
             hdr.ipv4.dstAddr       : lpm;
@@ -267,11 +267,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.protocol      : selector;
         }
         size = 512;
-        default_action = NoAction_1();
+        default_action = NoAction();
         @name("ecmp_action_profile") implementation = action_selector(HashAlgorithm.crc16, 32w4096, 32w14);
     }
     apply {
-        ipv4_routing_select.apply();
+        ipv4_routing_select_0.apply();
     }
 }
 
@@ -285,13 +285,24 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
+    @name("ipv4_chksum_calc") Checksum16() ipv4_chksum_calc;
+    action act() {
+        hdr.ipv4.hdrChecksum = ipv4_chksum_calc.get<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr });
+    }
+    table tbl_act() {
+        actions = {
+            act();
+        }
+        const default_action = act();
+    }
     apply {
+        tbl_act.apply();
     }
 }
 

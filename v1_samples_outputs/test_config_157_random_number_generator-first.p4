@@ -161,15 +161,20 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("action_0") action action_0(bit<16> param0) {
-        hdr.pkt.field_a_32 = random(5w16);
+        {
+            bit<32> tmp;
+            random(5w16, tmp);
+            hdr.pkt.field_a_32 = tmp;
+        }
         hdr.pkt.field_e_16 = param0;
     }
     @name("do_nothing") action do_nothing() {
     }
     @name("action_1") action action_1() {
         {
-            bit<32> tmp = random(5w24);
-            hdr.pkt.field_d_32[31:8] = tmp[31:8];
+            bit<32> tmp_0;
+            random(5w24, tmp_0);
+            hdr.pkt.field_d_32[31:8] = tmp_0[31:8];
         }
     }
     @name("table_0") table table_0() {
@@ -213,12 +218,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

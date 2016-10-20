@@ -159,19 +159,19 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("ing_drop") action ing_drop() {
+    @name("ing_drop") action ing_drop_0() {
         mark_to_drop();
     }
-    @name("bad_mac_drop") table bad_mac_drop() {
+    @name("bad_mac_drop") table bad_mac_drop_0() {
         actions = {
-            ing_drop();
+            ing_drop_0();
             NoAction();
         }
         default_action = NoAction();
     }
     apply {
         if (hdr.ethernet.srcAddr == hdr.ethernet.dstAddr) 
-            bad_mac_drop.apply();
+            bad_mac_drop_0.apply();
     }
 }
 
@@ -181,12 +181,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

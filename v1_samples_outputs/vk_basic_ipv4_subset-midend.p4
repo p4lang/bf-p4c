@@ -235,21 +235,21 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    @name("nop") action nop() {
+    @name("nop") action nop_0() {
     }
-    @name("modify_ip_id") action modify_ip_id(bit<9> port, bit<16> id, bit<48> srcAddr, bit<48> dstAddr) {
+    @name("modify_ip_id") action modify_ip_id_0(bit<9> port, bit<16> id, bit<48> srcAddr, bit<48> dstAddr) {
         hdr.ipv4.identification = id;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
         hdr.ethernet.srcAddr = srcAddr;
         hdr.ethernet.dstAddr = dstAddr;
     }
-    @name("tcam_indirect_action") table tcam_indirect_action_0() {
+    @name("tcam_indirect_action") table tcam_indirect_action() {
         actions = {
-            nop();
-            modify_ip_id();
-            NoAction_1();
+            nop_0();
+            modify_ip_id_0();
+            NoAction();
         }
         key = {
             hdr.ethernet.srcAddr  : ternary;
@@ -261,12 +261,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.version      : exact;
         }
         size = 2048;
-        default_action = NoAction_1();
+        default_action = NoAction();
         @name("indirect_action_profile") implementation = action_profile(32w2048);
     }
     apply {
         if (hdr.ipv4.isValid()) 
-            tcam_indirect_action_0.apply();
+            tcam_indirect_action.apply();
     }
 }
 
@@ -285,13 +285,24 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
+    @name("ipv4_chksum_calc") Checksum16() ipv4_chksum_calc;
+    action act() {
+        hdr.ipv4.hdrChecksum = ipv4_chksum_calc.get<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr });
+    }
+    table tbl_act() {
+        actions = {
+            act();
+        }
+        const default_action = act();
+    }
     apply {
+        tbl_act.apply();
     }
 }
 

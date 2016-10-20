@@ -198,54 +198,54 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    action NoAction_2() {
+    @name("NoAction_2") action NoAction_0() {
     }
-    action NoAction_3() {
+    @name("NoAction_3") action NoAction_4() {
     }
-    @name("do_trill_forward") action do_trill_forward(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
+    @name("do_trill_forward") action do_trill_forward_0(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
         hdr.outer_ethernet.dstAddr = new_mac_da;
         hdr.outer_ethernet.srcAddr = new_mac_sa;
         hdr.vlan_tag.vid = new_vlan_id;
         hdr.ig_intr_md_for_tm.ucast_egress_port = new_port;
         meta.m.hopCount = hdr.trill.hopCount;
     }
-    @name("do_trill_forward_1") action do_trill_forward_1() {
+    @name("do_trill_forward_1") action do_trill_forward_3() {
         meta.m.hopCount = meta.m.hopCount + 6w63;
     }
-    @name("do_trill_forward_2") action do_trill_forward_2() {
+    @name("do_trill_forward_2") action do_trill_forward_4() {
         hdr.trill.hopCount = meta.m.hopCount;
     }
-    @name("trill_forward") table trill_forward_0() {
+    @name("trill_forward") table trill_forward() {
         actions = {
-            do_trill_forward();
-            NoAction_1();
+            do_trill_forward_0();
+            NoAction();
         }
         key = {
             hdr.trill.egressRbridge: exact;
         }
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
-    @name("trill_forward_1") table trill_forward_3() {
+    @name("trill_forward_1") table trill_forward_1() {
         actions = {
-            do_trill_forward_1();
-            NoAction_2();
+            do_trill_forward_3();
+            NoAction_0();
         }
-        default_action = NoAction_2();
+        default_action = NoAction_0();
     }
-    @name("trill_forward_2") table trill_forward_4() {
+    @name("trill_forward_2") table trill_forward_2() {
         actions = {
-            do_trill_forward_2();
-            NoAction_3();
+            do_trill_forward_4();
+            NoAction_4();
         }
-        default_action = NoAction_3();
+        default_action = NoAction_4();
     }
     apply {
-        switch (trill_forward_0.apply().action_run) {
-            do_trill_forward: {
-                trill_forward_3.apply();
-                trill_forward_4.apply();
+        switch (trill_forward.apply().action_run) {
+            do_trill_forward_0: {
+                trill_forward_1.apply();
+                trill_forward_2.apply();
             }
         }
 
@@ -261,12 +261,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

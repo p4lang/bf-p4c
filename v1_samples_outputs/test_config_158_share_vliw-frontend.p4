@@ -160,21 +160,21 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_0") action action_0() {
+    @name("action_0") action action_2() {
         hdr.pkt.field_a_32 = hdr.pkt.field_b_32 + hdr.pkt.field_c_32;
         hdr.pkt.field_j_8 = 8w3;
     }
-    @name("action_1") action action_1() {
+    @name("action_1") action action_3() {
         hdr.pkt.field_a_32 = hdr.pkt.field_b_32 - hdr.pkt.field_c_32;
         hdr.pkt.field_e_16 = hdr.pkt.field_e_16 << 5;
     }
-    @name("do_nothing") action do_nothing() {
+    @name("do_nothing") action do_nothing_0() {
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_2() {
         actions = {
-            action_0();
-            action_1();
-            do_nothing();
+            action_2();
+            action_3();
+            do_nothing_0();
             NoAction();
         }
         key = {
@@ -183,11 +183,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_3() {
         actions = {
-            action_0();
-            action_1();
-            do_nothing();
+            action_2();
+            action_3();
+            do_nothing_0();
             NoAction();
         }
         key = {
@@ -198,9 +198,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.pkt.field_i_8 == 8w1) 
-            table_0.apply();
+            table_2.apply();
         else 
-            table_1.apply();
+            table_3.apply();
     }
 }
 
@@ -215,12 +215,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

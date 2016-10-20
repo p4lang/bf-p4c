@@ -157,84 +157,84 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_2() {
+    @name("NoAction_2") action NoAction() {
     }
-    @name("nop") action nop() {
+    @name("nop") action nop_0() {
     }
-    @name("e_t1") table e_t1_0() {
+    @name("e_t1") table e_t1() {
         actions = {
-            nop();
-            NoAction_2();
+            nop_0();
+            NoAction();
         }
         key = {
             hdr.ethernet.srcAddr: exact;
         }
-        default_action = NoAction_2();
+        default_action = NoAction();
     }
     apply {
-        e_t1_0.apply();
+        e_t1.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_3() {
+    @name("NoAction_3") action NoAction_0() {
     }
-    action NoAction_4() {
+    @name("NoAction_4") action NoAction_1() {
     }
-    action NoAction_5() {
+    @name("NoAction_5") action NoAction_6() {
     }
-    @name("nop") action nop_2() {
+    @name("nop") action nop_1() {
     }
-    @name("set_egress_port") action set_egress_port(bit<9> egress_port) {
+    @name("set_egress_port") action set_egress_port_0(bit<9> egress_port) {
         meta.ing_metadata.egress_port = egress_port;
     }
-    @name("set_bd") action set_bd(bit<16> bd) {
+    @name("set_bd") action set_bd_0(bit<16> bd) {
         meta.ing_metadata.bd = bd;
     }
-    @name("ing_drop") action ing_drop() {
+    @name("ing_drop") action ing_drop_0() {
         meta.ing_metadata.drop = 1w1;
     }
-    @name("dmac") table dmac_0() {
+    @name("dmac") table dmac() {
         actions = {
-            nop_2();
-            set_egress_port();
-            NoAction_3();
+            nop_1();
+            set_egress_port_0();
+            NoAction_0();
         }
         key = {
             hdr.ethernet.dstAddr: exact;
             meta.ing_metadata.bd: exact;
         }
         size = 131072;
-        default_action = NoAction_3();
+        default_action = NoAction_0();
     }
-    @name("port_bd") table port_bd_0() {
+    @name("port_bd") table port_bd() {
         actions = {
-            set_bd();
-            NoAction_4();
+            set_bd_0();
+            NoAction_1();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact;
         }
         size = 288;
-        default_action = NoAction_4();
+        default_action = NoAction_1();
     }
-    @name("port_drop") table port_drop_0() {
+    @name("port_drop") table port_drop() {
         actions = {
-            ing_drop();
-            NoAction_5();
+            ing_drop_0();
+            NoAction_6();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact;
         }
         size = 288;
-        default_action = NoAction_5();
+        default_action = NoAction_6();
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) {
-            port_bd_0.apply();
-            port_drop_0.apply();
+            port_bd.apply();
+            port_drop.apply();
         }
-        dmac_0.apply();
+        dmac.apply();
     }
 }
 
@@ -244,12 +244,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

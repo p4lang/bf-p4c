@@ -30,14 +30,13 @@ class AddBridgedMetadata::AddBridge : public PardeModifier {
     bool preorder(IR::Tofino::Parser *parser) override {
         if (self.need_bridge.empty()) return false;
         if (parser->gress == INGRESS) {
-            /* FIXME -- nasty hack here -- in order to deparse the bridged metadata we need
-             * a fixed constant POV bit for use in the deparser.  So we create a NamedRef here
-             * that we recognize in POV allocation as a POV bit we need to allocate.  Should
-             * have a better mechanism for managing and allocating POV bits */
+            /* We need a constant 1 bit to output the bridged metadata, so we create and set
+             * one here.  Perhaps should be in the MAU?  deparser_output.cpp hardcodes the name
+             * $bridge-metadata, so that's what we use here. */
             parser->start = new IR::Tofino::ParserState("$bridge-metadata", parser->gress, {}, {
                 new IR::Tofino::ParserMatch(match_t(), -1, {
                     new IR::Primitive("set_metadata",
-                        new IR::NamedRef(IR::Type::Bits::get(1), "$bridge-metadata"),
+                        new IR::TempVar(IR::Type::Bits::get(1), true, "$bridge-metadata"),
                         new IR::Constant(IR::Type::Bits::get(1), 1))
                 }, parser->start) });
         } else {

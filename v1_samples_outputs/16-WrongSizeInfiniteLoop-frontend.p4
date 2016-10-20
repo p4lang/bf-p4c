@@ -174,72 +174,72 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("a1") action a1() {
+    @name("a1") action a1_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f1;
     }
-    @name("a2") action a2() {
+    @name("a2") action a2_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f2;
     }
-    @name("a3") action a3() {
+    @name("a3") action a3_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f3;
     }
-    @name("a4") action a4() {
+    @name("a4") action a4_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f4;
     }
-    @name("a5") action a5() {
+    @name("a5") action a5_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f5;
     }
-    @name("a6") action a6() {
+    @name("a6") action a6_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f6;
     }
-    @name("a7") action a7() {
+    @name("a7") action a7_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f7;
     }
-    @name("a8") action a8() {
+    @name("a8") action a8_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f8;
     }
-    @name("a9") action a9() {
+    @name("a9") action a9_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f9;
     }
-    @name("a10") action a10() {
+    @name("a10") action a10_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f10;
     }
-    @name("a11") action a11() {
+    @name("a11") action a11_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f11;
     }
-    @name("a12") action a12() {
+    @name("a12") action a12_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f12;
     }
-    @name("a13") action a13() {
+    @name("a13") action a13_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f13;
     }
-    @name("a14") action a14() {
+    @name("a14") action a14_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f14;
     }
-    @name("a15") action a15() {
+    @name("a15") action a15_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f15;
     }
-    @name("a16") action a16() {
+    @name("a16") action a16_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f16;
     }
-    @name("t1") table t1() {
+    @name("t1") table t1_0() {
         actions = {
-            a1();
-            a2();
-            a3();
-            a4();
-            a5();
-            a6();
-            a7();
-            a8();
-            a9();
-            a10();
-            a11();
-            a12();
-            a13();
-            a14();
-            a15();
-            a16();
+            a1_0();
+            a2_0();
+            a3_0();
+            a4_0();
+            a5_0();
+            a6_0();
+            a7_0();
+            a8_0();
+            a9_0();
+            a10_0();
+            a11_0();
+            a12_0();
+            a13_0();
+            a14_0();
+            a15_0();
+            a16_0();
             NoAction();
         }
         key = {
@@ -248,7 +248,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        t1.apply();
+        t1_0.apply();
     }
 }
 
@@ -258,12 +258,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

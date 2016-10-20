@@ -57,13 +57,16 @@ Visitor::profile_t PhvInfo::init_apply(const IR::Node *root) {
     all_fields.clear();
     by_id.clear();
     all_headers.clear();
+    simple_headers.clear();
     alloc_done_ = false;
-    tmp_alloc_uid = 0;
     return rv;
 }
 
 bool PhvInfo::preorder(const IR::Header *h) {
+    int start = by_id.size();
     add_hdr(h->name, h->type, false);
+    int end = by_id.size() - 1;
+    simple_headers.emplace(h->name, std::make_pair(start, end));
     return false;
 }
 
@@ -84,32 +87,26 @@ bool PhvInfo::preorder(const IR::Metadata *h) {
     return false;
 }
 
-bool PhvInfo::preorder(const IR::NamedRef *n) {
-    if (n->name.name[0] == '$') {
-        if (n->name == "$bridge-metadata") {
-            /* FIXME -- nasty hack -- we recognize this name specially as the single fixed 1 bit
-             * we need in the POV to make bridged metadata work.  Should have a more general
-             * mechanism for managing POV bits (need a way to shift them properly for header
-             * stack operations) */
-            need_bridge_meta_pov = true;
-            return false; }
-        int id;
-        if (sscanf(n->name.name, "$tmp%d", &id) >= 1 && id > tmp_alloc_uid)
-            tmp_alloc_uid = id;
-        add(n->name, n->type->width_bits(), 0, 1, 0); }
+bool PhvInfo::preorder(const IR::TempVar *tv) {
+    BUG_CHECK(tv->type->is<IR::Type::Bits>(), "Can't create temp of type %s", tv->type);
+    add(tv->name, tv->type->width_bits(), 0, true, tv->POV);
     return false;
 }
 
-const IR::Expression *PhvInfo::createTempField(const IR::Type *type, const char *extname) {
-    BUG_CHECK(type->is<IR::Type::Bits>(), "Can't create temp of type %s", type);
-    BUG_CHECK(!alloc_done_, "Can't create temp after phv allocation");
-    char name[256];
-    if (extname)
-        snprintf(name, sizeof(name), "$tmp%d-%s", ++tmp_alloc_uid, extname);
-    else
-        snprintf(name, sizeof(name), "$tmp%d", ++tmp_alloc_uid);
-    add(name, type->width_bits(), 0, 1, 0);
-    return new IR::NamedRef(type, name);
+/* figure out how many disinct container bytes contain info from a bitrange of a particular field */
+int PhvInfo::Field::container_bytes(PhvInfo::Field::bitrange bits) const {
+    if (bits.hi < 0) bits.hi = size - 1;
+    if (alloc.empty())
+        return bits.hi/8U + bits.lo/8U + 1;
+    int rv = 0, w;
+    for (int bit = bits.lo; bit <= bits.hi; bit += w) {
+        auto &sl = for_bit(bit);
+        w = sl.width - (bit - sl.field_bit);
+        if (bit + w > bits.hi)
+            w = bits.hi - bit + 1;
+        int cbit = bit + sl.container_bit - sl.field_bit;
+        rv += (cbit+w-1)/8U - cbit/8U + 1; }
+    return rv;
 }
 
 const PhvInfo::Field *PhvInfo::field(const IR::Expression *e, Field::bitrange *bits) const {
@@ -133,8 +130,8 @@ const PhvInfo::Field *PhvInfo::field(const IR::Expression *e, Field::bitrange *b
                         sl->e0, bits->hi);
                 return 0; } }
         return rv; }
-    if (auto *n = e->to<IR::NamedRef>()) {
-        if (auto *rv = getref(all_fields, n->name)) {
+    if (auto *tv = e->to<IR::TempVar>()) {
+        if (auto *rv = getref(all_fields, tv->name)) {
             if (bits) {
                 bits->lo = 0;
                 bits->hi = rv->size - 1; }
@@ -178,36 +175,50 @@ const std::pair<int, int> *PhvInfo::header(cstring name_) const {
     return nullptr;
 }
 
-void PhvInfo::allocatePOV() {
+void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
     if (all_fields.count("ingress::$POV") || all_fields.count("egress::$POV"))
         BUG("trying to reallocate POV");
-    int ingress_size = 0, egress_size = 0;
-    for (auto &hdr : all_headers)
-        if (!field(hdr.second.first)->metadata) {
-            if (hdr.first.startsWith("ingress::"))
-                ++ingress_size;
-            else if (hdr.first.startsWith("egress::"))
-                ++egress_size;
-            else
-                BUG("Header %s neither ingress or egress", hdr.first); }
-    if (need_bridge_meta_pov)
-        ++ingress_size;
-    if (ingress_size > 0) {
-        gress = INGRESS;
-        add("ingress::$POV", ingress_size, 0, false, true);
-        for (auto &hdr : all_headers)
-            if (!field(hdr.second.first)->metadata && hdr.first.startsWith("ingress::"))
-                add(hdr.first + ".$valid", 1, --ingress_size, false, true);
-        if (need_bridge_meta_pov)
-            add("$bridge-metadata", 1, --ingress_size, false, true);
-        assert(ingress_size == 0); }
-    if (egress_size > 0) {
-        gress = EGRESS;
-        add("egress::$POV", egress_size, 0, false, true);
-        for (auto &hdr : all_headers)
-            if (!field(hdr.second.first)->metadata && hdr.first.startsWith("egress::"))
-                add(hdr.first + ".$valid", 1, --egress_size, false, true);
-        assert(egress_size == 0); }
+    int size[2] = { 0, 0 };
+    for (auto &stack : stacks) {
+        auto *ff = field(all_headers.at(stack.name).first);
+        BUG_CHECK(!ff->metadata, "metadata stack?");
+        size[ff->gress] += stack.size + stack.maxpush + stack.maxpop;
+        /* FIXME all bits for a stack must end up in one container */ }
+    for (auto &hdr : simple_headers) {
+        auto *ff = field(hdr.second.first);
+        if (!ff->metadata)
+            ++size[ff->gress]; }
+    for (auto &field : *this)
+        if (field.pov && field.metadata)
+            size[field.gress] += field.size;
+    for (auto gress : Range(INGRESS, EGRESS)) {
+        if (size[gress] == 0) continue;
+        this->gress = gress;
+        add(gress ? "egress::$POV" : "ingress::$POV", size[gress], 0, false, true);
+        for (auto &field : *this)
+            if (field.pov && field.metadata && field.gress == gress) {
+                size[gress] -= field.size;
+                field.offset = size[gress]; }
+        for (auto &hdr : simple_headers) {
+            auto *ff = field(hdr.second.first);
+            if (!ff->metadata && ff->gress == gress)
+                add(hdr.first + ".$valid", 1, --size[gress], false, true); }
+        for (auto &stack : stacks) {
+            auto *ff = field(all_headers.at(stack.name).first);
+            if (ff->gress == gress) {
+                if (stack.maxpush) {
+                    size[gress] -= stack.maxpush;
+                    add(stack.name + ".$push", stack.maxpush, size[gress], true, true); }
+                char buffer[16];
+                for (int i = 0; i < stack.size; ++i) {
+                    snprintf(buffer, sizeof(buffer), "[%d]", i);
+                    add(stack.name + buffer + ".$valid", 1, --size[gress], false, true); }
+                if (stack.maxpop) {
+                    size[gress] -= stack.maxpop;
+                    add(stack.name + ".$pop", stack.maxpush, size[gress], true, true); }
+                add(stack.name + ".$stkvalid", stack.size + stack.maxpush + stack.maxpop,
+                    size[gress], true, true); } }
+        assert(size[gress] == 0); }
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &sl) {
@@ -228,6 +239,17 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field *fld) {
     return out;
 }
 
+std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
+    out << field.id << ':' << field.name << '[' << field.size << ']'
+        << (field.gress ? " E" : " I") << " off=" << field.offset;
+    if (field.referenced) out << " ref";
+    if (field.metadata) out << " meta";
+    if (field.pov) out << " pov";
+    if (!field.alloc.empty())
+        out << " " << field.alloc;
+    return out;
+}
+
 std::ostream &operator<<(std::ostream &out, const PhvInfo &phv) {
     out << "++++++++++ All Fields(name,size) ++++++++++" << std::endl;
     for (auto field: phv)
@@ -235,5 +257,9 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo &phv) {
          out << &field << std::endl;
     }
     return out;
+}
+
+void dump(PhvInfo *phv) {
+    std::cout << *phv;
 }
 

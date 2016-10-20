@@ -175,24 +175,24 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_0") action action_0() {
+    @name("action_0") action action_4() {
         hdr.ipv4.diffserv = 8w1;
     }
-    @name("do_nothing") action do_nothing() {
+    @name("do_nothing") action do_nothing_0() {
     }
-    @name("action_1") action action_1() {
+    @name("action_1") action action_5() {
         hdr.ipv4.totalLen = 16w2;
     }
-    @name("action_2") action action_2() {
+    @name("action_2") action action_6() {
         hdr.ipv4.identification = 16w3;
     }
-    @name("action_3") action action_3() {
+    @name("action_3") action action_7() {
         hdr.ipv4.identification = 16w4;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_4() {
         actions = {
-            action_0();
-            do_nothing();
+            action_4();
+            do_nothing_0();
             NoAction();
         }
         key = {
@@ -202,10 +202,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 1024;
         default_action = NoAction();
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_5() {
         actions = {
-            action_1();
-            do_nothing();
+            action_5();
+            do_nothing_0();
             NoAction();
         }
         key = {
@@ -215,10 +215,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 16384;
         default_action = NoAction();
     }
-    @name("table_2") table table_2() {
+    @name("table_2") table table_6() {
         actions = {
-            action_2();
-            do_nothing();
+            action_6();
+            do_nothing_0();
             NoAction();
         }
         key = {
@@ -228,9 +228,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 4096;
         default_action = NoAction();
     }
-    @name("table_3") table table_3() {
+    @name("table_3") table table_7() {
         actions = {
-            action_3();
+            action_7();
             NoAction();
         }
         key = {
@@ -240,11 +240,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        table_0.apply();
-        table_1.apply();
+        table_4.apply();
+        table_5.apply();
         if (hdr.ipv4.isValid()) 
-            table_2.apply();
-        table_3.apply();
+            table_6.apply();
+        table_7.apply();
     }
 }
 
@@ -260,12 +260,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

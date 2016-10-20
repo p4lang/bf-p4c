@@ -192,27 +192,27 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    @name("forward_trill") action forward_trill(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
+    @name("forward_trill") action forward_trill_0(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
         hdr.outer_ethernet.dstAddr = new_mac_da;
         hdr.outer_ethernet.srcAddr = new_mac_sa;
         hdr.vlan_tag.vid = new_vlan_id;
         hdr.ig_intr_md_for_tm.ucast_egress_port = new_port;
         hdr.trill.hopCount = hdr.trill.hopCount + 6w63;
     }
-    @name("trill_forward") table trill_forward_0() {
+    @name("trill_forward") table trill_forward() {
         actions = {
-            forward_trill();
-            NoAction_1();
+            forward_trill_0();
+            NoAction();
         }
         key = {
             hdr.trill.egressRbridge: exact;
         }
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
     apply {
-        trill_forward_0.apply();
+        trill_forward.apply();
     }
 }
 
@@ -225,12 +225,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

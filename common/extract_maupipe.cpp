@@ -8,6 +8,7 @@
 #include "tofino/common/param_binding.h"
 #include "tofino/mau/table_dependency_graph.h"
 #include "tofino/parde/extract_parser.h"
+#include "tofino/tofinoOptions.h"
 #include "lib/algorithm.h"
 #include "lib/error.h"
 #include "rewrite.h"
@@ -43,6 +44,9 @@ class ActionBodySetup : public Inspector {
         return false; }
     bool preorder(const IR::Declaration *) override {
         // FIXME -- for now, ignoring local variables?  Need copy prop + dead code elim
+        return false; }
+    bool preorder(const IR::Annotations *) override {
+        // FIXME -- for now, ignoring annotations.
         return false; }
     bool preorder(const IR::Node *n) override {
         BUG("un-handled node %1% in action", n);
@@ -85,7 +89,7 @@ static void setIntProperty(cstring name, int *val, const IR::PropertyValue *pval
     error("%s: %s property must be a constant", pval->srcInfo, name);
 }
 
-const IR::V1Table *createV1Table(const IR::P4Table *tc, const P4::ReferenceMap *refMap) {
+const IR::V1Table *createV1Table(const IR::P4Table *tc, P4::ReferenceMap *refMap) {
     IR::V1Table *rv = new IR::V1Table;
     rv->srcInfo = tc->srcInfo;
     rv->name = tc->externalName();
@@ -169,9 +173,9 @@ static const IR::MethodCallExpression *isApplyHit(const IR::Expression *e, bool 
 }
 
 class GetTofinoTables : public Inspector {
-    const IR::V1Program                        *program;
-    const P4::ReferenceMap                     *refMap;
-    const P4::TypeMap                          *typeMap;
+    const IR::V1Program                         *program;
+    P4::ReferenceMap                            *refMap;
+    P4::TypeMap                                 *typeMap;
     gress_t                                     gress;
     IR::Tofino::Pipe                            *pipe;
     map<const IR::Node *, IR::MAU::Table *>     tables;
@@ -184,7 +188,7 @@ class GetTofinoTables : public Inspector {
  public:
     GetTofinoTables(const IR::V1Program *prog, gress_t gr, IR::Tofino::Pipe *p)
     : program(prog), refMap(nullptr), typeMap(nullptr), gress(gr), pipe(p) {}
-    GetTofinoTables(const P4::ReferenceMap* refMap, const P4::TypeMap* typeMap,
+    GetTofinoTables(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                     gress_t gr, IR::Tofino::Pipe *p)
     : program(nullptr), refMap(refMap), typeMap(typeMap), gress(gr), pipe(p) {}
 
@@ -349,7 +353,7 @@ class GetTofinoTables : public Inspector {
 };
 }  // anonymous namespace
 
-const IR::Tofino::Pipe *extract_maupipe(const IR::V1Program *program) {
+const IR::Tofino::Pipe *extract_maupipe(const IR::V1Program *program, Tofino_Options &) {
     auto rv = new IR::Tofino::Pipe();
     rv->standard_metadata = program->get<IR::Metadata>("standard_metadata");
     GetTofinoParser parser(program);
@@ -380,9 +384,10 @@ class ConvertIndexToHeaderStackItemRef : public Transform {
         return new IR::HeaderStackItemRef(idx->srcInfo, type, idx->left, idx->right); }
 };
 
-const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program) {
+const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program, Tofino_Options &options) {
     P4::ReferenceMap  refMap;
     P4::TypeMap       typeMap;
+    refMap.setIsV1(options.isv1());
     P4::EvaluatorPass evaluator(&refMap, &typeMap);
     program = program->apply(evaluator);
     auto toplevel = evaluator.getToplevelBlock();

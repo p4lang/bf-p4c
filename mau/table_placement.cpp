@@ -63,7 +63,7 @@ struct TablePlacement::Placed {
     /* A linked list of table placement decisions, from last table placed to first (so we
      * can backtrack and create different lists as needed) */
     TablePlacement              &self;
-    const Placed                *prev;
+    const Placed                *prev = 0;
     cstring                     name;
     int                         entries = 0;
     bitvec                      placed;  // fully placed tables after this placement
@@ -73,15 +73,53 @@ struct TablePlacement::Placed {
     int                         stage, logical_id;
     StageUseEstimate            use;
     const TableResourceAlloc    *resources;
-    Placed(TablePlacement &self, const Placed *p, const IR::MAU::Table *t)
-        : self(self), prev(p), name(t->name), table(t) {
-            if (prev) placed = prev->placed; }
+    Placed(TablePlacement &self, const IR::MAU::Table *t)
+        : self(self), table(t) {
+        if (t) { name = t->name; }
+    }
+
+
     bool is_placed(cstring name) const { return placed[self.table_uids.at(name)]; }
     bool is_placed(const IR::MAU::Table *tbl) const { return is_placed(tbl->name); }
     bool is_placed(const IR::MAU::TableSeq *seq) const {
         for (auto tbl : seq->tables)
-            if (!is_placed(tbl)) return false;
+            if (!is_placed(tbl)) { LOG3("Unplaced " << tbl->name); return false; }
         return true; }
+    void copy(const Placed *p) {
+        name = p->name; entries = p->entries; placed = p->placed;
+        need_more = p->need_more; gw_result_tag = p->gw_result_tag; table = p->table;
+        gw = p->gw; stage = p->stage; logical_id = p->logical_id; use = p->use;
+    }
+
+    void set_prev(const Placed *p, bool make_new, vector<TableResourceAlloc *> &prev_resources) {
+        if (!make_new) {
+            prev = p;
+            if (p) {
+                placed = p->placed;
+            }
+        } else {
+            int stage = -1;
+            int index = 0;
+            if (p) {
+               placed = p->placed;
+               stage = p->stage;
+            }
+            auto *curr_p = this;
+            auto *prev_p = p;
+            while (stage != -1) {
+                auto *new_p = new Placed(*prev_p);
+                new_p->resources = prev_resources[index];
+                index++;
+                curr_p->prev = new_p;
+                curr_p = new_p;
+                prev_p = prev_p->prev;
+                if (prev_p == nullptr || prev_p->stage != curr_p->stage) {
+                    curr_p->prev = prev_p;
+                    stage = -1;
+                }
+            }
+        }
+    }
 };
 
 static StageUseEstimate get_current_stage_use(const TablePlacement::Placed *pl) {
@@ -145,27 +183,46 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
 }
 
 static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Placed *done,
-                          int &entries, TableResourceAlloc *resources) {
+                          int &entries, TableResourceAlloc *resources,
+                          vector<TableResourceAlloc *> &prev_resources) {
+    LOG3("Try alloc mem with " << entries << " entries");
     Memories current_mem;
-    for (auto *p = done; p && p->stage == next->stage; p = p->prev)
-        current_mem.update(p->resources->memuse);
-    int gw_entries = 1;
+    int i = 0;
+    for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
+        current_mem.add_table(p->table, &prev_resources[i]->match_ixbar,
+                               &prev_resources[i]->memuse, p->entries);
+        current_mem.add_table(p->gw, &prev_resources[i]->match_ixbar,
+                               &prev_resources[i]->memuse, -1);
+        i++;
+    }
+
+    current_mem.add_table(next->table, &resources->match_ixbar,
+                           &resources->memuse, entries);
+    current_mem.add_table(next->gw, &resources->match_ixbar, &resources->memuse, -1);
     resources->memuse.clear();
-    if (!current_mem.allocTable(next->name, next->table, entries,
-                                resources->memuse, resources->match_ixbar) ||
-        !current_mem.allocTable(next->name, next->gw, gw_entries,
-                                resources->memuse, resources->match_ixbar)) {
+    for (auto *prev_resource : prev_resources) {
+        prev_resource->memuse.clear();
+    }
+    if (!current_mem.allocate_all()) {
         resources->memuse.clear();
-        return false; }
+        for (auto *prev_resource : prev_resources) {
+            prev_resource->memuse.clear();
+        }
+        return false;
+    }
     return true;
 }
 
 TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t, const Placed *done,
                                                         const StageUseEstimate &current) {
     LOG2("try_place_table(" << t->name << ", stage=" << (done ? done->stage : 0) << ")");
-    auto *rv = gateway_merge(new Placed(*this, done, t));
+    auto *rv = gateway_merge(new Placed(*this, t));
     TableResourceAlloc *resources = new TableResourceAlloc;
     rv->resources = resources;
+    vector<TableResourceAlloc *> prev_resources;
+    for (auto *p = done; p && p->stage == done->stage; p = p->prev) {
+        prev_resources.push_back(p->resources->clone_ixbar());
+    }
     t = rv->table;
     rv->stage = done ? done->stage : 0;
     int min_entries = 1;
@@ -190,6 +247,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     if (!try_alloc_ixbar(rv, done, phv, resources)) {
 retry_next_stage:
         rv->stage++;
+        // The placed list is onto the next stage, and we don't need to use memories.
         if (!try_alloc_ixbar(rv, done, phv, resources))
             BUG("Can't fit table %s in ixbar by itself", rv->name); }
 
@@ -209,7 +267,8 @@ retry_next_stage:
 
     auto avail = StageUseEstimate::max();
     if (rv->stage == (done ? done->stage : 0)) {
-        if (!(min_use + current <= avail) || !try_alloc_mem(rv, done, min_entries, resources)) {
+        if (!(min_use + current <= avail)
+            || !try_alloc_mem(rv, done, min_entries, resources, prev_resources)) {
             LOG4("   can't fit min_entries(" << min_entries << ") in stage " << rv->stage <<
                  ", advancing to next stage");
             resources->clear();
@@ -221,7 +280,8 @@ retry_next_stage:
         avail.maprams -= current.maprams; }
     assert(min_use <= avail);
     int last_try = rv->entries;
-    while (!(rv->use <= avail) || !try_alloc_mem(rv, done, rv->entries, resources)) {
+    while (!(rv->use <= avail) ||
+           !try_alloc_mem(rv, done, rv->entries, resources, prev_resources)) {
         rv->need_more = true;
         int scale = 0;
         if (rv->use.tcams > avail.tcams)
@@ -249,7 +309,13 @@ retry_next_stage:
     assert((rv->logical_id / StageUse::MAX_LOGICAL_IDS) == rv->stage);
     LOG2("try_place_table returning " << rv->entries << " of " << rv->name <<
          " in stage " << rv->stage);
+    if (done && rv->stage == done->stage) {
+        rv->set_prev(done, true, prev_resources);
+    } else {
+        rv->set_prev(done, false, prev_resources);
+    }
     if (!rv->need_more) {
+        LOG3("Setting placed variable");
         rv->placed[table_uids.at(rv->name)] = true;
         if (rv->gw)
             rv->placed[table_uids.at(rv->gw->name)] = true; }
@@ -266,6 +332,7 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const GroupPla
          pl->stage << (pl->need_more ? " (need more)" : ""));
     if (!pl->need_more) {
         while (grp && pl->is_placed(grp->seq)) {
+            LOG3("Finished a sequence");
             grp->finish(work);
             grp = grp->parent; }
         if (pl->gw)  {
@@ -405,6 +472,7 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
         if (p->gw) {
             assert(p->need_more || table_placed.count(p->gw->name) == 0);
             table_placed.emplace_hint(table_placed.find(p->gw->name), p->gw->name, p); } }
+    LOG3("Finished table placement");
     return pipe;
 }
 
@@ -494,6 +562,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
             prev->next["$miss"] = new IR::MAU::TableSeq(table_part); }
         prev = table_part; }
     assert(rv);
+    LOG3("Table in stage");
     return rv;
 }
 

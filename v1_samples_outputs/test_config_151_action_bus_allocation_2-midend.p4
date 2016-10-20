@@ -160,58 +160,58 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    action NoAction_2() {
+    @name("NoAction_2") action NoAction_0() {
     }
-    action NoAction_3() {
+    @name("NoAction_3") action NoAction_4() {
     }
-    @name("action_0") action action_0(bit<32> param0) {
+    @name("action_0") action action_3(bit<32> param0) {
         hdr.pkt.field_b_32[27:20] = param0[27:20];
     }
-    @name("action_1") action action_1(bit<32> param0) {
+    @name("action_1") action action_4(bit<32> param0) {
         hdr.pkt.field_c_32[19:12] = param0[19:12];
     }
-    @name("action_2") action action_2(bit<32> param0) {
+    @name("action_2") action action_5(bit<32> param0) {
         hdr.pkt.field_d_32[11:4] = param0[11:4];
     }
-    @name("table_0") table table_3() {
+    @name("table_0") table table_0() {
         actions = {
-            action_0();
-            NoAction_1();
+            action_3();
+            NoAction();
         }
         key = {
             hdr.pkt.field_h_16: ternary;
         }
         size = 512;
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
-    @name("table_1") table table_4() {
+    @name("table_1") table table_1() {
         actions = {
-            action_1();
-            NoAction_2();
+            action_4();
+            NoAction_0();
         }
         key = {
             hdr.pkt.field_h_16: ternary;
         }
         size = 512;
-        default_action = NoAction_2();
+        default_action = NoAction_0();
     }
-    @name("table_2") table table_5() {
+    @name("table_2") table table_2() {
         actions = {
-            action_2();
-            NoAction_3();
+            action_5();
+            NoAction_4();
         }
         key = {
             hdr.pkt.field_h_16: ternary;
         }
         size = 512;
-        default_action = NoAction_3();
+        default_action = NoAction_4();
     }
     apply {
-        table_3.apply();
-        table_4.apply();
-        table_5.apply();
+        table_0.apply();
+        table_1.apply();
+        table_2.apply();
     }
 }
 
@@ -226,12 +226,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

@@ -382,19 +382,19 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("a1") action a1() {
+    @name("a1") action a1_0() {
     }
-    @name("a2") action a2() {
+    @name("a2") action a2_0() {
     }
-    @name("a3") action a3() {
+    @name("a3") action a3_0() {
     }
-    @name("a4") action a4() {
+    @name("a4") action a4_0() {
     }
-    @name("a5") action a5() {
+    @name("a5") action a5_0() {
     }
-    @name("t1") table t1() {
+    @name("t1") table t1_0() {
         actions = {
-            a1();
+            a1_0();
             NoAction();
         }
         key = {
@@ -465,9 +465,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("t2") table t2() {
+    @name("t2") table t2_0() {
         actions = {
-            a2();
+            a2_0();
             NoAction();
         }
         key = {
@@ -506,9 +506,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("t3") table t3() {
+    @name("t3") table t3_0() {
         actions = {
-            a3();
+            a3_0();
             NoAction();
         }
         key = {
@@ -579,9 +579,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("t4") table t4() {
+    @name("t4") table t4_0() {
         actions = {
-            a4();
+            a4_0();
             NoAction();
         }
         key = {
@@ -620,9 +620,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("t5") table t5() {
+    @name("t5") table t5_0() {
         actions = {
-            a5();
+            a5_0();
             NoAction();
         }
         key = {
@@ -657,11 +657,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        t1.apply();
-        t2.apply();
-        t3.apply();
-        t4.apply();
-        t5.apply();
+        t1_0.apply();
+        t2_0.apply();
+        t3_0.apply();
+        t4_0.apply();
+        t5_0.apply();
     }
 }
 
@@ -671,12 +671,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

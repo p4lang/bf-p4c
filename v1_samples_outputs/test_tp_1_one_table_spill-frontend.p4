@@ -175,13 +175,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_e") action action_e(bit<8> param2, bit<16> param_3) {
+    @name("action_e") action action_e_0(bit<8> param2, bit<16> param_3) {
         hdr.ipv4.diffserv = param2;
         hdr.ipv4.hdrChecksum = param_3;
     }
-    @name("table_e") table table_e() {
+    @name("table_e") table table_e_0() {
         actions = {
-            action_e();
+            action_e_0();
             NoAction();
         }
         key = {
@@ -191,21 +191,21 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction();
     }
     apply {
-        table_e.apply();
+        table_e_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_0") action action_0(bit<8> param0) {
+    @name("action_0") action action_2(bit<8> param0) {
         hdr.ipv4.diffserv = param0;
     }
-    @name("action_1") action action_1(bit<16> param1) {
+    @name("action_1") action action_3(bit<16> param1) {
         hdr.ipv4.hdrChecksum = param1;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_2() {
         actions = {
-            action_0();
-            action_1();
+            action_2();
+            action_3();
             NoAction();
         }
         key = {
@@ -213,9 +213,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_3() {
         actions = {
-            action_1();
+            action_3();
             NoAction();
         }
         key = {
@@ -225,8 +225,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        table_0.apply();
-        table_1.apply();
+        table_2.apply();
+        table_3.apply();
     }
 }
 
@@ -237,12 +237,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

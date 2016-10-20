@@ -199,40 +199,40 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    action NoAction_2() {
+    @name("NoAction_2") action NoAction_0() {
     }
-    @name("copy_hopCount") action copy_hopCount() {
+    @name("copy_hopCount") action copy_hopCount_0() {
         hdr.trill.hopCount = meta.m.hopCount;
     }
-    @name("forward_trill") action forward_trill(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
+    @name("forward_trill") action forward_trill_0(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
         hdr.outer_ethernet.dstAddr = new_mac_da;
         hdr.outer_ethernet.srcAddr = new_mac_sa;
         hdr.vlan_tag.vid = new_vlan_id;
         hdr.ig_intr_md_for_tm.ucast_egress_port = new_port;
         meta.m.hopCount = meta.m.hopCount + 6w63;
     }
-    @name("fix_trill_header") table fix_trill_header_0() {
+    @name("fix_trill_header") table fix_trill_header() {
         actions = {
-            copy_hopCount();
-            NoAction_1();
+            copy_hopCount_0();
+            NoAction();
         }
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
-    @name("trill_forward") table trill_forward_0() {
+    @name("trill_forward") table trill_forward() {
         actions = {
-            forward_trill();
-            NoAction_2();
+            forward_trill_0();
+            NoAction_0();
         }
         key = {
             hdr.trill.egressRbridge: exact;
         }
-        default_action = NoAction_2();
+        default_action = NoAction_0();
     }
     apply {
-        trill_forward_0.apply();
-        fix_trill_header_0.apply();
+        trill_forward.apply();
+        fix_trill_header.apply();
     }
 }
 
@@ -245,12 +245,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

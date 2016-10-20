@@ -181,27 +181,27 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    @name("nop") action nop() {
+    @name("nop") action nop_0() {
     }
-    @name("mod_mac_adr") action mod_mac_adr(bit<8> egress_port, bit<48> srcmac, bit<48> dstmac) {
+    @name("mod_mac_adr") action mod_mac_adr_0(bit<8> egress_port, bit<48> srcmac, bit<48> dstmac) {
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    @name("tcam_tbl_stage_2") table tcam_tbl_stage() {
+    @name("tcam_tbl_stage_2") table tcam_tbl_stage_0() {
         actions = {
-            nop();
-            mod_mac_adr();
-            NoAction_1();
+            nop_0();
+            mod_mac_adr_0();
+            NoAction();
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
         }
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
     apply {
-        tcam_tbl_stage.apply();
+        tcam_tbl_stage_0.apply();
     }
 }
 
@@ -217,12 +217,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

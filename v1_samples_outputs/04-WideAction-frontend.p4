@@ -190,7 +190,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action1") action action1(bit<1> value1_1, bit<1> value1_2, bit<1> value1_3, bit<1> value1_4, bit<1> value1_5, bit<1> value1_6, bit<1> value1_7, bit<1> value1_8, bit<8> value8_1, bit<8> value8_2, bit<8> value8_3, bit<8> value8_4, bit<8> value8_5, bit<8> value8_6, bit<8> value8_7, bit<8> value8_8, bit<16> value16_1, bit<16> value16_2, bit<16> value16_3, bit<16> value16_4, bit<16> value16_5, bit<16> value16_6, bit<16> value16_7, bit<16> value16_8, bit<32> value32_1, bit<32> value32_2, bit<32> value32_3, bit<32> value32_4, bit<32> value32_5, bit<32> value32_6, bit<32> value32_7, bit<32> value32_8) {
+    @name("action1") action action1_0(bit<1> value1_1, bit<1> value1_2, bit<1> value1_3, bit<1> value1_4, bit<1> value1_5, bit<1> value1_6, bit<1> value1_7, bit<1> value1_8, bit<8> value8_1, bit<8> value8_2, bit<8> value8_3, bit<8> value8_4, bit<8> value8_5, bit<8> value8_6, bit<8> value8_7, bit<8> value8_8, bit<16> value16_1, bit<16> value16_2, bit<16> value16_3, bit<16> value16_4, bit<16> value16_5, bit<16> value16_6, bit<16> value16_7, bit<16> value16_8, bit<32> value32_1, bit<32> value32_2, bit<32> value32_3, bit<32> value32_4, bit<32> value32_5, bit<32> value32_6, bit<32> value32_7, bit<32> value32_8) {
         meta.md.field1_1 = value1_1;
         meta.md.field1_2 = value1_2;
         meta.md.field1_3 = value1_3;
@@ -224,9 +224,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.md.field32_7 = value32_7;
         meta.md.field32_8 = value32_8;
     }
-    @name("dmac") table dmac() {
+    @name("dmac") table dmac_0() {
         actions = {
-            action1();
+            action1_0();
             NoAction();
         }
         key = {
@@ -236,7 +236,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        dmac.apply();
+        dmac_0.apply();
     }
 }
 
@@ -246,12 +246,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

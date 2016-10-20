@@ -11,6 +11,12 @@ struct StageUse {
 };
 inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
     return out << (gress ? "egress" : "ingress"); }
+inline bool operator>>(cstring s, gress_t &gress) {
+    if (s == "ingress") gress = INGRESS;
+    else if (s == "egress") gress = EGRESS;
+    else return false;
+    return true;
+}
 #end
 
 #emit_impl
@@ -20,11 +26,23 @@ inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
 class Tofino::Pipe {
     Metadata    standard_metadata; // not visited
 #noconstructor
+    Pipe() = default;
     class thread_t {
         Tofino::Parser    parser = nullptr;
         MAU::TableSeq     mau = nullptr;
         Tofino::Deparser  deparser = nullptr;
         operator== { return parser == a.parser && mau == a.mau && deparser == a.deparser; }
+        toJSON {
+            json << json.indent << "\"parser\" : " << parser << "," << std::endl
+                 << json.indent << "\"mau\" : " << mau << "," << std::endl
+                 << json.indent << "\"deparser\" : " << deparser; }
+        fromJSON {
+            IR::Tofino::Pipe::thread_t * thread = new IR::Tofino::Pipe::thread_t();
+            json.load("parser", thread->parser);
+            json.load("mau", thread->mau);
+            json.load("deparser", thread->deparser);
+            return thread;
+        }
     }
     thread_t[2] thread = {};  // INGRESS and EGRESS
 #apply
@@ -55,13 +73,29 @@ abstract Tofino::Unit {
 }
 
 class InstanceRef : HeaderRef {
-    HeaderOrMetadata            obj;
+    ID                          name;
+    NullOK HeaderOrMetadata     obj;
     inline NameMap<InstanceRef> nested;
 #noconstructor
     InstanceRef(cstring prefix, ID n, Type t, bool forceMeta = false);
     InstanceRef(ID n, Type t, bool forceMeta = false) : InstanceRef(cstring(), n, t, forceMeta) {}
     HeaderOrMetadata baseRef() const override { return obj; }
-    toString { return obj->name; }
-    dbprint { out << obj; }
+    toString { return obj ? obj->name : name; }
+    dbprint { out << toString(); }
+}
+
+class TempVar : Expression {
+    bool        POV;
+    cstring     name;
+    static int  uid;
+#noconstructor
+    TempVar(Type t, bool p = false, const char *n = 0) : Expression(t), POV(p), name(n) {
+        if (!name) {
+            std::string n("$tmp");
+            n += std::to_string(++uid);
+            name = n; } }
+    TempVar(Type t, const char *n) : TempVar(t, false, n) {}
+    toString { return name; }
+    dbprint { out << name; }
 }
 

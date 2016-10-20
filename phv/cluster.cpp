@@ -20,7 +20,7 @@ Cluster::Cluster(PhvInfo &p) : phv_i(p)
 //***********************************************************************************
 //
 // preorder walk on IR tree to insert field operands in cluster set
-// 
+//
 //***********************************************************************************
 
 bool Cluster::preorder(const IR::Member* expression)
@@ -117,7 +117,7 @@ bool Cluster::preorder(const IR::Primitive* primitive)
 
         LOG3(field);
     }
-    dst_i = nullptr; 
+    dst_i = nullptr;
     if (! primitive->operands.empty())
     {
         dst_i = phv_i.field(primitive->operands[0]);
@@ -151,7 +151,7 @@ bool Cluster::preorder(const IR::Operation* operation)
 //***********************************************************************************
 //
 // postorder walk on IR tree
-// 
+//
 //***********************************************************************************
 
 void Cluster::postorder(const IR::Primitive* primitive)
@@ -168,7 +168,7 @@ void Cluster::postorder(const IR::Primitive* primitive)
 // end of IR walk epilogue
 // perform sanity checks
 // obtain unique clusters
-// 
+//
 //***********************************************************************************
 
 void Cluster::end_apply()
@@ -198,7 +198,7 @@ void Cluster::end_apply()
     }
     for(auto fp: delete_list)
     {
-        dst_map_i.erase(fp);						// erase map key
+        dst_map_i.erase(fp);                                            // erase map key
     }
     sanity_check_clusters_unique("end_apply..");
     //
@@ -273,9 +273,9 @@ void Cluster::insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rh
                     for(auto field: *(dst_map_i[rhs]))
                     {
                         dst_map_i[field] = dst_map_i[lhs];
-                        lhs_unique_i.erase(field);				// lhs_unique set erase field
+                        lhs_unique_i.erase(field);                              // lhs_unique set erase field
                     }
-                    delete dst_map_i_rhs;					// delete std::set
+                    delete dst_map_i_rhs;                                       // delete std::set
                 }
             }
             LOG3("lhs_unique..erase[" << std::endl << &lhs_unique_i << "lhs_unique..erase]");
@@ -286,7 +286,7 @@ void Cluster::insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rh
 //***********************************************************************************
 //
 // sanity checks
-// 
+//
 //***********************************************************************************
 
 void Cluster::sanity_check_field_range(const std::string& msg)
@@ -326,7 +326,7 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg)
 {
     // sanity check dst_map_i[] contains unique clusters only
     // forall clusters x,y
-    //		x intersect y = 0
+    //          x intersect y = 0
     //
     for(auto entry: dst_map_i)
     {

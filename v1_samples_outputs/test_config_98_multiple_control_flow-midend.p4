@@ -161,84 +161,84 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_2() {
+    @name("NoAction_2") action NoAction() {
     }
-    action NoAction_3() {
+    @name("NoAction_3") action NoAction_0() {
     }
-    @name("action_2") action action_0(bit<32> param0) {
+    @name("action_2") action action_2(bit<32> param0) {
         hdr.pkt.field_d_32 = param0;
     }
-    @name("do_nothing") action do_nothing() {
+    @name("do_nothing") action do_nothing_0() {
     }
-    @name("table_2") table table_4() {
+    @name("table_2") table table_0() {
         actions = {
-            action_0();
-            NoAction_2();
+            action_2();
+            NoAction();
         }
         key = {
             hdr.pkt.field_g_16: exact;
         }
-        default_action = NoAction_2();
+        default_action = NoAction();
     }
-    @name("table_3") table table_5() {
+    @name("table_3") table table_1() {
         actions = {
-            do_nothing();
-            NoAction_3();
+            do_nothing_0();
+            NoAction_0();
         }
         key = {
             hdr.pkt.field_g_16: exact;
         }
-        default_action = NoAction_3();
+        default_action = NoAction_0();
     }
     apply {
-        table_4.apply();
-        table_5.apply();
+        table_0.apply();
+        table_1.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    headers hdr_0;
-    metadata meta_0;
-    standard_metadata_t standard_metadata_0;
-    action NoAction_4() {
+    headers hdr_1;
+    metadata meta_1;
+    standard_metadata_t standard_metadata_1;
+    @name("NoAction_4") action NoAction_1() {
     }
-    action NoAction_5() {
+    @name("NoAction_5") action NoAction_6() {
     }
-    @name("action_0") action action_1(bit<32> param0) {
+    @name("action_0") action action_3(bit<32> param0) {
         hdr.pkt.field_b_32 = param0;
     }
-    @name("table_0") table table_7() {
+    @name("table_0") table table_2() {
         actions = {
-            action_1();
-            NoAction_4();
+            action_3();
+            NoAction_1();
         }
         key = {
             hdr.pkt.field_e_16: exact;
         }
-        default_action = NoAction_4();
+        default_action = NoAction_1();
     }
-    @name("pipe_0.action_1") action pipe_0_action_0(bit<32> param0) {
-        hdr_0.pkt.field_c_32 = param0;
+    @name("pipe_0.action_1") action pipe_0_action(bit<32> param0) {
+        hdr_1.pkt.field_c_32 = param0;
     }
-    @name("pipe_0.table_1") table pipe_0_table() {
+    @name("pipe_0.table_1") table pipe_0_table_0() {
         actions = {
-            pipe_0_action_0();
-            NoAction_5();
+            pipe_0_action();
+            NoAction_6();
         }
         key = {
-            hdr_0.pkt.field_f_16: exact;
+            hdr_1.pkt.field_f_16: exact;
         }
-        default_action = NoAction_5();
+        default_action = NoAction_6();
     }
     action act() {
-        hdr_0 = hdr;
-        meta_0 = meta;
-        standard_metadata_0 = standard_metadata;
+        hdr_1 = hdr;
+        meta_1 = meta;
+        standard_metadata_1 = standard_metadata;
     }
     action act_0() {
-        hdr = hdr_0;
-        meta = meta_0;
-        standard_metadata = standard_metadata_0;
+        hdr = hdr_1;
+        meta = meta_1;
+        standard_metadata = standard_metadata_1;
     }
     table tbl_act() {
         actions = {
@@ -253,9 +253,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         const default_action = act_0();
     }
     apply {
-        table_7.apply();
+        table_2.apply();
         tbl_act.apply();
-        pipe_0_table.apply();
+        pipe_0_table_0.apply();
         tbl_act_0.apply();
     }
 }
@@ -266,12 +266,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

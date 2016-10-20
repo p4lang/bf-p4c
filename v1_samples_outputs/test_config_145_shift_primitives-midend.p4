@@ -160,36 +160,36 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    @name("action_0") action action_0() {
+    @name("action_0") action action_4() {
         hdr.pkt.field_i_8 = hdr.pkt.field_j_8 << 2;
     }
-    @name("action_1") action action_1() {
+    @name("action_1") action action_5() {
         hdr.pkt.field_i_8 = 8w4;
     }
-    @name("action_2") action action_2() {
+    @name("action_2") action action_6() {
         hdr.pkt.field_i_8 = hdr.pkt.field_j_8 >> 5;
     }
-    @name("action_3") action action_3() {
+    @name("action_3") action action_7() {
         hdr.pkt.field_i_8 = 8w4;
     }
-    @name("table_0") table table_1() {
+    @name("table_0") table table_0() {
         actions = {
-            action_0();
-            action_1();
-            action_2();
-            action_3();
-            NoAction_1();
+            action_4();
+            action_5();
+            action_6();
+            action_7();
+            NoAction();
         }
         key = {
             hdr.pkt.field_a_32: ternary;
         }
         size = 512;
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
     apply {
-        table_1.apply();
+        table_0.apply();
     }
 }
 
@@ -204,12 +204,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

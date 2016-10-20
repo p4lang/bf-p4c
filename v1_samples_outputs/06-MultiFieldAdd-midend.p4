@@ -160,25 +160,25 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    @name("action1") action action1(bit<4> val1, bit<4> val2) {
+    @name("action1") action action1_0(bit<4> val1, bit<4> val2) {
         meta.md.field1 = meta.md.field1 + val1;
         meta.md.field2 = meta.md.field2 + val2;
     }
-    @name("dmac") table dmac_0() {
+    @name("dmac") table dmac() {
         actions = {
-            action1();
-            NoAction_1();
+            action1_0();
+            NoAction();
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 131072;
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
     apply {
-        dmac_0.apply();
+        dmac.apply();
     }
 }
 
@@ -188,12 +188,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

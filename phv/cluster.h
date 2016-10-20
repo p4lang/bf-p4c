@@ -29,9 +29,9 @@ class Cluster : public Inspector
     PhvInfo	&phv_i;		// phv object referenced through constructor
     //
     std::map<const PhvInfo::Field *, std::set<const PhvInfo::Field *>*> dst_map_i;
-				// map of field to cluster it belongs
+                                // map of field to cluster it belongs
     std::set<const PhvInfo::Field *> lhs_unique_i;
-				// maintains unique cluster ptrs
+                                // maintains unique cluster ptrs
     PhvInfo::Field *dst_i = nullptr;
 				// destination of current statement
     //

@@ -154,34 +154,34 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("a2") action a2() {
+    @name("a2") action a2_0() {
         hdr.ethernet.dstAddr = (bit<48>)meta.m1.f1;
     }
-    @name("t2") table t2() {
+    @name("t2") table t2_0() {
         actions = {
-            a2();
+            a2_0();
             NoAction();
         }
         default_action = NoAction();
     }
     apply {
-        t2.apply();
+        t2_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("a1") action a1(bit<8> p1) {
+    @name("a1") action a1_0(bit<8> p1) {
         meta.m1.f1 = p1;
     }
-    @name("t1") table t1() {
+    @name("t1") table t1_0() {
         actions = {
-            a1();
+            a1_0();
             NoAction();
         }
         default_action = NoAction();
     }
     apply {
-        t1.apply();
+        t1_0.apply();
     }
 }
 
@@ -191,12 +191,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

@@ -159,46 +159,46 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    action NoAction_2() {
+    @name("NoAction_2") action NoAction_0() {
     }
-    @name("nop") action nop() {
+    @name("nop") action nop_0() {
     }
-    @name("set_egress_port") action set_egress_port(bit<9> egress_port) {
+    @name("set_egress_port") action set_egress_port_0(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @name("set_bd") action set_bd(bit<12> bd) {
+    @name("set_bd") action set_bd_0(bit<12> bd) {
         hdr.l2_metadata.bd = bd;
     }
-    @name("dmac") table dmac_0() {
+    @name("dmac") table dmac() {
         actions = {
-            nop();
-            set_egress_port();
-            NoAction_1();
+            nop_0();
+            set_egress_port_0();
+            NoAction();
         }
         key = {
             hdr.l2_metadata.bd  : exact;
             hdr.ethernet.dstAddr: exact;
         }
         size = 131072;
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
-    @name("port_bd") table port_bd_0() {
+    @name("port_bd") table port_bd() {
         actions = {
-            set_bd();
-            NoAction_2();
+            set_bd_0();
+            NoAction_0();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact;
         }
         size = 288;
-        default_action = NoAction_2();
+        default_action = NoAction_0();
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) {
-            port_bd_0.apply();
-            dmac_0.apply();
+            port_bd.apply();
+            dmac.apply();
         }
     }
 }
@@ -209,12 +209,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

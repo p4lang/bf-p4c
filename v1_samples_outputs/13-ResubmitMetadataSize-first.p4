@@ -165,17 +165,6 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     }
 }
 
-struct struct_0 {
-    bit<32> field;
-    bit<32> field_0;
-    bit<32> field_1;
-    bit<32> field_2;
-    bit<32> field_3;
-    bit<32> field_4;
-    bit<32> field_5;
-    bit<32> field_6;
-}
-
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("a1") action a1(bit<32> d1, bit<32> d2, bit<32> d3, bit<32> d4, bit<32> d5, bit<32> d6, bit<32> d7, bit<32> d8) {
         meta.meta.f1 = d1;
@@ -186,7 +175,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.f6 = d6;
         meta.meta.f7 = d7;
         meta.meta.f8 = d8;
-        resubmit<struct_0>({ meta.meta.f1, meta.meta.f2, meta.meta.f3, meta.meta.f4, meta.meta.f5, meta.meta.f6, meta.meta.f7, meta.meta.f8 });
+        resubmit<tuple<bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>, bit<32>>>({ meta.meta.f1, meta.meta.f2, meta.meta.f3, meta.meta.f4, meta.meta.f5, meta.meta.f6, meta.meta.f7, meta.meta.f8 });
     }
     @name("t1") table t1() {
         actions = {
@@ -207,12 +196,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

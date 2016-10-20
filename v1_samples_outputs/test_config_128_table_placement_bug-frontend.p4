@@ -163,18 +163,18 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_0") action action_0(bit<16> param0) {
+    @name("action_0") action action_2(bit<16> param0) {
         hdr.pkt.field_f_16 = param0;
     }
-    @name("do_nothing") action do_nothing() {
+    @name("do_nothing") action do_nothing_0() {
     }
-    @name("action_1") action action_1(bit<16> param0) {
+    @name("action_1") action action_3(bit<16> param0) {
         hdr.pkt.field_g_16 = param0;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_2() {
         actions = {
-            action_0();
-            do_nothing();
+            action_2();
+            do_nothing_0();
             NoAction();
         }
         key = {
@@ -183,10 +183,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_3() {
         actions = {
-            action_1();
-            do_nothing();
+            action_3();
+            do_nothing_0();
             NoAction();
         }
         key = {
@@ -197,9 +197,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     apply {
         if (hdr.pkt.isValid()) 
-            table_0.apply();
+            table_2.apply();
         else 
-            table_1.apply();
+            table_3.apply();
     }
 }
 
@@ -214,12 +214,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

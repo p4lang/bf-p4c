@@ -22,6 +22,8 @@ tofino_backend_SOURCES = \
 	%reldir%/common/extract_maupipe.h \
 	%reldir%/common/field_defuse.cpp \
 	%reldir%/common/field_defuse.h \
+	%reldir%/common/header_stack.cpp \
+	%reldir%/common/header_stack.h \
 	%reldir%/common/remap_intrin.cpp \
 	%reldir%/common/remap_intrin.h \
 	%reldir%/common/param_binding.cpp \
@@ -45,6 +47,7 @@ tofino_backend_SOURCES = \
 	%reldir%/mau/memories.h \
 	%reldir%/mau/phv_constraints.cpp \
 	%reldir%/mau/phv_constraints.h \
+	%reldir%/mau/push_pop.h \
 	%reldir%/mau/resource_estimate.cpp \
 	%reldir%/mau/resource_estimate.h \
 	%reldir%/mau/resource.h \
@@ -157,7 +160,7 @@ cpplint_FILES += $(tofino_backend_SOURCES)
 -include newpa-tofinotests.mk
 
 
-tofinotests.mk: $(wildcard \
+tofinotests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
    $(srcdir)/testdata/p4_14_samples/*.p4 \
    $(srcdir)/testdata/p4_14_samples/switch_*/switch.p4 \
    $(srcdir)/%reldir%/v1_2_test/*.p4 \
@@ -171,7 +174,7 @@ tofinotests.mk: $(wildcard \
 #p4-16-tofinotests.mk: $(wildcard $(srcdir)/testdata/p4_16_samples/*.stf)
 #	@$(GENTESTS) $(srcdir) tofino $(srcdir)/%reldir%/runtest $(^:%.stf=%.p4) >$@ || ( rm $@ && false )
 
-newpa-tofinotests.mk: $(wildcard \
+newpa-tofinotests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
    $(srcdir)/testdata/p4_14_samples/*.stf \
    $(srcdir)/%reldir%/v1_2_test/*.stf \
    $(srcdir)/%reldir%/v1_samples/*.stf)
@@ -181,14 +184,14 @@ newpa-tofinotests.mk: $(wildcard \
 # These test input programs depend on Tofino in some way.
 
 # Exercise v12test back-end on Tofino-specific programs
-tofino-p14_to_16_tests.mk: $(wildcard \
+tofino-p14_to_16_tests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
     $(srcdir)/%reldir%/v1_samples/*.p4 \
     $(srcdir)/%reldir%/v1_samples/switch_*/switch.p4) \
     $(srcdir)/%reldir%/v1_samples
 	@$(GENTESTS) $(srcdir) p14_to_16 $(srcdir)/%reldir%/test-v12-sample.sh $^ >$@ || ( rm $@ && false )
 
 # Exercise bmv2 back-end on Tofino-specific programs
-tofino-bmv2tests.mk: $(wildcard \
+tofino-bmv2tests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
     $(srcdir)/%reldir%/v1_samples/*.p4 \
     $(srcdir)/%reldir%/v1_samples/switch_*/switch.p4) \
     $(srcdir)/%reldir%/v1_samples
@@ -216,7 +219,6 @@ XFAIL_TESTS += \
     tofino/%reldir%/v1_2_test/stateful_alu.p4.test \
     bmv2/%reldir%/v1_samples/02-FlexCounterActionProfile.p4.test \
     bmv2/%reldir%/v1_samples/action_profile.p4.test \
-    bmv2/%reldir%/v1_samples/switch_20160602/switch.p4.test \
     bmv2/%reldir%/v1_samples/test_config_117_first_tcam_range.p4.test \
     bmv2/%reldir%/v1_samples/test_config_118_tcam_range_2.p4.test \
     bmv2/%reldir%/v1_samples/test_config_119_tcam_range_3.p4.test \
@@ -238,7 +240,6 @@ XFAIL_TESTS += \
     bmv2/%reldir%/v1_samples/test_config_154_stateful_sampling.p4.test \
     bmv2/%reldir%/v1_samples/test_config_155_stateful_3_alus.p4.test \
     bmv2/%reldir%/v1_samples/test_config_156_indirect_stateful_cntr.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_157_random_number_generator.p4.test \
     bmv2/%reldir%/v1_samples/test_config_159_stateful_using_phv_field.p4.test \
     bmv2/%reldir%/v1_samples/test_config_160_stateful_single_bit_mode.p4.test \
     bmv2/%reldir%/v1_samples/test_config_163_stateful_table_math_unit.p4.test \
@@ -253,11 +254,6 @@ XFAIL_TESTS += \
     bmv2/%reldir%/v1_samples/test_config_173_stateful_bloom_filter.p4.test \
     bmv2/%reldir%/v1_samples/vk_basic_ipv4_20150706.p4.test \
     p14_to_16/%reldir%/v1_samples/02-FlexCounterActionProfile.p4.test \
-    p14_to_16/%reldir%/v1_samples/dileep12.p4.test \
-    p14_to_16/%reldir%/v1_samples/dileep2.p4.test \
-    p14_to_16/%reldir%/v1_samples/dileep4.p4.test \
-    p14_to_16/%reldir%/v1_samples/dileep8.p4.test \
-    p14_to_16/%reldir%/v1_samples/dileep.p4.test \
     p14_to_16/%reldir%/v1_samples/switch_20160602/switch.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_125_meter_pre_color.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_126_meter_pre_color_2.p4.test \
@@ -292,15 +288,28 @@ XFAIL_TESTS += \
     tofino/%reldir%/v1_samples/07-MacAddrCheck.p4.test \
     tofino/%reldir%/v1_samples/08-MacAddrCheck1.p4.test
 
-# These currently fail ixbar allocation (table too wide)
+# more failing gateway tests (odd bit alignments and range tests)
 XFAIL_TESTS += \
-    tofino/testdata/p4_14_samples/02-FullPHV1.p4.test \
-    tofino/testdata/p4_14_samples/03-FullPHV2.p4.test
+    tofino/testdata/p4_14_samples/gateway5.p4.test \
+    tofino-newpa/testdata/p4_14_samples/gateway5.p4.test \
+    tofino/testdata/p4_14_samples/gateway7.p4.test \
+    tofino-newpa/testdata/p4_14_samples/gateway7.p4.test
+
+# Parser failure.
+XFAIL_TESTS += \
+    tofino/testdata/p4_14_samples/parser_dc_full.p4.test \
+    tofino-newpa/testdata/p4_14_samples/parser_dc_full.p4.test
 
 # Generates broken PHV alloc (regs used by both ingress & egress)
 XFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/basic_routing.p4.test
 
-# Incorrect parser generation, broken tbl-cfg for 1 bit match, losing data in PHV?
-XFAIL_TESTS += \
-    tofino-newpa/testdata/p4_14_samples/07-MultiProtocol.p4.test
+# Missing constraints for header stack POV bits.
+XFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/instruct5.p4.test
+
+# Incorrect data layour in ixbar -- fails to get entire 128-bit value in one group.
+# intermittent failure?
+IFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/07-MultiProtocol.p4.test
+
+# Sometimes splits ternary match data across two groups when it shouldn't
+IFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/hitmiss.p4.test
 

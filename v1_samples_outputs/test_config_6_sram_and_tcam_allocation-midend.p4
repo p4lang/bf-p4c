@@ -181,80 +181,80 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_2() {
+    @name("NoAction_2") action NoAction() {
     }
-    @name("eg_drop") action eg_drop() {
+    @name("eg_drop") action eg_drop_0() {
         standard_metadata.egress_spec = 9w0;
     }
-    @name("permit") action permit() {
+    @name("permit") action permit_0() {
     }
-    @name("egress_acl") table egress_acl_0() {
+    @name("egress_acl") table egress_acl() {
         actions = {
-            eg_drop();
-            permit();
-            NoAction_2();
+            eg_drop_0();
+            permit_0();
+            NoAction();
         }
         key = {
             meta.routing_metadata.drop: ternary;
         }
-        default_action = NoAction_2();
+        default_action = NoAction();
     }
     apply {
-        egress_acl_0.apply();
+        egress_acl.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> ttl_0;
-    action NoAction_3() {
+    bit<8> ttl_1;
+    @name("NoAction_3") action NoAction_0() {
     }
-    action NoAction_4() {
+    @name("NoAction_4") action NoAction_1() {
     }
-    @name("do_nothing") action do_nothing() {
+    @name("do_nothing") action do_nothing_0() {
     }
-    @name("l3_set_index") action l3_set_index(bit<8> index) {
+    @name("l3_set_index") action l3_set_index_0(bit<8> index) {
         hdr.ipv4.diffserv = index;
     }
-    @name("ig_drop") action ig_drop() {
+    @name("ig_drop") action ig_drop_0() {
         meta.routing_metadata.drop = 1w1;
     }
-    @name("hop_ipv4") action hop_ipv4(bit<48> srcmac, bit<32> srcip, bit<48> dstmac, bit<9> egress_port) {
-        ttl_0 = hdr.ipv4.ttl;
-        ttl_0 = ttl_0 + 8w255;
+    @name("hop_ipv4") action hop_ipv4_0(bit<48> srcmac, bit<32> srcip, bit<48> dstmac, bit<9> egress_port) {
+        ttl_1 = hdr.ipv4.ttl;
+        ttl_1 = hdr.ipv4.ttl + 8w255;
         standard_metadata.egress_port = egress_port;
-        hdr.ipv4.ttl = ttl_0;
+        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
         hdr.ipv4.srcAddr = srcip;
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    @name("host_ip") table host_ip_0() {
+    @name("host_ip") table host_ip() {
         actions = {
-            do_nothing();
-            l3_set_index();
-            NoAction_3();
+            do_nothing_0();
+            l3_set_index_0();
+            NoAction_0();
         }
         key = {
             hdr.ipv4.dstAddr: exact;
         }
         max_size = 16384;
-        default_action = NoAction_3();
+        default_action = NoAction_0();
     }
-    @name("ipv4_routing") table ipv4_routing_0() {
+    @name("ipv4_routing") table ipv4_routing() {
         actions = {
-            ig_drop();
-            hop_ipv4();
-            NoAction_4();
+            ig_drop_0();
+            hop_ipv4_0();
+            NoAction_1();
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
             hdr.ipv4.srcAddr: exact;
         }
         max_size = 2048;
-        default_action = NoAction_4();
+        default_action = NoAction_1();
     }
     apply {
-        ipv4_routing_0.apply();
-        host_ip_0.apply();
+        ipv4_routing.apply();
+        host_ip.apply();
     }
 }
 
@@ -265,12 +265,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

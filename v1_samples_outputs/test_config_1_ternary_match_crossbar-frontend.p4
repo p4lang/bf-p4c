@@ -153,15 +153,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("modify_b") action modify_b(bit<8> my_param) {
+    @name("modify_b") action modify_b_0(bit<8> my_param) {
         hdr.my_test_config_1.b_8 = my_param;
     }
-    @name("just_no_op") action just_no_op() {
+    @name("just_no_op") action just_no_op_0() {
     }
-    @name("my_test_config_1_table") table my_test_config_1_table() {
+    @name("my_test_config_1_table") table my_test_config_1_table_0() {
         actions = {
-            modify_b();
-            just_no_op();
+            modify_b_0();
+            just_no_op_0();
             NoAction();
         }
         key = {
@@ -174,7 +174,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        my_test_config_1_table.apply();
+        my_test_config_1_table_0.apply();
     }
 }
 
@@ -189,12 +189,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

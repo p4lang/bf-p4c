@@ -153,58 +153,58 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    action NoAction_2() {
+    @name("NoAction_2") action NoAction_0() {
     }
-    action NoAction_3() {
+    @name("NoAction_3") action NoAction_4() {
     }
-    @name("setf1") action setf1(bit<32> val) {
+    @name("setf1") action setf1_0(bit<32> val) {
         hdr.data.f1 = val;
     }
-    @name("setf3") action setf3(bit<32> val) {
+    @name("setf3") action setf3_0(bit<32> val) {
         hdr.data.f3 = val;
     }
-    @name("setf3") action setf3_1(bit<32> val) {
+    @name("setf3") action setf3_2(bit<32> val) {
         hdr.data.f3 = val;
     }
-    @name("test1") table test1_0() {
+    @name("test1") table test1() {
         actions = {
-            setf1();
-            NoAction_1();
+            setf1_0();
+            NoAction();
         }
         key = {
             hdr.data.b1: exact;
         }
         size = 256;
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
-    @name("test2") table test2_0() {
+    @name("test2") table test2() {
         actions = {
-            setf3();
-            NoAction_2();
+            setf3_0();
+            NoAction_0();
         }
         key = {
             hdr.data.f2: ternary;
         }
-        default_action = NoAction_2();
+        default_action = NoAction_0();
     }
-    @name("test3") table test3_0() {
+    @name("test3") table test3() {
         actions = {
-            setf3_1();
-            NoAction_3();
+            setf3_2();
+            NoAction_4();
         }
         key = {
             hdr.data.f4: ternary;
         }
-        default_action = NoAction_3();
+        default_action = NoAction_4();
     }
     apply {
         if (hdr.data.b2 == 8w10) 
-            test1_0.apply();
+            test1.apply();
         else 
-            test2_0.apply();
-        test3_0.apply();
+            test2.apply();
+        test3.apply();
     }
 }
 
@@ -219,12 +219,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

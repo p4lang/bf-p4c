@@ -164,18 +164,18 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    action NoAction_1() {
+    @name("NoAction_1") action NoAction() {
     }
-    @name("set_flag") action set_flag() {
+    @name("set_flag") action set_flag_0() {
         hdr.my_test_config_1.o_1 = 1w1;
     }
-    @name("do_nothing") action do_nothing() {
+    @name("do_nothing") action do_nothing_0() {
     }
-    @name("test_exact_table") table test_exact_table_0() {
+    @name("test_exact_table") table test_exact_table() {
         actions = {
-            set_flag();
-            do_nothing();
-            NoAction_1();
+            set_flag_0();
+            do_nothing_0();
+            NoAction();
         }
         key = {
             hdr.my_test_config_1.a_32: exact;
@@ -186,10 +186,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.my_test_config_1.i_32: exact;
         }
         max_size = 16384;
-        default_action = NoAction_1();
+        default_action = NoAction();
     }
     apply {
-        test_exact_table_0.apply();
+        test_exact_table.apply();
     }
 }
 
@@ -204,12 +204,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }

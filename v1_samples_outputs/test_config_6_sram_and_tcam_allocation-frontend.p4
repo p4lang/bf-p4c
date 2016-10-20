@@ -181,15 +181,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("eg_drop") action eg_drop() {
+    @name("eg_drop") action eg_drop_0() {
         standard_metadata.egress_spec = 9w0;
     }
-    @name("permit") action permit() {
+    @name("permit") action permit_0() {
     }
-    @name("egress_acl") table egress_acl() {
+    @name("egress_acl") table egress_acl_0() {
         actions = {
-            eg_drop();
-            permit();
+            eg_drop_0();
+            permit_0();
             NoAction();
         }
         key = {
@@ -198,33 +198,33 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         default_action = NoAction();
     }
     apply {
-        egress_acl.apply();
+        egress_acl_0.apply();
     }
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("do_nothing") action do_nothing() {
+    @name("do_nothing") action do_nothing_0() {
     }
-    @name("l3_set_index") action l3_set_index(bit<8> index) {
+    @name("l3_set_index") action l3_set_index_0(bit<8> index) {
         hdr.ipv4.diffserv = index;
     }
-    @name("ig_drop") action ig_drop() {
+    @name("ig_drop") action ig_drop_0() {
         meta.routing_metadata.drop = 1w1;
     }
-    @name("hop") action hop(inout bit<8> ttl, bit<9> egress_port) {
+    @name("hop") action hop_0(inout bit<8> ttl, bit<9> egress_port) {
         ttl = ttl + 8w255;
         standard_metadata.egress_port = egress_port;
     }
-    @name("hop_ipv4") action hop_ipv4(bit<48> srcmac, bit<32> srcip, bit<48> dstmac, bit<9> egress_port) {
-        hop(hdr.ipv4.ttl, egress_port);
+    @name("hop_ipv4") action hop_ipv4_0(bit<48> srcmac, bit<32> srcip, bit<48> dstmac, bit<9> egress_port) {
+        hop_0(hdr.ipv4.ttl, egress_port);
         hdr.ipv4.srcAddr = srcip;
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    @name("host_ip") table host_ip() {
+    @name("host_ip") table host_ip_0() {
         actions = {
-            do_nothing();
-            l3_set_index();
+            do_nothing_0();
+            l3_set_index_0();
             NoAction();
         }
         key = {
@@ -233,10 +233,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 16384;
         default_action = NoAction();
     }
-    @name("ipv4_routing") table ipv4_routing() {
+    @name("ipv4_routing") table ipv4_routing_0() {
         actions = {
-            ig_drop();
-            hop_ipv4();
+            ig_drop_0();
+            hop_ipv4_0();
             NoAction();
         }
         key = {
@@ -247,8 +247,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        ipv4_routing.apply();
-        host_ip.apply();
+        ipv4_routing_0.apply();
+        host_ip_0.apply();
     }
 }
 
@@ -259,12 +259,12 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     }
 }
 
-control verifyChecksum(in headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control verifyChecksum(in headers hdr, inout metadata meta) {
     apply {
     }
 }
 
-control computeChecksum(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+control computeChecksum(inout headers hdr, inout metadata meta) {
     apply {
     }
 }
