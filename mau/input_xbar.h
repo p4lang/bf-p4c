@@ -67,6 +67,8 @@ struct IXBar {
         enum flags_t { NeedRange = 1, NeedXor = 2,
                        Align16lo = 4, Align16hi = 8, Align32lo = 16, Align32hi = 32 };
         bool            ternary;
+        bool            gw_search_bus;  int gw_search_bus_bytes;
+        bool            gw_hash_group;
         /* tracking individual bytes (or parts of bytes) placed on the ixbar */
         struct Byte {
             cstring     field;
@@ -104,7 +106,7 @@ struct IXBar {
         void clear() { use.clear(); hash_table_input = 0; bit_use.clear(); way_use.clear(); }
         void compute_hash_tables();
         int groups() const;  // how many different groups in this use
-        bool exact_comp(Use exact_use, int width) const;
+        bool exact_comp(const IXBar::Use *exact_use, int width) const;
     };
 
     /* A problem occurred with the way the IXbar was allocated that requires backtracking

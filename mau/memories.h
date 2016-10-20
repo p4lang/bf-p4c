@@ -157,7 +157,8 @@ struct Memories {
                              int row, int side, unsigned mask, bool is_oflow);
 
     bool allocate_all_gw();
-    table_alloc *find_correspond_exact_match();
+    table_alloc *find_corresponding_exact_match(cstring name);
+    bool gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int width_sect);
 
     bool alloc2Port(cstring table_name, int entries, int entries_per_word, Use &alloc);
     bool allocActionRams(cstring table_name, int width, int depth, Use &alloc);

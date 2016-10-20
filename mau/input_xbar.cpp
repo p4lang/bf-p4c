@@ -34,7 +34,7 @@ int IXBar::Use::groups() const {
     return rv;
 }
 
-bool IXBar::Use::exact_comp(IXBar::Use exact_use, int width) const {
+bool IXBar::Use::exact_comp(const IXBar::Use *exact_use, int width) const {
     unsigned gw_counted = 0, exact_counted = 0; 
     for (auto &b : use) {
         assert(b.loc.group >= 0 && b.loc.group < 16);
@@ -42,7 +42,7 @@ bool IXBar::Use::exact_comp(IXBar::Use exact_use, int width) const {
             gw_counted |= 1U << b.loc.group; } }
 
     int exact_groups = 0;
-    for (auto &b : exact_use.use) {
+    for (auto &b : exact_use->use) {
         if (!(1 & (exact_counted >> b.loc.group))) {
             ++exact_groups;
             exact_counted |= 1U << b.loc.group; } }
@@ -774,18 +774,27 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const IR::MAU::Table::Way &w
 
 bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                          bool second_try) {
+    alloc.gw_search_bus = false; alloc.gw_hash_group = false;
     CollectGatewayFields collect(phv);
     tbl->apply(collect);
     if (collect.info.empty() && collect.valid_offsets.empty()) return true;
     for (auto &info : collect.info) {
         int flags = 0;
-        if (info.second.xor_with)
+        if (info.second.xor_with) {
             flags |= IXBar::Use::NeedXor;
-        if (info.second.need_range)
+            alloc.gw_search_bus = true;
+            //FIXME: This need to be coordinated with the actual PHV!!!
+            alloc.gw_search_bus_bytes += (info.first->size + 7)/8;
+        }
+        if (info.second.need_range) {
             flags |= IXBar::Use::NeedRange;
+            alloc.gw_hash_group = true;
+        }
         add_use(alloc, info.first, flags); }
     for (auto &valid : collect.valid_offsets) {
-       add_use(alloc, phv.field(valid.first + ".$valid"), 0); }
+       add_use(alloc, phv.field(valid.first + ".$valid"), 0); 
+       alloc.gw_hash_group = true;
+    }
     vector<IXBar::Use::Byte *> xbar_alloced;
     if (!find_alloc(alloc, false, second_try, xbar_alloced, 0)) {
         alloc.clear();

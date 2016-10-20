@@ -191,14 +191,14 @@ static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Pl
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
         current_mem.add_table(p->table, &prev_resources[i]->match_ixbar,
                                &prev_resources[i]->memuse, p->entries);
-        current_mem.add_table(p->gw, &prev_resources[i]->match_ixbar,
+        current_mem.add_table(p->gw, &prev_resources[i]->gateway_ixbar,
                                &prev_resources[i]->memuse, -1);
         i++;
     }
 
     current_mem.add_table(next->table, &resources->match_ixbar,
                            &resources->memuse, entries);
-    current_mem.add_table(next->gw, &resources->match_ixbar, &resources->memuse, -1);
+    current_mem.add_table(next->gw, &resources->gateway_ixbar, &resources->memuse, -1);
     resources->memuse.clear();
     for (auto *prev_resource : prev_resources) {
         prev_resource->memuse.clear();
