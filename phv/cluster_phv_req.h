@@ -33,6 +33,7 @@ class Cluster_PHV
     std::vector<const PhvInfo::Field *> cluster_vec_i;
     							// cluster vec sorted by decreasing field width
     int id_i;						// cluster id
+    PHV_Container::Ingress_Egress gress_i;		// ingress or egress
     PHV_Container::PHV_Word width_i;			// container width in PHV group
     bool uniform_width_i=false;				// field widths differ in cluster
     int max_width_i;					// max width of field in cluster
@@ -43,6 +44,7 @@ class Cluster_PHV
     Cluster_PHV(std::set<const PhvInfo::Field *> *p);
     //
     std::vector<const PhvInfo::Field *>& cluster_vec()	{ return cluster_vec_i; }
+    PHV_Container::Ingress_Egress gress()		{ return gress_i; }
     PHV_Container::PHV_Word width()			{ return width_i; }
     void width(PHV_Container::PHV_Word w)		{ width_i = w; }
     bool uniform_width()				{ return uniform_width_i; }

@@ -9,7 +9,8 @@
 // 
 //***********************************************************************************
 
-PHV_MAU_Group::Container_Content::Container_Content(int l, int w, PHV_Container *c) : lo_i(l), hi_i(l+w-1), container_i(c)
+PHV_MAU_Group::Container_Content::Container_Content(int l, int w, PHV_Container *c)
+	: lo_i(l), hi_i(l+w-1), container_i(c)
 {
     BUG_CHECK(container_i, "*****PHV_MAU_Group::Container_Content constructor called with null container ptr*****");
 }
@@ -21,7 +22,7 @@ PHV_MAU_Group::Container_Content::Container_Content(int l, int w, PHV_Container 
 //***********************************************************************************
 
 PHV_MAU_Group::PHV_MAU_Group(PHV_Container::PHV_Word w, int n, int& phv_number, PHV_Container::Ingress_Egress gress)
-	: width_i(w), number_i(n)
+	: width_i(w), number_i(n), gress_i(gress)
 {
     // create containers within group
     for (int i=1; i <= (int)PHV_Container::Containers::MAX; i++)
@@ -170,7 +171,8 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
 // 2. each cluster field in separate containers
 //    addresses single-write constraint, surround effects within container, alignment issues (start @ 0)
 // 
-// 3. pick next cl, put in Group with available non-occupied <container, width>
+// 3a.honor MAU group In/Egress only constraints
+// 3b.pick next cl, put in Group with available non-occupied <container, width>
 //    s.t., after assignment, G.remaining_containers != 1 as forall cl, |cl| >= 2
 //    field f may need several containers, e.g., f:128 --> C1<32>,C2,C3,C4
 //    but each C single or partial field only => C does not contain 2 fields
@@ -229,7 +231,18 @@ PHV_MAU_Group_Assignments::cluster_placement_containers(std::map<PHV_Container::
         std::list<Cluster_PHV *> clusters_remove;
         for (auto cl: clusters_to_be_assigned)
         {
-            // 3. pick next cl, put in Group with available non-occupied <container, width>
+            //
+            // 3a.honor MAU group In/Egress only constraints
+            //
+            if(gress_in_compatibility(g->gress(), cl->gress()))
+            {   
+                // gress mismatch
+                // skip cluster for this MAU group
+                //
+                continue;
+            }
+            //
+            // 3b.pick next cl, put in Group with available non-occupied <container, width>
             //    s.t., after assignment, G.remaining_containers != 1 as forall cl, |cl| >= 2
             //    field f may need several containers, e.g., f:128 --> C1<32>,C2,C3,C4
             //    but each C single or partial field only => C does not contain 2 fields
@@ -511,7 +524,36 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
                     int m_n = j.first;
                     if(m_n >= cl_n)
                     {
-                        std::set<PHV_MAU_Group::Container_Content *> cc_set = *(j.second.begin());
+                        // honor gress compatible match
+                        //
+                        std::set<PHV_MAU_Group::Container_Content *> cc_set;
+                        cc_set.clear();
+                        for (auto cc_set_x: j.second)
+                        {
+                            if(! gress_in_compatibility((*(cc_set_x.begin()))->container()->gress(), cl->gress()))
+                            {
+                                cc_set = cc_set_x;
+                                //
+                                // remove matching PHV_MAU_Group Container Content from set_of_sets
+                                // if set_of_sets empty then remove map[m_w] entry
+                                //
+                                j.second.erase(cc_set_x);
+                                if(j.second.empty())
+                                {
+                                    i.second.erase(j.first);
+                                }
+                                //
+                                break;
+                            }
+                        }
+                        if(cc_set.empty())
+                        {   //
+                            // not gress compatible
+                            //
+                            LOG3("-----<" << cl_n << ',' << cl_w << ">---[" << m_w << "][" << m_n << ']');
+                            //
+                            continue;
+                        }
                         LOG3(".....<" << cl_n << ',' << cl_w << ">...[" << m_w << "][" << m_n << ']');
                         if(m_n > cl_n)
                         {   // create new container pack <mw, mn-cn>
@@ -553,18 +595,17 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
                             //
                             int start = cc->container()->avail_bits_hi() + 1 - cl_w;
                             cc->container()->taint(start, cl_w, cl->cluster_vec()[field++]);
+                            //
+                            // if container is fully packed, remove from group's available containers
+                            //
+                            if(cc->container()->status() == PHV_Container::Container_status::FULL)
+                            {
+                                cc->container()->phv_mau_group()->containers_pack().erase(cc->container());
+                            }
                         }
-                        //
                         // remove cl
-                        // remove matching PHV_MAU_Group Container Content from set_of_sets
-                        // if set_of_sets empty then remove map[m_w] entry
                         //
                         clusters_remove.push_back(cl);
-                        j.second.erase(j.second.begin());
-                        if(j.second.empty())
-                        {
-                            i.second.erase(j.first);
-                        }
                         //
                         found_match = true;	// next cluster cl
                         break;
@@ -605,12 +646,7 @@ void PHV_MAU_Group_Assignments::container_cohabit_summary()
             {
                 if(c->fields_in_container().size() > 1)
                 {
-                    std::set<const PhvInfo::Field *> *p_set = new std::set<const PhvInfo::Field *>;
-                    for (auto cc: c->fields_in_container())
-                    {
-                        p_set->insert(cc->field());
-                    }
-                    cohabit_fields_i[c->phv_number()] = p_set;
+                    cohabit_fields_i.push_back(c);
                 }
             }
         }
@@ -732,6 +768,7 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group &g)
     // mau group summary
     //
     out << 'G' << g.number() << '[' << (int)(g.width()) << ']';
+    out << (char) g.gress();
     if(g.avail_containers())
     {
         out << '(' << g.avail_containers() << ')';
@@ -839,11 +876,7 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group_Assignments &phv_mau_g
         << std::endl;
     for (auto cof: phv_mau_grps.cohabit_fields())
     {
-        out << "<PHV-" << cof.first << ':' << cof.second->size() << std::endl;
-        for (auto f: *(cof.second))
-        {
-            out << '\t' << f << std::endl; // summary only
-        }
+        out << '<' << cof->fields_in_container().size() << ':' << *cof << std::endl;
         out << '>' << std::endl;
     }
 

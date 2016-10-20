@@ -88,32 +88,63 @@ Cluster_PHV::Cluster_PHV(std::set<const PhvInfo::Field *> *p) : cluster_vec_i(p-
     {
         WARNING("*****Cluster_PHV called w/ nullptr cluster_set******");
     }
+    //
+    // set gress for this cluster
+    //
+    if(const_cast<const PhvInfo::Field *>(*(p->begin()))->gress == INGRESS)
+    {
+        gress_i = PHV_Container::Ingress_Egress::Ingress_Only;
+    }
+    else
+    {
+        if(const_cast<const PhvInfo::Field *>(*(p->begin()))->gress == EGRESS)
+        {
+            gress_i = PHV_Container::Ingress_Egress::Egress_Only;
+        }
+    }
+    //
+    // sorted vector, decreasing field width
+    //
+    auto width_req = 0;
     if((std::adjacent_find (cluster_vec_i.begin(), cluster_vec_i.end(),
 		[](const PhvInfo::Field *l, const PhvInfo::Field *r) { return l->size != r->size; }))
        == cluster_vec_i.end())
     {
         uniform_width_i = true;
-        max_width_i = cluster_vec_i.front()->size;
+        width_req = max_width_i = cluster_vec_i.front()->size;
     }
     else
     {
         uniform_width_i = false;
-        // get max field_width
-        max_width_i = 0;
-        for(auto pfield: cluster_vec_i)
-        {
-            max_width_i = std::max(pfield->size, max_width_i);
-        }
+        //
         // cluster vector = sorted cluster set, decreasing field width
         std::sort(cluster_vec_i.begin(), cluster_vec_i.end(),
 		[](const PhvInfo::Field *l, const PhvInfo::Field *r) { return l->size > r->size; });
+        //
+        width_req = max_width_i = cluster_vec_i.front()->size;
+        //
+        // <8:_32_16_16_16_16_16_16_16>	=> {9*b16} vs {8*b32}
+        // <8:_16_16_16_16_16_16_16_9>	=> {8*b16}
+        //
+        auto scale_down = 0;
+        for (auto pfield: cluster_vec_i)
+        {
+            if(pfield->size * 2 <= max_width_i)
+            {
+                scale_down++;
+            }
+        }
+        if(scale_down * 2 > (int) cluster_vec_i.size())
+        {
+            width_req = width_req / 2;
+        }
     }
     // container width
-    if(max_width_i > (int) PHV_Container::PHV_Word::b16)
+    if(width_req > (int) PHV_Container::PHV_Word::b16)
     {
         width_i = PHV_Container::PHV_Word::b32;
     }
-    else if(max_width_i > (int) PHV_Container::PHV_Word::b8) 
+    else if(width_req > (int) PHV_Container::PHV_Word::b8) 
     {
         width_i = PHV_Container::PHV_Word::b16;
     }
@@ -183,6 +214,7 @@ std::ostream &operator<<(std::ostream &out, Cluster_PHV &cp)
     }
     out << '>';
     out << '{' << cp.num_containers() << '*' << (int)(cp.width()) << '}';
+    out << (char) cp.gress();
 
     return out;
 }
