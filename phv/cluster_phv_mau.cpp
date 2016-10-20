@@ -202,7 +202,7 @@ PHV_MAU_Group_Assignments::cluster_placement_containers(std::map<PHV_Container::
             }
         }
     }
-    LOG3("..........clusters to be assigned..........");
+    LOG3("..........clusters to be assigned (" << clusters_to_be_assigned.size() << ").........." << std::endl);
     LOG3(clusters_to_be_assigned);
     //
     // fill PHV_MAU_Groups in reverse order 32b, 16b, 8b
@@ -218,14 +218,14 @@ PHV_MAU_Group_Assignments::cluster_placement_containers(std::map<PHV_Container::
             mau_groups_to_be_filled.push_back(g);
         }
     }
-    LOG3("..........mau groups to be filled..........");
+    LOG3("..........mau groups to be filled (" << mau_groups_to_be_filled.size() << ").........." << std::endl);
     LOG3(mau_groups_to_be_filled);
     //
     // assign clusters_to_be_assigned to mau_groups_to_be_filled
     // 2. each cluster field in separate containers
     //    addresses single-write constraint, surround effects within container, alignment issues (start @ 0)
     //
-    LOG3("..........container placements ..........");
+    LOG3("..........Initial Container Placements .........." << std::endl);
     for (auto g: mau_groups_to_be_filled)
     {
         std::list<Cluster_PHV *> clusters_remove;
@@ -356,7 +356,7 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices(std::set<PHV_MAU
             }
         }
     }
-    LOG3(std::endl << "----------sorted MAU Container Packs avail----------");
+    LOG3(std::endl << "----------sorted MAU Container Packs avail after Initial Container Placements----------");
     LOG3(aligned_container_slices_i);
 }
 
@@ -498,12 +498,12 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
         }
         return l->num_containers() > r->num_containers();
     });
-    LOG3("----------sorted clusters to be assigned (" << clusters_to_be_assigned.size() << ")-----");
+    LOG3("----------sorted clusters to be Packed (" << clusters_to_be_assigned.size() << ")-----" << std::endl);
     LOG3(clusters_to_be_assigned);
     //
     // pack sorted clusters<n,w> to containers[w][n]
     //
-    LOG3("..........packing..........");
+    LOG3("..........Packing.........." << std::endl);
     //
     std::list<Cluster_PHV *> clusters_remove;
     for (auto cl: clusters_to_be_assigned)
@@ -550,11 +550,11 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
                         {   //
                             // not gress compatible
                             //
-                            LOG3("-----<" << cl_n << ',' << cl_w << ">---[" << m_w << "][" << m_n << ']');
+                            LOG3("-----<" << cl_n << ',' << cl_w << '>' << (char) cl->gress() << "-----[" << m_w << "](" << m_n << ')' << j.second);
                             //
                             continue;
                         }
-                        LOG3(".....<" << cl_n << ',' << cl_w << ">...[" << m_w << "][" << m_n << ']');
+                        LOG3(".....<" << cl_n << ',' << cl_w << ">-->[" << m_w << "](" << m_n << ')');
                         if(m_n > cl_n)
                         {   // create new container pack <mw, mn-cn>
                             // n = m_n - cl_n containers
@@ -568,7 +568,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
                                 cc_set.erase(cc_set.begin());
                             }
                             i.second[n].insert(*cc_n);
-                            LOG3(".............[" << m_w << "][" << n << "]-->" << *cc_n);
+                            LOG3("\t==>[" << m_w << "]-->[" << m_w << "](" << n << ')' << std::endl << '\t' << *cc_n);
                         }
                         if(m_w > cl_w)
                         {   // create new container pack <mw-cw, cn>
@@ -583,7 +583,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
                             }
                             auto w = m_w - cl_w;
                             aligned_container_slices_i[w][cl_n].insert(*cc_w);
-                            LOG3(".............[" << w << "][" << cl_n << "]-->" << *cc_w);
+                            LOG3("\t==>(" << cl_n << ")-->[" << w << "](" << cl_n << ')' << std::endl << '\t' << *cc_w);
                         }
                         //
                         // update container tracking records based on cc_set ... <cl_n, cl_w>;
@@ -623,9 +623,9 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
     {
         clusters_to_be_assigned.remove(cl);
     }
-    LOG3(std::endl << "----------after packing ..... clusters not assigned (" << clusters_to_be_assigned.size() << ")-----");
+    LOG3(std::endl << "----------after Packing ..... clusters not assigned (" << clusters_to_be_assigned.size() << ")-----" << std::endl);
     LOG3(clusters_to_be_assigned);
-    LOG3("----------after packing ..... sorted MAU Container Packs avail----------");
+    LOG3("----------after Packing ..... sorted MAU Container Packs avail----------");
     LOG3(aligned_container_slices_i);
     //
 }//container_pack_cohabit
@@ -730,7 +730,7 @@ std::ostream &operator<<(std::ostream &out, std::set<PHV_MAU_Group::Container_Co
             out << c << ' ';
         }
     }
-    out << ')';
+    out << std::endl << "\t)";
 
     return out;
 }
@@ -744,12 +744,12 @@ std::ostream &operator<<(std::ostream &out, std::map<int, std::map<int, std::set
     {
         for (auto n: w.second)
         {
-            out << std::endl << "\t" << '[' << w.first << "][" << n.first << ']';
+            out << std::endl << "\t" << '[' << w.first << "](" << n.first << ')';
             if(n.second.size() > 1)
             {
                 out << '*' << n.second.size();
             }
-            out << "    \t";
+            out << std::endl << '\t';
             for(auto s: n.second)
             {
                 out << s;
@@ -784,7 +784,7 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group &g)
                 out << c << ' ';
             }
         }
-        out << '}';
+        out << std::endl << "\t}";
     }
     // summarize container slice groups
     if(! g.aligned_container_slices().empty())
@@ -793,7 +793,7 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group &g)
         {
             for (auto n: w.second)
             {
-                out << std::endl << "\t" << '[' << w.first << "][" << n.first << "]    \t" << n.second;
+                out << std::endl << "\t" << '[' << w.first << "](" << n.first << ')' << std::endl << '\t' << n.second;
             }
         }
     }
@@ -852,11 +852,14 @@ std::ostream &operator<<(std::ostream &out, std::vector<PHV_MAU_Group *> *phv_ma
 
 std::ostream &operator<<(std::ostream &out, std::vector<PHV_MAU_Group *> &phv_mau_vec)
 {
+    out << std::endl;
     out << "++++++++++ #mau_groups=" << phv_mau_vec.size() << " ++++++++++" << std::endl;
     for (auto m: phv_mau_vec)
     {
+        out << std::endl;
         out << m;
     }
+    out << std::endl;
 
     return out;
 }
@@ -865,7 +868,7 @@ std::ostream &operator<<(std::ostream &out, std::vector<PHV_MAU_Group *> &phv_ma
 //
 std::ostream &operator<<(std::ostream &out, PHV_MAU_Group_Assignments &phv_mau_grps)
 {
-    out << "++++++++++ PHV MAU Group Assignments ++++++++++" << std::endl;
+    out << "++++++++++ PHV MAU Group Assignments ++++++++++" << std::endl; 
     for (auto rit=phv_mau_grps.phv_mau_map().rbegin(); rit!=phv_mau_grps.phv_mau_map().rend(); ++rit)
     {
         out << rit->second;
@@ -873,6 +876,7 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group_Assignments &phv_mau_g
     // 
     out << std::endl
         << "++++++++++ Container Cohabit Summary .....(" << phv_mau_grps.cohabit_fields().size() << ")..... ++++++++++"
+        << std::endl
         << std::endl;
     for (auto cof: phv_mau_grps.cohabit_fields())
     {

@@ -95,6 +95,7 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c)
     //
     if(c)
     {
+        out << std::endl << '\t';
         out << "PHV-" << c->phv_number() << " C" << c->number() << (char) c->gress();
         if(c->fields_in_container().size() > 1)
         {
@@ -124,7 +125,6 @@ std::ostream &operator<<(std::ostream &out, PHV_Container &c)
     out << '\t' << &c
         << '\t' << c.bits()
         << c.fields_in_container();
-    out << std::endl;
 
     return out;
 }
