@@ -53,7 +53,7 @@ class PHV_MAU_Group
     PHV_Container::PHV_Word width_i;			// container width in PHV group
     int number_i;					// 1..4 [32], 1..6 [16], 1..4 [8]
     PHV_Container::Ingress_Egress gress_i;		// Ingress_Only, Egress_Only, Ingress_Or_Egress
-    int avail_containers_i = (int)PHV_Container::Containers::MAX;
+    int avail_containers_i;
 							// number of available containers
     std::vector<PHV_Container *> phv_containers_i;	// containers in this MAU group
     std::vector<Cluster_PHV *> cluster_phv_i;		// clusters in this MAU group
@@ -68,7 +68,8 @@ class PHV_MAU_Group
 							// map[1][1] --> (Cy [1..1])
  public:
     //
-    PHV_MAU_Group(PHV_Container::PHV_Word w, int n, int& phv_number, PHV_Container::Ingress_Egress gress);
+    PHV_MAU_Group(PHV_Container::PHV_Word w, int n, int& phv_number, PHV_Container::Ingress_Egress gress,
+		const int containers_in_group=(int)PHV_Container::Containers::MAX);
     //
     PHV_Container::PHV_Word width()			{ return width_i; }
     int number()					{ return number_i; }
@@ -97,12 +98,19 @@ class PHV_MAU_Group_Assignments
         {PHV_Container::PHV_Word::b16, 6},
         {PHV_Container::PHV_Word::b8, 4},
     };
-    //
+    // PHV
     std::map<PHV_Container::PHV_Word, int> phv_number_start_i
     {
         {PHV_Container::PHV_Word::b32, 0},
         {PHV_Container::PHV_Word::b16, 128},
         {PHV_Container::PHV_Word::b8, 64},
+    };
+    // T_PHV
+    std::map<PHV_Container::PHV_Word, int> t_phv_number_start_i
+    {
+        {PHV_Container::PHV_Word::b32, 256},
+        {PHV_Container::PHV_Word::b16, 320},
+        {PHV_Container::PHV_Word::b8, 288},
     };
     //
     std::map<std::pair<int, int>, PHV_Container::Ingress_Egress> ingress_egress_i
@@ -115,13 +123,15 @@ class PHV_MAU_Group_Assignments
         {std::make_pair(144, 159), PHV_Container::Ingress_Egress::Egress_Only},
     };
     //
-    std::map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>> PHV_MAU_i;
-							// sorted PHV requirements <num, width>,
-							// num decreasing then width decreasing
+    std::map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>> PHV_MAU_i;	// all PHV MAU groups
+    std::map<int, std::map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>> T_PHV_i;
+										// all TPHV collections
+    //
     std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>> aligned_container_slices_i;
 							// for all PHV_MAU_Groups
 							// sorted map <width increasing, num increasing>
 							// containing <set of <set of container_packs>>
+    //
     std::vector<PHV_Container *> cohabit_fields_i; 	// ranked set of container cohabits
 							// requests to TP to avoid single-write issue
     //
@@ -145,6 +155,11 @@ class PHV_MAU_Group_Assignments
     std::map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>& phv_mau_map()
     {
         return PHV_MAU_i;
+    }
+    //
+    std::map<int, std::map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>>& t_phv_map()
+    {
+        return T_PHV_i;
     }
     std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>& aligned_container_slices()
 							{ return aligned_container_slices_i; }

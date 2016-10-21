@@ -21,11 +21,12 @@ PHV_MAU_Group::Container_Content::Container_Content(int l, int w, PHV_Container 
 // 
 //***********************************************************************************
 
-PHV_MAU_Group::PHV_MAU_Group(PHV_Container::PHV_Word w, int n, int& phv_number, PHV_Container::Ingress_Egress gress)
-	: width_i(w), number_i(n), gress_i(gress)
+PHV_MAU_Group::PHV_MAU_Group(PHV_Container::PHV_Word w, int n, int& phv_number, PHV_Container::Ingress_Egress gress,
+	const int containers_in_group)
+	: width_i(w), number_i(n), gress_i(gress), avail_containers_i(containers_in_group)
 {
     // create containers within group
-    for (int i=1; i <= (int)PHV_Container::Containers::MAX; i++)
+    for (int i=1; i <= containers_in_group; i++)
     {
         PHV_Container *c = new PHV_Container(this, width_i, i, phv_number++, gress);
         phv_containers_i.push_back(c);
@@ -137,6 +138,38 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
             PHV_MAU_i[g->width()].push_back(g);
         }
     }
+    // create TPHV collections
+    for (auto &x: num_groups_i)
+    {
+        int phv_number = t_phv_number_start_i[x.first];
+        //
+        std::vector<PHV_MAU_Group *> t_phv_groups;
+        for (int i=1; i <= x.second; i++)
+        {
+            // any TPHV collection can be Ingress, Egress but not both
+            // which gress for this collection shall be determined during container placement
+            // initialize to Ingress_Or_Egress
+            //
+            PHV_MAU_Group *g = new PHV_MAU_Group(x.first, i, phv_number, PHV_Container::Ingress_Egress::Ingress_Or_Egress,
+		((int)PHV_Container::Containers::MAX)/2);
+            t_phv_groups.push_back(g);
+        }
+        // collections
+        int collection=0;
+        int i=0;
+        for (auto g: t_phv_groups)
+        {
+            for (auto c: g->phv_containers())
+            {
+                if(i++ % x.second == 0)
+                {
+                    collection++;
+                }
+                T_PHV_i[collection][g->width()].push_back(c);
+            }
+        }
+    }
+    //
     // cluster placement in containers conforming to MAU group constraints
     //
     std::list<Cluster_PHV *> clusters_to_be_assigned;
@@ -872,6 +905,19 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group_Assignments &phv_mau_g
     for (auto rit=phv_mau_grps.phv_mau_map().rbegin(); rit!=phv_mau_grps.phv_mau_map().rend(); ++rit)
     {
         out << rit->second;
+    }
+    // 
+    out << std::endl
+        << "++++++++++ T_PHV Collections ++++++++++" << std::endl; 
+    for (auto coll: phv_mau_grps.t_phv_map())
+    {
+        out << std::endl
+            << "Collection" << coll.first;
+        for (auto m: coll.second)
+        {
+            out << m.second;
+        }
+        out << std::endl;
     }
     // 
     out << std::endl
