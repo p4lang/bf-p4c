@@ -32,7 +32,7 @@ struct Memories {
     Alloc1D<cstring, SRAM_ROWS - 1>                    vert_overflow_bus;
     Alloc2D<cstring, SRAM_ROWS, MAPRAM_COLUMNS>        mapram_use;
     Alloc1D<cstring, SRAM_ROWS>                        stateful_bus;
-    int gw_bytes_per_sb [SRAM_ROWS][BUS_COUNT];
+    int gw_bytes_per_sb [SRAM_ROWS][BUS_COUNT] =  {{0}};
     struct mem_info {
         int match_tables;
         int match_bus_min;

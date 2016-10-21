@@ -1048,9 +1048,11 @@ bool Memories::gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int wid
     bytes_needed += groups / 2 * width; 
     int total_bytes = 16 * width;
     int remaining_bytes = total_bytes - bytes_needed - exact_ta->attached_gw_bytes;
-    if (remaining_bytes < ta->match_ixbar->gw_search_bus_bytes)
+    if (remaining_bytes < ta->match_ixbar->gw_search_bus_bytes) {
+        LOG3("Butter chicken");
         return false;
-    if (gw_bytes_per_sb[row][col] + ta->match_ixbar->gw_search_bus > 4)
+    }
+    if (gw_bytes_per_sb[row][col] + ta->match_ixbar->gw_search_bus_bytes > 4)
         return false;
     
     return true;
@@ -1061,9 +1063,12 @@ bool Memories::allocate_all_gw() {
     size_t index = 0;
     for (auto *ta : gw_tables) {
         auto name = ta->table->name + "$gw";
+        LOG3("Gateway Allocating " << name << " with "
+              << ta->match_ixbar->gw_search_bus_bytes << " search bus bytes");
         auto &alloc = (*ta->memuse)[name];
         bool found = false;
         for (int i = 0; i < SRAM_ROWS; i++) {
+            LOG3("About to start");
             if (gateway_use[i][0] && gateway_use[i][1]) continue;
             int current_gw = 0;
             if (gateway_use[i][0])
@@ -1077,20 +1082,23 @@ bool Memories::allocate_all_gw() {
                     continue;
                 }
                 if (ta->match_ixbar->gw_search_bus) {
+                    LOG3("First one");
                     if (!gw_search_bus_fit(ta, exact_ta, bus.second, i, j)) continue;
                 }
                 if (ta->match_ixbar->gw_hash_group) {
                     //FIXME: Currently all ways shared the same hash_group
+                    LOG3("In here");
+                    LOG3("group 1/2 " << ta->match_ixbar->bit_use[0].group << "/"
+                                      << exact_ta->match_ixbar->way_use[0].group);
                     if (ta->match_ixbar->bit_use[0].group 
                         != exact_ta->match_ixbar->way_use[0].group)
                          continue;
                 }
-                //At this point, the gateway can share the resources with the current
+                LOG3("Hello");
                 //search bus/hash bus
-                if (ta->match_ixbar->gw_hash_group) {
-                    exact_ta->attached_gw_bytes += ta->match_ixbar->gw_search_bus_bytes;
-                }
-                gw_bytes_per_sb[i][j] += ta->match_ixbar->gw_search_bus;
+                exact_ta->attached_gw_bytes += ta->match_ixbar->gw_search_bus_bytes;
+              
+                gw_bytes_per_sb[i][j] += ta->match_ixbar->gw_search_bus_bytes;
                 gateway_use[i][current_gw] = name;
                 alloc.row.emplace_back(i, j);
                 alloc.row.back().col.push_back(current_gw);
@@ -1100,7 +1108,9 @@ bool Memories::allocate_all_gw() {
             }
             if (found) break;
         }
+        LOG3("Found you");
         if (found) continue;
+        LOG3("Between the stuff");
         //No bus could be shared, just look for an open bus!
         for (int i = 0; i < SRAM_ROWS; i++) {
             if (gateway_use[i][0] && gateway_use[i][1]) continue;

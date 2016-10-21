@@ -56,6 +56,7 @@ bool IXBar::Use::exact_comp(const IXBar::Use *exact_use, int width) const {
                 }
                 groups_found++;
             }
+            index++;
         }
     }
     return exact_counted & gw_counted;
@@ -757,27 +758,35 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const IR::MAU::Table::Way &w
 
 bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                          bool second_try) {
+    LOG1("GW table name " << tbl->name);
     alloc.gw_search_bus = false; alloc.gw_hash_group = false;
+    alloc.gw_search_bus_bytes = 0;
     CollectGatewayFields collect(phv);
     tbl->apply(collect);
     if (collect.info.empty() && collect.valid_offsets.empty()) return true;
     for (auto &info : collect.info) {
+        LOG1("In here");
         int flags = 0;
         if (info.second.xor_with) {
             flags |= IXBar::Use::NeedXor;
             alloc.gw_search_bus = true;
             //FIXME: This need to be coordinated with the actual PHV!!!
             alloc.gw_search_bus_bytes += (info.first->size + 7)/8;
-        }
-        if (info.second.need_range) {
+            LOG1("xor");
+        } else if (info.second.need_range) {
             flags |= IXBar::Use::NeedRange;
             alloc.gw_hash_group = true;
+            LOG1("range");
+        } else {
+            alloc.gw_search_bus = true;
+            alloc.gw_search_bus_bytes += (info.first->size + 7)/8;
         }
         add_use(alloc, info.first, &info.second.bits, flags); }
     for (auto &valid : collect.valid_offsets) {
         add_use(alloc, phv.field(valid.first + ".$valid")); 
         alloc.gw_hash_group = true;
     }
+    LOG1("Total bytes out is " << alloc.gw_search_bus_bytes);
     vector<IXBar::Use::Byte *> xbar_alloced;
     if (!find_alloc(alloc, false, second_try, xbar_alloced, 0)) {
         alloc.clear();
