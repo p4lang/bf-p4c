@@ -67,7 +67,7 @@ const IR::ActionFunction *createActionFunction(const IR::P4Action *ac,
     for (auto param : *ac->parameters->getEnumerator()) {
         if ((param->direction == IR::Direction::None) ||
             ((!args || arg_idx >= args->size()) && param->direction == IR::Direction::In)) {
-            auto arg = new IR::ActionArg(param->srcInfo, param->type, param->name);
+            auto arg = new IR::ActionArg(param->srcInfo, param->type, rv->name, param->name);
             setup.add_arg(arg);
             rv->args.push_back(arg);
         } else {

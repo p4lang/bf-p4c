@@ -326,7 +326,7 @@ class MauAsmOutput::EmitAction : public Inspector {
         return false; }
     bool preorder(const IR::ActionArg *a) override {
         assert(sep);
-        out << sep << *a;
+        out << sep << a->toString();
         sep = ", ";
         return false; }
     void postorder(const IR::MAU::Instruction *) override {
@@ -353,7 +353,7 @@ class MauAsmOutput::EmitAction : public Inspector {
         return false; }
     bool preorder(const IR::Slice *sl) override {
         if (sep && sl->e0->is<IR::ActionArg>()) {
-            out << sep << *sl->e0 << '(' << *sl->e2 << ".." << *sl->e1 << ')';
+            out << sep << sl->e0->toString() << '(' << *sl->e2 << ".." << *sl->e1 << ')';
             sep = ", ";
             return false; }
         return preorder(static_cast<const IR::Expression *>(sl)); }
