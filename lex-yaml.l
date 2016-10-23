@@ -65,7 +65,7 @@ ID [A-Za-z_@$]([-.]?*[A-Za-z0-9_@$])*
                             indent.pop();
                             return UNINDENT; }
                         BEGIN(NORMAL); }
-<LINESTART>[ \t]*\n   { lineno++; }
+<LINESTART>[ \t\r]*\n { lineno++; }
 
 [[({]             { parens++; return *yytext; }
 [])}]             { if (--parens < 0) parens = 0;
@@ -74,7 +74,7 @@ ID [A-Za-z_@$]([-.]?*[A-Za-z0-9_@$])*
                     if (parens == 0) {
                         BEGIN(LINESTART);
                         return '\n'; } }
-[ \t]+              ;
+[ \t\r]+            ;
 ".."              { return DOTDOT; }
 {ID}              { yylval.str = strdup(yytext); return ID; }
 [0-9_]+           { return parse_num(&yylval, yytext, 10); }
