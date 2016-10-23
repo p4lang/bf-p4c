@@ -148,10 +148,10 @@ class Table : Tofino::Unit {
         auto &gateway_inhibit(v.flow_clone());
         gateway_inhibit.visit(gateway_payload, "gateway_payload");
         v.visit(match_table, "match_table");
-        auto &clone(v.flow_clone());
         if (match_table) {
+            auto &clone(v.flow_clone());
+            v.flow_dead();
             auto &default_action(clone.flow_clone());
-            bool need_default_action = false;
             for (auto &action : Values(actions)) {
                 auto &clone2(clone.flow_clone());
                 clone2.visit(action);
@@ -159,20 +159,18 @@ class Table : Tofino::Unit {
                     clone2.visit(next.at(action->name), action->name.name);
                     v.flow_merge(clone2);
                 } else {
-                    default_action.flow_merge(clone2);
-                    need_default_action = true; } }
-            if (next.count("$default")) {
+                    default_action.flow_merge(clone2); } }
+            if (next.count("$default"))
                 default_action.visit(next.at("$default"), "$default");
-                need_default_action = true; }
-            else if (next.count("$hit")) {
+            else if (next.count("$hit"))
                 default_action.visit(next.at("$hit"), "$hit");
-                need_default_action = true; }
-            if (need_default_action)
-                v.flow_merge(default_action);
+            v.flow_merge(default_action);
             if (next.count("$miss")) {
                 auto &clone2(clone.flow_clone());
                 clone2.visit(next.at("$miss"), "$miss");
-                v.flow_merge(clone2); } }
+                v.flow_merge(clone2); }
+        } else {
+            v.flow_dead(); }
         std::set<cstring> gw_next;
         for (auto &gw : gateway_rows) {
             if (gw.second && next.count(gw.second) && !gw_next.count(gw.second)) {

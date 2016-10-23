@@ -24,6 +24,8 @@ tofino_backend_SOURCES = \
 	%reldir%/common/field_defuse.h \
 	%reldir%/common/header_stack.cpp \
 	%reldir%/common/header_stack.h \
+	%reldir%/common/live_at_entry.cpp \
+	%reldir%/common/live_at_entry.h \
 	%reldir%/common/remap_intrin.cpp \
 	%reldir%/common/remap_intrin.h \
 	%reldir%/common/param_binding.cpp \

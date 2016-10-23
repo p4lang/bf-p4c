@@ -229,7 +229,7 @@ int IXBar::found_bytes_big_group(big_grp_use *grp, vector<IXBar::Use::Byte *> &u
             break;
         for (auto &p : Values(fields.equal_range(need.field))) {
             if (p.byte == 5) {
-                if ((grp->big_group == p.group/2) && (byte_group_use[p.group].second == need.lo)) {
+                if ((grp->big_group == p.group/2) && (byte_group_use[p.group/2].second == need.lo)) {
                     need.loc = p;
                     found_bytes--; bytes_placed++;
                     unalloced.erase(unalloced.begin() + i);
