@@ -97,7 +97,7 @@ void GatewayTable::setup(VECTOR(pair_t) &data) {
             layout[1].bus = kv.value.i;
             if (layout[1].lineno < 0)
                 layout[1].lineno = kv.value.lineno;
-        } else if (kv.key == "gateway_unit") {
+        } else if (kv.key == "gateway_unit" || kv.key == "unit") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
             if (kv.value.i < 0 || kv.value.i > 1)
                 error(kv.value.lineno, "gateway unit %d out of range", kv.value.i);
@@ -192,9 +192,19 @@ void GatewayTable::pass1() {
             error(layout[1].lineno, "payload_bus with no payload_row in gateway");
         else if (match_table)
             error(layout[1].lineno, "payload_row/bus on gateway attached to table");
+        else if (auto *old = stage->gw_payload_use[layout[1].row][layout[1].bus & 1])
+            error(layout[1].lineno, "payload %d.%d already in use by table %s",
+                  layout[1].row, layout[1].bus & 1, old->name());
+        else
+            stage->gw_payload_use[layout[1].row][layout[1].bus & 1] = this;
     } else if (have_payload && !match_table)
         error(have_payload, "payload on standalone gateway requires explicit payload_row");
-    if (gw_unit < 0) gw_unit = layout[0].bus;
+    if (gw_unit >= 0) {
+        if (auto *old = stage->gw_unit_use[layout[0].row][gw_unit])
+            error(layout[0].lineno, "gateway %d.%d already in use by table %s", layout[0].row,
+                  gw_unit, old->name());
+        else
+            stage->gw_unit_use[layout[0].row][gw_unit] = this; }
     if (input_xbar)
         input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
     else
@@ -228,12 +238,10 @@ void GatewayTable::pass1() {
     if (shift < 0) shift = 0;
     LOG3("shift=" << shift << " ignore=0x" << hex(ignore));
     for (auto &line : table) {
-#if 0
-        if ((line.val.word0 & (ignore >> shift)) != (ignore >> shift))
-            error(line.lineno, "Not ignoring bits not in match of gateway");
-        if ((line.val.word1 & (ignore >> shift)) != (ignore >> shift))
-            warning(line.lineno, "Not wildcarding bits not in match of gateway");
-#endif
+        auto ign = ~(line.val.word0 ^ line.val.word1);
+        if (ign == 0) ign = line.val.word0;
+        if ((ign & ~(~ignore >> shift)) != ~(~ignore >> shift))
+            warning(line.lineno, "Trying to match on bits not in match of gateway");
         line.val.word0 = (line.val.word0 << shift) | ignore;
         line.val.word1 = (line.val.word1 << shift) | ignore; }
 }
@@ -242,6 +250,27 @@ void GatewayTable::pass2() {
     if (logical_id < 0)  {
         if (match_table) logical_id = match_table->logical_id;
         else choose_logical_id(); }
+    if (gw_unit < 0) {
+        if (!stage->gw_unit_use[layout[0].row][layout[0].bus]) {
+            gw_unit = layout[0].bus;
+        } else for (int i = 0; i < 2; ++i) {
+            if (!stage->gw_unit_use[layout[0].row][i]) {
+                gw_unit = i;
+                break; } }
+        if (gw_unit < 0)
+            error(layout[0].lineno, "No gateway units available on row %d", layout[0].row);
+        else
+            stage->gw_unit_use[layout[0].row][gw_unit] = this; }
+    if (Table *tbl = match_table) {
+        if (auto *tmatch = dynamic_cast<TernaryMatchTable *>(tbl))
+            tbl = tmatch->indirect;
+        if (tbl)
+            for (auto &row : tbl->layout)
+                if (auto *old = stage->gw_payload_use[row.row][row.bus & 1])
+                    error(lineno, "payload %d.%d already in use by table %s",
+                          row.row, row.bus & 1, old->name());
+                else
+                    stage->gw_payload_use[row.row][row.bus & 1] = this; }
     if (input_xbar) input_xbar->pass2(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
 }
 

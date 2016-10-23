@@ -55,6 +55,8 @@ public:
     Alloc2D<Table *, TCAM_ROWS, TCAM_UNITS_PER_ROW>     tcam_use;
     Alloc2D<Table *, TCAM_ROWS, 2>                      tcam_match_bus_use;
     Alloc2D<Table *, SRAM_ROWS, 2>                      tcam_indirect_bus_use;
+    Alloc2D<Table *, SRAM_ROWS, 2>                      gw_unit_use;
+    Alloc2D<Table *, SRAM_ROWS, 2>                      gw_payload_use;
     Alloc1D<Table *, LOGICAL_TABLES_PER_STAGE>          logical_id_use;
     Alloc1D<Table *, TCAM_TABLES_PER_STAGE>             tcam_id_use;
     Alloc1D<std::vector<InputXbar *>, EXACT_XBAR_GROUPS>exact_ixbar;
