@@ -80,10 +80,12 @@ struct Memories {
         int provided_entries;
         int calculated_entries;
         int attached_gw_bytes;
+        table_alloc *table_link;
         explicit table_alloc(const IR::MAU::Table *t, const IXBar::Use *mi,
                              map<cstring, Memories::Use> *mu, int e)
                 : table(t), match_ixbar(mi), memuse(mu), provided_entries(e),
-                  calculated_entries(0) {}
+                  calculated_entries(0), attached_gw_bytes(0), table_link(nullptr) {}
+        void link_table(table_alloc *ta) {table_link = ta;}
     };
 
     struct SRAM_group {
@@ -116,8 +118,8 @@ struct Memories {
 
     void clear();
     void clear_table_vectors();
-    void add_table(const IR::MAU::Table *t, const IXBar::Use *mi,
-                   map<cstring, Memories::Use> *mu, int entries);
+    void add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
+                   TableResourceAlloc *resources, int entries);
     bool analyze_tables(mem_info &mi);
     void calculate_column_balance(mem_info &mi, unsigned &row);
     bool allocate_all();

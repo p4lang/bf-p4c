@@ -32,8 +32,21 @@ void Memories::clear_table_vectors() {
     gw_tables.clear();
 }
 
-/* Creates a new table_alloc object for each of the tables within the memory allocation */
-void Memories::add_table(const IR::MAU::Table *t, const IXBar::Use *mi,
+/* Creates a new table_alloc object for each of the taibles within the memory allocation */
+
+void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
+                         TableResourceAlloc *resources, int entries) {
+    auto *ta = new table_alloc(t, &resources->match_ixbar, &resources->memuse, entries);
+    tables.push_back(ta);
+    if (gw != nullptr)  {
+        auto *ta_gw = new table_alloc(gw, &resources->gateway_ixbar, &resources->memuse, -1);
+        ta_gw->link_table(ta);
+        tables.push_back(ta_gw);
+    }
+}
+
+/*
+void Memories::add_table(const IR::MAU::Table *t, const IXBar::Use *mi, 
                          map<cstring, Memories::Use> *mu, int entries) {
     if (t != nullptr) {
         auto *ta = new table_alloc(t, mi, mu, entries);
@@ -41,6 +54,7 @@ void Memories::add_table(const IR::MAU::Table *t, const IXBar::Use *mi,
         LOG3("Adding table " << t->name << " with " << entries << " entries.");
     }
 }
+*/
 
 /* Function that tests whether all added tables can be allocated to the stage */
 bool Memories::allocate_all() {
@@ -133,6 +147,9 @@ bool Memories::analyze_tables(mem_info &mi) {
     for (auto *ta : tables) {
         if (ta->provided_entries == -1 || ta->provided_entries == 0) {
             auto name = ta->table->name + "$gw";
+            if (ta->table_link != nullptr)
+                name = ta->table_link->table->name + "$gw";
+               
             (*ta->memuse)[name].type = Use::GATEWAY;
             gw_tables.push_back(ta);
             LOG4("Gateway table for " << ta->table->name);
@@ -1063,6 +1080,8 @@ bool Memories::allocate_all_gw() {
    size_t index = 0;
     for (auto *ta : gw_tables) {
         auto name = ta->table->name + "$gw";
+        if (ta->table_link != nullptr)
+            name = ta->table_link->table->name + "$gw";
         LOG3("Gateway Allocating " << name << " with "
               << ta->match_ixbar->gw_search_bus_bytes << " search bus bytes");
         auto &alloc = (*ta->memuse)[name];
@@ -1075,7 +1094,9 @@ bool Memories::allocate_all_gw() {
                 current_gw = 1;
             for (int j = 0; j < BUS_COUNT; j++) {
                 auto bus = sram_match_bus[i][j];
-                if (!bus.first) continue;
+                //FIXME: This is the punt based on the layout issues, later remove
+                // the gateway_use[i][j]
+                if (!bus.first || gateway_use[i][j]) continue;
                 table_alloc *exact_ta = find_corresponding_exact_match(bus.first);
                 //FIXME: this is just a temporary patch
                 if (exact_ta == nullptr) {
