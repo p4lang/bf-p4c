@@ -715,6 +715,9 @@ void PHV_MAU_Group_Assignments::consolidate_slices_in_group()
         {
             if(n.second.size() > 1)
             {
+                // multiple sets in set of sets
+                // attempt to consolidate
+                //
                 std::map<PHV_MAU_Group *, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>> g_lo;
                 for (auto cc_set: n.second)
                 {
@@ -722,12 +725,17 @@ void PHV_MAU_Group_Assignments::consolidate_slices_in_group()
                     int lo = (*(cc_set.begin()))->lo();
                     g_lo[c->phv_mau_group()][lo].insert(cc_set);
                 }
+                // all elements of g_lo[g][lo] must be used for aligned_slices[w][n]
+                //
                 for (auto g: g_lo)
                 {
+                    aligned_container_slices_i[w.first][n.first].clear();
                     for (auto l: g.second)
                     {
                         if(l.second.size() > 1)
-                        {
+                        {   //
+                            // make a composite set from all sets in l.second
+                            //
                             std::set<PHV_MAU_Group::Container_Content *> *set_u = new std::set<PHV_MAU_Group::Container_Content *>;
                             for (auto cc_set: l.second)
                             {
@@ -736,8 +744,12 @@ void PHV_MAU_Group_Assignments::consolidate_slices_in_group()
                                     set_u->insert(cc);
                                 }
                             }
-                            aligned_container_slices_i[w.first][n.first].clear();
                             aligned_container_slices_i[w.first][n.first].insert(*set_u);
+                        }
+                        else
+                        {   // use existing singleton set
+                            // 
+                            aligned_container_slices_i[w.first][n.first].insert(*(l.second.begin()));
                         } 
                     }
                 }
@@ -949,7 +961,11 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group &g)
         {
             for (auto n: w.second)
             {
-                out << std::endl << "\t" << '[' << w.first << "](" << n.first << ')' << std::endl << '\t' << n.second;
+                out << std::endl << "\t" << '[' << w.first << "](" << n.first << ')' << std::endl;
+                for (auto s: n.second)
+                {
+                    out << '\t' << s << std::endl;
+                }
             }
         }
     }
