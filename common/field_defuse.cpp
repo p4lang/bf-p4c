@@ -183,7 +183,17 @@ void dump(const FieldDefUse &a) { std::cout << a; }
 
 struct code { int id; };
 std::ostream &operator<<(std::ostream &out, const code &c) {
-    return out << char('a' + c.id/26) << char('a' + c.id%26);
+    switch (c.id/26/26) {
+    case 0:
+        return out << char('a' + c.id/26) << char('a' + c.id%26);
+    case 1:
+        return out << char('A' + c.id/26 - 26) << char('a' + c.id%26);
+    case 2:
+        return out << char('a' + c.id/26 - 52) << char('A' + c.id%26);
+    case 3:
+        return out << char('A' + c.id/26 - 78) << char('A' + c.id%26);
+    default:
+        return out << "??"; }
 }
 
 void FieldDefUse::end_apply(const IR::Node *) {
