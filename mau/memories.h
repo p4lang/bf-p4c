@@ -24,7 +24,7 @@ struct Memories {
     Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>          tcam_use;
     Alloc2D<cstring, SRAM_ROWS, 2>                     gateway_use;              
     Alloc2D<std::pair<cstring, int>, SRAM_ROWS, 2>     sram_match_bus;
-    Alloc2D<std::pair<cstring, int>, SRAM_ROWS, 2>     sram_search_bus;
+    Alloc2D<std::pair<cstring, int>, SRAM_ROWS, 2>     gw_search_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     sram_print_match_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     action_data_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     tind_bus;

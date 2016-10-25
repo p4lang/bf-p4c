@@ -8,7 +8,7 @@ void Memories::clear() {
     tcam_use.clear();
     mapram_use.clear();
     sram_match_bus.clear();
-    sram_search_bus.clear();
+    gw_search_bus.clear();
     sram_print_match_bus.clear();
     tind_bus.clear();
     action_data_bus.clear();
@@ -1059,8 +1059,8 @@ bool Memories::gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int wid
 }
 
 /* Allocates all gateways */
-bool Memories::allocate_all_gw() {
-    size_t index = 0;
+bool Memories::allocate_all_gw() { 
+   size_t index = 0;
     for (auto *ta : gw_tables) {
         auto name = ta->table->name + "$gw";
         LOG3("Gateway Allocating " << name << " with "
@@ -1093,6 +1093,7 @@ bool Memories::allocate_all_gw() {
                     if (ta->match_ixbar->bit_use[0].group 
                         != exact_ta->match_ixbar->way_use[0].group)
                          continue;
+                    LOG3("Yo");
                 }
                 LOG3("Hello");
                 //search bus/hash bus
@@ -1136,6 +1137,7 @@ bool Memories::allocate_all_gw() {
     if (gw_tables.size() != index)
         return false;
     return true;
+
 /*
     int row = 0; int column = 0;
     size_t index = 0;
