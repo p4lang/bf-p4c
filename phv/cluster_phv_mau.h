@@ -58,7 +58,8 @@ class PHV_MAU_Group
     std::vector<PHV_Container *> phv_containers_i;	// containers in this MAU group
     std::vector<Cluster_PHV *> cluster_phv_i;		// clusters in this MAU group
     std::set<PHV_Container *> containers_pack_i;	// containers available for packing
-    std::map<int, std::map<int, std::set<Container_Content *>>> aligned_container_slices_i;
+							// some containers may be assigned to Ingress, others Egress
+    std::map<int, std::map<int, std::set<std::set<Container_Content *>>>> aligned_container_slices_i;
 							// [8..15] [3..15] => 2[8..15] [3..7]
 							// map[8][2] --> (Cx[8..15], Cy[8..15]
 							// map[5][1]--> (Cy[3..7]
@@ -66,6 +67,8 @@ class PHV_MAU_Group
 							// map[3][3] --> (Cx[5..7], Cy, Cz)
 							// map[3][2] --> (Cx[2..4], Cy)
 							// map[1][1] --> (Cy [1..1])
+							// ingress slices, egress slices can have same width, num
+							// [w](n) --> ((Ingress set) (Egress set))
  public:
     //
     PHV_MAU_Group(PHV_Container::PHV_Word w, int n, int& phv_number, PHV_Container::Ingress_Egress gress,
@@ -79,11 +82,13 @@ class PHV_MAU_Group
     std::vector<PHV_Container *>& phv_containers()	{ return phv_containers_i; }
     std::vector<Cluster_PHV *>& clusters()		{ return cluster_phv_i; }
     std::set<PHV_Container *>& containers_pack()	{ return containers_pack_i; }
+    void create_aligned_container_slices(std::list<PHV_Container *>&);
     void create_aligned_container_slices();
-    std::map<int, std::map<int, std::set<Container_Content *>>>& aligned_container_slices()
+    std::map<int, std::map<int, std::set<std::set<Container_Content *>>>>& aligned_container_slices()
 							{ return aligned_container_slices_i; }
     //
     void sanity_check_container_packs(const std::string&);
+    void sanity_check_container_fields_gress(const std::string&);
 };
 //
 //
@@ -145,6 +150,7 @@ class PHV_MAU_Group_Assignments
     void cluster_placement_containers(std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map, std::list<Cluster_PHV *>& clusters_to_be_assigned, std::set<PHV_MAU_Group *>& mau_group_containers_avail);
     void create_aligned_container_slices(std::set<PHV_MAU_Group *>& mau_group_containers_avail);
     void container_pack_cohabit(std::list<Cluster_PHV *>& clusters_to_be_assigned);
+    void consolidate_slices_in_group();
     void update_PHV_MAU_Group_container_slices();
     void container_cohabit_summary();
     //
@@ -164,6 +170,8 @@ class PHV_MAU_Group_Assignments
     std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>& aligned_container_slices()
 							{ return aligned_container_slices_i; }
     std::vector<PHV_Container *>& cohabit_fields()	{ return cohabit_fields_i; }
+    //
+    void sanity_check_container_fields_gress(const std::string&);
 };
 //
 //

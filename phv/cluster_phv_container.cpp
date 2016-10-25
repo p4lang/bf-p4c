@@ -33,39 +33,47 @@ PHV_Container::PHV_Container(PHV_MAU_Group *g, PHV_Word w, int n, int phv_n, Ing
 }//PHV_Container
 
 void
-PHV_Container::taint(int start, int width, const PhvInfo::Field *field_i)
+PHV_Container::taint(int start, int width, const PhvInfo::Field *field)
 {
-   taint_color_i += '1' - '0';
-   for (auto i=start; i < start+width; i++)
-   {
-        bits_i[i] = taint_color_i;
-   }
-   if(start == 0)
-   {   // first use: container placement
-       //
-       avail_bits_lo_i = start + width;
-   }
-   else
-   {
-       // packing from right most slice to honor alignment
-       //
-       avail_bits_hi_i -= width;
-   }
-   //
-   //?? assert avail_bits_lo_i <= avail_bits_hi_i + 1
-   //
-   if(avail_bits_lo_i == avail_bits_hi_i + 1)
-   {
-       status_i = Container_status::FULL;
-   }
-   else
-   {
-       status_i = Container_status::PARTIAL;
-   }
-   //
-   // track fields in this container
-   //
-   fields_in_container_i.push_back(new Container_Content(start, width, field_i));
+    taint_color_i += '1' - '0';
+    for (auto i=start; i < start+width; i++)
+    {
+         bits_i[i] = taint_color_i;
+    }
+    if(start == 0)
+    {   // first use: container placement
+        //
+        avail_bits_lo_i = start + width;
+    }
+    else
+    {
+        // packing from right most slice to honor alignment
+        //
+        avail_bits_hi_i -= width;
+    }
+    //
+    //?? assert avail_bits_lo_i <= avail_bits_hi_i + 1
+    //
+    if(avail_bits_lo_i == avail_bits_hi_i + 1)
+    {
+        status_i = Container_status::FULL;
+    }
+    else
+    {
+        status_i = Container_status::PARTIAL;
+    }
+    //
+    // track fields in this container
+    //
+    fields_in_container_i.push_back(new Container_Content(start, width, field));
+    //
+    // set gress for this container
+    // container may be part of POV that is Ingress Or Egress
+    // however for any stage it can be used for Ingress or for Egress
+    // cannot share container with Ingress fields and Egress fields
+    // transition behavior for such sharing unclear
+    //
+    gress_i = gress(field);
 }
 
 //***********************************************************************************

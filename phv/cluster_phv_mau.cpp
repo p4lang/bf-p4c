@@ -57,7 +57,8 @@ PHV_MAU_Group::PHV_MAU_Group(PHV_Container::PHV_Word w, int n, int& phv_number, 
 // 
 //***********************************************************************************
 
-void PHV_MAU_Group::create_aligned_container_slices()
+
+void PHV_MAU_Group::create_aligned_container_slices(std::list<PHV_Container *>& container_list)
 {
     // larger n in <n:w> possible only when 2 or more containers
     // however, track singleton containers with available space
@@ -65,7 +66,6 @@ void PHV_MAU_Group::create_aligned_container_slices()
     //
     // for each slice group, obtain max of all lows in each partial container
     //
-    std::list<PHV_Container *> container_list(containers_pack_i.begin(), containers_pack_i.end());
     int lo = (int) width_i; 
     for (;container_list.size() > 0;)
     {
@@ -79,23 +79,53 @@ void PHV_MAU_Group::create_aligned_container_slices()
         //
         int width = hi - lo + 1;
         std::list<PHV_Container *> c_remove;
+        std::set<Container_Content *> *cc_set = new std::set<Container_Content *>;
         for (auto c: container_list)
         {
-            aligned_container_slices_i[width][container_list.size()].insert(new Container_Content(lo, width, c));	// insert in map[w][n]
+            cc_set->insert(new Container_Content(lo, width, c));	// insert in cc_set
             if(c->avail_bits_lo() == lo)
             {
                 c_remove.push_back(c);
             }
         }
+        aligned_container_slices_i[width][container_list.size()].insert(*cc_set);	// insert in map[w][n]
+        //
         // remove containers completely sliced
         for (auto c: c_remove)
         {
             container_list.remove(c);
         }
     }
+}
+
+
+void PHV_MAU_Group::create_aligned_container_slices()
+{
+    // Ingress Containers and Egress Containers cannot be shared
+    // split packable containers_pack into Ingress_Only list and Egress_Only list
+    //
+    std::list<PHV_Container *> ingress_container_list;
+    std::list<PHV_Container *> egress_container_list;
+    //
+    for (auto c: containers_pack_i)
+    {
+        if(c->gress() == PHV_Container::Ingress_Egress::Ingress_Only)
+        {
+            ingress_container_list.push_back(c);
+        }
+        else
+        {
+            egress_container_list.push_back(c);
+        }
+    }
+    //
+    create_aligned_container_slices(ingress_container_list);
+    create_aligned_container_slices(egress_container_list);
+    //
     sanity_check_container_packs("PHV_MAU_Group::create_aligned_container_slices()..");
     //
 }//create_aligned_container_slices
+
 
 //***********************************************************************************
 //
@@ -384,7 +414,10 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices(std::set<PHV_MAU
             {
                 for (auto n: w.second)
                 {
-                    aligned_container_slices_i[w.first][n.first].insert(n.second);					// insert in map[w][n]
+                    for (auto cc_set: n.second)
+                    {
+                        aligned_container_slices_i[w.first][n.first].insert(cc_set);	// insert in composite  map[w][n]
+                    }
                 }
             }
         }
@@ -416,12 +449,9 @@ void PHV_MAU_Group_Assignments::update_PHV_MAU_Group_container_slices()
         {
             for (auto &cc_set: n.second)
             {
-                for (auto &cc: cc_set)
-                {
-                    PHV_Container *c = cc->container();
-                    PHV_MAU_Group *g = c->phv_mau_group();
-                    g->aligned_container_slices()[w.first][n.first].insert(cc);						// insert in PHV_MAU_Group map[w][n]
-                }
+                PHV_Container *c = (*(cc_set.begin()))->container();
+                PHV_MAU_Group *g = c->phv_mau_group();
+                g->aligned_container_slices()[w.first][n.first].insert(cc_set);		// insert in PHV_MAU_Group map[w][n]
             }
         }
     }
@@ -560,10 +590,12 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
                         // honor gress compatible match
                         //
                         std::set<PHV_MAU_Group::Container_Content *> cc_set;
+                        PHV_Container::Ingress_Egress c_gress = PHV_Container::Ingress_Egress::Ingress_Or_Egress;
                         cc_set.clear();
                         for (auto cc_set_x: j.second)
                         {
-                            if(! gress_in_compatibility((*(cc_set_x.begin()))->container()->gress(), cl->gress()))
+                            c_gress = (*(cc_set_x.begin()))->container()->gress();
+                            if(! gress_in_compatibility(c_gress, cl->gress()))
                             {
                                 cc_set = cc_set_x;
                                 //
@@ -583,11 +615,13 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
                         {   //
                             // not gress compatible
                             //
-                            LOG3("-----<" << cl_n << ',' << cl_w << '>' << (char) cl->gress() << "-----[" << m_w << "](" << m_n << ')' << j.second);
+                            LOG3("-----<" << cl_n << ',' << cl_w << '>' << (char) cl->gress() << "-----[" << m_w << "](" << m_n << ')' << (char) c_gress << j.second);
                             //
                             continue;
                         }
-                        LOG3(".....<" << cl_n << ',' << cl_w << ">-->[" << m_w << "](" << m_n << ')');
+                        //
+                        LOG3(".....<" << cl_n << ',' << cl_w << '>' << (char) cl->gress() <<  "-->[" << m_w << "](" << m_n << ')' << (char) c_gress << cc_set);
+                        //
                         if(m_n > cl_n)
                         {   // create new container pack <mw, mn-cn>
                             // n = m_n - cl_n containers
@@ -651,6 +685,9 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
             }
         }
     }
+    //
+    sanity_check_container_fields_gress("PHV_MAU_Group_Assignments::container_pack_cohabit()..");
+    //
     // remove clusters already assigned
     for (auto cl: clusters_remove)
     {
@@ -658,10 +695,56 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
     }
     LOG3(std::endl << "----------after Packing ..... clusters not assigned (" << clusters_to_be_assigned.size() << ")-----" << std::endl);
     LOG3(clusters_to_be_assigned);
+    //
+    consolidate_slices_in_group();
+    //
     LOG3("----------after Packing ..... sorted MAU Container Packs avail----------");
     LOG3(aligned_container_slices_i);
     //
 }//container_pack_cohabit
+
+
+void PHV_MAU_Group_Assignments::consolidate_slices_in_group()
+{
+    // consolidate to get larger number same width only when all aligned and same MAU group
+    // [3](2)*2 ((PHV-149<3>{8..10}, PHV-147), (PHV-145<3>{8..10}, PHV-151)) ==> [3](4)*1
+    //
+    for (auto w: aligned_container_slices_i)
+    {
+        for (auto n: w.second)
+        {
+            if(n.second.size() > 1)
+            {
+                std::map<PHV_MAU_Group *, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>> g_lo;
+                for (auto cc_set: n.second)
+                {
+                    PHV_Container *c = (*(cc_set.begin()))->container();
+                    int lo = (*(cc_set.begin()))->lo();
+                    g_lo[c->phv_mau_group()][lo].insert(cc_set);
+                }
+                for (auto g: g_lo)
+                {
+                    for (auto l: g.second)
+                    {
+                        if(l.second.size() > 1)
+                        {
+                            std::set<PHV_MAU_Group::Container_Content *> *set_u = new std::set<PHV_MAU_Group::Container_Content *>;
+                            for (auto cc_set: l.second)
+                            {
+                                for (auto cc: cc_set)
+                                {
+                                    set_u->insert(cc);
+                                }
+                            }
+                            aligned_container_slices_i[w.first][n.first].clear();
+                            aligned_container_slices_i[w.first][n.first].insert(*set_u);
+                        } 
+                    }
+                }
+            }
+        }
+    }
+}
 
 //
 // container cohabit summary
@@ -703,31 +786,71 @@ void PHV_MAU_Group::sanity_check_container_packs(const std::string& msg)
     {
         for (auto n: w.second)
         {
-            // for all members check width and range lo .. hi
-            //
-            std::set<int> lo;
-            std::set<int> hi;
-            lo.clear();
-            hi.clear();
-            for (auto cc: n.second)
+            for (auto cc_set: n.second)
             {
-                if(cc->width() != w.first)
+                // for all members check width and range lo .. hi
+                // also check all containers belong to the same gress
+                //
+                std::set<int> lo;
+                std::set<int> hi;
+                lo.clear();
+                hi.clear();
+                std::set<PHV_Container::Ingress_Egress> gress;
+                for (auto cc: cc_set)
                 {
-                    WARNING("*****cluster_phv_mau.cpp:sanity_FAIL*****cluster_pack width differs .." << w.first << " vs " << cc << ' ' << msg);
+                    if(cc->width() != w.first)
+                    {
+                        WARNING("*****cluster_phv_mau.cpp:sanity_FAIL*****cluster_pack width differs .." << w.first << " vs " << cc << ' ' << msg);
+                    }
+                    lo.insert(cc->lo());
+                    hi.insert(cc->hi());
+                    //
+                    gress.insert(cc->container()->gress());
                 }
-                lo.insert(cc->lo());
-                hi.insert(cc->hi());
-            }
-            if(lo.size() != 1)
-            {
-                WARNING("*****cluster_phv_mau.cpp:sanity_FAIL*****cluster_pack lo differs .." << '[' << w.first << "][" << n.first << ' ' << msg);
-            }
-            if(hi.size() != 1)
-            {
-                WARNING("*****cluster_phv_mau.cpp:sanity_FAIL*****cluster_pack hi differs .." << '[' << w.first << "][" << n.first << ' ' << msg);
+                if(lo.size() != 1)
+                {
+                    WARNING("*****cluster_phv_mau.cpp:sanity_FAIL*****cluster_pack lo differs .." << '[' << w.first << "][" << n.first << ' ' << msg);
+                }
+                if(hi.size() != 1)
+                {
+                    WARNING("*****cluster_phv_mau.cpp:sanity_FAIL*****cluster_pack hi differs .." << '[' << w.first << "][" << n.first << ' ' << msg);
+                }
+                if(gress.size() != 1)
+                {
+                    WARNING("*****cluster_phv_mau.cpp:sanity_FAIL*****gress differs .." << n.second << msg);
+                }
             }
         }
     }
+}
+
+void PHV_MAU_Group::sanity_check_container_fields_gress(const std::string& msg)
+{
+    // sanity check all fields contained in this container are gress compatible with container gress
+    //
+    for (auto c: phv_containers_i)
+    {
+        for (auto cc: c->fields_in_container())
+        {
+            const PhvInfo::Field *field = cc->field();
+            PHV_Container::Ingress_Egress f_gress = PHV_Container::gress(field);
+            if(f_gress != c->gress())
+            {
+                WARNING("*****cluster_phv_mau.cpp:sanity_FAIL*****gress differs .." << (char) f_gress  << " vs " << (char) c->gress() << "..." << msg << c);
+            }
+        }
+    }
+}
+
+void PHV_MAU_Group_Assignments::sanity_check_container_fields_gress(const std::string& msg)
+{
+    for (auto groups: PHV_MAU_i)
+    { 
+        for (auto g: groups.second)
+        {
+            g->sanity_check_container_fields_gress(msg); 
+        } 
+    } 
 }
 
 //***********************************************************************************

@@ -70,9 +70,24 @@ class PHV_Container
     int number()						{ return number_i; }
     int phv_number()						{ return phv_number_i; }
     Ingress_Egress gress()					{ return gress_i; }
+    static Ingress_Egress gress(const PhvInfo::Field *field)
+    {
+        if(const_cast<const PhvInfo::Field *>(field)->gress == INGRESS)
+        {
+            return PHV_Container::Ingress_Egress::Ingress_Only;
+        }
+        else
+        {
+            if(const_cast<const PhvInfo::Field *>(field)->gress == EGRESS)
+            {
+                return PHV_Container::Ingress_Egress::Egress_Only;
+            }
+        }
+        return PHV_Container::Ingress_Egress::Ingress_Or_Egress;
+    }
     Container_status status()					{ return status_i; }
     char *bits()						{ return bits_i; }
-    void taint(int start, int width, const PhvInfo::Field *field_i);
+    void taint(int start, int width, const PhvInfo::Field *field);
     int avail_bits_lo()						{ return avail_bits_lo_i; }
     int avail_bits_hi()						{ return avail_bits_hi_i; }
     std::vector<Container_Content *>& fields_in_container()	{ return fields_in_container_i; }

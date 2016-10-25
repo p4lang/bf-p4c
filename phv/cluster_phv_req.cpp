@@ -91,17 +91,7 @@ Cluster_PHV::Cluster_PHV(std::set<const PhvInfo::Field *> *p) : cluster_vec_i(p-
     //
     // set gress for this cluster
     //
-    if(const_cast<const PhvInfo::Field *>(*(p->begin()))->gress == INGRESS)
-    {
-        gress_i = PHV_Container::Ingress_Egress::Ingress_Only;
-    }
-    else
-    {
-        if(const_cast<const PhvInfo::Field *>(*(p->begin()))->gress == EGRESS)
-        {
-            gress_i = PHV_Container::Ingress_Egress::Egress_Only;
-        }
-    }
+    gress_i = PHV_Container::gress(*(p->begin()));
     //
     // sorted vector, decreasing field width
     //
