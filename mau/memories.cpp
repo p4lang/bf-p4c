@@ -44,17 +44,6 @@ void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
     }
 }
 
-/*
-void Memories::add_table(const IR::MAU::Table *t, const IXBar::Use *mi, 
-                         map<cstring, Memories::Use> *mu, int entries) {
-    if (t != nullptr) {
-        auto *ta = new table_alloc(t, mi, mu, entries);
-        tables.push_back(ta);
-        LOG3("Adding table " << t->name << " with " << entries << " entries.");
-    }
-}
-*/
-
 /* Function that tests whether all added tables can be allocated to the stage */
 bool Memories::allocate_all() {
     mem_info mi;
@@ -764,33 +753,7 @@ bool Memories::allocate_all_tind() {
     }
     compress_tind_groups();
     return true;
-    /*
-    for (int i = 0; i < SRAM_ROWS; i++) {
-        if (tind_groups.empty())
-            break;
-        SRAM_group *next_tind = tind_groups[0];
-        if (!sram_use[i][0]) {
-            auto name = next_tind->ta->table->name + "$tind";
-            sram_use[i][0] = name;
-            sram_inuse[i] |= 1;
-            tind_bus[i][0] = name;
-            next_tind->placed++;
-            if (next_tind->all_placed()) {
-                tind_groups.erase(tind_groups.begin());
-            }
-            auto &alloc = (*next_tind->ta->memuse)[name];
-            alloc.row.emplace_back(i, 0);
-            alloc.row.back().col.push_back(0);
-        }
-    }
-
-    if (!tind_groups.empty())
-        return false;
-
-    return true;
-    */
 }
-
 /* Breaks up all tables requiring an action to be parsed into SRAM_group, a structure
    designed for adding to SRAM array  */
 void Memories::find_action_bus_users() {
