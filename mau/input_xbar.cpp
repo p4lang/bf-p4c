@@ -18,7 +18,6 @@ void IXBar::clear() {
     hash_index_use.clear();
     hash_single_bit_use.clear();
     memset(hash_index_inuse, 0, sizeof(hash_index_inuse));
-    //hash_group_use.clear();
     memset(hash_single_bit_inuse, 0, sizeof(hash_single_bit_inuse));
     memset(hash_group_use, 0, sizeof(hash_group_use));
 }
@@ -35,7 +34,7 @@ int IXBar::Use::groups() const {
 }
 
 bool IXBar::Use::exact_comp(const IXBar::Use *exact_use, int width) const {
-    unsigned gw_counted = 0, exact_counted = 0; 
+    unsigned gw_counted = 0, exact_counted = 0;
     for (auto &b : use) {
         assert(b.loc.group >= 0 && b.loc.group < 16);
         if (!(1 & (gw_counted >> b.loc.group))) {
@@ -262,7 +261,8 @@ int IXBar::found_bytes_big_group(big_grp_use *grp, vector<IXBar::Use::Byte *> &u
             break;
         for (auto &p : Values(fields.equal_range(need.field))) {
             if (p.byte == 5) {
-                if ((grp->big_group == p.group/2) && (byte_group_use[p.group/2].second == need.lo)) {
+                if ((grp->big_group == p.group/2)
+                    && (byte_group_use[p.group/2].second == need.lo)) {
                     need.loc = p;
                     found_bytes--; bytes_placed++;
                     unalloced.erase(unalloced.begin() + i);
@@ -642,10 +642,8 @@ static int way_groups_allocated(const IXBar::Use &alloc) {
 }
 
 int IXBar::getHashGroup(unsigned hash_table_input) {
-    LOG2("Hash_table_input is " << hash_table_input);
     for (int i = 0; i < HASH_GROUPS; i++) {
          if (hash_group_use[i] == hash_table_input) {
-             LOG2("We are in the same group " << i);
              hash_group_use[i] = hash_table_input;
              return i;
          }
@@ -653,23 +651,12 @@ int IXBar::getHashGroup(unsigned hash_table_input) {
     for (int i = 0; i < HASH_GROUPS; i++) {
          if (hash_group_use[i] == 0) {
              hash_group_use[i] = hash_table_input;
-             LOG2("We have a new group at " << i);
              return i;
          }
     }
 
     LOG2("failed to allocate hash group");
     return -1;
-/*
-    int hash_group = find(hash_group_use, hash_table_input) - hash_group_use.begin();
-    if (hash_group >= HASH_GROUPS)
-        hash_group = find(hash_group_use, 0) - hash_group_use.begin();
-    if (hash_group >= HASH_GROUPS) {
-        LOG2("failed to allocate hash group");
-        return -1; }
-    hash_group_use[hash_group] = name;
-    return hash_group;
-*/
 }
 
 
@@ -679,7 +666,6 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
     if (ternary)
         return true;
     int hash_group = getHashGroup(alloc.hash_table_input);
-    LOG3("Table " << tbl->name << " got hash group " << hash_group);
     if (hash_group < 0) return false;
     int free_groups = 0;
     int group;
@@ -728,9 +714,7 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const IR::MAU::Table::Way &w
     unsigned way_mask = 0;
     LOG3("Need " << way_bits << " mask bits for way " << alloc.way_use.size() <<
          " in table " << tbl->name);
-    LOG3("Alloc.hash_table_input " << alloc.hash_table_input);
     for (group = 0; group < HASH_INDEX_GROUPS; group++) {
-        LOG3("hash_index_inuse[group] " << hash_index_inuse[group]);
         if (!(hash_index_inuse[group] & alloc.hash_table_input)) {
             break; } }
     if (group >= HASH_INDEX_GROUPS) {
@@ -760,32 +744,28 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const IR::MAU::Table::Way &w
 
 bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                          bool second_try) {
-    LOG1("GW table name " << tbl->name);
     alloc.gw_search_bus = false; alloc.gw_hash_group = false;
     alloc.gw_search_bus_bytes = 0;
     CollectGatewayFields collect(phv);
     tbl->apply(collect);
     if (collect.info.empty() && collect.valid_offsets.empty()) return true;
     for (auto &info : collect.info) {
-        LOG1("In here");
         int flags = 0;
         if (info.second.xor_with) {
             flags |= IXBar::Use::NeedXor;
             alloc.gw_search_bus = true;
-            //FIXME: This need to be coordinated with the actual PHV!!!
+            // FIXME: This need to be coordinated with the actual PHV!!!
             alloc.gw_search_bus_bytes += (info.first->size + 7)/8;
-            LOG1("xor");
         } else if (info.second.need_range) {
             flags |= IXBar::Use::NeedRange;
             alloc.gw_hash_group = true;
-            LOG1("range");
         } else {
             alloc.gw_search_bus = true;
             alloc.gw_search_bus_bytes += (info.first->size + 7)/8;
         }
         add_use(alloc, info.first, &info.second.bits, flags); }
     for (auto &valid : collect.valid_offsets) {
-        add_use(alloc, phv.field(valid.first + ".$valid")); 
+        add_use(alloc, phv.field(valid.first + ".$valid"));
         alloc.gw_hash_group = true;
     }
     LOG1("Total bytes out is " << alloc.gw_search_bus_bytes);
@@ -907,8 +887,8 @@ void IXBar::update(cstring name, const Use &alloc) {
             hash_group_use[bits.group] = alloc.hash_table_input;
             hash_group_print_use[bits.group] = name;
         } else if (hash_group_use[bits.group] != alloc.hash_table_input) {
-            BUG("conflicting hash group use between %s and %s", name, hash_group_use[bits.group]); 
-        }        
+            BUG("conflicting hash group use between %s and %s", name, hash_group_use[bits.group]);
+        }
     }
     for (auto &way : alloc.way_use) {
         if (hash_group_use[way.group] == 0) {

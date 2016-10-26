@@ -22,9 +22,8 @@ struct Memories {
     Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>          sram_use;
     unsigned                                           sram_inuse[SRAM_ROWS] = { 0 };
     Alloc2D<cstring, TCAM_ROWS, TCAM_COLUMNS>          tcam_use;
-    Alloc2D<cstring, SRAM_ROWS, 2>                     gateway_use;              
+    Alloc2D<cstring, SRAM_ROWS, 2>                     gateway_use;
     Alloc2D<std::pair<cstring, int>, SRAM_ROWS, 2>     sram_match_bus;
-    Alloc2D<std::pair<cstring, int>, SRAM_ROWS, 2>     gw_search_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     sram_print_match_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     action_data_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     tind_bus;
@@ -32,7 +31,7 @@ struct Memories {
     Alloc1D<cstring, SRAM_ROWS - 1>                    vert_overflow_bus;
     Alloc2D<cstring, SRAM_ROWS, MAPRAM_COLUMNS>        mapram_use;
     Alloc1D<cstring, SRAM_ROWS>                        stateful_bus;
-    int gw_bytes_per_sb [SRAM_ROWS][BUS_COUNT] =  {{0}};
+    int gw_bytes_per_sb[SRAM_ROWS][BUS_COUNT] = {{0}};
     struct mem_info {
         int match_tables;
         int match_bus_min;

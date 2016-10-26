@@ -226,7 +226,7 @@ bool CollectGatewayFields::compute_offsets() {
                 LOG1("This is the spot "  << sl.container_bit);
                 info.offsets.emplace_back(bytes*8U + sl.container_bit%8U, sl.field_bits());
                 ++bytes;
-            }); 
+            });
         }
         LOG1("Info offset size is " << info.offsets.size());
     }
@@ -239,8 +239,8 @@ bool CollectGatewayFields::compute_offsets() {
             for (auto &f : ixbar->bit_use) {
                 if (f.field == field->name && f.lo == 0)
                     valid.second = f.bit + 32;
-                    if (f.bit >= bits)
-                        bits = f.bit + 1;
+                if (f.bit >= bits)
+                    bits = f.bit + 1;
                     break; } }
         if (valid.second >= 0) continue;
         valid.second = bits++ + 32; }
@@ -346,7 +346,7 @@ bool BuildGatewayMatch::preorder(const IR::Constant *c) {
             LOG1("Elmask " << elmask);
             match.word0 &= ~(val << val_offset) | ~elmask;
             match.word1 &= (val << val_offset) | ~elmask;
-        }                   
+        }
         match_field = nullptr;
     } else {
         BUG("Invalid context for constant in BuildGatewayMatch"); }

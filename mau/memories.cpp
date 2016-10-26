@@ -8,7 +8,6 @@ void Memories::clear() {
     tcam_use.clear();
     mapram_use.clear();
     sram_match_bus.clear();
-    gw_search_bus.clear();
     sram_print_match_bus.clear();
     tind_bus.clear();
     action_data_bus.clear();
@@ -64,8 +63,6 @@ bool Memories::allocate_all() {
     if (!analyze_tables(mi)) {
         return false;
     }
-
-    
     unsigned row = 0;
     bool finished = false;
 
@@ -76,7 +73,6 @@ bool Memories::allocate_all() {
            finished = true;
         }
         LOG3("Row size " << __builtin_popcount(row));
-
     } while (__builtin_popcount(row) < 10 && !finished);
 
     if (!finished) {
@@ -148,7 +144,6 @@ bool Memories::analyze_tables(mem_info &mi) {
             auto name = ta->table->name + "$gw";
             if (ta->table_link != nullptr)
                 name = ta->table_link->table->name + "$gw";
-               
             (*ta->memuse)[name].type = Use::GATEWAY;
             gw_tables.push_back(ta);
             LOG4("Gateway table for " << ta->table->name);
@@ -163,7 +158,7 @@ bool Memories::analyze_tables(mem_info &mi) {
             exact_tables.push_back(ta);
             mi.match_tables++;
             int width = table->ways[0].width;
-            //FIXME: Non-working valid bits
+            // FIXME: Non-working valid bits
             assert(width == ta->match_ixbar->groups() || ta->match_ixbar->groups() == 0);
             int groups = table->ways[0].match_groups;
             int depth = ((entries + groups - 1U)/groups + 1023)/1024U;
@@ -536,28 +531,27 @@ bool Memories::find_best_row_and_fill_out(unsigned column_mask) {
 
 // FIXME: Needs to actually be calculated for exact match row placement
 void Memories::calculate_column_balance(mem_info &mi, unsigned &row) {
-    int min_columns_required = (mi.match_RAMs + SRAM_ROWS - 1) / SRAM_ROWS; 
-    int total_RAMs = mi.match_RAMs + mi.tind_RAMs + mi.action_RAMs; 
-    int total_columns_required = (total_RAMs + SRAM_ROWS - 1) / SRAM_ROWS; 
-    int mask_columns = 0; 
-    if (__builtin_popcount(row) == 0) { 
-        // FIXME: Making things up. Need good statistics  
-        if (total_columns_required < 7 || min_columns_required < 5) { 
-            mask_columns = 8; 
-        } else { 
-            mask_columns = min_columns_required; 
-        } 
-    } else { 
-        mask_columns = __builtin_popcount(row) + 1; 
-    } 
- 
-    switch (mask_columns) { 
-        case 5 : row = 0x0f8; break; 
-        case 6 : row = 0x0fc; break; 
-        case 7 : row = 0x1fc; break; 
-        case 8 : row = 0x1fe; break; 
-        case 9 : row = 0x1ff; break; 
-        default : row = 0x3ff; break; 
+    int min_columns_required = (mi.match_RAMs + SRAM_ROWS - 1) / SRAM_ROWS;
+    int total_RAMs = mi.match_RAMs + mi.tind_RAMs + mi.action_RAMs;
+    int total_columns_required = (total_RAMs + SRAM_ROWS - 1) / SRAM_ROWS;
+    int mask_columns = 0;
+    if (__builtin_popcount(row) == 0) {
+        // FIXME: Making things up. Need good statistics
+        if (total_columns_required < 7 || min_columns_required < 5) {
+            mask_columns = 8;
+        } else {
+            mask_columns = min_columns_required;
+        }
+    } else {
+        mask_columns = __builtin_popcount(row) + 1;
+    }
+    switch (mask_columns) {
+        case 5 : row = 0x0f8; break;
+        case 6 : row = 0x0fc; break;
+        case 7 : row = 0x1fc; break;
+        case 8 : row = 0x1fe; break;
+        case 9 : row = 0x1ff; break;
+        default : row = 0x3ff; break;
     }
 }
 
@@ -698,9 +692,7 @@ int Memories::find_best_tind_row(SRAM_group *tg, int &bus) {
         tbus = tind_bus[b];
         if (tbus[0] == name || tbus[1] == name)
             return false;
-
         return a < b;
-        
     });
     int best_row = available_rows[0];
     if (!tind_bus[best_row][0] || tind_bus[best_row][0] == name)
@@ -1050,15 +1042,14 @@ Memories::table_alloc *Memories::find_corresponding_exact_match(cstring name) {
 bool Memories::gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int width_sect,
                                  int row, int col) {
     if (!ta->match_ixbar->exact_comp(exact_ta->match_ixbar, width_sect)) return false;
-
-    //FIXME: Needs to better orient with the layout
+    // FIXME: Needs to better orient with the layout
     int bytes_needed = exact_ta->table->layout.match_bytes;
     bytes_needed = (exact_ta->table->layout.overhead_bits + 7) / 8;
     int groups = exact_ta->table->ways[0].match_groups;
     int width = exact_ta->table->ways[0].width;
     bytes_needed *= groups * width;
-    //FIXME: For version bits
-    bytes_needed += groups / 2 * width; 
+    // FIXME: For version bits
+    bytes_needed += groups / 2 * width;
     int total_bytes = 16 * width;
     int remaining_bytes = total_bytes - bytes_needed - exact_ta->attached_gw_bytes;
     if (remaining_bytes < ta->match_ixbar->gw_search_bus_bytes) {
@@ -1066,20 +1057,19 @@ bool Memories::gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int wid
     }
     if (gw_bytes_per_sb[row][col] + ta->match_ixbar->gw_search_bus_bytes > 4)
         return false;
-    
     return true;
 }
 
 /* Allocates all gateways */
-bool Memories::allocate_all_gw() { 
-   size_t index = 0;
+bool Memories::allocate_all_gw() {
+    size_t index = 0;
     for (auto *ta : gw_tables) {
         auto name = ta->table->name + "$gw";
         if (ta->table_link != nullptr)
             name = ta->table_link->table->name + "$gw";
         auto &alloc = (*ta->memuse)[name];
         bool found = false;
-        //Tries to find a bus to share with the current table
+        // Tries to find a bus to share with the current table
         for (int i = 0; i < SRAM_ROWS; i++) {
             if (gateway_use[i][0] && gateway_use[i][1]) continue;
             int current_gw = 0;
@@ -1087,39 +1077,39 @@ bool Memories::allocate_all_gw() {
                 current_gw = 1;
             for (int j = 0; j < BUS_COUNT; j++) {
                 auto bus = sram_match_bus[i][j];
-                //FIXME: This is the punt based on the layout issues, later remove
+                // FIXME: This is the punt based on the layout issues, later remove
                 // the gateway_use[i][j]
                 if (!bus.first || gateway_use[i][j]) continue;
                 table_alloc *exact_ta = find_corresponding_exact_match(bus.first);
-                //FIXME: this is just a temporary patch
+                // FIXME: this is just a temporary patch
                 if (ta->match_ixbar->gw_search_bus) {
                     if (!gw_search_bus_fit(ta, exact_ta, bus.second, i, j)) continue;
                 }
                 if (ta->match_ixbar->gw_hash_group) {
-                    //FIXME: Currently all ways shared the same hash_group
-                    if (ta->match_ixbar->bit_use[0].group 
+                    // FIXME: Currently all ways shared the same hash_group
+                    if (ta->match_ixbar->bit_use[0].group
                         != exact_ta->match_ixbar->way_use[0].group)
                          continue;
                 }
-                exact_ta->attached_gw_bytes += ta->match_ixbar->gw_search_bus_bytes; 
+                exact_ta->attached_gw_bytes += ta->match_ixbar->gw_search_bus_bytes;
                 gw_bytes_per_sb[i][j] += ta->match_ixbar->gw_search_bus_bytes;
                 gateway_use[i][current_gw] = name;
                 alloc.row.emplace_back(i, j);
                 alloc.row.back().col.push_back(current_gw);
                 found = true;
                 index++;
-                break; 
+                break;
             }
             if (found) break;
         }
         if (found) continue;
-        //No bus could be shared, just look for an open bus!
+        // No bus could be shared, just look for an open bus!
         for (int i = 0; i < SRAM_ROWS; i++) {
             if (gateway_use[i][0] && gateway_use[i][1]) continue;
             int current_gw = 0;
             if (gateway_use[i][0])
                 current_gw = 1;
-            //FIXME: When layout info is added, we can potentially change this
+            // FIXME: When layout info is added, we can potentially change this
             for (int j = 0; j < BUS_COUNT; j++) {
                 if (!gateway_use[i][j]) {
                     alloc.row.emplace_back(i, j);

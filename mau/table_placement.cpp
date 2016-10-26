@@ -191,31 +191,7 @@ static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Pl
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
          current_mem.add_table(p->table, p->gw, prev_resources[i], p->entries);
          i++;
-    }       
-/*
-        if (p->gw == nullptr && p->entries == 0) {
-            current_mem.add_table(p->table, &prev_resources[i]->gateway_ixbar,
-                                  &prev_resources[i]->memuse, p->entries);
-            
-        } else { 
-            current_mem.add_table(p->table, &prev_resources[i]->match_ixbar,
-                                  &prev_resources[i]->memuse, p->entries);
-            current_mem.add_table(p->gw, &prev_resources[i]->gateway_ixbar,
-                                  &prev_resources[i]->memuse, -1);
-        }
-        i++;
     }
-*/
-    /*
-    if (next->gw == nullptr && next->entries == 0) {
-        current_mem.add_table(next->table, &resources->gateway_ixbar,
-                              &resources->memuse, entries);
-    } else {
-        current_mem.add_table(next->table, &resources->match_ixbar,
-                              &resources->memuse, entries);
-        current_mem.add_table(next->gw, &resources->gateway_ixbar, &resources->memuse, -1);
-    }
-    */
     current_mem.add_table(next->table, next->gw, resources, entries);
     resources->memuse.clear();
     for (auto *prev_resource : prev_resources) {
@@ -339,10 +315,6 @@ retry_next_stage:
             rv->placed[table_uids.at(rv->gw->name)] = true; }
     /* FIXME -- need to redo IXBar alloc if we moved to the next stage?  Or if we need less
      * hash indexing bits for smaller ways? */
-    for (auto *p = done; p && p->stage == done->stage; p = p->prev) {
-        LOG3("Table " << p->name << " has " << p->resources->memuse.size() << " tables."); 
-    }
-    LOG3("Table " << rv->name << " has " << rv->resources->memuse.size() << " tables.");
     return rv;
 }
 
