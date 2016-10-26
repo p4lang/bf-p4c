@@ -322,7 +322,6 @@ bool BuildGatewayMatch::preorder(const IR::Constant *c) {
     } else if (ctxt->node->is<IR::BOr>()) {
         ormask = c->asLong();
     } else if (match_field) {
-        int weird = 1;
         int64_t mask = (1ULL << match_field_bits.size()) - 1;
         LOG1("Mask is " << mask);
         uint64_t val = c->asLong() & mask;
@@ -347,22 +346,7 @@ bool BuildGatewayMatch::preorder(const IR::Constant *c) {
             LOG1("Elmask " << elmask);
             match.word0 &= ~(val << val_offset) | ~elmask;
             match.word1 &= (val << val_offset) | ~elmask;
-
         }                   
-            
-/*        for (auto &off : match_info.offsets) {
-            uint64_t elmask = ((1ULL << off.second.size()) - 1) <<
-                              (off.second.lo - match_info.bits.lo);
-            LOG1("Elmask " << elmask);
-            LOG1(off.second.lo << " " << off.first);
-            elmask &= mask;
-            int lo = off.first + match_field_bits.lo - shift;
-            LOG1("lo " << lo);
-            elmask <<= lo;
-            match.word0 &= ~(val << lo) | ~elmask;
-            match.word1 &= (val << lo) | ~elmask; }
-*/            
-            
         match_field = nullptr;
     } else {
         BUG("Invalid context for constant in BuildGatewayMatch"); }

@@ -229,6 +229,8 @@ int IXBar::found_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, bool
         if (found_bytes == 0)
             break;
         for (auto &p : Values(fields.equal_range(need.field))) {
+            if (ternary && p.byte == 5)
+                continue;
             if ((grp->group == p.group) && (use[p.group][p.byte].second == need.lo)) {
                 if (!ternary && (p.byte / 8 == 0) && !grp->first_hash_open)
                     continue;
