@@ -189,16 +189,10 @@ static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Pl
     Memories current_mem;
     int i = 0;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
-        current_mem.add_table(p->table, &prev_resources[i]->match_ixbar,
-                               &prev_resources[i]->memuse, p->entries);
-        current_mem.add_table(p->gw, &prev_resources[i]->match_ixbar,
-                               &prev_resources[i]->memuse, -1);
-        i++;
+         current_mem.add_table(p->table, p->gw, prev_resources[i], p->entries);
+         i++;
     }
-
-    current_mem.add_table(next->table, &resources->match_ixbar,
-                           &resources->memuse, entries);
-    current_mem.add_table(next->gw, &resources->match_ixbar, &resources->memuse, -1);
+    current_mem.add_table(next->table, next->gw, resources, entries);
     resources->memuse.clear();
     for (auto *prev_resource : prev_resources) {
         prev_resource->memuse.clear();
@@ -478,9 +472,15 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
 
 static void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *resources,
                                 int entries) {
+    LOG3("Table resources for " << tbl->name << " are " << resources->memuse.size());
     tbl->resources = resources;
     tbl->layout.entries = entries;
     if (!tbl->ways.empty()) {
+        LOG3("tbl->name " << tbl->name << " " << tbl->ways.size());
+        for (auto alloc : resources->memuse) {
+            LOG3("alloc.first " << alloc.first);
+        }
+        LOG3("Empty");
         auto &mem = resources->memuse.at(tbl->name);
         assert(tbl->ways.size() == mem.ways.size());
         for (unsigned i = 0; i < tbl->ways.size(); ++i)
@@ -539,6 +539,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
                 if (gw.second && !tbl->next.count(gw.second))
                     tbl->next[gw.second] = new IR::MAU::TableSeq(); }
     if (table_placed.count(tbl->name) == 1) {
+        LOG3("Yo");
         table_set_resources(tbl, it->second->resources, it->second->entries);
         return tbl; }
     int counter = 0;

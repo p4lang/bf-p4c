@@ -233,11 +233,11 @@ bool CollectGatewayFields::compute_offsets() {
         BUG_CHECK(field, "Can't find POV bit for %s", valid.first);
         if (ixbar) {
             for (auto &f : ixbar->bit_use) {
-                if (f.field == field->name && f.lo == 0)
+                if (f.field == field->name && f.lo == 0) {
                     valid.second = f.bit + 32;
                     if (f.bit >= bits)
                         bits = f.bit + 1;
-                    break; } }
+                    break; } } }
         if (valid.second >= 0) continue;
         valid.second = bits++ + 32; }
     return bits <= 12;
@@ -260,7 +260,7 @@ Visitor::profile_t BuildGatewayMatch::init_apply(const IR::Node *root) {
     match.setwidth(0);  // clear out old value
     match.setwidth(fields.bytes*8 + fields.bits - shift);
     match_field = nullptr;
-    andmask = ~0U;
+    andmask = ~0ULL;
     ormask = 0;
     return Inspector::init_apply(root);
 }
@@ -275,7 +275,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
         match_field_bits = bits;
     } else {
         size_t size = std::max(bits.size(), match_field_bits.size());
-        uint64_t mask = (1U << size) - 1;
+        uint64_t mask = (1ULL << size) - 1;
         mask &= andmask & ~ormask;
         auto &field_info = fields.info.at(field);
         auto &match_info = fields.info.at(match_field);
@@ -285,7 +285,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
             if (it == end || it->first != off.first || it->second.size() != off.second.size() ||
                 it->second.lo - field_info.bits.lo != off.second.lo - match_info.bits.lo) {
                 BUG("field equality comparison misaligned in gateway"); }
-            uint64_t elmask = ((1U << off.second.size()) - 1) <<
+            uint64_t elmask = ((1ULL << off.second.size()) - 1) <<
                               (off.second.lo - match_info.bits.lo);
             elmask &= mask;
             int lo = off.first + match_field_bits.lo;
@@ -303,9 +303,9 @@ bool BuildGatewayMatch::preorder(const IR::Primitive *prim) {
     if (!fields.valid_offsets.count(hdr))
         BUG("Failed to get valid bit in BuildGatewayMatch");
     if (getContext() && getContext()->node->is<IR::LNot>())
-        match.word1 &= ~(1U << fields.valid_offsets[hdr] >> shift);
+        match.word1 &= ~(1ULL << fields.valid_offsets[hdr] >> shift);
     else
-        match.word0 &= ~(1U << fields.valid_offsets[hdr] >> shift);
+        match.word0 &= ~(1ULL << fields.valid_offsets[hdr] >> shift);
     return false;
 }
 
@@ -316,14 +316,14 @@ bool BuildGatewayMatch::preorder(const IR::Constant *c) {
     } else if (ctxt->node->is<IR::BOr>()) {
         ormask = c->asLong();
     } else if (match_field) {
-        uint64_t mask = (1U << match_field_bits.size()) - 1;
+        uint64_t mask = (1ULL << match_field_bits.size()) - 1;
         uint64_t val = c->asLong() & mask;
         if ((val & mask & ~andmask) || (~val & mask & ormask))
             BUG("masked comparison in gateway can never match");
         mask &= andmask & ~ormask;
         auto &match_info = fields.info.at(match_field);
         for (auto &off : match_info.offsets) {
-            uint64_t elmask = ((1U << off.second.size()) - 1) <<
+            uint64_t elmask = ((1ULL << off.second.size()) - 1) <<
                               (off.second.lo - match_info.bits.lo);
             elmask &= mask;
             int lo = off.first + match_field_bits.lo - shift;
