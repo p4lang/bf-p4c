@@ -49,7 +49,7 @@ int main(int ac, char **av) {
         auto program = parse_P4_14_file(options, in);
         options.closeInput(in);
         PassManager fe = {
-            new RemapIntrinsics,
+//            new RemapIntrinsics,
             new P4::ConstantFolding(nullptr, nullptr),
             new CheckHeaderTypes,
             new HeaderTypeMaxLengthCalculator,
