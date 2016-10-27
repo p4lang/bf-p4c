@@ -193,6 +193,11 @@ tofino-bmv2tests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
     $(srcdir)/%reldir%/v1_samples
 	@$(GENTESTS) $(srcdir) bmv2 $(srcdir)/%reldir%/test-bmv2.sh $^ >$@ || ( rm $@ && false )
 
+check-tofino-all:
+	@$(MAKE) check TESTS="$(filter tofino%, $(TESTS) $(EXTRA_TESTS))"
+recheck-tofino-all:
+	@$(MAKE) recheck TESTS="$(filter tofino%, $(TESTS) $(EXTRA_TESTS))"
+
 CLEANFILES += \
 	tofinotests.mk \
 	tofino-p14_to_16_tests.mk \
