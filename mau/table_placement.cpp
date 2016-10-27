@@ -571,7 +571,17 @@ IR::Node *TablePlacement::preorder(IR::MAU::TableSeq *seq) {
     if (seq->tables.size() > 1) {
         std::sort(seq->tables.begin(), seq->tables.end(),
             [this](const IR::MAU::Table *a, const IR::MAU::Table *b) -> bool {
-                return table_placed.find(a->name)->second->logical_id <
-                       table_placed.find(b->name)->second->logical_id; }); }
+                char a_name[strlen(a->name) + 1];
+                strncpy(a_name, a->name, strlen(a->name) + 1);
+                if (strchr(a_name, '.')) {
+                    a_name[strchr(a_name, '.') - a_name] = '\0';
+                }
+                char b_name[strlen(b->name) + 1];
+                strncpy(b_name, b->name, strlen(b->name) + 1);
+                if (strchr(b_name, '.')) {
+                    b_name[strchr(b_name, '.') - b_name] = '\0';
+                }
+                return table_placed.find(a_name)->second->logical_id <
+                       table_placed.find(b_name)->second->logical_id; }); }
     return seq;
 }
