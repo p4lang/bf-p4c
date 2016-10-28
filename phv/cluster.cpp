@@ -221,10 +221,10 @@ void Cluster::compute_fields_no_use_mau()
 {
     // set1 = all fields in phv
     // set2 = cluster fields
-    // set difference = fields not used in mau pipe
-    // also subtract POV fields
+    // fields not used in mau pipe = set1 - set2 - POV fields
     //
-    std::set<const PhvInfo::Field *> s1;
+    std::set<const PhvInfo::Field *> s1;	// all fields
+    pov_fields_i.clear();
     for (auto &field: phv_i)
     {
         s1.insert(&field);
@@ -234,8 +234,10 @@ void Cluster::compute_fields_no_use_mau()
             pov_fields_i.push_back(&field);
         }
     }
+    LOG3("..........All fields (" << s1.size() << ")..........");
+    LOG3("..........POV fields (" << pov_fields_i.size() << ")..........");
     //
-    std::set<const PhvInfo::Field *> s2;
+    std::set<const PhvInfo::Field *> s2;	// cluster fields
     for(auto entry: dst_map_i)
     {
         if(entry.second)
@@ -248,12 +250,21 @@ void Cluster::compute_fields_no_use_mau()
         }
     }
     //
-    LOG3("..........All fields (" << s1.size() << ")..........");
     LOG3("..........Cluster fields (" << s2.size() << ")..........");
-    LOG3("..........POV fields (" << pov_fields_i.size() << ")..........");
+    //
+    std::set<const PhvInfo::Field *> s3;	// all - cluster fields
+    set_difference(s1.begin(),s1.end(),s2.begin(),s2.end(), std::inserter(s3, s3.end()));
+    //
+    // s3 - pov fields
     //
     fields_no_use_mau_i.clear();
-    set_difference(s1.begin(),s1.end(),s2.begin(),s2.end(), std::back_inserter(fields_no_use_mau_i));
+    std::set<const PhvInfo::Field *> s4(pov_fields_i.begin(), pov_fields_i.end());
+    set_difference(s3.begin(),s3.end(),s4.begin(),s4.end(), std::back_inserter(fields_no_use_mau_i));
+    //
+    // sanity check fields use
+    //
+    std::set<const PhvInfo::Field *> s5(fields_no_use_mau_i.begin(), fields_no_use_mau_i.end());
+    sanity_check_fields_use("compute_fields_no_use_mau..", s1, s2, s3, s4, s5);
     //
     LOG3("..........Fields avoiding MAU pipe (" << fields_no_use_mau_i.size() << ").........." << std::endl);
     //
@@ -402,6 +413,54 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg)
                 }
             }//for
         }
+    }
+}
+
+void Cluster::sanity_check_fields_use(const std::string& msg,
+	std::set<const PhvInfo::Field *> all,
+	std::set<const PhvInfo::Field *> cluster,
+	std::set<const PhvInfo::Field *> all_minus_cluster,
+	std::set<const PhvInfo::Field *> pov,
+	std::set<const PhvInfo::Field *> no_mau)
+{
+    std::vector<const PhvInfo::Field *> sx;
+    //
+    // cluster + all_minus_cluster = all
+    //
+    sx.clear();
+    std::set<const PhvInfo::Field *> s1(cluster.begin(), cluster.end());
+    s1.insert(all_minus_cluster.begin(), all_minus_cluster.end());
+    set_difference(s1.begin(),s1.end(),all.begin(),all.end(), std::back_inserter(sx));
+    if(sx.size())
+    {
+        WARNING("*****cluster.cpp:sanity_FAIL*****fields_use cluster+all_minus_cluster != all .." << msg << sx);
+    }
+    //
+    // cluster intersection all_minus_cluster = null
+    //
+    sx.clear();
+    set_intersection(cluster.begin(),cluster.end(),all_minus_cluster.begin(),all_minus_cluster.end(), std::back_inserter(sx));
+    if(sx.size())
+    {
+        WARNING("*****cluster.cpp:sanity_FAIL*****fields_use.. cluster intersection all_minus_cluster != 0" << msg << sx);
+    }
+    //
+    // all = cluster + pov + no_mau + pov_mau
+    // pov_mau: pov interect with cluster
+    //
+    std::set<const PhvInfo::Field *> pov_mau;	// pov intersect cluster fields
+    set_intersection(pov.begin(),pov.end(),cluster.begin(),cluster.end(), std::inserter(pov_mau, pov_mau.end()));
+    LOG3("..........POV fields in Cluster (" << pov_mau.size() << ")..........");
+    sx.clear();
+    s1.clear();
+    s1.insert(cluster.begin(), cluster.end());
+    s1.insert(pov.begin(), pov.end());
+    s1.insert(no_mau.begin(), no_mau.end());
+    s1.insert(pov_mau.begin(), pov_mau.end());
+    set_difference(s1.begin(),s1.end(),all.begin(),all.end(), std::back_inserter(sx));
+    if(sx.size())
+    {
+        WARNING("*****cluster.cpp:sanity_FAIL*****fields_use all != cluster+pov+no_mau+pov_mau .." << msg << sx);
     }
 }
 
