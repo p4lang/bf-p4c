@@ -64,6 +64,12 @@ class Cluster_PHV_Requirements
     std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>> Cluster_PHV_i;
 							// sorted PHV requirements <num, width>,
 							// num decreasing then width decreasing
+    std::vector<const PhvInfo::Field *> pov_fields_i;
+							// sorted pov fields, width decreasing
+							// some are not 1-bit fields
+    std::vector<const PhvInfo::Field *> t_phv_fields_i;
+							// fields that are not used through mau pipeline
+							// sorted width decreasing
  public:
     Cluster_PHV_Requirements(Cluster &c);
     //
@@ -71,6 +77,10 @@ class Cluster_PHV_Requirements
     {
         return Cluster_PHV_i;
     }
+    //
+    std::vector<const PhvInfo::Field *>& pov_fields()	{ return pov_fields_i; }
+    std::vector<const PhvInfo::Field *>& t_phv_fields()	{ return t_phv_fields_i; }
+    //
 };
 //
 //

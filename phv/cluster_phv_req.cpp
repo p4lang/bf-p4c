@@ -17,7 +17,8 @@
 // 
 //***********************************************************************************
 
-Cluster_PHV_Requirements::Cluster_PHV_Requirements(Cluster &c) : cluster_i(c)
+Cluster_PHV_Requirements::Cluster_PHV_Requirements(Cluster &c)
+	: cluster_i(c), pov_fields_i(c.pov_fields_not_in_cluster()), t_phv_fields_i(c.fields_no_use_mau())
 {
     // create PHV Requirements from clusters
     if(! cluster_i.dst_map().size())
@@ -68,6 +69,25 @@ Cluster_PHV_Requirements::Cluster_PHV_Requirements(Cluster &c) : cluster_i(c)
             });
         }
     }
+    //
+    // POV Requirements from clusters
+    // sort based on width requirement, greatest width first
+    //
+    std::sort(pov_fields_i.begin(), pov_fields_i.end(),
+	[](const PhvInfo::Field *l, const PhvInfo::Field *r)
+        {
+            return l->size > r->size;
+        });
+    //
+    // T_PHV Requirements from clusters
+    // sort based on width requirement, greatest width first
+    //
+    std::sort(t_phv_fields_i.begin(), t_phv_fields_i.end(),
+	[](const PhvInfo::Field *l, const PhvInfo::Field *r)
+        {
+            return l->size > r->size;
+        });
+    //
 }//Cluster_PHV_Requirements
 
 //***********************************************************************************

@@ -223,6 +223,14 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
         container_cohabit_summary();
     }
     //
+    // POV fields placement in MAU containers
+    //
+    POV_placement_containers();
+    //
+    // T_PHV fields placement in containers conforming to T_PHV Collection constraints
+    //
+    T_PHV_placement_containers();
+    //
 }//PHV_MAU_Group_Assignments
 
 //***********************************************************************************
@@ -247,7 +255,10 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
 //***********************************************************************************
 
 void
-PHV_MAU_Group_Assignments::cluster_placement_containers(std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map, std::list<Cluster_PHV *>& clusters_to_be_assigned, std::set<PHV_MAU_Group *>& mau_group_containers_avail)
+PHV_MAU_Group_Assignments::cluster_placement_containers(
+	std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map,
+	std::list<Cluster_PHV *>& clusters_to_be_assigned,
+	std::set<PHV_MAU_Group *>& mau_group_containers_avail)
 {
     //
     // 1. sorted clusters requirement decreasing, sorted mau groups width decreasing
@@ -779,6 +790,36 @@ void PHV_MAU_Group_Assignments::container_cohabit_summary()
             }
         }
     }
+}
+
+
+//***********************************************************************************
+//
+// POV placement
+// 
+//***********************************************************************************
+
+
+void
+PHV_MAU_Group_Assignments::POV_placement_containers()
+{
+    LOG3("..........POV fields to be assigned (" << phv_requirements_i.pov_fields().size() << ").........." << std::endl);
+    LOG3(phv_requirements_i.pov_fields());
+}
+
+
+//***********************************************************************************
+//
+// T_PHV placement
+// 
+//***********************************************************************************
+
+
+void
+PHV_MAU_Group_Assignments::T_PHV_placement_containers()
+{
+    LOG3("..........T_PHV fields to be assigned (" << phv_requirements_i.t_phv_fields().size() << ").........." << std::endl);
+    LOG3(phv_requirements_i.t_phv_fields());
 }
 
 

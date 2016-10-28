@@ -261,6 +261,19 @@ void Cluster::compute_fields_no_use_mau()
     std::set<const PhvInfo::Field *> s4(pov_fields_i.begin(), pov_fields_i.end());
     set_difference(s3.begin(),s3.end(),s4.begin(),s4.end(), std::back_inserter(fields_no_use_mau_i));
     //
+    // pov fields not in cluster
+    // pov_mau: pov intersect cluster fields
+    // pov_no_mau: set_diff pov, pov_mau
+    //
+    std::set<const PhvInfo::Field *> pov_mau;
+    set_intersection(s4.begin(),s4.end(),s2.begin(),s2.end(), std::inserter(pov_mau, pov_mau.end()));
+    LOG3("..........POV fields in Cluster (" << pov_mau.size() << ")..........");
+    //
+    std::set<const PhvInfo::Field *> pov_no_mau;
+    set_difference(s4.begin(),s4.end(),pov_mau.begin(),pov_mau.end(), std::inserter(pov_no_mau, pov_no_mau.end()));
+    LOG3("..........POV fields not in Cluster (" << pov_no_mau.size() << ")..........");
+    pov_fields_not_in_cluster_i.assign(pov_no_mau.begin(), pov_no_mau.end());
+    //
     // sanity check fields use
     //
     std::set<const PhvInfo::Field *> s5(fields_no_use_mau_i.begin(), fields_no_use_mau_i.end());
@@ -446,7 +459,7 @@ void Cluster::sanity_check_fields_use(const std::string& msg,
     }
     //
     // all = cluster + pov + no_mau + pov_mau
-    // pov_mau: pov interect with cluster
+    // pov_mau: pov intersect with cluster
     //
     std::set<const PhvInfo::Field *> pov_mau;	// pov intersect cluster fields
     set_intersection(pov.begin(),pov.end(),cluster.begin(),cluster.end(), std::inserter(pov_mau, pov_mau.end()));
