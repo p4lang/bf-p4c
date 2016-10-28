@@ -964,7 +964,7 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group &g)
                 out << std::endl << "\t" << '[' << w.first << "](" << n.first << ')' << std::endl;
                 for (auto s: n.second)
                 {
-                    out << '\t' << s << std::endl;
+                    out << '\t' << s;
                 }
             }
         }

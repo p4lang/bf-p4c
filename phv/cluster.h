@@ -34,6 +34,10 @@ class Cluster : public Inspector
                                 // maintains unique cluster ptrs
     PhvInfo::Field *dst_i = nullptr;
 				// destination of current statement
+    std::vector<const PhvInfo::Field *> pov_fields_i;
+				// pov fields
+    std::vector<const PhvInfo::Field *> fields_no_use_mau_i;
+				// fields that are not used through mau pipeline
     //
     bool preorder(const IR::Member*) override;
     bool preorder(const IR::Operation_Unary*) override;
@@ -58,6 +62,11 @@ class Cluster : public Inspector
     {
         return dst_map_i;
     }
+    //
+    std::vector<const PhvInfo::Field *>& pov_fields()		{ return pov_fields_i; }
+    //
+    std::vector<const PhvInfo::Field *>& fields_no_use_mau()	{ return fields_no_use_mau_i; }
+    void compute_fields_no_use_mau();
 };
 //
 //

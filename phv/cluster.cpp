@@ -11,7 +11,7 @@
 
 Cluster::Cluster(PhvInfo &p) : phv_i(p)
 {
-    for (auto field: phv_i)
+    for (auto &field: phv_i)
     {
         dst_map_i[&field] = nullptr;
     }
@@ -28,20 +28,20 @@ bool Cluster::preorder(const IR::Member* expression)
     // class Member : Operation_Unary
     // toString = expr->toString() + "." + member
 
-    LOG3(".....Member....." << expression->toString());
+    LOG4(".....Member....." << expression->toString());
 
     return true;
 }
 
 bool Cluster::preorder(const IR::Operation_Unary* expression)
 {
-    LOG3(".....Unary Operation....." << expression->toString()
+    LOG4(".....Unary Operation....." << expression->toString()
 	<< '(' << expression->expr->toString() << ')');
     PhvInfo::Field::bitrange bits;
     bits.lo = bits.hi = 0;
     auto field = phv_i.field(expression->expr, &bits);
 
-    LOG3(field);
+    LOG4(field);
 
     set_field_range(field, bits);
     insert_cluster(dst_i, field);
@@ -51,7 +51,7 @@ bool Cluster::preorder(const IR::Operation_Unary* expression)
 
 bool Cluster::preorder(const IR::Operation_Binary* expression)
 {
-    LOG3(".....Binary Operation....." << expression->toString()
+    LOG4(".....Binary Operation....." << expression->toString()
 	<< '(' << expression->left->toString() << ',' << expression->right->toString() << ')');
     PhvInfo::Field::bitrange left_bits;
     left_bits.lo = left_bits.hi = 0;
@@ -61,8 +61,8 @@ bool Cluster::preorder(const IR::Operation_Binary* expression)
     right_bits.lo = right_bits.hi = 0;
     auto right = phv_i.field(expression->right, &right_bits);
 
-    LOG3(left);
-    LOG3(right);
+    LOG4(left);
+    LOG4(right);
 
     set_field_range(left, left_bits);
     set_field_range(right, right_bits);
@@ -75,7 +75,7 @@ bool Cluster::preorder(const IR::Operation_Binary* expression)
 
 bool Cluster::preorder(const IR::Operation_Ternary* expression)
 {
-    LOG3(".....Ternary Operation....." << expression->toString() 
+    LOG4(".....Ternary Operation....." << expression->toString() 
 	<< '(' << expression->e0->toString() << ',' << expression->e1->toString() << ',' << expression->e2->toString()
         << ')');
     PhvInfo::Field::bitrange e0_bits;
@@ -90,9 +90,9 @@ bool Cluster::preorder(const IR::Operation_Ternary* expression)
     e2_bits.lo = e2_bits.hi = 0;
     auto e2 = phv_i.field(expression->e2, &e2_bits);
 
-    LOG3(e0);
-    LOG3(e1);
-    LOG3(e2);
+    LOG4(e0);
+    LOG4(e1);
+    LOG4(e2);
 
     set_field_range(e0, e0_bits);
     set_field_range(e1, e1_bits);
@@ -107,7 +107,7 @@ bool Cluster::preorder(const IR::Operation_Ternary* expression)
 
 bool Cluster::preorder(const IR::Primitive* primitive)
 {
-    LOG3(".....Primitive:Operation....." << primitive->name);
+    LOG4(".....Primitive:Operation....." << primitive->name);
     for (auto &operand : primitive->operands)
     {
         PhvInfo::Field::bitrange bits;
@@ -115,7 +115,7 @@ bool Cluster::preorder(const IR::Primitive* primitive)
         auto field = phv_i.field(operand, &bits);
         set_field_range(field, bits);
 
-        LOG3(field);
+        LOG4(field);
     }
     dst_i = nullptr;
     if (! primitive->operands.empty())
@@ -127,7 +127,7 @@ bool Cluster::preorder(const IR::Primitive* primitive)
             {
                 dst_map_i[dst_i] = new std::set<const PhvInfo::Field *>; 	// new std::set
                 lhs_unique_i.insert(dst_i);					// lhs_unique set insert field
-                LOG3("lhs_unique..insert[" << std::endl << &lhs_unique_i << "lhs_unique..insert]");
+                LOG4("lhs_unique..insert[" << std::endl << &lhs_unique_i << "lhs_unique..insert]");
             }
             for (auto &operand : primitive->operands)
             {
@@ -202,11 +202,62 @@ void Cluster::end_apply()
     }
     sanity_check_clusters_unique("end_apply..");
     //
+    // compute all fields that are not used through the MAU pipeline
+    // potential candidates for T-PHV allocation 
+    //
+    compute_fields_no_use_mau();
+    //
     // output logs
     //
     LOG3(phv_i);							// all Fields
     LOG3(*this);							// all Clusters
 }//end_apply
+
+//
+// compute fields that do not use mau pipeine
+//
+
+void Cluster::compute_fields_no_use_mau()
+{
+    // set1 = all fields in phv
+    // set2 = cluster fields
+    // set difference = fields not used in mau pipe
+    // also subtract POV fields
+    //
+    std::set<const PhvInfo::Field *> s1;
+    for (auto &field: phv_i)
+    {
+        s1.insert(&field);
+        //
+        if(field.pov)
+        {
+            pov_fields_i.push_back(&field);
+        }
+    }
+    //
+    std::set<const PhvInfo::Field *> s2;
+    for(auto entry: dst_map_i)
+    {
+        if(entry.second)
+        {
+            s2.insert(entry.first);
+            for (auto entry_2: *(entry.second))
+            {
+                s2.insert(entry_2);
+            }
+        }
+    }
+    //
+    LOG3("..........All fields (" << s1.size() << ")..........");
+    LOG3("..........Cluster fields (" << s2.size() << ")..........");
+    LOG3("..........POV fields (" << pov_fields_i.size() << ")..........");
+    //
+    fields_no_use_mau_i.clear();
+    set_difference(s1.begin(),s1.end(),s2.begin(),s2.end(), std::back_inserter(fields_no_use_mau_i));
+    //
+    LOG3("..........Fields avoiding MAU pipe (" << fields_no_use_mau_i.size() << ").........." << std::endl);
+    //
+}//fields_no_use_mau
 
 //***********************************************************************************
 //
@@ -278,7 +329,7 @@ void Cluster::insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rh
                     delete dst_map_i_rhs;                                       // delete std::set
                 }
             }
-            LOG3("lhs_unique..erase[" << std::endl << &lhs_unique_i << "lhs_unique..erase]");
+            LOG4("lhs_unique..erase[" << std::endl << &lhs_unique_i << "lhs_unique..erase]");
         }
     }
 }
@@ -345,8 +396,8 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg)
                     {
                         WARNING("*****cluster.cpp:sanity_FAIL*****uniqueness.." << msg
 				<< entry.first << s1 << "..^.." << entry_2.first << s2 << '=' << s3);
-                        LOG3("lhs[" << std::endl << &s1 << "lhs]");
-                        LOG3("lhs_2[" << std::endl << &s2 << "lhs_2]");
+                        LOG4("lhs[" << std::endl << &s1 << "lhs]");
+                        LOG4("lhs_2[" << std::endl << &s2 << "lhs_2]");
                     }
                 }
             }//for
@@ -391,7 +442,9 @@ std::ostream &operator<<(std::ostream &out, std::vector<const PhvInfo::Field *>&
 
 std::ostream &operator<<(std::ostream &out, Cluster &cluster)
 {
-    out << "++++++++++ Clusters ++++++++++" << std::endl;
+    out << "++++++++++ Clusters (" << cluster.dst_map().size() << ") ++++++++++"
+        << std::endl
+        << std::endl;
     // iterate through all elements in dst_map
     for(auto entry: cluster.dst_map())
     {
@@ -405,6 +458,20 @@ std::ostream &operator<<(std::ostream &out, Cluster &cluster)
             out << ')' << std::endl;
         }
     }
+    //
+    // output pov fields
+    out << std::endl;
+    out << ".......... POV Fields (" << cluster.pov_fields().size() << ") ........."
+        << std::endl
+        << std::endl;
+    out << cluster.pov_fields();
+    out << std::endl;
+    //
+    // output fields_no_use_mau
+    out << ".......... Fields avoiding MAU pipe (" << cluster.fields_no_use_mau().size() << ") ........."
+        << std::endl
+        << std::endl;
+    out << cluster.fields_no_use_mau();
 
     return out;
 }

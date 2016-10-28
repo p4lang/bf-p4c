@@ -251,7 +251,10 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo &phv) {
-    out << "++++++++++ All Fields(name,size) ++++++++++" << std::endl;
+    out << "++++++++++ All Fields name[size]{range} (" << phv.num_fields() << ") ++++++++++"
+        << std::endl
+        << std::endl;
+    //
     for (auto field: phv)
     {
          out << &field << std::endl;
