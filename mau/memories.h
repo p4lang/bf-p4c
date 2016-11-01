@@ -18,6 +18,8 @@ struct Memories {
     static constexpr int TERNARY_TABLES_MAX = 8;
     static constexpr int ACTION_TABLES_MAX = 16;
     static constexpr int BUS_COUNT = 2;
+    static constexpr int STATS_ALUS = 4;
+    static constexpr int METER_ALUS = 4;
 
     Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>          sram_use;
     unsigned                                           sram_inuse[SRAM_ROWS] = { 0 };
@@ -28,10 +30,12 @@ struct Memories {
     Alloc2D<cstring, SRAM_ROWS, 2>                     action_data_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     tind_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     overflow_bus;
-    Alloc1D<cstring, SRAM_ROWS - 1>                    vert_overflow_bus;
+    Alloc1D<std::pair<cstring, int>, SRAM_ROWS - 1>    vert_overflow_bus;
     Alloc2D<cstring, SRAM_ROWS, MAPRAM_COLUMNS>        mapram_use;
     Alloc1D<cstring, SRAM_ROWS>                        stateful_bus;
     int gw_bytes_per_sb[SRAM_ROWS][BUS_COUNT] = {{0}};
+    Alloc1D<cstring, STATS_ALUS>                       stats_alus;
+    Alloc1D<cstring, METER_ALUS>                       meter_alus;  
     struct mem_info {
         int match_tables;
         int match_bus_min;
@@ -43,11 +47,13 @@ struct Memories {
         int action_RAMs;
         int ternary_tables;
         int ternary_TCAMs;
+        int stats_tables;
+        int meter_tables;
 
         void clear() {
             match_tables = 0; match_bus_min = 0; match_RAMs = 0; tind_tables = 0;
             tind_RAMs = 0; action_tables = 0; action_bus_min = 0; action_RAMs = 0;
-            ternary_tables = 0; ternary_TCAMs = 0;
+            ternary_tables = 0; ternary_TCAMs = 0; stats_tables = 0; meter_tables = 0;
         }
     };
 
@@ -93,16 +99,24 @@ struct Memories {
         int width;
         int placed;
         int number;
-        explicit SRAM_group(table_alloc *t, int d, int w, int n)
-            : ta(t), depth(d), width(w), placed(0), number(n) {}
-        explicit SRAM_group(table_alloc *t, int d, int n)
-                     : ta(t), depth(d), width(0),  placed(0), number(n) {}
+        enum type_t { EXACT, ACTION, STATS, METER, TIND } type;
+        explicit SRAM_group(table_alloc *t, int d, int w, int n, type_t ty)
+            : ta(t), depth(d), width(w), placed(0), number(n), type(ty) {}
+        explicit SRAM_group(table_alloc *t, int d, int n, type_t ty)
+                     : ta(t), depth(d), width(0),  placed(0), number(n), type(ty) {}
         void dbprint(std::ostream &out) const {
             out << ta->table->name << " way #" << number << " depth: " << depth
                 << " width: " << width << " placed: " << placed;
         }
         int left_to_place() { return depth - placed; }
         bool all_placed() { return (depth == placed); }
+    };
+
+    struct action_fill {
+        SRAM_group *group;
+        unsigned mask;
+        int index;
+        explicit action_fill() : group(nullptr), mask(0), index(0) {}
     };
 
     vector<table_alloc *>      tables;
@@ -112,7 +126,10 @@ struct Memories {
     vector<table_alloc *>      tind_tables;
     vector<SRAM_group *>       tind_groups;
     vector<table_alloc *>      action_tables;
+    vector<table_alloc *>      stats_tables;
+    vector<table_alloc *>      meter_tables;
     vector<SRAM_group *>       action_bus_users;
+    vector<SRAM_group *>       supp_bus_users;
     vector<table_alloc *>      gw_tables;
 
     void clear();
@@ -147,16 +164,14 @@ struct Memories {
 
     bool allocate_all_action();
     void find_action_bus_users();
-    void find_action_candidates(int row, int mask, SRAM_group **a_group, unsigned &a_mask,
-                                int &a_index, SRAM_group** oflow_group,
-                                unsigned &oflow_mask, int &oflow_index);
+    int stats_per_row(int width, IR::CounterType type);
+    void find_action_candidates(int row, int mask, action_fill &action, action_fill &oflow);
     bool best_a_oflow_pair(SRAM_group **best_a_group, SRAM_group **best_oflow_group,
                            int &a_index, int &oflow_index, int RAMs_available,
                            SRAM_group *best_fit_group, int best_fit_index,
                            SRAM_group *curr_oflow_group);
-    bool fill_out_action_row(SRAM_group *a_group, unsigned a_mask, int a_index,
-                             int row, int side, unsigned mask, bool is_oflow);
-
+    bool fill_out_action_row(action_fill &action, int row, int side, unsigned mask, 
+                             bool is_oflow);
     bool allocate_all_gw();
     table_alloc *find_corresponding_exact_match(cstring name);
     bool gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int width_sect,

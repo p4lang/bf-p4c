@@ -362,6 +362,10 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b) {
     if (a->need_more && !b->need_more) return false;
     if (deps.graph.at(a->name).dep_stages > deps.graph.at(b->name).dep_stages)
         return true;
+    if (deps.graph.at(a->name).dep_stages < deps.graph.at(b->name).dep_stages)
+        return false;
+    if (deps.graph.at(a->name).data_dep.size() < deps.graph.at(b->name).data_dep.size())
+        return true;
     return false;
 }
 
