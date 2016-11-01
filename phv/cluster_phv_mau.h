@@ -46,6 +46,8 @@ class PHV_MAU_Group
         void hi(int h)			{ hi_i = h; }
         int width() const		{ return hi_i - lo_i + 1; }
         PHV_Container *container()	{ return container_i; }
+        //
+        void sanity_check_container(const std::string&);
     };
     //
  private:
@@ -89,6 +91,7 @@ class PHV_MAU_Group
     //
     void sanity_check_container_packs(const std::string&);
     void sanity_check_container_fields_gress(const std::string&);
+    void sanity_check_group_containers(const std::string&);
 };
 //
 //
@@ -178,6 +181,7 @@ class PHV_MAU_Group_Assignments
     std::vector<PHV_Container *>& cohabit_fields()	{ return cohabit_fields_i; }
     //
     void sanity_check_container_fields_gress(const std::string&);
+    void sanity_check_group_containers(const std::string&);
 };
 //
 //

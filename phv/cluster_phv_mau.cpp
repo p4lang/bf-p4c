@@ -232,6 +232,8 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
     //
     T_PHV_placement_containers();
     //
+    sanity_check_group_containers("PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments()..");
+    //
 }//PHV_MAU_Group_Assignments
 
 //***********************************************************************************
@@ -437,37 +439,6 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices(std::set<PHV_MAU
     }
     LOG3(std::endl << "----------sorted MAU Container Packs avail after Initial Container Placements----------");
     LOG3(aligned_container_slices_i);
-}
-
-//
-// update PHV MAU Group container slice information
-// after container cohabit packing pass completed
-//
-
-void PHV_MAU_Group_Assignments::update_PHV_MAU_Group_container_slices()
-{
-    for (auto &gg: PHV_MAU_i)
-    {
-        // groups within this word size
-        for(auto g: gg.second)
-        {
-            g->aligned_container_slices().clear();
-        }
-    }
-    // update PHV MAU Group map from updated composite map[width][number] --> <set of <set of container_packs>>
-    //
-    for (auto &w: aligned_container_slices_i)
-    {
-        for (auto &n: w.second)
-        {
-            for (auto &cc_set: n.second)
-            {
-                PHV_Container *c = (*(cc_set.begin()))->container();
-                PHV_MAU_Group *g = c->phv_mau_group();
-                g->aligned_container_slices()[w.first][n.first].insert(cc_set);		// insert in PHV_MAU_Group map[w][n]
-            }
-        }
-    }
 }
 
 //***********************************************************************************
@@ -739,7 +710,7 @@ void PHV_MAU_Group_Assignments::consolidate_slices_in_group()
             if(n.second.size() > 1)
             {
                 // multiple sets in set of sets
-                // attempt to consolidate
+                // attempt to consolidate only within same MAU group
                 //
                 std::map<PHV_MAU_Group *, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>> g_lo;
                 for (auto cc_set: n.second)
@@ -750,9 +721,9 @@ void PHV_MAU_Group_Assignments::consolidate_slices_in_group()
                 }
                 // all elements of g_lo[g][lo] must be used for aligned_slices[w][n]
                 //
+                aligned_container_slices_i[w.first].erase(n.first);
                 for (auto g: g_lo)
                 {
-                    aligned_container_slices_i[w.first][n.first].clear();
                     for (auto l: g.second)
                     {
                         if(l.second.size() > 1)
@@ -767,7 +738,7 @@ void PHV_MAU_Group_Assignments::consolidate_slices_in_group()
                                     set_u->insert(cc);
                                 }
                             }
-                            aligned_container_slices_i[w.first][n.first].insert(*set_u);
+                            aligned_container_slices_i[w.first][set_u->size()].insert(*set_u);
                         }
                         else
                         {   // use existing singleton set
@@ -779,7 +750,38 @@ void PHV_MAU_Group_Assignments::consolidate_slices_in_group()
             }
         }
     }
-}
+}//consolidate_slices_in_group
+
+//
+// update PHV MAU Group container slice information
+// after container cohabit packing pass completed
+//
+
+void PHV_MAU_Group_Assignments::update_PHV_MAU_Group_container_slices()
+{
+    for (auto &gg: PHV_MAU_i)
+    {
+        // groups within this word size
+        for(auto g: gg.second)
+        {
+            g->aligned_container_slices().clear();
+        }
+    }
+    // update PHV MAU Group map from updated composite map[width][number] --> <set of <set of container_packs>>
+    //
+    for (auto &w: aligned_container_slices_i)
+    {
+        for (auto &n: w.second)
+        {
+            for (auto &cc_set: n.second)
+            {
+                PHV_Container *c = (*(cc_set.begin()))->container();
+                PHV_MAU_Group *g = c->phv_mau_group();
+                g->aligned_container_slices()[w.first][n.first].insert(cc_set);		// insert in PHV_MAU_Group map[w][n]
+            }
+        }
+    }
+}//update_PHV_MAU_Group_container_slices
 
 //
 // container cohabit summary
@@ -802,7 +804,7 @@ void PHV_MAU_Group_Assignments::container_cohabit_summary()
             }
         }
     }
-}
+}//container_cohabit_summary
 
 
 //***********************************************************************************
@@ -840,6 +842,11 @@ PHV_MAU_Group_Assignments::T_PHV_placement_containers()
 // sanity checks
 // 
 //***********************************************************************************
+
+
+void PHV_MAU_Group::Container_Content::sanity_check_container(const std::string& msg)
+{
+}
 
 void PHV_MAU_Group::sanity_check_container_packs(const std::string& msg)
 {
@@ -907,6 +914,31 @@ void PHV_MAU_Group::sanity_check_container_fields_gress(const std::string& msg)
     }
 }
 
+void PHV_MAU_Group::sanity_check_group_containers(const std::string& msg)
+{
+    for (auto &w: aligned_container_slices_i)
+    {
+        for (auto &n: w.second)
+        {
+            for (auto &cc_set: n.second)
+            {
+                for (auto &cc: cc_set)
+                {
+                    cc->sanity_check_container(msg+"PHV_MAU_Group::sanity_check_group_containers");
+                }
+            }
+        }
+    }
+    for (auto &c: containers_pack_i)
+    {
+        c->sanity_check_container(msg+"PHV_MAU_Group::sanity_check_group_containers containers_pack");
+    }
+    for (auto &c: phv_containers_i)
+    {
+        c->sanity_check_container(msg+"PHV_MAU_Group::sanity_check_group_containers phv_containers");
+    }
+}
+
 void PHV_MAU_Group_Assignments::sanity_check_container_fields_gress(const std::string& msg)
 {
     for (auto groups: PHV_MAU_i)
@@ -914,6 +946,50 @@ void PHV_MAU_Group_Assignments::sanity_check_container_fields_gress(const std::s
         for (auto g: groups.second)
         {
             g->sanity_check_container_fields_gress(msg); 
+        } 
+    } 
+}
+
+void PHV_MAU_Group_Assignments::sanity_check_group_containers(const std::string& msg)
+{
+    // sanity check PHV_MAU_Group_Assignments aligned_container_slices with individual MAU Groups
+    //
+    for (auto &w: aligned_container_slices_i)
+    {
+        for (auto &n: w.second)
+        {
+            for (auto &cc_set: n.second)
+            {
+                PHV_Container *c = (*(cc_set.begin()))->container();
+                PHV_MAU_Group *g = c->phv_mau_group();
+                if(g->aligned_container_slices()[w.first][n.first].count(cc_set) != 1)
+                {
+                    WARNING("*****cluster_phv_mau.cpp:sanity_FAIL*****.." << msg << g << " aligned_container_slices does not contain" << cc_set);
+                }
+            }
+        }
+    }
+    // sanity check individual MAU Groups aligned_container_slices with composite PHV_MAU_Group_Assignments
+    // for each MAU Group sanity check constituent containers
+    //
+    for (auto groups: PHV_MAU_i)
+    { 
+        for (auto g: groups.second)
+        {
+            for (auto &w: g->aligned_container_slices())
+            {
+                for (auto &n: w.second)
+                {
+                    for (auto &cc_set: n.second)
+                    {
+                        if(aligned_container_slices_i[w.first][n.first].count(cc_set) != 1)
+                        {
+                            WARNING("*****cluster_phv_mau.cpp:sanity_FAIL*****.." << msg << " composite aligned_container_slices does not contain" << cc_set << " from " << g);
+                        }
+                    }
+                }
+            }
+            g->sanity_check_group_containers(msg); 
         } 
     } 
 }

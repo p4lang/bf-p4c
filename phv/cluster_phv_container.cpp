@@ -90,6 +90,23 @@ PHV_Container::taint(int start, int width, const PhvInfo::Field *field, int rang
     gress_i = gress(field);
 }
 
+
+//***********************************************************************************
+//
+// sanity checks
+// 
+//***********************************************************************************
+
+
+void PHV_Container::Container_Content::sanity_check_container(const std::string& msg)
+{
+}
+
+
+void PHV_Container::sanity_check_container(const std::string& msg)
+{
+}
+
 //***********************************************************************************
 //
 // output stream <<

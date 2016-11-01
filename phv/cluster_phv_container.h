@@ -44,6 +44,8 @@ class PHV_Container
         void hi(int h)			{ hi_i = h; }
         int width() const		{ return hi_i - lo_i + 1; }
         const PhvInfo::Field *field()	{ return field_i; }
+        //
+        void sanity_check_container(const std::string& msg);
     };
     //
  private:
@@ -92,6 +94,8 @@ class PHV_Container
     int avail_bits()						{ return avail_bits_i; }
     std::map<int, int>& ranges()				{ return ranges_i; }
     std::vector<Container_Content *>& fields_in_container()	{ return fields_in_container_i; }
+    //
+    void sanity_check_container(const std::string& msg);
 };
 //
 //
