@@ -40,6 +40,7 @@ class TablePlacement : public MauTransform, public Backtrack {
     const Placed *place_table(ordered_set<const GroupPlace *>&work, const GroupPlace *grp,
                               const Placed *pl);
     std::multimap<cstring, const Placed *> table_placed;
+    std::multimap<cstring, const Placed *>::const_iterator find_placed(cstring name) const;
 };
 
 

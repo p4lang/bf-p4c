@@ -220,6 +220,7 @@ XFAIL_TESTS += \
     tofino/%reldir%/v1_2_test/stateful_alu.p4.test \
     bmv2/%reldir%/v1_samples/02-FlexCounterActionProfile.p4.test \
     bmv2/%reldir%/v1_samples/action_profile.p4.test \
+    bmv2/%reldir%/v1_samples/switch_l2_profile_tofino.p4.test \
     bmv2/%reldir%/v1_samples/test_config_117_first_tcam_range.p4.test \
     bmv2/%reldir%/v1_samples/test_config_118_tcam_range_2.p4.test \
     bmv2/%reldir%/v1_samples/test_config_119_tcam_range_3.p4.test \
@@ -256,6 +257,7 @@ XFAIL_TESTS += \
     bmv2/%reldir%/v1_samples/vk_basic_ipv4_20150706.p4.test \
     p14_to_16/%reldir%/v1_samples/02-FlexCounterActionProfile.p4.test \
     p14_to_16/%reldir%/v1_samples/switch_20160602/switch.p4.test \
+    p14_to_16/%reldir%/v1_samples/switch_l2_profile_tofino.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_125_meter_pre_color.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_126_meter_pre_color_2.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_127_meter_pre_color_3.p4.test \
