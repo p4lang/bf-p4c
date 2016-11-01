@@ -224,13 +224,16 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
         container_cohabit_summary();
     }
     //
-    // POV fields placement in MAU containers
+    // POV fields packing in PHV containers
     //
-    POV_placement_containers();
+    LOG3("..........POV fields to be assigned (" << phv_requirements_i.pov_fields().size() << ").........." << std::endl);
+    std::list<const PhvInfo::Field *> pov_fields(phv_requirements_i.pov_fields().begin(), phv_requirements_i.pov_fields().end());
+    container_pack_cohabit(pov_fields);
     //
     // T_PHV fields placement in containers conforming to T_PHV Collection constraints
     //
-    T_PHV_placement_containers();
+    LOG3("..........T_PHV fields to be assigned (" << phv_requirements_i.t_phv_fields().size() << ").........." << std::endl);
+    T_PHV_placement_containers(phv_requirements_i.t_phv_fields());
     //
     sanity_check_group_containers("PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments()..");
     //
@@ -809,17 +812,166 @@ void PHV_MAU_Group_Assignments::container_cohabit_summary()
 
 //***********************************************************************************
 //
-// POV placement
+// POV packing
 // 
 //***********************************************************************************
 
-
+//
+// using consolidated MAU PHV container packs that are available
+// pack POV fields
+//
 void
-PHV_MAU_Group_Assignments::POV_placement_containers()
+PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<const PhvInfo::Field *>& pov_fields)
 {
-    LOG3("..........POV fields to be assigned (" << phv_requirements_i.pov_fields().size() << ").........." << std::endl);
-    LOG3(phv_requirements_i.pov_fields());
-}
+    LOG3(pov_fields);
+    //
+    // [w](n)
+    // pov fields are sorted width decreasing, n = 1 
+    // aligned_container_slices_i width increasing, number increasing
+    //
+    // pack sorted clusters<n,w> to containers[w][n]
+    //
+    LOG3("..........Packing POVs.........." << std::endl);
+    std::list<const PhvInfo::Field *> pov_remove;
+    for (auto pov: pov_fields)
+    {
+        int p_w = pov->phv_use_hi - pov->phv_use_lo + 1;
+        BUG_CHECK(p_w > 0, "*****PHV_MAU_Group::container_pack_cohabit(POV) pov_width < 1*****");
+        bool found_match = false;
+        for (auto &i : aligned_container_slices_i)
+        {
+            int m_w = i.first;
+            if(m_w >= p_w)
+            {
+                for (auto &j : i.second)
+                {
+                    // split container_pack <mw, mn> --> <mw, mn-1>, (<mw, 1> --> <mw-pw, 1>, <pw, 1>)
+		    //
+                    int m_n = j.first;
+                    if(m_n >= 1)
+                    {
+                        // honor gress compatible match
+                        //
+                        std::set<PHV_MAU_Group::Container_Content *> cc_set;
+                        PHV_Container::Ingress_Egress c_gress = PHV_Container::Ingress_Egress::Ingress_Or_Egress;
+                        cc_set.clear();
+                        for (auto cc_set_x: j.second)
+                        {
+                            c_gress = (*(cc_set_x.begin()))->container()->gress();
+                            if(! gress_in_compatibility(c_gress, PHV_Container::gress(pov)))
+                            {
+                                cc_set = cc_set_x;
+                                //
+                                // remove matching PHV_MAU_Group Container Content from set_of_sets
+                                // if set_of_sets empty then remove map[m_w] entry
+                                //
+                                j.second.erase(cc_set_x);
+                                if(j.second.empty())
+                                {
+                                    i.second.erase(j.first);
+                                }
+                                //
+                                break;
+                            }
+                        }
+                        if(cc_set.empty())
+                        {   //
+                            // not gress compatible
+                            //
+                            LOG3("-----<1," << p_w << '>' << (char) PHV_Container::gress(pov) << "-----[" << m_w << "](" << m_n << ')' << (char) c_gress << j.second);
+                            //
+                            continue;
+                        }
+                        //
+                        LOG3(".....<1," << p_w << '>' << (char) PHV_Container::gress(pov) <<  "-->[" << m_w << "](" << m_n << ')' << (char) c_gress << cc_set);
+                        //
+                        // mau availabilty number > pov requirement number = 1
+                        //
+                        if(m_n > 1)
+                        {   // create new container pack <mw, mn-1>
+                            // n = m_n - 1 containers
+                            // insert in map[n]
+                            //
+                            std::set<PHV_MAU_Group::Container_Content *>* cc_n = new std::set<PHV_MAU_Group::Container_Content *>;
+                            auto n = m_n - 1;
+                            for (auto i=0; i < n; i++)
+                            {
+                                cc_n->insert(*(cc_set.begin()));
+                                cc_set.erase(cc_set.begin());
+                            }
+                            i.second[n].insert(*cc_n);
+                            LOG3("\t==>[" << m_w << "]-->[" << m_w << "](" << n << ')' << std::endl << '\t' << *cc_n);
+                        }
+                        //
+                        // container tracking based on cc_set ... <1, p_w>;
+                        //
+                        BUG_CHECK(cc_set.size() == 1, "*****PHV_MAU_Group::container_pack_cohabit(POV) cc_set != 1*****");
+                        auto cc = *(cc_set.begin());
+                        {
+                            int start = cc->hi() + 1 - p_w;
+                            cc->container()->taint(start, p_w, pov, cc->lo() /*container ranges*/);
+                            //
+                            // if container is fully packed, remove from group's available containers
+                            //
+                            if(cc->container()->status() == PHV_Container::Container_status::FULL)
+                            {
+                                cc->container()->phv_mau_group()->containers_pack().erase(cc->container());
+                            }
+                            LOG3("\t\t" << *(cc->container()));
+                        }
+                        //
+                        // mau availabilty width > pov requirement width
+                        //
+                        if(m_w > p_w)
+                        {   // create new container pack <mw-pw, 1>
+                            // new width w = m_w - p_w;
+                            // insert in map[m_w-p_w](1)
+                            //
+                            std::set<PHV_MAU_Group::Container_Content *>* cc_w = new std::set<PHV_MAU_Group::Container_Content *>;
+                            *cc_w = cc_set;
+                            for (auto cc: *cc_w)
+                            {
+                                cc->hi(cc->hi() - 1);
+                            }
+                            auto w = m_w - p_w;
+                            aligned_container_slices_i[w][1].insert(*cc_w);
+                            LOG3("\t==>(1)-->[" << w << "](1)" << std::endl << '\t' << *cc_w);
+                        }
+                        // remove pov
+                        //
+                        pov_remove.push_back(pov);
+                        //
+                        found_match = true;     // next pov
+                        break;
+                    }
+                }
+            }
+            if(found_match)
+            {
+                break;
+            }
+        }
+    }
+    //
+    sanity_check_container_fields_gress("PHV_MAU_Group_Assignments::container_pack_cohabit(POV)..");
+    //
+    // remove povs already assigned
+    for (auto p: pov_remove)
+    {
+        pov_fields.remove(p);
+    }
+    LOG3(std::endl << "----------after Packing ..... POVs not assigned (" << pov_fields.size() << ")-----" << std::endl);
+    LOG3(pov_fields);
+    //
+    LOG3("----------after POV Packing ..... sorted MAU Container Packs avail----------");
+    LOG3(aligned_container_slices_i);
+    //
+    consolidate_slices_in_group();
+    //
+    LOG3("----------after POV Packing ..... consolidate slices ..... MAU Container Packs avail----------");
+    LOG3(aligned_container_slices_i);
+    //
+}//container_pack_cohabit POV
 
 
 //***********************************************************************************
@@ -830,10 +982,9 @@ PHV_MAU_Group_Assignments::POV_placement_containers()
 
 
 void
-PHV_MAU_Group_Assignments::T_PHV_placement_containers()
+PHV_MAU_Group_Assignments::T_PHV_placement_containers(std::vector<const PhvInfo::Field *>& t_phv_fields)
 {
-    LOG3("..........T_PHV fields to be assigned (" << phv_requirements_i.t_phv_fields().size() << ").........." << std::endl);
-    LOG3(phv_requirements_i.t_phv_fields());
+    LOG3(t_phv_fields);
 }
 
 

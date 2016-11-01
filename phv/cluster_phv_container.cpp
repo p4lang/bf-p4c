@@ -44,6 +44,10 @@ PHV_Container::taint(int start, int width, const PhvInfo::Field *field, int rang
 	phv_number_i, start, width, range_start);
     //
     taint_color_i += '1' - '0';
+    if(taint_color_i > '9')
+    {
+        taint_color_i = '*';
+    }
     for (auto i=start; i < start+width; i++)
     {
          bits_i[i] = taint_color_i;
@@ -82,9 +86,9 @@ PHV_Container::taint(int start, int width, const PhvInfo::Field *field, int rang
     fields_in_container_i.push_back(new Container_Content(start, width, field));
     //
     // set gress for this container
-    // container may be part of POV that is Ingress Or Egress
-    // however for any stage it can be used for Ingress or for Egress
-    // cannot share container with Ingress fields and Egress fields
+    // container may be part of MAU group that is Ingress Or Egress
+    // however for any stage it is used exclusively for Ingress or for Egress
+    // cannot share container with Ingress fields & Egress fields
     // transition behavior for such sharing unclear
     //
     gress_i = gress(field);

@@ -130,6 +130,7 @@ class PhvInfo : public Inspector {
 
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field::alloc_slice &);
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field *);
+std::ostream &operator<<(std::ostream &, std::list<const PhvInfo::Field *>&);
 std::ostream &operator<<(std::ostream &, const PhvInfo &);
 extern void repack_metadata(PhvInfo &phv);
 

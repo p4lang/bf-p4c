@@ -71,12 +71,22 @@ Cluster_PHV_Requirements::Cluster_PHV_Requirements(Cluster &c)
     }
     //
     // POV Requirements from clusters
+    // allocate all bits to PHVs only if they are used
+    // some POV fields, e.g., header stacks, have width > 1
+    // allocation of POV field bits must be contiguous
+    // sort based on use: fld->phv_use_hi - fld->phv_use_lo
     // sort based on width requirement, greatest width first
     //
     std::sort(pov_fields_i.begin(), pov_fields_i.end(),
 	[](const PhvInfo::Field *l, const PhvInfo::Field *r)
         {
-            return l->size > r->size;
+            int l_range = l->phv_use_hi - l->phv_use_lo;
+            int r_range = r->phv_use_hi - r->phv_use_lo;
+            if(l_range == r_range)
+            {
+                return l->size > r->size;
+            }
+            return l_range > r_range;
         });
     //
     // T_PHV Requirements from clusters

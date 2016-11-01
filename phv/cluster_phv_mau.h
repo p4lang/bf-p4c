@@ -156,12 +156,13 @@ class PHV_MAU_Group_Assignments
 	std::set<PHV_MAU_Group *>& mau_group_containers_avail);
     void create_aligned_container_slices(std::set<PHV_MAU_Group *>& mau_group_containers_avail);
     void container_pack_cohabit(std::list<Cluster_PHV *>& clusters_to_be_assigned);
+    void container_pack_cohabit(std::list<const PhvInfo::Field *>&);
+    //
     void consolidate_slices_in_group();
     void update_PHV_MAU_Group_container_slices();
     void container_cohabit_summary();
     //
-    void POV_placement_containers();
-    void T_PHV_placement_containers();
+    void T_PHV_placement_containers(std::vector<const PhvInfo::Field *>&);
     //
  public:
     //
