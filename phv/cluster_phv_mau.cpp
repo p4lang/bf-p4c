@@ -13,6 +13,7 @@ PHV_MAU_Group::Container_Content::Container_Content(int l, int w, PHV_Container 
 	: lo_i(l), hi_i(l+w-1), container_i(c)
 {
     BUG_CHECK(container_i, "*****PHV_MAU_Group::Container_Content constructor called with null container ptr*****");
+    container_i->ranges()[lo_i] = hi_i;
 }
 
 //***********************************************************************************
@@ -73,7 +74,7 @@ void PHV_MAU_Group::create_aligned_container_slices(std::list<PHV_Container *>& 
         lo = 0;
         for (auto c: container_list)
         {
-           lo = std::max(lo, c->avail_bits_lo()); 
+           lo = std::max(lo, c->ranges().begin()->first); 
         }
         // for each partial container slice lo .. hi 
         //
@@ -82,8 +83,8 @@ void PHV_MAU_Group::create_aligned_container_slices(std::list<PHV_Container *>& 
         std::set<Container_Content *> *cc_set = new std::set<Container_Content *>;
         for (auto c: container_list)
         {
-            cc_set->insert(new Container_Content(lo, width, c));	// insert in cc_set
-            if(c->avail_bits_lo() == lo)
+            cc_set->insert(new Container_Content(lo, width, c));			// insert in cc_set
+            if(c->ranges().begin()->first == lo)
             {
                 c_remove.push_back(c);
             }
@@ -363,6 +364,7 @@ PHV_MAU_Group_Assignments::cluster_placement_containers(
                             g->containers_pack().insert(g->phv_containers()[container_index]);
                             mau_group_containers_avail.insert(g);
                         }
+                        LOG3("\t\t" << g->phv_containers()[container_index]);
                         container_index++;
                     }
                 }
@@ -633,6 +635,8 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
                         //
                         LOG3(".....<" << cl_n << ',' << cl_w << '>' << (char) cl->gress() <<  "-->[" << m_w << "](" << m_n << ')' << (char) c_gress << cc_set);
                         //
+                        // mau availabilty number > cluster requirement number
+                        //
                         if(m_n > cl_n)
                         {   // create new container pack <mw, mn-cn>
                             // n = m_n - cl_n containers
@@ -648,6 +652,29 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
                             i.second[n].insert(*cc_n);
                             LOG3("\t==>[" << m_w << "]-->[" << m_w << "](" << n << ')' << std::endl << '\t' << *cc_n);
                         }
+                        //
+                        // container tracking based on cc_set ... <cl_n, cl_w>;
+                        //
+                        auto field = 0;
+                        for (auto cc : cc_set)
+                        {
+                            // to honor alignment of fields in clusters
+                            // start with rightmost vertical slice that accommodates this width
+                            //
+                            int start = cc->hi() + 1 - cl_w;
+                            cc->container()->taint(start, cl_w, cl->cluster_vec()[field++], cc->lo() /*container ranges*/);
+                            //
+                            // if container is fully packed, remove from group's available containers
+                            //
+                            if(cc->container()->status() == PHV_Container::Container_status::FULL)
+                            {
+                                cc->container()->phv_mau_group()->containers_pack().erase(cc->container());
+                            }
+                            LOG3("\t\t" << *(cc->container()));
+                        }
+                        //
+                        // mau availabilty width > cluster requirement width
+                        //
                         if(m_w > cl_w)
                         {   // create new container pack <mw-cw, cn>
                             // new width w = m_w - cl_w;
@@ -662,24 +689,6 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
                             auto w = m_w - cl_w;
                             aligned_container_slices_i[w][cl_n].insert(*cc_w);
                             LOG3("\t==>(" << cl_n << ")-->[" << w << "](" << cl_n << ')' << std::endl << '\t' << *cc_w);
-                        }
-                        //
-                        // update container tracking records based on cc_set ... <cl_n, cl_w>;
-                        auto field = 0;
-                        for (auto cc : cc_set)
-                        {
-                            // to honor alignment of fields in clusters
-                            // start with rightmost vertical slice
-                            //
-                            int start = cc->container()->avail_bits_hi() + 1 - cl_w;
-                            cc->container()->taint(start, cl_w, cl->cluster_vec()[field++]);
-                            //
-                            // if container is fully packed, remove from group's available containers
-                            //
-                            if(cc->container()->status() == PHV_Container::Container_status::FULL)
-                            {
-                                cc->container()->phv_mau_group()->containers_pack().erase(cc->container());
-                            }
                         }
                         // remove cl
                         //
@@ -707,9 +716,12 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
     LOG3(std::endl << "----------after Packing ..... clusters not assigned (" << clusters_to_be_assigned.size() << ")-----" << std::endl);
     LOG3(clusters_to_be_assigned);
     //
+    LOG3("----------after Packing ..... sorted MAU Container Packs avail----------");
+    LOG3(aligned_container_slices_i);
+    //
     consolidate_slices_in_group();
     //
-    LOG3("----------after Packing ..... sorted MAU Container Packs avail----------");
+    LOG3("----------after Packing ..... consolidate slices ..... MAU Container Packs avail----------");
     LOG3(aligned_container_slices_i);
     //
 }//container_pack_cohabit

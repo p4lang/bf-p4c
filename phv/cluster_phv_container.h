@@ -60,8 +60,9 @@ class PHV_Container
     char *bits_i;						// tainted bits in container
     char taint_color_i='0';					// color represented by 'number' to taint bits for fields
 								// highest taint number = number of fields represented by container
-    int avail_bits_lo_i = 0;					// available bit range lo
-    int avail_bits_hi_i;					// available bit range hi
+    int avail_bits_i = 0;					// available bits in container
+    std::map<int, int> ranges_i;				// available ranges in this container
+    //
  public:
     PHV_Container(PHV_MAU_Group *g, PHV_Word w, int n, int phv_number, Ingress_Egress gress);
     //
@@ -87,9 +88,9 @@ class PHV_Container
     }
     Container_status status()					{ return status_i; }
     char *bits()						{ return bits_i; }
-    void taint(int start, int width, const PhvInfo::Field *field);
-    int avail_bits_lo()						{ return avail_bits_lo_i; }
-    int avail_bits_hi()						{ return avail_bits_hi_i; }
+    void taint(int start, int width, const PhvInfo::Field *field, int range_start=0);
+    int avail_bits()						{ return avail_bits_i; }
+    std::map<int, int>& ranges()				{ return ranges_i; }
     std::vector<Container_Content *>& fields_in_container()	{ return fields_in_container_i; }
 };
 //

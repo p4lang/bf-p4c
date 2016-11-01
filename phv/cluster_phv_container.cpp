@@ -28,39 +28,53 @@ PHV_Container::PHV_Container(PHV_MAU_Group *g, PHV_Word w, int n, int phv_n, Ing
     {
         bits_i[i] = taint_color_i;
     }
-    avail_bits_lo_i = 0;
-    avail_bits_hi_i = (int) width_i - 1;
+    avail_bits_i = (int) width_i;
+    ranges_i[0] = (int) width_i - 1;
+    //
 }//PHV_Container
 
 void
-PHV_Container::taint(int start, int width, const PhvInfo::Field *field)
+PHV_Container::taint(int start, int width, const PhvInfo::Field *field, int range_start)
 {
+    BUG_CHECK((start+width <= (int) width_i),
+	"*****PHV_Container::taint()*****PHV-%s start=%d width=%d width_i=%d",
+	phv_number_i, start, width, (int) width_i);
+    BUG_CHECK(start+width <= ranges_i[range_start]+1,
+	"*****PHV_Container::taint()*****PHV-%s start=%d width=%d range_start=%d",
+	phv_number_i, start, width, range_start);
+    //
     taint_color_i += '1' - '0';
     for (auto i=start; i < start+width; i++)
     {
          bits_i[i] = taint_color_i;
     }
-    if(start == 0)
-    {   // first use: container placement
-        //
-        avail_bits_lo_i = start + width;
-    }
-    else
-    {
-        // packing from right most slice to honor alignment
-        //
-        avail_bits_hi_i -= width;
-    }
     //
-    //?? assert avail_bits_lo_i <= avail_bits_hi_i + 1
+    avail_bits_i -= width;		// packing reduces available bits
+    BUG_CHECK(avail_bits_i >= 0, "*****PHV_Container::taint()*****PHV-%s avail_bits = %d", phv_number_i, avail_bits_i);
     //
-    if(avail_bits_lo_i == avail_bits_hi_i + 1)
+    // first container placement, packing start lo = start + width
+    // after packing, non contiguous availability e.g., [15..15], [8..10] => ranges[15] = 15, ranges[8] = 10
+    //
+    if(avail_bits_i == 0)
     {
         status_i = Container_status::FULL;
+        ranges_i.clear();
     }
     else
     {
         status_i = Container_status::PARTIAL;
+        if(range_start == start)
+        {
+            if(start+width < ranges_i[start]+1)
+            {
+                ranges_i[start+width] = ranges_i[start];
+            }
+            ranges_i.erase(start);
+        }
+        else
+        {
+            ranges_i[range_start] = start-1;
+        }
     }
     //
     // track fields in this container
@@ -111,7 +125,10 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c)
         }
         if(c->status() != PHV_Container::Container_status::FULL)
         {
-            out << '[' << c->avail_bits_lo() << ".." << c->avail_bits_hi() << ']';
+            for (auto r: c->ranges())
+            {
+                out << '(' << r.first << ".." << r.second << ')';
+            }
         }
         else
         {
