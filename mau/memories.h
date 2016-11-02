@@ -116,10 +116,14 @@ struct Memories {
     struct action_fill {
         SRAM_group *group;
         unsigned mask;
-        int index;
+        size_t index;
         explicit action_fill() : group(nullptr), mask(0), index(0) {}
         void clear() { group = nullptr; mask = 0; index = 0; }
     };
+
+    static constexpr int ACTION_IND = 0;
+    static constexpr int SUPPL_IND = 1;
+    static constexpr int OFLOW_IND = 2;
 
     vector<table_alloc *>      tables;
     vector<table_alloc *>      exact_tables;
@@ -133,6 +137,7 @@ struct Memories {
     vector<SRAM_group *>       action_bus_users;
     vector<SRAM_group *>       suppl_bus_users;
     vector<table_alloc *>      gw_tables;
+
 
     void clear();
     void clear_table_vectors();
@@ -168,14 +173,16 @@ struct Memories {
     void find_action_bus_users();
     int stats_per_row(int width, IR::CounterType type);
     void find_action_candidates(int row, int mask, action_fill &action, action_fill &oflow,
-                                action_fill &suppl);
-    bool action_row_trip(action_fill &action, action_fill &suppl, action_fill &oflow,
+                                action_fill &suppl, bool stats_available, bool meter_available,
+                                action_fill &curr_oflow);
+    void action_row_trip(action_fill &action, action_fill &suppl, action_fill &oflow,
                          action_fill &best_fit_action, action_fill &best_fit_suppl,
-                         action_fill &curr_oflow, action_fill &next_suppl,
-                         action_fill &next_action, int RAMs_available, bool left_side);
-    bool action_oflow_only(action_fill &action, action_fill &oflow,
+                         action_fill &curr_oflow, action_fill &next_action,
+                         action_fill &next_suppl, int RAMs_available, bool left_side,
+                         int order[3], int RAMs[3]);
+    void action_oflow_only(action_fill &action, action_fill &oflow,
                            action_fill &best_fit_action, action_fill &next_action,
-                           action_fill &curr_oflow, int RAMs_available);
+                           action_fill &curr_oflow, int RAMs_available, int order[3]);
 
 
     bool best_a_oflow_pair(SRAM_group **best_a_group, SRAM_group **best_oflow_group,

@@ -832,40 +832,50 @@ void Memories::find_action_bus_users() {
     }
 }
 
-bool Memories::action_row_trip(action_fill &action, action_fill &suppl, action_fill &oflow,
+void Memories::action_row_trip(action_fill &action, action_fill &suppl, action_fill &oflow,
                                action_fill &best_fit_action, action_fill &best_fit_suppl,
-                               action_fill &curr_oflow, action_fill &next_suppl,
-                               action_fill &next_action, int RAMs_available, bool left_side) {
+                               action_fill &curr_oflow, action_fill &next_action,
+                               action_fill &next_suppl, int RAMs_available, bool left_side,
+                               int order[3], int RAMs[3]) {
     if (!left_side) {
         if (curr_oflow.group && curr_oflow.group->type != SRAM_group::ACTION) {
             if (best_fit_suppl.group && best_fit_suppl.group->left_to_place() == RAMs_available) {
                 suppl = best_fit_suppl;
+                order[SUPPL_IND] = 0;
             } else if (curr_oflow.group->left_to_place() >= RAMs_available) {
                 oflow = curr_oflow;
+                order[OFLOW_IND] = 0;
             } else if (next_suppl.group) {
                 suppl = next_suppl;     
-                oflow = curr_oflow; 
+                oflow = curr_oflow;
+                order[OFLOW_IND] = 0; order[SUPPL_IND] = 1; 
                 if (!next_suppl.group->requires_ab() && 
                     (next_suppl.group->left_to_place() + 
                     curr_oflow.group->left_to_place() < RAMs_available)) {
                     action = next_action;
+                    order[ACTION_IND] = 2;
                 }
             } else if (next_action.group && next_action.group->left_to_place() == RAMs_available) {
                oflow = curr_oflow;
                action = next_action;
+               order[OFLOW_IND] = 0; order[ACTION_IND] = 1;
             }
         } else if (next_suppl.group) {
             suppl = next_suppl;
+            order[SUPPL_IND] = 0;
+            //FIXME: Perhaps port the correct function
             if (next_suppl.group->left_to_place() < RAMs_available) {
                 if (curr_oflow.group) {
                     oflow = curr_oflow;
+                    order[OFLOW_IND] = 1;
                 } else if (next_action.group) {
                     action = next_action;
+                    order[ACTION_IND] = 1;
                 }
             } 
         } else {
             action_oflow_only(action, oflow, best_fit_action, next_action, curr_oflow, 
-                              RAMs_available);
+                              RAMs_available, order);
         }
     } else {
         action_fill curr_oflow_temp = curr_oflow;
@@ -873,15 +883,20 @@ bool Memories::action_row_trip(action_fill &action, action_fill &suppl, action_f
             curr_oflow_temp.group = nullptr;
         }
         action_oflow_only(action, oflow, best_fit_action, next_action, curr_oflow_temp,
-                          RAMs_available);
+                          RAMs_available, order);
     }
-    return true;
+    
+    if (order[ACTION_IND] >= 0)
+        RAMs[order[ACTION_IND]] = action.group->left_to_place();
+    if (order[SUPPL_IND] >= 0)
+        RAMs[order[SUPPL_IND]] = suppl.group->left_to_place();
+    if (order[OFLOW_IND] >= 0)
+        RAMs[order[OFLOW_IND]] = oflow.group->left_to_place();
 }
 
-bool Memories::action_oflow_only(action_fill &action, action_fill &oflow, 
+void Memories::action_oflow_only(action_fill &action, action_fill &oflow, 
                                  action_fill &best_fit_action, action_fill &next_action,
-                                 action_fill &curr_oflow, int RAMs_available) {
-    bool oflow_first = false;
+                                 action_fill &curr_oflow, int RAMs_available, int order[3]) {
 
     if (curr_oflow.group == nullptr) {
         if (!best_fit_action.group) {
@@ -891,27 +906,32 @@ bool Memories::action_oflow_only(action_fill &action, action_fill &oflow,
         } else {
             action = next_action;
         }
-
+        order[ACTION_IND] = 0;
     } else {
         if (!best_fit_action.group) {
             oflow = curr_oflow;
             if (next_action.group && curr_oflow.group->left_to_place() < RAMs_available) {
                 action = next_action;
+                order[ACTION_IND] = 1;
             }
-            oflow_first = true;
+            order[OFLOW_IND] = 0;
         } else if (curr_oflow.group->left_to_place() + best_fit_action.group->left_to_place()
             >= RAMs_available) {
             oflow = curr_oflow;
             if (curr_oflow.group->left_to_place() < RAMs_available) {
-                oflow_first = true;
                 action = next_action;
+                order[OFLOW_IND] = 0; order[ACTION_IND] = 1;
             } else {
                 if (best_fit_action.group->left_to_place() <= RAMs_available) {
                     action = best_fit_action;
-                    if (best_fit_action.group->left_to_place() == RAMs_available)
+                    if (best_fit_action.group->left_to_place() == RAMs_available) {
                         oflow.group = nullptr;
+                        order[ACTION_IND] = 0;
+                    } else {
+                        order[ACTION_IND] = 1; order[OFLOW_IND] = 0;
+                    }
                 } else {
-                    oflow_first = true;
+                    order[OFLOW_IND] = 0;
                 }
             }
         } else {
@@ -919,11 +939,11 @@ bool Memories::action_oflow_only(action_fill &action, action_fill &oflow,
             if (next_action.group
                 && curr_oflow.group->left_to_place() < RAMs_available) {
                 action = next_action;
+                order[ACTION_IND] = 1;
             }
-            oflow_first = true;
+            order[OFLOW_IND] = 0;
         }
     }
-    return oflow_first;
 }
 
 /* This is a large if-else to determine the best two groups to fit within in the
@@ -992,7 +1012,8 @@ bool Memories::best_a_oflow_pair(SRAM_group **best_a_group, SRAM_group **best_of
 /* Selects the best two candidates for the potential use in the particular action row, 
    and calculate the corresponding masks and indices within the list */
 void Memories::find_action_candidates(int row, int mask, action_fill &action, action_fill &oflow,
-                                      action_fill &suppl) /*, SRAM_group **curr_oflow_group,
+                                      action_fill &suppl, bool stats_available, bool meter_available,
+                                      action_fill &curr_oflow) /*, SRAM_group **curr_oflow_group,
                                       SRAM_group **right_oflow_group, bool stats_available,
                                       bool meter_available)*/
                                       /*SRAM_group **a_group, unsigned &a_mask,
@@ -1004,47 +1025,94 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
 
     int RAMs_available = __builtin_popcount(mask & ~sram_inuse[row]);
 
-    int best_fit_action_index = 0;
-    int best_fit_suppl_index = 0;
-    int a_index = 0; int oflow_index = 0;
+    action_fill best_fit_action, best_fit_suppl;
+    action_fill next_action, next_suppl;
 
-    SRAM_group *curr_oflow_group = nullptr;
-    
-    SRAM_group *best_a_group = nullptr;
-    SRAM_group *best_oflow_group = nullptr;
-    SRAM_group *best_suppl_group = nullptr;
-
-    SRAM_group *best_fit_action_group = nullptr;
-    SRAM_group *best_fit_suppl_group = nullptr; 
-    for (size_t i = 1; i < action_bus_users.size(); i++) {
-        if (action_bus_users[i]->depth <= RAMs_available) {
-            best_fit_action_group = action_bus_users[i];
-            best_fit_action_index = i;
+    for (size_t i = 0; i < action_bus_users.size(); i++) {
+        if (curr_oflow.group->type == SRAM_group::ACTION && curr_oflow.index == i)
+            continue;
+        if (action_bus_users[i]->left_to_place() <= RAMs_available) {
+            best_fit_action.group = action_bus_users[i];
+            best_fit_action.index = i;
             break;
         }
     }
 
-    /*
+    int min_left = 0;
+    for (size_t i = 0; i < action_bus_users.size(); i++) {
+        if (curr_oflow.group->type == SRAM_group::ACTION && curr_oflow.index == i)
+            continue;
+        if (action_bus_users[i]->left_to_place() > min_left) {
+            next_action.group = action_bus_users[i];
+            next_action.index = i;
+            min_left = action_bus_users[i]->left_to_place();
+        }
+    }
+
+    
     if (mask == 0x3f0) {
         for (size_t i = 0; i < suppl_bus_users.size(); i++) {
+            if (curr_oflow.group->type != SRAM_group::ACTION && curr_oflow.index == i)
+                continue;
             if (!stats_available && suppl_bus_users[i]->type == SRAM_group::STATS)
                 continue;
             if (!meter_available && suppl_bus_users[i]->type != SRAM_group::STATS)
                 continue;
-            if (suppl_bus_users[i]->depth <= RAMS_available) {
-                best_fit_suppl_group = suppl_bus_users[i];
-                best_fit_suppl_index = i;
+            if (suppl_bus_users[i]->depth <= RAMs_available) {
+                best_fit_suppl.group = suppl_bus_users[i];
+                best_fit_suppl.index = i;
                 break;
             }
         }
-    }*/
+        min_left = 0;
+        for (size_t i = 0; i < suppl_bus_users.size(); i++) {
+            if (curr_oflow.group->type != SRAM_group::ACTION && curr_oflow.index == i)
+                continue;
+            if (!stats_available && suppl_bus_users[i]->type == SRAM_group::STATS)
+                continue;
+            if (!meter_available && suppl_bus_users[i]->type != SRAM_group::STATS)
+                continue;
+            if (suppl_bus_users[i]->left_to_place() > min_left) {
+                next_suppl.group = suppl_bus_users[i];
+                next_suppl.index = i;
+                min_left = action_bus_users[i]->left_to_place();
+            }
+        }
+    }
 
     
-    bool oflow_first = true;
+    unsigned masks[3] = {0, 0, 0};
+    int RAMs[3] = {0, 0, 0};
+    int order[3] = {-1, -1, -1}; //order is action, suppl, oflow
+    action_row_trip(action, suppl, oflow, best_fit_action, best_fit_suppl, curr_oflow,
+                    next_action, next_suppl, RAMs_available, (mask == 0xf), order, RAMs);
     /*bool oflow_first = best_a_oflow_pair(&best_a_group, &best_oflow_group, a_index, oflow_index,
                                          RAMs_available, best_fit_group, best_fit_index,
                                          curr_oflow_group);
     */
+    int RAMs_filled = 0;
+    for (int i = 0; i < SRAM_COLUMNS && RAMs_filled < RAMs[0] + RAMs[1] + RAMs[2]; i++) {
+        if (((1 << i) & mask) == 0)
+            continue;
+        if ((1 << i) & ~sram_inuse[row]) {
+            if (RAMs_filled < RAMs[0])
+                masks[0] |= (1 << i);
+            else if (RAMs_filled < RAMs[0] + RAMs[1])
+                masks[1] |= (1 << i);
+            else
+                masks[2] |= (1 << i);
+            RAMs_filled++;
+        }
+    }
+
+
+    if (order[ACTION_IND] >= 0)
+        action.mask = masks[order[ACTION_IND]];
+    if (order[SUPPL_IND] >= 0)
+        suppl.mask = masks[order[SUPPL_IND]];
+    if (order[OFLOW_IND] >= 0)
+        oflow.mask = masks[order[OFLOW_IND]];
+    /*
     unsigned first_mask = 0; unsigned second_mask = 0;
     int first_RAMs = 0;
     int second_RAMs = 0;
@@ -1087,6 +1155,7 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
         oflow.group = best_oflow_group;
         oflow.index = oflow_index;
     }
+    */
 }
 
 /* Fills out the action RAMs and bus on an individual action data bus and potential
@@ -1159,7 +1228,7 @@ bool Memories::allocate_all_action() {
             SRAM_group *oflow_group = nullptr;
             unsigned a_mask = 0; unsigned oflow_mask = 0;
             int a_index = 0; int oflow_index = 0;*/
-            find_action_candidates(i, mask, action, oflow, suppl);
+   //         find_action_candidates(i, mask, action, oflow, suppl);
 
             if (action.group == nullptr && oflow.group == nullptr) {
                 completed = true;
