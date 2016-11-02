@@ -30,8 +30,10 @@ struct Memories {
     Alloc2D<cstring, SRAM_ROWS, 2>                     action_data_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     tind_bus;
     Alloc2D<cstring, SRAM_ROWS, 2>                     overflow_bus;
+    Alloc1D<cstring, SRAM_ROWS>                        twoport_bus;
     Alloc1D<std::pair<cstring, int>, SRAM_ROWS - 1>    vert_overflow_bus;
     Alloc2D<cstring, SRAM_ROWS, MAPRAM_COLUMNS>        mapram_use;
+    unsigned                                           mapram_inuse[SRAM_ROWS] = {0};
     Alloc1D<cstring, SRAM_ROWS>                        stateful_bus;
     int gw_bytes_per_sb[SRAM_ROWS][BUS_COUNT] = {{0}};
     Alloc1D<cstring, STATS_ALUS>                       stats_alus;
@@ -111,6 +113,16 @@ struct Memories {
         int left_to_place() { return depth - placed; }
         bool all_placed() { return (depth == placed); }
         bool requires_ab() { return false; }
+        cstring name_addition (){
+            switch(type) {
+                case EXACT:    return "";
+                case ACTION:   return "$action";
+                case STATS:    return "$stats";
+                case METER:    return "$meter";
+                case TIND:     return "$tind";
+                default:       return "";
+            }
+        }
     };
 
     struct action_fill {
@@ -172,8 +184,8 @@ struct Memories {
     bool allocate_all_action();
     void find_action_bus_users();
     int stats_per_row(int width, IR::CounterType type);
-    void find_action_candidates(int row, int mask, action_fill &action, action_fill &oflow,
-                                action_fill &suppl, bool stats_available, bool meter_available,
+    void find_action_candidates(int row, int mask, action_fill &action, action_fill &suppl,
+                                action_fill &oflow, bool stats_available, bool meter_available,
                                 action_fill &curr_oflow);
     void action_row_trip(action_fill &action, action_fill &suppl, action_fill &oflow,
                          action_fill &best_fit_action, action_fill &best_fit_suppl,
@@ -183,14 +195,12 @@ struct Memories {
     void action_oflow_only(action_fill &action, action_fill &oflow,
                            action_fill &best_fit_action, action_fill &next_action,
                            action_fill &curr_oflow, int RAMs_available, int order[3]);
-
-
     bool best_a_oflow_pair(SRAM_group **best_a_group, SRAM_group **best_oflow_group,
                            int &a_index, int &oflow_index, int RAMs_available,
                            SRAM_group *best_fit_group, int best_fit_index,
                            SRAM_group *curr_oflow_group);
     bool fill_out_action_row(action_fill &action, int row, int side, unsigned mask, 
-                             bool is_oflow);
+                             bool is_oflow, bool is_twoport);
     bool allocate_all_gw();
     table_alloc *find_corresponding_exact_match(cstring name);
     bool gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int width_sect,
