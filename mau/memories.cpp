@@ -818,7 +818,7 @@ void Memories::find_action_bus_users() {
         int width = (stats->min_width < stats->max_width) ? stats->max_width : stats->min_width;
         int per_row = stats_per_row(width, stats->type);
         int depth = (ta->calculated_entries + per_row * 1024 - 1)/(per_row * 1024) * 2; 
-        supp_bus_users.push_back(new SRAM_group(ta, depth, 0, SRAM_group::STATS));
+        suppl_bus_users.push_back(new SRAM_group(ta, depth, 0, SRAM_group::STATS));
     }
 
     for (auto *ta : meter_tables) {
@@ -828,8 +828,102 @@ void Memories::find_action_bus_users() {
                 break;
         }
         int depth = (ta->calculated_entries + 1023) / 1024 * 2;
-        supp_bus_users.push_back(new SRAM_group(ta, depth, 0, SRAM_group::METER));
+        suppl_bus_users.push_back(new SRAM_group(ta, depth, 0, SRAM_group::METER));
     }
+}
+
+bool Memories::action_row_trip(action_fill &action, action_fill &suppl, action_fill &oflow,
+                               action_fill &best_fit_action, action_fill &best_fit_suppl,
+                               action_fill &curr_oflow, action_fill &next_suppl,
+                               action_fill &next_action, int RAMs_available, bool left_side) {
+    if (!left_side) {
+        if (curr_oflow.group && curr_oflow.group->type != SRAM_group::ACTION) {
+            if (best_fit_suppl.group && best_fit_suppl.group->left_to_place() == RAMs_available) {
+                suppl = best_fit_suppl;
+            } else if (curr_oflow.group->left_to_place() >= RAMs_available) {
+                oflow = curr_oflow;
+            } else if (next_suppl.group) {
+                suppl = next_suppl;     
+                oflow = curr_oflow; 
+                if (!next_suppl.group->requires_ab() && 
+                    (next_suppl.group->left_to_place() + 
+                    curr_oflow.group->left_to_place() < RAMs_available)) {
+                    action = next_action;
+                }
+            } else if (next_action.group && next_action.group->left_to_place() == RAMs_available) {
+               oflow = curr_oflow;
+               action = next_action;
+            }
+        } else if (next_suppl.group) {
+            suppl = next_suppl;
+            if (next_suppl.group->left_to_place() < RAMs_available) {
+                if (curr_oflow.group) {
+                    oflow = curr_oflow;
+                } else if (next_action.group) {
+                    action = next_action;
+                }
+            } 
+        } else {
+            action_oflow_only(action, oflow, best_fit_action, next_action, curr_oflow, 
+                              RAMs_available);
+        }
+    } else {
+        action_fill curr_oflow_temp = curr_oflow;
+        if (!curr_oflow.group || curr_oflow.group->type != SRAM_group::ACTION) {
+            curr_oflow_temp.group = nullptr;
+        }
+        action_oflow_only(action, oflow, best_fit_action, next_action, curr_oflow_temp,
+                          RAMs_available);
+    }
+    return true;
+}
+
+bool Memories::action_oflow_only(action_fill &action, action_fill &oflow, 
+                                 action_fill &best_fit_action, action_fill &next_action,
+                                 action_fill &curr_oflow, int RAMs_available) {
+    bool oflow_first = false;
+
+    if (curr_oflow.group == nullptr) {
+        if (!best_fit_action.group) {
+            action = next_action;
+        } else if (best_fit_action.group->left_to_place() == RAMs_available) {
+            action = best_fit_action;
+        } else {
+            action = next_action;
+        }
+
+    } else {
+        if (!best_fit_action.group) {
+            oflow = curr_oflow;
+            if (next_action.group && curr_oflow.group->left_to_place() < RAMs_available) {
+                action = next_action;
+            }
+            oflow_first = true;
+        } else if (curr_oflow.group->left_to_place() + best_fit_action.group->left_to_place()
+            >= RAMs_available) {
+            oflow = curr_oflow;
+            if (curr_oflow.group->left_to_place() < RAMs_available) {
+                oflow_first = true;
+                action = next_action;
+            } else {
+                if (best_fit_action.group->left_to_place() <= RAMs_available) {
+                    action = best_fit_action;
+                    if (best_fit_action.group->left_to_place() == RAMs_available)
+                        oflow.group = nullptr;
+                } else {
+                    oflow_first = true;
+                }
+            }
+        } else {
+            oflow = curr_oflow;
+            if (next_action.group
+                && curr_oflow.group->left_to_place() < RAMs_available) {
+                action = next_action;
+            }
+            oflow_first = true;
+        }
+    }
+    return oflow_first;
 }
 
 /* This is a large if-else to determine the best two groups to fit within in the
@@ -898,7 +992,9 @@ bool Memories::best_a_oflow_pair(SRAM_group **best_a_group, SRAM_group **best_of
 /* Selects the best two candidates for the potential use in the particular action row, 
    and calculate the corresponding masks and indices within the list */
 void Memories::find_action_candidates(int row, int mask, action_fill &action, action_fill &oflow,
-                                      action_fill &suppl)
+                                      action_fill &suppl) /*, SRAM_group **curr_oflow_group,
+                                      SRAM_group **right_oflow_group, bool stats_available,
+                                      bool meter_available)*/
                                       /*SRAM_group **a_group, unsigned &a_mask,
                                       int &a_index, SRAM_group **oflow_group,
                                       unsigned &oflow_mask, int &oflow_index)*/ {
@@ -908,33 +1004,47 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
 
     int RAMs_available = __builtin_popcount(mask & ~sram_inuse[row]);
 
-    int best_fit_index = 0;
+    int best_fit_action_index = 0;
+    int best_fit_suppl_index = 0;
     int a_index = 0; int oflow_index = 0;
 
+    SRAM_group *curr_oflow_group = nullptr;
     
     SRAM_group *best_a_group = nullptr;
     SRAM_group *best_oflow_group = nullptr;
     SRAM_group *best_suppl_group = nullptr;
 
-    SRAM_group *curr_oflow_group - nullptr;
-    if (row > 0 && vert_overflow_bus[row].first) {
-        
-    }
-
-    SRAM_group *best_fit_group = nullptr;
+    SRAM_group *best_fit_action_group = nullptr;
+    SRAM_group *best_fit_suppl_group = nullptr; 
     for (size_t i = 1; i < action_bus_users.size(); i++) {
         if (action_bus_users[i]->depth <= RAMs_available) {
-            best_fit_group = action_bus_users[i];
-            best_fit_index = i;
+            best_fit_action_group = action_bus_users[i];
+            best_fit_action_index = i;
             break;
         }
     }
 
+    /*
+    if (mask == 0x3f0) {
+        for (size_t i = 0; i < suppl_bus_users.size(); i++) {
+            if (!stats_available && suppl_bus_users[i]->type == SRAM_group::STATS)
+                continue;
+            if (!meter_available && suppl_bus_users[i]->type != SRAM_group::STATS)
+                continue;
+            if (suppl_bus_users[i]->depth <= RAMS_available) {
+                best_fit_suppl_group = suppl_bus_users[i];
+                best_fit_suppl_index = i;
+                break;
+            }
+        }
+    }*/
 
-    bool oflow_first = best_a_oflow_pair(&best_a_group, &best_oflow_group, a_index, oflow_index,
+    
+    bool oflow_first = true;
+    /*bool oflow_first = best_a_oflow_pair(&best_a_group, &best_oflow_group, a_index, oflow_index,
                                          RAMs_available, best_fit_group, best_fit_index,
                                          curr_oflow_group);
-
+    */
     unsigned first_mask = 0; unsigned second_mask = 0;
     int first_RAMs = 0;
     int second_RAMs = 0;
@@ -1024,7 +1134,7 @@ bool Memories::allocate_all_action() {
         return a->number < b->number;
     });
 
-    std::sort(supp_bus_users.begin(), supp_bus_users.end(),
+    std::sort(suppl_bus_users.begin(), suppl_bus_users.end(),
         [=](const SRAM_group *a, SRAM_group *b) {
         int t;
         if ((t = a->depth - b->depth) != 0) return t > 0;

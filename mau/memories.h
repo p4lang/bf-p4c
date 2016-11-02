@@ -110,6 +110,7 @@ struct Memories {
         }
         int left_to_place() { return depth - placed; }
         bool all_placed() { return (depth == placed); }
+        bool requires_ab() { return false; }
     };
 
     struct action_fill {
@@ -117,6 +118,7 @@ struct Memories {
         unsigned mask;
         int index;
         explicit action_fill() : group(nullptr), mask(0), index(0) {}
+        void clear() { group = nullptr; mask = 0; index = 0; }
     };
 
     vector<table_alloc *>      tables;
@@ -129,7 +131,7 @@ struct Memories {
     vector<table_alloc *>      stats_tables;
     vector<table_alloc *>      meter_tables;
     vector<SRAM_group *>       action_bus_users;
-    vector<SRAM_group *>       supp_bus_users;
+    vector<SRAM_group *>       suppl_bus_users;
     vector<table_alloc *>      gw_tables;
 
     void clear();
@@ -165,7 +167,17 @@ struct Memories {
     bool allocate_all_action();
     void find_action_bus_users();
     int stats_per_row(int width, IR::CounterType type);
-    void find_action_candidates(int row, int mask, action_fill &action, action_fill &oflow);
+    void find_action_candidates(int row, int mask, action_fill &action, action_fill &oflow,
+                                action_fill &suppl);
+    bool action_row_trip(action_fill &action, action_fill &suppl, action_fill &oflow,
+                         action_fill &best_fit_action, action_fill &best_fit_suppl,
+                         action_fill &curr_oflow, action_fill &next_suppl,
+                         action_fill &next_action, int RAMs_available, bool left_side);
+    bool action_oflow_only(action_fill &action, action_fill &oflow,
+                           action_fill &best_fit_action, action_fill &next_action,
+                           action_fill &curr_oflow, int RAMs_available);
+
+
     bool best_a_oflow_pair(SRAM_group **best_a_group, SRAM_group **best_oflow_group,
                            int &a_index, int &oflow_index, int RAMs_available,
                            SRAM_group *best_fit_group, int best_fit_index,
