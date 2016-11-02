@@ -204,25 +204,14 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
     // cluster placement in containers conforming to MAU group constraints
     //
     std::list<Cluster_PHV *> clusters_to_be_assigned;
-    std::set<PHV_MAU_Group *> mau_group_containers_avail;
-    cluster_placement_containers(phv_requirements_i.cluster_phv_map(), clusters_to_be_assigned, mau_group_containers_avail);
+    cluster_placement_containers(phv_requirements_i.cluster_phv_map(), clusters_to_be_assigned);
     //
     // pack remaining clusters to partially filled containers
+    // slice containers to form groups that can accommodate larger number for given width in <n:w>
     //
-    if(clusters_to_be_assigned.size())
-    {
-        // slice containers to form groups that can accommodate larger number for given width in <n:w>
-        //
-        create_aligned_container_slices(mau_group_containers_avail);
-        //
-        container_pack_cohabit(clusters_to_be_assigned);
-        // 
-        // update PHV_MAU_Group info pertaining to available containers
-        //
-        update_PHV_MAU_Group_container_slices(); 
-        //
-        container_cohabit_summary();
-    }
+    create_aligned_container_slices();
+    //
+    container_pack_cohabit(clusters_to_be_assigned);
     //
     // POV fields packing in PHV containers
     //
@@ -256,15 +245,13 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
 // 
 // 4. when all G exhausted
 //    clusters_to_be_assigned contains clusters not assigned
-//    mau_group_containers_avail contains mau groups that have partially available containers 
 // 
 //***********************************************************************************
 
 void
 PHV_MAU_Group_Assignments::cluster_placement_containers(
 	std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map,
-	std::list<Cluster_PHV *>& clusters_to_be_assigned,
-	std::set<PHV_MAU_Group *>& mau_group_containers_avail)
+	std::list<Cluster_PHV *>& clusters_to_be_assigned)
 {
     //
     // 1. sorted clusters requirement decreasing, sorted mau groups width decreasing
@@ -367,7 +354,6 @@ PHV_MAU_Group_Assignments::cluster_placement_containers(
                         {   // MAU group has container packing potential
                             //
                             g->containers_pack().insert(g->phv_containers()[container_index]);
-                            mau_group_containers_avail.insert(g);
                         }
                         LOG3("\t\t" << g->phv_containers()[container_index]);
                         container_index++;
@@ -379,10 +365,6 @@ PHV_MAU_Group_Assignments::cluster_placement_containers(
                     break;
                 }
             }
-        }
-        if(g->avail_containers())
-        {
-            mau_group_containers_avail.insert(g);
         }
         // remove clusters already assigned
         for (auto cl: clusters_remove)
@@ -404,7 +386,7 @@ PHV_MAU_Group_Assignments::cluster_placement_containers(
 // slice to obtain larger number of sub-containers with reduced width
 //
 // input:
-//	mau_groups_containers_avail
+//	all mau groups
 // output:
 //	in each PHV_MAU_Group, map[width][number] of aligned_container_slices
 //	consider all PHV_MAU_Groups, create composite map[width][number] --> <set of <set of container_packs>>
@@ -412,12 +394,9 @@ PHV_MAU_Group_Assignments::cluster_placement_containers(
 // 
 //***********************************************************************************
 
-void PHV_MAU_Group_Assignments::create_aligned_container_slices(std::set<PHV_MAU_Group *>& mau_group_containers_avail)
+void PHV_MAU_Group_Assignments::create_aligned_container_slices()
 {
-    for (auto g: mau_group_containers_avail)
-    {
-        g->create_aligned_container_slices();
-    }
+    aligned_container_slices_i.clear();
     //
     // create composite map[width][number] --> <set of <set of container_packs>>
     // from all mau groups aligned_container_slices
@@ -428,6 +407,8 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices(std::set<PHV_MAU
         // groups within this word size
         for(auto g: rit->second)
         {
+            g->create_aligned_container_slices();
+            //
             for (auto w: g->aligned_container_slices())
             {
                 for (auto n: w.second)
@@ -697,6 +678,14 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
     //
     LOG3("----------after Packing ..... consolidate slices ..... MAU Container Packs avail----------");
     LOG3(aligned_container_slices_i);
+    // 
+    // update PHV_MAU_Group info pertaining to available containers
+    //
+    update_PHV_MAU_Group_container_slices(); 
+    //
+    container_cohabit_summary();
+    //
+    sanity_check_container_avail("container_pack_cohabit ()..");
     //
 }//container_pack_cohabit
 
@@ -970,6 +959,14 @@ PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<const PhvInfo::Field
     //
     LOG3("----------after POV Packing ..... consolidate slices ..... MAU Container Packs avail----------");
     LOG3(aligned_container_slices_i);
+    // 
+    // update PHV_MAU_Group info pertaining to available containers
+    //
+    update_PHV_MAU_Group_container_slices(); 
+    //
+    container_cohabit_summary();
+    //
+    sanity_check_container_avail("container_pack_cohabit POV ()..");
     //
 }//container_pack_cohabit POV
 
@@ -997,6 +994,9 @@ PHV_MAU_Group_Assignments::T_PHV_placement_containers(std::vector<const PhvInfo:
 
 void PHV_MAU_Group::Container_Content::sanity_check_container(const std::string& msg)
 {
+    const std::string msg_1 = msg+"PHV_MAU_Group::Container_Content";
+    //
+    container_i->sanity_check_container_avail(lo_i, hi_i, msg_1 /*taint=true*/);
 }
 
 void PHV_MAU_Group::sanity_check_container_packs(const std::string& msg)
@@ -1087,6 +1087,25 @@ void PHV_MAU_Group::sanity_check_group_containers(const std::string& msg)
     for (auto &c: phv_containers_i)
     {
         c->sanity_check_container(msg+"PHV_MAU_Group::sanity_check_group_containers phv_containers");
+    }
+}
+
+void PHV_MAU_Group_Assignments::sanity_check_container_avail(const std::string& msg)
+{
+    // check aligned_container_slices map agrees with container filling
+    //
+    for (auto &w: aligned_container_slices_i)
+    {
+        for (auto &n: w.second)
+        {
+            for (auto &cc_set: n.second)
+            {
+                for (auto &cc: cc_set)
+                {
+                    cc->container()->sanity_check_container_avail(cc->lo(), cc->hi(), msg, /*taint=*/false);
+                }
+            }
+        }
     }
 }
 

@@ -152,9 +152,8 @@ class PHV_MAU_Group_Assignments
     }
     void cluster_placement_containers(
 	std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map,
-	std::list<Cluster_PHV *>& clusters_to_be_assigned,
-	std::set<PHV_MAU_Group *>& mau_group_containers_avail);
-    void create_aligned_container_slices(std::set<PHV_MAU_Group *>& mau_group_containers_avail);
+	std::list<Cluster_PHV *>& clusters_to_be_assigned);
+    void create_aligned_container_slices();
     void container_pack_cohabit(std::list<Cluster_PHV *>& clusters_to_be_assigned);
     void container_pack_cohabit(std::list<const PhvInfo::Field *>&);
     //
@@ -181,6 +180,7 @@ class PHV_MAU_Group_Assignments
 							{ return aligned_container_slices_i; }
     std::vector<PHV_Container *>& cohabit_fields()	{ return cohabit_fields_i; }
     //
+    void sanity_check_container_avail(const std::string&);
     void sanity_check_container_fields_gress(const std::string&);
     void sanity_check_group_containers(const std::string&);
 };

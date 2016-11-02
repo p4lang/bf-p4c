@@ -45,7 +45,7 @@ class PHV_Container
         int width() const		{ return hi_i - lo_i + 1; }
         const PhvInfo::Field *field()	{ return field_i; }
         //
-        void sanity_check_container(const std::string& msg);
+        void sanity_check_container(PHV_Container *, const std::string&);
     };
     //
  private:
@@ -96,10 +96,12 @@ class PHV_Container
     std::vector<Container_Content *>& fields_in_container()	{ return fields_in_container_i; }
     //
     void sanity_check_container(const std::string& msg);
+    void sanity_check_container_avail(int lo, int hi, const std::string&, bool taint=true);
 };
 //
 //
 std::ostream &operator<<(std::ostream &, std::vector<PHV_Container::Container_Content *>&);
+std::ostream &operator<<(std::ostream &, std::map<int, int>&);
 std::ostream &operator<<(std::ostream &, PHV_Container*);
 std::ostream &operator<<(std::ostream &, PHV_Container&);
 std::ostream &operator<<(std::ostream &, std::vector<PHV_Container *>&);

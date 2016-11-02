@@ -44,7 +44,7 @@ PHV_Container::taint(int start, int width, const PhvInfo::Field *field, int rang
 	phv_number_i, start, width, range_start);
     //
     taint_color_i += '1' - '0';
-    if(taint_color_i > '9')
+    if(taint_color_i < '0' || taint_color_i > '9')
     {
         taint_color_i = '*';
     }
@@ -102,14 +102,87 @@ PHV_Container::taint(int start, int width, const PhvInfo::Field *field, int rang
 //***********************************************************************************
 
 
-void PHV_Container::Container_Content::sanity_check_container(const std::string& msg)
+void PHV_Container::Container_Content::sanity_check_container(PHV_Container *container, const std::string& msg)
 {
+    const std::string msg_1 = msg + "..PHV_Container::Container_Content::sanity_check_container";
+    //
+    // fields can span containers
+    //
+    if(field_i->size <= width())
+    {
+        if(field_i->phv_use_hi - field_i->phv_use_lo + 1 != width())
+        {
+            WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " field width does not match container use " << field_i->phv_use_lo << ".." << field_i->phv_use_hi << " vs " << lo_i << ".." << hi_i << ".." << field_i << *container);
+        }
+    }
 }
-
 
 void PHV_Container::sanity_check_container(const std::string& msg)
 {
+    const std::string msg_1 = msg + "..PHV_Container::sanity_check_container";
+    //
+    // for fields binned in this container check bits occupied
+    //
+    for (auto &cc: fields_in_container_i)
+    {
+        cc->sanity_check_container(this, msg_1);
+        sanity_check_container_avail(cc->lo(), cc->hi(), msg_1 /*,taint=true*/);
+    }
 }
+
+void PHV_Container::sanity_check_container_avail(int lo, int hi, const std::string& msg, bool taint)
+{
+    const std::string msg_1 = msg + "..PHV_Container::sanity_check_container_avail";
+    //
+    // check bits lo .. hi are 0
+    //
+    for (auto i = lo; i <= hi; i++)
+    {
+        if(taint == false && bits_i[i] != '0')
+        {
+            WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be '0' " << i << ".." << lo << ".." << hi << " vs " << *this);
+        }
+        if(taint == true && bits_i[i] == '0')
+        {
+            WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be tainted " << i << ".." << lo << ".." << hi << " vs " << *this);
+        }
+    }
+    // check available bits in container
+    //
+    if(taint == false && avail_bits_i < hi - lo)
+    {
+        WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container avail bits " << lo << ".." << hi << " vs " << avail_bits_i);
+    }
+    if(taint == false && avail_bits_i == hi - lo)
+    {   // check all other bits are not 0
+        for (auto i=0; i < lo; i++)
+        {
+            if(bits_i[i] == '0')
+            {
+                WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be tainted " << i << ".." << lo << ".." << hi << " vs " << *this);
+            }
+        }
+        for (auto i=hi+1; i < (int) width_i; i++)
+        {
+            if(bits_i[i] == '0')
+            {
+                WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be tainted " << i << ".." << lo << ".." << hi << " vs " << *this);
+            }
+        }
+    }
+    // check container status
+    //
+    if(taint == false && status_i != Container_status::PARTIAL)
+    {
+        WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container status " << (char) status_i << *this);
+    }
+    // check range map in container
+    //
+    if(taint == false && ranges_i[lo] != hi)
+    {
+        WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container ranges " << ranges_i << *this);
+    } 
+}//sanity_check_container_avail
 
 //***********************************************************************************
 //
@@ -129,9 +202,22 @@ std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container::Container
 
     return out;
 }
+
 //
 // phv_container output
 //
+
+std::ostream &operator<<(std::ostream &out, std::map<int, int>& ranges)
+{
+    out << ".....container ranges....." << std::endl;
+    for (auto i: ranges)
+    {
+        out << '[' << i.first << "] -- " << i.second << std::endl;
+    }
+
+    return out;
+}
+
 std::ostream &operator<<(std::ostream &out, PHV_Container *c)
 {
     // summary output 
