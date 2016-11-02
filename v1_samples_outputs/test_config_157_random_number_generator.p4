@@ -163,7 +163,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_0") action action_0(bit<16> param0) {
         {
             bit<32> tmp;
-            random((bit<5>)16, tmp);
+            random(tmp, 32w0, (bit<32>)((1 << 16) - 1));
             hdr.pkt.field_a_32 = tmp;
         }
         hdr.pkt.field_e_16 = param0;
@@ -173,7 +173,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_1") action action_1() {
         {
             bit<32> tmp_0;
-            random((bit<5>)24, tmp_0);
+            random(tmp_0, 32w0, (bit<32>)((1 << 24) - 1));
             hdr.pkt.field_d_32[31:8] = tmp_0[31:8];
         }
     }
