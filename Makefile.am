@@ -311,6 +311,3 @@ IFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/07-MultiProtocol.p4.test
 
 # Sometimes splits ternary match data across two groups when it shouldn't
 IFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/hitmiss.p4.test
-
-# crash in memory layout
-XFAIL_TESTS += tofino/extensions/tofino/v1_samples/switch_l2_profile_tofino.p4.test
