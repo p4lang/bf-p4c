@@ -62,6 +62,7 @@ class PhvInfo : public Inspector {
             operator std::pair<int, int>() { return std::make_pair(lo, hi); }
         };
         int container_bytes(bitrange bits = {0, -1}) const;
+        int phv_use_width() const { return phv_use_hi - phv_use_lo + 1; } // width of field needed in phv container
     };
     class SetReferenced : public Inspector {
         PhvInfo &self;

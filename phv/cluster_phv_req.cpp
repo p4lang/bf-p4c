@@ -18,7 +18,7 @@
 //***********************************************************************************
 
 Cluster_PHV_Requirements::Cluster_PHV_Requirements(Cluster &c)
-	: cluster_i(c), pov_fields_i(c.pov_fields_not_in_cluster()), t_phv_fields_i(c.fields_no_use_mau())
+	: cluster_i(c), t_phv_fields_i(c.fields_no_use_mau())
 {
     // create PHV Requirements from clusters
     if(! cluster_i.dst_map().size())
@@ -53,7 +53,7 @@ Cluster_PHV_Requirements::Cluster_PHV_Requirements(Cluster &c)
                                 {   // same size, descending widths <2:_16_10> <2:_16_9> <2:_16_5>
                                     auto differ = std::mismatch(l->cluster_vec().begin(), l->cluster_vec().end(), r->cluster_vec().begin(),
                                                    [](const PhvInfo::Field *f1, const PhvInfo::Field *f2) {
-                                                       return f1->size == f2->size;
+                                                       return f1->phv_use_width() == f2->phv_use_width();
                                                });
                                     return *differ.first >= *differ.second;
                                 }
@@ -77,14 +77,24 @@ Cluster_PHV_Requirements::Cluster_PHV_Requirements(Cluster &c)
     // sort based on use: fld->phv_use_hi - fld->phv_use_lo
     // sort based on width requirement, greatest width first
     //
+    for (auto p: cluster_i.pov_fields_not_in_cluster())
+    {
+        pov_fields_i.push_back(new Cluster_PHV(p));
+    }
     std::sort(pov_fields_i.begin(), pov_fields_i.end(),
-	[](const PhvInfo::Field *l, const PhvInfo::Field *r)
+	[](Cluster_PHV *l, Cluster_PHV *r)
         {
-            int l_range = l->phv_use_hi - l->phv_use_lo;
-            int r_range = r->phv_use_hi - r->phv_use_lo;
+            const PhvInfo::Field *fl =  *(l->cluster_vec().begin());
+            const PhvInfo::Field *fr =  *(r->cluster_vec().begin());
+            int l_range = fl->phv_use_hi - fl->phv_use_lo;
+            int r_range = fr->phv_use_hi - fr->phv_use_lo;
             if(l_range == r_range)
             {
-                return l->size > r->size;
+                if(fl->phv_use_width() == fr->phv_use_width())
+                {
+                    return fl->size > fr->size;
+                }
+                return fl->phv_use_width() > fr->phv_use_width();
             }
             return l_range > r_range;
         });
@@ -127,11 +137,11 @@ Cluster_PHV::Cluster_PHV(std::set<const PhvInfo::Field *> *p) : cluster_vec_i(p-
     //
     auto width_req = 0;
     if((std::adjacent_find (cluster_vec_i.begin(), cluster_vec_i.end(),
-		[](const PhvInfo::Field *l, const PhvInfo::Field *r) { return l->size != r->size; }))
+		[](const PhvInfo::Field *l, const PhvInfo::Field *r) { return l->phv_use_width() != r->phv_use_width(); }))
        == cluster_vec_i.end())
     {
         uniform_width_i = true;
-        width_req = max_width_i = cluster_vec_i.front()->size;
+        width_req = max_width_i = cluster_vec_i.front()->phv_use_width();
     }
     else
     {
@@ -139,9 +149,9 @@ Cluster_PHV::Cluster_PHV(std::set<const PhvInfo::Field *> *p) : cluster_vec_i(p-
         //
         // cluster vector = sorted cluster set, decreasing field width
         std::sort(cluster_vec_i.begin(), cluster_vec_i.end(),
-		[](const PhvInfo::Field *l, const PhvInfo::Field *r) { return l->size > r->size; });
+		[](const PhvInfo::Field *l, const PhvInfo::Field *r) { return l->phv_use_width() > r->phv_use_width(); });
         //
-        width_req = max_width_i = cluster_vec_i.front()->size;
+        width_req = max_width_i = cluster_vec_i.front()->phv_use_width();
         //
         // <8:_32_16_16_16_16_16_16_16>	=> {9*b16} vs {8*b32}
         // <8:_16_16_16_16_16_16_16_9>	=> {8*b16}
@@ -149,7 +159,7 @@ Cluster_PHV::Cluster_PHV(std::set<const PhvInfo::Field *> *p) : cluster_vec_i(p-
         auto scale_down = 0;
         for (auto pfield: cluster_vec_i)
         {
-            if(pfield->size * 2 <= max_width_i)
+            if(pfield->phv_use_width() * 2 <= max_width_i)
             {
                 scale_down++;
             }
@@ -177,7 +187,7 @@ Cluster_PHV::Cluster_PHV(std::set<const PhvInfo::Field *> *p) : cluster_vec_i(p-
     num_containers_i = num_containers(cluster_vec_i, width_i);
     //
 }//Cluster_PHV
-//
+
 //
 // Cluster_PHV::num_containers()
 // input
@@ -185,7 +195,7 @@ Cluster_PHV::Cluster_PHV(std::set<const PhvInfo::Field *> *p) : cluster_vec_i(p-
 // output
 //	num_containers based on field width
 //
-//
+
 int
 Cluster_PHV::num_containers(std::vector<const PhvInfo::Field *>& cluster_vec, PHV_Container::PHV_Word width)
 {
@@ -198,7 +208,7 @@ Cluster_PHV::num_containers(std::vector<const PhvInfo::Field *>& cluster_vec, PH
         // sharing needs analyses:
         // (i)  container single-write table interference
         // (ii) surround interference 
-        num_containers += pfield->size/(int)width + (pfield->size%(int)width? 1 : 0);
+        num_containers += pfield->phv_use_width()/(int)width + (pfield->phv_use_width()%(int)width? 1 : 0);
     }
     if(num_containers > (int) PHV_Container::Containers::MAX)
     {
@@ -229,23 +239,12 @@ std::ostream &operator<<(std::ostream &out, Cluster_PHV &cp)
     {
         for(auto f: cp.cluster_vec())
         {
-            out << '_' << f->size;
+            out << '_' << f->phv_use_width();
         }
     }
     out << '>';
     out << '{' << cp.num_containers() << '*' << (int)(cp.width()) << '}';
     out << (char) cp.gress();
-
-    return out;
-}
-
-std::ostream &operator<<(std::ostream &out, std::list<Cluster_PHV *> &cluster_list)
-{
-    for (auto c: cluster_list)
-    {
-        // cluster summary
-        out << *c << std::endl;
-    }
 
     return out;
 }
@@ -266,6 +265,17 @@ std::ostream &operator<<(std::ostream &out, Cluster_PHV *cp)
     else
     {
         out << "-cp-";
+    }
+
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, std::list<Cluster_PHV *> &cluster_list)
+{
+    for (auto c: cluster_list)
+    {
+        // cluster summary
+        out << c << std::endl;
     }
 
     return out;

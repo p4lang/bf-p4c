@@ -155,7 +155,6 @@ class PHV_MAU_Group_Assignments
 	std::list<Cluster_PHV *>& clusters_to_be_assigned);
     void create_aligned_container_slices();
     void container_pack_cohabit(std::list<Cluster_PHV *>& clusters_to_be_assigned);
-    void container_pack_cohabit(std::list<const PhvInfo::Field *>&);
     //
     void consolidate_slices_in_group();
     void update_PHV_MAU_Group_container_slices();

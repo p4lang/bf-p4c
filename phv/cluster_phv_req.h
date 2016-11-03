@@ -42,6 +42,15 @@ class Cluster_PHV
     //
  public:
     Cluster_PHV(std::set<const PhvInfo::Field *> *p);
+    Cluster_PHV(const PhvInfo::Field *f)	// cluster singleton field, e.g., POV fields
+        : Cluster_PHV(field_set(f)) {}
+    //
+    std::set<const PhvInfo::Field *> *field_set(const PhvInfo::Field *f)
+    {
+        std::set<const PhvInfo::Field *> *s = new std::set<const PhvInfo::Field *>;
+        s->insert(f);
+        return s;
+    }
     //
     std::vector<const PhvInfo::Field *>& cluster_vec()	{ return cluster_vec_i; }
     PHV_Container::Ingress_Egress gress()		{ return gress_i; }
@@ -64,7 +73,7 @@ class Cluster_PHV_Requirements
     std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>> Cluster_PHV_i;
 							// sorted PHV requirements <num, width>,
 							// num decreasing then width decreasing
-    std::vector<const PhvInfo::Field *> pov_fields_i;
+    std::vector<Cluster_PHV *> pov_fields_i;
 							// sorted pov fields, width decreasing
 							// header-stack POVs are not 1-bit fields
 							// such fields must be contiguously allocated in PHV
@@ -79,7 +88,7 @@ class Cluster_PHV_Requirements
         return Cluster_PHV_i;
     }
     //
-    std::vector<const PhvInfo::Field *>& pov_fields()	{ return pov_fields_i; }
+    std::vector<Cluster_PHV *>& pov_fields()		{ return pov_fields_i; }
     std::vector<const PhvInfo::Field *>& t_phv_fields()	{ return t_phv_fields_i; }
     //
 };
