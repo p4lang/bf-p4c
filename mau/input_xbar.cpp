@@ -608,17 +608,17 @@ bool IXBar::allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv,
     bool                                rv;
     for (auto r : *tbl->reads) {
         auto *field = r;
-        if (auto mask = r->to<IR::Mask>()) {
-            field = mask->left;
-        } else if (auto prim = r->to<IR::Primitive>()) {
-            if (prim->name != "valid")
-                BUG("unexpected reads expression %s", r);
-            // FIXME -- for now just assuming we can fit the valid bit reads in as needed
-            continue; }
-        const PhvInfo::Field *finfo;
-        PhvInfo::Field::bitrange bits;
-        if (!field || !(finfo = phv.field(field, &bits)))
-            BUG("unexpected reads expression %s", r);
+        const PhvInfo::Field *finfo = nullptr;
+        PhvInfo::Field::bitrange bits = { };
+        if (auto prim = r->to<IR::Primitive>()) {
+            if (prim->name == "valid") {
+                auto hdr = prim->operands[0]->to<IR::HeaderRef>()->toString();
+                finfo = phv.field(hdr + ".$valid"); }
+        } else {
+            if (auto mask = r->to<IR::Mask>())
+                field = mask->left;
+            finfo = phv.field(field, &bits); }
+        BUG_CHECK(finfo, "unexpected reads expression %s", r);
         if (fields_needed.count(finfo->name))
             throw Util::CompilationError("field %s read twice by table %s", finfo->name, tbl->name);
         fields_needed.insert(finfo->name);
