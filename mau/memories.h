@@ -102,6 +102,7 @@ struct Memories {
         int width;
         int placed;
         int number;
+        int recent_home_row;
         enum type_t { EXACT, ACTION, STATS, METER, TIND } type;
         explicit SRAM_group(table_alloc *t, int d, int w, int n, type_t ty)
             : ta(t), depth(d), width(w), placed(0), number(n), type(ty) {}

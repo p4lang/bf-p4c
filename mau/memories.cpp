@@ -802,6 +802,7 @@ void Memories::find_action_bus_users() {
 
         for (int i = 0; i < width; i++) {
             action_bus_users.push_back(new SRAM_group(ta, depth, i, SRAM_group::ACTION));
+            LOG1("Action bus user " << ta->table->name);
         }
     }
 
@@ -874,10 +875,12 @@ void Memories::action_row_trip(action_fill &action, action_fill &suppl, action_f
                 }
             } 
         } else {
+            LOG1("Right side");
             action_oflow_only(action, oflow, best_fit_action, next_action, curr_oflow, 
                               RAMs_available, order);
         }
     } else {
+        LOG1("Left side");
         action_fill curr_oflow_temp = curr_oflow;
         if (!curr_oflow.group || curr_oflow.group->type != SRAM_group::ACTION) {
             curr_oflow_temp.group = nullptr;
@@ -900,41 +903,50 @@ void Memories::action_oflow_only(action_fill &action, action_fill &oflow,
 
     if (curr_oflow.group == nullptr) {
         if (!best_fit_action.group) {
+            LOG1("First");
             action = next_action;
         } else if (best_fit_action.group->left_to_place() == RAMs_available) {
+            LOG1("Second");
             action = best_fit_action;
         } else {
+            LOG1("Third");
             action = next_action;
         }
         order[ACTION_IND] = 0;
     } else {
         if (!best_fit_action.group) {
+            LOG1("Fourth");
             oflow = curr_oflow;
             if (next_action.group && curr_oflow.group->left_to_place() < RAMs_available) {
                 action = next_action;
                 order[ACTION_IND] = 1;
+                LOG1("Inside");
             }
             order[OFLOW_IND] = 0;
         } else if (curr_oflow.group->left_to_place() + best_fit_action.group->left_to_place()
             >= RAMs_available) {
+            LOG1("Fifth");
             oflow = curr_oflow;
             if (curr_oflow.group->left_to_place() < RAMs_available) {
                 action = next_action;
                 order[OFLOW_IND] = 0; order[ACTION_IND] = 1;
+                LOG1("Shouldn't be here");
             } else {
                 if (best_fit_action.group->left_to_place() <= RAMs_available) {
+                    LOG1("Hello");
                     action = best_fit_action;
                     if (best_fit_action.group->left_to_place() == RAMs_available) {
                         oflow.group = nullptr;
                         order[ACTION_IND] = 0;
                     } else {
-                        order[ACTION_IND] = 1; order[OFLOW_IND] = 0;
+                        order[ACTION_IND] = 0; order[OFLOW_IND] = 1;
                     }
                 } else {
                     order[OFLOW_IND] = 0;
                 }
             }
         } else {
+            LOG1("Sixth");
             oflow = curr_oflow;
             if (next_action.group
                 && curr_oflow.group->left_to_place() < RAMs_available) {
@@ -1174,6 +1186,7 @@ bool Memories::fill_out_action_row(action_fill &action, int row, int side, unsig
         action_data_bus[row][side] = a_name;        
         a_alloc.row.emplace_back(row, side);
         a_alloc.home_row.emplace_back(row, action.group->number);
+        action.group->recent_home_row = row;
     }
     for (int k = 0; k < 10; k++) {
         if (((1 << k) & mask) == 0)
@@ -1197,8 +1210,10 @@ bool Memories::fill_out_action_row(action_fill &action, int row, int side, unsig
     if (action.group->all_placed()) {
         if (is_twoport)
             suppl_bus_users.erase(suppl_bus_users.begin() + action.index);
-        else
+        else {
+            LOG1("Size and index " << action_bus_users.size() << " " << action.index);
             action_bus_users.erase(action_bus_users.begin() + action.index);
+        }
         action_group_removed = true;
     }
     return action_group_removed;
@@ -1208,6 +1223,8 @@ bool Memories::fill_out_action_row(action_fill &action, int row, int side, unsig
    then allocates them.  */
 bool Memories::allocate_all_action() {
     find_action_bus_users();
+    action_fill curr_oflow, twoport_oflow;
+    action_fill action; action_fill oflow; action_fill suppl;
     std::sort(action_bus_users.begin(), action_bus_users.end(),
         [=](const SRAM_group *a, SRAM_group *b) {
         int t;
@@ -1222,8 +1239,7 @@ bool Memories::allocate_all_action() {
         return a->number < b->number;
     });
 
-    for (int i = 0; i < SRAM_ROWS; i++) {
-        action_fill curr_oflow, twoport_oflow;
+    for (int i = SRAM_ROWS - 1; i >= 0; i--) {
         twoport_oflow.clear();
         for (int j = 0; j < 2; j++) {
             int mask = 0;
@@ -1233,7 +1249,6 @@ bool Memories::allocate_all_action() {
                 mask = 0xf;
 
             if (__builtin_popcount(mask & ~sram_inuse[i]) == 0) continue;
-            action_fill action; action_fill oflow; action_fill suppl;
             action.clear(); oflow.clear(); suppl.clear();
             bool stats_available = true; bool meter_available = true;
 
@@ -1257,21 +1272,41 @@ bool Memories::allocate_all_action() {
                 action_removed = fill_out_action_row(action, i, j, mask, false, false);
             }
 
+            if (suppl.group != nullptr) {
+                suppl_removed = fill_out_action_row(suppl, i, j, mask, false, true);
+            }
+
             if (oflow.group != nullptr) {
-                if (action_removed && action.index < oflow.index)
+                if (action_removed && action.index < oflow.index 
+                    && oflow.group->type == SRAM_group::ACTION)
                     oflow.index--;
+                if (suppl_removed && suppl.index < oflow.index
+                    && oflow.group->type != SRAM_group::ACTION)
+                    oflow.index--;
+
                 oflow_removed = fill_out_action_row(oflow, i, j, mask, true, 
                                                     oflow.group->type != SRAM_group::ACTION);
             }
 
-            if (suppl.group != nullptr) {
-                suppl_removed = fill_out_action_row(suppl, i, j, mask, false, true);
-            }
+            if (suppl.group && oflow.group && oflow.group->type != SRAM_group::ACTION &&
+                oflow.index < suppl.index)
+                suppl.index--;
+
+            
+            if (action.group && oflow.group && oflow.group->type == SRAM_group::ACTION &&
+                oflow.index < action.index)
+                action.index--;
+
 
             if ((j == 0 && suppl.group && !suppl_removed) || 
                 ((j == 0) && oflow.group && !oflow_removed
                 && oflow.group->type != SRAM_group::ACTION))
                 twoport_oflow = suppl;
+
+           if (action.group)
+               LOG1("Action group " << action.group->ta->table->name);
+           if (oflow.group)
+               LOG1("Oflow group " << oflow.group->ta->table->name);
 
            if (!oflow_removed && oflow.group && oflow.group->type == SRAM_group::ACTION)
                curr_oflow = oflow;
@@ -1279,6 +1314,11 @@ bool Memories::allocate_all_action() {
                curr_oflow = action;
            else
                curr_oflow.clear();
+           if (curr_oflow.group)
+               LOG1("Curr oflow " << curr_oflow.group->ta->table->name);
+           else
+               LOG1("Curr oflow is empty");
+
         }
         if (twoport_oflow.group)
            curr_oflow = twoport_oflow;
@@ -1286,6 +1326,11 @@ bool Memories::allocate_all_action() {
             vert_overflow_bus[i] = std::make_pair(curr_oflow.group->ta->table->name 
                                                   + curr_oflow.group->name_addition(), 
                                                   curr_oflow.group->number);
+
+        if (curr_oflow.group && curr_oflow.group->type == SRAM_group::ACTION 
+            && curr_oflow.group->recent_home_row - i >= 5) {
+            curr_oflow.clear();
+        } 
     }
 
     if (!action_bus_users.empty())
