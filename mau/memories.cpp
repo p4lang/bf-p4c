@@ -1173,6 +1173,7 @@ bool Memories::fill_out_action_row(action_fill &action, int row, int side, unsig
     } else {
         action_data_bus[row][side] = a_name;        
         a_alloc.row.emplace_back(row, side);
+        a_alloc.home_row.emplace_back(row, action.group->number);
     }
     for (int k = 0; k < 10; k++) {
         if (((1 << k) & mask) == 0)
@@ -1291,6 +1292,17 @@ bool Memories::allocate_all_action() {
         return false;
 
     //FIXME: Add home rows and extra meter color maprams
+    for (auto *ta : action_tables) {
+        LOG1("Action table for " << ta->table->name);
+        auto name = ta->table->name + "$action";
+        auto alloc = (*ta->memuse)[name];
+        for (auto row : alloc.row) {
+            LOG1("Row is " << row.row << " and bus is " << row.bus);
+            for (auto col : row.col) {
+                LOG1("Col is " << col);
+            }
+        }
+    }
     return true;
 }
 

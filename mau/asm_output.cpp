@@ -276,7 +276,7 @@ std::ostream &operator<<(std::ostream &out, const memory_vector &v) {
 }
 
 void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memories::Use &mem) const {
-    vector<int> row, bus;
+    vector<int> row, bus, home_row;
     bool logical = mem.type >= Memories::Use::TWOPORT;
     bool have_bus = !logical;
     for (auto &r : mem.row) {
@@ -296,6 +296,16 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
         out << indent << "row: " << row[0] << std::endl;
         if (have_bus) out << indent << "bus: " << bus[0] << std::endl;
         out << indent << "column: " << memory_vector(mem.row[0].col, mem.type) << std::endl;
+    }
+
+    for (auto r : mem.home_row) {
+        home_row.push_back(r.first);
+    }
+    if (!home_row.empty()) {
+        if (home_row.size() > 1)
+            out << indent << "home_row: " << row << std::endl;
+        else
+            out << indent << "home_row: " << row[0] << std::endl;
     }
 }
 

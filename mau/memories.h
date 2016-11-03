@@ -75,6 +75,7 @@ struct Memories {
             }
         };
         vector<Row>     row;
+        vector<std::pair<int, int>>          home_row;
         vector<std::pair<int, unsigned>>     ways;
         // depth in memory units + mask to use for memory selection per way
         void visit(Memories &mem, std::function<void(cstring &)>) const;
