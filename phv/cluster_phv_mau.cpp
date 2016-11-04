@@ -185,7 +185,7 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
 		((int)PHV_Container::Containers::MAX)/2);
             t_phv_groups.push_back(g);
         }
-        // collections
+        // collections T_PHV_i
         int collection=0;
         int i=0;
         for (auto g: t_phv_groups)
@@ -211,20 +211,38 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
     //
     create_aligned_container_slices();
     //
-    container_pack_cohabit(clusters_to_be_assigned);
+    container_pack_cohabit(clusters_to_be_assigned, aligned_container_slices_i);
     //
     // POV fields packing in PHV containers
     //
     LOG3("..........POV fields to be assigned (" << phv_requirements_i.pov_fields().size() << ").........." << std::endl);
     std::list<Cluster_PHV *> pov_fields(phv_requirements_i.pov_fields().begin(), phv_requirements_i.pov_fields().end());
-    container_pack_cohabit(pov_fields);
+    container_pack_cohabit(pov_fields, aligned_container_slices_i);
     //
     container_cohabit_summary();
     //
-    // T_PHV fields placement in containers conforming to T_PHV Collection constraints
+    // T_PHV fields allocation
+    // no need for initial placement as in Clusters & PHV placement constraints
+    // directly pack in containers conforming to T_PHV Collection constraints
+    // T_PHV_container_slices populated before container_pack_cohabit()
     //
+    for (auto coll: T_PHV_i)
+    {
+        for (auto m: coll.second)
+        {
+            std::set<PHV_MAU_Group::Container_Content *> *set_cc = new std::set<PHV_MAU_Group::Container_Content *>;
+            for (auto c: m.second)
+            {
+                set_cc->insert(new PHV_MAU_Group::Container_Content(0, (int) c->width(), c));
+            }
+            T_PHV_container_slices_i[(int) m.first][set_cc->size()].insert(*set_cc); 
+        }
+    }
+    LOG3(std::endl << "----------sorted T_PHV Container Packs avail ----------");
+    LOG3(T_PHV_container_slices_i);
     LOG3("..........T_PHV fields to be assigned (" << phv_requirements_i.t_phv_fields().size() << ").........." << std::endl);
-    T_PHV_placement_containers(phv_requirements_i.t_phv_fields());
+    std::list<Cluster_PHV *> t_phv_fields(phv_requirements_i.t_phv_fields().begin(), phv_requirements_i.t_phv_fields().end());
+    container_pack_cohabit(t_phv_fields, T_PHV_container_slices_i);
     //
     sanity_check_group_containers("PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments()..");
     //
@@ -520,7 +538,9 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices()
 // 
 //***********************************************************************************
 
-void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>& clusters_to_be_assigned)
+void PHV_MAU_Group_Assignments::container_pack_cohabit(
+	std::list<Cluster_PHV *>& clusters_to_be_assigned,
+	std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>& aligned_slices)
 {
     // sort clusters number decreasing, width decreasing
     //
@@ -545,7 +565,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
         int cl_n = cl->num_containers();
         //
         bool found_match = false;
-        for (auto &i : aligned_container_slices_i)
+        for (auto &i : aligned_slices)
         {
             int m_w = i.first;
             if(m_w >= cl_w)
@@ -644,7 +664,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
                                 cc->hi(cc->hi() - cl_w);
                             }
                             auto w = m_w - cl_w;
-                            aligned_container_slices_i[w][cl_n].insert(*cc_w);
+                            aligned_slices[w][cl_n].insert(*cc_w);
                             LOG3("\t==>(" << cl_n << ")-->[" << w << "](" << cl_n << ')' << std::endl << '\t' << *cc_w);
                         }
                         // remove cl
@@ -674,12 +694,12 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
     LOG3(clusters_to_be_assigned);
     //
     LOG3("----------after Packing ..... sorted MAU Container Packs avail----------");
-    LOG3(aligned_container_slices_i);
+    LOG3(aligned_slices);
     //
-    consolidate_slices_in_group();
+    consolidate_slices_in_group(aligned_slices);
     //
     LOG3("----------after Packing ..... consolidate slices ..... MAU Container Packs avail----------");
-    LOG3(aligned_container_slices_i);
+    LOG3(aligned_slices);
     // 
     // update PHV_MAU_Group info pertaining to available containers
     //
@@ -690,12 +710,14 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(std::list<Cluster_PHV *>&
 }//container_pack_cohabit
 
 
-void PHV_MAU_Group_Assignments::consolidate_slices_in_group()
+void PHV_MAU_Group_Assignments::consolidate_slices_in_group(
+	std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>& aligned_slices
+	)
 {
     // consolidate to get larger number same width only when all aligned and same MAU group
     // [3](2)*2 ((PHV-149<3>{8..10}, PHV-147), (PHV-145<3>{8..10}, PHV-151)) ==> [3](4)*1
     //
-    for (auto w: aligned_container_slices_i)
+    for (auto w: aligned_slices)
     {
         for (auto n: w.second)
         {
@@ -713,7 +735,7 @@ void PHV_MAU_Group_Assignments::consolidate_slices_in_group()
                 }
                 // all elements of g_lo[g][lo] must be used for aligned_slices[w][n]
                 //
-                aligned_container_slices_i[w.first].erase(n.first);
+                aligned_slices[w.first].erase(n.first);
                 for (auto g: g_lo)
                 {
                     for (auto l: g.second)
@@ -730,12 +752,12 @@ void PHV_MAU_Group_Assignments::consolidate_slices_in_group()
                                     set_u->insert(cc);
                                 }
                             }
-                            aligned_container_slices_i[w.first][set_u->size()].insert(*set_u);
+                            aligned_slices[w.first][set_u->size()].insert(*set_u);
                         }
                         else
                         {   // use existing singleton set
                             // 
-                            aligned_container_slices_i[w.first][n.first].insert(*(l.second.begin()));
+                            aligned_slices[w.first][n.first].insert(*(l.second.begin()));
                         } 
                     }
                 }
@@ -797,20 +819,6 @@ void PHV_MAU_Group_Assignments::container_cohabit_summary()
         }
     }
 }//container_cohabit_summary
-
-
-//***********************************************************************************
-//
-// T_PHV placement
-// 
-//***********************************************************************************
-
-
-void
-PHV_MAU_Group_Assignments::T_PHV_placement_containers(std::vector<const PhvInfo::Field *>& t_phv_fields)
-{
-    LOG3(t_phv_fields);
-}
 
 
 //***********************************************************************************

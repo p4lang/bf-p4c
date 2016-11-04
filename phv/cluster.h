@@ -34,11 +34,11 @@ class Cluster : public Inspector
                                 // maintains unique cluster ptrs
     PhvInfo::Field *dst_i = nullptr;
 				// destination of current statement
-    std::vector<const PhvInfo::Field *> pov_fields_i;
+    std::list<const PhvInfo::Field *> pov_fields_i;
 				// all pov fields
-    std::vector<const PhvInfo::Field *> pov_fields_not_in_cluster_i;
+    std::list<const PhvInfo::Field *> pov_fields_not_in_cluster_i;
 				// pov fields not in cluster, need to be PHV allocated
-    std::vector<const PhvInfo::Field *> fields_no_use_mau_i;
+    std::list<const PhvInfo::Field *> fields_no_use_mau_i;
 				// fields that are not used through mau pipeline
     //
     bool preorder(const IR::Member*) override;
@@ -71,11 +71,11 @@ class Cluster : public Inspector
         return dst_map_i;
     }
     //
-    std::vector<const PhvInfo::Field *>& pov_fields()		{ return pov_fields_i; }
-    std::vector<const PhvInfo::Field *>& pov_fields_not_in_cluster()
+    std::list<const PhvInfo::Field *>& pov_fields()		{ return pov_fields_i; }
+    std::list<const PhvInfo::Field *>& pov_fields_not_in_cluster()
 								{ return pov_fields_not_in_cluster_i; }
     //
-    std::vector<const PhvInfo::Field *>& fields_no_use_mau()	{ return fields_no_use_mau_i; }
+    std::list<const PhvInfo::Field *>& fields_no_use_mau()	{ return fields_no_use_mau_i; }
     void compute_fields_no_use_mau();
 };
 //

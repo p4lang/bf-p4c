@@ -77,7 +77,7 @@ class Cluster_PHV_Requirements
 							// sorted pov fields, width decreasing
 							// header-stack POVs are not 1-bit fields
 							// such fields must be contiguously allocated in PHV
-    std::vector<const PhvInfo::Field *> t_phv_fields_i;
+    std::vector<Cluster_PHV *> t_phv_fields_i;
 							// fields that are not used through mau pipeline
 							// sorted width decreasing
  public:
@@ -89,7 +89,7 @@ class Cluster_PHV_Requirements
     }
     //
     std::vector<Cluster_PHV *>& pov_fields()		{ return pov_fields_i; }
-    std::vector<const PhvInfo::Field *>& t_phv_fields()	{ return t_phv_fields_i; }
+    std::vector<Cluster_PHV *>& t_phv_fields()		{ return t_phv_fields_i; }
     //
 };
 //
