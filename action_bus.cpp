@@ -58,6 +58,7 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
 }
 
 void ActionBus::pass1(Table *tbl) {
+    LOG1("ActionBus::pass1(" << tbl->name() << ")");
     Slot *use[ACTION_DATA_BUS_SLOTS] = { 0 };
     for (auto &slot : Values(by_byte)) {
         int slotno = Stage::action_bus_slot_map[slot.byte];
@@ -138,6 +139,7 @@ void ActionBus::do_alloc(Table *tbl, Table::Format::Field *f, unsigned use, int 
 }
 
 void ActionBus::pass2(Table *tbl) {
+    LOG1("ActionBus::pass2(" << tbl->name() << ")");
     int immed_offset = tbl->format->immed ? tbl->format->immed->bit(0) : 0;
     for (auto &f : need_place) {
         auto field = f.first;

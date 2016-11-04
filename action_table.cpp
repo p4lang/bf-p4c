@@ -184,9 +184,11 @@ void ActionTable::pass1() {
         if (idx != 0) {
             if (home < home_end && *home == row.row) {
                 home++;
+                need_bus(lineno, stage->action_data_use, row.row, "Action data");
             } else if (!home && home_rows.back() - row.row > 10) {
                 /* can't go over >10 rows for timing */
                 home_rows.push_back(row.row);
+                need_bus(lineno, stage->action_data_use, row.row, "Action data");
             } else if (home && home[-1] - row.row > 10) {
                 error(home_lineno, "Can't propagate over more than 10 rows to home row");
             } else {
