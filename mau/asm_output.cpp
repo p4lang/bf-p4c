@@ -303,9 +303,9 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     }
     if (!home_row.empty()) {
         if (home_row.size() > 1)
-            out << indent << "home_row: " << row << std::endl;
+            out << indent << "home_row: " << home_row << std::endl;
         else
-            out << indent << "home_row: " << row[0] << std::endl;
+            out << indent << "home_row: " << home_row[0] << std::endl;
     }
 }
 

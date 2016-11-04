@@ -1052,6 +1052,7 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
 
     int min_left = 0;
     for (size_t i = 0; i < action_bus_users.size(); i++) {
+        LOG1("i is " << i);
         if (curr_oflow.group == action_bus_users[i])
             continue;
         if (action_bus_users[i]->left_to_place() > min_left) {
@@ -1061,6 +1062,7 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
         }
     }
 
+    LOG1("Hello");
     
     if (mask == 0x3f0) {
         for (size_t i = 0; i < suppl_bus_users.size(); i++) {
@@ -1087,11 +1089,12 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
             if (suppl_bus_users[i]->left_to_place() > min_left) {
                 next_suppl.group = suppl_bus_users[i];
                 next_suppl.index = i;
-                min_left = action_bus_users[i]->left_to_place();
+                min_left = suppl_bus_users[i]->left_to_place();
             }
         }
     }
 
+    LOG1("Hello Again");
     
     unsigned masks[3] = {0, 0, 0};
     int RAMs[3] = {0, 0, 0};
@@ -1185,8 +1188,9 @@ bool Memories::fill_out_action_row(action_fill &action, int row, int side, unsig
     } else {
         action_data_bus[row][side] = a_name;        
         a_alloc.row.emplace_back(row, side);
-        a_alloc.home_row.emplace_back(row, action.group->number);
+        a_alloc.home_row.emplace_back(2*row + 1-side, action.group->number);
         action.group->recent_home_row = row;
+        LOG1("Home row");
     }
     for (int k = 0; k < 10; k++) {
         if (((1 << k) & mask) == 0)
@@ -1328,7 +1332,7 @@ bool Memories::allocate_all_action() {
                                                   curr_oflow.group->number);
 
         if (curr_oflow.group && curr_oflow.group->type == SRAM_group::ACTION 
-            && curr_oflow.group->recent_home_row - i >= 5) {
+            && curr_oflow.group->recent_home_row - i >= 4) {
             curr_oflow.clear();
         } 
     }
