@@ -169,7 +169,9 @@ class PHV_MAU_Group_Assignments
     void consolidate_slices_in_group(
     	std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&
 	);
-    void update_PHV_MAU_Group_container_slices();
+    void update_PHV_MAU_Group_container_slices(
+    	std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&
+	);
     void container_cohabit_summary();
     //
  public:
@@ -194,6 +196,7 @@ class PHV_MAU_Group_Assignments
     void sanity_check_container_avail(const std::string&);
     void sanity_check_container_fields_gress(const std::string&);
     void sanity_check_group_containers(const std::string&);
+    void sanity_check_T_PHV_collections(const std::string&);
 };
 //
 //
@@ -205,6 +208,7 @@ std::ostream &operator<<(std::ostream &, PHV_MAU_Group*);
 std::ostream &operator<<(std::ostream &, std::list<PHV_MAU_Group *>&);
 std::ostream &operator<<(std::ostream &, std::vector<PHV_MAU_Group *>&);
 std::ostream &operator<<(std::ostream &, std::vector<PHV_MAU_Group *>*);
+std::ostream &operator<<(std::ostream &, std::map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>&);
 std::ostream &operator<<(std::ostream &, PHV_MAU_Group_Assignments&);
 //
 #endif /* _TOFINO_PHV_CLUSTER_PHV_MAU_H_ */
