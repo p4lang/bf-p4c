@@ -2388,7 +2388,7 @@ table smac {
         smac_miss;
         smac_hit;
     }
-    size : 512000;
+    size : 440000;
 }
 
 
@@ -2450,7 +2450,7 @@ table dmac {
         dmac_redirect_ecmp;
         dmac_drop;
     }
-    size : 512000;
+    size : 440000;
     support_timeout: true;
 }
 
