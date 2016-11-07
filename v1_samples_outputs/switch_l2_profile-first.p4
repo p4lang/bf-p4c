@@ -124,7 +124,7 @@ struct ingress_parser_control_signals {
     bit<3> priority;
 }
 
-struct ingress_metadata_t {
+@pa_alias("ingress", "ig_intr_md.ingress_port", "ingress_metadata.ingress_port") struct ingress_metadata_t {
     bit<9>  ingress_port;
     bit<16> ifindex;
     bit<16> egress_ifindex;
@@ -703,7 +703,7 @@ header vlan_tag_t {
 }
 
 struct metadata {
-    @name("acl_metadata") 
+    @pa_solitary("ingress", "acl_metadata.if_label") @pa_atomic("ingress", "acl_metadata.if_label") @name("acl_metadata") 
     acl_metadata_t                              acl_metadata;
     @name("eg_intr_md") 
     egress_intrinsic_metadata_t                 eg_intr_md;
@@ -719,7 +719,7 @@ struct metadata {
     flowlet_metadata_t                          flowlet_metadata;
     @name("global_config_metadata") 
     global_config_metadata_t                    global_config_metadata;
-    @name("hash_metadata") 
+    @pa_atomic("ingress", "hash_metadata.hash1") @pa_solitary("ingress", "hash_metadata.hash1") @pa_atomic("ingress", "hash_metadata.hash2") @pa_solitary("ingress", "hash_metadata.hash2") @name("hash_metadata") 
     hash_metadata_t                             hash_metadata;
     @name("i2e_metadata") 
     i2e_metadata_t                              i2e_metadata;
@@ -729,7 +729,7 @@ struct metadata {
     ingress_intrinsic_metadata_for_tm_t         ig_intr_md_for_tm;
     @name("ig_prsr_ctrl") 
     ingress_parser_control_signals              ig_prsr_ctrl;
-    @name("ingress_metadata") 
+    @pa_atomic("ingress", "ingress_metadata.port_type") @pa_solitary("ingress", "ingress_metadata.port_type") @pa_atomic("ingress", "ingress_metadata.ifindex") @pa_solitary("ingress", "ingress_metadata.ifindex") @pa_atomic("egress", "ingress_metadata.bd") @pa_solitary("egress", "ingress_metadata.bd") @name("ingress_metadata") 
     ingress_metadata_t                          ingress_metadata;
     @name("int_metadata") 
     int_metadata_t                              int_metadata;
@@ -796,13 +796,13 @@ struct headers {
     ethernet_t                              inner_ethernet;
     @name("inner_icmp") 
     icmp_t                                  inner_icmp;
-    @name("inner_ipv4") 
+    @pa_fragment("ingress", "inner_ipv4.hdrChecksum") @pa_fragment("egress", "inner_ipv4.hdrChecksum") @name("inner_ipv4") 
     ipv4_t                                  inner_ipv4;
     @name("inner_ipv6") 
     ipv6_t                                  inner_ipv6;
     @name("inner_sctp") 
     sctp_t                                  inner_sctp;
-    @name("inner_tcp") 
+    @pa_fragment("egress", "inner_tcp.checksum") @pa_fragment("egress", "inner_tcp.urgentPtr") @name("inner_tcp") 
     tcp_t                                   inner_tcp;
     @name("inner_udp") 
     udp_t                                   inner_udp;
@@ -828,7 +828,7 @@ struct headers {
     int_q_occupancy_header_t                int_q_occupancy_header;
     @name("int_switch_id_header") 
     int_switch_id_header_t                  int_switch_id_header;
-    @name("ipv4") 
+    @pa_fragment("ingress", "ipv4.hdrChecksum") @pa_fragment("egress", "ipv4.hdrChecksum") @name("ipv4") 
     ipv4_t                                  ipv4;
     @name("ipv6") 
     ipv6_t                                  ipv6;
@@ -858,7 +858,7 @@ struct headers {
     sflow_sample_t                          sflow_sample;
     @name("snap_header") 
     snap_header_t                           snap_header;
-    @name("tcp") 
+    @pa_fragment("egress", "tcp.checksum") @pa_fragment("egress", "tcp.urgentPtr") @name("tcp") 
     tcp_t                                   tcp;
     @name("trill") 
     trill_t                                 trill;
@@ -1463,7 +1463,7 @@ control process_vlan_decap(inout headers hdr, inout metadata meta, inout standar
         hdr.vlan_tag_[0].setInvalid();
         hdr.vlan_tag_[1].setInvalid();
     }
-    @name("vlan_decap") table vlan_decap() {
+    @ternary(1) @name("vlan_decap") table vlan_decap() {
         actions = {
             nop();
             remove_vlan_single_tagged();
@@ -1766,7 +1766,7 @@ control process_int_insertion(inout headers hdr, inout metadata meta, inout stan
         size = 5;
         default_action = NoAction();
     }
-    @name("int_inst_0003") table int_inst_0003() {
+    @ternary(1) @name("int_inst_0003") table int_inst_0003() {
         actions = {
             int_set_header_0003_i0();
             int_set_header_0003_i1();
@@ -1792,7 +1792,7 @@ control process_int_insertion(inout headers hdr, inout metadata meta, inout stan
         size = 17;
         default_action = NoAction();
     }
-    @name("int_inst_0407") table int_inst_0407() {
+    @ternary(1) @name("int_inst_0407") table int_inst_0407() {
         actions = {
             nop();
             NoAction();
@@ -1935,7 +1935,7 @@ control process_tunnel_encap(inout headers hdr, inout metadata meta, inout stand
         hdr.fabric_payload_header.etherType = hdr.ethernet.etherType;
         hdr.ethernet.etherType = 16w0x9000;
     }
-    @name("tunnel_encap_process_outer") table tunnel_encap_process_outer() {
+    @ternary(1) @name("tunnel_encap_process_outer") table tunnel_encap_process_outer() {
         actions = {
             nop();
             fabric_rewrite();
@@ -2559,7 +2559,7 @@ control process_spanning_tree(inout headers hdr, inout metadata meta, inout stan
     @name("set_stp_state") action set_stp_state(bit<3> stp_state) {
         meta.l2_metadata.stp_state = stp_state;
     }
-    @name("spanning_tree") table spanning_tree() {
+    @ternary(1) @name("spanning_tree") table spanning_tree() {
         actions = {
             set_stp_state();
             NoAction();
@@ -2637,7 +2637,7 @@ control process_ingress_fabric(inout headers hdr, inout metadata meta, inout sta
         meta.l3_metadata.lkp_l4_sport = meta.l3_metadata.lkp_outer_l4_sport;
         meta.l3_metadata.lkp_l4_dport = meta.l3_metadata.lkp_outer_l4_dport;
     }
-    @name("fabric_ingress_dst_lkp") table fabric_ingress_dst_lkp() {
+    @ternary(1) @name("fabric_ingress_dst_lkp") table fabric_ingress_dst_lkp() {
         actions = {
             nop();
             terminate_cpu_packet();
@@ -2799,7 +2799,7 @@ control process_mac(inout headers hdr, inout metadata meta, inout standard_metad
     @name("smac_hit") action smac_hit(bit<16> ifindex) {
         meta.l2_metadata.l2_src_move = meta.ingress_metadata.ifindex ^ ifindex;
     }
-    @name("dmac") table dmac() {
+    @idletime_precision(2) @name("dmac") table dmac() {
         support_timeout = true;
         actions = {
             nop();
@@ -3058,7 +3058,7 @@ control process_hashes(inout headers hdr, inout metadata meta, inout standard_me
         }
         default_action = NoAction();
     }
-    @name("compute_other_hashes") table compute_other_hashes() {
+    @ternary(1) @name("compute_other_hashes") table compute_other_hashes() {
         actions = {
             computed_two_hashes();
             computed_one_hash();
@@ -3465,7 +3465,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("rmac_miss") action rmac_miss() {
         meta.l3_metadata.rmac_hit = 1w0;
     }
-    @name("rmac") table rmac() {
+    @ternary(1) @name("rmac") table rmac() {
         actions = {
             rmac_hit();
             rmac_miss();
