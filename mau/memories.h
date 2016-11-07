@@ -77,6 +77,7 @@ struct Memories {
         vector<Row>     row;
         vector<std::pair<int, int>>          home_row;
         vector<std::pair<int, unsigned>>     ways;
+        int                                  per_row;
         // depth in memory units + mask to use for memory selection per way
         void visit(Memories &mem, std::function<void(cstring &)>) const;
     };
@@ -103,6 +104,7 @@ struct Memories {
         int placed;
         int number;
         int recent_home_row;
+        cstring name;
         enum type_t { EXACT, ACTION, STATS, METER, TIND } type;
         explicit SRAM_group(table_alloc *t, int d, int w, int n, type_t ty)
             : ta(t), depth(d), width(w), placed(0), number(n), type(ty) {}

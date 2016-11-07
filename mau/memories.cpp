@@ -178,6 +178,8 @@ bool Memories::analyze_tables(mem_info &mi) {
            mi.ternary_TCAMs += TCAMs_needed * depth;
            ta->calculated_entries = depth * 512;
         }
+
+        bool stats_pushed = false; bool meter_pushed = false;
         for (auto at : table->attached) {
             if (at->is<IR::MAU::ActionData>()) {
                 LOG4("Action table for table " << table->name);
@@ -197,15 +199,21 @@ bool Memories::analyze_tables(mem_info &mi) {
                 tind_tables.push_back(ta);
                 mi.tind_tables++;
                 mi.tind_RAMs += (entries + 1023U) / 1024U;
-            } else if (at->is<IR::Counter>()) {
-                auto name = ta->table->name + "$stats";
+            } else if (auto *cnt = at->to<IR::Counter>()) {
+                auto name = cnt->name;
                 (*ta->memuse)[name].type = Use::TWOPORT;
-                stats_tables.push_back(ta);
+                if (!stats_pushed) {
+                    stats_tables.push_back(ta);
+                    stats_pushed = true;
+                }
                 mi.stats_tables++;
-            } else if (at->is<IR::Meter>()) {
-                auto name = ta->table->name + "$meter";
+            } else if (auto *mtr = at->to<IR::Meter>()) {
+                auto name = mtr->name;
                 (*ta->memuse)[name].type = Use::TWOPORT;
-                meter_tables.push_back(ta);
+                if (!meter_pushed) {
+                    meter_tables.push_back(ta);
+                    meter_pushed = true;
+                }
                 mi.meter_tables++;
             }
         }
@@ -803,33 +811,38 @@ void Memories::find_action_bus_users() {
         for (int i = 0; i < width; i++) {
             action_bus_users.push_back(new SRAM_group(ta, depth, i, SRAM_group::ACTION));
             LOG1("Action bus user " << ta->table->name);
-        }
+            action_bus_users.back()->name = ta->table->name
+                                            + action_bus_users.back()->name_addition();
+        } 
     }
 
     for (auto *ta : stats_tables) {
-        const IR::Counter *stats = nullptr;
         for (auto at : ta->table->attached) {
-            if ((stats = at->to<IR::Counter>())) 
-                break;
+            const IR::Counter *stats = nullptr;
+            if ((stats = at->to<IR::Counter>()) == nullptr)
+                continue;
+            LOG1("Stats table user " << stats->name);
+            int width = (stats->min_width < stats->max_width) ? stats->max_width : stats->min_width;
+            int per_row = stats_per_row(width, stats->type);
+            int depth = (ta->calculated_entries + per_row * 1024 - 1)/(per_row * 1024) * 2; 
+            suppl_bus_users.push_back(new SRAM_group(ta, depth, 0, SRAM_group::STATS));
+            suppl_bus_users.back()->name = stats->name;
+            (*ta->memuse)[stats->name].per_row = per_row;
         }
-        if (stats == nullptr)
-            BUG("Error in memories with stats tables");
 
 
-        int width = (stats->min_width < stats->max_width) ? stats->max_width : stats->min_width;
-        int per_row = stats_per_row(width, stats->type);
-        int depth = (ta->calculated_entries + per_row * 1024 - 1)/(per_row * 1024) * 2; 
-        suppl_bus_users.push_back(new SRAM_group(ta, depth, 0, SRAM_group::STATS));
     }
 
     for (auto *ta : meter_tables) {
         const IR::Meter *meter = nullptr;
         for (auto at : ta->table->attached) {
-            if ((meter = at->to<IR::Meter>()))
-                break;
+            if ((meter = at->to<IR::Meter>()) == nullptr)
+                continue;
+            LOG1("Meter table user " << meter->name);
+            int depth = (ta->calculated_entries + 1023) / 1024 * 2;
+            suppl_bus_users.push_back(new SRAM_group(ta, depth, 0, SRAM_group::METER));
+            suppl_bus_users.back()->name = meter->name;
         }
-        int depth = (ta->calculated_entries + 1023) / 1024 * 2;
-        suppl_bus_users.push_back(new SRAM_group(ta, depth, 0, SRAM_group::METER));
     }
 }
 
@@ -839,14 +852,19 @@ void Memories::action_row_trip(action_fill &action, action_fill &suppl, action_f
                                action_fill &next_suppl, int RAMs_available, bool left_side,
                                int order[3], int RAMs[3]) {
     if (!left_side) {
+        LOG1("All the way up");
         if (curr_oflow.group && curr_oflow.group->type != SRAM_group::ACTION) {
+            LOG1("All turnt");
             if (best_fit_suppl.group && best_fit_suppl.group->left_to_place() == RAMs_available) {
+                LOG1("First Prime");
                 suppl = best_fit_suppl;
                 order[SUPPL_IND] = 0;
             } else if (curr_oflow.group->left_to_place() >= RAMs_available) {
+                LOG1("Second Prime");
                 oflow = curr_oflow;
                 order[OFLOW_IND] = 0;
             } else if (next_suppl.group) {
+                LOG1("Third Prime");
                 suppl = next_suppl;     
                 oflow = curr_oflow;
                 order[OFLOW_IND] = 0; order[SUPPL_IND] = 1; 
@@ -857,11 +875,16 @@ void Memories::action_row_trip(action_fill &action, action_fill &suppl, action_f
                     order[ACTION_IND] = 2;
                 }
             } else if (next_action.group && next_action.group->left_to_place() == RAMs_available) {
+               LOG1("Fourth Prime");
                oflow = curr_oflow;
                action = next_action;
                order[OFLOW_IND] = 0; order[ACTION_IND] = 1;
+            } else {
+                oflow = curr_oflow;
+                order[OFLOW_IND] = 0;
             }
         } else if (next_suppl.group) {
+            LOG1("Fifth Prime");
             suppl = next_suppl;
             order[SUPPL_IND] = 0;
             //FIXME: Perhaps port the correct function
@@ -930,7 +953,6 @@ void Memories::action_oflow_only(action_fill &action, action_fill &oflow,
             if (curr_oflow.group->left_to_place() < RAMs_available) {
                 action = next_action;
                 order[OFLOW_IND] = 0; order[ACTION_IND] = 1;
-                LOG1("Shouldn't be here");
             } else {
                 if (best_fit_action.group->left_to_place() <= RAMs_available) {
                     LOG1("Hello");
@@ -1031,7 +1053,7 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
                                       /*SRAM_group **a_group, unsigned &a_mask,
                                       int &a_index, SRAM_group **oflow_group,
                                       unsigned &oflow_mask, int &oflow_index)*/ {
-    if (action_bus_users.empty()) {
+    if (action_bus_users.empty() && suppl_bus_users.empty()) {
         return;
     }
 
@@ -1052,7 +1074,6 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
 
     int min_left = 0;
     for (size_t i = 0; i < action_bus_users.size(); i++) {
-        LOG1("i is " << i);
         if (curr_oflow.group == action_bus_users[i])
             continue;
         if (action_bus_users[i]->left_to_place() > min_left) {
@@ -1061,9 +1082,7 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
             min_left = action_bus_users[i]->left_to_place();
         }
     }
-
-    LOG1("Hello");
-    
+ 
     if (mask == 0x3f0) {
         for (size_t i = 0; i < suppl_bus_users.size(); i++) {
             if (curr_oflow.group == suppl_bus_users[i])
@@ -1072,9 +1091,10 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
                 continue;
             if (!meter_available && suppl_bus_users[i]->type != SRAM_group::STATS)
                 continue;
-            if (suppl_bus_users[i]->depth <= RAMs_available) {
+            if (suppl_bus_users[i]->left_to_place() <= RAMs_available) {
                 best_fit_suppl.group = suppl_bus_users[i];
                 best_fit_suppl.index = i;
+                LOG1("In here");
                 break;
             }
         }
@@ -1090,12 +1110,22 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
                 next_suppl.group = suppl_bus_users[i];
                 next_suppl.index = i;
                 min_left = suppl_bus_users[i]->left_to_place();
+                LOG1("In here two");
+                LOG1("Next suppl left is " << next_suppl.group->left_to_place());
             }
         }
     }
 
-    LOG1("Hello Again");
-    
+    if (best_fit_action.group == nullptr && best_fit_suppl.group == nullptr
+        && curr_oflow.group == nullptr && next_action.group == nullptr 
+        && next_suppl.group == nullptr) {
+         LOG1("Butt soup");
+         return;
+    }
+   
+    if (curr_oflow.group != nullptr)
+        LOG1("Oflow isn't null");
+
     unsigned masks[3] = {0, 0, 0};
     int RAMs[3] = {0, 0, 0};
     int order[3] = {-1, -1, -1}; //order is action, suppl, oflow
@@ -1177,7 +1207,8 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
    removes completely packed action groups from the action group array */
 bool Memories::fill_out_action_row(action_fill &action, int row, int side, unsigned mask, 
                                    bool is_oflow, bool is_twoport) {
-    auto a_name = action.group->ta->table->name + action.group->name_addition();
+    auto a_name = action.group->name;//action.group->ta->table->name + action.group->name_addition();
+    
     auto &a_alloc = (*action.group->ta->memuse)[a_name];
     if (is_oflow) {
         overflow_bus[row][side] = a_name;
@@ -1201,21 +1232,28 @@ bool Memories::fill_out_action_row(action_fill &action, int row, int side, unsig
             a_alloc.row.back().col.push_back(k);
             if (is_twoport) {
                 mapram_use[row][k - LEFT_SIDE_COLUMNS] = a_name;
+                a_alloc.row.back().mapcol.push_back(k - LEFT_SIDE_COLUMNS);
             }
         }
 
     }
 
     sram_inuse[row] |= action.mask;
-    if (is_twoport)
+    if (is_twoport) {
         mapram_inuse[row] |= (action.mask >> LEFT_SIDE_COLUMNS);
+    }
+    if (is_twoport && !is_oflow) {
+        if (action.group->type == SRAM_group::STATS)
+            stats_alus[row/2] = a_name;
+        else
+            meter_alus[row/2] = a_name;
+    }
     bool action_group_removed = false;
     action.group->placed += __builtin_popcount(action.mask);
     if (action.group->all_placed()) {
         if (is_twoport)
             suppl_bus_users.erase(suppl_bus_users.begin() + action.index);
         else {
-            LOG1("Size and index " << action_bus_users.size() << " " << action.index);
             action_bus_users.erase(action_bus_users.begin() + action.index);
         }
         action_group_removed = true;
@@ -1246,6 +1284,11 @@ bool Memories::allocate_all_action() {
     for (int i = SRAM_ROWS - 1; i >= 0; i--) {
         twoport_oflow.clear();
         for (int j = 0; j < 2; j++) {
+            LOG1("i, j " << i << ", " << j);
+           if (curr_oflow.group)
+               LOG1("Curr oflow beginning " << curr_oflow.group->name);
+           else
+               LOG1("Curr oflow is empty beginning");
             int mask = 0;
             if (j == 0)
                 mask = 0x3f0;
@@ -1260,14 +1303,15 @@ bool Memories::allocate_all_action() {
                 stats_available = false;
             }
 
-            if (i == 0 || meter_alus[i/2]) {
+            if (i == 7 || meter_alus[i/2]) {
                 meter_available = false;
             }
-
+            LOG1("Meter available is " << meter_available);
             find_action_candidates(i, mask, action, suppl, oflow, stats_available, meter_available,
                                    curr_oflow);
 
             if (action.group == nullptr && oflow.group == nullptr && suppl.group == nullptr) {
+                //curr_oflow.clear();
                 continue;
             }
 
@@ -1302,30 +1346,36 @@ bool Memories::allocate_all_action() {
                 action.index--;
 
 
-            if ((j == 0 && suppl.group && !suppl_removed) || 
-                ((j == 0) && oflow.group && !oflow_removed
-                && oflow.group->type != SRAM_group::ACTION))
+            if (j == 0 && suppl.group && !suppl_removed)
                 twoport_oflow = suppl;
+            if (j == 0 && oflow.group && !oflow_removed
+                && oflow.group->type != SRAM_group::ACTION) 
+                twoport_oflow = oflow;
 
            if (action.group)
                LOG1("Action group " << action.group->ta->table->name);
            if (oflow.group)
                LOG1("Oflow group " << oflow.group->ta->table->name);
 
-           if (!oflow_removed && oflow.group && oflow.group->type == SRAM_group::ACTION)
+           if (!oflow_removed && oflow.group && oflow.group->type == SRAM_group::ACTION) {
                curr_oflow = oflow;
-           else if (!action_removed && action.group)
+           } else if (!action_removed && action.group) {
                curr_oflow = action;
-           else
+           } else {
                curr_oflow.clear();
+           }
+
            if (curr_oflow.group)
-               LOG1("Curr oflow " << curr_oflow.group->ta->table->name);
+               LOG1("Curr oflow " << curr_oflow.group->name);
            else
                LOG1("Curr oflow is empty");
 
         }
-        if (twoport_oflow.group)
-           curr_oflow = twoport_oflow;
+        if (twoport_oflow.group) {
+            curr_oflow = twoport_oflow;
+            LOG1("Two port oflow " << twoport_oflow.group->name << " with " 
+                  << twoport_oflow.group->left_to_place());
+        }
         if (i != SRAM_ROWS - 1 && curr_oflow.group)
             vert_overflow_bus[i] = std::make_pair(curr_oflow.group->ta->table->name 
                                                   + curr_oflow.group->name_addition(), 
@@ -1341,14 +1391,33 @@ bool Memories::allocate_all_action() {
         return false;
 
     //FIXME: Add home rows and extra meter color maprams
-    for (auto *ta : action_tables) {
-        LOG1("Action table for " << ta->table->name);
-        auto name = ta->table->name + "$action";
-        auto alloc = (*ta->memuse)[name];
-        for (auto row : alloc.row) {
-            LOG1("Row is " << row.row << " and bus is " << row.bus);
-            for (auto col : row.col) {
-                LOG1("Col is " << col);
+    for (auto *ta : stats_tables) {
+        for (auto at : ta->table->attached) {
+            const IR::Counter *stats = nullptr;
+            if ((stats = at->to<IR::Counter>()) == nullptr) 
+                continue;
+            LOG1("Stats table for " << stats->name);
+            auto name = stats->name;
+            auto alloc = (*ta->memuse)[name];
+            for (auto row : alloc.row) {
+                LOG1("Row is " << row.row << " and bus is " << row.bus);
+                LOG1("Col is " << row.col);
+                LOG1("Map col is " << row.mapcol);
+            }
+        }
+    }
+    for (auto *ta : meter_tables) {
+        for (auto at : ta->table->attached) {
+            const IR::Meter *meter = nullptr;
+            if ((meter = at->to<IR::Meter>()) == nullptr) 
+                continue;
+            LOG1("Meter table for " << meter->name);
+            auto name = meter->name;
+            auto alloc = (*ta->memuse)[name];
+            for (auto row : alloc.row) {
+                LOG1("Row is " << row.row << " and bus is " << row.bus);
+                LOG1("Col is " << row.col);
+                LOG1("Map col is " << row.mapcol);
             }
         }
     }
@@ -1484,16 +1553,18 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
     for (auto &r : row) {
         if (bus && r.bus != -1)
             fn((*bus)[r.row][r.bus]);
-        if (type == TWOPORT)
-            fn(mem.stateful_bus[r.row]);
+        /*if (type == TWOPORT) 
+            fn(mem.stateful_bus[r.row]);*/
         for (auto col : r.col) {
             fn((*use)[r.row][col]);
         }
-        for (auto col : r.mapcol)
-            fn((*mapuse)[r.row][col]); }
+        for (auto col : r.mapcol) {
+            LOG1("Row and col are " << r.row << " " << col);
+            fn((*mapuse)[r.row][col]);} } 
 }
 
 void Memories::update(cstring name, const Memories::Use &alloc) {
+    LOG1("name of table is " << name);
     alloc.visit(*this, [name](cstring &use) {
         if (use)
             BUG("conflicting memory use between %s and %s", use, name);
