@@ -3,6 +3,7 @@
 #include <set>
 #include <cmath>
 #include <climits>
+#include <numeric>
 #include "lib/log.h"
 
 void Constraints::SetEqualByte(const PHV::Byte &byte) {

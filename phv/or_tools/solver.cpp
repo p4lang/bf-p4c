@@ -1,5 +1,6 @@
 #include <list>
 #include <ctime>
+#include <numeric>
 #include "solver.h"
 #include "mau_group.h"
 #include "container.h"

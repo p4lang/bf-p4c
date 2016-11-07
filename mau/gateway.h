@@ -46,7 +46,7 @@ class CollectGatewayFields : public Inspector {
         bitrange                bits = { -1, -1 };
         bool                    need_range = false;
         uint64_t                need_mask = 0;
-        int                     offset = -1; };
+        vector<std::pair<int, bitrange>>        offsets; };
     map<const PhvInfo::Field *, info_t>       info;
     map<cstring, int>                         valid_offsets;
     int                                       bytes, bits;
@@ -72,6 +72,7 @@ class BuildGatewayMatch : public Inspector {
     const PhvInfo               &phv;
     CollectGatewayFields        &fields;
     match_t                     match;
+    profile_t init_apply(const IR::Node *root) override;
     bool preorder(const IR::Expression *) override;
     bool preorder(const IR::Primitive *) override;
     bool preorder(const IR::LAnd *) override { return true; }
@@ -85,9 +86,9 @@ class BuildGatewayMatch : public Inspector {
     const PhvInfo::Field        *match_field;
     PhvInfo::Field::bitrange    match_field_bits;
     uint64_t                    andmask, ormask;
+    int                         shift;
  public:
-    BuildGatewayMatch(const PhvInfo &phv, CollectGatewayFields &f) : phv(phv), fields(f) {
-        match.setwidth(fields.bytes*8 + fields.bits); }
+    BuildGatewayMatch(const PhvInfo &phv, CollectGatewayFields &f);
 };
 
 inline std::ostream &operator<<(std::ostream &out, const BuildGatewayMatch &m) {

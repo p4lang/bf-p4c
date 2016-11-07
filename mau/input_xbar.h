@@ -56,7 +56,8 @@ struct IXBar {
     unsigned                                    hash_index_inuse[HASH_INDEX_GROUPS] = { 0 };
     Alloc2D<cstring, HASH_TABLES, HASH_SINGLE_BITS>     hash_single_bit_use;
     unsigned                                    hash_single_bit_inuse[HASH_SINGLE_BITS] = { 0 };
-    Alloc1D<cstring, HASH_GROUPS>                       hash_group_use;
+    Alloc1D<cstring, HASH_GROUPS>                      hash_group_print_use;
+    unsigned                                    hash_group_use[HASH_GROUPS] = { 0 };
     friend class IXBarRealign;
 
  public:
@@ -66,6 +67,8 @@ struct IXBar {
         enum flags_t { NeedRange = 1, NeedXor = 2,
                        Align16lo = 4, Align16hi = 8, Align32lo = 16, Align32hi = 32 };
         bool            ternary;
+        bool            gw_search_bus;  int gw_search_bus_bytes;
+        bool            gw_hash_group;
         /* tracking individual bytes (or parts of bytes) placed on the ixbar */
         struct Byte {
             cstring     field;
@@ -89,7 +92,8 @@ struct IXBar {
             int         group;
             int         lo, bit, width;
             Bits(cstring f, int g, int l, int b, int w)
-            : field(f), group(g), lo(l), bit(b), width(w) {} };
+            : field(f), group(g), lo(l), bit(b), width(w) {}
+            int hi() const { return lo + width - 1; } };
         vector<Bits>    bit_use;
 
         /* hash tables used for way address computation */
@@ -103,6 +107,7 @@ struct IXBar {
         void clear() { use.clear(); hash_table_input = 0; bit_use.clear(); way_use.clear(); }
         void compute_hash_tables();
         int groups() const;  // how many different groups in this use
+        bool exact_comp(const IXBar::Use *exact_use, int width) const;
     };
 
     /* A problem occurred with the way the IXbar was allocated that requires backtracking
@@ -115,7 +120,7 @@ struct IXBar {
     void clear();
     bool allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc,
                     vector<IXBar::Use::Byte *> &alloced, bool second_try, int hash_groups);
-    int getHashGroup(cstring name);
+    int getHashGroup(unsigned hash_table_input);
     bool allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc);
     bool allocHashWay(const IR::MAU::Table *, const IR::MAU::Table::Way &, Use &);
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);

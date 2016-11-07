@@ -8,10 +8,12 @@
 #include "lib/log.h"
 #include "frontends/p4-14/typecheck.h"
 #include "tofinoOptions.h"
+#include "tofino/common/copy_header_eliminator.h"
 #include "tofino/common/extract_maupipe.h"
 #include "tofino/common/elim_unused.h"
 #include "tofino/common/field_defuse.h"
 #include "tofino/common/header_stack.h"
+#include "tofino/common/live_at_entry.h"
 #include "tofino/mau/asm_output.h"
 #include "tofino/mau/gateway.h"
 #include "tofino/mau/instruction_selection.h"
@@ -122,6 +124,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         &defuse,
         new AddBridgedMetadata(phv, defuse),
         new AddMetadataShims,
+        new LiveAtEntry(phv),
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),
         &stacks,

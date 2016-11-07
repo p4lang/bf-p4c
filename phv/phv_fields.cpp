@@ -93,6 +93,81 @@ bool PhvInfo::preorder(const IR::TempVar *tv) {
     return false;
 }
 
+const PhvInfo::Field::alloc_slice &PhvInfo::Field::for_bit(int bit) const {
+    for (auto &sl : alloc)
+        if (bit >= sl.field_bit && bit < sl.field_bit + sl.width)
+            return sl;
+    BUG("No allocation for bit %d in %s", bit, name);
+}
+
+void PhvInfo::Field::foreach_alloc(int lo, int hi,
+                                   std::function<void(const alloc_slice &)> fn) const
+{
+    alloc_slice tmp(PHV::Container(), lo, lo, hi-lo+1);
+    if (alloc.empty()) {
+        fn(tmp);
+        return; }
+    auto it = alloc.rbegin();
+    while (it != alloc.rend() && (it->container.tagalong() || it->field_hi() < lo)) ++it;
+    if (it != alloc.rend() && it->field_bit != lo) {
+        assert(it->field_bit < lo);
+        tmp = *it;
+        tmp.container_bit += it->field_bit - lo;
+        tmp.field_bit = lo;
+        if (it->field_hi() > hi)
+            tmp.width = hi - lo + 1;
+        else
+            tmp.width -= it->field_bit - lo;
+        fn(tmp);
+        ++it; }
+    while (it != alloc.rend() && it->field_bit <= hi) {
+        if (it->container.tagalong()) continue;
+        if (it->field_hi() > hi) {
+            tmp = *it;
+            tmp.width = hi - it->field_bit + 1;
+            fn(tmp);
+        } else {
+            fn(*it); }
+        ++it; }
+}
+
+void PhvInfo::Field::foreach_byte(int lo, int hi,
+                                  std::function<void(const alloc_slice &)> fn) const
+{
+    alloc_slice tmp(PHV::Container(), lo, lo, 8 - (lo&7));
+    if (alloc.empty()) {
+        while (lo <= hi) {
+            if (lo/8U == hi/8U)
+                tmp.width = hi - lo + 1;
+            fn(tmp);
+            tmp.field_bit = tmp.container_bit = lo = (lo|7) + 1;
+            tmp.width = 8; }
+        return; }
+    auto it = alloc.rbegin();
+    while (it != alloc.rend() && (it->container.tagalong() || it->field_hi() < lo)) ++it;
+    while (it != alloc.rend() && it->field_bit <= hi) {
+        if (it->container.tagalong()) continue;
+        unsigned clo = it->container_bit, chi = it->container_hi();
+        for (unsigned cbyte = clo/8U; cbyte <= chi/8U; ++cbyte) {
+            if (it->container != tmp.container || cbyte != tmp.container_bit/8U) {
+                if (tmp.container) fn(tmp);
+                tmp = *it;
+                if (cbyte*8 > clo) {
+                    tmp.container_bit = cbyte*8;
+                    tmp.field_bit += cbyte*8 - clo;
+                    tmp.width -= cbyte*8 - clo; }
+                if (cbyte*8+7 < chi)
+                    tmp.width -= chi - (cbyte*8+7);
+            } else {
+                int byte_hi = std::min(chi, cbyte*8+7);
+                assert(byte_hi > tmp.container_hi());
+                if (byte_hi > tmp.container_hi())
+                    tmp.width += byte_hi - tmp.container_hi();
+                assert(tmp.width <= 8); } }
+        ++it; }
+    if (tmp.container) fn(tmp);
+}
+
 /* figure out how many disinct container bytes contain info from a bitrange of a particular field */
 int PhvInfo::Field::container_bytes(PhvInfo::Field::bitrange bits) const {
     if (bits.hi < 0) bits.hi = size - 1;

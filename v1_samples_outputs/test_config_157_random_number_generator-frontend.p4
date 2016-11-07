@@ -163,14 +163,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<32> tmp_1;
     bit<32> tmp_2;
     @name("action_0") action action_2(bit<16> param0) {
-        random(5w16, tmp_1);
+        random(tmp_1, 32w0, 32w65535);
         hdr.pkt.field_a_32 = tmp_1;
         hdr.pkt.field_e_16 = param0;
     }
     @name("do_nothing") action do_nothing_0() {
     }
     @name("action_1") action action_3() {
-        random(5w24, tmp_2);
+        random(tmp_2, 32w0, 32w16777215);
         hdr.pkt.field_d_32[31:8] = tmp_2[31:8];
     }
     @name("table_0") table table_2() {

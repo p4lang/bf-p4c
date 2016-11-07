@@ -49,12 +49,11 @@ int main(int ac, char **av) {
         auto program = parse_P4_14_file(options, in);
         options.closeInput(in);
         PassManager fe = {
-            new RemapIntrinsics,
+//            new RemapIntrinsics,
             new P4::ConstantFolding(nullptr, nullptr),
             new CheckHeaderTypes,
             new HeaderTypeMaxLengthCalculator,
             new TypeCheck,
-            new P4_14::InlineActions,
         };
         fe.setName("V1FrontEnd");
         fe.addDebugHook(hook);
@@ -69,6 +68,7 @@ int main(int ac, char **av) {
                 dump(program);
             else
                 std::cout << *program << std::endl; }
+        program = program->apply(P4_14::InlineActions());  // midend?
         maupipe = extract_maupipe(program, options);
     } else {
         auto program = parseP4File(options);
