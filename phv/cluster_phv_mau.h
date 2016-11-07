@@ -59,8 +59,6 @@ class PHV_MAU_Group
 							// number of available containers
     std::vector<PHV_Container *> phv_containers_i;	// containers in this MAU group
     std::vector<Cluster_PHV *> cluster_phv_i;		// clusters in this MAU group
-    std::set<PHV_Container *> containers_pack_i;	// containers available for packing
-							// some containers may be assigned to Ingress, others Egress
     std::map<int, std::map<int, std::set<std::set<Container_Content *>>>> aligned_container_slices_i;
 							// [8..15] [3..15] => 2[8..15] [3..7]
 							// map[8][2] --> (Cx[8..15], Cy[8..15]
@@ -83,7 +81,6 @@ class PHV_MAU_Group
     void avail_containers(int n)			{ avail_containers_i = n; }
     std::vector<PHV_Container *>& phv_containers()	{ return phv_containers_i; }
     std::vector<Cluster_PHV *>& clusters()		{ return cluster_phv_i; }
-    std::set<PHV_Container *>& containers_pack()	{ return containers_pack_i; }
     void create_aligned_container_slices(std::list<PHV_Container *>&);
     void create_aligned_container_slices();
     std::map<int, std::map<int, std::set<std::set<Container_Content *>>>>& aligned_container_slices()
@@ -133,9 +130,10 @@ class PHV_MAU_Group_Assignments
     //
     std::map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>> PHV_MAU_i;
 								// all PHV MAU groups
+								// PHV_MAU_i[width] = vector of groups
     std::map<int, std::map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>> T_PHV_i;
 								// all TPHV collections
-								// T_PHV_i[collection][width] = set of containers
+								// T_PHV_i[collection][width] = vector of containers
     //
     std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>> aligned_container_slices_i;
 							// for all PHV_MAU_Groups

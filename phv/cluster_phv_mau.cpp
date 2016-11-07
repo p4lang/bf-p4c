@@ -103,20 +103,25 @@ void PHV_MAU_Group::create_aligned_container_slices(std::list<PHV_Container *>& 
 void PHV_MAU_Group::create_aligned_container_slices()
 {
     // Ingress Containers and Egress Containers cannot be shared
-    // split packable containers_pack into Ingress_Only list and Egress_Only list
+    // split packable containers into Ingress_Only list and Egress_Only list
+    //
+    aligned_container_slices_i.clear();
     //
     std::list<PHV_Container *> ingress_container_list;
     std::list<PHV_Container *> egress_container_list;
     //
-    for (auto c: containers_pack_i)
+    for (auto c: phv_containers_i)
     {
-        if(c->gress() == PHV_Container::Ingress_Egress::Ingress_Only)
+        if(c->status() != PHV_Container::Container_status::FULL)
         {
-            ingress_container_list.push_back(c);
-        }
-        else
-        {
-            egress_container_list.push_back(c);
+           if(c->gress() == PHV_Container::Ingress_Egress::Ingress_Only)
+           {
+               ingress_container_list.push_back(c);
+           }
+           else
+           {
+               egress_container_list.push_back(c);
+           }
         }
     }
     //
@@ -170,6 +175,7 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
             PHV_MAU_i[g->width()].push_back(g);
         }
     }
+    //
     // create TPHV collections
     //
     for (auto &x: num_groups_i)
@@ -380,11 +386,6 @@ PHV_MAU_Group_Assignments::cluster_placement_containers(
                         field_width -= (int) g->width();
                         //
                         g->phv_containers()[container_index]->taint(0, taint_bits, cl->cluster_vec()[i]);
-                        if(g->phv_containers()[container_index]->status() == PHV_Container::Container_status::PARTIAL)
-                        {   // MAU group has container packing potential
-                            //
-                            g->containers_pack().insert(g->phv_containers()[container_index]);
-                        }
                         LOG3("\t\t" << g->phv_containers()[container_index]);
                         container_index++;
                     }
@@ -650,13 +651,6 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                             //
                             int start = cc->hi() + 1 - cl_w;
                             cc->container()->taint(start, cl_w, cl->cluster_vec()[field++], cc->lo() /*container ranges*/);
-                            //
-                            // if container is fully packed, remove from group's available containers
-                            //
-                            if(cc->container()->status() == PHV_Container::Container_status::FULL)
-                            {
-                                cc->container()->phv_mau_group()->containers_pack().erase(cc->container());
-                            }
                             LOG3("\t\t" << *(cc->container()));
                         }
                         //
@@ -991,10 +985,6 @@ void PHV_MAU_Group::sanity_check_group_containers(const std::string& msg)
             }
         }
     }
-    for (auto &c: containers_pack_i)
-    {
-        c->sanity_check_container(msg+"PHV_MAU_Group::sanity_check_group_containers containers_pack");
-    }
     for (auto &c: phv_containers_i)
     {
         c->sanity_check_container(msg+"PHV_MAU_Group::sanity_check_group_containers phv_containers");
@@ -1173,15 +1163,20 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group &g)
         out << '(' << g.avail_containers() << ')';
     }
     // summarize packable containers
-    if(g.containers_pack().size())
+    std::set<PHV_Container *> containers_pack;
+    for (auto c: g.phv_containers())
+    {
+        if(c->status() != PHV_Container::Container_status::FULL)
+        {
+            containers_pack.insert(c);
+        }
+    }
+    if(containers_pack.size())
     {
         out << "\t{ ";
-        for (auto c: g.containers_pack())
+        for (auto c: containers_pack)
         {
-            if(c->status() != PHV_Container::Container_status::FULL)
-            {
-                out << c << ' ';
-            }
+            out << c << ' ';
         }
         out << std::endl << "\t}";
     }
