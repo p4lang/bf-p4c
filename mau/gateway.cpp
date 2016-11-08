@@ -10,7 +10,29 @@ class CanonGatewayExpr::NeedNegate : public Inspector {
     explicit operator bool() const { return rv; }
 };
 
+/* FIXME -- should be a global function somewhere */
+static bool isSigned(const IR::Type *t) {
+    if (auto b = t->to<IR::Type::Bits>())
+        return b->isSigned;
+    return false;
+}
+
+static mpz_class SliceReduce(IR::Operation::Relation *rel, mpz_class val) {
+    int slice = 0;
+    while ((val & 1) == 0) {
+        ++slice;
+        val /= 2; }
+    if (slice > 0) {
+        if (auto sl = rel->left->to<IR::Slice>())
+            rel->left = new IR::Slice(sl->e0, sl->getH(), sl->getL() + slice);
+        else
+            rel->left = new IR::Slice(rel->left, rel->left->type->width_bits(), slice);
+        rel->right = new IR::Constant(val); }
+    return val;
+}
+
 const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
+    // only called for Equ and Neq
     if (e->left->is<IR::Constant>()) {
         auto *t = e->left;
         e->left = e->right;
@@ -18,23 +40,31 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
     return e; }
 const IR::Expression *CanonGatewayExpr::postorder(IR::Leq *e) {
     if (e->left->is<IR::Constant>())
-        return new IR::Geq(e->right, e->left);
+        return postorder(new IR::Geq(e->right, e->left));
     if (auto k = e->right->to<IR::Constant>())
-        return new IR::Lss(e->left, new IR::Constant(k->value + 1));
+        return postorder(new IR::Lss(e->left, new IR::Constant(k->value + 1)));
     return e; }
 const IR::Expression *CanonGatewayExpr::postorder(IR::Lss *e) {
-    if (auto k = e->left->to<IR::Constant>())
-        return new IR::Geq(e->right, new IR::Constant(k->value + 1));
+    if (auto k = e->left->to<IR::Constant>()) {
+        BUG_CHECK(!e->right->is<IR::Constant>(), "constant folding failed");
+        return postorder(new IR::Geq(e->right, new IR::Constant(k->value + 1))); }
+    if (auto k = e->right->to<IR::Constant>())
+        if (SliceReduce(e, k->value) == 1 && !isSigned(e->left->type))
+            return new IR::Equ(e->left, new IR::Constant(0));
     return e; }
 const IR::Expression *CanonGatewayExpr::postorder(IR::Geq *e) {
-    if (auto k = e->left->to<IR::Constant>())
-        return new IR::Lss(e->right, new IR::Constant(k->value + 1));
+    if (auto k = e->left->to<IR::Constant>()) {
+        BUG_CHECK(!e->right->is<IR::Constant>(), "constant folding failed");
+        return postorder(new IR::Lss(e->right, new IR::Constant(k->value + 1))); }
+    if (auto k = e->right->to<IR::Constant>())
+        if (SliceReduce(e, k->value) == 1 && !isSigned(e->left->type))
+            return new IR::Neq(e->left, new IR::Constant(0));
     return e; }
 const IR::Expression *CanonGatewayExpr::postorder(IR::Grt *e) {
     if (e->left->is<IR::Constant>())
-        return new IR::Lss(e->right, e->left);
+        return postorder(new IR::Lss(e->right, e->left));
     if (auto k = e->right->to<IR::Constant>())
-        return new IR::Geq(e->left, new IR::Constant(k->value + 1));
+        return postorder(new IR::Geq(e->left, new IR::Constant(k->value + 1)));
     return e; }
 const IR::Expression *CanonGatewayExpr::postorder(IR::LAnd *e) {
     const IR::Expression *rv = e;
