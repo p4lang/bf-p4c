@@ -39,6 +39,8 @@ if [ "$curdir" = "tofino" -a "$(basename $(dirname $topdir))" = "extensions" ]; 
         echo >&2 "Need to rename $p4cdir to $(dirname $p4cdir)/p4c if you want bootstrap to work"
         exit 1
     fi
+elif [ "$curdir" = "p4c-extension-tofino" ]; then
+    topdir=$(dirname $topdir)
 fi
 
 cd $topdir
