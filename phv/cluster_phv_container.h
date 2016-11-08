@@ -51,11 +51,17 @@ class PHV_Container
  private:
     PHV_MAU_Group *phv_mau_group_i;				// parent PHV MAU Group this container belongs
     PHV_Word width_i;						// width of container
-    int number_i;						// container number 1..16 within MAU group
     int phv_number_i;						// PHV_number 0..223
 								// 32b:   0..63
 								//  8b:  64..127
 								// 16b: 128..223
+    std::string asm_str_i;					// assembler syntax for this container
+								// PHV-0 .. 63 = W0 .. 63
+								// PHV-64 .. 127 = B0 .. 63
+								// PHV-128 .. 223 = H0 .. 95
+								// PHV-256 .. 287 = TW0 .. 31
+								// PHV-288 .. 319 = TB0 .. 31
+								// PHV-320 .. 367 = TH0 .. 47
     Ingress_Egress gress_i;					// Ingress_Only, Egress_Only, Ingress_Or_Egress
     Container_status status_i = Container_status::EMPTY;
     std::vector<Container_Content *> fields_in_container_i;	// fields binned in this container
@@ -66,12 +72,22 @@ class PHV_Container
     std::map<int, int> ranges_i;				// available ranges in this container
     //
  public:
-    PHV_Container(PHV_MAU_Group *g, PHV_Word w, int n, int phv_number, Ingress_Egress gress);
+    PHV_Container(PHV_MAU_Group *g, PHV_Word w, int phv_number, Ingress_Egress gress);
     //
     PHV_MAU_Group *phv_mau_group()				{ return phv_mau_group_i; }
     PHV_Word width()						{ return width_i; }
-    int number()						{ return number_i; }
     int phv_number()						{ return phv_number_i; }
+    char asm_c(PHV_Word w)
+    {
+        switch(w)
+        {
+            case PHV_Word::b32: return 'W';
+            case PHV_Word::b16: return 'H';
+            case PHV_Word::b8: return 'B';
+        }
+        return 'X';
+    }
+    std::string asm_str()					{ return asm_str_i; }
     Ingress_Egress gress()					{ return gress_i; }
     static Ingress_Egress gress(const PhvInfo::Field *field)
     {
