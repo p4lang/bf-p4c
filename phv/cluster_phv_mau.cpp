@@ -29,7 +29,7 @@ PHV_MAU_Group::PHV_MAU_Group(PHV_Container::PHV_Word w, int n, int& phv_number, 
     // create containers within group
     for (int i=1; i <= containers_in_group; i++)
     {
-        PHV_Container *c = new PHV_Container(this, width_i, i, phv_number++, gress);
+        PHV_Container *c = new PHV_Container(this, width_i, phv_number++, gress);
         phv_containers_i.push_back(c);
     }
 }//PHV_MAU_Group
