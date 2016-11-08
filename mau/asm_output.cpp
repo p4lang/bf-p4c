@@ -17,6 +17,7 @@ class MauAsmOutput::EmitAttached : public Inspector {
     const IR::MAU::Table        *tbl;
     bool preorder(const IR::Counter *) override;
     bool preorder(const IR::Meter *) override;
+    bool preorder(const IR::Register *) override;
     bool preorder(const IR::ActionProfile *) override;
     bool preorder(const IR::ActionSelector *) override;
     bool preorder(const IR::MAU::TernaryIndirect *) override;
@@ -725,6 +726,10 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::Counter *counter) {
 }
 
 bool MauAsmOutput::EmitAttached::preorder(const IR::Meter *) {
+    return false;
+}
+
+bool MauAsmOutput::EmitAttached::preorder(const IR::Register *) {
     return false;
 }
 
