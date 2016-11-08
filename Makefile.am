@@ -221,21 +221,10 @@ XFAIL_TESTS += \
     bmv2/%reldir%/v1_samples/02-FlexCounterActionProfile.p4.test \
     bmv2/%reldir%/v1_samples/action_profile.p4.test \
     bmv2/%reldir%/v1_samples/switch_l2_profile_tofino.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_117_first_tcam_range.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_118_tcam_range_2.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_119_tcam_range_3.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_120_tcam_range_4.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_121_tcam_range_5.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_122_tcam_range_6.p4.test \
     bmv2/%reldir%/v1_samples/test_config_125_meter_pre_color.p4.test \
     bmv2/%reldir%/v1_samples/test_config_126_meter_pre_color_2.p4.test \
     bmv2/%reldir%/v1_samples/test_config_127_meter_pre_color_3.p4.test \
     bmv2/%reldir%/v1_samples/test_config_132_meter_pre_color_4.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_135_tcam_range_7.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_136_tcam_error_detection.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_137_tcam_error_detection_2.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_138_tcam_error_detection_3.p4.test \
-    bmv2/%reldir%/v1_samples/test_config_139_tcam_error_detection_4.p4.test \
     bmv2/%reldir%/v1_samples/test_config_144_recirculate.p4.test \
     bmv2/%reldir%/v1_samples/test_config_152_stateful_simple_cntr.p4.test \
     bmv2/%reldir%/v1_samples/test_config_153_stateful_simple_cntr_with_output.p4.test \
@@ -254,7 +243,6 @@ XFAIL_TESTS += \
     bmv2/%reldir%/v1_samples/test_config_171_stateful_conga.p4.test \
     bmv2/%reldir%/v1_samples/test_config_172_stateful_heavy_hitter.p4.test \
     bmv2/%reldir%/v1_samples/test_config_173_stateful_bloom_filter.p4.test \
-    bmv2/%reldir%/v1_samples/vk_basic_ipv4_20150706.p4.test \
     p14_to_16/%reldir%/v1_samples/02-FlexCounterActionProfile.p4.test \
     p14_to_16/%reldir%/v1_samples/switch_20160602/switch.p4.test \
     p14_to_16/%reldir%/v1_samples/switch_l2_profile_tofino.p4.test \
@@ -291,11 +279,6 @@ XFAIL_TESTS += \
     tofino/%reldir%/v1_samples/07-MacAddrCheck.p4.test \
     tofino/%reldir%/v1_samples/08-MacAddrCheck1.p4.test
 
-# Fails table layout -- invalid asm
-XFAIL_TESTS += \
-    tofino/testdata/p4_14_samples/exact_match_valid1.p4.test \
-    tofino-newpa/testdata/p4_14_samples/exact_match_valid1.p4.test
-
 # gateway doesn't yet support range match
 XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/gateway7.p4.test \
@@ -323,4 +306,3 @@ IFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/07-MultiProtocol.p4.test
 
 # Sometimes splits ternary match data across two groups when it shouldn't
 IFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/hitmiss.p4.test
-

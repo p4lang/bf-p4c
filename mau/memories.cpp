@@ -147,8 +147,6 @@ bool Memories::analyze_tables(mem_info &mi) {
             exact_tables.push_back(ta);
             mi.match_tables++;
             int width = table->ways[0].width;
-            // FIXME: Non-working valid bits
-            assert(width == ta->match_ixbar->groups() || ta->match_ixbar->groups() == 0);
             int groups = table->ways[0].match_groups;
             int depth = ((entries + groups - 1U)/groups + 1023)/1024U;
             mi.match_bus_min += width;
