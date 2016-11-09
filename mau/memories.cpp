@@ -560,6 +560,7 @@ void Memories::calculate_column_balance(mem_info &mi, unsigned &row) {
         case 9 : row = 0x1ff; break;
         default : row = 0x3ff; break;
     }
+    LOG1("mask_columns " << mask_columns); 
 }
 
 /* Allocates all of the ways */
@@ -773,7 +774,8 @@ bool Memories::allocate_all_tind() {
     return true;
 }
 
-int Memories::stats_per_row(int width, IR::CounterType type) {
+int Memories::stats_per_row(int min_width, int max_width, IR::CounterType type) {
+    int width = (min_width < max_width) ? max_width : min_width;
     if (type == IR::CounterType::BOTH) {
         if (width > 0 && width <= 42)
             return 3;
@@ -820,9 +822,13 @@ void Memories::find_action_bus_users() {
             if ((stats = at->to<IR::Counter>()) == nullptr)
                 continue;
             LOG1("Stats table user " << stats->name);
-            int width = (stats->min_width < stats->max_width) ? stats->max_width : stats->min_width;
-            int per_row = stats_per_row(width, stats->type);
-            int depth = (ta->calculated_entries + per_row * 1024 - 1)/(per_row * 1024) * 2; 
+            int per_row = stats_per_row(stats->min_width, stats->max_width, stats->type);
+            int depth;
+            if (stats->direct) {
+                depth = (ta->calculated_entries + per_row * 1024 - 1)/(per_row * 1024) + 1; 
+            } else
+                depth = (stats->instance_count + per_row * 1024 + 1023)/(per_row * 1024) + 1;
+            LOG1("Depth for " << stats->name << " is " << depth);
             suppl_bus_users.push_back(new SRAM_group(ta, depth, 0, SRAM_group::STATS));
             suppl_bus_users.back()->name = stats->name;
             (*ta->memuse)[stats->name].per_row = per_row;
@@ -837,7 +843,12 @@ void Memories::find_action_bus_users() {
             if ((meter = at->to<IR::Meter>()) == nullptr)
                 continue;
             LOG1("Meter table user " << meter->name);
-            int depth = (ta->calculated_entries + 1023) / 1024 * 2;
+            int depth;
+            if (meter->direct)
+                depth = (ta->calculated_entries + 1023) / 1024 + 1;
+            else
+                depth = (meter->instance_count + 1023)/1024 + 1;
+
             suppl_bus_users.push_back(new SRAM_group(ta, depth, 0, SRAM_group::METER));
             suppl_bus_users.back()->name = meter->name;
         }
@@ -1129,12 +1140,45 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
         oflow.mask = masks[order[OFLOW_IND]];
 }
 
+/*  Fills out a row with all three of the groups 
+*/
+void Memories::action_side(action_fill &action, action_fill &suppl, action_fill &oflow,
+                           bool removed[3], int row, int side, unsigned mask) {
+    if (action.group != nullptr) {
+        removed[ACTION_IND] = fill_out_action_row(action, row, side, mask, false, false);
+    }
+
+    if (suppl.group != nullptr) {
+        removed[SUPPL_IND] = fill_out_action_row(suppl, row, side, mask, false, true);
+    }
+
+    if (oflow.group != nullptr) {
+        if (removed[ACTION_IND] && action.index < oflow.index 
+            && oflow.group->type == SRAM_group::ACTION)
+            oflow.index--;
+        if (removed[SUPPL_IND] && suppl.index < oflow.index
+            && oflow.group->type != SRAM_group::ACTION)
+            oflow.index--;
+
+        removed[OFLOW_IND] = fill_out_action_row(oflow, row, side, mask, true, 
+                                            oflow.group->type != SRAM_group::ACTION);
+    }
+
+    if (suppl.group && oflow.group && oflow.group->type != SRAM_group::ACTION &&
+        oflow.index < suppl.index && removed[OFLOW_IND])
+        suppl.index--;
+
+    
+    if (action.group && oflow.group && oflow.group->type == SRAM_group::ACTION &&
+        oflow.index < action.index && removed[OFLOW_IND])
+        action.index--;
+}
+
 /* Fills out the action RAMs and bus on an individual action data bus and potential
    removes completely packed action groups from the action group array */
 bool Memories::fill_out_action_row(action_fill &action, int row, int side, unsigned mask, 
                                    bool is_oflow, bool is_twoport) {
-    auto a_name = action.group->name;//action.group->ta->table->name + action.group->name_addition();
-    
+    auto a_name = action.group->name;
     auto &a_alloc = (*action.group->ta->memuse)[a_name];
     if (is_oflow) {
         overflow_bus[row][side] = a_name;
@@ -1186,6 +1230,24 @@ bool Memories::fill_out_action_row(action_fill &action, int row, int side, unsig
     return action_group_removed;
 }
 
+void Memories::calculate_curr_oflow(action_fill &action, action_fill &suppl, action_fill &oflow,
+                                    bool removed[3], action_fill &curr_oflow, 
+                                    action_fill &twoport_oflow, bool right_side) {
+    if (right_side && suppl.group && !removed[SUPPL_IND])
+        twoport_oflow = suppl;
+    if (right_side && oflow.group && !removed[OFLOW_IND] && oflow.group->type != SRAM_group::ACTION) 
+        twoport_oflow = oflow;
+
+
+    if (!removed[OFLOW_IND] && oflow.group && oflow.group->type == SRAM_group::ACTION) {
+        curr_oflow = oflow;
+    } else if (!removed[ACTION_IND] && action.group) {
+        curr_oflow = action;
+    } else {
+        curr_oflow.clear();
+    }
+}
+
 /* Goes through action bus by action bus, and finds the best candidates for each row,
    then allocates them.  */
 bool Memories::allocate_all_action() {
@@ -1219,11 +1281,11 @@ bool Memories::allocate_all_action() {
             action.clear(); oflow.clear(); suppl.clear();
             bool stats_available = true; bool meter_available = true;
 
-            if (stats_alus[i/2]) {
+            if (i == 7 || stats_alus[i/2]) {
                 stats_available = false;
             }
 
-            if (i == 7 || meter_alus[i/2]) {
+            if (meter_alus[i/2]) {
                 meter_available = false;
             }
             find_action_candidates(i, mask, action, suppl, oflow, stats_available, meter_available,
@@ -1232,52 +1294,12 @@ bool Memories::allocate_all_action() {
             if (action.group == nullptr && oflow.group == nullptr && suppl.group == nullptr) {
                 continue;
             }
-
-            bool action_removed = false, oflow_removed = false, suppl_removed = false;
-            if (action.group != nullptr) {
-                action_removed = fill_out_action_row(action, i, j, mask, false, false);
-            }
-
-            if (suppl.group != nullptr) {
-                suppl_removed = fill_out_action_row(suppl, i, j, mask, false, true);
-            }
-
-            if (oflow.group != nullptr) {
-                if (action_removed && action.index < oflow.index 
-                    && oflow.group->type == SRAM_group::ACTION)
-                    oflow.index--;
-                if (suppl_removed && suppl.index < oflow.index
-                    && oflow.group->type != SRAM_group::ACTION)
-                    oflow.index--;
-
-                oflow_removed = fill_out_action_row(oflow, i, j, mask, true, 
-                                                    oflow.group->type != SRAM_group::ACTION);
-            }
-
-            if (suppl.group && oflow.group && oflow.group->type != SRAM_group::ACTION &&
-                oflow.index < suppl.index)
-                suppl.index--;
-
-            
-            if (action.group && oflow.group && oflow.group->type == SRAM_group::ACTION &&
-                oflow.index < action.index)
-                action.index--;
-
-
-            if (j == 0 && suppl.group && !suppl_removed)
-                twoport_oflow = suppl;
-            if (j == 0 && oflow.group && !oflow_removed
-                && oflow.group->type != SRAM_group::ACTION) 
-                twoport_oflow = oflow;
-
-
-           if (!oflow_removed && oflow.group && oflow.group->type == SRAM_group::ACTION) {
-               curr_oflow = oflow;
-           } else if (!action_removed && action.group) {
-               curr_oflow = action;
-           } else {
-               curr_oflow.clear();
-           }
+            bool removed[3];
+            for (int k = 0; k < 3; k++)
+                 removed[k] = false;
+            action_side(action, suppl, oflow, removed, i, j, mask);
+            calculate_curr_oflow(action, suppl, oflow, removed, curr_oflow, 
+                                 twoport_oflow, j == 0);
         }
         if (twoport_oflow.group) {
             curr_oflow = twoport_oflow;
@@ -1287,13 +1309,14 @@ bool Memories::allocate_all_action() {
                                                   + curr_oflow.group->name_addition(), 
                                                   curr_oflow.group->number);
 
-        if (curr_oflow.group && curr_oflow.group->type == SRAM_group::ACTION 
-            && curr_oflow.group->recent_home_row - i >= 4) {
+        if (curr_oflow.group && curr_oflow.group->recent_home_row - i >= 4) {
+            if (curr_oflow.group->type != SRAM_group::ACTION)
+                curr_oflow.group->depth++;
             curr_oflow.clear();
         } 
     }
 
-    if (!action_bus_users.empty())
+    if (!action_bus_users.empty() || !suppl_bus_users.empty())
         return false;
 
     //FIXME: Add home rows and extra meter color maprams

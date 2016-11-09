@@ -187,7 +187,7 @@ struct Memories {
 
     bool allocate_all_action();
     void find_action_bus_users();
-    int stats_per_row(int width, IR::CounterType type);
+    int stats_per_row(int min_width, int max_width, IR::CounterType type);
     void find_action_candidates(int row, int mask, action_fill &action, action_fill &suppl,
                                 action_fill &oflow, bool stats_available, bool meter_available,
                                 action_fill &curr_oflow);
@@ -205,6 +205,11 @@ struct Memories {
                            SRAM_group *curr_oflow_group);
     bool fill_out_action_row(action_fill &action, int row, int side, unsigned mask, 
                              bool is_oflow, bool is_twoport);
+    void action_side(action_fill &action, action_fill &suppl, action_fill &oflow,
+                     bool removed[3], int row, int side, unsigned mask);
+    void calculate_curr_oflow(action_fill &action, action_fill &suppl, action_fill &oflow,
+                              bool removed[3], action_fill &curr_oflow,
+                              action_fill &twoport_oflow, bool right_side);
     bool allocate_all_gw();
     table_alloc *find_corresponding_exact_match(cstring name);
     bool gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int width_sect,

@@ -693,16 +693,19 @@ static void counter_format(std::ostream &out, const IR::CounterType type, int pe
             default:
                 packet_size = 0; byte_size = 0; break;
         }
-        /*
         for (int i = 0; i < per_row; i++) {
-            int first_bit = (per_row - i - 1) *
-            format = format + "packets(" + i + 
-        } */       
+            int first_bit = (per_row - i - 1) * 128/per_row;
+            out << "packets(" << i << "): " <<  first_bit << ".." << first_bit + packet_size - 1;
+            out << ", ";
+            out << "bytes(" << i << "): " << first_bit + packet_size << ".."
+                << first_bit + packet_size + byte_size - 1;
+            if (i != per_row - 1)
+                out << ", ";
+        }       
     }
 } 
 
 bool MauAsmOutput::EmitAttached::preorder(const IR::Counter *counter) {
-    LOG1("Start");
     indent_t indent(1);
     out << indent++ << "counter " << counter->name << ":" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(counter->name));
@@ -725,7 +728,28 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::Counter *counter) {
     return false;
 }
 
-bool MauAsmOutput::EmitAttached::preorder(const IR::Meter *) {
+bool MauAsmOutput::EmitAttached::preorder(const IR::Meter *meter) {
+    indent_t indent(1);
+    out << indent++ << "meter " << meter->name << ":" << std::endl;
+    self.emit_memory(out, indent, tbl->resources->memuse.at(meter->name)); 
+    cstring imp_type;
+    if (!meter->implementation.name)
+        imp_type = "standard";
+    else
+        imp_type = meter->implementation.name;
+    out << indent << "type: " << imp_type << std::endl;
+    cstring count_type;
+    switch (meter->type) {
+        case IR::CounterType::PACKETS:
+            count_type = "packets"; break;
+        case IR::CounterType::BYTES:
+            count_type = "bytes"; break;
+        case IR::CounterType::BOTH:
+            count_type = "packets_and_bytes"; break;
+        default:
+            count_type = "";
+    }
+    out << indent << "count: " << count_type << std::endl;
     return false;
 }
 
