@@ -95,6 +95,12 @@ tofino_backend_SOURCES = \
 	%reldir%/phv/byte_constraint.h \
 	%reldir%/phv/cluster.cpp \
 	%reldir%/phv/cluster.h \
+	%reldir%/phv/cluster_phv_container.cpp \
+	%reldir%/phv/cluster_phv_container.h \
+	%reldir%/phv/cluster_phv_mau.cpp \
+	%reldir%/phv/cluster_phv_mau.h \
+	%reldir%/phv/cluster_phv_req.cpp \
+	%reldir%/phv/cluster_phv_req.h \
 	%reldir%/phv/constraints.cpp \
 	%reldir%/phv/constraints.h \
 	%reldir%/phv/container_constraint.cpp \
@@ -271,7 +277,6 @@ XFAIL_TESTS += \
 
 # These currently fail gateway check with 'expression too complex'
 XFAIL_TESTS += \
-    tofino/testdata/p4_14_samples/14-GatewayGreaterThan.p4.test \
     tofino/testdata/p4_14_samples/flowlet_switching.p4.test \
     tofino/testdata/p4_14_samples/switch.p4.test \
     tofino/testdata/p4_14_samples/switch_20160226/switch.p4.test \

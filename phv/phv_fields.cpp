@@ -306,6 +306,14 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &s
     return out;
 }
 
+std::ostream &operator<<(std::ostream &out, const PhvInfo::Field *fld) {
+    if(fld)
+        out << fld->name << '[' << fld->size << ']' << '{' << fld->phv_use_lo << ".." << fld->phv_use_hi << '}';
+    else
+        out << "-f-";	// fld is nil
+    return out;
+}
+
 std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
     out << field.id << ':' << field.name << '[' << field.size << ']'
         << (field.gress ? " E" : " I") << " off=" << field.offset;
@@ -317,9 +325,23 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
     return out;
 }
 
+std::ostream &operator<<(std::ostream &out, std::list<const PhvInfo::Field *>& field_list) {
+    for (auto &f: field_list)
+    {
+        out << f << std::endl;
+    }
+    return out;
+}
+
 std::ostream &operator<<(std::ostream &out, const PhvInfo &phv) {
-    for (auto &field : phv)
-        out << field << std::endl;
+    out << "++++++++++ All Fields name[size]{range} (" << phv.num_fields() << ") ++++++++++"
+        << std::endl
+        << std::endl;
+    //
+    for (auto field: phv)
+    {
+         out << &field << std::endl;
+    }
     return out;
 }
 

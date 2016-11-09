@@ -40,7 +40,8 @@
 #include "tofino/phv/split_phv_use.h"
 #include "tofino/phv/create_thread_local_instances.h"
 #include "tofino/phv/phv_allocator.h"
-#include "tofino/phv/cluster.h"
+#include "tofino/phv/cluster_phv_mau.h"
+#include "tofino/common/copy_header_eliminator.h"
 
 class CheckTableNameDuplicate : public MauInspector {
     set<cstring>        names;
@@ -87,7 +88,6 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     TableSummary summary;
     MauAsmOutput mauasm(phv);
     PassManager *phv_alloc;
-    PassManager *phv_analysis;
 
     if (options->phv_newalloc) {
         auto *newpa = new PhvAllocator(phv, defuse.conflicts(), std::ref(mutex));
@@ -107,16 +107,15 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
             new PHV::TrivialAlloc(phv, defuse.conflicts()) });
     }
 
-    phv_analysis = new PassManager({
-        &cluster,
+    PassManager *phv_analysis = new PassManager({
+        &cluster, 
         new VisitFunctor([&phv, &defuse, &cluster]() {
-                LOG3("++++++++++ All Fields(name,size) ++++++++++:\n");
-                LOG3(phv);
-                // LOG3("++++++++++ Def-Use ++++++++++:\n");
-                // LOG3(defuse);
-                LOG3("++++++++++ Clusters ++++++++++:\n");
-                LOG3(cluster);
-        }),
+            //
+            Cluster_PHV_Requirements phv_req(cluster);		// Cluster PHV requirements
+            LOG3(phv_req);
+            PHV_MAU_Group_Assignments phv_mau_grps(phv_req);	// PHV MAU Group assignments
+            LOG3(phv_mau_grps);
+	}),
     });
 
     PassManager backend = {
