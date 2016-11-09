@@ -284,7 +284,6 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     bool logical = mem.type >= Memories::Use::TWOPORT;
     bool have_bus = !logical;
     for (auto &r : mem.row) {
-        //FIXME: This needs to be changed for maprams potentially
         if (logical) {
             row.push_back(2*r.row + (r.col[0] >= Memories::LEFT_SIDE_COLUMNS));
         } else {
@@ -307,9 +306,8 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
         if (have_bus) out << indent << "bus: " << bus[0] << std::endl;
         out << indent << "column: " << memory_vector(mem.row[0].col, mem.type, false) << std::endl;
         if (mem.type == Memories::Use::TWOPORT) {
-            out << indent << "maprams: " << memory_vector(mem.row[0].mapcol, mem.type, true) 
+            out << indent << "maprams: " << memory_vector(mem.row[0].mapcol, mem.type, true)
                 << std::endl;
-            LOG1("Mapram size is " << mem.row[0].mapcol.size());
         }
     }
 
@@ -664,7 +662,6 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
 }
 
 static void counter_format(std::ostream &out, const IR::CounterType type, int per_row) {
-    LOG1("Counter format");
     if (type == IR::CounterType::PACKETS) {
         for (int i = 0; i < per_row; i++) {
             int first_bit = (per_row - i - 1) * 128/per_row;
@@ -684,7 +681,7 @@ static void counter_format(std::ostream &out, const IR::CounterType type, int pe
     } else if (type == IR::CounterType::BOTH) {
         int packet_size, byte_size;
         switch (per_row) {
-            case 1: 
+            case 1:
                 packet_size = 64; byte_size = 64; break;
             case 2:
                 packet_size = 28; byte_size = 36; break;
@@ -701,9 +698,9 @@ static void counter_format(std::ostream &out, const IR::CounterType type, int pe
                 << first_bit + packet_size + byte_size - 1;
             if (i != per_row - 1)
                 out << ", ";
-        }       
+        }
     }
-} 
+}
 
 bool MauAsmOutput::EmitAttached::preorder(const IR::Counter *counter) {
     indent_t indent(1);
@@ -721,17 +718,16 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::Counter *counter) {
             count_type = "";
     }
     out << indent << "count: " << count_type << std::endl;
-    out << indent << "format: {"; 
+    out << indent << "format: {";
     counter_format(out, counter->type, tbl->resources->memuse.at(counter->name).per_row);
-    out << "}" << std::endl; 
-    
+    out << "}" << std::endl;
     return false;
 }
 
 bool MauAsmOutput::EmitAttached::preorder(const IR::Meter *meter) {
     indent_t indent(1);
     out << indent++ << "meter " << meter->name << ":" << std::endl;
-    self.emit_memory(out, indent, tbl->resources->memuse.at(meter->name)); 
+    self.emit_memory(out, indent, tbl->resources->memuse.at(meter->name));
     cstring imp_type;
     if (!meter->implementation.name)
         imp_type = "standard";

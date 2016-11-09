@@ -37,7 +37,7 @@ struct Memories {
     Alloc1D<cstring, SRAM_ROWS>                        stateful_bus;
     int gw_bytes_per_sb[SRAM_ROWS][BUS_COUNT] = {{0}};
     Alloc1D<cstring, STATS_ALUS>                       stats_alus;
-    Alloc1D<cstring, METER_ALUS>                       meter_alus;  
+    Alloc1D<cstring, METER_ALUS>                       meter_alus;
     struct mem_info {
         int match_tables;
         int match_bus_min;
@@ -117,8 +117,8 @@ struct Memories {
         int left_to_place() { return depth - placed; }
         bool all_placed() { return (depth == placed); }
         bool requires_ab() { return false; }
-        cstring name_addition (){
-            switch(type) {
+        cstring name_addition() {
+            switch (type) {
                 case EXACT:    return "";
                 case ACTION:   return "$action";
                 case STATS:    return "$stats";
@@ -133,7 +133,7 @@ struct Memories {
         SRAM_group *group;
         unsigned mask;
         size_t index;
-        explicit action_fill() : group(nullptr), mask(0), index(0) {}
+        action_fill() : group(nullptr), mask(0), index(0) {}
         void clear() { group = nullptr; mask = 0; index = 0; }
     };
 
@@ -203,7 +203,7 @@ struct Memories {
                            int &a_index, int &oflow_index, int RAMs_available,
                            SRAM_group *best_fit_group, int best_fit_index,
                            SRAM_group *curr_oflow_group);
-    bool fill_out_action_row(action_fill &action, int row, int side, unsigned mask, 
+    bool fill_out_action_row(action_fill &action, int row, int side, unsigned mask,
                              bool is_oflow, bool is_twoport);
     void action_side(action_fill &action, action_fill &suppl, action_fill &oflow,
                      bool removed[3], int row, int side, unsigned mask);
