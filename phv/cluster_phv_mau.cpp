@@ -22,14 +22,27 @@ PHV_MAU_Group::Container_Content::Container_Content(int l, int w, PHV_Container 
 // 
 //***********************************************************************************
 
-PHV_MAU_Group::PHV_MAU_Group(PHV_Container::PHV_Word w, int n, int& phv_number, PHV_Container::Ingress_Egress gress,
+PHV_MAU_Group::PHV_MAU_Group(PHV_Container::PHV_Word w, int n,
+	int& phv_number,
+	std::string asm_encoded,
+	PHV_Container::Ingress_Egress gress,
 	const int containers_in_group)
 	: width_i(w), number_i(n), gress_i(gress), avail_containers_i(containers_in_group)
 {
+    // asm register offset encoded in asm_string "T?W|H|B...")
+    //
+    int offset_position = asm_encoded[0] == 'T'? 2: 1;
+    int asm_offset = std::stoi(asm_encoded.substr(offset_position));
+    asm_encoded.erase(offset_position);
+    //
     // create containers within group
     for (int i=1; i <= containers_in_group; i++)
     {
-        PHV_Container *c = new PHV_Container(this, width_i, phv_number++, gress);
+        std::stringstream ss;
+        ss << phv_number - asm_offset;
+        std::string asm_reg_string = asm_encoded + ss.str();
+        //
+        PHV_Container *c = new PHV_Container(this, width_i, phv_number++, asm_reg_string, gress);
         phv_containers_i.push_back(c);
     }
 }//PHV_MAU_Group
@@ -151,6 +164,9 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
     for (auto &x: num_groups_i)
     {
         int phv_number = phv_number_start_i[x.first];
+        std::stringstream ss;
+        ss << phv_number;
+        std::string asm_encoded = asm_prefix_i[x.first] + ss.str();
         //
         for (int i=1; i <= x.second; i++)
         {
@@ -171,7 +187,7 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
                 }
             }
             //
-            PHV_MAU_Group *g = new PHV_MAU_Group(x.first, i, phv_number, gress);
+            PHV_MAU_Group *g = new PHV_MAU_Group(x.first, i, phv_number, asm_encoded, gress);
             PHV_MAU_i[g->width()].push_back(g);
         }
     }
@@ -181,6 +197,9 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
     for (auto &x: num_groups_i)
     {
         int phv_number = t_phv_number_start_i[x.first];
+        std::stringstream ss;
+        ss << phv_number;
+        std::string asm_encoded = "T" + asm_prefix_i[x.first] + ss.str();
         //
         std::vector<PHV_MAU_Group *> t_phv_groups;
         //
@@ -190,13 +209,13 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
         //
         for (int i=1; i <= x.second; i++)
         {
-            PHV_MAU_Group *g = new PHV_MAU_Group(x.first, i, phv_number, PHV_Container::Ingress_Egress::Ingress_Only,
+            PHV_MAU_Group *g = new PHV_MAU_Group(x.first, i, phv_number, asm_encoded, PHV_Container::Ingress_Egress::Ingress_Only,
 		((int)PHV_Container::Containers::MAX)/4);
             t_phv_groups.push_back(g);
         }
         for (int i=x.second+1; i <= x.second*2; i++)
         {
-            PHV_MAU_Group *g = new PHV_MAU_Group(x.first, i, phv_number, PHV_Container::Ingress_Egress::Egress_Only,
+            PHV_MAU_Group *g = new PHV_MAU_Group(x.first, i, phv_number, asm_encoded, PHV_Container::Ingress_Egress::Egress_Only,
 		((int)PHV_Container::Containers::MAX)/4);
             t_phv_groups.push_back(g);
         }
