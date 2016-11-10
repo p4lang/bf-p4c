@@ -80,7 +80,9 @@ static void debug_hook(const char *, unsigned, const char *pass, const IR::Node 
 
 void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *options) {
     PhvInfo phv;
-    Cluster cluster(phv);
+    Cluster cluster(phv);					// cluster analysis
+    Cluster_PHV_Requirements *cluster_phv_requirements;		// PHV requirements analysis
+    PHV_MAU_Group_Assignments *phv_container_assignments;	// PHV Container assignments
     DependencyGraph deps;
     TablesMutuallyExclusive mutex;
     FieldDefUse defuse(phv);
@@ -104,17 +106,23 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     } else {
         phv_alloc = new PassManager({
             new MauPhvConstraints(phv),
-            new PHV::TrivialAlloc(phv, defuse.conflicts()) });
+            new PHV::TrivialAlloc(phv, defuse.conflicts()),
+            //
+            new VisitFunctor([&phv_container_assignments]() {
+                LOG3(std::endl << "..........PHV Assignment ASM Regs Generation.........." << std::endl);
+		LOG3(*phv_container_assignments);
+	    }),
+	});
     }
 
     PassManager *phv_analysis = new PassManager({
         &cluster, 
-        new VisitFunctor([&phv, &defuse, &cluster]() {
+        new VisitFunctor([&phv, &defuse, &cluster, &cluster_phv_requirements, &phv_container_assignments]() {
             //
-            Cluster_PHV_Requirements phv_req(cluster);		// Cluster PHV requirements
-            LOG3(phv_req);
-            PHV_MAU_Group_Assignments phv_mau_grps(phv_req);	// PHV MAU Group assignments
-            LOG3(phv_mau_grps);
+            cluster_phv_requirements = new Cluster_PHV_Requirements(cluster);	// PHV requirements analysis
+            phv_container_assignments = new PHV_MAU_Group_Assignments(*cluster_phv_requirements);
+										// first cut PHV MAU Group assignments
+										// produces cohabit fields for Table Placement
 	}),
     });
 
@@ -135,7 +143,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new CopyHeaderEliminator,    // needs to be after POV alloc and before InstSel
         new InstructionSelection(phv),
 
-        phv_analysis,   // perform cluster analysis after last &phv pass
+        phv_analysis,		// perform cluster analysis after last &phv pass
 
         new CanonGatewayExpr,   // must be before TableLayout?  or just TablePlacement?
         new SplitComplexGateways(phv),

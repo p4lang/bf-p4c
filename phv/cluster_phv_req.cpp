@@ -124,6 +124,8 @@ Cluster_PHV_Requirements::Cluster_PHV_Requirements(Cluster &c)
             return l_range > r_range;
         });
     //
+    LOG3(*this);
+    //
 }//Cluster_PHV_Requirements
 
 //***********************************************************************************

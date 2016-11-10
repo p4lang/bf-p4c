@@ -281,6 +281,8 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
     //
     sanity_check_group_containers("PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments()..");
     //
+    LOG3(*this);
+    //
 }//PHV_MAU_Group_Assignments
 
 //***********************************************************************************
