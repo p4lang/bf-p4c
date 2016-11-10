@@ -101,8 +101,7 @@ const PhvInfo::Field::alloc_slice &PhvInfo::Field::for_bit(int bit) const {
 }
 
 void PhvInfo::Field::foreach_alloc(int lo, int hi,
-                                   std::function<void(const alloc_slice &)> fn) const
-{
+                                   std::function<void(const alloc_slice &)> fn) const {
     alloc_slice tmp(PHV::Container(), lo, lo, hi-lo+1);
     if (alloc.empty()) {
         fn(tmp);
@@ -132,8 +131,7 @@ void PhvInfo::Field::foreach_alloc(int lo, int hi,
 }
 
 void PhvInfo::Field::foreach_byte(int lo, int hi,
-                                  std::function<void(const alloc_slice &)> fn) const
-{
+                                  std::function<void(const alloc_slice &)> fn) const {
     alloc_slice tmp(PHV::Container(), lo, lo, 8 - (lo&7));
     if (alloc.empty()) {
         while (lo <= hi) {
@@ -297,7 +295,7 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &sl) {
-    out << (sl.field_bit+sl.width-1) << ':' << sl.field_bit << "->" << sl.container;
+    out << '[' << (sl.field_bit+sl.width-1) << ':' << sl.field_bit << "]->[" << sl.container << ']';
     if (sl.container_bit || size_t(sl.width) != sl.container.size()) {
         out << '(' << sl.container_bit;
         if (sl.width != 1)
@@ -307,10 +305,18 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &s
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo::Field *fld) {
-    if(fld)
-        out << fld->name << '[' << fld->size << ']' << '{' << fld->phv_use_lo << ".." << fld->phv_use_hi << '}';
+    if (fld)
+        out << fld->name
+            << '['
+            << fld->size
+            << ']'
+            << '{'
+            << fld->phv_use_lo
+            << ".."
+            << fld->phv_use_hi
+            << '}';
     else
-        out << "-f-";	// fld is nil
+        out << "-f-";  // fld is nil
     return out;
 }
 
@@ -326,8 +332,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
 }
 
 std::ostream &operator<<(std::ostream &out, std::list<const PhvInfo::Field *>& field_list) {
-    for (auto &f: field_list)
-    {
+    for (auto &f : field_list) {
         out << f << std::endl;
     }
     return out;
@@ -338,8 +343,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo &phv) {
         << std::endl
         << std::endl;
     //
-    for (auto field: phv)
-    {
+    for (auto field : phv) {
          out << &field << std::endl;
     }
     return out;
