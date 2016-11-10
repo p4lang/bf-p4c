@@ -135,7 +135,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new CopyHeaderEliminator,    // needs to be after POV alloc and before InstSel
         new InstructionSelection(phv),
 
-        phv_analysis,   // perform cluster analysis after last &phv pass
+       phv_analysis,   // perform cluster analysis after last &phv pass
 
         new CanonGatewayExpr,   // must be before TableLayout?  or just TablePlacement?
         new SplitComplexGateways(phv),

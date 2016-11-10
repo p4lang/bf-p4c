@@ -637,14 +637,29 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
 void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
                                     const IR::MAU::Table *tbl) const {
     bool have_action = false;
+    vector<const IR::Attached *> stats_tables;
     for (auto at : tbl->attached) {
         if (at->is<IR::MAU::TernaryIndirect>()) continue;
         if (at->is<IR::ActionProfile>() || at->is<IR::MAU::ActionData>())
             have_action = true;
+        if (at->is<IR::Counter>() || at->is<IR::Meter>()) {
+            stats_tables.push_back(at);
+            continue;
+        }
         out << indent << at->kind() << ": " << at->name;
+        LOG1("at->kind() " << at->kind());
+        LOG1("at->indexed() " << at->indexed());
         if (at->indexed())
             out << '(' << at->kind() << ')';
         out << std::endl; }
+    if (!stats_tables.empty())
+        out << indent << "stats:" << std::endl;
+    for (auto at : stats_tables) {
+        out << indent << "- " << at->name;
+        if (at->indexed())
+            out << '(' << at->kind() << ')'; 
+        out << std::endl;
+    }
     if (!have_action && !tbl->actions.empty()) {
         out << indent++ << "actions:" << std::endl;
         for (auto act : Values(tbl->actions))

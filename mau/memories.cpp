@@ -1196,7 +1196,7 @@ bool Memories::allocate_all_action() {
             action.clear(); oflow.clear(); suppl.clear();
             bool stats_available = true; bool meter_available = true;
 
-            if (i == 7 || stats_alus[i/2]) {
+            if (i == 7 || stats_alus[(i+1)/2]) {
                 stats_available = false;
             }
 
