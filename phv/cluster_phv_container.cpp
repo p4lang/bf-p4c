@@ -20,8 +20,8 @@ PHV_Container::Container_Content::Container_Content(int l, int w, const PhvInfo:
 // 
 //***********************************************************************************
 
-PHV_Container::PHV_Container(PHV_MAU_Group *g, PHV_Word w, int phv_n, Ingress_Egress gress)
-	: phv_mau_group_i(g), width_i(w), phv_number_i(phv_n), gress_i(gress)
+PHV_Container::PHV_Container(PHV_MAU_Group *g, PHV_Word w, int phv_n, std::string asm_string, Ingress_Egress gress)
+	: phv_mau_group_i(g), width_i(w), phv_number_i(phv_n), asm_string_i(asm_string), gress_i(gress)
 {
     bits_i = new char[(int) width_i];
     for (auto i=0; i < (int) width_i; i++)
@@ -30,46 +30,6 @@ PHV_Container::PHV_Container(PHV_MAU_Group *g, PHV_Word w, int phv_n, Ingress_Eg
     }
     avail_bits_i = (int) width_i;
     ranges_i[0] = (int) width_i - 1;
-    //
-    // set up asm_str
-    //
-    if(phv_number_i <= 223)
-    {   // PHV
-        asm_str_i.push_back(asm_c(width_i));
-    }
-    else
-    {   // T_PHV
-        asm_str_i.push_back('T');
-        asm_str_i.push_back(asm_c(width_i));
-    }
-    if(phv_number_i >= 0 && phv_number_i <= 63)
-    {
-        asm_str_i += std::to_string(phv_number_i);
-    }
-    else if(phv_number_i >= 64 && phv_number_i <= 127)
-    {
-        asm_str_i += std::to_string(phv_number_i-64);
-    }
-    else if(phv_number_i >= 128 && phv_number_i <= 223)
-    {
-        asm_str_i += std::to_string(phv_number_i-128);
-    }
-    else if(phv_number_i >= 256 && phv_number_i <= 287)
-    {
-        asm_str_i += std::to_string(phv_number_i-256);
-    }
-    else if(phv_number_i >= 288 && phv_number_i <= 319)
-    {
-        asm_str_i += std::to_string(phv_number_i-288);
-    }
-    else if(phv_number_i >= 320 && phv_number_i <= 367)
-    {
-        asm_str_i += std::to_string(phv_number_i-320);
-    }
-    else
-    {
-        asm_str_i += "???";
-    }
     //
 }//PHV_Container
 
@@ -265,7 +225,7 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c)
     if(c)
     {
         out << std::endl << '\t';
-        out << "PHV-" << c->phv_number() << '.' << c->asm_str() << '.' << (char) c->gress();
+        out << "PHV-" << c->phv_number() << '.' << c->asm_string() << '.' << (char) c->gress();
         if(c->fields_in_container().size() > 1)
         {
             out << "p";

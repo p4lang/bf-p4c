@@ -71,7 +71,10 @@ class PHV_MAU_Group
 							// [w](n) --> ((Ingress set) (Egress set))
  public:
     //
-    PHV_MAU_Group(PHV_Container::PHV_Word w, int n, int& phv_number, PHV_Container::Ingress_Egress gress,
+    PHV_MAU_Group(PHV_Container::PHV_Word w, int n,
+		int& phv_number,
+		std::string asm_encoded,
+		PHV_Container::Ingress_Egress gress,
 		const int containers_in_group=(int)PHV_Container::Containers::MAX);
     //
     PHV_Container::PHV_Word width()			{ return width_i; }
@@ -101,24 +104,31 @@ class PHV_MAU_Group_Assignments
     {
         {PHV_Container::PHV_Word::b32, 4},
         {PHV_Container::PHV_Word::b16, 6},
-        {PHV_Container::PHV_Word::b8, 4},
+        {PHV_Container::PHV_Word::b8,  4},
     };
     // PHV
     std::map<PHV_Container::PHV_Word, int> phv_number_start_i
     {
         {PHV_Container::PHV_Word::b32, 0},
         {PHV_Container::PHV_Word::b16, 128},
-        {PHV_Container::PHV_Word::b8, 64},
+        {PHV_Container::PHV_Word::b8,  64},
     };
     // T_PHV
     std::map<PHV_Container::PHV_Word, int> t_phv_number_start_i
     {
         {PHV_Container::PHV_Word::b32, 256},
         {PHV_Container::PHV_Word::b16, 320},
-        {PHV_Container::PHV_Word::b8, 288},
+        {PHV_Container::PHV_Word::b8,  288},
+    };
+    // ASM register name prefix
+    std::map<PHV_Container::PHV_Word, std::string> asm_prefix_i
+    {
+        {PHV_Container::PHV_Word::b32, "W"},
+        {PHV_Container::PHV_Word::b16, "H"},
+        {PHV_Container::PHV_Word::b8,  "B"},
     };
     //
-    std::map<std::pair<int, int>, PHV_Container::Ingress_Egress> ingress_egress_i
+    const std::map<std::pair<int, int>, PHV_Container::Ingress_Egress> ingress_egress_i
     {
         {std::make_pair(0, 15), PHV_Container::Ingress_Egress::Ingress_Only},
         {std::make_pair(16, 31), PHV_Container::Ingress_Egress::Egress_Only},
