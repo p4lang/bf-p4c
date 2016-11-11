@@ -186,16 +186,14 @@ class PHV_MAU_Group_Assignments
     //
     PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &phv_r);
     //
-    std::map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>& phv_mau_map()
-    {
+    std::map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>& phv_mau_map() {
         return PHV_MAU_i;
     }
     std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>& aligned_container_slices()
 							{ return aligned_container_slices_i; }
     std::vector<PHV_Container *>& cohabit_fields()	{ return cohabit_fields_i; }
     //
-    std::map<int, std::map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>>& t_phv_map()
-    {
+    std::map<int, std::map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>>& t_phv_map() {
         return T_PHV_i;
     }
     std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>& T_PHV_container_slices()

@@ -40,7 +40,7 @@
 #include "tofino/phv/split_phv_use.h"
 #include "tofino/phv/create_thread_local_instances.h"
 #include "tofino/phv/phv_allocator.h"
-#include "tofino/phv/cluster_phv_mau.h"
+#include "tofino/phv/cluster_phv_bind.h"
 #include "tofino/common/copy_header_eliminator.h"
 
 class CheckTableNameDuplicate : public MauInspector {
@@ -82,7 +82,8 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     PhvInfo phv;
     Cluster cluster(phv);					// cluster analysis
     Cluster_PHV_Requirements *cluster_phv_requirements;		// PHV requirements analysis
-    PHV_MAU_Group_Assignments *phv_container_assignments;	// PHV Container assignments
+    PHV_MAU_Group_Assignments *phv_mau_group_assignments;	// PHV MAU Group Container placements
+    PHV_Bind *phv_field_bind;					// field binding to PHV Containers
     DependencyGraph deps;
     TablesMutuallyExclusive mutex;
     FieldDefUse defuse(phv);
@@ -108,19 +109,22 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
             new MauPhvConstraints(phv),
             new PHV::TrivialAlloc(phv, defuse.conflicts()),
             //
-            new VisitFunctor([&phv_container_assignments]() {
-                LOG3(std::endl << "..........PHV Assignment ASM Regs Generation.........." << std::endl);
-		LOG3(*phv_container_assignments);
+            new VisitFunctor([&phv, &phv_mau_group_assignments, &phv_field_bind]() {
+               // phv_mau_group_assignments = new PHV_MAU_Group_Assignments(*cluster_phv_requirements);
+										// second cut PHV MAU Group assignments
+										// honor single write conflicts from Table Placement
+                phv_field_bind = new PHV_Bind(phv, *phv_mau_group_assignments);	// fields bound to PHV containers
+		LOG3(*phv_field_bind);
 	    }),
 	});
     }
 
     PassManager *phv_analysis = new PassManager({
         &cluster, 
-        new VisitFunctor([&phv, &defuse, &cluster, &cluster_phv_requirements, &phv_container_assignments]() {
+        new VisitFunctor([&phv, &defuse, &cluster, &cluster_phv_requirements, &phv_mau_group_assignments]() {
             //
             cluster_phv_requirements = new Cluster_PHV_Requirements(cluster);	// PHV requirements analysis
-            phv_container_assignments = new PHV_MAU_Group_Assignments(*cluster_phv_requirements);
+            phv_mau_group_assignments = new PHV_MAU_Group_Assignments(*cluster_phv_requirements);
 										// first cut PHV MAU Group assignments
 										// produces cohabit fields for Table Placement
 	}),
