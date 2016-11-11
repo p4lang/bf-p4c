@@ -189,9 +189,12 @@ void Table::setup_maprams(VECTOR(value_t) *rams) {
             error(r->lineno, "Mapram layout doesn't match table layout");
             break; }
         auto &maprow = *r++;
-        VECTOR(value_t) *maprow_rams;
-        if (maprow.type == tINT && layout.size() == 1) {
-            maprow_rams = rams;
+        VECTOR(value_t) *maprow_rams, tmp;
+        if (maprow.type == tINT) {
+            // treat as a vector of length 1
+            maprow_rams = &tmp;
+            tmp.size = tmp.capacity = 1;
+            tmp.data = &maprow;
         } else if (CHECKTYPE(maprow, tVEC)) {
             maprow_rams = &maprow.vec;
         } else continue;
