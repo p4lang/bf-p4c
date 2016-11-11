@@ -191,10 +191,13 @@ void Table::setup_maprams(VECTOR(value_t) *rams) {
         auto &maprow = *r++;
         VECTOR(value_t) *maprow_rams, tmp;
         if (maprow.type == tINT) {
-            // treat as a vector of length 1
-            maprow_rams = &tmp;
-            tmp.size = tmp.capacity = 1;
-            tmp.data = &maprow;
+            if (layout.size() == 1) {
+                maprow_rams = rams;
+            } else {
+                // treat as a vector of length 1
+                maprow_rams = &tmp;
+                tmp.size = tmp.capacity = 1;
+                tmp.data = &maprow; }
         } else if (CHECKTYPE(maprow, tVEC)) {
             maprow_rams = &maprow.vec;
         } else continue;
