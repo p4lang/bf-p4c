@@ -115,6 +115,14 @@ void PHV_Container::Container_Content::sanity_check_container(PHV_Container *con
             WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " field width does not match container use " << field_i->phv_use_lo << ".." << field_i->phv_use_hi << " vs " << lo_i << ".." << hi_i << ".." << field_i << *container);
         }
     }
+    //
+    // cc lo .. hi must be tainted in c bits
+    //
+    for (auto i=lo_i; i <= hi_i; i++) {
+        if (container->bits()[i] == '0') {
+            WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " field taint does not match container use " << lo_i << ".." << hi_i << *container);
+        }  
+    }  
 }
 
 void PHV_Container::sanity_check_container(const std::string& msg)
@@ -126,62 +134,76 @@ void PHV_Container::sanity_check_container(const std::string& msg)
     for (auto &cc: fields_in_container_i)
     {
         cc->sanity_check_container(this, msg_1);
-        sanity_check_container_avail(cc->lo(), cc->hi(), msg_1 /*,taint=true*/);
+        sanity_check_container_avail(cc->lo(), cc->hi(), msg_1);
     }
 }
 
-void PHV_Container::sanity_check_container_avail(int lo, int hi, const std::string& msg, bool taint)
-{
+void PHV_Container::sanity_check_container_avail(int lo, int hi, const std::string& msg) {
+    //
     const std::string msg_1 = msg + "..PHV_Container::sanity_check_container_avail";
     //
-    // check bits lo .. hi are 0
+    // check container status
     //
-    for (auto i = lo; i <= hi; i++)
-    {
-        if(taint == false && bits_i[i] != '0')
-        {
-            WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be '0' " << i << ".." << lo << ".." << hi << " vs " << *this);
-        }
-        if(taint == true && bits_i[i] == '0')
-        {
-            WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be tainted " << i << ".." << lo << ".." << hi << " vs " << *this);
-        }
+    if ((avail_bits_i > 0 && status_i == Container_status::FULL)
+     || (avail_bits_i == 0 && status_i != Container_status::FULL)
+     || (avail_bits_i == (int) width_i && status_i != Container_status::EMPTY)
+     || (fields_in_container_i.size() && status_i == Container_status::EMPTY)) {
+        WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.."
+        << msg_1
+        << " container status inconsisent w/ available bits or fields_in_container size "
+        << (char) status_i
+        << "..avail_bits="
+        << avail_bits_i
+        << "..fields in container="
+        << fields_in_container_i
+        << *this
+        );
     }
+    // check range map in container
+    //
+    if (ranges_i[lo] && ranges_i[lo] != hi) {
+        WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container ranges " << ranges_i << *this);
+    } 
+    //
     // check available bits in container
     //
-    if(taint == false && avail_bits_i < hi - lo)
-    {
-        WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container avail bits " << lo << ".." << hi << " vs " << avail_bits_i);
+    if (status_i == Container_status::EMPTY && avail_bits_i < hi - lo) {
+        WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container avail bits inconsistent " << lo << ".." << hi << " vs " << avail_bits_i);
     }
-    if(taint == false && avail_bits_i == hi - lo)
-    {   // check all other bits are not 0
+    if (status_i == Container_status::FULL && avail_bits_i > 0) {
+        WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container avail bits should be 0 " << lo << ".." << hi << " vs " << avail_bits_i);
+    }
+    //
+    // check bits in range lo .. hi
+    //
+    for (auto i = lo; i <= hi; i++) {
+        if (status_i == Container_status::EMPTY && bits_i[i] != '0') {
+            WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be '0' " << i << ": " << lo << ".." << hi << " vs " << *this);
+        }
+        if (status_i == Container_status::FULL && bits_i[i] == '0') {
+            WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be tainted non-0 " << i << ": " << lo << ".." << hi << " vs " << *this);
+        }
+    }
+    //
+    // check bits outside range lo .. hi
+    //
+    if (avail_bits_i == hi - lo) {
+        // check all other bits are not 0
         for (auto i=0; i < lo; i++)
         {
             if(bits_i[i] == '0')
             {
-                WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be tainted " << i << ".." << lo << ".." << hi << " vs " << *this);
+                WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be tainted left outlier " << i << ": " << lo << ".." << hi << " vs " << *this);
             }
         }
         for (auto i=hi+1; i < (int) width_i; i++)
         {
             if(bits_i[i] == '0')
             {
-                WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be tainted " << i << ".." << lo << ".." << hi << " vs " << *this);
+                WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be tainted right outlier " << i << ": " << lo << ".." << hi << " vs " << *this);
             }
         }
     }
-    // check container status
-    //
-    if(taint == false && status_i != Container_status::PARTIAL)
-    {
-        WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container status " << (char) status_i << *this);
-    }
-    // check range map in container
-    //
-    if(taint == false && ranges_i[lo] != hi)
-    {
-        WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container ranges " << ranges_i << *this);
-    } 
 }//sanity_check_container_avail
 
 //***********************************************************************************

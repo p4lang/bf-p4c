@@ -920,9 +920,9 @@ void PHV_MAU_Group_Assignments::container_cohabit_summary()
 
 void PHV_MAU_Group::Container_Content::sanity_check_container(const std::string& msg)
 {
-    const std::string msg_1 = msg+"PHV_MAU_Group::Container_Content";
+    const std::string msg_1 = msg+"PHV_MAU_Group::Container_Content..";
     //
-    container_i->sanity_check_container_avail(lo_i, hi_i, msg_1 /*taint=true*/);
+    container_i->sanity_check_container_avail(lo_i, hi_i, msg_1);
 }
 
 void PHV_MAU_Group::sanity_check_container_packs(const std::string& msg)
@@ -1001,19 +1001,21 @@ void PHV_MAU_Group::sanity_check_group_containers(const std::string& msg)
             {
                 for (auto &cc: cc_set)
                 {
-                    cc->sanity_check_container(msg+"PHV_MAU_Group::sanity_check_group_containers");
+                    cc->sanity_check_container(msg+"PHV_MAU_Group::sanity_check_group_containers..");
                 }
             }
         }
     }
     for (auto &c: phv_containers_i)
     {
-        c->sanity_check_container(msg+"PHV_MAU_Group::sanity_check_group_containers phv_containers");
+        c->sanity_check_container(msg+"PHV_MAU_Group::sanity_check_group_containers phv_containers..");
     }
 }
 
 void PHV_MAU_Group_Assignments::sanity_check_container_avail(const std::string& msg)
 {
+    const std::string msg_1 = msg+"PHV_MAU_Group_Assignments::sanity_check_container_avail..";
+    //
     // check aligned_container_slices map agrees with container filling
     //
     for (auto &w: aligned_container_slices_i)
@@ -1024,7 +1026,7 @@ void PHV_MAU_Group_Assignments::sanity_check_container_avail(const std::string& 
             {
                 for (auto &cc: cc_set)
                 {
-                    cc->container()->sanity_check_container_avail(cc->lo(), cc->hi(), msg, /*taint=*/false);
+                    cc->container()->sanity_check_container_avail(cc->lo(), cc->hi(), msg_1);
                 }
             }
         }

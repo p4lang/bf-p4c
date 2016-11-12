@@ -102,7 +102,7 @@ class PHV_Container
     std::vector<Container_Content *>& fields_in_container()	{ return fields_in_container_i; }
     //
     void sanity_check_container(const std::string& msg);
-    void sanity_check_container_avail(int lo, int hi, const std::string&, bool taint=true);
+    void sanity_check_container_avail(int lo, int hi, const std::string&);
 };
 //
 //
