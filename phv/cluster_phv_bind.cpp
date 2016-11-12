@@ -15,6 +15,35 @@ PHV_Bind::PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m)
       phv_mau_i(phv_m.phv_mau_map()),
       t_phv_i(phv_m.t_phv_map())  {
     //
+    // collect all allocated containers in phv_mau_i, t_phv_i
+    //
+    for (auto it : phv_mau_i) {
+        for (auto g : it.second) {
+            for (auto c : g->phv_containers()) {
+                if(c->fields_in_container().size()) {
+                    containers_i.insert(c);
+                }
+            }
+        }
+    }
+    for (auto coll : t_phv_i) {
+        for (auto c_s : coll.second) {
+            for (auto c : c_s.second) {
+                if(c->fields_in_container().size()) {
+                    containers_i.insert(c);
+                }
+            }
+        }
+    }
+    //
+    // bind field alloc information
+    //
+    for (auto c : containers_i) {
+        for (auto cc : const_cast<PHV_Container *>(c)->fields_in_container()) {
+            fields_i.insert(cc->field());
+        }
+    }
+    //
     sanity_check_container_fields("PHV_Bind::PHV_Bind()..");
     //
     LOG3(*this);
@@ -34,6 +63,17 @@ void PHV_Bind::sanity_check_container_fields(const std::string& msg) {
     //
     // set difference phv_i fields, fields_i must be 0
     //
+    std::set<const PhvInfo::Field *> s1;                                // all fields
+    for (auto &field : phv_i) {
+        s1.insert(&field);
+    }
+    std::set<const PhvInfo::Field *> s3;                               // all - PHV_Bind fields
+    set_difference(s1.begin(), s1.end(), fields_i.begin(), fields_i.end(), std::inserter(s3, s3.end()));
+    if (s3.size()) {
+        WARNING("*****cluster_phv_bind.cpp:sanity_FAIL*****+phv bind fields != all .."
+            << msg << s3);
+    }
+    //
 }
 
 //***********************************************************************************
@@ -48,8 +88,12 @@ std::ostream &operator<<(std::ostream &out, PHV_Bind &phv_bind) {
     out << std::endl
         << "++++++++++ PHV_Bind PHV Containers to Fields ++++++++++"
         << std::endl
-        << phv_bind.fields()
         << std::endl;
+    for (auto f : phv_bind.fields()) {
+        out << f
+            << std::endl;
+    }
+    out << std::endl;
 
     return out;
 }
