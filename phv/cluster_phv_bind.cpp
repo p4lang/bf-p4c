@@ -36,17 +36,37 @@ PHV_Bind::PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m)
         }
     }
     //
-    // bind field alloc information
+    // accumulate fields to be bound
+    // create equivalent asm containers
     //
+    std::map<const PHV_Container*, PHV::Container *> phv_to_asm_map; 
     for (auto c : containers_i) {
         for (auto cc : const_cast<PHV_Container *>(c)->fields_in_container()) {
             fields_i.insert(cc->field());
         }
+        phv_to_asm_map[c] = new PHV::Container(const_cast<PHV_Container *>(c)->asm_string().c_str()); 
     }
     //
     sanity_check_container_fields("PHV_Bind::PHV_Bind()..");
-    //
     LOG3(*this);
+    //
+    // binding fields to containers
+    // clear previous field alloc information if any
+    //
+    for (auto &f : fields_i) {
+        PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
+        f1->alloc.clear();
+    }
+    for (auto c : containers_i) {
+        for (auto cc : const_cast<PHV_Container *>(c)->fields_in_container()) {
+            PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(cc->field());
+            int field_bit = f1->phv_use_lo;
+            int container_bit = cc->lo();
+            int container_width = cc->width();
+            PHV::Container *asm_container = phv_to_asm_map[c];
+            f1->alloc.emplace_back(*asm_container, field_bit, container_bit, container_width);
+        }
+    }
     //
 }  // PHV_Bind
 

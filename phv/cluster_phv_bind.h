@@ -36,8 +36,8 @@ class PHV_Bind {
                                                 // reference to parent PHV MAU Group Assignments
     std::map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>> &phv_mau_i;
     std::map<int, std::map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>> &t_phv_i;
-    std::set<const PHV_Container *> containers_i;  // all containers filled
-    std::set<const PhvInfo::Field *> fields_i;     // all fields processed
+    std::set<const PHV_Container *> containers_i;  // all filled containers
+    std::set<const PhvInfo::Field *> fields_i;     // all fields to be finally bound
     //
  public:
     //
