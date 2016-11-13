@@ -81,6 +81,8 @@ PHV_Container::taint(int start, int width, const PhvInfo::Field *field, int rang
         }
     }
     //
+    sanity_check_container_ranges("PHV_Container::taint()..");
+    //
     // track fields in this container
     //
     fields_in_container_i.push_back(new Container_Content(start, width, field));
@@ -162,8 +164,9 @@ void PHV_Container::sanity_check_container_avail(int lo, int hi, const std::stri
     // check range map in container
     //
     if (ranges_i[lo] && ranges_i[lo] != hi) {
-        WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container ranges " << ranges_i << *this);
+        WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container ranges " << '[' << lo << ".." << hi << ']' << ranges_i << *this);
     } 
+    sanity_check_container_ranges(msg_1);
     //
     // check available bits in container
     //
@@ -179,32 +182,49 @@ void PHV_Container::sanity_check_container_avail(int lo, int hi, const std::stri
     for (auto i = lo; i <= hi; i++) {
         if (status_i == Container_status::EMPTY && bits_i[i] != '0') {
             WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be '0' " << i << ": " << lo << ".." << hi << " vs " << *this);
-        }
-        if (status_i == Container_status::FULL && bits_i[i] == '0') {
-            WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be tainted non-0 " << i << ": " << lo << ".." << hi << " vs " << *this);
-        }
-    }
-    //
-    // check bits outside range lo .. hi
-    //
-    if (avail_bits_i == hi - lo) {
-        // check all other bits are not 0
-        for (auto i=0; i < lo; i++)
-        {
-            if(bits_i[i] == '0')
-            {
-                WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be tainted left outlier " << i << ": " << lo << ".." << hi << " vs " << *this);
-            }
-        }
-        for (auto i=hi+1; i < (int) width_i; i++)
-        {
-            if(bits_i[i] == '0')
-            {
-                WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be tainted right outlier " << i << ": " << lo << ".." << hi << " vs " << *this);
+        } else {
+            if (status_i == Container_status::FULL && bits_i[i] == '0') {
+                WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be tainted non-0 " << i << ": " << lo << ".." << hi << " vs " << *this);
             }
         }
     }
 }//sanity_check_container_avail
+
+void PHV_Container::sanity_check_container_ranges(const std::string& msg) {
+    //
+    const std::string msg_1 = msg + "..PHV_Container::sanity_check_container_ranges";
+    //
+    // ranges_i carries some spurious noise despite being cleared earlier
+    // e.g., for full container (0..0), packed container filled area (6..0), (7..0) etc.
+    // residual noise is taken care of here
+    //
+    if (status_i == Container_status::FULL) {
+        ranges_i.clear();
+    }
+    std::set<int> clear_these;
+    for (auto r : ranges_i) {
+        if (r.second < r.first) {
+            if (r.second == 0) {
+                clear_these.insert(r.first);
+            }
+        }
+    }
+    for (auto r : clear_these) {
+        ranges_i.erase(r);
+    }
+    //
+    bool warning = false;
+    for (auto r : ranges_i) {
+        if (r.second < r.first) {
+            warning = true;
+            WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " range absurdity [" << r.first << "]=" << r.second);
+        }
+    }
+    if (warning) {
+        WARNING(this->ranges());
+        WARNING(*this);
+    }
+} //  sanity_check_container_ranges
 
 //***********************************************************************************
 //
@@ -240,32 +260,23 @@ std::ostream &operator<<(std::ostream &out, std::map<int, int>& ranges)
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, PHV_Container *c)
-{
+std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
+    //
     // summary output 
     //
-    if(c)
-    {
+    if(c) {
         out << std::endl << '\t';
-        out << "PHV-" << c->phv_number() << '.' << c->asm_string() << '.' << (char) c->gress();
-        if(c->fields_in_container().size() > 1)
-        {
+        out << "PHV-" << c->phv_number()
+            << '.' << c->asm_string()
+            << '.' << (char) c->gress()
+            << '.' << (char) c->status();
+        if(c->fields_in_container().size() > 1) {
             out << "p";
         }
-        if(c->status() != PHV_Container::Container_status::FULL)
-        {
-            for (auto r: c->ranges())
-            {
-                out << '(' << r.first << ".." << r.second << ')';
-            }
+        for (auto r : c->ranges()) {
+            out << '(' << r.first << ".." << r.second << ')';
         }
-        else
-        {
-            out << '\t';
-        }
-    }
-    else
-    {
+    } else {
         out << "-c-";
     }
 

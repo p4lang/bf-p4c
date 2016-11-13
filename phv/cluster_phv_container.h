@@ -25,7 +25,7 @@ class PHV_Container
  public:
     enum class PHV_Word {b32=32, b16=16, b8=8};
     enum class Containers {MAX=16};
-    enum class Container_status {EMPTY='E', PARTIAL='P', FULL='F'};
+    enum class Container_status {EMPTY='V', PARTIAL='P', FULL='F'};  // V=Vacant, E=Egress_Only
     enum class Ingress_Egress {Ingress_Only='I', Egress_Only='E', Ingress_Or_Egress=' '};
     //
     class Container_Content
@@ -103,6 +103,7 @@ class PHV_Container
     //
     void sanity_check_container(const std::string& msg);
     void sanity_check_container_avail(int lo, int hi, const std::string&);
+    void sanity_check_container_ranges(const std::string&);
 };
 //
 //

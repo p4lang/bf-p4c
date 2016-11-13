@@ -14,6 +14,7 @@ PHV_MAU_Group::Container_Content::Container_Content(int l, int w, PHV_Container 
 {
     BUG_CHECK(container_i, "*****PHV_MAU_Group::Container_Content constructor called with null container ptr*****");
     container_i->ranges()[lo_i] = hi_i;
+    container_i->sanity_check_container_ranges("PHV_MAU_Group::Container_Content constructor");
 }
 
 //***********************************************************************************
@@ -672,6 +673,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                             //
                             int start = cc->hi() + 1 - cl_w;
                             cc->container()->taint(start, cl_w, cl->cluster_vec()[field++], cc->lo() /*container ranges*/);
+                            cc->container()->sanity_check_container_ranges("PHV_MAU_Group_Assignments::container_pack_cohabit..");
                             LOG3("\t\t" << *(cc->container()));
                         }
                         //
@@ -790,8 +792,6 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
     //
     update_PHV_MAU_Group_container_slices(aligned_slices); 
     //
-    sanity_check_container_avail("container_pack_cohabit ()..");
-    //
 }//container_pack_cohabit
 
 
@@ -865,9 +865,15 @@ void PHV_MAU_Group_Assignments::update_PHV_MAU_Group_container_slices(
         for (auto &gg: PHV_MAU_i)
         {
             // groups within this word size
-            for(auto g: gg.second)
+            for(auto &g: gg.second)
             {
                 g->aligned_container_slices().clear();
+                //
+                // clear ranges in g's containers
+                //
+                for (auto &c : g->phv_containers()) {
+                    c->ranges().clear();
+                }
             }
         }
     }
@@ -881,10 +887,20 @@ void PHV_MAU_Group_Assignments::update_PHV_MAU_Group_container_slices(
             {
                 PHV_Container *c = (*(cc_set.begin()))->container();
                 PHV_MAU_Group *g = c->phv_mau_group();
-                g->aligned_container_slices()[w.first][n.first].insert(cc_set);		// insert in MAU_Group map[w][n]
+                g->aligned_container_slices()[w.first][n.first].insert(cc_set);	 // insert in MAU_Group map[w][n]
+                //
+                // create ranges map for containers
+                //
+                for (auto &cc : cc_set) {
+                    PHV_Container *c = cc->container();
+                    c->ranges()[cc->lo()] = cc->hi();
+                }
             }
         }
     }
+    //
+    sanity_check_container_avail("update_PHV_MAU_Group_container_slices ()..");
+    //
 }//update_PHV_MAU_Group_container_slices
 
 //
@@ -1026,7 +1042,10 @@ void PHV_MAU_Group_Assignments::sanity_check_container_avail(const std::string& 
             {
                 for (auto &cc: cc_set)
                 {
-                    cc->container()->sanity_check_container_avail(cc->lo(), cc->hi(), msg_1);
+                    PHV_Container *c = cc->container();
+                    c->sanity_check_container_avail(cc->lo(), cc->hi(), msg_1);
+                    PHV_MAU_Group *g = c->phv_mau_group();
+                    g->sanity_check_group_containers(msg_1); 
                 }
             }
         }
