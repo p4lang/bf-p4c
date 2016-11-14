@@ -55,8 +55,8 @@ TernaryMatchTable::Match::Match(const value_t &v) {
             byte_group = -1;
         if ((byte_config = v[v.vec.size-1].i) < 0 || byte_config >= 4)
             error(v[v.vec.size-1].lineno, "Invalid input xbar byte control %d", byte_config);
-    } else if (CHECKTYPE(v, tMAP))
-        for (auto &kv : MapIterChecked(v.map))
+    } else if (CHECKTYPE(v, tMAP)) {
+        for (auto &kv : MapIterChecked(v.map)) {
             if (kv.key == "group") {
                 if (kv.value.type != tINT || kv.value.i < 0 || kv.value.i >= TCAM_XBAR_GROUPS)
                     error(kv.value.lineno, "Invalid input xbar group %s", value_desc(kv.value));
@@ -73,8 +73,9 @@ TernaryMatchTable::Match::Match(const value_t &v) {
                 if (kv.value.type != tINT || kv.value.i < 0 || kv.value.i > 0xfff)
                     error(kv.value.lineno, "Invalid dirtcam mode %s", value_desc(kv.value));
                 else dirtcam = kv.value.i;
-            } else
-                error(kv.key.lineno, "Unknown key '%s' in ternary match spec", value_desc(kv.key));
+            } else {
+                error(kv.key.lineno, "Unknown key '%s' in ternary match spec",
+                      value_desc(kv.key)); } } }
 }
 
 static void check_tcam_match_bus(const std::vector<Table::Layout> &layout) {

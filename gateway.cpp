@@ -265,13 +265,34 @@ void GatewayTable::pass2() {
         if (auto *tmatch = dynamic_cast<TernaryMatchTable *>(tbl))
             tbl = tmatch->indirect;
         if (tbl)
-            for (auto &row : tbl->layout)
+            for (auto &row : tbl->layout) {
                 if (auto *old = stage->gw_payload_use[row.row][row.bus & 1])
                     error(lineno, "payload %d.%d already in use by table %s",
                           row.row, row.bus & 1, old->name());
                 else
-                    stage->gw_payload_use[row.row][row.bus & 1] = this; }
+                    stage->gw_payload_use[row.row][row.bus & 1] = this; } }
     if (input_xbar) input_xbar->pass2(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
+}
+
+static unsigned match_input_use(const std::vector<GatewayTable::MatchKey> &match) {
+    unsigned rv = 0;
+    for (auto &r : match) {
+        unsigned lo = r.offset;
+        unsigned hi = lo + r.val->size() - 1;
+        if (lo < 32) {
+            rv |= (((1U << (hi/8 - lo/8 + 1)) - 1) << lo/8) & 0xf;
+            lo = 32; }
+        if (lo <= hi)
+            rv |= ((1U << (hi - lo + 1)) - 1) << (lo-24); }
+    return rv;
+}
+
+/* caluclate match_bus byte use (8 bytes/bits) + hash output use (12 bits) */
+unsigned GatewayTable::input_use() const {
+    unsigned rv = match_input_use(match) | match_input_use(xor_match);
+    if (!xor_match.empty())
+        rv |= (rv & 0xf) >> 4;
+    return rv;
 }
 
 /* FIXME -- how to deal with (or even specify) matches in the upper 24 bits coming from

@@ -302,11 +302,11 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data) {
         if (CHECKTYPE(kv.value, tSTR))
             miss_next = kv.value;
     } else if (kv.key == "next") {
-        if (!hit_next.empty())
+        if (!hit_next.empty()) {
             error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
-        else if (CHECKTYPE(kv.value, tSTR))
+        } else if (CHECKTYPE(kv.value, tSTR)) {
             hit_next.emplace_back(kv.value);
-            miss_next = kv.value;
+            miss_next = kv.value; }
     } else if (kv.key == "vpns") {
         if (CHECKTYPE(kv.value, tVEC))
             setup_vpns(layout, &kv.value.vec);

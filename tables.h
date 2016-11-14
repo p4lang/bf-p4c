@@ -626,6 +626,7 @@ public:
     const GatewayTable *get_gateway() const { return this; }
     SelectionTable *get_selector() const { return match_table ? match_table->get_selector() : 0; }
     bool empty_match() const { return match.empty() && xor_match.empty(); }
+    unsigned input_use() const;
 )
 
 DECLARE_TABLE_TYPE(SelectionTable, AttachedTable, "selection",

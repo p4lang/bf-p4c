@@ -294,7 +294,18 @@ void ExactMatchTable::pass1() {
         LOG1("  match in word " << i << ": " << match_in_word[i]);
     if (gateway) {
         gateway->logical_id = logical_id;
-        gateway->pass1(); }
+        gateway->pass1();
+        if (!gateway->layout.empty()) {
+            for (auto &row : layout) {
+                if (row.row == gateway->layout[0].row && row.bus == gateway->layout[0].bus) {
+                    unsigned gw_use = gateway->input_use() & 0xff;
+                    auto &way = way_map[std::make_pair(row.row, row.cols[0])];
+                    for (auto &grp : group_info) {
+                        if (gw_use & grp.tofino_mask[way.word]) {
+                            error(gateway->lineno, "match bus conflict between match and gateway"
+                                  " on table %s", name());
+                            break; } }
+                    break; } } } }
     if (idletime) {
         idletime->logical_id = logical_id;
         idletime->pass1(); }
