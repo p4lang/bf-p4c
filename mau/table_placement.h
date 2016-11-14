@@ -23,7 +23,7 @@ class TablePlacement : public MauTransform, public Backtrack {
     const PhvInfo &phv;
     bool alloc_done = false;
     profile_t init_apply(const IR::Node *root) override;
-    bool backtrack(trigger &) {
+    bool backtrack(trigger &) override {
         /* always back up to TableLayout -- don't catch here */
         return false;  /* trig.is<IXBar::failure>() && !alloc_done; */ }
     IR::Node *preorder(IR::Tofino::Pipe *) override;

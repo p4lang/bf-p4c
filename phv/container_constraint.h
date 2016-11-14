@@ -13,7 +13,7 @@ class ContainerConstraint : public Inspector, public BitExtractor {
         Constraints &ec) : BitExtractor(phv), mutex(m), constraints_(ec) { }
 
  private:
-    void end_apply() { uses.clear(); }
+    void end_apply() override { uses.clear(); }
     bool preorder(const IR::Primitive *prim) override;
     bool preorder(const IR::MAU::Instruction *inst) override;
     bool preorder(const IR::Tofino::Deparser *dp) override;
