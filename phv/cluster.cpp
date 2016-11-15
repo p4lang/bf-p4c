@@ -24,8 +24,27 @@ Cluster::Cluster(PhvInfo &p) : phv_i(p) {
 bool Cluster::preorder(const IR::Member* expression) {
     // class Member : Operation_Unary
     // toString = expr->toString() + "." + member
+    //
+    // reads manifest as member
+    // if fields, they must be allocated to MAU pipe
+    // e.g.,
+    // table t3_1 {
+    //    reads {
+    //        m.field_32_33 : exact;
+    //        m.field_32_34 : exact;
+    //.....Member.....ingress::m.field_32_33
+    //.....Member.....ingress::m.field_32_34
+    //
 
     LOG4(".....Member....." << expression->toString());
+    PhvInfo::Field::bitrange bits;
+    bits.lo = bits.hi = 0;
+    auto field = phv_i.field(expression->expr, &bits);
+
+    LOG4(field);
+
+    set_field_range(field, bits);
+    insert_cluster(dst_i, field);
 
     return true;
 }
@@ -118,6 +137,12 @@ bool Cluster::preorder(const IR::Primitive* primitive) {
             if (!dst_map_i[dst_i]) {
                 dst_map_i[dst_i] = new std::set<const PhvInfo::Field *>;  // new std::set
                 lhs_unique_i.insert(dst_i);  // lhs_unique set insert field
+                 //
+                 // x must be allocated to PHV
+                 // e.g., action a: - set x, 3
+                 // dst_map[x] points to singleton cluster using MAU
+                 //
+                insert_cluster(dst_i, dst_i);
                 LOG4("lhs_unique..insert[" << std::endl << &lhs_unique_i << "lhs_unique..insert]");
             }
             for (auto &operand : primitive->operands) {
@@ -168,13 +193,13 @@ void Cluster::end_apply() {
     //
     // form unique clusters
     // forall x not elem lhs_unique_i, dst_map_i[x] = 0
-    // remove singleton clusters
+    // do not remove singleton clusters as x needs MAU PHV, e.g., set x, 3
     // forall x, dst_map_i[x] == (x), dst_map_i[x] = 0
     //
     std::list<const PhvInfo::Field *> delete_list;
     for (auto entry : dst_map_i) {
         auto lhs = entry.first;
-        if (lhs && (lhs_unique_i.count(lhs) == 0 || entry.second->size() <= 1)) {
+        if (lhs && (lhs_unique_i.count(lhs) == 0 || entry.second->size() < 1)) {
             dst_map_i[lhs] = nullptr;
             delete_list.push_back(lhs);
         }
@@ -263,6 +288,26 @@ void Cluster::compute_fields_no_use_mau() {
         << fields_no_use_mau_i.size()
         << ").........." << std::endl);
     //
+    // discard metadata & pov from T_PHV candidates
+    // set_field_range (entire field deparsed) for T_PHV fields_no_use_mau
+    //
+    std::set<const PhvInfo::Field *> delete_set;
+    for (auto f : fields_no_use_mau_i) {
+        PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
+        if (f1->metadata || f1->pov) {
+            delete_set.insert(f);
+        } else {
+            f1->phv_use_lo = 0;
+            f1->phv_use_hi = f1->phv_use_lo + f1->size - 1;
+        }
+    }
+    fields_no_use_mau_i.clear();
+    set_difference(s5.begin(), s5.end(), delete_set.begin(), delete_set.end(),
+        std::back_inserter(fields_no_use_mau_i));
+    LOG3("..........T_PHV Fields ("
+        << fields_no_use_mau_i.size()
+        << ").........." << std::endl);
+    //
 }  // fields_no_use_mau
 
 //***********************************************************************************
@@ -275,7 +320,11 @@ void Cluster::compute_fields_no_use_mau() {
 void Cluster::set_field_range(PhvInfo::Field *field, const PhvInfo::Field::bitrange& bits) {
     if (field) {
         field->phv_use_lo = std::min(field->phv_use_lo, bits.lo);
-        field->phv_use_hi = std::max(field->phv_use_hi, bits.hi);
+        if(field->metadata || field->pov) {
+            field->phv_use_hi = std::max(field->phv_use_hi, bits.hi);
+        } else {
+            field->phv_use_hi = field->phv_use_lo + field->size - 1;
+        }
     }
 }
 
