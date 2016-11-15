@@ -107,8 +107,8 @@ struct Memories {
         int recent_home_row;
         cstring name;
         enum type_t { EXACT, ACTION, STATS, METER, TIND } type;
-        bool cm_needed;
-        bool cm_placed;
+        int cm_needed;
+        int cm_placed;
         bool cm_required;
         explicit SRAM_group(table_alloc *t, int d, int w, int n, type_t ty)
             : ta(t), depth(d), width(w), placed(0), number(n), type(ty),
@@ -121,7 +121,9 @@ struct Memories {
                 << " width: " << width << " placed: " << placed;
         }
         int left_to_place() { return depth - placed; }
+        int cm_left_to_place() { return cm_needed - cm_placed; }
         bool all_placed() { return (depth == placed); }
+        bool all_cm_placed() { return (cm_needed == cm_placed); } 
         bool requires_ab() { return false; }
         cstring name_addition() {
             switch (type) {
@@ -206,13 +208,15 @@ struct Memories {
                          action_fill &best_fit_action, action_fill &best_fit_suppl,
                          action_fill &curr_oflow, action_fill &next_action,
                          action_fill &next_suppl, int action_RAMs_available, 
-                         int suppl_RAMs_available, bool left_side, int order[3], int RAMs[3]);
+                         int suppl_RAMs_available, bool left_side, int order[3], int RAMs[3],
+                         bool is_suppl[3]);
     void action_oflow_only(action_fill &action, action_fill &oflow,
                            action_fill &best_fit_action, action_fill &next_action,
                            action_fill &curr_oflow, int RAMs_available, int order[3]);
     void color_mapram_candidates(action_fill &suppl, action_fill &oflow,
                                  action_fill &curr_oflow, action_fill &color_mapram,
                                  unsigned mask);
+    void fill_out_color_mapram(action_fill &action, int row, unsigned mask);
     bool fill_out_action_row(action_fill &action, int row, int side, unsigned mask,
                              bool is_oflow, bool is_twoport);
     void action_side(action_fill &action, action_fill &suppl, action_fill &oflow,
