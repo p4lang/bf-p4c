@@ -27,7 +27,7 @@ class SourceContainerConstraint : public MauInspector {
     std::set<std::pair<PHV::Bit, PHV::Bit>> dst_src_pairs_;
     Constraints &constraints_;
  private:
-    profile_t init_apply(const IR::Node *root) {
+    profile_t init_apply(const IR::Node *root) override {
         reset_updated();
         return MauInspector::init_apply(root); }
     bool preorder(const IR::Primitive *primitive) override;

@@ -6,7 +6,7 @@
 
 class UniqueStateNamer : public PardeInspector {
     std::set<cstring>   names;
-    profile_t init_apply(const IR::Node *root) {
+    profile_t init_apply(const IR::Node *root) override {
         names.clear();
         return PardeInspector::init_apply(root); }
     bool preorder(const IR::Expression *) override { return false; }
