@@ -75,6 +75,7 @@ struct Memories {
             }
         };
         vector<Row>     row;
+        vector<Row>                          color_mapram;
         vector<std::pair<int, int>>          home_row;
         vector<std::pair<int, unsigned>>     ways;
         int                                  per_row;
@@ -106,10 +107,15 @@ struct Memories {
         int recent_home_row;
         cstring name;
         enum type_t { EXACT, ACTION, STATS, METER, TIND } type;
+        bool cm_needed;
+        bool cm_placed;
+        bool cm_required;
         explicit SRAM_group(table_alloc *t, int d, int w, int n, type_t ty)
-            : ta(t), depth(d), width(w), placed(0), number(n), type(ty) {}
+            : ta(t), depth(d), width(w), placed(0), number(n), type(ty),
+              cm_needed(false), cm_placed(false), cm_required(false) {}
         explicit SRAM_group(table_alloc *t, int d, int n, type_t ty)
-                     : ta(t), depth(d), width(0),  placed(0), number(n), type(ty) {}
+            : ta(t), depth(d), width(0),  placed(0), number(n), type(ty),
+              cm_needed(false), cm_placed(false), cm_required(false) {}
         void dbprint(std::ostream &out) const {
             out << ta->table->name << " way #" << number << " depth: " << depth
                 << " width: " << width << " placed: " << placed;
@@ -132,9 +138,11 @@ struct Memories {
     struct action_fill {
         SRAM_group *group;
         unsigned mask;
+        unsigned mapram_mask;
         size_t index;
-        action_fill() : group(nullptr), mask(0), index(0) {}
-        void clear() { group = nullptr; mask = 0; index = 0; }
+        action_fill() : group(nullptr), mask(0), mapram_mask(0), index(0) {}
+        void clear() { group = nullptr; mask = 0; mapram_mask = 0; index = 0; }
+        void clear_masks() {mask = 0; mapram_mask = 0; }
     };
 
     static constexpr int ACTION_IND = 0;
@@ -190,19 +198,21 @@ struct Memories {
     int stats_per_row(int min_width, int max_width, IR::CounterType type);
     void find_action_candidates(int row, int mask, action_fill &action, action_fill &suppl,
                                 action_fill &oflow, bool stats_available, bool meter_available,
-                                action_fill &curr_oflow);
+                                action_fill &curr_oflow, action_fill &color_mapram);
+    void adjust_RAMs_available(action_fill &curr_oflow, action_fill &color_mapram,
+                               int &suppl_RAMs_available, int action_RAMs_available, int row,
+                               bool left_side);
     void action_row_trip(action_fill &action, action_fill &suppl, action_fill &oflow,
                          action_fill &best_fit_action, action_fill &best_fit_suppl,
                          action_fill &curr_oflow, action_fill &next_action,
-                         action_fill &next_suppl, int RAMs_available, bool left_side,
-                         int order[3], int RAMs[3]);
+                         action_fill &next_suppl, int action_RAMs_available, 
+                         int suppl_RAMs_available, bool left_side, int order[3], int RAMs[3]);
     void action_oflow_only(action_fill &action, action_fill &oflow,
                            action_fill &best_fit_action, action_fill &next_action,
                            action_fill &curr_oflow, int RAMs_available, int order[3]);
-    bool best_a_oflow_pair(SRAM_group **best_a_group, SRAM_group **best_oflow_group,
-                           int &a_index, int &oflow_index, int RAMs_available,
-                           SRAM_group *best_fit_group, int best_fit_index,
-                           SRAM_group *curr_oflow_group);
+    void color_mapram_candidates(action_fill &suppl, action_fill &oflow,
+                                 action_fill &curr_oflow, action_fill &color_mapram,
+                                 unsigned mask);
     bool fill_out_action_row(action_fill &action, int row, int side, unsigned mask,
                              bool is_oflow, bool is_twoport);
     void action_side(action_fill &action, action_fill &suppl, action_fill &oflow,

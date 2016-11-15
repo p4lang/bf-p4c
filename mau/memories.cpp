@@ -830,6 +830,30 @@ void Memories::find_action_bus_users() {
     }
 }
 
+void Memories::adjust_RAMs_available(action_fill &curr_oflow, action_fill &color_mapram,
+                                     int &suppl_RAMs_available, int action_RAMs_available,
+                                     int row, bool left_side) {
+    if (left_side)
+        return;
+
+    if (color_mapram.group) {
+        suppl_RAMs_available--;
+        if (curr_oflow.group && curr_oflow.group->type != SRAM_group::ACTION)
+            BUG("Curr oflow group and color mapram group don't match up");
+    }
+    if (__builtin_popcount(~sram_inuse[row] & 0x3f0) > 0)
+        return;
+
+    if (curr_oflow.group && curr_oflow.group->cm_required) {
+        suppl_RAMs_available--;
+    } else if (curr_oflow.group && curr_oflow.group->cm_needed
+               && !curr_oflow.group->cm_placed) {
+        if (curr_oflow.group->left_to_place() < action_RAMs_available)
+           suppl_RAMs_available--;
+    }
+}
+
+
 /* This is a massive conditional to determine which action and supplemental tables should
    fill in the current row.  On the right side, the supplemental tables are favored.  If
    someone is on the left side or if no tables are able to be placed, then the choice of
@@ -837,14 +861,16 @@ void Memories::find_action_bus_users() {
 void Memories::action_row_trip(action_fill &action, action_fill &suppl, action_fill &oflow,
                                action_fill &best_fit_action, action_fill &best_fit_suppl,
                                action_fill &curr_oflow, action_fill &next_action,
-                               action_fill &next_suppl, int RAMs_available, bool left_side,
-                               int order[3], int RAMs[3]) {
+                               action_fill &next_suppl, int action_RAMs_available, 
+                               int suppl_RAMs_available, bool left_side, int order[3],
+                               int RAMs[3]) {
     if (!left_side) {
         if (curr_oflow.group && curr_oflow.group->type != SRAM_group::ACTION) {
-            if (best_fit_suppl.group && best_fit_suppl.group->left_to_place() == RAMs_available) {
+            if (best_fit_suppl.group
+                && best_fit_suppl.group->left_to_place() == suppl_RAMs_available) {
                 suppl = best_fit_suppl;
                 order[SUPPL_IND] = 0;
-            } else if (curr_oflow.group->left_to_place() >= RAMs_available) {
+            } else if (curr_oflow.group->left_to_place() >= suppl_RAMs_available) {
                 oflow = curr_oflow;
                 order[OFLOW_IND] = 0;
             } else if (next_suppl.group) {
@@ -853,11 +879,12 @@ void Memories::action_row_trip(action_fill &action, action_fill &suppl, action_f
                 order[OFLOW_IND] = 0; order[SUPPL_IND] = 1;
                 if (!next_suppl.group->requires_ab() &&
                     (next_suppl.group->left_to_place() +
-                    curr_oflow.group->left_to_place() < RAMs_available)) {
+                    curr_oflow.group->left_to_place() < suppl_RAMs_available)) {
                     action = next_action;
                     order[ACTION_IND] = 2;
                 }
-            } else if (next_action.group && next_action.group->left_to_place() == RAMs_available) {
+            } else if (next_action.group
+                       && next_action.group->left_to_place() == action_RAMs_available) {
                oflow = curr_oflow;
                action = next_action;
                order[OFLOW_IND] = 0; order[ACTION_IND] = 1;
@@ -869,7 +896,7 @@ void Memories::action_row_trip(action_fill &action, action_fill &suppl, action_f
             suppl = next_suppl;
             order[SUPPL_IND] = 0;
             // FIXME: Perhaps port the correct function
-            if (next_suppl.group->left_to_place() < RAMs_available) {
+            if (next_suppl.group->left_to_place() < suppl_RAMs_available) {
                 if (curr_oflow.group) {
                     oflow = curr_oflow;
                     order[OFLOW_IND] = 1;
@@ -880,7 +907,7 @@ void Memories::action_row_trip(action_fill &action, action_fill &suppl, action_f
             }
         } else {
             action_oflow_only(action, oflow, best_fit_action, next_action, curr_oflow,
-                              RAMs_available, order);
+                              action_RAMs_available, order);
         }
     } else {
         action_fill curr_oflow_temp = curr_oflow;
@@ -888,7 +915,7 @@ void Memories::action_row_trip(action_fill &action, action_fill &suppl, action_f
             curr_oflow_temp.group = nullptr;
         }
         action_oflow_only(action, oflow, best_fit_action, next_action, curr_oflow_temp,
-                          RAMs_available, order);
+                          action_RAMs_available, order);
     }
 
     if (order[ACTION_IND] >= 0)
@@ -957,13 +984,16 @@ void Memories::action_oflow_only(action_fill &action, action_fill &oflow,
    and calculate the corresponding masks and indices within the list */
 void Memories::find_action_candidates(int row, int mask, action_fill &action, action_fill &suppl,
                                       action_fill &oflow, bool stats_available,
-                                      bool meter_available, action_fill &curr_oflow) {
+                                      bool meter_available, action_fill &curr_oflow,
+                                      action_fill &color_mapram) {
     if (action_bus_users.empty() && suppl_bus_users.empty()) {
         return;
     }
 
-    int RAMs_available = __builtin_popcount(mask & ~sram_inuse[row]);
-
+    int action_RAMs_available = __builtin_popcount(mask & ~sram_inuse[row]);
+    int suppl_RAMs_available = action_RAMs_available;
+    adjust_RAMs_available(curr_oflow, color_mapram, action_RAMs_available,
+                          suppl_RAMs_available, row, mask == 0xf);
     action_fill best_fit_action, best_fit_suppl;
     action_fill next_action, next_suppl;
 
@@ -971,7 +1001,7 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
     for (size_t i = 0; i < action_bus_users.size(); i++) {
         if (curr_oflow.group == action_bus_users[i])
             continue;
-        if (action_bus_users[i]->left_to_place() <= RAMs_available) {
+        if (action_bus_users[i]->left_to_place() <= action_RAMs_available) {
             best_fit_action.group = action_bus_users[i];
             best_fit_action.index = i;
             break;
@@ -999,7 +1029,7 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
                 continue;
             if (!meter_available && suppl_bus_users[i]->type != SRAM_group::STATS)
                 continue;
-            if (suppl_bus_users[i]->left_to_place() <= RAMs_available) {
+            if (suppl_bus_users[i]->left_to_place() <= suppl_RAMs_available) {
                 best_fit_suppl.group = suppl_bus_users[i];
                 best_fit_suppl.index = i;
                 break;
@@ -1025,36 +1055,123 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
     if (best_fit_action.group == nullptr && best_fit_suppl.group == nullptr
         && curr_oflow.group == nullptr && next_action.group == nullptr
         && next_suppl.group == nullptr) {
-         return;
+        //FIXME: Calculate the color mapram stuff
+        color_mapram_candidates(suppl, oflow, curr_oflow, color_mapram, mask);
+        return;
     }
 
-    unsigned masks[3] = {0, 0, 0};
+    unsigned suppl_masks[3] = {0, 0, 0};
+    unsigned action_masks[3] = {0, 0, 0};
     int RAMs[3] = {0, 0, 0};
     int order[3] = {-1, -1, -1};  // order is action, suppl, oflow
+    int RAMs_filled[3] = {0, 0, 0};
+    bool is_suppl[3] = {false, false, false};
     action_row_trip(action, suppl, oflow, best_fit_action, best_fit_suppl, curr_oflow,
-                    next_action, next_suppl, RAMs_available, (mask == 0xf), order, RAMs);
-    int RAMs_filled = 0;
-    for (int i = 0; i < SRAM_COLUMNS && RAMs_filled < RAMs[0] + RAMs[1] + RAMs[2]; i++) {
+                    next_action, next_suppl, action_RAMs_available, suppl_RAMs_available,
+                    (mask == 0xf), order, RAMs);
+    int total_RAMs_filled = 0;
+    for (int i = 0; i < SRAM_COLUMNS && total_RAMs_filled < RAMs[0] + RAMs[1] + RAMs[2] &&
+                                        total_RAMs_filled < suppl_RAMs_available; i++) {
         if (((1 << i) & mask) == 0)
             continue;
         if ((1 << i) & ~sram_inuse[row]) {
-            if (RAMs_filled < RAMs[0])
-                masks[0] |= (1 << i);
-            else if (RAMs_filled < RAMs[0] + RAMs[1])
-                masks[1] |= (1 << i);
-            else
-                masks[2] |= (1 << i);
-            RAMs_filled++;
+            if (RAMs_filled[0] < RAMs[0]) {
+                suppl_masks[0] |= (1 << i);
+                RAMs_filled[0]++;
+                
+            } else if (RAMs_filled[1] < RAMs[1]) {
+                suppl_masks[1] |= (1 << i);
+                RAMs_filled[1]++;
+            } else if (RAMs_filled[2] < RAMs[2]) {
+                suppl_masks[2] |= (1 << i);
+                RAMs_filled[2]++;
+            } else {
+                break;
+            }
+            total_RAMs_filled++;
         }
     }
 
+    for (int i = 0; i < SRAM_COLUMNS && total_RAMs_filled < RAMs[0] + RAMs[1] + RAMs[2] &&
+                                        total_RAMs_filled < action_RAMs_available; i++) {
+        if (((1 << i) & mask) == 0)
+            continue;
+        if ((1 << i) & ~sram_inuse[row]) {
+            if (RAMs_filled[0] < RAMs[0] && !is_suppl[0]) {
+                action_masks[0] |= (1 << i);
+                RAMs_filled[0]++;
+            } else if (RAMs_filled[1] < RAMs[1] && !is_suppl[1]) {
+                action_masks[1] |= (1 << i);
+                RAMs_filled[1]++;
+            } else if (RAMs_filled[2] < RAMs[2] && !is_suppl[2]) {
+                action_masks[2] |= (1 << i);
+                RAMs_filled[2]++;
+            } else {
+               break;
+            }
+            total_RAMs_filled++;
+            
+        }
+    } 
 
-    if (order[ACTION_IND] >= 0)
-        action.mask = masks[order[ACTION_IND]];
-    if (order[SUPPL_IND] >= 0)
-        suppl.mask = masks[order[SUPPL_IND]];
-    if (order[OFLOW_IND] >= 0)
-        oflow.mask = masks[order[OFLOW_IND]];
+    //FIXME: Add ability to do action RAMs after this
+
+
+    if (order[ACTION_IND] >= 0) {
+        action.mask = suppl_masks[order[ACTION_IND]] | action_masks[order[ACTION_IND]];
+    }
+    if (order[SUPPL_IND] >= 0) {
+        suppl.mask = suppl_masks[order[SUPPL_IND]];
+        suppl.mapram_mask = suppl_masks[order[SUPPL_IND]];
+    }
+    if (order[OFLOW_IND] >= 0) {
+        oflow.mask = suppl_masks[order[OFLOW_IND]];
+        if (oflow.group->type != SRAM_group::ACTION)
+            oflow.mapram_mask = suppl_masks[order[OFLOW_IND]];
+        else
+            oflow.mask |= action_masks[order[OFLOW_IND]];
+    }
+    color_mapram_candidates(suppl, oflow, curr_oflow, color_mapram, mask);
+}
+
+/* All calculations for the color mapram usage if necessary*/
+void Memories::color_mapram_candidates(action_fill &suppl, action_fill &oflow,
+                                       action_fill &curr_oflow, action_fill &color_mapram,
+                                       unsigned mask) {
+    unsigned mapram_masks[2] = {0, 0};
+    unsigned mapram_row_use = suppl.mask;
+    if (oflow.group && oflow.group->type != SRAM_group::ACTION)
+        mapram_row_use |= oflow.mask;
+
+    int mapram_index = 0;
+    for (int i = 0; i < SRAM_COLUMNS && mapram_index < 2; i++) {
+        if (((1 << i) & mask) == 0)
+            continue;
+        if ((1 << i) & mapram_row_use)
+            continue;
+        mapram_masks[mapram_index] |= (1 << i);
+        mapram_index++;
+    }
+
+    if (color_mapram.group) {
+        if (mapram_masks[0] == 0)
+            BUG("Missing mapram for color mapram");         
+        color_mapram.mapram_mask |= mapram_masks[0];
+    }
+    bool curr_oflow_mapram = false;
+    if (curr_oflow.group && curr_oflow.group->cm_needed && !curr_oflow.group->cm_placed) {
+        if (curr_oflow.group->cm_required && mapram_masks[0] == 0)
+            BUG("Oflow required color map ram and none available");
+        curr_oflow.mapram_mask = mapram_masks[0];
+        curr_oflow_mapram = true;
+    }
+
+    if (suppl.group && suppl.group->cm_needed && !suppl.group->cm_placed) {
+        int suppl_mapram_index = 0;
+        if (curr_oflow_mapram)
+            suppl_mapram_index = 1;
+        suppl.mapram_mask |= mapram_masks[suppl_mapram_index];
+    } 
 }
 
 /*  Fills out a row with all three of the groups
@@ -1167,7 +1284,7 @@ void Memories::calculate_curr_oflow(action_fill &action, action_fill &suppl, act
    then allocates them.  */
 bool Memories::allocate_all_action() {
     find_action_bus_users();
-    action_fill curr_oflow, twoport_oflow;
+    action_fill curr_oflow, twoport_oflow, color_mapram;
     action_fill action; action_fill oflow; action_fill suppl;
     std::sort(action_bus_users.begin(), action_bus_users.end(),
         [=](const SRAM_group *a, SRAM_group *b) {
@@ -1204,7 +1321,7 @@ bool Memories::allocate_all_action() {
                 meter_available = false;
             }
             find_action_candidates(i, mask, action, suppl, oflow, stats_available, meter_available,
-                                   curr_oflow);
+                                   curr_oflow, color_mapram);
 
             if (action.group == nullptr && oflow.group == nullptr && suppl.group == nullptr) {
                 continue;
@@ -1212,6 +1329,10 @@ bool Memories::allocate_all_action() {
             bool removed[3];
             for (int k = 0; k < 3; k++)
                  removed[k] = false;
+            /*
+            if (color_mapram.group) {
+                fill_out_color_mapram(
+            }*/
             action_side(action, suppl, oflow, removed, i, j, mask);
             calculate_curr_oflow(action, suppl, oflow, removed, curr_oflow,
                                  twoport_oflow, j == 0);
