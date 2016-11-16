@@ -9,7 +9,8 @@
 // 
 //***********************************************************************************
 
-PHV_Container::Container_Content::Container_Content(int l, int w, const PhvInfo::Field *f) : lo_i(l), hi_i(l+w-1), field_i(f)
+PHV_Container::Container_Content::Container_Content(int l, int w, const PhvInfo::Field *f, int field_bit_lo)
+    : lo_i(l), hi_i(l+w-1), field_i(f), field_bit_lo_i(field_bit_lo)
 {
     BUG_CHECK(field_i, "*****PHV_Container::Container_Content constructor called with null field ptr*****");
 }
@@ -21,7 +22,7 @@ PHV_Container::Container_Content::Container_Content(int l, int w, const PhvInfo:
 //***********************************************************************************
 
 PHV_Container::PHV_Container(PHV_MAU_Group *g, PHV_Word w, int phv_n, std::string asm_string, Ingress_Egress gress)
-	: phv_mau_group_i(g), width_i(w), phv_number_i(phv_n), asm_string_i(asm_string), gress_i(gress)
+    : phv_mau_group_i(g), width_i(w), phv_number_i(phv_n), asm_string_i(asm_string), gress_i(gress)
 {
     bits_i = new char[(int) width_i];
     for (auto i=0; i < (int) width_i; i++)
@@ -34,14 +35,19 @@ PHV_Container::PHV_Container(PHV_MAU_Group *g, PHV_Word w, int phv_n, std::strin
 }//PHV_Container
 
 void
-PHV_Container::taint(int start, int width, const PhvInfo::Field *field, int range_start)
+PHV_Container::taint(int start, int width, const PhvInfo::Field *field, int range_start, int field_bit_lo)
 {
     BUG_CHECK((start+width <= (int) width_i),
 	"*****PHV_Container::taint()*****PHV-%s start=%d width=%d width_i=%d",
 	phv_number_i, start, width, (int) width_i);
-    BUG_CHECK(start+width <= ranges_i[range_start]+1,
-	"*****PHV_Container::taint()*****PHV-%s start=%d width=%d range_start=%d",
-	phv_number_i, start, width, range_start);
+    BUG_CHECK((range_start < (int) width_i),
+	"*****PHV_Container::taint()*****PHV-%s range_start=%d width=%d width_i=%d",
+	phv_number_i, start, width, (int) width_i);
+    if (ranges_i[range_start]) {
+        BUG_CHECK(start+width <= ranges_i[range_start]+1,
+            "*****PHV_Container::taint()*****PHV-%s start=%d width=%d range_start=%d ranges_i[range_start]=%d",
+            phv_number_i, start, width, range_start, ranges_i[range_start]);
+    }
     //
     taint_color_i += '1' - '0';
     if(taint_color_i < '0' || taint_color_i > '9')
@@ -85,7 +91,7 @@ PHV_Container::taint(int start, int width, const PhvInfo::Field *field, int rang
     //
     // track fields in this container
     //
-    fields_in_container_i.push_back(new Container_Content(start, width, field));
+    fields_in_container_i.push_back(new Container_Content(start, width, field, field_bit_lo));
     //
     // set gress for this container
     // container may be part of MAU group that is Ingress Or Egress

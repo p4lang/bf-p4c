@@ -34,9 +34,10 @@ class PHV_Container
         int lo_i;						// low of bit range in container for field
         int hi_i;						// high of bit range in container for field
         const PhvInfo::Field *field_i;
+        const int field_bit_lo_i;				// start of field bit in this container
       public:
         //
-        Container_Content(int l, int h, const PhvInfo::Field *f);
+        Container_Content(int l, int h, const PhvInfo::Field *f, int field_bit_lo = 0);
         //
         int lo() const			{ return lo_i; }
         void lo(int l)			{ lo_i = l; }
@@ -44,6 +45,7 @@ class PHV_Container
         void hi(int h)			{ hi_i = h; }
         int width() const		{ return hi_i - lo_i + 1; }
         const PhvInfo::Field *field()	{ return field_i; }
+        int field_bit_lo() const        { return field_bit_lo_i; }
         //
         void sanity_check_container(PHV_Container *, const std::string&);
     };
@@ -96,7 +98,7 @@ class PHV_Container
     }
     Container_status status()					{ return status_i; }
     char *bits()						{ return bits_i; }
-    void taint(int start, int width, const PhvInfo::Field *field, int range_start=0);
+    void taint(int start, int width, const PhvInfo::Field *field, int range_start=0, int field_bit_lo=0);
     int avail_bits()						{ return avail_bits_i; }
     std::map<int, int>& ranges()				{ return ranges_i; }
     std::vector<Container_Content *>& fields_in_container()	{ return fields_in_container_i; }

@@ -398,7 +398,7 @@ PHV_MAU_Group_Assignments::cluster_placement_containers(
                 for (auto i=0, j=0; i < (int) cl->cluster_vec().size(); i++)
                 {
                     auto field_width = cl->cluster_vec()[i]->phv_use_width();
-                    for (; j < req_containers && field_width > 0; j++)
+                    for (auto field_stride=0; j < req_containers && field_width > 0; j++, field_stride++)
                     {
                         int taint_bits = (int) g->width();
                         if(field_width < (int) g->width())
@@ -407,7 +407,7 @@ PHV_MAU_Group_Assignments::cluster_placement_containers(
                         }
                         field_width -= (int) g->width();
                         //
-                        g->phv_containers()[container_index]->taint(0, taint_bits, cl->cluster_vec()[i]);
+                        g->phv_containers()[container_index]->taint(0, taint_bits, cl->cluster_vec()[i], 0 /* range_start */, field_stride * (int) g->width() /* field_bit_lo */);
                         LOG3("\t\t" << g->phv_containers()[container_index]);
                         container_index++;
                     }
@@ -672,7 +672,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                             // start with rightmost vertical slice that accommodates this width
                             //
                             int start = cc->hi() + 1 - cl_w;
-                            cc->container()->taint(start, cl_w, cl->cluster_vec()[field++], cc->lo() /*container ranges*/);
+                            cc->container()->taint(start, cl_w, cl->cluster_vec()[field++], cc->lo() /* range_start */);
                             cc->container()->sanity_check_container_ranges("PHV_MAU_Group_Assignments::container_pack_cohabit..");
                             LOG3("\t\t" << *(cc->container()));
                         }

@@ -60,7 +60,7 @@ PHV_Bind::PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m)
     for (auto c : containers_i) {
         for (auto cc : const_cast<PHV_Container *>(c)->fields_in_container()) {
             PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(cc->field());
-            int field_bit = f1->phv_use_lo;
+            int field_bit = cc->field_bit_lo();
             int container_bit = cc->lo();
             int container_width = cc->width();
             PHV::Container *asm_container = phv_to_asm_map[c];

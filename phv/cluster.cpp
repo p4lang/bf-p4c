@@ -37,14 +37,10 @@ bool Cluster::preorder(const IR::Member* expression) {
     //
 
     LOG4(".....Member....." << expression->toString());
-    PhvInfo::Field::bitrange bits;
-    bits.lo = bits.hi = 0;
-    auto field = phv_i.field(expression->expr, &bits);
-
+    auto field = phv_i.field(expression->expr);
     LOG4(field);
-
-    set_field_range(field, bits);
     insert_cluster(dst_i, field);
+    set_field_range(*(expression->expr));
 
     return true;
 }
@@ -52,14 +48,10 @@ bool Cluster::preorder(const IR::Member* expression) {
 bool Cluster::preorder(const IR::Operation_Unary* expression) {
     LOG4(".....Unary Operation....." << expression->toString()
         << '(' << expression->expr->toString() << ')');
-    PhvInfo::Field::bitrange bits;
-    bits.lo = bits.hi = 0;
-    auto field = phv_i.field(expression->expr, &bits);
-
+    auto field = phv_i.field(expression->expr);
     LOG4(field);
-
-    set_field_range(field, bits);
     insert_cluster(dst_i, field);
+    set_field_range(*(expression->expr));
 
     return true;
 }
@@ -67,22 +59,14 @@ bool Cluster::preorder(const IR::Operation_Unary* expression) {
 bool Cluster::preorder(const IR::Operation_Binary* expression) {
     LOG4(".....Binary Operation....." << expression->toString()
         << '(' << expression->left->toString() << ',' << expression->right->toString() << ')');
-    PhvInfo::Field::bitrange left_bits;
-    left_bits.lo = left_bits.hi = 0;
-    auto left = phv_i.field(expression->left, &left_bits);
-
-    PhvInfo::Field::bitrange right_bits;
-    right_bits.lo = right_bits.hi = 0;
-    auto right = phv_i.field(expression->right, &right_bits);
-
+    auto left = phv_i.field(expression->left);
+    auto right = phv_i.field(expression->right);
     LOG4(left);
     LOG4(right);
-
-    set_field_range(left, left_bits);
-    set_field_range(right, right_bits);
-
     insert_cluster(dst_i, left);
     insert_cluster(dst_i, right);
+    set_field_range(*(expression->left));
+    set_field_range(*(expression->right));
 
     return true;
 }
@@ -93,43 +77,50 @@ bool Cluster::preorder(const IR::Operation_Ternary* expression) {
         << ',' << expression->e1->toString()
         << ',' << expression->e2->toString()
         << ')');
-    PhvInfo::Field::bitrange e0_bits;
-    e0_bits.lo = e0_bits.hi = 0;
-    auto e0 = phv_i.field(expression->e0, &e0_bits);
-
-    PhvInfo::Field::bitrange e1_bits;
-    e1_bits.lo = e1_bits.hi = 0;
-    auto e1 = phv_i.field(expression->e1, &e1_bits);
-
-    PhvInfo::Field::bitrange e2_bits;
-    e2_bits.lo = e2_bits.hi = 0;
-    auto e2 = phv_i.field(expression->e2, &e2_bits);
-
+    auto e0 = phv_i.field(expression->e0);
+    auto e1 = phv_i.field(expression->e1);
+    auto e2 = phv_i.field(expression->e2);
     LOG4(e0);
     LOG4(e1);
     LOG4(e2);
-
-    set_field_range(e0, e0_bits);
-    set_field_range(e1, e1_bits);
-    set_field_range(e2, e2_bits);
-
     insert_cluster(dst_i, e0);
     insert_cluster(dst_i, e1);
     insert_cluster(dst_i, e2);
+    set_field_range(*(expression->e0));
+    set_field_range(*(expression->e1));
+    set_field_range(*(expression->e2));
+
+    return true;
+}
+
+bool Cluster::preorder(const IR::HeaderRef *hr) {
+    LOG4(".....Header Ref.....");
+    //
+    // parser extract, deparser emit
+    // operand can be field or header
+    // when header, obtain all fields in header to form cluster
+    // do cluster formation once
+    //
+    auto head = phv_i.header(hr);
+    dst_i = phv_i.field(head->first);
+    if (!dst_map_i[dst_i]) {
+        dst_map_i[dst_i] = new std::set<const PhvInfo::Field *>;  // new std::set
+        lhs_unique_i.insert(dst_i);  // lhs_unique set insert field
+        LOG4("lhs_unique..insert[" << std::endl << &lhs_unique_i << "lhs_unique..insert]");
+        //
+        for (auto fid : Range(*phv_i.header(hr))) {
+            auto field = phv_i.field(fid);
+            LOG4(field);
+            insert_cluster(dst_i, field);
+            set_field_range(field);
+        }
+    }
 
     return true;
 }
 
 bool Cluster::preorder(const IR::Primitive* primitive) {
     LOG4(".....Primitive:Operation....." << primitive->name);
-    for (auto &operand : primitive->operands) {
-        PhvInfo::Field::bitrange bits;
-        bits.lo = bits.hi = 0;
-        auto field = phv_i.field(operand, &bits);
-        set_field_range(field, bits);
-
-        LOG4(field);
-    }
     dst_i = nullptr;
     if (!primitive->operands.empty()) {
         dst_i = phv_i.field(primitive->operands[0]);
@@ -147,7 +138,9 @@ bool Cluster::preorder(const IR::Primitive* primitive) {
             }
             for (auto &operand : primitive->operands) {
                 auto field = phv_i.field(operand);
+                LOG4(field);
                 insert_cluster(dst_i, field);
+                set_field_range(*operand);
             }
         }
     }
@@ -317,7 +310,10 @@ void Cluster::compute_fields_no_use_mau() {
 //
 //***********************************************************************************
 
-void Cluster::set_field_range(PhvInfo::Field *field, const PhvInfo::Field::bitrange& bits) {
+void Cluster::set_field_range(const IR::Expression& expression) {
+    PhvInfo::Field::bitrange bits;
+    bits.lo = bits.hi = 0;
+    auto field = phv_i.field(&expression, &bits);
     if (field) {
         field->phv_use_lo = std::min(field->phv_use_lo, bits.lo);
         if(field->metadata || field->pov) {
@@ -325,6 +321,13 @@ void Cluster::set_field_range(PhvInfo::Field *field, const PhvInfo::Field::bitra
         } else {
             field->phv_use_hi = field->phv_use_lo + field->size - 1;
         }
+    }
+}
+
+void Cluster::set_field_range(PhvInfo::Field *field) {
+    if (field) {
+        field->phv_use_lo = 0;
+        field->phv_use_hi = field->phv_use_lo + field->size - 1;
     }
 }
 

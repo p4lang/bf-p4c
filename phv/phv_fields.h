@@ -29,8 +29,8 @@ class PhvInfo : public Inspector {
         int             id;
         gress_t         gress;
         int             size;
-        int		phv_use_lo;	// lowest bit of field used through MAU pipeline
-        int		phv_use_hi;	// highest bit of field used through MAU pipeline
+        int		phv_use_lo=0;	// lowest bit of field used through MAU pipeline
+        int		phv_use_hi=0;	// highest bit of field used through MAU pipeline
         int             offset;  // offset of lsb from lsb (last) bit of containing header
         bool            referenced;
         bool            metadata;

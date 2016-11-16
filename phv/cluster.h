@@ -44,13 +44,15 @@ class Cluster : public Inspector {
     bool preorder(const IR::Operation_Unary*) override;
     bool preorder(const IR::Operation_Binary*) override;
     bool preorder(const IR::Operation_Ternary*) override;
+    bool preorder(const IR::HeaderRef*) override;
     bool preorder(const IR::Primitive*) override;
     bool preorder(const IR::Operation*) override;
     void postorder(const IR::Primitive*) override;
     void end_apply() override;
     //
-    void set_field_range(PhvInfo::Field *field, const PhvInfo::Field::bitrange& bits);
     void insert_cluster(const PhvInfo::Field *, const PhvInfo::Field *);
+    void set_field_range(const IR::Expression&); 
+    void set_field_range(PhvInfo::Field *field);
     //
     void sanity_check_field_range(const std::string&);
     void sanity_check_clusters(const std::string&, const PhvInfo::Field *);
