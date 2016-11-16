@@ -2130,14 +2130,14 @@ control process_port_vlan_mapping {
 
 
 
-counter ingress_bd_stats {
+counter ingress_bd_stats_count {
     type : packets_and_bytes;
     instance_count : 16384;
     min_width : 32;
 }
 
 action update_ingress_bd_stats() {
-    count(ingress_bd_stats, l2_metadata.bd_stats_idx);
+    count(ingress_bd_stats_count, l2_metadata.bd_stats_idx);
 }
 
 table ingress_bd_stats {
@@ -2573,7 +2573,7 @@ control process_validate_packet {
 
 
 
-counter egress_bd_stats {
+counter egress_bd_stats_count {
     type : packets_and_bytes;
     direct : egress_bd_stats;
     min_width : 32;
@@ -3405,14 +3405,14 @@ control process_ipv6_racl {
 
 
 
-counter acl_stats {
+counter acl_stats_count {
     type : packets_and_bytes;
     instance_count : 128;
     min_width : 16;
 }
 
 action acl_stats_update() {
-    count(acl_stats, acl_metadata.acl_stats_index);
+    count(acl_stats_count, acl_metadata.acl_stats_index);
 }
 
 table acl_stats {
