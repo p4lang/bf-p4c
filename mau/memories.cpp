@@ -1342,7 +1342,7 @@ void Memories::fill_out_color_mapram(action_fill &action, int row, unsigned mask
             continue;
         
         if ((1 << k) & color_mapram_mask) {
-            a_alloc.color_mapram.back().col.push_back(k);
+            a_alloc.color_mapram.back().col.push_back(k - LEFT_SIDE_COLUMNS);
         } 
     }
     action.group->cm_placed += __builtin_popcount(color_mapram_mask);
@@ -1601,6 +1601,10 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
         for (auto col : r.mapcol) {
             LOG1("Row and col are " << r.row << " " << col);
             fn((*mapuse)[r.row][col]);} }
+    for (auto &r : color_mapram) {
+         for (auto col : r.col)
+             fn((*mapuse)[r.row][col]);
+    }
 }
 
 void Memories::update(cstring name, const Memories::Use &alloc) {
