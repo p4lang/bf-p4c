@@ -144,7 +144,7 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
     // create PHV Group Assignments from PHV Requirements
     if(! phv_requirements_i.cluster_phv_map().size())
     {
-        WARNING("*****PHV_MAU_Group_Assignments called w/ 0 Requirements******");
+        LOG1("*****PHV_MAU_Group_Assignments called w/ 0 Requirements******");
     }
     // create MAU Groups
     //
@@ -928,7 +928,7 @@ void PHV_MAU_Group::sanity_check_container_packs(const std::string& msg)
                 {
                     if(cc->width() != w.first)
                     {
-                        WARNING("*****cluster_phv_mau.cpp:sanity_FAIL*****cluster_pack width differs .." << w.first << " vs " << cc << ' ' << msg);
+                        LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****cluster_pack width differs .." << w.first << " vs " << cc << ' ' << msg);
                     }
                     lo.insert(cc->lo());
                     hi.insert(cc->hi());
@@ -937,15 +937,15 @@ void PHV_MAU_Group::sanity_check_container_packs(const std::string& msg)
                 }
                 if(lo.size() != 1)
                 {
-                    WARNING("*****cluster_phv_mau.cpp:sanity_FAIL*****cluster_pack lo differs .." << '[' << w.first << "][" << n.first << ' ' << msg);
+                    LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****cluster_pack lo differs .." << '[' << w.first << "][" << n.first << ' ' << msg);
                 }
                 if(hi.size() != 1)
                 {
-                    WARNING("*****cluster_phv_mau.cpp:sanity_FAIL*****cluster_pack hi differs .." << '[' << w.first << "][" << n.first << ' ' << msg);
+                    LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****cluster_pack hi differs .." << '[' << w.first << "][" << n.first << ' ' << msg);
                 }
                 if(gress.size() != 1)
                 {
-                    WARNING("*****cluster_phv_mau.cpp:sanity_FAIL*****gress differs .." << n.second << msg);
+                    LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****gress differs .." << n.second << msg);
                 }
             }
         }
@@ -964,7 +964,7 @@ void PHV_MAU_Group::sanity_check_container_fields_gress(const std::string& msg)
             PHV_Container::Ingress_Egress f_gress = PHV_Container::gress(field);
             if(f_gress != c->gress())
             {
-                WARNING("*****cluster_phv_mau.cpp:sanity_FAIL*****gress differs .." << (char) f_gress  << " vs " << (char) c->gress() << "..." << msg << c);
+                LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****gress differs .." << (char) f_gress  << " vs " << (char) c->gress() << "..." << msg << c);
             }
         }
     }
@@ -1035,7 +1035,7 @@ void PHV_MAU_Group_Assignments::sanity_check_group_containers(const std::string&
                 PHV_MAU_Group *g = c->phv_mau_group();
                 if(g->aligned_container_slices()[w.first][n.first].count(cc_set) != 1)
                 {
-                    WARNING("*****cluster_phv_mau.cpp:sanity_FAIL*****.." << msg << g << " aligned_container_slices does not contain" << cc_set);
+                    LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****.." << msg << g << " aligned_container_slices does not contain" << cc_set);
                 }
             }
         }
@@ -1055,7 +1055,7 @@ void PHV_MAU_Group_Assignments::sanity_check_group_containers(const std::string&
                     {
                         if(aligned_container_slices_i[w.first][n.first].count(cc_set) != 1)
                         {
-                            WARNING("*****cluster_phv_mau.cpp:sanity_FAIL*****.." << msg << " composite aligned_container_slices does not contain" << cc_set << " from " << g);
+                            LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****.." << msg << " composite aligned_container_slices does not contain" << cc_set << " from " << g);
                         }
                     }
                 }
@@ -1081,7 +1081,7 @@ void PHV_MAU_Group_Assignments::sanity_check_T_PHV_collections(const std::string
         }
         if(gress_set.size() != 1)
         {
-            WARNING("*****cluster_phv_mau.cpp:sanity_FAIL***** T_PHV Collection.." << coll.second << "..." << msg);
+            LOG1("*****cluster_phv_mau.cpp:sanity_FAIL***** T_PHV Collection.." << coll.second << "..." << msg);
         }
     }
 }

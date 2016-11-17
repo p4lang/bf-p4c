@@ -143,7 +143,7 @@ bool Cluster::preorder(const IR::Primitive* primitive)
 bool Cluster::preorder(const IR::Operation* operation)
 {
     // should not reach here
-    WARNING("*****cluster.cpp: sanity_FAIL Operation*****" << operation->toString());
+    LOG1("*****cluster.cpp: sanity_FAIL Operation*****" << operation->toString());
 
     return true;
 }
@@ -372,7 +372,7 @@ void Cluster::sanity_check_field_range(const std::string& msg)
         int range = field.phv_use_hi - field.phv_use_lo + 1;
         if(range > field.size)
         {
-            WARNING("*****cluster.cpp:sanity_FAIL*****field range > size .." << msg << &field);
+            LOG1("*****cluster.cpp:sanity_FAIL*****field range > size .." << msg << &field);
         }
     }
 }
@@ -384,14 +384,14 @@ void Cluster::sanity_check_clusters(const std::string& msg, const PhvInfo::Field
         // b --> (b,d,e); count b=1 in (b,d,e)
         if(dst_map_i[lhs]->count(lhs) != 1)
         {
-            WARNING("*****cluster.cpp:sanity_FAIL*****cluster member count > 1.." << msg << lhs << "-->" << *(dst_map_i[lhs]));
+            LOG1("*****cluster.cpp:sanity_FAIL*****cluster member count > 1.." << msg << lhs << "-->" << *(dst_map_i[lhs]));
         }
         // forall x elem (b,d,e), x-->(b,d,e)
         for(auto rhs: *(dst_map_i[lhs]))
         {
             if(dst_map_i[rhs] != dst_map_i[lhs])
             {
-                WARNING("*****cluster.cpp:sanity_FAIL*****cluster member pointers inconsistent.." << msg << lhs << "-->" << rhs);
+                LOG1("*****cluster.cpp:sanity_FAIL*****cluster member pointers inconsistent.." << msg << lhs << "-->" << rhs);
             }
         }
     }
@@ -418,7 +418,7 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg)
                     set_intersection(s1.begin(),s1.end(),s2.begin(),s2.end(), std::back_inserter(s3));
                     if(s3.size())
                     {
-                        WARNING("*****cluster.cpp:sanity_FAIL*****uniqueness.." << msg
+                        LOG1("*****cluster.cpp:sanity_FAIL*****uniqueness.." << msg
 				<< entry.first << s1 << "..^.." << entry_2.first << s2 << '=' << s3);
                         LOG4("lhs[" << std::endl << &s1 << "lhs]");
                         LOG4("lhs_2[" << std::endl << &s2 << "lhs_2]");
@@ -446,7 +446,7 @@ void Cluster::sanity_check_fields_use(const std::string& msg,
     set_difference(s1.begin(),s1.end(),all.begin(),all.end(), std::back_inserter(sx));
     if(sx.size())
     {
-        WARNING("*****cluster.cpp:sanity_FAIL*****fields_use cluster+all_minus_cluster != all .." << msg << sx);
+        LOG1("*****cluster.cpp:sanity_FAIL*****fields_use cluster+all_minus_cluster != all .." << msg << sx);
     }
     //
     // cluster intersection all_minus_cluster = null
@@ -455,7 +455,7 @@ void Cluster::sanity_check_fields_use(const std::string& msg,
     set_intersection(cluster.begin(),cluster.end(),all_minus_cluster.begin(),all_minus_cluster.end(), std::back_inserter(sx));
     if(sx.size())
     {
-        WARNING("*****cluster.cpp:sanity_FAIL*****fields_use.. cluster intersection all_minus_cluster != 0" << msg << sx);
+        LOG1("*****cluster.cpp:sanity_FAIL*****fields_use.. cluster intersection all_minus_cluster != 0" << msg << sx);
     }
     //
     // all = cluster + pov + no_mau + pov_mau
@@ -473,7 +473,7 @@ void Cluster::sanity_check_fields_use(const std::string& msg,
     set_difference(s1.begin(),s1.end(),all.begin(),all.end(), std::back_inserter(sx));
     if(sx.size())
     {
-        WARNING("*****cluster.cpp:sanity_FAIL*****fields_use all != cluster+pov+no_mau+pov_mau .." << msg << sx);
+        LOG1("*****cluster.cpp:sanity_FAIL*****fields_use all != cluster+pov+no_mau+pov_mau .." << msg << sx);
     }
 }
 
