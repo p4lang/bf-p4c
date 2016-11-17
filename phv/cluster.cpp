@@ -37,10 +37,22 @@ bool Cluster::preorder(const IR::Member* expression) {
     //
 
     LOG4(".....Member....." << expression->toString());
-    auto field = phv_i.field(expression->expr);
-    LOG4(field);
-    insert_cluster(dst_i, field);
-    set_field_range(*(expression->expr));
+    auto field = phv_i.field(expression);
+    if (field) {
+        if (!dst_map_i[field]) {
+            dst_map_i[field] = new std::set<const PhvInfo::Field *>;  // new std::set
+            lhs_unique_i.insert(field);  // lhs_unique set insert field
+            LOG4("lhs_unique..insert[" << std::endl << &lhs_unique_i << "lhs_unique..insert]");
+            //
+            // x must be allocated to PHV
+            // e.g., reads { x :
+            // dst_map[x] points to singleton cluster using MAU
+            //
+            LOG4(field);
+            insert_cluster(field, field);
+            set_field_range(field);
+        }
+    }
 
     return true;
 }
@@ -98,22 +110,12 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
     //
     // parser extract, deparser emit
     // operand can be field or header
-    // when header, obtain all fields in header to form cluster
-    // do cluster formation once
+    // when header, set_field_range all fields in header
     //
-    auto head = phv_i.header(hr);
-    dst_i = phv_i.field(head->first);
-    if (!dst_map_i[dst_i]) {
-        dst_map_i[dst_i] = new std::set<const PhvInfo::Field *>;  // new std::set
-        lhs_unique_i.insert(dst_i);  // lhs_unique set insert field
-        LOG4("lhs_unique..insert[" << std::endl << &lhs_unique_i << "lhs_unique..insert]");
-        //
-        for (auto fid : Range(*phv_i.header(hr))) {
-            auto field = phv_i.field(fid);
-            LOG4(field);
-            insert_cluster(dst_i, field);
-            set_field_range(field);
-        }
+    for (auto fid : Range(*phv_i.header(hr))) {
+        auto field = phv_i.field(fid);
+        LOG4(field);
+        set_field_range(field);
     }
 
     return true;
@@ -128,13 +130,13 @@ bool Cluster::preorder(const IR::Primitive* primitive) {
             if (!dst_map_i[dst_i]) {
                 dst_map_i[dst_i] = new std::set<const PhvInfo::Field *>;  // new std::set
                 lhs_unique_i.insert(dst_i);  // lhs_unique set insert field
+                LOG4("lhs_unique..insert[" << std::endl << &lhs_unique_i << "lhs_unique..insert]");
                  //
                  // x must be allocated to PHV
                  // e.g., action a: - set x, 3
                  // dst_map[x] points to singleton cluster using MAU
                  //
                 insert_cluster(dst_i, dst_i);
-                LOG4("lhs_unique..insert[" << std::endl << &lhs_unique_i << "lhs_unique..insert]");
             }
             for (auto &operand : primitive->operands) {
                 auto field = phv_i.field(operand);

@@ -106,8 +106,8 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
                     LOG2("result:" << iter->name << iter->alloc[1]); }}) : nullptr });
     } else {
         phv_alloc = new PassManager({
-            new MauPhvConstraints(phv),
-            new PHV::TrivialAlloc(phv, defuse.conflicts()),
+            //new MauPhvConstraints(phv),
+            //new PHV::TrivialAlloc(phv, defuse.conflicts()),
             //
             new VisitFunctor([&phv, &phv_mau_group_assignments, &phv_field_bind]() {
                // phv_mau_group_assignments = new PHV_MAU_Group_Assignments(*cluster_phv_requirements);

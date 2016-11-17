@@ -144,6 +144,7 @@ class PHV_MAU_Group_Assignments
     std::map<int, std::map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>> T_PHV_i;
 								// all TPHV collections
 								// T_PHV_i[collection][width] = vector of containers
+    std::list<PHV_MAU_Group *> T_PHV_groups_i;  // used for T_PHV placement before packing
     //
     std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>> aligned_container_slices_i;
 							// for all PHV_MAU_Groups
@@ -168,6 +169,9 @@ class PHV_MAU_Group_Assignments
     void cluster_placement_containers(
 	std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map,
 	std::list<Cluster_PHV *>& clusters_to_be_assigned);
+    void cluster_placement_containers(
+        std::list<PHV_MAU_Group *>& mau_groups_to_be_filled,
+        std::list<Cluster_PHV *>& clusters_to_be_assigned);
     void create_aligned_container_slices();
     void container_pack_cohabit(
 	std::list<Cluster_PHV *>& clusters_to_be_assigned,

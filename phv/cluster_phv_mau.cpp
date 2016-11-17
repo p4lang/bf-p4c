@@ -201,10 +201,9 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
         std::stringstream ss;
         ss << phv_number;
         std::string asm_encoded = "T" + asm_prefix_i[x.first] + ss.str();
+        std::list<PHV_MAU_Group *> t_phv_groups;
         //
-        std::vector<PHV_MAU_Group *> t_phv_groups;
-        //
-        // place 4(32b,8b), 6(16b) countainers per "tphv group" corresponding to T_PHV Collections
+        // place 4(32b,8b), 6(16b) containers per "tphv group" corresponding to T_PHV Collections
         // any TPHV collection can be Ingress, Egress but not both
         // initialize 1/2 to Ingress, the other 1/2 to Egress
         //
@@ -213,19 +212,21 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
             PHV_MAU_Group *g = new PHV_MAU_Group(x.first, i, phv_number, asm_encoded, PHV_Container::Ingress_Egress::Ingress_Only,
 		((int)PHV_Container::Containers::MAX)/4);
             t_phv_groups.push_back(g);
+            T_PHV_groups_i.push_front(g);
         }
         for (int i=x.second+1; i <= x.second*2; i++)
         {
             PHV_MAU_Group *g = new PHV_MAU_Group(x.first, i, phv_number, asm_encoded, PHV_Container::Ingress_Egress::Egress_Only,
 		((int)PHV_Container::Containers::MAX)/4);
             t_phv_groups.push_back(g);
+            T_PHV_groups_i.push_front(g);
         }
         // collections T_PHV_i
         int collection=0;
         int i=0;
-        for (auto g: t_phv_groups)
+        for (auto &g : t_phv_groups)
         {
-            for (auto c: g->phv_containers())
+            for (auto &c : g->phv_containers())
             {
                 if(i++ % x.second == 0)
                 {
@@ -258,26 +259,33 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
     container_cohabit_summary();
     //
     // T_PHV fields allocation
-    // no need for initial placement as in Clusters & PHV placement constraints
-    // directly pack in containers conforming to T_PHV Collection constraints
+    // initial placement as in Clusters & PHV placement constraints
+    // later pack in containers conforming to T_PHV Collection constraints
     // T_PHV_container_slices populated before container_pack_cohabit()
     //
-    for (auto coll: T_PHV_i)
+    LOG3("..........T_PHV fields to be assigned (" << phv_requirements_i.t_phv_fields().size() << ").........." << std::endl);
+    std::list<Cluster_PHV *> t_phv_fields(phv_requirements_i.t_phv_fields().begin(), phv_requirements_i.t_phv_fields().end());
+    cluster_placement_containers(T_PHV_groups_i, t_phv_fields);
+    //
+    for (auto &coll : T_PHV_i)
     {
-        for (auto m: coll.second)
+        for (auto &m : coll.second)
         {
             std::set<PHV_MAU_Group::Container_Content *> *set_cc = new std::set<PHV_MAU_Group::Container_Content *>;
-            for (auto c: m.second)
+            for (auto &c : m.second)
             {
-                set_cc->insert(new PHV_MAU_Group::Container_Content(0, (int) c->width(), c));
+                if (c->status() == PHV_Container::Container_status::EMPTY) { 
+                    set_cc->insert(new PHV_MAU_Group::Container_Content(0, (int) c->width(), c));
+                }
+                // ?? gather PARTIAL containers, set appropriate width
             }
-            T_PHV_container_slices_i[(int) m.first][set_cc->size()].insert(*set_cc); 
+            if (set_cc->size()) {
+                T_PHV_container_slices_i[(int) m.first][set_cc->size()].insert(*set_cc); 
+            }
         }
     }
     LOG3("----------sorted T_PHV Container Packs avail ----------");
     LOG3(T_PHV_container_slices_i);
-    LOG3("..........T_PHV fields to be assigned (" << phv_requirements_i.t_phv_fields().size() << ").........." << std::endl);
-    std::list<Cluster_PHV *> t_phv_fields(phv_requirements_i.t_phv_fields().begin(), phv_requirements_i.t_phv_fields().end());
     container_pack_cohabit(t_phv_fields, T_PHV_container_slices_i);
     //
     sanity_check_group_containers("PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments()..");
@@ -308,9 +316,8 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
 
 void
 PHV_MAU_Group_Assignments::cluster_placement_containers(
-	std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map,
-	std::list<Cluster_PHV *>& clusters_to_be_assigned)
-{
+    std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map,
+    std::list<Cluster_PHV *>& clusters_to_be_assigned) {
     //
     // 1. sorted clusters requirement decreasing, sorted mau groups width decreasing
     //
@@ -349,6 +356,31 @@ PHV_MAU_Group_Assignments::cluster_placement_containers(
     // assign clusters_to_be_assigned to mau_groups_to_be_filled
     // 2. each cluster field in separate containers
     //    addresses single-write constraint, surround effects within container, alignment issues (start @ 0)
+    //
+    cluster_placement_containers(mau_groups_to_be_filled, clusters_to_be_assigned);
+    //
+}  // cluster_placement_containers
+
+void
+PHV_MAU_Group_Assignments::cluster_placement_containers(
+    std::list<PHV_MAU_Group *>& mau_groups_to_be_filled,
+    std::list<Cluster_PHV *>& clusters_to_be_assigned)  {
+    //
+    // sort PHV_MAU_Groups in reverse order 32b, 16b, 8b
+    //
+    mau_groups_to_be_filled.sort([](PHV_MAU_Group *l, PHV_MAU_Group *r) {
+        return (int) l->width() > (int) r->width();
+    });
+    //
+    // sort clusters number decreasing, width decreasing
+    //
+    clusters_to_be_assigned.sort([](Cluster_PHV *l, Cluster_PHV *r) {
+        if(l->num_containers() == r->num_containers())
+        {
+            return l->width() > r->width();
+        }
+        return l->num_containers() > r->num_containers();
+    });
     //
     LOG3("..........Initial Container Placements .........." << std::endl);
     for (auto g: mau_groups_to_be_filled)
@@ -394,7 +426,7 @@ PHV_MAU_Group_Assignments::cluster_placement_containers(
                 //
                 // for each container assigned to cluster, taint bits that are filled
                 //
-                int container_index = (int) PHV_Container::Containers::MAX - g->avail_containers();
+                int container_index = g->phv_containers().size() - g->avail_containers();
                 for (auto i=0, j=0; i < (int) cl->cluster_vec().size(); i++)
                 {
                     auto field_width = cl->cluster_vec()[i]->phv_use_width();
@@ -428,7 +460,7 @@ PHV_MAU_Group_Assignments::cluster_placement_containers(
     //
     // all mau groups exhausted
     //
-}//cluster_placement_containers
+}
 
 
 //***********************************************************************************
