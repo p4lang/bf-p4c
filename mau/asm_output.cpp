@@ -320,6 +320,28 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
         else
             out << indent << "home_row: " << home_row[0] << std::endl;
     }
+    
+    if (!mem.color_mapram.empty()) {
+        out << indent++ << "color_maprams:" << std::endl;
+        vector<int> color_mapram_row, color_mapram_bus;
+        for (auto &r : mem.color_mapram) {
+            color_mapram_row.push_back(r.row);
+            color_mapram_bus.push_back(r.bus);
+        }
+        if (color_mapram_row.size() > 1) {
+            out << indent << "row: " << color_mapram_row << std::endl;
+            out << indent << "bus: " << color_mapram_bus << std::endl;
+            out << indent << "column:" << std::endl;
+            for (auto &r : mem.color_mapram)
+                out << indent << "- " << memory_vector(r.col, mem.type, true) << std::endl;
+        } else {
+            out << indent << "row: " << color_mapram_row[0] << std::endl;
+            out << indent << "bus: " << color_mapram_bus[0] << std::endl;
+            out << indent << "column: " << memory_vector(mem.color_mapram[0].col, mem.type, true)
+                << std::endl;
+        }
+        indent--;
+    }
 }
 
 class MauAsmOutput::EmitAction : public Inspector {
