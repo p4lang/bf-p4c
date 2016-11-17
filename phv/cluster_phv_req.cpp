@@ -23,7 +23,7 @@ Cluster_PHV_Requirements::Cluster_PHV_Requirements(Cluster &c)
     // create PHV Requirements from clusters
     if(! cluster_i.dst_map().size())
     {
-        WARNING("*****Cluster_PHV_Requirements called w/ 0 clusters******");
+        LOG1("*****Cluster_PHV_Requirements called w/ 0 clusters******");
     }
     //
     for (auto p: Values(cluster_i.dst_map()))
@@ -142,7 +142,7 @@ Cluster_PHV::Cluster_PHV(std::set<const PhvInfo::Field *> *p) : cluster_vec_i(p-
 {
     if(!p)
     {
-        WARNING("*****Cluster_PHV called w/ nullptr cluster_set******");
+        LOG1("*****Cluster_PHV called w/ nullptr cluster_set******");
     }
     //
     // set gress for this cluster
@@ -228,7 +228,7 @@ Cluster_PHV::num_containers(std::vector<const PhvInfo::Field *>& cluster_vec, PH
     }
     if(num_containers > (int) PHV_Container::Containers::MAX)
     {
-        WARNING("*****Cluster_PHV::get_num_containers: num_containers = " << num_containers << " > " << (int) (PHV_Container::Containers::MAX) << " ******");
+        LOG1("*****Cluster_PHV::get_num_containers: num_containers = " << num_containers << " > " << (int) (PHV_Container::Containers::MAX) << " ******");
     }
 
     return num_containers;
