@@ -212,8 +212,7 @@ struct Memories {
     void action_oflow_only(action_fill &action, action_fill &oflow,
                            action_fill &best_fit_action, action_fill &next_action,
                            action_fill &curr_oflow, int RAMs_available, int order[3]);
-    void color_mapram_candidates(action_fill &suppl, action_fill &oflow,
-                                 action_fill &curr_oflow, unsigned mask);
+    void color_mapram_candidates(action_fill &suppl, action_fill &oflow, unsigned mask);
     void fill_out_color_mapram(action_fill &action, int row, unsigned mask, bool is_oflow);
     bool fill_out_action_row(action_fill &action, int row, int side, unsigned mask,
                              bool is_oflow, bool is_twoport);
