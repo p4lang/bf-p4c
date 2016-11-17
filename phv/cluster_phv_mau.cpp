@@ -276,8 +276,13 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
             {
                 if (c->status() == PHV_Container::Container_status::EMPTY) { 
                     set_cc->insert(new PHV_MAU_Group::Container_Content(0, (int) c->width(), c));
+                } else if (c->status() == PHV_Container::Container_status::PARTIAL) {
+                    int start = c->ranges().begin()->first;
+                    int partial_width = (int) c->width() - start;
+                    std::set<PHV_MAU_Group::Container_Content *> *set_cc_partial = new std::set<PHV_MAU_Group::Container_Content *>;
+                    set_cc_partial->insert(new PHV_MAU_Group::Container_Content(start, partial_width, c));
+                    T_PHV_container_slices_i[partial_width][1].insert(*set_cc_partial); 
                 }
-                // ?? gather PARTIAL containers, set appropriate width
             }
             if (set_cc->size()) {
                 T_PHV_container_slices_i[(int) m.first][set_cc->size()].insert(*set_cc); 
@@ -396,6 +401,12 @@ PHV_MAU_Group_Assignments::cluster_placement_containers(
                 // gress mismatch
                 // skip cluster for this MAU group
                 //
+                continue;
+            }
+            //
+            // try to exact match cl width to g width  -- parser placement contraints
+            //
+            if ((int) cl->width() * 2 <= (int) g->width()) {
                 continue;
             }
             //
