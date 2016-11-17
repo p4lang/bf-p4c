@@ -112,7 +112,7 @@ void PHV_Container::Container_Content::sanity_check_container(PHV_Container *con
     {
         if(field_i->phv_use_hi - field_i->phv_use_lo + 1 != width())
         {
-            WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " field width does not match container use " << field_i->phv_use_lo << ".." << field_i->phv_use_hi << " vs " << lo_i << ".." << hi_i << ".." << field_i << *container);
+            LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " field width does not match container use " << field_i->phv_use_lo << ".." << field_i->phv_use_hi << " vs " << lo_i << ".." << hi_i << ".." << field_i << *container);
         }
     }
 }
@@ -140,18 +140,18 @@ void PHV_Container::sanity_check_container_avail(int lo, int hi, const std::stri
     {
         if(taint == false && bits_i[i] != '0')
         {
-            WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be '0' " << i << ".." << lo << ".." << hi << " vs " << *this);
+            LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be '0' " << i << ".." << lo << ".." << hi << " vs " << *this);
         }
         if(taint == true && bits_i[i] == '0')
         {
-            WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be tainted " << i << ".." << lo << ".." << hi << " vs " << *this);
+            LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be tainted " << i << ".." << lo << ".." << hi << " vs " << *this);
         }
     }
     // check available bits in container
     //
     if(taint == false && avail_bits_i < hi - lo)
     {
-        WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container avail bits " << lo << ".." << hi << " vs " << avail_bits_i);
+        LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container avail bits " << lo << ".." << hi << " vs " << avail_bits_i);
     }
     if(taint == false && avail_bits_i == hi - lo)
     {   // check all other bits are not 0
@@ -159,14 +159,14 @@ void PHV_Container::sanity_check_container_avail(int lo, int hi, const std::stri
         {
             if(bits_i[i] == '0')
             {
-                WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be tainted " << i << ".." << lo << ".." << hi << " vs " << *this);
+                LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be tainted " << i << ".." << lo << ".." << hi << " vs " << *this);
             }
         }
         for (auto i=hi+1; i < (int) width_i; i++)
         {
             if(bits_i[i] == '0')
             {
-                WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be tainted " << i << ".." << lo << ".." << hi << " vs " << *this);
+                LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be tainted " << i << ".." << lo << ".." << hi << " vs " << *this);
             }
         }
     }
@@ -174,13 +174,13 @@ void PHV_Container::sanity_check_container_avail(int lo, int hi, const std::stri
     //
     if(taint == false && status_i != Container_status::PARTIAL)
     {
-        WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container status " << (char) status_i << *this);
+        LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container status " << (char) status_i << *this);
     }
     // check range map in container
     //
     if(taint == false && ranges_i[lo] != hi)
     {
-        WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container ranges " << ranges_i << *this);
+        LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container ranges " << ranges_i << *this);
     } 
 }//sanity_check_container_avail
 
