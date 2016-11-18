@@ -190,6 +190,10 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
             //
             PHV_MAU_Group *g = new PHV_MAU_Group(x.first, i, phv_number, asm_encoded, gress);
             PHV_MAU_i[g->width()].push_back(g);
+            //
+            // fill PHV_groups_i sorted queue of MAU containers ordered 32b, 16b, 8b
+            //
+            PHV_groups_i.push_front(g);
         }
     }
     //
@@ -206,6 +210,8 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
         // place 4(32b,8b), 6(16b) containers per "tphv group" corresponding to T_PHV Collections
         // any TPHV collection can be Ingress, Egress but not both
         // initialize 1/2 to Ingress, the other 1/2 to Egress
+        //
+        // fill T_PHV_groups_i sorted queue of T_PHV containers in reverse order 32b, 16b, 8b
         //
         for (int i=1; i <= x.second; i++)
         {
@@ -241,7 +247,15 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
     // cluster placement in containers conforming to MAU group constraints
     //
     std::list<Cluster_PHV *> clusters_to_be_assigned;
-    cluster_placement_containers(phv_requirements_i.cluster_phv_map(), clusters_to_be_assigned);
+    for (auto &it : phv_requirements_i.cluster_phv_map()) {
+        for (auto &it_2 : it.second) {
+            for(auto &cl: it_2.second) {
+                clusters_to_be_assigned.push_front(cl);
+            }
+        }
+    }
+    LOG3("..........PHV clusters (" << clusters_to_be_assigned.size() << ").........." << std::endl);
+    cluster_placement(clusters_to_be_assigned, PHV_groups_i);
     //
     // pack remaining clusters to partially filled containers
     // slice containers to form groups that can accommodate larger number for given width in <n:w>
@@ -252,7 +266,7 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
     //
     // POV fields packing in PHV containers
     //
-    LOG3("..........POV fields to be assigned (" << phv_requirements_i.pov_fields().size() << ").........." << std::endl);
+    LOG3("..........POV fields (" << phv_requirements_i.pov_fields().size() << ").........." << std::endl);
     std::list<Cluster_PHV *> pov_fields(phv_requirements_i.pov_fields().begin(), phv_requirements_i.pov_fields().end());
     container_pack_cohabit(pov_fields, aligned_container_slices_i);
     //
@@ -263,9 +277,9 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
     // later pack in containers conforming to T_PHV Collection constraints
     // T_PHV_container_slices populated before container_pack_cohabit()
     //
-    LOG3("..........T_PHV fields to be assigned (" << phv_requirements_i.t_phv_fields().size() << ").........." << std::endl);
+    LOG3("..........T_PHV fields (" << phv_requirements_i.t_phv_fields().size() << ").........." << std::endl);
     std::list<Cluster_PHV *> t_phv_fields(phv_requirements_i.t_phv_fields().begin(), phv_requirements_i.t_phv_fields().end());
-    cluster_placement_containers(T_PHV_groups_i, t_phv_fields);
+    cluster_placement(t_phv_fields, T_PHV_groups_i);
     //
     for (auto &coll : T_PHV_i)
     {
@@ -301,7 +315,7 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
 
 //***********************************************************************************
 //
-// PHV_MAU_Group_Assignments::cluster_placement_containers
+// PHV_MAU_Group_Assignments::cluster_placement
 // 
 // 1. sorted clusters requirement decreasing, sorted mau groups width decreasing
 // 
@@ -320,62 +334,15 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &p
 //***********************************************************************************
 
 void
-PHV_MAU_Group_Assignments::cluster_placement_containers(
-    std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& cluster_phv_map,
-    std::list<Cluster_PHV *>& clusters_to_be_assigned) {
+PHV_MAU_Group_Assignments::cluster_placement(
+    std::list<Cluster_PHV *>& clusters_to_be_assigned,
+    std::list<PHV_MAU_Group *>& phv_groups_to_be_filled)  {
     //
-    // 1. sorted clusters requirement decreasing, sorted mau groups width decreasing
+    // 1. sorted clusters requirement <number, width> decreasing
     //
-    // traverse in reverse cluster_phv_map requirements for [32], [16], [8]
-    // populate sorted queue of clusters
-    //
-    for (auto rit=cluster_phv_map.rbegin(); rit!=cluster_phv_map.rend(); ++rit)
-    {
-        for (auto rit_2=rit->second.rbegin(); rit_2!=rit->second.rend(); ++rit_2)
-        {
-            for(auto cl: rit_2->second)
-            {
-                clusters_to_be_assigned.push_back(cl);
-            }
-        }
-    }
-    LOG3("..........clusters to be assigned (" << clusters_to_be_assigned.size() << ").........." << std::endl);
-    LOG3(clusters_to_be_assigned);
-    //
-    // fill PHV_MAU_Groups in reverse order 32b, 16b, 8b
-    // map cluster_phv_map in reverse order 32 --> 16 --> 8 to corresponding PHV_MAU_Groups
-    // populate sorted queue of mau containers
-    //
-    std::list<PHV_MAU_Group *> mau_groups_to_be_filled;
-    for (auto rit=PHV_MAU_i.rbegin(); rit!=PHV_MAU_i.rend(); ++rit)
-    {
-        // groups within this word size
-        for(auto g: rit->second)
-        {
-            mau_groups_to_be_filled.push_back(g);
-        }
-    }
-    LOG3("..........mau groups to be filled (" << mau_groups_to_be_filled.size() << ").........." << std::endl);
-    LOG3(mau_groups_to_be_filled);
-    //
-    // assign clusters_to_be_assigned to mau_groups_to_be_filled
-    // 2. each cluster field in separate containers
+    // 2. assign clusters_to_be_assigned to phv_groups_to_be_filled
+    //    each cluster field in separate containers
     //    addresses single-write constraint, surround effects within container, alignment issues (start @ 0)
-    //
-    cluster_placement_containers(mau_groups_to_be_filled, clusters_to_be_assigned);
-    //
-}  // cluster_placement_containers
-
-void
-PHV_MAU_Group_Assignments::cluster_placement_containers(
-    std::list<PHV_MAU_Group *>& mau_groups_to_be_filled,
-    std::list<Cluster_PHV *>& clusters_to_be_assigned)  {
-    //
-    // sort PHV_MAU_Groups in reverse order 32b, 16b, 8b
-    //
-    mau_groups_to_be_filled.sort([](PHV_MAU_Group *l, PHV_MAU_Group *r) {
-        return (int) l->width() > (int) r->width();
-    });
     //
     // sort clusters number decreasing, width decreasing
     //
@@ -387,11 +354,28 @@ PHV_MAU_Group_Assignments::cluster_placement_containers(
         return l->num_containers() > r->num_containers();
     });
     //
+    LOG3("..........Clusters to be assigned (" << clusters_to_be_assigned.size() << ").........." << std::endl);
+    LOG3(clusters_to_be_assigned);
+    //
+    // sort PHV_Groups in reverse order 32b, 16b, 8b
+    // for given width, I/E tagged MAU groups first
+    //
+    phv_groups_to_be_filled.sort([](PHV_MAU_Group *l, PHV_MAU_Group *r) {
+        if ((int) l->width() == (int) r->width()) {
+            return l->gress() == PHV_Container::Ingress_Egress::Ingress_Only
+                || l->gress() == PHV_Container::Ingress_Egress::Egress_Only;
+        }
+        return (int) l->width() > (int) r->width();
+    });
+    //
+    LOG3(".......... PHV_Groups to be filled (" << phv_groups_to_be_filled.size() << ").........." << std::endl);
+    LOG3(phv_groups_to_be_filled);
+    //
     LOG3("..........Initial Container Placements .........." << std::endl);
-    for (auto g: mau_groups_to_be_filled)
+    for (auto &g: phv_groups_to_be_filled)
     {
         std::list<Cluster_PHV *> clusters_remove;
-        for (auto cl: clusters_to_be_assigned)
+        for (auto &cl: clusters_to_be_assigned)
         {
             //
             // 3a.honor MAU group In/Egress only constraints
@@ -471,7 +455,7 @@ PHV_MAU_Group_Assignments::cluster_placement_containers(
     //
     // all mau groups exhausted
     //
-}
+}  // cluster_placement
 
 
 //***********************************************************************************
