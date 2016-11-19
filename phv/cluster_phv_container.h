@@ -103,6 +103,9 @@ class PHV_Container
     std::map<int, int>& ranges()				{ return ranges_i; }
     std::vector<Container_Content *>& fields_in_container()	{ return fields_in_container_i; }
     //
+    void create_ranges();
+    void clean_ranges();
+    //
     void sanity_check_container(const std::string& msg);
     void sanity_check_container_avail(int lo, int hi, const std::string&);
     void sanity_check_container_ranges(const std::string&);

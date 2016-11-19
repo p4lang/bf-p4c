@@ -35,8 +35,8 @@ PHV_Container::PHV_Container(PHV_MAU_Group *g, PHV_Word w, int phv_n, std::strin
 }//PHV_Container
 
 void
-PHV_Container::taint(int start, int width, const PhvInfo::Field *field, int range_start, int field_bit_lo)
-{
+PHV_Container::taint(int start, int width, const PhvInfo::Field *field, int range_start, int field_bit_lo) {
+    //
     BUG_CHECK((start+width <= (int) width_i),
 	"*****PHV_Container::taint()*****PHV-%s start=%d width=%d width_i=%d",
 	phv_number_i, start, width, (int) width_i);
@@ -100,6 +100,55 @@ PHV_Container::taint(int start, int width, const PhvInfo::Field *field, int rang
     // transition behavior for such sharing unclear
     //
     gress_i = gress(field);
+}
+
+void
+PHV_Container::create_ranges() {
+    ranges_i.clear();
+    if (status_i == PHV_Container::Container_status::EMPTY) {
+        ranges_i[0] = (int) width_i - 1;
+    } else {
+        if (status_i == PHV_Container::Container_status::PARTIAL) {
+            for (auto i=0; i < (int) width_i ; i++) {
+                if (bits_i[i] == '0') {
+                    for (auto j=i; j < (int) width_i ; j++) {
+                        if (bits_i[j] != '0') {
+                            ranges_i[i] = j - 1;
+                            i = j - 1;
+                            break;
+                        }
+                        if (j == (int) width_i - 1) {
+                            ranges_i[i] = j;
+                            i = j;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    const std::string msg = "..PHV_Container::create_ranges";
+    sanity_check_container_ranges(msg);
+}
+
+void
+PHV_Container::clean_ranges() {
+    //
+    // ranges_i carries some spurious noise despite being cleared earlier
+    // e.g., for full container (0..0), packed container filled area (6..0), (7..0) etc.
+    // residual noise is taken care of here
+    //
+    if (status_i == Container_status::FULL) {
+        ranges_i.clear();
+    }
+    std::set<int> clear_these;
+    for (auto r : ranges_i) {
+        if (r.second < r.first || (r.second == r.first &&  bits_i[r.first] != '0')) {
+            clear_these.insert(r.first);
+        }
+    }
+    for (auto r : clear_these) {
+        ranges_i.erase(r);
+    }
 }
 
 
@@ -200,25 +249,6 @@ void PHV_Container::sanity_check_container_ranges(const std::string& msg) {
     //
     const std::string msg_1 = msg + "..PHV_Container::sanity_check_container_ranges";
     //
-    // ranges_i carries some spurious noise despite being cleared earlier
-    // e.g., for full container (0..0), packed container filled area (6..0), (7..0) etc.
-    // residual noise is taken care of here
-    //
-    if (status_i == Container_status::FULL) {
-        ranges_i.clear();
-    }
-    std::set<int> clear_these;
-    for (auto r : ranges_i) {
-        if (r.second < r.first) {
-            if (r.second == 0) {
-                clear_these.insert(r.first);
-            }
-        }
-    }
-    for (auto r : clear_these) {
-        ranges_i.erase(r);
-    }
-    //
     bool warning = false;
     for (auto r : ranges_i) {
         if (r.second < r.first) {
@@ -279,6 +309,7 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
         if(c->fields_in_container().size() > 1) {
             out << "p";
         }
+        c->clean_ranges();
         for (auto r : c->ranges()) {
             out << '(' << r.first << ".." << r.second << ')';
         }

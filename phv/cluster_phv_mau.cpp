@@ -887,17 +887,11 @@ void PHV_MAU_Group_Assignments::update_PHV_MAU_Group_container_slices(
 	std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>& aligned_slices
 	)
 {
-    if(&aligned_slices == &aligned_container_slices_i)
-    {
-        for (auto &gg: PHV_MAU_i)
-        {
+    if(&aligned_slices == &aligned_container_slices_i) {
+        for (auto &gg : PHV_MAU_i) {
             // groups within this word size
-            for(auto &g: gg.second)
-            {
+            for(auto &g : gg.second) {
                 g->aligned_container_slices().clear();
-                //
-                // clear ranges in g's containers
-                //
                 for (auto &c : g->phv_containers()) {
                     c->ranges().clear();
                 }
@@ -921,6 +915,10 @@ void PHV_MAU_Group_Assignments::update_PHV_MAU_Group_container_slices(
                 for (auto &cc : cc_set) {
                     PHV_Container *c = cc->container();
                     c->ranges()[cc->lo()] = cc->hi();
+                    // BUG_CHECK(cc->hi() != 0,
+                        // "*****PHV_MAU_Group::update_PHV_MAU_Group_container_slices *****PHV-%d, ranges[%d] = %d, should be %d",
+                        // c->phv_number(), cc->lo(), c->ranges()[cc->lo()], cc->hi()
+                        // );
                 }
             }
         }
