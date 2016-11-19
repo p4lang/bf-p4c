@@ -250,7 +250,7 @@ vector<std::pair<int, int>> Memories::available_SRAMs_per_row(unsigned mask, tab
              [=](const std::pair<int, int> a, const std::pair<int, int> b) {
          int t;
          if ((t = a.second - b.second) != 0) return t > 0;
-         return a < b;
+         return a > b;
     });
     return available_rams;
 }
@@ -289,7 +289,7 @@ vector<int> Memories::available_match_SRAMs_per_row(unsigned row_mask, unsigned 
             (bus[1].first && bus[1].first == ta->table->name && bus[1].second == width_sect))
             return false;
 
-        return a < b;
+        return a > b;
     });
     return matching_rows;
 }
@@ -840,11 +840,14 @@ void Memories::adjust_RAMs_available(action_fill &curr_oflow, int &suppl_RAMs_av
     if (left_side)
         return;
 
-    int open_maprams = __builtin_popcount(~sram_inuse[row] & 0x3f0);
+    int open_maprams = __builtin_popcount(sram_inuse[row] & 0x3f0);
 
     if (!curr_oflow.group || curr_oflow.group->type != SRAM_group::METER)
         return;
 
+    LOG1("Open maprams and cm_left_to_place " << open_maprams << ", "
+          << curr_oflow.group->cm_left_to_place() << 
+          " " << curr_oflow.group->left_to_place());
     if (open_maprams > curr_oflow.group->cm_left_to_place())
         return;
 
@@ -854,6 +857,7 @@ void Memories::adjust_RAMs_available(action_fill &curr_oflow, int &suppl_RAMs_av
         if (curr_oflow.group->left_to_place() < action_RAMs_available)
            suppl_RAMs_available -= curr_oflow.group->cm_left_to_place() - open_maprams;
     }
+    LOG1("suppl_RAMS, action_RAMs " << suppl_RAMs_available << " " << action_RAMs_available);
 }
 
 
@@ -1001,8 +1005,9 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
 
     int action_RAMs_available = __builtin_popcount(mask & ~sram_inuse[row]);
     int suppl_RAMs_available = action_RAMs_available;
-    adjust_RAMs_available(curr_oflow, action_RAMs_available, suppl_RAMs_available, row,
+    adjust_RAMs_available(curr_oflow, suppl_RAMs_available, action_RAMs_available, row,
                           mask == 0xf);
+    LOG1("Suppl Rams begin " << suppl_RAMs_available);
     action_fill best_fit_action, best_fit_suppl;
     action_fill next_action, next_suppl;
 
@@ -1104,6 +1109,7 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
                 break;
             }
             total_RAMs_filled++;
+            LOG1("Total rams filled " << total_RAMs_filled);
         }
     }
 
@@ -1127,6 +1133,8 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
             total_RAMs_filled++; 
         }
     } 
+
+    LOG1("suppl masks " << suppl_masks[0] << " " << suppl_masks[1] << " " << suppl_masks[2]);
 
     if (order[ACTION_IND] >= 0) {
         action.mask = suppl_masks[order[ACTION_IND]] | action_masks[order[ACTION_IND]];
@@ -1241,9 +1249,8 @@ void Memories::action_side(action_fill &action, action_fill &suppl, action_fill 
    removes completely packed action groups from the action group array */
 bool Memories::fill_out_action_row(action_fill &action, int row, int side, unsigned mask,
                                    bool is_oflow, bool is_twoport) {
-    LOG1("Row and side " << row << " " << side);
+    LOG1("Row and side " << row << " " << side << " for " << action.group->name);
     if (__builtin_popcount(action.mask) == 0 && __builtin_popcount(action.mapram_mask) == 0) {
-        LOG1("Name is " << action.group->name);
         BUG("Somehow action group allocated without anything to place");
     }
     if (__builtin_popcount(action.mask) == 0)
@@ -1293,6 +1300,7 @@ bool Memories::fill_out_action_row(action_fill &action, int row, int side, unsig
         else
             action_bus_users.erase(action_bus_users.begin() + action.index);
         action_group_removed = true;
+        LOG1("Group is removed");
     }
     return action_group_removed;
 }
@@ -1306,11 +1314,14 @@ void Memories::calculate_curr_oflow(action_fill &action, action_fill &suppl, act
         twoport_oflow = suppl;
         LOG1("Abbey Road");
     }
-    if (right_side && oflow.group && !removed[OFLOW_IND] && oflow.group->type != SRAM_group::ACTION)
+    if (right_side && oflow.group && !removed[OFLOW_IND]
+                   && oflow.group->type != SRAM_group::ACTION)
         twoport_oflow = oflow;
     if (right_side && oflow.group && oflow.group->type != SRAM_group::ACTION 
         && oflow.group->all_placed() && !oflow.group->all_cm_placed()) {
         LOG1("Yellow Submarine");
+        LOG1("Name and placed " << oflow.group->name << " " << oflow.group->cm_placed << " " <<
+             oflow.group->cm_needed);
         twoport_oflow = oflow;
     }
 
@@ -1325,7 +1336,7 @@ void Memories::calculate_curr_oflow(action_fill &action, action_fill &suppl, act
 }
 
 void Memories::fill_out_color_mapram(action_fill &action, int row, unsigned mask, bool is_oflow) {
-    if (mask == 0xf || action.mapram_mask == action.mask)
+    if (action.mapram_mask == action.mask || action.group->type == SRAM_group::ACTION)
         return;
 
     auto a_name = action.group->name;

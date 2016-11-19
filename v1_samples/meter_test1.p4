@@ -51,7 +51,7 @@ table test1 {
     } actions {
         h1_3;
     }
-    size : 1024;
+    size : 6000;
 }
 
 table test2 {
@@ -60,7 +60,7 @@ table test2 {
     } actions {
         h4_6;
     }
-    size : 1024;
+    size : 10000;
 }
 
 control ingress {
