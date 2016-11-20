@@ -55,8 +55,7 @@ class PHV_MAU_Group
     PHV_Container::PHV_Word width_i;			// container width in PHV group
     int number_i;					// 1..4 [32], 1..6 [16], 1..4 [8]
     PHV_Container::Ingress_Egress gress_i;		// Ingress_Only, Egress_Only, Ingress_Or_Egress
-    int avail_containers_i;
-							// number of available containers
+    int empty_containers_i;  // number of containers that remain Empty
     std::vector<PHV_Container *> phv_containers_i;	// containers in this MAU group
     std::vector<Cluster_PHV *> cluster_phv_i;		// clusters in this MAU group
     std::map<int, std::map<int, std::set<std::set<Container_Content *>>>> aligned_container_slices_i;
@@ -79,9 +78,9 @@ class PHV_MAU_Group
     //
     PHV_Container::PHV_Word width()			{ return width_i; }
     int number()					{ return number_i; }
+    void gress(PHV_Container::Ingress_Egress gress_p)   { gress_i = gress_p; }
     PHV_Container::Ingress_Egress gress()		{ return gress_i; }
-    int avail_containers()				{ return avail_containers_i; }
-    void avail_containers(int n)			{ avail_containers_i = n; }
+    int& empty_containers()				{ return empty_containers_i; }
     std::vector<PHV_Container *>& phv_containers()	{ return phv_containers_i; }
     std::vector<Cluster_PHV *>& clusters()		{ return cluster_phv_i; }
     void create_aligned_container_slices(std::list<PHV_Container *>&);
@@ -202,6 +201,10 @@ class PHV_MAU_Group_Assignments
     }
     std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>& T_PHV_container_slices()
 							{ return T_PHV_container_slices_i; }
+    //
+    bool status(std::list<Cluster_PHV *>&);
+    bool status(std::list<PHV_MAU_Group *>&);
+    bool status(std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&);
     //
     void sanity_check_container_avail(const std::string&);
     void sanity_check_container_fields_gress(const std::string&);

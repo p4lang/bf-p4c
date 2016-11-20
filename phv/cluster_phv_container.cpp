@@ -249,6 +249,7 @@ void PHV_Container::sanity_check_container_ranges(const std::string& msg) {
     //
     const std::string msg_1 = msg + "..PHV_Container::sanity_check_container_ranges";
     //
+    clean_ranges();
     bool warning = false;
     for (auto r : ranges_i) {
         if (r.second < r.first) {
