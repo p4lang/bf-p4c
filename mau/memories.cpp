@@ -829,7 +829,7 @@ void Memories::find_action_bus_users() {
             if (meter->direct)
                 suppl_bus_users.back()->cm.needed = (ta->calculated_entries + 4095)/4096;
             else
-                suppl_bus_users.back()->cm.needed = (meter->instance_count + 1023)/1024;
+                suppl_bus_users.back()->cm.needed = (meter->instance_count + 4095)/4096;
             LOG1("Depth and cm.needed " << depth << " " << suppl_bus_users.back()->cm.needed);
         }
     }
@@ -1007,7 +1007,11 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
     int suppl_RAMs_available = action_RAMs_available;
     adjust_RAMs_available(curr_oflow, suppl_RAMs_available, action_RAMs_available, row,
                           mask == 0xf);
-    LOG1("Suppl Rams begin " << suppl_RAMs_available);
+    if (curr_oflow.group) {
+        LOG1("Oflow group left to place " << curr_oflow.group->left_to_place());
+    } else {
+        LOG1("No oflow group");
+    }
     action_fill best_fit_action, best_fit_suppl;
     action_fill next_action, next_suppl;
 
@@ -1206,6 +1210,7 @@ void Memories::color_mapram_candidates(action_fill &suppl, action_fill &oflow, u
         if (curr_oflow_mapram)
             suppl_mapram_index = 1;
         suppl.mapram_mask |= mapram_masks[suppl_mapram_index];
+        LOG1("Suppl mapram index " << suppl_mapram_index);
     } 
 }
 
@@ -1308,15 +1313,33 @@ bool Memories::fill_out_action_row(action_fill &action, int row, int side, unsig
 void Memories::calculate_curr_oflow(action_fill &action, action_fill &suppl, action_fill &oflow,
                                     bool removed[3], action_fill &curr_oflow,
                                     action_fill &twoport_oflow, bool right_side) {
+    bool twoport_oflow_selected = false;
+    if (right_side) {
+        if (suppl.group) {
+            if (!suppl.group->all_placed() || !suppl.group->cm.all_placed()) {
+                twoport_oflow = suppl;
+                twoport_oflow_selected = true;
+            }
+        }
+        if (oflow.group && oflow.group->type != SRAM_group::ACTION) {
+            if (!oflow.group->all_placed() || !oflow.group->cm.all_placed()) {
+                twoport_oflow = oflow;
+                if (twoport_oflow_selected)
+                    BUG("Compiler selected multiple overflow groups");
+            }
+        }
+    }
+
+    /*
     if (right_side && suppl.group && !removed[SUPPL_IND])
         twoport_oflow = suppl;
+    if (right_side && oflow.group && !removed[OFLOW_IND]
+                   && oflow.group->type != SRAM_group::ACTION) {
+        twoport_oflow = oflow;
+    }
     if (right_side && suppl.group && suppl.group->all_placed() && !suppl.group->cm.all_placed()) {
         twoport_oflow = suppl;
-        LOG1("Abbey Road");
     }
-    if (right_side && oflow.group && !removed[OFLOW_IND]
-                   && oflow.group->type != SRAM_group::ACTION)
-        twoport_oflow = oflow;
     if (right_side && oflow.group && oflow.group->type != SRAM_group::ACTION 
         && oflow.group->all_placed() && !oflow.group->cm.all_placed()) {
         LOG1("Yellow Submarine");
@@ -1324,11 +1347,14 @@ void Memories::calculate_curr_oflow(action_fill &action, action_fill &suppl, act
              oflow.group->cm.needed);
         twoport_oflow = oflow;
     }
+    */
 
 
     if (!removed[OFLOW_IND] && oflow.group && oflow.group->type == SRAM_group::ACTION) {
+        LOG1("Curr oflow is oflow");
         curr_oflow = oflow;
     } else if (!removed[ACTION_IND] && action.group) {
+        LOG1("Curr oflow is action");
         curr_oflow = action;
     } else {
         curr_oflow.clear();
