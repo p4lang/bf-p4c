@@ -827,10 +827,10 @@ void Memories::find_action_bus_users() {
             suppl_bus_users.push_back(new SRAM_group(ta, depth, 0, SRAM_group::METER));
             suppl_bus_users.back()->name = meter->name;
             if (meter->direct)
-                suppl_bus_users.back()->cm_needed = (ta->calculated_entries + 4095)/4096;
+                suppl_bus_users.back()->cm.needed = (ta->calculated_entries + 4095)/4096;
             else
-                suppl_bus_users.back()->cm_needed = (meter->instance_count + 1023)/1024;
-            LOG1("Depth and cm_needed " << depth << " " << suppl_bus_users.back()->cm_needed);
+                suppl_bus_users.back()->cm.needed = (meter->instance_count + 1023)/1024;
+            LOG1("Depth and cm.needed " << depth << " " << suppl_bus_users.back()->cm.needed);
         }
     }
 }
@@ -845,17 +845,17 @@ void Memories::adjust_RAMs_available(action_fill &curr_oflow, int &suppl_RAMs_av
     if (!curr_oflow.group || curr_oflow.group->type != SRAM_group::METER)
         return;
 
-    LOG1("Open maprams and cm_left_to_place " << open_maprams << ", "
-          << curr_oflow.group->cm_left_to_place() << 
+    LOG1("Open maprams and cm.left_to_place " << open_maprams << ", "
+          << curr_oflow.group->cm.left_to_place() << 
           " " << curr_oflow.group->left_to_place());
-    if (open_maprams > curr_oflow.group->cm_left_to_place())
+    if (open_maprams > curr_oflow.group->cm.left_to_place())
         return;
 
-    if (curr_oflow.group && curr_oflow.group->cm_required) {
-        suppl_RAMs_available -= curr_oflow.group->cm_left_to_place() - open_maprams;
-    } else if (curr_oflow.group && !curr_oflow.group->all_cm_placed()) {
+    if (curr_oflow.group && curr_oflow.group->cm.required) {
+        suppl_RAMs_available -= curr_oflow.group->cm.left_to_place() - open_maprams;
+    } else if (curr_oflow.group && !curr_oflow.group->cm.all_placed()) {
         if (curr_oflow.group->left_to_place() < action_RAMs_available)
-           suppl_RAMs_available -= curr_oflow.group->cm_left_to_place() - open_maprams;
+           suppl_RAMs_available -= curr_oflow.group->cm.left_to_place() - open_maprams;
     }
     LOG1("suppl_RAMS, action_RAMs " << suppl_RAMs_available << " " << action_RAMs_available);
 }
@@ -875,7 +875,7 @@ void Memories::action_row_trip(action_fill &action, action_fill &suppl, action_f
         if (curr_oflow.group && curr_oflow.group->type != SRAM_group::ACTION) {
             if (best_fit_suppl.group
                 && best_fit_suppl.group->left_to_place() == suppl_RAMs_available
-                && best_fit_suppl.group->cm_needed == 0) {
+                && best_fit_suppl.group->cm.needed == 0) {
                 suppl = best_fit_suppl;
                 order[SUPPL_IND] = 0;
             } else if (curr_oflow.group->left_to_place() >= suppl_RAMs_available) {
@@ -1070,7 +1070,7 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
         && curr_oflow.group == nullptr && next_action.group == nullptr
         && next_suppl.group == nullptr) {
         //FIXME: Calculate the color mapram stuff
-        if (curr_oflow.group && !curr_oflow.group->all_cm_placed()) {
+        if (curr_oflow.group && !curr_oflow.group->cm.all_placed()) {
             oflow = curr_oflow;
             color_mapram_candidates(suppl, oflow, mask);
         }
@@ -1159,16 +1159,16 @@ void Memories::color_mapram_candidates(action_fill &suppl, action_fill &oflow, u
     int maprams_filled[2] = {0, 0};
     bool curr_oflow_mapram = false;
     
-    if (oflow.group && !oflow.group->all_cm_placed()) {
-        maprams[0] = oflow.group->cm_left_to_place();
+    if (oflow.group && !oflow.group->cm.all_placed()) {
+        maprams[0] = oflow.group->cm.left_to_place();
         curr_oflow_mapram = true;
     }
 
-    if (suppl.group && !suppl.group->all_cm_placed()) {
+    if (suppl.group && !suppl.group->cm.all_placed()) {
         int suppl_mapram_index = 0;
         if (curr_oflow_mapram)
             suppl_mapram_index = 1;
-        maprams[suppl_mapram_index] = suppl.group->cm_left_to_place();
+        maprams[suppl_mapram_index] = suppl.group->cm.left_to_place();
     }
 
     unsigned mapram_masks[2] = {0, 0};
@@ -1194,14 +1194,14 @@ void Memories::color_mapram_candidates(action_fill &suppl, action_fill &oflow, u
 
     LOG1("Mapram masks " << mapram_masks[0] << " " << mapram_masks[1]);
     curr_oflow_mapram = false;
-    if (oflow.group && !oflow.group->all_cm_placed()) {
-        if (oflow.group->cm_required && mapram_masks[0] == 0)
+    if (oflow.group && !oflow.group->cm.all_placed()) {
+        if (oflow.group->cm.required && mapram_masks[0] == 0)
             BUG("Oflow required color map ram and none available");
         oflow.mapram_mask |= mapram_masks[0];
         curr_oflow_mapram = true;
     }
 
-    if (suppl.group && !suppl.group->all_cm_placed()) {
+    if (suppl.group && !suppl.group->cm.all_placed()) {
         int suppl_mapram_index = 0;
         if (curr_oflow_mapram)
             suppl_mapram_index = 1;
@@ -1310,7 +1310,7 @@ void Memories::calculate_curr_oflow(action_fill &action, action_fill &suppl, act
                                     action_fill &twoport_oflow, bool right_side) {
     if (right_side && suppl.group && !removed[SUPPL_IND])
         twoport_oflow = suppl;
-    if (right_side && suppl.group && suppl.group->all_placed() && !suppl.group->all_cm_placed()) {
+    if (right_side && suppl.group && suppl.group->all_placed() && !suppl.group->cm.all_placed()) {
         twoport_oflow = suppl;
         LOG1("Abbey Road");
     }
@@ -1318,10 +1318,10 @@ void Memories::calculate_curr_oflow(action_fill &action, action_fill &suppl, act
                    && oflow.group->type != SRAM_group::ACTION)
         twoport_oflow = oflow;
     if (right_side && oflow.group && oflow.group->type != SRAM_group::ACTION 
-        && oflow.group->all_placed() && !oflow.group->all_cm_placed()) {
+        && oflow.group->all_placed() && !oflow.group->cm.all_placed()) {
         LOG1("Yellow Submarine");
-        LOG1("Name and placed " << oflow.group->name << " " << oflow.group->cm_placed << " " <<
-             oflow.group->cm_needed);
+        LOG1("Name and placed " << oflow.group->name << " " << oflow.group->cm.placed << " " <<
+             oflow.group->cm.needed);
         twoport_oflow = oflow;
     }
 
@@ -1356,7 +1356,7 @@ void Memories::fill_out_color_mapram(action_fill &action, int row, unsigned mask
             a_alloc.color_mapram.back().col.push_back(k - LEFT_SIDE_COLUMNS);
         } 
     }
-    action.group->cm_placed += __builtin_popcount(color_mapram_mask);
+    action.group->cm.placed += __builtin_popcount(color_mapram_mask);
 } 
 
 /* Goes through action bus by action bus, and finds the best candidates for each row,

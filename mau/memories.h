@@ -107,23 +107,25 @@ struct Memories {
         int recent_home_row;
         cstring name;
         enum type_t { EXACT, ACTION, STATS, METER, TIND } type;
-        int cm_needed;
-        int cm_placed;
-        bool cm_required;
+        struct color_mapram_group {
+            int needed;
+            int placed;
+            bool required;
+            bool all_placed() { return needed == placed; }
+            bool left_to_place() { return needed - placed; }
+            explicit color_mapram_group() : needed(0), placed(0), required(false) {};
+        };
+        color_mapram_group cm;
         explicit SRAM_group(table_alloc *t, int d, int w, int n, type_t ty)
-            : ta(t), depth(d), width(w), placed(0), number(n), type(ty),
-              cm_needed(false), cm_placed(false), cm_required(false) {}
+            : ta(t), depth(d), width(w), placed(0), number(n), type(ty), cm() {}
         explicit SRAM_group(table_alloc *t, int d, int n, type_t ty)
-            : ta(t), depth(d), width(0),  placed(0), number(n), type(ty),
-              cm_needed(false), cm_placed(false), cm_required(false) {}
+            : ta(t), depth(d), width(0),  placed(0), number(n), type(ty), cm() {}
         void dbprint(std::ostream &out) const {
             out << ta->table->name << " way #" << number << " depth: " << depth
                 << " width: " << width << " placed: " << placed;
         }
         int left_to_place() { return depth - placed; }
-        int cm_left_to_place() { return cm_needed - cm_placed; }
         bool all_placed() { return (depth == placed); }
-        bool all_cm_placed() { return (cm_needed == cm_placed); } 
         bool requires_ab() { return false; }
         cstring name_addition() {
             switch (type) {
