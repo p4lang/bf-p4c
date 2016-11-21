@@ -182,15 +182,15 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction() {
+    @name("NoAction_1") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_0() {
+    @name("NoAction_2") action NoAction_6() {
     }
-    @name("NoAction_3") action NoAction_6() {
+    @name("NoAction_3") action NoAction_7() {
     }
-    @name("NoAction_4") action NoAction_7() {
+    @name("NoAction_4") action NoAction_8() {
     }
-    @name("NoAction_5") action NoAction_8() {
+    @name("NoAction_5") action NoAction_9() {
     }
     @name("do_new_cfi") action do_new_cfi_0() {
         hdr.vlan_tag.cfi = meta.meta.new_cfi;
@@ -217,40 +217,40 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("new_cfi") table new_cfi_1() {
         actions = {
             do_new_cfi_0();
-            NoAction();
-        }
-        default_action = NoAction();
-    }
-    @name("new_pri") table new_pri_1() {
-        actions = {
-            do_new_pri_0();
             NoAction_0();
         }
         default_action = NoAction_0();
     }
-    @name("new_tpid") table new_tpid_1() {
+    @name("new_pri") table new_pri_1() {
         actions = {
-            do_new_tpid_0();
+            do_new_pri_0();
             NoAction_6();
         }
         default_action = NoAction_6();
     }
-    @name("new_vid") table new_vid_1() {
+    @name("new_tpid") table new_tpid_1() {
         actions = {
-            do_new_vid_0();
+            do_new_tpid_0();
             NoAction_7();
         }
         default_action = NoAction_7();
     }
+    @name("new_vid") table new_vid_1() {
+        actions = {
+            do_new_vid_0();
+            NoAction_8();
+        }
+        default_action = NoAction_8();
+    }
     @name("vlan_xlate") table vlan_xlate() {
         actions = {
             rewrite_tag_0();
-            NoAction_8();
+            NoAction_9();
         }
         key = {
             hdr.vlan_tag.vid: exact;
         }
-        default_action = NoAction_8();
+        default_action = NoAction_9();
     }
     apply {
         switch (vlan_xlate.apply().action_run) {

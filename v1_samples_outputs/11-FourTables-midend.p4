@@ -162,13 +162,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction() {
+    @name("NoAction_1") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_0() {
+    @name("NoAction_2") action NoAction_5() {
     }
-    @name("NoAction_3") action NoAction_5() {
+    @name("NoAction_3") action NoAction_6() {
     }
-    @name("NoAction_4") action NoAction_6() {
+    @name("NoAction_4") action NoAction_7() {
     }
     @name("action1") action action1_0() {
         meta.ing_metadata.field1 = 1w1;
@@ -189,26 +189,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action1_0();
             action2_0();
-            NoAction();
+            NoAction_0();
         }
         key = {
             hdr.ethernet.srcAddr: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("table2") table table2() {
         actions = {
             action3_0();
-            NoAction_0();
-        }
-        key = {
-            hdr.ethernet.dstAddr: exact;
-        }
-        default_action = NoAction_0();
-    }
-    @name("table3") table table3() {
-        actions = {
-            action3_2();
             NoAction_5();
         }
         key = {
@@ -216,15 +206,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_5();
     }
+    @name("table3") table table3() {
+        actions = {
+            action3_2();
+            NoAction_6();
+        }
+        key = {
+            hdr.ethernet.dstAddr: exact;
+        }
+        default_action = NoAction_6();
+    }
     @name("table4") table table4() {
         actions = {
             action4_0();
-            NoAction_6();
+            NoAction_7();
         }
         key = {
             hdr.ethernet.ethertype: exact;
         }
-        default_action = NoAction_6();
+        default_action = NoAction_7();
     }
     apply {
         switch (table1.apply().action_run) {

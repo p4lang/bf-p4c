@@ -21,11 +21,9 @@ limitations under the License.
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/fromv1.0/v1model.h"
 #include "frontends/p4/moveDeclarations.h"
-#include "frontends/p4/parserControlFlow.h"
 #include "frontends/p4/simplify.h"
 #include "frontends/p4/simplifyParsers.h"
 #include "frontends/p4/strengthReduction.h"
-#include "frontends/p4/toP4/toP4.h"
 #include "frontends/p4/typeChecking/typeChecker.h"
 #include "frontends/p4/typeMap.h"
 #include "frontends/p4/uniqueNames.h"
@@ -33,14 +31,18 @@ limitations under the License.
 #include "midend/actionsInlining.h"
 #include "midend/actionSynthesis.h"
 #include "midend/convertEnums.h"
+#include "midend/copyStructures.h"
+#include "midend/eliminateTuples.h"
 #include "midend/local_copyprop.h"
 #include "midend/localizeActions.h"
 #include "midend/moveConstructors.h"
+#include "midend/nestedStructs.h"
 #include "midend/removeLeftSlices.h"
 #include "midend/removeParameters.h"
 #include "midend/removeReturns.h"
 #include "midend/simplifyKey.h"
 #include "midend/simplifySelect.h"
+#include "midend/validateProperties.h"
 
 
 namespace Tofino {
@@ -69,7 +71,6 @@ MidEnd::MidEnd(CompilerOptions& options) {
     auto evaluator = new P4::EvaluatorPass(&refMap, &typeMap);
 
     addPasses({
-        new P4::RemoveParserControlFlow(&refMap, &typeMap),
         new P4::ConvertEnums(&refMap, &typeMap, new EnumOn32Bits()),
         new P4::RemoveReturns(&refMap),
         new P4::MoveConstructors(&refMap),
@@ -88,8 +89,7 @@ MidEnd::MidEnd(CompilerOptions& options) {
         new P4::InlineActions(&refMap, &typeMap),
         new P4::LocalizeAllActions(&refMap),
         new P4::UniqueNames(&refMap),
-        new P4::UniqueParameters(&refMap),
-        new P4::ClearTypeMap(&typeMap),
+        new P4::UniqueParameters(&refMap, &typeMap),
         new P4::SimplifyControlFlow(&refMap, &typeMap),
         new P4::RemoveTableParameters(&refMap, &typeMap),
         new P4::RemoveActionParameters(&refMap, &typeMap),
@@ -99,9 +99,15 @@ MidEnd::MidEnd(CompilerOptions& options) {
         new P4::StrengthReduction(),
         new P4::SimplifySelect(&refMap, &typeMap, true),  // constant keysets
         new P4::SimplifyParsers(&refMap),
+        new P4::StrengthReduction(),
+        new P4::EliminateTuples(&refMap, &typeMap),
+        new P4::CopyStructures(&refMap, &typeMap),
+        new P4::NestedStructs(&refMap, &typeMap),
         new P4::LocalCopyPropagation(&refMap, &typeMap),
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::MoveDeclarations(),
+        new P4::ValidateTableProperties({ "implementation", "size", "counters",
+                                          "meters", "size", "support_timeout" }),
         new P4::SimplifyControlFlow(&refMap, &typeMap),
         new P4::SynthesizeActions(&refMap, &typeMap),
         new P4::MoveActionsToTables(&refMap, &typeMap),

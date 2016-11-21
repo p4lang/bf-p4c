@@ -33,47 +33,47 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction() {
+    @name("NoAction_1") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_0() {
+    @name("NoAction_2") action NoAction_4() {
     }
-    @name("NoAction_3") action NoAction_4() {
+    @name("NoAction_3") action NoAction_5() {
     }
     @name("noop") action noop_0() {
     }
     @name("test1") table test1() {
         actions = {
             noop_0();
-            NoAction();
-        }
-        key = {
-            hdr.data.f1: ternary;
-            hdr.data.f2: ternary;
-            hdr.data.b1: ternary;
-            hdr.data.b2: ternary;
-        }
-        default_action = NoAction();
-    }
-    @name("test2") table test2() {
-        actions = {
             NoAction_0();
         }
         key = {
             hdr.data.f1: ternary;
+            hdr.data.f2: ternary;
             hdr.data.b1: ternary;
             hdr.data.b2: ternary;
         }
         default_action = NoAction_0();
     }
-    @name("test3") table test3() {
+    @name("test2") table test2() {
         actions = {
             NoAction_4();
+        }
+        key = {
+            hdr.data.f1: ternary;
+            hdr.data.b1: ternary;
+            hdr.data.b2: ternary;
+        }
+        default_action = NoAction_4();
+    }
+    @name("test3") table test3() {
+        actions = {
+            NoAction_5();
         }
         key = {
             hdr.data.f2: ternary;
             hdr.data.b1: ternary;
         }
-        default_action = NoAction_4();
+        default_action = NoAction_5();
     }
     apply {
         test1.apply();

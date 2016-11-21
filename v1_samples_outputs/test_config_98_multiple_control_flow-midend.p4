@@ -161,9 +161,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_2") action NoAction() {
+    @name("NoAction_2") action NoAction_0() {
     }
-    @name("NoAction_3") action NoAction_0() {
+    @name("NoAction_3") action NoAction_1() {
     }
     @name("action_2") action action_2(bit<32> param0) {
         hdr.pkt.field_d_32 = param0;
@@ -173,22 +173,22 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name("table_2") table table_0() {
         actions = {
             action_2();
-            NoAction();
-        }
-        key = {
-            hdr.pkt.field_g_16: exact;
-        }
-        default_action = NoAction();
-    }
-    @name("table_3") table table_1() {
-        actions = {
-            do_nothing_0();
             NoAction_0();
         }
         key = {
             hdr.pkt.field_g_16: exact;
         }
         default_action = NoAction_0();
+    }
+    @name("table_3") table table_1() {
+        actions = {
+            do_nothing_0();
+            NoAction_1();
+        }
+        key = {
+            hdr.pkt.field_g_16: exact;
+        }
+        default_action = NoAction_1();
     }
     apply {
         table_0.apply();
@@ -197,12 +197,22 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    headers hdr_1;
+    egress_intrinsic_metadata_t hdr_1_eg_intr_md;
+    egress_intrinsic_metadata_for_mirror_buffer_t hdr_1_eg_intr_md_for_mb;
+    egress_intrinsic_metadata_for_output_port_t hdr_1_eg_intr_md_for_oport;
+    egress_intrinsic_metadata_from_parser_aux_t hdr_1_eg_intr_md_from_parser_aux;
+    ingress_intrinsic_metadata_t hdr_1_ig_intr_md;
+    ingress_intrinsic_metadata_for_mirror_buffer_t hdr_1_ig_intr_md_for_mb;
+    ingress_intrinsic_metadata_for_tm_t hdr_1_ig_intr_md_for_tm;
+    ingress_intrinsic_metadata_from_parser_aux_t hdr_1_ig_intr_md_from_parser_aux;
+    generator_metadata_t hdr_1_ig_pg_md;
+    ingress_parser_control_signals hdr_1_ig_prsr_ctrl;
+    pkt_t hdr_1_pkt;
     metadata meta_1;
     standard_metadata_t standard_metadata_1;
-    @name("NoAction_4") action NoAction_1() {
+    @name("NoAction_4") action NoAction_6() {
     }
-    @name("NoAction_5") action NoAction_6() {
+    @name("NoAction_5") action NoAction_7() {
     }
     @name("action_0") action action_3(bit<32> param0) {
         hdr.pkt.field_b_32 = param0;
@@ -210,35 +220,67 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_0") table table_2() {
         actions = {
             action_3();
-            NoAction_1();
+            NoAction_6();
         }
         key = {
             hdr.pkt.field_e_16: exact;
         }
-        default_action = NoAction_1();
+        default_action = NoAction_6();
     }
     @name("pipe_0.action_1") action pipe_0_action(bit<32> param0) {
-        hdr_1.pkt.field_c_32 = param0;
+        hdr_1_pkt.field_c_32 = param0;
     }
     @name("pipe_0.table_1") table pipe_0_table_0() {
         actions = {
             pipe_0_action();
-            NoAction_6();
+            NoAction_7();
         }
         key = {
-            hdr_1.pkt.field_f_16: exact;
+            hdr_1_pkt.field_f_16: exact;
         }
-        default_action = NoAction_6();
+        default_action = NoAction_7();
     }
     action act() {
-        hdr_1 = hdr;
-        meta_1 = meta;
-        standard_metadata_1 = standard_metadata;
+        hdr_1_eg_intr_md = hdr.eg_intr_md;
+        hdr_1_eg_intr_md_for_mb = hdr.eg_intr_md_for_mb;
+        hdr_1_eg_intr_md_for_oport = hdr.eg_intr_md_for_oport;
+        hdr_1_eg_intr_md_from_parser_aux = hdr.eg_intr_md_from_parser_aux;
+        hdr_1_ig_intr_md = hdr.ig_intr_md;
+        hdr_1_ig_intr_md_for_mb = hdr.ig_intr_md_for_mb;
+        hdr_1_ig_intr_md_for_tm = hdr.ig_intr_md_for_tm;
+        hdr_1_ig_intr_md_from_parser_aux = hdr.ig_intr_md_from_parser_aux;
+        hdr_1_ig_pg_md = hdr.ig_pg_md;
+        hdr_1_ig_prsr_ctrl = hdr.ig_prsr_ctrl;
+        hdr_1_pkt = hdr.pkt;
+        standard_metadata_1.ingress_port = standard_metadata.ingress_port;
+        standard_metadata_1.egress_spec = standard_metadata.egress_spec;
+        standard_metadata_1.egress_port = standard_metadata.egress_port;
+        standard_metadata_1.clone_spec = standard_metadata.clone_spec;
+        standard_metadata_1.instance_type = standard_metadata.instance_type;
+        standard_metadata_1.drop = standard_metadata.drop;
+        standard_metadata_1.recirculate_port = standard_metadata.recirculate_port;
+        standard_metadata_1.packet_length = standard_metadata.packet_length;
     }
     action act_0() {
-        hdr = hdr_1;
-        meta = meta_1;
-        standard_metadata = standard_metadata_1;
+        hdr.eg_intr_md = hdr_1_eg_intr_md;
+        hdr.eg_intr_md_for_mb = hdr_1_eg_intr_md_for_mb;
+        hdr.eg_intr_md_for_oport = hdr_1_eg_intr_md_for_oport;
+        hdr.eg_intr_md_from_parser_aux = hdr_1_eg_intr_md_from_parser_aux;
+        hdr.ig_intr_md = hdr_1_ig_intr_md;
+        hdr.ig_intr_md_for_mb = hdr_1_ig_intr_md_for_mb;
+        hdr.ig_intr_md_for_tm = hdr_1_ig_intr_md_for_tm;
+        hdr.ig_intr_md_from_parser_aux = hdr_1_ig_intr_md_from_parser_aux;
+        hdr.ig_pg_md = hdr_1_ig_pg_md;
+        hdr.ig_prsr_ctrl = hdr_1_ig_prsr_ctrl;
+        hdr.pkt = hdr_1_pkt;
+        standard_metadata.ingress_port = standard_metadata_1.ingress_port;
+        standard_metadata.egress_spec = standard_metadata_1.egress_spec;
+        standard_metadata.egress_port = standard_metadata_1.egress_port;
+        standard_metadata.clone_spec = standard_metadata_1.clone_spec;
+        standard_metadata.instance_type = standard_metadata_1.instance_type;
+        standard_metadata.drop = standard_metadata_1.drop;
+        standard_metadata.recirculate_port = standard_metadata_1.recirculate_port;
+        standard_metadata.packet_length = standard_metadata_1.packet_length;
     }
     table tbl_act() {
         actions = {

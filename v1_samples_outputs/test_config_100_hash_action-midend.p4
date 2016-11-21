@@ -167,11 +167,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction() {
+    @name("NoAction_1") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_0() {
+    @name("NoAction_2") action NoAction_4() {
     }
-    @name("NoAction_3") action NoAction_4() {
+    @name("NoAction_3") action NoAction_5() {
     }
     @name("simple_stats") counter(32w32768, CounterType.packets) simple_stats;
     @name("do_nothing") action do_nothing_0() {
@@ -189,31 +189,31 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing_0();
             action_3();
-            NoAction();
+            NoAction_0();
         }
         key = {
             hdr.pkt.field_i_8: exact;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @include_idletime(1) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name("table_1") table table_1() {
         actions = {
             action_4();
-            NoAction_0();
+            NoAction_4();
         }
         key = {
             hdr.pkt.field_g_16: exact;
         }
         size = 65536;
-        default_action = NoAction_0();
+        default_action = NoAction_4();
     }
     @name("table_2") table table_2() {
         actions = {
             action_5();
-            NoAction_4();
+            NoAction_5();
         }
-        default_action = NoAction_4();
+        default_action = NoAction_5();
     }
     apply {
         if (hdr.pkt.isValid()) {

@@ -164,9 +164,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction() {
+    @name("NoAction_1") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_0() {
+    @name("NoAction_2") action NoAction_3() {
     }
     @name("meter_0") direct_meter<bit<8>>(CounterType.bytes) meter_0;
     @name("meter_1") meter(32w500, CounterType.bytes) meter_1;
@@ -181,7 +181,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @pa_solitare("meter_result.color_0", "meter_result.color_1") @name("table_0") table table_0() {
         actions = {
             action_0_1();
-            NoAction();
+            NoAction_0();
         }
         key = {
             hdr.pkt.field_e_16: ternary;
@@ -189,20 +189,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.pkt.color_1   : exact;
         }
         size = 6000;
-        default_action = NoAction();
+        default_action = NoAction_0();
         meters = meter_0;
     }
     @idletime_two_way_notification(1) @name("table_1") table table_1() {
         actions = {
             do_nothing_0();
             action_0();
-            NoAction_0();
+            NoAction_3();
         }
         key = {
             hdr.pkt.field_e_16: exact;
         }
         size = 32768;
-        default_action = NoAction_0();
+        default_action = NoAction_3();
     }
     apply {
         table_0.apply();

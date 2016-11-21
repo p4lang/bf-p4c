@@ -189,7 +189,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction() {
+    @name("NoAction_1") action NoAction_0() {
     }
     @name("action_0") action action_2(bit<8> param0) {
         hdr.ipv4.diffserv = param0;
@@ -201,13 +201,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_2();
             action_3();
-            NoAction();
+            NoAction_0();
         }
         key = {
             hdr.vlan.vid: exact;
         }
         max_size = 8192;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         table_0.apply();

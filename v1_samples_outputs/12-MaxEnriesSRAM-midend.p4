@@ -159,9 +159,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction() {
+    @name("NoAction_1") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_0() {
+    @name("NoAction_2") action NoAction_3() {
     }
     @name("set_bd") action set_bd_0(bit<22> bd) {
         hdr.l2_metadata.bd = bd;
@@ -174,26 +174,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("port_bd") table port_bd() {
         actions = {
             set_bd_0();
-            NoAction();
+            NoAction_0();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact;
         }
         size = 288;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("vlan_port_tab") table vlan_port_tab() {
         actions = {
             nop_0();
             ing_drop_0();
-            NoAction_0();
+            NoAction_3();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact;
             hdr.l2_metadata.bd         : exact;
         }
         size = 409600;
-        default_action = NoAction_0();
+        default_action = NoAction_3();
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) {

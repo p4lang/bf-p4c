@@ -193,23 +193,23 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction() {
+    @name("NoAction_1") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_0() {
+    @name("NoAction_2") action NoAction_10() {
     }
-    @name("NoAction_3") action NoAction_10() {
+    @name("NoAction_3") action NoAction_11() {
     }
-    @name("NoAction_4") action NoAction_11() {
+    @name("NoAction_4") action NoAction_12() {
     }
-    @name("NoAction_5") action NoAction_12() {
+    @name("NoAction_5") action NoAction_13() {
     }
-    @name("NoAction_6") action NoAction_13() {
+    @name("NoAction_6") action NoAction_14() {
     }
-    @name("NoAction_7") action NoAction_14() {
+    @name("NoAction_7") action NoAction_15() {
     }
-    @name("NoAction_8") action NoAction_15() {
+    @name("NoAction_8") action NoAction_16() {
     }
-    @name("NoAction_9") action NoAction_16() {
+    @name("NoAction_9") action NoAction_17() {
     }
     @name("do_new_inner_cfi") action do_new_inner_cfi_0() {
         hdr.vlan_tag[1].cfi = meta.meta.new_inner_cfi;
@@ -258,64 +258,64 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("new_inner_cfi") table new_inner_cfi_1() {
         actions = {
             do_new_inner_cfi_0();
-            NoAction();
-        }
-        default_action = NoAction();
-    }
-    @name("new_inner_pri") table new_inner_pri_1() {
-        actions = {
-            do_new_inner_pri_0();
             NoAction_0();
         }
         default_action = NoAction_0();
     }
-    @name("new_inner_tpid") table new_inner_tpid_1() {
+    @name("new_inner_pri") table new_inner_pri_1() {
         actions = {
-            do_new_inner_tpid_0();
+            do_new_inner_pri_0();
             NoAction_10();
         }
         default_action = NoAction_10();
     }
-    @name("new_inner_vid") table new_inner_vid_1() {
+    @name("new_inner_tpid") table new_inner_tpid_1() {
         actions = {
-            do_new_inner_vid_0();
+            do_new_inner_tpid_0();
             NoAction_11();
         }
         default_action = NoAction_11();
     }
-    @name("new_outer_cfi") table new_outer_cfi_1() {
+    @name("new_inner_vid") table new_inner_vid_1() {
         actions = {
-            do_new_outer_cfi_0();
+            do_new_inner_vid_0();
             NoAction_12();
         }
         default_action = NoAction_12();
     }
-    @name("new_outer_pri") table new_outer_pri_1() {
+    @name("new_outer_cfi") table new_outer_cfi_1() {
         actions = {
-            do_new_outer_pri_0();
+            do_new_outer_cfi_0();
             NoAction_13();
         }
         default_action = NoAction_13();
     }
-    @name("new_outer_tpid") table new_outer_tpid_1() {
+    @name("new_outer_pri") table new_outer_pri_1() {
         actions = {
-            do_new_outer_tpid_0();
+            do_new_outer_pri_0();
             NoAction_14();
         }
         default_action = NoAction_14();
     }
-    @name("new_outer_vid") table new_outer_vid_1() {
+    @name("new_outer_tpid") table new_outer_tpid_1() {
         actions = {
-            do_new_outer_vid_0();
+            do_new_outer_tpid_0();
             NoAction_15();
         }
         default_action = NoAction_15();
+    }
+    @name("new_outer_vid") table new_outer_vid_1() {
+        actions = {
+            do_new_outer_vid_0();
+            NoAction_16();
+        }
+        default_action = NoAction_16();
     }
     @name("vlan_xlate") table vlan_xlate() {
         actions = {
             nop_0();
             rewrite_tags_0();
-            NoAction_16();
+            NoAction_17();
         }
         key = {
             hdr.vlan_tag[0].isValid(): exact;
@@ -323,7 +323,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.vlan_tag[1].isValid(): exact;
             hdr.vlan_tag[1].vid      : exact;
         }
-        default_action = NoAction_16();
+        default_action = NoAction_17();
     }
     apply {
         vlan_xlate.apply();

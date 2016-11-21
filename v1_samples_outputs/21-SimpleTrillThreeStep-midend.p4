@@ -198,11 +198,11 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction() {
+    @name("NoAction_1") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_0() {
+    @name("NoAction_2") action NoAction_4() {
     }
-    @name("NoAction_3") action NoAction_4() {
+    @name("NoAction_3") action NoAction_5() {
     }
     @name("do_copy_hopCount_from_m") action do_copy_hopCount_from_m_0() {
         hdr.trill.hopCount = meta.m.hopCount;
@@ -220,26 +220,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("copy_hopCount_from_m") table copy_hopCount_from_m() {
         actions = {
             do_copy_hopCount_from_m_0();
-            NoAction();
-        }
-        default_action = NoAction();
-    }
-    @name("copy_hopCount_to_m") table copy_hopCount_to_m() {
-        actions = {
-            do_copy_hopCount_to_m_0();
             NoAction_0();
         }
         default_action = NoAction_0();
     }
+    @name("copy_hopCount_to_m") table copy_hopCount_to_m() {
+        actions = {
+            do_copy_hopCount_to_m_0();
+            NoAction_4();
+        }
+        default_action = NoAction_4();
+    }
     @name("trill_forward") table trill_forward() {
         actions = {
             forward_trill_0();
-            NoAction_4();
+            NoAction_5();
         }
         key = {
             hdr.trill.egressRbridge: exact;
         }
-        default_action = NoAction_4();
+        default_action = NoAction_5();
     }
     apply {
         copy_hopCount_to_m.apply();
