@@ -143,9 +143,9 @@ class PHV_MAU_Group_Assignments
     std::map<int, std::map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>> T_PHV_i;
 								// all TPHV collections
 								// T_PHV_i[collection][width] = vector of containers
-    std::list<PHV_MAU_Group *> PHV_groups_i;    // list of Empty containers
+    std::list<PHV_MAU_Group *> PHV_groups_i;    // list of groups w/ Empty containers
                                                 // used for initial PHV placement
-    std::list<PHV_MAU_Group *> T_PHV_groups_i;  // list of Empty containers
+    std::list<PHV_MAU_Group *> T_PHV_groups_i;  // list of groups w/ Empty containers
                                                 // used for initial T_PHV placement
     //
     std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>> aligned_container_slices_i;
@@ -178,9 +178,6 @@ class PHV_MAU_Group_Assignments
 	);
     //
     void consolidate_slices_in_group(
-    	std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&
-	);
-    void update_PHV_MAU_Group_container_slices(
     	std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&
 	);
     void container_cohabit_summary();

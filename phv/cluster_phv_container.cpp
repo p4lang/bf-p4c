@@ -104,6 +104,7 @@ PHV_Container::taint(int start, int width, const PhvInfo::Field *field, int rang
 
 void
 PHV_Container::create_ranges() {
+    //
     ranges_i.clear();
     if (status_i == PHV_Container::Container_status::EMPTY) {
         ranges_i[0] = (int) width_i - 1;
@@ -310,7 +311,6 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
         if(c->fields_in_container().size() > 1) {
             out << "p";
         }
-        c->clean_ranges();
         for (auto r : c->ranges()) {
             out << '(' << r.first << ".." << r.second << ')';
         }
