@@ -830,6 +830,8 @@ void Memories::find_action_bus_users() {
     }
 }
 
+/* Due to color maprams, the number of RAMs available to the suppl vs. the action
+   groups could be wildly different */
 void Memories::adjust_RAMs_available(action_fill &curr_oflow, int &suppl_RAMs_available,
                                      int action_RAMs_available, int row, bool left_side) {
     if (left_side)
@@ -1047,46 +1049,10 @@ void Memories::best_candidates(action_fill &best_fit_action, action_fill &best_f
     }
 }
 
-/* Selects the best two candidates for the potential use in the particular action row,
-   and calculate the corresponding masks and indices within the list */
-void Memories::find_action_candidates(int row, int mask, action_fill &action, action_fill &suppl,
-                                      action_fill &oflow, bool stats_available,
-                                      bool meter_available, action_fill &curr_oflow) {
-    if (action_bus_users.empty() && suppl_bus_users.empty()) {
-        return;
-    }
-
-    int action_RAMs_available = __builtin_popcount(mask & ~sram_inuse[row]);
-    int suppl_RAMs_available = action_RAMs_available;
-    adjust_RAMs_available(curr_oflow, suppl_RAMs_available, action_RAMs_available, row,
-                          mask == 0xf);
-    action_fill best_fit_action, best_fit_suppl;
-    action_fill next_action, next_suppl;
-
-    best_candidates(best_fit_action, best_fit_suppl, next_action, next_suppl, curr_oflow,
-                    suppl_RAMs_available, action_RAMs_available, stats_available,
-                    meter_available, mask);
-
-    if (best_fit_action.group == nullptr && best_fit_suppl.group == nullptr
-        && curr_oflow.group == nullptr && next_action.group == nullptr
-        && next_suppl.group == nullptr) {
-        // FIXME: Calculate the color mapram stuff
-        if (curr_oflow.group && !curr_oflow.group->cm.all_placed()) {
-            oflow = curr_oflow;
-            color_mapram_candidates(suppl, oflow, mask);
-        }
-        return;
-    }
-
-    unsigned suppl_masks[3] = {0, 0, 0};
-    unsigned action_masks[3] = {0, 0, 0};
-    int RAMs[3] = {0, 0, 0};
-    int order[3] = {-1, -1, -1};  // order is action, suppl, oflow
-    int RAMs_filled[3] = {0, 0, 0};
-    bool is_suppl[3] = {false, false, false};
-    action_row_trip(action, suppl, oflow, best_fit_action, best_fit_suppl, curr_oflow,
-                    next_action, next_suppl, action_RAMs_available, suppl_RAMs_available,
-                    (mask == 0xf), order, RAMs, is_suppl);
+/* Fills out the masks for the suppl and the action groups in each of the orders */
+void Memories::fill_out_masks(unsigned suppl_masks[3], unsigned action_masks[3], int RAMs[3],
+                              int RAMs_filled[3], bool is_suppl[3], int row, unsigned mask,
+                              int suppl_RAMs_available, int action_RAMs_available) {
     int total_RAMs_filled = 0;
 
     /* Separate passes as the considered RAMs available for supplementary tables and
@@ -1133,7 +1099,50 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
             total_RAMs_filled++;
         }
     }
+}
 
+/* Selects the best two candidates for the potential use in the particular action row,
+   and calculate the corresponding masks and indices within the list */
+void Memories::find_action_candidates(int row, int mask, action_fill &action, action_fill &suppl,
+                                      action_fill &oflow, bool stats_available,
+                                      bool meter_available, action_fill &curr_oflow) {
+    if (action_bus_users.empty() && suppl_bus_users.empty()) {
+        return;
+    }
+
+    int action_RAMs_available = __builtin_popcount(mask & ~sram_inuse[row]);
+    int suppl_RAMs_available = action_RAMs_available;
+    adjust_RAMs_available(curr_oflow, suppl_RAMs_available, action_RAMs_available, row,
+                          mask == 0xf);
+    action_fill best_fit_action, best_fit_suppl;
+    action_fill next_action, next_suppl;
+
+    best_candidates(best_fit_action, best_fit_suppl, next_action, next_suppl, curr_oflow,
+                    suppl_RAMs_available, action_RAMs_available, stats_available,
+                    meter_available, mask);
+
+    if (best_fit_action.group == nullptr && best_fit_suppl.group == nullptr
+        && curr_oflow.group == nullptr && next_action.group == nullptr
+        && next_suppl.group == nullptr) {
+        // FIXME: Calculate the color mapram stuff
+        if (curr_oflow.group && !curr_oflow.group->cm.all_placed()) {
+            oflow = curr_oflow;
+            color_mapram_candidates(suppl, oflow, mask);
+        }
+        return;
+    }
+
+    unsigned suppl_masks[3] = {0, 0, 0};
+    unsigned action_masks[3] = {0, 0, 0};
+    int RAMs[3] = {0, 0, 0};
+    int order[3] = {-1, -1, -1};  // order is action, suppl, oflow
+    int RAMs_filled[3] = {0, 0, 0};
+    bool is_suppl[3] = {false, false, false};
+    action_row_trip(action, suppl, oflow, best_fit_action, best_fit_suppl, curr_oflow,
+                    next_action, next_suppl, action_RAMs_available, suppl_RAMs_available,
+                    (mask == 0xf), order, RAMs, is_suppl);
+    fill_out_masks(suppl_masks, action_masks, RAMs, RAMs_filled, is_suppl, row, mask,
+                   suppl_RAMs_available, action_RAMs_available);
     if (order[ACTION_IND] >= 0) {
         action.mask = suppl_masks[order[ACTION_IND]] | action_masks[order[ACTION_IND]];
     }

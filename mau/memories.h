@@ -210,6 +210,9 @@ struct Memories {
                          action_fill &curr_oflow, int action_RAMs_available,
                          int suppl_RAMs_available, bool stats_available,
                          bool meter_available, unsigned mask);
+    void fill_out_masks(unsigned suppl_masks[3], unsigned action_masks[3], int RAMs[3],
+                        int RAMs_filled[3], bool is_suppl[3], int row, unsigned mask,
+                        int suppl_RAMs_available, int action_RAMs_available);
     void action_row_trip(action_fill &action, action_fill &suppl, action_fill &oflow,
                          action_fill &best_fit_action, action_fill &best_fit_suppl,
                          action_fill &curr_oflow, action_fill &next_action,
