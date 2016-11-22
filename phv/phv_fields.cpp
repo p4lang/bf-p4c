@@ -297,7 +297,7 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &sl) {
-    out << (sl.field_bit+sl.width-1) << ':' << sl.field_bit << "->" << sl.container;
+    out << '[' << (sl.field_bit+sl.width-1) << ':' << sl.field_bit << "]->[" << sl.container << ']';
     if (sl.container_bit || size_t(sl.width) != sl.container.size()) {
         out << '(' << sl.container_bit;
         if (sl.width != 1)

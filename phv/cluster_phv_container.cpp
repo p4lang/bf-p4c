@@ -1,4 +1,5 @@
 #include "cluster_phv_container.h"
+#include "cluster_phv_mau.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
 #include "base/logging.h"
@@ -24,6 +25,7 @@ PHV_Container::Container_Content::Container_Content(int l, int w, const PhvInfo:
 PHV_Container::PHV_Container(PHV_MAU_Group *g, PHV_Word w, int phv_n, std::string asm_string, Ingress_Egress gress)
     : phv_mau_group_i(g), width_i(w), phv_number_i(phv_n), asm_string_i(asm_string), gress_i(gress)
 {
+    taint_color_i = '0';
     bits_i = new char[(int) width_i];
     for (auto i=0; i < (int) width_i; i++)
     {
@@ -62,16 +64,17 @@ PHV_Container::taint(int start, int width, const PhvInfo::Field *field, int rang
     avail_bits_i -= width;		// packing reduces available bits
     BUG_CHECK(avail_bits_i >= 0, "*****PHV_Container::taint()*****PHV-%s avail_bits = %d", phv_number_i, avail_bits_i);
     //
+    if (status_i == Container_status::EMPTY) {
+        phv_mau_group_i->empty_containers()--;
+    }
+    //
     // first container placement, packing start lo = start + width
     // after packing, non contiguous availability e.g., [15..15], [8..10] => ranges[15] = 15, ranges[8] = 10
     //
-    if(avail_bits_i == 0)
-    {
+    if (avail_bits_i == 0) {
         status_i = Container_status::FULL;
         ranges_i.clear();
-    }
-    else
-    {
+    } else {
         status_i = Container_status::PARTIAL;
         if(range_start == start)
         {
@@ -129,6 +132,22 @@ PHV_Container::create_ranges() {
     }
     const std::string msg = "..PHV_Container::create_ranges";
     sanity_check_container_ranges(msg);
+}
+
+void
+PHV_Container::clear() {
+    status_i = Container_status::EMPTY;
+    phv_mau_group_i->empty_containers()++;
+    fields_in_container_i.clear();
+    taint_color_i = '0';
+    bits_i = new char[(int) width_i];
+    for (auto i=0; i < (int) width_i; i++)
+    {
+        bits_i[i] = taint_color_i;
+    }
+    avail_bits_i = (int) width_i;
+    ranges_i.clear();
+    ranges_i[0] = (int) width_i - 1;
 }
 
 void

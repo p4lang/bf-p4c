@@ -47,8 +47,8 @@ PHV_Bind::PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m)
         phv_to_asm_map[c] = new PHV::Container(const_cast<PHV_Container *>(c)->asm_string().c_str()); 
     }
     //
-    sanity_check_container_fields("PHV_Bind::PHV_Bind()..");
-    LOG3(*this);
+    std::set<const PhvInfo::Field *> fields_overflow;  // all - PHV_Bind fields
+    sanity_check_container_fields("PHV_Bind::PHV_Bind()..", fields_overflow);
     //
     // binding fields to containers
     // clear previous field alloc information if any
@@ -68,6 +68,8 @@ PHV_Bind::PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m)
         }
     }
     //
+    LOG3(*this);
+    //
 }  // PHV_Bind
 
 
@@ -78,7 +80,10 @@ PHV_Bind::PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m)
 //***********************************************************************************
 
 
-void PHV_Bind::sanity_check_container_fields(const std::string& msg) {
+void PHV_Bind::sanity_check_container_fields(
+    const std::string& msg,
+    std::set<const PhvInfo::Field *>& s3) {
+    //
     const std::string msg_1 = msg+"PHV_Bind::sanity_check_container_fields";
     //
     // set difference phv_i fields, fields_i must be 0
@@ -87,7 +92,7 @@ void PHV_Bind::sanity_check_container_fields(const std::string& msg) {
     for (auto &field : phv_i) {
         s1.insert(&field);
     }
-    std::set<const PhvInfo::Field *> s3;                               // all - PHV_Bind fields
+    // s3 = all - PHV_Bind fields
     set_difference(s1.begin(), s1.end(), fields_i.begin(), fields_i.end(), std::inserter(s3, s3.end()));
     if (s3.size()) {
         WARNING("*****cluster_phv_bind.cpp:sanity_FAIL*****+phv bind fields != all .."
@@ -109,9 +114,14 @@ std::ostream &operator<<(std::ostream &out, PHV_Bind &phv_bind) {
         << "++++++++++ PHV_Bind PHV Containers to Fields ++++++++++"
         << std::endl
         << std::endl;
-    for (auto f : phv_bind.fields()) {
-        out << f
-            << std::endl;
+    for (auto &f : phv_bind.fields()) {
+        out << f;
+        for (auto &as : f->alloc) {
+            out << std::endl
+                << '\t'
+                << as;
+        }
+        out << std::endl;
     }
     out << std::endl;
 

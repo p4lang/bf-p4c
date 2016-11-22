@@ -104,6 +104,7 @@ class PHV_Container
     std::vector<Container_Content *>& fields_in_container()	{ return fields_in_container_i; }
     //
     void create_ranges();
+    void clear();
     void clean_ranges();
     //
     void sanity_check_container(const std::string& msg);

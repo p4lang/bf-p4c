@@ -52,7 +52,7 @@ class PHV_Bind {
     std::set<const PHV_Container *> containers()  { return containers_i; }
     std::set<const PhvInfo::Field *>& fields()    { return fields_i; }
     //
-    void sanity_check_container_fields(const std::string&);
+    void sanity_check_container_fields(const std::string&, std::set<const PhvInfo::Field *>&);
     //
 };
 //

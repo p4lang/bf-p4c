@@ -383,6 +383,7 @@ PHV_MAU_Group_Assignments::cluster_placement(
     LOG3(phv_groups_to_be_filled);
     //
     LOG3("..........Initial Container Placements .........." << std::endl);
+    std::set<PHV_Container *> fix_parser_containers;  // partial containers with parser fields
     for (auto &g : phv_groups_to_be_filled) {
         std::list<Cluster_PHV *> clusters_remove;
         for (auto &cl: clusters_to_be_assigned) {
@@ -397,7 +398,7 @@ PHV_MAU_Group_Assignments::cluster_placement(
             }
             //
             // try to exact match cl width to g width  -- parser placement contraints
-            // bits less than byte can use byte
+            // fields less than byte use byte
             //
             if ((int) g->width() > (int) PHV_Container::PHV_Word::b8
              && (int) cl->width() * 2 <= (int) g->width()) {
@@ -440,12 +441,26 @@ PHV_MAU_Group_Assignments::cluster_placement(
                         }
                         field_width -= (int) g->width();
                         //
-                        g->phv_containers()[container_index]->taint(0, taint_bits, cl->cluster_vec()[i], 0 /* range_start */, field_stride * (int) g->width() /* field_bit_lo */);
-                        LOG3("\t\t" << g->phv_containers()[container_index]);
+                        PHV_Container *container = g->phv_containers()[container_index];
+                        const PhvInfo::Field *field = cl->cluster_vec()[i];
+                        container->taint(
+                            0,
+                            taint_bits,
+                            field,
+                            0 /* range_start */,
+                            field_stride * (int) g->width() /* field_bit_lo */
+                            );
+                        LOG3("\t\t" << container);
                         container_index++;
+                        //
+                        // check if this container is partially filled with parser field
+                        //
+                        if (!field->metadata && !field->pov
+                            && container->status() == PHV_Container::Container_status::PARTIAL) {
+                            fix_parser_containers.insert(container);
+                        }
                     }
                 }
-                g->empty_containers() -= req_containers;
                 if (g->empty_containers() == 0) {
                     break;
                 }
@@ -458,6 +473,58 @@ PHV_MAU_Group_Assignments::cluster_placement(
     }  // for phv groups
     //
     // all mau groups searched
+    //
+    // fix parser constraints
+    // parser / deparser require fully packed containers
+    // ensure parser field parts are in full containers
+    // e.g.,
+    // field 48b -> 32b+16b and not 32b+32b half-filled
+    // header field:
+    // <data.x1.32-47: W1(0..15), data.x1.0-31: W0>
+    // should be
+    // <data.x1.16-47: W1, data.x1.0-15: H1>
+    // or
+    // <data.x1.0-31: W0, data.x1.32-47: H2>
+    //
+    for (auto &c : fix_parser_containers) {
+        PHV_Container::Container_Content *cc = c->fields_in_container()[0];
+        //
+        // find empty container with exact width
+        //
+        bool transfer_complete = false;
+        for (auto &g : phv_groups_to_be_filled) {
+            if (g->empty_containers() == 0
+             || (int) g->width() != cc->width()
+             || gress_in_compatibility(g->gress(), c->gress())) {   
+                //
+                // width or gress mismatch
+                // skip cluster field for this MAU group
+                //
+                continue;
+            }
+            for (auto &c_transfer : g->phv_containers()) {
+                if (c_transfer->status() == PHV_Container::Container_status::EMPTY) {
+                    //
+                    c_transfer->taint(
+                        0,
+                        cc->width(),
+                        cc->field(),
+                        0 /* range_start */,
+                        cc->field_bit_lo() /* field_bit_lo */
+                        );
+                    //
+                    c->clear();
+                    //
+                    LOG3("----->transfer parser container----->" << c << "--to-->" << c_transfer);
+                    transfer_complete = true;
+                    break;
+                }
+            }  // for
+            if (transfer_complete) {
+                break;
+            }
+        }  // for  
+    }
     //
     status(clusters_to_be_assigned);
     //
