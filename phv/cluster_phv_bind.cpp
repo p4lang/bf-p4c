@@ -20,7 +20,7 @@ PHV_Bind::PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m)
     for (auto it : phv_mau_i) {
         for (auto g : it.second) {
             for (auto c : g->phv_containers()) {
-                if(c->fields_in_container().size()) {
+                if (c->fields_in_container().size()) {
                     containers_i.insert(c);
                 }
             }
@@ -29,7 +29,7 @@ PHV_Bind::PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m)
     for (auto coll : t_phv_i) {
         for (auto c_s : coll.second) {
             for (auto c : c_s.second) {
-                if(c->fields_in_container().size()) {
+                if (c->fields_in_container().size()) {
                     containers_i.insert(c);
                 }
             }
@@ -39,12 +39,13 @@ PHV_Bind::PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m)
     // accumulate fields to be bound
     // create equivalent asm containers
     //
-    std::map<const PHV_Container*, PHV::Container *> phv_to_asm_map; 
+    std::map<const PHV_Container*, PHV::Container *> phv_to_asm_map;
     for (auto c : containers_i) {
         for (auto cc : const_cast<PHV_Container *>(c)->fields_in_container()) {
             fields_i.insert(cc->field());
         }
-        phv_to_asm_map[c] = new PHV::Container(const_cast<PHV_Container *>(c)->asm_string().c_str()); 
+        phv_to_asm_map[c] =
+            new PHV::Container(const_cast<PHV_Container *>(c)->asm_string().c_str());
     }
     //
     std::set<const PhvInfo::Field *> fields_overflow;  // all - PHV_Bind fields
@@ -93,7 +94,12 @@ void PHV_Bind::sanity_check_container_fields(
         s1.insert(&field);
     }
     // s3 = all - PHV_Bind fields
-    set_difference(s1.begin(), s1.end(), fields_i.begin(), fields_i.end(), std::inserter(s3, s3.end()));
+    set_difference(
+        s1.begin(),
+        s1.end(),
+        fields_i.begin(),
+        fields_i.end(),
+        std::inserter(s3, s3.end()));
     if (s3.size()) {
         WARNING("*****cluster_phv_bind.cpp:sanity_FAIL*****+phv bind fields != all .."
             << msg << s3);

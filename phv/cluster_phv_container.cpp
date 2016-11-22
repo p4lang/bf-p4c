@@ -7,85 +7,103 @@
 //***********************************************************************************
 //
 // PHV_Container::Container_Content::Container_Content constructor
-// 
+//
 //***********************************************************************************
 
-PHV_Container::Container_Content::Container_Content(int l, int w, const PhvInfo::Field *f, int field_bit_lo)
-    : lo_i(l), hi_i(l+w-1), field_i(f), field_bit_lo_i(field_bit_lo)
-{
-    BUG_CHECK(field_i, "*****PHV_Container::Container_Content constructor called with null field ptr*****");
+PHV_Container::Container_Content::Container_Content(
+    int l,
+    int w,
+    const PhvInfo::Field *f,
+    int field_bit_lo)
+    : lo_i(l), hi_i(l+w-1), field_i(f), field_bit_lo_i(field_bit_lo) {
+    //
+    BUG_CHECK(
+        field_i,
+        "*****PHV_Container::Container_Content constructor called with null field ptr*****");
 }
 
 //***********************************************************************************
 //
 // PHV_Container::PHV_Container
-// 
+//
 //***********************************************************************************
 
-PHV_Container::PHV_Container(PHV_MAU_Group *g, PHV_Word w, int phv_n, std::string asm_string, Ingress_Egress gress)
-    : phv_mau_group_i(g), width_i(w), phv_number_i(phv_n), asm_string_i(asm_string), gress_i(gress)
-{
+PHV_Container::PHV_Container(
+    PHV_MAU_Group *g,
+    PHV_Word w,
+    int phv_n,
+    std::string asm_string,
+    Ingress_Egress gress)
+    : phv_mau_group_i(g),
+      width_i(w),
+      phv_number_i(phv_n),
+      asm_string_i(asm_string),
+      gress_i(gress) {
+    //
     taint_color_i = '0';
     bits_i = new char[(int) width_i];
-    for (auto i=0; i < (int) width_i; i++)
-    {
+    for (auto i=0; i < (int) width_i; i++) {
         bits_i[i] = taint_color_i;
     }
     avail_bits_i = (int) width_i;
     ranges_i[0] = (int) width_i - 1;
     //
-}//PHV_Container
+}  // PHV_Container
 
 void
-PHV_Container::taint(int start, int width, const PhvInfo::Field *field, int range_start, int field_bit_lo) {
+PHV_Container::taint(
+    int start,
+    int width,
+    const PhvInfo::Field *field,
+    int range_start,
+    int field_bit_lo) {
     //
     BUG_CHECK((start+width <= (int) width_i),
-	"*****PHV_Container::taint()*****PHV-%s start=%d width=%d width_i=%d",
-	phv_number_i, start, width, (int) width_i);
+        "*****PHV_Container::taint()*****PHV-%s start=%d width=%d width_i=%d",
+        phv_number_i, start, width, (int) width_i);
     BUG_CHECK((range_start < (int) width_i),
-	"*****PHV_Container::taint()*****PHV-%s range_start=%d width=%d width_i=%d",
-	phv_number_i, start, width, (int) width_i);
+        "*****PHV_Container::taint()*****PHV-%s range_start=%d width=%d width_i=%d",
+        phv_number_i, start, width, (int) width_i);
     if (ranges_i[range_start]) {
         BUG_CHECK(start+width <= ranges_i[range_start]+1,
-            "*****PHV_Container::taint()*****PHV-%s start=%d width=%d range_start=%d ranges_i[range_start]=%d",
-            phv_number_i, start, width, range_start, ranges_i[range_start]);
+        "*****PHV_Container::taint()*****PHV-%s start=%d width=%d range_start=%d ranges_i[range_start]=%d",
+        phv_number_i, start, width, range_start, ranges_i[range_start]);
     }
     //
     taint_color_i += '1' - '0';
-    if(taint_color_i < '0' || taint_color_i > '9')
-    {
+    if (taint_color_i < '0' || taint_color_i > '9') {
         taint_color_i = '*';
     }
-    for (auto i=start; i < start+width; i++)
-    {
+    for (auto i=start; i < start+width; i++) {
          bits_i[i] = taint_color_i;
     }
     //
-    avail_bits_i -= width;		// packing reduces available bits
-    BUG_CHECK(avail_bits_i >= 0, "*****PHV_Container::taint()*****PHV-%s avail_bits = %d", phv_number_i, avail_bits_i);
+    avail_bits_i -= width;  // packing reduces available bits
+    BUG_CHECK(
+        avail_bits_i >= 0,
+        "*****PHV_Container::taint()*****PHV-%s avail_bits = %d",
+        phv_number_i,
+        avail_bits_i);
     //
     if (status_i == Container_status::EMPTY) {
         phv_mau_group_i->empty_containers()--;
     }
     //
     // first container placement, packing start lo = start + width
-    // after packing, non contiguous availability e.g., [15..15], [8..10] => ranges[15] = 15, ranges[8] = 10
+    // after packing, non contiguous availability
+    // e.g., [15..15], [8..10] => ranges[15] = 15, ranges[8] = 10
     //
     if (avail_bits_i == 0) {
         status_i = Container_status::FULL;
         ranges_i.clear();
     } else {
         status_i = Container_status::PARTIAL;
-        if(range_start == start)
-        {
-            if(start+width < ranges_i[start]+1)
-            {
+        if (range_start == start) {
+            if (start+width < ranges_i[start]+1) {
                 ranges_i[start+width] = ranges_i[start];
             }
             ranges_i.erase(start);
-        }
-        else
-        {
+        } else {
             ranges_i[range_start] = start-1;
         }
     }
@@ -141,8 +159,7 @@ PHV_Container::clear() {
     fields_in_container_i.clear();
     taint_color_i = '0';
     bits_i = new char[(int) width_i];
-    for (auto i=0; i < (int) width_i; i++)
-    {
+    for (auto i=0; i < (int) width_i; i++) {
         bits_i[i] = taint_color_i;
     }
     avail_bits_i = (int) width_i;
@@ -175,21 +192,33 @@ PHV_Container::clean_ranges() {
 //***********************************************************************************
 //
 // sanity checks
-// 
+//
 //***********************************************************************************
 
 
-void PHV_Container::Container_Content::sanity_check_container(PHV_Container *container, const std::string& msg)
-{
+void PHV_Container::Container_Content::sanity_check_container(
+    PHV_Container *container,
+    const std::string& msg) {
     const std::string msg_1 = msg + "..PHV_Container::Container_Content::sanity_check_container";
     //
     // fields can span containers
     //
-    if(field_i->size <= width())
-    {
-        if(field_i->phv_use_hi - field_i->phv_use_lo + 1 != width())
-        {
-            WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " field width does not match container use " << field_i->phv_use_lo << ".." << field_i->phv_use_hi << " vs " << lo_i << ".." << hi_i << ".." << field_i << *container);
+    if (field_i->size <= width()) {
+        if (field_i->phv_use_hi - field_i->phv_use_lo + 1 != width()) {
+            WARNING(
+                "*****cluster_phv_container.cpp:sanity_FAIL*****.."
+                << msg_1
+                << " field width does not match container use "
+                << field_i->phv_use_lo
+                << ".."
+                << field_i->phv_use_hi
+                << " vs "
+                << lo_i
+                << ".."
+                << hi_i
+                << ".."
+                << field_i
+                << *container);
         }
     }
     //
@@ -197,19 +226,24 @@ void PHV_Container::Container_Content::sanity_check_container(PHV_Container *con
     //
     for (auto i=lo_i; i <= hi_i; i++) {
         if (container->bits()[i] == '0') {
-            WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " field taint does not match container use " << lo_i << ".." << hi_i << *container);
-        }  
-    }  
+            WARNING(
+                "*****cluster_phv_container.cpp:sanity_FAIL*****.."
+                << msg_1
+                << " field taint does not match container use "
+                << lo_i
+                << ".."
+                << hi_i
+                << *container);
+        }
+    }
 }
 
-void PHV_Container::sanity_check_container(const std::string& msg)
-{
+void PHV_Container::sanity_check_container(const std::string& msg) {
     const std::string msg_1 = msg + "..PHV_Container::sanity_check_container";
     //
     // for fields binned in this container check bits occupied
     //
-    for (auto &cc: fields_in_container_i)
-    {
+    for (auto &cc : fields_in_container_i) {
         cc->sanity_check_container(this, msg_1);
         sanity_check_container_avail(cc->lo(), cc->hi(), msg_1);
     }
@@ -233,37 +267,82 @@ void PHV_Container::sanity_check_container_avail(int lo, int hi, const std::stri
         << avail_bits_i
         << "..fields in container="
         << fields_in_container_i
-        << *this
-        );
+        << *this);
     }
     // check range map in container
     //
     if (ranges_i[lo] && ranges_i[lo] != hi) {
-        WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container ranges " << '[' << lo << ".." << hi << ']' << ranges_i << *this);
-    } 
+        WARNING(
+            "*****cluster_phv_container.cpp:sanity_FAIL*****.."
+            << msg_1
+            << " container ranges "
+            << '['
+            << lo
+            << ".."
+            << hi
+            << ']'
+            << ranges_i
+            << *this);
+    }
     sanity_check_container_ranges(msg_1);
     //
     // check available bits in container
     //
     if (status_i == Container_status::EMPTY && avail_bits_i < hi - lo) {
-        WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container avail bits inconsistent " << lo << ".." << hi << " vs " << avail_bits_i);
+        WARNING(
+            "*****cluster_phv_container.cpp:sanity_FAIL*****.."
+            << msg_1
+            << " container avail bits inconsistent "
+            << lo
+            << ".."
+            << hi
+            << " vs "
+            << avail_bits_i);
     }
     if (status_i == Container_status::FULL && avail_bits_i > 0) {
-        WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container avail bits should be 0 " << lo << ".." << hi << " vs " << avail_bits_i);
+        WARNING(
+            "*****cluster_phv_container.cpp:sanity_FAIL*****.."
+            << msg_1
+            << " container avail bits should be 0 "
+            << lo
+            << ".."
+            << hi
+            << " vs "
+            << avail_bits_i);
     }
     //
     // check bits in range lo .. hi
     //
     for (auto i = lo; i <= hi; i++) {
         if (status_i == Container_status::EMPTY && bits_i[i] != '0') {
-            WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be '0' " << i << ": " << lo << ".." << hi << " vs " << *this);
+            WARNING(
+                "*****cluster_phv_container.cpp:sanity_FAIL*****.."
+                << msg_1
+                << " container bits should be '0' "
+                << i
+                << ": "
+                << lo
+                << ".."
+                << hi
+                << " vs "
+                << *this);
         } else {
             if (status_i == Container_status::FULL && bits_i[i] == '0') {
-                WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " container bits should be tainted non-0 " << i << ": " << lo << ".." << hi << " vs " << *this);
+                WARNING(
+                    "*****cluster_phv_container.cpp:sanity_FAIL*****.."
+                    << msg_1
+                    << " container bits should be tainted non-0 "
+                    << i
+                    << ": "
+                    << lo
+                    << ".."
+                    << hi
+                    << " vs "
+                    << *this);
             }
         }
     }
-}//sanity_check_container_avail
+}  // sanity_check_container_avail
 
 void PHV_Container::sanity_check_container_ranges(const std::string& msg) {
     //
@@ -274,27 +353,31 @@ void PHV_Container::sanity_check_container_ranges(const std::string& msg) {
     for (auto r : ranges_i) {
         if (r.second < r.first) {
             warning = true;
-            WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.." << msg_1 << " range absurdity [" << r.first << "]=" << r.second);
+            WARNING(
+                "*****cluster_phv_container.cpp:sanity_FAIL*****.."
+                << msg_1
+                << " range absurdity ["
+                << r.first
+                << "]="
+                << r.second);
         }
     }
     if (warning) {
         WARNING(this->ranges());
         WARNING(*this);
     }
-} //  sanity_check_container_ranges
+}  // sanity_check_container_ranges
 
 //***********************************************************************************
 //
 // output stream <<
-// 
+//
 //***********************************************************************************
 //
 // Container_Content output
 //
-std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container::Container_Content *>& c)
-{
-    for (auto f: c)
-    {
+std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container::Container_Content *>& c) {
+    for (auto f : c) {
         out << std::endl << "\t\t\t\t\t";
         out << f->field() << '<' << f->width() << '>' << '{' << f->lo() << ".." << f->hi() << '}';
     }
@@ -306,11 +389,9 @@ std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container::Container
 // phv_container output
 //
 
-std::ostream &operator<<(std::ostream &out, std::map<int, int>& ranges)
-{
+std::ostream &operator<<(std::ostream &out, std::map<int, int>& ranges) {
     out << ".....container ranges....." << std::endl;
-    for (auto i: ranges)
-    {
+    for (auto i : ranges) {
         out << '[' << i.first << "] -- " << i.second << std::endl;
     }
 
@@ -319,15 +400,15 @@ std::ostream &operator<<(std::ostream &out, std::map<int, int>& ranges)
 
 std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
     //
-    // summary output 
+    // summary output
     //
-    if(c) {
+    if (c) {
         out << std::endl << '\t';
         out << "PHV-" << c->phv_number()
             << '.' << c->asm_string()
             << '.' << (char) c->gress()
             << '.' << (char) c->status();
-        if(c->fields_in_container().size() > 1) {
+        if (c->fields_in_container().size() > 1) {
             out << "p";
         }
         for (auto r : c->ranges()) {
@@ -340,8 +421,7 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, PHV_Container &c)
-{
+std::ostream &operator<<(std::ostream &out, PHV_Container &c) {
     // detailed output
     //
     out << '\t' << &c
@@ -351,10 +431,8 @@ std::ostream &operator<<(std::ostream &out, PHV_Container &c)
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container *> &phv_containers)
-{
-    for (auto m: phv_containers)
-    {
+std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container *> &phv_containers) {
+    for (auto m : phv_containers) {
         out << *m;
     }
 

@@ -32,8 +32,8 @@ bool Cluster::preorder(const IR::Member* expression) {
     //    reads {
     //        m.field_32_33 : exact;
     //        m.field_32_34 : exact;
-    //.....Member.....ingress::m.field_32_33
-    //.....Member.....ingress::m.field_32_34
+    // .....Member.....ingress::m.field_32_33
+    // .....Member.....ingress::m.field_32_34
     //
 
     LOG4(".....Member....." << expression->toString());
@@ -316,7 +316,7 @@ void Cluster::set_field_range(const IR::Expression& expression) {
     auto field = phv_i.field(&expression, &bits);
     if (field) {
         field->phv_use_lo = std::min(field->phv_use_lo, bits.lo);
-        if(field->metadata || field->pov) {
+        if (field->metadata || field->pov) {
             field->phv_use_hi = std::max(field->phv_use_hi, bits.hi);
         } else {
             field->phv_use_hi = field->phv_use_lo + field->size - 1;
