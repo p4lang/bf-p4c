@@ -320,7 +320,6 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
         else
             out << indent << "home_row: " << home_row[0] << std::endl;
     }
-    
     if (!mem.color_mapram.empty()) {
         out << indent++ << "color_maprams:" << std::endl;
         vector<int> color_mapram_row, color_mapram_bus;
@@ -674,7 +673,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         if (at->is<IR::Meter>()) {
             meter_tables.push_back(at);
             continue;
-        } 
+        }
         out << indent << at->kind() << ": " << at->name;
         if (at->indexed())
             out << '(' << at->kind() << ')';
@@ -684,7 +683,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         for (auto at : stats_tables) {
             out << indent << "- " << at->name;
             if (at->indexed())
-                out << '(' << at->kind() << ')'; 
+                out << '(' << at->kind() << ')';
             out << std::endl;
         }
     }
@@ -693,7 +692,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         for (auto at : meter_tables) {
             out << indent << "- " << at->name;
             if (at->indexed())
-                out << '(' << at->kind() << ')'; 
+                out << '(' << at->kind() << ')';
             out << std::endl;
         }
     }

@@ -112,8 +112,8 @@ struct Memories {
             int placed;
             bool required;
             bool all_placed() { return needed == placed; }
-            bool left_to_place() { return needed - placed; }
-            explicit color_mapram_group() : needed(0), placed(0), required(false) {};
+            int left_to_place() { return needed - placed; }
+            color_mapram_group() : needed(0), placed(0), required(false) {}
         };
         color_mapram_group cm;
         explicit SRAM_group(table_alloc *t, int d, int w, int n, type_t ty)
@@ -205,10 +205,15 @@ struct Memories {
                                 action_fill &curr_oflow);
     void adjust_RAMs_available(action_fill &curr_oflow, int &suppl_RAMs_available,
                                int action_RAMs_available, int row, bool left_side);
+    void best_candidates(action_fill &best_fit_action, action_fill &best_fit_suppl,
+                         action_fill &next_action, action_fill &next_suppl,
+                         action_fill &curr_oflow, int action_RAMs_available,
+                         int suppl_RAMs_available, bool stats_available,
+                         bool meter_available, unsigned mask);
     void action_row_trip(action_fill &action, action_fill &suppl, action_fill &oflow,
                          action_fill &best_fit_action, action_fill &best_fit_suppl,
                          action_fill &curr_oflow, action_fill &next_action,
-                         action_fill &next_suppl, int action_RAMs_available, 
+                         action_fill &next_suppl, int action_RAMs_available,
                          int suppl_RAMs_available, bool left_side, int order[3], int RAMs[3],
                          bool is_suppl[3]);
     void action_oflow_only(action_fill &action, action_fill &oflow,

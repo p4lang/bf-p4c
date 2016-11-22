@@ -308,6 +308,10 @@ XFAIL_TESTS += tofino-newpa/extensions/tofino/v1_samples/gateway_bus2.p4.test
 # Multiple calculations per action
 XFAIL_TESTS += tofino-newpa/extensions/tofino/v1_samples/counter_test1.p4.test
 XFAIL_TESTS += tofino-newpa/extensions/tofino/v1_samples/counter_test2.p4.test
+XFAIL_TESTS += tofino-newpa/extensions/tofino/v1_samples/meter_test1.p4.test
+
+# STF framework doesn't work for meters
+XFAIL_TESTS += tofino/extensions/tofino/v1_samples/meter_test1.p4.test
 
 # Incorrect data layour in ixbar -- fails to get entire 128-bit value in one group.
 # intermittent failure?
