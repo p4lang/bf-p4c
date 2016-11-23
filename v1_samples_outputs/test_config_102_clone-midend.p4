@@ -156,11 +156,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
 }
 
+struct tuple_0 {
+    bit<8> field;
+}
+
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_2") action NoAction() {
+    @name("NoAction_2") action NoAction_0() {
     }
     @name("egr_action") action egr_action_0() {
-        clone3<tuple<bit<8>>>(CloneType.E2E, 32w7, { meta.m.foo });
+        clone3<tuple_0>(CloneType.E2E, 32w7, { meta.m.foo });
     }
     @name("egr_action2") action egr_action2_0() {
         clone(CloneType.E2E, 32w8);
@@ -169,14 +173,14 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             egr_action_0();
             egr_action2_0();
-            NoAction();
+            NoAction_0();
         }
         key = {
             hdr.eg_intr_md_from_parser_aux.egress_parser_err: exact;
             hdr.ethernet.dstAddr                            : exact;
             meta.m.foo                                      : exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         egr_null_table.apply();
@@ -184,10 +188,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_3") action NoAction_0() {
+    @name("NoAction_3") action NoAction_1() {
     }
     @name("ingr_action") action ingr_action_0() {
-        clone3<tuple<bit<8>>>(CloneType.I2E, 32w5, { meta.m.foo });
+        clone3<tuple_0>(CloneType.I2E, 32w5, { meta.m.foo });
     }
     @name("ingr_action2") action ingr_action2_0() {
         clone(CloneType.I2E, 32w6);
@@ -196,12 +200,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             ingr_action_0();
             ingr_action2_0();
-            NoAction_0();
+            NoAction_1();
         }
         key = {
             hdr.ig_intr_md_from_parser_aux.ingress_parser_err: exact;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     apply {
         ingr_null_table.apply();

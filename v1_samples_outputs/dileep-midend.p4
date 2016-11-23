@@ -227,19 +227,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<8> ttl_3;
     bit<8> ttl_4;
     bit<8> ttl_5;
-    @name("NoAction_1") action NoAction() {
+    @name("NoAction_1") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_0() {
+    @name("NoAction_2") action NoAction_8() {
     }
-    @name("NoAction_3") action NoAction_8() {
+    @name("NoAction_3") action NoAction_9() {
     }
-    @name("NoAction_4") action NoAction_9() {
+    @name("NoAction_4") action NoAction_10() {
     }
-    @name("NoAction_5") action NoAction_10() {
+    @name("NoAction_5") action NoAction_11() {
     }
-    @name("NoAction_6") action NoAction_11() {
+    @name("NoAction_6") action NoAction_12() {
     }
-    @name("NoAction_7") action NoAction_12() {
+    @name("NoAction_7") action NoAction_13() {
     }
     @name("nop") action nop_0() {
     }
@@ -303,83 +303,83 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_0();
             hop_ipv4_0();
-            NoAction();
+            NoAction_0();
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("ipv4_routing_exm_stage_5") table ipv4_routing_exm_stage_1() {
         actions = {
             nop_7();
             next_hop_ipv4_0();
-            NoAction_0();
+            NoAction_8();
         }
         key = {
             hdr.ipv4.dstAddr: exact;
             hdr.ipv4.srcAddr: exact;
         }
         size = 28672;
-        default_action = NoAction_0();
+        default_action = NoAction_8();
     }
     @name("ipv4_routing_exm_stage_6") table ipv4_routing_exm_stage_2() {
         actions = {
             nop_8();
             next_hop_ipv4_2();
-            NoAction_8();
+            NoAction_9();
         }
         key = {
             hdr.ipv4.dstAddr: exact;
         }
         size = 8192;
-        default_action = NoAction_8();
+        default_action = NoAction_9();
     }
     @name("ipv4_routing_stage_1") table ipv4_routing_stage_0() {
         actions = {
             nop_9();
             hop_ipv4_2();
-            NoAction_9();
+            NoAction_10();
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
             hdr.ipv4.srcAddr: exact;
         }
         size = 1024;
-        default_action = NoAction_9();
+        default_action = NoAction_10();
     }
     @name("tcam_tbl_stage_2") table tcam_tbl_stage_0() {
         actions = {
             nop_10();
             mod_mac_adr_0();
-            NoAction_10();
+            NoAction_11();
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
         }
-        default_action = NoAction_10();
+        default_action = NoAction_11();
     }
     @name("tcp_rm_tbl_stage_4") table tcp_rm_tbl_stage_0() {
         actions = {
             nop_11();
             tcp_hdr_rm_0();
-            NoAction_11();
-        }
-        key = {
-            hdr.ethernet.srcAddr: ternary;
-        }
-        default_action = NoAction_11();
-    }
-    @name("udp_add_tbl_stage_3") table udp_add_tbl_stage_0() {
-        actions = {
-            nop_12();
-            udp_hdr_add_0();
             NoAction_12();
         }
         key = {
             hdr.ethernet.srcAddr: ternary;
         }
         default_action = NoAction_12();
+    }
+    @name("udp_add_tbl_stage_3") table udp_add_tbl_stage_0() {
+        actions = {
+            nop_12();
+            udp_hdr_add_0();
+            NoAction_13();
+        }
+        key = {
+            hdr.ethernet.srcAddr: ternary;
+        }
+        default_action = NoAction_13();
     }
     apply {
         ipv4_routing.apply();
@@ -406,10 +406,24 @@ control verifyChecksum(in headers hdr, inout metadata meta) {
     }
 }
 
+struct tuple_0 {
+    bit<4>  field;
+    bit<4>  field_0;
+    bit<8>  field_1;
+    bit<16> field_2;
+    bit<16> field_3;
+    bit<3>  field_4;
+    bit<13> field_5;
+    bit<8>  field_6;
+    bit<8>  field_7;
+    bit<32> field_8;
+    bit<32> field_9;
+}
+
 control computeChecksum(inout headers hdr, inout metadata meta) {
     @name("ipv4_chksum_calc") Checksum16() ipv4_chksum_calc;
     apply {
-        hdr.ipv4.hdrChecksum = ipv4_chksum_calc.get<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr });
+        hdr.ipv4.hdrChecksum = ipv4_chksum_calc.get<tuple_0>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr });
     }
 }
 

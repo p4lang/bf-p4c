@@ -158,15 +158,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction() {
+    @name("NoAction_1") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_0() {
+    @name("NoAction_2") action NoAction_6() {
     }
-    @name("NoAction_3") action NoAction_6() {
+    @name("NoAction_3") action NoAction_7() {
     }
-    @name("NoAction_4") action NoAction_7() {
+    @name("NoAction_4") action NoAction_8() {
     }
-    @name("NoAction_5") action NoAction_8() {
+    @name("NoAction_5") action NoAction_9() {
     }
     @name("action_0") action action_5(bit<32> my_param_0, bit<32> my_param_4) {
         hdr.pkt.field_a = my_param_0;
@@ -198,57 +198,57 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_5();
             nop_0();
-            NoAction();
+            NoAction_0();
         }
         key = {
             hdr.pkt.field_b: exact;
         }
         size = 256000;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("table_1") table table_1() {
         actions = {
             action_6();
             nop_5();
-            NoAction_0();
+            NoAction_6();
         }
         key = {
             hdr.pkt.field_d: exact;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_6();
     }
     @name("table_2") table table_2() {
         actions = {
             action_7();
             nop_6();
-            NoAction_6();
+            NoAction_7();
         }
         key = {
             hdr.pkt.field_f: exact;
         }
-        default_action = NoAction_6();
+        default_action = NoAction_7();
     }
     @name("table_3") table table_3() {
         actions = {
             action_8();
             nop_7();
-            NoAction_7();
+            NoAction_8();
         }
         key = {
             hdr.pkt.field_h: exact;
         }
-        default_action = NoAction_7();
+        default_action = NoAction_8();
     }
     @name("table_4") table table_4() {
         actions = {
             action_9();
             nop_8();
-            NoAction_8();
+            NoAction_9();
         }
         key = {
             hdr.pkt.field_e: exact;
         }
-        default_action = NoAction_8();
+        default_action = NoAction_9();
     }
     apply {
         switch (table_0.apply().action_run) {

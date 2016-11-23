@@ -167,7 +167,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction() {
+    @name("NoAction_1") action NoAction_0() {
     }
     @name("bfd_rx") action bfd_rx_0() {
     }
@@ -177,14 +177,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             bfd_rx_0();
             bfd_tx_0();
-            NoAction();
+            NoAction_0();
         }
         key = {
             meta.bfd_md.bfd_tx_or_rx     : exact;
             meta.bfd_md.bfd_discriminator: exact;
         }
         size = 16384;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         bfd.apply();

@@ -29,21 +29,21 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction() {
+    @name("NoAction_1") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_0() {
+    @name("NoAction_2") action NoAction_9() {
     }
-    @name("NoAction_3") action NoAction_9() {
+    @name("NoAction_3") action NoAction_10() {
     }
-    @name("NoAction_4") action NoAction_10() {
+    @name("NoAction_4") action NoAction_11() {
     }
-    @name("NoAction_5") action NoAction_11() {
+    @name("NoAction_5") action NoAction_12() {
     }
-    @name("NoAction_6") action NoAction_12() {
+    @name("NoAction_6") action NoAction_13() {
     }
-    @name("NoAction_7") action NoAction_13() {
+    @name("NoAction_7") action NoAction_14() {
     }
-    @name("NoAction_8") action NoAction_14() {
+    @name("NoAction_8") action NoAction_15() {
     }
     @name("noop") action noop_0() {
     }
@@ -64,83 +64,83 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test1") table test1() {
         actions = {
             noop_0();
-            NoAction();
+            NoAction_0();
         }
         key = {
             hdr.data.b1: exact;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("test2") table test2() {
         actions = {
             noop_8();
-            NoAction_0();
+            NoAction_9();
         }
         key = {
             hdr.data.b2: exact;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_9();
     }
     @name("test3") table test3() {
         actions = {
             noop_9();
-            NoAction_9();
+            NoAction_10();
         }
         key = {
             hdr.data.b3: exact;
         }
-        default_action = NoAction_9();
+        default_action = NoAction_10();
     }
     @name("test4") table test4() {
         actions = {
             noop_10();
-            NoAction_10();
+            NoAction_11();
         }
         key = {
             hdr.data.b4: exact;
         }
-        default_action = NoAction_10();
+        default_action = NoAction_11();
     }
     @name("test5") table test5() {
         actions = {
             noop_11();
-            NoAction_11();
+            NoAction_12();
         }
         key = {
             hdr.data.b5: exact;
         }
-        default_action = NoAction_11();
+        default_action = NoAction_12();
     }
     @name("test6") table test6() {
         actions = {
             noop_12();
-            NoAction_12();
+            NoAction_13();
         }
         key = {
             hdr.data.b6: exact;
         }
-        default_action = NoAction_12();
+        default_action = NoAction_13();
     }
     @name("test7") table test7() {
         actions = {
             noop_13();
-            NoAction_13();
+            NoAction_14();
         }
         key = {
             hdr.data.b7: exact;
         }
-        default_action = NoAction_13();
+        default_action = NoAction_14();
     }
     @name("test8") table test8() {
         actions = {
             noop_14();
-            NoAction_14();
+            NoAction_15();
         }
         key = {
             hdr.data.b8: exact;
             hdr.data.b9: exact;
         }
-        default_action = NoAction_14();
+        default_action = NoAction_15();
     }
     apply {
         test1.apply();

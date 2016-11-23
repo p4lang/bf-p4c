@@ -190,9 +190,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction() {
+    @name("NoAction_1") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_0() {
+    @name("NoAction_2") action NoAction_3() {
     }
     @name("set_field1_1") action set_field1(bit<1> value) {
         meta.md.field1_1 = value;
@@ -413,13 +413,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             set_field32_21();
             set_field32_23();
             set_field32_25();
-            NoAction();
+            NoAction_0();
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 32768;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("dmac2") table dmac2() {
         actions = {
@@ -454,13 +454,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             set_field32_22();
             set_field32_24();
             set_field32_26();
-            NoAction_0();
+            NoAction_3();
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
         size = 32768;
-        default_action = NoAction_0();
+        default_action = NoAction_3();
     }
     apply {
         if ((hdr.ig_intr_md.ingress_port & 9w0x1) == 9w0x1) 

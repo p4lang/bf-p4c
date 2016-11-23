@@ -181,7 +181,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_2") action NoAction() {
+    @name("NoAction_2") action NoAction_0() {
     }
     @name("eg_drop") action eg_drop_0() {
         standard_metadata.egress_spec = 9w0;
@@ -192,12 +192,12 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             eg_drop_0();
             permit_0();
-            NoAction();
+            NoAction_0();
         }
         key = {
             meta.routing_metadata.drop: ternary;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     apply {
         egress_acl.apply();
@@ -206,9 +206,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     bit<8> ttl_1;
-    @name("NoAction_3") action NoAction_0() {
+    @name("NoAction_3") action NoAction_1() {
     }
-    @name("NoAction_4") action NoAction_1() {
+    @name("NoAction_4") action NoAction_5() {
     }
     @name("do_nothing") action do_nothing_0() {
     }
@@ -231,26 +231,26 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing_0();
             l3_set_index_0();
-            NoAction_0();
+            NoAction_1();
         }
         key = {
             hdr.ipv4.dstAddr: exact;
         }
         max_size = 16384;
-        default_action = NoAction_0();
+        default_action = NoAction_1();
     }
     @name("ipv4_routing") table ipv4_routing() {
         actions = {
             ig_drop_0();
             hop_ipv4_0();
-            NoAction_1();
+            NoAction_5();
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
             hdr.ipv4.srcAddr: exact;
         }
         max_size = 2048;
-        default_action = NoAction_1();
+        default_action = NoAction_5();
     }
     apply {
         ipv4_routing.apply();

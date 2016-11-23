@@ -162,13 +162,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction() {
+    @name("NoAction_1") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_0() {
+    @name("NoAction_2") action NoAction_5() {
     }
-    @name("NoAction_3") action NoAction_5() {
+    @name("NoAction_3") action NoAction_6() {
     }
-    @name("NoAction_4") action NoAction_6() {
+    @name("NoAction_4") action NoAction_7() {
     }
     @name("assign_egress1_action") action assign_egress1_action_0() {
         meta.ing_metadata.egress_port1 = meta.ing_metadata.tmp;
@@ -185,37 +185,37 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("assign_egress1") table assign_egress1() {
         actions = {
             assign_egress1_action_0();
-            NoAction();
-        }
-        default_action = NoAction();
-    }
-    @name("assign_egress2") table assign_egress2() {
-        actions = {
-            assign_egress2_action_0();
             NoAction_0();
         }
         default_action = NoAction_0();
     }
+    @name("assign_egress2") table assign_egress2() {
+        actions = {
+            assign_egress2_action_0();
+            NoAction_5();
+        }
+        default_action = NoAction_5();
+    }
     @name("dmac") table dmac() {
         actions = {
             assign_egress_interfaces_0();
-            NoAction_5();
+            NoAction_6();
         }
         key = {
             hdr.ethernet.dstAddr: exact;
         }
-        default_action = NoAction_5();
+        default_action = NoAction_6();
     }
     @name("ingress_port_map") table ingress_port_map() {
         actions = {
             set_ingress_port_props_0();
-            NoAction_6();
+            NoAction_7();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact;
         }
         size = 288;
-        default_action = NoAction_6();
+        default_action = NoAction_7();
     }
     apply {
         if (hdr.ig_intr_md.resubmit_flag == 1w0) {

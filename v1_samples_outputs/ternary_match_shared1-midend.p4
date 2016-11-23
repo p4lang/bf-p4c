@@ -26,11 +26,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction() {
+    @name("NoAction_1") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_0() {
+    @name("NoAction_2") action NoAction_4() {
     }
-    @name("NoAction_3") action NoAction_4() {
+    @name("NoAction_3") action NoAction_5() {
     }
     @name("noop") action noop_0() {
     }
@@ -41,30 +41,30 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test1") table test1() {
         actions = {
             noop_0();
-            NoAction();
+            NoAction_0();
         }
         key = {
             hdr.data.b1: ternary;
             hdr.data.b2: ternary;
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("test2") table test2() {
         actions = {
             noop_3();
-            NoAction_0();
+            NoAction_4();
         }
         key = {
             hdr.data.b3: ternary;
             hdr.data.b4: ternary;
             hdr.data.b5: ternary;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_4();
     }
     @name("test3") table test3() {
         actions = {
             noop_4();
-            NoAction_4();
+            NoAction_5();
         }
         key = {
             hdr.data.b1: ternary;
@@ -73,7 +73,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.data.b4: ternary;
             hdr.data.b7: ternary;
         }
-        default_action = NoAction_4();
+        default_action = NoAction_5();
     }
     apply {
         test1.apply();

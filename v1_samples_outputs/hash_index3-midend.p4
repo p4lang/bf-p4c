@@ -153,11 +153,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction() {
+    @name("NoAction_1") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_0() {
+    @name("NoAction_2") action NoAction_4() {
     }
-    @name("NoAction_3") action NoAction_4() {
+    @name("NoAction_3") action NoAction_5() {
     }
     @name("setf1") action setf1_0(bit<32> val) {
         hdr.data.f1 = val;
@@ -171,33 +171,33 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @use_hash_action(1) @name("test1") table test1() {
         actions = {
             setf1_0();
-            NoAction();
+            NoAction_0();
         }
         key = {
             hdr.data.b1: exact;
         }
         size = 256;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("test2") table test2() {
         actions = {
             setf3_0();
-            NoAction_0();
+            NoAction_4();
         }
         key = {
             hdr.data.f2: ternary;
         }
-        default_action = NoAction_0();
+        default_action = NoAction_4();
     }
     @name("test3") table test3() {
         actions = {
             setf3_2();
-            NoAction_4();
+            NoAction_5();
         }
         key = {
             hdr.data.f4: ternary;
         }
-        default_action = NoAction_4();
+        default_action = NoAction_5();
     }
     apply {
         if (hdr.data.b2 == 8w10) 

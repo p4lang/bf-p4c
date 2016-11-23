@@ -183,10 +183,10 @@ blackbox_type stateful_alu {
     }
     attribute math_unit_exponent_invert {
         /* Specifies whether the math unit should invert the computed exponent.
-           By default, the exponent is not inverted. Allowed values are True and False.
+           By default, the exponent is not inverted. Allowed values are true and false.
            Inverting allows reciprocal exponents, e.g. 1/x, 1/x**2, or 1/sqrt(x)
          */
-        type: string;
+        type: bit;
         optional;
     }
 

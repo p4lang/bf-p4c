@@ -174,9 +174,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction() {
+    @name("NoAction_1") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_0() {
+    @name("NoAction_2") action NoAction_3() {
     }
     @name("flex_counter") counter(32w8192, CounterType.packets) flex_counter;
     @name("update_flex_counter") action update_flex_counter_0() {
@@ -188,20 +188,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("update_counters") table update_counters() {
         actions = {
             update_flex_counter_0();
-            NoAction();
+            NoAction_0();
         }
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("vlan") table vlan() {
         actions = {
             set_flex_counter_index_0();
-            NoAction_0();
+            NoAction_3();
         }
         key = {
             hdr.vlan_tag.vlan_id: exact;
         }
         size = 4096;
-        default_action = NoAction_0();
+        default_action = NoAction_3();
     }
     apply {
         if (vlan.apply().hit) 

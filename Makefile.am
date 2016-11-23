@@ -321,5 +321,7 @@ IFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/07-MultiProtocol.p4.test
 IFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/hitmiss.p4.test
 
 # These fail (or pass) intermittently on Jenkins; not sure why
-IFAIL_TESTS += tofino-newpa/extensions/tofino/v1_samples/simple_counter.p4.text \
-	       tofino-newpa/extensions/tofino/v1_samples/gateway_bus2.p4.test
+IFAIL_TESTS += tofino-newpa/extensions/tofino/v1_samples/simple_counter.p4.test \
+	       tofino-newpa/extensions/tofino/v1_samples/max_counters.p4.test \
+	       tofino-newpa/extensions/tofino/v1_samples/gateway_bus2.p4.test \
+	       tofino-newpa/extensions/tofino/v1_samples/bigfield1.p4.test

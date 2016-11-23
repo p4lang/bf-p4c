@@ -175,11 +175,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction() {
+    @name("NoAction_1") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_0() {
+    @name("NoAction_2") action NoAction_4() {
     }
-    @name("NoAction_3") action NoAction_4() {
+    @name("NoAction_3") action NoAction_5() {
     }
     @name("action_0") action action_3() {
         hdr.ipv4.diffserv = 8w1;
@@ -200,38 +200,38 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_3();
             do_nothing_0();
-            NoAction();
+            NoAction_0();
         }
         key = {
             hdr.ethernet.etherType: lpm;
         }
         max_size = 1024;
-        default_action = NoAction();
+        default_action = NoAction_0();
     }
     @name("table_1") table table_1() {
         actions = {
             action_4();
             do_nothing_3();
-            NoAction_0();
+            NoAction_4();
         }
         key = {
             hdr.ipv4.srcAddr: exact;
             hdr.ipv4.dstAddr: exact;
         }
         max_size = 16384;
-        default_action = NoAction_0();
+        default_action = NoAction_4();
     }
     @name("table_2") table table_2() {
         actions = {
             action_5();
             do_nothing_4();
-            NoAction_4();
+            NoAction_5();
         }
         key = {
             hdr.ipv4.srcAddr: exact;
         }
         max_size = 4096;
-        default_action = NoAction_4();
+        default_action = NoAction_5();
     }
     apply {
         if (hdr.ethernet.etherType == 16w0x800) 

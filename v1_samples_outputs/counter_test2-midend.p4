@@ -32,11 +32,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction() {
+    @name("NoAction_1") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_0() {
+    @name("NoAction_2") action NoAction_4() {
     }
-    @name("NoAction_3") action NoAction_4() {
+    @name("NoAction_3") action NoAction_5() {
     }
     @name("c1_3") action c1_0(bit<16> val1, bit<16> val2, bit<16> val3) {
         hdr.data.c1 = val1;
@@ -57,37 +57,37 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test1") table test1() {
         actions = {
             c1_0();
-            NoAction();
+            NoAction_0();
         }
         key = {
             hdr.data.f1: exact;
         }
         size = 16384;
-        default_action = NoAction();
+        default_action = NoAction_0();
         @name("cnt") counters = direct_counter(CounterType.packets);
     }
     @name("test2") table test2() {
         actions = {
             c4_0();
-            NoAction_0();
+            NoAction_4();
         }
         key = {
             hdr.data.f2: exact;
         }
         size = 16384;
-        default_action = NoAction_0();
+        default_action = NoAction_4();
         @name("cnt2") counters = direct_counter(CounterType.packets);
     }
     @name("test3") table test3() {
         actions = {
             c7_0();
-            NoAction_4();
+            NoAction_5();
         }
         key = {
             hdr.data.f3: exact;
         }
         size = 1024;
-        default_action = NoAction_4();
+        default_action = NoAction_5();
         @name("cnt3") counters = direct_counter(CounterType.packets);
     }
     apply {
