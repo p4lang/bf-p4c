@@ -41,7 +41,6 @@
 #include "tofino/phv/create_thread_local_instances.h"
 #include "tofino/phv/phv_allocator.h"
 #include "tofino/phv/cluster_phv_bind.h"
-#include "tofino/common/copy_header_eliminator.h"
 
 class CheckTableNameDuplicate : public MauInspector {
     set<cstring>        names;
@@ -116,7 +115,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
                                            // honor single write conflicts from Table Placement
                 phv_field_bind = new PHV_Bind(phv, *phv_mau_group_assignments);
                                      // fields bound to PHV containers
-	    }),
+            }),
         });
     }
 
