@@ -41,12 +41,12 @@ PHV_Container::PHV_Container(
       gress_i(gress) {
     //
     taint_color_i = '0';
-    bits_i = new char[(int) width_i];
-    for (auto i=0; i < (int) width_i; i++) {
+    bits_i = new char[static_cast<int>(width_i)];
+    for (auto i=0; i < static_cast<int>(width_i); i++) {
         bits_i[i] = taint_color_i;
     }
-    avail_bits_i = (int) width_i;
-    ranges_i[0] = (int) width_i - 1;
+    avail_bits_i = static_cast<int>(width_i);
+    ranges_i[0] = static_cast<int>(width_i) - 1;
     //
 }  // PHV_Container
 
@@ -58,16 +58,17 @@ PHV_Container::taint(
     int range_start,
     int field_bit_lo) {
     //
-    BUG_CHECK((start+width <= (int) width_i),
+    BUG_CHECK((start+width <= static_cast<int>(width_i)),
         "*****PHV_Container::taint()*****PHV-%s start=%d width=%d width_i=%d",
-        phv_number_i, start, width, (int) width_i);
-    BUG_CHECK((range_start < (int) width_i),
+        phv_number_i, start, width, static_cast<int>(width_i));
+    BUG_CHECK((range_start < static_cast<int>(width_i)),
         "*****PHV_Container::taint()*****PHV-%s range_start=%d width=%d width_i=%d",
-        phv_number_i, start, width, (int) width_i);
+        phv_number_i, start, width, static_cast<int>(width_i));
     if (ranges_i[range_start]) {
         BUG_CHECK(start+width <= ranges_i[range_start]+1,
-        "*****PHV_Container::taint()*****PHV-%s start=%d width=%d range_start=%d ranges_i[range_start]=%d",
-        phv_number_i, start, width, range_start, ranges_i[range_start]);
+            "*****PHV_Container::taint()*****"
+            "PHV-%s start=%d width=%d range_start=%d ranges_i[range_start]=%d",
+            phv_number_i, start, width, range_start, ranges_i[range_start]);
     }
     //
     taint_color_i += '1' - '0';
@@ -128,18 +129,18 @@ PHV_Container::create_ranges() {
     //
     ranges_i.clear();
     if (status_i == PHV_Container::Container_status::EMPTY) {
-        ranges_i[0] = (int) width_i - 1;
+        ranges_i[0] = static_cast<int>(width_i) - 1;
     } else {
         if (status_i == PHV_Container::Container_status::PARTIAL) {
-            for (auto i=0; i < (int) width_i ; i++) {
+            for (auto i=0; i < static_cast<int>(width_i) ; i++) {
                 if (bits_i[i] == '0') {
-                    for (auto j=i; j < (int) width_i ; j++) {
+                    for (auto j=i; j < static_cast<int>(width_i) ; j++) {
                         if (bits_i[j] != '0') {
                             ranges_i[i] = j - 1;
                             i = j - 1;
                             break;
                         }
-                        if (j == (int) width_i - 1) {
+                        if (j == static_cast<int>(width_i) - 1) {
                             ranges_i[i] = j;
                             i = j;
                         }
@@ -158,13 +159,13 @@ PHV_Container::clear() {
     phv_mau_group_i->empty_containers()++;
     fields_in_container_i.clear();
     taint_color_i = '0';
-    bits_i = new char[(int) width_i];
-    for (auto i=0; i < (int) width_i; i++) {
+    bits_i = new char[static_cast<int>(width_i)];
+    for (auto i=0; i < static_cast<int>(width_i); i++) {
         bits_i[i] = taint_color_i;
     }
-    avail_bits_i = (int) width_i;
+    avail_bits_i = static_cast<int>(width_i);
     ranges_i.clear();
-    ranges_i[0] = (int) width_i - 1;
+    ranges_i[0] = static_cast<int>(width_i) - 1;
 }
 
 void
@@ -257,12 +258,12 @@ void PHV_Container::sanity_check_container_avail(int lo, int hi, const std::stri
     //
     if ((avail_bits_i > 0 && status_i == Container_status::FULL)
      || (avail_bits_i == 0 && status_i != Container_status::FULL)
-     || (avail_bits_i == (int) width_i && status_i != Container_status::EMPTY)
+     || (avail_bits_i == static_cast<int>(width_i) && status_i != Container_status::EMPTY)
      || (fields_in_container_i.size() && status_i == Container_status::EMPTY)) {
         WARNING("*****cluster_phv_container.cpp:sanity_FAIL*****.."
         << msg_1
         << " container status inconsisent w/ available bits or fields_in_container size "
-        << (char) status_i
+        << static_cast<char>(status_i)
         << "..avail_bits="
         << avail_bits_i
         << "..fields in container="
@@ -406,8 +407,8 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
         out << std::endl << '\t';
         out << "PHV-" << c->phv_number()
             << '.' << c->asm_string()
-            << '.' << (char) c->gress()
-            << '.' << (char) c->status();
+            << '.' << static_cast<char>(c->gress())
+            << '.' << static_cast<char>(c->status());
         if (c->fields_in_container().size() > 1) {
             out << "p";
         }

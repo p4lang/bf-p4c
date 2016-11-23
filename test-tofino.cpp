@@ -41,7 +41,6 @@
 #include "tofino/phv/create_thread_local_instances.h"
 #include "tofino/phv/phv_allocator.h"
 #include "tofino/phv/cluster_phv_bind.h"
-#include "tofino/common/copy_header_eliminator.h"
 
 class CheckTableNameDuplicate : public MauInspector {
     set<cstring>        names;
@@ -80,10 +79,10 @@ static void debug_hook(const char *, unsigned, const char *pass, const IR::Node 
 
 void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *options) {
     PhvInfo phv;
-    Cluster cluster(phv);					// cluster analysis
-    Cluster_PHV_Requirements *cluster_phv_requirements;		// PHV requirements analysis
-    PHV_MAU_Group_Assignments *phv_mau_group_assignments;	// PHV MAU Group Container placements
-    PHV_Bind *phv_field_bind;					// field binding to PHV Containers
+    Cluster cluster(phv);  // cluster analysis
+    Cluster_PHV_Requirements *cluster_phv_requirements;  // PHV requirements analysis
+    PHV_MAU_Group_Assignments *phv_mau_group_assignments;  // PHV MAU Group Container placements
+    PHV_Bind *phv_field_bind;  // field binding to PHV Containers
     DependencyGraph deps;
     TablesMutuallyExclusive mutex;
     FieldDefUse defuse(phv);
@@ -110,23 +109,27 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
             new PHV::TrivialAlloc(phv, defuse.conflicts()),
             //
             new VisitFunctor([&phv, &phv_mau_group_assignments, &phv_field_bind]() {
-               // phv_mau_group_assignments = new PHV_MAU_Group_Assignments(*cluster_phv_requirements);
-										// second cut PHV MAU Group assignments
-										// honor single write conflicts from Table Placement
-                phv_field_bind = new PHV_Bind(phv, *phv_mau_group_assignments);	// fields bound to PHV containers
-	    }),
-	});
+               // phv_mau_group_assignments =
+                                       // new PHV_MAU_Group_Assignments(*cluster_phv_requirements);
+                                           // second cut PHV MAU Group assignments
+                                           // honor single write conflicts from Table Placement
+                phv_field_bind = new PHV_Bind(phv, *phv_mau_group_assignments);
+                                     // fields bound to PHV containers
+            }),
+        });
     }
 
     PassManager *phv_analysis = new PassManager({
-        &cluster, 
-        new VisitFunctor([&phv, &defuse, &cluster, &cluster_phv_requirements, &phv_mau_group_assignments]() {
+        &cluster,
+        new VisitFunctor(
+            [&phv, &defuse, &cluster, &cluster_phv_requirements, &phv_mau_group_assignments]() {
             //
-            cluster_phv_requirements = new Cluster_PHV_Requirements(cluster);	// PHV requirements analysis
+            cluster_phv_requirements = new Cluster_PHV_Requirements(cluster);
+                                           // PHV requirements analysis
             phv_mau_group_assignments = new PHV_MAU_Group_Assignments(*cluster_phv_requirements);
-										// first cut PHV MAU Group assignments
-										// produces cohabit fields for Table Placement
-	}),
+                                            // first cut PHV MAU Group assignments
+                                            // produces cohabit fields for Table Placement
+        }),
     });
 
     PassManager backend = {
@@ -146,7 +149,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new CopyHeaderEliminator,    // needs to be after POV alloc and before InstSel
         new InstructionSelection(phv),
 
-        phv_analysis,		// perform cluster analysis after last &phv pass
+        phv_analysis,  // perform cluster analysis after last &phv pass
 
         new CanonGatewayExpr,   // must be before TableLayout?  or just TablePlacement?
         new SplitComplexGateways(phv),

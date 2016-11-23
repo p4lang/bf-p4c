@@ -29,8 +29,8 @@ class PhvInfo : public Inspector {
         int             id;
         gress_t         gress;
         int             size;
-        int		phv_use_lo=0;	// lowest bit of field used through MAU pipeline
-        int		phv_use_hi=0;	// highest bit of field used through MAU pipeline
+        int             phv_use_lo = 0;  // lowest bit of field used through MAU pipeline
+        int             phv_use_hi = 0;  // highest bit of field used through MAU pipeline
         int             offset;  // offset of lsb from lsb (last) bit of containing header
         bool            referenced;
         bool            metadata;
@@ -70,7 +70,8 @@ class PhvInfo : public Inspector {
             int container_hi() const { return container_bit + width - 1; } };
         vector<alloc_slice>     alloc;   // sorted MSB (field) first
         int container_bytes(bitrange bits = {0, -1}) const;
-        int phv_use_width() const { return phv_use_hi - phv_use_lo + 1; } // width of field needed in phv container
+        int phv_use_width() const { return phv_use_hi - phv_use_lo + 1; }
+                                                      // width of field needed in phv container
         const alloc_slice &for_bit(int bit) const;
         void foreach_alloc(int lo, int hi, std::function<void(const alloc_slice &)> fn) const;
         void foreach_alloc(std::function<void(const alloc_slice &)> fn) const {
