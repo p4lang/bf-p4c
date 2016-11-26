@@ -20,6 +20,7 @@ enum {
     PARSER_TCAM_DEPTH = 256,
     PARSER_CHECKSUM_ROWS = 32,
     PARSER_CTRINIT_ROWS = 16,
+    PARSER_INPUT_BUFFER_SIZE = 32,
 };
 
 class Parser : public Section {

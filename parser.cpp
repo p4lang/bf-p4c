@@ -764,12 +764,14 @@ Parser::State::Match::Match(int l, gress_t gress, match_t m, VECTOR(pair_t) &dat
             if (shift)
                 error(kv.key.lineno, "Multiple shift settings in match");
             if (!CHECKTYPE(kv.value, tINT)) continue;
-            shift = kv.value.i;
+            if ((shift = kv.value.i) < 0 || shift > PARSER_INPUT_BUFFER_SIZE)
+                error(kv.value.lineno, "shift value %d out of range", shift);
         } else if (kv.key == "buf_req") {
             if (buf_req >= 0)
                 error(kv.key.lineno, "Multiple buf_req settings in match");
             if (!CHECKTYPE(kv.value, tINT)) continue;
-            buf_req = kv.value.i;
+            if ((buf_req = kv.value.i) < 0 || shift > PARSER_INPUT_BUFFER_SIZE)
+                error(kv.value.lineno, "buf_req value %d out of range", shift);
         } else if (kv.key == "next") {
             if (next.lineno >= 0) {
                 error(kv.key.lineno, "Multiple next settings in match");
