@@ -4,3 +4,7 @@ hash_index5.p4 mismatch
 mac_rewrite.p4 tfas
 proxy_hash1.p4 mismatch
 selector0.p4 compile
+
+- new failures -- incorrect asm gen
+acl1.p4 tfas
+testgw.p4 tfas

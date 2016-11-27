@@ -140,7 +140,7 @@ function test_p4() {
     pushd $(dirname $p4file) >/dev/null
     name=$(basename $p4file .p4)
     mkdir -p $name.out
-    expect_fail=$(sed -n "/^$name.p4/s/[^ ]* *//p" expected_failures.txt 2>/dev/null)
+    expect_fail=$(sed -n "/^$name.p4/s/[^ ]* *//p" expected_failures.txt 2>/dev/null | head -1)
     cd $name.out
     ok=true
     fail_type=""
