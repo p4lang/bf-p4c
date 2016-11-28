@@ -91,12 +91,12 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     MauAsmOutput mauasm(phv);
     PassManager *phv_alloc;
 
-    if (options->phv_newalloc) {
+    if (options->phv_ortools) {
         auto *newpa = new PhvAllocator(phv, defuse.conflicts(), std::ref(mutex));
         phv_alloc = new PassManager({
             newpa,
             new VisitFunctor([newpa, options]() {
-                if (!newpa->Solve(options->phv_newalloc)) {
+                if (!newpa->Solve(options->phv_ortools)) {
                     error("or-tools failed to find PHV allocation"); } }),
             verbose ? new VisitFunctor([&phv]() {
                 std::cout << "Printing PHV fields:\n";
@@ -107,16 +107,15 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         phv_alloc = new PassManager({
             new MauPhvConstraints(phv),
             new PHV::TrivialAlloc(phv, defuse.conflicts()),
-            //
-            new VisitFunctor([&phv, &phv_mau_group_assignments, &phv_field_bind]() {
-               // phv_mau_group_assignments =
-                                       // new PHV_MAU_Group_Assignments(*cluster_phv_requirements);
-                                           // second cut PHV MAU Group assignments
-                                           // honor single write conflicts from Table Placement
+            options->phv_new ? new VisitFunctor([&]() {
+                // phv_mau_group_assignments =
+                //       new PHV_MAU_Group_Assignments(*cluster_phv_requirements);
+                //       second cut PHV MAU Group assignments
+                //       honor single write conflicts from Table Placement
                 phv_field_bind = new PHV_Bind(phv, *phv_mau_group_assignments);
                                      // fields bound to PHV containers
-            }),
-        });
+                }) : nullptr,
+            });
     }
 
     PassManager *phv_analysis = new PassManager({

@@ -161,7 +161,7 @@ cpplint_FILES += $(tofino_backend_SOURCES)
 #-include p4-16-tofinotests.mk
 -include tofino-p14_to_16_tests.mk
 -include tofino-bmv2tests.mk
--include newpa-tofinotests.mk
+-include ortools-tofinotests.mk
 
 
 tofinotests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
@@ -178,11 +178,11 @@ tofinotests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
 #p4-16-tofinotests.mk: $(wildcard $(srcdir)/testdata/p4_16_samples/*.stf)
 #	@$(GENTESTS) $(srcdir) tofino $(srcdir)/%reldir%/runtest $(^:%.stf=%.p4) >$@ || ( rm $@ && false )
 
-newpa-tofinotests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
+ortools-tofinotests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
    $(srcdir)/testdata/p4_14_samples/*.stf \
    $(srcdir)/%reldir%/v1_2_test/*.stf \
    $(srcdir)/%reldir%/v1_samples/*.stf)
-	@$(GENTESTS) $(srcdir) tofino-newpa $(srcdir)/%reldir%/runtest --newpa $(^:%.stf=%.p4) >$@ || ( rm $@ && false )
+	@$(GENTESTS) $(srcdir) tofino-ortools $(srcdir)/%reldir%/runtest --ortools $(^:%.stf=%.p4) >$@ || ( rm $@ && false )
 
 # We have additional test inputs that are used to test the other (standard) back-ends
 # These test input programs depend on Tofino in some way.
@@ -211,7 +211,7 @@ CLEANFILES += \
 	tofino-p14_to_16_tests.mk \
 	tofino-bmv2tests.mk \
 	p4-16-tofinotests.mk \
-	newpa-tofinotests.mk
+	ortools-tofinotests.mk
 
 # Some of these failures are still P4 v1.0 front-end bugs.
 # Others are due to non-standard extensions to P4:
@@ -289,41 +289,41 @@ XFAIL_TESTS += \
 # gateway doesn't yet support range match
 XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/gateway7.p4.test \
-    tofino-newpa/testdata/p4_14_samples/gateway7.p4.test
+    tofino-ortools/testdata/p4_14_samples/gateway7.p4.test
 
 # Parser failure.
 XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/parser_dc_full.p4.test \
-    tofino-newpa/testdata/p4_14_samples/parser_dc_full.p4.test
+    tofino-ortools/testdata/p4_14_samples/parser_dc_full.p4.test
 
 # Generates broken PHV alloc (regs used by both ingress & egress)
-XFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/basic_routing.p4.test
+XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/basic_routing.p4.test
 
 # Missing constraints for header stack POV bits.
-XFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/instruct5.p4.test
+XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/instruct5.p4.test
 
 # Layout Constraints from gateway allocation
 XFAIL_TESTS += tofino/extensions/tofino/v1_samples/gateway_bus2.p4.test
-XFAIL_TESTS += tofino-newpa/extensions/tofino/v1_samples/gateway_bus1.p4.test
-XFAIL_TESTS += tofino-newpa/extensions/tofino/v1_samples/gateway_bus2.p4.test
+XFAIL_TESTS += tofino-ortools/extensions/tofino/v1_samples/gateway_bus1.p4.test
+XFAIL_TESTS += tofino-ortools/extensions/tofino/v1_samples/gateway_bus2.p4.test
 
 # Multiple calculations per action
-XFAIL_TESTS += tofino-newpa/extensions/tofino/v1_samples/counter_test1.p4.test
-XFAIL_TESTS += tofino-newpa/extensions/tofino/v1_samples/counter_test2.p4.test
-XFAIL_TESTS += tofino-newpa/extensions/tofino/v1_samples/meter_test1.p4.test
+XFAIL_TESTS += tofino-ortools/extensions/tofino/v1_samples/counter_test1.p4.test
+XFAIL_TESTS += tofino-ortools/extensions/tofino/v1_samples/counter_test2.p4.test
+XFAIL_TESTS += tofino-ortools/extensions/tofino/v1_samples/meter_test1.p4.test
 
 # STF framework doesn't work for meters
 XFAIL_TESTS += tofino/extensions/tofino/v1_samples/meter_test1.p4.test
 
 # Incorrect data layour in ixbar -- fails to get entire 128-bit value in one group.
 # intermittent failure?
-IFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/07-MultiProtocol.p4.test
+IFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/07-MultiProtocol.p4.test
 
 # Sometimes splits ternary match data across two groups when it shouldn't
-IFAIL_TESTS += tofino-newpa/testdata/p4_14_samples/hitmiss.p4.test
+IFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/hitmiss.p4.test
 
 # These fail (or pass) intermittently on Jenkins; not sure why
-IFAIL_TESTS += tofino-newpa/extensions/tofino/v1_samples/simple_counter.p4.test \
-	       tofino-newpa/extensions/tofino/v1_samples/max_counters.p4.test \
-	       tofino-newpa/extensions/tofino/v1_samples/gateway_bus2.p4.test \
-	       tofino-newpa/testdata/p4_14_samples/bigfield1.p4.test
+IFAIL_TESTS += tofino-ortools/extensions/tofino/v1_samples/simple_counter.p4.test \
+	       tofino-ortools/extensions/tofino/v1_samples/max_counters.p4.test \
+	       tofino-ortools/extensions/tofino/v1_samples/gateway_bus2.p4.test \
+	       tofino-ortools/testdata/p4_14_samples/bigfield1.p4.test
