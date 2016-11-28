@@ -30,9 +30,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+<<<<<<< HEAD
     @name("NoAction_1") action NoAction() {
     }
     @name("NoAction_2") action NoAction_0() {
+=======
+    @name("NoAction_1") action NoAction_0() {
+    }
+    @name("NoAction_2") action NoAction_3() {
+>>>>>>> d32b778adba02821e0b5eafae3abf56d5194d68f
     }
     @name("meter_1") direct_meter<bit<8>>(CounterType.bytes) meter_1;
     @name("meter_2") direct_meter<bit<8>>(CounterType.bytes) meter_2;
@@ -45,13 +51,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test1") table test1() {
         actions = {
             h1_1();
+<<<<<<< HEAD
             NoAction();
+=======
+            NoAction_0();
+>>>>>>> d32b778adba02821e0b5eafae3abf56d5194d68f
         }
         key = {
             hdr.data.f1: exact;
         }
         size = 6000;
+<<<<<<< HEAD
         default_action = NoAction();
+=======
+        default_action = NoAction_0();
+>>>>>>> d32b778adba02821e0b5eafae3abf56d5194d68f
         meters = meter_1;
     }
     @name("h4_6") action h4_1(bit<16> val4, bit<16> val5, bit<16> val6, bit<9> port) {
@@ -64,13 +78,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test2") table test2() {
         actions = {
             h4_1();
+<<<<<<< HEAD
             NoAction_0();
+=======
+            NoAction_3();
+>>>>>>> d32b778adba02821e0b5eafae3abf56d5194d68f
         }
         key = {
             hdr.data.f2: exact;
         }
         size = 10000;
+<<<<<<< HEAD
         default_action = NoAction_0();
+=======
+        default_action = NoAction_3();
+>>>>>>> d32b778adba02821e0b5eafae3abf56d5194d68f
         meters = meter_2;
     }
     apply {

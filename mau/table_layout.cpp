@@ -109,7 +109,14 @@ class VisitAttached : public Inspector {
         if (!st->direct) {
             if (st->instance_count <= 0)
                 error("%s: No instance count in indirect %s %s", st->srcInfo, st->kind(), st->name);
-            layout.overhead_bits += ceil_log2(st->instance_count); }
+            int vpn_bits_needed = std::max(10, ceil_log2(st->instance_count));
+            layout.overhead_bits += vpn_bits_needed; 
+            if (st->is<IR::Meter>())
+                layout.meter_overhead_bits.push_back(vpn_bits_needed);
+            else if (st->is<IR::Counter>())
+                layout.counter_overhead_bits.push_back(vpn_bits_needed);
+          
+        }
         return false; }
     bool preorder(const IR::ActionProfile *ap) override {
         have_action_data = true;
@@ -188,6 +195,8 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
         if (match_group_bits > 128)
             match_group_bits = std::max(tbl->layout.match_width_bits-10, 0) +
                                tbl->layout.overhead_bits + 4;
+        LOG1("Match group bits for " << tbl->name << " are " << match_group_bits );
+        LOG1("Overhead bits are " << tbl->layout.overhead_bits);
         int width = (match_group_bits+127)/128U;
         int match_groups = width > 1 ? 1 : 128 / match_group_bits;
         if (tbl->layout.overhead_bits > 0) {

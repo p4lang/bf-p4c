@@ -40,6 +40,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+<<<<<<< HEAD
     @name("NoAction_1") action NoAction() {
     }
     @name("NoAction_2") action NoAction_0() {
@@ -49,6 +50,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("NoAction_4") action NoAction_7() {
     }
     @name("NoAction_5") action NoAction_8() {
+=======
+    @name("NoAction_1") action NoAction_0() {
+    }
+    @name("NoAction_2") action NoAction_6() {
+    }
+    @name("NoAction_3") action NoAction_7() {
+    }
+    @name("NoAction_4") action NoAction_8() {
+    }
+    @name("NoAction_5") action NoAction_9() {
+>>>>>>> d32b778adba02821e0b5eafae3abf56d5194d68f
     }
     @name("meter_1") direct_meter<bit<8>>(CounterType.bytes) meter_1;
     @name("meter_2") direct_meter<bit<8>>(CounterType.bytes) meter_2;
@@ -74,13 +86,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test1") table test1() {
         actions = {
             h1_1();
+<<<<<<< HEAD
             NoAction();
+=======
+            NoAction_0();
+>>>>>>> d32b778adba02821e0b5eafae3abf56d5194d68f
         }
         key = {
             hdr.data.f1: exact;
         }
         size = 6000;
+<<<<<<< HEAD
         default_action = NoAction();
+=======
+        default_action = NoAction_0();
+>>>>>>> d32b778adba02821e0b5eafae3abf56d5194d68f
         meters = meter_1;
     }
     @name("h4_6") action h4_1(bit<16> val4, bit<16> val5, bit<16> val6) {
@@ -92,47 +112,79 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test2") table test2() {
         actions = {
             h4_1();
+<<<<<<< HEAD
             NoAction_0();
+=======
+            NoAction_6();
+>>>>>>> d32b778adba02821e0b5eafae3abf56d5194d68f
         }
         key = {
             hdr.data.f2: exact;
         }
         size = 10000;
+<<<<<<< HEAD
         default_action = NoAction_0();
+=======
+        default_action = NoAction_6();
+>>>>>>> d32b778adba02821e0b5eafae3abf56d5194d68f
         meters = meter_2;
     }
     @name("test3") table test3() {
         actions = {
             h7_0();
+<<<<<<< HEAD
             NoAction_6();
+=======
+            NoAction_7();
+>>>>>>> d32b778adba02821e0b5eafae3abf56d5194d68f
         }
         key = {
             hdr.data.f3: exact;
         }
         size = 2000;
+<<<<<<< HEAD
         default_action = NoAction_6();
+=======
+        default_action = NoAction_7();
+>>>>>>> d32b778adba02821e0b5eafae3abf56d5194d68f
     }
     @name("test4") table test4() {
         actions = {
             h10_0();
+<<<<<<< HEAD
             NoAction_7();
+=======
+            NoAction_8();
+>>>>>>> d32b778adba02821e0b5eafae3abf56d5194d68f
         }
         key = {
             hdr.data.f4: exact;
         }
         size = 8192;
+<<<<<<< HEAD
         default_action = NoAction_7();
+=======
+        default_action = NoAction_8();
+>>>>>>> d32b778adba02821e0b5eafae3abf56d5194d68f
     }
     @name("test5") table test5() {
         actions = {
             set_port_0();
+<<<<<<< HEAD
             NoAction_8();
+=======
+            NoAction_9();
+>>>>>>> d32b778adba02821e0b5eafae3abf56d5194d68f
         }
         key = {
             hdr.data.color_1: ternary;
             hdr.data.color_2: ternary;
         }
+<<<<<<< HEAD
         default_action = NoAction_8();
+=======
+        default_action = NoAction_9();
+>>>>>>> d32b778adba02821e0b5eafae3abf56d5194d68f
     }
     apply {
         test1.apply();

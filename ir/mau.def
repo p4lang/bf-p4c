@@ -46,6 +46,8 @@ class Table : Tofino::Unit {
         int             action_data_bytes = 0;
         int             action_data_bytes_in_overhead = 0;
         int             overhead_bits = 0;
+        vector<int>     meter_overhead_bits;
+        vector<int>     counter_overhead_bits;
         Layout() { memset(this, 0, sizeof(*this)); }
         operator== { return memcmp(this, &a, sizeof(Layout)) == 0; }
         toJSON {

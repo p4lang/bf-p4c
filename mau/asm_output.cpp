@@ -40,10 +40,13 @@ class MauAsmOutput::TableFormat {
     const MauAsmOutput &self;
     struct match_group {
         int                             action = -1, immediate = -1, version = -1;
+        vector<int>                     counters, meters;
         vector<std::pair<int, int>>     match;
     };
     int action_bits = 0;
     int immediate_bits = 0;
+    vector<int> meter_bits;
+    vector<int> counter_bits;
     vector<match_group> format;
  public:
     vector<Slice>       match_fields;
@@ -442,6 +445,8 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
         bitvec used;
         action_bits = ceil_log2(tbl->actions.size());
         immediate_bits = tbl->layout.action_data_bytes_in_overhead * 8;
+        meter_bits = tbl->layout.meter_overhead_bits; 
+        counter_bits = tbl->layout.counter_overhead_bits;
         int width = tbl->ways[0].width;
         int groups = tbl->ways[0].match_groups;
         int groups_per_word = (groups + width - 1)/width;
@@ -459,6 +464,24 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
                 int word = i / groups_per_word;
                 format[i].immediate = used.ffz(128*word);
                 used.setrange(format[i].immediate, immediate_bits); } }
+        if (counter_bits.size() > 0) {
+            for (size_t j = 0; j < counter_bits.size(); j++) {
+                for (int i = 0; i < groups; i++) {
+                    int word = i / groups_per_word;
+                    format[i].counters.push_back(used.ffz(128*word));
+                    used.setrange(format[i].counters.back(), counter_bits[j]);
+                }
+            }
+        }
+        if (meter_bits.size() > 0) {
+            for (size_t j = 0; j < meter_bits.size(); j++) {
+                for (int i = 0; i < groups; i++) {
+                    int word = i / groups_per_word;
+                    format[i].meters.push_back(used.ffz(128*word));
+                    used.setrange(format[i].meters.back(), meter_bits[j]);
+                }
+            }
+        }
         if (!match_fields.empty()) {
             for (int i = 0; i < groups; i++) {
                 int word = i / groups_per_word;
@@ -511,6 +534,13 @@ void MauAsmOutput::TableFormat::print(std::ostream &out) const {
         fmt.emit(out, "action", i, group.action, action_bits);
         fmt.emit(out, "immediate", i, group.immediate, immediate_bits);
         fmt.emit(out, "version", i, group.version, 4);
+        // FIXME: String manipulation for multiple cnters, meters, etc.
+        for (size_t j = 0; j < group.counters.size(); j++) {
+            fmt.emit(out, "counter_ptr", i, group.counters[j], counter_bits[j]);
+        }
+        for (size_t j = 0; j < group.meters.size(); j++) {
+            fmt.emit(out, "meter_ptr", i, group.meters[j], meter_bits[j]);
+        }
         fmt.emit(out, "match", i, group.match);
         ++i; }
     out << (fmt.sep + 1) << "}";
@@ -683,7 +713,8 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         for (auto at : stats_tables) {
             out << indent << "- " << at->name;
             if (at->indexed())
-                out << '(' << at->kind() << ')';
+                // FIXME: Must be adjusted for multiple tables
+                out << '(' << "counter_ptr" << ')';
             out << std::endl;
         }
     }
@@ -692,7 +723,8 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         for (auto at : meter_tables) {
             out << indent << "- " << at->name;
             if (at->indexed())
-                out << '(' << at->kind() << ')';
+                //FIXME: Must be adjusted for multiple meter tables
+                out << '(' << "meter_ptr" << ')';
             out << std::endl;
         }
     }
