@@ -178,6 +178,8 @@ bool Memories::analyze_tables(mem_info &mi) {
                     stats_pushed = true;
                 }
                 mi.stats_tables++;
+                int per_row = stats_per_row(cnt->min_width, cnt->max_width, cnt->type);
+                mi.stats_RAMs += (entries + per_row * 1024 - 1) / (per_row * 1024) + 1;
             } else if (auto *mtr = at->to<IR::Meter>()) {
                 auto name = mtr->name;
                 (*ta->memuse)[name].type = Use::TWOPORT;
@@ -186,6 +188,7 @@ bool Memories::analyze_tables(mem_info &mi) {
                     meter_pushed = true;
                 }
                 mi.meter_tables++;
+                mi.meter_RAMs += (entries + 1023)/1024 + 1;
             }
         }
     }
@@ -199,7 +202,8 @@ bool Memories::analyze_tables(mem_info &mi) {
         || mi.ternary_tables > TERNARY_TABLES_MAX
         || mi.ternary_TCAMs > TCAM_ROWS * TCAM_COLUMNS
         || mi.stats_tables > STATS_ALUS
-        || mi.meter_tables > METER_ALUS) {
+        || mi.meter_tables > METER_ALUS
+        || mi.meter_RAMs + mi.stats_RAMs > MAPRAM_COLUMNS * SRAM_ROWS) {
         return false;
     }
     return true;
@@ -826,6 +830,10 @@ void Memories::find_action_bus_users() {
                 suppl_bus_users.back()->cm.needed = (ta->calculated_entries + 4095)/4096;
             else
                 suppl_bus_users.back()->cm.needed = (meter->instance_count + 4095)/4096;
+            if (meter->implementation.name == "lpf" || meter->implementation.name == "wred") {
+                suppl_bus_users.back()->requires_ab = true;
+                LOG1("Requires action bus");
+            }
         }
     }
 }
@@ -874,18 +882,19 @@ void Memories::action_row_trip(action_fill &action, action_fill &suppl, action_f
             } else if (curr_oflow.group->left_to_place() >= suppl_RAMs_available) {
                 oflow = curr_oflow;
                 order[OFLOW_IND] = 0;
-            } else if (next_suppl.group) {
+            } else if (next_suppl.group && (!curr_oflow.group->needs_ab() || 
+                      (curr_oflow.group->needs_ab() && !next_suppl.group->needs_ab()))) {
                 suppl = next_suppl;
                 oflow = curr_oflow;
                 order[OFLOW_IND] = 0; order[SUPPL_IND] = 1;
-                if (!next_suppl.group->requires_ab() &&
+                if (!next_suppl.group->needs_ab() &&
                     (next_suppl.group->left_to_place() +
                     curr_oflow.group->left_to_place() < suppl_RAMs_available)
                     && next_action.group) {
                     action = next_action;
                     order[ACTION_IND] = 2;
                 }
-            } else if (next_action.group
+            } else if (next_action.group && !curr_oflow.group->needs_ab()
                        && next_action.group->left_to_place() == action_RAMs_available) {
                oflow = curr_oflow;
                action = next_action;
@@ -898,7 +907,8 @@ void Memories::action_row_trip(action_fill &action, action_fill &suppl, action_f
             suppl = next_suppl;
             order[SUPPL_IND] = 0;
             // FIXME: Perhaps port the correct function
-            if (next_suppl.group->left_to_place() < suppl_RAMs_available) {
+            if (next_suppl.group->left_to_place() < suppl_RAMs_available
+                && !next_suppl.group->needs_ab()) {
                 if (curr_oflow.group) {
                     oflow = curr_oflow;
                     order[OFLOW_IND] = 1;
@@ -1039,6 +1049,9 @@ void Memories::best_candidates(action_fill &best_fit_action, action_fill &best_f
             if (!stats_available && suppl_bus_users[i]->type == SRAM_group::STATS)
                 continue;
             if (!meter_available && suppl_bus_users[i]->type != SRAM_group::STATS)
+                continue;
+            if (curr_oflow.group && curr_oflow.group->needs_ab()
+                && suppl_bus_users[i]->needs_ab())
                 continue;
             if (suppl_bus_users[i]->left_to_place() > min_left) {
                 next_suppl.group = suppl_bus_users[i];

@@ -50,12 +50,15 @@ struct Memories {
         int ternary_tables;
         int ternary_TCAMs;
         int stats_tables;
+        int stats_RAMs;
         int meter_tables;
+        int meter_RAMs;
 
         void clear() {
             match_tables = 0; match_bus_min = 0; match_RAMs = 0; tind_tables = 0;
             tind_RAMs = 0; action_tables = 0; action_bus_min = 0; action_RAMs = 0;
-            ternary_tables = 0; ternary_TCAMs = 0; stats_tables = 0; meter_tables = 0;
+            ternary_tables = 0; ternary_TCAMs = 0; stats_tables = 0; stats_RAMs = 0;
+            meter_tables = 0; meter_RAMs = 0;
         }
     };
 
@@ -116,17 +119,20 @@ struct Memories {
             color_mapram_group() : needed(0), placed(0), required(false) {}
         };
         color_mapram_group cm;
+        bool requires_ab;
         explicit SRAM_group(table_alloc *t, int d, int w, int n, type_t ty)
-            : ta(t), depth(d), width(w), placed(0), number(n), type(ty), cm() {}
+            : ta(t), depth(d), width(w), placed(0), number(n), type(ty), cm(),
+              requires_ab(false) {}
         explicit SRAM_group(table_alloc *t, int d, int n, type_t ty)
-            : ta(t), depth(d), width(0),  placed(0), number(n), type(ty), cm() {}
+            : ta(t), depth(d), width(0), placed(0), number(n), type(ty), cm(),
+              requires_ab(false) {}
         void dbprint(std::ostream &out) const {
             out << ta->table->name << " way #" << number << " depth: " << depth
                 << " width: " << width << " placed: " << placed;
         }
         int left_to_place() { return depth - placed; }
         bool all_placed() { return (depth == placed); }
-        bool requires_ab() { return false; }
+        bool needs_ab() { return requires_ab && all_placed();}
         cstring name_addition() {
             switch (type) {
                 case EXACT:    return "";
