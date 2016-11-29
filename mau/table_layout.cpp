@@ -105,17 +105,19 @@ static void setup_action_layout(IR::MAU::Table *tbl) {
 namespace {
 class VisitAttached : public Inspector {
     IR::MAU::Table::Layout &layout;
+    int immediate_bytes_needed;
     bool preorder(const IR::Stateful *st) override {
         if (!st->direct) {
             if (st->instance_count <= 0)
                 error("%s: No instance count in indirect %s %s", st->srcInfo, st->kind(), st->name);
             int vpn_bits_needed = std::max(10, ceil_log2(st->instance_count));
             layout.overhead_bits += vpn_bits_needed; 
-            if (st->is<IR::Meter>())
+            if (st->is<IR::Meter>()) {
                 layout.meter_overhead_bits.push_back(vpn_bits_needed);
-            else if (st->is<IR::Counter>())
+                immediate_bytes_needed += 1; 
+            } else if (st->is<IR::Counter>()) {
                 layout.counter_overhead_bits.push_back(vpn_bits_needed);
-          
+            } 
         }
         return false; }
     bool preorder(const IR::ActionProfile *ap) override {
@@ -137,9 +139,11 @@ class VisitAttached : public Inspector {
         BUG("Unknown attached table type %s", typeid(*att).name()); }
 
  public:
-    explicit VisitAttached(IR::MAU::Table::Layout *l) : layout(*l) {}
+    explicit VisitAttached(IR::MAU::Table::Layout *l) : layout(*l),
+        immediate_bytes_needed(0)  {}
     bool have_ternary_indirect = false;
-    bool have_action_data = false;;
+    bool have_action_data = false;
+    int immediate_reserved() { return immediate_bytes_needed; }
 };
 }  // namespace
 
@@ -155,9 +159,10 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     VisitAttached attached(&tbl->layout);
     for (auto at : tbl->attached)
         at->apply(attached);
+    int immediate_bytes_reserved = attached.immediate_reserved();
     bool add_action_data = false;
     if (!attached.have_action_data) {
-        if (tbl->layout.action_data_bytes > 4) {   // too big for overhead
+        if (tbl->layout.action_data_bytes > 4 - immediate_bytes_reserved) {   // too big for overhead
             add_action_data = true;
         } else if (!tbl->layout.ternary) {
             // match size duplicated from way allocation below
