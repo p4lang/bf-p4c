@@ -30,8 +30,11 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                 if (!sz) off = 24, sz = 8;
             } else if (tbl->format) {
                 error(kv.value.lineno, "No field %s in format", name);
-                continue; } }
-        if (f && !sz) sz = f->size;
+                continue; }
+        } else {
+            if (!sz) sz = f->size;
+            if (off + sz > f->size)
+                error(kv.value.lineno, "Invalid slice of %d bit field %s", f->size, name); }
         unsigned idx = kv.key.i;
         if (kv.key.type == tRANGE) {
             idx = kv.key.lo;
