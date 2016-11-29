@@ -18,8 +18,8 @@
 //
 // input:
 // PHV_MAU_Group_Assignments
-// phv_mau_map() std::map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>
-// t_phv_map()   std::map<int, std::map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>>
+// phv_mau_map() map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>
+// t_phv_map()   map<int, map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>>
 // All containers bit mapped to fields
 //
 // output:
@@ -34,8 +34,8 @@ class PHV_Bind {
     PhvInfo &phv_i;                             // all fields in input
     PHV_MAU_Group_Assignments &phv_mau_group_assignments_i;
                                                 // reference to parent PHV MAU Group Assignments
-    std::map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>> &phv_mau_i;
-    std::map<int, std::map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>> &t_phv_i;
+    ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>> &phv_mau_i;
+    ordered_map<int, ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>> &t_phv_i;
     std::set<const PHV_Container *> containers_i;  // all filled containers
     std::set<const PhvInfo::Field *> fields_i;     // all fields to be finally bound
     //
@@ -43,10 +43,11 @@ class PHV_Bind {
     //
     PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m);
     //
-    std::map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>& phv_mau_map() {
+    ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>& phv_mau_map() {
         return phv_mau_i;
     }
-    std::map<int, std::map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>>& t_phv_map() {
+    ordered_map<int,
+    ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>>& t_phv_map() {
         return t_phv_i;
     }
     std::set<const PHV_Container *> containers()  { return containers_i; }

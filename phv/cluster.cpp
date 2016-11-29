@@ -40,7 +40,7 @@ bool Cluster::preorder(const IR::Member* expression) {
     auto field = phv_i.field(expression);
     if (field) {
         if (!dst_map_i[field]) {
-            dst_map_i[field] = new std::set<const PhvInfo::Field *>;  // new std::set
+            dst_map_i[field] = new ordered_set<const PhvInfo::Field *>;  // new set
             lhs_unique_i.insert(field);  // lhs_unique set insert field
             LOG4("lhs_unique..insert[" << std::endl << &lhs_unique_i << "lhs_unique..insert]");
             //
@@ -128,7 +128,7 @@ bool Cluster::preorder(const IR::Primitive* primitive) {
         dst_i = phv_i.field(primitive->operands[0]);
         if (dst_i) {
             if (!dst_map_i[dst_i]) {
-                dst_map_i[dst_i] = new std::set<const PhvInfo::Field *>;  // new std::set
+                dst_map_i[dst_i] = new ordered_set<const PhvInfo::Field *>;  // new set
                 lhs_unique_i.insert(dst_i);  // lhs_unique set insert field
                 LOG4("lhs_unique..insert[" << std::endl << &lhs_unique_i << "lhs_unique..insert]");
                  //
@@ -364,10 +364,13 @@ void Cluster::insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rh
                     dst_map_i[rhs] = dst_map_i[lhs];
                 } else {   // [b]-->(b,d,x)
                     // [a]-->(a,u,v)U(b,d,x)
-                    dst_map_i[lhs]->insert(dst_map_i[rhs]->begin(), dst_map_i[rhs]->end());
+                    // dst:_map_i[lhs]->insert(dst_map_i[rhs]->begin(), dst_map_i[rhs]->end());
+                    for (auto field : *(dst_map_i[rhs])) {
+                        dst_map_i[lhs]->insert(field);
+                    }
                     // [b],[d],[x],[a],[u],[v]-->(a,u,v,b,d,x)
                     // lhs_unique set: -remove(b,d,x)
-                    std::set<const PhvInfo::Field *>* dst_map_i_rhs = dst_map_i[rhs];
+                    ordered_set<const PhvInfo::Field *>* dst_map_i_rhs = dst_map_i[rhs];
                     for (auto field : *(dst_map_i[rhs])) {
                         dst_map_i[field] = dst_map_i[lhs];
                         lhs_unique_i.erase(field);                   // lhs_unique set erase field
@@ -401,7 +404,7 @@ void Cluster::sanity_check_clusters(const std::string& msg, const PhvInfo::Field
         // b --> (b,d,e); count b=1 in (b,d,e)
         if (dst_map_i[lhs]->count(lhs) != 1) {
             LOG1("*****cluster.cpp:sanity_FAIL*****cluster member count > 1.."
-                << msg << lhs << "-->" << *(dst_map_i[lhs]));
+                << msg << lhs << "-->" << dst_map_i[lhs]);
         }
         // forall x elem (b,d,e), x-->(b,d,e)
         for (auto rhs : *(dst_map_i[lhs])) {
@@ -420,17 +423,17 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg) {
     //
     for (auto entry : dst_map_i) {
         if (entry.first && entry.second) {
-            std::set<const PhvInfo::Field *> s1 = *(entry.second);
+            ordered_set<const PhvInfo::Field *> s1 = *(entry.second);
             for (auto entry_2 : dst_map_i) {
                 if (entry_2.first && entry_2.second && entry_2.first != entry.first) {
-                    std::set<const PhvInfo::Field *> s2 = *(entry_2.second);
+                    ordered_set<const PhvInfo::Field *> s2 = *(entry_2.second);
                     std::vector<const PhvInfo::Field *> s3;
                     s3.clear();
                     set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(),
                         std::back_inserter(s3));
                     if (s3.size()) {
                         LOG1("*****cluster.cpp:sanity_FAIL*****uniqueness.." << msg
-                            << entry.first << s1 << "..^.." << entry_2.first << s2 << '=' << s3);
+                            << entry.first << &s1 << "..^.." << entry_2.first << &s2 << '=' << s3);
                         LOG4("lhs[" << std::endl << &s1 << "lhs]");
                         LOG4("lhs_2[" << std::endl << &s2 << "lhs_2]");
                     }
@@ -498,7 +501,7 @@ void Cluster::sanity_check_fields_use(const std::string& msg,
 //
 // cluster output
 //
-std::ostream &operator<<(std::ostream &out, std::set<const PhvInfo::Field *> *cluster_set) {
+std::ostream &operator<<(std::ostream &out, ordered_set<const PhvInfo::Field *> *cluster_set) {
     if (cluster_set) {
         for (auto field : *cluster_set) {
             out << field << std::endl;

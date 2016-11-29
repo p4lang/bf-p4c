@@ -5,6 +5,7 @@
 #include "phv_fields.h"
 #include "ir/ir.h"
 #include "lib/map.h"
+#include "lib/ordered_set.h"
 #include "lib/range.h"
 #include "tofino/ir/thread_visitor.h"
 //
@@ -27,9 +28,9 @@ class Cluster : public Inspector {
  private:
     PhvInfo &phv_i;             // phv object referenced through constructor
     //
-    std::map<const PhvInfo::Field *, std::set<const PhvInfo::Field *>*> dst_map_i;
+    ordered_map<const PhvInfo::Field *, ordered_set<const PhvInfo::Field *>*> dst_map_i;
                                 // map of field to cluster it belongs
-    std::set<const PhvInfo::Field *> lhs_unique_i;
+    ordered_set<const PhvInfo::Field *> lhs_unique_i;
                                 // maintains unique cluster ptrs
     PhvInfo::Field *dst_i = nullptr;
                                 // destination of current statement
@@ -68,7 +69,7 @@ class Cluster : public Inspector {
     //
     Cluster(PhvInfo &p);                       // NOLINT(runtime/explicit)
     //
-    std::map<const PhvInfo::Field *, std::set<const PhvInfo::Field *>*>& dst_map() {
+    ordered_map<const PhvInfo::Field *, ordered_set<const PhvInfo::Field *>*>& dst_map() {
         return dst_map_i;
     }
     //
@@ -81,7 +82,7 @@ class Cluster : public Inspector {
 };
 //
 //
-std::ostream &operator<<(std::ostream &, std::set<const PhvInfo::Field *>*);
+std::ostream &operator<<(std::ostream &, ordered_set<const PhvInfo::Field *>*);
 std::ostream &operator<<(std::ostream &, std::vector<const PhvInfo::Field *>&);
 std::ostream &operator<<(std::ostream &, Cluster &);
 //

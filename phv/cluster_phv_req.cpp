@@ -11,7 +11,7 @@
 //      clusters: cluster.dst_map()
 // output:
 //      creates sorted PHV container requirements for clusters
-//      std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>> Cluster_PHV_i;
+//      map<PHV_Container::PHV_Word, map<int, std::vector<Cluster_PHV *>>> Cluster_PHV_i;
 //      sorted PHV requirements <number_of_containers, width_of_containers>
 //      number decreasing then width decreasing
 //
@@ -130,7 +130,7 @@ Cluster_PHV_Requirements::Cluster_PHV_Requirements(Cluster &c)
 //***********************************************************************************
 
 Cluster_PHV::Cluster_PHV(
-    std::set<const PhvInfo::Field *> *p)
+    ordered_set<const PhvInfo::Field *> *p)
     : cluster_vec_i(p->begin(), p->end()) {
     //
     if (!p) {
@@ -313,7 +313,7 @@ std::ostream &operator<<(std::ostream &out, std::vector<Cluster_PHV *> &cluster_
 
 std::ostream &operator<<(
     std::ostream &out,
-    std::map<int, std::vector<Cluster_PHV *>>& phv_req_map) {
+    ordered_map<int, std::vector<Cluster_PHV *>>& phv_req_map) {
     //
     for (auto rit = phv_req_map.rbegin(); rit != phv_req_map.rend(); ++rit) {
         // print key <number> of phv_req_map

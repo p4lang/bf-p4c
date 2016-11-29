@@ -72,7 +72,7 @@ class PHV_Container {
     char taint_color_i = '0';                                // each resident field separate color
                                                              // highest number=#fields in container
     int avail_bits_i = 0;                                    // available bits in container
-    std::map<int, int> ranges_i;                             // available ranges in this container
+    ordered_map<int, int> ranges_i;                          // available ranges in this container
     //
  public:
     PHV_Container(
@@ -106,7 +106,7 @@ class PHV_Container {
         int range_start = 0,
         int field_bit_lo = 0);
     int avail_bits()                                            { return avail_bits_i; }
-    std::map<int, int>& ranges()                                { return ranges_i; }
+    ordered_map<int, int>& ranges()                                { return ranges_i; }
     std::vector<Container_Content *>& fields_in_container()     { return fields_in_container_i; }
     //
     void create_ranges();
@@ -120,7 +120,7 @@ class PHV_Container {
 //
 //
 std::ostream &operator<<(std::ostream &, std::vector<PHV_Container::Container_Content *>&);
-std::ostream &operator<<(std::ostream &, std::map<int, int>&);
+std::ostream &operator<<(std::ostream &, ordered_map<int, int>&);
 std::ostream &operator<<(std::ostream &, PHV_Container*);
 std::ostream &operator<<(std::ostream &, PHV_Container&);
 std::ostream &operator<<(std::ostream &, std::vector<PHV_Container *>&);

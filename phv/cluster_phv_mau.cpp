@@ -693,7 +693,7 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices() {
 //
 // input:
 //        (i)  clusters_to_be_assigned
-//        (ii) all PHV_MAU_Groups w/ std::map<int, std::map<int, std::set<Container_Content *>>>
+//        (ii) all PHV_MAU_Groups w/ map<int, map<int, std::set<Container_Content *>>>
 //                 aligned_container_slices_i
 //             forall G,C sorted aligned_slices
 //             --------------------------------
@@ -720,7 +720,7 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices() {
 
 void PHV_MAU_Group_Assignments::container_pack_cohabit(
     std::list<Cluster_PHV *>& clusters_to_be_assigned,
-    std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&
+    ordered_map<int, ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&
     aligned_slices) {
     //
     // slice containers to form groups that can accommodate larger number for given width in <n:w>
@@ -970,8 +970,8 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
 
 
 void PHV_MAU_Group_Assignments::consolidate_slices_in_group(
-    std::map<int,
-    std::map<int,
+    ordered_map<int,
+    ordered_map<int,
     std::set<std::set<PHV_MAU_Group::Container_Content *>>>>& aligned_slices) {
     //
     // consolidate to get larger number same width only when all aligned and same MAU group
@@ -984,8 +984,8 @@ void PHV_MAU_Group_Assignments::consolidate_slices_in_group(
                 // multiple sets in set of sets
                 // attempt to consolidate only within same MAU group
                 //
-                std::map<PHV_MAU_Group *,
-                std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>> g_lo;
+                ordered_map<PHV_MAU_Group *,
+                ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>> g_lo;
                 for (auto &cc_set : n.second) {
                     PHV_Container *c = (*(cc_set.begin()))->container();
                     int lo = (*(cc_set.begin()))->lo();
@@ -1051,7 +1051,7 @@ void PHV_MAU_Group_Assignments::container_cohabit_summary() {
 bool PHV_MAU_Group_Assignments::status(std::list<Cluster_PHV *>& clusters_to_be_assigned) {
     //
     if (clusters_to_be_assigned.size() > 0) {
-        std::map<PHV_Container::PHV_Word, int> needed_containers;
+        ordered_map<PHV_Container::PHV_Word, int> needed_containers;
         for (auto w : num_groups_i) {
             needed_containers[w.first] = 0;
         }
@@ -1076,7 +1076,7 @@ bool PHV_MAU_Group_Assignments::status(std::list<Cluster_PHV *>& clusters_to_be_
 }
 
 bool PHV_MAU_Group_Assignments::status(
-    std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&
+    ordered_map<int, ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&
     aligned_slices) {
     //
     if (aligned_slices.empty()) {
@@ -1355,7 +1355,7 @@ std::ostream &operator<<(std::ostream &out, std::set<PHV_MAU_Group::Container_Co
 //
 std::ostream &operator<<(
     std::ostream &out,
-    std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&
+    ordered_map<int, ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&
     all_container_packs) {
     //
     // map[w][n] --> <set of <set of container_packs>>
@@ -1475,7 +1475,7 @@ std::ostream &operator<<(std::ostream &out, std::vector<PHV_MAU_Group *> &phv_ma
 
 std::ostream &operator<<(
     std::ostream &out,
-    std::map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>& coll) {
+    ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>& coll) {
     //
     for (auto m : coll) {
         out << m.second;

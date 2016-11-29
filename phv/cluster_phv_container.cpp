@@ -390,7 +390,7 @@ std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container::Container
 // phv_container output
 //
 
-std::ostream &operator<<(std::ostream &out, std::map<int, int>& ranges) {
+std::ostream &operator<<(std::ostream &out, ordered_map<int, int>& ranges) {
     out << ".....container ranges....." << std::endl;
     for (auto i : ranges) {
         out << '[' << i.first << "] -- " << i.second << std::endl;

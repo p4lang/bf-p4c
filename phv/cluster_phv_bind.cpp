@@ -39,7 +39,7 @@ PHV_Bind::PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m)
     // accumulate fields to be bound
     // create equivalent asm containers
     //
-    std::map<const PHV_Container*, PHV::Container *> phv_to_asm_map;
+    ordered_map<const PHV_Container*, PHV::Container *> phv_to_asm_map;
     for (auto c : containers_i) {
         for (auto cc : const_cast<PHV_Container *>(c)->fields_in_container()) {
             fields_i.insert(cc->field());
