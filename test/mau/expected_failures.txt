@@ -20,14 +20,6 @@ test_config_137_tcam_error_detection_2.p4 mismatch
 test_config_138_tcam_error_detection_3.p4 mismatch
 test_config_139_tcam_error_detection_4.p4 mismatch
 
-- new failures -- incorrect asm
-10-AssignChooseSource.p4 tfas
-12-Counters.p4 tfas
-test_config_116_predication_with_condition.p4 tfas
-test_config_11_simple_gateway_table.p4 tfas
-test_config_175_match_table_with_no_key.p4 tfas
-test_config_20_table_dependencies.p4 tfas
-test_config_85_table_ordering.p4 tfas
 - new failure -- compiler crash
 test_config_203_first_reduction_or.p4 compile
 test_config_209_pack_hash_dist.p4 compile
@@ -40,7 +32,7 @@ test_config_209_pack_hash_dist.p4 compile
 08-MacAddrCheck1.p4 compile
 08-MultiProtocolIfElse.p4 mismatch
 09-MacAddrCheck2.p4 mismatch
-12-Counters.p4 compile
+12-Counters.p4 tfas
 14-Counter.p4 tfas
 16-NoHeaders.p4 tfas
 22-BigToSmallFieldWithMask8.p4 compile

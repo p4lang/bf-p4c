@@ -315,11 +315,11 @@ function test_stf() {
 }
 
 for file in "$@"; do
-    if [ ${file##*.} == "p4" ]; then
+    if [ "${file##*.}" == "p4" ]; then
         test_p4 $file
-    elif [ ${file##*.} == "stf" ]; then
+    elif [ "${file##*.}" == "stf" ]; then
         test_stf $file
-    elif [ ${file##*.} == "stf" ]; then
+    else
         echo "unrecognized file type $file"
     fi
 done
