@@ -90,7 +90,7 @@ bool PhvAllocator::Solve(StringRef opt) {
     if (phv.alloc_done()) return true;
     or_tools::Solver solver;
     auto strategy = operations_research::Solver::ASSIGN_MIN_VALUE;
-    bool luby_restart = false, firstnum=true;
+    bool luby_restart = false, firstnum = true;
     int timeout = 5, maxcount = 10;
     for (auto p : opt.split(',')) {
         p = p.trim();

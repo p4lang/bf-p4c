@@ -40,8 +40,7 @@
 #include "tofino/phv/split_phv_use.h"
 #include "tofino/phv/create_thread_local_instances.h"
 #include "tofino/phv/phv_allocator.h"
-#include "tofino/phv/cluster_phv_mau.h"
-#include "tofino/common/copy_header_eliminator.h"
+#include "tofino/phv/cluster_phv_bind.h"
 
 class CheckTableNameDuplicate : public MauInspector {
     set<cstring>        names;
@@ -80,7 +79,10 @@ static void debug_hook(const char *, unsigned, const char *pass, const IR::Node 
 
 void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *options) {
     PhvInfo phv;
-    Cluster cluster(phv);
+    Cluster cluster(phv);  // cluster analysis
+    Cluster_PHV_Requirements *cluster_phv_requirements;  // PHV requirements analysis
+    PHV_MAU_Group_Assignments *phv_mau_group_assignments;  // PHV MAU Group Container placements
+    PHV_Bind *phv_field_bind;  // field binding to PHV Containers
     DependencyGraph deps;
     TablesMutuallyExclusive mutex;
     FieldDefUse defuse(phv);
@@ -89,12 +91,12 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     MauAsmOutput mauasm(phv);
     PassManager *phv_alloc;
 
-    if (options->phv_newalloc) {
+    if (options->phv_ortools) {
         auto *newpa = new PhvAllocator(phv, defuse.conflicts(), std::ref(mutex));
         phv_alloc = new PassManager({
             newpa,
             new VisitFunctor([newpa, options]() {
-                if (!newpa->Solve(options->phv_newalloc)) {
+                if (!newpa->Solve(options->phv_ortools)) {
                     error("or-tools failed to find PHV allocation"); } }),
             verbose ? new VisitFunctor([&phv]() {
                 std::cout << "Printing PHV fields:\n";
@@ -104,18 +106,29 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     } else {
         phv_alloc = new PassManager({
             new MauPhvConstraints(phv),
-            new PHV::TrivialAlloc(phv, defuse.conflicts()) });
+            new PHV::TrivialAlloc(phv, defuse.conflicts()),
+            options->phv_new ? new VisitFunctor([&]() {
+                // phv_mau_group_assignments =
+                //       new PHV_MAU_Group_Assignments(*cluster_phv_requirements);
+                //       second cut PHV MAU Group assignments
+                //       honor single write conflicts from Table Placement
+                phv_field_bind = new PHV_Bind(phv, *phv_mau_group_assignments);
+                                     // fields bound to PHV containers
+                }) : nullptr,
+            });
     }
 
     PassManager *phv_analysis = new PassManager({
-        &cluster, 
-        new VisitFunctor([&phv, &defuse, &cluster]() {
+        &cluster,
+        new VisitFunctor(
+            [&phv, &defuse, &cluster, &cluster_phv_requirements, &phv_mau_group_assignments]() {
             //
-            Cluster_PHV_Requirements phv_req(cluster);		// Cluster PHV requirements
-            LOG3(phv_req);
-            PHV_MAU_Group_Assignments phv_mau_grps(phv_req);	// PHV MAU Group assignments
-            LOG3(phv_mau_grps);
-	}),
+            cluster_phv_requirements = new Cluster_PHV_Requirements(cluster);
+                                           // PHV requirements analysis
+            phv_mau_group_assignments = new PHV_MAU_Group_Assignments(*cluster_phv_requirements);
+                                            // first cut PHV MAU Group assignments
+                                            // produces cohabit fields for Table Placement
+        }),
     });
 
     PassManager backend = {
@@ -135,7 +148,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new CopyHeaderEliminator,    // needs to be after POV alloc and before InstSel
         new InstructionSelection(phv),
 
-       phv_analysis,   // perform cluster analysis after last &phv pass
+        phv_analysis,  // perform cluster analysis after last &phv pass
 
         new CanonGatewayExpr,   // must be before TableLayout?  or just TablePlacement?
         new SplitComplexGateways(phv),
