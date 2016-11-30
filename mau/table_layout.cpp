@@ -162,7 +162,8 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     int immediate_bytes_reserved = attached.immediate_reserved();
     bool add_action_data = false;
     if (!attached.have_action_data) {
-        if (tbl->layout.action_data_bytes > 4 - immediate_bytes_reserved) {   // too big for overhead
+        // too big for overhead
+        if (tbl->layout.action_data_bytes > 4 - immediate_bytes_reserved) {
             add_action_data = true;
         } else if (!tbl->layout.ternary) {
             // match size duplicated from way allocation below

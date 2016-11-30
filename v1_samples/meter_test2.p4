@@ -1,3 +1,6 @@
+/* Tests to see if all of the meters can fit into a single stage.  Also tests whether the 
+   dependencies from the meters are honored, as test5 and test6 should not be in the same
+   stage as the meters */
 header_type data_t {
     fields {
         f1 : 32;
@@ -16,6 +19,7 @@ header_type data_t {
         h10 : 16;
         h11 : 16;
         h12 : 16;
+        h13 : 16;
         color_1 : 8;
         color_2 : 8;
         color_3 : 8;
@@ -45,17 +49,23 @@ action h7_9(val7, val8, val9) {
     modify_field(data.h7, val7);
     modify_field(data.h8, val8);
     modify_field(data.h9, val9);
+    execute_meter(meter_3, 7, data.color_3);
 }
 
 action h10_12(val10, val11, val12) {
     modify_field(data.h10, val10);
     modify_field(data.h11, val11);
     modify_field(data.h12, val12);
+    execute_meter(meter_4, 7, data.color_4);
 }
 
 action set_port(port) {
     modify_field(standard_metadata.egress_spec, port);
-} 
+}
+
+action seth13(val13) {
+    modify_field(data.h13, val13);
+}
 
 
 meter meter_1 {
@@ -130,10 +140,23 @@ table test5 {
     }
 }
 
+table test6 {
+    reads {
+        data.color_3 : ternary;
+        data.color_4 : ternary;
+    }
+    actions {
+        seth13;    
+    }
+}
+
+
+
 control ingress {
     apply(test1);
     apply(test2);
     apply(test3);
     apply(test4);
     apply(test5);
+    apply(test6);
 }

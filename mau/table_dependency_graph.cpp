@@ -75,6 +75,10 @@ class UpdateAccess : public MauInspector , P4WriteContext {
     void postorder(const IR::Primitive *prim) {
         if (prim->isOutput(0)) {
             auto dest = prim->operands[0];
+            // FIXME: This is a hack for execute meter in P4-14
+            LOG1("Primitive name " << prim->name);
+            if (prim->name == "execute_meter")
+                dest = prim->operands[2];
             cstring name;
             if (auto sl = dest->to<IR::Slice>())
                 dest = sl->e0;
@@ -98,6 +102,26 @@ class UpdateAccess : public MauInspector , P4WriteContext {
             a.write.insert(table); }
     }
 };
+
+class UpdateAttached : public Inspector {
+    typedef DependencyGraph::Table      Table;
+    typedef DependencyGraph::access_t   access_t;
+    map<cstring, access_t>              &access;
+    Table                               *table;
+
+ public:
+    UpdateAttached(map<cstring, access_t> &a, Table *t) : access(a), table(t) {}
+    void postorder(const IR::Meter *meter) override {
+        if (meter->direct && meter->result) {
+            cstring name = meter->result->toString();
+            auto &a = access[name];
+            a.read.clear();
+            a.write.clear();
+            a.write.insert(table);
+        }
+    }
+};
+
 
 void FindDependencyGraph::add_control_dependency(Table *tt, const IR::Node *child) {
     const Context *ctxt = getContext();
@@ -138,6 +162,7 @@ bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
             gw.first->apply(UpdateAccess(access, &table));
         for (auto &action : Values(t->actions))
             action->apply(UpdateAccess(access, &table));
+        t->apply(UpdateAttached(access, &table));
     } else {
         error("%s: Multiple applies of table %s not supported", t->srcInfo, t->name); }
     return true;
