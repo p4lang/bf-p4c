@@ -238,7 +238,7 @@ int Stage::tcam_delay(gress_t gress) {
 int Stage::adr_dist_delay(gress_t gress) {
     if (group_table_use[gress] & Stage::USE_SELECTOR)
         return 8;
-    else if (group_table_use[gress] & Stage::USE_METER)
+    else if (group_table_use[gress] & Stage::USE_METER_LPF_RED)
         return 4;
     else if (group_table_use[gress] & Stage::USE_STATEFUL)
         return 4;

@@ -16,6 +16,7 @@ action_to_perform
 ap_bind_indirect_res_to_match
 bound_to_stateful_table
 bound_to_stateful_table_handle
+color_address_extract
 color_aware_per_flow_enable_address_type_bit_position
 constant_name_to_value
 default_address_bits_provided
@@ -36,6 +37,7 @@ hash_polynomial
 hash_way_number
 include_idletime
 indirect
+lpf_or_red_field
 match_entry_vpns
 match_fields_type_dictionary
 match_group_resource_allocation

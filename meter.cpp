@@ -96,6 +96,8 @@ void MeterTable::pass1() {
     std::sort(layout.begin(), layout.end(),
               [](const Layout &a, const Layout &b)->bool { return a.row > b.row; });
     stage->table_use[gress] |= Stage::USE_METER;
+    if (type == LPF || type == RED)
+        stage->table_use[gress] |= Stage::USE_METER_LPF_RED;
     for (auto &hd : hash_dist)
         hd.pass1(this);
     if (input_xbar) input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
@@ -153,14 +155,13 @@ void MeterTable::write_regs() {
     auto &adrdist = stage->regs.rams.match.adrdist;
     DataSwitchboxSetup swbox(stage, home->row/2U);
     int minvpn = 1000000, maxvpn = -1;
-    if (options.match_compiler) {
-        minvpn = 0;
-        maxvpn = layout_size() - 1;
-    } else
-        for (Layout &logical_row : layout)
-            for (auto v : logical_row.vpns) {
-                if (v < minvpn) minvpn = v;
-                if (v > maxvpn) maxvpn = v; }
+    for (Layout &logical_row : layout)
+        for (auto v : logical_row.vpns) {
+            if (v < minvpn) minvpn = v;
+            if (v > maxvpn) maxvpn = v; }
+    if (maxvpn > minvpn) {
+        // last one is spare bank -- don't include it
+        --maxvpn; }
     for (Layout &logical_row : layout) {
         unsigned row = logical_row.row/2U;
         unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
@@ -223,11 +224,12 @@ void MeterTable::write_regs() {
                 stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row); }
             ++mapram, ++vpn; }
         if (&logical_row == home) {
-            auto &meter_ctl = map_alu.meter_group[row/2U].meter.meter_ctl;
+            int meter_group_index = row/2U;
+            auto &meter_ctl = map_alu.meter_group[meter_group_index].meter.meter_ctl;
             meter_ctl.meter_bytecount_adjust = 0; // FIXME
             meter_ctl.meter_rng_enable = 0; // FIXME
-            auto &delay_ctl = map_alu.meter_alu_group_data_delay_ctl[row/2U];
-            delay_ctl.meter_alu_right_group_delay = 14 + stage->tcam_delay(gress);
+            auto &delay_ctl = map_alu.meter_alu_group_data_delay_ctl[meter_group_index];
+            delay_ctl.meter_alu_right_group_delay = 13 + row/4 + stage->tcam_delay(gress);
             switch (type) {
                 case LPF:
                     meter_ctl.lpf_enable = 1;
@@ -246,9 +248,29 @@ void MeterTable::write_regs() {
             if (gress == EGRESS)
                 meter_ctl.meter_alu_egress = 1;
             meter_ctl.meter_rng_enable = 0; // TODO
-            //setup_muxctl(adrdist.meter_alu_phys_to_logical_ixbar_ctl[row/2U], logical_id);
+            auto &error_ctl = map_alu.meter_alu_group_error_ctl[meter_group_index];
+            error_ctl.meter_alu_group_ecc_error_enable = 1;
+            error_ctl.meter_alu_group_thread = gress;
+            auto &meter_sweep_ctl = adrdist.meter_sweep_ctl[meter_group_index];
+            meter_sweep_ctl.meter_sweep_en = 1;
+            meter_sweep_ctl.meter_sweep_offset = minvpn;
+            meter_sweep_ctl.meter_sweep_size = maxvpn;
+            meter_sweep_ctl.meter_sweep_remove_hole_pos = 0; // FIXME
+            meter_sweep_ctl.meter_sweep_remove_hole_en = 0; // FIXME
+            meter_sweep_ctl.meter_sweep_interval = sweep_interval;
             map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_base = minvpn;
             map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_limit = maxvpn;
+            auto &movereg_meter_ctl = adrdist.movereg_meter_ctl[meter_group_index];
+            if (run_at_eop()) movereg_meter_ctl.movereg_meter_ctl_deferred = 1;
+            movereg_meter_ctl.movereg_ad_meter_shift = 7;
+            movereg_meter_ctl.movereg_meter_ctl_lt = logical_id;
+            if (direct) {
+                movereg_meter_ctl.movereg_meter_ctl_direct = 1;
+                adrdist.movereg_ad_direct[1] |= 1U << logical_id; }
+            // FIXME -- should these be set for all match tables attached to?
+            movereg_meter_ctl.movereg_meter_ctl_color_en = 1;
+            adrdist.movereg_ad_meter_alu_to_logical_xbar_ctl[logical_id/8U]
+                .set_subfield(4 | meter_group_index, 3 * (logical_id%8U), 3);
         } else {
             auto &adr_ctl = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
             if (home->row >= 8 && logical_row.row < 8) {
@@ -292,21 +314,28 @@ void MeterTable::write_regs() {
         auto vpn = row.vpns.begin();
         for (int col : row.cols) {
             auto &mapram_config = map_alu_row.adrmux.mapram_config[col];
+            if (&row == &color_maprams[0])
+                mapram_config.mapram_color_bus_select = MapRam::ColorBus::COLOR;
+            else
+                mapram_config.mapram_color_bus_select = MapRam::ColorBus::OVERFLOW;
             mapram_config.mapram_type = MapRam::COLOR;
             mapram_config.mapram_logical_table = logical_id;
             mapram_config.mapram_vpn = *vpn;
+            mapram_config.mapram_parity_generate = 1;
+            mapram_config.mapram_parity_check = 0;
             if (gress == INGRESS)
                 mapram_config.mapram_ingress = 1;
             else
                 mapram_config.mapram_egress = 1;
             mapram_config.mapram_enable = 1;
-            if (&row == &color_maprams[0])
-                mapram_config.mapram_color_bus_select = MapRam::ColorBus::COLOR;
-            else
-                mapram_config.mapram_color_bus_select = MapRam::ColorBus::OVERFLOW;
+            if (row.row != home->row/2) { /* ALU home row */
+                mapram_config.mapram_color_write_bus_select = 1; }
             auto &ram_address_mux_ctl = map_alu_row.adrmux.ram_address_mux_ctl[1][col];
-            if (&row == &color_maprams[0]) { /* color mapram home row */
-                ram_address_mux_ctl.synth2port_radr_mux_select_home_row = 1; }
+            if (row.row == home->row/2) { /* ALU home row */
+                ram_address_mux_ctl.synth2port_radr_mux_select_home_row = 1;
+            } else {
+                ram_address_mux_ctl.synth2port_radr_mux_select_oflo = 1; }
+            map_alu_row.i2portctl.synth2port_ctl.synth2port_mapram_color |= 1U << col;
             ram_address_mux_ctl.map_ram_wadr_shift = 1;
             ram_address_mux_ctl.map_ram_wadr_mux_select = MapRam::Mux::COLOR;
             ram_address_mux_ctl.map_ram_wadr_mux_enable = 1;
@@ -332,16 +361,13 @@ void MeterTable::write_regs() {
         adrdist.adr_dist_idletime_adr_oxbar_ctl[bus_index/4]
             .set_subfield(m->logical_id | 0x10, 5 * (bus_index%4), 5);
         // FIXME -- color map should be programmable, rather than fixed
-        adrdist.meter_color_output_map[m->logical_id] = 0x2010100;
+        adrdist.meter_color_output_map[m->logical_id].set_subfield(0,  0, 8);  // green
+        adrdist.meter_color_output_map[m->logical_id].set_subfield(1,  8, 8);  // yellow
+        adrdist.meter_color_output_map[m->logical_id].set_subfield(1, 16, 8);  // yellow
+        adrdist.meter_color_output_map[m->logical_id].set_subfield(3, 24, 8);  // red
+        adrdist.movereg_idle_ctl[m->logical_id].movereg_idle_ctl_mc = 1;
         if (type != LPF)
             adrdist.meter_enable |= 1U << m->logical_id;
-        auto &meter_sweep_ctl = adrdist.meter_sweep_ctl[m->logical_id];
-        meter_sweep_ctl.meter_sweep_en = 1;
-        meter_sweep_ctl.meter_sweep_offset = minvpn;
-        meter_sweep_ctl.meter_sweep_size = maxvpn;
-        meter_sweep_ctl.meter_sweep_remove_hole_pos = 0; // FIXME
-        meter_sweep_ctl.meter_sweep_remove_hole_en = 0; // FIXME
-        meter_sweep_ctl.meter_sweep_interval = sweep_interval;
         /*auto &movereg_ad_ctl = adrdist.movereg_ad_ctl[m->logical_id];
         movereg_ad_ctl.movereg_meter_deferred = 1;
         if (!color_maprams.empty())
@@ -349,7 +375,9 @@ void MeterTable::write_regs() {
         else
             movereg_ad_ctl.movereg_ad_stats_as_mc = 1;
         movereg_ad_ctl.movereg_ad_direct_meter = direct;
-        movereg_ad_ctl.movereg_ad_meter_shift = 7; */ }
+        movereg_ad_ctl.movereg_ad_meter_shift = 7; */
+        setup_muxctl(adrdist.meter_color_logical_to_phys_ixbar_ctl[m->logical_id], home->row/4U);
+        adrdist.mau_ad_meter_virt_lt[home->row/4U] |= 1 << m->logical_id; }
     adrdist.deferred_ram_ctl[1][home->row/4U].deferred_ram_en = 1;
     adrdist.deferred_ram_ctl[1][home->row/4U].deferred_ram_thread = gress;
     if (gress)
@@ -359,6 +387,12 @@ void MeterTable::write_regs() {
         adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::METER; }
     for (auto &hd : hash_dist)
         hd.write_regs(this, 1, false);
+    if (gress == INGRESS) {
+        merge.meter_alu_thread[0].meter_alu_thread_ingress |= 1U << home->row/4U;
+        merge.meter_alu_thread[1].meter_alu_thread_ingress |= 1U << home->row/4U;
+    } else {
+        merge.meter_alu_thread[0].meter_alu_thread_egress |= 1U << home->row/4U;
+        merge.meter_alu_thread[1].meter_alu_thread_egress |= 1U << home->row/4U; }
 }
 
 void MeterTable::gen_tbl_cfg(json::vector &out) {
@@ -384,4 +418,25 @@ void MeterTable::gen_tbl_cfg(json::vector &out) {
     tbl["enable_per_flow_enable"] = per_flow_enable;
     tbl["enable_color_aware"] = color_aware;
     tbl["enable_color_aware_per_flow_enable"] = color_aware_per_flow_enable;
+    json::vector &bindings = tbl["binding"];
+    if (global_binding) {
+        if (bindings.empty()) {
+            bindings.push_back("global");
+            bindings.push_back("null");
+        } else if (*bindings[0] != (indirect ? "static" : "direct"))
+            ERROR("Incompatible bindings for " << name());
+    } else {
+        if (bindings.empty())
+            bindings.push_back(indirect ? "static" : "direct");
+        else if (*bindings[0] != (indirect ? "static" : "direct"))
+            ERROR("Incompatible bindings for " << name());
+        for (auto table : match_tables) {
+            const char *name = table->p4_name();
+            if (!name) name = table->name();
+            size_t i;
+            for (i = 1; i < bindings.size(); ++i)
+                if (*bindings[i] == name)
+                    break;
+            if (i == bindings.size())
+                bindings.push_back(name); } }
 }

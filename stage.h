@@ -71,8 +71,8 @@ public:
                                                         overflow_bus_use;
     Alloc2D<Table::Actions::Action *, 2, ACTION_IMEM_ADDR_MAX>          imem_addr_use;
     bitvec      imem_use[ACTION_IMEM_SLOTS];
-    enum { USE_TCAM=1, USE_TCAM_PIPED=2, USE_STATEFUL=4, USE_METER=8,
-           USE_SELECTOR=16, USE_WIDE_SELECTOR=32 };
+    enum { USE_TCAM=1, USE_TCAM_PIPED=2, USE_STATEFUL=4, USE_METER=8, USE_METER_LPF_RED=16,
+           USE_SELECTOR=32, USE_WIDE_SELECTOR=64 };
     int /* enum */      table_use[2], group_table_use[2];
     enum { NONE=0, CONCURRENT=1, ACTION_DEP=2, MATCH_DEP=3 } stage_dep[2];
     bitvec              match_use[2], action_use[2], action_set[2];

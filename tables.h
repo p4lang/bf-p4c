@@ -710,6 +710,7 @@ public:
     int direct_shiftcount();
     bool                color_aware = false;
     bool                color_aware_per_flow_enable = false;
+    bool run_at_eop() { return type == STANDARD; }
     // int direct_shiftcount();
 )
 

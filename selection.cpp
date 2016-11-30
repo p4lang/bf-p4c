@@ -239,12 +239,13 @@ void SelectionTable::write_regs() {
     selector_ctl.resilient_hash_mode = resilient_hash ? 1 : 0;
     selector_ctl.selector_enable = 1;
     auto &delay_ctl = map_alu.meter_alu_group_data_delay_ctl[meter_group];
-    delay_ctl.meter_alu_right_group_delay = 14 + stage->tcam_delay(gress);
+    delay_ctl.meter_alu_right_group_delay = 13 + meter_group/2 + stage->tcam_delay(gress);
     delay_ctl.meter_alu_right_group_enable = resilient_hash ? 3 : 1;
     /* FIXME -- error_ctl should be configurable */
     auto &error_ctl = map_alu.meter_alu_group_error_ctl[meter_group];
     error_ctl.meter_alu_group_ecc_error_enable = 1;
     error_ctl.meter_alu_group_sel_error_enable = 1;
+    error_ctl.meter_alu_group_thread = gress;
 
     auto &merge = stage->regs.rams.match.merge;
     auto &adrdist = stage->regs.rams.match.adrdist;
