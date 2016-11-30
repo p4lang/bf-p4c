@@ -76,7 +76,6 @@ class UpdateAccess : public MauInspector , P4WriteContext {
         if (prim->isOutput(0)) {
             auto dest = prim->operands[0];
             // FIXME: This is a hack for execute meter in P4-14
-            LOG1("Primitive name " << prim->name);
             if (prim->name == "execute_meter")
                 dest = prim->operands[2];
             cstring name;

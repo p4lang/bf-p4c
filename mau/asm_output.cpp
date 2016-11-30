@@ -445,7 +445,7 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
         bitvec used;
         action_bits = ceil_log2(tbl->actions.size());
         immediate_bits = tbl->layout.action_data_bytes_in_overhead * 8;
-        meter_bits = tbl->layout.meter_overhead_bits; 
+        meter_bits = tbl->layout.meter_overhead_bits;
         counter_bits = tbl->layout.counter_overhead_bits;
         int width = tbl->ways[0].width;
         int groups = tbl->ways[0].match_groups;
@@ -704,7 +704,6 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         for (auto at : stats_tables) {
             out << indent << "- " << at->name;
             if (at->indexed())
-                // FIXME: Must be adjusted for multiple tables
                 out << '(' << "counter_ptr" << ')';
             out << std::endl;
         }
@@ -714,7 +713,6 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         for (auto at : meter_tables) {
             out << indent << "- " << at->name;
             if (at->indexed())
-                //FIXME: Must be adjusted for multiple meter tables
                 out << '(' << "meter_ptr" << ')';
             out << std::endl;
         }

@@ -11,9 +11,12 @@ header_type data_t {
         h1 : 16;
         h2 : 16;
         h3 : 16;
+        h4 : 16;
+        h5 : 16;
         b1 : 8;
         color_1 : 8;
         color_2 : 8;
+        color_3 : 8;
     }
 }
 
@@ -35,6 +38,12 @@ action h3_b1(val3, val1) {
     execute_meter(meter_2, 7, data.color_2);
 }
 
+action h4_5(val4, val5) {
+    modify_field(data.h4, val4);
+    modify_field(data.h5, val5);
+    execute_meter(meter_3, 7, data.color_3);
+}
+
 
 action set_port(port) {
     modify_field(standard_metadata.egress_spec, port);
@@ -45,7 +54,6 @@ meter meter_1 {
     type : bytes;
     static : test1;
     result : data.color_1;
-    implementation : lpf;
     instance_count : 1024;
 }
 
@@ -53,6 +61,14 @@ meter meter_2 {
     type : bytes;
     static : test2;
     result : data.color_2;
+    instance_count : 1024;
+}
+
+meter meter_3 {
+    type : bytes;
+    static : test3;
+    result : data.color_3;
+    implementation : lpf;
     instance_count : 1024;
 }
 
@@ -75,8 +91,19 @@ table test2 {
     size : 1024;
 }
 
+table test3 {
+    reads {
+        data.f3 : exact;
+    }
+    actions {
+        h4_5;
+    }
+    size : 1024;
+}
+
 
 control ingress {
     apply(test1);
     apply(test2);
+    apply(test3);
 }
