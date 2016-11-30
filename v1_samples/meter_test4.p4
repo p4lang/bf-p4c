@@ -44,12 +44,6 @@ action h4_5(val4, val5) {
     execute_meter(meter_3, 7, data.color_3);
 }
 
-
-action set_port(port) {
-    modify_field(standard_metadata.egress_spec, port);
-} 
-
-
 meter meter_1 {
     type : bytes;
     static : test1;

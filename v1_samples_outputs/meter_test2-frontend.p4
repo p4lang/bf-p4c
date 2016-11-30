@@ -18,6 +18,7 @@ header data_t {
     bit<16> h10;
     bit<16> h11;
     bit<16> h12;
+    bit<16> h13;
     bit<8>  color_1;
     bit<8>  color_2;
     bit<8>  color_3;
@@ -41,19 +42,26 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("meter_1") direct_meter<bit<8>>(CounterType.bytes) meter_0;
-    @name("meter_2") direct_meter<bit<8>>(CounterType.bytes) meter_3;
+    @name("meter_2") direct_meter<bit<8>>(CounterType.bytes) meter_5;
+    @name("meter_3") meter(32w1000, CounterType.packets) meter_6;
+    @name("meter_4") meter(32w4096, CounterType.packets) meter_7;
     @name("h7_9") action h7_0(bit<16> val7, bit<16> val8, bit<16> val9) {
         hdr.data.h7 = val7;
         hdr.data.h8 = val8;
         hdr.data.h9 = val9;
+        meter_6.execute_meter<bit<8>>(32w7, hdr.data.color_3);
     }
     @name("h10_12") action h10_0(bit<16> val10, bit<16> val11, bit<16> val12) {
         hdr.data.h10 = val10;
         hdr.data.h11 = val11;
         hdr.data.h12 = val12;
+        meter_7.execute_meter<bit<8>>(32w7, hdr.data.color_4);
     }
     @name("set_port") action set_port_0(bit<9> port) {
         standard_metadata.egress_spec = port;
+    }
+    @name("seth13") action seth13_0(bit<16> val13) {
+        hdr.data.h13 = val13;
     }
     @name("h1_3") action h1_3(bit<16> val1, bit<16> val2, bit<16> val3) {
         hdr.data.h1 = val1;
@@ -77,7 +85,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.h4 = val4;
         hdr.data.h5 = val5;
         hdr.data.h6 = val6;
-        meter_3.read(hdr.data.color_2);
+        meter_5.read(hdr.data.color_2);
     }
     @name("test2") table test2_0() {
         actions = {
@@ -89,7 +97,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 10000;
         default_action = NoAction();
-        meters = meter_3;
+        meters = meter_5;
     }
     @name("test3") table test3_0() {
         actions = {
@@ -124,12 +132,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
+    @name("test6") table test6_0() {
+        actions = {
+            seth13_0();
+            NoAction();
+        }
+        key = {
+            hdr.data.color_3: ternary;
+            hdr.data.color_4: ternary;
+        }
+        default_action = NoAction();
+    }
     apply {
         test1_0.apply();
         test2_0.apply();
         test3_0.apply();
         test4_0.apply();
         test5_0.apply();
+        test6_0.apply();
     }
 }
 

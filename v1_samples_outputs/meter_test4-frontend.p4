@@ -9,9 +9,12 @@ header data_t {
     bit<16> h1;
     bit<16> h2;
     bit<16> h3;
+    bit<16> h4;
+    bit<16> h5;
     bit<8>  b1;
     bit<8>  color_1;
     bit<8>  color_2;
+    bit<8>  color_3;
 }
 
 struct metadata {
@@ -31,7 +34,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("meter_1") meter(32w1024, CounterType.bytes) meter_0;
-    @name("meter_2") meter(32w1024, CounterType.bytes) meter_3;
+    @name("meter_2") meter(32w1024, CounterType.bytes) meter_4;
+    @name("meter_3") meter(32w1024, CounterType.bytes) meter_5;
     @name("h1_2") action h1_0(bit<16> val1, bit<16> val2) {
         hdr.data.h1 = val1;
         hdr.data.h2 = val2;
@@ -40,7 +44,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("h3_b1") action h3_b1_0(bit<16> val3, bit<8> val1) {
         hdr.data.h3 = val3;
         hdr.data.b1 = val1;
-        meter_3.execute_meter<bit<8>>(32w7, hdr.data.color_2);
+        meter_4.execute_meter<bit<8>>(32w7, hdr.data.color_2);
+    }
+    @name("h4_5") action h4_0(bit<16> val4, bit<16> val5) {
+        hdr.data.h4 = val4;
+        hdr.data.h5 = val5;
+        meter_5.execute_meter<bit<8>>(32w7, hdr.data.color_3);
     }
     @name("test1") table test1_0() {
         actions = {
@@ -64,9 +73,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
+    @name("test3") table test3_0() {
+        actions = {
+            h4_0();
+            NoAction();
+        }
+        key = {
+            hdr.data.f3: exact;
+        }
+        size = 1024;
+        default_action = NoAction();
+    }
     apply {
         test1_0.apply();
         test2_0.apply();
+        test3_0.apply();
     }
 }
 
