@@ -856,8 +856,9 @@ void Memories::adjust_RAMs_available(action_fill &curr_oflow, int &suppl_RAMs_av
     if (curr_oflow.group && curr_oflow.group->cm.required) {
         suppl_RAMs_available -= curr_oflow.group->cm.left_to_place() - open_maprams;
     } else if (curr_oflow.group && !curr_oflow.group->cm.all_placed()) {
-        if (curr_oflow.group->left_to_place() < action_RAMs_available)
+        if (curr_oflow.group->left_to_place() < action_RAMs_available) {
            suppl_RAMs_available -= curr_oflow.group->cm.left_to_place() - open_maprams;
+        }
     }
 }
 
@@ -887,6 +888,11 @@ void Memories::action_row_trip(action_fill &action, action_fill &suppl, action_f
                 suppl = next_suppl;
                 oflow = curr_oflow;
                 order[OFLOW_IND] = 0; order[SUPPL_IND] = 1;
+                LOG1("In this section");
+                LOG1("next suppl name and curr oflow " << next_suppl.group->name << " " 
+                     << curr_oflow.group->name);
+                LOG1("next_suppl " << next_suppl.group->needs_ab() << " curr_oflow " <<
+                     curr_oflow.group->needs_ab());
                 if (!next_suppl.group->needs_ab() &&
                     (next_suppl.group->left_to_place() +
                     curr_oflow.group->left_to_place() < suppl_RAMs_available)
@@ -1127,6 +1133,9 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
     int suppl_RAMs_available = action_RAMs_available;
     adjust_RAMs_available(curr_oflow, suppl_RAMs_available, action_RAMs_available, row,
                           mask == 0xf);
+    if (mask == 0x3f0)
+        LOG1("Suppl vs action on row " << row << " " << suppl_RAMs_available << " " 
+             << action_RAMs_available);
     action_fill best_fit_action, best_fit_suppl;
     action_fill next_action, next_suppl;
 

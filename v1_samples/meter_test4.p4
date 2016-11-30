@@ -26,13 +26,13 @@ parser start {
 action h1_2(val1, val2) {
     modify_field(data.h1, val1);
     modify_field(data.h2, val2);
-    execute_meter(meter1, 7, data.color_1); 
+    execute_meter(meter_1, 7, data.color_1); 
 }
 
 action h3_b1(val3, val1) {
     modify_field(data.h3, val3);
     modify_field(data.b1, val1);
-    execute_meter(meter2, 7, data.color_2);
+    execute_meter(meter_2, 7, data.color_2);
 }
 
 

@@ -48,7 +48,8 @@ meter meter_2 {
 table test1 {
     reads {
         data.f1 : exact;
-    } actions {
+    } 
+    actions {
         h1_3;
     }
     size : 6000;
@@ -57,7 +58,8 @@ table test1 {
 table test2 {
     reads {
         data.f2 : exact;
-    } actions {
+    } 
+    actions {
         h4_6;
     }
     size : 10000;

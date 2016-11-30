@@ -132,7 +132,7 @@ struct Memories {
         }
         int left_to_place() { return depth - placed; }
         bool all_placed() { return (depth == placed); }
-        bool needs_ab() { return requires_ab && all_placed();}
+        bool needs_ab() { return requires_ab && !all_placed();}
         cstring name_addition() {
             switch (type) {
                 case EXACT:    return "";

@@ -106,17 +106,29 @@ namespace {
 class VisitAttached : public Inspector {
     IR::MAU::Table::Layout &layout;
     int immediate_bytes_needed;
+    int counter_vpn_bits_needed;
+    int meter_vpn_bits_needed;
     bool preorder(const IR::Stateful *st) override {
         if (!st->direct) {
             if (st->instance_count <= 0)
                 error("%s: No instance count in indirect %s %s", st->srcInfo, st->kind(), st->name);
             int vpn_bits_needed = std::max(10, ceil_log2(st->instance_count));
             layout.overhead_bits += vpn_bits_needed; 
-            if (st->is<IR::Meter>()) {
-                layout.meter_overhead_bits.push_back(vpn_bits_needed);
-                immediate_bytes_needed += 1; 
+            if (auto *mtr = st->to<IR::Meter>()) {
+                if (meter_vpn_bits_needed > vpn_bits_needed) {
+	            layout.meter_overhead_bits = vpn_bits_needed;
+                    meter_vpn_bits_needed = vpn_bits_needed;
+		}
+                if (!mtr->implementation.name) {
+                    immediate_bytes_needed = 1;
+                    LOG1("Regular meter");
+                }
+               
             } else if (st->is<IR::Counter>()) {
-                layout.counter_overhead_bits.push_back(vpn_bits_needed);
+                if (counter_vpn_bits_needed > vpn_bits_needed) {
+	            layout.counter_overhead_bits = vpn_bits_needed;
+                    counter_vpn_bits_needed = vpn_bits_needed;
+                }
             } 
         }
         return false; }
@@ -140,7 +152,7 @@ class VisitAttached : public Inspector {
 
  public:
     explicit VisitAttached(IR::MAU::Table::Layout *l) : layout(*l),
-        immediate_bytes_needed(0)  {}
+        immediate_bytes_needed(0), counter_vpn_bits_needed(0), meter_vpn_bits_needed(0) {}
     bool have_ternary_indirect = false;
     bool have_action_data = false;
     int immediate_reserved() { return immediate_bytes_needed; }

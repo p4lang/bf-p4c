@@ -39,14 +39,14 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
 class MauAsmOutput::TableFormat {
     const MauAsmOutput &self;
     struct match_group {
-        int                             action = -1, immediate = -1, version = -1;
-        vector<int>                     counters, meters;
+        int                             action = -1, immediate = -1, version = -1, counter = -1,
+                                        meter = -1;
         vector<std::pair<int, int>>     match;
     };
     int action_bits = 0;
     int immediate_bits = 0;
-    vector<int> meter_bits;
-    vector<int> counter_bits;
+    int meter_bits = 0;
+    int counter_bits = 0;
     vector<match_group> format;
  public:
     vector<Slice>       match_fields;
@@ -464,22 +464,18 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
                 int word = i / groups_per_word;
                 format[i].immediate = used.ffz(128*word);
                 used.setrange(format[i].immediate, immediate_bits); } }
-        if (counter_bits.size() > 0) {
-            for (size_t j = 0; j < counter_bits.size(); j++) {
-                for (int i = 0; i < groups; i++) {
-                    int word = i / groups_per_word;
-                    format[i].counters.push_back(used.ffz(128*word));
-                    used.setrange(format[i].counters.back(), counter_bits[j]);
-                }
+        if (counter_bits > 0) {
+            for (int i = 0; i < groups; i++) {
+                int word = i / groups_per_word;
+                format[i].counter = used.ffz(128*word);
+                used.setrange(format[i].counter, counter_bits);
             }
         }
-        if (meter_bits.size() > 0) {
-            for (size_t j = 0; j < meter_bits.size(); j++) {
-                for (int i = 0; i < groups; i++) {
-                    int word = i / groups_per_word;
-                    format[i].meters.push_back(used.ffz(128*word));
-                    used.setrange(format[i].meters.back(), meter_bits[j]);
-                }
+        if (meter_bits > 0) {
+            for (int i = 0; i < groups; i++) {
+                int word = i / groups_per_word;
+                format[i].meter = used.ffz(128*word);
+                used.setrange(format[i].meter, meter_bits);
             }
         }
         if (!match_fields.empty()) {
@@ -534,13 +530,8 @@ void MauAsmOutput::TableFormat::print(std::ostream &out) const {
         fmt.emit(out, "action", i, group.action, action_bits);
         fmt.emit(out, "immediate", i, group.immediate, immediate_bits);
         fmt.emit(out, "version", i, group.version, 4);
-        // FIXME: String manipulation for multiple cnters, meters, etc.
-        for (size_t j = 0; j < group.counters.size(); j++) {
-            fmt.emit(out, "counter_ptr", i, group.counters[j], counter_bits[j]);
-        }
-        for (size_t j = 0; j < group.meters.size(); j++) {
-            fmt.emit(out, "meter_ptr", i, group.meters[j], meter_bits[j]);
-        }
+        fmt.emit(out, "counter_ptr", i, group.counter, counter_bits);
+        fmt.emit(out, "meter_ptr", i, group.meter, meter_bits);
         fmt.emit(out, "match", i, group.match);
         ++i; }
     out << (fmt.sep + 1) << "}";
