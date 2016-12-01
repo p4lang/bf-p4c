@@ -5,6 +5,7 @@
 #include "phv_fields.h"
 #include "ir/ir.h"
 #include "lib/map.h"
+#include "lib/ordered_map.h"
 #include "lib/ordered_set.h"
 #include "lib/range.h"
 #include "tofino/ir/thread_visitor.h"
@@ -66,7 +67,7 @@ class Cluster_PHV {
 };
 //
 //
-class Cluster_PHV_Requirements {
+class Cluster_PHV_Requirements : public Visitor {
  private:
     Cluster &cluster_i;            // reference to parent cluster
     //
@@ -82,13 +83,15 @@ class Cluster_PHV_Requirements {
                                    // fields that are not used through mau pipeline
                                    // sorted width decreasing
  public:
-    Cluster_PHV_Requirements(Cluster &c);  // NOLINT(runtime/explicit)
+    Cluster_PHV_Requirements(Cluster &c) : cluster_i(c) {}  // NOLINT(runtime/explicit)
     //
     ordered_map<PHV_Container::PHV_Word, ordered_map<int, std::vector<Cluster_PHV *>>>&
     cluster_phv_map()                           { return Cluster_PHV_i; }
     //
     std::vector<Cluster_PHV *>& pov_fields()    { return pov_fields_i; }
     std::vector<Cluster_PHV *>& t_phv_fields()  { return t_phv_fields_i; }
+    //
+    const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
     //
 };
 //

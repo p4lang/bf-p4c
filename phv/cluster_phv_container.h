@@ -5,6 +5,7 @@
 #include "phv_fields.h"
 #include "ir/ir.h"
 #include "lib/map.h"
+#include "lib/ordered_map.h"
 #include "lib/range.h"
 #include "tofino/ir/thread_visitor.h"
 //

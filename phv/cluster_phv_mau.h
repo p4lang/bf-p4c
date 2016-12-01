@@ -5,6 +5,7 @@
 #include "phv_fields.h"
 #include "ir/ir.h"
 #include "lib/map.h"
+#include "lib/ordered_map.h"
 #include "lib/range.h"
 #include "tofino/ir/thread_visitor.h"
 #include "cluster_phv_req.h"
@@ -98,7 +99,7 @@ class PHV_MAU_Group {
 };
 //
 //
-class PHV_MAU_Group_Assignments {
+class PHV_MAU_Group_Assignments : public Visitor {
  private:
     Cluster_PHV_Requirements &phv_requirements_i;  // reference to parent PHV Requirements
     //
@@ -191,7 +192,8 @@ class PHV_MAU_Group_Assignments {
     //
  public:
     //
-    PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &phv_r);  // NOLINT(runtime/explicit)
+    PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &phv_r)  // NOLINT(runtime/explicit)
+        : phv_requirements_i(phv_r) {}
     //
     ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>& phv_mau_map() {
         return PHV_MAU_i;
@@ -204,6 +206,8 @@ class PHV_MAU_Group_Assignments {
     t_phv_map()                                         { return T_PHV_i; }
     ordered_map<int, ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&
     T_PHV_container_slices()                            { return T_PHV_container_slices_i; }
+    //
+    const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
     //
     bool status(std::list<Cluster_PHV *>&);
     bool status(std::list<PHV_MAU_Group *>&);

@@ -80,10 +80,10 @@ static void debug_hook(const char *, unsigned, const char *pass, const IR::Node 
 
 void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *options) {
     PhvInfo phv;
-    Cluster cluster(phv);  // cluster analysis
-    Cluster_PHV_Requirements *cluster_phv_requirements;  // PHV requirements analysis
-    PHV_MAU_Group_Assignments *phv_mau_group_assignments;  // PHV MAU Group Container placements
-    PHV_Bind *phv_field_bind;  // field binding to PHV Containers
+    Cluster cluster(phv);                                        // cluster analysis
+    Cluster_PHV_Requirements cluster_phv_req(cluster);           // cluster PHV requirements
+    PHV_MAU_Group_Assignments cluster_phv_mau(cluster_phv_req);  // cluster PHV Container placements
+    PHV_Bind phv_bind(phv, cluster_phv_mau);                     // field binding to PHV Containers
     DependencyGraph deps;
     TablesMutuallyExclusive mutex;
     FieldDefUse defuse(phv);
@@ -109,27 +109,20 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
             new MauPhvConstraints(phv),
             new PHV::TrivialAlloc(phv, defuse.conflicts()),
             options->phv_new ? new VisitFunctor([&]() {
-                // phv_mau_group_assignments =
-                //       new PHV_MAU_Group_Assignments(*cluster_phv_requirements);
-                //       second cut PHV MAU Group assignments
-                //       honor single write conflicts from Table Placement
-                phv_field_bind = new PHV_Bind(phv, *phv_mau_group_assignments);
-                                     // fields bound to PHV containers
+                // &cluster_phv_mau,  // cluster PHV container placements
+                                      // second cut PHV MAU Group assignments
+                                      // honor single write conflicts from Table Placement
+                &phv_bind,            // fields bound to PHV containers
                 }) : nullptr,
             });
     }
 
     PassManager *phv_analysis = new PassManager({
-        &cluster,
-        new VisitFunctor(
-            [&phv, &defuse, &cluster, &cluster_phv_requirements, &phv_mau_group_assignments]() {
-            //
-            cluster_phv_requirements = new Cluster_PHV_Requirements(cluster);
-                                           // PHV requirements analysis
-            phv_mau_group_assignments = new PHV_MAU_Group_Assignments(*cluster_phv_requirements);
-                                            // first cut PHV MAU Group assignments
-                                            // produces cohabit fields for Table Placement
-        }),
+        &cluster,          // cluster analysis
+        &cluster_phv_req,  // cluster PHV requirements analysis
+        &cluster_phv_mau,  // cluster PHV container placements
+                           // first cut PHV MAU Group assignments
+                           // produces cohabit fields for Table Placement
     });
 
     PassManager backend = {
@@ -147,12 +140,12 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         &phv,
         new VisitFunctor([&phv, &stacks]() { phv.allocatePOV(stacks); }),
         new HeaderPushPop(stacks),
-        new CopyHeaderEliminator,    // needs to be after POV alloc and before InstSel
+        new CopyHeaderEliminator,   // needs to be after POV alloc and before InstSel
         new InstructionSelection(phv),
 
-        phv_analysis,  // perform cluster analysis after last &phv pass
+        phv_analysis,               // phv analysis after last &phv pass
 
-        new CanonGatewayExpr,   // must be before TableLayout?  or just TablePlacement?
+        new CanonGatewayExpr,       // must be before TableLayout?  or just TablePlacement?
         new SplitComplexGateways(phv),
         new CheckGatewayExpr(phv),
         new TableLayout(phv),
@@ -182,7 +175,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         &summary,
         Log::verbose() ? new VisitFunctor([&summary]() { std::cout << summary; }) : nullptr,
 
-        phv_alloc,
+        phv_alloc,                   // phv assignment / binding
 
         Log::verbose() ? new VisitFunctor([&phv]() { std::cout << phv; }) : nullptr,
 

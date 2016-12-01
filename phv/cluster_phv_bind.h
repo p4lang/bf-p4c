@@ -28,30 +28,25 @@
 //***********************************************************************************
 //
 //
-class PHV_Bind {
+class PHV_Bind : public Visitor {
  private:
     //
-    PhvInfo &phv_i;                             // all fields in input
-    PHV_MAU_Group_Assignments &phv_mau_group_assignments_i;
-                                                // reference to parent PHV MAU Group Assignments
-    ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>> &phv_mau_i;
-    ordered_map<int, ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>> &t_phv_i;
+    PhvInfo &phv_i;                                // all fields in input
+    PHV_MAU_Group_Assignments &phv_mau_i;
+                                                   // parent PHV MAU Group Assignments
     std::set<const PHV_Container *> containers_i;  // all filled containers
     std::set<const PhvInfo::Field *> fields_i;     // all fields to be finally bound
     //
  public:
     //
-    PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m);
+    PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m)
+       : phv_i(phv_f),
+         phv_mau_i(phv_m) {}
     //
-    ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>& phv_mau_map() {
-        return phv_mau_i;
-    }
-    ordered_map<int,
-    ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>>& t_phv_map() {
-        return t_phv_i;
-    }
     std::set<const PHV_Container *> containers()  { return containers_i; }
     std::set<const PhvInfo::Field *>& fields()    { return fields_i; }
+    //
+    const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
     //
     void sanity_check_container_fields(const std::string&, std::set<const PhvInfo::Field *>&);
     //

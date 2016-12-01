@@ -5,7 +5,7 @@
 
 //***********************************************************************************
 //
-// Cluster_PHV_Requirements::Cluster_PHV_Requirements constructor
+// Cluster_PHV_Requirements::apply_visitor()
 //
 // input:
 //      clusters: cluster.dst_map()
@@ -17,12 +17,18 @@
 //
 //***********************************************************************************
 
-Cluster_PHV_Requirements::Cluster_PHV_Requirements(Cluster &c)
-    : cluster_i(c) {
+
+const IR::Node *
+Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) {
+    //
+    LOG1("..........Cluster_PHV_Requirements::apply_visitor()..........");
+    if (name) {
+        LOG1(name);
+    }
     //
     // create PHV Requirements from clusters
     if (!cluster_i.dst_map().size()) {
-        LOG1("*****Cluster_PHV_Requirements called w/ 0 clusters******");
+        LOG1("***************Cluster_PHV_Requirements called w/ 0 clusters***************");
     }
     //
     for (auto p : Values(cluster_i.dst_map())) {
@@ -115,7 +121,8 @@ Cluster_PHV_Requirements::Cluster_PHV_Requirements(Cluster &c)
     //
     LOG3(*this);
     //
-}  // Cluster_PHV_Requirements
+    return node;
+}
 
 //***********************************************************************************
 //

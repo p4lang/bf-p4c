@@ -331,6 +331,13 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
     return out;
 }
 
+std::ostream &operator<<(std::ostream &out, std::set<const PhvInfo::Field *>& field_set) {
+    for (auto &f : field_set) {
+        out << f << std::endl;
+    }
+    return out;
+}
+
 std::ostream &operator<<(std::ostream &out, std::list<const PhvInfo::Field *>& field_list) {
     for (auto &f : field_list) {
         out << f << std::endl;

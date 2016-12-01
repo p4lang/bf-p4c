@@ -5,30 +5,33 @@
 
 //***********************************************************************************
 //
-// PHV_Bind::PHV_Bind
+// PHV_Bind::apply_visitor()
 //
 //***********************************************************************************
 
-PHV_Bind::PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m)
-    : phv_i(phv_f),
-      phv_mau_group_assignments_i(phv_m),
-      phv_mau_i(phv_m.phv_mau_map()),
-      t_phv_i(phv_m.t_phv_map())  {
+
+const IR::Node *
+PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
     //
-    // collect all allocated containers in phv_mau_i, t_phv_i
+    LOG1("..........PHV_Bind::apply_visitor()..........");
+    if (name) {
+        LOG1(name);
+    }
     //
-    for (auto it : phv_mau_i) {
-        for (auto g : it.second) {
-            for (auto c : g->phv_containers()) {
+    // collect all allocated containers from phv_mau_map, t_phv_map
+    //
+    for (auto &it : phv_mau_i.phv_mau_map()) {
+        for (auto &g : it.second) {
+            for (auto &c : g->phv_containers()) {
                 if (c->fields_in_container().size()) {
                     containers_i.insert(c);
                 }
             }
         }
     }
-    for (auto coll : t_phv_i) {
-        for (auto c_s : coll.second) {
-            for (auto c : c_s.second) {
+    for (auto &coll : phv_mau_i.t_phv_map()) {
+        for (auto &c_s : coll.second) {
+            for (auto &c : c_s.second) {
                 if (c->fields_in_container().size()) {
                     containers_i.insert(c);
                 }
@@ -40,8 +43,8 @@ PHV_Bind::PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m)
     // create equivalent asm containers
     //
     ordered_map<const PHV_Container*, PHV::Container *> phv_to_asm_map;
-    for (auto c : containers_i) {
-        for (auto cc : const_cast<PHV_Container *>(c)->fields_in_container()) {
+    for (auto &c : containers_i) {
+        for (auto &cc : const_cast<PHV_Container *>(c)->fields_in_container()) {
             fields_i.insert(cc->field());
         }
         phv_to_asm_map[c] =
@@ -58,8 +61,8 @@ PHV_Bind::PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m)
         PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
         f1->alloc.clear();
     }
-    for (auto c : containers_i) {
-        for (auto cc : const_cast<PHV_Container *>(c)->fields_in_container()) {
+    for (auto &c : containers_i) {
+        for (auto &cc : const_cast<PHV_Container *>(c)->fields_in_container()) {
             PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(cc->field());
             int field_bit = cc->field_bit_lo();
             int container_bit = cc->lo();
@@ -71,7 +74,8 @@ PHV_Bind::PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m)
     //
     LOG3(*this);
     //
-}  // PHV_Bind
+    return node;
+}
 
 
 //***********************************************************************************
@@ -101,8 +105,12 @@ void PHV_Bind::sanity_check_container_fields(
         fields_i.end(),
         std::inserter(s3, s3.end()));
     if (s3.size()) {
-        LOG1("*****cluster_phv_bind.cpp:sanity_FAIL*****+phv bind fields != all .."
-            << msg << s3);
+        LOG1(std::endl
+            << "*****cluster_phv_bind.cpp:sanity_FAIL*****"
+            << msg
+            << ".....phv bind fields != all....."
+            << std::endl
+            << s3);
     }
     //
 }
@@ -117,7 +125,7 @@ void PHV_Bind::sanity_check_container_fields(
 
 std::ostream &operator<<(std::ostream &out, PHV_Bind &phv_bind) {
     out << std::endl
-        << "++++++++++ PHV_Bind PHV Containers to Fields ++++++++++"
+        << "++++++++++ PHV Bind Containers to Fields ++++++++++"
         << std::endl
         << std::endl;
     for (auto &f : phv_bind.fields()) {

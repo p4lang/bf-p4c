@@ -153,17 +153,23 @@ void PHV_MAU_Group::create_aligned_container_slices() {
 
 //***********************************************************************************
 //
-// PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments
+// PHV_MAU_Group_Assignments::apply_visitor()
 //
 //***********************************************************************************
 
-PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(
-    Cluster_PHV_Requirements &phv_r)
-    : phv_requirements_i(phv_r) {
+
+const IR::Node *
+PHV_MAU_Group_Assignments::apply_visitor(const IR::Node *node, const char *name) {
+    //
+    LOG1("..........PHV_MAU_Group_Assignments::apply_visitor()..........");
+    if (name) {
+        LOG1(name);
+    }
     //
     // create PHV Group Assignments from PHV Requirements
+    //
     if (!phv_requirements_i.cluster_phv_map().size()) {
-        LOG1("*****PHV_MAU_Group_Assignments called w/ 0 Requirements******");
+        LOG1("***************PHV_MAU_Group_Assignments called w/ 0 Requirements****************");
     }
     // create MAU Groups
     //
@@ -345,7 +351,9 @@ PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments(
     //
     LOG3(*this);
     //
-}  // PHV_MAU_Group_Assignments
+    return node;
+    //
+}  // PHV_MAU_Group_Assignments::apply_visitor
 
 //***********************************************************************************
 //
