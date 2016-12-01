@@ -73,11 +73,9 @@ class UpdateAccess : public MauInspector , P4WriteContext {
         access[f->toString()].read.insert(table);
         return false; }
     void postorder(const IR::Primitive *prim) {
-        if (prim->isOutput(0)) {
-            auto dest = prim->operands[0];
-            // FIXME: This is a hack for execute meter in P4-14
-            if (prim->name == "execute_meter")
-                dest = prim->operands[2];
+        int operand = 0;
+        for (auto dest : prim->operands) {
+            if (!prim->isOutput(operand++)) continue;
             cstring name;
             if (auto sl = dest->to<IR::Slice>())
                 dest = sl->e0;
