@@ -166,6 +166,7 @@ struct Memories {
     vector<table_alloc *>      tind_tables;
     vector<SRAM_group *>       tind_groups;
     vector<table_alloc *>      action_tables;
+    vector<table_alloc *>      indirect_action_tables;
     vector<table_alloc *>      stats_tables;
     vector<table_alloc *>      meter_tables;
     vector<SRAM_group *>       action_bus_users;

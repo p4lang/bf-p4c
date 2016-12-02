@@ -40,13 +40,14 @@ class MauAsmOutput::TableFormat {
     const MauAsmOutput &self;
     struct match_group {
         int                             action = -1, immediate = -1, version = -1, counter = -1,
-                                        meter = -1;
+                                        meter = -1, indirect_action = -1;
         vector<std::pair<int, int>>     match;
     };
     int action_bits = 0;
     int immediate_bits = 0;
     int meter_bits = 0;
     int counter_bits = 0;
+    int indirect_action_bits = 0;
     vector<match_group> format;
  public:
     vector<Slice>       match_fields;
@@ -447,6 +448,7 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
         immediate_bits = tbl->layout.action_data_bytes_in_overhead * 8;
         meter_bits = tbl->layout.meter_overhead_bits;
         counter_bits = tbl->layout.counter_overhead_bits;
+        indirect_action_bits = tbl->layout.indirect_action_overhead_bits;
         int width = tbl->ways[0].width;
         int groups = tbl->ways[0].match_groups;
         int groups_per_word = (groups + width - 1)/width;
@@ -476,6 +478,13 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
                 int word = i / groups_per_word;
                 format[i].meter = used.ffz(128*word);
                 used.setrange(format[i].meter, meter_bits);
+            }
+        }
+        if (indirect_action_bits > 0) {
+            for (int i = 0; i < groups; i++) {
+                int word = i / groups_per_word;
+                format[i].indirect_action = used.ffz(128*word);
+                used.setrange(format[i].indirect_action, indirect_action_bits);
             }
         }
         if (!match_fields.empty()) {
@@ -532,6 +541,7 @@ void MauAsmOutput::TableFormat::print(std::ostream &out) const {
         fmt.emit(out, "version", i, group.version, 4);
         fmt.emit(out, "counter_ptr", i, group.counter, counter_bits);
         fmt.emit(out, "meter_ptr", i, group.meter, meter_bits);
+        fmt.emit(out, "action_ptr", i, group.indirect_action, indirect_action_bits);
         fmt.emit(out, "match", i, group.match);
         ++i; }
     out << (fmt.sep + 1) << "}";
@@ -685,14 +695,19 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         if (at->is<IR::MAU::TernaryIndirect>()) continue;
         if (at->is<IR::ActionProfile>() || at->is<IR::MAU::ActionData>())
             have_action = true;
-        LOG1("at->kind() " << at->kind());
-        LOG1("at->indexed() " << at->indexed());
         if (at->is<IR::Counter>()) {
             stats_tables.push_back(at);
             continue;
         }
         if (at->is<IR::Meter>()) {
             meter_tables.push_back(at);
+            continue;
+        }
+        if (at->is<IR::ActionProfile>()) {
+            out << indent << "action: " << tbl->name << "$action";
+            if (at->indexed())
+                out << "(action, action_ptr)";
+            out << std::endl;
             continue;
         }
         out << indent << at->kind() << ": " << at->name;
@@ -828,7 +843,23 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::Register *) {
 }
 
 bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *) {
-    return false; }
+    indent_t    indent(1);
+    cstring name = tbl->match_table->name + "$action"; 
+    out << indent++ << "action " << name << ':' << std::endl;
+    if (tbl->match_table)
+        out << indent << "p4: { name: " << tbl->match_table->name << "$action }" << std::endl;
+    self.emit_memory(out, indent, tbl->resources->memuse.at(name));
+    for (auto act : Values(tbl->actions)) {
+        if (act->args.empty()) continue;
+        out << indent << ActionDataFormat(self, tbl, act) << std::endl; }
+    if (!tbl->actions.empty()) {
+        out << indent++ << "actions:" << std::endl;
+        for (auto act : Values(tbl->actions))
+            act->apply(EmitAction(self, out, tbl, indent));
+        --indent; }
+    return false; 
+}
+
 bool MauAsmOutput::EmitAttached::preorder(const IR::ActionSelector *) {
     return false; }
 bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {

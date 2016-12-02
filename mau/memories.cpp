@@ -28,6 +28,7 @@ void Memories::clear_table_vectors() {
     tind_tables.clear();
     tind_groups.clear();
     action_tables.clear();
+    indirect_action_tables.clear();
     action_bus_users.clear();
     gw_tables.clear();
     stats_tables.clear();
@@ -163,6 +164,18 @@ bool Memories::analyze_tables(mem_info &mi) {
                 mi.action_bus_min += width;
                 int per_ram = sz > 7 ? 10 : 17 - sz;
                 int depth = ((entries - 1) >> per_ram) + 1;
+                mi.action_RAMs += depth;
+            } else if (auto *ap = at->to<IR::ActionProfile>()) {
+                LOG4("Action profile for table " << table->name);
+                auto name = ta->table->name + "$action";
+                (*ta->memuse)[name].type = Use::ACTIONDATA;
+                indirect_action_tables.push_back(ta);
+                mi.action_tables++;
+                int sz = ceil_log2(table->layout.action_data_bytes) + 3;
+                int width = sz > 7 ? 1 << (sz - 7) : 1;
+                mi.action_bus_min += width;
+                int per_ram = sz > 7 ? 10 : 17 - sz;
+                int depth = ((ap->size) >> per_ram) + 1;
                 mi.action_RAMs += depth;
             } else if (at->is<IR::MAU::TernaryIndirect>()) {
                 auto name = ta->table->name + "$tind";
@@ -792,6 +805,24 @@ void Memories::find_action_bus_users() {
             action_bus_users.push_back(new SRAM_group(ta, depth, i, SRAM_group::ACTION));
             action_bus_users.back()->name = ta->table->name
                                             + action_bus_users.back()->name_addition();
+        }
+    }
+
+    for (auto *ta : indirect_action_tables) {
+        for (auto at : ta->table->attached) {
+            const IR::ActionProfile *ap = nullptr;
+            if ((ap = at->to<IR::ActionProfile>()) == nullptr) 
+                continue;
+            int sz = ceil_log2(ta->table->layout.action_data_bytes) + 3;
+            int width = sz > 7 ? 1 << (sz - 7) : 1;
+            int per_ram = sz > 7 ? 10 : 17 - sz;
+            int depth = ((ap->size - 1) >> per_ram) + 1;
+
+            for (int i = 0; i < width; i++) {
+                action_bus_users.push_back(new SRAM_group(ta, depth, i, SRAM_group::ACTION));
+                action_bus_users.back()->name = ta->table->name
+                                                + action_bus_users.back()->name_addition();
+            } 
         }
     }
 

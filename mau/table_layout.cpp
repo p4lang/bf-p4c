@@ -134,7 +134,10 @@ class VisitAttached : public Inspector {
         have_action_data = true;
         if (ap->size <= 0)
             error("%s: No size count in %s %s", ap->srcInfo, ap->kind(), ap->name);
-        layout.overhead_bits += ceil_log2(ap->size);
+        int vpn_bits_needed = std::max(10, ceil_log2(ap->size));
+        layout.overhead_bits += vpn_bits_needed;
+        layout.indirect_action_overhead_bits = vpn_bits_needed;
+       // setup_action_profile_layout(ap, layout);
         return false; }
     bool preorder(const IR::ActionSelector *) override {
         // TODO(cdodd) -- what does this require from the layout?
