@@ -312,9 +312,6 @@ XFAIL_TESTS += tofino-ortools/extensions/tofino/v1_samples/counter_test1.p4.test
 XFAIL_TESTS += tofino-ortools/extensions/tofino/v1_samples/counter_test2.p4.test
 XFAIL_TESTS += tofino-ortools/extensions/tofino/v1_samples/meter_test1.p4.test
 
-# STF framework doesn't work for meters
-XFAIL_TESTS += tofino/extensions/tofino/v1_samples/meter_test1.p4.test
-
 # Incorrect data layour in ixbar -- fails to get entire 128-bit value in one group.
 # intermittent failure?
 IFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/07-MultiProtocol.p4.test
