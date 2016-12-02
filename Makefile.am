@@ -281,8 +281,6 @@ XFAIL_TESTS += \
 XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/flowlet_switching.p4.test \
     tofino/testdata/p4_14_samples/switch.p4.test \
-    tofino/testdata/p4_14_samples/switch_20160226/switch.p4.test \
-    tofino/testdata/p4_14_samples/switch_20160512/switch.p4.test \
     tofino/%reldir%/v1_samples/07-MacAddrCheck.p4.test \
     tofino/%reldir%/v1_samples/08-MacAddrCheck1.p4.test
 

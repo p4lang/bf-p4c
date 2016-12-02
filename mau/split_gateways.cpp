@@ -45,30 +45,40 @@ const IR::Node *SpreadGatewayAcrossSeq::postorder(IR::MAU::Table *t) {
     return rv;
 }
 
+static void erase_unused_next(IR::MAU::Table *tbl) {
+    BUG_CHECK(tbl->match_table == nullptr, "Can only run erase_unused_next on pure gateways");
+    std::set<cstring> results;
+    for (auto &row : tbl->gateway_rows)
+        results.insert(row.second);
+    for (auto it = tbl->next.begin(); it != tbl->next.end();) {
+        if (results.count(it->first) == 0)
+            it = tbl->next.erase(it);
+        else
+            ++it; }
+}
+
 const IR::MAU::Table *SplitComplexGateways::preorder(IR::MAU::Table *tbl) {
-    if (tbl->gateway_rows.size() <= 1) return tbl;
+    if (tbl->gateway_rows.size() <= 2) return tbl;
+    BUG_CHECK(tbl->gateway_rows.back().first == nullptr, "Gateway not canonicalized?");
     if (tbl->match_table)
         BUG("Must run SplitComplexGateways before attaching gateways to match tables");
     CollectGatewayFields collect(phv);
     tbl->apply(collect);
-    if (collect.compute_offsets())
+    if (collect.compute_offsets() && tbl->gateway_rows.size() <= 5)
         return tbl;
-    for (unsigned i = tbl->gateway_rows.size() - 1; i > 0; --i) {
+    for (unsigned i = tbl->gateway_rows.size() - 2; i > 0; --i) {
+        if (i > 4) i = 4;
         CollectGatewayFields collect(phv, i);
         tbl->apply(collect);
         if (collect.compute_offsets()) {
-#if 0
-        // FIXME -- this is actually wrong as it effectively duplicates the table in the
-        // dependency tree, which is ok in some cases, but won't work in others.  Need to
-        // figure out how the change the representation to make use of this pattern correctly
-        // in the general case, without having to introduce new metadata.
             LOG1("Splitting " << i << " rows into " << tbl->name);
             auto rest = tbl->clone_rename("-split");
             rest->gateway_rows.erase(rest->gateway_rows.begin(), rest->gateway_rows.begin() + i);
             tbl->gateway_rows.erase(tbl->gateway_rows.begin() + i, tbl->gateway_rows.end());
             tbl->gateway_rows.emplace_back(nullptr, "$gwcont");
             tbl->next.addUnique("$gwcont", new IR::MAU::TableSeq(rest));
-#endif
+            erase_unused_next(rest);
+            erase_unused_next(tbl);
             return tbl; } }
     return tbl;
 }

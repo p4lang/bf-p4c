@@ -152,10 +152,11 @@ const IR::MAU::Table *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
     /* split logical-OR operations across rows */
     for (auto it = rows.begin(); it != rows.end(); ++it) {
         LOG3("    " << it->first << " -> " << it->second);
-        if (auto *e = dynamic_cast<const IR::LOr *>(it->first)) {
+        while (auto *e = dynamic_cast<const IR::LOr *>(it->first)) {
             auto act = it->second;
-            it->first = e->right;
-            it = rows.emplace(++it, e->left, act); } }
+            it->first = e->left;
+            it = rows.emplace(++it, e->right, act);
+            --it; } }
     if (rows.back().first)
         rows.emplace_back(nullptr, cstring());
     std::deque<std::pair<const IR::Expression *, cstring>> need_negate;
