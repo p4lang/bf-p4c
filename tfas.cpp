@@ -9,6 +9,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#define MAJOR_VERSION   1
+#define MINOR_VERSION   0
+
 option_t options = {
     .version = CONFIG_OLD,
     .match_compiler = false,
@@ -178,7 +181,15 @@ class Version : public Section {
     void start(int lineno, VECTOR(value_t) args) {}
     void input(VECTOR(value_t) args, value_t data) {
         if (!CHECKTYPE2(data, tINT, tVEC)) return;
-        /* ignore for now */
+        if (data.type == tINT) {
+            if (data.i != MAJOR_VERSION)
+                error(data.lineno, "Version %d not supported", data.i);
+        } else if (data.vec.size >= 2) {
+            if (CHECKTYPE(data[0], tINT) && CHECKTYPE(data[1], tINT) &&
+                (data[0].i != MAJOR_VERSION || data[1].i > MINOR_VERSION))
+                error(data.lineno, "Version %d.%d not supported", data[0].i, data[1].i);
+        } else
+            error(data.lineno, "Version not understood");
     }
     void process() {}
     void output() {}
