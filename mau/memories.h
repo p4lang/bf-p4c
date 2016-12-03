@@ -82,6 +82,8 @@ struct Memories {
         vector<std::pair<int, int>>          home_row;
         vector<std::pair<int, unsigned>>     ways;
         int                                  per_row;
+        bool                                 unattached_profile = false;
+        cstring                              profile_name;
         // depth in memory units + mask to use for memory selection per way
         void visit(Memories &mem, std::function<void(cstring &)>) const;
     };
@@ -109,11 +111,12 @@ struct Memories {
         int number;
         int recent_home_row;
         cstring name;
-        enum type_t { EXACT, ACTION, STATS, METER, TIND } type;
+        enum type_t { EXACT, ACTION, STATS, METER, SELECTOR, TIND } type;
         struct color_mapram_group {
             int needed;
             int placed;
             bool required;
+            bool waiting_for_selector;
             bool all_placed() { return needed == placed; }
             int left_to_place() { return needed - placed; }
             color_mapram_group() : needed(0), placed(0), required(false) {}
@@ -139,6 +142,7 @@ struct Memories {
                 case ACTION:   return "$action";
                 case STATS:    return "$stats";
                 case METER:    return "$meter";
+                case SELECTOR: return "$selector";
                 case TIND:     return "$tind";
                 default:       return "";
             }
@@ -159,19 +163,21 @@ struct Memories {
     static constexpr int SUPPL_IND = 1;
     static constexpr int OFLOW_IND = 2;
 
-    vector<table_alloc *>      tables;
-    vector<table_alloc *>      exact_tables;
-    vector<SRAM_group *>       exact_match_ways;
-    vector<table_alloc *>      ternary_tables;
-    vector<table_alloc *>      tind_tables;
-    vector<SRAM_group *>       tind_groups;
-    vector<table_alloc *>      action_tables;
-    vector<table_alloc *>      indirect_action_tables;
-    vector<table_alloc *>      stats_tables;
-    vector<table_alloc *>      meter_tables;
-    vector<SRAM_group *>       action_bus_users;
-    vector<SRAM_group *>       suppl_bus_users;
-    vector<table_alloc *>      gw_tables;
+    vector<table_alloc *>       tables;
+    vector<table_alloc *>       exact_tables;
+    vector<SRAM_group *>        exact_match_ways;
+    vector<table_alloc *>       ternary_tables;
+    vector<table_alloc *>       tind_tables;
+    vector<SRAM_group *>        tind_groups;
+    vector<table_alloc *>       action_tables;
+    vector<table_alloc *>       indirect_action_tables;
+    vector<IR::ActionProfile *> action_profiles;
+    vector<table_alloc *>       selector_tables;
+    vector<table_alloc *>       stats_tables;
+    vector<table_alloc *>       meter_tables;
+    vector<SRAM_group *>        action_bus_users;
+    vector<SRAM_group *>        suppl_bus_users;
+    vector<table_alloc *>       gw_tables;
 
 
     void clear();

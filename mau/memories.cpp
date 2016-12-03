@@ -2,6 +2,7 @@
 #include "lib/range.h"
 #include "memories.h"
 #include "resource_estimate.h"
+#include "mau_visitor.h"
 
 void Memories::clear() {
     sram_use.clear();
@@ -29,6 +30,8 @@ void Memories::clear_table_vectors() {
     tind_groups.clear();
     action_tables.clear();
     indirect_action_tables.clear();
+    action_profiles.clear();
+    selector_tables.clear();
     action_bus_users.clear();
     gw_tables.clear();
     stats_tables.clear();
@@ -97,6 +100,85 @@ bool Memories::allocate_all() {
     return true;
 }
 
+class SetupAttachedTables : public MauInspector {
+    Memories &mem; Memories::table_alloc *ta; int entries; Memories::mem_info &mi;
+    bool stats_pushed = false; bool meter_pushed = false;
+    bool preorder(const IR::MAU::ActionData *) {
+        LOG4("Action table for table " << ta->table->name);
+        auto name = ta->table->name + "$action";
+        (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
+        mem.action_tables.push_back(ta);
+        mi.action_tables++;
+        int sz = ceil_log2(ta->table->layout.action_data_bytes) + 3;
+        int width = sz > 7 ? 1 << (sz - 7) : 1;
+        mi.action_bus_min += width;
+        int per_ram = sz > 7 ? 10 : 17 - sz;
+        int depth = ((entries - 1) >> per_ram) + 1;
+        mi.action_RAMs += depth;
+        return false;
+    }
+
+    bool preorder(const IR::ActionProfile *ap) {
+        LOG4("Action profile for table " << ta->table->name);
+        auto name = ta->table->name + "$action";
+        (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
+        mem.indirect_action_tables.push_back(ta);
+        mi.action_tables++;
+        int sz = ceil_log2(ta->table->layout.action_data_bytes) + 3;
+        int width = sz > 7 ? 1 << (sz - 7) : 1;
+        mi.action_bus_min += width;
+        int per_ram = sz > 7 ? 10 : 17 - sz;
+        int depth = ((ap->size) >> per_ram) + 1;
+        mi.action_RAMs += depth;
+        return false;
+    }
+
+    bool preorder(const IR::Meter *mtr) {
+        auto name = mtr->name;
+        (*ta->memuse)[name].type = Memories::Use::TWOPORT;
+        if (!meter_pushed) {
+            mem.meter_tables.push_back(ta);
+            meter_pushed = true;
+        }
+        mi.meter_tables++;
+        mi.meter_RAMs += (entries + 1023)/1024 + 1;
+        return false;
+    }
+
+    bool preorder(const IR::Counter *cnt) {
+        auto name = cnt->name;
+        (*ta->memuse)[name].type = Memories::Use::TWOPORT;
+        if (!stats_pushed) {
+            mem.stats_tables.push_back(ta);
+            stats_pushed = true;
+        }
+        mi.stats_tables++;
+        int per_row = mem.stats_per_row(cnt->min_width, cnt->max_width, cnt->type);
+        mi.stats_RAMs += (entries + per_row * 1024 - 1) / (per_row * 1024) + 1;
+        return false;
+    }
+
+    bool preorder(const IR::MAU::TernaryIndirect *) {
+        auto name = ta->table->name + "$tind";
+        (*ta->memuse)[name].type = Memories::Use::TIND;
+        mem.tind_tables.push_back(ta);
+        mi.tind_tables++;
+        mi.tind_RAMs += (entries + 1023U) / 1024U;
+        return false;
+    }
+
+    bool preorder(const IR::ActionSelector *) {
+        auto name = ta->table->name + "$select";
+        (*ta->memuse)[name].type = Memories::Use::TWOPORT;
+        mem.selector_tables.push_back(ta);
+        return false;
+    }
+
+  public:
+     explicit SetupAttachedTables(Memories &m, Memories::table_alloc *t, int e,
+         Memories::mem_info &i) : mem(m), ta(t), entries(e), mi(i) {}
+};
+
 /* Run a quick analysis on all tables added by the table placement algorithm,
    and add the tables to their corresponding lists */
 bool Memories::analyze_tables(mem_info &mi) {
@@ -150,62 +232,11 @@ bool Memories::analyze_tables(mem_info &mi) {
            mi.ternary_TCAMs += TCAMs_needed * depth;
            ta->calculated_entries = depth * 512;
         }
-
-        bool stats_pushed = false; bool meter_pushed = false;
+        SetupAttachedTables setup(*this, ta, entries, mi);
         for (auto at : table->attached) {
-            if (at->is<IR::MAU::ActionData>()) {
-                LOG4("Action table for table " << table->name);
-                auto name = ta->table->name + "$action";
-                (*ta->memuse)[name].type = Use::ACTIONDATA;
-                action_tables.push_back(ta);
-                mi.action_tables++;
-                int sz = ceil_log2(table->layout.action_data_bytes) + 3;
-                int width = sz > 7 ? 1 << (sz - 7) : 1;
-                mi.action_bus_min += width;
-                int per_ram = sz > 7 ? 10 : 17 - sz;
-                int depth = ((entries - 1) >> per_ram) + 1;
-                mi.action_RAMs += depth;
-            } else if (auto *ap = at->to<IR::ActionProfile>()) {
-                LOG4("Action profile for table " << table->name);
-                auto name = ta->table->name + "$action";
-                (*ta->memuse)[name].type = Use::ACTIONDATA;
-                indirect_action_tables.push_back(ta);
-                mi.action_tables++;
-                int sz = ceil_log2(table->layout.action_data_bytes) + 3;
-                int width = sz > 7 ? 1 << (sz - 7) : 1;
-                mi.action_bus_min += width;
-                int per_ram = sz > 7 ? 10 : 17 - sz;
-                int depth = ((ap->size) >> per_ram) + 1;
-                mi.action_RAMs += depth;
-            } else if (at->is<IR::MAU::TernaryIndirect>()) {
-                auto name = ta->table->name + "$tind";
-                (*ta->memuse)[name].type = Use::TIND;
-                tind_tables.push_back(ta);
-                mi.tind_tables++;
-                mi.tind_RAMs += (entries + 1023U) / 1024U;
-            } else if (auto *cnt = at->to<IR::Counter>()) {
-                auto name = cnt->name;
-                (*ta->memuse)[name].type = Use::TWOPORT;
-                if (!stats_pushed) {
-                    stats_tables.push_back(ta);
-                    stats_pushed = true;
-                }
-                mi.stats_tables++;
-                int per_row = stats_per_row(cnt->min_width, cnt->max_width, cnt->type);
-                mi.stats_RAMs += (entries + per_row * 1024 - 1) / (per_row * 1024) + 1;
-            } else if (auto *mtr = at->to<IR::Meter>()) {
-                auto name = mtr->name;
-                (*ta->memuse)[name].type = Use::TWOPORT;
-                if (!meter_pushed) {
-                    meter_tables.push_back(ta);
-                    meter_pushed = true;
-                }
-                mi.meter_tables++;
-                mi.meter_RAMs += (entries + 1023)/1024 + 1;
-            }
+            at->apply(setup);
         }
     }
-
     if (mi.match_tables > EXACT_TABLES_MAX
         || mi.match_bus_min > SRAM_ROWS * BUS_COUNT
         || mi.tind_tables > TERNARY_TABLES_MAX
@@ -807,6 +838,19 @@ void Memories::find_action_bus_users() {
                                             + action_bus_users.back()->name_addition();
         }
     }
+    
+    /*
+    for (auto *ta : selector_tables) {
+        for (auto at : ta->table->attached) {
+            // const IR::ActionSelector *sel = nullptr;
+            if ((at->to<IR::ActionSelector>()) == nullptr)
+                continue;
+            suppl_bus_users.push_back(new SRAM_group(ta, depth, i, SRAM_group::SELECTOR));
+            suppl_bus_users.back()->name = ta->table->name
+                                           + suppl_bus_users.back()->name_addition();
+        }
+    }
+    */
 
     for (auto *ta : indirect_action_tables) {
         for (auto at : ta->table->attached) {
@@ -817,6 +861,13 @@ void Memories::find_action_bus_users() {
             int width = sz > 7 ? 1 << (sz - 7) : 1;
             int per_ram = sz > 7 ? 10 : 17 - sz;
             int depth = ((ap->size - 1) >> per_ram) + 1;
+            /*
+            bool selector_linked = false;
+            for (auto sel_ta : selector_tables) {
+                if (sel_ta == ta) {
+                    selector_linked = true;
+                }
+            }*/
 
             for (int i = 0; i < width; i++) {
                 action_bus_users.push_back(new SRAM_group(ta, depth, i, SRAM_group::ACTION));
@@ -1034,29 +1085,7 @@ void Memories::best_candidates(action_fill &best_fit_action, action_fill &best_f
                                action_fill &curr_oflow, int action_RAMs_available,
                                int suppl_RAMs_available, bool stats_available,
                                bool meter_available, unsigned mask) {
-    /* Determine the best fit action on the current row.  Cannot be current oflow group */
-    for (size_t i = 0; i < action_bus_users.size(); i++) {
-        if (curr_oflow.group == action_bus_users[i])
-            continue;
-        if (action_bus_users[i]->left_to_place() <= action_RAMs_available) {
-            best_fit_action.group = action_bus_users[i];
-            best_fit_action.index = i;
-            break;
-        }
-    }
-
-    int min_left = 0;
-    /* Determine the action with the most left to place */
-    for (size_t i = 0; i < action_bus_users.size(); i++) {
-        if (curr_oflow.group == action_bus_users[i])
-            continue;
-        if (action_bus_users[i]->left_to_place() > min_left) {
-            next_action.group = action_bus_users[i];
-            next_action.index = i;
-            min_left = action_bus_users[i]->left_to_place();
-        }
-    }
-
+    int min_left;
     if (mask == 0x3f0) {
         /* Determine the best fit supplementary table on the row */
         for (size_t i = 0; i < suppl_bus_users.size(); i++) {
@@ -1091,6 +1120,30 @@ void Memories::best_candidates(action_fill &best_fit_action, action_fill &best_f
             }
         }
     }
+
+    /* Determine the best fit action on the current row.  Cannot be current oflow group */
+    for (size_t i = 0; i < action_bus_users.size(); i++) {
+        if (curr_oflow.group == action_bus_users[i])
+            continue;
+        if (action_bus_users[i]->left_to_place() <= action_RAMs_available) {
+            best_fit_action.group = action_bus_users[i];
+            best_fit_action.index = i;
+            break;
+        }
+    }
+
+    min_left = 0;
+    /* Determine the action with the most left to place */
+    for (size_t i = 0; i < action_bus_users.size(); i++) {
+        if (curr_oflow.group == action_bus_users[i])
+            continue;
+        if (action_bus_users[i]->left_to_place() > min_left) {
+            next_action.group = action_bus_users[i];
+            next_action.index = i;
+            min_left = action_bus_users[i]->left_to_place();
+        }
+    }
+
 }
 
 /* Fills out the masks for the suppl and the action groups in each of the orders */
