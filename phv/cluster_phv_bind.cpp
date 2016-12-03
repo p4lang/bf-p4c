@@ -20,11 +20,12 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
     //
     // collect all allocated containers from phv_mau_map, t_phv_map
     //
+    containers_i.clear();
     for (auto &it : phv_mau_i.phv_mau_map()) {
         for (auto &g : it.second) {
             for (auto &c : g->phv_containers()) {
                 if (c->fields_in_container().size()) {
-                    containers_i.insert(c);
+                    containers_i.push_front(c);
                 }
             }
         }
@@ -33,7 +34,7 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
         for (auto &c_s : coll.second) {
             for (auto &c : c_s.second) {
                 if (c->fields_in_container().size()) {
-                    containers_i.insert(c);
+                    containers_i.push_front(c);
                 }
             }
         }
@@ -72,9 +73,56 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
         }
     }
     //
+    // Trivially allocating overflow fields
+    //
+    // trivial_allocate(fields_overflow);
+    //
     LOG3(*this);
     //
     return node;
+}
+
+
+void
+PHV_Bind::trivial_allocate(std::set<const PhvInfo::Field *>& fields) {
+    //
+    // trivially allocating overflow fields
+    //
+    LOG3("********** Overflow Allocation **********");
+    std::map<PHV_Container::PHV_Word, int> overflow_reg {
+        {PHV_Container::PHV_Word::b32, 64},
+        {PHV_Container::PHV_Word::b16, 224},
+        {PHV_Container::PHV_Word::b8,  128},
+    };
+    PHV_Container::PHV_Word container_width = PHV_Container::PHV_Word::b8;
+    std::string container_prefix = "B";
+    for (auto &f : fields) {
+        if (!uses_i.use[0][f->gress][f->id]) {
+            continue;
+        }
+        PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
+        int field_bit = 0;
+        int container_bit = 0;
+        if (f->size >= 16) {
+            container_width = PHV_Container::PHV_Word::b32;
+            container_prefix = "W";
+        } else if (f->size >= 8) {
+            container_width = PHV_Container::PHV_Word::b16;
+            container_prefix = "H";
+        }
+        for (field_bit = 0; field_bit < f->size; field_bit++) {
+            std::stringstream ss;
+            ss << overflow_reg[container_width];
+            overflow_reg[container_width]++;
+            std::string reg_string = container_prefix + ss.str();
+            const char *reg_name = reg_string.c_str();
+            PHV::Container *asm_container = new PHV::Container(reg_name);
+            f1->alloc.emplace_back(
+                *asm_container, field_bit, container_bit, static_cast<int> (container_width));
+            LOG3("....." << f << '[' << field_bit << "].." << reg_name);
+            field_bit += static_cast<int> (container_width)-1;
+        }
+    }
 }
 
 
@@ -104,6 +152,9 @@ void PHV_Bind::sanity_check_container_fields(
         fields_i.begin(),
         fields_i.end(),
         std::inserter(s3, s3.end()));
+    //
+    // ?? fields may be unused in ingress, egress, need additional check before howling
+    //
     if (s3.size()) {
         LOG1(std::endl
             << "*****cluster_phv_bind.cpp:sanity_FAIL*****"

@@ -31,22 +31,24 @@
 class PHV_Bind : public Visitor {
  private:
     //
-    PhvInfo &phv_i;                                // all fields in input
-    PHV_MAU_Group_Assignments &phv_mau_i;
-                                                   // parent PHV MAU Group Assignments
-    std::set<const PHV_Container *> containers_i;  // all filled containers
-    std::set<const PhvInfo::Field *> fields_i;     // all fields to be finally bound
+    PhvInfo &phv_i;                                 // all fields in input
+    PHV_MAU_Group_Assignments &phv_mau_i;           // PHV MAU Group Assignments
+    Cluster::Uses &uses_i;                          // field uses mau, I, E
+    std::list<const PHV_Container *> containers_i;  // all filled containers
+    std::set<const PhvInfo::Field *> fields_i;      // all fields to be finally bound
     //
  public:
     //
-    PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m)
+    PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m, Cluster::Uses &uses_p)
        : phv_i(phv_f),
-         phv_mau_i(phv_m) {}
+         phv_mau_i(phv_m),
+         uses_i(uses_p) {}
     //
-    std::set<const PHV_Container *> containers()  { return containers_i; }
+    std::list<const PHV_Container *> containers()  { return containers_i; }
     std::set<const PhvInfo::Field *>& fields()    { return fields_i; }
     //
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
+    void trivial_allocate(std::set<const PhvInfo::Field *>&);
     //
     void sanity_check_container_fields(const std::string&, std::set<const PhvInfo::Field *>&);
     //

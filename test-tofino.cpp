@@ -83,7 +83,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
     Cluster cluster(phv);                                        // cluster analysis
     Cluster_PHV_Requirements cluster_phv_req(cluster);           // cluster PHV requirements
     PHV_MAU_Group_Assignments cluster_phv_mau(cluster_phv_req);  // cluster PHV Container placements
-    PHV_Bind phv_bind(phv, cluster_phv_mau);                     // field binding to PHV Containers
+    PHV_Bind phv_bind(phv, cluster_phv_mau, cluster.uses());     // field binding to PHV Containers
     DependencyGraph deps;
     TablesMutuallyExclusive mutex;
     FieldDefUse defuse(phv);

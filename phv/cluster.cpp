@@ -9,7 +9,7 @@
 //
 //***********************************************************************************
 
-Cluster::Cluster(PhvInfo &p) : phv_i(p) {
+Cluster::Cluster(PhvInfo &p) : phv_i(p), uses_i(new Uses(phv_i)) {
     for (auto &field : phv_i) {
         dst_map_i[&field] = nullptr;
     }
@@ -20,6 +20,15 @@ Cluster::Cluster(PhvInfo &p) : phv_i(p) {
 // preorder walk on IR tree to insert field operands in cluster set
 //
 //***********************************************************************************
+
+
+bool Cluster::preorder(const IR::Tofino::Pipe *pipe) {
+    //
+    pipe->apply(*uses_i);
+
+    return true;
+}
+
 
 bool Cluster::preorder(const IR::Member* expression) {
     // class Member : Operation_Unary
@@ -181,7 +190,7 @@ void Cluster::postorder(const IR::Primitive* primitive) {
 void Cluster::end_apply() {
     sanity_check_field_range("end_apply..");
     //
-    for (auto entry : dst_map_i) {
+    for (auto &entry : dst_map_i) {
         auto lhs = entry.first;
         sanity_check_clusters("end_apply..", lhs);
     }
@@ -192,14 +201,16 @@ void Cluster::end_apply() {
     // forall x, dst_map_i[x] == (x), dst_map_i[x] = 0
     //
     std::list<const PhvInfo::Field *> delete_list;
-    for (auto entry : dst_map_i) {
+    for (auto &entry : dst_map_i) {
         auto lhs = entry.first;
-        if (lhs && (lhs_unique_i.count(lhs) == 0 || entry.second->size() < 1)) {
+        // remove dst_map entry for fields absorbed in other clusters
+        // remove singleton clusters (from headers) not used in mau
+        if (lhs && (lhs_unique_i.count(lhs) == 0 || !uses_i->use[1][lhs->gress][lhs->id])) {
             dst_map_i[lhs] = nullptr;
             delete_list.push_back(lhs);
         }
     }
-    for (auto fp : delete_list) {
+    for (auto &fp : delete_list) {
         dst_map_i.erase(fp);                                            // erase map key
     }
     sanity_check_clusters_unique("end_apply..");
@@ -282,13 +293,16 @@ void Cluster::compute_fields_no_use_mau() {
         << fields_no_use_mau_i.size()
         << ")..........");
     //
-    // discard metadata & pov from T_PHV candidates
+    // from T_PHV candidates,
+    // discard metadata & pov
+    // and fields not used in ingress or egress
     // set_field_range (entire field deparsed) for T_PHV fields_no_use_mau
     //
     std::set<const PhvInfo::Field *> delete_set;
     for (auto f : fields_no_use_mau_i) {
         PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
-        if (f1->metadata || f1->pov) {
+        bool use_any = uses_i->use[0][f1->gress][f1->id];
+        if (f1->metadata || f1->pov || !use_any) {
             delete_set.insert(f);
         } else {
             set_field_range(f1);
