@@ -121,8 +121,26 @@ class SetupAttachedTables : public MauInspector {
     bool preorder(const IR::ActionProfile *ap) {
         LOG4("Action profile for table " << ta->table->name);
         auto name = ta->table->name + "$action";
-        (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
-        mem.indirect_action_tables.push_back(ta);
+
+        LOG1("Table " << ta->table->name << " has the current bits at " << 
+             ta->table->layout.indirect_action_overhead_bits);
+        Memories::profile_info *linked_pi = nullptr;
+        for (auto *pi : mem.action_profiles) {
+            if (pi->ap == ap) {
+                linked_pi = pi;
+                break;
+            }
+        }
+        if (linked_pi == nullptr) {
+            LOG1("Not found for " << ta->table->name);
+            mem.indirect_action_tables.push_back(ta);
+            mem.action_profiles.push_back(new Memories::profile_info(ap, ta));
+            (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
+        } else {
+            LOG1("Found for " << ta->table->name);
+            (*ta->memuse)[ta->table->name].unattached_profile = true;
+            (*ta->memuse)[ta->table->name].profile_name = linked_pi->linked_table->table->name;
+        }
         mi.action_tables++;
         int sz = ceil_log2(ta->table->layout.action_data_bytes) + 3;
         int width = sz > 7 ? 1 << (sz - 7) : 1;

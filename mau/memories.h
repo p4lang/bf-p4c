@@ -159,6 +159,12 @@ struct Memories {
         void clear_masks() {mask = 0; mapram_mask = 0; }
     };
 
+    struct profile_info {
+        const IR::ActionProfile *ap;
+        table_alloc *linked_table;
+        explicit profile_info(const IR::ActionProfile *a, table_alloc *t) : ap(a), linked_table(t) {}
+    };
+
     static constexpr int ACTION_IND = 0;
     static constexpr int SUPPL_IND = 1;
     static constexpr int OFLOW_IND = 2;
@@ -171,7 +177,7 @@ struct Memories {
     vector<SRAM_group *>        tind_groups;
     vector<table_alloc *>       action_tables;
     vector<table_alloc *>       indirect_action_tables;
-    vector<IR::ActionProfile *> action_profiles;
+    vector<profile_info *>      action_profiles;
     vector<table_alloc *>       selector_tables;
     vector<table_alloc *>       stats_tables;
     vector<table_alloc *>       meter_tables;

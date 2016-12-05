@@ -449,6 +449,8 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
         meter_bits = tbl->layout.meter_overhead_bits;
         counter_bits = tbl->layout.counter_overhead_bits;
         indirect_action_bits = tbl->layout.indirect_action_overhead_bits;
+        LOG1("Indirect action bits " << tbl->layout.indirect_action_overhead_bits << " for table "
+             << tbl->name);
         int width = tbl->ways[0].width;
         int groups = tbl->ways[0].match_groups;
         int groups_per_word = (groups + width - 1)/width;
@@ -481,10 +483,12 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
             }
         }
         if (indirect_action_bits > 0) {
+            LOG1("Finding bitrange");
             for (int i = 0; i < groups; i++) {
                 int word = i / groups_per_word;
                 format[i].indirect_action = used.ffz(128*word);
                 used.setrange(format[i].indirect_action, indirect_action_bits);
+                LOG1("format[i].indirect_action " << format[i].indirect_action);
             }
         }
         if (!match_fields.empty()) {
@@ -514,6 +518,7 @@ void MauAsmOutput::TableFormat::print(std::ostream &out) const {
         int next = 0;
         void emit(std::ostream &out, const char *name, int group, int bit, int width) {
             if (bit < 0) return;
+            LOG1("name is " << name);
             out << sep << name << '(' << group << "): ";
             if (next == bit)
                 out << width;
@@ -704,7 +709,12 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
             continue;
         }
         if (at->is<IR::ActionProfile>()) {
-            out << indent << "action: " << tbl->name << "$action";
+            auto &memuse = tbl->resources->memuse.at(tbl->name);
+            out << indent << "action: "; 
+            if (memuse.unattached_profile)
+                out << memuse.profile_name << "$action";
+            else 
+                out << tbl->name << "$action";
             if (at->indexed())
                 out << "(action, action_ptr)";
             out << std::endl;
@@ -843,6 +853,11 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::Register *) {
 }
 
 bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *) {
+    if (tbl->resources->memuse.at(tbl->name).unattached_profile) {
+        LOG1("Unattached profile for " << tbl->name); 
+        return false;
+    }
+    LOG1("Hello for " << tbl->name);
     indent_t    indent(1);
     cstring name = tbl->match_table->name + "$action"; 
     out << indent++ << "action " << name << ':' << std::endl;
@@ -857,6 +872,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *) {
         for (auto act : Values(tbl->actions))
             act->apply(EmitAction(self, out, tbl, indent));
         --indent; }
+    LOG1("Goodbye");
     return false; 
 }
 
