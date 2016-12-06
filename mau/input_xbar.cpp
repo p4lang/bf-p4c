@@ -643,16 +643,16 @@ static int way_groups_allocated(const IXBar::Use &alloc) {
 
 int IXBar::getHashGroup(unsigned hash_table_input) {
     for (int i = 0; i < HASH_GROUPS; i++) {
-         if (hash_group_use[i] == hash_table_input) {
-             hash_group_use[i] = hash_table_input;
-             return i;
-         }
+        if (hash_group_use[i] == hash_table_input) {
+            hash_group_use[i] = hash_table_input;
+            return i;
+        }
     }
     for (int i = 0; i < HASH_GROUPS; i++) {
-         if (hash_group_use[i] == 0) {
-             hash_group_use[i] = hash_table_input;
-             return i;
-         }
+        if (hash_group_use[i] == 0) {
+            hash_group_use[i] = hash_table_input;
+            return i;
+        }
     }
 
     LOG2("failed to allocate hash group");
@@ -827,8 +827,13 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     return true;
 }
 
+bool IXBar::allocSelector(const IR::ActionSelector *as, const PhvInfo &phv, Use &alloc,
+                          bool second_try) {
+    
+    return false;
+}
 bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv,
-                       Use &tbl_alloc, Use &gw_alloc) {
+                       Use &tbl_alloc, Use &gw_alloc, Use &sel_alloc) {
     if (!tbl) return true;
     LOG1("IXBar::allocTable(" << tbl->name << ")");
     if (tbl->match_table) {
@@ -845,6 +850,19 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv,
             fill_out_use(alloced, ternary);
         }
     }
+    const IR::ActionSelector *as = nullptr;
+    for (auto at : tbl->attached) {
+        if ((as = at->to<IR::ActionSelector>()) != nullptr 
+            && std::find(selectors.begin(), selectors.end(), as) == selectors.end())
+           break;
+    }
+    if (as != nullptr && !allocSelector(as, phv, sel_alloc, false) 
+        && !allocSelector(as, phv, sel_alloc, true)) {
+        tbl_alloc.clear();
+        sel_alloc.clear();
+        return false;
+    }
+
     if (!allocGateway(tbl, phv, gw_alloc, false) && !allocGateway(tbl, phv, gw_alloc, true)) {
         gw_alloc.clear();
         tbl_alloc.clear();

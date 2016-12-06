@@ -260,13 +260,23 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
     IXBar current_ixbar;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
         current_ixbar.update(p->name, p->resources->match_ixbar);
-        current_ixbar.update(p->name + "$gw", p->resources->gateway_ixbar); }
+        current_ixbar.update(p->name + "$gw", p->resources->gateway_ixbar);
+        const IR::ActionSelector *as;
+        for (auto *at : p->table->attached) {
+             if ((as = at->to<IR::ActionSelector>()) != nullptr
+                 && !p->resources->selector_ixbar.use.empty()) {
+                 current_ixbar.update(p->name + "$selector", p->resources->selector_ixbar);
+                 current_ixbar.selectors.push_back(as);
+             }
+        }
+    }
     if (!current_ixbar.allocTable(next->table, phv, resources->match_ixbar,
-                                  resources->gateway_ixbar) ||
+                                  resources->gateway_ixbar, resources->selector_ixbar) ||
         !current_ixbar.allocTable(next->gw, phv, resources->match_ixbar,
-                                  resources->gateway_ixbar)) {
+                                  resources->gateway_ixbar, resources->selector_ixbar)) {
         resources->match_ixbar.clear();
         resources->gateway_ixbar.clear();
+        resources->selector_ixbar.clear();
         return false; }
     return true;
 }

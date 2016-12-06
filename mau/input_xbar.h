@@ -61,6 +61,7 @@ struct IXBar {
     friend class IXBarRealign;
 
  public:
+    vector<const IR::ActionSelector *>                selectors;
     /* IXbar::Use tracks the input xbar use of a single table */
     struct Use {
         /* everything is public so anyone can read it, but only IXBar should write to this */
@@ -124,7 +125,9 @@ struct IXBar {
     bool allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc);
     bool allocHashWay(const IR::MAU::Table *, const IR::MAU::Table::Way &, Use &);
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);
-    bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_alloc, Use &gw_alloc);
+    bool allocSelector(const IR::ActionSelector *, const PhvInfo &phv, Use &alloc, bool second_try);
+    bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_alloc, Use &gw_alloc,
+                    Use &sel_alloc);
     void update(cstring name, const Use &alloc);
     void update(cstring name, const TableResourceAlloc *alloc);
     void update(const IR::MAU::Table *tbl) {

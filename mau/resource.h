@@ -6,7 +6,7 @@
 #include "memories.h"
 
 struct TableResourceAlloc {
-    IXBar::Use                          match_ixbar, gateway_ixbar;
+    IXBar::Use                          match_ixbar, gateway_ixbar, selector_ixbar;
     map<cstring, Memories::Use>         memuse;
     TableResourceAlloc *clone_rename(const char *ext) const {
         TableResourceAlloc *rv = new TableResourceAlloc;

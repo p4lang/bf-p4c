@@ -202,7 +202,7 @@ class SetupAttachedTables : public MauInspector {
                 break;
             }
             if (pi->linked_ta == ta) {
-                if (pi->ap->selector.name != pi->as->name)
+                if (pi->ap->selector.name != as->name)
                     BUG("Alignment of selector and action profile in memory allocation"); 
                 profile_first = true;
                 linked_pi = pi;
