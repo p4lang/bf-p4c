@@ -1,24 +1,16 @@
 # Setup
 
 This repo contains the tofino backend for p4c v1.2 compiler.  It contains
-*just* the backend, and can only be built within the p4c build infrastructure
-in git@github.com:p4lang/p4c.  To use this repo, first clone the
-git@github.com:p4lang/p4c.git repository, then clone this repository in
-the extensions subdirectory as 'tofino':
+*just* the backend and can only be built within the p4c build infrastructure
+in git@github.com:p4lang/p4c.  To use this repo:
 
-    git clone git@github.com:p4lang/p4c.git <local-name>
+    git clone git@github.com:barefootnetworks/p4c-extension-tofino.git <local-name>
     cd <local-name>
-    mkdir -p extensions
-    cd extensions
-    git clone git@github.com:barefootnetworks/p4c-extension-tofino.git tofino
-    cd ..
     ./bootstrap.sh
-    cd build
-    make
 
-By having this repo present in the 'extensions' subdirectory, the p4c
-bootstrap process will automatically include the tofino backend in its
-build and testing process.
+This will check out the p4lang/p4c repository, move the
+p4c-extension-tofino to `p4c/extensions/tofino`, install the
+necessary dependences, and build the project.
 
 # Dependences
 
