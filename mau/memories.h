@@ -84,6 +84,8 @@ struct Memories {
         int                                  per_row;
         bool                                 unattached_profile = false;
         cstring                              profile_name;
+        bool                                 unattached_selector = false;
+        cstring                              selector_name;
         // depth in memory units + mask to use for memory selection per way
         void visit(Memories &mem, std::function<void(cstring &)>) const;
     };
@@ -121,13 +123,20 @@ struct Memories {
             int left_to_place() { return needed - placed; }
             color_mapram_group() : needed(0), placed(0), required(false) {}
         };
+        struct selector_info {
+            bool linked;
+            bool placed;
+            const IR::ActionSelector *as;
+            selector_info () : linked(false), placed(false), as(nullptr) {}
+        };
+        selector_info sel;
         color_mapram_group cm;
         bool requires_ab;
         explicit SRAM_group(table_alloc *t, int d, int w, int n, type_t ty)
-            : ta(t), depth(d), width(w), placed(0), number(n), type(ty), cm(),
+            : ta(t), depth(d), width(w), placed(0), number(n), type(ty), sel(), cm(),
               requires_ab(false) {}
         explicit SRAM_group(table_alloc *t, int d, int n, type_t ty)
-            : ta(t), depth(d), width(0), placed(0), number(n), type(ty), cm(),
+            : ta(t), depth(d), width(0), placed(0), number(n), type(ty), sel(), cm(),
               requires_ab(false) {}
         void dbprint(std::ostream &out) const {
             out << ta->table->name << " way #" << number << " depth: " << depth
@@ -161,9 +170,12 @@ struct Memories {
 
     struct profile_info {
         const IR::ActionProfile *ap;
-        table_alloc *linked_table;
-        explicit profile_info(const IR::ActionProfile *a, table_alloc *t) : ap(a), linked_table(t) {}
+        const IR::ActionSelector *as;
+        table_alloc *linked_ta;
+        explicit profile_info(const IR::ActionProfile *a, table_alloc *t) : ap(a), linked_ta(t) {}
+        explicit profile_info(const IR::ActionSelector *a, table_alloc *t) : as(a), linked_ta(t) {}
     };
+
 
     static constexpr int ACTION_IND = 0;
     static constexpr int SUPPL_IND = 1;

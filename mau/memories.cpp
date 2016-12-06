@@ -121,25 +121,33 @@ class SetupAttachedTables : public MauInspector {
     bool preorder(const IR::ActionProfile *ap) {
         LOG4("Action profile for table " << ta->table->name);
         auto name = ta->table->name + "$action";
-
-        LOG1("Table " << ta->table->name << " has the current bits at " << 
-             ta->table->layout.indirect_action_overhead_bits);
+        bool selector_first = false;
+        /* This is a check to see if the table has already been placed due to it being in 
+           the profile of a separate table */
         Memories::profile_info *linked_pi = nullptr;
         for (auto *pi : mem.action_profiles) {
             if (pi->ap == ap) {
                 linked_pi = pi;
                 break;
             }
+            if (pi->linked_ta == ta) {
+                if (ap->selector.name != pi->as->name)
+                    BUG("Alignment of selector and action profile in memory allocation"); 
+                selector_first = true;
+                linked_pi = pi;
+                break;
+            }
         }
-        if (linked_pi == nullptr) {
-            LOG1("Not found for " << ta->table->name);
+        if (selector_first) {
+            linked_pi->ap = ap;
+        } else if (linked_pi == nullptr) {
             mem.indirect_action_tables.push_back(ta);
             mem.action_profiles.push_back(new Memories::profile_info(ap, ta));
             (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
         } else {
-            LOG1("Found for " << ta->table->name);
             (*ta->memuse)[ta->table->name].unattached_profile = true;
-            (*ta->memuse)[ta->table->name].profile_name = linked_pi->linked_table->table->name;
+            (*ta->memuse)[ta->table->name].profile_name = linked_pi->linked_ta->table->name;
+            return false;
         }
         mi.action_tables++;
         int sz = ceil_log2(ta->table->layout.action_data_bytes) + 3;
@@ -185,10 +193,33 @@ class SetupAttachedTables : public MauInspector {
         return false;
     }
 
-    bool preorder(const IR::ActionSelector *) {
-        auto name = ta->table->name + "$select";
-        (*ta->memuse)[name].type = Memories::Use::TWOPORT;
-        mem.selector_tables.push_back(ta);
+    bool preorder(const IR::ActionSelector *as) {
+        bool profile_first = false;
+        Memories::profile_info *linked_pi = nullptr;
+        for (auto *pi : mem.action_profiles) {
+            if (pi->as == as) {
+                linked_pi = pi;
+                break;
+            }
+            if (pi->linked_ta == ta) {
+                if (pi->ap->selector.name != pi->as->name)
+                    BUG("Alignment of selector and action profile in memory allocation"); 
+                profile_first = true;
+                linked_pi = pi;
+                break;
+            }
+        }
+        if (profile_first) {
+            linked_pi->as = as;
+        } else if (linked_pi == nullptr) {
+            auto name = ta->table->name + "$selector";
+            (*ta->memuse)[name].type = Memories::Use::TWOPORT;
+            mem.selector_tables.push_back(ta);
+            mem.action_profiles.push_back(new Memories::profile_info(as, ta));
+        } else {
+            (*ta->memuse)[ta->table->name].unattached_profile = true;
+            (*ta->memuse)[ta->table->name].profile_name = linked_pi->linked_ta->table->name;
+        }
         return false;
     }
 
@@ -611,6 +642,15 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
         }
     }
     compress_ways();
+    for (auto *ta : exact_tables) {   
+        LOG4("Exact match table " << ta->table->name);
+        auto name = ta->table->name;
+        auto alloc = (*ta->memuse)[name];
+        for (auto row : alloc.row) {
+            LOG4("Row is " << row.row << " and bus is " << row.bus);
+            LOG4("Col is " << row.col);
+        }
+    }
     return true;
 }
 
@@ -857,18 +897,19 @@ void Memories::find_action_bus_users() {
         }
     }
     
-    /*
     for (auto *ta : selector_tables) {
         for (auto at : ta->table->attached) {
-            // const IR::ActionSelector *sel = nullptr;
-            if ((at->to<IR::ActionSelector>()) == nullptr)
+            // FIXME: need to adjust if the action selector is larger than 2 RAMs, based
+            // on the pragmas provided to the compiler
+            const IR::ActionSelector *as = nullptr;
+            if ((as = at->to<IR::ActionSelector>()) == nullptr)
                 continue;
-            suppl_bus_users.push_back(new SRAM_group(ta, depth, i, SRAM_group::SELECTOR));
+            suppl_bus_users.push_back(new SRAM_group(ta, 2, 0, SRAM_group::SELECTOR));
             suppl_bus_users.back()->name = ta->table->name
                                            + suppl_bus_users.back()->name_addition();
+            suppl_bus_users.back()->sel.as = as;
         }
     }
-    */
 
     for (auto *ta : indirect_action_tables) {
         for (auto at : ta->table->attached) {
@@ -879,19 +920,28 @@ void Memories::find_action_bus_users() {
             int width = sz > 7 ? 1 << (sz - 7) : 1;
             int per_ram = sz > 7 ? 10 : 17 - sz;
             int depth = ((ap->size - 1) >> per_ram) + 1;
-            /*
             bool selector_linked = false;
+            const IR::ActionSelector *as = nullptr;
             for (auto sel_ta : selector_tables) {
                 if (sel_ta == ta) {
                     selector_linked = true;
+                    for (auto sel_at : sel_ta->table->attached) {
+                        if ((as = sel_at->to<IR::ActionSelector>()) != nullptr)
+                            break;
+                    }
+                    if (as == nullptr)
+                        BUG("Selector and Profile are not linked even though specified");
+                    break;
                 }
-            }*/
+            }
 
             for (int i = 0; i < width; i++) {
                 action_bus_users.push_back(new SRAM_group(ta, depth, i, SRAM_group::ACTION));
                 action_bus_users.back()->name = ta->table->name
                                                 + action_bus_users.back()->name_addition();
-            } 
+                action_bus_users.back()->sel.linked = selector_linked;
+                action_bus_users.back()->sel.as = as;
+            }
         }
     }
 
@@ -1143,6 +1193,9 @@ void Memories::best_candidates(action_fill &best_fit_action, action_fill &best_f
     for (size_t i = 0; i < action_bus_users.size(); i++) {
         if (curr_oflow.group == action_bus_users[i])
             continue;
+        if (action_bus_users[i]->sel.linked && (!action_bus_users[i]->sel.placed
+            && next_suppl.group
+            && next_suppl.group->sel.as == action_bus_users[i]->sel.as))
         if (action_bus_users[i]->left_to_place() <= action_RAMs_available) {
             best_fit_action.group = action_bus_users[i];
             best_fit_action.index = i;
@@ -1390,6 +1443,10 @@ bool Memories::fill_out_action_row(action_fill &action, int row, int side, unsig
         action.group->recent_home_row = row;
     }
 
+    if (action.group->type == SRAM_group::SELECTOR) {
+        action.group->sel.placed = true;
+    }
+
     for (int k = 0; k < 10; k++) {
         if (((1 << k) & mask) == 0)
             continue;
@@ -1590,6 +1647,22 @@ bool Memories::allocate_all_action() {
             }
         }
     }
+
+    for (auto *ta : selector_tables) {
+        for (auto at : ta->table->attached) {
+            const IR::ActionSelector *as = nullptr;
+            if ((as = at->to<IR::ActionSelector>()) == nullptr)
+                continue;
+            LOG4("Selector table for " << ta->table->name);
+            auto name = ta->table->name + "$selector";
+            auto alloc = (*ta->memuse)[name];
+            for (auto row : alloc.row) {
+                LOG4("Row is " << row.row << " and bus is " << row.bus);
+                LOG4("Col is " << row.col);
+                LOG4("Map col is " << row.mapcol);
+            }
+        }
+    }
     return true;
 }
 
@@ -1720,22 +1793,27 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
     default:
         BUG("Unhandled memory use type %d in Memories::Use::visit", type); }
     for (auto &r : row) {
-        if (bus && r.bus != -1)
+        if (bus && r.bus != -1) {
             fn((*bus)[r.row][r.bus]);
+        }
         /*if (type == TWOPORT)
             fn(mem.stateful_bus[r.row]);*/
         for (auto col : r.col) {
             fn((*use)[r.row][col]);
         }
         for (auto col : r.mapcol) {
-            fn((*mapuse)[r.row][col]);} }
+            fn((*mapuse)[r.row][col]);
+        }
+    }
     for (auto &r : color_mapram) {
-         for (auto col : r.col)
+         for (auto col : r.col) {
              fn((*mapuse)[r.row][col]);
+         }
     }
 }
 
 void Memories::update(cstring name, const Memories::Use &alloc) {
+    LOG1("Name of the table " << name);
     alloc.visit(*this, [name](cstring &use) {
         if (use)
             BUG("conflicting memory use between %s and %s", use, name);
