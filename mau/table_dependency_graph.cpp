@@ -88,8 +88,10 @@ class UpdateAccess : public MauInspector , P4WriteContext {
             } else if (dest->to<IR::ConcreteHeaderRef>()) {
                 // FIXME -- do something
                 return;
-            } else {
+            } else if (auto i = dest->to<IR::GlobalRef>()) {
                 // FIXME -- counters, meters, ???
+                name = i->toString();
+            } else {
                 warning("%s: Destination of %s is not a field", prim->srcInfo, prim->name);
                 return; }
             LOG3("update_access write " << name);
