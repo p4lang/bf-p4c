@@ -35,5 +35,6 @@ IR::MAU::Table::Layout &IR::MAU::Table::Layout::operator +=(const IR::MAU::Table
     meter_overhead_bits += a.meter_overhead_bits;
     counter_overhead_bits += a.counter_overhead_bits;
     indirect_action_overhead_bits += a.indirect_action_overhead_bits;
+    selector_overhead_bits += a.selector_overhead_bits;
     return *this;
 }

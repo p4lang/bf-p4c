@@ -828,9 +828,59 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
 }
 
 bool IXBar::allocSelector(const IR::ActionSelector *as, const PhvInfo &phv, Use &alloc,
-                          bool second_try) {
-    
-    return false;
+                          bool second_try, cstring name) {
+    LOG1("Allocating a selector");
+    const IR::FieldListCalculation *flc = as->key_fields;    
+    const IR::FieldList *fl = flc->input_fields;
+    vector<IXBar::Use::Byte *> alloced;
+    set <cstring>                   fields_needed;
+    for (auto r : fl->fields) {
+        LOG1("Hello");
+        auto *field = r;
+        const PhvInfo::Field *finfo = nullptr;
+        PhvInfo::Field::bitrange bits = { };
+        if (auto prim = r->to<IR::Primitive>()) {
+            if (prim->name == "valid") {
+                auto hdr = prim->operands[0]->to<IR::HeaderRef>()->toString();
+                finfo = phv.field(hdr + ".$valid"); }
+        } else {
+            if (auto mask = r->to<IR::Mask>())
+                field = mask->left;
+            finfo = phv.field(field, &bits); }
+        BUG_CHECK(finfo, "unexpected reads expression %s", r);
+        if (fields_needed.count(finfo->name))
+            throw Util::CompilationError("field %s read twice by table %s", finfo->name, as->name);
+        fields_needed.insert(finfo->name);
+        add_use(alloc, finfo, &bits);
+    }
+
+    bool rv = find_alloc(alloc, false, second_try, alloced, HASH_INDEX_GROUPS);
+    if (rv)
+         alloc.compute_hash_tables();
+    if (!rv) alloc.clear();
+
+    if (!rv) return false;
+        
+    int hash_group = getHashGroup(alloc.hash_table_input);
+    if (hash_group < 0) { 
+        alloc.clear();
+        return false; 
+    }
+    alloc.select_use.emplace_back(hash_group);
+    fill_out_use(alloced, false);
+    for (int i = 0; i < HASH_TABLES; i++) {
+        if ((1U << i) & alloc.hash_table_input) {
+            for (int j = 0; j < HASH_INDEX_GROUPS; j++)
+                hash_index_use[i][j] = name + "$select";
+            hash_index_inuse[i] |= 0xf;
+            for (int j = 0; j < HASH_SINGLE_BITS; j++)
+                hash_single_bit_use[i][j] = name + "$select";
+            hash_single_bit_inuse[i] |= 0xfff; 
+        }
+    }
+    hash_group_print_use[hash_group] = name + "$select";
+    hash_group_use[hash_group] |= alloc.hash_table_input;
+    return rv;
 }
 bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv,
                        Use &tbl_alloc, Use &gw_alloc, Use &sel_alloc) {
@@ -856,8 +906,8 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv,
             && std::find(selectors.begin(), selectors.end(), as) == selectors.end())
            break;
     }
-    if (as != nullptr && !allocSelector(as, phv, sel_alloc, false) 
-        && !allocSelector(as, phv, sel_alloc, true)) {
+    if (as != nullptr && !allocSelector(as, phv, sel_alloc, false, tbl->name) 
+        && !allocSelector(as, phv, sel_alloc, true, tbl->name)) {
         tbl_alloc.clear();
         sel_alloc.clear();
         return false;
@@ -921,9 +971,24 @@ void IXBar::update(cstring name, const Use &alloc) {
                 hash_single_bit_inuse[bit] |= alloc.hash_table_input;
                 if (!hash_single_bit_use[hash][bit])
                     hash_single_bit_use[hash][bit] = name; } } }
+    for (auto &select : alloc.select_use) {
+        for (int i = 0; i < HASH_TABLES; i++) {
+            if ((1U << i) & alloc.hash_table_input) {
+                for (int j = 0; j < HASH_INDEX_GROUPS; j++)
+                    hash_index_use[i][j] = name;
+                hash_index_inuse[i] |= 0xf;
+                for (int j = 0; j < HASH_SINGLE_BITS; j++)
+                    hash_single_bit_use[i][j] = name;
+                hash_single_bit_inuse[i] |= 0xfff; 
+            }
+        }
+        hash_group_print_use[select.group] = name;
+        hash_group_use[select.group] |= alloc.hash_table_input;
+    }
 }
 
 void IXBar::update(cstring name, const TableResourceAlloc *rsrc) {
+    update(name + "$select", rsrc->selector_ixbar);
     update(name + "$gw", rsrc->gateway_ixbar);
     update(name, rsrc->match_ixbar);
 }

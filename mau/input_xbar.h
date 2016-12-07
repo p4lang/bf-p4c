@@ -105,6 +105,13 @@ struct IXBar {
             Way(int g, int s, unsigned m) : group(g), slice(s), mask(m) {} };
         vector<Way>     way_use;
 
+        struct Select {
+            int        group;
+            unsigned   bit_mask;
+            explicit Select(int g) : group(g), bit_mask(0) {}
+        };
+        vector<Select> select_use;
+        
         void clear() { use.clear(); hash_table_input = 0; bit_use.clear(); way_use.clear(); }
         void compute_hash_tables();
         int groups() const;  // how many different groups in this use
@@ -125,7 +132,8 @@ struct IXBar {
     bool allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc);
     bool allocHashWay(const IR::MAU::Table *, const IR::MAU::Table::Way &, Use &);
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);
-    bool allocSelector(const IR::ActionSelector *, const PhvInfo &phv, Use &alloc, bool second_try);
+    bool allocSelector(const IR::ActionSelector *, const PhvInfo &phv, Use &alloc, bool second_try,
+                       cstring name);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_alloc, Use &gw_alloc,
                     Use &sel_alloc);
     void update(cstring name, const Use &alloc);
