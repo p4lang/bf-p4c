@@ -162,7 +162,7 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
     test=`pwd`/${file%.p4}.stf
     cd $testdir
     mkdir -p $name.out
-    obsLog=$name.out/$name.obs
+    obsLog=$name.p4.obs
 
     rm -f $name.out/*.cfg.json
     cp $name.tfa $name.out
