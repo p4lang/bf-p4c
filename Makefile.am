@@ -37,6 +37,7 @@ tofino_backend_SOURCES = \
 	%reldir%/mau/default_next.h \
 	%reldir%/mau/field_use.cpp \
 	%reldir%/mau/field_use.h \
+	%reldir%/mau/db-gateway.cpp \
 	%reldir%/mau/gateway.cpp \
 	%reldir%/mau/gateway.h \
 	%reldir%/mau/input_xbar.cpp \

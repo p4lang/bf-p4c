@@ -57,8 +57,14 @@ static void erase_unused_next(IR::MAU::Table *tbl) {
             ++it; }
 }
 
+std::ostream &operator<<(std::ostream &out, const std::pair<const IR::Expression *, cstring> &p) {
+    if (p.first) out << *p.first << " => ";
+    out << (p.second ? p.second : "_");;
+    return out;
+}
+
 const IR::MAU::Table *SplitComplexGateways::preorder(IR::MAU::Table *tbl) {
-    if (tbl->gateway_rows.size() <= 2) return tbl;
+    if (tbl->gateway_rows.empty()) return tbl;
     BUG_CHECK(tbl->gateway_rows.back().first == nullptr, "Gateway not canonicalized?");
     if (tbl->match_table)
         BUG("Must run SplitComplexGateways before attaching gateways to match tables");
@@ -66,6 +72,7 @@ const IR::MAU::Table *SplitComplexGateways::preorder(IR::MAU::Table *tbl) {
     tbl->apply(collect);
     if (collect.compute_offsets() && tbl->gateway_rows.size() <= 5)
         return tbl;
+    LOG1("Trying to split gateway " << tbl->name << tbl->gateway_rows << collect);
     for (unsigned i = tbl->gateway_rows.size() - 2; i > 0; --i) {
         if (i > 4) i = 4;
         CollectGatewayFields collect(phv, i);

@@ -54,6 +54,7 @@ class CollectGatewayFields : public Inspector {
     : phv(phv), ixbar(ix) {}
     CollectGatewayFields(const PhvInfo &phv, unsigned rl) : phv(phv), row_limit(rl) {}
     bool compute_offsets();
+    friend std::ostream &operator<<(std::ostream &, const CollectGatewayFields &);
 };
 
 class CheckGatewayExpr : public Inspector {
