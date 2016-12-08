@@ -278,6 +278,7 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
         resources->gateway_ixbar.clear();
         resources->selector_ixbar.clear();
         return false; }
+    LOG1("Do we have problems - NO");
     return true;
 }
 
@@ -389,8 +390,10 @@ retry_next_stage:
             rv->entries = last_try - 500;
             if (rv->entries < min_entries && min_entries < last_try)
                 rv->entries = min_entries; }
-        if (rv->entries < min_entries)
+        if (rv->entries < min_entries) {
+            LOG1("RV entries " << rv->entries << " min entries " << min_entries);
             BUG("Can't fit any entries of table %s in a stage by iteself (too wide?)", t->name);
+        }
         last_try = rv->entries;
         LOG3(" - reducing to " << rv->entries << " of " << t->name << " in stage " << rv->stage);
         rv->use = StageUseEstimate(t, rv->entries, &resources->match_ixbar);

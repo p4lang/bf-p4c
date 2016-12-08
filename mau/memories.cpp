@@ -1283,6 +1283,7 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
         return;
     }
 
+
     int action_RAMs_available = __builtin_popcount(mask & ~sram_inuse[row]);
     int suppl_RAMs_available = action_RAMs_available;
     adjust_RAMs_available(curr_oflow, suppl_RAMs_available, action_RAMs_available, row,
@@ -1298,10 +1299,24 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
         && curr_oflow.group == nullptr && next_action.group == nullptr
         && next_suppl.group == nullptr) {
         // FIXME: Calculate the color mapram stuff
-        if (curr_oflow.group && !curr_oflow.group->cm.all_placed()) {
-            oflow = curr_oflow;
-            color_mapram_candidates(suppl, oflow, mask);
+        //if (curr_oflow.group && !curr_oflow.group->cm.all_placed()) {
+        //    oflow = curr_oflow;
+        //    color_mapram_candidates(suppl, oflow, mask);
+        //}
+        bool actions_available = false;
+        for (size_t i = 0; i < action_bus_users.size(); i++) {
+            if (!action_bus_users[i]->sel.linked ||
+                (action_bus_users[i]->sel.linked && action_bus_users[i]->sel.placed)) {
+                actions_available = true;
+                break;
+            }
         }
+    
+        if (!actions_available) {
+            LOG1("No actions available, due to the selector");
+            return;
+        }
+        LOG1("Nothing to place");
         return;
     }
 

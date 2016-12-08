@@ -859,7 +859,9 @@ bool IXBar::allocSelector(const IR::ActionSelector *as, const PhvInfo &phv, Use 
          alloc.compute_hash_tables();
     if (!rv) alloc.clear();
 
+    LOG1("This is where I am");
     if (!rv) return false;
+    LOG1("Yo mom");
         
     int hash_group = getHashGroup(alloc.hash_table_input);
     if (hash_group < 0) { 
@@ -880,6 +882,7 @@ bool IXBar::allocSelector(const IR::ActionSelector *as, const PhvInfo &phv, Use 
     }
     hash_group_print_use[hash_group] = name + "$select";
     hash_group_use[hash_group] |= alloc.hash_table_input;
+    LOG1("We made it");
     return rv;
 }
 bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv,
@@ -917,6 +920,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv,
         gw_alloc.clear();
         tbl_alloc.clear();
         return false; }
+    LOG1("It's allocated");
     return true;
 }
 

@@ -172,12 +172,20 @@ struct FormatHash {
         : match_data(md), ghost(g), as(a) {}
 };
 
+static cstring inline crc_poly(cstring number) {
+    if (number == "16")
+        return "0x8fdb";
+    else // if (number == "32")
+        return "0xe89061db";
+    
+} 
+
 std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
     if (hash.as != nullptr) {
         cstring alg_name = hash.as->key_fields->algorithm.name;
         if (strncmp(alg_name, "crc", 3) == 0) {
-            out << "crc(" << alg_name.substr(3) << ", " << emit_vector(hash.match_data, ", ") 
-                << ")";
+            out << "stripe(crc(" << crc_poly(alg_name.substr(3)) << ", " 
+                << emit_vector(hash.match_data, ", ") << "))";
         } else if (alg_name == "random") {
             out << "random(" << emit_vector(hash.match_data, ", ") << ")";
         } else {
@@ -768,8 +776,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
                  out << memuse.profile_name << "$selector";
              else
                  out << tbl->name << "$selector";
-             if (at->indexed())
-                 out << "(select_ptr)";
+             out << "(select_ptr)";
              out << std::endl;
              continue;
         } 
@@ -932,6 +939,10 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *) {
 bool MauAsmOutput::EmitAttached::preorder(const IR::ActionSelector *as) {
     LOG1("Selector");
     indent_t indent(1);
+    if (tbl->resources->memuse.at(tbl->name).unattached_profile) {
+        LOG1("Unattached profile for " << tbl->name);
+        return false;
+    }
     //const IR::FieldListCalculation *flc = as->key_fields;
     cstring name = tbl->match_table->name + "$selector";
     out << indent++ << "selection " << name << ":" << std::endl;
