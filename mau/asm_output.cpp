@@ -40,7 +40,7 @@ class MauAsmOutput::TableFormat {
     const MauAsmOutput &self;
     struct match_group {
         int                             action = -1, immediate = -1, version = -1, counter = -1,
-                                        meter = -1, indirect_action = -1;
+                                        meter = -1, indirect_action = -1, selector = -1;
         vector<std::pair<int, int>>     match;
     };
     int action_bits = 0;
@@ -48,6 +48,7 @@ class MauAsmOutput::TableFormat {
     int meter_bits = 0;
     int counter_bits = 0;
     int indirect_action_bits = 0;
+    int selector_bits = 0;
     vector<match_group> format;
  public:
     vector<Slice>       match_fields;
@@ -166,10 +167,24 @@ class MauAsmOutput::ActionDataFormat : public Inspector {
 struct FormatHash {
     vector<Slice> match_data;
     vector<Slice> ghost;
-    FormatHash(vector<Slice> md, vector<Slice> g) : match_data(md), ghost(g) {}
+    const IR::ActionSelector *as;
+    FormatHash(vector<Slice> md, vector<Slice> g, const IR::ActionSelector *a = nullptr) 
+        : match_data(md), ghost(g), as(a) {}
 };
 
 std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
+    if (hash.as != nullptr) {
+        cstring alg_name = hash.as->key_fields->algorithm.name;
+        if (strncmp(alg_name, "crc", 3) == 0) {
+            out << "crc(" << alg_name.substr(3) << ", " << emit_vector(hash.match_data, ", ") 
+                << ")";
+        } else if (alg_name == "random") {
+            out << "random(" << emit_vector(hash.match_data, ", ") << ")";
+        } else {
+            BUG("Algorithm %s for %s is not recognized", alg_name, hash.as->name);
+        }
+        return out;
+    }
     if (!hash.match_data.empty()) {
         out << "random(" << emit_vector(hash.match_data, ", ") << ")";
         if (!hash.ghost.empty()) out << " ^ "; }
@@ -179,9 +194,11 @@ std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
 }
 
 void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
-        const IXBar::Use &use, const Memories::Use *mem, const TableFormat *fmt) const {
+        const IXBar::Use &use, const Memories::Use *mem, const TableFormat *fmt,
+        bool is_sel /*= false*/, const IR::ActionSelector *as /*= nullptr */) const {
     map<int, map<int, Slice>> sort;
     for (auto &b : use.use) {
+        LOG1("b in the group " << b);
         Slice sl(phv, b.field, b.lo, b.hi);
         auto n = sort[b.loc.group].emplace(b.loc.byte*8 + sl.bytealign(), sl);
         assert(n.second); }
@@ -197,7 +214,7 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
                     continue; } }
             it = next; } }
     int hash_group = -1;
-    if (!use.way_use.empty()) {
+    if (!use.way_use.empty() && !is_sel) {
         out << indent << "ways:" << std::endl;
         auto memway = mem->ways.begin();
         for (auto &way : use.way_use) {
@@ -229,11 +246,26 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
                     assert(!half);
                     reg = reg(0, 63 - match.first); }
                 if (!reg) continue;
-                auto reg_hash = reg - fmt->ghost_bits;
-                if (auto reg_ghost = reg - reg_hash)
-                    ghost.push_back(reg_ghost);
-                if (reg_hash)
-                    match_data.emplace_back(reg_hash); }
+                if (as == nullptr) {
+                    auto reg_hash = reg - fmt->ghost_bits;
+                    if (auto reg_ghost = reg - reg_hash)
+                        ghost.push_back(reg_ghost);
+                    if (reg_hash)
+                        match_data.emplace_back(reg_hash);
+                } else {
+                    match_data.emplace_back(reg);
+                }
+            }
+            // FIXME: This is obviously an issue for larger selector tables, whole function needs
+            // to be replaced
+            if (as != nullptr) {
+                LOG1("Match data length " << match_data.size());
+                if (as->mode == "fair")
+                    out << indent << "0..13: " << FormatHash(match_data, ghost, as) << std::endl; 
+                else
+                    out << indent << "0..50: " << FormatHash(match_data, ghost, as) << std::endl;
+                hash_group = use.select_use[0].group;
+            }
             for (auto &way : use.way_use) {
                 mask_bits |= way.mask;
                 if (done & (1 << way.slice)) continue;
@@ -449,6 +481,7 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
         meter_bits = tbl->layout.meter_overhead_bits;
         counter_bits = tbl->layout.counter_overhead_bits;
         indirect_action_bits = tbl->layout.indirect_action_overhead_bits;
+        selector_bits = tbl->layout.selector_overhead_bits;
         LOG1("Indirect action bits " << tbl->layout.indirect_action_overhead_bits << " for table "
              << tbl->name);
         int width = tbl->ways[0].width;
@@ -483,12 +516,18 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
             }
         }
         if (indirect_action_bits > 0) {
-            LOG1("Finding bitrange");
             for (int i = 0; i < groups; i++) {
                 int word = i / groups_per_word;
                 format[i].indirect_action = used.ffz(128*word);
                 used.setrange(format[i].indirect_action, indirect_action_bits);
-                LOG1("format[i].indirect_action " << format[i].indirect_action);
+            }
+        }
+        if (selector_bits > 0) {
+            LOG1("Selector bits " << selector_bits);
+            for (int i = 0; i < groups; i++) {
+                int word = i / groups_per_word;
+                format[i].selector = used.ffz(128*word);
+                used.setrange(format[i].selector, selector_bits);
             }
         }
         if (!match_fields.empty()) {
@@ -547,6 +586,7 @@ void MauAsmOutput::TableFormat::print(std::ostream &out) const {
         fmt.emit(out, "counter_ptr", i, group.counter, counter_bits);
         fmt.emit(out, "meter_ptr", i, group.meter, meter_bits);
         fmt.emit(out, "action_ptr", i, group.indirect_action, indirect_action_bits);
+        fmt.emit(out, "select_ptr", i, group.selector, selector_bits);
         fmt.emit(out, "match", i, group.match);
         ++i; }
     out << (fmt.sep + 1) << "}";
@@ -720,6 +760,19 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
             out << std::endl;
             continue;
         }
+
+        if (at->is<IR::ActionSelector>()) {
+             auto &memuse = tbl->resources->memuse.at(tbl->name);
+             out << indent << "selector: ";
+             if (memuse.unattached_profile)
+                 out << memuse.profile_name << "$selector";
+             else
+                 out << tbl->name << "$selector";
+             if (at->indexed())
+                 out << "(select_ptr)";
+             out << std::endl;
+             continue;
+        } 
         out << indent << at->kind() << ": " << at->name;
         if (at->indexed())
             out << '(' << at->kind() << ')';
@@ -876,7 +929,16 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *) {
     return false; 
 }
 
-bool MauAsmOutput::EmitAttached::preorder(const IR::ActionSelector *) {
+bool MauAsmOutput::EmitAttached::preorder(const IR::ActionSelector *as) {
+    LOG1("Selector");
+    indent_t indent(1);
+    //const IR::FieldListCalculation *flc = as->key_fields;
+    cstring name = tbl->match_table->name + "$selector";
+    out << indent++ << "selection " << name << ":" << std::endl;
+    self.emit_memory(out, indent, tbl->resources->memuse.at(name));
+    self.emit_ixbar(out, indent, tbl->resources->selector_ixbar,
+                    &tbl->resources->memuse.at(name), nullptr, true, as); 
+    out << indent << "mode: " << as->mode.name << " 0" << std::endl;
     return false; }
 bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     indent_t    indent(1);

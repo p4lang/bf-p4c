@@ -140,6 +140,8 @@ class SetupAttachedTables : public MauInspector {
         }
         if (selector_first) {
             linked_pi->ap = ap;
+            (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
+            mem.indirect_action_tables.push_back(ta);
         } else if (linked_pi == nullptr) {
             mem.indirect_action_tables.push_back(ta);
             mem.action_profiles.push_back(new Memories::profile_info(ap, ta));
@@ -211,6 +213,9 @@ class SetupAttachedTables : public MauInspector {
         }
         if (profile_first) {
             linked_pi->as = as;
+            auto name = ta->table->name + "$selector";
+            (*ta->memuse)[name].type = Memories::Use::TWOPORT;
+            mem.selector_tables.push_back(ta);
         } else if (linked_pi == nullptr) {
             auto name = ta->table->name + "$selector";
             (*ta->memuse)[name].type = Memories::Use::TWOPORT;

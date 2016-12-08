@@ -143,6 +143,9 @@ class VisitAttached : public Inspector {
         return false; }
     bool preorder(const IR::ActionSelector *) override {
         // TODO(cdodd) -- what does this require from the layout?
+        int vpn_bits_needed = 17; // FIXME: This is just trash
+        layout.overhead_bits += vpn_bits_needed;
+        layout.selector_overhead_bits = vpn_bits_needed;
         return false; }
     bool preorder(const IR::MAU::TernaryIndirect *) override {
         have_ternary_indirect = true;
