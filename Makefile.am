@@ -161,6 +161,7 @@ cpplint_FILES += $(tofino_backend_SOURCES)
 -include tofinotests.mk
 #-include p4-16-tofinotests.mk
 -include tofino-p14_to_16_tests.mk
+-include tofino-p4tests.mk
 -include tofino-bmv2tests.mk
 -include ortools-tofinotests.mk
 
@@ -195,6 +196,11 @@ tofino-p14_to_16_tests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard
     $(srcdir)/%reldir%/v1_samples
 	@$(GENTESTS) $(srcdir) p14_to_16 $(srcdir)/%reldir%/test-v12-sample.sh $^ >$@ || ( rm $@ && false )
 
+tofino-p4tests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
+   $(srcdir)/%reldir%/v1_2_test/*.p4) \
+   $(srcdir)/%reldir%/v1_2_test
+	@$(GENTESTS) $(srcdir) p4 $(srcdir)/backends/p4test/run-p4-sample.py $^ >$@ || ( rm $@ && false )
+
 # Exercise bmv2 back-end on Tofino-specific programs
 tofino-bmv2tests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
     $(srcdir)/%reldir%/v1_samples/*.p4 \
@@ -210,6 +216,7 @@ recheck-tofino-all:
 CLEANFILES += \
 	tofinotests.mk \
 	tofino-p14_to_16_tests.mk \
+	tofino-p4tests.mk \
 	tofino-bmv2tests.mk \
 	p4-16-tofinotests.mk \
 	ortools-tofinotests.mk
