@@ -465,7 +465,7 @@ Parser::CounterInit::CounterInit(value_t &data) : lineno(data.lineno) {
                 else error(kv.value.lineno, "unknown counter source");
             } else if (kv.key == "rot" || kv.key == "rotate") {
                 if (CHECKTYPE(kv.value, tINT))
-                    if ((rot == kv.value.i) < 0 || rot > 7)
+                    if ((rot = kv.value.i) < 0 || rot > 7)
                         error(kv.value.lineno, "counter rotate value out of range");
             } else {
                 error(kv.key.lineno, "Unknown field %s in counter", kv.key.s); } } }
@@ -1083,12 +1083,12 @@ void Parser::State::pass2(Parser *pa) {
     for (auto &m : match) {
         m.pass2(pa, this);
         unsigned saved = def_saved;
-        if (m.future.lineno)
+        if (m.future.lineno) {
             for (int i = 0; i < 4; i++)
                 if (m.future.data[i].bit >= 0)
                     saved |= 1 << i;
                 else if (def && def->future.lineno && def->future.data[i].bit >= 0)
-                    m.future.data[i] = def->future.data[i];
+                    m.future.data[i] = def->future.data[i]; }
         if (saved) {
             if (m.next)
                 m.next->key.preserve_saved(saved);
