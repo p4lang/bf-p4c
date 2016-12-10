@@ -118,16 +118,15 @@ struct Memories {
             int needed;
             int placed;
             bool required;
-            bool waiting_for_selector;
             bool all_placed() { return needed == placed; }
             int left_to_place() { return needed - placed; }
             color_mapram_group() : needed(0), placed(0), required(false) {}
         };
         struct selector_info {
-            bool linked;
-            bool placed;
-            const IR::ActionSelector *as;
-            selector_info () : linked(false), placed(false), as(nullptr) {}
+            SRAM_group *corr_group;
+            selector_info () : corr_group(nullptr) {}
+            bool linked() { return corr_group != nullptr; }
+            bool placed() { return corr_group->all_placed(); }
         };
         selector_info sel;
         color_mapram_group cm;
@@ -144,7 +143,14 @@ struct Memories {
         }
         int left_to_place() { return depth - placed; }
         bool all_placed() { return (depth == placed); }
-        bool needs_ab() { return requires_ab && !all_placed();}
+        bool needs_ab() { return requires_ab && !all_placed(); }
+        bool sel_act_placed(SRAM_group *corr) {
+            if (type == ACTION && sel.linked() && sel.corr_group == corr && all_placed())
+                return true;
+            else
+                return false; 
+        }
+        
         cstring name_addition() {
             switch (type) {
                 case EXACT:    return "";
@@ -233,14 +239,14 @@ struct Memories {
     int stats_per_row(int min_width, int max_width, IR::CounterType type);
     void find_action_candidates(int row, int mask, action_fill &action, action_fill &suppl,
                                 action_fill &oflow, bool stats_available, bool meter_available,
-                                action_fill &curr_oflow);
+                                action_fill &curr_oflow, action_fill &sel_unplaced);
     void adjust_RAMs_available(action_fill &curr_oflow, int &suppl_RAMs_available,
                                int action_RAMs_available, int row, bool left_side);
     void best_candidates(action_fill &best_fit_action, action_fill &best_fit_suppl,
                          action_fill &next_action, action_fill &next_suppl,
                          action_fill &curr_oflow, int action_RAMs_available,
                          int suppl_RAMs_available, bool stats_available,
-                         bool meter_available, unsigned mask);
+                         bool meter_available, unsigned mask, action_fill &sel_unplaced);
     void fill_out_masks(unsigned suppl_masks[3], unsigned action_masks[3], int RAMs[3],
                         int RAMs_filled[3], bool is_suppl[3], int row, unsigned mask,
                         int suppl_RAMs_available, int action_RAMs_available);
@@ -248,11 +254,12 @@ struct Memories {
                          action_fill &best_fit_action, action_fill &best_fit_suppl,
                          action_fill &curr_oflow, action_fill &next_action,
                          action_fill &next_suppl, int action_RAMs_available,
-                         int suppl_RAMs_available, bool left_side, int order[3], int RAMs[3],
-                         bool is_suppl[3]);
+                         int suppl_RAMs_available, bool left_side, int order[3]);
     void action_oflow_only(action_fill &action, action_fill &oflow,
                            action_fill &best_fit_action, action_fill &next_action,
                            action_fill &curr_oflow, int RAMs_available, int order[3]);
+    void set_up_RAM_counts(action_fill &action, action_fill &suppl, action_fill &oflow,
+                           int order[3], int RAMs[3], bool is_suppl[3]);
     void color_mapram_candidates(action_fill &suppl, action_fill &oflow, unsigned mask);
     void fill_out_color_mapram(action_fill &action, int row, unsigned mask, bool is_oflow);
     bool fill_out_action_row(action_fill &action, int row, int side, unsigned mask,
@@ -262,6 +269,14 @@ struct Memories {
     void calculate_curr_oflow(action_fill &action, action_fill &suppl, action_fill &oflow,
                               bool removed[3], action_fill &curr_oflow,
                               action_fill &twoport_oflow, bool right_side);
+    void calculate_sel_unplaced(action_fill &action, action_fill &suppl, action_fill &oflow,
+                                action_fill &sel_unplaced);
+    bool can_place_selector(action_fill &curr_oflow, SRAM_group *curr_check,
+                            int suppl_RAMs_available, int action_RAMs_available,
+                            action_fill &sel_unplaced);
+    void selector_candidate_setup(action_fill &action, action_fill &suppl, action_fill &oflow,
+                                  action_fill &curr_oflow, action_fill &sel_unplaced,
+                                  action_fill &next_suppl, int order[3]);
     bool allocate_all_gw();
     table_alloc *find_corresponding_exact_match(cstring name);
     bool gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int width_sect,
