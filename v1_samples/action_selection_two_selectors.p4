@@ -70,7 +70,7 @@ action_profile set_b1_3 {
         setb2;
         setb3;
     }
-    size : 1024;
+    size : 160000;
     dynamic_action_selection : my_sel;
 }
 
@@ -97,7 +97,7 @@ action_profile set_b4_6 {
         setb5;
         setb6;
     }
-    size : 100000;
+    size : 1024;
     dynamic_action_selection : my_sel2;
 }
 
