@@ -38,8 +38,6 @@ bool InstructionSelection::checkPHV(const IR::Expression *e) {
 bool InstructionSelection::checkSrc1(const IR::Expression *e) {
     if (e->is<IR::Constant>()) return true;
     if (e->is<IR::ActionArg>()) return true;
-    if (auto cast = e->to<IR::Cast>())
-        if (cast->expr->is<IR::ActionArg>()) return true;
     if (auto slice = e->to<IR::Slice>())
         if (slice->e0->is<IR::ActionArg>()) return true;
     return phv.field(e);
@@ -52,6 +50,11 @@ bool InstructionSelection::checkConst(const IR::Expression *ex, long &value) {
     } else {
         return false;
     }
+}
+
+const IR::Expression *InstructionSelection::postorder(IR::Cast *e) {
+    // FIXME -- just ignoring casts may be wrong if they actually do something
+    return e->expr;
 }
 
 const IR::Expression *InstructionSelection::postorder(IR::BAnd *e) {

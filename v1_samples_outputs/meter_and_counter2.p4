@@ -40,7 +40,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.h1 = val1;
         hdr.data.h2 = val2;
         hdr.data.h3 = val3;
-        meter1.execute_meter((bit<32>)7, hdr.data.color_1);
+        meter1.execute_meter((bit<32>)14w7, hdr.data.color_1);
     }
     @name("h4_6") action h4_6(bit<16> val4, bit<16> val5, bit<16> val6) {
         hdr.data.h4 = val4;
@@ -51,7 +51,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.h7 = val7;
         hdr.data.h8 = val8;
         hdr.data.h9 = val9;
-        meter2.execute_meter((bit<32>)7, hdr.data.color_2);
+        meter2.execute_meter((bit<32>)13w7, hdr.data.color_2);
     }
     @name("test1") table test1() {
         actions = {

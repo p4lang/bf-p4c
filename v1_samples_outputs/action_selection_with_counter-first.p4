@@ -55,7 +55,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("setb6") action setb6(bit<8> val6) {
         hdr.data.b6 = val6;
     }
-    @name("my_count") action my_count(bit<8> idx) {
+    @name("my_count") action my_count(bit<12> idx) {
         test3_counter.count((bit<32>)idx);
     }
     @name("test1") table test1() {

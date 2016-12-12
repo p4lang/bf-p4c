@@ -59,13 +59,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.h7 = val7;
         hdr.data.h8 = val8;
         hdr.data.h9 = val9;
-        meter_3.execute_meter((bit<32>)7, hdr.data.color_3);
+        meter_3.execute_meter((bit<32>)10w7, hdr.data.color_3);
     }
     @name("h10_12") action h10_12(bit<16> val10, bit<16> val11, bit<16> val12) {
         hdr.data.h10 = val10;
         hdr.data.h11 = val11;
         hdr.data.h12 = val12;
-        meter_4.execute_meter((bit<32>)7, hdr.data.color_4);
+        meter_4.execute_meter((bit<32>)12w7, hdr.data.color_4);
     }
     @name("set_port") action set_port(bit<9> port) {
         standard_metadata.egress_spec = port;

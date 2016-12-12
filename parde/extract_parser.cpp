@@ -210,6 +210,21 @@ static match_t buildListMatch(const IR::Vector<IR::Expression> *list) {
     return rv;
 }
 
+static match_t buildMatch(int match_size, const IR::Expression *key) {
+    if (key->is<IR::DefaultExpression>())
+        return match_t();
+    else if (auto k = key->to<IR::Constant>())
+        return match_t(match_size, k->asLong(), ~0ULL);
+    else if (auto mask = key->to<IR::Mask>())
+        return match_t(match_size, mask->left->to<IR::Constant>()->asLong(),
+                                   mask->right->to<IR::Constant>()->asLong());
+    else if (auto list = key->to<IR::ListExpression>())
+        return buildListMatch(list->components);
+    else
+        BUG("Invalid select case expression %1%", key);
+    return match_t();
+}
+
 IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctxt) {
     if (states.count(name) == 0) return nullptr;
     if (ctxt && ctxt->depth >= 256) return nullptr;
@@ -241,9 +256,10 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
     if (v1_0) {
         if (v1_0->cases)
             for (auto ce : *v1_0->cases)
-                for (auto val : ce->values)
-                    addMatch(rv, match_t(match_size, val.first->asLong(), val.second->asLong()),
-                             *stmts, ce->action, ctxt);
+                for (auto val : ce->values) {
+                    uintmax_t v = val.first->asLong(), m = val.second->asLong();
+                    addMatch(rv, m ? match_t(match_size, v, m) : match_t(),
+                             *stmts, ce->action, ctxt); }
         if (v1_0->default_return)
             addMatch(rv, match_t(), *stmts, v1_0->default_return, ctxt);
         else if (v1_0->parse_error)
@@ -252,21 +268,9 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
         if (auto *path = dynamic_cast<const IR::PathExpression *>(v1_2->selectExpression)) {
             addMatch(rv, match_t(), *stmts, path->path->name, ctxt);
         } else if (auto *sel = dynamic_cast<const IR::SelectExpression *>(v1_2->selectExpression)) {
-            for (auto ce : sel->selectCases) {
-                if (ce->keyset->is<IR::DefaultExpression>())
-                    addMatch(rv, match_t(), *stmts, ce->state->path->name, ctxt);
-                else if (auto k = ce->keyset->to<IR::Constant>())
-                    addMatch(rv, match_t(match_size, k->asLong(), ~0ULL),
-                             *stmts, ce->state->path->name, ctxt);
-                else if (auto mask = ce->keyset->to<IR::Mask>())
-                    addMatch(rv, match_t(match_size, mask->left->to<IR::Constant>()->asLong(),
-                                                     mask->right->to<IR::Constant>()->asLong()),
-                             *stmts, ce->state->path->name, ctxt);
-                else if (auto list = ce->keyset->to<IR::ListExpression>())
-                    addMatch(rv, buildListMatch(list->components), *stmts,
-                             ce->state->path->name, ctxt);
-                else
-                    BUG("Invalid select case expression %1%", ce); }
+            for (auto ce : sel->selectCases)
+                addMatch(rv, buildMatch(match_size, ce->keyset), *stmts,
+                         ce->state->path->name, ctxt);
         } else if (v1_2->selectExpression) {
             BUG("Invalid select expression %1%", v1_2->selectExpression); } }
     return rv;

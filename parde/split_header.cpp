@@ -12,7 +12,7 @@ IR::Node *SplitExtractEmit::preorder(IR::Primitive *p) {
     for (auto field : *hdr_type->fields) {
         IR::Expression *fref = new IR::Member(field->type, hdr, field->name);
         rv->push_back(new IR::Primitive(p->srcInfo, p->name, fref)); }
-    if (p->name == "extract") {
+    if (p->name == "extract" && !hdr->baseRef()->is<IR::Metadata>()) {
         rv->push_back(new IR::Primitive(p->srcInfo, "set_metadata",
             new IR::Member(IR::Type::Bits::get(1), hdr, "$valid"),
             new IR::Constant(1))); }

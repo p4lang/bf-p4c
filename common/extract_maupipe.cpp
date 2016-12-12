@@ -28,6 +28,8 @@ class ActionArgSetup : public Transform {
 };
 
 class ActionBodySetup : public Inspector {
+    P4::ReferenceMap        *refMap;
+    P4::TypeMap             *typeMap;
     IR::ActionFunction      *af;
     ActionArgSetup          &setup;
     bool preorder(const IR::IndexedVector<IR::StatOrDecl> *) override { return true; }
@@ -39,9 +41,7 @@ class ActionBodySetup : public Inspector {
         auto prim = new IR::Primitive(assign->srcInfo, pname, assign->left, assign->right);
         af->action.push_back(prim->apply(setup));
         return false; }
-    bool preorder(const IR::MethodCallStatement *mc) override {
-        ERROR("extern method call " << mc << " not yet implemented");
-        return false; }
+    bool preorder(const IR::MethodCallStatement *mc) override;
     bool preorder(const IR::Declaration *) override {
         // FIXME -- for now, ignoring local variables?  Need copy prop + dead code elim
         return false; }
@@ -53,12 +53,47 @@ class ActionBodySetup : public Inspector {
         return false; }
 
  public:
-    ActionBodySetup(IR::ActionFunction *af, ActionArgSetup &setup) : af(af), setup(setup) {}
+    ActionBodySetup(P4::ReferenceMap *refMap, P4::TypeMap *typeMap, IR::ActionFunction *af,
+                    ActionArgSetup &setup)
+    : refMap(refMap), typeMap(typeMap), af(af), setup(setup) {}
 };
+
+bool ActionBodySetup::preorder(const IR::MethodCallStatement *mc) {
+    auto mi = P4::MethodInstance::resolve(mc->methodCall, refMap, typeMap, true);
+    cstring name;
+    const IR::Expression *recv = nullptr;
+    if (auto bi = mi->to<P4::BuiltInMethod>()) {
+        name = bi->name;
+        recv = bi->appliedTo;
+    } else if (auto em = mi->to<P4::ExternMethod>()) {
+        name = em->actualExternType->name + "." + em->method->name;
+        recv = new IR::GlobalRef(em->object->getNode());
+    } else if (auto ef = mi->to<P4::ExternFunction>()) {
+        name = ef->method->name;
+    } else {
+        BUG("method call %s not yet implemented", mc); }
+    static const std::map<cstring, cstring> name_remap = {
+        { "counter.count", "count" },
+        { "isValid", "valid" },
+        { "meter.execute_meter", "execute_meter" },
+        { "pop_front", "pop" },
+        { "push_front", "push" },
+    };
+    if (name_remap.count(name)) name = name_remap.at(name);
+    auto prim = new IR::Primitive(mc->srcInfo, name);
+    if (recv) prim->operands.push_back(recv);
+    for (auto arg : *mc->methodCall->arguments)
+        prim->operands.push_back(arg);
+    af->action.push_back(prim->apply(setup));
+    return false;
+}
+
 }  // anonymous namespace
 
-const IR::ActionFunction *createActionFunction(const IR::P4Action *ac,
-                                               const IR::Vector<IR::Expression> *args) {
+const IR::ActionFunction *createActionFunction(
+    P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+    const IR::P4Action *ac,
+    const IR::Vector<IR::Expression> *args) {
     IR::ActionFunction *rv = new IR::ActionFunction;
     rv->srcInfo = ac->srcInfo;
     rv->name = ac->externalName();
@@ -77,7 +112,7 @@ const IR::ActionFunction *createActionFunction(const IR::P4Action *ac,
                 setup.add_arg(param->name, args->at(arg_idx++)); } }
     if (arg_idx != (args ? args->size(): 0))
         error("%s: Too many args for %s", args->srcInfo, ac);
-    ac->body->apply(ActionBodySetup(rv, setup));
+    ac->body->apply(ActionBodySetup(refMap, typeMap, rv, setup));
     return rv;
 }
 
@@ -97,6 +132,10 @@ const IR::V1Table *createV1Table(const IR::P4Table *tc, P4::ReferenceMap *refMap
         if (prop->name == "key") {
             auto reads = new IR::Vector<IR::Expression>();
             for (auto el : *prop->value->to<IR::Key>()->keyElements) {
+                if (el->matchType->path->name == "selector") {
+                    // FIXME -- skip these for now.  Need to turn into a field list
+                    // for the action_selector?
+                    continue; }
                 reads->push_back(el->expression);
                 rv->reads_types.push_back(el->matchType->path->name); }
             rv->reads = reads;
@@ -221,7 +260,7 @@ class GetTofinoTables : public Inspector {
                               ->to<IR::ActionList>()->actionList) {
             if (auto action = refMap->getDeclaration(act->getPath())->to<IR::P4Action>()) {
                 auto mce = act->expression->to<IR::MethodCallExpression>();
-                auto newaction = createActionFunction(action, mce->arguments);
+                auto newaction = createActionFunction(refMap, typeMap, action, mce->arguments);
                 if (!tt->actions.count(newaction->name))
                     tt->actions.addUnique(newaction->name, newaction);
                 else
@@ -298,6 +337,7 @@ class GetTofinoTables : public Inspector {
             error("%s: Can only switch on table.apply().action_run", s->expression->srcInfo);
             return; }
         auto tt = tables[s] = tables.at(exp->expr);
+        vector<cstring> fallthrough;
         for (auto c : s->cases) {
             cstring label;
             if (c->label->is<IR::DefaultExpression>())
@@ -305,8 +345,14 @@ class GetTofinoTables : public Inspector {
             else
                 label = refMap->getDeclaration(c->label->to<IR::PathExpression>()->path)
                               ->externalName();
-            tt->next[label] = getseq(c->statement); } }
-
+            if (c->statement) {
+                auto n = getseq(c->statement);
+                tt->next[label] = n;
+                for (auto ft : fallthrough)
+                    tt->next[ft] = n;
+                fallthrough.clear();
+            } else {
+                fallthrough.push_back(label); } } }
     bool preorder(const IR::NamedCond *c) override {
         if (!tables.count(c))
             tables[c] = new IR::MAU::Table(c->name, gress, c->pred);
