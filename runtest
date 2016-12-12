@@ -162,12 +162,13 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
     test=`pwd`/${file%.p4}.stf
     cd $testdir
     mkdir -p $name.out
+    obsLog=$name.p4.obs
 
     rm -f $name.out/*.cfg.json
     cp $name.tfa $name.out
     run $TFAS -vvvvl $name.out/tfas.config.log $name.tfa || die
     run $TFLN $name.out/*.cfg.json -o $name.out/tofino.bin || die
-    run $STF -l $name.out $test | \
+    run $STF -l $name.out --observation-log $obsLog $test | \
         grep -v 'WARN MAU::process_match Time gone backwards!' \
         || die
 fi
