@@ -251,13 +251,7 @@ pushd p4c >/dev/null
         echo "Reusing $PWD/build as is"
     else
         if [ ! -d build ]; then
-            ./find-makefiles.sh
-            autoreconf -i
-            mkdir -p build
-            sourcedir=`pwd`
-            cd build
-            ../configure CXXFLAGS="-g -O1" --prefix=$sourcedir
-            cd ..
+            ./bootstrap.sh
         fi
         if $clean_before_rebuild; then
             make -C build clean
