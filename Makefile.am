@@ -8,7 +8,7 @@ tofino_ir_SOURCES = \
 	%reldir%/ir/thread_visitor.h \
 	%reldir%/ir/tofino.cpp
 
-ir_SOURCES += $(tofino_ir_SOURCES)
+extension_frontend_SOURCES += $(tofino_ir_SOURCES)
 
 tofino_backend_SOURCES = \
 	$(tofino_ir_SOURCES) \
