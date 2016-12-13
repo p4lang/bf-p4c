@@ -60,12 +60,12 @@ struct DumpPipe : public Inspector {
     DumpPipe() : heading(nullptr) {}
     explicit DumpPipe(const char *h) : heading(h) {}
     bool preorder(const IR::Node *pipe) override {
-        if (verbose) {
+        if (Log::verbose()) {
             if (heading)
                 std::cout << "-------------------------------------------------" << std::endl
                           << heading << std::endl
                           << "-------------------------------------------------" << std::endl;
-            if (verbose > 1)
+            if (Log::verbosity() > 1)
                 dump(pipe);
             else
                 std::cout << *pipe << std::endl; }
@@ -99,7 +99,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
             new VisitFunctor([newpa, options]() {
                 if (!newpa->Solve(options->phv_ortools)) {
                     error("or-tools failed to find PHV allocation"); } }),
-            verbose ? new VisitFunctor([&phv]() {
+            Log::verbose() ? new VisitFunctor([&phv]() {
                 std::cout << "Printing PHV fields:\n";
                 for (auto iter = phv.begin(); iter != phv.end(); ++iter) {
                     LOG2("result:" << iter->name << iter->alloc[0]);
@@ -158,7 +158,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new TableLayout(phv),
         new TableFindSeqDependencies,
         new FindDependencyGraph(&deps),
-        verbose ? new VisitFunctor([&deps]() { std::cout << deps; }) : nullptr,
+        Log::verbose() ? new VisitFunctor([&deps]() { std::cout << deps; }) : nullptr,
         new TypeCheck,
         new SpreadGatewayAcrossSeq,
         new CheckTableNameDuplicate,
@@ -179,11 +179,11 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new PhvInfo::SetReferenced(phv),
         &mutex,
         &summary,
-        verbose ? new VisitFunctor([&summary]() { std::cout << summary; }) : nullptr,
+        Log::verbose() ? new VisitFunctor([&summary]() { std::cout << summary; }) : nullptr,
 
         phv_alloc,
 
-        verbose ? new VisitFunctor([&phv]() { std::cout << phv; }) : nullptr,
+        Log::verbose() ? new VisitFunctor([&phv]() { std::cout << phv; }) : nullptr,
 
         new IXBarRealign(phv),
         new SplitExtractEmit,

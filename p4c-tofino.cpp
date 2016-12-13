@@ -60,11 +60,11 @@ int main(int ac, char **av) {
         program = program->apply(fe);
         if (!program)
             return 1;
-        if (verbose) {
+        if (Log::verbose()) {
             std::cout << "-------------------------------------------------" << std::endl
                       << "Initial program" << std::endl
                       << "-------------------------------------------------" << std::endl;
-            if (verbose > 1)
+            if (Log::verbosity() > 1)
                 dump(program);
             else
                 std::cout << *program << std::endl; }
@@ -75,11 +75,11 @@ int main(int ac, char **av) {
         program = P4::FrontEnd().run(options, program);
         if (!program)
             return 1;
-        if (verbose) {
+        if (Log::verbose()) {
             std::cout << "-------------------------------------------------" << std::endl
                       << "Initial program" << std::endl
                       << "-------------------------------------------------" << std::endl;
-            if (verbose > 1)
+            if (Log::verbosity() > 1)
                 dump(program);
             else
                 std::cout << *program << std::endl; }
@@ -88,11 +88,11 @@ int main(int ac, char **av) {
         program = program->apply(midend);
         if (!program)
             return 1;
-        if (verbose) {
+        if (Log::verbose()) {
             std::cout << "-------------------------------------------------" << std::endl
                       << "After midend" << std::endl
                       << "-------------------------------------------------" << std::endl;
-            if (verbose > 1)
+            if (Log::verbosity() > 1)
                 dump(program);
             else
                 std::cout << *program << std::endl; }
@@ -103,12 +103,12 @@ int main(int ac, char **av) {
     if (!maupipe)
         return 1;
 
-    if (verbose)
+    if (Log::verbose())
         std::cout << "Compiling" << std::endl;
 
     test_tofino_backend(maupipe, &options);
 
-    if (verbose)
+    if (Log::verbose())
         std::cout << "Done." << std::endl;
     return ErrorReporter::instance.getErrorCount() > 0;
 }
