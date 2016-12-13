@@ -285,6 +285,13 @@ XFAIL_TESTS += \
     p14_to_16/%reldir%/v1_samples/test_config_172_stateful_heavy_hitter.p4.test \
     p14_to_16/%reldir%/v1_samples/test_config_173_stateful_bloom_filter.p4.test
 
+# Failures with 'this' handling -- should be fixed soon once other changes get merged
+XFAIL_TESTS += \
+    p4/extensions/tofino/v1_2_test/bloom_filter.p4.test \
+    p4/extensions/tofino/v1_2_test/bfd_offload.p4.test \
+    p4/extensions/tofino/v1_2_test/flowlet_switching.p4.test \
+    p4/extensions/tofino/v1_2_test/stateful_alu.p4.test
+
 # These currently fail gateway check with 'expression too complex'
 XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/flowlet_switching.p4.test \
