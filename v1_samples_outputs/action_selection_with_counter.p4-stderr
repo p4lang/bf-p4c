@@ -1,0 +1,9 @@
+../extensions/tofino/v1_samples/action_selection_with_counter.p4(81): warning: fair: Action selector attribute ignored
+    selection_mode : fair;
+                     ^^^^
+../extensions/tofino/v1_samples/action_selection_with_counter.p4(119): warning: fair: Action selector attribute ignored
+    selection_mode : fair;
+                     ^^^^
+../extensions/tofino/v1_samples/action_selection_with_counter.p4(103): warning: Could not infer type for idx, using bit<8>
+action my_count(idx) {
+                ^^^

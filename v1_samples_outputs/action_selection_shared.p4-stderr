@@ -1,0 +1,3 @@
+../extensions/tofino/v1_samples/action_selection_shared.p4(60): warning: fair: Action selector attribute ignored
+    selection_mode : fair;
+                     ^^^^

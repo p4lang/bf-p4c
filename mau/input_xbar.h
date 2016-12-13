@@ -111,7 +111,6 @@ struct IXBar {
             explicit Select(int g) : group(g), bit_mask(0) {}
         };
         vector<Select> select_use;
-        
         void clear() { use.clear(); hash_table_input = 0; bit_use.clear(); way_use.clear(); }
         void compute_hash_tables();
         int groups() const;  // how many different groups in this use

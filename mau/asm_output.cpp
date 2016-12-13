@@ -168,7 +168,7 @@ struct FormatHash {
     vector<Slice> match_data;
     vector<Slice> ghost;
     const IR::ActionSelector *as;
-    FormatHash(vector<Slice> md, vector<Slice> g, const IR::ActionSelector *a = nullptr) 
+    FormatHash(vector<Slice> md, vector<Slice> g, const IR::ActionSelector *a = nullptr)
         : match_data(md), ghost(g), as(a) {}
 };
 
@@ -177,16 +177,15 @@ struct FormatHash {
 static cstring inline crc_poly(cstring number) {
     if (number == "16")
         return "0x8fdb";
-    else // if (number == "32")
+    else  // if (number == "32")
         return "0xe89061db";
-    
-} 
+}
 
 std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
     if (hash.as != nullptr) {
         cstring alg_name = hash.as->key_fields->algorithm.name;
         if (strncmp(alg_name, "crc", 3) == 0) {
-            out << "stripe(crc(" << crc_poly(alg_name.substr(3)) << ", " 
+            out << "stripe(crc(" << crc_poly(alg_name.substr(3)) << ", "
                 << emit_vector(hash.match_data, ", ") << "))";
         } else if (alg_name == "random") {
             out << "random(" << emit_vector(hash.match_data, ", ") << ")";
@@ -272,7 +271,7 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
             // to be replaced
             if (as != nullptr) {
                 if (as->mode == "fair")
-                    out << indent << "0..13: " << FormatHash(match_data, ghost, as) << std::endl; 
+                    out << indent << "0..13: " << FormatHash(match_data, ghost, as) << std::endl;
                 else
                     out << indent << "0..50: " << FormatHash(match_data, ghost, as) << std::endl;
                 hash_group = use.select_use[0].group;
@@ -757,10 +756,10 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         }
         if (at->is<IR::ActionProfile>()) {
             auto &memuse = tbl->resources->memuse.at(tbl->name);
-            out << indent << "action: "; 
+            out << indent << "action: ";
             if (memuse.unattached_profile)
                 out << memuse.profile_name << "$action";
-            else 
+            else
                 out << tbl->name << "$action";
             if (at->indexed())
                 out << "(action, action_ptr)";
@@ -778,7 +777,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
              out << "(select_ptr)";
              out << std::endl;
              continue;
-        } 
+        }
         out << indent << at->kind() << ": " << at->name;
         if (at->indexed())
             out << '(' << at->kind() << ')';
@@ -916,7 +915,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *) {
         return false;
     }
     indent_t    indent(1);
-    cstring name = tbl->match_table->name + "$action"; 
+    cstring name = tbl->match_table->name + "$action";
     out << indent++ << "action " << name << ':' << std::endl;
     if (tbl->match_table)
         out << indent << "p4: { name: " << tbl->match_table->name << "$action }" << std::endl;
@@ -929,7 +928,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *) {
         for (auto act : Values(tbl->actions))
             act->apply(EmitAction(self, out, tbl, indent));
         --indent; }
-    return false; 
+    return false;
 }
 
 bool MauAsmOutput::EmitAttached::preorder(const IR::ActionSelector *as) {
@@ -937,12 +936,11 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionSelector *as) {
     if (tbl->resources->memuse.at(tbl->name).unattached_profile) {
         return false;
     }
-    //const IR::FieldListCalculation *flc = as->key_fields;
     cstring name = tbl->match_table->name + "$selector";
     out << indent++ << "selection " << name << ":" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     self.emit_ixbar(out, indent, tbl->resources->selector_ixbar,
-                    &tbl->resources->memuse.at(name), nullptr, true, as); 
+                    &tbl->resources->memuse.at(name), nullptr, true, as);
     out << indent << "mode: " << as->mode.name << " 0" << std::endl;
     return false; }
 bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {

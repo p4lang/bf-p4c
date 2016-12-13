@@ -830,7 +830,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
 bool IXBar::allocSelector(const IR::ActionSelector *as, const PhvInfo &phv, Use &alloc,
                           bool second_try, cstring name) {
     LOG1("Allocating a selector");
-    const IR::FieldListCalculation *flc = as->key_fields;    
+    const IR::FieldListCalculation *flc = as->key_fields;
     const IR::FieldList *fl = flc->input_fields;
     vector<IXBar::Use::Byte *> alloced;
     set <cstring>                   fields_needed;
@@ -859,14 +859,11 @@ bool IXBar::allocSelector(const IR::ActionSelector *as, const PhvInfo &phv, Use 
          alloc.compute_hash_tables();
     if (!rv) alloc.clear();
 
-    LOG1("This is where I am");
     if (!rv) return false;
-    LOG1("Yo mom");
-        
     int hash_group = getHashGroup(alloc.hash_table_input);
-    if (hash_group < 0) { 
+    if (hash_group < 0) {
         alloc.clear();
-        return false; 
+        return false;
     }
     alloc.select_use.emplace_back(hash_group);
     fill_out_use(alloced, false);
@@ -877,7 +874,7 @@ bool IXBar::allocSelector(const IR::ActionSelector *as, const PhvInfo &phv, Use 
             hash_index_inuse[i] |= 0xf;
             for (int j = 0; j < HASH_SINGLE_BITS; j++)
                 hash_single_bit_use[i][j] = name + "$select";
-            hash_single_bit_inuse[i] |= 0xfff; 
+            hash_single_bit_inuse[i] |= 0xfff;
         }
     }
     hash_group_print_use[hash_group] = name + "$select";
@@ -905,11 +902,11 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv,
     }
     const IR::ActionSelector *as = nullptr;
     for (auto at : tbl->attached) {
-        if ((as = at->to<IR::ActionSelector>()) != nullptr 
+        if ((as = at->to<IR::ActionSelector>()) != nullptr
             && std::find(selectors.begin(), selectors.end(), as) == selectors.end())
            break;
     }
-    if (as != nullptr && !allocSelector(as, phv, sel_alloc, false, tbl->name) 
+    if (as != nullptr && !allocSelector(as, phv, sel_alloc, false, tbl->name)
         && !allocSelector(as, phv, sel_alloc, true, tbl->name)) {
         tbl_alloc.clear();
         sel_alloc.clear();
@@ -983,7 +980,7 @@ void IXBar::update(cstring name, const Use &alloc) {
                 hash_index_inuse[i] |= 0xf;
                 for (int j = 0; j < HASH_SINGLE_BITS; j++)
                     hash_single_bit_use[i][j] = name;
-                hash_single_bit_inuse[i] |= 0xfff; 
+                hash_single_bit_inuse[i] |= 0xfff;
             }
         }
         hash_group_print_use[select.group] = name;

@@ -134,7 +134,7 @@ class SetupAttachedTables : public MauInspector {
             }
             if (pi->linked_ta == ta) {
                 if (ap->selector.name != pi->as->name)
-                    BUG("Alignment of selector and action profile in memory allocation"); 
+                    BUG("Alignment of selector and action profile in memory allocation");
                 selector_first = true;
                 linked_pi = pi;
                 break;
@@ -209,7 +209,7 @@ class SetupAttachedTables : public MauInspector {
             }
             if (pi->linked_ta == ta) {
                 if (pi->ap->selector.name != as->name)
-                    BUG("Alignment of selector and action profile in memory allocation"); 
+                    BUG("Alignment of selector and action profile in memory allocation");
                 profile_first = true;
                 linked_pi = pi;
                 break;
@@ -232,7 +232,7 @@ class SetupAttachedTables : public MauInspector {
         return false;
     }
 
-  public:
+ public:
      explicit SetupAttachedTables(Memories &m, Memories::table_alloc *t, int e,
          Memories::mem_info &i) : mem(m), ta(t), entries(e), mi(i) {}
 };
@@ -651,7 +651,7 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
         }
     }
     compress_ways();
-    for (auto *ta : exact_tables) {   
+    for (auto *ta : exact_tables) {
         LOG4("Exact match table " << ta->table->name);
         auto name = ta->table->name;
         auto alloc = (*ta->memuse)[name];
@@ -908,7 +908,7 @@ void Memories::action_bus_selectors_indirects() {
     for (auto *ta : indirect_action_tables) {
         for (auto at : ta->table->attached) {
             const IR::ActionProfile *ap = nullptr;
-            if ((ap = at->to<IR::ActionProfile>()) == nullptr) 
+            if ((ap = at->to<IR::ActionProfile>()) == nullptr)
                 continue;
             int sz = ceil_log2(ta->table->layout.action_data_bytes) + 3;
             int width = sz > 7 ? 1 << (sz - 7) : 1;
@@ -928,7 +928,7 @@ void Memories::action_bus_selectors_indirects() {
                                                 + action_bus_users.back()->name_addition();
                 if (selector != nullptr) {
                     action_bus_users.back()->sel.corr_group = selector;
-                    selector->sel.corr_group = action_bus_users.back(); 
+                    selector->sel.corr_group = action_bus_users.back();
                 }
             }
         }
@@ -996,7 +996,6 @@ void Memories::find_action_bus_users() {
                                             + action_bus_users.back()->name_addition();
         }
     }
-    
     action_bus_selectors_indirects();
     action_bus_meters_counters();
 }
@@ -1092,7 +1091,6 @@ void Memories::action_row_trip(action_fill &action, action_fill &suppl, action_f
         action_oflow_only(action, oflow, best_fit_action, next_action, curr_oflow_temp,
                           action_RAMs_available, order);
     }
-
 }
 
 /* When no supplementary tables were available, the best action and overflow groups are
@@ -1153,12 +1151,12 @@ void Memories::action_oflow_only(action_fill &action, action_fill &oflow,
 bool Memories::can_place_selector(action_fill &curr_oflow, SRAM_group *curr_check,
                                   int suppl_RAMs_available, int action_RAMs_available,
                                   action_fill &sel_unplaced) {
-    // Need to fit the selector on this row, as the 
+    // Need to fit the selector on this row, as the oflow group is a twoport table
     if (curr_oflow.group && curr_oflow.group->type != SRAM_group::ACTION) {
         if (curr_check->left_to_place() > suppl_RAMs_available) {
             return false;
         }
-        if (sel_unplaced.group->sel.corr_group->left_to_place() + curr_check->left_to_place() 
+        if (sel_unplaced.group->sel.corr_group->left_to_place() + curr_check->left_to_place()
             > action_RAMs_available)
             return false;
 
@@ -1182,7 +1180,7 @@ void Memories::selector_candidate_setup(action_fill &action, action_fill &suppl,
     /* Should be guaranteed that the selector has enough space to fit onto the row
        if another two port table is on overflow */
 
-    // FIXME: Potentially could save room if the action group that is overflowing is the 
+    // FIXME: Potentially could save room if the action group that is overflowing is the
     // sel_unplaced group
     if (curr_oflow.group && curr_oflow.group->type != SRAM_group::ACTION) {
         suppl = next_suppl;
@@ -1190,7 +1188,7 @@ void Memories::selector_candidate_setup(action_fill &action, action_fill &suppl,
         if (suppl.group->left_to_place() < action_RAMs_available) {
             action.group = sel_unplaced.group->sel.corr_group;
             order[ACTION_IND] = 1;
-            if (suppl.group->left_to_place() + action.group->left_to_place() 
+            if (suppl.group->left_to_place() + action.group->left_to_place()
                 < suppl_RAMs_available) {
                 oflow.group = curr_oflow.group;
                 order[OFLOW_IND] = 2;
@@ -1205,12 +1203,12 @@ void Memories::selector_candidate_setup(action_fill &action, action_fill &suppl,
         if (action.group->left_to_place() + suppl.group->left_to_place()
             > action_RAMs_available) {
             BUG("We have an issue in the double selector algorithm");
-        } else if (action.group->left_to_place() + suppl.group->left_to_place() 
+        } else if (action.group->left_to_place() + suppl.group->left_to_place()
                    < action_RAMs_available && curr_oflow.group
                    && curr_oflow.group != action.group && suppl.group != curr_oflow.group) {
             order[OFLOW_IND] = 2;
             oflow.group = curr_oflow.group;
-        } 
+        }
     }
 }
 
@@ -1273,7 +1271,6 @@ void Memories::best_candidates(action_fill &best_fit_action, action_fill &best_f
                                suppl_RAMs_available, action_RAMs_available, sel_unplaced)) {
                 continue;
             }
-                
             if (suppl_bus_users[i]->total_left_to_place() > min_left) {
                 next_suppl.group = suppl_bus_users[i];
                 next_suppl.index = i;
@@ -1410,7 +1407,6 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
                 break;
             }
         }
-    
         if (!actions_available) {
             LOG3("No actions available, due to the selector");
             return;
@@ -1425,11 +1421,11 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
     int order[3] = {-1, -1, -1};  // order is action, suppl, oflow
     int RAMs_filled[3] = {0, 0, 0};
     bool is_suppl[3] = {false, false, false};
- 
+
     if (sel_unplaced.group && next_suppl.group && next_suppl.group->type == SRAM_group::SELECTOR)
         selector_candidate_setup(action, suppl, oflow, curr_oflow, sel_unplaced, next_suppl,
                                  order, action_RAMs_available, suppl_RAMs_available);
-    else 
+    else
         action_row_trip(action, suppl, oflow, best_fit_action, best_fit_suppl, curr_oflow,
                         next_action, next_suppl, action_RAMs_available, suppl_RAMs_available,
                         (mask == 0xf), order);
@@ -1608,8 +1604,7 @@ bool Memories::fill_out_action_row(action_fill &action, int row, int side, unsig
 void Memories::calculate_sel_unplaced(action_fill &action, action_fill &suppl,
                                       action_fill &oflow, action_fill &sel_unplaced) {
     if (sel_unplaced.group) {
-
-        if ((action.group && action.group->sel_act_placed(sel_unplaced.group)) || 
+        if ((action.group && action.group->sel_act_placed(sel_unplaced.group)) ||
             (oflow.group && oflow.group->sel_act_placed(sel_unplaced.group))) {
            sel_unplaced.clear();
         }
@@ -1618,7 +1613,7 @@ void Memories::calculate_sel_unplaced(action_fill &action, action_fill &suppl,
     bool curr_sel_oflow = sel_unplaced.group != nullptr;
     if (suppl.group && suppl.group->type == SRAM_group::SELECTOR) {
         if ((action.group == nullptr || action.group->sel.corr_group != suppl.group ||
-            !action.group->all_placed()) && (oflow.group == nullptr || 
+            !action.group->all_placed()) && (oflow.group == nullptr ||
             oflow.group->sel.corr_group != suppl.group || oflow.group->all_placed())) {
             if (curr_sel_oflow)
                 BUG("Error: Two selector tables are colliding on overflow");

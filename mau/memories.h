@@ -124,10 +124,10 @@ struct Memories {
         };
         struct selector_info {
             SRAM_group *corr_group;
-            selector_info () : corr_group(nullptr) {}
+            selector_info() : corr_group(nullptr) {}
             bool linked() { return corr_group != nullptr; }
             bool placed() { return corr_group->all_placed(); }
-            bool any_placed() { return corr_group->any_placed(); } 
+            bool any_placed() { return corr_group->any_placed(); }
         };
         selector_info sel;
         color_mapram_group cm;
@@ -150,7 +150,7 @@ struct Memories {
             if (type == ACTION && sel.linked() && sel.corr_group == corr && all_placed())
                 return true;
             else
-                return false; 
+                return false;
         }
         int RAMs_required() const {
             if (type == SELECTOR) {
@@ -166,7 +166,6 @@ struct Memories {
                 return left_to_place();
             }
         }
-        
         cstring name_addition() {
             switch (type) {
                 case EXACT:    return "";
@@ -296,7 +295,7 @@ struct Memories {
                                   action_fill &curr_oflow, action_fill &sel_unplaced,
                                   action_fill &next_suppl, int order[3],
                                   int action_RAMs_available, int suppl_RAMs_available);
-   void action_bus_users_log();
+    void action_bus_users_log();
     bool allocate_all_gw();
     table_alloc *find_corresponding_exact_match(cstring name);
     bool gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int width_sect,
