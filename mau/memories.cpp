@@ -936,8 +936,10 @@ void Memories::find_action_bus_users() {
                 action_bus_users.push_back(new SRAM_group(ta, depth, i, SRAM_group::ACTION));
                 action_bus_users.back()->name = ta->table->name
                                                 + action_bus_users.back()->name_addition();
-                action_bus_users.back()->sel.corr_group = selector;
-                selector->sel.corr_group = action_bus_users.back(); 
+                if (selector != nullptr) {
+                    action_bus_users.back()->sel.corr_group = selector;
+                    selector->sel.corr_group = action_bus_users.back(); 
+                }
             }
         }
     }
@@ -1251,10 +1253,10 @@ void Memories::best_candidates(action_fill &best_fit_action, action_fill &best_f
                 continue;
             }
                 
-            if (suppl_bus_users[i]->left_to_place() > min_left) {
+            if (suppl_bus_users[i]->total_left_to_place() > min_left) {
                 next_suppl.group = suppl_bus_users[i];
                 next_suppl.index = i;
-                min_left = suppl_bus_users[i]->left_to_place();
+                min_left = suppl_bus_users[i]->total_left_to_place();
             }
         }
     }
@@ -1390,10 +1392,10 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
         }
     
         if (!actions_available) {
-            LOG1("No actions available, due to the selector");
+            LOG3("No actions available, due to the selector");
             return;
         }
-        LOG1("Nothing to place");
+        LOG3("Nothing to place");
         return;
     }
 
@@ -1682,14 +1684,14 @@ bool Memories::allocate_all_action() {
     std::sort(action_bus_users.begin(), action_bus_users.end(),
         [=](const SRAM_group *a, SRAM_group *b) {
         int t;
-        if ((t = a->depth - b->depth) != 0) return t > 0;
+        if ((t = a->RAMs_required() - b->RAMs_required()) != 0) return t > 0;
         return a->number < b->number;
     });
 
     std::sort(suppl_bus_users.begin(), suppl_bus_users.end(),
         [=](const SRAM_group *a, SRAM_group *b) {
         int t;
-        if ((t = a->depth - b->depth) != 0) return t > 0;
+        if ((t = a->RAMs_required() - b->RAMs_required()) != 0) return t > 0;
         return a->number < b->number;
     });
 

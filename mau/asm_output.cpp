@@ -172,6 +172,8 @@ struct FormatHash {
         : match_data(md), ghost(g), as(a) {}
 };
 
+// FIXME: This is a simple function for crc polynomial.  Probably needs to be expanded for
+// actual use of the assembly
 static cstring inline crc_poly(cstring number) {
     if (number == "16")
         return "0x8fdb";
@@ -188,6 +190,9 @@ std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
                 << emit_vector(hash.match_data, ", ") << "))";
         } else if (alg_name == "random") {
             out << "random(" << emit_vector(hash.match_data, ", ") << ")";
+        // FIXME: Not sure if this is correct for identity for asm output
+        } else if (alg_name == "identity" || alg_name == "identity_lsb") {
+            out << hash.match_data[0];
         } else {
             BUG("Algorithm %s for %s is not recognized", alg_name, hash.as->name);
         }
@@ -206,7 +211,6 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
         bool is_sel /*= false*/, const IR::ActionSelector *as /*= nullptr */) const {
     map<int, map<int, Slice>> sort;
     for (auto &b : use.use) {
-        LOG1("b in the group " << b);
         Slice sl(phv, b.field, b.lo, b.hi);
         auto n = sort[b.loc.group].emplace(b.loc.byte*8 + sl.bytealign(), sl);
         assert(n.second); }
@@ -267,7 +271,6 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
             // FIXME: This is obviously an issue for larger selector tables, whole function needs
             // to be replaced
             if (as != nullptr) {
-                LOG1("Match data length " << match_data.size());
                 if (as->mode == "fair")
                     out << indent << "0..13: " << FormatHash(match_data, ghost, as) << std::endl; 
                 else
@@ -490,8 +493,6 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
         counter_bits = tbl->layout.counter_overhead_bits;
         indirect_action_bits = tbl->layout.indirect_action_overhead_bits;
         selector_bits = tbl->layout.selector_overhead_bits;
-        LOG1("Indirect action bits " << tbl->layout.indirect_action_overhead_bits << " for table "
-             << tbl->name);
         int width = tbl->ways[0].width;
         int groups = tbl->ways[0].match_groups;
         int groups_per_word = (groups + width - 1)/width;
@@ -531,7 +532,6 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
             }
         }
         if (selector_bits > 0) {
-            LOG1("Selector bits " << selector_bits);
             for (int i = 0; i < groups; i++) {
                 int word = i / groups_per_word;
                 format[i].selector = used.ffz(128*word);
@@ -565,7 +565,6 @@ void MauAsmOutput::TableFormat::print(std::ostream &out) const {
         int next = 0;
         void emit(std::ostream &out, const char *name, int group, int bit, int width) {
             if (bit < 0) return;
-            LOG1("name is " << name);
             out << sep << name << '(' << group << "): ";
             if (next == bit)
                 out << width;
@@ -914,10 +913,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::Register *) {
 
 bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *) {
     if (tbl->resources->memuse.at(tbl->name).unattached_profile) {
-        LOG1("Unattached profile for " << tbl->name); 
         return false;
     }
-    LOG1("Hello for " << tbl->name);
     indent_t    indent(1);
     cstring name = tbl->match_table->name + "$action"; 
     out << indent++ << "action " << name << ':' << std::endl;
@@ -932,15 +929,12 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *) {
         for (auto act : Values(tbl->actions))
             act->apply(EmitAction(self, out, tbl, indent));
         --indent; }
-    LOG1("Goodbye");
     return false; 
 }
 
 bool MauAsmOutput::EmitAttached::preorder(const IR::ActionSelector *as) {
-    LOG1("Selector");
     indent_t indent(1);
     if (tbl->resources->memuse.at(tbl->name).unattached_profile) {
-        LOG1("Unattached profile for " << tbl->name);
         return false;
     }
     //const IR::FieldListCalculation *flc = as->key_fields;

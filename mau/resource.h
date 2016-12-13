@@ -19,6 +19,7 @@ struct TableResourceAlloc {
         TableResourceAlloc *rv = new TableResourceAlloc;
         rv->match_ixbar = match_ixbar;
         rv->gateway_ixbar = gateway_ixbar;
+        rv->selector_ixbar = selector_ixbar;
         return rv; }
     void clear() {
         match_ixbar.clear();

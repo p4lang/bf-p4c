@@ -115,7 +115,7 @@ class VisitAttached : public Inspector {
             int vpn_bits_needed = std::max(10, ceil_log2(st->instance_count));
             layout.overhead_bits += vpn_bits_needed;
             if (auto *mtr = st->to<IR::Meter>()) {
-                if (meter_vpn_bits_needed > vpn_bits_needed) {
+                if (meter_vpn_bits_needed < vpn_bits_needed) {
                     layout.meter_overhead_bits = vpn_bits_needed;
                     meter_vpn_bits_needed = vpn_bits_needed;
                 }
@@ -123,7 +123,7 @@ class VisitAttached : public Inspector {
                     immediate_bytes_needed = 1;
                 }
             } else if (st->is<IR::Counter>()) {
-                if (counter_vpn_bits_needed > vpn_bits_needed) {
+                if (counter_vpn_bits_needed < vpn_bits_needed) {
                     layout.counter_overhead_bits = vpn_bits_needed;
                     counter_vpn_bits_needed = vpn_bits_needed;
                 }

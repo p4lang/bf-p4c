@@ -278,7 +278,6 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
         resources->gateway_ixbar.clear();
         resources->selector_ixbar.clear();
         return false; }
-    LOG1("Do we have problems - NO");
     return true;
 }
 

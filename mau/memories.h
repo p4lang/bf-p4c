@@ -152,6 +152,20 @@ struct Memories {
             else
                 return false; 
         }
+        int RAMs_required() const {
+            if (type == SELECTOR) {
+                return depth + sel.corr_group->depth;
+            } else {
+                return depth;
+            }
+        }
+        int total_left_to_place() {
+            if (type == SELECTOR) {
+                return left_to_place() + sel.corr_group->left_to_place();
+            } else {
+                return left_to_place();
+            }
+        }
         
         cstring name_addition() {
             switch (type) {
