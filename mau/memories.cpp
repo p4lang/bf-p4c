@@ -40,7 +40,6 @@ void Memories::clear_table_vectors() {
 }
 
 /* Creates a new table_alloc object for each of the taibles within the memory allocation */
-
 void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
                          TableResourceAlloc *resources, int entries) {
     auto *ta = new table_alloc(t, &resources->match_ixbar, &resources->memuse, entries);
@@ -100,6 +99,9 @@ bool Memories::allocate_all() {
     return true;
 }
 
+/* This class is responsible for filling in all of the particular lists with the corresponding
+   twoport tables, as well as getting the sharing of indirect action tables and selectors correct 
+*/
 class SetupAttachedTables : public MauInspector {
     Memories &mem; Memories::table_alloc *ta; int entries; Memories::mem_info &mi;
     bool stats_pushed = false; bool meter_pushed = false;
@@ -198,6 +200,8 @@ class SetupAttachedTables : public MauInspector {
     bool preorder(const IR::ActionSelector *as) {
         bool profile_first = false;
         Memories::profile_info *linked_pi = nullptr;
+        /* This checks to see if the selector is being shared between separate tables in the
+           same stage.  Only needs to be allocated once if shared between two logical tables */
         for (auto *pi : mem.action_profiles) {
             if (pi->as == as) {
                 linked_pi = pi;
@@ -885,23 +889,9 @@ int Memories::stats_per_row(int min_width, int max_width, IR::CounterType type) 
     }
 }
 
-/* Breaks up all tables requiring an action to be parsed into SRAM_group, a structure
-   designed for adding to SRAM array  */
-void Memories::find_action_bus_users() {
-    for (auto *ta : action_tables) {
-        int sz = ceil_log2(ta->table->layout.action_data_bytes) + 3;
-        int width = sz > 7 ? 1 << (sz - 7) : 1;
-
-        int per_ram = sz > 7 ? 10 : 17 - sz;
-        int depth = ((ta->calculated_entries - 1) >> per_ram) + 1;
-
-        for (int i = 0; i < width; i++) {
-            action_bus_users.push_back(new SRAM_group(ta, depth, i, SRAM_group::ACTION));
-            action_bus_users.back()->name = ta->table->name
-                                            + action_bus_users.back()->name_addition();
-        }
-    }
-    
+/* Calculates the necessary size and requirements for any and all indirect actions and selectors.
+   Selectors must be done before indirect actions */
+void Memories::action_bus_selectors_indirects() {
     for (auto *ta : selector_tables) {
         for (auto at : ta->table->attached) {
             // FIXME: need to adjust if the action selector is larger than 2 RAMs, based
@@ -943,7 +933,11 @@ void Memories::find_action_bus_users() {
             }
         }
     }
+}
 
+/* Calculates the necessary size and requirements for any meter and counter tables within 
+   the stage */
+void Memories::action_bus_meters_counters() {
     for (auto *ta : stats_tables) {
         for (auto at : ta->table->attached) {
             const IR::Counter *stats = nullptr;
@@ -986,6 +980,27 @@ void Memories::find_action_bus_users() {
     }
 }
 
+/* Breaks up all tables requiring an action to be parsed into SRAM_group, a structure
+   designed for adding to SRAM array  */
+void Memories::find_action_bus_users() {
+    for (auto *ta : action_tables) {
+        int sz = ceil_log2(ta->table->layout.action_data_bytes) + 3;
+        int width = sz > 7 ? 1 << (sz - 7) : 1;
+
+        int per_ram = sz > 7 ? 10 : 17 - sz;
+        int depth = ((ta->calculated_entries - 1) >> per_ram) + 1;
+
+        for (int i = 0; i < width; i++) {
+            action_bus_users.push_back(new SRAM_group(ta, depth, i, SRAM_group::ACTION));
+            action_bus_users.back()->name = ta->table->name
+                                            + action_bus_users.back()->name_addition();
+        }
+    }
+    
+    action_bus_selectors_indirects();
+    action_bus_meters_counters();
+}
+
 /* Due to color maprams, the number of RAMs available to the suppl vs. the action
    groups could be wildly different */
 void Memories::adjust_RAMs_available(action_fill &curr_oflow, int &suppl_RAMs_available,
@@ -1010,7 +1025,6 @@ void Memories::adjust_RAMs_available(action_fill &curr_oflow, int &suppl_RAMs_av
     }
 }
 
-
 /* This is a massive conditional to determine which action and supplemental tables should
    fill in the current row.  On the right side, the supplemental tables are favored.  If
    someone is on the left side or if no tables are able to be placed, then the choice of
@@ -1030,6 +1044,7 @@ void Memories::action_row_trip(action_fill &action, action_fill &suppl, action_f
             } else if (curr_oflow.group->left_to_place() >= suppl_RAMs_available) {
                 oflow = curr_oflow;
                 order[OFLOW_IND] = 0;
+            /* There is space left for the suppl, based on the 2nd check */
             } else if (next_suppl.group && (!curr_oflow.group->needs_ab() ||
                       (curr_oflow.group->needs_ab() && !next_suppl.group->needs_ab()))) {
                 suppl = next_suppl;
@@ -1133,6 +1148,8 @@ void Memories::action_oflow_only(action_fill &action, action_fill &oflow,
     }
 }
 
+/* Is a test within best candidates to see if even though sel unplaced is not yet finished,
+   its action can be placed within this next row so that a new selector can be placed as well */
 bool Memories::can_place_selector(action_fill &curr_oflow, SRAM_group *curr_check,
                                   int suppl_RAMs_available, int action_RAMs_available,
                                   action_fill &sel_unplaced) {
@@ -1154,6 +1171,9 @@ bool Memories::can_place_selector(action_fill &curr_oflow, SRAM_group *curr_chec
     return true;
 }
 
+/* This function called is used in the particular scenario where a previous selector's action
+   can be placed within the same row as a new selector.  This has the possibility to use
+   up potentially some RAMs in a particular row */
 void Memories::selector_candidate_setup(action_fill &action, action_fill &suppl,
                                         action_fill &oflow, action_fill &curr_oflow,
                                         action_fill &sel_unplaced, action_fill &next_suppl,
@@ -1175,7 +1195,6 @@ void Memories::selector_candidate_setup(action_fill &action, action_fill &suppl,
                 oflow.group = curr_oflow.group;
                 order[OFLOW_IND] = 2;
             }
-
         }
     } else {
         action.group = sel_unplaced.group->sel.corr_group;
@@ -1195,6 +1214,8 @@ void Memories::selector_candidate_setup(action_fill &action, action_fill &suppl,
     }
 }
 
+/* Calculates the RAMs available to give to a particular action fill group based on the ordering
+   which was dteremined by action_row_trip or selector_candidate_setup */
 void Memories::set_up_RAM_counts(action_fill &action, action_fill &suppl, action_fill &oflow,
                                  int order[3], int RAMs[3], bool is_suppl[3]) {
     if (order[ACTION_IND] >= 0) {
@@ -1362,7 +1383,6 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
         return;
     }
 
-
     int action_RAMs_available = __builtin_popcount(mask & ~sram_inuse[row]);
     int suppl_RAMs_available = action_RAMs_available;
     adjust_RAMs_available(curr_oflow, suppl_RAMs_available, action_RAMs_available, row,
@@ -1378,10 +1398,10 @@ void Memories::find_action_candidates(int row, int mask, action_fill &action, ac
         && curr_oflow.group == nullptr && next_action.group == nullptr
         && next_suppl.group == nullptr) {
         // FIXME: Calculate the color mapram stuff
-        //if (curr_oflow.group && !curr_oflow.group->cm.all_placed()) {
-        //    oflow = curr_oflow;
-        //    color_mapram_candidates(suppl, oflow, mask);
-        //}
+        if (curr_oflow.group && !curr_oflow.group->cm.all_placed()) {
+            oflow = curr_oflow;
+            color_mapram_candidates(suppl, oflow, mask);
+        }
         bool actions_available = false;
         for (size_t i = 0; i < action_bus_users.size(); i++) {
             if (!action_bus_users[i]->sel.linked() ||
@@ -1583,6 +1603,8 @@ bool Memories::fill_out_action_row(action_fill &action, int row, int side, unsig
     return action_group_removed;
 }
 
+/* Calculates if a placed selector's action has been entirely placed.  If the action
+   is not yet fully placed, another selector cannot yet be placed */
 void Memories::calculate_sel_unplaced(action_fill &action, action_fill &suppl,
                                       action_fill &oflow, action_fill &sel_unplaced) {
     if (sel_unplaced.group) {
@@ -1674,6 +1696,67 @@ void Memories::fill_out_color_mapram(action_fill &action, int row, unsigned mask
     action.group->cm.placed += __builtin_popcount(color_mapram_mask);
 }
 
+/* Logging information for each individual action/twoport table information */
+void Memories::action_bus_users_log() {
+    for (auto *ta : action_tables) {
+        auto name = ta->table->name + "$action";
+        auto alloc = (*ta->memuse)[name];
+        LOG4("Action allocation for " << name);
+        for (auto row : alloc.row) {
+            LOG4("Row is " << row.row << " and bus is " << row.bus);
+            LOG4("Col is " << row.col);
+        }
+    }
+
+    // FIXME: Add extra meter pre-color maprams
+    for (auto *ta : stats_tables) {
+        for (auto at : ta->table->attached) {
+            const IR::Counter *stats = nullptr;
+            if ((stats = at->to<IR::Counter>()) == nullptr)
+                continue;
+            LOG4("Stats table for " << stats->name);
+            auto name = stats->name;
+            auto alloc = (*ta->memuse)[name];
+            for (auto row : alloc.row) {
+                LOG4("Row is " << row.row << " and bus is " << row.bus);
+                LOG4("Col is " << row.col);
+                LOG4("Map col is " << row.mapcol);
+            }
+        }
+    }
+    for (auto *ta : meter_tables) {
+        for (auto at : ta->table->attached) {
+            const IR::Meter *meter = nullptr;
+            if ((meter = at->to<IR::Meter>()) == nullptr)
+                continue;
+            LOG4("Meter table for " << meter->name);
+            auto name = meter->name;
+            auto alloc = (*ta->memuse)[name];
+            for (auto row : alloc.row) {
+                LOG4("Row is " << row.row << " and bus is " << row.bus);
+                LOG4("Col is " << row.col);
+                LOG4("Map col is " << row.mapcol);
+            }
+        }
+    }
+
+    for (auto *ta : selector_tables) {
+        for (auto at : ta->table->attached) {
+            const IR::ActionSelector *as = nullptr;
+            if ((as = at->to<IR::ActionSelector>()) == nullptr)
+                continue;
+            LOG4("Selector table for " << ta->table->name);
+            auto name = ta->table->name + "$selector";
+            auto alloc = (*ta->memuse)[name];
+            for (auto row : alloc.row) {
+                LOG4("Row is " << row.row << " and bus is " << row.bus);
+                LOG4("Col is " << row.col);
+                LOG4("Map col is " << row.mapcol);
+            }
+        }
+    }
+}
+
 /* Goes through action bus by action bus, and finds the best candidates for each row,
    then allocates them.  */
 bool Memories::allocate_all_action() {
@@ -1747,63 +1830,7 @@ bool Memories::allocate_all_action() {
     if (!action_bus_users.empty() || !suppl_bus_users.empty())
         return false;
 
-    for (auto *ta : action_tables) {
-        auto name = ta->table->name + "$action";
-        auto alloc = (*ta->memuse)[name];
-        LOG4("Action allocation for " << name);
-        for (auto row : alloc.row) {
-            LOG4("Row is " << row.row << " and bus is " << row.bus);
-            LOG4("Col is " << row.col);
-        }
-    }
-
-    // FIXME: Add extra meter pre-color maprams
-    for (auto *ta : stats_tables) {
-        for (auto at : ta->table->attached) {
-            const IR::Counter *stats = nullptr;
-            if ((stats = at->to<IR::Counter>()) == nullptr)
-                continue;
-            LOG4("Stats table for " << stats->name);
-            auto name = stats->name;
-            auto alloc = (*ta->memuse)[name];
-            for (auto row : alloc.row) {
-                LOG4("Row is " << row.row << " and bus is " << row.bus);
-                LOG4("Col is " << row.col);
-                LOG4("Map col is " << row.mapcol);
-            }
-        }
-    }
-    for (auto *ta : meter_tables) {
-        for (auto at : ta->table->attached) {
-            const IR::Meter *meter = nullptr;
-            if ((meter = at->to<IR::Meter>()) == nullptr)
-                continue;
-            LOG4("Meter table for " << meter->name);
-            auto name = meter->name;
-            auto alloc = (*ta->memuse)[name];
-            for (auto row : alloc.row) {
-                LOG4("Row is " << row.row << " and bus is " << row.bus);
-                LOG4("Col is " << row.col);
-                LOG4("Map col is " << row.mapcol);
-            }
-        }
-    }
-
-    for (auto *ta : selector_tables) {
-        for (auto at : ta->table->attached) {
-            const IR::ActionSelector *as = nullptr;
-            if ((as = at->to<IR::ActionSelector>()) == nullptr)
-                continue;
-            LOG4("Selector table for " << ta->table->name);
-            auto name = ta->table->name + "$selector";
-            auto alloc = (*ta->memuse)[name];
-            for (auto row : alloc.row) {
-                LOG4("Row is " << row.row << " and bus is " << row.bus);
-                LOG4("Col is " << row.col);
-                LOG4("Map col is " << row.mapcol);
-            }
-        }
-    }
+    action_bus_users_log();
     return true;
 }
 

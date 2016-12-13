@@ -252,6 +252,8 @@ struct Memories {
 
     bool allocate_all_action();
     void find_action_bus_users();
+    void action_bus_selectors_indirects();
+    void action_bus_meters_counters();
     int stats_per_row(int min_width, int max_width, IR::CounterType type);
     void find_action_candidates(int row, int mask, action_fill &action, action_fill &suppl,
                                 action_fill &oflow, bool stats_available, bool meter_available,
@@ -294,6 +296,7 @@ struct Memories {
                                   action_fill &curr_oflow, action_fill &sel_unplaced,
                                   action_fill &next_suppl, int order[3],
                                   int action_RAMs_available, int suppl_RAMs_available);
+   void action_bus_users_log();
     bool allocate_all_gw();
     table_alloc *find_corresponding_exact_match(cstring name);
     bool gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int width_sect,
