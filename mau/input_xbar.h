@@ -4,6 +4,7 @@
 #include "lib/alloc.h"
 #include "lib/hex.h"
 #include "ir/ir.h"
+#include <unordered_set>
 
 class PhvInfo;
 class IXBarRealign;
@@ -61,7 +62,7 @@ struct IXBar {
     friend class IXBarRealign;
 
  public:
-    vector<const IR::ActionSelector *>                selectors;
+    unordered_set<const IR::ActionSelector *>                selectors;
     /* IXbar::Use tracks the input xbar use of a single table */
     struct Use {
         /* everything is public so anyone can read it, but only IXBar should write to this */

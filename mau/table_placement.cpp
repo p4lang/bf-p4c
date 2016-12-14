@@ -263,11 +263,11 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
         current_ixbar.update(p->name + "$gw", p->resources->gateway_ixbar);
         const IR::ActionSelector *as;
         for (auto *at : p->table->attached) {
-             if ((as = at->to<IR::ActionSelector>()) != nullptr
-                 && !p->resources->selector_ixbar.use.empty()) {
-                 current_ixbar.update(p->name + "$selector", p->resources->selector_ixbar);
-                 current_ixbar.selectors.push_back(as);
-             }
+            if ((as = at->to<IR::ActionSelector>()) != nullptr
+                && !p->resources->selector_ixbar.use.empty()) {
+                current_ixbar.update(p->name + "$selector", p->resources->selector_ixbar);
+                current_ixbar.selectors.emplace(as);
+            }
         }
     }
     if (!current_ixbar.allocTable(next->table, phv, resources->match_ixbar,
@@ -278,6 +278,8 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
         resources->gateway_ixbar.clear();
         resources->selector_ixbar.clear();
         return false; }
+    LOG1("Next xbar is " << next->table->name);
+    LOG1("Is it empty? " << resources->selector_ixbar.use.empty());
     return true;
 }
 
@@ -304,6 +306,39 @@ static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Pl
         return false;
     }
     return true;
+}
+
+static void coord_selector_xbar(const TablePlacement::Placed *curr,
+                                const TablePlacement::Placed *done,
+                                TableResourceAlloc *resource,
+                                vector<TableResourceAlloc *> &prev_resources) {
+    const IR::ActionSelector *as = nullptr;
+    for (auto at : curr->table->attached) {
+        if ((as = at->to<IR::ActionSelector>()) != nullptr) break;
+    }
+    if (as == nullptr) return;
+    auto loc = resource->memuse.find(curr->table->name + "$selector");
+    if (loc == resource->memuse.end() || (loc != resource->memuse.end()
+        && !resource->selector_ixbar.use.empty()))
+        return;
+    int j = 0;
+    for (auto *p = done; p && p->stage == curr->stage; p = p->prev) {
+        const IR::ActionSelector *p_as = nullptr;
+        if (p == curr) {
+            j++;
+            continue;
+        }
+        for (auto at : p->table->attached) {                
+            if ((p_as = at->to<IR::ActionSelector>()) != nullptr)
+                break;
+        }
+        if (p_as == as && !p->resources->selector_ixbar.use.empty()) {
+            resource->selector_ixbar = prev_resources[j]->selector_ixbar;
+            prev_resources[j]->selector_ixbar.clear();
+            break;
+        }
+        j++;
+    }
 }
 
 TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t, const Placed *done,
@@ -404,11 +439,20 @@ retry_next_stage:
     assert((rv->logical_id / StageUse::MAX_LOGICAL_IDS) == rv->stage);
     LOG2("try_place_table returning " << rv->entries << " of " << rv->name <<
          " in stage " << rv->stage << (rv->need_more ? " (need more)" : ""));
+ 
+    int i = 0;
+    for (auto *p = done; p && p->stage == rv->stage; p = p->prev) {
+        coord_selector_xbar(p, done, prev_resources[i], prev_resources);
+        i++;
+    }
+    coord_selector_xbar(rv, done, resources, prev_resources);
+
     if (done && rv->stage == done->stage) {
         rv->set_prev(done, true, prev_resources);
     } else {
         rv->set_prev(done, false, prev_resources);
     }
+
     if (!rv->need_more) {
         rv->placed[tblInfo.at(rv->table).uid] = true;
         if (rv->gw)

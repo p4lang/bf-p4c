@@ -12,6 +12,7 @@ struct TableResourceAlloc {
         TableResourceAlloc *rv = new TableResourceAlloc;
         rv->match_ixbar = match_ixbar;
         rv->gateway_ixbar = gateway_ixbar;
+        rv->selector_ixbar = selector_ixbar;
         for (auto &use : memuse)
             rv->memuse.emplace(use.first + ext, use.second);
         return rv; }

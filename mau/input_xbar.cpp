@@ -902,11 +902,11 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv,
     }
     const IR::ActionSelector *as = nullptr;
     for (auto at : tbl->attached) {
-        if ((as = at->to<IR::ActionSelector>()) != nullptr
-            && std::find(selectors.begin(), selectors.end(), as) == selectors.end())
+        if ((as = at->to<IR::ActionSelector>()) != nullptr)
            break;
     }
-    if (as != nullptr && !allocSelector(as, phv, sel_alloc, false, tbl->name)
+    if (as != nullptr && selectors.find(as) == selectors.end()
+        && !allocSelector(as, phv, sel_alloc, false, tbl->name)
         && !allocSelector(as, phv, sel_alloc, true, tbl->name)) {
         tbl_alloc.clear();
         sel_alloc.clear();
