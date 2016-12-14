@@ -1,149 +1,116 @@
 ####### Tofino back-end
 
-tofino_ir_SOURCES = \
+tofino_ir_UNIFIED = \
 	%reldir%/ir/dbprint-tofino.cpp \
 	%reldir%/ir/mau.cpp \
 	%reldir%/ir/parde.cpp \
 	%reldir%/ir/thread_visitor.cpp \
-	%reldir%/ir/thread_visitor.h \
 	%reldir%/ir/tofino.cpp
 
+cpplint_FILES += $(tofino_ir_UNIFIED) $(tofino_ir_NONUNIFIED)
 extension_frontend_SOURCES += $(tofino_ir_SOURCES)
 
-tofino_backend_SOURCES = \
-	$(tofino_ir_SOURCES) \
+tofino_backend_common_UNIFIED = \
 	%reldir%/common/asm_output.cpp \
-	%reldir%/common/blockmap.h \
 	%reldir%/common/copy_header_eliminator.cpp \
-	%reldir%/common/copy_header_eliminator.h \
 	%reldir%/common/elim_unused.cpp \
-	%reldir%/common/elim_unused.h \
 	%reldir%/common/extract_maupipe.cpp \
-	%reldir%/common/extract_maupipe.h \
 	%reldir%/common/field_defuse.cpp \
-	%reldir%/common/field_defuse.h \
 	%reldir%/common/header_stack.cpp \
-	%reldir%/common/header_stack.h \
 	%reldir%/common/live_at_entry.cpp \
-	%reldir%/common/live_at_entry.h \
 	%reldir%/common/remap_intrin.cpp \
-	%reldir%/common/remap_intrin.h \
 	%reldir%/common/param_binding.cpp \
-	%reldir%/common/param_binding.h \
-	%reldir%/common/phv.cpp \
-	%reldir%/common/phv.h \
+	%reldir%/common/phv.cpp
+
+cpplint_FILES += $(tofino_backend_common_UNIFIED) $(tofino_backend_common_NONUNIFIED)
+
+tofino_backend_mau_UNIFIED = \
 	%reldir%/mau/asm_output.cpp \
-	%reldir%/mau/asm_output.h \
-	%reldir%/mau/default_next.h \
 	%reldir%/mau/field_use.cpp \
-	%reldir%/mau/field_use.h \
 	%reldir%/mau/db-gateway.cpp \
 	%reldir%/mau/gateway.cpp \
-	%reldir%/mau/gateway.h \
 	%reldir%/mau/input_xbar.cpp \
-	%reldir%/mau/input_xbar.h \
 	%reldir%/mau/instruction_selection.cpp \
-	%reldir%/mau/instruction_selection.h \
 	%reldir%/mau/ixbar_realign.cpp \
-	%reldir%/mau/ixbar_realign.h \
 	%reldir%/mau/memories.cpp \
-	%reldir%/mau/memories.h \
 	%reldir%/mau/phv_constraints.cpp \
-	%reldir%/mau/phv_constraints.h \
-	%reldir%/mau/push_pop.h \
 	%reldir%/mau/resource_estimate.cpp \
-	%reldir%/mau/resource_estimate.h \
-	%reldir%/mau/resource.h \
 	%reldir%/mau/split_gateways.cpp \
-	%reldir%/mau/split_gateways.h \
 	%reldir%/mau/table_dependency_graph.cpp \
-	%reldir%/mau/table_dependency_graph.h \
 	%reldir%/mau/table_layout.cpp \
-	%reldir%/mau/table_layout.h \
 	%reldir%/mau/table_mutex.cpp \
-	%reldir%/mau/table_mutex.h \
 	%reldir%/mau/table_placement.cpp \
-	%reldir%/mau/table_placement.h \
 	%reldir%/mau/table_seqdeps.cpp \
-	%reldir%/mau/table_seqdeps.h \
-	%reldir%/mau/table_summary.cpp \
-	%reldir%/mau/table_summary.h \
-	%reldir%/midend.cpp \
-	%reldir%/midend.h \
-	%reldir%/p4c-tofino.cpp \
+	%reldir%/mau/table_summary.cpp
+
+cpplint_FILES += $(tofino_backend_mau_UNIFIED) $(tofino_backend_mau_NONUNIFIED)
+
+tofino_backend_parde_UNIFIED = \
 	%reldir%/parde/add_parde_metadata.cpp \
-	%reldir%/parde/add_parde_metadata.h \
-	%reldir%/parde/asm_output.h \
 	%reldir%/parde/bridge_metadata.cpp \
-	%reldir%/parde/bridge_metadata.h \
-	%reldir%/parde/compute_shifts.h \
 	%reldir%/parde/deparser_output.cpp \
 	%reldir%/parde/extract_parser.cpp \
-	%reldir%/parde/extract_parser.h \
 	%reldir%/parde/gen_deparser.cpp \
 	%reldir%/parde/match_keys.cpp \
-	%reldir%/parde/match_keys.h \
 	%reldir%/parde/parser_output.cpp \
 	%reldir%/parde/split_big_states.cpp \
-	%reldir%/parde/split_big_states.h \
-	%reldir%/parde/split_header.cpp \
-	%reldir%/parde/split_header.h \
+	%reldir%/parde/split_header.cpp
+
+cpplint_FILES += $(tofino_backend_parde_UNIFIED) $(tofino_backend_parde_NONUNIFIED)
+
+tofino_backend_phv_UNIFIED = \
 	%reldir%/phv/asm_output.cpp \
-	%reldir%/phv/asm_output.h \
 	%reldir%/phv/bit_extractor.cpp \
-	%reldir%/phv/bit_extractor.h \
 	%reldir%/phv/byte_constraint.cpp \
-	%reldir%/phv/byte_constraint.h \
 	%reldir%/phv/cluster.cpp \
-	%reldir%/phv/cluster.h \
 	%reldir%/phv/cluster_phv_bind.cpp \
-	%reldir%/phv/cluster_phv_bind.h \
 	%reldir%/phv/cluster_phv_container.cpp \
-	%reldir%/phv/cluster_phv_container.h \
 	%reldir%/phv/cluster_phv_mau.cpp \
-	%reldir%/phv/cluster_phv_mau.h \
 	%reldir%/phv/cluster_phv_req.cpp \
-	%reldir%/phv/cluster_phv_req.h \
 	%reldir%/phv/constraints.cpp \
-	%reldir%/phv/constraints.h \
 	%reldir%/phv/container_constraint.cpp \
-	%reldir%/phv/container_constraint.h \
-	%reldir%/phv/create_thread_local_instances.h \
 	%reldir%/phv/match_xbar_constraint.cpp \
-	%reldir%/phv/match_xbar_constraint.h \
 	%reldir%/phv/mau_group_constraint.cpp \
-	%reldir%/phv/mau_group_constraint.h \
 	%reldir%/phv/offset_constraint.cpp \
-	%reldir%/phv/offset_constraint.h \
-	%reldir%/phv/or_tools/bit.cpp \
-	%reldir%/phv/or_tools/bit.h \
-	%reldir%/phv/or_tools/container.cpp \
-	%reldir%/phv/or_tools/container.h \
-	%reldir%/phv/or_tools/mau_group.cpp \
-	%reldir%/phv/or_tools/mau_group.h \
-	%reldir%/phv/or_tools/min_value_solver.h \
-	%reldir%/phv/or_tools/random_value_solver.h \
-	%reldir%/phv/or_tools/solver.cpp \
-	%reldir%/phv/or_tools/solver.h \
 	%reldir%/phv/parse_graph_constraint.cpp \
-	%reldir%/phv/parse_graph_constraint.h \
-	%reldir%/phv/phv_allocator.cpp \
-	%reldir%/phv/phv_allocator.h \
 	%reldir%/phv/phv_fields.cpp \
-	%reldir%/phv/phv_fields.h \
-	%reldir%/phv/phv.h \
 	%reldir%/phv/repack_metadata.cpp \
 	%reldir%/phv/source_container_constraint.cpp \
-	%reldir%/phv/source_container_constraint.h \
 	%reldir%/phv/split_phv_use.cpp \
-	%reldir%/phv/split_phv_use.h \
 	%reldir%/phv/thread_constraint.cpp \
-	%reldir%/phv/thread_constraint.h \
-	%reldir%/phv/trivial_alloc.cpp \
-	%reldir%/phv/trivial_alloc.h \
-	%reldir%/phv/t_phv_constraint.h \
-	%reldir%/test-tofino.cpp \
-	%reldir%/tofinoOptions.h
+	%reldir%/phv/trivial_alloc.cpp
+
+cpplint_FILES += $(tofino_backend_phv_UNIFIED) $(tofino_backend_phv_NONUNIFIED)
+
+# OR Tools uses Protobuf, which includes this wonderful hack:
+#   https://github.com/google/protobuf/blob/master/src/google/protobuf/stubs/common.h#L223
+#
+# We unfortunately have our own hack that puts |vector| in the global namespace
+# in |ir/std.h|. Until at least one of these hacks is removed, files that use OR
+# Tools need to be built separately from files that interact with our IR.
+
+tofino_backend_phv_or_tools_UNIFIED = \
+	%reldir%/phv/phv_allocator.cpp \
+	%reldir%/phv/or_tools/bit.cpp \
+	%reldir%/phv/or_tools/solver.cpp
+
+# These ones have to be built totally non-unified because in some of the files
+# that use OR Tools, the |Solver| in the global namespace is Google's
+# |operations_research::Solver|, and in some it's our own |or_tools::Solver|. We
+# should fix that.
+
+tofino_backend_phv_or_tools_NONUNIFIED = \
+	%reldir%/phv/or_tools/container.cpp \
+	%reldir%/phv/or_tools/mau_group.cpp
+
+cpplint_FILES += $(tofino_backend_phv_or_tools_UNIFIED) $(tofino_backend_phv_or_tools_NONUNIFIED)
+
+tofino_backend_main_UNIFIED = \
+	%reldir%/midend.cpp \
+	%reldir%/p4c-tofino.cpp \
+	%reldir%/test-tofino.cpp
+
+cpplint_FILES += $(tofino_backend_main_UNIFIED) $(tofino_backend_main_NONUNIFIED)
 
 ir_DEF_FILES += \
     $(srcdir)/%reldir%/ir/tofino.def \
@@ -152,9 +119,15 @@ ir_DEF_FILES += \
 
 bin_PROGRAMS += p4c-tofino
 p4c_tofino_LDADD = libfrontend.a libp4ctoolkit.a
-p4c_tofino_SOURCES = $(tofino_backend_SOURCES)
 
-cpplint_FILES += $(tofino_backend_SOURCES)
+p4c_tofino_SOURCES = \
+	$(tofino_ir_SOURCES) \
+	$(tofino_backend_common_SOURCES) \
+	$(tofino_backend_mau_SOURCES) \
+	$(tofino_backend_parde_SOURCES) \
+	$(tofino_backend_phv_SOURCES) \
+	$(tofino_backend_phv_or_tools_SOURCES) \
+	$(tofino_backend_main_SOURCES)
 
 # Tests
 
