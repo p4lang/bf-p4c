@@ -63,6 +63,15 @@ int ActionTable::find_on_actionbus(const char *name, int off, int size, int *len
     return -1;
 }
 
+void ActionTable::vpn_params(int &width, int &depth, int &period, const char *&period_name) {
+    width = 1;
+    depth = layout_size();
+    period = format ? 1 << std::max((int)format->log2size - 7, 0) : 0;
+    for (auto fmt : Values(action_formats))
+        period = std::max(period, 1 << std::max((int)fmt->log2size - 7, 0));
+    period_name = "action data width";
+}
+
 void ActionTable::setup(VECTOR(pair_t) &data) {
     action_id = -1;
     auto *row = get(data, "row");
@@ -70,22 +79,23 @@ void ActionTable::setup(VECTOR(pair_t) &data) {
     setup_layout(layout, row, get(data, "column"), 0);
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "format") {
+            const char *action = nullptr;
+            if (kv.key.type == tCMD) {
+                if (!PCHECKTYPE(kv.key.vec.size > 1, kv.key[1], tSTR)) continue;
+                if (action_formats.count((action = kv.key[1].s))) {
+                    error(kv.key.lineno, "Multiple formats for action %s", kv.key[1].s);
+                    continue; } }
             if (CHECKTYPEPM(kv.value, tMAP, kv.value.map.size > 0, "non-empty map")) {
-                format = new Format(kv.value.map, true);
-                if (format->size < 8) {  // pad out to minimum size
-                    format->size = 8;
-                    format->log2size = 3; } }
-        } else if (kv.key.type == tCMD && kv.key[0] == "format") {
-            if (!PCHECKTYPE(kv.key.vec.size > 1, kv.key[1], tSTR)) continue;
-            if (action_formats.count(kv.key[1].s)) {
-                error(kv.key.lineno, "Multiple formats for action %s", kv.key[1].s);
-                return; }
-            if (CHECKTYPEPM(kv.value, tMAP, kv.value.map.size > 0, "non-empty map")) {
-                auto *fmt = new Format(kv.value.map);
+                auto *fmt = new Format(kv.value.map, action == nullptr);
                 if (fmt->size < 8) {  // pad out to minimum size
                     fmt->size = 8;
                     fmt->log2size = 3; }
-                action_formats[kv.key[1].s] = fmt; } } }
+                if (action)
+                    action_formats[action] = fmt;
+                else
+                    format = fmt; } } }
+    if (!format && action_formats.empty())
+        error(lineno, "No format in action table %s", name());
     VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
     for (auto &kv : MapIterChecked(data, true)) {
         if (kv.key == "format") {
@@ -255,7 +265,10 @@ static void flow_selector_addr(Stage *stage, int from, int to) {
 
 void ActionTable::write_regs() {
     LOG1("### Action table " << name() << " write_regs");
-    int width = (format->size+127)/128;
+    unsigned fmt_log2size = format->log2size;
+    for (auto fmt : Values(action_formats))
+        fmt_log2size = std::max(fmt_log2size, fmt->log2size);
+    int width = 1 << std::max(fmt_log2size - 7, 0U);
     int depth = layout_size()/width;
     int idx = 0;
     int word = 0;
@@ -357,7 +370,7 @@ void ActionTable::write_regs() {
             auto &ram_mux = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
             auto &adr_mux_sel = ram_mux.ram_unitram_adr_mux_select;
             if (SelectionTable *sel = get_selector()) {
-                int shift = format->log2size - 2;
+                int shift = fmt_log2size - 2;
                 auto &shift_ctl = stage->regs.rams.map_alu.mau_selector_action_adr_shift[row];
                 if (logical_row.row == sel->layout[0].row) {
                     /* we're on the home row of the selector, so use it directly */
@@ -399,6 +412,7 @@ void ActionTable::write_regs() {
 }
 
 void ActionTable::gen_tbl_cfg(json::vector &out) {
+    // FIXME -- this is wrong if actions have different format sizes
     unsigned number_entries = (layout_size() * 128 * 1024) / (1 << format->log2size);
     json::map &tbl = *base_tbl_cfg(out, "action_data", number_entries);
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "action_data", number_entries);
@@ -410,6 +424,7 @@ void ActionTable::gen_tbl_cfg(json::vector &out) {
     if (actions)
         actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
     stage_tbl["how_referenced"] = indirect ? "indirect" : "direct";
+    // FIXME -- this is wrong if actions have different format sizes
     tbl["action_data_entry_width"] = 1 << format->log2size;
     /* FIXME -- don't include ref to select table as compiler doesn't */
     tbl.erase("p4_selection_tables");

@@ -523,6 +523,7 @@ static void append_bits(std::vector<Table::Format::bitrange_t> &vec, int lo, int
 
 Table::Format::Format(VECTOR(pair_t) &data, bool may_overlap) {
     unsigned nextbit = 0;
+    fmt.resize(1);
     for (auto &kv : data) {
         if (lineno < 0) lineno = kv.key.lineno;
         if (!CHECKTYPE2M(kv.key, tSTR, tCMD, "expecting field desc"))
