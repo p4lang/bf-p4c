@@ -662,7 +662,7 @@ struct NulOP : public Instruction {
         out << "INSTR: " << opc->name << " " << dest; }
 };
 
-static NulOP::Decode opInvalidate("invalidate", 0x7000), opNoop("noop", 0);
+static NulOP::Decode opInvalidate("invalidate", 0x3800), opNoop("noop", 0);
 
 Instruction *NulOP::Decode::decode(Table *tbl, const Table::Actions::Action *act,
                                    const VECTOR(value_t) &op) {

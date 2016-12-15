@@ -127,7 +127,7 @@ int ActionBus::find_merge(int offset, int bytes) {
 
 void ActionBus::do_alloc(Table *tbl, Table::Format::Field *f, unsigned use, int lobyte,
                          int bytes, unsigned offset) {
-    auto name = tbl->format->find_field(f);
+    auto name = tbl->find_field(f);
     LOG2("putting " << name << '(' << offset << ".." << (offset + bytes*8 - 1) <<
          ")[" << (lobyte*8) << ".." << ((lobyte+bytes)*8 - 1) << "] at action_bus " << use);
     while (bytes > 0) {
