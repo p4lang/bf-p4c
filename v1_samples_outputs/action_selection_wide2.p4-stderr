@@ -1,0 +1,6 @@
+../extensions/tofino/v1_samples/action_selection_wide2.p4(91): warning: fair: Action selector attribute ignored
+    selection_mode : fair;
+                     ^^^^
+../extensions/tofino/v1_samples/action_selection_wide2.p4(118): warning: fair: Action selector attribute ignored
+    selection_mode : fair;
+                     ^^^^

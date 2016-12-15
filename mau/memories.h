@@ -123,11 +123,60 @@ struct Memories {
             color_mapram_group() : needed(0), placed(0), required(false) {}
         };
         struct selector_info {
-            SRAM_group *corr_group;
-            selector_info() : corr_group(nullptr) {}
-            bool linked() { return corr_group != nullptr; }
-            bool placed() { return corr_group->all_placed(); }
-            bool any_placed() { return corr_group->any_placed(); }
+            SRAM_group *sel_group;
+            unordered_set<SRAM_group *> action_groups;
+            selector_info() : sel_group(nullptr) {}
+            bool sel_linked() { return sel_group != nullptr; }
+            bool act_linked() { return !action_groups.empty(); }
+            bool sel_all_placed() { return sel_group->all_placed(); } 
+            bool action_all_placed() {
+                if (action_groups.empty())
+                    BUG("No action corresponding with this selector");
+                for (auto *action_group : action_groups) {
+                    if (!action_group->all_placed())
+                        return false;
+                }
+                return true;
+            }
+            bool sel_any_placed() {
+                return sel_group->any_placed();
+            }
+            bool action_any_placed() { 
+                if (action_groups.empty())
+                    BUG("No action corresponding with this selector");
+                for (auto *action_group : action_groups) {
+                    if (action_group->any_placed())
+                        return true;
+                }
+                return false;
+            }
+            bool is_act_corr_group(SRAM_group *corr) {
+                return action_groups.find(corr) != action_groups.end();
+            }
+            bool is_sel_corr_group(SRAM_group *corr) {
+                return corr == sel_group;
+            }
+            bool one_action_left() {
+                int total_unplaced_groups = 0;
+                for (auto *action_group : action_groups)
+                    if (action_group->left_to_place() > 0)
+                        total_unplaced_groups++;
+                return total_unplaced_groups == 1;
+            }
+            int action_left_to_place() {
+                int left_to_place = 0;
+                for (auto *action_group : action_groups)
+                    left_to_place += action_group->left_to_place();
+                return left_to_place;
+            }
+            SRAM_group *action_group_left() {
+                if (!one_action_left())
+                    BUG("Trying to call action_group_left with more than one action left");
+                for (auto *action_group : action_groups)
+                    if (action_group->left_to_place() > 0)
+                        return action_group;
+                return nullptr;
+            }
         };
         selector_info sel;
         color_mapram_group cm;
@@ -147,21 +196,28 @@ struct Memories {
         bool any_placed() { return (placed != 0); }
         bool needs_ab() { return requires_ab && !all_placed(); }
         bool sel_act_placed(SRAM_group *corr) {
-            if (type == ACTION && sel.linked() && sel.corr_group == corr && all_placed())
+            if (type == ACTION && sel.sel_linked() && sel.is_sel_corr_group(corr)
+                && corr->sel.action_all_placed())
                 return true;
             else
                 return false;
         }
         int RAMs_required() const {
             if (type == SELECTOR) {
-                return depth + sel.corr_group->depth;
+                int action_depth = 0;
+                for (auto *action_group : sel.action_groups)
+                    action_depth += action_group->depth;
+                return depth + action_depth;
             } else {
                 return depth;
             }
         }
         int total_left_to_place() {
             if (type == SELECTOR) {
-                return left_to_place() + sel.corr_group->left_to_place();
+                int action_depth = 0;
+                for (auto *action_group : sel.action_groups)
+                    action_depth += action_group->left_to_place();
+                return left_to_place() + action_depth;
             } else {
                 return left_to_place();
             }
