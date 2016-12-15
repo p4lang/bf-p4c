@@ -20,10 +20,16 @@ class TablesMutuallyExclusive : public MauInspector {
         table_succ.clear();
         mutex.clear();
         return rv; }
-
  public:
     bool operator()(const IR::MAU::Table *a, const IR::MAU::Table *b) const {
         return mutex(table_ids.at(a), table_ids.at(b)); }
 };
 
+class DetermineActionProfileFaults : public MauInspector {
+    map<const IR::ActionProfile *, vector<const IR::MAU::Table *>> ap_users;
+    const TablesMutuallyExclusive &mutex;
+    bool preorder(const IR::MAU::Table *t) override;
+ public:
+    DetermineActionProfileFaults(const TablesMutuallyExclusive &m) : mutex(m) {}
+};
 #endif /* _TOFINO_MAU_TABLE_MUTEX_H_ */

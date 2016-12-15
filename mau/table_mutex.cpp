@@ -1,6 +1,7 @@
 #include "table_mutex.h"
 
 void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
+    // FIXME: Doesn't take into account gateways and match tables merging after table placement
     assert(table_ids.count(tbl));
     table_succ[tbl][table_ids[tbl]] = true;
     vector<bitvec> sets;
@@ -42,3 +43,22 @@ void TablesMutuallyExclusive::postorder(const IR::Tofino::Pipe *pipe) {
                 if (&set != &other)
                     mutex[t] |= other;
 }
+
+bool DetermineActionProfileFaults::preorder(const IR::MAU::Table *t) {
+    LOG1("Table being tested is " << t->name);
+    const IR::ActionProfile *ap = nullptr;
+    for (auto at : t->attached) {
+        if ((ap = at->to<IR::ActionProfile>()) != nullptr)
+            break;
+    }
+    if (ap == nullptr) return true;
+    for (auto *check_tbl : ap_users[ap]) {
+        if (!mutex(t, check_tbl)) {
+            error("Tables %s and %s are not mutually exclusive, yet share action profile %s",
+                  t->name, check_tbl->name, ap->name);
+        }
+    }
+    ap_users[ap].push_back(t);
+    return true;
+}
+

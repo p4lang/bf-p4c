@@ -369,6 +369,10 @@ XFAIL_TESTS += tofino/extensions/tofino/v1_samples/gateway_bus2.p4.test
 XFAIL_TESTS += tofino-ortools/extensions/tofino/v1_samples/gateway_bus1.p4.test
 XFAIL_TESTS += tofino-ortools/extensions/tofino/v1_samples/gateway_bus2.p4.test
 
+# Fail on purpose due to action profiles not being mutually exclusive
+XFAIL_TESTS += tofino/extensions/tofino/v1_samples/action_profile_not_shared.p4.test
+XFAIL_TESTS += tofino/extensions/tofino/v1_samples/action_profile_next_stage.p4.test
+
 # Multiple calculations per action
 XFAIL_TESTS += tofino-ortools/extensions/tofino/v1_samples/counter_test1.p4.test
 XFAIL_TESTS += tofino-ortools/extensions/tofino/v1_samples/counter_test2.p4.test

@@ -166,6 +166,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         new CheckTableNameDuplicate,
         new FindDependencyGraph(&deps),
         &mutex,
+        new DetermineActionProfileFaults(mutex),
         new DumpPipe("Before table placement"),
         new TablePlacement(deps, mutex, phv),
         new CheckTableNameDuplicate,
