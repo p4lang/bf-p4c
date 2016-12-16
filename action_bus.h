@@ -7,11 +7,16 @@ class ActionBus {
     struct Slot {
         std::string                 name;
         unsigned                    byte, size;  // size in bits
-        Table::Format::Field        *data;
-        unsigned                    offset;      // offset in bits
+        std::map<Table::Format::Field *, unsigned>
+                                    data;
+        // offset in the specified field is in this slot -- corresponding bytes for different
+        // action data formats will go into the same slot.
     };
     std::map<unsigned, Slot>                        by_byte;
     std::map<Table::Format::Field *, std::map<unsigned, unsigned>>      need_place;
+    // bytes from the given fields are needed on the action bus -- the pairs in the map
+    // are (offset,use) where offset is offset in bits, and use is a bitset of the needed
+    // uses (bit index == log2 of the access size)
     int find_merge(int offset, int bytes);
 public:
     int             lineno;

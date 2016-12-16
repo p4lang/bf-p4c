@@ -53,7 +53,7 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
         if (getref(by_byte, idx)) {
             error(kv.key.lineno, "Multiple action bus entries at %d", idx);
             continue; }
-        by_byte.emplace(idx, Slot{name, idx, sz, f, off});
+        by_byte.emplace(idx, Slot{name, idx, sz, {{f, off}}});
         //by_name[name].push_back(&by_byte[idx]);
         tbl->apply_to_field(name, [](Table::Format::Field *f){
             f->flags |= Table::Format::Field::USED_IMMED; });
@@ -76,12 +76,16 @@ void ActionBus::pass1(Table *tbl) {
                 if (tbl->stage->action_bus_use[slotno] != tbl)
                     error(lineno, "Action bus byte %d set in table %s and table %s", byte,
                           tbl->name(), tbl->stage->action_bus_use[slotno]->name());
-                else if (slot.data->bit(8*(byte - slot.byte)) !=
-                         use[slotno]->data->bit(8*(byte - use[slotno]->byte)))
-                    error(lineno, "Action bus byte %d used inconsistently for fields %s and "
-                          "%s in table %s", byte, use[slotno]->name.c_str(),
-                          slot.name.c_str(), tbl->name());
-                continue; }
+                else {
+                    assert(!slot.data.empty() && !use[slotno]->data.empty());
+                    auto nfield = slot.data.begin()->first;
+                    auto ofield = use[slotno]->data.begin()->first;
+                    if (nfield->bit(8*(byte - slot.byte)) !=
+                        ofield->bit(8*(byte - use[slotno]->byte)))
+                        error(lineno, "Action bus byte %d used inconsistently for fields %s and "
+                              "%s in table %s", byte, use[slotno]->name.c_str(),
+                              slot.name.c_str(), tbl->name());
+                    continue; } }
             tbl->stage->action_bus_use[slotno] = tbl;
             use[slotno] = &slot; } }
 }
@@ -119,9 +123,10 @@ int ActionBus::find_merge(int offset, int bytes) {
         int slot = Stage::action_bus_slot_map[alloc.first];
         int slotsize = Stage::action_bus_slot_size[slot];
         int slotbyte = alloc.first & ~(slotsize/8U - 1);
-        int slotoffset = alloc.second.offset & ~(slotsize - 1);
-        if (offset > slotoffset && offset + bytes*8 <= slotoffset + slotsize)
-            return slotbyte + (offset - slotoffset)/8U; }
+        for (auto &f : alloc.second.data) {
+            int slotoffset = f.first->bit(f.second) & ~(slotsize - 1);
+            if (offset >= slotoffset && offset + bytes*8 <= slotoffset + slotsize)
+                return slotbyte + (offset - slotoffset)/8U; } }
     return -1;
 }
 
@@ -135,7 +140,11 @@ void ActionBus::do_alloc(Table *tbl, Table::Format::Field *f, unsigned use, int 
         int slotsize = Stage::action_bus_slot_size[slot];
         assert(!tbl->stage->action_bus_use[slot] || tbl->stage->action_bus_use[slot] == tbl);
         tbl->stage->action_bus_use[slot] = tbl;
-        by_byte.emplace(use, Slot{name, use, bytes*8U, f, offset});
+        auto n = by_byte.emplace(use, Slot{name, use, bytes*8U, {{f, offset}}});
+        if (!n.second) {
+            Slot &sl = n.first->second;
+            if (sl.size < bytes*8U) sl.size = bytes*8U;
+            sl.data.emplace(f, offset); }
         offset += slotsize;
         bytes -= slotsize/8U;
         use += slotsize/8U; }
@@ -164,7 +173,8 @@ void ActionBus::pass2(Table *tbl) {
                     continue; }
                 unsigned start = (lo/8U) % step;
                 if (!(bits.second & 4)) bytes = 1;
-                if ((use = find_free(tbl, start, 31, step, bytes)) >= 0)
+                if ((use = find_merge(lo, bytes)) >= 0 ||
+                    (use = find_free(tbl, start, 31, step, bytes)) >= 0)
                     do_alloc(tbl, field, use, lo/8U, bytes, offset); }
             step = lo < 64 ? 4 : 8;
             if (bits.second & 2) {
@@ -179,7 +189,8 @@ void ActionBus::pass2(Table *tbl) {
                         continue; } }
                 if (!(bits.second & 4) && bytes > 2) bytes = 2;
                 unsigned start = 32 + (lo/8U) % step;
-                if ((use = find_free(tbl, start, 63, step, bytes)) >= 0 ||
+                if ((use = find_merge(lo, bytes)) >= 0 ||
+                    (use = find_free(tbl, start, 63, step, bytes)) >= 0 ||
                     (use = find_free(tbl, start+32, 95, 8, bytes)) >= 0)
                     do_alloc(tbl, field, use, lo/8U, bytes, offset); }
             if (bits.second == 4) {
@@ -190,7 +201,8 @@ void ActionBus::pass2(Table *tbl) {
                     if ((use = find_merge(lo, bytes)) >= 0) {
                         do_alloc(tbl, field, use, lo/8U, bytes, 0);
                         continue; } }
-                if ((use = find_free(tbl, 96+start+odd, 127, 8, bytes)) >= 0 ||
+                if ((use = find_merge(lo, bytes)) >= 0 ||
+                    (use = find_free(tbl, 96+start+odd, 127, 8, bytes)) >= 0 ||
                     (use = find_free(tbl, 64+start+odd, 95, 8, bytes)) >= 0 ||
                     (use = find_free(tbl, 32+start, 63, step, bytes)) >= 0 ||
                     (use = find_free(tbl, 0+start, 31, step, bytes)) >= 0)
@@ -206,13 +218,13 @@ static int slot_sizes[] = {
 
 int ActionBus::find(Table::Format::Field *f, int off, int size /* in bytes */) {
     for (auto &slot : by_byte) {
-        if (slot.second.data != f) continue;
-        if ((int)slot.second.offset > off) continue;
+        if (!slot.second.data.count(f)) continue;
+        if ((int)slot.second.data[f] > off) continue;
         /* FIXME -- off < f->size check is wrong, but needed for old compiler broken asm */
         /* FIXME -- see test/action_bus1.p4 */
-        if (off < (int)f->size && off - slot.second.offset >= slot.second.size) continue;
+        if (off < (int)f->size && off - slot.second.data[f] >= slot.second.size) continue;
         if (!(size & slot_sizes[slot.first/32U])) continue;
-        return slot.first + (off - slot.second.offset)/8U; }
+        return slot.first + (off - slot.second.data[f])/8U; }
     return -1;
 }
 int ActionBus::find(const char *name, int off, int size, int *len) {
@@ -233,14 +245,14 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
     for (auto &el : by_byte) {
         unsigned byte = el.first;
         assert(byte == el.second.byte);
-        Table::Format::Field *f = el.second.data;
-        if ((f->bit(el.second.offset) >> 7) != action_slice)
+        Table::Format::Field *f = el.second.data.begin()->first;;
+        if ((f->bit(el.second.data.begin()->second) >> 7) != action_slice)
             continue;
         unsigned slot = Stage::action_bus_slot_map[byte];
-        unsigned bit = f->bit(el.second.offset) & 0x7f;
-        unsigned size = std::min(el.second.size, f->size - el.second.offset);
+        unsigned bit = f->bit(el.second.data.begin()->second) & 0x7f;
+        unsigned size = std::min(el.second.size, f->size - el.second.data.begin()->second);
         LOG3("    byte " << byte << " (slot " << slot << "): field " << tbl->find_field(f) <<
-             "(" << el.second.offset << ".." << (el.second.offset + size - 1) << ")" <<
+             "(" << el.second.data.begin()->second << ".." << (el.second.data.begin()->second + size - 1) << ")" <<
              " [" << bit << ".." << (bit+size-1) << "]");
         if (bit + size > 128) {
             error(line, "Action bus setup can't deal with field %s split across "
@@ -356,11 +368,13 @@ void ActionBus::write_immed_regs(Table *tbl) {
     int tid = tbl->logical_id;
     for (auto &f : by_byte) {
         int slot = Stage::action_bus_slot_map[f.first];
-        unsigned off = f.second.offset;
-        if (f.second.data) {
-            off += f.second.data->bits[0].lo;
-            assert(tbl->format && tbl->format->immed);
-            if (tbl->format) off -= tbl->format->immed->bits[0].lo; }
+        unsigned off = 0;
+        if (!f.second.data.empty()) {
+            off = f.second.data.begin()->second;
+            if (f.second.data.begin()->first) {
+                off += f.second.data.begin()->first->bits[0].lo;
+                assert(tbl->format && tbl->format->immed);
+                if (tbl->format) off -= tbl->format->immed->bits[0].lo; } }
         unsigned size = f.second.size;
         switch(Stage::action_bus_slot_size[slot]) {
         case 8:
