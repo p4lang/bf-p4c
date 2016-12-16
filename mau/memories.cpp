@@ -1060,9 +1060,9 @@ void Memories::action_row_trip(action_fill &action, action_fill &suppl, action_f
                 }
             /* There is space left for the action, based on 2nd check */
             } else if (next_action.group && !curr_oflow.group->needs_ab()) {
-               oflow = curr_oflow;
-               action = next_action;
-               order[OFLOW_IND] = 0; order[ACTION_IND] = 1;
+                oflow = curr_oflow;
+                action = next_action;
+                order[OFLOW_IND] = 0; order[ACTION_IND] = 1;
             } else {
                 oflow = curr_oflow;
                 order[OFLOW_IND] = 0;
@@ -1168,8 +1168,7 @@ bool Memories::can_place_selector(action_fill &curr_oflow, SRAM_group *curr_chec
 
     } else {
         if (sel_unplaced.group->sel.one_action_left()
-            && (sel_unplaced.group->sel.action_left_to_place() + curr_check->left_to_place()
-            > action_RAMs_available))
+            && (sel_unplaced.group->sel.action_left_to_place() + 1 > action_RAMs_available))
             return false;
     }
     return true;
@@ -1208,7 +1207,8 @@ void Memories::selector_candidate_setup(action_fill &action, action_fill &suppl,
         // FIXME: Double check fo putting the correct information
         if (action.group->left_to_place() + suppl.group->left_to_place()
             > action_RAMs_available) {
-            BUG("We have an issue in the double selector algorithm");
+            if (action.group->left_to_place() + 1 != action_RAMs_available)
+                BUG("We have an issue in the double selector algorithm");
         } else if (action.group->left_to_place() + suppl.group->left_to_place()
                    < action_RAMs_available && curr_oflow.group
                    && curr_oflow.group != action.group && suppl.group != curr_oflow.group) {
@@ -1252,7 +1252,7 @@ void Memories::best_candidates(action_fill &best_fit_action, action_fill &best_f
                 continue;
             if (!meter_available && suppl_bus_users[i]->type != SRAM_group::STATS)
                 continue;
-            if (sel_unplaced.group && suppl_bus_users[i]->type != SRAM_group::SELECTOR)
+            if (sel_unplaced.group && suppl_bus_users[i]->type == SRAM_group::SELECTOR)
                 continue;
             if (suppl_bus_users[i]->left_to_place() <= suppl_RAMs_available) {
                 best_fit_suppl.group = suppl_bus_users[i];

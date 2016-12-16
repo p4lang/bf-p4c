@@ -26,6 +26,11 @@ class TablesMutuallyExclusive : public MauInspector {
 };
 
 class DetermineActionProfileFaults : public MauInspector {
+    profile_t init_apply(const IR::Node *root) override {
+        profile_t rv = MauInspector::init_apply(root);
+        ap_users.clear();
+        return rv;
+    }
     map<const IR::ActionProfile *, vector<const IR::MAU::Table *>> ap_users;
     const TablesMutuallyExclusive &mutex;
     bool preorder(const IR::MAU::Table *t) override;

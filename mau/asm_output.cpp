@@ -39,22 +39,26 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
 class MauAsmOutput::TableFormat {
     const MauAsmOutput &self;
     struct match_group {
-        int                             action = -1, immediate = -1, version = -1, counter = -1,
-                                        meter = -1, indirect_action = -1, selector = -1;
+        int starting_bits [7] = {-1, -1, -1, -1, -1, -1, -1};
         vector<std::pair<int, int>>     match;
     };
-    int action_bits = 0;
-    int immediate_bits = 0;
-    int meter_bits = 0;
-    int counter_bits = 0;
-    int indirect_action_bits = 0;
-    int selector_bits = 0;
+    int total_bits [7] = {0, 0, 0, 0, 0, 0, 0};
+    enum type_t { ACTION, IMMEDIATE, VERS, COUNTER, METER, INDIRECT_ACTION, SELECTOR } type;
     vector<match_group> format;
  public:
     vector<Slice>       match_fields;
     vector<Slice>       ghost_bits;
     TableFormat(const MauAsmOutput &s, const IR::MAU::Table *tbl);
     void print(std::ostream &) const;
+    void setup_indirect(type_t type, int groups, int groups_per_word, bitvec &used) { 
+        if (total_bits[type] > 0) {
+            for (int i = 0; i < groups; i++) {
+                int word = i / groups_per_word;
+                format[i].starting_bits[type] = used.ffz(128*word);
+                used.setrange(format[i].starting_bits[type], total_bits[type]);
+            }
+        }
+    }
 };
 
 class MauAsmOutput::ImmedFormat {
@@ -486,12 +490,12 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
                 ghost_bits_needed = 0; } } }
     if (!tbl->ways.empty()) {
         bitvec used;
-        action_bits = ceil_log2(tbl->actions.size());
-        immediate_bits = tbl->layout.action_data_bytes_in_overhead * 8;
-        meter_bits = tbl->layout.meter_overhead_bits;
-        counter_bits = tbl->layout.counter_overhead_bits;
-        indirect_action_bits = tbl->layout.indirect_action_overhead_bits;
-        selector_bits = tbl->layout.selector_overhead_bits;
+        total_bits[ACTION] = ceil_log2(tbl->actions.size());
+        total_bits[IMMEDIATE] = tbl->layout.action_data_bytes_in_overhead * 8;
+        total_bits[METER] = tbl->layout.meter_overhead_bits;
+        total_bits[COUNTER] = tbl->layout.counter_overhead_bits;
+        total_bits[INDIRECT_ACTION] = tbl->layout.indirect_action_overhead_bits;
+        total_bits[SELECTOR] = tbl->layout.selector_overhead_bits;
         int width = tbl->ways[0].width;
         int groups = tbl->ways[0].match_groups;
         int groups_per_word = (groups + width - 1)/width;
@@ -499,44 +503,17 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
         for (int i = 0; i < groups; i++) {
             int word = i / groups_per_word;
             int j = i % groups_per_word;
-            if (action_bits > 0) {
-                format[i].action = 128*word + j*action_bits;
-                used.setrange(format[i].action, action_bits); }
-            format[i].version = 128*word + 124 - j*4;
-            used.setrange(format[i].version, 4); }
-        if (immediate_bits > 0) {
-            for (int i = 0; i < groups; i++) {
-                int word = i / groups_per_word;
-                format[i].immediate = used.ffz(128*word);
-                used.setrange(format[i].immediate, immediate_bits); } }
-        if (counter_bits > 0) {
-            for (int i = 0; i < groups; i++) {
-                int word = i / groups_per_word;
-                format[i].counter = used.ffz(128*word);
-                used.setrange(format[i].counter, counter_bits);
-            }
-        }
-        if (meter_bits > 0) {
-            for (int i = 0; i < groups; i++) {
-                int word = i / groups_per_word;
-                format[i].meter = used.ffz(128*word);
-                used.setrange(format[i].meter, meter_bits);
-            }
-        }
-        if (indirect_action_bits > 0) {
-            for (int i = 0; i < groups; i++) {
-                int word = i / groups_per_word;
-                format[i].indirect_action = used.ffz(128*word);
-                used.setrange(format[i].indirect_action, indirect_action_bits);
-            }
-        }
-        if (selector_bits > 0) {
-            for (int i = 0; i < groups; i++) {
-                int word = i / groups_per_word;
-                format[i].selector = used.ffz(128*word);
-                used.setrange(format[i].selector, selector_bits);
-            }
-        }
+            if (total_bits[ACTION] > 0) {
+                format[i].starting_bits[ACTION] = 128*word + j*total_bits[ACTION];
+                used.setrange(format[i].starting_bits[ACTION], total_bits[ACTION]); }
+            format[i].starting_bits[VERS] = 128*word + 124 - j*4;
+            total_bits[VERS] = 4;
+            used.setrange(format[i].starting_bits[VERS], 4); }
+        setup_indirect(IMMEDIATE, groups, groups_per_word, used);
+        setup_indirect(COUNTER, groups, groups_per_word, used);
+        setup_indirect(METER, groups, groups_per_word, used);
+        setup_indirect(INDIRECT_ACTION, groups, groups_per_word, used);
+        setup_indirect(SELECTOR, groups, groups_per_word, used);
         if (!match_fields.empty()) {
             for (int i = 0; i < groups; i++) {
                 int word = i / groups_per_word;
@@ -586,13 +563,14 @@ void MauAsmOutput::TableFormat::print(std::ostream &out) const {
     out << "format: {";
     int i = 0;
     for (auto &group : format) {
-        fmt.emit(out, "action", i, group.action, action_bits);
-        fmt.emit(out, "immediate", i, group.immediate, immediate_bits);
-        fmt.emit(out, "version", i, group.version, 4);
-        fmt.emit(out, "counter_ptr", i, group.counter, counter_bits);
-        fmt.emit(out, "meter_ptr", i, group.meter, meter_bits);
-        fmt.emit(out, "action_ptr", i, group.indirect_action, indirect_action_bits);
-        fmt.emit(out, "select_ptr", i, group.selector, selector_bits);
+        fmt.emit(out, "action", i, group.starting_bits[ACTION], total_bits[ACTION]);
+        fmt.emit(out, "immediate", i, group.starting_bits[IMMEDIATE], total_bits[IMMEDIATE]);
+        fmt.emit(out, "version", i, group.starting_bits[VERS], total_bits[VERS]);
+        fmt.emit(out, "counter_ptr", i, group.starting_bits[COUNTER], total_bits[COUNTER]);
+        fmt.emit(out, "meter_ptr", i, group.starting_bits[METER], total_bits[METER]);
+        fmt.emit(out, "action_ptr", i, group.starting_bits[INDIRECT_ACTION], 
+                 total_bits[INDIRECT_ACTION]);
+        fmt.emit(out, "select_ptr", i, group.starting_bits[SELECTOR], total_bits[SELECTOR]);
         fmt.emit(out, "match", i, group.match);
         ++i; }
     out << (fmt.sep + 1) << "}";

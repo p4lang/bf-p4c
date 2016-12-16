@@ -2,6 +2,7 @@
 
 void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
     // FIXME: Doesn't take into account gateways and match tables merging after table placement
+    LOG1("Mutex table " << tbl->name);
     assert(table_ids.count(tbl));
     table_succ[tbl][table_ids[tbl]] = true;
     vector<bitvec> sets;
@@ -53,6 +54,8 @@ bool DetermineActionProfileFaults::preorder(const IR::MAU::Table *t) {
     }
     if (ap == nullptr) return true;
     for (auto *check_tbl : ap_users[ap]) {
+        LOG1("Vector length is " << ap_users[ap].size());
+        LOG1("Check table name " << check_tbl->name);
         if (!mutex(t, check_tbl)) {
             error("Tables %s and %s are not mutually exclusive, yet share action profile %s",
                   t->name, check_tbl->name, ap->name);
@@ -61,4 +64,3 @@ bool DetermineActionProfileFaults::preorder(const IR::MAU::Table *t) {
     ap_users[ap].push_back(t);
     return true;
 }
-

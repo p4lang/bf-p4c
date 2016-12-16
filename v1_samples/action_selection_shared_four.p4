@@ -96,7 +96,7 @@ table test4 {
 }
 
 control ingress {
-    if (data.b4 == 0 || data.b4 == 1 || data.b4 == 2) {
+    if (data.b4 == 0 or data.b4 == 2) {
         if (data.b4 == 0) {
             apply(test1);
         } else {
