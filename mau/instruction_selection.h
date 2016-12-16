@@ -25,6 +25,7 @@ class InstructionSelection : public MauTransform {
     bool checkPHV(const IR::Expression *);
     bool checkSrc1(const IR::Expression *);
     bool checkConst(const IR::Expression *ex, long &value);
+    IR::Member *gen_stdmeta(cstring field);
  public:
     explicit InstructionSelection(PhvInfo &phv) : phv(phv) {}
 };

@@ -3,6 +3,19 @@
 template<class T> static
 T *clone(const T *ir) { return ir ? ir->clone() : nullptr; }
 
+IR::Member *InstructionSelection::gen_stdmeta(cstring field) {
+    // FIXME -- this seems like an ugly hack -- need to make it match up to the
+    // names created by CreateThreadLocalInstances.  Should have a better way of getting
+    // a handle on the standard metadata.
+    auto *std_meta = findContext<IR::Tofino::Pipe>()->standard_metadata->clone();
+    std_meta->name = IR::ID(cstring::to_cstring(VisitingThread(this)) + "::" + std_meta->name);
+    if (auto f = std_meta->type->getField(field))
+        return new IR::Member(f->type, new IR::ConcreteHeaderRef(std_meta), field);
+    else
+        BUG("No field %s in standard_metadata", field);
+    return nullptr;
+}
+
 const IR::ActionFunction *InstructionSelection::preorder(IR::ActionFunction *af) {
     LOG2("InstructionSelection processing action " << af->name);
     this->af = af;
@@ -261,7 +274,10 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
         } else {
             auto rv = new IR::MAU::Instruction(*prim);
             rv->name = rv->name + 4;  // strip off bit_ prefix
-            return rv; } }
+            return rv; }
+    } else if (prim->name == "drop") {
+        return new IR::MAU::Instruction(prim->srcInfo, "invalidate",
+            gen_stdmeta(VisitingThread(this) ? "egress_port" : "egress_spec")); }
     WARNING("unhandled in InstSel: " << *prim);
     return prim;
 }
