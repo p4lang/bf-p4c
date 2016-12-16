@@ -7,6 +7,9 @@ tofino_ir_UNIFIED = \
 	%reldir%/ir/thread_visitor.cpp \
 	%reldir%/ir/tofino.cpp
 
+noinst_HEADERS += \
+	%reldir%/ir/thread_visitor.h
+
 cpplint_FILES += $(tofino_ir_UNIFIED) $(tofino_ir_NONUNIFIED)
 extension_frontend_SOURCES += $(tofino_ir_SOURCES)
 
@@ -21,6 +24,18 @@ tofino_backend_common_UNIFIED = \
 	%reldir%/common/remap_intrin.cpp \
 	%reldir%/common/param_binding.cpp \
 	%reldir%/common/phv.cpp
+
+noinst_HEADERS += \
+	%reldir%/common/blockmap.h \
+	%reldir%/common/copy_header_eliminator.h \
+	%reldir%/common/elim_unused.h \
+	%reldir%/common/extract_maupipe.h \
+	%reldir%/common/field_defuse.h \
+	%reldir%/common/header_stack.h \
+	%reldir%/common/live_at_entry.h \
+	%reldir%/common/remap_intrin.h \
+	%reldir%/common/param_binding.h \
+	%reldir%/common/phv.h
 
 cpplint_FILES += $(tofino_backend_common_UNIFIED) $(tofino_backend_common_NONUNIFIED)
 
@@ -43,6 +58,27 @@ tofino_backend_mau_UNIFIED = \
 	%reldir%/mau/table_seqdeps.cpp \
 	%reldir%/mau/table_summary.cpp
 
+noinst_HEADERS += \
+	%reldir%/mau/asm_output.h \
+	%reldir%/mau/default_next.h \
+	%reldir%/mau/field_use.h \
+	%reldir%/mau/gateway.h \
+	%reldir%/mau/input_xbar.h \
+	%reldir%/mau/instruction_selection.h \
+	%reldir%/mau/ixbar_realign.h \
+	%reldir%/mau/memories.h \
+	%reldir%/mau/phv_constraints.h \
+	%reldir%/mau/push_pop.h \
+	%reldir%/mau/resource_estimate.h \
+	%reldir%/mau/resource.h \
+	%reldir%/mau/split_gateways.h \
+	%reldir%/mau/table_dependency_graph.h \
+	%reldir%/mau/table_layout.h \
+	%reldir%/mau/table_mutex.h \
+	%reldir%/mau/table_placement.h \
+	%reldir%/mau/table_seqdeps.h \
+	%reldir%/mau/table_summary.h
+
 cpplint_FILES += $(tofino_backend_mau_UNIFIED) $(tofino_backend_mau_NONUNIFIED)
 
 tofino_backend_parde_UNIFIED = \
@@ -55,6 +91,16 @@ tofino_backend_parde_UNIFIED = \
 	%reldir%/parde/parser_output.cpp \
 	%reldir%/parde/split_big_states.cpp \
 	%reldir%/parde/split_header.cpp
+
+noinst_HEADERS += \
+	%reldir%/parde/add_parde_metadata.h \
+	%reldir%/parde/asm_output.h \
+	%reldir%/parde/bridge_metadata.h \
+	%reldir%/parde/compute_shifts.h \
+	%reldir%/parde/extract_parser.h \
+	%reldir%/parde/match_keys.h \
+	%reldir%/parde/split_big_states.h \
+	%reldir%/parde/split_header.h
 
 cpplint_FILES += $(tofino_backend_parde_UNIFIED) $(tofino_backend_parde_NONUNIFIED)
 
@@ -80,6 +126,31 @@ tofino_backend_phv_UNIFIED = \
 	%reldir%/phv/thread_constraint.cpp \
 	%reldir%/phv/trivial_alloc.cpp
 
+noinst_HEADERS += \
+	%reldir%/phv/asm_output.h \
+	%reldir%/phv/bit_extractor.h \
+	%reldir%/phv/byte_constraint.h \
+	%reldir%/phv/cluster.h \
+	%reldir%/phv/cluster_phv_bind.h \
+	%reldir%/phv/cluster_phv_container.h \
+	%reldir%/phv/cluster_phv_mau.h \
+	%reldir%/phv/cluster_phv_req.h \
+	%reldir%/phv/constraints.h \
+	%reldir%/phv/container_constraint.h \
+	%reldir%/phv/create_thread_local_instances.h \
+	%reldir%/phv/match_xbar_constraint.h \
+	%reldir%/phv/mau_group_constraint.h \
+	%reldir%/phv/offset_constraint.h \
+	%reldir%/phv/parse_graph_constraint.h \
+	%reldir%/phv/phv_allocator.h \
+	%reldir%/phv/phv_fields.h \
+	%reldir%/phv/phv.h \
+	%reldir%/phv/source_container_constraint.h \
+	%reldir%/phv/split_phv_use.h \
+	%reldir%/phv/thread_constraint.h \
+	%reldir%/phv/trivial_alloc.h \
+	%reldir%/phv/t_phv_constraint.h
+
 cpplint_FILES += $(tofino_backend_phv_UNIFIED) $(tofino_backend_phv_NONUNIFIED)
 
 # OR Tools uses Protobuf, which includes this wonderful hack:
@@ -103,12 +174,24 @@ tofino_backend_phv_or_tools_NONUNIFIED = \
 	%reldir%/phv/or_tools/container.cpp \
 	%reldir%/phv/or_tools/mau_group.cpp
 
+noinst_HEADERS += \
+	%reldir%/phv/or_tools/bit.h \
+	%reldir%/phv/or_tools/container.h \
+	%reldir%/phv/or_tools/mau_group.h \
+	%reldir%/phv/or_tools/min_value_solver.h \
+	%reldir%/phv/or_tools/random_value_solver.h \
+	%reldir%/phv/or_tools/solver.h
+
 cpplint_FILES += $(tofino_backend_phv_or_tools_UNIFIED) $(tofino_backend_phv_or_tools_NONUNIFIED)
 
 tofino_backend_main_UNIFIED = \
 	%reldir%/midend.cpp \
 	%reldir%/p4c-tofino.cpp \
 	%reldir%/test-tofino.cpp
+
+noinst_HEADERS += \
+	%reldir%/midend.h \
+	%reldir%/tofinoOptions.h
 
 cpplint_FILES += $(tofino_backend_main_UNIFIED) $(tofino_backend_main_NONUNIFIED)
 
