@@ -17,7 +17,7 @@ class ActionBus {
     // bytes from the given fields are needed on the action bus -- the pairs in the map
     // are (offset,use) where offset is offset in bits, and use is a bitset of the needed
     // uses (bit index == log2 of the access size)
-    int find_merge(int offset, int bytes);
+    int find_merge(int offset, int bytes, int use);
 public:
     int             lineno;
     ActionBus() : lineno(-1) {}

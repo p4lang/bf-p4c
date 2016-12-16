@@ -118,8 +118,13 @@ static int find_free(Table *tbl, int min, int max, int step, int bytes) {
     return -1;
 }
 
-int ActionBus::find_merge(int offset, int bytes) {
+int ActionBus::find_merge(int offset, int bytes, int use) {
     for (auto &alloc : by_byte) {
+        if (use & 1) {
+            if (alloc.first >= 32) break;
+        } else if (use & 2) {
+            if (alloc.first < 32) continue;
+            if (alloc.first >= 96) break; }
         int slot = Stage::action_bus_slot_map[alloc.first];
         int slotsize = Stage::action_bus_slot_size[slot];
         int slotbyte = alloc.first & ~(slotsize/8U - 1);
@@ -173,7 +178,7 @@ void ActionBus::pass2(Table *tbl) {
                     continue; }
                 unsigned start = (lo/8U) % step;
                 if (!(bits.second & 4)) bytes = 1;
-                if ((use = find_merge(lo, bytes)) >= 0 ||
+                if ((use = find_merge(lo, bytes, 1)) >= 0 ||
                     (use = find_free(tbl, start, 31, step, bytes)) >= 0)
                     do_alloc(tbl, field, use, lo/8U, bytes, offset); }
             step = lo < 64 ? 4 : 8;
@@ -184,12 +189,12 @@ void ActionBus::pass2(Table *tbl) {
                         error(tbl->format->lineno, "field %s not correctly aligned for 16-bit use "
                               "on action bus", tbl->format->find_field(field).c_str());
                         continue; }
-                    if ((use = find_merge(lo, bytes)) >= 0) {
+                    if ((use = find_merge(lo, bytes, 2)) >= 0) {
                         do_alloc(tbl, field, use, lo/8U, bytes, offset);
                         continue; } }
                 if (!(bits.second & 4) && bytes > 2) bytes = 2;
                 unsigned start = 32 + (lo/8U) % step;
-                if ((use = find_merge(lo, bytes)) >= 0 ||
+                if ((use = find_merge(lo, bytes, 2)) >= 0 ||
                     (use = find_free(tbl, start, 63, step, bytes)) >= 0 ||
                     (use = find_free(tbl, start+32, 95, 8, bytes)) >= 0)
                     do_alloc(tbl, field, use, lo/8U, bytes, offset); }
@@ -198,10 +203,10 @@ void ActionBus::pass2(Table *tbl) {
                 unsigned odd = (lo/8U) & (4 & step);
                 unsigned start = (lo/8U) % step;
                 if (lo % 32U) {
-                    if ((use = find_merge(lo, bytes)) >= 0) {
+                    if ((use = find_merge(lo, bytes, 4)) >= 0) {
                         do_alloc(tbl, field, use, lo/8U, bytes, 0);
                         continue; } }
-                if ((use = find_merge(lo, bytes)) >= 0 ||
+                if ((use = find_merge(lo, bytes, 4)) >= 0 ||
                     (use = find_free(tbl, 96+start+odd, 127, 8, bytes)) >= 0 ||
                     (use = find_free(tbl, 64+start+odd, 95, 8, bytes)) >= 0 ||
                     (use = find_free(tbl, 32+start, 63, step, bytes)) >= 0 ||
