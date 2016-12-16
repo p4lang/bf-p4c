@@ -328,7 +328,7 @@ static void coord_selector_xbar(const TablePlacement::Placed *curr,
             j++;
             continue;
         }
-        for (auto at : p->table->attached) {                
+        for (auto at : p->table->attached) {
             if ((p_as = at->to<IR::ActionSelector>()) != nullptr)
                 break;
         }
@@ -438,8 +438,7 @@ retry_next_stage:
                                                       : rv->stage * StageUse::MAX_LOGICAL_IDS;
     assert((rv->logical_id / StageUse::MAX_LOGICAL_IDS) == rv->stage);
     LOG2("try_place_table returning " << rv->entries << " of " << rv->name <<
-         " in stage " << rv->stage << (rv->need_more ? " (need more)" : ""));
- 
+         " in stage " << rv->stage << (rv->need_more ? " (need more)" : "")); 
     int i = 0;
     for (auto *p = done; p && p->stage == rv->stage; p = p->prev) {
         coord_selector_xbar(p, done, prev_resources[i], prev_resources);

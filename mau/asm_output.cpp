@@ -39,10 +39,10 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
 class MauAsmOutput::TableFormat {
     const MauAsmOutput &self;
     struct match_group {
-        int starting_bits [7] = {-1, -1, -1, -1, -1, -1, -1};
+        int starting_bits[7] = {-1, -1, -1, -1, -1, -1, -1};
         vector<std::pair<int, int>>     match;
     };
-    int total_bits [7] = {0, 0, 0, 0, 0, 0, 0};
+    int total_bits[7] = {0, 0, 0, 0, 0, 0, 0};
     enum type_t { ACTION, IMMEDIATE, VERS, COUNTER, METER, INDIRECT_ACTION, SELECTOR } type;
     vector<match_group> format;
  public:
@@ -50,7 +50,7 @@ class MauAsmOutput::TableFormat {
     vector<Slice>       ghost_bits;
     TableFormat(const MauAsmOutput &s, const IR::MAU::Table *tbl);
     void print(std::ostream &) const;
-    void setup_indirect(type_t type, int groups, int groups_per_word, bitvec &used) { 
+    void setup_indirect(type_t type, int groups, int groups_per_word, bitvec &used) {
         if (total_bits[type] > 0) {
             for (int i = 0; i < groups; i++) {
                 int word = i / groups_per_word;
@@ -568,7 +568,7 @@ void MauAsmOutput::TableFormat::print(std::ostream &out) const {
         fmt.emit(out, "version", i, group.starting_bits[VERS], total_bits[VERS]);
         fmt.emit(out, "counter_ptr", i, group.starting_bits[COUNTER], total_bits[COUNTER]);
         fmt.emit(out, "meter_ptr", i, group.starting_bits[METER], total_bits[METER]);
-        fmt.emit(out, "action_ptr", i, group.starting_bits[INDIRECT_ACTION], 
+        fmt.emit(out, "action_ptr", i, group.starting_bits[INDIRECT_ACTION],
                  total_bits[INDIRECT_ACTION]);
         fmt.emit(out, "select_ptr", i, group.starting_bits[SELECTOR], total_bits[SELECTOR]);
         fmt.emit(out, "match", i, group.match);

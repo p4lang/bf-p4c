@@ -109,7 +109,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         @name("set_b1_3") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
     }
     apply {
-        if (hdr.data.b4 == 8w0 || hdr.data.b4 == 8w1 || hdr.data.b4 == 8w2) 
+        if (hdr.data.b4 == 8w0 || hdr.data.b4 == 8w2) 
             if (hdr.data.b4 == 8w0) 
                 test1.apply();
             else 
