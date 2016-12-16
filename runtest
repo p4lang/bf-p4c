@@ -100,11 +100,13 @@ while [ $# -gt 1 ]; do
         fi
         verbose=true
         ;;
-    --newpa)
-        testdir=tofino-newpa
+    --*)
+        if [ -d $testdir${1#-} ]; then
+            testdir="$testdir${1#-}"
+        fi
         P4C_ARGS="$P4C_ARGS $1"
         ;;
-    *) P4C_ARGS="$P4C_ARGS $1"
+    *)  P4C_ARGS="$P4C_ARGS $1"
         ;;
     esac
     shift
