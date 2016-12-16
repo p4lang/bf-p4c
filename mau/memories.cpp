@@ -915,8 +915,6 @@ void Memories::action_bus_selectors_indirects() {
             int per_ram = sz > 7 ? 10 : 17 - sz;
             int depth = ((ap->size - 1) >> per_ram) + 1;
             SRAM_group *selector = nullptr;
-            LOG1("Width of the table " << ap->name << " is " << width);
-            LOG1("Depth is " << depth);
 
             for (auto grp : suppl_bus_users) {
                 if (grp->ta == ta && grp->type == SRAM_group::SELECTOR) {
@@ -1788,7 +1786,6 @@ bool Memories::allocate_all_action() {
                 mask = 0x3f0;
             else
                 mask = 0xf;
-            LOG1("Row and side are " << i << " " << j);
 
             if (__builtin_popcount(mask & ~sram_inuse[i]) == 0) continue;
             action.clear(); oflow.clear(); suppl.clear();

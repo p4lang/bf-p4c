@@ -2,7 +2,6 @@
 
 void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
     // FIXME: Doesn't take into account gateways and match tables merging after table placement
-    LOG1("Mutex table " << tbl->name);
     assert(table_ids.count(tbl));
     table_succ[tbl][table_ids[tbl]] = true;
     vector<bitvec> sets;

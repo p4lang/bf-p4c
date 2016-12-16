@@ -278,8 +278,6 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
         resources->gateway_ixbar.clear();
         resources->selector_ixbar.clear();
         return false; }
-    LOG1("Next xbar is " << next->table->name);
-    LOG1("Is it empty? " << resources->selector_ixbar.use.empty());
     return true;
 }
 
@@ -438,7 +436,7 @@ retry_next_stage:
                                                       : rv->stage * StageUse::MAX_LOGICAL_IDS;
     assert((rv->logical_id / StageUse::MAX_LOGICAL_IDS) == rv->stage);
     LOG2("try_place_table returning " << rv->entries << " of " << rv->name <<
-         " in stage " << rv->stage << (rv->need_more ? " (need more)" : "")); 
+         " in stage " << rv->stage << (rv->need_more ? " (need more)" : ""));
     int i = 0;
     for (auto *p = done; p && p->stage == rv->stage; p = p->prev) {
         coord_selector_xbar(p, done, prev_resources[i], prev_resources);
