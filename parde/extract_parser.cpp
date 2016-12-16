@@ -254,12 +254,12 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
 
     LOG2("GetParser::state(" << name << ")");
     if (v1_0) {
-        if (v1_0->cases)
-            for (auto ce : *v1_0->cases)
+        if (v1_0->cases) {
+            for (auto ce : *v1_0->cases) {
                 for (auto val : ce->values) {
                     uintmax_t v = val.first->asLong(), m = val.second->asLong();
                     addMatch(rv, m ? match_t(match_size, v, m) : match_t(),
-                             *stmts, ce->action, ctxt); }
+                             *stmts, ce->action, ctxt); } } }
         if (v1_0->default_return)
             addMatch(rv, match_t(), *stmts, v1_0->default_return, ctxt);
         else if (v1_0->parse_error)

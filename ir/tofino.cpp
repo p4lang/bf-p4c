@@ -1,8 +1,7 @@
 #include "ir/ir.h"
 
 IR::InstanceRef::InstanceRef(cstring prefix, IR::ID name, const IR::Type *t, bool forceMeta)
-: HeaderRef(t), name(name)
-{
+: HeaderRef(t), name(name) {
     if (name.srcInfo.isValid()) srcInfo = name.srcInfo;
     if (prefix && forceMeta)
         name.name = prefix + "." + name.name;
@@ -21,7 +20,7 @@ IR::InstanceRef::InstanceRef(cstring prefix, IR::ID name, const IR::Type *t, boo
             BUG("metadata arrays not handled in InstanceRef::InstanceRef");
         obj = new IR::HeaderStack(name, stk->elementType->to<IR::Type_Header>(), stk->getSize());
     } else if (t->is<IR::Type::Bits>()) {
-        ;
+        obj = nullptr;
     } else {
         BUG("Unhandled InstanceRef type %1%", t); }
 }
