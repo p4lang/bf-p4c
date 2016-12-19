@@ -111,12 +111,18 @@ class SetupAttachedTables : public MauInspector {
         (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
         mem.action_tables.push_back(ta);
         mi.action_tables++;
+        /*
         int sz = ceil_log2(ta->table->layout.action_data_bytes) + 3;
         int width = sz > 7 ? 1 << (sz - 7) : 1;
         mi.action_bus_min += width;
         int per_ram = sz > 7 ? 10 : 17 - sz;
         int depth = ((entries - 1) >> per_ram) + 1;
         mi.action_RAMs += depth;
+        */
+        int width = 1;
+        int per_row = ActionDataPerWord(&ta->table->layout, &width);
+        int depth = (entries + per_row * 1024 - 1) / (per_row * 1024) + 1;
+        mi.action_bus_min += width; mi.action_RAMs += depth * width;
         return false;
     }
 
@@ -154,12 +160,10 @@ class SetupAttachedTables : public MauInspector {
             return false;
         }
         mi.action_tables++;
-        int sz = ceil_log2(ta->table->layout.action_data_bytes) + 3;
-        int width = sz > 7 ? 1 << (sz - 7) : 1;
-        mi.action_bus_min += width;
-        int per_ram = sz > 7 ? 10 : 17 - sz;
-        int depth = ((ap->size) >> per_ram) + 1;
-        mi.action_RAMs += depth;
+        int width = 1;
+        int per_row = ActionDataPerWord(&ta->table->layout, &width);
+        int depth = (entries + per_row * 1024 - 1) / (per_row * 1024) + 1;
+        mi.action_bus_min += width; mi.action_RAMs += depth * width;
         return false;
     }
 
@@ -183,7 +187,7 @@ class SetupAttachedTables : public MauInspector {
             stats_pushed = true;
         }
         mi.stats_tables++;
-        int per_row = mem.stats_per_row(cnt->min_width, cnt->max_width, cnt->type);
+        int per_row = CounterPerWord(cnt);
         mi.stats_RAMs += (entries + per_row * 1024 - 1) / (per_row * 1024) + 1;
         return false;
     }
@@ -835,7 +839,6 @@ bool Memories::allocate_all_tind() {
     find_tind_groups();
 
     // Keep it really simple for first iteration, just reserve the 1st column and then fill it out
-
     while (!tind_groups.empty()) {
         auto *tg = tind_groups[0];
         int best_bus = 0;
@@ -863,32 +866,6 @@ bool Memories::allocate_all_tind() {
     return true;
 }
 
-
-/* Calculates the per_row for Counter Tables */
-int Memories::stats_per_row(int min_width, int max_width, IR::CounterType type) {
-    int width = (min_width < max_width) ? max_width : min_width;
-    if (type == IR::CounterType::BOTH) {
-        if (width > 0 && width <= 42)
-            return 3;
-        else if (width > 42 && width <= 64)
-            return 2;
-        else
-            return 1;
-    } else if (type == IR::CounterType::PACKETS) {
-        if (width > 0 && width <= 21)
-            return 6;
-        else if (width > 21 && width <= 32)
-            return 4;
-        else
-            return 2;
-    } else {
-        if (width > 0 && width <= 32)
-            return 4;
-        else
-            return 2;
-    }
-}
-
 /* Calculates the necessary size and requirements for any and all indirect actions and selectors.
    Selectors must be done before indirect actions */
 void Memories::action_bus_selectors_indirects() {
@@ -910,10 +887,9 @@ void Memories::action_bus_selectors_indirects() {
             const IR::ActionProfile *ap = nullptr;
             if ((ap = at->to<IR::ActionProfile>()) == nullptr)
                 continue;
-            int sz = ceil_log2(ta->table->layout.action_data_bytes) + 3;
-            int width = sz > 7 ? 1 << (sz - 7) : 1;
-            int per_ram = sz > 7 ? 10 : 17 - sz;
-            int depth = ((ap->size - 1) >> per_ram) + 1;
+            int width = 1;
+            int per_row = ActionDataPerWord(&ta->table->layout, &width);
+            int depth = (ap->size + per_row * 1024 - 1) / (per_row * 1024) + 1;
             SRAM_group *selector = nullptr;
 
             for (auto grp : suppl_bus_users) {
@@ -943,7 +919,7 @@ void Memories::action_bus_meters_counters() {
             const IR::Counter *stats = nullptr;
             if ((stats = at->to<IR::Counter>()) == nullptr)
                 continue;
-            int per_row = stats_per_row(stats->min_width, stats->max_width, stats->type);
+            int per_row = CounterPerWord(stats);
             int depth;
             if (stats->direct) {
                 depth = (ta->calculated_entries + per_row * 1024 - 1)/(per_row * 1024) + 1;
@@ -984,12 +960,9 @@ void Memories::action_bus_meters_counters() {
    designed for adding to SRAM array  */
 void Memories::find_action_bus_users() {
     for (auto *ta : action_tables) {
-        int sz = ceil_log2(ta->table->layout.action_data_bytes) + 3;
-        int width = sz > 7 ? 1 << (sz - 7) : 1;
-
-        int per_ram = sz > 7 ? 10 : 17 - sz;
-        int depth = ((ta->calculated_entries - 1) >> per_ram) + 1;
-
+        int width = 1;
+        int per_row = ActionDataPerWord(&ta->table->layout, &width);
+        int depth = (ta->calculated_entries + per_row * 1024 - 1) / (per_row * 1024) + 1;
         for (int i = 0; i < width; i++) {
             action_bus_users.push_back(new SRAM_group(ta, depth, i, SRAM_group::ACTION));
             action_bus_users.back()->name = ta->table->name
@@ -1514,6 +1487,7 @@ void Memories::color_mapram_candidates(action_fill &suppl, action_fill &oflow, u
 /*  Fills out a row with all three of the group */
 void Memories::action_side(action_fill &action, action_fill &suppl, action_fill &oflow,
                            bool removed[3], int row, int side, unsigned mask) {
+
     if (action.group != nullptr) {
         removed[ACTION_IND] = fill_out_action_row(action, row, side, mask, false, false);
     }
@@ -1535,6 +1509,23 @@ void Memories::action_side(action_fill &action, action_fill &suppl, action_fill 
                                             oflow.group->type != SRAM_group::ACTION);
         fill_out_color_mapram(oflow, row, mask, true);
     }
+    
+    // FIXME: Potentially need to set up the difference between wide action tables within
+    // the assembly output
+    if (action.group && oflow.group && action.group->ta == oflow.group->ta) {
+        if (action.group == oflow.group) {
+            BUG("Shouldn't be the same for action and oflow");
+        } else {
+            auto name = action.group->ta->table->name + "$action";
+            auto &alloc = (*action.group->ta->memuse)[name];
+            size_t size = alloc.row.size();
+            auto &row2 = alloc.row[size - 1]; auto &row1 = alloc.row[size - 2];
+            row1.col.insert(row1.col.end(), row2.col.begin(), row2.col.end());
+            alloc.row.erase(alloc.row.begin() + size - 1);
+        }
+    }
+   
+
 
     if (suppl.group && oflow.group && oflow.group->type != SRAM_group::ACTION &&
         oflow.index < suppl.index && removed[OFLOW_IND])
@@ -1753,6 +1744,16 @@ void Memories::action_bus_users_log() {
                 LOG4("Col is " << row.col);
                 LOG4("Map col is " << row.mapcol);
             }
+        }
+    }
+
+    for (auto *ta : indirect_action_tables) {
+        auto name = ta->table->name + "$action";
+        auto alloc = (*ta->memuse)[name]; 
+        LOG1("Indirect Action Table for " << ta->table->name);
+        for (auto row : alloc.row) {
+            LOG4("Row is " << row.row << " and bus is " << row.bus);
+            LOG4("Col is " << row.col);
         }
     }
 }

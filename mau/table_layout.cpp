@@ -100,6 +100,7 @@ static void setup_action_layout(IR::MAU::Table *tbl) {
             action_data_bytes += (arg->type->width_bits() + 7) / 8U;
         if (action_data_bytes > tbl->layout.action_data_bytes)
             tbl->layout.action_data_bytes = action_data_bytes; }
+    LOG1("Table layout action data bytes " << tbl->layout.action_data_bytes);
 }
 
 namespace {

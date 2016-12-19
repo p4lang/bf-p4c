@@ -53,6 +53,8 @@ struct Memories {
         int stats_RAMs;
         int meter_tables;
         int meter_RAMs;
+        int selector_tables;
+        int selector_RAMs;
 
         void clear() {
             match_tables = 0; match_bus_min = 0; match_RAMs = 0; tind_tables = 0;
@@ -309,7 +311,6 @@ struct Memories {
     void find_action_bus_users();
     void action_bus_selectors_indirects();
     void action_bus_meters_counters();
-    int stats_per_row(int min_width, int max_width, IR::CounterType type);
     void find_action_candidates(int row, int mask, action_fill &action, action_fill &suppl,
                                 action_fill &oflow, bool stats_available, bool meter_available,
                                 action_fill &curr_oflow, action_fill &sel_unplaced);
