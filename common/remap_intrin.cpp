@@ -17,6 +17,6 @@ bool RemapIntrinsics::preorder(IR::Member *mem) {
     if (remap.count(mname)) {
         auto &to = remap.at(mname);
         mem->member = to.second;
-        mem->expr = new IR::NamedRef(to.first); }
+        mem->expr = new IR::PathExpression(to.first); }
     return false;
 }

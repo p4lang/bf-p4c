@@ -53,7 +53,7 @@ class GetTofinoParser::RewriteExtractNext : public Transform {
     const Context                 *ctxt;
     const IR::Expression          *latest = nullptr;
     std::map<cstring, int>        adjust;
-    const IR::Expression *preorder(IR::NamedRef *name) override;
+    const IR::Expression *preorder(IR::PathExpression *name) override;
     const IR::Expression *preorder(IR::Member *name) override;
     const IR::Expression *postorder(IR::Primitive *prim) override {
         if (prim->name == "extract") latest = prim->operands[0];
@@ -97,8 +97,8 @@ class GetTofinoParser::RewriteExtractNext : public Transform {
     RewriteExtractNext(GetTofinoParser &s, const Context *c) : self(s), ctxt(c) {}
 };
 
-const IR::Expression *GetTofinoParser::RewriteExtractNext::preorder(IR::NamedRef *name) {
-    if (name->name == "latest") {
+const IR::Expression *GetTofinoParser::RewriteExtractNext::preorder(IR::PathExpression *name) {
+    if (name->path->name == "latest") {
         for (const Context *c = ctxt; c && !latest; c = c->parent)
             for (auto m : c->state->match)
                 m->stmts.apply(FindLatestExtract(latest));
@@ -107,7 +107,7 @@ const IR::Expression *GetTofinoParser::RewriteExtractNext::preorder(IR::NamedRef
             return name; }
         LOG2("   rewrite latest => " << latest);
         return latest; }
-    if (name->name != "next") return name;
+    if (name->path->name != "next") return name;
     auto *hdr = findContext<IR::HeaderStackItemRef>();
     if (!hdr) /* error? */
         return name;

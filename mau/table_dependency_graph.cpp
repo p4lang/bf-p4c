@@ -83,7 +83,7 @@ class UpdateAccess : public MauInspector , P4WriteContext {
                 name = f->toString();
             } else if (auto i = dest->to<IR::HeaderStackItemRef>()) {
                 name = i->toString();
-            } else if (auto i = dest->to<IR::NamedRef>()) {
+            } else if (auto i = dest->to<IR::PathExpression>()) {
                 name = i->toString();
             } else if (dest->to<IR::ConcreteHeaderRef>()) {
                 // FIXME -- do something

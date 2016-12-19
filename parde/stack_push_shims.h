@@ -13,7 +13,7 @@ class StackPushShims : public PardeModifier {
                 { new IR::Tofino::ParserMatch(match_t(), 0, {
                     new IR::Primitive("set_metadata",
                         new IR::Member(IR::Type::Bits::get(stack.maxpush),
-                                       new IR::NamedRef(stack.name), "$push"),
+                                       new IR::PathExpression(stack.name), "$push"),
                         new IR::Constant((1U << stack.maxpush) - 1)) }, p->start) } ); }
         return false; }
 
