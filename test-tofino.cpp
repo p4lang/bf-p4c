@@ -108,13 +108,13 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
         phv_alloc = new PassManager({
             new MauPhvConstraints(phv),
             new PHV::TrivialAlloc(phv, defuse.conflicts()),
-            options->phv_new ? new VisitFunctor([&]() {
+            options->phv_new ? new PassManager ({
                 // &cluster_phv_mau,  // cluster PHV container placements
                                       // second cut PHV MAU Group assignments
                                       // honor single write conflicts from Table Placement
                 &phv_bind,            // fields bound to PHV containers
-                }) : nullptr,
-            });
+            }) : nullptr,
+        });
     }
 
     PassManager *phv_analysis = new PassManager({
