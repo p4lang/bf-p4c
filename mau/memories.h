@@ -60,8 +60,17 @@ struct Memories {
             match_tables = 0; match_bus_min = 0; match_RAMs = 0; tind_tables = 0;
             tind_RAMs = 0; action_tables = 0; action_bus_min = 0; action_RAMs = 0;
             ternary_tables = 0; ternary_TCAMs = 0; stats_tables = 0; stats_RAMs = 0;
-            meter_tables = 0; meter_RAMs = 0;
+            meter_tables = 0; meter_RAMs = 0; selector_tables = 0; selector_RAMs = 0;
         }
+
+        int total_RAMs() {
+            return match_RAMs + action_RAMs + stats_RAMs + meter_RAMs + selector_RAMs + tind_RAMs;
+        }
+
+        int left_side_RAMs() { return tind_RAMs; }
+        int right_side_RAMs() { return meter_RAMs + stats_RAMs + selector_RAMs; }
+        int non_SRAM_RAMs() { return left_side_RAMs() + right_side_RAMs() + action_RAMs; }
+        int columns(int RAMs) { return (RAMs + SRAM_COLUMNS - 1) / SRAM_COLUMNS; }
     };
 
 
@@ -283,6 +292,7 @@ struct Memories {
                    TableResourceAlloc *resources, int entries);
     bool analyze_tables(mem_info &mi);
     void calculate_column_balance(mem_info &mi, unsigned &row);
+    bool cut_from_left_side(mem_info &mi, int left_given_columns, int right_given_columns);
     bool allocate_all();
     bool allocate_all_exact(unsigned column_mask);
     vector<int> way_size_calculator(int ways, int RAMs_needed);

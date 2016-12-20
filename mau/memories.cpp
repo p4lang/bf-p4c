@@ -69,6 +69,7 @@ bool Memories::allocate_all() {
            finished = true;
         }
         LOG3("Row size " << __builtin_popcount(row));
+        LOG1("Row is " << row);
     } while (__builtin_popcount(row) < 10 && !finished);
 
     if (!finished) {
@@ -612,30 +613,90 @@ bool Memories::find_best_row_and_fill_out(unsigned column_mask) {
     }
 }
 
+bool Memories::cut_from_left_side(mem_info &mi, int left_given_columns,
+                                          int right_given_columns) {
+ 
+    if (right_given_columns > mi.columns(mi.right_side_RAMs())
+        && left_given_columns <= mi.columns(mi.left_side_RAMs())) {
+        LOG1("First");
+        return false;
+    } else if (right_given_columns <= mi.columns(mi.right_side_RAMs())
+               && left_given_columns > mi.columns(mi.left_side_RAMs())) {
+        LOG1("Second");
+        return true;
+    } else if (mi.columns(mi.left_side_RAMs()) < left_given_columns) {
+        LOG1("Third");
+        return true;
+    } else if (left_given_columns == 0) {
+        LOG1("Fourth");
+        return false;
+    } else {
+        BUG("We have a problem in calculate column balance");
+    }
+    return false;
+}
+
 // FIXME: Needs to actually be calculated for exact match row placement
 void Memories::calculate_column_balance(mem_info &mi, unsigned &row) {
-    int min_columns_required = (mi.match_RAMs + SRAM_ROWS - 1) / SRAM_ROWS;
-    int total_RAMs = mi.match_RAMs + mi.tind_RAMs + mi.action_RAMs;
-    int total_columns_required = (total_RAMs + SRAM_ROWS - 1) / SRAM_ROWS;
-    int mask_columns = 0;
+    int min_columns_required = (mi.match_RAMs + SRAM_COLUMNS - 1) / SRAM_COLUMNS;
+    LOG1("Min columns required " << min_columns_required);
+    int left_given_columns = 0;
+    int right_given_columns = 0;
+    LOG1("Function call");
+
     if (__builtin_popcount(row) == 0) {
         // FIXME: Making things up. Need good statistics
-        if (total_columns_required < 7 || min_columns_required < 5) {
-            mask_columns = 8;
-        } else {
-            mask_columns = min_columns_required;
+        left_given_columns = mi.left_side_RAMs();
+        right_given_columns = mi.right_side_RAMs();
+
+        LOG1("left given and right given " << left_given_columns << " "
+             << right_given_columns);
+        bool add_to_right = true;
+        LOG1("Non SRAM RAMs " << mi.non_SRAM_RAMs());
+        while (mi.columns(mi.non_SRAM_RAMs()) > left_given_columns + right_given_columns) {
+            if (add_to_right) {
+                right_given_columns++;
+                add_to_right = false;
+            } else {
+                left_given_columns++;
+                add_to_right = true;
+            }
+            LOG1("Loop 1");
         }
+        
+        LOG1("left given and right given " << left_given_columns << " "
+             << right_given_columns);
+        while (min_columns_required > SRAM_COLUMNS - (left_given_columns + right_given_columns)) {
+            if (cut_from_left_side(mi, left_given_columns, right_given_columns))
+                left_given_columns--;
+            else
+                right_given_columns--;
+            LOG1("Loop 2");
+        }
+
     } else {
-        mask_columns = __builtin_popcount(row) + 1;
+        left_given_columns = __builtin_popcount(row & 0xf);
+        right_given_columns = __builtin_popcount(row & 0x3f0);
+   
+        if (cut_from_left_side(mi, left_given_columns, right_given_columns))
+            left_given_columns--;
+        else
+            right_given_columns--;
     }
-    switch (mask_columns) {
-        case 5 : row = 0x0f8; break;
-        case 6 : row = 0x0fc; break;
-        case 7 : row = 0x1fc; break;
-        case 8 : row = 0x1fe; break;
-        case 9 : row = 0x1ff; break;
-        default : row = 0x3ff; break;
+
+    LOG1("Total sum is " << (left_given_columns + right_given_columns));
+    unsigned mask = 0;
+
+    for (int i = 0; i < LEFT_SIDE_COLUMNS - left_given_columns; i++) {
+        mask |= (1 << i);
     }
+
+    for (int i = 0; i < SRAM_COLUMNS - LEFT_SIDE_COLUMNS - right_given_columns; i++) {
+        mask |= (1 << (i + LEFT_SIDE_COLUMNS));
+    }
+
+    LOG1("Mask bits is " << __builtin_popcount(mask));
+    row = mask;
 }
 
 /* Allocates all of the ways */

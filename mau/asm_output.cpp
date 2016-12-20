@@ -925,8 +925,9 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionSelector *as) {
     return false; }
 bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     indent_t    indent(1);
+    auto name = tbl->name + "$tind";
     out << indent++ << "ternary_indirect " << ti->name << ':' << std::endl;
-    self.emit_memory(out, indent, tbl->resources->memuse.at(ti->name));
+    self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     int action_fmt_size = ceil_log2(tbl->actions.size());
     out << indent << "format: { action: " << action_fmt_size;
     if (tbl->layout.action_data_bytes_in_overhead > 0)
