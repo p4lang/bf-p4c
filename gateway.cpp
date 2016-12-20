@@ -42,7 +42,7 @@ GatewayTable::Match::Match(value_t *v, value_t &data, range_match_t range_match)
     else if (data.type == tSTR) {
         next = data;
     } else if (data.type == tMAP) {
-        for (auto &kv: data.map) {
+        for (auto &kv: MapIterChecked(data.map)) {
             if (kv.key == "next") {
                 if (CHECKTYPE(kv.value, tSTR))
                     next = kv.value;
@@ -55,6 +55,8 @@ GatewayTable::Match::Match(value_t *v, value_t &data, range_match_t range_match)
                     error(kv.value.lineno, "Syntax error, expecting boolean");
             } else
                 error(kv.key.lineno, "Syntax error, expecting gateway action description"); }
+        if (run_table && next.set())
+            error(data.lineno, "Can't run table and override next in the same gateway row");
     } else
         error(data.lineno, "Syntax error, expecting gateway action description");
 }
