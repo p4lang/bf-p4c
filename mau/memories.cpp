@@ -111,17 +111,9 @@ class SetupAttachedTables : public MauInspector {
         (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
         mem.action_tables.push_back(ta);
         mi.action_tables++;
-        /*
-        int sz = ceil_log2(ta->table->layout.action_data_bytes) + 3;
-        int width = sz > 7 ? 1 << (sz - 7) : 1;
-        mi.action_bus_min += width;
-        int per_ram = sz > 7 ? 10 : 17 - sz;
-        int depth = ((entries - 1) >> per_ram) + 1;
-        mi.action_RAMs += depth;
-        */
         int width = 1;
         int per_row = ActionDataPerWord(&ta->table->layout, &width);
-        int depth = (entries + per_row * 1024 - 1) / (per_row * 1024) + 1;
+        int depth = (entries + per_row * 1024 - 1) / (per_row * 1024);
         mi.action_bus_min += width; mi.action_RAMs += depth * width;
         return false;
     }
@@ -162,7 +154,7 @@ class SetupAttachedTables : public MauInspector {
         mi.action_tables++;
         int width = 1;
         int per_row = ActionDataPerWord(&ta->table->layout, &width);
-        int depth = (ap->size + per_row * 1024 - 1) / (per_row * 1024) + 1;
+        int depth = (ap->size + per_row * 1024 - 1) / (per_row * 1024);
         mi.action_bus_min += width; mi.action_RAMs += depth * width;
         return false;
     }
@@ -889,7 +881,7 @@ void Memories::action_bus_selectors_indirects() {
                 continue;
             int width = 1;
             int per_row = ActionDataPerWord(&ta->table->layout, &width);
-            int depth = (ap->size + per_row * 1024 - 1) / (per_row * 1024) + 1;
+            int depth = (ap->size + per_row * 1024 - 1) / (per_row * 1024);
             SRAM_group *selector = nullptr;
 
             for (auto grp : suppl_bus_users) {
@@ -962,7 +954,7 @@ void Memories::find_action_bus_users() {
     for (auto *ta : action_tables) {
         int width = 1;
         int per_row = ActionDataPerWord(&ta->table->layout, &width);
-        int depth = (ta->calculated_entries + per_row * 1024 - 1) / (per_row * 1024) + 1;
+        int depth = (ta->calculated_entries + per_row * 1024 - 1) / (per_row * 1024);
         for (int i = 0; i < width; i++) {
             action_bus_users.push_back(new SRAM_group(ta, depth, i, SRAM_group::ACTION));
             action_bus_users.back()->name = ta->table->name
@@ -1523,7 +1515,6 @@ void Memories::action_side(action_fill &action, action_fill &suppl, action_fill 
             auto &row2 = alloc.row[size - 1]; auto &row1 = alloc.row[size - 2];
             row1.col.insert(row1.col.end(), row2.col.begin(), row2.col.end());
             alloc.row.erase(alloc.row.begin() + size - 1);
-            LOG1("It is in here, bitch");
         }
     }
    
@@ -1752,7 +1743,6 @@ void Memories::action_bus_users_log() {
     for (auto *ta : indirect_action_tables) {
         auto name = ta->table->name + "$action";
         auto alloc = (*ta->memuse)[name]; 
-        LOG1("Indirect Action Table for " << ta->table->name);
         for (auto row : alloc.row) {
             LOG4("Row is " << row.row << " and bus is " << row.bus);
             LOG4("Col is " << row.col);

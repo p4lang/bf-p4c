@@ -12,10 +12,10 @@ int CounterPerWord(const IR::Counter *ctr) {
             error("%s: Maximum width for counter %s is 64 bits", ctr->srcInfo, ctr->name);
         return 2;
     case IR::CounterType::BOTH:
-        if (ctr->min_width <= 17) return 3;
-        if (ctr->min_width <= 28) return 2;
-        if (ctr->min_width > 64)
-            error("%s: Maximum width for counter %s is 64 bits", ctr->srcInfo, ctr->name);
+        if (ctr->min_width <= 42) return 3;
+        if (ctr->min_width <= 64) return 2;
+        if (ctr->min_width > 128)
+            error("%s: Maximum width for counter %s is 128 bits", ctr->srcInfo, ctr->name);
         return 1;
     default:
         error("%s: No counter type for %s", ctr->srcInfo, ctr->name);
