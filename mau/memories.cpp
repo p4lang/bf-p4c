@@ -162,7 +162,7 @@ class SetupAttachedTables : public MauInspector {
         mi.action_tables++;
         int width = 1;
         int per_row = ActionDataPerWord(&ta->table->layout, &width);
-        int depth = (entries + per_row * 1024 - 1) / (per_row * 1024) + 1;
+        int depth = (ap->size + per_row * 1024 - 1) / (per_row * 1024) + 1;
         mi.action_bus_min += width; mi.action_RAMs += depth * width;
         return false;
     }
@@ -1512,7 +1512,8 @@ void Memories::action_side(action_fill &action, action_fill &suppl, action_fill 
     
     // FIXME: Potentially need to set up the difference between wide action tables within
     // the assembly output
-    if (action.group && oflow.group && action.group->ta == oflow.group->ta) {
+    if (action.group && oflow.group && action.group->ta == oflow.group->ta
+        && action.group->type == SRAM_group::ACTION && oflow.group->type == SRAM_group::ACTION) {
         if (action.group == oflow.group) {
             BUG("Shouldn't be the same for action and oflow");
         } else {
@@ -1522,6 +1523,7 @@ void Memories::action_side(action_fill &action, action_fill &suppl, action_fill 
             auto &row2 = alloc.row[size - 1]; auto &row1 = alloc.row[size - 2];
             row1.col.insert(row1.col.end(), row2.col.begin(), row2.col.end());
             alloc.row.erase(alloc.row.begin() + size - 1);
+            LOG1("It is in here, bitch");
         }
     }
    

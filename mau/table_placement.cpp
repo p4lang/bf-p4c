@@ -729,7 +729,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         snprintf(suffix, sizeof(suffix), ".%d", ++counter);
         auto *table_part = tbl->clone_rename(suffix);
         table_part->logical_id = it->second->logical_id;
-        table_set_resources(table_part, it->second->resources->clone_rename(suffix),
+        table_set_resources(table_part, it->second->resources->clone_rename(suffix, tbl->name),
                             it->second->entries);
         if (!rv) {
             rv = table_part;

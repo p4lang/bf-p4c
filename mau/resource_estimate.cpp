@@ -35,7 +35,9 @@ int RegisterPerWord(const IR::Register *reg) {
 }
 
 int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width) {
-    int size = ceil_log2(layout->action_data_bytes);
+    int size = 0;
+    if (layout->action_data_bytes > 0)
+        size = ceil_log2(layout->action_data_bytes);
     if (size > 4) {
         *width = 1 << (size-4);
         return 1; }
