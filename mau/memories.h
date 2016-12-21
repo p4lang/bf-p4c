@@ -288,6 +288,7 @@ struct Memories {
 
     void clear();
     void clear_table_vectors();
+    void clear_uses();
     void add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
                    TableResourceAlloc *resources, int entries);
     bool analyze_tables(mem_info &mi);

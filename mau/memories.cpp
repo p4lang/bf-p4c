@@ -4,7 +4,8 @@
 #include "resource_estimate.h"
 #include "mau_visitor.h"
 
-void Memories::clear() {
+
+void Memories::clear_uses() {
     sram_use.clear();
     tcam_use.clear();
     mapram_use.clear();
@@ -18,8 +19,12 @@ void Memories::clear() {
     memset(sram_inuse, 0, sizeof(sram_inuse));
     memset(gw_bytes_per_sb, 0, sizeof(gw_bytes_per_sb));
     memset(mapram_inuse, 0, sizeof(mapram_inuse));
+}
+
+void Memories::clear() {
     tables.clear();
     clear_table_vectors();
+    clear_uses();
 }
 
 void Memories::clear_table_vectors() {
@@ -49,6 +54,7 @@ void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
         ta_gw->link_table(ta);
         tables.push_back(ta_gw);
     }
+    LOG1("Adding table " << t->name << " with " << entries << " entries.");
 }
 
 /* Function that tests whether all added tables can be allocated to the stage */
@@ -63,40 +69,44 @@ bool Memories::allocate_all() {
     bool finished = false;
 
     do {
+        clear_uses();
         calculate_column_balance(mi, row);
         LOG3("Allocating all exact tables");
         if (allocate_all_exact(row)) {
            finished = true;
         }
         LOG3("Row size " << __builtin_popcount(row));
-        LOG1("Row is " << row);
+        //LOG1("Row is " << row);
     } while (__builtin_popcount(row) < 10 && !finished);
 
     if (!finished) {
+        LOG1("Failure?");
         return false;
     }
 
-    LOG3("Allocating all ternary tables");
+    LOG1("Success");
+
+    LOG1("Allocating all ternary tables");
     if (!allocate_all_ternary()) {
         return false;
     }
 
-    LOG3("Allocating all ternary indirect tables");
+    LOG1("Allocating all ternary indirect tables");
     if (!allocate_all_tind()) {
         return false;
     }
 
-    LOG3("Allocating all action tables");
+    LOG1("Allocating all action tables");
     if (!allocate_all_action()) {
         return false;
     }
 
-    LOG3("Allocating all gateway tables");
+    LOG1("Allocating all gateway tables");
     if (!allocate_all_gw()) {
         return false;
     }
 
-    LOG3("Memory allocation fits");
+    LOG1("Memory allocation fits");
     return true;
 }
 
@@ -403,6 +413,9 @@ vector<int> Memories::available_match_SRAMs_per_row(unsigned row_mask, unsigned 
 void Memories::break_exact_tables_into_ways() {
     exact_match_ways.clear();
     for (auto *ta : exact_tables) {
+        ta->calculated_entries = 0;
+        (*ta->memuse)[ta->table->name].ways.clear();
+        (*ta->memuse)[ta->table->name].row.clear();
         int number_of_ways = ta->table->ways.size();
         int width = ta->table->ways[0].width;
         int groups = ta->table->ways[0].match_groups;
@@ -614,21 +627,20 @@ bool Memories::find_best_row_and_fill_out(unsigned column_mask) {
 }
 
 bool Memories::cut_from_left_side(mem_info &mi, int left_given_columns,
-                                          int right_given_columns) {
- 
+                                          int right_given_columns) { 
     if (right_given_columns > mi.columns(mi.right_side_RAMs())
         && left_given_columns <= mi.columns(mi.left_side_RAMs())) {
-        LOG1("First");
         return false;
     } else if (right_given_columns <= mi.columns(mi.right_side_RAMs())
                && left_given_columns > mi.columns(mi.left_side_RAMs())) {
-        LOG1("Second");
         return true;
     } else if (mi.columns(mi.left_side_RAMs()) < left_given_columns) {
-        LOG1("Third");
+        return true;
+    } else if(mi.columns(mi.right_side_RAMs()) < right_given_columns) {
+        return false;
+    } else if (left_given_columns > 0) {
         return true;
     } else if (left_given_columns == 0) {
-        LOG1("Fourth");
         return false;
     } else {
         BUG("We have a problem in calculate column balance");
@@ -661,22 +673,17 @@ void Memories::calculate_column_balance(mem_info &mi, unsigned &row) {
                 left_given_columns++;
                 add_to_right = true;
             }
-            LOG1("Loop 1");
-        }
-        
-        LOG1("left given and right given " << left_given_columns << " "
-             << right_given_columns);
+        } 
         while (min_columns_required > SRAM_COLUMNS - (left_given_columns + right_given_columns)) {
             if (cut_from_left_side(mi, left_given_columns, right_given_columns))
                 left_given_columns--;
             else
                 right_given_columns--;
-            LOG1("Loop 2");
         }
 
     } else {
-        left_given_columns = __builtin_popcount(row & 0xf);
-        right_given_columns = __builtin_popcount(row & 0x3f0);
+        left_given_columns = __builtin_popcount(~row & 0xf);
+        right_given_columns = __builtin_popcount(~row & 0x3f0);
    
         if (cut_from_left_side(mi, left_given_columns, right_given_columns))
             left_given_columns--;
@@ -709,12 +716,12 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
     }
     compress_ways();
     for (auto *ta : exact_tables) {
-        LOG4("Exact match table " << ta->table->name);
+        LOG1("Exact match table " << ta->table->name);
         auto name = ta->table->name;
         auto alloc = (*ta->memuse)[name];
         for (auto row : alloc.row) {
-            LOG4("Row is " << row.row << " and bus is " << row.bus);
-            LOG4("Col is " << row.col);
+            LOG1("Row is " << row.row << " and bus is " << row.bus);
+            LOG1("Col is " << row.col);
         }
     }
     return true;
@@ -1020,6 +1027,8 @@ void Memories::find_action_bus_users() {
             action_bus_users.push_back(new SRAM_group(ta, depth, i, SRAM_group::ACTION));
             action_bus_users.back()->name = ta->table->name
                                             + action_bus_users.back()->name_addition();
+            //LOG1("Action bus user " << *action_bus_users.back() << " with per_row " <<
+            //     per_row << " and entries " << ta->calculated_entries);
         }
     }
     action_bus_selectors_indirects();
@@ -1541,13 +1550,17 @@ void Memories::color_mapram_candidates(action_fill &suppl, action_fill &oflow, u
 void Memories::action_side(action_fill &action, action_fill &suppl, action_fill &oflow,
                            bool removed[3], int row, int side, unsigned mask) {
 
+    int available = __builtin_popcount(~sram_inuse[row] & mask);
+    int used = 0;
     if (action.group != nullptr) {
         removed[ACTION_IND] = fill_out_action_row(action, row, side, mask, false, false);
+        used += __builtin_popcount(action.mask);
     }
 
     if (suppl.group != nullptr) {
         removed[SUPPL_IND] = fill_out_action_row(suppl, row, side, mask, false, true);
         fill_out_color_mapram(suppl, row, mask, false);
+        used += __builtin_popcount(suppl.mask);
     }
 
     if (oflow.group != nullptr) {
@@ -1561,7 +1574,11 @@ void Memories::action_side(action_fill &action, action_fill &suppl, action_fill 
         removed[OFLOW_IND] = fill_out_action_row(oflow, row, side, mask, true,
                                             oflow.group->type != SRAM_group::ACTION);
         fill_out_color_mapram(oflow, row, mask, true);
+        used += __builtin_popcount(oflow.mask);
     }
+
+    //LOG1("Available and Used is " << available << " " << used << " on row,side " << row << ", "
+    //     << side);
     
     // FIXME: Potentially need to set up the difference between wide action tables within
     // the assembly output
@@ -1881,9 +1898,18 @@ bool Memories::allocate_all_action() {
         }
     }
 
-    if (!action_bus_users.empty() || !suppl_bus_users.empty())
-        return false;
+    if (!action_bus_users.empty() || !suppl_bus_users.empty()) {
+        int act_unused = 0;
+        for (auto abu : action_bus_users)
+            act_unused += abu->left_to_place();
 
+        int sup_unused = 0;
+        for (auto sbu : suppl_bus_users)
+            sup_unused += sbu->left_to_place();
+
+        //LOG1("Unused " << act_unused << ", " << sup_unused);
+        return false;
+    }
     action_bus_users_log();
     return true;
 }
@@ -2016,7 +2042,10 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
         BUG("Unhandled memory use type %d in Memories::Use::visit", type); }
     for (auto &r : row) {
         if (bus && r.bus != -1) {
+            LOG1("Before Bus");
+            LOG1("Row and Bus " << r.row << " " << r.bus);
             fn((*bus)[r.row][r.bus]);
+            LOG1("After Bus");
         }
         /*if (type == TWOPORT)
             fn(mem.stateful_bus[r.row]);*/
@@ -2035,12 +2064,21 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
 }
 
 void Memories::update(cstring name, const Memories::Use &alloc) {
+    LOG1("Name is " << name);
     alloc.visit(*this, [name](cstring &use) {
         if (use)
             BUG("conflicting memory use between %s and %s", use, name);
         use = name; });
 }
 void Memories::update(const map<cstring, Use> &alloc) {
+    for (auto &a : alloc) {
+        LOG1("Table name is " << a.first);
+        for (auto row : a.second.row) {
+            LOG1("Row is " << row.row << " and bus is " << row.bus);
+            LOG1("Col is " << row.col);
+        }
+    }
+
     for (auto &a : alloc) update(a.first, a.second);
 }
 

@@ -636,7 +636,7 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
         if (p->gw) {
             assert(p->need_more || table_placed.count(p->gw->name) == 0);
             table_placed.emplace_hint(table_placed.find(p->gw->name), p->gw->name, p); } }
-    LOG3("Finished table placement");
+    LOG1("Finished table placement");
     return pipe;
 }
 
