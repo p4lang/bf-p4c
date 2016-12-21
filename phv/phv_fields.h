@@ -35,6 +35,7 @@ class PhvInfo : public Inspector {
         bool            referenced;
         bool            metadata;
         bool            pov;
+        bool            mau_write = false;  // field Write in MAU ?
         set<constraint> constraints;    // unused -- get rid of it?
         cstring header() const { return name.before(strrchr(name, '.')); }
         PHV::Bit bit(unsigned i) const {

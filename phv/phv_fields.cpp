@@ -305,7 +305,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &s
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo::Field *fld) {
-    if (fld)
+    if (fld) {
         out << fld->name
             << '['
             << fld->size
@@ -315,8 +315,14 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field *fld) {
             << ".."
             << fld->phv_use_hi
             << '}';
-    else
+        if (fld->mau_write) {
+            out << "-w-";
+        } else {
+            out << "--";
+        }
+    } else {
         out << "-f-";  // fld is nil
+    }
     return out;
 }
 
@@ -326,6 +332,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
     if (field.referenced) out << " ref";
     if (field.metadata) out << " meta";
     if (field.pov) out << " pov";
+    if (field.mau_write) out << " mau_write";
     if (!field.alloc.empty())
         out << " " << field.alloc;
     return out;

@@ -166,6 +166,18 @@ bool Cluster::preorder(const IR::Operation* operation) {
     return true;
 }
 
+bool Cluster::preorder(const IR::Expression* expression) {
+    LOG4(".....Expression....." << expression);
+    auto field = phv_i.field(expression);
+    if (field && isWrite()) {
+        field->mau_write = true;
+        LOG4(".....MAU_write....." << field);
+        return false;  // prune children below, e.g., complicated slice expression
+    }
+
+    return true;
+}
+
 //***********************************************************************************
 //
 // postorder walk on IR tree

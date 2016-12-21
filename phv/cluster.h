@@ -25,7 +25,7 @@
 //***********************************************************************************
 //
 //
-class Cluster : public Inspector {
+class Cluster : public Inspector, P4WriteContext {
  public:
     class Uses;
  private:
@@ -53,6 +53,7 @@ class Cluster : public Inspector {
     bool preorder(const IR::HeaderRef*) override;
     bool preorder(const IR::Primitive*) override;
     bool preorder(const IR::Operation*) override;
+    bool preorder(const IR::Expression*) override;
     void postorder(const IR::Primitive*) override;
     void end_apply() override;
     //
