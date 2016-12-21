@@ -47,7 +47,7 @@ meter meter1 {
     type : bytes;
     static : test1;
     result : data.color_1;
-    instance_count : 16000;
+    instance_count : 1000;
     implementation : lpf;
 }
 
@@ -55,7 +55,7 @@ meter meter2 {
     type : bytes;
     static : test3;
     result : data.color_2;
-    instance_count : 5000;
+    instance_count : 2000;
     implementation : wred;
 }
 

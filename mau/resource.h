@@ -18,7 +18,10 @@ struct TableResourceAlloc {
                 rv->memuse.emplace(name + ext, use.second);
             } else {
                 cstring back = use.first.findlast('$');
-                rv->memuse.emplace(name + ext + back, use.second);
+                if (back)
+                    rv->memuse.emplace(name + ext + back, use.second);
+                else 
+                    rv->memuse.emplace(use.first + ext, use.second);
             }
         }
         return rv; }

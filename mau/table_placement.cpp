@@ -661,6 +661,10 @@ static void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *r
             LOG3("alloc.first " << alloc.first);
         }
         auto &mem = resources->memuse.at(tbl->name);
+        for (auto &alloc : resources->memuse)
+            LOG1("Name is " << alloc.first);
+        LOG1("Way sizes " << tbl->ways.size() << " " << mem.ways.size());
+        LOG1("Tbl name " << tbl->name);
         assert(tbl->ways.size() == mem.ways.size());
         for (unsigned i = 0; i < tbl->ways.size(); ++i)
             tbl->ways[i].entries = mem.ways[i].first * 1024 * tbl->ways[i].match_groups; }
@@ -723,12 +727,16 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     int counter = 0;
     IR::MAU::Table *rv = 0, *prev = 0;
     /* split the table into multiple parts per the placement */
-    LOG3("splitting " << tbl->name << " across " << table_placed.count(tbl->name) << " stages");
+    LOG1("splitting " << tbl->name << " across " << table_placed.count(tbl->name) << " stages");
     for (it = table_placed.find(tbl->name); it->first == tbl->name; it++) {
+        LOG1("In here " << tbl->name);
         char suffix[8];
         snprintf(suffix, sizeof(suffix), ".%d", ++counter);
         auto *table_part = tbl->clone_rename(suffix);
         table_part->logical_id = it->second->logical_id;
+        for (auto &alloc : it->second->resources->memuse) {
+            LOG1("Table names before " << alloc.first);
+        }
         table_set_resources(table_part, it->second->resources->clone_rename(suffix, tbl->name),
                             it->second->entries);
         if (!rv) {

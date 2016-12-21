@@ -449,8 +449,9 @@ void Memories::break_exact_tables_into_ways() {
                }
                mask |= 1 << *bits.next;
             }
-           (*ta->memuse)[ta->table->name].ways.emplace_back(way_sizes[i], mask);
+            (*ta->memuse)[ta->table->name].ways.emplace_back(way_sizes[i], mask);
         }
+        LOG1("Ways done for " << ta->table->name << " with " << way_sizes.size());
     }
 
     std::sort(exact_match_ways.begin(), exact_match_ways.end(),
