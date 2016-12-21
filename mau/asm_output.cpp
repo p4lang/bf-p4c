@@ -897,8 +897,6 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *) {
     out << indent++ << "action " << name << ':' << std::endl;
     if (tbl->match_table)
         out << indent << "p4: { name: " << tbl->match_table->name << "$action }" << std::endl;
-    for (auto use : tbl->resources->memuse)
-        LOG1("use.first " << use.first);
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     for (auto act : Values(tbl->actions)) {
         if (act->args.empty()) continue;

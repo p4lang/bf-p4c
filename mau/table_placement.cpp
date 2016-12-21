@@ -284,7 +284,6 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
 static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Placed *done,
                           int &entries, TableResourceAlloc *resources,
                           vector<TableResourceAlloc *> &prev_resources) {
-    LOG3("Try alloc mem with " << entries << " entries");
     Memories current_mem;
     int i = 0;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
@@ -652,19 +651,10 @@ IR::Node *TablePlacement::postorder(IR::Tofino::Pipe *pipe) {
 
 static void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *resources,
                                 int entries) {
-    LOG3("Table resources for " << tbl->name << " are " << resources->memuse.size());
     tbl->resources = resources;
     tbl->layout.entries = entries;
     if (!tbl->ways.empty()) {
-        LOG3("tbl->name " << tbl->name << " " << tbl->ways.size());
-        for (auto alloc : resources->memuse) {
-            LOG3("alloc.first " << alloc.first);
-        }
         auto &mem = resources->memuse.at(tbl->name);
-        for (auto &alloc : resources->memuse)
-            LOG1("Name is " << alloc.first);
-        LOG1("Way sizes " << tbl->ways.size() << " " << mem.ways.size());
-        LOG1("Tbl name " << tbl->name);
         assert(tbl->ways.size() == mem.ways.size());
         for (unsigned i = 0; i < tbl->ways.size(); ++i)
             tbl->ways[i].entries = mem.ways[i].first * 1024 * tbl->ways[i].match_groups; }
@@ -729,14 +719,10 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     /* split the table into multiple parts per the placement */
     LOG1("splitting " << tbl->name << " across " << table_placed.count(tbl->name) << " stages");
     for (it = table_placed.find(tbl->name); it->first == tbl->name; it++) {
-        LOG1("In here " << tbl->name);
         char suffix[8];
         snprintf(suffix, sizeof(suffix), ".%d", ++counter);
         auto *table_part = tbl->clone_rename(suffix);
         table_part->logical_id = it->second->logical_id;
-        for (auto &alloc : it->second->resources->memuse) {
-            LOG1("Table names before " << alloc.first);
-        }
         table_set_resources(table_part, it->second->resources->clone_rename(suffix, tbl->name),
                             it->second->entries);
         if (!rv) {
@@ -749,7 +735,6 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
             prev->next["$miss"] = new IR::MAU::TableSeq(table_part); }
         prev = table_part; }
     assert(rv);
-    LOG3("Table in stage");
     return rv;
 }
 
