@@ -318,7 +318,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field *fld) {
         if (fld->mau_write) {
             out << "-w-";
         } else {
-            out << "--";
+            out << "-r-";
         }
     } else {
         out << "-f-";  // fld is nil

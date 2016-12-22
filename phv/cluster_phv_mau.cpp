@@ -1032,16 +1032,25 @@ void PHV_MAU_Group_Assignments::consolidate_slices_in_group(
 //
 // container cohabit summary
 // recommendations to TP phase
-//     avoid single write issue
+// avoid single write issue
+// consider only containers that have more than 1 field each with mau_write
 //
 
 void PHV_MAU_Group_Assignments::container_cohabit_summary() {
     for (auto &gg : PHV_MAU_i) {
         // groups within this word size
-        for (auto g : gg.second) {
-            for (auto c : g->phv_containers()) {
+        for (auto &g : gg.second) {
+            for (auto &c : g->phv_containers()) {
                 if (c->fields_in_container().size() > 1) {
-                    cohabit_fields_i.push_back(c);
+                    int fields_written = 0;
+                    for (auto &cc : c->fields_in_container()) {
+                        if (cc->field()->mau_write) {
+                            fields_written++;
+                        }
+                    }
+                    if (fields_written > 1) {
+                        cohabit_fields_i.push_back(c);
+                    }
                 }
             }
         }
@@ -1060,7 +1069,7 @@ bool PHV_MAU_Group_Assignments::status(std::list<Cluster_PHV *>& clusters_to_be_
     //
     if (clusters_to_be_assigned.size() > 0) {
         ordered_map<PHV_Container::PHV_Word, int> needed_containers;
-        for (auto w : num_groups_i) {
+        for (auto &w : num_groups_i) {
             needed_containers[w.first] = 0;
         }
         int needed_bits = 0;
