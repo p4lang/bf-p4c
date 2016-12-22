@@ -229,8 +229,11 @@ static int count(const TablePlacement::Placed *pl) {
 }
 
 TablePlacement::Placed *TablePlacement::Placed::gateway_merge() {
-    if (gw || !table->uses_gateway() || table->match_table)
+    if (gw || !table->uses_gateway() || table->match_table) {
+        LOG1("Gateway Merge return?");
         return this;
+    }
+    LOG1("Gateway Merger");
     /* table is just a gateway -- look for a dependent match table to combine with */
     cstring result_tag;
     const IR::MAU::Table *match = 0;
@@ -629,6 +632,7 @@ IR::Node *TablePlacement::preorder(IR::Tofino::Pipe *pipe) {
     placement = placed;
     table_placed.clear();
     for (auto p = placement; p; p = p->prev) {
+        LOG1("Table name is " << p->name << " with logical id " << p->logical_id);
         assert(p->name == p->table->name);
         assert(p->need_more || table_placed.count(p->name) == 0);
         table_placed.emplace_hint(table_placed.find(p->name), p->name, p);

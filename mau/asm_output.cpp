@@ -888,10 +888,11 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::Register *) {
     return false;
 }
 
-bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *) {
+bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *ap) {
     if (tbl->resources->memuse.at(tbl->name).unattached_profile) {
         return false;
     }
+
     indent_t    indent(1);
     cstring name = tbl->name + "$action";
     out << indent++ << "action " << name << ':' << std::endl;
