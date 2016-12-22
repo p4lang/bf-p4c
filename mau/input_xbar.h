@@ -1,10 +1,10 @@
 #ifndef _TOFINO_MAU_INPUT_XBAR_H_
 #define _TOFINO_MAU_INPUT_XBAR_H_
 
+#include <unordered_set>
 #include "lib/alloc.h"
 #include "lib/hex.h"
 #include "ir/ir.h"
-#include <unordered_set>
 
 class PhvInfo;
 class IXBarRealign;

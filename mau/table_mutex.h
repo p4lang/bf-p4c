@@ -35,6 +35,6 @@ class DetermineActionProfileFaults : public MauInspector {
     const TablesMutuallyExclusive &mutex;
     bool preorder(const IR::MAU::Table *t) override;
  public:
-    DetermineActionProfileFaults(const TablesMutuallyExclusive &m) : mutex(m) {}
+    explicit DetermineActionProfileFaults(const TablesMutuallyExclusive &m) : mutex(m) {}
 };
 #endif /* _TOFINO_MAU_TABLE_MUTEX_H_ */

@@ -34,13 +34,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("meter1") meter(32w16000, CounterType.bytes) meter1;
-    @name("meter2") meter(32w5000, CounterType.bytes) meter2;
+    @name("meter1") meter(32w1000, CounterType.bytes) meter1;
+    @name("meter2") meter(32w2000, CounterType.bytes) meter2;
     @name("h1_3") action h1_3(bit<16> val1, bit<16> val2, bit<16> val3) {
         hdr.data.h1 = val1;
         hdr.data.h2 = val2;
         hdr.data.h3 = val3;
-        meter1.execute_meter((bit<32>)14w7, hdr.data.color_1);
+        meter1.execute_meter((bit<32>)10w7, hdr.data.color_1);
     }
     @name("h4_6") action h4_6(bit<16> val4, bit<16> val5, bit<16> val6) {
         hdr.data.h4 = val4;
@@ -51,7 +51,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.h7 = val7;
         hdr.data.h8 = val8;
         hdr.data.h9 = val9;
-        meter2.execute_meter((bit<32>)13w7, hdr.data.color_2);
+        meter2.execute_meter((bit<32>)11w7, hdr.data.color_2);
     }
     @name("test1") table test1() {
         actions = {

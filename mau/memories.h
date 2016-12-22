@@ -139,7 +139,7 @@ struct Memories {
             selector_info() : sel_group(nullptr) {}
             bool sel_linked() { return sel_group != nullptr; }
             bool act_linked() { return !action_groups.empty(); }
-            bool sel_all_placed() { return sel_group->all_placed(); } 
+            bool sel_all_placed() { return sel_group->all_placed(); }
             bool action_all_placed() {
                 if (action_groups.empty())
                     BUG("No action corresponding with this selector");
@@ -152,7 +152,7 @@ struct Memories {
             bool sel_any_placed() {
                 return sel_group->any_placed();
             }
-            bool action_any_placed() { 
+            bool action_any_placed() {
                 if (action_groups.empty())
                     BUG("No action corresponding with this selector");
                 for (auto *action_group : action_groups) {

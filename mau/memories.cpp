@@ -629,7 +629,7 @@ bool Memories::find_best_row_and_fill_out(unsigned column_mask) {
 }
 
 bool Memories::cut_from_left_side(mem_info &mi, int left_given_columns,
-                                          int right_given_columns) { 
+                                          int right_given_columns) {
     if (right_given_columns > mi.columns(mi.right_side_RAMs())
         && left_given_columns <= mi.columns(mi.left_side_RAMs())) {
         return false;
@@ -638,7 +638,7 @@ bool Memories::cut_from_left_side(mem_info &mi, int left_given_columns,
         return true;
     } else if (mi.columns(mi.left_side_RAMs()) < left_given_columns) {
         return true;
-    } else if(mi.columns(mi.right_side_RAMs()) < right_given_columns) {
+    } else if (mi.columns(mi.right_side_RAMs()) < right_given_columns) {
         return false;
     } else if (left_given_columns > 0) {
         return true;
@@ -670,7 +670,7 @@ void Memories::calculate_column_balance(mem_info &mi, unsigned &row) {
                 left_given_columns++;
                 add_to_right = true;
             }
-        } 
+        }
         while (min_columns_required > SRAM_COLUMNS - (left_given_columns + right_given_columns)) {
             if (cut_from_left_side(mi, left_given_columns, right_given_columns))
                 left_given_columns--;
@@ -681,7 +681,6 @@ void Memories::calculate_column_balance(mem_info &mi, unsigned &row) {
     } else {
         left_given_columns = __builtin_popcount(~row & 0xf);
         right_given_columns = __builtin_popcount(~row & 0x3f0);
-   
         if (cut_from_left_side(mi, left_given_columns, right_given_columns))
             left_given_columns--;
         else
@@ -1549,7 +1548,6 @@ void Memories::color_mapram_candidates(action_fill &suppl, action_fill &oflow, u
 /*  Fills out a row with all three of the group */
 void Memories::action_side(action_fill &action, action_fill &suppl, action_fill &oflow,
                            bool removed[3], int row, int side, unsigned mask) {
-
     if (action.group != nullptr) {
         removed[ACTION_IND] = fill_out_action_row(action, row, side, mask, false, false);
     }
@@ -1571,8 +1569,6 @@ void Memories::action_side(action_fill &action, action_fill &suppl, action_fill 
                                             oflow.group->type != SRAM_group::ACTION);
         fill_out_color_mapram(oflow, row, mask, true);
     }
-
-    
     // FIXME: Potentially need to set up the difference between wide action tables within
     // the assembly output
     if (action.group && oflow.group && action.group->ta == oflow.group->ta
@@ -1588,8 +1584,6 @@ void Memories::action_side(action_fill &action, action_fill &suppl, action_fill 
             alloc.row.erase(alloc.row.begin() + size - 1);
         }
     }
-   
-
 
     if (suppl.group && oflow.group && oflow.group->type != SRAM_group::ACTION &&
         oflow.index < suppl.index && removed[OFLOW_IND])
@@ -1813,7 +1807,7 @@ void Memories::action_bus_users_log() {
 
     for (auto *ta : indirect_action_tables) {
         auto name = ta->table->name + "$action";
-        auto alloc = (*ta->memuse)[name]; 
+        auto alloc = (*ta->memuse)[name];
         for (auto row : alloc.row) {
             LOG4("Row is " << row.row << " and bus is " << row.bus);
             LOG4("Col is " << row.col);

@@ -20,7 +20,7 @@ struct TableResourceAlloc {
                 cstring back = use.first.findlast('$');
                 if (back)
                     rv->memuse.emplace(name + ext + back, use.second);
-                else 
+                else
                     rv->memuse.emplace(use.first + ext, use.second);
             }
         }
