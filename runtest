@@ -64,8 +64,25 @@ if [ "$tofinodir" = "$execdir" -a "$srcdir" != "." ]; then
 fi
 
 P4C=./p4c-tofino
-
 testdir=tofino
+filter_P4C_ARGS=""
+for p4c_arg in $P4C_ARGS; do
+    if [ "$p4c_arg" = "--runtfas" -o "$p4c_arg" = "-runtfas" ]; then
+        RUN_TFAS=true
+    elif [ "$p4c_arg" = "-norun" ]; then
+        run_stf=false
+    elif [ "$p4c_arg" = "-time" ]; then
+        TIME_COMMAND="time"
+    elif [ "$p4c_arg" = "-v" ]; then
+        if $verbose; then
+            filter_P4C_ARGS="$filter_P4C_ARGS $p4c_arg"
+        fi
+        verbose=true
+    else
+        filter_P4C_ARGS="$filter_P4C_ARGS $p4c_arg"
+    fi
+done
+P4C_ARGS="$filter_P4C_ARGS"
 
 while [ $# -gt 1 ]; do
     case $1 in
@@ -99,6 +116,9 @@ while [ $# -gt 1 ]; do
             P4C_ARGS="$P4C_ARGS $1"
         fi
         verbose=true
+        ;;
+    -runtfas|--runtfas)
+        RUN_TFAS=true
         ;;
     --*)
         if [ -d $testdir${1#-} ]; then
@@ -173,4 +193,10 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
     run $STF -l $name.out --observation-log $obsLog $test | \
         grep -v 'WARN MAU::process_match Time gone backwards!' \
         || die
+elif ${RUN_TFAS:-false}; then
+    TFAS=$(findbin tofino-asm tfas)
+    cd $testdir
+    mkdir -p $name.out
+    rm -f $name.out/*.cfg.json
+    run $TFAS -vvvvl $name.out/tfas.config.log $name.tfa || die
 fi
