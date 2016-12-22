@@ -239,3 +239,12 @@ class Instruction : Primitive {
 }
 
 }  // end namespace MAU
+
+class RangeMatch : Operation_Unary {
+    // range match -- use operand (up to 4 bits) as index into constant (up to 16 bits)
+    // to extract a single bit.  Result is always 1 bit.
+    unsigned    data;
+    RangeMatch { type = Type::Bits::get(1); }
+    precedence = DBPrint::Prec_Equ;
+    stringOp = " in ";
+}

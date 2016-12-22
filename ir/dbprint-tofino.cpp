@@ -65,6 +65,12 @@ void IR::MAU::TableSeq::dbprint(std::ostream &out) const {
         out << endl << indent << t << unindent;
 }
 
+void IR::RangeMatch::dbprint(std::ostream &out) const {
+    int prec = getprec(out);
+    out << setprec(Prec_Equ) << expr << " in 0x" << hex(data) << setprec(prec);
+    if (prec == 0) out << ';';
+}
+
 void IR::Tofino::ParserMatch::dbprint(std::ostream &out) const {
     (value ? out << "match " << value : out << "default") << ":  (shift=" << shift << ')' << indent;
     for (auto st : stmts)

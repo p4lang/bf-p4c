@@ -49,12 +49,25 @@ class CollectGatewayFields : public Inspector {
         vector<std::pair<int, bitrange>>        offsets; };
     map<const PhvInfo::Field *, info_t>       info;
     map<cstring, int>                         valid_offsets;
+    bool                                      need_range = false;
     int                                       bytes, bits;
     explicit CollectGatewayFields(const PhvInfo &phv, const IXBar::Use *ix = nullptr)
     : phv(phv), ixbar(ix) {}
     CollectGatewayFields(const PhvInfo &phv, unsigned rl) : phv(phv), row_limit(rl) {}
     bool compute_offsets();
+    friend std::ostream &operator<<(std::ostream &, const info_t &);
     friend std::ostream &operator<<(std::ostream &, const CollectGatewayFields &);
+};
+
+class GatewayRangeMatch : public MauModifier {
+    const PhvInfo       &phv;
+    bool preorder(IR::ActionFunction *) override { return false; }
+    bool preorder(IR::V1Table *) override { return false; }
+    void postorder(IR::MAU::Table *) override;
+    class SetupRanges;
+
+ public:
+    explicit GatewayRangeMatch(const PhvInfo &phv) : phv(phv) {}
 };
 
 class CheckGatewayExpr : public Inspector {
@@ -73,6 +86,7 @@ class BuildGatewayMatch : public Inspector {
     const PhvInfo               &phv;
     CollectGatewayFields        &fields;
     match_t                     match;
+    vector<int>                 range_match;
     profile_t init_apply(const IR::Node *root) override;
     bool preorder(const IR::Expression *) override;
     bool preorder(const IR::Primitive *) override;
@@ -82,7 +96,7 @@ class BuildGatewayMatch : public Inspector {
     bool preorder(const IR::BOr *) override { return true; }
     bool preorder(const IR::Constant *) override;
     bool preorder(const IR::Equ *) override;
-    bool preorder(const IR::Geq *) override;
+    bool preorder(const IR::RangeMatch *) override;
     friend std::ostream &operator<<(std::ostream &, const BuildGatewayMatch &);
     const PhvInfo::Field        *match_field;
     PhvInfo::Field::bitrange    match_field_bits;
@@ -92,7 +106,9 @@ class BuildGatewayMatch : public Inspector {
     BuildGatewayMatch(const PhvInfo &phv, CollectGatewayFields &f);
 };
 
-inline std::ostream &operator<<(std::ostream &out, const BuildGatewayMatch &m) {
-    return out << m.match; }
+class GatewayOpt : public PassManager {
+ public:
+    explicit GatewayOpt(const PhvInfo &);
+};
 
 #endif /* _TOFINO_MAU_GATEWAY_H_ */

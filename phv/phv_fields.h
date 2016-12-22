@@ -164,4 +164,6 @@ extern void repack_metadata(PhvInfo &phv);
 void dump(const PhvInfo *);
 extern void repack_metadata(PhvInfo &phv);
 
+std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::bitrange &br);
+
 #endif /* _TOFINO_PHV_PHV_FIELDS_H_ */

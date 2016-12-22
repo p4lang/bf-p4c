@@ -805,7 +805,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             for (auto &offset : info.second.offsets) {
                 if (offset.first < 32) continue;
                 offset.first += shift;
-                alloc.bit_use.emplace_back(info.first->name, hash_group, 0,
+                alloc.bit_use.emplace_back(info.first->name, hash_group, offset.second.lo,
                                            offset.first - 32, offset.second.size()); } }
         for (auto &valid : collect.valid_offsets) {
             LOG3("Valid.second " << valid.second);

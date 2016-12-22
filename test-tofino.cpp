@@ -145,9 +145,7 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
 
         phv_analysis,               // phv analysis after last &phv pass
 
-        new CanonGatewayExpr,       // must be before TableLayout?  or just TablePlacement?
-        new SplitComplexGateways(phv),
-        new CheckGatewayExpr(phv),
+        new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
         new TableLayout(phv),
         new TableFindSeqDependencies,
         new FindDependencyGraph(&deps),

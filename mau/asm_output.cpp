@@ -43,7 +43,7 @@ class MauAsmOutput::TableFormat {
         vector<std::pair<int, int>>     match;
     };
     int total_bits[7] = {0, 0, 0, 0, 0, 0, 0};
-    enum type_t { ACTION, IMMEDIATE, VERS, COUNTER, METER, INDIRECT_ACTION, SELECTOR } type;
+    enum type_t { ACTION, IMMEDIATE, VERS, COUNTER, METER, INDIRECT_ACTION, SELECTOR };
     vector<match_group> format;
  public:
     vector<Slice>       match_fields;
@@ -652,6 +652,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
                             out << sep << offset.first << ": " << Slice(f.first, offset.second);
                             sep = ", "; } } }
                 out << (sep+1) << "}" << std::endl; }
+            if (collect.need_range)
+                out << gw_indent << "range: 4" << std::endl;
             BuildGatewayMatch match(phv, collect);
             for (auto &line : tbl->gateway_rows) {
                 out << gw_indent;

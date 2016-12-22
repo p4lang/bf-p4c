@@ -348,11 +348,6 @@ XFAIL_TESTS += \
     tofino/%reldir%/v1_samples/07-MacAddrCheck.p4.test \
     tofino/%reldir%/v1_samples/08-MacAddrCheck1.p4.test
 
-# gateway doesn't yet support range match
-XFAIL_TESTS += \
-    tofino/testdata/p4_14_samples/gateway7.p4.test \
-    tofino-ortools/testdata/p4_14_samples/gateway7.p4.test
-
 # Parser failure.
 XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/parser_dc_full.p4.test \

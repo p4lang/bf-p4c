@@ -13,18 +13,23 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::bitrange &bits
     return out;
 }
 
+std::ostream &operator<<(std::ostream &out, const CollectGatewayFields::info_t &info) {
+    out << info.bits;;
+    if (info.need_range) out << " range";
+    if (~info.need_mask) out << " mask=0x" << hex(info.need_mask);
+    for (auto &off : info.offsets) out << " " << off.first << off.second;
+    if (info.xor_with) out << " xor=" << info.xor_with->name;
+    return out;
+}
+
 std::ostream &operator<<(std::ostream &out, const CollectGatewayFields &gwf) {
     out << indent;
     for (auto &i : gwf.info) {
-        out << endl << i.first->name << i.second.bits;;
-        if (i.second.need_range) out << " range";
-        if (~i.second.need_mask) out << " mask=0x" << hex(i.second.need_mask);
-        if (i.second.xor_with) {
-            out << " xor=" << i.second.xor_with->name;
-            if (gwf.info.count(i.second.xor_with))
-                out << gwf.info.at(i.second.xor_with).bits;
-            else
-                out << "<invalid>"; } }
+        out << endl << i.first->name << i.second;
+        if (gwf.info.count(i.second.xor_with))
+            out << gwf.info.at(i.second.xor_with).bits;
+        else if (i.second.xor_with)
+            out << "<invalid>"; }
     if (!gwf.valid_offsets.empty()) {
         out << endl;
         const char *sep = "";

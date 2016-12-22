@@ -1,4 +1,5 @@
 #include "gateway.h"
+#include "split_gateways.h"
 #include <deque>
 
 class CanonGatewayExpr::NeedNegate : public Inspector {
@@ -17,17 +18,28 @@ static bool isSigned(const IR::Type *t) {
     return false;
 }
 
+const IR::Expression *make_slice(const IR::Expression *e, int lo, int hi) {
+    if (lo == 0 && hi == e->type->width_bits() - 1)
+        return e;
+    BUG_CHECK(hi < e->type->width_bits(), "make_slice slice too big");
+    if (auto sl = e->to<IR::Slice>()) {
+        lo += sl->getL();
+        hi += sl->getL();
+        BUG_CHECK(hi <= sl->getH(), "make_slice slice too big");
+        e = sl->e0; }
+    return new IR::Slice(e, hi, lo);
+}
+
 static mpz_class SliceReduce(IR::Operation::Relation *rel, mpz_class val) {
     int slice = 0;
     while ((val & 1) == 0) {
         ++slice;
         val /= 2; }
     if (slice > 0) {
-        if (auto sl = rel->left->to<IR::Slice>())
-            rel->left = new IR::Slice(sl->e0, sl->getH(), sl->getL() + slice);
-        else
-            rel->left = new IR::Slice(rel->left, rel->left->type->width_bits(), slice);
-        rel->right = new IR::Constant(val); }
+        LOG4("Slicing " << slice << " bits off the bottom of " << rel);
+        rel->left = make_slice(rel->left, slice, rel->left->type->width_bits() - 1);
+        rel->right = new IR::Constant(val);
+        LOG4("Now have " << rel); }
     return val;
 }
 
@@ -201,9 +213,11 @@ bool CollectGatewayFields::preorder(const IR::Expression *e) {
     } else {
         info.bits = bits; }
     info.need_mask = -1;  // FIXME -- should look for mask ops and extract them
-    if (auto *rel = findContext<IR::Operation::Relation>(ctxt)) {
+    if (findContext<IR::RangeMatch>()) {
+        info.need_range = need_range = true;
+    } else if (auto *rel = findContext<IR::Operation::Relation>(ctxt)) {
         if (!rel->is<IR::Equ>() && !rel->is<IR::Neq>()) {
-            info.need_range = true;
+            info.need_range = need_range = true;
         } else if (ctxt->child_index > 0) {
             info.xor_with = xor_match;
         } else {
@@ -274,6 +288,90 @@ bool CollectGatewayFields::compute_offsets() {
     return bits <= 12;
 }
 
+class GatewayRangeMatch::SetupRanges : public Transform {
+    const PhvInfo               &phv;
+    const CollectGatewayFields  &fields;
+    IR::ActionFunction *preorder(IR::ActionFunction *af) override { prune(); return af; }
+    IR::V1Table *preorder(IR::V1Table *t) override { prune(); return t; }
+    IR::MAU::TableSeq *preorder(IR::MAU::TableSeq *s) override { prune(); return s; }
+
+    const IR::Expression *postorder(IR::Operation::Relation *rel) override {
+        PhvInfo::Field::bitrange bits;
+        auto f = phv.field(rel->left, &bits);
+        if (!f || !rel->right->is<IR::Constant>() || !fields.info.count(f)) return rel;
+        LOG3("SetupRange for " << rel);
+        bool forceRange = !(rel->is<IR::Equ>() || rel->is<IR::Neq>());
+        bool reverse = (rel->is<IR::Geq>() || rel->is<IR::Neq>());
+        auto info = fields.info.at(f);
+        long val = rel->right->to<IR::Constant>()->asLong();
+        BUG_CHECK(!forceRange || (val & 1), "Non-canonicalized range value");
+        int base = 0;
+        int orig_lo = bits.lo;
+        for (auto &alloc : info.offsets) {
+            if (alloc.first < 32) {
+                if (!forceRange && alloc.second.hi <= bits.lo) {
+                    val >>= (bits.lo - alloc.second.hi + 1);
+                    bits.lo = alloc.second.hi + 1;
+                    if (bits.lo > bits.hi) {
+                        LOG4("  all bits in lower 32, skipping");
+                        return rel; } }
+                continue; }
+            if (!alloc.second.overlaps(bits)) continue;
+            BUG_CHECK(base == 0, "bits for %s split in range match", f->name);
+            base = alloc.first + bits.lo - alloc.second.lo;
+            BUG_CHECK(base >= 32 && base + bits.size() <= alloc.first + alloc.second.size(),
+                      "bad gateway field layout for range match"); }
+        if (!base) return rel;
+        if (base & 3) {
+            bits.lo -= base & 3;
+            val <<= base & 3;
+            base &= ~3; }
+        bits.lo -= orig_lo;
+        bits.hi -= orig_lo;
+        const IR::Expression *rv = nullptr, *himatch = nullptr;
+        LOG5("  bits = " << bits);
+        for (int lo = (bits.hi & ~3); lo >= (bits.lo & ~3); lo -= 4) {
+            int hi = std::min(lo + 3, bits.hi);
+            if (lo < bits.lo) lo = bits.lo;
+            unsigned data = 1U << ((val >> (lo - bits.lo)) & 0xf);
+            const IR::Expression *eq, *c;
+            eq = new IR::RangeMatch(make_slice(rel->left, lo, hi), data);
+            if (forceRange) --data;
+            if (reverse) {
+                data ^= 0xffff;
+                if (forceRange && lo != bits.lo)
+                    data = (data << 1) & 0xffff; }
+            c = new IR::RangeMatch(make_slice(rel->left, lo, hi), data);
+            if (forceRange)
+                c = himatch ? new IR::LAnd(himatch, c) : c;
+            if (rv) {
+                if (forceRange || reverse)
+                    rv = new IR::LOr(rv, c);
+                else
+                    rv = new IR::LAnd(rv, c);
+            } else {
+                rv = c; }
+            himatch = himatch ? new IR::LAnd(himatch, eq) : eq; }
+        LOG3("SetupRange result: " << rv);
+        return rv;
+    }
+
+ public:
+    SetupRanges(const PhvInfo &phv, const CollectGatewayFields &fields)
+    : phv(phv), fields(fields) {}
+};
+
+void GatewayRangeMatch::postorder(IR::MAU::Table *tbl) {
+    CollectGatewayFields collect(phv);
+    tbl->apply(collect);
+    if (!collect.need_range) return;
+    if (!collect.compute_offsets()) return;
+    SetupRanges setup(phv, collect);
+    for (auto &gw : tbl->gateway_rows)
+        if (gw.first) gw.first = gw.first->apply(setup);
+}
+
+
 BuildGatewayMatch:: BuildGatewayMatch(const PhvInfo &phv, CollectGatewayFields &f)
 : phv(phv), fields(f) {
     shift = INT_MAX;
@@ -288,8 +386,14 @@ BuildGatewayMatch:: BuildGatewayMatch(const PhvInfo &phv, CollectGatewayFields &
 
 
 Visitor::profile_t BuildGatewayMatch::init_apply(const IR::Node *root) {
+    LOG3("BuildGatewayMatch for " << root);
     match.setwidth(0);  // clear out old value
-    match.setwidth(fields.bytes*8 + fields.bits - shift);
+    if (fields.need_range || !fields.bits) {
+        if (fields.bytes)
+            match.setwidth(fields.bytes*8 - shift);
+    } else {
+        match.setwidth(32 + fields.bits - shift); }
+    range_match.clear();
     match_field = nullptr;
     andmask = ~0ULL;
     ormask = 0;
@@ -304,6 +408,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
     if (!match_field) {
         match_field = field;
         match_field_bits = bits;
+        LOG4("  match_field = " << field->name << bits);
     } else {
         size_t size = std::max(bits.size(), match_field_bits.size());
         uint64_t mask = (1ULL << size) - 1;
@@ -344,8 +449,10 @@ bool BuildGatewayMatch::preorder(const IR::Constant *c) {
     auto ctxt = getContext();
     if (ctxt->node->is<IR::BAnd>()) {
         andmask = c->asLong();
+        LOG4("  andmask = 0x" << hex(andmask));
     } else if (ctxt->node->is<IR::BOr>()) {
         ormask = c->asLong();
+        LOG4("  ormask = 0x" << hex(ormask));
     } else if (match_field) {
         uint64_t mask = (1ULL << match_field_bits.size()) - 1;
         uint64_t val = c->asLong() & mask;
@@ -353,11 +460,12 @@ bool BuildGatewayMatch::preorder(const IR::Constant *c) {
             BUG("masked comparison in gateway can never match");
         mask &= andmask & ~ormask;
         auto &match_info = fields.info.at(match_field);
+        LOG4("  match_info = " << match_info);
         for (auto &off : match_info.offsets) {
             uint64_t elmask = ((1ULL << off.second.size()) - 1) <<
                               (off.second.lo - match_info.bits.lo);
             elmask &= mask;
-            int lo = off.first + match_field_bits.lo - shift;
+            int lo = off.first - shift;
             elmask <<= lo;
             match.word0 &= ~(val << lo) | ~elmask;
             match.word1 &= (val << lo) | ~elmask; }
@@ -373,10 +481,50 @@ bool BuildGatewayMatch::preorder(const IR::Equ *) {
     ormask = 0;
     return true;
 }
-bool BuildGatewayMatch::preorder(const IR::Geq *) {
-    WARNING("gateway range matches not implemented");
-    match_field = nullptr;
-    andmask = -1;
-    ormask = 0;
-    return true;
+bool BuildGatewayMatch::preorder(const IR::RangeMatch *rm) {
+    PhvInfo::Field::bitrange bits;
+    auto field = phv.field(rm->expr, &bits);
+    BUG_CHECK(field, "invalid RangeMatch in BuildGatewayMatch");
+    int unit = -1;
+    for (auto &alloc : fields.info.at(field).offsets) {
+        if (alloc.first < 32 && !alloc.second.overlaps(bits))
+            continue;
+        unit = (alloc.first + bits.lo - alloc.second.lo - 32) / 4;
+        break; }
+    BUG_CHECK(unit >= 0 && unit < 3, "invalid RangeMatch unit");
+    LOG4("RangeMatch " << rm->expr << " unit=" << unit << " size=" << bits.size() <<
+         " data=0x" << hex(rm->data));
+    while (range_match.size() <= size_t(unit))
+        range_match.push_back(0xffff);
+    unsigned val = rm->data;
+    int size = bits.size();
+    if (size < 2) {
+        val &= 0x3;
+        val |= val << 2; }
+    if (size < 3) {
+        val &= 0xf;
+        val |= val << 4; }
+    if (size < 4) {
+        val &= 0xff;
+        val |= val << 8; }
+    range_match.at(unit) &= val;
+    return false;
 }
+
+std::ostream &operator<<(std::ostream &out, const BuildGatewayMatch &m) {
+    if (m.range_match.empty())
+        return out << m.match;
+    // only used as a gateway key, so format it as a YAML complex key
+    out << "? [ ";
+    for (int i = m.range_match.size()-1; i >= 0; --i)
+        out << "0x" << hex(m.range_match[i]) << ", ";
+    return out << m.match << " ] ";
+}
+
+GatewayOpt::GatewayOpt(const PhvInfo &phv) : PassManager {
+    new PassRepeated {
+        new CanonGatewayExpr,
+        new SplitComplexGateways(phv),
+        new GatewayRangeMatch(phv) },
+    new CheckGatewayExpr(phv)
+} {}

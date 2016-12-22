@@ -143,7 +143,7 @@ struct IXBar {
     friend std::ostream &operator<<(std::ostream &, const IXBar &);
     const Loc *findExactByte(cstring name, int byte) const {
         for (auto &p : Values(exact_fields.equal_range(name)))
-            if (exact_use.at(p.group, p.byte).second == byte)
+            if (exact_use.at(p.group, p.byte).second/8 == byte)
                 return &p;
         /* FIXME -- what if it's in more than one place? */
         return nullptr; }

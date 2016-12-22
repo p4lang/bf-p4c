@@ -29,6 +29,8 @@ document dnt
 end
 
 python
+import sys
+
 class cstringPrinter(object):
     "Print a cstring"
     def __init__(self, val):
@@ -93,8 +95,6 @@ class MemoriesPrinter(object):
     def to_string(self):
         rv = "\ntc  eb  tib ab  srams       mapram  sb\n"
         tables = {}
-        #import pydb
-        #pydb.debugger()
         alloc_names = [ 'tcam_use', 'sram_match_bus', 'tind_bus',
             'action_data_bus', 'sram_use', 'mapram_use' ]
         ptrs = [ self.val[arr]['data'] for arr in alloc_names ]
@@ -121,9 +121,7 @@ class MemoriesPrinter(object):
                         ptrs[t] += 1
                 rv += '  '
             rv += "\n"
-        #import pydb
-        #pydb.debugger()
-        for tbl,k in tables.iteritems():
+        for tbl,k in tables.items():
             rv += "   " + k + " " + tbl + "\n"
         return rv
 
@@ -137,8 +135,8 @@ class IXBarPrinter(object):
         ptrs = [ self.val['exact_use']['data'],
                  self.val['ternary_use']['data'],
                  self.val['byte_group_use']['data'] ]
-        cols = [ self.val['exact_use']['ncols'],
-                 self.val['ternary_use']['ncols'], 1 ]
+        cols = [ int(self.val['exact_use']['ncols']),
+                 int(self.val['ternary_use']['ncols']), 1 ]
         indir = [ 0, 1, 2, 1 ]
         pfx = [ "", "   ", " ", " " ]
         for r in range(0, 8):
@@ -156,12 +154,12 @@ class IXBarPrinter(object):
                             else:
                                 fields[name] = chr(ord('a') + len(fields))
                         rv += fields[name]
-                        rv += hex(int(field['second'])/8)[2]
+                        rv += hex(int(field['second'])//8)[2]
                     else:
                         rv += '..'
                     ptrs[indir[t]] += 1
             rv += "\n"
-        for field,k in fields.iteritems():
+        for field,k in fields.items():
             rv += "   " + k + " " + field + "\n"
         return rv;
 
@@ -170,7 +168,7 @@ def vec_begin(vec):
 def vec_end(vec):
     return vec['_M_impl']['_M_finish']
 def vec_size(vec):
-    return vec_end(vec) - vec_begin(vec)
+    return int(vec_end(vec) - vec_begin(vec))
 def vec_at(vec, i):
     return (vec_begin(vec) + i).dereference()
 
@@ -186,8 +184,6 @@ class MemoriesUsePrinter(object):
         else:
             t = "<type " + str(t) + ">"
         rv = "MemUse " + t + "("
-        #import pydb
-        #pydb.debugger()
         rows = vec_size(self.val['row'])
         for i in range(0, rows):
             if i > 0:
@@ -238,7 +234,7 @@ class IXBarUsePrinter(object):
         for i in range(0, vec_size(self.val['way_use'])):
             rv += "\n     "
             way = vec_at(self.val['way_use'], i)
-            rv += "[%d:%d:%x]" % (way['group'], way['slice'], way['mask'])
+            rv += "[%d:%d:%x]" % (int(way['group']), int(way['slice']), int(way['mask']))
         return rv;
 
 class PHVBitPrinter(object):
