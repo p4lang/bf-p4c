@@ -888,7 +888,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::Register *) {
     return false;
 }
 
-bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *ap) {
+bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *) {
     if (tbl->resources->memuse.at(tbl->name).unattached_profile) {
         return false;
     }
