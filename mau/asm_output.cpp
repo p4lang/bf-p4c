@@ -930,9 +930,14 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     out << indent++ << "ternary_indirect " << ti->name << ':' << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     int action_fmt_size = ceil_log2(tbl->actions.size());
-    out << indent << "format: { action: " << action_fmt_size;
-    if (tbl->layout.action_data_bytes_in_overhead > 0)
-        out << ", immediate: " << tbl->layout.action_data_bytes_in_overhead*8;
+    out << indent << "format: { ";
+    const char *sep = "";
+    if (action_fmt_size > 0) {
+        out << sep << "action: " << action_fmt_size;
+        sep = ", "; }
+    if (tbl->layout.action_data_bytes_in_overhead > 0) {
+        out << sep << "immediate: " << tbl->layout.action_data_bytes_in_overhead*8;
+        sep = ", "; }
     out << " }" << std::endl;
     self.emit_table_indir(out, indent, tbl);
     return false; }
