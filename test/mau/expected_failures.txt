@@ -21,7 +21,6 @@ test_config_138_tcam_error_detection_3.p4 mismatch
 test_config_139_tcam_error_detection_4.p4 mismatch
 
 - new failure -- compiler crash
-test_config_203_first_reduction_or.p4 compile
 test_config_209_pack_hash_dist.p4 compile
 
 - uncharacterized failures (FIXME)
@@ -41,7 +40,6 @@ dileep11.p4 mismatch
 dileep12.p4 mismatch
 test_config_100_hash_action.p4 mismatch
 test_config_103_first_phase_0.p4 mismatch
-test_config_10_new_crossbar_allocation.p4 tfas
 test_config_13_first_selection.p4 compile
 test_config_140_table_counter.p4 mismatch
 test_config_142_stateful_bfd.p4 compile

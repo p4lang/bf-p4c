@@ -505,14 +505,18 @@ void InputXbar::write_regs() {
 InputXbar::Input *InputXbar::find(Phv::Slice sl, int grp) {
     if (grp == -1 && groups.size() == 1)
         grp = groups.begin()->first;
+    InputXbar::Input *rv = nullptr;
     if (groups.count(grp))
         for (auto &in : groups[grp]) {
             if (in.lo < 0) continue;
             if (in.what->reg.index != sl.reg.index) continue;
             if (in.what->lo/8U > sl.lo/8U) continue;
             if (in.what->hi/8U < sl.hi/8U) continue;
+            rv = &in;
+            if (in.what->lo > sl.lo) continue;
+            if (in.what->hi < sl.hi) continue;
             return &in; }
-    return 0;
+    return rv;
 }
 
 bitvec InputXbar::hash_group_bituse() const {
