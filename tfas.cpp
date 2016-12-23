@@ -114,7 +114,7 @@ int main(int ac, char **av) {
                              * redirect fails, and we crash on exit */
                             std::clog.rdbuf(tmp->rdbuf());
                         } else {
-                            std::cerr << "Can't open " << av[i-1]
+                            std::cerr << "Can't open " << av[i]
                                       << " for writing" << std::endl;
                             delete tmp; } }
                     break;

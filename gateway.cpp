@@ -310,6 +310,9 @@ static bool setup_vh_xbar(Table *table, Table::Layout &row, int base,
         if (r.offset >= 32) break; /* skip hash matches */
         unsigned byte = base + r.offset / 8;
         int ibyte = table->find_on_ixbar(*r.val, group);
+        if (ibyte < 0) {
+            error(r.val.lineno, "Can't find %s on ixbar", r.val.desc().c_str());
+            return false; }
         for (unsigned b = 0; b < (r.val->size()+7)/8; b++, byte++, ibyte++)
             for (unsigned bit = 0; bit < 8; bit++)
                 byteswizzle_ctl[byte][bit] = 0x10 + ibyte; }

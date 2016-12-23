@@ -509,8 +509,8 @@ InputXbar::Input *InputXbar::find(Phv::Slice sl, int grp) {
         for (auto &in : groups[grp]) {
             if (in.lo < 0) continue;
             if (in.what->reg.index != sl.reg.index) continue;
-            if (in.what->lo > sl.lo) continue;
-            if (in.what->hi < sl.hi) continue;
+            if (in.what->lo/8U > sl.lo/8U) continue;
+            if (in.what->hi/8U < sl.hi/8U) continue;
             return &in; }
     return 0;
 }

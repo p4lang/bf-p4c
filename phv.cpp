@@ -175,6 +175,12 @@ void Phv::Ref::dbprint(std::ostream &out) const {
         out << ']'; }
 }
 
+std::string Phv::Ref::desc() const {
+    std::stringstream str;
+    str << *this;
+    return str.str();
+}
+
 void Phv::Slice::dbprint(std::ostream &out) const {
     if (valid) {
         out << "R" << reg.index;

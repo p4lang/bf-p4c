@@ -515,7 +515,7 @@ static void overlap_test(int lineno,
 
 static void append_bits(std::vector<Table::Format::bitrange_t> &vec, int lo, int hi) {
     /* split any chunks that cross a word (128-bit) boundary */
-    while (lo/128U != hi/128U) {
+    while (lo < hi && lo/128U != hi/128U) {
         vec.emplace_back(lo, lo | 127);
         lo = (lo | 127) + 1; }
     vec.emplace_back(lo, hi);
@@ -548,7 +548,10 @@ Table::Format::Format(VECTOR(pair_t) &data, bool may_overlap) {
         Field *f = &fmt[idx][name.s];
         f->group = idx;
         if (kv.value.type == tINT) {
-            f->size  = kv.value.i;
+            if (kv.value.i <= 0)
+                error(kv.value.lineno, "invalid size %d for format field %s",
+                      kv.value.i, name.s);
+            f->size = kv.value.i;
             append_bits(f->bits, nextbit, nextbit+f->size-1);
         } else if (kv.value.type == tRANGE) {
             if (kv.value.lo > kv.value.hi)
@@ -1145,7 +1148,6 @@ int Table::find_on_ixbar(Phv::Slice sl, int group) {
             unsigned bit = (i->lo + sl.lo - i->what->lo);
             assert(bit < 128);
             return bit/8; } }
-    assert(0);
     return -1;
 }
 
