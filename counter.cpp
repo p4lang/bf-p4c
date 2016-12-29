@@ -90,7 +90,8 @@ void CounterTable::pass2() {
 
 static int counter_size[] = { 0, 0, 1, 2, 3, 0, 4 };
 static int counter_masks[] = { 0, 7, 3, 4, 1, 0, 0 };
-static int counter_shifts[] = { 0, 3, 2, 2, 1, 0, 2 };
+static int counter_shifts[] = { 0, 3, 2, 1, 1, 0, 0 };
+static int counter_hole_swizzle[] = { 0, 0, 0, 1, 0, 0, 2 };
 
 int CounterTable::direct_shiftcount() {
     return 64 + 7 - counter_shifts[format->groups()];
@@ -108,6 +109,7 @@ void CounterTable::write_merge_regs(MatchTable *match, int type, int bus, const 
          * for hash_action tables.  Is it not needed? */
     } else
         merge.mau_stats_adr_mask[type][bus] = 0xfffff & ~counter_masks[format->groups()];
+    merge.mau_stats_adr_hole_swizzle_mode[type][bus] = counter_hole_swizzle[format->groups()];
     merge.mau_stats_adr_default[type][bus] = per_flow_enable ? 0 : (1U << pfe_bit);
     if (per_flow_enable)
         merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = pfe_bit;
