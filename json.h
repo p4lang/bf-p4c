@@ -180,10 +180,11 @@ public:
     bool test_width(int &limit) const {
         limit -= 2;
         for (auto &e : *this) {
-            if (!e->test_width(limit)) return false;
+            if (e ? !e->test_width(limit) : (limit -= 4) < 0) return false;
             if ((limit -= 2) < 0 ) return false; }
         return true; }
     using vector_base::push_back;
+    void push_back(decltype(nullptr)) { push_back(std::unique_ptr<obj>()); }
     void push_back(bool t) {
         if (t) push_back(make_unique<True>(True()));
         else push_back(make_unique<False>(False())); }
@@ -240,7 +241,7 @@ public:
         limit -= 2;
         for (auto &e : *this) {
             if (!e.first->test_width(limit)) return false;
-            if (!e.second->test_width(limit)) return false;
+            if (e.second ? !e.second->test_width(limit) : (limit -= 4) < 0) return false;
             if ((limit -= 4) < 0 ) return false; }
         return true; }
     using map_base::count;
@@ -290,6 +291,11 @@ private:
             iter = self.find(k.get());
             if (iter == self.end())
                 key = std::move(k); }
+        void operator=(decltype(nullptr)) {
+            if (key)
+                iter = self.emplace(key.release(), std::unique_ptr<obj>()).first;
+            else { assert(iter != self.end());
+                iter->second.reset(); } }
         bool operator=(bool t) {
             if (key)
                 iter = self.emplace(key.release(),

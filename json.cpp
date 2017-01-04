@@ -79,6 +79,7 @@ std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json) {
                 in.unget();
                 if (s == "true") json.reset(new True());
                 else if (s == "false") json.reset(new False());
+                else if (s == "null") json.reset();
                 else json.reset(new string(std::move(s)));
                 return in;
             } else
@@ -98,7 +99,10 @@ void vector::print_on(std::ostream &out, int indent, int width, const char *pfx)
         if (!first) out << ',';
         if (!oneline) out << '\n' << pfx << std::setw(indent);
         out << ' ' << std::setw(0);
-        e->print_on(out, indent, width - 2, pfx);
+        if (e)
+            e->print_on(out, indent, width - 2, pfx);
+        else
+            out << "null";
         first = false;
     }
     indent -= 2;
@@ -119,7 +123,10 @@ void map::print_on(std::ostream &out, int indent, int width, const char *pfx) co
         out << ' ' << std::setw(0);
         e.first->print_on(out, indent, width - 2, pfx);
         out << ": ";
-        e.second->print_on(out, indent, width - 2, pfx);
+        if (e.second)
+            e.second->print_on(out, indent, width - 2, pfx);
+        else
+            out << "null";
         first = false;
     }
     indent -= 2;
