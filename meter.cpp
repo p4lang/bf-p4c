@@ -422,7 +422,7 @@ void MeterTable::gen_tbl_cfg(json::vector &out) {
     if (global_binding) {
         if (bindings.empty()) {
             bindings.push_back("global");
-            bindings.push_back("null");
+            bindings.push_back(nullptr);
         } else if (*bindings[0] != (indirect ? "static" : "direct"))
             ERROR("Incompatible bindings for " << name());
     } else {

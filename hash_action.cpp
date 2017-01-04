@@ -139,20 +139,34 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
     size = tbl["number_entries"].get()->as_number()->val;
     if (!tbl.count("preferred_match_type"))
         tbl["preferred_match_type"] = "exact";
-    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, hash_dist.empty() ? "match_with_no_key"
-                                                                     : "hash_action", size);
+    const char *stage_tbl_type = "hash_action";
+    if (hash_dist.empty()) {
+        stage_tbl_type = "match_with_no_key";
+        size = 1; }
+    json::map &stage_tbl = *add_stage_tbl_cfg(tbl, stage_tbl_type, size);
     add_pack_format(stage_tbl, 0, 0, hash_dist.empty() ? 1 : 0);
     if (options.match_compiler)
-        stage_tbl["memory_resource_allocation"] = "null";
+        stage_tbl["memory_resource_allocation"] = nullptr;
     if (actions)
         actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
+    if (!default_action.empty()) {
+        tbl["default_action"] = default_action;
+        json::vector &params = tbl["default_action_parameters"] = json::vector();
+        for (auto val : default_action_args)
+            params.push_back(val);
+    } else if (options.match_compiler) {
+        tbl["default_action"] = nullptr;
+        tbl["default_action_parameters"] = nullptr; }
     if (idletime)
         idletime->gen_stage_tbl_cfg(stage_tbl);
     else if (options.match_compiler)
-        stage_tbl["stage_idletime_table"] = "null";
+        stage_tbl["stage_idletime_table"] = nullptr;
     tbl["performs_hash_action"] = !hash_dist.empty();
     tbl["uses_versioning"] = true;  // FIXME
     tbl["tcam_error_detect"] = false;
     tbl["match_type"] = p4_table->match_type.empty() ? "exact" : p4_table->match_type;
-    tbl["action_profile"] = p4_table->action_profile.empty() ? "null" : p4_table->action_profile;
+    if (!p4_table->action_profile.empty())
+        tbl["action_profile"] = p4_table->action_profile;
+    else
+        tbl["action_profile"] = nullptr;
 }

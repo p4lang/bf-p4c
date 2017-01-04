@@ -1181,7 +1181,7 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(const c
         tmp["memory_units"] = std::move(mem);
         json::vector vpns;
         if (no_vpns)
-            vpns.push_back("null");
+            vpns.push_back(nullptr);
         else
             vpns.push_back(vpn);
         tmp["vpns"] = std::move(vpns);

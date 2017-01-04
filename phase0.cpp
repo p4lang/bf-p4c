@@ -64,9 +64,20 @@ void Phase0MatchTable::gen_tbl_cfg(json::vector &out) {
     add_pack_format(stage_tbl, 64, width, 1);
     if (options.match_compiler)
         tbl["p4_statistics_tables"] = json::vector();
+    if (!default_action.empty()) {
+        tbl["default_action"] = default_action;
+        json::vector &params = tbl["default_action_parameters"] = json::vector();
+        for (auto val : default_action_args)
+            params.push_back(val);
+    } else if (options.match_compiler) {
+        tbl["default_action"] = nullptr;
+        tbl["default_action_parameters"] = nullptr; }
     tbl["performs_hash_action"] = false;
     tbl["uses_versioning"] = true;
     tbl["tcam_error_detect"] = false;
     tbl["match_type"] = p4_table->match_type.empty() ? "exact" : p4_table->match_type;
-    tbl["action_profile"] = p4_table->action_profile.empty() ? "null" : p4_table->action_profile;
+    if (!p4_table->action_profile.empty())
+        tbl["action_profile"] = p4_table->action_profile;
+    else
+        tbl["action_profile"] = nullptr;
 }
