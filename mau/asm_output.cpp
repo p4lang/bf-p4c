@@ -63,14 +63,15 @@ class MauAsmOutput::TableFormat {
 
 class MauAsmOutput::ImmedFormat {
     struct arg {
-        cstring         name;
+        cstring         name, immed;
         int             lo, hi;
-        arg(cstring n, int l, int sz) : name(n), lo(l), hi(l+sz-1) {}
+        arg(cstring n, cstring im, int l, int sz) : name(n), immed(im), lo(l), hi(l+sz-1) {}
     };
     vector<arg> immediates;
-    int         base = 0;
-    const char  *tag = nullptr;
-    void init(const IR::ActionFunction *act) {
+ public:
+    void add_alias(cstring name, cstring immed) {
+        immediates.emplace_back(name, immed, -1, 0); }
+    void setup_immed(const IR::ActionFunction *act, const char *immed) {
         vector<std::pair<int, cstring>> sorted_args;
         for (auto arg : act->args) {
             int size = (arg->type->width_bits() + 7) / 8U;  // in bytes
@@ -82,20 +83,15 @@ class MauAsmOutput::ImmedFormat {
         for (auto &arg : sorted_args) {
             if (byte >= 4) break;
             if (byte + arg.first > 4) continue;
-            immediates.emplace_back(arg.second, byte*8, arg.first*8);
+            immediates.emplace_back(arg.second, immed, byte*8, arg.first*8);
             byte += arg.first; } }
-
- public:
-    ImmedFormat(const IR::ActionFunction *act, const char *tag) : tag(tag) { init(act); }
-    ImmedFormat(const IR::ActionFunction *act, int base) : base(base) { init(act); }
     explicit operator bool() { return !immediates.empty(); }
     void print(std::ostream &out) const {
         const char *sep = "";
         for (auto &a : immediates) {
-            out << sep << a.name << ": ";
-            if (tag) out << tag << '(';
-            out << (base+a.lo) << ".." << (base+a.hi);
-            if (tag) out << ")";
+            out << sep << a.name << ": " << a.immed;
+            if (a.lo >= 0)
+                out << '(' << a.lo << ".." << a.hi << ')';
             sep = ", "; } }
 };
 
@@ -399,15 +395,33 @@ class MauAsmOutput::EmitAction : public Inspector {
     const IR::MAU::Table        *table;
     indent_t                    indent;
     const char                  *sep = nullptr;
-    bool preorder(const IR::ActionFunction *act) override {
+    void output_action(const IR::ActionFunction *act, ImmedFormat &ifmt) {
         out << indent << act->name << ":" << std::endl;
-        if (table->layout.action_data_bytes_in_overhead) {
-            ImmedFormat ifmt(act, "immediate");
-            if (ifmt) out << indent << "- { " << ifmt << " }" << std::endl; }
+        if (ifmt) out << indent << "- { " << ifmt << " }" << std::endl;
         if (act->action.empty()) {
             /* a noop */
-            out << indent << "- 0" << std::endl; }
-        visit_children(act, [this, act]() { act->action.visit_children(*this); });
+            out << indent << "- 0" << std::endl;
+        } else {
+            act->action.visit_children(*this); } }
+    bool preorder(const IR::ActionFunction *act) override {
+        ImmedFormat ifmt;
+        if (table->layout.action_data_bytes_in_overhead)
+            ifmt.setup_immed(act, "immediate");
+        output_action(act, ifmt);
+        return false; }
+    bool preorder(const IR::MAU::ActionFunctionEx *act) override {
+        ImmedFormat ifmt;
+        if (table->layout.action_data_bytes_in_overhead)
+            ifmt.setup_immed(act, "immediate");
+        for (auto prim : act->stateful) {
+            if (prim->name == "count") {
+                if (auto aa = prim->operands[1]->to<IR::ActionArg>())
+                    ifmt.add_alias(aa->name, "counter_ptr");
+                else
+                    ERROR("counter index arg '" << prim->operands[1] << "' is not an action arg");
+            } else {
+                ERROR("skipping " << prim); } }
+        output_action(act, ifmt);
         return false; }
     bool preorder(const IR::MAU::Instruction *inst) override {
         out << indent << "- " << inst->name;
@@ -842,6 +856,8 @@ static void counter_format(std::ostream &out, const IR::CounterType type, int pe
 bool MauAsmOutput::EmitAttached::preorder(const IR::Counter *counter) {
     indent_t indent(1);
     out << indent++ << "counter " << counter->name << ":" << std::endl;
+    if (auto p = counter->name.name.find('.'))
+        out << indent << "p4: { name: " << counter->name.name.before(p) << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(counter->name));
     cstring count_type;
     switch (counter->type) {
@@ -864,6 +880,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::Counter *counter) {
 bool MauAsmOutput::EmitAttached::preorder(const IR::Meter *meter) {
     indent_t indent(1);
     out << indent++ << "meter " << meter->name << ":" << std::endl;
+    if (auto p = meter->name.name.find('.'))
+        out << indent << "p4: { name: " << meter->name.name.before(p) << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(meter->name));
     cstring imp_type;
     if (!meter->implementation.name)

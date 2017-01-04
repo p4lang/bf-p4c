@@ -3,6 +3,14 @@
 template<class T> static
 T *clone(const T *ir) { return ir ? ir->clone() : nullptr; }
 
+InstructionSelection::InstructionSelection(PhvInfo &phv) : phv(phv) {}
+
+Visitor::profile_t InstructionSelection::init_apply(const IR::Node *root) {
+    auto rv = MauTransform::init_apply(root);
+    stateful.clear();
+    return rv;
+}
+
 IR::Member *InstructionSelection::gen_stdmeta(cstring field) {
     // FIXME -- this seems like an ugly hack -- need to make it match up to the
     // names created by CreateThreadLocalInstances.  Should have a better way of getting
@@ -17,6 +25,7 @@ IR::Member *InstructionSelection::gen_stdmeta(cstring field) {
 }
 
 const IR::ActionFunction *InstructionSelection::preorder(IR::ActionFunction *af) {
+    BUG_CHECK(this->af == nullptr, "Nested action functions");
     LOG2("InstructionSelection processing action " << af->name);
     this->af = af;
     return af;
@@ -35,12 +44,18 @@ class InstructionSelection::SplitInstructions : public Transform {
 };
 
 const IR::ActionFunction *InstructionSelection::postorder(IR::ActionFunction *af) {
+    BUG_CHECK(this->af == af, "Nested action functions");
     this->af = nullptr;
     IR::Vector<IR::Primitive> split;
     for (auto *p : af->action)
         split.push_back(p->apply(SplitInstructions(split)));
     if (split.size() > af->action.size())
         af->action = std::move(split);
+    if (stateful.count(af)) {
+        BUG_CHECK(!af->is<IR::MAU::ActionFunctionEx>(), "already processed action function?");
+        auto *rv = new IR::MAU::ActionFunctionEx(*af);
+        rv->stateful.insert(rv->stateful.end(), stateful[af].begin(), stateful[af].end());
+        af = rv; }
     return af;
 }
 
@@ -277,9 +292,46 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
             return rv; }
     } else if (prim->name == "drop") {
         return new IR::MAU::Instruction(prim->srcInfo, "invalidate",
-            gen_stdmeta(VisitingThread(this) ? "egress_port" : "egress_spec")); }
+            gen_stdmeta(VisitingThread(this) ? "egress_port" : "egress_spec"));
+    } else if (prim->name == "count" || prim->name == "execute_meter" ||
+               prim->name == "execute_stateful_alu")
+    {
+        stateful[af].emplace_back(prim);
+        return nullptr; }
     WARNING("unhandled in InstSel: " << *prim);
     return prim;
 }
 
+const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
+    if (prim->name == "count")
+        return IR::Type_Counter::get();
+    if (prim->name == "execute_meter")
+        return IR::Type_Meter::get();
+    if (prim->name == "execute_stateful_alu")
+        return IR::Type_Register::get();
+    BUG("Not a stateful primitive %s", prim);
+}
 
+const IR::MAU::Table *InstructionSelection::postorder(IR::MAU::Table *tbl) {
+    for (auto act : Values(tbl->actions)) {
+        if (!stateful.count(act)) continue;
+        for (auto prim : stateful[act]) {
+            if (prim->name == "execute_stateful_alu")
+                continue;  // skip for now
+            // typechecking should have verified
+            BUG_CHECK(prim->operands.size() >= 2, "Invalid primitive %s", prim);
+            auto gref = prim->operands[0]->to<IR::GlobalRef>();
+            // typechecking should catch this too
+            BUG_CHECK(gref, "No object named %s", prim->operands[0]);
+            auto stateful = gref->obj->to<IR::Stateful>();
+            auto type = stateful_type_for_primitive(prim);
+            if (!stateful || stateful->getType() != type) {
+                // typechecking is unable to check this without a good bit more work
+                error("%s: %s is not a %s", prim->operands[0]->srcInfo, gref->obj, type);
+            } else if (!contains(tbl->attached, stateful)) {
+                tbl->attached.push_back(stateful);
+            }
+        }
+    }
+    return tbl;
+}

@@ -238,6 +238,12 @@ class Instruction : Primitive {
     bool isOutput(int operand_index) const override { return operand_index == 0; }
 }
 
+class ActionFunctionEx : ActionFunction {
+    // Removed the stateful primitives as they aren't instructions as such.
+    inline Vector<Primitive>    stateful = {};
+    ActionFunctionEx(const ActionFunction &af) : ActionFunction(af) {}
+}
+
 }  // end namespace MAU
 
 class RangeMatch : Operation_Unary {

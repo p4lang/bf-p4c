@@ -6,8 +6,11 @@
 
 class InstructionSelection : public MauTransform {
     PhvInfo &phv;
-    const IR::ActionFunction *af;
+    const IR::ActionFunction *af = nullptr;
     class SplitInstructions;
+    std::map<const IR::ActionFunction *, std::vector<const IR::Primitive *>> stateful;
+
+    profile_t init_apply(const IR::Node *root) override;
     const IR::ActionFunction *preorder(IR::ActionFunction *) override;
     const IR::ActionFunction *postorder(IR::ActionFunction *) override;
     const IR::Expression *postorder(IR::Add *) override;
@@ -21,13 +24,14 @@ class InstructionSelection : public MauTransform {
     const IR::Expression *postorder(IR::Cast *) override;
     const IR::Primitive *postorder(IR::Primitive *) override;
     const IR::MAU::Instruction *postorder(IR::MAU::Instruction *i) override { return i; }
+    const IR::MAU::Table *postorder(IR::MAU::Table *) override;
 
     bool checkPHV(const IR::Expression *);
     bool checkSrc1(const IR::Expression *);
     bool checkConst(const IR::Expression *ex, long &value);
     IR::Member *gen_stdmeta(cstring field);
  public:
-    explicit InstructionSelection(PhvInfo &phv) : phv(phv) {}
+    explicit InstructionSelection(PhvInfo &phv);
 };
 
 #endif /* _TOFINO_MAU_INSTRUCTION_SELECTION_H_ */

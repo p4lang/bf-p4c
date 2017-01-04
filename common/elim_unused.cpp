@@ -16,6 +16,9 @@ class ElimUnused::ParserMetadata : public Transform {
             LOG1("elim unused instruction " << i);
             return nullptr; }
         return i; }
+    IR::GlobalRef *preorder(IR::GlobalRef *gr) override {
+        prune();  // don't go through these.
+        return gr; }
  public:
     explicit ParserMetadata(ElimUnused &self) : self(self) {}
 };

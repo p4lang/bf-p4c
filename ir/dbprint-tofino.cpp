@@ -65,6 +65,16 @@ void IR::MAU::TableSeq::dbprint(std::ostream &out) const {
         out << endl << indent << t << unindent;
 }
 
+void IR::MAU::ActionFunctionEx::dbprint(std::ostream &out) const {
+    ActionFunction::dbprint(out);
+    if (!stateful.empty()) {
+        out << " + {" << indent;
+        for (auto &p : action)
+            out << endl << p;
+        out << unindent << " }";
+    }
+}
+
 void IR::RangeMatch::dbprint(std::ostream &out) const {
     int prec = getprec(out);
     out << setprec(Prec_Equ) << expr << " in 0x" << hex(data) << setprec(prec);
