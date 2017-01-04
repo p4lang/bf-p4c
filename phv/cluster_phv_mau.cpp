@@ -532,41 +532,7 @@ PHV_MAU_Group_Assignments::cluster_placement(
     //
     for (auto &c : fix_parser_containers) {
         PHV_Container::Container_Content *cc = c->fields_in_container()[0];
-        //
-        // find empty container with exact width
-        //
-        bool transfer_complete = false;
-        for (auto &g : phv_groups_to_be_filled) {
-            if (g->empty_containers() == 0
-             || static_cast<int>(g->width()) != cc->width()
-             || gress_in_compatibility(g->gress(), c->gress())) {
-                //
-                // width or gress mismatch
-                // skip cluster field for this MAU group
-                //
-                continue;
-            }
-            for (auto &c_transfer : g->phv_containers()) {
-                if (c_transfer->status() == PHV_Container::Container_status::EMPTY) {
-                    //
-                    c_transfer->taint(
-                        0,
-                        cc->width(),
-                        cc->field(),
-                        0 /* range_start */,
-                        cc->field_bit_lo() /* field_bit_lo */);
-                    //
-                    c->clear();
-                    //
-                    LOG3("----->transfer parser container----->" << c << "--to-->" << c_transfer);
-                    transfer_complete = true;
-                    break;
-                }
-            }  // for
-            if (transfer_complete) {
-                break;
-            }
-        }  // for
+        parser_container_no_holes(c, cc, phv_groups_to_be_filled);
     }
     //
     status(clusters_to_be_assigned);
@@ -585,6 +551,51 @@ PHV_MAU_Group_Assignments::cluster_placement(
     status(phv_groups_to_be_filled);
     //
 }  // cluster_placement
+
+void
+PHV_MAU_Group_Assignments::parser_container_no_holes(
+    PHV_Container *c,
+    PHV_Container::Container_Content *cc,
+    std::list<PHV_MAU_Group *>& phv_groups_to_be_filled) {
+    //
+    // find empty container with exact width
+    //
+    bool transfer_complete = false;
+    for (auto &g : phv_groups_to_be_filled) {
+        if (g->empty_containers() == 0
+         || static_cast<int>(g->width()) != cc->width()
+         || gress_in_compatibility(g->gress(), c->gress())) {
+            //
+            // width or gress mismatch
+            // skip cluster field for this MAU group
+            //
+            continue;
+        }
+        for (auto &c_transfer : g->phv_containers()) {
+            if (c_transfer->status() == PHV_Container::Container_status::EMPTY) {
+                //
+                c_transfer->taint(
+                    0,
+                    static_cast<int>(g->width()),
+                    cc->field(),
+                    0 /* range_start */,
+                    cc->field_bit_lo() /* field_bit_lo */);
+                //
+                c->clear();
+                //
+                LOG3("----->transfer parser container----->" << c << "--to-->" << c_transfer);
+                transfer_complete = true;
+                break;
+            }
+        }  // for
+        if (transfer_complete) {
+            break;
+        }
+    }  // for
+    if (transfer_complete == false) {
+        WARNING("parser container transfer unsuccessful container: " << c << " content: " << cc);
+    }
+}  // parser_container_no_holes
 
 
 //***********************************************************************************
