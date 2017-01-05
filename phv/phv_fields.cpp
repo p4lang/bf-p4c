@@ -272,26 +272,44 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
             if (field.pov && field.metadata && field.gress == gress) {
                 size[gress] -= field.size;
                 field.offset = size[gress]; }
+        vector<Field *> pov_fields;  // accumulate member povs of header stk pov
         for (auto &hdr : simple_headers) {
             auto *ff = field(hdr.second.first);
-            if (!ff->metadata && ff->gress == gress)
-                add(hdr.first + ".$valid", 1, --size[gress], false, true); }
+            if (!ff->metadata && ff->gress == gress) {
+                add(hdr.first + ".$valid", 1, --size[gress], false, true);
+                pov_fields.push_back(&all_fields[hdr.first + ".$valid"]);
+            }
+        }
         for (auto &stack : stacks) {
             auto *ff = field(all_headers.at(stack.name).first);
             if (ff->gress == gress) {
                 if (stack.maxpush) {
                     size[gress] -= stack.maxpush;
-                    add(stack.name + ".$push", stack.maxpush, size[gress], true, true); }
+                    add(stack.name + ".$push", stack.maxpush, size[gress], true, true);
+                    pov_fields.push_back(&all_fields[stack.name + ".$push"]);
+                }
                 char buffer[16];
                 for (int i = 0; i < stack.size; ++i) {
                     snprintf(buffer, sizeof(buffer), "[%d]", i);
-                    add(stack.name + buffer + ".$valid", 1, --size[gress], false, true); }
+                    add(stack.name + buffer + ".$valid", 1, --size[gress], false, true);
+                    pov_fields.push_back(&all_fields[stack.name + buffer + ".$valid"]);
+                }
                 if (stack.maxpop) {
                     size[gress] -= stack.maxpop;
-                    add(stack.name + ".$pop", stack.maxpush, size[gress], true, true); }
+                    add(stack.name + ".$pop", stack.maxpush, size[gress], true, true);
+                    pov_fields.push_back(&all_fields[stack.name + ".$pop"]);
+                }
                 add(stack.name + ".$stkvalid", stack.size + stack.maxpush + stack.maxpop,
-                    size[gress], true, true); } }
-        assert(size[gress] == 0); }
+                    size[gress], true, true);
+                Field *pov_stk = &all_fields[stack.name + ".$stkvalid"];
+                for (auto &f : pov_fields) {
+                    pov_stk->pov_fields.push_back(f);
+                    f->hdr_stk_pov = pov_stk;
+                }
+            }
+        }
+        assert(size[gress] == 0);
+    }
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &sl) {
@@ -358,7 +376,20 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo &phv) {
         << std::endl;
     //
     for (auto field : phv) {
-         out << &field << std::endl;
+         out << &field;
+         // member of header stk pov
+         if (field.hdr_stk_pov) {
+             out << "\t--> " << field.hdr_stk_pov;
+         }
+         out << std::endl;
+         // header stk povs
+         if (field.pov_fields.size()) {
+             out << '[' << std::endl;
+             for (auto &pov_f : field.pov_fields) {
+                 out << '\t' << pov_f << std::endl;
+             }
+             out << ']' << std::endl;
+         }
     }
     return out;
 }

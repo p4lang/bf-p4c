@@ -179,8 +179,8 @@ class PHV_MAU_Group_Assignments : public Visitor {
     void cluster_placement(
         std::list<Cluster_PHV *>& clusters_to_be_assigned,
         std::list<PHV_MAU_Group *>& phv_groups_to_be_filled);
-    void parser_container_no_holes(
-        PHV_Container *,
+    PHV_Container* parser_container_no_holes(
+        PHV_Container::Ingress_Egress,
         PHV_Container::Container_Content *,
         std::list<PHV_MAU_Group *>&);    // ensure parser fields in containers with no holes
     void create_aligned_container_slices();

@@ -31,12 +31,16 @@ class PhvInfo : public Inspector {
         int             size;
         int             phv_use_lo = 0;  // lowest bit of field used through MAU pipeline
         int             phv_use_hi = 0;  // highest bit of field used through MAU pipeline
-        int             offset;  // offset of lsb from lsb (last) bit of containing header
+        int             offset;          // offset of lsb from lsb (last) bit of containing header
         bool            referenced;
         bool            metadata;
         bool            pov;
         bool            mau_write = false;  // field Write in MAU ?
-        set<constraint> constraints;    // unused -- get rid of it?
+        Field           *hdr_stk_pov = 0;  // this member field points to header pov field, e.g.,
+                                           // extra.$push: B9(5..6) --> extra.$stkvalid: B9(0..6)
+                                           // extra$0.$valid: B9(4) --> extra.$stkvalid: B9(0..6)
+        vector<Field *> pov_fields;  // member pov fields of header stk pov
+        set<constraint> constraints;  // unused -- get rid of it?
         cstring header() const { return name.before(strrchr(name, '.')); }
         PHV::Bit bit(unsigned i) const {
             BUG_CHECK(i < size_t(size), "bit out of range for field");
