@@ -555,7 +555,7 @@ PHV_MAU_Group_Assignments::cluster_placement(
                 }
             }
         }
-        PHV_Container *c_transfer = 
+        PHV_Container *c_transfer =
             parser_container_no_holes(c->gress(), cc, phv_groups_to_be_filled);
         if (c_transfer) {
             LOG3("----->transfer parser container----->" << c << "--to-->" << c_transfer);
