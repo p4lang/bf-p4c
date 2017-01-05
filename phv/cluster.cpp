@@ -253,7 +253,10 @@ void Cluster::compute_fields_no_use_mau() {
     for (auto &field : phv_i) {
         s1.insert(&field);
         //
-        if (field.pov) {
+        // discard povs that are members of header stack containing a .$push
+        // these members are part of header stk pov container
+        //
+        if (field.pov && ! field.hdr_stk_pov) {
             pov_fields_i.push_back(&field);
         }
     }

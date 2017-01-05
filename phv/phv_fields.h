@@ -35,11 +35,14 @@ class PhvInfo : public Inspector {
         bool            referenced;
         bool            metadata;
         bool            pov;
-        bool            mau_write = false;  // field Write in MAU ?
-        Field           *hdr_stk_pov = 0;  // this member field points to header pov field, e.g.,
+        bool            mau_write = false;  // true when field Write in MAU
+        Field           *hdr_stk_pov = 0;  // only when .$push exists -- see allocatePOV()
+                                           // this member field points to header pov field, e.g.,
                                            // extra.$push: B9(5..6) --> extra.$stkvalid: B9(0..6)
                                            // extra$0.$valid: B9(4) --> extra.$stkvalid: B9(0..6)
-        vector<Field *> pov_fields;  // member pov fields of header stk pov
+        vector<Field *> pov_fields;  // only when .$push exists -- see allocatePOV(),
+                                     // member pov fields of header stk pov
+                                     // these members are in same container as header stk pov
         set<constraint> constraints;  // unused -- get rid of it?
         cstring header() const { return name.before(strrchr(name, '.')); }
         PHV::Bit bit(unsigned i) const {

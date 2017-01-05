@@ -273,6 +273,7 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
                 size[gress] -= field.size;
                 field.offset = size[gress]; }
         vector<Field *> pov_fields;  // accumulate member povs of header stk pov
+        bool push_exists = false;
         for (auto &hdr : simple_headers) {
             auto *ff = field(hdr.second.first);
             if (!ff->metadata && ff->gress == gress) {
@@ -287,6 +288,7 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
                     size[gress] -= stack.maxpush;
                     add(stack.name + ".$push", stack.maxpush, size[gress], true, true);
                     pov_fields.push_back(&all_fields[stack.name + ".$push"]);
+                    push_exists = true;
                 }
                 char buffer[16];
                 for (int i = 0; i < stack.size; ++i) {
@@ -301,10 +303,12 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
                 }
                 add(stack.name + ".$stkvalid", stack.size + stack.maxpush + stack.maxpop,
                     size[gress], true, true);
-                Field *pov_stk = &all_fields[stack.name + ".$stkvalid"];
-                for (auto &f : pov_fields) {
-                    pov_stk->pov_fields.push_back(f);
-                    f->hdr_stk_pov = pov_stk;
+                if (push_exists) {
+                    Field *pov_stk = &all_fields[stack.name + ".$stkvalid"];
+                    for (auto &f : pov_fields) {
+                        pov_stk->pov_fields.push_back(f);
+                        f->hdr_stk_pov = pov_stk;
+                    }
                 }
             }
         }
