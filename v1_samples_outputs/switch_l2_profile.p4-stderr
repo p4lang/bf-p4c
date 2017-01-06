@@ -100,9 +100,6 @@ action copy_to_cpu_with_reason(reason_code, qid, meter_id, icos) {
 ./acl.p4(691): warning: Could not infer type for meter_id, using bit<8>
 action redirect_to_cpu_with_reason(reason_code, qid, meter_id, icos) {
                                                      ^^^^^^^^
-./acl.p4(736): warning: Could not infer type for drop_reason, using bit<8>
-action drop_packet_with_reason(drop_reason) {
-                               ^^^^^^^^^^^
 ./includes/parser.p4(700): warning: SelectCase: unreachable
         default: parse_all_int_meta_value_heders;
         ^^^^^^^
