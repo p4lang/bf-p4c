@@ -102,6 +102,55 @@ static void setup_action_layout(IR::MAU::Table *tbl) {
             tbl->layout.action_data_bytes = action_data_bytes; }
 }
 
+void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved,
+                                       bool has_action_profile) {
+
+    for (int entry_count = 1; entry_count < 10; entry_count++) {
+        int match_group_bits = std::max(tbl->layout.match_width_bits-10, 0) +
+                               tbl->layout.overhead_bits + 4;
+        int width = (entry_count * match_group_bits + 127) / 128;
+        
+        while (tbl->layout.overhead_bits * entry_count > width * 64) 
+            width++;
+       
+        if (width > 8) break;
+
+        IR::MAU::Table::Layout *layout = new IR::MAU::Table::Layout();
+        IR::MAU::Table::Way *way = new IR::MAU::Table::Way();
+        layout->copy(tbl->layout);
+        way->match_groups = entry_count; way->width = width;
+        IR::MAU::Table::LayoutOption lo(layout, way);
+        lo.action_data_required = true;
+        tbl->layout_options.push_back(lo);
+    }
+
+    if (has_action_profile || tbl->layout.action_data_bytes > 4 - immediate_bytes_reserved)
+        return;
+
+    for (int entry_count = 1; entry_count < 10; entry_count++) {
+        int match_group_bits = std::max(tbl->layout.match_width_bits-10, 0) +
+                               tbl->layout.overhead_bits + tbl->layout.action_data_bytes + 4;
+        int width = (entry_count * match_group_bits + 127) / 128;
+        
+        while ((tbl->layout.overhead_bits + 8 * tbl->layout.action_data_bytes * entry_count)
+                > width * 64) 
+            width++;
+       
+        if (width > 8) break;
+
+        IR::MAU::Table::Layout *layout = new IR::MAU::Table::Layout();
+        IR::MAU::Table::Way *way = new IR::MAU::Table::Way();
+        layout->copy(tbl->layout);
+        layout->action_data_bytes_in_overhead = tbl->layout.action_data_bytes;
+        layout->overhead_bits += tbl->layout.action_data_bytes * 8;
+        way->match_groups = entry_count; way->width = width;
+        IR::MAU::Table::LayoutOption lo(layout, way);
+        lo.action_data_required = false;
+        tbl->layout_options.push_back(lo);
+    }
+
+}
+
 namespace {
 class VisitAttached : public Inspector {
     IR::MAU::Table::Layout &layout;
@@ -132,6 +181,7 @@ class VisitAttached : public Inspector {
         return false; }
     bool preorder(const IR::ActionProfile *ap) override {
         have_action_data = true;
+        have_action_profile = true;
         if (ap->size <= 0)
             error("%s: No size count in %s %s", ap->srcInfo, ap->kind(), ap->name);
         int vpn_bits_needed = std::max(10, ceil_log2(ap->size));
@@ -158,6 +208,7 @@ class VisitAttached : public Inspector {
         immediate_bytes_needed(0), counter_vpn_bits_needed(0), meter_vpn_bits_needed(0) {}
     bool have_ternary_indirect = false;
     bool have_action_data = false;
+    bool have_action_profile = false;
     int immediate_reserved() { return immediate_bytes_needed; }
 };
 }  // namespace
@@ -175,6 +226,7 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     for (auto at : tbl->attached)
         at->apply(attached);
     int immediate_bytes_reserved = attached.immediate_reserved();
+    setup_layout_options(tbl, immediate_bytes_reserved, attached.have_action_profile);
     bool add_action_data = false;
     if (!attached.have_action_data) {
         // too big for overhead

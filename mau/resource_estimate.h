@@ -8,6 +8,7 @@ struct StageUseEstimate {
     int srams, tcams, maprams;
     int exact_ixbar_bytes;
     int ternary_ixbar_groups;
+    vector<IR::MAU::Table::LayoutOption> layout_options;
     StageUseEstimate() { memset(this, 0, sizeof(*this)); }
     StageUseEstimate &operator+=(const StageUseEstimate &a) {
         logical_ids += a.logical_ids;
@@ -33,7 +34,11 @@ struct StageUseEstimate {
         return logical_ids <= a.logical_ids && srams <= a.srams && tcams <= a.tcams &&
                maprams <= a.maprams && exact_ixbar_bytes <= a.exact_ixbar_bytes &&
                ternary_ixbar_groups <= a.ternary_ixbar_groups; }
+    void options_to_ways(const IR::MAU::Table *tbl, int &entries);
+    void options_to_rams(const IR::MAU::Table *tbl);
+    void select_best_option(const IR::MAU::Table *tbl);
 };
+
 
 int CounterPerWord(const IR::Counter *ctr);
 int RegisterPerWord(const IR::Register *reg);

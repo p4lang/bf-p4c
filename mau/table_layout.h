@@ -12,6 +12,8 @@ class TableLayout : public MauModifier, Backtrack {
     bool preorder(IR::MAU::Table *tbl) override;
     void setup_match_layout(IR::MAU::Table::Layout &, const IR::V1Table *);
     void setup_gateway_layout(IR::MAU::Table::Layout &, IR::MAU::Table *);
+    void setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved,
+                              bool has_action_profile);
 
  public:
     explicit TableLayout(const PhvInfo &phv) : phv(phv) {}

@@ -73,6 +73,8 @@ class Table : Tofino::Unit {
             json.load("action_data_bytes_in_overhead", rv->action_data_bytes_in_overhead);
             json.load("overhead_bits", rv->overhead_bits);
             return rv; }
+
+        void copy(Layout &a) { memcpy(this, &a, sizeof(Layout)); }
 #emit
         Layout &operator+=(const Layout &a);
 #end
@@ -101,6 +103,20 @@ class Table : Tofino::Unit {
     vector<Way>    ways;
     const TableResourceAlloc            *resources = nullptr;
 
+
+    class LayoutOption {
+        Layout layout;
+        Way way;  //Assumes all ways are the same size
+        vector<int> way_sizes;
+        int entries = 0; bool action_data_required = false;
+        int srams = 0; int maprams = 0;
+        toJSON { json << "null"; }
+        fromJSON { return nullptr; }
+        LayoutOption() {}
+        LayoutOption(Layout l, Way w) : layout(l), way(w) {}
+    }
+
+    vector<LayoutOption> layout_options;
 #noconstructor
     Table(cstring n, gress_t gr) : name(n), gress(gr) {}
     Table(cstring n, gress_t gr, IR::V1Table t)
