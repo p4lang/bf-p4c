@@ -78,6 +78,8 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
             f1->alloc.emplace_back(*asm_container, field_bit, container_bit, container_width);
             //
             // header stack pov members
+            // constituent members of header stack povs must fit header stk pov
+            // this condition should be guaranteed by phv_fields.cpp allocatePOV()
             //
             if (f1->pov_fields.size()) {
                 int container_bit = container_width + 1;
@@ -85,13 +87,25 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
                     int field_bit = pov_f->phv_use_lo;
                     int pov_width = pov_f->size;
                     container_bit -= pov_width;
+                    //
+                    // check constituent members do fit hdr stk pov 
+                    //
+                    if (container_bit < 0) {
+                        WARNING( "*****PHV_Bind: header stack overrun *****"
+                            << " hdr stk pov: "
+                            << f1
+                            << " pov member: "
+                            << pov_f
+                            << " container_bit: "
+                            << container_bit);
+                    }
                     pov_f->alloc.emplace_back(*asm_container, field_bit, container_bit, pov_width);
                 }
             }
         }
     }
     //
-    // phv_fields.h vector<alloc_slice>     alloc;   // sorted MSB (field) first
+    // phv_fields.h vector<alloc_slice> alloc;  // sorted MSB (field) first
     // for all fields sort
     //
     for (auto &f : fields_i) {
