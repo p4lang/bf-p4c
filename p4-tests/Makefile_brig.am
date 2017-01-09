@@ -8,7 +8,7 @@
 -include ortools-tofinotests.mk
 
 tofinotests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
-   $(srcdir)/testdata/p4_14_samples/*.p4 \ 
+   $(srcdir)/testdata/p4_14_samples/*.p4 \
    $(srcdir)/testdata/p4_14_samples/switch_*/switch.p4 \
    $(srcdir)/%reldir%/p4_16/*.p4 \
    $(srcdir)/%reldir%/p4_14/01-FlexCounter.p4 \
@@ -268,6 +268,9 @@ ortools-tofinotests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
    $(srcdir)/%reldir%/p4_14/max_counters.stf \
    $(srcdir)/%reldir%/p4_14/meter_test1.stf \
    $(srcdir)/%reldir%/p4_14/simple_counter.stf ) \
+   $(srcdir)/testdata/p4_14_samples \
+   $(srcdir)/%reldir%/p4_16 \
+   $(srcdir)/%reldir%/p4_14
 	@$(GENTESTS) $(srcdir) tofino-ortools $(srcdir)/%reldir%/runtest --ortools $(^:%.stf=%.p4) >$@ || ( rm $@ && false )
 
 # We have additional test inputs that are used to test the other (standard) back-ends
