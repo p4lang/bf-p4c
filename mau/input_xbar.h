@@ -100,7 +100,8 @@ struct IXBar {
 
         /* hash tables used for way address computation */
         struct Way {
-            int         group, slice;
+            int         group, slice; // group refers to which 8 of the hash groups used,
+                                      // slice refers to the 10b way used
             unsigned    mask;
             Way() = delete;
             Way(int g, int s, unsigned m) : group(g), slice(s), mask(m) {} };
@@ -129,13 +130,17 @@ struct IXBar {
     bool allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc,
                     vector<IXBar::Use::Byte *> &alloced, bool second_try, int hash_groups);
     int getHashGroup(unsigned hash_table_input);
-    bool allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc);
-    bool allocHashWay(const IR::MAU::Table *, const IR::MAU::Table::Way &, Use &);
+    bool allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc,
+                          const IR::MAU::Table::LayoutOption *layout_option,
+                          int start, int last);
+    bool allocHashWay(const IR::MAU::Table *tbl,
+                      const IR::MAU::Table::LayoutOption *layout_option,
+                      int index, int start, Use &alloc);     
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);
     bool allocSelector(const IR::ActionSelector *, const PhvInfo &phv, Use &alloc, bool second_try,
                        cstring name);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_alloc, Use &gw_alloc,
-                    Use &sel_alloc);
+                    Use &sel_alloc, const IR::MAU::Table::LayoutOption *lo);
     void update(cstring name, const Use &alloc);
     void update(cstring name, const TableResourceAlloc *alloc);
     void update(const IR::MAU::Table *tbl) {
@@ -176,6 +181,8 @@ struct IXBar {
     bool small_grp_alloc(bool ternary, bool second_try, vector<IXBar::Use::Byte *> &unalloced,
                          vector<IXBar::Use::Byte *> &alloced, vector<grp_use *> &small_order,
                          vector<big_grp_use> &order, int &total_bytes_needed);
+    void layout_option_calculation(const IR::MAU::Table::LayoutOption *layout_option,
+                                   int &start, int &last);
 };
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {

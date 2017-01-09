@@ -105,13 +105,15 @@ struct Memories {
         const IR::MAU::Table *table;
         const IXBar::Use *match_ixbar;
         map<cstring, Memories::Use>* memuse;
+        const IR::MAU::Table::LayoutOption *layout_option;
         int provided_entries;
         int calculated_entries;
         int attached_gw_bytes;
         table_alloc *table_link;
         explicit table_alloc(const IR::MAU::Table *t, const IXBar::Use *mi,
-                             map<cstring, Memories::Use> *mu, int e)
-                : table(t), match_ixbar(mi), memuse(mu), provided_entries(e),
+                             map<cstring, Memories::Use> *mu, 
+                             const IR::MAU::Table::LayoutOption *lo, const int e)
+                : table(t), match_ixbar(mi), memuse(mu), layout_option(lo), provided_entries(e),
                   calculated_entries(0), attached_gw_bytes(0), table_link(nullptr) {}
         void link_table(table_alloc *ta) {table_link = ta;}
     };
@@ -290,7 +292,8 @@ struct Memories {
     void clear_table_vectors();
     void clear_uses();
     void add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
-                   TableResourceAlloc *resources, int entries);
+                   TableResourceAlloc *resources, const IR::MAU::Table::LayoutOption *lo,
+                   int entries);
     bool analyze_tables(mem_info &mi);
     void calculate_column_balance(mem_info &mi, unsigned &row);
     bool cut_from_left_side(mem_info &mi, int left_given_columns, int right_given_columns);

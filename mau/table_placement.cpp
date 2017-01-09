@@ -259,7 +259,8 @@ TablePlacement::Placed *TablePlacement::Placed::gateway_merge() {
 }
 
 static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::Placed *done,
-                            const PhvInfo &phv, TableResourceAlloc *resources) {
+                            const PhvInfo &phv, StageUseEstimate &sue,
+                            TableResourceAlloc *resources) {
     IXBar current_ixbar;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
         current_ixbar.update(p->name, p->resources->match_ixbar);
@@ -274,9 +275,11 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
         }
     }
     if (!current_ixbar.allocTable(next->table, phv, resources->match_ixbar,
-                                  resources->gateway_ixbar, resources->selector_ixbar) ||
+                                  resources->gateway_ixbar, resources->selector_ixbar,
+                                  sue.preferred_option()) ||
         !current_ixbar.allocTable(next->gw, phv, resources->match_ixbar,
-                                  resources->gateway_ixbar, resources->selector_ixbar)) {
+                                  resources->gateway_ixbar, resources->selector_ixbar,
+                                  sue.preferred_option())) {
         resources->match_ixbar.clear();
         resources->gateway_ixbar.clear();
         resources->selector_ixbar.clear();
@@ -285,15 +288,16 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
 }
 
 static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Placed *done,
-                          int &entries, TableResourceAlloc *resources,
+                          int &entries, TableResourceAlloc *resources, StageUseEstimate &sue,
                           vector<TableResourceAlloc *> &prev_resources) {
     Memories current_mem;
     int i = 0;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
-         current_mem.add_table(p->table, p->gw, prev_resources[i], p->entries);
+         current_mem.add_table(p->table, p->gw, prev_resources[i], p->use.preferred_option(),
+                               p->entries);
          i++;
     }
-    current_mem.add_table(next->table, next->gw, resources, entries);
+    current_mem.add_table(next->table, next->gw, resources, sue.preferred_option(), entries);
     resources->memuse.clear();
     for (auto *prev_resource : prev_resources) {
         prev_resource->memuse.clear();
@@ -308,6 +312,7 @@ static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Pl
     return true;
 }
 
+/*
 static void coord_selector_xbar(const TablePlacement::Placed *curr,
                                 const TablePlacement::Placed *done,
                                 TableResourceAlloc *resource,
@@ -340,6 +345,7 @@ static void coord_selector_xbar(const TablePlacement::Placed *curr,
         j++;
     }
 }
+*/
 
 TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t, const Placed *done,
                                                         const StageUseEstimate &current) {
@@ -353,7 +359,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     }
     t = rv->table;
     rv->stage = done ? done->stage : 0;
-    int min_entries = 1;
+//   int min_entries = 1;
     rv->entries = 512;
     if (t->match_table) {
         if (t->match_table->size)
@@ -372,6 +378,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             rv->stage++; } }
     assert(!rv->placed[tblInfo.at(rv->table).uid]);
 
+/*
     if (!try_alloc_ixbar(rv, done, phv, resources)) {
 retry_next_stage:
         rv->stage++;
@@ -445,7 +452,7 @@ retry_next_stage:
         i++;
     }
     coord_selector_xbar(rv, done, resources, prev_resources);
-
+*/
     if (done && rv->stage == done->stage) {
         rv->set_prev(done, true, prev_resources);
     } else {

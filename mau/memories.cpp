@@ -46,11 +46,12 @@ void Memories::clear_table_vectors() {
 
 /* Creates a new table_alloc object for each of the taibles within the memory allocation */
 void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
-                         TableResourceAlloc *resources, int entries) {
-    auto *ta = new table_alloc(t, &resources->match_ixbar, &resources->memuse, entries);
+                         TableResourceAlloc *resources, const IR::MAU::Table::LayoutOption *lo,
+                         int entries) {
+    auto *ta = new table_alloc(t, &resources->match_ixbar, &resources->memuse, lo, entries);
     tables.push_back(ta);
     if (gw != nullptr)  {
-        auto *ta_gw = new table_alloc(gw, &resources->gateway_ixbar, &resources->memuse, -1);
+        auto *ta_gw = new table_alloc(gw, &resources->gateway_ixbar, &resources->memuse, lo, -1);
         ta_gw->link_table(ta);
         tables.push_back(ta_gw);
     }
@@ -415,9 +416,19 @@ vector<int> Memories::available_match_SRAMs_per_row(unsigned row_mask, unsigned 
 void Memories::break_exact_tables_into_ways() {
     exact_match_ways.clear();
     for (auto *ta : exact_tables) {
+        
         ta->calculated_entries = 0;
         (*ta->memuse)[ta->table->name].ways.clear();
         (*ta->memuse)[ta->table->name].row.clear();
+        int index = 0;
+        for (int way_size : ta->layout_option->way_sizes) {
+            exact_match_ways.push_back(new SRAM_group(ta, way_size, ta->layout_option->way->width,
+                                       index, SRAM_group::EXACT));
+            index++;
+        }
+        ta->calculated_entries = ta->layout_option->entries;
+        
+        /*
         int number_of_ways = ta->table->ways.size();
         int width = ta->table->ways[0].width;
         int groups = ta->table->ways[0].match_groups;
@@ -429,6 +440,7 @@ void Memories::break_exact_tables_into_ways() {
                                                       SRAM_group::EXACT));
             ta->calculated_entries += way_sizes[i] * 1024U * groups;
         }
+        */
 
         struct waybits {
             bitvec bits;
@@ -436,6 +448,7 @@ void Memories::break_exact_tables_into_ways() {
             waybits() : next(bits.end()) {}
         };
         std::map<int, waybits> alloc_bits;
+        /*
         for (auto &way : ta->match_ixbar->way_use) {
             alloc_bits[way.group].bits |= way.mask;
         }
@@ -453,6 +466,7 @@ void Memories::break_exact_tables_into_ways() {
             }
             (*ta->memuse)[ta->table->name].ways.emplace_back(way_sizes[i], mask);
         }
+        */
     }
 
     std::sort(exact_match_ways.begin(), exact_match_ways.end(),

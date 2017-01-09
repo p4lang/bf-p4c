@@ -9,6 +9,7 @@ struct StageUseEstimate {
     int exact_ixbar_bytes;
     int ternary_ixbar_groups;
     vector<IR::MAU::Table::LayoutOption> layout_options;
+    int preferred_index;
     StageUseEstimate() { memset(this, 0, sizeof(*this)); }
     StageUseEstimate &operator+=(const StageUseEstimate &a) {
         logical_ids += a.logical_ids;
@@ -37,6 +38,11 @@ struct StageUseEstimate {
     void options_to_ways(const IR::MAU::Table *tbl, int &entries);
     void options_to_rams(const IR::MAU::Table *tbl);
     void select_best_option(const IR::MAU::Table *tbl);
+    const IR::MAU::Table::LayoutOption *preferred_option() const {
+    if (layout_options.empty())
+        return nullptr;
+    else
+        return &layout_options[preferred_index]; }
 };
 
 
