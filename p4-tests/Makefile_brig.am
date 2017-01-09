@@ -261,13 +261,13 @@ tofinotests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
 ortools-tofinotests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
    $(srcdir)/testdata/p4_14_samples/*.stf \
    $(srcdir)/%reldir%/p4_16/*.stf \
-   $(srcdir)/%reldir%/p4_16/counter_test1.stf \
-   $(srcdir)/%reldir%/p4_16/v1_samples/counter_test2.stf \
-   $(srcdir)/%reldir%/p4_16/v1_samples/gateway_bus1.stf \
-   $(srcdir)/%reldir%/p4_16/v1_samples/gateway_bus2.stf \
-   $(srcdir)/%reldir%/p4_16/v1_samples/max_counters.stf \
-   $(srcdir)/%reldir%/p4_16/v1_samples/meter_test1.stf \
-   $(srcdir)/%reldir%/p4_16/v1_samples/simple_counter.stf ) \
+   $(srcdir)/%reldir%/p4_14/counter_test1.stf \
+   $(srcdir)/%reldir%/p4_14/counter_test2.stf \
+   $(srcdir)/%reldir%/p4_14/gateway_bus1.stf \
+   $(srcdir)/%reldir%/p4_14/gateway_bus2.stf \
+   $(srcdir)/%reldir%/p4_14/max_counters.stf \
+   $(srcdir)/%reldir%/p4_14/meter_test1.stf \
+   $(srcdir)/%reldir%/p4_14/simple_counter.stf ) \
 	@$(GENTESTS) $(srcdir) tofino-ortools $(srcdir)/%reldir%/runtest --ortools $(^:%.stf=%.p4) >$@ || ( rm $@ && false )
 
 # We have additional test inputs that are used to test the other (standard) back-ends
