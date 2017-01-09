@@ -252,7 +252,7 @@ tofinotests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
    $(srcdir)/%reldir%/p4_14/test_tp_1_one_table_spill.p4 \
    $(srcdir)/%reldir%/p4_14/vk_basic_ipv4_20150706.p4 \
    $(srcdir)/%reldir%/p4_14/vk_basic_ipv4_subset.p4 \
-   $(srcdir)/%reldir%/p4_14/switch.p4 ) \
+   $(srcdir)/%reldir%/p4_14/switch_*/switch.p4 ) \
    $(srcdir)/testdata/p4_14_samples \
    $(srcdir)/%reldir%/p4_16 \
    $(srcdir)/%reldir%/p4_14
@@ -519,7 +519,7 @@ tofino-p14_to_16_tests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard
    $(srcdir)/%reldir%/p4_14/test_tp_1_one_table_spill.p4 \
    $(srcdir)/%reldir%/p4_14/vk_basic_ipv4_20150706.p4 \
    $(srcdir)/%reldir%/p4_14/vk_basic_ipv4_subset.p4 \
-   $(srcdir)/%reldir%/p4_14/switch.p4 ) \
+   $(srcdir)/%reldir%/p4_14/switch_*/switch.p4 ) \
    $(srcdir)/%reldir%/p4_14
 	@$(GENTESTS) $(srcdir) p14_to_16 $(srcdir)/%reldir%/test-v12-sample.sh $^ >$@ || ( rm $@ && false )
 
@@ -772,7 +772,7 @@ tofino-bmv2tests.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile.am $(wildcard \
    $(srcdir)/%reldir%/p4_14/test_tp_1_one_table_spill.p4 \
    $(srcdir)/%reldir%/p4_14/vk_basic_ipv4_20150706.p4 \
    $(srcdir)/%reldir%/p4_14/vk_basic_ipv4_subset.p4 \
-   $(srcdir)/%reldir%/p4_14/switch.p4 ) \
+   $(srcdir)/%reldir%/p4_14/switch_*/switch.p4 ) \
     $(srcdir)/%reldir%/p4_14
 	@$(GENTESTS) $(srcdir) bmv2 $(srcdir)/%reldir%/test-bmv2.sh $^ >$@ || ( rm $@ && false )
 
