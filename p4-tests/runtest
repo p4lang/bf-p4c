@@ -148,7 +148,7 @@ P4C_ARGS="$P4C_ARGS -D__TARGET_TOFINO__"
 if [ $(expr "$file" : ".*v1_2") -gt 0 ]; then
     P4C_ARGS="$P4C_ARGS --p4v 1.2"
 else
-    P4C_ARGS="$P4C_ARGS -I$execdir/v1_samples/p4_lib"
+    P4C_ARGS="$P4C_ARGS -I$execdir/p4_14/p4_lib"
 fi
 
 if [ ! -x $P4C ]; then
