@@ -145,7 +145,7 @@ testdir=$testdir/$(dirname ${file#$srcdir/})
 name=$(basename $file .p4)
 
 P4C_ARGS="$P4C_ARGS -D__TARGET_TOFINO__"
-if [ $(expr "$file" : ".*v1_2") -gt 0 ]; then
+if [ $(expr "$file" : ".*p4_16") -gt 0 ]; then
     P4C_ARGS="$P4C_ARGS --p4v 1.2"
 else
     P4C_ARGS="$P4C_ARGS -I$execdir/p4_14/p4_lib"
