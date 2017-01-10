@@ -38,6 +38,8 @@ struct StageUseEstimate {
     void options_to_ways(const IR::MAU::Table *tbl, int &entries);
     void options_to_rams(const IR::MAU::Table *tbl);
     void select_best_option(const IR::MAU::Table *tbl);
+    void calculate_attached_rams(const IR::MAU::Table *tbl, int entries,
+                                 int &srams, int &maprams);
     const IR::MAU::Table::LayoutOption *preferred_option() const {
     if (layout_options.empty())
         return nullptr;

@@ -117,6 +117,13 @@ struct IXBar {
         void compute_hash_tables();
         int groups() const;  // how many different groups in this use
         bool exact_comp(const IXBar::Use *exact_use, int width) const;
+        void add(const Use &alloc) {
+            use.insert(use.end(), alloc.use.begin(), alloc.use.end());
+            bit_use.insert(bit_use.end(), alloc.bit_use.begin(), alloc.bit_use.end());
+            way_use.insert(way_use.end(), alloc.way_use.begin(), alloc.way_use.end());
+            select_use.insert(select_use.end(), alloc.select_use.begin(), alloc.select_use.end());
+        }
+        int hash_groups() const;
     };
 
     /* A problem occurred with the way the IXbar was allocated that requires backtracking
@@ -132,10 +139,10 @@ struct IXBar {
     int getHashGroup(unsigned hash_table_input);
     bool allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc,
                           const IR::MAU::Table::LayoutOption *layout_option,
-                          int start, int last);
+                          size_t start, size_t last);
     bool allocHashWay(const IR::MAU::Table *tbl,
                       const IR::MAU::Table::LayoutOption *layout_option,
-                      int index, int start, Use &alloc);     
+                      size_t index, size_t start, Use &alloc);     
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);
     bool allocSelector(const IR::ActionSelector *, const PhvInfo &phv, Use &alloc, bool second_try,
                        cstring name);
@@ -182,7 +189,7 @@ struct IXBar {
                          vector<IXBar::Use::Byte *> &alloced, vector<grp_use *> &small_order,
                          vector<big_grp_use> &order, int &total_bytes_needed);
     void layout_option_calculation(const IR::MAU::Table::LayoutOption *layout_option,
-                                   int &start, int &last);
+                                   size_t &start, size_t &last);
 };
 
 inline std::ostream &operator<<(std::ostream &out, const IXBar::Loc &l) {

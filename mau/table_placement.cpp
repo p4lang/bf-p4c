@@ -261,6 +261,9 @@ TablePlacement::Placed *TablePlacement::Placed::gateway_merge() {
 static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::Placed *done,
                             const PhvInfo &phv, StageUseEstimate &sue,
                             TableResourceAlloc *resources) {
+    resources->match_ixbar.clear();
+    resources->gateway_ixbar.clear();
+    resources->selector_ixbar.clear();
     IXBar current_ixbar;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
         current_ixbar.update(p->name, p->resources->match_ixbar);
@@ -312,7 +315,6 @@ static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Pl
     return true;
 }
 
-/*
 static void coord_selector_xbar(const TablePlacement::Placed *curr,
                                 const TablePlacement::Placed *done,
                                 TableResourceAlloc *resource,
@@ -345,7 +347,6 @@ static void coord_selector_xbar(const TablePlacement::Placed *curr,
         j++;
     }
 }
-*/
 
 TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t, const Placed *done,
                                                         const StageUseEstimate &current) {
@@ -359,7 +360,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     }
     t = rv->table;
     rv->stage = done ? done->stage : 0;
-//   int min_entries = 1;
+    int min_entries = 1;
     rv->entries = 512;
     if (t->match_table) {
         if (t->match_table->size)
@@ -378,6 +379,95 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             rv->stage++; } }
     assert(!rv->placed[tblInfo.at(rv->table).uid]);
 
+    StageUseEstimate min_use(t, min_entries, nullptr);
+    int increment_entries = min_entries + 1;
+    StageUseEstimate increment_use(t, min_entries, nullptr);
+    auto avail = StageUseEstimate::max();
+    bool allocated = false;
+    bool ixbar_allocation_bug = false;
+    bool mem_allocation_bug = false;
+   
+    do {    
+        bool advance_to_next_stage = false;
+        allocated = false; ixbar_allocation_bug = false; mem_allocation_bug = false;
+        rv->use = StageUseEstimate(t, rv->entries, &resources->match_ixbar);
+
+        if (!try_alloc_ixbar(rv, done, phv, rv->use, resources)) {
+            advance_to_next_stage = true;
+            ixbar_allocation_bug = true;
+        }
+
+        if (!(min_use + current <= avail)
+            || !try_alloc_mem(rv, done, min_entries, resources, min_use, prev_resources)) {
+            mem_allocation_bug = true;
+            advance_to_next_stage = true;
+        }
+
+        if (done && rv->stage == done->stage) {
+            avail.srams -= current.srams;
+            avail.tcams -= current.tcams;
+            avail.maprams -= current.maprams; }
+        assert(min_use <= avail);
+        int last_try = rv->entries;
+
+
+        while (!(rv->use <= avail) ||
+               !try_alloc_mem(rv, done, rv->entries, resources, rv->use, prev_resources)) {
+            rv->need_more = true;
+            int scale = 0;
+            if (rv->use.tcams > avail.tcams)
+                scale = (avail.tcams - min_use.tcams) / (increment_use.tcams - min_use.tcams);
+            else if (rv->use.maprams > avail.maprams)
+                scale = (avail.maprams - min_use.maprams)
+                        / (increment_use.maprams - min_use.maprams);
+            else if (rv->use.srams > avail.srams)
+                scale = (avail.srams - min_use.srams) / (increment_use.srams - min_use.srams);
+            if (scale)
+                rv->entries = scale * increment_entries - (scale-1) * min_entries;
+            if (rv->entries >= last_try) {
+                rv->entries = last_try - 500;
+                if (rv->entries < min_entries && min_entries < last_try)
+                    rv->entries = min_entries; }
+            if (rv->entries < min_entries) {
+                LOG1("RV entries " << rv->entries << " min entries " << min_entries);
+                mem_allocation_bug = true;
+                break;
+            }
+            last_try = rv->entries;
+            LOG3(" - reducing to " << rv->entries << " of " << t->name
+                 << " in stage " << rv->stage);
+            rv->use = StageUseEstimate(t, rv->entries, nullptr);
+            if (!try_alloc_ixbar(rv, done, phv, rv->use, resources)) {
+                ixbar_allocation_bug = true;
+                ERROR("IXBar Allocation error after previous allocation?");
+                break;
+            }
+        }
+        if (advance_to_next_stage) {
+            rv->stage++;
+        }
+
+    } while (!allocated && rv->stage <= done->stage + 1);
+
+    if (rv->stage > done->stage + 1) {
+        if (ixbar_allocation_bug)
+            BUG("Can't fit table %s in input xbar by itself", rv->name);
+        if (mem_allocation_bug)
+            BUG("Can't fit the minimum number of table %s entries within the memories", rv->name);
+        BUG("Unknown error for stage advancement?");
+    }
+
+    rv->logical_id = done && done->stage == rv->stage ? done->logical_id + 1
+                                                      : rv->stage * StageUse::MAX_LOGICAL_IDS;
+    assert((rv->logical_id / StageUse::MAX_LOGICAL_IDS) == rv->stage);
+    LOG2("try_place_table returning " << rv->entries << " of " << rv->name <<
+         " in stage " << rv->stage << (rv->need_more ? " (need more)" : ""));
+    int i = 0;
+    for (auto *p = done; p && p->stage == rv->stage; p = p->prev) {
+        coord_selector_xbar(p, done, prev_resources[i], prev_resources);
+        i++;
+    }
+    coord_selector_xbar(rv, done, resources, prev_resources);
 /*
     if (!try_alloc_ixbar(rv, done, phv, resources)) {
 retry_next_stage:

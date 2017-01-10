@@ -33,6 +33,18 @@ int IXBar::Use::groups() const {
     return rv;
 }
 
+int IXBar::Use::hash_groups() const {
+    int rv = 0;
+    unsigned counted = 0;
+    for (auto way : way_use) {
+        if (((1U << way.group) & counted) == 0) {
+            rv++;
+            counted |= 1U << way.group;
+        }
+    }
+    return rv;
+}
+
 bool IXBar::Use::exact_comp(const IXBar::Use *exact_use, int width) const {
     unsigned gw_counted = 0, exact_counted = 0;
     for (auto &b : use) {
@@ -601,7 +613,7 @@ static void add_use(IXBar::Use &alloc, const PhvInfo::Field *field,
 }
 
 void IXBar::layout_option_calculation(const IR::MAU::Table::LayoutOption *layout_option,
-                                      int &start, int &last) {
+                                      size_t &start, size_t &last) {
     start = last;
     if (start == 0 && layout_option && layout_option->way_sizes[0] == 16) {
         last = 3;
@@ -675,7 +687,7 @@ int IXBar::getHashGroup(unsigned hash_table_input) {
 // needs a much greater analysis
 bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc,
                              const IR::MAU::Table::LayoutOption *layout_option,
-                             int start, int last) {
+                             size_t start, size_t last) {
     if (ternary)
         return true;
     int hash_group = getHashGroup(alloc.hash_table_input);
@@ -708,7 +720,7 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
         return false;
     }
     // Currently should  never return false
-    for (int index = start; index < last; index++) {
+    for (size_t index = start; index < last; index++) {
         if (!allocHashWay(tbl, layout_option, index, start, alloc)) {
             alloc.clear();
             return false;
@@ -724,7 +736,7 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
 //bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const IR::MAU::Table::Way &way, Use &alloc) {
 bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
                          const IR::MAU::Table::LayoutOption *layout_option,
-                         int index, int start, Use &alloc) {
+                         size_t index, size_t start, Use &alloc) {
     int hash_group = getHashGroup(alloc.hash_table_input);
     if (hash_group < 0) return false;
     int way_bits = ceil_log2(layout_option->way_sizes[index]);
@@ -763,7 +775,7 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
     } else if (shared) {
         int used_count = __builtin_popcount(used_bits);
         int allocated_select_bits = 0;
-        for (int i = start; i < index; i++) {
+        for (size_t i = start; i < index; i++) {
             allocated_select_bits += ceil_log2(layout_option->way_sizes[i]);
         }
         int starting_bit = allocated_select_bits % used_count;
@@ -938,7 +950,6 @@ bool IXBar::allocSelector(const IR::ActionSelector *as, const PhvInfo &phv, Use 
     return rv;
 }
 
-
 bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_alloc,
                        Use &gw_alloc, Use &sel_alloc, const IR::MAU::Table::LayoutOption *lo) {
     if (!tbl) return true;
@@ -947,24 +958,35 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_a
     LOG1("IXBar::allocTable(" << tbl->name << ")");
     if (tbl->match_table) {
         bool ternary = tbl->layout.ternary;
-        vector <IXBar::Use::Byte *> alloced;
-        bool finished = true;
+        vector<IXBar::Use::Byte *> alloced;
+        vector<Use> all_tbl_allocs; 
+        bool finished = false;
         while (!finished) {
-            int start = 0; int last = 0;
+            Use next_alloc;
+            size_t start = 0; size_t last = 0;
             layout_option_calculation(lo, start, last);
             int hash_groups = (last - start > 4) ? 4 : last - start;
-            if (!(allocMatch(ternary, tbl->match_table, phv, tbl_alloc, 
+            if (!(allocMatch(ternary, tbl->match_table, phv, next_alloc, 
                              alloced, false, hash_groups)
-                && allocAllHashWays(ternary, tbl, tbl_alloc, lo, start, last))
-                && !(allocMatch(ternary, tbl->match_table, phv, tbl_alloc,
+                && allocAllHashWays(ternary, tbl, next_alloc, lo, start, last))
+                && !(allocMatch(ternary, tbl->match_table, phv, next_alloc,
                      alloced, true, hash_groups)
-                && allocAllHashWays(ternary, tbl, tbl_alloc, lo, start, last))) {
+                && allocAllHashWays(ternary, tbl, next_alloc, lo, start, last))) {
+            next_alloc.clear();
             tbl_alloc.clear();
             return false;
-        } else {
+            } else {
                fill_out_use(alloced, ternary);
             }
+            alloced.clear();
+            all_tbl_allocs.push_back(next_alloc);
+            if (last == lo->way_sizes.size())
+                finished = true;
         }
+        for (auto alloc : all_tbl_allocs) {
+            tbl_alloc.add(alloc);
+        }
+      
     }
     const IR::ActionSelector *as = nullptr;
     for (auto at : tbl->attached) {
