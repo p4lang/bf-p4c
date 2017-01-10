@@ -59,7 +59,7 @@ static void erase_unused_next(IR::MAU::Table *tbl) {
 
 std::ostream &operator<<(std::ostream &out, const std::pair<const IR::Expression *, cstring> &p) {
     if (p.first) out << *p.first << " => ";
-    out << (p.second ? p.second : "_");;
+    out << (p.second ? p.second : "_");
     return out;
 }
 

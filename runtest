@@ -191,7 +191,7 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
     run $TFAS -vvvvl $name.out/tfas.config.log $name.tfa || die
     run $TFLN $name.out/*.cfg.json -o $name.out/tofino.bin || die
     run $STF -l $name.out --observation-log $obsLog $test | \
-        grep -v 'WARN MAU::process_match Time gone backwards!' \
+        grep -v 'WARN MAU::[a-z_]* Time gone backwards!' \
         || die
 elif ${RUN_TFAS:-false}; then
     TFAS=$(findbin tofino-asm tfas)

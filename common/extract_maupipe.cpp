@@ -67,7 +67,8 @@ bool ActionBodySetup::preorder(const IR::MethodCallStatement *mc) {
         recv = bi->appliedTo;
     } else if (auto em = mi->to<P4::ExternMethod>()) {
         name = em->actualExternType->name + "." + em->method->name;
-        recv = new IR::GlobalRef(em->object->getNode());
+        auto n = em->object->getNode();
+        recv = new IR::GlobalRef(typeMap->getType(n), n);
     } else if (auto ef = mi->to<P4::ExternFunction>()) {
         name = ef->method->name;
     } else {
@@ -90,10 +91,11 @@ bool ActionBodySetup::preorder(const IR::MethodCallStatement *mc) {
 
 }  // anonymous namespace
 
-const IR::ActionFunction *createActionFunction(
+static IR::ActionFunction *createActionFunction(
     P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
     const IR::P4Action *ac,
-    const IR::Vector<IR::Expression> *args) {
+    const IR::Vector<IR::Expression> *args)
+{
     IR::ActionFunction *rv = new IR::ActionFunction;
     rv->srcInfo = ac->srcInfo;
     rv->name = ac->externalName();
@@ -124,9 +126,74 @@ static void setIntProperty(cstring name, int *val, const IR::PropertyValue *pval
     error("%s: %s property must be a constant", pval->srcInfo, name);
 }
 
-const IR::V1Table *createV1Table(const IR::P4Table *tc, P4::ReferenceMap *refMap) {
+static IR::Attached *createV1Attached(Util::SourceInfo srcInfo, cstring name,
+                                      const IR::Type *type,
+                                      const IR::Vector<IR::Expression> *args,
+                                      const IR::Annotations *annot)
+{
+    IR::CounterOrMeter *rv = nullptr;
+    // FIXME -- this should be looking at the arch model, but the current arch model stuff
+    // is too complex -- need a way of building this automatically from the arch.p4 file.
+    // For now, hack just using the type name as a string.
+    cstring tname = type->toString();
+    if (auto p = tname.find('<'))  // strip off type args (if any)
+        tname = tname.before(p);
+    if (tname == "action_selector") {
+        return new IR::ActionSelector(srcInfo, name);
+        // FIXME Need to reconstruct the field list from the table key
+        // FIXME How do we get the type and mode?
+    } else if (tname == "action_profile") {
+        auto ap = new IR::ActionProfile(srcInfo, name);
+        ap->size = args->at(0)->as<IR::Constant>().asInt();
+        // Do we need to reconstruct the selector or action lists from the table?
+        return ap;
+    } else if (tname == "counter" || tname == "direct_counter") {
+        auto ctr = new IR::Counter(srcInfo, name);
+        for (auto anno : annot->annotations) {
+            if (anno->name == "max_width")
+                ctr->max_width = anno->expr.at(0)->as<IR::Constant>().asInt();
+            else if (anno->name == "min_width")
+                ctr->min_width = anno->expr.at(0)->as<IR::Constant>().asInt();
+            else
+                WARNING("unknown annotation " << anno->name << " on " << tname); }
+        rv = ctr;
+    } else if (tname == "meter" || tname == "direct_meter") {
+        auto mtr = new IR::Meter(srcInfo, name);
+        for (auto anno : annot->annotations) {
+            if (anno->name == "result")
+                mtr->result = anno->expr.at(0);
+            else if (anno->name == "pre_color")
+                mtr->pre_color = anno->expr.at(0);
+            else if (anno->name == "implementation")
+                mtr->implementation = anno->expr.at(0)->as<IR::StringLiteral>();
+            else
+                WARNING("unknown annotation " << anno->name << " on " << tname); }
+        rv = mtr; }
+    if (rv) {
+        switch (args->size()) {
+        case 1:
+            rv->settype(args->at(0)->as<IR::Member>().member.name);
+            rv->direct = true;
+            break;
+        case 2:
+            rv->instance_count = args->at(0)->as<IR::Constant>().asInt();
+            rv->settype(args->at(1)->as<IR::Member>().member.name);
+            break;
+        default:
+            BUG("wrong number of arguments to %s ctor %s", tname, args);
+            break; }
+        return rv; }
+    return nullptr;
+}
+
+
+static IR::V1Table *createV1Table(const IR::P4Table *tc, const P4::ReferenceMap *refMap,
+                                  IR::MAU::Table *tt, set<cstring> &unique_names)
+{
     IR::V1Table *rv = new IR::V1Table;
-    rv->srcInfo = tc->srcInfo;
+    if (tc->srcInfo) {
+        rv->srcInfo = tc->srcInfo;
+        tt->srcInfo = tc->srcInfo; }
     rv->name = tc->externalName();
     for (auto prop : *tc->properties->properties) {
         if (prop->name == "key") {
@@ -161,7 +228,30 @@ const IR::V1Table *createV1Table(const IR::P4Table *tc, P4::ReferenceMap *refMap
         } else if (prop->name == "min_size") {
             setIntProperty(prop->name, &rv->min_size, prop->value);
         } else if (prop->name == "max_size") {
-            setIntProperty(prop->name, &rv->max_size, prop->value); } }
+            setIntProperty(prop->name, &rv->max_size, prop->value);
+        } else if (prop->name == "counters" || prop->name == "meters" ||
+                   prop->name == "implementation")
+        {
+            auto pval = prop->value->as<IR::ExpressionValue>().expression;
+            IR::Attached *obj = nullptr;
+            if (auto cc = pval->to<IR::ConstructorCallExpression>()) {
+                cstring tname = cc->type->toString();
+                if (auto p = tname.find('<'))  // strip off type args (if any)
+                    tname = tname.before(p);
+                unique_names.insert(tname);   // don't use the type name directly
+                tname = cstring::make_unique(unique_names, tname);
+                unique_names.insert(tname);
+                obj = createV1Attached(cc->srcInfo, prop->externalName(tname), cc->type,
+                                       cc->arguments, prop->annotations);
+            } else if (auto pe = pval->to<IR::PathExpression>()) {
+                auto &d = refMap->getDeclaration(pe->path, true)->as<IR::Declaration_Instance>();
+                obj = createV1Attached(d.srcInfo, d.externalName(), d.type,
+                                       d.arguments, d.annotations); }
+            BUG_CHECK(obj, "not valid for %s: %s", prop->name, pval);
+            tt->attached.push_back(obj);
+        } else {
+            BUG("table property %s not handled", prop->name);
+        } }
     return rv;
 }
 
@@ -176,22 +266,39 @@ class FindAttached : public Inspector {
 };
 
 struct AttachTables : public Modifier {
-    const IR::V1Program                          *program;
-    map<cstring, vector<const IR::Attached *>>    attached;
+    const IR::V1Program                         *program = nullptr;
+    map<cstring, vector<const IR::Attached *>>  attached;
+    map<const IR::Declaration_Instance *, const IR::Attached *> converted;
 
     void postorder(IR::MAU::Table *tbl) override {
         if (attached.count(tbl->name))
             for (auto a : attached[tbl->name])
                 if (!contains(tbl->attached, a))
                     tbl->attached.push_back(a); }
+    void postorder(IR::GlobalRef *gref) override {
+        if (auto di = gref->obj->to<IR::Declaration_Instance>()) {
+            if (converted.count(di)) {
+                gref->obj = converted.at(di);
+            } else {
+                auto att = createV1Attached(di->srcInfo, di->externalName(), di->type,
+                                            di->arguments, di->annotations);
+                if (att)
+                    gref->obj = converted[di] = att; } } }
     void postorder(IR::Primitive *prim) override {
-        if (prim->name == "count" || prim->name == "execute_meter") {
-            if (auto at = program->get<IR::Attached>(prim->operands[0]->toString())) {
-                if (auto tt = findContext<IR::MAU::Table>()) {
-                    if (!contains(attached[tt->name], at))
-                        attached[tt->name].push_back(at); } } }
+        if (prim->name != "count" && prim->name != "execute_meter")
+            return;
+        auto tt = findContext<IR::MAU::Table>();
+        BUG_CHECK(tt, "%s primitive not in a table", prim);
+        const IR::Attached *att = nullptr;
+        if (auto gr = prim->operands.at(0)->to<IR::GlobalRef>())
+            att = gr->obj->to<IR::Attached>();
+        if (!att && program)
+            att = program->get<IR::Attached>(prim->operands.at(0)->toString());
+        if (att && !contains(attached[tt->name], att))
+            attached[tt->name].push_back(att);
         /* various error check should be here */ }
 
+    AttachTables() {}
     explicit AttachTables(const IR::V1Program *prg) : program(prg) {
         program->apply(FindAttached(attached)); }
 };
@@ -217,6 +324,7 @@ class GetTofinoTables : public Inspector {
     P4::TypeMap                                 *typeMap;
     gress_t                                     gress;
     IR::Tofino::Pipe                            *pipe;
+    set<cstring>                                unique_names;
     map<const IR::Node *, IR::MAU::Table *>     tables;
     map<const IR::Node *, IR::MAU::TableSeq *>  seqs;
     IR::MAU::TableSeq *getseq(const IR::Node *n) {
@@ -321,8 +429,8 @@ class GetTofinoTables : public Inspector {
         auto table = mi->object->to<IR::P4Table>();
         if (!table) BUG("%1% not apllied to table", m);
         if (!tables.count(m)) {
-            auto tt = tables[m] = new IR::MAU::Table(table->name, gress,
-                                                     createV1Table(table, refMap));
+            auto tt = tables[m] = new IR::MAU::Table(table->name, gress);
+            tt->match_table = createV1Table(table, refMap, tt, unique_names);
             setup_tt_actions(tt, table);
         } else {
             error("%s: Multiple applies of table %s not supported", m->srcInfo, table->name); }
@@ -498,6 +606,9 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program, Tofino_Opt
     egress->apply(GetTofinoTables(&refMap, &typeMap, EGRESS, rv));
 
     // AttachTables...
+    AttachTables toAttach;
+    for (auto &th : rv->thread)
+        th.mau = th.mau->apply(toAttach);
 
     return rv->apply(fixups);
 }

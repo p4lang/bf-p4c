@@ -102,6 +102,7 @@ class Table : Tofino::Unit {
     const TableResourceAlloc            *resources = nullptr;
 
 #noconstructor
+    Table(cstring n, gress_t gr) : name(n), gress(gr) {}
     Table(cstring n, gress_t gr, IR::V1Table t)
     : Tofino::Unit(t->srcInfo), name(n), gress(gr), match_table(t) {}
 #emit

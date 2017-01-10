@@ -14,7 +14,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::bitrange &bits
 }
 
 std::ostream &operator<<(std::ostream &out, const CollectGatewayFields::info_t &info) {
-    out << info.bits;;
+    out << info.bits;
     if (info.need_range) out << " range";
     if (~info.need_mask) out << " mask=0x" << hex(info.need_mask);
     for (auto &off : info.offsets) out << " " << off.first << off.second;
