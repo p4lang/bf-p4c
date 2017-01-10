@@ -59,7 +59,7 @@ blackbox stateful_alu cntr_1 {
     math_unit_input: pkt.field_f_16;
     math_unit_output_scale: 4;
     math_unit_exponent_shift: -1;
-    math_unit_exponent_invert: True;
+    math_unit_exponent_invert: true;
     math_unit_lookup_table: 0xf  14  13 0xc  0x0b  10 9 8 7 6 5 4 3 2 1 0;
 
     output_predicate: condition_lo;
