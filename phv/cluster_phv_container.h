@@ -120,6 +120,7 @@ class PHV_Container {
 };
 //
 //
+std::ostream &operator<<(std::ostream &, PHV_Container::Container_Content *);
 std::ostream &operator<<(std::ostream &, std::vector<PHV_Container::Container_Content *>&);
 std::ostream &operator<<(std::ostream &, ordered_map<int, int>&);
 std::ostream &operator<<(std::ostream &, PHV_Container*);

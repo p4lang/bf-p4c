@@ -31,6 +31,8 @@ class PhvInfo : public Inspector {
         int             size;
         int             phv_use_lo = 0;  // lowest bit of field used through MAU pipeline
         int             phv_use_hi = 0;  // highest bit of field used through MAU pipeline
+                                         // for container contiguous groups
+                                         // owner phv_use_hi = sum of member sizes
         int             offset;          // offset of lsb from lsb (last) bit of containing header
         bool            referenced;
         bool            metadata;

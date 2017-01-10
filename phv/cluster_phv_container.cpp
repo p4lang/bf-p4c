@@ -377,10 +377,21 @@ void PHV_Container::sanity_check_container_ranges(const std::string& msg) {
 //
 // Container_Content output
 //
-std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container::Container_Content *>& c) {
-    for (auto f : c) {
+std::ostream &operator<<(std::ostream &out, PHV_Container::Container_Content *cc) {
+    if (cc) {
         out << std::endl << "\t\t\t\t\t";
-        out << f->field() << '<' << f->width() << '>' << '{' << f->lo() << ".." << f->hi() << '}';
+        out << cc->field() << '<' << cc->width() << '>' << '{' << cc->lo() << ".." << cc->hi() << '}';
+    } else {
+        out << "-cc-";
+    }
+
+    return out;
+}
+
+
+std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container::Container_Content *>& vc) {
+    for (auto &cc : vc) {
+        out << cc << std::endl;
     }
 
     return out;

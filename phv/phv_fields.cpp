@@ -345,6 +345,26 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field *fld) {
         } else {
             out << "-r-";
         }
+        // member of header stk pov
+        // in phv container group accumulation (sub-byte, contiguous, complete)
+        // fx -> fx, fy -> fx, fz -> fx; fx: {fx, fy, fz)}
+        //
+        if (fld->hdr_stk_pov) {
+            out << "\t--> " << fld->hdr_stk_pov->name;
+        }
+        // header stk povs
+        if (fld->pov_fields.size()) {
+            // count bits in "contiguous complete"
+            out << std::endl << '[';
+            int ccg_width = 0;
+            for (auto pov_f : fld->pov_fields) {
+                out << '\t';
+                out << pov_f->name << '[' << pov_f->size << ']';
+                out << std::endl;
+                ccg_width += pov_f->size;
+            }
+            out << ':' << ccg_width << ']';
+        }
     } else {
         out << "-f-";  // fld is nil
     }
@@ -383,20 +403,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo &phv) {
         << std::endl;
     //
     for (auto field : phv) {
-         out << &field;
-         // member of header stk pov
-         if (field.hdr_stk_pov) {
-             out << "\t--> " << field.hdr_stk_pov;
-         }
-         out << std::endl;
-         // header stk povs
-         if (field.pov_fields.size()) {
-             out << '[' << std::endl;
-             for (auto &pov_f : field.pov_fields) {
-                 out << '\t' << pov_f << std::endl;
-             }
-             out << ']' << std::endl;
-         }
+         out << &field << std::endl;
     }
     return out;
 }
