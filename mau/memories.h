@@ -124,6 +124,7 @@ struct Memories {
         int width;
         int placed;
         int number;
+        int hash_group;
         int recent_home_row;
         cstring name;
         enum type_t { EXACT, ACTION, STATS, METER, SELECTOR, TIND } type;
@@ -195,15 +196,19 @@ struct Memories {
         color_mapram_group cm;
         bool requires_ab;
         explicit SRAM_group(table_alloc *t, int d, int w, int n, type_t ty)
-            : ta(t), depth(d), width(w), placed(0), number(n), type(ty), sel(), cm(),
-              requires_ab(false) {}
+            : ta(t), depth(d), width(w), placed(0), number(n), hash_group(0), type(ty), sel(),
+              cm(), requires_ab(false) {}
         explicit SRAM_group(table_alloc *t, int d, int n, type_t ty)
-            : ta(t), depth(d), width(0), placed(0), number(n), type(ty), sel(), cm(),
-              requires_ab(false) {}
+            : ta(t), depth(d), width(0), placed(0), number(n), hash_group(0), type(ty), sel(),
+              cm(), requires_ab(false) {}
+        explicit SRAM_group(table_alloc *t, int d, int w, int n, int h, type_t ty)
+            : ta(t), depth(d), width(w), placed(0), number(n), hash_group(h), type(ty), sel(),
+              cm(), requires_ab(false) {}
         void dbprint(std::ostream &out) const {
             out << ta->table->name << " way #" << number << " depth: " << depth
                 << " width: " << width << " placed: " << placed;
         }
+        int unique_bus(int i) { return hash_group * width + i; }
         int left_to_place() { return depth - placed; }
         bool all_placed() { return (depth == placed); }
         bool any_placed() { return (placed != 0); }

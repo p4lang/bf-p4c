@@ -112,7 +112,37 @@ bool Memories::allocate_all() {
 class SetupAttachedTables : public MauInspector {
     Memories &mem; Memories::table_alloc *ta; int entries; Memories::mem_info &mi;
     bool stats_pushed = false; bool meter_pushed = false;
+
+    profile_t init_apply(const IR::Node *root) {
+        profile_t rv = MauInspector::init_apply(root);
+        if (ta->layout_option == nullptr) return rv;
+
+        if (ta->layout_option->ternary_indirect_required) {
+            auto name = ta->table->name + "$tind";
+            (*ta->memuse)[name].type = Memories::Use::TIND;
+            mem.tind_tables.push_back(ta);
+            mi.tind_tables++;
+            mi.tind_RAMs += (entries + 1023U) / 1024U;
+        }
+
+        if (ta->layout_option->action_data_required) {
+            LOG4("Action table for table " << ta->table->name);
+            auto name = ta->table->name + "$action";
+            (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
+            mem.action_tables.push_back(ta);
+            mi.action_tables++;
+            int width = 1;
+            int per_row = ActionDataPerWord(ta->layout_option->layout, &width);
+            int depth = (entries + per_row * 1024 - 1) / (per_row * 1024);
+            mi.action_bus_min += width; mi.action_RAMs += depth * width;
+        }
+        return rv;
+    }
+
+
     bool preorder(const IR::MAU::ActionData *) {
+        BUG("Shouldn't have an action data table before table placement");
+        /*
         LOG4("Action table for table " << ta->table->name);
         auto name = ta->table->name + "$action";
         (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
@@ -123,6 +153,7 @@ class SetupAttachedTables : public MauInspector {
         int depth = (entries + per_row * 1024 - 1) / (per_row * 1024);
         mi.action_bus_min += width; mi.action_RAMs += depth * width;
         return false;
+        */
     }
 
     bool preorder(const IR::ActionProfile *ap) {
@@ -198,13 +229,17 @@ class SetupAttachedTables : public MauInspector {
     }
 
     bool preorder(const IR::MAU::TernaryIndirect *) {
+        BUG("Should be no Ternary Indirect before table placement is complete");
+        /*
         auto name = ta->table->name + "$tind";
         (*ta->memuse)[name].type = Memories::Use::TIND;
         mem.tind_tables.push_back(ta);
         mi.tind_tables++;
         mi.tind_RAMs += (entries + 1023U) / 1024U;
         return false;
+        */
     }
+
 
     bool preorder(const IR::ActionSelector *as) {
         bool profile_first = false;
@@ -422,11 +457,19 @@ void Memories::break_exact_tables_into_ways() {
         (*ta->memuse)[ta->table->name].row.clear();
         int index = 0;
         for (int way_size : ta->layout_option->way_sizes) {
-            exact_match_ways.push_back(new SRAM_group(ta, way_size, ta->layout_option->way->width,
-                                       index, SRAM_group::EXACT));
-            index++;
         }
         ta->calculated_entries = ta->layout_option->entries;
+
+        index = 0;
+        for (auto &way : ta->match_ixbar->way_use) {
+            SRAM_group *way = new SRAM_group(ta, ta->layout_option->way_sizes[index], 
+                                             ta->layout_option->way->width, index,
+                                             way.group, SRAM_group::EXACT);
+            exact_match_ways.push_back(way);
+            (*ta->memuse)[ta->table->name].ways.emplace_back(ta->layout_option->way_sizes[index],
+                                                             way.mask);
+            index++;
+        }
         
         /*
         int number_of_ways = ta->table->ways.size();
@@ -442,12 +485,6 @@ void Memories::break_exact_tables_into_ways() {
         }
         */
 
-        struct waybits {
-            bitvec bits;
-            decltype(bits.end()) next;
-            waybits() : next(bits.end()) {}
-        };
-        std::map<int, waybits> alloc_bits;
         /*
         for (auto &way : ta->match_ixbar->way_use) {
             alloc_bits[way.group].bits |= way.mask;
@@ -546,7 +583,7 @@ int Memories::match_bus_available(table_alloc *ta, int width, int row) {
 /* Put the selected way group into the RAM row as much as possible */
 bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols, unsigned column_mask) {
     vector<std::pair<int, int>> buses;
-    buses.emplace_back(row, match_bus_available(wa->ta, 0, row));
+    buses.emplace_back(row, match_bus_available(wa->ta, wa->unique_bus(0), row));
     unsigned row_mask = 0;
     vector<int> selected_cols;
 
@@ -564,7 +601,7 @@ bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols, unsigned c
     // Fairly simple stuff
     for (int i = 1; i < wa->width; i++) {
         vector<int> matching_rows = available_match_SRAMs_per_row(row_mask, column_mask, row,
-                                                                  wa->ta, i);
+                                                                  wa->ta, wa->unique_bus(i));
         size_t j = 0;
         while (j < matching_rows.size()) {
             int test_row = matching_rows[j];
@@ -616,7 +653,7 @@ bool Memories::find_best_row_and_fill_out(unsigned column_mask) {
     SRAM_group *wa = exact_match_ways[0];
     // FIXME: Obviously the mask has to change
     vector<std::pair<int, int>> available_rams
-        = available_SRAMs_per_row(column_mask, wa->ta, 0);
+        = available_SRAMs_per_row(column_mask, wa->ta, wa->unique_bus(0));
     // No memories left to place anything
     if (available_rams.size() == 0) {
         return false;
@@ -1026,7 +1063,7 @@ void Memories::action_bus_meters_counters() {
 void Memories::find_action_bus_users() {
     for (auto *ta : action_tables) {
         int width = 1;
-        int per_row = ActionDataPerWord(&ta->table->layout, &width);
+        int per_row = ActionDataPerWord(ta->layout_option->layout, &width);
         int depth = (ta->calculated_entries + per_row * 1024 - 1) / (per_row * 1024);
         for (int i = 0; i < width; i++) {
             action_bus_users.push_back(new SRAM_group(ta, depth, i, SRAM_group::ACTION));
