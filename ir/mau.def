@@ -108,11 +108,13 @@ class Table : Tofino::Unit {
         Layout layout;
         Way way;  //Assumes all ways are the same size
         vector<int> way_sizes;
-        int entries = 0; bool action_data_required = false;
-        int srams = 0; int maprams = 0;
+        int entries = 0;
+        bool action_data_required = false; bool ternary_indirect_required = false;
+        int srams = 0; int maprams = 0; int tcams = 0;
         toJSON { json << "null"; }
         fromJSON { return nullptr; }
         LayoutOption() {}
+        LayoutOption(Layout l) : layout(l) {}
         LayoutOption(Layout l, Way w) : layout(l), way(w) {}
     }
 

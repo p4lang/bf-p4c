@@ -19,7 +19,7 @@ struct StageUseEstimate {
         exact_ixbar_bytes += a.exact_ixbar_bytes;
         ternary_ixbar_groups += a.ternary_ixbar_groups;
         return *this; }
-    StageUseEstimate(const IR::MAU::Table *, int &, const IXBar::Use *);
+    StageUseEstimate(const IR::MAU::Table *, int &);
     StageUseEstimate operator+(const StageUseEstimate &a) const {
         StageUseEstimate rv = *this; rv += a; return rv; }
     static StageUseEstimate max() {
@@ -38,8 +38,11 @@ struct StageUseEstimate {
     void options_to_ways(const IR::MAU::Table *tbl, int &entries);
     void options_to_rams(const IR::MAU::Table *tbl);
     void select_best_option(const IR::MAU::Table *tbl);
-    void calculate_attached_rams(const IR::MAU::Table *tbl, int entries,
-                                 int &srams, int &maprams);
+    void options_to_ternary_entries(const IR::MAU::Table *tbl, int &entries);
+    void select_best_option_ternary();
+    void calculate_attached_rams(const IR::MAU::Table *tbl,
+                                 IR::MAU::Table::LayoutOption *lo, bool table_placement);
+    void fill_estimate_from_option(int &entries);
     const IR::MAU::Table::LayoutOption *preferred_option() const {
     if (layout_options.empty())
         return nullptr;
@@ -51,5 +54,6 @@ struct StageUseEstimate {
 int CounterPerWord(const IR::Counter *ctr);
 int RegisterPerWord(const IR::Register *reg);
 int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width);
+int TernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::Table *tbl);
 
 #endif /* _TOFINO_MAU_RESOURCE_ESTIMATE_H_ */

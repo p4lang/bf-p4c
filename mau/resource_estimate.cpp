@@ -44,6 +44,16 @@ int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width) {
     return 16 >> size;
 }
 
+int TernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::Table *tbl) {
+    int indir_size = ceil_log2(layout->overhead_bits);
+    if (indir_size > 8)
+        BUG("can't have more than 64 bits of overhead in "
+                                        "ternary table %s", tbl->name);
+    if (indir_size < 3) indir_size = 3;
+    return (128 >> indir_size);
+
+}
+
 void StageUseEstimate::options_to_ways(const IR::MAU::Table *tbl, int &entries) {
     layout_options.clear();
     layout_options = tbl->layout_options;
@@ -98,13 +108,24 @@ void StageUseEstimate::options_to_ways(const IR::MAU::Table *tbl, int &entries) 
     }
 }
 
+void StageUseEstimate::options_to_ternary_entries(const IR::MAU::Table *tbl, int &entries) {
+    layout_options.clear();
+    layout_options = tbl->layout_options;
+    for (auto &lo : layout_options) {
+        int depth = (entries + 511u)/512u;
+        int width = (tbl->layout.match_width_bits + 47)/44;  // +4 bits for v/v, round up
+        lo.tcams = depth * width;
+        lo.entries = depth * 512;
+    }
+}
 
-void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl, int entries,
-                                               int &srams, int &maprams) {
+void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
+                                               IR::MAU::Table::LayoutOption *lo,
+                                               bool table_placement) {
     for (auto at : tbl->attached) {
         int per_word = 0;
         int width = 1;
-        int attached_entries = entries;
+        int attached_entries = lo->entries;
         bool need_maprams = false;
         if (auto *ctr = dynamic_cast<const IR::Counter *>(at)) {
             per_word = CounterPerWord(ctr);
@@ -119,22 +140,21 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl, int en
             if (!reg->direct) attached_entries = reg->instance_count;
             need_maprams = true;
         } else if (auto *ap = dynamic_cast<const IR::ActionProfile *>(at)) {
-            per_word = ActionDataPerWord(&tbl->layout, &width);
+            per_word = ActionDataPerWord(lo->layout, &width);
             attached_entries = ap->size;
         } else if (/*auto *ad = */dynamic_cast<const IR::MAU::ActionData *>(at)) {
-            // fixme: in theory, the table should not have an action data table,
+            // FIXME: in theory, the table should not have an action data table,
             // as that is decided after the table layout is picked
-            continue;
-            //per_word = actiondataperword(&tbl->layout, &width);
+            if (!table_placement)
+                BUG("Action Data table exists before table placement occurs");
+            width = 1;
+            per_word = ActionDataPerWord(lo->layout, &width);
         } else if (/*auto *as = */dynamic_cast<const IR::ActionSelector *>(at)) {
-            // todo(cdodd)
+            // TODO(cdodd)
         } else if (/*auto *ti = */dynamic_cast<const IR::MAU::TernaryIndirect *>(at)) {
-            int indir_size = ceil_log2(tbl->layout.overhead_bits);
-            if (indir_size > 8)
-                BUG("can't have more than 64 bits of overhead in "
-                                        "ternary table %s", tbl->name);
-            if (indir_size < 3) indir_size = 3;
-            per_word = 128 >> indir_size;
+            if (!table_placement)
+                BUG("Ternary Indirect Data table exists before table placement occurs");
+            per_word = TernaryIndirectPerWord(lo->layout, tbl);
         } else {
             BUG("unknown attached table type %s", at->kind()); }
         if (per_word > 0) {
@@ -146,63 +166,26 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl, int en
             if (need_maprams) maprams += units; 
         }
     }
+    if (lo->action_data_required) {
+        int width = 1;
+        int per_word = ActionDataPerWord(lo->layout, &width);
+        int attached_entries = lo->entries;
+        int entries_per_sram = 1024 * per_word;
+        int units = (attached_entries + entries_per_sram - 1) / entries_per_sram;
+        srams += units * width;
+    }
+    if (lo->ternary_indirect_required) {
+        int per_word = TernaryIndirectPerWord(lo->layout, tbl);
+        int attached_entries = lo->entries;
+        int entries_per_sram = 1024 * per_word;
+        int units = (attached_entries + entries_per_sram - 1) / entries_per_sram;
+        srams += units;
+    }
 }
 
 void StageUseEstimate::options_to_rams(const IR::MAU::Table *tbl) {
     for (auto &lo : layout_options) {
-        for (auto at : tbl->attached) {
-            int per_word = 0;
-            int width = 1;
-            int attached_entries = lo.entries;
-            bool need_maprams = false;
-            if (auto *ctr = dynamic_cast<const IR::Counter *>(at)) {
-                per_word = CounterPerWord(ctr);
-                if (!ctr->direct) attached_entries = ctr->instance_count;
-                need_maprams = true;
-            } else if (auto *mtr = dynamic_cast<const IR::Meter *>(at)) {
-                per_word = 1;
-                if (!mtr->direct) attached_entries = mtr->instance_count;
-                need_maprams = true;
-            } else if (auto *reg = dynamic_cast<const IR::Register *>(at)) {
-                per_word = RegisterPerWord(reg);
-                if (!reg->direct) attached_entries = reg->instance_count;
-                need_maprams = true;
-            } else if (auto *ap = dynamic_cast<const IR::ActionProfile *>(at)) {
-                per_word = ActionDataPerWord(&tbl->layout, &width);
-                attached_entries = ap->size;
-            } else if (/*auto *ad = */dynamic_cast<const IR::MAU::ActionData *>(at)) {
-                // fixme: in theory, the table should not have an action data table,
-                // as that is decided after the table layout is picked
-                continue;
-                //per_word = actiondataperword(&tbl->layout, &width);
-            } else if (/*auto *as = */dynamic_cast<const IR::ActionSelector *>(at)) {
-                // todo(cdodd)
-            } else if (/*auto *ti = */dynamic_cast<const IR::MAU::TernaryIndirect *>(at)) {
-                int indir_size = ceil_log2(tbl->layout.overhead_bits);
-                if (indir_size > 8)
-                    BUG("can't have more than 64 bits of overhead in "
-                                            "ternary table %s", tbl->name);
-                if (indir_size < 3) indir_size = 3;
-                per_word = 128 >> indir_size;
-            } else {
-                BUG("unknown attached table type %s", at->kind()); }
-            if (per_word > 0) {
-                if (attached_entries <= 0)
-                    BUG("%s: no size in indirect %s %s", at->srcInfo, at->kind(), at->name);
-                int entries_per_sram = 1024 * per_word;
-                int units = (attached_entries + entries_per_sram - 1) / entries_per_sram;
-                lo.srams += units * width;
-                if (need_maprams) lo.maprams += units; 
-            }
-        }
-        if (lo.action_data_required) {
-            int width = 1;
-            int per_word = ActionDataPerWord(&tbl->layout, &width);
-            int attached_entries = lo.entries;
-            int entries_per_sram = 1024 * per_word;
-            int units = (attached_entries + entries_per_sram - 1) / entries_per_sram;
-            lo.srams += units * width;
-        }
+        calculate_attached_rams(tbl, &lo, false);
     }
 }
 
@@ -254,34 +237,53 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
               << " entries " << lo.entries << " srams " << lo.srams
               << " action data " << lo.action_data_required); 
     }
+
+    preferred_index = 0;
 }
 
-StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
-                                   const IXBar::Use *match_ixbar) {
+void StageUseEstimate::select_best_option_ternary() {
+    std::sort(layout_options.begin(), layout_options.end(),
+        [=](const IR::MAU::Table::LayoutOption &a, const IR::MAU::Table::LayoutOption &b) {
+        int t;
+        if ((t = a.srams - b.srams) != 0) return t < 0;
+        if (!a.ternary_indirect_required) return true;
+        if (!b.ternary_indirect_required) return false;
+        if (!a.action_data_required) return true;
+        if (!b.action_data_required) return false;
+        return false;
+    });
+
+    preferred_index = 0;
+}
+
+void StageUseEstimate::fill_estimate_from_option(int &entries) {
+    tcams = preferred_option()->tcams;
+    srams = preferred_option()->srams;
+    maprams = preferred_option()->maprams;
+    entries = preferred_option()->entries;
+}
+
+StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries) {
     memset(this, 0, sizeof(*this));
     logical_ids = 1;
     exact_ixbar_bytes = tbl->layout.ixbar_bytes;
     if (tbl->layout.ternary) {
-        int depth = (entries + 511u)/512u;
-        int width = (tbl->layout.match_width_bits + 47)/44;  // +4 bits for v/v, round up
+        options_to_ternary_entries(tbl, entries);
+        options_to_rams(tbl);
+        select_best_option_ternary();
+        fill_estimate_from_option(entries);
+        /*
         if (match_ixbar)
             width = match_ixbar->groups();
-        ternary_ixbar_groups = width;
-        tcams = depth * width;
-        entries = depth * 512;
-    } else if (!tbl->ways.empty()) {
+        */
+    } else if (tbl->match_table) {
         /* assuming all ways have the same format and width (only differ in depth) */
         options_to_ways(tbl, entries);
         options_to_rams(tbl);
         select_best_option(tbl);
-        int width = tbl->ways[0].width;
-        int groups = tbl->ways[0].match_groups;
-        int depth = ((entries + groups - 1u)/groups + 1023)/1024u;
-        if (depth < static_cast<int>(tbl->ways.size()))
-            depth = tbl->ways.size();
-        srams = depth * width;
-        entries = depth * groups * 1024u;
+        fill_estimate_from_option(entries);
     } else {
-        entries = 0; }
-    calculate_attached_rams(tbl, entries, srams, maprams);
+        entries = 0;
+    }
+    
 }

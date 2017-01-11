@@ -102,6 +102,31 @@ static void setup_action_layout(IR::MAU::Table *tbl) {
             tbl->layout.action_data_bytes = action_data_bytes; }
 }
 
+void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved,
+                                               bool has_action_profile, int num_actions) {
+
+    bool ternary_indirect_required = false;
+    if (tbl->layout.overhead_bits + ceil_log2(num_actions) > 1)
+        ternary_indirect_required = true;
+
+    IR::MAU::Table::Layout *layout = new IR::MAU::Table::Layout();
+    layout->copy(tbl->layout);
+    IR::MAU::Table::LayoutOption lo(layout);
+    lo.action_data_required = true;
+    lo.ternary_indirect_required = ternary_indirect_required;
+    tbl->layout_options.push_back(lo);
+
+    if (has_action_profile || tbl->layout.action_data_bytes > 4 - immediate_bytes_reserved)
+        return;
+
+    layout = new IR::MAU::Table::Layout();
+    layout->copy(tbl->layout);
+    layout->action_data_bytes_in_overhead = tbl->layout.action_data_bytes;
+    layout->overhead_bits += tbl->layout.action_data_bytes * 8;
+    IR::MAU::Table::LayoutOption lo_tern(layout);
+    tbl->layout_options.push_back(lo_tern);
+}
+
 void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved,
                                        bool has_action_profile) {
 
@@ -226,7 +251,12 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     for (auto at : tbl->attached)
         at->apply(attached);
     int immediate_bytes_reserved = attached.immediate_reserved();
-    setup_layout_options(tbl, immediate_bytes_reserved, attached.have_action_profile);
+    if (tbl->layout.ternary)
+        setup_ternary_layout_options(tbl, immediate_bytes_reserved, attached.have_action_profile,
+                                     tbl->actions.size());
+    else
+        setup_layout_options(tbl, immediate_bytes_reserved, attached.have_action_profile);
+/*
     bool add_action_data = false;
     if (!attached.have_action_data) {
         // too big for overhead
@@ -255,6 +285,7 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
         LOG2("  putting " << tbl->layout.action_data_bytes << " bytes of action data in overhead");
         tbl->layout.action_data_bytes_in_overhead = tbl->layout.action_data_bytes;
         tbl->layout.overhead_bits += 8 * tbl->layout.action_data_bytes_in_overhead; }
+
     if (tbl->layout.ternary) {
         if (tbl->layout.overhead_bits > 1 && !attached.have_ternary_indirect) {
             LOG2("  adding ternary indirect table");
@@ -297,5 +328,7 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
             if ((entries -= way.entries) < 0)
                 entries = 0;
             way.entries *= match_groups; } }
+    return true;
+*/
     return true;
 }

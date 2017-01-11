@@ -379,9 +379,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             rv->stage++; } }
     assert(!rv->placed[tblInfo.at(rv->table).uid]);
 
-    StageUseEstimate min_use(t, min_entries, nullptr);
+    StageUseEstimate min_use(t, min_entries);
     int increment_entries = min_entries + 1;
-    StageUseEstimate increment_use(t, min_entries, nullptr);
+    StageUseEstimate increment_use(t, min_entries);
     auto avail = StageUseEstimate::max();
     bool allocated = false;
     bool ixbar_allocation_bug = false;
@@ -390,7 +390,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     do {    
         bool advance_to_next_stage = false;
         allocated = false; ixbar_allocation_bug = false; mem_allocation_bug = false;
-        rv->use = StageUseEstimate(t, rv->entries, &resources->match_ixbar);
+        rv->use = StageUseEstimate(t, rv->entries);
 
         if (!try_alloc_ixbar(rv, done, phv, rv->use, resources)) {
             advance_to_next_stage = true;
@@ -436,7 +436,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             last_try = rv->entries;
             LOG3(" - reducing to " << rv->entries << " of " << t->name
                  << " in stage " << rv->stage);
-            rv->use = StageUseEstimate(t, rv->entries, nullptr);
+            rv->use = StageUseEstimate(t, rv->entries);
             if (!try_alloc_ixbar(rv, done, phv, rv->use, resources)) {
                 ixbar_allocation_bug = true;
                 ERROR("IXBar Allocation error after previous allocation?");
