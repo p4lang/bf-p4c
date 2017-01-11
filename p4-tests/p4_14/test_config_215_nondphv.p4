@@ -116,7 +116,6 @@ table table_i0 {
 table table_i1 {
     reads {
         hdr_1.c: ternary;
-        hdr_1.c: ternary;
     }
     actions {
         action_1;
