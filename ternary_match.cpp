@@ -585,7 +585,8 @@ void TernaryIndirectTable::pass2() {
 void TernaryIndirectTable::write_regs() {
     LOG1("### Ternary indirect table " << name() << " write_regs");
     int tcam_id = match_table->tcam_id;
-    stage->regs.tcams.tcam_match_adr_shift[tcam_id] = format->log2size-2;
+    int tcam_shift = format->log2size-2;
+    stage->regs.tcams.tcam_match_adr_shift[tcam_id] = tcam_shift;
     auto &merge = stage->regs.rams.match.merge;
     for (Layout &row : layout) {
         auto vpn = row.vpns.begin();
@@ -653,14 +654,14 @@ void TernaryIndirectTable::write_regs() {
                     66 + format->log2size - match_table->idletime->precision_shift();
         for (auto &st : attached.stats) {
             if (st.args.empty())
-                merge.mau_stats_adr_tcam_shiftcount[bus] = st->direct_shiftcount();
+                merge.mau_stats_adr_tcam_shiftcount[bus] = st->direct_shiftcount() + tcam_shift;
             else
                 merge.mau_stats_adr_tcam_shiftcount[bus] = st.args[0].field()->bits[0].lo + 7;
             break; /* all must be the same, only config once */ }
         for (auto &m : attached.meter) {
             if (m.args.empty()) {
-                merge.mau_meter_adr_tcam_shiftcount[bus] = m->direct_shiftcount() + 16;
-                merge.mau_idletime_adr_tcam_shiftcount[bus] = m->direct_shiftcount();
+                merge.mau_meter_adr_tcam_shiftcount[bus] = m->direct_shiftcount() + tcam_shift + 16;
+                merge.mau_idletime_adr_tcam_shiftcount[bus] = m->direct_shiftcount() + tcam_shift;
             } else {
                 merge.mau_meter_adr_tcam_shiftcount[bus] = m.args[0].field()->bits[0].lo + 16;
                 merge.mau_idletime_adr_tcam_shiftcount[bus] = m.args[0].field()->bits[0].lo; }
