@@ -614,6 +614,9 @@ static void add_use(IXBar::Use &alloc, const PhvInfo::Field *field,
 
 void IXBar::layout_option_calculation(const IR::MAU::Table::LayoutOption *layout_option,
                                       size_t &start, size_t &last) {
+    if (layout_option->layout->ternary) {
+        start = 0; last = 0; return;
+    }
     start = last;
     if (start == 0 && layout_option && layout_option->way_sizes[0] == 16) {
         last = 3;
@@ -653,7 +656,6 @@ bool IXBar::allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv,
     if (!ternary && rv)
         alloc.compute_hash_tables();
     if (!rv) alloc.clear();
-    LOG1("Done");
     return rv;
 }
 
@@ -835,7 +837,6 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
         add_use(alloc, phv.field(valid.first + ".$valid"));
         alloc.gw_hash_group = true;
     }
-    LOG1("Total bytes out is " << alloc.gw_search_bus_bytes);
     vector<IXBar::Use::Byte *> xbar_alloced;
     if (!find_alloc(alloc, false, second_try, xbar_alloced, 0)) {
         alloc.clear();
@@ -886,7 +887,6 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
                 hash_single_bit_use[ht][shift + i] = tbl->name + "$gw";
         for (int i = 0; i < collect.bits; ++i)
             hash_single_bit_inuse[shift + i] |= alloc.hash_table_input; }
-    LOG1("Totally allocated");
     fill_out_use(xbar_alloced, false);
     for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
         LOG3("Hash bit at bit " << bit << " is " << hash_single_bit_inuse[bit]);
@@ -896,13 +896,11 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
 
 bool IXBar::allocSelector(const IR::ActionSelector *as, const PhvInfo &phv, Use &alloc,
                           bool second_try, cstring name) {
-    LOG1("Allocating a selector");
     const IR::FieldListCalculation *flc = as->key_fields;
     const IR::FieldList *fl = flc->input_fields;
     vector<IXBar::Use::Byte *> alloced;
     set <cstring>                   fields_needed;
     for (auto r : fl->fields) {
-        LOG1("Hello");
         auto *field = r;
         const PhvInfo::Field *finfo = nullptr;
         PhvInfo::Field::bitrange bits = { };
@@ -946,7 +944,6 @@ bool IXBar::allocSelector(const IR::ActionSelector *as, const PhvInfo &phv, Use 
     }
     hash_group_print_use[hash_group] = name + "$select";
     hash_group_use[hash_group] |= alloc.hash_table_input;
-    LOG1("We made it");
     return rv;
 }
 
@@ -985,9 +982,10 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_a
         }
         for (auto alloc : all_tbl_allocs) {
             tbl_alloc.add(alloc);
-        }
-      
+        } 
     }
+
+
     const IR::ActionSelector *as = nullptr;
     for (auto at : tbl->attached) {
         if ((as = at->to<IR::ActionSelector>()) != nullptr)
@@ -1005,7 +1003,9 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_a
         gw_alloc.clear();
         tbl_alloc.clear();
         return false; }
-    LOG1("It's allocated");
+    for (auto byte : tbl_alloc.use) {
+        LOG1("Byte is " << byte);
+    }
     return true;
 }
 

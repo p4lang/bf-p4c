@@ -212,7 +212,8 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
     for (auto &b : use.use) {
         Slice sl(phv, b.field, b.lo, b.hi);
         auto n = sort[b.loc.group].emplace(b.loc.byte*8 + sl.bytealign(), sl);
-        assert(n.second); }
+        assert(n.second);
+    }
     for (auto &group : sort) {
         auto it = group.second.begin();
         while (it != group.second.end()) {

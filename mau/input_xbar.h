@@ -118,6 +118,10 @@ struct IXBar {
         int groups() const;  // how many different groups in this use
         bool exact_comp(const IXBar::Use *exact_use, int width) const;
         void add(const Use &alloc) {
+            ternary = alloc.ternary;
+            gw_search_bus = alloc.gw_search_bus;
+            gw_search_bus_bytes = alloc.gw_search_bus_bytes;
+            gw_hash_group = alloc.gw_hash_group;
             use.insert(use.end(), alloc.use.begin(), alloc.use.end());
             bit_use.insert(bit_use.end(), alloc.bit_use.begin(), alloc.bit_use.end());
             way_use.insert(way_use.end(), alloc.way_use.begin(), alloc.way_use.end());

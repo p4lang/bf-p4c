@@ -287,6 +287,7 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
         resources->gateway_ixbar.clear();
         resources->selector_ixbar.clear();
         return false; }
+    LOG1("resources->match_ixbar is ternary? " << resources->match_ixbar.ternary);
     return true;
 }
 
@@ -774,6 +775,7 @@ static void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *r
 
 static void select_layout_option(IR::MAU::Table *tbl,
                                  const IR::MAU::Table::LayoutOption *layout_option) {
+    LOG1("select layout option");
     tbl->layout.copy(*(layout_option->layout));
     if (layout_option->ternary_indirect_required) {
         LOG1("  Adding Ternary Indirect table to " << tbl->name);
@@ -795,7 +797,6 @@ static void select_layout_option(IR::MAU::Table *tbl,
             index++;
         }
     }
-
 }
 
 IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
@@ -859,13 +860,13 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     } else if (it->second->table->match_table) {
         select_layout_option(tbl, it->second->use.preferred_option());
     }
-    LOG1("Names for tables");
-    for (auto &a : it->second->resources->memuse) {
-        LOG1("Name " << a.first);
-    }
 
     if (table_placed.count(tbl->name) == 1) {
         table_set_resources(tbl, it->second->resources, it->second->entries);
+        LOG1("Table Placement byte check");
+        for (auto byte : it->second->resources->match_ixbar.use) {
+            LOG1("Byte is " << byte);
+        }
         return tbl; }
     int counter = 0;
     IR::MAU::Table *rv = 0, *prev = 0;

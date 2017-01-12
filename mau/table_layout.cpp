@@ -104,7 +104,6 @@ static void setup_action_layout(IR::MAU::Table *tbl) {
 
 void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved,
                                                bool has_action_profile, int num_actions) {
-
     bool ternary_indirect_required = false;
     if (tbl->layout.overhead_bits + ceil_log2(num_actions) > 1)
         ternary_indirect_required = true;
@@ -124,12 +123,12 @@ void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl, int immediat
     layout->action_data_bytes_in_overhead = tbl->layout.action_data_bytes;
     layout->overhead_bits += tbl->layout.action_data_bytes * 8;
     IR::MAU::Table::LayoutOption lo_tern(layout);
+    lo_tern.ternary_indirect_required = true;
     tbl->layout_options.push_back(lo_tern);
 }
 
 void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved,
                                        bool has_action_profile) {
-
     for (int entry_count = 1; entry_count < 10; entry_count++) {
         int match_group_bits = std::max(tbl->layout.match_width_bits-10, 0) +
                                tbl->layout.overhead_bits + 4;

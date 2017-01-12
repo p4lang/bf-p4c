@@ -19,7 +19,7 @@ struct StageUseEstimate {
         exact_ixbar_bytes += a.exact_ixbar_bytes;
         ternary_ixbar_groups += a.ternary_ixbar_groups;
         return *this; }
-    StageUseEstimate(const IR::MAU::Table *, int &);
+    StageUseEstimate(const IR::MAU::Table *, int &, bool table_placement = false);
     StageUseEstimate operator+(const StageUseEstimate &a) const {
         StageUseEstimate rv = *this; rv += a; return rv; }
     static StageUseEstimate max() {
@@ -36,7 +36,7 @@ struct StageUseEstimate {
                maprams <= a.maprams && exact_ixbar_bytes <= a.exact_ixbar_bytes &&
                ternary_ixbar_groups <= a.ternary_ixbar_groups; }
     void options_to_ways(const IR::MAU::Table *tbl, int &entries);
-    void options_to_rams(const IR::MAU::Table *tbl);
+    void options_to_rams(const IR::MAU::Table *tbl, bool table_placement);
     void select_best_option(const IR::MAU::Table *tbl);
     void options_to_ternary_entries(const IR::MAU::Table *tbl, int &entries);
     void select_best_option_ternary();
