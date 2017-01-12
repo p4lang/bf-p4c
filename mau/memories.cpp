@@ -114,6 +114,7 @@ class SetupAttachedTables : public MauInspector {
     bool stats_pushed = false; bool meter_pushed = false;
 
     profile_t init_apply(const IR::Node *root) {
+        LOG1("Init apply");
         profile_t rv = MauInspector::init_apply(root);
         if (ta->layout_option == nullptr) return rv;
 
@@ -126,7 +127,7 @@ class SetupAttachedTables : public MauInspector {
         }
 
         if (ta->layout_option->action_data_required) {
-            LOG4("Action table for table " << ta->table->name);
+            LOG1("Action table for table " << ta->table->name);
             auto name = ta->table->name + "$action";
             (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
             mem.action_tables.push_back(ta);
@@ -139,6 +140,9 @@ class SetupAttachedTables : public MauInspector {
         return rv;
     }
 
+    /* In order to only visit the attached tables of the current table */
+    bool preorder(const IR::MAU::TableSeq *) { return false; }
+    bool preorder(const IR::ActionFunction *) { return false; }
 
     bool preorder(const IR::MAU::ActionData *) {
         BUG("Shouldn't have an action data table before table placement");
@@ -305,8 +309,8 @@ bool Memories::analyze_tables(mem_info &mi) {
             (*ta->memuse)[name].type = Use::EXACT;
             exact_tables.push_back(ta);
             mi.match_tables++;
-            int width = table->ways[0].width;
-            int groups = table->ways[0].match_groups;
+            int width = ta->layout_option->way->width;
+            int groups = ta->layout_option->way->match_groups;
             int depth = ((entries + groups - 1U)/groups + 1023)/1024U;
             mi.match_bus_min += width;
             mi.match_RAMs += depth;
@@ -336,9 +340,7 @@ bool Memories::analyze_tables(mem_info &mi) {
            ta->calculated_entries = depth * 512;
         }
         SetupAttachedTables setup(*this, ta, entries, mi);
-        for (auto at : table->attached) {
-            at->apply(setup);
-        }
+        ta->table->apply(setup);
     }
     if (mi.match_tables > EXACT_TABLES_MAX
         || mi.match_bus_min > SRAM_ROWS * BUS_COUNT
@@ -456,16 +458,14 @@ void Memories::break_exact_tables_into_ways() {
         (*ta->memuse)[ta->table->name].ways.clear();
         (*ta->memuse)[ta->table->name].row.clear();
         int index = 0;
-        for (int way_size : ta->layout_option->way_sizes) {
-        }
         ta->calculated_entries = ta->layout_option->entries;
 
         index = 0;
         for (auto &way : ta->match_ixbar->way_use) {
-            SRAM_group *way = new SRAM_group(ta, ta->layout_option->way_sizes[index], 
+            SRAM_group *wa = new SRAM_group(ta, ta->layout_option->way_sizes[index], 
                                              ta->layout_option->way->width, index,
                                              way.group, SRAM_group::EXACT);
-            exact_match_ways.push_back(way);
+            exact_match_ways.push_back(wa);
             (*ta->memuse)[ta->table->name].ways.emplace_back(ta->layout_option->way_sizes[index],
                                                              way.mask);
             index++;

@@ -379,15 +379,18 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             rv->stage++; } }
     assert(!rv->placed[tblInfo.at(rv->table).uid]);
 
+    LOG1("Min Use calculation");
     StageUseEstimate min_use(t, min_entries);
     int increment_entries = min_entries + 1;
-    StageUseEstimate increment_use(t, min_entries);
+    LOG1("Increment Use calculation");
+    StageUseEstimate increment_use(t, increment_entries);
     auto avail = StageUseEstimate::max();
     bool allocated = false;
     bool ixbar_allocation_bug = false;
     bool mem_allocation_bug = false;
+    int furthest_stage = (done == nullptr) ? 0 : done->stage + 1;
    
-    do {    
+    do {
         bool advance_to_next_stage = false;
         allocated = false; ixbar_allocation_bug = false; mem_allocation_bug = false;
         rv->use = StageUseEstimate(t, rv->entries);
@@ -399,6 +402,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 
         if (!(min_use + current <= avail)
             || !try_alloc_mem(rv, done, min_entries, resources, min_use, prev_resources)) {
+            LOG1("Failure at first point");
             mem_allocation_bug = true;
             advance_to_next_stage = true;
         }
@@ -410,9 +414,14 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         assert(min_use <= avail);
         int last_try = rv->entries;
 
+        LOG1("Advance to next stage " << advance_to_next_stage);
+        LOG1("rv->use <= avail " << (rv->use <= avail));
 
-        while (!(rv->use <= avail) ||
-               !try_alloc_mem(rv, done, rv->entries, resources, rv->use, prev_resources)) {
+        while (!advance_to_next_stage &&
+               (!(rv->use <= avail) ||
+               (allocated = try_alloc_mem(rv, done, rv->entries, resources,
+                                          rv->use, prev_resources)) == false)) {
+            LOG1("Hello " << min_entries);
             rv->need_more = true;
             int scale = 0;
             if (rv->use.tcams > avail.tcams)
@@ -431,6 +440,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             if (rv->entries < min_entries) {
                 LOG1("RV entries " << rv->entries << " min entries " << min_entries);
                 mem_allocation_bug = true;
+                advance_to_next_stage = true;
                 break;
             }
             last_try = rv->entries;
@@ -440,6 +450,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             if (!try_alloc_ixbar(rv, done, phv, rv->use, resources)) {
                 ixbar_allocation_bug = true;
                 ERROR("IXBar Allocation error after previous allocation?");
+                advance_to_next_stage = true;
                 break;
             }
         }
@@ -447,9 +458,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             rv->stage++;
         }
 
-    } while (!allocated && rv->stage <= done->stage + 1);
+    } while (!allocated && rv->stage <= furthest_stage);
 
-    if (rv->stage > done->stage + 1) {
+    if (rv->stage > furthest_stage) {
         if (ixbar_allocation_bug)
             BUG("Can't fit table %s in input xbar by itself", rv->name);
         if (mem_allocation_bug)
@@ -578,7 +589,7 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
                         parents.insert(pl->find_group(tbl));
                     } else {
                         ready = false;
-                        break ; } }
+                        break; } }
                 if (n->tables.size() == 1 && n->tables.at(0) == pl->table) {
                     assert(!found_match && !gw_match_grp);
                     BUG_CHECK(ready && parents.size() == 1, "Gateway incorrectly placed on "
@@ -761,12 +772,39 @@ static void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *r
             tbl->ways[i].entries = mem.ways[i].first * 1024 * tbl->ways[i].match_groups; }
 }
 
+static void select_layout_option(IR::MAU::Table *tbl,
+                                 const IR::MAU::Table::LayoutOption *layout_option) {
+    tbl->layout.copy(*(layout_option->layout));
+    if (layout_option->ternary_indirect_required) {
+        LOG1("  Adding Ternary Indirect table to " << tbl->name);
+        auto *tern_indir = new IR::MAU::TernaryIndirect(tbl->name);
+        tbl->attached.push_back(tern_indir); 
+    }
+    if (layout_option->action_data_required) {
+        LOG1("  Adding Action Data Table to " << tbl->name);
+        auto *act_data = new IR::MAU::ActionData(tbl->name);
+        tbl->attached.push_back(act_data);
+    }
+    if (!layout_option->layout->ternary) {
+        tbl->ways.resize(layout_option->way_sizes.size());
+        int index = 0;
+        for (auto &way : tbl->ways) {
+            way.copy(*(layout_option->way));
+            LOG1("Match Groups and Width " << way.match_groups << " " << way.width);
+            way.entries = way.match_groups * 1024 * layout_option->way_sizes[index];
+            index++;
+        }
+    }
+
+}
+
 IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     auto it = table_placed.find(tbl->name);
     if (it == table_placed.end()) {
         assert(strchr(tbl->name, '.'));
         return tbl; }
     tbl->logical_id = it->second->logical_id;
+
     if (it->second->gw && it->second->gw->name == tbl->name) {
         /* fold gateway and match table together */
         auto match = it->second->table;
@@ -778,9 +816,15 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
                 gw.second = cstring();
         tbl->match_table = match->match_table;
         tbl->actions = match->actions;
+        IR::MAU::Table::Layout gw_layout;
+        gw_layout.copy(tbl->layout);
+        select_layout_option(tbl, it->second->use.preferred_option()); 
+        tbl->layout += gw_layout;
+        /*
         tbl->attached = match->attached;
         tbl->layout += match->layout;
         tbl->ways = match->ways;
+        */
         auto *seq = tbl->next.at(it->second->gw_result_tag)->clone();
         tbl->next.erase(it->second->gw_result_tag);
         if (seq->tables.size() != 1) {
@@ -811,7 +855,15 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         if (have_default || seq)
             for (auto &gw : tbl->gateway_rows)
                 if (gw.second && !tbl->next.count(gw.second))
-                    tbl->next[gw.second] = new IR::MAU::TableSeq(); }
+                    tbl->next[gw.second] = new IR::MAU::TableSeq();
+    } else if (it->second->table->match_table) {
+        select_layout_option(tbl, it->second->use.preferred_option());
+    }
+    LOG1("Names for tables");
+    for (auto &a : it->second->resources->memuse) {
+        LOG1("Name " << a.first);
+    }
+
     if (table_placed.count(tbl->name) == 1) {
         table_set_resources(tbl, it->second->resources, it->second->entries);
         return tbl; }

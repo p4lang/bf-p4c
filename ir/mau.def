@@ -74,7 +74,7 @@ class Table : Tofino::Unit {
             json.load("overhead_bits", rv->overhead_bits);
             return rv; }
 
-        void copy(Layout &a) { memcpy(this, &a, sizeof(Layout)); }
+        void copy(const Layout &a) { memcpy(this, &a, sizeof(Layout)); }
 #emit
         Layout &operator+=(const Layout &a);
 #end
@@ -99,6 +99,7 @@ class Table : Tofino::Unit {
             json.load("entries", way->entries);
             json.load("width", way->width);
             return way; }
+        void copy(const Way &a) { memcpy(this, &a, sizeof(Way)); }
     }
     vector<Way>    ways;
     const TableResourceAlloc            *resources = nullptr;

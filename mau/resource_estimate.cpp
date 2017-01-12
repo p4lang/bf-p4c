@@ -227,7 +227,7 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
             return true;
         });
     }
-    LOG1("table " << tbl->name << " requiring " << tbl->layout.entries << " entries.");
+    LOG1("table " << tbl->name << " requiring " << tbl->match_table->size << " entries.");
     if (small_table_allocation)
         LOG1("small table allocation");
     else
