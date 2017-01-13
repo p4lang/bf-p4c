@@ -194,7 +194,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_0") table table_0() {
         actions = {
             action_2();
-            NoAction_0();
+            @default_only NoAction_0();
         }
         key = {
             hdr.ethernet.etherType: ternary;
@@ -205,7 +205,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_1") table table_1() {
         actions = {
             action_3();
-            NoAction_3();
+            @default_only NoAction_3();
         }
         key = {
             hdr.ethernet.etherType: ternary;

@@ -185,21 +185,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("assign_egress1") table assign_egress1() {
         actions = {
             assign_egress1_action_0();
-            NoAction_0();
+            @default_only NoAction_0();
         }
         default_action = NoAction_0();
     }
     @name("assign_egress2") table assign_egress2() {
         actions = {
             assign_egress2_action_0();
-            NoAction_5();
+            @default_only NoAction_5();
         }
         default_action = NoAction_5();
     }
     @name("dmac") table dmac() {
         actions = {
             assign_egress_interfaces_0();
-            NoAction_6();
+            @default_only NoAction_6();
         }
         key = {
             hdr.ethernet.dstAddr: exact;
@@ -209,7 +209,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("ingress_port_map") table ingress_port_map() {
         actions = {
             set_ingress_port_props_0();
-            NoAction_7();
+            @default_only NoAction_7();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact;

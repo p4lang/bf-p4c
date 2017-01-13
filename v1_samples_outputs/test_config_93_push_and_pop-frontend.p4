@@ -180,7 +180,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             push_action_0();
             pop_action_0();
-            NoAction();
+            @default_only NoAction();
         }
         key = {
             hdr.pkt.field_a_32: exact;

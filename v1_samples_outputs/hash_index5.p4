@@ -160,7 +160,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test1") table test1() {
         actions = {
             countb2;
-            NoAction;
+            @default_only NoAction;
         }
         default_action = NoAction();
     }

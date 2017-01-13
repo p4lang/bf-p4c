@@ -195,7 +195,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_group") table table_group() {
         actions = {
             action_select;
-            NoAction;
+            @default_only NoAction;
         }
         key = {
             hdr.ipv4.blah1: ternary;
@@ -207,7 +207,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             action_0;
             big_action;
             do_nothing;
-            NoAction;
+            @default_only NoAction;
         }
         key = {
             hdr.ethernet.etherType: exact;

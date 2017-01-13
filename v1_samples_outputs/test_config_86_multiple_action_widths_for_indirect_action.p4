@@ -194,7 +194,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             action_3;
             action_4;
             action_5;
-            NoAction;
+            @default_only NoAction;
         }
         key = {
             hdr.pkt.field_b: exact;

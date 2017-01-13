@@ -195,7 +195,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @action_entries(1024) @name("table_0") table table_1() {
         actions = {
             action_1();
-            NoAction();
+            @default_only NoAction();
         }
         key = {
             hdr.ipv4.srcAddr: exact;

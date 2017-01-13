@@ -193,7 +193,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_0();
             do_nothing();
-            NoAction();
+            @default_only NoAction();
         }
         key = {
             hdr.ethernet.etherType    : ternary;
@@ -206,7 +206,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_1();
             do_nothing();
-            NoAction();
+            @default_only NoAction();
         }
         key = {
             hdr.ipv4.srcAddr    : exact;

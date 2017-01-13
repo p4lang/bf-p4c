@@ -175,7 +175,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             bfd_rx();
             bfd_tx();
-            NoAction();
+            @default_only NoAction();
         }
         key = {
             meta.bfd_md.bfd_tx_or_rx     : exact;

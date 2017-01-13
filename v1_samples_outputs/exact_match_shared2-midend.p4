@@ -75,7 +75,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test1") table test1() {
         actions = {
             noop_0();
-            NoAction_0();
+            @default_only NoAction_0();
         }
         key = {
             hdr.data.f1: exact;
@@ -88,7 +88,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test2") table test2() {
         actions = {
             noop_7();
-            NoAction_8();
+            @default_only NoAction_8();
         }
         key = {
             hdr.data.f3: exact;
@@ -101,7 +101,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test3") table test3() {
         actions = {
             noop_8();
-            NoAction_9();
+            @default_only NoAction_9();
         }
         key = {
             hdr.data.f5: exact;
@@ -115,7 +115,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test4") table test4() {
         actions = {
             noop_9();
-            NoAction_10();
+            @default_only NoAction_10();
         }
         key = {
             hdr.data.f6: exact;
@@ -126,7 +126,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test5") table test5() {
         actions = {
             noop_10();
-            NoAction_11();
+            @default_only NoAction_11();
         }
         key = {
             hdr.data.w6: exact;
@@ -138,7 +138,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test6") table test6() {
         actions = {
             noop_11();
-            NoAction_12();
+            @default_only NoAction_12();
         }
         key = {
             hdr.data.w8: exact;
@@ -149,7 +149,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test7") table test7() {
         actions = {
             noop_12();
-            NoAction_13();
+            @default_only NoAction_13();
         }
         key = {
             hdr.data.f8: exact;

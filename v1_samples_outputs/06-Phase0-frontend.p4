@@ -170,7 +170,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("ingress_port_map") table ingress_port_map_0() {
         actions = {
             set_ingress_port_props_0();
-            NoAction();
+            @default_only NoAction();
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact;

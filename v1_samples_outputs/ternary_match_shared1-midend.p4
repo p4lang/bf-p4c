@@ -41,7 +41,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test1") table test1() {
         actions = {
             noop_0();
-            NoAction_0();
+            @default_only NoAction_0();
         }
         key = {
             hdr.data.b1: ternary;
@@ -52,7 +52,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test2") table test2() {
         actions = {
             noop_3();
-            NoAction_4();
+            @default_only NoAction_4();
         }
         key = {
             hdr.data.b3: ternary;
@@ -64,7 +64,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test3") table test3() {
         actions = {
             noop_4();
-            NoAction_5();
+            @default_only NoAction_5();
         }
         key = {
             hdr.data.b1: ternary;

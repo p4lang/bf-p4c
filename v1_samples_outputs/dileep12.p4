@@ -302,7 +302,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             next_hop_ipv4;
-            NoAction;
+            @default_only NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
@@ -314,7 +314,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             custom_action_1;
-            NoAction;
+            @default_only NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
@@ -327,7 +327,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             modify_tcp_dst_port_1;
-            NoAction;
+            @default_only NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
@@ -340,7 +340,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             custom_action_3;
-            NoAction;
+            @default_only NoAction;
         }
         key = {
             hdr.ipv4.dstAddr: exact;
@@ -354,7 +354,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             custom_action_2;
-            NoAction;
+            @default_only NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
@@ -366,7 +366,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             next_hop_ipv4;
-            NoAction;
+            @default_only NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;
@@ -380,7 +380,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             mod_mac_addr;
-            NoAction;
+            @default_only NoAction;
         }
         key = {
             hdr.ethernet.dstAddr: exact;

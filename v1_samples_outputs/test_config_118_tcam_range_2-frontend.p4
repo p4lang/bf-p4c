@@ -176,7 +176,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing_0();
             action_2();
-            NoAction();
+            @default_only NoAction();
         }
         key = {
             hdr.pkt.field_o_4 : range;
@@ -189,7 +189,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing_0();
             action_3();
-            NoAction();
+            @default_only NoAction();
         }
         key = {
             hdr.pkt.field_p_4 : range;

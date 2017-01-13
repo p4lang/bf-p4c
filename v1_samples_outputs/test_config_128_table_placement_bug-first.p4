@@ -175,7 +175,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_0();
             do_nothing();
-            NoAction();
+            @default_only NoAction();
         }
         key = {
             hdr.pkt.field_e_16: ternary;
@@ -187,7 +187,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_1();
             do_nothing();
-            NoAction();
+            @default_only NoAction();
         }
         key = {
             hdr.pkt.field_e_16: exact;

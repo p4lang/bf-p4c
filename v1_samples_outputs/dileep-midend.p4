@@ -303,7 +303,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_0();
             hop_ipv4_0();
-            NoAction_0();
+            @default_only NoAction_0();
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
@@ -314,7 +314,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_7();
             next_hop_ipv4_0();
-            NoAction_8();
+            @default_only NoAction_8();
         }
         key = {
             hdr.ipv4.dstAddr: exact;
@@ -327,7 +327,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_8();
             next_hop_ipv4_2();
-            NoAction_9();
+            @default_only NoAction_9();
         }
         key = {
             hdr.ipv4.dstAddr: exact;
@@ -339,7 +339,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_9();
             hop_ipv4_2();
-            NoAction_10();
+            @default_only NoAction_10();
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
@@ -352,7 +352,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_10();
             mod_mac_adr_0();
-            NoAction_11();
+            @default_only NoAction_11();
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
@@ -363,7 +363,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_11();
             tcp_hdr_rm_0();
-            NoAction_12();
+            @default_only NoAction_12();
         }
         key = {
             hdr.ethernet.srcAddr: ternary;
@@ -374,7 +374,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_12();
             udp_hdr_add_0();
-            NoAction_13();
+            @default_only NoAction_13();
         }
         key = {
             hdr.ethernet.srcAddr: ternary;

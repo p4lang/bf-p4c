@@ -189,7 +189,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             action_2();
             action_6();
             do_nothing_0();
-            NoAction_0();
+            @default_only NoAction_0();
         }
         key = {
             hdr.pkt.field_b_32: ternary;
@@ -202,7 +202,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             action_3();
             action_7();
             do_nothing_2();
-            NoAction_3();
+            @default_only NoAction_3();
         }
         key = {
             hdr.pkt.field_c_32: ternary;

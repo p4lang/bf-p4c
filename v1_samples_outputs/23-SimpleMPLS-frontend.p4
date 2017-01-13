@@ -199,7 +199,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("mpls_forward") table mpls_forward_0() {
         actions = {
             forward_mpls_0();
-            NoAction();
+            @default_only NoAction();
         }
         key = {
             hdr.mpls.label: exact;

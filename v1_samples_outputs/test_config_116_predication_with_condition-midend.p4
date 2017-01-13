@@ -187,7 +187,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing_0();
             action_3();
-            NoAction_0();
+            @default_only NoAction_0();
         }
         key = {
             hdr.pkt.field_a_32: exact;
@@ -199,7 +199,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing_4();
             action_4();
-            NoAction_4();
+            @default_only NoAction_4();
         }
         key = {
             hdr.pkt.field_b_32: exact;
@@ -211,7 +211,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing_2();
             action_5();
-            NoAction_5();
+            @default_only NoAction_5();
         }
         key = {
             hdr.pkt.field_b_32: exact;

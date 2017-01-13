@@ -175,7 +175,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_160;
             action_8;
-            NoAction;
+            @default_only NoAction;
         }
         key = {
             hdr.my_test_config_1.a_32    : lpm;

@@ -255,7 +255,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_0();
             custom_action();
-            NoAction();
+            @default_only NoAction();
         }
         key = {
             hdr.ethernet.dstAddr: exact;

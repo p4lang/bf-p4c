@@ -350,7 +350,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             nop_0();
             hop_ipv4_0();
             drop_ipv4_0();
-            NoAction_0();
+            @default_only NoAction_0();
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
@@ -361,7 +361,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_11();
             custom_action();
-            NoAction_12();
+            @default_only NoAction_12();
         }
         key = {
             hdr.ipv4.dstAddr    : exact;
@@ -373,7 +373,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_12();
             modify_tcp_dst_port_0();
-            NoAction_13();
+            @default_only NoAction_13();
         }
         key = {
             hdr.ipv4.dstAddr: exact;
@@ -385,7 +385,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_13();
             next_hop_ipv4_0();
-            NoAction_14();
+            @default_only NoAction_14();
         }
         key = {
             hdr.ipv4.dstAddr: exact;
@@ -397,7 +397,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_14();
             custom_action_0();
-            NoAction_15();
+            @default_only NoAction_15();
         }
         key = {
             hdr.ipv4.dstAddr: exact;
@@ -411,7 +411,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_15();
             next_hop_ipv4_3();
-            NoAction_16();
+            @default_only NoAction_16();
         }
         key = {
             hdr.ipv4.dstAddr: exact;
@@ -422,7 +422,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_16();
             next_hop_ipv4_4();
-            NoAction_17();
+            @default_only NoAction_17();
         }
         key = {
             hdr.ipv4.dstAddr: exact;
@@ -433,7 +433,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_17();
             hop_ipv4_2();
-            NoAction_18();
+            @default_only NoAction_18();
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
@@ -446,7 +446,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_18();
             mod_mac_adr_0();
-            NoAction_19();
+            @default_only NoAction_19();
         }
         key = {
             hdr.ipv4.dstAddr: lpm;
@@ -457,7 +457,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_19();
             tcp_hdr_rm_0();
-            NoAction_20();
+            @default_only NoAction_20();
         }
         key = {
             hdr.ethernet.srcAddr: ternary;
@@ -468,7 +468,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_20();
             udp_hdr_add_0();
-            NoAction_21();
+            @default_only NoAction_21();
         }
         key = {
             hdr.ethernet.srcAddr: ternary;

@@ -170,7 +170,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("port_bd") table port_bd() {
         actions = {
             set_bd;
-            NoAction;
+            @default_only NoAction;
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact;
@@ -182,7 +182,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop;
             ing_drop;
-            NoAction;
+            @default_only NoAction;
         }
         key = {
             hdr.ig_intr_md.ingress_port: exact;

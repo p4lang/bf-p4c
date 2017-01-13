@@ -258,56 +258,56 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("new_inner_cfi") table new_inner_cfi_1() {
         actions = {
             do_new_inner_cfi_0();
-            NoAction_0();
+            @default_only NoAction_0();
         }
         default_action = NoAction_0();
     }
     @name("new_inner_pri") table new_inner_pri_1() {
         actions = {
             do_new_inner_pri_0();
-            NoAction_10();
+            @default_only NoAction_10();
         }
         default_action = NoAction_10();
     }
     @name("new_inner_tpid") table new_inner_tpid_1() {
         actions = {
             do_new_inner_tpid_0();
-            NoAction_11();
+            @default_only NoAction_11();
         }
         default_action = NoAction_11();
     }
     @name("new_inner_vid") table new_inner_vid_1() {
         actions = {
             do_new_inner_vid_0();
-            NoAction_12();
+            @default_only NoAction_12();
         }
         default_action = NoAction_12();
     }
     @name("new_outer_cfi") table new_outer_cfi_1() {
         actions = {
             do_new_outer_cfi_0();
-            NoAction_13();
+            @default_only NoAction_13();
         }
         default_action = NoAction_13();
     }
     @name("new_outer_pri") table new_outer_pri_1() {
         actions = {
             do_new_outer_pri_0();
-            NoAction_14();
+            @default_only NoAction_14();
         }
         default_action = NoAction_14();
     }
     @name("new_outer_tpid") table new_outer_tpid_1() {
         actions = {
             do_new_outer_tpid_0();
-            NoAction_15();
+            @default_only NoAction_15();
         }
         default_action = NoAction_15();
     }
     @name("new_outer_vid") table new_outer_vid_1() {
         actions = {
             do_new_outer_vid_0();
-            NoAction_16();
+            @default_only NoAction_16();
         }
         default_action = NoAction_16();
     }
@@ -315,7 +315,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_0();
             rewrite_tags_0();
-            NoAction_17();
+            @default_only NoAction_17();
         }
         key = {
             hdr.vlan_tag[0].isValid(): exact;

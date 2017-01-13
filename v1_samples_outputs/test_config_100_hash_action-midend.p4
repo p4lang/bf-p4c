@@ -189,7 +189,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing_0();
             action_3();
-            NoAction_0();
+            @default_only NoAction_0();
         }
         key = {
             hdr.pkt.field_i_8: exact;
@@ -200,7 +200,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @include_idletime(1) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name("table_1") table table_1() {
         actions = {
             action_4();
-            NoAction_4();
+            @default_only NoAction_4();
         }
         key = {
             hdr.pkt.field_g_16: exact;
@@ -211,7 +211,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_2") table table_2() {
         actions = {
             action_5();
-            NoAction_5();
+            @default_only NoAction_5();
         }
         default_action = NoAction_5();
     }

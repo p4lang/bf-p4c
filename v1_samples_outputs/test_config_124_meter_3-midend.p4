@@ -181,7 +181,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @pa_solitare("meter_result.color_0", "meter_result.color_1") @name("table_0") table table_0() {
         actions = {
             action_0_1();
-            NoAction_0();
+            @default_only NoAction_0();
         }
         key = {
             hdr.pkt.field_e_16: ternary;
@@ -196,7 +196,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing_0();
             action_0();
-            NoAction_3();
+            @default_only NoAction_3();
         }
         key = {
             hdr.pkt.field_e_16: exact;

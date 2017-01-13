@@ -345,7 +345,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_0();
             next_hop_ipv4_0();
-            NoAction_0();
+            @default_only NoAction_0();
         }
         key = {
             hdr.ipv4.dstAddr: exact;
@@ -357,7 +357,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_7();
             custom_action();
-            NoAction_8();
+            @default_only NoAction_8();
         }
         key = {
             hdr.ethernet.dstAddr: exact;
@@ -370,7 +370,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_8();
             modify_tcp_dst_port();
-            NoAction_9();
+            @default_only NoAction_9();
         }
         key = {
             hdr.ipv4.dstAddr: exact;
@@ -383,7 +383,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_9();
             custom_action_0();
-            NoAction_10();
+            @default_only NoAction_10();
         }
         key = {
             hdr.ipv4.dstAddr: exact;
@@ -397,7 +397,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_10();
             custom_action_4();
-            NoAction_11();
+            @default_only NoAction_11();
         }
         key = {
             hdr.ethernet.dstAddr: exact;
@@ -409,7 +409,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_11();
             next_hop_ipv4_2();
-            NoAction_12();
+            @default_only NoAction_12();
         }
         key = {
             hdr.ethernet.dstAddr: exact;
@@ -423,7 +423,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             nop_12();
             mod_mac_addr_0();
-            NoAction_13();
+            @default_only NoAction_13();
         }
         key = {
             hdr.ethernet.dstAddr: exact;

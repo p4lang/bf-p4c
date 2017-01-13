@@ -174,7 +174,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             set_flag;
             do_nothing;
-            NoAction;
+            @default_only NoAction;
         }
         key = {
             hdr.my_test_config_1.a_32: exact;

@@ -72,7 +72,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test1") table test1_0() {
         actions = {
             h1_3();
-            NoAction();
+            @default_only NoAction();
         }
         key = {
             hdr.data.f1: exact;
@@ -90,7 +90,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test2") table test2_0() {
         actions = {
             h4_6();
-            NoAction();
+            @default_only NoAction();
         }
         key = {
             hdr.data.f2: exact;
@@ -102,7 +102,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test3") table test3_0() {
         actions = {
             h7_0();
-            NoAction();
+            @default_only NoAction();
         }
         key = {
             hdr.data.f3: exact;
@@ -113,7 +113,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test4") table test4_0() {
         actions = {
             h10_0();
-            NoAction();
+            @default_only NoAction();
         }
         key = {
             hdr.data.f4: exact;
@@ -124,7 +124,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test5") table test5_0() {
         actions = {
             set_port_0();
-            NoAction();
+            @default_only NoAction();
         }
         key = {
             hdr.data.color_1: ternary;
@@ -135,7 +135,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test6") table test6_0() {
         actions = {
             seth13_0();
-            NoAction();
+            @default_only NoAction();
         }
         key = {
             hdr.data.color_3: ternary;

@@ -194,7 +194,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_a") table table_a() {
         actions = {
             do_nothing_0();
-            NoAction_0();
+            @default_only NoAction_0();
         }
         key = {
             hdr.pkt.field_a_32: ternary;
@@ -205,7 +205,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_b") table table_b() {
         actions = {
             do_nothing_6();
-            NoAction_7();
+            @default_only NoAction_7();
         }
         key = {
             hdr.pkt.field_b_32: ternary;
@@ -216,7 +216,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_c") table table_c() {
         actions = {
             do_nothing_7();
-            NoAction_8();
+            @default_only NoAction_8();
         }
         key = {
             hdr.pkt.field_c_32: ternary;
@@ -227,7 +227,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("table_d") table table_d() {
         actions = {
             do_nothing_8();
-            NoAction_9();
+            @default_only NoAction_9();
         }
         key = {
             hdr.pkt.field_d_32: ternary;
@@ -239,7 +239,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             do_nothing_9();
             action_1();
-            NoAction_10();
+            @default_only NoAction_10();
         }
         key = {
             hdr.pkt.field_o_10: range;
@@ -252,7 +252,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @tcam_error_detect(1) @name("table_f") table table_f() {
         actions = {
             do_nothing_10();
-            NoAction_11();
+            @default_only NoAction_11();
         }
         key = {
             hdr.pkt.field_g_16: ternary;

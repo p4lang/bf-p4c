@@ -60,7 +60,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             setb1;
             setb2;
             setb3;
-            NoAction;
+            @default_only NoAction;
         }
         key = {
             hdr.data.f1: exact;
@@ -74,7 +74,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             setb5;
             setb6;
             setb7;
-            NoAction;
+            @default_only NoAction;
         }
         key = {
             hdr.data.f2: exact;
@@ -88,7 +88,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             setb1;
             setb2;
             setb3;
-            NoAction;
+            @default_only NoAction;
         }
         key = {
             hdr.data.f1: exact;
@@ -102,7 +102,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             setb5;
             setb6;
             setb7;
-            NoAction;
+            @default_only NoAction;
         }
         key = {
             hdr.data.f2: exact;
@@ -114,7 +114,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test_mid") table test_mid() {
         actions = {
             setf1;
-            NoAction;
+            @default_only NoAction;
         }
         key = {
             hdr.data.f3: exact;
@@ -124,7 +124,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test_mid2") table test_mid2() {
         actions = {
             setf2;
-            NoAction;
+            @default_only NoAction;
         }
         key = {
             hdr.data.f4: exact;

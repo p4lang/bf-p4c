@@ -169,7 +169,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         actions = {
             action_2();
             nop_0();
-            NoAction_0();
+            @default_only NoAction_0();
         }
         key = {
             hdr.pkt.field_d: exact;
@@ -193,7 +193,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         actions = {
             action_3();
             nop_1();
-            NoAction_1();
+            @default_only NoAction_1();
         }
         key = {
             hdr.pkt.field_b: exact;
