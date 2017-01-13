@@ -30,6 +30,9 @@ class PhvInfo : public Inspector {
         gress_t         gress;
         int             size;
         int             phv_use_lo = 0;  // lowest bit of field used through MAU pipeline
+        int             phv_use_rem = 0;  // lowest bit of field used in next container
+                                          // when field straddles containers
+                                          // used in ccg: container contiguous groups 
         int             phv_use_hi = 0;  // highest bit of field used through MAU pipeline
                                          // for container contiguous groups
                                          // owner phv_use_hi = sum of member sizes

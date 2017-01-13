@@ -470,10 +470,9 @@ PHV_MAU_Group_Assignments::cluster_placement(
                 g->clusters().push_back(cl);
                 clusters_remove.push_back(cl);
                 //
-                // container_index picks next Empty container in MAU group g
+                // pick next Empty container in MAU group g
                 // for each container assigned to cluster, taint bits that are filled
                 //
-                int container_index = g->phv_containers().size() - g->empty_containers();
                 for (auto i=0, j=0; i < static_cast<int>(cl->cluster_vec().size()); i++) {
                     auto field_width = cl->cluster_vec()[i]->phv_use_width();
                     for (auto field_stride=0;
@@ -486,7 +485,7 @@ PHV_MAU_Group_Assignments::cluster_placement(
                         }
                         field_width -= static_cast<int>(g->width());
                         //
-                        PHV_Container *container = g->phv_containers()[container_index];
+                        PHV_Container *container = g->empty_container();
                         const PhvInfo::Field *field = cl->cluster_vec()[i];
                         container->taint(
                             0,
@@ -495,7 +494,6 @@ PHV_MAU_Group_Assignments::cluster_placement(
                             0 /* range_start */,
                             field_stride * static_cast<int>(g->width()) /* field_bit_lo */);
                         LOG3("\t\t" << container);
-                        container_index++;
                         //
                         // check if this container is partially filled with parser field
                         //

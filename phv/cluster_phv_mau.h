@@ -84,6 +84,15 @@ class PHV_MAU_Group {
     void gress(PHV_Container::Ingress_Egress gress_p)   { gress_i = gress_p; }
     PHV_Container::Ingress_Egress gress()               { return gress_i; }
     int& empty_containers()                             { return empty_containers_i; }
+    PHV_Container *empty_container() {
+        // return next empty container in MAU group
+        for (auto &c : phv_containers_i) {
+            if (c->status() == PHV_Container::Container_status::EMPTY) {
+                return c;
+            }
+        }
+        return 0;
+    }
     std::vector<PHV_Container *>& phv_containers()      { return phv_containers_i; }
     std::vector<Cluster_PHV *>& clusters()              { return cluster_phv_i; }
     void create_aligned_container_slices(std::list<PHV_Container *>&);
