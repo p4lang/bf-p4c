@@ -330,6 +330,26 @@ void Cluster::compute_fields_no_use_mau() {
         if (field.pov && !field.hdr_stk_pov) {
             pov_fields_i.push_back(&field);
         }
+        if (field.pov_fields.size()) {
+            int ccg_width = 0;
+            for (auto &f : field.pov_fields) {
+                ccg_width += f->size;
+            }
+            // ignore non byte-multiples for contiguous container groups only
+            // header stack povs should remain in tact
+            //
+            if (field.hdr_stk_pov == &field) {
+                if (ccg_width && ccg_width %
+                    static_cast<int>(PHV_Container::PHV_Word::b8) == 0) {
+                    field.phv_use_hi = ccg_width - 1;
+                } else {
+                    for (auto &f : field.pov_fields) {
+                        f->hdr_stk_pov = 0;
+                    }
+                    field.pov_fields.clear();
+                }
+            }
+        }
     }
     LOG3(std::endl << "..........All fields (" << s1.size() << ")..........");
     std::set<const PhvInfo::Field *> s2;                               // cluster fields
@@ -343,28 +363,17 @@ void Cluster::compute_fields_no_use_mau() {
             if (field->hdr_stk_pov && !field->pov_fields.size()) {
                 PhvInfo::Field *owner = field->hdr_stk_pov;
                 //
-                // compute container contigous group width 
+                // compute container contiguous group width 
                 // need PHV container of this width
                 //
-                int ccg_width = 0;
-                for (auto &f : owner->pov_fields) {
-                    ccg_width += f->size;
-                }
-                if (ccg_width && ccg_width %
-                    static_cast<int>(PHV_Container::PHV_Word::b8) == 0) {
-                    field->pov_fields.insert(
-                        field->pov_fields.begin(),
-                        owner->pov_fields.begin(),
-                        owner->pov_fields.end());
-                    owner->pov_fields.clear();  // clear previous owner
-                    field->phv_use_hi = ccg_width - 1;
-                    field->hdr_stk_pov = field;
-                } else {
-                    for (auto &f : owner->pov_fields) {
-                        f->hdr_stk_pov = 0;
-                    }
-                    owner->pov_fields.clear();  // clear previous owner
-                }
+                field->pov_fields.insert(
+                    field->pov_fields.begin(),
+                    owner->pov_fields.begin(),
+                    owner->pov_fields.end());
+                owner->pov_fields.clear();  // clear previous owner
+                field->phv_use_hi = owner->phv_use_hi;
+                owner->phv_use_hi = owner->size - 1;
+                field->hdr_stk_pov = field;
             } 
             s2.insert(entry.first);
             for (auto entry_2 : *(entry.second)) {

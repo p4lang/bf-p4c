@@ -70,6 +70,43 @@ PHV_Container::taint(
             "PHV-%s start=%d width=%d range_start=%d ranges_i[range_start]=%d",
             phv_number_i, start, width, range_start, ranges_i[range_start]);
     }
+    if (field->hdr_stk_pov == field) {
+        // container contiguous groups
+        // for each member taint container with appropriate width
+        // must consider MSB order
+        //
+        int processed_members = 0;
+        start = static_cast<int>(width_i);
+        for (auto &member : field->pov_fields) {
+            int member_bit_lo = member->phv_use_lo;
+            int use_width = member->size - member->phv_use_rem;
+            start -= use_width;
+            if (start < 0) {
+                // member straddles containers
+                //
+                use_width += start;  // start is -ve
+                start = 0;
+                member_bit_lo = member->size - use_width;
+                member->phv_use_rem = use_width;
+            } else {
+                processed_members++;
+            }
+            member->hdr_stk_pov = 0;  // recursive taint call should skip hdr_stk_pov
+            taint(start, use_width, member, start /*range start*/, member_bit_lo);
+            if (start <= 0) {
+                break;
+            }
+        }
+        PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(field);
+        f1->pov_fields.erase(
+            f1->pov_fields.begin(),
+            f1->pov_fields.begin() + processed_members);
+        if (field->pov_fields.size() != 0) {
+            f1->hdr_stk_pov = f1;
+        }
+
+        return;
+    }
     //
     taint_color_i += '1' - '0';
     if (taint_color_i < '0' || taint_color_i > '9') {
