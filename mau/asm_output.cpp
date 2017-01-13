@@ -480,9 +480,9 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
         /* somewhat duplicates what is done in IXBar::alloc_table */
         for (auto r : *tbl->match_table->reads) {
             auto *field = r;
-            if (auto mask = r->to<IR::Mask>()) {
+            if (auto mask = r->to<IR::Mask>())
                 field = mask->left;
-            } else if (auto prim = r->to<IR::Primitive>()) {
+            if (auto prim = field->to<IR::Primitive>()) {
                 if (prim->name != "valid")
                     BUG("unexpected reads expression %s", r);
                 // FIXME -- for now just assuming we can fit the valid bit reads in as needed

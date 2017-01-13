@@ -49,6 +49,18 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
         auto *t = e->left;
         e->left = e->right;
         e->right = t; }
+    if (auto prim = e->left->to<IR::Primitive>()) {
+        if (prim->name == "valid") {
+            if (auto k = e->right->to<IR::Constant>()) {
+                if (k->value != 0 && k->value != 1)
+                    return new IR::Constant(e->is<IR::Neq>());
+                bool kval = (k->value != 0);
+                if (e->is<IR::Neq>())
+                    kval = !kval;
+                if (kval)
+                    return prim;
+                else return
+                    new IR::LNot(prim); } } }
     return e; }
 const IR::Expression *CanonGatewayExpr::postorder(IR::Leq *e) {
     if (e->left->is<IR::Constant>())

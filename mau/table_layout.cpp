@@ -22,13 +22,13 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::V
     layout.match_width_bits = 0;
     if (tbl->reads) {
         for (auto r : *tbl->reads) {
-            PhvInfo::Field::bitrange bits;
+            PhvInfo::Field::bitrange bits = { 0, 0 };
             auto *field = phv.field(r, &bits);
             if (auto mask = r->to<IR::Mask>()) {
                 if (auto mval = mask->right->to<IR::Constant>()) {
                     /* find highest and lowest set bit in the mask, and use them to slice
                      * down the field */
-                    field = phv.field(mask->left, &bits);
+                    field = phv.field((r = mask->left), &bits);
                     int hi = floor_log2(mval->value);
                     if (hi >= 0 && hi < bits.size())
                         bits.hi = bits.lo + hi;

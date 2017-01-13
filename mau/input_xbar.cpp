@@ -610,17 +610,18 @@ bool IXBar::allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv,
         auto *field = r;
         const PhvInfo::Field *finfo = nullptr;
         PhvInfo::Field::bitrange bits = { };
-        if (auto prim = r->to<IR::Primitive>()) {
+        if (auto mask = field->to<IR::Mask>())
+            field = mask->left;
+        if (auto prim = field->to<IR::Primitive>()) {
             if (prim->name == "valid") {
                 auto hdr = prim->operands[0]->to<IR::HeaderRef>()->toString();
                 finfo = phv.field(hdr + ".$valid"); }
         } else {
-            if (auto mask = r->to<IR::Mask>())
-                field = mask->left;
             finfo = phv.field(field, &bits); }
         BUG_CHECK(finfo, "unexpected reads expression %s", r);
-        if (fields_needed.count(finfo->name))
-            throw Util::CompilationError("field %s read twice by table %s", finfo->name, tbl->name);
+        if (fields_needed.count(finfo->name)) {
+            warning("field %s read twice by table %s", finfo->name, tbl->name);
+            continue; }
         fields_needed.insert(finfo->name);
         add_use(alloc, finfo, &bits); }
     LOG3("need " << alloc.use.size() << " bytes for table " << tbl->name);
