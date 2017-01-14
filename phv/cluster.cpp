@@ -140,21 +140,21 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
     //
     ordered_map<PhvInfo::Field *, int> ccg;
     PhvInfo::Field *group_accumulator = 0;
-    int accumulator_bits = 0; 
+    int accumulator_bits = 0;
     for (auto fid : Range(*phv_i.header(hr))) {
         auto field = phv_i.field(fid);
         //
         // accumulate sub-byte fields to group to a byte boundary
         // so that if any field is part of MAU then entire PHV container has no holes
         //
-        if (!field->hdr_stk_pov) {
+        if (!field->ccgf) {
             if (field->size % static_cast<int>(PHV_Container::PHV_Word::b8)) {
                 if (!group_accumulator) {
                     group_accumulator = field;
                     accumulator_bits = 0;
                 }
-                field->hdr_stk_pov = group_accumulator;
-                group_accumulator->pov_fields.push_back(field);
+                field->ccgf = group_accumulator;
+                group_accumulator->ccgf_fields.push_back(field);
                 accumulator_bits += field->size;
                 if (accumulator_bits
                     % static_cast<int>(PHV_Container::PHV_Word::b8) == 0) {
@@ -187,10 +187,10 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
         if ((ccg_width
             && ccg_width % static_cast<int>(PHV_Container::PHV_Word::b8))
             || ccg_width > static_cast<int>(PHV_Container::PHV_Word::b32)) {
-            for (auto &f : owner->pov_fields) {
-                f->hdr_stk_pov = 0;
+            for (auto &f : owner->ccgf_fields) {
+                f->ccgf = 0;
             }
-            owner->pov_fields.clear();
+            owner->ccgf_fields.clear();
             LOG4("-----PHV_container_contiguous_group..."
                 << ccg_width
                 << " "
@@ -327,26 +327,26 @@ void Cluster::compute_fields_no_use_mau() {
         // discard povs that are members of header stack containing a .$push
         // these members are part of header stk pov container
         //
-        if (field.pov && !field.hdr_stk_pov) {
+        if (field.pov && !field.ccgf) {
             pov_fields_i.push_back(&field);
         }
-        if (field.pov_fields.size()) {
+        if (field.ccgf_fields.size()) {
             int ccg_width = 0;
-            for (auto &f : field.pov_fields) {
+            for (auto &f : field.ccgf_fields) {
                 ccg_width += f->size;
             }
             // ignore non byte-multiples for contiguous container groups only
             // header stack povs should remain in tact
             //
-            if (field.hdr_stk_pov == &field) {
+            if (field.ccgf == &field) {
                 if (ccg_width && ccg_width %
                     static_cast<int>(PHV_Container::PHV_Word::b8) == 0) {
                     field.phv_use_hi = ccg_width - 1;
                 } else {
-                    for (auto &f : field.pov_fields) {
-                        f->hdr_stk_pov = 0;
+                    for (auto &f : field.ccgf_fields) {
+                        f->ccgf = 0;
                     }
-                    field.pov_fields.clear();
+                    field.ccgf_fields.clear();
                 }
             }
         }
@@ -356,25 +356,25 @@ void Cluster::compute_fields_no_use_mau() {
     for (auto entry : dst_map_i) {
         if (entry.second) {
             PhvInfo::Field *field = const_cast<PhvInfo::Field *>(entry.first);
-            // 
+            //
             // sub-byte container contiguous-group accumulations
             // move ownership of container to field
             //
-            if (field->hdr_stk_pov && !field->pov_fields.size()) {
-                PhvInfo::Field *owner = field->hdr_stk_pov;
+            if (field->ccgf && !field->ccgf_fields.size()) {
+                PhvInfo::Field *owner = field->ccgf;
                 //
-                // compute container contiguous group width 
+                // compute container contiguous group width
                 // need PHV container of this width
                 //
-                field->pov_fields.insert(
-                    field->pov_fields.begin(),
-                    owner->pov_fields.begin(),
-                    owner->pov_fields.end());
-                owner->pov_fields.clear();  // clear previous owner
+                field->ccgf_fields.insert(
+                    field->ccgf_fields.begin(),
+                    owner->ccgf_fields.begin(),
+                    owner->ccgf_fields.end());
+                owner->ccgf_fields.clear();  // clear previous owner
                 field->phv_use_hi = owner->phv_use_hi;
                 owner->phv_use_hi = owner->size - 1;
-                field->hdr_stk_pov = field;
-            } 
+                field->ccgf = field;
+            }
             s2.insert(entry.first);
             for (auto entry_2 : *(entry.second)) {
                 s2.insert(entry_2);
@@ -428,7 +428,7 @@ void Cluster::compute_fields_no_use_mau() {
     for (auto f : fields_no_use_mau_i) {
         PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
         bool use_any = uses_i->use[0][f1->gress][f1->id];
-        if (f1->metadata || f1->pov || !use_any || f1->hdr_stk_pov) {
+        if (f1->metadata || f1->pov || !use_any || f1->ccgf) {
             delete_set.insert(f);
         } else {
             set_field_range(f1);

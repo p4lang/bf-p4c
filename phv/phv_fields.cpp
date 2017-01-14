@@ -309,8 +309,8 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
                 if (push_exists) {
                     Field *pov_stk = &all_fields[stack.name + ".$stkvalid"];
                     for (auto &f : pov_fields) {
-                        pov_stk->pov_fields.push_back(f);
-                        f->hdr_stk_pov = pov_stk;
+                        pov_stk->ccgf_fields.push_back(f);
+                        f->ccgf = pov_stk;
                     }
                 }
             }
@@ -349,15 +349,15 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field *fld) {
         // in phv container group accumulation (sub-byte, contiguous, complete)
         // fx -> fx, fy -> fx, fz -> fx; fx: {fx, fy, fz)}
         //
-        if (fld->hdr_stk_pov) {
-            out << "\t--> " << fld->hdr_stk_pov->name;
+        if (fld->ccgf) {
+            out << "\t--> " << fld->ccgf->name;
         }
         // header stk povs
-        if (fld->pov_fields.size()) {
-            // count bits in "contiguous complete"
+        if (fld->ccgf_fields.size()) {
+            // count bits in "container contiguous group fields"
             out << std::endl << '[';
             int ccg_width = 0;
-            for (auto pov_f : fld->pov_fields) {
+            for (auto pov_f : fld->ccgf_fields) {
                 out << '\t';
                 out << pov_f->name << '[' << pov_f->size << ']';
                 out << std::endl;

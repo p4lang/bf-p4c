@@ -29,25 +29,38 @@ class PhvInfo : public Inspector {
         int             id;
         gress_t         gress;
         int             size;
-        int             phv_use_lo = 0;  // lowest bit of field used through MAU pipeline
-        int             phv_use_rem = 0;  // lowest bit of field used in next container
-                                          // when field straddles containers
-                                          // used in ccg: container contiguous groups 
-        int             phv_use_hi = 0;  // highest bit of field used through MAU pipeline
-                                         // for container contiguous groups
-                                         // owner phv_use_hi = sum of member sizes
-        int             offset;          // offset of lsb from lsb (last) bit of containing header
+        int             phv_use_lo = 0;   // lowest bit of field used through MAU pipeline
+        int             phv_use_rem = 0;  // field straddles containers
+                                          // used in ccg: container contiguous groups
+                                          // phv_container allocation phase:
+                                          // remembers lowest bit of field use in next container
+                                          // phv binding phase:
+                                          // remembers bits already allocated
+        int             phv_use_hi = 0;   // highest bit of field used through MAU pipeline
+                                          // for container contiguous groups
+                                          // owner phv_use_hi = sum of member sizes
+        int             offset;           // offset of lsb from lsb (last) bit of containing header
         bool            referenced;
         bool            metadata;
         bool            pov;
         bool            mau_write = false;  // true when field Write in MAU
-        Field           *hdr_stk_pov = 0;  // only when .$push exists -- see allocatePOV()
-                                           // this member field points to header pov field, e.g.,
+        Field           *ccgf = 0;         // container contiguous group fields
+                                           // used for
+                                           // (i) header stack povs: container FULL, no holes
+                                           // (ii) sub-byte header fields: container may be PARTIAL
+                                           // sub-byte header fields
+                                           // owner->ccgf = owner, member->ccgf = owner
+                                           // owner->ccgf_fields = (owner, members)
+                                           // header stack povs
+                                           // only when .$push exists -- see allocatePOV()
+                                           // owner ".$stkvalid" ->ccgf = 0, member->ccgf = owner
+                                           // owner->ccgf_fields (members)
+                                           // e.g.,
                                            // extra.$push: B9(5..6) --> extra.$stkvalid: B9(0..6)
                                            // extra$0.$valid: B9(4) --> extra.$stkvalid: B9(0..6)
-        vector<Field *> pov_fields;  // only when .$push exists -- see allocatePOV(),
-                                     // member pov fields of header stk pov
-                                     // these members are in same container as header stk pov
+        vector<Field *> ccgf_fields;       // member fields of container contiguous groups
+                                           // member pov fields of header stk pov
+                                           // these members are in same container as header stk pov
         set<constraint> constraints;  // unused -- get rid of it?
         cstring header() const { return name.before(strrchr(name, '.')); }
         PHV::Bit bit(unsigned i) const {

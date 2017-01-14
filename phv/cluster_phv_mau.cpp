@@ -551,7 +551,7 @@ PHV_MAU_Group_Assignments::cluster_placement(
                 // width < 16, <=> 8
                 if (cc->width() % static_cast<int>(PHV_Container::PHV_Word::b8)) {
                     WARNING("parser_container width<PHV_Word::b8..pack@header analysis? "
-                        << cc->width() 
+                        << cc->width()
                         << cc
                         << c);
                 }
