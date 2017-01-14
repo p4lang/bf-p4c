@@ -279,15 +279,14 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
     }
     if (!current_ixbar.allocTable(next->table, phv, resources->match_ixbar,
                                   resources->gateway_ixbar, resources->selector_ixbar,
-                                  sue.preferred_option()) ||
+                                  sue.preferred()) ||
         !current_ixbar.allocTable(next->gw, phv, resources->match_ixbar,
                                   resources->gateway_ixbar, resources->selector_ixbar,
-                                  sue.preferred_option())) {
+                                  sue.preferred())) {
         resources->match_ixbar.clear();
         resources->gateway_ixbar.clear();
         resources->selector_ixbar.clear();
         return false; }
-    LOG1("resources->match_ixbar is ternary? " << resources->match_ixbar.ternary);
     return true;
 }
 
@@ -297,11 +296,11 @@ static bool try_alloc_mem(TablePlacement::Placed *next, const TablePlacement::Pl
     Memories current_mem;
     int i = 0;
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
-         current_mem.add_table(p->table, p->gw, prev_resources[i], p->use.preferred_option(),
+         current_mem.add_table(p->table, p->gw, prev_resources[i], p->use.preferred(),
                                p->entries);
          i++;
     }
-    current_mem.add_table(next->table, next->gw, resources, sue.preferred_option(), entries);
+    current_mem.add_table(next->table, next->gw, resources, sue.preferred(), entries);
     resources->memuse.clear();
     for (auto *prev_resource : prev_resources) {
         prev_resource->memuse.clear();
@@ -351,9 +350,10 @@ static void coord_selector_xbar(const TablePlacement::Placed *curr,
 
 TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t, const Placed *done,
                                                         const StageUseEstimate &current) {
-    LOG2("try_place_table(" << t->name << ", stage=" << (done ? done->stage : 0) << ")");
+    LOG1("try_place_table(" << t->name << ", stage=" << (done ? done->stage : 0) << ")");
     auto *rv = (new Placed(*this, t))->gateway_merge();
     TableResourceAlloc *resources = new TableResourceAlloc;
+    TableResourceAlloc *min_resources = new TableResourceAlloc;
     rv->resources = resources;
     vector<TableResourceAlloc *> prev_resources;
     for (auto *p = done; p && p->stage == done->stage; p = p->prev) {
@@ -385,69 +385,66 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     int increment_entries = min_entries + 1;
     LOG1("Increment Use calculation");
     StageUseEstimate increment_use(t, increment_entries);
-    auto avail = StageUseEstimate::max();
     bool allocated = false;
     bool ixbar_allocation_bug = false;
     bool mem_allocation_bug = false;
     int furthest_stage = (done == nullptr) ? 0 : done->stage + 1;
+    bool already_advanced = false;
    
     do {
+        LOG1("The stage is " << rv->stage);
+        auto avail = StageUseEstimate::max();
         bool advance_to_next_stage = false;
         allocated = false; ixbar_allocation_bug = false; mem_allocation_bug = false;
         rv->use = StageUseEstimate(t, rv->entries);
 
+        LOG1("Allocate ixbar minuse");
+        if (!try_alloc_ixbar(rv, done, phv, min_use, min_resources)) {
+            advance_to_next_stage = true;
+            ixbar_allocation_bug = true;
+            LOG1("Failure at this point");
+        }
+
+        LOG1("Allocate ixbar regular");
         if (!try_alloc_ixbar(rv, done, phv, rv->use, resources)) {
             advance_to_next_stage = true;
             ixbar_allocation_bug = true;
+            LOG1("Failure at second point");
         }
 
-        if (!(min_use + current <= avail)
-            || !try_alloc_mem(rv, done, min_entries, resources, min_use, prev_resources)) {
-            LOG1("Failure at first point");
+        LOG1("!already_advanced " << !already_advanced); 
+        if (!(already_advanced || min_use + current <= avail) 
+            || !try_alloc_mem(rv, done, min_entries, min_resources, min_use, prev_resources)) {
             mem_allocation_bug = true;
             advance_to_next_stage = true;
+            LOG1("Test " << (already_advanced || min_use + current <= avail) );
+            LOG1("Failure at third point");
         }
 
         if (done && rv->stage == done->stage) {
             avail.srams -= current.srams;
             avail.tcams -= current.tcams;
             avail.maprams -= current.maprams; }
-        assert(min_use <= avail);
-        int last_try = rv->entries;
 
-        LOG1("Advance to next stage " << advance_to_next_stage);
-        LOG1("rv->use <= avail " << (rv->use <= avail));
-
+        int srams_left = avail.srams;
         while (!advance_to_next_stage &&
                (!(rv->use <= avail) ||
                (allocated = try_alloc_mem(rv, done, rv->entries, resources,
                                           rv->use, prev_resources)) == false)) {
-            LOG1("Hello " << min_entries);
             rv->need_more = true;
-            int scale = 0;
-            if (rv->use.tcams > avail.tcams)
-                scale = (avail.tcams - min_use.tcams) / (increment_use.tcams - min_use.tcams);
-            else if (rv->use.maprams > avail.maprams)
-                scale = (avail.maprams - min_use.maprams)
-                        / (increment_use.maprams - min_use.maprams);
-            else if (rv->use.srams > avail.srams)
-                scale = (avail.srams - min_use.srams) / (increment_use.srams - min_use.srams);
-            if (scale)
-                rv->entries = scale * increment_entries - (scale-1) * min_entries;
-            if (rv->entries >= last_try) {
-                rv->entries = last_try - 500;
-                if (rv->entries < min_entries && min_entries < last_try)
-                    rv->entries = min_entries; }
+            if (!t->layout.ternary)
+                rv->use.calculate_for_leftover_srams(t, srams_left, rv->entries);
+
+            LOG1("rv->entries is " << rv->entries);
             if (rv->entries < min_entries) {
                 LOG1("RV entries " << rv->entries << " min entries " << min_entries);
                 mem_allocation_bug = true;
                 advance_to_next_stage = true;
                 break;
             }
-            last_try = rv->entries;
+            srams_left--;
             LOG3(" - reducing to " << rv->entries << " of " << t->name
                  << " in stage " << rv->stage);
-            rv->use = StageUseEstimate(t, rv->entries);
             if (!try_alloc_ixbar(rv, done, phv, rv->use, resources)) {
                 ixbar_allocation_bug = true;
                 ERROR("IXBar Allocation error after previous allocation?");
@@ -456,7 +453,9 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             }
         }
         if (advance_to_next_stage) {
+            LOG1("Advance to the next stage");
             rv->stage++;
+            already_advanced = true;
         }
 
     } while (!allocated && rv->stage <= furthest_stage);
@@ -567,6 +566,7 @@ retry_next_stage:
             rv->placed[tblInfo.at(rv->gw).uid] = true; }
     /* FIXME -- need to redo IXBar alloc if we moved to the next stage?  Or if we need less
      * hash indexing bits for smaller ways? */
+    LOG1("Try place table done?");
     return rv;
 }
 
@@ -819,7 +819,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         tbl->actions = match->actions;
         IR::MAU::Table::Layout gw_layout;
         gw_layout.copy(tbl->layout);
-        select_layout_option(tbl, it->second->use.preferred_option()); 
+        select_layout_option(tbl, it->second->use.preferred()); 
         tbl->layout += gw_layout;
         /*
         tbl->attached = match->attached;
@@ -858,7 +858,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
                 if (gw.second && !tbl->next.count(gw.second))
                     tbl->next[gw.second] = new IR::MAU::TableSeq();
     } else if (it->second->table->match_table) {
-        select_layout_option(tbl, it->second->use.preferred_option());
+        select_layout_option(tbl, it->second->use.preferred());
     }
 
     if (table_placed.count(tbl->name) == 1) {

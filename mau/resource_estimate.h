@@ -10,6 +10,8 @@ struct StageUseEstimate {
     int ternary_ixbar_groups;
     vector<IR::MAU::Table::LayoutOption> layout_options;
     int preferred_index;
+    int previous_index;
+    int provided_index;
     StageUseEstimate() { memset(this, 0, sizeof(*this)); }
     StageUseEstimate &operator+=(const StageUseEstimate &a) {
         logical_ids += a.logical_ids;
@@ -19,7 +21,7 @@ struct StageUseEstimate {
         exact_ixbar_bytes += a.exact_ixbar_bytes;
         ternary_ixbar_groups += a.ternary_ixbar_groups;
         return *this; }
-    StageUseEstimate(const IR::MAU::Table *, int &, bool table_placement = false);
+    StageUseEstimate(const IR::MAU::Table *, int &, bool table_placement = false, bool redo = false);
     StageUseEstimate operator+(const StageUseEstimate &a) const {
         StageUseEstimate rv = *this; rv += a; return rv; }
     static StageUseEstimate max() {
@@ -43,11 +45,33 @@ struct StageUseEstimate {
     void calculate_attached_rams(const IR::MAU::Table *tbl,
                                  IR::MAU::Table::LayoutOption *lo, bool table_placement);
     void fill_estimate_from_option(int &entries);
-    const IR::MAU::Table::LayoutOption *preferred_option() const {
+    const IR::MAU::Table::LayoutOption *preferred() const {
     if (layout_options.empty())
         return nullptr;
     else
         return &layout_options[preferred_index]; }
+
+    const IR::MAU::Table::LayoutOption *provided() const {
+        if (layout_options.empty())
+            return nullptr;
+        else
+            return &layout_options[provided_index]; }
+
+    void set_provided(const IR::MAU::Table::LayoutOption *a);
+
+    void calculate_for_leftover_srams(const IR::MAU::Table *tbl, int srams_left, int &entries);
+    void known_srams_needed(const IR::MAU::Table *tbl, IR::MAU::Table::LayoutOption *lo);
+    void unknown_srams_needed(const IR::MAU::Table *tbl, IR::MAU::Table::LayoutOption *lo,
+                              int srams_left);
+    void calculate_way_sizes(IR::MAU::Table::LayoutOption *lo, int &calculated_depth);
+    void srams_left_best_option();
+    struct RAM_counter {
+        int per_word;
+        int width;
+        bool need_maprams;
+        RAM_counter() : per_word (0), width(0), need_maprams(false) {}
+        RAM_counter(int p, int w, bool nm) : per_word(p), width(w), need_maprams(nm) {}
+    };
 };
 
 

@@ -153,7 +153,8 @@ void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_
 
     for (int entry_count = 1; entry_count < 10; entry_count++) {
         int match_group_bits = std::max(tbl->layout.match_width_bits-10, 0) +
-                               tbl->layout.overhead_bits + tbl->layout.action_data_bytes + 4;
+                               tbl->layout.overhead_bits + tbl->layout.action_data_bytes * 8
+                               + 4;
         int width = (entry_count * match_group_bits + 127) / 128;
         
         while ((tbl->layout.overhead_bits + 8 * tbl->layout.action_data_bytes * entry_count)

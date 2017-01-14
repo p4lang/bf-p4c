@@ -117,6 +117,7 @@ class Table : Tofino::Unit {
         LayoutOption() {}
         LayoutOption(Layout l) : layout(l) {}
         LayoutOption(Layout l, Way w) : layout(l), way(w) {}
+        void clear_mems() { srams = 0; maprams = 0; tcams = 0; entries = 0; way_sizes.clear(); } 
     }
 
     vector<LayoutOption> layout_options;

@@ -461,6 +461,7 @@ void Memories::break_exact_tables_into_ways() {
         ta->calculated_entries = ta->layout_option->entries;
 
         index = 0;
+        assert(ta->match_ixbar->way_use.size() == ta->layout_option->way_sizes.size());
         for (auto &way : ta->match_ixbar->way_use) {
             SRAM_group *wa = new SRAM_group(ta, ta->layout_option->way_sizes[index], 
                                              ta->layout_option->way->width, index,

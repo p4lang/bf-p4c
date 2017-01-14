@@ -958,10 +958,11 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_a
         vector<IXBar::Use::Byte *> alloced;
         vector<Use> all_tbl_allocs; 
         bool finished = false;
+        size_t start = 0; size_t last = 0;
         while (!finished) {
             Use next_alloc;
-            size_t start = 0; size_t last = 0;
             layout_option_calculation(lo, start, last);
+            LOG1("Start and Last " << start << " " << last);
             int hash_groups = (last - start > 4) ? 4 : last - start;
             if (!(allocMatch(ternary, tbl->match_table, phv, next_alloc, 
                              alloced, false, hash_groups)

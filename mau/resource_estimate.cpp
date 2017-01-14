@@ -54,6 +54,51 @@ int TernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::
 
 }
 
+void StageUseEstimate::calculate_way_sizes(IR::MAU::Table::LayoutOption *lo,
+                                           int &calculated_depth) {
+    if (calculated_depth < 8) {
+        switch (calculated_depth) {
+            case 1:
+                lo->way_sizes = {1, 1, 1};
+                calculated_depth = 3;
+                break;
+            case 2:
+                lo->way_sizes = {1, 1, 1, 1};
+                calculated_depth = 4;
+                break;
+            case 3:
+                lo->way_sizes = {1, 1, 1, 1};
+                calculated_depth = 4;
+                break;
+            case 4:
+                lo->way_sizes = {1, 1, 1, 1};
+                break;
+            case 5:
+                lo->way_sizes = {2, 1, 1, 1};
+                break;
+            case 6:
+                lo->way_sizes = {2, 2, 1, 1};
+                break;
+            case 7:
+                lo->way_sizes = {2, 2, 2, 1};
+                break;
+        }
+    //Cannot share a single hash group
+    } else {
+        int test_depth = calculated_depth > 64 ? 64 : calculated_depth;
+        int max_group_size = (1 << ceil_log2(test_depth)) / 4;
+        int depth = calculated_depth > 80 ? 80 : calculated_depth;
+        while (depth > 0) {
+            if (max_group_size <= depth) {
+                lo->way_sizes.push_back(max_group_size);
+                depth -= max_group_size; 
+            } else {
+                max_group_size /= 2;
+            }
+        }
+    }
+}
+
 void StageUseEstimate::options_to_ways(const IR::MAU::Table *tbl, int &entries) {
     layout_options.clear();
     layout_options = tbl->layout_options;
@@ -196,7 +241,6 @@ void StageUseEstimate::options_to_rams(const IR::MAU::Table *tbl, bool table_pla
 // number of total rams
 // closeness to the number of entries needed
 void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
-    LOG1("select best option");
     bool small_table_allocation = true;
     for (auto lo : layout_options) {
         if (lo.entries < tbl->match_table->size) {
@@ -228,6 +272,7 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
             return true;
         });
     }
+    /*
     LOG1("table " << tbl->name << " requiring " << tbl->match_table->size << " entries.");
     if (small_table_allocation)
         LOG1("small table allocation");
@@ -237,7 +282,9 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
         LOG1("layout option width " << lo.way->width << " match groups " << lo.way->match_groups
               << " entries " << lo.entries << " srams " << lo.srams
               << " action data " << lo.action_data_required); 
+        LOG1("Layout option way sizes " << lo.way_sizes);
     }
+    */
 
     preferred_index = 0;
 }
@@ -264,13 +311,16 @@ void StageUseEstimate::select_best_option_ternary() {
 }
 
 void StageUseEstimate::fill_estimate_from_option(int &entries) {
-    tcams = preferred_option()->tcams;
-    srams = preferred_option()->srams;
-    maprams = preferred_option()->maprams;
-    entries = preferred_option()->entries;
+    tcams = preferred()->tcams;
+    srams = preferred()->srams;
+    maprams = preferred()->maprams;
+    entries = preferred()->entries;
 }
 
-StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries, bool table_placement) {
+StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries, bool table_placement,
+                                   bool redo) {
+    // FIXME: This is wrong
+    if (redo) previous_index = provided_index;
     memset(this, 0, sizeof(*this));
     logical_ids = 1;
     exact_ixbar_bytes = tbl->layout.ixbar_bytes;
@@ -291,6 +341,170 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries, bool
         fill_estimate_from_option(entries);
     } else {
         entries = 0;
+    } 
+}
+
+void StageUseEstimate::set_provided(const IR::MAU::Table::LayoutOption *a) {
+    int index = 0;
+    for (auto lo : layout_options) {
+        if (lo.way->match_groups == a->way->match_groups &&
+            lo.way->width == a->way->width &&
+            lo.action_data_required == a->action_data_required &&
+            lo.ternary_indirect_required == a->ternary_indirect_required) {
+            provided_index = index;
+            return;
+        }
+        index++;
     }
-    
+    BUG("Non-matching resource estimate.  Should never happen within same table");
+    provided_index = -1;
+}
+
+void StageUseEstimate::known_srams_needed(const IR::MAU::Table *tbl,
+                                          IR::MAU::Table::LayoutOption *lo) {
+    for (auto at : tbl->attached) {
+         int attached_entries = 0;
+         int per_word = 0;
+         int width = 1;
+         bool need_maprams = false;
+         if (auto *ctr = dynamic_cast<const IR::Counter *>(at)) {
+            if (ctr->direct) continue;
+            attached_entries  = ctr->instance_count;
+            per_word = CounterPerWord(ctr);
+            need_maprams = true;
+        } else if (auto *mtr = dynamic_cast<const IR::Meter *>(at)) {
+            if (mtr->direct) continue;
+            per_word = 1;
+            attached_entries = mtr->instance_count;
+            need_maprams = true;
+        } else if (auto *reg = dynamic_cast<const IR::Register *>(at)) {
+            if (reg->direct) continue; 
+            per_word = RegisterPerWord(reg);
+            attached_entries = reg->instance_count;
+            need_maprams = true;
+        } else if (auto *ap = dynamic_cast<const IR::ActionProfile *>(at)) {
+            per_word = ActionDataPerWord(lo->layout, &width);
+            attached_entries = ap->size;
+        } else if (/*auto *ad = */dynamic_cast<const IR::MAU::ActionData *>(at)) {
+           continue;
+        } else if (/*auto *as = */dynamic_cast<const IR::ActionSelector *>(at)) {
+            // TODO(cdodd)
+        } else if (dynamic_cast<const IR::MAU::TernaryIndirect *>(at)) {
+            continue;
+        } else {
+            BUG("Unrecognized table type");
+        }
+        if (per_word > 0) {
+            if (attached_entries <= 0)
+                BUG("%s: no size in indirect %s %s", at->srcInfo, at->kind(), at->name);
+            int entries_per_sram = 1024 * per_word;
+            int units = (attached_entries + entries_per_sram - 1) / entries_per_sram;
+            lo->srams += units * width;
+            if (need_maprams) lo->maprams += units; 
+        }        
+    }
+}
+
+void StageUseEstimate::unknown_srams_needed(const IR::MAU::Table *tbl,
+                                            IR::MAU::Table::LayoutOption *lo,
+                                            int srams_left) {
+    vector <RAM_counter> per_word_and_width;
+    for (auto at : tbl->attached) {
+         int per_word = 0;
+         int width = 1;
+         bool need_maprams = false;
+         if (auto *ctr = at->to<IR::Counter>()) {
+             if (!ctr->direct) continue;
+             per_word = CounterPerWord(ctr);
+             need_maprams = true;;
+         } else if (auto *mtr = at->to<IR::Meter>()) {
+             if (!mtr->direct) continue;
+             per_word = 1;
+             need_maprams = true;
+         } else if (auto *reg = at->to<IR::Register>()) {
+             if (!reg->direct) continue;
+             per_word = RegisterPerWord(reg);
+             need_maprams = true;
+         } else if (at->is<IR::ActionProfile>() || at->is<IR::ActionSelector>()) {
+             continue;
+         } else {
+             BUG("Unrecognized table type");
+         }
+         per_word_and_width.emplace_back(per_word, width, need_maprams);
+    }
+    if (lo->action_data_required) {
+        int width = 1;
+        int per_word = ActionDataPerWord(lo->layout, &width);
+        per_word_and_width.emplace_back(per_word, width, false);
+    }
+    if (lo->ternary_indirect_required) {
+        int width = 1;
+        int per_word = TernaryIndirectPerWord(lo->layout, tbl);
+        per_word_and_width.emplace_back(per_word, width, false);
+    }
+    int available_srams = srams_left - lo->srams;
+    int used_srams = 0; int used_maprams = 0;
+    int entries = 0;
+    int depth = 1;
+
+    while (true) {
+        int sram_count = 0;
+        int mapram_count = 0;
+        int attempted_entries = lo->way->match_groups * 1024 * depth;
+        sram_count += attempted_entries / 1024 * lo->way->width;
+        for (auto rc : per_word_and_width) {
+            int entries_per_sram = 1024 * rc.per_word;
+            int units = (attempted_entries + entries_per_sram - 1) / entries_per_sram;
+            sram_count += units * rc.width;
+            if (rc.need_maprams)
+                mapram_count += units;
+        }
+        LOG1("SRAM count " << sram_count);
+
+        if (sram_count > available_srams) break;
+        depth++;
+        entries = attempted_entries;
+        used_srams = sram_count;
+        used_maprams = mapram_count;
+    }
+
+    calculate_way_sizes(lo, depth);
+    lo->srams += used_srams;
+    lo->maprams += used_maprams;
+    lo->entries = entries;
+    LOG1("layout option " << lo->srams << " " << lo->maprams << " " << lo->entries);  
+    LOG1("Way sizes " << lo->way_sizes);
+}
+
+void StageUseEstimate::srams_left_best_option() {
+    std::sort(layout_options.begin(), layout_options.end(),
+        [=](const IR::MAU::Table::LayoutOption &a, const IR::MAU::Table::LayoutOption &b) {
+        int t;
+        if ((t = a.entries - b.entries) != 0) return t > 0;
+        if ((t = a.way->width - b.way->width) != 0) return t < 0;
+        if (!a.action_data_required) return true;
+        if (!b.action_data_required) return false;
+        return true;
+    });
+    for (auto &lo : layout_options) {
+        LOG1("layout option width " << lo.way->width << " match groups " << lo.way->match_groups
+              << " entries " << lo.entries << " srams " << lo.srams
+              << " action data " << lo.action_data_required); 
+        LOG1("Layout option way sizes " << lo.way_sizes);
+    }
+    preferred_index = 0;
+}
+
+void StageUseEstimate::calculate_for_leftover_srams(const IR::MAU::Table *tbl, int srams_left,
+                                                    int &entries) {
+    LOG1("srams left " << srams_left);
+    layout_options.clear();
+    layout_options = tbl->layout_options;
+    for (auto &lo : layout_options) {
+        lo.clear_mems();
+        known_srams_needed(tbl, &lo);
+        unknown_srams_needed(tbl, &lo, srams_left);
+    }
+    srams_left_best_option();
+    fill_estimate_from_option(entries);
 }
