@@ -470,6 +470,7 @@ void Memories::break_exact_tables_into_ways() {
             (*ta->memuse)[ta->table->name].ways.emplace_back(ta->layout_option->way_sizes[index],
                                                              way.mask);
             index++;
+            LOG1("Way sizes " << ta->layout_option->way_sizes[index]);
         }
         
         /*

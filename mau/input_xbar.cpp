@@ -74,13 +74,30 @@ bool IXBar::Use::exact_comp(const IXBar::Use *exact_use, int width) const {
 }
 
 
-void IXBar::Use::compute_hash_tables() {
-    hash_table_input = 0;
+unsigned IXBar::Use::compute_hash_tables() {
+    unsigned hash_table_input = 0;
     for (auto &b : use) {
         assert(b.loc.group >= 0 && b.loc.group < HASH_TABLES/2);
         unsigned grp = 1U << (b.loc.group * 2);
         if (b.loc.byte >= 8) grp <<= 1;
         hash_table_input |= grp; }
+    return hash_table_input;
+}
+
+void IXBar::Use::add(const IXBar::Use &alloc) {
+    ternary = alloc.ternary;
+    gw_search_bus = alloc.gw_search_bus;
+    gw_search_bus_bytes = alloc.gw_search_bus_bytes;
+    gw_hash_group = alloc.gw_hash_group;
+    use.insert(use.end(), alloc.use.begin(), alloc.use.end());
+    bit_use.insert(bit_use.end(), alloc.bit_use.begin(), alloc.bit_use.end());
+    way_use.insert(way_use.end(), alloc.way_use.begin(), alloc.way_use.end());
+    select_use.insert(select_use.end(), alloc.select_use.begin(), alloc.select_use.end());
+    for (int i = 0; i < HASH_GROUPS; i++) {
+        if (hash_table_inputs[i] != 0 && alloc.hash_table_inputs[i] != 0)
+            BUG("When adding allocs of ways, somehow ended up on the same hash group");
+        hash_table_inputs[i] |= alloc.hash_table_inputs[i];
+    }
 }
 
 static int align_flags[4] = {
@@ -692,12 +709,14 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
                              size_t start, size_t last) {
     if (ternary)
         return true;
-    int hash_group = getHashGroup(alloc.hash_table_input);
+    unsigned hash_table_input = alloc.compute_hash_tables();
+
+    int hash_group = getHashGroup(hash_table_input);
     if (hash_group < 0) return false;
     int free_groups = 0;
     int group;
     for (group = 0; group < HASH_INDEX_GROUPS; group++) {
-        if (!(hash_index_inuse[group] & alloc.hash_table_input)) {
+        if (!(hash_index_inuse[group] & hash_table_input)) {
             free_groups++;
         }
     }
@@ -713,7 +732,7 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
     }
     int way_bits = 0;
     for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
-        if (!(hash_single_bit_inuse[bit] & alloc.hash_table_input)) {
+        if (!(hash_single_bit_inuse[bit] & hash_table_input)) {
             way_bits++;
         }
     }
@@ -728,9 +747,7 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
             return false;
         }
     }
-    for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
-        LOG3("Hash bit at bit " << bit << " is " << hash_single_bit_inuse[bit]);
-    }
+    alloc.hash_table_inputs[hash_group] = hash_table_input;
     return true;
 }
 
@@ -739,7 +756,8 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
 bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
                          const IR::MAU::Table::LayoutOption *layout_option,
                          size_t index, size_t start, Use &alloc) {
-    int hash_group = getHashGroup(alloc.hash_table_input);
+    unsigned hash_table_input = alloc.compute_hash_tables();
+    int hash_group = getHashGroup(hash_table_input);
     if (hash_group < 0) return false;
     int way_bits = ceil_log2(layout_option->way_sizes[index]);
     int group;
@@ -748,7 +766,7 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
     LOG3("Need " << way_bits << " mask bits for way " << alloc.way_use.size() <<
          " in table " << tbl->name);
     for (group = 0; group < HASH_INDEX_GROUPS; group++) {
-        if (!(hash_index_inuse[group] & alloc.hash_table_input)) {
+        if (!(hash_index_inuse[group] & hash_table_input)) {
             break; } }
     if (group >= HASH_INDEX_GROUPS) {
         if (alloc.way_use.empty()) {
@@ -764,7 +782,7 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
     unsigned free_bits = 0; unsigned used_bits = 0;
 
     for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
-        if (!(hash_single_bit_inuse[bit] & alloc.hash_table_input)) {
+        if (!(hash_single_bit_inuse[bit] & hash_table_input)) {
             free_bits |= 1U << bit;
         } 
     }
@@ -801,10 +819,10 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
     }
 
     alloc.way_use.emplace_back(Use::Way{ hash_group, group, way_mask });
-    hash_index_inuse[group] |= alloc.hash_table_input;
+    hash_index_inuse[group] |= hash_table_input;
     for (auto bit : bitvec(way_mask))
-        hash_single_bit_inuse[bit] |= alloc.hash_table_input;
-    for (auto ht : bitvec(alloc.hash_table_input)) {
+        hash_single_bit_inuse[bit] |= hash_table_input;
+    for (auto ht : bitvec(hash_table_input)) {
         hash_index_use[ht][group] = tbl->name;
         for (auto bit : bitvec(way_mask))
             hash_single_bit_use[ht][bit] = tbl->name; }
@@ -847,8 +865,8 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
         return false; }
     LOG3("Collect bits is " << collect.bits);
     if (collect.bits > 0) {
-        alloc.compute_hash_tables();
-        int hash_group = getHashGroup(alloc.hash_table_input);
+        int hash_table_input = alloc.compute_hash_tables();
+        int hash_group = getHashGroup(hash_table_input);
         if (hash_group < 0) {
             alloc.clear();
             return false; }
@@ -857,7 +875,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
         unsigned avail = 0;
         unsigned need = (1U << collect.bits) - 1;
         for (auto i : Range(0, HASH_SINGLE_BITS-1)) {
-            if ((hash_single_bit_inuse[i] & alloc.hash_table_input) == 0)
+            if ((hash_single_bit_inuse[i] & hash_table_input) == 0)
                 avail |= (1U << i); }
         int shift = 0;
         LOG3("Avail is " << avail);
@@ -882,11 +900,13 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
             alloc.bit_use.emplace_back(valid.first + ".$valid", hash_group, 0,
                                        valid.second - 32, 1); }
         LOG3("Before bit_use size is " << alloc.bit_use.size());
-        for (auto ht : bitvec(alloc.hash_table_input))
+        for (auto ht : bitvec(hash_table_input))
             for (int i = 0; i < collect.bits; ++i)
                 hash_single_bit_use[ht][shift + i] = tbl->name + "$gw";
         for (int i = 0; i < collect.bits; ++i)
-            hash_single_bit_inuse[shift + i] |= alloc.hash_table_input; }
+            hash_single_bit_inuse[shift + i] |= hash_table_input;
+        alloc.hash_table_inputs[hash_group] = hash_table_input;
+    }
     fill_out_use(xbar_alloced, false);
     for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
         LOG3("Hash bit at bit " << bit << " is " << hash_single_bit_inuse[bit]);
@@ -920,12 +940,13 @@ bool IXBar::allocSelector(const IR::ActionSelector *as, const PhvInfo &phv, Use 
     }
 
     bool rv = find_alloc(alloc, false, second_try, alloced, HASH_INDEX_GROUPS);
+    unsigned hash_table_input = 0;
     if (rv)
-         alloc.compute_hash_tables();
+         hash_table_input = alloc.compute_hash_tables();
     if (!rv) alloc.clear();
 
     if (!rv) return false;
-    int hash_group = getHashGroup(alloc.hash_table_input);
+    int hash_group = getHashGroup(hash_table_input);
     if (hash_group < 0) {
         alloc.clear();
         return false;
@@ -933,7 +954,7 @@ bool IXBar::allocSelector(const IR::ActionSelector *as, const PhvInfo &phv, Use 
     alloc.select_use.emplace_back(hash_group);
     fill_out_use(alloced, false);
     for (int i = 0; i < HASH_TABLES; i++) {
-        if ((1U << i) & alloc.hash_table_input) {
+        if ((1U << i) & hash_table_input) {
             for (int j = 0; j < HASH_INDEX_GROUPS; j++)
                 hash_index_use[i][j] = name + "$select";
             hash_index_inuse[i] |= 0xf;
@@ -943,7 +964,8 @@ bool IXBar::allocSelector(const IR::ActionSelector *as, const PhvInfo &phv, Use 
         }
     }
     hash_group_print_use[hash_group] = name + "$select";
-    hash_group_use[hash_group] |= alloc.hash_table_input;
+    hash_group_use[hash_group] |= hash_table_input;
+    alloc.hash_table_inputs[hash_group] = hash_table_input;
     return rv;
 }
 
@@ -1036,34 +1058,34 @@ void IXBar::update(cstring name, const Use &alloc) {
             if ((!loc || loc->byte != (b + bits.lo)/8) &&
                 !(loc = findExactByte(bits.field, (b + bits.lo)/8)))
                 BUG("ixbar hashing bits from %s, but they're not on the bus", bits.field);
-            for (auto ht : bitvec(alloc.hash_table_input)) {
+            for (auto ht : bitvec(alloc.hash_table_inputs[bits.group])) {
                 if (hash_single_bit_use.at(ht, b + bits.bit))
                     BUG("conflicting ixbar hash bit allocation");
                 hash_single_bit_use.at(ht, b + bits.bit) = name; }
-            hash_single_bit_inuse[b + bits.bit] |= alloc.hash_table_input; }
+            hash_single_bit_inuse[b + bits.bit] |= alloc.hash_table_inputs[bits.group]; }
         if (hash_group_use[bits.group] == 0) {
-            hash_group_use[bits.group] = alloc.hash_table_input;
+            hash_group_use[bits.group] = alloc.hash_table_inputs[bits.group];
             hash_group_print_use[bits.group] = name;
-        } else if (hash_group_use[bits.group] != alloc.hash_table_input) {
+        } else if (hash_group_use[bits.group] != alloc.hash_table_inputs[bits.group]) {
             BUG("conflicting hash group use between %s and %s", name, hash_group_use[bits.group]);
         }
     }
     for (auto &way : alloc.way_use) {
         if (hash_group_use[way.group] == 0) {
-            hash_group_use[way.group] = alloc.hash_table_input;
+            hash_group_use[way.group] = alloc.hash_table_inputs[way.group];
             hash_group_print_use[way.group] = name;
         }
-        hash_index_inuse[way.slice] |= alloc.hash_table_input;
-        for (int hash : bitvec(alloc.hash_table_input)) {
+        hash_index_inuse[way.slice] |= alloc.hash_table_inputs[way.group];
+        for (int hash : bitvec(alloc.hash_table_inputs[way.group])) {
             if (!hash_index_use[hash][way.slice])
                 hash_index_use[hash][way.slice] = name;
             for (auto bit : bitvec(way.mask)) {
-                hash_single_bit_inuse[bit] |= alloc.hash_table_input;
+                hash_single_bit_inuse[bit] |= alloc.hash_table_inputs[way.group];
                 if (!hash_single_bit_use[hash][bit])
                     hash_single_bit_use[hash][bit] = name; } } }
     for (auto &select : alloc.select_use) {
         for (int i = 0; i < HASH_TABLES; i++) {
-            if ((1U << i) & alloc.hash_table_input) {
+            if ((1U << i) & alloc.hash_table_inputs[select.group]) {
                 for (int j = 0; j < HASH_INDEX_GROUPS; j++)
                     hash_index_use[i][j] = name;
                 hash_index_inuse[i] |= 0xf;
@@ -1073,7 +1095,7 @@ void IXBar::update(cstring name, const Use &alloc) {
             }
         }
         hash_group_print_use[select.group] = name;
-        hash_group_use[select.group] |= alloc.hash_table_input;
+        hash_group_use[select.group] |= alloc.hash_table_inputs[select.group];
     }
 }
 

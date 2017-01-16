@@ -85,8 +85,7 @@ struct IXBar {
         vector<Byte>    use;
 
         /* which of the 16 hash tables we are using (bitvec) */
-        unsigned        hash_table_input = 0;
-
+        unsigned        hash_table_inputs[HASH_GROUPS] = { 0 };
         /* values fed through the hash tables onto the upper 12 bits of the hash bus via
          * an identity matrix */
         struct Bits {
@@ -113,20 +112,12 @@ struct IXBar {
             explicit Select(int g) : group(g), bit_mask(0) {}
         };
         vector<Select> select_use;
-        void clear() { use.clear(); hash_table_input = 0; bit_use.clear(); way_use.clear(); }
-        void compute_hash_tables();
+        void clear() { use.clear(); memset(hash_table_inputs, 0, sizeof(hash_table_inputs)); 
+                       bit_use.clear(); way_use.clear(); }
+        unsigned compute_hash_tables();
         int groups() const;  // how many different groups in this use
         bool exact_comp(const IXBar::Use *exact_use, int width) const;
-        void add(const Use &alloc) {
-            ternary = alloc.ternary;
-            gw_search_bus = alloc.gw_search_bus;
-            gw_search_bus_bytes = alloc.gw_search_bus_bytes;
-            gw_hash_group = alloc.gw_hash_group;
-            use.insert(use.end(), alloc.use.begin(), alloc.use.end());
-            bit_use.insert(bit_use.end(), alloc.bit_use.begin(), alloc.bit_use.end());
-            way_use.insert(way_use.end(), alloc.way_use.begin(), alloc.way_use.end());
-            select_use.insert(select_use.end(), alloc.select_use.begin(), alloc.select_use.end());
-        }
+        void add(const Use &alloc);
         int hash_groups() const;
     };
 

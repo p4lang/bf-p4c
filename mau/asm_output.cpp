@@ -225,14 +225,14 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
                     group.second.erase(next);
                     continue; } }
             it = next; } }
-    int hash_group = -1;
+    //int hash_group = -1;
     if (!use.way_use.empty() && !is_sel) {
         out << indent << "ways:" << std::endl;
         auto memway = mem->ways.begin();
         for (auto &way : use.way_use) {
-            if (hash_group >= 0 && hash_group != way.group)
-                BUG("multiple hash groups use in ways");
-            hash_group = way.group;
+            //if (hash_group >= 0 && hash_group != way.group)
+            //    BUG("multiple hash groups use in ways");
+            //hash_group = way.group;
             out << indent << "- [" << way.group << ", " << way.slice << ", 0x"
                 << hex(memway->second) << "]" << std::endl;
             ++memway; } }
@@ -240,67 +240,75 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
     out << indent++ << "input_xbar:" << std::endl;
     for (auto &group : sort)
         out << indent << "group " << group.first << ": " << group.second << std::endl;
-    if (use.hash_table_input) {
-        for (int ht : bitvec(use.hash_table_input)) {
-            out << indent++ << "hash " << ht << ":" << std::endl;
-            unsigned half = ht & 1;
-            unsigned done = 0, mask_bits = 0;
-            vector<Slice> match_data;
-            vector<Slice> ghost;
-            for (auto &match : sort.at(ht/2)) {
-                Slice reg = match.second;
-                if (match.first/64U != half) {
-                    if ((match.first + reg.width() - 1)/64U != half)
-                        continue;
-                    assert(half);
-                    reg = reg(64 - match.first, 64);
-                } else if ((match.first + reg.width() - 1)/64U != half) {
-                    assert(!half);
-                    reg = reg(0, 63 - match.first); }
-                if (!reg) continue;
-                if (as == nullptr) {
-                    auto reg_hash = reg - fmt->ghost_bits;
-                    if (auto reg_ghost = reg - reg_hash)
-                        ghost.push_back(reg_ghost);
-                    if (reg_hash)
-                        match_data.emplace_back(reg_hash);
-                } else {
-                    match_data.emplace_back(reg);
+    int hash_group = 0;
+    for (auto hash_table_input : use.hash_table_inputs) {
+        if (hash_table_input) {
+            for (int ht : bitvec(hash_table_input)) {
+                out << indent++ << "hash " << ht << ":" << std::endl;
+                unsigned half = ht & 1;
+                unsigned done = 0, mask_bits = 0;
+                vector<Slice> match_data;
+                vector<Slice> ghost;
+                for (auto &match : sort.at(ht/2)) {
+                    Slice reg = match.second;
+                    if (match.first/64U != half) {
+                        if ((match.first + reg.width() - 1)/64U != half)
+                            continue;
+                        assert(half);
+                        reg = reg(64 - match.first, 64);
+                    } else if ((match.first + reg.width() - 1)/64U != half) {
+                        assert(!half);
+                        reg = reg(0, 63 - match.first); }
+                    if (!reg) continue;
+                    if (as == nullptr) {
+                        auto reg_hash = reg - fmt->ghost_bits;
+                        if (auto reg_ghost = reg - reg_hash)
+                            ghost.push_back(reg_ghost);
+                        if (reg_hash)
+                            match_data.emplace_back(reg_hash);
+                    } else {
+                        match_data.emplace_back(reg);
+                    }
                 }
+                // FIXME: This is obviously an issue for larger selector tables, whole function needs
+                // to be replaced
+                if (as != nullptr) {
+                    if (as->mode == "fair")
+                        out << indent << "0..13: "
+                            << FormatHash(match_data, ghost, as) << std::endl;
+                    else
+                        out << indent << "0..50: "
+                            << FormatHash(match_data, ghost, as) << std::endl;
+                }
+                for (auto &way : use.way_use) {
+                    mask_bits |= way.mask;
+                    if (done & (1 << way.slice)) continue;
+                    done |= 1 << way.slice;
+                    out << indent << (way.slice*10) << ".." << (way.slice*10 + 9) << ": "
+                        << FormatHash(match_data, ghost) << std::endl; }
+                for (auto range : bitranges(mask_bits)) {
+                    out << indent << (range.first+40);
+                    if (range.second != range.first) out << ".." << (range.second+40);
+                    out << ": " << FormatHash(match_data, ghost) << std::endl; }
+                for (auto ident : use.bit_use) {
+                    out << indent << (40 + ident.bit);
+                    if (ident.width > 1)
+                        out << ".." << (39 + ident.bit + ident.width);
+                    out << ": " << Slice(phv, ident.field, ident.lo, ident.lo + ident.width - 1)
+                        << std:: endl;
+                    assert(hash_group == -1 || hash_group == ident.group);
+                }
+                --indent;
             }
-            // FIXME: This is obviously an issue for larger selector tables, whole function needs
-            // to be replaced
-            if (as != nullptr) {
-                if (as->mode == "fair")
-                    out << indent << "0..13: " << FormatHash(match_data, ghost, as) << std::endl;
-                else
-                    out << indent << "0..50: " << FormatHash(match_data, ghost, as) << std::endl;
-                hash_group = use.select_use[0].group;
+            if (hash_group >= 0) {
+                out << indent++ << "hash group " << hash_group << ":" << std::endl;
+                out << indent << "table: [" << emit_vector(bitvec(hash_table_input), ", ") << "]"
+                    << std::endl;
+                --indent;
             }
-            for (auto &way : use.way_use) {
-                mask_bits |= way.mask;
-                if (done & (1 << way.slice)) continue;
-                done |= 1 << way.slice;
-                out << indent << (way.slice*10) << ".." << (way.slice*10 + 9) << ": "
-                    << FormatHash(match_data, ghost) << std::endl; }
-            for (auto range : bitranges(mask_bits)) {
-                out << indent << (range.first+40);
-                if (range.second != range.first) out << ".." << (range.second+40);
-                out << ": " << FormatHash(match_data, ghost) << std::endl; }
-            for (auto ident : use.bit_use) {
-                out << indent << (40 + ident.bit);
-                if (ident.width > 1)
-                    out << ".." << (39 + ident.bit + ident.width);
-                out << ": " << Slice(phv, ident.field, ident.lo, ident.lo + ident.width - 1)
-                    << std:: endl;
-                assert(hash_group == -1 || hash_group == ident.group);
-                hash_group = ident.group; }
-            --indent; } }
-    if (hash_group >= 0) {
-        out << indent++ << "hash group " << hash_group << ":" << std::endl;
-        out << indent << "table: [" << emit_vector(bitvec(use.hash_table_input), ", ") << "]"
-            << std::endl;
-        --indent; }
+        hash_group++;
+        }
+    }
 }
 
 class memory_vector {
