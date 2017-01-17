@@ -640,7 +640,6 @@ void IXBar::layout_option_calculation(const IR::MAU::Table::LayoutOption *layout
     } else {
         last = layout_option->way_sizes.size();
     }
-    LOG1("Layout option calculation");
 }
 
 bool IXBar::allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc,
@@ -790,7 +789,6 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
     for (auto &way_use : alloc.way_use) {
         used_bits |= way_use.mask;
     }
-    LOG1("Free Bits is " << free_bits << " and way bits " << way_bits);
 
     if (way_bits == 0) {
         way_mask = 0;
@@ -806,7 +804,6 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
         for (int i = starting_bit; i < way_bits; i++) {
             way_mask |= (1U << i);
         }
-        LOG1("Way mask of shared is " << way_mask);
     } else if (__builtin_popcount(free_bits) < way_bits) {
         LOG3("Free bits available is too small");
         return false;
@@ -845,12 +842,14 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
         if (info.second.xor_with) {
             flags |= IXBar::Use::NeedXor;
             alloc.gw_search_bus = true;
+            LOG1("Table " << tbl->name << " requires XOR");
             // FIXME: This need to be coordinated with the actual PHV!!!
             alloc.gw_search_bus_bytes += (info.first->size + 7)/8;
         } else if (info.second.need_range) {
             flags |= IXBar::Use::NeedRange;
             alloc.gw_hash_group = true;
         } else {
+            LOG1("Table " << tbl->name << " requires search bus");
             alloc.gw_search_bus = true;
             alloc.gw_search_bus_bytes += (info.first->size + 7)/8;
         }
@@ -979,7 +978,6 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_a
     /* Determine number of groups needed.  Loop through them, alloc match will be the same
        for these.  Alloc All Hash Ways will required multiple groups, and may need to change  */
     LOG1("IXBar::allocTable(" << tbl->name << ")");
-    LOG1("Way sizes for allocation " << lo->way_sizes);
     if (tbl->match_table) {
         bool ternary = tbl->layout.ternary;
         vector<IXBar::Use::Byte *> alloced;
@@ -989,7 +987,6 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_a
         while (!finished) {
             Use next_alloc;
             layout_option_calculation(lo, start, last);
-            LOG1("Start and Last " << start << " " << last);
             int hash_groups = (last - start > 4) ? 4 : last - start;
             if (!(allocMatch(ternary, tbl->match_table, phv, next_alloc, 
                              alloced, false, hash_groups)
@@ -1030,6 +1027,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_a
     if (!allocGateway(tbl, phv, gw_alloc, false) && !allocGateway(tbl, phv, gw_alloc, true)) {
         gw_alloc.clear();
         tbl_alloc.clear();
+        sel_alloc.clear();
         return false; }
     return true;
 }

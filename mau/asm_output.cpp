@@ -314,8 +314,8 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
                     << std::endl;
                 --indent;
             }
-        hash_group++;
         }
+        hash_group++;
     }
 }
 

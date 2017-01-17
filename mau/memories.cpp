@@ -48,7 +48,11 @@ void Memories::clear_table_vectors() {
 void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
                          TableResourceAlloc *resources, const IR::MAU::Table::LayoutOption *lo,
                          int entries) {
-    auto *ta = new table_alloc(t, &resources->match_ixbar, &resources->memuse, lo, entries);
+    table_alloc *ta; 
+    if (t->match_table)
+        ta = new table_alloc(t, &resources->match_ixbar, &resources->memuse, lo, entries);
+    else
+        ta = new table_alloc(t, &resources->gateway_ixbar, &resources->memuse, lo, entries);
     tables.push_back(ta);
     if (gw != nullptr)  {
         auto *ta_gw = new table_alloc(gw, &resources->gateway_ixbar, &resources->memuse, lo, -1);
@@ -470,8 +474,8 @@ void Memories::break_exact_tables_into_ways() {
             
             (*ta->memuse)[ta->table->name].ways.emplace_back(ta->layout_option->way_sizes[index],
                                                              way.mask);
-            index++;
             LOG1("Way sizes " << ta->layout_option->way_sizes[index]);
+            index++;
         }
         
         /*
@@ -1973,8 +1977,8 @@ bool Memories::gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int wid
     // FIXME: Needs to better orient with the layout
     int bytes_needed = exact_ta->table->layout.match_bytes;
     bytes_needed = (exact_ta->table->layout.overhead_bits + 7) / 8;
-    int groups = exact_ta->table->ways[0].match_groups;
-    int width = exact_ta->table->ways[0].width;
+    int groups = exact_ta->layout_option->way->match_groups;
+    int width = exact_ta->layout_option->way->width;
     bytes_needed *= groups * width;
     // FIXME: For version bits
     bytes_needed += groups / 2 * width;
@@ -1997,6 +2001,8 @@ bool Memories::allocate_all_gw() {
             name = ta->table_link->table->name + "$gw";
         auto &alloc = (*ta->memuse)[name];
         bool found = false;
+        LOG1("Match Ixbar " << ta->table->name 
+              << " requires search bus " << ta->match_ixbar->gw_search_bus);
         // Tries to find a bus to share with the current table
         for (int i = 0; i < SRAM_ROWS; i++) {
             if (gateway_use[i][0] && gateway_use[i][1]) continue;
@@ -2011,7 +2017,8 @@ bool Memories::allocate_all_gw() {
                 table_alloc *exact_ta = find_corresponding_exact_match(bus.first);
                 // FIXME: this is just a temporary patch
                 if (ta->match_ixbar->gw_search_bus) {
-                    if (!gw_search_bus_fit(ta, exact_ta, bus.second, i, j)) continue;
+                    continue;
+                    //if (!gw_search_bus_fit(ta, exact_ta, bus.second, i, j)) continue;
                 }
                 if (ta->match_ixbar->gw_hash_group) {
                     // FIXME: Currently all ways shared the same hash_group
@@ -2019,6 +2026,7 @@ bool Memories::allocate_all_gw() {
                         != exact_ta->match_ixbar->way_use[0].group)
                          continue;
                 }
+                LOG1("We made it to this point");
                 exact_ta->attached_gw_bytes += ta->match_ixbar->gw_search_bus_bytes;
                 gw_bytes_per_sb[i][j] += ta->match_ixbar->gw_search_bus_bytes;
                 gateway_use[i][current_gw] = name;
