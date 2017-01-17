@@ -60,11 +60,16 @@ struct StageUseEstimate {
     void set_provided(const IR::MAU::Table::LayoutOption *a);
 
     void calculate_for_leftover_srams(const IR::MAU::Table *tbl, int srams_left, int &entries);
+    void calculate_for_leftover_tcams(const IR::MAU::Table *tbl, int srams_left, int tcams_left,
+                                      int &entries);
     void known_srams_needed(const IR::MAU::Table *tbl, IR::MAU::Table::LayoutOption *lo);
     void unknown_srams_needed(const IR::MAU::Table *tbl, IR::MAU::Table::LayoutOption *lo,
                               int srams_left);
+    void unknown_tcams_needed(const IR::MAU::Table *tbl, IR::MAU::Table::LayoutOption *lo, 
+                              int tcams_left, int srams_left);
     void calculate_way_sizes(IR::MAU::Table::LayoutOption *lo, int &calculated_depth);
     void srams_left_best_option();
+    void tcams_left_best_option();
     struct RAM_counter {
         int per_word;
         int width;
@@ -72,6 +77,8 @@ struct StageUseEstimate {
         RAM_counter() : per_word (0), width(0), need_maprams(false) {}
         RAM_counter(int p, int w, bool nm) : per_word(p), width(w), need_maprams(nm) {}
     };
+    void calculate_per_row_vector(vector<RAM_counter> &per_word_and_width,
+                                  const IR::MAU::Table *tbl, IR::MAU::Table::LayoutOption *lo);
 };
 
 

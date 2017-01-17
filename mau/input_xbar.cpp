@@ -804,8 +804,9 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
         if (starting_bit + way_bits >= used_count)
             BUG("Allocated bigger way before smaller way");
         for (int i = starting_bit; i < way_bits; i++) {
-            way_mask |= 1U << starting_bit;
+            way_mask |= (1U << i);
         }
+        LOG1("Way mask of shared is " << way_mask);
     } else if (__builtin_popcount(free_bits) < way_bits) {
         LOG3("Free bits available is too small");
         return false;
@@ -978,6 +979,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_a
     /* Determine number of groups needed.  Loop through them, alloc match will be the same
        for these.  Alloc All Hash Ways will required multiple groups, and may need to change  */
     LOG1("IXBar::allocTable(" << tbl->name << ")");
+    LOG1("Way sizes for allocation " << lo->way_sizes);
     if (tbl->match_table) {
         bool ternary = tbl->layout.ternary;
         vector<IXBar::Use::Byte *> alloced;
@@ -1029,9 +1031,6 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_a
         gw_alloc.clear();
         tbl_alloc.clear();
         return false; }
-    for (auto byte : tbl_alloc.use) {
-        LOG1("Byte is " << byte);
-    }
     return true;
 }
 

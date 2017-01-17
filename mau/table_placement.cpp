@@ -427,6 +427,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             avail.maprams -= current.maprams; }
 
         int srams_left = avail.srams;
+        int tcams_left = avail.tcams;
         while (!advance_to_next_stage &&
                (!(rv->use <= avail) ||
                (allocated = try_alloc_mem(rv, done, rv->entries, resources,
@@ -434,6 +435,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             rv->need_more = true;
             if (!t->layout.ternary)
                 rv->use.calculate_for_leftover_srams(t, srams_left, rv->entries);
+            else
+                rv->use.calculate_for_leftover_tcams(t, tcams_left, srams_left, rv->entries);
 
             LOG1("rv->entries is " << rv->entries);
             if (rv->entries < min_entries) {
@@ -442,7 +445,11 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
                 advance_to_next_stage = true;
                 break;
             }
-            srams_left--;
+            if (!t->layout.ternary)
+                srams_left--;
+            else
+                tcams_left--;
+
             LOG3(" - reducing to " << rv->entries << " of " << t->name
                  << " in stage " << rv->stage);
             if (!try_alloc_ixbar(rv, done, phv, rv->use, resources)) {
@@ -776,17 +783,10 @@ static void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *r
 static void select_layout_option(IR::MAU::Table *tbl,
                                  const IR::MAU::Table::LayoutOption *layout_option) {
     LOG1("select layout option");
+    LOG1("Layout Option " << layout_option->way->match_groups << " " 
+         << layout_option->way->width << " " << layout_option->action_data_required
+         << layout_option->way_sizes);
     tbl->layout.copy(*(layout_option->layout));
-    if (layout_option->ternary_indirect_required) {
-        LOG1("  Adding Ternary Indirect table to " << tbl->name);
-        auto *tern_indir = new IR::MAU::TernaryIndirect(tbl->name);
-        tbl->attached.push_back(tern_indir); 
-    }
-    if (layout_option->action_data_required) {
-        LOG1("  Adding Action Data Table to " << tbl->name);
-        auto *act_data = new IR::MAU::ActionData(tbl->name);
-        tbl->attached.push_back(act_data);
-    }
     if (!layout_option->layout->ternary) {
         tbl->ways.resize(layout_option->way_sizes.size());
         int index = 0;
@@ -798,6 +798,22 @@ static void select_layout_option(IR::MAU::Table *tbl,
         }
     }
 }
+
+static void add_attached_tables(IR::MAU::Table *tbl,
+                                const IR::MAU::Table::LayoutOption *layout_option) {
+    
+    if (layout_option->ternary_indirect_required) {
+        LOG1("  Adding Ternary Indirect table to " << tbl->name);
+        auto *tern_indir = new IR::MAU::TernaryIndirect(tbl->name);
+        tbl->attached.push_back(tern_indir); 
+    }
+    if (layout_option->action_data_required) {
+        LOG1("  Adding Action Data Table to " << tbl->name);
+        auto *act_data = new IR::MAU::ActionData(tbl->name);
+        tbl->attached.push_back(act_data);
+    }
+}
+
 
 IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
     auto it = table_placed.find(tbl->name);
@@ -824,6 +840,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         gw_layout.copy(tbl->layout);
         gw_layout_used = true;
         select_layout_option(tbl, it->second->use.preferred()); 
+        add_attached_tables(tbl, it->second->use.preferred());
         tbl->layout += gw_layout;
         /*
         tbl->attached = match->attached;
@@ -863,6 +880,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
                     tbl->next[gw.second] = new IR::MAU::TableSeq();
     } else if (it->second->table->match_table) {
         select_layout_option(tbl, it->second->use.preferred());
+        add_attached_tables(tbl, it->second->use.preferred());
     }
 
     if (table_placed.count(tbl->name) == 1) {

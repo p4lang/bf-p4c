@@ -720,7 +720,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
     assert(have_action || (tbl->layout.action_data_bytes <=
                            tbl->layout.action_data_bytes_in_overhead));
 
-    bool        need_next_hit_map = false;
+    bool need_next_hit_map = false;
     for (auto &next : tbl->next) {
         if (next.first[0] != '$') {
             need_next_hit_map = true;

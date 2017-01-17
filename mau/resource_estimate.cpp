@@ -369,10 +369,9 @@ void StageUseEstimate::known_srams_needed(const IR::MAU::Table *tbl,
     }
 }
 
-void StageUseEstimate::unknown_srams_needed(const IR::MAU::Table *tbl,
-                                            IR::MAU::Table::LayoutOption *lo,
-                                            int srams_left) {
-    vector <RAM_counter> per_word_and_width;
+void StageUseEstimate::calculate_per_row_vector(vector<RAM_counter> &per_word_and_width,
+                                                const IR::MAU::Table *tbl,
+                                                IR::MAU::Table::LayoutOption *lo) {
     for (auto at : tbl->attached) {
          int per_word = 0;
          int width = 1;
@@ -406,6 +405,15 @@ void StageUseEstimate::unknown_srams_needed(const IR::MAU::Table *tbl,
         int per_word = TernaryIndirectPerWord(lo->layout, tbl);
         per_word_and_width.emplace_back(per_word, width, false);
     }
+
+}
+
+void StageUseEstimate::unknown_srams_needed(const IR::MAU::Table *tbl,
+                                            IR::MAU::Table::LayoutOption *lo,
+                                            int srams_left) {
+    vector<RAM_counter> per_word_and_width;
+    calculate_per_row_vector(per_word_and_width, tbl, lo);
+
     int available_srams = srams_left - lo->srams;
     int used_srams = 0; int used_maprams = 0;
     int adding_entries = 0;
@@ -461,6 +469,58 @@ void StageUseEstimate::srams_left_best_option() {
     preferred_index = 0;
 }
 
+void StageUseEstimate::unknown_tcams_needed(const IR::MAU::Table *tbl,
+                                            IR::MAU::Table::LayoutOption *lo,
+                                            int tcams_left, int srams_left) { 
+    vector<RAM_counter> per_word_and_width;
+    calculate_per_row_vector(per_word_and_width, tbl, lo);
+
+    int available_srams = srams_left - lo->srams;
+    int available_tcams = tcams_left;
+    int adding_entries = 0;
+    int used_srams = 0; int used_maprams = 0; int used_tcams = 0;
+    int depth = 1;
+
+    while (true) {
+        int sram_count = 0; int mapram_count = 0; int tcam_count = 0;
+        int attempted_entries = depth * 512;
+        tcam_count += depth;
+        for (auto rc : per_word_and_width) { 
+            int entries_per_sram = 1024 * rc.per_word;
+            int units = (attempted_entries + entries_per_sram - 1) / entries_per_sram;
+            sram_count += units * rc.width;
+            if (rc.need_maprams)
+                mapram_count += units;
+        }
+
+        if (sram_count > available_srams || tcam_count > available_tcams) break;
+        depth++;
+        adding_entries = attempted_entries;
+        used_srams = sram_count;
+        used_maprams = mapram_count; 
+        used_tcams = tcam_count;
+    }
+    lo->srams += used_srams;
+    lo->maprams += used_maprams;
+    lo->tcams += used_tcams;
+    lo->entries = adding_entries;
+}
+
+void StageUseEstimate::tcams_left_best_option() {
+    std::sort(layout_options.begin(), layout_options.end(),
+        [=](const IR::MAU::Table::LayoutOption &a, const IR::MAU::Table::LayoutOption &b) {
+        int t;
+        if ((t = a.entries - b.entries) != 0) return t > 0;
+        if ((t = a.srams - b.srams) != 0) return t < 0;
+        if (!a.ternary_indirect_required) return true;
+        if (!b.ternary_indirect_required) return false;
+        if (!a.action_data_required) return true;
+        if (!b.action_data_required) return false;
+        return true;
+    });
+    preferred_index = 0;
+}
+
 void StageUseEstimate::calculate_for_leftover_srams(const IR::MAU::Table *tbl, int srams_left,
                                                     int &entries) {
     LOG1("srams left " << srams_left);
@@ -472,5 +532,18 @@ void StageUseEstimate::calculate_for_leftover_srams(const IR::MAU::Table *tbl, i
         unknown_srams_needed(tbl, &lo, srams_left);
     }
     srams_left_best_option();
+    fill_estimate_from_option(entries);
+}
+
+void StageUseEstimate::calculate_for_leftover_tcams(const IR::MAU::Table *tbl, int tcams_left,
+                                                    int srams_left, int &entries) {
+    layout_options.clear();
+    layout_options = tbl->layout_options;
+    for (auto &lo : layout_options) {
+        lo.clear_mems();
+        known_srams_needed(tbl, &lo);
+        unknown_tcams_needed(tbl, &lo, tcams_left, srams_left);
+    }
+    tcams_left_best_option();
     fill_estimate_from_option(entries);
 }
