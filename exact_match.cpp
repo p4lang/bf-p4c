@@ -492,8 +492,12 @@ void ExactMatchTable::write_regs() {
                 hash_group = ways[way.way].group;
                 setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus], hash_group);
                 first = false;
-            } else
-                assert(hash_group == ways[way.way].group);
+            } else if (hash_group != ways[way.way].group) {
+                auto first_way = way_map[std::make_pair(row.row, row.cols[0])];
+                error(ways[way.way].lineno, "table %s ways #%d and #%d use the same row bus "
+                      "(%d.%d) but different hash groups", name(), first_way.way, way.way,
+                      row.row, row.bus);
+                hash_group = ways[way.way].group; }
             assert(way.word == (int)word);
             setup_muxctl(vh_adr_xbar.exactmatch_mem_hashadr_xbar_ctl[col],
                          ways[way.way].subgroup + row.bus*5);
