@@ -413,21 +413,6 @@ inline std::ostream &operator<<(std::ostream &out, const map::element_ref &el) {
     el->print_on(out);
     return out; }
 
-class istream : public virtual std::istream {
-public:
-    istream(std::istream &s) : std::istream(s.rdbuf()) {}
-};
-
-class ostream : public virtual std::ostream {
-public:
-    ostream(std::ostream &s) : std::ostream(s.rdbuf()) {}
-};
-
-class iostream : public virtual istream, virtual ostream, virtual std::iostream {
-public:
-    iostream(std::iostream &s) : istream(s), ostream(s), std::iostream(s.rdbuf()) {}
-};
-
 }  // end namespace json
 
 extern void dump(const json::obj *);
