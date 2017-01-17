@@ -311,6 +311,7 @@ static void gen_dump_unread_method(std::ostream &out, json::map *m,
                                    indent_t indent,
                                    const std::string &classname)
 {
+#pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
     out << indent++ << "void ";
     if (gen_definitions == DEFN_ONLY) out << classname << "::";
