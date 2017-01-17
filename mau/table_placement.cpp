@@ -770,7 +770,7 @@ static void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *r
         auto &mem = resources->memuse.at(tbl->name);
         assert(tbl->ways.size() == mem.ways.size());
         for (unsigned i = 0; i < tbl->ways.size(); ++i)
-            tbl->ways[i].entries = mem.ways[i].first * 1024 * tbl->ways[i].match_groups; }
+            tbl->ways[i].entries = mem.ways[i].size * 1024 * tbl->ways[i].match_groups; }
 }
 
 static void select_layout_option(IR::MAU::Table *tbl,
@@ -805,6 +805,10 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         assert(strchr(tbl->name, '.'));
         return tbl; }
     tbl->logical_id = it->second->logical_id;
+    // FIXME: Currently the gateway is laid out for every table, so I'm keeping the information
+    // in split tables.  In the future, there should be no gw_layout for split tables
+    IR::MAU::Table::Layout gw_layout;
+    bool gw_layout_used = false;
 
     if (it->second->gw && it->second->gw->name == tbl->name) {
         /* fold gateway and match table together */
@@ -817,8 +821,8 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
                 gw.second = cstring();
         tbl->match_table = match->match_table;
         tbl->actions = match->actions;
-        IR::MAU::Table::Layout gw_layout;
         gw_layout.copy(tbl->layout);
+        gw_layout_used = true;
         select_layout_option(tbl, it->second->use.preferred()); 
         tbl->layout += gw_layout;
         /*
@@ -876,6 +880,9 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         char suffix[8];
         snprintf(suffix, sizeof(suffix), ".%d", ++counter);
         auto *table_part = tbl->clone_rename(suffix);
+        select_layout_option(table_part, it->second->use.preferred());
+        if (gw_layout_used)
+            tbl->layout += gw_layout;
         table_part->logical_id = it->second->logical_id;
         table_set_resources(table_part, it->second->resources->clone_rename(suffix, tbl->name),
                             it->second->entries);

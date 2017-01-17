@@ -640,6 +640,7 @@ void IXBar::layout_option_calculation(const IR::MAU::Table::LayoutOption *layout
     } else {
         last = layout_option->way_sizes.size();
     }
+    LOG1("Layout option calculation");
 }
 
 bool IXBar::allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc,
@@ -774,7 +775,7 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
             BUG("Group was allocated with no available space to push hash ways");
         } else {
             group = alloc.way_use[alloc.way_use.size() % way_groups_allocated(alloc)].slice;
-            shared = false;
+            shared = true;
         }
         LOG3("all hash slices in use, reusing " << group); }
 
@@ -789,6 +790,7 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
     for (auto &way_use : alloc.way_use) {
         used_bits |= way_use.mask;
     }
+    LOG1("Free Bits is " << free_bits << " and way bits " << way_bits);
 
     if (way_bits == 0) {
         way_mask = 0;
@@ -805,7 +807,8 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
             way_mask |= 1U << starting_bit;
         }
     } else if (__builtin_popcount(free_bits) < way_bits) {
-        BUG("The number of way bits is smaller than the number of free bits left");    
+        LOG3("Free bits available is too small");
+        return false;
     } else {
         int bits_needed = way_bits;
         for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {

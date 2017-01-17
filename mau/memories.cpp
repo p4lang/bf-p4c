@@ -467,6 +467,7 @@ void Memories::break_exact_tables_into_ways() {
                                              ta->layout_option->way->width, index,
                                              way.group, SRAM_group::EXACT);
             exact_match_ways.push_back(wa);
+            
             (*ta->memuse)[ta->table->name].ways.emplace_back(ta->layout_option->way_sizes[index],
                                                              way.mask);
             index++;
@@ -640,6 +641,11 @@ bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols, unsigned c
             sram_use[selected_rows[i]][selected_cols[j]] = wa->ta->table->name;
             alloc_row.col.push_back(selected_cols[j]);
         }
+        
+        for (size_t j = 0; j < selected_cols.size(); j++) {
+            alloc.ways[wa->number].rams.emplace_back(selected_rows[i], selected_cols[j]);
+        }
+
         sram_inuse[selected_rows[i]] |= row_mask;
         if (!sram_match_bus[selected_rows[i]][bus].first) {
             sram_match_bus[selected_rows[i]][bus]

@@ -88,10 +88,16 @@ struct Memories {
                 out << "Row " << row << " with bus " << bus;
             }
         };
-        vector<Row>     row;
+        struct Way {
+            int size;
+            unsigned select_mask;
+            vector<std::pair<int, int>> rams;
+            explicit Way(int s, unsigned sm) : size(s), select_mask(sm) {}
+        };
+        vector<Row>                          row;
         vector<Row>                          color_mapram;
         vector<std::pair<int, int>>          home_row;
-        vector<std::pair<int, unsigned>>     ways;
+        vector<Way>                          ways;
         int                                  per_row;
         bool                                 unattached_profile = false;
         cstring                              profile_name;

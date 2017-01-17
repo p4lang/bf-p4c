@@ -234,7 +234,15 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
             //    BUG("multiple hash groups use in ways");
             //hash_group = way.group;
             out << indent << "- [" << way.group << ", " << way.slice << ", 0x"
-                << hex(memway->second) << "]" << std::endl;
+                << hex(memway->select_mask) << ", ";
+            size_t index = 0;
+            for (auto ram : memway->rams) {
+                out << "[" << ram.first << ", " << (ram.second + 2) << "]";
+                if (index < memway->rams.size() - 1)
+                    out << ", ";
+                index++;
+            }
+            out  << "]" << std::endl;
             ++memway; } }
     if (use.use.empty()) return;
     out << indent++ << "input_xbar:" << std::endl;
@@ -270,8 +278,8 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
                         match_data.emplace_back(reg);
                     }
                 }
-                // FIXME: This is obviously an issue for larger selector tables, whole function needs
-                // to be replaced
+                // FIXME: This is obviously an issue for larger selector tables,
+                //  whole function needs to be replaced
                 if (as != nullptr) {
                     if (as->mode == "fair")
                         out << indent << "0..13: "

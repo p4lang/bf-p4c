@@ -86,7 +86,7 @@ void StageUseEstimate::calculate_way_sizes(IR::MAU::Table::LayoutOption *lo,
     //Cannot share a single hash group
     } else {
         int test_depth = calculated_depth > 64 ? 64 : calculated_depth;
-        int max_group_size = (1 << ceil_log2(test_depth)) / 4;
+        int max_group_size = (1 << floor_log2(test_depth)) / 4;
         int depth = calculated_depth > 80 ? 80 : calculated_depth;
         while (depth > 0) {
             if (max_group_size <= depth) {
@@ -106,47 +106,7 @@ void StageUseEstimate::options_to_ways(const IR::MAU::Table *tbl, int &entries) 
         int per_row = lo.way->match_groups;
         int total_depth = (entries + per_row * 1024 - 1) / (per_row * 1024); 
         int calculated_depth = total_depth;
-        //Need to have a larger depth in ways than it's total 
-        if (total_depth < 8) {
-            switch (total_depth) {
-                case 1:
-                    lo.way_sizes = {1, 1, 1};
-                    calculated_depth = 3;
-                    break;
-                case 2:
-                    lo.way_sizes = {1, 1, 1, 1};
-                    calculated_depth = 4;
-                    break;
-                case 3:
-                    lo.way_sizes = {1, 1, 1, 1};
-                    calculated_depth = 4;
-                    break;
-                case 4:
-                    lo.way_sizes = {1, 1, 1, 1};
-                    break;
-                case 5:
-                    lo.way_sizes = {2, 1, 1, 1};
-                    break;
-                case 6:
-                    lo.way_sizes = {2, 2, 1, 1};
-                    break;
-                case 7:
-                    lo.way_sizes = {2, 2, 2, 1};
-                    break;
-            }
-        //Cannot share a single hash group
-        } else {
-            int max_group_size = (1 << ceil_log2(total_depth)) / 4;
-            int depth = total_depth;
-            while (depth > 0) {
-                if (max_group_size <= depth) {
-                    lo.way_sizes.push_back(max_group_size);
-                    depth -= max_group_size; 
-                } else {
-                    max_group_size /= 2;
-                }
-            }
-        }
+        calculate_way_sizes(&lo, calculated_depth);
         lo.entries = calculated_depth * lo.way->match_groups * 1024;
         lo.srams = calculated_depth * lo.way->width;
         lo.maprams = 0;
@@ -253,6 +213,10 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
         std::sort(layout_options.begin(), layout_options.end(),
             [=](const IR::MAU::Table::LayoutOption &a, const IR::MAU::Table::LayoutOption &b) {
             int t;
+            // The next two lines are to prevent sharing a group across multiple widths,
+            // as the asm doesn't yet handle this
+            if ((t = a.way->match_groups % a.way->width) != 0) return false;
+            if ((t = b.way->match_groups % b.way->width) != 0) return true;
             if ((t = a.srams - b.srams) != 0) return t < 0;
             if ((t = a.way->width - b.way->width) != 0) return t < 0;
             if ((t = a.way->match_groups - b.way->match_groups) != 0) return t < 0;
@@ -264,6 +228,8 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
         std::sort(layout_options.begin(), layout_options.end(),
             [=](const IR::MAU::Table::LayoutOption a, const IR::MAU::Table::LayoutOption b) {
             int t;
+            if ((t = a.way->match_groups % a.way->width) != 0) return false;
+            if ((t = b.way->match_groups % b.way->width) != 0) return true;
             if ((t = a.srams - b.srams) != 0) return t < 0;
             if ((t = a.way->width - b.way->width) != 0) return t < 0;
             if ((t = a.way->match_groups - b.way->match_groups) != 0) return t > 0;
@@ -272,7 +238,6 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
             return true;
         });
     }
-    /*
     LOG1("table " << tbl->name << " requiring " << tbl->match_table->size << " entries.");
     if (small_table_allocation)
         LOG1("small table allocation");
@@ -284,7 +249,6 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
               << " action data " << lo.action_data_required); 
         LOG1("Layout option way sizes " << lo.way_sizes);
     }
-    */
 
     preferred_index = 0;
 }
@@ -444,14 +408,15 @@ void StageUseEstimate::unknown_srams_needed(const IR::MAU::Table *tbl,
     }
     int available_srams = srams_left - lo->srams;
     int used_srams = 0; int used_maprams = 0;
-    int entries = 0;
+    int adding_entries = 0;
     int depth = 1;
 
     while (true) {
         int sram_count = 0;
         int mapram_count = 0;
         int attempted_entries = lo->way->match_groups * 1024 * depth;
-        sram_count += attempted_entries / 1024 * lo->way->width;
+        LOG1("Match groups and depth " << lo->way->match_groups << " " << depth);
+        sram_count += attempted_entries / (lo->way->match_groups * 1024) * lo->way->width;
         for (auto rc : per_word_and_width) {
             int entries_per_sram = 1024 * rc.per_word;
             int units = (attempted_entries + entries_per_sram - 1) / entries_per_sram;
@@ -459,11 +424,10 @@ void StageUseEstimate::unknown_srams_needed(const IR::MAU::Table *tbl,
             if (rc.need_maprams)
                 mapram_count += units;
         }
-        LOG1("SRAM count " << sram_count);
 
         if (sram_count > available_srams) break;
         depth++;
-        entries = attempted_entries;
+        adding_entries = attempted_entries;
         used_srams = sram_count;
         used_maprams = mapram_count;
     }
@@ -471,15 +435,17 @@ void StageUseEstimate::unknown_srams_needed(const IR::MAU::Table *tbl,
     calculate_way_sizes(lo, depth);
     lo->srams += used_srams;
     lo->maprams += used_maprams;
-    lo->entries = entries;
-    LOG1("layout option " << lo->srams << " " << lo->maprams << " " << lo->entries);  
-    LOG1("Way sizes " << lo->way_sizes);
+    lo->entries = adding_entries;
+    LOG1("Entries is " << adding_entries << " for layout option " << lo->way->match_groups
+          << " " << lo->way->width << " with depth " << depth);
 }
 
 void StageUseEstimate::srams_left_best_option() {
     std::sort(layout_options.begin(), layout_options.end(),
         [=](const IR::MAU::Table::LayoutOption &a, const IR::MAU::Table::LayoutOption &b) {
         int t;
+        if ((t = a.way->match_groups % a.way->width) != 0) return false;
+        if ((t = b.way->match_groups % b.way->width) != 0) return true;
         if ((t = a.entries - b.entries) != 0) return t > 0;
         if ((t = a.way->width - b.way->width) != 0) return t < 0;
         if (!a.action_data_required) return true;
