@@ -1157,7 +1157,7 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(const c
     vpn_params(width, depth, period, period_name);
     json::map mra;
     mra["memory_type"] = type;
-    json::vector mem_units[depth/period];
+    std::vector<json::vector> mem_units(depth/period);
     json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
     int ctr = 0;
     bool no_vpns = false;
