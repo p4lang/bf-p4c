@@ -31,7 +31,7 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
         LOG1("***************Cluster_PHV_Requirements called w/ 0 clusters***************");
     }
     //
-    int cluster_num = 0; 
+    int cluster_num = 0;
     for (auto p : Values(cluster_i.dst_map())) {
         std::stringstream ss;
         ss << cluster_num++;
