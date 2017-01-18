@@ -77,6 +77,7 @@ IXBarRealign::Realign::Realign(const PhvInfo &phv, int stage, const IXBar &ixbar
             int byte = (use.second - alloc.field_bit + alloc.container_bit)/8;
             if ((((i + off) ^ byte) & mask) != 0) {
                 LOG1("Ternary ixbar needs realignment stage " << stage << " group " << grp);
+                LOG2("......field = " << field << " " << alloc);
                 throw IXBar::failure(stage, grp); } } }
 }
 

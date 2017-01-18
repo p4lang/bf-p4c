@@ -288,6 +288,17 @@ void Cluster::end_apply() {
             dst_map_i[lhs] = nullptr;
             delete_list.push_back(lhs);
         }
+        // container contiguous group fields
+        // a->ccgf_fields = [a, b, c], a->ccgf = a, b->ccgf = a, c->ccgf = a
+        // dst_map_i[a] = (a), dst_map_i[b] = (b)
+        // (a) += (b); remove dst_map_i[b]
+        //
+        if (lhs->ccgf && lhs->ccgf != lhs && dst_map_i.count(lhs->ccgf)) {
+            LOG4(".....ccgf fold " << lhs->name << "..into.. " << lhs->ccgf->name);
+            // insert_cluster(lhs->ccgf, lhs);
+            dst_map_i[lhs] = nullptr;
+            delete_list.push_back(lhs);
+        }
     }
     for (auto &fp : delete_list) {
         dst_map_i.erase(fp);                                            // erase map key
@@ -523,6 +534,7 @@ void Cluster::insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rh
                     delete dst_map_i_rhs;                            // delete std::set
                 }
             }
+            LOG4("insert_cluster .....");
             LOG4("lhs_unique..erase[" << std::endl << &lhs_unique_i << "lhs_unique..erase]");
         }
     }
