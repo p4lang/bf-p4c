@@ -35,7 +35,7 @@ blackbox_type stateful_alu {
              memory +/- phv - constant operation 0
          */
         type: expression;
-        expression_local_variables {register_lo, register_hi}
+        expression_local_variables { bit<32> register_lo, bit<32> register_hi}
         optional;
     }
 
@@ -45,7 +45,7 @@ blackbox_type stateful_alu {
              memory +/- phv - constant operation 0
          */
         type: expression;
-        expression_local_variables {register_lo, register_hi}
+        expression_local_variables { bit<32> register_lo, bit<32> register_hi}
         optional;
     }
 
@@ -53,7 +53,7 @@ blackbox_type stateful_alu {
     attribute update_lo_1_predicate {
         /* Condition expression associated with running ALU 1 lo. */
         type: expression;
-        expression_local_variables {condition_lo, condition_hi}
+        expression_local_variables { bit<1> condition_lo, bit<1> condition_hi}
         optional;
     }
 
@@ -79,7 +79,7 @@ blackbox_type stateful_alu {
 
          */
         type: expression;
-        expression_local_variables {register_lo, register_hi,
+        expression_local_variables {bit<32> register_lo, bit<32> register_hi,
                                     set_bit, set_bitc, clr_bit, clr_bitc, read_bit, read_bitc}
         optional;
     }
@@ -87,42 +87,42 @@ blackbox_type stateful_alu {
     attribute update_lo_2_predicate {
         /* Condition expression associated with running ALU 2 lo. */
         type: expression;
-        expression_local_variables {condition_lo, condition_hi}
+        expression_local_variables {bit<1> condition_lo, bit<1> condition_hi}
         optional;
     }
 
     attribute update_lo_2_value {
         /* Expression computed in ALU 2 lo. */
         type: expression;
-        expression_local_variables {register_lo, register_hi, math_unit}
+        expression_local_variables {bit<32> register_lo, bit<32> register_hi, math_unit}
         optional;
     }
 
     attribute update_hi_1_predicate {
         /* Condition expression associated with running ALU 1 hi. */
         type: expression;
-        expression_local_variables {condition_lo, condition_hi}
+        expression_local_variables {bit<1> condition_lo, bit<1> condition_hi}
         optional;
     }
 
     attribute update_hi_1_value {
         /* Expression computed in ALU 1 hi. */
         type: expression;
-        expression_local_variables {register_lo, register_hi}
+        expression_local_variables {bit<32> register_lo, bit<32> register_hi}
         optional;
     }
 
     attribute update_hi_2_predicate {
         /* Condition expression associated with running ALU 2 hi. */
         type: expression;
-        expression_local_variables {condition_lo, condition_hi}
+        expression_local_variables {bit<1> condition_lo, bit<1> condition_hi}
         optional;
     }
 
     attribute update_hi_2_value {
         /* Expression computed in ALU 2 hi. */
         type: expression;
-        expression_local_variables {register_lo, register_hi}
+        expression_local_variables {bit<32> register_lo, bit<32> register_hi}
         optional;
     }
 
@@ -132,7 +132,7 @@ blackbox_type stateful_alu {
            Allowed operations are 'and', 'or', and 'not'.
          */
         type: expression;
-        expression_local_variables {condition_lo, condition_hi}
+        expression_local_variables {bit<1> condition_lo, bit<1> condition_hi}
         optional;
     }
 
@@ -145,7 +145,7 @@ blackbox_type stateful_alu {
            computed by the ALU(s).
          */
         type: expression;
-        expression_local_variables {alu_lo, alu_hi, register_lo, register_hi, predicate, combined_predicate}
+        expression_local_variables {bit<32> alu_lo, bit<32> alu_hi, bit<32> register_lo, bit<32> register_hi, bit<1> predicate, bit<1> combined_predicate}
         optional;
     }
 
@@ -160,7 +160,7 @@ blackbox_type stateful_alu {
            This attribute must be defined if a math_unit is referenced in 'update_lo_2_value'.
          */
         type: expression;
-        expression_local_variables {register_lo, register_hi}
+        expression_local_variables {bit<32> register_lo, bit<32> register_hi}
         optional;
     }
     attribute math_unit_output_scale {
