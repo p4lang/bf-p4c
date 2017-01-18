@@ -49,7 +49,7 @@ control c(inout packet_t hdrs, inout standard_metadata meta) {
     bit<32> arg;
     @name("a") action a_0() {
         arg = 32w3;
-        meta.egress_spec = (bit<9>)32w3;
+        meta.egress_spec = 9w3;
     }
     table tbl_a() {
         actions = {
