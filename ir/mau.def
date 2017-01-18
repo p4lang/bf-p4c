@@ -249,9 +249,9 @@ class ActionFunctionEx : ActionFunction {
 
 class RangeMatch : Operation_Unary {
     // range match -- use operand (up to 4 bits) as index into constant (up to 16 bits)
-    // to extract a single bit.  Result is always 1 bit.
+    // to extract a single bit.  Result is boolean.
     unsigned    data;
-    RangeMatch { type = Type::Bits::get(1); }
+    RangeMatch { type = Type::Boolean::get(); }
     precedence = DBPrint::Prec_Equ;
     stringOp = " in ";
 }
