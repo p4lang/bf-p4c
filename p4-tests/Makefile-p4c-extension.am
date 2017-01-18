@@ -1,0 +1,193 @@
+# Tests
+
+-include p4_tests_tofino.mk
+-include p4_tests_tofino-ortools.mk
+-include p4_tests_p14_to_16.mk
+-include p4_tests_p4.mk
+-include p4_tests_bmv2.mk
+
+p4_tests_tofino.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(wildcard \
+   $(srcdir)/%reldir%/p4_16/*.p4 \
+   $(srcdir)/%reldir%/p4_14/*.p4 \
+   $(srcdir)/%reldir%/p4_14/switch_*/switch.p4 ) \
+   $(srcdir)/%reldir%/p4_16 \
+   $(srcdir)/%reldir%/p4_14
+	@$(GENTESTS) $(srcdir) tofino $(srcdir)/%reldir%/runtest $^ >$@ || ( rm $@ && false )
+
+p4_tests_tofino-ortools.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(wildcard \
+   $(srcdir)/%reldir%/p4_16/*.stf \
+   $(srcdir)/%reldir%/p4_14/counter_test1.stf \
+   $(srcdir)/%reldir%/p4_14/counter_test2.stf \
+   $(srcdir)/%reldir%/p4_14/gateway_bus1.stf \
+   $(srcdir)/%reldir%/p4_14/gateway_bus2.stf \
+   $(srcdir)/%reldir%/p4_14/max_counters.stf \
+   $(srcdir)/%reldir%/p4_14/meter_test1.stf \
+   $(srcdir)/%reldir%/p4_14/simple_counter.stf ) \
+   $(srcdir)/%reldir%/p4_16 \
+   $(srcdir)/%reldir%/p4_14
+	@$(GENTESTS) $(srcdir) tofino-ortools $(srcdir)/%reldir%/runtest --ortools $(^:%.stf=%.p4) >$@ || ( rm $@ && false )
+
+# We have additional test inputs that are used to test the other (standard) back-ends
+# These test input programs depend on Tofino in some way.
+
+# Exercise v12test back-end on Tofino-specific programs
+p4_tests_p14_to_16.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(wildcard \
+   $(srcdir)/%reldir%/p4_14/*.p4 \
+   $(srcdir)/%reldir%/p4_14/switch_*/switch.p4 ) \
+   $(srcdir)/%reldir%/p4_14
+	@$(GENTESTS) $(srcdir) p14_to_16 $(srcdir)/%reldir%/test-v12-sample.sh $^ >$@ || ( rm $@ && false )
+
+p4_tests_p4.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(wildcard \
+   $(srcdir)/%reldir%/p4_16/*.p4) \
+   $(srcdir)/%reldir%/p4_16
+	@$(GENTESTS) $(srcdir) p4 $(srcdir)/backends/p4test/run-p4-sample.py $^ >$@ || ( rm $@ && false )
+
+# Exercise bmv2 back-end on Tofino-specific programs
+p4_tests_bmv2.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(wildcard \
+    $(srcdir)/%reldir%/p4_14/*.p4 \
+    $(srcdir)/%reldir%/p4_14/switch_*/switch.p4 ) \
+    $(srcdir)/%reldir%/p4_14
+	@$(GENTESTS) $(srcdir) bmv2 $(srcdir)/%reldir%/test-bmv2.sh $^ >$@ || ( rm $@ && false )
+
+check-nop4test:
+	@$(MAKE) check TESTS="$(filter-out %/%reldir%/%, $(TESTS))"
+
+CLEANFILES += \
+        p4_tests_tofino.mk \
+        p4_tests_tofino-ortools.mk \
+        p4_tests_p14_to_16.mk \
+        p4_tests_p4.mk \
+        p4_tests_bmv2.mk
+
+# Some of these failures are still P4 v1.0 front-end bugs.
+# Others are due to non-standard extensions to P4:
+# The *meter* tests use direct meters and execute_meter calls with 4 arguments (not in spec)
+# The *stateful* tests use extensions to P4 not in spec
+# FlexCounter, action_profile use a non-standard Algorithm
+# TwoReferences invokes a table twice - maybe it should become a negative test?
+# *range* match type is not supported by BMv2 (used also in error_detection*.p4)
+XFAIL_TESTS += \
+    tofino/%reldir%/p4_16/flowlet_switching.p4.test \
+    tofino/%reldir%/p4_16/bfd_offload.p4.test \
+    tofino/%reldir%/p4_16/bloom_filter.p4.test \
+    tofino/%reldir%/p4_16/stateful_alu.p4.test \
+    bmv2/%reldir%/p4_14/02-FlexCounterActionProfile.p4.test \
+    bmv2/%reldir%/p4_14/action_profile.p4.test \
+    bmv2/%reldir%/p4_14/switch_l2_profile_tofino.p4.test \
+    bmv2/%reldir%/p4_14/test_config_125_meter_pre_color.p4.test \
+    bmv2/%reldir%/p4_14/test_config_126_meter_pre_color_2.p4.test \
+    bmv2/%reldir%/p4_14/test_config_127_meter_pre_color_3.p4.test \
+    bmv2/%reldir%/p4_14/test_config_132_meter_pre_color_4.p4.test \
+    bmv2/%reldir%/p4_14/test_config_144_recirculate.p4.test \
+    bmv2/%reldir%/p4_14/test_config_152_stateful_simple_cntr.p4.test \
+    bmv2/%reldir%/p4_14/test_config_153_stateful_simple_cntr_with_output.p4.test \
+    bmv2/%reldir%/p4_14/test_config_154_stateful_sampling.p4.test \
+    bmv2/%reldir%/p4_14/test_config_155_stateful_3_alus.p4.test \
+    bmv2/%reldir%/p4_14/test_config_156_indirect_stateful_cntr.p4.test \
+    bmv2/%reldir%/p4_14/test_config_159_stateful_using_phv_field.p4.test \
+    bmv2/%reldir%/p4_14/test_config_160_stateful_single_bit_mode.p4.test \
+    bmv2/%reldir%/p4_14/test_config_163_stateful_table_math_unit.p4.test \
+    bmv2/%reldir%/p4_14/test_config_164_stateful_deterministic_sampling.p4.test \
+    bmv2/%reldir%/p4_14/test_config_165_stateful_bfd_failure_detection.p4.test \
+    bmv2/%reldir%/p4_14/test_config_166_stateful_generic_counter.p4.test \
+    bmv2/%reldir%/p4_14/test_config_167_stateful_flowlet_switching.p4.test \
+    bmv2/%reldir%/p4_14/test_config_169_stateful_sflow_sequence.p4.test \
+    bmv2/%reldir%/p4_14/test_config_170_stateful_selection_table_update.p4.test \
+    bmv2/%reldir%/p4_14/test_config_171_stateful_conga.p4.test \
+    bmv2/%reldir%/p4_14/test_config_172_stateful_heavy_hitter.p4.test \
+    bmv2/%reldir%/p4_14/test_config_173_stateful_bloom_filter.p4.test \
+    p14_to_16/%reldir%/p4_14/02-FlexCounterActionProfile.p4.test \
+    p14_to_16/%reldir%/p4_14/switch_20160602/switch.p4.test \
+    p14_to_16/%reldir%/p4_14/switch_l2_profile_tofino.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_125_meter_pre_color.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_126_meter_pre_color_2.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_127_meter_pre_color_3.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_132_meter_pre_color_4.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_144_recirculate.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_152_stateful_simple_cntr.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_153_stateful_simple_cntr_with_output.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_154_stateful_sampling.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_155_stateful_3_alus.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_156_indirect_stateful_cntr.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_159_stateful_using_phv_field.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_160_stateful_single_bit_mode.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_163_stateful_table_math_unit.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_164_stateful_deterministic_sampling.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_165_stateful_bfd_failure_detection.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_166_stateful_generic_counter.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_167_stateful_flowlet_switching.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_169_stateful_sflow_sequence.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_170_stateful_selection_table_update.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_171_stateful_conga.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_172_stateful_heavy_hitter.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_173_stateful_bloom_filter.p4.test
+
+# These testcases taken from glass and xfail in glass
+XFAIL_TESTS += \
+    tofino/%reldir%/p4_14/test_config_121_tcam_range_5.p4.test.test \
+    tofino/%reldir%/p4_14/test_config_141_first_stateful_conga.p4.test.test \
+    tofino/%reldir%/p4_14/test_config_142_stateful_bfd.p4.test.test \
+    tofino/%reldir%/p4_14/test_config_171_stateful_conga.p4.test.test \
+    tofino/%reldir%/p4_14/test_config_183_sample_e2e.p4.test \
+    tofino/%reldir%/p4_14/test_config_190_modify_with_expr.p4.test \
+    tofino/%reldir%/p4_14/case1770.p4.test \
+    tofino/%reldir%/p4_14/test_config_248_pa_problem.p4.test \
+    tofino/%reldir%/p4_14/test_config_252_pa_required_packing.p4.test \
+    tofino/%reldir%/p4_14/test_config_256_pa_problem_4.p4.test \
+    tofino/%reldir%/p4_14/test_config_257_pa_problem_5.p4.test \
+    tofino/%reldir%/p4_14/exclusive_cf_fail_next_ptr.p4.test \
+    tofino/%reldir%/p4_14/exclusive_cf_one_action_fail_after.p4.test \
+    tofino/%reldir%/p4_14/exclusive_cf_one_action_fail_before.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_121_tcam_range_5.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_141_first_stateful_conga.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_142_stateful_bfd.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_171_stateful_conga.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_183_sample_e2e.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_190_modify_with_expr.p4.test \
+    p14_to_16/%reldir%/p4_14/case1770.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_248_pa_problem.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_252_pa_required_packing.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_256_pa_problem_4.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_257_pa_problem_5.p4.test \
+    p14_to_16/%reldir%/p4_14/exclusive_cf_fail_next_ptr.p4.test \
+    p14_to_16/%reldir%/p4_14/exclusive_cf_one_action_fail_after.p4.test \
+    p14_to_16/%reldir%/p4_14/exclusive_cf_one_action_fail_before.p4.test \
+    bmv2/%reldir%/p4_14/test_config_121_tcam_range_5.p4.test \
+    bmv2/%reldir%/p4_14/test_config_141_first_stateful_conga.p4.test \
+    bmv2/%reldir%/p4_14/test_config_142_stateful_bfd.p4.test \
+    bmv2/%reldir%/p4_14/test_config_171_stateful_conga.p4.test \
+    bmv2/%reldir%/p4_14/test_config_183_sample_e2e.p4.test \
+    bmv2/%reldir%/p4_14/test_config_190_modify_with_expr.p4.test \
+    bmv2/%reldir%/p4_14/case1770.p4.test \
+    bmv2/%reldir%/p4_14/test_config_248_pa_problem.p4.test \
+    bmv2/%reldir%/p4_14/test_config_252_pa_required_packing.p4.test \
+    bmv2/%reldir%/p4_14/test_config_256_pa_problem_4.p4.test \
+    bmv2/%reldir%/p4_14/test_config_257_pa_problem_5.p4.test \
+    bmv2/%reldir%/p4_14/exclusive_cf_fail_next_ptr.p4.test \
+    bmv2/%reldir%/p4_14/exclusive_cf_one_action_fail_after.p4.test \
+    bmv2/%reldir%/p4_14/exclusive_cf_one_action_fail_before.p4.test
+
+# These currently fail gateway check with 'expression too complex'
+XFAIL_TESTS += \
+    tofino/%reldir%/p4_14/07-MacAddrCheck.p4.test \
+    tofino/%reldir%/p4_14/08-MacAddrCheck1.p4.test
+
+# Layout Constraints from gateway allocation
+XFAIL_TESTS += tofino/%reldir%/p4_14/gateway_bus2.p4.test
+XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/gateway_bus1.p4.test
+XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/gateway_bus2.p4.test
+
+# Fail on purpose due to action profiles not being mutually exclusive
+XFAIL_TESTS += tofino/%reldir%/p4_14/action_profile_not_shared.p4.test
+XFAIL_TESTS += tofino/%reldir%/p4_14/action_profile_next_stage.p4.test
+
+# Multiple calculations per action
+XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/counter_test1.p4.test
+XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/counter_test2.p4.test
+XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/meter_test1.p4.test
+
+# These fail (or pass) intermittently on Jenkins; not sure why
+IFAIL_TESTS += tofino-ortools/%reldir%/p4_14/simple_counter.p4.test \
+	       tofino-ortools/%reldir%/p4_14/max_counters.p4.test \
+	       tofino-ortools/%reldir%/p4_14/gateway_bus2.p4.test
+
