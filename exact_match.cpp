@@ -460,7 +460,6 @@ void ExactMatchTable::write_regs() {
     MatchTable::write_regs(0, this);
     auto &merge = stage->regs.rams.match.merge;
     unsigned fmt_width = (format->size + 127)/128;
-    unsigned word = fmt_width-1;  // FIXME -- don't need this anymore?
     bitvec match_mask, version_nibble_mask;
     match_mask.setrange(0, 128*fmt_width);
     version_nibble_mask.setrange(0, 32*fmt_width);
@@ -485,20 +484,22 @@ void ExactMatchTable::write_regs() {
         auto &vh_adr_xbar = rams_row.vh_adr_xbar;
         bool first = true;
         int hash_group = -1;
+        unsigned  word = ~0;
         auto vpn_iter = row.vpns.begin();
         for (auto col : row.cols) {
             auto &way = way_map[std::make_pair(row.row, col)];
             if (first) {
                 hash_group = ways[way.way].group;
+                word = way.word;
                 setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[row.bus], hash_group);
                 first = false;
-            } else if (hash_group != ways[way.way].group) {
+            } else if (hash_group != ways[way.way].group || (int)word != way.word) {
                 auto first_way = way_map[std::make_pair(row.row, row.cols[0])];
                 error(ways[way.way].lineno, "table %s ways #%d and #%d use the same row bus "
-                      "(%d.%d) but different hash groups", name(), first_way.way, way.way,
-                      row.row, row.bus);
-                hash_group = ways[way.way].group; }
-            assert(way.word == (int)word);
+                      "(%d.%d) but different %s", name(), first_way.way, way.way, row.row,
+                      row.bus, (int)word == way.word ? "hash groups" : "word order");
+                hash_group = ways[way.way].group;
+                word = way.word; }
             setup_muxctl(vh_adr_xbar.exactmatch_mem_hashadr_xbar_ctl[col],
                          ways[way.way].subgroup + row.bus*5);
             vh_adr_xbar.exactmatch_bank_enable[col]
@@ -702,8 +703,7 @@ void ExactMatchTable::write_regs() {
         merge.exact_match_phys_result_thread[bus/8U] |= gress << (bus%8U);
         if (stage->tcam_delay(gress))
             merge.exact_match_phys_result_delay[bus/8U] |= 1U << (bus%8U);
-
-        if (word-- == 0) { word = fmt_width-1; } }
+    }
 
     merge.exact_match_logical_result_en |= 1 << logical_id;
     if (stage->tcam_delay(gress) > 0)
