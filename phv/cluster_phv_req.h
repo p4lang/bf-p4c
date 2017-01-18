@@ -33,7 +33,7 @@ class Cluster_PHV {
  private:
     std::vector<const PhvInfo::Field *> cluster_vec_i;
                                             // cluster vec sorted by decreasing field width
-    int id_i;                               // cluster id
+    std::string id_i;                       // cluster id
     PHV_Container::Ingress_Egress gress_i;  // ingress or egress
     PHV_Container::PHV_Word width_i;        // container width in PHV group
     bool uniform_width_i = false;           // field widths differ in cluster
@@ -42,10 +42,13 @@ class Cluster_PHV {
     bool sliceable_i;                       // can split cluster, move-based ops only ?
     //
  public:
-    Cluster_PHV(ordered_set<const PhvInfo::Field *> *p);  // NOLINT(runtime/explicit)
+    Cluster_PHV(
+        ordered_set<const PhvInfo::Field *> *p,
+        std::string id_p = "???");  // NOLINT(runtime/explicit)
                                                        // cluster set of fields
-    Cluster_PHV(const PhvInfo::Field *f)               // NOLINT(runtime/explicit)
-        : Cluster_PHV(field_set(f)) {}                 // cluster singleton field
+    Cluster_PHV(const PhvInfo::Field *f,
+        std::string id_p = "???")  // NOLINT(runtime/explicit)
+        : Cluster_PHV(field_set(f), id_p) {}           // cluster singleton field
                                                        // e.g., POV fields
     //
     ordered_set<const PhvInfo::Field *> *field_set(const PhvInfo::Field *f) {
@@ -55,6 +58,7 @@ class Cluster_PHV {
     }
     //
     std::vector<const PhvInfo::Field *>& cluster_vec()  { return cluster_vec_i; }
+    std::string id()                                    { return id_i; }
     PHV_Container::Ingress_Egress gress()               { return gress_i; }
     PHV_Container::PHV_Word width()                     { return width_i; }
     void width(PHV_Container::PHV_Word w)               { width_i = w; }

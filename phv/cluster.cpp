@@ -129,12 +129,6 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
         LOG4(field);
         header_size += field->size;
     }
-    if (header_size > 150) {  // Fix me to pass switch tests that break asm
-        //
-        // not attempting container contiguous groups
-        //
-        return true;
-    }
     //
     // attempting container contiguous groups
     //
@@ -146,9 +140,11 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
         //
         // accumulate sub-byte fields to group to a byte boundary
         // so that if any field is part of MAU then entire PHV container has no holes
+        // fields must be contiguous
         //
         if (!field->ccgf) {
-            if (field->size % static_cast<int>(PHV_Container::PHV_Word::b8)) {
+            if (group_accumulator
+                || field->size % static_cast<int>(PHV_Container::PHV_Word::b8)) {
                 if (!group_accumulator) {
                     group_accumulator = field;
                     accumulator_bits = 0;
@@ -378,6 +374,11 @@ void Cluster::compute_fields_no_use_mau() {
             s2.insert(entry.first);
             for (auto entry_2 : *(entry.second)) {
                 s2.insert(entry_2);
+                if (entry_2->ccgf_fields.size()) {
+                    for (auto &member : entry_2->ccgf_fields) {
+                        s2.insert(member);
+                    }
+                }
             }
         }
     }
@@ -420,15 +421,17 @@ void Cluster::compute_fields_no_use_mau() {
         << ")..........");
     //
     // from T_PHV candidates,
-    // discard metadata & pov, and those members of "container contiguous group"
-    // and fields not used in ingress or egress
+    // discard the following
+    // metadata & pov
+    // members of "container contiguous group"
+    // fields not used in ingress or egress
     // set_field_range (entire field deparsed) for T_PHV fields_no_use_mau
     //
     std::set<const PhvInfo::Field *> delete_set;
     for (auto f : fields_no_use_mau_i) {
         PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
         bool use_any = uses_i->use[0][f1->gress][f1->id];
-        if (f1->metadata || f1->pov || !use_any || f1->ccgf) {
+        if (f1->metadata || f1->pov || !use_any || (f1->ccgf && f1->ccgf != f1)) {
             delete_set.insert(f);
         } else {
             set_field_range(f1);
@@ -467,7 +470,9 @@ void Cluster::set_field_range(const IR::Expression& expression) {
 void Cluster::set_field_range(PhvInfo::Field *field) {
     if (field) {
         field->phv_use_lo = 0;
-        field->phv_use_hi = field->phv_use_lo + field->size - 1;
+        if (field->ccgf != field) {
+            field->phv_use_hi = field->phv_use_lo + field->size - 1;
+        }
     }
 }
 

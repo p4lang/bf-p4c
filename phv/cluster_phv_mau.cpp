@@ -317,7 +317,7 @@ PHV_MAU_Group_Assignments::apply_visitor(const IR::Node *node, const char *name)
                                 c));
                     } else if (c->status() == PHV_Container::Container_status::PARTIAL) {
                         int start = c->ranges().begin()->first;
-                        int partial_width = static_cast<int>(c->width()) - start;
+                        int partial_width = c->avail_bits();
                         std::set<PHV_MAU_Group::Container_Content *> *set_cc_partial
                             = new std::set<PHV_MAU_Group::Container_Content *>;
                         set_cc_partial->insert(

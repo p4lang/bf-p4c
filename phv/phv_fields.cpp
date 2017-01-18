@@ -252,10 +252,12 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
     if (all_fields.count("ingress::$POV") || all_fields.count("egress::$POV"))
         BUG("trying to reallocate POV");
     int size[2] = { 0, 0 };
+    int stacks_num = 0;
     for (auto &stack : stacks) {
         auto *ff = field(all_headers.at(stack.name).first);
         BUG_CHECK(!ff->metadata, "metadata stack?");
         size[ff->gress] += stack.size + stack.maxpush + stack.maxpop;
+        stacks_num++;
         /* FIXME all bits for a stack must end up in one container */ }
     for (auto &hdr : simple_headers) {
         auto *ff = field(hdr.second.first);
@@ -272,13 +274,29 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
             if (field.pov && field.metadata && field.gress == gress) {
                 size[gress] -= field.size;
                 field.offset = size[gress]; }
-        Field *hdr_dd_valid = 0;
+        Field *hdr_dd_valid = 0;  // header.$valid
+        vector<Field *> pov_fields_h;  // accumulate member povs of simple headers
         for (auto &hdr : simple_headers) {
             auto *ff = field(hdr.second.first);
             if (!ff->metadata && ff->gress == gress) {
                 add(hdr.first + ".$valid", 1, --size[gress], false, true);
                 hdr_dd_valid = &all_fields[hdr.first + ".$valid"];
+                pov_fields_h.push_back(hdr_dd_valid);
             }
+        }
+        // accumulate member povs of simple headers
+        // all pov bits must be in single container
+        //
+        if (!stacks_num) {
+            for (auto &f : pov_fields_h) {
+                hdr_dd_valid->ccgf_fields.push_back(f);
+                f->ccgf = hdr_dd_valid;
+            }
+            hdr_dd_valid->phv_use_hi = pov_fields_h.size();
+                                     // to allocated container for ccg width
+            hdr_dd_valid->phv_use_rem = -pov_fields_h.size();
+                                     // negative encoding signifies simple header ccg
+            pov_fields_h.clear();
         }
         for (auto &stack : stacks) {
             vector<Field *> pov_fields;  // accumulate member povs of header stk pov

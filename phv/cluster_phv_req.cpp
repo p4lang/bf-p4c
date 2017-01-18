@@ -31,8 +31,12 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
         LOG1("***************Cluster_PHV_Requirements called w/ 0 clusters***************");
     }
     //
+    int cluster_num = 0; 
     for (auto p : Values(cluster_i.dst_map())) {
-        Cluster_PHV *m = new Cluster_PHV(p);
+        std::stringstream ss;
+        ss << cluster_num++;
+        std::string id = "phv_" + ss.str();
+        Cluster_PHV *m = new Cluster_PHV(p, id);
         Cluster_PHV_i[m->width()][m->num_containers()].push_back(m);
     }
     //
@@ -81,7 +85,10 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
     // sort based on width requirement, greatest width first
     //
     for (auto p : cluster_i.pov_fields_not_in_cluster()) {
-        pov_fields_i.push_back(new Cluster_PHV(p));
+        std::stringstream ss;
+        ss << cluster_num++;
+        std::string id = "pov_" + ss.str();
+        pov_fields_i.push_back(new Cluster_PHV(p, id));
     }
     std::sort(pov_fields_i.begin(), pov_fields_i.end(),
         [](Cluster_PHV *l, Cluster_PHV *r) {
@@ -102,7 +109,10 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
     // sort based on width requirement, greatest width first
     //
     for (auto p : cluster_i.fields_no_use_mau()) {
-        t_phv_fields_i.push_back(new Cluster_PHV(p));
+        std::stringstream ss;
+        ss << cluster_num++;
+        std::string id = "tphv_" + ss.str();
+        t_phv_fields_i.push_back(new Cluster_PHV(p, id));
     }
     std::sort(t_phv_fields_i.begin(), t_phv_fields_i.end(),
         [](Cluster_PHV *l, Cluster_PHV *r) {
@@ -137,8 +147,10 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
 //***********************************************************************************
 
 Cluster_PHV::Cluster_PHV(
-    ordered_set<const PhvInfo::Field *> *p)
-    : cluster_vec_i(p->begin(), p->end()) {
+    ordered_set<const PhvInfo::Field *> *p,
+    std::string id_p)
+    : cluster_vec_i(p->begin(), p->end()),
+      id_i(id_p) {
     //
     if (!p) {
         LOG1("*****Cluster_PHV called w/ nullptr cluster_set******");
@@ -266,7 +278,7 @@ std::ostream &operator<<(std::ostream &out, Cluster_PHV *cp) {
         // cluster summary
         out << *cp;
         // fields in cluster
-        out << '(' << std::endl
+        out << "( " << cp->id() << std::endl
             << cp->cluster_vec()
             << ')' << std::endl;
     } else {
