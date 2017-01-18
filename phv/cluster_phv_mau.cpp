@@ -448,9 +448,8 @@ PHV_MAU_Group_Assignments::cluster_placement(
             }
             //
             // 3b.pick next cl, put in Group with available non-occupied <container, width>
-            //    s.t., after assignment, G.remaining_containers != 1 as forall cl, |cl| >= 2
-            //    field f may need several containers, e.g., f:128 --> C1<32>,C2,C3,C4
-            //    but each C single or partial field only => C does not contain 2 fields
+            //    field f may need several containers, e.g., f:128 --> C1[32],C2,C3,C4
+            //    each C single or partial field, e.g., f:24 --> C1[16], C2[8/16]
             //
             auto req_containers = cl->num_containers();
             if (g->width() < cl->width()) {
@@ -458,8 +457,7 @@ PHV_MAU_Group_Assignments::cluster_placement(
                 // <2:_48_32>{3*32} => <2:_48_32>{5*16}
                 req_containers = cl->num_containers(cl->cluster_vec(), g->width());
             }
-            if (req_containers <= g->empty_containers()
-             && g->empty_containers() - req_containers != 1) {
+            if (req_containers <= g->empty_containers()) {
                 // assign cl to g
                 //
                 // if scaled width, update num_containers
