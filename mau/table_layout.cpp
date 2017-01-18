@@ -103,19 +103,27 @@ static void setup_action_layout(IR::MAU::Table *tbl) {
 }
 
 void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved,
-                                               bool has_action_profile, int num_actions) {
+                                               bool has_action_profile) {
+    LOG1("Setup ternary layout options");
     bool ternary_indirect_required = false;
-    if (tbl->layout.overhead_bits + ceil_log2(num_actions) > 1)
+    bool no_action_data = (tbl->layout.action_data_bytes == 0);
+
+    LOG1("Int calculation " << (tbl->layout.overhead_bits));
+    if (tbl->layout.overhead_bits > 0)
         ternary_indirect_required = true;
 
     IR::MAU::Table::Layout *layout = new IR::MAU::Table::Layout();
     layout->copy(tbl->layout);
     IR::MAU::Table::LayoutOption lo(layout);
-    lo.action_data_required = true;
+    if (no_action_data)
+        lo.action_data_required = false;
+    else 
+        lo.action_data_required = true;
     lo.ternary_indirect_required = ternary_indirect_required;
     tbl->layout_options.push_back(lo);
 
-    if (has_action_profile || tbl->layout.action_data_bytes > 4 - immediate_bytes_reserved)
+    if (no_action_data || has_action_profile 
+        || tbl->layout.action_data_bytes > 4 - immediate_bytes_reserved)
         return;
 
     layout = new IR::MAU::Table::Layout();
@@ -129,11 +137,16 @@ void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl, int immediat
 
 void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved,
                                        bool has_action_profile) {
+    bool no_action_data = (tbl->layout.action_data_bytes == 0);
+
     for (int entry_count = 1; entry_count < 10; entry_count++) {
-        int match_group_bits = std::max(tbl->layout.match_width_bits-10, 0) +
+        
+        int match_group_bits = std::max(8*tbl->layout.match_bytes-10, 0) +
                                tbl->layout.overhead_bits + 4;
         int width = (entry_count * match_group_bits + 127) / 128;
         
+        while (entry_count / width > 4)
+            width++;
         while (tbl->layout.overhead_bits * entry_count > width * 64) 
             width++;
        
@@ -144,15 +157,19 @@ void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_
         layout->copy(tbl->layout);
         way->match_groups = entry_count; way->width = width;
         IR::MAU::Table::LayoutOption lo(layout, way);
-        lo.action_data_required = true;
+        if (no_action_data)
+            lo.action_data_required = false;
+        else
+            lo.action_data_required = true;
         tbl->layout_options.push_back(lo);
     }
 
-    if (has_action_profile || tbl->layout.action_data_bytes > 4 - immediate_bytes_reserved)
+    if (no_action_data || has_action_profile
+        || tbl->layout.action_data_bytes > 4 - immediate_bytes_reserved)
         return;
 
     for (int entry_count = 1; entry_count < 10; entry_count++) {
-        int match_group_bits = std::max(tbl->layout.match_width_bits-10, 0) +
+        int match_group_bits = std::max(8*tbl->layout.match_bytes-10, 0) +
                                tbl->layout.overhead_bits + tbl->layout.action_data_bytes * 8
                                + 4;
         int width = (entry_count * match_group_bits + 127) / 128;
@@ -252,8 +269,7 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
         at->apply(attached);
     int immediate_bytes_reserved = attached.immediate_reserved();
     if (tbl->layout.ternary)
-        setup_ternary_layout_options(tbl, immediate_bytes_reserved, attached.have_action_profile,
-                                     tbl->actions.size());
+        setup_ternary_layout_options(tbl, immediate_bytes_reserved, attached.have_action_profile);
     else
         setup_layout_options(tbl, immediate_bytes_reserved, attached.have_action_profile);
 /*

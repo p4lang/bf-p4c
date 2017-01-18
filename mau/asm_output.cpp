@@ -540,6 +540,7 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
             format[i].starting_bits[VERS] = 128*word + 124 - j*4;
             total_bits[VERS] = 4;
             used.setrange(format[i].starting_bits[VERS], 4); }
+        LOG1("Width and groups " << width << " " << groups);
         setup_indirect(IMMEDIATE, groups, groups_per_word, used);
         setup_indirect(COUNTER, groups, groups_per_word, used);
         setup_indirect(METER, groups, groups_per_word, used);
@@ -635,6 +636,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         emit_ixbar(out, indent, tbl->resources->match_ixbar,
                    &tbl->resources->memuse.at(tbl->name), &fmt);
         if (!tbl->layout.ternary) {
+            LOG1("Emitting format for " << tbl->name);
             out << indent << fmt << std::endl;
             bool first = true;
             for (auto field : fmt.match_fields) {
@@ -716,7 +718,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         } else if (at->is<IR::MAU::ActionData>()) {
             assert(tbl->layout.action_data_bytes > tbl->layout.action_data_bytes_in_overhead);
             have_action = true; } }
-    assert(have_indirect == (tbl->layout.ternary && (tbl->layout.overhead_bits > 1)));
+    assert(have_indirect == (tbl->layout.ternary && (tbl->layout.overhead_bits > 0)));
     assert(have_action || (tbl->layout.action_data_bytes <=
                            tbl->layout.action_data_bytes_in_overhead));
 

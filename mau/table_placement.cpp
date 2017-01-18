@@ -782,10 +782,7 @@ static void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *r
 
 static void select_layout_option(IR::MAU::Table *tbl,
                                  const IR::MAU::Table::LayoutOption *layout_option) {
-    LOG1("select layout option");
-    LOG1("Layout Option " << layout_option->way->match_groups << " " 
-         << layout_option->way->width << " " << layout_option->action_data_required
-         << layout_option->way_sizes);
+    LOG1("select layout option " << tbl->name);
     tbl->layout.copy(*(layout_option->layout));
     if (!layout_option->layout->ternary) {
         tbl->ways.resize(layout_option->way_sizes.size());
