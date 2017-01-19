@@ -201,9 +201,10 @@ ir_DEF_FILES += \
     $(srcdir)/%reldir%/ir/parde.def
 
 bin_PROGRAMS += p4c-tofino
-p4c_tofino_LDADD = libfrontend.la libp4ctoolkit.a
+p4c_tofino_LDADD = libfrontend.a libp4ctoolkit.a
 
 p4c_tofino_SOURCES = \
+	$(tofino_ir_SOURCES) \
 	$(tofino_backend_common_SOURCES) \
 	$(tofino_backend_mau_SOURCES) \
 	$(tofino_backend_parde_SOURCES) \
