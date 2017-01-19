@@ -351,6 +351,7 @@ static void coord_selector_xbar(const TablePlacement::Placed *curr,
 TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t, const Placed *done,
                                                         const StageUseEstimate &current) {
     LOG1("try_place_table(" << t->name << ", stage=" << (done ? done->stage : 0) << ")");
+    LOG1("Table layout options size " << t->layout_options.size());
     auto *rv = (new Placed(*this, t))->gateway_merge();
     TableResourceAlloc *resources = new TableResourceAlloc;
     TableResourceAlloc *min_resources = new TableResourceAlloc;
@@ -385,14 +386,18 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     int increment_entries = min_entries + 1;
     LOG1("Increment Use calculation");
     StageUseEstimate increment_use(t, increment_entries);
+    StageUseEstimate stage_current = current;
+    if (done && rv->stage != done->stage)
+        stage_current.clear();
+
     bool allocated = false;
     bool ixbar_allocation_bug = false;
     bool mem_allocation_bug = false;
     int furthest_stage = (done == nullptr) ? 0 : done->stage + 1;
-    bool already_advanced = false;
    
     do {
         LOG1("The stage is " << rv->stage);
+        if (done != nullptr) LOG1("Done stage is " << done->stage);
         auto avail = StageUseEstimate::max();
         bool advance_to_next_stage = false;
         allocated = false; ixbar_allocation_bug = false; mem_allocation_bug = false;
@@ -412,19 +417,18 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             LOG1("Failure at second point");
         }
 
-        LOG1("!already_advanced " << !already_advanced); 
-        if (!(already_advanced || min_use + current <= avail) 
+        if (!(min_use + stage_current <= avail) 
             || !try_alloc_mem(rv, done, min_entries, min_resources, min_use, prev_resources)) {
             mem_allocation_bug = true;
             advance_to_next_stage = true;
-            LOG1("Test " << (already_advanced || min_use + current <= avail) );
+            LOG1("Test " << (min_use + stage_current <= avail) );
             LOG1("Failure at third point");
         }
 
         if (done && rv->stage == done->stage) {
-            avail.srams -= current.srams;
-            avail.tcams -= current.tcams;
-            avail.maprams -= current.maprams; }
+            avail.srams -= stage_current.srams;
+            avail.tcams -= stage_current.tcams;
+            avail.maprams -= stage_current.maprams; }
 
         int srams_left = avail.srams;
         int tcams_left = avail.tcams;
@@ -459,10 +463,11 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
                 break;
             }
         }
+        LOG1("Nonsense: sdfghjkldsfdhkjlas;");
         if (advance_to_next_stage) {
             LOG1("Advance to the next stage");
             rv->stage++;
-            already_advanced = true;
+            stage_current.clear();
         }
 
     } while (!allocated && rv->stage <= furthest_stage);

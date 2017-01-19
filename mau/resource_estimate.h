@@ -10,8 +10,6 @@ struct StageUseEstimate {
     int ternary_ixbar_groups;
     vector<IR::MAU::Table::LayoutOption> layout_options;
     int preferred_index;
-    int previous_index;
-    int provided_index;
     StageUseEstimate() { memset(this, 0, sizeof(*this)); }
     StageUseEstimate &operator+=(const StageUseEstimate &a) {
         logical_ids += a.logical_ids;
@@ -21,7 +19,7 @@ struct StageUseEstimate {
         exact_ixbar_bytes += a.exact_ixbar_bytes;
         ternary_ixbar_groups += a.ternary_ixbar_groups;
         return *this; }
-    StageUseEstimate(const IR::MAU::Table *, int &, bool table_placement = false, bool redo = false);
+    StageUseEstimate(const IR::MAU::Table *, int &, bool table_placement = false);
     StageUseEstimate operator+(const StageUseEstimate &a) const {
         StageUseEstimate rv = *this; rv += a; return rv; }
     static StageUseEstimate max() {
@@ -37,6 +35,10 @@ struct StageUseEstimate {
         return logical_ids <= a.logical_ids && srams <= a.srams && tcams <= a.tcams &&
                maprams <= a.maprams && exact_ixbar_bytes <= a.exact_ixbar_bytes &&
                ternary_ixbar_groups <= a.ternary_ixbar_groups; }
+    void clear() {
+        logical_ids = 0; srams = 0; tcams = 0; maprams = 0;
+        exact_ixbar_bytes = 0; ternary_ixbar_groups = 0;
+    }
     void options_to_ways(const IR::MAU::Table *tbl, int &entries);
     void options_to_rams(const IR::MAU::Table *tbl, bool table_placement);
     void select_best_option(const IR::MAU::Table *tbl);
@@ -50,14 +52,6 @@ struct StageUseEstimate {
         return nullptr;
     else
         return &layout_options[preferred_index]; }
-
-    const IR::MAU::Table::LayoutOption *provided() const {
-        if (layout_options.empty())
-            return nullptr;
-        else
-            return &layout_options[provided_index]; }
-
-    void set_provided(const IR::MAU::Table::LayoutOption *a);
 
     void calculate_for_leftover_srams(const IR::MAU::Table *tbl, int srams_left, int &entries);
     void calculate_for_leftover_tcams(const IR::MAU::Table *tbl, int srams_left, int tcams_left,

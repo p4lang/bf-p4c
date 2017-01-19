@@ -111,6 +111,7 @@ class Table : Tofino::Unit {
         vector<int> way_sizes;
         int entries = 0;
         bool action_data_required = false; bool ternary_indirect_required = false;
+        bool no_match_data = false;
         int srams = 0; int maprams = 0; int tcams = 0;
         toJSON { json << "null"; }
         fromJSON { return nullptr; }

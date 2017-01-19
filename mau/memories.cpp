@@ -810,6 +810,9 @@ void Memories::compress_ways() {
 /* Number of continuous TCAMs needed for table width */
 int Memories::ternary_TCAMs_necessary(table_alloc *ta, int &mid_bytes_needed) {
     int groups = ta->match_ixbar->groups();
+    // FIXME: This is a hack for no match groups
+    if (groups == 0 && ta->layout_option->no_match_data == true)
+        groups++;
     mid_bytes_needed = groups/2;
     return groups;
 }

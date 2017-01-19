@@ -799,7 +799,9 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
             allocated_select_bits += ceil_log2(layout_option->way_sizes[i]);
         }
         int starting_bit = allocated_select_bits % used_count;
-        if (starting_bit + way_bits >= used_count)
+        LOG1("Starting bit, way_bits, used_count " << starting_bit << " "
+             << way_bits << " " << used_count);
+        if (starting_bit + way_bits > used_count)
             BUG("Allocated bigger way before smaller way");
         for (int i = starting_bit; i < starting_bit + way_bits; i++) {
             way_mask |= (1U << i);

@@ -281,14 +281,19 @@ void StageUseEstimate::fill_estimate_from_option(int &entries) {
     entries = preferred()->entries;
 }
 
-StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries, bool table_placement,
-                                   bool redo) {
+StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries, bool table_placement) {
     // FIXME: This is wrong
-    if (redo) previous_index = provided_index;
     memset(this, 0, sizeof(*this));
     logical_ids = 1;
     exact_ixbar_bytes = tbl->layout.ixbar_bytes;
-    if (tbl->layout.ternary) {
+    // FIXME: This is a bug
+    LOG1("size and no match data " << tbl->layout_options.size() << " "
+          << tbl->layout_options[0].no_match_data);
+    if (tbl->layout_options.size() == 1 && tbl->layout_options[0].no_match_data) {
+        entries = 512;
+        layout_options = tbl->layout_options;
+        preferred_index = 0;
+    } else if (tbl->layout.ternary) {
         options_to_ternary_entries(tbl, entries);
         options_to_rams(tbl, table_placement);
         select_best_option_ternary();
@@ -306,22 +311,6 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries, bool
     } else {
         entries = 0;
     } 
-}
-
-void StageUseEstimate::set_provided(const IR::MAU::Table::LayoutOption *a) {
-    int index = 0;
-    for (auto lo : layout_options) {
-        if (lo.way->match_groups == a->way->match_groups &&
-            lo.way->width == a->way->width &&
-            lo.action_data_required == a->action_data_required &&
-            lo.ternary_indirect_required == a->ternary_indirect_required) {
-            provided_index = index;
-            return;
-        }
-        index++;
-    }
-    BUG("Non-matching resource estimate.  Should never happen within same table");
-    provided_index = -1;
 }
 
 void StageUseEstimate::known_srams_needed(const IR::MAU::Table *tbl,
