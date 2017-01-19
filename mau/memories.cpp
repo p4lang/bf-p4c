@@ -465,6 +465,9 @@ void Memories::break_exact_tables_into_ways() {
         ta->calculated_entries = ta->layout_option->entries;
 
         index = 0;
+        LOG1("Table name " << ta->table->name);
+        LOG1("Sizes " << ta->match_ixbar->way_use.size() << " "
+             << ta->layout_option->way_sizes.size());
         assert(ta->match_ixbar->way_use.size() == ta->layout_option->way_sizes.size());
         for (auto &way : ta->match_ixbar->way_use) {
             SRAM_group *wa = new SRAM_group(ta, ta->layout_option->way_sizes[index], 
@@ -474,7 +477,6 @@ void Memories::break_exact_tables_into_ways() {
             
             (*ta->memuse)[ta->table->name].ways.emplace_back(ta->layout_option->way_sizes[index],
                                                              way.mask);
-            LOG1("Way sizes " << ta->layout_option->way_sizes[index]);
             index++;
         }
         
@@ -646,9 +648,6 @@ bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols, unsigned c
             alloc_row.col.push_back(selected_cols[j]);
         }
         
-        for (size_t j = 0; j < selected_cols.size(); j++) {
-            alloc.ways[wa->number].rams.emplace_back(selected_rows[i], selected_cols[j]);
-        }
 
         sram_inuse[selected_rows[i]] |= row_mask;
         if (!sram_match_bus[selected_rows[i]][bus].first) {
@@ -657,6 +656,11 @@ bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols, unsigned c
             sram_print_match_bus[selected_rows[i]][bus] = wa->ta->table->name;
         }
     }
+   for (size_t j = 0; j < selected_cols.size(); j++) {
+       for (size_t i = 0; i < selected_rows.size(); i++) {
+            alloc.ways[wa->number].rams.emplace_back(selected_rows[i], selected_cols[j]);
+       }
+   }
     return true;
 }
 
@@ -810,9 +814,6 @@ void Memories::compress_ways() {
 /* Number of continuous TCAMs needed for table width */
 int Memories::ternary_TCAMs_necessary(table_alloc *ta, int &mid_bytes_needed) {
     int groups = ta->match_ixbar->groups();
-    // FIXME: This is a hack for no match groups
-    if (groups == 0 && ta->layout_option->no_match_data == true)
-        groups++;
     mid_bytes_needed = groups/2;
     return groups;
 }
@@ -856,6 +857,10 @@ bool Memories::allocate_all_ternary() {
     for (auto *ta : ternary_tables) {
         int mid_bytes_needed = 0;
         int TCAMs_necessary = ternary_TCAMs_necessary(ta, mid_bytes_needed);
+        // FIXME: If the table is just a default action table
+        if (TCAMs_necessary == 0)
+            continue;
+
         int row = 0; int col = 0;
         auto name = ta->table->name;
         Memories::Use &alloc = (*ta->memuse)[name];

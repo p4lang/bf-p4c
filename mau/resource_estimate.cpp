@@ -287,8 +287,6 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries, bool
     logical_ids = 1;
     exact_ixbar_bytes = tbl->layout.ixbar_bytes;
     // FIXME: This is a bug
-    LOG1("size and no match data " << tbl->layout_options.size() << " "
-          << tbl->layout_options[0].no_match_data);
     if (tbl->layout_options.size() == 1 && tbl->layout_options[0].no_match_data) {
         entries = 512;
         layout_options = tbl->layout_options;

@@ -417,8 +417,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             LOG1("Failure at second point");
         }
 
-        if (!(min_use + stage_current <= avail) 
-            || !try_alloc_mem(rv, done, min_entries, min_resources, min_use, prev_resources)) {
+        if (!advance_to_next_stage && (!( min_use + stage_current <= avail) 
+            || !try_alloc_mem(rv, done, min_entries, min_resources, min_use, prev_resources))) {
             mem_allocation_bug = true;
             advance_to_next_stage = true;
             LOG1("Test " << (min_use + stage_current <= avail) );
