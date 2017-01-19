@@ -732,8 +732,12 @@ std::unique_ptr<json::map> ExactMatchTable::gen_memory_resource_allocation_tbl_c
     mra["hash_entry_bit_hi"] = way.subgroup*10 + 9;
     mra["number_entry_bits"] = 10;
     if (way.mask) {
-        mra["hash_select_bit_lo"] = 40 + ffs(way.mask) - 1;
-        mra["hash_select_bit_hi"] = 40 + floor_log2(way.mask);
+        int lo = ffs(way.mask) - 1, hi = floor_log2(way.mask);
+        mra["hash_select_bit_lo"] = 40 + lo;
+        mra["hash_select_bit_hi"] = 40 + hi;
+        if (way.mask != (1 << (hi+1)) - (1 << lo)) {
+            warning(way.lineno, "driver does not support discontinuous bits in a way mask");
+            mra["hash_select_bit_mask"] = way.mask >> lo; }
     } else
         mra["hash_select_bit_lo"] = mra["hash_select_bit_hi"] = 40;
     mra["number_select_bits"] = bitcount(way.mask);

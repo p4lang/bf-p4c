@@ -232,7 +232,7 @@ void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool a
     bool on_repeat = false;
     for (auto &row : layout) {
         if (++word < width) {
-            if (row.cols.size() != firstrow->cols.size())
+            if (row.cols != firstrow->cols)
                 error(row.lineno, "Columns across wide rows don't match in table %s", name());
             row.vpns = firstrow->vpns;
             continue; }
