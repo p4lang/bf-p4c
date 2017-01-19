@@ -31,3 +31,4 @@ For Brig
     cd build
     make -j8
     make -j8 check
+
