@@ -61,7 +61,7 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
     for (auto &f : fields_i) {
         PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
         f1->alloc.clear();
-        // header stack pov members
+        // ccgf members
         if (f1->ccgf_fields.size()) {
             for (auto &pov_f : f1->ccgf_fields) {
                 pov_f->alloc.clear();
@@ -75,17 +75,16 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
             int container_bit = cc->lo();
             int container_width = cc->width();
             PHV::Container *asm_container = phv_to_asm_map[c];
-            // ignore allocation for
-            // non-header stack ccgs
-            // and simple header ccgs
             //
-            if (f1->ccgf != f1 || f1->phv_use_rem >= 0) {
-                f1->alloc.emplace_back(
-                   *asm_container,
-                   field_bit,
-                   container_bit,
-                   container_width);
-            }
+            // ignore allocation for owners of
+            // non-header stack ccgs
+            // simple header ccgs
+            //
+            f1->alloc.emplace_back(
+               *asm_container,
+               field_bit,
+               container_bit,
+               container_width);
             //
             // container contiguous allocation
             // header fields allocation permits no holes in container

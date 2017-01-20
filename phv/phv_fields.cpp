@@ -324,12 +324,15 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
                 }
                 add(stack.name + ".$stkvalid", stack.size + stack.maxpush + stack.maxpop,
                     size[gress], true, true);
+                // do not push ".$stkvalid" as a member
+                // members are slices of owner ".stkvalid"'s allocation span
                 if (push_exists) {
                     Field *pov_stk = &all_fields[stack.name + ".$stkvalid"];
                     for (auto &f : pov_fields) {
                         pov_stk->ccgf_fields.push_back(f);
                         f->ccgf = pov_stk;
                     }
+                    pov_stk->ccgf = pov_stk;
                 }
             }
         }

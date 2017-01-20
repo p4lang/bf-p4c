@@ -289,8 +289,9 @@ void Cluster::end_apply() {
             delete_list.push_back(lhs);
         }
         // container contiguous group fields
-        // a->ccgf_fields = [a, b, c], a->ccgf = a, b->ccgf = a, c->ccgf = a
-        // dst_map_i[a] = (a), dst_map_i[b] = (b)
+        // cluster(a{a,b},x), cluster(b,y) => cluster(a{a,b},x,y)
+        // a->ccgf_fields = {a,b,c}, a->ccgf=a, b->ccgf=a, c->ccgf=a
+        // dst_map_i[a]=(a), dst_map_i[b]=(b)
         // (a) += (b); remove dst_map_i[b]
         //
         if (lhs->ccgf
@@ -345,19 +346,8 @@ void Cluster::compute_fields_no_use_mau() {
             for (auto &f : field.ccgf_fields) {
                 ccg_width += f->size;
             }
-            // ignore non byte-multiples for contiguous container groups only
-            // header stack povs should remain in tact
-            //
             if (field.ccgf == &field) {
-                if (ccg_width && ccg_width %
-                    static_cast<int>(PHV_Container::PHV_Word::b8) == 0) {
-                    field.phv_use_hi = ccg_width - 1;
-                } else {
-                    for (auto &f : field.ccgf_fields) {
-                        f->ccgf = 0;
-                    }
-                    field.ccgf_fields.clear();
-                }
+                field.phv_use_hi = ccg_width - 1;
             }
         }
     }
@@ -501,7 +491,7 @@ void Cluster::set_field_range(PhvInfo::Field *field) {
 //     [a]-->(a,x)
 // if [b]--> ==  [a]-->
 //     do nothing
-// if [b]-->nullptr
+// if [b]-->nullptr, b not member of ccgf[a] as 'a' phv-allocates for its ccgf
 //     (a,x) = (a,x) U b
 //     [a],[b]-->(a,x,b)
 // if [b]-->(b,d,x)
@@ -520,19 +510,21 @@ void Cluster::insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rh
             dst_map_i[lhs]->insert(rhs);
         } else {
             if (dst_map_i[rhs] != dst_map_i[lhs]) {   // [b]-->nullptr
+                //
+                // ccgf owners will phv allocate for members
+                // recursively (PHV_Container::taint())
+                // avoid duplication
+                // e.g.,  owner's cluster as (lhs{lhs->ccgf_fields=(field,...)}, field)
+                //
                 if (!dst_map_i[rhs]) {
-                    dst_map_i[lhs]->insert(rhs);
-                    dst_map_i[rhs] = dst_map_i[lhs];
+                    if (rhs->ccgf != lhs) {       // ccgf check
+                        dst_map_i[lhs]->insert(rhs);
+                        dst_map_i[rhs] = dst_map_i[lhs];
+                    }
                 } else {   // [b]-->(b,d,x)
                     // [a]-->(a,u,v)U(b,d,x)
-                    // dst:_map_i[lhs]->insert(dst_map_i[rhs]->begin(), dst_map_i[rhs]->end());
                     for (auto field : *(dst_map_i[rhs])) {
-                        // ccgf owners will phv allocate for members
-                        // recursively (PHV_Container::taint())
-                        // avoid duplication
-                        // e.g.,  owner's cluster as (lhs{lhs->ccgf_fields=(field,...)}, field)
-                        //
-                        if (field->ccgf != lhs) {
+                        if (field->ccgf != lhs) {  // ccgf check
                             dst_map_i[lhs]->insert(field);
                         }
                     }

@@ -78,7 +78,16 @@ PHV_Container::taint(
         //
         int processed_members = 0;
         start = static_cast<int>(width_i);
+        //
+        // header stack pov's allocation is composition of members
+        // it is not present as a member in its ccgf
+        // as no separate allocation required
+        //
+        bool stack_pov_ccg = true;
         for (auto &member : field->ccgf_fields) {
+            if (member == field) {
+                stack_pov_ccg = false;
+            }
             int member_bit_lo = member->phv_use_lo;
             int use_width = member->size - member->phv_use_rem;
             start -= use_width;
@@ -107,6 +116,11 @@ PHV_Container::taint(
             f1->ccgf_fields.begin() + processed_members);
         if (field->ccgf_fields.size()) {
             f1->ccgf = f1;
+        }
+
+        if (stack_pov_ccg) {
+            fields_in_container_i.push_back(
+                new Container_Content(0/*start*/, width, field, field_bit_lo));
         }
 
         return;
