@@ -117,7 +117,7 @@ struct Memories {
         int attached_gw_bytes;
         table_alloc *table_link;
         explicit table_alloc(const IR::MAU::Table *t, const IXBar::Use *mi,
-                             map<cstring, Memories::Use> *mu, 
+                             map<cstring, Memories::Use> *mu,
                              const IR::MAU::Table::LayoutOption *lo, const int e)
                 : table(t), match_ixbar(mi), memuse(mu), layout_option(lo), provided_entries(e),
                   calculated_entries(0), attached_gw_bytes(0), table_link(nullptr) {}

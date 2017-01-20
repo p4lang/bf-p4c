@@ -781,15 +781,13 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
             shared = true;
         }
         LOG3("all hash slices in use, reusing " << group); }
-
-    
     // Calculation of the separate select bits among many stages
     unsigned free_bits = 0; unsigned used_bits = 0;
 
     for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
         if (!(hash_single_bit_inuse[bit] & hash_table_input)) {
             free_bits |= 1U << bit;
-        } 
+        }
     }
     for (auto &way_use : alloc.way_use) {
         used_bits |= way_use.mask;
@@ -985,7 +983,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_a
     if (tbl->match_table) {
         bool ternary = tbl->layout.ternary;
         vector<IXBar::Use::Byte *> alloced;
-        vector<Use> all_tbl_allocs; 
+        vector<Use> all_tbl_allocs;
         bool finished = false;
         size_t start = 0; size_t last = 0;
         while (!finished) {
@@ -993,7 +991,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_a
             layout_option_calculation(lo, start, last);
             /* Essentially a calculation of how much space is potentially available */
             int hash_groups = (last - start > 4) ? 4 : last - start;
-            if (!(allocMatch(ternary, tbl->match_table, phv, next_alloc, 
+            if (!(allocMatch(ternary, tbl->match_table, phv, next_alloc,
                              alloced, false, hash_groups)
                 && allocAllHashWays(ternary, tbl, next_alloc, lo, start, last))
                 && !(allocMatch(ternary, tbl->match_table, phv, next_alloc,
@@ -1012,7 +1010,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_a
         }
         for (auto alloc : all_tbl_allocs) {
             tbl_alloc.add(alloc);
-        } 
+        }
     }
 
 

@@ -99,8 +99,8 @@ struct IXBar {
 
         /* hash tables used for way address computation */
         struct Way {
-            int         group, slice; // group refers to which 8 of the hash groups used,
-                                      // slice refers to the 10b way used
+            int         group, slice;  // group refers to which 8 of the hash groups used,
+                                       // slice refers to the 10b way used
             unsigned    mask;
             Way() = delete;
             Way(int g, int s, unsigned m) : group(g), slice(s), mask(m) {} };
@@ -112,7 +112,7 @@ struct IXBar {
             explicit Select(int g) : group(g), bit_mask(0) {}
         };
         vector<Select> select_use;
-        void clear() { use.clear(); memset(hash_table_inputs, 0, sizeof(hash_table_inputs)); 
+        void clear() { use.clear(); memset(hash_table_inputs, 0, sizeof(hash_table_inputs));
                        bit_use.clear(); way_use.clear(); }
         unsigned compute_hash_tables();
         int groups() const;  // how many different groups in this use
@@ -137,7 +137,7 @@ struct IXBar {
                           size_t start, size_t last);
     bool allocHashWay(const IR::MAU::Table *tbl,
                       const IR::MAU::Table::LayoutOption *layout_option,
-                      size_t index, size_t start, Use &alloc);     
+                      size_t index, size_t start, Use &alloc);
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);
     bool allocSelector(const IR::ActionSelector *, const PhvInfo &phv, Use &alloc, bool second_try,
                        cstring name);

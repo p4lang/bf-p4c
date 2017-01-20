@@ -68,6 +68,7 @@ class MauAsmOutput::ImmedFormat {
         arg(cstring n, cstring im, int l, int sz) : name(n), immed(im), lo(l), hi(l+sz-1) {}
     };
     vector<arg> immediates;
+
  public:
     void add_alias(cstring name, cstring immed) {
         immediates.emplace_back(name, immed, -1, 0); }
@@ -955,7 +956,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionSelector *as) {
     out << indent++ << "selection " << name << ":" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     self.emit_ixbar(out, indent, tbl->resources->selector_ixbar,
-                    &tbl->resources->memuse.at(name), nullptr, true, as); 
+                    &tbl->resources->memuse.at(name), nullptr, true, as);
     out << indent << "mode: " << as->mode.name << " 0" << std::endl;
     return false; }
 bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {

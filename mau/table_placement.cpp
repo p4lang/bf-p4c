@@ -410,7 +410,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             LOG3("Table Use ixbar allocation did not fit");
         }
 
-        if (!advance_to_next_stage && (!( min_use + stage_current <= avail) 
+        if (!advance_to_next_stage && (!( min_use + stage_current <= avail)
             || !try_alloc_mem(rv, done, min_entries, min_resources, min_use, prev_resources))) {
             mem_allocation_bug = true;
             advance_to_next_stage = true;
@@ -458,7 +458,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             rv->stage++;
             stage_current.clear();
         }
-
     } while (!allocated && rv->stage <= furthest_stage);
 
     if (rv->stage > furthest_stage) {
@@ -720,7 +719,7 @@ static void add_attached_tables(IR::MAU::Table *tbl,
     if (layout_option->ternary_indirect_required) {
         LOG1("  Adding Ternary Indirect table to " << tbl->name);
         auto *tern_indir = new IR::MAU::TernaryIndirect(tbl->name);
-        tbl->attached.push_back(tern_indir); 
+        tbl->attached.push_back(tern_indir);
     }
     if (layout_option->action_data_required) {
         LOG1("  Adding Action Data Table to " << tbl->name);
@@ -756,7 +755,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         gw_layout.copy(tbl->layout);
         gw_layout_used = true;
         tbl->layout_options = match->layout_options;
-        select_layout_option(tbl, it->second->use.preferred()); 
+        select_layout_option(tbl, it->second->use.preferred());
         add_attached_tables(tbl, it->second->use.preferred());
         tbl->layout += gw_layout;
         auto *seq = tbl->next.at(it->second->gw_result_tag)->clone();

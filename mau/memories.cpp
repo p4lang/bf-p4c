@@ -48,7 +48,7 @@ void Memories::clear_table_vectors() {
 void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
                          TableResourceAlloc *resources, const IR::MAU::Table::LayoutOption *lo,
                          int entries) {
-    table_alloc *ta; 
+    table_alloc *ta;
     if (t->match_table)
         ta = new table_alloc(t, &resources->match_ixbar, &resources->memuse, lo, entries);
     else
@@ -444,7 +444,7 @@ void Memories::break_exact_tables_into_ways() {
         index = 0;
         assert(ta->match_ixbar->way_use.size() == ta->layout_option->way_sizes.size());
         for (auto &way : ta->match_ixbar->way_use) {
-            SRAM_group *wa = new SRAM_group(ta, ta->layout_option->way_sizes[index], 
+            SRAM_group *wa = new SRAM_group(ta, ta->layout_option->way_sizes[index],
                                              ta->layout_option->way->width, index,
                                              way.group, SRAM_group::EXACT);
             exact_match_ways.push_back(wa);
@@ -586,7 +586,6 @@ bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols, unsigned c
             sram_use[selected_rows[i]][selected_cols[j]] = wa->ta->table->name;
             alloc_row.col.push_back(selected_cols[j]);
         }
-        
 
         sram_inuse[selected_rows[i]] |= row_mask;
         if (!sram_match_bus[selected_rows[i]][bus].first) {
@@ -595,11 +594,11 @@ bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols, unsigned c
             sram_print_match_bus[selected_rows[i]][bus] = wa->ta->table->name;
         }
     }
-   for (size_t j = 0; j < selected_cols.size(); j++) {
-       for (size_t i = 0; i < selected_rows.size(); i++) {
-            alloc.ways[wa->number].rams.emplace_back(selected_rows[i], selected_cols[j]);
-       }
-   }
+    for (size_t j = 0; j < selected_cols.size(); j++) {
+        for (size_t i = 0; i < selected_rows.size(); i++) {
+             alloc.ways[wa->number].rams.emplace_back(selected_rows[i], selected_cols[j]);
+        }
+    }
     return true;
 }
 
@@ -1952,8 +1951,6 @@ bool Memories::allocate_all_gw() {
             name = ta->table_link->table->name + "$gw";
         auto &alloc = (*ta->memuse)[name];
         bool found = false;
-        LOG1("Match Ixbar " << ta->table->name 
-              << " requires search bus " << ta->match_ixbar->gw_search_bus);
         // Tries to find a bus to share with the current table
         for (int i = 0; i < SRAM_ROWS; i++) {
             if (gateway_use[i][0] && gateway_use[i][1]) continue;
@@ -1969,7 +1966,7 @@ bool Memories::allocate_all_gw() {
                 // FIXME: this is just a temporary patch
                 if (ta->match_ixbar->gw_search_bus) {
                     continue;
-                    //if (!gw_search_bus_fit(ta, exact_ta, bus.second, i, j)) continue;
+                    // if (!gw_search_bus_fit(ta, exact_ta, bus.second, i, j)) continue;
                 }
                 if (ta->match_ixbar->gw_hash_group) {
                     // FIXME: Currently all ways shared the same hash_group

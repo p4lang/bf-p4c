@@ -51,7 +51,6 @@ int TernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::
                                         "ternary table %s", tbl->name);
     if (indir_size < 3) indir_size = 3;
     return (128 >> indir_size);
-
 }
 
 /* Calculates the individual way sizes, given a total depth, i.e. 24 will become
@@ -94,7 +93,7 @@ void StageUseEstimate::calculate_way_sizes(IR::MAU::Table::LayoutOption *lo,
         while (depth > 0) {
             if (max_group_size <= depth) {
                 lo->way_sizes.push_back(max_group_size);
-                depth -= max_group_size; 
+                depth -= max_group_size;
             } else {
                 max_group_size /= 2;
             }
@@ -106,7 +105,7 @@ void StageUseEstimate::calculate_way_sizes(IR::MAU::Table::LayoutOption *lo,
 void StageUseEstimate::options_to_ways(const IR::MAU::Table *tbl, int &entries) {
     for (auto &lo : layout_options) {
         int per_row = lo.way->match_groups;
-        int total_depth = (entries + per_row * 1024 - 1) / (per_row * 1024); 
+        int total_depth = (entries + per_row * 1024 - 1) / (per_row * 1024);
         int calculated_depth = total_depth;
         calculate_way_sizes(&lo, calculated_depth);
         lo.entries = calculated_depth * lo.way->match_groups * 1024;
@@ -173,10 +172,10 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
             int entries_per_sram = 1024 * per_word;
             int units = (attached_entries + entries_per_sram - 1) / entries_per_sram;
             lo->srams += units * width;
-            if (need_maprams) lo->maprams += units; 
+            if (need_maprams) lo->maprams += units;
         }
     }
-    // Before table placment, tables do not have attached Ternary Indirect or 
+    // Before table placment, tables do not have attached Ternary Indirect or
     // Action Data Tables
     if (lo->action_data_required && !table_placement) {
         int width = 1;
@@ -252,7 +251,7 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
     for (auto &lo : layout_options) {
         LOG3("layout option width " << lo.way->width << " match groups " << lo.way->match_groups
               << " entries " << lo.entries << " srams " << lo.srams
-              << " action data " << lo.action_data_required); 
+              << " action data " << lo.action_data_required);
         LOG3("Layout option way sizes " << lo.way_sizes);
     }
 
@@ -274,9 +273,9 @@ void StageUseEstimate::select_best_option_ternary() {
     });
 
     for (auto &lo : layout_options) {
-        LOG3("entries " << lo.entries << " srams " << lo.srams << " tcams " << lo.tcams 
+        LOG3("entries " << lo.entries << " srams " << lo.srams << " tcams " << lo.tcams
               << " action data " << lo.action_data_required
-              << " ternary indirect " << lo.ternary_indirect_required); 
+              << " ternary indirect " << lo.ternary_indirect_required);
     }
 
     preferred_index = 0;
@@ -302,20 +301,20 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries, bool
     if (tbl->layout_options.size() == 1 && tbl->layout_options[0].no_match_data) {
         entries = 512;
         preferred_index = 0;
-    } else if (tbl->layout.ternary) { // ternary
+    } else if (tbl->layout.ternary) {  // ternary
         options_to_ternary_entries(tbl, entries);
         options_to_rams(tbl, table_placement);
         select_best_option_ternary();
         fill_estimate_from_option(entries);
-    } else if (tbl->match_table) { // exact_match
+    } else if (tbl->match_table) {  // exact_match
         /* assuming all ways have the same format and width (only differ in depth) */
         options_to_ways(tbl, entries);
         options_to_rams(tbl, table_placement);
         select_best_option(tbl);
         fill_estimate_from_option(entries);
-    } else { // gw
+    } else {  // gw
         entries = 0;
-    } 
+    }
 }
 
 /* Given a number of available srams within a stage, calculate the maximum size
@@ -368,7 +367,7 @@ void StageUseEstimate::known_srams_needed(const IR::MAU::Table *tbl,
             attached_entries = mtr->instance_count;
             need_maprams = true;
         } else if (auto *reg = dynamic_cast<const IR::Register *>(at)) {
-            if (reg->direct) continue; 
+            if (reg->direct) continue;
             per_word = RegisterPerWord(reg);
             attached_entries = reg->instance_count;
             need_maprams = true;
@@ -390,8 +389,8 @@ void StageUseEstimate::known_srams_needed(const IR::MAU::Table *tbl,
             int entries_per_sram = 1024 * per_word;
             int units = (attached_entries + entries_per_sram - 1) / entries_per_sram;
             lo->srams += units * width;
-            if (need_maprams) lo->maprams += units; 
-        }        
+            if (need_maprams) lo->maprams += units;
+        }
     }
 }
 
@@ -493,7 +492,7 @@ void StageUseEstimate::srams_left_best_option() {
     for (auto &lo : layout_options) {
         LOG3("layout option width " << lo.way->width << " match groups " << lo.way->match_groups
               << " entries " << lo.entries << " srams " << lo.srams
-              << " action data " << lo.action_data_required); 
+              << " action data " << lo.action_data_required);
         LOG3("Layout option way sizes " << lo.way_sizes);
     }
     preferred_index = 0;
@@ -503,7 +502,7 @@ void StageUseEstimate::srams_left_best_option() {
    the number of entries until the available tcams or srams are full */
 void StageUseEstimate::unknown_tcams_needed(const IR::MAU::Table *tbl,
                                             IR::MAU::Table::LayoutOption *lo,
-                                            int tcams_left, int srams_left) { 
+                                            int tcams_left, int srams_left) {
     vector<RAM_counter> per_word_and_width;
     calculate_per_row_vector(per_word_and_width, tbl, lo);
 
@@ -517,7 +516,7 @@ void StageUseEstimate::unknown_tcams_needed(const IR::MAU::Table *tbl,
         int sram_count = 0; int mapram_count = 0; int tcam_count = 0;
         int attempted_entries = depth * 512;
         tcam_count += depth;
-        for (auto rc : per_word_and_width) { 
+        for (auto rc : per_word_and_width) {
             int entries_per_sram = 1024 * rc.per_word;
             int units = (attempted_entries + entries_per_sram - 1) / entries_per_sram;
             sram_count += units * rc.width;
@@ -529,7 +528,7 @@ void StageUseEstimate::unknown_tcams_needed(const IR::MAU::Table *tbl,
         depth++;
         adding_entries = attempted_entries;
         used_srams = sram_count;
-        used_maprams = mapram_count; 
+        used_maprams = mapram_count;
         used_tcams = tcam_count;
     }
     lo->srams += used_srams;

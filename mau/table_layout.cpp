@@ -116,12 +116,12 @@ void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl, int immediat
     IR::MAU::Table::LayoutOption lo(layout);
     if (no_action_data)
         lo.action_data_required = false;
-    else 
+    else
         lo.action_data_required = true;
     lo.ternary_indirect_required = ternary_indirect_required;
     tbl->layout_options.push_back(lo);
 
-    if (no_action_data || has_action_profile 
+    if (no_action_data || has_action_profile
         || tbl->layout.action_data_bytes > 4 - immediate_bytes_reserved)
         return;
 
@@ -141,16 +141,13 @@ void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_
     bool no_action_data = (tbl->layout.action_data_bytes == 0);
 
     for (int entry_count = 1; entry_count < 10; entry_count++) {
-        
         int match_group_bits = std::max(8*tbl->layout.match_bytes-8, 0) +
                                tbl->layout.overhead_bits + 4;
         int width = (entry_count * match_group_bits + 127) / 128;
-        
         while (entry_count / width > 4)
             width++;
-        while (tbl->layout.overhead_bits * entry_count > width * 64) 
+        while (tbl->layout.overhead_bits * entry_count > width * 64)
             width++;
-       
         if (width > 8) break;
 
         IR::MAU::Table::Layout *layout = new IR::MAU::Table::Layout();
@@ -174,11 +171,9 @@ void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_
                                tbl->layout.overhead_bits + tbl->layout.action_data_bytes * 8
                                + 4;
         int width = (entry_count * match_group_bits + 127) / 128;
-        
         while ((tbl->layout.overhead_bits + 8 * tbl->layout.action_data_bytes * entry_count)
-                > width * 64) 
+                > width * 64)
             width++;
-       
         if (width > 8) break;
 
         IR::MAU::Table::Layout *layout = new IR::MAU::Table::Layout();
@@ -205,7 +200,7 @@ void TableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl) {
         lo.action_data_required = true;
     else
         lo.action_data_required = false;
-    
+
     if (tbl->layout.overhead_bits > 0)
         lo.ternary_indirect_required = true;
     else
