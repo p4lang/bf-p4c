@@ -150,18 +150,6 @@ class SetupAttachedTables : public MauInspector {
 
     bool preorder(const IR::MAU::ActionData *) {
         BUG("Shouldn't have an action data table before table placement");
-        /*
-        LOG4("Action table for table " << ta->table->name);
-        auto name = ta->table->name + "$action";
-        (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
-        mem.action_tables.push_back(ta);
-        mi.action_tables++;
-        int width = 1;
-        int per_row = ActionDataPerWord(&ta->table->layout, &width);
-        int depth = (entries + per_row * 1024 - 1) / (per_row * 1024);
-        mi.action_bus_min += width; mi.action_RAMs += depth * width;
-        return false;
-        */
     }
 
     bool preorder(const IR::ActionProfile *ap) {
@@ -238,14 +226,6 @@ class SetupAttachedTables : public MauInspector {
 
     bool preorder(const IR::MAU::TernaryIndirect *) {
         BUG("Should be no Ternary Indirect before table placement is complete");
-        /*
-        auto name = ta->table->name + "$tind";
-        (*ta->memuse)[name].type = Memories::Use::TIND;
-        mem.tind_tables.push_back(ta);
-        mi.tind_tables++;
-        mi.tind_RAMs += (entries + 1023U) / 1024U;
-        return false;
-        */
     }
 
 
@@ -451,68 +431,27 @@ vector<int> Memories::available_match_SRAMs_per_row(unsigned row_mask, unsigned 
     return matching_rows;
 }
 
-/* Based on the number of ways provided to the table, this function calculates the
-   way sizes based on the number of entries desired by the table, and recalculates
-   the same number of entries */
+/* Based on the number of ways provided by the layout option, the ways sizes and
+   select masks are initialized and provided to the way allocation algorithm */
 void Memories::break_exact_tables_into_ways() {
     exact_match_ways.clear();
     for (auto *ta : exact_tables) {
-        
         ta->calculated_entries = 0;
         (*ta->memuse)[ta->table->name].ways.clear();
         (*ta->memuse)[ta->table->name].row.clear();
         int index = 0;
         ta->calculated_entries = ta->layout_option->entries;
-
         index = 0;
-        LOG1("Table name " << ta->table->name);
-        LOG1("Sizes " << ta->match_ixbar->way_use.size() << " "
-             << ta->layout_option->way_sizes.size());
         assert(ta->match_ixbar->way_use.size() == ta->layout_option->way_sizes.size());
         for (auto &way : ta->match_ixbar->way_use) {
             SRAM_group *wa = new SRAM_group(ta, ta->layout_option->way_sizes[index], 
                                              ta->layout_option->way->width, index,
                                              way.group, SRAM_group::EXACT);
             exact_match_ways.push_back(wa);
-            
             (*ta->memuse)[ta->table->name].ways.emplace_back(ta->layout_option->way_sizes[index],
                                                              way.mask);
             index++;
         }
-        
-        /*
-        int number_of_ways = ta->table->ways.size();
-        int width = ta->table->ways[0].width;
-        int groups = ta->table->ways[0].match_groups;
-        int RAMs_needed = width * (((ta->provided_entries + groups - 1U)/groups + 1023)/1024U);
-        int total_depth = (RAMs_needed + width - 1) / width;
-        vector<int> way_sizes = way_size_calculator(number_of_ways, total_depth);
-        for (size_t i = 0; i < way_sizes.size(); i++) {
-            exact_match_ways.push_back(new SRAM_group(ta, way_sizes[i], width, i,
-                                                      SRAM_group::EXACT));
-            ta->calculated_entries += way_sizes[i] * 1024U * groups;
-        }
-        */
-
-        /*
-        for (auto &way : ta->match_ixbar->way_use) {
-            alloc_bits[way.group].bits |= way.mask;
-        }
-        for (size_t i = 0; i < way_sizes.size(); i++) {
-            int log2sz = ceil_log2(way_sizes[i]);
-            auto &bits = alloc_bits[ta->match_ixbar->way_use[i].group];
-            unsigned mask = 0;
-            for (int bit = 0; bit < log2sz; bit++) {
-               if (!++bits.next) ++bits.next;
-               if (!bits.next || (mask & (1 << *bits.next))) {
-                   WARNING("Not enough way bits");
-                   break;
-               }
-               mask |= 1 << *bits.next;
-            }
-            (*ta->memuse)[ta->table->name].ways.emplace_back(way_sizes[i], mask);
-        }
-        */
     }
 
     std::sort(exact_match_ways.begin(), exact_match_ways.end(),
@@ -695,6 +634,8 @@ bool Memories::find_best_row_and_fill_out(unsigned column_mask) {
     }
 }
 
+/* Determining if the side from which we want to give extra columns to the exact match
+   allocation, potentially cutting room from either tind tables or twoport tables */
 bool Memories::cut_from_left_side(mem_info &mi, int left_given_columns,
                                           int right_given_columns) {
     if (right_given_columns > mi.columns(mi.right_side_RAMs())
@@ -717,14 +658,14 @@ bool Memories::cut_from_left_side(mem_info &mi, int left_given_columns,
     return false;
 }
 
-// FIXME: Needs to actually be calculated for exact match row placement
+/* Calculates the number of columns and the distribution of columns on the left and 
+   right side of the SRAM array in order to place all exact match tables */
 void Memories::calculate_column_balance(mem_info &mi, unsigned &row) {
     int min_columns_required = (mi.match_RAMs + SRAM_COLUMNS - 1) / SRAM_COLUMNS;
     int left_given_columns = 0;
     int right_given_columns = 0;
 
     if (__builtin_popcount(row) == 0) {
-        // FIXME: Making things up. Need good statistics
         left_given_columns = mi.left_side_RAMs();
         right_given_columns = mi.right_side_RAMs();
 
@@ -772,18 +713,7 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
             return false;
         }
     }
-    LOG4("Before compression");
-    for (auto *ta : exact_tables) {
-        LOG4("Exact match table " << ta->table->name);
-        auto name = ta->table->name;
-        auto alloc = (*ta->memuse)[name];
-        for (auto row : alloc.row) {
-            LOG4("Row is " << row.row << " and bus is " << row.bus);
-            LOG4("Col is " << row.col);
-        }
-    }
     compress_ways();
-    LOG4("After compression");
     for (auto *ta : exact_tables) {
         LOG4("Exact match table " << ta->table->name);
         auto name = ta->table->name;
@@ -870,7 +800,7 @@ bool Memories::allocate_all_ternary() {
     for (auto *ta : ternary_tables) {
         int mid_bytes_needed = 0;
         int TCAMs_necessary = ternary_TCAMs_necessary(ta, mid_bytes_needed);
-        // FIXME: If the table is just a default action table
+        // FIXME: If the table is just a default action table, essentially a hack
         if (TCAMs_necessary == 0)
             continue;
 

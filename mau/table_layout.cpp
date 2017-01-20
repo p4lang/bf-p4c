@@ -102,13 +102,12 @@ static void setup_action_layout(IR::MAU::Table *tbl) {
             tbl->layout.action_data_bytes = action_data_bytes; }
 }
 
+/* Setting up the potential layouts for ternary, either with or without immediate
+   data if immediate is possible */
 void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved,
                                                bool has_action_profile) {
-    LOG1("Setup ternary layout options");
     bool ternary_indirect_required = false;
     bool no_action_data = (tbl->layout.action_data_bytes == 0);
-
-    LOG1("Int calculation " << (tbl->layout.overhead_bits));
     if (tbl->layout.overhead_bits > 0)
         ternary_indirect_required = true;
 
@@ -135,14 +134,14 @@ void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl, int immediat
     tbl->layout_options.push_back(lo_tern);
 }
 
+/* Setting up the potential layouts for exact match, with different numbers of entries per row,
+   different ram widths, and immediate data on and off */
 void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved,
                                        bool has_action_profile) {
     bool no_action_data = (tbl->layout.action_data_bytes == 0);
 
     for (int entry_count = 1; entry_count < 10; entry_count++) {
         
-        LOG1("Match bytes " << tbl->layout.match_bytes);
-        LOG1("Overhead bits " << tbl->layout.overhead_bits);
         int match_group_bits = std::max(8*tbl->layout.match_bytes-8, 0) +
                                tbl->layout.overhead_bits + 4;
         int width = (entry_count * match_group_bits + 127) / 128;
@@ -194,13 +193,12 @@ void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_
     }
 }
 
-/* FIXME: This is entirely a hack to get test cases to not fail */
+/* FIXME: This function is for the setup of a table with no match data.  This is currently hacked
+   together in order to pass many of the test cases */
 void TableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl) {
-    LOG1("Setup layout option no match");
     tbl->layout.ternary = true;
     IR::MAU::Table::Layout *layout = new IR::MAU::Table::Layout();
     layout->copy(tbl->layout);
-    LOG1("Layout " << layout);
     IR::MAU::Table::LayoutOption lo(layout);
     lo.no_match_data = true;
     if (layout->action_data_bytes > 0)
@@ -298,80 +296,5 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
         setup_ternary_layout_options(tbl, immediate_bytes_reserved, attached.have_action_profile);
     else
         setup_layout_options(tbl, immediate_bytes_reserved, attached.have_action_profile);
-    LOG1("size is " << tbl->layout_options.size());
-/*
-    bool add_action_data = false;
-    if (!attached.have_action_data) {
-        // too big for overhead
-        if (tbl->layout.action_data_bytes > 4 - immediate_bytes_reserved) {
-            add_action_data = true;
-        } else if (!tbl->layout.ternary) {
-            // match size duplicated from way allocation below
-            int match_group_bits = std::max(tbl->layout.match_width_bits-10, 0) +
-                                   tbl->layout.overhead_bits + 4;
-            int w_overhead_bits = match_group_bits + 8*tbl->layout.action_data_bytes;
-            if ((match_group_bits + 127)/128U != (w_overhead_bits + 127)/128U) {
-                // would increase table width in rams (bad)
-                add_action_data = true;
-            } else if (128U/match_group_bits != 128U/w_overhead_bits) {
-                // would decrease the number of match groups (not good)
-                if (1024 * (128/w_overhead_bits) >= tbl->layout.entries) {
-                    // all the entries we want still fits in one ram, so ok
-                } else {
-                    add_action_data = true; } } } }
-    if (add_action_data) {
-        LOG2("  adding action data table");
-        auto *act_data = new IR::MAU::ActionData(tbl->name);
-        tbl->attached.push_back(act_data);
-        act_data->apply(attached); }
-    if (!attached.have_action_data) {
-        LOG2("  putting " << tbl->layout.action_data_bytes << " bytes of action data in overhead");
-        tbl->layout.action_data_bytes_in_overhead = tbl->layout.action_data_bytes;
-        tbl->layout.overhead_bits += 8 * tbl->layout.action_data_bytes_in_overhead; }
-
-    if (tbl->layout.ternary) {
-        if (tbl->layout.overhead_bits > 1 && !attached.have_ternary_indirect) {
-            LOG2("  adding ternary indirect table");
-            auto *tern_indir = new IR::MAU::TernaryIndirect(tbl->name);
-            tbl->attached.push_back(tern_indir);
-            tern_indir->apply(attached); }
-    } else if (tbl->match_table) {
-        // determine ways and match groups?
-        int match_group_bits = std::max(tbl->layout.match_bytes-1, 0)*8 +
-                               tbl->layout.overhead_bits + 4;
-        if (match_group_bits > 128)
-            match_group_bits = std::max(tbl->layout.match_width_bits-10, 0) +
-                               tbl->layout.overhead_bits + 4;
-        int width = (match_group_bits+127)/128U;
-        int match_groups = width > 1 ? 1 : 128 / match_group_bits;
-        if (tbl->layout.overhead_bits > 0) {
-            auto max_overhead_groups_per_word = 64 / tbl->layout.overhead_bits;
-            if (match_groups > width * max_overhead_groups_per_word)
-                match_groups = width * max_overhead_groups_per_word; }
-        if (match_groups > 5*width) match_groups = 5*width;
-        int ways = tbl->layout.entries / 1024U / match_groups;
-        // FIXME -- quick hack to choose a non-silly number of ways.  Should do for real
-        if (ways > 6) {
-            ways = 6;
-        } else if (ways < 3) {
-            if (match_groups == 1)
-                ways = 3;
-            else if (match_groups == 2)
-                ways = 2;
-            else if (ways < 1)
-                ways = 1; }
-        if ((ways+1)/2 * width > 8)
-            ways = (8/width) * 2;
-        tbl->ways.resize(ways);
-        int entries = (tbl->layout.entries + match_groups - 1)/ match_groups;
-        for (auto &way : tbl->ways) {
-            way.match_groups = match_groups;
-            way.width = width;
-            way.entries = std::max(1024U, 1U << (ceil_log2(entries / ways--) + 1) >> 1);
-            if ((entries -= way.entries) < 0)
-                entries = 0;
-            way.entries *= match_groups; } }
-    return true;
-*/
     return true;
 }

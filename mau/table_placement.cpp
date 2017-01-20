@@ -381,11 +381,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             rv->stage++; } }
     assert(!rv->placed[tblInfo.at(rv->table).uid]);
 
-    LOG1("Min Use calculation");
     StageUseEstimate min_use(t, min_entries);
-    int increment_entries = min_entries + 1;
-    LOG1("Increment Use calculation");
-    StageUseEstimate increment_use(t, increment_entries);
     StageUseEstimate stage_current = current;
     if (done && rv->stage != done->stage)
         stage_current.clear();
@@ -394,35 +390,31 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     bool ixbar_allocation_bug = false;
     bool mem_allocation_bug = false;
     int furthest_stage = (done == nullptr) ? 0 : done->stage + 1;
-   
+
+    /* Loop to find the right size of entries for a table to place into stage */
     do {
-        LOG1("The stage is " << rv->stage);
-        if (done != nullptr) LOG1("Done stage is " << done->stage);
         auto avail = StageUseEstimate::max();
         bool advance_to_next_stage = false;
         allocated = false; ixbar_allocation_bug = false; mem_allocation_bug = false;
         rv->use = StageUseEstimate(t, rv->entries);
 
-        LOG1("Allocate ixbar minuse");
         if (!try_alloc_ixbar(rv, done, phv, min_use, min_resources)) {
             advance_to_next_stage = true;
             ixbar_allocation_bug = true;
-            LOG1("Failure at this point");
+            LOG3("Min Use ixbar allocation did not fit");
         }
 
-        LOG1("Allocate ixbar regular");
         if (!try_alloc_ixbar(rv, done, phv, rv->use, resources)) {
             advance_to_next_stage = true;
             ixbar_allocation_bug = true;
-            LOG1("Failure at second point");
+            LOG3("Table Use ixbar allocation did not fit");
         }
 
         if (!advance_to_next_stage && (!( min_use + stage_current <= avail) 
             || !try_alloc_mem(rv, done, min_entries, min_resources, min_use, prev_resources))) {
             mem_allocation_bug = true;
             advance_to_next_stage = true;
-            LOG1("Test " << (min_use + stage_current <= avail) );
-            LOG1("Failure at third point");
+            LOG3("Min use of memory allocation did not fit");
         }
 
         if (done && rv->stage == done->stage) {
@@ -442,11 +434,10 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             else
                 rv->use.calculate_for_leftover_tcams(t, tcams_left, srams_left, rv->entries);
 
-            LOG1("rv->entries is " << rv->entries);
             if (rv->entries < min_entries) {
-                LOG1("RV entries " << rv->entries << " min entries " << min_entries);
                 mem_allocation_bug = true;
                 advance_to_next_stage = true;
+                ERROR("Couldn't place mininum entries within a table");
                 break;
             }
             if (!t->layout.ternary)
@@ -463,9 +454,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
                 break;
             }
         }
-        LOG1("Nonsense: sdfghjkldsfdhkjlas;");
         if (advance_to_next_stage) {
-            LOG1("Advance to the next stage");
             rv->stage++;
             stage_current.clear();
         }
@@ -491,81 +480,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         i++;
     }
     coord_selector_xbar(rv, done, resources, prev_resources);
-/*
-    if (!try_alloc_ixbar(rv, done, phv, resources)) {
-retry_next_stage:
-        rv->stage++;
-        // The placed list is onto the next stage, and we don't need to use memories.
-        if (!try_alloc_ixbar(rv, done, phv, resources))
-            BUG("Can't fit table %s in ixbar by itself", rv->name); }
-
-    LOG3(" - will try " << rv->entries << " of " << t->name << " in stage " << rv->stage);
-    // minimum use for part of table to be useful
-    StageUseEstimate min_use(t, min_entries, &resources->match_ixbar);
-    int increment_entries = min_entries + 1;
-    // next bigger than min_use
-    StageUseEstimate increment_use(t, increment_entries, &resources->match_ixbar);
-    rv->use = StageUseEstimate(t, rv->entries, &resources->match_ixbar);
-    if (rv->gw) {
-        assert(!t->uses_gateway());
-        assert(!rv->gw->match_table);
-        rv->use.exact_ixbar_bytes += rv->gw->layout.ixbar_bytes;
-        min_use.exact_ixbar_bytes += rv->gw->layout.ixbar_bytes;
-        increment_use.exact_ixbar_bytes += rv->gw->layout.ixbar_bytes; }
-
-    auto avail = StageUseEstimate::max();
-    if (rv->stage == (done ? done->stage : 0)) {
-        if (!(min_use + current <= avail)
-            || !try_alloc_mem(rv, done, min_entries, resources, prev_resources)) {
-            LOG4("   can't fit min_entries(" << min_entries << ") in stage " << rv->stage <<
-                 ", advancing to next stage");
-            resources->clear();
-            goto retry_next_stage; }
-        resources->memuse.clear(); }
-    if (done && rv->stage == done->stage) {
-        avail.srams -= current.srams;
-        avail.tcams -= current.tcams;
-        avail.maprams -= current.maprams; }
-    assert(min_use <= avail);
-    int last_try = rv->entries;
-    while (!(rv->use <= avail) ||
-           !try_alloc_mem(rv, done, rv->entries, resources, prev_resources)) {
-        rv->need_more = true;
-        int scale = 0;
-        if (rv->use.tcams > avail.tcams)
-            scale = (avail.tcams - min_use.tcams) / (increment_use.tcams - min_use.tcams);
-        else if (rv->use.maprams > avail.maprams)
-            scale = (avail.maprams - min_use.maprams) / (increment_use.maprams - min_use.maprams);
-        else if (rv->use.srams > avail.srams)
-            scale = (avail.srams - min_use.srams) / (increment_use.srams - min_use.srams);
-        if (scale)
-            rv->entries = scale * increment_entries - (scale-1) * min_entries;
-        if (rv->entries >= last_try) {
-            rv->entries = last_try - 500;
-            if (rv->entries < min_entries && min_entries < last_try)
-                rv->entries = min_entries; }
-        if (rv->entries < min_entries) {
-            LOG1("RV entries " << rv->entries << " min entries " << min_entries);
-            BUG("Can't fit any entries of table %s in a stage by iteself (too wide?)", t->name);
-        }
-        last_try = rv->entries;
-        LOG3(" - reducing to " << rv->entries << " of " << t->name << " in stage " << rv->stage);
-        rv->use = StageUseEstimate(t, rv->entries, &resources->match_ixbar);
-        if (rv->gw)
-            rv->use.exact_ixbar_bytes += rv->gw->layout.ixbar_bytes; }
-
-    rv->logical_id = done && done->stage == rv->stage ? done->logical_id + 1
-                                                      : rv->stage * StageUse::MAX_LOGICAL_IDS;
-    assert((rv->logical_id / StageUse::MAX_LOGICAL_IDS) == rv->stage);
-    LOG2("try_place_table returning " << rv->entries << " of " << rv->name <<
-         " in stage " << rv->stage << (rv->need_more ? " (need more)" : ""));
-    int i = 0;
-    for (auto *p = done; p && p->stage == rv->stage; p = p->prev) {
-        coord_selector_xbar(p, done, prev_resources[i], prev_resources);
-        i++;
-    }
-    coord_selector_xbar(rv, done, resources, prev_resources);
-*/
     if (done && rv->stage == done->stage) {
         rv->set_prev(done, true, prev_resources);
     } else {
@@ -578,7 +492,6 @@ retry_next_stage:
             rv->placed[tblInfo.at(rv->gw).uid] = true; }
     /* FIXME -- need to redo IXBar alloc if we moved to the next stage?  Or if we need less
      * hash indexing bits for smaller ways? */
-    LOG1("Try place table done?");
     return rv;
 }
 
@@ -785,25 +698,25 @@ static void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *r
             tbl->ways[i].entries = mem.ways[i].size * 1024 * tbl->ways[i].match_groups; }
 }
 
+/* Sets the layout and ways for a table from the selected table layout option 
+   from table placement */
 static void select_layout_option(IR::MAU::Table *tbl,
                                  const IR::MAU::Table::LayoutOption *layout_option) {
-    LOG1("select layout option " << tbl->name);
     tbl->layout.copy(*(layout_option->layout));
     if (!layout_option->layout->ternary) {
         tbl->ways.resize(layout_option->way_sizes.size());
         int index = 0;
         for (auto &way : tbl->ways) {
             way.copy(*(layout_option->way));
-            LOG1("Match Groups and Width " << way.match_groups << " " << way.width);
             way.entries = way.match_groups * 1024 * layout_option->way_sizes[index];
             index++;
         }
     }
 }
 
+/* Adds the potential ternary tables necessary for layout options */
 static void add_attached_tables(IR::MAU::Table *tbl,
                                 const IR::MAU::Table::LayoutOption *layout_option) {
-    
     if (layout_option->ternary_indirect_required) {
         LOG1("  Adding Ternary Indirect table to " << tbl->name);
         auto *tern_indir = new IR::MAU::TernaryIndirect(tbl->name);
@@ -839,17 +752,13 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
                 gw.second = cstring();
         tbl->match_table = match->match_table;
         tbl->actions = match->actions;
+        /* Generate the correct table layout from the options */
         gw_layout.copy(tbl->layout);
         gw_layout_used = true;
         tbl->layout_options = match->layout_options;
         select_layout_option(tbl, it->second->use.preferred()); 
         add_attached_tables(tbl, it->second->use.preferred());
         tbl->layout += gw_layout;
-        /*
-        tbl->attached = match->attached;
-        tbl->layout += match->layout;
-        tbl->ways = match->ways;
-        */
         auto *seq = tbl->next.at(it->second->gw_result_tag)->clone();
         tbl->next.erase(it->second->gw_result_tag);
         if (seq->tables.size() != 1) {
@@ -888,11 +797,8 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
 
     if (table_placed.count(tbl->name) == 1) {
         table_set_resources(tbl, it->second->resources, it->second->entries);
-        LOG1("Table Placement byte check");
-        for (auto byte : it->second->resources->match_ixbar.use) {
-            LOG1("Byte is " << byte);
-        }
-        return tbl; }
+        return tbl;
+    }
     int counter = 0;
     IR::MAU::Table *rv = 0, *prev = 0;
     /* split the table into multiple parts per the placement */

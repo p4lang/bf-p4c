@@ -73,7 +73,6 @@ bool IXBar::Use::exact_comp(const IXBar::Use *exact_use, int width) const {
     return exact_counted & gw_counted;
 }
 
-
 unsigned IXBar::Use::compute_hash_tables() {
     unsigned hash_table_input = 0;
     for (auto &b : use) {
@@ -84,6 +83,8 @@ unsigned IXBar::Use::compute_hash_tables() {
     return hash_table_input;
 }
 
+/* Combining the allocation of multiple separately allocated hash groups of the same
+   table.  Done if the table requires two hash groups */
 void IXBar::Use::add(const IXBar::Use &alloc) {
     ternary = alloc.ternary;
     gw_search_bus = alloc.gw_search_bus;
@@ -629,6 +630,9 @@ static void add_use(IXBar::Use &alloc, const PhvInfo::Field *field,
         BUG("field %s allocated to tagalong but used in MAU pipe", field->name);
 }
 
+/* Simple first step that aligns with the possible options for layout option way sizes.
+   For example, the max a way size can currently be will be 16, and at most 3 16 deep ways
+   can be within a single column.  Thus it may need a second hash group */
 void IXBar::layout_option_calculation(const IR::MAU::Table::LayoutOption *layout_option,
                                       size_t &start, size_t &last) {
     if (layout_option->layout->ternary) {
@@ -701,9 +705,8 @@ int IXBar::getHashGroup(unsigned hash_table_input) {
     return -1;
 }
 
-
-// FIXME: This is a very temporary patch to solve the hashing issue.  Hashing
-// needs a much greater analysis
+/* Allocate all hashes used within a hash group of a table. The number of hashes in the
+   hash group are determined by the layout option */
 bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc,
                              const IR::MAU::Table::LayoutOption *layout_option,
                              size_t start, size_t last) {
@@ -724,7 +727,6 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
         alloc.clear();
         return false;
     }
-
 
     int way_bits_needed = 0;
     for (auto &way : tbl->ways) {
@@ -747,12 +749,14 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
             return false;
         }
     }
+    /* No longer does a logical table have one hash_table_input, but a couple if the
+       table requires multiple hash groups */
     alloc.hash_table_inputs[hash_group] = hash_table_input;
     return true;
 }
 
-
-//bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const IR::MAU::Table::Way &way, Use &alloc) {
+/* Individual Hash way allocated, called from allocAllHashWays.  Sets up the select bit
+   mask provided by the layout option */
 bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
                          const IR::MAU::Table::LayoutOption *layout_option,
                          size_t index, size_t start, Use &alloc) {
@@ -779,6 +783,7 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
         LOG3("all hash slices in use, reusing " << group); }
 
     
+    // Calculation of the separate select bits among many stages
     unsigned free_bits = 0; unsigned used_bits = 0;
 
     for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
@@ -793,14 +798,13 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
     if (way_bits == 0) {
         way_mask = 0;
     } else if (shared) {
+        // FIXME: The used_bits may not be contiguous, but will work in the meantime
         int used_count = __builtin_popcount(used_bits);
         int allocated_select_bits = 0;
         for (size_t i = start; i < index; i++) {
             allocated_select_bits += ceil_log2(layout_option->way_sizes[i]);
         }
         int starting_bit = allocated_select_bits % used_count;
-        LOG1("Starting bit, way_bits, used_count " << starting_bit << " "
-             << way_bits << " " << used_count);
         if (starting_bit + way_bits > used_count)
             BUG("Allocated bigger way before smaller way");
         for (int i = starting_bit; i < starting_bit + way_bits; i++) {
@@ -844,14 +848,12 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
         if (info.second.xor_with) {
             flags |= IXBar::Use::NeedXor;
             alloc.gw_search_bus = true;
-            LOG1("Table " << tbl->name << " requires XOR");
             // FIXME: This need to be coordinated with the actual PHV!!!
             alloc.gw_search_bus_bytes += (info.first->size + 7)/8;
         } else if (info.second.need_range) {
             flags |= IXBar::Use::NeedRange;
             alloc.gw_hash_group = true;
         } else {
-            LOG1("Table " << tbl->name << " requires search bus");
             alloc.gw_search_bus = true;
             alloc.gw_search_bus_bytes += (info.first->size + 7)/8;
         }
@@ -989,6 +991,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_a
         while (!finished) {
             Use next_alloc;
             layout_option_calculation(lo, start, last);
+            /* Essentially a calculation of how much space is potentially available */
             int hash_groups = (last - start > 4) ? 4 : last - start;
             if (!(allocMatch(ternary, tbl->match_table, phv, next_alloc, 
                              alloced, false, hash_groups)
