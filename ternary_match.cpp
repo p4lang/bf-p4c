@@ -149,12 +149,12 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     fini(p4_info);
     alloc_rams(false, stage->tcam_use, &stage->tcam_match_bus_use);
     check_tcam_match_bus(layout);
-    if (indirect_bus > 0) {
+    if (indirect_bus >= 0) {
         stage->tcam_indirect_bus_use[indirect_bus/2][indirect_bus&1] = this; }
     if (indirect.set()) {
         if (action.set() || actions)
             error(lineno, "Table %s has both ternary indirect and direct actions", name());
-        if (indirect_bus > 0)
+        if (indirect_bus >= 0)
             error(lineno, "Table %s has both ternary indirect table and explicit indirect bus",
                   name());
         if (!attached.stats.empty() || !attached.meter.empty())
@@ -307,15 +307,16 @@ void TernaryMatchTable::write_regs() {
         setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[3][indirect_bus], logical_id);
         setup_muxctl(merge.tcam_match_adr_to_physical_oxbar_outputmap[indirect_bus], tcam_id);
         merge.mau_action_instruction_adr_default[1][indirect_bus] = 0x40;
-        if (options.match_compiler) {
-            auto &shift_en = merge.mau_payload_shifter_enable[1][indirect_bus];
-            shift_en.action_instruction_adr_payload_shifter_en = 1;
-            if (action)
-                shift_en.actiondata_adr_payload_shifter_en = 1;
-            if (!attached.stats.empty())
-                shift_en.stats_adr_payload_shifter_en = 1;
-            if (!attached.meter.empty())
-                shift_en.meter_adr_payload_shifter_en = 1; }
+        auto &shift_en = merge.mau_payload_shifter_enable[1][indirect_bus];
+        if (1 || options.match_compiler) {
+            // FIXME -- only need this if there is an instruction address?
+            shift_en.action_instruction_adr_payload_shifter_en = 1; }
+        if (action)
+            shift_en.actiondata_adr_payload_shifter_en = 1;
+        if (!attached.stats.empty())
+            shift_en.stats_adr_payload_shifter_en = 1;
+        if (!attached.meter.empty())
+            shift_en.meter_adr_payload_shifter_en = 1;
         merge.tind_bus_prop[indirect_bus].tcam_piped = 1;
         merge.tind_bus_prop[indirect_bus].thread = gress;
         merge.tind_bus_prop[indirect_bus].enabled = 1;
