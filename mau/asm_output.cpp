@@ -225,14 +225,10 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
                     group.second.erase(next);
                     continue; } }
             it = next; } }
-    //int hash_group = -1;
     if (!use.way_use.empty() && !is_sel) {
         out << indent << "ways:" << std::endl;
         auto memway = mem->ways.begin();
         for (auto &way : use.way_use) {
-            //if (hash_group >= 0 && hash_group != way.group)
-            //    BUG("multiple hash groups use in ways");
-            //hash_group = way.group;
             out << indent << "- [" << way.group << ", " << way.slice << ", 0x"
                 << hex(memway->select_mask) << ", ";
             size_t index = 0;
@@ -248,6 +244,7 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
     out << indent++ << "input_xbar:" << std::endl;
     for (auto &group : sort)
         out << indent << "group " << group.first << ": " << group.second << std::endl;
+    // Hash groups are now broguht out of the IXBar Use, rather than recalculated in asm_output
     int hash_group = 0;
     for (auto hash_table_input : use.hash_table_inputs) {
         if (hash_table_input) {
