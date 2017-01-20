@@ -358,8 +358,21 @@ XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/basic_routing.p4.test
 # Missing constraints for header stack POV bits.
 XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/instruct5.p4.test
 
+# Incorrect ASM generation for default action tables
+XFAIL_TESTS += tofino/testdata/p4_14_samples/bridge1.p4.test
+XFAIL_TESTS += tofino/testdata/p4_14_samples/instruct5.p4.test
+XFAIL_TESTS += tofino/extensions/tofino/v1_2_test/direct-action.p4.test
+XFAIL_TESTS += tofino/extensions/tofino/v1_2_test/synth-action.p4.test
+XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/bridge1.p4.test
+XFAIL_TESTS += tofino-ortools/extensions/tofino/v1_2_test/direct-action.p4.test
+XFAIL_TESTS += tofino-ortools/extensions/tofino/v1_2_test/synth-action.p4.test
+
+# Incorrect PHV allocation for selector tables
+XFAIL_TESTS += tofino/extensions/tofino/v1_samples/test_config_160_stateful_single_bit_mode.p4.test
+XFAIL_TESTS += tofino/extensions/tofino/v1_samples/test_config_170_stateful_selection_table_update.p4.test
+
 # Layout Constraints from gateway allocation
-XFAIL_TESTS += tofino/extensions/tofino/v1_samples/gateway_bus2.p4.test
+# XFAIL_TESTS += tofino/extensions/tofino/v1_samples/gateway_bus2.p4.test
 XFAIL_TESTS += tofino-ortools/extensions/tofino/v1_samples/gateway_bus1.p4.test
 XFAIL_TESTS += tofino-ortools/extensions/tofino/v1_samples/gateway_bus2.p4.test
 
