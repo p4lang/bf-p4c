@@ -1018,6 +1018,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_a
         if ((as = at->to<IR::ActionSelector>()) != nullptr)
            break;
     }
+
     if (as != nullptr && selectors.find(as) == selectors.end()
         && !allocSelector(as, phv, sel_alloc, false, tbl->name)
         && !allocSelector(as, phv, sel_alloc, true, tbl->name)) {

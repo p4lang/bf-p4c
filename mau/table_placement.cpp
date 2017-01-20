@@ -841,6 +841,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         tbl->actions = match->actions;
         gw_layout.copy(tbl->layout);
         gw_layout_used = true;
+        tbl->layout_options = match->layout_options;
         select_layout_option(tbl, it->second->use.preferred()); 
         add_attached_tables(tbl, it->second->use.preferred());
         tbl->layout += gw_layout;

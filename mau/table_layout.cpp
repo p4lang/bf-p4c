@@ -141,7 +141,9 @@ void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_
 
     for (int entry_count = 1; entry_count < 10; entry_count++) {
         
-        int match_group_bits = std::max(8*tbl->layout.match_bytes-10, 0) +
+        LOG1("Match bytes " << tbl->layout.match_bytes);
+        LOG1("Overhead bits " << tbl->layout.overhead_bits);
+        int match_group_bits = std::max(8*tbl->layout.match_bytes-8, 0) +
                                tbl->layout.overhead_bits + 4;
         int width = (entry_count * match_group_bits + 127) / 128;
         
@@ -169,7 +171,7 @@ void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_
         return;
 
     for (int entry_count = 1; entry_count < 10; entry_count++) {
-        int match_group_bits = std::max(8*tbl->layout.match_bytes-10, 0) +
+        int match_group_bits = std::max(8*tbl->layout.match_bytes-8, 0) +
                                tbl->layout.overhead_bits + tbl->layout.action_data_bytes * 8
                                + 4;
         int width = (entry_count * match_group_bits + 127) / 128;

@@ -772,7 +772,18 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
             return false;
         }
     }
+    LOG4("Before compression");
+    for (auto *ta : exact_tables) {
+        LOG4("Exact match table " << ta->table->name);
+        auto name = ta->table->name;
+        auto alloc = (*ta->memuse)[name];
+        for (auto row : alloc.row) {
+            LOG4("Row is " << row.row << " and bus is " << row.bus);
+            LOG4("Col is " << row.col);
+        }
+    }
     compress_ways();
+    LOG4("After compression");
     for (auto *ta : exact_tables) {
         LOG4("Exact match table " << ta->table->name);
         auto name = ta->table->name;
@@ -791,7 +802,7 @@ void Memories::compress_ways() {
     for (auto *ta : exact_tables) {
         auto name = ta->table->name;
         auto &alloc = (*ta->memuse)[name];
-        std::sort(alloc.row.begin(), alloc.row.end(),
+        std::stable_sort(alloc.row.begin(), alloc.row.end(),
             [=](const Memories::Use::Row a, const Memories::Use::Row b) {
                 int t;
                 if ((t = a.row - b.row) != 0) return t < 0;
@@ -814,6 +825,8 @@ void Memories::compress_ways() {
 /* Number of continuous TCAMs needed for table width */
 int Memories::ternary_TCAMs_necessary(table_alloc *ta, int &mid_bytes_needed) {
     int groups = ta->match_ixbar->groups();
+    if (groups == 0)
+        groups++;
     mid_bytes_needed = groups/2;
     return groups;
 }
