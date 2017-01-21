@@ -58,6 +58,7 @@ class Cluster : public Inspector, P4WriteContext {
     void end_apply() override;
     //
     void insert_cluster(const PhvInfo::Field *, const PhvInfo::Field *);
+    bool is_ccgf_member(const PhvInfo::Field *, const PhvInfo::Field *);
     void set_field_range(const IR::Expression&);
     void set_field_range(PhvInfo::Field *field);
     //

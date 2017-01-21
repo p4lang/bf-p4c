@@ -89,7 +89,10 @@ PHV_Container::taint(
                 stack_pov_ccg = false;
             }
             int member_bit_lo = member->phv_use_lo;
-            int use_width = member->size - member->phv_use_rem;
+            int use_width = member->size;
+            if (member->phv_use_rem > 0) {  // ignore simple header ccgf encoded phv_use_rem -ve
+                use_width = member->size - member->phv_use_rem;
+            }
             start -= use_width;
             if (start < 0) {
                 // member straddles containers
@@ -98,8 +101,8 @@ PHV_Container::taint(
                 //
                 use_width += start;  // start is -ve
                 start = 0;
-                member_bit_lo = member->size - use_width;
-                member->phv_use_rem = use_width;
+                member_bit_lo = member->size - member->phv_use_rem - use_width;
+                member->phv_use_rem += use_width;  // spans several containers, aggregate used bits
             } else {
                 processed_members++;
                 member->phv_use_rem = 0;

@@ -491,11 +491,13 @@ void Cluster::set_field_range(PhvInfo::Field *field) {
 //     [a]-->(a,x)
 // if [b]--> ==  [a]-->
 //     do nothing
-// if [b]-->nullptr, b not member of ccgf[a] as 'a' phv-allocates for its ccgf
+// if [b]-->nullptr, b not member of ccgf[f], f element of [a]
+//                            avoid duplicate b, f.b in cluster as f phv-allocates for its ccgf
 //     (a,x) = (a,x) U b
 //     [a],[b]-->(a,x,b)
 // if [b]-->(b,d,x)
-//     [a]-->(a,u,v)U(b,d,x), b,d,x not member of ccgf[a] as 'a' phv-allocates for its ccgf
+//     [a]-->(a,u,v)U(b,d,x), b,d,x not member of ccgf[f], f element of [a]
+//                            avoid duplicates in cluster as f phv-allocates for its ccgf
 //     [b(=rhs)] set members --> [a(=lhs)], rhs cluster subsumed by lhs'
 //     [b],[d],[x],[a],[u],[v]-->(a,u,v,b,d,x)
 //     lhs_unique set: -remove(b,d,x)
@@ -517,14 +519,14 @@ void Cluster::insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rh
                 // e.g.,  owner's cluster as (lhs{lhs->ccgf_fields=(field,...)}, field)
                 //
                 if (!dst_map_i[rhs]) {
-                    if (rhs->ccgf != lhs) {       // ccgf check
+                    if (!is_ccgf_member(lhs, rhs)) {  // ccgf check
                         dst_map_i[lhs]->insert(rhs);
                         dst_map_i[rhs] = dst_map_i[lhs];
                     }
                 } else {   // [b]-->(b,d,x)
                     // [a]-->(a,u,v)U(b,d,x)
                     for (auto field : *(dst_map_i[rhs])) {
-                        if (field->ccgf != lhs) {  // ccgf check
+                        if (!is_ccgf_member(lhs, field)) {  // ccgf check
                             dst_map_i[lhs]->insert(field);
                         }
                     }
@@ -542,7 +544,25 @@ void Cluster::insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rh
             LOG4("lhs_unique..erase[" << std::endl << &lhs_unique_i << "lhs_unique..erase]");
         }
     }
-}
+}  // insert_cluster
+
+
+bool
+Cluster::is_ccgf_member(const PhvInfo::Field *lhs, const PhvInfo::Field *rhs) {
+    // ccgf check: rhs is not a member of f.ccgf, f element of dst_map_i[lhs]
+    if (lhs && rhs && dst_map_i[lhs]) {
+        for (auto &f : *dst_map_i[lhs]) {
+            if (std::find(f->ccgf_fields.begin(), f->ccgf_fields.end(), rhs)
+               != f->ccgf_fields.end()) {
+               // rhs is member of f.ccgf, f element of lhs.cluster
+               LOG4("-----" << rhs << " member of ccgf of " << f << " -----");
+               //
+               return true;
+            }
+        }  // for
+    }
+    return false;
+}  // is_ccgf_member
 
 //***********************************************************************************
 //
@@ -578,13 +598,39 @@ void Cluster::sanity_check_clusters(const std::string& msg, const PhvInfo::Field
 }
 
 void Cluster::sanity_check_clusters_unique(const std::string& msg) {
+    //
     // sanity check dst_map_i[] contains unique clusters only
     // forall clusters x,y
-    //          x intersect y = 0
+    //     x intersect y = 0
+    //
+    // avoid duplicate phv alloc for ccgf members as owner accounts for ccgf phv allocation
+    // for m,f member of cluster x, m != f
+    //    m not element of f.ccgf
+    //    header stack povs: m not member of m.ccgf
+    //    sub-byte header fields: m member of m.ccgf
     //
     for (auto entry : dst_map_i) {
         if (entry.first && entry.second) {
             ordered_set<const PhvInfo::Field *> s1 = *(entry.second);
+            //
+            // ccgf check
+            // for x,y member of cluster, x!=y, z element of x.xxgf
+            //     z != y     
+            //
+            for (auto &f : s1) {
+                for (auto &m : f->ccgf_fields) {
+                    if (m != f && s1.count(m)) {
+                        LOG1("*****cluster.cpp:sanity_FAIL***** ccgf ..." << msg);
+                        LOG1("field");
+                        LOG1(m);
+                        LOG1("in cluster");
+                        LOG1(&s1);
+                    }
+                }
+            }
+            //
+            // unique clusters check
+            //
             for (auto entry_2 : dst_map_i) {
                 if (entry_2.first && entry_2.second && entry_2.first != entry.first) {
                     ordered_set<const PhvInfo::Field *> s2 = *(entry_2.second);
@@ -593,10 +639,21 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg) {
                     set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(),
                         std::back_inserter(s3));
                     if (s3.size()) {
-                        LOG1("*****cluster.cpp:sanity_FAIL*****uniqueness.." << msg
-                            << entry.first << &s1 << "..^.." << entry_2.first << &s2 << '=' << s3);
-                        LOG4("lhs[" << std::endl << &s1 << "lhs]");
-                        LOG4("lhs_2[" << std::endl << &s2 << "lhs_2]");
+                        LOG1("*****cluster.cpp:sanity_FAIL***** cluster uniqueness.." << msg);
+                        LOG1(entry.first);
+                        LOG1(&s1);
+                        LOG1("...^...");
+                        LOG1(entry_2.first);
+                        LOG1(&s2);
+                        LOG1('=');
+                        LOG1(s3);
+                        //
+                        LOG4("lhs[");
+                        LOG4(&s1);
+                        LOG4("lhs]");
+                        LOG4("lhs_2[");
+                        LOG4(&s2);
+                        LOG4("lhs_2]");
                     }
                 }
             }  // for

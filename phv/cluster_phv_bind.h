@@ -48,6 +48,11 @@ class PHV_Bind : public Visitor {
     std::set<const PhvInfo::Field *>& fields()    { return fields_i; }
     //
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
+    void container_contiguous_alloc(               // backup for ccgf fields processing
+        PhvInfo::Field*,
+        const PHV_Container *,
+        PHV::Container *,
+        int);
     void trivial_allocate(std::set<const PhvInfo::Field *>&);
     //
     void sanity_check_container_fields(const std::string&, std::set<const PhvInfo::Field *>&);

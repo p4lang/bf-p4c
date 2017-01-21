@@ -73,7 +73,7 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
             PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(cc->field());
             int field_bit = cc->field_bit_lo();
             int container_bit = cc->lo();
-            int container_width = cc->width();
+            int width_in_container = cc->width();
             PHV::Container *asm_container = phv_to_asm_map[c];
             //
             // ignore allocation for owners of
@@ -84,95 +84,12 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
                *asm_container,
                field_bit,
                container_bit,
-               container_width);
+               width_in_container);
+
+            // contiguous container group allocation
+            // in case bypassing MAU PHV allocation PHV_container::taint() recursion
             //
-            // container contiguous allocation
-            // header fields allocation permits no holes in container
-            // header stack povs allocation permits holes beside LSB of packed field
-            //
-            if (f1->ccgf_fields.size()) {
-                if (f1->ccgf == f1) {
-                    // contiguous container group allocation
-                    // cases bypassing MAU PHV allocation PHV_container::taint() recursion
-                    // consider MSB order
-                    int processed_members = 0;
-                    // container_bit start
-                    int start = static_cast<int>(
-                                const_cast<PHV_Container *>(c)->width());
-                    for (auto &member : f1->ccgf_fields) {
-                        int member_bit_lo = member->phv_use_lo;
-                        int use_width = member->size - member->phv_use_rem;
-                        start -= use_width;
-                        if (start < 0) {
-                            // member straddles containers
-                            // remainder bits processed
-                            // in subsequent container allocated to owner
-                            use_width += start;
-                            start = 0;
-                            member_bit_lo = member->size - use_width - member->phv_use_rem;
-                            member->phv_use_rem += use_width;  // [width 20]
-                                                               // 12..19 [8b],
-                                                               // 4..11 [8b],
-                                                               // 0..3 [4b]
-                        } else {
-                            processed_members++;
-                            member->phv_use_rem = 0;
-                        }
-                        // -- reentrant PHV_Bind, preserve entry state of member
-                        // member->ccgf = 0;
-                        member->alloc.emplace_back(
-                            *asm_container,
-                            member_bit_lo,
-                            start,
-                            use_width);
-                        if (start <= 0) {
-                            break;
-                        }
-                    }
-                    // -- reentrant PHV_Bind, preserve entry state of f1
-                    // f1->ccgf_fields.erase(
-                        // f1->ccgf_fields.begin(),
-                        // f1->ccgf_fields.begin() + processed_members);
-                    // if (f1->ccgf_fields.size()) {
-                        // f1->ccgf = f1;
-                    // }
-                } else {
-                    //
-                    // header stack pov members
-                    // constituent members of header stack povs must fit header stk pov
-                    // this condition should be guaranteed by phv_fields.cpp allocatePOV()
-                    //
-                    int container_bit = container_width + 1;
-                    for (auto &pov_f : f1->ccgf_fields) {
-                        int field_bit = pov_f->phv_use_lo;
-                        int pov_width = pov_f->size;
-                        container_bit -= pov_width;
-                        if (f1->phv_use_rem < 0) {
-                            // simple header ccgs
-                            container_bit -= 2;
-                            f1->phv_use_rem = 0;
-                            f1->phv_use_hi = f1->size - 1;
-                        }
-                        //
-                        // check constituent members do fit hdr stk pov
-                        //
-                        if (container_bit < 0) {
-                            WARNING("*****PHV_Bind: header stack overrun *****"
-                                << " hdr stk pov: "
-                                << f1
-                                << " pov member: "
-                                << pov_f
-                                << " container_bit: "
-                                << container_bit);
-                        }
-                        pov_f->alloc.emplace_back(
-                            *asm_container,
-                            field_bit,
-                            container_bit,
-                            pov_width);
-                    }
-                }
-            }
+            // container_contiguous_alloc(f1, c, asm_container, width_in_container);
         }
     }
     //
@@ -197,6 +114,103 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
     //
     return node;
 }
+
+
+void
+PHV_Bind::container_contiguous_alloc(
+    PhvInfo::Field* f1,
+    const PHV_Container *c,
+    PHV::Container *asm_container,
+    int width_in_container) {
+    //
+    // container contiguous allocation
+    // header fields allocation permits no holes in container
+    // header stack povs allocation permits leading / trailing holes beside ccgf
+    //
+    if (f1->ccgf_fields.size()) {
+        if (f1->ccgf == f1) {
+            // contiguous container group allocation
+            // cases bypassing MAU PHV allocation PHV_container::taint() recursion
+            // consider MSB order
+            int processed_members = 0;
+            // container_bit start
+            int start = static_cast<int>(
+                        const_cast<PHV_Container *>(c)->width());
+            for (auto &member : f1->ccgf_fields) {
+                int member_bit_lo = member->phv_use_lo;
+                int use_width = member->size - member->phv_use_rem;
+                start -= use_width;
+                if (start < 0) {
+                    // member straddles containers
+                    // remainder bits processed
+                    // in subsequent container allocated to owner
+                    use_width += start;
+                    start = 0;
+                    member_bit_lo = member->size - use_width - member->phv_use_rem;
+                    member->phv_use_rem += use_width;  // [width 20]
+                                                       // 12..19 [8b],
+                                                       // 4..11 [8b],
+                                                       // 0..3 [4b]
+                } else {
+                    processed_members++;
+                    member->phv_use_rem = 0;
+                }
+                // -- reentrant PHV_Bind, preserve entry state of member
+                // member->ccgf = 0;
+                member->alloc.emplace_back(
+                    *asm_container,
+                    member_bit_lo,
+                    start,
+                    use_width);
+                if (start <= 0) {
+                    break;
+                }
+            }
+            // -- reentrant PHV_Bind, preserve entry state of f1
+            // f1->ccgf_fields.erase(
+                // f1->ccgf_fields.begin(),
+                // f1->ccgf_fields.begin() + processed_members);
+            // if (f1->ccgf_fields.size()) {
+                // f1->ccgf = f1;
+            // }
+        } else {
+            //
+            // header stack pov members
+            // constituent members of header stack povs must fit header stk pov
+            // this condition should be guaranteed by phv_fields.cpp allocatePOV()
+            //
+            int container_bit = width_in_container + 1;
+            for (auto &pov_f : f1->ccgf_fields) {
+                int field_bit = pov_f->phv_use_lo;
+                int pov_width = pov_f->size;
+                container_bit -= pov_width;
+                if (f1->phv_use_rem < 0) {
+                    // simple header ccgs
+                    container_bit -= 2;
+                    f1->phv_use_rem = 0;
+                    f1->phv_use_hi = f1->size - 1;
+                }
+                //
+                // check constituent members do fit hdr stk pov
+                //
+                if (container_bit < 0) {
+                    WARNING("*****PHV_Bind: header stack overrun *****"
+                        << " hdr stk pov: "
+                        << f1
+                        << " pov member: "
+                        << pov_f
+                        << " container_bit: "
+                        << container_bit);
+                }
+                pov_f->alloc.emplace_back(
+                    *asm_container,
+                    field_bit,
+                    container_bit,
+                    pov_width);
+            }
+        }
+    }
+}  // container_contiguous_alloc
 
 
 void

@@ -286,6 +286,14 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
         }
         // accumulate member povs of simple headers
         // all pov bits must be in single container
+        // e.g.,
+        // ingress::udp.$valid[1]{0..4}-r- --> ingress::udp.$valid
+        // [      ingress::ethernet.$valid[1]
+        //        ingress::ig_intr_md_for_tm.$valid[1]
+        //        ingress::ipv4.$valid[1]
+        //        ingress::tcp.$valid[1]
+        //        ingress::udp.$valid[1]
+        // :5]
         //
         if (!stacks_num) {
             for (auto &f : pov_fields_h) {
@@ -293,9 +301,9 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
                 f->ccgf = hdr_dd_valid;
             }
             hdr_dd_valid->phv_use_hi = pov_fields_h.size();
-                                     // to allocated container for ccg width
+                                     // to allocated container for ccgf width
             hdr_dd_valid->phv_use_rem = -pov_fields_h.size();
-                                     // negative encoding signifies simple header ccg
+                                     // negative encoding signifies simple header ccgf
             pov_fields_h.clear();
         }
         for (auto &stack : stacks) {
