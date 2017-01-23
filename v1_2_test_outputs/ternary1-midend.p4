@@ -61,8 +61,17 @@ control egress(inout packet_t hdrs, inout standard_metadata meta) {
 }
 
 control deparser(packet_out b, in packet_t hdrs, inout standard_metadata meta) {
-    apply {
+    action act() {
         b.emit<data_h>(hdrs.data);
+    }
+    table tbl_act() {
+        actions = {
+            act();
+        }
+        const default_action = act();
+    }
+    apply {
+        tbl_act.apply();
     }
 }
 
