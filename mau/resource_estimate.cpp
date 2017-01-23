@@ -478,8 +478,17 @@ void StageUseEstimate::unknown_srams_needed(const IR::MAU::Table *tbl,
     if (depth_test != depth) {
         int attempted_entries = lo->way->match_groups * 1024 * depth_test;
         int sram_count = attempted_entries / (lo->way->match_groups * 1024) * lo->way->width;
+        int mapram_count = 0;
+        for (auto rc : per_word_and_width) {
+            int entries_per_sram = 1024 * rc.per_word;
+            int units = (attempted_entries + entries_per_sram - 1) / entries_per_sram;
+            sram_count += units * rc.width;
+            if (rc.need_maprams)
+                mapram_count += units;
+        }
         used_srams = sram_count;
         adding_entries = attempted_entries;
+        used_maprams = mapram_count;
     }
     
     lo->srams += used_srams;
