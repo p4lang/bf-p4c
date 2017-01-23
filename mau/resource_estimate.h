@@ -39,7 +39,7 @@ struct StageUseEstimate {
         logical_ids = 0; srams = 0; tcams = 0; maprams = 0;
         exact_ixbar_bytes = 0; ternary_ixbar_groups = 0;
     }
-    void options_to_ways(const IR::MAU::Table *tbl, int &entries);
+    void options_to_ways(int &entries);
     void options_to_rams(const IR::MAU::Table *tbl, bool table_placement);
     void select_best_option(const IR::MAU::Table *tbl);
     void options_to_ternary_entries(const IR::MAU::Table *tbl, int &entries);

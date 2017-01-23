@@ -237,7 +237,6 @@ class VisitAttached : public Inspector {
         }
         return false; }
     bool preorder(const IR::ActionProfile *ap) override {
-        LOG1("Has action profile in table layout");
         have_action_data = true;
         have_action_profile = true;
         if (ap->size <= 0)

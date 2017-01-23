@@ -230,10 +230,8 @@ static int count(const TablePlacement::Placed *pl) {
 
 TablePlacement::Placed *TablePlacement::Placed::gateway_merge() {
     if (gw || !table->uses_gateway() || table->match_table) {
-        LOG1("Gateway Merge return?");
         return this;
     }
-    LOG1("Gateway Merger");
     /* table is just a gateway -- look for a dependent match table to combine with */
     cstring result_tag;
     const IR::MAU::Table *match = 0;
@@ -500,10 +498,6 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
     LOG1("placing " << pl->entries << " entries of " << pl->name << (pl->gw ? " (with gw " : "") <<
          (pl->gw ? pl->gw->name : "") << (pl->gw ? ")" : "") << " in stage " <<
          pl->stage << (pl->need_more ? " (need more)" : ""));
-    for (auto at : pl->table->attached) {
-        if (at->is<IR::ActionProfile>())
-            LOG1("Table placement action profile " << pl->table->name);
-    }
     if (!pl->need_more) {
         pl->group->finish_if_placed(work, pl);
         GroupPlace *gw_match_grp = nullptr;
@@ -722,12 +716,12 @@ static void select_layout_option(IR::MAU::Table *tbl,
 static void add_attached_tables(IR::MAU::Table *tbl,
                                 const IR::MAU::Table::LayoutOption *layout_option) {
     if (layout_option->ternary_indirect_required) {
-        LOG1("  Adding Ternary Indirect table to " << tbl->name);
+        LOG3("  Adding Ternary Indirect table to " << tbl->name);
         auto *tern_indir = new IR::MAU::TernaryIndirect(tbl->name);
         tbl->attached.push_back(tern_indir);
     }
     if (layout_option->action_data_required) {
-        LOG1("  Adding Action Data Table to " << tbl->name);
+        LOG3("  Adding Action Data Table to " << tbl->name);
         auto *act_data = new IR::MAU::ActionData(tbl->name);
         tbl->attached.push_back(act_data);
     }
@@ -735,12 +729,6 @@ static void add_attached_tables(IR::MAU::Table *tbl,
 
 
 IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
-    LOG1("Preorder for tbl " << tbl->name);
-    for (auto at : tbl->attached) {
-        if (at->is<IR::ActionProfile>())
-            LOG1("Table placement action profile preorder " << tbl->name);
-    }
-
     auto it = table_placed.find(tbl->name);
     if (it == table_placed.end()) {
         assert(strchr(tbl->name, '.'));
@@ -844,7 +832,6 @@ IR::Node *TablePlacement::preorder(IR::MAU::TableSeq *seq) {
             [this](const IR::MAU::Table *a, const IR::MAU::Table *b) -> bool {
                 return find_placed(a->name)->second->logical_id <
                        find_placed(b->name)->second->logical_id; }); }
-    LOG1("Here");
     return seq;
 }
 
