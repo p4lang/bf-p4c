@@ -490,7 +490,6 @@ void StageUseEstimate::unknown_srams_needed(const IR::MAU::Table *tbl,
         adding_entries = attempted_entries;
         used_maprams = mapram_count;
     }
-    
     lo->srams += used_srams;
     lo->maprams += used_maprams;
     lo->entries = adding_entries;
