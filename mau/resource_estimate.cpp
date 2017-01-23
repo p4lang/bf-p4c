@@ -135,6 +135,7 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
         int per_word = 0;
         int width = 1;
         int attached_entries = lo->entries;
+        LOG1("Attached_entries " << attached_entries);
         bool need_maprams = false;
         if (auto *ctr = dynamic_cast<const IR::Counter *>(at)) {
             per_word = CounterPerWord(ctr);

@@ -707,11 +707,13 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
 
     /* FIXME -- this is a mess and needs to be rewritten to be sane */
     bool have_action = false, have_indirect = false;
+    LOG1("Basic test");
     for (auto at : tbl->attached) {
         if (at->is<IR::MAU::TernaryIndirect>()) {
             have_indirect = true;
             out << indent << at->kind() << ": " << at->name << std::endl;
         } else if (at->is<IR::ActionProfile>()) {
+            LOG1("Have action profile?");
             have_action = true;
         } else if (at->is<IR::MAU::ActionData>()) {
             assert(tbl->layout.action_data_bytes > tbl->layout.action_data_bytes_in_overhead);

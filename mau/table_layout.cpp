@@ -155,7 +155,7 @@ void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_
         layout->copy(tbl->layout);
         way->match_groups = entry_count; way->width = width;
         IR::MAU::Table::LayoutOption lo(layout, way);
-        if (no_action_data)
+        if (no_action_data || has_action_profile)
             lo.action_data_required = false;
         else
             lo.action_data_required = true;
@@ -237,6 +237,7 @@ class VisitAttached : public Inspector {
         }
         return false; }
     bool preorder(const IR::ActionProfile *ap) override {
+        LOG1("Has action profile in table layout");
         have_action_data = true;
         have_action_profile = true;
         if (ap->size <= 0)

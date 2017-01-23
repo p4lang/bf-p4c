@@ -363,19 +363,19 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     t = rv->table;
     rv->stage = done ? done->stage : 0;
     int min_entries = 1;
-    rv->entries = 512;
+    int set_entries = 512;
     if (t->match_table) {
         if (t->match_table->size)
-            rv->entries = t->match_table->size;
+            set_entries = t->match_table->size;
         else if (t->match_table->min_size)
-            rv->entries = t->match_table->min_size; }
+            set_entries = t->match_table->min_size; }
     auto &rvdeps = deps.graph.at(rv->name);
     for (auto *p = done; p; p = p->prev) {
         if (p->name == rv->name) {
             if (p->need_more == false) {
                 LOG2(" - can't place as its already done");
                 return nullptr; }
-            rv->entries -= p->entries;
+            set_entries -= p->entries;
         } else if (p->stage == rv->stage && rvdeps.data_dep.count(p->name) &&
                    rvdeps.data_dep.at(p->name) >= DependencyGraph::Table::ACTION) {
             rv->stage++; } }
@@ -393,6 +393,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 
     /* Loop to find the right size of entries for a table to place into stage */
     do {
+        rv->entries = set_entries;
         auto avail = StageUseEstimate::max();
         bool advance_to_next_stage = false;
         allocated = false; ixbar_allocation_bug = false; mem_allocation_bug = false;
@@ -499,6 +500,10 @@ TablePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *
     LOG1("placing " << pl->entries << " entries of " << pl->name << (pl->gw ? " (with gw " : "") <<
          (pl->gw ? pl->gw->name : "") << (pl->gw ? ")" : "") << " in stage " <<
          pl->stage << (pl->need_more ? " (need more)" : ""));
+    for (auto at : pl->table->attached) {
+        if (at->is<IR::ActionProfile>())
+            LOG1("Table placement action profile " << pl->table->name);
+    }
     if (!pl->need_more) {
         pl->group->finish_if_placed(work, pl);
         GroupPlace *gw_match_grp = nullptr;
@@ -730,6 +735,12 @@ static void add_attached_tables(IR::MAU::Table *tbl,
 
 
 IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
+    LOG1("Preorder for tbl " << tbl->name);
+    for (auto at : tbl->attached) {
+        if (at->is<IR::ActionProfile>())
+            LOG1("Table placement action profile preorder " << tbl->name);
+    }
+
     auto it = table_placed.find(tbl->name);
     if (it == table_placed.end()) {
         assert(strchr(tbl->name, '.'));
@@ -751,6 +762,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
                 gw.second = cstring();
         tbl->match_table = match->match_table;
         tbl->actions = match->actions;
+        tbl->attached = match->attached;
         /* Generate the correct table layout from the options */
         gw_layout.copy(tbl->layout);
         gw_layout_used = true;
@@ -794,6 +806,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         add_attached_tables(tbl, it->second->use.preferred());
     }
 
+
     if (table_placed.count(tbl->name) == 1) {
         table_set_resources(tbl, it->second->resources, it->second->entries);
         return tbl;
@@ -831,6 +844,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::TableSeq *seq) {
             [this](const IR::MAU::Table *a, const IR::MAU::Table *b) -> bool {
                 return find_placed(a->name)->second->logical_id <
                        find_placed(b->name)->second->logical_id; }); }
+    LOG1("Here");
     return seq;
 }
 
