@@ -155,7 +155,7 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
                 if (accumulator_bits
                     % static_cast<int>(PHV_Container::PHV_Word::b8) == 0) {
                     ccg[group_accumulator] = accumulator_bits;
-                    LOG4("+++++PHV_container_contiguous_group..."
+                    LOG4("+++++PHV_container_contiguous_group....."
                         << accumulator_bits
                         << " "
                         << group_accumulator);
@@ -166,7 +166,7 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
     }
     if (group_accumulator) {
        ccg[group_accumulator] = accumulator_bits;
-       LOG4("+++++PHV_container_contiguous_group..."
+       LOG4("+++++PHV_container_contiguous_group....."
            << accumulator_bits
            << " "
            << group_accumulator);
@@ -187,7 +187,7 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
                 f->ccgf = 0;
             }
             owner->ccgf_fields.clear();
-            LOG4("-----PHV_container_contiguous_group..."
+            LOG4("-----discarded PHV_container_contiguous_group....."
                 << ccg_width
                 << " "
                 << owner);
@@ -293,15 +293,27 @@ void Cluster::end_apply() {
         // a->ccgf_fields = {a,b,c}, a->ccgf=a, b->ccgf=a, c->ccgf=a
         // dst_map_i[a]=(a), dst_map_i[b]=(b)
         // (a) += (b); remove dst_map_i[b]
+        // b appearing in dst_map_i[y] :-
+        //     cluster(a{a,b},x), cluster(y,b) => cluster(a{a,b},x,y)
         //
-        if (lhs->ccgf
-            && lhs->ccgf != lhs
-            && lhs->ccgf->ccgf == lhs->ccgf  // ccgfs - not header stack pov
-            && dst_map_i.count(lhs->ccgf)) {
-            LOG4(".....ccgf fold " << lhs->name << "..into.. " << lhs->ccgf->name);
-            insert_cluster(lhs->ccgf, lhs);
-            dst_map_i[lhs] = nullptr;
-            delete_list.push_back(lhs);
+        if (entry.second) {
+            ordered_set<const PhvInfo::Field *> s1 = *(entry.second);
+            for (auto &f : s1) {
+                if (f->ccgf
+                    && f->ccgf != f
+                    && f->ccgf->ccgf == f->ccgf  // ccgfs - not header stack pov
+                    && dst_map_i.count(f->ccgf)) {
+                    //
+                    LOG4("===== ccgf fold =====");
+                    LOG4(&s1);
+                    LOG4(".....into.....");
+                    LOG4(f->ccgf);
+                    //
+                    insert_cluster(f->ccgf, lhs);
+                    dst_map_i[lhs] = nullptr;
+                    delete_list.push_back(lhs);
+                }
+            }
         }
     }
     for (auto &fp : delete_list) {
@@ -555,7 +567,11 @@ Cluster::is_ccgf_member(const PhvInfo::Field *lhs, const PhvInfo::Field *rhs) {
             if (std::find(f->ccgf_fields.begin(), f->ccgf_fields.end(), rhs)
                != f->ccgf_fields.end()) {
                // rhs is member of f.ccgf, f element of lhs.cluster
-               LOG4("-----" << rhs << " member of ccgf of " << f << " -----");
+               LOG4("=====");
+               LOG4(rhs);
+               LOG4(" member of ccgf of ");
+               LOG4(f);
+               LOG4("=====");
                //
                return true;
             }
@@ -631,29 +647,44 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg) {
             //
             // unique clusters check
             //
+            // ccgfs: s1.f.ccgf can intersect s2.f
+            // s1 <-- s1 U f.ccgf, f element of s1
+            // s2 <-- s2 U f.ccgf, f element of s2
+            //
+            for (auto &f : s1) {
+                for (auto &m : f->ccgf_fields) {
+                    s1.insert((const PhvInfo::Field *) m);
+                }
+            }
+            //
             for (auto entry_2 : dst_map_i) {
                 if (entry_2.first && entry_2.second && entry_2.first != entry.first) {
                     ordered_set<const PhvInfo::Field *> s2 = *(entry_2.second);
-                    std::vector<const PhvInfo::Field *> s3;
-                    s3.clear();
-                    set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(),
-                        std::back_inserter(s3));
-                    if (s3.size()) {
-                        LOG1("*****cluster.cpp:sanity_FAIL***** cluster uniqueness.." << msg);
-                        LOG1(entry.first);
-                        LOG1(&s1);
-                        LOG1("...^...");
-                        LOG1(entry_2.first);
-                        LOG1(&s2);
-                        LOG1('=');
-                        LOG1(s3);
-                        //
-                        LOG4("lhs[");
-                        LOG4(&s1);
-                        LOG4("lhs]");
-                        LOG4("lhs_2[");
-                        LOG4(&s2);
-                        LOG4("lhs_2]");
+                    //
+                    // s2 <-- s2 U f.ccgf, f element of s2
+                    //
+                    for (auto &f : s2) {
+                        for (auto &m : f->ccgf_fields) {
+                            s2.insert((const PhvInfo::Field *) m);
+                        }
+                    }
+                    //std::vector<const PhvInfo::Field *> s3;
+                    //s3.clear();
+                    //std::set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(),
+                        //std::back_inserter(s3));
+                    //if (s3.size()) {
+                    for (auto &f : s1) {
+                        if (s2.count(f)) {
+                            LOG1("*****cluster.cpp:sanity_FAIL***** cluster uniqueness.."
+                                << msg);
+                            LOG1(&s1);
+                            LOG1("/\\");
+                            LOG1(&s2);
+                            LOG1('=');
+                            //LOG1(s3);
+                            LOG1("---> " << f << " <---");
+                            //
+                        }
                     }
                 }
             }  // for
