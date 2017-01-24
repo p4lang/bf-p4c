@@ -5,7 +5,7 @@ blackbox_type lpf {
     attribute filter_input {
         /*  Reference to the input field to compute the filter on.
             The maximum input bit width supported is 32 bits.  */
-        type: bit<0>;
+        type: bit<32>;
     }
 
     attribute direct {
@@ -45,7 +45,7 @@ blackbox_type lpf {
              unless the low pass filter is declared as direct, in which case it should
              not be present.
     */
-    method execute (out bit<0> destination, optional in int index){
+    method execute (out bit<32> destination, optional in int index){
         reads {filter_input}
     }
 }

@@ -5,7 +5,7 @@ blackbox_type wred {
     attribute wred_input {
         /*  Reference to the input field to compute the moving average on.
             The maximum input bit width supported is 32 bits.  */
-        type: bit<0>;
+        type: bit<32>;
     }
 
     attribute direct {
@@ -56,7 +56,7 @@ blackbox_type wred {
              unless the wred is declared as direct, in which case it should
              not be present.
     */
-    method execute (out bit<0> destination, optional in int index){
+    method execute (out bit<32> destination, optional in int index){
         reads {wred_input}
     }
 }

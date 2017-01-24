@@ -243,13 +243,14 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
         } else if (!checkSrc1(prim->operands[1])) {
             error("%s: source 1 of %s invalid", prim->srcInfo, prim->name);
         } else if (!checkPHV(prim->operands[2])) {
-            long value;
-            if (prim->name == "add" && checkSrc1(prim->operands[2]) && checkPHV(prim->operands[1]))
-                return new IR::MAU::Instruction(prim->srcInfo, "add", dest,
-                                                prim->operands[2], prim->operands[1]);
-            else if (checkSrc1(prim->operands[2]) && checkConst(prim->operands[1], value))
-                return new IR::MAU::Instruction(prim->srcInfo, "add", dest,
-                                                prim->operands[2], new IR::Constant(-value));
+            if (checkPHV(prim->operands[1])) {
+                if (prim->name == "add") {
+                    if (checkSrc1(prim->operands[2]))
+                        return new IR::MAU::Instruction(prim->srcInfo, "add", dest,
+                                                        prim->operands[2], prim->operands[1]);
+                } else if (auto *k = prim->operands[2]->to<IR::Constant>()) {
+                    return new IR::MAU::Instruction(prim->srcInfo, "add", dest, (-*k).clone(),
+                                                    prim->operands[1]); } }
             error("%s: source 2 of %s invalid", prim->srcInfo, prim->name);
         } else {
             return new IR::MAU::Instruction(*prim); }

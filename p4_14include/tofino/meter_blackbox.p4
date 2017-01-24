@@ -67,7 +67,7 @@ blackbox_type meter {
              unless the low pass filter is declared as direct, in which case it should
              not be present.
     */
-    method execute (out bit<0> destination, optional in int index){}
+    method execute (out bit<32> destination, optional in int index){}
 
     /*  Same as execute, but the precolor attribute specifies the minimum color the packet
         may be tagged with.
@@ -77,7 +77,7 @@ blackbox_type meter {
         2 = yellow
         3 = red
      */
-    method execute_with_pre_color (out bit<0> destination, in bit<0> precolor, optional in int index){}
+    method execute_with_pre_color (out bit<32> destination, in bit<32> precolor, optional in int index){}
 }
 
 /***************************************************************************/
