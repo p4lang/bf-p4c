@@ -122,7 +122,7 @@ class SetupAttachedTables : public MauInspector {
         profile_t rv = MauInspector::init_apply(root);
         if (ta->layout_option == nullptr) return rv;
 
-        if (ta->layout_option->ternary_indirect_required) {
+        if (ta->layout_option->layout->ternary_indirect_required()) {
             auto name = ta->table->name + "$tind";
             (*ta->memuse)[name].type = Memories::Use::TIND;
             mem.tind_tables.push_back(ta);
@@ -130,7 +130,7 @@ class SetupAttachedTables : public MauInspector {
             mi.tind_RAMs += (entries + 1023U) / 1024U;
         }
 
-        if (ta->layout_option->action_data_required) {
+        if (ta->layout_option->layout->action_data_required()) {
             LOG1("Action table for table " << ta->table->name);
             auto name = ta->table->name + "$action";
             (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;

@@ -113,7 +113,7 @@ struct IXBar {
         };
         vector<Select> select_use;
         void clear() { use.clear(); memset(hash_table_inputs, 0, sizeof(hash_table_inputs));
-                       bit_use.clear(); way_use.clear(); }
+                       bit_use.clear(); way_use.clear(); select_use.clear(); }
         unsigned compute_hash_tables();
         int groups() const;  // how many different groups in this use
         bool exact_comp(const IXBar::Use *exact_use, int width) const;

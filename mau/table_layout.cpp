@@ -106,19 +106,11 @@ static void setup_action_layout(IR::MAU::Table *tbl) {
    data if immediate is possible */
 void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved,
                                                bool has_action_profile) {
-    bool ternary_indirect_required = false;
     bool no_action_data = (tbl->layout.action_data_bytes == 0);
-    if (tbl->layout.overhead_bits > 0)
-        ternary_indirect_required = true;
 
     IR::MAU::Table::Layout *layout = new IR::MAU::Table::Layout();
-    layout->copy(tbl->layout);
+    *layout = tbl->layout;
     IR::MAU::Table::LayoutOption lo(layout);
-    if (no_action_data)
-        lo.action_data_required = false;
-    else
-        lo.action_data_required = true;
-    lo.ternary_indirect_required = ternary_indirect_required;
     tbl->layout_options.push_back(lo);
 
     if (no_action_data || has_action_profile
@@ -126,11 +118,10 @@ void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl, int immediat
         return;
 
     layout = new IR::MAU::Table::Layout();
-    layout->copy(tbl->layout);
+    *layout = tbl->layout;
     layout->action_data_bytes_in_overhead = tbl->layout.action_data_bytes;
     layout->overhead_bits += tbl->layout.action_data_bytes * 8;
     IR::MAU::Table::LayoutOption lo_tern(layout);
-    lo_tern.ternary_indirect_required = true;
     tbl->layout_options.push_back(lo_tern);
 }
 
@@ -152,13 +143,9 @@ void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_
 
         IR::MAU::Table::Layout *layout = new IR::MAU::Table::Layout();
         IR::MAU::Table::Way *way = new IR::MAU::Table::Way();
-        layout->copy(tbl->layout);
+        *layout = tbl->layout;
         way->match_groups = entry_count; way->width = width;
         IR::MAU::Table::LayoutOption lo(layout, way);
-        if (no_action_data || has_action_profile)
-            lo.action_data_required = false;
-        else
-            lo.action_data_required = true;
         tbl->layout_options.push_back(lo);
     }
 
@@ -178,12 +165,11 @@ void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_
 
         IR::MAU::Table::Layout *layout = new IR::MAU::Table::Layout();
         IR::MAU::Table::Way *way = new IR::MAU::Table::Way();
-        layout->copy(tbl->layout);
+        *layout = tbl->layout;
         layout->action_data_bytes_in_overhead = tbl->layout.action_data_bytes;
         layout->overhead_bits += tbl->layout.action_data_bytes * 8;
         way->match_groups = entry_count; way->width = width;
         IR::MAU::Table::LayoutOption lo(layout, way);
-        lo.action_data_required = false;
         tbl->layout_options.push_back(lo);
     }
 }
@@ -193,18 +179,8 @@ void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_
 void TableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl) {
     tbl->layout.ternary = true;
     IR::MAU::Table::Layout *layout = new IR::MAU::Table::Layout();
-    layout->copy(tbl->layout);
+    *layout = tbl->layout;
     IR::MAU::Table::LayoutOption lo(layout);
-    lo.no_match_data = true;
-    if (layout->action_data_bytes > 0)
-        lo.action_data_required = true;
-    else
-        lo.action_data_required = false;
-
-    if (tbl->layout.overhead_bits > 0)
-        lo.ternary_indirect_required = true;
-    else
-        lo.ternary_indirect_required = false;
     tbl->layout_options.push_back(lo);
 }
 

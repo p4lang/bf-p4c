@@ -371,7 +371,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     for (auto *p = done; p; p = p->prev) {
         if (p->name == rv->name) {
             prev_placed = true;
-            has_action_data = p->use.preferred()->action_data_required;
+            has_action_data = p->use.preferred()->layout->action_data_required();
             if (p->need_more == false) {
                 LOG2(" - can't place as its already done");
                 return nullptr; }
@@ -702,12 +702,12 @@ static void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *r
    from table placement */
 static void select_layout_option(IR::MAU::Table *tbl,
                                  const IR::MAU::Table::LayoutOption *layout_option) {
-    tbl->layout.copy(*(layout_option->layout));
+    tbl->layout = *(layout_option->layout);
     if (!layout_option->layout->ternary) {
         tbl->ways.resize(layout_option->way_sizes.size());
         int index = 0;
         for (auto &way : tbl->ways) {
-            way.copy(*(layout_option->way));
+            way = *(layout_option->way);
             way.entries = way.match_groups * 1024 * layout_option->way_sizes[index];
             index++;
         }
@@ -717,12 +717,12 @@ static void select_layout_option(IR::MAU::Table *tbl,
 /* Adds the potential ternary tables necessary for layout options */
 static void add_attached_tables(IR::MAU::Table *tbl,
                                 const IR::MAU::Table::LayoutOption *layout_option) {
-    if (layout_option->ternary_indirect_required) {
+    if (layout_option->layout->ternary_indirect_required()) {
         LOG3("  Adding Ternary Indirect table to " << tbl->name);
         auto *tern_indir = new IR::MAU::TernaryIndirect(tbl->name);
         tbl->attached.push_back(tern_indir);
     }
-    if (layout_option->action_data_required) {
+    if (layout_option->layout->action_data_required()) {
         LOG3("  Adding Action Data Table to " << tbl->name);
         auto *act_data = new IR::MAU::ActionData(tbl->name);
         tbl->attached.push_back(act_data);
@@ -754,7 +754,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         tbl->actions = match->actions;
         tbl->attached = match->attached;
         /* Generate the correct table layout from the options */
-        gw_layout.copy(tbl->layout);
+        gw_layout = tbl->layout;
         gw_layout_used = true;
         tbl->layout_options = match->layout_options;
         select_layout_option(tbl, it->second->use.preferred());
