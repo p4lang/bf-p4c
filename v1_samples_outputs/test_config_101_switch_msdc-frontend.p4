@@ -2417,11 +2417,11 @@ control process_nexthop(inout headers hdr, inout metadata meta, inout standard_m
 }
 
 control process_ingress_bd_stats(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("ingress_bd_stats") counter(32w16384, CounterType.packets_and_bytes) ingress_bd_stats_1;
+    @name("ingress_bd_stats_count") counter(32w16384, CounterType.packets_and_bytes) ingress_bd_stats_count_0;
     @name("update_ingress_bd_stats") action update_ingress_bd_stats_0() {
-        ingress_bd_stats_1.count((bit<32>)meta.l2_metadata.bd_stats_idx);
+        ingress_bd_stats_count_0.count((bit<32>)meta.l2_metadata.bd_stats_idx);
     }
-    @name("ingress_bd_stats") table ingress_bd_stats_2() {
+    @name("ingress_bd_stats") table ingress_bd_stats_0() {
         actions = {
             update_ingress_bd_stats_0();
             @default_only NoAction();
@@ -2430,7 +2430,7 @@ control process_ingress_bd_stats(inout headers hdr, inout metadata meta, inout s
         default_action = NoAction();
     }
     apply {
-        ingress_bd_stats_2.apply();
+        ingress_bd_stats_0.apply();
     }
 }
 

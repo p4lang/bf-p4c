@@ -2725,11 +2725,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_99();
     }
-    @name("process_ingress_bd_stats.ingress_bd_stats") counter(32w16384, CounterType.packets_and_bytes) process_ingress_bd_stats_ingress_bd_stats_1;
+    @name("process_ingress_bd_stats.ingress_bd_stats_count") counter(32w16384, CounterType.packets_and_bytes) process_ingress_bd_stats_ingress_bd_stats_count_0;
     @name("process_ingress_bd_stats.update_ingress_bd_stats") action process_ingress_bd_stats_update_ingress_bd_stats() {
-        process_ingress_bd_stats_ingress_bd_stats_1.count((bit<32>)meta.l2_metadata.bd_stats_idx);
+        process_ingress_bd_stats_ingress_bd_stats_count_0.count((bit<32>)meta.l2_metadata.bd_stats_idx);
     }
-    @name("process_ingress_bd_stats.ingress_bd_stats") table process_ingress_bd_stats_ingress_bd_stats_2() {
+    @name("process_ingress_bd_stats.ingress_bd_stats") table process_ingress_bd_stats_ingress_bd_stats_0() {
         actions = {
             process_ingress_bd_stats_update_ingress_bd_stats();
             @default_only NoAction_100();
@@ -2737,11 +2737,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction_100();
     }
-    @name("process_ingress_acl_stats.acl_stats") counter(32w128, CounterType.packets_and_bytes) process_ingress_acl_stats_acl_stats_1;
+    @name("process_ingress_acl_stats.acl_stats_count") counter(32w128, CounterType.packets_and_bytes) process_ingress_acl_stats_acl_stats_count_0;
     @name("process_ingress_acl_stats.acl_stats_update") action process_ingress_acl_stats_acl_stats_update() {
-        process_ingress_acl_stats_acl_stats_1.count((bit<32>)meta.acl_metadata.acl_stats_index);
+        process_ingress_acl_stats_acl_stats_count_0.count((bit<32>)meta.acl_metadata.acl_stats_index);
     }
-    @name("process_ingress_acl_stats.acl_stats") table process_ingress_acl_stats_acl_stats_2() {
+    @name("process_ingress_acl_stats.acl_stats") table process_ingress_acl_stats_acl_stats_0() {
         actions = {
             process_ingress_acl_stats_acl_stats_update();
             @default_only NoAction_101();
@@ -3081,8 +3081,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             process_hashes_compute_non_ip_hashes_0.apply();
         process_hashes_compute_other_hashes_0.apply();
         if (meta.ingress_metadata.port_type != 2w1) {
-            process_ingress_bd_stats_ingress_bd_stats_2.apply();
-            process_ingress_acl_stats_acl_stats_2.apply();
+            process_ingress_bd_stats_ingress_bd_stats_0.apply();
+            process_ingress_acl_stats_acl_stats_0.apply();
             if (!(meta.ingress_metadata.bypass_lookups == 16w0xffff)) 
                 process_fwd_results_fwd_result_0.apply();
             if (meta.nexthop_metadata.nexthop_type == 2w1) 

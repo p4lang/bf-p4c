@@ -218,13 +218,15 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
             int t;
             // The first two lines are to prevent sharing a group across multiple widths,
             // as the asm doesn't yet handle this
+            if (prev_placed && has_action_data != a.action_data_required) return false;
+            if (prev_placed && has_action_data != b.action_data_required) return true;
             if ((t = a.way->match_groups % a.way->width) != 0) return false;
             if ((t = b.way->match_groups % b.way->width) != 0) return true;
             if ((t = a.srams - b.srams) != 0) return t < 0;
             if ((t = a.way->width - b.way->width) != 0) return t < 0;
             if ((t = a.way->match_groups - b.way->match_groups) != 0) return t < 0;
-            if (a.action_data_required) return true;
-            if (b.action_data_required) return false;
+            if (!a.action_data_required) return true;
+            if (!b.action_data_required) return false;
             return true;
         });
     } else {
@@ -233,13 +235,15 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
             int t;
             // The first two lines are to prevent sharing a group across multiple widths,
             // as the asm doesn't yet handle this
+            if (prev_placed && has_action_data != a.action_data_required) return false;
+            if (prev_placed && has_action_data != b.action_data_required) return true;
             if ((t = a.way->match_groups % a.way->width) != 0) return false;
             if ((t = b.way->match_groups % b.way->width) != 0) return true;
             if ((t = a.srams - b.srams) != 0) return t < 0;
             if ((t = a.way->width - b.way->width) != 0) return t < 0;
             if ((t = a.way->match_groups - b.way->match_groups) != 0) return t > 0;
-            if (a.action_data_required) return true;
-            if (b.action_data_required) return false;
+            if (!a.action_data_required) return true;
+            if (!b.action_data_required) return false;
             return true;
         });
     }
@@ -264,6 +268,8 @@ void StageUseEstimate::select_best_option_ternary() {
     std::sort(layout_options.begin(), layout_options.end(),
         [=](const IR::MAU::Table::LayoutOption &a, const IR::MAU::Table::LayoutOption &b) {
         int t;
+        if (prev_placed && has_action_data != a.action_data_required) return false;
+        if (prev_placed && has_action_data != b.action_data_required) return true;
         if ((t = a.srams - b.srams) != 0) return t < 0;
         if (!a.ternary_indirect_required) return true;
         if (!b.ternary_indirect_required) return false;
@@ -290,9 +296,12 @@ void StageUseEstimate::fill_estimate_from_option(int &entries) {
 }
 
 /* Constructor to estimate the number of srams, tcams, and maprams a table will require*/
-StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries, bool table_placement) {
+StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries, bool pp, bool had,
+                                   bool table_placement) {
     // Because the table is const, the layout options must be copied into the Object
     memset(this, 0, sizeof(*this));
+    prev_placed = pp;
+    has_action_data = had;
     logical_ids = 1;
     layout_options.clear();
     layout_options = tbl->layout_options;
@@ -501,6 +510,8 @@ void StageUseEstimate::srams_left_best_option() {
     std::sort(layout_options.begin(), layout_options.end(),
         [=](const IR::MAU::Table::LayoutOption &a, const IR::MAU::Table::LayoutOption &b) {
         int t;
+        if (prev_placed && has_action_data != a.action_data_required) return false;
+        if (prev_placed && has_action_data != b.action_data_required) return true;
         if ((t = a.way->match_groups % a.way->width) != 0) return false;
         if ((t = b.way->match_groups % b.way->width) != 0) return true;
         if ((t = a.entries - b.entries) != 0) return t > 0;
@@ -564,6 +575,8 @@ void StageUseEstimate::tcams_left_best_option() {
     std::sort(layout_options.begin(), layout_options.end(),
         [=](const IR::MAU::Table::LayoutOption &a, const IR::MAU::Table::LayoutOption &b) {
         int t;
+        if (prev_placed && has_action_data != a.action_data_required) return false;
+        if (prev_placed && has_action_data != b.action_data_required) return true;
         if ((t = a.entries - b.entries) != 0) return t > 0;
         if ((t = a.srams - b.srams) != 0) return t < 0;
         if (!a.ternary_indirect_required) return true;

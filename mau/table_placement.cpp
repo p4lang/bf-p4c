@@ -349,7 +349,6 @@ static void coord_selector_xbar(const TablePlacement::Placed *curr,
 TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t, const Placed *done,
                                                         const StageUseEstimate &current) {
     LOG1("try_place_table(" << t->name << ", stage=" << (done ? done->stage : 0) << ")");
-    LOG1("Table layout options size " << t->layout_options.size());
     auto *rv = (new Placed(*this, t))->gateway_merge();
     TableResourceAlloc *resources = new TableResourceAlloc;
     TableResourceAlloc *min_resources = new TableResourceAlloc;
@@ -368,8 +367,11 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         else if (t->match_table->min_size)
             set_entries = t->match_table->min_size; }
     auto &rvdeps = deps.graph.at(rv->name);
+    bool prev_placed = false;  bool has_action_data = false;
     for (auto *p = done; p; p = p->prev) {
         if (p->name == rv->name) {
+            prev_placed = true;
+            has_action_data = p->use.preferred()->action_data_required;
             if (p->need_more == false) {
                 LOG2(" - can't place as its already done");
                 return nullptr; }
@@ -379,7 +381,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             rv->stage++; } }
     assert(!rv->placed[tblInfo.at(rv->table).uid]);
 
-    StageUseEstimate min_use(t, min_entries);
+    StageUseEstimate min_use(t, min_entries, prev_placed, has_action_data);
     StageUseEstimate stage_current = current;
     if (done && rv->stage != done->stage)
         stage_current.clear();
@@ -395,7 +397,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         auto avail = StageUseEstimate::max();
         bool advance_to_next_stage = false;
         allocated = false; ixbar_allocation_bug = false; mem_allocation_bug = false;
-        rv->use = StageUseEstimate(t, rv->entries);
+        rv->use = StageUseEstimate(t, rv->entries, prev_placed, has_action_data);
 
         if (!try_alloc_ixbar(rv, done, phv, min_use, min_resources)) {
             advance_to_next_stage = true;
@@ -809,7 +811,7 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         auto *table_part = tbl->clone_rename(suffix);
         select_layout_option(table_part, it->second->use.preferred());
         if (gw_layout_used)
-            tbl->layout += gw_layout;
+            table_part->layout += gw_layout;
         table_part->logical_id = it->second->logical_id;
         table_set_resources(table_part, it->second->resources->clone_rename(suffix, tbl->name),
                             it->second->entries);

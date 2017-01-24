@@ -8,6 +8,7 @@ struct StageUseEstimate {
     int srams, tcams, maprams;
     int exact_ixbar_bytes;
     int ternary_ixbar_groups;
+    bool prev_placed; bool has_action_data;
     vector<IR::MAU::Table::LayoutOption> layout_options;
     int preferred_index;
     StageUseEstimate() { memset(this, 0, sizeof(*this)); }
@@ -19,7 +20,8 @@ struct StageUseEstimate {
         exact_ixbar_bytes += a.exact_ixbar_bytes;
         ternary_ixbar_groups += a.ternary_ixbar_groups;
         return *this; }
-    StageUseEstimate(const IR::MAU::Table *, int &, bool table_placement = false);
+    StageUseEstimate(const IR::MAU::Table *, int &, bool pp, bool had,
+                     bool table_placement = false);
     StageUseEstimate operator+(const StageUseEstimate &a) const {
         StageUseEstimate rv = *this; rv += a; return rv; }
     static StageUseEstimate max() {
