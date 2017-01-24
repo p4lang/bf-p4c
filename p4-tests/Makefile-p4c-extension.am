@@ -122,58 +122,137 @@ XFAIL_TESTS += \
     p14_to_16/%reldir%/p4_14/test_config_172_stateful_heavy_hitter.p4.test \
     p14_to_16/%reldir%/p4_14/test_config_173_stateful_bloom_filter.p4.test
 
-# These testcases taken from glass and xfail in glass
+# These testcases taken from glass and xfail in brig
 XFAIL_TESTS += \
     tofino/%reldir%/p4_14/test_config_121_tcam_range_5.p4.test.test \
     tofino/%reldir%/p4_14/test_config_141_first_stateful_conga.p4.test.test \
     tofino/%reldir%/p4_14/test_config_142_stateful_bfd.p4.test.test \
     tofino/%reldir%/p4_14/test_config_171_stateful_conga.p4.test.test \
-    tofino/%reldir%/p4_14/test_config_183_sample_e2e.p4.test \
-    tofino/%reldir%/p4_14/test_config_190_modify_with_expr.p4.test \
-    tofino/%reldir%/p4_14/case1770.p4.test \
-    tofino/%reldir%/p4_14/test_config_248_pa_problem.p4.test \
-    tofino/%reldir%/p4_14/test_config_252_pa_required_packing.p4.test \
-    tofino/%reldir%/p4_14/test_config_256_pa_problem_4.p4.test \
-    tofino/%reldir%/p4_14/test_config_257_pa_problem_5.p4.test \
-    tofino/%reldir%/p4_14/exclusive_cf_fail_next_ptr.p4.test \
-    tofino/%reldir%/p4_14/exclusive_cf_one_action_fail_after.p4.test \
-    tofino/%reldir%/p4_14/exclusive_cf_one_action_fail_before.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_121_tcam_range_5.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_141_first_stateful_conga.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_142_stateful_bfd.p4.test \
     p14_to_16/%reldir%/p4_14/test_config_171_stateful_conga.p4.test \
     p14_to_16/%reldir%/p4_14/test_config_183_sample_e2e.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_190_modify_with_expr.p4.test \
-    p14_to_16/%reldir%/p4_14/case1770.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_248_pa_problem.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_252_pa_required_packing.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_256_pa_problem_4.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_257_pa_problem_5.p4.test \
-    p14_to_16/%reldir%/p4_14/exclusive_cf_fail_next_ptr.p4.test \
-    p14_to_16/%reldir%/p4_14/exclusive_cf_one_action_fail_after.p4.test \
-    p14_to_16/%reldir%/p4_14/exclusive_cf_one_action_fail_before.p4.test \
-    bmv2/%reldir%/p4_14/test_config_121_tcam_range_5.p4.test \
-    bmv2/%reldir%/p4_14/test_config_141_first_stateful_conga.p4.test \
-    bmv2/%reldir%/p4_14/test_config_142_stateful_bfd.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_234_ternary_valid.p4.test \
+    bmv2/%reldir%/p4_14/exclusive_cf_one_action_fail_after.p4.test \
+    bmv2/%reldir%/p4_14/exclusive_cf_one_action_fail_before.p4.test \
     bmv2/%reldir%/p4_14/test_config_171_stateful_conga.p4.test \
     bmv2/%reldir%/p4_14/test_config_183_sample_e2e.p4.test \
     bmv2/%reldir%/p4_14/test_config_190_modify_with_expr.p4.test \
-    bmv2/%reldir%/p4_14/case1770.p4.test \
-    bmv2/%reldir%/p4_14/test_config_248_pa_problem.p4.test \
-    bmv2/%reldir%/p4_14/test_config_252_pa_required_packing.p4.test \
-    bmv2/%reldir%/p4_14/test_config_256_pa_problem_4.p4.test \
-    bmv2/%reldir%/p4_14/test_config_257_pa_problem_5.p4.test \
-    bmv2/%reldir%/p4_14/exclusive_cf_fail_next_ptr.p4.test \
-    bmv2/%reldir%/p4_14/exclusive_cf_one_action_fail_after.p4.test \
-    bmv2/%reldir%/p4_14/exclusive_cf_one_action_fail_before.p4.test
+    bmv2/%reldir%/p4_14/test_config_234_ternary_valid.p4.test
+
+# conflict between blackbox meter and builtin meter
+XFAIL_TESTS += \
+    tofino/%reldir%/p4_14/test_config_185_first_lpf.p4.test \
+    tofino/%reldir%/p4_14/test_config_201_meter_constant_index.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_185_first_lpf.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_201_meter_constant_index.p4.test \
+    bmv2/%reldir%/p4_14/test_config_185_first_lpf.p4.test \
+    bmv2/%reldir%/p4_14/test_config_201_meter_constant_index.p4.test
+
+# Fail due to multiple uses of a table (JIRA #BRIG-26)
+XFAIL_TESTS += \
+    tofino/%reldir%/p4_14/eth_addr_cmp.p4.test \
+    tofino/%reldir%/p4_14/exclusive_cf_fail_next_ptr.p4.test \
+    tofino/%reldir%/p4_14/exclusive_cf_multiple_actions.p4.test \
+    tofino/%reldir%/p4_14/exclusive_cf_one_action.p4.test \
+    tofino/%reldir%/p4_14/exclusive_cf_one_action_fail_after.p4.test \
+    tofino/%reldir%/p4_14/exclusive_cf_one_action_fail_before.p4.test
+
+# Synatx error in generated P4_16 code (JIRA #BRIG-29)
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_193_indirect_stats_no_reads.p4.test
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_194_same_action_param.p4.test
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_196_hit_miss.p4.test
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_197_default_next_table.p4.test
+
+# Could not find declaration error in generated P4_16 code (JIRA #BRIG-31)
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_192_stateful_driven_by_hash.p4.test
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_206_stateful_logging.p4.test
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_209_pack_hash_dist.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_192_stateful_driven_by_hash.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_206_stateful_logging.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_209_pack_hash_dist.p4.test
+
+# cannot find type for <GlobalRef>
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_184_stateful_bug1.p4.test
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_195_stateful_predicate_output.p4.test
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_199_stateful_constant_index.p4.test
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_224_stateful_error_check.p4.test
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_236_stateful_read_bit.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_184_stateful_bug1.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_195_stateful_predicate_output.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_199_stateful_constant_index.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_224_stateful_error_check.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_236_stateful_read_bit.p4.test
+
+# blackbox type unification failures (JIRA #COMPILER-341)
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_174_stateful_flow_learning.p4.test
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_205_modify_field_from_hash.p4.test
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_214_full_stats.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_174_stateful_flow_learning.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_205_modify_field_from_hash.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_214_full_stats.p4.test
+
+# P4_14->16 unhandled primitives
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_182_warp_primitive.p4.test
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_191_invalidate.p4.test
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_219_modify_field_conditionally.p4.test
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_235_funnel_shift.p4.test
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_254_simple_exit.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_182_warp_primitive.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_191_invalidate.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_219_modify_field_conditionally.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_235_funnel_shift.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_254_simple_exit.p4.test
+
+# reduction_or_group (blackbox string attrib) failure
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_203_first_reduction_or.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_203_first_reduction_or.p4.test
+
+# broken gateway valid check
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_244_gateway_compare.p4.test
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_245_alias_test.p4.test
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_246_fill_stage.p4.test
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_247_first_clpm.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_244_gateway_compare.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_245_alias_test.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_246_fill_stage.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_247_first_clpm.p4.test
 
 # These currently fail gateway check with 'expression too complex'
 XFAIL_TESTS += \
     tofino/%reldir%/p4_14/07-MacAddrCheck.p4.test \
     tofino/%reldir%/p4_14/08-MacAddrCheck1.p4.test
 
+# Parser failure.
+XFAIL_TESTS += \
+    tofino/testdata/p4_14_samples/parser_dc_full.p4.test \
+    tofino-ortools/testdata/p4_14_samples/parser_dc_full.p4.test
+
+# Generates broken PHV alloc (regs used by both ingress & egress)
+XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/basic_routing.p4.test
+
+# Crashes in model -- need to root cause
+XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/exact_match5.p4.test
+
+# Missing constraints for header stack POV bits.
+XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/instruct5.p4.test
+
+# Incorrect ASM generation for default action tables
+XFAIL_TESTS += tofino/testdata/p4_14_samples/bridge1.p4.test
+XFAIL_TESTS += tofino/testdata/p4_14_samples/instruct5.p4.test
+XFAIL_TESTS += tofino/%reldir%/p4_16/direct-action.p4.test
+XFAIL_TESTS += tofino/%reldir%/p4_16/synth-action.p4.test
+XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/bridge1.p4.test
+XFAIL_TESTS += tofino-ortools/%reldir%/p4_16/direct-action.p4.test
+XFAIL_TESTS += tofino-ortools/%reldir%/p4_16/synth-action.p4.test
+
+# match group packing overflow
+XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_246_fill_stage.p4.test
+
+# conflicting memory use
+XFAIL_TESTS += tofino/%reldir%/p4_14/switch_l2_profile.p4.test
+XFAIL_TESTS += tofino/%reldir%/p4_14/switch_20160602/switch.p4.test
+XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_101_switch_msdc.p4.test
+
 # Layout Constraints from gateway allocation
-XFAIL_TESTS += tofino/%reldir%/p4_14/gateway_bus2.p4.test
 XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/gateway_bus1.p4.test
 XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/gateway_bus2.p4.test
 
