@@ -107,6 +107,44 @@ struct Memories {
         void visit(Memories &mem, std::function<void(cstring &)>) const;
     };
 
+    struct UseNames {
+        static constexpr int TIND_NAME = 1;
+        static constexpr int AD_NAME = 2;
+        UseNames() {}
+        cstring get_name(const IR::MAU::Table *tbl, const IR::Attached *at = nullptr,
+                         bool is_gw = false, int type = 0) const {
+            if (is_gw) {
+                return tbl->name + "$gw";
+            } else if (at == nullptr) {
+                if (type == TIND_NAME)
+                    return tbl->name + "$tind";
+                else if (type == AD_NAME)
+                    return tbl->name + "$action";
+                else
+                    return tbl->name;
+            } else if (at->is<IR::Counter>()) {
+                return tbl->name + "$counter." + at->name;
+            } else if (at->is<IR::Meter>()) {
+                return tbl->name + "$meter." + at->name;
+            } else if (at->is<IR::Register>()) {
+                return tbl->name + "$register." + at->name;
+            } else if (at->is<IR::ActionProfile>()) {
+                return tbl->name + "$act_prof." + at->name;
+            } else if (at->is<IR::ActionSelector>()) {
+                return tbl->name + "$act_sel." + at->name;
+            } else if (at->is<IR::MAU::ActionData>()) {
+                return tbl->name + "$action";
+            } else if (at->is<IR::MAU::TernaryIndirect>()) {
+                return tbl->name + "$tind";
+            } else {
+                BUG("Unrecgonized attached table %s", at->name);
+                return "";
+            }
+        }
+    };
+
+    UseNames use_names;
+
     struct table_alloc {
         const IR::MAU::Table *table;
         const IXBar::Use *match_ixbar;
@@ -131,8 +169,8 @@ struct Memories {
         int placed;
         int number;
         int hash_group;
+        const IR::Attached *attached;
         int recent_home_row;
-        cstring name;
         enum type_t { EXACT, ACTION, STATS, METER, SELECTOR, TIND } type;
         struct color_mapram_group {
             int needed;
@@ -202,14 +240,14 @@ struct Memories {
         color_mapram_group cm;
         bool requires_ab;
         explicit SRAM_group(table_alloc *t, int d, int w, int n, type_t ty)
-            : ta(t), depth(d), width(w), placed(0), number(n), hash_group(0), type(ty), sel(),
-              cm(), requires_ab(false) {}
+            : ta(t), depth(d), width(w), placed(0), number(n), hash_group(0), attached(nullptr),
+              type(ty), sel(), cm(), requires_ab(false) {}
         explicit SRAM_group(table_alloc *t, int d, int n, type_t ty)
-            : ta(t), depth(d), width(0), placed(0), number(n), hash_group(0), type(ty), sel(),
-              cm(), requires_ab(false) {}
+            : ta(t), depth(d), width(0), placed(0), number(n), hash_group(0), attached(nullptr), 
+              type(ty), sel(), cm(), requires_ab(false) {}
         explicit SRAM_group(table_alloc *t, int d, int w, int n, int h, type_t ty)
-            : ta(t), depth(d), width(w), placed(0), number(n), hash_group(h), type(ty), sel(),
-              cm(), requires_ab(false) {}
+            : ta(t), depth(d), width(w), placed(0), number(n), hash_group(h), attached(nullptr),
+              type(ty), sel(), cm(), requires_ab(false) {}
         void dbprint(std::ostream &out) const {
             out << ta->table->name << " way #" << number << " depth: " << depth
                 << " width: " << width << " placed: " << placed;
@@ -246,16 +284,14 @@ struct Memories {
                 return left_to_place();
             }
         }
-        cstring name_addition() {
-            switch (type) {
-                case EXACT:    return "";
-                case ACTION:   return "$action";
-                case STATS:    return "$stats";
-                case METER:    return "$meter";
-                case SELECTOR: return "$selector";
-                case TIND:     return "$tind";
-                default:       return "";
-            }
+        cstring get_name(Memories::UseNames use_names) {
+            if (type == TIND)
+                return use_names.get_name(ta->table, nullptr, false,
+                                          Memories::UseNames::TIND_NAME);
+            else if (type == ACTION && attached == nullptr)
+                return use_names.get_name(ta->table, nullptr, false, Memories::UseNames::AD_NAME);
+            else
+                return use_names.get_name(ta->table, attached);
         }
     };
 

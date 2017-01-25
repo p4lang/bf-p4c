@@ -5,12 +5,14 @@
 #include "resource.h"
 #include "lib/log.h"
 #include "tofino/common/asm_output.h"
+#include "memories.h"
 
 class PhvInfo;
 
 class MauAsmOutput : public MauInspector {
     const PhvInfo       &phv;
     DefaultNext         default_next;
+    Memories::UseNames  use_names;
     std::map<std::pair<gress_t, int>, std::vector<const IR::MAU::Table *>>      by_stage;
     profile_t init_apply(const IR::Node *root) override {
         root->apply(default_next);
