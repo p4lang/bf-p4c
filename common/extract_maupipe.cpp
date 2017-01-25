@@ -510,8 +510,8 @@ class GetTofinoTables : public Inspector {
 const IR::Tofino::Pipe *extract_maupipe(const IR::V1Program *program, Tofino_Options &) {
     auto rv = new IR::Tofino::Pipe();
     rv->standard_metadata = program->get<IR::Metadata>("standard_metadata");
-    GetTofinoParser parser(program);
-    auto ingress = program->get<IR::V1Control>(parser.ingress_entry());
+    auto parserInfo = Tofino::extractParser(program);
+    auto ingress = program->get<IR::V1Control>(parserInfo.ingressEntryPoint);
     if (!ingress) ingress = new IR::V1Control(IR::ID("ingress"));
     ingress = ingress->apply(InlineControlFlow(program));
     ingress = ingress->apply(NameGateways());
@@ -521,9 +521,9 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::V1Program *program, Tofino_Opt
     egress = egress->apply(NameGateways());
     ingress->apply(GetTofinoTables(program, INGRESS, rv));
     egress->apply(GetTofinoTables(program, EGRESS, rv));
-    if (auto in = rv->thread[INGRESS].parser = parser.parser(INGRESS))
+    if (auto in = rv->thread[INGRESS].parser = parserInfo.parser(INGRESS))
         rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, in);
-    if (auto eg = rv->thread[EGRESS].parser = parser.parser(EGRESS)->apply(RemoveSetMetadata()))
+    if (auto eg = rv->thread[EGRESS].parser = parserInfo.parser(EGRESS))
         rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, eg);
     AttachTables toAttach(program);
     for (auto &th : rv->thread)
@@ -592,11 +592,10 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program, Tofino_Opt
     egress = egress->apply(fixups);
     deparser = deparser->apply(fixups);
 
-    GetTofinoParser make_parser(parser);
-    if (auto in = rv->thread[INGRESS].parser = make_parser.parser(INGRESS))
+    auto parserInfo = Tofino::extractParser(&parser->as<IR::P4Parser>());
+    if (auto in = rv->thread[INGRESS].parser = parserInfo.parser(INGRESS))
         rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, in);
-    if (auto eg = rv->thread[EGRESS].parser
-                = make_parser.parser(EGRESS)->apply(RemoveSetMetadata()))
+    if (auto eg = rv->thread[EGRESS].parser = parserInfo.parser(EGRESS))
         rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, eg);
     // FIXME -- use the deparser rather than always inferring it from the parser
 
