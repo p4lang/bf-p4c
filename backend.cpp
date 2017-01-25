@@ -1,3 +1,21 @@
+/*
+Copyright 2013-present Barefoot Networks, Inc. 
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+#include "backend.h"
+
 #include <base/logging.h>
 #include <stdio.h>
 #include <iostream>
@@ -43,6 +61,8 @@
 #include "tofino/phv/phv_allocator.h"
 #include "tofino/phv/cluster_phv_bind.h"
 
+namespace Tofino {
+
 class CheckTableNameDuplicate : public MauInspector {
     set<cstring>        names;
     profile_t init_apply(const IR::Node *root) override {
@@ -78,7 +98,7 @@ static void debug_hook(const char *, unsigned, const char *pass, const IR::Node 
     LOG4(pass << ": " << std::endl << *n << std::endl);
 }
 
-void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *options) {
+void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options* options) {
     PhvInfo phv;
     Cluster cluster(phv);                                        // cluster analysis
     Cluster_PHV_Requirements cluster_phv_req(cluster);           // cluster PHV requirements
@@ -203,3 +223,5 @@ void test_tofino_backend(const IR::Tofino::Pipe *maupipe, const Tofino_Options *
          << DeparserAsmOutput(maupipe, phv, EGRESS)
          << mauasm << std::flush;
 }
+
+}  // namespace Tofino

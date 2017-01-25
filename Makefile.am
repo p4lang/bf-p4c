@@ -185,11 +185,12 @@ noinst_HEADERS += \
 cpplint_FILES += $(tofino_backend_phv_or_tools_UNIFIED) $(tofino_backend_phv_or_tools_NONUNIFIED)
 
 tofino_backend_main_UNIFIED = \
+	%reldir%/backend.cpp \
 	%reldir%/midend.cpp \
-	%reldir%/p4c-tofino.cpp \
-	%reldir%/test-tofino.cpp
+	%reldir%/p4c-tofino.cpp
 
 noinst_HEADERS += \
+	%reldir%/backend.h \
 	%reldir%/midend.h \
 	%reldir%/tofinoOptions.h
 

@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 
+#include "backend.h"
 #include "ir/ir.h"
 #include "ir/dbprint.h"
 #include "lib/crash.h"
@@ -21,8 +22,6 @@
 #include "midend.h"
 #include "midend/actionsInlining.h"
 #include "tofinoOptions.h"
-
-extern void test_tofino_backend(const IR::Tofino::Pipe *, const Tofino_Options *);
 
 int main(int ac, char **av) {
     setup_gc_logging();
@@ -106,7 +105,7 @@ int main(int ac, char **av) {
     if (Log::verbose())
         std::cout << "Compiling" << std::endl;
 
-    test_tofino_backend(maupipe, &options);
+    Tofino::backend(maupipe, &options);
 
     if (Log::verbose())
         std::cout << "Done." << std::endl;
