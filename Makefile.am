@@ -2,12 +2,14 @@
 
 tofino_ir_UNIFIED = \
 	%reldir%/ir/dbprint-tofino.cpp \
+	%reldir%/ir/gress.cpp \
 	%reldir%/ir/mau.cpp \
 	%reldir%/ir/parde.cpp \
 	%reldir%/ir/thread_visitor.cpp \
 	%reldir%/ir/tofino.cpp
 
 noinst_HEADERS += \
+	%reldir%/ir/gress.h \
 	%reldir%/ir/thread_visitor.h
 
 cpplint_FILES += $(tofino_ir_UNIFIED) $(tofino_ir_NONUNIFIED)

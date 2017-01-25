@@ -17,7 +17,20 @@ limitations under the License.
 #ifndef _TOFINO_PARDE_EXTRACT_PARSER_H_
 #define _TOFINO_PARDE_EXTRACT_PARSER_H_
 
-#include "ir/ir.h"
+#include "lib/cstring.h"
+#include "lib/exceptions.h"
+#include "tofino/ir/gress.h"
+
+namespace IR {
+
+namespace Tofino {
+class Parser;
+} // namespace Tofino
+
+class V1Program;
+class P4Parser;
+
+} // namespace IR
 
 namespace Tofino {
 

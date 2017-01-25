@@ -1,5 +1,6 @@
 #emit
-enum gress_t { INGRESS, EGRESS };
+#include "tofino/ir/gress.h"
+
 struct StageUse {
     static constexpr int MAX_STAGES = 12;
     static constexpr int MAX_LOGICAL_IDS = 16;
@@ -9,14 +10,6 @@ struct StageUse {
     static constexpr int MAX_IXBAR_BYTES = 128;
     static constexpr int MAX_TERNARY_GROUPS = 12;
 };
-inline std::ostream &operator<<(std::ostream &out, gress_t gress) {
-    return out << (gress ? "egress" : "ingress"); }
-inline bool operator>>(cstring s, gress_t &gress) {
-    if (s == "ingress") gress = INGRESS;
-    else if (s == "egress") gress = EGRESS;
-    else return false;
-    return true;
-}
 #end
 
 #emit_impl
