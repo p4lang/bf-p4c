@@ -22,7 +22,7 @@ limitations under the License.
 
 namespace Tofino {
 
-void backend(const IR::Tofino::Pipe* pipe, const Tofino_Options* options);
+void backend(const IR::Tofino::Pipe* pipe, const Tofino_Options& options);
 
 }  // namespace Tofino
 

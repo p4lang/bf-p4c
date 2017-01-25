@@ -105,7 +105,7 @@ int main(int ac, char **av) {
     if (Log::verbose())
         std::cout << "Compiling" << std::endl;
 
-    Tofino::backend(maupipe, &options);
+    Tofino::backend(maupipe, options);
 
     if (Log::verbose())
         std::cout << "Done." << std::endl;

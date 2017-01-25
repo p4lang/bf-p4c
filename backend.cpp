@@ -98,7 +98,7 @@ static void debug_hook(const char *, unsigned, const char *pass, const IR::Node 
     LOG4(pass << ": " << std::endl << *n << std::endl);
 }
 
-void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options* options) {
+void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     PhvInfo phv;
     Cluster cluster(phv);                                        // cluster analysis
     Cluster_PHV_Requirements cluster_phv_req(cluster);           // cluster PHV requirements
@@ -112,12 +112,12 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options* options) {
     MauAsmOutput mauasm(phv);
     PassManager *phv_alloc;
 
-    if (options->phv_ortools) {
+    if (options.phv_ortools) {
         auto *newpa = new PhvAllocator(phv, defuse.conflicts(), std::ref(mutex));
         phv_alloc = new PassManager({
             newpa,
             new VisitFunctor([newpa, options]() {
-                if (!newpa->Solve(options->phv_ortools)) {
+                if (!newpa->Solve(options.phv_ortools)) {
                     error("or-tools failed to find PHV allocation"); } }),
             Log::verbose() ? new VisitFunctor([&phv]() {
                 std::cout << "Printing PHV fields:\n";
@@ -128,7 +128,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options* options) {
         phv_alloc = new PassManager({
             new MauPhvConstraints(phv),
             new PHV::TrivialAlloc(phv, defuse.conflicts()),
-            options->phv_new ? new PassManager ({
+            options.phv_new ? new PassManager ({
                 // &cluster_phv_mau,  // cluster PHV container placements
                                       // second cut PHV MAU Group assignments
                                       // honor single write conflicts from Table Placement
@@ -213,8 +213,8 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options* options) {
     if (ErrorReporter::instance.getErrorCount() > 0)
         return;
     std::ostream *out = &std::cout;
-    if (options->outputFile)
-        out = new std::ofstream(options->outputFile);
+    if (options.outputFile)
+        out = new std::ofstream(options.outputFile);
     *out << "version: 1.0.0" << std::endl
          << PhvAsmOutput(phv)
          << ParserAsmOutput(maupipe, phv, INGRESS)
