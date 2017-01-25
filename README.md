@@ -57,6 +57,9 @@ make
   Only the dependences required by the "model" are needed (i.e., we
   don't use the driver in the compiler tests).
 
+- The tests depend on GNU utilities. On macOS, these can be installed with
+  `brew install coreutils`.
+
 # Tofino mid-end and back-end design
 
 The mid-end and back-end of the compiler are where all the Tofino-specific
