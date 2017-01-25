@@ -631,7 +631,7 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg) {
             //
             // ccgf check
             // for x,y member of cluster, x!=y, z element of x.xxgf
-            //     z != y     
+            //     z != y
             //
             for (auto &f : s1) {
                 for (auto &m : f->ccgf_fields) {
@@ -668,11 +668,11 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg) {
                             s2.insert((const PhvInfo::Field *) m);
                         }
                     }
-                    //std::vector<const PhvInfo::Field *> s3;
-                    //s3.clear();
-                    //std::set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(),
-                        //std::back_inserter(s3));
-                    //if (s3.size()) {
+                    // std::vector<const PhvInfo::Field *> s3;
+                    // s3.clear();
+                    // std::set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(),
+                        // std::back_inserter(s3));
+                    // if (s3.size()) {
                     for (auto &f : s1) {
                         if (s2.count(f)) {
                             LOG1("*****cluster.cpp:sanity_FAIL***** cluster uniqueness.."
@@ -681,7 +681,7 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg) {
                             LOG1("/\\");
                             LOG1(&s2);
                             LOG1('=');
-                            //LOG1(s3);
+                            // LOG1(s3);
                             LOG1("---> " << f << " <---");
                             //
                         }

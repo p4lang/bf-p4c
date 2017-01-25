@@ -164,6 +164,8 @@ class PHV_MAU_Group_Assignments : public Visitor {
                                        // for all PHV_MAU_Groups
                                        // sorted map <width increasing, num increasing>
                                        // containing <set of <set of container_packs>>
+    std::list<Cluster_PHV *> clusters_to_be_assigned_i;
+    std::list<Cluster_PHV *> t_phv_fields_i;
     //
     ordered_map<int,
     ordered_map<int,
@@ -208,17 +210,26 @@ class PHV_MAU_Group_Assignments : public Visitor {
     PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &phv_r)  // NOLINT(runtime/explicit)
         : phv_requirements_i(phv_r) {}
     //
-    ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>& phv_mau_map() {
-        return PHV_MAU_i;
-    }
-    ordered_map<int, ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&
-    aligned_container_slices()                          { return aligned_container_slices_i; }
-    std::vector<PHV_Container *>& cohabit_fields()      { return cohabit_fields_i; }
-    //
+    ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>&
+        phv_mau_map() { return PHV_MAU_i; }
     ordered_map<int, ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>>&
-    t_phv_map()                                         { return T_PHV_i; }
+        t_phv_map()   { return T_PHV_i; }
+    //
+    // remaining container slices available
+    //
     ordered_map<int, ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&
-    T_PHV_container_slices()                            { return T_PHV_container_slices_i; }
+        aligned_container_slices() { return aligned_container_slices_i; }
+    ordered_map<int, ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&
+        T_PHV_container_slices()   { return T_PHV_container_slices_i; }
+    //
+    // remaining clusters to be processed
+    //
+    std::list<Cluster_PHV *>& phv_clusters()            { return clusters_to_be_assigned_i; }
+    std::list<Cluster_PHV *>& t_phv_clusters()          { return t_phv_fields_i; }
+    //
+    // cohabit_fields requests to TP to avoid single-write issue
+    //
+    std::vector<PHV_Container *>& cohabit_fields()      { return cohabit_fields_i; }
     //
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
     //

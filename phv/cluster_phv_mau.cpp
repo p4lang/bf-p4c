@@ -248,24 +248,23 @@ PHV_MAU_Group_Assignments::apply_visitor(const IR::Node *node, const char *name)
     //
     // cluster placement in containers conforming to MAU group constraints
     //
-    std::list<Cluster_PHV *> clusters_to_be_assigned;
     for (auto &it : phv_requirements_i.cluster_phv_map()) {
         for (auto &it_2 : it.second) {
             for (auto &cl : it_2.second) {
-                clusters_to_be_assigned.push_front(cl);
+                clusters_to_be_assigned_i.push_front(cl);
             }
         }
     }
     LOG3("..........PHV Placement clusters ("
-         << clusters_to_be_assigned.size()
+         << clusters_to_be_assigned_i.size()
          << ").........."
          << std::endl);
-    cluster_placement(clusters_to_be_assigned, PHV_groups_i);
-    if (clusters_to_be_assigned.size()) {
+    cluster_placement(clusters_to_be_assigned_i, PHV_groups_i);
+    if (clusters_to_be_assigned_i.size()) {
         //
         // pack remaining clusters to partially filled containers
         //
-        container_pack_cohabit(clusters_to_be_assigned, aligned_container_slices_i);
+        container_pack_cohabit(clusters_to_be_assigned_i, aligned_container_slices_i);
     }
     //
     // POV fields in PHV containers
@@ -292,58 +291,25 @@ PHV_MAU_Group_Assignments::apply_visitor(const IR::Node *node, const char *name)
     // later pack in containers conforming to T_PHV Collection constraints
     // T_PHV_container_slices populated before container_pack_cohabit()
     //
-    std::list<Cluster_PHV *> t_phv_fields(
+    t_phv_fields_i.assign(
         phv_requirements_i.t_phv_fields().begin(),
         phv_requirements_i.t_phv_fields().end());
-    LOG3("..........T_PHV fields (" << t_phv_fields.size() << ")..........");
-    cluster_placement(t_phv_fields, T_PHV_groups_i);
+    LOG3("..........T_PHV fields (" << t_phv_fields_i.size() << ")..........");
+    cluster_placement(t_phv_fields_i, T_PHV_groups_i);
     //
-    if (t_phv_fields.size()) {
-        //
-        // pack remaining fields to partially filled containers
-        // conforming to T_PHV Collection constraints
-        // T_PHV_container_slices determined before container_pack_cohabit()
-        //
-        for (auto &coll : T_PHV_i) {
-            for (auto &m : coll.second) {
-                std::set<PHV_MAU_Group::Container_Content *> *set_cc
-                    = new std::set<PHV_MAU_Group::Container_Content *>;
-                for (auto &c : m.second) {
-                    if (c->status() == PHV_Container::Container_status::EMPTY) {
-                        set_cc->insert(
-                            new PHV_MAU_Group::Container_Content(
-                                0,
-                                static_cast<int>(c->width()),
-                                c));
-                    } else if (c->status() == PHV_Container::Container_status::PARTIAL) {
-                        int start = c->ranges().begin()->first;
-                        int partial_width = c->avail_bits();
-                        std::set<PHV_MAU_Group::Container_Content *> *set_cc_partial
-                            = new std::set<PHV_MAU_Group::Container_Content *>;
-                        set_cc_partial->insert(
-                            new PHV_MAU_Group::Container_Content(start, partial_width, c));
-                        T_PHV_container_slices_i[partial_width][1].insert(*set_cc_partial);
-                    }
-                }
-                if (set_cc->size()) {
-                    T_PHV_container_slices_i
-                       [static_cast<int>(m.first)][set_cc->size()].insert(*set_cc);
-                }
-            }
-        }
-        LOG3("..........sorted T_PHV Container Packs avail ..........");
-        LOG3(T_PHV_container_slices_i);
+    if (t_phv_fields_i.size()) {
         //
         // pack remaining clusters to partially filled containers
         //
-        container_pack_cohabit(t_phv_fields, T_PHV_container_slices_i);
+        container_pack_cohabit(t_phv_fields_i, T_PHV_container_slices_i);
         //
         // try overflow T_PHVs in PHV remaining spaces
         //
-        if (t_phv_fields.size()) {
+        if (t_phv_fields_i.size()) {
+            //
             LOG3("..........attempting T_PHV overflow into PHV ..........");
             //
-            container_pack_cohabit(t_phv_fields, aligned_container_slices_i);
+            container_pack_cohabit(t_phv_fields_i, aligned_container_slices_i);
         }
     }
     //
@@ -642,12 +608,12 @@ PHV_MAU_Group_Assignments::parser_container_no_holes(
 //***********************************************************************************
 
 void PHV_MAU_Group_Assignments::create_aligned_container_slices() {
-    aligned_container_slices_i.clear();
     //
     // create composite map[width][number] --> <set of <set of container_packs>>
     // from all mau groups aligned_container_slices
     // map automatically has sorted order width increasing, number increasing
     //
+    aligned_container_slices_i.clear();
     for (auto rit = PHV_MAU_i.rbegin(); rit != PHV_MAU_i.rend(); ++rit) {
         // groups within this word size
         for (auto g : rit->second) {
@@ -663,9 +629,48 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices() {
             }
         }
     }
-    LOG3(std::endl << "..........create_slices: Container Packs avail ..........");
+    LOG3("+++++++++++++++++++++++++++");
+    LOG3("..........PHV Container Packs avail ..........");
     LOG3(aligned_container_slices_i);
-}
+    LOG3("+++++++++++++++++++++++++++");
+        //
+        // pack remaining fields to partially filled containers
+        // conforming to T_PHV Collection constraints
+        // T_PHV_container_slices determined before container_pack_cohabit()
+        //
+    T_PHV_container_slices_i.clear();
+    for (auto &coll : T_PHV_i) {
+        for (auto &m : coll.second) {
+            std::set<PHV_MAU_Group::Container_Content *> *set_cc
+                = new std::set<PHV_MAU_Group::Container_Content *>;
+            for (auto &c : m.second) {
+                if (c->status() == PHV_Container::Container_status::EMPTY) {
+                    set_cc->insert(
+                        new PHV_MAU_Group::Container_Content(
+                            0,
+                            static_cast<int>(c->width()),
+                            c));
+                } else if (c->status() == PHV_Container::Container_status::PARTIAL) {
+                    int start = c->ranges().begin()->first;
+                    int partial_width = c->avail_bits();
+                    std::set<PHV_MAU_Group::Container_Content *> *set_cc_partial
+                        = new std::set<PHV_MAU_Group::Container_Content *>;
+                    set_cc_partial->insert(
+                        new PHV_MAU_Group::Container_Content(start, partial_width, c));
+                    T_PHV_container_slices_i[partial_width][1].insert(*set_cc_partial);
+                }
+            }
+            if (set_cc->size()) {
+                T_PHV_container_slices_i
+                   [static_cast<int>(m.first)][set_cc->size()].insert(*set_cc);
+            }
+        }
+    }
+    LOG3("+++++++++++++++++++++++++++");
+    LOG3("..........T_PHV Container Packs avail ..........");
+    LOG3(T_PHV_container_slices_i);
+    LOG3("+++++++++++++++++++++++++++");
+}  // PHV_MAU_Group_Assignments::create_aligned_container_slices()
 
 //***********************************************************************************
 //
