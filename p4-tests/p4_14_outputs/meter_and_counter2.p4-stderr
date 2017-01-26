@@ -1,0 +1,6 @@
+../extensions/p4_tests/p4_14/meter_and_counter2.p4(46): warning: Ignoring `implementation' field of meter Meter meter1
+meter meter1 {
+^
+../extensions/p4_tests/p4_14/meter_and_counter2.p4(54): warning: Ignoring `implementation' field of meter Meter meter2
+meter meter2 {
+^

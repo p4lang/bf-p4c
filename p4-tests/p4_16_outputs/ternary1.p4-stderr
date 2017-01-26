@@ -1,0 +1,3 @@
+../extensions/p4_tests/p4_16/ternary1.p4(30): warning: Table test1 does not have an `default_action' property
+    table test1() {
+          ^^^^^

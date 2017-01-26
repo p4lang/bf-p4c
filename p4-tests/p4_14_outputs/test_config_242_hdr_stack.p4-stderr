@@ -1,0 +1,7 @@
+../extensions/p4_tests/p4_14/test_config_242_hdr_stack.p4(83): warning: Could not infer type for p, using bit<8>
+action action_0(p){
+                ^
+../extensions/p4_tests/p4_14/test_config_242_hdr_stack.p4(86): warning: Could not infer type for p, using bit<8>
+action action_1(p){
+                ^
+warning: The order of headers in deparser is not uniquely determined by parser!

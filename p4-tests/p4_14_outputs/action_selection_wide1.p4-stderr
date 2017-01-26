@@ -1,0 +1,3 @@
+../extensions/p4_tests/p4_14/action_selection_wide1.p4(70): warning: fair: Action selector attribute ignored
+    selection_mode : fair;
+                     ^^^^

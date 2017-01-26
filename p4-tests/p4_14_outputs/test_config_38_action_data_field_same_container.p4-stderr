@@ -1,0 +1,3 @@
+../extensions/p4_tests/p4_14/test_config_38_action_data_field_same_container.p4(30): warning: Could not infer type for my_param_0, using bit<8>
+action action_0(my_param_0){
+                ^^^^^^^^^^

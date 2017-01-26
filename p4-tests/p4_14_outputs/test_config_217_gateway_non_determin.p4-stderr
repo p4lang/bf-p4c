@@ -1,0 +1,6 @@
+../extensions/p4_tests/p4_14/test_config_217_gateway_non_determin.p4(85): warning: Could not infer type for p0, using bit<8>
+action action_0(p0, p1){
+                ^^
+../extensions/p4_tests/p4_14/test_config_217_gateway_non_determin.p4(85): warning: Could not infer type for p1, using bit<8>
+action action_0(p0, p1){
+                    ^^

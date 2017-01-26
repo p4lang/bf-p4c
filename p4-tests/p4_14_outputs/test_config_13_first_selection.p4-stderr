@@ -1,0 +1,6 @@
+../extensions/p4_tests/p4_14/test_config_13_first_selection.p4(119): warning: resilient: Action selector attribute ignored
+    selection_mode : resilient;
+                     ^^^^^^^^^
+../extensions/p4_tests/p4_14/test_config_13_first_selection.p4(143): warning: resilient: Action selector attribute ignored
+    selection_mode : resilient;
+                     ^^^^^^^^^

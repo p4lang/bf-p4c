@@ -1,0 +1,9 @@
+../extensions/p4_tests/p4_14/test_config_124_meter_3.p4(57): warning: Could not infer type for param0, using bit<8>
+action action_0(param0){
+                ^^^^^^
+../extensions/p4_tests/p4_14/test_config_124_meter_3.p4(63): warning: Could not infer type for param0, using bit<8>
+action action_1(param0){
+                ^^^^^^
+../extensions/p4_tests/p4_14/test_config_124_meter_3.p4(57): warning: Could not infer type for param0, using bit<8>
+action action_0(param0){
+                ^^^^^^

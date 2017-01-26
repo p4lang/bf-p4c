@@ -1,0 +1,10 @@
+../extensions/p4_tests/p4_14/test_config_216_phv_aff.p4(154): warning: Could not infer type for p0, using bit<8>
+action action_0(p0, p1){
+                ^^
+../extensions/p4_tests/p4_14/test_config_216_phv_aff.p4(154): warning: Could not infer type for p1, using bit<8>
+action action_0(p0, p1){
+                    ^^
+../extensions/p4_tests/p4_14/test_config_216_phv_aff.p4(171): warning: Could not infer type for p0, using bit<8>
+action action_3(p0){
+                ^^
+warning: The order of headers in deparser is not uniquely determined by parser!

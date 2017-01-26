@@ -1,0 +1,12 @@
+../extensions/p4_tests/p4_14/test_checksum.p4:182:6: warning: missing terminating ' character
+     8'0;
+      ^
+../extensions/p4_tests/p4_14/test_checksum.p4:211:7: warning: missing terminating ' character
+     24'0;
+       ^
+../extensions/p4_tests/p4_14/test_checksum.p4:384:6: warning: missing terminating ' character
+     8'0;
+      ^
+../extensions/p4_tests/p4_14/test_checksum.p4(491): warning: -1: negative value with unsigned type
+    add_to_field(ipv4.ttl, -1);
+                            ^

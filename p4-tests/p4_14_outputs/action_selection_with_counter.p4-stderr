@@ -1,0 +1,6 @@
+../extensions/p4_tests/p4_14/action_selection_with_counter.p4(81): warning: fair: Action selector attribute ignored
+    selection_mode : fair;
+                     ^^^^
+../extensions/p4_tests/p4_14/action_selection_with_counter.p4(119): warning: fair: Action selector attribute ignored
+    selection_mode : fair;
+                     ^^^^
