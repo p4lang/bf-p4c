@@ -52,16 +52,10 @@ findbin() {
 }
 
 srcdir=${1%/}
-execdir=$(dirname $0)
 if [ ! -d "$srcdir" ]; then
     die "Usage: $0 <srcdir> <test-source>"
 fi
 shift
-
-tofinodir=${execdir#$srcdir/}
-if [ "$tofinodir" = "$execdir" -a "$srcdir" != "." ]; then
-    die "$tofinodir is not under $srcdir"
-fi
 
 P4C=./p4c-tofino
 testdir=tofino
@@ -145,10 +139,11 @@ testdir=$testdir/$(dirname ${file#$srcdir/})
 name=$(basename $file .p4)
 
 P4C_ARGS="$P4C_ARGS -D__TARGET_TOFINO__"
-if [ $(expr "$file" : ".*p4_16") -gt 0 ]; then
-    P4C_ARGS="$P4C_ARGS --p4v 1.2"
+# FIXME -- should not need -I options here; compiler should be picking it up automatcially
+if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; then
+    P4C_ARGS="$P4C_ARGS --p4v 1.2 -I$srcdir/extensions/tofino/p4include"
 else
-    P4C_ARGS="$P4C_ARGS -I$execdir/p4_14/p4_lib"
+    P4C_ARGS="$P4C_ARGS -I$srcdir/extensions/tofino/p4_14include"
 fi
 
 if [ ! -x $P4C ]; then
@@ -191,7 +186,7 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
     run $TFAS -vvvvl $name.out/tfas.config.log $name.tfa || die
     run $TFLN $name.out/*.cfg.json -o $name.out/tofino.bin || die
     run $STF -l $name.out --observation-log $obsLog $test | \
-        grep -v 'WARN MAU::process_match Time gone backwards!' \
+        grep -v 'WARN MAU::[a-z_]* Time gone backwards!' \
         || die
 elif ${RUN_TFAS:-false}; then
     TFAS=$(findbin tofino-asm tfas)

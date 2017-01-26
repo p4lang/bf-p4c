@@ -33,3 +33,5 @@ For Brig
     make -j8  
     make -j8 check  
 
+If this last step gives you the error "/usr/bin/make: Argument list too long", you can run tests by running "make -j8 test-suite.log"
+
