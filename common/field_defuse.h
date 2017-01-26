@@ -41,7 +41,7 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, P4WriteContext 
     FieldDefUse *clone() const override { return new FieldDefUse(*this); }
     void flow_merge(Visitor &) override;
     bool filter_join_point(const IR::Node *n) override {
-        return !n->is<IR::Tofino::ParserState>(); }
+        return !n->is<IR::Tofino::ParserState>() && !n->is<IR::MAU::TableSeq>(); }
     FieldDefUse(const FieldDefUse &) = default;
     FieldDefUse(FieldDefUse &&) = default;
     friend std::ostream &operator<<(std::ostream &, const FieldDefUse::info &);
