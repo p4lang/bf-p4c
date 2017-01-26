@@ -52,11 +52,12 @@ gen/regs.ebp_rspec.%: JSON_NAME=regs.all.parser.egress
 gen/regs.prsr_reg_merge_rspec.%: JSON_NAME=regs.all.parse_merge
 gen/regs.tofino.%: JSON_NAME=regs.top
 gen/regs.pipe_addrmap.%: JSON_NAME=regs.pipe
+gen/regs.pipe_addrmap.%: JSON_EXTRA_ARGS=+E
 gen/memories.pipe_top_level.%: JSON_NAME=memories.top
 gen/memories.pipe_addrmap.%: JSON_NAME=memories.pipe
 gen/%.h: templates/%.size.json templates/%.cfg.json json2cpp
 	@mkdir -p gen
-	./json2cpp +ehD $(JSON_GLOBALS:%=-g %) -run '$(JSON_NAME)' -c templates/$*.cfg.json $< >$@
+	./json2cpp +ehD $(JSON_GLOBALS:%=-g %) $(JSON_EXTRA_ARGS) -run '$(JSON_NAME)' -c templates/$*.cfg.json $< >$@
 
 gen/disas.%.h: templates/%.size.json json2cpp
 	@mkdir -p gen
@@ -64,7 +65,7 @@ gen/disas.%.h: templates/%.size.json json2cpp
 
 gen/%.cpp: templates/%.size.json templates/%.cfg.json json2cpp
 	@mkdir -p gen
-	./json2cpp +ehDD $(JSON_GLOBALS:%=-g %) -run '$(JSON_NAME)' -c templates/$*.cfg.json -I $*.h $< >$@
+	./json2cpp +ehDD $(JSON_GLOBALS:%=-g %) $(JSON_EXTRA_ARGS) -run '$(JSON_NAME)' -c templates/$*.cfg.json -I $*.h $< >$@
 
 gen/uptr_sizes.h: mksizes
 	@mkdir -p gen

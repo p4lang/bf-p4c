@@ -24,22 +24,22 @@ static bool test_sanity(json::obj *data, std::string name, bool sizes=true) {
         return test_sanity(data, name+"[]", sizes); }
     if (json::map *m = dynamic_cast<json::map *>(data)) {
         for (auto &a : *m) {
+            std::string child;
+            if (name.size() > 0) child = ".";
             if (json::string *key = dynamic_cast<json::string *>(a.first)) {
                 if ((*key)[0] == '_') continue;
+                child += *key;
                 for (char ch : *key)
                     if (!isalnum(ch) && ch != '_') {
-                        std::cerr << "field not identifier: " << name << '.' << *key << std::endl;
+                        std::cerr << "field not identifier: " << name << child << std::endl;
                         return false; }
-                if (name.size()) name += '.';
-                name += *key;
             } else {
                 std::cerr << "field not string: " << name << std::endl;
                 return false; }
-            if (!test_sanity(a.second.get(), name, sizes)) return false; }
+            if (!test_sanity(a.second.get(), name+child, sizes)) return false; }
         return true; }
     if (json::number *n = dynamic_cast<json::number *>(data)) {
-        if (!sizes ||
-            (n->val >= 0 && (size_t)n->val <= sizeof(unsigned long) * CHAR_BIT))
+        if (!sizes || (n->val >= 0 && n->val <= 128))
             return true;
         std::cerr << "size out of range: " << name << " " << n->val << std::endl; }
     if (dynamic_cast<json::string *>(data))
@@ -80,6 +80,7 @@ static bool is_singleton(json::map *m) {
 static int tabsz = 4;
 static bool enable_disable = true;
 static bool checked_array = true;
+static bool expand_disabled_vector = false;
 
 static void gen_emit_method(std::ostream &out, json::map *m, indent_t indent,
                             const std::string &classname, const char *objname,
@@ -134,9 +135,12 @@ static void gen_emit_method(std::ostream &out, json::map *m, indent_t indent,
         out << indent << "out << indent << \"\\\"" << *name << "\\\": \";" << std::endl;
         std::vector<int> indexes;
         json::obj *type = get_indexes(a.second.get(), indexes);
+        if (*type == +0 && !expand_disabled_vector) {
+            out << indent << "out << \"0\";" << std::endl;
+            continue; }
         int index_num = 0;
         for (int idx : indexes) {
-            if (enable_disable && checked_array) {
+            if (enable_disable && checked_array && *type != +0) {
                 out << indent++ << "if (" << *name;
                 for (int i = 0; i < index_num; i++)
                     out << "[i" << i << ']';
@@ -161,6 +165,8 @@ static void gen_emit_method(std::ostream &out, json::map *m, indent_t indent,
             for (int i = 0; i < index_num; i++)
                 out << "[i" << i << ']';
             out << ".emit_json(out, indent+1);" << std::endl;
+        } else if (*type == +0) {
+            out << indent << "out << 0;" << std::endl;
         } else {
             out << indent << "out << " << *name;
             for (int i = 0; i < index_num; i++)
@@ -169,7 +175,7 @@ static void gen_emit_method(std::ostream &out, json::map *m, indent_t indent,
         while (--index_num >= 0) {
             out << --indent << "}" << std::endl;
             out << indent << "out << '\\n' << --indent << ']';" << std::endl;
-            if (enable_disable && checked_array)
+            if (enable_disable && checked_array && *type != +0)
                 out << --indent << "}" << std::endl; }
         first = false; }
     out << indent << "out << '\\n' << indent-1 << \"}\";" << std::endl;
@@ -194,6 +200,7 @@ static void gen_fieldname_method(std::ostream &out, json::map *m, indent_t inden
         json::string *name = dynamic_cast<json::string *>(it->first);
         if ((*name)[0] == '_') continue;
         json::obj *type = get_indexes(it->second.get(), indexes);
+        if (*type == +0) continue;
         out << indent;
         if (first) first = false;
         else out << "} else ";
@@ -244,6 +251,7 @@ static void gen_unpack_method(std::ostream &out, json::map *m, indent_t indent,
         json::string *name = dynamic_cast<json::string *>(a.first);
         if ((*name)[0] == '_') continue;
         json::obj *type = get_indexes(a.second.get(), indexes);
+        if (*type == +0) continue;
         int index_num = 0;
         for (int idx : indexes) {
             out << indent++ << "if (json::vector *v" << index_num
@@ -327,6 +335,7 @@ static void gen_dump_unread_method(std::ostream &out, json::map *m,
         if ((*name)[0] == '_') continue;
         json::obj *type = get_indexes(a.second.get(), indexes);
         json::obj *single = singleton_obj(type, name);
+        if (*type == +0) continue;
         if (dynamic_cast<json::map *>(single)) {
             if (need_lpfx) {
                 out << indent << "prefix lpfx(pfx, 0);" << std::endl;
@@ -362,9 +371,10 @@ static void gen_modified_method(std::ostream &out, json::map *m, indent_t indent
     for (auto &a : *m) {
         json::string *name = dynamic_cast<json::string *>(a.first);
         if ((*name)[0] == '_') continue;
+        std::vector<int> indexes;
+        auto *type = get_indexes(a.second.get(), indexes);
+        if (*type == +0) continue;
         if (!checked_array) {
-            std::vector<int> indexes;
-            get_indexes(a.second.get(), indexes);
             if (!indexes.empty()) {
                 int index_num = 0;
                 for (int idx : indexes) {
@@ -414,9 +424,10 @@ static void gen_disable_if_zero_method(std::ostream &out, json::map *m, indent_t
     for (auto &a : *m) {
         json::string *name = dynamic_cast<json::string *>(a.first);
         if ((*name)[0] == '_') continue;
+        std::vector<int> indexes;
+        auto type = get_indexes(a.second.get(), indexes);
+        if (*type == +0) continue;
         if (!checked_array) {
-            std::vector<int> indexes;
-            get_indexes(a.second.get(), indexes);
             if (!indexes.empty()) {
                 int index_num = 0;
                 for (int idx : indexes) {
@@ -520,6 +531,7 @@ static void gen_type(std::ostream &out, const std::string &parent,
             init = m_init ? m_init->at(name).get() : 0;
             json::obj *type = get_indexes(a.second.get(), indexes);
             type = singleton_obj(type, name);
+            if (*type == +0) continue;
             init = singleton_obj(skip_indexes(init), name);
             bool notclass = !dynamic_cast<json::map *>(type);
             bool isglobal = global_types.count(*name) > 0;
@@ -564,8 +576,11 @@ static void gen_type(std::ostream &out, const std::string &parent,
         //const json::number *n_init = dynamic_cast<const json::number *>(init);
         //if (n_init && n_init->val)
         //    std::clog << "init value " << n_init->val << std::endl;
-        if (gen_definitions != DEFN_ONLY)
-            out << "ubits<" << (n->val ? n->val : 32) << ">";
+        if (gen_definitions != DEFN_ONLY) {
+            if (size_t(n->val) > CHAR_BIT * sizeof(unsigned long))
+                out << "widereg<" << n->val << ">";
+            else
+                out << "ubits<" << n->val << ">"; }
     } else if (dynamic_cast<json::string *>(t)) {
         if (gen_definitions != DEFN_ONLY)
             out << "ustring";
@@ -585,6 +600,7 @@ static int gen_global_types(std::ostream &out, json::obj *t, const json::obj *in
             init = m_init ? m_init->at(name).get() : 0;
             json::obj *type = get_indexes(a.second.get(), indexes);
             type = singleton_obj(type, name);
+            if (*type == +0) continue;
             init = singleton_obj(skip_indexes(init), name);
             if (json::map *cl = dynamic_cast<json::map *>(type)) {
                 rv |= gen_global_types(out, type, init);
@@ -627,6 +643,7 @@ int main(int ac, char **av) {
                 case 'd': declare = av[++i]; break;
                 case 'D': gen_definitions = mod_definitions[flag][gen_definitions];
                 case 'e': gen_emit = flag; break;
+                case 'E': expand_disabled_vector = flag; break;
                 case 'f': gen_fieldname = flag; break;
                 case 'g': global_types[av[++i]] = 0; break;
                 case 'h': gen_hdrs = flag; break;
