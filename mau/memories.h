@@ -113,6 +113,7 @@ struct Memories {
         UseNames() {}
         cstring get_name(const IR::MAU::Table *tbl, const IR::Attached *at = nullptr,
                          bool is_gw = false, int type = 0) const {
+            cstring attached_name;
             if (is_gw) {
                 return tbl->name + "$gw";
             } else if (at == nullptr) {
@@ -122,22 +123,29 @@ struct Memories {
                     return tbl->name + "$action";
                 else
                     return tbl->name;
-            } else if (at->is<IR::Counter>()) {
-                return tbl->name + "$counter." + at->name;
+            } else { 
+                cstring orig_name = at->name.name;
+                if (auto p = orig_name.findlast('.'))
+                    attached_name = orig_name.before(p);
+                else
+                    attached_name = orig_name;
+            }
+            if (at->is<IR::Counter>()) {
+                return tbl->name + "$counter." + attached_name;
             } else if (at->is<IR::Meter>()) {
-                return tbl->name + "$meter." + at->name;
+                return tbl->name + "$meter." + attached_name;
             } else if (at->is<IR::Register>()) {
-                return tbl->name + "$register." + at->name;
+                return tbl->name + "$register." + attached_name;
             } else if (at->is<IR::ActionProfile>()) {
-                return tbl->name + "$act_prof." + at->name;
+                return tbl->name + "$act_prof." + attached_name;
             } else if (at->is<IR::ActionSelector>()) {
-                return tbl->name + "$act_sel." + at->name;
+                return tbl->name + "$act_sel." + attached_name;
             } else if (at->is<IR::MAU::ActionData>()) {
                 return tbl->name + "$action";
             } else if (at->is<IR::MAU::TernaryIndirect>()) {
                 return tbl->name + "$tind";
             } else {
-                BUG("Unrecgonized attached table %s", at->name);
+                BUG("Unrecgonized attached table %s", attached_name);
                 return "";
             }
         }

@@ -345,6 +345,9 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     bool logical = mem.type >= Memories::Use::TWOPORT;
     bool have_bus = !logical;
     for (auto &r : mem.row) {
+        LOG1("row bus col " << r.row << " " << r.bus << " " << r.col[0]);
+    }
+    for (auto &r : mem.row) {
         if (logical) {
             row.push_back(2*r.row + (r.col[0] >= Memories::LEFT_SIDE_COLUMNS));
         } else {
@@ -706,9 +709,10 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
     /* FIXME -- this is a mess and needs to be rewritten to be sane */
     bool have_action = false, have_indirect = false;
     for (auto at : tbl->attached) {
-        if (at->is<IR::MAU::TernaryIndirect>()) {
+        if (auto *ti = at->to<IR::MAU::TernaryIndirect>()) {
             have_indirect = true;
-            out << indent << at->kind() << ": " << at->name << std::endl;
+            cstring name = tbl->resources->use_names.get_name(tbl, ti);
+            out << indent << at->kind() << ": " << name << std::endl;
         } else if (at->is<IR::ActionProfile>()) {
             have_action = true;
         } else if (at->is<IR::MAU::ActionData>()) {
@@ -915,9 +919,12 @@ static void counter_format(std::ostream &out, const IR::CounterType type, int pe
 bool MauAsmOutput::EmitAttached::preorder(const IR::Counter *counter) {
     indent_t indent(1);
     auto name = tbl->resources->use_names.get_name(tbl, counter);
+    LOG1("Name of counter " << name);
     out << indent++ << "counter " << name << ":" << std::endl;
     if (auto p = counter->name.name.find('.'))
         out << indent << "p4: { name: " << counter->name.name.before(p) << " }" << std::endl;
+    else
+        out << indent << "p4: { name: " << counter->name << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     cstring count_type;
     switch (counter->type) {

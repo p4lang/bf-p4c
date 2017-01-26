@@ -118,7 +118,6 @@ class SetupAttachedTables : public MauInspector {
     bool stats_pushed = false; bool meter_pushed = false;
 
     profile_t init_apply(const IR::Node *root) {
-        LOG1("Init apply");
         profile_t rv = MauInspector::init_apply(root);
         if (ta->layout_option == nullptr) return rv;
 
@@ -823,6 +822,16 @@ bool Memories::allocate_all_ternary() {
             }
         }
     }
+    for (auto *ta : ternary_tables) {
+        auto name = use_names.get_name(ta->table);
+        auto &alloc = (*ta->memuse)[name];
+        LOG4("Allocation of " << name);
+        for (auto row : alloc.row) {
+            LOG4("Row is " << row.row << " and bus is " << row.bus);
+            LOG4("Col is " << row.col);
+        }
+    }
+
     return true;
 }
 
@@ -877,7 +886,7 @@ int Memories::find_best_tind_row(SRAM_group *tg, int &bus) {
 /* Compresses the tind groups on the same row in the use, into one row */
 void Memories::compress_tind_groups() {
     for (auto *ta : tind_tables) {
-        auto name = use_names.get_name(ta->table);
+        auto name = use_names.get_name(ta->table, nullptr, false, UseNames::TIND_NAME);
         auto &alloc = (*ta->memuse)[name];
         std::sort(alloc.row.begin(), alloc.row.end(),
             [=](const Memories::Use::Row a, const Memories::Use::Row b) {
@@ -909,7 +918,6 @@ bool Memories::allocate_all_tind() {
     });
     find_tind_groups();
 
-    // Keep it really simple for first iteration, just reserve the 1st column and then fill it out
     while (!tind_groups.empty()) {
         auto *tg = tind_groups[0];
         int best_bus = 0;
@@ -954,6 +962,7 @@ void Memories::action_bus_selectors_indirects() {
     }
 
     for (auto *ta : indirect_action_tables) {
+        LOG1("Indirect action tables " << ta->table->name);
         for (auto at : ta->table->attached) {
             const IR::ActionProfile *ap = nullptr;
             if ((ap = at->to<IR::ActionProfile>()) == nullptr)
@@ -970,6 +979,7 @@ void Memories::action_bus_selectors_indirects() {
                 }
             }
             for (int i = 0; i < width; i++) {
+                LOG1("Additions");
                 action_bus_users.push_back(new SRAM_group(ta, depth, i, SRAM_group::ACTION));
                 action_bus_users.back()->attached = ap;
                 if (selector != nullptr) {
@@ -1031,16 +1041,21 @@ void Memories::action_bus_meters_counters() {
 /* Breaks up all tables requiring an action to be parsed into SRAM_group, a structure
    designed for adding to SRAM array  */
 void Memories::find_action_bus_users() {
+    LOG1("Size of action bus users is " << action_bus_users.size());
     for (auto *ta : action_tables) {
         int width = 1;
         int per_row = ActionDataPerWord(ta->layout_option->layout, &width);
         int depth = (ta->calculated_entries + per_row * 1024 - 1) / (per_row * 1024);
         for (int i = 0; i < width; i++) {
+            LOG1("Action bus users");
             action_bus_users.push_back(new SRAM_group(ta, depth, i, SRAM_group::ACTION));
         }
     }
+    LOG1("Size of action bus users is " << action_bus_users.size());
     action_bus_selectors_indirects();
+    LOG1("Size of action bus users is " << action_bus_users.size());
     action_bus_meters_counters();
+    LOG1("Size of action bus users is " << action_bus_users.size());
 }
 
 /* Due to color maprams, the number of RAMs available to the suppl vs. the action
@@ -1987,7 +2002,6 @@ bool Memories::allocate_all_gw() {
                         != exact_ta->match_ixbar->way_use[0].group)
                          continue;
                 }
-                LOG1("We made it to this point");
                 exact_ta->attached_gw_bytes += ta->match_ixbar->gw_search_bus_bytes;
                 gw_bytes_per_sb[i][j] += ta->match_ixbar->gw_search_bus_bytes;
                 gateway_use[i][current_gw] = name;
