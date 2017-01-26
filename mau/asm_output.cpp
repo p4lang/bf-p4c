@@ -746,6 +746,38 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         at->apply(EmitAttached(*this, out, tbl));
 }
 
+class MauAsmOutput::UnattachedName : public MauInspector {
+    const IR::MAU::Table *comp_table;
+    cstring comparison_name;
+    cstring return_name;
+    const IR::Attached *unattached;
+    bool setting = false;
+
+
+    bool preorder(const IR::MAU::Table *tbl) {
+        auto p = tbl->name.findlast('.');
+        if (tbl->name == comparison_name ||
+            (p != nullptr && tbl->name.before(p) == comparison_name)) {
+             if (tbl->logical_id/16U != comp_table->logical_id/16U)
+                 return true;
+             return_name = tbl->resources->use_names.get_name(tbl, unattached);
+             if (setting)
+                 BUG("Multiple tables claim to be attached table");
+             setting = true;
+        }
+        return true;
+    }
+
+    void end_apply() {
+        if (setting == false)
+            BUG("Unable to find unattached table");
+    }
+ public:
+    explicit UnattachedName(const IR::MAU::Table* ct, cstring cn, const IR::Attached *at) :
+        comp_table(ct), comparison_name(cn), unattached(at) {}
+    cstring name() { return return_name; }  
+};
+
 void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
                                     const IR::MAU::Table *tbl) const {
     bool have_action = false;
@@ -764,26 +796,32 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
             meter_tables.push_back(at);
             continue;
         }
-        if (at->is<IR::ActionProfile>()) {
+        if (auto *ap = at->to<IR::ActionProfile>()) {
             auto &memuse = tbl->resources->memuse.at(match_name);
             out << indent << "action: ";
-            if (memuse.unattached_profile)
-                out << memuse.profile_name << "$action";
-            else
-                out << tbl->name << "$action";
+            if (memuse.unattached_profile) {
+                UnattachedName unattached(tbl, match_name, ap);
+                pipe->apply(unattached);
+                out << unattached.name();
+            } else {
+                out << tbl->resources->use_names.get_name(tbl, ap);
+            }
             if (at->indexed())
                 out << "(action, action_ptr)";
             out << std::endl;
             continue;
         }
 
-        if (at->is<IR::ActionSelector>()) {
+        if (auto *as = at->to<IR::ActionSelector>()) {
              auto &memuse = tbl->resources->memuse.at(match_name);
              out << indent << "selector: ";
-             if (memuse.unattached_profile)
-                 out << memuse.profile_name << "$selector";
-             else
-                 out << tbl->name << "$selector";
+             if (memuse.unattached_profile) {
+                 UnattachedName unattached(tbl, match_name, as);
+                 pipe->apply(unattached);
+                 out << unattached.name();
+             } else {
+                 out << tbl->resources->use_names.get_name(tbl, as);
+             }
              out << "(select_ptr)";
              out << std::endl;
              continue;
