@@ -252,6 +252,8 @@ def walle_process(parser, args=None):
 
         if args.schema_info:
             print_schema_info(os.path.abspath(args.schema), schema)
+        elif args.dump_schema:
+            print yaml.dump(schema)
         elif args.generate_templates != None:
             generate_templates(args, schema)
         else:
@@ -287,6 +289,11 @@ def main():
         "--schema-info",
         action='store_true',
         help="Print metadata stored in the selected chip schema and exit"
+    )
+    parser.add_argument(
+        "--dump-schema",
+        action='store_true',
+        help="Dump chip schema as yaml"
     )
     parser.add_argument(
         "--generate-schema",
