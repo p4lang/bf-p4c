@@ -60,6 +60,7 @@ limitations under the License.
 #include "tofino/phv/create_thread_local_instances.h"
 #include "tofino/phv/phv_allocator.h"
 #include "tofino/phv/cluster_phv_bind.h"
+#include "tofino/common/parser_overlay.h"
 
 namespace Tofino {
 
@@ -111,6 +112,8 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     TableSummary summary;
     MauAsmOutput mauasm(phv);
     PassManager *phv_alloc;
+    SymBitMatrix mutually_exclusive_field_ids;
+    ParserOverlay parserOverlay(phv, mutually_exclusive_field_ids);
 
     if (options.phv_ortools) {
         auto *newpa = new PhvAllocator(phv, defuse.conflicts(), std::ref(mutex));
@@ -139,6 +142,8 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
 
     PassManager *phv_analysis = new PassManager({
         &cluster,          // cluster analysis
+        &parserOverlay,    // produce pairs of mutually exclusive header
+                           // fields, eg. (arpSrc, ipSrc)
         &cluster_phv_req,  // cluster PHV requirements analysis
         &cluster_phv_mau,  // cluster PHV container placements
                            // first cut PHV MAU Group assignments
@@ -210,6 +215,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     if (LOGGING(4))
         backend.addDebugHook(debug_hook);
     maupipe = maupipe->apply(backend);
+
     if (ErrorReporter::instance.getErrorCount() > 0)
         return;
     std::ostream *out = &std::cout;
