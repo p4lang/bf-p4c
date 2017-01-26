@@ -135,12 +135,12 @@ static void gen_emit_method(std::ostream &out, json::map *m, indent_t indent,
         out << indent << "out << indent << \"\\\"" << *name << "\\\": \";" << std::endl;
         std::vector<int> indexes;
         json::obj *type = get_indexes(a.second.get(), indexes);
-        if (*type == +0 && !expand_disabled_vector) {
+        if (*type == +0L && !expand_disabled_vector) {
             out << indent << "out << \"0\";" << std::endl;
             continue; }
         int index_num = 0;
         for (int idx : indexes) {
-            if (enable_disable && checked_array && *type != +0) {
+            if (enable_disable && checked_array && *type != +0L) {
                 out << indent++ << "if (" << *name;
                 for (int i = 0; i < index_num; i++)
                     out << "[i" << i << ']';
@@ -165,7 +165,7 @@ static void gen_emit_method(std::ostream &out, json::map *m, indent_t indent,
             for (int i = 0; i < index_num; i++)
                 out << "[i" << i << ']';
             out << ".emit_json(out, indent+1);" << std::endl;
-        } else if (*type == +0) {
+        } else if (*type == +0L) {
             out << indent << "out << 0;" << std::endl;
         } else {
             out << indent << "out << " << *name;
@@ -175,7 +175,7 @@ static void gen_emit_method(std::ostream &out, json::map *m, indent_t indent,
         while (--index_num >= 0) {
             out << --indent << "}" << std::endl;
             out << indent << "out << '\\n' << --indent << ']';" << std::endl;
-            if (enable_disable && checked_array && *type != +0)
+            if (enable_disable && checked_array && *type != +0L)
                 out << --indent << "}" << std::endl; }
         first = false; }
     out << indent << "out << '\\n' << indent-1 << \"}\";" << std::endl;
@@ -200,7 +200,7 @@ static void gen_fieldname_method(std::ostream &out, json::map *m, indent_t inden
         json::string *name = dynamic_cast<json::string *>(it->first);
         if ((*name)[0] == '_') continue;
         json::obj *type = get_indexes(it->second.get(), indexes);
-        if (*type == +0) continue;
+        if (*type == +0L) continue;
         out << indent;
         if (first) first = false;
         else out << "} else ";
@@ -251,7 +251,7 @@ static void gen_unpack_method(std::ostream &out, json::map *m, indent_t indent,
         json::string *name = dynamic_cast<json::string *>(a.first);
         if ((*name)[0] == '_') continue;
         json::obj *type = get_indexes(a.second.get(), indexes);
-        if (*type == +0) continue;
+        if (*type == +0L) continue;
         int index_num = 0;
         for (int idx : indexes) {
             out << indent++ << "if (json::vector *v" << index_num
@@ -335,7 +335,7 @@ static void gen_dump_unread_method(std::ostream &out, json::map *m,
         if ((*name)[0] == '_') continue;
         json::obj *type = get_indexes(a.second.get(), indexes);
         json::obj *single = singleton_obj(type, name);
-        if (*type == +0) continue;
+        if (*type == +0L) continue;
         if (dynamic_cast<json::map *>(single)) {
             if (need_lpfx) {
                 out << indent << "prefix lpfx(pfx, 0);" << std::endl;
@@ -373,7 +373,7 @@ static void gen_modified_method(std::ostream &out, json::map *m, indent_t indent
         if ((*name)[0] == '_') continue;
         std::vector<int> indexes;
         auto *type = get_indexes(a.second.get(), indexes);
-        if (*type == +0) continue;
+        if (*type == +0L) continue;
         if (!checked_array) {
             if (!indexes.empty()) {
                 int index_num = 0;
@@ -426,7 +426,7 @@ static void gen_disable_if_zero_method(std::ostream &out, json::map *m, indent_t
         if ((*name)[0] == '_') continue;
         std::vector<int> indexes;
         auto type = get_indexes(a.second.get(), indexes);
-        if (*type == +0) continue;
+        if (*type == +0L) continue;
         if (!checked_array) {
             if (!indexes.empty()) {
                 int index_num = 0;
@@ -531,7 +531,7 @@ static void gen_type(std::ostream &out, const std::string &parent,
             init = m_init ? m_init->at(name).get() : 0;
             json::obj *type = get_indexes(a.second.get(), indexes);
             type = singleton_obj(type, name);
-            if (*type == +0) continue;
+            if (*type == +0L) continue;
             init = singleton_obj(skip_indexes(init), name);
             bool notclass = !dynamic_cast<json::map *>(type);
             bool isglobal = global_types.count(*name) > 0;
@@ -600,7 +600,7 @@ static int gen_global_types(std::ostream &out, json::obj *t, const json::obj *in
             init = m_init ? m_init->at(name).get() : 0;
             json::obj *type = get_indexes(a.second.get(), indexes);
             type = singleton_obj(type, name);
-            if (*type == +0) continue;
+            if (*type == +0L) continue;
             init = singleton_obj(skip_indexes(init), name);
             if (json::map *cl = dynamic_cast<json::map *>(type)) {
                 rv |= gen_global_types(out, type, init);
