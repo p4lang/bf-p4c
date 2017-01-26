@@ -3,12 +3,14 @@
 
 #include <iostream>
 #include "ir/ir.h"
-#include "tofino/phv/phv_fields.h"
-#include "lib/symbitmatrix.h"
 #include "lib/cstring.h"
+#include "lib/bitvec.h"
+#include "lib/symbitmatrix.h"
+#include "tofino/phv/phv_fields.h"
 
 /* Produces a SymBitMatrix where keys are PhvInfo::Field ids and values
- * indicate whether two fields are mutually exclusive. */
+ * indicate whether two fields are mutually exclusive.
+ */
 
 class ParserOverlay : public ControlFlowVisitor,
                       public Inspector, P4WriteContext {
@@ -20,7 +22,7 @@ class ParserOverlay : public ControlFlowVisitor,
     SymBitMatrix     mutually_inclusive;
     SymBitMatrix&    mutually_exclusive;
 
-    std::set<int>    fields_encountered;
+    bitvec           fields_encountered;
 
     void mark(const PhvInfo::Field*);
     void mark(const IR::HeaderRef*);
