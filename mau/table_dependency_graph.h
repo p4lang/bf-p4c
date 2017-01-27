@@ -37,9 +37,10 @@ class FindDependencyGraph : public MauInspector, ControlFlowVisitor {
     void postorder(const IR::Tofino::Pipe *) override { recompute_dep_stages(); }
 
     void flow_merge(Visitor &v) override;
+    bool filter_join_point(const IR::Node *n) override { return !n->is<IR::MAU::TableSeq>(); }
     FindDependencyGraph *clone() const override { return new FindDependencyGraph(*this); }
  public:
-    explicit FindDependencyGraph(DependencyGraph *out) : graph(out->graph) {}
+    explicit FindDependencyGraph(DependencyGraph *out) : graph(out->graph) { joinFlows = true; }
 };
 
 #endif /* _TOFINO_MAU_TABLE_DEPENDENCY_GRAPH_H_ */

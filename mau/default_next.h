@@ -22,11 +22,12 @@ class DefaultNext : public MauInspector, ControlFlowVisitor {
     void flow_merge(Visitor &a_) override {
         auto &a = dynamic_cast<DefaultNext &>(a_);
         prev_tbls.insert(a.prev_tbls.begin(), a.prev_tbls.end()); }
+    bool filter_join_point(const IR::Node *n) override { return !n->is<IR::MAU::TableSeq>(); }
     DefaultNext(const DefaultNext &) = default;
 
  public:
     DefaultNext() : default_next(new std::remove_reference<decltype(*default_next)>::type) {
-        visitDagOnce = false; }
+        joinFlows = true; visitDagOnce = false; }
     const IR::MAU::Table *next(const IR::MAU::Table *t) const {
         return ::get(default_next, t); }
     cstring next_in_thread(const IR::MAU::Table *t) const {
