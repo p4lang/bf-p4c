@@ -1,3 +1,0 @@
-../extensions/tofino/v1_samples/meter_test4.p4(61): warning: Ignoring `implementation' field of meter Meter meter_3
-meter meter_3 {
-^

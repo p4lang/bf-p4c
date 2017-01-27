@@ -1,6 +1,0 @@
-../extensions/tofino/v1_samples/test_config_102_clone.p4(24): warning: SelectCase: unreachable
-        default: ingress;
-        ^^^^^^^
-../extensions/tofino/v1_samples/test_config_102_clone.p4(22): warning: ListExpression: transition does not depend on select argument
-    return select(current(0,1)) {
-                  ^^^^^^^^^^^^

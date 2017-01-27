@@ -1,3 +1,0 @@
-../extensions/tofino/v1_samples/debug_issue_1_invalid_action_pack_format.p4(63): warning: Could not infer type for egress_port, using bit<8>
-action mod_mac_adr(egress_port, srcmac, dstmac) {
-                   ^^^^^^^^^^^

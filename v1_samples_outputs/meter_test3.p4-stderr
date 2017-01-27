@@ -1,9 +1,0 @@
-../extensions/tofino/v1_samples/meter_test3.p4(66): warning: Ignoring `implementation' field of meter Meter meter_1
-meter meter_1 {
-^
-../extensions/tofino/v1_samples/meter_test3.p4(74): warning: Ignoring `implementation' field of meter Meter meter_2
-meter meter_2 {
-^
-../extensions/tofino/v1_samples/meter_test3.p4(89): warning: Ignoring `implementation' field of meter Meter meter_4
-meter meter_4 {
-^

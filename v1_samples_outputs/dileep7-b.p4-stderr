@@ -1,3 +1,0 @@
-../extensions/tofino/v1_samples/dileep7-b.p4(154): warning: -1: negative value with unsigned type
-    add_to_field(ttl, -1);
-                       ^
