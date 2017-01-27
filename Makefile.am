@@ -205,6 +205,18 @@ ir_DEF_FILES += \
     $(srcdir)/%reldir%/ir/mau.def \
     $(srcdir)/%reldir%/ir/parde.def
 
+p4include_HEADERS += $(srcdir)/%reldir%/p4include/tofino_model.p4
+p4_14include_tofinodir = $(p4_14includedir)/tofino
+p4_14include_tofino_HEADERS = \
+    $(srcdir)/%reldir%/p4_14include/tofino/constants.p4 \
+    $(srcdir)/%reldir%/p4_14include/tofino/intrinsic_metadata.p4 \
+    $(srcdir)/%reldir%/p4_14include/tofino/lpf_blackbox.p4 \
+    $(srcdir)/%reldir%/p4_14include/tofino/meter_blackbox.p4 \
+    $(srcdir)/%reldir%/p4_14include/tofino/pktgen_headers.p4 \
+    $(srcdir)/%reldir%/p4_14include/tofino/primitives.p4 \
+    $(srcdir)/%reldir%/p4_14include/tofino/stateful_alu_blackbox.p4 \
+    $(srcdir)/%reldir%/p4_14include/tofino/wred_blackbox.p4
+
 bin_PROGRAMS += p4c-tofino
 p4c_tofino_LDADD = libfrontend.la libp4ctoolkit.a
 
