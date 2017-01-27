@@ -146,11 +146,8 @@ testdir=$testdir/$(dirname ${file#$srcdir/})
 name=$(basename $file .p4)
 
 P4C_ARGS="$P4C_ARGS -D__TARGET_TOFINO__"
-# FIXME -- should not need -I options here; compiler should be picking it up automatcially
 if [ $(expr "$file" : ".*v1_2") -gt 0 -o $(expr "$file" : ".*p4_16") -gt 0 ]; then
-    P4C_ARGS="$P4C_ARGS --p4v 1.2 -I$srcdir/extensions/tofino/p4include"
-else
-    P4C_ARGS="$P4C_ARGS -I$srcdir/extensions/tofino/p4_14include"
+    P4C_ARGS="$P4C_ARGS --p4v 1.2"
 fi
 
 if [ ! -x $P4C ]; then
