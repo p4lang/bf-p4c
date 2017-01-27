@@ -39,7 +39,7 @@ class ParserOverlay : public ControlFlowVisitor,
 
  public:
     explicit ParserOverlay(PhvInfo& phv, SymBitMatrix& rv) :
-        phv{phv}, mutually_exclusive{rv}
+        phv(phv), mutually_exclusive(rv)
     {
         joinFlows = true;
         visitDagOnce = true;
