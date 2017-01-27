@@ -803,7 +803,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
             auto &memuse = tbl->resources->memuse.at(match_name);
             out << indent << "action: ";
             if (memuse.unattached_profile) {
-                UnattachedName unattached(tbl, match_name, ap);
+                UnattachedName unattached(tbl, memuse.profile_name, ap);
                 pipe->apply(unattached);
                 out << unattached.name();
             } else {
@@ -818,8 +818,8 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         if (auto *as = at->to<IR::ActionSelector>()) {
              auto &memuse = tbl->resources->memuse.at(match_name);
              out << indent << "selector: ";
-             if (memuse.unattached_profile) {
-                 UnattachedName unattached(tbl, match_name, as);
+             if (memuse.unattached_selector) {
+                 UnattachedName unattached(tbl, memuse.selector_name, as);
                  pipe->apply(unattached);
                  out << unattached.name();
              } else {
