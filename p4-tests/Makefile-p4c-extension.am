@@ -247,11 +247,6 @@ XFAIL_TESTS += tofino-ortools/%reldir%/p4_16/synth-action.p4.test
 # match group packing overflow
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_246_fill_stage.p4.test
 
-# conflicting memory use
-XFAIL_TESTS += tofino/%reldir%/p4_14/switch_l2_profile.p4.test
-XFAIL_TESTS += tofino/%reldir%/p4_14/switch_20160602/switch.p4.test
-XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_101_switch_msdc.p4.test
-
 # Layout Constraints from gateway allocation
 XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/gateway_bus1.p4.test
 XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/gateway_bus2.p4.test
@@ -264,6 +259,10 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/action_profile_next_stage.p4.test
 XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/counter_test1.p4.test
 XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/counter_test2.p4.test
 XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/meter_test1.p4.test
+
+# Same Name Conversion Bug
+XFAIL_TESTS += p14_to_16/extensions/p4_tests/p4_14/shared_names.p4.test
+XFAIL_TESTS += bmv2/extensions/p4_tests/p4_14/shared_names.p4.test
 
 # These fail (or pass) intermittently on Jenkins; not sure why
 IFAIL_TESTS += tofino-ortools/%reldir%/p4_14/simple_counter.p4.test \
