@@ -461,6 +461,10 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         }
     } while (!allocated && rv->stage <= furthest_stage);
 
+    // FIXME: for a particular test case, adding more entries actually filled in the table better
+    if (rv->need_more && rv->entries > set_entries)
+        rv->need_more = false;
+
     if (rv->stage > furthest_stage) {
         if (ixbar_allocation_bug)
             BUG("Can't fit table %s in input xbar by itself", rv->name);

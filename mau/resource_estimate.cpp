@@ -559,15 +559,12 @@ void StageUseEstimate::unknown_tcams_needed(const IR::MAU::Table *tbl,
         }
 
         if (sram_count > available_srams || tcam_count > available_tcams) break;
-        LOG1("Testing the waters " << depth);
         depth = attempted_depth;
         adding_entries = attempted_entries;
         used_srams = sram_count;
         used_maprams = mapram_count;
         used_tcams = tcam_count;
     }
-    LOG1("Depth " << depth << " used_tcams " << used_tcams << " attempted entries "
-         << adding_entries);
     lo->srams += used_srams;
     lo->maprams += used_maprams;
     lo->tcams += used_tcams;

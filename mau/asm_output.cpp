@@ -345,9 +345,6 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     bool logical = mem.type >= Memories::Use::TWOPORT;
     bool have_bus = !logical;
     for (auto &r : mem.row) {
-        LOG1("row bus col " << r.row << " " << r.bus << " " << r.col[0]);
-    }
-    for (auto &r : mem.row) {
         if (logical) {
             row.push_back(2*r.row + (r.col[0] >= Memories::LEFT_SIDE_COLUMNS));
         } else {
@@ -777,10 +774,11 @@ class MauAsmOutput::UnattachedName : public MauInspector {
         if (setting == false)
             BUG("Unable to find unattached table");
     }
+
  public:
     explicit UnattachedName(const IR::MAU::Table* ct, cstring cn, const IR::Attached *at) :
         comp_table(ct), comparison_name(cn), unattached(at) {}
-    cstring name() { return return_name; }  
+    cstring name() { return return_name; }
 };
 
 void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
@@ -835,7 +833,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         out << indent << at->kind() << ": " << name;
         if (at->indexed())
             out << '(' << at->kind() << ')';
-        out << std::endl; 
+        out << std::endl;
     }
 
 
@@ -978,7 +976,6 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *ap) {
     if (tbl->resources->memuse.at(match_name).unattached_profile) {
         return false;
     }
-    
     indent_t    indent(1);
     auto name = tbl->resources->use_names.get_name(tbl, ap);
     out << indent++ << "action " << name << ':' << std::endl;
@@ -1027,7 +1024,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
         sep = ", "; }
     out << " }" << std::endl;
     self.emit_table_indir(out, indent, tbl);
-    return false; 
+    return false;
 }
 
 bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {

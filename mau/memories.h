@@ -123,7 +123,7 @@ struct Memories {
                     return tbl->name + "$action";
                 else
                     return tbl->name;
-            } else { 
+            } else {
                 cstring orig_name = at->name.name;
                 if (auto p = orig_name.findlast('.'))
                     attached_name = orig_name.before(p);
@@ -251,7 +251,7 @@ struct Memories {
             : ta(t), depth(d), width(w), placed(0), number(n), hash_group(0), attached(nullptr),
               type(ty), sel(), cm(), requires_ab(false) {}
         explicit SRAM_group(table_alloc *t, int d, int n, type_t ty)
-            : ta(t), depth(d), width(0), placed(0), number(n), hash_group(0), attached(nullptr), 
+            : ta(t), depth(d), width(0), placed(0), number(n), hash_group(0), attached(nullptr),
               type(ty), sel(), cm(), requires_ab(false) {}
         explicit SRAM_group(table_alloc *t, int d, int w, int n, int h, type_t ty)
             : ta(t), depth(d), width(w), placed(0), number(n), hash_group(h), attached(nullptr),

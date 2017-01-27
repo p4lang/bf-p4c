@@ -155,8 +155,7 @@ class SetupAttachedTables : public MauInspector {
     bool preorder(const IR::ActionProfile *ap) {
         auto name = mem.use_names.get_name(ta->table, ap);
         auto table_name = mem.use_names.get_name(ta->table);
-        LOG4("Action profile for table " << table_name);
-        
+        LOG4("Action profile for table " << table_name); 
         bool selector_first = false;
         /* This is a check to see if the table has already been placed due to it being in 
            the profile of a separate table */
@@ -183,7 +182,7 @@ class SetupAttachedTables : public MauInspector {
             mem.action_profiles.push_back(new Memories::profile_info(ap, ta));
             (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
         } else {
-            auto linked_name = mem.use_names.get_name(linked_pi->linked_ta->table); 
+            auto linked_name = mem.use_names.get_name(linked_pi->linked_ta->table);
             (*ta->memuse)[table_name].unattached_profile = true;
             (*ta->memuse)[table_name].profile_name = linked_name;
             return false;
@@ -585,7 +584,6 @@ bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols, unsigned c
                 width = j;
             }
         }
-        LOG1("Table " << wa->ta->table << " with bus " << bus);
 
         alloc.row.emplace_back(selected_rows[i], bus);
         auto &alloc_row = alloc.row.back();
@@ -597,7 +595,7 @@ bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols, unsigned c
         sram_inuse[selected_rows[i]] |= row_mask;
         if (!sram_match_bus[selected_rows[i]][bus].first) {
             sram_match_bus[selected_rows[i]][bus]
-                = std::make_pair(name, width);
+                = std::make_pair(name, wa->unique_bus(width));
             sram_print_match_bus[selected_rows[i]][bus] = name;
         }
     }
@@ -944,6 +942,15 @@ bool Memories::allocate_all_tind() {
         }
     }
     compress_tind_groups();
+    for (auto *ta : tind_tables) {
+        auto name = use_names.get_name(ta->table, nullptr, false, UseNames::TIND_NAME);
+        auto &alloc = (*ta->memuse)[name];
+        LOG4("Allocation of " << name);
+        for (auto row : alloc.row) {
+            LOG4("Row is " << row.row << " and bus is " << row.bus);
+            LOG4("Col is " << row.col);
+        }
+    }
     return true;
 }
 
@@ -1604,7 +1611,6 @@ void Memories::action_side(action_fill &action, action_fill &suppl, action_fill 
         if (action.group == oflow.group) {
             BUG("Shouldn't be the same for action and oflow");
         } else {
-            
             auto name = action.group->get_name(use_names);
             auto &alloc = (*action.group->ta->memuse)[name];
             size_t size = alloc.row.size();
