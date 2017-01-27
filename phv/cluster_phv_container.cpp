@@ -122,6 +122,8 @@ PHV_Container::taint(
         } else {
             f1->ccgf = 0;
             Cluster::set_field_range(f1);
+            // after ccgf allocation set range availability within container
+            ranges_i[0] = avail_bits_i - 1;
         }
 
         if (field->header_stack_pov_ccgf) {
@@ -306,9 +308,22 @@ void PHV_Container::sanity_check_container(const std::string& msg) {
     //
     // for fields binned in this container check bits occupied
     //
+    // check total occupation width against available bits
+    //
+    int occupation_width = 0;
     for (auto &cc : fields_in_container_i) {
         cc->sanity_check_container(this, msg_1);
         sanity_check_container_avail(cc->lo(), cc->hi(), msg_1);
+        occupation_width += cc->width();
+    }
+    if (occupation_width + avail_bits_i != static_cast<int>(width_i)) {
+        LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****.."
+        << msg_1
+        << " occupation_width + available_bits != container_width "
+        << " occupation_width = " << occupation_width
+        << " available_bits = " << avail_bits_i
+        << " container_width = " << static_cast<int>(width_i)
+        << *this);
     }
 }
 
@@ -338,7 +353,8 @@ void PHV_Container::sanity_check_container_avail(int lo, int hi, const std::stri
         LOG1(
             "*****cluster_phv_container.cpp:sanity_FAIL*****.."
             << msg_1
-            << " container ranges "
+            << std::endl
+            << "container ranges "
             << '['
             << lo
             << ".."
