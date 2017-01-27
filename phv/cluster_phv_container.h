@@ -31,13 +31,19 @@ class PHV_Container {
     //
     class Container_Content {
      private:
+        const PHV_Container *container_i;  // parent container
         int lo_i;  // low of bit range in container for field
         int hi_i;  // high of bit range in container for field
         const PhvInfo::Field *field_i;
         const int field_bit_lo_i;  // start of field bit in this container
      public:
         //
-        Container_Content(int l, int h, const PhvInfo::Field *f, int field_bit_lo = 0);
+        Container_Content(
+            const PHV_Container *c,
+            int l,
+            int h,
+            const PhvInfo::Field *f,
+            int field_bit_lo = 0);
         //
         int lo() const                  { return lo_i; }
         void lo(int l)                  { lo_i = l; }
@@ -46,6 +52,7 @@ class PHV_Container {
         int width() const               { return hi_i - lo_i + 1; }
         const PhvInfo::Field *field()   { return field_i; }
         int field_bit_lo() const        { return field_bit_lo_i; }
+        const PHV_Container *container() { return container_i; }
         //
         void sanity_check_container(PHV_Container *, const std::string&);
     };
@@ -122,7 +129,9 @@ class PHV_Container {
 //
 std::ostream &operator<<(std::ostream &, PHV_Container::Container_Content *);
 std::ostream &operator<<(std::ostream &, std::vector<PHV_Container::Container_Content *>&);
+std::ostream &operator<<(std::ostream &, std::set<PHV_Container::Container_Content *>&);
 std::ostream &operator<<(std::ostream &, ordered_map<int, int>&);
+std::ostream &operator<<(std::ostream &, const PHV_Container*);
 std::ostream &operator<<(std::ostream &, PHV_Container*);
 std::ostream &operator<<(std::ostream &, PHV_Container&);
 std::ostream &operator<<(std::ostream &, std::vector<PHV_Container *>&);

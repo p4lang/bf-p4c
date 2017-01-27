@@ -301,9 +301,10 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
                 f->ccgf = hdr_dd_valid;
             }
             hdr_dd_valid->phv_use_hi = pov_fields_h.size();
-                                     // to allocated container for ccgf width
+                                     // allocate container for ccgf width
             hdr_dd_valid->phv_use_rem = -pov_fields_h.size();
-                                     // negative encoding signifies simple header ccgf
+                                     // negative encoding for simple header ccgf
+            hdr_dd_valid->simple_header_pov_ccgf = true;
             pov_fields_h.clear();
         }
         for (auto &stack : stacks) {
@@ -341,6 +342,7 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
                         f->ccgf = pov_stk;
                     }
                     pov_stk->ccgf = pov_stk;
+                    pov_stk->header_stack_pov_ccgf = true;
                 }
             }
         }
@@ -379,7 +381,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field *fld) {
         // fx -> fx, fy -> fx, fz -> fx; fx: {fx, fy, fz)}
         //
         if (fld->ccgf) {
-            out << "\t--> " << fld->ccgf->name;
+            out << " --ccgf-> " << fld->ccgf->name;
         }
         // header stk povs
         if (fld->ccgf_fields.size()) {

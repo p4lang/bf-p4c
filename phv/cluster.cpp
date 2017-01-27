@@ -299,9 +299,33 @@ void Cluster::end_apply() {
         if (entry.second) {
             ordered_set<const PhvInfo::Field *> s1 = *(entry.second);
             for (auto &f : s1) {
+                //
+                // ccgf accumulations
+                // transfer ownership of container to field in cluster
+                //
+                if (f->ccgf
+                    && !f->ccgf->header_stack_pov_ccgf  // not header stack pov
+                    && !f->ccgf_fields.size()
+                    && !dst_map_i.count(f->ccgf)) {  // owner not in dst_map
+                    //
+                    PhvInfo::Field *owner = f->ccgf;
+                    PhvInfo::Field *field = const_cast<PhvInfo::Field *>(f);
+                    field->ccgf_fields.insert(
+                        field->ccgf_fields.begin(),
+                        owner->ccgf_fields.begin(),
+                        owner->ccgf_fields.end());
+                    owner->ccgf_fields.clear();  // clear previous owner
+                    field->ccgf = field;
+                    for (auto &m : field->ccgf_fields) {
+                        m->ccgf = field;
+                    }
+                }
+                //
+                // unify ccgf member's cluster with owner ccgf
+                //
                 if (f->ccgf
                     && f->ccgf != f
-                    && f->ccgf->ccgf == f->ccgf  // ccgfs - not header stack pov
+                    && !f->header_stack_pov_ccgf  // not header stack pov
                     && dst_map_i.count(f->ccgf)) {
                     //
                     LOG4("===== ccgf fold =====");
@@ -319,12 +343,13 @@ void Cluster::end_apply() {
     for (auto &fp : delete_list) {
         dst_map_i.erase(fp);                                            // erase map key
     }
-    sanity_check_clusters_unique("end_apply..");
     //
     // compute all fields that are not used through the MAU pipeline
     // potential candidates for T-PHV allocation
     //
     compute_fields_no_use_mau();
+    //
+    sanity_check_clusters_unique("end_apply..");
     //
     // output logs
     //
@@ -353,6 +378,10 @@ void Cluster::compute_fields_no_use_mau() {
         if (field.pov && !field.ccgf) {
             pov_fields_i.push_back(&field);
         }
+        //
+        // compute ccgf width
+        // need PHV container of this width
+        //
         if (field.ccgf_fields.size()) {
             int ccg_width = 0;
             for (auto &f : field.ccgf_fields) {
@@ -367,28 +396,6 @@ void Cluster::compute_fields_no_use_mau() {
     std::set<const PhvInfo::Field *> s2;                               // cluster fields
     for (auto entry : dst_map_i) {
         if (entry.second) {
-            PhvInfo::Field *field = const_cast<PhvInfo::Field *>(entry.first);
-            //
-            // sub-byte container contiguous-group accumulations
-            // move ownership of container to field
-            //
-            if (field->ccgf
-                && field->ccgf->ccgf == field->ccgf  // ccgfs - not header stack pov
-                && !field->ccgf_fields.size()) {
-                PhvInfo::Field *owner = field->ccgf;
-                //
-                // compute container contiguous group width
-                // need PHV container of this width
-                //
-                field->ccgf_fields.insert(
-                    field->ccgf_fields.begin(),
-                    owner->ccgf_fields.begin(),
-                    owner->ccgf_fields.end());
-                owner->ccgf_fields.clear();  // clear previous owner
-                field->phv_use_hi = owner->phv_use_hi;
-                owner->phv_use_hi = owner->size - 1;
-                field->ccgf = field;
-            }
             s2.insert(entry.first);
             for (auto entry_2 : *(entry.second)) {
                 s2.insert(entry_2);
@@ -651,10 +658,19 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg) {
             // s1 <-- s1 U f.ccgf, f element of s1
             // s2 <-- s2 U f.ccgf, f element of s2
             //
+            ordered_set<const PhvInfo::Field *> sx;
             for (auto &f : s1) {
                 for (auto &m : f->ccgf_fields) {
-                    s1.insert((const PhvInfo::Field *) m);
+                    const PhvInfo::Field *mx = (const PhvInfo::Field *) m;
+                    if (sx.count(mx)) {
+                        LOG1("*****cluster.cpp:sanity_FAIL***** duplicate ccgf member ..." << msg);
+                        LOG1(mx);
+                    }
+                    sx.insert(mx);
                 }
+            }
+            for (auto &f : sx) {
+                s1.insert(f);
             }
             //
             for (auto entry_2 : dst_map_i) {
@@ -663,10 +679,19 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg) {
                     //
                     // s2 <-- s2 U f.ccgf, f element of s2
                     //
+                    ordered_set<const PhvInfo::Field *> sx;
                     for (auto &f : s2) {
                         for (auto &m : f->ccgf_fields) {
-                            s2.insert((const PhvInfo::Field *) m);
+                            const PhvInfo::Field *mx = (const PhvInfo::Field *) m;
+                            if (sx.count(mx)) {
+                                LOG1("*****cluster.cpp:sanity_FAIL***** duplicate ccgf member ..." << msg);
+                                LOG1(mx);
+                            }
+                            sx.insert(mx);
                         }
+                    }
+                    for (auto &f : sx) {
+                        s2.insert(f);
                     }
                     // std::vector<const PhvInfo::Field *> s3;
                     // s3.clear();

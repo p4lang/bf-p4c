@@ -11,11 +11,12 @@
 //***********************************************************************************
 
 PHV_Container::Container_Content::Container_Content(
+    const PHV_Container *c,
     int l,
     int w,
     const PhvInfo::Field *f,
     int field_bit_lo)
-    : lo_i(l), hi_i(l+w-1), field_i(f), field_bit_lo_i(field_bit_lo) {
+    : container_i(c), lo_i(l), hi_i(l+w-1), field_i(f), field_bit_lo_i(field_bit_lo) {
     //
     BUG_CHECK(
         field_i,
@@ -76,18 +77,14 @@ PHV_Container::taint(
         // for each member taint container with appropriate width
         // must consider MSB order
         //
-        int processed_members = 0;
-        start = static_cast<int>(width_i);
-        //
         // header stack pov's allocation is composition of members
         // it is not present as a member in its ccgf
         // as no separate allocation required
         //
-        bool stack_pov_ccg = true;
+        start = static_cast<int>(width_i);
+        int processed_members = 0;
+        int processed_width = 0;
         for (auto &member : field->ccgf_fields) {
-            if (member == field) {
-                stack_pov_ccg = false;
-            }
             int member_bit_lo = member->phv_use_lo;
             int use_width = member->size;
             if (member->phv_use_rem > 0) {  // ignore simple header ccgf encoded phv_use_rem -ve
@@ -109,21 +106,27 @@ PHV_Container::taint(
             }
             member->ccgf = 0;  // recursive taint call should skip ccgf
             taint(start, use_width, member, start /*range start*/, member_bit_lo);
+            processed_width += use_width;
             if (start <= 0) {
                 break;
             }
         }
+        // update ccgf owner record
         PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(field);
         f1->ccgf_fields.erase(
             f1->ccgf_fields.begin(),
             f1->ccgf_fields.begin() + processed_members);
+        f1->phv_use_hi -= processed_width;
         if (field->ccgf_fields.size()) {
             f1->ccgf = f1;
+	} else {
+            f1->ccgf = 0;
+            Cluster::set_field_range(f1);
         }
 
-        if (stack_pov_ccg) {
+        if (field->header_stack_pov_ccgf) {
             fields_in_container_i.push_back(
-                new Container_Content(0/*start*/, width, field, field_bit_lo));
+                new Container_Content(this, 0/*start*/, width, field, field_bit_lo));
         }
 
         return;
@@ -171,7 +174,8 @@ PHV_Container::taint(
     //
     // track fields in this container
     //
-    fields_in_container_i.push_back(new Container_Content(start, width, field, field_bit_lo));
+    fields_in_container_i.push_back(
+        new Container_Content(this, start, width, field, field_bit_lo));
     //
     // set gress for this container
     // container may be part of MAU group that is Ingress Or Egress
@@ -445,7 +449,10 @@ std::ostream &operator<<(std::ostream &out, PHV_Container::Container_Content *cc
             << '{' << cc->lo()
             << ".."
             << cc->hi()
-            << '}';
+            << '}'
+            << '|'
+            << cc->container()
+            << '|';
     } else {
         out << "-cc-";
     }
@@ -462,6 +469,15 @@ std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container::Container
     return out;
 }
 
+
+std::ostream &operator<<(std::ostream &out, std::set<PHV_Container::Container_Content *>& vc) {
+    for (auto &cc : vc) {
+        out << cc << std::endl;
+    }
+
+    return out;
+}
+
 //
 // phv_container output
 //
@@ -470,6 +486,18 @@ std::ostream &operator<<(std::ostream &out, ordered_map<int, int>& ranges) {
     out << ".....container ranges....." << std::endl;
     for (auto i : ranges) {
         out << '[' << i.first << "] -- " << i.second << std::endl;
+    }
+
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const PHV_Container *c) {
+    if (c) {
+        PHV_Container *c1 = const_cast<PHV_Container *>(c);
+        out << "PHV-" << c1->phv_number()
+            << '.' << c1->asm_string();
+    } else {
+        out << "-c-";
     }
 
     return out;

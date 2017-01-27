@@ -502,11 +502,13 @@ PHV_MAU_Group_Assignments::cluster_placement(
             if (cc->width() > static_cast<int>(PHV_Container::PHV_Word::b16)) {
                 int width_diff = cc->width() - static_cast<int>(PHV_Container::PHV_Word::b16);
                 cc_1 = new PHV_Container::Container_Content(
+                    c,
                     0,
                     static_cast<int>(PHV_Container::PHV_Word::b16),
                     cc->field(),
                     width_diff);
                 cc = new PHV_Container::Container_Content(
+                    c,
                     0,
                     width_diff,
                     cc->field(),
@@ -1349,6 +1351,43 @@ void PHV_MAU_Group_Assignments::sanity_check_group_containers(const std::string&
                 }
             }
             g->sanity_check_group_containers(msg);
+        }
+    }
+    // sanity check a field is not duplicately allocated
+    // check spans all groups, containers
+    // field can straddle containers but should not be allocated again
+    //
+    ordered_map<const PhvInfo::Field *,
+        std::set<PHV_Container::Container_Content *>> field_container_map;
+    for (auto groups : PHV_MAU_i) {
+        for (auto g : groups.second) {
+            for (auto c : g->phv_containers()) {
+                for (auto cc : c->fields_in_container()) {
+                    const PhvInfo::Field *field = cc->field();
+                    field_container_map[field].insert(cc);
+                }
+            }
+        }
+    }
+    for (auto &entry : field_container_map) {
+        auto field = entry.first;
+        auto cc_s = entry.second;
+        //
+        // assert width allocated in container(s) matches field width
+        // width will exceed when field duplicately allocated
+        //
+        int width_in_c = 0;
+        for (auto &cc : cc_s) {
+            width_in_c += cc->width();
+        }
+        int field_width = field->phv_use_width();
+        if (field_width != width_in_c) {
+            LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****");
+            LOG1(msg);
+            LOG1(".....field duplicated in containers.....");
+            LOG1(field);
+            LOG1("width_in_c = " << width_in_c << ", phv_use_width = " << field_width);
+            LOG1(cc_s);
         }
     }
 }
