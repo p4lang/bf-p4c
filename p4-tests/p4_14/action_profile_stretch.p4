@@ -75,13 +75,14 @@ table test2 {
     reads {
         data.f2 : exact;
     }
-    action_profile : set_b5_7;
+    action_profile : set_b1_3;
     size : 500000;
 }
 
 control ingress {
     if (data.b4 == 0) {
         apply(test1);
+    } else {
         apply(test2);
     } 
 }
