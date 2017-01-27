@@ -7,13 +7,14 @@
 #include "lib/bitvec.h"
 #include "lib/symbitmatrix.h"
 #include "tofino/phv/phv_fields.h"
+#include "tofino/parde/parde_visitor.h"
 
 /* Produces a SymBitMatrix where keys are PhvInfo::Field ids and values
  * indicate whether two fields are mutually exclusive.
  */
 
 class ParserOverlay : public ControlFlowVisitor,
-                      public Inspector, P4WriteContext {
+                      public PardeInspector, P4WriteContext {
  private:
     const PhvInfo&   phv;
 
@@ -28,12 +29,13 @@ class ParserOverlay : public ControlFlowVisitor,
     void mark(const IR::HeaderRef*);
 
     bool preorder(const IR::Expression*) override;
+    bool preorder(const IR::Tofino::Deparser*) override { return false; }
 
     bool filter_join_point(const IR::Node *n) override {
         return !n->is<IR::Tofino::ParserState>(); }
     void flow_merge(Visitor &) override;
 
-    void end_apply();
+    void end_apply() override;
 
  public:
     explicit ParserOverlay(PhvInfo& phv, SymBitMatrix& rv) :

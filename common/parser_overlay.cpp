@@ -12,8 +12,7 @@ void ParserOverlay::mark(const PhvInfo::Field* f) {
     if (fields_encountered[new_field])
         return;
     fields_encountered[new_field] = true;
-    for (int known_field : fields_encountered) {
-        mutually_inclusive(new_field, known_field) = true; }
+    mutually_inclusive[new_field] |= fields_encountered;
 }
 
 void ParserOverlay::mark(const IR::HeaderRef* hr) {
@@ -27,23 +26,15 @@ bool ParserOverlay::preorder(const IR::Expression *e) {
     auto *f = phv.field(e);
     auto *hr = e->to<IR::HeaderRef>();
     if (!f && !hr) return true;
-    if (findContext<IR::Tofino::ParserState>()) {
-        mark(f);
-        mark(hr);
-    }
-    return true;
+    mark(f);
+    mark(hr);
+    return false;
 }
 
 void ParserOverlay::flow_merge(Visitor& other_) {
     ParserOverlay &other = dynamic_cast<ParserOverlay &>(other_);
-    for (int other_field : other.fields_encountered) {
-        // Union fields_encountered.
-        fields_encountered[other_field] = true;
-
-        // Union mutually_inclusive.
-        for (int other_field2 : other.fields_encountered)
-            mutually_inclusive(other_field, other_field2) =
-                other.mutually_inclusive(other_field, other_field2) ? true : false; }
+    fields_encountered |= other.fields_encountered;
+    mutually_inclusive |= other.mutually_inclusive;
 }
 
 void ParserOverlay::end_apply() {
