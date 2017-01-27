@@ -142,7 +142,7 @@ class Table : Tofino::Unit {
     Table *clone_rename(const char *ext) const {
         Table *rv = clone();
         rv->name += ext;
-        for (auto &at : rv->attached) at = at->clone_rename(ext);
+        for (auto &at : rv->attached) at = at->clone();
         return rv; }
 #nooperator==
 #emit

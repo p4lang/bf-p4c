@@ -632,9 +632,10 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         if (tbl->match_table->size > 0)
             out << ", size: " << tbl->match_table->size;
         out << " }" << std::endl;
-        emit_memory(out, indent, tbl->resources->memuse.at(tbl->name));
+        auto memuse_name = tbl->resources->use_names.get_name(tbl);
+        emit_memory(out, indent, tbl->resources->memuse.at(memuse_name));
         emit_ixbar(out, indent, tbl->resources->match_ixbar,
-                   &tbl->resources->memuse.at(tbl->name), &fmt);
+                   &tbl->resources->memuse.at(memuse_name), &fmt);
         if (!tbl->layout.ternary) {
             out << indent << fmt << std::endl;
             bool first = true;
@@ -830,7 +831,8 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
              out << std::endl;
              continue;
         }
-        out << indent << at->kind() << ": " << at->name;
+        auto name = tbl->resources->use_names.get_name(tbl, at);
+        out << indent << at->kind() << ": " << name;
         if (at->indexed())
             out << '(' << at->kind() << ')';
         out << std::endl; 
@@ -919,12 +921,8 @@ static void counter_format(std::ostream &out, const IR::CounterType type, int pe
 bool MauAsmOutput::EmitAttached::preorder(const IR::Counter *counter) {
     indent_t indent(1);
     auto name = tbl->resources->use_names.get_name(tbl, counter);
-    LOG1("Name of counter " << name);
     out << indent++ << "counter " << name << ":" << std::endl;
-    if (auto p = counter->name.name.find('.'))
-        out << indent << "p4: { name: " << counter->name.name.before(p) << " }" << std::endl;
-    else
-        out << indent << "p4: { name: " << counter->name << " }" << std::endl;
+    out << indent << "p4: { name: " << counter->name << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     cstring count_type;
     switch (counter->type) {
@@ -948,8 +946,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::Meter *meter) {
     indent_t indent(1);
     auto name = tbl->resources->use_names.get_name(tbl, meter);
     out << indent++ << "meter " << name << ":" << std::endl;
-    if (auto p = meter->name.name.find('.'))
-        out << indent << "p4: { name: " << meter->name.name.before(p) << " }" << std::endl;
+    out << indent << "p4: { name: " << meter->name << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     cstring imp_type;
     if (!meter->implementation.name)
@@ -985,8 +982,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *ap) {
     indent_t    indent(1);
     auto name = tbl->resources->use_names.get_name(tbl, ap);
     out << indent++ << "action " << name << ':' << std::endl;
-    if (auto p = ap->name.name.find('.'))
-        out << indent << "p4: { name: " << ap->name.name.before(p) << " }" << std::endl;
+    out << indent << "p4: { name: " << ap->name << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     for (auto act : Values(tbl->actions)) {
         if (act->args.empty()) continue;
@@ -1006,14 +1002,15 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionSelector *as) {
         return false;
     }
     cstring name = tbl->resources->use_names.get_name(tbl, as);
-    if (auto p = as->name.name.find('.'))
-        out << indent << "p4: { name: " << as->name.name.before(p) << " }" << std::endl;
+    out << indent << "p4: { name: " << as->name << " }" << std::endl;
     out << indent++ << "selection " << name << ":" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     self.emit_ixbar(out, indent, tbl->resources->selector_ixbar,
                     &tbl->resources->memuse.at(name), nullptr, true, as);
     out << indent << "mode: " << as->mode.name << " 0" << std::endl;
-    return false; }
+    return false;
+}
+
 bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     indent_t    indent(1);
     auto name = tbl->resources->use_names.get_name(tbl, ti);
@@ -1035,10 +1032,10 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
 
 bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
     indent_t    indent(1);
-    out << indent++ << "action " << ad->name << ':' << std::endl;
     auto name = tbl->resources->use_names.get_name(tbl, ad);
+    out << indent++ << "action " << name << ':' << std::endl;
     if (tbl->match_table)
-        out << indent << "p4: { name: " << tbl->match_table->name << "$action }" << std::endl;
+        out << indent << "p4: { name: " << ad->name << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     for (auto act : Values(tbl->actions)) {
         if (act->args.empty()) continue;

@@ -585,6 +585,7 @@ bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols, unsigned c
                 width = j;
             }
         }
+        LOG1("Table " << wa->ta->table << " with bus " << bus);
 
         alloc.row.emplace_back(selected_rows[i], bus);
         auto &alloc_row = alloc.row.back();
@@ -962,7 +963,6 @@ void Memories::action_bus_selectors_indirects() {
     }
 
     for (auto *ta : indirect_action_tables) {
-        LOG1("Indirect action tables " << ta->table->name);
         for (auto at : ta->table->attached) {
             const IR::ActionProfile *ap = nullptr;
             if ((ap = at->to<IR::ActionProfile>()) == nullptr)
@@ -979,7 +979,6 @@ void Memories::action_bus_selectors_indirects() {
                 }
             }
             for (int i = 0; i < width; i++) {
-                LOG1("Additions");
                 action_bus_users.push_back(new SRAM_group(ta, depth, i, SRAM_group::ACTION));
                 action_bus_users.back()->attached = ap;
                 if (selector != nullptr) {
@@ -1041,21 +1040,16 @@ void Memories::action_bus_meters_counters() {
 /* Breaks up all tables requiring an action to be parsed into SRAM_group, a structure
    designed for adding to SRAM array  */
 void Memories::find_action_bus_users() {
-    LOG1("Size of action bus users is " << action_bus_users.size());
     for (auto *ta : action_tables) {
         int width = 1;
         int per_row = ActionDataPerWord(ta->layout_option->layout, &width);
         int depth = (ta->calculated_entries + per_row * 1024 - 1) / (per_row * 1024);
         for (int i = 0; i < width; i++) {
-            LOG1("Action bus users");
             action_bus_users.push_back(new SRAM_group(ta, depth, i, SRAM_group::ACTION));
         }
     }
-    LOG1("Size of action bus users is " << action_bus_users.size());
     action_bus_selectors_indirects();
-    LOG1("Size of action bus users is " << action_bus_users.size());
     action_bus_meters_counters();
-    LOG1("Size of action bus users is " << action_bus_users.size());
 }
 
 /* Due to color maprams, the number of RAMs available to the suppl vs. the action
