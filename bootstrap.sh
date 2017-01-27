@@ -46,7 +46,7 @@ fi
 cd $topdir
 found=""
 
-for repo in p4c tofino-asm behavioral-model model p4c-extension-tofino p4c/extensions/tofino; do
+for repo in p4c tofino-asm behavioral-model model p4c-extension-tofino p4c/extensions/tofino p4c/extensions/p4_tests; do
     if [ -d $repo ]; then
         if [ -d $repo/.git ]; then
             found=$found$'\n'"$repo in $topdir/$repo"
@@ -228,6 +228,9 @@ fi
 pushd p4c >/dev/null
     mkdir -p extensions
     cd extensions
+    if [ ! -e p4_tests ]; then
+        git clone git@github.com:barefootnetworks/p4_tests.git
+    fi
     if [ ! -e tofino ]; then
         if [ -d ../../p4c-extension-tofino/.git ]; then
             mv ../../p4c-extension-tofino tofino
