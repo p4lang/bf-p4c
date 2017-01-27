@@ -7,22 +7,20 @@
 -include p4_tests_bmv2.mk
 
 p4_tests_tofino.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(wildcard \
+   $(srcdir)/testdata/p4_14_samples/*.p4 \
+   $(srcdir)/testdata/p4_14_samples/switch_*/switch.p4 \
    $(srcdir)/%reldir%/p4_16/*.p4 \
    $(srcdir)/%reldir%/p4_14/*.p4 \
    $(srcdir)/%reldir%/p4_14/switch_*/switch.p4 ) \
+   $(srcdir)/testdata/p4_14_samples \
    $(srcdir)/%reldir%/p4_16 \
    $(srcdir)/%reldir%/p4_14
 	@$(GENTESTS) $(srcdir) tofino $(srcdir)/%reldir%/runtest $^ >$@ || ( rm $@ && false )
 
 p4_tests_tofino-ortools.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(wildcard \
+   $(srcdir)/testdata/p4_14_samples/*.stf \
    $(srcdir)/%reldir%/p4_16/*.stf \
-   $(srcdir)/%reldir%/p4_14/counter_test1.stf \
-   $(srcdir)/%reldir%/p4_14/counter_test2.stf \
-   $(srcdir)/%reldir%/p4_14/gateway_bus1.stf \
-   $(srcdir)/%reldir%/p4_14/gateway_bus2.stf \
-   $(srcdir)/%reldir%/p4_14/max_counters.stf \
-   $(srcdir)/%reldir%/p4_14/meter_test1.stf \
-   $(srcdir)/%reldir%/p4_14/simple_counter.stf ) \
+   $(srcdir)/%reldir%/p4_14/*.stf ) \
    $(srcdir)/%reldir%/p4_16 \
    $(srcdir)/%reldir%/p4_14
 	@$(GENTESTS) $(srcdir) tofino-ortools $(srcdir)/%reldir%/runtest --ortools $(^:%.stf=%.p4) >$@ || ( rm $@ && false )
@@ -67,6 +65,8 @@ CLEANFILES += \
 # TwoReferences invokes a table twice - maybe it should become a negative test?
 # *range* match type is not supported by BMv2 (used also in error_detection*.p4)
 XFAIL_TESTS += \
+    tofino/testdata/p4_14_samples/flowlet_switching.p4.test \
+    tofino/testdata/p4_14_samples/16-TwoReferences.p4.test \
     tofino/%reldir%/p4_16/flowlet_switching.p4.test \
     tofino/%reldir%/p4_16/bfd_offload.p4.test \
     tofino/%reldir%/p4_16/bloom_filter.p4.test \
