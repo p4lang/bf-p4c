@@ -2,6 +2,13 @@
 
 set -o pipefail
 
+# On macOS, 'timeout' is not installed by default, and 'brew install coreutils'
+# prefixes all of the standard GNU utilities with 'g', so 'timeout' is
+# 'gtimeout' on that plaform. 'readlink' also needs this treatment because the
+# BSD version accepts different options.
+TIMEOUT_COMMAND=$(which gtimeout || which timeout)
+READLINK_COMMAND=$(which greadlink || which readlink)
+
 TIMEOUT=${P4C_TIMEOUT:-60}
 TIME_COMMAND="" # don't time commands
 verbose=false
@@ -19,7 +26,7 @@ run() {
     if $verbose; then
         echo "$@"
     fi
-    $TIME_COMMAND timeout --foreground $TIMEOUT "$@"
+    $TIME_COMMAND $TIMEOUT_COMMAND --foreground $TIMEOUT "$@"
     status=$?
     if [ $status -eq 124 ]; then
         echo >&2 $1 TIMEOUT
@@ -36,7 +43,7 @@ findbin() {
     while [ "$dir" != "/" ]; do
         if [ -d "$dir/$1" ]; then
             x=""
-            for f in $(find $(readlink -f "$dir/$1") -name $2 -type f); do
+            for f in $(find $($READLINK_COMMAND -f "$dir/$1") -name $2 -type f); do
                 if [ -z "$x" -o "$f" -nt "$x" ]; then
                     x="$f"
                 fi
