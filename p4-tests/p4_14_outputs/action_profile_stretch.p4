@@ -40,15 +40,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("setb3") action setb3(bit<8> val3) {
         hdr.data.b3 = val3;
     }
-    @name("setb5") action setb5(bit<8> val5) {
-        hdr.data.b5 = val5;
-    }
-    @name("setb6") action setb6(bit<8> val6) {
-        hdr.data.b6 = val6;
-    }
-    @name("setb7") action setb7(bit<8> val7) {
-        hdr.data.b7 = val7;
-    }
     @name("test1") table test1() {
         actions = {
             setb1;
@@ -65,9 +56,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("test2") table test2() {
         actions = {
-            setb5;
-            setb6;
-            setb7;
+            setb1;
+            setb2;
+            setb3;
             @default_only NoAction;
         }
         key = {
@@ -75,11 +66,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 500000;
         default_action = NoAction();
-        @name("set_b5_7") implementation = action_profile(32w2048);
+        @name("set_b1_3") implementation = action_profile(32w1024);
     }
     apply {
         if (hdr.data.b4 == 8w0) {
             test1.apply();
+        }
+        else {
             test2.apply();
         }
     }
