@@ -8,7 +8,6 @@
 struct TableResourceAlloc {
     IXBar::Use                          match_ixbar, gateway_ixbar, selector_ixbar;
     map<cstring, Memories::Use>         memuse;
-    Memories::UseNames                  use_names;
     TableResourceAlloc *clone_rename(const char *ext, const cstring name) const {
         TableResourceAlloc *rv = new TableResourceAlloc;
         rv->match_ixbar = match_ixbar;

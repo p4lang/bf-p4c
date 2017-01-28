@@ -122,8 +122,7 @@ class SetupAttachedTables : public MauInspector {
         if (ta->layout_option == nullptr) return rv;
 
         if (ta->layout_option->layout->ternary_indirect_required()) {
-            auto name = mem.use_names.get_name(ta->table, nullptr, false,
-                                               Memories::UseNames::TIND_NAME);
+            auto name = ta->table->get_use_name(nullptr, false, IR::MAU::Table::TIND_NAME);
             (*ta->memuse)[name].type = Memories::Use::TIND;
             mem.tind_tables.push_back(ta);
             mi.tind_tables++;
@@ -131,8 +130,7 @@ class SetupAttachedTables : public MauInspector {
         }
 
         if (ta->layout_option->layout->action_data_required()) {
-            auto name = mem.use_names.get_name(ta->table, nullptr, false,
-                                               Memories::UseNames::AD_NAME);
+            auto name = ta->table->get_use_name(nullptr, false, IR::MAU::Table::AD_NAME);
             (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
             mem.action_tables.push_back(ta);
             mi.action_tables++;
@@ -153,8 +151,8 @@ class SetupAttachedTables : public MauInspector {
     }
 
     bool preorder(const IR::ActionProfile *ap) {
-        auto name = mem.use_names.get_name(ta->table, ap);
-        auto table_name = mem.use_names.get_name(ta->table);
+        auto name = ta->table->get_use_name(ap);
+        auto table_name = ta->table->get_use_name();
         LOG4("Action profile for table " << table_name); 
         bool selector_first = false;
         /* This is a check to see if the table has already been placed due to it being in 
@@ -182,7 +180,7 @@ class SetupAttachedTables : public MauInspector {
             mem.action_profiles.push_back(new Memories::profile_info(ap, ta));
             (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
         } else {
-            auto linked_name = mem.use_names.get_name(linked_pi->linked_ta->table);
+            auto linked_name = linked_pi->linked_ta->table->get_use_name();
             (*ta->memuse)[table_name].unattached_profile = true;
             (*ta->memuse)[table_name].profile_name = linked_name;
             return false;
@@ -196,7 +194,7 @@ class SetupAttachedTables : public MauInspector {
     }
 
     bool preorder(const IR::Meter *mtr) {
-        auto name = mem.use_names.get_name(ta->table, mtr);
+        auto name = ta->table->get_use_name(mtr);
         (*ta->memuse)[name].type = Memories::Use::TWOPORT;
         if (!meter_pushed) {
             mem.meter_tables.push_back(ta);
@@ -211,7 +209,7 @@ class SetupAttachedTables : public MauInspector {
     }
 
     bool preorder(const IR::Counter *cnt) {
-        auto name = mem.use_names.get_name(ta->table, cnt);
+        auto name = ta->table->get_use_name(cnt);
         (*ta->memuse)[name].type = Memories::Use::TWOPORT;
         if (!stats_pushed) {
             mem.stats_tables.push_back(ta);
@@ -232,8 +230,8 @@ class SetupAttachedTables : public MauInspector {
 
 
     bool preorder(const IR::ActionSelector *as) {
-        auto name = mem.use_names.get_name(ta->table, as);
-        auto table_name = mem.use_names.get_name(ta->table);
+        auto name = ta->table->get_use_name(as);
+        auto table_name = ta->table->get_use_name();
         bool profile_first = false;
         Memories::profile_info *linked_pi = nullptr;
         /* This checks to see if the selector is being shared between separate tables in the
@@ -261,7 +259,7 @@ class SetupAttachedTables : public MauInspector {
             mem.selector_tables.push_back(ta);
             mem.action_profiles.push_back(new Memories::profile_info(as, ta));
         } else {
-            auto linked_name = mem.use_names.get_name(linked_pi->linked_ta->table);
+            auto linked_name = linked_pi->linked_ta->table->get_use_name();
             (*ta->memuse)[table_name].unattached_profile = true;
             (*ta->memuse)[table_name].profile_name = linked_name;
         }
@@ -281,9 +279,9 @@ bool Memories::analyze_tables(mem_info &mi) {
     clear_table_vectors();
     for (auto *ta : tables) {
         if (ta->provided_entries == -1 || ta->provided_entries == 0) {
-            auto name = use_names.get_name(ta->table, nullptr, true);
+            auto name = ta->table->get_use_name(nullptr, true);
             if (ta->table_link != nullptr)
-                name = use_names.get_name(ta->table_link->table, nullptr, true);
+                name = ta->table_link->table->get_use_name(nullptr, true);
             (*ta->memuse)[name].type = Use::GATEWAY;
             gw_tables.push_back(ta);
             LOG4("Gateway table for " << ta->table->name);
@@ -292,7 +290,7 @@ bool Memories::analyze_tables(mem_info &mi) {
         auto table = ta->table;
         int entries = ta->provided_entries;
         if (!table->layout.ternary) {
-            auto name = use_names.get_name(ta->table);
+            auto name = ta->table->get_use_name();
             LOG4("Exact match table " << name);
             (*ta->memuse)[name].type = Use::EXACT;
             exact_tables.push_back(ta);
@@ -303,7 +301,7 @@ bool Memories::analyze_tables(mem_info &mi) {
             mi.match_bus_min += width;
             mi.match_RAMs += depth;
         } else {
-           auto name = use_names.get_name(ta->table);
+           auto name = ta->table->get_use_name();
            LOG4("Ternary match table " << name);
            (*ta->memuse)[name].type = Use::TERNARY;
            ternary_tables.push_back(ta);
@@ -375,7 +373,7 @@ vector<int> Memories::way_size_calculator(int ways, int RAMs_needed) {
 vector<std::pair<int, int>> Memories::available_SRAMs_per_row(unsigned mask, table_alloc *ta,
                                                                 int width_sect) {
     vector<std::pair<int, int>> available_rams;
-    auto name = use_names.get_name(ta->table);
+    auto name = ta->table->get_use_name();
     for (int i = 0; i < SRAM_ROWS; i++) {
         auto bus = sram_match_bus[i];
         // if the first bus or the second bus match up to what is
@@ -400,7 +398,7 @@ vector<std::pair<int, int>> Memories::available_SRAMs_per_row(unsigned mask, tab
 vector<int> Memories::available_match_SRAMs_per_row(unsigned row_mask, unsigned total_mask,
                                                     int row, table_alloc *ta, int width_sect) {
     vector<int> matching_rows;
-    auto name = use_names.get_name(ta->table);
+    auto name = ta->table->get_use_name();
     for (int i = 0; i < SRAM_ROWS; i++) {
         auto bus = sram_match_bus[i];
         if (row == i) continue;
@@ -441,7 +439,7 @@ void Memories::break_exact_tables_into_ways() {
     exact_match_ways.clear();
     for (auto *ta : exact_tables) {
         ta->calculated_entries = 0;
-        auto name = use_names.get_name(ta->table);
+        auto name = ta->table->get_use_name();
         (*ta->memuse)[name].ways.clear();
         (*ta->memuse)[name].row.clear();
         int index = 0;
@@ -486,7 +484,7 @@ Memories::SRAM_group * Memories::find_best_candidate(SRAM_group *placed_wa, int 
 
     loc = 0;
     for (auto emw : exact_match_ways) {
-        auto name = use_names.get_name(emw->ta->table);
+        auto name = emw->ta->table->get_use_name();
         if ((bus[0].first && bus[0].first == name) || (bus[1].first && bus[1].first == name))
             return emw;
         loc++;
@@ -525,7 +523,7 @@ bool Memories::fill_out_row(SRAM_group *placed_wa, int row, unsigned column_mask
 
 /* Returns the match bus that we are selecting on this row */
 int Memories::match_bus_available(table_alloc *ta, int width, int row) {
-     auto name = use_names.get_name(ta->table);
+     auto name = ta->table->get_use_name();
      if (!sram_match_bus[row][0].first
          || (sram_match_bus[row][0].first == name && sram_match_bus[row][0].second == width))
          return 0;
@@ -572,7 +570,7 @@ bool Memories::pack_way_into_RAMs(SRAM_group *wa, int row, int &cols, unsigned c
         }
     }
 
-    auto name = use_names.get_name(wa->ta->table);
+    auto name = wa->ta->table->get_use_name();
     Memories::Use &alloc = (*wa->ta->memuse)[name];
 
     for (size_t i = 0; i < selected_rows.size(); i++) {
@@ -719,7 +717,7 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
     }
     compress_ways();
     for (auto *ta : exact_tables) {
-        auto name = use_names.get_name(ta->table);
+        auto name = ta->table->get_use_name();
         LOG4("Exact match table " << name);
         auto alloc = (*ta->memuse)[name];
         for (auto row : alloc.row) {
@@ -734,7 +732,7 @@ bool Memories::allocate_all_exact(unsigned column_mask) {
    to be adjusted in the Memories::Use, as multiple entries appear o/w  */
 void Memories::compress_ways() {
     for (auto *ta : exact_tables) {
-        auto name = use_names.get_name(ta->table);
+        auto name = ta->table->get_use_name();
         auto &alloc = (*ta->memuse)[name];
         std::stable_sort(alloc.row.begin(), alloc.row.end(),
             [=](const Memories::Use::Row a, const Memories::Use::Row b) {
@@ -809,7 +807,7 @@ bool Memories::allocate_all_ternary() {
             continue;
 
         int row = 0; int col = 0;
-        auto name = use_names.get_name(ta->table);
+        auto name = ta->table->get_use_name();
         Memories::Use &alloc = (*ta->memuse)[name];
         for (int i = 0; i < ta->calculated_entries / 512; i++) {
             if (!find_ternary_stretch(TCAMs_necessary, mid_bytes_needed, row, col))
@@ -822,7 +820,7 @@ bool Memories::allocate_all_ternary() {
         }
     }
     for (auto *ta : ternary_tables) {
-        auto name = use_names.get_name(ta->table);
+        auto name = ta->table->get_use_name();
         auto &alloc = (*ta->memuse)[name];
         LOG4("Allocation of " << name);
         for (auto row : alloc.row) {
@@ -848,7 +846,7 @@ int Memories::find_best_tind_row(SRAM_group *tg, int &bus) {
     int open_space = 0;
     unsigned left_mask = 0xf;
     vector<int> available_rows;
-    auto name = use_names.get_name(tg->ta->table, nullptr, false, UseNames::TIND_NAME);
+    auto name = tg->ta->table->get_use_name(nullptr, false, IR::MAU::Table::TIND_NAME);
     for (int i = 0; i < SRAM_ROWS; i++) {
         open_space += __builtin_popcount(~sram_inuse[i] & left_mask);
         auto tbus = tind_bus[i];
@@ -885,7 +883,7 @@ int Memories::find_best_tind_row(SRAM_group *tg, int &bus) {
 /* Compresses the tind groups on the same row in the use, into one row */
 void Memories::compress_tind_groups() {
     for (auto *ta : tind_tables) {
-        auto name = use_names.get_name(ta->table, nullptr, false, UseNames::TIND_NAME);
+        auto name = ta->table->get_use_name(nullptr, false, IR::MAU::Table::TIND_NAME);
         auto &alloc = (*ta->memuse)[name];
         std::sort(alloc.row.begin(), alloc.row.end(),
             [=](const Memories::Use::Row a, const Memories::Use::Row b) {
@@ -924,8 +922,7 @@ bool Memories::allocate_all_tind() {
         if (best_row == -1) return false;
         for (int i = 0; i < LEFT_SIDE_COLUMNS; i++) {
             if (~sram_inuse[best_row] & (1 << i)) {
-                auto name = use_names.get_name(tg->ta->table, nullptr, false,
-                                               UseNames::TIND_NAME);
+                auto name = tg->ta->table->get_use_name(nullptr, false, IR::MAU::Table::TIND_NAME);
                 sram_inuse[best_row] |= (1 << i);
                 sram_use[best_row][i] = name;
                 tg->placed++;
@@ -943,7 +940,7 @@ bool Memories::allocate_all_tind() {
     }
     compress_tind_groups();
     for (auto *ta : tind_tables) {
-        auto name = use_names.get_name(ta->table, nullptr, false, UseNames::TIND_NAME);
+        auto name = ta->table->get_use_name(nullptr, false, IR::MAU::Table::TIND_NAME);
         auto &alloc = (*ta->memuse)[name];
         LOG4("Allocation of " << name);
         for (auto row : alloc.row) {
@@ -1014,7 +1011,7 @@ void Memories::action_bus_meters_counters() {
             }
             suppl_bus_users.push_back(new SRAM_group(ta, depth, 0, SRAM_group::STATS));
             suppl_bus_users.back()->attached = stats;
-            auto name = use_names.get_name(ta->table, stats);
+            auto name = ta->table->get_use_name(stats);
             // FIXME: This can go away
             (*ta->memuse)[name].per_row = per_row;
         }
@@ -1611,7 +1608,7 @@ void Memories::action_side(action_fill &action, action_fill &suppl, action_fill 
         if (action.group == oflow.group) {
             BUG("Shouldn't be the same for action and oflow");
         } else {
-            auto name = action.group->get_name(use_names);
+            auto name = action.group->get_name();
             auto &alloc = (*action.group->ta->memuse)[name];
             size_t size = alloc.row.size();
             auto &row2 = alloc.row[size - 1]; auto &row1 = alloc.row[size - 2];
@@ -1640,7 +1637,7 @@ bool Memories::fill_out_action_row(action_fill &action, int row, int side, unsig
     if (__builtin_popcount(action.mask) == 0)
         return false;
 
-    auto a_name = action.group->get_name(use_names);
+    auto a_name = action.group->get_name();
     auto &a_alloc = (*action.group->ta->memuse)[a_name];
     if (is_oflow) {
         overflow_bus[row][side] = a_name;
@@ -1761,7 +1758,7 @@ void Memories::fill_out_color_mapram(action_fill &action, int row, unsigned mask
     if (action.mapram_mask == action.mask || action.group->type == SRAM_group::ACTION)
         return;
 
-    auto a_name = action.group->get_name(use_names);
+    auto a_name = action.group->get_name();
     auto &a_alloc = (*action.group->ta->memuse)[a_name];
 
     if (is_oflow)
@@ -1783,7 +1780,7 @@ void Memories::fill_out_color_mapram(action_fill &action, int row, unsigned mask
 /* Logging information for each individual action/twoport table information */
 void Memories::action_bus_users_log() {
     for (auto *ta : action_tables) {
-        auto name = use_names.get_name(ta->table, nullptr, false, UseNames::AD_NAME);
+        auto name = ta->table->get_use_name(nullptr, false, IR::MAU::Table::AD_NAME);
         auto alloc = (*ta->memuse)[name];
         LOG4("Action allocation for " << name);
         for (auto row : alloc.row) {
@@ -1798,7 +1795,7 @@ void Memories::action_bus_users_log() {
             const IR::Counter *stats = nullptr;
             if ((stats = at->to<IR::Counter>()) == nullptr)
                 continue;
-            auto name = use_names.get_name(ta->table, stats);
+            auto name = ta->table->get_use_name(stats);
             LOG4("Stats table for " << name);
             auto alloc = (*ta->memuse)[name];
             for (auto row : alloc.row) {
@@ -1813,7 +1810,7 @@ void Memories::action_bus_users_log() {
             const IR::Meter *meter = nullptr;
             if ((meter = at->to<IR::Meter>()) == nullptr)
                 continue;
-            auto name = use_names.get_name(ta->table, meter);
+            auto name = ta->table->get_use_name(meter);
             LOG4("Meter table for " << name);
             auto alloc = (*ta->memuse)[name];
             for (auto row : alloc.row) {
@@ -1829,7 +1826,7 @@ void Memories::action_bus_users_log() {
             const IR::ActionSelector *as = nullptr;
             if ((as = at->to<IR::ActionSelector>()) == nullptr)
                 continue;
-            auto name = use_names.get_name(ta->table, as);
+            auto name = ta->table->get_use_name(as);
             LOG4("Selector table for " << name);
             auto alloc = (*ta->memuse)[name];
             for (auto row : alloc.row) {
@@ -1845,7 +1842,7 @@ void Memories::action_bus_users_log() {
             const IR::ActionProfile *ap = nullptr;
             if ((ap = at->to<IR::ActionProfile>()) == nullptr)
                 continue;
-            auto name = use_names.get_name(ta->table, ap);
+            auto name = ta->table->get_use_name(ap);
             LOG4("Action profile allocation for " << name);
             auto alloc = (*ta->memuse)[name];
             for (auto row : alloc.row) {
@@ -1915,7 +1912,7 @@ bool Memories::allocate_all_action() {
             curr_oflow = twoport_oflow;
         }
         if (i != SRAM_ROWS - 1 && curr_oflow.group)
-            vert_overflow_bus[i] = std::make_pair(curr_oflow.group->get_name(use_names),
+            vert_overflow_bus[i] = std::make_pair(curr_oflow.group->get_name(),
                                                   curr_oflow.group->number);
 
         if (curr_oflow.group && curr_oflow.group->recent_home_row - i >= 4) {
@@ -1942,7 +1939,7 @@ bool Memories::allocate_all_action() {
 
 Memories::table_alloc *Memories::find_corresponding_exact_match(cstring name) {
     for (auto *ta : exact_tables) {
-        auto check_name = use_names.get_name(ta->table);
+        auto check_name = ta->table->get_use_name();
         if (check_name == name)
             return ta;
     }
@@ -1974,9 +1971,9 @@ bool Memories::gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int wid
 bool Memories::allocate_all_gw() {
     size_t index = 0;
     for (auto *ta : gw_tables) {
-        auto name = use_names.get_name(ta->table, nullptr, true);
+        auto name = ta->table->get_use_name(nullptr, true);
         if (ta->table_link != nullptr)
-            name = use_names.get_name(ta->table_link->table, nullptr, true);
+            name = ta->table_link->table->get_use_name(nullptr, true);
         auto &alloc = (*ta->memuse)[name];
         bool found = false;
         // Tries to find a bus to share with the current table

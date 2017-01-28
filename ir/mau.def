@@ -127,6 +127,41 @@ class Table : Tofino::Unit {
     }
 
     vector<LayoutOption> layout_options;
+
+#emit
+    static constexpr int TIND_NAME = 1;
+    static constexpr int AD_NAME = 2;
+#end
+    cstring get_use_name(const IR::Attached *at = nullptr, bool is_gw = false, int type = 0) const {
+        if (is_gw) {
+            return name + "$gw";
+        } else if (at == nullptr) {
+            if (type == IR::MAU::Table::TIND_NAME)
+                return name + "$tind";
+            else if (type == IR::MAU::Table::AD_NAME)
+                return name + "$action";
+            else
+                return name;
+        } else if (at->is<IR::Counter>()) {
+            return name + "$counter." + at->name;
+        } else if (at->is<IR::Meter>()) {
+            return name + "$meter." + at->name;
+        } else if (at->is<IR::Register>()) {
+            return name + "$register." + at->name;
+        } else if (at->is<IR::ActionProfile>()) {
+            return name + "$act_prof." + at->name;
+        } else if (at->is<IR::ActionSelector>()) {
+            return name + "$act_sel." + at->name;
+        } else if (at->is<IR::MAU::ActionData>()) {
+            return name + "$action";
+        } else if (at->is<IR::MAU::TernaryIndirect>()) {
+            return name + "$tind";
+        } else {
+            BUG("Unrecgonized attached table %s", at->name);
+            return "";
+        }
+    }
+
 #noconstructor
     Table(cstring n, gress_t gr) : name(n), gress(gr) {}
     Table(cstring n, gress_t gr, IR::V1Table t)
