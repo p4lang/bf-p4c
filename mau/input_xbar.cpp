@@ -90,6 +90,25 @@ void IXBar::Use::add(const IXBar::Use &alloc) {
     gw_search_bus = alloc.gw_search_bus;
     gw_search_bus_bytes = alloc.gw_search_bus_bytes;
     gw_hash_group = alloc.gw_hash_group;
+    for (auto old_byte : use) {
+        for (auto new_byte : alloc.use) {
+            if (old_byte.loc.group == new_byte.loc.group
+                && old_byte.loc.byte == new_byte.loc.byte)
+                BUG("Two combined input xbar groups are using the same byte location");
+        }
+    }
+    for (auto old_way : way_use) {
+        for (auto new_way : alloc.way_use) {
+            if (old_way.group == new_way.group)
+                BUG("Ways from supposedly different hash groups have same group?");
+        }
+    }
+    for (auto old_bits : bit_use) {
+        for (auto new_bits : alloc.bit_use) {
+            if (old_bits.group == new_bits.group)
+                BUG("Bit uses from separate hash groups are within same slice");
+        }
+    }
     use.insert(use.end(), alloc.use.begin(), alloc.use.end());
     bit_use.insert(bit_use.end(), alloc.bit_use.begin(), alloc.bit_use.end());
     way_use.insert(way_use.end(), alloc.way_use.begin(), alloc.way_use.end());

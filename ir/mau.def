@@ -74,7 +74,15 @@ class Table : Tofino::Unit {
             json.load("overhead_bits", rv->overhead_bits);
             return rv; }
 
-        void copy(const Layout &a) { memcpy(this, &a, sizeof(Layout)); }
+        bool action_data_required() const {
+            if (indirect_action_overhead_bits > 0)
+                return false;
+            if (action_data_bytes == 0)
+                return false;
+            return action_data_bytes != action_data_bytes_in_overhead;
+        }
+        bool ternary_indirect_required() const { return ternary && overhead_bits > 0; }
+        bool no_match_data() const { return match_width_bits == 0; }
 #emit
         Layout &operator+=(const Layout &a);
 #end
@@ -99,7 +107,6 @@ class Table : Tofino::Unit {
             json.load("entries", way->entries);
             json.load("width", way->width);
             return way; }
-        void copy(const Way &a) { memcpy(this, &a, sizeof(Way)); }
     }
     vector<Way>    ways;
     const TableResourceAlloc            *resources = nullptr;
@@ -110,8 +117,6 @@ class Table : Tofino::Unit {
         Way way;  //Assumes all ways are the same size
         vector<int> way_sizes;
         int entries = 0;
-        bool action_data_required = false; bool ternary_indirect_required = false;
-        bool no_match_data = false;
         int srams = 0; int maprams = 0; int tcams = 0;
         toJSON { json << "null"; }
         fromJSON { return nullptr; }
@@ -122,6 +127,41 @@ class Table : Tofino::Unit {
     }
 
     vector<LayoutOption> layout_options;
+
+#emit
+    static constexpr int TIND_NAME = 1;
+    static constexpr int AD_NAME = 2;
+#end
+    cstring get_use_name(const IR::Attached *at = nullptr, bool is_gw = false, int type = 0) const {
+        if (is_gw) {
+            return name + "$gw";
+        } else if (at == nullptr) {
+            if (type == IR::MAU::Table::TIND_NAME)
+                return name + "$tind";
+            else if (type == IR::MAU::Table::AD_NAME)
+                return name + "$action";
+            else
+                return name;
+        } else if (at->is<IR::Counter>()) {
+            return name + "$counter." + at->name;
+        } else if (at->is<IR::Meter>()) {
+            return name + "$meter." + at->name;
+        } else if (at->is<IR::Register>()) {
+            return name + "$register." + at->name;
+        } else if (at->is<IR::ActionProfile>()) {
+            return name + "$act_prof." + at->name;
+        } else if (at->is<IR::ActionSelector>()) {
+            return name + "$act_sel." + at->name;
+        } else if (at->is<IR::MAU::ActionData>()) {
+            return name + "$action";
+        } else if (at->is<IR::MAU::TernaryIndirect>()) {
+            return name + "$tind";
+        } else {
+            BUG("Unrecgonized attached table %s", at->name);
+            return "";
+        }
+    }
+
 #noconstructor
     Table(cstring n, gress_t gr) : name(n), gress(gr) {}
     Table(cstring n, gress_t gr, IR::V1Table t)
@@ -137,7 +177,7 @@ class Table : Tofino::Unit {
     Table *clone_rename(const char *ext) const {
         Table *rv = clone();
         rv->name += ext;
-        for (auto &at : rv->attached) at = at->clone_rename(ext);
+        for (auto &at : rv->attached) at = at->clone();
         return rv; }
 #nooperator==
 #emit

@@ -629,9 +629,10 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         if (tbl->match_table->size > 0)
             out << ", size: " << tbl->match_table->size;
         out << " }" << std::endl;
-        emit_memory(out, indent, tbl->resources->memuse.at(tbl->name));
+        auto memuse_name = tbl->get_use_name();
+        emit_memory(out, indent, tbl->resources->memuse.at(memuse_name));
         emit_ixbar(out, indent, tbl->resources->match_ixbar,
-                   &tbl->resources->memuse.at(tbl->name), &fmt);
+                   &tbl->resources->memuse.at(memuse_name), &fmt);
         if (!tbl->layout.ternary) {
             out << indent << fmt << std::endl;
             bool first = true;
@@ -706,9 +707,10 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
     /* FIXME -- this is a mess and needs to be rewritten to be sane */
     bool have_action = false, have_indirect = false;
     for (auto at : tbl->attached) {
-        if (at->is<IR::MAU::TernaryIndirect>()) {
+        if (auto *ti = at->to<IR::MAU::TernaryIndirect>()) {
             have_indirect = true;
-            out << indent << at->kind() << ": " << at->name << std::endl;
+            cstring name = tbl->get_use_name(ti);
+            out << indent << at->kind() << ": " << name << std::endl;
         } else if (at->is<IR::ActionProfile>()) {
             have_action = true;
         } else if (at->is<IR::MAU::ActionData>()) {
@@ -746,11 +748,45 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         at->apply(EmitAttached(*this, out, tbl));
 }
 
+class MauAsmOutput::UnattachedName : public MauInspector {
+    const IR::MAU::Table *comp_table;
+    cstring comparison_name;
+    cstring return_name;
+    const IR::Attached *unattached;
+    bool setting = false;
+
+
+    bool preorder(const IR::MAU::Table *tbl) {
+        auto p = tbl->name.findlast('.');
+        if (tbl->name == comparison_name ||
+            (p != nullptr && tbl->name.before(p) == comparison_name)) {
+             if (tbl->logical_id/16U != comp_table->logical_id/16U)
+                 return true;
+             return_name = tbl->get_use_name(unattached);
+             if (setting)
+                 BUG("Multiple tables claim to be attached table");
+             setting = true;
+        }
+        return true;
+    }
+
+    void end_apply() {
+        if (setting == false)
+            BUG("Unable to find unattached table");
+    }
+
+ public:
+    explicit UnattachedName(const IR::MAU::Table* ct, cstring cn, const IR::Attached *at) :
+        comp_table(ct), comparison_name(cn), unattached(at) {}
+    cstring name() { return return_name; }
+};
+
 void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
                                     const IR::MAU::Table *tbl) const {
     bool have_action = false;
     vector<const IR::Attached *> stats_tables;
     vector<const IR::Attached *> meter_tables;
+    auto match_name = tbl->get_use_name();
     for (auto at : tbl->attached) {
         if (at->is<IR::MAU::TernaryIndirect>()) continue;
         if (at->is<IR::ActionProfile>() || at->is<IR::MAU::ActionData>())
@@ -763,38 +799,49 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
             meter_tables.push_back(at);
             continue;
         }
-        if (at->is<IR::ActionProfile>()) {
-            auto &memuse = tbl->resources->memuse.at(tbl->name);
+        if (auto *ap = at->to<IR::ActionProfile>()) {
+            auto &memuse = tbl->resources->memuse.at(match_name);
             out << indent << "action: ";
-            if (memuse.unattached_profile)
-                out << memuse.profile_name << "$action";
-            else
-                out << tbl->name << "$action";
+            if (memuse.unattached_profile) {
+                UnattachedName unattached(tbl, memuse.profile_name, ap);
+                pipe->apply(unattached);
+                out << unattached.name();
+            } else {
+                out << tbl->get_use_name(ap);
+            }
             if (at->indexed())
                 out << "(action, action_ptr)";
             out << std::endl;
             continue;
         }
 
-        if (at->is<IR::ActionSelector>()) {
-             auto &memuse = tbl->resources->memuse.at(tbl->name);
+        if (auto *as = at->to<IR::ActionSelector>()) {
+             auto &memuse = tbl->resources->memuse.at(match_name);
              out << indent << "selector: ";
-             if (memuse.unattached_profile)
-                 out << memuse.profile_name << "$selector";
-             else
-                 out << tbl->name << "$selector";
+             if (memuse.unattached_selector) {
+                 UnattachedName unattached(tbl, memuse.selector_name, as);
+                 pipe->apply(unattached);
+                 out << unattached.name();
+             } else {
+                 out << tbl->get_use_name(as);
+             }
              out << "(select_ptr)";
              out << std::endl;
              continue;
         }
-        out << indent << at->kind() << ": " << at->name;
+        auto name = tbl->get_use_name(at);
+        out << indent << at->kind() << ": " << name;
         if (at->indexed())
             out << '(' << at->kind() << ')';
-        out << std::endl; }
+        out << std::endl;
+    }
+
+
     if (!stats_tables.empty()) {
         out << indent << "stats:" << std::endl;
         for (auto at : stats_tables) {
-            out << indent << "- " << at->name;
+            auto name = tbl->get_use_name(at);
+            out << indent << "- " << name;
             if (at->indexed())
                 out << '(' << "counter_ptr" << ')';
             out << std::endl;
@@ -803,7 +850,8 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
     if (!meter_tables.empty()) {
         out << indent << "meter:" << std::endl;
         for (auto at : meter_tables) {
-            out << indent << "- " << at->name;
+            auto name = tbl->get_use_name(at);
+            out << indent << "- " << name;
             if (at->indexed())
                 out << '(' << "meter_ptr" << ')';
             out << std::endl;
@@ -870,10 +918,10 @@ static void counter_format(std::ostream &out, const IR::CounterType type, int pe
 
 bool MauAsmOutput::EmitAttached::preorder(const IR::Counter *counter) {
     indent_t indent(1);
-    out << indent++ << "counter " << counter->name << ":" << std::endl;
-    if (auto p = counter->name.name.find('.'))
-        out << indent << "p4: { name: " << counter->name.name.before(p) << " }" << std::endl;
-    self.emit_memory(out, indent, tbl->resources->memuse.at(counter->name));
+    auto name = tbl->get_use_name(counter);
+    out << indent++ << "counter " << name << ":" << std::endl;
+    out << indent << "p4: { name: " << counter->name << " }" << std::endl;
+    self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     cstring count_type;
     switch (counter->type) {
         case IR::CounterType::PACKETS:
@@ -887,17 +935,17 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::Counter *counter) {
     }
     out << indent << "count: " << count_type << std::endl;
     out << indent << "format: {";
-    counter_format(out, counter->type, tbl->resources->memuse.at(counter->name).per_row);
+    counter_format(out, counter->type, tbl->resources->memuse.at(name).per_row);
     out << "}" << std::endl;
     return false;
 }
 
 bool MauAsmOutput::EmitAttached::preorder(const IR::Meter *meter) {
     indent_t indent(1);
-    out << indent++ << "meter " << meter->name << ":" << std::endl;
-    if (auto p = meter->name.name.find('.'))
-        out << indent << "p4: { name: " << meter->name.name.before(p) << " }" << std::endl;
-    self.emit_memory(out, indent, tbl->resources->memuse.at(meter->name));
+    auto name = tbl->get_use_name(meter);
+    out << indent++ << "meter " << name << ":" << std::endl;
+    out << indent << "p4: { name: " << meter->name << " }" << std::endl;
+    self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     cstring imp_type;
     if (!meter->implementation.name)
         imp_type = "standard";
@@ -923,16 +971,15 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::Register *) {
     return false;
 }
 
-bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *) {
-    if (tbl->resources->memuse.at(tbl->name).unattached_profile) {
+bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *ap) {
+    auto match_name = tbl->get_use_name();
+    if (tbl->resources->memuse.at(match_name).unattached_profile) {
         return false;
     }
-
     indent_t    indent(1);
-    cstring name = tbl->name + "$action";
+    auto name = tbl->get_use_name(ap);
     out << indent++ << "action " << name << ':' << std::endl;
-    if (tbl->match_table)
-        out << indent << "p4: { name: " << tbl->match_table->name << "$action }" << std::endl;
+    out << indent << "p4: { name: " << ap->name << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     for (auto act : Values(tbl->actions)) {
         if (act->args.empty()) continue;
@@ -947,20 +994,24 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *) {
 
 bool MauAsmOutput::EmitAttached::preorder(const IR::ActionSelector *as) {
     indent_t indent(1);
-    if (tbl->resources->memuse.at(tbl->name).unattached_profile) {
+    auto match_name = tbl->get_use_name();
+    if (tbl->resources->memuse.at(match_name).unattached_profile) {
         return false;
     }
-    cstring name = tbl->match_table->name + "$selector";
+    cstring name = tbl->get_use_name(as);
+    out << indent << "p4: { name: " << as->name << " }" << std::endl;
     out << indent++ << "selection " << name << ":" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     self.emit_ixbar(out, indent, tbl->resources->selector_ixbar,
                     &tbl->resources->memuse.at(name), nullptr, true, as);
     out << indent << "mode: " << as->mode.name << " 0" << std::endl;
-    return false; }
+    return false;
+}
+
 bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     indent_t    indent(1);
-    auto name = tbl->name + "$tind";
-    out << indent++ << "ternary_indirect " << ti->name << ':' << std::endl;
+    auto name = tbl->get_use_name(ti);
+    out << indent++ << "ternary_indirect " << name << ':' << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     int action_fmt_size = ceil_log2(tbl->actions.size());
     out << indent << "format: { ";
@@ -973,13 +1024,15 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
         sep = ", "; }
     out << " }" << std::endl;
     self.emit_table_indir(out, indent, tbl);
-    return false; }
+    return false;
+}
+
 bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
     indent_t    indent(1);
-    out << indent++ << "action " << ad->name << ':' << std::endl;
-    auto name = tbl->name + "$action";
+    auto name = tbl->get_use_name(ad);
+    out << indent++ << "action " << name << ':' << std::endl;
     if (tbl->match_table)
-        out << indent << "p4: { name: " << tbl->match_table->name << "$action }" << std::endl;
+        out << indent << "p4: { name: " << ad->name << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     for (auto act : Values(tbl->actions)) {
         if (act->args.empty()) continue;
@@ -989,4 +1042,5 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
         for (auto act : Values(tbl->actions))
             act->apply(EmitAction(self, out, tbl, indent));
         --indent; }
-    return false; }
+    return false;
+}

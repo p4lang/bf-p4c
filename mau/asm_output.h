@@ -5,16 +5,22 @@
 #include "resource.h"
 #include "lib/log.h"
 #include "tofino/common/asm_output.h"
+#include "memories.h"
 
 class PhvInfo;
 
 class MauAsmOutput : public MauInspector {
     const PhvInfo       &phv;
     DefaultNext         default_next;
+    const IR::Tofino::Pipe *pipe;
     std::map<std::pair<gress_t, int>, std::vector<const IR::MAU::Table *>>      by_stage;
     profile_t init_apply(const IR::Node *root) override {
         root->apply(default_next);
         return MauInspector::init_apply(root); }
+    bool preorder(const IR::Tofino::Pipe *p) {
+        pipe = p;
+        return true;
+    }
     bool preorder(const IR::MAU::Table *tbl) override {
         by_stage[std::make_pair(tbl->gress, tbl->logical_id/16U)].push_back(tbl);
         return true; }
@@ -30,6 +36,7 @@ class MauAsmOutput : public MauInspector {
     void emit_table_indir(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
     class EmitAction;
     class EmitAttached;
+    class UnattachedName;
 
  public:
     explicit MauAsmOutput(const PhvInfo &p) : phv(p) {}
