@@ -88,7 +88,7 @@ class Cluster : public Inspector, P4WriteContext {
     std::list<const PhvInfo::Field *>& fields_no_use_mau()  { return fields_no_use_mau_i; }
     void compute_fields_no_use_mau();
     //
-    Uses& uses()  { return *uses_i; }
+    Uses* uses()  { return uses_i; }
 };
 //
 //

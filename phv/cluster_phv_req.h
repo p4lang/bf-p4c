@@ -89,6 +89,9 @@ class Cluster_PHV_Requirements : public Visitor {
  public:
     Cluster_PHV_Requirements(Cluster &c) : cluster_i(c) {}  // NOLINT(runtime/explicit)
     //
+    Cluster&
+        cluster() { return cluster_i; }
+    //
     ordered_map<PHV_Container::PHV_Word, ordered_map<int, std::vector<Cluster_PHV *>>>&
     cluster_phv_map()                           { return Cluster_PHV_i; }
     //

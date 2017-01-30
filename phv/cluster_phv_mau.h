@@ -210,6 +210,9 @@ class PHV_MAU_Group_Assignments : public Visitor {
     PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &phv_r)  // NOLINT(runtime/explicit)
         : phv_requirements_i(phv_r) {}
     //
+    Cluster_PHV_Requirements&
+        phv_requirements() { return phv_requirements_i; } 
+    //
     ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>&
         phv_mau_map() { return PHV_MAU_i; }
     ordered_map<int, ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>>&

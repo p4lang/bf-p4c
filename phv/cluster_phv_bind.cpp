@@ -227,7 +227,7 @@ PHV_Bind::trivial_allocate(std::set<const PhvInfo::Field *>& fields) {
     PHV_Container::PHV_Word container_width = PHV_Container::PHV_Word::b8;
     std::string container_prefix = "B";
     for (auto &f : fields) {
-        if (!uses_i.use[0][f->gress][f->id]) {
+        if (!uses_i->use[0][f->gress][f->id]) {
             continue;
         }
         PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
@@ -271,19 +271,24 @@ void PHV_Bind::sanity_check_container_fields(
     //
     // set difference phv_i fields, fields_i must be 0
     //
-    std::set<const PhvInfo::Field *> s1;                                // all fields
+    std::set<const PhvInfo::Field *> s1;                                // All Fields
     for (auto &field : phv_i) {
-        s1.insert(&field);
+        //
+        // discard fields that are not used
+        //
+        if (uses_i->use[1][field.gress][field.id]
+           || uses_i->use[0][field.gress][field.id]) {
+            //
+            s1.insert(&field);
+        }
     }
-    // s3 = all - PHV_Bind fields
+    // s3 = All - PHV_Bind fields
     set_difference(
         s1.begin(),
         s1.end(),
         fields_i.begin(),
         fields_i.end(),
         std::inserter(s3, s3.end()));
-    //
-    // ?? fields may be unused in ingress, egress, need additional check before howling
     //
     if (s3.size()) {
         LOG1(std::endl

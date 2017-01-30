@@ -33,16 +33,20 @@ class PHV_Bind : public Visitor {
     //
     PhvInfo &phv_i;                                 // all fields in input
     PHV_MAU_Group_Assignments &phv_mau_i;           // PHV MAU Group Assignments
-    Cluster::Uses &uses_i;                          // field uses mau, I, E
+    Cluster::Uses *uses_i;                          // field uses mau, I, E
     std::list<const PHV_Container *> containers_i;  // all filled containers
     std::set<const PhvInfo::Field *> fields_i;      // all fields to be finally bound
     //
  public:
     //
-    PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m, Cluster::Uses &uses_p)
+    PHV_Bind(PhvInfo &phv_f, PHV_MAU_Group_Assignments &phv_m)
        : phv_i(phv_f),
          phv_mau_i(phv_m),
-         uses_i(uses_p) {}
+         uses_i(new Cluster::Uses(phv_f)) { }       // Cluster uses() not re-used
+                                                    // Uses recomputed
+                                                    // dead code elimination
+                                                    // happens after Phv Analysis
+                                                    // i.e., after Cluser Uses computation
     //
     std::list<const PHV_Container *> containers()  { return containers_i; }
     std::set<const PhvInfo::Field *>& fields()    { return fields_i; }
