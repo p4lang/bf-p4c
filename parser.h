@@ -3,10 +3,10 @@
 
 #include "sections.h"
 #include "phv.h"
-#include "gen/memories.prsr_mem_main_rspec.h"
-#include "gen/regs.ibp_rspec.h"
-#include "gen/regs.ebp_rspec.h"
-#include "gen/regs.prsr_reg_merge_rspec.h"
+#include "gen/tofino/memories.prsr_mem_main_rspec.h"
+#include "gen/tofino/regs.ibp_rspec.h"
+#include "gen/tofino/regs.ebp_rspec.h"
+#include "gen/tofino/regs.prsr_reg_merge_rspec.h"
 #include <map>
 #include <vector>
 #include <set>

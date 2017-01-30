@@ -2,8 +2,8 @@
 #define _deparser_h_
 
 #include "sections.h"
-#include "gen/regs.dprsr_hdr.h"
-#include "gen/regs.dprsr_inp.h"
+#include "gen/tofino/regs.dprsr_hdr.h"
+#include "gen/tofino/regs.dprsr_inp.h"
 #include "phv.h"
 #include <vector>
 

@@ -1,7 +1,7 @@
-#include "gen/memories.pipe_top_level.h"
-#include "gen/memories.pipe_addrmap.h"
-#include "gen/regs.tofino.h"
-#include "gen/regs.pipe_addrmap.h"
+#include "gen/tofino/memories.pipe_top_level.h"
+#include "gen/tofino/memories.pipe_addrmap.h"
+#include "gen/tofino/regs.tofino.h"
+#include "gen/tofino/regs.pipe_addrmap.h"
 #include "json.h"
 
 class TopLevel {

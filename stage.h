@@ -5,7 +5,7 @@
 #include <vector>
 #include "alloc.h"
 #include "bitvec.h"
-#include "gen/regs.mau_addrmap.h"
+#include "gen/tofino/regs.mau_addrmap.h"
 
 enum {
     /* global constants related to MAU stage */
