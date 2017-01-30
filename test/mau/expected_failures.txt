@@ -20,9 +20,6 @@ test_config_137_tcam_error_detection_2.p4 mismatch
 test_config_138_tcam_error_detection_3.p4 mismatch
 test_config_139_tcam_error_detection_4.p4 mismatch
 
-- new failure -- compiler crash
-test_config_209_pack_hash_dist.p4 compile
-
 - uncharacterized failures (FIXME)
 01-FlexCounter.p4 compile
 02-FlexCounterActionProfile.p4 compile

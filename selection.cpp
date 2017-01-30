@@ -86,7 +86,7 @@ void SelectionTable::pass1() {
     max_words = 0;
     if (pool_sizes.empty()) min_words = max_words = 1;
     else for (int size : pool_sizes) {
-        int words = (size + 119)/120;
+        int words = (size + SELECTOR_PORTS_PER_WORD - 1)/SELECTOR_PORTS_PER_WORD;
         if (words < min_words) min_words = words;
         if (words > max_words) max_words = words; }
     stage->table_use[gress] |= Stage::USE_SELECTOR;
@@ -260,7 +260,8 @@ void SelectionTable::write_regs() {
         adrdist.mau_ad_meter_virt_lt[meter_group] |= 1U << m->logical_id;
         adrdist.movereg_ad_meter_alu_to_logical_xbar_ctl[m->logical_id/8U].set_subfield(
             4 | meter_group, 3*(m->logical_id % 8U), 3);
-        merge.mau_logical_to_meter_alu_map.set_subfield( 16 | m->logical_id, 5*meter_group, 5);
+        if (max_words > 1)
+            merge.mau_logical_to_meter_alu_map.set_subfield( 16 | m->logical_id, 5*meter_group, 5);
         merge.mau_meter_alu_to_logical_map[m->logical_id/8U].set_subfield(
             4 | meter_group, 3*(m->logical_id % 8U), 3); }
     if (max_words == 1)
