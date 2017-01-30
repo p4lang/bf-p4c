@@ -17,6 +17,9 @@ WALLE := $(shell  \
 GEN_TOFINO :=  memories.pipe_addrmap  memories.pipe_top_level  memories.prsr_mem_main_rspec \
 	       regs.dprsr_hdr regs.dprsr_inp regs.ebp_rspec regs.ibp_rspec regs.mau_addrmap \
 	       regs.pipe_addrmap regs.prsr_reg_merge_rspec regs.tofino
+GEN_JBAY := memories.jbay_mem memories.pipe_addrmap memories.prsr_mem_main_rspec \
+	    regs.dprsr_reg regs.jbay_reg regs.mau_addrmap regs.parde_glue_stn_reg \
+	    regs.pipe_addrmap
 TFAS_OBJS:= action_bus.o action_table.o asm-parse.o asm-types.o bitvec.o \
 	    counter.o crash.o deparser.o exact_match.o gateway.o hash_action.o \
 	    hash_dist.o hashexpr.o hex.o idletime.o input_xbar.o \
@@ -24,7 +27,7 @@ TFAS_OBJS:= action_bus.o action_table.o asm-parse.o asm-types.o bitvec.o \
 	    selection.o stage.o tables.o ternary_match.o tfas.o top_level.o \
 	    ubits.o vector.o
 TEST_SRCS:= $(wildcard test_*.cpp)
-default: $(GEN_TOFINO:%=gen/tofino/%.h) gen/uptr_sizes.h tfas
+default: $(GEN_TOFINO:%=gen/tofino/%.h) $(GEN_JBAY:%=gen/jbay/%.h) gen/uptr_sizes.h tfas
 all: default reflow json_diff
 tfas: $(TFAS_OBJS) json.o $(GEN_TOFINO:%=gen/tofino/%.o) $(TEST_SRCS:%.cpp=%.o)
 
@@ -57,15 +60,15 @@ gen/tofino/memories.pipe_top_level.%: JSON_NAME=memories.top
 gen/tofino/memories.pipe_addrmap.%: JSON_NAME=memories.pipe
 gen/%.h: templates/%.size.json templates/%.cfg.json json2cpp
 	@mkdir -p gen/$(dir $*)
-	./json2cpp +ehD $(JSON_GLOBALS:%=-g %) $(JSON_EXTRA_ARGS) -run '$(JSON_NAME)' -c templates/$*.cfg.json $< >$@
+	./json2cpp +ehD $(JSON_GLOBALS:%=-g %) $(JSON_EXTRA_ARGS) -run '$(JSON_NAME)' -c templates/$*.cfg.json $< >$@ || { rm $@; false; }
 
 gen/disas.%.h: templates/%.size.json json2cpp
 	@mkdir -p gen/$(dir $*)
-	./json2cpp +hru -en $* $< >$@
+	./json2cpp +hru -en $* $< >$@ || { rm $@; false; }
 
 gen/%.cpp: templates/%.size.json templates/%.cfg.json json2cpp
 	@mkdir -p gen/$(dir $*)
-	./json2cpp +ehDD $(JSON_GLOBALS:%=-g %) $(JSON_EXTRA_ARGS) -run '$(JSON_NAME)' -c templates/$*.cfg.json -I $(notdir $*.h) $< >$@
+	./json2cpp +ehDD $(JSON_GLOBALS:%=-g %) $(JSON_EXTRA_ARGS) -run '$(JSON_NAME)' -c templates/$*.cfg.json -I $(notdir $*.h) $< >$@ || { rm $@; false; }
 
 gen/uptr_sizes.h: mksizes
 	@mkdir -p gen
@@ -84,6 +87,8 @@ tofino/chip.schema tofino/template_objects.yaml: %: p4c-templates/%
 	if [ $< -nt $@ ]; then cp $< $@; fi
 
 $(GEN_TOFINO:%=templates/tofino/%.cfg.json) $(GEN_TOFINO:%=templates/tofino/%.size.json): templates/tofino/.templates-updated
+	@test -r $@
+$(GEN_JBAY:%=templates/jbay/%.cfg.json) $(GEN_JBAY:%=templates/jbay/%.size.json): templates/jbay/.templates-updated
 	@test -r $@
 
 -include $(wildcard *.d gen/*.d)

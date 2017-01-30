@@ -87,9 +87,9 @@ class traversal_history (object):
     """
     A class which records part of Walle's traversal through input JSON data. A
     single traversal_history corresponds to the traversal of one JSON file.
-    
+
     Attributes:
-    @attr template_name 
+    @attr template_name
         The value at the top level "_name" key of the file currently being
         processed
     @attr path
@@ -98,7 +98,7 @@ class traversal_history (object):
         If we drill down into a dictionary at key "a", push "a" onto the list.
         If we access elements of a list, push a tuple recording the index at
         each dimension of the list and then the list name. Eg,
-            [(4,),"a"] to represent a[4] 
+            [(4,),"a"] to represent a[4]
             [(1,2,3),"b"] to represent b[1][2][3]
     """
     def __init__(self, template_name):
@@ -145,7 +145,7 @@ class binary_cache(object):
             path.append(traversal_history(key))
             self.binary_templates[key] = obj_schema.generate_binary(self.templates[key], self, path)
             path.pop()
-        
+
         binary_data_copy = []
         for chip_obj in self.binary_templates[key]:
             binary_data_copy.append(chip_obj.deepcopy())
@@ -190,7 +190,7 @@ class address_map(csr_object):
         Controls how this address map gets used during template generation:
             - If None, it is expanded as a dictionary wherever it appears in the
               register hierarchy
-            - If "top_level", it is split off into its own JSON file and 
+            - If "top_level", it is split off into its own JSON file and
               replaced wherever it appears in the register hierarchy with a
               string reference to that JSON file
             - If "disabled", it is replaced wherever it appears in the register
@@ -200,7 +200,7 @@ class address_map(csr_object):
         An ordered list of objects contained in the addressmap - either regs,
         groups, or address_map_instances
 
-    @attr parent 
+    @attr parent
         A string indicating which parent of the chip hierarchy the addressmap
         falls under ("memories" or "regs)
     """
@@ -303,7 +303,7 @@ class address_map(csr_object):
                                 for idx in range(0, obj.count[-1]):
                                     context[-1] = idx
                                     obj.generate_binary(sub_data[idx], cache, path, mem)
-                                path[-1].path.pop()                                
+                                path[-1].path.pop()
                             nd_array_loop(obj.count, data[obj.name], mem_loop)
                             reg_values.append(mem)
                         else:
@@ -342,7 +342,7 @@ class address_map(csr_object):
                         nd_array_loop(obj.count, data[obj.name], addr_map_loop)
                 else:
                     raise CsrException("Unrecognized object in address map ('"+type(obj)+"')")
-            
+
             return reg_values
         else:
             raise CsrException(
@@ -398,7 +398,7 @@ class group(address_map):
         address_map.__init__(self, name, count, parent)
         self.stride = stride
         self.offset = offset
-    
+
     def generate_binary(self, data, cache, path):
         path[-1].path.append(self.name)
         binary = address_map.generate_binary(self, data, cache, path)
@@ -433,7 +433,7 @@ class reg(csr_object):
             return None
         elif isinstance(data, StringTypes):
             # Refernce to template
-            
+
             path[-1].path.append(self.name)
 
             type_name = self.parent + "." + self.name
@@ -513,7 +513,7 @@ class reg(csr_object):
                         array_size = "x".join(map(str,field.count))
                         raise CsrException("Expected "+array_size+" element array of integers at key '"+field.name+"'")
 
-                    nd_array_loop(field.count, data[field.name], field_loop)                        
+                    nd_array_loop(field.count, data[field.name], field_loop)
 
             path[-1].path.pop()
 
@@ -560,7 +560,7 @@ class field(csr_object):
 
     def __str__(self):
         return "name = %s  count = %s  msb = %s  lsb = %s  parent = %s" % (str(self.name), str(self.count), str(self.msb), str(self.lsb), str(self.parent))
- 
+
 
 ########################################################################
 ## Utility functions
@@ -614,6 +614,7 @@ def parse_csrcompiler_csv (filename, section_name):
 
     csv_field_types = {
         "configuration",
+        "userdefined configuration",
         "constant",
         "counter",
         "status",
@@ -657,7 +658,7 @@ def parse_csrcompiler_csv (filename, section_name):
 
             if row["Type"] in csv_addressmap_types:
                 addr_maps[row["Identifier"]] = address_map(
-                    row["Identifier"], 
+                    row["Identifier"],
                     array_size,
                     section_name
                 )
@@ -720,7 +721,7 @@ def parse_csrcompiler_csv (filename, section_name):
 
                 active_container.objs.append(
                     group (
-                        row["Identifier"], 
+                        row["Identifier"],
                         array_size,
                         int(row["Offset"],0),
                         section_name,
@@ -732,6 +733,9 @@ def parse_csrcompiler_csv (filename, section_name):
                 popped_group = active_group.pop()
                 if popped_group.stride == None:
                     popped_group.stride = popped_group.min_width()
+            elif row["Type"] == "userdefined memory":
+                # ignore for now?
+                pass
             else:
                 raise CsrException("Unrecognized type '"+row["Type"]+"' in CSV file '"+filename+"' line "+str(row_num))
 
@@ -747,10 +751,10 @@ def build_schema (dir, walle_version):
     The schema is a dictionary of dictionaries. The top-level keys are the
     "sections" of the chip's interface and metadata:
         - memories: Memories and large register arrays. Things like the parser
-                    TCAM are found here. Taken from the pipe_top_level Semifore
+                    TCAM are found here. Taken from the jbay_mem Semifore
                     hierarchy, in byte-granularity chip addresses
         - regs:     Registers, like statistics counters and MAU crossbars.
-                    Taken from the tofino Semifore hierarchy, in 32-bit PCIe 
+                    Taken from the jbay Semifore hierarchy, in 32-bit PCIe
                     addresses
         - _schema_hash:  An MD5 hash of the CSV file contents used to generate
                     the rest of the schema
@@ -758,33 +762,39 @@ def build_schema (dir, walle_version):
     The non-metadata entries contain a dictionary of all of that hierarchy's
     addressmaps, mapping from addressmap name to addrses_map objects.
 
-    @param  dir     A string pointing to the directory containing a copy of the
-                    bfnregs repo containing CSV files "pipe_top_level.csv" and
-                    "tofino.csv" generated by Semifore using csr_config.css
+    @param  dir     A string pointing to the directory containing (a copy of) the
+                    bfnregs repo subdir "modules/<chip>_reg" generated by Semifore
+                    using csr_config.css
     @return A new schema object
     """
     new_schema = {}
-
-    csr_file = {
-        "memories":"pipe_top_level.csv",
-        "regs":"tofino.csv"
-    }
-    version_file = os.path.join(dir,"VERSION")
-
-    if not os.path.isfile(version_file):
-        raise Exception("Directory '"+os.path.abspath(dir)+"' could not be opened, does not exist, or does not appear to be the root of a valid bfnregs repo.")
-
     schema_hash = 0
     hasher = hashlib.md5()
 
-    for key in csr_file:
-        full_csr_file = os.path.join(dir,"modules","tofino_regs","module","csv",csr_file[key])
+    version_file = os.path.join(dir, "..", "..", "VERSION")
+    csv_files = os.path.join(dir, "module", "csv")
+    if not os.path.isfile(version_file) or not os.path.isdir(csv_files):
+        raise Exception("Directory '"+os.path.abspath(dir)+"' could not be opened, "+
+                        "does not exist, or does not appear to be a valid bfnregs "+
+                        "chip module.")
 
-        new_schema[key] = parse_csrcompiler_csv(full_csr_file, key)
+    for filename in os.listdir(csv_files):
+        if filename.endswith(".csv"):
+            key = os.path.splitext(filename)[0]
+            if key == "pipe_top_level":
+                key = "memories"
+            elif key == "tofino":
+                key = "regs"
+            elif key.endswith("_mem"):
+                key = "memories"
+            elif key.endswith("_reg"):
+                key = "regs"
+            filename = os.path.join(csv_files, filename)
 
-        with open(full_csr_file, "rb") as csv_file:
-            hasher.update(csv_file.read())
+            new_schema[key] = parse_csrcompiler_csv(filename, key)
 
+            with open(filename, "rb") as csv_file:
+                hasher.update(csv_file.read())
 
     with open(version_file, "r") as version_file_handle:
         reg_version = version_file_handle.read()

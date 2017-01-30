@@ -124,6 +124,9 @@ def generate_templates (args, schema):
     for section_name, section in schema.items():
         if section_name[0] == "_":
             continue
+        if section_name not in top_level_objs:
+            sys.stderr.write("no template cfg for "+section_name+", ignoring\n");
+            continue;
 
         for obj in top_level_objs[section_name]:
             section[obj].templatization_behavior = "top_level"
@@ -297,9 +300,9 @@ def main():
     )
     parser.add_argument(
         "--generate-schema",
-        metavar='BFNREGS-ROOT',
+        metavar='BFNREGS-TARGET-DIR',
         type=str,
-        help="Generate a chip schema from the bfnregs repo at the specified directory",
+        help="Generate a chip schema from the bfnregs target regs directory",
         default=None
     )
     parser.add_argument(

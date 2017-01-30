@@ -17,8 +17,11 @@ static bool test_sanity(json::obj *data, std::string name, bool sizes=true) {
     if (json::vector *v = dynamic_cast<json::vector *>(data)) {
         data = 0;
         for (auto &a : *v) {
-            if (!data) data = a.get();
-            else if (*data != *a) {
+            if (!data) {
+                data = a.get();
+                if (!sizes && data->is<json::number>())
+                    break;
+            } else if (*data != *a) {
                 std::cerr << "array element mismatch: " << name << std::endl;
                 return false; } }
         return test_sanity(data, name+"[]", sizes); }
@@ -39,7 +42,8 @@ static bool test_sanity(json::obj *data, std::string name, bool sizes=true) {
             if (!test_sanity(a.second.get(), name+child, sizes)) return false; }
         return true; }
     if (json::number *n = dynamic_cast<json::number *>(data)) {
-        if (!sizes || (n->val >= 0 && n->val <= 128))
+        if (!sizes || (n->val >= 0 && n->val <= 1024))
+            // FIXME -- arbitrary cutoff for 'reasonable' widereg
             return true;
         std::cerr << "size out of range: " << name << " " << n->val << std::endl; }
     if (dynamic_cast<json::string *>(data))
@@ -679,8 +683,15 @@ int main(int ac, char **av) {
         if (name && !*name && !declare)
             name = 0;
         if (!name && gen_definitions != BOTH) {
-            std::cerr << "+D requires -n option" << std::endl;
-            exit(1); }
+            auto *e = av[i] + strlen(av[i]);
+            if ((name = strrchr(av[i], '/')))
+                ++name;
+            else
+                name = av[i];
+            if (!strcmp(e-5, ".json")) e -= 5;
+            if (!strncmp(e-5, ".size", 5)) e -= 5;
+            if (!strncmp(e-4, ".cfg", 4)) e -= 4;
+            *e = '\0'; }
         for (auto n : includes)
             std::cout << "#include \"" << n << '"' << std::endl;
         if (gen_hdrs) {
