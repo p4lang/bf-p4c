@@ -288,6 +288,9 @@ PHV_TESTS = \
 PARDE_TESTS = \
 ./p4_14/test_checksum.p4
 
+PARDE_XFAIL_TESTS = \
+./p4_14/COMPILER-350/ipv4_issue.p4
+
 PHV_XFAIL_TESTS = \
 ./p4_14/test_config_248_pa_problem.p4 \
 ./p4_14/test_config_252_pa_required_packing.p4 \
@@ -305,7 +308,7 @@ OTHER_XFAIL_TESTS = \
 ./p4_14/exclusive_cf_one_action_fail_before.p4
 
 TESTS = $(MAU_TESTS) $(PHV_TESTS) $(PARDE_TESTS) $(OTHER_TESTS)
-XFAIL_TESTS = $(MAU_XFAIL_TESTS) $(PHV_XFAIL_TESTS) $(OTHER_XFAIL_TESTS)
+XFAIL_TESTS = $(MAU_XFAIL_TESTS)  $(PARDE_XFAIL_TESTS) $(PHV_XFAIL_TESTS) $(OTHER_XFAIL_TESTS)
 
 LOG_COMPILER = ./../p4c-tofino/p4c_tofino/full_shell.py
 
