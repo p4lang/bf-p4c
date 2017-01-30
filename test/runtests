@@ -31,6 +31,8 @@ TRY_STF="
 "
 
 TIME=false
+PARALLEL=1
+if [[ $MAKEFLAGS =~ ^-j\ *[0-9]+$ ]]; then PARALLEL=${MAKEFLAGS#-j}; fi
 
 while expr "$1" : - >/dev/null; do
     case $1 in
@@ -41,6 +43,17 @@ while expr "$1" : - >/dev/null; do
         ;;
     -t)
         TIME=true
+        ;;
+    -j)
+        shift
+        if [[ $1 =~ ^[0-9]+$ ]]; then
+            PARALLEL=$1
+        else
+            echo 2>& "invalid number -j $1"
+        fi
+        ;;
+    -j[1-9]|-j[1-9][0-9])
+        PARALLEL=${1#-j}
         ;;
     -*)
         echo >&2 "unknown argumnet $1"
@@ -130,10 +143,6 @@ else
     CTXT_DIFFARGS="-al handle -i table_type"
 fi
 
-pass=0
-fail=0
-expected_fail=0
-unexpected_pass=0
 
 function test_p4() {
     p4file="$1"
@@ -143,9 +152,11 @@ function test_p4() {
     expect_fail=$(sed -n "/^$name.p4/s/[^ ]* *//p" expected_failures.txt 2>/dev/null | head -1)
     cd $name.out
     ok=true
+    rv=0
     fail_type=""
     #echo "about to run $name.p4, expecting ${expect_fail:-no} failure"
-    echo -n $p4file
+    msg="$p4file"
+
     start=`date +%s`
     if $fast && [ -r $name.tfa ]; then
         true
@@ -157,20 +168,19 @@ function test_p4() {
                 ln -s out.tfa $name.tfa
             fi
             if [ ! -r $name.tfa ]; then
-                echo -n " p4 compile failed to produce asm"
+                msg="$msg p4 compile failed to produce asm"
                 fail_type="compile"
-                let fail++
+                rv=1
                 ok=false
             fi
         else
-            echo -n " p4 compile failed"
+            msg="$msg p4 compile failed"
             fail_type="compile"
-            let fail++
+            rv=1
             ok=false
         fi
         if not $ok && ( [ $count -eq 1 ] || [ "$expect_fail" != "compile" ] ); then
-            echo "$p4file:" >> $FAILLOG
-            sed 's/^/ /' glsc.log >> $FAILLOG
+            flock $FAILLOG -c "echo '$p4file:' >>$FAILLOG; sed 's/^/ /' glsc.log >>$FAILLOG"
         fi
     fi
     glsc_cfg=.
@@ -211,40 +221,38 @@ function test_p4() {
         fi
         cnt=$(grep -Ev '^\+\+\+|^---|"int_inj"' json_diff.txt | grep -Ec '^\+|^-')
         if [ $cnt -gt 0 ]; then
-            echo -n " mismatch"
+            msg="$msg mismatch"
             fail_type="mismatch"
-            let fail++
+            rv=1
             if [ $count -eq 1 ] || [ "$expect_fail" != "mismatch" ]; then
-                echo "$p4file:" >> $FAILLOG
-                cat json_diff.txt >> $FAILLOG
+                flock $FAILLOG -c "echo '$p4file:' >>$FAILLOG; cat json_diff.txt >>$FAILLOG"
             fi
             ok=false
         else
-            echo -n " pass"
+            msg="$msg pass"
             let pass++
         fi
     elif $ok; then
-        echo -n " tfas failed"
+        msg="$msg tfas failed"
         fail_type="tfas"
-        let fail++
+        rv=1
         if [ $count -eq 1 ] || [ "$expect_fail" != "tfas" ]; then
-	    echo "$p4file:" >> $FAILLOG
-	    sed -e 's/^/ /' -e '/\n/!a\' tfas.log >> $FAILLOG
-	fi
+            flock $FAILLOG -c "echo '$p4file:' >>$FAILLOG; sed -e 's/^/ /' -e '/\n/!a\' tfas.log >>$FAILLOG"
+        fi
         ok=false
     fi
     if [ "$expect_fail" != "" ]; then
         if $ok; then
-            echo -n " (UNEXPECTED PASS -- expected $expect_fail failure)"
-            let unexpected_pass++
+            msg="$msg (UNEXPECTED PASS -- expected $expect_fail failure)"
+            rv=3
         elif [ "$expect_fail" != "$fail_type" ]; then
-            echo -n " (expected $expect_fail failure)"
+            msg="$msg (expected $expect_fail failure)"
             if [ "$fail_type" = "mismatch" -o "$expect_fail" = "compile" ]; then
-                let expected_fail++
+                rv=2
             fi
         else
-            echo -n " (expected)"
-            let expected_fail++
+            msg="$msg (expected)"
+            rv=2
         fi
     fi
     if $TIME; then
@@ -254,19 +262,21 @@ function test_p4() {
         if [ $sec -lt 10 ]; then
             sec=0$sec
         fi
-        echo " ($min:$sec)"
-    else
-        echo
+        msg="$msg ($min:$sec)"
     fi
+    echo "$msg"
     popd >/dev/null
+    return $rv
 }
 
 function test_stf() {
-    echo -n "$1"
+    msg="$1"
     pushd $(dirname $1) >/dev/null
     name=$(basename $1 .stf)
+    rv=0
     if [ ! -x $STF ]; then
-        echo " simple_test_framework not available"
+        echo "$msg simple_test_framework not available"
+        rv=4
     elif [ -d $name.out ]; then
         cd $name.out
         start=`date +%s`
@@ -284,18 +294,15 @@ function test_stf() {
             export TOFINO_BIN=$name.out/tofino.bin
             export TABLE_CONFIG=$name.out/tbl-cfg
             if "$STF" ../$name.stf >stf.txt 2>&1; then
-                echo -n " pass"
-                let pass++
+                msg="$msg pass"
             else
-                echo -n " fail"
-                let fail++
-                echo "$1:" >> $FAILLOG
-                sed -e '/WARN MAU::process_match Time gone backwards!/d' -e 's/^/  /' \
-                    stf.txt >> $FAILLOG
+                msg="$msg fail"
+                rv=1
+                flock $FAILLOG -c "echo '$1:' >>$FAILLOG; sed -e 's/^/  /' stf.txt >>$FAILLOG"
             fi
         else
-            echo -n " failed"
-            let fail++
+            msg="$msg failed"
+            rv=1
         fi
         if $TIME; then
             let elapsed=`date +%s`-start
@@ -304,24 +311,60 @@ function test_stf() {
             if [ $sec -lt 10 ]; then
                 sec=0$sec
             fi
-            echo " ($min:$sec)"
-        else
-            echo
+            msg="$msg ($min:$sec)"
         fi
+        echo "$msg"
     else
-        echo " not built"
+        echo "$msg not built"
+        rv=4
     fi
     popd >/dev/null
+    return $rv
+}
+
+pass=0
+fail=0
+skip=0
+expected_fail=0
+unexpected_pass=0
+running=0
+
+function wait_1() {
+    wait -n
+    case $? in
+    0)  let pass++
+        ;;
+    1)  let fail++
+        ;;
+    2)  let fail++
+        let expected_fail++
+        ;;
+    3)  let pass++
+        let unexpected_pass++
+        ;;
+    4)  let skip++
+        ;;
+    esac
+    let running--
 }
 
 for file in "$@"; do
+    if (( running >= PARALLEL )); then
+        wait_1
+    fi
     if [ "${file##*.}" == "p4" ]; then
-        test_p4 $file
+        let running++
+        test_p4 $file &
     elif [ "${file##*.}" == "stf" ]; then
-        test_stf $file
+        let running++
+        test_stf $file &
     else
         echo "unrecognized file type $file"
     fi
+done
+
+while (( running > 0 )); do
+    wait_1
 done
 
 if [ $pass -ne 1 ]; then
@@ -343,8 +386,8 @@ else
     uxp=""
 fi
 
-echo "$pmsg, $fmsg ($expected_fail expected) $uxp"
-echo "$pmsg, $fmsg ($expected_fail expected) $uxp" >>$FAILLOG
+echo "$pmsg, $fmsg ($expected_fail expected)$uxp"
+echo "$pmsg, $fmsg ($expected_fail expected)$uxp" >>$FAILLOG
 
 if [ $fail -ne $expected_fail ]; then
     exit 1
