@@ -174,8 +174,8 @@ void list_map_print_diff(json::vector *a, json::vector *b, int indent, const cha
             continue; }
         if (!ignore(p1->first) && !equiv(p1->second, p2->second, p1->first)) {
             int width = 80-indent, copy;
-            if (p1->first->test_width(width) && (copy = width) &&
-                p1->second->test_width(width) && p2->second->test_width(copy)
+            if (p1->first->test_width(width) && (copy = width) && p1->second &&
+                p1->second->test_width(width) && p2->second && p2->second->test_width(copy)
             ) {
                 do_output(p1->first, indent, "-", ": ");
                 std::cout << p1->second;
@@ -312,8 +312,8 @@ void sort_map_print_diff(json::map *a, json::map *b, int indent) {
             continue; }
         if (!ignore(p1->first) && !equiv(p1->second, p2->second, p1->first)) {
             int width = 80-indent, copy;
-            if (p1->first->test_width(width) && (copy = width) &&
-                p1->second->test_width(width) && p2->second->test_width(copy)
+            if (p1->first->test_width(width) && (copy = width) && p1->second &&
+		p1->second->test_width(width) && p2->second && p2->second->test_width(copy)
             ) {
                 do_output(p1->first, indent, "-", ": ");
                 std::cout << p1->second;
@@ -380,8 +380,8 @@ void print_diff(json::map *a, json::map *b, int indent) {
             continue; }
         if (!ignore(p1->first) && !equiv(p1->second, p2->second, p1->first)) {
             int width = 80-indent, copy;
-            if (p1->first->test_width(width) && (copy = width) &&
-                p1->second->test_width(width) && p2->second->test_width(copy)
+            if (p1->first->test_width(width) && (copy = width) && p1->second &&
+                p1->second->test_width(width) && p2->second && p2->second->test_width(copy)
             ) {
                 do_output(p1->first, indent, "-", ": ");
                 std::cout << p1->second;
