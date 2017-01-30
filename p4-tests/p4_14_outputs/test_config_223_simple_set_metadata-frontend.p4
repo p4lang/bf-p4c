@@ -68,11 +68,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.one.a  : ternary;
-            meta.meta.a: exact;
-            meta.meta.b: exact;
-            meta.meta.c: exact;
-            meta.meta.d: exact;
+            hdr.one.a  : ternary @name("hdr.one.a") ;
+            meta.meta.a: exact @name("meta.meta.a") ;
+            meta.meta.b: exact @name("meta.meta.b") ;
+            meta.meta.c: exact @name("meta.meta.c") ;
+            meta.meta.d: exact @name("meta.meta.d") ;
         }
         size = 512;
         default_action = NoAction();

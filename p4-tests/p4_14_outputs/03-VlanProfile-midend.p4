@@ -198,7 +198,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_3();
         }
         key = {
-            hdr.vlan_tag.vlan_id: exact;
+            hdr.vlan_tag.vlan_id: exact @name("hdr.vlan_tag.vlan_id") ;
         }
         size = 4096;
         default_action = NoAction_3();

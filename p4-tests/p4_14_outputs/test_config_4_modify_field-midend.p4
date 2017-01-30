@@ -183,7 +183,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.my_test_config_1.a_32: lpm;
+            hdr.my_test_config_1.a_32: lpm @name("hdr.my_test_config_1.a_32") ;
         }
         max_size = 1024;
         default_action = NoAction_0();

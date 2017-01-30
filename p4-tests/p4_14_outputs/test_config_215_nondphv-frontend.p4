@@ -73,8 +73,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @default_only NoAction();
         }
         key = {
-            meta.meta.e: exact;
-            meta.meta.h: exact;
+            meta.meta.e: exact @name("meta.meta.e") ;
+            meta.meta.h: exact @name("meta.meta.h") ;
         }
         size = 4096;
         default_action = NoAction();
@@ -125,7 +125,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.hdr_0.b: ternary;
+            hdr.hdr_0.b: ternary @name("hdr.hdr_0.b") ;
         }
         size = 512;
         default_action = NoAction();
@@ -137,7 +137,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.hdr_1.c: ternary;
+            hdr.hdr_1.c: ternary @name("hdr.hdr_1.c") ;
         }
         size = 512;
         default_action = NoAction();
@@ -149,19 +149,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            meta.meta.a: exact;
-            meta.meta.b: exact;
-            meta.meta.c: exact;
-            meta.meta.d: exact;
-            meta.meta.e: exact;
-            meta.meta.f: exact;
-            meta.meta.g: exact;
-            meta.meta.h: exact;
-            meta.meta.i: exact;
-            meta.meta.j: exact;
-            meta.meta.k: exact;
-            meta.meta.l: exact;
-            meta.meta.m: exact;
+            meta.meta.a: exact @name("meta.meta.a") ;
+            meta.meta.b: exact @name("meta.meta.b") ;
+            meta.meta.c: exact @name("meta.meta.c") ;
+            meta.meta.d: exact @name("meta.meta.d") ;
+            meta.meta.e: exact @name("meta.meta.e") ;
+            meta.meta.f: exact @name("meta.meta.f") ;
+            meta.meta.g: exact @name("meta.meta.g") ;
+            meta.meta.h: exact @name("meta.meta.h") ;
+            meta.meta.i: exact @name("meta.meta.i") ;
+            meta.meta.j: exact @name("meta.meta.j") ;
+            meta.meta.k: exact @name("meta.meta.k") ;
+            meta.meta.l: exact @name("meta.meta.l") ;
+            meta.meta.m: exact @name("meta.meta.m") ;
         }
         size = 1024;
         default_action = NoAction();

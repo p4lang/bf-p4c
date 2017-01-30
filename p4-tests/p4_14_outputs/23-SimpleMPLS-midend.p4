@@ -204,7 +204,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.mpls.label: exact;
+            hdr.mpls.label: exact @name("hdr.mpls.label") ;
         }
         default_action = NoAction_0();
     }

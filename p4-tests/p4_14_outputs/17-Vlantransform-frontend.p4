@@ -300,10 +300,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.vlan_tag[0].isValid(): exact;
-            hdr.vlan_tag[0].vid      : exact;
-            hdr.vlan_tag[1].isValid(): exact;
-            hdr.vlan_tag[1].vid      : exact;
+            hdr.vlan_tag[0].isValid(): exact @name("hdr.vlan_tag[0].isValid()") ;
+            hdr.vlan_tag[0].vid      : exact @name("hdr.vlan_tag[0].vid") ;
+            hdr.vlan_tag[1].isValid(): exact @name("hdr.vlan_tag[1].isValid()") ;
+            hdr.vlan_tag[1].vid      : exact @name("hdr.vlan_tag[1].vid") ;
         }
         default_action = NoAction();
     }

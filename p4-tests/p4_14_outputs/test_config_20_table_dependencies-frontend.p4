@@ -196,8 +196,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.ethernet.etherType: lpm;
-            hdr.ipv4.diffserv     : exact;
+            hdr.ethernet.etherType: lpm @name("hdr.ethernet.etherType") ;
+            hdr.ipv4.diffserv     : exact @name("hdr.ipv4.diffserv") ;
         }
         max_size = 1024;
         default_action = NoAction();
@@ -209,8 +209,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.ipv4.srcAddr: exact;
-            hdr.ipv4.dstAddr: exact;
+            hdr.ipv4.srcAddr: exact @name("hdr.ipv4.srcAddr") ;
+            hdr.ipv4.dstAddr: exact @name("hdr.ipv4.dstAddr") ;
         }
         max_size = 16384;
         default_action = NoAction();
@@ -222,8 +222,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.ipv4.srcAddr : exact;
-            hdr.ipv4.totalLen: exact;
+            hdr.ipv4.srcAddr : exact @name("hdr.ipv4.srcAddr") ;
+            hdr.ipv4.totalLen: exact @name("hdr.ipv4.totalLen") ;
         }
         max_size = 4096;
         default_action = NoAction();
@@ -234,7 +234,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.ipv4.srcAddr: exact;
+            hdr.ipv4.srcAddr: exact @name("hdr.ipv4.srcAddr") ;
         }
         max_size = 2048;
         default_action = NoAction();

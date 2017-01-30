@@ -170,11 +170,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.pkt.field_a: exact;
-            hdr.pkt.field_b: exact;
-            hdr.pkt.field_c: exact;
-            hdr.pkt.field_d: exact;
-            hdr.pkt.field_e: exact;
+            hdr.pkt.field_a: exact @name("hdr.pkt.field_a") ;
+            hdr.pkt.field_b: exact @name("hdr.pkt.field_b") ;
+            hdr.pkt.field_c: exact @name("hdr.pkt.field_c") ;
+            hdr.pkt.field_d: exact @name("hdr.pkt.field_d") ;
+            hdr.pkt.field_e: exact @name("hdr.pkt.field_e") ;
         }
         default_action = NoAction_0();
     }

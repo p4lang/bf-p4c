@@ -250,13 +250,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.ethernet.srcAddr  : ternary;
-            hdr.ethernet.dstAddr  : ternary;
-            hdr.ethernet.etherType: exact;
-            hdr.ipv4.srcAddr      : ternary;
-            hdr.ipv4.dstAddr      : ternary;
-            hdr.ipv4.protocol     : exact;
-            hdr.ipv4.version      : exact;
+            hdr.ethernet.srcAddr  : ternary @name("hdr.ethernet.srcAddr") ;
+            hdr.ethernet.dstAddr  : ternary @name("hdr.ethernet.dstAddr") ;
+            hdr.ethernet.etherType: exact @name("hdr.ethernet.etherType") ;
+            hdr.ipv4.srcAddr      : ternary @name("hdr.ipv4.srcAddr") ;
+            hdr.ipv4.dstAddr      : ternary @name("hdr.ipv4.dstAddr") ;
+            hdr.ipv4.protocol     : exact @name("hdr.ipv4.protocol") ;
+            hdr.ipv4.version      : exact @name("hdr.ipv4.version") ;
         }
         size = 2048;
         default_action = NoAction();

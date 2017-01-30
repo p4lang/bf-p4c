@@ -399,9 +399,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.ethernet.dstAddr: exact;
-            hdr.ethernet.srcAddr: exact;
-            hdr.ipv4.dstAddr    : exact;
+            hdr.ethernet.dstAddr: exact @name("hdr.ethernet.dstAddr") ;
+            hdr.ethernet.srcAddr: exact @name("hdr.ethernet.srcAddr") ;
+            hdr.ipv4.dstAddr    : exact @name("hdr.ipv4.dstAddr") ;
         }
         default_action = NoAction_0();
     }
@@ -412,8 +412,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_13();
         }
         key = {
-            hdr.ethernet.dstAddr: exact;
-            hdr.ethernet.srcAddr: exact;
+            hdr.ethernet.dstAddr: exact @name("hdr.ethernet.dstAddr") ;
+            hdr.ethernet.srcAddr: exact @name("hdr.ethernet.srcAddr") ;
         }
         default_action = NoAction_13();
     }
@@ -424,9 +424,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_14();
         }
         key = {
-            hdr.ipv4.srcAddr: exact;
-            hdr.ipv4.dstAddr: exact;
-            hdr.tcp.dstPort : exact;
+            hdr.ipv4.srcAddr: exact @name("hdr.ipv4.srcAddr") ;
+            hdr.ipv4.dstAddr: exact @name("hdr.ipv4.dstAddr") ;
+            hdr.tcp.dstPort : exact @name("hdr.tcp.dstPort") ;
         }
         default_action = NoAction_14();
     }
@@ -437,10 +437,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_15();
         }
         key = {
-            hdr.ipv4.dstAddr    : exact;
-            hdr.ipv4.srcAddr    : exact;
-            hdr.ethernet.dstAddr: exact;
-            hdr.ethernet.srcAddr: exact;
+            hdr.ipv4.dstAddr    : exact @name("hdr.ipv4.dstAddr") ;
+            hdr.ipv4.srcAddr    : exact @name("hdr.ipv4.srcAddr") ;
+            hdr.ethernet.dstAddr: exact @name("hdr.ethernet.dstAddr") ;
+            hdr.ethernet.srcAddr: exact @name("hdr.ethernet.srcAddr") ;
         }
         size = 16384;
         default_action = NoAction_15();
@@ -452,8 +452,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_16();
         }
         key = {
-            hdr.ipv4.dstAddr: exact;
-            hdr.tcp.dstPort : exact;
+            hdr.ipv4.dstAddr: exact @name("hdr.ipv4.dstAddr") ;
+            hdr.tcp.dstPort : exact @name("hdr.tcp.dstPort") ;
         }
         default_action = NoAction_16();
     }
@@ -464,8 +464,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_17();
         }
         key = {
-            hdr.ipv4.dstAddr: exact;
-            hdr.tcp.srcPort : exact;
+            hdr.ipv4.dstAddr: exact @name("hdr.ipv4.dstAddr") ;
+            hdr.tcp.srcPort : exact @name("hdr.tcp.srcPort") ;
         }
         default_action = NoAction_17();
     }
@@ -476,9 +476,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_18();
         }
         key = {
-            hdr.ipv4.dstAddr: exact;
-            hdr.ipv4.srcAddr: exact;
-            hdr.tcp.dstPort : exact;
+            hdr.ipv4.dstAddr: exact @name("hdr.ipv4.dstAddr") ;
+            hdr.ipv4.srcAddr: exact @name("hdr.ipv4.srcAddr") ;
+            hdr.tcp.dstPort : exact @name("hdr.tcp.dstPort") ;
         }
         default_action = NoAction_18();
     }
@@ -489,8 +489,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_19();
         }
         key = {
-            hdr.ipv4.dstAddr    : exact;
-            hdr.ethernet.dstAddr: exact;
+            hdr.ipv4.dstAddr    : exact @name("hdr.ipv4.dstAddr") ;
+            hdr.ethernet.dstAddr: exact @name("hdr.ethernet.dstAddr") ;
         }
         default_action = NoAction_19();
     }
@@ -501,8 +501,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_20();
         }
         key = {
-            hdr.ethernet.dstAddr: exact;
-            hdr.ipv4.dstAddr    : exact;
+            hdr.ethernet.dstAddr: exact @name("hdr.ethernet.dstAddr") ;
+            hdr.ipv4.dstAddr    : exact @name("hdr.ipv4.dstAddr") ;
         }
         default_action = NoAction_20();
     }
@@ -513,7 +513,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_21();
         }
         key = {
-            hdr.ipv4.dstAddr: exact;
+            hdr.ipv4.dstAddr: exact @name("hdr.ipv4.dstAddr") ;
         }
         default_action = NoAction_21();
     }
@@ -524,9 +524,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_22();
         }
         key = {
-            hdr.ipv4.dstAddr    : exact;
-            hdr.ipv4.srcAddr    : exact;
-            hdr.ethernet.srcAddr: exact;
+            hdr.ipv4.dstAddr    : exact @name("hdr.ipv4.dstAddr") ;
+            hdr.ipv4.srcAddr    : exact @name("hdr.ipv4.srcAddr") ;
+            hdr.ethernet.srcAddr: exact @name("hdr.ethernet.srcAddr") ;
         }
         default_action = NoAction_22();
     }
@@ -537,9 +537,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_23();
         }
         key = {
-            hdr.ethernet.dstAddr: exact;
-            hdr.ethernet.srcAddr: exact;
-            hdr.tcp.srcPort     : exact;
+            hdr.ethernet.dstAddr: exact @name("hdr.ethernet.dstAddr") ;
+            hdr.ethernet.srcAddr: exact @name("hdr.ethernet.srcAddr") ;
+            hdr.tcp.srcPort     : exact @name("hdr.tcp.srcPort") ;
         }
         default_action = NoAction_23();
     }

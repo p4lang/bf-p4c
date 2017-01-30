@@ -196,7 +196,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @default_only NoAction();
         }
         key = {
-            hdr.pkt.field_i_8: exact;
+            hdr.pkt.field_i_8: exact @name("hdr.pkt.field_i_8") ;
         }
         size = 1024;
         default_action = NoAction();
@@ -217,8 +217,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.pkt.field_g_16: exact;
-            hdr.pkt.color_0   : exact;
+            hdr.pkt.field_g_16: exact @name("hdr.pkt.field_g_16") ;
+            hdr.pkt.color_0   : exact @name("hdr.pkt.color_0") ;
         }
         size = 65536;
         default_action = NoAction();

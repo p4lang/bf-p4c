@@ -60,7 +60,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.pkt.field_a_32: ternary;
+            hdr.pkt.field_a_32: ternary @name("hdr.pkt.field_a_32") ;
         }
         default_action = NoAction_0();
     }
@@ -70,7 +70,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_4();
         }
         key = {
-            hdr.pkt.field_b_32: ternary;
+            hdr.pkt.field_b_32: ternary @name("hdr.pkt.field_b_32") ;
         }
         default_action = NoAction_4();
     }
@@ -81,7 +81,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_5();
         }
         key = {
-            hdr.pkt.field_c_32: ternary;
+            hdr.pkt.field_c_32: ternary @name("hdr.pkt.field_c_32") ;
         }
         default_action = NoAction_5();
     }

@@ -176,9 +176,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @default_only NoAction_0();
         }
         key = {
-            hdr.eg_intr_md_from_parser_aux.egress_parser_err: exact;
-            hdr.ethernet.dstAddr                            : exact;
-            meta.m.foo                                      : exact;
+            hdr.eg_intr_md_from_parser_aux.egress_parser_err: exact @name("hdr.eg_intr_md_from_parser_aux.egress_parser_err") ;
+            hdr.ethernet.dstAddr                            : exact @name("hdr.ethernet.dstAddr") ;
+            meta.m.foo                                      : exact @name("meta.m.foo") ;
         }
         default_action = NoAction_0();
     }
@@ -203,7 +203,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_1();
         }
         key = {
-            hdr.ig_intr_md_from_parser_aux.ingress_parser_err: exact;
+            hdr.ig_intr_md_from_parser_aux.ingress_parser_err: exact @name("hdr.ig_intr_md_from_parser_aux.ingress_parser_err") ;
         }
         default_action = NoAction_1();
     }

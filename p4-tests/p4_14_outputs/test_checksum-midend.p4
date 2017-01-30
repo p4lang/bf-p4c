@@ -350,8 +350,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_1();
         }
         key = {
-            hdr.ig_intr_md.ingress_port                      : exact;
-            hdr.ig_intr_md_from_parser_aux.ingress_parser_err: exact;
+            hdr.ig_intr_md.ingress_port                      : exact @name("hdr.ig_intr_md.ingress_port") ;
+            hdr.ig_intr_md_from_parser_aux.ingress_parser_err: exact @name("hdr.ig_intr_md_from_parser_aux.ingress_parser_err") ;
         }
         size = 288;
         default_action = NoAction_1();
@@ -363,7 +363,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_5();
         }
         key = {
-            hdr.ipv4.dstAddr: exact;
+            hdr.ipv4.dstAddr: exact @name("hdr.ipv4.dstAddr") ;
         }
         size = 512;
         default_action = NoAction_5();

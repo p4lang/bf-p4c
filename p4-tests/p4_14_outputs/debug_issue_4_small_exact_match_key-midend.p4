@@ -195,7 +195,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.ipv4.hdrChecksum: exact;
+            hdr.ipv4.hdrChecksum: exact @name("hdr.ipv4.hdrChecksum") ;
         }
         default_action = NoAction_0();
     }

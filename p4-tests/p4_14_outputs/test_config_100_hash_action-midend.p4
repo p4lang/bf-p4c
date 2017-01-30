@@ -178,7 +178,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @default_only NoAction_0();
         }
         key = {
-            meta.meta.field_17: exact;
+            meta.meta.field_17: exact @name("meta.meta.field_17") ;
         }
         default_action = NoAction_0();
         @name("extra_stats") counters = direct_counter(CounterType.bytes);
@@ -215,7 +215,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_1();
         }
         key = {
-            hdr.pkt.field_i_8: exact;
+            hdr.pkt.field_i_8: exact @name("hdr.pkt.field_i_8") ;
         }
         size = 256;
         default_action = NoAction_1();
@@ -226,7 +226,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_6();
         }
         key = {
-            hdr.pkt.field_g_16: exact;
+            hdr.pkt.field_g_16: exact @name("hdr.pkt.field_g_16") ;
         }
         size = 65536;
         default_action = NoAction_6();

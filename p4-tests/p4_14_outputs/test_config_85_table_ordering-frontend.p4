@@ -183,7 +183,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.pkt.field_b: exact;
+            hdr.pkt.field_b: exact @name("hdr.pkt.field_b") ;
         }
         size = 256000;
         default_action = NoAction();
@@ -195,7 +195,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.pkt.field_d: exact;
+            hdr.pkt.field_d: exact @name("hdr.pkt.field_d") ;
         }
         default_action = NoAction();
     }
@@ -206,7 +206,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.pkt.field_f: exact;
+            hdr.pkt.field_f: exact @name("hdr.pkt.field_f") ;
         }
         default_action = NoAction();
     }
@@ -217,7 +217,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.pkt.field_h: exact;
+            hdr.pkt.field_h: exact @name("hdr.pkt.field_h") ;
         }
         default_action = NoAction();
     }
@@ -228,7 +228,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.pkt.field_e: exact;
+            hdr.pkt.field_e: exact @name("hdr.pkt.field_e") ;
         }
         default_action = NoAction();
     }

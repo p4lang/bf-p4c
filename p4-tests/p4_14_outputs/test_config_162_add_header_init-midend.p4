@@ -192,10 +192,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.pkt.field_a_32    : ternary;
-            hdr.to_add.field_one  : exact;
-            hdr.to_add.field_three: exact;
-            hdr.to_add.field_four : exact;
+            hdr.pkt.field_a_32    : ternary @name("hdr.pkt.field_a_32") ;
+            hdr.to_add.field_one  : exact @name("hdr.to_add.field_one") ;
+            hdr.to_add.field_three: exact @name("hdr.to_add.field_three") ;
+            hdr.to_add.field_four : exact @name("hdr.to_add.field_four") ;
         }
         size = 512;
         default_action = NoAction_0();

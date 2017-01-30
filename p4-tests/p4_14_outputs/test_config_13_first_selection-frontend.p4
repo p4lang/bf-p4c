@@ -200,7 +200,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.ipv4.blah1: ternary;
+            hdr.ipv4.blah1: ternary @name("hdr.ipv4.blah1") ;
         }
         default_action = NoAction();
     }
@@ -212,12 +212,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.ethernet.etherType: exact;
-            hdr.ethernet.dstAddr  : exact;
-            hdr.ethernet.srcAddr  : exact;
-            hdr.ipv4.blah1        : selector;
-            hdr.ipv4.blah2        : selector;
-            hdr.ipv4.blah3        : selector;
+            hdr.ethernet.etherType: exact @name("hdr.ethernet.etherType") ;
+            hdr.ethernet.dstAddr  : exact @name("hdr.ethernet.dstAddr") ;
+            hdr.ethernet.srcAddr  : exact @name("hdr.ethernet.srcAddr") ;
+            hdr.ipv4.blah1        : selector @name("hdr.ipv4.blah1") ;
+            hdr.ipv4.blah2        : selector @name("hdr.ipv4.blah2") ;
+            hdr.ipv4.blah3        : selector @name("hdr.ipv4.blah3") ;
         }
         size = 8192;
         default_action = NoAction();
@@ -229,10 +229,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.ethernet.etherType: exact;
-            hdr.ipv4.blah1        : selector;
-            hdr.ipv4.blah2        : selector;
-            hdr.ipv4.blah3        : selector;
+            hdr.ethernet.etherType: exact @name("hdr.ethernet.etherType") ;
+            hdr.ipv4.blah1        : selector @name("hdr.ipv4.blah1") ;
+            hdr.ipv4.blah2        : selector @name("hdr.ipv4.blah2") ;
+            hdr.ipv4.blah3        : selector @name("hdr.ipv4.blah3") ;
         }
         size = 4096;
         default_action = NoAction();

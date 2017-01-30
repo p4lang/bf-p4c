@@ -200,7 +200,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.ipv4.srcAddr: lpm;
+            hdr.ipv4.srcAddr: lpm @name("hdr.ipv4.srcAddr") ;
         }
         max_size = 1024;
         default_action = NoAction_0();

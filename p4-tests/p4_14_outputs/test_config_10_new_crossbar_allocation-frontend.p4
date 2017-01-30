@@ -196,8 +196,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.ethernet.etherType    : ternary;
-            hdr.ethernet.srcAddr[39:8]: ternary;
+            hdr.ethernet.etherType    : ternary @name("hdr.ethernet.etherType") ;
+            hdr.ethernet.srcAddr[39:8]: ternary @name("hdr.ethernet.srcAddr[39:8]") ;
         }
         max_size = 1024;
         default_action = NoAction();
@@ -209,11 +209,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.ipv4.srcAddr    : exact;
-            hdr.ipv4.dstAddr    : exact;
-            hdr.ipv4.fragOffset : exact;
-            hdr.ethernet.srcAddr: exact;
-            hdr.ethernet.dstAddr: exact;
+            hdr.ipv4.srcAddr    : exact @name("hdr.ipv4.srcAddr") ;
+            hdr.ipv4.dstAddr    : exact @name("hdr.ipv4.dstAddr") ;
+            hdr.ipv4.fragOffset : exact @name("hdr.ipv4.fragOffset") ;
+            hdr.ethernet.srcAddr: exact @name("hdr.ethernet.srcAddr") ;
+            hdr.ethernet.dstAddr: exact @name("hdr.ethernet.dstAddr") ;
         }
         max_size = 40960;
         default_action = NoAction();

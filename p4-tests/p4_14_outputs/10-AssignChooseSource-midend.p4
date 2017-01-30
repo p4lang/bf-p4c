@@ -202,7 +202,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_6();
         }
         key = {
-            hdr.ethernet.dstAddr: exact;
+            hdr.ethernet.dstAddr: exact @name("hdr.ethernet.dstAddr") ;
         }
         default_action = NoAction_6();
     }
@@ -212,7 +212,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_7();
         }
         key = {
-            hdr.ig_intr_md.ingress_port: exact;
+            hdr.ig_intr_md.ingress_port: exact @name("hdr.ig_intr_md.ingress_port") ;
         }
         size = 288;
         default_action = NoAction_7();

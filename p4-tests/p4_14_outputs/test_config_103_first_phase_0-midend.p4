@@ -208,7 +208,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.ig_intr_md.ingress_port: exact;
+            hdr.ig_intr_md.ingress_port: exact @name("hdr.ig_intr_md.ingress_port") ;
         }
         size = 128;
         default_action = NoAction_0();
@@ -219,22 +219,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_3();
         }
         key = {
-            hdr.pkt.field_g_16  : exact;
-            hdr.pkt.color_0     : exact;
-            meta.meta.field_a0_1: exact;
-            meta.meta.field_a1_1: exact;
-            meta.meta.field_a2_1: exact;
-            meta.meta.field_a3_1: exact;
-            meta.meta.field_b_4 : exact;
-            meta.meta.field_c_4 : exact;
-            meta.meta.field_d_4 : exact;
-            meta.meta.field_e_4 : exact;
-            meta.meta.field_f_4 : exact;
-            meta.meta.field_g_4 : exact;
-            meta.meta.field_h0_1: exact;
-            meta.meta.field_h1_1: exact;
-            meta.meta.field_h2_1: exact;
-            meta.meta.field_h3_1: exact;
+            hdr.pkt.field_g_16  : exact @name("hdr.pkt.field_g_16") ;
+            hdr.pkt.color_0     : exact @name("hdr.pkt.color_0") ;
+            meta.meta.field_a0_1: exact @name("meta.meta.field_a0_1") ;
+            meta.meta.field_a1_1: exact @name("meta.meta.field_a1_1") ;
+            meta.meta.field_a2_1: exact @name("meta.meta.field_a2_1") ;
+            meta.meta.field_a3_1: exact @name("meta.meta.field_a3_1") ;
+            meta.meta.field_b_4 : exact @name("meta.meta.field_b_4") ;
+            meta.meta.field_c_4 : exact @name("meta.meta.field_c_4") ;
+            meta.meta.field_d_4 : exact @name("meta.meta.field_d_4") ;
+            meta.meta.field_e_4 : exact @name("meta.meta.field_e_4") ;
+            meta.meta.field_f_4 : exact @name("meta.meta.field_f_4") ;
+            meta.meta.field_g_4 : exact @name("meta.meta.field_g_4") ;
+            meta.meta.field_h0_1: exact @name("meta.meta.field_h0_1") ;
+            meta.meta.field_h1_1: exact @name("meta.meta.field_h1_1") ;
+            meta.meta.field_h2_1: exact @name("meta.meta.field_h2_1") ;
+            meta.meta.field_h3_1: exact @name("meta.meta.field_h3_1") ;
         }
         size = 65536;
         default_action = NoAction_3();

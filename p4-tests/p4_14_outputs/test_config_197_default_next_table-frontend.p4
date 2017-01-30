@@ -188,11 +188,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.pkt.field_l_8 : ternary;
-            hdr.pkt.field_a_32: ternary;
-            hdr.pkt.field_b_32: exact;
-            hdr.pkt.field_c_32: exact;
-            hdr.pkt.field_e_16: exact;
+            hdr.pkt.field_l_8 : ternary @name("hdr.pkt.field_l_8") ;
+            hdr.pkt.field_a_32: ternary @name("hdr.pkt.field_a_32") ;
+            hdr.pkt.field_b_32: exact @name("hdr.pkt.field_b_32") ;
+            hdr.pkt.field_c_32: exact @name("hdr.pkt.field_c_32") ;
+            hdr.pkt.field_e_16: exact @name("hdr.pkt.field_e_16") ;
         }
         size = 256;
         default_action = NoAction();
@@ -203,7 +203,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.pkt.field_a_32[7:0]: ternary;
+            hdr.pkt.field_a_32[7:0]: ternary @name("hdr.pkt.field_a_32[7:0]") ;
         }
         size = 256;
         default_action = NoAction();
@@ -221,7 +221,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.pkt.field_a_32: ternary;
+            hdr.pkt.field_a_32: ternary @name("hdr.pkt.field_a_32") ;
         }
         size = 512;
         default_action = NoAction();

@@ -178,12 +178,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.my_test_config_1.a_32: exact;
-            hdr.my_test_config_1.e_32: exact;
-            hdr.my_test_config_1.f_32: exact;
-            hdr.my_test_config_1.g_32: exact;
-            hdr.my_test_config_1.h_32: exact;
-            hdr.my_test_config_1.i_32: exact;
+            hdr.my_test_config_1.a_32: exact @name("hdr.my_test_config_1.a_32") ;
+            hdr.my_test_config_1.e_32: exact @name("hdr.my_test_config_1.e_32") ;
+            hdr.my_test_config_1.f_32: exact @name("hdr.my_test_config_1.f_32") ;
+            hdr.my_test_config_1.g_32: exact @name("hdr.my_test_config_1.g_32") ;
+            hdr.my_test_config_1.h_32: exact @name("hdr.my_test_config_1.h_32") ;
+            hdr.my_test_config_1.i_32: exact @name("hdr.my_test_config_1.i_32") ;
         }
         max_size = 16384;
         default_action = NoAction_0();

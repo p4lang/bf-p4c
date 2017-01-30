@@ -222,7 +222,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: ternary;
+            hdr.ethernet.srcAddr[15:0]: ternary @name("hdr.ethernet.srcAddr[15:0]") ;
         }
         size = 512;
         default_action = NoAction();
@@ -234,10 +234,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            meta.m.p: ternary;
-            meta.m.t: exact;
-            meta.m.c: exact;
-            meta.m.v: exact;
+            meta.m.p: ternary @name("meta.m.p") ;
+            meta.m.t: exact @name("meta.m.t") ;
+            meta.m.c: exact @name("meta.m.c") ;
+            meta.m.v: exact @name("meta.m.v") ;
         }
         size = 512;
         default_action = NoAction();

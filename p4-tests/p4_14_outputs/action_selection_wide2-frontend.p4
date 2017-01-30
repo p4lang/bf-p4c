@@ -72,10 +72,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.data.f1: exact;
-            hdr.data.h1: selector;
-            hdr.data.h2: selector;
-            hdr.data.h3: selector;
+            hdr.data.f1: exact @name("hdr.data.f1") ;
+            hdr.data.h1: selector @name("hdr.data.h1") ;
+            hdr.data.h2: selector @name("hdr.data.h2") ;
+            hdr.data.h3: selector @name("hdr.data.h3") ;
         }
         size = 10000;
         default_action = NoAction();
@@ -89,10 +89,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.data.f2: exact;
-            hdr.data.h1: selector;
-            hdr.data.h2: selector;
-            hdr.data.h3: selector;
+            hdr.data.f2: exact @name("hdr.data.f2") ;
+            hdr.data.h1: selector @name("hdr.data.h1") ;
+            hdr.data.h2: selector @name("hdr.data.h2") ;
+            hdr.data.h3: selector @name("hdr.data.h3") ;
         }
         size = 1024;
         default_action = NoAction();

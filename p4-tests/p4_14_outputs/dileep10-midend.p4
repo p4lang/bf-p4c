@@ -255,12 +255,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.ipv4.dstAddr    : exact;
-            hdr.ipv4.srcAddr    : exact;
-            hdr.ethernet.dstAddr: exact;
-            hdr.ethernet.srcAddr: exact;
-            hdr.tcp.srcPort     : exact;
-            hdr.tcp.dstPort     : exact;
+            hdr.ipv4.dstAddr    : exact @name("hdr.ipv4.dstAddr") ;
+            hdr.ipv4.srcAddr    : exact @name("hdr.ipv4.srcAddr") ;
+            hdr.ethernet.dstAddr: exact @name("hdr.ethernet.dstAddr") ;
+            hdr.ethernet.srcAddr: exact @name("hdr.ethernet.srcAddr") ;
+            hdr.tcp.srcPort     : exact @name("hdr.tcp.srcPort") ;
+            hdr.tcp.dstPort     : exact @name("hdr.tcp.dstPort") ;
         }
         size = 32768;
         default_action = NoAction_0();

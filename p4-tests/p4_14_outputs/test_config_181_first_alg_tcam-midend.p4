@@ -236,9 +236,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            meta.meta.partition_index: exact;
-            meta.meta.vrf            : exact;
-            hdr.ipv4.dstAddr         : lpm;
+            meta.meta.partition_index: exact @name("meta.meta.partition_index") ;
+            meta.meta.vrf            : exact @name("meta.meta.vrf") ;
+            hdr.ipv4.dstAddr         : lpm @name("hdr.ipv4.dstAddr") ;
         }
         size = 65536;
         default_action = NoAction_0();
@@ -249,8 +249,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_5();
         }
         key = {
-            meta.meta.vrf   : exact;
-            hdr.ipv4.dstAddr: lpm;
+            meta.meta.vrf   : exact @name("meta.meta.vrf") ;
+            hdr.ipv4.dstAddr: lpm @name("hdr.ipv4.dstAddr") ;
         }
         size = 1024;
         default_action = NoAction_5();
@@ -262,7 +262,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_6();
         }
         key = {
-            hdr.ipv4.dstAddr: exact;
+            hdr.ipv4.dstAddr: exact @name("hdr.ipv4.dstAddr") ;
         }
         default_action = NoAction_6();
     }
@@ -272,7 +272,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_7();
         }
         key = {
-            hdr.ipv4.dstAddr: ternary;
+            hdr.ipv4.dstAddr: ternary @name("hdr.ipv4.dstAddr") ;
         }
         default_action = NoAction_7();
     }

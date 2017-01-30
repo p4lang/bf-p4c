@@ -43,7 +43,7 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
     }
     @name("test1") table test1() {
         key = {
-            hdrs.data.f1: ternary;
+            hdrs.data.f1: ternary @name("hdrs.data.f1") ;
         }
         actions = {
             setb1_0();

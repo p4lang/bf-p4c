@@ -71,7 +71,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.one.a: ternary;
+            hdr.one.a: ternary @name("hdr.one.a") ;
         }
         size = 512;
         default_action = NoAction_0();

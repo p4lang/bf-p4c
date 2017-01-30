@@ -47,11 +47,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.pkt.srcAddr : exact;
-            hdr.pkt.dstAddr : exact;
-            hdr.pkt.protocol: exact;
-            hdr.pkt.srcPort : exact;
-            hdr.pkt.dstPort : exact;
+            hdr.pkt.srcAddr : exact @name("hdr.pkt.srcAddr") ;
+            hdr.pkt.dstAddr : exact @name("hdr.pkt.dstAddr") ;
+            hdr.pkt.protocol: exact @name("hdr.pkt.protocol") ;
+            hdr.pkt.srcPort : exact @name("hdr.pkt.srcPort") ;
+            hdr.pkt.dstPort : exact @name("hdr.pkt.dstPort") ;
         }
         size = 400000;
         default_action = NoAction_0();

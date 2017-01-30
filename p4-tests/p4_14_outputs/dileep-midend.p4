@@ -306,7 +306,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.ipv4.dstAddr: lpm;
+            hdr.ipv4.dstAddr: lpm @name("hdr.ipv4.dstAddr") ;
         }
         default_action = NoAction_0();
     }
@@ -317,8 +317,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_8();
         }
         key = {
-            hdr.ipv4.dstAddr: exact;
-            hdr.ipv4.srcAddr: exact;
+            hdr.ipv4.dstAddr: exact @name("hdr.ipv4.dstAddr") ;
+            hdr.ipv4.srcAddr: exact @name("hdr.ipv4.srcAddr") ;
         }
         size = 28672;
         default_action = NoAction_8();
@@ -330,7 +330,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_9();
         }
         key = {
-            hdr.ipv4.dstAddr: exact;
+            hdr.ipv4.dstAddr: exact @name("hdr.ipv4.dstAddr") ;
         }
         size = 8192;
         default_action = NoAction_9();
@@ -342,8 +342,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_10();
         }
         key = {
-            hdr.ipv4.dstAddr: lpm;
-            hdr.ipv4.srcAddr: exact;
+            hdr.ipv4.dstAddr: lpm @name("hdr.ipv4.dstAddr") ;
+            hdr.ipv4.srcAddr: exact @name("hdr.ipv4.srcAddr") ;
         }
         size = 1024;
         default_action = NoAction_10();
@@ -355,7 +355,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_11();
         }
         key = {
-            hdr.ipv4.dstAddr: lpm;
+            hdr.ipv4.dstAddr: lpm @name("hdr.ipv4.dstAddr") ;
         }
         default_action = NoAction_11();
     }
@@ -366,7 +366,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_12();
         }
         key = {
-            hdr.ethernet.srcAddr: ternary;
+            hdr.ethernet.srcAddr: ternary @name("hdr.ethernet.srcAddr") ;
         }
         default_action = NoAction_12();
     }
@@ -377,7 +377,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_13();
         }
         key = {
-            hdr.ethernet.srcAddr: ternary;
+            hdr.ethernet.srcAddr: ternary @name("hdr.ethernet.srcAddr") ;
         }
         default_action = NoAction_13();
     }

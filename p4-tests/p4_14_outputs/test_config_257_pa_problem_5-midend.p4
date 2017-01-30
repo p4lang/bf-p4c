@@ -259,7 +259,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: ternary;
+            hdr.ethernet.srcAddr[15:0]: ternary @name("hdr.ethernet.srcAddr[15:0]") ;
         }
         size = 512;
         default_action = NoAction_0();
@@ -271,7 +271,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_6();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: ternary;
+            hdr.ethernet.srcAddr[15:0]: ternary @name("hdr.ethernet.srcAddr[15:0]") ;
         }
         size = 512;
         default_action = NoAction_6();
@@ -283,7 +283,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_7();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: ternary;
+            hdr.ethernet.srcAddr[15:0]: ternary @name("hdr.ethernet.srcAddr[15:0]") ;
         }
         size = 512;
         default_action = NoAction_7();
@@ -295,7 +295,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_8();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: ternary;
+            hdr.ethernet.srcAddr[15:0]: ternary @name("hdr.ethernet.srcAddr[15:0]") ;
         }
         size = 512;
         default_action = NoAction_8();
@@ -307,14 +307,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_9();
         }
         key = {
-            meta.m.p : exact;
-            meta.m.c : exact;
-            meta.m.v : exact;
-            meta.m.t : exact;
-            meta.m2.p: exact;
-            meta.m2.c: exact;
-            meta.m2.v: exact;
-            meta.m2.t: exact;
+            meta.m.p : exact @name("meta.m.p") ;
+            meta.m.c : exact @name("meta.m.c") ;
+            meta.m.v : exact @name("meta.m.v") ;
+            meta.m.t : exact @name("meta.m.t") ;
+            meta.m2.p: exact @name("meta.m2.p") ;
+            meta.m2.c: exact @name("meta.m2.c") ;
+            meta.m2.v: exact @name("meta.m2.v") ;
+            meta.m2.t: exact @name("meta.m2.t") ;
         }
         size = 1024;
         default_action = NoAction_9();

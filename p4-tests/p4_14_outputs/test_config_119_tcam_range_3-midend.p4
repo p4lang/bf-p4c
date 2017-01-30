@@ -185,8 +185,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.pkt.field_o_12: range;
-            hdr.pkt.field_f_16: exact;
+            hdr.pkt.field_o_12: range @name("hdr.pkt.field_o_12") ;
+            hdr.pkt.field_f_16: exact @name("hdr.pkt.field_f_16") ;
         }
         size = 1024;
         default_action = NoAction_0();
@@ -198,8 +198,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_3();
         }
         key = {
-            hdr.pkt.field_p_12: range;
-            hdr.pkt.field_f_16: exact;
+            hdr.pkt.field_p_12: range @name("hdr.pkt.field_p_12") ;
+            hdr.pkt.field_f_16: exact @name("hdr.pkt.field_f_16") ;
         }
         size = 1024;
         default_action = NoAction_3();

@@ -193,7 +193,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @default_only NoAction();
         }
         key = {
-            meta.routing_metadata.drop: ternary;
+            meta.routing_metadata.drop: ternary @name("meta.routing_metadata.drop") ;
         }
         default_action = NoAction();
     }
@@ -228,7 +228,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.ipv4.dstAddr: exact;
+            hdr.ipv4.dstAddr: exact @name("hdr.ipv4.dstAddr") ;
         }
         max_size = 16384;
         default_action = NoAction();
@@ -240,8 +240,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.ipv4.dstAddr: lpm;
-            hdr.ipv4.srcAddr: exact;
+            hdr.ipv4.dstAddr: lpm @name("hdr.ipv4.dstAddr") ;
+            hdr.ipv4.srcAddr: exact @name("hdr.ipv4.srcAddr") ;
         }
         max_size = 2048;
         default_action = NoAction();

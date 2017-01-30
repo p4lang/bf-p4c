@@ -198,10 +198,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @default_only NoAction();
         }
         key = {
-            hdr.hdr1.b : exact;
-            meta.meta.x: ternary;
-            meta.meta.y: exact;
-            meta.meta.z: exact;
+            hdr.hdr1.b : exact @name("hdr.hdr1.b") ;
+            meta.meta.x: ternary @name("meta.meta.x") ;
+            meta.meta.y: exact @name("meta.meta.y") ;
+            meta.meta.z: exact @name("meta.meta.z") ;
         }
         size = 512;
         default_action = NoAction();
@@ -226,7 +226,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.hdr0.a: ternary;
+            hdr.hdr0.a: ternary @name("hdr.hdr0.a") ;
         }
         size = 512;
         default_action = NoAction();

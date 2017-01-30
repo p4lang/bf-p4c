@@ -200,7 +200,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.pkt.field_a_28: exact;
+            hdr.pkt.field_a_28: exact @name("hdr.pkt.field_a_28") ;
         }
         default_action = NoAction_0();
     }
@@ -211,11 +211,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_4();
         }
         key = {
-            hdr.pkt.field_c_32: exact;
-            hdr.pkt.field_d_32: exact;
-            hdr.pkt.field_f_16: exact;
-            hdr.pkt.field_g_16: exact;
-            hdr.pkt.field_h_16: exact;
+            hdr.pkt.field_c_32: exact @name("hdr.pkt.field_c_32") ;
+            hdr.pkt.field_d_32: exact @name("hdr.pkt.field_d_32") ;
+            hdr.pkt.field_f_16: exact @name("hdr.pkt.field_f_16") ;
+            hdr.pkt.field_g_16: exact @name("hdr.pkt.field_g_16") ;
+            hdr.pkt.field_h_16: exact @name("hdr.pkt.field_h_16") ;
         }
         size = 2048;
         default_action = NoAction_4();
@@ -227,12 +227,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_5();
         }
         key = {
-            hdr.pkt.field_b_32: ternary;
-            hdr.pkt.field_d_32: selector;
-            hdr.pkt.field_l_8 : selector;
-            hdr.pkt.field_c_32: selector;
-            hdr.pkt.field_e_16: selector;
-            hdr.pkt.field_f_16: selector;
+            hdr.pkt.field_b_32: ternary @name("hdr.pkt.field_b_32") ;
+            hdr.pkt.field_d_32: selector @name("hdr.pkt.field_d_32") ;
+            hdr.pkt.field_l_8 : selector @name("hdr.pkt.field_l_8") ;
+            hdr.pkt.field_c_32: selector @name("hdr.pkt.field_c_32") ;
+            hdr.pkt.field_e_16: selector @name("hdr.pkt.field_e_16") ;
+            hdr.pkt.field_f_16: selector @name("hdr.pkt.field_f_16") ;
         }
         size = 2048;
         default_action = NoAction_5();

@@ -237,7 +237,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_5();
         }
         key = {
-            hdr.trill.egressRbridge: exact;
+            hdr.trill.egressRbridge: exact @name("hdr.trill.egressRbridge") ;
         }
         default_action = NoAction_5();
     }

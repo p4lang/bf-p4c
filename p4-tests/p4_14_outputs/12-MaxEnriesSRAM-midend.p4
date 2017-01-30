@@ -177,7 +177,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.ig_intr_md.ingress_port: exact;
+            hdr.ig_intr_md.ingress_port: exact @name("hdr.ig_intr_md.ingress_port") ;
         }
         size = 288;
         default_action = NoAction_0();
@@ -189,8 +189,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_3();
         }
         key = {
-            hdr.ig_intr_md.ingress_port: exact;
-            hdr.l2_metadata.bd         : exact;
+            hdr.ig_intr_md.ingress_port: exact @name("hdr.ig_intr_md.ingress_port") ;
+            hdr.l2_metadata.bd         : exact @name("hdr.l2_metadata.bd") ;
         }
         size = 409600;
         default_action = NoAction_3();

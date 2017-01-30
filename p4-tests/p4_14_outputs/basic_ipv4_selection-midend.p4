@@ -260,11 +260,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.ipv4.dstAddr       : lpm;
-            hdr.ipv4.srcAddr       : selector;
-            hdr.ipv4.dstAddr       : selector;
-            hdr.ipv4.identification: selector;
-            hdr.ipv4.protocol      : selector;
+            hdr.ipv4.dstAddr       : lpm @name("hdr.ipv4.dstAddr") ;
+            hdr.ipv4.srcAddr       : selector @name("hdr.ipv4.srcAddr") ;
+            hdr.ipv4.dstAddr       : selector @name("hdr.ipv4.dstAddr") ;
+            hdr.ipv4.identification: selector @name("hdr.ipv4.identification") ;
+            hdr.ipv4.protocol      : selector @name("hdr.ipv4.protocol") ;
         }
         size = 512;
         default_action = NoAction_0();

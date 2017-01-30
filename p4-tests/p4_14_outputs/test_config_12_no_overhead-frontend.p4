@@ -184,7 +184,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.ethernet.etherType: exact;
+            hdr.ethernet.etherType: exact @name("hdr.ethernet.etherType") ;
         }
         max_size = 1024;
         default_action = NoAction();

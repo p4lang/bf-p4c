@@ -58,17 +58,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.data.f1: ternary;
-            hdr.data.f2: ternary;
-            hdr.data.f3: ternary;
-            hdr.data.f4: ternary;
-            hdr.data.f5: ternary;
-            hdr.data.f6: ternary;
-            hdr.data.f7: ternary;
-            hdr.data.b1: ternary;
-            hdr.data.b2: ternary;
-            hdr.data.b3: ternary;
-            hdr.data.b4: ternary;
+            hdr.data.f1: ternary @name("hdr.data.f1") ;
+            hdr.data.f2: ternary @name("hdr.data.f2") ;
+            hdr.data.f3: ternary @name("hdr.data.f3") ;
+            hdr.data.f4: ternary @name("hdr.data.f4") ;
+            hdr.data.f5: ternary @name("hdr.data.f5") ;
+            hdr.data.f6: ternary @name("hdr.data.f6") ;
+            hdr.data.f7: ternary @name("hdr.data.f7") ;
+            hdr.data.b1: ternary @name("hdr.data.b1") ;
+            hdr.data.b2: ternary @name("hdr.data.b2") ;
+            hdr.data.b3: ternary @name("hdr.data.b3") ;
+            hdr.data.b4: ternary @name("hdr.data.b4") ;
         }
         default_action = NoAction_0();
     }
@@ -78,7 +78,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_5();
         }
         key = {
-            hdr.data.f1: ternary;
+            hdr.data.f1: ternary @name("hdr.data.f1") ;
         }
         default_action = NoAction_5();
     }
@@ -88,7 +88,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_6();
         }
         key = {
-            hdr.data.f3: ternary;
+            hdr.data.f3: ternary @name("hdr.data.f3") ;
         }
         default_action = NoAction_6();
     }
@@ -98,7 +98,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_7();
         }
         key = {
-            hdr.data.f1: ternary;
+            hdr.data.f1: ternary @name("hdr.data.f1") ;
         }
         default_action = NoAction_7();
     }

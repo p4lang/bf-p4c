@@ -211,11 +211,11 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @default_only NoAction();
         }
         key = {
-            meta.m.w    : ternary;
-            meta.m.x    : exact;
-            meta.m.y    : exact;
-            meta.m.z    : exact;
-            hdr.ipv4.ttl: exact;
+            meta.m.w    : ternary @name("meta.m.w") ;
+            meta.m.x    : exact @name("meta.m.x") ;
+            meta.m.y    : exact @name("meta.m.y") ;
+            meta.m.z    : exact @name("meta.m.z") ;
+            hdr.ipv4.ttl: exact @name("hdr.ipv4.ttl") ;
         }
         size = 512;
         default_action = NoAction();
@@ -241,7 +241,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: ternary;
+            hdr.ethernet.srcAddr[15:0]: ternary @name("hdr.ethernet.srcAddr[15:0]") ;
         }
         size = 512;
         default_action = NoAction();
@@ -252,7 +252,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.ethernet.srcAddr[15:0]: ternary;
+            hdr.ethernet.srcAddr[15:0]: ternary @name("hdr.ethernet.srcAddr[15:0]") ;
         }
         size = 512;
         default_action = NoAction();

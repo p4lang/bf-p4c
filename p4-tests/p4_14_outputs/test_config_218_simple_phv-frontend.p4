@@ -197,7 +197,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.hdr_0.b: ternary;
+            hdr.hdr_0.b: ternary @name("hdr.hdr_0.b") ;
         }
         size = 512;
         default_action = NoAction();
@@ -209,7 +209,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.hdr_0.c: ternary;
+            hdr.hdr_0.c: ternary @name("hdr.hdr_0.c") ;
         }
         size = 512;
         default_action = NoAction();

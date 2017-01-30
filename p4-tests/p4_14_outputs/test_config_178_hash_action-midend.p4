@@ -176,7 +176,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.pkt.field_i_8: exact;
+            hdr.pkt.field_i_8: exact @name("hdr.pkt.field_i_8") ;
         }
         size = 256;
         default_action = NoAction_0();

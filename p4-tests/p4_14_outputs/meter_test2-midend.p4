@@ -87,7 +87,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_0();
         }
         key = {
-            hdr.data.f1: exact;
+            hdr.data.f1: exact @name("hdr.data.f1") ;
         }
         size = 6000;
         default_action = NoAction_0();
@@ -105,7 +105,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_7();
         }
         key = {
-            hdr.data.f2: exact;
+            hdr.data.f2: exact @name("hdr.data.f2") ;
         }
         size = 10000;
         default_action = NoAction_7();
@@ -117,7 +117,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_8();
         }
         key = {
-            hdr.data.f3: exact;
+            hdr.data.f3: exact @name("hdr.data.f3") ;
         }
         size = 2000;
         default_action = NoAction_8();
@@ -128,7 +128,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_9();
         }
         key = {
-            hdr.data.f4: exact;
+            hdr.data.f4: exact @name("hdr.data.f4") ;
         }
         size = 8192;
         default_action = NoAction_9();
@@ -139,8 +139,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_10();
         }
         key = {
-            hdr.data.color_1: ternary;
-            hdr.data.color_2: ternary;
+            hdr.data.color_1: ternary @name("hdr.data.color_1") ;
+            hdr.data.color_2: ternary @name("hdr.data.color_2") ;
         }
         default_action = NoAction_10();
     }
@@ -150,8 +150,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_11();
         }
         key = {
-            hdr.data.color_3: ternary;
-            hdr.data.color_4: ternary;
+            hdr.data.color_3: ternary @name("hdr.data.color_3") ;
+            hdr.data.color_4: ternary @name("hdr.data.color_4") ;
         }
         default_action = NoAction_11();
     }

@@ -224,7 +224,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            meta.h1.f2: ternary;
+            meta.h1.f2: ternary @name("meta.h1.f2") ;
         }
         default_action = NoAction();
     }
@@ -234,9 +234,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            meta.h1.f1            : exact;
-            hdr.ethHdr.dmac[47:20]: lpm;
-            hdr.ethHdr.dmac[23:0] : lpm;
+            meta.h1.f1            : exact @name("meta.h1.f1") ;
+            hdr.ethHdr.dmac[47:20]: lpm @name("hdr.ethHdr.dmac[47:20]") ;
+            hdr.ethHdr.dmac[23:0] : lpm @name("hdr.ethHdr.dmac[23:0]") ;
         }
         size = 131072;
         default_action = NoAction();

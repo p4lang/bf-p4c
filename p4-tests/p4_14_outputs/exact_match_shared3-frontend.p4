@@ -49,8 +49,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.data.f1: exact;
-            hdr.data.f2: exact;
+            hdr.data.f1: exact @name("hdr.data.f1") ;
+            hdr.data.f2: exact @name("hdr.data.f2") ;
         }
         default_action = NoAction();
     }
@@ -60,9 +60,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.data.f3: exact;
-            hdr.data.f4: exact;
-            hdr.data.f5: exact;
+            hdr.data.f3: exact @name("hdr.data.f3") ;
+            hdr.data.f4: exact @name("hdr.data.f4") ;
+            hdr.data.f5: exact @name("hdr.data.f5") ;
         }
         default_action = NoAction();
     }
@@ -71,10 +71,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.data.f6 : exact;
-            hdr.data.f12: exact;
-            hdr.data.f13: exact;
-            hdr.data.f14: exact;
+            hdr.data.f6 : exact @name("hdr.data.f6") ;
+            hdr.data.f12: exact @name("hdr.data.f12") ;
+            hdr.data.f13: exact @name("hdr.data.f13") ;
+            hdr.data.f14: exact @name("hdr.data.f14") ;
         }
         default_action = NoAction();
     }
@@ -84,12 +84,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.data.f6 : exact;
-            hdr.data.f7 : exact;
-            hdr.data.f8 : exact;
-            hdr.data.f9 : exact;
-            hdr.data.f10: exact;
-            hdr.data.f11: exact;
+            hdr.data.f6 : exact @name("hdr.data.f6") ;
+            hdr.data.f7 : exact @name("hdr.data.f7") ;
+            hdr.data.f8 : exact @name("hdr.data.f8") ;
+            hdr.data.f9 : exact @name("hdr.data.f9") ;
+            hdr.data.f10: exact @name("hdr.data.f10") ;
+            hdr.data.f11: exact @name("hdr.data.f11") ;
         }
         default_action = NoAction();
     }
@@ -98,11 +98,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.data.f12: exact;
-            hdr.data.f13: exact;
-            hdr.data.f14: exact;
-            hdr.data.f7 : exact;
-            hdr.data.f8 : exact;
+            hdr.data.f12: exact @name("hdr.data.f12") ;
+            hdr.data.f13: exact @name("hdr.data.f13") ;
+            hdr.data.f14: exact @name("hdr.data.f14") ;
+            hdr.data.f7 : exact @name("hdr.data.f7") ;
+            hdr.data.f8 : exact @name("hdr.data.f8") ;
         }
         default_action = NoAction();
     }

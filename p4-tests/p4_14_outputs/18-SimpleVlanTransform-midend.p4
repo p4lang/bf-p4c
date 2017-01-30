@@ -248,7 +248,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction_9();
         }
         key = {
-            hdr.vlan_tag.vid: exact;
+            hdr.vlan_tag.vid: exact @name("hdr.vlan_tag.vid") ;
         }
         default_action = NoAction_9();
     }

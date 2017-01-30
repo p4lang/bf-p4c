@@ -44,8 +44,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.pkt.srcPort: exact;
-            hdr.pkt.dstPort: ternary;
+            hdr.pkt.srcPort: exact @name("hdr.pkt.srcPort") ;
+            hdr.pkt.dstPort: ternary @name("hdr.pkt.dstPort") ;
         }
         size = 4096;
         default_action = NoAction();

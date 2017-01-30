@@ -251,10 +251,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
             @default_only NoAction();
         }
         key = {
-            hdr.ethernet.isValid(): exact;
-            hdr.ipv4.isValid()    : exact;
-            hdr.udp.isValid()     : exact;
-            hdr.udp.srcPort       : exact;
+            hdr.ethernet.isValid(): exact @name("hdr.ethernet.isValid()") ;
+            hdr.ipv4.isValid()    : exact @name("hdr.ipv4.isValid()") ;
+            hdr.udp.isValid()     : exact @name("hdr.udp.isValid()") ;
+            hdr.udp.srcPort       : exact @name("hdr.udp.srcPort") ;
         }
         default_action = NoAction();
     }
@@ -280,8 +280,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.ipv4.dstAddr: ternary;
-            hdr.tcp.dstPort : range;
+            hdr.ipv4.dstAddr: ternary @name("hdr.ipv4.dstAddr") ;
+            hdr.tcp.dstPort : range @name("hdr.tcp.dstPort") ;
         }
         size = 1024;
         default_action = NoAction();

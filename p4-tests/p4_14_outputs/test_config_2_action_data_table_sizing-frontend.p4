@@ -178,10 +178,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             @default_only NoAction();
         }
         key = {
-            hdr.my_test_config_1.a_32    : lpm;
-            hdr.my_test_config_1.e_32    : ternary;
-            hdr.my_test_config_1.b_8[7:4]: ternary;
-            hdr.my_test_config_1.c_8     : ternary;
+            hdr.my_test_config_1.a_32    : lpm @name("hdr.my_test_config_1.a_32") ;
+            hdr.my_test_config_1.e_32    : ternary @name("hdr.my_test_config_1.e_32") ;
+            hdr.my_test_config_1.b_8[7:4]: ternary @name("hdr.my_test_config_1.b_8[7:4]") ;
+            hdr.my_test_config_1.c_8     : ternary @name("hdr.my_test_config_1.c_8") ;
         }
         max_size = 1024;
         default_action = NoAction();
