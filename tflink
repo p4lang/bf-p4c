@@ -26,6 +26,9 @@ if [ ! -x "$WALLE" ]; then
     WALLE=$(findfile walle/walle/walle.py)
 fi
 SCHEMA=$(findfile chip.schema)
+if [ ! -r "$SCHEMA" ]; then
+    SCHEMA=$(findfile tofino/chip.schema)
+fi
 
 OUT="tofino.bin"
 objs=""
