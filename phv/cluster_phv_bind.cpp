@@ -18,6 +18,10 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
         LOG1(name);
     }
     //
+    // uses_i recomputed after dead-code elimination
+    //
+    node->apply(*uses_i);
+    //
     // collect all allocated containers from phv_mau_map, t_phv_map
     //
     containers_i.clear();
@@ -107,6 +111,12 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
     }
     //
     // Trivially allocating overflow fields
+    // some clusters yet not assiged past
+    // header overlap attempt
+    // cluster slicing
+    // perhaps due to Ingress / Egress partitions
+    // e.g., Ingress containers available, but Egress clusters remain
+    //       & vice versa 
     //
     // trivial_allocate(fields_overflow);
     //

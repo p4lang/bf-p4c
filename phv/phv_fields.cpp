@@ -295,7 +295,7 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
         //        ingress::udp.$valid[1]
         // :5]
         //
-        if (!stacks_num) {
+        if (!stacks_num && pov_fields_h.size() > 1) {
             for (auto &f : pov_fields_h) {
                 hdr_dd_valid->ccgf_fields.push_back(f);
                 f->ccgf = hdr_dd_valid;
