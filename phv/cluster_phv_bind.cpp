@@ -235,20 +235,22 @@ PHV_Bind::trivial_allocate(std::set<const PhvInfo::Field *>& fields) {
         {PHV_Container::PHV_Word::b8,  128},
     };
     PHV_Container::PHV_Word container_width = PHV_Container::PHV_Word::b8;
-    std::string container_prefix = "B";
     for (auto &f : fields) {
-        if (!uses_i->use[0][f->gress][f->id]) {
-            continue;
+        std::string container_prefix = "";
+        if (uses_i->use[0][f->gress][f->id]) {
+            container_prefix = "T";
         }
         PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
         int field_bit = 0;
         int container_bit = 0;
         if (f->size >= 16) {
             container_width = PHV_Container::PHV_Word::b32;
-            container_prefix = "W";
+            container_prefix += "W";
         } else if (f->size >= 8) {
             container_width = PHV_Container::PHV_Word::b16;
-            container_prefix = "H";
+            container_prefix += "H";
+        } else {
+            container_prefix += "B";
         }
         for (field_bit = 0; field_bit < f->size; field_bit++) {
             std::stringstream ss;
