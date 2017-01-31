@@ -376,6 +376,7 @@ void Cluster::compute_fields_no_use_mau() {
         // members of owners that represent header_stack_pov_ccgf
         // members of owners that represent simple_header_pov_ccgf
         // these members are part of owner container
+        // owners if not part of MAU cluster, should be added to pov_fields
         //
         if (field.pov
            && (!field.ccgf
@@ -385,6 +386,13 @@ void Cluster::compute_fields_no_use_mau() {
             //
             pov_fields_i.push_back(&field);
         }
+        // pov owners not part of MAU cluster, must be added to pov_fields
+        //
+        if (field.pov
+           && (&field == field.ccgf && !dst_map_i.count(field.ccgf))) {
+            //
+            pov_fields_i.push_back(&field);
+        } 
         //
         // compute ccgf width
         // need PHV container of this width
