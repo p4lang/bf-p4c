@@ -372,10 +372,17 @@ void Cluster::compute_fields_no_use_mau() {
     for (auto &field : phv_i) {
         s1.insert(&field);
         //
-        // discard povs that are members of header stack containing a .$push
-        // these members are part of header stk pov container
+        // avoid duplicate allocation for povs that are
+        // members of owners that represent header_stack_pov_ccgf
+        // members of owners that represent simple_header_pov_ccgf
+        // these members are part of owner container
         //
-        if (field.pov && !field.ccgf) {
+        if (field.pov
+           && (!field.ccgf
+              || (field.ccgf
+              && !field.ccgf->header_stack_pov_ccgf
+              && !field.ccgf->simple_header_pov_ccgf))) {
+            //
             pov_fields_i.push_back(&field);
         }
         //
