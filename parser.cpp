@@ -266,24 +266,18 @@ void Parser::output() {
 
     init_common_regs(this, reg_in.prsr_reg, INGRESS);
     reg_in.ing_buf_regs.glb_group.disable();
-    reg_in.ing_buf_regs.chan0_group.chnl_ctrl.chnl_ena = 1;
     reg_in.ing_buf_regs.chan0_group.chnl_drop.disable();
     reg_in.ing_buf_regs.chan0_group.chnl_metadata_fix.disable();
-    reg_in.ing_buf_regs.chan1_group.chnl_ctrl.chnl_ena = 1;
     reg_in.ing_buf_regs.chan1_group.chnl_drop.disable();
     reg_in.ing_buf_regs.chan1_group.chnl_metadata_fix.disable();
-    reg_in.ing_buf_regs.chan2_group.chnl_ctrl.chnl_ena = 1;
     reg_in.ing_buf_regs.chan2_group.chnl_drop.disable();
     reg_in.ing_buf_regs.chan2_group.chnl_metadata_fix.disable();
-    reg_in.ing_buf_regs.chan3_group.chnl_ctrl.chnl_ena = 1;
     reg_in.ing_buf_regs.chan3_group.chnl_drop.disable();
     reg_in.ing_buf_regs.chan3_group.chnl_metadata_fix.disable();
 
     init_common_regs(this, reg_eg.prsr_reg, EGRESS);
-    for (int i = 0; i < 4; i++) {
-        //reg_eg.ebuf_reg.chnl_ctrl[i].chnl_ena = 1;
+    for (int i = 0; i < 4; i++)
         reg_eg.epb_prsr_port_regs.chnl_ctrl[i].meta_opt = meta_opt;
-        reg_eg.epb_prsr_port_regs.chnl_ctrl[i].chnl_ena = 1; }
 
     reg_in.prsr_reg.hdr_len_adj.amt = hdr_len_adj[INGRESS];
     reg_eg.prsr_reg.hdr_len_adj.amt = hdr_len_adj[EGRESS];
