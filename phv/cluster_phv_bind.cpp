@@ -56,8 +56,7 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
             new PHV::Container(const_cast<PHV_Container *>(c)->asm_string().c_str());
     }
     //
-    std::set<const PhvInfo::Field *> fields_overflow;  // all - PHV_Bind fields
-    sanity_check_container_fields("PHV_Bind::PHV_Bind()..", fields_overflow);
+    sanity_check_container_fields("PHV_Bind::PHV_Bind()..", fields_overflow_i);
     //
     // binding fields to containers
     // clear previous field alloc information if any
@@ -93,7 +92,12 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
             // contiguous container group allocation
             // in case bypassing MAU PHV allocation PHV_container::taint() recursion
             //
-            // container_contiguous_alloc(f1, c, asm_container, width_in_container);
+            // int container_width = static_cast<int>(
+            //                           const_cast<PHV_Container *>(c)->width());
+            // container_contiguous_alloc(f1,
+            //                            container_width,
+            //                            asm_container,
+            //                            width_in_container);
         }
     }
     //
@@ -118,7 +122,7 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
     // e.g., Ingress containers available, but Egress clusters remain
     //       & vice versa 
     //
-    // trivial_allocate(fields_overflow);
+    // trivial_allocate(fields_overflow_i);
     //
     LOG3(*this);
     //
@@ -129,7 +133,7 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
 void
 PHV_Bind::container_contiguous_alloc(
     PhvInfo::Field* f1,
-    const PHV_Container *c,
+    int container_width,
     PHV::Container *asm_container,
     int width_in_container) {
     //
@@ -144,8 +148,7 @@ PHV_Bind::container_contiguous_alloc(
             // consider MSB order
             int processed_members = 0;
             // container_bit start
-            int start = static_cast<int>(
-                        const_cast<PHV_Container *>(c)->width());
+            int start = container_width; 
             for (auto &member : f1->ccgf_fields) {
                 int member_bit_lo = member->phv_use_lo;
                 int use_width = member->size - member->phv_use_rem;
@@ -235,34 +238,64 @@ PHV_Bind::trivial_allocate(std::set<const PhvInfo::Field *>& fields) {
         {PHV_Container::PHV_Word::b8,  128},
     };
     PHV_Container::PHV_Word container_width = PHV_Container::PHV_Word::b8;
+    //
+    // binding fields to containers
+    // clear previous field alloc information if any
+    //
     for (auto &f : fields) {
+        PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
+        f1->alloc.clear();
+        // ccgf members
+        if (f1->ccgf_fields.size()) {
+            for (auto &pov_f : f1->ccgf_fields) {
+                pov_f->alloc.clear();
+            }
+        }
+    }
+    for (auto &f : fields) {
+        // 
+        // skip members of ccgfs as owners will allocate for them
+        //
+        if (f->ccgf && !f->ccgf_fields.size()) {
+            continue;
+        }
         std::string container_prefix = "";
-        if (uses_i->use[0][f->gress][f->id]) {
+        if (!uses_i->use[1][f->gress][f->id]
+            && uses_i->use[0][f->gress][f->id]) {
+            //
             container_prefix = "T";
         }
         PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
         int field_bit = 0;
         int container_bit = 0;
-        if (f->size >= 16) {
+        if (f->size > 16) {
             container_width = PHV_Container::PHV_Word::b32;
             container_prefix += "W";
-        } else if (f->size >= 8) {
+        } else if (f->size > 8) {
             container_width = PHV_Container::PHV_Word::b16;
             container_prefix += "H";
         } else {
             container_prefix += "B";
         }
+        PHV::Container *asm_container;
         for (field_bit = 0; field_bit < f->size; field_bit++) {
             std::stringstream ss;
             ss << overflow_reg[container_width];
             overflow_reg[container_width]++;
             std::string reg_string = container_prefix + ss.str();
             const char *reg_name = reg_string.c_str();
-            PHV::Container *asm_container = new PHV::Container(reg_name);
+            asm_container = new PHV::Container(reg_name);
             f1->alloc.emplace_back(
                 *asm_container, field_bit, container_bit, static_cast<int> (container_width));
-            LOG3("....." << f << '[' << field_bit << "].." << reg_name);
+            LOG3(f << '[' << field_bit << "] ..... " << reg_name);
             field_bit += static_cast<int> (container_width)-1;
+        }
+        // ccgf owners allocate for members
+        if (f->ccgf_fields.size()) {
+            container_contiguous_alloc(f1,
+                                       static_cast<int>(container_width),
+                                       asm_container,
+                                       static_cast<int>(container_width));
         }
     }
 }
@@ -323,7 +356,7 @@ void PHV_Bind::sanity_check_container_fields(
 
 std::ostream &operator<<(std::ostream &out, PHV_Bind &phv_bind) {
     out << std::endl
-        << "++++++++++ PHV Bind Containers to Fields ++++++++++"
+        << "Begin++++++++++ PHV Bind Containers to Fields ++++++++++"
         << std::endl
         << std::endl;
     for (auto &f : phv_bind.fields()) {
@@ -335,7 +368,23 @@ std::ostream &operator<<(std::ostream &out, PHV_Bind &phv_bind) {
         }
         out << std::endl;
     }
-    out << std::endl;
+    out << std::endl
+        << "Begin.......... Overflow Fields ........................"
+        << std::endl
+        << std::endl;
+    for (auto &f : phv_bind.fields_overflow()) {
+        out << f;
+        for (auto &as : f->alloc) {
+            out << std::endl
+                << '\t'
+                << as;
+        }
+        out << std::endl;
+    }
+    out << std::endl
+        << "End+++++++++++++++++++++++++++++++++++++++++++++++++++++"
+        << std::endl
+        << std::endl;
 
     return out;
 }

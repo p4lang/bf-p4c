@@ -32,10 +32,14 @@ class Slice {
     : field(phv.field(n)), lo(0), hi(field->size-1) {}
     Slice(const PhvInfo &phv, cstring n, int bit)
     : field(phv.field(n)), lo(bit), hi(bit) {
-        BUG_CHECK(bit >= 0 && bit < field->size, "Slice out of range for field"); }
+        BUG_CHECK((bit >= 0 && bit < field->size),
+            "Slice out of range for field = '%s', bit=%d, size=%d",
+            field->name, bit, field->size); }
     Slice(const PhvInfo &phv, cstring n, int l, int h)
     : field(phv.field(n)), lo(l), hi(h) {
-        BUG_CHECK(lo < field->size, "Slice out of range for field");
+        BUG_CHECK((lo < field->size),
+            "Slice out of range for field = '%s', lo=%d, size=%d",
+            field->name, lo, field->size);
         if (lo < 0) lo = 0;
         if (hi >= field->size) hi = field->size-1; }
     Slice(PHV::Container r) : field(0), reg(r), lo(0), hi(r.size()-1) {}

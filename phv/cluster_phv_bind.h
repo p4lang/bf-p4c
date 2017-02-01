@@ -36,6 +36,7 @@ class PHV_Bind : public Visitor {
     Cluster::Uses *uses_i;                          // field uses mau, I, E
     std::list<const PHV_Container *> containers_i;  // all filled containers
     std::set<const PhvInfo::Field *> fields_i;      // all fields to be finally bound
+    std::set<const PhvInfo::Field *> fields_overflow_i;  // All - PHV_Bind fields
     //
  public:
     //
@@ -48,13 +49,14 @@ class PHV_Bind : public Visitor {
                                                     // happens after Phv Analysis
                                                     // i.e., after Cluser Uses computation
     //
-    std::list<const PHV_Container *> containers()  { return containers_i; }
-    std::set<const PhvInfo::Field *>& fields()    { return fields_i; }
+    std::list<const PHV_Container *> containers()        { return containers_i; }
+    std::set<const PhvInfo::Field *>& fields()           { return fields_i; }
+    std::set<const PhvInfo::Field *>& fields_overflow()  { return fields_overflow_i; }
     //
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
     void container_contiguous_alloc(               // backup for ccgf fields processing
-        PhvInfo::Field*,
-        const PHV_Container *,
+        PhvInfo::Field *,
+        int,
         PHV::Container *,
         int);
     void trivial_allocate(std::set<const PhvInfo::Field *>&);
