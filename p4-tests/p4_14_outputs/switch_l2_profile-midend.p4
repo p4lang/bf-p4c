@@ -2128,7 +2128,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction_56") action NoAction_109() {
     }
-    @name("rmac_hit") action rmac_hit_0() {
+    @pa_atomic("ingress", "l3_metadata.lkp_ip_version") @pa_solitary("ingress", "l3_metadata.lkp_ip_version") @name("rmac_hit") action rmac_hit_0() {
         meta.l3_metadata.rmac_hit = 1w1;
     }
     @name("rmac_miss") action rmac_miss_0() {
