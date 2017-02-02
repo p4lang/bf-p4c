@@ -277,13 +277,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         ttl_3 = hdr.ipv4.ttl;
         ttl_3 = hdr.ipv4.ttl + 8w255;
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+        hdr.ipv4.ttl = ttl_3;
     }
     @name("hop_ipv4") action hop_ipv4_2(bit<9> egress_port) {
         ttl_4 = hdr.ipv4.ttl;
         ttl_4 = hdr.ipv4.ttl + 8w255;
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+        hdr.ipv4.ttl = ttl_4;
     }
     @name("drop_ipv4") action drop_ipv4_0() {
         mark_to_drop();
@@ -301,7 +301,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         ttl_5 = hdr.ipv4.ttl;
         ttl_5 = hdr.ipv4.ttl + 8w255;
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+        hdr.ipv4.ttl = ttl_5;
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
@@ -309,7 +309,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         ttl_6 = hdr.ipv4.ttl;
         ttl_6 = hdr.ipv4.ttl + 8w255;
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+        hdr.ipv4.ttl = ttl_6;
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
@@ -317,7 +317,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         ttl_7 = hdr.ipv4.ttl;
         ttl_7 = hdr.ipv4.ttl + 8w255;
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+        hdr.ipv4.ttl = ttl_7;
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
@@ -327,7 +327,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         ttl_8 = hdr.ipv4.ttl;
         ttl_8 = hdr.ipv4.ttl + 8w255;
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+        hdr.ipv4.ttl = ttl_8;
     }
     @name("mod_mac_adr") action mod_mac_adr_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;

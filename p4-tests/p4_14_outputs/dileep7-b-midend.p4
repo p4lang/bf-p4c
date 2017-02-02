@@ -251,7 +251,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         ttl_1 = hdr.ipv4.ttl;
         ttl_1 = hdr.ipv4.ttl + 8w255;
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+        hdr.ipv4.ttl = ttl_1;
     }
     @pack(1) @ways(5) @name("exm_5ways_1Entries_stage_2") table exm_5ways_1Entries_stage_0() {
         actions = {
