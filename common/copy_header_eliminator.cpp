@@ -1,5 +1,4 @@
 #include "copy_header_eliminator.h"
-#include "base/logging.h"
 
 const IR::Node *
 CopyHeaderEliminator::preorder(IR::Primitive *primitive) {

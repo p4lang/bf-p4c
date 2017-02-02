@@ -38,12 +38,9 @@ class ParserOverlay : public ControlFlowVisitor,
     void end_apply() override;
 
  public:
-    explicit ParserOverlay(PhvInfo& phv, SymBitMatrix& rv) :
-        phv(phv), mutually_exclusive(rv)
-    {
+    explicit ParserOverlay(PhvInfo& phv, SymBitMatrix& rv) : phv(phv), mutually_exclusive(rv) {
         joinFlows = true;
-        visitDagOnce = true;
-    }
+        visitDagOnce = true; }
     ParserOverlay *clone() const override { return new ParserOverlay(*this); }
 };
 

@@ -111,7 +111,7 @@ bool Memories::allocate_all() {
 }
 
 /* This class is responsible for filling in all of the particular lists with the corresponding
-   twoport tables, as well as getting the sharing of indirect action tables and selectors correct 
+   twoport tables, as well as getting the sharing of indirect action tables and selectors correct
 */
 class SetupAttachedTables : public MauInspector {
     Memories &mem; Memories::table_alloc *ta; int entries; Memories::mem_info &mi;
@@ -153,9 +153,9 @@ class SetupAttachedTables : public MauInspector {
     bool preorder(const IR::ActionProfile *ap) {
         auto name = ta->table->get_use_name(ap);
         auto table_name = ta->table->get_use_name();
-        LOG4("Action profile for table " << table_name); 
+        LOG4("Action profile for table " << table_name);
         bool selector_first = false;
-        /* This is a check to see if the table has already been placed due to it being in 
+        /* This is a check to see if the table has already been placed due to it being in
            the profile of a separate table */
         Memories::profile_info *linked_pi = nullptr;
         for (auto *pi : mem.action_profiles) {
@@ -660,7 +660,7 @@ bool Memories::cut_from_left_side(mem_info &mi, int left_given_columns,
     return false;
 }
 
-/* Calculates the number of columns and the distribution of columns on the left and 
+/* Calculates the number of columns and the distribution of columns on the left and
    right side of the SRAM array in order to place all exact match tables */
 void Memories::calculate_column_balance(mem_info &mi, unsigned &row) {
     int min_columns_required = (mi.match_RAMs + SRAM_COLUMNS - 1) / SRAM_COLUMNS;
@@ -994,7 +994,7 @@ void Memories::action_bus_selectors_indirects() {
     }
 }
 
-/* Calculates the necessary size and requirements for any meter and counter tables within 
+/* Calculates the necessary size and requirements for any meter and counter tables within
    the stage */
 void Memories::action_bus_meters_counters() {
     for (auto *ta : stats_tables) {

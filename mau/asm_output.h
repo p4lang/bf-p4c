@@ -17,10 +17,9 @@ class MauAsmOutput : public MauInspector {
     profile_t init_apply(const IR::Node *root) override {
         root->apply(default_next);
         return MauInspector::init_apply(root); }
-    bool preorder(const IR::Tofino::Pipe *p) {
+    bool preorder(const IR::Tofino::Pipe *p) override {
         pipe = p;
-        return true;
-    }
+        return true; }
     bool preorder(const IR::MAU::Table *tbl) override {
         by_stage[std::make_pair(tbl->gress, tbl->logical_id/16U)].push_back(tbl);
         return true; }

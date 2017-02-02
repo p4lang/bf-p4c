@@ -114,7 +114,7 @@ void StageUseEstimate::options_to_ways(int &entries) {
     }
 }
 
-/* Calculate the correct size of ternary tables.  Obviously with ternary tables, no way 
+/* Calculate the correct size of ternary tables.  Obviously with ternary tables, no way
    size calculation is necessary, as ternary has no ways */
 void StageUseEstimate::options_to_ternary_entries(const IR::MAU::Table *tbl, int &entries) {
     for (auto &lo : layout_options) {
@@ -201,7 +201,7 @@ void StageUseEstimate::options_to_rams(const IR::MAU::Table *tbl, bool table_pla
     }
 }
 
-/* Sorting algorithm to determine the best option given that it is before trying to 
+/* Sorting algorithm to determine the best option given that it is before trying to
    fit the layout options to a certian number of resources, instead just using all entries */
 void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
     bool small_table_allocation = true;
@@ -549,7 +549,7 @@ void StageUseEstimate::unknown_tcams_needed(const IR::MAU::Table *tbl,
         int attempted_entries = attempted_depth * 512;
         int width = (tbl->layout.match_width_bits + 47)/44;  // +4 bits for v/v, round up
         tcam_count += attempted_depth * width;
-        
+
         for (auto rc : per_word_and_width) {
             int entries_per_sram = 1024 * rc.per_word;
             int units = (attempted_entries + entries_per_sram - 1) / entries_per_sram;
@@ -571,7 +571,7 @@ void StageUseEstimate::unknown_tcams_needed(const IR::MAU::Table *tbl,
     lo->entries = adding_entries;
 }
 
-/* Pick the best ternary option given that the ternary options are selecting from the 
+/* Pick the best ternary option given that the ternary options are selecting from the
    available resources provided */
 void StageUseEstimate::tcams_left_best_option() {
     std::sort(layout_options.begin(), layout_options.end(),

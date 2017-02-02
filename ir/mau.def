@@ -63,6 +63,7 @@ class Table : Tofino::Unit {
                                 << action_data_bytes_in_overhead << ",\n"
                  << json.indent << "\"overhead_bits\" : " << overhead_bits; }
         fromJSON {
+            if (!json.json) return nullptr;
             Layout *rv = new Layout();
             json.load("entries", rv->entries);
             json.load("gateway", rv->gateway);
@@ -102,6 +103,7 @@ class Table : Tofino::Unit {
                  << json.indent << "\"entries\" : " << entries << ",\n"
                  << json.indent << "\"width\" : " << width; }
         fromJSON {
+            if (!json.json) return nullptr;
             Way* way = new Way();
             json.load("match_groups", way->match_groups);
             json.load("entries", way->entries);
@@ -118,12 +120,21 @@ class Table : Tofino::Unit {
         vector<int> way_sizes;
         int entries = 0;
         int srams = 0; int maprams = 0; int tcams = 0;
-        toJSON { json << "null"; }
-        fromJSON { return nullptr; }
+        toJSON {
+            json << json.indent << "\"layout\" : " << layout << ",\n"
+                 << json.indent << "\"way\" : " << way << ",\n"
+                 << json.indent << "\"way_sizes\" : " << way_sizes; }
+        fromJSON {
+            if (!json.json) return nullptr;
+            LayoutOption *rv = new LayoutOption();
+            json.load("layout", rv->layout);
+            json.load("way", rv->way);
+            json.load("way_sizes", rv->way_sizes);
+            return rv; }
         LayoutOption() {}
         LayoutOption(Layout l) : layout(l) {}
         LayoutOption(Layout l, Way w) : layout(l), way(w) {}
-        void clear_mems() { srams = 0; maprams = 0; tcams = 0; entries = 0; way_sizes.clear(); } 
+        void clear_mems() { srams = 0; maprams = 0; tcams = 0; entries = 0; way_sizes.clear(); }
     }
 
     vector<LayoutOption> layout_options;

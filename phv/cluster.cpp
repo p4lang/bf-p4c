@@ -684,7 +684,8 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg) {
                         for (auto &m : f->ccgf_fields) {
                             const PhvInfo::Field *mx = (const PhvInfo::Field *) m;
                             if (sx.count(mx)) {
-                                LOG1("*****cluster.cpp:sanity_FAIL***** duplicate ccgf member ..." << msg);
+                                LOG1("*****cluster.cpp:sanity_FAIL***** duplicate "
+                                     "ccgf member ..." << msg);
                                 LOG1(mx);
                             }
                             sx.insert(mx);

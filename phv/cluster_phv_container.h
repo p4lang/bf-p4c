@@ -36,6 +36,7 @@ class PHV_Container {
         int hi_i;  // high of bit range in container for field
         const PhvInfo::Field *field_i;
         const int field_bit_lo_i;  // start of field bit in this container
+
      public:
         //
         Container_Content(

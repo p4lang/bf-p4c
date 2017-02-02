@@ -45,9 +45,9 @@ class PhvInfo : public Inspector {
         bool            pov;
         bool            mau_write = false;  // true when field Write in MAU
         bool            header_stack_pov_ccgf = false;  // header stack pov owner
-                                                        // has members in ccgf_fields 
+                                                        // has members in ccgf_fields
         bool            simple_header_pov_ccgf = false;  // simple header ccgf
-                                                         // has members in ccgf_fields 
+                                                         // has members in ccgf_fields
         Field           *ccgf = 0;         // container contiguous group fields
                                            // used for
                                            // (i) header stack povs: container FULL, no holes

@@ -363,4 +363,4 @@ cstring GetTofinoParser::ingress_entry() {
     return ingress_control.name;
 }
 
-} // namespace Tofino
+}  // namespace Tofino

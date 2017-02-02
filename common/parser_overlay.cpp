@@ -1,10 +1,9 @@
-#include <base/logging.h>
-#include "lib/log.h"
 #include "parser_overlay.h"
-#include "ir/ir.h"
-
 #include <sstream>
 #include <typeinfo>
+#include "lib/log.h"
+#include "ir/ir.h"
+
 
 void ParserOverlay::mark(const PhvInfo::Field* f) {
     if (!f || f->metadata) return;
@@ -41,8 +40,7 @@ void ParserOverlay::end_apply() {
     LOG4("mutually exclusive fields:");
     for ( auto it1 = fields_encountered.begin();
           it1 != fields_encountered.end();
-          ++it1 )
-    {
+          ++it1 ) {
         for (auto it2 = it1; it2 != fields_encountered.end(); ++it2) {
             if (mutually_inclusive(*it1, *it2)) continue;
             mutually_exclusive(*it1, *it2) = true;

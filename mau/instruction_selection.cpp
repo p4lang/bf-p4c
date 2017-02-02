@@ -295,8 +295,7 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
         return new IR::MAU::Instruction(prim->srcInfo, "invalidate",
             gen_stdmeta(VisitingThread(this) ? "egress_port" : "egress_spec"));
     } else if (prim->name == "count" || prim->name == "execute_meter" ||
-               prim->name == "execute_stateful_alu")
-    {
+               prim->name == "execute_stateful_alu") {
         stateful[af].emplace_back(prim);
         return nullptr; }
     WARNING("unhandled in InstSel: " << *prim);

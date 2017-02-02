@@ -119,7 +119,7 @@ PHV_Container::taint(
         f1->phv_use_hi -= processed_width;
         if (field->ccgf_fields.size()) {
             f1->ccgf = f1;
-	} else {
+        } else {
             f1->ccgf = 0;
             Cluster::set_field_range(f1);
         }

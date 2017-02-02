@@ -9,12 +9,12 @@ namespace PHV {
 
 class TrivialAlloc : public Inspector {
  public:
-    TrivialAlloc(PhvInfo &p, const SymBitMatrix &c) : phv(p), conflict(c) {}
+    TrivialAlloc(PhvInfo &p, const SymBitMatrix &) : phv(p) {}
     struct Regs;
 
  private:
     PhvInfo                     &phv;
-    const SymBitMatrix          &conflict;
+    // const SymBitMatrix       &conflict;
     class Uses;
     void do_alloc(PhvInfo::Field *, Regs *, Regs *, int = 0);
     bool preorder(const IR::Tofino::Pipe *p) override;

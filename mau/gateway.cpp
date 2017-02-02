@@ -1,6 +1,6 @@
 #include "gateway.h"
-#include "split_gateways.h"
 #include <deque>
+#include "split_gateways.h"
 
 class CanonGatewayExpr::NeedNegate : public Inspector {
     bool        rv = false;
@@ -59,8 +59,8 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
                     kval = !kval;
                 if (kval)
                     return prim;
-                else return
-                    new IR::LNot(prim); } } }
+                else
+                    return new IR::LNot(prim); } } }
     return e; }
 const IR::Expression *CanonGatewayExpr::postorder(IR::Leq *e) {
     if (e->left->is<IR::Constant>())

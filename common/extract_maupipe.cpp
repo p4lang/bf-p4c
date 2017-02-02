@@ -91,11 +91,9 @@ bool ActionBodySetup::preorder(const IR::MethodCallStatement *mc) {
 
 }  // anonymous namespace
 
-static IR::ActionFunction *createActionFunction(
-    P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-    const IR::P4Action *ac,
-    const IR::Vector<IR::Expression> *args)
-{
+static IR::ActionFunction *createActionFunction(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+                                                const IR::P4Action *ac,
+                                                const IR::Vector<IR::Expression> *args) {
     IR::ActionFunction *rv = new IR::ActionFunction;
     rv->srcInfo = ac->srcInfo;
     rv->name = ac->externalName();
@@ -129,8 +127,7 @@ static void setIntProperty(cstring name, int *val, const IR::PropertyValue *pval
 static IR::Attached *createV1Attached(Util::SourceInfo srcInfo, cstring name,
                                       const IR::Type *type,
                                       const IR::Vector<IR::Expression> *args,
-                                      const IR::Annotations *annot)
-{
+                                      const IR::Annotations *annot) {
     IR::CounterOrMeter *rv = nullptr;
     // FIXME -- this should be looking at the arch model, but the current arch model stuff
     // is too complex -- need a way of building this automatically from the arch.p4 file.
@@ -188,8 +185,7 @@ static IR::Attached *createV1Attached(Util::SourceInfo srcInfo, cstring name,
 
 
 static IR::V1Table *createV1Table(const IR::P4Table *tc, const P4::ReferenceMap *refMap,
-                                  IR::MAU::Table *tt, set<cstring> &unique_names)
-{
+                                  IR::MAU::Table *tt, set<cstring> &unique_names) {
     IR::V1Table *rv = new IR::V1Table;
     if (tc->srcInfo) {
         rv->srcInfo = tc->srcInfo;
@@ -230,8 +226,7 @@ static IR::V1Table *createV1Table(const IR::P4Table *tc, const P4::ReferenceMap 
         } else if (prop->name == "max_size") {
             setIntProperty(prop->name, &rv->max_size, prop->value);
         } else if (prop->name == "counters" || prop->name == "meters" ||
-                   prop->name == "implementation")
-        {
+                   prop->name == "implementation") {
             auto pval = prop->value->as<IR::ExpressionValue>().expression;
             IR::Attached *obj = nullptr;
             if (auto cc = pval->to<IR::ConstructorCallExpression>()) {

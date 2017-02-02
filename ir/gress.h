@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef TOFINO_COMMON_GRESS_H_
-#define TOFINO_COMMON_GRESS_H_
+#ifndef TOFINO_IR_GRESS_H_
+#define TOFINO_IR_GRESS_H_
 
 #include <iosfwd>
 #include "lib/cstring.h"
@@ -25,8 +25,7 @@ enum gress_t {
   EGRESS
 };
 
-
 std::ostream& operator<<(std::ostream& out, gress_t gress);
 bool operator>>(cstring s, gress_t& gressOut);
 
-#endif /* TOFINO_COMMON_GRESS_H_ */
+#endif /* TOFINO_IR_GRESS_H_ */
