@@ -237,7 +237,6 @@ PHV_Bind::trivial_allocate(std::set<const PhvInfo::Field *>& fields) {
         {PHV_Container::PHV_Word::b16, 224},
         {PHV_Container::PHV_Word::b8,  128},
     };
-    PHV_Container::PHV_Word container_width = PHV_Container::PHV_Word::b8;
     //
     // binding fields to containers
     // clear previous field alloc information if any
@@ -252,6 +251,7 @@ PHV_Bind::trivial_allocate(std::set<const PhvInfo::Field *>& fields) {
             }
         }
     }
+    PHV_Container::PHV_Word container_width = PHV_Container::PHV_Word::b8;
     for (auto &f : fields) {
         // 
         // skip members of ccgfs as owners will allocate for them
@@ -268,17 +268,18 @@ PHV_Bind::trivial_allocate(std::set<const PhvInfo::Field *>& fields) {
         PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
         int field_bit = 0;
         int container_bit = 0;
-        if (f->size > 16) {
+        if (f->phv_use_width() > 16) {
             container_width = PHV_Container::PHV_Word::b32;
             container_prefix += "W";
-        } else if (f->size > 8) {
+        } else if (f->phv_use_width() > 8) {
             container_width = PHV_Container::PHV_Word::b16;
             container_prefix += "H";
         } else {
+            container_width = PHV_Container::PHV_Word::b8;
             container_prefix += "B";
         }
         PHV::Container *asm_container;
-        for (field_bit = 0; field_bit < f->size; field_bit++) {
+        for (field_bit = 0; field_bit < f->phv_use_width(); field_bit++) {
             std::stringstream ss;
             ss << overflow_reg[container_width];
             overflow_reg[container_width]++;
