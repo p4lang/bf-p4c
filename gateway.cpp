@@ -371,7 +371,7 @@ void GatewayTable::write_regs() {
     gw_reg.gateway_table_ctl.gateway_table_logical_table = logical_id;
     gw_reg.gateway_table_ctl.gateway_table_thread = gress;
     for (auto &r : xor_match)
-        gw_reg.gateway_table_matchdata_xor_en |= ((1U << r.val->size()) - 1) << r.offset;
+        gw_reg.gateway_table_matchdata_xor_en |= ((1ULL << r.val->size()) - 1) << r.offset;
     int lineno = 3;
     gw_reg.gateway_table_ctl.gateway_table_mode = range_match;
     for (auto &line : table) {

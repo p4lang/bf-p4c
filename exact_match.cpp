@@ -595,7 +595,10 @@ void ExactMatchTable::write_regs() {
                 assert(bit == match->size); }
             if (Format::Field *version = format->field("version", i)) {
                 if (version->bits[0].lo/128U != word) continue;
-                using_match = true;
+                // don't need to enable vh_xbar just for version/valid, but do need to enable
+                // at least one word of vh_xbar always, so use this one if there's no match
+                if (!format->field("match", i))
+                    using_match = true;
                 for (unsigned bit = version->bits[0].lo; bit <= version->bits[0].hi; bit++) {
                     unsigned byte = (bit%128)/8;
                     byteswizzle_ctl[byte][bit%8U] = 8; } } }

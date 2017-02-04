@@ -1,7 +1,22 @@
 - current compiler failures on some tests.
+
 counter5.p4 mismatch
+- synth2port fabric is different -- not clear if it is a bug or where
+
 hash_index5.p4 mismatch
+- control of stats table is different
+
 mac_rewrite.p4 tfas
+- asm generation error?  invalid slice on immediate use in action bus
+
 meter_test1.p4 mismatch
+- vpn lsb encoding swapped (not a bug -- either way is fine)
+- synth2port fabric is different -- not clear if it is a bug or where
+- idletime enable missing?
+- color_map_ram info missing from context json
+
 proxy_hash1.p4 mismatch
+- hash config is different -- need something extra in asmgen?
+
 selector0.p4 compile
+- invalid test?
