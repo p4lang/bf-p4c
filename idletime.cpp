@@ -115,7 +115,7 @@ void IdletimeTable::gen_stage_tbl_cfg(json::map &out) {
     tbl["stage_table_type"] = "idletime";
     tbl["number_entries"] = number_entries;
     add_pack_format(tbl, 10, 1, 8U/precision);
-    tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("map_ram");
+    tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("map_ram", layout);
     tbl["stage_table_handle"] = logical_id;
     tbl["idletime_precision"] = precision;
     tbl["idletime_disable_notification"] = disable_notification;

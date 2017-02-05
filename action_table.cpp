@@ -420,7 +420,8 @@ void ActionTable::gen_tbl_cfg(json::vector &out) {
     for (auto &act : *actions) {
         auto *fmt = ::get(action_formats, act.name);
         add_pack_format(stage_tbl, fmt ? fmt : format); }
-    stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("sram");
+    stage_tbl["memory_resource_allocation"] =
+            gen_memory_resource_allocation_tbl_cfg("sram", layout);
     if (actions)
         actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
     stage_tbl["how_referenced"] = indirect ? "indirect" : "direct";

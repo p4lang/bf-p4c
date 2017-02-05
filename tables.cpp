@@ -1151,13 +1151,16 @@ int Table::find_on_ixbar(Phv::Slice sl, int group) {
     return -1;
 }
 
-std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(const char *type, bool skip_spare_bank) {
+std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(const char *type, std::vector<Layout> &layout, bool skip_spare_bank) {
     int width, depth, period;
     const char *period_name;
+    // FIXME -- calling vpn_params here is only valid when layout == this->layout, but we also
+    // FIXME -- get here for color_maprams.  It works out as we don't use depth or width, only
+    // FIXME -- period, which will always be 1 for meter layout or color_maprams
     vpn_params(width, depth, period, period_name);
     json::map mra;
     mra["memory_type"] = type;
-    std::vector<json::vector> mem_units(depth/period);
+    std::vector<json::vector> mem_units;
     json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"] = json::vector();
     int ctr = 0;
     bool no_vpns = false;
@@ -1167,10 +1170,13 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(const c
             if (vpn == row.vpns.end())
                 no_vpns = true;
             else ctr = *vpn++;
-            mem_units[ctr++/period].push_back(memunit(row.row, col)); } }
+            int unit = ctr++/period;
+            if (size_t(unit) >= mem_units.size())
+                mem_units.resize(unit + 1);
+            mem_units[unit].push_back(memunit(row.row, col)); } }
     int vpn = 0;
     for (auto &mem : mem_units) {
-        if (skip_spare_bank && &mem == &mem_units[depth/period - 1]) {
+        if (skip_spare_bank && &mem == &mem_units.back()) {
             if (mem.size() == 1)
                 mra["spare_bank_memory_unit"] = std::move(mem[0]);
             else

@@ -286,6 +286,7 @@ void SelectionTable::gen_tbl_cfg(json::vector &out) {
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "selection", 1024);
     stage_tbl["how_referenced"] = indirect ? "indirect" : "direct";
     add_pack_format(stage_tbl, 128, 1, 1);
-    stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("sram", true);
+    stage_tbl["memory_resource_allocation"] =
+            gen_memory_resource_allocation_tbl_cfg("sram", layout, true);
     stage_tbl["stage_table_handle"] = logical_id;
 }

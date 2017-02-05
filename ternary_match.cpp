@@ -363,7 +363,7 @@ void TernaryMatchTable::write_regs() {
     stage->regs.cfg_regs.mau_cfg_movereg_tcam_only |= 1U << logical_id;
 }
 
-std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl_cfg(const char *type, bool skip_spare_bank) {
+std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl_cfg(const char *type, std::vector<Layout> &, bool skip_spare_bank) {
     assert(!skip_spare_bank); // never spares in tcam
     json::map mra { { "memory_type", json::string(type) } };
     json::vector &mem_units_and_vpns = mra["memory_units_and_vpns"];
@@ -395,7 +395,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         tbl["preferred_match_type"] = "ternary";
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "ternary_match", number_entries);
     json::map &pack_fmt = add_pack_format(stage_tbl, 47, match.size(), 1);
-    stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("tcam");
+    stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("tcam", layout);
     json::vector match_field_list, match_entry_list;
     for (auto field : *input_xbar) {
         int word = match_word(field.first);
@@ -437,7 +437,7 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
             { "stage_table_type", json::string("ternary_indirection") }};
         indirect->add_pack_format(tind, indirect->format);
         tind["memory_resource_allocation"] =
-            indirect->gen_memory_resource_allocation_tbl_cfg("sram");
+            indirect->gen_memory_resource_allocation_tbl_cfg("sram", indirect->layout);
         stage_tbl["ternary_indirection_table"] = std::move(tind);
         if (indirect->actions) {
             indirect->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));

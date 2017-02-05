@@ -259,7 +259,7 @@ public:
     json::map *base_tbl_cfg(json::vector &out, const char *type, int size);
     json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size);
     virtual std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(
-            const char *type, bool skip_spare_bank = false);
+            const char *type, std::vector<Layout> &layout, bool skip_spare_bank = false);
     enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER,
                         METER, IDLETIME };
     virtual table_type_t table_type() { return OTHER; }
@@ -418,7 +418,7 @@ TYPE *TYPE::Type::create(int lineno, const char *name, gress_t gress,   \
 }
 
 DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
-    void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
         width = (format->size-1)/128 + 1;
         period = format->groups();
         depth = period * layout_size() / width;
@@ -459,7 +459,7 @@ public:
 )
 
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
-    void vpn_params(int &width, int &depth, int &period, const char *&period_name);
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) override;
     struct Match {
         int word_group=-1, byte_group=-1, byte_config=0, dirtcam=0;
         Match() {}
@@ -495,7 +495,8 @@ public:
     Actions *get_actions() { return actions ? actions : indirect ? indirect->actions : 0; }
     const AttachedTables *get_attached() const { return indirect ? indirect->get_attached() : &attached; }
     SelectionTable *get_selector() const { return indirect ? indirect->get_selector() : 0; }
-    std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(const char *type, bool skip_spare_bank=false);
+    std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(
+            const char *type, std::vector<Layout> &layout, bool skip_spare_bank=false) override;
     Call &action_call() { return indirect ? indirect->action : action; }
     int memunit(int r, int c) { return r + c*12; }
     bool is_ternary() { return true; }
@@ -520,7 +521,7 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     AttachedTables              attached;
     table_type_t table_type() { return TERNARY_INDIRECT; }
     table_type_t set_match_table(MatchTable *m, bool indirect);
-    void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
         width = (format->size-1)/128 + 1;
         depth = layout_size() / width;
         period = 1;
@@ -568,7 +569,7 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     std::vector<int>                    home_rows;
     int                                 home_lineno = -1;
     std::map<std::string, Format *>     action_formats;
-    void vpn_params(int &width, int &depth, int &period, const char *&period_name);
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) override;
     std::string find_field(Format::Field *field);
     Format::Field *lookup_field(const std::string &name, const std::string &action);
     void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn);
@@ -636,7 +637,7 @@ DECLARE_TABLE_TYPE(SelectionTable, AttachedTable, "selection",
 public:
     bool                per_flow_enable;
     table_type_t table_type() { return SELECTION; }
-    void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
         width = period = 1; depth = layout_size(); period_name = 0; }
     void write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args);
     unsigned address_shift() const { return 7 + ceil_log2(min_words); }
@@ -659,7 +660,7 @@ public:
         match_table = m;
         if ((unsigned)m->logical_id < (unsigned)logical_id) logical_id = m->logical_id;
         return IDLETIME; }
-    void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
         width = period = 1; depth = layout_size(); period_name = 0; }
     int memunit(int r, int c) { return r*6 + c; }
     int precision_shift();
@@ -677,7 +678,7 @@ public:
 };
 
 DECLARE_ABSTRACT_TABLE_TYPE(StatsTable, AttachedTable,
-    void vpn_params(int &width, int &depth, int &period, const char *&period_name) {
+    void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
         width = period = 1; depth = layout_size(); period_name = 0; }
 public:
     virtual void write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args) = 0;

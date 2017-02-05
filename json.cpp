@@ -1,6 +1,7 @@
 #include "json.h"
 #include <iomanip>
 #include <sstream>
+#include "hex.h"
 
 namespace json {
 
@@ -83,7 +84,8 @@ std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json) {
                 else json.reset(new string(std::move(s)));
                 return in;
             } else
-                std::cerr << "unexpected character '" << ch << "'" << std::endl;
+                std::cerr << "unexpected character '" << ch << "' (0x" << hex(ch) << ")"
+                          << std::endl;
         }
     }
     return in;
