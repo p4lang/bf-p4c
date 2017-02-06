@@ -122,7 +122,7 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
     // e.g., Ingress containers available, but Egress clusters remain
     //       & vice versa 
     //
-    // trivial_allocate(fields_overflow_i);
+    trivial_allocate(fields_overflow_i);
     //
     LOG3(*this);
     //
@@ -293,6 +293,26 @@ PHV_Bind::trivial_allocate(std::set<const PhvInfo::Field *>& fields) {
         }
         // ccgf owners allocate for members
         if (f->ccgf_fields.size()) {
+            if (!f->header_stack_pov_ccgf) {
+                //
+                // do not remove allocation for owners
+                // that are not members of ccgf, e.g., header stack povs
+                // egress::mpls.$stkvalid[6]{0..6}-r- --ccgf-> egress::mpls.$stkvalid
+                // [       egress::vxlan_gpe_int_header.$valid[1]
+                //         egress::mpls.$push[3]
+                //         egress::mpls[0].$valid[1]
+                //         egress::mpls[1].$valid[1]
+                //         egress::mpls[2].$valid[1]
+                // :7]
+                //
+                // when owner is member of ccgf,
+                // remove owner's allocation
+                // egress::tunnel_metadata.tunnel_src_index[9]{0..31}-r- --ccgf->
+                // e.g., [31:0]->[W109]        -- removed
+                //       [8:0]->[W109](23..31) -- fresh allocation
+                //
+                f1->alloc.clear();
+            }
             container_contiguous_alloc(f1,
                                        static_cast<int>(container_width),
                                        asm_container,

@@ -158,7 +158,13 @@ void PhvInfo::Field::foreach_byte(int lo, int hi,
                     tmp.width -= chi - (cbyte*8+7);
             } else {
                 int byte_hi = std::min(chi, cbyte*8+7);
-                assert(byte_hi > tmp.container_hi());
+                if (byte_hi <= tmp.container_hi()) {
+                    LOG1("**********"
+                        << " field = " << name
+                        << " byte_hi = " << byte_hi
+                        << " tmp.container_hi = " << tmp.container_hi());
+                }
+                assert(byte_hi >= tmp.container_hi());
                 if (byte_hi > tmp.container_hi())
                     tmp.width += byte_hi - tmp.container_hi();
                 assert(tmp.width <= 8); } }
