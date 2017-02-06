@@ -12,7 +12,7 @@ mac_rewrite.p4 tfas
 meter_test1.p4 mismatch
 - vpn lsb encoding swapped (not a bug -- either way is fine)
 - synth2port fabric is different -- not clear if it is a bug or where
-- idletime enable missing?
+- idletime missing from asm?
 
 proxy_hash1.p4 mismatch
 - hash config is different -- need something extra in asmgen?

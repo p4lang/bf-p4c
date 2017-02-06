@@ -42,6 +42,7 @@ static int precision_bits[] = { 0, 0, 1, 2, 0, 0, 3 };
 
 void IdletimeTable::write_merge_regs(int type, int bus) {
     auto &merge = stage->regs.rams.match.merge;
+    merge.mau_payload_shifter_enable[type][bus].idletime_adr_payload_shifter_en = 1;
     merge.mau_idletime_adr_mask[type][bus] = (~1U << precision_bits[precision]) & 0x1fffff;
     merge.mau_idletime_adr_default[type][bus] = 0x100000 | ((1 << precision_bits[precision]) - 1);
 }
@@ -52,7 +53,11 @@ void IdletimeTable::write_regs() {
     LOG1("### Idletime table " << name() << " write_regs");
     auto &map_alu = stage->regs.rams.map_alu;
     auto &adrdist = stage->regs.rams.match.adrdist;
-    stage->regs.cfg_regs.idle_dump_ctl[logical_id].idletime_dump_size = layout_size() - 1;
+    int minvpn = 1000000, maxvpn = -1;
+    for (Layout &logical_row : layout)
+        for (auto v : logical_row.vpns) {
+            if (v < minvpn) minvpn = v;
+            if (v > maxvpn) maxvpn = v; }
     //stage->regs.cfg_regs.mau_cfg_lt_has_idle |= 1 << logical_id;
     for (Layout &row : layout) {
         auto &map_alu_row = map_alu.row[row.row];
@@ -98,14 +103,22 @@ void IdletimeTable::write_regs() {
         if (bus_index < 8 && row.row >= 4)
             bus_index += 10;
         adrdist.adr_dist_idletime_adr_oxbar_ctl[bus_index/4]
-            .set_subfield(logical_id | 0x10, 5 * (bus_index%4), 5);
-    }
+            .set_subfield(logical_id | 0x10, 5 * (bus_index%4), 5); }
     //don't enable initially -- runtime will enable
     //adrdist.idletime_sweep_ctl[logical_id].idletime_en = 1;
+    adrdist.idletime_sweep_ctl[logical_id].idletime_sweep_offset = minvpn;
     adrdist.idletime_sweep_ctl[logical_id].idletime_sweep_size = layout_size() - 1;
+    adrdist.idletime_sweep_ctl[logical_id].idletime_sweep_remove_hole_pos = 0;  // TODO
+    adrdist.idletime_sweep_ctl[logical_id].idletime_sweep_remove_hole_en = 0;  // TODO
     adrdist.idletime_sweep_ctl[logical_id].idletime_sweep_interval = sweep_interval;
-    //adrdist.movereg_ad_ctl[logical_id].movereg_ad_direct_idle = 1;
-    //adrdist.movereg_ad_ctl[logical_id].movereg_ad_idle_size = precision_bits[precision];
+    auto &idle_dump_ctl = stage->regs.cfg_regs.idle_dump_ctl[logical_id];
+    idle_dump_ctl.idletime_dump_offset = minvpn;
+    idle_dump_ctl.idletime_dump_size = maxvpn;
+    idle_dump_ctl.idletime_dump_remove_hole_pos = 0;  // TODO
+    idle_dump_ctl.idletime_dump_remove_hole_en = 0;  // TODO
+    adrdist.movereg_idle_ctl[logical_id].movereg_idle_ctl_size = precision_bits[precision];
+    adrdist.movereg_idle_ctl[logical_id].movereg_idle_ctl_direct = 1;
+    adrdist.movereg_ad_direct[MoveReg::IDLE] |= 1 << logical_id;
 }
 
 void IdletimeTable::gen_stage_tbl_cfg(json::map &out) {
@@ -114,7 +127,7 @@ void IdletimeTable::gen_stage_tbl_cfg(json::map &out) {
     tbl["stage_number"] = stage->stageno;
     tbl["stage_table_type"] = "idletime";
     tbl["number_entries"] = number_entries;
-    add_pack_format(tbl, 10, 1, 8U/precision);
+    add_pack_format(tbl, 11, 1, 8U/precision);
     tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("map_ram", layout);
     tbl["stage_table_handle"] = logical_id;
     tbl["idletime_precision"] = precision;

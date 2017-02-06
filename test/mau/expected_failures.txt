@@ -26,6 +26,19 @@ test_config_139_tcam_error_detection_4.p4 mismatch
 16-NoHeaders.p4 tfas
 - invalid asm -- empty vector where (empty) map expected
 
+test_config_2_action_data_table_sizing.p4 mismatch
+- asmgen causes enable of unneeded byte on action_hv_xbar
+test_config_23_same_container_modified.p4 mismatch
+- asmgen incorrect asm for masked modify_field
+test_config_45_action_data_immediate_param_and_constant.p4 mismatch
+- asmgen causes enable of unneeded bytes on action_hv_xbar
+test_config_48_action_data_bit_masked_set.p4 mismatch
+- asmgen causes enable of unneeded bytes on action_hv_xbar
+test_config_91_gateway_with_split_table.p4 mismatch
+- action table split at 8 rows instead of 10?
+
+
+
 - uncharacterized failures (FIXME)
 01-FlexCounter.p4 compile
 02-FlexCounterActionProfile.p4 compile
@@ -87,11 +100,6 @@ test_config_204_no_tables_in_stage0.p4 mismatch
 test_config_205_modify_field_from_hash.p4 tfas
 test_config_206_stateful_logging.p4 mismatch
 test_config_209_pack_hash_dist.p4 mismatch
-test_config_23_same_container_modified.p4 mismatch
-test_config_2_action_data_table_sizing.p4 mismatch
-test_config_45_action_data_immediate_param_and_constant.p4 mismatch
-test_config_48_action_data_bit_masked_set.p4 mismatch
-test_config_91_gateway_with_split_table.p4 mismatch
 test_config_99_share_exact_match_key.p4 mismatch
 vk_basic_ipv4_20150706.p4 mismatch
 vk_basic_ipv4_subset.p4 mismatch
