@@ -120,7 +120,7 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
     // cluster slicing
     // perhaps due to Ingress / Egress partitions
     // e.g., Ingress containers available, but Egress clusters remain
-    //       & vice versa 
+    //       & vice versa
     //
     trivial_allocate(fields_overflow_i);
     //
@@ -148,7 +148,7 @@ PHV_Bind::container_contiguous_alloc(
             // consider MSB order
             int processed_members = 0;
             // container_bit start
-            int start = container_width; 
+            int start = container_width;
             for (auto &member : f1->ccgf_fields) {
                 int member_bit_lo = member->phv_use_lo;
                 int use_width = member->size - member->phv_use_rem;
@@ -253,7 +253,7 @@ PHV_Bind::trivial_allocate(std::set<const PhvInfo::Field *>& fields) {
     }
     PHV_Container::PHV_Word container_width = PHV_Container::PHV_Word::b8;
     for (auto &f : fields) {
-        // 
+        //
         // skip members of ccgfs as owners will allocate for them
         //
         if (f->ccgf && !f->ccgf_fields.size()) {
@@ -342,7 +342,8 @@ void PHV_Bind::sanity_check_container_fields(
         //
         // discard fields that are not used
         //
-        if (uses_i->use[1][field.gress][field.id]
+        if (field.pov
+           || uses_i->use[1][field.gress][field.id]
            || uses_i->use[0][field.gress][field.id]) {
             //
             s1.insert(&field);

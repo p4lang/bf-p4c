@@ -211,7 +211,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
         : phv_requirements_i(phv_r) {}
     //
     Cluster_PHV_Requirements&
-        phv_requirements() { return phv_requirements_i; } 
+        phv_requirements() { return phv_requirements_i; }
     //
     ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>&
         phv_mau_map() { return PHV_MAU_i; }

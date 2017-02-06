@@ -392,7 +392,7 @@ void Cluster::compute_fields_no_use_mau() {
            && (&field == field.ccgf && !dst_map_i.count(field.ccgf))) {
             //
             pov_fields_i.push_back(&field);
-        } 
+        }
         //
         // compute ccgf width
         // need PHV container of this width
@@ -699,8 +699,8 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg) {
                         for (auto &m : f->ccgf_fields) {
                             const PhvInfo::Field *mx = (const PhvInfo::Field *) m;
                             if (sx.count(mx)) {
-                                LOG1("*****cluster.cpp:sanity_FAIL***** duplicate "
-                                     "ccgf member ..." << msg);
+                                LOG1("*****cluster.cpp:sanity_FAIL***** duplicate ccgf member ....."
+                                    << msg);
                                 LOG1(mx);
                             }
                             sx.insert(mx);
