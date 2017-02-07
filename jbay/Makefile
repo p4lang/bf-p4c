@@ -5,7 +5,7 @@ default: $(GEN_JBAY:%=gen/jbay/%.h)
 
 JBAY_OBJS=$(GEN_TOFINO:%=gen/jbay/%.o)
 
-$(TFAS_OBJS): | $(GEN_JBAY:%=gen/tofino/%.h)
+GEN_HEADERS += $(GEN_JBAY:%=gen/jbay/%.h)
 
 $(GEN_JBAY:%=gen/jbay/%.o): gen/jbay/%.o: gen/jbay/%.cpp gen/jbay/%.h
 

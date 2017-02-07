@@ -5,7 +5,7 @@ default: $(GEN_TOFINO:%=gen/tofino/%.h)
 
 TOFINO_OBJS=$(GEN_TOFINO:%=gen/tofino/%.o)
 
-$(TFAS_OBJS): | $(GEN_TOFINO:%=gen/tofino/%.h)
+GEN_HEADERS += $(GEN_TOFINO:%=gen/tofino/%.h)
 
 $(GEN_TOFINO:%=gen/tofino/%.o): gen/tofino/%.o: gen/tofino/%.cpp gen/tofino/%.h
 gen/tofino/memories.prsr_mem_main_rspec.%: JSON_NAME=memories.all.parser.%s

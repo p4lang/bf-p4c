@@ -16,6 +16,8 @@ WALLE := $(shell  \
 
 default: tfas
 
+GEN_HEADERS := gen/uptr_sizes.h
+
 include tofino/Makefile
 include jbay/Makefile
 
@@ -39,7 +41,7 @@ asm-parse.o: lex-yaml.c gen/uptr_sizes.h
 json_diff.o json.o: OPTFLAGS = -O3
 
 %: %.cpp
-$(TFAS_OBJS): | gen/uptr_sizes.h
+$(TFAS_OBJS): | $(GEN_HEADERS)
 
 gen/%.h: templates/%.size.json templates/%.cfg.json json2cpp
 	@mkdir -p gen/$(dir $*)
