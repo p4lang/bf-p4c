@@ -65,7 +65,6 @@ CLEANFILES += \
 # TwoReferences invokes a table twice - maybe it should become a negative test?
 # *range* match type is not supported by BMv2 (used also in error_detection*.p4)
 XFAIL_TESTS += \
-    tofino/testdata/p4_14_samples/flowlet_switching.p4.test \
     tofino/testdata/p4_14_samples/16-TwoReferences.p4.test \
     tofino/%reldir%/p4_16/flowlet_switching.p4.test \
     tofino/%reldir%/p4_16/bfd_offload.p4.test \
@@ -140,8 +139,6 @@ XFAIL_TESTS += \
 
 # conflict between blackbox meter and builtin meter
 XFAIL_TESTS += \
-    tofino/%reldir%/p4_14/test_config_185_first_lpf.p4.test \
-    tofino/%reldir%/p4_14/test_config_201_meter_constant_index.p4.test \
     p14_to_16/%reldir%/p4_14/test_config_185_first_lpf.p4.test \
     p14_to_16/%reldir%/p4_14/test_config_201_meter_constant_index.p4.test \
     bmv2/%reldir%/p4_14/test_config_185_first_lpf.p4.test \
@@ -218,6 +215,7 @@ XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_247_first_clpm.p4.test
 
 # These currently fail gateway check with 'expression too complex'
 XFAIL_TESTS += \
+    tofino/testdata/p4_14_samples/flowlet_switching.p4.test \
     tofino/%reldir%/p4_14/07-MacAddrCheck.p4.test \
     tofino/%reldir%/p4_14/08-MacAddrCheck1.p4.test
 
