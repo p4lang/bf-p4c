@@ -111,11 +111,13 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     HeaderStackInfo stacks;
     TableSummary summary;
     MauAsmOutput mauasm(phv);
-    PassManager *phv_alloc;
+    Visitor *phv_alloc;
     SymBitMatrix mutually_exclusive_field_ids;
     ParserOverlay parserOverlay(phv, mutually_exclusive_field_ids);
 
-    if (options.phv_ortools) {
+    if (options.trivial_phvalloc) {
+        phv_alloc = new PHV::TrivialAlloc(phv, defuse.conflicts());
+    } else if (options.phv_ortools) {
         auto *newpa = new PhvAllocator(phv, defuse.conflicts(), std::ref(mutex));
         phv_alloc = new PassManager({
             newpa,
@@ -130,14 +132,10 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     } else {
         phv_alloc = new PassManager({
             new MauPhvConstraints(phv),
-            options.phv_new ?
-                new PassManager ({
-                    // &cluster_phv_mau,  // cluster PHV container placements
-                                          // second cut PHV MAU Group assignments
-                                          // honor single write conflicts from Table Placement
-                    &phv_bind,            // fields bound to PHV containers
-                })
-            :   new PassManager ({new PHV::TrivialAlloc(phv, defuse.conflicts())}),
+            // &cluster_phv_mau,   // cluster PHV container placements
+                                // second cut PHV MAU Group assignments
+                                // honor single write conflicts from Table Placement
+            &phv_bind,          // fields bound to PHV containers
         });
     }
 

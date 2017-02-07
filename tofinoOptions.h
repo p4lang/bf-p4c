@@ -7,13 +7,16 @@
 class Tofino_Options : public CompilerOptions {
  public:
     cstring phv_ortools = cstring();
-    bool phv_new = false;
+    bool trivial_phvalloc = false;
     int v12_path = 0;
 
     Tofino_Options() {
-        registerOption("--newpa", nullptr,
-            [this](const char *) { phv_new = true; return true; },
-            "use the new PHV allocation");
+        registerOption("--oldpa", nullptr,
+            [this](const char *) { trivial_phvalloc = true; return true; },
+            "use the old (trivial) PHV allocator");
+        registerOption("--trivpa", nullptr,
+            [this](const char *) { trivial_phvalloc = true; return true; },
+            "use the trivial PHV allocator");
         registerOption("--ortools", nullptr,
             [this](const char *arg) { phv_ortools = arg ? arg : "default"; return true; },
             "use ortools-based PHV allocation");

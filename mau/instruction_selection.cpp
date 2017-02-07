@@ -234,7 +234,7 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
         else if (isDepositMask(mask))
             return makeDepositField(prim, mask);
         else
-            return new IR::MAU::Instruction(prim->srcInfo, "bitmask-set", &prim->operands);
+            return new IR::MAU::Instruction(prim->srcInfo, "bitmasked-set", &prim->operands);
     } else if (prim->name == "add" || prim->name == "sub" || prim->name == "subtract") {
         if (prim->operands.size() != 3) {
             error("%s: wrong number of operands to %s", prim->srcInfo, prim->name);
