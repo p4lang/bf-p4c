@@ -62,6 +62,8 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
 
 void ActionBus::pass1(Table *tbl) {
     LOG1("ActionBus::pass1(" << tbl->name() << ")");
+    if (lineno < 0)
+        lineno = tbl->format && tbl->format->lineno >= 0 ? tbl->format->lineno : tbl->lineno;
     Slot *use[ACTION_DATA_BUS_SLOTS] = { 0 };
     for (auto &slot : Values(by_byte)) {
         int slotno = Stage::action_bus_slot_map[slot.byte];
@@ -156,8 +158,10 @@ void ActionBus::do_alloc(Table *tbl, Table::Format::Field *f, unsigned use, int 
 }
 
 void ActionBus::pass2(Table *tbl) {
-    LOG1("ActionBus::pass2(" << tbl->name() << ")");
-    int immed_offset = tbl->format->immed ? tbl->format->immed->bit(0) : 0;
+    bool is_action_data = dynamic_cast<ActionTable *>(tbl) != nullptr;
+    LOG1("ActionBus::pass2(" << tbl->name() << ") " << (is_action_data ? "[action]" : "[immed]"));
+    int immed_offset = tbl->format && tbl->format->immed ? tbl->format->immed->bit(0) : 0;
+    assert(immed_offset == 0 || !is_action_data);
     for (auto &f : need_place) {
         auto field = f.first;
         for (auto &bits : f.second) {
@@ -169,11 +173,11 @@ void ActionBus::pass2(Table *tbl) {
                 /* Can't go across 32-bit boundary so chop it down as needed */
                 hi = lo|31U; }
             int bytes = hi/8U - lo/8U + 1;
-            int step = lo < 32 && !tbl->format->immed ? 2 : lo < 64 ? 4 : 8;
+            int step = lo < 32 && is_action_data ? 2 : lo < 64 ? 4 : 8;
             if (bits.second & 1) {
                 /* need 8-bit */
                 if ((lo % 8U) && (lo/8U != hi/8U)) {
-                    error(tbl->format->lineno, "field %s not correctly aligned for 8-bit use on "
+                    error(lineno, "field %s not correctly aligned for 8-bit use on "
                           "action bus", tbl->format->find_field(field).c_str());
                     continue; }
                 unsigned start = (lo/8U) % step;
@@ -186,7 +190,7 @@ void ActionBus::pass2(Table *tbl) {
                 /* need 16-bit */
                 if (lo % 16U) {
                     if (lo/16U != hi/16U) {
-                        error(tbl->format->lineno, "field %s not correctly aligned for 16-bit use "
+                        error(lineno, "field %s not correctly aligned for 16-bit use "
                               "on action bus", tbl->format->find_field(field).c_str());
                         continue; }
                     if ((use = find_merge(lo, bytes, 2)) >= 0) {
@@ -244,7 +248,6 @@ int ActionBus::find(const char *name, int off, int size, int *len) {
 void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action_slice) {
     LOG2("--- ActionBus write_action_regs(" << tbl->name() << ", " << home_row << ", " <<
          action_slice << ")");
-    int line = lineno < 0 ? tbl->format->lineno : lineno;
     auto &action_hv_xbar = tbl->stage->regs.rams.array.row[home_row/2].action_hv_xbar;
     unsigned side = home_row%2;  /* 0 == left,  1 == right */
     for (auto &el : by_byte) {
@@ -260,7 +263,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
              "(" << el.second.data.begin()->second << ".." << (el.second.data.begin()->second + size - 1) << ")" <<
              " [" << bit << ".." << (bit+size-1) << "]");
         if (bit + size > 128) {
-            error(line, "Action bus setup can't deal with field %s split across "
+            error(lineno, "Action bus setup can't deal with field %s split across "
                   "SRAM rows", el.second.name.c_str());
             continue; }
         unsigned bytemask = (1U << ((size+7)/8U)) - 1;
@@ -274,7 +277,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
                 case 2: case 3: code = 3; mask = 7; break;
                 default: assert(0); }
                 if ((sbyte^byte) & mask) {
-                    error(line, "Can't put field %s into byte %d on action xbar",
+                    error(lineno, "Can't put field %s into byte %d on action xbar",
                           el.second.name.c_str(), byte);
                     break; }
                 auto &ctl = action_hv_xbar.action_hv_ixbar_ctl_byte[side];
@@ -296,7 +299,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
                     ctl.action_hv_ixbar_ctl_byte_15to8_enable = 1;
                     break; }
                 if (!(bytemask & 1))
-                    WARNING(SrcInfo(line) << ": putting " << el.second.name << " on action bus "
+                    WARNING(SrcInfo(lineno) << ": putting " << el.second.name << " on action bus "
                             "byte " << byte << " even though bit in bytemask is not set");
                 action_hv_xbar.action_hv_ixbar_input_bytemask[side] |= 1 << sbyte;
                 bytemask >>= 1; }
@@ -313,7 +316,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
                 case 2: case 3: code = 3; mask = 7; break;
                 default: assert(0); }
                 if (((word << 1)^byte) & mask) {
-                    error(line, "Can't put field %s into byte %d on action xbar",
+                    error(lineno, "Can't put field %s into byte %d on action xbar",
                           el.second.name.c_str(), byte);
                     break; }
                 auto &ctl = action_hv_xbar.action_hv_ixbar_ctl_halfword[slot/8][side];
@@ -342,7 +345,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
             bit %= 32;
             bytemask <<= bit/8;
             if (((word << 2)^byte) & 7) {
-                error(line, "Can't put field %s into byte %d on action xbar",
+                error(lineno, "Can't put field %s into byte %d on action xbar",
                       el.second.name.c_str(), byte);
                 break; }
             auto &ctl = action_hv_xbar.action_hv_ixbar_ctl_word[slot/4][side];
@@ -362,7 +365,7 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
         default:
             assert(0); }
         if (bytemask)
-            WARNING(SrcInfo(line) << ": excess bits " << hex(bytemask) <<
+            WARNING(SrcInfo(lineno) << ": excess bits " << hex(bytemask) <<
                     " set in bytemask for " << el.second.name);
     }
 }

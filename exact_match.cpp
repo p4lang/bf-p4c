@@ -14,9 +14,7 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
     setup_logical_id();
     if (auto *fmt = get(data, "format")) {
         if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
-            format = new Format(fmt->map);
-    } else
-        error(lineno, "No format specified in table %s", name());
+            format = new Format(fmt->map); }
     VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
     for (auto &kv : MapIterChecked(data)) {
         if (common_setup(kv, data)) {
@@ -76,6 +74,8 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
             p4_table = P4Table::get(P4Table::MatchEntry, p4_info); }
     fini(p4_info);
     alloc_rams(false, stage->sram_use, &stage->sram_match_bus_use);
+    if (layout_size() > 0 && !format)
+        error(lineno, "No format specified in table %s", name());
     if (action.set() && actions)
         error(lineno, "Table %s has both action table and immediate actions", name());
     if (!action.set() && !actions)
@@ -124,174 +124,177 @@ void ExactMatchTable::pass1() {
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
     input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
-    if (format->log2size < 7)
-        format->log2size = 7;
-    format->pass1(this);
-    group_info.resize(format->groups());
-    unsigned fmt_width = (format->size + 127)/128;
-    for (unsigned i = 0; i < format->groups(); i++) {
-        auto &info = group_info[i];
-        info.tofino_mask.resize(fmt_width);
-        if (Format::Field *match = format->field("match", i)) {
-            for (auto &piece : match->bits) {
+    if (format) {
+        if (format->log2size < 7)
+            format->log2size = 7;
+        format->pass1(this);
+        group_info.resize(format->groups());
+        unsigned fmt_width = (format->size + 127)/128;
+        for (unsigned i = 0; i < format->groups(); i++) {
+            auto &info = group_info[i];
+            info.tofino_mask.resize(fmt_width);
+            if (Format::Field *match = format->field("match", i)) {
+                for (auto &piece : match->bits) {
+                    unsigned word = piece.lo/128;
+                    if (word != piece.hi/128)
+                        error(format->lineno, "'match' field must be explictly split across "
+                              "128-bit boundary in table %s", name());
+                    info.tofino_mask[word] |= tofino_bytemask(piece.lo%128, piece.hi%128);
+                    info.match_group[word] = -1; } }
+            if (auto *version = format->field("version", i)) {
+                if (version->bits.size() != 1)
+                    error(format->lineno, "'version' field cannot be split");
+                auto &piece = version->bits[0];
                 unsigned word = piece.lo/128;
-                if (word != piece.hi/128)
-                    error(format->lineno, "'match' field must be explictly split across 128-bit "
-                          "boundary in table %s", name());
+                if (version->size != 4 || (piece.lo % 4) != 0)
+                    error(format->lineno, "'version' field not 4 bits and nibble aligned "
+                          "in table %s", name());
                 info.tofino_mask[word] |= tofino_bytemask(piece.lo%128, piece.hi%128);
-                info.match_group[word] = -1; } }
-        if (auto *version = format->field("version", i)) {
-            if (version->bits.size() != 1)
-                error(format->lineno, "'version' field cannot be split");
-            auto &piece = version->bits[0];
-            unsigned word = piece.lo/128;
-            if (version->size != 4 || (piece.lo % 4) != 0)
-                error(format->lineno, "'version' field not 4 bits and nibble aligned "
-                      "in table %s", name());
-            info.tofino_mask[word] |= tofino_bytemask(piece.lo%128, piece.hi%128);
-            info.match_group[word] = -1; }
-        for (unsigned j = 0; j < i; j++)
-            for (unsigned word = 0; word < fmt_width; word++)
-                if (group_info[j].tofino_mask[word] & info.tofino_mask[word]) {
-                    int bit = ffs(group_info[j].tofino_mask[word] & info.tofino_mask[word])-1;
-                    if (bit >= 14) bit += 14;
-                    error(format->lineno, "Match groups %d and %d both use %s %d in word %d",
-                          i, j, bit > 20 ? "nibble" : "byte", bit, word);
-                    break; }
-        for (auto it = format->begin(i); it != format->end(i); it++) {
-            if (it->first == "match" || it->first == "version" || it->first == "proxy_hash")
-                continue;
-            if (it->second.bits.size() != 1) {
-                error(format->lineno, "Can't deal with split field %s", it->first.c_str());
-                continue; }
-            unsigned limit = it->first == "next" ? 40 : 64;
-            unsigned word = it->second.bits[0].lo/128;
-            if (info.overhead_word < 0) {
-                info.overhead_word = word;
-                info.overhead_bit = it->second.bits[0].lo%128;
-                if (!info.match_group.count(word))
-                    error(format->lineno, "Overhead for group %d must be in the same word "
-                          "as part of its match", i);
-            } else if (info.overhead_word != (int)word)
-                error(format->lineno, "Match overhead group %d split across words", i);
-            else if (word != it->second.bits[0].hi/128 || it->second.bits[0].hi%128 >= limit)
-                error(format->lineno, "Match overhead field %s(%d) not in bottom %d bits",
-                      it->first.c_str(), i, limit);
-            if ((unsigned)info.overhead_bit > it->second.bits[0].lo%128)
-                info.overhead_bit = it->second.bits[0].lo%128; } }
-    if (word_info.empty()) {
-        word_info.resize(fmt_width);
-        if (format->field("next")) {
-            /* 'next' for match group 0 must be in bit 0, so make the format group with
-             * overhead in bit 0 match group 0 in its overhead word */
-            for (unsigned i = 0; i < group_info.size(); i++) {
-                if (group_info[i].overhead_bit == 0) {
-                    assert(error_count > 0 || word_info[group_info[i].overhead_word].empty());
-                    group_info[i].match_group[group_info[i].overhead_word] = 0;
-                    word_info[group_info[i].overhead_word].push_back(i); } } }
-        for (unsigned i = 0; i < group_info.size(); i++)
-            if (group_info[i].match_group.size() > 1)
+                info.match_group[word] = -1; }
+            for (unsigned j = 0; j < i; j++)
+                for (unsigned word = 0; word < fmt_width; word++)
+                    if (group_info[j].tofino_mask[word] & info.tofino_mask[word]) {
+                        int bit = ffs(group_info[j].tofino_mask[word] & info.tofino_mask[word])-1;
+                        if (bit >= 14) bit += 14;
+                        error(format->lineno, "Match groups %d and %d both use %s %d in word %d",
+                              i, j, bit > 20 ? "nibble" : "byte", bit, word);
+                        break; }
+            for (auto it = format->begin(i); it != format->end(i); it++) {
+                if (it->first == "match" || it->first == "version" || it->first == "proxy_hash")
+                    continue;
+                if (it->second.bits.size() != 1) {
+                    error(format->lineno, "Can't deal with split field %s", it->first.c_str());
+                    continue; }
+                unsigned limit = it->first == "next" ? 40 : 64;
+                unsigned word = it->second.bits[0].lo/128;
+                if (info.overhead_word < 0) {
+                    info.overhead_word = word;
+                    info.overhead_bit = it->second.bits[0].lo%128;
+                    if (!info.match_group.count(word))
+                        error(format->lineno, "Overhead for group %d must be in the same word "
+                              "as part of its match", i);
+                } else if (info.overhead_word != (int)word)
+                    error(format->lineno, "Match overhead group %d split across words", i);
+                else if (word != it->second.bits[0].hi/128 || it->second.bits[0].hi%128 >= limit)
+                    error(format->lineno, "Match overhead field %s(%d) not in bottom %d bits",
+                          it->first.c_str(), i, limit);
+                if ((unsigned)info.overhead_bit > it->second.bits[0].lo%128)
+                    info.overhead_bit = it->second.bits[0].lo%128; } }
+        if (word_info.empty()) {
+            word_info.resize(fmt_width);
+            if (format->field("next")) {
+                /* 'next' for match group 0 must be in bit 0, so make the format group with
+                 * overhead in bit 0 match group 0 in its overhead word */
+                for (unsigned i = 0; i < group_info.size(); i++) {
+                    if (group_info[i].overhead_bit == 0) {
+                        assert(error_count > 0 || word_info[group_info[i].overhead_word].empty());
+                        group_info[i].match_group[group_info[i].overhead_word] = 0;
+                        word_info[group_info[i].overhead_word].push_back(i); } } }
+            for (unsigned i = 0; i < group_info.size(); i++)
+                if (group_info[i].match_group.size() > 1)
+                    for (auto &mgrp : group_info[i].match_group) {
+                        if (mgrp.second >= 0) continue;
+                        if ((mgrp.second = word_info[mgrp.first].size()) > 1)
+                            error(format->lineno, "Too many multi-word groups using word %d",
+                                  mgrp.first);
+                        word_info[mgrp.first].push_back(i); }
+        } else {
+            if (word_info.size() != fmt_width)
+                error(mgm_lineno, "Match group map doesn't match format size");
+            for (unsigned i = 0; i < word_info.size(); i++) {
+                for (unsigned j = 0; j < word_info[i].size(); j++) {
+                    int grp = word_info[i][j];
+                    if (grp < 0 || (unsigned)grp >= format->groups())
+                        error(mgm_lineno, "Invalid group number %d", grp);
+                    else if (!group_info[grp].match_group.count(i))
+                        error(mgm_lineno, "Format group %d doesn't match in word %d", grp, i);
+                    else {
+                        group_info[grp].match_group[i] = j;
+                        if (Format::Field *next = format->field("next", grp)) {
+                            if (next->bits[0].lo/128 != i) continue;
+                            static unsigned limit[5] = { 0, 8, 32, 32, 32 };
+                            unsigned bit = next->bits[0].lo%128U;
+                            if (!j && bit)
+                                error(mgm_lineno, "Next(%d) field must start at bit %d to be in "
+                                      "match group 0", grp, i*128);
+                            else if (j && (!bit || bit > limit[j]))
+                                warning(mgm_lineno, "Next(%d) field must start in range %d..%d "
+                                        "to be in match group %d", grp, i*128+1, i*128+limit[j], j);
+                            } } } } }
+        if (error_count > 0) return;
+        for (int i = 0; i < (int)group_info.size(); i++) {
+            if (group_info[i].match_group.size() == 1)
                 for (auto &mgrp : group_info[i].match_group) {
                     if (mgrp.second >= 0) continue;
-                    if ((mgrp.second = word_info[mgrp.first].size()) > 1)
-                        error(format->lineno, "Too many multi-word groups using word %d",
-                              mgrp.first);
+                    if ((mgrp.second = word_info[mgrp.first].size()) > 4)
+                        error(format->lineno, "Too many match groups using word %d", mgrp.first);
                     word_info[mgrp.first].push_back(i); }
-    } else {
-        if (word_info.size() != fmt_width)
-            error(mgm_lineno, "Match group map doesn't match format size");
-        for (unsigned i = 0; i < word_info.size(); i++) {
-            for (unsigned j = 0; j < word_info[i].size(); j++) {
-                int grp = word_info[i][j];
-                if (grp < 0 || (unsigned)grp >= format->groups())
-                    error(mgm_lineno, "Invalid group number %d", grp);
-                else if (!group_info[grp].match_group.count(i))
-                    error(mgm_lineno, "Format group %d doesn't match in word %d", grp, i);
-                else {
-                    group_info[grp].match_group[i] = j;
-                    if (Format::Field *next = format->field("next", grp)) {
-                        if (next->bits[0].lo/128 != i) continue;
-                        static unsigned limit[5] = { 0, 8, 32, 32, 32 };
-                        unsigned bit = next->bits[0].lo%128U;
-                        if (!j && bit)
-                            error(mgm_lineno, "Next(%d) field must start at bit %d to be in "
-                                  "match group 0", grp, i*128);
-                        else if (j && (!bit || bit > limit[j]))
-                            warning(mgm_lineno, "Next(%d) field must start in range %d..%d to be "
-                                    "in match group %d", grp, i*128+1, i*128+limit[j], j); } } } } }
-    if (error_count > 0) return;
-    for (int i = 0; i < (int)group_info.size(); i++) {
-        if (group_info[i].match_group.size() == 1)
-            for (auto &mgrp : group_info[i].match_group) {
-                if (mgrp.second >= 0) continue;
-                if ((mgrp.second = word_info[mgrp.first].size()) > 4)
-                    error(format->lineno, "Too many match groups using word %d", mgrp.first);
-                word_info[mgrp.first].push_back(i); }
-        if (group_info[i].overhead_word < 0) {
-            /* no overhead -- use the last match word */
-            group_info[i].word_group = group_info[i].match_group.rbegin()->second;
-            LOG1("  format group " << i << " no overhead");
-        } else {
-            group_info[i].word_group = group_info[i].match_group[group_info[i].overhead_word];
-            LOG1("  format group " << i << " overhead in word " << group_info[i].overhead_word <<
-                 " at bit " << group_info[i].overhead_bit); }
-        LOG1("  masks: " << hexvec(group_info[i].tofino_mask));
-        for (auto &mgrp : group_info[i].match_group)
-            LOG1("    match group " << mgrp.second << " in word " << mgrp.first); }
-    for (unsigned i = 0; i < word_info.size(); i++)
-        LOG1("  word " << i << " groups: " << word_info[i]);
-    if (options.match_compiler && 0) {
-        /* hack to match the compiler's nibble usage -- if any of the top 4 nibbles is
-         * unused in a word, mark it as used by any group that uses the other nibble of the
-         * byte, UNLESS it is used for the version.  This is ok, as the unused nibble will
-         * end up being masked off by the match_mask anyways */
-        for (unsigned word = 0; word < word_info.size(); word++) {
-            unsigned used_nibbles = 0;
-            for (auto group : word_info[word])
-                used_nibbles |= group_info[group].tofino_mask[word] >> 14;
-            for (unsigned nibble = 0; nibble < 4; nibble++) {
-                if (!((used_nibbles >> nibble) & 1) && ((used_nibbles >> (nibble^1)) & 1)) {
-                    LOG1("  ** fixup nibble " << nibble << " in word " << word);
-                    for (auto group : word_info[word])
-                        if ((group_info[group].tofino_mask[word] >> (14 + (nibble^1))) & 1) {
-                            if (auto *version = format->field("version", group)) {
-                                if (version->bits[0].lo == word*128 + (nibble^1)*4 + 112) {
-                                    LOG1("      skip group " << group << " (version)");
-                                    continue; } }
-                            group_info[group].tofino_mask[word] |= 1 << (14 + nibble);
-                            LOG1("      adding to group " << group); } } } } }
-    setup_ways();
-    for (auto &r : match) r.check(true);
-    if (error_count > 0) return;
-    auto match_format = format->field("match");
-    if (match_format && match.empty())
-        for (auto ixbar_element : *input_xbar)
-            match.push_back(ixbar_element.second.what);
-    unsigned bit = 0;
-    for (auto &r : match) {
-        match_by_bit[bit] = r;
-        bit += r->size(); }
-    if ((unsigned)bit != (match_format ? match_format->size : 0))
-        warning(match[0].lineno, "Match width %d for table %s doesn't match format match width %d",
-                bit, name(), match_format->size);
-    match_in_word.resize(fmt_width);
-    for (unsigned i = 0; i < format->groups(); i++) {
-        Format::Field *match = format->field("match", i);
-        if (!match) continue;
+            if (group_info[i].overhead_word < 0) {
+                /* no overhead -- use the last match word */
+                group_info[i].word_group = group_info[i].match_group.rbegin()->second;
+                LOG1("  format group " << i << " no overhead");
+            } else {
+                group_info[i].word_group = group_info[i].match_group[group_info[i].overhead_word];
+                LOG1("  format group " << i << " overhead in word " << group_info[i].overhead_word
+                     << " at bit " << group_info[i].overhead_bit); }
+            LOG1("  masks: " << hexvec(group_info[i].tofino_mask));
+            for (auto &mgrp : group_info[i].match_group)
+                LOG1("    match group " << mgrp.second << " in word " << mgrp.first); }
+        for (unsigned i = 0; i < word_info.size(); i++)
+            LOG1("  word " << i << " groups: " << word_info[i]);
+        if (options.match_compiler && 0) {
+            /* hack to match the compiler's nibble usage -- if any of the top 4 nibbles is
+             * unused in a word, mark it as used by any group that uses the other nibble of the
+             * byte, UNLESS it is used for the version.  This is ok, as the unused nibble will
+             * end up being masked off by the match_mask anyways */
+            for (unsigned word = 0; word < word_info.size(); word++) {
+                unsigned used_nibbles = 0;
+                for (auto group : word_info[word])
+                    used_nibbles |= group_info[group].tofino_mask[word] >> 14;
+                for (unsigned nibble = 0; nibble < 4; nibble++) {
+                    if (!((used_nibbles >> nibble) & 1) && ((used_nibbles >> (nibble^1)) & 1)) {
+                        LOG1("  ** fixup nibble " << nibble << " in word " << word);
+                        for (auto group : word_info[word])
+                            if ((group_info[group].tofino_mask[word] >> (14 + (nibble^1))) & 1) {
+                                if (auto *version = format->field("version", group)) {
+                                    if (version->bits[0].lo == word*128 + (nibble^1)*4 + 112) {
+                                        LOG1("      skip group " << group << " (version)");
+                                        continue; } }
+                                group_info[group].tofino_mask[word] |= 1 << (14 + nibble);
+                                LOG1("      adding to group " << group); } } } } }
+        setup_ways();
+        for (auto &r : match) r.check(true);
+        if (error_count > 0) return;
+        auto match_format = format->field("match");
+        if (match_format && match.empty())
+            for (auto ixbar_element : *input_xbar)
+                match.push_back(ixbar_element.second.what);
         unsigned bit = 0;
-        for (auto &piece : match->bits) {
-            auto mw = --match_by_bit.upper_bound(bit);
-            int lo = bit - mw->first;
-            while(mw != match_by_bit.end() &&  mw->first < bit + piece.size()) {
-                int hi = std::min((unsigned)mw->second->size()-1, bit+piece.size()-mw->first-1);
-                assert((unsigned)piece.lo/128 < fmt_width);
-                //merge_phv_vec(match_in_word[piece.lo/128], Phv::Ref(mw->second, lo, hi));
-                append(match_in_word[piece.lo/128], split_phv_bytes(Phv::Ref(mw->second, lo, hi)));
-                lo = 0;
-                ++mw; }
-            bit += piece.size(); } }
-    for (unsigned i = 0; i < fmt_width; i++)
-        LOG1("  match in word " << i << ": " << match_in_word[i]);
+        for (auto &r : match) {
+            match_by_bit[bit] = r;
+            bit += r->size(); }
+        if ((unsigned)bit != (match_format ? match_format->size : 0))
+            warning(match[0].lineno, "Match width %d for table %s doesn't match format match "
+                    "width %d", bit, name(), match_format->size);
+        match_in_word.resize(fmt_width);
+        for (unsigned i = 0; i < format->groups(); i++) {
+            Format::Field *match = format->field("match", i);
+            if (!match) continue;
+            unsigned bit = 0;
+            for (auto &piece : match->bits) {
+                auto mw = --match_by_bit.upper_bound(bit);
+                int lo = bit - mw->first;
+                while(mw != match_by_bit.end() &&  mw->first < bit + piece.size()) {
+                    int hi = std::min((unsigned)mw->second->size()-1, bit+piece.size()-mw->first-1);
+                    assert((unsigned)piece.lo/128 < fmt_width);
+                    //merge_phv_vec(match_in_word[piece.lo/128], Phv::Ref(mw->second, lo, hi));
+                    append(match_in_word[piece.lo/128],
+                           split_phv_bytes(Phv::Ref(mw->second, lo, hi)));
+                    lo = 0;
+                    ++mw; }
+                bit += piece.size(); } }
+        for (unsigned i = 0; i < fmt_width; i++)
+            LOG1("  match in word " << i << ": " << match_in_word[i]); }
     if (gateway) {
         gateway->logical_id = logical_id;
         gateway->pass1();
@@ -449,7 +452,7 @@ void ExactMatchTable::pass2() {
     if (action_bus) action_bus->pass2(this);
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
-    format->pass2(this);
+    if (format) format->pass2(this);
 }
 
 /* FIXME -- should have ExactMatchTable::write_merge_regs write some of the merge stuff
@@ -459,18 +462,18 @@ void ExactMatchTable::write_regs() {
     LOG1("### Exact match table " << name() << " write_regs");
     MatchTable::write_regs(0, this);
     auto &merge = stage->regs.rams.match.merge;
-    unsigned fmt_width = (format->size + 127)/128;
+    unsigned fmt_width = format ? (format->size + 127)/128 : 0;
     bitvec match_mask, version_nibble_mask;
     match_mask.setrange(0, 128*fmt_width);
     version_nibble_mask.setrange(0, 32*fmt_width);
-    for (unsigned i = 0; i < format->groups(); i++) {
+    for (unsigned i = 0; format && i < format->groups(); i++) {
         if (Format::Field *match = format->field("match", i)) {
             for (auto &piece : match->bits)
                 match_mask.clrrange(piece.lo, piece.hi+1-piece.lo); }
         if (Format::Field *version = format->field("version", i)) {
             match_mask.clrrange(version->bits[0].lo, version->size);
             version_nibble_mask.clrrange(version->bits[0].lo/4, 1); } }
-    Format::Field *next = format->field("next");
+    Format::Field *next = format ? format->field("next") : nullptr;
 
     /* iterating through rows in the sram array;  while in this loop, 'row' is the
      * row we're on, 'word' is which word in a wide full-way the row is for, and 'way'
@@ -572,7 +575,7 @@ void ExactMatchTable::write_regs() {
         /* setup input xbars to get data to the right places on the bus(es) */
         bool using_match = false;
         auto &byteswizzle_ctl = rams_row.exactmatch_row_vh_xbar_byteswizzle_ctl[row.bus];
-        for (unsigned i = 0; i < format->groups(); i++) {
+        for (unsigned i = 0; format && i < format->groups(); i++) {
             if (Format::Field *match = format->field("match", i)) {
                 unsigned bit = 0;
                 for (auto &piece : match->bits) {
@@ -627,7 +630,7 @@ void ExactMatchTable::write_regs() {
                 if (attached.selector.args.size() == 3)
                     width += attached.selector.args[2].size();
                 merge.mau_selectorlength_mask[0][bus] = (1 << width) - 1; } }
-        for (unsigned word_group = 0; word_group < word_info[word].size(); word_group++) {
+        for (unsigned word_group = 0; format && word_group < word_info[word].size(); word_group++) {
             int group = word_info[word][word_group];
             if (group_info[group].overhead_word == (int)word) {
                 if (format->immed) {
@@ -721,7 +724,7 @@ std::unique_ptr<json::map> ExactMatchTable::gen_memory_resource_allocation_tbl_c
     mra["memory_type"] = "sram";
     int hash_id = -1;
     unsigned hash_groups = 0, vpn_ctr = 0;
-    unsigned fmt_width = (format->size + 127)/128;
+    unsigned fmt_width = format ? (format->size + 127)/128 : 0;
     if (options.match_compiler) {
         for (auto &w : ways) {
             if (!((hash_groups >> w.group) & 1)) {
@@ -793,13 +796,14 @@ void ExactMatchTable::add_field_to_pack_format(json::vector &field_list, int bas
 }
 
 void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
-    unsigned fmt_width = (format->size + 127)/128;
-    unsigned number_entries = layout_size()/fmt_width * format->groups() * 1024;
+    unsigned fmt_width = format ? (format->size + 127)/128 : 0;
+    unsigned number_entries = format ? layout_size()/fmt_width * format->groups() * 1024 : 0;
     json::map &tbl = *base_tbl_cfg(out, "match_entry", number_entries);
     if (!tbl.count("preferred_match_type"))
         tbl["preferred_match_type"] = "exact";
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "hash_match", number_entries);
-    add_pack_format(stage_tbl, format);
+    if (format)
+        add_pack_format(stage_tbl, format);
     if (options.match_compiler)
         stage_tbl["memory_resource_allocation"] = nullptr;
     json::vector match_field_list;
@@ -843,7 +847,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
     else if (options.match_compiler)
         stage_tbl["stage_idletime_table"] = nullptr;
     tbl["performs_hash_action"] = false;
-    tbl["uses_versioning"] = format->field("version") != 0;
+    tbl["uses_versioning"] = format ? format->field("version") != nullptr : false;
     tbl["tcam_error_detect"] = false;
     tbl["match_type"] = p4_table->match_type.empty() ? "exact" : p4_table->match_type;
     if (!p4_table->action_profile.empty())

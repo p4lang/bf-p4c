@@ -438,7 +438,7 @@ void Table::alloc_maprams() {
 }
 
 void Table::alloc_vpns() {
-    if (no_vpns || layout.size() == 0 || layout[0].vpns.size() > 0) return;
+    if (no_vpns || layout_size() == 0 || layout[0].vpns.size() > 0) return;
     setup_vpns(layout, 0);
 }
 
