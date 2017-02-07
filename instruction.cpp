@@ -122,7 +122,9 @@ private:
             unsigned bits = group_size[group];
             unsigned bytes = bits/8U;
             if (field && table->find_on_actionbus(field, lo, bytes) < 0) {
-                int immed_offset = table->format->immed ? table->format->immed->bit(0) : 0;
+                int immed_offset = 0;
+                if (table->format && table->format->immed)
+                    immed_offset = table->format->immed->bit(0);
                 int l = field->bit(lo) - immed_offset, h = field->bit(hi) - immed_offset;
                 if (l%bits != 0 && l/bits != h/bits)
                     error(lineno, "%s misaligned for action bus", name.c_str());

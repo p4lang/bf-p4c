@@ -142,6 +142,9 @@ public:
                         return chunk.hi;
                 assert(0); }
             enum flags_t { USED_IMMED=1 };
+            Field() {}
+            Field(unsigned size, enum flags_t fl) : size(size), flags(fl) {
+                if (size) bits.push_back({ 0, size-1 }); }
         };
         Format() { fmt.resize(1); }
         Format(VECTOR(pair_t) &data, bool may_overlap = false);
@@ -450,6 +453,7 @@ DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
                                                  * match group in each word */
     int         mgm_lineno = -1;                /* match_group_map lineno */
 public:
+    Format::Field *lookup_field(const std::string &n, const std::string &act = "") override;
     SelectionTable *get_selector() const { return attached.get_selector(); }
     void write_merge_regs(int type, int bus) { attached.write_merge_regs(this, type, bus); }
     using Table::gen_memory_resource_allocation_tbl_cfg;
@@ -479,7 +483,7 @@ public:
     Table::Ref indirect;
     int indirect_bus;   /* indirect bus to use if there's no indirect table */
     void alloc_vpns();
-    Format::Field *lookup_field(const std::string &name, const std::string &action) {
+    Format::Field *lookup_field(const std::string &name, const std::string &action) override {
         assert(!format);
         return indirect ? indirect->lookup_field(name, action) : 0; }
     int find_on_actionbus(Format::Field *f, int off, int size) {
@@ -571,7 +575,7 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     std::map<std::string, Format *>     action_formats;
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override;
     std::string find_field(Format::Field *field);
-    Format::Field *lookup_field(const std::string &name, const std::string &action);
+    Format::Field *lookup_field(const std::string &name, const std::string &action) override;
     void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn);
     int find_on_actionbus(Format::Field *f, int off, int size);
     int find_on_actionbus(const char *n, int off, int size, int *len);

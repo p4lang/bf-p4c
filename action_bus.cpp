@@ -381,7 +381,6 @@ void ActionBus::write_immed_regs(Table *tbl) {
             off = f.second.data.begin()->second;
             if (f.second.data.begin()->first) {
                 off += f.second.data.begin()->first->bits[0].lo;
-                assert(tbl->format && tbl->format->immed);
                 if (tbl->format) off -= tbl->format->immed->bits[0].lo; } }
         unsigned size = f.second.size;
         switch(Stage::action_bus_slot_size[slot]) {

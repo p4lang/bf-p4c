@@ -87,6 +87,14 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
         input_xbar = new InputXbar(this, false);
 }
 
+Table::Format::Field *ExactMatchTable::lookup_field(const std::string &n, const std::string &) {
+    if (format) return format->field(n);
+    if (n == "immediate" && !::Phv::get(gress, n)) {
+        static Format::Field default_immediate(32, Format::Field::USED_IMMED);
+        return &default_immediate; }
+    return nullptr;
+}
+
 /* calculate the 18-bit byte/nybble mask tofino uses for matching in a 128-bit word */
 static unsigned tofino_bytemask(int lo, int hi) {
     unsigned rv = 0;
