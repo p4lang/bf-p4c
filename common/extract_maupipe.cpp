@@ -271,6 +271,7 @@ struct AttachTables : public Modifier {
                 if (!contains(tbl->attached, a))
                     tbl->attached.push_back(a); }
     void postorder(IR::GlobalRef *gref) override {
+        if (program) return;
         if (auto di = gref->obj->to<IR::Declaration_Instance>()) {
             if (converted.count(di)) {
                 gref->obj = converted.at(di);
