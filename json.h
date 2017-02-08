@@ -14,9 +14,10 @@
 
 namespace json {
 
-/* this is std::make_unique, except that is missing in some compilers/versions */
+/* this is std::make_unique, except that is missing in some compilers/versions.  We give
+ * it a different name as other compilers complain about ambiguities if we don't... */
 template<class T, class...Args>
-std::unique_ptr<T> make_unique(Args&&... args) {
+std::unique_ptr<T> mkuniq(Args&&... args) {
     std::unique_ptr<T> ret (new T(std::forward<Args>(args)...));
     return ret;
 }
@@ -75,7 +76,7 @@ class True : public obj {
     void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const
         { out << "true"; }
     bool test_width(int &limit) const { limit -= 4; return limit >= 0; }
-    std::unique_ptr<obj> copy() && { return make_unique<True>(std::move(*this)); }
+    std::unique_ptr<obj> copy() && { return mkuniq<True>(std::move(*this)); }
 };
 
 class False : public obj {
@@ -85,7 +86,7 @@ class False : public obj {
     void print_on(std::ostream &out, int indent=0, int width=80, const char *pfx="") const
         { out << "false"; }
     bool test_width(int &limit) const { limit -= 5; return limit >= 0; }
-    std::unique_ptr<obj> copy() && { return make_unique<False>(std::move(*this)); }
+    std::unique_ptr<obj> copy() && { return mkuniq<False>(std::move(*this)); }
 };
 
 class number : public obj {
@@ -106,7 +107,7 @@ public:
         { char buf[32]; limit -= sprintf(buf, "%ld", val); return limit >= 0; }
     number *as_number() { return this; }
     const number *as_number() const { return this; }
-    std::unique_ptr<obj> copy() && { return make_unique<number>(std::move(*this)); }
+    std::unique_ptr<obj> copy() && { return mkuniq<number>(std::move(*this)); }
 };
 
 class string : public obj, public std::string {
@@ -138,7 +139,7 @@ public:
     const char *c_str() const { return std::string::c_str(); }
     string *as_string() { return this; }
     const string *as_string() const { return this; }
-    std::unique_ptr<obj> copy() && { return make_unique<string>(std::move(*this)); }
+    std::unique_ptr<obj> copy() && { return mkuniq<string>(std::move(*this)); }
 };
 
 class map; // forward decl
@@ -186,18 +187,18 @@ public:
     using vector_base::push_back;
     void push_back(decltype(nullptr)) { push_back(std::unique_ptr<obj>()); }
     void push_back(bool t) {
-        if (t) push_back(make_unique<True>(True()));
-        else push_back(make_unique<False>(False())); }
-    void push_back(long n) { push_back(make_unique<number>(number(n))); }
+        if (t) push_back(mkuniq<True>(True()));
+        else push_back(mkuniq<False>(False())); }
+    void push_back(long n) { push_back(mkuniq<number>(number(n))); }
     void push_back(int n) { push_back((long)n); }
     void push_back(unsigned int n) { push_back((long)n); }
     void push_back(unsigned long n) { push_back((long)n); }
-    void push_back(const char *s) { push_back(make_unique<string>(string(s))); }
-    void push_back(vector &&v) { push_back(make_unique<vector>(std::move(v))); }
+    void push_back(const char *s) { push_back(mkuniq<string>(string(s))); }
+    void push_back(vector &&v) { push_back(mkuniq<vector>(std::move(v))); }
     void push_back(json::map &&);
     vector *as_vector() { return this; }
     const vector *as_vector() const { return this; }
-    std::unique_ptr<obj> copy() && { return make_unique<vector>(std::move(*this)); }
+    std::unique_ptr<obj> copy() && { return mkuniq<vector>(std::move(*this)); }
 };
 
 typedef ordered_map<obj *, std::unique_ptr<obj>, obj::ptrless> map_base;
@@ -326,15 +327,15 @@ private:
         unsigned long operator=(unsigned long v) { return (unsigned long)(*this = (long)v); }
         vector &operator=(vector &&v) {
             if (key)
-                iter = self.emplace(key.release(), make_unique<vector>(std::move(v))).first;
+                iter = self.emplace(key.release(), mkuniq<vector>(std::move(v))).first;
             else { assert(iter != self.end());
-                iter->second = make_unique<vector>(std::move(v)); }
+                iter->second = mkuniq<vector>(std::move(v)); }
             return dynamic_cast<vector &>(*iter->second); }
         map &operator=(map &&v) {
             if (key)
-                iter = self.emplace(key.release(), make_unique<map>(std::move(v))).first;
+                iter = self.emplace(key.release(), mkuniq<map>(std::move(v))).first;
             else { assert(iter != self.end());
-                iter->second = make_unique<map>(std::move(v)); }
+                iter->second = mkuniq<map>(std::move(v)); }
             return dynamic_cast<map &>(*iter->second); }
         const std::unique_ptr<obj> &operator=(std::unique_ptr<obj> &&v) {
             if (key) iter = self.emplace(key.release(), std::move(v)).first;
@@ -348,33 +349,33 @@ private:
         obj *get() const { return key ? 0 : iter->second.get(); }
         obj *operator->() const { return key ? 0 : iter->second.get(); }
         operator vector&() {
-            if (key) iter = self.emplace(key.release(), make_unique<vector>()).first;
+            if (key) iter = self.emplace(key.release(), mkuniq<vector>()).first;
             return dynamic_cast<vector &>(*iter->second); }
         operator map&() {
-            if (key) iter = self.emplace(key.release(), make_unique<map>()).first;
+            if (key) iter = self.emplace(key.release(), mkuniq<map>()).first;
             return dynamic_cast<map &>(*iter->second); }
         element_ref operator[](const char *str) {
-            if (key) iter = self.emplace(key.release(), make_unique<map>()).first;
+            if (key) iter = self.emplace(key.release(), mkuniq<map>()).first;
             map *m = dynamic_cast<map *>(iter->second.get());
             if (!m) throw std::runtime_error("lookup in non-map json object");
             return element_ref(*m, str); }
         element_ref operator[](const std::string &str) {
-            if (key) iter = self.emplace(key.release(), make_unique<map>()).first;
+            if (key) iter = self.emplace(key.release(), mkuniq<map>()).first;
             map *m = dynamic_cast<map *>(iter->second.get());
             if (!m) throw std::runtime_error("lookup in non-map json object");
             return element_ref(*m, str.c_str()); }
         element_ref operator[](long n) {
-            if (key) iter = self.emplace(key.release(), make_unique<map>()).first;
+            if (key) iter = self.emplace(key.release(), mkuniq<map>()).first;
             map *m = dynamic_cast<map *>(iter->second.get());
             if (!m) throw std::runtime_error("lookup in non-map json object");
             return element_ref(*m, n); }
         element_ref operator[](std::unique_ptr<obj> &&i) {
-            if (key) iter = self.emplace(key.release(), make_unique<map>()).first;
+            if (key) iter = self.emplace(key.release(), mkuniq<map>()).first;
             map *m = dynamic_cast<map *>(iter->second.get());
             if (!m) throw std::runtime_error("lookup in non-map json object");
             return element_ref(*m, std::move(i)); }
         template <class T> T &to() {
-            if (key) iter = self.emplace(key.release(), make_unique<T>()).first;
+            if (key) iter = self.emplace(key.release(), mkuniq<T>()).first;
             return dynamic_cast<T &>(*iter->second); }
     };
     friend std::ostream &operator<<(std::ostream &out, const element_ref &el);
@@ -391,10 +392,10 @@ public:
         return map_base::erase(&tmp); }
     map *as_map() { return this; }
     const map *as_map() const { return this; }
-    std::unique_ptr<obj> copy() && { return make_unique<map>(std::move(*this)); }
+    std::unique_ptr<obj> copy() && { return mkuniq<map>(std::move(*this)); }
 };
 
-inline void vector::push_back(map &&m) { emplace_back(make_unique<map>(std::move(m))); }
+inline void vector::push_back(map &&m) { emplace_back(mkuniq<map>(std::move(m))); }
 
 std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json);
 inline std::istream &operator>>(std::istream &in, obj *&json) {

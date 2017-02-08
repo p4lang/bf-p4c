@@ -191,11 +191,17 @@ typedef struct {                        \
      ((vec).data[(vec).size] = (val), 0))
 #define VECTOR_top(vec)         ((vec).data[(vec).size-1])
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern int erase_raw_vector(void *vec, size_t elsize, int idx, unsigned cnt);
 extern int expand_raw_vector(void *vec, size_t elsize);
 extern int init_raw_vector(void *vec, size_t elsize, int mincap);
 extern int insert_raw_vector(void *vec, size_t elsize, int idx, unsigned cnt);
 extern int reserve_raw_vector(void *vec, size_t elsize, int size, int shrink);
 extern int shrink_raw_vector(void *vec, size_t elsize);
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _vector_h_ */

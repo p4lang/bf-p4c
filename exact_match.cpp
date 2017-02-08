@@ -773,7 +773,7 @@ std::unique_ptr<json::map> ExactMatchTable::gen_memory_resource_allocation_tbl_c
             tmp["vpns"] = std::move(vpns);
             mem_units_and_vpns.push_back(std::move(tmp)); } }
     assert(mem_units.empty());
-    return json::make_unique<json::map>(std::move(mra));
+    return json::mkuniq<json::map>(std::move(mra));
 }
 
 void ExactMatchTable::add_field_to_pack_format(json::vector &field_list, int basebit,

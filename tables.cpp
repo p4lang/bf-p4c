@@ -1193,7 +1193,7 @@ std::unique_ptr<json::map> Table::gen_memory_resource_allocation_tbl_cfg(const c
         tmp["vpns"] = std::move(vpns);
         mem_units_and_vpns.push_back(std::move(tmp));
         vpn += period; }
-    return json::make_unique<json::map>(std::move(mra));
+    return json::mkuniq<json::map>(std::move(mra));
 }
 
 SelectionTable *AttachedTables::get_selector() const {

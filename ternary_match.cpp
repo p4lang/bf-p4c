@@ -385,7 +385,7 @@ std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl
                 mem_units = json::vector();
                 word = 0; }
             done = false; } }
-    return json::make_unique<json::map>(std::move(mra));
+    return json::mkuniq<json::map>(std::move(mra));
 }
 
 void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
