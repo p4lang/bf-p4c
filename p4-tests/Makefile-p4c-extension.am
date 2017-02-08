@@ -233,15 +233,6 @@ XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/exact_match5.p4.test
 # Missing constraints for header stack POV bits.
 XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/instruct5.p4.test
 
-# Incorrect ASM generation for default action tables
-XFAIL_TESTS += tofino/testdata/p4_14_samples/bridge1.p4.test
-XFAIL_TESTS += tofino/testdata/p4_14_samples/instruct5.p4.test
-XFAIL_TESTS += tofino/%reldir%/p4_16/direct-action.p4.test
-XFAIL_TESTS += tofino/%reldir%/p4_16/synth-action.p4.test
-XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/bridge1.p4.test
-XFAIL_TESTS += tofino-ortools/%reldir%/p4_16/direct-action.p4.test
-XFAIL_TESTS += tofino-ortools/%reldir%/p4_16/synth-action.p4.test
-
 # match group packing overflow
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_246_fill_stage.p4.test
 
