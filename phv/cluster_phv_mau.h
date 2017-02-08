@@ -187,15 +187,21 @@ class PHV_MAU_Group_Assignments : public Visitor {
           || gc_gress == PHV_Container::Ingress_Egress::Egress_Only)
           && gc_gress != cl_gress;
     }
-    void cluster_placement(
+    void container_no_pack(
         std::list<Cluster_PHV *>& clusters_to_be_assigned,
         std::list<PHV_MAU_Group *>& phv_groups_to_be_filled,
-        bool consider_fragmentation = true);
+        const char *msg = "",
+        bool smallest_container_width = true);
     PHV_Container* parser_container_no_holes(
         PHV_Container::Ingress_Egress,
         PHV_Container::Container_Content *,
         std::list<PHV_MAU_Group *>&);    // ensure parser fields in containers with no holes
     void create_aligned_container_slices();
+    void container_pack_cohabit(
+        std::list<Cluster_PHV *>& clusters_to_be_assigned,
+        ordered_map<int,
+        ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&,
+        const char *msg = "");
     //
     void consolidate_slices_in_group(
         ordered_map<int,
@@ -240,11 +246,6 @@ class PHV_MAU_Group_Assignments : public Visitor {
         ordered_map<int,
         std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&);
     //
-    void container_pack_cohabit(
-        std::list<Cluster_PHV *>& clusters_to_be_assigned,
-        ordered_map<int,
-        ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&);
-    //
     void sanity_check_container_avail(const std::string&);
     void sanity_check_container_fields_gress(const std::string&);
     void sanity_check_group_containers(const std::string&);
@@ -252,17 +253,36 @@ class PHV_MAU_Group_Assignments : public Visitor {
 };
 //
 //
-std::ostream &operator<<(std::ostream &, PHV_MAU_Group::Container_Content*);
-std::ostream &operator<<(std::ostream &, std::set<PHV_MAU_Group::Container_Content *>&);
-std::ostream &operator<<(std::ostream &,
+std::ostream &operator<<(
+    std::ostream &,
+    PHV_MAU_Group::Container_Content*);
+std::ostream &operator<<(
+    std::ostream &,
+    std::set<PHV_MAU_Group::Container_Content *>&);
+std::ostream &operator<<(
+    std::ostream &,
     ordered_map<int, ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&);
-std::ostream &operator<<(std::ostream &, PHV_MAU_Group&);
-std::ostream &operator<<(std::ostream &, PHV_MAU_Group*);
-std::ostream &operator<<(std::ostream &, std::list<PHV_MAU_Group *>&);
-std::ostream &operator<<(std::ostream &, std::vector<PHV_MAU_Group *>&);
-std::ostream &operator<<(std::ostream &, std::vector<PHV_MAU_Group *>*);
-std::ostream &operator<<(std::ostream &,
+std::ostream &operator<<(
+    std::ostream &,
+    PHV_MAU_Group&);
+std::ostream &operator<<(
+    std::ostream &,
+    PHV_MAU_Group*);
+std::ostream &operator<<(
+    std::ostream &,
+    std::list<PHV_MAU_Group *>&);
+std::ostream &operator<<(
+    std::ostream &,
+    std::vector<PHV_MAU_Group *>&);
+std::ostream &operator<<(
+    std::ostream &,
+    std::vector<PHV_MAU_Group *>*);
+std::ostream &operator<<(
+    std::ostream &,
     ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>&);
+std::ostream &operator<<(
+    std::ostream &out,
+    ordered_map<int, ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>>&);
 std::ostream &operator<<(
     std::ostream &out,
     ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>&);
