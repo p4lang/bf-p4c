@@ -23,7 +23,7 @@ die () {
 gitclone() {
     [ -e "$2" ] && die "$2 already exists!"
     [ ! -d "$(dirname $2)" ] && die "$(dirname $2) not a directory"
-    git clone $1 $2 || { rm -rf $2; die "can't clone $1"; }
+    git clone --recursive $1 $2 || { rm -rf $2; die "can't clone $1"; }
 }
 
 
@@ -226,6 +226,8 @@ elif $pull_before_rebuild; then
     popd >/dev/null
 fi
 pushd p4c >/dev/null
+    git submodule sync
+    git submodule update --init --recursive
     mkdir -p extensions
     cd extensions
     if [ ! -e p4_tests ]; then
