@@ -189,7 +189,8 @@ class PHV_MAU_Group_Assignments : public Visitor {
     }
     void cluster_placement(
         std::list<Cluster_PHV *>& clusters_to_be_assigned,
-        std::list<PHV_MAU_Group *>& phv_groups_to_be_filled);
+        std::list<PHV_MAU_Group *>& phv_groups_to_be_filled,
+        bool consider_fragmentation = true);
     PHV_Container* parser_container_no_holes(
         PHV_Container::Ingress_Egress,
         PHV_Container::Container_Content *,
@@ -262,6 +263,9 @@ std::ostream &operator<<(std::ostream &, std::vector<PHV_MAU_Group *>&);
 std::ostream &operator<<(std::ostream &, std::vector<PHV_MAU_Group *>*);
 std::ostream &operator<<(std::ostream &,
     ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>&);
+std::ostream &operator<<(
+    std::ostream &out,
+    ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>&);
 std::ostream &operator<<(std::ostream &, PHV_MAU_Group_Assignments&);
 //
 #endif /* _TOFINO_PHV_CLUSTER_PHV_MAU_H_ */

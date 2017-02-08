@@ -95,6 +95,10 @@ class PHV_Container {
     PHV_Word width()                                            { return width_i; }
     int phv_number()                                            { return phv_number_i; }
     std::string asm_string()                                    { return asm_string_i; }
+    void
+    gress(Ingress_Egress gress_p) {  // set when MAU group's gress is set
+        gress_i = gress_p;
+    }
     Ingress_Egress gress()                                      { return gress_i; }
     static Ingress_Egress gress(const PhvInfo::Field *field) {
         if (const_cast<const PhvInfo::Field *>(field)->gress == INGRESS) {

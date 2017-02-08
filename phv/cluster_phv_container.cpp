@@ -533,7 +533,10 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
             out << "p";
         }
         for (auto r : c->ranges()) {
-            out << '(' << r.first << ".." << r.second << ')';
+            // when container FULL, range[0] = -1
+            if (r.second != -1) {
+                out << '(' << r.first << ".." << r.second << ')';
+            }
         }
     } else {
         out << "-c-";

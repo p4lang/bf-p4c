@@ -359,9 +359,12 @@ void PHV_Bind::sanity_check_container_fields(
     //
     if (s3.size()) {
         LOG1(std::endl
-            << "*****cluster_phv_bind.cpp:sanity_FAIL*****"
+            << "*****cluster_phv_bind.cpp:sanity_FAIL***** "
             << msg
-            << ".....phv bind fields != all....."
+            << std::endl
+            << ".....Phv Bind fields != All Fields..... "
+            << ".....need OverFlow Allocation....."
+            << std::endl
             << std::endl
             << s3);
     }
