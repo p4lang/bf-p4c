@@ -84,7 +84,7 @@ clean:
 	rm -f *.o *.d asm-parse.c lex-yaml.c *.json json2cpp tfas y.output
 
 veryclean: clean
-	rm -rf gen templates reflow json_diff mksizes test/*.out
+	rm -rf gen templates reflow json_diff mksizes
 
 help:
 	@echo "Tofino assembler makefile -- builds assembler"

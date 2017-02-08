@@ -1,6 +1,7 @@
 #!/bin/bash
 
 fast=false;
+verbose=false
 
 shopt -s nullglob
 set -o pipefail
@@ -55,6 +56,9 @@ while expr "$1" : - >/dev/null; do
     -j[1-9]|-j[1-9][0-9])
         PARALLEL=${1#-j}
         ;;
+    -v)
+        verbose=true
+        ;;
     -*)
         echo >&2 "unknown argumnet $1"
         ;;
@@ -106,7 +110,9 @@ if [ -x "$STF" ]; then
 fi
 
 function findbin () {
-    if [ -x "$PWD/../$1" ]; then
+    if [ -x "$PWD/$1" ]; then
+        echo $PWD/$1
+    elif [ -x "$PWD/../$1" ]; then
         echo $PWD/../$1
     elif [ -x "$TESTDIR/../$1" ]; then
         echo $TESTDIR/../$1
@@ -143,6 +149,27 @@ else
     CTXT_DIFFARGS="-al handle -i table_type"
 fi
 
+TIMEOUT_COMMAND=$(which gtimeout || which timeout)
+run() {
+    if $verbose; then
+        echo "$@" >/dev/tty
+    fi
+    if [ -z "$TIMEOUT" ]; then
+        $TIME_COMMAND "$@"
+    else
+        $TIME_COMMAND $TIMEOUT_COMMAND --foreground $TIMEOUT "$@"
+    fi
+    status=$?
+    if [ $status -eq 124 ]; then
+        echo >&2 $1 TIMEOUT
+    elif [ $status -gt 128 ]; then
+        echo >&2 $1 CRASH with signal $(expr $status - 128)
+    elif [ $status -gt 0 ]; then
+        echo >&2 $1 FAILED
+    fi
+    return $status
+}
+
 
 function test_p4() {
     p4file="$1"
@@ -162,7 +189,7 @@ function test_p4() {
         true
     else 
         rm -f $name.tfa
-        if $GLSC -o . --verbose 2 -vl 2 -S -G $glsc_args ../$name.p4 </dev/null >glsc.log 2>&1; then
+        if run $GLSC -o . --verbose 2 -vl 2 -S -G $glsc_args ../$name.p4 </dev/null >glsc.log 2>&1; then
             if [ out.tfa -nt $name.tfa ]; then
                 rm -f $name.tfa
                 ln -s out.tfa $name.tfa
@@ -196,7 +223,7 @@ function test_p4() {
         fi
     done
     tfas_succeeded=false
-    if $ok && $TFAS -Mvvvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
+    if $ok && run $TFAS -Mvvvvl tfas.config.log $name.tfa >tfas.log 2>&1; then
         tfas_succeeded=true
         for f in $name.out/*.cfg.json; do
             if $REFLOW $f | gzip -9 > $f.gz; then
@@ -290,10 +317,10 @@ function test_stf() {
                 fi
             done
         fi
-        if $linked || $TFLINK -o $name.out/tofino.bin $name.out/*.cfg.json* >/dev/null 2>&1; then
+        if $linked || run $TFLINK -o $name.out/tofino.bin $name.out/*.cfg.json* >/dev/null 2>&1; then
             export TOFINO_BIN=$name.out/tofino.bin
             export TABLE_CONFIG=$name.out/tbl-cfg
-            if "$STF" ../$name.stf >stf.txt 2>&1; then
+            if run "$STF" ../$name.stf >stf.txt 2>&1; then
                 msg="$msg pass"
             else
                 msg="$msg fail"
@@ -347,6 +374,8 @@ function wait_1() {
     esac
     let running--
 }
+
+if $verbose; then echo "running $PARALLEL threads"; fi
 
 for file in "$@"; do
     if (( running >= PARALLEL )); then
