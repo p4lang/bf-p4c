@@ -37,11 +37,12 @@ void Memories::clear_table_vectors() {
     indirect_action_tables.clear();
     action_profiles.clear();
     selector_tables.clear();
-    action_bus_users.clear();
-    gw_tables.clear();
     stats_tables.clear();
     meter_tables.clear();
+    action_bus_users.clear();
     suppl_bus_users.clear();
+    gw_tables.clear();
+    no_match_tables.clear();
 }
 
 /* Creates a new table_alloc object for each of the taibles within the memory allocation */
@@ -106,6 +107,11 @@ bool Memories::allocate_all() {
         return false;
     }
 
+    LOG3("Allocating all no match tables");
+    if (!allocate_all_no_match()) {
+        return false;
+    }
+
     LOG3("Memory allocation fits");
     return true;
 }
@@ -121,7 +127,8 @@ class SetupAttachedTables : public MauInspector {
         profile_t rv = MauInspector::init_apply(root);
         if (ta->layout_option == nullptr) return rv;
 
-        if (ta->layout_option->layout->ternary_indirect_required()) {
+        if (!ta->layout_option->layout->no_match_data() &&
+            ta->layout_option->layout->ternary_indirect_required()) {
             auto name = ta->table->get_use_name(nullptr, false, IR::MAU::Table::TIND_NAME);
             (*ta->memuse)[name].type = Memories::Use::TIND;
             mem.tind_tables.push_back(ta);
@@ -282,6 +289,8 @@ bool Memories::analyze_tables(mem_info &mi) {
             auto name = ta->table->get_use_name(nullptr, true);
             if (ta->table_link != nullptr)
                 name = ta->table_link->table->get_use_name(nullptr, true);
+            else
+                mi.independent_gw_tables++;
             (*ta->memuse)[name].type = Use::GATEWAY;
             gw_tables.push_back(ta);
             LOG4("Gateway table for " << ta->table->name);
@@ -289,7 +298,10 @@ bool Memories::analyze_tables(mem_info &mi) {
         }
         auto table = ta->table;
         int entries = ta->provided_entries;
-        if (!table->layout.ternary) {
+        if (ta->layout_option->layout->no_match_data()) {
+            ta->calculated_entries = 512;
+            no_match_tables.push_back(ta);
+        } else if (!table->layout.ternary) {
             auto name = ta->table->get_use_name();
             LOG4("Exact match table " << name);
             (*ta->memuse)[name].type = Use::EXACT;
@@ -327,17 +339,23 @@ bool Memories::analyze_tables(mem_info &mi) {
         SetupAttachedTables setup(*this, ta, entries, mi);
         ta->table->apply(setup);
     }
-    if (mi.match_tables > EXACT_TABLES_MAX
-        || mi.match_bus_min > SRAM_ROWS * BUS_COUNT
-        || mi.tind_tables > TERNARY_TABLES_MAX
-        || mi.action_tables > ACTION_TABLES_MAX
-        || mi.action_bus_min > SRAM_ROWS * BUS_COUNT
-        || mi.match_RAMs + mi.action_RAMs + mi.tind_RAMs > SRAM_ROWS * SRAM_COLUMNS
-        || mi.ternary_tables > TERNARY_TABLES_MAX
-        || mi.ternary_TCAMs > TCAM_ROWS * TCAM_COLUMNS
-        || mi.stats_tables > STATS_ALUS
-        || mi.meter_tables + mi.selector_tables > METER_ALUS
-        || mi.meter_RAMs + mi.stats_RAMs + mi.selector_RAMs > MAPRAM_COLUMNS * SRAM_ROWS) {
+    return mi.constraint_check();
+}
+
+bool Memories::mem_info::constraint_check() {
+    if (match_tables + no_match_tables + ternary_tables + independent_gw_tables >
+           Memories::TABLES_MAX
+        || match_bus_min > Memories::SRAM_ROWS * Memories::BUS_COUNT
+        || tind_tables > Memories::TERNARY_TABLES_MAX
+        || action_tables > Memories::ACTION_TABLES_MAX
+        || action_bus_min > Memories::SRAM_ROWS * Memories::BUS_COUNT
+        || match_RAMs + action_RAMs + tind_RAMs > Memories::SRAM_ROWS * Memories::SRAM_COLUMNS
+        || ternary_tables > Memories::TERNARY_TABLES_MAX
+        || ternary_TCAMs > Memories::TCAM_ROWS * Memories::TCAM_COLUMNS
+        || stats_tables > Memories::STATS_ALUS
+        || meter_tables + selector_tables > Memories::METER_ALUS
+        || meter_RAMs + stats_RAMs + selector_RAMs >
+           Memories::MAPRAM_COLUMNS * Memories::SRAM_ROWS) {
         return false;
     }
     return true;
@@ -2033,6 +2051,47 @@ bool Memories::allocate_all_gw() {
         if (!found) break;
     }
     if (gw_tables.size() != index)
+        return false;
+    return true;
+}
+
+void Memories::allocate_one_no_match(table_alloc *ta, int row, int col) {
+    auto name = ta->table->get_use_name();
+    auto &alloc = (*ta->memuse)[name];
+    int available_bus = match_bus_available(ta, 0, row);
+    sram_inuse[row] |= (1 << col);
+    sram_match_bus[row][available_bus] = std::make_pair(name, 0);
+    alloc.type = Use::EXACT;
+    sram_print_match_bus[row][available_bus] = name;
+    alloc.row.emplace_back(row, available_bus);
+//    alloc.row.back().col.push_back(col);
+//    alloc.ways.emplace_back(1, 0);
+//    alloc.ways.back().rams.emplace_back(row, col);
+}
+
+bool Memories::allocate_all_no_match() {
+    size_t finished_tables = 0;
+    for (auto ta : no_match_tables) {
+        bool allocated = false;
+        for (int i = 0; i < SRAM_ROWS; i++) {
+            unsigned columns_available = ~sram_inuse[i] & 0x3ff;
+            if (__builtin_popcount(columns_available) == 0) continue;
+            if (!sram_match_bus[i][0].first.isNull() && !sram_match_bus[i][1].first.isNull())
+                continue;
+            for (int j = 0; j < SRAM_COLUMNS; j++) {
+                if ((columns_available & (1 << j)) == 0) continue;
+                allocate_one_no_match(ta, i, j);
+                finished_tables++;
+                allocated = true;
+                break;
+            }
+            if (allocated)
+                break;
+            else
+                BUG("No match data allocation issues");
+        }
+    }
+    if (finished_tables != no_match_tables.size())
         return false;
     return true;
 }

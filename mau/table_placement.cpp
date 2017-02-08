@@ -721,7 +721,8 @@ static void select_layout_option(IR::MAU::Table *tbl,
 /* Adds the potential ternary tables necessary for layout options */
 static void add_attached_tables(IR::MAU::Table *tbl,
                                 const IR::MAU::Table::LayoutOption *layout_option) {
-    if (layout_option->layout->ternary_indirect_required()) {
+    if (!layout_option->layout->no_match_data() &&
+        layout_option->layout->ternary_indirect_required()) {
         LOG3("  Adding Ternary Indirect table to " << tbl->name);
         auto *tern_indir = new IR::MAU::TernaryIndirect(tbl->name);
         tbl->attached.push_back(tern_indir);

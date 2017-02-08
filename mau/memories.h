@@ -14,7 +14,7 @@ struct Memories {
     static constexpr int MAPRAM_COLUMNS = 6;
     static constexpr int TCAM_ROWS = 12;
     static constexpr int TCAM_COLUMNS = 2;
-    static constexpr int EXACT_TABLES_MAX = 16;
+    static constexpr int TABLES_MAX = 16;
     static constexpr int TERNARY_TABLES_MAX = 8;
     static constexpr int ACTION_TABLES_MAX = 16;
     static constexpr int BUS_COUNT = 2;
@@ -39,28 +39,27 @@ struct Memories {
     Alloc1D<cstring, STATS_ALUS>                       stats_alus;
     Alloc1D<cstring, METER_ALUS>                       meter_alus;
     struct mem_info {
-        int match_tables;
-        int match_bus_min;
-        int match_RAMs;
-        int tind_tables;
-        int tind_RAMs;
-        int action_tables;
-        int action_bus_min;
-        int action_RAMs;
-        int ternary_tables;
-        int ternary_TCAMs;
-        int stats_tables;
-        int stats_RAMs;
-        int meter_tables;
-        int meter_RAMs;
-        int selector_tables;
-        int selector_RAMs;
+        int match_tables = 0;
+        int match_bus_min = 0;
+        int match_RAMs = 0;
+        int tind_tables = 0;
+        int tind_RAMs = 0;
+        int action_tables = 0;
+        int action_bus_min = 0;
+        int action_RAMs = 0;
+        int ternary_tables = 0;
+        int ternary_TCAMs = 0;
+        int stats_tables = 0;
+        int stats_RAMs = 0;
+        int meter_tables = 0;
+        int meter_RAMs = 0;
+        int selector_tables = 0;
+        int selector_RAMs = 0;
+        int no_match_tables = 0;
+        int independent_gw_tables = 0;
 
         void clear() {
-            match_tables = 0; match_bus_min = 0; match_RAMs = 0; tind_tables = 0;
-            tind_RAMs = 0; action_tables = 0; action_bus_min = 0; action_RAMs = 0;
-            ternary_tables = 0; ternary_TCAMs = 0; stats_tables = 0; stats_RAMs = 0;
-            meter_tables = 0; meter_RAMs = 0; selector_tables = 0; selector_RAMs = 0;
+            memset(this, 0, sizeof(mem_info));
         }
 
         int total_RAMs() {
@@ -71,6 +70,7 @@ struct Memories {
         int right_side_RAMs() { return meter_RAMs + stats_RAMs + selector_RAMs; }
         int non_SRAM_RAMs() { return left_side_RAMs() + right_side_RAMs() + action_RAMs; }
         int columns(int RAMs) { return (RAMs + SRAM_COLUMNS - 1) / SRAM_COLUMNS; }
+        bool constraint_check();
     };
 
 
@@ -295,6 +295,7 @@ struct Memories {
     vector<SRAM_group *>        action_bus_users;
     vector<SRAM_group *>        suppl_bus_users;
     vector<table_alloc *>       gw_tables;
+    vector<table_alloc *>       no_match_tables;
 
 
     void clear();
@@ -381,14 +382,8 @@ struct Memories {
     table_alloc *find_corresponding_exact_match(cstring name);
     bool gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int width_sect,
                            int row, int col);
-
-    bool alloc2Port(cstring table_name, int entries, int entries_per_word, Use &alloc);
-    bool allocActionRams(cstring table_name, int width, int depth, Use &alloc);
-    bool allocBus(cstring table_name, Alloc2Dbase<cstring> &bus_use, Use &alloc);
-    bool allocRams(cstring table_name, int width, int depth,
-                   Alloc2Dbase<cstring> &use, Alloc2Dbase<cstring> *bus, Use &alloc);
-    bool allocTable(cstring name, const IR::MAU::Table *table, int &entries,
-                    map<cstring, Use> &alloc, const IXBar::Use &);
+    bool allocate_all_no_match();
+    void allocate_one_no_match(table_alloc *ta, int row, int col);
     void update(cstring table_name, const Use &alloc);
     void update(const map<cstring, Use> &alloc);
     void remove(cstring table_name, const Use &alloc);

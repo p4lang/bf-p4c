@@ -229,9 +229,9 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
     if (!use.way_use.empty() && !is_sel) {
         out << indent << "ways:" << std::endl;
         auto memway = mem->ways.begin();
-        for (auto &way : use.way_use) {
-            out << indent << "- [" << way.group << ", " << way.slice << ", 0x"
-                << hex(memway->select_mask) << ", ";
+        for (auto way : use.way_use) {
+            out << indent << "- [" << way.group << ", " << way.slice;
+            out << ", 0x" << hex(memway->select_mask) << ", ";
             size_t index = 0;
             for (auto ram : memway->rams) {
                 out << "[" << ram.first << ", " << (ram.second + 2) << "]";
@@ -240,7 +240,9 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
                 index++;
             }
             out  << "]" << std::endl;
-            ++memway; } }
+            ++memway;
+        }
+    }
     if (use.use.empty()) return;
     out << indent++ << "input_xbar:" << std::endl;
     for (auto &group : sort)
@@ -328,7 +330,7 @@ class memory_vector {
 };
 
 std::ostream &operator<<(std::ostream &out, const memory_vector &v) {
-    if (v.vec.size() > 1) out << "[ ";
+    if (v.vec.size() != 1) out << "[ ";
     const char *sep = "";
     int col_adjust = (v.type == Memories::Use::TERNARY || v.is_mapcol)  ? 0 : 2;
     bool logical = v.type >= Memories::Use::TWOPORT;
@@ -336,7 +338,7 @@ std::ostream &operator<<(std::ostream &out, const memory_vector &v) {
     for (auto c : v.vec) {
         out << sep << (c + col_adjust) % col_mod;
         sep = ", "; }
-    if (v.vec.size() > 1) out << " ]";
+    if (v.vec.size() != 1) out << " ]";
     return out;
 }
 
@@ -633,7 +635,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         emit_memory(out, indent, tbl->resources->memuse.at(memuse_name));
         emit_ixbar(out, indent, tbl->resources->match_ixbar,
                    &tbl->resources->memuse.at(memuse_name), &fmt);
-        if (!tbl->layout.ternary) {
+        if (!tbl->layout.ternary && !tbl->layout.no_match_data()) {
             out << indent << fmt << std::endl;
             bool first = true;
             for (auto field : fmt.match_fields) {

@@ -999,7 +999,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_a
     /* Determine number of groups needed.  Loop through them, alloc match will be the same
        for these.  Alloc All Hash Ways will required multiple groups, and may need to change  */
     LOG1("IXBar::allocTable(" << tbl->name << ")");
-    if (tbl->match_table) {
+    if (tbl->match_table && !lo->layout->no_match_data()) {
         bool ternary = tbl->layout.ternary;
         vector<IXBar::Use::Byte *> alloced;
         vector<Use> all_tbl_allocs;

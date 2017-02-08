@@ -16,7 +16,7 @@ class TableLayout : public MauModifier, Backtrack {
                               bool has_action_profile);
     void setup_ternary_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved,
                                       bool has_action_profile);
-    void setup_layout_option_no_match(IR::MAU::Table *tbl);
+    void setup_layout_option_no_match(IR::MAU::Table *tbl, int immediate_bytes_reserved);
  public:
     explicit TableLayout(const PhvInfo &phv) : phv(phv) {}
 };

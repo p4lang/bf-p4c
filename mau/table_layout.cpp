@@ -176,10 +176,12 @@ void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_
 
 /* FIXME: This function is for the setup of a table with no match data.  This is currently hacked
    together in order to pass many of the test cases */
-void TableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl) {
-    tbl->layout.ternary = true;
+void TableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl, int immediate_bytes_reserved) {
     IR::MAU::Table::Layout *layout = new IR::MAU::Table::Layout();
     *layout = tbl->layout;
+    if (layout->action_data_bytes - immediate_bytes_reserved <= 4) {
+        layout->action_data_bytes_in_overhead = layout->action_data_bytes;
+    }
     IR::MAU::Table::LayoutOption lo(layout);
     tbl->layout_options.push_back(lo);
 }
@@ -262,7 +264,7 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     if (tbl->layout.gateway)
         return true;
     else if (tbl->layout.match_width_bits == 0)
-        setup_layout_option_no_match(tbl);
+        setup_layout_option_no_match(tbl, immediate_bytes_reserved);
     else if (tbl->layout.ternary)
         setup_ternary_layout_options(tbl, immediate_bytes_reserved, attached.have_action_profile);
     else

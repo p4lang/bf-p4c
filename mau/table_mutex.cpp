@@ -45,7 +45,6 @@ void TablesMutuallyExclusive::postorder(const IR::Tofino::Pipe *pipe) {
 }
 
 bool DetermineActionProfileFaults::preorder(const IR::MAU::Table *t) {
-    LOG1("Table being tested is " << t->name);
     const IR::ActionProfile *ap = nullptr;
     for (auto at : t->attached) {
         if ((ap = at->to<IR::ActionProfile>()) != nullptr)
@@ -53,8 +52,6 @@ bool DetermineActionProfileFaults::preorder(const IR::MAU::Table *t) {
     }
     if (ap == nullptr) return true;
     for (auto *check_tbl : ap_users[ap]) {
-        LOG1("Vector length is " << ap_users[ap].size());
-        LOG1("Check table name " << check_tbl->name);
         if (!mutex(t, check_tbl)) {
             error("Tables %s and %s are not mutually exclusive, yet share action profile %s",
                   t->name, check_tbl->name, ap->name);
