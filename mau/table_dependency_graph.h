@@ -2,6 +2,7 @@
 #define _TOFINO_MAU_TABLE_DEPENDENCY_GRAPH_H_
 
 #include "mau_visitor.h"
+#include "tofino/phv/phv_fields.h"
 
 struct DependencyGraph {
     struct Table {
@@ -20,6 +21,7 @@ struct DependencyGraph {
 };
 
 class FindDependencyGraph : public MauInspector, ControlFlowVisitor {
+    const PhvInfo                       &phv;
     typedef DependencyGraph::Table      Table;
     typedef DependencyGraph::access_t   access_t;
     const IR::Tofino::Pipe              *maupipe;
@@ -28,6 +30,9 @@ class FindDependencyGraph : public MauInspector, ControlFlowVisitor {
     map<cstring, access_t>              access;
     void add_control_dependency(Table *, const IR::Node * = 0);
     void recompute_dep_stages();
+    class AddDependencies;
+    class UpdateAccess;
+    class UpdateAttached;
 
     // alt 3 functions
     bool preorder(const IR::Tofino::Pipe *p) override {
@@ -40,7 +45,8 @@ class FindDependencyGraph : public MauInspector, ControlFlowVisitor {
     bool filter_join_point(const IR::Node *n) override { return !n->is<IR::MAU::TableSeq>(); }
     FindDependencyGraph *clone() const override { return new FindDependencyGraph(*this); }
  public:
-    explicit FindDependencyGraph(DependencyGraph *out) : graph(out->graph) { joinFlows = true; }
+    FindDependencyGraph(const PhvInfo &phv, DependencyGraph *out) : phv(phv), graph(out->graph) {
+        joinFlows = true; }
 };
 
 #endif /* _TOFINO_MAU_TABLE_DEPENDENCY_GRAPH_H_ */

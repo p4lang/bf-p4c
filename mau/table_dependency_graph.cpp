@@ -27,93 +27,62 @@ std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
     return out;
 }
 
-class AddDependencies : public MauInspector, P4WriteContext {
-    typedef DependencyGraph::Table      Table;
-    typedef DependencyGraph::access_t   access_t;
-    map<cstring, access_t>              &access;
-    Table                               *table;
-    Table::depend_t                     type;
+class FindDependencyGraph::AddDependencies : public MauInspector, P4WriteContext {
+    FindDependencyGraph         &self;
+    Table                       *table;
+    Table::depend_t             type;
 
  public:
-    AddDependencies(map<cstring, access_t> &a, Table *t, Table::depend_t ty)
-    : access(a), table(t), type(ty) {}
-    void add_dependency(cstring field) {
-        if (!access.count(field)) return;
-        LOG3("add_dependency(" << field << ")");
-        if (isWrite()) {
-            for (auto t : access[field].read)
-                if (table->data_dep[t->name] < Table::WRITE)
-                    table->data_dep[t->name] = Table::WRITE;
-        } else {
-            for (auto t : access[field].write)
-                if (table->data_dep[t->name] < type)
-                    table->data_dep[t->name] = type; } }
-    bool preorder(const IR::Member *f) override {
-        add_dependency(f->toString());
-        return false; }
-    bool preorder(const IR::HeaderStackItemRef *f) override {
-        add_dependency(f->toString());
-        return false; }
-};
-
-class UpdateAccess : public MauInspector , P4WriteContext {
-    typedef DependencyGraph::Table      Table;
-    typedef DependencyGraph::access_t   access_t;
-    map<cstring, access_t>              &access;
-    Table                               *table;
-
- public:
-    UpdateAccess(map<cstring, access_t> &a, Table *t) : access(a), table(t) {}
-    bool preorder(const IR::Member *f) {
-        LOG3("update_access read " << f->toString());
-        access[f->toString()].read.insert(table);
-        return false; }
-    bool preorder(const IR::HeaderStackItemRef *f) {
-        LOG3("update_access read " << f->toString());
-        access[f->toString()].read.insert(table);
-        return false; }
-    void postorder(const IR::Primitive *prim) {
-        int operand = 0;
-        for (auto dest : prim->operands) {
-            if (!prim->isOutput(operand++)) continue;
-            cstring name;
-            if (auto sl = dest->to<IR::Slice>())
-                dest = sl->e0;
-            if (auto f = dest->to<IR::Member>()) {
-                name = f->toString();
-            } else if (auto i = dest->to<IR::HeaderStackItemRef>()) {
-                name = i->toString();
-            } else if (auto i = dest->to<IR::PathExpression>()) {
-                name = i->toString();
-            } else if (dest->to<IR::ConcreteHeaderRef>()) {
-                // FIXME -- do something
-                return;
-            } else if (auto i = dest->to<IR::GlobalRef>()) {
-                // FIXME -- counters, meters, ???
-                name = i->toString();
+    AddDependencies(FindDependencyGraph &self, Table *t, Table::depend_t ty)
+    : self(self), table(t), type(ty) {}
+    bool preorder(const IR::Expression *e) override {
+        if (auto *field = self.phv.field(e)) {
+            if (!self.access.count(field->name)) return false;
+            LOG3("add_dependency(" << field->name << ")");
+            if (isWrite()) {
+                for (auto t : self.access[field->name].read)
+                    if (table->data_dep[t->name] < Table::WRITE)
+                        table->data_dep[t->name] = Table::WRITE;
             } else {
-                warning("%s: Destination of %s is not a field", prim->srcInfo, prim->name);
-                return; }
-            LOG3("update_access write " << name);
-            auto &a = access[name];
-            a.read.clear();
-            a.write.clear();
-            a.write.insert(table); }
-    }
+                for (auto t : self.access[field->name].write)
+                    if (table->data_dep[t->name] < type)
+                        table->data_dep[t->name] = type; }
+            return false; }
+        return true; }
 };
 
-class UpdateAttached : public Inspector {
-    typedef DependencyGraph::Table      Table;
-    typedef DependencyGraph::access_t   access_t;
-    map<cstring, access_t>              &access;
-    Table                               *table;
+class FindDependencyGraph::UpdateAccess : public MauInspector , P4WriteContext {
+    FindDependencyGraph         &self;
+    Table                       *table;
 
  public:
-    UpdateAttached(map<cstring, access_t> &a, Table *t) : access(a), table(t) {}
+    UpdateAccess(FindDependencyGraph &self, Table *t) : self(self), table(t) {}
+    bool preorder(const IR::Expression *e) override {
+        if (auto *field = self.phv.field(e)) {
+            if (isWrite()) {
+                LOG3("update_access write " << field->name);
+                auto &a = self.access[field->name];
+                a.read.clear();
+                a.write.clear();
+                a.write.insert(table);
+            } else {
+                LOG3("update_access read " << field->name);
+                self.access[field->name].read.insert(table); }
+            return false; }
+        return true; }
+};
+
+class FindDependencyGraph::UpdateAttached : public Inspector {
+    FindDependencyGraph         &self;
+    Table                       *table;
+
+ public:
+    UpdateAttached(FindDependencyGraph &self, Table *t) : self(self), table(t) {}
     void postorder(const IR::Meter *meter) override {
         if (meter->direct && meter->result) {
-            cstring name = meter->result->toString();
-            auto &a = access[name];
+            auto *field = self.phv.field(meter->result);
+            BUG_CHECK(field, "meter writing to %s", meter->result);
+            auto &a = self.access[field->name];
             a.read.clear();
             a.write.clear();
             a.write.insert(table);
@@ -141,7 +110,7 @@ void FindDependencyGraph::add_control_dependency(Table *tt, const IR::Node *chil
 
 bool FindDependencyGraph::preorder(const IR::MAU::TableSeq *) {
     const Context *ctxt = getContext();
-    if (ctxt && dynamic_cast<const IR::Tofino::Pipe *>(ctxt->node)) {
+    if (ctxt && ctxt->node->is<IR::Tofino::Pipe>()) {
         gress = gress_t(ctxt->child_index / 3);
         access.clear(); }
     return true;
@@ -152,16 +121,16 @@ bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
         auto &table = graph.emplace(t->name, Table(t->name, gress)).first->second;
         add_control_dependency(&table, t);
         for (auto &gw : t->gateway_rows)
-            gw.first->apply(AddDependencies(access, &table, Table::MATCH));
+            gw.first->apply(AddDependencies(*this, &table, Table::MATCH));
         if (t->match_table && t->match_table->reads)
-            t->match_table->reads->apply(AddDependencies(access, &table, Table::MATCH));
+            t->match_table->reads->apply(AddDependencies(*this, &table, Table::MATCH));
         for (auto &action : Values(t->actions))
-            action->apply(AddDependencies(access, &table, Table::ACTION));
+            action->apply(AddDependencies(*this, &table, Table::ACTION));
         for (auto &gw : t->gateway_rows)
-            gw.first->apply(UpdateAccess(access, &table));
+            gw.first->apply(UpdateAccess(*this, &table));
         for (auto &action : Values(t->actions))
-            action->apply(UpdateAccess(access, &table));
-        t->apply(UpdateAttached(access, &table));
+            action->apply(UpdateAccess(*this, &table));
+        t->apply(UpdateAttached(*this, &table));
     } else {
         error("%s: Multiple applies of table %s not supported", t->srcInfo, t->name); }
     return true;
