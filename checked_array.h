@@ -31,6 +31,12 @@ class checked_array : public checked_array_base<T> {
     T data[S];
 public:
     checked_array() : disabled_(false) {};
+    checked_array(const T &v) : disabled_(false) { for (auto &e : data) e = v; }
+    checked_array(const std::initializer_list<T> &v) : disabled_(false) {
+        auto it = v.begin();
+        for (auto &e : data) {
+            if (it == v.end()) break;
+            e = *v++; } }
     T& operator[](size_t idx) {
         assert(idx < S);
         if (disabled_) ERROR("Accessing disabled record " << this);

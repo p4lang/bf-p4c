@@ -26,10 +26,10 @@ TFAS_OBJS:= action_bus.o action_table.o asm-parse.o asm-types.o bitvec.o \
 	    hash_dist.o hashexpr.o hex.o idletime.o input_xbar.o \
 	    instruction.o meter.o p4_table.o parser.o phase0.o phv.o power_ctl.o \
 	    selection.o stage.o tables.o ternary_match.o tfas.o top_level.o \
-	    ubits.o vector.o
+	    ubits.o vector.o widereg.o
 TEST_SRCS:= $(wildcard test_*.cpp)
 all: default reflow json_diff
-tfas: $(TFAS_OBJS) json.o $(TOFINO_OBJS) $(TEST_SRCS:%.cpp=%.o)
+tfas: $(TFAS_OBJS) json.o $(TOFINO_OBJS) $(JBAY_OBJS) $(TEST_SRCS:%.cpp=%.o)
 
 json2cpp: json.o
 json_diff: json.o fdstream.o
@@ -67,7 +67,7 @@ templates/%/.templates-updated: %/chip.schema %/template_objects.yaml
 echo-walle:
 	@echo walle is '"$(WALLE)"'
 
--include $(wildcard *.d gen/*.d)
+-include $(wildcard *.d gen/*.d gen/*/*.d)
 
 .PHONY: default all tags test clean veryclean help
 tags:

@@ -6,6 +6,7 @@
 #include "alloc.h"
 #include "bitvec.h"
 #include "gen/tofino/regs.mau_addrmap.h"
+#include "gen/jbay/regs.mau_addrmap.h"
 
 enum {
     /* global constants related to MAU stage */
@@ -81,7 +82,8 @@ public:
                         error_mode[2];
 
     int                         pass1_logical_id, pass1_tcam_id;
-    regs_match_action_stage_    regs;
+
+    Tofino::regs_match_action_stage_    regs;
 protected:
     Stage_data() {}
     Stage_data(const Stage_data &) = delete;

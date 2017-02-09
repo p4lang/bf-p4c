@@ -9,6 +9,15 @@
 #include <utility>
 #include <iostream>
 
+#ifdef setbit
+/* some broken systems define a `setbit' macro in their system header files! */
+#undef setbit
+#endif
+#ifdef clrbit
+/* some broken systems define a `clrbit' macro in their system header files! */
+#undef clrbit
+#endif
+
 #if defined(__GNUC__) || defined(__clang__)
 /* use builtin count leading/trailing bits of type-approprite size */
 static inline int builtin_ctz(unsigned x) { return __builtin_ctz(x); }
@@ -17,6 +26,9 @@ static inline int builtin_ctz(unsigned long long x) { return __builtin_ctzll(x);
 static inline int builtin_clz(unsigned x) { return __builtin_clz(x); }
 static inline int builtin_clz(unsigned long x) { return __builtin_clzl(x); }
 static inline int builtin_clz(unsigned long long x) { return __builtin_clzll(x); }
+static inline int builtin_popcount(unsigned x) { return __builtin_popcount(x); }
+static inline int builtin_popcount(unsigned long x) { return __builtin_popcountl(x); }
+static inline int builtin_popcount(unsigned long long x) { return __builtin_popcountll(x); }
 #endif
 
 class bitvec {
@@ -40,7 +52,7 @@ class bitvec {
      public:
         bitref(const bitref &a) = default;
         bitref(bitref &&a) = default;
-        explicit operator bool() const { return self.getbit(idx); }
+        operator bool() const { return self.getbit(idx); }
         bool operator==(const bitref &a) const { return &self == &a.self && idx == a.idx; }
         bool operator!=(const bitref &a) const { return &self != &a.self || idx != a.idx; }
         int index() const { return idx; }
@@ -132,7 +144,7 @@ class bitvec {
 
     void clear() {
         if (size > 1) memset(ptr, 0, size * sizeof(*ptr));
-        else data = 0; }  // NOLINT(whitespace/newline)
+        else data = 0; }
     bool setbit(size_t idx) {
         if (idx >= size * bits_per_unit) expand(1 + idx/bits_per_unit);
         if (size > 1)
@@ -153,8 +165,7 @@ class bitvec {
             idx += sz;
             while (++i < idx/bits_per_unit) {
                 ptr[i] = ~(uintptr_t)0; }
-            if (i < size)
-                ptr[i] |= (((uintptr_t)1 << (idx%bits_per_unit)) - 1); } }
+            ptr[i] |= (((uintptr_t)1 << (idx%bits_per_unit)) - 1); } }
     void setraw(uintptr_t raw) {
         if (size == 1) {
             data = raw;
@@ -210,6 +221,22 @@ class bitvec {
             return rv & ~(~(uintptr_t)1 << (sz-1));
         } else {
             return (data >> idx) & ~(~(uintptr_t)1 << (sz-1)); }}
+    void putrange(size_t idx, size_t sz, uintptr_t v) {
+        assert(sz > 0 && sz <= bits_per_unit);
+        uintptr_t mask = ~(uintptr_t)0 >> (bits_per_unit - sz);
+        v &= mask;
+        if (idx+sz > size * bits_per_unit) expand(1 + (idx+sz-1)/bits_per_unit);
+        if (size == 1) {
+            data &= ~(mask << idx);
+            data |= v << idx;
+        } else {
+            unsigned shift = idx % bits_per_unit;
+            idx /= bits_per_unit;
+            ptr[idx] &= ~(mask >> shift);
+            ptr[idx] |= v >> shift;
+            if (shift != 0 && idx + 1 < size) {
+                ptr[idx + 1] &= ~(mask << (bits_per_unit - shift));
+                ptr[idx + 1] |= v << (bits_per_unit - shift); } } }
     bitvec getslice(size_t idx, size_t sz) const;
     nonconst_bitref operator[](int idx) { return nonconst_bitref(*this, idx); }
     bool operator[](int idx) const { return getbit(idx); }
@@ -321,10 +348,26 @@ class bitvec {
         for (size_t i = 0; i < size && i < a.size; i++)
             if (word(i) & a.word(i)) return true;
         return false; }
+    bool contains(const bitvec &a) const {  // is 'a' a subset or equal to 'this'?
+        for (size_t i = 0; i < size && i < a.size; i++)
+            if ((word(i) & a.word(i)) != a.word(i)) return false;
+        for (size_t i = size; i < a.size; i++)
+            if (a.word(i)) return false;
+        return true; }
     bitvec &operator>>=(size_t count);
     bitvec &operator<<=(size_t count);
     bitvec operator>>(size_t count) const { bitvec rv(*this); rv >>= count; return rv; }
     bitvec operator<<(size_t count) const { bitvec rv(*this); rv <<= count; return rv; }
+    int popcount() const {
+        int rv = 0;
+        for (size_t i = 0; i < size; i++)
+#if defined(__GNUC__) || defined(__clang__)
+            rv += builtin_popcount(word(i));
+#else
+            for (auto v = word(i); v; v &= v-1)
+                ++rv;
+#endif
+        return rv; }
 
  private:
     void expand(size_t newsize) {

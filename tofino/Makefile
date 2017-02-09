@@ -19,9 +19,11 @@ gen/tofino/regs.ebp_rspec.%: JSON_NAME=regs.all.parser.egress
 gen/tofino/regs.prsr_reg_merge_rspec.%: JSON_NAME=regs.all.parse_merge
 gen/tofino/regs.tofino.%: JSON_NAME=regs.top
 gen/tofino/regs.pipe_addrmap.%: JSON_NAME=regs.pipe
-gen/tofino/regs.pipe_addrmap.%: JSON_EXTRA_ARGS=+E
+gen/tofino/regs.pipe_addrmap.%: JSON_EXTRA_ARGS=+E -N Tofino
 gen/tofino/memories.pipe_top_level.%: JSON_NAME=memories.top
 gen/tofino/memories.pipe_addrmap.%: JSON_NAME=memories.pipe
+
+gen/tofino/%: JSON_EXTRA_ARGS=-N Tofino
 
 tofino/chip.schema tofino/template_objects.yaml: %: p4c-templates/%
 	# if there's a symlink 'p4c-templates' to somewhere with new reg schema, copy them

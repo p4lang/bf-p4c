@@ -2,8 +2,10 @@
 #define _tfas_h_
 
 enum config_version_t { CONFIG_OLD=1, CONFIG_NEW=2, CONFIG_BOTH=3 };
+enum target_t { TOFINO=1, JBAY=2 };
 extern struct option_t {
     config_version_t    version;
+    target_t            target;
     bool                match_compiler;
     bool                condense_json;
 } options;

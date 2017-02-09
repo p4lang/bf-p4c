@@ -4,6 +4,7 @@
 #include "sections.h"
 #include "gen/tofino/regs.dprsr_hdr.h"
 #include "gen/tofino/regs.dprsr_inp.h"
+#include "gen/jbay/regs.dprsr_reg.h"
 #include "phv.h"
 #include <vector>
 
@@ -25,13 +26,13 @@ public:
         Phv::Slice operator *() const;
         Phv::Slice operator->() const { return **this; }
     };
-    int                                 lineno[2];
-    regs_all_deparser_input_phase       inp_regs;
-    regs_all_deparser_header_phase      hdr_regs;
-    std::vector<std::pair<RefOrChksum, Phv::Ref>>  dictionary[2];
-    std::vector<Phv::Ref>               checksum[2][DEPARSER_CHECKSUM_UNITS];
-    std::vector<Phv::Ref>               pov_order[2];
-    bitvec                              phv_use[2];
+    int                                             lineno[2];
+    Tofino::regs_all_deparser_input_phase           inp_regs;
+    Tofino::regs_all_deparser_header_phase          hdr_regs;
+    std::vector<std::pair<RefOrChksum, Phv::Ref>>   dictionary[2];
+    std::vector<Phv::Ref>                           checksum[2][DEPARSER_CHECKSUM_UNITS];
+    std::vector<Phv::Ref>                           pov_order[2];
+    bitvec                                          phv_use[2];
     struct Intrinsic;
     std::vector<std::pair<Intrinsic *, std::vector<Phv::Ref>>> intrinsics;
     struct Digest {

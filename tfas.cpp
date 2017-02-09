@@ -14,6 +14,7 @@
 
 option_t options = {
     .version = CONFIG_OLD,
+    .target = TOFINO,
     .match_compiler = false,
     .condense_json = true,
 };
@@ -94,6 +95,18 @@ int main(int ac, char **av) {
     for (int i = 1; i < ac; i++) {
         if (av[i][0] == '-' && av[i][1] == 0) {
             asm_parse_file("<stdin>", stdin);
+        } else if (!strcmp(av[i], "--target")) {
+            if (!strcmp(av[++i], "tofino"))
+                options.target = TOFINO;
+            else if (!strcmp(av[i], "jbay"))
+                options.target = JBAY;
+            else {
+                std::cerr << "Unknown target " << av[i];
+                error_count++; }
+        } else if (!strcmp(av[i], "--tofino")) {
+            options.target = TOFINO;
+        } else if (!strcmp(av[i], "--jbay")) {
+            options.target = JBAY;
         } else if (av[i][0] == '-' || av[i][0] == '+') {
             bool flag = av[i][0] == '+';
             for (char *arg = av[i]+1; *arg;)
@@ -139,13 +152,22 @@ int main(int ac, char **av) {
                 case 'q':
                     std::clog.setstate(std::ios::failbit);
                     break;
+                case 't':
+                    if (!strcmp(av[++i], "tofino"))
+                        options.target = TOFINO;
+                    else if (!strcmp(av[i], "jbay"))
+                        options.target = JBAY;
+                    else {
+                        std::cerr << "Unknown target " << av[i];
+                        error_count++; }
+                    break;
                 case 'v':
                     verbose++;
                     break;
                 default:
                     std::cerr << "Unknown option " << (flag ? '+' : '-')
                               << arg[-1] << std::endl;
-                    std::cerr << "usage: " << av[0] << " [-l:D:Mo:qv] file..."
+                    std::cerr << "usage: " << av[0] << " [-l:D:Mo:qtv] file..."
                               << std::endl;
                     error_count++; }
         } else if (FILE *fp = fopen(av[i], "r")) {
