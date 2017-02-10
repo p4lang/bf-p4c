@@ -262,6 +262,47 @@ void Cluster::end_apply() {
         sanity_check_clusters("end_apply..", lhs);
     }
     //
+    // transfer ccgf ownership to field in dst_map_i
+    //
+    for (auto &f : phv_i) {
+        if (dst_map_i.count(&f))  {
+            //
+            // ccgf accumulations
+            // transfer ownership of container to field in cluster
+            //
+            if (f.ccgf
+                && !f.ccgf->header_stack_pov_ccgf  // not header stack pov
+                && !f.ccgf_fields.size()
+                && !dst_map_i.count(f.ccgf)) {  // current owner not in dst_map
+                //
+                PhvInfo::Field *current_owner = f.ccgf;
+                PhvInfo::Field *new_owner = &f;
+                new_owner->ccgf_fields.insert(
+                    new_owner->ccgf_fields.begin(),
+                    current_owner->ccgf_fields.begin(),
+                    current_owner->ccgf_fields.end());
+                current_owner->ccgf_fields.clear();  // clear previous owner
+                new_owner->ccgf = new_owner;
+                for (auto &m : new_owner->ccgf_fields) {
+                    m->ccgf = new_owner;
+                }
+            }
+            // container contiguous group fields
+            // cluster(a{a,b},x), cluster(b,y) => cluster(a{a,b},x,y)
+            // a->ccgf_fields = {a,b,c}, a->ccgf=a, b->ccgf=a, c->ccgf=a
+            // dst_map_i[a]=(a), dst_map_i[b]=(b)
+            // (a) += (b); remove dst_map_i[b]
+            // b appearing in dst_map_i[y] :-
+            //     cluster(a{a,b},x), cluster(y,b) => cluster(a{a,b},x,y)
+            //
+            for (auto &m : f.ccgf_fields) {
+                if (dst_map_i.count(m)) {
+                    insert_cluster(&f, m);
+                }
+            }
+        }
+    }
+    //
     // form unique clusters
     // forall x not elem lhs_unique_i, dst_map_i[x] = 0
     // do not remove singleton clusters as x needs MAU PHV, e.g., set x, 3
@@ -270,62 +311,13 @@ void Cluster::end_apply() {
     std::list<const PhvInfo::Field *> delete_list;
     for (auto &entry : dst_map_i) {
         auto lhs = entry.first;
+        //
         // remove dst_map entry for fields absorbed in other clusters
         // remove singleton clusters (from headers) not used in mau
+        //
         if (lhs && (lhs_unique_i.count(lhs) == 0 || !uses_i->use[1][lhs->gress][lhs->id])) {
             dst_map_i[lhs] = nullptr;
             delete_list.push_back(lhs);
-        }
-        // container contiguous group fields
-        // cluster(a{a,b},x), cluster(b,y) => cluster(a{a,b},x,y)
-        // a->ccgf_fields = {a,b,c}, a->ccgf=a, b->ccgf=a, c->ccgf=a
-        // dst_map_i[a]=(a), dst_map_i[b]=(b)
-        // (a) += (b); remove dst_map_i[b]
-        // b appearing in dst_map_i[y] :-
-        //     cluster(a{a,b},x), cluster(y,b) => cluster(a{a,b},x,y)
-        //
-        if (entry.second) {
-            ordered_set<const PhvInfo::Field *> s1 = *(entry.second);
-            for (auto &f : s1) {
-                //
-                // ccgf accumulations
-                // transfer ownership of container to field in cluster
-                //
-                if (f->ccgf
-                    && !f->ccgf->header_stack_pov_ccgf  // not header stack pov
-                    && !f->ccgf_fields.size()
-                    && !dst_map_i.count(f->ccgf)) {  // owner not in dst_map
-                    //
-                    PhvInfo::Field *owner = f->ccgf;
-                    PhvInfo::Field *field = const_cast<PhvInfo::Field *>(f);
-                    field->ccgf_fields.insert(
-                        field->ccgf_fields.begin(),
-                        owner->ccgf_fields.begin(),
-                        owner->ccgf_fields.end());
-                    owner->ccgf_fields.clear();  // clear previous owner
-                    field->ccgf = field;
-                    for (auto &m : field->ccgf_fields) {
-                        m->ccgf = field;
-                    }
-                }
-                //
-                // unify ccgf member's cluster with owner ccgf
-                //
-                if (f->ccgf
-                    && f->ccgf != f
-                    && !f->header_stack_pov_ccgf  // not header stack pov
-                    && dst_map_i.count(f->ccgf)) {
-                    //
-                    LOG4("===== ccgf fold =====");
-                    LOG4(&s1);
-                    LOG4(".....into.....");
-                    LOG4(f->ccgf);
-                    //
-                    insert_cluster(f->ccgf, lhs);
-                    dst_map_i[lhs] = nullptr;
-                    delete_list.push_back(lhs);
-                }
-            }
         }
     }
     for (auto &fp : delete_list) {

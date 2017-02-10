@@ -290,7 +290,7 @@ PHV_Bind::trivial_allocate(std::set<const PhvInfo::Field *>& fields) {
             asm_container = new PHV::Container(reg_name);
             f1->alloc.emplace_back(
                 *asm_container, field_bit, container_bit, static_cast<int> (container_width));
-            LOG3(f << '[' << field_bit << "] ..... " << reg_name);
+            LOG3(f << '[' << field_bit << ".." << f->phv_use_width()-1 << "] ..... " << reg_name);
             field_bit += static_cast<int> (container_width)-1;
         }
         // ccgf owners allocate for members
