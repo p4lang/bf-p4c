@@ -49,19 +49,12 @@ bool Cluster::preorder(const IR::Member* expression) {
     LOG4(".....Member....." << expression->toString());
     auto field = phv_i.field(expression);
     if (field) {
-        if (!dst_map_i[field]) {
-            dst_map_i[field] = new ordered_set<const PhvInfo::Field *>;  // new set
-            lhs_unique_i.insert(field);  // lhs_unique set insert field
-            LOG4("lhs_unique..insert[" << std::endl << &lhs_unique_i << "lhs_unique..insert]");
-            //
-            // x must be allocated to PHV
-            // e.g., reads { x :
-            // dst_map[x] points to singleton cluster using MAU
-            //
-            insert_cluster(field, field);
-            set_field_range(field);
-            LOG4(field);
-        }
+        //
+        // x must be allocated to PHV
+        // e.g., reads { x :
+        // dst_map[x] points to singleton cluster using MAU
+        //
+        create_dst_map_entry(field);
     }
 
     return true;
@@ -173,9 +166,8 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
     }
     //
     // discard following container contiguous group widths
-    // < byte,
+    // not byte-multiple (includes < byte)
     // > largest container width,
-    // not byte-multiple
     //
     for (auto &entry : ccg) {
         auto owner = entry.first;
@@ -203,17 +195,13 @@ bool Cluster::preorder(const IR::Primitive* primitive) {
     if (!primitive->operands.empty()) {
         dst_i = phv_i.field(primitive->operands[0]);
         if (dst_i) {
-            if (!dst_map_i[dst_i]) {
-                dst_map_i[dst_i] = new ordered_set<const PhvInfo::Field *>;  // new set
-                lhs_unique_i.insert(dst_i);  // lhs_unique set insert field
-                LOG4("lhs_unique..insert[" << std::endl << &lhs_unique_i << "lhs_unique..insert]");
-                 //
-                 // x must be allocated to PHV
-                 // e.g., action a: - set x, 3
-                 // dst_map[x] points to singleton cluster using MAU
-                 //
-                insert_cluster(dst_i, dst_i);
-            }
+            //
+            // x must be allocated to PHV
+            // e.g., action a: - set x, 3
+            // dst_map[x] points to singleton cluster using MAU
+            //
+            create_dst_map_entry(dst_i);
+            //
             for (auto &operand : primitive->operands) {
                 auto field = phv_i.field(operand);
                 insert_cluster(dst_i, field);
@@ -471,7 +459,12 @@ void Cluster::compute_fields_no_use_mau() {
     for (auto f : fields_no_use_mau_i) {
         PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
         bool use_any = uses_i->use[0][f1->gress][f1->id];
-        if (f1->metadata || f1->pov || !use_any || (f1->ccgf && f1->ccgf != f1)) {
+        //
+        // normally f1->metadata in the T_PHV path can be removed
+        // but bridge_metadata deparsed must be allocated
+        // f1->metadata && !use_any
+        //
+        if (!use_any || (f1->metadata && !use_any) || f1->pov || (f1->ccgf && f1->ccgf != f1)) {
             delete_set.insert(f);
         } else {
             set_field_range(f1);
@@ -485,6 +478,27 @@ void Cluster::compute_fields_no_use_mau() {
         << ").........." << std::endl);
     //
 }  // fields_no_use_mau
+
+//***********************************************************************************
+//
+// create dst map entry
+// create a dst_map_i entry for field
+// insert in lhs_unique_i
+// insert_cluster
+//
+//***********************************************************************************
+
+void Cluster::create_dst_map_entry(PhvInfo::Field *field) {
+    assert(field);
+    if (!dst_map_i[field]) {
+        dst_map_i[field] = new ordered_set<const PhvInfo::Field *>;  // new set
+        lhs_unique_i.insert(field);  // lhs_unique set insert field
+        LOG4("lhs_unique..insert[" << std::endl << &lhs_unique_i << "lhs_unique..insert]");
+        insert_cluster(field, field);
+        set_field_range(field);
+        LOG4(field);
+    }
+}
 
 //***********************************************************************************
 //
@@ -571,7 +585,7 @@ void Cluster::insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rh
                         dst_map_i[field] = dst_map_i[lhs];
                         lhs_unique_i.erase(field);                   // lhs_unique set erase field
                     }
-                    delete dst_map_i_rhs;                            // delete std::set
+                    // delete dst_map_i_rhs;                            // delete std::set
                 }
             }
             LOG4("insert_cluster .....");

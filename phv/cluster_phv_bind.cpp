@@ -122,7 +122,9 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
     // e.g., Ingress containers available, but Egress clusters remain
     //       & vice versa
     //
-    trivial_allocate(fields_overflow_i);
+    if (fields_overflow_i.size()) {
+        trivial_allocate(fields_overflow_i);
+    }
     //
     LOG3(*this);
     //
@@ -381,7 +383,7 @@ void PHV_Bind::sanity_check_container_fields(
 
 std::ostream &operator<<(std::ostream &out, PHV_Bind &phv_bind) {
     out << std::endl
-        << "Begin++++++++++ PHV Bind Containers to Fields ++++++++++"
+        << "Begin ++++++++++++++++++++ PHV Bind Containers to Fields ++++++++++++++++++++"
         << std::endl
         << std::endl;
     for (auto &f : phv_bind.fields()) {
@@ -393,21 +395,27 @@ std::ostream &operator<<(std::ostream &out, PHV_Bind &phv_bind) {
         }
         out << std::endl;
     }
-    out << std::endl
-        << "Begin.......... Overflow Fields ........................"
-        << std::endl
-        << std::endl;
-    for (auto &f : phv_bind.fields_overflow()) {
-        out << f;
-        for (auto &as : f->alloc) {
-            out << std::endl
-                << '\t'
-                << as;
+    if (phv_bind.fields_overflow().size()) {
+        out << std::endl
+            << "Begin .......... Overflow Fields ........................"
+            << std::endl
+            << std::endl;
+        for (auto &f : phv_bind.fields_overflow()) {
+            out << f;
+            for (auto &as : f->alloc) {
+                out << std::endl
+                    << '\t'
+                    << as;
+            }
+            out << std::endl;
         }
-        out << std::endl;
+        out << std::endl
+            << "End .......... Overflow Fields ........................"
+            << std::endl
+            << std::endl;
     }
     out << std::endl
-        << "End+++++++++++++++++++++++++++++++++++++++++++++++++++++"
+        << "End ++++++++++++++++++++ PHV Bind Containers to Fields ++++++++++++++++++++"
         << std::endl
         << std::endl;
 
