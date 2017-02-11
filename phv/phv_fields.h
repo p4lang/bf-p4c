@@ -24,6 +24,7 @@ class PhvInfo : public Inspector {
             return kind == a.kind ? (with ? with->id : 0) < (a.with ? a.with->id : 0)
                                   : kind < a.kind; }
     };
+    enum class Field_Ops {NONE = 0, R = 1, W = 2, RW = 3};
     struct Field {
         cstring         name;
         int             id;
@@ -66,6 +67,7 @@ class PhvInfo : public Inspector {
                                            // member pov fields of header stk pov
                                            // these members are in same container as header stk pov
         set<constraint> constraints;  // unused -- get rid of it?
+        vector<std::tuple<bool, cstring, Field_Ops>> operations; // all operations performed on the field.
         cstring header() const { return name.before(strrchr(name, '.')); }
         PHV::Bit bit(unsigned i) const {
             BUG_CHECK(i < size_t(size), "bit out of range for field");
@@ -189,6 +191,7 @@ std::ostream &operator<<(std::ostream &, const PhvInfo::Field *);
 std::ostream &operator<<(std::ostream &, std::set<const PhvInfo::Field *>&);
 std::ostream &operator<<(std::ostream &, std::list<const PhvInfo::Field *>&);
 std::ostream &operator<<(std::ostream &, const PhvInfo &);
+std::ostream &operator<<(std::ostream &, const PhvInfo::Field_Ops &);
 extern void repack_metadata(PhvInfo &phv);
 
 void dump(const PhvInfo *);

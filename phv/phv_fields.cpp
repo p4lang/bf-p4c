@@ -445,6 +445,16 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo &phv) {
     return out;
 }
 
+std::ostream &operator<<(std::ostream &out, const PhvInfo::Field_Ops &op) {
+    switch(op) {
+        case PhvInfo::Field_Ops::NONE: out << "None"; break;
+        case PhvInfo::Field_Ops::R: out << 'R'; break;
+        case PhvInfo::Field_Ops::W: out << 'W'; break;
+        case PhvInfo::Field_Ops::RW: out << "RW"; break;
+        default: out << "<Field_Ops " << static_cast<int>(op) << ">"; }
+    return out;
+}
+
 void dump(PhvInfo *phv) {
     std::cout << *phv;
 }

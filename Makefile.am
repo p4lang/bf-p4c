@@ -117,6 +117,7 @@ tofino_backend_phv_UNIFIED = \
 	%reldir%/phv/cluster_phv_container.cpp \
 	%reldir%/phv/cluster_phv_mau.cpp \
 	%reldir%/phv/cluster_phv_req.cpp \
+	%reldir%/phv/cluster_phv_slicing.cpp \
 	%reldir%/phv/constraints.cpp \
 	%reldir%/phv/container_constraint.cpp \
 	%reldir%/phv/match_xbar_constraint.cpp \

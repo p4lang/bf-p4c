@@ -195,10 +195,6 @@ class PHV_MAU_Group_Assignments : public Visitor {
         PHV_Container::Container_Content *,
         std::list<PHV_MAU_Group *>&);    // ensure parser fields in containers with no holes
     void create_aligned_container_slices();
-    void container_pack_cohabit(
-        std::list<Cluster_PHV *>& clusters_to_be_assigned,
-        ordered_map<int,
-        ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&);
     //
     void consolidate_slices_in_group(
         ordered_map<int,
@@ -242,6 +238,11 @@ class PHV_MAU_Group_Assignments : public Visitor {
         ordered_map<int,
         ordered_map<int,
         std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&);
+    //
+    void container_pack_cohabit(
+        std::list<Cluster_PHV *>& clusters_to_be_assigned,
+        ordered_map<int,
+        ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&);
     //
     void sanity_check_container_avail(const std::string&);
     void sanity_check_container_fields_gress(const std::string&);

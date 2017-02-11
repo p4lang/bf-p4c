@@ -60,6 +60,7 @@ limitations under the License.
 #include "tofino/phv/create_thread_local_instances.h"
 #include "tofino/phv/phv_allocator.h"
 #include "tofino/phv/cluster_phv_bind.h"
+#include "tofino/phv/cluster_phv_slicing.h"
 #include "tofino/common/parser_overlay.h"
 
 namespace Tofino {
@@ -105,6 +106,8 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     Cluster_PHV_Requirements cluster_phv_req(cluster);           // cluster PHV requirements
     PHV_MAU_Group_Assignments cluster_phv_mau(cluster_phv_req);  // cluster PHV Container placements
     PHV_Bind phv_bind(phv, cluster_phv_mau);                     // field binding to PHV Containers
+    PHV_Field_Operations phv_field_ops(phv);                     // field operation analysis
+    Cluster_Slicing cluster_slicing(cluster_phv_mau);            // cluster slicing
     DependencyGraph deps;
     TablesMutuallyExclusive mutex;
     FieldDefUse defuse(phv);
@@ -143,10 +146,12 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         &cluster,          // cluster analysis
         &parserOverlay,    // produce pairs of mutually exclusive header
                            // fields, eg. (arpSrc, ipSrc)
+        &phv_field_ops,    // PHV field operations analysis
         &cluster_phv_req,  // cluster PHV requirements analysis
         &cluster_phv_mau,  // cluster PHV container placements
                            // first cut PHV MAU Group assignments
                            // produces cohabit fields for Table Placement
+        // &cluster_slicing,  // cluster slicing
     });
 
     PassManager backend = {

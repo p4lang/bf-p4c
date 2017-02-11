@@ -40,6 +40,9 @@ class Cluster_PHV {
     int max_width_i;                        // max width of field in cluster
     int num_containers_i;                   // number of containers
     bool sliceable_i;                       // can split cluster, move-based ops only ?
+    ordered_map<const PhvInfo::Field*,
+    std::pair<int,int>> field_slice_o;
+                                            // map field to a list of bitrange after slicing
     //
  public:
     Cluster_PHV(
@@ -64,10 +67,14 @@ class Cluster_PHV {
     void width(PHV_Container::PHV_Word w)               { width_i = w; }
     bool uniform_width()                                { return uniform_width_i; }
     int max_width()                                     { return max_width_i; }
+    void max_width(int i)                               { max_width_i = i; }
     int num_containers()                                { return num_containers_i; }
     void num_containers(int n)                          { num_containers_i = n; }
     int num_containers(std::vector<const PhvInfo::Field *>&, PHV_Container::PHV_Word);
+    ordered_map<const PhvInfo::Field *, std::pair<int, int>>&
+        field_slices()                                  { return field_slice_o; };
     bool sliceable()                                    { return sliceable_i; }
+    void sliceable(bool i)                              { sliceable_i = i; }
 };
 //
 //
