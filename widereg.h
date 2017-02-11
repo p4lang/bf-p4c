@@ -19,6 +19,7 @@ struct widereg_base {
     mutable bool        read, write;
 
     widereg_base() : read(false), write(false) {}
+    widereg_base(bitvec v) : value(v), read(false), write(false) {}
     widereg_base(uintptr_t v) : value(v), read(false), write(false) {}
     operator bitvec() const { read = true; return value; }
     bool modified() const { return write; }
