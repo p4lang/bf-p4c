@@ -295,9 +295,23 @@ void Cluster::end_apply() {
             // b appearing in dst_map_i[y] :-
             //     cluster(a{a,b},x), cluster(y,b) => cluster(a{a,b},x,y)
             //
-            for (auto &m : f.ccgf_fields) {
-                if (dst_map_i.count(m)) {
-                    insert_cluster(&f, m);
+            if (f.ccgf == &f) {
+                for (auto &m : f.ccgf_fields) {
+                    if (dst_map_i.count(m)) {
+                        insert_cluster(&f, m);
+                    }
+                }
+                // remove ccgf members duplicated as cluster members
+                // ccgf owners responsible for member allocation
+                // remove duplication as cluster members
+                //
+                ordered_set<const PhvInfo::Field *> s1 = *(dst_map_i[&f]);
+                for (auto &c_e : s1) {
+                    for (auto &m : c_e->ccgf_fields) {
+                        if (m != c_e && s1.count(m)) {
+                            dst_map_i[&f]->erase(m);
+                        }
+                    }
                 }
             }
         }
@@ -664,10 +678,11 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg) {
             for (auto &f : s1) {
                 for (auto &m : f->ccgf_fields) {
                     if (m != f && s1.count(m)) {
-                        LOG1("*****cluster.cpp:sanity_FAIL***** ccgf ..." << msg);
-                        LOG1("field");
+                        LOG1("*****cluster.cpp:sanity_FAIL*****" << msg);
+                        LOG1("ccgf member duplicated in cluster");
+                        LOG1("member =");
                         LOG1(m);
-                        LOG1("in cluster");
+                        LOG1("cluster =");
                         LOG1(&s1);
                     }
                 }
