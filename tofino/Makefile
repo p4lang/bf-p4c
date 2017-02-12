@@ -25,7 +25,7 @@ gen/tofino/regs.prsr_reg_merge_rspec.%: JSON_NAME=regs.all.parse_merge
 gen/tofino/regs.tofino.%: JSON_NAME=regs.top
 
 
-tofino/chip.schema tofino/template_objects.yaml: %: p4c-templates/%
+tofino/chip.schema tofino/template_objects.yaml: tofino/%: p4c-templates/%
 	# if there's a symlink 'p4c-templates' to somewhere with new reg schema, copy them
 	if [ $< -nt $@ ]; then cp $< $@; fi
 
