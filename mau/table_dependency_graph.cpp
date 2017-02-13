@@ -82,14 +82,38 @@ class FindDependencyGraph::UpdateAttached : public Inspector {
 
  public:
     UpdateAttached(FindDependencyGraph &self, const IR::MAU::Table *t) : self(self), table(t) { }
-    void postorder(const IR::Meter *meter) override {
+    void postorder(const IR::MAU::MAUMeter *meter) override {
         if (meter->direct && meter->result) {
             auto *field = self.phv.field(meter->result);
             BUG_CHECK(field, "meter writing to %s", meter->result);
             auto &a = self.access[field->name];
             a.read.clear();
             a.write.clear();
-            a.write.insert(table); } }
+            a.write.insert(table);
+        }
+        /*
+        if (meter->indirect_index) {
+            auto *field = self.phv.field(meter->indirect_index);
+            if (field != nullptr) {
+                auto &a = self.access[field->name];
+                a.read.insert(table);
+            }
+        }
+        */
+    }
+
+    /*
+    void postorder(const IR::MAU::MAUCounter *counter) override {
+        if (counter->indirect_index) {
+            auto *field = self.phv.field(counter->indirect_index);
+            BUG_CHECK(field, "counter reading from %s", counter->indirect_index);
+            if (field != nullptr) {
+                auto &a = self.access[field->name];
+                a.read.insert(table);
+            }
+        }
+    }
+    */
 };
 
 

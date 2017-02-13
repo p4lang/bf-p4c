@@ -13,6 +13,20 @@ bool TableLayout::backtrack(trigger &trig) {
     return trig.is<IXBar::failure>() && !alloc_done;
 }
 
+int HashDistReq::bits_required(const PhvInfo &phv) const {
+    if (instr != nullptr) {
+        if (instr->name == "modify_field_with_hash_based_offset") {
+           return -1;
+        }
+    }
+
+    if (attached != nullptr) {
+        if (auto *c = attached->to<IR::MAU::MAUCounter>())
+            return phv.field(c->indirect_index)->size;
+    }
+    return -1;
+}
+
 void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
     if (auto k = tbl->match_table->getConstantProperty("size"))
         layout.entries = k->asInt();
@@ -109,6 +123,35 @@ static void setup_action_layout(IR::MAU::Table *tbl) {
             tbl->layout.action_data_bytes = action_data_bytes; }
 }
 
+static void setup_hash_dist(IR::MAU::Table *tbl, const PhvInfo &phv, HashDistChoices &hdc) {
+    vector<HashDistReq> hash_dist_reqs;
+    for (auto action : Values(tbl->actions)) {
+        for (const IR::Primitive* instr : action->action) {
+            LOG1("instr name " << instr->name);
+            if (instr->name == "modify_field_with_hash_based_offset")
+                hash_dist_reqs.emplace_back(true, instr, nullptr);
+        }
+    }
+    for (auto *at : tbl->attached) {
+        const IR::MAU::MAUCounter *cnt = at->to<IR::MAU::MAUCounter>();
+        const IR::MAU::MAUMeter *mtr = at->to<IR::MAU::MAUMeter>();
+        if (cnt != nullptr) {
+            LOG1("Counter");
+            LOG1("cnt->indirect index " << cnt->indirect_index);
+            LOG1("Counter id " << cnt->id);
+            if (cnt->indirect_index && phv.field(cnt->indirect_index) != nullptr) {
+                hash_dist_reqs.emplace_back(true, nullptr, cnt);
+                LOG1("At layout is address " << hash_dist_reqs.back().is_address());
+            }
+        } else if (mtr != nullptr) {
+            LOG1("Meter in here");
+            if (mtr->indirect_index && phv.field(mtr->indirect_index) != nullptr)
+                hash_dist_reqs.emplace_back(true, nullptr, mtr);
+        }
+    }
+    hdc.total_hash_dist_reqs[tbl->name] = hash_dist_reqs;
+}
+
 /* Setting up the potential layouts for ternary, either with or without immediate
    data if immediate is possible */
 void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved,
@@ -186,9 +229,12 @@ void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_
 void TableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl, int immediate_bytes_reserved) {
     IR::MAU::Table::Layout *layout = new IR::MAU::Table::Layout();
     *layout = tbl->layout;
+    LOG1("Layout no match");
     if (layout->action_data_bytes - immediate_bytes_reserved <= 4) {
         layout->action_data_bytes_in_overhead = layout->action_data_bytes;
     }
+    if (!hdc.get_hash_dist_req(tbl).empty())
+        layout->hash_action = true;
     IR::MAU::Table::LayoutOption lo(layout);
     tbl->layout_options.push_back(lo);
 }
@@ -264,6 +310,7 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     if ((tbl->layout.gateway = tbl->uses_gateway()))
         setup_gateway_layout(tbl->layout, tbl);
     setup_action_layout(tbl);
+    setup_hash_dist(tbl, phv, hdc);
     VisitAttached attached(&tbl->layout);
     for (auto at : tbl->attached)
         at->apply(attached);

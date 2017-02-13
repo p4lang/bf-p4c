@@ -119,6 +119,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     SymBitMatrix mutually_exclusive_field_ids;
     ParserOverlay parserOverlay(phv, mutually_exclusive_field_ids);
     Cluster_PHV_Overlay cluster_phv_overlay(cluster_phv_mau, mutually_exclusive_field_ids);
+    HashDistChoices hdc;
 
     if (options.trivial_phvalloc) {
         phv_alloc = new PHV::TrivialAlloc(phv, defuse.conflicts());
@@ -179,7 +180,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         phv_analysis,               // phv analysis after last &phv pass
 
         new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
-        new TableLayout(phv),
+        new TableLayout(phv, hdc),
         new TableFindSeqDependencies,
         new FindDependencyGraph(phv, deps),
         Log::verbose() ? new VisitFunctor([&deps]() { std::cout << deps; }) : nullptr,
@@ -192,7 +193,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         &mutex,
         new DetermineActionProfileFaults(mutex),
         new DumpPipe("Before table placement"),
-        new TablePlacement(&deps, mutex, phv),
+        new TablePlacement(&deps, mutex, phv, hdc),
         new CheckTableNameDuplicate,
         new TableFindSeqDependencies,  // not needed?
         new CheckTableNameDuplicate,

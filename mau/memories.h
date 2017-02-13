@@ -115,8 +115,8 @@ struct Memories {
         const IR::MAU::Table::LayoutOption *layout_option;
         int provided_entries;
         int calculated_entries;
-        int attached_gw_bytes;
-        table_alloc *table_link;
+        int attached_gw_bytes = 0;
+        table_alloc *table_link = nullptr;
         explicit table_alloc(const IR::MAU::Table *t, const IXBar::Use *mi,
                              map<cstring, Memories::Use> *mu,
                              const IR::MAU::Table::LayoutOption *lo, const int e)
@@ -276,6 +276,7 @@ struct Memories {
     };
 
 
+
     static constexpr int ACTION_IND = 0;
     static constexpr int SUPPL_IND = 1;
     static constexpr int OFLOW_IND = 2;
@@ -296,7 +297,10 @@ struct Memories {
     vector<SRAM_group *>        suppl_bus_users;
     vector<table_alloc *>       gw_tables;
     vector<table_alloc *>       no_match_tables;
-
+    vector<table_alloc *>       hash_action_tables;
+    vector<table_alloc *>       action_payload_gws;
+    vector<table_alloc *>       normal_gws;
+    vector<table_alloc *>       hash_action_gws;
 
     void clear();
     void clear_table_vectors();

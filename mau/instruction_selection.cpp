@@ -55,6 +55,8 @@ const IR::ActionFunction *InstructionSelection::postorder(IR::ActionFunction *af
         BUG_CHECK(!af->is<IR::MAU::ActionFunctionEx>(), "already processed action function?");
         auto *rv = new IR::MAU::ActionFunctionEx(*af);
         rv->stateful.insert(rv->stateful.end(), stateful[af].begin(), stateful[af].end());
+        stateful[rv] = stateful[af];
+        modify_with_hash[rv] = modify_with_hash[af];
         af = rv; }
     return af;
 }
@@ -331,6 +333,23 @@ const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
     BUG("Not a stateful primitive %s", prim);
 }
 
+class SetupIndirectIndex : public MauModifier {
+    const IR::Expression *indirect;
+
+    bool preorder(IR::MAU::MAUCounter *counter) {
+        LOG1("This is the pass of change " << indirect);
+        counter->indirect_index = indirect;
+        return true;
+    }
+
+    bool preorder(IR::MAU::MAUMeter *meter) {
+        meter->indirect_index = indirect;
+        return true;
+    }
+ public:
+    explicit SetupIndirectIndex(const IR::Expression *i) : indirect(i) {}
+};
+
 const IR::MAU::Table *InstructionSelection::postorder(IR::MAU::Table *tbl) {
     for (auto act : Values(tbl->actions)) {
         if (!stateful.count(act)) continue;
@@ -348,9 +367,39 @@ const IR::MAU::Table *InstructionSelection::postorder(IR::MAU::Table *tbl) {
                 // typechecking is unable to check this without a good bit more work
                 error("%s: %s is not a %s", prim->operands[0]->srcInfo, gref->obj, type);
             } else if (!contains(tbl->attached, stateful)) {
-                tbl->attached.push_back(stateful);
+                const IR::Expression *indirect = prim->operands[1];
+                if (auto *c = stateful->to<IR::Counter>())
+                    tbl->attached.push_back(new IR::MAU::MAUCounter(*c, indirect));
+                else if (auto *m = stateful->to<IR::Meter>())
+                    tbl->attached.push_back(new IR::MAU::MAUMeter(*m, indirect));
+                else
+                    tbl->attached.push_back(stateful);
+            } else {
+                const IR::Stateful *stateful_update = nullptr;
+                for (size_t i = 0; i < tbl->attached.size(); i++) {
+                    if (stateful == tbl->attached[i]) {
+                        stateful_update = stateful;
+                        tbl->attached.erase(tbl->attached.begin() + i);
+                        break;
+                    }
+                }
+                for (auto at : tbl->attached) {
+                    if (at == stateful) {
+                        stateful_update = stateful;
+                    }
+                }
+                const IR::Expression *indirect = prim->operands[1];
+                LOG1("indirect is " << indirect);
+                stateful_update =
+                    stateful_update->apply(SetupIndirectIndex(indirect))->to<IR::Stateful>();
+                if (auto *c = stateful_update->to<IR::MAU::MAUCounter>())
+                    LOG1("Counter indirect index is " << c->indirect_index << " of " << c->name);
+                LOG1("Stateful id " << stateful_update->id);
+                tbl->attached.push_back(stateful_update);
+
             }
         }
     }
+    LOG1("Finished here");
     return tbl;
 }

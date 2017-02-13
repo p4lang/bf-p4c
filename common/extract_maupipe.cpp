@@ -169,7 +169,7 @@ static IR::Attached *createV1Attached(IR::MAU::Table *tt, Util::SourceInfo srcIn
                 ctr->min_width = anno->expr.at(0)->as<IR::Constant>().asInt();
             else
                 WARNING("unknown annotation " << anno->name << " on " << tname); }
-        rv = ctr;
+        rv = new IR::MAU::MAUCounter(*ctr);
     } else if (tname == "meter" || tname == "direct_meter") {
         auto mtr = new IR::Meter(srcInfo, name);
         for (auto anno : annot->annotations) {
@@ -181,7 +181,7 @@ static IR::Attached *createV1Attached(IR::MAU::Table *tt, Util::SourceInfo srcIn
                 mtr->implementation = anno->expr.at(0)->as<IR::StringLiteral>();
             else
                 WARNING("unknown annotation " << anno->name << " on " << tname); }
-        rv = mtr; }
+        rv = new IR::MAU::MAUMeter(*mtr); }
     if (rv) {
         switch (args->size()) {
         case 1:
@@ -228,10 +228,12 @@ class FixP4Table : public Transform {
                 unique_names.insert(tname);   // don't use the type name directly
                 tname = cstring::make_unique(unique_names, tname);
                 unique_names.insert(tname);
+                LOG1("Create at first point");
                 obj = createV1Attached(tt, cc->srcInfo, prop->externalName(tname), cc->type,
                                        cc->arguments, prop->annotations);
             } else if (auto pe = pval->to<IR::PathExpression>()) {
                 auto &d = refMap->getDeclaration(pe->path, true)->as<IR::Declaration_Instance>();
+                LOG1("Create at second point");
                 obj = createV1Attached(tt, d.srcInfo, d.externalName(), d.type,
                                        d.arguments, d.annotations); }
             BUG_CHECK(obj, "not valid for %s: %s", prop->name, pval);
@@ -286,6 +288,7 @@ struct AttachTables : public Modifier {
             if (converted.count(di)) {
                 gref->obj = converted.at(di);
             } else {
+                LOG1("Create at this point");
                 auto att = createV1Attached(nullptr, di->srcInfo, di->externalName(), di->type,
                                             di->arguments, di->annotations);
                 if (att)

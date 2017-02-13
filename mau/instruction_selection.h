@@ -9,6 +9,7 @@ class InstructionSelection : public MauTransform {
     const IR::ActionFunction *af = nullptr;
     class SplitInstructions;
     std::map<const IR::ActionFunction *, std::vector<const IR::Primitive *>> stateful;
+    std::map<const IR::ActionFunction *, std::vector<const IR::Primitive *>> modify_with_hash;
 
     profile_t init_apply(const IR::Node *root) override;
     const IR::ActionFunction *preorder(IR::ActionFunction *) override;

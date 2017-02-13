@@ -7,6 +7,7 @@
 #include "resource.h"
 #include "table_dependency_graph.h"
 #include "table_mutex.h"
+#include "table_layout.h"
 #include "table_placement.h"
 #include "lib/bitops.h"
 #include "lib/bitvec.h"
@@ -17,8 +18,8 @@
 #include "tofino/phv/phv_fields.h"
 
 TablePlacement::TablePlacement(const DependencyGraph* d, const TablesMutuallyExclusive &m,
-                               const PhvInfo &p)
-: deps(d), mutex(m), phv(p) {}
+                               const PhvInfo &p, const HashDistChoices &h)
+: deps(d), mutex(m), phv(p), hdc(h) {}
 
 Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
     alloc_done = phv.alloc_done();
@@ -258,7 +259,7 @@ TablePlacement::Placed *TablePlacement::Placed::gateway_merge() {
 
 static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::Placed *done,
                             const PhvInfo &phv, StageUseEstimate &sue,
-                            TableResourceAlloc *resources) {
+                            TableResourceAlloc *resources, const HashDistChoices &hdc) {
     resources->match_ixbar.clear();
     resources->gateway_ixbar.clear();
     resources->selector_ixbar.clear();
@@ -275,16 +276,20 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
             }
         }
     }
+    
+    const vector<HashDistReq> &hdr_match = hdc.get_hash_dist_req(next->table);
+    const vector<HashDistReq> &hdr_gw = hdc.get_hash_dist_req(next->gw); 
     if (!current_ixbar.allocTable(next->table, phv, resources->match_ixbar,
                                   resources->gateway_ixbar, resources->selector_ixbar,
-                                  sue.preferred()) ||
+                                  sue.preferred(), hdr_match) ||
         !current_ixbar.allocTable(next->gw, phv, resources->match_ixbar,
                                   resources->gateway_ixbar, resources->selector_ixbar,
-                                  sue.preferred())) {
+                                  sue.preferred(), hdr_gw)) {
         resources->match_ixbar.clear();
         resources->gateway_ixbar.clear();
         resources->selector_ixbar.clear();
         return false; }
+    
     return true;
 }
 
@@ -399,13 +404,13 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         allocated = false; ixbar_allocation_bug = false; mem_allocation_bug = false;
         rv->use = StageUseEstimate(t, rv->entries, prev_placed, has_action_data);
 
-        if (!try_alloc_ixbar(rv, done, phv, min_use, min_resources)) {
+        if (!try_alloc_ixbar(rv, done, phv, min_use, min_resources, hdc)) {
             advance_to_next_stage = true;
             ixbar_allocation_bug = true;
             LOG3("Min Use ixbar allocation did not fit");
         }
 
-        if (!try_alloc_ixbar(rv, done, phv, rv->use, resources)) {
+        if (!try_alloc_ixbar(rv, done, phv, rv->use, resources, hdc)) {
             advance_to_next_stage = true;
             ixbar_allocation_bug = true;
             LOG3("Table Use ixbar allocation did not fit");
@@ -455,7 +460,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 
             LOG3(" - reducing to " << rv->entries << " of " << t->name
                  << " in stage " << rv->stage);
-            if (!try_alloc_ixbar(rv, done, phv, rv->use, resources)) {
+            if (!try_alloc_ixbar(rv, done, phv, rv->use, resources, hdc)) {
                 ixbar_allocation_bug = true;
                 ERROR("IXBar Allocation error after previous allocation?");
                 advance_to_next_stage = true;

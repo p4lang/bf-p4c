@@ -8,10 +8,12 @@ struct DependencyGraph;
 class TablesMutuallyExclusive;
 struct StageUseEstimate;
 class PhvInfo;
+class HashDistChoices;
 
 class TablePlacement : public MauTransform, public Backtrack {
  public:
-    TablePlacement(const DependencyGraph* d, const TablesMutuallyExclusive &m, const PhvInfo &p);
+    TablePlacement(const DependencyGraph* d, const TablesMutuallyExclusive &m, const PhvInfo &p,
+                   const HashDistChoices &h);
     struct GroupPlace;
     struct Placed;
 
@@ -24,6 +26,7 @@ class TablePlacement : public MauTransform, public Backtrack {
     const DependencyGraph* deps;
     const TablesMutuallyExclusive &mutex;
     const PhvInfo &phv;
+    const HashDistChoices &hdc;
     bool alloc_done = false;
     profile_t init_apply(const IR::Node *root) override;
     bool backtrack(trigger &) override {

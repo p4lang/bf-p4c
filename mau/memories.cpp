@@ -261,7 +261,6 @@ class SetupAttachedTables : public MauInspector {
             (*ta->memuse)[name].type = Memories::Use::TWOPORT;
             mem.selector_tables.push_back(ta);
         } else if (linked_pi == nullptr) {
-            auto name = ta->table->name + "$selector";
             (*ta->memuse)[name].type = Memories::Use::TWOPORT;
             mem.selector_tables.push_back(ta);
             mem.action_profiles.push_back(new Memories::profile_info(as, ta));
@@ -300,7 +299,11 @@ bool Memories::analyze_tables(mem_info &mi) {
         int entries = ta->provided_entries;
         if (ta->layout_option->layout->no_match_data()) {
             ta->calculated_entries = 512;
-            no_match_tables.push_back(ta);
+            if (ta->table->layout.hash_action)
+                hash_action_tables.push_back(ta);
+            else
+                no_match_tables.push_back(ta);
+            mi.no_match_tables++;
         } else if (!table->layout.ternary) {
             auto name = ta->table->get_use_name();
             LOG4("Exact match table " << name);
@@ -1987,8 +1990,55 @@ bool Memories::gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int wid
 
 /* Allocates all gateways */
 bool Memories::allocate_all_gw() {
-    size_t index = 0;
-    for (auto *ta : gw_tables) {
+    for (auto *ta_gw : gw_tables) {
+        bool pushed_back = false;
+        for (auto *ta_ha : hash_action_tables) {
+            if (ta_gw->table_link == ta_ha) {
+                action_payload_gws.push_back(ta_gw);
+                pushed_back = true;
+            } else {
+                hash_action_gws.push_back(ta_ha);
+            }
+        }
+        if (!pushed_back)
+            normal_gws.push_back(ta_gw);
+    }
+
+    size_t action_payload_index = 0;
+    for (auto *ta : action_payload_gws) {
+        bool found = false;
+        bool linked = false;
+        auto name = ta->table->get_use_name(nullptr, true);
+        cstring link_name;
+        if (ta->table_link != nullptr) {
+            name = ta->table_link->table->get_use_name(nullptr, true);
+            linked = true;
+            link_name = ta->table_link->table->get_use_name();
+        }
+        auto &alloc = (*ta->memuse)[name];
+        for (int i = 0; i < SRAM_ROWS; i++) {
+            if (gateway_use[i][0] && gateway_use[i][1]) continue;
+            for (int j = 0; j < BUS_COUNT; j++) {
+                if (sram_match_bus[i][j].first || tind_bus[i][j]) continue;
+                gateway_use[i][j] = name;
+                alloc.row.emplace_back(i, j);
+                alloc.row.back().col.push_back(j);
+                action_payload_index++;
+                if (link_name)
+                    sram_match_bus[i][j] = std::make_pair(link_name, 0);
+                else
+                    sram_match_bus[i][j] = std::make_pair(name, 0);
+                found = true;
+            }
+            if (found) break;
+        }
+    }
+
+    if (action_payload_index != action_payload_gws.size())
+        return false;
+
+    size_t normal_index = 0;
+    for (auto *ta : normal_gws) {
         auto name = ta->table->get_use_name(nullptr, true);
         if (ta->table_link != nullptr)
             name = ta->table_link->table->get_use_name(nullptr, true);
@@ -2006,6 +2056,7 @@ bool Memories::allocate_all_gw() {
                 // the gateway_use[i][j]
                 if (!bus.first || gateway_use[i][j]) continue;
                 table_alloc *exact_ta = find_corresponding_exact_match(bus.first);
+                if (exact_ta == nullptr) continue;
                 // FIXME: this is just a temporary patch
                 if (ta->match_ixbar->gw_search_bus) {
                     continue;
@@ -2023,7 +2074,7 @@ bool Memories::allocate_all_gw() {
                 alloc.row.emplace_back(i, j);
                 alloc.row.back().col.push_back(current_gw);
                 found = true;
-                index++;
+                normal_index++;
                 break;
             }
             if (found) break;
@@ -2041,7 +2092,7 @@ bool Memories::allocate_all_gw() {
                     alloc.row.emplace_back(i, j);
                     gateway_use[i][current_gw] = name;
                     alloc.row.back().col.push_back(current_gw);
-                    index++;
+                    normal_index++;
                     found = true;
                     break;
                 }
@@ -2050,9 +2101,37 @@ bool Memories::allocate_all_gw() {
         }
         if (!found) break;
     }
-    if (gw_tables.size() != index)
+
+    if (normal_index != normal_gws.size())
+        return false;
+
+    size_t hash_action_index = 0;
+    for (auto *ta : hash_action_gws) {
+        LOG1("Hash Action Gateway");
+        auto name = ta->table->get_use_name(nullptr, true);
+        if (ta->table_link != nullptr)
+            name = ta->table_link->table->get_use_name(nullptr, true);
+        auto &alloc = (*ta->memuse)[name];
+        bool found = false;
+
+        for (int i = 0; i < SRAM_ROWS; i++) {
+            if (gateway_use[i][0] && gateway_use[i][1]) continue;
+            for (int j = 0; j < BUS_COUNT; j++) {
+                if (gateway_use[i][j]) continue;
+                alloc.row.emplace_back(i, j);
+                gateway_use[i][j] = name;
+                alloc.row.back().col.push_back(j);
+                hash_action_index++;
+                found = true;
+            }
+            if (found) break;
+        }
+    }
+
+    if (hash_action_index != hash_action_gws.size())
         return false;
     return true;
+
 }
 
 void Memories::allocate_one_no_match(table_alloc *ta, int row, int col) {

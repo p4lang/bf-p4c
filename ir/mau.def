@@ -40,6 +40,7 @@ class Table : Tofino::Unit {
         int             entries = 0;
         bool            gateway = false;
         bool            ternary = false;
+        bool            hash_action = false;
         int             ixbar_bytes = 0;
         int             match_bytes = 0;
         int             match_width_bits = 0;
@@ -140,6 +141,13 @@ class Table : Tofino::Unit {
 
     vector<LayoutOption> layout_options;
 
+    class HashDistReq {
+        int total_bits_required = 0;
+        bool immediate = false;
+        bool address = false;
+        Primitive action; // Should be an instruction?
+        Attached attached;
+    }
 #emit
     static constexpr int TIND_NAME = 1;
     static constexpr int AD_NAME = 2;
@@ -275,6 +283,26 @@ class ActionData : Attached {
     const char *kind() const override { return "action"; }
     bool indexed() const override { return !direct; }
 }
+
+class MAUCounter : IR::Counter {
+#nodbprint
+    NullOK Expression indirect_index;
+    MAUCounter(const IR::Counter &c) : Counter(c) {}
+    MAUCounter(const IR::Counter &c, const IR::Expression *ii)
+        : Counter(c), indirect_index(ii) {}
+    /*bool operator==(const IR::MAU::MAUCounter &a) const {
+        return IR::Counter::operator==(a) && indirect_index == a.indirect_index;
+    }*/
+}
+
+class MAUMeter : IR::Meter {
+#nodbprint
+    NullOK Expression indirect_index;
+    MAUMeter(const IR::Meter &m) : Meter(m) {}
+    MAUMeter(const IR::Meter &m, const IR::Expression *ii)
+        : Meter(m), indirect_index(ii) {}
+}
+
 
 // a sequence of tables -- may be reordered if deps allow.
 // deps(i,j) is true iff tables[i] is dependent on tables[j]
