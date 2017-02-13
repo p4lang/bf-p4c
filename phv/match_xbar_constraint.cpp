@@ -13,6 +13,7 @@ class GetBits : public Inspector {
                 out.insert(info->bit(i));
             return false; }
         return true; }
+    bool preorder(const IR::Annotation *) { return false; }
  private:
     const PhvInfo &phv;
     std::set<PHV::Bit> &out;
@@ -26,8 +27,8 @@ bool MatchXbarConstraint::preorder(const IR::MAU::Table *mau_table) {
          " and logical ID " << mau_table->logical_id);
     std::set<PHV::Bit> match_bits;
     auto match_table = mau_table->match_table;
-    if (match_table && match_table->reads)
-        GetBits(phv, match_bits, match_table->reads);
+    if (match_table && match_table->getKey())
+        GetBits(phv, match_bits, match_table->getKey());
     if (true == mau_table->layout.ternary) {
         if (tcam_match_bits_.size() <= size_t(stage))
             tcam_match_bits_.resize(stage+1);

@@ -41,61 +41,33 @@ int main(int ac, char **av) {
     if (options.target != "tofino") {
         error("only supported target is 'tofino'");
         return 1; }
-    const IR::Tofino::Pipe *maupipe = nullptr;
 
-    bool v1 = options.isv1();
-    if (v1 && !options.v12_path) {
-        auto program = parse_P4_14_file(options, in);
-        options.closeInput(in);
-        PassManager fe = {
-//            new RemapIntrinsics,
-            new P4::ConstantFolding(nullptr, nullptr),
-            new CheckHeaderTypes,
-            new HeaderTypeMaxLengthCalculator,
-            new TypeCheck,
-        };
-        fe.setName("V1FrontEnd");
-        fe.addDebugHook(hook);
-        program = program->apply(fe);
-        if (!program)
-            return 1;
-        if (Log::verbose()) {
-            std::cout << "-------------------------------------------------" << std::endl
-                      << "Initial program" << std::endl
-                      << "-------------------------------------------------" << std::endl;
-            if (Log::verbosity() > 1)
-                dump(program);
-            else
-                std::cout << *program << std::endl; }
-        program = program->apply(P4_14::InlineActions());  // midend?
-        maupipe = extract_maupipe(program, options);
-    } else {
-        auto program = parseP4File(options);
-        program = P4::FrontEnd().run(options, program);
-        if (!program)
-            return 1;
-        if (Log::verbose()) {
-            std::cout << "-------------------------------------------------" << std::endl
-                      << "Initial program" << std::endl
-                      << "-------------------------------------------------" << std::endl;
-            if (Log::verbosity() > 1)
-                dump(program);
-            else
-                std::cout << *program << std::endl; }
-        Tofino::MidEnd midend(options);
-        midend.addDebugHook(hook);
-        program = program->apply(midend);
-        if (!program)
-            return 1;
-        if (Log::verbose()) {
-            std::cout << "-------------------------------------------------" << std::endl
-                      << "After midend" << std::endl
-                      << "-------------------------------------------------" << std::endl;
-            if (Log::verbosity() > 1)
-                dump(program);
-            else
-                std::cout << *program << std::endl; }
-        maupipe = extract_maupipe(program, options); }
+    auto program = parseP4File(options);
+    program = P4::FrontEnd().run(options, program);
+    if (!program)
+        return 1;
+    if (Log::verbose()) {
+        std::cout << "-------------------------------------------------" << std::endl
+                  << "Initial program" << std::endl
+                  << "-------------------------------------------------" << std::endl;
+        if (Log::verbosity() > 1)
+            dump(program);
+        else
+            std::cout << *program << std::endl; }
+    Tofino::MidEnd midend(options);
+    midend.addDebugHook(hook);
+    program = program->apply(midend);
+    if (!program)
+        return 1;
+    if (Log::verbose()) {
+        std::cout << "-------------------------------------------------" << std::endl
+                  << "After midend" << std::endl
+                  << "-------------------------------------------------" << std::endl;
+        if (Log::verbosity() > 1)
+            dump(program);
+        else
+            std::cout << *program << std::endl; }
+    auto maupipe = extract_maupipe(program, options);
 
     if (ErrorReporter::instance.getErrorCount() > 0)
         return 1;

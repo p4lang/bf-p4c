@@ -31,14 +31,8 @@ void IR::MAU::Table::dbprint(std::ostream &out) const {
     if (!(dbgetflags(out) & TableNoActions)) {
         for (auto &a : Values(actions))
             out << endl << a;
-        if (match_table && match_table->default_action) {
-            out << endl << "default_action " << match_table->default_action << '(';
-            const char *sep = "";
-            if (match_table->default_action_args) {
-                for (auto a : *match_table->default_action_args) {
-                    out << sep << *a;
-                    sep = ", "; } }
-            out << ")"; } }
+        if (match_table && match_table->getDefaultAction())
+            out << endl << "default_action " << match_table->getDefaultAction(); }
     std::set<const IR::MAU::TableSeq *> done;
     for (auto it = next.begin(); it != next.end(); ++it) {
         if (done.count(it->second)) continue;

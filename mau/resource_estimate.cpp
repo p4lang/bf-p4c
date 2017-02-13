@@ -205,8 +205,11 @@ void StageUseEstimate::options_to_rams(const IR::MAU::Table *tbl, bool table_pla
    fit the layout options to a certian number of resources, instead just using all entries */
 void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
     bool small_table_allocation = true;
+    int table_size = 0;
+    if (auto k = tbl->match_table->getConstantProperty("size"))
+        table_size = k->asInt();
     for (auto lo : layout_options) {
-        if (lo.entries < tbl->match_table->size) {
+        if (lo.entries < table_size) {
             small_table_allocation = false;
             break;
         }
@@ -247,7 +250,7 @@ void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
             return true;
         });
     }
-    LOG3("table " << tbl->name << " requiring " << tbl->match_table->size << " entries.");
+    LOG3("table " << tbl->name << " requiring " << table_size << " entries.");
     if (small_table_allocation)
         LOG3("small table allocation");
     else

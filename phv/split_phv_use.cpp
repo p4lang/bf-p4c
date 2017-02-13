@@ -1,6 +1,6 @@
 #include "split_phv_use.h"
 
-IR::Node *SplitPhvUse::preorder(IR::Primitive *p) {
+const IR::Node *SplitPhvUse::preorder(IR::Primitive *p) {
     if (p->operands.empty()) return p;
     IR::Vector<IR::Primitive> *rv = nullptr;
     PhvInfo::Field::bitrange bits;
@@ -28,7 +28,7 @@ IR::Node *SplitPhvUse::preorder(IR::Primitive *p) {
     return p;
 }
 
-IR::Node *SplitPhvUse::preorder(IR::Expression *e) {
+const IR::Node *SplitPhvUse::preorder(IR::Expression *e) {
     PhvInfo::Field::bitrange bits;
     IR::Vector<IR::Expression> *rv = nullptr;
     if (auto field = phv.field(e, &bits)) {
@@ -60,7 +60,7 @@ IR::Node *SplitPhvUse::preorder(IR::Expression *e) {
     return e;
 }
 
-IR::Node *SplitPhvUse::preorder(IR::Slice *sl) {
+const IR::Node *SplitPhvUse::preorder(IR::Slice *sl) {
     if (auto *of = sl->e0->to<IR::Slice>()) {
         int lo = sl->getL() + of->getL();
         int hi = sl->getH() + of->getL();

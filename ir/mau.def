@@ -30,7 +30,7 @@ class Table : Tofino::Unit {
      * (taken if no gateway rows match).  If this last row NULL expression
      * is not present, the default action is to run the table. */
     NullOK ActionFunction                       gateway_payload;
-    NullOK IR::V1Table                          match_table;
+    NullOK IR::P4Table                          match_table;
     inline Vector<Attached>                     attached;
     inline NameMap<ActionFunction, ordered_map> actions;
     inline NameMap<TableSeq>                    next;
@@ -176,7 +176,7 @@ class Table : Tofino::Unit {
 
 #noconstructor
     Table(cstring n, gress_t gr) : name(n), gress(gr) {}
-    Table(cstring n, gress_t gr, IR::V1Table t)
+    Table(cstring n, gress_t gr, IR::P4Table t)
     : Tofino::Unit(t->srcInfo), name(n), gress(gr), match_table(t) {}
 #emit
     Table(cstring n, gress_t gr, const Expression *gw)

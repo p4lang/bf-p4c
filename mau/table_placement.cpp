@@ -362,10 +362,10 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     int min_entries = 1;
     int set_entries = 512;
     if (t->match_table) {
-        if (t->match_table->size)
-            set_entries = t->match_table->size;
-        else if (t->match_table->min_size)
-            set_entries = t->match_table->min_size; }
+        if (auto k = t->match_table->getConstantProperty("size"))
+            set_entries = k->asInt();
+        else if (auto k = t->match_table->getConstantProperty("min_size"))
+            set_entries = k->asInt(); }
     auto &rvdeps = deps.graph.at(rv->name);
     bool prev_placed = false;  bool has_action_data = false;
     for (auto *p = done; p; p = p->prev) {

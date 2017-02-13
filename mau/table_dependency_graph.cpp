@@ -49,6 +49,7 @@ class FindDependencyGraph::AddDependencies : public MauInspector, P4WriteContext
                         table->data_dep[t->name] = type; }
             return false; }
         return true; }
+    bool preorder(const IR::Annotation *) override { return false; }
 };
 
 class FindDependencyGraph::UpdateAccess : public MauInspector , P4WriteContext {
@@ -122,8 +123,8 @@ bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
         add_control_dependency(&table, t);
         for (auto &gw : t->gateway_rows)
             gw.first->apply(AddDependencies(*this, &table, Table::MATCH));
-        if (t->match_table && t->match_table->reads)
-            t->match_table->reads->apply(AddDependencies(*this, &table, Table::MATCH));
+        if (t->match_table && t->match_table->getKey())
+            t->match_table->getKey()->apply(AddDependencies(*this, &table, Table::MATCH));
         for (auto &action : Values(t->actions))
             action->apply(AddDependencies(*this, &table, Table::ACTION));
         for (auto &gw : t->gateway_rows)

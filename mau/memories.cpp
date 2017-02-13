@@ -2126,22 +2126,18 @@ void Memories::Use::visit(Memories &mem, std::function<void(cstring &)> fn) cons
         BUG("Unhandled memory use type %d in Memories::Use::visit", type); }
     for (auto &r : row) {
         if (bus && r.bus != -1) {
-            fn((*bus)[r.row][r.bus]);
-        }
+            fn((*bus)[r.row][r.bus]); }
         /*if (type == TWOPORT)
             fn(mem.stateful_bus[r.row]);*/
         for (auto col : r.col) {
-            fn((*use)[r.row][col]);
-        }
-        for (auto col : r.mapcol) {
-            fn((*mapuse)[r.row][col]);
-        }
-    }
-    for (auto &r : color_mapram) {
-         for (auto col : r.col) {
-             fn((*mapuse)[r.row][col]);
-         }
-    }
+            fn((*use)[r.row][col]); }
+        if (mapuse) {
+            for (auto col : r.mapcol) {
+                fn((*mapuse)[r.row][col]); } } }
+    if (mapuse) {
+        for (auto &r : color_mapram) {
+             for (auto col : r.col) {
+                 fn((*mapuse)[r.row][col]); } } }
 }
 
 void Memories::update(cstring name, const Memories::Use &alloc) {

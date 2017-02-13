@@ -124,9 +124,16 @@ static void setIntProperty(cstring name, int *val, const IR::PropertyValue *pval
     error("%s: %s property must be a constant", pval->srcInfo, name);
 }
 
-static IR::Attached *createV1Attached(Util::SourceInfo srcInfo, cstring name,
-                                      const IR::Type *type,
-                                      const IR::Vector<IR::Expression> *args,
+static IR::ID getAnnotID(const IR::Annotations *annot, cstring name) {
+    if (auto a = annot->getSingle(name))
+        if (a->expr.size() == 1)
+            if (auto str = a->expr.at(0)->to<IR::StringLiteral>())
+                return IR::ID(str->srcInfo, str->value);
+    return IR::ID();
+}
+
+static IR::Attached *createV1Attached(IR::MAU::Table *tt, Util::SourceInfo srcInfo, cstring name,
+                                      const IR::Type *type, const IR::Vector<IR::Expression> *args,
                                       const IR::Annotations *annot) {
     IR::CounterOrMeter *rv = nullptr;
     // FIXME -- this should be looking at the arch model, but the current arch model stuff
@@ -136,13 +143,22 @@ static IR::Attached *createV1Attached(Util::SourceInfo srcInfo, cstring name,
     if (auto p = tname.find('<'))  // strip off type args (if any)
         tname = tname.before(p);
     if (tname == "action_selector") {
-        return new IR::ActionSelector(srcInfo, name);
-        // FIXME Need to reconstruct the field list from the table key
-        // FIXME How do we get the type and mode?
+        auto sel = new IR::ActionSelector(srcInfo, name);
+        auto flc = new IR::FieldListCalculation(IR::Annotations::empty);
+        flc->algorithm = args->at(0)->as<IR::Member>().member;
+        flc->output_width = args->at(2)->as<IR::Constant>().asInt();
+        sel->key_fields = flc;
+        sel->mode = getAnnotID(annot, "mode");
+        sel->type = getAnnotID(annot, "type");
+        auto ap = new IR::ActionProfile(srcInfo, name);
+        ap->size = args->at(1)->as<IR::Constant>().asInt();
+        ap->selector = name;
+        // FIXME Need to reconstruct the field list from the table key?
+        tt->attached.push_back(ap);
+        return sel;
     } else if (tname == "action_profile") {
         auto ap = new IR::ActionProfile(srcInfo, name);
         ap->size = args->at(0)->as<IR::Constant>().asInt();
-        // Do we need to reconstruct the selector or action lists from the table?
         return ap;
     } else if (tname == "counter" || tname == "direct_counter") {
         auto ctr = new IR::Counter(srcInfo, name);
@@ -184,50 +200,26 @@ static IR::Attached *createV1Attached(Util::SourceInfo srcInfo, cstring name,
 }
 
 
-static IR::V1Table *createV1Table(const IR::P4Table *tc, const P4::ReferenceMap *refMap,
-                                  IR::MAU::Table *tt, set<cstring> &unique_names) {
-    IR::V1Table *rv = new IR::V1Table;
-    if (tc->srcInfo) {
-        rv->srcInfo = tc->srcInfo;
-        tt->srcInfo = tc->srcInfo; }
-    rv->name = tc->externalName();
-    for (auto prop : *tc->properties->properties) {
-        if (prop->name == "key") {
-            auto reads = new IR::Vector<IR::Expression>();
-            for (auto el : *prop->value->to<IR::Key>()->keyElements) {
-                if (el->matchType->path->name == "selector") {
-                    // FIXME -- skip these for now.  Need to turn into a field list
-                    // for the action_selector?
-                    continue; }
-                reads->push_back(el->expression);
-                rv->reads_types.push_back(el->matchType->path->name); }
-            rv->reads = reads;
-        } else if (prop->name == "actions") {
-            for (auto el : *prop->value->to<IR::ActionList>()->actionList)
-                rv->actions.push_back(refMap->getDeclaration(el->getPath(), true)->externalName());
-        } else if (prop->name == "default_action") {
-            auto v = prop->value->to<IR::ExpressionValue>();
-            if (!v) {
-            } else if (auto pe = v->expression->to<IR::PathExpression>()) {
-                rv->default_action = refMap->getDeclaration(pe->path, true)->externalName();
-                rv->default_action.srcInfo = pe->srcInfo;
-                continue;
-            } else if (auto mc = v->expression->to<IR::MethodCallExpression>()) {
-                if (auto pe = mc->method->to<IR::PathExpression>()) {
-                    rv->default_action = refMap->getDeclaration(pe->path, true)->externalName();
-                    rv->default_action.srcInfo = mc->srcInfo;
-                    rv->default_action_args = mc->arguments;
-                    continue; } }
-            BUG("default action %1% is not an action or call", prop->value);
-        } else if (prop->name == "size") {
-            setIntProperty(prop->name, &rv->size, prop->value);
-        } else if (prop->name == "min_size") {
-            setIntProperty(prop->name, &rv->min_size, prop->value);
-        } else if (prop->name == "max_size") {
-            setIntProperty(prop->name, &rv->max_size, prop->value);
+namespace {
+class FixP4Table : public Transform {
+    const P4::ReferenceMap *refMap;
+    IR::MAU::Table *tt;
+    set<cstring> &unique_names;
+    bool default_action_fix = false;
+
+    const IR::P4Table *preorder(IR::P4Table *tc) override {
+        tc->name = tc->externalName();
+        visit(tc->properties);  // just visiting properties
+        prune();
+        return tc; }
+    const IR::ExpressionValue *preorder(IR::ExpressionValue *ev) override {
+        auto prop = findContext<IR::Property>();
+        if (prop->name == "default_action") {
+            default_action_fix = true;
+            return ev;
         } else if (prop->name == "counters" || prop->name == "meters" ||
                    prop->name == "implementation") {
-            auto pval = prop->value->as<IR::ExpressionValue>().expression;
+            auto pval = ev->expression;
             IR::Attached *obj = nullptr;
             if (auto cc = pval->to<IR::ConstructorCallExpression>()) {
                 cstring tname = cc->type->toString();
@@ -236,21 +228,39 @@ static IR::V1Table *createV1Table(const IR::P4Table *tc, const P4::ReferenceMap 
                 unique_names.insert(tname);   // don't use the type name directly
                 tname = cstring::make_unique(unique_names, tname);
                 unique_names.insert(tname);
-                obj = createV1Attached(cc->srcInfo, prop->externalName(tname), cc->type,
+                obj = createV1Attached(tt, cc->srcInfo, prop->externalName(tname), cc->type,
                                        cc->arguments, prop->annotations);
             } else if (auto pe = pval->to<IR::PathExpression>()) {
                 auto &d = refMap->getDeclaration(pe->path, true)->as<IR::Declaration_Instance>();
-                obj = createV1Attached(d.srcInfo, d.externalName(), d.type,
+                obj = createV1Attached(tt, d.srcInfo, d.externalName(), d.type,
                                        d.arguments, d.annotations); }
             BUG_CHECK(obj, "not valid for %s: %s", prop->name, pval);
-            tt->attached.push_back(obj);
-        } else {
-            BUG("table property %s not handled", prop->name);
-        } }
-    return rv;
-}
+            tt->attached.push_back(obj); }
+        prune();
+        return ev; }
+    const IR::ExpressionValue *postorder(IR::ExpressionValue *ev) override {
+        default_action_fix = false;
+        return ev; }
+    const IR::PathExpression *preorder(IR::PathExpression *pe) override {
+        if (default_action_fix) {
+            // need to change the default action name back to the extern name, rather than
+            // whatever the frontend code rewrote it as.
+            auto actName = refMap->getDeclaration(pe->path, true)->externalName();
+            pe->path = new IR::Path(pe->path->srcInfo, actName); }
+        prune();
+        return pe; }
+    const IR::Expression *preorder(IR::MethodCallExpression *mc) override {
+        visit(mc->method);
+        if (default_action_fix && mc->arguments->empty())
+            return mc->method;
+        prune();
+        return mc; }
 
-namespace {
+ public:
+    FixP4Table(const P4::ReferenceMap *r, IR::MAU::Table *tt, set<cstring> &u)
+    : refMap(r), tt(tt), unique_names(u) {}
+};
+
 class FindAttached : public Inspector {
     map<cstring, vector<const IR::Attached *>>    &attached;
     void postorder(const IR::Stateful *st) override {
@@ -276,7 +286,7 @@ struct AttachTables : public Modifier {
             if (converted.count(di)) {
                 gref->obj = converted.at(di);
             } else {
-                auto att = createV1Attached(di->srcInfo, di->externalName(), di->type,
+                auto att = createV1Attached(nullptr, di->srcInfo, di->externalName(), di->type,
                                             di->arguments, di->annotations);
                 if (att)
                     gref->obj = converted[di] = att; } } }
@@ -399,7 +409,8 @@ class GetTofinoTables : public Inspector {
             if (!table) {
                 error("%s: No table named %s", a->srcInfo, a->name);
                 return true; }
-            auto tt = tables[a] = new IR::MAU::Table(a->name, gress, table);
+            BUG("converting V1 tables not supported");
+            auto tt = tables[a] = new IR::MAU::Table(a->name, gress /*, table*/);
             setup_tt_actions(tt, table);
         } else {
             error("%s: Multiple applies of table %s not supported", a->srcInfo, a->name); }
@@ -425,8 +436,9 @@ class GetTofinoTables : public Inspector {
         auto table = mi->object->to<IR::P4Table>();
         if (!table) BUG("%1% not apllied to table", m);
         if (!tables.count(m)) {
-            auto tt = tables[m] = new IR::MAU::Table(table->name, gress);
-            tt->match_table = createV1Table(table, refMap, tt, unique_names);
+            auto tt = tables[m] = new IR::MAU::Table(table->name, gress, table);
+            tt->match_table = table =
+                table->apply(FixP4Table(refMap, tt, unique_names))->to<IR::P4Table>();
             setup_tt_actions(tt, table);
         } else {
             error("%s: Multiple applies of table %s not supported", m->srcInfo, table->name); }

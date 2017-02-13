@@ -129,7 +129,7 @@ struct IXBar {
     };
 
     void clear();
-    bool allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc,
+    bool allocMatch(bool ternary, const IR::P4Table *tbl, const PhvInfo &phv, Use &alloc,
                     vector<IXBar::Use::Byte *> &alloced, bool second_try, int hash_groups);
     int getHashGroup(unsigned hash_table_input);
     bool allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc,
@@ -139,8 +139,8 @@ struct IXBar {
                       const IR::MAU::Table::LayoutOption *layout_option,
                       size_t index, size_t start, Use &alloc);
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);
-    bool allocSelector(const IR::ActionSelector *, const PhvInfo &phv, Use &alloc, bool second_try,
-                       cstring name);
+    bool allocSelector(const IR::ActionSelector *, const IR::P4Table *, const PhvInfo &phv,
+                       Use &alloc, bool second_try, cstring name);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_alloc, Use &gw_alloc,
                     Use &sel_alloc, const IR::MAU::Table::LayoutOption *lo);
     void update(cstring name, const Use &alloc);

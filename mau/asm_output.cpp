@@ -493,21 +493,22 @@ MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Tab
     /* FIXME -- this should probably be an aux data structure built earlier, rather than
      * done in AsmOutput */
 
-    if (tbl->match_table && tbl->match_table->reads) {
+    if (tbl->match_table && tbl->match_table->getKey()) {
         /* somewhat duplicates what is done in IXBar::alloc_table */
-        for (auto r : *tbl->match_table->reads) {
-            auto *field = r;
-            if (auto mask = r->to<IR::Mask>())
+        for (auto key : *tbl->match_table->getKey()->keyElements) {
+            if (key->matchType->path->name == "selector") continue;
+            auto *field = key->expression;
+            if (auto mask = field->to<IR::Mask>())
                 field = mask->left;
             if (auto prim = field->to<IR::Primitive>()) {
                 if (prim->name != "valid")
-                    BUG("unexpected reads expression %s", r);
+                    BUG("unexpected key expression %s", key->expression);
                 // FIXME -- for now just assuming we can fit the valid bit reads in as needed
                 continue; }
             const PhvInfo::Field *finfo;
             PhvInfo::Field::bitrange bits;
             if (!field || !(finfo = self.phv.field(field, &bits)))
-                BUG("unexpected reads expression %s", r);
+                BUG("unexpected key expression %s", key->expression);
             match_fields.emplace_back(finfo, bits.lo, bits.hi); } }
 
     if (!tbl->layout.ternary) {
@@ -628,8 +629,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         << std::endl;
     if (tbl->match_table) {
         out << indent << "p4: { name: " << tbl->match_table->name;
-        if (tbl->match_table->size > 0)
-            out << ", size: " << tbl->match_table->size;
+        if (auto k = tbl->match_table->getConstantProperty("size"))
+            out << ", size: " << k->asInt();
         out << " }" << std::endl;
         auto memuse_name = tbl->get_use_name();
         emit_memory(out, indent, tbl->resources->memuse.at(memuse_name));
@@ -866,14 +867,8 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         for (auto act : Values(tbl->actions))
             act->apply(EmitAction(*this, out, tbl, indent));
         --indent; }
-    if (tbl->match_table && tbl->match_table->default_action) {
-        out << indent << "default_action: " << tbl->match_table->default_action;
-        if (tbl->match_table->default_action_args) {
-            const char *sep = "(";
-            for (auto a : *tbl->match_table->default_action_args) {
-                out << sep << *a;
-                sep = ", "; }
-            if (*sep != '(') out << ")"; }
+    if (auto defact = tbl->match_table ? tbl->match_table->getDefaultAction() : nullptr) {
+        out << indent << "default_action: " << DBPrint::Prec_Low << defact << DBPrint::Reset;
         out << std::endl; }
 }
 

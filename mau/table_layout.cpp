@@ -13,15 +13,22 @@ bool TableLayout::backtrack(trigger &trig) {
     return trig.is<IXBar::failure>() && !alloc_done;
 }
 
-void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::V1Table *tbl) {
-    layout.entries = tbl->size;
-    for (auto t : tbl->reads_types)
-        if (t == "ternary" || t == "lpm") {
-            layout.ternary = true;
-            break; }
+void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl) {
+    if (auto k = tbl->match_table->getConstantProperty("size"))
+        layout.entries = k->asInt();
+    else if (auto k = tbl->match_table->getConstantProperty("min_size"))
+        layout.entries = k->asInt();
+    auto key = tbl->match_table->getKey();
+    if (key)
+        for (auto t : *key->keyElements)
+            if (t->matchType->path->name == "ternary" || t->matchType->path->name == "lpm") {
+                layout.ternary = true;
+                break; }
     layout.match_width_bits = 0;
-    if (tbl->reads) {
-        for (auto r : *tbl->reads) {
+    if (key) {
+        for (auto el : *key->keyElements) {
+            if (el->matchType->path->name == "selector") continue;
+            auto r = el->expression;
             PhvInfo::Field::bitrange bits = { 0, 0 };
             auto *field = phv.field(r, &bits);
             if (auto mask = r->to<IR::Mask>()) {
@@ -253,7 +260,7 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     tbl->layout.ixbar_bytes = tbl->layout.match_bytes = tbl->layout.match_width_bits =
     tbl->layout.action_data_bytes = tbl->layout.overhead_bits = 0;
     if (tbl->match_table)
-        setup_match_layout(tbl->layout, tbl->match_table);
+        setup_match_layout(tbl->layout, tbl);
     if ((tbl->layout.gateway = tbl->uses_gateway()))
         setup_gateway_layout(tbl->layout, tbl);
     setup_action_layout(tbl);

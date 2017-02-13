@@ -665,14 +665,15 @@ void IXBar::layout_option_calculation(const IR::MAU::Table::LayoutOption *layout
     }
 }
 
-bool IXBar::allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv, Use &alloc,
+bool IXBar::allocMatch(bool ternary, const IR::P4Table *tbl, const PhvInfo &phv, Use &alloc,
                        vector<IXBar::Use::Byte *> &alloced, bool second_try, int hash_groups) {
     alloc.ternary = ternary;
-    if (!tbl->reads) return true;
+    if (!tbl->getKey()) return true;
     set<cstring>                        fields_needed;
     bool                                rv;
-    for (auto r : *tbl->reads) {
-        auto *field = r;
+    for (auto key : *tbl->getKey()->keyElements) {
+        if (key->matchType->path->name == "selector") continue;
+        auto *field = key->expression;
         const PhvInfo::Field *finfo = nullptr;
         PhvInfo::Field::bitrange bits = { };
         if (auto mask = field->to<IR::Mask>())
@@ -683,7 +684,7 @@ bool IXBar::allocMatch(bool ternary, const IR::V1Table *tbl, const PhvInfo &phv,
                 finfo = phv.field(hdr + ".$valid"); }
         } else {
             finfo = phv.field(field, &bits); }
-        BUG_CHECK(finfo, "unexpected reads expression %s", r);
+        BUG_CHECK(finfo, "unexpected key expression %s", key->expression);
         if (fields_needed.count(finfo->name)) {
             warning("field %s read twice by table %s", finfo->name, tbl->name);
             continue; }
@@ -938,30 +939,32 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     return true;
 }
 
-bool IXBar::allocSelector(const IR::ActionSelector *as, const PhvInfo &phv, Use &alloc,
-                          bool second_try, cstring name) {
-    const IR::FieldListCalculation *flc = as->key_fields;
-    const IR::FieldList *fl = flc->input_fields;
-    vector<IXBar::Use::Byte *> alloced;
-    set <cstring>                   fields_needed;
-    for (auto r : fl->fields) {
-        auto *field = r;
+bool IXBar::allocSelector(const IR::ActionSelector *as, const IR::P4Table *match_table,
+                          const PhvInfo &phv, Use &alloc, bool second_try, cstring name) {
+    vector<IXBar::Use::Byte *>  alloced;
+    set <cstring>               fields_needed;
+    for (auto key : *match_table->getKey()->keyElements) {
+        // FIXME -- refactor this with the similar loop in allocMatch
+        if (key->matchType->path->name != "selector") continue;
+        auto *field = key->expression;
         const PhvInfo::Field *finfo = nullptr;
         PhvInfo::Field::bitrange bits = { };
-        if (auto prim = r->to<IR::Primitive>()) {
+        if (auto mask = field->to<IR::Mask>())
+            field = mask->left;
+        if (auto prim = field->to<IR::Primitive>()) {
             if (prim->name == "valid") {
                 auto hdr = prim->operands[0]->to<IR::HeaderRef>()->toString();
                 finfo = phv.field(hdr + ".$valid"); }
         } else {
-            if (auto mask = r->to<IR::Mask>())
-                field = mask->left;
             finfo = phv.field(field, &bits); }
-        BUG_CHECK(finfo, "unexpected reads expression %s", r);
-        if (fields_needed.count(finfo->name))
-            throw Util::CompilationError("field %s read twice by table %s", finfo->name, as->name);
+        BUG_CHECK(finfo, "unexpected key expression %s", key->expression);
+        if (fields_needed.count(finfo->name)) {
+            warning("field %s read twice by table %s", finfo->name, match_table->name);
+            continue; }
         fields_needed.insert(finfo->name);
-        add_use(alloc, finfo, &bits);
-    }
+        add_use(alloc, finfo, &bits); }
+    LOG3("need " << alloc.use.size() << " bytes for table " << match_table->name);
+    LOG3("need fields " << fields_needed);
 
     bool rv = find_alloc(alloc, false, second_try, alloced, HASH_INDEX_GROUPS);
     unsigned hash_table_input = 0;
@@ -1040,8 +1043,8 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_a
     }
 
     if (as != nullptr && selectors.find(as) == selectors.end()
-        && !allocSelector(as, phv, sel_alloc, false, tbl->name)
-        && !allocSelector(as, phv, sel_alloc, true, tbl->name)) {
+        && !allocSelector(as, tbl->match_table, phv, sel_alloc, false, tbl->name)
+        && !allocSelector(as, tbl->match_table, phv, sel_alloc, true, tbl->name)) {
         tbl_alloc.clear();
         sel_alloc.clear();
         return false;

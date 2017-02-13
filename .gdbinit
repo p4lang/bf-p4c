@@ -93,9 +93,9 @@ class MemoriesPrinter(object):
     def __init__(self, val):
         self.val = val
     def to_string(self):
-        rv = "\ntc  eb  tib ab  srams       mapram  sb\n"
+        rv = "\ntc  eb  gw  tib ab  srams       mapram  sb\n"
         tables = {}
-        alloc_names = [ 'tcam_use', 'sram_match_bus', 'tind_bus',
+        alloc_names = [ 'tcam_use', 'sram_print_match_bus', 'gateway_use', 'tind_bus',
             'action_data_bus', 'sram_use', 'mapram_use' ]
         ptrs = [ self.val[arr]['data'] for arr in alloc_names ]
         rows = [ self.val[arr]['nrows'] for arr in alloc_names ]
