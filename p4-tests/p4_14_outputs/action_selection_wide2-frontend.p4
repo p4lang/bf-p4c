@@ -79,7 +79,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 10000;
         default_action = NoAction();
-        @name("set_r1_10") implementation = action_selector(HashAlgorithm.crc16, 32w18000, 32w14);
+        @name("set_r1_10") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w18000, 32w14);
     }
     @name("test2") table test2_0() {
         actions = {
@@ -96,7 +96,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
         default_action = NoAction();
-        @name("set_b1_3") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
+        @name("set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
     }
     apply {
         test1_0.apply();

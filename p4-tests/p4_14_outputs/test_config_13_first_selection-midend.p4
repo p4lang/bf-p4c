@@ -233,7 +233,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 8192;
         default_action = NoAction_4();
-        @name("some_action_profile") implementation = action_selector(HashAlgorithm.random, 32w2048, 32w72);
+        @name("some_action_profile") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w2048, 32w72);
     }
     @name("test_select2") table test_select2() {
         actions = {
@@ -248,7 +248,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 4096;
         default_action = NoAction_5();
-        @name("some_action_profile2") implementation = action_selector(HashAlgorithm.random, 32w2048, 32w72);
+        @name("some_action_profile2") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w2048, 32w72);
     }
     apply {
         test_select.apply();

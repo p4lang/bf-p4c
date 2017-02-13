@@ -266,7 +266,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 512;
         default_action = NoAction();
-        @name("ecmp_action_profile") implementation = action_selector(HashAlgorithm.random, 32w4096, 32w72);
+        @name("ecmp_action_profile") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w4096, 32w72);
     }
     apply {
         ipv4_routing_select.apply();

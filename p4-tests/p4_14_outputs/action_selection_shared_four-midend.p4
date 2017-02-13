@@ -90,7 +90,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 10000;
         default_action = NoAction_0();
-        @name("set_b1_3") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
+        @name("set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
     }
     @name("test2") table test2() {
         actions = {
@@ -107,7 +107,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 5000;
         default_action = NoAction_5();
-        @name("set_b1_3") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
+        @name("set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
     }
     @name("test3") table test3() {
         actions = {
@@ -124,7 +124,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 2000;
         default_action = NoAction_6();
-        @name("set_b1_3") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
+        @name("set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
     }
     @name("test4") table test4() {
         actions = {
@@ -141,7 +141,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         size = 1024;
         default_action = NoAction_7();
-        @name("set_b1_3") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
+        @name("set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w1024, 32w14);
     }
     apply {
         if (hdr.data.b4 == 8w0 || hdr.data.b4 == 8w2) 
