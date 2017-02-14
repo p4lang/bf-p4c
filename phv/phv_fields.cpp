@@ -308,8 +308,6 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
             }
             hdr_dd_valid->phv_use_hi = pov_fields_h.size();
                                      // allocate container for ccgf width
-            hdr_dd_valid->phv_use_rem = -pov_fields_h.size();
-                                     // negative encoding for simple header ccgf
             hdr_dd_valid->simple_header_pov_ccgf = true;
             pov_fields_h.clear();
         }

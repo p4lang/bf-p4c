@@ -87,7 +87,7 @@ PHV_Container::taint(
         for (auto &member : field->ccgf_fields) {
             int member_bit_lo = member->phv_use_lo;
             int use_width = member->size;
-            if (member->phv_use_rem > 0) {  // ignore simple header ccgf encoded phv_use_rem -ve
+            if (!member->simple_header_pov_ccgf) {  // ignore simple header ccgf
                 use_width = member->size - member->phv_use_rem;
             }
             start -= use_width;

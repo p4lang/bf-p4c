@@ -161,11 +161,10 @@ PHV_Bind::container_contiguous_alloc(
                     // in subsequent container allocated to owner
                     use_width += start;
                     start = 0;
-                    member_bit_lo = member->size - use_width - member->phv_use_rem;
-                    member->phv_use_rem += use_width;  // [width 20]
-                                                       // 12..19 [8b],
-                                                       // 4..11 [8b],
-                                                       // 0..3 [4b]
+                    member_bit_lo = member->size - member->phv_use_rem - use_width;
+                    member->phv_use_rem += use_width;  // spans several containers
+                                                       // aggregate used bits
+                                                       // [width 20] = 12..19[8b] 4..11[8b] 0..3[4b]
                 } else {
                     processed_members++;
                     member->phv_use_rem = 0;
@@ -199,10 +198,8 @@ PHV_Bind::container_contiguous_alloc(
                 int field_bit = pov_f->phv_use_lo;
                 int pov_width = pov_f->size;
                 container_bit -= pov_width;
-                if (f1->phv_use_rem < 0) {
-                    // simple header ccgs
+                if (f1->simple_header_pov_ccgf) {  // simple header ccgf
                     container_bit -= 2;
-                    f1->phv_use_rem = 0;
                     f1->phv_use_hi = f1->size - 1;
                 }
                 //
