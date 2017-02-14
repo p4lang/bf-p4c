@@ -9,7 +9,7 @@ set -o pipefail
 TIMEOUT_COMMAND=$(which gtimeout || which timeout)
 READLINK_COMMAND=$(which greadlink || which readlink)
 
-TIMEOUT=${P4C_TIMEOUT:-60}
+TIMEOUT=${P4C_TIMEOUT:-120}
 TIME_COMMAND="" # don't time commands
 verbose=false
 debug=false
