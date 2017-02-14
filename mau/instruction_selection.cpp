@@ -190,6 +190,25 @@ const IR::Expression *InstructionSelection::postorder(IR::Shr *e) {
     return new IR::MAU::Instruction(e->srcInfo, shr, new IR::TempVar(e->type), e->left, e->right);
 }
 
+const IR::Expression *InstructionSelection::postorder(IR::Mux *e) {
+    if (auto r = e->e0->to<IR::Operation_Relation>()) {
+        bool isMin = false;
+        if (r->is<IR::Lss>() || r->is<IR::Leq>())
+            isMin = true;
+        else if (!r->is<IR::Grt>() && !r->is<IR::Geq>())
+            return e;
+        if (*r->left == *e->e2 && *r->right == *e->e1)
+            isMin = !isMin;
+        else if (*r->left != *e->e1 || *r->right != *e->e2)
+            return e;
+        cstring op = isMin ? "minu" : "maxu";
+        if (auto t = r->left->type->to<IR::Type::Bits>())
+            if (t->isSigned)
+                op = isMin ? "mins" : "maxs";
+        return new IR::MAU::Instruction(e->srcInfo, op, new IR::TempVar(e->type), e->e1, e->e2); }
+    return e;
+}
+
 static const IR::MAU::Instruction *fillInstDest(const IR::Expression *in,
                                                 const IR::Expression *dest) {
     auto *inst = in ? in->to<IR::MAU::Instruction>() : nullptr;
@@ -291,7 +310,7 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
             auto rv = new IR::MAU::Instruction(*prim);
             rv->name = rv->name + 4;  // strip off bit_ prefix
             return rv; }
-    } else if (prim->name == "drop") {
+    } else if (prim->name == "drop" || prim->name == "mark_to_drop") {
         return new IR::MAU::Instruction(prim->srcInfo, "invalidate",
             gen_stdmeta(VisitingThread(this) ? "egress_port" : "egress_spec"));
     } else if (prim->name == "count" || prim->name == "execute_meter" ||
