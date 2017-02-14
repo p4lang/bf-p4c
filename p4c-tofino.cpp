@@ -35,9 +35,6 @@ int main(int ac, char **av) {
         return 1;
     options.preprocessor_options += " -D__TARGET_TOFINO__";
 
-    FILE* in = options.preprocess();
-    if (!in) return 1;
-
     if (options.target != "tofino") {
         error("only supported target is 'tofino'");
         return 1; }
