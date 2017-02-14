@@ -71,7 +71,7 @@ XFAIL_TESTS += \
          bmv2/%reldir%/p4_14/action_profile.p4.test \
        tofino/testdata/p4_14_samples/16-TwoReferences.p4.test \
     p14_to_16/%reldir%/p4_14/switch_20160602/switch.p4.test \
-       tofino/%reldir%/p4_14/switch_20160602/switch.p4.test
+       tofino/%reldir%/p4_14/switch_20160602/switch.p4.test \
          bmv2/%reldir%/p4_14/switch_l2_profile_tofino.p4.test \
     p14_to_16/%reldir%/p4_14/switch_l2_profile_tofino.p4.test \
        tofino/%reldir%/p4_14/switch_l2_profile_tofino.p4.test \
