@@ -444,7 +444,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo &phv) {
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo::Field_Ops &op) {
-    switch(op) {
+    switch (op) {
         case PhvInfo::Field_Ops::NONE: out << "None"; break;
         case PhvInfo::Field_Ops::R: out << 'R'; break;
         case PhvInfo::Field_Ops::W: out << 'W'; break;

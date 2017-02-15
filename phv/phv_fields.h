@@ -67,7 +67,8 @@ class PhvInfo : public Inspector {
                                            // member pov fields of header stk pov
                                            // these members are in same container as header stk pov
         set<constraint> constraints;  // unused -- get rid of it?
-        vector<std::tuple<bool, cstring, Field_Ops>> operations; // all operations performed on the field.
+        vector<std::tuple<bool, cstring, Field_Ops>> operations;
+                                           // all operations performed on the field
         cstring header() const { return name.before(strrchr(name, '.')); }
         PHV::Bit bit(unsigned i) const {
             BUG_CHECK(i < size_t(size), "bit out of range for field");

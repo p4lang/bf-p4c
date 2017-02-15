@@ -297,13 +297,14 @@ PHV_MAU_Group_Assignments::apply_visitor(const IR::Node *node, const char *name)
     //
     // when placing POVs if a bit occupies whole container it reduces opportunities for
     // TPHV overflow into PHV
-    // container_no_pack(
-    //     pov_fields,
-    //     PHV_groups_i,
-    //     "POV_any_container_width",
-    //     false/*smallest_container_width*/);
     //
-    container_no_pack(pov_fields, PHV_groups_i, "POV_smallest_container_width");
+    container_no_pack(
+        pov_fields,
+        PHV_groups_i,
+        "POV_any_container_width",
+        false/*smallest_container_width*/);
+    //
+    // container_no_pack(pov_fields, PHV_groups_i, "POV_smallest_container_width");
     //
     if (pov_fields.size()) {
         //
