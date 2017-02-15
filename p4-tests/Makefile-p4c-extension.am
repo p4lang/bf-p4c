@@ -64,6 +64,7 @@ CLEANFILES += \
 # FlexCounter, action_profile use a non-standard Algorithm
 # TwoReferences invokes a table twice - maybe it should become a negative test?
 # *range* match type is not supported by BMv2 (used also in error_detection*.p4)
+# ipv4_options.p4: currently fails with "Unhandled InstanceRef type bool"
 XFAIL_TESTS += \
          bmv2/%reldir%/p4_14/02-FlexCounterActionProfile.p4.test \
     p14_to_16/%reldir%/p4_14/02-FlexCounterActionProfile.p4.test \
@@ -144,6 +145,7 @@ XFAIL_TESTS += \
        tofino/%reldir%/p4_16/bfd_offload.p4.test \
        tofino/%reldir%/p4_16/bloom_filter.p4.test \
        tofino/%reldir%/p4_16/flowlet_switching.p4.test \
+       tofino/%reldir%/p4_16/ipv4_options.p4.test \
        tofino/%reldir%/p4_16/stateful_alu.p4.test
 
 # These testcases taken from glass and xfail in brig
