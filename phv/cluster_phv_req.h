@@ -41,7 +41,7 @@ class Cluster_PHV {
     int num_containers_i;                   // number of containers
     bool sliceable_i;                       // can split cluster, move-based ops only ?
     ordered_map<const PhvInfo::Field*,
-    std::pair<int,int>> field_slice_o;
+    std::pair<int, int>> field_slice_o;
                                             // map field to a list of bitrange after slicing
     //
  public:
@@ -72,7 +72,7 @@ class Cluster_PHV {
     void num_containers(int n)                          { num_containers_i = n; }
     int num_containers(std::vector<const PhvInfo::Field *>&, PHV_Container::PHV_Word);
     ordered_map<const PhvInfo::Field *, std::pair<int, int>>&
-        field_slices()                                  { return field_slice_o; };
+        field_slices()                                  { return field_slice_o; }
     bool sliceable()                                    { return sliceable_i; }
     void sliceable(bool i)                              { sliceable_i = i; }
 };

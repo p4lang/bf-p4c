@@ -72,8 +72,7 @@ Cluster_Slicing::apply_visitor(const IR::Node *node, const char *name) {
     std::list<Cluster_PHV *> clusters_add;
     LOG3("....... Cluster to be sliced ("
         << phv_mau_i.phv_clusters().size()
-        << ")..."
-        );
+        << ")...");
     for (auto &cl : phv_mau_i.phv_clusters()) {
         // decide if a cluster is sliceable.
         // A cluster is sliceable if:
@@ -130,9 +129,8 @@ Cluster_Slicing::apply_visitor(const IR::Node *node, const char *name) {
                     phv_use_hi_0 = phv_use_lo_0 + cl->max_width() / 2 - 1;
                     phv_use_lo_1 = phv_use_lo_0 + cl->max_width() / 2;
                     phv_use_hi_1 = cl->field_slices()[f].second;
-                }
-                // else use _lo and _hi from original field.
-                else {
+                } else {
+                    // else use _lo and _hi from original field.
                     phv_use_lo_0 = f->phv_use_lo;
                     phv_use_hi_0 = f->phv_use_lo + f->size / 2 - 1;
                     phv_use_lo_1 = f->phv_use_lo + f->size / 2;
