@@ -18,9 +18,9 @@
 class PHV_Field_Operations : public Inspector {
  public:
     // define enum INVALID, R, W, RW
-    explicit PHV_Field_Operations (const PhvInfo &phv_f) : phv(phv_f) {}
+    explicit PHV_Field_Operations (PhvInfo &phv_f) : phv(phv_f) {}
  private:
-    const PhvInfo &phv;         // phv object referenced through constructor
+    PhvInfo &phv;         // phv object referenced through constructor
     PhvInfo::Field *dst_i = nullptr;
                                 // destination of current statement
     bool preorder(const IR::MAU::Instruction *p) override;

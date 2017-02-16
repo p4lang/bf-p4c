@@ -43,7 +43,7 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
             for (auto operand = ++inst->operands.begin();
                     operand != inst->operands.end();
                     ++operand) {
-                PhvInfo::Field* field = const_cast<PhvInfo::Field*> (phv.field(*operand));
+                PhvInfo::Field* field = phv.field(*operand);
                 if (field) {
                     // insert operation in field.operations with tuple3
                     auto op = std::make_tuple(is_move_op, inst->name, PhvInfo::Field_Ops::R);
