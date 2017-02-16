@@ -43,8 +43,9 @@ p4_tests_p4.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(wildc
 # Exercise bmv2 back-end on Tofino-specific programs
 p4_tests_bmv2.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(wildcard \
     $(srcdir)/%reldir%/p4_14/*.p4 \
-    $(srcdir)/%reldir%/p4_14/switch_*/switch.p4 ) \
-    $(srcdir)/%reldir%/p4_14
+    $(srcdir)/%reldir%/p4_14/switch_*/switch.p4 \
+    $(shell grep -l v1model.p4 $(srcdir)/%reldir%/p4_16/*.p4) ) \
+    $(srcdir)/%reldir%/p4_14 $(srcdir)/%reldir%/p4_16
 	@$(GENTESTS) $(srcdir) bmv2 $(srcdir)/%reldir%/test-bmv2.sh $^ >$@ || ( rm $@ && false )
 
 check-nop4test:
@@ -64,13 +65,13 @@ CLEANFILES += \
 # FlexCounter, action_profile use a non-standard Algorithm
 # TwoReferences invokes a table twice - maybe it should become a negative test?
 # *range* match type is not supported by BMv2 (used also in error_detection*.p4)
-# ipv4_options.p4: currently fails with "Unhandled InstanceRef type bool"
 XFAIL_TESTS += \
          bmv2/%reldir%/p4_14/02-FlexCounterActionProfile.p4.test \
     p14_to_16/%reldir%/p4_14/02-FlexCounterActionProfile.p4.test \
        tofino/%reldir%/p4_14/02-FlexCounterActionProfile.p4.test \
          bmv2/%reldir%/p4_14/action_profile.p4.test \
        tofino/testdata/p4_14_samples/16-TwoReferences.p4.test \
+         bmv2/%reldir%/p4_14/switch_20160602/switch.p4.test \
     p14_to_16/%reldir%/p4_14/switch_20160602/switch.p4.test \
        tofino/%reldir%/p4_14/switch_20160602/switch.p4.test \
          bmv2/%reldir%/p4_14/switch_l2_profile_tofino.p4.test \
@@ -92,23 +93,11 @@ XFAIL_TESTS += \
     p14_to_16/%reldir%/p4_14/test_config_144_recirculate.p4.test \
        tofino/%reldir%/p4_14/test_config_144_recirculate.p4.test \
          bmv2/%reldir%/p4_14/test_config_152_stateful_simple_cntr.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_152_stateful_simple_cntr.p4.test \
-       tofino/%reldir%/p4_14/test_config_152_stateful_simple_cntr.p4.test \
          bmv2/%reldir%/p4_14/test_config_153_stateful_simple_cntr_with_output.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_153_stateful_simple_cntr_with_output.p4.test \
-       tofino/%reldir%/p4_14/test_config_153_stateful_simple_cntr_with_output.p4.test \
          bmv2/%reldir%/p4_14/test_config_154_stateful_sampling.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_154_stateful_sampling.p4.test \
-       tofino/%reldir%/p4_14/test_config_154_stateful_sampling.p4.test \
          bmv2/%reldir%/p4_14/test_config_155_stateful_3_alus.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_155_stateful_3_alus.p4.test \
-       tofino/%reldir%/p4_14/test_config_155_stateful_3_alus.p4.test \
          bmv2/%reldir%/p4_14/test_config_156_indirect_stateful_cntr.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_156_indirect_stateful_cntr.p4.test \
-       tofino/%reldir%/p4_14/test_config_156_indirect_stateful_cntr.p4.test \
          bmv2/%reldir%/p4_14/test_config_159_stateful_using_phv_field.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_159_stateful_using_phv_field.p4.test \
-       tofino/%reldir%/p4_14/test_config_159_stateful_using_phv_field.p4.test \
          bmv2/%reldir%/p4_14/test_config_160_stateful_single_bit_mode.p4.test \
     p14_to_16/%reldir%/p4_14/test_config_160_stateful_single_bit_mode.p4.test \
        tofino/%reldir%/p4_14/test_config_160_stateful_single_bit_mode.p4.test \
@@ -116,8 +105,6 @@ XFAIL_TESTS += \
     p14_to_16/%reldir%/p4_14/test_config_163_stateful_table_math_unit.p4.test \
        tofino/%reldir%/p4_14/test_config_163_stateful_table_math_unit.p4.test \
          bmv2/%reldir%/p4_14/test_config_164_stateful_deterministic_sampling.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_164_stateful_deterministic_sampling.p4.test \
-       tofino/%reldir%/p4_14/test_config_164_stateful_deterministic_sampling.p4.test \
          bmv2/%reldir%/p4_14/test_config_165_stateful_bfd_failure_detection.p4.test \
     p14_to_16/%reldir%/p4_14/test_config_165_stateful_bfd_failure_detection.p4.test \
        tofino/%reldir%/p4_14/test_config_165_stateful_bfd_failure_detection.p4.test \
@@ -128,8 +115,6 @@ XFAIL_TESTS += \
     p14_to_16/%reldir%/p4_14/test_config_167_stateful_flowlet_switching.p4.test \
        tofino/%reldir%/p4_14/test_config_167_stateful_flowlet_switching.p4.test \
          bmv2/%reldir%/p4_14/test_config_169_stateful_sflow_sequence.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_169_stateful_sflow_sequence.p4.test \
-       tofino/%reldir%/p4_14/test_config_169_stateful_sflow_sequence.p4.test \
          bmv2/%reldir%/p4_14/test_config_170_stateful_selection_table_update.p4.test \
     p14_to_16/%reldir%/p4_14/test_config_170_stateful_selection_table_update.p4.test \
        tofino/%reldir%/p4_14/test_config_170_stateful_selection_table_update.p4.test \
@@ -145,7 +130,6 @@ XFAIL_TESTS += \
        tofino/%reldir%/p4_16/bfd_offload.p4.test \
        tofino/%reldir%/p4_16/bloom_filter.p4.test \
        tofino/%reldir%/p4_16/flowlet_switching.p4.test \
-       tofino/%reldir%/p4_16/ipv4_options.p4.test \
        tofino/%reldir%/p4_16/stateful_alu.p4.test
 
 # These testcases taken from glass and xfail in brig
@@ -165,6 +149,10 @@ XFAIL_TESTS += \
     bmv2/%reldir%/p4_14/test_config_183_sample_e2e.p4.test \
     bmv2/%reldir%/p4_14/test_config_190_modify_with_expr.p4.test \
     bmv2/%reldir%/p4_14/test_config_234_ternary_valid.p4.test
+
+# parser verify not supported
+XFAIL_TESTS += tofino/%reldir%/p4_16/ipv4_options.p4.test \
+    tofino-ortools/%reldir%/p4_16/ipv4_options.p4.test
 
 # conflict between blackbox meter and builtin meter
 XFAIL_TESTS += \
@@ -191,32 +179,20 @@ XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_196_hit_miss.p4.test
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_197_default_next_table.p4.test
 
 # Could not find declaration error in generated P4_16 code (JIRA #BRIG-31)
-XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_192_stateful_driven_by_hash.p4.test
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_206_stateful_logging.p4.test
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_209_pack_hash_dist.p4.test
 XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_192_stateful_driven_by_hash.p4.test
 XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_206_stateful_logging.p4.test
 XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_209_pack_hash_dist.p4.test
-XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_192_stateful_driven_by_hash.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_206_stateful_logging.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_209_pack_hash_dist.p4.test
 
 # cannot find type for <GlobalRef>
-XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_184_stateful_bug1.p4.test
-XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_195_stateful_predicate_output.p4.test
-XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_199_stateful_constant_index.p4.test
-XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_224_stateful_error_check.p4.test
-XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_236_stateful_read_bit.p4.test
 XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_184_stateful_bug1.p4.test
 XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_195_stateful_predicate_output.p4.test
 XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_199_stateful_constant_index.p4.test
 XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_224_stateful_error_check.p4.test
 XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_236_stateful_read_bit.p4.test
-XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_184_stateful_bug1.p4.test
-XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_195_stateful_predicate_output.p4.test
-XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_199_stateful_constant_index.p4.test
-XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_224_stateful_error_check.p4.test
-XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_236_stateful_read_bit.p4.test
 
 # blackbox type unification failures (JIRA #COMPILER-341)
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_174_stateful_flow_learning.p4.test

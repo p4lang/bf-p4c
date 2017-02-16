@@ -1,487 +1,32 @@
 # 1 "switch.p4"
-# 1 "<built-in>" 1
-# 1 "<built-in>" 3
-# 170 "<built-in>" 3
-# 1 "<command line>" 1
-# 1 "<built-in>" 2
-# 1 "switch.p4" 2
+# 1 "<built-in>"
+# 1 "<built-in>"
+# 170 "<built-in>"
+# 1 "<command line>"
+# 1 "<built-in>"
+# 1 "switch.p4"
 # 29 "switch.p4"
-# 1 "../../p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/constants.p4" 1
-# 30 "switch.p4" 2
-# 1 "../../p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/intrinsic_metadata.p4" 1
-# 10 "../../p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/intrinsic_metadata.p4"
-header_type ingress_parser_control_signals {
-    fields {
-        priority : 3;
-    }
-}
-
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header ingress ig_prsr_ctrl
-header ingress_parser_control_signals ig_prsr_ctrl;
-
-
-
-header_type ingress_intrinsic_metadata_t {
-    fields {
-
-        resubmit_flag : 1;
-
-
-        _pad1 : 1;
-
-        _pad2 : 2;
-
-        _pad3 : 3;
-
-        ingress_port : 9;
-
-
-        ingress_mac_tstamp : 48;
-
-    }
-}
-
-@pragma dont_trim
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header ingress ig_intr_md
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md.ingress_port
-header ingress_intrinsic_metadata_t ig_intr_md;
-
-
-
-header_type generator_metadata_t {
-    fields {
-
-        app_id : 16;
-
-        batch_id: 16;
-
-        instance_id: 16;
-    }
-}
-
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-header generator_metadata_t ig_pg_md;
-
-
-
-header_type ingress_intrinsic_metadata_from_parser_aux_t {
-    fields {
-        ingress_global_tstamp : 48;
-
-
-        ingress_global_ver : 32;
-
-
-        ingress_parser_err : 16;
-
-    }
-}
-
-@pragma pa_fragment ingress ig_intr_md_from_parser_aux.ingress_parser_err
-@pragma pa_atomic ingress ig_intr_md_from_parser_aux.ingress_parser_err
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header ingress ig_intr_md_from_parser_aux
-header ingress_intrinsic_metadata_from_parser_aux_t ig_intr_md_from_parser_aux;
-
-
-
-header_type ingress_intrinsic_metadata_for_tm_t {
-    fields {
-
-
-
-
-        _pad1 : 7;
-        ucast_egress_port : 9;
-
-
-
-
-        drop_ctl : 3;
-
-
-
-
-        bypass_egress : 1;
-
-        deflect_on_drop : 1;
-
-
-
-        ingress_cos : 3;
-
-
-
-
-
-        qid : 5;
-
-        icos_for_copy_to_cpu : 3;
-
-
-
-
-
-        _pad2: 3;
-
-        copy_to_cpu : 1;
-
-        packet_color : 2;
-
-
-
-        disable_ucast_cutthru : 1;
-
-        enable_mcast_cutthru : 1;
-
-
-
-
-        mcast_grp_a : 16;
-
-
-
-
-
-        mcast_grp_b : 16;
-
-
-
-
-        _pad3 : 3;
-        level1_mcast_hash : 13;
-
-
-
-
-
-
-
-        _pad4 : 3;
-        level2_mcast_hash : 13;
-
-
-
-
-
-
-
-        level1_exclusion_id : 16;
-
-
-
-
-
-        _pad5 : 7;
-        level2_exclusion_id : 9;
-
-
-
-
-
-        rid : 16;
-
-
-
-    }
-}
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.ucast_egress_port
-
-@pragma pa_fragment ingress ig_intr_md_for_tm.drop_ctl
-@pragma pa_fragment ingress ig_intr_md_for_tm.qid
-@pragma pa_fragment ingress ig_intr_md_for_tm._pad2
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.mcast_grp_a
-@pragma pa_fragment ingress ig_intr_md_for_tm.mcast_grp_a
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md_for_tm.mcast_grp_a
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.mcast_grp_b
-@pragma pa_fragment ingress ig_intr_md_for_tm.mcast_grp_b
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md_for_tm.mcast_grp_b
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.level1_mcast_hash
-@pragma pa_fragment ingress ig_intr_md_for_tm._pad3
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.level2_mcast_hash
-@pragma pa_fragment ingress ig_intr_md_for_tm._pad4
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.level1_exclusion_id
-@pragma pa_fragment ingress ig_intr_md_for_tm.level1_exclusion_id
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.level2_exclusion_id
-@pragma pa_fragment ingress ig_intr_md_for_tm._pad5
-
-@pragma pa_atomic ingress ig_intr_md_for_tm.rid
-@pragma pa_fragment ingress ig_intr_md_for_tm.rid
-
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header ingress ig_intr_md_for_tm
-@pragma dont_trim
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md_for_tm.drop_ctl
-header ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm;
-
-
-header_type ingress_intrinsic_metadata_for_mirror_buffer_t {
-    fields {
-        _pad1 : 6;
-        ingress_mirror_id : 10;
-
-
-    }
-}
-
-@pragma dont_trim
-@pragma pa_intrinsic_header ingress ig_intr_md_for_mb
-@pragma pa_atomic ingress ig_intr_md_for_mb.ingress_mirror_id
-@pragma pa_mandatory_intrinsic_field ingress ig_intr_md_for_mb.ingress_mirror_id
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-header ingress_intrinsic_metadata_for_mirror_buffer_t ig_intr_md_for_mb;
-
-
-header_type egress_intrinsic_metadata_t {
-    fields {
-
-        _pad0 : 7;
-        egress_port : 9;
-
-
-        _pad1: 5;
-        enq_qdepth : 19;
-
-
-        _pad2: 6;
-        enq_congest_stat : 2;
-
-
-        enq_tstamp : 32;
-
-
-        _pad3: 5;
-        deq_qdepth : 19;
-
-
-        _pad4: 6;
-        deq_congest_stat : 2;
-
-
-        app_pool_congest_stat : 8;
-
-
-
-        deq_timedelta : 32;
-
-
-        egress_rid : 16;
-
-
-        _pad5: 7;
-        egress_rid_first : 1;
-
-
-        _pad6: 3;
-        egress_qid : 5;
-
-
-        _pad7: 5;
-        egress_cos : 3;
-
-
-        _pad8: 7;
-        deflection_flag : 1;
-
-
-        pkt_length : 16;
-    }
-}
-
-@pragma dont_trim
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header egress eg_intr_md
-
-@pragma pa_atomic egress eg_intr_md.egress_port
-@pragma pa_fragment egress eg_intr_md._pad1
-@pragma pa_fragment egress eg_intr_md._pad7
-@pragma pa_fragment egress eg_intr_md._pad8
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md.egress_port
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md.egress_cos
-
-header egress_intrinsic_metadata_t eg_intr_md;
-
-
-header_type egress_intrinsic_metadata_from_parser_aux_t {
-    fields {
-        egress_global_tstamp : 48;
-
-
-        egress_global_ver : 32;
-
-
-        egress_parser_err : 16;
-
-
-
-        clone_src : 8;
-
-
-
-        coalesce_sample_count : 8;
-
-
-    }
-}
-
-@pragma pa_fragment egress eg_intr_md_from_parser_aux.coalesce_sample_count
-@pragma pa_fragment egress eg_intr_md_from_parser_aux.clone_src
-@pragma pa_fragment egress eg_intr_md_from_parser_aux.egress_parser_err
-@pragma pa_atomic egress eg_intr_md_from_parser_aux.egress_parser_err
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header egress eg_intr_md_from_parser_aux
-header egress_intrinsic_metadata_from_parser_aux_t eg_intr_md_from_parser_aux;
-# 377 "../../p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/intrinsic_metadata.p4"
-header_type egress_intrinsic_metadata_for_mirror_buffer_t {
-    fields {
-        _pad1 : 6;
-        egress_mirror_id : 10;
-
-
-        coalesce_flush: 1;
-        coalesce_length: 7;
-
-
-    }
-}
-
-@pragma dont_trim
-@pragma pa_intrinsic_header egress eg_intr_md_for_mb
-@pragma pa_atomic egress eg_intr_md_for_mb.egress_mirror_id
-@pragma pa_fragment egress eg_intr_md_for_mb.coalesce_flush
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md_for_mb.egress_mirror_id
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md_for_mb.coalesce_flush
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md_for_mb.coalesce_length
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-header egress_intrinsic_metadata_for_mirror_buffer_t eg_intr_md_for_mb;
-
-
-
-header_type egress_intrinsic_metadata_for_output_port_t {
-    fields {
-
-        _pad1 : 2;
-        capture_tstamp_on_tx : 1;
-
-
-        update_delay_on_tx : 1;
-# 420 "../../p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/intrinsic_metadata.p4"
-        force_tx_error : 1;
-
-        drop_ctl : 3;
-
-
-
-
-
-
-
-    }
-}
-
-@pragma dont_trim
-@pragma pa_mandatory_intrinsic_field egress eg_intr_md_for_oport.drop_ctl
-@pragma not_deparsed ingress
-@pragma not_deparsed egress
-@pragma pa_intrinsic_header egress eg_intr_md_for_oport
-header egress_intrinsic_metadata_for_output_port_t eg_intr_md_for_oport;
-# 31 "switch.p4" 2
-# 1 "../../p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/primitives.p4" 1
-# 10 "../../p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/primitives.p4"
-action deflect_on_drop(enable_dod) {
-    modify_field(ig_intr_md_for_tm.deflect_on_drop, enable_dod);
-}
-# 32 "switch.p4" 2
-# 1 "../../p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/pktgen_headers.p4" 1
-
-
-
-
-
-
-
-
-header_type pktgen_generic_header_t {
-    fields {
-        _pad0 : 3;
-        app_id : 3;
-        pipe_id : 2;
-        key_msb : 8;
-        batch_id : 16;
-
-        packet_id : 16;
-    }
-}
-header pktgen_generic_header_t pktgen_generic;
-
-header_type pktgen_timer_header_t {
-    fields {
-        _pad0 : 3;
-        app_id : 3;
-        pipe_id : 2;
-        _pad1 : 8;
-        batch_id : 16;
-        packet_id : 16;
-    }
-}
-header pktgen_timer_header_t pktgen_timer;
-
-header_type pktgen_port_down_header_t {
-    fields {
-        _pad0 : 3;
-        app_id : 3;
-        pipe_id : 2;
-        _pad1 : 15;
-        port_num : 9;
-        packet_id : 16;
-    }
-}
-header pktgen_port_down_header_t pktgen_port_down;
-
-header_type pktgen_recirc_header_t {
-    fields {
-        _pad0 : 3;
-        app_id : 3;
-        pipe_id : 2;
-        key : 24;
-        packet_id : 16;
-    }
-}
-header pktgen_recirc_header_t pktgen_recirc;
-# 33 "switch.p4" 2
-
-
-
-
-# 1 "./includes/p4features.h" 1
-# 38 "switch.p4" 2
-# 1 "./includes/drop_reason_codes.h" 1
-# 39 "switch.p4" 2
-# 1 "./includes/cpu_reason_codes.h" 1
-# 40 "switch.p4" 2
-# 1 "./includes/p4_pktgen.h" 1
-# 41 "switch.p4" 2
-# 1 "./includes/defines.p4" 1
-# 42 "switch.p4" 2
-# 1 "./includes/headers.p4" 1
+#include "tofino/constants.p4"
+# 30 "switch.p4"
+#include "tofino/intrinsic_metadata.p4"
+# 31 "switch.p4"
+#include "tofino/primitives.p4"
+# 32 "switch.p4"
+#include "tofino/pktgen_headers.p4"
+# 33 "switch.p4"
+
+
+# 1 "./includes/p4features.h"
+# 38 "switch.p4"
+# 1 "./includes/drop_reason_codes.h"
+# 39 "switch.p4"
+# 1 "./includes/cpu_reason_codes.h"
+# 40 "switch.p4"
+# 1 "./includes/p4_pktgen.h"
+# 41 "switch.p4"
+# 1 "./includes/defines.p4"
+# 42 "switch.p4"
+# 1 "./includes/headers.p4"
 # 24 "./includes/headers.p4"
 header_type ethernet_t {
     fields {
@@ -1099,8 +644,8 @@ header_type int_value_t {
         val : 31;
     }
 }
-# 43 "switch.p4" 2
-# 1 "./includes/parser.p4" 1
+# 43 "switch.p4"
+# 1 "./includes/parser.p4"
 # 111 "./includes/parser.p4"
 parser start {
     return select(current(96, 16)) {
@@ -1762,11 +1307,11 @@ parser parse_set_prio_max {
     set_metadata(ig_prsr_ctrl.priority, 7);
     return ingress;
 }
-# 44 "switch.p4" 2
-# 1 "./includes/p4_table_sizes.h" 1
-# 45 "switch.p4" 2
-# 1 "./includes/negative_mirroring.h" 1
-# 46 "switch.p4" 2
+# 44 "switch.p4"
+# 1 "./includes/p4_table_sizes.h"
+# 45 "switch.p4"
+# 1 "./includes/negative_mirroring.h"
+# 46 "switch.p4"
 
 @pragma pa_alias ingress ig_intr_md.ingress_port ingress_metadata.ingress_port
 
@@ -1845,7 +1390,7 @@ metadata intrinsic_metadata_t intrinsic_metadata;
 metadata global_config_metadata_t global_config_metadata;
 
 
-# 1 "./switch_config.p4" 1
+# 1 "./switch_config.p4"
 # 28 "./switch_config.p4"
 action set_config_parameters(enable_dod, enable_flowlet, switch_id) {
     deflect_on_drop(enable_dod);
@@ -1871,11 +1416,11 @@ control process_global_params {
 
     apply(switch_config_params);
 }
-# 124 "switch.p4" 2
+# 124 "switch.p4"
 
 
 
-# 1 "./port.p4" 1
+# 1 "./port.p4"
 # 31 "./port.p4"
 action set_valid_outer_unicast_packet_untagged() {
     modify_field(l2_metadata.lkp_pkt_type, 1);
@@ -2306,8 +1851,8 @@ table egress_vlan_xlate {
 control process_vlan_xlate {
     apply(egress_vlan_xlate);
 }
-# 128 "switch.p4" 2
-# 1 "./l2.p4" 1
+# 128 "switch.p4"
+# 1 "./l2.p4"
 # 28 "./l2.p4"
 header_type l2_metadata_t {
     fields {
@@ -2660,8 +2205,8 @@ control process_adjust_packet_length {
 
 
 }
-# 129 "switch.p4" 2
-# 1 "./l3.p4" 1
+# 129 "switch.p4"
+# 1 "./l3.p4"
 # 32 "./l3.p4"
 header_type l3_metadata_t {
     fields {
@@ -2846,8 +2391,8 @@ control process_mtu {
 
 
 }
-# 130 "switch.p4" 2
-# 1 "./ipv4.p4" 1
+# 130 "switch.p4"
+# 1 "./ipv4.p4"
 # 31 "./ipv4.p4"
 header_type ipv4_metadata_t {
     fields {
@@ -2873,8 +2418,8 @@ control process_ipv4_fib {
 control process_ipv4_urpf {
 # 203 "./ipv4.p4"
 }
-# 131 "switch.p4" 2
-# 1 "./ipv6.p4" 1
+# 131 "switch.p4"
+# 1 "./ipv6.p4"
 # 31 "./ipv6.p4"
 header_type ipv6_metadata_t {
     fields {
@@ -2902,8 +2447,8 @@ control process_ipv6_fib {
 control process_ipv6_urpf {
 # 230 "./ipv6.p4"
 }
-# 132 "switch.p4" 2
-# 1 "./tunnel.p4" 1
+# 132 "switch.p4"
+# 1 "./tunnel.p4"
 # 31 "./tunnel.p4"
 header_type tunnel_metadata_t {
     fields {
@@ -3088,8 +2633,8 @@ control process_tunnel_encap {
 # 1614 "./tunnel.p4"
     }
 }
-# 133 "switch.p4" 2
-# 1 "./acl.p4" 1
+# 133 "switch.p4"
+# 1 "./acl.p4"
 # 31 "./acl.p4"
 header_type acl_metadata_t {
     fields {
@@ -3645,8 +3190,8 @@ control process_egress_system_acl {
         apply(egress_system_acl);
     }
 }
-# 134 "switch.p4" 2
-# 1 "./nat.p4" 1
+# 134 "switch.p4"
+# 1 "./nat.p4"
 # 28 "./nat.p4"
 header_type nat_metadata_t {
     fields {
@@ -3685,8 +3230,8 @@ control process_l4_checksum {
 
 
 }
-# 135 "switch.p4" 2
-# 1 "./multicast.p4" 1
+# 135 "switch.p4"
+# 1 "./multicast.p4"
 # 28 "./multicast.p4"
 header_type multicast_metadata_t {
     fields {
@@ -3798,8 +3343,8 @@ control process_multicast_flooding {
 control process_replication {
 # 649 "./multicast.p4"
 }
-# 136 "switch.p4" 2
-# 1 "./nexthop.p4" 1
+# 136 "switch.p4"
+# 1 "./nexthop.p4"
 # 31 "./nexthop.p4"
 header_type nexthop_metadata_t {
     fields {
@@ -4076,8 +3621,8 @@ control process_nexthop {
         apply(nexthop);
     }
 }
-# 137 "switch.p4" 2
-# 1 "./rewrite.p4" 1
+# 137 "switch.p4"
+# 1 "./rewrite.p4"
 # 32 "./rewrite.p4"
 action set_l2_rewrite_with_tunnel(tunnel_index, tunnel_type) {
     modify_field(egress_metadata.routed, 0);
@@ -4157,8 +3702,8 @@ control process_rewrite {
 
     }
 }
-# 138 "switch.p4" 2
-# 1 "./security.p4" 1
+# 138 "switch.p4"
+# 1 "./security.p4"
 # 31 "./security.p4"
 header_type security_metadata_t {
     fields {
@@ -4188,8 +3733,8 @@ control process_storm_control_stats {
 control process_ip_sourceguard {
 # 155 "./security.p4"
 }
-# 139 "switch.p4" 2
-# 1 "./fabric.p4" 1
+# 139 "switch.p4"
+# 1 "./fabric.p4"
 # 29 "./fabric.p4"
 header_type fabric_metadata_t {
     fields {
@@ -4312,14 +3857,14 @@ action cpu_rx_rewrite() {
 action fabric_rewrite(tunnel_index) {
     modify_field(tunnel_metadata.tunnel_index, tunnel_index);
 }
-# 140 "switch.p4" 2
-# 1 "./egress_filter.p4" 1
+# 140 "switch.p4"
+# 1 "./egress_filter.p4"
 # 66 "./egress_filter.p4"
 control process_egress_filter {
 # 81 "./egress_filter.p4"
 }
-# 141 "switch.p4" 2
-# 1 "./mirror.p4" 1
+# 141 "switch.p4"
+# 1 "./mirror.p4"
 # 28 "./mirror.p4"
 action set_mirror_nhop(nhop_idx) {
     modify_field(l3_metadata.nexthop_index, nhop_idx);
@@ -4350,237 +3895,11 @@ control process_mirroring {
 
 
 }
-# 142 "switch.p4" 2
-# 1 "./int_plt.p4" 1
+# 142 "switch.p4"
+# 1 "./int_plt.p4"
 # 30 "./int_plt.p4"
-# 1 "../../p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/stateful_alu_blackbox.p4" 1
-
-
-blackbox_type stateful_alu {
-
-    attribute reg {
-
-        type: register;
-    }
-
-    attribute selector_binding {
-
-        type: table;
-        optional;
-    }
-
-    attribute initial_register_lo_value {
-
-
-
-        type: int;
-        optional;
-    }
-
-    attribute initial_register_hi_value {
-
-
-
-        type: int;
-        optional;
-    }
-
-    attribute condition_hi {
-
-
-
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi}
-        optional;
-    }
-
-    attribute condition_lo {
-
-
-
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi}
-        optional;
-    }
-
-
-    attribute update_lo_1_predicate {
-
-        type: expression;
-        expression_local_variables {condition_lo, condition_hi}
-        optional;
-    }
-
-    attribute update_lo_1_value {
-# 81 "../../p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/stateful_alu_blackbox.p4"
-        type: expression;
-        expression_local_variables {register_lo, register_hi,
-                                    set_bit, set_bitc, clr_bit, clr_bitc, read_bit, read_bitc}
-        optional;
-    }
-
-    attribute update_lo_2_predicate {
-
-        type: expression;
-        expression_local_variables {condition_lo, condition_hi}
-        optional;
-    }
-
-    attribute update_lo_2_value {
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi, math_unit}
-        optional;
-    }
-
-    attribute update_hi_1_predicate {
-
-        type: expression;
-        expression_local_variables {condition_lo, condition_hi}
-        optional;
-    }
-
-    attribute update_hi_1_value {
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi}
-        optional;
-    }
-
-    attribute update_hi_2_predicate {
-
-        type: expression;
-        expression_local_variables {condition_lo, condition_hi}
-        optional;
-    }
-
-    attribute update_hi_2_value {
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi}
-        optional;
-    }
-
-    attribute output_predicate {
-
-
-
-
-        type: expression;
-        expression_local_variables {condition_lo, condition_hi}
-        optional;
-    }
-
-    attribute output_value {
-
-
-
-
-
-
-
-        type: expression;
-        expression_local_variables {alu_lo, alu_hi, register_lo, register_hi, predicate, combined_predicate}
-        optional;
-    }
-
-    attribute output_dst {
-
-        type: bit<1>;
-        optional;
-    }
-
-    attribute math_unit_input {
-
-
-
-        type: expression;
-        expression_local_variables {register_lo, register_hi}
-        optional;
-    }
-    attribute math_unit_output_scale {
-
-
-
-
-        type: int;
-        optional;
-    }
-    attribute math_unit_exponent_shift {
-
-
-
-
-
-
-        type: int;
-        optional;
-    }
-    attribute math_unit_exponent_invert {
-
-
-
-
-        type: string;
-        optional;
-    }
-
-    attribute math_unit_lookup_table {
-
-
-
-
-
-
-
-        type: string;
-        optional;
-    }
-
-    attribute reduction_or_group {
-# 214 "../../p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/stateful_alu_blackbox.p4"
-        type: string;
-        optional;
-    }
-
-    attribute stateful_logging_mode {
-# 228 "../../p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/stateful_alu_blackbox.p4"
-        type: string;
-        optional;
-    }
-# 246 "../../p4c-tofino/p4c_tofino/target/tofino/p4_lib/tofino/stateful_alu_blackbox.p4"
-    method execute_stateful_alu(optional in bit<1> index){
-        reads {condition_hi, condition_lo,
-               update_lo_1_predicate, update_lo_1_value,
-               update_lo_2_predicate, update_lo_2_value,
-               update_hi_1_predicate, update_hi_1_value,
-               update_hi_2_predicate, update_hi_2_value,
-               math_unit_input}
-        writes {output_dst}
-    }
-
-    method execute_stateful_alu_from_hash(in field_list_calculation hash_field_list){
-        reads {condition_hi, condition_lo,
-               update_lo_1_predicate, update_lo_1_value,
-               update_lo_2_predicate, update_lo_2_value,
-               update_hi_1_predicate, update_hi_1_value,
-               update_hi_2_predicate, update_hi_2_value,
-               math_unit_input}
-        writes {output_dst}
-    }
-
-    method execute_stateful_log(){
-        reads {condition_hi, condition_lo,
-               update_lo_1_predicate, update_lo_1_value,
-               update_lo_2_predicate, update_lo_2_value,
-               update_hi_1_predicate, update_hi_1_value,
-               update_hi_2_predicate, update_hi_2_value,
-               math_unit_input}
-    }
-}
-# 31 "./int_plt.p4" 2
+#include "tofino/stateful_alu_blackbox.p4"
+# 31 "./int_plt.p4"
 # 1195 "./int_plt.p4"
 control process_int_endpoint{
 # 1234 "./int_plt.p4"
@@ -4615,8 +3934,8 @@ control process_int_egress {
 control process_int_outer_encap {
 # 1914 "./int_plt.p4"
 }
-# 143 "switch.p4" 2
-# 1 "./hashes.p4" 1
+# 143 "switch.p4"
+# 1 "./hashes.p4"
 # 27 "./hashes.p4"
 header_type hash_metadata_t {
     fields {
@@ -4833,8 +4152,8 @@ control process_hashes {
 
     apply(compute_other_hashes);
 }
-# 144 "switch.p4" 2
-# 1 "./meter.p4" 1
+# 144 "switch.p4"
+# 1 "./meter.p4"
 # 31 "./meter.p4"
  header_type meter_metadata_t {
      fields {
@@ -4860,8 +4179,8 @@ control process_meter_action {
 
 
 }
-# 145 "switch.p4" 2
-# 1 "./sflow.p4" 1
+# 145 "switch.p4"
+# 1 "./sflow.p4"
 # 94 "./sflow.p4"
 control process_ingress_sflow {
 
@@ -4869,8 +4188,8 @@ control process_ingress_sflow {
 
 
 }
-# 146 "switch.p4" 2
-# 1 "./bfd.p4" 1
+# 146 "switch.p4"
+# 1 "./bfd.p4"
 # 482 "./bfd.p4"
 control process_bfd_mirror_to_cpu {
 }
@@ -4886,8 +4205,8 @@ control process_bfd_tx_packet {
 }
 control process_bfd_recirc {
 }
-# 147 "switch.p4" 2
-# 1 "./qos.p4" 1
+# 147 "switch.p4"
+# 1 "./qos.p4"
 
 
 
@@ -4923,11 +4242,11 @@ control process_egress_qos_map {
 
 
 }
-# 148 "switch.p4" 2
-# 1 "./flowlet.p4" 1
+# 148 "switch.p4"
+# 1 "./flowlet.p4"
 # 28 "./flowlet.p4"
-# 1 "./flowlet_bmv2.p4" 1
-# 29 "./flowlet.p4" 2
+# 1 "./flowlet_bmv2.p4"
+# 29 "./flowlet.p4"
 
 
 
@@ -4997,23 +4316,23 @@ control process_flowlet {
 
     }
 }
-# 149 "switch.p4" 2
-# 1 "./pktgen.p4" 1
+# 149 "switch.p4"
+# 1 "./pktgen.p4"
 # 29 "./pktgen.p4"
 control process_pktgen {
 # 45 "./pktgen.p4"
 }
-# 150 "switch.p4" 2
-# 1 "./failover.p4" 1
+# 150 "switch.p4"
+# 1 "./failover.p4"
 # 101 "./failover.p4"
 control process_pktgen_port_down {
 
 
 
 }
-# 151 "switch.p4" 2
-# 1 "./ila.p4" 1
-# 152 "switch.p4" 2
+# 151 "switch.p4"
+# 1 "./ila.p4"
+# 152 "switch.p4"
 
 action nop() {
 }
