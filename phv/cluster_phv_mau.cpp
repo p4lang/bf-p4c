@@ -151,10 +151,24 @@ void PHV_MAU_Group::create_aligned_container_slices() {
     }
     //
     if (ingress_container_list.size()) {
-        create_aligned_container_slices(ingress_container_list);
+        std::map<int, std::list<PHV_Container *>> container_hi_s;
+        container_hi_s.clear();
+        for (auto &c : ingress_container_list) {
+           container_hi_s[c->ranges().begin()->second].push_back(c);
+        }
+        for (auto &entry : container_hi_s) {
+            create_aligned_container_slices(entry.second);
+        }
     }
     if (egress_container_list.size()) {
-        create_aligned_container_slices(egress_container_list);
+        std::map<int, std::list<PHV_Container *>> container_hi_s;
+        container_hi_s.clear();
+        for (auto &c : egress_container_list) {
+           container_hi_s[c->ranges().begin()->second].push_back(c);
+        }
+        for (auto &entry : container_hi_s) {
+            create_aligned_container_slices(entry.second);
+        }
     }
     if (vacant_container_list.size()) {
         create_aligned_container_slices(vacant_container_list);
@@ -1577,8 +1591,16 @@ std::ostream &operator<<(
     //
     // map[w][n] --> <set of <set of container_packs>>
     //
-    for (auto w : all_container_packs) {
-        for (auto n : w.second) {
+    // output in sorted order, not in map insertion order
+    //
+    std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>> cpks;
+    for (auto &w : all_container_packs) {
+        for (auto &n : w.second) {
+            cpks[w.first][n.first] = all_container_packs[w.first][n.first];
+        }
+    }
+    for (auto &w : cpks) {
+        for (auto &n : w.second) {
             out << std::endl << "\t" << "[w" << w.first << "](n" << n.first << ')';
             if (n.second.size() > 1) {
                 out << '*' << n.second.size();
