@@ -16,27 +16,10 @@ void CounterTable::setup(VECTOR(pair_t) &data) {
             format = new Format(fmt->map);
     } else
         error(lineno, "No format specified in table %s", name());
-    VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
     for (auto &kv : MapIterChecked(data, true)) {
-        if (kv.key == "format") {
+        if (common_setup(kv, data, P4Table::Statistics)) {
+        } else if (kv.key == "format") {
             /* done above to be done before vpns */
-        } else if (kv.key == "vpns") {
-            if (kv.value == "null")
-                no_vpns = true;
-            else if (CHECKTYPE(kv.value, tVEC))
-                setup_vpns(layout, &kv.value.vec, true);
-        } else if (kv.key == "p4") {
-            if (CHECKTYPE(kv.value, tMAP))
-                p4_table = P4Table::get(P4Table::Statistics, kv.value.map);
-        } else if (kv.key == "p4_table") {
-            push_back(p4_info, "name", std::move(kv.value));
-        } else if (kv.key == "p4_table_size") {
-            push_back(p4_info, "size", std::move(kv.value));
-        } else if (kv.key == "handle") {
-            push_back(p4_info, "handle", std::move(kv.value));
-        } else if (kv.key == "maprams") {
-            if (CHECKTYPE(kv.value, tVEC))
-                setup_maprams(&kv.value.vec);
         } else if (kv.key == "count") {
             if (kv.value == "bytes")
                 type = BYTES;
@@ -45,22 +28,9 @@ void CounterTable::setup(VECTOR(pair_t) &data) {
             else if (kv.value == "both" || kv.value == "packets_and_bytes")
                 type = BOTH;
             else error(kv.value.lineno, "Unknown counter type %s", value_desc(kv.value));
-        } else if (kv.key == "global_binding") {
-            global_binding = get_bool(kv.value);
-        } else if (kv.key == "per_flow_enable") {
-            per_flow_enable = get_bool(kv.value);
-        } else if (kv.key == "row" || kv.key == "logical_row" ||
-                   kv.key == "column" || kv.key == "bus") {
-            /* already done in setup_layout */
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
-    if (p4_info.size) {
-        if (p4_table)
-            error(p4_info[0].key.lineno, "old and new p4 table info in %s", name());
-        else
-            p4_table = P4Table::get(P4Table::Statistics, p4_info); }
-    fini(p4_info);
     alloc_rams(true, stage->sram_use);
 }
 
@@ -118,7 +88,7 @@ void CounterTable::write_merge_regs(MatchTable *match, int type, int bus, const 
 void CounterTable::write_regs() {
     LOG1("### Counter table " << name() << " write_regs");
     // FIXME -- factor common AttachedTable::write_regs
-    // FIXME -- factor common StatsTable::write_regs
+    // FIXME -- factor common Synth2Port::write_regs
     // FIXME -- factor common MeterTable::write_regs
     Layout *home = &layout[0];
     bool push_on_overflow = false;
@@ -126,14 +96,17 @@ void CounterTable::write_regs() {
     auto &adrdist = stage->regs.rams.match.adrdist;
     DataSwitchboxSetup swbox(stage, home->row/2U);
     int minvpn = 1000000, maxvpn = -1;
-    if (options.match_compiler) {
+    if (options.match_compiler && 0) {
         minvpn = 0;
         maxvpn = layout_size() - 2;
-    } else
+    } else {
         for (Layout &logical_row : layout)
             for (auto v : logical_row.vpns) {
                 if (v < minvpn) minvpn = v;
                 if (v > maxvpn) maxvpn = v; }
+        if (maxvpn > minvpn) {
+            // last one is spare bank -- don't include it
+            --maxvpn; } }
     for (Layout &logical_row : layout) {
         unsigned row = logical_row.row/2U;
         unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
@@ -261,16 +234,10 @@ void CounterTable::write_regs() {
 }
 
 void CounterTable::gen_tbl_cfg(json::vector &out) {
+    // FIXME -- factor common Synth2Port stuff
     int size = (layout_size() - 1)*1024*format->groups();
     json::map &tbl = *base_tbl_cfg(out, "statistics", size);
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "statistics", size);
-    stage_tbl["how_referenced"] = indirect ? "indirect" : "direct";
-    add_pack_format(stage_tbl, 128, 1, format->groups());
-    stage_tbl["memory_resource_allocation"] =
-            gen_memory_resource_allocation_tbl_cfg("sram", layout, true);
-    stage_tbl["stage_table_handle"] = logical_id;
-    tbl.erase("p4_selection_tables");
-    tbl.erase("p4_action_data_tables");
     if (auto *f = lookup_field("bytes"))
         stage_tbl["byte_width"] = f->size;
     else
@@ -289,27 +256,4 @@ void CounterTable::gen_tbl_cfg(json::vector &out) {
     default: break; }
     tbl["lrt_enable"] = false;
     tbl["saturating"] = false;  // FIXME?
-    tbl["enable_per_flow_enable"] = per_flow_enable;
-    json::vector &bindings = tbl["binding"];
-    if (global_binding) {
-        if (bindings.empty()) {
-            bindings.push_back("global");
-            bindings.push_back(nullptr);
-        } else if (*bindings[0] != (indirect ? "static" : "direct"))
-            ERROR("Incompatible bindings for " << name());
-    } else {
-        if (bindings.empty())
-            bindings.push_back(indirect ? "static" : "direct");
-        else if (*bindings[0] != (indirect ? "static" : "direct"))
-            ERROR("Incompatible bindings for " << name());
-        for (auto table : match_tables) {
-            const char *name = table->p4_name();
-            if (!name) name = table->name();
-            size_t i;
-            for (i = 1; i < bindings.size(); ++i)
-                if (*bindings[i] == name)
-                    break;
-            if (i == bindings.size())
-                bindings.push_back(name); } }
-
 }

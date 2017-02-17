@@ -260,7 +260,7 @@ void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool a
                 break; } }
 }
 
-bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data) {
+bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p4type) {
     if (kv.key == "action") {
         action.setup(kv.value, this);
     } else if (kv.key == "action_enable") {
@@ -312,14 +312,14 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data) {
             setup_vpns(layout, &kv.value.vec);
     } else if (kv.key == "p4") {
         if (CHECKTYPE(kv.value, tMAP))
-            p4_table = P4Table::get(P4Table::MatchEntry, kv.value.map);
+            p4_table = P4Table::get(p4type, kv.value.map);
     } else
         return false;
     return true;
 }
 
-bool MatchTable::common_setup(pair_t &kv, const VECTOR(pair_t) &data) {
-    if (Table::common_setup(kv, data)) {
+bool MatchTable::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p4type) {
+    if (Table::common_setup(kv, data, p4type)) {
         return true; }
     if (kv.key == "gateway") {
         if (CHECKTYPE(kv.value, tMAP)) {

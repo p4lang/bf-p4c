@@ -10,28 +10,11 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
     auto *row = get(data, "row");
     if (!row) row = get(data, "logical_row");
     setup_layout(layout, row, get(data, "column"), get(data, "bus"));
-    VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
     for (auto &kv : MapIterChecked(data, true)) {
-        if (kv.key == "input_xbar") {
+        if (common_setup(kv, data, P4Table::Meter)) {
+        } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
                 input_xbar = new InputXbar(this, false, kv.value.map);
-        } else if (kv.key == "vpns") {
-            if (kv.value == "null")
-                no_vpns = true;
-            else if (CHECKTYPE(kv.value, tVEC))
-                setup_vpns(layout, &kv.value.vec, true);
-        } else if (kv.key == "p4") {
-            if (CHECKTYPE(kv.value, tMAP))
-                p4_table = P4Table::get(P4Table::Meter, kv.value.map);
-        } else if (kv.key == "p4_table") {
-            push_back(p4_info, "name", std::move(kv.value));
-        } else if (kv.key == "p4_table_size") {
-            push_back(p4_info, "size", std::move(kv.value));
-        } else if (kv.key == "handle") {
-            push_back(p4_info, "handle", std::move(kv.value));
-        } else if (kv.key == "maprams") {
-            if (CHECKTYPE(kv.value, tVEC))
-                setup_maprams(&kv.value.vec);
         } else if (kv.key == "color_aware") {
             if (kv.value == "per_flow")
                 color_aware = color_aware_per_flow_enable = true;
@@ -66,28 +49,15 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "sweep_interval") {
             if (CHECKTYPE(kv.value, tINT))
                 sweep_interval = kv.value.i;
-        } else if (kv.key == "global_binding") {
-            global_binding = get_bool(kv.value);
-        } else if (kv.key == "per_flow_enable") {
-            per_flow_enable = get_bool(kv.value);
-        } else if (kv.key == "row" || kv.key == "logical_row" ||
-                   kv.key == "column" || kv.key == "bus") {
-            /* already done in setup_layout */
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
-    if (p4_info.size) {
-        if (p4_table)
-            error(p4_info[0].key.lineno, "old and new p4 table info in %s", name());
-        else
-            p4_table = P4Table::get(P4Table::Meter, p4_info); }
-    fini(p4_info);
     alloc_rams(true, stage->sram_use);
 }
 
 void MeterTable::pass1() {
     LOG1("### Meter table " << name() << " pass1");
-    if (!p4_table) p4_table = P4Table::alloc(P4Table::Statistics, this);
+    if (!p4_table) p4_table = P4Table::alloc(P4Table::Meter, this);
     else p4_table->check(this);
     alloc_vpns();
     alloc_maprams();
@@ -396,19 +366,13 @@ void MeterTable::write_regs() {
 }
 
 void MeterTable::gen_tbl_cfg(json::vector &out) {
+    // FIXME -- factor common Synth2Port stuff
     int size = (layout_size() - 1)*1024;
     json::map &tbl = *base_tbl_cfg(out, "meter", size);
     json::map &stage_tbl = *add_stage_tbl_cfg(tbl, "meter", size);
-    stage_tbl["how_referenced"] = indirect ? "indirect" : "direct";
-    add_pack_format(stage_tbl, 128, 1, 1);
-    stage_tbl["memory_resource_allocation"] =
-            gen_memory_resource_allocation_tbl_cfg("sram", layout, true);
-    stage_tbl["stage_table_handle"] = logical_id;
     stage_tbl["color_map_ram_resource_allocation"] =
             gen_memory_resource_allocation_tbl_cfg("map_ram", color_maprams);
     stage_tbl["meter_sweep_interval"] = sweep_interval;
-    tbl.erase("p4_selection_tables");
-    tbl.erase("p4_action_data_tables");
     switch (type) {
     case STANDARD: tbl["meter_type"] = "standard"; break;
     case LPF: tbl["meter_type"] = "lpf"; break;
@@ -418,28 +382,6 @@ void MeterTable::gen_tbl_cfg(json::vector &out) {
     case PACKETS: tbl["meter_granularity"] = "packets"; break;
     case BYTES: tbl["meter_granularity"] = "bytes"; break;
     default: break; }
-    tbl["enable_per_flow_enable"] = per_flow_enable;
     tbl["enable_color_aware"] = color_aware;
     tbl["enable_color_aware_per_flow_enable"] = color_aware_per_flow_enable;
-    json::vector &bindings = tbl["binding"];
-    if (global_binding) {
-        if (bindings.empty()) {
-            bindings.push_back("global");
-            bindings.push_back(nullptr);
-        } else if (*bindings[0] != (indirect ? "static" : "direct"))
-            ERROR("Incompatible bindings for " << name());
-    } else {
-        if (bindings.empty())
-            bindings.push_back(indirect ? "static" : "direct");
-        else if (*bindings[0] != (indirect ? "static" : "direct"))
-            ERROR("Incompatible bindings for " << name());
-        for (auto table : match_tables) {
-            const char *name = table->p4_name();
-            if (!name) name = table->name();
-            size_t i;
-            for (i = 1; i < bindings.size(); ++i)
-                if (*bindings[i] == name)
-                    break;
-            if (i == bindings.size())
-                bindings.push_back(name); } }
 }

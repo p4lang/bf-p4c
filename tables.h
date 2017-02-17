@@ -24,7 +24,7 @@ struct Instruction;
 class InputXbar;
 class MatchTable;
 class SelectionTable;
-class StatsTable;
+class Synth2Port;
 class Stage;
 
 class Table {
@@ -49,7 +49,7 @@ protected:
     Table(const Table &) = delete;
     Table(Table &&) = delete;
     virtual void setup(VECTOR(pair_t) &data) = 0;
-    virtual bool common_setup(pair_t &, const VECTOR(pair_t) &);
+    virtual bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type);
     void setup_layout(std::vector<Layout> &, value_t *row, value_t *col, value_t *bus, const char *subname = "");
     void setup_logical_id();
     void setup_actions(value_t &);
@@ -255,12 +255,13 @@ public:
     virtual void pass1() = 0;
     virtual void pass2() = 0;
     virtual void write_merge_regs(int type, int bus) { assert(0); }
-    virtual void write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args) { assert(0); }
+    virtual void write_merge_regs(MatchTable *match, int type, int bus,
+                                  const std::vector<Call::Arg> &args) { assert(0); }
     virtual void write_regs() = 0;
     virtual void gen_tbl_cfg(json::vector &out) = 0;
     virtual void gen_name_lookup(json::map &out) {}
-    json::map *base_tbl_cfg(json::vector &out, const char *type, int size);
-    json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size);
+    virtual json::map *base_tbl_cfg(json::vector &out, const char *type, int size);
+    virtual json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size);
     virtual std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(
             const char *type, std::vector<Layout> &layout, bool skip_spare_bank = false);
     enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER,
@@ -381,14 +382,14 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     void pass1(int type);
     using Table::write_regs;
     void write_regs(int type, Table *result);
-    bool common_setup(pair_t &, const VECTOR(pair_t) &);
+    bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type) override;
 public:
     const AttachedTables *get_attached() const { return &attached; }
     const GatewayTable *get_gateway() const { return gateway; }
     MatchTable *get_match_table() { return this; }
     std::set<MatchTable *> get_match_tables() { return std::set<MatchTable *>{this}; }
     void gen_name_lookup(json::map &out);
-    bool run_at_eop() { return attached.run_at_eop(); }
+    bool run_at_eop() override { return attached.run_at_eop(); }
     virtual bool is_ternary() { return false; }
 )
 
@@ -402,12 +403,12 @@ class TYPE : public PARENT {                                            \
     friend struct Type;                                                 \
     TYPE(int l, const char *n, gress_t g, Stage *s, int lid)            \
         : PARENT(l, n, g, s, lid) {}                                    \
-    void setup(VECTOR(pair_t) &data);                                   \
+    void setup(VECTOR(pair_t) &data) override;                          \
 public:                                                                 \
-    void pass1();                                                       \
-    void pass2();                                                       \
-    void write_regs();                                                  \
-    void gen_tbl_cfg(json::vector &out);                                \
+    void pass1() override;                                              \
+    void pass2() override;                                              \
+    void write_regs() override;                                         \
+    void gen_tbl_cfg(json::vector &out) override;                       \
 private:                                                                \
     __VA_ARGS__                                                         \
 };
@@ -517,7 +518,7 @@ DECLARE_TABLE_TYPE(Phase0MatchTable, Table, "phase0_match",
 DECLARE_TABLE_TYPE(HashActionTable, MatchTable, "hash_action",
 public:
     int                                 row = -1, bus = -1;
-    void write_merge_regs(int type, int bus);
+    void write_merge_regs(int type, int bus) override;
 )
 
 DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
@@ -643,7 +644,8 @@ public:
     table_type_t table_type() { return SELECTION; }
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
         width = period = 1; depth = layout_size(); period_name = 0; }
-    void write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args);
+    void write_merge_regs(MatchTable *match, int type, int bus,
+                          const std::vector<Call::Arg> &args) override;
     unsigned address_shift() const { return 7 + ceil_log2(min_words); }
     unsigned meter_group() const { return layout.at(0).row/4U; }
 )
@@ -668,10 +670,10 @@ public:
         width = period = 1; depth = layout_size(); period_name = 0; }
     int memunit(int r, int c) { return r*6 + c; }
     int precision_shift();
-    void pass1();
-    void pass2();
-    void write_merge_regs(int type, int bus);
-    void write_regs();
+    void pass1() override;
+    void pass2() override;
+    void write_merge_regs(int type, int bus) override;
+    void write_regs() override;
     void gen_tbl_cfg(json::vector &out) { /* nothing at top level */ }
     void gen_stage_tbl_cfg(json::map &out);
     static IdletimeTable *create(int lineno, const std::string &name, gress_t gress,
@@ -681,39 +683,51 @@ public:
         return rv; }
 };
 
-DECLARE_ABSTRACT_TABLE_TYPE(StatsTable, AttachedTable,
+DECLARE_ABSTRACT_TABLE_TYPE(Synth2Port, AttachedTable,
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
         width = period = 1; depth = layout_size(); period_name = 0; }
-public:
-    virtual void write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args) = 0;
-)
-
-DECLARE_TABLE_TYPE(CounterTable, StatsTable, "counter",
-    enum { NONE=0, PACKETS=1, BYTES=2, BOTH=3 } type = NONE;
-    table_type_t table_type() { return COUNTER; }
-    void write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args);
     bool                per_flow_enable = false;
     bool                global_binding = false;
+    json::map *base_tbl_cfg(json::vector &out, const char *type, int size) override;
+    json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size) override;
 public:
-    int direct_shiftcount();
-    bool run_at_eop() { return (type&BYTES) != 0; }
+    virtual void write_merge_regs(MatchTable *match, int type, int bus,
+                                  const std::vector<Call::Arg> &args) = 0;
+    virtual void write_regs() override;
+    bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type) override;
+
 )
 
-DECLARE_TABLE_TYPE(MeterTable, StatsTable, "meter",
+DECLARE_TABLE_TYPE(CounterTable, Synth2Port, "counter",
+    enum { NONE=0, PACKETS=1, BYTES=2, BOTH=3 } type = NONE;
+    table_type_t table_type() { return COUNTER; }
+    void write_merge_regs(MatchTable *match, int type, int bus,
+                          const std::vector<Call::Arg> &args) override;
+public:
+    int direct_shiftcount() override;
+    bool run_at_eop() override { return (type&BYTES) != 0; }
+)
+
+DECLARE_TABLE_TYPE(MeterTable, Synth2Port, "meter",
     enum { NONE=0, STANDARD=1, LPF=2, RED=3 }   type = NONE;
     enum { NONE_=0, PACKETS=1, BYTES=2 }        count = NONE_;
     std::vector<Layout>                         color_maprams;
     table_type_t table_type() { return METER; }
-    void write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args);
+    void write_merge_regs(MatchTable *match, int type, int bus,
+                          const std::vector<Call::Arg> &args) override;
     int                 sweep_interval = 2;
-    bool                per_flow_enable = false;
-    bool                global_binding = false;
 public:
-    int direct_shiftcount();
+    int direct_shiftcount() override;
     bool                color_aware = false;
     bool                color_aware_per_flow_enable = false;
-    bool run_at_eop() { return type == STANDARD; }
-    // int direct_shiftcount();
+    bool run_at_eop() override { return type == STANDARD; }
+)
+
+DECLARE_TABLE_TYPE(Stateful, Synth2Port, "stateful",
+    void write_merge_regs(MatchTable *match, int type, int bus,
+                          const std::vector<Call::Arg> &args) override;
+public:
+    int direct_shiftcount() override;
 )
 
 #endif /* _tables_h_ */

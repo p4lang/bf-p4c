@@ -15,9 +15,8 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
     if (auto *fmt = get(data, "format")) {
         if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
             format = new Format(fmt->map); }
-    VECTOR(pair_t) p4_info = EMPTY_VECTOR_INIT;
     for (auto &kv : MapIterChecked(data)) {
-        if (common_setup(kv, data)) {
+        if (common_setup(kv, data, P4Table::MatchEntry)) {
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
                 input_xbar = new InputXbar(this, false, kv.value.map);
@@ -58,21 +57,9 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
                         for (auto &v : kv.value[i].vec)
                             if (CHECKTYPE(v, tINT))
                                 word_info[i].push_back(v.i); } }
-        } else if (kv.key == "p4_table") {
-            push_back(p4_info, "name", std::move(kv.value));
-        } else if (kv.key == "p4_table_size") {
-            push_back(p4_info, "size", std::move(kv.value));
-        } else if (kv.key == "handle") {
-            push_back(p4_info, "handle", std::move(kv.value));
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
-    if (p4_info.size) {
-        if (p4_table)
-            error(p4_info[0].key.lineno, "old and new p4 table info in %s", name());
-        else
-            p4_table = P4Table::get(P4Table::MatchEntry, p4_info); }
-    fini(p4_info);
     alloc_rams(false, stage->sram_use, &stage->sram_match_bus_use);
     if (layout_size() > 0 && !format)
         error(lineno, "No format specified in table %s", name());

@@ -93,35 +93,50 @@ void do_prefix(int indent, const char *prefix) {
 
 void do_output(json::obj *o, int indent, const char *prefix, const char *suffix = "") {
     do_prefix(indent, prefix);
-    o->print_on(std::cout, indent, 80-indent, prefix);
+    if (o)
+        o->print_on(std::cout, indent, 80-indent, prefix);
+    else
+        std::cout << "null";
     std::cout << suffix;
 }
 
 void do_output(int index, json::vector::iterator p, int indent, const char *prefix) {
     do_prefix(indent, prefix);
     std::cout << '[' << index << "] ";
-    (*p)->print_on(std::cout, indent, 80-indent, prefix);
+    if (*p)
+        (*p)->print_on(std::cout, indent, 80-indent, prefix);
+    else
+        std::cout << "null";
 }
 
 void do_output(json::map::iterator p, int indent, const char *prefix) {
     do_prefix(indent, prefix);
     p->first->print_on(std::cout, indent, 80-indent, prefix);
     std::cout << ": ";
-    p->second->print_on(std::cout, indent, 80-indent, prefix);
+    if (p->second)
+        p->second->print_on(std::cout, indent, 80-indent, prefix);
+    else
+        std::cout << "null";
 }
 
 void do_output(std::map<json::obj *, json::map *, json::obj::ptrless>::iterator p, int indent, const char *prefix) {
     do_prefix(indent, prefix);
     p->first->print_on(std::cout, indent, 80-indent, prefix);
     std::cout << ": ";
-    p->second->print_on(std::cout, indent, 80-indent, prefix);
+    if (p->second)
+        p->second->print_on(std::cout, indent, 80-indent, prefix);
+    else
+        std::cout << "null";
 }
 
 void do_output(std::map<json::obj *, json::obj *, json::obj::ptrless>::iterator p, int indent, const char *prefix) {
     do_prefix(indent, prefix);
     p->first->print_on(std::cout, indent, 80-indent, prefix);
     std::cout << ": ";
-    p->second->print_on(std::cout, indent, 80-indent, prefix);
+    if (p->second)
+        p->second->print_on(std::cout, indent, 80-indent, prefix);
+    else
+        std::cout << "null";
 }
 
 bool equiv(json::obj *a, json::obj *b, json::obj *key = nullptr);
