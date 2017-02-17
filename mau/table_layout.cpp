@@ -33,11 +33,11 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
     else if (auto k = tbl->match_table->getConstantProperty("min_size"))
         layout.entries = k->asInt();
     auto key = tbl->match_table->getKey();
-    if (key)
+    if (key) {
         for (auto t : *key->keyElements)
             if (t->matchType->path->name == "ternary" || t->matchType->path->name == "lpm") {
                 layout.ternary = true;
-                break; }
+                break; } }
     layout.match_width_bits = 0;
     if (key) {
         for (auto el : *key->keyElements) {
@@ -127,7 +127,6 @@ static void setup_hash_dist(IR::MAU::Table *tbl, const PhvInfo &phv, HashDistCho
     vector<HashDistReq> hash_dist_reqs;
     for (auto action : Values(tbl->actions)) {
         for (const IR::Primitive* instr : action->action) {
-            LOG1("instr name " << instr->name);
             if (instr->name == "modify_field_with_hash_based_offset")
                 hash_dist_reqs.emplace_back(true, instr, nullptr);
         }
@@ -136,15 +135,13 @@ static void setup_hash_dist(IR::MAU::Table *tbl, const PhvInfo &phv, HashDistCho
         const IR::MAU::MAUCounter *cnt = at->to<IR::MAU::MAUCounter>();
         const IR::MAU::MAUMeter *mtr = at->to<IR::MAU::MAUMeter>();
         if (cnt != nullptr) {
-            LOG1("Counter");
-            LOG1("cnt->indirect index " << cnt->indirect_index);
-            LOG1("Counter id " << cnt->id);
             if (cnt->indirect_index && phv.field(cnt->indirect_index) != nullptr) {
                 hash_dist_reqs.emplace_back(true, nullptr, cnt);
-                LOG1("At layout is address " << hash_dist_reqs.back().is_address());
+                if (hash_dist_reqs.back().bits_required(phv) > 23)
+                    BUG("The size of this particular field %s is too large to be "
+                         "used as an address", cnt->indirect_index);
             }
         } else if (mtr != nullptr) {
-            LOG1("Meter in here");
             if (mtr->indirect_index && phv.field(mtr->indirect_index) != nullptr)
                 hash_dist_reqs.emplace_back(true, nullptr, mtr);
         }
@@ -229,12 +226,13 @@ void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_
 void TableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl, int immediate_bytes_reserved) {
     IR::MAU::Table::Layout *layout = new IR::MAU::Table::Layout();
     *layout = tbl->layout;
-    LOG1("Layout no match");
     if (layout->action_data_bytes - immediate_bytes_reserved <= 4) {
         layout->action_data_bytes_in_overhead = layout->action_data_bytes;
     }
-    if (!hdc.get_hash_dist_req(tbl).empty())
+    if (!hdc.get_hash_dist_req(tbl).empty()) {
+        tbl->layout.hash_action = true;
         layout->hash_action = true;
+    }
     IR::MAU::Table::LayoutOption lo(layout);
     tbl->layout_options.push_back(lo);
 }

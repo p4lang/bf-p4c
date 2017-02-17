@@ -75,6 +75,10 @@ struct IXBar {
         bool            ternary;
         bool            gw_search_bus;  int gw_search_bus_bytes;
         bool            gw_hash_group;
+
+        enum algorithm_t { ExactMatch, Random, CRC16, CRC32, Identity };
+        enum hash_dist_type_t { CounterPtr = 1, MeterPtr = 2, RegisterPtr = 4, Immediate = 8,
+                                MeterPre = 16, SelectMod = 32 };
         /* tracking individual bytes (or parts of bytes) placed on the ixbar */
         struct Byte {
             cstring     field;
@@ -111,8 +115,9 @@ struct IXBar {
         vector<Way>     way_use;
 
         struct Select {
-            int        group;
-            unsigned   bit_mask;
+            int          group;
+            unsigned     bit_mask;
+            algorithm_t  alg;
             explicit Select(int g) : group(g), bit_mask(0) {}
         };
         vector<Select> select_use;
@@ -120,13 +125,16 @@ struct IXBar {
         struct HashDist {
             vector<Byte>      use;
             unsigned          hash_table_input;
-            int               group;
-            unsigned          slice;
-            unsigned long     bit_mask;
-            explicit HashDist() : use(), group(-1), slice(0), bit_mask(0) {}
+            int               unit = -1;
+            int               group = -1;
+            unsigned          slice = 0;
+            unsigned long     bit_mask = 0;
+            int               shift = 0;
+            algorithm_t       alg;
+            hash_dist_type_t  type;
+            HashDist() : use(), group(-1) {}
         };
         vector<HashDist> hash_dist_use;
-        
 
         void clear() { use.clear(); memset(hash_table_inputs, 0, sizeof(hash_table_inputs));
                        bit_use.clear(); way_use.clear(); select_use.clear();
@@ -157,19 +165,19 @@ struct IXBar {
         bool second_hash_open = true;
         type_t first_hash_dist = FREE;
         type_t second_hash_dist = FREE;
-    
+
         bool first_hash_dist_avail() {
             return first_hash_dist == HASH_DIST || first_hash_dist == FREE;
         }
-    
+
         bool second_hash_dist_avail() {
             return second_hash_dist == HASH_DIST || second_hash_dist == FREE;
         }
-    
+
         bool first_hash_dist_only() {
             return first_hash_dist == HASH_DIST;
         }
-    
+
         bool second_hash_dist_only() {
             return second_hash_dist == HASH_DIST;
         }
@@ -177,7 +185,7 @@ struct IXBar {
             out << group << " found: " << found << " free: " << free;
         }
     };
-    
+
     /* A struct use for TCAM split between 2 groups.  Mid bytes are for the individual
        byte groups within the two ternary groups.  Only one grp_use is necessary for the
        calculation of the SRAM xbar */
@@ -225,6 +233,7 @@ struct IXBar {
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_alloc, Use &gw_alloc,
                     Use &sel_alloc, const IR::MAU::Table::LayoutOption *lo,
                     const vector<HashDistReq> &hash_dist_reqs);
+    void update_hash_dist(cstring name, const Use &alloc);
     void update(cstring name, const Use &alloc);
     void update(cstring name, const TableResourceAlloc *alloc);
     void update(const IR::MAU::Table *tbl) {

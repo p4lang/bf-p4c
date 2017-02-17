@@ -98,6 +98,7 @@ struct Memories {
         vector<Row>                          color_mapram;
         vector<std::pair<int, int>>          home_row;
         vector<Way>                          ways;
+        unsigned long                        payload = 0;
         int                                  per_row;
         bool                                 unattached_profile = false;
         cstring                              profile_name;
@@ -383,11 +384,14 @@ struct Memories {
                                   int action_RAMs_available, int suppl_RAMs_available);
     void action_bus_users_log();
     bool allocate_all_gw();
+    bool allocate_all_payload_gw();
+    bool allocate_all_normal_gw();
+    bool allocate_all_hash_action_gw();
     table_alloc *find_corresponding_exact_match(cstring name);
     bool gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int width_sect,
                            int row, int col);
     bool allocate_all_no_match();
-    void allocate_one_no_match(table_alloc *ta, int row, int col);
+    void allocate_one_no_match(table_alloc *ta, int row, int col, bool hash_action);
     void update(cstring table_name, const Use &alloc);
     void update(const map<cstring, Use> &alloc);
     void remove(cstring table_name, const Use &alloc);

@@ -168,49 +168,47 @@ class MauAsmOutput::ActionDataFormat : public Inspector {
 struct FormatHash {
     vector<Slice> match_data;
     vector<Slice> ghost;
-    const IR::ActionSelector *as;
-    FormatHash(vector<Slice> md, vector<Slice> g, const IR::ActionSelector *a = nullptr)
-        : match_data(md), ghost(g), as(a) {}
+    const IXBar::Use::algorithm_t alg;
+    FormatHash(vector<Slice> md, vector<Slice> g, IXBar::Use::algorithm_t a)
+        : match_data(md), ghost(g), alg(a) {}
 };
 
 // FIXME: This is a simple function for crc polynomial.  Probably needs to be expanded for
 // actual use of the assembly
-static cstring inline crc_poly(cstring number) {
-    if (number == "16")
+static cstring inline crc_poly(int number) {
+    if (number == 16)
         return "0x8fdb";
     else  // if (number == "32")
         return "0xe89061db";
 }
 
 std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
-    if (hash.as != nullptr) {
-        cstring alg_name = hash.as->key_fields->algorithm.name;
-        if (strncmp(alg_name, "crc", 3) == 0) {
-            out << "stripe(crc(" << crc_poly(alg_name.substr(3)) << ", "
-                << emit_vector(hash.match_data, ", ") << "))";
-        } else if (alg_name == "random") {
+    if (hash.alg == IXBar::Use::ExactMatch) {
+        if (!hash.match_data.empty()) {
             out << "random(" << emit_vector(hash.match_data, ", ") << ")";
-        // FIXME: Not sure if this is correct for identity for asm output
-        } else if (alg_name == "identity" || alg_name == "identity_lsb") {
-            out << hash.match_data[0];
-        } else {
-            BUG("Algorithm %s for %s is not recognized", alg_name, hash.as->name);
+            if (!hash.ghost.empty()) out << " ^ ";
         }
-        return out;
-    }
-    if (!hash.match_data.empty()) {
+        if (!hash.ghost.empty()) {
+            out << "stripe(" << emit_vector(hash.ghost, ", ") << ")";
+        }
+    } else if (hash.alg == IXBar::Use::Random) {
         out << "random(" << emit_vector(hash.match_data, ", ") << ")";
-        if (!hash.ghost.empty()) out << " ^ "; }
-    if (!hash.ghost.empty())
-        out << "stripe(" << emit_vector(hash.ghost, ", ") << ")";
+    } else if (hash.alg == IXBar::Use::CRC16) {
+        out << "stripe(crc(" << crc_poly(16) << ", " << emit_vector(hash.match_data, ", ") << "))";
+    } else if (hash.alg == IXBar::Use::CRC32) {
+        out << "stripe(crc(" << crc_poly(16) << ", " << emit_vector(hash.match_data, ", ") << "))";
+    } else if (hash.alg == IXBar::Use::Identity) {
+        out << hash.match_data[0];
+    } else {
+        BUG("Hashing Algorithm is not recognized");
+    }
     return out;
 }
 
-void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
-        const IXBar::Use &use, const Memories::Use *mem, const TableFormat *fmt,
-        bool is_sel /*= false*/, const IR::ActionSelector *as /*= nullptr */) const {
-    map<int, map<int, Slice>> sort;
-    for (auto &b : use.use) {
+/* Calculate the hash tables used by an individual P4 table in the IXBar */
+void MauAsmOutput::emit_ixbar_gather_bytes(const vector<IXBar::Use::Byte> &use,
+        map<int, map<int, Slice>> &sort) const {
+    for (auto &b : use) {
         Slice sl(phv, b.field, b.lo, b.hi);
         auto n = sort[b.loc.group].emplace(b.loc.byte*8 + sl.bytealign(), sl);
         assert(n.second);
@@ -224,8 +222,18 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
                 if (j && it->first + it->second.width() == next->first) {
                     it->second = j;
                     group.second.erase(next);
-                    continue; } }
-            it = next; } }
+                    continue;
+                }
+            }
+            it = next;
+        }
+    }
+}
+
+/* Generate asm for the way information, such as the size, select mask, and specifically which
+   RAMs belong to a specific way */
+void MauAsmOutput::emit_ixbar_ways(std::ostream &out, indent_t indent,
+        const IXBar::Use &use, const Memories::Use *mem, bool is_sel) const {
     if (!use.way_use.empty() && !is_sel) {
         out << indent << "ways:" << std::endl;
         auto memway = mem->ways.begin();
@@ -243,7 +251,139 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
             ++memway;
         }
     }
-    if (use.use.empty()) return;
+}
+
+/* Generate asm for the hash distribution unit, specifically the unit, group, mask and shift value
+   found in each hash dist assembly */
+void MauAsmOutput::emit_ixbar_hash_dist(std::ostream &out, indent_t indent,
+        const IXBar::Use &use/*, const IR::MAU::Table *tbl*/) const {
+    if (use.hash_dist_use.empty())
+        return;
+    out << indent++ << "hash_dist:" << std::endl;
+    for (auto &hash_dist : use.hash_dist_use) {
+        out << indent << hash_dist.unit << ": {";
+        out << "hash: " << hash_dist.unit;
+        int group = 0;
+        for (int i = 0; i < IXBar::HASH_DIST_GROUPS; i++) {
+            if ((1 << i) & hash_dist.slice) {
+                group = i;
+            }
+        }
+        unsigned mask = hash_dist.bit_mask >> (IXBar::HASH_DIST_BITS * group);
+        out << ", mask: 0x" << hex(mask);
+        out << ", shift: " << hash_dist.shift;
+        out << "}" << std::endl;
+    }
+    indent--;
+}
+
+/* Determine which bytes of a table's input xbar belong to an individual hash table,
+   so that we can output the hash of this individual table. */
+void MauAsmOutput::emit_ixbar_hash_table(int hash_table, vector<Slice> &match_data,
+        vector<Slice> &ghost, const TableFormat *fmt, map<int, map<int, Slice>> &sort) const {
+    unsigned half = hash_table & 1;
+    for (auto &match : sort.at(hash_table/2)) {
+        Slice reg = match.second;
+        if (match.first/64U != half) {
+            if ((match.first + reg.width() - 1)/64U != half)
+                continue;
+            assert(half);
+            reg = reg(64 - match.first, 64);
+        } else if ((match.first + reg.width() - 1)/64U != half) {
+            assert(!half);
+            reg = reg(0, 63 - match.first); }
+        if (!reg) continue;
+        if (fmt != nullptr) {
+            auto reg_hash = reg - fmt->ghost_bits;
+            if (auto reg_ghost = reg - reg_hash)
+                ghost.push_back(reg_ghost);
+            if (reg_hash)
+                match_data.emplace_back(reg_hash);
+        } else {
+            match_data.emplace_back(reg);
+        }
+    }
+}
+
+/* Generate asm for the hash of a table, specifically either a match, gateway, or selector
+   table.  Not used for hash distribution hash */
+void MauAsmOutput::emit_ixbar_hash(std::ostream &out, indent_t indent, vector<Slice> &match_data,
+        vector<Slice> &ghost, const IXBar::Use &use, int hash_group,
+        const IR::ActionSelector *as) const {
+    unsigned done = 0; unsigned mask_bits = 0;
+    if (as != nullptr) {
+        if (as->mode == "fair")
+            out << indent << "0..13: "
+                << FormatHash(match_data, ghost, use.select_use.back().alg) << std::endl;
+        else
+            out << indent << "0..50: "
+                << FormatHash(match_data, ghost, use.select_use.back().alg) << std::endl;
+    }
+    for (auto &way : use.way_use) {
+        mask_bits |= way.mask;
+        if (done & (1 << way.slice)) continue;
+        done |= 1 << way.slice;
+        out << indent << (way.slice*10) << ".." << (way.slice*10 + 9) << ": "
+            << FormatHash(match_data, ghost, IXBar::Use::ExactMatch) << std::endl;
+    }
+    for (auto range : bitranges(mask_bits)) {
+        out << indent << (range.first+40);
+        if (range.second != range.first) out << ".." << (range.second+40);
+        out << ": " << FormatHash(match_data, ghost, IXBar::Use::ExactMatch) << std::endl;
+    }
+    for (auto ident : use.bit_use) {
+        out << indent << (40 + ident.bit);
+        if (ident.width > 1)
+            out << ".." << (39 + ident.bit + ident.width);
+        out << ": " << Slice(phv, ident.field, ident.lo, ident.lo + ident.width - 1)
+            << std:: endl;
+        assert(hash_group == -1 || hash_group == ident.group);
+    }
+}
+
+/* Generate Assembly for an individual hash distribution P4 requirement, specifically the
+   hash tables and hash bits required on the hash input xbar */
+void MauAsmOutput::emit_ixbar_hash_dist_hash(std::ostream &out, indent_t indent,
+        vector<Slice> &match_data, vector<Slice> &ghost,
+        const IXBar::Use::HashDist &hash_dist) const {
+    for (int i = 0; i < IXBar::HASH_DIST_GROUPS; i++) {
+        if (((1 << i) & hash_dist.slice) == 0) continue;
+        int first_bit = i * IXBar::HASH_DIST_BITS;
+        int last_bit = -1;
+        bool last_bit_found = false;
+        for (int j = i * IXBar::HASH_DIST_BITS; j < (i + 1) * IXBar::HASH_DIST_BITS; j++) {
+            if (((1ULL << j) & hash_dist.bit_mask) == 0) {
+                last_bit_found = true;
+                last_bit = j - 1;
+            }
+            if (((1ULL << j) & hash_dist.bit_mask) != 0 && last_bit_found) {
+                BUG("Split in address bits for hash distribution");
+            }
+        }
+        if (last_bit == -1)
+            last_bit = (i + 1) * IXBar::HASH_DIST_BITS - 1;
+        out << indent << first_bit << ".." << last_bit;
+        out << ": " << FormatHash(match_data, ghost, hash_dist.alg) << std::endl;
+    }
+}
+
+/* Emit the ixbar use for a particular type of table */
+void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
+        const IXBar::Use &use, const Memories::Use *mem, const TableFormat *fmt,
+        bool hash_action, bool is_sel /*= false*/,
+        const IR::ActionSelector *as /*= nullptr */) const {
+    map<int, map<int, Slice>> sort;
+    emit_ixbar_ways(out, indent, use, mem, is_sel);
+    emit_ixbar_hash_dist(out, indent, use);
+    emit_ixbar_gather_bytes(use.use, sort);
+    if (use.use.empty() && use.hash_dist_use.empty()) {
+        if (hash_action) {
+            out << indent++ << "input_xbar:" << std::endl;
+            out << indent << "group 0: {}" << std::endl;
+            out << indent << "hash group 0: []" << std::endl;
+        }
+        return;
+    }
     out << indent++ << "input_xbar:" << std::endl;
     for (auto &group : sort)
         out << indent << "group " << group.first << ": " << group.second << std::endl;
@@ -253,69 +393,38 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
         if (hash_table_input) {
             for (int ht : bitvec(hash_table_input)) {
                 out << indent++ << "hash " << ht << ":" << std::endl;
-                unsigned half = ht & 1;
-                unsigned done = 0, mask_bits = 0;
                 vector<Slice> match_data;
                 vector<Slice> ghost;
-                for (auto &match : sort.at(ht/2)) {
-                    Slice reg = match.second;
-                    if (match.first/64U != half) {
-                        if ((match.first + reg.width() - 1)/64U != half)
-                            continue;
-                        assert(half);
-                        reg = reg(64 - match.first, 64);
-                    } else if ((match.first + reg.width() - 1)/64U != half) {
-                        assert(!half);
-                        reg = reg(0, 63 - match.first); }
-                    if (!reg) continue;
-                    if (as == nullptr) {
-                        auto reg_hash = reg - fmt->ghost_bits;
-                        if (auto reg_ghost = reg - reg_hash)
-                            ghost.push_back(reg_ghost);
-                        if (reg_hash)
-                            match_data.emplace_back(reg_hash);
-                    } else {
-                        match_data.emplace_back(reg);
-                    }
-                }
+                emit_ixbar_hash_table(ht, match_data, ghost, fmt, sort);
                 // FIXME: This is obviously an issue for larger selector tables,
                 //  whole function needs to be replaced
-                if (as != nullptr) {
-                    if (as->mode == "fair")
-                        out << indent << "0..13: "
-                            << FormatHash(match_data, ghost, as) << std::endl;
-                    else
-                        out << indent << "0..50: "
-                            << FormatHash(match_data, ghost, as) << std::endl;
-                }
-                for (auto &way : use.way_use) {
-                    mask_bits |= way.mask;
-                    if (done & (1 << way.slice)) continue;
-                    done |= 1 << way.slice;
-                    out << indent << (way.slice*10) << ".." << (way.slice*10 + 9) << ": "
-                        << FormatHash(match_data, ghost) << std::endl; }
-                for (auto range : bitranges(mask_bits)) {
-                    out << indent << (range.first+40);
-                    if (range.second != range.first) out << ".." << (range.second+40);
-                    out << ": " << FormatHash(match_data, ghost) << std::endl; }
-                for (auto ident : use.bit_use) {
-                    out << indent << (40 + ident.bit);
-                    if (ident.width > 1)
-                        out << ".." << (39 + ident.bit + ident.width);
-                    out << ": " << Slice(phv, ident.field, ident.lo, ident.lo + ident.width - 1)
-                        << std:: endl;
-                    assert(hash_group == -1 || hash_group == ident.group);
-                }
+                emit_ixbar_hash(out, indent, match_data, ghost, use, hash_group, as);
                 --indent;
             }
-            if (hash_group >= 0) {
-                out << indent++ << "hash group " << hash_group << ":" << std::endl;
-                out << indent << "table: [" << emit_vector(bitvec(hash_table_input), ", ") << "]"
-                    << std::endl;
-                --indent;
-            }
+            out << indent++ << "hash group " << hash_group << ":" << std::endl;
+            out << indent << "table: [" << emit_vector(bitvec(hash_table_input), ", ") << "]"
+                << std::endl;
+            --indent;
         }
         hash_group++;
+    }
+    for (auto hash_dist : use.hash_dist_use) {
+        sort.clear();
+        emit_ixbar_gather_bytes(hash_dist.use, sort);
+        for (auto &group : sort)
+            out << indent << "group " << group.first << ": " << group.second << std::endl;
+        for (int ht : bitvec(hash_dist.hash_table_input)) {
+            out << indent++ << "hash " << ht << ":" << std::endl;
+            vector<Slice> match_data;
+            vector<Slice> ghost;
+            emit_ixbar_hash_table(ht, match_data, ghost, nullptr, sort);
+            emit_ixbar_hash_dist_hash(out, indent, match_data, ghost, hash_dist);
+            --indent;
+        }
+        out << indent++ << "hash group " << hash_dist.group << ":" << std::endl;
+        out << indent  << "table: [" << emit_vector(bitvec(hash_dist.hash_table_input), ", ")
+            << "]" << std::endl;
+        --indent;
     }
 }
 
@@ -618,6 +727,79 @@ static cstring next_for(const IR::MAU::Table *tbl, cstring what, const DefaultNe
     return def.next_in_thread(tbl);
 }
 
+
+void MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
+        const IR::MAU::Table *tbl, bool hash_action, cstring next_hit, cstring &gw_miss) const {
+    CollectGatewayFields collect(phv, &tbl->resources->gateway_ixbar);
+    tbl->apply(collect);
+    if (collect.compute_offsets()) {
+        bool have_xor;
+        out << gw_indent << "match: {";
+        const char *sep = " ";
+        for (auto &f : collect.info) {
+            if (f.second.xor_with) {
+                have_xor = true;
+                continue; }
+            for (auto &offset : f.second.offsets) {
+                out << sep << offset.first << ": " << Slice(f.first, offset.second);
+                sep = ", "; } }
+        for (auto &valid : collect.valid_offsets) {
+            out << sep << valid.second << ": " << canon_name(valid.first) << ".$valid";
+            sep = ", "; }
+        out << (sep+1) << "}" << std::endl;
+        if (have_xor) {
+            out << gw_indent << "xor: {";
+            sep = " ";
+            for (auto &f : collect.info) {
+                if (f.second.xor_with) {
+                    for (auto &offset : f.second.offsets) {
+                        out << sep << offset.first << ": " << Slice(f.first, offset.second);
+                        sep = ", ";
+                    }
+                }
+            }
+            out << (sep+1) << "}" << std::endl;
+        }
+        if (collect.need_range)
+            out << gw_indent << "range: 4" << std::endl;
+        BuildGatewayMatch match(phv, collect);
+        for (auto &line : tbl->gateway_rows) {
+            out << gw_indent;
+            if (line.first) {
+                line.first->apply(match);
+                out << match << ": ";
+            } else {
+                out << "miss: ";
+            }
+            if (line.second) {
+                if (hash_action) {
+                    out << "run_table";
+                    gw_miss = next_for(tbl, line.second, default_next);
+                } else {
+                    out << next_for(tbl, line.second, default_next);
+                }
+            } else {
+                if (hash_action)
+                    out << next_hit;
+                else
+                    out << "run_table";
+            }
+            out << std::endl;
+        }
+        if (tbl->gateway_rows.back().first) {
+            out << gw_indent << "miss: run_table" << std::endl;
+        }
+    } else {
+        WARNING("Failed to fit gateway expression for " << tbl->name);
+    }
+}
+
+void MauAsmOutput::emit_hash_action_gateway(std::ostream &out, indent_t gw_indent,
+        const IR::MAU::Table *tbl) const {
+    out << gw_indent << "0x0: " << next_for(tbl, "", default_next) << std::endl;
+    out << gw_indent << "miss: " << next_for(tbl, "", default_next) << std::endl;
+}
+
 void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) const {
     /* FIXME -- some of this should be method(s) in IR::MAU::Table? */
     TableFormat fmt(*this, tbl);
@@ -625,6 +807,8 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
     indent_t    indent(1);
     if (tbl->match_table)
         tbl_type = tbl->layout.ternary ? "ternary_match" : "exact_match";
+    if (tbl->layout.hash_action)
+        tbl_type = "hash_action";
     out << indent++ << tbl_type << ' '<< tbl->name << ' ' << tbl->logical_id % 16U << ':'
         << std::endl;
     if (tbl->match_table) {
@@ -635,7 +819,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         auto memuse_name = tbl->get_use_name();
         emit_memory(out, indent, tbl->resources->memuse.at(memuse_name));
         emit_ixbar(out, indent, tbl->resources->match_ixbar,
-                   &tbl->resources->memuse.at(memuse_name), &fmt);
+                   &tbl->resources->memuse.at(memuse_name), &fmt, tbl->layout.hash_action);
         if (!tbl->layout.ternary && !tbl->layout.no_match_data()) {
             out << indent << fmt << std::endl;
             bool first = true;
@@ -648,65 +832,69 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
                 } else {
                     out << ", "; }
                 out << field; }
-            if (!first) out << " ]" << std::endl; } }
-    if (tbl->uses_gateway()) {
+            if (!first) out << " ]" << std::endl;
+        }
+    }
+
+    cstring next_hit = "";  cstring next_miss = "";
+    cstring gw_miss;
+    bool need_next_hit_map = false;
+    if (tbl->match_table) {
+        for (auto &next : tbl->next) {
+            if (next.first[0] != '$') {
+                need_next_hit_map = true;
+                break;
+            }
+        }
+        if (!need_next_hit_map) {
+            next_hit = next_for(tbl, "$hit", default_next);
+            next_miss = next_for(tbl, "$miss", default_next);
+        }
+    }
+
+
+
+    if (tbl->uses_gateway() || tbl->layout.hash_action) {
         indent_t gw_indent = indent;
         if (tbl->match_table)
             out << gw_indent++ << "gateway:" << std::endl;
-        emit_ixbar(out, gw_indent, tbl->resources->gateway_ixbar, 0, &fmt);
+        emit_ixbar(out, gw_indent, tbl->resources->gateway_ixbar, 0, &fmt,
+                   tbl->layout.hash_action);
         for (auto &use : Values(tbl->resources->memuse))
             if (use.type == Memories::Use::GATEWAY) {
                 out << gw_indent << "row: " << use.row[0].row << std::endl;
                 out << gw_indent << "bus: " << use.row[0].bus << std::endl;
-                break; }
-        CollectGatewayFields collect(phv, &tbl->resources->gateway_ixbar);
-        tbl->apply(collect);
-        if (collect.compute_offsets()) {
-            bool have_xor;
-            out << gw_indent << "match: {";
-            const char *sep = " ";
-            for (auto &f : collect.info) {
-                if (f.second.xor_with) {
-                    have_xor = true;
-                    continue; }
-                for (auto &offset : f.second.offsets) {
-                    out << sep << offset.first << ": " << Slice(f.first, offset.second);
-                    sep = ", "; } }
-            for (auto &valid : collect.valid_offsets) {
-                out << sep << valid.second << ": " << canon_name(valid.first) << ".$valid";
-                sep = ", "; }
-            out << (sep+1) << "}" << std::endl;
-            if (have_xor) {
-                out << gw_indent << "xor: {";
-                sep = " ";
-                for (auto &f : collect.info) {
-                    if (f.second.xor_with) {
-                        for (auto &offset : f.second.offsets) {
-                            out << sep << offset.first << ": " << Slice(f.first, offset.second);
-                            sep = ", "; } } }
-                out << (sep+1) << "}" << std::endl; }
-            if (collect.need_range)
-                out << gw_indent << "range: 4" << std::endl;
-            BuildGatewayMatch match(phv, collect);
-            for (auto &line : tbl->gateway_rows) {
-                out << gw_indent;
-                if (line.first) {
-                    line.first->apply(match);
-                    out << match << ": ";
-                } else {
-                    out << "miss: "; }
-                if (line.second)
-                    out << next_for(tbl, line.second, default_next);
-                else
-                    out << "run_table";
-                out << std::endl; }
-            if (tbl->gateway_rows.back().first)
-                out << gw_indent << "miss: run_table" << std::endl;
-        } else {
-            WARNING("Failed to fit gateway expression for " << tbl->name); }
+                if (use.payload != 0)
+                    out << gw_indent << "payload: " << use.payload << std::endl;
+                break;
+            }
+        if (!tbl->layout.hash_action || tbl->uses_gateway())
+            emit_gateway(out, gw_indent, tbl, tbl->layout.hash_action, next_hit, gw_miss);
+        else
+            emit_hash_action_gateway(out, gw_indent, tbl);
         if (!tbl->match_table)
-            return; }
+            return;
+    }
 
+    if (need_next_hit_map) {
+        out << indent << "hit: [ ";
+        const char *sep = "";
+        for (auto act : Values(tbl->actions)) {
+            out << sep << next_for(tbl, act->name, default_next);
+            sep = ", ";
+        }
+        out << " ]" << std::endl;
+        out << indent << "miss: " << next_for(tbl, "$miss", default_next)  << std::endl;
+    } else {
+        if (tbl->layout.hash_action && gw_miss) {
+            out << indent << "next: " << gw_miss << std::endl;
+        } else if (next_miss != next_hit) {
+            out << indent << "hit: " << next_hit << std::endl;
+            out << indent << "miss: " << next_miss << std::endl;
+        } else {
+            out << indent << "next: " << next_hit << std::endl;
+        }
+    }
     /* FIXME -- this is a mess and needs to be rewritten to be sane */
     bool have_action = false, have_indirect = false;
     for (auto at : tbl->attached) {
@@ -723,27 +911,6 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
     assert(have_action || (tbl->layout.action_data_bytes <=
                            tbl->layout.action_data_bytes_in_overhead));
 
-    bool need_next_hit_map = false;
-    for (auto &next : tbl->next) {
-        if (next.first[0] != '$') {
-            need_next_hit_map = true;
-            break; } }
-    if (need_next_hit_map) {
-        out << indent << "hit: [ ";
-        const char *sep = "";
-        for (auto act : Values(tbl->actions)) {
-            out << sep << next_for(tbl, act->name, default_next);
-            sep = ", "; }
-        out << " ]" << std::endl;
-        out << indent << "miss: " << next_for(tbl, "$miss", default_next)  << std::endl;
-    } else {
-        auto next_hit = next_for(tbl, "$hit", default_next);
-        auto next_miss = next_for(tbl, "$miss", default_next);
-        if (next_miss != next_hit) {
-            out << indent << "hit: " << next_hit << std::endl;
-            out << indent << "miss: " << next_miss << std::endl;
-        } else {
-            out << indent << "next: " << next_hit << std::endl; } }
 
     if (!have_indirect)
         emit_table_indir(out, indent, tbl);
@@ -784,22 +951,38 @@ class MauAsmOutput::UnattachedName : public MauInspector {
     cstring name() { return return_name; }
 };
 
+void MauAsmOutput::find_indirect_index(std::ostream &out, const IR::MAU::Table *tbl,
+         const IR::Attached *at) const {
+    const IR::MAU::MAUCounter *cnt = at->to<IR::MAU::MAUCounter>();
+    const IR::Counter *test = at->to<IR::Counter>();
+    if (cnt != nullptr && phv.field(cnt->indirect_index)) {
+        for (auto hash_dist : tbl->resources->match_ixbar.hash_dist_use) {
+            if (hash_dist.type == IXBar::Use::CounterPtr) {
+                out << "(hash_dist " << hash_dist.unit << ")";
+                return;
+            }
+        }
+    } else {
+        out << "(counter_ptr)";
+    }
+}
+
 void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
                                     const IR::MAU::Table *tbl) const {
     bool have_action = false;
-    vector<const IR::Attached *> stats_tables;
-    vector<const IR::Attached *> meter_tables;
+    vector<const IR::MAU::MAUCounter *> stats_tables;
+    vector<const IR::MAU::MAUMeter *> meter_tables;
     auto match_name = tbl->get_use_name();
     for (auto at : tbl->attached) {
         if (at->is<IR::MAU::TernaryIndirect>()) continue;
         if (at->is<IR::ActionProfile>() || at->is<IR::MAU::ActionData>())
             have_action = true;
-        if (at->is<IR::Counter>()) {
-            stats_tables.push_back(at);
+        if (auto *c = at->to<IR::MAU::MAUCounter>()) {
+            stats_tables.push_back(c);
             continue;
         }
-        if (at->is<IR::Meter>()) {
-            meter_tables.push_back(at);
+        if (auto *m = at->to<IR::MAU::MAUMeter>()) {
+            meter_tables.push_back(m);
             continue;
         }
         if (auto *ap = at->to<IR::ActionProfile>()) {
@@ -845,8 +1028,9 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         for (auto at : stats_tables) {
             auto name = tbl->get_use_name(at);
             out << indent << "- " << name;
-            if (at->indexed())
-                out << '(' << "counter_ptr" << ')';
+            if (at->indexed()) {
+                find_indirect_index(out, tbl, at);
+            }
             out << std::endl;
         }
     }
@@ -864,9 +1048,11 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
 
     if (!have_action && !tbl->actions.empty()) {
         out << indent++ << "actions:" << std::endl;
-        for (auto act : Values(tbl->actions))
+        for (auto act : Values(tbl->actions)) {
             act->apply(EmitAction(*this, out, tbl, indent));
-        --indent; }
+        }
+        --indent;
+    }
     if (auto defact = tbl->match_table ? tbl->match_table->getDefaultAction() : nullptr) {
         out << indent << "default_action: " << DBPrint::Prec_Low << defact << DBPrint::Reset;
         out << std::endl; }
@@ -1000,7 +1186,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionSelector *as) {
     out << indent++ << "selection " << name << ":" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     self.emit_ixbar(out, indent, tbl->resources->selector_ixbar,
-                    &tbl->resources->memuse.at(name), nullptr, true, as);
+                    &tbl->resources->memuse.at(name), nullptr, false, true, as);
     out << indent << "mode: " << as->mode.name << " 0" << std::endl;
     return false;
 }

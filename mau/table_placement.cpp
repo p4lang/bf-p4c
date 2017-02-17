@@ -276,9 +276,9 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
             }
         }
     }
-    
+
     const vector<HashDistReq> &hdr_match = hdc.get_hash_dist_req(next->table);
-    const vector<HashDistReq> &hdr_gw = hdc.get_hash_dist_req(next->gw); 
+    const vector<HashDistReq> &hdr_gw = hdc.get_hash_dist_req(next->gw);
     if (!current_ixbar.allocTable(next->table, phv, resources->match_ixbar,
                                   resources->gateway_ixbar, resources->selector_ixbar,
                                   sue.preferred(), hdr_match) ||
@@ -289,7 +289,6 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
         resources->gateway_ixbar.clear();
         resources->selector_ixbar.clear();
         return false; }
-    
     return true;
 }
 
@@ -380,8 +379,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             if (p->need_more == false) {
                 LOG2(" - can't place as its already done");
                 return nullptr; }
-            set_entries -= p->entries; }
-        else if (p->stage == rv->stage &&
+            set_entries -= p->entries;
+        } else if (p->stage == rv->stage &&
                  deps->happens_before(p->table, rv->table)) {
              rv->stage++; } }
     assert(!rv->placed[tblInfo.at(rv->table).uid]);
@@ -417,7 +416,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         }
 
         if (!advance_to_next_stage
-            && (!( min_use + stage_current <= avail)
+            && (!(min_use + stage_current <= avail)
                 || !try_alloc_mem(
                         rv,
                         done,

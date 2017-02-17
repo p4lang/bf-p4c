@@ -337,7 +337,6 @@ class SetupIndirectIndex : public MauModifier {
     const IR::Expression *indirect;
 
     bool preorder(IR::MAU::MAUCounter *counter) {
-        LOG1("This is the pass of change " << indirect);
         counter->indirect_index = indirect;
         return true;
     }
@@ -389,17 +388,11 @@ const IR::MAU::Table *InstructionSelection::postorder(IR::MAU::Table *tbl) {
                     }
                 }
                 const IR::Expression *indirect = prim->operands[1];
-                LOG1("indirect is " << indirect);
                 stateful_update =
                     stateful_update->apply(SetupIndirectIndex(indirect))->to<IR::Stateful>();
-                if (auto *c = stateful_update->to<IR::MAU::MAUCounter>())
-                    LOG1("Counter indirect index is " << c->indirect_index << " of " << c->name);
-                LOG1("Stateful id " << stateful_update->id);
                 tbl->attached.push_back(stateful_update);
-
             }
         }
     }
-    LOG1("Finished here");
     return tbl;
 }

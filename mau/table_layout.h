@@ -8,6 +8,7 @@ class HashDistReq {
     bool required = false;
     const IR::Primitive *instr;
     const IR::Attached *attached;
+
  public:
     HashDistReq(bool r, const IR::Primitive *i, const IR::Attached *at)
         : required(r), instr(i), attached(at) {}
@@ -18,12 +19,14 @@ class HashDistReq {
         if (attached != nullptr)
             if (attached->is<IR::MAU::MAUCounter>() || attached->is<IR::MAU::MAUMeter>())
                 return true;
-        return false; 
+        return false;
     }
     bool is_immediate() const {
-        if (instr != nullptr)
-            if (instr->name == "modify_field_with_hash_based_offset");
+        if (instr != nullptr) {
+            if (instr->name == "modify_field_with_hash_based_offset") {
                 return true;
+            }
+        }
         return false;
     }
     int bits_required(const PhvInfo &phv) const;

@@ -154,8 +154,8 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         &cluster_phv_mau,  // cluster PHV container placements
                            // first cut PHV MAU Group assignments
                            // produces cohabit fields for Table Placement
-        &cluster_phv_overlay, // use mutually exclusive headers to free up phv containers
-        //&cluster_slicing, // slice clusters into smaller clusters
+        &cluster_phv_overlay,  // use mutually exclusive headers to free up phv containers
+        // &cluster_slicing, // slice clusters into smaller clusters
     });
 
     PassManager backend = {
