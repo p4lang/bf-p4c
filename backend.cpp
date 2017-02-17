@@ -161,6 +161,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         &defuse,
         new AddBridgedMetadata(phv, defuse),
         new AddMetadataShims,
+        &phv,  // only needed to avoid warnings about otherwise unused ingress/egress_port?
         new LiveAtEntry(phv),
         new CreateThreadLocalInstances(INGRESS),
         new CreateThreadLocalInstances(EGRESS),

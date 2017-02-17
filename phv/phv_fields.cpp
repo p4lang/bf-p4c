@@ -364,58 +364,35 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &s
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const PhvInfo::Field *fld) {
-    if (fld) {
-        out << fld->name
-            << '['
-            << fld->size
-            << ']'
-            << '{'
-            << fld->phv_use_lo
-            << ".."
-            << fld->phv_use_hi
-            << '}';
-        if (fld->mau_write) {
-            out << "-w-";
-        } else {
-            out << "-r-";
-        }
-        // member of header stk pov
-        // in phv container group accumulation (sub-byte, contiguous, complete)
-        // fx -> fx, fy -> fx, fz -> fx; fx: {fx, fy, fz)}
-        //
-        if (fld->ccgf) {
-            out << " --ccgf-> " << fld->ccgf->name;
-        }
-        // header stk povs
-        if (fld->ccgf_fields.size()) {
-            // count bits in "container contiguous group fields"
-            out << std::endl << '[';
-            int ccg_width = 0;
-            for (auto pov_f : fld->ccgf_fields) {
-                out << '\t';
-                out << pov_f->name << '[' << pov_f->size << ']';
-                out << std::endl;
-                ccg_width += pov_f->size;
-            }
-            out << ':' << ccg_width << ']';
-        }
-    } else {
-        out << "-f-";  // fld is nil
-    }
-    return out;
-}
-
 std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
-    out << field.id << ':' << field.name << '[' << field.size << ']'
-        << (field.gress ? " E" : " I") << " off=" << field.offset;
+    out << field.id << ':' << field.name << '[' << field.size << ']';
+    if (field.phv_use_lo || field.phv_use_hi)
+        out << '{' << field.phv_use_lo << ".." << field.phv_use_hi << '}';
+    out << (field.gress ? " E" : " I") << " off=" << field.offset;
     if (field.referenced) out << " ref";
     if (field.metadata) out << " meta";
     if (field.pov) out << " pov";
     if (field.mau_write) out << " mau_write";
+    if (field.ccgf) out << " ccgf=" << field.ccgf->name;
+    if (field.ccgf_fields.size()) {
+        // count bits in "container contiguous group fields"
+        out << std::endl << '[';
+        int ccg_width = 0;
+        for (auto pov_f : field.ccgf_fields) {
+            out << '\t';
+            out << pov_f->name << '[' << pov_f->size << ']';
+            out << std::endl;
+            ccg_width += pov_f->size;
+        }
+        out << ':' << ccg_width << ']'; }
     if (!field.alloc.empty())
         out << " " << field.alloc;
     return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const PhvInfo::Field *fld) {
+    if (fld) return out << *fld;
+    return out << "(nullptr)";
 }
 
 std::ostream &operator<<(std::ostream &out, std::set<const PhvInfo::Field *>& field_set) {
