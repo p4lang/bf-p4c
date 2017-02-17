@@ -635,8 +635,8 @@ PHV_MAU_Group_Assignments::container_no_pack(
         LOG3(PHV_MAU_i);
     }
     //
-    status(clusters_to_be_assigned);
-    status(phv_groups_to_be_filled);
+    status(clusters_to_be_assigned, msg);
+    status(phv_groups_to_be_filled, msg);
     //
 }  // container_no_pack
 
@@ -1112,8 +1112,8 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
     } else {
         LOG3(PHV_MAU_i);
     }
-    status(clusters_to_be_assigned);
-    status(aligned_slices);
+    status(clusters_to_be_assigned, msg);
+    status(aligned_slices, msg);
 }  // container_pack_cohabit
 
 
@@ -1205,7 +1205,9 @@ void PHV_MAU_Group_Assignments::container_cohabit_summary() {
 //***********************************************************************************
 
 
-bool PHV_MAU_Group_Assignments::status(std::list<Cluster_PHV *>& clusters_to_be_assigned) {
+bool PHV_MAU_Group_Assignments::status(
+    std::list<Cluster_PHV *>& clusters_to_be_assigned,
+    const char *msg) {
     //
     if (clusters_to_be_assigned.size() > 0) {
         ordered_map<PHV_Container::Ingress_Egress,
@@ -1234,16 +1236,19 @@ bool PHV_MAU_Group_Assignments::status(std::list<Cluster_PHV *>& clusters_to_be_
             ss << " (bits=" << needed_bits << ");";
         }
         std::string s = ss.str();
-        LOG3(std::endl << "---------- ..... Clusters NOT assigned ("
+        LOG3(std::endl << "---------- Status: Clusters NOT Assigned ("
             << clusters_to_be_assigned.size()
             << ")"
             << s
-            << "----------" << std::endl
+            << "----------"
+            << msg
+            << std::endl
             << clusters_to_be_assigned);
         return false;
     } else {
         LOG3(' ');
-        LOG3("++++++++++++++++++++ ALL clusters assigned ++++++++++++++++++++");
+        LOG3("++++++++++++++++++++ Status: ALL clusters Assigned ++++++++++++++++++++"
+            << msg);
         LOG3(' ');
         return true;
     }
@@ -1251,24 +1256,43 @@ bool PHV_MAU_Group_Assignments::status(std::list<Cluster_PHV *>& clusters_to_be_
 
 bool PHV_MAU_Group_Assignments::status(
     ordered_map<int, ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&
-    aligned_slices) {
+        aligned_slices,
+    const char *msg) {
     //
     if (aligned_slices.empty()) {
-        LOG3("----------status: NO Container Packs avail----------" << std::endl);
+        LOG3("----------Status: NO Container Packs Available----------"
+            << msg
+            << std::endl);
         return false;
     } else {
-        LOG3("..........status: Container Packs avail.........." << aligned_slices);
+        int bits_available = 0;
+        for (auto &w : aligned_slices) {
+            for (auto &n : w.second) {
+                bits_available += w.first * n.first * n.second.size();
+            }
+        }
+        LOG3("..........Status: Container Packs Available"
+            << " ("
+            << bits_available
+            << " bits).........."
+            << msg
+            << std::endl
+            << aligned_slices);
         return true;
     }
 }
 
-bool PHV_MAU_Group_Assignments::status(std::list<PHV_MAU_Group *>& phv_mau_groups) {
+bool PHV_MAU_Group_Assignments::status(
+    std::list<PHV_MAU_Group *>& phv_mau_groups,
+    const char *msg) {
     //
     if (phv_mau_groups.empty()) {
-        LOG3("----------status: NO MAU Groups avail----------" << std::endl);
+        LOG3("----------Status: NO MAU Groups Available----------"
+            << std::endl);
         return false;
     } else {
-        LOG3("..........status: MAU Groups avail.........." << phv_mau_groups);
+        LOG3("..........Status: MAU Groups Available.........."
+            << phv_mau_groups);
         return true;
     }
 }

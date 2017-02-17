@@ -81,7 +81,7 @@ PHV_Container::taint(
         // it is not present as a member in its ccgf
         // as no separate allocation required
         //
-        start += width; // start allocation from ccgf-segment RHS in container
+        start += width;  // start allocation from ccgf-segment RHS in container
         int processed_members = 0;
         int processed_width = 0;
         for (auto &member : field->ccgf_fields) {

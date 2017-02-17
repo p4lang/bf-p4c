@@ -244,12 +244,17 @@ class PHV_MAU_Group_Assignments : public Visitor {
         ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&,
         const char *msg = "");
     //
-    bool status(std::list<Cluster_PHV *>&);
-    bool status(std::list<PHV_MAU_Group *>&);
+    bool status(
+        std::list<Cluster_PHV *>&,
+        const char *msg = "");
+    bool status(
+        std::list<PHV_MAU_Group *>&,
+        const char *msg = "");
     bool status(
         ordered_map<int,
         ordered_map<int,
-        std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&);
+        std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&,
+        const char *msg = "");
     //
     void sanity_check_container_avail(const std::string&);
     void sanity_check_container_fields_gress(const std::string&);
