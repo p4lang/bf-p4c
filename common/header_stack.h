@@ -15,8 +15,8 @@ class HeaderStackInfo : public Inspector {
  private:
     std::map<cstring, Info>     info;
     profile_t init_apply(const IR::Node *root) override;
-    bool preorder(const IR::Primitive *) override;
-    bool preorder(const IR::HeaderStack *) override;
+    void postorder(const IR::Primitive *) override;
+    void postorder(const IR::HeaderStack *) override;
 
  public:
     auto begin() const -> decltype(Values(info).begin()) { return Values(info).begin(); }

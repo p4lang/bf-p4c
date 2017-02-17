@@ -5,7 +5,7 @@ Visitor::profile_t HeaderStackInfo::init_apply(const IR::Node *root) {
     return Inspector::init_apply(root);
 }
 
-bool HeaderStackInfo::preorder(const IR::HeaderStack *hs) {
+void HeaderStackInfo::postorder(const IR::HeaderStack *hs) {
     auto &i = info[hs->name];
     i.name = hs->name;
     i.size = hs->size;
@@ -16,17 +16,16 @@ bool HeaderStackInfo::preorder(const IR::HeaderStack *hs) {
         i.gress = EGRESS;
     else
         BUG("Can't determine thread");
-    return false;  // can't have stacks of stacks!
 }
 
-bool HeaderStackInfo::preorder(const IR::Primitive *prim) {
+void HeaderStackInfo::postorder(const IR::Primitive *prim) {
     if (prim->name == "push" || prim->name == "pop") {
         BUG_CHECK(prim->operands.size() == 2, "wrong number of operands to %s", prim);
         cstring hsname = prim->operands[0]->toString();
         if (!info.count(hsname)) {
             /* Should have been caught by typechecking? */
             error("%s: No header stack %s", prim->srcInfo, prim->operands[0]);
-            return false; }
+            return; }
         int &max = (prim->name == "push") ? at(hsname).maxpush : at(hsname).maxpop;
         if (auto count = prim->operands[1]->to<IR::Constant>()) {
             auto countval = count->asInt();
@@ -35,7 +34,5 @@ bool HeaderStackInfo::preorder(const IR::Primitive *prim) {
             else if (countval > max)
                 max = countval;
         } else {
-            error("%s: %s amount must be constant", prim->operands[1]->srcInfo, prim->name); }
-        return false; }
-    return true;
+            error("%s: %s amount must be constant", prim->operands[1]->srcInfo, prim->name); } }
 }
