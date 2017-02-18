@@ -234,7 +234,10 @@ function test_p4() {
             if zcmp -s $f $glsc_cfg/$(basename $f); then
                 continue
             elif [ "$f" = "$name.out/regs.pipe.cfg.json.gz" ]; then
-                $JSON_DIFF -i mau $f $glsc_cfg/$(basename $f) || echo "***json_diff died"
+                $JSON_DIFF -i mau $f $glsc_cfg/$(basename $f)
+                if [ $? -gt 128 ]; then
+                    echo "***json_diff crashed"
+                fi
                 continue
             fi
             $DIFF $f $glsc_cfg/$(basename $f)
@@ -244,7 +247,8 @@ function test_p4() {
             glsc_ctxt=context/mau.context.json
         fi
         if [ -r $name.out/tbl-cfg ]; then
-            { $JSON_DIFF $CTXT_DIFFARGS $name.out/tbl-cfg $glsc_ctxt || echo "***json_diff died"; } >> json_diff.txt
+            { $JSON_DIFF $CTXT_DIFFARGS $name.out/tbl-cfg $glsc_ctxt;
+              if [ $? -gt 128 ]; then echo "***json_diff crashed"; fi; } >> json_diff.txt
         fi
         cnt=$(grep -Ev '^\+\+\+|^---|"int_inj"' json_diff.txt | grep -Ec '^\+|^-')
         if [ $cnt -gt 0 ]; then

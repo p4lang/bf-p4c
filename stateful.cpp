@@ -20,6 +20,9 @@ void Stateful::setup(VECTOR(pair_t) &data) {
         if (common_setup(kv, data, P4Table::Stateful)) {
         } else if (kv.key == "format") {
             /* done above to be done before vpns */
+        } else if (kv.key == "input_xbar") {
+            if (CHECKTYPE(kv.value, tMAP))
+                input_xbar = new InputXbar(this, false, kv.value.map);
         } else if (kv.key == "hash_dist") {
             HashDistribution::parse(hash_dist, kv.value);
             for (auto &hd : hash_dist) hd.meter_pre_color = true;
