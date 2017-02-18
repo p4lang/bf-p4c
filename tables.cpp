@@ -88,7 +88,7 @@ static void add_row(int lineno, std::vector<Table::Layout> &layout, int row) {
     layout.push_back(Table::Layout(lineno, row));
 }
 
-static int add_rows(std::vector<Table::Layout> &layout, value_t &rows) {
+static int add_rows(std::vector<Table::Layout> &layout, const value_t &rows) {
     if (!CHECKTYPE2(rows, tINT, tRANGE)) return 1;
     if (rows.type == tINT)
         add_row(rows.lineno, layout, rows.i);
@@ -108,7 +108,7 @@ static int add_col(int lineno, Table::Layout &row, int col) {
     return 0;
 }
 
-static int add_cols(Table::Layout &row, value_t &cols) {
+static int add_cols(Table::Layout &row, const value_t &cols) {
     int rv = 0;
     if (cols.type == tVEC) {
         if (cols.vec.size == 1)
@@ -129,12 +129,10 @@ static int add_cols(Table::Layout &row, value_t &cols) {
     return rv;
 }
 
-void Table::setup_layout(std::vector<Layout> &layout, value_t *row, value_t *col, value_t *bus, const char *subname) {
+void Table::setup_layout(std::vector<Layout> &layout, const value_t *row, const value_t *col,
+                         const value_t *bus, const char *subname) {
     if (!row) {
         error(lineno, "No 'row' attribute in table %s%s", name(), subname);
-        return; }
-    if (!col) {
-        error(lineno, "No 'column' attribute in table %s%s", name(), subname);
         return; }
     int err = 0;
     if (row->type == tVEC)
@@ -142,12 +140,16 @@ void Table::setup_layout(std::vector<Layout> &layout, value_t *row, value_t *col
     else
         err |= add_rows(layout, *row);
     if (err) return;
-    if (col->type == tVEC && col->vec.size == (int)layout.size()) {
-        for (int i = 0; i < col->vec.size; i++)
-            err |= add_cols(layout[i], col->vec[i]);
-    } else {
-        for (auto &row : layout)
-            if ((err |= add_cols(row, *col))) break; }
+    if (col) {
+        if (col->type == tVEC && col->vec.size == (int)layout.size()) {
+            for (int i = 0; i < col->vec.size; i++)
+                err |= add_cols(layout[i], col->vec[i]);
+        } else {
+            for (auto &row : layout)
+                if ((err |= add_cols(row, *col))) break; }
+    } else if (layout.size() > 1) {
+        error(lineno, "No 'column' attribute in table %s%s", name(), subname);
+        return; }
     if (bus) {
         if (!CHECKTYPE2(*bus, tINT, tVEC)) err = 1;
         else if (bus->type == tVEC) {
@@ -260,8 +262,17 @@ void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool a
                 break; } }
 }
 
+void Table::common_init_setup(const VECTOR(pair_t) &data, bool, P4Table::type) {
+    setup_layout(layout, get(data, "row"), get(data, "column"), get(data, "bus"));
+    if (auto *fmt = get(data, "format")) {
+        if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
+            format = new Format(fmt->map); }
+}
+
 bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p4type) {
-    if (kv.key == "action") {
+    if (kv.key == "format" || kv.key == "row" || kv.key == "column" || kv.key == "bus") {
+        /* done in Table::common_init_setup */
+    } else if (kv.key == "action") {
         action.setup(kv.value, this);
     } else if (kv.key == "action_enable") {
         if (CHECKTYPE(kv.value, tINT))
@@ -318,8 +329,21 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
     return true;
 }
 
+void MatchTable::common_init_setup(const VECTOR(pair_t) &data, bool ternary, P4Table::type p4type) {
+    Table::common_init_setup(data, ternary, p4type);
+    setup_logical_id();
+    if (auto *ixbar = get(data, "input_xbar")) {
+        if (CHECKTYPE(*ixbar, tMAP))
+            input_xbar = new InputXbar(this, ternary, ixbar->map); }
+    if (auto *hd = get(data, "hash_dist"))
+        HashDistribution::parse(hash_dist, *hd);
+}
+
 bool MatchTable::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p4type) {
     if (Table::common_setup(kv, data, p4type)) {
+        return true; }
+    if (kv.key == "input_xbar" || kv.key == "hash_dist") {
+        /* done in common_init_setup */
         return true; }
     if (kv.key == "gateway") {
         if (CHECKTYPE(kv.value, tMAP)) {
@@ -521,7 +545,7 @@ static void append_bits(std::vector<Table::Format::bitrange_t> &vec, int lo, int
     vec.emplace_back(lo, hi);
 }
 
-Table::Format::Format(VECTOR(pair_t) &data, bool may_overlap) {
+Table::Format::Format(const VECTOR(pair_t) &data, bool may_overlap) {
     unsigned nextbit = 0;
     fmt.resize(1);
     for (auto &kv : data) {
@@ -998,7 +1022,7 @@ void MatchTable::write_regs(int type, Table *result) {
         if (result->action_enable >= 0)
             action_enable = 1 << result->action_enable;
         for (auto &row : result->layout) {
-            int bus = row.row*2 | row.bus;
+            int bus = row.row*2 | (row.bus & 1);
             auto &shift_en = merge.mau_payload_shifter_enable[type][bus];
             setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[type][bus], logical_id);
             setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[type+2][bus], logical_id);
@@ -1100,7 +1124,7 @@ void MatchTable::write_regs(int type, Table *result) {
      *-----------------------*/
     if (result->format) {
         for (auto &row : result->layout) {
-            int bus = row.row*2 | row.bus;
+            int bus = row.row*2 | (row.bus & 1);
             merge.mau_immediate_data_mask[type][bus] = (1UL << result->format->immed_size)-1;
             if (result->format->immed_size > 0)
                 merge.mau_payload_shifter_enable[type][bus]

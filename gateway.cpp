@@ -408,7 +408,7 @@ void GatewayTable::write_regs() {
             tind_bus = true;
             tbl = tmatch->indirect;
         } else if (auto *hashaction = dynamic_cast<HashActionTable *>(tbl))
-            tind_bus = hashaction->bus >= 2;
+            tind_bus = hashaction->layout[0].bus >= 2;
         if (tbl)
             for (auto &row : tbl->layout)
                 payload_write_regs(row.row, tind_bus, row.bus);

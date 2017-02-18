@@ -90,12 +90,8 @@ static void check_tcam_match_bus(const std::vector<Table::Layout> &layout) {
 void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
     tcam_id = -1;
     indirect_bus = -1;
-    setup_layout(layout, get(data, "row"), get(data, "column"), get(data, "bus"));
-    setup_logical_id();
-    if (auto *ixbar = get(data, "input_xbar")) {
-        if (CHECKTYPE(*ixbar, tMAP))
-            input_xbar = new InputXbar(this, true, ixbar->map);
-    } else
+    common_init_setup(data, true, P4Table::MatchEntry);
+    if (!input_xbar)
         warning(lineno, "No input xbar specified in table %s", name());
     if (auto *m = get(data, "match"))
         if (CHECKTYPE2(*m, tVEC, tMAP)) {
@@ -106,7 +102,7 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
                 match.emplace_back(*m); }
     for (auto &kv : MapIterChecked(data)) {
         if (common_setup(kv, data, P4Table::MatchEntry)) {
-        } else if (kv.key == "input_xbar" || kv.key == "match") {
+        } else if (kv.key == "match") {
             /* done above to be done before vpns */
         } else if (kv.key == "indirect") {
             if (CHECKTYPE(kv.value, tSTR))
@@ -129,8 +125,6 @@ void TernaryMatchTable::setup(VECTOR(pair_t) &data) {
                           tcam_id, stage->tcam_id_use[tcam_id]->name());
                 else
                     stage->tcam_id_use[tcam_id] = this; }
-        } else if (kv.key == "row" || kv.key == "column" || kv.key == "bus") {
-            /* already done in setup_layout */
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
@@ -465,22 +459,18 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
 
 void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
     match_table = 0;
-    setup_layout(layout, get(data, "row"), get(data, "column"), get(data, "bus"));
-    if (auto *fmt = get(data, "format")) {
-        if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map")) {
-            format = new Format(fmt->map, true);
-            if (format->size > 64)
-                error(fmt->lineno, "ternary indirect format larger than 64 bits");
-            if (format->size < 4) {
-                /* pad out to minumum size */
-                format->size = 4;
-                format->log2size = 2; } }
+    common_init_setup(data, true, P4Table::MatchEntry);
+    if (format) {
+        if (format->size > 64)
+            error(format->lineno, "ternary indirect format larger than 64 bits");
+        if (format->size < 4) {
+            /* pad out to minumum size */
+            format->size = 4;
+            format->log2size = 2; }
     } else
         error(lineno, "No format specified in table %s", name());
     for (auto &kv : MapIterChecked(data)) {
         if (common_setup(kv, data, P4Table::MatchEntry)) {
-        } else if (kv.key == "format") {
-            /* done above to be done before action_bus and vpns */
         } else if (kv.key == "selector") {
             attached.selector.setup(kv.value, this);
         } else if (kv.key == "stats") {
@@ -493,8 +483,6 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
                 for (auto &v : kv.value.vec)
                     attached.meter.emplace_back(v, this);
             else attached.meter.emplace_back(kv.value, this);
-        } else if (kv.key == "row" || kv.key == "column" || kv.key == "bus") {
-            /* already done in setup_layout */
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }

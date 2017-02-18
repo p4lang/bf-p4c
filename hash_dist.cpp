@@ -25,7 +25,7 @@ HashDistribution::HashDistribution(int id_, value_t &data, int u)
                         value_desc(kv.key)); }
 }
 
-void HashDistribution::parse(std::vector<HashDistribution> &out, value_t &data, int xbar_use) {
+void HashDistribution::parse(std::vector<HashDistribution> &out, const value_t &data, int xbar_use) {
     if (CHECKTYPE(data, tMAP))
         for (auto &kv : data.map)
             if (CHECKTYPE(kv.key, tINT))

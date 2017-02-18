@@ -6,11 +6,7 @@
 DEFINE_TABLE_TYPE(HashActionTable)
 
 void HashActionTable::setup(VECTOR(pair_t) &data) {
-    if (auto *fmt = get(data, "format"))
-        if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
-            format = new Format(fmt->map);
-    if (auto *fmt = get(data, "hash_dist"))
-        HashDistribution::parse(hash_dist, *fmt, HashDistribution::ACTION_DATA_ADDRESS);
+    common_init_setup(data, false, P4Table::MatchEntry);
     for (auto &kv : MapIterChecked(data)) {
         if (common_setup(kv, data, P4Table::MatchEntry)) {
         } else if (kv.key == "format") {
@@ -18,16 +14,8 @@ void HashActionTable::setup(VECTOR(pair_t) &data) {
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
                 input_xbar = new InputXbar(this, false, kv.value.map);
-        } else if (kv.key == "row") {
-            if (CHECKTYPE(kv.value, tINT))
-                if ((row = kv.value.i) >= 8)
-                    error(kv.value.lineno, "Invalid row %d", row);
-        } else if (kv.key == "bus") {
-            if (CHECKTYPE(kv.value, tINT))
-                if ((bus = kv.value.i) >= 4)
-                    error(kv.value.lineno, "Invalid bus %d", row);
         } else if (kv.key == "hash_dist") {
-            /* done above to be dnoe before parsing table calls */
+            /* done above to be done before parsing table calls */
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
@@ -62,8 +50,10 @@ void HashActionTable::pass1() {
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
     if (input_xbar)
         input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
-    for (auto &hd : hash_dist)
-        hd.pass1(this);
+    for (auto &hd : hash_dist) {
+        if (hd.xbar_use == HashDistribution::NONE)
+            hd.xbar_use = HashDistribution::ACTION_DATA_ADDRESS;
+        hd.pass1(this); }
     if (gateway) {
         gateway->logical_id = logical_id;
         gateway->pass1(); }
@@ -75,7 +65,7 @@ void HashActionTable::pass1() {
 void HashActionTable::pass2() {
     LOG1("### Hash Action " << name() << " pass2");
     if (logical_id < 0) choose_logical_id();
-    if (row < 0 || bus < 0)
+    if (layout.size() != 1 || layout[0].bus < 0)
         error(lineno, "Need explicit row/bus in hash_action table"); // FIXME
     //if (hash_dist.empty())
     //    error(lineno, "Need explicit hash_dist in hash_action table"); // FIXME
@@ -112,10 +102,8 @@ void HashActionTable::write_merge_regs(int type, int bus) {
 void HashActionTable::write_regs() {
     LOG1("### Hash Action " << name() << " write_regs");
     /* FIXME -- setup layout with no rams so other functions can write registers properly */
-    layout.resize(1);
-    layout[0].row = row;
-    layout[0].bus = bus & 1;
-    MatchTable::write_regs((bus&2) >> 1, this);
+    int bus_type = layout[0].bus >> 1;
+    MatchTable::write_regs(bus_type, this);
     auto &merge = stage->regs.rams.match.merge;
     merge.exact_match_logical_result_en |= 1 << logical_id;
     if (stage->tcam_delay(gress))

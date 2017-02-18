@@ -10,20 +10,9 @@
 DEFINE_TABLE_TYPE(ExactMatchTable)
 
 void ExactMatchTable::setup(VECTOR(pair_t) &data) {
-    setup_layout(layout, get(data, "row"), get(data, "column"), get(data, "bus"));
-    setup_logical_id();
-    if (auto *fmt = get(data, "format")) {
-        if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
-            format = new Format(fmt->map); }
+    common_init_setup(data, false, P4Table::MatchEntry);
     for (auto &kv : MapIterChecked(data)) {
         if (common_setup(kv, data, P4Table::MatchEntry)) {
-        } else if (kv.key == "input_xbar") {
-            if (CHECKTYPE(kv.value, tMAP))
-                input_xbar = new InputXbar(this, false, kv.value.map);
-        } else if (kv.key == "format") {
-            /* done above to be done before action_bus and vpns */
-        } else if (kv.key == "row" || kv.key == "column" || kv.key == "bus") {
-            /* already done in setup_layout */
         } else if (kv.key == "ways") {
             if (!CHECKTYPE(kv.value, tVEC)) continue;
             for (auto &w : kv.value.vec) {

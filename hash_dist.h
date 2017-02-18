@@ -23,7 +23,7 @@ struct HashDistribution {
            ACTION_DATA_ADDRESS=4, HASHMOD_DIVIDEND=5 };
     int         xbar_use = NONE;
     HashDistribution(int id, value_t &data, int u=NONE);
-    static void parse(std::vector<HashDistribution> &out, value_t &v, int u=NONE);
+    static void parse(std::vector<HashDistribution> &out, const value_t &v, int u=NONE);
     bool compatible(HashDistribution *a);
     void pass1(Table *tbl);
     void write_regs(Table *, int, bool);

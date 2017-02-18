@@ -36,7 +36,7 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
             hash_table[col].bit = bit++; }
 }
 
-InputXbar::InputXbar(Table *t, bool tern, VECTOR(pair_t) &data)
+InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
 : table(t), ternary(tern), lineno(data[0].key.lineno)
 {
     int numgroups = ternary ? TCAM_XBAR_GROUPS : EXACT_XBAR_GROUPS;

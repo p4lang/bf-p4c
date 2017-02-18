@@ -49,13 +49,16 @@ protected:
     Table(const Table &) = delete;
     Table(Table &&) = delete;
     virtual void setup(VECTOR(pair_t) &data) = 0;
+    virtual void common_init_setup(const VECTOR(pair_t) &, bool, P4Table::type);
     virtual bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type);
-    void setup_layout(std::vector<Layout> &, value_t *row, value_t *col, value_t *bus, const char *subname = "");
+    void setup_layout(std::vector<Layout> &, const value_t *row, const value_t *col,
+                      const value_t *bus, const char *subname = "");
     void setup_logical_id();
     void setup_actions(value_t &);
     void setup_maprams(VECTOR(value_t) *);
     void setup_vpns(std::vector<Layout> &, VECTOR(value_t) *, bool allow_holes = false);
-    virtual void vpn_params(int &width, int &depth, int &period, const char *&period_name) { assert(0); }
+    virtual void vpn_params(int &width, int &depth, int &period, const char *&period_name)
+    { assert(0); }
     void alloc_rams(bool logical, Alloc2Dbase<Table *> &use, Alloc2Dbase<Table *> *bus_use = 0);
     void alloc_busses(Alloc2Dbase<Table *> &bus_use);
     void alloc_id(const char *idname, int &id, int &next_id, int max_id,
@@ -147,7 +150,7 @@ public:
                 if (size) bits.push_back({ 0, size-1 }); }
         };
         Format() { fmt.resize(1); }
-        Format(VECTOR(pair_t) &data, bool may_overlap = false);
+        Format(const VECTOR(pair_t) &data, bool may_overlap = false);
         ~Format();
         void pass1(Table *tbl);
         void pass2(Table *tbl);
@@ -382,6 +385,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     void pass1(int type);
     using Table::write_regs;
     void write_regs(int type, Table *result);
+    void common_init_setup(const VECTOR(pair_t) &, bool, P4Table::type) override;
     bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type) override;
 public:
     const AttachedTables *get_attached() const { return &attached; }
@@ -517,7 +521,7 @@ DECLARE_TABLE_TYPE(Phase0MatchTable, Table, "phase0_match",
 )
 DECLARE_TABLE_TYPE(HashActionTable, MatchTable, "hash_action",
 public:
-    int                                 row = -1, bus = -1;
+    //int                                 row = -1, bus = -1;
     void write_merge_regs(int type, int bus) override;
 )
 
