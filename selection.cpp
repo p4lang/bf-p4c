@@ -139,16 +139,9 @@ void SelectionTable::write_regs() {
     Layout *home = &layout[0];
     bool push_on_overflow = false;
     auto &map_alu =  stage->regs.rams.map_alu;
-    DataSwitchboxSetup swbox(stage, home->row/2U);
-    int minvpn = 1000000, maxvpn = -1;
-    if (options.match_compiler) {
-        minvpn = 0;
-        maxvpn = layout_size() - 2;
-    } else
-        for (Layout &logical_row : layout)
-            for (auto v : logical_row.vpns) {
-                if (v < minvpn) minvpn = v;
-                if (v > maxvpn) maxvpn = v; }
+    DataSwitchboxSetup swbox(this);
+    int minvpn, maxvpn;
+    layout_vpn_bounds(minvpn, maxvpn, true);
     for (Layout &logical_row : layout) {
         unsigned row = logical_row.row/2U;
         unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
@@ -160,55 +153,10 @@ void SelectionTable::write_regs() {
         swbox.setup_row(row);
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;
-            auto &ram = stage->regs.rams.array.row[row].ram[logical_col + 6*side];
-            auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
-            unitram_config.unitram_type = UnitRam::SELECTOR;
-            unitram_config.unitram_logical_table = logical_id;
-            if (!options.match_compiler) // FIXME -- compiler doesn't set this?
-                unitram_config.unitram_vpn = *vpn;
-            if (gress == INGRESS)
-                unitram_config.unitram_ingress = 1;
-            else
-                unitram_config.unitram_egress = 1;
-            unitram_config.unitram_enable = 1;
-
-            auto &ram_address_mux_ctl = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
-            ram_address_mux_ctl.ram_unitram_adr_mux_select = UnitRam::AdrMux::STATS_METERS;
-            if (&logical_row == home) {
-                ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::STATISTICS;
-                ram.unit_ram_ctl.match_ram_read_data_mux_select = UnitRam::DataMux::STATISTICS;
-                ram_address_mux_ctl.ram_stats_meter_adr_mux_select_meter = 1;
-                ram_address_mux_ctl.ram_ofo_stats_mux_select_statsmeter = 1;
-                ram_address_mux_ctl.synth2port_radr_mux_select_home_row = 1;
-            } else {
-                ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::OVERFLOW;
-                ram.unit_ram_ctl.match_ram_read_data_mux_select = UnitRam::DataMux::OVERFLOW;
-                ram_address_mux_ctl.ram_oflo_adr_mux_select_oflo = 1;
-                ram_address_mux_ctl.ram_ofo_stats_mux_select_oflo = 1;
-                ram_address_mux_ctl.synth2port_radr_mux_select_oflo = 1; }
-            ram_address_mux_ctl.map_ram_wadr_mux_select = MapRam::Mux::SYNTHETIC_TWO_PORT;
-            ram_address_mux_ctl.map_ram_wadr_mux_enable = 1;
-            ram_address_mux_ctl.map_ram_radr_mux_select_smoflo = 1;
-
-            swbox.setup_col(logical_col);
-
-            auto &mapram_config = map_alu_row.adrmux.mapram_config[*mapram];
-            //auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[*mapram];
-            mapram_config.mapram_type = MapRam::SELECTOR_SIZE;
-            mapram_config.mapram_logical_table = logical_id;
-            mapram_config.mapram_vpn_members = 0;
-            if (!options.match_compiler) // FIXME -- compiler doesn't set this?
-                mapram_config.mapram_vpn = *vpn;
-            if (gress == INGRESS)
-                mapram_config.mapram_ingress = 1;
-            else
-                mapram_config.mapram_egress = 1;
-            mapram_config.mapram_enable = 1;
-            //if (!options.match_compiler) // FIXME -- compiler doesn't set this?
-            //    mapram_ctl.mapram_vpn_limit = maxvpn;
-            if (gress) {
-                stage->regs.cfg_regs.mau_cfg_mram_thread[*mapram/3U] |= 1U << (*mapram%3U*8U + row);
-                stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row); }
+            swbox.setup_row_col(row, col, *vpn);
+            write_mapram_regs(row, *mapram, *vpn, MapRam::SELECTOR_SIZE);
+            if (gress)
+                stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row);
             ++mapram, ++vpn; }
         if (&logical_row == home) {
             auto &vh_adr_xbar = stage->regs.rams.array.row[row].vh_adr_xbar;

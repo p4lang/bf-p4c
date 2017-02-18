@@ -74,7 +74,30 @@ void Stateful::write_regs() {
     // FIXME -- factor common Synth2Port::write_regs
     // FIXME -- factor common CounterTable::write_regs
     // FIXME -- factor common MeterTable::write_regs
-    Synth2Port::write_regs();
+    if (input_xbar) input_xbar->write_regs();
+    Layout *home = &layout[0];
+    //bool push_on_overflow = false;
+    //auto &map_alu =  stage->regs.rams.map_alu;
+    //auto &adrdist = stage->regs.rams.match.adrdist;
+    DataSwitchboxSetup swbox(this);
+    int minvpn, maxvpn;
+    layout_vpn_bounds(minvpn, maxvpn, true);
+    for (Layout &logical_row : layout) {
+        unsigned row = logical_row.row/2U;
+        unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
+        assert(side == 1);      /* no map rams or alus on left side anymore */
+        auto vpn = logical_row.vpns.begin();
+        auto mapram = logical_row.maprams.begin();
+        //auto &map_alu_row =  map_alu.row[row];
+        LOG2("# DataSwitchbox.setup(" << row << ") home=" << home->row/2U);
+        swbox.setup_row(row);
+        for (int logical_col : logical_row.cols) {
+            unsigned col = logical_col + 6*side;
+            swbox.setup_row_col(row, col, *vpn);
+            write_mapram_regs(row, *mapram, *vpn, MapRam::STATEFUL);
+            if (gress)
+                stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row);
+            ++mapram, ++vpn; } }
 }
 
 void Stateful::gen_tbl_cfg(json::vector &out) {

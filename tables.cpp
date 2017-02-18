@@ -1149,6 +1149,25 @@ void MatchTable::write_regs(int type, Table *result) {
 
 }
 
+void Table::write_mapram_regs(int row, int col, int vpn, int type) {
+    auto &mapram_config = stage->regs.rams.map_alu.row[row].adrmux.mapram_config[col];
+    //auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[col];
+    mapram_config.mapram_type = type;
+    mapram_config.mapram_logical_table = logical_id;
+    mapram_config.mapram_vpn_members = 0;
+    if (!options.match_compiler) // FIXME -- compiler doesn't set this?
+        mapram_config.mapram_vpn = vpn;
+    if (gress == INGRESS)
+        mapram_config.mapram_ingress = 1;
+    else
+        mapram_config.mapram_egress = 1;
+    mapram_config.mapram_enable = 1;
+    //if (!options.match_compiler) // FIXME -- compiler doesn't set this?
+    //    mapram_ctl.mapram_vpn_limit = maxvpn;
+    if (gress)
+        stage->regs.cfg_regs.mau_cfg_mram_thread[col/3U] |= 1U << (col%3U*8U + row);
+}
+
 int Table::find_on_actionbus(Format::Field *f, int off, int size) {
     return action_bus ? action_bus->find(f, off, size) : -1;
 }

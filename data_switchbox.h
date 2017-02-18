@@ -7,13 +7,13 @@
  */
 
 class DataSwitchboxSetup {
-    Stage *stage;
+    Table       *tbl;
     unsigned    home_row, prev_row;
 public:
-    DataSwitchboxSetup(Stage *s, unsigned h) : stage(s), home_row(h), prev_row(h) {}
+    DataSwitchboxSetup(Table *t) : tbl(t) { home_row = prev_row = tbl->layout[0].row/2U; }
     void setup_row(unsigned row) {
-        auto &map_alu =  stage->regs.rams.map_alu;
-        auto &swbox = stage->regs.rams.array.switchbox.row;
+        auto &map_alu =  tbl->stage->regs.rams.map_alu;
+        auto &swbox = tbl->stage->regs.rams.array.switchbox.row;
         auto &map_alu_row =  map_alu.row[row];
         int side = 1;  // always -- currently no maprams on left side
         auto &syn2port_ctl = map_alu_row.i2portctl.synth2port_fabric_ctl[0][side];
@@ -49,12 +49,45 @@ public:
         if (row == home_row)
             swbox[row].ctl.r_stats_alu_o_mux_select.r_stats_alu_o_sel_stats_rd_r_i = 1;
     }
-    void setup_col(unsigned col) {
-        auto &map_alu =  stage->regs.rams.map_alu;
+    void setup_row_col(unsigned row, unsigned col, int vpn) {
+        int side = col >= 6;
+        unsigned logical_col = col % 6U;
+        auto &ram = tbl->stage->regs.rams.array.row[row].ram[col];
+        auto &map_alu =  tbl->stage->regs.rams.map_alu;
         auto &map_alu_row =  map_alu.row[prev_row];
+        auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
+        unitram_config.unitram_type = tbl->unitram_type();
+        unitram_config.unitram_logical_table = tbl->logical_id;
+        if (!options.match_compiler) // FIXME -- compiler doesn't set this?
+            unitram_config.unitram_vpn = vpn;
+        if (tbl->gress == INGRESS)
+            unitram_config.unitram_ingress = 1;
+        else
+            unitram_config.unitram_egress = 1;
+        unitram_config.unitram_enable = 1;
+
+        auto &ram_address_mux_ctl = map_alu_row.adrmux.ram_address_mux_ctl[side][logical_col];
+        ram_address_mux_ctl.ram_unitram_adr_mux_select = UnitRam::AdrMux::STATS_METERS;
+        if (row == home_row) {
+            ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::STATISTICS;
+            ram.unit_ram_ctl.match_ram_read_data_mux_select = UnitRam::DataMux::STATISTICS;
+            if (tbl->adr_mux_select_stats())
+                ram_address_mux_ctl.ram_stats_meter_adr_mux_select_stats = 1;
+            else
+                ram_address_mux_ctl.ram_stats_meter_adr_mux_select_meter = 1;
+            ram_address_mux_ctl.ram_ofo_stats_mux_select_statsmeter = 1;
+            ram_address_mux_ctl.synth2port_radr_mux_select_home_row = 1;
+        } else {
+            ram.unit_ram_ctl.match_ram_write_data_mux_select = UnitRam::DataMux::OVERFLOW;
+            ram.unit_ram_ctl.match_ram_read_data_mux_select = UnitRam::DataMux::OVERFLOW;
+            ram_address_mux_ctl.ram_oflo_adr_mux_select_oflo = 1;
+            ram_address_mux_ctl.ram_ofo_stats_mux_select_oflo = 1;
+            ram_address_mux_ctl.synth2port_radr_mux_select_oflo = 1; }
+        ram_address_mux_ctl.map_ram_wadr_mux_select = MapRam::Mux::SYNTHETIC_TWO_PORT;
+        ram_address_mux_ctl.map_ram_wadr_mux_enable = 1;
+        ram_address_mux_ctl.map_ram_radr_mux_select_smoflo = 1;
         int syn2port_bus = prev_row == home_row ? 0 : 1;
-        int side = 1;  // always -- currently no maprams on left side
         auto &syn2port_members = map_alu_row.i2portctl.synth2port_hbus_members[syn2port_bus][side];
-        syn2port_members |= 1U << col;
+        syn2port_members |= 1U << logical_col;
     }
 };

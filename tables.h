@@ -1,20 +1,21 @@
 #ifndef _tables_h_
 #define _tables_h_
 
+#include <set>
+#include <string>
+#include <vector>
 #include "algorithm.h"
 #include "alloc.h"
 #include "asm-types.h"
 #include "bitvec.h"
+#include "constants.h"
 #include "hash_dist.h"
 #include "json.h"
 #include "map.h"
 #include "ordered_map.h"
-#include <set>
-#include <string>
 #include "phv.h"
 #include "p4_table.h"
 #include "slist.h"
-#include <vector>
 
 class ActionBus;
 struct AttachedTables;
@@ -280,7 +281,10 @@ public:
     virtual int direct_shiftcount() { assert(0); }
     /* row,col -> mem unitno mapping -- unitnumbers used in context json */
     virtual int memunit(int r, int c) { return r*12 + c; }
+    virtual int unitram_type() { assert(0); }
+    virtual bool adr_mux_select_stats() { return false; }
     virtual bool run_at_eop() { return false; }
+    void write_mapram_regs(int row, int col, int vpn, int type);
 
     std::string                 name_;
     P4Table                     *p4_table = 0;
@@ -321,6 +325,13 @@ public:
             return row.vpns.at(col - row.cols.begin()); }
         assert(0);
         return 0; }
+    void layout_vpn_bounds(int &min, int &max, bool spare = false) {
+        min = 1000000; max = -1;
+        for (Layout &row : layout)
+            for (auto v : row.vpns) {
+                if (v < min) min = v;
+                if (v > max) max = v; }
+        if (spare && max > min) --max; }
     virtual Format::Field *lookup_field(const std::string &n,
                                         const std::string &act = "")
         { return format ? format->field(n) : 0; }
@@ -465,6 +476,7 @@ public:
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(Way &);
     void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                   const Table::Format::Field &field);
+    int unitram_type() override { return UnitRam::MATCH; }
 )
 
 DECLARE_TABLE_TYPE(TernaryMatchTable, MatchTable, "ternary_match",
@@ -547,6 +559,7 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     void write_merge_regs(int type, int bus) { attached.write_merge_regs(match_table, type, bus); }
     void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                   const Table::Format::Field &field);
+    int unitram_type() override { return UnitRam::TERNARY_INDIRECTION; }
 )
 
 DECLARE_ABSTRACT_TABLE_TYPE(AttachedTable, Table,
@@ -585,6 +598,7 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     int find_on_actionbus(Format::Field *f, int off, int size);
     int find_on_actionbus(const char *n, int off, int size, int *len);
     table_type_t table_type() { return ACTION; }
+    int unitram_type() override { return UnitRam::ACTION; }
 )
 
 DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
@@ -652,6 +666,7 @@ public:
                           const std::vector<Call::Arg> &args) override;
     unsigned address_shift() const { return 7 + ceil_log2(min_words); }
     unsigned meter_group() const { return layout.at(0).row/4U; }
+    int unitram_type() override { return UnitRam::SELECTOR; }
 )
 
 class IdletimeTable : public Table {
@@ -710,6 +725,8 @@ DECLARE_TABLE_TYPE(CounterTable, Synth2Port, "counter",
 public:
     int direct_shiftcount() override;
     bool run_at_eop() override { return (type&BYTES) != 0; }
+    bool adr_mux_select_stats() override { return true; }
+    int unitram_type() override { return UnitRam::STATISTICS; }
 )
 
 DECLARE_TABLE_TYPE(MeterTable, Synth2Port, "meter",
@@ -725,6 +742,7 @@ public:
     bool                color_aware = false;
     bool                color_aware_per_flow_enable = false;
     bool run_at_eop() override { return type == STANDARD; }
+    int unitram_type() override { return UnitRam::METER; }
 )
 
 DECLARE_TABLE_TYPE(Stateful, Synth2Port, "stateful",
@@ -732,6 +750,7 @@ DECLARE_TABLE_TYPE(Stateful, Synth2Port, "stateful",
                           const std::vector<Call::Arg> &args) override;
 public:
     int direct_shiftcount() override;
+    int unitram_type() override { return UnitRam::STATEFUL; }
 )
 
 #endif /* _tables_h_ */
