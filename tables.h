@@ -269,8 +269,9 @@ public:
     virtual std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(
             const char *type, std::vector<Layout> &layout, bool skip_spare_bank = false);
     enum table_type_t { OTHER=0, TERNARY_INDIRECT, GATEWAY, ACTION, SELECTION, COUNTER,
-                        METER, IDLETIME };
+                        METER, IDLETIME, STATEFUL };
     virtual table_type_t table_type() { return OTHER; }
+    virtual int instruction_set() { return 0; /* VLIW_ALU */ }
     virtual table_type_t set_match_table(MatchTable *m, bool indirect) { assert(0); }
     virtual MatchTable *get_match_table() { assert(0); }
     virtual std::set<MatchTable *> get_match_tables() { assert(0); }
@@ -746,9 +747,11 @@ public:
 )
 
 DECLARE_TABLE_TYPE(Stateful, Synth2Port, "stateful",
+    table_type_t table_type() { return STATEFUL; }
     void write_merge_regs(MatchTable *match, int type, int bus,
                           const std::vector<Call::Arg> &args) override;
 public:
+    int instruction_set() override { return 1; /* STATEFUL_ALU */ }
     int direct_shiftcount() override;
     int unitram_type() override { return UnitRam::STATEFUL; }
 )

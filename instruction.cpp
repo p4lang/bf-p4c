@@ -4,18 +4,23 @@
 #include "tables.h"
 #include "stage.h"
 
-struct Idecode {
-    static std::map<std::string, Idecode *> opcode;
-    Idecode(const char *name) { opcode[name] = this; }
-    Idecode &alias(const char *name) {
-        opcode[name] = this;
-        return *this; }
-    virtual Instruction *decode(Table *tbl, const Table::Actions::Action *act,
-                                const VECTOR(value_t) &op) = 0;
-};
+std::map<std::string, const Instruction::Decode *>
+    Instruction::Decode::opcode[Instruction::NUM_SETS];
 
-std::map<std::string, Idecode *> Idecode::opcode;
+Instruction *Instruction::decode(Table *tbl, const Table::Actions::Action *act,
+                                 const VECTOR(value_t) &op) {
+    if (auto *d = ::get(Instruction::Decode::opcode[tbl->instruction_set()], op[0].s))
+        return d->decode(tbl, act, op);
+    if (auto p = strchr(op[0].s, '.')) {
+        std::string opname(op[0].s, p - op[0].s);
+        if (auto *d = ::get(Instruction::Decode::opcode[tbl->instruction_set()], opname)) {
+            if (d->type_suffix)
+                return d->decode(tbl, act, op); } }
+    error(op[0].lineno, "Unknown instruction %s", op[0].s);
+    return 0;
+}
 
+namespace {
 static const int group_size[] = { 32, 32, 32, 32, 8, 8, 8, 8, 16, 16, 16, 16, 16, 16 };
 
 class operand {
@@ -275,22 +280,22 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
 }
 
 struct AluOP : public Instruction {
-    struct Decode : public Idecode {
+    const struct Decode : public Instruction::Decode {
         std::string name;
         unsigned opcode;
-        Decode *swap_args;
-        Decode(const char *n, unsigned opc, bool assoc = false) : Idecode(n), name(n),
+        const Decode *swap_args;
+        Decode(const char *n, unsigned opc, bool assoc = false) : Instruction::Decode(n), name(n),
             opcode(opc), swap_args(assoc ? this : 0) {}
         Decode(const char *n, unsigned opc, Decode *sw, const char *alias_name = 0)
-        : Idecode(n), name(n), opcode(opc), swap_args(sw) {
+        : Instruction::Decode(n), name(n), opcode(opc), swap_args(sw) {
             if (sw && !sw->swap_args) sw->swap_args = this;
             if (alias_name) alias(alias_name); }
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
-                            const VECTOR(value_t) &op);
+                            const VECTOR(value_t) &op) const override;
     } *opc;
     Phv::Ref    dest;
     operand     src1, src2;
-    AluOP(Decode *op, Table *tbl, const Table::Actions::Action *act, const value_t &d,
+    AluOP(const Decode *op, Table *tbl, const Table::Actions::Action *act, const value_t &d,
           const value_t &s1, const value_t &s2)
     : Instruction(d.lineno), opc(op), dest(tbl->gress, d),
       src1(tbl, act, s1), src2(tbl, act, s2) {}
@@ -321,7 +326,7 @@ static AluOP::Decode opADD("add", 0x23e, true), opADDC("addc", 0x2be, true),
                      opBMSET("bitmasked-set", 0x2e); // FIXME -- make 3rd operand explicit?
 
 Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act,
-                                   const VECTOR(value_t) &op) {
+                                   const VECTOR(value_t) &op) const {
     AluOP *rv;
     if (op.size == 4)
         rv = new AluOP(this, tbl, act, op.data[1], op.data[2], op.data[3]);
@@ -367,10 +372,10 @@ bool AluOP::equiv(Instruction *a_) {
 }
 
 struct LoadConst : public Instruction {
-    struct Decode : public Idecode {
-        Decode(const char *n) : Idecode(n) {}
+    struct Decode : public Instruction::Decode {
+        Decode(const char *n) : Instruction::Decode(n) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
-                            const VECTOR(value_t) &op);
+                            const VECTOR(value_t) &op) const override;
     };
     Phv::Ref    dest;
     int         src;
@@ -389,7 +394,7 @@ struct LoadConst : public Instruction {
 static LoadConst::Decode opLoadConst("load-const");
 
 Instruction *LoadConst::Decode::decode(Table *tbl, const Table::Actions::Action *act,
-                                       const VECTOR(value_t) &op) {
+                                       const VECTOR(value_t) &op) const {
     if (op.size != 3) {
         error(op[0].lineno, "%s requires 2 operands", op[0].s);
         return 0; }
@@ -422,21 +427,22 @@ bool LoadConst::equiv(Instruction *a_) {
 }
 
 struct CondMoveMux : public Instruction {
-    struct Decode : public Idecode {
+    const struct Decode : public Instruction::Decode {
         unsigned opcode, cond_size;
         bool    src2opt;
         Decode(const char *name, unsigned opc, bool s2opt, unsigned csize, const char *alias_name)
-        : Idecode(name), opcode(opc), cond_size(csize), src2opt(s2opt) { alias(alias_name); }
+        : Instruction::Decode(name), opcode(opc), cond_size(csize), src2opt(s2opt) {
+            alias(alias_name); }
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
-                            const VECTOR(value_t) &op);
+                            const VECTOR(value_t) &op) const override;
     } *opc;
     Phv::Ref    dest;
     operand     src1, src2;
     unsigned    cond;
-    CondMoveMux(Table *tbl, Decode *op, const Table::Actions::Action *act, const value_t &d,
+    CondMoveMux(Table *tbl, const Decode *op, const Table::Actions::Action *act, const value_t &d,
                 const value_t &s)
     : Instruction(d.lineno), opc(op), dest(tbl->gress, d), src1(tbl, act, s), src2(tbl->gress, d) {}
-    CondMoveMux(Table *tbl, Decode *op, const Table::Actions::Action *act, const value_t &d,
+    CondMoveMux(Table *tbl, const Decode *op, const Table::Actions::Action *act, const value_t &d,
                 const value_t &s1, const value_t &s2)
     : Instruction(d.lineno), opc(op), dest(tbl->gress, d), src1(tbl, act, s1), src2(tbl, act, s2) {}
     Instruction *pass1(Table *tbl);
@@ -456,7 +462,7 @@ static CondMoveMux::Decode opCondMove("cmov", 0x16, true, 5, "conditional-move")
                            opCondMux("cmux", 0x6, false, 2, "conditional-mux");
 
 Instruction *CondMoveMux::Decode::decode(Table *tbl, const Table::Actions::Action *act,
-                                         const VECTOR(value_t) &op) {
+                                         const VECTOR(value_t) &op) const {
     if (op.size != 5 && (op.size != 4 || !src2opt)) {
         error(op[0].lineno, "%s requires %s4 operands", op[0].s, src2opt ? "3 or " : "");
         return 0; }
@@ -505,10 +511,10 @@ bool CondMoveMux::equiv(Instruction *a_) {
 struct Set;
 
 struct DepositField : public Instruction {
-    struct Decode : public Idecode {
-        Decode() : Idecode("deposit_field") { alias("deposit-field"); }
+    struct Decode : public Instruction::Decode {
+        Decode() : Instruction::Decode("deposit_field") { alias("deposit-field"); }
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
-                            const VECTOR(value_t) &op);
+                            const VECTOR(value_t) &op) const override;
     };
     Phv::Ref    dest;
     operand     src1, src2;
@@ -531,7 +537,7 @@ struct DepositField : public Instruction {
 static DepositField::Decode opDepositField;
 
 Instruction *DepositField::Decode::decode(Table *tbl, const Table::Actions::Action *act,
-                                          const VECTOR(value_t) &op) {
+                                          const VECTOR(value_t) &op) const {
     if (op.size != 4 && op.size != 3) {
         error(op[0].lineno, "%s requires 2 or 3 operands", op[0].s);
         return 0; }
@@ -587,10 +593,10 @@ bool DepositField::equiv(Instruction *a_) {
 }
 
 struct Set : public Instruction {
-    struct Decode : public Idecode {
-        Decode(const char *n) : Idecode(n) {}
+    struct Decode : public Instruction::Decode {
+        Decode(const char *n) : Instruction::Decode(n) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
-                            const VECTOR(value_t) &op);
+                            const VECTOR(value_t) &op) const override;
     };
     Phv::Ref    dest;
     operand     src;
@@ -612,7 +618,7 @@ DepositField::DepositField(const Set &s)
 static Set::Decode opSet("set");
 
 Instruction *Set::Decode::decode(Table *tbl, const Table::Actions::Action *act,
-                                 const VECTOR(value_t) &op) {
+                                 const VECTOR(value_t) &op) const {
     if (op.size != 3) {
         error(op[0].lineno, "%s requires 2 operands", op[0].s);
         return 0; }
@@ -645,15 +651,15 @@ bool Set::equiv(Instruction *a_) {
 }
 
 struct NulOP : public Instruction {
-    struct Decode : public Idecode {
+    const struct Decode : public Instruction::Decode {
         std::string name;
         unsigned opcode;
-        Decode(const char *n, unsigned opc) : Idecode(n), name(n), opcode(opc) {}
+        Decode(const char *n, unsigned opc) : Instruction::Decode(n), name(n), opcode(opc) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
-                            const VECTOR(value_t) &op);
+                            const VECTOR(value_t) &op) const override;
     } *opc;
     Phv::Ref    dest;
-    NulOP(Table *tbl, const Table::Actions::Action *act, Decode *o, const value_t &d) :
+    NulOP(Table *tbl, const Table::Actions::Action *act, const Decode *o, const value_t &d) :
         Instruction(d.lineno), opc(o), dest(tbl->gress, d) {}
     Instruction *pass1(Table *tbl);
     void pass2(Table *) {}
@@ -667,7 +673,7 @@ struct NulOP : public Instruction {
 static NulOP::Decode opInvalidate("invalidate", 0x3800), opNoop("noop", 0);
 
 Instruction *NulOP::Decode::decode(Table *tbl, const Table::Actions::Action *act,
-                                   const VECTOR(value_t) &op) {
+                                   const VECTOR(value_t) &op) const {
     if (op.size != 2) {
         error(op[0].lineno, "%s requires 1 operand", op[0].s);
         return 0; }
@@ -691,30 +697,21 @@ bool NulOP::equiv(Instruction *a_) {
         return false;
 }
 
-Instruction *Instruction::decode(Table *tbl, const Table::Actions::Action *act,
-                                 const VECTOR(value_t) &op) {
-    if (auto *d = ::get(Idecode::opcode, op[0].s))
-        return d->decode(tbl, act, op);
-    else
-        error(op[0].lineno, "Unknown instruction %s", op[0].s);
-    return 0;
-}
-
 struct ShiftOP : public Instruction {
-    struct Decode : public Idecode {
+    const struct Decode : public Instruction::Decode {
         std::string name;
         unsigned opcode;
         bool use_src1;
-        Decode *swap_args;
+        const Decode *swap_args;
         Decode(const char *n, unsigned opc, bool funnel = false)
-        : Idecode(n), name(n), opcode(opc), use_src1(funnel) {}
+        : Instruction::Decode(n), name(n), opcode(opc), use_src1(funnel) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
-                            const VECTOR(value_t) &op);
+                            const VECTOR(value_t) &op) const override;
     } *opc;
     Phv::Ref    dest;
     operand     src1, src2;
     int         shift;
-    ShiftOP(Decode *d, Table *tbl, const Table::Actions::Action *act, const value_t *ops) :
+    ShiftOP(const Decode *d, Table *tbl, const Table::Actions::Action *act, const value_t *ops) :
             Instruction(ops->lineno), opc(d), dest(tbl->gress, ops[0]),
             src1(tbl, act, ops[1]), src2(tbl, act, ops[2]) {
                 if (opc->use_src1) {
@@ -736,7 +733,7 @@ static ShiftOP::Decode opSHL("shl", 0x0c, false), opSHRS("shrs", 0x1c, false),
                        opSHRU("shru", 0x14, false), opFUNSHIFT("funnel-shift", 0x04, true);
 
 Instruction *ShiftOP::Decode::decode(Table *tbl, const Table::Actions::Action *act,
-                                     const VECTOR(value_t) &op) {
+                                     const VECTOR(value_t) &op) const {
     if (op.size != (use_src1 ? 5 : 4)) {
         error(op[0].lineno, "%s requires %d operands", op[0].s, use_src1 ? 4 : 3);
         return 0; }
@@ -778,3 +775,5 @@ bool ShiftOP::equiv(Instruction *a_) {
     } else
         return false;
 }
+
+}  // end anonymous namespace

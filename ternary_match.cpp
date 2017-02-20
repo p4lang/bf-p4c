@@ -478,7 +478,7 @@ void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {
                 for (auto &v : kv.value.vec)
                     attached.stats.emplace_back(v, this);
             else attached.stats.emplace_back(kv.value, this);
-        } else if (kv.key == "meter") {
+        } else if (kv.key == "meter" || kv.key == "stateful") {
             if (kv.value.type == tVEC)
                 for (auto &v : kv.value.vec)
                     attached.meter.emplace_back(v, this);

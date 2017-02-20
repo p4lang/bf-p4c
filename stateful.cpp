@@ -14,8 +14,8 @@ void Stateful::setup(VECTOR(pair_t) &data) {
     if (auto *fmt = get(data, "format")) {
         if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
             format = new Format(fmt->map);
-    } // else
-        // error(lineno, "No format specified in table %s", name());
+    } else
+        error(lineno, "No format specified in table %s", name());
     for (auto &kv : MapIterChecked(data, true)) {
         if (common_setup(kv, data, P4Table::Stateful)) {
         } else if (kv.key == "format") {
@@ -28,6 +28,9 @@ void Stateful::setup(VECTOR(pair_t) &data) {
             for (auto &hd : hash_dist) hd.meter_pre_color = true;
             if (hash_dist.size() > 1)
                 error(kv.key.lineno, "More than one hast_dist in a stateful table not supported");
+        } else if (kv.key == "actions") {
+            if (CHECKTYPE(kv.value, tMAP))
+                actions = new Actions(this, kv.value.map);
         } else
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
                     value_desc(kv.key), name()); }
@@ -43,19 +46,39 @@ void Stateful::pass1() {
     std::sort(layout.begin(), layout.end(),
               [](const Layout &a, const Layout &b)->bool { return a.row > b.row; });
     stage->table_use[gress] |= Stage::USE_STATEFUL;
+    for (auto &hd : hash_dist)
+        hd.pass1(this);
+    if (input_xbar) input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
     int prev_row = -1;
     for (auto &row : layout) {
         if (prev_row >= 0)
             need_bus(lineno, stage->overflow_bus_use, row.row, "Overflow");
         else
-            need_bus(lineno, stage->stats_bus_use, row.row, "Statistics data");
+            need_bus(lineno, stage->meter_bus_use, row.row, "Meter data");
         for (int r = (row.row + 1) | 1; r < prev_row; r += 2)
             need_bus(lineno, stage->overflow_bus_use, r, "Overflow");
         prev_row = row.row; }
+    unsigned idx = 0, size = 0;
+    for (auto &fld : *format) {
+        switch (idx++) {
+        case 0:
+            if ((size = fld.second.size) != 1 && size != 8 && size != 16 && size != 32)
+                error(format->lineno, "invalid size %d for stateful format field %s",
+                      size, fld.first.c_str()); break;
+        case 1:
+            if (size != fld.second.size)
+                error(format->lineno, "stateful fields must be the same size");
+            else if (size == 1)
+                error(format->lineno, "one bit stateful tables can only have a single field");
+            break;
+        default:
+            error(format->lineno, "only two fields allowed in a stateful table"); } }
 }
 
 void Stateful::pass2() {
     LOG1("### Stateful table " << name() << " pass2");
+    if (input_xbar) input_xbar->pass2(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
+
 }
 
 int Stateful::direct_shiftcount() {

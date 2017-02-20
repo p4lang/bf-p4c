@@ -366,7 +366,7 @@ bool MatchTable::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::t
                 attached.stats.emplace_back(v, this);
         else attached.stats.emplace_back(kv.value, this);
         return true; }
-    if (kv.key == "meter") {
+    if (kv.key == "meter" || kv.key == "stateful") {
         if (kv.value.type == tVEC)
             for (auto &v : kv.value.vec)
                 attached.meter.emplace_back(v, this);
@@ -728,6 +728,11 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
             if (actions->code_use[(code = kv.key[1].i)])
                 error(kv.key.lineno, "Duplicate action code %d", code);
             actions->code_use[code] = true; }
+    } else if (kv.key.type == tINT) {
+        name = std::to_string(kv.key.i);
+        if (actions->code_use[(code = kv.key.i)])
+            error(kv.key.lineno, "Duplicate action code %d", code);
+        actions->code_use[code] = true;
     } else
         name = kv.key.s;
     for (auto &i : kv.value.vec) {
@@ -745,11 +750,13 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
 
 Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
     for (auto &kv : data) {
-        if (!CHECKTYPE2(kv.key, tSTR, tCMD) || !CHECKTYPE(kv.value, tVEC))
+        if ((kv.key.type != tINT && !CHECKTYPE2M(kv.key, tSTR, tCMD, "action")) ||
+            !CHECKTYPE(kv.value, tVEC))
             continue;
-        const char *name = kv.key.type == tSTR ? kv.key.s : kv.key[0].s;
+        std::string name = kv.key.type == tINT ? std::to_string(kv.key.i) :
+                           kv.key.type == tSTR ? kv.key.s : kv.key[0].s;
         if (actions.count(name)) {
-            error(kv.key.lineno, "Duplicate action %s", name);
+            error(kv.key.lineno, "Duplicate action %s", name.c_str());
             continue; }
         actions.emplace(name, Action(tbl, this, kv)); }
 }
@@ -1275,8 +1282,9 @@ void AttachedTables::pass1(MatchTable *self) {
         else if (s->gress != self->gress)
             error(s.lineno, "Counter %s not in same thread as %s", s->name(), self->name()); }
     for (auto &m : meter) if (m.check()) {
-        if (m->set_match_table(self, m.args.size() >= 1) != Table::METER)
-            error(m.lineno, "%s is not a meter table", m->name());
+        auto type = m->set_match_table(self, m.args.size() >= 1);
+        if (type != Table::METER && type != Table::STATEFUL)
+            error(m.lineno, "%s is not a meter or stateful table", m->name());
         if (m.args.size() > 1)
             error(m.lineno, "Meter table requires zero or one args");
         if (m.args.size() > 0 && m.args[0].hash_dist())

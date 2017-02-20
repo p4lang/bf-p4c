@@ -10,6 +10,12 @@ static void yyerror(const char *, ...);
 static int lineno;
 static std::map<int, std::pair<std::string, int>> line_file_map;
 
+/* DANGER -- The value/command functions take non-const references to
+ * value_t and MOVE them, so the source should not be used or cleaned
+ * up afterwards.  This matches up with how bison  actions work -- in
+ * the normal case it does NOT try to destroy stuff on the value stack,
+ * but rather just pops it and lets it go.  Do not try to use them
+ * outside of bison action code */
 static value_t value(int v, int lineno_adj) {
     value_t rv{tINT, lineno - lineno_adj};
     rv.i = v;
@@ -69,6 +75,8 @@ static value_t command(char *cmd, value_t &arg, int lineno_adj) {
     VECTOR_init2(rv.vec, value(cmd, 0), arg);
     rv[0].lineno = rv.lineno;
     return rv; }
+static value_t command(char *cmd, value_t &&arg, int lineno_adj) {
+    return command(cmd, arg, lineno_adj); }
 static value_t command(char *cmd, value_t &a1, value_t &a2, int lineno_adj) {
     if (a1.type == tCMD && a1 == cmd && a1.vec.size > 2) {
         free(cmd);
@@ -187,6 +195,7 @@ linewrapped_params
 param   : INT { $$ = VAL($1); }
         | ID { $$ = VAL($1); }
         | '-' INT { $$ = VAL(-$2); }
+        | '!' ID { $$ = CMD(strdup("!"), VAL($2)); }
         | INT DOTDOT INT { $$ = VAL($1, $3); }
         | ID '(' param ')' { $$ = CMD($1, $3); }
         | ID '(' comma_params ')' { $$ = CMD($1, $3); }
@@ -246,6 +255,7 @@ key : ID { $$ = VAL($1); }
 value: key
     | flow_value
     | '-' value %prec UNARY { if (($$=$2).type == tINT) $$.i = -$$.i; else $$ = CMD(strdup("-"), $2); }
+    | '!' value %prec UNARY { $$ = CMD(strdup("!"), $2); }
     | dotvals INT { VECTOR_add($1, VAL($2)); $$ = VAL($1); }
     | value '^' value { $$ = CMD(strdup("^"), $1, $3); }
     | value '|' value { $$ = CMD(strdup("|"), $1, $3); }

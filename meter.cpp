@@ -76,7 +76,7 @@ void MeterTable::pass1() {
         if (prev_row >= 0)
             need_bus(lineno, stage->overflow_bus_use, row.row, "Overflow");
         else
-            need_bus(lineno, stage->stats_bus_use, row.row, "Statistics data");
+            need_bus(lineno, stage->meter_bus_use, row.row, "Meter data");
         for (int r = (row.row + 1) | 1; r < prev_row; r += 2)
             need_bus(lineno, stage->overflow_bus_use, r, "Overflow");
         prev_row = row.row; }
