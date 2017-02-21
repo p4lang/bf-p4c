@@ -199,3 +199,9 @@ elif ${RUN_TFAS:-false}; then
     rm -f $name.out/*.cfg.json
     run $TFAS -vvvvl $name.out/tfas.config.log $name.tfa || die
 fi
+
+if [[ " $IFAIL_TESTS " =~ " $testdir/$name.p4.test " ]]; then
+    echo "intermittent test PASSED"
+    exit 1
+fi
+

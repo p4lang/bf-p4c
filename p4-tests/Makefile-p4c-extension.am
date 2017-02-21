@@ -285,7 +285,9 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/shared_names.p4.test
 IFAIL_TESTS += tofino-ortools/%reldir%/p4_14/simple_counter.p4.test \
 	       tofino-ortools/%reldir%/p4_14/max_counters.p4.test \
 	       tofino-ortools/%reldir%/p4_14/gateway_bus2.p4.test \
-	       tofino-ortools/testdata/p4_14_samples/07-MultiProtocol.p4.test
+	       tofino-ortools/testdata/p4_14_samples/bigfield1.p4.test \
+	       tofino-ortools/testdata/p4_14_samples/07-MultiProtocol.p4.test \
+	       tofino/testdata/p4_14_samples/basic_routing.p4.test
 
 
 # Fails PHV allocation with 'Slice out of range for field...'
