@@ -177,16 +177,6 @@ class PHV_MAU_Group_Assignments : public Visitor {
     std::vector<PHV_Container *> cohabit_fields_i;
                                        // ranked set of container cohabits
                                        // requests to TP to avoid single-write issue
-    //
-    bool gress_in_compatibility(
-        PHV_Container::Ingress_Egress gc_gress,
-        PHV_Container::Ingress_Egress cl_gress) {
-        //
-        return
-            (gc_gress == PHV_Container::Ingress_Egress::Ingress_Only
-          || gc_gress == PHV_Container::Ingress_Egress::Egress_Only)
-          && gc_gress != cl_gress;
-    }
     void container_no_pack(
         std::list<Cluster_PHV *>& clusters_to_be_assigned,
         std::list<PHV_MAU_Group *>& phv_groups_to_be_filled,
@@ -243,6 +233,16 @@ class PHV_MAU_Group_Assignments : public Visitor {
         ordered_map<int,
         ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&,
         const char *msg = "");
+    //
+    bool gress_in_compatibility(
+        PHV_Container::Ingress_Egress gc_gress,
+        PHV_Container::Ingress_Egress cl_gress) {
+        //
+        return
+            (gc_gress == PHV_Container::Ingress_Egress::Ingress_Only
+          || gc_gress == PHV_Container::Ingress_Egress::Egress_Only)
+          && gc_gress != cl_gress;
+    }
     //
     bool status(
         std::list<Cluster_PHV *>&,

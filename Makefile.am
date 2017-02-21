@@ -118,6 +118,7 @@ tofino_backend_phv_UNIFIED = \
 	%reldir%/phv/cluster_phv_mau.cpp \
 	%reldir%/phv/cluster_phv_req.cpp \
 	%reldir%/phv/cluster_phv_slicing.cpp \
+	%reldir%/phv/cluster_phv_overlay.cpp \
 	%reldir%/phv/constraints.cpp \
 	%reldir%/phv/container_constraint.cpp \
 	%reldir%/phv/match_xbar_constraint.cpp \
@@ -140,6 +141,8 @@ noinst_HEADERS += \
 	%reldir%/phv/cluster_phv_container.h \
 	%reldir%/phv/cluster_phv_mau.h \
 	%reldir%/phv/cluster_phv_req.h \
+	%reldir%/phv/cluster_phv_slicing.h \
+	%reldir%/phv/cluster_phv_overlay.h \
 	%reldir%/phv/constraints.h \
 	%reldir%/phv/container_constraint.h \
 	%reldir%/phv/create_thread_local_instances.h \

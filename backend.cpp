@@ -61,6 +61,7 @@ limitations under the License.
 #include "tofino/phv/phv_allocator.h"
 #include "tofino/phv/cluster_phv_bind.h"
 #include "tofino/phv/cluster_phv_slicing.h"
+#include "tofino/phv/cluster_phv_overlay.h"
 #include "tofino/common/parser_overlay.h"
 
 namespace Tofino {
@@ -117,6 +118,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     Visitor *phv_alloc;
     SymBitMatrix mutually_exclusive_field_ids;
     ParserOverlay parserOverlay(phv, mutually_exclusive_field_ids);
+    Cluster_PHV_Overlay cluster_phv_overlay(cluster_phv_mau, mutually_exclusive_field_ids);
 
     if (options.trivial_phvalloc) {
         phv_alloc = new PHV::TrivialAlloc(phv, defuse.conflicts());
@@ -151,7 +153,8 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         &cluster_phv_mau,  // cluster PHV container placements
                            // first cut PHV MAU Group assignments
                            // produces cohabit fields for Table Placement
-        // &cluster_slicing,  // cluster slicing
+        &cluster_phv_overlay, // use mutually exclusive headers to free up phv containers
+        //&cluster_slicing, // slice clusters into smaller clusters
     });
 
     PassManager backend = {

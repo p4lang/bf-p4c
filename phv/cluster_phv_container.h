@@ -83,6 +83,13 @@ class PHV_Container {
     int avail_bits_i = 0;                                    // available bits in container
     ordered_map<int, int> ranges_i;                          // available ranges in this container
     //
+    Container_status o_status_i = Container_status::EMPTY;
+    std::vector<Container_Content *> o_fields_in_container_i; // fields to overlay in this container
+    char o_taint_color_i = '0';                              // each resident field separate color
+    char *o_bits_i;                                          // tainted bits for overlay fields
+    int avail_o_bits_i = 0;                                  // available overlay bits
+    ordered_map<int, int> o_ranges_i;                        // available overlay ranges
+    //
  public:
     PHV_Container(
         PHV_MAU_Group *g,
@@ -111,17 +118,22 @@ class PHV_Container {
         return PHV_Container::Ingress_Egress::Ingress_Or_Egress;
     }
     Container_status status()                                   { return status_i; }
+    Container_status o_status()                                 { return o_status_i; }
     char *bits()                                                { return bits_i; }
+    char *o_bits()                                              { return o_bits_i; }
     void taint(
         int start,
         int width,
         const PhvInfo::Field *field,
         int range_start = 0,
-        int field_bit_lo = 0);
+        int field_bit_lo = 0,
+        bool process_overflow = false /* default */);
     int avail_bits()                                            { return avail_bits_i; }
-    ordered_map<int, int>& ranges()                                { return ranges_i; }
+    int avail_o_bits()                                          { return avail_o_bits_i; }
+    ordered_map<int, int>& ranges()                             { return ranges_i; }
+    ordered_map<int, int>& o_ranges()                           { return o_ranges_i; }
     std::vector<Container_Content *>& fields_in_container()     { return fields_in_container_i; }
-    //
+    std::vector<Container_Content *>& o_fields_in_container()   { return o_fields_in_container_i; }
     void create_ranges();
     void clear();
     void clean_ranges();
