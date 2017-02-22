@@ -1,5 +1,8 @@
 ####### Tofino back-end
 
+BOOST_CPPFLAGS = -DBOOST_NO_ARGUMENT_DEPENDENT_LOOKUP
+AM_CPPFLAGS += $(BOOST_CPPFLAGS)
+
 tofino_ir_UNIFIED = \
 	%reldir%/ir/dbprint-tofino.cpp \
 	%reldir%/ir/gress.cpp \
@@ -222,7 +225,8 @@ p4_14include_tofino_HEADERS = \
     $(srcdir)/%reldir%/p4_14include/tofino/wred_blackbox.p4
 
 bin_PROGRAMS += p4c-tofino
-p4c_tofino_LDADD = libfrontend.la libp4ctoolkit.a
+p4c_tofino_LDADD = libfrontend.la libp4ctoolkit.a \
+    $(BOOST_FILESYSTEM_LIB) $(BOOST_SYSTEM_LIB)
 
 p4c_tofino_SOURCES = \
 	$(tofino_backend_common_SOURCES) \
@@ -231,10 +235,3 @@ p4c_tofino_SOURCES = \
 	$(tofino_backend_phv_SOURCES) \
 	$(tofino_backend_phv_or_tools_SOURCES) \
 	$(tofino_backend_main_SOURCES)
-
-
-
-
-
-
-

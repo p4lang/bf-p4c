@@ -11,7 +11,7 @@ class PhvInfo;
 
 class TablePlacement : public MauTransform, public Backtrack {
  public:
-    TablePlacement(const DependencyGraph &d, const TablesMutuallyExclusive &m, const PhvInfo &p);
+    TablePlacement(const DependencyGraph* d, const TablesMutuallyExclusive &m, const PhvInfo &p);
     struct GroupPlace;
     struct Placed;
 
@@ -21,7 +21,7 @@ class TablePlacement : public MauTransform, public Backtrack {
     struct TableSeqInfo;
     map<const IR::MAU::TableSeq *, struct TableSeqInfo> seqInfo;
     class SetupInfo;
-    const DependencyGraph &deps;
+    const DependencyGraph* deps;
     const TablesMutuallyExclusive &mutex;
     const PhvInfo &phv;
     bool alloc_done = false;

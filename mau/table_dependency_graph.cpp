@@ -4,49 +4,52 @@
 #include "ir/ir.h"
 #include "lib/log.h"
 
-static const char *dep_types[] = { "W", "A", "M" };
+#include <boost/graph/breadth_first_search.hpp>
+
+static const char *dep_types[] = { "CONTROL", "DATA", "ANTI", "OUTPUT" };
 
 std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
-    auto save = out.flags();
-    for (auto &tt : dg.graph) {
-        out << std::setw(16) << std::left << tt.first;
-        int w = std::max(static_cast<int>(tt.first.size()) - 16, 0);
-        if (tt.second.min_stage >= 0) {
-            out << ' ' << tt.second.min_stage << '+' << tt.second.dep_stages;
-            w += 4; }
-        for (auto &dep : tt.second.data_dep) {
-            if (w > 50) { out << std::endl << std::setw(16) << " "; w = 0; }
-            out << ' ' << dep.first << '(' << dep_types[dep.second] << ')';
-            w += dep.first.size() + 4; }
-        for (auto &dep : tt.second.control_dep) {
-            if (w > 50) { out << std::endl << std::setw(16) << " "; w = 0; }
-            out << ' ' << dep.first << '(' << dep.second << ')';
-            w += dep.first.size() + dep.second.size() + 3; }
-        out << std::endl; }
-    out.flags(save);
+    out << "GRAPH" << std::endl;
+    DependencyGraph::Graph::edge_iterator edges, edges_end;
+    for (boost::tie(edges, edges_end) = boost::edges(dg.g);
+         edges != edges_end;
+         ++edges) {
+        out << "    " << dg.g[boost::source(*edges, dg.g)]->name << " -- "
+            << dep_types[dg.g[*edges]] << " --> "
+            << dg.g[boost::target(*edges, dg.g)]->name << std::endl; }
+
+    out << "MIN STAGE, DEPENDENCE CHAIN" << std::endl;
+    for (auto &kv : dg.stage_info) {
+        out << "    " << kv.first->name << ": "
+            << kv.second.min_stage << ", " << kv.second.dep_stages
+            << std::endl; }
+
     return out;
 }
 
 class FindDependencyGraph::AddDependencies : public MauInspector, P4WriteContext {
     FindDependencyGraph         &self;
-    Table                       *table;
-    Table::depend_t             type;
+    const IR::MAU::Table        *table;
 
  public:
-    AddDependencies(FindDependencyGraph &self, Table *t, Table::depend_t ty)
-    : self(self), table(t), type(ty) {}
+    AddDependencies(FindDependencyGraph &self, const IR::MAU::Table *t)
+    : self(self), table(t) { }
+
     bool preorder(const IR::Expression *e) override {
         if (auto *field = self.phv.field(e)) {
             if (!self.access.count(field->name)) return false;
             LOG3("add_dependency(" << field->name << ")");
             if (isWrite()) {
-                for (auto t : self.access[field->name].read)
-                    if (table->data_dep[t->name] < Table::WRITE)
-                        table->data_dep[t->name] = Table::WRITE;
-            } else {
-                for (auto t : self.access[field->name].write)
-                    if (table->data_dep[t->name] < type)
-                        table->data_dep[t->name] = type; }
+                // Write-after-read dependence.
+                for (auto upstream_t : self.access[field->name].read)
+                    self.dg.add_edge(upstream_t, table, DependencyGraph::ANTI);
+                // Write-after-write dependence.
+                for (auto upstream_t : self.access[field->name].write)
+                    self.dg.add_edge(upstream_t, table, DependencyGraph::OUTPUT); }
+            else {
+                // Read-after-write dependence.
+                for (auto upstream_t : self.access[field->name].write)
+                    self.dg.add_edge(upstream_t, table, DependencyGraph::DATA); }
             return false; }
         return true; }
     bool preorder(const IR::Annotation *) override { return false; }
@@ -54,10 +57,10 @@ class FindDependencyGraph::AddDependencies : public MauInspector, P4WriteContext
 
 class FindDependencyGraph::UpdateAccess : public MauInspector , P4WriteContext {
     FindDependencyGraph         &self;
-    Table                       *table;
+    const IR::MAU::Table        *table;
 
  public:
-    UpdateAccess(FindDependencyGraph &self, Table *t) : self(self), table(t) {}
+    UpdateAccess(FindDependencyGraph &self, const IR::MAU::Table *t) : self(self), table(t) {}
     bool preorder(const IR::Expression *e) override {
         if (auto *field = self.phv.field(e)) {
             if (isWrite()) {
@@ -75,10 +78,10 @@ class FindDependencyGraph::UpdateAccess : public MauInspector , P4WriteContext {
 
 class FindDependencyGraph::UpdateAttached : public Inspector {
     FindDependencyGraph         &self;
-    Table                       *table;
+    const IR::MAU::Table        *table;
 
  public:
-    UpdateAttached(FindDependencyGraph &self, Table *t) : self(self), table(t) {}
+    UpdateAttached(FindDependencyGraph &self, const IR::MAU::Table *t) : self(self), table(t) { }
     void postorder(const IR::Meter *meter) override {
         if (meter->direct && meter->result) {
             auto *field = self.phv.field(meter->result);
@@ -86,54 +89,49 @@ class FindDependencyGraph::UpdateAttached : public Inspector {
             auto &a = self.access[field->name];
             a.read.clear();
             a.write.clear();
-            a.write.insert(table);
-        }
-    }
+            a.write.insert(table); } }
 };
 
 
-void FindDependencyGraph::add_control_dependency(Table *tt, const IR::Node *child) {
-    const Context *ctxt = getContext();
-    while (ctxt && dynamic_cast<const IR::MAU::TableSeq *>(ctxt->node)) {
-        child = ctxt->node;
-        ctxt = ctxt->parent; }
-    if (!ctxt || dynamic_cast<const IR::Tofino::Pipe *>(ctxt->node)) {
-        return;
-    } else if (auto *t = dynamic_cast<const IR::MAU::Table *>(ctxt->node)) {
-        for (auto &kv : t->next)
-            if (kv.second == child) {
-                tt->control_dep[t->name] = kv.first;
-                return; }
-        assert(false);
-    } else {
-        assert(false); }
-}
-
-bool FindDependencyGraph::preorder(const IR::MAU::TableSeq *) {
+bool FindDependencyGraph::preorder(const IR::MAU::TableSeq *seq) {
     const Context *ctxt = getContext();
     if (ctxt && ctxt->node->is<IR::Tofino::Pipe>()) {
-        gress = gress_t(ctxt->child_index / 3);
         access.clear(); }
+    else if (ctxt && dynamic_cast<const IR::MAU::Table *>(ctxt->node)) {
+        const IR::MAU::Table* parent;
+        parent = dynamic_cast<const IR::MAU::Table *>(ctxt->node);
+        for (auto child : seq->tables) {
+            dg.add_edge(parent, child, DependencyGraph::CONTROL); } }
+
     return true;
 }
+
 bool FindDependencyGraph::preorder(const IR::MAU::Table *t) {
-    if (!graph.count(t->name)) {
-        LOG3("FindDep table " << t->name);
-        auto &table = graph.emplace(t->name, Table(t->name, gress)).first->second;
-        add_control_dependency(&table, t);
-        for (auto &gw : t->gateway_rows)
-            gw.first->apply(AddDependencies(*this, &table, Table::MATCH));
-        if (t->match_table && t->match_table->getKey())
-            t->match_table->getKey()->apply(AddDependencies(*this, &table, Table::MATCH));
-        for (auto &action : Values(t->actions))
-            action->apply(AddDependencies(*this, &table, Table::ACTION));
-        for (auto &gw : t->gateway_rows)
-            gw.first->apply(UpdateAccess(*this, &table));
-        for (auto &action : Values(t->actions))
-            action->apply(UpdateAccess(*this, &table));
-        t->apply(UpdateAttached(*this, &table));
-    } else {
-        error("%s: Multiple applies of table %s not supported", t->srcInfo, t->name); }
+    LOG3("FindDep table " << t->name);
+
+    // TODO: add a pass in the beginning of the back end that checks for
+    // duplicate table instances and, if found, aborts compilation.
+    //     error("%s: Multiple applies of table %s not supported", t->srcInfo, t->name); }
+
+    // Add this table as a vertex in the dependency graph if it's not
+    // already there.
+    dg.add_vertex(t);
+
+    // Add data dependences induced by gateways, matches, and actions.
+    for (auto &gw : t->gateway_rows)
+        gw.first->apply(AddDependencies(*this, t));
+    if (t->match_table && t->match_table->getKey())
+        t->match_table->getKey()->apply(AddDependencies(*this, t));
+    for (auto &action : Values(t->actions))
+        action->apply(AddDependencies(*this, t));
+
+    // Mark fields read/written by this table in accesses.
+    for (auto &gw : t->gateway_rows)
+        gw.first->apply(UpdateAccess(*this, t));
+    for (auto &action : Values(t->actions))
+        action->apply(UpdateAccess(*this, t));
+    t->apply(UpdateAttached(*this, t));
+
     return true;
 }
 
@@ -148,31 +146,158 @@ void FindDependencyGraph::flow_merge(Visitor &v) {
         access[a.first].write |= a.second.write; }
 }
 
-void FindDependencyGraph::recompute_dep_stages() {
-    for (auto &t : graph) t.second.min_stage = t.second.dep_stages = 0;
-    bool delta;
-    do {
-        delta = false;
-        for (auto &t : graph) {
-            auto &table = t.second;
-            for (auto &dep : table.data_dep) {
-                int stages = table.dep_stages;
-                int min = graph.at(dep.first).min_stage;
-                if (dep.second >= Table::ACTION) ++stages, ++min;
-                if (stages > graph.at(dep.first).dep_stages) {
-                    graph.at(dep.first).dep_stages = stages;
-                    delta = true; }
-                if (min > table.min_stage) {
-                    table.min_stage = min;
-                    delta = true; } }
-            for (auto &dep : table.control_dep) {
-                int stages = table.dep_stages;
-                int min = graph.at(dep.first).min_stage;
-                if (stages > graph.at(dep.first).dep_stages) {
-                    graph.at(dep.first).dep_stages = stages;
-                    delta = true; }
-                if (min > table.min_stage) {
-                    table.min_stage = min;
-                    delta = true; } } }
-    } while (delta);
+// Should be applied to a reversed graph, so that it populates happens_before_map
+// starting at the leaves.
+class bfs_happens_before_visitor : public boost::default_bfs_visitor {
+  // happens_before_map[t1] = {t2, t3} means t1 happens strictly before t2 and t3.
+  map< const IR::MAU::Table*,
+       set<const IR::MAU::Table*> >& happens_before_map;
+
+  // happens_not_after[t1] = {t2, t3} means t1 and t2 and/or t3 may happen in
+  // the same stage, or t1 may happen first, but neither t2 nor t3 can happen
+  // before t1.
+  map< const IR::MAU::Table*,
+       set<const IR::MAU::Table*> > happens_not_after;
+
+  public:
+    bfs_happens_before_visitor(
+        map< const IR::MAU::Table*,
+             set<const IR::MAU::Table*> >& happens_before_map)
+        : happens_before_map(happens_before_map)
+    { }
+
+    template <typename Vertex, typename Graph>
+    void discover_vertex( Vertex v, const Graph & g)
+    {
+        // Ensure that every table gets entered into the happens-before map.
+        const IR::MAU::Table* label = g[v];
+
+        if (happens_before_map[label].size() == 0)
+            happens_before_map[label] = set<const IR::MAU::Table*>();
+        if (happens_not_after[label].size() == 0)
+            happens_not_after[label] = set<const IR::MAU::Table*>();
+    }
+
+    template <typename Edge, typename Graph>
+    void examine_edge( Edge e, const Graph & g)
+    {
+        const IR::MAU::Table* src = g[boost::source(e, g)];
+        const IR::MAU::Table* dst = g[boost::target(e, g)];
+
+        happens_not_after[dst] |= happens_not_after[src];
+        happens_not_after[dst].insert(src);
+
+        happens_before_map[dst] |= happens_before_map[src];
+        if (g[e] != DependencyGraph::ANTI) {
+            happens_before_map[dst].insert(src);
+        }
+    }
+};
+
+class bfs_depth_visitor : public boost::default_bfs_visitor {
+  std::map<DependencyGraph::Graph::vertex_descriptor, int>& counts;
+  public:
+    bfs_depth_visitor(
+        std::map<DependencyGraph::Graph::vertex_descriptor,
+                 int>& counts)
+        : counts(counts) { }
+
+    void examine_edge(
+        DependencyGraph::Graph::edge_descriptor e,
+        const DependencyGraph::Graph& g)
+    {
+        DependencyGraph::Graph::vertex_descriptor src, dst;
+        src = boost::source(e, g);
+        dst = boost::target(e, g);
+
+        // Tables with anti-dependences (write-after-read) can be places in the
+        // same stage, so don't increment the min stage in that case.
+        int count = counts[src];
+        if (g[e] != DependencyGraph::ANTI)
+            count++;
+
+        counts[dst] = std::max(count, counts[dst]);
+    }
+};
+
+void FindDependencyGraph::finalize_dependence_graph(void) {
+    typename DependencyGraph::Graph::vertex_iterator v, v_end;
+    typename DependencyGraph::Graph::edge_iterator out, out_end;
+    set<typename DependencyGraph::Graph::vertex_descriptor> roots;
+
+    // Some operations need to be performed on the reversed graph.
+    DependencyGraph::Graph rev_g = dg.g;
+    boost::tie(out, out_end) = boost::edges(rev_g);
+    while (out != out_end) {
+        boost::remove_edge(*out, rev_g);
+        boost::tie(out, out_end) = boost::edges(rev_g);
+    }
+    for (boost::tie(out, out_end) = boost::edges(dg.g);
+         out != out_end;
+         ++out) {
+        DependencyGraph::Graph::vertex_descriptor src, dst;
+        dst = boost::target(*out, dg.g);
+        src = boost::source(*out, dg.g);
+
+        auto p = boost::add_edge(dst, src, rev_g);
+        rev_g[p.first] = dg.g[*out];
+        rev_g[dst] = dg.g[dst];
+        rev_g[src] = dg.g[src];
+     }
+
+    // Build the happens_before_map relation, and for each table, calculate the
+    // length of the longest chain of tables that depend on it and must be
+    // placed in later stages.
+
+    std::map< DependencyGraph::Graph::vertex_descriptor, int > post_chains;
+    bfs_depth_visitor back_vis(post_chains);
+    bfs_happens_before_visitor hb_vis(dg.happens_before_map);
+
+    roots.clear();
+    for (boost::tie(v, v_end) = boost::vertices(rev_g); v != v_end; ++v) {
+        post_chains[*v] = 0;
+        roots.insert(*v); }
+
+    for (boost::tie(out, out_end) = boost::edges(rev_g); out != out_end; ++out)
+        roots.erase(boost::target(*out, rev_g));
+
+    for (auto root : roots) {
+        boost::breadth_first_search(rev_g, root, boost::visitor(hb_vis));
+        boost::breadth_first_search(rev_g, root, boost::visitor(back_vis));
+    }
+
+    for (auto &kv : post_chains) {
+        const IR::MAU::Table* table = rev_g[kv.first];
+        dg.stage_info[table].dep_stages = kv.second;
+    }
+
+    // For each table, calculate the minimum stage in which it can be placed.
+    // This is its depth in the dependence graph.
+    std::map<DependencyGraph::Graph::vertex_descriptor, int> pre_chains;
+    boost::tie(v, v_end) = boost::vertices(dg.g);
+    for (; v != v_end; ++v) pre_chains[*v] = 0;
+    bfs_depth_visitor vis(pre_chains);
+
+    roots.clear();
+    boost::tie(v, v_end) = boost::vertices(dg.g);
+    roots.insert(v, v_end);
+
+    for (boost::tie(out, out_end) = boost::edges(dg.g); out != out_end; ++out)
+        roots.erase(boost::target(*out, dg.g));
+
+    for (auto root : roots) {
+        boost::breadth_first_search(dg.g, root, boost::visitor(vis));
+    }
+
+    for (auto &kv : pre_chains) {
+        const IR::MAU::Table* table = dg.g[kv.first];
+        dg.stage_info[table].min_stage = kv.second;
+    }
+
+    dg.finalized = true;
+
+
+    // TODO: traverse the finalized dependency graph and check that no egress
+    // table is required to happen before an ingress table.
+
 }

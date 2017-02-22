@@ -16,7 +16,7 @@
 #include "tofino/ir/table_tree.h"
 #include "tofino/phv/phv_fields.h"
 
-TablePlacement::TablePlacement(const DependencyGraph &d, const TablesMutuallyExclusive &m,
+TablePlacement::TablePlacement(const DependencyGraph* d, const TablesMutuallyExclusive &m,
                                const PhvInfo &p)
 : deps(d), mutex(m), phv(p) {}
 
@@ -366,8 +366,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             set_entries = k->asInt();
         else if (auto k = t->match_table->getConstantProperty("min_size"))
             set_entries = k->asInt(); }
-    auto &rvdeps = deps.graph.at(rv->name);
-    bool prev_placed = false;  bool has_action_data = false;
+    bool prev_placed = false;
+    bool has_action_data = false;
     for (auto *p = done; p; p = p->prev) {
         if (p->name == rv->name) {
             prev_placed = true;
@@ -375,10 +375,10 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             if (p->need_more == false) {
                 LOG2(" - can't place as its already done");
                 return nullptr; }
-            set_entries -= p->entries;
-        } else if (p->stage == rv->stage && rvdeps.data_dep.count(p->name) &&
-                   rvdeps.data_dep.at(p->name) >= DependencyGraph::Table::ACTION) {
-            rv->stage++; } }
+            set_entries -= p->entries; }
+        else if (p->stage == rv->stage &&
+                 deps->happens_before(p->table, rv->table)) {
+             rv->stage++; } }
     assert(!rv->placed[tblInfo.at(rv->table).uid]);
 
     StageUseEstimate min_use(t, min_entries, prev_placed, has_action_data);
@@ -411,8 +411,15 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
             LOG3("Table Use ixbar allocation did not fit");
         }
 
-        if (!advance_to_next_stage && (!( min_use + stage_current <= avail)
-            || !try_alloc_mem(rv, done, min_entries, min_resources, min_use, prev_resources))) {
+        if (!advance_to_next_stage
+            && (!( min_use + stage_current <= avail)
+                || !try_alloc_mem(
+                        rv,
+                        done,
+                        min_entries,
+                        min_resources,
+                        min_use,
+                        prev_resources))) {
             mem_allocation_bug = true;
             advance_to_next_stage = true;
             LOG3("Min use of memory allocation did not fit");
@@ -559,12 +566,16 @@ bool TablePlacement::is_better(const Placed *a, const Placed *b) {
     if (a->stage > b->stage) return false;
     if (b->need_more && !a->need_more) return true;
     if (a->need_more && !b->need_more) return false;
-    if (deps.graph.at(a->name).dep_stages > deps.graph.at(b->name).dep_stages)
-        return true;
-    if (deps.graph.at(a->name).dep_stages < deps.graph.at(b->name).dep_stages)
-        return false;
-    if (deps.graph.at(a->name).data_dep.size() < deps.graph.at(b->name).data_dep.size())
-        return true;
+
+    int a_deps_stages = deps->dependence_tail_size(a->table);
+    int b_deps_stages = deps->dependence_tail_size(b->table);
+    if (a_deps_stages > b_deps_stages) return true;
+    if (a_deps_stages < b_deps_stages) return false;
+
+    int a_total_deps = deps->happens_before_dependences(a->table).size();
+    int b_total_deps = deps->happens_before_dependences(b->table).size();
+    if (a_total_deps < b_total_deps) return true;
+
     return false;
 }
 
