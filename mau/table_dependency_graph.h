@@ -151,7 +151,7 @@ class FindDependencyGraph : public MauInspector, ControlFlowVisitor {
 
     bool preorder(const IR::MAU::TableSeq *) override;
     bool preorder(const IR::MAU::Table *) override;
-    void end_apply() { finalize_dependence_graph(); }
+    void end_apply() override { finalize_dependence_graph(); }
 
     void flow_merge(Visitor &v) override;
 
