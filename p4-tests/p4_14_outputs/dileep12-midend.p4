@@ -266,19 +266,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<8> ttl_4;
     bit<8> ttl_5;
     bit<8> ttl_6;
-    @name("NoAction_1") action NoAction_0() {
+    @name("NoAction") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_8() {
+    @name("NoAction") action NoAction_8() {
     }
-    @name("NoAction_3") action NoAction_9() {
+    @name("NoAction") action NoAction_9() {
     }
-    @name("NoAction_4") action NoAction_10() {
+    @name("NoAction") action NoAction_10() {
     }
-    @name("NoAction_5") action NoAction_11() {
+    @name("NoAction") action NoAction_11() {
     }
-    @name("NoAction_6") action NoAction_12() {
+    @name("NoAction") action NoAction_12() {
     }
-    @name("NoAction_7") action NoAction_13() {
+    @name("NoAction") action NoAction_13() {
     }
     @name("nop") action nop_0() {
     }

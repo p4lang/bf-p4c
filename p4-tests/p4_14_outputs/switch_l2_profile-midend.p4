@@ -1180,57 +1180,57 @@ struct tuple_0 {
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_2") action NoAction_0() {
+    @name("NoAction") action NoAction_0() {
     }
-    @name("NoAction_3") action NoAction_1() {
+    @name("NoAction") action NoAction_1() {
     }
-    @name("NoAction_4") action NoAction_57() {
+    @name("NoAction") action NoAction_57() {
     }
-    @name("NoAction_5") action NoAction_58() {
+    @name("NoAction") action NoAction_58() {
     }
-    @name("NoAction_6") action NoAction_59() {
+    @name("NoAction") action NoAction_59() {
     }
-    @name("NoAction_7") action NoAction_60() {
+    @name("NoAction") action NoAction_60() {
     }
-    @name("NoAction_8") action NoAction_61() {
+    @name("NoAction") action NoAction_61() {
     }
-    @name("NoAction_9") action NoAction_62() {
+    @name("NoAction") action NoAction_62() {
     }
-    @name("NoAction_10") action NoAction_63() {
+    @name("NoAction") action NoAction_63() {
     }
-    @name("NoAction_11") action NoAction_64() {
+    @name("NoAction") action NoAction_64() {
     }
-    @name("NoAction_12") action NoAction_65() {
+    @name("NoAction") action NoAction_65() {
     }
-    @name("NoAction_13") action NoAction_66() {
+    @name("NoAction") action NoAction_66() {
     }
-    @name("NoAction_14") action NoAction_67() {
+    @name("NoAction") action NoAction_67() {
     }
-    @name("NoAction_15") action NoAction_68() {
+    @name("NoAction") action NoAction_68() {
     }
-    @name("NoAction_16") action NoAction_69() {
+    @name("NoAction") action NoAction_69() {
     }
-    @name("NoAction_17") action NoAction_70() {
+    @name("NoAction") action NoAction_70() {
     }
-    @name("NoAction_18") action NoAction_71() {
+    @name("NoAction") action NoAction_71() {
     }
-    @name("NoAction_19") action NoAction_72() {
+    @name("NoAction") action NoAction_72() {
     }
-    @name("NoAction_20") action NoAction_73() {
+    @name("NoAction") action NoAction_73() {
     }
-    @name("NoAction_21") action NoAction_74() {
+    @name("NoAction") action NoAction_74() {
     }
-    @name("NoAction_22") action NoAction_75() {
+    @name("NoAction") action NoAction_75() {
     }
-    @name("NoAction_23") action NoAction_76() {
+    @name("NoAction") action NoAction_76() {
     }
-    @name("NoAction_24") action NoAction_77() {
+    @name("NoAction") action NoAction_77() {
     }
-    @name("NoAction_25") action NoAction_78() {
+    @name("NoAction") action NoAction_78() {
     }
-    @name("NoAction_26") action NoAction_79() {
+    @name("NoAction") action NoAction_79() {
     }
-    @name("NoAction_27") action NoAction_80() {
+    @name("NoAction") action NoAction_80() {
     }
     @name("egress_port_type_normal") action egress_port_type_normal_0(bit<16> ifindex, bit<5> qos_group, bit<16> if_label) {
         meta.egress_metadata.port_type = 2w0;
@@ -2070,63 +2070,63 @@ struct tuple_3 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_28") action NoAction_81() {
+    @name("NoAction") action NoAction_81() {
     }
-    @name("NoAction_29") action NoAction_82() {
+    @name("NoAction") action NoAction_82() {
     }
-    @name("NoAction_30") action NoAction_83() {
+    @name("NoAction") action NoAction_83() {
     }
-    @name("NoAction_31") action NoAction_84() {
+    @name("NoAction") action NoAction_84() {
     }
-    @name("NoAction_32") action NoAction_85() {
+    @name("NoAction") action NoAction_85() {
     }
-    @name("NoAction_33") action NoAction_86() {
+    @name("NoAction") action NoAction_86() {
     }
-    @name("NoAction_34") action NoAction_87() {
+    @name("NoAction") action NoAction_87() {
     }
-    @name("NoAction_35") action NoAction_88() {
+    @name("NoAction") action NoAction_88() {
     }
-    @name("NoAction_36") action NoAction_89() {
+    @name("NoAction") action NoAction_89() {
     }
-    @name("NoAction_37") action NoAction_90() {
+    @name("NoAction") action NoAction_90() {
     }
-    @name("NoAction_38") action NoAction_91() {
+    @name("NoAction") action NoAction_91() {
     }
-    @name("NoAction_39") action NoAction_92() {
+    @name("NoAction") action NoAction_92() {
     }
-    @name("NoAction_40") action NoAction_93() {
+    @name("NoAction") action NoAction_93() {
     }
-    @name("NoAction_41") action NoAction_94() {
+    @name("NoAction") action NoAction_94() {
     }
-    @name("NoAction_42") action NoAction_95() {
+    @name("NoAction") action NoAction_95() {
     }
-    @name("NoAction_43") action NoAction_96() {
+    @name("NoAction") action NoAction_96() {
     }
-    @name("NoAction_44") action NoAction_97() {
+    @name("NoAction") action NoAction_97() {
     }
-    @name("NoAction_45") action NoAction_98() {
+    @name("NoAction") action NoAction_98() {
     }
-    @name("NoAction_46") action NoAction_99() {
+    @name("NoAction") action NoAction_99() {
     }
-    @name("NoAction_47") action NoAction_100() {
+    @name("NoAction") action NoAction_100() {
     }
-    @name("NoAction_48") action NoAction_101() {
+    @name("NoAction") action NoAction_101() {
     }
-    @name("NoAction_49") action NoAction_102() {
+    @name("NoAction") action NoAction_102() {
     }
-    @name("NoAction_50") action NoAction_103() {
+    @name("NoAction") action NoAction_103() {
     }
-    @name("NoAction_51") action NoAction_104() {
+    @name("NoAction") action NoAction_104() {
     }
-    @name("NoAction_52") action NoAction_105() {
+    @name("NoAction") action NoAction_105() {
     }
-    @name("NoAction_53") action NoAction_106() {
+    @name("NoAction") action NoAction_106() {
     }
-    @name("NoAction_54") action NoAction_107() {
+    @name("NoAction") action NoAction_107() {
     }
-    @name("NoAction_55") action NoAction_108() {
+    @name("NoAction") action NoAction_108() {
     }
-    @name("NoAction_56") action NoAction_109() {
+    @name("NoAction") action NoAction_109() {
     }
     @pa_atomic("ingress", "l3_metadata.lkp_ip_version") @pa_solitary("ingress", "l3_metadata.lkp_ip_version") @name("rmac_hit") action rmac_hit_0() {
         meta.l3_metadata.rmac_hit = 1w1;

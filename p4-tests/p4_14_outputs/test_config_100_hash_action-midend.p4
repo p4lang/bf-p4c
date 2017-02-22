@@ -167,7 +167,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_2") action NoAction_0() {
+    @name("NoAction") action NoAction_0() {
     }
     @name("action_3") action action_4() {
         mark_to_drop();
@@ -189,11 +189,11 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_3") action NoAction_1() {
+    @name("NoAction") action NoAction_1() {
     }
-    @name("NoAction_4") action NoAction_6() {
+    @name("NoAction") action NoAction_6() {
     }
-    @name("NoAction_5") action NoAction_7() {
+    @name("NoAction") action NoAction_7() {
     }
     @name("simple_stats") counter(32w32768, CounterType.packets) simple_stats;
     @name("do_nothing") action do_nothing_0() {

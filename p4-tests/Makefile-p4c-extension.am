@@ -172,12 +172,6 @@ XFAIL_TESTS += \
     tofino/%reldir%/p4_14/exclusive_cf_one_action_fail_after.p4.test \
     tofino/%reldir%/p4_14/exclusive_cf_one_action_fail_before.p4.test
 
-# Synatx error in generated P4_16 code (JIRA #BRIG-29)
-XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_193_indirect_stats_no_reads.p4.test
-XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_194_same_action_param.p4.test
-XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_196_hit_miss.p4.test
-XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_197_default_next_table.p4.test
-
 # Could not find declaration error in generated P4_16 code (JIRA #BRIG-31)
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_206_stateful_logging.p4.test
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_209_pack_hash_dist.p4.test
@@ -288,8 +282,3 @@ IFAIL_TESTS += tofino-ortools/%reldir%/p4_14/simple_counter.p4.test \
 	       tofino-ortools/testdata/p4_14_samples/bigfield1.p4.test \
 	       tofino-ortools/testdata/p4_14_samples/07-MultiProtocol.p4.test \
 	       tofino/testdata/p4_14_samples/basic_routing.p4.test
-
-
-# Fails PHV allocation with 'Slice out of range for field...'
-XFAIL_TESTS += tofino/testdata/p4_14_samples/switch_20160226/switch.p4.test
-XFAIL_TESTS += tofino/testdata/p4_14_samples/switch_20160512/switch.p4.test

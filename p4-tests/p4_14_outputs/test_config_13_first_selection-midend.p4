@@ -184,11 +184,11 @@ struct tuple_0 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction_0() {
+    @name("NoAction") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_4() {
+    @name("NoAction") action NoAction_4() {
     }
-    @name("NoAction_3") action NoAction_5() {
+    @name("NoAction") action NoAction_5() {
     }
     @name("action_select") action action_select_0() {
         hash<bit<8>, bit<72>, tuple_0, bit<144>>(hdr.ipv4.blah2, HashAlgorithm.random, 72w0, { hdr.ipv4.blah1, hdr.ipv4.blah2, hdr.ipv4.blah3 }, 144w16384);

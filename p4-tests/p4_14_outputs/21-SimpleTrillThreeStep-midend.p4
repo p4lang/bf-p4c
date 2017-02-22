@@ -198,11 +198,11 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction_0() {
+    @name("NoAction") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_4() {
+    @name("NoAction") action NoAction_4() {
     }
-    @name("NoAction_3") action NoAction_5() {
+    @name("NoAction") action NoAction_5() {
     }
     @name("do_copy_hopCount_from_m") action do_copy_hopCount_from_m_0() {
         hdr.trill.hopCount = meta.m.hopCount;

@@ -220,13 +220,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction_0() {
+    @name("NoAction") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_5() {
+    @name("NoAction") action NoAction_5() {
     }
-    @name("NoAction_3") action NoAction_6() {
+    @name("NoAction") action NoAction_6() {
     }
-    @name("NoAction_4") action NoAction_7() {
+    @name("NoAction") action NoAction_7() {
     }
     @name("sflow_state_exp_seq_num") register<bit<32>>(32w4294967295) sflow_state_exp_seq_num;
     @name("sflow_state_seq_num") register<bit<32>>(32w4294967295) sflow_state_seq_num;

@@ -34,11 +34,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction_0() {
+    @name("NoAction") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_4() {
+    @name("NoAction") action NoAction_4() {
     }
-    @name("NoAction_3") action NoAction_5() {
+    @name("NoAction") action NoAction_5() {
     }
     @name("meter1") meter(32w1000, CounterType.bytes) meter1;
     @name("meter2") meter(32w2000, CounterType.bytes) meter2;

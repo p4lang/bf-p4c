@@ -174,11 +174,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction_0() {
+    @name("NoAction") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_4() {
+    @name("NoAction") action NoAction_4() {
     }
-    @name("NoAction_3") action NoAction_5() {
+    @name("NoAction") action NoAction_5() {
     }
     @name("flow_cnt") register<bit<8>>(32w4294967295) flow_cnt;
     @name("stateful_cntr_1") register<bit<16>>(32w4294967295) stateful_cntr_1;

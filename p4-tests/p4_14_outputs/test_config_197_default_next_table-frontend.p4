@@ -152,7 +152,7 @@ struct headers {
 
 extern stateful_alu {
     void execute_stateful_alu(@optional in bit<32> index);
-    void execute_stateful_alu_from_hash(in hash_field_list);
+    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
     void execute_stateful_log();
     stateful_alu();
 }

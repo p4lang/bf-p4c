@@ -1,3 +1,0 @@
-../extensions/p4_tests/p4_14/action_selection_shared_four.p4(63): warning: fair: Action selector attribute ignored
-    selection_mode : fair;
-                     ^^^^

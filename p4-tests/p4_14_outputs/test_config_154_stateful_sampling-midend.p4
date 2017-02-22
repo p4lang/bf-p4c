@@ -173,7 +173,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction_0() {
+    @name("NoAction") action NoAction_0() {
     }
     @name("flow_cnt") register<bit<8>>(32w4294967295) flow_cnt;
     @name("sampler_alu") stateful_alu() sampler_alu;

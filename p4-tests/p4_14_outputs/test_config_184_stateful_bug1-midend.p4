@@ -173,9 +173,9 @@ struct tuple_0 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction_0() {
+    @name("NoAction") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_3() {
+    @name("NoAction") action NoAction_3() {
     }
     @name("sampling_cntr") register<bit<32>>(32w139264) sampling_cntr;
     @name("sampling_alu") stateful_alu() sampling_alu;

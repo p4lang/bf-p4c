@@ -1,3 +1,0 @@
-../extensions/p4_tests/p4_14/basic_ipv4_selection.p4(210): warning: resilient: Action selector attribute ignored
-    selection_mode : resilient;
-                     ^^^^^^^^^

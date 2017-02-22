@@ -162,7 +162,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction_0() {
+    @name("NoAction") action NoAction_0() {
     }
     @name("set_ingress_port_props") action set_ingress_port_props_0(bit<8> f1, bit<16> f2, bit<32> f3) {
         meta.ing_metadata.f1 = f1;

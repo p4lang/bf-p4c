@@ -168,35 +168,35 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction_0() {
+    @name("NoAction") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_16() {
+    @name("NoAction") action NoAction_16() {
     }
-    @name("NoAction_3") action NoAction_17() {
+    @name("NoAction") action NoAction_17() {
     }
-    @name("NoAction_4") action NoAction_18() {
+    @name("NoAction") action NoAction_18() {
     }
-    @name("NoAction_5") action NoAction_19() {
+    @name("NoAction") action NoAction_19() {
     }
-    @name("NoAction_6") action NoAction_20() {
+    @name("NoAction") action NoAction_20() {
     }
-    @name("NoAction_7") action NoAction_21() {
+    @name("NoAction") action NoAction_21() {
     }
-    @name("NoAction_8") action NoAction_22() {
+    @name("NoAction") action NoAction_22() {
     }
-    @name("NoAction_9") action NoAction_23() {
+    @name("NoAction") action NoAction_23() {
     }
-    @name("NoAction_10") action NoAction_24() {
+    @name("NoAction") action NoAction_24() {
     }
-    @name("NoAction_11") action NoAction_25() {
+    @name("NoAction") action NoAction_25() {
     }
-    @name("NoAction_12") action NoAction_26() {
+    @name("NoAction") action NoAction_26() {
     }
-    @name("NoAction_13") action NoAction_27() {
+    @name("NoAction") action NoAction_27() {
     }
-    @name("NoAction_14") action NoAction_28() {
+    @name("NoAction") action NoAction_28() {
     }
-    @name("NoAction_15") action NoAction_29() {
+    @name("NoAction") action NoAction_29() {
     }
     @name("do_nothing") action do_nothing_0() {
     }

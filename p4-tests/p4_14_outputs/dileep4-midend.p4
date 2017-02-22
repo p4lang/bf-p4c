@@ -229,27 +229,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     bit<8> ttl_6;
     bit<8> ttl_7;
     bit<8> ttl_8;
-    @name("NoAction_1") action NoAction_0() {
+    @name("NoAction") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_12() {
+    @name("NoAction") action NoAction_12() {
     }
-    @name("NoAction_3") action NoAction_13() {
+    @name("NoAction") action NoAction_13() {
     }
-    @name("NoAction_4") action NoAction_14() {
+    @name("NoAction") action NoAction_14() {
     }
-    @name("NoAction_5") action NoAction_15() {
+    @name("NoAction") action NoAction_15() {
     }
-    @name("NoAction_6") action NoAction_16() {
+    @name("NoAction") action NoAction_16() {
     }
-    @name("NoAction_7") action NoAction_17() {
+    @name("NoAction") action NoAction_17() {
     }
-    @name("NoAction_8") action NoAction_18() {
+    @name("NoAction") action NoAction_18() {
     }
-    @name("NoAction_9") action NoAction_19() {
+    @name("NoAction") action NoAction_19() {
     }
-    @name("NoAction_10") action NoAction_20() {
+    @name("NoAction") action NoAction_20() {
     }
-    @name("NoAction_11") action NoAction_21() {
+    @name("NoAction") action NoAction_21() {
     }
     @name("nop") action nop_0() {
     }

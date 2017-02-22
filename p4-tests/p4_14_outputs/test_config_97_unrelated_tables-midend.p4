@@ -161,11 +161,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction_1") action NoAction_0() {
+    @name("NoAction") action NoAction_0() {
     }
-    @name("NoAction_2") action NoAction_4() {
+    @name("NoAction") action NoAction_4() {
     }
-    @name("NoAction_3") action NoAction_5() {
+    @name("NoAction") action NoAction_5() {
     }
     @name("action_0") action action_3(bit<32> param0) {
         hdr.pkt.field_b_32 = param0;
