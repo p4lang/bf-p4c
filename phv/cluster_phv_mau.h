@@ -105,12 +105,14 @@ class PHV_MAU_Group {
     void sanity_check_container_packs(const std::string&);
     void sanity_check_container_fields_gress(const std::string&);
     void sanity_check_group_containers(const std::string&);
-};
+};  // class PHV_MAU_Group
 //
 //
 class PHV_MAU_Group_Assignments : public Visitor {
  private:
     Cluster_PHV_Requirements &phv_requirements_i;  // reference to parent PHV Requirements
+    //
+    enum Nibble {nibble = 4};
     //
     const ordered_map<PHV_Container::PHV_Word, int> num_groups_i {
         {PHV_Container::PHV_Word::b32, 4},
@@ -164,7 +166,9 @@ class PHV_MAU_Group_Assignments : public Visitor {
                                        // for all PHV_MAU_Groups
                                        // sorted map <width increasing, num increasing>
                                        // containing <set of <set of container_packs>>
-    std::list<Cluster_PHV *> clusters_to_be_assigned_i;
+    std::list<Cluster_PHV *> clusters_to_be_assigned_i;         // non-nibble clusters
+    std::list<Cluster_PHV *> clusters_to_be_assigned_nibble_i;  // nibble clusters
+    std::list<Cluster_PHV *> pov_fields_i;
     std::list<Cluster_PHV *> t_phv_fields_i;
     //
     ordered_map<int,
@@ -216,12 +220,20 @@ class PHV_MAU_Group_Assignments : public Visitor {
     // remaining clusters to be processed
     //
     std::list<Cluster_PHV *>& phv_clusters()            { return clusters_to_be_assigned_i; }
+    std::list<Cluster_PHV *>& phv_clusters_nibble()     { return clusters_to_be_assigned_nibble_i; }
+    std::list<Cluster_PHV *>& pov_clusters()            { return pov_fields_i; }
     std::list<Cluster_PHV *>& t_phv_clusters()          { return t_phv_fields_i; }
     //
     // cohabit_fields requests to TP to avoid single-write issue
     //
     std::vector<PHV_Container *>& cohabit_fields()      { return cohabit_fields_i; }
     //
+    void create_MAU_groups();
+    void create_TPHV_collections();
+    void cluster_PHV_placements();
+    void cluster_TPHV_placements();
+    void cluster_POV_placements();
+    void cluster_nibble_PHV_placements();
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
     //
     // public member
@@ -260,7 +272,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
     void sanity_check_container_fields_gress(const std::string&);
     void sanity_check_group_containers(const std::string&);
     void sanity_check_T_PHV_collections(const std::string&);
-};
+};  // class PHV_MAU_Group_Assignments
 //
 //
 std::ostream &operator<<(

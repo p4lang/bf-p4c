@@ -197,8 +197,29 @@ PHV_MAU_Group_Assignments::apply_visitor(const IR::Node *node, const char *name)
     // create PHV Group Assignments from PHV Requirements
     //
     if (!phv_requirements_i.cluster_phv_map().size()) {
-        LOG1("***************PHV_MAU_Group_Assignments called w/ 0 Requirements****************");
+        LOG1("**********PHV_MAU_Group_Assignments apply_visitor w/ 0 Requirements***********");
     }
+    create_MAU_groups();
+    create_TPHV_collections();
+    //
+    cluster_PHV_placements();
+    cluster_TPHV_placements();    // consider TPHVoverflow => PHV before POV placements
+    cluster_POV_placements();     // POV placements after TPHVoverflow => PHV
+    cluster_nibble_PHV_placements();  // nibble cluster PHV placements
+    //
+    container_cohabit_summary();  // summarize recommendations to TP
+    //
+    sanity_check_group_containers("PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments()..");
+    //
+    LOG3(*this);
+    //
+    return node;
+    //
+}  // PHV_MAU_Group_Assignments::apply_visitor
+
+void
+PHV_MAU_Group_Assignments::create_MAU_groups() {
+    //
     // create MAU Groups
     //
     for (auto &x : num_groups_i) {
@@ -230,6 +251,10 @@ PHV_MAU_Group_Assignments::apply_visitor(const IR::Node *node, const char *name)
             PHV_groups_i.push_front(g);
         }
     }
+}  // PHV_MAU_Group_Assignments::create_MAU_groups
+
+void
+PHV_MAU_Group_Assignments::create_TPHV_collections() {
     //
     // create TPHV collections
     //
@@ -274,12 +299,25 @@ PHV_MAU_Group_Assignments::apply_visitor(const IR::Node *node, const char *name)
     }
     sanity_check_T_PHV_collections("PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments()..");
     //
+}  // PHV_MAU_Group_Assignments::create_TPHV_collections
+
+void
+PHV_MAU_Group_Assignments::cluster_PHV_placements() {
+    //
     // cluster placement in containers conforming to MAU group constraints
     //
     for (auto &it : phv_requirements_i.cluster_phv_map()) {
+        //
+        // 1-bit clusters separated from others
+        // placement for 1-bit cls after TPHVoverflow, POV
+        //
         for (auto &it_2 : it.second) {
             for (auto &cl : it_2.second) {
-                clusters_to_be_assigned_i.push_front(cl);
+                if (cl->max_width() <= Nibble::nibble) {
+                    clusters_to_be_assigned_nibble_i.push_front(cl);
+                } else {
+                    clusters_to_be_assigned_i.push_front(cl);
+                }
             }
         }
     }
@@ -302,10 +340,14 @@ PHV_MAU_Group_Assignments::apply_visitor(const IR::Node *node, const char *name)
             container_pack_cohabit(clusters_to_be_assigned_i, aligned_container_slices_i, "PHV");
         }
     }
+}  // PHV_MAU_Group_Assignments::cluster_PHV_placements
+
+void
+PHV_MAU_Group_Assignments::cluster_POV_placements() {
     //
     // POV fields in PHV containers
     //
-    std::list<Cluster_PHV *> pov_fields(
+    pov_fields_i.assign(
         phv_requirements_i.pov_fields().begin(),
         phv_requirements_i.pov_fields().end());
     //
@@ -316,23 +358,23 @@ PHV_MAU_Group_Assignments::apply_visitor(const IR::Node *node, const char *name)
     // initial placement with POV_smallest_container_width gobbles byte sized containers
     //
     // container_no_pack(
-    //   pov_fields,
+    //   pov_fields_i,
     //   PHV_groups_i,
     //   "POV_any_container_width",
     //   false/*smallest_container_width*/);
     //
-    // container_no_pack(pov_fields, PHV_groups_i, "POV_smallest_container_width");
+    // container_no_pack(pov_fields_i, PHV_groups_i, "POV_smallest_container_width");
     //
-    if (pov_fields.size()) {
+    if (pov_fields_i.size()) {
         //
         // pack remaining clusters to partially filled containers
         //
-        container_pack_cohabit(pov_fields, aligned_container_slices_i, "POV");
+        container_pack_cohabit(pov_fields_i, aligned_container_slices_i, "POV");
     }
-    //
-    // summarize recommendations to TP
-    //
-    container_cohabit_summary();
+}  // PHV_MAU_Group_Assignments::cluster_POV_placements
+
+void
+PHV_MAU_Group_Assignments::cluster_TPHV_placements() {
     //
     // T_PHV fields allocation
     // initial placement as in Clusters & PHV placement constraints
@@ -373,14 +415,20 @@ PHV_MAU_Group_Assignments::apply_visitor(const IR::Node *node, const char *name)
             }
         }
     }
-    //
-    sanity_check_group_containers("PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments()..");
-    //
-    LOG3(*this);
-    //
-    return node;
-    //
-}  // PHV_MAU_Group_Assignments::apply_visitor
+}  // PHV_MAU_Group_Assignments::cluster_TPHV_placements
+
+void
+PHV_MAU_Group_Assignments::cluster_nibble_PHV_placements() {
+    if (clusters_to_be_assigned_nibble_i.size()) {
+        //
+        // pack remaining clusters to partially filled containers
+        //
+        container_pack_cohabit(
+            clusters_to_be_assigned_nibble_i,
+            aligned_container_slices_i,
+            "PHV_Nibble");
+    }
+}  // PHV_MAU_Group_Assignments::cluster_nibble_PHV_placements
 
 //***********************************************************************************
 //
@@ -425,6 +473,9 @@ PHV_MAU_Group_Assignments::container_no_pack(
     //
     clusters_to_be_assigned.sort([](Cluster_PHV *l, Cluster_PHV *r) {
         if (l->num_containers() == r->num_containers()) {
+            //
+            // when placement, no pack, consider container_width, not field width (max_width())
+            //
             return l->width() > r->width();
         }
         return l->num_containers() > r->num_containers();
@@ -865,7 +916,14 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
     //
     clusters_to_be_assigned.sort([](Cluster_PHV *l, Cluster_PHV *r) {
         if (l->num_containers() == r->num_containers()) {
-            return l->width() > r->width();
+            //
+            // width() = width of container
+            // max_width() = max width of field in cluster
+            // max_width() <= width()
+            // when packing consider field width
+            //
+            // return l->width() > r->width();
+            return l->max_width() > r->max_width();
         }
         return l->num_containers() > r->num_containers();
     });
@@ -1287,11 +1345,11 @@ bool PHV_MAU_Group_Assignments::status(
     const char *msg) {
     //
     if (phv_mau_groups.empty()) {
-        LOG3("----------Status: NO MAU Groups Available----------"
+        LOG3("----------Status: NO MAU Groups w/ empty Containers Available----------"
             << std::endl);
         return false;
     } else {
-        LOG3("..........Status: MAU Groups Available.........."
+        LOG3("..........Status: MAU Groups w/ empty Containers Available.........."
             << phv_mau_groups);
         return true;
     }

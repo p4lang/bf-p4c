@@ -278,17 +278,26 @@ PHV_Bind::trivial_allocate(std::set<const PhvInfo::Field *>& fields) {
             container_prefix += "B";
         }
         PHV::Container *asm_container;
-        for (field_bit = 0; field_bit < f->phv_use_width(); field_bit++) {
+        for (field_bit = 0; field_bit < f->phv_use_width(); /* nil */) {
             std::stringstream ss;
             ss << overflow_reg[container_width];
             overflow_reg[container_width]++;
             std::string reg_string = container_prefix + ss.str();
             const char *reg_name = reg_string.c_str();
             asm_container = new PHV::Container(reg_name);
+            int width_in_container = f->size - f->phv_use_rem;
+            if (width_in_container > static_cast<int> (container_width)) {
+                width_in_container = static_cast<int> (container_width);
+                f1->phv_use_rem += width_in_container;  // spans several containers
+                                                        // aggregate used bits
+                                                        // [width 20]= 12..19[8b] 4..11[8b] 0..3[4b]
+            } else {
+                f1->phv_use_rem = 0;
+            }
             f1->alloc.emplace_back(
-                *asm_container, field_bit, container_bit, static_cast<int> (container_width));
+                *asm_container, field_bit, container_bit, width_in_container);
             LOG3(f << '[' << field_bit << ".." << f->phv_use_width()-1 << "] ..... " << reg_name);
-            field_bit += static_cast<int> (container_width)-1;
+            field_bit += width_in_container;
         }
         // ccgf owners allocate for members
         if (f->ccgf_fields.size()) {
@@ -394,7 +403,9 @@ std::ostream &operator<<(std::ostream &out, PHV_Bind &phv_bind) {
     }
     if (phv_bind.fields_overflow().size()) {
         out << std::endl
-            << "Begin .......... Overflow Fields ........................"
+            << "Begin .......... Overflow Fields ("
+            << phv_bind.fields_overflow().size()
+            << ") ........................"
             << std::endl
             << std::endl;
         for (auto &f : phv_bind.fields_overflow()) {
@@ -407,7 +418,9 @@ std::ostream &operator<<(std::ostream &out, PHV_Bind &phv_bind) {
             out << std::endl;
         }
         out << std::endl
-            << "End .......... Overflow Fields ........................"
+            << "End .......... Overflow Fields ("
+            << phv_bind.fields_overflow().size()
+            << ") ........................"
             << std::endl
             << std::endl;
     }
