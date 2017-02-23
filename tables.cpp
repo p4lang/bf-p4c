@@ -743,6 +743,12 @@ Table::Actions::Action::Action(Table *tbl, Actions *actions, pair_t &kv) {
             for (auto &a : i.map)
                 if (CHECKTYPE(a.key, tSTR) && CHECKTYPE2(a.value, tSTR, tCMD))
                     alias.emplace(a.key.s, a.value);
+        } else if (i.type == tSTR) {
+            VECTOR(value_t)     tmp;
+            VECTOR_init1(tmp, i);
+            if (auto *p = Instruction::decode(tbl, this, tmp))
+                instr.push_back(p);
+            VECTOR_fini(tmp);
         } else if (CHECKTYPE(i, tCMD))
             if (auto *p = Instruction::decode(tbl, this, i.vec))
                 instr.push_back(p); }
@@ -763,6 +769,7 @@ Table::Actions::Actions(Table *tbl, VECTOR(pair_t) &data) {
 
 void Table::Actions::pass1(Table *tbl) {
     for (auto &act : *this) {
+        /* SALU actions always have act.addr == -1 (so iaddr == -1) */
         int iaddr = -1;
         if (act.addr >= 0) {
             if (auto old = tbl->stage->imem_addr_use[tbl->gress][act.addr]) {
@@ -773,7 +780,7 @@ void Table::Actions::pass1(Table *tbl) {
             tbl->stage->imem_addr_use[tbl->gress][act.addr] = &act;
             iaddr = act.addr/ACTION_IMEM_COLORS; }
         for (auto &inst : act.instr) {
-            inst = inst->pass1(tbl);
+            inst = inst->pass1(tbl, &act);
             if (inst->slot >= 0) {
                 if (act.slot_use[inst->slot])
                     error(inst->lineno, "instruction slot %d used multiple times in action %s",
@@ -803,6 +810,8 @@ static void find_pred_in_stage(int stageno, std::set<MatchTable *> &pred, Table 
 }
 
 void Table::Actions::pass2(Table *tbl) {
+    /* We do NOT call this for SALU actions, so we can assume VLIW actions here */
+    assert(tbl->table_type() != STATEFUL);
     int code = tbl->get_gateway() ? 1 : 0;  // if there's a gateway, reserve code 0 for a NOP
                                             // to run when the gateway inhibits the table
 
@@ -836,7 +845,7 @@ void Table::Actions::pass2(Table *tbl) {
 
     for (auto &act : *this) {
         for (auto *inst : act.instr)
-            inst->pass2(tbl);
+            inst->pass2(tbl, &act);
         if (act.addr < 0) {
             for (int i = 0; i < ACTION_IMEM_ADDR_MAX; i++) {
                 if (auto old = tbl->stage->imem_addr_use[tbl->gress][i]) {
@@ -890,56 +899,31 @@ void Table::Actions::pass2(Table *tbl) {
                         warning(a1.lineno, "Conflicting instruction slot usage for non-exlusive "
                                 "table %s action %s", tbl->name(), a1.name.c_str());
                     first = true;
-                    warning(a2.lineno, "and table %s action %s", t->name(), a2.name.c_str()); } } }
-    }
+                    warning(a2.lineno, "and table %s action %s", t->name(), a2.name.c_str());
+        } } } }
 }
 
-static int parity(unsigned v) {
-    v ^= v >> 16;
-    v ^= v >> 8;
-    v ^= v >> 4;
-    v ^= v >> 2;
-    v ^= v >> 1;
-    return v&1;
+void Table::Actions::stateful_pass2(Table *tbl) {
+    assert(tbl->table_type() == STATEFUL);
+    for (auto &act : *this) {
+        if (act.code >= 4)
+            error(act.lineno, "Only 4 actions in a stateful table");
+        else if (act.code >= 0)
+            code_use[act.code] = 1;
+        for (auto *inst : act.instr)
+            inst->pass2(tbl, &act); }
+    for (auto &act : *this) {
+        if (act.code < 0) {
+            if ((act.code = code_use.ffz(0)) >= 4) {
+                error(act.lineno, "Only 4 actions in a stateful table");
+                break; }
+            code_use[act.code] = 1; } }
 }
 
 void Table::Actions::write_regs(Table *tbl) {
-    auto &imem = tbl->stage->regs.dp.imem;
-    for (auto &act : *this) {
-        if (&act != tbl->stage->imem_addr_use[tbl->gress][act.addr]) {
-            LOG3("skipping " << tbl->name() << '.' << act.name << " as its imem is used by " <<
-                 tbl->stage->imem_addr_use[tbl->gress][act.addr]->name);
-            continue; }
-        int iaddr = act.addr/ACTION_IMEM_COLORS;
-        int color = act.addr%ACTION_IMEM_COLORS;
-        for (auto *inst : act.instr) {
-            unsigned bits = inst->encode();
-            assert(inst->slot >= 0);
-            LOG2(inst);
-            switch (Phv::reg(inst->slot).size) {
-            case 8:
-                imem.imem_subword8[inst->slot-64][iaddr].imem_subword8_instr = bits;
-                imem.imem_subword8[inst->slot-64][iaddr].imem_subword8_color = color;
-                imem.imem_subword8[inst->slot-64][iaddr].imem_subword8_parity =
-                    parity(bits) ^ color;
-                break;
-            case 16:
-                imem.imem_subword16[inst->slot-128][iaddr].imem_subword16_instr = bits;
-                imem.imem_subword16[inst->slot-128][iaddr].imem_subword16_color = color;
-                imem.imem_subword16[inst->slot-128][iaddr].imem_subword16_parity =
-                    parity(bits) ^ color;
-                break;
-            case 32:
-                imem.imem_subword32[inst->slot][iaddr].imem_subword32_instr = bits;
-                imem.imem_subword32[inst->slot][iaddr].imem_subword32_color = color;
-                imem.imem_subword32[inst->slot][iaddr].imem_subword32_parity =
-                    parity(bits) ^ color;
-                break;
-            default:
-                assert(0); }
-            auto &power_ctl = tbl->stage->regs.dp.actionmux_din_power_ctl;
-            inst->phvRead([&](const Phv::Slice &sl) {
-                set_power_ctl_reg(power_ctl, sl.reg.index); }); } }
+    for (auto &act : *this)
+        for (auto *inst : act.instr)
+            inst->write_regs(tbl, &act);
 }
 
 void Table::Actions::gen_tbl_cfg(json::vector &cfg) {

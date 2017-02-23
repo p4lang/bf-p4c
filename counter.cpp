@@ -8,18 +8,11 @@
 DEFINE_TABLE_TYPE(CounterTable)
 
 void CounterTable::setup(VECTOR(pair_t) &data) {
-    auto *row = get(data, "row");
-    if (!row) row = get(data, "logical_row");
-    setup_layout(layout, row, get(data, "column"), get(data, "bus"));
-    if (auto *fmt = get(data, "format")) {
-        if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
-            format = new Format(fmt->map);
-    } else
+    common_init_setup(data, false, P4Table::Statistics);
+    if (!format)
         error(lineno, "No format specified in table %s", name());
     for (auto &kv : MapIterChecked(data, true)) {
         if (common_setup(kv, data, P4Table::Statistics)) {
-        } else if (kv.key == "format") {
-            /* done above to be done before vpns */
         } else if (kv.key == "count") {
             if (kv.value == "bytes")
                 type = BYTES;

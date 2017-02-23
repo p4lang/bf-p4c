@@ -5,6 +5,15 @@
 #include "stage.h"
 #include "tables.h"
 
+void Synth2Port::common_init_setup(const VECTOR(pair_t) &data, bool, P4Table::type p4type) {
+    auto *row = get(data, "row");
+    if (!row) row = get(data, "logical_row");
+    setup_layout(layout, row, get(data, "column"), get(data, "bus"));
+    if (auto *fmt = get(data, "format")) {
+        if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
+            format = new Format(fmt->map); }
+}
+
 bool Synth2Port::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p4type) {
     if (kv.key == "vpns") {
         if (kv.value == "null")
@@ -21,7 +30,7 @@ bool Synth2Port::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::t
     } else if (kv.key == "p4") {
         if (CHECKTYPE(kv.value, tMAP))
             p4_table = P4Table::get(p4type, kv.value.map);
-    } else if (kv.key == "row" || kv.key == "logical_row" ||
+    } else if (kv.key == "format" || kv.key == "row" || kv.key == "logical_row" ||
                kv.key == "column" || kv.key == "bus") {
         /* already done in setup_layout */
     } else

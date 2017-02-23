@@ -1,6 +1,7 @@
 #include "algorithm.h"
 #include "data_switchbox.h"
 #include "input_xbar.h"
+#include "instruction.h"
 #include "misc.h"
 #include "stage.h"
 #include "tables.h"
@@ -8,18 +9,11 @@
 DEFINE_TABLE_TYPE(Stateful)
 
 void Stateful::setup(VECTOR(pair_t) &data) {
-    auto *row = get(data, "row");
-    if (!row) row = get(data, "logical_row");
-    setup_layout(layout, row, get(data, "column"), get(data, "bus"));
-    if (auto *fmt = get(data, "format")) {
-        if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
-            format = new Format(fmt->map);
-    } else
+    common_init_setup(data, false, P4Table::Stateful);
+    if (!format)
         error(lineno, "No format specified in table %s", name());
     for (auto &kv : MapIterChecked(data, true)) {
         if (common_setup(kv, data, P4Table::Stateful)) {
-        } else if (kv.key == "format") {
-            /* done above to be done before vpns */
         } else if (kv.key == "input_xbar") {
             if (CHECKTYPE(kv.value, tMAP))
                 input_xbar = new InputXbar(this, false, kv.value.map);
@@ -73,12 +67,21 @@ void Stateful::pass1() {
             break;
         default:
             error(format->lineno, "only two fields allowed in a stateful table"); } }
+    if (actions) actions->pass1(this);
+}
+
+int Stateful::get_const(long v) {
+    int rv = std::find(const_vals.begin(), const_vals.end(), v) - const_vals.begin();
+    if (rv == const_vals.size())
+        const_vals.push_back(v);
+    return rv;
 }
 
 void Stateful::pass2() {
     LOG1("### Stateful table " << name() << " pass2");
     if (input_xbar) input_xbar->pass2(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
-
+    if (actions)
+        actions->stateful_pass2(this);
 }
 
 int Stateful::direct_shiftcount() {
@@ -121,6 +124,8 @@ void Stateful::write_regs() {
             if (gress)
                 stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row);
             ++mapram, ++vpn; } }
+    if (actions)
+        actions->write_regs(this);
 }
 
 void Stateful::gen_tbl_cfg(json::vector &out) {
@@ -128,4 +133,6 @@ void Stateful::gen_tbl_cfg(json::vector &out) {
     int size = (layout_size() - 1)*1024* (format ? format->groups() : 1);
     json::map &tbl = *base_tbl_cfg(out, "stateful", size);
     /*json::map &stage_tbl = */add_stage_tbl_cfg(tbl, "stateful", size);
+    if (actions)
+        actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
 }

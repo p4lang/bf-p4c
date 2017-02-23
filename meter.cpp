@@ -7,9 +7,7 @@
 DEFINE_TABLE_TYPE(MeterTable)
 
 void MeterTable::setup(VECTOR(pair_t) &data) {
-    auto *row = get(data, "row");
-    if (!row) row = get(data, "logical_row");
-    setup_layout(layout, row, get(data, "column"), get(data, "bus"));
+    common_init_setup(data, false, P4Table::Stateful);
     for (auto &kv : MapIterChecked(data, true)) {
         if (common_setup(kv, data, P4Table::Meter)) {
         } else if (kv.key == "input_xbar") {

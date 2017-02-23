@@ -9,12 +9,12 @@ struct Instruction {
     int         slot;
     Instruction(int l) : lineno(l), slot(-1) {}
     virtual ~Instruction() {}
-    virtual Instruction *pass1(Table *) = 0;
-    virtual void pass2(Table *) = 0;
-    virtual int encode() = 0;
+    virtual Instruction *pass1(Table *, Table::Actions::Action *) = 0;
+    virtual void pass2(Table *, Table::Actions::Action *) = 0;
     virtual void dbprint(std::ostream &) const = 0;
     virtual bool equiv(Instruction *a) = 0;
     virtual void phvRead(std::function<void (const Phv::Slice &sl)>) = 0;
+    virtual void write_regs(Table *, Table::Actions::Action *) = 0;
     static Instruction *decode(Table *, const Table::Actions::Action *, const VECTOR(value_t) &);
 
     enum instruction_set_t { VLIW_ALU=0, STATEFUL_ALU=1, NUM_SETS=2 };

@@ -246,6 +246,7 @@ public:
         bool exists(const std::string &n) { return actions.count(n) > 0; }
         void pass1(Table *);
         void pass2(Table *);
+        void stateful_pass2(Table *);
         void write_regs(Table *);
         void gen_tbl_cfg(json::vector &);
         void add_immediate_mapping(json::map &);
@@ -714,6 +715,7 @@ public:
     virtual void write_merge_regs(MatchTable *match, int type, int bus,
                                   const std::vector<Call::Arg> &args) = 0;
     virtual void write_regs() override;
+    void common_init_setup(const VECTOR(pair_t) &, bool, P4Table::type) override;
     bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type) override;
 
 )
@@ -750,10 +752,12 @@ DECLARE_TABLE_TYPE(Stateful, Synth2Port, "stateful",
     table_type_t table_type() { return STATEFUL; }
     void write_merge_regs(MatchTable *match, int type, int bus,
                           const std::vector<Call::Arg> &args) override;
+    std::vector<long>   const_vals;
 public:
     int instruction_set() override { return 1; /* STATEFUL_ALU */ }
     int direct_shiftcount() override;
     int unitram_type() override { return UnitRam::STATEFUL; }
+    int get_const(long v);
 )
 
 #endif /* _tables_h_ */

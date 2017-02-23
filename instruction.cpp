@@ -1,5 +1,6 @@
 #include "action_bus.h"
 #include "instruction.h"
+#include "misc.h"
 #include "phv.h"
 #include "tables.h"
 #include "stage.h"
@@ -279,7 +280,57 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
     return ref;
 }
 
-struct AluOP : public Instruction {
+int parity(unsigned v) {
+    v ^= v >> 16;
+    v ^= v >> 8;
+    v ^= v >> 4;
+    v ^= v >> 2;
+    v ^= v >> 1;
+    return v&1;
+}
+
+struct VLIWInstruction : public Instruction {
+    VLIWInstruction(int l) : Instruction(l) {}
+    virtual int encode() = 0;
+    void write_regs(Table *tbl, Table::Actions::Action *act) {
+        if (act != tbl->stage->imem_addr_use[tbl->gress][act->addr]) {
+            LOG3("skipping " << tbl->name() << '.' << act->name << " as its imem is used by " <<
+                 tbl->stage->imem_addr_use[tbl->gress][act->addr]->name);
+            return; }
+        auto &imem = tbl->stage->regs.dp.imem;
+        int iaddr = act->addr/ACTION_IMEM_COLORS;
+        int color = act->addr%ACTION_IMEM_COLORS;
+        unsigned bits = encode();
+        assert(slot >= 0);
+        LOG2(this);
+        switch (Phv::reg(slot).size) {
+        case 8:
+            imem.imem_subword8[slot-64][iaddr].imem_subword8_instr = bits;
+            imem.imem_subword8[slot-64][iaddr].imem_subword8_color = color;
+            imem.imem_subword8[slot-64][iaddr].imem_subword8_parity =
+                parity(bits) ^ color;
+            break;
+        case 16:
+            imem.imem_subword16[slot-128][iaddr].imem_subword16_instr = bits;
+            imem.imem_subword16[slot-128][iaddr].imem_subword16_color = color;
+            imem.imem_subword16[slot-128][iaddr].imem_subword16_parity =
+                parity(bits) ^ color;
+            break;
+        case 32:
+            imem.imem_subword32[slot][iaddr].imem_subword32_instr = bits;
+            imem.imem_subword32[slot][iaddr].imem_subword32_color = color;
+            imem.imem_subword32[slot][iaddr].imem_subword32_parity =
+                parity(bits) ^ color;
+            break;
+        default:
+            assert(0); }
+        auto &power_ctl = tbl->stage->regs.dp.actionmux_din_power_ctl;
+        phvRead([&](const Phv::Slice &sl) {
+            set_power_ctl_reg(power_ctl, sl.reg.index); });
+    }
+};
+
+struct AluOP : public VLIWInstruction {
     const struct Decode : public Instruction::Decode {
         std::string name;
         unsigned opcode;
@@ -297,10 +348,12 @@ struct AluOP : public Instruction {
     operand     src1, src2;
     AluOP(const Decode *op, Table *tbl, const Table::Actions::Action *act, const value_t &d,
           const value_t &s1, const value_t &s2)
-    : Instruction(d.lineno), opc(op), dest(tbl->gress, d),
+    : VLIWInstruction(d.lineno), opc(op), dest(tbl->gress, d),
       src1(tbl, act, s1), src2(tbl, act, s2) {}
-    Instruction *pass1(Table *tbl);
-    void pass2(Table *tbl) { src1->pass2(tbl, slot/16); src2->pass2(tbl, slot/16); }
+    Instruction *pass1(Table *tbl, Table::Actions::Action *);
+    void pass2(Table *tbl, Table::Actions::Action *) {
+        src1->pass2(tbl, slot/16);
+        src2->pass2(tbl, slot/16); }
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
@@ -345,7 +398,7 @@ Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     return 0;
 }
 
-Instruction *AluOP::pass1(Table *tbl) {
+Instruction *AluOP::pass1(Table *tbl, Table::Actions::Action *) {
     if (!dest.check(true) || !src1.check() || !src2.check()) return this;
     if (dest->lo || dest->hi != dest->reg.size-1) {
         error(lineno, "ALU ops cannot operate on slices");
@@ -371,7 +424,7 @@ bool AluOP::equiv(Instruction *a_) {
         return false;
 }
 
-struct LoadConst : public Instruction {
+struct LoadConst : public VLIWInstruction {
     struct Decode : public Instruction::Decode {
         Decode(const char *n) : Instruction::Decode(n) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
@@ -380,9 +433,9 @@ struct LoadConst : public Instruction {
     Phv::Ref    dest;
     int         src;
     LoadConst(Table *tbl, const Table::Actions::Action *act, const value_t &d, int&s)
-        : Instruction(d.lineno), dest(tbl->gress, d), src(s) {}
-    Instruction *pass1(Table *tbl);
-    void pass2(Table *) {}
+        : VLIWInstruction(d.lineno), dest(tbl->gress, d), src(s) {}
+    Instruction *pass1(Table *tbl, Table::Actions::Action *);
+    void pass2(Table *, Table::Actions::Action *) {}
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) { }
@@ -402,7 +455,7 @@ Instruction *LoadConst::Decode::decode(Table *tbl, const Table::Actions::Action 
     return new LoadConst(tbl, act, op[1], op[2].i);
 }
 
-Instruction *LoadConst::pass1(Table *tbl) {
+Instruction *LoadConst::pass1(Table *tbl, Table::Actions::Action *) {
     if (!dest.check(true)) return this;
     if (dest->lo || dest->hi != dest->reg.size-1) {
         error(lineno, "load-const cannot operate on slices");
@@ -426,7 +479,7 @@ bool LoadConst::equiv(Instruction *a_) {
         return false;
 }
 
-struct CondMoveMux : public Instruction {
+struct CondMoveMux : public VLIWInstruction {
     const struct Decode : public Instruction::Decode {
         unsigned opcode, cond_size;
         bool    src2opt;
@@ -439,14 +492,18 @@ struct CondMoveMux : public Instruction {
     Phv::Ref    dest;
     operand     src1, src2;
     unsigned    cond;
-    CondMoveMux(Table *tbl, const Decode *op, const Table::Actions::Action *act, const value_t &d,
-                const value_t &s)
-    : Instruction(d.lineno), opc(op), dest(tbl->gress, d), src1(tbl, act, s), src2(tbl->gress, d) {}
-    CondMoveMux(Table *tbl, const Decode *op, const Table::Actions::Action *act, const value_t &d,
-                const value_t &s1, const value_t &s2)
-    : Instruction(d.lineno), opc(op), dest(tbl->gress, d), src1(tbl, act, s1), src2(tbl, act, s2) {}
-    Instruction *pass1(Table *tbl);
-    void pass2(Table *tbl) { src1->pass2(tbl, slot/16); src2->pass2(tbl, slot/16); }
+    CondMoveMux(Table *tbl, const Decode *op, const Table::Actions::Action *act,
+                const value_t &d, const value_t &s)
+    : VLIWInstruction(d.lineno), opc(op), dest(tbl->gress, d), src1(tbl, act, s),
+      src2(tbl->gress, d) {}
+    CondMoveMux(Table *tbl, const Decode *op, const Table::Actions::Action *act,
+                const value_t &d, const value_t &s1, const value_t &s2)
+    : VLIWInstruction(d.lineno), opc(op), dest(tbl->gress, d), src1(tbl, act, s1),
+      src2(tbl, act, s2) {}
+    Instruction *pass1(Table *tbl, Table::Actions::Action *);
+    void pass2(Table *tbl, Table::Actions::Action *) {
+        src1->pass2(tbl, slot/16);
+        src2->pass2(tbl, slot/16); }
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
@@ -486,7 +543,7 @@ Instruction *CondMoveMux::Decode::decode(Table *tbl, const Table::Actions::Actio
     return 0;
 }
 
-Instruction *CondMoveMux::pass1(Table *tbl) {
+Instruction *CondMoveMux::pass1(Table *tbl, Table::Actions::Action *) {
     if (!dest.check(true) || !src1.check() || !src2.check()) return this;
     slot = dest->reg.index;
     tbl->stage->action_set[tbl->gress][slot] = true;
@@ -510,7 +567,7 @@ bool CondMoveMux::equiv(Instruction *a_) {
 
 struct Set;
 
-struct DepositField : public Instruction {
+struct DepositField : public VLIWInstruction {
     struct Decode : public Instruction::Decode {
         Decode() : Instruction::Decode("deposit_field") { alias("deposit-field"); }
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
@@ -518,14 +575,17 @@ struct DepositField : public Instruction {
     };
     Phv::Ref    dest;
     operand     src1, src2;
-    DepositField(Table *tbl, const Table::Actions::Action *act, const value_t &d, const value_t &s)
-    : Instruction(d.lineno), dest(tbl->gress, d), src1(tbl, act, s), src2(tbl->gress, d) {}
+    DepositField(Table *tbl, const Table::Actions::Action *act, const value_t &d,
+                 const value_t &s)
+    : VLIWInstruction(d.lineno), dest(tbl->gress, d), src1(tbl, act, s), src2(tbl->gress, d) {}
     DepositField(Table *tbl, const Table::Actions::Action *act, const value_t &d,
                  const value_t &s1, const value_t &s2)
-    : Instruction(d.lineno), dest(tbl->gress, d), src1(tbl, act, s1), src2(tbl, act, s2) {}
+    : VLIWInstruction(d.lineno), dest(tbl->gress, d), src1(tbl, act, s1), src2(tbl, act, s2) {}
     DepositField(const Set &);
-    Instruction *pass1(Table *tbl);
-    void pass2(Table *tbl) { src1->pass2(tbl, slot/16); src2->pass2(tbl, slot/16); }
+    Instruction *pass1(Table *tbl, Table::Actions::Action *);
+    void pass2(Table *tbl, Table::Actions::Action *) {
+        src1->pass2(tbl, slot/16);
+        src2->pass2(tbl, slot/16); }
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
@@ -556,7 +616,7 @@ Instruction *DepositField::Decode::decode(Table *tbl, const Table::Actions::Acti
     return 0;
 }
 
-Instruction *DepositField::pass1(Table *tbl) {
+Instruction *DepositField::pass1(Table *tbl, Table::Actions::Action *) {
     if (!dest.check(true) || !src1.check() || !src2.check()) return this;
     slot = dest->reg.index;
     tbl->stage->action_set[tbl->gress][slot] = true;
@@ -592,7 +652,7 @@ bool DepositField::equiv(Instruction *a_) {
         return false;
 }
 
-struct Set : public Instruction {
+struct Set : public VLIWInstruction {
     struct Decode : public Instruction::Decode {
         Decode(const char *n) : Instruction::Decode(n) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
@@ -601,9 +661,9 @@ struct Set : public Instruction {
     Phv::Ref    dest;
     operand     src;
     Set(Table *tbl, const Table::Actions::Action *act, const value_t &d, const value_t &s)
-        : Instruction(d.lineno), dest(tbl->gress, d), src(tbl, act, s) {}
-    Instruction *pass1(Table *tbl);
-    void pass2(Table *tbl) { src->pass2(tbl, slot/16); }
+        : VLIWInstruction(d.lineno), dest(tbl->gress, d), src(tbl, act, s) {}
+    Instruction *pass1(Table *tbl, Table::Actions::Action *);
+    void pass2(Table *tbl, Table::Actions::Action *) { src->pass2(tbl, slot/16); }
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) { src.phvRead(fn); }
@@ -613,7 +673,7 @@ struct Set : public Instruction {
 };
 
 DepositField::DepositField(const Set &s)
-: Instruction(s), dest(s.dest), src1(s.src), src2(s.dest->reg) {}
+: VLIWInstruction(s), dest(s.dest), src1(s.src), src2(s.dest->reg) {}
 
 static Set::Decode opSet("set");
 
@@ -631,10 +691,10 @@ Instruction *Set::Decode::decode(Table *tbl, const Table::Actions::Action *act,
     return 0;
 }
 
-Instruction *Set::pass1(Table *tbl) {
+Instruction *Set::pass1(Table *tbl, Table::Actions::Action *act) {
     if (!dest.check(true) || !src.check()) return this;
     if (dest->lo || dest->hi != dest->reg.size-1)
-        return (new DepositField(*this))->pass1(tbl);
+        return (new DepositField(*this))->pass1(tbl, act);
     slot = dest->reg.index;
     tbl->stage->action_set[tbl->gress][slot] = true;
     src.mark_use(tbl);
@@ -650,7 +710,7 @@ bool Set::equiv(Instruction *a_) {
         return false;
 }
 
-struct NulOP : public Instruction {
+struct NulOP : public VLIWInstruction {
     const struct Decode : public Instruction::Decode {
         std::string name;
         unsigned opcode;
@@ -660,9 +720,9 @@ struct NulOP : public Instruction {
     } *opc;
     Phv::Ref    dest;
     NulOP(Table *tbl, const Table::Actions::Action *act, const Decode *o, const value_t &d) :
-        Instruction(d.lineno), opc(o), dest(tbl->gress, d) {}
-    Instruction *pass1(Table *tbl);
-    void pass2(Table *) {}
+        VLIWInstruction(d.lineno), opc(o), dest(tbl->gress, d) {}
+    Instruction *pass1(Table *tbl, Table::Actions::Action *);
+    void pass2(Table *, Table::Actions::Action *) {}
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) { }
@@ -680,7 +740,7 @@ Instruction *NulOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     return new NulOP(tbl, act, this, op[1]);
 }
 
-Instruction *NulOP::pass1(Table *tbl) {
+Instruction *NulOP::pass1(Table *tbl, Table::Actions::Action *) {
     if (!dest.check(true)) return this;
     slot = dest->reg.index;
     if (opc->opcode || !options.match_compiler) {
@@ -697,7 +757,7 @@ bool NulOP::equiv(Instruction *a_) {
         return false;
 }
 
-struct ShiftOP : public Instruction {
+struct ShiftOP : public VLIWInstruction {
     const struct Decode : public Instruction::Decode {
         std::string name;
         unsigned opcode;
@@ -712,15 +772,17 @@ struct ShiftOP : public Instruction {
     operand     src1, src2;
     int         shift;
     ShiftOP(const Decode *d, Table *tbl, const Table::Actions::Action *act, const value_t *ops) :
-            Instruction(ops->lineno), opc(d), dest(tbl->gress, ops[0]),
+            VLIWInstruction(ops->lineno), opc(d), dest(tbl->gress, ops[0]),
             src1(tbl, act, ops[1]), src2(tbl, act, ops[2]) {
                 if (opc->use_src1) {
                     if (CHECKTYPE(ops[3], tINT)) shift = ops[3].i;
                 } else {
                     src2 = src1;
                     if (CHECKTYPE(ops[2], tINT)) shift = ops[2].i; } }
-    Instruction *pass1(Table *tbl);
-    void pass2(Table *tbl) { src1->pass2(tbl, slot/16); src2->pass2(tbl, slot/16); }
+    Instruction *pass1(Table *tbl, Table::Actions::Action *);
+    void pass2(Table *tbl, Table::Actions::Action *) {
+        src1->pass2(tbl, slot/16);
+        src2->pass2(tbl, slot/16); }
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
@@ -750,7 +812,7 @@ Instruction *ShiftOP::Decode::decode(Table *tbl, const Table::Actions::Action *a
     return 0;
 }
 
-Instruction *ShiftOP::pass1(Table *tbl) {
+Instruction *ShiftOP::pass1(Table *tbl, Table::Actions::Action *) {
     if (!dest.check(true) || !src1.check() || !src2.check()) return this;
     if (dest->lo || dest->hi != dest->reg.size-1) {
         error(lineno, "shift ops cannot operate on slices");
