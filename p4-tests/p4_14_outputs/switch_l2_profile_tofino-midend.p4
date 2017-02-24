@@ -1973,7 +1973,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_60();
     }
-    @name("process_ingress_bd_stats.ingress_bd_stats") counter(32w16384, CounterType.packets_and_bytes) process_ingress_bd_stats_ingress_bd_stats_1;
+    @min_width(32) @name("process_ingress_bd_stats.ingress_bd_stats") counter(32w16384, CounterType.packets_and_bytes) process_ingress_bd_stats_ingress_bd_stats_1;
     @name("process_ingress_bd_stats.update_ingress_bd_stats") action process_ingress_bd_stats_update_ingress_bd_stats() {
         process_ingress_bd_stats_ingress_bd_stats_1.count((bit<32>)meta.l2_metadata.bd_stats_idx);
     }
@@ -1985,7 +1985,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction_61();
     }
-    @name("process_ingress_acl_stats.acl_stats") counter(32w128, CounterType.packets_and_bytes) process_ingress_acl_stats_acl_stats_1;
+    @min_width(16) @name("process_ingress_acl_stats.acl_stats") counter(32w128, CounterType.packets_and_bytes) process_ingress_acl_stats_acl_stats_1;
     @name("process_ingress_acl_stats.acl_stats_update") action process_ingress_acl_stats_acl_stats_update() {
         process_ingress_acl_stats_acl_stats_1.count((bit<32>)meta.acl_metadata.acl_stats_index);
     }
