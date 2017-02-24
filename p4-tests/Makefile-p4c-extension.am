@@ -262,6 +262,16 @@ XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/gateway_bus2.p4.test
 XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/counter_test1.p4.test
 XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/counter_test2.p4.test
 XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/meter_test1.p4.test
+XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/hash_action_basic.p4.test
+XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/hash_action_gateway.p4.test
+XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/hash_action_two_separate.p4.test
+
+# Hash Action Bugs within the ASM or Model
+XFAIL_TESTS += tofino/testdata/p4_14_samples/hash_action_basic.p4.test
+XFAIL_TESTS += tofino/testdata/p4_14_samples/hash_action_gateway.p4.test
+
+# Failure for BRIG-44 in JIRA
+XFAIL_TESTS += tofino/testdata/p4_14_samples/basic_conditionals.p4.test
 
 # Same Name Conversion Bug
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/shared_names.p4.test

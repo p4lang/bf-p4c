@@ -23,6 +23,7 @@ action h1_3(val1, val2, val3) {
     modify_field(data.h1, val1);
     modify_field(data.h2, val2);
     modify_field(data.h3, val3);
+    execute_meter(meter1, 7, data.color_1);
 }
 
 action h4_6(val4, val5, val6) {
