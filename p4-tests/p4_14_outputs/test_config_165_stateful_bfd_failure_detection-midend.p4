@@ -1,6 +1,12 @@
 #include <core.p4>
 #include <v1model.p4>
 
+struct meta_t {
+    bit<8>  bfd_timeout_detected;
+    bit<8>  bfd_tx_or_rx;
+    bit<16> bfd_discriminator;
+}
+
 header egress_intrinsic_metadata_t {
     bit<7>  _pad0;
     bit<9>  egress_port;
@@ -48,6 +54,12 @@ header egress_intrinsic_metadata_from_parser_aux_t {
     bit<16> egress_parser_err;
     bit<8>  clone_src;
     bit<8>  coalesce_sample_count;
+}
+
+header ethernet_t {
+    bit<48> dstAddr;
+    bit<48> srcAddr;
+    bit<16> etherType;
 }
 
 header ingress_intrinsic_metadata_t {
@@ -106,25 +118,24 @@ header ingress_parser_control_signals {
     bit<3> priority;
 }
 
-header pkt_t {
-    bit<32> field_a_32;
-    bit<32> field_b_32;
-    bit<32> field_c_32;
-    bit<32> field_d_32;
-    bit<16> field_e_16;
-    bit<16> field_f_16;
-    bit<16> field_g_16;
-    bit<16> field_h_16;
-    bit<8>  field_i_8;
-    bit<8>  field_j_8;
-    bit<4>  color_0;
-    bit<4>  pad_0;
-    bit<8>  color_1;
-    bit<8>  color_2;
-    bit<8>  color_3;
+header ipv4_t {
+    bit<4>  version;
+    bit<4>  ihl;
+    bit<8>  diffserv;
+    bit<16> totalLen;
+    bit<16> identification;
+    bit<3>  flags;
+    bit<13> fragOffset;
+    bit<8>  ttl;
+    bit<8>  protocol;
+    bit<16> hdrChecksum;
+    bit<32> srcAddr;
+    bit<32> dstAddr;
 }
 
 struct metadata {
+    @name("meta") 
+    meta_t meta;
 }
 
 struct headers {
@@ -136,6 +147,8 @@ struct headers {
     egress_intrinsic_metadata_for_output_port_t    eg_intr_md_for_oport;
     @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name("eg_intr_md_from_parser_aux") 
     egress_intrinsic_metadata_from_parser_aux_t    eg_intr_md_from_parser_aux;
+    @name("ethernet") 
+    ethernet_t                                     ethernet;
     @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name("ig_intr_md") 
     ingress_intrinsic_metadata_t                   ig_intr_md;
     @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name("ig_intr_md_for_mb") 
@@ -148,13 +161,27 @@ struct headers {
     generator_metadata_t                           ig_pg_md;
     @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
-    @name("pkt") 
-    pkt_t                                          pkt;
+    @name("ipv4") 
+    ipv4_t                                         ipv4;
+}
+
+extern stateful_alu {
+    void execute_stateful_alu(@optional in bit<32> index);
+    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
+    void execute_stateful_log();
+    stateful_alu();
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("parse_ethernet") state parse_ethernet {
-        packet.extract(hdr.pkt);
+        packet.extract<ethernet_t>(hdr.ethernet);
+        transition select(hdr.ethernet.etherType) {
+            16w0x800: parse_ipv4;
+            default: accept;
+        }
+    }
+    @name("parse_ipv4") state parse_ipv4 {
+        packet.extract<ipv4_t>(hdr.ipv4);
         transition accept;
     }
     @name("start") state start {
@@ -163,53 +190,51 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("do_nothing") action do_nothing() {
-        ;
+    @name("NoAction") action NoAction_0() {
     }
-    @name("action_1") action action_1(bit<16> param0) {
-        hdr.pkt.field_g_16 = param0;
+    @name("NoAction") action NoAction_3() {
     }
-    @table_counter("gateway_hit") @name("table_0") table table_0() {
+    @name("bfd_cnt") register<bit<8>>(32w1024) bfd_cnt;
+    @name("bfd_cnt_rx_alu") stateful_alu() bfd_cnt_rx_alu;
+    @name("bfd_cnt_tx_alu") stateful_alu() bfd_cnt_tx_alu;
+    @name("bfd_rx") action bfd_rx_0() {
+        bfd_cnt_rx_alu.execute_stateful_alu();
+    }
+    @name("bfd_tx") action bfd_tx_0() {
+        bfd_cnt_tx_alu.execute_stateful_alu();
+    }
+    @name("drop_me") action drop_me_0() {
+        mark_to_drop();
+    }
+    @name("on_miss") action on_miss_0() {
+    }
+    @name("bfd") table bfd() {
         actions = {
-            do_nothing;
-            @default_only NoAction;
+            bfd_rx_0();
+            bfd_tx_0();
+            @default_only NoAction_0();
         }
         key = {
-            hdr.pkt.field_e_16: ternary;
+            meta.meta.bfd_tx_or_rx     : exact @name("meta.meta.bfd_tx_or_rx") ;
+            meta.meta.bfd_discriminator: exact @name("meta.meta.bfd_discriminator") ;
         }
-        size = 4096;
-        default_action = NoAction();
+        size = 1024;
+        default_action = NoAction_0();
     }
-    @table_counter("table_miss") @name("table_1") table table_1() {
+    @name("check_needs") table check_needs() {
         actions = {
-            do_nothing;
-            @default_only action_1;
+            drop_me_0();
+            on_miss_0();
+            @default_only NoAction_3();
         }
         key = {
-            hdr.pkt.field_e_16      : exact;
-            hdr.pkt.field_f_16[15:0]: exact;
+            meta.meta.bfd_timeout_detected: exact @name("meta.meta.bfd_timeout_detected") ;
         }
-        size = 16384;
-        const default_action = action_1(0xf);
-    }
-    @table_counter("table_hit") @name("table_2") table table_2() {
-        actions = {
-            do_nothing;
-        }
-        key = {
-            hdr.pkt.field_f_16: ternary;
-        }
-        size = 2048;
-        const default_action = do_nothing();
+        default_action = NoAction_3();
     }
     apply {
-        if (hdr.pkt.isValid()) {
-            table_0.apply();
-        }
-        else {
-            table_1.apply();
-        }
-        table_2.apply();
+        bfd.apply();
+        check_needs.apply();
     }
 }
 
@@ -220,7 +245,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        packet.emit(hdr.pkt);
+        packet.emit<ethernet_t>(hdr.ethernet);
+        packet.emit<ipv4_t>(hdr.ipv4);
     }
 }
 
@@ -234,4 +260,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
     }
 }
 
-V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;

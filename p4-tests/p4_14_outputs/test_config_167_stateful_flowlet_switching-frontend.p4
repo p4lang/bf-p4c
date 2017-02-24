@@ -1,6 +1,11 @@
 #include <core.p4>
 #include <v1model.p4>
 
+struct meta_t {
+    bit<16> next_hop;
+    bit<32> tstamp;
+}
+
 header egress_intrinsic_metadata_t {
     bit<7>  _pad0;
     bit<9>  egress_port;
@@ -48,6 +53,12 @@ header egress_intrinsic_metadata_from_parser_aux_t {
     bit<16> egress_parser_err;
     bit<8>  clone_src;
     bit<8>  coalesce_sample_count;
+}
+
+header ethernet_t {
+    bit<48> dstAddr;
+    bit<48> srcAddr;
+    bit<16> etherType;
 }
 
 header ingress_intrinsic_metadata_t {
@@ -106,25 +117,37 @@ header ingress_parser_control_signals {
     bit<3> priority;
 }
 
-header pkt_t {
-    bit<32> field_a_32;
-    bit<32> field_b_32;
-    bit<32> field_c_32;
-    bit<32> field_d_32;
-    bit<16> field_e_16;
-    bit<16> field_f_16;
-    bit<16> field_g_16;
-    bit<16> field_h_16;
-    bit<8>  field_i_8;
-    bit<8>  field_j_8;
-    bit<4>  color_0;
-    bit<4>  pad_0;
-    bit<8>  color_1;
-    bit<8>  color_2;
-    bit<8>  color_3;
+header ipv4_t {
+    bit<4>  version;
+    bit<4>  ihl;
+    bit<8>  diffserv;
+    bit<16> totalLen;
+    bit<16> identification;
+    bit<3>  flags;
+    bit<13> fragOffset;
+    bit<8>  ttl;
+    bit<8>  protocol;
+    bit<16> hdrChecksum;
+    bit<32> srcAddr;
+    bit<32> dstAddr;
+}
+
+header tcp_t {
+    bit<16> srcPort;
+    bit<16> dstPort;
+    bit<32> seqNo;
+    bit<32> ackNo;
+    bit<4>  dataOffset;
+    bit<4>  res;
+    bit<8>  flags;
+    bit<16> window;
+    bit<16> checksum;
+    bit<16> urgentPtr;
 }
 
 struct metadata {
+    @name("meta") 
+    meta_t meta;
 }
 
 struct headers {
@@ -136,6 +159,8 @@ struct headers {
     egress_intrinsic_metadata_for_output_port_t    eg_intr_md_for_oport;
     @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name("eg_intr_md_from_parser_aux") 
     egress_intrinsic_metadata_from_parser_aux_t    eg_intr_md_from_parser_aux;
+    @name("ethernet") 
+    ethernet_t                                     ethernet;
     @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name("ig_intr_md") 
     ingress_intrinsic_metadata_t                   ig_intr_md;
     @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name("ig_intr_md_for_mb") 
@@ -148,13 +173,36 @@ struct headers {
     generator_metadata_t                           ig_pg_md;
     @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
-    @name("pkt") 
-    pkt_t                                          pkt;
+    @name("ipv4") 
+    ipv4_t                                         ipv4;
+    @name("tcp") 
+    tcp_t                                          tcp;
+}
+
+extern stateful_alu {
+    void execute_stateful_alu(@optional in bit<32> index);
+    void execute_stateful_alu_from_hash<FL>(in FL hash_field_list);
+    void execute_stateful_log();
+    stateful_alu();
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("parse_ethernet") state parse_ethernet {
-        packet.extract(hdr.pkt);
+        packet.extract<ethernet_t>(hdr.ethernet);
+        transition select(hdr.ethernet.etherType) {
+            16w0x800: parse_ipv4;
+            default: accept;
+        }
+    }
+    @name("parse_ipv4") state parse_ipv4 {
+        packet.extract<ipv4_t>(hdr.ipv4);
+        transition select(hdr.ipv4.protocol) {
+            8w0x6: parse_tcp;
+            default: accept;
+        }
+    }
+    @name("parse_tcp") state parse_tcp {
+        packet.extract<tcp_t>(hdr.tcp);
         transition accept;
     }
     @name("start") state start {
@@ -163,53 +211,25 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("do_nothing") action do_nothing() {
-        ;
+    @name("flowlet_state") register<bit<64>>(32w65536) flowlet_state_0;
+    @name("flowlet_state_alu") stateful_alu() flowlet_state_alu_0;
+    @name("get_flowlet_next_hop") action get_flowlet_next_hop_0() {
+        flowlet_state_alu_0.execute_stateful_alu();
     }
-    @name("action_1") action action_1(bit<16> param0) {
-        hdr.pkt.field_g_16 = param0;
-    }
-    @table_counter("gateway_hit") @name("table_0") table table_0() {
+    @name("flowlet_next_hop") table flowlet_next_hop_0() {
         actions = {
-            do_nothing;
-            @default_only NoAction;
+            get_flowlet_next_hop_0();
+            @default_only NoAction();
         }
         key = {
-            hdr.pkt.field_e_16: ternary;
+            meta.meta.next_hop: ternary @name("meta.meta.next_hop") ;
+            meta.meta.tstamp  : exact @name("meta.meta.tstamp") ;
         }
-        size = 4096;
+        size = 1024;
         default_action = NoAction();
     }
-    @table_counter("table_miss") @name("table_1") table table_1() {
-        actions = {
-            do_nothing;
-            @default_only action_1;
-        }
-        key = {
-            hdr.pkt.field_e_16      : exact;
-            hdr.pkt.field_f_16[15:0]: exact;
-        }
-        size = 16384;
-        const default_action = action_1(0xf);
-    }
-    @table_counter("table_hit") @name("table_2") table table_2() {
-        actions = {
-            do_nothing;
-        }
-        key = {
-            hdr.pkt.field_f_16: ternary;
-        }
-        size = 2048;
-        const default_action = do_nothing();
-    }
     apply {
-        if (hdr.pkt.isValid()) {
-            table_0.apply();
-        }
-        else {
-            table_1.apply();
-        }
-        table_2.apply();
+        flowlet_next_hop_0.apply();
     }
 }
 
@@ -220,7 +240,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        packet.emit(hdr.pkt);
+        packet.emit<ethernet_t>(hdr.ethernet);
+        packet.emit<ipv4_t>(hdr.ipv4);
+        packet.emit<tcp_t>(hdr.tcp);
     }
 }
 
@@ -234,4 +256,4 @@ control computeChecksum(inout headers hdr, inout metadata meta) {
     }
 }
 
-V1Switch(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;
+V1Switch<headers, metadata>(ParserImpl(), verifyChecksum(), ingress(), egress(), computeChecksum(), DeparserImpl()) main;

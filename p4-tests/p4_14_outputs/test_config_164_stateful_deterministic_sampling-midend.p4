@@ -222,7 +222,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr: exact @name("hdr.ipv4.dstAddr") ;
         }
         size = 1024;
-        default_action = on_miss_2();
+        const default_action = on_miss_2();
     }
     apply {
         ipv4_fib.apply();

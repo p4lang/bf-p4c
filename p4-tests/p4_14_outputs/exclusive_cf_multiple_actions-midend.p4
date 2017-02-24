@@ -193,7 +193,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             branch_0();
         }
         size = 1;
-        default_action = branch_0();
+        const default_action = branch_0();
     }
     @name("t1") table t1() {
         actions = {
@@ -214,28 +214,28 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             forward_0();
         }
         size = 1;
-        default_action = forward_0();
+        const default_action = forward_0();
     }
     @name("t3") table t3() {
         actions = {
             forward_4();
         }
         size = 1;
-        default_action = forward_4();
+        const default_action = forward_4();
     }
     @name("t4") table t4() {
         actions = {
             forward_5();
         }
         size = 1;
-        default_action = forward_5();
+        const default_action = forward_5();
     }
     @name("t5") table t5() {
         actions = {
             forward_6();
         }
         size = 1;
-        default_action = forward_6();
+        const default_action = forward_6();
     }
     apply {
         t0.apply();

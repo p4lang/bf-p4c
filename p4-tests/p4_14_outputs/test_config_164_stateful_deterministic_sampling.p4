@@ -218,7 +218,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
             hdr.ipv4.dstAddr: exact;
         }
         size = 1024;
-        default_action = on_miss();
+        const default_action = on_miss();
     }
     apply {
         ipv4_fib.apply();
