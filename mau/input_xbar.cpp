@@ -220,10 +220,12 @@ void IXBar::calculate_available_groups(vector<big_grp_use> &order, int hash_grou
             if (!(hash_index_inuse[hash_group] & (1 << (2 * big_grp.big_group + 1))))
                 second_ways_available++;
         }
-        if (first_ways_available < hash_groups_needed)
+        if (first_ways_available < hash_groups_needed) {
             big_grp.first.first_hash_open = false;
-        if (second_ways_available < hash_groups_needed)
+        }
+        if (second_ways_available < hash_groups_needed) {
             big_grp.first.second_hash_open = false;
+        }
     }
     for (auto &big_grp : order) {
         big_grp.first.first_hash_dist = is_group_for_hash_dist(2 * big_grp.big_group);
@@ -237,7 +239,7 @@ IXBar::grp_use::type_t IXBar::is_group_for_hash_dist(int hash_table) {
         if (i == hash_dist_groups[0] || i == hash_dist_groups[1]) {
             hash_dist = true;
         }
-        if ((1 << hash_table) | hash_group_use[i] != hash_group_use[i]) continue;
+        if (((1 << hash_table) | hash_group_use[i]) != hash_group_use[i]) continue;
         if (hash_dist)
             return grp_use::HASH_DIST;
         else
@@ -267,7 +269,7 @@ bool IXBar::violates_hash_constraints(vector<big_grp_use> &order, bool hash_dist
         } else {
            if (order[group].first.second_hash_dist_only())
                return true;
-           if (!order[group].second.second_hash_open) return true;
+           if (!order[group].first.second_hash_open) return true;
         }
     }
     return false;
@@ -839,10 +841,10 @@ void IXBar::getHashDistGroups(unsigned hash_table_input, int hash_group_opt[2]) 
 
     if (hash_dist_groups[0] == -1 && hash_dist_groups[1] == -1) {
         hash_group_opt[0] = getHashGroup(hash_table_input);
-    } else if (hash_dist_groups[0] == 0) {
-        if (hash_dist_groups[1] != 0)
+    } else if (hash_dist_groups[0] == -1) {
+        if (hash_dist_groups[1] != -1)
             BUG("Hash Distribution Allocation Error");
-    } else if (hash_dist_groups[1] == 0) {
+    } else if (hash_dist_groups[1] == -1) {
        hash_group_opt[0] = hash_dist_groups[0];
        hash_group_opt[1] = getHashGroup(hash_table_input);
     } else {
@@ -1194,7 +1196,7 @@ bool IXBar::allocHashDist(const HashDistReq &hash_dist_req, const PhvInfo &phv, 
         used_hash_group = hash_group_opts[i];
         unsigned long used_hash_dist_bits = 0;
         unsigned used_hash_dist_groups = 0;
-        for (int j = 0; j < HASH_GROUPS; j++) {
+        for (int j = 0; j < HASH_TABLES; j++) {
             if (((1 << j) & hash_group_use[hash_group_opts[i]]) == 0) continue;
             used_hash_dist_bits |= hash_dist_bit_inuse[j];
             used_hash_dist_groups |= hash_dist_inuse[j];
@@ -1257,6 +1259,7 @@ bool IXBar::allocHashDist(const HashDistReq &hash_dist_req, const PhvInfo &phv, 
     fill_out_use(alloced, false);
     alloc.hash_dist_use.back().hash_table_input = hash_table_input;
     hash_group_use[used_hash_group] |= hash_table_input;
+    hash_dist_groups[unit] = used_hash_group;
     alloc.hash_dist_use.back().unit = unit;
     alloc.hash_dist_use.back().slice = slice;
     alloc.hash_dist_use.back().bit_mask = bit_mask;
@@ -1368,6 +1371,10 @@ void IXBar::update_hash_dist(cstring name, const Use &alloc) {
         }
         hash_group_print_use[hash_dist.group] = name;
         hash_group_use[hash_dist.group] |= hash_dist.hash_table_input;
+        if (hash_dist_groups[hash_dist.unit] != hash_dist.group &&
+            hash_dist_groups[hash_dist.unit] != -1)
+            BUG("Conflicting hash distribution unit groups");
+        hash_dist_groups[hash_dist.unit] = hash_dist.group;
     }
 }
 
@@ -1390,7 +1397,6 @@ void IXBar::update(cstring name, const Use &alloc) {
                 BUG("conflicting ixbar allocation");
             use[byte.loc] = byte; }
         fields.emplace(byte.field, byte.loc); }
-    LOG3("Bit_use size is " << alloc.bit_use.size());
     for (auto &bits : alloc.bit_use) {
         const Loc *loc = nullptr;
         for (int b = 0; b < bits.width; b++) {

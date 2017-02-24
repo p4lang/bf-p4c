@@ -62,7 +62,7 @@ struct IXBar {
     unsigned                                    hash_dist_inuse[HASH_TABLES] = { 0 };
     Alloc2D<cstring, HASH_TABLES, HASH_DIST_GROUPS * HASH_DIST_BITS>   hash_dist_bit_use;
     unsigned long                               hash_dist_bit_inuse[HASH_TABLES] = { 0 };
-    int hash_dist_groups[2] = {-1, -1};
+    int hash_dist_groups[HASH_DIST_UNITS] = {-1, -1};
     friend class IXBarRealign;
 
  public:
