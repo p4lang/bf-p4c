@@ -285,3 +285,9 @@ IFAIL_TESTS += tofino-ortools/%reldir%/p4_14/simple_counter.p4.test \
 	       tofino-ortools/testdata/p4_14_samples/bigfield1.p4.test \
 	       tofino-ortools/testdata/p4_14_samples/07-MultiProtocol.p4.test \
 	       tofino/testdata/p4_14_samples/basic_routing.p4.test
+
+# Fails with CompilerBug "Can't create temp of type bool"
+XFAIL_TESTS += tofino/%reldir%/p4_16/apply_if.p4.test
+XFAIL_TESTS += tofino-ortools/%reldir%/p4_16/apply_if.p4.test
+XFAIL_TESTS += tofino/%reldir%/p4_16/depgraph2.p4.test
+XFAIL_TESTS += tofino-ortools/%reldir%/p4_16/depgraph2.p4.test
