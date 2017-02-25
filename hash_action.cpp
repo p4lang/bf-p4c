@@ -8,17 +8,9 @@ DEFINE_TABLE_TYPE(HashActionTable)
 void HashActionTable::setup(VECTOR(pair_t) &data) {
     common_init_setup(data, false, P4Table::MatchEntry);
     for (auto &kv : MapIterChecked(data)) {
-        if (common_setup(kv, data, P4Table::MatchEntry)) {
-        } else if (kv.key == "format") {
-            /* done above to be done before action_bus and vpns */
-        } else if (kv.key == "input_xbar") {
-            if (CHECKTYPE(kv.value, tMAP))
-                input_xbar = new InputXbar(this, false, kv.value.map);
-        } else if (kv.key == "hash_dist") {
-            /* done above to be done before parsing table calls */
-        } else
+        if (!common_setup(kv, data, P4Table::MatchEntry)) {
             warning(kv.key.lineno, "ignoring unknown item %s in table %s",
-                    value_desc(kv.key), name()); }
+                    value_desc(kv.key), name()); } }
     if (action.set() && actions)
         error(lineno, "Table %s has both action table and immediate actions", name());
     if (!action.set() && !actions)
@@ -56,7 +48,9 @@ void HashActionTable::pass1() {
         hd.pass1(this); }
     if (gateway) {
         gateway->logical_id = logical_id;
-        gateway->pass1(); }
+        gateway->pass1();
+    } else if (!hash_dist.empty())
+        warning(hash_dist[0].lineno, "No gateway in hash_action means hash_dist can't be used");
     if (idletime) {
         idletime->logical_id = logical_id;
         idletime->pass1(); }

@@ -300,36 +300,66 @@ function test_p4() {
     return $rv
 }
 
+function test_tfa() {
+    msg="$1"
+    pushd $(dirname $1) >/dev/null
+    name=$(basename $1 .tfa)
+    rv=0
+    mkdir -p $name.out
+    if not run $TFAS -Mvvvvl $name.out/tfas.config.log $name.tfa >$name.out/tfas.log 2>&1; then
+        msg="$msg tfas failed"
+        flock $FAILLOG -c "echo '$1:' >>$FAILLOG; sed -e 's/^/ /' -e '/\n/!a\' $name.out/tfas.log >>$FAILLOG"
+        rv=1
+    else
+        msg="$msg pass"
+    fi
+    echo "$msg"
+    popd >/dev/null
+    return $rv
+}
+
 function test_stf() {
+    if [ ! -x $STF ]; then
+        echo "$msg simple_test_framework not available"
+        return 4
+    fi
     msg="$1"
     pushd $(dirname $1) >/dev/null
     name=$(basename $1 .stf)
     rv=0
-    if [ ! -x $STF ]; then
-        echo "$msg simple_test_framework not available"
-        rv=4
-    elif [ -d $name.out ]; then
-        cd $name.out
+    if [[ -r $name.tfa && ( ! -r $name.out/tofino-bin || $fast = false ) ]]; then
+        mkdir -p $name.out
+        if not run $TFAS -Mvvvvl $name.out/tfas.config.log $name.tfa >$name.out/tfas.log 2>&1; then
+            msg="$msg tfas failed"
+            flock $FAILLOG -c "echo '$1:' >>$FAILLOG; sed -e 's/^/ /' -e '/\n/!a\' $name.out/tfas.log >>$FAILLOG"
+            rv=1
+        fi
+    fi
+    if [[ $rv == 0 && -d $name.out ]]; then
+        bindir=$name.out
+        if [ -d "$bindir/$name.out" ]; then
+            bindir="$bindir/$name.out"
+        fi
         start=`date +%s`
         linked=false
-        if [ -r $name.out/tofino.bin ]; then
+        if [ -r $bindir/tofino.bin ]; then
             linked=true
-            for f in $name.out/*.cfg.json*; do
-                if [ $f -nt $name.out/tofino.bin ]; then
+            for f in $bindir/*.cfg.json*; do
+                if [ $f -nt $bindir/tofino.bin ]; then
                     linked=false
                     break
                 fi
             done
         fi
-        if $linked || run $TFLINK -o $name.out/tofino.bin $name.out/*.cfg.json* >/dev/null 2>&1; then
-            export TOFINO_BIN=$name.out/tofino.bin
-            export TABLE_CONFIG=$name.out/tbl-cfg
-            if run "$STF" ../$name.stf >stf.txt 2>&1; then
+        if $linked || run $TFLINK -o $bindir/tofino.bin $bindir/*.cfg.json* >/dev/null 2>&1; then
+            export TOFINO_BIN=$bindir/tofino.bin
+            export TABLE_CONFIG=$bindir/tbl-cfg
+            if run "$STF" -l $bindir $name.stf >$name.out/stf.txt 2>&1; then
                 msg="$msg pass"
             else
                 msg="$msg fail"
                 rv=1
-                flock $FAILLOG -c "echo '$1:' >>$FAILLOG; sed -e 's/^/  /' stf.txt >>$FAILLOG"
+                flock $FAILLOG -c "echo '$1:' >>$FAILLOG; sed -e 's/^/  /' $name.out/stf.txt >>$FAILLOG"
             fi
         else
             msg="$msg failed"
@@ -388,6 +418,9 @@ for file in "$@"; do
     if [ "${file##*.}" == "p4" ]; then
         let running++
         test_p4 $file &
+    elif [ "${file##*.}" == "tfa" ]; then
+        let running++
+        test_tfa $file &
     elif [ "${file##*.}" == "stf" ]; then
         let running++
         test_stf $file &

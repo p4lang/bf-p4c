@@ -1,9 +1,3 @@
-#load tofino.bin
-#load context/mau.context.json
-#load context/p4_name_lookup.json
-load ternary_match1.out/tofino.bin
-load ternary_match1.out/tbl-cfg
-load ternary_match1.out/p4_name_lookup.json
 
 tcam_2bit_mode TRUE
 

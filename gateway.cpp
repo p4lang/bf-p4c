@@ -174,7 +174,7 @@ static void check_match_key(Table *tbl, std::vector<GatewayTable::MatchKey> &vec
         if (vec[i].offset + vec[i].val->size() > max) {
             error(vec[i].val.lineno, "Gateway %s key too big", name);
             break; }
-        if (vec[i].offset >= 32) {
+        if (vec[i].offset >= 32 && tbl->input_xbar) {
             auto hash = tbl->input_xbar->hash_column(vec[i].offset + 8);
             if (hash.size() != 1 || hash[0]->bit || !hash[0]->fn ||
                 !hash[0]->fn->match_phvref(vec[i].val))
@@ -189,6 +189,8 @@ void GatewayTable::pass1() {
     alloc_busses(stage->sram_match_bus_use);
     if (layout.empty() || layout[0].row < 0)
         error(lineno, "No row specified in gateway");
+    else if (layout[0].bus < 0 && (!match.empty() || !xor_match.empty()))
+        error(lineno, "No bus specified in gateway to read from");
     if (layout.size() > 1) {
         if (layout[1].row < 0)
             error(layout[1].lineno, "payload_bus with no payload_row in gateway");
@@ -209,8 +211,6 @@ void GatewayTable::pass1() {
             stage->gw_unit_use[layout[0].row][gw_unit] = this; }
     if (input_xbar)
         input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
-    else
-        error(lineno, "input_xbar required for gateway");
     check_match_key(this, match, "match", 44);
     check_match_key(this, xor_match, "xor", 32);
     std::sort(match.begin(), match.end());
@@ -253,7 +253,7 @@ void GatewayTable::pass2() {
         if (match_table) logical_id = match_table->logical_id;
         else choose_logical_id(); }
     if (gw_unit < 0) {
-        if (!stage->gw_unit_use[layout[0].row][layout[0].bus]) {
+        if (layout[0].bus >= 0 && !stage->gw_unit_use[layout[0].row][layout[0].bus]) {
             gw_unit = layout[0].bus;
         } else for (int i = 0; i < 2; ++i) {
             if (!stage->gw_unit_use[layout[0].row][i]) {
