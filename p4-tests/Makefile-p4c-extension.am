@@ -120,11 +120,6 @@ XFAIL_TESTS += \
        tofino/%reldir%/p4_16/flowlet_switching.p4.test \
        tofino/%reldir%/p4_16/stateful_alu.p4.test
 
-#Fail with 'Conflicting hash distribution bit allocation'
-XFAIL_TESTS += \
-    tofino/%reldir%/p4_14/switch_20160602/switch.p4.test \
-    tofino/%reldir%/p4_14/switch_l2_profile_tofino.p4.test
-
 # These testcases taken from glass and xfail in brig
 XFAIL_TESTS += \
     tofino/%reldir%/p4_14/test_config_121_tcam_range_5.p4.test.test \
