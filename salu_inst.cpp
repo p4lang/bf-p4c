@@ -254,11 +254,11 @@ Instruction *AluOP::pass1(Table *tbl, Table::Actions::Action *act) {
     if (slot < 0 && act->slot_use[slot = (dest ? ALU1HI : ALU1LO)])
         slot = dest ? ALU2HI : ALU2LO;
     auto k1 = srca.to<operand::Const>();
-    auto k2 = srca.to<operand::Const>();
+    auto k2 = srcb.to<operand::Const>();
     if (k1 && k2 && k1->value != k2->value)
         error(lineno, "can only have one distinct constant in an SALU instruction");
     if (!k1) k1 = k2;
-    if (k1->value < -8 || k1->value >= 8)
+    if (k1 && (k1->value < -8 || k1->value >= 8))
         dynamic_cast<Stateful *>(tbl)->get_const(k1->value);
     if (auto p = srcb.to<operand::Phv>())
         p->reg.check();
@@ -286,10 +286,10 @@ void AluOP::write_regs(Table *tbl_, Table::Actions::Action *act) {
                 salu.salu_regfile_const = 1; }
         } else assert(0); }
     if (srcb) {
-        if (/*auto f =*/ srca.to<operand::Phv>()) {
+        if (/*auto f =*/ srcb.to<operand::Phv>()) {
             salu.salu_bsrc_phv = 1;
             salu.salu_bsrc_phv_index = 0;  // FIXME
-        } else if (auto k = srca.to<operand::Const>()) {
+        } else if (auto k = srcb.to<operand::Const>()) {
             salu.salu_bsrc_phv = 0;
             if (k->value >= -8 && k->value < 8) {
                 salu.salu_const_src = k->value;
@@ -397,10 +397,13 @@ Instruction *CmpOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     while (idx < op.size) {
         operand src(tbl, act, op[idx++]);
         if (!rv->srca && (rv->srca = src.to<operand::Memory>())) {
+            src.op = nullptr;
             rv->srca_neg = src.neg;
         } else if (!rv->srcb && (rv->srcb = src.to<operand::Phv>())) {
+            src.op = nullptr;
             rv->srcb_neg = src.neg;
         } else if (!rv->srcc && (rv->srcc = src.to<operand::Const>())) {
+            src.op = nullptr;
             if (src.neg)
                 rv->srcc->value = -rv->srcc->value;
         } else {

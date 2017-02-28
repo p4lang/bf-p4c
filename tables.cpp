@@ -186,7 +186,6 @@ void Table::setup_logical_id() {
 void Table::setup_maprams(VECTOR(value_t) *rams) {
     auto r = rams->begin();
     for (auto &row : layout) {
-        int sram_row = row.row/2;
         if (r == rams->end()) {
             error(r->lineno, "Mapram layout doesn't match table layout");
             break; }
@@ -210,12 +209,8 @@ void Table::setup_maprams(VECTOR(value_t) *rams) {
             if (CHECKTYPE(mapcol, tINT)) {
                 if (mapcol.i < 0 || mapcol.i >= MAPRAM_UNITS_PER_ROW)
                     error(mapcol.lineno, "Invalid mapram column %d", mapcol.i);
-                else if (auto *old = stage->mapram_use[sram_row][mapcol.i])
-                    error(mapcol.lineno, "Mapram col %d in row %d already in use by table %s",
-                          sram_row, mapcol.i, old->name());
-                else {
-                    stage->mapram_use[sram_row][mapcol.i] = this;
-                    row.maprams.push_back(mapcol.i); } } }
+                else
+                    row.maprams.push_back(mapcol.i); } }
 }
 
 void Table::setup_vpns(std::vector<Layout> &layout, VECTOR(value_t) *vpn, bool allow_holes) {
@@ -449,16 +444,23 @@ void Table::alloc_maprams() {
         if ((row.row & 1) == 0) {
             error(row.lineno, "Can only use 2-port rams on right side srams (odd logical rows)");
             continue; }
-        if (!row.maprams.empty()) continue;
-        int use = 0;
-        for (unsigned i = 0; i < row.cols.size(); i++) {
-            while (use < MAPRAM_UNITS_PER_ROW && stage->mapram_use[sram_row][use]) use++;
-            if (use >= MAPRAM_UNITS_PER_ROW) {
-                error(row.lineno, "Ran out of maprams on row %d in stage %d", sram_row,
-                      stage->stageno);
-                break; }
-            row.maprams.push_back(use);
-            stage->mapram_use[sram_row][use++] = this; } }
+        if (row.maprams.empty()) {
+            int use = 0;
+            for (unsigned i = 0; i < row.cols.size(); i++) {
+                while (use < MAPRAM_UNITS_PER_ROW && stage->mapram_use[sram_row][use]) use++;
+                if (use >= MAPRAM_UNITS_PER_ROW) {
+                    error(row.lineno, "Ran out of maprams on row %d in stage %d", sram_row,
+                          stage->stageno);
+                    break; }
+                row.maprams.push_back(use);
+                stage->mapram_use[sram_row][use++] = this; }
+        } else {
+            for (auto mapcol : row.maprams) {
+                if (auto *old = stage->mapram_use[sram_row][mapcol])
+                    error(lineno, "Table %s trying to use mapram %d,%d which is use by table %s",
+                          name(), sram_row, mapcol, old->name());
+                else
+                    stage->mapram_use[sram_row][mapcol] = this; } } }
 }
 
 void Table::alloc_vpns() {

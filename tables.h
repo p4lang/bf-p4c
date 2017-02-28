@@ -752,7 +752,16 @@ DECLARE_TABLE_TYPE(Stateful, Synth2Port, "stateful",
     table_type_t table_type() { return STATEFUL; }
     void write_merge_regs(MatchTable *match, int type, int bus,
                           const std::vector<Call::Arg> &args) override;
+    Ref                 bound_selector;
     std::vector<long>   const_vals;
+    struct MathTable {
+        int                     lineno = -1;
+        std::vector<int>        data;
+        bool                    invert = false;
+        int                     shift = 0, scale = 0;
+        explicit operator bool() { return lineno >= 0; }
+        void check();
+    }                   math_table;
 public:
     int instruction_set() override { return 1; /* STATEFUL_ALU */ }
     int direct_shiftcount() override;

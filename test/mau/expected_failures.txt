@@ -28,8 +28,8 @@ test_config_139_tcam_error_detection_4.p4 mismatch
 
 test_config_2_action_data_table_sizing.p4 mismatch
 - asmgen causes enable of unneeded byte on action_hv_xbar
-test_config_23_same_container_modified.p4 mismatch
-- asmgen incorrect asm for masked modify_field
+#test_config_23_same_container_modified.p4 mismatch
+#- asmgen incorrect asm for masked modify_field
 test_config_45_action_data_immediate_param_and_constant.p4 mismatch
 - asmgen causes enable of unneeded bytes on action_hv_xbar
 test_config_48_action_data_bit_masked_set.p4 mismatch
@@ -45,6 +45,7 @@ test_config_91_gateway_with_split_table.p4 mismatch
 02-FullPHV1.p4 compile
 07-MacAddrCheck.p4 compile
 08-MacAddrCheck1.p4 compile
+12-Counters.p4 compile
 22-BigToSmallFieldWithMask8.p4 compile
 
 dileep10.p4 mismatch
@@ -65,7 +66,7 @@ test_config_157_random_number_generator.p4 tfas
 test_config_159_stateful_using_phv_field.p4 mismatch
 test_config_160_stateful_single_bit_mode.p4 mismatch
 test_config_161_new_primitives.p4 mismatch
-test_config_163_stateful_table_math_unit.p4 mismatch
+test_config_163_stateful_table_math_unit.p4 tfas
 test_config_164_stateful_deterministic_sampling.p4 tfas
 test_config_165_stateful_bfd_failure_detection.p4 mismatch
 test_config_166_stateful_generic_counter.p4 mismatch
@@ -87,19 +88,18 @@ test_config_187_proxy_hash_2.p4 mismatch
 test_config_189_stat_with_lrt.p4 mismatch
 test_config_190_modify_with_expr.p4 compile
 test_config_191_invalidate.p4 tfas
-test_config_192_stateful_driven_by_hash.p4 mismatch
+test_config_192_stateful_driven_by_hash.p4 tfas
 test_config_193_indirect_stats_no_reads.p4 tfas
 test_config_195_stateful_predicate_output.p4 mismatch
 test_config_196_hit_miss.p4 mismatch
 test_config_198_shared_action_profile.p4 mismatch
-test_config_199_stateful_constant_index.p4 mismatch
+test_config_199_stateful_constant_index.p4 tfas
 test_config_200_counter_constant_index.p4 tfas
 test_config_201_meter_constant_index.p4 tfas
 test_config_203_first_reduction_or.p4 mismatch
 test_config_204_no_tables_in_stage0.p4 mismatch
 test_config_205_modify_field_from_hash.p4 tfas
-test_config_206_stateful_logging.p4 mismatch
+test_config_206_stateful_logging.p4 tfas
 test_config_209_pack_hash_dist.p4 mismatch
-test_config_99_share_exact_match_key.p4 mismatch
 vk_basic_ipv4_20150706.p4 mismatch
 vk_basic_ipv4_subset.p4 mismatch

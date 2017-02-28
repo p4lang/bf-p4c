@@ -52,7 +52,15 @@ json::map *Synth2Port::base_tbl_cfg(json::vector &out, const char *type, int siz
 json::map *Synth2Port::add_stage_tbl_cfg(json::map &tbl, const char *type, int size) {
     json::map &stage_tbl = *AttachedTable::add_stage_tbl_cfg(tbl, type, size);
     stage_tbl["how_referenced"] = indirect ? "indirect" : "direct";
-    add_pack_format(stage_tbl, 128, 1, format ? format->groups() : 1);
+    int entries = 1;
+    if (format) {
+        assert(format->log2size <= 7);
+        if (format->groups() > 1) {
+            assert(format->log2size == 7);
+            entries = format->groups();
+        } else {
+            entries = 128U >> format->log2size; } }
+    add_pack_format(stage_tbl, 128, 1, entries);
     stage_tbl["memory_resource_allocation"] =
         gen_memory_resource_allocation_tbl_cfg("sram", layout, true);
     stage_tbl["stage_table_handle"] = logical_id;

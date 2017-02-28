@@ -116,4 +116,5 @@ stage 1 ingress:
     column: [ 0, 1, 2, 3, 4, 5 ]
     maprams: [ 0, 1, 2, 3, 4, 5 ]
     count: packets
+    per_flow_enable: true
     format: {packets(0): 96..127, packets(1): 64..95, packets(2): 32..63, packets(3): 0..31}
