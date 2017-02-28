@@ -23,12 +23,13 @@ class HashDistReq {
     }
     bool is_immediate() const {
         if (instr != nullptr) {
-            if (instr->name == "modify_field_with_hash_based_offset") {
+            if (instr->name == "hash") {
                 return true;
             }
         }
         return false;
     }
+    cstring algorithm() const;
     int bits_required(const PhvInfo &phv) const;
 };
 

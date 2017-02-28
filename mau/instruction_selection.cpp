@@ -51,12 +51,17 @@ const IR::ActionFunction *InstructionSelection::postorder(IR::ActionFunction *af
         split.push_back(p->apply(SplitInstructions(split)));
     if (split.size() > af->action.size())
         af->action = std::move(split);
-    if (stateful.count(af)) {
+    LOG1("Af name " << af->name);
+    if (stateful.count(af) || modify_with_hash.count(af)) {
         BUG_CHECK(!af->is<IR::MAU::ActionFunctionEx>(), "already processed action function?");
         auto *rv = new IR::MAU::ActionFunctionEx(*af);
+        LOG1("Size in instr sel " << modify_with_hash[af].size());
         rv->stateful.insert(rv->stateful.end(), stateful[af].begin(), stateful[af].end());
+        rv->modify_with_hash.insert(rv->modify_with_hash.end(), modify_with_hash[af].begin(),
+                                    modify_with_hash[af].end());
         stateful[rv] = stateful[af];
         modify_with_hash[rv] = modify_with_hash[af];
+        LOG1("Size test 2 " << rv->modify_with_hash.size());
         af = rv; }
     return af;
 }
@@ -234,6 +239,7 @@ static const IR::Primitive *makeDepositField(IR::Primitive *prim, long) {
 }
 
 const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
+    LOG1("Primitive name " << prim->name);
     if (!af) return prim;
     const IR::Expression *dest = prim->operands.size() > 0 ? prim->operands[0] : nullptr;
     if (prim->name == "modify_field") {
@@ -318,7 +324,17 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
     } else if (prim->name == "count" || prim->name == "execute_meter" ||
                prim->name == "execute_stateful_alu") {
         stateful[af].emplace_back(prim);
-        return nullptr; }
+        return nullptr;
+    } else if (prim->name == "hash") {
+        for (size_t i = 0; i < prim->operands.size(); i++) {
+            LOG1("Operand " << i << " is " << prim->operands[i]);
+        }
+        modify_with_hash[af].emplace_back(prim);
+        IR::MAU::Instruction *instr = new IR::MAU::Instruction(prim->srcInfo, "set",
+                                                               prim->operands[0]);
+        instr->through_arg = false;
+        return instr;
+    }
     WARNING("unhandled in InstSel: " << *prim);
     return prim;
 }

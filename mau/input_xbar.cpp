@@ -1155,6 +1155,7 @@ bool IXBar::allocHashDist(const HashDistReq &hash_dist_req, const PhvInfo &phv, 
             alloc.hash_dist_use.back().alg = Use::Identity;
             alloc.hash_dist_use.back().shift = 7;
         }
+        alloc.hash_dist_use.back().max_size = hash_dist_req.bits_required(phv);
         auto r = field;
         const PhvInfo::Field *finfo = nullptr;
         PhvInfo::Field::bitrange bits = { };
@@ -1173,6 +1174,48 @@ bool IXBar::allocHashDist(const HashDistReq &hash_dist_req, const PhvInfo &phv, 
                                          name);
         fields_needed.insert(finfo->name);
         add_use(alloc, finfo, &bits, 0, true);
+    } else if (hash_dist_req.is_immediate()) {
+        alloc.hash_dist_use.back().type = Use::Immediate;
+        cstring algorithm = hash_dist_req.algorithm();
+        if (algorithm == "crc32" || algorithm == "crc32_custom")
+            alloc.hash_dist_use.back().alg = Use::CRC32;
+        else if (algorithm == "crc16" || "crc16_custom")
+            alloc.hash_dist_use.back().alg = Use::CRC16;
+        else if (algorithm == "random")
+            alloc.hash_dist_use.back().alg = Use::Random;
+        else if (algorithm == "identity")
+            alloc.hash_dist_use.back().alg = Use::Identity;
+        else
+            BUG("Unrecognized hash algorithm %s", algorithm);
+
+        long con = hash_dist_req.get_instr()->operands[4]->to<IR::Constant>()->asLong();
+        alloc.hash_dist_use.back().max_size = __builtin_popcount(con - 1);
+        LOG1("Max size " << alloc.hash_dist_use.back().max_size);
+        
+        auto *fl = hash_dist_req.get_instr()->operands[3]->to<IR::ListExpression>();
+        for (auto comp : *(fl->components)) {
+            auto r = comp;
+            const PhvInfo::Field *finfo = nullptr;
+        
+            PhvInfo::Field::bitrange bits = { };
+            if (auto prim = r->to<IR::Primitive>()) {
+                if (prim->name == "valid") {
+                    auto hdr = prim->operands[0]->to<IR::HeaderRef>()->toString();
+                    finfo = phv.field(hdr + ".$valid"); }
+            } else {
+                if (auto mask = r->to<IR::Mask>())
+                    comp = mask->left;
+                finfo = phv.field(comp, &bits);
+            }
+            BUG_CHECK(finfo, "unexpected reads expression %s", r);
+            if (fields_needed.count(finfo->name))
+                throw Util::CompilationError("field %s read twice by table %s", finfo->name,
+                                             name);
+            fields_needed.insert(finfo->name);
+            add_use(alloc, finfo, &bits, 0, true);
+        }
+    } else {
+        LOG1("Neither");
     }
     bool rv = find_alloc(alloc.hash_dist_use.back().use, false, second_try, alloced,
                          HASH_INDEX_GROUPS, true);
@@ -1187,7 +1230,7 @@ bool IXBar::allocHashDist(const HashDistReq &hash_dist_req, const PhvInfo &phv, 
     int hash_group_opts[HASH_DIST_UNITS] = {-1, -1};
     getHashDistGroups(hash_table_input, hash_group_opts);
 
-    bool allocated = false;
+    bool can_allocate = false;
     unsigned long bit_mask = 0; unsigned slice = 0;
     int unit = -1;
     for (int i = 0; i < HASH_DIST_UNITS; i++) {
@@ -1202,6 +1245,7 @@ bool IXBar::allocHashDist(const HashDistReq &hash_dist_req, const PhvInfo &phv, 
             used_hash_dist_groups |= hash_dist_inuse[j];
         }
         int address_group = -1;
+        int hash_dist_groups_needed = -1;  unsigned avail_groups = 0;
         if (hash_dist_req.is_address()) {
             for (int j = 0; j < HASH_DIST_GROUPS - 1; j++) {
                 bool collision = false;
@@ -1216,11 +1260,26 @@ bool IXBar::allocHashDist(const HashDistReq &hash_dist_req, const PhvInfo &phv, 
                     }
                 }
                 if (collision) continue;
-                allocated = true;
+                can_allocate = true;
                 break;
             }
-            if (!allocated) continue;
+        } else if (hash_dist_req.is_immediate()) {
+            hash_dist_groups_needed =
+                (hash_dist_req.bits_required(phv) + HASH_DIST_BITS - 1) / HASH_DIST_BITS;
+            avail_groups = ((1 << HASH_DIST_GROUPS) - 1) & (~used_hash_dist_groups);
+            int groups_left = __builtin_popcount(avail_groups);
+            LOG1("Before Avail groups 0x" << hex(avail_groups)); 
+            if (groups_left - hash_dist_groups_needed >= 0)
+                can_allocate = true;
+            for (int j = 0; j < HASH_DIST_GROUPS; j++) {
+                if ((groups_left - hash_dist_groups_needed) == 0) break;
+                if (((1 << j) & avail_groups) == 0) continue;
+                avail_groups &= ~(1 << j);
+                groups_left--;
+            }
         }
+ 
+        if (!can_allocate) continue;
 
         if (hash_dist_req.is_address()) {
             for (int j = 0; j < HASH_TABLES; j++) {
@@ -1249,10 +1308,28 @@ bool IXBar::allocHashDist(const HashDistReq &hash_dist_req, const PhvInfo &phv, 
                     }
                 }
             }
+        } else if (hash_dist_req.is_immediate()) {
+            LOG1("Avail groups 0x" << hex(avail_groups));
+            for (int j = 0; j < HASH_TABLES; j++) {
+                int allocated_groups = 0;
+                if ((hash_table_input & (1 << j)) == 0) continue;
+                for (int k = 0; k < HASH_DIST_GROUPS; k++) {
+                    if (((1 << k) & avail_groups) == 0) continue;
+                    hash_dist_use[j][k] = name;
+                    hash_dist_inuse[j] |= (1 << k);
+                    slice |= (1 << k);
+                    int bits_needed = hash_dist_req.bits_required(phv) - 
+                                      allocated_groups * HASH_DIST_BITS;
+                    bits_needed = (bits_needed <= HASH_DIST_BITS) ? bits_needed : HASH_DIST_BITS;
+                    unsigned long bit_vector = (1 << bits_needed) - 1;
+                    bit_mask |= (bit_vector << (k * HASH_DIST_BITS)); 
+                    allocated_groups++;
+                }
+            }
         }
         break;
     }
-    if (!allocated) {
+    if (!can_allocate) {
         alloc.hash_dist_use.pop_back();
         return false;
     }
@@ -1264,6 +1341,9 @@ bool IXBar::allocHashDist(const HashDistReq &hash_dist_req, const PhvInfo &phv, 
     alloc.hash_dist_use.back().slice = slice;
     alloc.hash_dist_use.back().bit_mask = bit_mask;
     alloc.hash_dist_use.back().group = used_hash_group;
+    LOG1("Hash dist info: unit: " << unit << ", group: " << used_hash_group <<
+         ", slice: 0x" << hex(slice)
+         << ", bit_mask: 0x" << hex(bit_mask));
     return rv;
 }
 

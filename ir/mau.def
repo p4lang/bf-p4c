@@ -336,6 +336,7 @@ class Instruction : Primitive {
 #emit
     using Primitive::Primitive;
 #end
+    bool through_arg = true;
     Instruction(const Primitive &p) : Primitive(p) {}
     bool isOutput(int operand_index) const override { return operand_index == 0; }
 }
@@ -343,6 +344,7 @@ class Instruction : Primitive {
 class ActionFunctionEx : ActionFunction {
     // Removed the stateful primitives as they aren't instructions as such.
     inline Vector<Primitive>    stateful = {};
+    inline Vector<Primitive>    modify_with_hash = {};
     ActionFunctionEx(const ActionFunction &af) : ActionFunction(af) {}
 }
 

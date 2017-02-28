@@ -130,6 +130,7 @@ struct IXBar {
             unsigned          slice = 0;
             unsigned long     bit_mask = 0;
             int               shift = 0;
+            int               max_size = 0;
             algorithm_t       alg;
             hash_dist_type_t  type;
             HashDist() : use(), group(-1) {}

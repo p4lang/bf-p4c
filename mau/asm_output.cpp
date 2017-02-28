@@ -261,18 +261,20 @@ void MauAsmOutput::emit_ixbar_hash_dist(std::ostream &out, indent_t indent,
         return;
     out << indent++ << "hash_dist:" << std::endl;
     for (auto &hash_dist : use.hash_dist_use) {
-        out << indent << hash_dist.unit << ": {";
-        out << "hash: " << hash_dist.unit;
-        int group = 0;
+        LOG1("Hash dist used");
         for (int i = 0; i < IXBar::HASH_DIST_GROUPS; i++) {
-            if ((1 << i) & hash_dist.slice) {
-                group = i;
-            }
+            if (((1 << i) & hash_dist.slice) == 0) continue;
+            int unit = IXBar::HASH_DIST_GROUPS * hash_dist.unit + i;
+            out << indent << unit << ": {";
+            out << "hash: " << hash_dist.group;
+            unsigned long potential_mask = (1 << IXBar::HASH_DIST_BITS) - 1;
+            potential_mask <<= i * IXBar::HASH_DIST_BITS;
+            unsigned long mask = (hash_dist.bit_mask & potential_mask);
+            mask >>= (IXBar::HASH_DIST_BITS * i);
+            out << ", mask: 0x" << hex(mask);
+            out << ", shift: " << hash_dist.shift;
+            out << "}" << std::endl;
         }
-        unsigned mask = hash_dist.bit_mask >> (IXBar::HASH_DIST_BITS * group);
-        out << ", mask: 0x" << hex(mask);
-        out << ", shift: " << hash_dist.shift;
-        out << "}" << std::endl;
     }
     indent--;
 }
@@ -521,14 +523,24 @@ class MauAsmOutput::EmitAction : public Inspector {
     const IR::MAU::Table        *table;
     indent_t                    indent;
     const char                  *sep = nullptr;
+    bool                        through_hash_dist = false;
+    bool                        hash_dist_visited = false;
+    vector<int>                 hash_dist_units;
+    int                         max_size = -1;
+    
     void output_action(const IR::ActionFunction *act, ImmedFormat &ifmt) {
+        LOG1("Outputting action " << act);
         out << indent << act->name << ":" << std::endl;
         if (ifmt) out << indent << "- { " << ifmt << " }" << std::endl;
         if (act->action.empty()) {
             /* a noop */
             out << indent << "- 0" << std::endl;
         } else {
-            act->action.visit_children(*this); } }
+            act->action.visit_children(*this);
+            hash_dist_visited = true;
+            act->action.visit_children(*this);
+        }
+    }
     bool preorder(const IR::ActionFunction *act) override {
         ImmedFormat ifmt;
         if (table->layout.action_data_bytes_in_overhead)
@@ -536,6 +548,7 @@ class MauAsmOutput::EmitAction : public Inspector {
         output_action(act, ifmt);
         return false; }
     bool preorder(const IR::MAU::ActionFunctionEx *act) override {
+        hash_dist_units.clear();
         ImmedFormat ifmt;
         if (table->layout.action_data_bytes_in_overhead)
             ifmt.setup_immed(act, "immediate");
@@ -546,13 +559,40 @@ class MauAsmOutput::EmitAction : public Inspector {
                 else
                     ERROR("counter index arg '" << prim->operands[1] << "' is not an action arg");
             } else {
-                ERROR("skipping " << prim); } }
+                ERROR("skipping " << prim);
+            }
+        }
+        for (auto prim : act->modify_with_hash) {
+            if (prim->name == "hash") {
+                LOG1("Hash is called!");
+                const IXBar::Use use = table->resources->match_ixbar;
+                for (auto hash_dist : use.hash_dist_use) {
+                    if (hash_dist.type == IXBar::Use::Immediate) {
+                        LOG1("Slice 0x" << hex(hash_dist.slice));
+                        for (int i = 0; i < IXBar::HASH_DIST_GROUPS; i++) {
+                             if (((1 << i) & hash_dist.slice) == 0) continue;
+                             hash_dist_units.push_back(i);
+                             LOG1("Push Back");
+                        }
+                        max_size = __builtin_popcount(hash_dist.bit_mask)
+                                   + __builtin_popcount(hash_dist.bit_mask >> 32);
+                    } else {
+                        LOG1("Fuck me with a rake");
+                    }
+                }
+            }
+        }
         output_action(act, ifmt);
         return false; }
     bool preorder(const IR::MAU::Instruction *inst) override {
+        if (hash_dist_units.size() <= 1 && hash_dist_visited) {
+            return false;
+        }
         out << indent << "- " << inst->name;
         sep = " ";
-        return true; }
+        through_hash_dist = !inst->through_arg;
+        return true;
+    }
     bool preorder(const IR::Constant *c) override {
         assert(sep);
         out << sep << c->asLong();
@@ -564,6 +604,14 @@ class MauAsmOutput::EmitAction : public Inspector {
         sep = ", ";
         return false; }
     void postorder(const IR::MAU::Instruction *) override {
+        if (through_hash_dist) {
+            out << ", hash_dist ";
+            if (!hash_dist_visited)
+                out << hash_dist_units[0];
+            else
+                out << hash_dist_units[1];
+        }
+        through_hash_dist = false;
         sep = nullptr;
         out << std::endl; }
     bool preorder(const IR::Cast *c) override { visit(c->expr); return false; }
@@ -579,6 +627,12 @@ class MauAsmOutput::EmitAction : public Inspector {
                     bits.hi -= alloc.field_bit; }
                 if (bits.lo || bits.size() != alloc.width)
                     out << '(' << bits.lo << ".." << bits.hi << ')';
+                if (through_hash_dist && bits.size() > IXBar::HASH_DIST_BITS) {
+                    if (!hash_dist_visited)
+                        out << '(' << bits.lo << ".." << (bits.lo + 15) << ")";
+                    else
+                        out << '(' << (bits.lo + 16) << ".." << (max_size - 1) << ")";
+                }
             } else {
                 out << sep << "/* " << *exp << " */"; }
             sep = ", ";
@@ -818,6 +872,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         out << " }" << std::endl;
         auto memuse_name = tbl->get_use_name();
         emit_memory(out, indent, tbl->resources->memuse.at(memuse_name));
+        LOG1("Emitting ixbar for table " << tbl->name);
         emit_ixbar(out, indent, tbl->resources->match_ixbar,
                    &tbl->resources->memuse.at(memuse_name), &fmt, tbl->layout.hash_action);
         if (!tbl->layout.ternary && !tbl->layout.no_match_data()) {
@@ -954,12 +1009,15 @@ class MauAsmOutput::UnattachedName : public MauInspector {
 void MauAsmOutput::find_indirect_index(std::ostream &out, const IR::MAU::Table *tbl,
          const IR::Attached *at) const {
     const IR::MAU::MAUCounter *cnt = at->to<IR::MAU::MAUCounter>();
-    const IR::Counter *test = at->to<IR::Counter>();
     if (cnt != nullptr && phv.field(cnt->indirect_index)) {
         for (auto hash_dist : tbl->resources->match_ixbar.hash_dist_use) {
             if (hash_dist.type == IXBar::Use::CounterPtr) {
-                out << "(hash_dist " << hash_dist.unit << ")";
-                return;
+                for (int i = 0; i < IXBar::HASH_DIST_GROUPS; i++) {
+                    if (((1 << i) & hash_dist.slice) == 0) continue;
+                    out << "(hash_dist ";
+                    out << (IXBar::HASH_DIST_GROUPS * hash_dist.unit + i) << ")";
+                    return;
+                } 
             }
         }
     } else {

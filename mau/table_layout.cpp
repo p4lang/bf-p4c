@@ -13,10 +13,17 @@ bool TableLayout::backtrack(trigger &trig) {
     return trig.is<IXBar::failure>() && !alloc_done;
 }
 
+cstring HashDistReq::algorithm() const {
+    if (instr != nullptr && instr->name == "hash") {
+        return instr->operands[1]->to<IR::Member>()->member;  
+    }
+    return "";
+}
+
 int HashDistReq::bits_required(const PhvInfo &phv) const {
     if (instr != nullptr) {
-        if (instr->name == "modify_field_with_hash_based_offset") {
-           return -1;
+        if (instr->name == "hash") {
+            return instr->operands[2]->type->width_bits();
         }
     }
 
@@ -126,9 +133,14 @@ static void setup_action_layout(IR::MAU::Table *tbl) {
 static void setup_hash_dist(IR::MAU::Table *tbl, const PhvInfo &phv, HashDistChoices &hdc) {
     vector<HashDistReq> hash_dist_reqs;
     for (auto action : Values(tbl->actions)) {
-        for (const IR::Primitive* instr : action->action) {
-            if (instr->name == "modify_field_with_hash_based_offset")
+        const IR::MAU::ActionFunctionEx *af = action->to<IR::MAU::ActionFunctionEx>();
+        if (af == nullptr) continue;
+
+        for (auto instr : af->modify_with_hash) {
+            if (instr->name == "hash") {
                 hash_dist_reqs.emplace_back(true, instr, nullptr);
+                hash_dist_reqs.back().bits_required(phv);
+            }
         }
     }
     for (auto *at : tbl->attached) {
