@@ -94,7 +94,7 @@ blackbox_type stateful_alu {
     attribute update_lo_2_value {
         /* Expression computed in ALU 2 lo. */
         type: expression;
-        expression_local_variables {bit<32> register_lo, bit<32> register_hi, math_unit}
+        expression_local_variables {bit<32> register_lo, bit<32> register_hi, bit<32> math_unit}
         optional;
     }
 
