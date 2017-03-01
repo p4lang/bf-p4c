@@ -64,7 +64,7 @@ field_list_calculation first_hash {
       first_field_list;
    }
    algorithm : random;
-   output_width : 72;
+   output_width : 32;//72;
 }
 
 
