@@ -20,7 +20,6 @@ test_config_137_tcam_error_detection_2.p4 mismatch
 test_config_138_tcam_error_detection_3.p4 mismatch
 test_config_139_tcam_error_detection_4.p4 mismatch
 
-12-Counters.p4 tfas
 14-Counter.p4 tfas
 - invalid asm refers to stat_ptr but doesn't define it.
 16-NoHeaders.p4 tfas
