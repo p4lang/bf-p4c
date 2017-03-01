@@ -21,15 +21,12 @@ cstring HashDistReq::algorithm() const {
 }
 
 int HashDistReq::bits_required(const PhvInfo &phv) const {
-    if (instr != nullptr) {
-        if (instr->name == "hash") {
-            return instr->operands[2]->type->width_bits();
-        }
+    if (is_immediate()) {
+        return instr->operands[2]->type->width_bits();
     }
 
-    if (attached != nullptr) {
-        if (auto *c = attached->to<IR::MAU::MAUCounter>())
-            return phv.field(c->indirect_index)->size;
+    if (is_address()) {
+        return phv.field(instr->operands[1])->size;
     }
     return -1;
 }
@@ -138,24 +135,15 @@ static void setup_hash_dist(IR::MAU::Table *tbl, const PhvInfo &phv, HashDistCho
 
         for (auto instr : af->modify_with_hash) {
             if (instr->name == "hash") {
-                hash_dist_reqs.emplace_back(true, instr, nullptr);
-                hash_dist_reqs.back().bits_required(phv);
+                hash_dist_reqs.emplace_back(true, instr);
             }
         }
-    }
-    for (auto *at : tbl->attached) {
-        const IR::MAU::MAUCounter *cnt = at->to<IR::MAU::MAUCounter>();
-        const IR::MAU::MAUMeter *mtr = at->to<IR::MAU::MAUMeter>();
-        if (cnt != nullptr) {
-            if (cnt->indirect_index && phv.field(cnt->indirect_index) != nullptr) {
-                hash_dist_reqs.emplace_back(true, nullptr, cnt);
-                if (hash_dist_reqs.back().bits_required(phv) > 23)
-                    BUG("The size of this particular field %s is too large to be "
-                         "used as an address", cnt->indirect_index);
+
+        for (auto instr : af->stateful) {
+            if (instr->name == "count" || instr->name == "execute_meter") {
+                if (phv.field(instr->operands[1]) == nullptr) continue;
+                hash_dist_reqs.emplace_back(true, instr);
             }
-        } else if (mtr != nullptr) {
-            if (mtr->indirect_index && phv.field(mtr->indirect_index) != nullptr)
-                hash_dist_reqs.emplace_back(true, nullptr, mtr);
         }
     }
     hdc.total_hash_dist_reqs[tbl->name] = hash_dist_reqs;

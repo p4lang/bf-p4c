@@ -284,26 +284,6 @@ class ActionData : Attached {
     bool indexed() const override { return !direct; }
 }
 
-class MAUCounter : IR::Counter {
-#nodbprint
-    NullOK Expression indirect_index;
-    MAUCounter(const IR::Counter &c) : Counter(c) {}
-    MAUCounter(const IR::Counter &c, const IR::Expression *ii)
-        : Counter(c), indirect_index(ii) {}
-    /*bool operator==(const IR::MAU::MAUCounter &a) const {
-        return IR::Counter::operator==(a) && indirect_index == a.indirect_index;
-    }*/
-}
-
-class MAUMeter : IR::Meter {
-#nodbprint
-    NullOK Expression indirect_index;
-    MAUMeter(const IR::Meter &m) : Meter(m) {}
-    MAUMeter(const IR::Meter &m, const IR::Expression *ii)
-        : Meter(m), indirect_index(ii) {}
-}
-
-
 // a sequence of tables -- may be reordered if deps allow.
 // deps(i,j) is true iff tables[i] is dependent on tables[j]
 // (so must have j < i) */

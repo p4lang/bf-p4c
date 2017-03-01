@@ -82,7 +82,7 @@ class FindDependencyGraph::UpdateAttached : public Inspector {
 
  public:
     UpdateAttached(FindDependencyGraph &self, const IR::MAU::Table *t) : self(self), table(t) { }
-    void postorder(const IR::MAU::MAUMeter *meter) override {
+    void postorder(const IR::Meter *meter) override {
         if (meter->direct && meter->result) {
             auto *field = self.phv.field(meter->result);
             BUG_CHECK(field, "meter writing to %s", meter->result);

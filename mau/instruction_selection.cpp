@@ -51,17 +51,14 @@ const IR::ActionFunction *InstructionSelection::postorder(IR::ActionFunction *af
         split.push_back(p->apply(SplitInstructions(split)));
     if (split.size() > af->action.size())
         af->action = std::move(split);
-    LOG1("Af name " << af->name);
     if (stateful.count(af) || modify_with_hash.count(af)) {
         BUG_CHECK(!af->is<IR::MAU::ActionFunctionEx>(), "already processed action function?");
         auto *rv = new IR::MAU::ActionFunctionEx(*af);
-        LOG1("Size in instr sel " << modify_with_hash[af].size());
         rv->stateful.insert(rv->stateful.end(), stateful[af].begin(), stateful[af].end());
         rv->modify_with_hash.insert(rv->modify_with_hash.end(), modify_with_hash[af].begin(),
                                     modify_with_hash[af].end());
         stateful[rv] = stateful[af];
         modify_with_hash[rv] = modify_with_hash[af];
-        LOG1("Size test 2 " << rv->modify_with_hash.size());
         af = rv; }
     return af;
 }
@@ -239,7 +236,6 @@ static const IR::Primitive *makeDepositField(IR::Primitive *prim, long) {
 }
 
 const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
-    LOG1("Primitive name " << prim->name);
     if (!af) return prim;
     const IR::Expression *dest = prim->operands.size() > 0 ? prim->operands[0] : nullptr;
     if (prim->name == "modify_field") {
@@ -326,9 +322,6 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
         stateful[af].emplace_back(prim);
         return nullptr;
     } else if (prim->name == "hash") {
-        for (size_t i = 0; i < prim->operands.size(); i++) {
-            LOG1("Operand " << i << " is " << prim->operands[i]);
-        }
         modify_with_hash[af].emplace_back(prim);
         IR::MAU::Instruction *instr = new IR::MAU::Instruction(prim->srcInfo, "set",
                                                                prim->operands[0]);
@@ -349,22 +342,6 @@ const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
     BUG("Not a stateful primitive %s", prim);
 }
 
-class SetupIndirectIndex : public MauModifier {
-    const IR::Expression *indirect;
-
-    bool preorder(IR::MAU::MAUCounter *counter) {
-        counter->indirect_index = indirect;
-        return true;
-    }
-
-    bool preorder(IR::MAU::MAUMeter *meter) {
-        meter->indirect_index = indirect;
-        return true;
-    }
- public:
-    explicit SetupIndirectIndex(const IR::Expression *i) : indirect(i) {}
-};
-
 const IR::MAU::Table *InstructionSelection::postorder(IR::MAU::Table *tbl) {
     for (auto act : Values(tbl->actions)) {
         if (!stateful.count(act)) continue;
@@ -382,31 +359,7 @@ const IR::MAU::Table *InstructionSelection::postorder(IR::MAU::Table *tbl) {
                 // typechecking is unable to check this without a good bit more work
                 error("%s: %s is not a %s", prim->operands[0]->srcInfo, gref->obj, type);
             } else if (!contains(tbl->attached, stateful)) {
-                const IR::Expression *indirect = prim->operands[1];
-                if (auto *c = stateful->to<IR::Counter>())
-                    tbl->attached.push_back(new IR::MAU::MAUCounter(*c, indirect));
-                else if (auto *m = stateful->to<IR::Meter>())
-                    tbl->attached.push_back(new IR::MAU::MAUMeter(*m, indirect));
-                else
-                    tbl->attached.push_back(stateful);
-            } else {
-                const IR::Stateful *stateful_update = nullptr;
-                for (size_t i = 0; i < tbl->attached.size(); i++) {
-                    if (stateful == tbl->attached[i]) {
-                        stateful_update = stateful;
-                        tbl->attached.erase(tbl->attached.begin() + i);
-                        break;
-                    }
-                }
-                for (auto at : tbl->attached) {
-                    if (at == stateful) {
-                        stateful_update = stateful;
-                    }
-                }
-                const IR::Expression *indirect = prim->operands[1];
-                stateful_update =
-                    stateful_update->apply(SetupIndirectIndex(indirect))->to<IR::Stateful>();
-                tbl->attached.push_back(stateful_update);
+                tbl->attached.push_back(stateful);
             }
         }
     }

@@ -169,7 +169,7 @@ static IR::Attached *createV1Attached(IR::MAU::Table *tt, Util::SourceInfo srcIn
                 ctr->min_width = anno->expr.at(0)->as<IR::Constant>().asInt();
             else
                 WARNING("unknown annotation " << anno->name << " on " << tname); }
-        rv = new IR::MAU::MAUCounter(*ctr);
+        rv = ctr;
     } else if (tname == "meter" || tname == "direct_meter") {
         auto mtr = new IR::Meter(srcInfo, name);
         for (auto anno : annot->annotations) {
@@ -181,7 +181,7 @@ static IR::Attached *createV1Attached(IR::MAU::Table *tt, Util::SourceInfo srcIn
                 mtr->implementation = anno->expr.at(0)->as<IR::StringLiteral>();
             else
                 WARNING("unknown annotation " << anno->name << " on " << tname); }
-        rv = new IR::MAU::MAUMeter(*mtr); }
+        rv = mtr; }
     if (rv) {
         switch (args->size()) {
         case 1:

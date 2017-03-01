@@ -7,26 +7,20 @@ class PhvInfo;
 class HashDistReq {
     bool required = false;
     const IR::Primitive *instr;
-    const IR::Attached *attached;
 
  public:
-    HashDistReq(bool r, const IR::Primitive *i, const IR::Attached *at)
-        : required(r), instr(i), attached(at) {}
+    HashDistReq(bool r, const IR::Primitive *i)
+        : required(r), instr(i) {}
     bool is_required() const { return required; }
-    const IR::Attached *get_attached() const { return attached; }
     const IR::Primitive *get_instr() const { return instr; }
     bool is_address() const {
-        if (attached != nullptr)
-            if (attached->is<IR::MAU::MAUCounter>() || attached->is<IR::MAU::MAUMeter>())
-                return true;
+        if (instr != nullptr && (instr->name == "count" || instr->name == "execute_meter"))
+            return true;
         return false;
     }
     bool is_immediate() const {
-        if (instr != nullptr) {
-            if (instr->name == "hash") {
-                return true;
-            }
-        }
+        if (instr != nullptr && instr->name == "hash")
+            return true;
         return false;
     }
     cstring algorithm() const;
