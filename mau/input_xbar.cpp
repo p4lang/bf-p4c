@@ -87,7 +87,7 @@ unsigned IXBar::Use::compute_hash_tables() {
 unsigned IXBar::Use::compute_hash_dist_tables(int i /*= -1*/) {
     unsigned hash_table_input = 0;
     vector<Byte> hash_dist;
-    if (i = -1)
+    if (i == -1)
         hash_dist = hash_dist_use.back().use;
     else
         hash_dist = hash_dist_use[i].use;
@@ -453,9 +453,9 @@ int IXBar::free_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced,
         }
         if (hash_dist && !ternary && found) {
             if (chosen_byte < 8) {
-                grp->first_hash_dist == grp_use::HASH_DIST;
+                grp->first_hash_dist = grp_use::HASH_DIST;
             } else {
-                grp->second_hash_dist == grp_use::HASH_DIST;
+                grp->second_hash_dist = grp_use::HASH_DIST;
             }
         }
     }
@@ -825,7 +825,7 @@ int IXBar::getHashGroup(unsigned hash_table_input) {
 void IXBar::getHashDistGroups(unsigned hash_table_input, int hash_group_opt[2]) {
     if (hash_dist_groups[0] >= 0) {
         int index = hash_dist_groups[0];
-        if (hash_table_input | hash_group_use[index] == hash_group_use[index]) {
+        if ((hash_table_input | hash_group_use[index]) == hash_group_use[index]) {
             hash_group_opt[0] = index; hash_group_opt[1] = -1;
             return;
         }
@@ -833,7 +833,7 @@ void IXBar::getHashDistGroups(unsigned hash_table_input, int hash_group_opt[2]) 
 
     if (hash_dist_groups[1] >= 0) {
         int index = hash_dist_groups[1];
-        if (hash_table_input | hash_group_use[index] == hash_group_use[index]) {
+        if ((hash_table_input | hash_group_use[index]) == hash_group_use[index]) {
             hash_group_opt[0] = -1; hash_group_opt[1] = index;
             return;
         }
@@ -1224,7 +1224,7 @@ bool IXBar::allocHashDist(const HashDistReq &hash_dist_req, const PhvInfo &phv, 
 
         if (hash_dist_req.is_address()) {
             for (int j = 0; j < HASH_TABLES; j++) {
-                if (hash_table_input & (1 << j) == 0) continue;
+                if ((hash_table_input & (1 << j)) == 0) continue;
                 hash_dist_use[j][address_group] = name;
                 hash_dist_inuse[j] |= (1 << address_group);
                 slice |= (1 << address_group);
@@ -1354,7 +1354,7 @@ void IXBar::update_hash_dist(cstring name, const Use &alloc) {
             hd_fields.emplace(byte.field, byte.loc);
         }
         for (int i = 0; i < HASH_TABLES; i++) {
-            if ((1U << i) & hash_dist.hash_table_input == 0) continue;
+            if (((1U << i) & hash_dist.hash_table_input) == 0) continue;
             for (auto bit : bitvec(hash_dist.bit_mask)) {
                  if (!hash_dist_bit_use[i][bit]) {
                      hash_dist_bit_use[i][bit] = name;
