@@ -39,9 +39,10 @@ class Cluster_PHV {
     bool uniform_width_i = false;           // field widths differ in cluster
     int max_width_i;                        // max width of field in cluster
     int num_containers_i;                   // number of containers
+    int num_fields_no_cohabit_i = 0;        // number of constrained fields, no cohabit
     bool sliceable_i;                       // can split cluster, move-based ops only ?
     ordered_map<const PhvInfo::Field*,
-    std::pair<int, int>> field_slice_o;
+        std::pair<int, int>> field_slice_o;
                                             // map field to a list of bitrange after slicing
     //
  public:
@@ -68,9 +69,21 @@ class Cluster_PHV {
     bool uniform_width()                                { return uniform_width_i; }
     int max_width()                                     { return max_width_i; }
     void max_width(int i)                               { max_width_i = i; }
+    int needed_bits() {
+        if (uniform_width_i) {
+            return cluster_vec_i.size() * max_width_i;
+        } else {
+            int f_bits = 0;
+            for (auto &f : cluster_vec_i) {
+                f_bits += f->phv_use_width();
+            }
+            return f_bits;
+        }
+    }
     int num_containers()                                { return num_containers_i; }
     void num_containers(int n)                          { num_containers_i = n; }
     int num_containers(std::vector<const PhvInfo::Field *>&, PHV_Container::PHV_Word);
+    int num_fields_no_cohabit()                         { return num_fields_no_cohabit_i; }
     ordered_map<const PhvInfo::Field *, std::pair<int, int>>&
         field_slices()                                  { return field_slice_o; }
     bool sliceable()                                    { return sliceable_i; }

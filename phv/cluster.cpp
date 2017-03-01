@@ -55,6 +55,27 @@ bool Cluster::preorder(const IR::Member* expression) {
         // dst_map[x] points to singleton cluster using MAU
         //
         create_dst_map_entry(field);
+        //
+        // deparser constraint
+        // some fields e.g., egress_port (9 bits), egress_spec (9 bits)
+        // cannot share container with other fields, they expect cohabit bits = 0
+        // should NOT place ing_meta_data.drop bit cohabit with egress_port
+        // e.g., ing_metadata.egress_port: H1(0..8)
+        //       ing_metadata.drop: H1(15)
+        // ing_metadata.drop bit controlled by valid bit in egress_spec
+        //
+        ordered_set<const char *> egress_deparser_constraint;
+        egress_deparser_constraint.insert("egress_port");
+        egress_deparser_constraint.insert("egress_spec");
+        for (auto &es : egress_deparser_constraint) {
+            if (const char *s = strstr(field->name, es)) {
+                // restrict to name ending in egress_port, i.e., discard egress_port_id
+                if (strlen(s) == strlen(es)) {
+                    LOG1(".....Deparser Constraint on field..... " << field->name);
+                    field->deparser_no_pack = true;
+                }
+            }
+        }
     }
 
     return true;
@@ -137,7 +158,7 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
         //
         if (!field->ccgf) {
             if (group_accumulator
-                || field->size % static_cast<int>(PHV_Container::PHV_Word::b8)) {
+                || field->size % PHV_Container::PHV_Word::b8) {
                 if (!group_accumulator) {
                     group_accumulator = field;
                     accumulator_bits = 0;
@@ -146,7 +167,7 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
                 group_accumulator->ccgf_fields.push_back(field);
                 accumulator_bits += field->size;
                 if (accumulator_bits
-                    % static_cast<int>(PHV_Container::PHV_Word::b8) == 0) {
+                    % PHV_Container::PHV_Word::b8 == 0) {
                     ccg[group_accumulator] = accumulator_bits;
                     LOG4("+++++PHV_container_contiguous_group....."
                         << accumulator_bits
@@ -173,8 +194,8 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
         auto owner = entry.first;
         auto ccg_width = entry.second;
         if ((ccg_width
-            && ccg_width % static_cast<int>(PHV_Container::PHV_Word::b8))
-            || ccg_width > static_cast<int>(PHV_Container::PHV_Word::b32)) {
+            && ccg_width % PHV_Container::PHV_Word::b8)
+            || ccg_width > PHV_Container::PHV_Word::b32) {
             for (auto &f : owner->ccgf_fields) {
                 f->ccgf = 0;
             }
@@ -820,7 +841,6 @@ std::ostream &operator<<(std::ostream &out, ordered_set<const PhvInfo::Field *> 
     } else {
         out << "[X]" << std::endl;
     }
-
     return out;
 }
 
@@ -828,7 +848,6 @@ std::ostream &operator<<(std::ostream &out, std::vector<const PhvInfo::Field *>&
     for (auto field : cluster_vec) {
         out << field << std::endl;
     }
-
     return out;
 }
 
@@ -861,6 +880,5 @@ std::ostream &operator<<(std::ostream &out, Cluster &cluster) {
         << std::endl
         << std::endl;
     out << cluster.fields_no_use_mau();
-
     return out;
 }

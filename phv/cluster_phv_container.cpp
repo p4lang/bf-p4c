@@ -41,22 +41,84 @@ PHV_Container::PHV_Container(
       asm_string_i(asm_string),
       gress_i(gress) {
     //
+    clear();
+    //
+}  // PHV_Container::PHV_Container
+
+void
+PHV_Container::clear() {
+    status_i = Container_status::EMPTY;
+    phv_mau_group_i->inc_empty_containers();
+    fields_in_container_i.clear();
     taint_color_i = '0';
-    bits_i = new char[static_cast<int>(width_i)];
-    for (auto i=0; i < static_cast<int>(width_i); i++) {
+    bits_i = new char[width_i];
+    for (auto i=0; i < width_i; i++) {
         bits_i[i] = taint_color_i;
     }
-    avail_bits_i = static_cast<int>(width_i);
-    ranges_i[0] = static_cast<int>(width_i) - 1;
+    avail_bits_i = width_i;
+    ranges_i.clear();
+    ranges_i[0] = width_i - 1;
     //
+    o_fields_in_container_i.clear();
     o_taint_color_i = '0';
-    o_bits_i = new char[static_cast<int>(width_i)];
-    for (auto i=0; i < static_cast<int>(width_i); i++) {
+    o_bits_i = new char[width_i];
+    for (auto i=0; i < width_i; i++) {
         o_bits_i[i] = o_taint_color_i;
     }
-    avail_o_bits_i = static_cast<int>(width_i);
-    o_ranges_i[0] = static_cast<int>(width_i) - 1;
-}  // PHV_Container
+    avail_o_bits_i = width_i;
+    o_ranges_i.clear();
+    o_ranges_i[0] = width_i - 1;
+}  // clear
+
+void
+PHV_Container::clean_ranges() {
+    //
+    // ranges_i carries some spurious noise despite being cleared earlier
+    // e.g., for full container (0..0), packed container filled area (6..0), (7..0) etc.
+    // residual noise is taken care of here
+    //
+    if (status_i == Container_status::FULL) {
+        ranges_i.clear();
+    }
+    std::set<int> clear_these;
+    for (auto r : ranges_i) {
+        if (r.second < r.first || (r.second == r.first &&  bits_i[r.first] != '0')) {
+            clear_these.insert(r.first);
+        }
+    }
+    for (auto r : clear_these) {
+        ranges_i.erase(r);
+    }
+}
+
+void
+PHV_Container::create_ranges() {
+    //
+    ranges_i.clear();  // status = FULL => ranges remains empty
+    if (status_i == PHV_Container::Container_status::EMPTY) {
+        ranges_i[0] = width_i - 1;
+    } else {
+        if (status_i == PHV_Container::Container_status::PARTIAL) {
+            for (auto i=0; i < width_i ; i++) {
+                if (bits_i[i] == '0') {
+                    for (auto j=i; j < width_i ; j++) {
+                        if (bits_i[j] != '0') {
+                            ranges_i[i] = j - 1;
+                            i = j - 1;
+                            break;
+                        }
+                        if (j == width_i - 1) {
+                            ranges_i[i] = j;
+                            i = j;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    const std::string msg = "..PHV_Container::create_ranges";
+    sanity_check_container_ranges(msg);
+}
 
 void
 PHV_Container::taint(
@@ -67,12 +129,12 @@ PHV_Container::taint(
     int field_bit_lo,
     bool process_overflow) {
     //
-    BUG_CHECK((start+width <= static_cast<int>(width_i)),
+    BUG_CHECK((start+width <= width_i),
         "*****PHV_Container::taint()*****PHV-%s start=%d width=%d width_i=%d",
-        phv_number_i, start, width, static_cast<int>(width_i));
-    BUG_CHECK((range_start < static_cast<int>(width_i)),
+        phv_number_i, start, width, width_i);
+    BUG_CHECK((range_start < width_i),
         "*****PHV_Container::taint()*****PHV-%s range_start=%d width=%d width_i=%d",
-        phv_number_i, start, width, static_cast<int>(width_i));
+        phv_number_i, start, width, width_i);
     if (!process_overflow && ranges_i[range_start]) {
         BUG_CHECK(start+width <= ranges_i[range_start]+1,
             "*****PHV_Container::taint()*****"
@@ -136,8 +198,6 @@ PHV_Container::taint(
         } else {
             f1->ccgf = 0;
             Cluster::set_field_range(f1);
-            // after ccgf allocation set range availability within container
-            ranges_i[0] = avail_bits_i - 1;
         }
 
         if (field->header_stack_pov_ccgf) {
@@ -182,9 +242,10 @@ PHV_Container::taint(
         return;
     }
     //
-    taint_color_i += '1' - '0';
-    if (taint_color_i < '0' || taint_color_i > '9') {
-        taint_color_i = '*';
+    if (taint_color_i == '9') {
+        taint_color_i = 'a';
+    } else {
+        taint_color_i += '1' - '0';
     }
     for (auto i=start; i < start+width; i++) {
          bits_i[i] = taint_color_i;
@@ -198,27 +259,29 @@ PHV_Container::taint(
         avail_bits_i);
     //
     if (status_i == Container_status::EMPTY) {
-        phv_mau_group_i->empty_containers()--;
+        phv_mau_group_i->dec_empty_containers();
     }
     //
     // first container placement, packing start lo = start + width
     // after packing, non contiguous availability
     // e.g., [15..15], [8..10] => ranges[15] = 15, ranges[8] = 10
     //
-    if (avail_bits_i == 0) {
+    if (avail_bits_i == 0
+        || constraint_no_cohabit(field)) {
+        //
         status_i = Container_status::FULL;
-        ranges_i.clear();
+        if (constraint_no_cohabit(field)) {
+            taint_color_i = '-';
+            for (auto i=width_i - avail_bits_i;
+                i < width_i;
+                i++) {
+                 bits_i[i] = taint_color_i;
+            }
+        }
     } else {
         status_i = Container_status::PARTIAL;
-        if (range_start == start) {
-            if (start+width < ranges_i[start]+1) {
-                ranges_i[start+width] = ranges_i[start];
-            }
-            ranges_i.erase(start);
-        } else {
-            ranges_i[range_start] = start-1;
-        }
     }
+    create_ranges();
     //
     sanity_check_container_ranges("PHV_Container::taint()..");
     //
@@ -234,82 +297,12 @@ PHV_Container::taint(
     // transition behavior for such sharing unclear
     //
     gress_i = gress(field);
-}
-
-void
-PHV_Container::create_ranges() {
-    //
-    ranges_i.clear();
-    if (status_i == PHV_Container::Container_status::EMPTY) {
-        ranges_i[0] = static_cast<int>(width_i) - 1;
+    if (phv_mau_group_i->gress() == Ingress_Egress::Ingress_Or_Egress) {
+        phv_mau_group_i->gress(gress_i);
     } else {
-        if (status_i == PHV_Container::Container_status::PARTIAL) {
-            for (auto i=0; i < static_cast<int>(width_i) ; i++) {
-                if (bits_i[i] == '0') {
-                    for (auto j=i; j < static_cast<int>(width_i) ; j++) {
-                        if (bits_i[j] != '0') {
-                            ranges_i[i] = j - 1;
-                            i = j - 1;
-                            break;
-                        }
-                        if (j == static_cast<int>(width_i) - 1) {
-                            ranges_i[i] = j;
-                            i = j;
-                        }
-                    }
-                }
-            }
-        }
+        assert(phv_mau_group_i->gress() == gress_i);
     }
-    const std::string msg = "..PHV_Container::create_ranges";
-    sanity_check_container_ranges(msg);
-}
-
-void
-PHV_Container::clear() {
-    status_i = Container_status::EMPTY;
-    phv_mau_group_i->empty_containers()++;
-    fields_in_container_i.clear();
-    taint_color_i = '0';
-    bits_i = new char[static_cast<int>(width_i)];
-    for (auto i=0; i < static_cast<int>(width_i); i++) {
-        bits_i[i] = taint_color_i;
-    }
-    avail_bits_i = static_cast<int>(width_i);
-    ranges_i.clear();
-    ranges_i[0] = static_cast<int>(width_i) - 1;
-    //
-    o_fields_in_container_i.clear();
-    o_taint_color_i = '0';
-    o_bits_i = new char[static_cast<int>(width_i)];
-    for (auto i=0; i < static_cast<int>(width_i); i++) {
-        o_bits_i[i] = o_taint_color_i;
-    }
-    avail_o_bits_i = static_cast<int>(width_i);
-    o_ranges_i.clear();
-    o_ranges_i[0] = static_cast<int>(width_i) - 1;
-}
-
-void
-PHV_Container::clean_ranges() {
-    //
-    // ranges_i carries some spurious noise despite being cleared earlier
-    // e.g., for full container (0..0), packed container filled area (6..0), (7..0) etc.
-    // residual noise is taken care of here
-    //
-    if (status_i == Container_status::FULL) {
-        ranges_i.clear();
-    }
-    std::set<int> clear_these;
-    for (auto r : ranges_i) {
-        if (r.second < r.first || (r.second == r.first &&  bits_i[r.first] != '0')) {
-            clear_these.insert(r.first);
-        }
-    }
-    for (auto r : clear_these) {
-        ranges_i.erase(r);
-    }
-}
+}  // taint
 
 
 //***********************************************************************************
@@ -374,13 +367,13 @@ void PHV_Container::sanity_check_container(const std::string& msg) {
         sanity_check_container_avail(cc->lo(), cc->hi(), msg_1);
         occupation_width += cc->width();
     }
-    if (occupation_width + avail_bits_i != static_cast<int>(width_i)) {
+    if (occupation_width + avail_bits_i != width_i) {
         LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****.."
         << msg_1
         << " occupation_width + available_bits != container_width "
         << " occupation_width = " << occupation_width
         << " available_bits = " << avail_bits_i
-        << " container_width = " << static_cast<int>(width_i)
+        << " container_width = " << width_i
         << *this);
     }
 }
@@ -393,7 +386,7 @@ void PHV_Container::sanity_check_container_avail(int lo, int hi, const std::stri
     //
     if ((avail_bits_i > 0 && status_i == Container_status::FULL)
      || (avail_bits_i == 0 && status_i != Container_status::FULL)
-     || (avail_bits_i == static_cast<int>(width_i) && status_i != Container_status::EMPTY)
+     || (avail_bits_i == width_i && status_i != Container_status::EMPTY)
      || (fields_in_container_i.size() && status_i == Container_status::EMPTY)) {
         LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****.."
         << msg_1
@@ -530,7 +523,6 @@ std::ostream &operator<<(std::ostream &out, PHV_Container::Container_Content *cc
     } else {
         out << "-cc-";
     }
-
     return out;
 }
 
@@ -539,7 +531,6 @@ std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container::Container
     for (auto &cc : vc) {
         out << cc << std::endl;
     }
-
     return out;
 }
 
@@ -548,7 +539,6 @@ std::ostream &operator<<(std::ostream &out, std::set<PHV_Container::Container_Co
     for (auto &cc : vc) {
         out << cc << std::endl;
     }
-
     return out;
 }
 
@@ -561,7 +551,6 @@ std::ostream &operator<<(std::ostream &out, ordered_map<int, int>& ranges) {
     for (auto i : ranges) {
         out << '[' << i.first << "] -- " << i.second << std::endl;
     }
-
     return out;
 }
 
@@ -573,7 +562,6 @@ std::ostream &operator<<(std::ostream &out, const PHV_Container *c) {
     } else {
         out << "-c-";
     }
-
     return out;
 }
 
@@ -599,7 +587,6 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
     } else {
         out << "-c-";
     }
-
     return out;
 }
 
@@ -611,7 +598,7 @@ std::ostream &operator<<(std::ostream &out, PHV_Container &c) {
         << c.fields_in_container();
 
     // only print overlay bits if used.
-    if (c.avail_o_bits() != static_cast<int>(c.width())) {
+    if (c.avail_o_bits() != c.width()) {
         out << "\t... OPHV ...\t" << c.o_bits()
             << c.o_fields_in_container();
     }
@@ -619,10 +606,16 @@ std::ostream &operator<<(std::ostream &out, PHV_Container &c) {
 }
 
 std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container *> &phv_containers) {
-    for (auto m : phv_containers) {
-        out << *m;
+    for (auto c : phv_containers) {
+        out << *c;
     }
+    return out;
+}
 
+std::ostream &operator<<(std::ostream &out, std::list<PHV_Container *> &phv_containers) {
+    for (auto c : phv_containers) {
+        out << c;
+    }
     return out;
 }
 

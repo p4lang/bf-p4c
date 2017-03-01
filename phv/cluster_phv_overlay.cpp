@@ -55,8 +55,8 @@ bool Cluster_PHV_Overlay::overlay_cluster_to_group(Cluster_PHV *cl, PHV_MAU_Grou
     }
     // try to exact match cl width to g width  -- parser placement contraints
     // fields less than byte use byte
-    if (static_cast<int>(g->width()) > static_cast<int>(PHV_Container::PHV_Word::b8)
-            && static_cast<int>(cl->width()) * 2 <= static_cast<int>(g->width())) {
+    if (g->width() > PHV_Container::PHV_Word::b8
+            && cl->width() * 2 <= g->width()) {
         //
         return false;
     }
@@ -75,7 +75,7 @@ bool Cluster_PHV_Overlay::overlay_cluster_to_group(Cluster_PHV *cl, PHV_MAU_Grou
     // Phase 1: test if cluster can overlay to containers in the same group.
     LOG3("... try to overlay cluster ..." << cl);
     std::vector<PHV_Container*>* cc_set = new std::vector<PHV_Container*>;
-    for (auto i=0, j=0; i<static_cast<int>(cl->cluster_vec().size()); i++) {
+    for (auto i=0, j=0; i<cl->cluster_vec().size(); i++) {
         bool field_can_overlay = false;
         // field can be larger than one container..
         const PhvInfo::Field *field = cl->cluster_vec()[i];
@@ -100,7 +100,7 @@ bool Cluster_PHV_Overlay::overlay_cluster_to_group(Cluster_PHV *cl, PHV_MAU_Grou
                 field_can_overlay = check_field_with_container(field, c);
                 if (field_can_overlay) {
                     // found a candidate container.
-                    field_width -= static_cast<int>(g->width());
+                    field_width -= g->width();
                     // mark container as used for this cluster
                     cc_set->push_back(c);
                     break;
@@ -116,7 +116,7 @@ bool Cluster_PHV_Overlay::overlay_cluster_to_group(Cluster_PHV *cl, PHV_MAU_Grou
     }
     // Phase 2: commit cluster to containers in the group.
     LOG3("... can overlay ..." << cc_set->size() << " containers.");
-    for (auto i=0, j=0; i<static_cast<int>(cl->cluster_vec().size()); i++) {
+    for (auto i=0, j=0; i<cl->cluster_vec().size(); i++) {
         bool field_can_overlay = false;
         const PhvInfo::Field *field = cl->cluster_vec()[i];
         auto field_width = field->phv_use_width();
@@ -124,18 +124,18 @@ bool Cluster_PHV_Overlay::overlay_cluster_to_group(Cluster_PHV *cl, PHV_MAU_Grou
              j < req_containers && field_width > 0;
              j++, field_stride++) {
             // pop container from the front of the vector
-            int taint_bits = static_cast<int>(g->width());
-            if (field_width < static_cast<int>(g->width())) {
+            int taint_bits = g->width();
+            if (field_width < g->width()) {
                 taint_bits = field_width;
             }
-            field_width -= static_cast<int>(g->width());
+            field_width -= g->width();
             auto c = cc_set->front();
             c->taint(
                 0,
                 taint_bits,
                 field,
                 0, /* range_start */
-                field_stride * static_cast<int>(g->width()) /* field_bit_lo */,
+                field_stride * g->width() /* field_bit_lo */,
                 true);
             cc_set->erase(cc_set->begin());
         }
@@ -171,11 +171,11 @@ Cluster_PHV_Overlay::overlay_clusters_to_groups(
     // for given width, I/E tagged MAU groups first
     //
     phv_groups_to_be_overlayed.sort([](PHV_MAU_Group *l, PHV_MAU_Group *r) {
-        if (static_cast<int>(l->width()) == static_cast<int>(r->width())) {
+        if (l->width() == r->width()) {
             return l->gress() == PHV_Container::Ingress_Egress::Ingress_Only
                 || l->gress() == PHV_Container::Ingress_Egress::Egress_Only;
         }
-        return static_cast<int>(l->width()) > static_cast<int>(r->width());
+        return l->width() > r->width();
     });
     //
     LOG4(".......... PHV_Groups to be filled ("
@@ -215,7 +215,10 @@ Cluster_PHV_Overlay::apply_visitor(const IR::Node *node, const char *name) {
             phv_groups_to_be_overlayed.push_front(g);
         }
     }
-    overlay_clusters_to_groups(phv_mau_i.phv_clusters(), phv_groups_to_be_overlayed);
+    overlay_clusters_to_groups(
+        phv_mau_i.phv_clusters(),
+        phv_groups_to_be_overlayed,
+        "Overlay_Clusters");
     return node;
 }
 

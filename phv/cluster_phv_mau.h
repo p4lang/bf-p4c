@@ -77,13 +77,29 @@ class PHV_MAU_Group {
         int& phv_number,
         std::string asm_encoded,
         PHV_Container::Ingress_Egress gress,
-        const int containers_in_group = static_cast<int>(PHV_Container::Containers::MAX));
+        const int containers_in_group = PHV_Container::Containers::MAX);
     //
     PHV_Container::PHV_Word width()                     { return width_i; }
     int number()                                        { return number_i; }
-    void gress(PHV_Container::Ingress_Egress gress_p)   { gress_i = gress_p; }
+    void gress(PHV_Container::Ingress_Egress gress_p)   {
+        gress_i = gress_p;
+        // set gress for all containers in group
+        for (auto &c : phv_containers_i) {
+            c->gress(gress_i);
+        }
+    }
     PHV_Container::Ingress_Egress gress()               { return gress_i; }
     int& empty_containers()                             { return empty_containers_i; }
+    void inc_empty_containers() {
+        if (empty_containers_i < phv_containers_i.size()) {
+            empty_containers_i++;
+        }
+    }
+    void dec_empty_containers() {
+        if (empty_containers_i > 0) {
+            empty_containers_i--;
+        }
+    }
     PHV_Container *empty_container() {
         // return next empty container in MAU group
         for (auto &c : phv_containers_i) {
@@ -95,6 +111,7 @@ class PHV_MAU_Group {
     }
     std::vector<PHV_Container *>& phv_containers()      { return phv_containers_i; }
     std::vector<Cluster_PHV *>& clusters()              { return cluster_phv_i; }
+    void create_aligned_container_slices_per_range(std::list<PHV_Container *>&);
     void create_aligned_container_slices(std::list<PHV_Container *>&);
     void create_aligned_container_slices();
     ordered_map<int,
@@ -166,10 +183,11 @@ class PHV_MAU_Group_Assignments : public Visitor {
                                        // for all PHV_MAU_Groups
                                        // sorted map <width increasing, num increasing>
                                        // containing <set of <set of container_packs>>
-    std::list<Cluster_PHV *> clusters_to_be_assigned_i;         // non-nibble clusters
-    std::list<Cluster_PHV *> clusters_to_be_assigned_nibble_i;  // nibble clusters
-    std::list<Cluster_PHV *> pov_fields_i;
-    std::list<Cluster_PHV *> t_phv_fields_i;
+    std::list<Cluster_PHV *> clusters_to_be_assigned_i;         // phv non-nibble clusters
+    std::list<Cluster_PHV *> clusters_to_be_assigned_nibble_i;  // phv nibble clusters
+    std::list<Cluster_PHV *> pov_fields_i;                      // pov clusters
+    std::list<Cluster_PHV *> t_phv_fields_i;                    // t_phv non-nibble clusters
+    std::list<Cluster_PHV *> t_phv_fields_nibble_i;             // t_phv nibble clusters
     //
     ordered_map<int,
     ordered_map<int,
@@ -223,6 +241,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
     std::list<Cluster_PHV *>& phv_clusters_nibble()     { return clusters_to_be_assigned_nibble_i; }
     std::list<Cluster_PHV *>& pov_clusters()            { return pov_fields_i; }
     std::list<Cluster_PHV *>& t_phv_clusters()          { return t_phv_fields_i; }
+    std::list<Cluster_PHV *>& t_phv_clusters_nibble()   { return t_phv_fields_nibble_i; }
     //
     // cohabit_fields requests to TP to avoid single-write issue
     //
@@ -234,6 +253,8 @@ class PHV_MAU_Group_Assignments : public Visitor {
     void cluster_TPHV_placements();
     void cluster_POV_placements();
     void cluster_nibble_PHV_placements();
+    void cluster_nibble_T_PHV_placements();
+    //
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
     //
     // public member

@@ -23,11 +23,11 @@ class PHV_MAU_Group;
 //
 class PHV_Container {
  public:
-    enum class PHV_Word {b32 = 32, b16 = 16, b8 = 8};
-    enum class Containers {MAX = 16};
-    enum class Container_status {EMPTY = 'V', PARTIAL = 'P', FULL = 'F'};
+    enum PHV_Word {b32 = 32, b16 = 16, b8 = 8};
+    enum Containers {MAX = 16};
+    enum Container_status {EMPTY = 'V', PARTIAL = 'P', FULL = 'F'};
                                                               // V = Vacant, E = Egress_Only
-    enum class Ingress_Egress {Ingress_Only = 'I', Egress_Only = 'E', Ingress_Or_Egress = ' '};
+    enum Ingress_Egress {Ingress_Only = 'I', Egress_Only = 'E', Ingress_Or_Egress = ' '};
     //
     class Container_Content {
      private:
@@ -84,7 +84,8 @@ class PHV_Container {
     ordered_map<int, int> ranges_i;                          // available ranges in this container
     //
     Container_status o_status_i = Container_status::EMPTY;
-    std::vector<Container_Content *> o_fields_in_container_i; // fields to overlay in this container
+    std::vector<Container_Content *> o_fields_in_container_i;
+                                                             // fields to overlay in this container
     char o_taint_color_i = '0';                              // each resident field separate color
     char *o_bits_i;                                          // tainted bits for overlay fields
     int avail_o_bits_i = 0;                                  // available overlay bits
@@ -138,10 +139,20 @@ class PHV_Container {
     void clear();
     void clean_ranges();
     //
+    static bool constraint_no_cohabit(const PhvInfo::Field *field) {
+        if (field->deparser_no_pack
+            || field->mau_phv_no_pack) {
+            //
+            return true;
+        }
+        return false;
+    }
+    //
     void sanity_check_container(const std::string& msg);
     void sanity_check_container_avail(int lo, int hi, const std::string&);
     void sanity_check_container_ranges(const std::string&);
-};
+    //
+};  // class PHV_Container
 //
 //
 std::ostream &operator<<(std::ostream &, PHV_Container::Container_Content *);
@@ -152,5 +163,6 @@ std::ostream &operator<<(std::ostream &, const PHV_Container*);
 std::ostream &operator<<(std::ostream &, PHV_Container*);
 std::ostream &operator<<(std::ostream &, PHV_Container&);
 std::ostream &operator<<(std::ostream &, std::vector<PHV_Container *>&);
+std::ostream &operator<<(std::ostream &, std::list<PHV_Container *>&);
 //
 #endif /* _TOFINO_PHV_CLUSTER_PHV_CONTAINER_H_ */

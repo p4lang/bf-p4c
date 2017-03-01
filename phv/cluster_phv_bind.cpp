@@ -92,8 +92,7 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
             // contiguous container group allocation
             // in case bypassing MAU PHV allocation PHV_container::taint() recursion
             //
-            // int container_width = static_cast<int>(
-            //                           const_cast<PHV_Container *>(c)->width());
+            // int container_width = const_cast<PHV_Container *>(c)->width();
             // container_contiguous_alloc(f1,
             //                            container_width,
             //                            asm_container,
@@ -286,8 +285,8 @@ PHV_Bind::trivial_allocate(std::set<const PhvInfo::Field *>& fields) {
             const char *reg_name = reg_string.c_str();
             asm_container = new PHV::Container(reg_name);
             int width_in_container = f->size - f->phv_use_rem;
-            if (width_in_container > static_cast<int> (container_width)) {
-                width_in_container = static_cast<int> (container_width);
+            if (width_in_container > container_width) {
+                width_in_container = container_width;
                 f1->phv_use_rem += width_in_container;  // spans several containers
                                                         // aggregate used bits
                                                         // [width 20]= 12..19[8b] 4..11[8b] 0..3[4b]
@@ -322,9 +321,9 @@ PHV_Bind::trivial_allocate(std::set<const PhvInfo::Field *>& fields) {
                 f1->alloc.clear();
             }
             container_contiguous_alloc(f1,
-                                       static_cast<int>(container_width),
+                                       container_width,
                                        asm_container,
-                                       static_cast<int>(container_width));
+                                       container_width);
         }
     }
 }
@@ -428,6 +427,5 @@ std::ostream &operator<<(std::ostream &out, PHV_Bind &phv_bind) {
         << "End ++++++++++++++++++++ PHV Bind Containers to Fields ++++++++++++++++++++"
         << std::endl
         << std::endl;
-
     return out;
 }

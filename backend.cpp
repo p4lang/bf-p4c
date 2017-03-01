@@ -60,6 +60,7 @@ limitations under the License.
 #include "tofino/phv/create_thread_local_instances.h"
 #include "tofino/phv/phv_allocator.h"
 #include "tofino/phv/cluster_phv_bind.h"
+#include "tofino/phv/cluster_phv_operations.h"
 #include "tofino/phv/cluster_phv_slicing.h"
 #include "tofino/phv/cluster_phv_overlay.h"
 #include "tofino/common/parser_overlay.h"

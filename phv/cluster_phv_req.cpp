@@ -186,20 +186,20 @@ Cluster_PHV::Cluster_PHV(
         // <8:_16_16_16_16_16_16_16_9>  => {8*b16}
         //
         auto scale_down = 0;
-        for (auto pfield : cluster_vec_i) {
+        for (auto &pfield : cluster_vec_i) {
             if (pfield->phv_use_width() * 2 <= max_width_i) {
                 scale_down++;
             }
         }
-        if (scale_down * 2 > static_cast<int>(cluster_vec_i.size())) {
+        if (scale_down * 2 > cluster_vec_i.size()) {
             width_req = width_req / 2;
         }
     }
     // container width
-    if (width_req > static_cast<int>(PHV_Container::PHV_Word::b16)) {
+    if (width_req > PHV_Container::PHV_Word::b16) {
         width_i = PHV_Container::PHV_Word::b32;
     } else {
-        if (width_req > static_cast<int>(PHV_Container::PHV_Word::b8)) {
+        if (width_req > PHV_Container::PHV_Word::b8) {
             width_i = PHV_Container::PHV_Word::b16;
         } else {
             width_i = PHV_Container::PHV_Word::b8;
@@ -208,6 +208,16 @@ Cluster_PHV::Cluster_PHV(
     // num containers of width
     //
     num_containers_i = num_containers(cluster_vec_i, width_i);
+    //
+    // count constrained fields
+    // preference given during container placement
+    //
+    for (auto &pfield : cluster_vec_i) {
+        if (PHV_Container::constraint_no_cohabit(pfield)) {
+            //
+            num_fields_no_cohabit_i++;
+        }
+    }
     //
 }  // Cluster_PHV
 
@@ -231,17 +241,16 @@ Cluster_PHV::num_containers(
         // sharing needs analyses:
         // (i)  container single-write table interference
         // (ii) surround interference
-        num_containers += pfield->phv_use_width() / static_cast<int>(width)
-                       + (pfield->phv_use_width() % static_cast<int>(width)? 1 : 0);
+        num_containers += pfield->phv_use_width() / width
+                       + (pfield->phv_use_width() % width? 1 : 0);
     }
-    if (num_containers > static_cast<int>(PHV_Container::Containers::MAX)) {
+    if (num_containers > PHV_Container::Containers::MAX) {
         LOG1(
             "*****Cluster_PHV::get_num_containers: num_containers = "
             << num_containers
             << " > "
-            << static_cast<int>(PHV_Container::Containers::MAX) << " ******");
+            << PHV_Container::Containers::MAX << " ******");
     }
-
     return num_containers;
 }
 
@@ -265,9 +274,17 @@ std::ostream &operator<<(std::ostream &out, Cluster_PHV &cp) {
         }
     }
     out << '>';
-    out << '{' << cp.num_containers() << '*' << static_cast<int>(cp.width()) << '}';
+    out << '{'
+        << cp.num_containers()
+        << '*'
+        << cp.width()
+        << '}';
+    if (cp.max_width() != cp.width()) {
+        out << '['
+            << cp.needed_bits()
+            << ']';
+    }
     out << static_cast<char>(cp.gress());
-
     return out;
 }
 
@@ -284,7 +301,6 @@ std::ostream &operator<<(std::ostream &out, Cluster_PHV *cp) {
     } else {
         out << "-cp-";
     }
-
     return out;
 }
 
@@ -293,7 +309,6 @@ std::ostream &operator<<(std::ostream &out, std::list<Cluster_PHV *> &cluster_li
         // cluster summary
         out << c << std::endl;
     }
-
     return out;
 }
 
@@ -309,7 +324,6 @@ std::ostream &operator<<(std::ostream &out, std::vector<Cluster_PHV *> *cluster_
         out << "-clv-";
     }
     out << ']' << std::endl;
-
     return out;
 }
 
@@ -317,7 +331,7 @@ std::ostream &operator<<(std::ostream &out, std::vector<Cluster_PHV *> &cluster_
     out << ".....{"
         << cluster_phv_vec.front()->num_containers()
         << ','
-        << static_cast<int>(cluster_phv_vec.front()->width())
+        << cluster_phv_vec.front()->width()
         << "}#"
         << cluster_phv_vec.size()
         << " ....."
@@ -326,7 +340,6 @@ std::ostream &operator<<(std::ostream &out, std::vector<Cluster_PHV *> &cluster_
         // cluster details
         out << cp;
     }
-
     return out;
 }
 
@@ -344,7 +357,6 @@ std::ostream &operator<<(
         }
         out << std::endl;
     }
-
     return out;
 }
 
@@ -359,7 +371,7 @@ std::ostream &operator<<(std::ostream &out, Cluster_PHV_Requirements &phv_requir
             num_clusters += rit_2->second.size();
         }
         out << "[----------"
-            << static_cast<int>(rit->first)
+            << rit->first
             << "---------#"
             << num_clusters
             << ']'
@@ -373,9 +385,8 @@ std::ostream &operator<<(std::ostream &out, Cluster_PHV_Requirements &phv_requir
     for (auto rit = phv_requirements.cluster_phv_map().rbegin();
          rit != phv_requirements.cluster_phv_map().rend();
          ++rit) {
-        out << "[----------" << static_cast<int>(rit->first) << "----------]" << std::endl;
+        out << "[----------" << rit->first << "----------]" << std::endl;
         out << rit->second;
     }
-
     return out;
 }
