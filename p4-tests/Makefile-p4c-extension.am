@@ -59,8 +59,10 @@ CLEANFILES += \
         p4_tests_bmv2.mk
 
 # Some of these failures are still P4 v1.0 front-end bugs.
+# 02-FlexCounter fails with Cannot unify Type(HashAlgorithm) to HashAlgorithm
 # Others are due to non-standard extensions to P4:
 # The *meter* tests use direct meters and execute_meter calls with 4 arguments (not in spec)
+# The *recircualte* tests use a different (non standard?) reciculate primitive
 # The *stateful* tests use extensions to P4 not in spec
 # FlexCounter, action_profile use a non-standard Algorithm
 # TwoReferences invokes a table twice - maybe it should become a negative test?
@@ -69,8 +71,6 @@ XFAIL_TESTS += \
          bmv2/%reldir%/p4_14/02-FlexCounterActionProfile.p4.test \
     p14_to_16/%reldir%/p4_14/02-FlexCounterActionProfile.p4.test \
        tofino/%reldir%/p4_14/02-FlexCounterActionProfile.p4.test \
-         bmv2/%reldir%/p4_14/action_profile.p4.test \
-       tofino/testdata/p4_14_samples/16-TwoReferences.p4.test \
          bmv2/%reldir%/p4_14/test_config_125_meter_pre_color.p4.test \
     p14_to_16/%reldir%/p4_14/test_config_125_meter_pre_color.p4.test \
        tofino/%reldir%/p4_14/test_config_125_meter_pre_color.p4.test \
@@ -92,12 +92,7 @@ XFAIL_TESTS += \
          bmv2/%reldir%/p4_14/test_config_155_stateful_3_alus.p4.test \
          bmv2/%reldir%/p4_14/test_config_156_indirect_stateful_cntr.p4.test \
          bmv2/%reldir%/p4_14/test_config_159_stateful_using_phv_field.p4.test \
-         bmv2/%reldir%/p4_14/test_config_160_stateful_single_bit_mode.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_160_stateful_single_bit_mode.p4.test \
-       tofino/%reldir%/p4_14/test_config_160_stateful_single_bit_mode.p4.test \
          bmv2/%reldir%/p4_14/test_config_163_stateful_table_math_unit.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_163_stateful_table_math_unit.p4.test \
-       tofino/%reldir%/p4_14/test_config_163_stateful_table_math_unit.p4.test \
          bmv2/%reldir%/p4_14/test_config_164_stateful_deterministic_sampling.p4.test \
          bmv2/%reldir%/p4_14/test_config_165_stateful_bfd_failure_detection.p4.test \
          bmv2/%reldir%/p4_14/test_config_166_stateful_generic_counter.p4.test \
@@ -119,6 +114,12 @@ XFAIL_TESTS += \
        tofino/%reldir%/p4_16/bloom_filter.p4.test \
        tofino/%reldir%/p4_16/flowlet_switching.p4.test \
        tofino/%reldir%/p4_16/stateful_alu.p4.test
+
+# Signed 1-bit field not allowed in P4_16 (and really makes no sense?)
+XFAIL_TESTS += \
+         bmv2/%reldir%/p4_14/test_config_160_stateful_single_bit_mode.p4.test \
+    p14_to_16/%reldir%/p4_14/test_config_160_stateful_single_bit_mode.p4.test \
+       tofino/%reldir%/p4_14/test_config_160_stateful_single_bit_mode.p4.test
 
 # These testcases taken from glass and xfail in brig
 XFAIL_TESTS += \
@@ -153,6 +154,7 @@ XFAIL_TESTS += \
 
 # Fail due to multiple uses of a table (JIRA #BRIG-26)
 XFAIL_TESTS += \
+    tofino/testdata/p4_14_samples/16-TwoReferences.p4.test \
     tofino/%reldir%/p4_14/eth_addr_cmp.p4.test \
     tofino/%reldir%/p4_14/exclusive_cf_fail_next_ptr.p4.test \
     tofino/%reldir%/p4_14/exclusive_cf_multiple_actions.p4.test \
