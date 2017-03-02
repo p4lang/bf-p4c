@@ -73,7 +73,7 @@ control ingress(inout packet_t p, inout user_metadata_t m, inout standard_metada
     }
     apply {
         tbl_act.apply();
-        if (p.ipv4.ihl > 4w5) 
+        if (tmp_4) 
             tbl_sendToCPU.apply();
         else 
             tbl_forward.apply();
