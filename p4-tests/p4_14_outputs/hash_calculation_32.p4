@@ -26,7 +26,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("action0") action action0() {
-        hash(hdr.packet.hash_result, HashAlgorithm.random, (bit<32>)0, { hdr.packet.hash_field1, hdr.packet.hash_field2, hdr.packet.hash_field3 }, (bit<64>)4294967296);
+        hash(hdr.packet.hash_result, HashAlgorithm.crc32, (bit<32>)0, { hdr.packet.hash_field1, hdr.packet.hash_field2, hdr.packet.hash_field3 }, (bit<64>)4294967296);
     }
     @name("set_port") action set_port() {
         standard_metadata.egress_spec = 9w1;
@@ -44,9 +44,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test2") table test2() {
         actions = {
             set_port;
-            @default_only NoAction;
         }
-        default_action = NoAction();
+        const default_action = set_port();
     }
     apply {
         test.apply();

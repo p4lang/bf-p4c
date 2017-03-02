@@ -99,6 +99,7 @@ table port {
     actions {
         set_port;
     }
+    default_action : set_port;
 }
 
 control ingress {

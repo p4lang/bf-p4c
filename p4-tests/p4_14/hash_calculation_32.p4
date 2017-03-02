@@ -26,7 +26,7 @@ field_list_calculation hash_0 {
     input {
         my_hash;
     }
-    algorithm : random;
+    algorithm : crc32;
     output_width : 32;
 }
 
@@ -51,6 +51,7 @@ table test2 {
     actions {
         set_port;
     }
+    default_action : set_port;
 }
 
 control ingress {

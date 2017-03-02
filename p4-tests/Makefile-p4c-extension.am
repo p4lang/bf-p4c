@@ -267,6 +267,10 @@ XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/hash_action_two_separate.p4
 XFAIL_TESTS += tofino/testdata/p4_14_samples/hash_action_basic.p4.test
 XFAIL_TESTS += tofino/testdata/p4_14_samples/hash_action_gateway.p4.test
 
+# No support yet in assembler for hash calcuation
+XFAIL_TESTS += tofino/%reldir%/p4_14/hash_calculation_32.p4.test
+XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/hash_calculation_32.p4.test
+
 # Failure for BRIG-44 in JIRA
 XFAIL_TESTS += tofino/testdata/p4_14_samples/basic_conditionals.p4.test
 

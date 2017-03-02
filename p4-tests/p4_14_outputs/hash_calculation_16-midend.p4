@@ -33,8 +33,6 @@ struct tuple_0 {
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name("NoAction") action NoAction_3() {
-    }
     @name("action0") action action0_0() {
         hash<bit<16>, bit<16>, tuple_0, bit<32>>(hdr.packet.hash_result, HashAlgorithm.random, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field2, hdr.packet.hash_field3 }, 32w63356);
     }
@@ -54,9 +52,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test2") table test2() {
         actions = {
             set_port_0();
-            @default_only NoAction_3();
         }
-        default_action = NoAction_3();
+        const default_action = set_port_0();
     }
     apply {
         test.apply();

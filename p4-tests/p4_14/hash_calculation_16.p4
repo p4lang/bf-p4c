@@ -51,6 +51,7 @@ table test2 {
     actions {
         set_port;
     }
+    default_action : set_port;
 }
 
 control ingress {

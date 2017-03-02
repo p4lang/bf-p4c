@@ -39,8 +39,6 @@ struct tuple_0 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("NoAction") action NoAction_0() {
-    }
     @name("set_port") action set_port_0() {
         standard_metadata.egress_spec = 9w1;
     }
@@ -65,9 +63,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("port") table port() {
         actions = {
             set_port_0();
-            @default_only NoAction_0();
         }
-        default_action = NoAction_0();
+        const default_action = set_port_0();
     }
     @name("test1") table test1() {
         actions = {

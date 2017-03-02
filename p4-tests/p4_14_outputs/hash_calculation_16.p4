@@ -44,9 +44,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("test2") table test2() {
         actions = {
             set_port;
-            @default_only NoAction;
         }
-        default_action = NoAction();
+        const default_action = set_port();
     }
     apply {
         test.apply();
