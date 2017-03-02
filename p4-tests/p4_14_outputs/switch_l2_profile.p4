@@ -2149,7 +2149,7 @@ control process_egress_system_acl(inout headers hdr, inout metadata meta, inout 
         mark_to_drop();
     }
     @name("egress_copy_to_cpu") action egress_copy_to_cpu() {
-        clone3(CloneType.E2E, (bit<32>)250, { meta.ingress_metadata.bd, meta.ingress_metadata.ifindex, meta.fabric_metadata.reason_code, meta.ingress_metadata.ingress_port });
+        clone3(CloneType.E2E, (bit<32>)32w250, { meta.ingress_metadata.bd, meta.ingress_metadata.ifindex, meta.fabric_metadata.reason_code, meta.ingress_metadata.ingress_port });
     }
     @name("egress_redirect_to_cpu") action egress_redirect_to_cpu() {
         egress_copy_to_cpu();
@@ -3413,7 +3413,7 @@ control process_system_acl(inout headers hdr, inout metadata meta, inout standar
     @name("copy_to_cpu") action copy_to_cpu(bit<5> qid, bit<8> meter_id, bit<3> icos) {
         meta.ig_intr_md_for_tm.qid = qid;
         meta.ig_intr_md_for_tm.ingress_cos = icos;
-        clone3(CloneType.I2E, (bit<32>)250, { meta.ingress_metadata.bd, meta.ingress_metadata.ifindex, meta.fabric_metadata.reason_code, meta.ingress_metadata.ingress_port });
+        clone3(CloneType.I2E, (bit<32>)32w250, { meta.ingress_metadata.bd, meta.ingress_metadata.ifindex, meta.fabric_metadata.reason_code, meta.ingress_metadata.ingress_port });
     }
     @name("redirect_to_cpu") action redirect_to_cpu(bit<5> qid, bit<8> meter_id, bit<3> icos) {
         copy_to_cpu(qid, meter_id, icos);

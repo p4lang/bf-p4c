@@ -25,7 +25,4 @@ action egress_mirror_coal_hdr(session_id, id) {
 ../extensions/p4_tests/p4_14/switch_20160602/switch_config.p4(5): warning: Could not infer type for enable_flowlet, using bit<8>
 action set_config_parameters(enable_dod, enable_flowlet) {
                                          ^^^^^^^^^^^^^^
-../extensions/p4_tests/p4_14/switch_20160602/acl.p4(528): warning: Could not infer type for session_id, using bit<8>
-action negative_mirror(session_id) {
-                       ^^^^^^^^^^
 warning: The order of headers in deparser is not uniquely determined by parser!

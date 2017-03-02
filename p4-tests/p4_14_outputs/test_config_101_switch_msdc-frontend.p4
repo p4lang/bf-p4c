@@ -1727,14 +1727,14 @@ control process_port_vlan_mapping(inout headers hdr, inout metadata meta, inout 
         hdr.ig_intr_md_for_tm.level1_exclusion_id = exclusion_id;
         meta.l2_metadata.bd_stats_idx = stats_idx;
     }
-    @name("set_bd_ipv4_mcast_switch_ipv6_mcast_route_flags") action set_bd_ipv4_mcast_switch_ipv6_mcast_route_flags_0(bit<16> bd, bit<2> vrf, bit<10> rmac_group, bit<16> mrpf_group, bit<16> bd_label, bit<16> uuc_mc_index, bit<16> bcast_mc_index, bit<16> umc_mc_index, bit<1> ipv4_unicast_enabled, bit<1> ipv6_unicast_enabled, bit<2> ipv4_multicast_mode, bit<2> ipv6_multicast_mode, bit<1> igmp_snooping_enabled, bit<1> mld_snooping_enabled, bit<2> ipv4_urpf_mode, bit<2> ipv6_urpf_mode, bit<10> stp_group, bit<16> exclusion_id, bit<16> stats_idx) {
-        meta.ingress_metadata.vrf = vrf;
+    @name("set_bd_ipv4_mcast_switch_ipv6_mcast_route_flags") action set_bd_ipv4_mcast_switch_ipv6_mcast_route_flags_0(bit<16> bd, bit<8> vrf, bit<10> rmac_group, bit<16> mrpf_group, bit<16> bd_label, bit<16> uuc_mc_index, bit<16> bcast_mc_index, bit<16> umc_mc_index, bit<1> ipv4_unicast_enabled, bit<1> ipv6_unicast_enabled, bit<2> ipv4_multicast_mode, bit<2> ipv6_multicast_mode, bit<1> igmp_snooping_enabled, bit<1> mld_snooping_enabled, bit<2> ipv4_urpf_mode, bit<2> ipv6_urpf_mode, bit<10> stp_group, bit<16> exclusion_id, bit<16> stats_idx) {
+        meta.ingress_metadata.vrf = (bit<2>)vrf;
         meta.ingress_metadata.bd = bd;
         meta.ingress_metadata.outer_bd = bd;
         meta.multicast_metadata.outer_ipv4_mcast_key_type = 1w0;
         meta.multicast_metadata.outer_ipv4_mcast_key = (bit<8>)bd;
         meta.multicast_metadata.outer_ipv6_mcast_key_type = 1w1;
-        meta.multicast_metadata.outer_ipv6_mcast_key = (bit<8>)vrf;
+        meta.multicast_metadata.outer_ipv6_mcast_key = vrf;
         meta.ipv4_metadata.ipv4_unicast_enabled = ipv4_unicast_enabled;
         meta.ipv6_metadata.ipv6_unicast_enabled = ipv6_unicast_enabled;
         meta.multicast_metadata.ipv4_multicast_mode = ipv4_multicast_mode;
@@ -1753,12 +1753,12 @@ control process_port_vlan_mapping(inout headers hdr, inout metadata meta, inout 
         hdr.ig_intr_md_for_tm.level1_exclusion_id = exclusion_id;
         meta.l2_metadata.bd_stats_idx = stats_idx;
     }
-    @name("set_bd_ipv4_mcast_route_ipv6_mcast_switch_flags") action set_bd_ipv4_mcast_route_ipv6_mcast_switch_flags_0(bit<16> bd, bit<2> vrf, bit<10> rmac_group, bit<16> mrpf_group, bit<16> bd_label, bit<16> uuc_mc_index, bit<16> bcast_mc_index, bit<16> umc_mc_index, bit<1> ipv4_unicast_enabled, bit<1> ipv6_unicast_enabled, bit<2> ipv4_multicast_mode, bit<2> ipv6_multicast_mode, bit<1> igmp_snooping_enabled, bit<1> mld_snooping_enabled, bit<2> ipv4_urpf_mode, bit<2> ipv6_urpf_mode, bit<10> stp_group, bit<16> exclusion_id, bit<16> stats_idx) {
-        meta.ingress_metadata.vrf = vrf;
+    @name("set_bd_ipv4_mcast_route_ipv6_mcast_switch_flags") action set_bd_ipv4_mcast_route_ipv6_mcast_switch_flags_0(bit<16> bd, bit<8> vrf, bit<10> rmac_group, bit<16> mrpf_group, bit<16> bd_label, bit<16> uuc_mc_index, bit<16> bcast_mc_index, bit<16> umc_mc_index, bit<1> ipv4_unicast_enabled, bit<1> ipv6_unicast_enabled, bit<2> ipv4_multicast_mode, bit<2> ipv6_multicast_mode, bit<1> igmp_snooping_enabled, bit<1> mld_snooping_enabled, bit<2> ipv4_urpf_mode, bit<2> ipv6_urpf_mode, bit<10> stp_group, bit<16> exclusion_id, bit<16> stats_idx) {
+        meta.ingress_metadata.vrf = (bit<2>)vrf;
         meta.ingress_metadata.bd = bd;
         meta.ingress_metadata.outer_bd = bd;
         meta.multicast_metadata.outer_ipv4_mcast_key_type = 1w1;
-        meta.multicast_metadata.outer_ipv4_mcast_key = (bit<8>)vrf;
+        meta.multicast_metadata.outer_ipv4_mcast_key = vrf;
         meta.multicast_metadata.outer_ipv6_mcast_key_type = 1w0;
         meta.multicast_metadata.outer_ipv6_mcast_key = (bit<8>)bd;
         meta.ipv4_metadata.ipv4_unicast_enabled = ipv4_unicast_enabled;
@@ -1779,14 +1779,14 @@ control process_port_vlan_mapping(inout headers hdr, inout metadata meta, inout 
         hdr.ig_intr_md_for_tm.level1_exclusion_id = exclusion_id;
         meta.l2_metadata.bd_stats_idx = stats_idx;
     }
-    @name("set_bd_ipv4_mcast_route_ipv6_mcast_route_flags") action set_bd_ipv4_mcast_route_ipv6_mcast_route_flags_0(bit<16> bd, bit<2> vrf, bit<10> rmac_group, bit<16> mrpf_group, bit<16> bd_label, bit<16> uuc_mc_index, bit<16> bcast_mc_index, bit<16> umc_mc_index, bit<1> ipv4_unicast_enabled, bit<1> ipv6_unicast_enabled, bit<2> ipv4_multicast_mode, bit<2> ipv6_multicast_mode, bit<1> igmp_snooping_enabled, bit<1> mld_snooping_enabled, bit<2> ipv4_urpf_mode, bit<2> ipv6_urpf_mode, bit<10> stp_group, bit<16> exclusion_id, bit<16> stats_idx) {
-        meta.ingress_metadata.vrf = vrf;
+    @name("set_bd_ipv4_mcast_route_ipv6_mcast_route_flags") action set_bd_ipv4_mcast_route_ipv6_mcast_route_flags_0(bit<16> bd, bit<8> vrf, bit<10> rmac_group, bit<16> mrpf_group, bit<16> bd_label, bit<16> uuc_mc_index, bit<16> bcast_mc_index, bit<16> umc_mc_index, bit<1> ipv4_unicast_enabled, bit<1> ipv6_unicast_enabled, bit<2> ipv4_multicast_mode, bit<2> ipv6_multicast_mode, bit<1> igmp_snooping_enabled, bit<1> mld_snooping_enabled, bit<2> ipv4_urpf_mode, bit<2> ipv6_urpf_mode, bit<10> stp_group, bit<16> exclusion_id, bit<16> stats_idx) {
+        meta.ingress_metadata.vrf = (bit<2>)vrf;
         meta.ingress_metadata.bd = bd;
         meta.ingress_metadata.outer_bd = bd;
         meta.multicast_metadata.outer_ipv4_mcast_key_type = 1w1;
-        meta.multicast_metadata.outer_ipv4_mcast_key = (bit<8>)vrf;
+        meta.multicast_metadata.outer_ipv4_mcast_key = vrf;
         meta.multicast_metadata.outer_ipv6_mcast_key_type = 1w1;
-        meta.multicast_metadata.outer_ipv6_mcast_key = (bit<8>)vrf;
+        meta.multicast_metadata.outer_ipv6_mcast_key = vrf;
         meta.ipv4_metadata.ipv4_unicast_enabled = ipv4_unicast_enabled;
         meta.ipv6_metadata.ipv6_unicast_enabled = ipv6_unicast_enabled;
         meta.multicast_metadata.ipv4_multicast_mode = ipv4_multicast_mode;
@@ -2490,7 +2490,7 @@ control process_system_acl(inout headers hdr, inout metadata meta, inout standar
     @name("drop_packet") action drop_packet_0() {
         mark_to_drop();
     }
-    @name("negative_mirror") action negative_mirror_0(bit<8> clone_spec, bit<8> drop_reason) {
+    @name("negative_mirror") action negative_mirror_0(bit<32> clone_spec, bit<8> drop_reason) {
         meta.ingress_metadata.drop_reason = drop_reason;
         clone3<tuple<bit<16>, bit<8>, bit<8>>>(CloneType.I2E, (bit<32>)clone_spec, { meta.ingress_metadata.ifindex, meta.ingress_metadata.drop_reason, meta.l3_metadata.lkp_ip_ttl });
         mark_to_drop();

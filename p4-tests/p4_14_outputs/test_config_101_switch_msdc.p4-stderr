@@ -4,7 +4,4 @@ p4src/rewrite.p4(10): warning: -1: negative value with unsigned type
 p4src/l2.p4(216): warning: -1: negative value with unsigned type
     add_to_field(ipv4.ttl, -1);
                             ^
-p4src/acl.p4(344): warning: Could not infer type for clone_spec, using bit<8>
-action negative_mirror(clone_spec, drop_reason) {
-                       ^^^^^^^^^^
 warning: The order of headers in deparser is not uniquely determined by parser!

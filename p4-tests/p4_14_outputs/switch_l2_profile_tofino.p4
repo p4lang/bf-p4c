@@ -1542,7 +1542,7 @@ control process_egress_system_acl(inout headers hdr, inout metadata meta, inout 
         mark_to_drop();
     }
     @name("egress_copy_to_cpu") action egress_copy_to_cpu() {
-        clone3(CloneType.E2E, (bit<32>)250, { meta.ingress_metadata.bd, meta.ingress_metadata.ifindex, meta.fabric_metadata.reason_code, meta.ingress_metadata.ingress_port });
+        clone3(CloneType.E2E, (bit<32>)32w250, { meta.ingress_metadata.bd, meta.ingress_metadata.ifindex, meta.fabric_metadata.reason_code, meta.ingress_metadata.ingress_port });
     }
     @name("egress_redirect_to_cpu") action egress_redirect_to_cpu() {
         egress_copy_to_cpu();
