@@ -24,12 +24,9 @@ Instruction *Instruction::decode(Table *tbl, const Table::Actions::Action *act,
 namespace {
 static const int group_size[] = { 32, 32, 32, 32, 8, 8, 8, 8, 16, 16, 16, 16, 16, 16 };
 
-class operand {
-private:
-    class Base {
-    protected:
+struct operand {
+    struct Base {
         int     lineno;
-    public:
         Base(int line) : lineno(line) {}
         Base(const Base &a) : lineno(a.lineno) {}
         virtual ~Base() {}
@@ -45,15 +42,13 @@ private:
         virtual void phvRead(std::function<void (const ::Phv::Slice &sl)>) {}
         virtual void pass2(Table *, int) const {}
     } *op;
-    class Const : public Base {
+    struct Const : Base {
         long            value;
-    public:
         Const(int line, long v) : Base(line), value(v) {}
         bool equiv(const Base *a_) const {
             if (auto *a = dynamic_cast<const Const *>(a_)) {
                 return value == a->value;
             } else return false; }
-    private:
         virtual Const *clone() { return new Const(*this); }
         int bits(int group) {
             if (value >= -8 && value < 8)
@@ -62,9 +57,8 @@ private:
             return -1; }
         virtual void dbprint(std::ostream &out) const { out << value; }
     };
-    class Phv : public Base {
+    struct Phv : Base {
         ::Phv::Ref      reg;
-    public:
         Phv(int line, gress_t g, const value_t &n) : Base(line), reg(g, n) {}
         Phv(int line, gress_t g, const std::string &n, int l, int h) :
             Base(line), reg(g, line, n, l, h) {}
@@ -73,7 +67,6 @@ private:
             if (auto *a = dynamic_cast<const Phv *>(a_)) {
                 return reg == a->reg;
             } else return false; }
-    private:
         virtual Phv *clone() { return new Phv(*this); }
         bool check() { return reg.check(true); }
         int phvGroup() { return reg->reg.index / 16; }
@@ -88,12 +81,12 @@ private:
         virtual void dbprint(std::ostream &out) const { out << reg; }
         void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) override { fn(*reg); }
     };
-    class Action : public Base {
+    struct Action : Base {
         std::string             name;
         Table                   *table;
         Table::Format::Field    *field;
         unsigned                lo, hi;
-    public:
+
         Action(int line, const std::string &n, Table *tbl, Table::Format::Field *f,
                unsigned l, unsigned h) : Base(line), name(n), table(tbl), field(f), lo(l), hi(h) {}
         bool equiv(const Base *a_) const {
@@ -101,7 +94,6 @@ private:
                 return name == a->name && table == a->table && field == a->field &&
                        lo == a->lo && hi == a->hi;
             } else return false; }
-    private:
         virtual Action *clone() { return new Action(*this); }
         int bits(int group) {
             int size = group_size[group]/8U;
@@ -148,27 +140,26 @@ private:
                 out << '[' << field->bits[0].lo << ':' << field->size << ", "
                     << field->group << ']'; }
     };
-    class RawAction : public Base {
+    struct RawAction : Base {
         int             index;
         unsigned        offset;
-    public:
+
         RawAction(int line, int idx, unsigned off) : Base(line), index(idx), offset(off) {}
         bool equiv(const Base *a_) const {
             if (auto *a = dynamic_cast<const RawAction *>(a_)) {
                 return index == a->index && offset == a->offset;
             } else return false; }
-    private:
         virtual RawAction *clone() { return new RawAction(*this); }
         int bits(int group) { return 0x40 + index; }
         virtual unsigned bitoffset(int group) const { return offset; }
         void dbprint(std::ostream &out) const { out << 'A' << index; }
     };
-    class Named : public Base {
+    struct Named : Base {
         std::string     name;
         int             lo, hi;
         Table           *tbl;
         std::string     action;
-    public:
+
         Named(int line, const std::string &n, int l, int h, Table *t, const std::string &act)
         : Base(line), name(n), lo(l), hi(h), tbl(t), action(act) {}
         bool equiv(const Base *a_) const {
@@ -176,7 +167,6 @@ private:
                 return name == a->name && lo == a->lo && hi == a->hi && tbl == a->tbl &&
                        action == a->action;
             } else return false; }
-    private:
         Base *lookup(Base *&ref);
         Named *clone() { return new Named(*this); }
         bool check() { assert(0); return true; }
@@ -192,7 +182,6 @@ private:
                 out << ')'; }
             out << '[' << tbl->name() << ':' << action << ']'; }
     };
-public:
     operand() : op(0) {}
     operand(const operand &a) : op(a.op ? a.op->clone() : 0) {}
     operand(operand &&a) : op(a.op) { a.op = 0; }
@@ -222,6 +211,7 @@ public:
     void mark_use(Table *tbl) { op->lookup(op)->mark_use(tbl); }
     void dbprint(std::ostream &out) const { op->dbprint(out); }
     Base *operator->() { return op->lookup(op); }
+    template <class T> T *to() { return dynamic_cast<T *>(op->lookup(op)); }
 };
 
 operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v) : op(0) {
@@ -289,7 +279,7 @@ int parity(unsigned v) {
     return v&1;
 }
 
-struct VLIWInstruction : public Instruction {
+struct VLIWInstruction : Instruction {
     VLIWInstruction(int l) : Instruction(l) {}
     virtual int encode() = 0;
     void write_regs(Table *tbl, Table::Actions::Action *act) {
@@ -330,8 +320,8 @@ struct VLIWInstruction : public Instruction {
     }
 };
 
-struct AluOP : public VLIWInstruction {
-    const struct Decode : public Instruction::Decode {
+struct AluOP : VLIWInstruction {
+    const struct Decode : Instruction::Decode {
         std::string name;
         unsigned opcode;
         const Decode *swap_args;
@@ -424,8 +414,8 @@ bool AluOP::equiv(Instruction *a_) {
         return false;
 }
 
-struct LoadConst : public VLIWInstruction {
-    struct Decode : public Instruction::Decode {
+struct LoadConst : VLIWInstruction {
+    struct Decode : Instruction::Decode {
         Decode(const char *n) : Instruction::Decode(n) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
@@ -434,6 +424,7 @@ struct LoadConst : public VLIWInstruction {
     int         src;
     LoadConst(Table *tbl, const Table::Actions::Action *act, const value_t &d, int&s)
         : VLIWInstruction(d.lineno), dest(tbl->gress, d), src(s) {}
+    LoadConst(int line, Phv::Ref &d, int v) : VLIWInstruction(line), dest(d), src(v) {}
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *, Table::Actions::Action *) {}
     int encode();
@@ -479,8 +470,8 @@ bool LoadConst::equiv(Instruction *a_) {
         return false;
 }
 
-struct CondMoveMux : public VLIWInstruction {
-    const struct Decode : public Instruction::Decode {
+struct CondMoveMux : VLIWInstruction {
+    const struct Decode : Instruction::Decode {
         unsigned opcode, cond_size;
         bool    src2opt;
         Decode(const char *name, unsigned opc, bool s2opt, unsigned csize, const char *alias_name)
@@ -567,8 +558,8 @@ bool CondMoveMux::equiv(Instruction *a_) {
 
 struct Set;
 
-struct DepositField : public VLIWInstruction {
-    struct Decode : public Instruction::Decode {
+struct DepositField : VLIWInstruction {
+    struct Decode : Instruction::Decode {
         Decode() : Instruction::Decode("deposit_field") { alias("deposit-field"); }
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
@@ -652,8 +643,8 @@ bool DepositField::equiv(Instruction *a_) {
         return false;
 }
 
-struct Set : public VLIWInstruction {
-    struct Decode : public Instruction::Decode {
+struct Set : VLIWInstruction {
+    struct Decode : Instruction::Decode {
         Decode(const char *n) : Instruction::Decode(n) {}
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
@@ -695,6 +686,9 @@ Instruction *Set::pass1(Table *tbl, Table::Actions::Action *act) {
     if (!dest.check(true) || !src.check()) return this;
     if (dest->lo || dest->hi != dest->reg.size-1)
         return (new DepositField(*this))->pass1(tbl, act);
+    if (auto *k = src.to<operand::Const>())
+        if (k->value < -8 || k->value >= 8)
+            return (new LoadConst(lineno, dest, k->value))->pass1(tbl, act);
     slot = dest->reg.index;
     tbl->stage->action_set[tbl->gress][slot] = true;
     src.mark_use(tbl);
@@ -710,8 +704,8 @@ bool Set::equiv(Instruction *a_) {
         return false;
 }
 
-struct NulOP : public VLIWInstruction {
-    const struct Decode : public Instruction::Decode {
+struct NulOP : VLIWInstruction {
+    const struct Decode : Instruction::Decode {
         std::string name;
         unsigned opcode;
         Decode(const char *n, unsigned opc) : Instruction::Decode(n), name(n), opcode(opc) {}
@@ -757,8 +751,8 @@ bool NulOP::equiv(Instruction *a_) {
         return false;
 }
 
-struct ShiftOP : public VLIWInstruction {
-    const struct Decode : public Instruction::Decode {
+struct ShiftOP : VLIWInstruction {
+    const struct Decode : Instruction::Decode {
         std::string name;
         unsigned opcode;
         bool use_src1;
