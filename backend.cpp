@@ -185,7 +185,6 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new TableFindSeqDependencies,
         new FindDependencyGraph(phv, deps),
         Log::verbose() ? new VisitFunctor([&deps]() { std::cout << deps; }) : nullptr,
-        new TypeCheck,
         new SpreadGatewayAcrossSeq,
         new CheckTableNameDuplicate,
         new TableFindSeqDependencies,
