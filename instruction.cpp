@@ -56,7 +56,7 @@ private:
     private:
         virtual Const *clone() { return new Const(*this); }
         int bits(int group) {
-            if (value >= -8 || value < 8)
+            if (value >= -8 && value < 8)
                 return value+24;
             error(lineno, "constant value %ld out of range for immediate", value);
             return -1; }

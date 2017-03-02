@@ -510,7 +510,7 @@ int main(int ac, char **av) {
                     cmd = "bzcat ";
                 if (!cmd.empty()) {
                     cmd += av[i];
-                    cmd += " 2>/dev/null";  // ignore errors (Broken Pipe in particular)
+                    cmd = "2>/dev/null; " + cmd;  // ignore errors (Broken Pipe in particular)
                     auto *pipe = popen(cmd.c_str(), "r");
                     auto *pstream = new fdstream(fileno(pipe));
                     pstream->setclose([pipe]() { pclose(pipe); });
