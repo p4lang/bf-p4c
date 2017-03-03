@@ -152,8 +152,25 @@ class GetTofinoParser::RewriteExtractNext : public Transform {
             BUG("invalid method call %s", e); }
         return e; }
     const IR::Expression *preorder(IR::AssignmentStatement *s) override {
+        if (!canEvaluateInParser(s->right))
+            ::error("Assignment cannot be supported in the parser: %1%", s->right);
         return new IR::Primitive(s->srcInfo, "set_metadata", s->left, s->right); }
     const IR::Expression *preorder(IR::Statement *) override { BUG("Unhandled statement kind"); }
+
+    bool canEvaluateInParser(const IR::Expression* expression) const {
+        // Peel off any Cast expression. This accepts more programs than we can
+        // actually implement; some casts can't be performed at parse time.
+        if (expression->is<IR::Cast>()) {
+            expression = expression->to<IR::Cast>()->expr;
+        }
+
+        // We can't evaluate complex expressions on current hardware.
+        return expression->is<IR::Constant>() ||
+               expression->is<IR::PathExpression>() ||
+               expression->is<IR::Member>() ||
+               expression->is<IR::HeaderStackItemRef>() ||
+               expression->is<IR::ArrayIndex>();
+    }
 
  public:
     bool                        failed = false;
