@@ -235,6 +235,12 @@ XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/parser_dc_full.p4.test \
     tofino-ortools/testdata/p4_14_samples/parser_dc_full.p4.test
 
+# Fails due to complex expressions in the parser that our hardware can't support.
+XFAIL_TESTS += \
+   tofino/testdata/p4_14_samples/TLV_parsing.p4.test \
+   tofino/testdata/p4_14_samples/axon.p4.test \
+   tofino/testdata/p4_14_samples/simple_nat.p4.test
+
 # Generates broken PHV alloc (regs used by both ingress & egress)
 XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/basic_routing.p4.test
 
