@@ -33,6 +33,7 @@ class Cluster_PHV {
  private:
     std::vector<const PhvInfo::Field *> cluster_vec_i;
                                             // cluster vec sorted by decreasing field width
+    int id_num_i = 0;                       // number part of id_i
     std::string id_i;                       // cluster id
     PHV_Container::Ingress_Egress gress_i;  // ingress or egress
     PHV_Container::PHV_Word width_i;        // container width in PHV group
@@ -59,14 +60,17 @@ class Cluster_PHV {
  public:
     Cluster_PHV(
         ordered_set<const PhvInfo::Field *> *set_of_f,
-        std::string id_p = "???");  // NOLINT(runtime/explicit)
+        const int id_n = 0,
+        std::string id_s = "???");  // NOLINT(runtime/explicit)
                                                        // cluster set of fields
     Cluster_PHV(const PhvInfo::Field *f,
-        std::string id_p = "???")  // NOLINT(runtime/explicit)
-        : Cluster_PHV(field_set(f), id_p) {}           // cluster singleton field
+        const int id_n = 0,
+        std::string id_s = "???")  // NOLINT(runtime/explicit)
+        : Cluster_PHV(field_set(f), id_n, id_s) {}     // cluster singleton field
                                                        // e.g., POV fields
     //
     void compute_requirements();                       // compute cluster requirements
+    PHV_Container::PHV_Word container_width(int field_width);
     //
     ordered_set<const PhvInfo::Field *> *field_set(const PhvInfo::Field *f) {
         ordered_set<const PhvInfo::Field *> *s = new ordered_set<const PhvInfo::Field *>;
@@ -75,6 +79,7 @@ class Cluster_PHV {
     }
     //
     std::vector<const PhvInfo::Field *>& cluster_vec()  { return cluster_vec_i; }
+    const int id_num()                                  { return id_num_i; }
     std::string id()                                    { return id_i; }
     PHV_Container::Ingress_Egress gress()               { return gress_i; }
     PHV_Container::PHV_Word width()                     { return width_i; }
@@ -153,10 +158,9 @@ std::ostream &operator<<(std::ostream &, Cluster_PHV*);
 std::ostream &operator<<(std::ostream &, std::list<Cluster_PHV *>&);
 std::ostream &operator<<(std::ostream &, std::vector<Cluster_PHV *>*);
 std::ostream &operator<<(std::ostream &, std::vector<Cluster_PHV *>&);
-std::ostream &operator<<(std::ostream &, std::map<int, std::vector<Cluster_PHV *>>&);
 std::ostream &operator<<(std::ostream &, ordered_map<int, std::vector<Cluster_PHV *>>&);
 std::ostream &operator<<(std::ostream &,
-    std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>&);
+    ordered_map<PHV_Container::PHV_Word, ordered_map<int, std::vector<Cluster_PHV *>>>&);
 std::ostream &operator<<(std::ostream &, Cluster_PHV_Requirements&);
 //
 #endif /* _TOFINO_PHV_CLUSTER_PHV_REQ_H_ */

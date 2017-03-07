@@ -243,8 +243,11 @@ bool Cluster::preorder(const IR::Operation* operation) {
 }
 
 bool Cluster::preorder(const IR::Expression* expression) {
-    LOG4(".....Expression....." << expression);
+    LOG4(".....Expression.....");
     auto field = phv_i.field(expression);
+    if (field) {
+        LOG4(field);
+    }
     if (field && isWrite()) {
         field->mau_write = true;
         LOG4(".....MAU_write....." << field);
@@ -403,6 +406,8 @@ void Cluster::end_apply() {
     //
     compute_fields_no_use_mau();
     //
+    sort_fields_remove_non_determinism();
+    //
     sanity_check_clusters_unique("end_apply..");
     //
     // output logs
@@ -421,7 +426,7 @@ void Cluster::compute_fields_no_use_mau() {
     // set2 = cluster fields
     // fields not used in mau pipe = set1 - set2 - POV fields
     //
-    std::set<const PhvInfo::Field *> s1;                                // all fields
+    std::set<const PhvInfo::Field *> s1;                               // all fields
     pov_fields_i.clear();
     for (auto &field : phv_i) {
         s1.insert(&field);
@@ -462,7 +467,7 @@ void Cluster::compute_fields_no_use_mau() {
     }
     LOG3(std::endl << "..........All fields (" << s1.size() << ")..........");
     std::set<const PhvInfo::Field *> s2;                               // cluster fields
-    for (auto entry : dst_map_i) {
+    for (auto &entry : dst_map_i) {
         if (entry.second) {
             s2.insert(entry.first);
             for (auto entry_2 : *(entry.second)) {
@@ -479,7 +484,7 @@ void Cluster::compute_fields_no_use_mau() {
     LOG3("..........Cluster fields (" << s2.size() << ")..........");
     LOG3("..........POV fields (" << pov_fields_i.size() << ")..........");
     //
-    // All - cluster fields
+    // all fields - cluster fields
     //
     std::set<const PhvInfo::Field *> s3;
     set_difference(s1.begin(), s1.end(), s2.begin(), s2.end(), std::inserter(s3, s3.end()));
@@ -546,6 +551,40 @@ void Cluster::compute_fields_no_use_mau() {
         << ").........." << std::endl);
     //
 }  // fields_no_use_mau
+
+void
+Cluster::sort_fields_remove_non_determinism() {
+    //
+    // sort fields by id so that future passes using these lists
+    // produce determined output on each run
+    // useful for debugging purposes
+    // occasionally see intermittent failures that are tough to track down
+    // cause of non-determinism:
+    // doing things that depend on where garbage collector puts stuff in memory (somewhat random)
+    // generally by comparing pointers for order
+    // happens whenever iterate over `std::set` or `std::map` that uses a pointer type as the key
+    // best way to avoid is to use `ordered_set`/`ordered_map` types,
+    // which track order of insertion & use that as iteration order.
+    // when cannot replace by ordered_ as we need "count", "set_difference", "set_intersection"
+    // result in std::list
+    // sort exported list fields by id
+    //
+    pov_fields_i.sort(
+        [](const PhvInfo::Field *l, const PhvInfo::Field *r) {
+            // sort by cluster id_num to prevent non-determinism
+            return l->id < r->id;
+        });
+    pov_fields_not_in_cluster_i.sort(
+        [](const PhvInfo::Field *l, const PhvInfo::Field *r) {
+            // sort by cluster id_num to prevent non-determinism
+            return l->id < r->id;
+        });
+    fields_no_use_mau_i.sort(
+        [](const PhvInfo::Field *l, const PhvInfo::Field *r) {
+            // sort by cluster id_num to prevent non-determinism
+            return l->id < r->id;
+        });
+}  // sort_fields_remove_non_determinism
 
 //***********************************************************************************
 //

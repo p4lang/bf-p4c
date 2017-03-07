@@ -375,9 +375,10 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &s
 }
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
-    out << field.id << ':' << field.name << '[' << field.size << ']';
+    out << field.id << ':' << field.name << '<' << field.size;
     if (field.phv_use_lo || field.phv_use_hi)
-        out << '{' << field.phv_use_lo << ".." << field.phv_use_hi << '}';
+        out << ':' << field.phv_use_lo << ".." << field.phv_use_hi;
+    out << '>';
     out << (field.gress ? " E" : " I") << " off=" << field.offset;
     if (field.referenced) out << " ref";
     if (field.metadata) out << " meta";
@@ -388,16 +389,22 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
     if (field.deparser_no_holes) out << " deparser_no_holes";
     if (field.ccgf) out << " ccgf=" << field.ccgf->id << ':' << field.ccgf->name;
     if (field.ccgf_fields.size()) {
-        // count bits in "container contiguous group fields"
+        // aggregate widths of members in "container contiguous group fields"
         out << std::endl << '[';
-        int ccg_width = 0;
-        for (auto &pov_f : field.ccgf_fields) {
+        int ccgf_width = 0;
+        for (auto &f : field.ccgf_fields) {
             out << '\t';
-            out << pov_f->id << ':' << pov_f->name << '[' << pov_f->size << ']';
+            if (f->ccgf == f) {
+                // ccgf owner appears as member, phv_use_width = aggregate size of members
+                ccgf_width += f->size;
+                out << f->id << ':' << f->name << '<' << f->size << ">*";
+            } else {
+                ccgf_width += f->phv_use_width();
+                out << f;
+            }
             out << std::endl;
-            ccg_width += pov_f->size;
         }
-        out << ':' << ccg_width << ']'; }
+        out << ':' << ccgf_width << ']'; }
     if (field.field_overlay_map_i.size()) {
         for (auto &entry : field.field_overlay_map_i) {
             out << "\t"

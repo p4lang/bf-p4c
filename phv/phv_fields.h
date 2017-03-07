@@ -86,30 +86,24 @@ class PhvInfo : public Inspector {
                                            // F<c1,c2> -- [0] -- B<c1>, A<c1>
                                            //          -- [1] -- B<c2>, D<c2>, E<c2>
         ordered_map<int, ordered_set<const PhvInfo::Field *> *>&
-        field_overlay_map() {
-            return field_overlay_map_i;
-        }
+            field_overlay_map()            { return field_overlay_map_i; }
         void field_overlay_map(int r, const PhvInfo::Field *field) {
-            //
             assert(r >= 0);
             assert(field);
-            //
             if (!field_overlay_map_i[r]) {
                 field_overlay_map_i[r] = new ordered_set<const PhvInfo::Field *>;
             }
             field_overlay_map_i[r]->insert(field);
         }
         int phv_use_width() const { return phv_use_hi - phv_use_lo + 1; }
-                                                      // width of field needed in phv container
+                                           // width of field needed in phv container
         void phv_use_width(bool ccgf_owner) {
-            //
-            // compute ccgf width
-            // need PHV container of this width
-            //
+            // compute ccgf width, need PHV container(s) of this width
             if (ccgf_owner && ccgf_fields.size()) {
                 int ccg_width = 0;
                 for (auto &f : ccgf_fields) {
-                    ccg_width += f->phv_use_width();
+                    // ccgf owner appears as member, phv_use_width = aggregate size of members
+                    ccg_width += (f->ccgf == f)? f->size: f->phv_use_width();
                 }
                 phv_use_hi = ccg_width - 1;
             }

@@ -226,7 +226,7 @@ Cluster_PHV_Overlay::apply_visitor(const IR::Node *node, const char *name) {
     }
     // T_PHV overlay
     if (phv_mau_i.t_phv_clusters().size()) {
-        std::set<PHV_MAU_Group *> t_phv_group_set;
+        ordered_set<PHV_MAU_Group *> t_phv_group_set;
         for (auto &it : phv_mau_i.t_phv_map()) {
             for (auto &it_2 : it.second) {
                 for (auto &c : it_2.second) {

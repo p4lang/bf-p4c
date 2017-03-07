@@ -86,7 +86,7 @@ PHV_Container::clean_ranges() {
     if (status_i == Container_status::FULL) {
         ranges_i.clear();
     }
-    std::set<int> clear_these;
+    ordered_set<int> clear_these;
     for (auto r : ranges_i) {
         if (r.second < r.first || (r.second == r.first &&  bits_i[r.first] != '0')) {
             clear_these.insert(r.first);
@@ -168,10 +168,23 @@ PHV_Container::taint(
         int processed_members = 0;
         int processed_width = 0;
         for (auto &member : field->ccgf_fields) {
+            int use_width = (member->ccgf == member)? member->size : member->phv_use_width();
+            if (member->mau_phv_no_pack && !member->deparser_no_pack) {
+                if (processed_width != 0) {
+                    //
+                    // entire phv_use_width to be allocated in stand-alone container
+                    // e.g., <3:_12_8_8>{4*8}[28]I( phv_0
+                    // 64:ingress::meta.b[4]{0..11}  meta ccgf=64:ingress::meta.b
+                    // [ 64:ingress::meta.b[4]
+                    //   65:ingress::meta.c[4]{0..7} meta mau_phv_no_pack ccgf=64:ingress::meta.b
+                    // :12]
+                    //
+                    break;
+                }
+            }
             int member_bit_lo = member->phv_use_lo;
-            int use_width = member->size;
             if (!member->simple_header_pov_ccgf) {  // ignore simple header ccgf
-                use_width = member->size - member->phv_use_rem;
+                use_width -= member->phv_use_rem;
             }
             start -= use_width;
             if (start < 0) {
@@ -452,6 +465,23 @@ void PHV_Container::sanity_check_container(const std::string& msg) {
         cc->sanity_check_container(this, msg_1);
         sanity_check_container_avail(cc->lo(), cc->hi(), msg_1);
         occupation_width += cc->width();
+        // sanity check constraints on field
+        if (constraint_no_cohabit(cc->field())) {
+            if (fields_in_container_i.size() != 1) {
+                LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****.."
+                << msg_1
+                << " cohabit fields with 'constraint_no_cohabit' "
+                << cc->field());
+            }
+        }
+        if (constraint_no_holes(cc->field())) {
+            if (avail_bits_i) {
+                LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****.."
+                << msg_1
+                << " container has holes with field 'constraint_no_holes' "
+                << cc->field());
+            }
+        }
     }
     if (occupation_width + avail_bits_i != width_i) {
         LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****.."
@@ -594,17 +624,20 @@ void PHV_Container::sanity_check_container_ranges(const std::string& msg) {
 //
 std::ostream &operator<<(std::ostream &out, PHV_Container::Container_Content *cc) {
     if (cc) {
-        out << std::endl << "\t\t\t\t\t";
-        out << cc->field()
-            << '<'
+        out << std::endl << "\t\t\t\t";
+        out << "  "
+            << cc->taint_color()
+            << "= "
+            << cc->field()
+            << " |"
+            << cc->container()
+            << " <"
             << cc->width()
-            << '>'
-            << '{' << cc->lo()
+            << ':'
+            << cc->lo()
             << ".."
             << cc->hi()
-            << '}'
-            << '|'
-            << cc->container()
+            << '>'
             << '|';
     } else {
         out << "-cc-";
@@ -620,8 +653,8 @@ std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container::Container
     return out;
 }
 
-
-std::ostream &operator<<(std::ostream &out, std::set<PHV_Container::Container_Content *>& vc) {
+// ordered_set
+std::ostream &operator<<(std::ostream &out, ordered_set<PHV_Container::Container_Content *>& vc) {
     for (auto &cc : vc) {
         out << cc << std::endl;
     }

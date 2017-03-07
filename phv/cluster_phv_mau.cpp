@@ -88,8 +88,8 @@ void PHV_MAU_Group::create_aligned_container_slices_per_range(
     // to consider other ranges
     // successively erase ranges().begin() & call this routine
     //
-    std::set<int> set_of_hi_s;
-    set_of_hi_s.clear();
+    ordered_set<int> set_of_hi_s;
+    // set_of_hi_s.clear();
     for (auto &c : container_list) {
        set_of_hi_s.insert(c->ranges().begin()->second);
     }
@@ -109,14 +109,14 @@ void PHV_MAU_Group::create_aligned_container_slices_per_range(
         //
         int width = hi - lo + 1;
         std::list<PHV_Container *> c_remove;
-        std::set<Container_Content *> *cc_set = new std::set<Container_Content *>;
+        std::list<Container_Content *> *cc_set = new std::list<Container_Content *>;
         for (auto &c : container_list) {
-            cc_set->insert(new Container_Content(lo, width, c));  // insert in cc_set
+            cc_set->push_back(new Container_Content(lo, width, c));  // insert in cc_set
             if (c->ranges().begin()->first == lo) {
                 c_remove.push_back(c);
             }
         }
-        aligned_container_slices_i[width][container_list.size()].insert(*cc_set);
+        aligned_container_slices_i[width][container_list.size()].push_back(*cc_set);
                                                            // insert in map[w][n]
         // remove containers completely sliced
         for (auto &c : c_remove) {
@@ -176,7 +176,7 @@ void PHV_MAU_Group::create_aligned_container_slices() {
 void PHV_MAU_Group::create_aligned_container_slices(
     std::list<PHV_Container *>& container_list) {
     while (container_list.size()) {
-        std::map<int, std::list<PHV_Container *>> container_hi_s;
+        ordered_map<int, std::list<PHV_Container *>> container_hi_s;
         container_hi_s.clear();
         for (auto &c : container_list) {
            container_hi_s[c->ranges().begin()->second].push_back(c);
@@ -665,11 +665,8 @@ PHV_MAU_Group_Assignments::container_no_pack(
                          j < req_containers && field_width > 0;
                          j++, field_stride++) {
                         //
-                        int taint_bits = g->width();
-                        if (field_width < g->width()) {
-                            taint_bits = field_width;
-                        }
-                        field_width -= g->width();
+                        int taint_bits = std::min(field_width, static_cast<int>(g->width()));
+                        field_width -= g->width();   // inner loop termination
                         //
                         PHV_Container *container = g->empty_container();
                         const PhvInfo::Field *field = cl->cluster_vec()[i];
@@ -902,7 +899,7 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices() {
             for (auto w : g->aligned_container_slices()) {
                 for (auto n : w.second) {
                     for (auto cc_set : n.second) {
-                        aligned_container_slices_i[w.first][n.first].insert(cc_set);
+                        aligned_container_slices_i[w.first][n.first].push_back(cc_set);
                            // insert in composite  map[w][n]
                     }
                 }
@@ -919,11 +916,11 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices() {
     T_PHV_container_slices_i.clear();
     for (auto &coll : T_PHV_i) {
         for (auto &m : coll.second) {
-            std::set<PHV_MAU_Group::Container_Content *> *set_cc
-                = new std::set<PHV_MAU_Group::Container_Content *>;
+            std::list<PHV_MAU_Group::Container_Content *> *set_cc
+                = new std::list<PHV_MAU_Group::Container_Content *>;
             for (auto &c : m.second) {
                 if (c->status() == PHV_Container::Container_status::EMPTY) {
-                    set_cc->insert(
+                    set_cc->push_back(
                         new PHV_MAU_Group::Container_Content(
                             0,
                             c->width(),
@@ -936,17 +933,17 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices() {
                     for (auto &r : c->ranges()) {
                         int start = r.first;
                         int partial_width = r.second - r.first + 1;
-                        std::set<PHV_MAU_Group::Container_Content *> *set_cc_partial
-                            = new std::set<PHV_MAU_Group::Container_Content *>;
-                        set_cc_partial->insert(
+                        std::list<PHV_MAU_Group::Container_Content *> *set_cc_partial
+                            = new std::list<PHV_MAU_Group::Container_Content *>;
+                        set_cc_partial->push_back(
                             new PHV_MAU_Group::Container_Content(start, partial_width, c));
-                        T_PHV_container_slices_i[partial_width][1].insert(*set_cc_partial);
+                        T_PHV_container_slices_i[partial_width][1].push_back(*set_cc_partial);
                     }
                 }
             }
             if (set_cc->size()) {
                 T_PHV_container_slices_i
-                   [m.first][set_cc->size()].insert(*set_cc);
+                   [m.first][set_cc->size()].push_back(*set_cc);
             }
         }
     }
@@ -1025,7 +1022,7 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices() {
 //
 // input:
 //        (i)  clusters_to_be_assigned
-//        (ii) all PHV_MAU_Groups w/ map<int, map<int, std::set<Container_Content *>>>
+//        (ii) all PHV_MAU_Groups w/ map<int, map<int, set<Container_Content *>>>
 //                 aligned_container_slices_i
 //             forall G,C sorted aligned_slices
 //             --------------------------------
@@ -1052,7 +1049,7 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices() {
 
 void PHV_MAU_Group_Assignments::container_pack_cohabit(
     std::list<Cluster_PHV *>& clusters_to_be_assigned,
-    ordered_map<int, ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&
+    ordered_map<int, ordered_map<int, std::list<std::list<PHV_MAU_Group::Container_Content *>>>>&
         aligned_slices,
     const char *msg) {
     //
@@ -1071,6 +1068,10 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
             // when packing consider field width
             //
             // return l->width() > r->width();
+            if (l->max_width() == r->max_width()) {
+                // sort by cluster id_num to prevent non-determinism
+                return l->id_num() < r->id_num();
+            }
             return l->max_width() > r->max_width();
         }
         return l->num_containers() > r->num_containers();
@@ -1105,7 +1106,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                     if (m_n >= cl_n) {
                         // honor gress compatible match
                         //
-                        std::set<PHV_MAU_Group::Container_Content *> cc_set;
+                        std::list<PHV_MAU_Group::Container_Content *> cc_set;
                         PHV_Container::Ingress_Egress c_gress
                             = PHV_Container::Ingress_Egress::Ingress_Or_Egress;
                         cc_set.clear();
@@ -1117,7 +1118,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                                 // remove matching PHV_MAU_Group Container Content from set_of_sets
                                 // if set_of_sets empty then remove map[m_w] entry
                                 //
-                                j.second.erase(cc_set_x);
+                                j.second.remove(cc_set_x);
                                 if (j.second.empty()) {
                                     i.second.erase(j.first);
                                 }
@@ -1171,14 +1172,14 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                             // n = m_n - cl_n containers
                             // insert in map[n]
                             //
-                            std::set<PHV_MAU_Group::Container_Content *>* cc_n
-                                = new std::set<PHV_MAU_Group::Container_Content *>;
+                            std::list<PHV_MAU_Group::Container_Content *>* cc_n
+                                = new std::list<PHV_MAU_Group::Container_Content *>;
                             auto n = m_n - cl_n;
                             for (auto i = 0; i < n; i++) {
-                                cc_n->insert(*(cc_set.begin()));
+                                cc_n->push_back(*(cc_set.begin()));
                                 cc_set.erase(cc_set.begin());
                             }
-                            i.second[n].insert(*cc_n);
+                            i.second[n].push_back(*cc_n);
                             LOG3("\t==>["
                                  << m_w
                                  << "]-->["
@@ -1229,14 +1230,14 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                             // new width w = m_w - cl_w;
                             // insert in map[m_w-cl_w][cl_n]
                             //
-                            std::set<PHV_MAU_Group::Container_Content *>* cc_w
-                                = new std::set<PHV_MAU_Group::Container_Content *>;
+                            std::list<PHV_MAU_Group::Container_Content *>* cc_w
+                                = new std::list<PHV_MAU_Group::Container_Content *>;
                             *cc_w = cc_set;
                             for (auto &cc : *cc_w) {
                                 cc->hi(cc->hi() - cl_w);
                             }
                             auto w = m_w - cl_w;
-                            aligned_slices[w][cl_n].insert(*cc_w);
+                            aligned_slices[w][cl_n].push_back(*cc_w);
                             LOG3("\t==>("
                                 << cl_n
                                 << ")-->["
@@ -1302,7 +1303,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
     if (&aligned_slices != &aligned_container_slices_i) {
         phv_groups = T_PHV_groups_i;
     }
-    std::set<PHV_MAU_Group *> phv_groups_remove;
+    ordered_set<PHV_MAU_Group *> phv_groups_remove;
     for (auto &g : phv_groups) {
         g->empty_containers() = 0;
         for (auto &c : g->phv_containers()) {
@@ -1342,7 +1343,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
 void PHV_MAU_Group_Assignments::consolidate_slices_in_group(
     ordered_map<int,
     ordered_map<int,
-    std::set<std::set<PHV_MAU_Group::Container_Content *>>>>& aligned_slices) {
+    std::list<std::list<PHV_MAU_Group::Container_Content *>>>>& aligned_slices) {
     //
     // consolidate to get larger number same width only when all aligned and same MAU group
     // [3](2)*2 ((PHV-149<3>{8..10}, PHV-147), (PHV-145<3>{8..10}, PHV-151)) ==> [3](4)*1
@@ -1355,11 +1356,11 @@ void PHV_MAU_Group_Assignments::consolidate_slices_in_group(
                 // attempt to consolidate only within same MAU group
                 //
                 ordered_map<PHV_MAU_Group *,
-                ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>> g_lo;
+                ordered_map<int, std::list<std::list<PHV_MAU_Group::Container_Content *>>>> g_lo;
                 for (auto &cc_set : n.second) {
                     PHV_Container *c = (*(cc_set.begin()))->container();
                     int lo = (*(cc_set.begin()))->lo();
-                    g_lo[c->phv_mau_group()][lo].insert(cc_set);
+                    g_lo[c->phv_mau_group()][lo].push_back(cc_set);
                 }
                 // all elements of g_lo[g][lo] must be used for aligned_slices[w][n]
                 //
@@ -1370,19 +1371,19 @@ void PHV_MAU_Group_Assignments::consolidate_slices_in_group(
                             //
                             // make a composite set from all sets in l.second
                             //
-                            std::set<PHV_MAU_Group::Container_Content *> *set_u
-                                = new std::set<PHV_MAU_Group::Container_Content *>;
+                            std::list<PHV_MAU_Group::Container_Content *> *set_u
+                                = new std::list<PHV_MAU_Group::Container_Content *>;
                             for (auto &cc_set : l.second) {
                                 for (auto &cc : cc_set) {
-                                    set_u->insert(cc);
+                                    set_u->push_back(cc);
                                 }
                             }
-                            aligned_slices[w.first][set_u->size()].insert(*set_u);
+                            aligned_slices[w.first][set_u->size()].push_back(*set_u);
                         } else {
                             //
                             // use existing singleton set
                             //
-                            aligned_slices[w.first][n.first].insert(*(l.second.begin()));
+                            aligned_slices[w.first][n.first].push_back(*(l.second.begin()));
                         }
                     }
                 }
@@ -1478,7 +1479,7 @@ bool PHV_MAU_Group_Assignments::status(
 }  // status clusters_to_be_assigned
 
 bool PHV_MAU_Group_Assignments::status(
-    ordered_map<int, ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&
+    ordered_map<int, ordered_map<int, std::list<std::list<PHV_MAU_Group::Container_Content *>>>>&
         aligned_slices,
     const char *msg) {
     //
@@ -1546,11 +1547,11 @@ void PHV_MAU_Group::sanity_check_container_packs(const std::string& msg) {
                 // for all members check width and range lo .. hi
                 // also check all containers belong to the same gress
                 //
-                std::set<int> lo;
-                std::set<int> hi;
-                lo.clear();
-                hi.clear();
-                std::set<PHV_Container::Ingress_Egress> gress;
+                ordered_set<int> lo;
+                ordered_set<int> hi;
+                // lo.clear();
+                // hi.clear();
+                ordered_set<PHV_Container::Ingress_Egress> gress;
                 for (auto cc : cc_set) {
                     if (cc->width() != w.first) {
                         LOG1(
@@ -1567,7 +1568,8 @@ void PHV_MAU_Group::sanity_check_container_packs(const std::string& msg) {
                     gress.insert(cc->container()->gress());
                 }
                 if (lo.size() != 1) {
-                    LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****cluster_pack lo differs .."
+                    LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****cluster_pack"
+                           << ".....lo differs ....."
                             << '['
                             << w.first
                             << "]["
@@ -1576,7 +1578,8 @@ void PHV_MAU_Group::sanity_check_container_packs(const std::string& msg) {
                             << msg);
                 }
                 if (hi.size() != 1) {
-                    LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****cluster_pack hi differs .."
+                    LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****cluster_pack"
+                           << ".....hi differs ....."
                            << '['
                            << w.first
                            << "]["
@@ -1585,8 +1588,8 @@ void PHV_MAU_Group::sanity_check_container_packs(const std::string& msg) {
                            << msg);
                 }
                 if (gress.size() != 1) {
-                    LOG1("*****cluster_phv_mau.cpp:sanity_FAIL***** "
-                           << "gress differs ....."
+                    LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****cluster_pack"
+                           << ".....gress differs ....."
                            << n.second
                            << std::endl
                            << "\t"
@@ -1696,7 +1699,10 @@ void PHV_MAU_Group_Assignments::sanity_check_group_containers(const std::string&
             for (auto &cc_set : n.second) {
                 PHV_Container *c = (*(cc_set.begin()))->container();
                 PHV_MAU_Group *g = c->phv_mau_group();
-                if (g->aligned_container_slices()[w.first][n.first].count(cc_set) != 1) {
+                std::set<std::list<PHV_MAU_Group::Container_Content *>> s1(
+                    g->aligned_container_slices()[w.first][n.first].begin(),
+                    g->aligned_container_slices()[w.first][n.first].end());
+                if (s1.count(cc_set) != 1) {
                     LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****.."
                             << msg
                             << g
@@ -1715,7 +1721,10 @@ void PHV_MAU_Group_Assignments::sanity_check_group_containers(const std::string&
             for (auto &w : g->aligned_container_slices()) {
                 for (auto &n : w.second) {
                     for (auto &cc_set : n.second) {
-                        if (aligned_container_slices_i[w.first][n.first].count(cc_set) != 1) {
+                        std::set<std::list<PHV_MAU_Group::Container_Content *>> s1(
+                            aligned_container_slices_i[w.first][n.first].begin(),
+                            aligned_container_slices_i[w.first][n.first].end());
+                        if (s1.count(cc_set) != 1) {
                             LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****.."
                                     << msg
                                     << " composite aligned_container_slices does not contain"
@@ -1734,7 +1743,7 @@ void PHV_MAU_Group_Assignments::sanity_check_group_containers(const std::string&
     // field can straddle containers but should not be allocated again
     //
     ordered_map<const PhvInfo::Field *,
-        std::set<PHV_Container::Container_Content *>> field_container_map;
+        ordered_set<PHV_Container::Container_Content *>> field_container_map;
     for (auto groups : PHV_MAU_i) {
         for (auto g : groups.second) {
             for (auto c : g->phv_containers()) {
@@ -1777,7 +1786,7 @@ void PHV_MAU_Group_Assignments::sanity_check_T_PHV_collections(const std::string
     // sanity check T_PHV collections containers have same gress
     //
     for (auto &coll : T_PHV_i) {
-        std::set<PHV_Container::Ingress_Egress> gress_set;
+        ordered_set<PHV_Container::Ingress_Egress> gress_set;
         for (auto &v : coll.second) {
             for (auto &c : v.second) {
                 gress_set.insert(c->gress());
@@ -1786,7 +1795,7 @@ void PHV_MAU_Group_Assignments::sanity_check_T_PHV_collections(const std::string
         if (gress_set.size() != 1) {
             LOG1("*****cluster_phv_mau.cpp:sanity_FAIL***** T_PHV Collection.."
                     << coll.second
-                    << "..."
+                    << ".....containers have differing gress....."
                     << msg);
         }
     }
@@ -1816,8 +1825,10 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group::Container_Content *c)
     return out;
 }
 //
-//
-std::ostream &operator<<(std::ostream &out, std::set<PHV_MAU_Group::Container_Content *>& slices) {
+// ordered_set
+std::ostream &operator<<(
+    std::ostream &out,
+    ordered_set<PHV_MAU_Group::Container_Content *>& slices) {
     out << '(';
     for (auto c : slices) {
         if (c->container()->status() != PHV_Container::Container_status::FULL) {
@@ -1828,17 +1839,45 @@ std::ostream &operator<<(std::ostream &out, std::set<PHV_MAU_Group::Container_Co
     return out;
 }
 //
+// list
+std::ostream &operator<<(
+    std::ostream &out,
+    std::list<PHV_MAU_Group::Container_Content *>& slices_list) {
+    out << '(';
+    for (auto &cc : slices_list) {
+        if (cc->container()->status() != PHV_Container::Container_status::FULL) {
+            out << cc << ' ';
+        }
+    }
+    out << std::endl << "\t)";
+    return out;
+}
+//
+// list of list
+std::ostream &operator<<(
+    std::ostream &out,
+    std::list<std::list<PHV_MAU_Group::Container_Content *>>& slices_list_list) {
+    out << '{';
+    for (auto &slices_list : slices_list_list) {
+        out << slices_list << ',';
+    }
+    out << std::endl << "\t}";
+    return out;
+}
+//
 //
 std::ostream &operator<<(
     std::ostream &out,
-    ordered_map<int, ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&
+    ordered_map<int, ordered_map<int, std::list<std::list<PHV_MAU_Group::Container_Content *>>>>&
     all_container_packs) {
     //
     // map[w][n] --> <set of <set of container_packs>>
     //
     // output in sorted order, not in map insertion order
     //
-    std::map<int, std::map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>> cpks;
+    ordered_map<int,
+        ordered_map<int,
+            std::list<std::list<PHV_MAU_Group::Container_Content *>>>> cpks;
     for (auto &w : all_container_packs) {
         for (auto &n : w.second) {
             cpks[w.first][n.first] = all_container_packs[w.first][n.first];
@@ -1872,7 +1911,7 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group &g) {
         out << "(V" << g.empty_containers() << ')';
     }
     // summarize packable containers
-    std::set<PHV_Container *> containers_pack;
+    ordered_set<PHV_Container *> containers_pack;
     for (auto c : g.phv_containers()) {
         if (c->status() != PHV_Container::Container_status::FULL) {
             containers_pack.insert(c);

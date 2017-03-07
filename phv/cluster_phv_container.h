@@ -149,12 +149,10 @@ class PHV_Container {
     void clean_ranges();
     //
     static bool constraint_no_cohabit(const PhvInfo::Field *field) {
-        if (field->deparser_no_pack
-            || field->mau_phv_no_pack) {
-            //
-            return true;
-        }
-        return false;
+        return field->deparser_no_pack || field->mau_phv_no_pack;
+    }
+    static bool constraint_no_holes(const PhvInfo::Field *field) {
+        return field->deparser_no_holes;
     }
     //
     void sanity_check_container(const std::string& msg);
@@ -166,7 +164,7 @@ class PHV_Container {
 //
 std::ostream &operator<<(std::ostream &, PHV_Container::Container_Content *);
 std::ostream &operator<<(std::ostream &, std::vector<PHV_Container::Container_Content *>&);
-std::ostream &operator<<(std::ostream &, std::set<PHV_Container::Container_Content *>&);
+std::ostream &operator<<(std::ostream &, ordered_set<PHV_Container::Container_Content *>&);
 std::ostream &operator<<(std::ostream &, ordered_map<int, int>&);
 std::ostream &operator<<(std::ostream &, const PHV_Container*);
 std::ostream &operator<<(std::ostream &, PHV_Container*);

@@ -76,11 +76,22 @@ void PHV_Field_Operations::end_apply() {
                 // element 0 in tuple is 'is_move_op'
                 if (std::get<0>(op) != true) {
                     f.mau_phv_no_pack = true;
+                    //
+                    // recompute phv_use_width
+                    // do not change width for deparser fields
+                    //
+                    if (!f.deparser_no_pack) {
+                        ceil_phv_use_width(&f);
+                    }
                     LOG3("...packing_constraint... " << f);
                     break;
                 }
             }
         }
+    }
+    // recompute width for ccgf owners
+    for (auto &f : phv) {
+        f.phv_use_width(f.ccgf == &f);
     }
     LOG3("..........End PHV_Field_Operations..........");
 }

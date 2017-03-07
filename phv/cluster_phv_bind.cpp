@@ -93,7 +93,7 @@ PHV_Bind::collect_containers_with_fields() {
     // accumulate containers_i, fields_i
     //
     containers_i.clear();
-    fields_i.clear();
+    // fields_i.clear();
     fields_overflow_i.clear();
     //
     for (auto &it : phv_mau_i.phv_mau_map()) {
@@ -136,39 +136,45 @@ PHV_Bind::collect_containers_with_fields() {
             s1.insert(&field);
         }
     }
+    std::set<const PhvInfo::Field *> s2(fields_i.begin(), fields_i.end());
     // fields_overflow_i = All - PHV_Bind fields
     set_difference(
         s1.begin(),
         s1.end(),
-        fields_i.begin(),
-        fields_i.end(),
-        std::inserter(fields_overflow_i, fields_overflow_i.end()));
+        s2.begin(),
+        s2.end(),
+        std::back_inserter(fields_overflow_i));
+    //
+    fields_overflow_i.sort(
+        [](const PhvInfo::Field *l, const PhvInfo::Field *r) {
+            // sort by cluster id_num to prevent non-determinism
+            return l->id < r->id;
+        });
     //
 }  // collect_containers_with_fields
 
 void
-PHV_Bind::phv_tphv_allocate(std::set<const PhvInfo::Field *>& fields) {
+PHV_Bind::phv_tphv_allocate(std::list<const PhvInfo::Field *>& fields) {
     std::list<Cluster_PHV *> phv_clusters;
     std::list<Cluster_PHV *> t_phv_clusters;
     //
     int cluster_num = 0;
-    std::set<const PhvInfo::Field *> remove_set;
+    ordered_set<const PhvInfo::Field *> remove_set;
     for (auto &f : fields) {
         if (f->ccgf && f->ccgf != f) {
             // no separate allocation required for ccgf members, remove field
             remove_set.insert(f);
             continue;
         }
-        std::stringstream ss;
-        ss << cluster_num++;
-        std::string id = "phv_bind" + ss.str();
         if (uses_i->use[1][f->gress][f->id]) {
             // used in MAU
-            phv_clusters.push_back(new Cluster_PHV(f, id));
+            phv_clusters.push_back(new Cluster_PHV(f, cluster_num, "phv_bind_phv_"));
+            cluster_num++;
         } else {
             if (uses_i->use[0][f->gress][f->id]) {
                 // used in parser / deparser
-                t_phv_clusters.push_back(new Cluster_PHV(f, id));
+                t_phv_clusters.push_back(new Cluster_PHV(f, cluster_num, "phv_bind_t_phv_"));
+                cluster_num++;
             } else {
                 // no allocation required, remove field
                 remove_set.insert(f);
@@ -176,7 +182,7 @@ PHV_Bind::phv_tphv_allocate(std::set<const PhvInfo::Field *>& fields) {
         }
     }
     for (auto &f : remove_set) {
-        fields.erase(f);
+        fields.remove(f);
     }
     if (phv_clusters.size()) {
         phv_mau_i.container_pack_cohabit(
@@ -203,8 +209,8 @@ PHV_Bind::bind_fields_to_containers() {
         f1->alloc.clear();
         // ccgf members
         if (f1->ccgf_fields.size()) {
-            for (auto &pov_f : f1->ccgf_fields) {
-                pov_f->alloc.clear();
+            for (auto &m : f1->ccgf_fields) {
+                m->alloc.clear();
             }
         }
     }
@@ -213,7 +219,10 @@ PHV_Bind::bind_fields_to_containers() {
             PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(cc->field());
             int field_bit = cc->field_bit_lo();
             int container_bit = cc->lo();
-            int width_in_container = cc->width();
+            int width_in_container =
+                    cc->field()->mau_phv_no_pack && !cc->field()->deparser_no_pack?
+                    const_cast<PHV_Container *>(c)->width():
+                    cc->width();
             PHV::Container *asm_container = phv_to_asm_map_i[c];
             //
             // ignore allocation for owners of
@@ -345,12 +354,12 @@ PHV_Bind::container_contiguous_alloc(
 }  // container_contiguous_alloc
 
 void
-PHV_Bind::trivial_allocate(std::set<const PhvInfo::Field *>& fields) {
+PHV_Bind::trivial_allocate(std::list<const PhvInfo::Field *>& fields) {
     //
     // trivially allocating overflow fields
     //
     LOG3("********** Overflow Allocation **********");
-    std::map<PHV_Container::PHV_Word, int> overflow_reg {
+    ordered_map<PHV_Container::PHV_Word, int> overflow_reg {
         {PHV_Container::PHV_Word::b32, 64},
         {PHV_Container::PHV_Word::b16, 224},
         {PHV_Container::PHV_Word::b8,  128},
@@ -464,7 +473,7 @@ void PHV_Bind::sanity_check_field_duplicate_containers(
     const std::string msg_1 = msg+"PHV_Bind::sanity_check_field_duplicate_containers";
     //
     for (auto &f : fields_i) {
-        std::set<int> hi_s;
+        ordered_set<int> hi_s;
         for (auto &as : f->alloc) {
             if (hi_s.count(as.field_bit)) {
                 LOG1(std::endl

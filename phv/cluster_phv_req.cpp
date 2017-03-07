@@ -33,11 +33,9 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
     //
     int cluster_num = 0;
     for (auto &set_of_fields : Values(cluster_i.dst_map())) {
-        std::stringstream ss;
-        ss << cluster_num++;
-        std::string id = "phv_" + ss.str();
-        Cluster_PHV *m = new Cluster_PHV(set_of_fields, id);
+        Cluster_PHV *m = new Cluster_PHV(set_of_fields, cluster_num, "phv_");
         Cluster_PHV_i.push_back(m);
+        cluster_num++;
     }
     //
     // cluster PHV requirement = [qty, width]
@@ -50,19 +48,34 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
                 if (l->max_width() == r->max_width()) {
                     if (l->cluster_vec().size() == r->cluster_vec().size()) {
                         // sort by uniform_width first
+                        if (l->uniform_width() == true && r->uniform_width() == true) {
+                            // sort by cluster id_num to prevent non-determinism
+                            return l->id_num() < r->id_num();
+                        }
+                        if (l->uniform_width() == true && r->uniform_width() == false) {
+                            // sort by cluster id_num to prevent non-determinism
+                            return true;
+                        }
+                        if (l->uniform_width() == false && r->uniform_width() == true) {
+                            // sort by cluster id_num to prevent non-determinism
+                            return false;
+                        }
                         if (l->uniform_width() == false && r->uniform_width() == false) {
                             // same size, descending widths <2:_16_10> <2:_16_9> <2:_16_5>
-                            auto differ = std::mismatch(l->cluster_vec().begin(),
-                                                        l->cluster_vec().end(),
-                                                        r->cluster_vec().begin(),
-                                                        [](const PhvInfo::Field *f1,
-                                                           const PhvInfo::Field *f2) {
-                                                               return f1->phv_use_width()
-                                                                   == f2->phv_use_width();
-                                                         });
-                            return *differ.first >= *differ.second;
+                            int lf_phv_use_width = 0;
+                            for (auto &lf : l->cluster_vec()) {
+                                lf_phv_use_width += lf->phv_use_width();
+                            }
+                            int rf_phv_use_width = 0;
+                            for (auto &rf : r->cluster_vec()) {
+                                rf_phv_use_width += rf->phv_use_width();
+                            }
+                            if (lf_phv_use_width == rf_phv_use_width) {
+                                // sort by cluster id_num to prevent non-determinism
+                                return l->id_num() < r->id_num();
+                            }
+                            return lf_phv_use_width >= rf_phv_use_width;
                         }
-                        return l->uniform_width() == true && r->uniform_width() == false;
                     }
                     return l->cluster_vec().size() > r->cluster_vec().size();
                 }
@@ -81,10 +94,8 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
     // sort based on width requirement, greatest width first
     //
     for (auto p : cluster_i.pov_fields_not_in_cluster()) {
-        std::stringstream ss;
-        ss << cluster_num++;
-        std::string id = "pov_" + ss.str();
-        pov_fields_i.push_back(new Cluster_PHV(p, id));
+        pov_fields_i.push_back(new Cluster_PHV(p, cluster_num, "pov_"));
+        cluster_num++;
     }
     std::sort(pov_fields_i.begin(), pov_fields_i.end(),
         [](Cluster_PHV *l, Cluster_PHV *r) {
@@ -94,6 +105,10 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
             int r_range = fr->phv_use_hi - fr->phv_use_lo;
             if (l_range == r_range) {
                 if (fl->phv_use_width() == fr->phv_use_width()) {
+                    if (fl->size == fr->size) {
+                        // sort by cluster id_num to prevent non-determinism
+                        return l->id_num() < r->id_num();
+                    }
                     return fl->size > fr->size;
                 }
                 return fl->phv_use_width() > fr->phv_use_width();
@@ -105,10 +120,8 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
     // sort based on width requirement, greatest width first
     //
     for (auto p : cluster_i.fields_no_use_mau()) {
-        std::stringstream ss;
-        ss << cluster_num++;
-        std::string id = "tphv_" + ss.str();
-        t_phv_fields_i.push_back(new Cluster_PHV(p, id));
+        t_phv_fields_i.push_back(new Cluster_PHV(p, cluster_num, "t_phv_"));
+        cluster_num++;
     }
     std::sort(t_phv_fields_i.begin(), t_phv_fields_i.end(),
         [](Cluster_PHV *l, Cluster_PHV *r) {
@@ -118,6 +131,10 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
             int r_range = fr->phv_use_hi - fr->phv_use_lo;
             if (l_range == r_range) {
                 if (fl->phv_use_width() == fr->phv_use_width()) {
+                    if (fl->size == fr->size) {
+                        // sort by cluster id_num to prevent non-determinism
+                        return l->id_num() < r->id_num();
+                    }
                     return fl->size > fr->size;
                 }
                 return fl->phv_use_width() > fr->phv_use_width();
@@ -144,13 +161,19 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
 
 Cluster_PHV::Cluster_PHV(
     ordered_set<const PhvInfo::Field *> *p,
+    const int id_n,
     std::string id_p)
     : cluster_vec_i(p->begin(), p->end()),
-      id_i(id_p) {
+      id_num_i(id_n) {
     //
     if (!p) {
         LOG1("*****Cluster_PHV called w/ nullptr cluster_set******");
     }
+    // set string id for cluster
+    //
+    std::stringstream ss;
+    ss << id_n;
+    id_i = id_p + ss.str();
     //
     // set gress for this cluster
     // ignore gress of temp vars ($tmp1, $tmp2, ....)
@@ -203,7 +226,7 @@ Cluster_PHV::compute_requirements() {
         //
         auto scale_down = 0;
         for (auto &pfield : cluster_vec_i) {
-            if (pfield->phv_use_width() * 2 <= max_width_i) {
+            if (pfield->phv_use_width() * 2 <= container_width(max_width_i)) {
                 scale_down++;
             }
         }
@@ -212,17 +235,8 @@ Cluster_PHV::compute_requirements() {
         }
     }
     // container width
-    if (width_req > PHV_Container::PHV_Word::b16) {
-        width_i = PHV_Container::PHV_Word::b32;
-    } else {
-        if (width_req > PHV_Container::PHV_Word::b8) {
-            width_i = PHV_Container::PHV_Word::b16;
-        } else {
-            width_i = PHV_Container::PHV_Word::b8;
-        }
-    }
+    width_i = container_width(width_req);
     // num containers of width
-    //
     num_containers_i = num_containers(cluster_vec_i, width_i);
     //
     // count constrained fields
@@ -234,6 +248,22 @@ Cluster_PHV::compute_requirements() {
             num_fields_no_cohabit_i++;
         }
     }
+}
+
+//
+// given width of field, return container width required
+//
+PHV_Container::PHV_Word
+Cluster_PHV::container_width(int field_width) {
+    //
+    if (field_width > PHV_Container::PHV_Word::b16) {
+        return PHV_Container::PHV_Word::b32;
+    } else {
+        if (field_width > PHV_Container::PHV_Word::b8) {
+            return PHV_Container::PHV_Word::b16;
+        }
+    }
+    return PHV_Container::PHV_Word::b8;
 }
 
 //
@@ -250,12 +280,14 @@ Cluster_PHV::num_containers(
     //
     // num containers of width
     int num_containers = 0;
-    for (auto pfield : cluster_vec) {
+    for (auto &pfield : cluster_vec) {
+        //
         // fields can span containers  (e.g., 48b = 2*32b or 3*16b = 6*8b)
         // no sharing of containers with cohabitant fields
         // sharing needs analyses:
         // (i)  container single-write table interference
         // (ii) surround interference
+        //
         num_containers += pfield->phv_use_width() / width
                        + (pfield->phv_use_width() % width? 1 : 0);
     }
@@ -369,24 +401,6 @@ std::ostream &operator<<(std::ostream &out, std::vector<Cluster_PHV *> &cluster_
     return out;
 }
 
-// std::map
-std::ostream &operator<<(
-    std::ostream &out,
-    std::map<int, std::vector<Cluster_PHV *>>& phv_req_map) {
-    //
-    for (auto rit = phv_req_map.rbegin(); rit != phv_req_map.rend(); ++rit) {
-        // print key <number> of phv_req_map
-        out << '[' << rit->first << "]*" << rit->second.size() << "   \t= ";
-        // summarize clusters
-        for (auto &cp : rit->second) {
-            // cluster summary
-            out << *cp << ' ';
-        }
-        out << std::endl;
-    }
-    return out;
-}
-
 // ordered_map
 std::ostream &operator<<(
     std::ostream &out,
@@ -406,7 +420,7 @@ std::ostream &operator<<(
 }
 
 std::ostream &operator<<(std::ostream &out,
-    std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& print_map) {
+    ordered_map<PHV_Container::PHV_Word, ordered_map<int, std::vector<Cluster_PHV *>>>& print_map) {
     //
     for (auto rit = print_map.rbegin();
         rit != print_map.rend();
@@ -446,8 +460,8 @@ std::ostream &operator<<(std::ostream &out, Cluster_PHV_Requirements &phv_requir
         << std::endl
         << std::endl;
     //
-    std::map<PHV_Container::PHV_Word,
-         std::map<int, std::vector<Cluster_PHV *>>> print_map;
+    ordered_map<PHV_Container::PHV_Word,
+         ordered_map<int, std::vector<Cluster_PHV *>>> print_map;
     print_map.clear();
     for (auto &cl : phv_requirements.cluster_phv_fields()) {
         print_map[cl->width()][cl->num_containers()].push_back(cl);

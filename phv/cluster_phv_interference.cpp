@@ -129,7 +129,7 @@ PHV_Interference::interference_reduction(
         // assign ownership to containers
         // for overlaps, entry in field_overlay_map[owner][reg#]
         //
-        std::map<int, const PhvInfo::Field*> reg_map;  // register r owner field
+        ordered_map<int, const PhvInfo::Field*> reg_map;  // register r owner field
         reg_map.clear();
         for (auto &f : cl->cluster_vec()) {
             assign_virtual_container(cl, f, reg_map);
@@ -180,7 +180,7 @@ void
 PHV_Interference::virtual_container_overlay(
     Cluster_PHV *cl,
     const PhvInfo::Field *field,
-    std::map<int, const PhvInfo::Field*>& reg_map,
+    ordered_map<int, const PhvInfo::Field*>& reg_map,
     const int r) {
     if (reg_map[r]) {
         //
@@ -200,7 +200,7 @@ void
 PHV_Interference::assign_virtual_container(
     Cluster_PHV *cl,
     const PhvInfo::Field *field,
-    std::map<int, const PhvInfo::Field*>& reg_map) {
+    ordered_map<int, const PhvInfo::Field*>& reg_map) {
     //
     // assign color(s) to field such that they don't conflict with neighbors
     //
@@ -286,7 +286,7 @@ void PHV_Interference::sanity_check_interference(
 }
 
 void PHV_Interference::sanity_check_overlay_maps(
-    std::map<int, const PhvInfo::Field*>& reg_map,
+    ordered_map<int, const PhvInfo::Field*>& reg_map,
     Cluster_PHV *cl,
     const std::string& msg) {
     //
@@ -304,7 +304,7 @@ void PHV_Interference::sanity_check_overlay_maps(
     //
     // ownership in field_overlay_map has unique registers
     //
-    std::map<int, const PhvInfo::Field*> reg_owner;
+    ordered_map<int, const PhvInfo::Field*> reg_owner;
     int num_overlays = 0;
     for (auto &entry : cl->field_overlay_map()) {
         for (auto &entry_2 : entry.second) {
@@ -343,7 +343,7 @@ void PHV_Interference::sanity_check_overlay_maps(
 //
 //
 
-std::ostream &operator<<(std::ostream &out, std::map<int, const PhvInfo::Field*>& reg_map) {
+std::ostream &operator<<(std::ostream &out, ordered_map<int, const PhvInfo::Field*>& reg_map) {
     for (auto &r : reg_map) {
         out << "\treg[" << r.first << "] --> "
             << r.second
