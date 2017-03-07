@@ -212,7 +212,8 @@ class bfs_happens_before_visitor : public boost::default_bfs_visitor {
         happens_not_after[dst].insert(src);
 
         happens_before_map[dst] |= happens_before_map[src];
-        if (g[e] != DependencyGraph::ANTI) {
+        if (g[e] != DependencyGraph::ANTI &&
+            g[e] != DependencyGraph::CONTROL) {
             happens_before_map[dst].insert(src);
         }
     }
@@ -234,10 +235,11 @@ class bfs_depth_visitor : public boost::default_bfs_visitor {
         src = boost::source(e, g);
         dst = boost::target(e, g);
 
-        // Tables with anti-dependences (write-after-read) can be places in the
-        // same stage, so don't increment the min stage in that case.
+        // Tables with anti-dependencies (write-after-read) and control
+        // dependencies can be placed in the same stage, so don't increment the
+        // min stage in that case.
         int count = counts[src];
-        if (g[e] != DependencyGraph::ANTI)
+        if (g[e] != DependencyGraph::ANTI && g[e] != DependencyGraph::CONTROL)
             count++;
 
         counts[dst] = std::max(count, counts[dst]);
