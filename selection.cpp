@@ -93,7 +93,7 @@ void SelectionTable::pass1() {
     if (max_words > 1) {
         stage->table_use[gress] |= Stage::USE_WIDE_SELECTOR;
         for (auto &hd : hash_dist)
-            hd.xbar_use = HashDistribution::HASHMOD_DIVIDEND; }
+            hd.xbar_use |= HashDistribution::HASHMOD_DIVIDEND; }
     for (auto &hd : hash_dist)
         hd.pass1(this);
 }

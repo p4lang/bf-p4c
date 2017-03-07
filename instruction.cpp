@@ -40,7 +40,7 @@ struct operand {
         virtual void dbprint(std::ostream &) const = 0;
         virtual bool equiv(const Base *) const = 0;
         virtual void phvRead(std::function<void (const ::Phv::Slice &sl)>) {}
-        virtual void pass2(Table *, int) const {}
+        virtual void pass2(int) const {}
     } *op;
     struct Const : Base {
         long            value;
@@ -116,7 +116,7 @@ struct operand {
             else
                 return 0x20 + byte/size;
             return -1; }
-        virtual void pass2(Table *, int group) const {
+        virtual void pass2(int group) const {
             unsigned bits = group_size[group];
             unsigned bytes = bits/8U;
             if (field && table->find_on_actionbus(field, lo, bytes) < 0) {
@@ -153,6 +153,75 @@ struct operand {
         int bits(int group) { return 0x40 + index; }
         virtual unsigned bitoffset(int group) const { return offset; }
         void dbprint(std::ostream &out) const { out << 'A' << index; }
+    };
+    struct HashDist : Base {
+        Table                           *table;
+        std::vector<HashDistribution *> dist;
+
+        HashDist(int line, Table *t) : Base(line), table(t) {}
+        HashDist(int line, Table *t, int unit) : Base(line), table(t) {
+            if (auto hd = table->find_hash_dist(unit))
+                dist.push_back(hd);
+            else
+                error(lineno, "No hash dist %d in table %s", unit, table->name()); }
+        static HashDist *parse(Table *tbl, const VECTOR(value_t) &v) {
+            if (v.size < 2 || v[0] != "hash_dist") return nullptr;
+            auto *rv = new HashDist(v[0].lineno, tbl);
+            for (int i = 1; i < v.size; ++i) {
+                if (CHECKTYPE(v[i], tINT)) {
+                    if (auto hd = tbl->find_hash_dist(v[i].i)) {
+                        rv->dist.push_back(hd);
+                        continue;
+                    } else
+                        error(rv->lineno, "No hash_dist %d in table %s", v[i].i, tbl->name()); }
+                delete rv;
+                return nullptr; }
+            return rv; }
+
+        bool equiv(const Base *a_) const override {
+            if (auto *a = dynamic_cast<const HashDist *>(a_)) {
+                return table == a->table && dist == a->dist;
+            } else return false; }
+        virtual HashDist *clone() override { return new HashDist(*this); }
+        virtual void pass2(int group) const override {
+            if (dist.size() > 2) {
+                error(lineno, "Can't use more than 2 hash_dist units together in an action");
+                return; }
+            int size = group_size[group]/8U;
+            if (dist.size() == 2) {
+                if (size != 4)
+                    error(lineno, "Can't combine hash_dist units in %d bit operation", size*8);
+                dist.at(0)->xbar_use |= HashDistribution::IMMEDIATE_LOW;
+                dist.at(1)->xbar_use |= HashDistribution::IMMEDIATE_HIGH;
+            } else if (!(dist.at(0)->xbar_use & HashDistribution::IMMEDIATE_HIGH))
+                dist.at(0)->xbar_use |= HashDistribution::IMMEDIATE_LOW;
+            int offset = 0;
+            for (auto hd : dist) {
+                if (!(hd->xbar_use & HashDistribution::IMMEDIATE_LOW))
+                    offset = 16;
+                if (table->find_on_actionbus(hd, offset, size) < 0)
+                    table->need_on_actionbus(hd, offset, size);
+                offset = 16; } }
+        virtual int bits(int group) override { 
+            int size = group_size[group]/8U;
+            int offset = dist.at(0)->xbar_use & HashDistribution::IMMEDIATE_LOW ? 0 : 16;
+            int byte = table->find_on_actionbus(dist.at(0), offset, size);
+            if (byte < 0) {
+                error(lineno, "hash dist %d is not on the action bus", dist.at(0)->id);
+                return -1; }
+            if (size == 2) byte -= 32;
+            if (byte >= 0 || byte < 32*size)
+                return 0x20 + byte/size;
+            error(lineno, "action bus entry %d(hash_dist %d) out of range for %d-bit access",
+                  size == 2 ? byte+32 : byte, dist.at(0)->id, size*8);
+            return -1; }
+        virtual void dbprint(std::ostream &out) const {
+            out << "hash_dist(";
+            const char *sep = "";
+            for (auto hd : dist) {
+                out << sep << hd->id;
+                sep = ", "; }
+            out << ")"; }
     };
     struct Named : Base {
         std::string     name;
@@ -221,7 +290,9 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
         std::string name = v.type == tSTR ? v.s : v[0].s;
         int lo = -1, hi = -1;
         if (v.type == tCMD) {
-            if (!CHECKTYPE2(v[1], tINT, tRANGE)) return;
+            if (v == "hash_dist" && (op = HashDist::parse(tbl, v.vec)))
+                return;
+            if (!PCHECKTYPE2(v.vec.size == 2, v[1], tINT, tRANGE)) return;
             if (v[1].type == tINT) lo = hi = v[1].i;
             else {
                 lo = v[1].lo;
@@ -261,11 +332,15 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
     } else if (tbl->find_on_actionbus(name, 0, 7, &len) >= 0) {
         ref = new Action(lineno, name, tbl, 0, lo >= 0 ? lo : 0,
                          hi >= 0 ? hi : len - 1);
-    } else if (!::Phv::get(tbl->gress, name) && sscanf(name.c_str(), "A%d%n", &slot, &len) >= 1 &&
-               len == (int)name.size() && slot >= 0 && slot < 32)
-        ref = new RawAction(lineno, slot, lo >= 0 ? lo : 0);
-    else
+    } else if (::Phv::get(tbl->gress, name)) {
         ref = new Phv(lineno, tbl->gress, name, lo, hi);
+    } else if (sscanf(name.c_str(), "A%d%n", &slot, &len) >= 1 &&
+               len == (int)name.size() && slot >= 0 && slot < 32) {
+        ref = new RawAction(lineno, slot, lo >= 0 ? lo : 0);
+    } else if (name == "hash_dist" && lo == hi) {
+        ref = new HashDist(lineno, tbl, lo);
+    } else {
+        ref = new Phv(lineno, tbl->gress, name, lo, hi); }
     if (ref != this) delete this;
     return ref;
 }
@@ -342,8 +417,8 @@ struct AluOP : VLIWInstruction {
       src1(tbl, act, s1), src2(tbl, act, s2) {}
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {
-        src1->pass2(tbl, slot/16);
-        src2->pass2(tbl, slot/16); }
+        src1->pass2(slot/16);
+        src2->pass2(slot/16); }
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
@@ -493,8 +568,8 @@ struct CondMoveMux : VLIWInstruction {
       src2(tbl, act, s2) {}
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {
-        src1->pass2(tbl, slot/16);
-        src2->pass2(tbl, slot/16); }
+        src1->pass2(slot/16);
+        src2->pass2(slot/16); }
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
@@ -575,8 +650,8 @@ struct DepositField : VLIWInstruction {
     DepositField(const Set &);
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {
-        src1->pass2(tbl, slot/16);
-        src2->pass2(tbl, slot/16); }
+        src1->pass2(slot/16);
+        src2->pass2(slot/16); }
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {
@@ -654,7 +729,7 @@ struct Set : VLIWInstruction {
     Set(Table *tbl, const Table::Actions::Action *act, const value_t &d, const value_t &s)
         : VLIWInstruction(d.lineno), dest(tbl->gress, d), src(tbl, act, s) {}
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
-    void pass2(Table *tbl, Table::Actions::Action *) { src->pass2(tbl, slot/16); }
+    void pass2(Table *tbl, Table::Actions::Action *) { src->pass2(slot/16); }
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) { src.phvRead(fn); }
@@ -775,8 +850,8 @@ struct ShiftOP : VLIWInstruction {
                     if (CHECKTYPE(ops[2], tINT)) shift = ops[2].i; } }
     Instruction *pass1(Table *tbl, Table::Actions::Action *);
     void pass2(Table *tbl, Table::Actions::Action *) {
-        src1->pass2(tbl, slot/16);
-        src2->pass2(tbl, slot/16); }
+        src1->pass2(slot/16);
+        src2->pass2(slot/16); }
     int encode();
     bool equiv(Instruction *a_);
     void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) {

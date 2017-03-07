@@ -342,11 +342,14 @@ public:
     virtual void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn)
         { if (format) format->apply_to_field(n, fn); }
     int find_on_ixbar(Phv::Slice sl, int group);
+    HashDistribution *find_hash_dist(int unit);
     virtual int find_on_actionbus(Format::Field *f, int off, int size);
     virtual void need_on_actionbus(Format::Field *f, int off, int size);
     virtual int find_on_actionbus(const char *n, int off, int size, int *len = 0);
     int find_on_actionbus(const std::string &n, int off, int size, int *len = 0) {
         return find_on_actionbus(n.c_str(), off, size, len); }
+    virtual int find_on_actionbus(HashDistribution *hd, int off, int size);
+    virtual void need_on_actionbus(HashDistribution *hd, int off, int size);
     virtual Call &action_call() { return action; }
     virtual Actions *get_actions() { return actions; }
     json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries = -1);

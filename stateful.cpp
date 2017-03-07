@@ -18,10 +18,7 @@ void Stateful::setup(VECTOR(pair_t) &data) {
             if (CHECKTYPE(kv.value, tMAP))
                 input_xbar = new InputXbar(this, false, kv.value.map);
         } else if (kv.key == "hash_dist") {
-            HashDistribution::parse(hash_dist, kv.value);
-            for (auto &hd : hash_dist) hd.meter_pre_color = true;
-            if (hash_dist.size() > 1)
-                error(kv.key.lineno, "More than one hast_dist in a stateful table not supported");
+            /* parsed in common_init_setup */
         } else if (kv.key == "actions") {
             if (CHECKTYPE(kv.value, tMAP))
                 actions = new Actions(this, kv.value.map);

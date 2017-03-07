@@ -1,7 +1,27 @@
 #include "hash_dist.h"
 #include "stage.h"
+#include "range.h"
 
-HashDistribution::HashDistribution(int id_, value_t &data, int u)
+static void set_output_bit(unsigned &xbar_use, value_t &v) {
+    if (CHECKTYPE(v, tSTR)) {
+        if (v == "immediate_lo" || v == "lo")
+            xbar_use |= HashDistribution::IMMEDIATE_LOW;
+        else if (v == "immediate_hi" || v == "hi")
+            xbar_use |= HashDistribution::IMMEDIATE_HIGH;
+        else if (v == "meter" || v == "meter_address")
+            xbar_use |= HashDistribution::METER_ADDRESS;
+        else if (v == "stats" || v == "stats_address")
+            xbar_use |= HashDistribution::STATISTICS_ADDRESS;
+        else if (v == "action" || v == "action_address")
+            xbar_use |= HashDistribution::ACTION_DATA_ADDRESS;
+        else if (v == "hashmod")
+            xbar_use |= HashDistribution::HASHMOD_DIVIDEND;
+        else
+            error(v.lineno, "Unrecognized hash_dist output %s", v.s);
+    }
+}
+
+HashDistribution::HashDistribution(int id_, value_t &data, unsigned u)
     : lineno(data.lineno), id (id_), xbar_use(u)
 {
     if (id < 0 || id >= 6)
@@ -20,12 +40,19 @@ HashDistribution::HashDistribution(int id_, value_t &data, int u)
             } else if (kv.key == "expand") {
                 if (CHECKTYPE(kv.value, tINT))
                     expand = kv.value.i;
+            } else if (kv.key == "output") {
+                if (kv.value.type == tVEC)
+                    for (auto &s : kv.value.vec)
+                        set_output_bit(xbar_use, s);
+                else
+                    set_output_bit(xbar_use, kv.value);
             } else
                 warning(kv.key.lineno, "ignoring unknown item %s in hash_dist",
                         value_desc(kv.key)); }
 }
 
-void HashDistribution::parse(std::vector<HashDistribution> &out, const value_t &data, int xbar_use) {
+void HashDistribution::parse(std::vector<HashDistribution> &out, const value_t &data,
+                             unsigned xbar_use) {
     if (CHECKTYPE(data, tMAP))
         for (auto &kv : data.map)
             if (CHECKTYPE(kv.key, tINT))
@@ -39,7 +66,6 @@ bool HashDistribution::compatible(HashDistribution *a) {
     if (expand != a->expand) return false;
     if (meter_pre_color && !a->meter_pre_color && (mask & ~a->mask)) return false;
     if (!meter_pre_color && a->meter_pre_color && (~mask & a->mask)) return false;
-    if (xbar_use != NONE && a->xbar_use != NONE && xbar_use != a->xbar_use) return false;
     return true;
 }
 
@@ -111,9 +137,13 @@ void HashDistribution::write_regs(Table *tbl, int type, bool non_linear) {
         merge.mau_hash_group_expand[id/3].hash_slice_group2_expand = expand - 7;
         break;
     default: assert(0); }
-    if (xbar_use >= 0)
-        merge.mau_hash_group_xbar_ctl[xbar_use][tbl->logical_id/8U].set_subfield(
-            8|id, 4*(tbl->logical_id%8U), 4);
+    for (int oxbar : Range(0, 4))
+        if ((xbar_use >> oxbar) & 1) 
+            merge.mau_hash_group_xbar_ctl[oxbar][tbl->logical_id/8U].set_subfield(
+                8|id, 4*(tbl->logical_id%8U), 4);
+    if (xbar_use & HASHMOD_DIVIDEND) {
+        int mgroup = tbl->get_selector()->meter_group();
+        merge.mau_hash_group_xbar_ctl[5][mgroup/8U].set_subfield(8|id, 4*(mgroup%8U), 4); }
     if (meter_pre_color) {
         merge.mau_meter_precolor_hash_sel.set_subfield(8|id, 4 * (id/3), 4);
         int ctl = 16 | meter_mask_index;

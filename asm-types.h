@@ -147,6 +147,10 @@ inline void fini(VECTOR(pair_t) &v) { VECTOR_foreach(v, free_pair); VECTOR_fini(
     ((V).type == (T1) || (V).type == (T2) || \
      (error((V).lineno, "Syntax error, expecting %s or %s", \
             value_type_desc[T1], value_type_desc[T2]), 0))
+#define PCHECKTYPE2(P, V, T1, T2) \
+    (((P) && ((V).type == (T1) || (V).type == (T2))) || \
+     (error((V).lineno, "Syntax error, expecting %s or %s", \
+            value_type_desc[T1], value_type_desc[T2]), 0))
 #define CHECKTYPE2M(V, T1, T2, M) \
     ((V).type == (T1) || (V).type == (T2) || \
      (error((V).lineno, "Syntax error, expecting %s", M), 0))

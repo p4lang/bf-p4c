@@ -97,7 +97,7 @@ void ExactMatchTable::pass1() {
         assert(action.args.size() == 0);
         if (auto *sel = lookup_field("action"))
             action.args.push_back(sel);
-        else if (actions->count() > 1)
+        else if (actions->count() > 1 && format)
             error(lineno, "No field 'action' to select between mulitple actions in "
                   "table %s format", name());
         actions->pass1(this);

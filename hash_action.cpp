@@ -43,8 +43,8 @@ void HashActionTable::pass1() {
     if (input_xbar)
         input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
     for (auto &hd : hash_dist) {
-        if (hd.xbar_use == HashDistribution::NONE)
-            hd.xbar_use = HashDistribution::ACTION_DATA_ADDRESS;
+        if (hd.xbar_use == 0)
+            hd.xbar_use |= HashDistribution::ACTION_DATA_ADDRESS;
         hd.pass1(this); }
     if (gateway) {
         gateway->logical_id = logical_id;

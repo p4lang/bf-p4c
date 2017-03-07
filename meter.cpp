@@ -26,7 +26,7 @@ void MeterTable::setup(VECTOR(pair_t) &data) {
                     if (CHECKTYPE(*vpn, tVEC))
                         setup_vpns(color_maprams, &vpn->vec, true); }
         } else if (kv.key == "hash_dist") {
-            HashDistribution::parse(hash_dist, kv.value);
+            // parsed in common_init_setup
             for (auto &hd : hash_dist) hd.meter_pre_color = true;
             if (hash_dist.size() > 1)
                 error(kv.key.lineno, "More than one hast_dist in a meter table not supported");

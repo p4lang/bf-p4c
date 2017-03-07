@@ -19,11 +19,11 @@ struct HashDistribution {
     int         shift = 0, mask = 0, expand = -1;
     bool        meter_pre_color = false;
     int         meter_mask_index;
-    enum { NONE=-1, IMMEDIATE_HIGH=0, IMMEDIATE_LOW=1, METER_ADDRESS=2, STATISTICS_ADDRESS=3,
-           ACTION_DATA_ADDRESS=4, HASHMOD_DIVIDEND=5 };
-    int         xbar_use = NONE;
-    HashDistribution(int id, value_t &data, int u=NONE);
-    static void parse(std::vector<HashDistribution> &out, const value_t &v, int u=NONE);
+    enum { IMMEDIATE_HIGH=1<<0, IMMEDIATE_LOW=1<<1, METER_ADDRESS=1<<2, STATISTICS_ADDRESS=1<<3,
+           ACTION_DATA_ADDRESS=1<<4, HASHMOD_DIVIDEND=1<<5 };
+    unsigned    xbar_use = 0;
+    HashDistribution(int id, value_t &data, unsigned  u=0);
+    static void parse(std::vector<HashDistribution> &out, const value_t &v, unsigned u=0);
     bool compatible(HashDistribution *a);
     void pass1(Table *tbl);
     void write_regs(Table *, int, bool);

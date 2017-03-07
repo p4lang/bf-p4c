@@ -262,6 +262,8 @@ void Table::common_init_setup(const VECTOR(pair_t) &data, bool, P4Table::type) {
     if (auto *fmt = get(data, "format")) {
         if (CHECKTYPEPM(*fmt, tMAP, fmt->map.size > 0, "non-empty map"))
             format = new Format(fmt->map); }
+    if (auto *hd = get(data, "hash_dist"))
+        HashDistribution::parse(hash_dist, *hd);
 }
 
 bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p4type) {
@@ -330,8 +332,6 @@ void MatchTable::common_init_setup(const VECTOR(pair_t) &data, bool ternary, P4T
     if (auto *ixbar = get(data, "input_xbar")) {
         if (CHECKTYPE(*ixbar, tMAP))
             input_xbar = new InputXbar(this, ternary, ixbar->map); }
-    if (auto *hd = get(data, "hash_dist"))
-        HashDistribution::parse(hash_dist, *hd);
 }
 
 bool MatchTable::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p4type) {
@@ -1027,13 +1027,8 @@ void MatchTable::write_regs(int type, Table *result) {
                 shift_en.action_instruction_adr_payload_shifter_en = 1;
             } else {
                 merge.mau_action_instruction_adr_mask[type][bus] = 0;
-                if (actions->count() > 0) {
-                    if (actions->count() > 1) {
-                        /* FIXME -- if there's more than one action and no overhead bits to
-                         * select, which should be the one used by the table?  We use the first */
-                        warning(actions->begin()->lineno, "More than one possible action, but no "
-                                "action in table %s overhead", name()); }
-                    default_action |= actions->begin()->code; }
+                if (actions->count() == 1)
+                    default_action |= actions->begin()->code;
                 if (options.match_compiler)
                     shift_en.action_instruction_adr_payload_shifter_en = 1; }
             merge.mau_action_instruction_adr_default[type][bus] = default_action;
@@ -1161,6 +1156,22 @@ void Table::write_mapram_regs(int row, int col, int vpn, int type) {
         stage->regs.cfg_regs.mau_cfg_mram_thread[col/3U] |= 1U << (col%3U*8U + row);
 }
 
+HashDistribution *Table::find_hash_dist(int unit) {
+    for (auto &hd : hash_dist)
+        if (hd.id == unit)
+            return &hd;
+    for (auto t : get_match_tables())
+        for (auto &hd : t->hash_dist)
+            if (hd.id == unit)
+                return &hd;
+    if (auto *a = get_attached())
+        for (auto &call : a->meter)
+            for (auto &hd : call->hash_dist)
+                if (hd.id == unit)
+                    return &hd;
+    return nullptr;
+}
+
 int Table::find_on_actionbus(Format::Field *f, int off, int size) {
     return action_bus ? action_bus->find(f, off, size) : -1;
 }
@@ -1171,6 +1182,14 @@ void Table::need_on_actionbus(Format::Field *f, int off, int size) {
 
 int Table::find_on_actionbus(const char *name, int off, int size, int *len) {
     return action_bus ? action_bus->find(name, off, size, len) : -1;
+}
+
+int Table::find_on_actionbus(HashDistribution *hd, int off, int size) {
+    return action_bus ? action_bus->find(hd, off, size) : -1;
+}
+
+void Table::need_on_actionbus(HashDistribution *hd, int off, int size) {
+    if (action_bus) action_bus->need_alloc(this, hd, off, size);
 }
 
 int Table::find_on_ixbar(Phv::Slice sl, int group) {
@@ -1260,7 +1279,7 @@ void AttachedTables::pass1(MatchTable *self) {
         if (s.args.size() > 1)
             error(s.lineno, "Stats table requires zero or one args");
         if (s.args.size() > 0 && s.args[0].hash_dist())
-            s.args[0].hash_dist()->xbar_use = HashDistribution::STATISTICS_ADDRESS;
+            s.args[0].hash_dist()->xbar_use |= HashDistribution::STATISTICS_ADDRESS;
         else if (s.args != stats[0].args)
             error(s.lineno, "Must pass same args to all stats tables in a single table");
         if (s->stage != self->stage)
@@ -1274,7 +1293,7 @@ void AttachedTables::pass1(MatchTable *self) {
         if (m.args.size() > 1)
             error(m.lineno, "Meter table requires zero or one args");
         if (m.args.size() > 0 && m.args[0].hash_dist())
-            m.args[0].hash_dist()->xbar_use = HashDistribution::METER_ADDRESS;
+            m.args[0].hash_dist()->xbar_use |= HashDistribution::METER_ADDRESS;
         else if (m.args != meter[0].args)
             error(m.lineno, "Must pass same args to all meter tables in a single table");
         if (m->stage != self->stage)
