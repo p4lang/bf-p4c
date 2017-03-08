@@ -333,7 +333,7 @@ void GatewayTable::payload_write_regs(int row, int type, int bus) {
             merge.gateway_payload_tind_pbus[row] |= 1 << bus;
         else
             merge.gateway_payload_exact_pbus[row] |= 1 << bus;
-        if (options.match_compiler) {
+        if (options.match_compiler || 1) {
             /* working around a problem in the harlyn model */
             merge.gateway_payload_data[row][bus][0][type^1] = payload & 0xffffffff;
             merge.gateway_payload_data[row][bus][1][type^1] = payload >> 32; }
