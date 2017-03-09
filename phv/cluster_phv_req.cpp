@@ -37,45 +37,41 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
         ss << cluster_num++;
         std::string id = "phv_" + ss.str();
         Cluster_PHV *m = new Cluster_PHV(p, id);
-        Cluster_PHV_i[m->width()][m->num_containers()].push_back(m);
+        Cluster_PHV_i.push_back(m);
     }
     //
     // cluster PHV requirement = [qty, width]
     // sort based on width requirement, greatest width first
     // for each width sort based on quantity requirement
     //
-    for (auto &x : Values(Cluster_PHV_i)) {
-        for (auto &p : Values(x)) {
-            std::sort(p.begin(), p.end(), [](Cluster_PHV *l, Cluster_PHV *r) {
-                if (l->width() == r->width()) {
-                    if (l->num_containers() == r->num_containers()) {
-                        if (l->max_width() == r->max_width()) {
-                            if (l->cluster_vec().size() == r->cluster_vec().size()) {
-                                // sort by uniform_width first
-                                if (l->uniform_width() == false && r->uniform_width() == false) {
-                                    // same size, descending widths <2:_16_10> <2:_16_9> <2:_16_5>
-                                    auto differ = std::mismatch(l->cluster_vec().begin(),
-                                                                l->cluster_vec().end(),
-                                                                r->cluster_vec().begin(),
-                                                                [](const PhvInfo::Field *f1,
-                                                                   const PhvInfo::Field *f2) {
-                                                                       return f1->phv_use_width()
-                                                                           == f2->phv_use_width();
-                                                                 });
-                                    return *differ.first >= *differ.second;
-                                }
-                                return l->uniform_width() == true && r->uniform_width() == false;
-                            }
-                            return l->cluster_vec().size() > r->cluster_vec().size();
+    std::sort(Cluster_PHV_i.begin(), Cluster_PHV_i.end(), [](Cluster_PHV *l, Cluster_PHV *r) {
+        if (l->width() == r->width()) {
+            if (l->num_containers() == r->num_containers()) {
+                if (l->max_width() == r->max_width()) {
+                    if (l->cluster_vec().size() == r->cluster_vec().size()) {
+                        // sort by uniform_width first
+                        if (l->uniform_width() == false && r->uniform_width() == false) {
+                            // same size, descending widths <2:_16_10> <2:_16_9> <2:_16_5>
+                            auto differ = std::mismatch(l->cluster_vec().begin(),
+                                                        l->cluster_vec().end(),
+                                                        r->cluster_vec().begin(),
+                                                        [](const PhvInfo::Field *f1,
+                                                           const PhvInfo::Field *f2) {
+                                                               return f1->phv_use_width()
+                                                                   == f2->phv_use_width();
+                                                         });
+                            return *differ.first >= *differ.second;
                         }
-                        return l->max_width() > r->max_width();
+                        return l->uniform_width() == true && r->uniform_width() == false;
                     }
-                    return l->num_containers() > r->num_containers();
+                    return l->cluster_vec().size() > r->cluster_vec().size();
                 }
-                return l->width() > r->width();
-            });
+                return l->max_width() > r->max_width();
+            }
+            return l->num_containers() > r->num_containers();
         }
-    }
+        return l->width() > r->width();
+    });
     //
     // POV Requirements from clusters
     // allocate all bits to PHVs only if they are used
@@ -345,6 +341,23 @@ std::ostream &operator<<(std::ostream &out, std::vector<Cluster_PHV *> &cluster_
 
 std::ostream &operator<<(
     std::ostream &out,
+    std::map<int, std::vector<Cluster_PHV *>>& phv_req_map) {
+    //
+    for (auto rit = phv_req_map.rbegin(); rit != phv_req_map.rend(); ++rit) {
+        // print key <number> of phv_req_map
+        out << '[' << rit->first << "]*" << rit->second.size() << "   \t= ";
+        // summarize clusters
+        for (auto &cp : rit->second) {
+            // cluster summary
+            out << *cp << ' ';
+        }
+        out << std::endl;
+    }
+    return out;
+}
+
+std::ostream &operator<<(
+    std::ostream &out,
     ordered_map<int, std::vector<Cluster_PHV *>>& phv_req_map) {
     //
     for (auto rit = phv_req_map.rbegin(); rit != phv_req_map.rend(); ++rit) {
@@ -361,14 +374,22 @@ std::ostream &operator<<(
 }
 
 std::ostream &operator<<(std::ostream &out, Cluster_PHV_Requirements &phv_requirements) {
-    out << "++++++++++ Cluster PHV Requirements ++++++++++" << std::endl << std::endl;
-    for (auto rit = phv_requirements.cluster_phv_map().rbegin();
-         rit != phv_requirements.cluster_phv_map().rend();
-         ++rit) {
+    out << std::endl
+        << "++++++++++++++++++++ Cluster PHV Requirements ++++++++++++++++++++"
+        << std::endl
+        << std::endl;
+    std::map<PHV_Container::PHV_Word,
+         std::map<int, std::vector<Cluster_PHV *>>> print_map;
+    for (auto &cl : phv_requirements.cluster_phv_fields()) {
+        print_map[cl->width()][cl->num_containers()].push_back(cl);
+    }
+    for (auto rit = print_map.rbegin();
+        rit != print_map.rend();
+        ++rit) {
         //
         int num_clusters = 0;
-        for (auto rit_2 = rit->second.rbegin(); rit_2 != rit->second.rend(); ++rit_2) {
-            num_clusters += rit_2->second.size();
+        for (auto &it_2 : rit->second) {
+            num_clusters += it_2.second.size();
         }
         out << "[----------"
             << rit->first
@@ -381,10 +402,13 @@ std::ostream &operator<<(std::ostream &out, Cluster_PHV_Requirements &phv_requir
         }
     }
     //
-    out << "++++++++++ PHV Container Requirements ++++++++++" << std::endl << std::endl;
-    for (auto rit = phv_requirements.cluster_phv_map().rbegin();
-         rit != phv_requirements.cluster_phv_map().rend();
-         ++rit) {
+    out << std::endl
+        << "++++++++++++++++++++ PHV Container Requirements ++++++++++++++++++++"
+        << std::endl
+        << std::endl;
+    for (auto rit = print_map.rbegin();
+        rit != print_map.rend();
+        ++rit) {
         out << "[----------" << rit->first << "----------]" << std::endl;
         out << rit->second;
     }

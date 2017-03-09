@@ -59,6 +59,7 @@ limitations under the License.
 #include "tofino/phv/split_phv_use.h"
 #include "tofino/phv/create_thread_local_instances.h"
 #include "tofino/phv/phv_allocator.h"
+#include "tofino/phv/cluster_phv_interference.h"
 #include "tofino/phv/cluster_phv_bind.h"
 #include "tofino/phv/cluster_phv_operations.h"
 #include "tofino/phv/cluster_phv_slicing.h"
@@ -104,12 +105,16 @@ static void debug_hook(const char *, unsigned, const char *pass, const IR::Node 
 
 void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     PhvInfo phv;
+    SymBitMatrix mutually_exclusive_field_ids;
     Cluster cluster(phv);                                        // cluster analysis
     Cluster_PHV_Requirements cluster_phv_req(cluster);           // cluster PHV requirements
-    PHV_MAU_Group_Assignments cluster_phv_mau(cluster_phv_req);  // cluster PHV Container placements
-    PHV_Bind phv_bind(phv, cluster_phv_mau);                     // field binding to PHV Containers
     PHV_Field_Operations phv_field_ops(phv);                     // field operation analysis
+    PHV_Interference phv_interference(cluster_phv_req, mutually_exclusive_field_ids);
+                                                                 // cluster PHV Interference Graph
+    PHV_MAU_Group_Assignments cluster_phv_mau(cluster_phv_req);  // cluster PHV Container placements
+    Cluster_PHV_Overlay cluster_phv_overlay(cluster_phv_mau, mutually_exclusive_field_ids);
     Cluster_Slicing cluster_slicing(cluster_phv_mau);            // cluster slicing
+    PHV_Bind phv_bind(phv, cluster_phv_mau);                     // field binding to PHV Containers
     DependencyGraph deps;
     TablesMutuallyExclusive mutex;
     FieldDefUse defuse(phv);
@@ -117,9 +122,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     TableSummary summary;
     MauAsmOutput mauasm(phv);
     Visitor *phv_alloc;
-    SymBitMatrix mutually_exclusive_field_ids;
     ParserOverlay parserOverlay(phv, mutually_exclusive_field_ids);
-    Cluster_PHV_Overlay cluster_phv_overlay(cluster_phv_mau, mutually_exclusive_field_ids);
     HashDistChoices hdc;
 
     if (options.trivial_phvalloc) {
@@ -147,16 +150,17 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     }
 
     PassManager *phv_analysis = new PassManager({
-        &cluster,          // cluster analysis
-        &parserOverlay,    // produce pairs of mutually exclusive header
-                           // fields, eg. (arpSrc, ipSrc)
-        &phv_field_ops,    // PHV field operations analysis
-        &cluster_phv_req,  // cluster PHV requirements analysis
-        &cluster_phv_mau,  // cluster PHV container placements
-                           // first cut PHV MAU Group assignments
-                           // produces cohabit fields for Table Placement
+        &cluster,              // cluster analysis
+        &parserOverlay,        // produce pairs of mutually exclusive header
+                               // fields, eg. (arpSrc, ipSrc)
+        &phv_field_ops,        // PHV field operations analysis
+        &cluster_phv_req,      // cluster PHV requirements analysis
+        &phv_interference,     // cluster PHV interference graph analysis
+        &cluster_phv_mau,      // cluster PHV container placements
+                               // first cut PHV MAU Group assignments
+                               // produces cohabit fields for Table Placement
         &cluster_phv_overlay,  // use mutually exclusive headers to free up phv containers
-        // &cluster_slicing, // slice clusters into smaller clusters
+        // &cluster_slicing,   // slice clusters into smaller clusters
     });
 
     PassManager backend = {

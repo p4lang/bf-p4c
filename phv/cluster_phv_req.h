@@ -95,8 +95,7 @@ class Cluster_PHV_Requirements : public Visitor {
  private:
     Cluster &cluster_i;            // reference to parent cluster
     //
-    ordered_map<PHV_Container::PHV_Word,
-    ordered_map<int, std::vector<Cluster_PHV *>>> Cluster_PHV_i;
+    std::vector<Cluster_PHV *> Cluster_PHV_i;
                                    // sorted PHV requirements <num, width>,
                                    // num decreasing then width decreasing
     std::vector<Cluster_PHV *> pov_fields_i;
@@ -112,11 +111,10 @@ class Cluster_PHV_Requirements : public Visitor {
     Cluster&
         cluster() { return cluster_i; }
     //
-    ordered_map<PHV_Container::PHV_Word, ordered_map<int, std::vector<Cluster_PHV *>>>&
-    cluster_phv_map()                           { return Cluster_PHV_i; }
+    std::vector<Cluster_PHV *>& cluster_phv_fields()  { return Cluster_PHV_i; }
     //
-    std::vector<Cluster_PHV *>& pov_fields()    { return pov_fields_i; }
-    std::vector<Cluster_PHV *>& t_phv_fields()  { return t_phv_fields_i; }
+    std::vector<Cluster_PHV *>& pov_fields()          { return pov_fields_i; }
+    std::vector<Cluster_PHV *>& t_phv_fields()        { return t_phv_fields_i; }
     //
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
     //
@@ -128,6 +126,7 @@ std::ostream &operator<<(std::ostream &, Cluster_PHV*);
 std::ostream &operator<<(std::ostream &, std::list<Cluster_PHV *>&);
 std::ostream &operator<<(std::ostream &, std::vector<Cluster_PHV *>*);
 std::ostream &operator<<(std::ostream &, std::vector<Cluster_PHV *>&);
+std::ostream &operator<<(std::ostream &, std::map<int, std::vector<Cluster_PHV *>>&);
 std::ostream &operator<<(std::ostream &, ordered_map<int, std::vector<Cluster_PHV *>>&);
 std::ostream &operator<<(std::ostream &, Cluster_PHV_Requirements&);
 //

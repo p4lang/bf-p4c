@@ -45,9 +45,11 @@ class PhvInfo : public Inspector {
         bool            metadata;
         bool            pov;
         bool            mau_write = false;  // true when field Write in MAU
-        bool            deparser_no_pack = false;  // true when egress_port
-        bool            mau_phv_no_pack = false;  // true when any op on field is not "move based"
-                                              // set by PHV_Field_Operations end_apply()
+        bool            deparser_no_holes = false;  // true if deparsed field
+                                                    // place in container exactly (no holes)
+        bool            deparser_no_pack = false;   // true when egress_port
+        bool            mau_phv_no_pack = false;    // true when any op on field is not "move based"
+                                                    // set by PHV_Field_Operations end_apply()
         bool            header_stack_pov_ccgf = false;  // header stack pov owner
                                                         // has members in ccgf_fields
         bool            simple_header_pov_ccgf = false;  // simple header ccgf

@@ -421,6 +421,12 @@ void Cluster::compute_fields_no_use_mau() {
                 field.phv_use_hi = ccg_width - 1;
             }
         }
+        //
+        // set deparsed_no_holes
+        //
+        if (uses_i->use[0][field.gress][field.id]) {
+            field.deparser_no_holes = true;
+        }
     }
     LOG3(std::endl << "..........All fields (" << s1.size() << ")..........");
     std::set<const PhvInfo::Field *> s2;                               // cluster fields
@@ -485,13 +491,13 @@ void Cluster::compute_fields_no_use_mau() {
     std::set<const PhvInfo::Field *> delete_set;
     for (auto f : fields_no_use_mau_i) {
         PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
-        bool use_any = uses_i->use[0][f1->gress][f1->id];
+        bool use_pd = uses_i->use[0][f1->gress][f1->id];
         //
         // normally f1->metadata in the T_PHV path can be removed
         // but bridge_metadata deparsed must be allocated
-        // f1->metadata && !use_any
+        // f1->metadata && !use_pd
         //
-        if (!use_any || (f1->metadata && !use_any) || f1->pov || (f1->ccgf && f1->ccgf != f1)) {
+        if (!use_pd || (f1->metadata && !use_pd) || f1->pov || (f1->ccgf && f1->ccgf != f1)) {
             delete_set.insert(f);
         } else {
             set_field_range(f1);

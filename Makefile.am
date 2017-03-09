@@ -118,6 +118,7 @@ tofino_backend_phv_UNIFIED = \
 	%reldir%/phv/cluster.cpp \
 	%reldir%/phv/cluster_phv_bind.cpp \
 	%reldir%/phv/cluster_phv_container.cpp \
+	%reldir%/phv/cluster_phv_interference.cpp \
 	%reldir%/phv/cluster_phv_mau.cpp \
 	%reldir%/phv/cluster_phv_operations.cpp \
 	%reldir%/phv/cluster_phv_overlay.cpp \
@@ -143,6 +144,7 @@ noinst_HEADERS += \
 	%reldir%/phv/cluster.h \
 	%reldir%/phv/cluster_phv_bind.h \
 	%reldir%/phv/cluster_phv_container.h \
+	%reldir%/phv/cluster_phv_interference.h \
 	%reldir%/phv/cluster_phv_mau.h \
 	%reldir%/phv/cluster_phv_operations.h \
 	%reldir%/phv/cluster_phv_overlay.h \
