@@ -63,7 +63,7 @@ int CounterTable::direct_shiftcount() {
 void CounterTable::write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge =  stage->regs.rams.match.merge;
     auto pfe_bit = 19;
-    if (dynamic_cast<HashActionTable *>(match)) {
+    if (per_flow_enable && dynamic_cast<HashActionTable *>(match)) {
         /* FIXME -- This should be cleaner -- rather than checking the match table type, have
          * the pfe bit stored in the CounterTable and hve the match table set it in some pass? */
         pfe_bit = 7; }
