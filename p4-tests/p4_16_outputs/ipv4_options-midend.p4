@@ -43,21 +43,11 @@ parser TopParser(packet_in b, out packet_t p, inout user_metadata_t m, inout sta
 }
 
 control ingress(inout packet_t p, inout user_metadata_t m, inout standard_metadata_t meta) {
-    bool tmp_4;
     @name("sendToCPU") action sendToCPU_0() {
         meta.egress_spec = 9w64;
     }
     @name("forward") action forward_0() {
         meta.egress_spec = 9w1;
-    }
-    action act() {
-        tmp_4 = p.ipv4.ihl > 4w5;
-    }
-    table tbl_act() {
-        actions = {
-            act();
-        }
-        const default_action = act();
     }
     table tbl_sendToCPU() {
         actions = {
@@ -72,7 +62,6 @@ control ingress(inout packet_t p, inout user_metadata_t m, inout standard_metada
         const default_action = forward_0();
     }
     apply {
-        tbl_act.apply();
         if (p.ipv4.ihl > 4w5) 
             tbl_sendToCPU.apply();
         else 

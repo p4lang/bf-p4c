@@ -49,10 +49,6 @@ parser p(packet_in b, out packet_t hdrs, inout standard_metadata meta) {
 }
 
 control ingress(inout packet_t hdrs, inout standard_metadata meta) {
-    bit<8> reg_0;
-    bit<8> reg_1;
-    bit<8> reg_2;
-    bit<8> reg_3;
     @name("setb1") action setb1_0(bit<9> port, bit<8> val) {
         hdrs.data.b1 = val;
         meta.egress_spec = port;
@@ -68,19 +64,15 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
     @name("noop") action noop_8() {
     }
     @name("setbyte") action setbyte_0(bit<8> val) {
-        reg_0 = val;
         hdrs.extra[0].b1 = val;
     }
     @name("setbyte") action setbyte_4(bit<8> val) {
-        reg_1 = val;
         hdrs.data.b2 = val;
     }
     @name("setbyte") action setbyte_5(bit<8> val) {
-        reg_2 = val;
         hdrs.extra[1].b1 = val;
     }
     @name("setbyte") action setbyte_6(bit<8> val) {
-        reg_3 = val;
         hdrs.extra[2].b2 = val;
     }
     @name("act1") action act1_0(bit<8> val) {
