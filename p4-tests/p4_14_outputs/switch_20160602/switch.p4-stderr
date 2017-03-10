@@ -26,27 +26,3 @@ action egress_mirror_coal_hdr(session_id, id) {
 action set_config_parameters(enable_dod, enable_flowlet) {
                                          ^^^^^^^^^^^^^^
 warning: The order of headers in deparser is not uniquely determined by parser!
-/home/cdodd/p4c/build/p4_14include/tofino/stateful_alu_blackbox.p4(104): warning: AttribLocal shadows condition_hi
-        expression_local_variables {bit<1> condition_lo, bit<1> condition_hi}
-                                                         ^^^^^^^^^^^^^^^^^^^
-/home/cdodd/p4c/build/p4_14include/tofino/stateful_alu_blackbox.p4(32)
-    attribute condition_hi {
-              ^^^^^^^^^^^^
-/home/cdodd/p4c/build/p4_14include/tofino/stateful_alu_blackbox.p4(104): warning: AttribLocal shadows condition_lo
-        expression_local_variables {bit<1> condition_lo, bit<1> condition_hi}
-                                    ^^^^^^^^^^^^^^^^^^^
-/home/cdodd/p4c/build/p4_14include/tofino/stateful_alu_blackbox.p4(42)
-    attribute condition_lo {
-              ^^^^^^^^^^^^
-/home/cdodd/p4c/build/p4_14include/tofino/stateful_alu_blackbox.p4(118): warning: AttribLocal shadows condition_hi
-        expression_local_variables {bit<1> condition_lo, bit<1> condition_hi}
-                                                         ^^^^^^^^^^^^^^^^^^^
-/home/cdodd/p4c/build/p4_14include/tofino/stateful_alu_blackbox.p4(32)
-    attribute condition_hi {
-              ^^^^^^^^^^^^
-/home/cdodd/p4c/build/p4_14include/tofino/stateful_alu_blackbox.p4(118): warning: AttribLocal shadows condition_lo
-        expression_local_variables {bit<1> condition_lo, bit<1> condition_hi}
-                                    ^^^^^^^^^^^^^^^^^^^
-/home/cdodd/p4c/build/p4_14include/tofino/stateful_alu_blackbox.p4(42)
-    attribute condition_lo {
-              ^^^^^^^^^^^^
