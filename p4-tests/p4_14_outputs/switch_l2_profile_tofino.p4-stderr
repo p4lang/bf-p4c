@@ -91,3 +91,27 @@ action copy_to_cpu_with_reason(reason_code, qid, meter_id, icos) {
 ./acl.p4(691): warning: Could not infer type for meter_id, using bit<8>
 action redirect_to_cpu_with_reason(reason_code, qid, meter_id, icos) {
                                                      ^^^^^^^^
+/home/cdodd/p4c/build/p4_14include/tofino/stateful_alu_blackbox.p4(104): warning: AttribLocal shadows condition_hi
+        expression_local_variables {bit<1> condition_lo, bit<1> condition_hi}
+                                                         ^^^^^^^^^^^^^^^^^^^
+/home/cdodd/p4c/build/p4_14include/tofino/stateful_alu_blackbox.p4(32)
+    attribute condition_hi {
+              ^^^^^^^^^^^^
+/home/cdodd/p4c/build/p4_14include/tofino/stateful_alu_blackbox.p4(104): warning: AttribLocal shadows condition_lo
+        expression_local_variables {bit<1> condition_lo, bit<1> condition_hi}
+                                    ^^^^^^^^^^^^^^^^^^^
+/home/cdodd/p4c/build/p4_14include/tofino/stateful_alu_blackbox.p4(42)
+    attribute condition_lo {
+              ^^^^^^^^^^^^
+/home/cdodd/p4c/build/p4_14include/tofino/stateful_alu_blackbox.p4(118): warning: AttribLocal shadows condition_hi
+        expression_local_variables {bit<1> condition_lo, bit<1> condition_hi}
+                                                         ^^^^^^^^^^^^^^^^^^^
+/home/cdodd/p4c/build/p4_14include/tofino/stateful_alu_blackbox.p4(32)
+    attribute condition_hi {
+              ^^^^^^^^^^^^
+/home/cdodd/p4c/build/p4_14include/tofino/stateful_alu_blackbox.p4(118): warning: AttribLocal shadows condition_lo
+        expression_local_variables {bit<1> condition_lo, bit<1> condition_hi}
+                                    ^^^^^^^^^^^^^^^^^^^
+/home/cdodd/p4c/build/p4_14include/tofino/stateful_alu_blackbox.p4(42)
+    attribute condition_lo {
+              ^^^^^^^^^^^^

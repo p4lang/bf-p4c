@@ -270,7 +270,6 @@ XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/hash_action_gateway.p4.test
 XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/hash_action_two_separate.p4.test
 
 # Hash Action Bugs within the ASM or Model
-XFAIL_TESTS += tofino/testdata/p4_14_samples/hash_action_basic.p4.test
 XFAIL_TESTS += tofino/testdata/p4_14_samples/hash_action_gateway.p4.test
 
 # No support yet in assembler for hash calcuation
