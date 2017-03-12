@@ -20,6 +20,8 @@ limitations under the License.
  * Not tested on BM (v1 or v2).
  */
 
+/* P4TEST_IGNORE_STDERR */
+
 #ifdef __TARGET_TOFINO__
 #include <tofino/intrinsic_metadata.p4>
 #endif
