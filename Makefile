@@ -69,7 +69,7 @@ echo-walle:
 
 -include $(wildcard *.d gen/*.d gen/*/*.d)
 
-.PHONY: default all tags test clean veryclean help
+.PHONY: default all tags test ftest check clean veryclean help
 tags:
 	ctags -R -I VECTOR --exclude=test --exclude=submodules \
 	    --regex-C++='/^DECLARE_(ABSTRACT_)?TABLE_TYPE\(([a-zA-Z0-9_]+)/\2/c/'
@@ -79,6 +79,8 @@ test: all
 
 ftest: all
 	cd test; ./runtests -f
+
+check: test
 
 clean:
 	rm -f *.o *.d asm-parse.c lex-yaml.c *.json json2cpp tfas y.output
