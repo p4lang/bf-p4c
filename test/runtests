@@ -113,18 +113,28 @@ if [ -x "$STF" ]; then
     echo "Using $STF"
 fi
 
+TRY_BINDIRS="
+    $PWD
+    $PWD/..
+    $PWD/../*
+    $TESTDIR/..
+    $TESTDIR/../*
+"
+
 function findbin () {
-    if [ -x "$PWD/$1" ]; then
-        echo $PWD/$1
-    elif [ -x "$PWD/../$1" ]; then
-        echo $PWD/../$1
-    elif [ -x "$TESTDIR/../$1" ]; then
-        echo $TESTDIR/../$1
-    elif type $1 >/dev/null 2>&1; then
-        echo $1
-    else
+    found=""
+    for d in $TRY_BINDIRS; do
+        if [ -x "$d/$1" ]; then
+            if [ -z "$found" -o "$d/$1" -nt "$found" ]; then
+                found="$(cd $d; pwd -P)/$1"
+            fi
+        fi
+    done
+    if [ -z "$found" ]; then
         echo >&2 "Can't find $1 executable"
         echo false
+    else
+        echo $found
     fi
 }
 
@@ -133,6 +143,7 @@ function not() { if "$@"; then return 1; else return 0; fi }
 if [ ! -x "$TFAS" ]; then
     TFAS=$(findbin tfas)
 fi
+echo "Using $TFAS"
 if [ ! -x "$TFLINK" ]; then
     TFLINK=$(findbin tflink)
 fi

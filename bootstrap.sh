@@ -1,4 +1,4 @@
 #!/bin/sh
 
-# autoreconf -i
-# ./configure
+autoreconf -i
+./configure
