@@ -671,6 +671,7 @@ public:
                           const std::vector<Call::Arg> &args) override;
     unsigned address_shift() const { return 7 + ceil_log2(min_words); }
     unsigned meter_group() const { return layout.at(0).row/4U; }
+    int home_row() const { return layout.at(0).row | 3; }
     int unitram_type() override { return UnitRam::SELECTOR; }
 )
 

@@ -34,6 +34,7 @@ public:
     Alloc1D<Table *, LOGICAL_SRAM_ROWS>                 action_data_use,
                                                         meter_bus_use,
                                                         stats_bus_use,
+                                                        selector_adr_bus_use,
                                                         overflow_bus_use;
     Alloc2D<Table::Actions::Action *, 2, ACTION_IMEM_ADDR_MAX>          imem_addr_use;
     bitvec      imem_use[ACTION_IMEM_SLOTS];

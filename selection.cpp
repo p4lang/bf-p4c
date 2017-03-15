@@ -96,6 +96,15 @@ void SelectionTable::pass1() {
             hd.xbar_use |= HashDistribution::HASHMOD_DIVIDEND; }
     for (auto &hd : hash_dist)
         hd.pass1(this);
+    bool home = true;  // first layout row is home row
+    for (Layout &row : layout) {
+        if (home)
+            need_bus(row.lineno, stage->selector_adr_bus_use, row.row|3, "Selector Address");
+        need_bus(row.lineno, stage->selector_adr_bus_use, row.row, "Selector Address");
+        if ((row.row & 2) == 0)  // even phy rows wired together
+            need_bus(row.lineno, stage->selector_adr_bus_use, row.row^1, "Selector Address");
+        home = false; }
+
 }
 
 void SelectionTable::pass2() {

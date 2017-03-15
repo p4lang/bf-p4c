@@ -33,7 +33,11 @@ TRY_STF="
 
 TIME=false
 PARALLEL=1
-if [[ $MAKEFLAGS =~ ^-j\ *[0-9]+$ ]]; then PARALLEL=${MAKEFLAGS#-j}; fi
+if [[ $TESTFLAGS =~ ^-j\ *[0-9]+$ ]]; then
+    PARALLEL=${TESTFLAGS#-j}
+elif [[ $MAKEFLAGS =~ ^-j\ *[0-9]+$ ]]; then
+    PARALLEL=${MAKEFLAGS#-j}
+fi
 
 while expr "$1" : - >/dev/null; do
     case $1 in
@@ -60,7 +64,7 @@ while expr "$1" : - >/dev/null; do
         verbose=true
         ;;
     -*)
-        echo >&2 "unknown argumnet $1"
+        echo >&2 "unknown argument $1"
         ;;
     esac
     shift

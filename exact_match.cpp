@@ -284,7 +284,8 @@ void ExactMatchTable::pass1() {
         gateway->pass1();
         if (!gateway->layout.empty()) {
             for (auto &row : layout) {
-                if (row.row == gateway->layout[0].row && row.bus == gateway->layout[0].bus) {
+                if (row.row == gateway->layout[0].row && row.bus == gateway->layout[0].bus &&
+                    !row.cols.empty()) {
                     unsigned gw_use = gateway->input_use() & 0xff;
                     auto &way = way_map[std::make_pair(row.row, row.cols[0])];
                     for (auto &grp : group_info) {

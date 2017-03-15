@@ -317,12 +317,12 @@ void ActionTable::write_regs() {
                         icxbar[mtab->logical_id].address_distr_to_overflow = 1; }
             oflo_adr_xbar.adr_dist_oflo_adr_xbar_enable = 1; }
         if (SelectionTable *sel = get_selector()) {
-            if (logical_row.row != sel->layout[0].row) {
-                if (logical_row.row > sel->layout[0].row)
+            if (logical_row.row != sel->home_row()) {
+                if (logical_row.row > sel->home_row())
                     error(lineno, "Selector data from %s on row %d cannot flow up to %s on row %d",
-                          sel->name(), sel->layout[0].row, name(), logical_row.row);
+                          sel->name(), sel->home_row(), name(), logical_row.row);
                 else
-                    flow_selector_addr(stage, sel->layout[0].row, logical_row.row); } }
+                    flow_selector_addr(stage, sel->home_row(), logical_row.row); } }
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;
             auto &ram = stage->regs.rams.array.row[row].ram[col];

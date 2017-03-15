@@ -1,8 +1,8 @@
 #include "p4_table.h"
 #include "tables.h"
 
-std::map<unsigned, P4Table *>           P4Table::by_handle;
-std::map<std::string, P4Table *>        P4Table::by_name;
+std::map<unsigned, P4Table *>                                   P4Table::by_handle;
+std::map<P4Table::type, std::map<std::string, P4Table *>>       P4Table::by_name;
 unsigned                                P4Table::max_handle[7];
 const char *P4Table::type_name[] = { 0,
 "match_entry", "action_data", "selection", "statistics", "meter", "stateful" };
@@ -24,19 +24,16 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
         if (handle > max_handle[t]) max_handle[t] = handle;
         handle |= t << 24;
         if (!(rv = by_handle[handle])) {
-            if (!n || !CHECKTYPE(*n, tSTR) || !by_name.count(n->s) ||
-                (rv = by_name[n->s])->handle != (unsigned)t << 24)
+            if (!n || !CHECKTYPE(*n, tSTR) || !by_name[t].count(n->s) ||
+                (rv = by_name[t][n->s])->handle != (unsigned)t << 24)
                 rv = by_handle[handle] = new P4Table;
             rv->handle = handle; }
     } else if (n) {
         if (!CHECKTYPE(*n, tSTR)) return 0;
-        if (!(rv = by_name[n->s])) {
-            rv = by_name[n->s] = new P4Table;
-            rv->name = n->s; }
-        if (rv->handle && (rv->handle >> 24) != (unsigned)t) {
-            error(n->lineno, "Inconsistent table type for p4 table %s", n->s);
-            return 0; }
-        rv->handle |= t << 24;
+        if (!(rv = by_name[t][n->s])) {
+            rv = by_name[t][n->s] = new P4Table;
+            rv->name = n->s;
+            rv->handle = t << 24; }
     } else {
         error(data[0].key.lineno, "no handle or name in p4 info");
         return 0; }
@@ -52,8 +49,8 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
                     warning(rv->lineno, "Previously set here");
                 } else if (rv->name.empty()) {
                     rv->name = kv.value.s;
-                    if (!by_name.count(rv->name))
-                        by_name[rv->name] = rv; } }
+                    if (!by_name[t].count(rv->name))
+                        by_name[t][rv->name] = rv; } }
         } else if (kv.key == "size") {
             if (CHECKTYPE(kv.value, tINT)) {
                 if (rv->explicit_size && rv->size != (unsigned)kv.value.i) {

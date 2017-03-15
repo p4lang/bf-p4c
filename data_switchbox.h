@@ -3,7 +3,7 @@
 
 /*
  * Code to handle programming of the Ram Data Bus Horizontal/Vertical Switchbox
- * see section 6.2.4.4 of the MAU uArch docs
+ * see section 5.2.4.4 of the MAU uArch docs
  */
 
 class DataSwitchboxSetup {

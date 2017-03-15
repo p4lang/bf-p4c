@@ -21,8 +21,8 @@ public:
     enum type { MatchEntry=1, ActionData=2, Selection=3, Statistics=4, Meter=5, Stateful=6 };
     static const char *type_name[];
 private:
-    static std::map<unsigned, P4Table *>        by_handle;
-    static std::map<std::string, P4Table *>     by_name;
+    static std::map<unsigned, P4Table *>                        by_handle;
+    static std::map<type, std::map<std::string, P4Table *>>     by_name;
     static unsigned                             max_handle[];
 public:
     static P4Table *get(type t, VECTOR(pair_t) &d);

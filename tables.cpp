@@ -517,7 +517,7 @@ bool Table::choose_logical_id(const slist<Table *> *work) {
 
 void Table::need_bus(int lineno, Alloc1Dbase<Table *> &use, int idx, const char *busname)
 {
-    if (use[idx]) {
+    if (use[idx] && use[idx] != this) {
         error(lineno, "%s bus conflict on row %d between tables %s and %s", busname, idx,
               name(), use[idx]->name());
         error(use[idx]->lineno, "%s defined here", use[idx]->name());

@@ -186,7 +186,8 @@ void AsmStage::output() {
         stage[i].regs.emit_json(*open_output("regs.match_action_stage.%02x.cfg.json", i) , i);
         char buf[64];
         sprintf(buf, "regs.match_action_stage.%02x", i);
-        TopLevel::all.reg_pipe.mau[i] = buf; }
+        if (i < NUM_MAU_STAGES)
+            TopLevel::all.reg_pipe.mau[i] = buf; }
     auto json_out = open_output("tbl-cfg");
     if (options.match_compiler)
         *json_out << "{ \"ContextJsonNode\": ";
