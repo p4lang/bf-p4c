@@ -14,6 +14,7 @@ class FieldUse : public MauInspector, P4WriteContext {
     bool preorder(const IR::MAU::Table *t) override;
     bool preorder(const IR::Member *f) override;
     bool preorder(const IR::HeaderStackItemRef *f) override;
+    bool preorder(const IR::TempVar *t) override;
     friend std::ostream &operator<<(std::ostream &, const FieldUse &);
  public:
     FieldUse() { visitDagOnce = false; }

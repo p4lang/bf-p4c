@@ -32,6 +32,11 @@ bool FieldUse::preorder(const IR::HeaderStackItemRef *f) {
     return false;
 }
 
+bool FieldUse::preorder(const IR::TempVar *f) {
+    access_field(f->toString());
+    return false;
+}
+
 bitvec FieldUse::tables_modify(const IR::MAU::Table *t) const {
     bitvec rv;
     rv |= table_use.at(t->name).writes;
