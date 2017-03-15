@@ -869,6 +869,9 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         out << indent << "p4: { name: " << tbl->match_table->name;
         if (auto k = tbl->match_table->getConstantProperty("size"))
             out << ", size: " << k->asInt();
+        for (auto at : tbl->attached)
+            if (auto ap = at->to<IR::ActionProfile>())
+                out << ", action_profile: " << ap->name;
         out << " }" << std::endl;
         auto memuse_name = tbl->get_use_name();
         emit_memory(out, indent, tbl->resources->memuse.at(memuse_name));
@@ -1244,7 +1247,6 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *ap) {
     indent_t    indent(1);
     auto name = tbl->get_use_name(ap);
     out << indent++ << "action " << name << ':' << std::endl;
-    out << indent << "p4: { name: " << ap->name << " }" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     for (auto act : Values(tbl->actions)) {
         if (act->args.empty()) continue;
@@ -1264,7 +1266,6 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::ActionSelector *as) {
         return false;
     }
     cstring name = tbl->get_use_name(as);
-    out << indent << "p4: { name: " << as->name << " }" << std::endl;
     out << indent++ << "selection " << name << ":" << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     self.emit_ixbar(out, indent, tbl->resources->selector_ixbar,
