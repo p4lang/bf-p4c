@@ -108,6 +108,9 @@ class MauAsmOutput::ActionDataFormat : public Inspector {
         if (auto *inst = findContext<IR::MAU::Instruction>()) {
             PhvInfo::Field::bitrange bits;
             if (auto f = self.phv.field(inst->operands[0], &bits)) {
+                if (f->alloc.empty()) {
+                    ERROR("No PHV allocation for " << f->name);
+                    return false; }
                 auto &alloc = f->for_bit(bits.lo);
                 int sz = alloc.container.size() / 8U;
                 if (arg_use[a].first < sz)
@@ -616,7 +619,8 @@ class MauAsmOutput::EmitAction : public Inspector {
     bool preorder(const IR::Expression *exp) override {
         if (sep) {
             PhvInfo::Field::bitrange bits;
-            if (auto f = self.phv.field(exp, &bits)) {
+            auto f = self.phv.field(exp, &bits);
+            if (f && !f->alloc.empty()) {
                 auto &alloc = f->for_bit(bits.lo);
                 out << sep << canon_name(f->name);
                 if (alloc.field_bit > 0 || alloc.width != f->size) {

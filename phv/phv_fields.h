@@ -189,6 +189,7 @@ class PhvInfo : public Inspector {
     iterator<vector<Field *>::const_iterator> end() const { return by_id.end(); }
     void allocatePOV(const HeaderStackInfo &);
     bool alloc_done() const { return alloc_done_; }
+    void addTempVar(const IR::TempVar *);
 };
 
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field::alloc_slice &);

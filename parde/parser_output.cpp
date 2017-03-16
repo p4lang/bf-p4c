@@ -34,7 +34,7 @@ class OutputExtracts : public Inspector {
             if (auto val = prim->operands[1]->to<IR::Constant>())
                 out << val->value;
             else
-                out << "/* " << *prim->operands[1] << " */";
+                out << "0 /* " << *prim->operands[1] << " */";
         } else {
             out << indent << "/* " << *prim << " */"; }
         out << std::endl;

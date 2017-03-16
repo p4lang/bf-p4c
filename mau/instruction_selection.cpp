@@ -32,15 +32,19 @@ const IR::ActionFunction *InstructionSelection::preorder(IR::ActionFunction *af)
 }
 
 class InstructionSelection::SplitInstructions : public Transform {
+    InstructionSelection &self;
     IR::Vector<IR::Primitive> &split;
     const IR::Expression *postorder(IR::MAU::Instruction *inst) override {
-        if (inst->operands[0]->is<IR::TempVar>() && getContext() != nullptr) {
-            LOG3("splitting instruction " << inst);
-            split.push_back(inst);
-            return inst->operands[0]; }
+        if (auto *tv = inst->operands[0]->to<IR::TempVar>()) {
+            self.phv.addTempVar(tv);
+            if (getContext() != nullptr) {
+                LOG3("splitting instruction " << inst);
+                split.push_back(inst);
+                return tv; } }
         return inst; }
  public:
-    explicit SplitInstructions(IR::Vector<IR::Primitive> &s) : split(s) {}
+    SplitInstructions(InstructionSelection &self, IR::Vector<IR::Primitive> &s)
+    : self(self), split(s) {}
 };
 
 const IR::ActionFunction *InstructionSelection::postorder(IR::ActionFunction *af) {
@@ -48,7 +52,7 @@ const IR::ActionFunction *InstructionSelection::postorder(IR::ActionFunction *af
     this->af = nullptr;
     IR::Vector<IR::Primitive> split;
     for (auto *p : af->action)
-        split.push_back(p->apply(SplitInstructions(split)));
+        split.push_back(p->apply(SplitInstructions(*this, split)));
     if (split.size() > af->action.size())
         af->action = std::move(split);
     if (stateful.count(af) || modify_with_hash.count(af)) {

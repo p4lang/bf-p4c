@@ -93,6 +93,12 @@ bool PhvInfo::preorder(const IR::TempVar *tv) {
     return false;
 }
 
+void PhvInfo::addTempVar(const IR::TempVar *tv) {
+    BUG_CHECK(tv->type->is<IR::Type::Bits>(), "Can't create temp of type %s", tv->type);
+    if (all_fields.count(tv->name) == 0)
+        add(tv->name, tv->type->width_bits(), 0, true, tv->POV);
+}
+
 const PhvInfo::Field::alloc_slice &PhvInfo::Field::for_bit(int bit) const {
     for (auto &sl : alloc)
         if (bit >= sl.field_bit && bit < sl.field_bit + sl.width)
@@ -214,7 +220,9 @@ const PhvInfo::Field *PhvInfo::field(const IR::Expression *e, Field::bitrange *b
             if (bits) {
                 bits->lo = 0;
                 bits->hi = rv->size - 1; }
-            return rv; } }
+            return rv;
+        } else {
+            BUG("TempVar %s not in PhvInfo", tv->name); } }
     return 0;
 }
 
