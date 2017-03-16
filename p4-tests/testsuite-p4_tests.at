@@ -1,0 +1,137 @@
+dnl Copyright 2013-present Barefoot Networks, Inc. 
+dnl
+dnl Licensed under the Apache License, Version 2.0 (the "License");
+dnl you may not use this file except in compliance with the License.
+dnl You may obtain a copy of the License at
+dnl
+dnl     http://www.apache.org/licenses/LICENSE-2.0
+dnl
+dnl Unless required by applicable law or agreed to in writing, software
+dnl distributed under the License is distributed on an "AS IS" BASIS,
+dnl WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+dnl See the License for the specific language governing permissions and
+dnl limitations under the License.
+
+dnl $1 target
+dnl $2 program name
+dnl $3 program path
+dnl $4 status (xfail or xpass)
+m4_define([TOFINO_TEST_RUN],
+[
+ AT_SETUP([$1/$2])
+ AT_XFAIL_IF([ test "$4" = "xfail" ])
+ AT_KEYWORDS($1)
+ AT_KEYWORDS($6)
+ AT_CHECK([
+  cd $abs_top_srcdir/build
+  mkdir -p $1/$5
+  echo "cd $abs_top_srcdir/build" > $1/$2.test
+  echo "../extensions/p4_tests/runtest .. \${*} ../$2" >> $1/$2.test
+  chmod +x $1/$2.test
+  ../extensions/p4_tests/runtest .. $3
+  ],
+  [0],
+  [stdout],
+  [stderr])
+  AT_CLEANUP
+])
+
+m4_define([TOFINO_ORTOOLS_TEST_RUN],
+[
+ AT_SETUP([$1/$2])
+ AT_XFAIL_IF([ test "$4" = "xfail" ])
+ AT_KEYWORDS($1)
+ AT_KEYWORDS($6)
+ AT_CHECK([
+  cd $abs_top_srcdir/build
+  mkdir -p $1/$5
+  echo "cd $abs_top_srcdir/build" > $1/$2.test
+  echo "../extensions/p4_tests/runtest --ortools .. \${*} ../$2" >> $1/$2.test
+  chmod +x $1/$2.test
+  ../extensions/p4_tests/runtest --ortools .. $3
+  ],
+  [0],
+  [stdout],
+  [stderr])
+  AT_CLEANUP
+])
+
+dnl We have additional test inputs that are used to test the other (standard) back-ends
+dnl These test input programs depend on Tofino in some way.
+m4_define([P14_TO_16_TEST_RUN],
+[
+ AT_SETUP([$1/$2])
+ AT_XFAIL_IF([ test "$4" = "xfail" ])
+ AT_KEYWORDS($1)
+ AT_KEYWORDS($6)
+ AT_CHECK([
+  cd $abs_top_srcdir/build
+  mkdir -p $1/$5
+  echo "cd $abs_top_srcdir/build" > $1/$2.test
+  echo "../extensions/p4_tests/test-v12-sample.sh .. \${*} ../$2" >> $1/$2.test
+  chmod +x $1/$2.test
+  ../extensions/p4_tests/test-v12-sample.sh .. $3
+  ],
+  [0],
+  [stdout],
+  [stderr])
+  AT_CLEANUP
+])
+
+m4_define([TOFINO_BMV2_TEST_RUN],
+[
+ AT_SETUP([$1/$2])
+ AT_XFAIL_IF([ test "$4" = "xfail" ])
+ AT_KEYWORDS($1)
+ AT_KEYWORDS($6)
+ AT_CHECK([
+  cd $abs_top_srcdir/build
+  mkdir -p $1/$5
+  echo "cd $abs_top_srcdir/build" > $1/$2.test
+  echo "../extensions/p4_tests/test-bmv2.sh .. \${*} ../$2" >> $1/$2.test
+  chmod +x $1/$2.test
+  ../extensions/p4_tests/test-bmv2.sh .. $3
+  ],
+  [0],
+  [stdout],
+  [stderr])
+  AT_CLEANUP
+])
+
+m4_define([TOFINO_P4TEST_TEST_RUN],
+[
+ AT_SETUP([$1/$2])
+ AT_XFAIL_IF([ test "$4" = "xfail" ])
+ dnl AT_KEYWORDS($1)
+ AT_KEYWORDS($6)
+ AT_CHECK([
+  mkdir -p $1/$5
+  cd $abs_top_srcdir/build
+  echo "cd $abs_top_srcdir/build" > $1/$2.test
+  echo "../extensions/p4_tests/run-p4-sample.py .. \${*} ../$2" >> $1/$2.test
+  chmod +x $1/$2.test
+  ../backends/p4test/run-p4-sample.py .. $3
+  ],
+  [0],
+  [stdout],
+  [stderr])
+  AT_CLEANUP
+])
+
+dnl documentation for these commands are available at tests/testsuite.at
+dnl AT_BANNER([tofino unit tests])
+P4TEST_RUN([tofino], [testdata/p4_14_samples], [\"*.p4\"], [TOFINO_TEST_RUN], [../extensions/p4_tests/xfails.text])
+P4TEST_RUN([tofino], [testdata/p4_14_samples/switch_20160226], [\"switch.p4\"], [TOFINO_TEST_RUN], [../extensions/p4_tests/xfails.text])
+P4TEST_RUN([tofino], [testdata/p4_14_samples/switch_20160512], [\"switch.p4\"], [TOFINO_TEST_RUN], [../extensions/p4_tests/xfails.text])
+P4TEST_RUN([tofino], [extensions/p4_tests/p4_14], [\"*.p4\"], [TOFINO_TEST_RUN], [../extensions/p4_tests/xfails.text])
+P4TEST_RUN([tofino], [extensions/p4_tests/p4_16], [\"*.p4\"], [TOFINO_TEST_RUN], [../extensions/p4_tests/xfails.text])
+P4TEST_RUN([tofino], [extensions/p4_tests/p4_14/switch_20160602], [\"switch.p4\"], [TOFINO_TEST_RUN], [../extensions/p4_tests/xfails.text])
+
+dnl AT_BANNER([p4-16 frontend unit tests])
+P4TEST_RUN([frontend], [extensions/p4_tests/p4_14], [\"*.p4\"], [P14_TO_16_TEST_RUN], [../extensions/p4_tests/xfails.text])
+P4TEST_RUN([frontend], [extensions/p4_tests/p4_14/switch_20160602], [\"switch.p4\"], [P14_TO_16_TEST_RUN], [../extensions/p4_tests/xfails.text])
+
+dnl AT_BANNER([bmv2 unit tests])
+P4TEST_RUN([bmv2], [extensions/p4_tests/p4_14], [\"*.p4\"], [TOFINO_BMV2_TEST_RUN], [../extensions/p4_tests/xfails.text])
+P4TEST_RUN([bmv2], [extensions/p4_tests/p4_14/switch_20160602], [\"switch.p4\"], [TOFINO_BMV2_TEST_RUN], [../extensions/p4_tests/xfails.text])
+P4TEST_RUN([bmv2], [extensions/p4_tests/p4_16], [\"*.p4\"], [TOFINO_BMV2_TEST_RUN], [../extensions/p4_tests/xfails.text])

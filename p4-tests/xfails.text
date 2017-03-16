@@ -1,0 +1,250 @@
+# Some of these failures are still P4 v1.0 front-end bugs.
+# 02-FlexCounter fails with Cannot unify Type(HashAlgorithm) to HashAlgorithm
+# Others are due to non-standard extensions to P4:
+# The *meter* tests use direct meters and execute_meter calls with 4 arguments (not in spec)
+# The *recircualte* tests use a different (non standard?) reciculate primitive
+# The *stateful* tests use extensions to P4 not in spec
+# FlexCounter, action_profile use a non-standard Algorithm
+# TwoReferences invokes a table twice - maybe it should become a negative test?
+# *range* match type is not supported by BMv2 (used also in error_detection*.p4)
+bmv2/extensions/p4_tests/p4_14/02-FlexCounterActionProfile.p4
+frontend/extensions/p4_tests/p4_14/02-FlexCounterActionProfile.p4
+tofino/extensions/p4_tests/p4_14/02-FlexCounterActionProfile.p4
+bmv2/extensions/p4_tests/p4_14/test_config_125_meter_pre_color.p4
+frontend/extensions/p4_tests/p4_14/test_config_125_meter_pre_color.p4
+tofino/extensions/p4_tests/p4_14/test_config_125_meter_pre_color.p4
+bmv2/extensions/p4_tests/p4_14/test_config_126_meter_pre_color_2.p4
+frontend/extensions/p4_tests/p4_14/test_config_126_meter_pre_color_2.p4
+tofino/extensions/p4_tests/p4_14/test_config_126_meter_pre_color_2.p4
+bmv2/extensions/p4_tests/p4_14/test_config_127_meter_pre_color_3.p4
+frontend/extensions/p4_tests/p4_14/test_config_127_meter_pre_color_3.p4
+tofino/extensions/p4_tests/p4_14/test_config_127_meter_pre_color_3.p4
+bmv2/extensions/p4_tests/p4_14/test_config_132_meter_pre_color_4.p4
+frontend/extensions/p4_tests/p4_14/test_config_132_meter_pre_color_4.p4
+tofino/extensions/p4_tests/p4_14/test_config_132_meter_pre_color_4.p4
+bmv2/extensions/p4_tests/p4_14/test_config_144_recirculate.p4
+frontend/extensions/p4_tests/p4_14/test_config_144_recirculate.p4
+tofino/extensions/p4_tests/p4_14/test_config_144_recirculate.p4
+bmv2/extensions/p4_tests/p4_14/test_config_152_stateful_simple_cntr.p4
+bmv2/extensions/p4_tests/p4_14/test_config_153_stateful_simple_cntr_with_output.p4
+bmv2/extensions/p4_tests/p4_14/test_config_154_stateful_sampling.p4
+bmv2/extensions/p4_tests/p4_14/test_config_155_stateful_3_alus.p4
+bmv2/extensions/p4_tests/p4_14/test_config_156_indirect_stateful_cntr.p4
+bmv2/extensions/p4_tests/p4_14/test_config_159_stateful_using_phv_field.p4
+bmv2/extensions/p4_tests/p4_14/test_config_163_stateful_table_math_unit.p4
+bmv2/extensions/p4_tests/p4_14/test_config_164_stateful_deterministic_sampling.p4
+bmv2/extensions/p4_tests/p4_14/test_config_165_stateful_bfd_failure_detection.p4
+bmv2/extensions/p4_tests/p4_14/test_config_166_stateful_generic_counter.p4
+bmv2/extensions/p4_tests/p4_14/test_config_167_stateful_flowlet_switching.p4
+bmv2/extensions/p4_tests/p4_14/test_config_169_stateful_sflow_sequence.p4
+bmv2/extensions/p4_tests/p4_14/test_config_170_stateful_selection_table_update.p4
+frontend/extensions/p4_tests/p4_14/test_config_170_stateful_selection_table_update.p4
+tofino/extensions/p4_tests/p4_14/test_config_170_stateful_selection_table_update.p4
+bmv2/extensions/p4_tests/p4_14/test_config_171_stateful_conga.p4
+frontend/extensions/p4_tests/p4_14/test_config_171_stateful_conga.p4
+tofino/extensions/p4_tests/p4_14/test_config_171_stateful_conga.p4
+bmv2/extensions/p4_tests/p4_14/test_config_172_stateful_heavy_hitter.p4
+frontend/extensions/p4_tests/p4_14/test_config_172_stateful_heavy_hitter.p4
+tofino/extensions/p4_tests/p4_14/test_config_172_stateful_heavy_hitter.p4
+bmv2/extensions/p4_tests/p4_14/test_config_173_stateful_bloom_filter.p4
+frontend/extensions/p4_tests/p4_14/test_config_173_stateful_bloom_filter.p4
+tofino/extensions/p4_tests/p4_14/test_config_173_stateful_bloom_filter.p4
+tofino/extensions/p4_tests/p4_16/bfd_offload.p4
+tofino/extensions/p4_tests/p4_16/bloom_filter.p4
+tofino/extensions/p4_tests/p4_16/flowlet_switching.p4
+tofino/extensions/p4_tests/p4_16/stateful_alu.p4
+
+# Signed 1-bit field not allowed in P4_16 (and really makes no sense?)
+bmv2/extensions/p4_tests/p4_14/test_config_160_stateful_single_bit_mode.p4
+frontend/extensions/p4_tests/p4_14/test_config_160_stateful_single_bit_mode.p4
+tofino/extensions/p4_tests/p4_14/test_config_160_stateful_single_bit_mode.p4
+
+# These testcases taken from glass and xfail in brig
+tofino/extensions/p4_tests/p4_14/test_config_121_tcam_range_5.p4.test
+tofino/extensions/p4_tests/p4_14/test_config_141_first_stateful_conga.p4.test
+tofino/extensions/p4_tests/p4_14/test_config_142_stateful_bfd.p4.test
+tofino/extensions/p4_tests/p4_14/test_config_171_stateful_conga.p4.test
+tofino/extensions/p4_tests/p4_14/test_config_183_sample_e2e.p4
+tofino/extensions/p4_tests/p4_14/test_config_234_ternary_valid.p4
+frontend/extensions/p4_tests/p4_14/test_config_171_stateful_conga.p4
+frontend/extensions/p4_tests/p4_14/test_config_183_sample_e2e.p4
+frontend/extensions/p4_tests/p4_14/test_config_234_ternary_valid.p4
+bmv2/extensions/p4_tests/p4_14/exclusive_cf_one_action_fail_after.p4
+bmv2/extensions/p4_tests/p4_14/exclusive_cf_one_action_fail_before.p4
+bmv2/extensions/p4_tests/p4_14/test_config_171_stateful_conga.p4
+bmv2/extensions/p4_tests/p4_14/test_config_183_sample_e2e.p4
+bmv2/extensions/p4_tests/p4_14/test_config_190_modify_with_expr.p4
+bmv2/extensions/p4_tests/p4_14/test_config_234_ternary_valid.p4
+
+# parser verify not supported
+tofino/extensions/p4_tests/p4_16/ipv4_options.p4
+tofino-ortools/extensions/p4_tests/p4_16/ipv4_options.p4
+
+# conflict between blackbox meter and builtin meter
+frontend/extensions/p4_tests/p4_14/test_config_185_first_lpf.p4
+frontend/extensions/p4_tests/p4_14/test_config_201_meter_constant_index.p4
+bmv2/extensions/p4_tests/p4_14/test_config_185_first_lpf.p4
+bmv2/extensions/p4_tests/p4_14/test_config_201_meter_constant_index.p4
+tofino/extensions/p4_tests/p4_14/test_config_185_first_lpf.p4
+tofino/extensions/p4_tests/p4_14/test_config_201_meter_constant_index.p4
+
+# Fail due to multiple uses of a table (JIRA #BRIG-26)
+tofino/testdata/p4_14_samples/16-TwoReferences.p4
+tofino/extensions/p4_tests/p4_14/eth_addr_cmp.p4
+tofino/extensions/p4_tests/p4_14/exclusive_cf_fail_next_ptr.p4
+tofino/extensions/p4_tests/p4_14/exclusive_cf_multiple_actions.p4
+tofino/extensions/p4_tests/p4_14/exclusive_cf_one_action.p4
+tofino/extensions/p4_tests/p4_14/exclusive_cf_one_action_fail_after.p4
+tofino/extensions/p4_tests/p4_14/exclusive_cf_one_action_fail_before.p4
+
+# Could not find declaration error in generated P4_16 code (JIRA #BRIG-31)
+frontend/extensions/p4_tests/p4_14/test_config_206_stateful_logging.p4
+frontend/extensions/p4_tests/p4_14/test_config_209_pack_hash_dist.p4
+bmv2/extensions/p4_tests/p4_14/test_config_192_stateful_driven_by_hash.p4
+bmv2/extensions/p4_tests/p4_14/test_config_206_stateful_logging.p4
+bmv2/extensions/p4_tests/p4_14/test_config_209_pack_hash_dist.p4
+tofino/extensions/p4_tests/p4_14/test_config_206_stateful_logging.p4
+tofino/extensions/p4_tests/p4_14/test_config_209_pack_hash_dist.p4
+
+# cannot find type for <GlobalRef>
+bmv2/extensions/p4_tests/p4_14/test_config_184_stateful_bug1.p4
+bmv2/extensions/p4_tests/p4_14/test_config_195_stateful_predicate_output.p4
+bmv2/extensions/p4_tests/p4_14/test_config_199_stateful_constant_index.p4
+bmv2/extensions/p4_tests/p4_14/test_config_224_stateful_error_check.p4
+bmv2/extensions/p4_tests/p4_14/test_config_236_stateful_read_bit.p4
+
+# blackbox type unification failures (JIRA #BRIG-30, #COMPILER-341)
+frontend/extensions/p4_tests/p4_14/test_config_174_stateful_flow_learning.p4
+frontend/extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
+frontend/extensions/p4_tests/p4_14/test_config_214_full_stats.p4
+bmv2/extensions/p4_tests/p4_14/test_config_174_stateful_flow_learning.p4
+bmv2/extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
+bmv2/extensions/p4_tests/p4_14/test_config_214_full_stats.p4
+tofino/extensions/p4_tests/p4_14/test_config_174_stateful_flow_learning.p4
+tofino/extensions/p4_tests/p4_14/test_config_205_modify_field_from_hash.p4
+tofino/extensions/p4_tests/p4_14/test_config_214_full_stats.p4
+
+# P4_14->16 unhandled primitives
+frontend/extensions/p4_tests/p4_14/test_config_182_warp_primitive.p4
+frontend/extensions/p4_tests/p4_14/test_config_191_invalidate.p4
+frontend/extensions/p4_tests/p4_14/test_config_219_modify_field_conditionally.p4
+frontend/extensions/p4_tests/p4_14/test_config_235_funnel_shift.p4
+frontend/extensions/p4_tests/p4_14/test_config_254_simple_exit.p4
+bmv2/extensions/p4_tests/p4_14/test_config_182_warp_primitive.p4
+bmv2/extensions/p4_tests/p4_14/test_config_191_invalidate.p4
+bmv2/extensions/p4_tests/p4_14/test_config_219_modify_field_conditionally.p4
+bmv2/extensions/p4_tests/p4_14/test_config_235_funnel_shift.p4
+bmv2/extensions/p4_tests/p4_14/test_config_254_simple_exit.p4
+tofino/extensions/p4_tests/p4_14/test_config_182_warp_primitive.p4
+tofino/extensions/p4_tests/p4_14/test_config_191_invalidate.p4
+tofino/extensions/p4_tests/p4_14/test_config_219_modify_field_conditionally.p4
+tofino/extensions/p4_tests/p4_14/test_config_235_funnel_shift.p4
+tofino/extensions/p4_tests/p4_14/test_config_254_simple_exit.p4
+
+# reduction_or_group (blackbox string attrib) failure
+frontend/extensions/p4_tests/p4_14/test_config_203_first_reduction_or.p4
+bmv2/extensions/p4_tests/p4_14/test_config_203_first_reduction_or.p4
+tofino/extensions/p4_tests/p4_14/test_config_203_first_reduction_or.p4
+
+# broken gateway valid check
+frontend/extensions/p4_tests/p4_14/test_config_244_gateway_compare.p4
+frontend/extensions/p4_tests/p4_14/test_config_245_alias_test.p4
+frontend/extensions/p4_tests/p4_14/test_config_246_fill_stage.p4
+frontend/extensions/p4_tests/p4_14/test_config_247_first_clpm.p4
+bmv2/extensions/p4_tests/p4_14/test_config_244_gateway_compare.p4
+bmv2/extensions/p4_tests/p4_14/test_config_245_alias_test.p4
+bmv2/extensions/p4_tests/p4_14/test_config_246_fill_stage.p4
+bmv2/extensions/p4_tests/p4_14/test_config_247_first_clpm.p4
+tofino/extensions/p4_tests/p4_14/test_config_244_gateway_compare.p4
+tofino/extensions/p4_tests/p4_14/test_config_245_alias_test.p4
+tofino/extensions/p4_tests/p4_14/test_config_247_first_clpm.p4
+
+# These currently fail gateway check with 'expression too complex'
+tofino/testdata/p4_14_samples/flowlet_switching.p4
+tofino/extensions/p4_tests/p4_14/07-MacAddrCheck.p4
+tofino/extensions/p4_tests/p4_14/08-MacAddrCheck1.p4
+
+# Parser failure.
+tofino/testdata/p4_14_samples/parser_dc_full.p4
+tofino-ortools/testdata/p4_14_samples/parser_dc_full.p4
+
+# Fails due to complex expressions in the parser that our hardware can't support.
+tofino/testdata/p4_14_samples/TLV_parsing.p4
+tofino/testdata/p4_14_samples/axon.p4
+tofino/testdata/p4_14_samples/simple_nat.p4
+
+# Generates broken PHV alloc (regs used by both ingress & egress)
+tofino-ortools/testdata/p4_14_samples/basic_routing.p4
+
+# Crashes in model -- need to root cause
+tofino-ortools/testdata/p4_14_samples/exact_match5.p4
+
+# Missing constraints for header stack POV bits.
+tofino-ortools/testdata/p4_14_samples/instruct5.p4
+
+# match group packing overflow
+tofino/extensions/p4_tests/p4_14/test_config_246_fill_stage.p4
+
+# Layout Constraints from gateway allocation
+tofino-ortools/extensions/p4_tests/p4_14/gateway_bus1.p4
+tofino-ortools/extensions/p4_tests/p4_14/gateway_bus2.p4
+
+# Fail on purpose due to action profiles not being mutually exclusive
+#tofino/extensions/p4_tests/p4_14/action_profile_not_shared.p4
+#tofino/extensions/p4_tests/p4_14/action_profile_next_stage.p4
+
+# Multiple calculations per action
+tofino-ortools/extensions/p4_tests/p4_14/counter_test1.p4
+tofino-ortools/extensions/p4_tests/p4_14/counter_test2.p4
+tofino-ortools/extensions/p4_tests/p4_14/meter_test1.p4
+tofino-ortools/testdata/p4_14_samples/hash_action_basic.p4
+tofino-ortools/testdata/p4_14_samples/hash_action_gateway.p4
+tofino-ortools/testdata/p4_14_samples/hash_action_two_separate.p4
+
+# Hash Action Bugs within the ASM or Model
+tofino/testdata/p4_14_samples/hash_action_gateway.p4
+
+# No support yet in assembler for hash calcuation
+tofino/extensions/p4_tests/p4_14/hash_calculation_32.p4
+tofino-ortools/extensions/p4_tests/p4_14/hash_calculation_32.p4
+
+# Failure for BRIG-44 in JIRA
+tofino/testdata/p4_14_samples/basic_conditionals.p4
+
+# Same Name Conversion Bug
+frontend/extensions/p4_tests/p4_14/shared_names.p4
+bmv2/extensions/p4_tests/p4_14/shared_names.p4
+tofino/extensions/p4_tests/p4_14/shared_names.p4
+
+# These fail (or pass) intermittently on Jenkins; not sure why
+tofino-ortools/extensions/p4_tests/p4_14/simple_counter.p4
+tofino-ortools/extensions/p4_tests/p4_14/max_counters.p4
+tofino-ortools/extensions/p4_tests/p4_14/gateway_bus2.p4
+tofino-ortools/testdata/p4_14_samples/bigfield1.p4
+tofino-ortools/testdata/p4_14_samples/07-MultiProtocol.p4
+tofino/testdata/p4_14_samples/basic_routing.p4
+
+# Fails intermittently due to allocating two fields to the same PHV container when it shouldn't
+tofino/testdata/p4_14_samples/07-MultiProtocol.p4
+
+# Fails with CompilerBug "Can't create temp of type bool"
+tofino/extensions/p4_tests/p4_16/apply_if.p4
+tofino-ortools/extensions/p4_tests/p4_16/apply_if.p4
+tofino/extensions/p4_tests/p4_16/depgraph2.p4
+tofino-ortools/extensions/p4_tests/p4_16/depgraph2.p4
+
+#tofino/testdata/p4_14_samples/switch_20160226/switch.p4
+#tofino/testdata/p4_14_samples/switch_20160512/switch.p4
+
+bmv2/extensions/p4_tests/p4_16/bfd_offload.p4
+bmv2/extensions/p4_tests/p4_16/bloom_filter.p4
+bmv2/extensions/p4_tests/p4_16/apply_if.p4
+bmv2/extensions/p4_tests/p4_16/direct-action.p4
+bmv2/extensions/p4_tests/p4_16/flowlet_switching.p4
+bmv2/extensions/p4_tests/p4_16/depgraph1.p4
+bmv2/extensions/p4_tests/p4_16/parser_metadata_init.p4
+bmv2/extensions/p4_tests/p4_16/stateful_alu.p4
+bmv2/extensions/p4_tests/p4_16/synth-action.p4
+bmv2/extensions/p4_tests/p4_16/ternary1.p4
+bmv2/extensions/p4_tests/p4_16/ternary2.p4
+bmv2/extensions/p4_tests/p4_16/ipv4_options.p4
