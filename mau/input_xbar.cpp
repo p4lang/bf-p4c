@@ -745,7 +745,7 @@ static void add_use(IXBar::Use &alloc, const PhvInfo::Field *field,
             alloc.use.push_back(byte);
     });
     if (!ok)
-        BUG("field %s allocated to tagalong but used in MAU pipe", field->name);
+        ERROR("field " << field->name << " allocated to tagalong but used in MAU pipe");
 }
 
 /* Simple first step that aligns with the possible options for layout option way sizes.
