@@ -676,18 +676,16 @@ void ExactMatchTable::write_regs() {
         for (auto col : row.cols) {
             int word_group = 0;
             for (int group : word_info[word]) {
+                int overhead_word = group_info[group].overhead_word;
+                if (overhead_word < 0)
+                    overhead_word = group_info[group].match_group.rbegin()->first;
+                if (int(word) == overhead_word)
+                    merge.col[col].row_action_nxtable_bus_drive[row.row] |= 1 << row.bus;
+                auto &way = way_map[std::make_pair(row.row, col)];
+                int idx = way.index + word - overhead_word;
+                int overhead_row = ways[way.way].rams[idx].first;
                 auto &hitmap_ixbar = merge.col[col].hitmap_output_map[2*row.row + word_group];
-                if (group_info[group].overhead_word >= 0) {
-                    auto &overhead_row = layout[index + word - group_info[group].overhead_word];
-                    if (&overhead_row == &row)
-                        merge.col[col].row_action_nxtable_bus_drive[row.row] |= 1 << row.bus;
-                    setup_muxctl(hitmap_ixbar, overhead_row.row*2 + group_info[group].word_group);
-                } else {
-                    int last_word = group_info[group].match_group.rbegin()->first;
-                    auto &last_row = layout[index + word - last_word];
-                    if (&last_row == &row)
-                        merge.col[col].row_action_nxtable_bus_drive[row.row] |= 1 << row.bus;
-                    setup_muxctl(hitmap_ixbar, last_row.row*2 + group_info[group].word_group); }
+                setup_muxctl(hitmap_ixbar, overhead_row*2 + group_info[group].word_group);
                 if (++word_group > 1) break; }
             /*setup_muxctl(merge.col[col].hitmap_output_map[bus],
                            layout[index+word].row*2 + layout[index+word].bus); */ }
