@@ -151,6 +151,7 @@ void ActionTable::pass1() {
         if (!actions->exists(fmt.first)) {
             error(fmt.second->lineno, "Format for non-existant action %s", fmt.first.c_str());
             continue; }
+#if 0
         for (auto &fld : *fmt.second) {
             if (auto *f = format ? format->field(fld.first) : 0) {
                 if (fld.second.bits != f->bits || fld.second.size != f->size) {
@@ -165,6 +166,7 @@ void ActionTable::pass1() {
                               "with action %s format", fmt.first.c_str(), fld.first.c_str(),
                               fmt2.first.c_str());
                         break; } } } }
+#endif
         width = std::max(width, (fmt.second->size-1)/128 + 1); }
     unsigned depth = layout_size()/width;
     unsigned idx = 0; // ram index within depth
