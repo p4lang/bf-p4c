@@ -17,9 +17,10 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
             if (!CHECKTYPE(kv.value, tVEC)) continue;
             for (auto &w : kv.value.vec) {
                 if (!CHECKTYPE(w, tVEC)) continue;
-                if (w.vec.size < 3 || w[0].type != tINT || w[1].type != tINT || w[2].type != tINT)
+                if (w.vec.size < 3 || w[0].type != tINT || w[1].type != tINT || w[2].type != tINT) {
                     error(w.lineno, "invalid way descriptor");
-                else ways.emplace_back(Way{w.lineno, w[0].i, w[1].i, w[2].i});
+                    continue; }
+                ways.emplace_back(Way{w.lineno, w[0].i, w[1].i, w[2].i});
                 if (w.vec.size > 3) {
                     for (int i = 3; i < w.vec.size; i++) {
                         if (!CHECKTYPE(w[i], tVEC)) continue;
@@ -87,7 +88,6 @@ void ExactMatchTable::pass1() {
     alloc_id("logical", logical_id, stage->pass1_logical_id,
              LOGICAL_TABLES_PER_STAGE, true, stage->logical_id_use);
     alloc_busses(stage->sram_match_bus_use);
-    alloc_vpns();
     check_next();
     if (action.check() && action->set_match_table(this, action.args.size() > 1) != ACTION)
         error(action.lineno, "%s is not an action table", action->name());
@@ -279,6 +279,7 @@ void ExactMatchTable::pass1() {
                 bit += piece.size(); } }
         for (unsigned i = 0; i < fmt_width; i++)
             LOG1("  match in word " << i << ": " << match_in_word[i]); }
+    alloc_vpns();
     if (gateway) {
         gateway->logical_id = logical_id;
         gateway->pass1();
@@ -381,6 +382,26 @@ void ExactMatchTable::setup_ways() {
             if (++word == fmt_width) { word = 0; bank++; } }
         ++way; }
     // FIXME -- check to ensure that ways that share a bus use the same hash group?
+}
+
+void ExactMatchTable::alloc_vpns() {
+    if (error_count > 0 || no_vpns || layout_size() == 0 || layout[0].vpns.size() > 0) return;
+    int period, width, depth;
+    const char *period_name;
+    vpn_params(width, depth, period, period_name);
+    std::map<std::pair<int, int>, int *> vpn_for;
+    for (auto &row : layout) {
+        row.vpns.resize(row.cols.size());
+        int i = 0;
+        for (auto col : row.cols)
+            vpn_for[std::make_pair(row.row, col)] = &row.vpns[i++]; }
+    int vpn = 0, word = 0;
+    for (auto &way : ways) {
+        for (auto unit : way.rams) {
+            *vpn_for[unit] = vpn;
+            if (++word == width) {
+                word = 0;
+                vpn += period; } } }
 }
 
 static int find_in_ixbar(Table *table, std::vector<Phv::Ref> &match) {

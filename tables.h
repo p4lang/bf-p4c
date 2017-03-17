@@ -456,6 +456,7 @@ DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
     struct WayRam { int way, index, word, bank; };
     std::map<std::pair<int, int>, WayRam> way_map;
     void setup_ways();
+    void alloc_vpns() override;
     std::vector<Phv::Ref>                 match;
     std::map<unsigned, Phv::Ref>          match_by_bit;
     std::vector<std::vector<Phv::Ref>>    match_in_word;
