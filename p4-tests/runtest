@@ -138,11 +138,14 @@ if [ ! -r $1 ]; then
 fi
 file=$1
 
-if [ "${file#$srcdir/}" = "$file" -a "$srcdir" != "." ]; then
+if [[ "$file" =~ ^"$srcdir/" || "$srcdir" == "." ]]; then
+    testdir=$testdir/$(dirname ${file#$srcdir/})
+elif [[ "$file" =~ ^/ ]]; then
+    testdir=$(dirname $file)
+else
     die "$file is not under $srcdir"
 fi
 
-testdir=$testdir/$(dirname ${file#$srcdir/})
 name=$(basename $file .p4)
 
 P4C_ARGS="$P4C_ARGS -D__TARGET_TOFINO__"
@@ -180,7 +183,11 @@ if $run_stf && [ -r ${file%.p4}.stf ]; then
     TFLN=$(findbin tofino-asm tflink)
     STF=$(findbin model simple_test_harness)
 
-    test=`pwd`/${file%.p4}.stf
+    if [[ "$file" =~ ^/ ]]; then
+        test=${file%.p4}.stf
+    else
+        test=`pwd`/${file%.p4}.stf
+    fi
     cd $testdir
     mkdir -p $name.out
     obsLog=$name.p4.obs
