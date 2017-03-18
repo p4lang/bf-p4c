@@ -1,5 +1,8 @@
 - current compiler failures on some tests.
 
+action_chain1.p4 tfas
+- asm gen fails to include 'next' field in ternary indirect
+
 counter5.p4 mismatch
 - synth2port fabric is different -- not clear if it is a bug or where
 

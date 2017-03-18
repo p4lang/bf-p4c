@@ -33,8 +33,8 @@ test_config_48_action_data_bit_masked_set.p4 mismatch
 - asmgen causes enable of unneeded bytes on action_hv_xbar
 test_config_91_gateway_with_split_table.p4 mismatch
 - action table split at 8 rows instead of 10?
-
-
+test_config_197_default_next_table.p4 tfas
+- missing next field in ternary indirect format
 
 - uncharacterized failures (FIXME)
 01-FlexCounter.p4 compile

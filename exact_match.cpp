@@ -194,7 +194,10 @@ void ExactMatchTable::pass1() {
                         error(mgm_lineno, "Format group %d doesn't match in word %d", grp, i);
                     else {
                         group_info[grp].match_group[i] = j;
-                        if (Format::Field *next = format->field("next", grp)) {
+                        auto *next = format->field("next", grp);
+                        if (!next && hit_next.size() > 1)
+                            next = format->field("action", grp);
+                        if (next) {
                             if (next->bits[0].lo/128 != i) continue;
                             static unsigned limit[5] = { 0, 8, 32, 32, 32 };
                             unsigned bit = next->bits[0].lo%128U;
@@ -205,6 +208,8 @@ void ExactMatchTable::pass1() {
                                 warning(mgm_lineno, "Next(%d) field must start in range %d..%d "
                                         "to be in match group %d", grp, i*128+1, i*128+limit[j], j);
                             } } } } }
+        if (hit_next.size() > 1 && !format->field("next") && !format->field("action"))
+            error(format->lineno, "No 'next' field in format");
         if (error_count > 0) return;
         for (int i = 0; i < (int)group_info.size(); i++) {
             if (group_info[i].match_group.size() == 1)
@@ -480,6 +485,8 @@ void ExactMatchTable::write_regs() {
             match_mask.clrrange(version->bits[0].lo, version->size);
             version_nibble_mask.clrrange(version->bits[0].lo/4, 1); } }
     Format::Field *next = format ? format->field("next") : nullptr;
+    if (format && !next && hit_next.size() > 1)
+        next = format->field("action");
 
     /* iterating through rows in the sram array;  while in this loop, 'row' is the
      * row we're on, 'word' is which word in a wide full-way the row is for, and 'way'

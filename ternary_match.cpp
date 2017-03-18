@@ -204,7 +204,18 @@ void TernaryMatchTable::pass1() {
         if (hit_next.size() > 0 && indirect->hit_next.size() > 0)
             error(hit_next[0].lineno, "Ternary Match table with both direct and indirect "
                   "next tables");
-        if (!indirect->p4_table) indirect->p4_table = p4_table; }
+        if (!indirect->p4_table) indirect->p4_table = p4_table;
+        if (hit_next.size() > 1 || indirect->hit_next.size() > 1) {
+            if (auto *next = indirect->format->field("next")) {
+                if (next->bit(0) != 0)
+                    error(indirect->format->lineno, "ternary indirect 'next' field must be"
+                          " at bit 0");
+            } else if (auto *action = indirect->format->field("action")) {
+                if (action->bit(0) != 0)
+                    error(indirect->format->lineno, "ternary indirect 'action' field must be"
+                          " at bit 0 to be used as next table selector");
+            } else
+                error(indirect->format->lineno, "No 'next' or 'action' field in format"); } }
     attached.pass1(this);
     if (hit_next.size() > 2 && !indirect)
         error(hit_next[0].lineno, "Ternary Match tables cannot directly specify more"
@@ -342,6 +353,8 @@ void TernaryMatchTable::write_regs() {
     if (idletime) idletime->write_regs();
     merge.exact_match_logical_result_delay |= 1 << logical_id;
     stage->regs.cfg_regs.mau_cfg_movereg_tcam_only |= 1U << logical_id;
+    if (hit_next.size() > 1 && !indirect)
+        merge.next_table_tcam_actionbit_map_en |= 1 << logical_id;
 }
 
 std::unique_ptr<json::map> TernaryMatchTable::gen_memory_resource_allocation_tbl_cfg(const char *type, std::vector<Layout> &, bool skip_spare_bank) {
