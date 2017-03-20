@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 #include "midend.h"
-#include "backends/bmv2/inlining.h"
 #include "frontends/common/constantFolding.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/evaluator/evaluator.h"
@@ -30,20 +29,24 @@ limitations under the License.
 #include "frontends/p4/unusedDeclarations.h"
 #include "midend/actionsInlining.h"
 #include "midend/actionSynthesis.h"
+#include "midend/compileTimeOps.h"
 #include "midend/convertEnums.h"
 #include "midend/copyStructures.h"
 #include "midend/eliminateTuples.h"
+#include "midend/expandLookahead.h"
 #include "midend/local_copyprop.h"
 #include "midend/localizeActions.h"
 #include "midend/moveConstructors.h"
 #include "midend/nestedStructs.h"
+#include "midend/predication.h"
 #include "midend/removeLeftSlices.h"
 #include "midend/removeParameters.h"
 #include "midend/removeReturns.h"
 #include "midend/simplifyKey.h"
-#include "midend/simplifySelect.h"
+#include "midend/simplifySelectCases.h"
+#include "midend/simplifySelectList.h"
+#include "midend/tableHit.h"
 #include "midend/validateProperties.h"
-
 
 namespace Tofino {
 
@@ -91,29 +94,33 @@ MidEnd::MidEnd(CompilerOptions& options) {
         new P4::UniqueNames(&refMap),
         new P4::UniqueParameters(&refMap, &typeMap),
         new P4::SimplifyControlFlow(&refMap, &typeMap),
-        new P4::RemoveTableParameters(&refMap, &typeMap),
         new P4::RemoveActionParameters(&refMap, &typeMap),
         new P4::SimplifyKey(&refMap, &typeMap,
                             new P4::NonLeftValue(&refMap, &typeMap)),
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::StrengthReduction(),
-        new P4::SimplifySelect(&refMap, &typeMap, true),  // constant keysets
+        new P4::SimplifySelectCases(&refMap, &typeMap, true),  // constant keysets
+        new P4::ExpandLookahead(&refMap, &typeMap),
         new P4::SimplifyParsers(&refMap),
         new P4::StrengthReduction(),
         new P4::EliminateTuples(&refMap, &typeMap),
         new P4::CopyStructures(&refMap, &typeMap),
         new P4::NestedStructs(&refMap, &typeMap),
+        new P4::SimplifySelectList(&refMap, &typeMap),
+        new P4::Predication(&refMap),
+        new P4::ConstantFolding(&refMap, &typeMap),
         new P4::LocalCopyPropagation(&refMap, &typeMap),
         new P4::ConstantFolding(&refMap, &typeMap),
         new P4::MoveDeclarations(),
         new P4::ValidateTableProperties({ "implementation", "size", "counters",
                                           "meters", "size", "support_timeout" }),
         new P4::SimplifyControlFlow(&refMap, &typeMap),
+        new P4::CompileTimeOperations(),
+        new P4::TableHit(&refMap, &typeMap),
         new P4::SynthesizeActions(&refMap, &typeMap),
         new P4::MoveActionsToTables(&refMap, &typeMap),
 
-        new P4::TypeChecking(&refMap, &typeMap, true),
-        evaluator,
+        new P4::TypeChecking(&refMap, &typeMap, true)
     });
 }
 
