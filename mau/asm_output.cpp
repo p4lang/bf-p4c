@@ -762,6 +762,11 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << sep << c->asLong();
         sep = ", ";
         return false; }
+    bool preorder(const IR::BoolLiteral *c) override {
+        assert(sep);
+        out << sep << c->value;
+        sep = ", ";
+        return false; }
     bool preorder(const IR::ActionArg *a) override {
         assert(sep);
         out << sep << a->toString();

@@ -40,7 +40,7 @@ int main(int ac, char **av) {
         return 1; }
 
     auto program = parseP4File(options);
-    program = P4::FrontEnd(hook).run(options, program);
+    program = P4::FrontEnd(hook).run(options, program, true);
     if (!program)
         return 1;
     if (Log::verbose()) {

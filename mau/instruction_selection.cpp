@@ -73,6 +73,7 @@ bool InstructionSelection::checkPHV(const IR::Expression *e) {
 
 bool InstructionSelection::checkSrc1(const IR::Expression *e) {
     if (e->is<IR::Constant>()) return true;
+    if (e->is<IR::BoolLiteral>()) return true;
     if (e->is<IR::ActionArg>()) return true;
     if (auto slice = e->to<IR::Slice>())
         if (slice->e0->is<IR::ActionArg>()) return true;

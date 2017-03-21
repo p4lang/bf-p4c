@@ -39,15 +39,25 @@ class SplitComplexInstanceRef : public Transform {
 };
 
 class RemoveInstanceRef : public Transform {
+    std::map<cstring, const IR::Expression *>   created_tempvars;
  public:
     RemoveInstanceRef() { dontForwardChildrenBeforePreorder = true; }
     const IR::Expression *preorder(IR::InstanceRef *ir) override {
-        if (!ir->obj)
-            return new IR::TempVar(ir->type, ir->name.name);
-        else if (!ir->obj->is<IR::HeaderStack>())
+        if (!ir->obj) {
+            const IR::Expression *rv = nullptr;
+            if (created_tempvars.count(ir->name.name)) {
+                rv = created_tempvars.at(ir->name.name);
+                LOG2("RemoveInstanceRef existing TempVar " << ir->name.name);
+            } else {
+                created_tempvars[ir->name.name] = rv = new IR::TempVar(ir->type, ir->name.name);
+                LOG2("RemoveInstanceRef new TempVar " << ir->name.name); }
+            return rv;
+        } else if (!ir->obj->is<IR::HeaderStack>()) {
+            LOG2("RemoveInstanceRef new ConcreteheaderRef " << ir->obj);
             return new IR::ConcreteHeaderRef(ir->obj);
-        else
-            return ir; }
+        } else {
+            LOG2("RemoveInstanceRef not removing " << ir->name.name);
+            return ir; } }
 };
 
 #endif /* _COMMON_PARAM_BINDING_H_ */
