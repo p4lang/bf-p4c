@@ -73,6 +73,8 @@ class Slice {
         if (lo > hi) invalidate();
         return *this; }
     Slice operator&(const Slice &a) const { auto tmp = *this; tmp &= a; return tmp; }
+    vector<Slice> split(const Slice &a, bool &split);
+    vector<Slice> split(const vector<Slice> &vec, vector<Slice> &splitters);
     int width() const { return hi - lo + 1; }
     int bytealign() const;
     Slice fullbyte() const;

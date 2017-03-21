@@ -15,7 +15,7 @@ bool TableLayout::backtrack(trigger &trig) {
 
 cstring HashDistReq::algorithm() const {
     if (instr != nullptr && instr->name == "hash") {
-        return instr->operands[1]->to<IR::Member>()->member;  
+        return instr->operands[1]->to<IR::Member>()->member;
     }
     return "";
 }
@@ -172,40 +172,14 @@ void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl, int immediat
     tbl->layout_options.push_back(lo_tern);
 }
 
-/* Setting up the potential layouts for exact match, with different numbers of entries per row,
-   different ram widths, and immediate data on and off */
-void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved,
-                                       bool has_action_profile) {
-    bool no_action_data = (tbl->layout.action_data_bytes == 0);
-
+void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes) {
     for (int entry_count = 1; entry_count < 10; entry_count++) {
         int match_group_bits = std::max(8*tbl->layout.match_bytes-8, 0) +
-                               tbl->layout.overhead_bits + 4;
+                               tbl->layout.overhead_bits + action_data_bytes * 8 + 4;
         int width = (entry_count * match_group_bits + 127) / 128;
         while (entry_count / width > 4)
             width++;
-        while (tbl->layout.overhead_bits * entry_count > width * 64)
-            width++;
-        if (width > 8) break;
-
-        IR::MAU::Table::Layout *layout = new IR::MAU::Table::Layout();
-        IR::MAU::Table::Way *way = new IR::MAU::Table::Way();
-        *layout = tbl->layout;
-        way->match_groups = entry_count; way->width = width;
-        IR::MAU::Table::LayoutOption lo(layout, way);
-        tbl->layout_options.push_back(lo);
-    }
-
-    if (no_action_data || has_action_profile
-        || tbl->layout.action_data_bytes > 4 - immediate_bytes_reserved)
-        return;
-
-    for (int entry_count = 1; entry_count < 10; entry_count++) {
-        int match_group_bits = std::max(8*tbl->layout.match_bytes-8, 0) +
-                               tbl->layout.overhead_bits + tbl->layout.action_data_bytes * 8
-                               + 4;
-        int width = (entry_count * match_group_bits + 127) / 128;
-        while ((tbl->layout.overhead_bits + 8 * tbl->layout.action_data_bytes * entry_count)
+        while (((tbl->layout.overhead_bits + 8 * action_data_bytes) * entry_count)
                 > width * 64)
             width++;
         if (width > 8) break;
@@ -213,12 +187,24 @@ void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_
         IR::MAU::Table::Layout *layout = new IR::MAU::Table::Layout();
         IR::MAU::Table::Way *way = new IR::MAU::Table::Way();
         *layout = tbl->layout;
-        layout->action_data_bytes_in_overhead = tbl->layout.action_data_bytes;
-        layout->overhead_bits += tbl->layout.action_data_bytes * 8;
+        layout->action_data_bytes_in_overhead = action_data_bytes;
+        layout->overhead_bits += action_data_bytes * 8;
         way->match_groups = entry_count; way->width = width;
         IR::MAU::Table::LayoutOption lo(layout, way);
         tbl->layout_options.push_back(lo);
     }
+}
+
+/* Setting up the potential layouts for exact match, with different numbers of entries per row,
+   different ram widths, and immediate data on and off */
+void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved,
+                                       bool has_action_profile) {
+    bool no_action_data = (tbl->layout.action_data_bytes == 0);
+    setup_exact_match(tbl, 0);
+    if (no_action_data || has_action_profile
+        || tbl->layout.action_data_bytes > 4 - immediate_bytes_reserved)
+        return;
+    setup_exact_match(tbl, tbl->layout.action_data_bytes);
 }
 
 /* FIXME: This function is for the setup of a table with no match data.  This is currently hacked

@@ -257,9 +257,22 @@ TablePlacement::Placed *TablePlacement::Placed::gateway_merge() {
     return this;
 }
 
+static bool try_alloc_format(TablePlacement::Placed *next, TableResourceAlloc *resources,
+                             StageUseEstimate &sue) {
+     resources->table_format.clear();
+     TableFormat current_format(*sue.preferred(), resources->match_ixbar, next->table);
+
+     if (!current_format.find_format(&resources->table_format)) {
+         resources->table_format.clear();
+         return false;
+     }
+     return true;
+}
+
 static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::Placed *done,
                             const PhvInfo &phv, StageUseEstimate &sue,
-                            TableResourceAlloc *resources, const HashDistChoices &hdc) {
+                            TableResourceAlloc *resources, const HashDistChoices &hdc,
+                            bool is_gw) {
     resources->match_ixbar.clear();
     resources->gateway_ixbar.clear();
     resources->selector_ixbar.clear();
@@ -289,6 +302,15 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
         resources->gateway_ixbar.clear();
         resources->selector_ixbar.clear();
         return false; }
+
+    if (!is_gw && !try_alloc_format(next, resources, sue)) {
+        resources->match_ixbar.clear();
+        resources->gateway_ixbar.clear();
+        resources->selector_ixbar.clear();
+        LOG3("Could not allocate format for selected layout_option");
+        return false;
+    }
+
     return true;
 }
 
@@ -403,13 +425,13 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         allocated = false; ixbar_allocation_bug = false; mem_allocation_bug = false;
         rv->use = StageUseEstimate(t, rv->entries, prev_placed, has_action_data);
 
-        if (!try_alloc_ixbar(rv, done, phv, min_use, min_resources, hdc)) {
+        if (!try_alloc_ixbar(rv, done, phv, min_use, min_resources, hdc, rv->entries == 0)) {
             advance_to_next_stage = true;
             ixbar_allocation_bug = true;
             LOG3("Min Use ixbar allocation did not fit");
         }
 
-        if (!try_alloc_ixbar(rv, done, phv, rv->use, resources, hdc)) {
+        if (!try_alloc_ixbar(rv, done, phv, rv->use, resources, hdc, rv->entries == 0)) {
             advance_to_next_stage = true;
             ixbar_allocation_bug = true;
             LOG3("Table Use ixbar allocation did not fit");
@@ -459,7 +481,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 
             LOG3(" - reducing to " << rv->entries << " of " << t->name
                  << " in stage " << rv->stage);
-            if (!try_alloc_ixbar(rv, done, phv, rv->use, resources, hdc)) {
+            if (!try_alloc_ixbar(rv, done, phv, rv->use, resources, hdc, rv->entries == 0)) {
                 ixbar_allocation_bug = true;
                 ERROR("IXBar Allocation error after previous allocation?");
                 advance_to_next_stage = true;

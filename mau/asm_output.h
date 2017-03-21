@@ -24,11 +24,11 @@ class MauAsmOutput : public MauInspector {
         by_stage[std::make_pair(tbl->gress, tbl->logical_id/16U)].push_back(tbl);
         return true; }
     friend std::ostream &operator<<(std::ostream &, const MauAsmOutput &);
-    class TableFormat;
+    class TableMatch;
     class ImmedFormat;
     class ActionDataFormat;
     void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use &,
-            const Memories::Use *, const TableFormat *, bool hash_action,
+            const Memories::Use *, const TableMatch *, bool hash_action,
             bool is_sel = false, const IR::ActionSelector *as = nullptr) const;
     void emit_ixbar_gather_bytes(const vector<IXBar::Use::Byte> &use,
                                  map<int, map<int, Slice>> &sort) const;
@@ -37,7 +37,7 @@ class MauAsmOutput : public MauInspector {
     void emit_ixbar_hash_dist(std::ostream &out, indent_t indent,
              const IXBar::Use &use) const;
     void emit_ixbar_hash_table(int hash_table, vector<Slice> &match_data,
-            vector<Slice> &ghost, const TableFormat *fmt, map<int, map<int, Slice>> &sort) const;
+            vector<Slice> &ghost, const TableMatch *fmt, map<int, map<int, Slice>> &sort) const;
     void emit_ixbar_hash(std::ostream &out, indent_t indent, vector<Slice> &match_data,
             vector<Slice> &ghost, const IXBar::Use &use, int hash_group,
             const IR::ActionSelector *as) const;
@@ -49,6 +49,8 @@ class MauAsmOutput : public MauInspector {
              bool hash_action, cstring next_hit, cstring &gw_miss) const;
     void emit_hash_action_gateway(std::ostream &out, indent_t gw_indent,
             const IR::MAU::Table *tbl) const;
+    void emit_table_format(std::ostream &out, indent_t, const TableFormat::Use &use,
+            const TableMatch *tm, bool ternary) const;
     void emit_table(std::ostream &out, const IR::MAU::Table *tbl) const;
     void find_indirect_index(std::ostream &out, const IR::MAU::Table *tbl,
             const IR::Attached *at) const;

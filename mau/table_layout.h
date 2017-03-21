@@ -49,6 +49,7 @@ class TableLayout : public MauModifier, Backtrack {
     bool preorder(IR::MAU::Table *tbl) override;
     void setup_match_layout(IR::MAU::Table::Layout &, const IR::MAU::Table *);
     void setup_gateway_layout(IR::MAU::Table::Layout &, IR::MAU::Table *);
+    void setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes);
     void setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved,
                               bool has_action_profile);
     void setup_ternary_layout_options(IR::MAU::Table *tbl, int immediate_bytes_reserved,

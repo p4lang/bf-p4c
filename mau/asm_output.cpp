@@ -36,29 +36,13 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
     return out;
 }
 
-class MauAsmOutput::TableFormat {
+class MauAsmOutput::TableMatch {
     const MauAsmOutput &self;
-    struct match_group {
-        int starting_bits[7] = {-1, -1, -1, -1, -1, -1, -1};
-        vector<std::pair<int, int>>     match;
-    };
-    int total_bits[7] = {0, 0, 0, 0, 0, 0, 0};
-    enum type_t { ACTION, IMMEDIATE, VERS, COUNTER, METER, INDIRECT_ACTION, SELECTOR };
-    vector<match_group> format;
  public:
     vector<Slice>       match_fields;
     vector<Slice>       ghost_bits;
-    TableFormat(const MauAsmOutput &s, const IR::MAU::Table *tbl);
-    void print(std::ostream &) const;
-    void setup_indirect(type_t type, int groups, int groups_per_word, bitvec &used) {
-        if (total_bits[type] > 0) {
-            for (int i = 0; i < groups; i++) {
-                int word = i / groups_per_word;
-                format[i].starting_bits[type] = used.ffz(128*word);
-                used.setrange(format[i].starting_bits[type], total_bits[type]);
-            }
-        }
-    }
+
+    TableMatch(const MauAsmOutput &s, const PhvInfo &phv, const IR::MAU::Table *tbl);
 };
 
 class MauAsmOutput::ImmedFormat {
@@ -72,20 +56,56 @@ class MauAsmOutput::ImmedFormat {
  public:
     void add_alias(cstring name, cstring immed) {
         immediates.emplace_back(name, immed, -1, 0); }
-    void setup_immed(const IR::ActionFunction *act, const char *immed) {
+    void setup_immed(const IR::ActionFunction *act, cstring immed, bitvec immed_mask) {
         vector<std::pair<int, cstring>> sorted_args;
+        vector<std::pair<int, int>> immediate_lengths;
         for (auto arg : act->args) {
-            int size = (arg->type->width_bits() + 7) / 8U;  // in bytes
+            int size = arg->type->width_bits();  // in bytes
             sorted_args.emplace_back(size, arg->name); }
         std::stable_sort(sorted_args.begin(), sorted_args.end(),
             [](const std::pair<int, cstring> &a, const std::pair<int, cstring> &b)->bool {
                 return a.first > b.first; });
+        int start = immed_mask.ffs();
+        // If the immediate is split, then have to keep track of multiple immediate info
+        // per match group
+        while (start >= 0) {
+            int end = immed_mask.ffz(start);
+            if (end == -1)
+                end = immed_mask.max() + 1;
+            immediate_lengths.emplace_back(start, end - 1);
+            start = immed_mask.ffs(end);
+        }
         int byte = 0;
+
+        // Link the byte to the particular byte to the tables immediate mask, i.e. if
+        // the immediate is split into multiple parts, the first bits would be part of
+        // immediate0, the next bits would be part of immediate1, etc.  If it's not split,
+        // then it's simply just immediate
         for (auto &arg : sorted_args) {
             if (byte >= 4) break;
-            if (byte + arg.first > 4) continue;
-            immediates.emplace_back(arg.second, immed, byte*8, arg.first*8);
-            byte += arg.first; } }
+            if (byte + arg.first / 8 > 4) continue;
+            int index = 0;
+            while (index < immediate_lengths.size()) {
+                int location = byte * 8;
+                if (immediate_lengths[index].first <= location
+                    && immediate_lengths[index].second >= location) {
+                    if (location + arg.first - 1 > immediate_lengths[index].second)
+                        BUG("Immediate does not line up appropriately");
+                    break;
+                }
+                index++;
+            }
+            if (index == immediate_lengths.size())
+                BUG("Immediate issue.  Format incorrect");
+            cstring immed_addon = immed;
+            if (immediate_lengths.size() > 1)
+                immed_addon = immed + std::to_string(index);
+
+            immediates.emplace_back(arg.second, immed_addon,
+                                    byte*8 - immediate_lengths[index].first, arg.first);
+            byte += (arg.first + 7) / 8;
+        }
+    }
     explicit operator bool() { return !immediates.empty(); }
     void print(std::ostream &out) const {
         const char *sep = "";
@@ -291,7 +311,7 @@ void MauAsmOutput::emit_ixbar_hash_dist(std::ostream &out, indent_t indent,
 /* Determine which bytes of a table's input xbar belong to an individual hash table,
    so that we can output the hash of this individual table. */
 void MauAsmOutput::emit_ixbar_hash_table(int hash_table, vector<Slice> &match_data,
-        vector<Slice> &ghost, const TableFormat *fmt, map<int, map<int, Slice>> &sort) const {
+        vector<Slice> &ghost, const TableMatch *fmt, map<int, map<int, Slice>> &sort) const {
     unsigned half = hash_table & 1;
     for (auto &match : sort.at(hash_table/2)) {
         Slice reg = match.second;
@@ -305,11 +325,10 @@ void MauAsmOutput::emit_ixbar_hash_table(int hash_table, vector<Slice> &match_da
             reg = reg(0, 63 - match.first); }
         if (!reg) continue;
         if (fmt != nullptr) {
-            auto reg_hash = reg - fmt->ghost_bits;
-            if (auto reg_ghost = reg - reg_hash)
-                ghost.push_back(reg_ghost);
-            if (reg_hash)
-                match_data.emplace_back(reg_hash);
+            vector<Slice> reg_ghost;
+            vector<Slice> reg_hash = reg.split(fmt->ghost_bits, reg_ghost);
+            ghost.insert(ghost.end(), reg_ghost.begin(), reg_ghost.end());
+            match_data.insert(match_data.end(), reg_hash.begin(), reg_hash.end());
         } else {
             match_data.emplace_back(reg);
         }
@@ -380,7 +399,7 @@ void MauAsmOutput::emit_ixbar_hash_dist_hash(std::ostream &out, indent_t indent,
 
 /* Emit the ixbar use for a particular type of table */
 void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
-        const IXBar::Use &use, const Memories::Use *mem, const TableFormat *fmt,
+        const IXBar::Use &use, const Memories::Use *mem, const TableMatch *fmt,
         bool hash_action, bool is_sel /*= false*/,
         const IR::ActionSelector *as /*= nullptr */) const {
     map<int, map<int, Slice>> sort;
@@ -521,6 +540,149 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
     }
 }
 
+struct fmt_state {
+    const char *sep = " ";
+    int next = 0;
+    void emit(std::ostream &out, const char *name, int group, int bit, int width) {
+        if (bit < 0) return;
+        out << sep << name;
+        if (group != -1)
+            out << '(' << group << ")";
+        out << ": ";
+        if (next == bit)
+            out << width;
+        else
+            out << bit << ".." << bit+width-1;
+        next = bit+width;
+        sep = ", "; }
+    void emit(std::ostream &out, const char *name, int group,
+              const vector<std::pair<int, int>> &bits) {
+        if (bits.size() == 1) {
+            emit(out, name, group, bits[0].first, bits[0].second - bits[0].first + 1);
+        } else if (bits.size() > 1) {
+            out << sep << name;
+            if (group != -1)
+                out << '(' << group << ")";
+            out << ": [";
+            sep = "";
+            for (auto &p : bits) {
+                out << sep << p.first << ".." << p.second;
+                sep = ", "; }
+            out << " ]"; } }
+};
+
+cstring format_name(int type) {
+    if (type == TableFormat::MATCH)
+        return "match";
+    if (type == TableFormat::ACTION)
+        return "action";
+    if (type == TableFormat::IMMEDIATE)
+        return "immediate";
+    if (type == TableFormat::VERS)
+        return "version";
+    if (type == TableFormat::COUNTER)
+        return "counter_ptr";
+    if (type == TableFormat::METER)
+        return "meter_ptr";
+    if (type == TableFormat::INDIRECT_ACTION)
+        return "action_ptr";
+    if (type == TableFormat::SELECTOR)
+        return "select_ptr";
+    return "";
+}
+
+/* Emits the format portion of tind tables and for exact match tables. */
+void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
+          const TableFormat::Use &use, const TableMatch *tm, bool ternary) const {
+    fmt_state fmt;
+    out << indent << "format: {";
+    int group = ternary ? -1 : 0;
+
+    for (auto match_group : use.match_groups) {
+        int type;
+        vector<std::pair<int, int>> bits;
+        // For table objects that are not match
+        for (type = TableFormat::ACTION; type <= TableFormat::SELECTOR; type++) {
+            if (match_group.mask[type].popcount() == 0) continue;
+            bits.clear();
+            int start = match_group.mask[type].ffs();
+            while (start >= 0) {
+                int end = match_group.mask[type].ffz(start);
+                if (end == -1)
+                    end = match_group.mask[type].max();
+                bits.emplace_back(start, end - 1);
+                start = match_group.mask[type].ffs(end);
+            }
+            // Specifically, the immediate information may have to be broken up into mutliple
+            // places
+            if (type == TableFormat::IMMEDIATE) {
+                for (int i = 0; i < bits.size(); i++) {
+                    cstring name = format_name(type);
+                    if (bits.size() > 1)
+                        name = name + std::to_string(i);
+                    fmt.emit(out, name, group, bits[i].first, bits[i].second - bits[i].first + 1);
+                }
+            } else {
+                fmt.emit(out, format_name(type), group, bits);
+            }
+        }
+
+        if (ternary) {
+            out << "}" << std::endl;
+            return;
+        }
+        type = TableFormat::MATCH;
+
+        bits.clear();
+        int start = -1; int end = -1;
+
+        int total_amount;
+        // For every single match byte information.  Have to understand the byte alignment in
+        // PHV to understand exactly which bits to use
+        for (auto match_byte : match_group.match) {
+            int byte_start = -1; int byte_end = -1;
+            const IXBar::Use::Byte &byte = match_byte.first;
+            const std::pair<int, bitvec> &byte_layout = match_byte.second;
+            Slice sl(phv, byte.field, byte.lo, byte.hi);
+            // Byte start and byte end are the bitvec positions for this specific byte
+            byte_start = byte_layout.second.ffs() + sl.bytealign();
+            byte_end = byte_start + byte_layout.first - 1;
+            if (start == -1) {
+                start = byte_start;
+                end = byte_end;
+            } else if (end == byte_start - 1) {
+                end = byte_end;
+            } else {
+               bits.emplace_back(start, end);
+               start = byte_start;
+               end = byte_end;
+            }
+        }
+        bits.emplace_back(start, end);
+        fmt.emit(out, format_name(type), group, bits);
+        group++;
+    }
+
+    if (ternary) {
+        out << "}" << std::endl;
+        return;
+    }
+    out << (fmt.sep + 1) << "}" << std::endl;
+
+    // Outputs the match portion
+    bool first = true;
+    for (auto field : tm->match_fields) {
+        if (!field) continue;
+        if (first) {
+            out << indent << "match: [ ";
+            first = false;
+        } else {
+            out << ", "; }
+        out << field; }
+    if (!first) out << " ]" << std::endl;
+}
+
+
 /* Adjusted to consider actions coming from hash distribution.  Now hash computation
    instructions have specific tags so that we can output the correct hash distribution
    unit corresponding to it. */
@@ -549,15 +711,16 @@ class MauAsmOutput::EmitAction : public Inspector {
     }
     bool preorder(const IR::ActionFunction *act) override {
         ImmedFormat ifmt;
-        if (table->layout.action_data_bytes_in_overhead)
-            ifmt.setup_immed(act, "immediate");
+        if (table->layout.action_data_bytes_in_overhead) {
+            ifmt.setup_immed(act, "immediate", table->resources->table_format.immed_mask);
+        }
         output_action(act, ifmt);
         return false; }
     bool preorder(const IR::MAU::ActionFunctionEx *act) override {
         hash_dist_units.clear();
         ImmedFormat ifmt;
         if (table->layout.action_data_bytes_in_overhead)
-            ifmt.setup_immed(act, "immediate");
+            ifmt.setup_immed(act, "immediate", table->resources->table_format.immed_mask);
         for (auto prim : act->stateful) {
             if (prim->name == "count") {
                 if (auto aa = prim->operands[1]->to<IR::ActionArg>())
@@ -656,123 +819,71 @@ class MauAsmOutput::EmitAction : public Inspector {
     : self(s), out(o), table(tbl), indent(i) { visitDagOnce = false; }
 };
 
-MauAsmOutput::TableFormat::TableFormat(const MauAsmOutput &s, const IR::MAU::Table *tbl) : self(s) {
-    /* FIXME -- this should probably be an aux data structure built earlier, rather than
-     * done in AsmOutput */
+/* Information on which tables are matched and ghosted.  This is used by the emit table format,
+   and the hashing information.  Comes directly from the table_format object in the resources
+   of a table*/
+MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &s, const PhvInfo &phv,
+        const IR::MAU::Table *tbl) : self(s) {
+    if (tbl->resources->table_format.match_groups.size() == 0)
+        return;
 
-    if (tbl->match_table && tbl->match_table->getKey()) {
-        /* somewhat duplicates what is done in IXBar::alloc_table */
-        for (auto key : *tbl->match_table->getKey()->keyElements) {
-            if (key->matchType->path->name == "selector") continue;
-            auto *field = key->expression;
-            if (auto mask = field->to<IR::Mask>())
-                field = mask->left;
-            if (auto prim = field->to<IR::Primitive>()) {
-                if (prim->name != "valid")
-                    BUG("unexpected key expression %s", key->expression);
-                // FIXME -- for now just assuming we can fit the valid bit reads in as needed
-                continue; }
-            const PhvInfo::Field *finfo;
-            PhvInfo::Field::bitrange bits;
-            if (!field || !(finfo = self.phv.field(field, &bits)))
-                BUG("unexpected key expression %s", key->expression);
-            match_fields.emplace_back(finfo, bits.lo, bits.hi); } }
+    // Determine which fields are part of a table match.  If a field partially ghosted,
+    // then this information is contained within the bitvec and the int of the match_info
+    for (auto match_info : tbl->resources->table_format.match_groups[0].match) {
+        int i = 0;
+        const IXBar::Use::Byte &byte = match_info.first;
+        const std::pair<int, bitvec> &byte_layout = match_info.second;
+        int lowest_part = byte.lo;
+        // If the vector is partially ghosted, then the ffs will be the first location of the
+        // ghost.  If it is an unaligned bit, then the ffs will be 0, as we couldn't break
+        // that bit up particularly easily
+        if (byte.hi - byte.lo + 1 > byte_layout.second.popcount()) {
+            lowest_part += byte_layout.second.ffs() % 8;
+        }
+        Slice sl(phv, byte.field, lowest_part, lowest_part + byte_layout.first - 1);
+        match_fields.push_back(sl);
+    }
 
-    if (!tbl->layout.ternary) {
-        int ghost_bits_needed = 10;  // FIXME -- should depend on way depth
-        for (auto &field : match_fields) {
-            if (ghost_bits_needed >= field.width()) {
-                ghost_bits.push_back(field);
-                ghost_bits_needed -= field.width();
-            } else if (ghost_bits_needed > 0) {
-                ghost_bits.push_back(field(0, ghost_bits_needed-1));
-                ghost_bits_needed = 0; } } }
-    if (!tbl->ways.empty()) {
-        bitvec used;
-        total_bits[ACTION] = ceil_log2(tbl->actions.size());
-        total_bits[IMMEDIATE] = tbl->layout.action_data_bytes_in_overhead * 8;
-        total_bits[METER] = tbl->layout.meter_overhead_bits;
-        total_bits[COUNTER] = tbl->layout.counter_overhead_bits;
-        total_bits[INDIRECT_ACTION] = tbl->layout.indirect_action_overhead_bits;
-        total_bits[SELECTOR] = tbl->layout.selector_overhead_bits;
-        int width = tbl->ways[0].width;
-        int groups = tbl->ways[0].match_groups;
-        int groups_per_word = (groups + width - 1)/width;
-        format.resize(groups);
-        for (int i = 0; i < groups; i++) {
-            int word = i / groups_per_word;
-            int j = i % groups_per_word;
-            if (total_bits[ACTION] > 0) {
-                format[i].starting_bits[ACTION] = 128*word + j*total_bits[ACTION];
-                used.setrange(format[i].starting_bits[ACTION], total_bits[ACTION]); }
-            format[i].starting_bits[VERS] = 128*word + 124 - j*4;
-            total_bits[VERS] = 4;
-            used.setrange(format[i].starting_bits[VERS], 4); }
-        setup_indirect(IMMEDIATE, groups, groups_per_word, used);
-        setup_indirect(COUNTER, groups, groups_per_word, used);
-        setup_indirect(METER, groups, groups_per_word, used);
-        setup_indirect(INDIRECT_ACTION, groups, groups_per_word, used);
-        setup_indirect(SELECTOR, groups, groups_per_word, used);
-        if (!match_fields.empty()) {
-            for (int i = 0; i < groups; i++) {
-                int word = i / groups_per_word;
-                int bit = used.ffz(128*word);
-                for (auto field : match_fields) {
-                    field -= ghost_bits;
-                    if (!field) continue;
-                    bit += (field.bytealign() - bit) & 7;
-                    while (used.getslice(bit, field.width())) {
-                        bit = used.ffz(used.ffs(bit));
-                        bit += (field.bytealign() - bit) & 7; }
-                    if (bit + field.width() > width*128)
-                        BUG("match group packing overflow for table %s (groups=%d, width=%d)",
-                            tbl->name, groups, width);
-                    if (format[i].match.empty() || format[i].match.back().second != bit - 1)
-                        format[i].match.emplace_back(bit, bit + field.width() - 1);
-                    else
-                        format[i].match.back().second = bit + field.width() - 1;
-                    used.setrange(bit, field.width()); } } } }
-}
+    // Determine which bytes are part of the ghosting bits.  Again like the match info,
+    // whichever bits are ghosted must be handled in a particular way if the byte is partially
+    // matched and partially ghosted
+    for (auto ghost_info : tbl->resources->table_format.ghost_bits) {
+        const IXBar::Use::Byte &byte = ghost_info.first;
+        const std::pair<int, bitvec> &byte_layout = ghost_info.second;
+        if (byte_layout.second.popcount() != 8) {
+            // Ghosted bits from an 8-bit field may have multiple ghosting portions
+            int start = byte_layout.second.ffs();
+            do {
+                int end = byte_layout.second.ffz(start);
+                if (end == -1)
+                    end = byte_layout.second.max() + 1;
+                int start_byte = (start % 8) + byte.lo;
+                int end_byte = ((end - 1) % 8) + byte.lo;
+                Slice sl(phv, byte.field, start_byte, end_byte);
+                ghost_bits.push_back(sl);
+                start = byte_layout.second.ffs(end);
+            } while (start != -1);
+        } else {
+            int start = byte.hi - byte_layout.first + 1;
+            Slice sl(phv, byte.field, start, byte.hi);
+            ghost_bits.push_back(sl);
+        }
+    }
 
-void MauAsmOutput::TableFormat::print(std::ostream &out) const {
-    struct fmt_state {
-        const char *sep = " ";
-        int next = 0;
-        void emit(std::ostream &out, const char *name, int group, int bit, int width) {
-            if (bit < 0) return;
-            out << sep << name << '(' << group << "): ";
-            if (next == bit)
-                out << width;
-            else
-                out << bit << ".." << bit+width-1;
-            next = bit+width;
-            sep = ", "; }
-        void emit(std::ostream &out, const char *name, int group,
-                  const vector<std::pair<int, int>> &bits) {
-            if (bits.size() == 1) {
-                emit(out, name, group, bits[0].first, bits[0].second - bits[0].first + 1);
-            } else if (bits.size() > 1) {
-                out << sep << name << '(' << group << "): [ ";
-                sep = "";
-                for (auto &p : bits) {
-                    out << sep << p.first << ".." << p.second;
-                    sep = ", "; }
-                out << " ]"; } }
-    } fmt;
-    out << "format: {";
-    int i = 0;
-    for (auto &group : format) {
-        fmt.emit(out, "action", i, group.starting_bits[ACTION], total_bits[ACTION]);
-        fmt.emit(out, "immediate", i, group.starting_bits[IMMEDIATE], total_bits[IMMEDIATE]);
-        fmt.emit(out, "version", i, group.starting_bits[VERS], total_bits[VERS]);
-        fmt.emit(out, "counter_ptr", i, group.starting_bits[COUNTER], total_bits[COUNTER]);
-        fmt.emit(out, "meter_ptr", i, group.starting_bits[METER], total_bits[METER]);
-        fmt.emit(out, "action_ptr", i, group.starting_bits[INDIRECT_ACTION],
-                 total_bits[INDIRECT_ACTION]);
-        fmt.emit(out, "select_ptr", i, group.starting_bits[SELECTOR], total_bits[SELECTOR]);
-        fmt.emit(out, "match", i, group.match);
-        ++i; }
-    out << (fmt.sep + 1) << "}";
+    // Link match data together for an easier to read asm
+    auto it = match_fields.begin();
+    while (it != match_fields.end()) {
+        auto next = it;
+        if (++next != match_fields.end()) {
+            Slice j = it->join(*next);
+            if (j) {
+                *it = j;
+                match_fields.erase(next);
+                continue;
+            }
+        }
+        it = next;
+    }
 }
 
 static cstring next_for(const IR::MAU::Table *tbl, cstring what, const DefaultNext &def) {
@@ -860,7 +971,7 @@ void MauAsmOutput::emit_hash_action_gateway(std::ostream &out, indent_t gw_inden
 
 void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) const {
     /* FIXME -- some of this should be method(s) in IR::MAU::Table? */
-    TableFormat fmt(*this, tbl);
+    TableMatch fmt(*this, phv, tbl);
     const char *tbl_type = "gateway";
     indent_t    indent(1);
     if (tbl->match_table)
@@ -882,18 +993,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl) cons
         emit_ixbar(out, indent, tbl->resources->match_ixbar,
                    &tbl->resources->memuse.at(memuse_name), &fmt, tbl->layout.hash_action);
         if (!tbl->layout.ternary && !tbl->layout.no_match_data()) {
-            out << indent << fmt << std::endl;
-            bool first = true;
-            for (auto field : fmt.match_fields) {
-                field -= fmt.ghost_bits;
-                if (!field) continue;
-                if (first) {
-                    out << indent << "match: [ ";
-                    first = false;
-                } else {
-                    out << ", "; }
-                out << field; }
-            if (!first) out << " ]" << std::endl;
+            emit_table_format(out, indent, tbl->resources->table_format, &fmt, false);
         }
     }
 
@@ -1284,6 +1384,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     out << indent++ << "ternary_indirect " << name << ':' << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
     int action_fmt_size = ceil_log2(tbl->actions.size());
+    self.emit_table_format(out, indent, tbl->resources->table_format, nullptr, true);
+    /*
     out << indent << "format: { ";
     const char *sep = "";
     if (action_fmt_size > 0) {
@@ -1293,6 +1395,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
         out << sep << "immediate: " << tbl->layout.action_data_bytes_in_overhead*8;
         sep = ", "; }
     out << " }" << std::endl;
+    */
     self.emit_table_indir(out, indent, tbl);
     return false;
 }

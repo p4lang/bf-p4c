@@ -89,7 +89,17 @@ struct IXBar {
             Byte(cstring f, int l, int h, int g, int gb) : field(f), lo(l), hi(h), loc(g, gb) {}
             operator std::pair<cstring, int>() const { return std::make_pair(field, lo); }
             bool operator==(const std::pair<cstring, int> &a) const {
-                return field == a.first && lo == a.second; } };
+                return field == a.first && lo == a.second; }
+            bool operator==(const Byte &b) const {
+                return field == b.field && lo == b.lo && hi == b.hi;
+            }
+            bool operator<(const Byte &b) const {
+                if (field != b.field) return field < b.field;
+                if (lo != b.lo) return lo < b.lo;
+                if (hi != b.hi) return hi < b.hi;
+                return true;
+            }
+        };
         vector<Byte>    use;
 
         /* which of the 16 hash tables we are using (bitvec) */
@@ -146,6 +156,9 @@ struct IXBar {
         bool exact_comp(const IXBar::Use *exact_use, int width) const;
         void add(const Use &alloc);
         int hash_groups() const;
+        vector<IXBar::Use::Byte> match_hash_single() const;
+        vector<std::pair<int, int>> bits_per_group_single() const;
+        int groups_single() const;
     };
 
     /* A problem occurred with the way the IXbar was allocated that requires backtracking

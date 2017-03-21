@@ -46,6 +46,48 @@ int IXBar::Use::hash_groups() const {
     return rv;
 }
 
+vector<std::pair<int, int>> IXBar::Use::bits_per_group_single() const {
+    int bits_per[IXBar::EXACT_GROUPS] = { 0 };
+
+    for (auto &b : match_hash_single()) {
+        assert(b.loc.group >= 0 && b.loc.group < 8);
+        int difference = b.hi - b.lo + 1;
+        bits_per[b.loc.group] += difference;
+    }
+
+    vector<std::pair<int, int>> sizes;
+    for (int i = 0; i < IXBar::EXACT_GROUPS; i++) {
+         if (bits_per[i] == 0) continue;
+         sizes.emplace_back(i, bits_per[i]);
+    }
+    return sizes;
+}
+
+vector<IXBar::Use::Byte> IXBar::Use::match_hash_single() const {
+    vector<IXBar::Use::Byte> single_match;
+    for (int i = 0; i < HASH_GROUPS; i++) {
+        if (hash_table_inputs[i] == 0) continue;
+        for (auto byte : use) {
+            int hash_group = byte.loc.group * 2 + byte.loc.byte / 8;
+            if ((1 << hash_group) & hash_table_inputs[i])
+                single_match.push_back(byte);
+        }
+        break;
+    }
+    return single_match;
+}
+
+int IXBar::Use::groups_single() const {
+    int rv = 0;
+    unsigned counted = 0;
+    for (auto &b : match_hash_single()) {
+        assert(b.loc.group >= 0 && b.loc.group < 16);
+        if (!(1 & (counted >> b.loc.group))) {
+            ++rv;
+            counted |= 1U << b.loc.group; } }
+    return rv;
+}
+
 bool IXBar::Use::exact_comp(const IXBar::Use *exact_use, int width) const {
     unsigned gw_counted = 0, exact_counted = 0;
     for (auto &b : use) {
