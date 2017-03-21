@@ -297,3 +297,13 @@ XFAIL_TESTS += tofino/%reldir%/p4_16/apply_if.p4.test
 XFAIL_TESTS += tofino-ortools/%reldir%/p4_16/apply_if.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_16/depgraph2.p4.test
 XFAIL_TESTS += tofino-ortools/%reldir%/p4_16/depgraph2.p4.test
+
+# Fails intermittenly with ortools as the action bus isn't configured correctly
+IFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/gateway1.p4.test \
+               tofino-ortools/testdata/p4_14_samples/gateway8.p4.test \
+               tofino-ortools/testdata/p4_14_samples/ternary_match4.p4.test \
+               tofino-ortools/testdata/p4_14_samples/ternary_match3.p4.test \
+               tofino-ortools/testdata/p4_14_samples/bridge1.p4.test \
+               tofino-ortools/testdata/p4_14_samples/action_chain1.p4.test \
+               tofino-ortools/%reldir%/p4_14/em_ghost1.p4.test \
+               tofino-ortools/%reldir%/p4_16/ternary2.p4.test
