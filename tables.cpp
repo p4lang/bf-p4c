@@ -662,6 +662,8 @@ void Table::Format::pass1(Table *tbl) {
 
 void Table::Format::pass2(Table *tbl) {
     int byte[4] = { -1, -1, -1, -1 };
+    int half[2] = { -1, -1 };
+    int word = -1;
     bool err = false;
     for (auto &f : fmt[0]) {
         int byte_slot = tbl->find_on_actionbus(&f.second, 0, 7);
@@ -671,7 +673,8 @@ void Table::Format::pass2(Table *tbl) {
         switch (Stage::action_bus_slot_size[slot]) {
         case 8:
             for (unsigned b = off/8; b <= (off + f.second.size - 1)/8; b++) {
-                if (b >= 4 || (byte[b] >= 0 && byte[b] != slot) ||
+                if (b >= 4 || (b&3) != (slot&3) || (byte[b] >= 0 && byte[b] != slot) ||
+                    (byte[b^1] >= 0 && byte[b^1] != (slot^1)) ||
                     Stage::action_bus_slot_size[slot] != 8) {
                     err = true;
                     break; }
@@ -679,18 +682,15 @@ void Table::Format::pass2(Table *tbl) {
             break;
         case 16:
             for (unsigned w = off/16; w <= (off + f.second.size - 1)/16; w++) {
-                if (w >= 2 || (byte[2*w] >= 0 && byte[2*w] != slot) ||
-                    (byte[2*w+1] >= 0 && byte[2*w+1] != slot) ||
+                if (w >= 2 || (w&1) != (slot&1) || (half[w] >= 0 && half[w] != slot) ||
                     Stage::action_bus_slot_size[slot] != 16) {
                     err = true;
                     break; }
-                byte[2*w] = slot;
-                byte[2*w+1] = slot++; }
+                half[w] = slot++; }
             break;
         case 32:
-            for (int b = 0; b < 4; b++) {
-                if (byte[b] >= 0 && byte[b] != slot) { err = true; break; }
-                byte[b] = slot; }
+            if (word >= 0 && word != slot) err = true;
+            word = slot;
             break;
         default:
             assert(0); }
