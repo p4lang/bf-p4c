@@ -242,16 +242,16 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("nop") action nop_0() {
     }
-    @name("hop") action hop_0(inout bit<8> ttl, bit<9> egress_port) {
-        ttl = ttl + 8w255;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+    @name("hop") action hop_0(inout bit<8> ttl_0, bit<9> egress_port_0) {
+        ttl_0 = ttl_0 + 8w255;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port_0;
     }
     @name("custom_action_3") action custom_action(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
         hdr.ipv4.dstAddr = dstIp;
         hdr.ethernet.dstAddr = dstAddr;
         hop_0(hdr.ipv4.ttl, egress_port);
     }
-    @pack(1) @ways(5) @name("exm_5ways_1Entries_stage_2") table exm_5ways_1Entries_stage() {
+    @pack(1) @ways(5) @name("exm_5ways_1Entries_stage_2") table exm_5ways_1Entries_stage {
         actions = {
             nop_0();
             custom_action();
@@ -284,9 +284,11 @@ control verifyChecksum(in headers hdr, inout metadata meta) {
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
+    bit<16> tmp;
     @name("ipv4_chksum_calc") Checksum16() ipv4_chksum_calc_0;
     apply {
-        hdr.ipv4.hdrChecksum = ipv4_chksum_calc_0.get<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr });
+        tmp = ipv4_chksum_calc_0.get<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr });
+        hdr.ipv4.hdrChecksum = tmp;
     }
 }
 

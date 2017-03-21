@@ -234,7 +234,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.m2.v = meta.m.v;
         meta.m2.t = meta.m.t;
     }
-    @name("t1") table t1_0() {
+    @name("t1") table t1_0 {
         actions = {
             do_nothing_0();
             set_m_0();
@@ -246,7 +246,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("t2") table t2_0() {
+    @name("t2") table t2_0 {
         actions = {
             do_nothing_0();
             add_vlan_0();
@@ -258,7 +258,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("t3") table t3_0() {
+    @name("t3") table t3_0 {
         actions = {
             do_nothing_0();
             set_m2_0();
@@ -270,7 +270,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("t4") table t4_0() {
+    @name("t4") table t4_0 {
         actions = {
             do_nothing_0();
             set_m_again_0();
@@ -282,7 +282,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("t5") table t5_0() {
+    @name("t5") table t5_0 {
         support_timeout = true;
         actions = {
             do_nothing_0();

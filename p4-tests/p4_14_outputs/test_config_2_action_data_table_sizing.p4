@@ -171,7 +171,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_8") action action_8(bit<8> param_1_8) {
         hdr.my_test_config_1.b_8 = param_1_8;
     }
-    @name("my_test_config_1_table") table my_test_config_1_table() {
+    @name("my_test_config_1_table") table my_test_config_1_table {
         actions = {
             action_160;
             action_8;

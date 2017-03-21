@@ -171,7 +171,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("bfd_tx") action bfd_tx() {
     }
-    @name("bfd") table bfd() {
+    @name("bfd") table bfd {
         actions = {
             bfd_rx;
             bfd_tx;

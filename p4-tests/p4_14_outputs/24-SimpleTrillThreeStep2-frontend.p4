@@ -211,7 +211,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("do_trill_forward_2") action do_trill_forward_4() {
         hdr.trill.hopCount = meta.m.hopCount;
     }
-    @name("trill_forward") table trill_forward_0() {
+    @name("trill_forward") table trill_forward_0 {
         actions = {
             do_trill_forward_0();
             @default_only NoAction();
@@ -221,14 +221,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("trill_forward_1") table trill_forward_3() {
+    @name("trill_forward_1") table trill_forward_3 {
         actions = {
             do_trill_forward_3();
             @default_only NoAction();
         }
         default_action = NoAction();
     }
-    @name("trill_forward_2") table trill_forward_4() {
+    @name("trill_forward_2") table trill_forward_4 {
         actions = {
             do_trill_forward_4();
             @default_only NoAction();

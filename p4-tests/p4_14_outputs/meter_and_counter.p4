@@ -41,7 +41,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.h5 = val5;
         hdr.data.h6 = val6;
     }
-    @name("test1") table test1() {
+    @name("test1") table test1 {
         actions = {
             h1_3;
             @default_only NoAction;
@@ -52,7 +52,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 32000;
         default_action = NoAction();
     }
-    @name("test2") table test2() {
+    @name("test2") table test2 {
         actions = {
             h4_6;
             @default_only NoAction;

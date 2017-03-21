@@ -57,7 +57,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.z = 8w0;
         meter_0.read(meta.meta.x);
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             action_0_0;
             action_1_0;
@@ -70,7 +70,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         meters = meter_0;
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_1 {
         actions = {
             action_2;
             do_nothing;

@@ -187,7 +187,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("nop") action nop() {
         exm_meter2_0.read(hdr.ipv4.diffserv);
     }
-    @name("table_0") table table_1() {
+    @name("table_0") table table_1 {
         actions = {
             action_0();
             action_1();

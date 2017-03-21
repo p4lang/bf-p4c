@@ -198,7 +198,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("ipv4_fib_hit") action ipv4_fib_hit_0() {
         sampler_alu_0.execute_stateful_alu();
     }
-    @name("check_needs") table check_needs_0() {
+    @name("check_needs") table check_needs_0 {
         actions = {
             drop_me_0();
             on_miss_0();
@@ -209,7 +209,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("ipv4_fib") table ipv4_fib_0() {
+    @name("ipv4_fib") table ipv4_fib_0 {
         actions = {
             ipv4_fib_hit_0();
             @default_only on_miss_0();

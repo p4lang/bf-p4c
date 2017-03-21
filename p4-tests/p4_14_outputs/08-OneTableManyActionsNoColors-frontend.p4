@@ -410,7 +410,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.md.field_1_8_15 = value;
         meta.md.field_2_32_16 = 32w815;
     }
-    @name("dmac") table dmac_0() {
+    @name("dmac") table dmac_0 {
         actions = {
             action_1();
             action_1_0();

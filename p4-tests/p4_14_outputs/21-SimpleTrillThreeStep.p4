@@ -211,21 +211,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ig_intr_md_for_tm.ucast_egress_port = new_port;
         meta.m.hopCount = meta.m.hopCount + 6w63;
     }
-    @name("copy_hopCount_from_m") table copy_hopCount_from_m() {
+    @name("copy_hopCount_from_m") table copy_hopCount_from_m {
         actions = {
             do_copy_hopCount_from_m;
             @default_only NoAction;
         }
         default_action = NoAction();
     }
-    @name("copy_hopCount_to_m") table copy_hopCount_to_m() {
+    @name("copy_hopCount_to_m") table copy_hopCount_to_m {
         actions = {
             do_copy_hopCount_to_m;
             @default_only NoAction;
         }
         default_action = NoAction();
     }
-    @name("trill_forward") table trill_forward() {
+    @name("trill_forward") table trill_forward {
         actions = {
             forward_trill;
             @default_only NoAction;

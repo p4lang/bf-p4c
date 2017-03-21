@@ -49,7 +49,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.r9 = val9;
         hdr.data.r10 = val10;
     }
-    @name("test1") table test1_0() {
+    @name("test1") table test1_0 {
         actions = {
             setr1();
             setr6();

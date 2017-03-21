@@ -204,7 +204,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name("set_port") action set_port(bit<9> p0) {
         hdr.eg_intr_md.egress_port = p0;
     }
-    @name("te0") table te0() {
+    @name("te0") table te0 {
         actions = {
             do_nothing;
             set_port;
@@ -234,7 +234,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.m.y = py;
         meta.m.z = pz;
     }
-    @name("t0") table t0() {
+    @name("t0") table t0 {
         actions = {
             do_nothing;
             i0;
@@ -246,7 +246,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("t1") table t1() {
+    @name("t1") table t1 {
         actions = {
             do_nothing;
             @default_only NoAction;

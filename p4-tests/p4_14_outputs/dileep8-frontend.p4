@@ -242,9 +242,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("nop") action nop_0() {
     }
-    @name("hop") action hop_0(inout bit<8> ttl, bit<9> egress_port) {
-        ttl = ttl + 8w255;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+    @name("hop") action hop_0(inout bit<8> ttl_0, bit<9> egress_port_0) {
+        ttl_0 = ttl_0 + 8w255;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port_0;
     }
     @name("next_hop_ipv4") action next_hop_ipv4_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
         hop_0(hdr.ipv4.ttl, egress_port);
@@ -266,7 +266,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    @pack(7) @ways(2) @name("exm_2ways_7Entries_stage_3") table exm_2ways_7Entries_stage() {
+    @pack(7) @ways(2) @name("exm_2ways_7Entries_stage_3") table exm_2ways_7Entries_stage {
         actions = {
             nop_0();
             next_hop_ipv4_0();
@@ -279,7 +279,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @ways(3) @pack(1) @name("exm_3ways_1Entries") table exm_3ways_1Entries_0() {
+    @ways(3) @pack(1) @name("exm_3ways_1Entries") table exm_3ways_1Entries_0 {
         actions = {
             nop_0();
             next_hop_ipv4_0();
@@ -291,7 +291,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @pack(2) @ways(3) @name("exm_3ways_2Entries_stage_3") table exm_3ways_2Entries_stage() {
+    @pack(2) @ways(3) @name("exm_3ways_2Entries_stage_3") table exm_3ways_2Entries_stage {
         actions = {
             nop_0();
             next_hop_ipv4_0();
@@ -304,7 +304,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @ways(4) @name("exm_4ways_16k_stage_5") table exm_4ways_16k_stage() {
+    @ways(4) @name("exm_4ways_16k_stage_5") table exm_4ways_16k_stage {
         actions = {
             nop_0();
             next_hop_ipv4_0();
@@ -319,7 +319,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction();
     }
-    @ways(4) @pack(1) @name("exm_4ways_1Entries") table exm_4ways_1Entries_0() {
+    @ways(4) @pack(1) @name("exm_4ways_1Entries") table exm_4ways_1Entries_0 {
         actions = {
             nop_0();
             custom_action();
@@ -331,7 +331,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @pack(2) @ways(4) @name("exm_4ways_2Entries_stage_4") table exm_4ways_2Entries_stage() {
+    @pack(2) @ways(4) @name("exm_4ways_2Entries_stage_4") table exm_4ways_2Entries_stage {
         actions = {
             nop_0();
             next_hop_ipv4_0();
@@ -343,7 +343,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @pack(2) @ways(5) @name("exm_5ways_2Entries_stage_4") table exm_5ways_2Entries_stage() {
+    @pack(2) @ways(5) @name("exm_5ways_2Entries_stage_4") table exm_5ways_2Entries_stage {
         actions = {
             nop_0();
             custom_action_0();
@@ -356,7 +356,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @stage(0) @pack(7) @ways(5) @name("exm_5ways_7Entries") table exm_5ways_7Entries_0() {
+    @stage(0) @pack(7) @ways(5) @name("exm_5ways_7Entries") table exm_5ways_7Entries_0 {
         actions = {
             nop_0();
             custom_action_0();
@@ -368,7 +368,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @pack(1) @ways(6) @name("exm_6ways_1Entries_stage_3") table exm_6ways_1Entries_stage() {
+    @pack(1) @ways(6) @name("exm_6ways_1Entries_stage_3") table exm_6ways_1Entries_stage {
         actions = {
             nop_0();
             next_hop_ipv4_0();
@@ -380,7 +380,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @pack(2) @ways(6) @name("exm_6ways_2Entries_stage_4") table exm_6ways_2Entries_stage() {
+    @pack(2) @ways(6) @name("exm_6ways_2Entries_stage_4") table exm_6ways_2Entries_stage {
         actions = {
             nop_0();
             custom_action();
@@ -391,7 +391,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @ways(6) @pack(7) @name("exm_6ways_7Entries_stage_1") table exm_6ways_7Entries_stage() {
+    @ways(6) @pack(7) @name("exm_6ways_7Entries_stage_1") table exm_6ways_7Entries_stage {
         actions = {
             nop_0();
             next_hop_ipv4_0();
@@ -404,7 +404,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @ways(5) @pack(8) @name("exm_6ways_8Entries_stage_2") table exm_6ways_8Entries_stage() {
+    @ways(5) @pack(8) @name("exm_6ways_8Entries_stage_2") table exm_6ways_8Entries_stage {
         actions = {
             nop_0();
             mod_mac_addr_0();
@@ -449,9 +449,11 @@ control verifyChecksum(in headers hdr, inout metadata meta) {
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
+    bit<16> tmp;
     @name("ipv4_chksum_calc") Checksum16() ipv4_chksum_calc_0;
     apply {
-        hdr.ipv4.hdrChecksum = ipv4_chksum_calc_0.get<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr });
+        tmp = ipv4_chksum_calc_0.get<tuple<bit<4>, bit<4>, bit<8>, bit<16>, bit<16>, bit<3>, bit<13>, bit<8>, bit<8>, bit<32>, bit<32>>>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr });
+        hdr.ipv4.hdrChecksum = tmp;
     }
 }
 

@@ -283,7 +283,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("set_field32_7") action set_field32_7(bit<32> value) {
         meta.md.field32_7 = value;
     }
-    @name("dmac1") table dmac1() {
+    @name("dmac1") table dmac1 {
         actions = {
             set_field1_1;
             set_field1_2;
@@ -324,7 +324,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 32768;
         default_action = NoAction();
     }
-    @name("dmac2") table dmac2() {
+    @name("dmac2") table dmac2 {
         actions = {
             set_field1_1;
             set_field1_2;

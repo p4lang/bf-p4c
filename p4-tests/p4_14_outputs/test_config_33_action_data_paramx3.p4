@@ -158,7 +158,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.test.field_b = my_param_1;
         hdr.test.field_c = my_param_2;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             action_0;
             @default_only NoAction;

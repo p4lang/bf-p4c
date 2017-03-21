@@ -178,7 +178,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_5") action action_5() {
         hdr.pkt.field_i_signed_sat = hdr.pkt.field_i_signed_sat - (int<8>)hdr.pkt.field_j_8;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             action_0;
             action_1;

@@ -182,7 +182,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.field_i_bit_1 = 1w0;
         hdr.pkt.field_i_bit_0 = 1w1;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             set_hi;
             set_mid;

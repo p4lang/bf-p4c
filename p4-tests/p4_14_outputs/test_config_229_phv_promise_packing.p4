@@ -63,7 +63,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.hdr0.a = hdr.hdr2.a;
         hdr.hdr2.c = hdr.hdr1.c;
     }
-    @name("table_i0") table table_i0() {
+    @name("table_i0") table table_i0 {
         actions = {
             do_nothing;
             action_0;

@@ -232,7 +232,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("hop_ipv4") action hop_ipv4(bit<9> egress_port) {
         hop(hdr.ipv4.ttl, egress_port);
     }
-    @name("ipv4_routing_exm_ways_3_pack_5") table ipv4_routing_exm_ways_3_pack_5() {
+    @name("ipv4_routing_exm_ways_3_pack_5") table ipv4_routing_exm_ways_3_pack_5 {
         actions = {
             nop;
             hop_ipv4;

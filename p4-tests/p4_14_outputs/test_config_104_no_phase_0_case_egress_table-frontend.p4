@@ -190,7 +190,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.pkt.field_h2_1 = param5;
         hdr.pkt.field_h3_1 = 1w1;
     }
-    @name("table_0") table table_2() {
+    @name("table_0") table table_2 {
         actions = {
             action_2();
             @default_only NoAction();
@@ -211,7 +211,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_1") action action_3(bit<16> param0) {
         hdr.pkt.field_f_16 = param0;
     }
-    @include_idletime(1) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name("table_1") table table_3() {
+    @include_idletime(1) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name("table_1") table table_3 {
         actions = {
             action_3();
             @default_only NoAction();

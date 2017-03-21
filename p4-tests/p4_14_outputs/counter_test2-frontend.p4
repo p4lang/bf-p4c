@@ -48,7 +48,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.c8 = val8;
         hdr.data.c9 = val9;
     }
-    @name("test1") table test1_0() {
+    @name("test1") table test1_0 {
         actions = {
             c1_0();
             @default_only NoAction();
@@ -60,7 +60,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("cnt") counters = direct_counter(CounterType.packets);
     }
-    @name("test2") table test2_0() {
+    @name("test2") table test2_0 {
         actions = {
             c4_0();
             @default_only NoAction();
@@ -72,7 +72,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("cnt2") counters = direct_counter(CounterType.packets);
     }
-    @name("test3") table test3_0() {
+    @name("test3") table test3_0 {
         actions = {
             c7_0();
             @default_only NoAction();

@@ -170,7 +170,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("do_nothing") action do_nothing_0() {
     }
-    @name("table_0") table table_2() {
+    @name("table_0") table table_2 {
         actions = {
             action_2();
             action_3();
@@ -183,7 +183,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_1") table table_3() {
+    @name("table_1") table table_3 {
         actions = {
             action_2();
             action_3();

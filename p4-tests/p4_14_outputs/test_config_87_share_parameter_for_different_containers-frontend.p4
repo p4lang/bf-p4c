@@ -165,7 +165,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.field_e = (bit<16>)my_only_param;
         hdr.pkt.field_i = (bit<8>)my_only_param;
     }
-    @immediate(0) @name("table_0") table table_1() {
+    @immediate(0) @name("table_0") table table_1 {
         actions = {
             action_1();
             @default_only NoAction();

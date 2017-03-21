@@ -31,7 +31,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("noop") action noop(bit<8> param0) {
         hdr.data.b1 = param0;
     }
-    @name("test1") table test1() {
+    @name("test1") table test1 {
         actions = {
             noop;
             @default_only NoAction;

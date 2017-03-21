@@ -186,14 +186,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.vlan_tag.cfi = meta.vtag.cfi;
         hdr.vlan_tag.vid = meta.vtag.vid;
     }
-    @name("t1") table t1_0() {
+    @name("t1") table t1_0 {
         actions = {
             a1_0();
             @default_only NoAction();
         }
         default_action = NoAction();
     }
-    @name("t2") table t2_0() {
+    @name("t2") table t2_0 {
         actions = {
             a2_0();
             @default_only NoAction();

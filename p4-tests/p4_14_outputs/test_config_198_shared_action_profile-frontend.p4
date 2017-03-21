@@ -168,7 +168,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_1") action action_3(bit<32> param1) {
         hdr.pkt.field_b_32 = param1;
     }
-    @name("table_0") table table_3() {
+    @name("table_0") table table_3 {
         actions = {
             do_nothing_0();
             action_2();
@@ -182,7 +182,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("shared_action_profile") implementation = action_profile(32w1024);
     }
-    @name("table_1") table table_4() {
+    @name("table_1") table table_4 {
         actions = {
             do_nothing_0();
             action_2();
@@ -196,7 +196,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("shared_action_profile") implementation = action_profile(32w1024);
     }
-    @name("table_2") table table_5() {
+    @name("table_2") table table_5 {
         actions = {
             do_nothing_0();
             @default_only NoAction();

@@ -178,7 +178,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("sample") action sample() {
         sampler_alu.execute_stateful_alu();
     }
-    @name("match_tbl") table match_tbl() {
+    @name("match_tbl") table match_tbl {
         actions = {
             sample;
             @default_only NoAction;

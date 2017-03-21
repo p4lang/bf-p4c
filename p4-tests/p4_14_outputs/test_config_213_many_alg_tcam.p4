@@ -215,7 +215,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("set_partition_index") action set_partition_index(bit<10> idx) {
         meta.meta.partition_index = idx;
     }
-    @pack(1) @ways(4) @atcam_partition_index("meta.partition_index") @name("ipv4_alg_tcam") table ipv4_alg_tcam() {
+    @pack(1) @ways(4) @atcam_partition_index("meta.partition_index") @name("ipv4_alg_tcam") table ipv4_alg_tcam {
         actions = {
             ipv4_lpm_hit;
             lpm_miss;
@@ -230,7 +230,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("ap") implementation = action_profile(32w65536);
     }
-    @name("ipv4_lpm_partition") table ipv4_lpm_partition() {
+    @name("ipv4_lpm_partition") table ipv4_lpm_partition {
         actions = {
             set_partition_index;
             @default_only NoAction;

@@ -165,7 +165,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("ing_drop") action ing_drop_0() {
         mark_to_drop();
     }
-    @name("port_bd") table port_bd_0() {
+    @name("port_bd") table port_bd_0 {
         actions = {
             set_bd_0();
             @default_only NoAction();
@@ -176,7 +176,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction();
     }
-    @name("vlan_port_tab") table vlan_port_tab_0() {
+    @name("vlan_port_tab") table vlan_port_tab_0 {
         actions = {
             ing_drop_0();
             @default_only NoAction();

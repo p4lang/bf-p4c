@@ -192,7 +192,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_0") action action_0(bit<8> my_param0, bit<8> my_param1) {
         hdr.ipv4.ttl = my_param1;
     }
-    @action_entries(1024) @name("table_0") table table_0() {
+    @action_entries(1024) @name("table_0") table table_0 {
         actions = {
             action_0;
             @default_only NoAction;

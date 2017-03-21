@@ -243,7 +243,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ethernet.srcAddr = srcAddr;
         hdr.ethernet.dstAddr = dstAddr;
     }
-    @stage(10) @name("tcam_indirect_action") table tcam_indirect_action() {
+    @stage(10) @name("tcam_indirect_action") table tcam_indirect_action {
         actions = {
             nop;
             modify_ip_id;

@@ -179,7 +179,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("cnt_1") action cnt_1() {
         cntr_1.execute_stateful_alu();
     }
-    @name("match_cntr_1") table match_cntr_1() {
+    @name("match_cntr_1") table match_cntr_1 {
         actions = {
             cnt_1;
             @default_only NoAction;

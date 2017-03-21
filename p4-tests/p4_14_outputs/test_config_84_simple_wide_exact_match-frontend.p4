@@ -161,7 +161,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_1") action action_3(bit<32> my_param_0) {
         hdr.pkt.field_c = my_param_0;
     }
-    @name("table_0") table table_1() {
+    @name("table_0") table table_1 {
         actions = {
             action_2();
             action_3();

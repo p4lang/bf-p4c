@@ -316,7 +316,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.ipv4.hdrChecksum = 16w0;
         clone(CloneType.E2E, (bit<32>)32w200);
     }
-    @name("ip_hdr_update") table ip_hdr_update() {
+    @name("ip_hdr_update") table ip_hdr_update {
         actions = {
             ip_header_modify;
             @default_only NoAction;
@@ -336,7 +336,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
         clone(CloneType.I2E, (bit<32>)32w100);
     }
-    @name("ingress_port_mapping") table ingress_port_mapping() {
+    @name("ingress_port_mapping") table ingress_port_mapping {
         actions = {
             nop;
             @default_only NoAction;
@@ -348,7 +348,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 288;
         default_action = NoAction();
     }
-    @name("ip_nhop") table ip_nhop() {
+    @name("ip_nhop") table ip_nhop {
         actions = {
             nhop_set;
             nop;

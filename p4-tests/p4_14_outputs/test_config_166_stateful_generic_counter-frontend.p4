@@ -193,7 +193,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("increment_counter") action increment_counter_0() {
         counter_alu_0.execute_stateful_alu();
     }
-    @name("packet_offset_counting") table packet_offset_counting_0() {
+    @name("packet_offset_counting") table packet_offset_counting_0 {
         actions = {
             increment_counter_0();
             @default_only NoAction();

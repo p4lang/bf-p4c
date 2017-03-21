@@ -182,7 +182,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ipv4.diffserv = param0;
         hdr.ipv4.ttl = param1;
     }
-    @name("table_0") table table_1() {
+    @name("table_0") table table_1 {
         actions = {
             action_2();
             action_3();

@@ -196,7 +196,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ig_intr_md_for_tm.ucast_egress_port = new_port;
         hdr.mpls.ttl = hdr.mpls.ttl + 8w255;
     }
-    @name("mpls_forward") table mpls_forward_0() {
+    @name("mpls_forward") table mpls_forward_0 {
         actions = {
             forward_mpls_0();
             @default_only NoAction();

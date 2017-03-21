@@ -220,7 +220,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.vlan.vtype = meta.m.t;
         hdr.ipv4.diffserv = meta.m.x;
     }
-    @name("t1") table t1() {
+    @name("t1") table t1 {
         actions = {
             do_nothing;
             set_m;
@@ -232,7 +232,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("t2") table t2() {
+    @name("t2") table t2 {
         actions = {
             do_nothing;
             add_vlan;

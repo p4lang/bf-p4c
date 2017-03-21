@@ -70,7 +70,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_1") action action_1() {
         hdr.hdr2.c = meta.meta.a_8;
     }
-    @name("table_i0") table table_i0() {
+    @name("table_i0") table table_i0 {
         actions = {
             do_nothing;
             action_0;
@@ -82,7 +82,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_i1") table table_i1() {
+    @name("table_i1") table table_i1 {
         actions = {
             do_nothing;
             action_1;

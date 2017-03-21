@@ -167,14 +167,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.md.is_equal = is_equal;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name("addr_compare_failure") table addr_compare_failure_0() {
+    @name("addr_compare_failure") table addr_compare_failure_0 {
         actions = {
             addr_compare_0();
         }
         size = 1;
         const default_action = addr_compare_0(1w0, 9w2);
     }
-    @name("addr_compare_success") table addr_compare_success_0() {
+    @name("addr_compare_success") table addr_compare_success_0 {
         actions = {
             addr_compare_0();
         }

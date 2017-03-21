@@ -177,7 +177,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.f8 = d8;
         resubmit({ meta.meta.f1, meta.meta.f2, meta.meta.f3, meta.meta.f4, meta.meta.f5, meta.meta.f6, meta.meta.f7, meta.meta.f8 });
     }
-    @name("t1") table t1() {
+    @name("t1") table t1 {
         actions = {
             a1;
             @default_only NoAction;

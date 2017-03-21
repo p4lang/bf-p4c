@@ -166,7 +166,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_1") action action_3() {
         hdr.pkt.field_i_8 = hdr.pkt.field_j_8 - hdr.pkt.field_k_8;
     }
-    @name("table_0") table table_2() {
+    @name("table_0") table table_2 {
         actions = {
             action_2();
             @default_only NoAction();
@@ -177,7 +177,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_1") table table_3() {
+    @name("table_1") table table_3 {
         actions = {
             action_3();
             @default_only NoAction();

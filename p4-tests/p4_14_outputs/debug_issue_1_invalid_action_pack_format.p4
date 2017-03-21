@@ -188,7 +188,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    @immediate(1) @name("tcam_tbl_stage_2") table tcam_tbl_stage_2() {
+    @immediate(1) @name("tcam_tbl_stage_2") table tcam_tbl_stage_2 {
         actions = {
             nop;
             mod_mac_adr;

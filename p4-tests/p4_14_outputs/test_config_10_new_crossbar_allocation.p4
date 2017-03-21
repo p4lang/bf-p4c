@@ -190,7 +190,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_1") action action_1() {
         hdr.ipv4.totalLen = 16w2;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             action_0;
             do_nothing;
@@ -203,7 +203,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 1024;
         default_action = NoAction();
     }
-    @ways(6) @pack(3) @name("table_1") table table_1() {
+    @ways(6) @pack(3) @name("table_1") table table_1 {
         actions = {
             action_1;
             do_nothing;

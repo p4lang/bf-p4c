@@ -162,7 +162,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("a1") action a1() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = meta.m1.f1;
     }
-    @name("t1") table t1() {
+    @name("t1") table t1 {
         actions = {
             a1;
             @default_only NoAction;

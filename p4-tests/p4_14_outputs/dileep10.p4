@@ -246,7 +246,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ethernet.dstAddr = dstAddr;
         hop(hdr.ipv4.ttl, egress_port);
     }
-    @stage(2) @name("exm_3ways_32k") table exm_3ways_32k() {
+    @stage(2) @name("exm_3ways_32k") table exm_3ways_32k {
         actions = {
             nop;
             custom_action_3;

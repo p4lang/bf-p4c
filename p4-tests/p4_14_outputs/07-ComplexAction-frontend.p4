@@ -164,7 +164,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.md.field1 = meta.md.field1 + meta.md.field2;
         meta.md.field2 = 8w5;
     }
-    @name("table1") table table1_0() {
+    @name("table1") table table1_0 {
         actions = {
             action1_0();
             @default_only NoAction();

@@ -266,7 +266,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }
-    @pack(7) @ways(2) @name("exm_2ways_7Entries_stage_3") table exm_2ways_7Entries_stage_3() {
+    @pack(7) @ways(2) @name("exm_2ways_7Entries_stage_3") table exm_2ways_7Entries_stage_3 {
         actions = {
             nop;
             next_hop_ipv4;
@@ -279,7 +279,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @ways(3) @pack(1) @name("exm_3ways_1Entries") table exm_3ways_1Entries() {
+    @ways(3) @pack(1) @name("exm_3ways_1Entries") table exm_3ways_1Entries {
         actions = {
             nop;
             next_hop_ipv4;
@@ -291,7 +291,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @pack(2) @ways(3) @name("exm_3ways_2Entries_stage_3") table exm_3ways_2Entries_stage_3() {
+    @pack(2) @ways(3) @name("exm_3ways_2Entries_stage_3") table exm_3ways_2Entries_stage_3 {
         actions = {
             nop;
             next_hop_ipv4;
@@ -304,7 +304,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @ways(4) @name("exm_4ways_16k_stage_5") table exm_4ways_16k_stage_5() {
+    @ways(4) @name("exm_4ways_16k_stage_5") table exm_4ways_16k_stage_5 {
         actions = {
             nop;
             next_hop_ipv4;
@@ -319,7 +319,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction();
     }
-    @ways(4) @pack(1) @name("exm_4ways_1Entries") table exm_4ways_1Entries() {
+    @ways(4) @pack(1) @name("exm_4ways_1Entries") table exm_4ways_1Entries {
         actions = {
             nop;
             custom_action_2;
@@ -331,7 +331,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @pack(2) @ways(4) @name("exm_4ways_2Entries_stage_4") table exm_4ways_2Entries_stage_4() {
+    @pack(2) @ways(4) @name("exm_4ways_2Entries_stage_4") table exm_4ways_2Entries_stage_4 {
         actions = {
             nop;
             next_hop_ipv4;
@@ -343,7 +343,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @pack(2) @ways(5) @name("exm_5ways_2Entries_stage_4") table exm_5ways_2Entries_stage_4() {
+    @pack(2) @ways(5) @name("exm_5ways_2Entries_stage_4") table exm_5ways_2Entries_stage_4 {
         actions = {
             nop;
             custom_action_3;
@@ -356,7 +356,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @stage(0) @pack(7) @ways(5) @name("exm_5ways_7Entries") table exm_5ways_7Entries() {
+    @stage(0) @pack(7) @ways(5) @name("exm_5ways_7Entries") table exm_5ways_7Entries {
         actions = {
             nop;
             custom_action_3;
@@ -368,7 +368,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @pack(1) @ways(6) @name("exm_6ways_1Entries_stage_3") table exm_6ways_1Entries_stage_3() {
+    @pack(1) @ways(6) @name("exm_6ways_1Entries_stage_3") table exm_6ways_1Entries_stage_3 {
         actions = {
             nop;
             next_hop_ipv4;
@@ -380,7 +380,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @pack(2) @ways(6) @name("exm_6ways_2Entries_stage_4") table exm_6ways_2Entries_stage_4() {
+    @pack(2) @ways(6) @name("exm_6ways_2Entries_stage_4") table exm_6ways_2Entries_stage_4 {
         actions = {
             nop;
             custom_action_2;
@@ -391,7 +391,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @ways(6) @pack(7) @name("exm_6ways_7Entries_stage_1") table exm_6ways_7Entries_stage_1() {
+    @ways(6) @pack(7) @name("exm_6ways_7Entries_stage_1") table exm_6ways_7Entries_stage_1 {
         actions = {
             nop;
             next_hop_ipv4;
@@ -404,7 +404,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @ways(5) @pack(8) @name("exm_6ways_8Entries_stage_2") table exm_6ways_8Entries_stage_2() {
+    @ways(5) @pack(8) @name("exm_6ways_8Entries_stage_2") table exm_6ways_8Entries_stage_2 {
         actions = {
             nop;
             mod_mac_addr;

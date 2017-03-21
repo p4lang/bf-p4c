@@ -37,7 +37,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         counter_1.count(32w2047);
         hdr.pkt.a = param0;
     }
-    @name("table_0") table table_1() {
+    @name("table_0") table table_1 {
         actions = {
             action_1();
             @default_only NoAction();

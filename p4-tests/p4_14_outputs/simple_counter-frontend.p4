@@ -35,7 +35,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.c4 = val4;
         standard_metadata.egress_spec = port;
     }
-    @name("test1") table test1_0() {
+    @name("test1") table test1_0 {
         actions = {
             c1_0();
             @default_only NoAction();
@@ -46,7 +46,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("cnt") counters = direct_counter(CounterType.packets);
     }
-    @name("test2") table test2_0() {
+    @name("test2") table test2_0 {
         actions = {
             c3_0();
             @default_only NoAction();

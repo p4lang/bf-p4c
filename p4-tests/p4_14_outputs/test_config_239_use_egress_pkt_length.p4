@@ -191,7 +191,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name("action_1") action action_1() {
         hdr.hdr2.a = hdr.hdr2.a + hdr.eg_intr_md.pkt_length;
     }
-    @name("table_e0") table table_e0() {
+    @name("table_e0") table table_e0 {
         actions = {
             do_nothing;
             action_1;
@@ -219,7 +219,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.y = py;
         meta.meta.z = pz;
     }
-    @name("table_i0") table table_i0() {
+    @name("table_i0") table table_i0 {
         actions = {
             do_nothing;
             action_0;

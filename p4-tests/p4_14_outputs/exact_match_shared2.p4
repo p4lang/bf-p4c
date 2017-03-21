@@ -46,7 +46,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("noop") action noop() {
     }
-    @name("test1") table test1() {
+    @name("test1") table test1 {
         actions = {
             noop;
             @default_only NoAction;
@@ -59,7 +59,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("test2") table test2() {
+    @name("test2") table test2 {
         actions = {
             noop;
             @default_only NoAction;
@@ -72,7 +72,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("test3") table test3() {
+    @name("test3") table test3 {
         actions = {
             noop;
             @default_only NoAction;
@@ -86,7 +86,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("test4") table test4() {
+    @name("test4") table test4 {
         actions = {
             noop;
             @default_only NoAction;
@@ -97,7 +97,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("test5") table test5() {
+    @name("test5") table test5 {
         actions = {
             noop;
             @default_only NoAction;
@@ -109,7 +109,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("test6") table test6() {
+    @name("test6") table test6 {
         actions = {
             noop;
             @default_only NoAction;
@@ -120,7 +120,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("test7") table test7() {
+    @name("test7") table test7 {
         actions = {
             noop;
             @default_only NoAction;

@@ -214,7 +214,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("do_nothing") action do_nothing() {
     }
-    @alpm(1) @alpm_partitions(2048) @alpm_subtrees_per_partition(1) @name("ipv4_alpm") table ipv4_alpm() {
+    @alpm(1) @alpm_partitions(2048) @alpm_subtrees_per_partition(1) @name("ipv4_alpm") table ipv4_alpm {
         actions = {
             ipv4_lpm_hit;
             lpm_miss;
@@ -227,7 +227,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = NoAction();
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             do_nothing;
             @default_only NoAction;
@@ -237,7 +237,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_1 {
         actions = {
             do_nothing;
             @default_only NoAction;

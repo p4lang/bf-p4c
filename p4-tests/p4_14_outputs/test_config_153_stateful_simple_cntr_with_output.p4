@@ -180,7 +180,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("cnt") action cnt() {
         cntr.execute_stateful_alu();
     }
-    @name("dummy") table dummy() {
+    @name("dummy") table dummy {
         actions = {
             do_nothing;
             @default_only NoAction;
@@ -190,7 +190,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("match_cntr") table match_cntr() {
+    @name("match_cntr") table match_cntr {
         actions = {
             cnt;
             @default_only NoAction;

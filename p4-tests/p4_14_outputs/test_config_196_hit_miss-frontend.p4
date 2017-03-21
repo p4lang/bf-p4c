@@ -173,6 +173,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    bool tmp;
     @name("action_0") action action_2(bit<16> param_0) {
         hdr.pkt.field_f_16 = hdr.pkt.field_g_16 ^ param_0;
         hdr.pkt.field_e_16 = param_0;
@@ -186,7 +187,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.field_a_32 = hdr.pkt.field_a_32 ^ param_1;
         hdr.pkt.field_b_32 = param_1;
     }
-    @immediate(0) @name("table_0") table table_3() {
+    @immediate(0) @name("table_0") table table_3 {
         actions = {
             action_2();
             drop_me_0();
@@ -203,7 +204,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction();
     }
-    @immediate(0) @name("table_1") table table_4() {
+    @immediate(0) @name("table_1") table table_4 {
         actions = {
             action_3();
             @default_only NoAction();
@@ -214,7 +215,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction();
     }
-    @name("table_2") table table_5() {
+    @name("table_2") table table_5 {
         actions = {
             action_3();
             drop_me_0();
@@ -225,7 +226,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("table_e") table table_e_0() {
+    @name("table_e") table table_e_0 {
         actions = {
             do_nothing_0();
             drop_me_0();
@@ -238,7 +239,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     apply {
-        if (table_3.apply().hit) {
+        tmp = table_3.apply().hit;
+        if (tmp) {
             table_4.apply();
             table_5.apply();
         }

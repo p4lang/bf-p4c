@@ -190,7 +190,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_3") action action_3() {
         hdr.ipv4.identification = 16w4;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             action_0;
             do_nothing;
@@ -203,7 +203,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 1024;
         default_action = NoAction();
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_1 {
         actions = {
             action_1;
             do_nothing;
@@ -216,7 +216,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 16384;
         default_action = NoAction();
     }
-    @name("table_2") table table_2() {
+    @name("table_2") table table_2 {
         actions = {
             action_2;
             do_nothing;
@@ -229,7 +229,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 4096;
         default_action = NoAction();
     }
-    @name("table_3") table table_3() {
+    @name("table_3") table table_3 {
         actions = {
             action_3;
             @default_only NoAction;

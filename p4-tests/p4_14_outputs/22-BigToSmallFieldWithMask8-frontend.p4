@@ -165,14 +165,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("a2") action a2_0() {
         hdr.ethernet.dstAddr[7:0] = meta.m1.f1[7:0];
     }
-    @name("t1") table t1_0() {
+    @name("t1") table t1_0 {
         actions = {
             a1_0();
             @default_only NoAction();
         }
         default_action = NoAction();
     }
-    @name("t2") table t2_0() {
+    @name("t2") table t2_0 {
         actions = {
             a2_0();
             @default_only NoAction();

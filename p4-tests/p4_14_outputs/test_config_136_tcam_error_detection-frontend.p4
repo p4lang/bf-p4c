@@ -169,7 +169,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_0") action action_1() {
         hdr.pkt.field_f_16 = 16w1;
     }
-    @entries_with_ranges(64) @tcam_error_detect(1) @name("table_0") table table_1() {
+    @entries_with_ranges(64) @tcam_error_detect(1) @name("table_0") table table_1 {
         actions = {
             do_nothing_0();
             action_1();

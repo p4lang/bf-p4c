@@ -182,7 +182,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("do_nothing") action do_nothing_0() {
     }
-    @name("match_cntr") table match_cntr_0() {
+    @name("match_cntr") table match_cntr_0 {
         actions = {
             cnt_0();
             cnt2_0();

@@ -199,7 +199,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("a_t_indirect") action a_t_indirect() {
         b_t_indirect.execute_stateful_alu_from_hash({ hdr.pkt.field_a_32, hdr.pkt.field_b_32 });
     }
-    @name("t_em_direct") table t_em_direct() {
+    @name("t_em_direct") table t_em_direct {
         actions = {
             a_em_direct;
             @default_only NoAction;
@@ -210,7 +210,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction();
     }
-    @name("t_em_indirect") table t_em_indirect() {
+    @name("t_em_indirect") table t_em_indirect {
         actions = {
             a_em_indirect;
             do_nothing;
@@ -222,7 +222,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 2048;
         default_action = NoAction();
     }
-    @name("t_hash_act") table t_hash_act() {
+    @name("t_hash_act") table t_hash_act {
         actions = {
             a_hash_act;
             @default_only NoAction;
@@ -233,7 +233,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-    @name("t_no_key") table t_no_key() {
+    @name("t_no_key") table t_no_key {
         actions = {
             a_no_key;
             @default_only NoAction;
@@ -241,7 +241,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-    @name("t_t_direct") table t_t_direct() {
+    @name("t_t_direct") table t_t_direct {
         actions = {
             a_t_direct;
             @default_only NoAction;
@@ -252,7 +252,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction();
     }
-    @name("t_t_indirect") table t_t_indirect() {
+    @name("t_t_indirect") table t_t_indirect {
         actions = {
             a_t_indirect;
             do_nothing;

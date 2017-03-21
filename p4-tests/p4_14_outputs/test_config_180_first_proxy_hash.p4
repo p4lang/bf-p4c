@@ -172,7 +172,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_1") action action_1() {
         mark_to_drop();
     }
-    @proxy_hash_width(24) @proxy_hash_algorithm("crc16_extend") @name("table_0") table table_0() {
+    @proxy_hash_width(24) @proxy_hash_algorithm("crc16_extend") @name("table_0") table table_0 {
         actions = {
             action_0;
             action_1;

@@ -61,7 +61,7 @@ control ingress(inout packet_t p, inout user_metadata_t m,
         // to be implemented when we figure out how to clone in P4_16
     }
 
-    // table t() {
+    // table t {
     //     key = { p.ipv4.ihl : exact; }
     //     actions = {
     //         copyToCPU;

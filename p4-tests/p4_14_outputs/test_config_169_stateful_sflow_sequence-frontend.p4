@@ -238,7 +238,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("do_nothing") action do_nothing_0() {
     }
-    @name("sflow_seq_num") table sflow_seq_num_0() {
+    @name("sflow_seq_num") table sflow_seq_num_0 {
         actions = {
             get_sflow_seq_num_0();
             @default_only NoAction();
@@ -250,7 +250,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-    @name("sflow_verify_seq_no_step_1") table sflow_verify_seq_no_step() {
+    @name("sflow_verify_seq_no_step_1") table sflow_verify_seq_no_step {
         actions = {
             calc_next_seq_num_0();
             @default_only NoAction();
@@ -258,7 +258,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @stage(1) @name("sflow_verify_seq_no_step_2") table sflow_verify_seq_no_step_0() {
+    @stage(1) @name("sflow_verify_seq_no_step_2") table sflow_verify_seq_no_step_0 {
         actions = {
             chk_sflow_seq_num_0();
             @default_only NoAction();
@@ -269,7 +269,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction();
     }
-    @name("sflow_verify_seq_no_step_3") table sflow_verify_seq_no_step_4() {
+    @name("sflow_verify_seq_no_step_3") table sflow_verify_seq_no_step_4 {
         actions = {
             drop_me_0();
             do_nothing_0();

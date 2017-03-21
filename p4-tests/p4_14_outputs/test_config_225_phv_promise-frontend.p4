@@ -47,7 +47,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_0") action action_1() {
         hdr.one.a = hdr.two.a;
     }
-    @name("t_one") table t_one_0() {
+    @name("t_one") table t_one_0 {
         actions = {
             action_1();
             @default_only NoAction();

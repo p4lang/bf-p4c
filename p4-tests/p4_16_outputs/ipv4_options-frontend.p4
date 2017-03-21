@@ -30,20 +30,15 @@ struct user_metadata_t {
 }
 
 parser TopParser(packet_in b, out packet_t p, inout user_metadata_t m, inout standard_metadata_t meta) {
-    bool tmp;
-    bool tmp_0;
     state start {
         b.extract<ipv4_t>(p.ipv4);
-        tmp = p.ipv4.version == 4w4;
-        verify(tmp, error.IPv4IncorrectVersion);
-        tmp_0 = p.ipv4.ihl > 4w4;
-        verify(tmp_0, error.IPv4IncorrectOptions);
+        verify(p.ipv4.version == 4w4, error.IPv4IncorrectVersion);
+        verify(p.ipv4.ihl > 4w4, error.IPv4IncorrectOptions);
         transition accept;
     }
 }
 
 control ingress(inout packet_t p, inout user_metadata_t m, inout standard_metadata_t meta) {
-    bool tmp_1;
     @name("sendToCPU") action sendToCPU_0() {
         meta.egress_spec = 9w64;
     }
@@ -51,8 +46,7 @@ control ingress(inout packet_t p, inout user_metadata_t m, inout standard_metada
         meta.egress_spec = 9w1;
     }
     apply {
-        tmp_1 = p.ipv4.ihl > 4w5;
-        if (tmp_1) 
+        if (p.ipv4.ihl > 4w5) 
             sendToCPU_0();
         else 
             forward_0();

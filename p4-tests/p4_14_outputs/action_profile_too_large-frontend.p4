@@ -35,7 +35,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("setb3") action setb3_0(bit<8> val3) {
         hdr.data.b3 = val3;
     }
-    @name("test1") table test1_0() {
+    @name("test1") table test1_0 {
         actions = {
             setb1_0();
             setb2_0();

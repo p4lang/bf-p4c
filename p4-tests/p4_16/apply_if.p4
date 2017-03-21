@@ -25,12 +25,12 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
     action set_f1(bit<32> val) { hdrs.data.f1 = val; set_port(2); }
     action noop() { }
 
-    table t1() {
+    table t1 {
         key = { hdrs.data.f1 : ternary; }
         actions = { set_port; noop; }
         default_action = noop; }
 
-    table t2() {
+    table t2 {
         key = { hdrs.data.f1 : ternary; }
         actions = { set_f1; noop; }
         default_action = noop; }

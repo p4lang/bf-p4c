@@ -224,7 +224,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.md.field32_7 = value32_7;
         meta.md.field32_8 = value32_8;
     }
-    @name("dmac") table dmac() {
+    @name("dmac") table dmac {
         actions = {
             action1;
             @default_only NoAction;

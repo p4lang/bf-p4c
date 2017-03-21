@@ -39,31 +39,31 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("b3_act") action b3_act(bit<8> b3) {
         hdr.data.b3 = b3;
     }
-    @name("first") table first() {
+    @name("first") table first {
         actions = {
             b1_act;
         }
         const default_action = b1_act(1);
     }
-    @name("fourth") table fourth() {
+    @name("fourth") table fourth {
         actions = {
             b4_act;
         }
         const default_action = b4_act(4);
     }
-    @name("port_set") table port_set() {
+    @name("port_set") table port_set {
         actions = {
             set_port;
         }
         const default_action = set_port(5);
     }
-    @name("second") table second() {
+    @name("second") table second {
         actions = {
             b2_act;
         }
         const default_action = b2_act(2);
     }
-    @name("third") table third() {
+    @name("third") table third {
         actions = {
             b3_act;
         }

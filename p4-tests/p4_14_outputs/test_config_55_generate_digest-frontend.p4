@@ -156,7 +156,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_0") action action_1() {
         digest<tcp_digest>(32w0, { hdr.pkt.field_a });
     }
-    @name("table_0") table table_1() {
+    @name("table_0") table table_1 {
         actions = {
             action_1();
             @default_only NoAction();

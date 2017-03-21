@@ -172,7 +172,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("a_test") action a_test() {
         b_test.execute_stateful_alu();
     }
-    @name("t_test") table t_test() {
+    @name("t_test") table t_test {
         actions = {
             a_test;
             @default_only NoAction;

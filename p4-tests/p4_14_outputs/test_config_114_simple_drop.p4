@@ -164,7 +164,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name("nop") action nop() {
         ;
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_1 {
         actions = {
             action_1;
             nop;
@@ -187,7 +187,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("nop") action nop() {
         ;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             action_0;
             nop;

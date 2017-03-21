@@ -170,7 +170,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name("action_3") action action_3() {
         mark_to_drop();
     }
-    @name("table_3") table table_3() {
+    @name("table_3") table table_3 {
         actions = {
             action_3;
             @default_only NoAction;
@@ -201,7 +201,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_2") action action_2() {
         simple_stats.count((bit<32>)meta.meta.field_17);
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             do_nothing;
             action_0;
@@ -213,7 +213,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction();
     }
-    @include_idletime(1) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name("table_1") table table_1() {
+    @include_idletime(1) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name("table_1") table table_1 {
         actions = {
             action_1;
             @default_only NoAction;
@@ -224,7 +224,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = NoAction();
     }
-    @name("table_2") table table_2() {
+    @name("table_2") table table_2 {
         actions = {
             action_2;
             @default_only NoAction;

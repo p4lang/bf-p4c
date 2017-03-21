@@ -195,7 +195,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_1") action action_1(bit<16> param1) {
         hdr.ethernet.etherType = param1;
     }
-    @name("table_group") table table_group() {
+    @name("table_group") table table_group {
         actions = {
             action_select;
             @default_only NoAction;
@@ -205,7 +205,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @immediate(0) @selector_max_group_size(121) @name("test_select") table test_select() {
+    @immediate(0) @selector_max_group_size(121) @name("test_select") table test_select {
         actions = {
             action_0;
             big_action;
@@ -224,7 +224,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("some_action_profile") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w2048, 32w32);
     }
-    @name("test_select2") table test_select2() {
+    @name("test_select2") table test_select2 {
         actions = {
             action_1;
             @default_only NoAction;

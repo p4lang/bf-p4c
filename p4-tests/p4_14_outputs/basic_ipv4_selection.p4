@@ -251,7 +251,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("nop") action nop() {
     }
-    @name("ipv4_routing_select_2") table ipv4_routing_select_2() {
+    @name("ipv4_routing_select_2") table ipv4_routing_select_2 {
         actions = {
             nhop_set;
             nop;

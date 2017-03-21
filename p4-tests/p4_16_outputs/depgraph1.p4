@@ -60,7 +60,7 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
         set_b1(b1);
         set_port(port);
     }
-    table t1() {
+    table t1 {
         key = {
             hdrs.data.f1: ternary;
         }
@@ -70,7 +70,7 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
         }
         default_action = noop;
     }
-    table t2() {
+    table t2 {
         key = {
             hdrs.data.f2: ternary;
         }
@@ -80,7 +80,7 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
         }
         default_action = noop;
     }
-    table t3() {
+    table t3 {
         key = {
             hdrs.data.h1: ternary;
         }
@@ -90,7 +90,7 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
         }
         default_action = noop;
     }
-    table t4() {
+    table t4 {
         key = {
             hdrs.data.h1: ternary;
         }

@@ -244,7 +244,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name("udp_set_src") action udp_set_src(bit<16> port) {
         hdr.udp.srcPort = port;
     }
-    @immediate(1) @stage(0) @name("eg_udp") table eg_udp() {
+    @immediate(1) @stage(0) @name("eg_udp") table eg_udp {
         actions = {
             nop;
             udp_set_src;
@@ -273,7 +273,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("hop_ipv4") action hop_ipv4(bit<9> egress_port) {
         hop(hdr.ipv4.ttl, egress_port);
     }
-    @stage(5) @name("tcam_range") table tcam_range() {
+    @stage(5) @name("tcam_range") table tcam_range {
         actions = {
             nop;
             hop_ipv4;

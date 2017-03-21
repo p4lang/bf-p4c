@@ -61,7 +61,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("pop_action") action pop_action() {
         hdr.tags.pop_front(4);
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             push_action;
             pop_action;

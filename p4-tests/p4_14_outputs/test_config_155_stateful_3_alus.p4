@@ -189,7 +189,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("sample") action sample() {
         sampler_alu.execute_stateful_alu();
     }
-    @table_counter("disabled") @name("match_cntr_1") table match_cntr_1() {
+    @table_counter("disabled") @name("match_cntr_1") table match_cntr_1 {
         actions = {
             cnt_1;
             @default_only NoAction;
@@ -200,7 +200,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction();
     }
-    @name("match_cntr_2") table match_cntr_2() {
+    @name("match_cntr_2") table match_cntr_2 {
         actions = {
             cnt_2;
             @default_only NoAction;
@@ -213,7 +213,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction();
     }
-    @name("match_flow") table match_flow() {
+    @name("match_flow") table match_flow {
         actions = {
             sample;
             @default_only NoAction;

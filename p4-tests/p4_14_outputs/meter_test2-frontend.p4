@@ -69,7 +69,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.h3 = val3;
         meter_0.read(hdr.data.color_1);
     }
-    @name("test1") table test1_0() {
+    @name("test1") table test1_0 {
         actions = {
             h1_3();
             @default_only NoAction();
@@ -87,7 +87,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.h6 = val6;
         meter_5.read(hdr.data.color_2);
     }
-    @name("test2") table test2_0() {
+    @name("test2") table test2_0 {
         actions = {
             h4_6();
             @default_only NoAction();
@@ -99,7 +99,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         meters = meter_5;
     }
-    @name("test3") table test3_0() {
+    @name("test3") table test3_0 {
         actions = {
             h7_0();
             @default_only NoAction();
@@ -110,7 +110,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 2000;
         default_action = NoAction();
     }
-    @name("test4") table test4_0() {
+    @name("test4") table test4_0 {
         actions = {
             h10_0();
             @default_only NoAction();
@@ -121,7 +121,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 8192;
         default_action = NoAction();
     }
-    @name("test5") table test5_0() {
+    @name("test5") table test5_0 {
         actions = {
             set_port_0();
             @default_only NoAction();
@@ -132,7 +132,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("test6") table test6_0() {
+    @name("test6") table test6_0 {
         actions = {
             seth13_0();
             @default_only NoAction();

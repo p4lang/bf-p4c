@@ -204,7 +204,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("on_miss") action on_miss() {
     }
-    @name("bfd") table bfd() {
+    @name("bfd") table bfd {
         actions = {
             bfd_rx;
             bfd_tx;
@@ -217,7 +217,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-    @name("check_needs") table check_needs() {
+    @name("check_needs") table check_needs {
         actions = {
             drop_me;
             on_miss;

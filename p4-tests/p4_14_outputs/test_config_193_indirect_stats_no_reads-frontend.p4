@@ -171,7 +171,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_0") action action_1() {
         cntr.count((bit<32>)hdr.pkt.field_i_8);
     }
-    @name("table_0") table table_1() {
+    @name("table_0") table table_1 {
         actions = {
             action_1();
             @default_only NoAction();

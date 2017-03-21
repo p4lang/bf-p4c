@@ -178,7 +178,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_7") action action_7() {
         hash(hdr.ethernet.blah, HashAlgorithm.random, (bit<16>)0, { hdr.ethernet.dstAddr, hdr.ethernet.etherType }, (bit<32>)262144);
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             action_0;
             action_1;
@@ -190,7 +190,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_1 {
         actions = {
             action_7;
             @default_only NoAction;

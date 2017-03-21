@@ -58,7 +58,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("my_count") action my_count_0(bit<12> idx) {
         test3_counter_0.count((bit<32>)idx);
     }
-    @name("test1") table test1_0() {
+    @name("test1") table test1_0 {
         actions = {
             setb1_0();
             setb2_0();
@@ -75,7 +75,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w80000, 32w14);
     }
-    @name("test2") table test2_0() {
+    @name("test2") table test2_0 {
         actions = {
             setb4_0();
             setb5_0();
@@ -92,7 +92,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("set_b4_6") @mode("fair") implementation = action_selector(HashAlgorithm.random, 32w1024, 32w14);
     }
-    @name("test3") table test3_0() {
+    @name("test3") table test3_0 {
         actions = {
             my_count_0();
             @default_only NoAction();

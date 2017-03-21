@@ -53,7 +53,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.h9 = val9;
         meter2_0.execute_meter<bit<8>>(32w7, hdr.data.color_2);
     }
-    @name("test1") table test1_0() {
+    @name("test1") table test1_0 {
         actions = {
             h1_0();
             @default_only NoAction();
@@ -64,7 +64,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 32000;
         default_action = NoAction();
     }
-    @name("test2") table test2_0() {
+    @name("test2") table test2_0 {
         actions = {
             h4_0();
             @default_only NoAction();
@@ -76,7 +76,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("counter2") counters = direct_counter(CounterType.packets);
     }
-    @name("test3") table test3_0() {
+    @name("test3") table test3_0 {
         actions = {
             h7_0();
             @default_only NoAction();

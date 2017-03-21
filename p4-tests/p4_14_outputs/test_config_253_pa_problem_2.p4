@@ -215,7 +215,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("set_port") action set_port(bit<9> p) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
     }
-    @name("t1") table t1() {
+    @name("t1") table t1 {
         actions = {
             do_nothing;
             read_vlan;
@@ -227,7 +227,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("t2") table t2() {
+    @name("t2") table t2 {
         actions = {
             do_nothing;
             set_port;

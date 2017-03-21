@@ -38,7 +38,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.h3 = val3;
         meter_0.read(hdr.data.color_1);
     }
-    @name("test1") table test1_0() {
+    @name("test1") table test1_0 {
         actions = {
             h1_3();
             @default_only NoAction();
@@ -57,7 +57,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         standard_metadata.egress_spec = port;
         meter_3.read(hdr.data.color_2);
     }
-    @name("test2") table test2_0() {
+    @name("test2") table test2_0 {
         actions = {
             h4_6();
             @default_only NoAction();

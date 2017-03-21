@@ -195,7 +195,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.field_h3_1 = 1w1;
         meter_1.read(hdr.pkt.color_0);
     }
-    @name("table_0") table table_2() {
+    @name("table_0") table table_2 {
         actions = {
             action_0_1();
             @default_only NoAction();
@@ -207,7 +207,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         meters = meter_1;
     }
-    @include_idletime(1) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name("table_1") table table_3() {
+    @include_idletime(1) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name("table_1") table table_3 {
         actions = {
             action_0();
             @default_only NoAction();

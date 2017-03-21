@@ -179,7 +179,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.ipv4.diffserv = param2;
         hdr.ipv4.hdrChecksum = param_3;
     }
-    @name("table_e") table table_e_0() {
+    @name("table_e") table table_e_0 {
         actions = {
             action_e_0();
             @default_only NoAction();
@@ -202,7 +202,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_1") action action_3(bit<16> param1) {
         hdr.ipv4.hdrChecksum = param1;
     }
-    @name("table_0") table table_2() {
+    @name("table_0") table table_2 {
         actions = {
             action_2();
             action_3();
@@ -213,7 +213,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("table_1") table table_3() {
+    @name("table_1") table table_3 {
         actions = {
             action_3();
             @default_only NoAction();

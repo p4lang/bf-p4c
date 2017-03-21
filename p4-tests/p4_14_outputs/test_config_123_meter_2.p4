@@ -178,7 +178,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_0") action action_0_0(bit<8> param0) {
         meter_0.read(hdr.pkt.color_0);
     }
-    @pa_solitare("meter_result.color_0", "meter_result.color_1") @include_stash(1) @action_default_only("do_nothing") @name("table_0") table table_0() {
+    @pa_solitare("meter_result.color_0", "meter_result.color_1") @include_stash(1) @action_default_only("do_nothing") @name("table_0") table table_0 {
         actions = {
             action_0_0;
             @default_only NoAction;
@@ -193,7 +193,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         meters = meter_0;
     }
-    @idletime_two_way_notification(1) @include_stash(1) @name("table_1") table table_1() {
+    @idletime_two_way_notification(1) @include_stash(1) @name("table_1") table table_1 {
         actions = {
             do_nothing;
             action_1;

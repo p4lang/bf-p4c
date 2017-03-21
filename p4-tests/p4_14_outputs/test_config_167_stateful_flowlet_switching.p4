@@ -216,7 +216,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("get_flowlet_next_hop") action get_flowlet_next_hop() {
         flowlet_state_alu.execute_stateful_alu();
     }
-    @name("flowlet_next_hop") table flowlet_next_hop() {
+    @name("flowlet_next_hop") table flowlet_next_hop {
         actions = {
             get_flowlet_next_hop;
             @default_only NoAction;

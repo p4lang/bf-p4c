@@ -48,7 +48,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.g = hdr.pkt.g ^ 16w0xfff;
         hdr.pkt.h = ~param2;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             nop;
             action_0;

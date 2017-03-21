@@ -169,7 +169,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("do_nothing") action do_nothing_0() {
     }
-    @name("test_exact_table") table test_exact_table_0() {
+    @name("test_exact_table") table test_exact_table_0 {
         actions = {
             set_flag_0();
             do_nothing_0();

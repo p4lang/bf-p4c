@@ -37,7 +37,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_0") action action_0(bit<32> param0, bit<8> param1, bit<8> param2, bit<8> param3, bit<8> param4) {
         hdr.pkt.a = param0;
     }
-    @immediate(0) @name("table_0") table table_0() {
+    @immediate(0) @name("table_0") table table_0 {
         actions = {
             nop;
             action_0;

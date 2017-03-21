@@ -38,7 +38,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("set_dip") action set_dip_0() {
         hdr.pkt.blah = 16w8;
     }
-    @proxy_hash_width(24) @name("exm_proxy_hash") table exm_proxy_hash_0() {
+    @proxy_hash_width(24) @name("exm_proxy_hash") table exm_proxy_hash_0 {
         actions = {
             nop_0();
             set_dip_0();

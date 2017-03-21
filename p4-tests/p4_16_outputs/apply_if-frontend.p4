@@ -35,7 +35,6 @@ parser p(packet_in b, out packet_t hdrs, inout standard_metadata meta) {
 }
 
 control ingress(inout packet_t hdrs, inout standard_metadata meta) {
-    bool tmp;
     @name("set_port") action set_port_0(bit<9> port) {
         meta.egress_spec = port;
     }
@@ -45,7 +44,7 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
     }
     @name("noop") action noop_0() {
     }
-    @name("t1") table t1_0() {
+    @name("t1") table t1_0 {
         key = {
             hdrs.data.f1: ternary @name("hdrs.data.f1") ;
         }
@@ -55,7 +54,7 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
         }
         default_action = noop_0();
     }
-    @name("t2") table t2_0() {
+    @name("t2") table t2_0 {
         key = {
             hdrs.data.f1: ternary @name("hdrs.data.f1") ;
         }
@@ -67,8 +66,7 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
     }
     apply {
         t1_0.apply();
-        tmp = hdrs.data.f1 == 32w0;
-        if (tmp) 
+        if (hdrs.data.f1 == 32w0) 
             t2_0.apply();
     }
 }

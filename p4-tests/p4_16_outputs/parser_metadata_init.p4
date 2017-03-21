@@ -42,7 +42,7 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
     }
     action noop() {
     }
-    table test1() {
+    table test1 {
         key = {
             hdrs.meta: ternary;
         }

@@ -174,7 +174,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action4") action action4_0(bit<48> newAddr) {
         hdr.ethernet.srcAddr = newAddr;
     }
-    @name("table1") table table1_0() {
+    @name("table1") table table1_0 {
         actions = {
             action1_0();
             action2_0();
@@ -185,7 +185,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("table2") table table2_0() {
+    @name("table2") table table2_0 {
         actions = {
             action3_0();
             @default_only NoAction();
@@ -195,7 +195,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("table3") table table3_0() {
+    @name("table3") table table3_0 {
         actions = {
             action3_0();
             @default_only NoAction();
@@ -205,7 +205,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("table4") table table4_0() {
+    @name("table4") table table4_0 {
         actions = {
             action4_0();
             @default_only NoAction();

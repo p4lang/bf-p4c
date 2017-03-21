@@ -167,7 +167,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.ing_metadata.f2 = f2;
         meta.ing_metadata.f3 = f3;
     }
-    @name("ingress_port_map") table ingress_port_map_0() {
+    @name("ingress_port_map") table ingress_port_map_0 {
         actions = {
             set_ingress_port_props_0();
             @default_only NoAction();

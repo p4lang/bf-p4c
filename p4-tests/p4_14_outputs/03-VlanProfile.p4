@@ -181,14 +181,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("set_flex_counter_index") action set_flex_counter_index(bit<13> flex_counter_base) {
         meta.md.flex_counter_index = flex_counter_base + (bit<13>)hdr.vlan_tag.prio;
     }
-    @name("update_counters") table update_counters() {
+    @name("update_counters") table update_counters {
         actions = {
             update_flex_counter;
             @default_only NoAction;
         }
         default_action = NoAction();
     }
-    @name("vlan") table vlan() {
+    @name("vlan") table vlan {
         actions = {
             set_flex_counter_index;
             @default_only NoAction;

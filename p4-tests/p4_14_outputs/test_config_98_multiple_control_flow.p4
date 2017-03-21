@@ -167,7 +167,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name("do_nothing") action do_nothing() {
         ;
     }
-    @name("table_2") table table_2() {
+    @name("table_2") table table_2 {
         actions = {
             action_2;
             @default_only NoAction;
@@ -177,7 +177,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         }
         default_action = NoAction();
     }
-    @name("table_3") table table_3() {
+    @name("table_3") table table_3 {
         actions = {
             do_nothing;
             @default_only NoAction;
@@ -197,7 +197,7 @@ control pipe_0(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name("action_1") action action_1(bit<32> param0) {
         hdr.pkt.field_c_32 = param0;
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_1 {
         actions = {
             action_1;
             @default_only NoAction;
@@ -216,7 +216,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_0") action action_0(bit<32> param0) {
         hdr.pkt.field_b_32 = param0;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             action_0;
             @default_only NoAction;

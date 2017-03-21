@@ -52,7 +52,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("setb6") action setb6(bit<8> val6) {
         hdr.data.b6 = val6;
     }
-    @name("test1") table test1() {
+    @name("test1") table test1 {
         actions = {
             setb1;
             setb2;
@@ -69,7 +69,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("set_b1_3") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w160000, 32w14);
     }
-    @name("test2") table test2() {
+    @name("test2") table test2 {
         actions = {
             setb4;
             setb5;

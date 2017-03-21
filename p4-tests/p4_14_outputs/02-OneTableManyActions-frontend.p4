@@ -472,7 +472,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_32_14") action action_32_26(bit<32> value) {
         meta.md.field_1_32_14 = value;
     }
-    @name("dmac") table dmac_0() {
+    @name("dmac") table dmac_0 {
         actions = {
             action_1();
             action_1_0();

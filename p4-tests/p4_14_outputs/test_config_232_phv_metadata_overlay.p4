@@ -100,7 +100,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_4") action action_4() {
         meta.meta.tbl4 = 16w1;
     }
-    @name("table_i0") table table_i0() {
+    @name("table_i0") table table_i0 {
         actions = {
             do_nothing;
             action_0;
@@ -113,7 +113,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_i1") table table_i1() {
+    @name("table_i1") table table_i1 {
         actions = {
             do_nothing;
             action_1;
@@ -127,7 +127,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_i2") table table_i2() {
+    @name("table_i2") table table_i2 {
         actions = {
             do_nothing;
             action_2;
@@ -142,7 +142,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_i3") table table_i3() {
+    @name("table_i3") table table_i3 {
         actions = {
             do_nothing;
             action_3;
@@ -158,7 +158,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_i4") table table_i4() {
+    @name("table_i4") table table_i4 {
         actions = {
             do_nothing;
             action_4;

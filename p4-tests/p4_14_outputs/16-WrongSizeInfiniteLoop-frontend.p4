@@ -222,7 +222,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("a16") action a16_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f16;
     }
-    @name("t1") table t1_0() {
+    @name("t1") table t1_0 {
         actions = {
             a1_0();
             a2_0();

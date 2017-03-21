@@ -164,7 +164,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("update_preferred_next_hop") action update_preferred_next_hop_0() {
     }
-    @name("conga_rd_next_hop_table") table conga_rd_next_hop_table_0() {
+    @name("conga_rd_next_hop_table") table conga_rd_next_hop_table_0 {
         actions = {
             get_preferred_next_hop_0();
             @default_only NoAction();
@@ -175,7 +175,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction();
     }
-    @name("conga_wr_next_hop_table") table conga_wr_next_hop_table_0() {
+    @name("conga_wr_next_hop_table") table conga_wr_next_hop_table_0 {
         actions = {
             update_preferred_next_hop_0();
             @default_only NoAction();

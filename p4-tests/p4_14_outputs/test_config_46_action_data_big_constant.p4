@@ -192,7 +192,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_0") action action_0(bit<8> my_param0, bit<8> my_param1) {
         hdr.ethernet.dstAddr = 48w0xcba987654321;
     }
-    @immediate(1) @name("table_0") table table_0() {
+    @immediate(1) @name("table_0") table table_0 {
         actions = {
             action_0;
             @default_only NoAction;

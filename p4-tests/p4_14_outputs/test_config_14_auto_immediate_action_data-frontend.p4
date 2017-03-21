@@ -180,7 +180,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("do_nothing") action do_nothing_0() {
     }
-    @immediate(1) @name("table_0") table table_1() {
+    @immediate(1) @name("table_0") table table_1 {
         actions = {
             action_1();
             do_nothing_0();

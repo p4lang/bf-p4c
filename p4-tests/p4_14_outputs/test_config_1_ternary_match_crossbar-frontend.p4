@@ -158,7 +158,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("just_no_op") action just_no_op_0() {
     }
-    @name("my_test_config_1_table") table my_test_config_1_table_0() {
+    @name("my_test_config_1_table") table my_test_config_1_table_0 {
         actions = {
             modify_b_0();
             just_no_op_0();

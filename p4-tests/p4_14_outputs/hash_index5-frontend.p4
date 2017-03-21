@@ -157,7 +157,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("countb2") action countb2_0(bit<8> val) {
         simple_0.count((bit<32>)hdr.data.b2);
     }
-    @name("test1") table test1_0() {
+    @name("test1") table test1_0 {
         actions = {
             countb2_0();
             @default_only NoAction();

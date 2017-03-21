@@ -199,7 +199,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.ig_intr_md_for_tm.ucast_egress_port = new_port;
         hdr.trill.hopCount = hdr.trill.hopCount + 6w63;
     }
-    @name("trill_forward") table trill_forward() {
+    @name("trill_forward") table trill_forward {
         actions = {
             forward_trill;
             @default_only NoAction;

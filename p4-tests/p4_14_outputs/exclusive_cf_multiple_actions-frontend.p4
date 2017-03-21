@@ -177,14 +177,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("forward") action forward_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.port;
     }
-    @name("t0") table t0_0() {
+    @name("t0") table t0_0 {
         actions = {
             branch_0();
         }
         size = 1;
         const default_action = branch_0();
     }
-    @name("t1") table t1_0() {
+    @name("t1") table t1_0 {
         actions = {
             a1_0();
             a2_0();
@@ -198,28 +198,28 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction();
     }
-    @name("t2") table t2_0() {
+    @name("t2") table t2_0 {
         actions = {
             forward_0();
         }
         size = 1;
         const default_action = forward_0();
     }
-    @name("t3") table t3_0() {
+    @name("t3") table t3_0 {
         actions = {
             forward_0();
         }
         size = 1;
         const default_action = forward_0();
     }
-    @name("t4") table t4_0() {
+    @name("t4") table t4_0 {
         actions = {
             forward_0();
         }
         size = 1;
         const default_action = forward_0();
     }
-    @name("t5") table t5_0() {
+    @name("t5") table t5_0 {
         actions = {
             forward_0();
         }

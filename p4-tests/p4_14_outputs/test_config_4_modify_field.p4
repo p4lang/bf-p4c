@@ -173,7 +173,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("modify_from_param") action modify_from_param(bit<32> param1_32) {
         hdr.my_test_config_1.f_32 = param1_32;
     }
-    @name("my_test_config_1_table") table my_test_config_1_table() {
+    @name("my_test_config_1_table") table my_test_config_1_table {
         actions = {
             modify_from_constant;
             modify_from_field;

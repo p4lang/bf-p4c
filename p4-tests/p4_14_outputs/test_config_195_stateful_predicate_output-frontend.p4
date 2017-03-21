@@ -186,7 +186,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("a_comb_pred") action a_comb_pred_0(bit<32> idx) {
         b_comb_pred_0.execute_stateful_alu(idx);
     }
-    @name("t_pred") table t_pred_0() {
+    @name("t_pred") table t_pred_0 {
         actions = {
             a_pred_0();
             a_comb_pred_0();

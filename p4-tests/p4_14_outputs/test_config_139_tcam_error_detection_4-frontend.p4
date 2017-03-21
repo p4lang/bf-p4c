@@ -173,14 +173,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("action_0") action action_1() {
         hdr.pkt.field_f_16 = 16w1;
     }
-    @name("table_a") table table_a_0() {
+    @name("table_a") table table_a_0 {
         actions = {
             count_it_0();
             @default_only NoAction();
         }
         default_action = NoAction();
     }
-    @name("table_b") table table_b_0() {
+    @name("table_b") table table_b_0 {
         actions = {
             do_nothing_0();
             @default_only NoAction();
@@ -191,7 +191,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_c") table table_c_0() {
+    @name("table_c") table table_c_0 {
         actions = {
             do_nothing_0();
             @default_only NoAction();
@@ -202,7 +202,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @name("table_d") table table_d_0() {
+    @name("table_d") table table_d_0 {
         actions = {
             do_nothing_0();
             @default_only NoAction();
@@ -213,7 +213,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction();
     }
-    @entries_with_ranges(64) @tcam_error_detect(1) @name("table_e") table table_e_0() {
+    @entries_with_ranges(64) @tcam_error_detect(1) @name("table_e") table table_e_0 {
         actions = {
             do_nothing_0();
             action_1();
@@ -227,7 +227,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction();
     }
-    @tcam_error_detect(1) @name("table_f") table table_f_0() {
+    @tcam_error_detect(1) @name("table_f") table table_f_0 {
         actions = {
             do_nothing_0();
             @default_only NoAction();

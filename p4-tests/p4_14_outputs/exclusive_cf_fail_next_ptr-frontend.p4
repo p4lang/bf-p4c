@@ -150,14 +150,14 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("a1") action a1_0() {
     }
-    @name("table1") table table1_0() {
+    @name("table1") table table1_0 {
         actions = {
             a1_0();
             @default_only NoAction();
         }
         default_action = NoAction();
     }
-    @name("table2") table table2_0() {
+    @name("table2") table table2_0 {
         actions = {
             a1_0();
             @default_only NoAction();
