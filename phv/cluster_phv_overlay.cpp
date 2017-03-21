@@ -10,13 +10,14 @@
 // NOTE: This check does not consider field that is smaller than container width,
 //       in which case not all fields in target container need to be checked.
 //***********************************************************************************
+
 bool Cluster_PHV_Overlay::check_field_with_container(const PhvInfo::Field *field,
                                                      PHV_Container *c) {
     bool can_overlay = false;
     // if overlay candidate field is ccgf
     if (field->ccgf) {
-        for (auto *cc: c->fields_in_container()) {
-            for (auto *f: field->ccgf_fields) {
+        for (auto *cc : c->fields_in_container()) {
+            for (auto *f : field->ccgf_fields) {
                 can_overlay = mutex_i(f->id, cc->field()->id);
                 if (!can_overlay) {
                     //
@@ -25,7 +26,7 @@ bool Cluster_PHV_Overlay::check_field_with_container(const PhvInfo::Field *field
             }
         }
     } else {
-        for (auto *cc: c->fields_in_container()) {
+        for (auto *cc : c->fields_in_container()) {
             can_overlay = mutex_i(field->id, cc->field()->id);
             if (!can_overlay) {
                 //
@@ -43,6 +44,7 @@ bool Cluster_PHV_Overlay::check_field_with_container(const PhvInfo::Field *field
 // 2. if check succeeds, commit the cluster overlay to mau group.
 //    else, nothing changes, try next mau group.
 //***********************************************************************************
+
 bool Cluster_PHV_Overlay::overlay_cluster_to_group(Cluster_PHV *cl, PHV_MAU_Group *g) {
     //
     // 3a.honor MAU group In/Egress only constraints
@@ -64,7 +66,7 @@ bool Cluster_PHV_Overlay::overlay_cluster_to_group(Cluster_PHV *cl, PHV_MAU_Grou
     //    field f may need several containers, e.g., f:128 --> C1[32],C2,C3,C4
     //    each C single or partial field, e.g., f:24 --> C1[16], C2[8/16]
     //
-    auto req_containers = cl->num_containers(); //?!
+    auto req_containers = cl->num_containers();  // ?!
     if (g->width() < cl->width()) {
         // scale cl width down
         // <2:_48_32>{3*32} => <2:_48_32>{5*16}
@@ -75,12 +77,12 @@ bool Cluster_PHV_Overlay::overlay_cluster_to_group(Cluster_PHV *cl, PHV_MAU_Grou
     // Phase 1: test if cluster can overlay to containers in the same group.
     LOG3("... try to overlay cluster ..." << cl);
     std::vector<PHV_Container*>* cc_set = new std::vector<PHV_Container*>;
-    for (auto i=0, j=0; i<cl->cluster_vec().size(); i++) {
+    for (auto i=0, j=0; i < cl->cluster_vec().size(); i++) {
         bool field_can_overlay = false;
         // field can be larger than one container..
         const PhvInfo::Field *field = cl->cluster_vec()[i];
         auto field_width = field->phv_use_width();
-        //TODO hanw: check field alignment in clusters residing in separate containers.
+        // TODO hanw: check field alignment in clusters residing in separate containers.
         //      e.g.
         //      cluster {f1, f2, f3} maybe mapped to
         //      containers | f1 ....... |
@@ -91,7 +93,7 @@ bool Cluster_PHV_Overlay::overlay_cluster_to_group(Cluster_PHV *cl, PHV_MAU_Grou
              j < req_containers && field_width > 0;
              j++, field_stride++) {
             // field uses one or more containers, tracked by field_width
-            for (auto &c: g->phv_containers()) {
+            for (auto &c : g->phv_containers()) {
                 if (c->o_status() != PHV_Container::Container_status::EMPTY)
                     continue;
                 auto it = std::find(cc_set->begin(), cc_set->end(), c);
@@ -116,7 +118,7 @@ bool Cluster_PHV_Overlay::overlay_cluster_to_group(Cluster_PHV *cl, PHV_MAU_Grou
     }
     // Phase 2: commit cluster to containers in the group.
     LOG3("... can overlay ..." << cc_set->size() << " containers.");
-    for (auto i=0, j=0; i<cl->cluster_vec().size(); i++) {
+    for (auto i=0, j=0; i < cl->cluster_vec().size(); i++) {
         bool field_can_overlay = false;
         const PhvInfo::Field *field = cl->cluster_vec()[i];
         auto field_width = field->phv_use_width();
@@ -189,7 +191,7 @@ Cluster_PHV_Overlay::overlay_clusters_to_groups(
             if (succeed) {
                 clusters_remove.push_back(cl);
             }
-        } // for cluster
+        }  // for cluster
         // remove clusters already assigned
         for (auto &cl : clusters_remove) {
             clusters_to_be_assigned.remove(cl);
@@ -209,16 +211,37 @@ Cluster_PHV_Overlay::apply_visitor(const IR::Node *node, const char *name) {
     if (name) {
         LOG1(name);
     }
-    std::list<PHV_MAU_Group *> phv_groups_to_be_overlayed;
-    for (auto &it : phv_mau_i.phv_mau_map()) {
-        for (auto &g : it.second) {
-            phv_groups_to_be_overlayed.push_front(g);
+    // PHV overlay
+    if (phv_mau_i.phv_clusters().size()) {
+        std::list<PHV_MAU_Group *> phv_groups_to_be_overlayed;
+        for (auto &it : phv_mau_i.phv_mau_map()) {
+            for (auto &g : it.second) {
+                phv_groups_to_be_overlayed.push_front(g);
+            }
         }
+        overlay_clusters_to_groups(
+            phv_mau_i.phv_clusters(),
+            phv_groups_to_be_overlayed,
+            "Overlay_Clusters_MAU_Group:PHV");
     }
-    overlay_clusters_to_groups(
-        phv_mau_i.phv_clusters(),
-        phv_groups_to_be_overlayed,
-        "Overlay_Clusters");
+    // T_PHV overlay
+    if (phv_mau_i.t_phv_clusters().size()) {
+        std::set<PHV_MAU_Group *> t_phv_group_set;
+        for (auto &it : phv_mau_i.t_phv_map()) {
+            for (auto &it_2 : it.second) {
+                for (auto &c : it_2.second) {
+                    t_phv_group_set.insert(c->phv_mau_group());
+                }
+            }
+        }
+        std::list<PHV_MAU_Group *> t_phv_groups_to_be_overlayed(
+            t_phv_group_set.begin(),
+            t_phv_group_set.end());
+        overlay_clusters_to_groups(
+            phv_mau_i.t_phv_clusters(),
+            t_phv_groups_to_be_overlayed,
+            "Overlay_Clusters_MAU_Group:T_PHV");
+    }
     return node;
 }
 

@@ -4,6 +4,8 @@
 #include "phv.h"
 #include "ir/ir.h"
 #include "lib/map.h"
+#include "lib/ordered_map.h"
+#include "lib/ordered_set.h"
 #include "lib/range.h"
 #include "tofino/ir/thread_visitor.h"
 #include "tofino/common/header_stack.h"
@@ -41,17 +43,20 @@ class PhvInfo : public Inspector {
                                           // for container contiguous groups
                                           // owner phv_use_hi = sum of member sizes
         int             offset;           // offset of lsb from lsb (last) bit of containing header
+        //
         bool            referenced;
         bool            metadata;
         bool            pov;
-        bool            mau_write = false;  // true when field Write in MAU
-        bool            deparser_no_holes = false;  // true if deparsed field
-                                                    // place in container exactly (no holes)
-        bool            deparser_no_pack = false;   // true when egress_port
+        //
+        bool            mau_write = false;          // true when field Write in MAU
         bool            mau_phv_no_pack = false;    // true when any op on field is not "move based"
                                                     // set by PHV_Field_Operations end_apply()
-        bool            header_stack_pov_ccgf = false;  // header stack pov owner
-                                                        // has members in ccgf_fields
+        bool            deparser_no_pack = false;   // true when egress_port
+        bool            deparser_no_holes = false;  // true if deparsed field
+                                                    // place in container exactly (no holes)
+        //
+        bool            header_stack_pov_ccgf = false;   // header stack pov owner
+                                                         // has members in ccgf_fields
         bool            simple_header_pov_ccgf = false;  // simple header ccgf
                                                          // has members in ccgf_fields
         Field           *ccgf = 0;         // container contiguous group fields
@@ -71,6 +76,45 @@ class PhvInfo : public Inspector {
         vector<Field *> ccgf_fields;       // member fields of container contiguous groups
                                            // member pov fields of header stk pov
                                            // these members are in same container as header stk pov
+        //
+        ordered_map<int, ordered_set<const PhvInfo::Field *> *> field_overlay_map_i;
+                                           // liveness / interference graph related
+                                           // fields (within cluster) overlay map
+                                           // F = <c1,c2> adjacent containers based on F width
+                                           // F[0] = c1
+                                           // F[1] = c2
+                                           // F<c1,c2> -- [0] -- B<c1>, A<c1>
+                                           //          -- [1] -- B<c2>, D<c2>, E<c2>
+        ordered_map<int, ordered_set<const PhvInfo::Field *> *>&
+        field_overlay_map() {
+            return field_overlay_map_i;
+        }
+        void field_overlay_map(int r, const PhvInfo::Field *field) {
+            //
+            assert(r >= 0);
+            assert(field);
+            //
+            if (!field_overlay_map_i[r]) {
+                field_overlay_map_i[r] = new ordered_set<const PhvInfo::Field *>;
+            }
+            field_overlay_map_i[r]->insert(field);
+        }
+        int phv_use_width() const { return phv_use_hi - phv_use_lo + 1; }
+                                                      // width of field needed in phv container
+        void phv_use_width(bool ccgf_owner) {
+            //
+            // compute ccgf width
+            // need PHV container of this width
+            //
+            if (ccgf_owner && ccgf_fields.size()) {
+                int ccg_width = 0;
+                for (auto &f : ccgf_fields) {
+                    ccg_width += f->phv_use_width();
+                }
+                phv_use_hi = ccg_width - 1;
+            }
+        }
+        //
         set<constraint> constraints;  // unused -- get rid of it?
         vector<std::tuple<bool, cstring, Field_Ops>> operations;
                                            // all operations performed on the field
@@ -96,6 +140,8 @@ class PhvInfo : public Inspector {
                 bitrange rv = { std::min(lo, l), std::max(hi, h) };
                 BUG_CHECK(rv.lo <= rv.hi, "invalid bitrange::intersect");
                 return rv; } };
+        //
+        int container_bytes(bitrange bits = {0, -1}) const;
 
         struct alloc_slice {
             PHV::Container         container;
@@ -107,9 +153,7 @@ class PhvInfo : public Inspector {
             int field_hi() const { return field_bit + width - 1; }
             int container_hi() const { return container_bit + width - 1; } };
         vector<alloc_slice>     alloc;   // sorted MSB (field) first
-        int container_bytes(bitrange bits = {0, -1}) const;
-        int phv_use_width() const { return phv_use_hi - phv_use_lo + 1; }
-                                                      // width of field needed in phv container
+        //
         const alloc_slice &for_bit(int bit) const;
         void foreach_alloc(int lo, int hi, std::function<void(const alloc_slice &)> fn) const;
         void foreach_alloc(std::function<void(const alloc_slice &)> fn) const {

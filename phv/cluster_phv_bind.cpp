@@ -22,14 +22,88 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
     //
     node->apply(*uses_i);
     //
+    create_phv_asm_container_map();
+    //
+    collect_containers_with_fields();
+    //
+    // during phv_analysis phase (cluster analysis) fields that are metadata,
+    // e.g.,
+    // 3:ingress::standard_metadata.clone_spec[32]{0..31} I off=81 meta
+    // becomes
+    // 3:ingress::standard_metadata.clone_spec[32]{0..31} I off=81 ref meta
+    // 'ref' is set by PhvInfo::SetReferenced pass, called twice in the backend
+    // once after ElimUnused (before phv_bind) and also before asm generation
+    // if these references are used (parser, mau, or deparser, (or multiple)),
+    // need phv allocation
+    //
+    if (fields_overflow_i.size()) {
+        phv_tphv_allocate(fields_overflow_i);
+        collect_containers_with_fields();
+    }
+    //
+    sanity_check_all_fields_allocated("PHV_Bind::apply_visitor()..");
+    sanity_check_field_duplicate_containers("PHV_Bind::apply_visitor()..");
+    //
+    bind_fields_to_containers();
+    //
+    // Trivially allocating overflow fields
+    // some clusters yet not assigmed after
+    //     mutex headers overlap
+    //     interference gragh
+    //     cluster slicing
+    // perhaps due to Ingress / Egress partitions
+    // e.g., Ingress containers available, but Egress clusters remain & vice versa
+    //
+    if (fields_overflow_i.size()) {
+        trivial_allocate(fields_overflow_i);
+    }
+    //
+    LOG3(*this);
+    //
+    return node;
+}  // apply_visitor
+
+void
+PHV_Bind::create_phv_asm_container_map() {
+    //
+    // PHV_MAU_i[width] = vector of groups
+    for (auto &x : phv_mau_i.phv_mau_map()) {
+        for (auto &y : x.second) {
+            for (auto &c : y->phv_containers()) {
+                phv_to_asm_map_i[c] =
+                    new PHV::Container(const_cast<PHV_Container *>(c)->asm_string().c_str());
+            }
+        }
+    }
+    // T_PHV_i[collection][width] = vector of containers
+    for (auto &x : phv_mau_i.t_phv_map()) {
+        for (auto &y : x.second) {
+            for (auto &c : y.second) {
+                phv_to_asm_map_i[c] =
+                    new PHV::Container(const_cast<PHV_Container *>(c)->asm_string().c_str());
+            }
+        }
+    }
+}
+
+void
+PHV_Bind::collect_containers_with_fields() {
+    //
     // collect all allocated containers from phv_mau_map, t_phv_map
+    // accumulate containers_i, fields_i
     //
     containers_i.clear();
+    fields_i.clear();
+    fields_overflow_i.clear();
+    //
     for (auto &it : phv_mau_i.phv_mau_map()) {
         for (auto &g : it.second) {
             for (auto &c : g->phv_containers()) {
                 if (c->fields_in_container().size()) {
                     containers_i.push_front(c);
+                    for (auto &cc : const_cast<PHV_Container *>(c)->fields_in_container()) {
+                        fields_i.insert(cc->field());
+                    }
                 }
             }
         }
@@ -39,24 +113,87 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
             for (auto &c : c_s.second) {
                 if (c->fields_in_container().size()) {
                     containers_i.push_front(c);
+                    for (auto &cc : const_cast<PHV_Container *>(c)->fields_in_container()) {
+                        fields_i.insert(cc->field());
+                    }
                 }
             }
         }
     }
     //
-    // accumulate fields to be bound
-    // create equivalent asm containers
+    // set difference (All phv_i fields, fields_i) => fields_overflow_i
     //
-    ordered_map<const PHV_Container*, PHV::Container *> phv_to_asm_map;
-    for (auto &c : containers_i) {
-        for (auto &cc : const_cast<PHV_Container *>(c)->fields_in_container()) {
-            fields_i.insert(cc->field());
+    std::set<const PhvInfo::Field *> s1;
+    // All Fields
+    for (auto &field : phv_i) {
+        //
+        // discard fields that are not used
+        //
+        if (field.pov
+           || uses_i->use[1][field.gress][field.id]
+           || uses_i->use[0][field.gress][field.id]) {
+            //
+            s1.insert(&field);
         }
-        phv_to_asm_map[c] =
-            new PHV::Container(const_cast<PHV_Container *>(c)->asm_string().c_str());
     }
+    // fields_overflow_i = All - PHV_Bind fields
+    set_difference(
+        s1.begin(),
+        s1.end(),
+        fields_i.begin(),
+        fields_i.end(),
+        std::inserter(fields_overflow_i, fields_overflow_i.end()));
     //
-    sanity_check_container_fields("PHV_Bind::PHV_Bind()..", fields_overflow_i);
+}  // collect_containers_with_fields
+
+void
+PHV_Bind::phv_tphv_allocate(std::set<const PhvInfo::Field *>& fields) {
+    std::list<Cluster_PHV *> phv_clusters;
+    std::list<Cluster_PHV *> t_phv_clusters;
+    //
+    int cluster_num = 0;
+    std::set<const PhvInfo::Field *> remove_set;
+    for (auto &f : fields) {
+        if (f->ccgf && f->ccgf != f) {
+            // no separate allocation required for ccgf members, remove field
+            remove_set.insert(f);
+            continue;
+        }
+        std::stringstream ss;
+        ss << cluster_num++;
+        std::string id = "phv_bind" + ss.str();
+        if (uses_i->use[1][f->gress][f->id]) {
+            // used in MAU
+            phv_clusters.push_back(new Cluster_PHV(f, id));
+        } else {
+            if (uses_i->use[0][f->gress][f->id]) {
+                // used in parser / deparser
+                t_phv_clusters.push_back(new Cluster_PHV(f, id));
+            } else {
+                // no allocation required, remove field
+                remove_set.insert(f);
+            }
+        }
+    }
+    for (auto &f : remove_set) {
+        fields.erase(f);
+    }
+    if (phv_clusters.size()) {
+        phv_mau_i.container_pack_cohabit(
+            phv_clusters,
+            phv_mau_i.aligned_container_slices(),
+            "PHV_Bind:PHV");
+    }
+    if (t_phv_clusters.size()) {
+        phv_mau_i.container_pack_cohabit(
+            t_phv_clusters,
+            phv_mau_i.T_PHV_container_slices(),
+            "PHV_Bind:T_PHV");
+    }
+}  // phv_tphv_allocate
+
+void
+PHV_Bind::bind_fields_to_containers() {
     //
     // binding fields to containers
     // clear previous field alloc information if any
@@ -77,7 +214,7 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
             int field_bit = cc->field_bit_lo();
             int container_bit = cc->lo();
             int width_in_container = cc->width();
-            PHV::Container *asm_container = phv_to_asm_map[c];
+            PHV::Container *asm_container = phv_to_asm_map_i[c];
             //
             // ignore allocation for owners of
             // non-header stack ccgs
@@ -100,8 +237,9 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
         }
     }
     //
-    // phv_fields.h vector<alloc_slice> alloc;  // sorted MSB (field) first
-    // for all fields sort
+    // phv_fields.h vector<alloc_slice> alloc;
+    // sorted MSB (field) first
+    // sort fields' alloc
     //
     for (auto &f : fields_i) {
         PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
@@ -112,24 +250,7 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
             });
         }
     }
-    //
-    // Trivially allocating overflow fields
-    // some clusters yet not assiged past
-    // header overlap attempt
-    // cluster slicing
-    // perhaps due to Ingress / Egress partitions
-    // e.g., Ingress containers available, but Egress clusters remain
-    //       & vice versa
-    //
-    if (fields_overflow_i.size()) {
-        trivial_allocate(fields_overflow_i);
-    }
-    //
-    LOG3(*this);
-    //
-    return node;
-}
-
+}  // bind_fields_to_containers
 
 void
 PHV_Bind::container_contiguous_alloc(
@@ -223,7 +344,6 @@ PHV_Bind::container_contiguous_alloc(
     }
 }  // container_contiguous_alloc
 
-
 void
 PHV_Bind::trivial_allocate(std::set<const PhvInfo::Field *>& fields) {
     //
@@ -260,6 +380,8 @@ PHV_Bind::trivial_allocate(std::set<const PhvInfo::Field *>& fields) {
         std::string container_prefix = "";
         if (!uses_i->use[1][f->gress][f->id]
             && uses_i->use[0][f->gress][f->id]) {
+            //
+            // not used in mau && used in paser / deparser
             //
             container_prefix = "T";
         }
@@ -336,46 +458,48 @@ PHV_Bind::trivial_allocate(std::set<const PhvInfo::Field *>& fields) {
 //***********************************************************************************
 
 
-void PHV_Bind::sanity_check_container_fields(
-    const std::string& msg,
-    std::set<const PhvInfo::Field *>& s3) {
+void PHV_Bind::sanity_check_field_duplicate_containers(
+    const std::string& msg) {
     //
-    const std::string msg_1 = msg+"PHV_Bind::sanity_check_container_fields";
+    const std::string msg_1 = msg+"PHV_Bind::sanity_check_field_duplicate_containers";
     //
-    // set difference phv_i fields, fields_i must be 0
-    //
-    std::set<const PhvInfo::Field *> s1;                                // All Fields
-    for (auto &field : phv_i) {
-        //
-        // discard fields that are not used
-        //
-        if (field.pov
-           || uses_i->use[1][field.gress][field.id]
-           || uses_i->use[0][field.gress][field.id]) {
-            //
-            s1.insert(&field);
+    for (auto &f : fields_i) {
+        std::set<int> hi_s;
+        for (auto &as : f->alloc) {
+            if (hi_s.count(as.field_bit)) {
+                LOG1(std::endl
+                    << "*****cluster_phv_bind.cpp:sanity_FAIL***** "
+                    << msg_1
+                    << std::endl
+                    << ".....PHV_Bind Field Container duplication..... "
+                    << std::endl
+                    << f
+                    << "\t"
+                    << as);
+            } else {
+                hi_s.insert(as.field_bit);
+            }
         }
     }
-    // s3 = All - PHV_Bind fields
-    set_difference(
-        s1.begin(),
-        s1.end(),
-        fields_i.begin(),
-        fields_i.end(),
-        std::inserter(s3, s3.end()));
+}
+
+
+void PHV_Bind::sanity_check_all_fields_allocated(
+    const std::string& msg) {
     //
-    if (s3.size()) {
+    const std::string msg_1 = msg+"PHV_Bind::sanity_check_all_fields_allocated";
+    //
+    if (fields_overflow_i.size()) {
         LOG1(std::endl
             << "*****cluster_phv_bind.cpp:sanity_FAIL***** "
-            << msg
+            << msg_1
             << std::endl
             << ".....Phv Bind fields != All Fields..... "
             << ".....need OverFlow Allocation....."
             << std::endl
             << std::endl
-            << s3);
+            << fields_overflow_i);
     }
-    //
 }
 
 //***********************************************************************************

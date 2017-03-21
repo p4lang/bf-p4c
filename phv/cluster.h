@@ -138,6 +138,9 @@ class Cluster::Uses : public Inspector {
 //
 std::ostream &operator<<(std::ostream &, ordered_set<const PhvInfo::Field *>*);
 std::ostream &operator<<(std::ostream &, std::vector<const PhvInfo::Field *>&);
+std::ostream &operator<<(
+    std::ostream&,
+    ordered_map<const PhvInfo::Field *, ordered_set<const PhvInfo::Field *>*>&);
 std::ostream &operator<<(std::ostream &, Cluster &);
 //
 #endif /* _TOFINO_PHV_CLUSTER_H_ */

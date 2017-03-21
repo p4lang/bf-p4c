@@ -36,7 +36,10 @@ class PHV_Bind : public Visitor {
     Cluster::Uses *uses_i;                          // field uses mau, I, E
     std::list<const PHV_Container *> containers_i;  // all filled containers
     std::set<const PhvInfo::Field *> fields_i;      // all fields to be finally bound
-    std::set<const PhvInfo::Field *> fields_overflow_i;  // All - PHV_Bind fields
+    std::set<const PhvInfo::Field *> fields_overflow_i;
+                                                    // overflow fields =  All - PHV_Bind fields
+    ordered_map<const PHV_Container*, PHV::Container *> phv_to_asm_map_i;
+                                                    // PHV_Container = asm_container PHV::Container
     //
  public:
     //
@@ -54,6 +57,10 @@ class PHV_Bind : public Visitor {
     std::set<const PhvInfo::Field *>& fields_overflow()  { return fields_overflow_i; }
     //
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
+    void create_phv_asm_container_map();
+    void collect_containers_with_fields();
+    void phv_tphv_allocate(std::set<const PhvInfo::Field *>& fields);
+    void bind_fields_to_containers();
     void container_contiguous_alloc(               // backup for ccgf fields processing
         PhvInfo::Field *,
         int,
@@ -61,7 +68,8 @@ class PHV_Bind : public Visitor {
         int);
     void trivial_allocate(std::set<const PhvInfo::Field *>&);
     //
-    void sanity_check_container_fields(const std::string&, std::set<const PhvInfo::Field *>&);
+    void sanity_check_field_duplicate_containers(const std::string&);
+    void sanity_check_all_fields_allocated(const std::string&);
     //
 };
 //

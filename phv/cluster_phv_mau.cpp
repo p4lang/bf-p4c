@@ -223,6 +223,9 @@ PHV_MAU_Group_Assignments::apply_visitor(const IR::Node *node, const char *name)
     if (!phv_requirements_i.cluster_phv_fields().size()) {
         LOG1("**********PHV_MAU_Group_Assignments apply_visitor w/ 0 Requirements***********");
     }
+    clear();                            // clear all PHV, T_PHV container assignments if any
+                                        // used when PHV_MAU_Group_Assignments::apply_visitor()
+                                        // called multiple times
     create_MAU_groups();
     create_TPHV_collections();
     //
@@ -241,6 +244,39 @@ PHV_MAU_Group_Assignments::apply_visitor(const IR::Node *node, const char *name)
     return node;
     //
 }  // PHV_MAU_Group_Assignments::apply_visitor
+
+void
+PHV_MAU_Group_Assignments::clear() {
+    //
+    // PHV_MAU_i[width] = vector of groups
+    for (auto &x : PHV_MAU_i) {
+        for (auto &y : x.second) {
+            y->clear();
+        }
+    }
+    // T_PHV_i[collection][width] = vector of containers
+    for (auto &x : T_PHV_i) {
+        for (auto &y : x.second) {
+            for (auto &z : y.second) {
+                z->clear();
+            }
+        }
+    }
+    //
+    PHV_groups_i.clear();
+    T_PHV_groups_i.clear();
+    //
+    clusters_to_be_assigned_i.clear();
+    clusters_to_be_assigned_nibble_i.clear();
+    pov_fields_i.clear();
+    t_phv_fields_i.clear();
+    t_phv_fields_nibble_i.clear();
+    //
+    aligned_container_slices_i.clear();
+    T_PHV_container_slices_i.clear();
+    //
+    cohabit_fields_i.clear();
+}
 
 void
 PHV_MAU_Group_Assignments::create_MAU_groups() {
@@ -646,9 +682,19 @@ PHV_MAU_Group_Assignments::container_no_pack(
                         LOG3(container);
                         //
                         // check if this container is partially filled with parser field
+                        // if field in MAU, avoid MAU Group violation, avoid relocation to another G
+                        // also, if cluster is not uniform width, e.g.,
+                        //     (ingress::test.field_a{0..31} deparser_no_holes,
+                        //      ingress::test.field_e{0..15} deparser_no_holes)
+                        //     set test.field_a, test.field_e
+                        // placing field_a in 32b, field_e in 16b will cause mau group violation
+                        // "registers in an instruction must all be in the same phv group"
                         //
                         if (field->deparser_no_holes
-                            && container->status() == PHV_Container::Container_status::PARTIAL) {
+                            && container->status() == PHV_Container::Container_status::PARTIAL
+                            && cl->uniform_width()
+                            && cl->uniform_deparser_no_holes()
+                            && !field->mau_phv_no_pack) {
                             //
                             // partial container with parser field
                             // parser / deparser require fully packed containers
@@ -883,13 +929,19 @@ void PHV_MAU_Group_Assignments::create_aligned_container_slices() {
                             c->width(),
                             c));
                 } else if (c->status() == PHV_Container::Container_status::PARTIAL) {
-                    int start = c->ranges().begin()->first;
-                    int partial_width = c->avail_bits();
-                    std::set<PHV_MAU_Group::Container_Content *> *set_cc_partial
-                        = new std::set<PHV_MAU_Group::Container_Content *>;
-                    set_cc_partial->insert(
-                        new PHV_MAU_Group::Container_Content(start, partial_width, c));
-                    T_PHV_container_slices_i[partial_width][1].insert(*set_cc_partial);
+                    //
+                    // extract contiguous bit ranges
+                    // c->avail_bits()=16 but disjoint (0..2)(19..31)<16>
+                    //
+                    for (auto &r : c->ranges()) {
+                        int start = r.first;
+                        int partial_width = r.second - r.first + 1;
+                        std::set<PHV_MAU_Group::Container_Content *> *set_cc_partial
+                            = new std::set<PHV_MAU_Group::Container_Content *>;
+                        set_cc_partial->insert(
+                            new PHV_MAU_Group::Container_Content(start, partial_width, c));
+                        T_PHV_container_slices_i[partial_width][1].insert(*set_cc_partial);
+                    }
                 }
             }
             if (set_cc->size()) {
@@ -1036,9 +1088,8 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
     //
     std::list<Cluster_PHV *> clusters_remove;
     for (auto &cl : clusters_to_be_assigned) {
-        int cl_w = cl->max_width();
-                            // ?? assert width < container_width,
-                            // also consider non uniform widths of fields
+        int cl_w = std::min(cl->max_width(), static_cast<int>(cl->width()));
+            // exceed container_width => no match, e.g., cluster <1:160>{5*32}(pkt.pad_1{0..159})
         int cl_n = cl->num_containers();
         //
         bool found_match = false;
@@ -1143,18 +1194,31 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                         // container tracking based on cc_set ... <cl_n, cl_w>;
                         //
                         auto field = 0;
+                        auto field_bit_lo = 0;  // single field overlapping several containers
                         for (auto &cc : cc_set) {
                             // to honor alignment of fields in clusters
                             // start with rightmost vertical slice that accommodates this width
                             //
                             int start = cc->hi() + 1 - cl_w;
-                            cc->container()->taint(start,
-                                                   cl_w,
-                                                   cl->cluster_vec()[field++],
-                                                   cc->lo() /* range_start */);
+                            cc->container()->taint(start,                     // start
+                                                   cl_w,                      // width
+                                                   cl->cluster_vec()[field],  // field
+                                                   cc->lo(),                  // range_start
+                                                   field_bit_lo);             // field_bit_lo
                             cc->container()->sanity_check_container_ranges(
                                 "PHV_MAU_Group_Assignments::container_pack_cohabit..");
                             LOG3("\t\t" << *(cc->container()));
+                            if (field < cl->cluster_vec().size() - 1) {
+                                //
+                                // e.g., singleton field cl <1:160>{5*32}
+                                //
+                                field++;
+                            } else {
+                                //
+                                // advance field_bit for same field
+                                //
+                                field_bit_lo += cl_w;
+                            }
                         }
                         //
                         // mau availabilty width > cluster requirement width

@@ -381,18 +381,41 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
     if (field.metadata) out << " meta";
     if (field.pov) out << " pov";
     if (field.mau_write) out << " mau_write";
-    if (field.ccgf) out << " ccgf=" << field.ccgf->name;
+    if (field.mau_phv_no_pack) out << " mau_phv_no_pack";
+    if (field.deparser_no_pack) out << " deparser_no_pack";
+    if (field.deparser_no_holes) out << " deparser_no_holes";
+    if (field.ccgf) out << " ccgf=" << field.ccgf->id << ':' << field.ccgf->name;
     if (field.ccgf_fields.size()) {
         // count bits in "container contiguous group fields"
         out << std::endl << '[';
         int ccg_width = 0;
-        for (auto pov_f : field.ccgf_fields) {
+        for (auto &pov_f : field.ccgf_fields) {
             out << '\t';
-            out << pov_f->name << '[' << pov_f->size << ']';
+            out << pov_f->id << ':' << pov_f->name << '[' << pov_f->size << ']';
             out << std::endl;
             ccg_width += pov_f->size;
         }
         out << ':' << ccg_width << ']'; }
+    if (field.field_overlay_map_i.size()) {
+        for (auto &entry : field.field_overlay_map_i) {
+            out << "\t"
+                << "[r" << entry.first << "] = [";
+            if (entry.second) {
+                for (auto &f : *(entry.second)) {
+                    out << f->id;
+                    if (f->ccgf_fields.size()) {
+                        out << '(';
+                        for (auto &m : f->ccgf_fields) {
+                            out << m->id << ',';
+                        }
+                        out << ')';
+                    }
+                    out << ";";
+                }
+            }
+            out << ']';
+        }
+    }
     if (!field.alloc.empty())
         out << " " << field.alloc;
     return out;

@@ -26,6 +26,7 @@ class PHV_Field_Operations : public Inspector {
                                 // destination of current statement
     bool preorder(const IR::MAU::Instruction *p) override;
     void end_apply() override;
+    void ceil_phv_use_width(PhvInfo::Field*);
 };
 //
 //

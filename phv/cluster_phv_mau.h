@@ -60,8 +60,8 @@ class PHV_MAU_Group {
     std::vector<PHV_Container *> phv_containers_i;      // containers in this MAU group
     std::vector<Cluster_PHV *> cluster_phv_i;           // clusters in this MAU group
     ordered_map<int,
-    ordered_map<int,
-    std::set<std::set<Container_Content *>>>> aligned_container_slices_i;
+        ordered_map<int,
+            std::set<std::set<Container_Content *>>>> aligned_container_slices_i;
                                               // [8..15] [3..15] => 2[8..15] [3..7]
                                               // map[8][2] --> (Cx[8..15], Cy[8..15]
                                               // map[5][1]--> (Cy[3..7]
@@ -78,6 +78,15 @@ class PHV_MAU_Group {
         std::string asm_encoded,
         PHV_Container::Ingress_Egress gress,
         const int containers_in_group = PHV_Container::Containers::MAX);
+    //
+    void clear() {
+        for (auto &c : phv_containers_i) {
+            c->clear();
+        }
+        phv_containers_i.clear();
+        cluster_phv_i.clear();
+        aligned_container_slices_i.clear();
+    }
     //
     PHV_Container::PHV_Word width()                     { return width_i; }
     int number()                                        { return number_i; }
@@ -177,12 +186,6 @@ class PHV_MAU_Group_Assignments : public Visitor {
                                        // list of groups w/ Empty containers
                                        // used for initial T_PHV placement
     //
-    ordered_map<int,
-    ordered_map<int,
-    std::set<std::set<PHV_MAU_Group::Container_Content *>>>> aligned_container_slices_i;
-                                       // for all PHV_MAU_Groups
-                                       // sorted map <width increasing, num increasing>
-                                       // containing <set of <set of container_packs>>
     std::list<Cluster_PHV *> clusters_to_be_assigned_i;         // phv non-nibble clusters
     std::list<Cluster_PHV *> clusters_to_be_assigned_nibble_i;  // phv nibble clusters
     std::list<Cluster_PHV *> pov_fields_i;                      // pov clusters
@@ -190,8 +193,15 @@ class PHV_MAU_Group_Assignments : public Visitor {
     std::list<Cluster_PHV *> t_phv_fields_nibble_i;             // t_phv nibble clusters
     //
     ordered_map<int,
+        ordered_map<int,
+            std::set<std::set<PHV_MAU_Group::Container_Content *>>>> aligned_container_slices_i;
+                                       // for all PHV_MAU_Groups
+                                       // sorted map <width increasing, num increasing>
+                                       // containing <set of <set of container_packs>>
+    //
     ordered_map<int,
-    std::set<std::set<PHV_MAU_Group::Container_Content *>>>> T_PHV_container_slices_i;
+        ordered_map<int,
+            std::set<std::set<PHV_MAU_Group::Container_Content *>>>> T_PHV_container_slices_i;
                                        // for all T_PHV
                                        // sorted map <width increasing, num increasing>
                                        // containing <set of <set of container_packs>>
@@ -199,6 +209,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
     std::vector<PHV_Container *> cohabit_fields_i;
                                        // ranked set of container cohabits
                                        // requests to TP to avoid single-write issue
+    //
     void container_no_pack(
         std::list<Cluster_PHV *>& clusters_to_be_assigned,
         std::list<PHV_MAU_Group *>& phv_groups_to_be_filled,
@@ -217,13 +228,15 @@ class PHV_MAU_Group_Assignments : public Visitor {
     //
     void consolidate_slices_in_group(
         ordered_map<int,
-        ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&);
+            ordered_map<int, std::set<std::set<PHV_MAU_Group::Container_Content *>>>>&);
     void container_cohabit_summary();
     //
  public:
     //
     PHV_MAU_Group_Assignments(Cluster_PHV_Requirements &phv_r)  // NOLINT(runtime/explicit)
         : phv_requirements_i(phv_r) {}
+    //
+    void clear();
     //
     Cluster_PHV_Requirements&
         phv_requirements() { return phv_requirements_i; }

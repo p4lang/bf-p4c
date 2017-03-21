@@ -36,24 +36,27 @@ class PHV_Container {
         int hi_i;  // high of bit range in container for field
         const PhvInfo::Field *field_i;
         const int field_bit_lo_i;  // start of field bit in this container
+        char taint_color_i = '?';  // taint color of this field in container
 
      public:
         //
         Container_Content(
             const PHV_Container *c,
-            int l,
-            int h,
+            const int l,
+            const int h,
             const PhvInfo::Field *f,
-            int field_bit_lo = 0);
+            const int field_bit_lo = 0,
+            const char taint_color = '?');
         //
-        int lo() const                  { return lo_i; }
-        void lo(int l)                  { lo_i = l; }
-        int hi() const                  { return hi_i; }
-        void hi(int h)                  { hi_i = h; }
-        int width() const               { return hi_i - lo_i + 1; }
-        const PhvInfo::Field *field()   { return field_i; }
-        int field_bit_lo() const        { return field_bit_lo_i; }
+        int lo() const                   { return lo_i; }
+        void lo(int l)                   { lo_i = l; }
+        int hi() const                   { return hi_i; }
+        void hi(int h)                   { hi_i = h; }
+        int width() const                { return hi_i - lo_i + 1; }
+        const PhvInfo::Field *field()    { return field_i; }
+        int field_bit_lo() const         { return field_bit_lo_i; }
         const PHV_Container *container() { return container_i; }
+        const char taint_color()         { return taint_color_i; }
         //
         void sanity_check_container(PHV_Container *, const std::string&);
     };
@@ -129,6 +132,12 @@ class PHV_Container {
         int range_start = 0,
         int field_bit_lo = 0,
         bool process_overflow = false /* default */);
+    void overlay_fields(
+        PhvInfo::Field *f_overlay,
+        const int start,
+        const int width,
+        const int field_bit_lo,
+        const char taint_color);
     int avail_bits()                                            { return avail_bits_i; }
     int avail_o_bits()                                          { return avail_o_bits_i; }
     ordered_map<int, int>& ranges()                             { return ranges_i; }

@@ -40,20 +40,33 @@ class Cluster_PHV {
     int max_width_i;                        // max width of field in cluster
     int num_containers_i;                   // number of containers
     int num_fields_no_cohabit_i = 0;        // number of constrained fields, no cohabit
-    bool sliceable_i;                       // can split cluster, move-based ops only ?
+    //
+    ordered_map<const PhvInfo::Field *,
+        ordered_map<int, std::vector<const PhvInfo::Field *> *>> field_overlay_map_i;
+                                            // liveness / interference graph related
+                                            // fields (within cluster) overlay map
+                                            // F = <c1,c2> adjacent containers based on F width
+                                            // F[0] = c1
+                                            // F[1] = c2
+                                            // F<c1,c2> -- [0] -- B<c1>, A<c1>
+                                            //          -- [1] -- B<c2>, D<c2>, E<c2>
+    //
+    bool sliceable_i;                       // can split cluster, move-based ops only
     ordered_map<const PhvInfo::Field*,
         std::pair<int, int>> field_slice_o;
                                             // map field to a list of bitrange after slicing
     //
  public:
     Cluster_PHV(
-        ordered_set<const PhvInfo::Field *> *p,
+        ordered_set<const PhvInfo::Field *> *set_of_f,
         std::string id_p = "???");  // NOLINT(runtime/explicit)
                                                        // cluster set of fields
     Cluster_PHV(const PhvInfo::Field *f,
         std::string id_p = "???")  // NOLINT(runtime/explicit)
         : Cluster_PHV(field_set(f), id_p) {}           // cluster singleton field
                                                        // e.g., POV fields
+    //
+    void compute_requirements();                       // compute cluster requirements
     //
     ordered_set<const PhvInfo::Field *> *field_set(const PhvInfo::Field *f) {
         ordered_set<const PhvInfo::Field *> *s = new ordered_set<const PhvInfo::Field *>;
@@ -84,6 +97,20 @@ class Cluster_PHV {
     void num_containers(int n)                          { num_containers_i = n; }
     int num_containers(std::vector<const PhvInfo::Field *>&, PHV_Container::PHV_Word);
     int num_fields_no_cohabit()                         { return num_fields_no_cohabit_i; }
+    //
+    bool uniform_deparser_no_holes() {
+        for (auto &f : cluster_vec_i) {
+            if (!f->deparser_no_holes) {
+                return false;
+            }
+        }
+        return true;
+    }
+    //
+    ordered_map<const PhvInfo::Field *,
+        ordered_map<int, std::vector<const PhvInfo::Field *> *>>&
+            field_overlay_map()                         { return field_overlay_map_i; }
+    //
     ordered_map<const PhvInfo::Field *, std::pair<int, int>>&
         field_slices()                                  { return field_slice_o; }
     bool sliceable()                                    { return sliceable_i; }
@@ -128,6 +155,8 @@ std::ostream &operator<<(std::ostream &, std::vector<Cluster_PHV *>*);
 std::ostream &operator<<(std::ostream &, std::vector<Cluster_PHV *>&);
 std::ostream &operator<<(std::ostream &, std::map<int, std::vector<Cluster_PHV *>>&);
 std::ostream &operator<<(std::ostream &, ordered_map<int, std::vector<Cluster_PHV *>>&);
+std::ostream &operator<<(std::ostream &,
+    std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>&);
 std::ostream &operator<<(std::ostream &, Cluster_PHV_Requirements&);
 //
 #endif /* _TOFINO_PHV_CLUSTER_PHV_REQ_H_ */

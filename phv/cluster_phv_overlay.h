@@ -14,7 +14,10 @@ class Cluster_PHV_Overlay : public Visitor {
     PHV_MAU_Group_Assignments &phv_mau_i;
     SymBitMatrix &mutex_i;
  public:
-    Cluster_PHV_Overlay(PHV_MAU_Group_Assignments &phv_m, SymBitMatrix &mutex_m) : phv_mau_i(phv_m), mutex_i(mutex_m){}
+    Cluster_PHV_Overlay(
+        PHV_MAU_Group_Assignments &phv_m,
+        SymBitMatrix &mutex_m) : phv_mau_i(phv_m), mutex_i(mutex_m) {}
+    //
     const IR::Node *apply_visitor(const IR::Node *node, const char *name = 0) override;
     bool overlay_cluster_to_group(Cluster_PHV *cl, PHV_MAU_Group *g);
     void overlay_clusters_to_groups(std::list<Cluster_PHV *>& clusters_to_be_assigned,

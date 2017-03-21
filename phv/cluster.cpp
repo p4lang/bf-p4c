@@ -227,7 +227,7 @@ bool Cluster::preorder(const IR::Primitive* primitive) {
                 auto field = phv_i.field(operand);
                 insert_cluster(dst_i, field);
                 set_field_range(*operand);
-                LOG4(field);
+                LOG4("...operand... = " << field);
             }
         }
     }
@@ -308,6 +308,13 @@ void Cluster::end_apply() {
                     m->ccgf = new_owner;
                 }
             }
+        }
+    }
+    LOG4(".....After transfer ccgf ownership.....");
+    LOG4(dst_map_i);
+    for (auto &f : phv_i) {
+        if (dst_map_i.count(&f))  {
+            //
             // container contiguous group fields
             // cluster(a{a,b},x), cluster(b,y) => cluster(a{a,b},x,y)
             // a->ccgf_fields = {a,b,c}, a->ccgf=a, b->ccgf=a, c->ccgf=a
@@ -337,11 +344,12 @@ void Cluster::end_apply() {
             }
         }
     }
+    LOG4(".....After remove ccgf member duplication.....");
+    LOG4(dst_map_i);
     //
     // form unique clusters
     // forall x not elem lhs_unique_i, dst_map_i[x] = 0
     // do not remove singleton clusters as x needs MAU PHV, e.g., set x, 3
-    // forall x, dst_map_i[x] == (x), dst_map_i[x] = 0
     //
     std::list<const PhvInfo::Field *> delete_list;
     for (auto &entry : dst_map_i) {
@@ -350,14 +358,45 @@ void Cluster::end_apply() {
         // remove dst_map entry for fields absorbed in other clusters
         // remove singleton clusters (from headers) not used in mau
         //
-        if (lhs && (lhs_unique_i.count(lhs) == 0 || !uses_i->use[1][lhs->gress][lhs->id])) {
+        if (lhs_unique_i.count(lhs) == 0) {
             dst_map_i[lhs] = nullptr;
             delete_list.push_back(lhs);
+        } else {
+            bool use_mau = uses_i->use[1][lhs->gress][lhs->id];
+            if (!use_mau && entry.second) {
+                for (auto &f : *(entry.second)) {
+                    if (uses_i->use[1][f->gress][f->id]) {
+                        use_mau = true;
+                        break;
+                    } else {
+                        if (f->ccgf && f->ccgf == f) {
+                            for (auto &m : f->ccgf_fields) {
+                                if (uses_i->use[1][m->gress][m->id]) {
+                                    use_mau = true;
+                                    break;
+                                }
+                            }  // for
+                        }
+                        if (use_mau) {
+                            break;
+                        }
+                    }
+                }  // for
+            }
+            if (!use_mau) {
+                dst_map_i[lhs] = nullptr;
+                delete_list.push_back(lhs);
+            }
         }
     }
     for (auto &fp : delete_list) {
         dst_map_i.erase(fp);                                            // erase map key
     }
+    LOG4(".....After form unique clusters.....");
+    LOG4(".....lhs_unique_i.....");
+    LOG4(&lhs_unique_i);
+    LOG4(".....dst_map_i.....");
+    LOG4(dst_map_i);
     //
     // compute all fields that are not used through the MAU pipeline
     // potential candidates for T-PHV allocation
@@ -412,17 +451,10 @@ void Cluster::compute_fields_no_use_mau() {
         // compute ccgf width
         // need PHV container of this width
         //
-        if (field.ccgf_fields.size()) {
-            int ccg_width = 0;
-            for (auto &f : field.ccgf_fields) {
-                ccg_width += f->size;
-            }
-            if (field.ccgf == &field) {
-                field.phv_use_hi = ccg_width - 1;
-            }
-        }
+        field.phv_use_width(field.ccgf == &field);
         //
         // set deparsed_no_holes
+        // used in parser / deparser
         //
         if (uses_i->use[0][field.gress][field.id]) {
             field.deparser_no_holes = true;
@@ -447,7 +479,9 @@ void Cluster::compute_fields_no_use_mau() {
     LOG3("..........Cluster fields (" << s2.size() << ")..........");
     LOG3("..........POV fields (" << pov_fields_i.size() << ")..........");
     //
-    std::set<const PhvInfo::Field *> s3;                               // all - cluster fields
+    // All - cluster fields
+    //
+    std::set<const PhvInfo::Field *> s3;
     set_difference(s1.begin(), s1.end(), s2.begin(), s2.end(), std::inserter(s3, s3.end()));
     //
     // s3 - pov fields
@@ -491,13 +525,14 @@ void Cluster::compute_fields_no_use_mau() {
     std::set<const PhvInfo::Field *> delete_set;
     for (auto f : fields_no_use_mau_i) {
         PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
-        bool use_pd = uses_i->use[0][f1->gress][f1->id];
+        bool use_pd = uses_i->use[0][f1->gress][f1->id];  // used in parser / deparser
         //
         // normally f1->metadata in the T_PHV path can be removed
         // but bridge_metadata deparsed must be allocated
         // f1->metadata && !use_pd
         //
-        if (!use_pd || (f1->metadata && !use_pd) || f1->pov || (f1->ccgf && f1->ccgf != f1)) {
+        if (!use_pd || f1->pov || (f1->ccgf && f1->ccgf != f1)) {
+            //
             delete_set.insert(f);
         } else {
             set_field_range(f1);
@@ -526,7 +561,7 @@ void Cluster::create_dst_map_entry(PhvInfo::Field *field) {
     if (!dst_map_i[field]) {
         dst_map_i[field] = new ordered_set<const PhvInfo::Field *>;  // new set
         lhs_unique_i.insert(field);  // lhs_unique set insert field
-        LOG4("lhs_unique..insert[" << std::endl << &lhs_unique_i << "lhs_unique..insert]");
+        LOG5("lhs_unique..insert[" << std::endl << &lhs_unique_i << "lhs_unique..insert]");
         insert_cluster(field, field);
         set_field_range(field);
         LOG4(field);
@@ -549,7 +584,7 @@ void Cluster::set_field_range(const IR::Expression& expression) {
         if (field->metadata || field->pov) {
             field->phv_use_hi = std::max(field->phv_use_hi, bits.hi);
         } else {
-            field->phv_use_hi = field->phv_use_lo + field->size - 1;
+            set_field_range(field);
         }
     }
 }
@@ -621,8 +656,9 @@ void Cluster::insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rh
                     // delete dst_map_i_rhs;                            // delete std::set
                 }
             }
-            LOG4("insert_cluster .....");
-            LOG4("lhs_unique..erase[" << std::endl << &lhs_unique_i << "lhs_unique..erase]");
+            LOG4("..... insert_cluster ....." << lhs);
+            LOG4(dst_map_i[lhs]);
+            LOG5("lhs_unique..erase[" << std::endl << &lhs_unique_i << "lhs_unique..erase]");
         }
     }
 }  // insert_cluster
@@ -839,20 +875,37 @@ void Cluster::sanity_check_fields_use(const std::string& msg,
 //
 // cluster output
 //
-std::ostream &operator<<(std::ostream &out, ordered_set<const PhvInfo::Field *> *cluster_set) {
-    if (cluster_set) {
-        for (auto field : *cluster_set) {
-            out << field << std::endl;
+
+std::ostream &operator<<(std::ostream &out, ordered_set<const PhvInfo::Field *>* p_cluster_set) {
+    if (p_cluster_set) {
+        out << "cluster<#=" << p_cluster_set->size() << ">(" << std::endl;
+        int n = 1;
+        for (auto &field : *p_cluster_set) {
+            out << "<#" << n++ << ">\t" << field << std::endl;
         }
+        out << ')' << std::endl;
     } else {
-        out << "[X]" << std::endl;
+        out << "cluster = ()" << std::endl;
     }
     return out;
 }
 
 std::ostream &operator<<(std::ostream &out, std::vector<const PhvInfo::Field *>& cluster_vec) {
-    for (auto field : cluster_vec) {
+    for (auto &field : cluster_vec) {
         out << field << std::endl;
+    }
+    return out;
+}
+
+std::ostream &operator<<(
+    std::ostream &out,
+    ordered_map<const PhvInfo::Field *, ordered_set<const PhvInfo::Field *>*>& dst_map) {
+    // iterate through all elements in dst_map
+    for (auto &entry : dst_map) {
+        if (entry.second) {
+            out << entry.first << " -->" << std::endl;
+            out << entry.second;
+        }
     }
     return out;
 }
@@ -861,16 +914,8 @@ std::ostream &operator<<(std::ostream &out, Cluster &cluster) {
     out << "++++++++++ Clusters (" << cluster.dst_map().size() << ") ++++++++++"
         << std::endl
         << std::endl;
-    // iterate through all elements in dst_map
-    for (auto entry : cluster.dst_map()) {
-        if (entry.second) {
-            out << entry.first << "-->(";
-            for (auto entry_2 : *(entry.second)) {
-                out << ' ' << entry_2;
-            }
-            out << ')' << std::endl;
-        }
-    }
+    // clusters
+    out << cluster.dst_map();
     //
     // output pov fields
     out << std::endl;

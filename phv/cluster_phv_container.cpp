@@ -12,11 +12,17 @@
 
 PHV_Container::Container_Content::Container_Content(
     const PHV_Container *c,
-    int l,
-    int w,
+    const int l,
+    const int w,
     const PhvInfo::Field *f,
-    int field_bit_lo)
-    : container_i(c), lo_i(l), hi_i(l+w-1), field_i(f), field_bit_lo_i(field_bit_lo) {
+    const int field_bit_lo,
+    const char taint_color)
+        : container_i(c),
+          lo_i(l),
+          hi_i(l+w-1),
+          field_i(f),
+          field_bit_lo_i(field_bit_lo),
+          taint_color_i(taint_color) {
     //
     BUG_CHECK(
         field_i,
@@ -130,22 +136,23 @@ PHV_Container::taint(
     bool process_overflow) {
     //
     BUG_CHECK((start+width <= width_i),
-        "*****PHV_Container::taint()*****PHV-%s start=%d width=%d width_i=%d",
-        phv_number_i, start, width, width_i);
+        "*****PHV_Container::taint()*****PHV-%s start=%d width=%d width_i=%d, field=%d:%s",
+        phv_number_i, start, width, width_i, field->id, field->name);
     BUG_CHECK((range_start < width_i),
-        "*****PHV_Container::taint()*****PHV-%s range_start=%d width=%d width_i=%d",
-        phv_number_i, start, width, width_i);
+        "*****PHV_Container::taint()*****PHV-%s range_start=%d width=%d width_i=%d, field=%d:%s",
+        phv_number_i, start, width, width_i, field->id, field->name);
     if (!process_overflow && ranges_i[range_start]) {
         BUG_CHECK(start+width <= ranges_i[range_start]+1,
             "*****PHV_Container::taint()*****"
-            "PHV-%s start=%d width=%d range_start=%d ranges_i[range_start]=%d",
-            phv_number_i, start, width, range_start, ranges_i[range_start]);
+            "PHV-%s start=%d width=%d range_start=%d ranges_i[range_start]=%d, field=%d:%s",
+            phv_number_i, start, width, range_start, ranges_i[range_start], field->id, field->name);
     }
     if (process_overflow && o_ranges_i[range_start]) {
         BUG_CHECK(start+width <= o_ranges_i[range_start]+1,
             "*****PHV_Container::taint()*****"
-            "PHV-%s start=%d width=%d range_start=%d o_ranges_i[range_start]=%d",
-            phv_number_i, start, width, range_start, o_ranges_i[range_start]);
+            "PHV-%s start=%d width=%d range_start=%d o_ranges_i[range_start]=%d, field=%d:%s",
+            phv_number_i, start, width, range_start, o_ranges_i[range_start],
+            field->id, field->name);
     }
     if (field->ccgf == field) {
         // container contiguous groups
@@ -202,7 +209,7 @@ PHV_Container::taint(
 
         if (field->header_stack_pov_ccgf) {
             fields_in_container_i.push_back(
-                new Container_Content(this, 0/*start*/, width, field, field_bit_lo));
+                new Container_Content(this, 0/*start*/, width, field, field_bit_lo, taint_color_i));
         }
 
         return;
@@ -238,7 +245,7 @@ PHV_Container::taint(
         }
         // sanity check?
         o_fields_in_container_i.push_back(
-                new Container_Content(this, start, width, field, field_bit_lo));
+                new Container_Content(this, start, width, field, field_bit_lo, taint_color_i));
         return;
     }
     //
@@ -288,7 +295,13 @@ PHV_Container::taint(
     // track fields in this container
     //
     fields_in_container_i.push_back(
-        new Container_Content(this, start, width, field, field_bit_lo));
+        new Container_Content(this, start, width, field, field_bit_lo, taint_color_i));
+    //
+    // if field has overlay fields after cluster's interference graph computation
+    // add those overlay fields to container's container_contents
+    //
+    overlay_fields(const_cast<PhvInfo::Field *>(field), start, width, field_bit_lo, taint_color_i);
+    //
     //
     // set gress for this container
     // container may be part of MAU group that is Ingress Or Egress
@@ -296,13 +309,84 @@ PHV_Container::taint(
     // cannot share container with Ingress fields & Egress fields
     // transition behavior for such sharing unclear
     //
-    gress_i = gress(field);
-    if (phv_mau_group_i->gress() == Ingress_Egress::Ingress_Or_Egress) {
-        phv_mau_group_i->gress(gress_i);
-    } else {
-        assert(phv_mau_group_i->gress() == gress_i);
+    // ignore gress of $tmp fields as cluster_phv sets its gress based on non-tmps
+    //
+    if (strncmp(field->name, "$tmp", strlen("$tmp"))) {
+        gress_i = gress(field);
+        if (phv_mau_group_i->gress() == Ingress_Egress::Ingress_Or_Egress) {
+            phv_mau_group_i->gress(gress_i);
+        } else {
+            assert(phv_mau_group_i->gress() == gress_i);
+        }
     }
 }  // taint
+
+void PHV_Container::overlay_fields(
+    PhvInfo::Field *f_overlay,
+    const int start,
+    const int width,
+    const int field_bit_lo,
+    const char taint_color) {
+    //
+    assert(f_overlay);
+    //
+    if (f_overlay->field_overlay_map().size()) {
+        for (auto &entry : f_overlay->field_overlay_map()) {
+            if (entry.second) {
+                for (auto &f : *(entry.second)) {
+                    if (f->ccgf_fields.size()) {
+                        int m_start = start;
+                        //
+                        // if two ccgfs are overlayed, start from lowest phv_use bit of substratum
+                        // e.g.,
+                        // 25:ingress::hdr_1[0].d_0[4]{0..7}
+                        // [  25:ingress::hdr_1[0].d_0[4]
+                        //    26:ingress::hdr_1[0].d_1[4]
+                        // :8]     [r0] = [13(12,13,);]
+                        // overlayed with
+                        // 13:ingress::hdr_0.a_1[4]{0..7}
+                        // [  12:ingress::hdr_0.a_0[4]
+                        //    13:ingress::hdr_0.a_1[4]
+                        // :8]
+                        // d_1 = 0..3, d_0 = 4..7
+                        // ccgf d_0(d_0,d_1) = ccgf a_1(a_0,a_1)
+                        // a_1 start = 0, not 4
+                        //
+                        if (f_overlay->ccgf_fields.size()) {
+                            for (auto &m : f_overlay->ccgf_fields) {
+                                m_start = std::min(m_start, m->phv_use_lo);
+                            }
+                        }
+                        for (auto &m : f->ccgf_fields) {
+                            int m_width = m->size;
+                            int m_field_bit_lo = m->phv_use_lo;
+                            fields_in_container_i.push_back(
+                                new Container_Content(
+                                   this,
+                                   m_start,
+                                   m_width,
+                                   m,
+                                   m_field_bit_lo,
+                                   taint_color));
+                            m_start += m_width;
+                        }
+                    } else {
+                        fields_in_container_i.push_back(
+                            new Container_Content(
+                                this,
+                                start,
+                                width,
+                                f,
+                                field_bit_lo,
+                                taint_color));
+                    }
+                    LOG3(".....PHV_Container::overlay_fields.....");
+                    LOG3(f_overlay << " == " << f);
+                }
+            }
+        }
+    }
+}
 
 
 //***********************************************************************************
@@ -341,7 +425,7 @@ void PHV_Container::Container_Content::sanity_check_container(
     // cc lo .. hi must be tainted in c bits
     //
     for (auto i=lo_i; i <= hi_i; i++) {
-        if (container->bits()[i] == '0') {
+        if (container->bits()[i] != taint_color_i) {
             LOG1(
                 "*****cluster_phv_container.cpp:sanity_FAIL*****.."
                 << msg_1
@@ -349,6 +433,8 @@ void PHV_Container::Container_Content::sanity_check_container(
                 << lo_i
                 << ".."
                 << hi_i
+                << " should be tainted "
+                << taint_color_i
                 << *container);
         }
     }

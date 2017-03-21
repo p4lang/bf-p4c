@@ -109,7 +109,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     Cluster cluster(phv);                                        // cluster analysis
     Cluster_PHV_Requirements cluster_phv_req(cluster);           // cluster PHV requirements
     PHV_Field_Operations phv_field_ops(phv);                     // field operation analysis
-    PHV_Interference phv_interference(cluster_phv_req, mutually_exclusive_field_ids);
+    PHV_Interference cluster_phv_interference(cluster_phv_req, mutually_exclusive_field_ids);
                                                                  // cluster PHV Interference Graph
     PHV_MAU_Group_Assignments cluster_phv_mau(cluster_phv_req);  // cluster PHV Container placements
     Cluster_PHV_Overlay cluster_phv_overlay(cluster_phv_mau, mutually_exclusive_field_ids);
@@ -142,6 +142,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     } else {
         phv_alloc = new PassManager({
             new MauPhvConstraints(phv),
+            //
             // &cluster_phv_mau,   // cluster PHV container placements
                                 // second cut PHV MAU Group assignments
                                 // honor single write conflicts from Table Placement
@@ -155,11 +156,12 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
                                // fields, eg. (arpSrc, ipSrc)
         &phv_field_ops,        // PHV field operations analysis
         &cluster_phv_req,      // cluster PHV requirements analysis
-        &phv_interference,     // cluster PHV interference graph analysis
+        // &cluster_phv_interference,
+                               // cluster PHV interference graph analysis
         &cluster_phv_mau,      // cluster PHV container placements
                                // first cut PHV MAU Group assignments
                                // produces cohabit fields for Table Placement
-        &cluster_phv_overlay,  // use mutually exclusive headers to free up phv containers
+        // &cluster_phv_overlay,  // use mutually exclusive headers to free up phv containers
         // &cluster_slicing,   // slice clusters into smaller clusters
     });
 

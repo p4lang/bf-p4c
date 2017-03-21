@@ -76,11 +76,28 @@ void PHV_Field_Operations::end_apply() {
                 // element 0 in tuple is 'is_move_op'
                 if (std::get<0>(op) != true) {
                     f.mau_phv_no_pack = true;
-                    LOG3(f);
+                    LOG3("...packing_constraint... " << f);
                     break;
                 }
             }
         }
     }
     LOG3("..........End PHV_Field_Operations..........");
+}
+
+void PHV_Field_Operations::ceil_phv_use_width(PhvInfo::Field* f) {
+    assert(f);
+    if (f->mau_phv_no_pack) {
+        if (f->size <= PHV_Container::PHV_Word::b8) {
+            f->phv_use_hi = PHV_Container::PHV_Word::b8 - 1;
+        } else {
+            if (f->size <= PHV_Container::PHV_Word::b16) {
+                f->phv_use_hi = PHV_Container::PHV_Word::b16 - 1;
+            } else {
+                if (f->size <= PHV_Container::PHV_Word::b32) {
+                    f->phv_use_hi = PHV_Container::PHV_Word::b32 - 1;
+                }
+            }
+        }
+    }
 }

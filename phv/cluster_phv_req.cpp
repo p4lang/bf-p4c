@@ -32,11 +32,11 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
     }
     //
     int cluster_num = 0;
-    for (auto p : Values(cluster_i.dst_map())) {
+    for (auto &set_of_fields : Values(cluster_i.dst_map())) {
         std::stringstream ss;
         ss << cluster_num++;
         std::string id = "phv_" + ss.str();
-        Cluster_PHV *m = new Cluster_PHV(p, id);
+        Cluster_PHV *m = new Cluster_PHV(set_of_fields, id);
         Cluster_PHV_i.push_back(m);
     }
     //
@@ -153,8 +153,28 @@ Cluster_PHV::Cluster_PHV(
     }
     //
     // set gress for this cluster
+    // ignore gress of temp vars ($tmp1, $tmp2, ....)
+    // consider gress of field vars in cluster
     //
-    gress_i = PHV_Container::gress(*(p->begin()));
+    gress_i = PHV_Container::Ingress_Egress::Ingress_Or_Egress;
+    for (auto &f : cluster_vec_i) {
+        if (strncmp(f->name, "$tmp", strlen("$tmp")) == 0) {
+            continue;
+        } else {
+            if (gress_i == PHV_Container::Ingress_Egress::Ingress_Or_Egress) {
+                gress_i = PHV_Container::gress(f);
+            } else {
+                assert(gress_i == PHV_Container::gress(f));
+            }
+        }
+    }
+    //
+    compute_requirements();
+    //
+}  // Cluster_PHV
+
+void
+Cluster_PHV::compute_requirements() {
     //
     // sorted vector, decreasing field width
     //
@@ -214,8 +234,7 @@ Cluster_PHV::Cluster_PHV(
             num_fields_no_cohabit_i++;
         }
     }
-    //
-}  // Cluster_PHV
+}
 
 //
 // Cluster_PHV::num_containers()
@@ -242,10 +261,16 @@ Cluster_PHV::num_containers(
     }
     if (num_containers > PHV_Container::Containers::MAX) {
         LOG1(
-            "*****Cluster_PHV::get_num_containers: num_containers = "
+            "*****Cluster_PHV::get_num_containers: "
+            << "cluster "
+            << this->id()
+            << " requires num_containers = "
             << num_containers
             << " > "
-            << PHV_Container::Containers::MAX << " ******");
+            << PHV_Container::Containers::MAX
+            << " of width "
+            << width
+            << " ******");
     }
     return num_containers;
 }
@@ -259,6 +284,7 @@ Cluster_PHV::num_containers(
 // cluster_phv output
 //
 std::ostream &operator<<(std::ostream &out, Cluster_PHV &cp) {
+    //
     // cluster summary
     //
     out << "<" << cp.cluster_vec().size() << ':';
@@ -285,15 +311,19 @@ std::ostream &operator<<(std::ostream &out, Cluster_PHV &cp) {
 }
 
 std::ostream &operator<<(std::ostream &out, Cluster_PHV *cp) {
+    //
     // cluster details
     //
     if (cp) {
         // cluster summary
         out << *cp;
         // fields in cluster
-        out << "( " << cp->id() << std::endl
+        out << "( "
+            << cp->id()
+            << std::endl
             << cp->cluster_vec()
-            << ')' << std::endl;
+            << ')'
+            << std::endl;
     } else {
         out << "-cp-";
     }
@@ -339,6 +369,7 @@ std::ostream &operator<<(std::ostream &out, std::vector<Cluster_PHV *> &cluster_
     return out;
 }
 
+// std::map
 std::ostream &operator<<(
     std::ostream &out,
     std::map<int, std::vector<Cluster_PHV *>>& phv_req_map) {
@@ -356,6 +387,7 @@ std::ostream &operator<<(
     return out;
 }
 
+// ordered_map
 std::ostream &operator<<(
     std::ostream &out,
     ordered_map<int, std::vector<Cluster_PHV *>>& phv_req_map) {
@@ -373,16 +405,9 @@ std::ostream &operator<<(
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, Cluster_PHV_Requirements &phv_requirements) {
-    out << std::endl
-        << "++++++++++++++++++++ Cluster PHV Requirements ++++++++++++++++++++"
-        << std::endl
-        << std::endl;
-    std::map<PHV_Container::PHV_Word,
-         std::map<int, std::vector<Cluster_PHV *>>> print_map;
-    for (auto &cl : phv_requirements.cluster_phv_fields()) {
-        print_map[cl->width()][cl->num_containers()].push_back(cl);
-    }
+std::ostream &operator<<(std::ostream &out,
+    std::map<PHV_Container::PHV_Word, std::map<int, std::vector<Cluster_PHV *>>>& print_map) {
+    //
     for (auto rit = print_map.rbegin();
         rit != print_map.rend();
         ++rit) {
@@ -401,9 +426,8 @@ std::ostream &operator<<(std::ostream &out, Cluster_PHV_Requirements &phv_requir
             out << rit_2->second;
         }
     }
-    //
     out << std::endl
-        << "++++++++++++++++++++ PHV Container Requirements ++++++++++++++++++++"
+        << ".......... Container Requirements .........."
         << std::endl
         << std::endl;
     for (auto rit = print_map.rbegin();
@@ -412,5 +436,37 @@ std::ostream &operator<<(std::ostream &out, Cluster_PHV_Requirements &phv_requir
         out << "[----------" << rit->first << "----------]" << std::endl;
         out << rit->second;
     }
+    out << std::endl;
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, Cluster_PHV_Requirements &phv_requirements) {
+    out << std::endl
+        << "++++++++++++++++++++ Begin Cluster PHV Requirements ++++++++++++++++++++"
+        << std::endl
+        << std::endl;
+    //
+    std::map<PHV_Container::PHV_Word,
+         std::map<int, std::vector<Cluster_PHV *>>> print_map;
+    print_map.clear();
+    for (auto &cl : phv_requirements.cluster_phv_fields()) {
+        print_map[cl->width()][cl->num_containers()].push_back(cl);
+    }
+    out << "..........PHV Requirements.........."
+        << std::endl;
+    out << print_map;
+    //
+    print_map.clear();
+    for (auto &cl : phv_requirements.t_phv_fields()) {
+        print_map[cl->width()][cl->num_containers()].push_back(cl);
+    }
+    out << "..........T_PHV Requirements.........."
+        << std::endl;
+    out << print_map;
+    out << std::endl
+        << "++++++++++++++++++++ End Cluster PHV Requirements ++++++++++++++++++++"
+        << std::endl
+        << std::endl;
+    //
     return out;
 }
