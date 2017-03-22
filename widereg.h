@@ -8,8 +8,6 @@
 #include <sstream>
 #include "bitvec.h"
 
-void declare_registers(const void *addr, size_t sz, std::function<void(std::ostream &, const char *, const void *)> fn);
-void undeclare_registers(const void *addr);
 void print_regname(std::ostream &out, const void *addr, const void *end);
 
 struct widereg_base;

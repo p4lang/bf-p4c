@@ -3,12 +3,7 @@
 
 #include "sections.h"
 #include "phv.h"
-#include "gen/tofino/memories.prsr_mem_main_rspec.h"
-#include "gen/tofino/regs.ibp_rspec.h"
-#include "gen/tofino/regs.ebp_rspec.h"
-#include "gen/tofino/regs.prsr_reg_merge_rspec.h"
-#include "gen/jbay/memories.prsr_mem_main_rspec.h"
-#include "gen/jbay/regs.parde_glue_stn_reg.h"
+#include "target.h"
 #include <map>
 #include <vector>
 #include <set>
@@ -27,10 +22,8 @@ enum {
 
 class Parser : public Section {
     int                                 lineno[2];
-    Tofino::memories_all_parser_        mem[2];
-    Tofino::regs_all_parser_ingress     reg_in;
-    Tofino::regs_all_parser_egress      reg_eg;
-    Tofino::regs_all_parse_merge        reg_merge;
+    Target::Tofino::parser_memory       mem[2];
+    Target::Tofino::parser_regs         regs;
     Parser();
     ~Parser();
     void start(int lineno, VECTOR(value_t) args);

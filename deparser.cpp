@@ -6,18 +6,10 @@
 Deparser Deparser::singleton_object;
 
 Deparser::Deparser() : Section("deparser") {
-    declare_registers(&inp_regs, sizeof(inp_regs),
-        [this](std::ostream &out, const char *addr, const void *end) {
-            out << "deparser.input_phase";
-            inp_regs.emit_fieldname(out, addr, end); });
-    declare_registers(&hdr_regs, sizeof(inp_regs),
-        [this](std::ostream &out, const char *addr, const void *end) {
-            out << "deparser.header_phase";
-            hdr_regs.emit_fieldname(out, addr, end); });
+    declare_registers(&regs);
 }
 Deparser::~Deparser() {
-    undeclare_registers(&inp_regs);
-    undeclare_registers(&hdr_regs);
+    undeclare_registers(&regs);
 }
 
 struct Deparser::Intrinsic {
@@ -45,11 +37,11 @@ static struct INTRIN##GR##NAME : public Deparser::Intrinsic {           \
     dep->PFX.NAME.phv = vals[0]->reg.index;                             \
     IF_SHIFT( dep->PFX.NAME.shft = vals[0]->lo; )                       \
     dep->PFX.NAME.valid = 1; )
-#define IIR_MAIN_INTRINSIC(NAME, SHFT) SIMPLE_INTRINSIC(INGRESS, inp_regs.iir.main_i, NAME, SHFT)
-#define IIR_INTRINSIC(NAME, SHFT)      SIMPLE_INTRINSIC(INGRESS, inp_regs.iir.ingr, NAME, SHFT)
-#define HIR_INTRINSIC(NAME, SHFT)      SIMPLE_INTRINSIC(INGRESS, hdr_regs.hir.ingr, NAME, SHFT)
-#define IER_MAIN_INTRINSIC(NAME, SHFT) SIMPLE_INTRINSIC(EGRESS, inp_regs.ier.main_e, NAME, SHFT)
-#define HER_INTRINSIC(NAME, SHFT)      SIMPLE_INTRINSIC(EGRESS, hdr_regs.her.egr, NAME, SHFT)
+#define IIR_MAIN_INTRINSIC(NAME, SHFT) SIMPLE_INTRINSIC(INGRESS, regs.input.iir.main_i, NAME, SHFT)
+#define IIR_INTRINSIC(NAME, SHFT)      SIMPLE_INTRINSIC(INGRESS, regs.input.iir.ingr, NAME, SHFT)
+#define HIR_INTRINSIC(NAME, SHFT)      SIMPLE_INTRINSIC(INGRESS, regs.header.hir.ingr, NAME, SHFT)
+#define IER_MAIN_INTRINSIC(NAME, SHFT) SIMPLE_INTRINSIC(EGRESS, regs.input.ier.main_e, NAME, SHFT)
+#define HER_INTRINSIC(NAME, SHFT)      SIMPLE_INTRINSIC(EGRESS, regs.header.her.egr, NAME, SHFT)
 
 IIR_MAIN_INTRINSIC(egress_unicast_port, NO)
 IIR_MAIN_INTRINSIC(drop_ctl, YES)
@@ -57,17 +49,17 @@ IIR_INTRINSIC(copy_to_cpu, YES)
 INTRINSIC(INGRESS, egress_multicast_group, 2,
     int i = 0;
     for (auto &el : vals) {
-        dep->hdr_regs.hir.ingr.egress_multicast_group[i].phv = el->reg.index;
-        dep->hdr_regs.hir.ingr.egress_multicast_group[i++].valid = 1; } )
+        dep->regs.header.hir.ingr.egress_multicast_group[i].phv = el->reg.index;
+        dep->regs.header.hir.ingr.egress_multicast_group[i++].valid = 1; } )
 INTRINSIC(INGRESS, hash_lag_ecmp_mcast, 2,
     int i = 0;
     for (auto &el : vals) {
-        dep->hdr_regs.hir.ingr.hash_lag_ecmp_mcast[i].phv = el->reg.index;
-        dep->hdr_regs.hir.ingr.hash_lag_ecmp_mcast[i++].valid = 1; } )
+        dep->regs.header.hir.ingr.hash_lag_ecmp_mcast[i].phv = el->reg.index;
+        dep->regs.header.hir.ingr.hash_lag_ecmp_mcast[i++].valid = 1; } )
 HIR_INTRINSIC(copy_to_cpu_cos, YES)
 INTRINSIC(INGRESS, ingress_port_source, 1,
-    dep->hdr_regs.hir.ingr.ingress_port.phv = vals[0]->reg.index;
-    dep->hdr_regs.hir.ingr.ingress_port.sel = 0; )
+    dep->regs.header.hir.ingr.ingress_port.phv = vals[0]->reg.index;
+    dep->regs.header.hir.ingr.ingress_port.sel = 0; )
 HIR_INTRINSIC(deflect_on_drop, YES)
 HIR_INTRINSIC(meter_color, YES)
 HIR_INTRINSIC(icos, YES)
@@ -145,10 +137,10 @@ struct GRESS##NAME##Digest : public Deparser::Digest::Type {                    
 #define YES(X)        X
 #define NO(X)
 
-DIGEST(INGRESS, learning, inp_regs.iir.ingr.learn_cfg, inp_regs.iir.ingr.learn_tbl, NO, NO, 8)
-DIGEST(INGRESS, mirror, hdr_regs.hir.main_i.mirror_cfg, hdr_regs.hir.main_i.mirror_tbl, YES, YES, 8)
-DIGEST(EGRESS, mirror, hdr_regs.her.main_e.mirror_cfg, hdr_regs.her.main_e.mirror_tbl, YES, YES, 8)
-DIGEST(INGRESS, resubmit, inp_regs.iir.ingr.resub_cfg, inp_regs.iir.ingr.resub_tbl, YES, NO, 8)
+DIGEST(INGRESS, learning, regs.input.iir.ingr.learn_cfg, regs.input.iir.ingr.learn_tbl, NO, NO, 8)
+DIGEST(INGRESS, mirror, regs.header.hir.main_i.mirror_cfg, regs.header.hir.main_i.mirror_tbl, YES, YES, 8)
+DIGEST(EGRESS, mirror, regs.header.her.main_e.mirror_cfg, regs.header.her.main_e.mirror_tbl, YES, YES, 8)
+DIGEST(INGRESS, resubmit, regs.input.iir.ingr.resub_cfg, regs.input.iir.ingr.resub_tbl, YES, NO, 8)
 
 void Deparser::start(int lineno, VECTOR(value_t) args) {
     if (args.size == 0) {
@@ -449,18 +441,18 @@ void output_phv_ownership(bitvec phv_use[2],
 void Deparser::output() {
     if (dictionary[INGRESS].empty() && dictionary[EGRESS].empty())
         return;
-    inp_regs.icr.inp_cfg.disable();
-    inp_regs.icr.intr.disable();
-    hdr_regs.hem.he_edf_cfg.disable();
-    hdr_regs.him.hi_edf_cfg.disable();
-    dump_checksum_units(inp_regs.iim.ii_phv_csum.csum_cfg, hdr_regs.him.hi_tphv_csum.csum_cfg,
+    regs.input.icr.inp_cfg.disable();
+    regs.input.icr.intr.disable();
+    regs.header.hem.he_edf_cfg.disable();
+    regs.header.him.hi_edf_cfg.disable();
+    dump_checksum_units(regs.input.iim.ii_phv_csum.csum_cfg, regs.header.him.hi_tphv_csum.csum_cfg,
                         INGRESS, checksum[INGRESS]);
-    dump_checksum_units(inp_regs.iem.ie_phv_csum.csum_cfg, hdr_regs.hem.he_tphv_csum.csum_cfg,
+    dump_checksum_units(regs.input.iem.ie_phv_csum.csum_cfg, regs.header.hem.he_tphv_csum.csum_cfg,
                         EGRESS, checksum[EGRESS]);
-    dump_field_dictionary(inp_regs.iim.ii_fde_pov.fde_pov, hdr_regs.him.hi_fde_phv.fde_phv,
-        inp_regs.iir.main_i.pov.phvs, pov_order[INGRESS], dictionary[INGRESS]);
-    dump_field_dictionary(inp_regs.iem.ie_fde_pov.fde_pov, hdr_regs.hem.he_fde_phv.fde_phv,
-        inp_regs.ier.main_e.pov.phvs, pov_order[EGRESS], dictionary[EGRESS]);
+    dump_field_dictionary(regs.input.iim.ii_fde_pov.fde_pov, regs.header.him.hi_fde_phv.fde_phv,
+        regs.input.iir.main_i.pov.phvs, pov_order[INGRESS], dictionary[INGRESS]);
+    dump_field_dictionary(regs.input.iem.ie_fde_pov.fde_pov, regs.header.hem.he_fde_phv.fde_phv,
+        regs.input.ier.main_e.pov.phvs, pov_order[EGRESS], dictionary[EGRESS]);
 
     if (Phv::use(INGRESS).intersects(Phv::use(EGRESS))) {
         warning(lineno[INGRESS], "Registers used in both ingress and egress in pipeline: %s",
@@ -475,36 +467,36 @@ void Deparser::output() {
         phv_use[INGRESS] |= Phv::use(INGRESS);
         phv_use[EGRESS] |= Phv::use(EGRESS); }
 
-    output_phv_ownership(phv_use, inp_regs.iir.ingr.phv8_grp, inp_regs.iir.ingr.phv8_split,
-                         inp_regs.ier.egr.phv8_grp, inp_regs.ier.egr.phv8_split,
+    output_phv_ownership(phv_use, regs.input.iir.ingr.phv8_grp, regs.input.iir.ingr.phv8_split,
+                         regs.input.ier.egr.phv8_grp, regs.input.ier.egr.phv8_split,
                          FIRST_8BIT_PHV, COUNT_8BIT_PHV);
-    output_phv_ownership(phv_use, inp_regs.iir.ingr.phv16_grp, inp_regs.iir.ingr.phv16_split,
-                         inp_regs.ier.egr.phv16_grp, inp_regs.ier.egr.phv16_split,
+    output_phv_ownership(phv_use, regs.input.iir.ingr.phv16_grp, regs.input.iir.ingr.phv16_split,
+                         regs.input.ier.egr.phv16_grp, regs.input.ier.egr.phv16_split,
                          FIRST_16BIT_PHV, COUNT_16BIT_PHV);
-    output_phv_ownership(phv_use, inp_regs.iir.ingr.phv32_grp, inp_regs.iir.ingr.phv32_split,
-                         inp_regs.ier.egr.phv32_grp, inp_regs.ier.egr.phv32_split,
+    output_phv_ownership(phv_use, regs.input.iir.ingr.phv32_grp, regs.input.iir.ingr.phv32_split,
+                         regs.input.ier.egr.phv32_grp, regs.input.ier.egr.phv32_split,
                          FIRST_32BIT_PHV, COUNT_32BIT_PHV);
 
     for (unsigned i = 0; i < 8; i++) {
         if (phv_use[EGRESS].intersects(Phv::tagalong_groups[i])) {
-            inp_regs.icr.tphv_cfg.i_e_assign |= 1 << i;
+            regs.input.icr.tphv_cfg.i_e_assign |= 1 << i;
             if (phv_use[INGRESS].intersects(Phv::tagalong_groups[i])) {
                 error(lineno[INGRESS], "tagalong group %d used in both ingress and "
                       "egress deparser", i); } } }
 
     for (auto &intrin : intrinsics)
         intrin.first->setregs(this, intrin.second);
-    if (!hdr_regs.hir.ingr.ingress_port.sel.modified())
-        hdr_regs.hir.ingr.ingress_port.sel = 1;
+    if (!regs.header.hir.ingr.ingress_port.sel.modified())
+        regs.header.hir.ingr.ingress_port.sel = 1;
 
     for (auto &digest : digests)
         digest.type->setregs(this, digest);
 
     if (!options.match_compiler) {
-        inp_regs.disable_if_zero();
-        hdr_regs.disable_if_zero(); }
-    inp_regs.emit_json(*open_output("regs.all.deparser.input_phase.cfg.json"));
-    hdr_regs.emit_json(*open_output("regs.all.deparser.header_phase.cfg.json"));
+        regs.input.disable_if_zero();
+        regs.header.disable_if_zero(); }
+    regs.input.emit_json(*open_output("regs.all.deparser.input_phase.cfg.json"));
+    regs.header.emit_json(*open_output("regs.all.deparser.header_phase.cfg.json"));
     TopLevel::all.reg_pipe.deparser.hdr = "regs.all.deparser.header_phase";
     TopLevel::all.reg_pipe.deparser.inp = "regs.all.deparser.input_phase";
 }

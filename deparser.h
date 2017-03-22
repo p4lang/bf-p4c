@@ -2,10 +2,8 @@
 #define _deparser_h_
 
 #include "sections.h"
-#include "gen/tofino/regs.dprsr_hdr.h"
-#include "gen/tofino/regs.dprsr_inp.h"
-#include "gen/jbay/regs.dprsr_reg.h"
 #include "phv.h"
+#include "target.h"
 #include <vector>
 
 enum {
@@ -27,8 +25,7 @@ public:
         Phv::Slice operator->() const { return **this; }
     };
     int                                             lineno[2];
-    Tofino::regs_all_deparser_input_phase           inp_regs;
-    Tofino::regs_all_deparser_header_phase          hdr_regs;
+    Target::Tofino::deparser_regs                   regs;
     std::vector<std::pair<RefOrChksum, Phv::Ref>>   dictionary[2];
     std::vector<Phv::Ref>                           checksum[2][DEPARSER_CHECKSUM_UNITS];
     std::vector<Phv::Ref>                           pov_order[2];

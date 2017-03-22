@@ -205,10 +205,7 @@ Stage::Stage() {
     table_use[0] = table_use[1] = NONE;
     stage_dep[0] = stage_dep[1] = NONE;
     error_mode[0] = error_mode[1] = PROPAGATE;
-    declare_registers(&regs, sizeof(regs),
-        [this](std::ostream &out, const char *addr, const void *end) {
-            out << "mau[" << stageno << "]";
-            regs.emit_fieldname(out, addr, end); });
+    declare_registers(&regs, stageno);
     for (int i = 0; i < SRAM_ROWS; i++)
         sram_use[i][0] = sram_use[i][1] = &invalid_rams;
 }

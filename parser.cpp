@@ -8,36 +8,17 @@ Parser Parser::singleton_object;
 
 Parser::Parser() : Section("parser") {
     lineno[0] = lineno[1] = 0;
-    declare_registers(&mem, sizeof(mem),
-        [this](std::ostream &out, const char *addr, const void *end) {
-            out << "parser.mem[";
-            if (addr < (const char *)&mem[EGRESS]) {
-                out << "INGRESS]";
-                mem[INGRESS].emit_fieldname(out, addr, end);
-            } else {
-                out << "EGRESS]";
-                mem[EGRESS].emit_fieldname(out, addr, end); } });
-    declare_registers(&reg_in, sizeof(reg_in),
-        [this](std::ostream &out, const char *addr, const void *end) {
-            out << "parser.ibp_reg";
-            reg_in.emit_fieldname(out, addr, end); });
-    declare_registers(&reg_eg, sizeof(reg_eg),
-        [this](std::ostream &out, const char *addr, const void *end) {
-            out << "parser.ebp_reg";
-            reg_eg.emit_fieldname(out, addr, end); });
-    declare_registers(&reg_merge, sizeof(reg_merge),
-        [this](std::ostream &out, const char *addr, const void *end) {
-            out << "parser.merge";
-            reg_merge.emit_fieldname(out, addr, end); });
+    declare_registers(&mem[INGRESS], "INGRESS");
+    declare_registers(&mem[EGRESS], "EGRESS");
+    declare_registers(&regs);
     hdr_len_adj[INGRESS] = 0;
     hdr_len_adj[EGRESS] = 2;
     meta_opt = 0;
 }
 Parser::~Parser() {
-    undeclare_registers(&mem);
-    undeclare_registers(&reg_in);
-    undeclare_registers(&reg_eg);
-    undeclare_registers(&reg_merge);
+    undeclare_registers(&mem[INGRESS]);
+    undeclare_registers(&mem[EGRESS]);
+    undeclare_registers(&regs);
 }
 
 void Parser::start(int lineno, VECTOR(value_t) args) {
@@ -264,60 +245,60 @@ void Parser::output() {
         for (auto csum : checksum_use[gress])
             if (csum) csum->write_config(this); }
 
-    init_common_regs(this, reg_in.prsr_reg, INGRESS);
-    reg_in.ing_buf_regs.glb_group.disable();
-    reg_in.ing_buf_regs.chan0_group.chnl_drop.disable();
-    reg_in.ing_buf_regs.chan0_group.chnl_metadata_fix.disable();
-    reg_in.ing_buf_regs.chan1_group.chnl_drop.disable();
-    reg_in.ing_buf_regs.chan1_group.chnl_metadata_fix.disable();
-    reg_in.ing_buf_regs.chan2_group.chnl_drop.disable();
-    reg_in.ing_buf_regs.chan2_group.chnl_metadata_fix.disable();
-    reg_in.ing_buf_regs.chan3_group.chnl_drop.disable();
-    reg_in.ing_buf_regs.chan3_group.chnl_metadata_fix.disable();
+    init_common_regs(this, regs.ingress.prsr_reg, INGRESS);
+    regs.ingress.ing_buf_regs.glb_group.disable();
+    regs.ingress.ing_buf_regs.chan0_group.chnl_drop.disable();
+    regs.ingress.ing_buf_regs.chan0_group.chnl_metadata_fix.disable();
+    regs.ingress.ing_buf_regs.chan1_group.chnl_drop.disable();
+    regs.ingress.ing_buf_regs.chan1_group.chnl_metadata_fix.disable();
+    regs.ingress.ing_buf_regs.chan2_group.chnl_drop.disable();
+    regs.ingress.ing_buf_regs.chan2_group.chnl_metadata_fix.disable();
+    regs.ingress.ing_buf_regs.chan3_group.chnl_drop.disable();
+    regs.ingress.ing_buf_regs.chan3_group.chnl_metadata_fix.disable();
 
-    init_common_regs(this, reg_eg.prsr_reg, EGRESS);
+    init_common_regs(this, regs.egress.prsr_reg, EGRESS);
     for (int i = 0; i < 4; i++)
-        reg_eg.epb_prsr_port_regs.chnl_ctrl[i].meta_opt = meta_opt;
+        regs.egress.epb_prsr_port_regs.chnl_ctrl[i].meta_opt = meta_opt;
 
-    reg_in.prsr_reg.hdr_len_adj.amt = hdr_len_adj[INGRESS];
-    reg_eg.prsr_reg.hdr_len_adj.amt = hdr_len_adj[EGRESS];
+    regs.ingress.prsr_reg.hdr_len_adj.amt = hdr_len_adj[INGRESS];
+    regs.egress.prsr_reg.hdr_len_adj.amt = hdr_len_adj[EGRESS];
 
     if (options.match_compiler) {
         phv_use[INGRESS] |= Phv::use(INGRESS);
         phv_use[EGRESS] |= Phv::use(EGRESS); }
     for (int i : phv_use[EGRESS]) {
         if (i >= 256) {
-            reg_merge.phv_owner.t_owner[i-256] = 1;
-            reg_in.prsr_reg.phv_owner.t_owner[i-256] = 1;
-            reg_eg.prsr_reg.phv_owner.t_owner[i-256] = 1;
+            regs.merge.phv_owner.t_owner[i-256] = 1;
+            regs.ingress.prsr_reg.phv_owner.t_owner[i-256] = 1;
+            regs.egress.prsr_reg.phv_owner.t_owner[i-256] = 1;
         } else if (i < 224) {
-            reg_merge.phv_owner.owner[i] = 1;
-            reg_in.prsr_reg.phv_owner.owner[i] = 1;
-            reg_eg.prsr_reg.phv_owner.owner[i] = 1; } }
+            regs.merge.phv_owner.owner[i] = 1;
+            regs.ingress.prsr_reg.phv_owner.owner[i] = 1;
+            regs.egress.prsr_reg.phv_owner.owner[i] = 1; } }
     for (int i = 0; i < 224; i++) {
         if (!phv_allow_multi_write[i]) {
-            reg_in.prsr_reg.no_multi_wr.nmw[i] = 1;
-            reg_eg.prsr_reg.no_multi_wr.nmw[i] = 1;
+            regs.ingress.prsr_reg.no_multi_wr.nmw[i] = 1;
+            regs.egress.prsr_reg.no_multi_wr.nmw[i] = 1;
         }
         if (phv_allow_multi_write[i] || phv_init_valid[i])
-            reg_merge.phv_valid.vld[i] = 1;
+            regs.merge.phv_valid.vld[i] = 1;
     }
 
     for (int i = 0; i < 112; i++)
         if (!phv_allow_multi_write[256+i]) {
-            reg_in.prsr_reg.no_multi_wr.t_nmw[i] = 1;
-            reg_eg.prsr_reg.no_multi_wr.t_nmw[i] = 1; }
+            regs.ingress.prsr_reg.no_multi_wr.t_nmw[i] = 1;
+            regs.egress.prsr_reg.no_multi_wr.t_nmw[i] = 1; }
     if (!options.match_compiler) {
         mem[INGRESS].disable_if_zero();
         mem[EGRESS].disable_if_zero();
-        reg_in.disable_if_zero();
-        reg_eg.disable_if_zero();
-        reg_merge.disable_if_zero(); }
+        regs.ingress.disable_if_zero();
+        regs.egress.disable_if_zero();
+        regs.merge.disable_if_zero(); }
     mem[INGRESS].emit_json(*open_output("memories.all.parser.ingress.cfg.json"), "ingress");
     mem[EGRESS].emit_json(*open_output("memories.all.parser.egress.cfg.json"), "egress");
-    reg_in.emit_json(*open_output("regs.all.parser.ingress.cfg.json"));
-    reg_eg.emit_json(*open_output("regs.all.parser.egress.cfg.json"));
-    reg_merge.emit_json(*open_output("regs.all.parse_merge.cfg.json"));
+    regs.ingress.emit_json(*open_output("regs.all.parser.ingress.cfg.json"));
+    regs.egress.emit_json(*open_output("regs.all.parser.egress.cfg.json"));
+    regs.merge.emit_json(*open_output("regs.all.parse_merge.cfg.json"));
     for (int i = 0; i < 18; i++) {
         TopLevel::all.mem_pipe.i_prsr[i] = "memories.all.parser.ingress";
         TopLevel::all.reg_pipe.pmarb.ibp18_reg.ibp_reg[i] = "regs.all.parser.ingress";

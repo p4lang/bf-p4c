@@ -5,8 +5,7 @@
 #include <vector>
 #include "alloc.h"
 #include "bitvec.h"
-#include "gen/tofino/regs.mau_addrmap.h"
-#include "gen/jbay/regs.mau_addrmap.h"
+#include "target.h"
 
 class Stage_data {
     /* we encapsulate all the Stage non-static fields in a base class to automate the
@@ -48,7 +47,7 @@ public:
 
     int                         pass1_logical_id, pass1_tcam_id;
 
-    Tofino::regs_match_action_stage_    regs;
+    Target::Tofino::mau_regs    regs;
 protected:
     Stage_data() {}
     Stage_data(const Stage_data &) = delete;
