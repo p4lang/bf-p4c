@@ -13,6 +13,7 @@ class SplitPhvUse : public Transform {
     const IR::Node *preorder(IR::Expression *p) override;
     const IR::Node *preorder(IR::Slice *p) override;
     const IR::Node *preorder(IR::KeyElement *ke) override { return ke->transform_visit(*this); }
+    const IR::Property *preorder(IR::Property *prop) override { prune(); return prop; }
  public:
     explicit SplitPhvUse(const PhvInfo &phv) : phv(phv) {}
 };
