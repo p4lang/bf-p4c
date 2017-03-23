@@ -6,14 +6,17 @@
  * see section 5.2.4.4 of the MAU uArch docs
  */
 
+template<class REGS>
 class DataSwitchboxSetup {
+    REGS        &regs;
     Table       *tbl;
     unsigned    home_row, prev_row;
 public:
-    DataSwitchboxSetup(Table *t) : tbl(t) { home_row = prev_row = tbl->layout[0].row/2U; }
+    DataSwitchboxSetup(REGS &regs, Table *t) : regs(regs), tbl(t) {
+        home_row = prev_row = tbl->layout[0].row/2U; }
     void setup_row(unsigned row) {
-        auto &map_alu =  tbl->stage->regs.rams.map_alu;
-        auto &swbox = tbl->stage->regs.rams.array.switchbox.row;
+        auto &map_alu =  regs.rams.map_alu;
+        auto &swbox = regs.rams.array.switchbox.row;
         auto &map_alu_row =  map_alu.row[row];
         int side = 1;  // always -- currently no maprams on left side
         auto &syn2port_ctl = map_alu_row.i2portctl.synth2port_fabric_ctl[0][side];
@@ -52,8 +55,8 @@ public:
     void setup_row_col(unsigned row, unsigned col, int vpn) {
         int side = col >= 6;
         unsigned logical_col = col % 6U;
-        auto &ram = tbl->stage->regs.rams.array.row[row].ram[col];
-        auto &map_alu =  tbl->stage->regs.rams.map_alu;
+        auto &ram = regs.rams.array.row[row].ram[col];
+        auto &map_alu =  regs.rams.map_alu;
         auto &map_alu_row =  map_alu.row[prev_row];
         auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
         unitram_config.unitram_type = tbl->unitram_type();

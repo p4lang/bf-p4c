@@ -26,7 +26,7 @@ struct HashDistribution {
     static void parse(std::vector<HashDistribution> &out, const value_t &v, unsigned u=0);
     bool compatible(HashDistribution *a);
     void pass1(Table *tbl);
-    void write_regs(Table *, int, bool);
+    template<class REGS> void write_regs(REGS &regs, Table *, int, bool);
 };
 
 #endif /* _hash_dist_h_ */

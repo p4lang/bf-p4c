@@ -114,10 +114,9 @@ void SelectionTable::pass2() {
         error(lineno, "No selection_hash in selector table %s", name());
 }
 
-void SelectionTable::write_merge_regs(MatchTable *match, int type, int bus,
-    const std::vector<Call::Arg> &args)
-{
-    auto &merge = stage->regs.rams.match.merge;
+template<class REGS> void SelectionTable::write_merge_regs(REGS &regs, MatchTable *match,
+            int type, int bus, const std::vector<Call::Arg> &args) {
+    auto &merge = regs.rams.match.merge;
     merge.mau_physical_to_meter_alu_ixbar_map[type][bus/8U].set_subfield(
         4 | meter_group(), 3*(bus%8U), 3);
     if (match->action_call())
@@ -142,13 +141,14 @@ void SelectionTable::write_merge_regs(MatchTable *match, int type, int bus,
     //    merge.mau_bus_hash_group_sel[type][bus/8].set_subfield(hash_dist[0].id | 8, 4*(bus%8), 4); }
 }
 
-void SelectionTable::write_regs() {
+template<class REGS>
+void SelectionTable::write_regs(REGS &regs) {
     LOG1("### Selection table " << name() << " write_regs");
-    if (input_xbar) input_xbar->write_regs();
+    if (input_xbar) input_xbar->write_regs(regs);
     Layout *home = &layout[0];
     bool push_on_overflow = false;
-    auto &map_alu =  stage->regs.rams.map_alu;
-    DataSwitchboxSetup swbox(this);
+    auto &map_alu =  regs.rams.map_alu;
+    DataSwitchboxSetup<REGS> swbox(regs, this);
     int minvpn, maxvpn;
     layout_vpn_bounds(minvpn, maxvpn, true);
     for (Layout &logical_row : layout) {
@@ -163,12 +163,12 @@ void SelectionTable::write_regs() {
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;
             swbox.setup_row_col(row, col, *vpn);
-            write_mapram_regs(row, *mapram, *vpn, MapRam::SELECTOR_SIZE);
+            write_mapram_regs(regs, row, *mapram, *vpn, MapRam::SELECTOR_SIZE);
             if (gress)
-                stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row);
+                regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row);
             ++mapram, ++vpn; }
         if (&logical_row == home) {
-            auto &vh_adr_xbar = stage->regs.rams.array.row[row].vh_adr_xbar;
+            auto &vh_adr_xbar = regs.rams.array.row[row].vh_adr_xbar;
             setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + logical_row.bus],
                          selection_hash);
             vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
@@ -204,8 +204,8 @@ void SelectionTable::write_regs() {
     error_ctl.meter_alu_group_sel_error_enable = 1;
     error_ctl.meter_alu_group_thread = gress;
 
-    auto &merge = stage->regs.rams.match.merge;
-    auto &adrdist = stage->regs.rams.match.adrdist;
+    auto &merge = regs.rams.match.merge;
+    auto &adrdist = regs.rams.match.adrdist;
     for (MatchTable *m : match_tables) {
         adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id] = 1 << meter_group;
         //auto &icxbar = adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id];
@@ -227,7 +227,7 @@ void SelectionTable::write_regs() {
         adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::METER;
     adrdist.packet_action_at_headertime[1][meter_group] = 1;
     for (auto &hd : hash_dist)
-        hd.write_regs(this, 0, non_linear_hash);
+        hd.write_regs(regs, this, 0, non_linear_hash);
     if (gress == INGRESS) {
         merge.meter_alu_thread[0].meter_alu_thread_ingress |= 1U << meter_group;
         merge.meter_alu_thread[1].meter_alu_thread_ingress |= 1U << meter_group;

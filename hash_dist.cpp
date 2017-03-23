@@ -114,9 +114,10 @@ void HashDistribution::pass1(Table *tbl) {
                   mask, tbl->name()); }
 }
 
-void HashDistribution::write_regs(Table *tbl, int type, bool non_linear) {
+template<class REGS>
+void HashDistribution::write_regs(REGS &regs, Table *tbl, int type, bool non_linear) {
     /* from HashDistributionResourceAllocation.write_config: */
-    auto &merge = tbl->stage->regs.rams.match.merge;
+    auto &merge = regs.rams.match.merge;
     if (non_linear)
         merge.mau_selector_hash_sps_enable |= 1 << id;
     if (tbl->gress == EGRESS)
@@ -151,3 +152,5 @@ void HashDistribution::write_regs(Table *tbl, int type, bool non_linear) {
         merge.mau_meter_precolor_hash_map_to_logical_ctl[tbl->logical_id/4U].set_subfield(
             ctl, 5 * (tbl->logical_id%4U), 5); }
 }
+template void HashDistribution::write_regs(Target::Tofino::mau_regs &, Table *, int, bool);
+template void HashDistribution::write_regs(Target::JBay::mau_regs &, Table *, int, bool);

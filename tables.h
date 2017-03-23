@@ -16,6 +16,7 @@
 #include "phv.h"
 #include "p4_table.h"
 #include "slist.h"
+#include "target.h"
 
 class ActionBus;
 struct AttachedTables;
@@ -247,7 +248,7 @@ public:
         void pass1(Table *);
         void pass2(Table *);
         void stateful_pass2(Table *);
-        void write_regs(Table *);
+        template<class REGS> void write_regs(REGS &, Table *);
         void gen_tbl_cfg(json::vector &);
         void add_immediate_mapping(json::map &);
         void add_next_table_mapping(Table *, json::map &);
@@ -259,10 +260,14 @@ public:
     int table_id() const;
     virtual void pass1() = 0;
     virtual void pass2() = 0;
-    virtual void write_merge_regs(int type, int bus) { assert(0); }
-    virtual void write_merge_regs(MatchTable *match, int type, int bus,
+    virtual void write_merge_regs(Target::Tofino::mau_regs &, int type, int bus) { assert(0); }
+    virtual void write_merge_regs(Target::JBay::mau_regs &, int type, int bus) { assert(0); }
+    virtual void write_merge_regs(Target::Tofino::mau_regs &, MatchTable *match, int type, int bus,
                                   const std::vector<Call::Arg> &args) { assert(0); }
-    virtual void write_regs() = 0;
+    virtual void write_merge_regs(Target::JBay::mau_regs &, MatchTable *match, int type, int bus,
+                                  const std::vector<Call::Arg> &args) { assert(0); }
+    virtual void write_regs(Target::Tofino::mau_regs &) = 0;
+    virtual void write_regs(Target::JBay::mau_regs &) = 0;
     virtual void gen_tbl_cfg(json::vector &out) = 0;
     virtual void gen_name_lookup(json::map &out) {}
     virtual json::map *base_tbl_cfg(json::vector &out, const char *type, int size);
@@ -286,7 +291,7 @@ public:
     virtual int unitram_type() { assert(0); }
     virtual bool adr_mux_select_stats() { return false; }
     virtual bool run_at_eop() { return false; }
-    void write_mapram_regs(int row, int col, int vpn, int type);
+    template<class REGS> void write_mapram_regs(REGS &regs, int row, int col, int vpn, int type);
 
     std::string                 name_;
     P4Table                     *p4_table = 0;
@@ -369,7 +374,11 @@ public:
     void setup(VECTOR(pair_t) &data) { assert(0); }
     void pass1() { assert(0); }
     void pass2() { assert(0); }
-    void write_regs() { assert(0); }
+    template<class REGS> void write_regs(REGS &) { assert(0); }
+    void write_regs(Target::Tofino::mau_regs &regs) override {
+        write_regs<Target::Tofino::mau_regs>(regs); }
+    void write_regs(Target::JBay::mau_regs &regs) override {
+        write_regs<Target::JBay::mau_regs>(regs); }
     void gen_tbl_cfg(json::vector &out) { assert(0); }
 };
 
@@ -378,7 +387,7 @@ struct AttachedTables {
     std::vector<Table::Call>    stats, meter;
     SelectionTable *get_selector() const;
     void pass1(MatchTable *self);
-    void write_merge_regs(MatchTable *self, int type, int bus);
+    template<class REGS> void write_merge_regs(REGS &regs, MatchTable *self, int type, int bus);
     bool run_at_eop();
 };
 
@@ -400,7 +409,7 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     using Table::pass1;
     void pass1(int type);
     using Table::write_regs;
-    void write_regs(int type, Table *result);
+    template<class REGS> void write_regs(REGS &, int type, Table *result);
     void common_init_setup(const VECTOR(pair_t) &, bool, P4Table::type) override;
     bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type) override;
 public:
@@ -427,7 +436,11 @@ class TYPE : public PARENT {                                            \
 public:                                                                 \
     void pass1() override;                                              \
     void pass2() override;                                              \
-    void write_regs() override;                                         \
+    template<class REGS> void write_regs(REGS &regs);                   \
+    void write_regs(Target::Tofino::mau_regs &regs) override {          \
+        write_regs<Target::Tofino::mau_regs>(regs); }                   \
+    void write_regs(Target::JBay::mau_regs &regs) override {            \
+        write_regs<Target::JBay::mau_regs>(regs); }                     \
     void gen_tbl_cfg(json::vector &out) override;                       \
 private:                                                                \
     __VA_ARGS__                                                         \
@@ -477,7 +490,12 @@ DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
 public:
     Format::Field *lookup_field(const std::string &n, const std::string &act = "") override;
     SelectionTable *get_selector() const { return attached.get_selector(); }
-    void write_merge_regs(int type, int bus) { attached.write_merge_regs(this, type, bus); }
+    template<class REGS> void write_merge_regs(REGS &regs, int type, int bus) {
+        attached.write_merge_regs(regs, this, type, bus); }
+    void write_merge_regs(Target::Tofino::mau_regs &regs, int type, int bus) override {
+        write_merge_regs<Target::Tofino::mau_regs>(regs, type, bus); }
+    void write_merge_regs(Target::JBay::mau_regs &regs, int type, int bus) override {
+        write_merge_regs<Target::JBay::mau_regs>(regs, type, bus); }
     using Table::gen_memory_resource_allocation_tbl_cfg;
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(Way &);
     void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
@@ -540,7 +558,11 @@ DECLARE_TABLE_TYPE(Phase0MatchTable, Table, "phase0_match",
 DECLARE_TABLE_TYPE(HashActionTable, MatchTable, "hash_action",
 public:
     //int                                 row = -1, bus = -1;
-    void write_merge_regs(int type, int bus) override;
+    template<class REGS> void write_merge_regs(REGS &regs, int type, int bus);
+    void write_merge_regs(Target::Tofino::mau_regs &regs, int type, int bus) override {
+        write_merge_regs<Target::Tofino::mau_regs>(regs, type, bus); }
+    void write_merge_regs(Target::JBay::mau_regs &regs, int type, int bus) override {
+        write_merge_regs<Target::JBay::mau_regs>(regs, type, bus); }
 )
 
 DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
@@ -558,11 +580,16 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     const GatewayTable *get_gateway() const { return match_table->get_gateway(); }
     MatchTable *get_match_table() { return match_table; }
     std::set<MatchTable *> get_match_tables() {
-        std::set<MatchTable *> rv; 
+        std::set<MatchTable *> rv;
         if (match_table) rv.insert(match_table);
         return rv; }
     SelectionTable *get_selector() const { return attached.get_selector(); }
-    void write_merge_regs(int type, int bus) { attached.write_merge_regs(match_table, type, bus); }
+    template<class REGS> void write_merge_regs(REGS &regs, int type, int bus) {
+        attached.write_merge_regs(regs, match_table, type, bus); }
+    void write_merge_regs(Target::Tofino::mau_regs &regs, int type, int bus) override {
+        write_merge_regs<Target::Tofino::mau_regs>(regs, type, bus); }
+    void write_merge_regs(Target::JBay::mau_regs &regs, int type, int bus) override {
+        write_merge_regs<Target::JBay::mau_regs>(regs, type, bus); }
     void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
                                   const Table::Format::Field &field);
     int unitram_type() override { return UnitRam::TERNARY_INDIRECTION; }
@@ -635,12 +662,12 @@ private:
         Match(value_t *v, value_t &data, range_match_t range_match);
     }                           miss;
     std::vector<Match>          table;
-    void payload_write_regs(int row, int type, int bus);
+    template<class REGS> void payload_write_regs(REGS &, int row, int type, int bus);
 public:
     table_type_t table_type() { return GATEWAY; }
     MatchTable *get_match_table() { return match_table; }
     std::set<MatchTable *> get_match_tables() {
-        std::set<MatchTable *> rv; 
+        std::set<MatchTable *> rv;
         if (match_table) rv.insert(match_table);
         return rv; }
     table_type_t set_match_table(MatchTable *m, bool indirect) {
@@ -668,8 +695,15 @@ public:
     table_type_t table_type() { return SELECTION; }
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
         width = period = 1; depth = layout_size(); period_name = 0; }
-    void write_merge_regs(MatchTable *match, int type, int bus,
-                          const std::vector<Call::Arg> &args) override;
+
+    template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
+                          const std::vector<Call::Arg> &args);
+    void write_merge_regs(Target::Tofino::mau_regs &regs, MatchTable *match, int type, int bus,
+                          const std::vector<Call::Arg> &args) override {
+        write_merge_regs<Target::Tofino::mau_regs>(regs, match, type, bus, args); }
+    void write_merge_regs(Target::JBay::mau_regs &regs, MatchTable *match, int type, int bus,
+                          const std::vector<Call::Arg> &args) override {
+        write_merge_regs<Target::JBay::mau_regs>(regs, match, type, bus, args); }
     unsigned address_shift() const { return 7 + ceil_log2(min_words); }
     unsigned meter_group() const { return layout.at(0).row/4U; }
     int home_row() const { return layout.at(0).row | 3; }
@@ -698,8 +732,16 @@ public:
     int precision_shift();
     void pass1() override;
     void pass2() override;
-    void write_merge_regs(int type, int bus) override;
-    void write_regs() override;
+    template<class REGS> void write_merge_regs(REGS &regs, int type, int bus);
+    void write_merge_regs(Target::Tofino::mau_regs &regs, int type, int bus) override {
+        write_merge_regs<Target::Tofino::mau_regs>(regs, type, bus); }
+    void write_merge_regs(Target::JBay::mau_regs &regs, int type, int bus) override {
+        write_merge_regs<Target::JBay::mau_regs>(regs, type, bus); }
+    template<class REGS> void write_regs(REGS &regs);
+    void write_regs(Target::Tofino::mau_regs &regs) override {
+        write_regs<Target::Tofino::mau_regs>(regs); }
+    void write_regs(Target::JBay::mau_regs &regs) override {
+        write_regs<Target::JBay::mau_regs>(regs); }
     void gen_tbl_cfg(json::vector &out) { /* nothing at top level */ }
     void gen_stage_tbl_cfg(json::map &out);
     static IdletimeTable *create(int lineno, const std::string &name, gress_t gress,
@@ -717,9 +759,15 @@ DECLARE_ABSTRACT_TABLE_TYPE(Synth2Port, AttachedTable,
     json::map *base_tbl_cfg(json::vector &out, const char *type, int size) override;
     json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size) override;
 public:
-    virtual void write_merge_regs(MatchTable *match, int type, int bus,
-                                  const std::vector<Call::Arg> &args) = 0;
-    virtual void write_regs() override;
+    virtual void write_merge_regs(Target::Tofino::mau_regs &regs, MatchTable *match,
+                                  int type, int bus, const std::vector<Call::Arg> &args) = 0;
+    virtual void write_merge_regs(Target::JBay::mau_regs &regs, MatchTable *match,
+                                  int type, int bus, const std::vector<Call::Arg> &args) = 0;
+    template<class REGS> void write_regs(REGS &regs);
+    void write_regs(Target::Tofino::mau_regs &regs) override {
+        write_regs<Target::Tofino::mau_regs>(regs); }
+    void write_regs(Target::JBay::mau_regs &regs) override {
+        write_regs<Target::JBay::mau_regs>(regs); }
     void common_init_setup(const VECTOR(pair_t) &, bool, P4Table::type) override;
     bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type) override;
 
@@ -728,8 +776,14 @@ public:
 DECLARE_TABLE_TYPE(CounterTable, Synth2Port, "counter",
     enum { NONE=0, PACKETS=1, BYTES=2, BOTH=3 } type = NONE;
     table_type_t table_type() { return COUNTER; }
-    void write_merge_regs(MatchTable *match, int type, int bus,
-                          const std::vector<Call::Arg> &args) override;
+    template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
+                                               const std::vector<Call::Arg> &args);
+    void write_merge_regs(Target::Tofino::mau_regs &regs, MatchTable *match, int type, int bus,
+                          const std::vector<Call::Arg> &args) override {
+        write_merge_regs<Target::Tofino::mau_regs>(regs, match, type, bus, args); }
+    void write_merge_regs(Target::JBay::mau_regs &regs, MatchTable *match, int type, int bus,
+                          const std::vector<Call::Arg> &args) override {
+        write_merge_regs<Target::JBay::mau_regs>(regs, match, type, bus, args); }
 public:
     int direct_shiftcount() override;
     bool run_at_eop() override { return (type&BYTES) != 0; }
@@ -742,8 +796,14 @@ DECLARE_TABLE_TYPE(MeterTable, Synth2Port, "meter",
     enum { NONE_=0, PACKETS=1, BYTES=2 }        count = NONE_;
     std::vector<Layout>                         color_maprams;
     table_type_t table_type() { return METER; }
-    void write_merge_regs(MatchTable *match, int type, int bus,
-                          const std::vector<Call::Arg> &args) override;
+    template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
+                                               const std::vector<Call::Arg> &args);
+    void write_merge_regs(Target::Tofino::mau_regs &regs, MatchTable *match, int type, int bus,
+                          const std::vector<Call::Arg> &args) override {
+        write_merge_regs<Target::Tofino::mau_regs>(regs, match, type, bus, args); }
+    void write_merge_regs(Target::JBay::mau_regs &regs, MatchTable *match, int type, int bus,
+                          const std::vector<Call::Arg> &args) override {
+        write_merge_regs<Target::JBay::mau_regs>(regs, match, type, bus, args); }
     int                 sweep_interval = 2;
 public:
     int direct_shiftcount() override;
@@ -755,8 +815,14 @@ public:
 
 DECLARE_TABLE_TYPE(Stateful, Synth2Port, "stateful",
     table_type_t table_type() { return STATEFUL; }
-    void write_merge_regs(MatchTable *match, int type, int bus,
-                          const std::vector<Call::Arg> &args) override;
+    template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
+                                               const std::vector<Call::Arg> &args);
+    void write_merge_regs(Target::Tofino::mau_regs &regs, MatchTable *match, int type, int bus,
+                          const std::vector<Call::Arg> &args) override {
+        write_merge_regs<Target::Tofino::mau_regs>(regs, match, type, bus, args); }
+    void write_merge_regs(Target::JBay::mau_regs &regs, MatchTable *match, int type, int bus,
+                          const std::vector<Call::Arg> &args) override {
+        write_merge_regs<Target::JBay::mau_regs>(regs, match, type, bus, args); }
     Ref                 bound_selector;
     std::vector<long>   const_vals;
     struct MathTable {

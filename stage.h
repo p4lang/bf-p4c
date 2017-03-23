@@ -5,7 +5,6 @@
 #include <vector>
 #include "alloc.h"
 #include "bitvec.h"
-#include "target.h"
 
 class Stage_data {
     /* we encapsulate all the Stage non-static fields in a base class to automate the
@@ -46,8 +45,6 @@ public:
                         error_mode[2];
 
     int                         pass1_logical_id, pass1_tcam_id;
-
-    Target::Tofino::mau_regs    regs;
 protected:
     Stage_data() {}
     Stage_data(const Stage_data &) = delete;
@@ -63,7 +60,8 @@ public:
     Stage();
     Stage(Stage &&);
     ~Stage();
-    void write_regs();
+    template<class TARGET> void output(json::vector &tbl_cfg);
+    template<class REGS> void write_regs(REGS &regs);
     int adr_dist_delay(gress_t gress);
     int pipelength(gress_t gress);
     int pred_cycle(gress_t gress);

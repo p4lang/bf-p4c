@@ -313,10 +313,11 @@ int ActionBus::find(HashDistribution *hd, int off, int size) {
     return -1;
 }
 
-void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action_slice) {
+template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
+                                                       unsigned home_row, unsigned action_slice) {
     LOG2("--- ActionBus write_action_regs(" << tbl->name() << ", " << home_row << ", " <<
          action_slice << ")");
-    auto &action_hv_xbar = tbl->stage->regs.rams.array.row[home_row/2].action_hv_xbar;
+    auto &action_hv_xbar = regs.rams.array.row[home_row/2].action_hv_xbar;
     unsigned side = home_row%2;  /* 0 == left,  1 == right */
     for (auto &el : by_byte) {
         unsigned byte = el.first;
@@ -438,10 +439,12 @@ void ActionBus::write_action_regs(Table *tbl, unsigned home_row, unsigned action
                     " set in bytemask for " << el.second.name);
     }
 }
+template void ActionBus::write_action_regs(Target::Tofino::mau_regs &, Table *, unsigned, unsigned);
+template void ActionBus::write_action_regs(Target::JBay::mau_regs &, Table *, unsigned, unsigned);
 
-void ActionBus::write_immed_regs(Table *tbl) {
+template<class REGS> void ActionBus::write_immed_regs(REGS &regs, Table *tbl) {
     LOG2("--- ActionBus write_immed_regs(" << tbl->name() << ")");
-    auto &adrdist = tbl->stage->regs.rams.match.adrdist;
+    auto &adrdist = regs.rams.match.adrdist;
     int tid = tbl->logical_id;
     for (auto &f : by_byte) {
         int slot = Stage::action_bus_slot_map[f.first];
@@ -473,6 +476,8 @@ void ActionBus::write_immed_regs(Table *tbl) {
         default:
             assert(0); } }
 }
+template void ActionBus::write_immed_regs(Target::Tofino::mau_regs &, Table *);
+template void ActionBus::write_immed_regs(Target::JBay::mau_regs &, Table *);
 
 ActionBus::MeterBus_t ActionBus::MeterBus;
 

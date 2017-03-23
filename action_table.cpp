@@ -217,34 +217,35 @@ void ActionTable::pass2() {
     action_bus->pass2(this);
 }
 
-static void flow_selector_addr(Stage *stage, int from, int to) {
+template<class REGS>
+static void flow_selector_addr(REGS &regs, int from, int to) {
     assert(from > to);
     assert((from & 3) == 3);
     if (from/2 == to/2) {
         /* R to L */
-        stage->regs.rams.map_alu.selector_adr_switchbox.row[from/4].ctl
+        regs.rams.map_alu.selector_adr_switchbox.row[from/4].ctl
             .l_oflo_adr_o_mux_select.l_oflo_adr_o_sel_selector_adr_r_i = 1;
         return; }
     if (from & 1)
         /* R down */
-        stage->regs.rams.map_alu.selector_adr_switchbox.row[from/4].ctl
+        regs.rams.map_alu.selector_adr_switchbox.row[from/4].ctl
             .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_selector_adr_r_i = 1;
     //else
     //    /* L down */
-    //    stage->regs.rams.map_alu.selector_adr_switchbox.row[from/4].ctl
+    //    regs.rams.map_alu.selector_adr_switchbox.row[from/4].ctl
     //        .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_selector_adr_l_i = 1;
     for (int row = from/4 - 1; row > to/4; row--)
         /* top to bottom */
-        stage->regs.rams.map_alu.selector_adr_switchbox.row[row].ctl
+        regs.rams.map_alu.selector_adr_switchbox.row[row].ctl
             .b_oflo_adr_o_mux_select.b_oflo_adr_o_sel_oflo_adr_t_i = 1;
     switch (to & 3) {
     case 3:
         /* flow down to R */
-        stage->regs.rams.map_alu.selector_adr_switchbox.row[to/4].ctl.r_oflo_adr_o_mux_select = 1;
+        regs.rams.map_alu.selector_adr_switchbox.row[to/4].ctl.r_oflo_adr_o_mux_select = 1;
         break;
     case 2:
         /* flow down to L */
-        stage->regs.rams.map_alu.selector_adr_switchbox.row[to/4].ctl
+        regs.rams.map_alu.selector_adr_switchbox.row[to/4].ctl
             .l_oflo_adr_o_mux_select.l_oflo_adr_o_sel_oflo_adr_t_i = 1;
         break;
     default:
@@ -252,7 +253,8 @@ static void flow_selector_addr(Stage *stage, int from, int to) {
         break; }
 }
 
-void ActionTable::write_regs() {
+template<class REGS>
+void ActionTable::write_regs(REGS &regs) {
     LOG1("### Action table " << name() << " write_regs");
     unsigned fmt_log2size = format->log2size;
     for (auto fmt : Values(action_formats))
@@ -264,16 +266,16 @@ void ActionTable::write_regs() {
     Layout *home = nullptr;
     auto home_row = home_rows.begin();
     int prev_logical_row = -1;
-    decltype(stage->regs.rams.array.switchbox.row[0].ctl) *home_switch_ctl = 0,
+    decltype(regs.rams.array.switchbox.row[0].ctl) *home_switch_ctl = 0,
                                                           *prev_switch_ctl = 0;
-    auto &icxbar = stage->regs.rams.match.adrdist.adr_dist_action_data_adr_icxbar_ctl;
+    auto &icxbar = regs.rams.match.adrdist.adr_dist_action_data_adr_icxbar_ctl;
     for (Layout &logical_row : layout) {
         unsigned row = logical_row.row/2;
         unsigned side = logical_row.row&1;   /* 0 == left  1 == right */
         unsigned top = logical_row.row >= 8; /* 0 == bottom  1 == top */
         auto vpn = logical_row.vpns.begin();
-        auto &switch_ctl = stage->regs.rams.array.switchbox.row[row].ctl;
-        auto &map_alu_row =  stage->regs.rams.map_alu.row[row];
+        auto &switch_ctl = regs.rams.array.switchbox.row[row].ctl;
+        auto &map_alu_row =  regs.rams.map_alu.row[row];
         if (home_row != home_rows.end() && *home_row == logical_row.row) {
             /* FIXME -- won't work if new home row starts in the middle of this row */
             home = nullptr;
@@ -303,7 +305,7 @@ void ActionTable::write_regs() {
              * propagate overflow from bottom to top.  This effectively uses only the
              * odd (right side) overflow busses.  L ovfl can still go to R action */
             for (int r = prev_logical_row/2 - 1; r > (int)row; r--) {
-                prev_switch_ctl = &stage->regs.rams.array.switchbox.row[r].ctl;
+                prev_switch_ctl = &regs.rams.array.switchbox.row[r].ctl;
                 prev_switch_ctl->t_oflo_rd_o_mux_select.t_oflo_rd_o_sel_oflo_rd_b_i = 1; }
 
             auto &oflo_adr_xbar = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
@@ -324,10 +326,10 @@ void ActionTable::write_regs() {
                     error(lineno, "Selector data from %s on row %d cannot flow up to %s on row %d",
                           sel->name(), sel->home_row(), name(), logical_row.row);
                 else
-                    flow_selector_addr(stage, sel->home_row(), logical_row.row); } }
+                    flow_selector_addr(regs, sel->home_row(), logical_row.row); } }
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;
-            auto &ram = stage->regs.rams.array.row[row].ram[col];
+            auto &ram = regs.rams.array.row[row].ram[col];
             auto &unitram_config = map_alu_row.adrmux.unitram_config[side][logical_col];
             if (!home) {
                 /* FIXME -- this probably won't work if this isn't the first RAM used by this
@@ -336,7 +338,7 @@ void ActionTable::write_regs() {
                  * Should have issued an error earlier in this case?  */
                 home = &logical_row;
                 home_switch_ctl = &switch_ctl;
-                action_bus->write_action_regs(this, logical_row.row, word);
+                action_bus->write_action_regs(regs, this, logical_row.row, word);
                 if (side)
                     switch_ctl.r_action_o_mux_select.r_action_o_sel_action_rd_r_i = 1;
                 else
@@ -360,7 +362,7 @@ void ActionTable::write_regs() {
             auto &adr_mux_sel = ram_mux.ram_unitram_adr_mux_select;
             if (SelectionTable *sel = get_selector()) {
                 int shift = fmt_log2size - 2;
-                auto &shift_ctl = stage->regs.rams.map_alu.mau_selector_action_adr_shift[row];
+                auto &shift_ctl = regs.rams.map_alu.mau_selector_action_adr_shift[row];
                 if (logical_row.row == sel->layout[0].row) {
                     /* we're on the home row of the selector, so use it directly */
                     if (home == &logical_row)
@@ -389,15 +391,15 @@ void ActionTable::write_regs() {
                     adr_mux_sel = UnitRam::AdrMux::OVERFLOW;
                     ram_mux.ram_oflo_adr_mux_select_oflo = 1; } }
             if (gress)
-                stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row);
-            stage->regs.rams.array.row[row].actiondata_error_uram_ctl[gress] |= 1 << (col-2);
+                regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row);
+            regs.rams.array.row[row].actiondata_error_uram_ctl[gress] |= 1 << (col-2);
             if (++idx == depth) { idx = 0; home = nullptr; ++word; } }
         prev_switch_ctl = &switch_ctl;
         prev_logical_row = logical_row.row; }
     // FIXME -- should we do this?
     // if (push_on_overflow)
     //    adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::ACTION;
-    if (actions) actions->write_regs(this);
+    if (actions) actions->write_regs(regs, this);
 }
 
 void ActionTable::gen_tbl_cfg(json::vector &out) {

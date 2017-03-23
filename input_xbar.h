@@ -54,7 +54,7 @@ public:
     InputXbar(Table *table, bool ternary, const VECTOR(pair_t) &data);
     void pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size);
     void pass2(Alloc1Dbase<std::vector<InputXbar *>> &use, int size);
-    void write_regs();
+    template<class REGS> void write_regs(REGS &regs);
 
     int hash_group() const {
         /* used by gateways to get the associated hash group */

@@ -391,8 +391,9 @@ static int tcam_swizzle_offset[4][4] = {
     { +1, +2, -1,  0 },
 };
 
-void InputXbar::write_regs() {
-    auto &xbar = table->stage->regs.dp.xbar_hash.xbar;
+template<class REGS>
+void InputXbar::write_regs(REGS &regs) {
+    auto &xbar = regs.dp.xbar_hash.xbar;
     for (auto &group : groups) {
         if (group.second.empty()) continue;
         LOG1("  # Input xbar group " << group.first);
@@ -463,10 +464,9 @@ void InputXbar::write_regs() {
                         .match_input_xbar_816b_ctl_enable = 1; }
                 if ((i ^ phv_byte) & swizzle_mask)
                     LOG1("FIXME -- need swizzle for " << input.what); }
-            auto &power_ctl = table->stage->regs.dp.match_input_xbar_din_power_ctl;
+            auto &power_ctl = regs.dp.match_input_xbar_din_power_ctl;
             set_power_ctl_reg(power_ctl, input.what->reg.index); } }
-    auto &dp = table->stage->regs.dp;
-    auto &hash = dp.xbar_hash.hash;
+    auto &hash = regs.dp.xbar_hash.hash;
     for (auto &ht : hash_tables) {
         if (ht.second.empty()) continue;
         LOG1("  # Input xbar hash table " << ht.first);
@@ -489,18 +489,20 @@ void InputXbar::write_regs() {
         if (hg.second.tables) {
             hash.parity_group_mask[grp][0] = hg.second.tables & 0xff;
             hash.parity_group_mask[grp][1] = (hg.second.tables >> 8) & 0xff;
-            dp.mau_match_input_xbar_exact_match_enable[table->gress].rewrite();
-            dp.mau_match_input_xbar_exact_match_enable[table->gress] |= hg.second.tables; }
+            regs.dp.mau_match_input_xbar_exact_match_enable[table->gress].rewrite();
+            regs.dp.mau_match_input_xbar_exact_match_enable[table->gress] |= hg.second.tables; }
         if (hg.second.seed) {
             for (int bit = 0; bit < 52; ++bit)
                 if ((hg.second.seed >> bit) & 1)
                     hash.hash_seed[bit] |= 1U << grp; }
         if (table->gress == INGRESS)
-            dp.hashout_ctl.hash_group_ingress_enable |= 1 << grp;
+            regs.dp.hashout_ctl.hash_group_ingress_enable |= 1 << grp;
         else
-            dp.hashout_ctl.hash_group_egress_enable |= 1 << grp;
+            regs.dp.hashout_ctl.hash_group_egress_enable |= 1 << grp;
     }
 }
+template void InputXbar::write_regs(Target::Tofino::mau_regs &);
+template void InputXbar::write_regs(Target::JBay::mau_regs &);
 
 InputXbar::Input *InputXbar::find(Phv::Slice sl, int grp) {
     if (grp == -1 && groups.size() == 1)

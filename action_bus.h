@@ -42,8 +42,9 @@ public:
     ActionBus(Table *, VECTOR(pair_t) &);
     void pass1(Table *tbl);
     void pass2(Table *tbl);
-    void write_immed_regs(Table *tbl);
-    void write_action_regs(Table *tbl, unsigned homerow, unsigned action_slice);
+    template<class REGS> void write_immed_regs(REGS &regs, Table *tbl);
+    template<class REGS>
+    void write_action_regs(REGS &regs, Table *tbl, unsigned homerow, unsigned action_slice);
     int find(Table::Format::Field *f, int off, int size);
     void do_alloc(Table *tbl, Source src, unsigned use, int lobyte, int bytes, unsigned offset);
     void alloc_field(Table *, Source src, unsigned offset, unsigned sizes_needed);

@@ -301,10 +301,11 @@ unsigned GatewayTable::input_use() const {
  * the hash bus?   Currently we assume that the input_xbar is declared to set up the
  * hash signals correctly so that we can just match them.  Should at least check it
  * somewhere, somehow. */
-static bool setup_vh_xbar(Table *table, Table::Layout &row, int base,
+template<class REGS>
+static bool setup_vh_xbar(REGS &regs, Table *table, Table::Layout &row, int base,
                           std::vector<GatewayTable::MatchKey> &match, int group)
 {
-    auto &rams_row = table->stage->regs.rams.array.row[row.row];
+    auto &rams_row = regs.rams.array.row[row.row];
     auto &byteswizzle_ctl = rams_row.exactmatch_row_vh_xbar_byteswizzle_ctl[row.bus];
     for (auto &r : match) {
         if (r.offset >= 32) break; /* skip hash matches */
@@ -319,8 +320,9 @@ static bool setup_vh_xbar(Table *table, Table::Layout &row, int base,
     return true;
 }
 
-void GatewayTable::payload_write_regs(int row, int type, int bus) {
-    auto &merge = stage->regs.rams.match.merge;
+template<class REGS>
+void GatewayTable::payload_write_regs(REGS &regs, int row, int type, int bus) {
+    auto &merge = regs.rams.match.merge;
     auto &xbar_ctl = merge.gateway_to_pbus_xbar_ctl[row*2 + bus];
     if (type) {
         xbar_ctl.tind_logical_select = logical_id;
@@ -343,17 +345,18 @@ void GatewayTable::payload_write_regs(int row, int type, int bus) {
     }
 }
 
-void GatewayTable::write_regs() {
+template<class REGS>
+void GatewayTable::write_regs(REGS &regs) {
     LOG1("### Gateway table " << name() << " write_regs");
     auto &row = layout[0];
     if (input_xbar) {
-        input_xbar->write_regs();
-        if (!setup_vh_xbar(this, row, 0, match, input_xbar->match_group()) ||
-            !setup_vh_xbar(this, row, 4, xor_match, input_xbar->match_group()))
+        input_xbar->write_regs(regs);
+        if (!setup_vh_xbar(regs, this, row, 0, match, input_xbar->match_group()) ||
+            !setup_vh_xbar(regs, this, row, 4, xor_match, input_xbar->match_group()))
             return; }
-    auto &row_reg = stage->regs.rams.array.row[row.row];
+    auto &row_reg = regs.rams.array.row[row.row];
     auto &gw_reg = row_reg.gateway_table[gw_unit];
-    auto &merge = stage->regs.rams.match.merge;
+    auto &merge = regs.rams.match.merge;
     if (row.bus == 0) {
         gw_reg.gateway_table_ctl.gateway_table_input_data0_select = 1;
         gw_reg.gateway_table_ctl.gateway_table_input_hash0_select = 1;
@@ -411,7 +414,7 @@ void GatewayTable::write_regs() {
             tind_bus = hashaction->layout[0].bus >= 2;
         if (tbl)
             for (auto &row : tbl->layout)
-                payload_write_regs(row.row, tind_bus, row.bus);
+                payload_write_regs(regs, row.row, tind_bus, row.bus);
         else {
             assert(tmatch);
             auto &xbar_ctl = merge.gateway_to_pbus_xbar_ctl[tmatch->indirect_bus];
@@ -420,7 +423,7 @@ void GatewayTable::write_regs() {
     } else {
         merge.predication_ctl[gress].table_thread |= 1 << logical_id;
         if (gress) {
-            stage->regs.dp.imem_table_addr_egress |= 1 << logical_id;
+            regs.dp.imem_table_addr_egress |= 1 << logical_id;
             merge.logical_table_thread[0].logical_table_thread_egress |= 1 << logical_id;
             merge.logical_table_thread[1].logical_table_thread_egress |= 1 << logical_id;
             merge.logical_table_thread[2].logical_table_thread_egress |= 1 << logical_id;
@@ -428,11 +431,11 @@ void GatewayTable::write_regs() {
             merge.logical_table_thread[0].logical_table_thread_ingress |= 1 << logical_id;
             merge.logical_table_thread[1].logical_table_thread_ingress |= 1 << logical_id;
             merge.logical_table_thread[2].logical_table_thread_ingress |= 1 << logical_id; }
-        auto &adrdist = stage->regs.rams.match.adrdist;
+        auto &adrdist = regs.rams.match.adrdist;
         adrdist.adr_dist_table_thread[gress][0] |= 1 << logical_id;
         adrdist.adr_dist_table_thread[gress][1] |= 1 << logical_id;
         if (layout.size() > 1)
-            payload_write_regs(layout[1].row, layout[1].bus >> 1, layout[1].bus & 1);
+            payload_write_regs(regs, layout[1].row, layout[1].bus >> 1, layout[1].bus & 1);
         // FIXME -- allow table_counter on standalone gateay?  What can it count?
         if (options.match_compiler)
             merge.mau_table_counter_ctl[logical_id/8U].set_subfield(4, 3 * (logical_id%8U), 3); }

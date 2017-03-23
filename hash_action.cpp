@@ -72,10 +72,11 @@ void HashActionTable::pass2() {
     if (idletime) idletime->pass2();
 }
 
-void HashActionTable::write_merge_regs(int type, int bus) {
-    attached.write_merge_regs(this, type, bus);
+template<class REGS>
+void HashActionTable::write_merge_regs(REGS &regs, int type, int bus) {
+    attached.write_merge_regs(regs, this, type, bus);
     /* FIXME -- factor with ExactMatch::write_merge_regs? */
-    auto &merge = stage->regs.rams.match.merge;
+    auto &merge = regs.rams.match.merge;
     merge.exact_match_phys_result_en[bus/8U] |= 1U << (bus%8U);
     merge.exact_match_phys_result_thread[bus/8U] |= gress << (bus%8U);
     if (stage->tcam_delay(gress))
@@ -93,20 +94,21 @@ void HashActionTable::write_merge_regs(int type, int bus) {
         merge.tind_bus_prop[bus].enabled = 1; }
 }
 
-void HashActionTable::write_regs() {
+template<class REGS>
+void HashActionTable::write_regs(REGS &regs) {
     LOG1("### Hash Action " << name() << " write_regs");
     /* FIXME -- setup layout with no rams so other functions can write registers properly */
     int bus_type = layout[0].bus >> 1;
-    MatchTable::write_regs(bus_type, this);
-    auto &merge = stage->regs.rams.match.merge;
+    MatchTable::write_regs(regs, bus_type, this);
+    auto &merge = regs.rams.match.merge;
     merge.exact_match_logical_result_en |= 1 << logical_id;
     if (stage->tcam_delay(gress))
         merge.exact_match_logical_result_delay |= 1 << logical_id;
-    if (actions) actions->write_regs(this);
-    if (idletime) idletime->write_regs();
-    if (gateway) gateway->write_regs();
+    if (actions) actions->write_regs(regs, this);
+    if (idletime) idletime->write_regs(regs);
+    if (gateway) gateway->write_regs(regs);
     for (auto &hd : hash_dist)
-        hd.write_regs(this, 1, false);
+        hd.write_regs(regs, this, 1, false);
     if (options.match_compiler && !enable_action_data_enable &&
         (!gateway || gateway->empty_match())) {
         /* this seems unneeded? (won't actually be used...) */

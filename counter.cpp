@@ -60,8 +60,9 @@ int CounterTable::direct_shiftcount() {
     return 64 + 7 - counter_shifts[format->groups()];
 }
 
-void CounterTable::write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args) {
-    auto &merge =  stage->regs.rams.match.merge;
+template<class REGS> void CounterTable::write_merge_regs(REGS &regs, MatchTable *match,
+            int type, int bus, const std::vector<Call::Arg> &args) {
+    auto &merge =  regs.rams.match.merge;
     auto pfe_bit = 19;
     if (per_flow_enable && dynamic_cast<HashActionTable *>(match)) {
         /* FIXME -- This should be cleaner -- rather than checking the match table type, have
@@ -78,16 +79,16 @@ void CounterTable::write_merge_regs(MatchTable *match, int type, int bus, const 
         merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = pfe_bit;
 }
 
-void CounterTable::write_regs() {
+template<class REGS> void CounterTable::write_regs(REGS &regs) {
     LOG1("### Counter table " << name() << " write_regs");
     // FIXME -- factor common AttachedTable::write_regs
     // FIXME -- factor common Synth2Port::write_regs
     // FIXME -- factor common MeterTable::write_regs
     Layout *home = &layout[0];
     bool push_on_overflow = false;
-    auto &map_alu =  stage->regs.rams.map_alu;
-    auto &adrdist = stage->regs.rams.match.adrdist;
-    DataSwitchboxSetup swbox(this);
+    auto &map_alu =  regs.rams.map_alu;
+    auto &adrdist = regs.rams.match.adrdist;
+    DataSwitchboxSetup<REGS> swbox(regs, this);
     int minvpn, maxvpn;
     layout_vpn_bounds(minvpn, maxvpn, true);
     for (Layout &logical_row : layout) {
@@ -103,9 +104,9 @@ void CounterTable::write_regs() {
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;
             swbox.setup_row_col(row, col, *vpn);
-            write_mapram_regs(row, *mapram, *vpn, MapRam::STATISTICS);
+            write_mapram_regs(regs, row, *mapram, *vpn, MapRam::STATISTICS);
             if (gress)
-                stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row);
+                regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row);
             ++mapram, ++vpn; }
         if (&logical_row == home) {
             int stats_group_index = row/2;
@@ -117,7 +118,7 @@ void CounterTable::write_regs() {
             stat_ctl.stats_alu_egress = gress;
             stat_ctl.stats_bytecount_adjust = 0; // TODO
             stat_ctl.stats_alu_error_enable = 0; // TODO
-            stage->regs.cfg_regs.mau_cfg_stats_alu_lt[stats_group_index] = logical_id;
+            regs.cfg_regs.mau_cfg_stats_alu_lt[stats_group_index] = logical_id;
             //setup_muxctl(adrdist.stats_alu_phys_to_logical_ixbar_ctl[row/2], logical_id);
             map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_base = minvpn;
             map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_limit = maxvpn;
@@ -140,7 +141,7 @@ void CounterTable::write_regs() {
     auto &movereg_stats_ctl = adrdist.movereg_stats_ctl[stats_group_index];
     for (MatchTable *m : match_tables) {
         adrdist.adr_dist_stats_adr_icxbar_ctl[m->logical_id] |= 1U << stats_group_index;
-        auto &dump_ctl = stage->regs.cfg_regs.stats_dump_ctl[m->logical_id];
+        auto &dump_ctl = regs.cfg_regs.stats_dump_ctl[m->logical_id];
         dump_ctl.stats_dump_entries_per_word = format->groups();
         if (type == BYTES || type == BOTH)
             dump_ctl.stats_dump_has_bytes = 1;
@@ -161,7 +162,7 @@ void CounterTable::write_regs() {
         adrdist.deferred_ram_ctl[MoveReg::STATS][stats_group_index].deferred_ram_en = 1;
         adrdist.deferred_ram_ctl[MoveReg::STATS][stats_group_index].deferred_ram_thread = gress;
         if (gress)
-            stage->regs.cfg_regs.mau_cfg_dram_thread |= 1 << stats_group_index;
+            regs.cfg_regs.mau_cfg_dram_thread |= 1 << stats_group_index;
         movereg_stats_ctl.movereg_stats_ctl_deferred = 1;
     } else
         adrdist.packet_action_at_headertime[0][stats_group_index] = 1;

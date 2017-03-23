@@ -469,10 +469,10 @@ void ExactMatchTable::pass2() {
 /* FIXME -- should have ExactMatchTable::write_merge_regs write some of the merge stuff
  * from write_regs? */
 
-void ExactMatchTable::write_regs() {
+template<class REGS> void ExactMatchTable::write_regs(REGS &regs) {
     LOG1("### Exact match table " << name() << " write_regs");
-    MatchTable::write_regs(0, this);
-    auto &merge = stage->regs.rams.match.merge;
+    MatchTable::write_regs(regs, 0, this);
+    auto &merge = regs.rams.match.merge;
     unsigned fmt_width = format ? (format->size + 127)/128 : 0;
     bitvec match_mask, version_nibble_mask;
     match_mask.setrange(0, 128*fmt_width);
@@ -496,7 +496,7 @@ void ExactMatchTable::write_regs() {
     for (auto &row : layout) {
         index++;  /* index of the row in the layout */
         /* setup match logic in rams */
-        auto &rams_row = stage->regs.rams.array.row[row.row];
+        auto &rams_row = regs.rams.array.row[row.row];
         auto &vh_adr_xbar = rams_row.vh_adr_xbar;
         bool first = true;
         int hash_group = -1;
@@ -548,7 +548,7 @@ void ExactMatchTable::write_regs() {
             ram.unit_ram_ctl.match_result_bus_select = 1 << row.bus;
             if (auto cnt = word_info[way.word].size())
                 ram.unit_ram_ctl.match_entry_enable = ~(~0U << cnt);
-            auto &unitram_config = stage->regs.rams.map_alu.row[row.row].adrmux
+            auto &unitram_config = regs.rams.map_alu.row[row.row].adrmux
                     .unitram_config[col/6][col%6];
             unitram_config.unitram_type = 1;
             unitram_config.unitram_logical_table = logical_id;
@@ -583,7 +583,7 @@ void ExactMatchTable::write_regs() {
                 ram.match_bytemask[word_group].mask_bytes_0_to_13 = 0x3fff;
                 ram.match_bytemask[word_group].mask_nibbles_28_to_31 = 0xf; }
             if (gress)
-                stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row.row);
+                regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row.row);
             rams_row.emm_ecc_error_uram_ctl[gress] |= 1U << (col - 2); }
         /* setup input xbars to get data to the right places on the bus(es) */
         bool using_match = false;
@@ -728,9 +728,9 @@ void ExactMatchTable::write_regs() {
     merge.exact_match_logical_result_en |= 1 << logical_id;
     if (stage->tcam_delay(gress) > 0)
         merge.exact_match_logical_result_delay |= 1 << logical_id;
-    if (actions) actions->write_regs(this);
-    if (gateway) gateway->write_regs();
-    if (idletime) idletime->write_regs();
+    if (actions) actions->write_regs(regs, this);
+    if (gateway) gateway->write_regs(regs);
+    if (idletime) idletime->write_regs(regs);
 }
 
 std::unique_ptr<json::map> ExactMatchTable::gen_memory_resource_allocation_tbl_cfg(Way &way) {

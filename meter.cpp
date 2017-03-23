@@ -89,8 +89,9 @@ int MeterTable::direct_shiftcount() {
     return 64;
 }
 
-void MeterTable::write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args) {
-    auto &merge = stage->regs.rams.match.merge;
+template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *match,
+            int type, int bus, const std::vector<Call::Arg> &args) {
+    auto &merge = regs.rams.match.merge;
     if (args.empty()) { // direct access
         merge.mau_meter_adr_mask[type][bus] =  0x7fff80;
     } else { // indirect access
@@ -114,14 +115,15 @@ void MeterTable::write_merge_regs(MatchTable *match, int type, int bus, const st
     merge.mau_idletime_adr_default[type][bus] = per_flow_enable ? 0 : 0x100000;
 }
 
-void MeterTable::write_regs() {
+template<class REGS>
+void MeterTable::write_regs(REGS &regs) {
     LOG1("### Meter table " << name() << " write_regs");
-    if (input_xbar) input_xbar->write_regs();
+    if (input_xbar) input_xbar->write_regs(regs);
     Layout *home = &layout[0];
     bool push_on_overflow = false;
-    auto &map_alu =  stage->regs.rams.map_alu;
-    auto &adrdist = stage->regs.rams.match.adrdist;
-    DataSwitchboxSetup swbox(this);
+    auto &map_alu =  regs.rams.map_alu;
+    auto &adrdist = regs.rams.match.adrdist;
+    DataSwitchboxSetup<REGS> swbox(regs, this);
     int minvpn, maxvpn;
     layout_vpn_bounds(minvpn, maxvpn, true);
     for (Layout &logical_row : layout) {
@@ -136,9 +138,9 @@ void MeterTable::write_regs() {
         for (int logical_col : logical_row.cols) {
             unsigned col = logical_col + 6*side;
             swbox.setup_row_col(row, col, *vpn);
-            write_mapram_regs(row, *mapram, *vpn, MapRam::METER);
+            write_mapram_regs(regs, row, *mapram, *vpn, MapRam::METER);
             if (gress)
-                stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row);
+                regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row);
             ++mapram, ++vpn; }
         if (&logical_row == home) {
             int meter_group_index = row/2U;
@@ -198,7 +200,7 @@ void MeterTable::write_regs() {
                 adr_ctl.adr_dist_oflo_adr_xbar_source_index = home->row % 8;
                 adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::METER; }
             adr_ctl.adr_dist_oflo_adr_xbar_enable = 1; } }
-    auto &merge = stage->regs.rams.match.merge;
+    auto &merge = regs.rams.match.merge;
     int color_map_color = (color_maprams[0].row & 2) >> 1;
     for (Layout &row : color_maprams) {
         if (&row == &color_maprams[0]) { /* color mapram home row */
@@ -261,7 +263,7 @@ void MeterTable::write_regs() {
             ram_address_mux_ctl.ram_ofo_stats_mux_select_statsmeter = 1;
             setup_muxctl(map_alu_row.vh_xbars.adr_dist_idletime_adr_xbar_ctl[col], row.bus);
             if (gress)
-                stage->regs.cfg_regs.mau_cfg_mram_thread[col/3U] |= 1U << (col%3U*8U + row.row);
+                regs.cfg_regs.mau_cfg_mram_thread[col/3U] |= 1U << (col%3U*8U + row.row);
             ++vpn; } }
     for (MatchTable *m : match_tables) {
         adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id] |= 1U << (home->row/4U);
@@ -269,7 +271,7 @@ void MeterTable::write_regs() {
         //icxbar.address_distr_to_logical_rows = 1U << home->row;
         //icxbar.address_distr_to_overflow = push_on_overflow;
         //if (direct)
-        //    stage->regs.cfg_regs.mau_cfg_lt_meter_are_direct |= 1 << m->logical_id;
+        //    regs.cfg_regs.mau_cfg_lt_meter_are_direct |= 1 << m->logical_id;
         merge.mau_mapram_color_map_to_logical_ctl[m->logical_id/8].set_subfield(
             0x4 | (color_maprams[0].row/2U), 3 * (m->logical_id%8U), 3);
         // FIXME -- this bus_index calculation is probably wrong
@@ -298,12 +300,12 @@ void MeterTable::write_regs() {
     adrdist.deferred_ram_ctl[1][home->row/4U].deferred_ram_en = 1;
     adrdist.deferred_ram_ctl[1][home->row/4U].deferred_ram_thread = gress;
     if (gress)
-        stage->regs.cfg_regs.mau_cfg_dram_thread |= 0x10 << (home->row/4U);
+        regs.cfg_regs.mau_cfg_dram_thread |= 0x10 << (home->row/4U);
     if (push_on_overflow) {
         adrdist.deferred_oflo_ctl = 1 << ((home->row-8)/2U);
         adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::METER; }
     for (auto &hd : hash_dist)
-        hd.write_regs(this, 1, false);
+        hd.write_regs(regs, this, 1, false);
     if (gress == INGRESS) {
         merge.meter_alu_thread[0].meter_alu_thread_ingress |= 1U << home->row/4U;
         merge.meter_alu_thread[1].meter_alu_thread_ingress |= 1U << home->row/4U;

@@ -150,7 +150,13 @@ struct AluOP : public Instruction {
     void phvRead(std::function<void (const Phv::Slice &sl)>) { }
     void dbprint(std::ostream &out) const {
         out << "INSTR: " << opc->name /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
-    void write_regs(Table *tbl, Table::Actions::Action *act) override;
+    template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
+    void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
+                    Table::Actions::Action *act) override {
+        write_regs<Target::Tofino::mau_regs>(regs, tbl, act); }
+    void write_regs(Target::JBay::mau_regs &regs, Table *tbl,
+                    Table::Actions::Action *act) override {
+        write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
 };
 
 static AluOP::Decode opADD("add", 0x1c, true), opSUB("sub", 0x1e),
@@ -264,10 +270,11 @@ Instruction *AluOP::pass1(Table *tbl, Table::Actions::Action *act) {
         p->reg.check();
     return this; }
 
-void AluOP::write_regs(Table *tbl_, Table::Actions::Action *act) {
+template<class REGS>
+void AluOP::write_regs(REGS &regs, Table *tbl_, Table::Actions::Action *act) {
     auto tbl = dynamic_cast<Stateful *>(tbl_);
     int logical_home_row = tbl->layout[0].row;
-    auto &meter_group = tbl->stage->regs.rams.map_alu.meter_group[logical_home_row/4U];
+    auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_state_alu[act->code][slot - 2];
     salu.salu_op = opc->opcode & 0xf;
     salu.salu_arith = opc->opcode >> 4;
@@ -316,7 +323,13 @@ struct BitOP : public Instruction {
     void phvRead(std::function<void (const Phv::Slice &sl)>) { }
     void dbprint(std::ostream &out) const {
         out << "INSTR: " << opc->name /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
-    void write_regs(Table *tbl, Table::Actions::Action *act) override;
+    template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
+    void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
+                    Table::Actions::Action *act) override {
+        write_regs<Target::Tofino::mau_regs>(regs, tbl, act); }
+    void write_regs(Target::JBay::mau_regs &regs, Table *tbl,
+                    Table::Actions::Action *act) override {
+        write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
 };
 
 static BitOP::Decode opSET_BIT("set_bit", 0x0), opSET_BITC("set_bitc", 0x1),
@@ -339,9 +352,10 @@ bool BitOP::equiv(Instruction *a_) {
     return false;
 }
 
-void BitOP::write_regs(Table *tbl, Table::Actions::Action *act) {
+template<class REGS>
+void BitOP::write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act) {
     int logical_home_row = tbl->layout[0].row;
-    auto &meter_group = tbl->stage->regs.rams.map_alu.meter_group[logical_home_row/4U];
+    auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_state_alu[act->code][slot-2];
     salu.salu_op = opc->opcode & 0xf;
     salu.salu_pred = 0;
@@ -369,7 +383,13 @@ struct CmpOP : public Instruction {
     void phvRead(std::function<void (const Phv::Slice &sl)>) { }
     void dbprint(std::ostream &out) const {
         out << "INSTR: " << opc->name /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
-    void write_regs(Table *tbl, Table::Actions::Action *act) override;
+    template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
+    void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
+                    Table::Actions::Action *act) override {
+        write_regs<Target::Tofino::mau_regs>(regs, tbl, act); }
+    void write_regs(Target::JBay::mau_regs &regs, Table *tbl,
+                    Table::Actions::Action *act) override {
+        write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
 };
 
 static CmpOP::Decode opEQU("equ", 0, false), opNEQ("neq", 1, false),
@@ -425,10 +445,11 @@ Instruction *CmpOP::pass1(Table *tbl_, Table::Actions::Action *act) {
     return this;
 }
 
-void CmpOP::write_regs(Table *tbl_, Table::Actions::Action *act) {
+template<class REGS>
+void CmpOP::write_regs(REGS &regs, Table *tbl_, Table::Actions::Action *act) {
     auto tbl = dynamic_cast<Stateful *>(tbl_);
     int logical_home_row = tbl->layout[0].row;
-    auto &meter_group = tbl->stage->regs.rams.map_alu.meter_group[logical_home_row/4U];
+    auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_cmp_alu[act->code][slot];
     if (srca) {
         salu.salu_cmp_asrc_input = srca->field->bit(0) > 0;

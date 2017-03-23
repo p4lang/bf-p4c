@@ -922,11 +922,13 @@ void Table::Actions::stateful_pass2(Table *tbl) {
             code_use[act.code] = 1; } }
 }
 
-void Table::Actions::write_regs(Table *tbl) {
+template<class REGS> void Table::Actions::write_regs(REGS &regs, Table *tbl) {
     for (auto &act : *this)
         for (auto *inst : act.instr)
-            inst->write_regs(tbl, &act);
+            inst->write_regs(regs, tbl, &act);
 }
+template void Table::Actions::write_regs(Target::Tofino::mau_regs &, Table *);
+template void Table::Actions::write_regs(Target::JBay::mau_regs &, Table *);
 
 void Table::Actions::gen_tbl_cfg(json::vector &cfg) {
     for (auto &act : *this) {
@@ -981,7 +983,7 @@ void MatchTable::pass1(int type) {
               name());
 }
 
-void MatchTable::write_regs(int type, Table *result) {
+template<class REGS> void MatchTable::write_regs(REGS &regs, int type, Table *result) {
     /* this follows the order and behavior in stage_match_entry_table.py
      * it can be reorganized to be clearer */
 
@@ -989,13 +991,13 @@ void MatchTable::write_regs(int type, Table *result) {
      * data path
      *-----------------------*/
     if (gress == EGRESS)
-        stage->regs.dp.imem_table_addr_egress |= 1 << logical_id;
+        regs.dp.imem_table_addr_egress |= 1 << logical_id;
 
     /*------------------------
      * Match Merge
      *-----------------------*/
-    auto &merge = stage->regs.rams.match.merge;
-    auto &adrdist = stage->regs.rams.match.adrdist;
+    auto &merge = regs.rams.match.merge;
+    auto &adrdist = regs.rams.match.adrdist;
     merge.predication_ctl[gress].table_thread |= 1 << logical_id;
     if (gress) {
         merge.logical_table_thread[0].logical_table_thread_egress |= 1 << logical_id;
@@ -1042,7 +1044,7 @@ void MatchTable::write_regs(int type, Table *result) {
                         result->action_enable + 5;
             }
             if (idletime)
-                idletime->write_merge_regs(type, bus);
+                idletime->write_merge_regs(regs, type, bus);
             if (result->action) {
                 /* FIXME -- deal with variable-sized actions */
                 merge.mau_actiondata_adr_default[type][bus] =
@@ -1056,7 +1058,7 @@ void MatchTable::write_regs(int type, Table *result) {
             if (!get_attached()->meter.empty())
                 shift_en.meter_adr_payload_shifter_en = 1;
 
-            result->write_merge_regs(type, bus); }
+            result->write_merge_regs(regs, type, bus); }
     } else {
         /* ternary match with no indirection table */
         assert(type == 1);
@@ -1118,16 +1120,16 @@ void MatchTable::write_regs(int type, Table *result) {
                 merge.mau_payload_shifter_enable[type][bus]
                     .immediate_data_payload_shifter_en = 1; } }
     if (result->action_bus)
-        result->action_bus->write_immed_regs(result);
+        result->action_bus->write_immed_regs(regs, result);
     if (default_action_args.size() > 0)
         merge.mau_immediate_data_miss_value[logical_id] = default_action_args[0];
     else if (result->default_action_args.size() > 0)
         merge.mau_immediate_data_miss_value[logical_id] = result->default_action_args[0];
 
-    if (input_xbar) input_xbar->write_regs();
+    if (input_xbar) input_xbar->write_regs(regs);
 
     if (gress == EGRESS)
-        stage->regs.cfg_regs.mau_cfg_lt_thread |= 1U << logical_id;
+        regs.cfg_regs.mau_cfg_lt_thread |= 1U << logical_id;
     if (options.match_compiler && dynamic_cast<HashActionTable *>(this))
         return; // skip the rest
 
@@ -1136,9 +1138,12 @@ void MatchTable::write_regs(int type, Table *result) {
             table_counter, 3 * (logical_id%8U), 3);
 
 }
+template void MatchTable::write_regs(Target::Tofino::mau_regs &, int, Table *);
+template void MatchTable::write_regs(Target::JBay::mau_regs &, int, Table *);
 
-void Table::write_mapram_regs(int row, int col, int vpn, int type) {
-    auto &mapram_config = stage->regs.rams.map_alu.row[row].adrmux.mapram_config[col];
+template<class REGS>
+void Table::write_mapram_regs(REGS &regs, int row, int col, int vpn, int type) {
+    auto &mapram_config = regs.rams.map_alu.row[row].adrmux.mapram_config[col];
     //auto &mapram_ctl = map_alu_row.adrmux.mapram_ctl[col];
     mapram_config.mapram_type = type;
     mapram_config.mapram_logical_table = logical_id;
@@ -1153,8 +1158,10 @@ void Table::write_mapram_regs(int row, int col, int vpn, int type) {
     //if (!options.match_compiler) // FIXME -- compiler doesn't set this?
     //    mapram_ctl.mapram_vpn_limit = maxvpn;
     if (gress)
-        stage->regs.cfg_regs.mau_cfg_mram_thread[col/3U] |= 1U << (col%3U*8U + row);
+        regs.cfg_regs.mau_cfg_mram_thread[col/3U] |= 1U << (col%3U*8U + row);
 }
+template void Table::write_mapram_regs(Target::Tofino::mau_regs &, int, int, int, int);
+template void Table::write_mapram_regs(Target::JBay::mau_regs &, int, int, int, int);
 
 HashDistribution *Table::find_hash_dist(int unit) {
     for (auto &hd : hash_dist)
@@ -1302,12 +1309,15 @@ void AttachedTables::pass1(MatchTable *self) {
             error(m.lineno, "Meter %s not in same thread as %s", m->name(), self->name()); }
 }
 
-void AttachedTables::write_merge_regs(MatchTable *self, int type, int bus) {
-    for (auto &s : stats) s->write_merge_regs(self, type, bus, s.args);
-    for (auto &m : meter) m->write_merge_regs(self, type, bus, m.args);
+template<class REGS>
+void AttachedTables::write_merge_regs(REGS &regs, MatchTable *self, int type, int bus) {
+    for (auto &s : stats) s->write_merge_regs(regs, self, type, bus, s.args);
+    for (auto &m : meter) m->write_merge_regs(regs, self, type, bus, m.args);
     if (selector)
-        get_selector()->write_merge_regs(self, type, bus, selector.args);
+        get_selector()->write_merge_regs(regs, self, type, bus, selector.args);
 }
+template void AttachedTables::write_merge_regs(Target::Tofino::mau_regs &, MatchTable *, int, int);
+template void AttachedTables::write_merge_regs(Target::JBay::mau_regs &, MatchTable *, int, int);
 
 json::map *Table::base_tbl_cfg(json::vector &out, const char *type, int size) {
     return p4_table->base_tbl_cfg(out, size, this);

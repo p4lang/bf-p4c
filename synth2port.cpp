@@ -38,7 +38,8 @@ bool Synth2Port::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::t
     return true;
 }
 
-void Synth2Port::write_regs() {
+template<class REGS>
+void Synth2Port::write_regs(REGS &) {
 }
 
 json::map *Synth2Port::base_tbl_cfg(json::vector &out, const char *type, int size) {

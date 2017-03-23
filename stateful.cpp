@@ -166,25 +166,26 @@ int Stateful::direct_shiftcount() {
     return 64;
 }
 
-void Stateful::write_merge_regs(MatchTable *match, int type, int bus, const std::vector<Call::Arg> &args) {
-    auto &merge =  stage->regs.rams.match.merge;
+template<class REGS> void Stateful::write_merge_regs(REGS &regs, MatchTable *match,
+            int type, int bus, const std::vector<Call::Arg> &args) {
+    auto &merge = regs.rams.match.merge;
     if (per_flow_enable)
         merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = 16; // FIXME
 }
 
-void Stateful::write_regs() {
+template<class REGS> void Stateful::write_regs(REGS &regs) {
     LOG1("### Stateful table " << name() << " write_regs");
     // FIXME -- factor common AttachedTable::write_regs
     // FIXME -- factor common Synth2Port::write_regs
     // FIXME -- factor common CounterTable::write_regs
     // FIXME -- factor common MeterTable::write_regs
-    if (input_xbar) input_xbar->write_regs();
+    if (input_xbar) input_xbar->write_regs(regs);
     Layout *home = &layout[0];
     bool push_on_overflow = false;
-    auto &map_alu =  stage->regs.rams.map_alu;
-    auto &merge =  stage->regs.rams.match.merge;
-    auto &adrdist = stage->regs.rams.match.adrdist;
-    DataSwitchboxSetup swbox(this);
+    auto &map_alu =  regs.rams.map_alu;
+    auto &merge =  regs.rams.match.merge;
+    auto &adrdist = regs.rams.match.adrdist;
+    DataSwitchboxSetup<REGS> swbox(regs, this);
     int minvpn, maxvpn;
     layout_vpn_bounds(minvpn, maxvpn, true);
     if (!bound_selector) {
@@ -200,13 +201,13 @@ void Stateful::write_regs() {
             for (int logical_col : logical_row.cols) {
                 unsigned col = logical_col + 6*side;
                 swbox.setup_row_col(row, col, *vpn);
-                write_mapram_regs(row, *mapram, *vpn, MapRam::STATEFUL);
+                write_mapram_regs(regs, row, *mapram, *vpn, MapRam::STATEFUL);
                 if (gress)
-                    stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row);
+                    regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row);
                 ++mapram, ++vpn; }
             /* FIXME -- factor with selector/meter? */
             if (&logical_row == home) {
-                auto &vh_adr_xbar = stage->regs.rams.array.row[row].vh_adr_xbar;
+                auto &vh_adr_xbar = regs.rams.array.row[row].vh_adr_xbar;
                 //setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + logical_row.bus],
                 //             selection_hash);
                 if (input_xbar)
@@ -225,7 +226,7 @@ void Stateful::write_regs() {
                     adr_ctl.adr_dist_oflo_adr_xbar_source_sel = AdrDist::METER; }
                 adr_ctl.adr_dist_oflo_adr_xbar_enable = 1; } } }
     if (actions)
-        actions->write_regs(this);
+        actions->write_regs(regs, this);
     unsigned meter_group = home->row/4U;
     for (MatchTable *m : match_tables) {
         adrdist.adr_dist_meter_adr_icxbar_ctl[m->logical_id] = 1 << meter_group;
@@ -238,14 +239,14 @@ void Stateful::write_regs() {
             adrdist.oflo_adr_user[0] = adrdist.oflo_adr_user[1] = AdrDist::METER;
         adrdist.packet_action_at_headertime[1][meter_group] = 1; }
     //for (auto &hd : hash_dist)
-    //    hd.write_regs(this, 0, non_linear_hash);
+    //    hd.write_regs(regs, this, 0, non_linear_hash);
     if (gress == INGRESS) {
         merge.meter_alu_thread[0].meter_alu_thread_ingress |= 1U << meter_group;
         merge.meter_alu_thread[1].meter_alu_thread_ingress |= 1U << meter_group;
     } else {
         merge.meter_alu_thread[0].meter_alu_thread_egress |= 1U << meter_group;
         merge.meter_alu_thread[1].meter_alu_thread_egress |= 1U << meter_group; }
-    auto &salu = stage->regs.rams.map_alu.meter_group[meter_group].stateful;
+    auto &salu = regs.rams.map_alu.meter_group[meter_group].stateful;
     if (math_table) {
         for (size_t i = 0; i < math_table.data.size(); ++i)
             salu.salu_mathtable[i/4U].set_subfield(math_table.data[i], 8*(i%4U), 8);

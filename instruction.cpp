@@ -357,12 +357,13 @@ int parity(unsigned v) {
 struct VLIWInstruction : Instruction {
     VLIWInstruction(int l) : Instruction(l) {}
     virtual int encode() = 0;
-    void write_regs(Table *tbl, Table::Actions::Action *act) {
+    template<class REGS>
+    void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act) {
         if (act != tbl->stage->imem_addr_use[tbl->gress][act->addr]) {
             LOG3("skipping " << tbl->name() << '.' << act->name << " as its imem is used by " <<
                  tbl->stage->imem_addr_use[tbl->gress][act->addr]->name);
             return; }
-        auto &imem = tbl->stage->regs.dp.imem;
+        auto &imem = regs.dp.imem;
         int iaddr = act->addr/ACTION_IMEM_COLORS;
         int color = act->addr%ACTION_IMEM_COLORS;
         unsigned bits = encode();
@@ -389,10 +390,16 @@ struct VLIWInstruction : Instruction {
             break;
         default:
             assert(0); }
-        auto &power_ctl = tbl->stage->regs.dp.actionmux_din_power_ctl;
+        auto &power_ctl = regs.dp.actionmux_din_power_ctl;
         phvRead([&](const Phv::Slice &sl) {
             set_power_ctl_reg(power_ctl, sl.reg.index); });
     }
+    void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
+                    Table::Actions::Action *act) override {
+        write_regs<Target::Tofino::mau_regs>(regs, tbl, act); }
+    void write_regs(Target::JBay::mau_regs &regs, Table *tbl,
+                    Table::Actions::Action *act) override {
+        write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
 };
 
 struct AluOP : VLIWInstruction {

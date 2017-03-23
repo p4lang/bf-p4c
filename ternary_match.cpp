@@ -244,16 +244,19 @@ void TernaryMatchTable::pass2() {
     if (gateway) gateway->pass2();
     if (idletime) idletime->pass2();
 }
+
 extern int get_address_mau_actiondata_adr_default(unsigned log2size, bool per_flow_enable);
-void TernaryMatchTable::write_regs() {
+
+template<class REGS>
+void TernaryMatchTable::write_regs(REGS &regs) {
     LOG1("### Ternary match table " << name() << " write_regs");
-    MatchTable::write_regs(1, indirect);
+    MatchTable::write_regs(regs, 1, indirect);
     unsigned word = 0;
-    auto &merge = stage->regs.rams.match.merge;
+    auto &merge = regs.rams.match.merge;
     for (Layout &row : layout) {
         auto vpn = row.vpns.begin();
         for (auto col : row.cols) {
-            auto &tcam_mode = stage->regs.tcams.col[col].tcam_mode[row.row];
+            auto &tcam_mode = regs.tcams.col[col].tcam_mode[row.row];
             //tcam_mode.tcam_data1_select = row.bus; -- no longer used
             if (options.match_compiler)
                 tcam_mode.tcam_data1_select = col;
@@ -269,7 +272,7 @@ void TernaryMatchTable::write_regs() {
             tcam_mode.tcam_data_dirtcam_mode = match[word].dirtcam & 0x3ff;
             tcam_mode.tcam_vbit_dirtcam_mode = match[word].dirtcam >> 10;
             /* TODO -- always disable tcam_validbit_xbar? */
-            auto &tcam_vh_xbar = stage->regs.tcams.vh_data_xbar;
+            auto &tcam_vh_xbar = regs.tcams.vh_data_xbar;
             if (options.match_compiler) {
                 for (int i = 0; i < 8; i++)
                     tcam_vh_xbar.tcam_validbit_xbar_ctl[col][row.row/2][i] |= 15; }
@@ -283,7 +286,7 @@ void TernaryMatchTable::write_regs() {
                 setup_muxctl(tcam_vh_xbar.tcam_extra_byte_ctl[col][row.row/2],
                              match[word].byte_group);
             if (!((chain_rows >> row.row) & 1))
-                stage->regs.tcams.col[col].tcam_table_map[tcam_id] |= 1U << row.row; }
+                regs.tcams.col[col].tcam_table_map[tcam_id] |= 1U << row.row; }
         if (++word == match.size()) word = 0; }
     setup_muxctl(merge.tcam_hit_to_logical_table_ixbar_outputmap[tcam_id], logical_id);
     /* FIXME -- setting piped mode if any table in the stage is piped -- perhaps
@@ -292,7 +295,7 @@ void TernaryMatchTable::write_regs() {
         merge.tcam_table_prop[tcam_id].tcam_piped = 1;
     merge.tcam_table_prop[tcam_id].thread = gress;
     merge.tcam_table_prop[tcam_id].enabled = 1;
-    stage->regs.tcams.tcam_output_table_thread[tcam_id] = 1 << gress;
+    regs.tcams.tcam_output_table_thread[tcam_id] = 1 << gress;
     if (indirect_bus >= 0) {
         /* FIXME -- factor into corresponding code in MatchTable::write_regs */
         setup_muxctl(merge.match_to_logical_table_ixbar_outputmap[1][indirect_bus], logical_id);
@@ -314,9 +317,9 @@ void TernaryMatchTable::write_regs() {
         merge.tind_bus_prop[indirect_bus].enabled = 1;
         //if (action_bus)
         //     merge.mau_immediate_data_mask[1][indirect_bus] = (1UL << action_bus->size()) - 1;
-        attached.write_merge_regs(this, 1, indirect_bus);
+        attached.write_merge_regs(regs, this, 1, indirect_bus);
         if (idletime)
-            idletime->write_merge_regs(1, indirect_bus);
+            idletime->write_merge_regs(regs, 1, indirect_bus);
         if (action) {
             merge.mau_actiondata_adr_default[1][indirect_bus] =
                 get_address_mau_actiondata_adr_default(action->format->log2size, false);
@@ -348,11 +351,11 @@ void TernaryMatchTable::write_regs() {
                 merge.mau_idletime_adr_tcam_shiftcount[indirect_bus] = m.args[0].field()->bits[0].lo; }
             break; /* all must be the same, only config once */ }
     }
-    if (actions) actions->write_regs(this);
-    if (gateway) gateway->write_regs();
-    if (idletime) idletime->write_regs();
+    if (actions) actions->write_regs(regs, this);
+    if (gateway) gateway->write_regs(regs);
+    if (idletime) idletime->write_regs(regs);
     merge.exact_match_logical_result_delay |= 1 << logical_id;
-    stage->regs.cfg_regs.mau_cfg_movereg_tcam_only |= 1U << logical_id;
+    regs.cfg_regs.mau_cfg_movereg_tcam_only |= 1U << logical_id;
     if (hit_next.size() > 1 && !indirect)
         merge.next_table_tcam_actionbit_map_en |= 1 << logical_id;
 }
@@ -558,24 +561,24 @@ void TernaryIndirectTable::pass2() {
     if (format) format->pass2(this);
 }
 
-void TernaryIndirectTable::write_regs() {
+template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
     LOG1("### Ternary indirect table " << name() << " write_regs");
     int tcam_id = match_table->tcam_id;
     int tcam_shift = format->log2size-2;
-    stage->regs.tcams.tcam_match_adr_shift[tcam_id] = tcam_shift;
-    auto &merge = stage->regs.rams.match.merge;
+    regs.tcams.tcam_match_adr_shift[tcam_id] = tcam_shift;
+    auto &merge = regs.rams.match.merge;
     for (Layout &row : layout) {
         auto vpn = row.vpns.begin();
-        auto &ram_row = stage->regs.rams.array.row[row.row];
+        auto &ram_row = regs.rams.array.row[row.row];
         for (int col : row.cols) {
             auto &unit_ram_ctl = ram_row.ram[col].unit_ram_ctl;
             unit_ram_ctl.match_ram_write_data_mux_select = 7; /* disable */
             unit_ram_ctl.match_ram_read_data_mux_select = 7; /* disable */
             unit_ram_ctl.tind_result_bus_select = 1U << row.bus;
-            auto &mux_ctl = stage->regs.rams.map_alu.row[row.row].adrmux
+            auto &mux_ctl = regs.rams.map_alu.row[row.row].adrmux
                     .ram_address_mux_ctl[col/6][col%6];
                 mux_ctl.ram_unitram_adr_mux_select = row.bus + 2;
-            auto &unitram_config = stage->regs.rams.map_alu.row[row.row].adrmux
+            auto &unitram_config = regs.rams.map_alu.row[row.row].adrmux
                     .unitram_config[col/6][col%6];
             unitram_config.unitram_type = 6;
             unitram_config.unitram_vpn = *vpn++;
@@ -585,11 +588,11 @@ void TernaryIndirectTable::write_regs() {
             else
                 unitram_config.unitram_egress = 1;
             unitram_config.unitram_enable = 1;
-            auto &xbar_ctl = stage->regs.rams.map_alu.row[row.row].vh_xbars
+            auto &xbar_ctl = regs.rams.map_alu.row[row.row].vh_xbars
                     .adr_dist_tind_adr_xbar_ctl[row.bus];
             setup_muxctl(xbar_ctl, tcam_id);
             if (gress)
-                stage->regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row.row);
+                regs.cfg_regs.mau_cfg_uram_thread[col/4U] |= 1U << (col%4U*8U + row.row);
             ram_row.tind_ecc_error_uram_ctl[gress] |= 1 << (col - 2); }
         int bus = row.row*2 + row.bus;
         merge.tind_ram_data_size[bus] = format->log2size - 1;
@@ -643,7 +646,7 @@ void TernaryIndirectTable::write_regs() {
                 merge.mau_idletime_adr_tcam_shiftcount[bus] = m.args[0].field()->bits[0].lo; }
             break; /* all must be the same, only config once */ }
     }
-    if (actions) actions->write_regs(this);
+    if (actions) actions->write_regs(regs, this);
 }
 
 void TernaryIndirectTable::add_field_to_pack_format(json::vector &field_list, int basebit,

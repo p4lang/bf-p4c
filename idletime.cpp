@@ -40,8 +40,9 @@ void IdletimeTable::pass2() {
 
 static int precision_bits[] = { 0, 0, 1, 2, 0, 0, 3 };
 
-void IdletimeTable::write_merge_regs(int type, int bus) {
-    auto &merge = stage->regs.rams.match.merge;
+template<class REGS>
+void IdletimeTable::write_merge_regs(REGS &regs, int type, int bus) {
+    auto &merge = regs.rams.match.merge;
     merge.mau_payload_shifter_enable[type][bus].idletime_adr_payload_shifter_en = 1;
     merge.mau_idletime_adr_mask[type][bus] = (~1U << precision_bits[precision]) & 0x1fffff;
     merge.mau_idletime_adr_default[type][bus] = 0x100000 | ((1 << precision_bits[precision]) - 1);
@@ -49,16 +50,17 @@ void IdletimeTable::write_merge_regs(int type, int bus) {
 
 int IdletimeTable::precision_shift() { return precision_bits[precision] + 1; }
 
-void IdletimeTable::write_regs() {
+template<class REGS>
+void IdletimeTable::write_regs(REGS &regs) {
     LOG1("### Idletime table " << name() << " write_regs");
-    auto &map_alu = stage->regs.rams.map_alu;
-    auto &adrdist = stage->regs.rams.match.adrdist;
+    auto &map_alu = regs.rams.map_alu;
+    auto &adrdist = regs.rams.match.adrdist;
     int minvpn = 1000000, maxvpn = -1;
     for (Layout &logical_row : layout)
         for (auto v : logical_row.vpns) {
             if (v < minvpn) minvpn = v;
             if (v > maxvpn) maxvpn = v; }
-    //stage->regs.cfg_regs.mau_cfg_lt_has_idle |= 1 << logical_id;
+    //regs.cfg_regs.mau_cfg_lt_has_idle |= 1 << logical_id;
     for (Layout &row : layout) {
         auto &map_alu_row = map_alu.row[row.row];
         auto &adrmux = map_alu_row.adrmux;
@@ -98,7 +100,7 @@ void IdletimeTable::write_regs() {
                 adrmux.idletime_cfg_rd_clear_val[col]
                     .set_subfield(clear_val, i*precision, precision);
             if (gress)
-                stage->regs.cfg_regs.mau_cfg_mram_thread[col/3U] |= 1U << (col%3U*8U + row.row); }
+                regs.cfg_regs.mau_cfg_mram_thread[col/3U] |= 1U << (col%3U*8U + row.row); }
         unsigned bus_index = row.bus;
         if (bus_index < 8 && row.row >= 4)
             bus_index += 10;
@@ -111,7 +113,7 @@ void IdletimeTable::write_regs() {
     adrdist.idletime_sweep_ctl[logical_id].idletime_sweep_remove_hole_pos = 0;  // TODO
     adrdist.idletime_sweep_ctl[logical_id].idletime_sweep_remove_hole_en = 0;  // TODO
     adrdist.idletime_sweep_ctl[logical_id].idletime_sweep_interval = sweep_interval;
-    auto &idle_dump_ctl = stage->regs.cfg_regs.idle_dump_ctl[logical_id];
+    auto &idle_dump_ctl = regs.cfg_regs.idle_dump_ctl[logical_id];
     idle_dump_ctl.idletime_dump_offset = minvpn;
     idle_dump_ctl.idletime_dump_size = maxvpn;
     idle_dump_ctl.idletime_dump_remove_hole_pos = 0;  // TODO

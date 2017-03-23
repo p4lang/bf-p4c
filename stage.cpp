@@ -172,22 +172,10 @@ void AsmStage::output() {
                 stage[i-1].group_table_use[gress] |= stage[i].group_table_use[gress]; }
     for (unsigned i = 0; i < stage.size(); i++) {
         // if  (stage[i].tables.empty()) continue;
-        json::map &names = TopLevel::all.name_lookup["stages"][std::to_string(i)];
-        Phv::output_names(names["containers"]);
-        json::map &table_names = names["logical_tables"];
-        for (auto table : stage[i].tables) {
-            table->write_regs();
-            table->gen_tbl_cfg(tbl_cfg);
-            if (table->logical_id >= 0)
-                table->gen_name_lookup(table_names[std::to_string(table->logical_id)]); }
-        stage[i].write_regs();
-        if (options.condense_json)
-            stage[i].regs.disable_if_zero();
-        stage[i].regs.emit_json(*open_output("regs.match_action_stage.%02x.cfg.json", i) , i);
-        char buf[64];
-        sprintf(buf, "regs.match_action_stage.%02x", i);
-        if (i < NUM_MAU_STAGES)
-            TopLevel::all.reg_pipe.mau[i] = buf; }
+        switch (options.target) {
+        case TOFINO: stage[i].output<Target::Tofino>(tbl_cfg); break;
+        case JBAY: stage[i].output<Target::JBay>(tbl_cfg); break;
+        default: assert(0); } }
     auto json_out = open_output("tbl-cfg");
     if (options.match_compiler)
         *json_out << "{ \"ContextJsonNode\": ";
@@ -205,22 +193,16 @@ Stage::Stage() {
     table_use[0] = table_use[1] = NONE;
     stage_dep[0] = stage_dep[1] = NONE;
     error_mode[0] = error_mode[1] = PROPAGATE;
-    declare_registers(&regs, stageno);
     for (int i = 0; i < SRAM_ROWS; i++)
         sram_use[i][0] = sram_use[i][1] = &invalid_rams;
 }
 
 Stage::~Stage() {
-    undeclare_registers(&regs);
 }
 
 Stage::Stage(Stage &&a) : Stage_data(std::move(a)) {
     for (auto ref : all_refs)
         *ref = this;
-    declare_registers(&regs, sizeof(regs),
-        [this](std::ostream &out, const char *addr, const void *end) {
-            out << "mau[" << stageno << "]";
-            regs.emit_fieldname(out, addr, end); });
 }
 
 int Stage::tcam_delay(gress_t gress) {
@@ -252,7 +234,7 @@ int Stage::pred_cycle(gress_t gress) {
     return 11 + tcam_delay(gress);
 }
 
-void Stage::write_regs() {
+template<class REGS> void Stage::write_regs(REGS &regs) {
     /* FIXME -- most of the values set here are 'placeholder' constants copied
      * from build_pipeline_output_2.py in the compiler */
     auto &merge = regs.rams.match.merge;
@@ -416,4 +398,27 @@ void Stage::write_regs() {
         for (auto &salu : regs.cfg_regs.mau_cfg_stats_alu_lt)
             if (!salu.modified())
                 salu = no_stats; }
+}
+
+template<class TARGET>
+void Stage::output(json::vector &tbl_cfg) {
+    typename TARGET::mau_regs regs;
+    declare_registers(&regs, stageno);
+    json::map &names = TopLevel::all.name_lookup["stages"][std::to_string(stageno)];
+    Phv::output_names(names["containers"]);
+    json::map &table_names = names["logical_tables"];
+    for (auto table : tables) {
+        table->write_regs(regs);
+        table->gen_tbl_cfg(tbl_cfg);
+        if (table->logical_id >= 0)
+            table->gen_name_lookup(table_names[std::to_string(table->logical_id)]); }
+    write_regs(regs);
+    if (options.condense_json)
+        regs.disable_if_zero();
+    regs.emit_json(*open_output("regs.match_action_stage.%02x.cfg.json", stageno) , stageno);
+    char buf[64];
+    sprintf(buf, "regs.match_action_stage.%02x", stageno);
+    if (stageno < NUM_MAU_STAGES)
+        TopLevel::all.reg_pipe.mau[stageno] = buf;
+    undeclare_registers(&regs);
 }
