@@ -6,7 +6,11 @@
 #include "gen/tofino/regs.ebp_rspec.h"
 #include "gen/tofino/regs.prsr_reg_merge_rspec.h"
 #include "gen/jbay/memories.prsr_mem_main_rspec.h"
-#include "gen/jbay/regs.parde_glue_stn_reg.h"
+#include "gen/jbay/regs.ipb_csr_regs.h"
+#include "gen/jbay/regs.epb_regs.h"
+#include "gen/jbay/regs.prsr_reg_main_rspec.h"
+#include "gen/jbay/regs.pmerge_reg.h"
+
 #include "gen/tofino/regs.mau_addrmap.h"
 #include "gen/jbay/regs.mau_addrmap.h"
 #include "gen/tofino/regs.dprsr_hdr.h"
@@ -37,7 +41,12 @@ class Target::Tofino : public Target {
 class Target::JBay : public Target {
  public:
     typedef ::JBay::memories_prsr_mem_main_rspec    parser_memory;
-    typedef ::JBay::regs_parde_glue_stn_reg         parser_regs;
+    struct                                          parser_regs {
+        ::JBay::regs_ipb_csr_regs                       ingress;
+        ::JBay::regs_epb_regs                           egress;
+        ::JBay::regs_prsr_reg_main_rspec                main;
+        ::JBay::regs_pmerge_reg                         merge;
+    };
     typedef ::JBay::regs_mau_addrmap                mau_regs;
     typedef ::JBay::regs_dprsr_reg                  deparser_regs;
 };
@@ -51,6 +60,7 @@ void undeclare_registers(const Target::Tofino::deparser_regs *regs);
 
 void declare_registers(const Target::JBay::parser_memory *mem, const char *gress);
 void declare_registers(const Target::JBay::parser_regs *regs);
+void undeclare_registers(const Target::JBay::parser_regs *regs);
 void declare_registers(const Target::JBay::mau_regs *regs, int stage);
 void declare_registers(const Target::JBay::deparser_regs *regs);
 

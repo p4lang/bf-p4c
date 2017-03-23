@@ -1,6 +1,8 @@
 GEN_JBAY := memories.jbay_mem memories.pipe_addrmap memories.prsr_mem_main_rspec \
-	    regs.dprsr_reg regs.jbay_reg regs.mau_addrmap regs.parde_glue_stn_reg \
-	    regs.pipe_addrmap
+	    regs.epb_regs regs.ipb_csr_regs regs.prsr_reg_main_rspec \
+	    regs.pipe_addrmap regs.pmerge_reg \
+	    regs.mau_addrmap \
+	    regs.dprsr_reg regs.jbay_reg
 default: $(GEN_JBAY:%=gen/jbay/%.h)
 
 JBAY_OBJS=$(GEN_JBAY:%=gen/jbay/%.o)

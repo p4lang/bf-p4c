@@ -8,7 +8,13 @@
         "regs":[
             "jbay_reg",
                 "pipe_addrmap",
-                    "parde_glue_stn_reg",
+                    #"parde_glue_stn_reg",
+                        "pmerge_reg",
+                        # ipb_prsr4_reg
+                            "ipb_csr_regs",
+                            "prsr_reg_main_rspec",
+                        # epb_prsr4_reg
+                            "epb_regs",
                     # mirr_ebuf_reg
                     "mau_addrmap",
                     "dprsr_reg",
@@ -30,6 +36,7 @@
                         "pgr_reg",
                         "s2p_reg",
                         "p2s_reg",
+                        "parde_glue_reg",
                     "mirr_ebuf_reg",
                     # dprsr_reg
                         # dprsr_reg_rspec
