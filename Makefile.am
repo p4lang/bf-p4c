@@ -241,3 +241,6 @@ p4c_tofino_SOURCES = \
 	$(tofino_backend_phv_SOURCES) \
 	$(tofino_backend_phv_or_tools_SOURCES) \
 	$(tofino_backend_main_SOURCES)
+
+p4c_PYTHON += $(srcdir)/%reldir%/driver/p4c.tofino.cfg
+
