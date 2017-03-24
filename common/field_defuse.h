@@ -5,6 +5,7 @@
 #include "ir/ir.h"
 #include "lib/symbitmatrix.h"
 #include "lib/ltbitmatrix.h"
+#include "lib/ordered_set.h"
 #include "tofino/phv/phv_fields.h"
 
 class FieldDefUse : public ControlFlowVisitor, public Inspector, P4WriteContext {
@@ -13,14 +14,15 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, P4WriteContext 
      * action used by mulitple tables), so we use a pair<Unit,Expr> to denote a particular
      * use or definition in the code */
     typedef std::pair<const IR::Tofino::Unit *, const IR::Expression*>  locpair;
+    typedef ordered_set<locpair> LocPairSet;
 
  private:
     const PhvInfo               &phv;
     SymBitMatrix                &conflict;
-    map<locpair, set<locpair>>  &uses, &defs;
+    ordered_map<locpair, LocPairSet>  &uses, &defs;
     struct info {
         const PhvInfo::Field    *field = 0;
-        set<locpair>            def, use;
+        LocPairSet            def, use;
     };
     std::unordered_map<int, info> defuse;
     class ClearBeforeEgress;
@@ -55,19 +57,19 @@ class FieldDefUse : public ControlFlowVisitor, public Inspector, P4WriteContext 
     { joinFlows = true; visitDagOnce = false; }
     const SymBitMatrix &conflicts() { return conflict; }
 
-    const set<locpair> &getDefs(locpair use) const {
-        static const set<locpair> emptyset;
+    const LocPairSet &getDefs(locpair use) const {
+        static const LocPairSet emptyset;
         return defs.count(use) ? uses.at(use) : emptyset; }
-    const set<locpair> &getDefs(const IR::Tofino::Unit *u, const IR::Expression *e) const {
+    const LocPairSet &getDefs(const IR::Tofino::Unit *u, const IR::Expression *e) const {
         return getDefs(locpair(u, e)); }
-    const set<locpair> &getDefs(const Visitor *v, const IR::Expression *e) const {
+    const LocPairSet &getDefs(const Visitor *v, const IR::Expression *e) const {
         return getDefs(locpair(v->findOrigCtxt<IR::Tofino::Unit>(), e)); }
-    const set<locpair> &getUses(locpair def) const {
-        static const set<locpair> emptyset;
+    const LocPairSet &getUses(locpair def) const {
+        static const LocPairSet emptyset;
         return uses.count(def) ? uses.at(def) : emptyset; }
-    const set<locpair> &getUses(const IR::Tofino::Unit *u, const IR::Expression *e) const {
+    const LocPairSet &getUses(const IR::Tofino::Unit *u, const IR::Expression *e) const {
         return getUses(locpair(u, e)); }
-    const set<locpair> &getUses(const Visitor *v, const IR::Expression *e) const {
+    const LocPairSet &getUses(const Visitor *v, const IR::Expression *e) const {
         return getUses(locpair(v->findOrigCtxt<IR::Tofino::Unit>(), e)); }
 };
 

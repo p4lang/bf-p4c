@@ -47,10 +47,10 @@ class CollectGatewayFields : public Inspector {
         bool                    need_range = false;
         uint64_t                need_mask = 0;
         vector<std::pair<int, bitrange>>        offsets; };
-    map<const PhvInfo::Field *, info_t>       info;
-    map<cstring, int>                         valid_offsets;
-    bool                                      need_range = false;
-    int                                       bytes, bits;
+    ordered_map<const PhvInfo::Field *, info_t>       info;
+    map<cstring, int>                                 valid_offsets;
+    bool                                              need_range = false;
+    int                                               bytes, bits;
     explicit CollectGatewayFields(const PhvInfo &phv, const IXBar::Use *ix = nullptr)
     : phv(phv), ixbar(ix) {}
     CollectGatewayFields(const PhvInfo &phv, unsigned rl) : phv(phv), row_limit(rl) {}
