@@ -3,12 +3,12 @@
 
 #include "sections.h"
 #include "phv.h"
-#include "target.h"
 #include <map>
 #include <vector>
 #include <set>
 #include "alloc.h"
 #include "bitvec.h"
+#include "ubits.h"
 
 enum {
     /* global constants related to parser */
@@ -22,14 +22,14 @@ enum {
 
 class Parser : public Section {
     int                                 lineno[2];
-    Target::Tofino::parser_memory       mem[2];
-    Target::Tofino::parser_regs         regs;
+    //Target::Tofino::parser_regs         regs;
     Parser();
     ~Parser();
     void start(int lineno, VECTOR(value_t) args);
     void input(VECTOR(value_t) args, value_t data);
     void process();
     void output();
+    template<class REGS> void write_config(REGS &);
     static Parser singleton_object;
     struct phv_output_map;
 
@@ -43,7 +43,7 @@ class Parser : public Section {
         bool equiv(const Checksum &) const;
         void pass1(Parser *);
         void pass2(Parser *);
-        void write_config(Parser *);
+        template<class REGS> void write_config(REGS &, Parser *);
     private:
         template <typename ROW> void write_row_config(ROW &row_regs);
     };
@@ -52,7 +52,7 @@ class Parser : public Section {
         int             add = 0, mask = 7, rot = 0, max = 255, src = -1;
         CounterInit(value_t &data);
         bool parse(value_t &exp, int what = 0);
-        void write_config(Parser *, gress_t, int);
+        template<class REGS> void write_config(REGS &, Parser *, gress_t, int);
         bool equiv(const CounterInit &a) const {
             /* ignoring lineno and offset fields */
             return add == a.add && mask == a.mask && rot == a.rot && max == a.max && src == a.src; }
@@ -115,7 +115,8 @@ class Parser : public Section {
                 Phv::Ref    where, second;
                 int         flags;
                 Save(gress_t, int l, int h, value_t &data, int flgs=0);
-                void write_output_config(phv_output_map *, unsigned &) const;
+                template<class REGS>
+                void write_output_config(REGS &, phv_output_map *, unsigned &) const;
                 OutputUse output_use() const;
             };
             std::vector<Save>               save;
@@ -124,7 +125,8 @@ class Parser : public Section {
                 int             what;
                 int             flags;
                 Set(gress_t gress, value_t &data, int v, int flgs=0);
-                void write_output_config(phv_output_map *, unsigned &) const;
+                template<class REGS>
+                void write_output_config(REGS &, phv_output_map *, unsigned &) const;
                 OutputUse output_use() const;
             };
             std::vector<Set>            set;
@@ -136,8 +138,8 @@ class Parser : public Section {
             void pass2(Parser *pa, State *state);
             OutputUse output_use() const;
             void merge_outputs(OutputUse);
-            void write_future_config(Parser *, State *, int) const;
-            void write_config(Parser *, State *, Match *);
+            template<class REGS> void write_future_config(REGS &, Parser *, State *, int) const;
+            template<class REGS> void write_config(REGS &, Parser *, State *, Match *);
         };
 
         std::string             name;
@@ -156,8 +158,9 @@ class Parser : public Section {
         void unmark_reachable(Parser *, bitvec &);
         void pass1(Parser *);
         void pass2(Parser *);
-        void write_lookup_config(Parser *, State *, int, const std::vector<State *> &);
-        void write_config(Parser *);
+        template<class REGS>
+        void write_lookup_config(REGS &, Parser *, State *, int, const std::vector<State *> &);
+        template<class REGS> void write_config(REGS &, Parser *);
     };
 public:
     std::map<std::string, State>        states[2];
@@ -184,7 +187,7 @@ private:
         ubits_base  *src;   /* 6 or 8 bits */
         ubits<1>    *src_type, *offset_add, *offset_rot;
     };
-    void setup_phv_output_map(phv_output_map *, gress_t, int);
+    template<class REGS> void setup_phv_output_map(REGS &, phv_output_map *, gress_t, int);
 };
 
 #endif /* _parser_h_ */

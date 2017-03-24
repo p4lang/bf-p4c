@@ -2,23 +2,18 @@
 #include "parser.h"
 #include "phv.h"
 #include "range.h"
+#include "target.h"
 #include "top_level.h"
 
 Parser Parser::singleton_object;
 
 Parser::Parser() : Section("parser") {
     lineno[0] = lineno[1] = 0;
-    declare_registers(&mem[INGRESS], "INGRESS");
-    declare_registers(&mem[EGRESS], "EGRESS");
-    declare_registers(&regs);
     hdr_len_adj[INGRESS] = 0;
     hdr_len_adj[EGRESS] = 2;
     meta_opt = 0;
 }
 Parser::~Parser() {
-    undeclare_registers(&mem[INGRESS]);
-    undeclare_registers(&mem[EGRESS]);
-    undeclare_registers(&regs);
 }
 
 void Parser::start(int lineno, VECTOR(value_t) args) {
@@ -235,15 +230,22 @@ void Parser::output() {
     for (auto st : all) st->pass2(this);
     if (error_count > 0) return;
     tcam_row_use[INGRESS] = tcam_row_use[EGRESS] = PARSER_TCAM_DEPTH;
-    for (auto st : all) st->write_config(this);
+    Target::Tofino::parser_regs       regs;
+    declare_registers(&regs);
+    write_config(regs);
+    undeclare_registers(&regs);
+}
+
+template<class REGS> void Parser::write_config(REGS &regs) {
+    for (auto st : all) st->write_config(regs, this);
     if (error_count > 0) return;
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         int i = 0;
         for (auto ctr : counter_init[gress]) {
-            if (ctr) ctr->write_config(this, gress, i);
+            if (ctr) ctr->write_config(regs, this, gress, i);
             ++i; }
         for (auto csum : checksum_use[gress])
-            if (csum) csum->write_config(this); }
+            if (csum) csum->write_config(regs, this); }
 
     init_common_regs(this, regs.ingress.prsr_reg, INGRESS);
     regs.ingress.ing_buf_regs.glb_group.disable();
@@ -289,13 +291,13 @@ void Parser::output() {
             regs.ingress.prsr_reg.no_multi_wr.t_nmw[i] = 1;
             regs.egress.prsr_reg.no_multi_wr.t_nmw[i] = 1; }
     if (!options.match_compiler) {
-        mem[INGRESS].disable_if_zero();
-        mem[EGRESS].disable_if_zero();
+        regs.memory[INGRESS].disable_if_zero();
+        regs.memory[EGRESS].disable_if_zero();
         regs.ingress.disable_if_zero();
         regs.egress.disable_if_zero();
         regs.merge.disable_if_zero(); }
-    mem[INGRESS].emit_json(*open_output("memories.all.parser.ingress.cfg.json"), "ingress");
-    mem[EGRESS].emit_json(*open_output("memories.all.parser.egress.cfg.json"), "egress");
+    regs.memory[INGRESS].emit_json(*open_output("memories.all.parser.ingress.cfg.json"), "ingress");
+    regs.memory[EGRESS].emit_json(*open_output("memories.all.parser.egress.cfg.json"), "egress");
     regs.ingress.emit_json(*open_output("regs.all.parser.ingress.cfg.json"));
     regs.egress.emit_json(*open_output("regs.all.parser.egress.cfg.json"));
     regs.merge.emit_json(*open_output("regs.all.parse_merge.cfg.json"));
@@ -398,11 +400,12 @@ void Parser::Checksum::write_row_config(ROW &row) {
     row.type = residual;
 }
 
-void Parser::Checksum::write_config(Parser *parser) {
+template <class REGS>
+void Parser::Checksum::write_config(REGS &regs, Parser *parser) {
     if (unit == 0)
-        write_row_config(parser->mem[gress].po_csum_ctrl_0_row[addr]);
+        write_row_config(regs.memory[gress].po_csum_ctrl_0_row[addr]);
     else if (unit == 1)
-        write_row_config(parser->mem[gress].po_csum_ctrl_1_row[addr]);
+        write_row_config(regs.memory[gress].po_csum_ctrl_1_row[addr]);
     else
         error(lineno, "invalid unit for checksum");
 }
@@ -517,8 +520,9 @@ bool Parser::CounterInit::parse(value_t &exp, int what) {
     return false;
 }
 
-void Parser::CounterInit::write_config(Parser *parser, gress_t gress, int idx) {
-    auto &ctr_init_ram = parser->mem[gress].ml_ctr_init_ram[idx];
+template <class REGS>
+void Parser::CounterInit::write_config(REGS &regs, Parser *parser, gress_t gress, int idx) {
+    auto &ctr_init_ram = regs.memory[gress].ml_ctr_init_ram[idx];
     ctr_init_ram.add = add;
     ctr_init_ram.mask = mask;
     ctr_init_ram.rotate = rot;
@@ -1076,11 +1080,12 @@ void Parser::State::pass2(Parser *pa) {
 /********* output *********/
 
 /* FIXME -- combine these two methods into a single method on MachKey */
-void Parser::State::write_lookup_config(Parser *pa, State *state, int row,
+template <class REGS>
+void Parser::State::write_lookup_config(REGS &regs, Parser *pa, State *state, int row,
                                         const std::vector<State *> &prev)
 {
     LOG2("-- checking match from state " << name << " (" << stateno << ')');
-    auto &ea_row = pa->mem[gress].ml_ea_row[row];
+    auto &ea_row = regs.memory[gress].ml_ea_row[row];
     for (int i = 0; i < 4; i++) {
         if (i == 1) continue;
         if (key.data[i].bit < 0) continue;
@@ -1106,8 +1111,9 @@ void Parser::State::write_lookup_config(Parser *pa, State *state, int row,
                 ea_row.ld_lookup_16 = 1; } } }
 }
 
-void Parser::State::Match::write_future_config(Parser *pa, State *state, int row) const {
-    auto &ea_row = pa->mem[state->gress].ml_ea_row[row];
+template <class REGS>
+void Parser::State::Match::write_future_config(REGS &regs, Parser *pa, State *state, int row) const {
+    auto &ea_row = regs.memory[state->gress].ml_ea_row[row];
     for (int i = 0; i < 4; i++) {
         if (i == 1) continue;
         if (future.data[i].bit < 0) continue;
@@ -1132,7 +1138,8 @@ enum {
     phv_output_map_size,
 };
 
-void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
+template <class REGS>
+void Parser::State::Match::write_config(REGS &regs, Parser *pa, State *state, Match *def) {
     int row;
     if ((row = --pa->tcam_row_use[state->gress]) < 0) {
         if (row == -1)
@@ -1140,8 +1147,8 @@ void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
                   state->gress ? "e" : "in");
         return; }
 
-    auto &word0 = pa->mem[state->gress].ml_tcam_row_word0[row];
-    auto &word1 = pa->mem[state->gress].ml_tcam_row_word1[row];
+    auto &word0 = regs.memory[state->gress].ml_tcam_row_word0[row];
+    auto &word1 = regs.memory[state->gress].ml_tcam_row_word1[row];
     match_t lookup = { 0, 0 };
     for (int i = 0; i < 4; i++) {
         lookup.word0 <<= 8;
@@ -1173,7 +1180,7 @@ void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
     word0.ver_0 = word1.ver_0 = 1;
     word0.ver_1 = word1.ver_1 = 1;
 
-    auto &ea_row = pa->mem[state->gress].ml_ea_row[row];
+    auto &ea_row = regs.memory[state->gress].ml_ea_row[row];
     if (counter | counter_reset | counter_load) {
         ea_row.ctr_amt_idx = counter;
         ea_row.ctr_ld_src = counter_load;
@@ -1184,11 +1191,11 @@ void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
         ea_row.ctr_load = def->counter_reset; }
     if (shift) ea_row.shift_amt = shift;
     else if (def) ea_row.shift_amt = def->shift;
-    write_future_config(pa, state, row);
+    write_future_config(regs, pa, state, row);
     if (auto &next = (!this->next && def) ? def->next : this->next) {
         std::vector<State *> prev;
         for (auto n : next) {
-            n->write_lookup_config(pa, state, row, prev);
+            n->write_lookup_config(regs, pa, state, row, prev);
             prev.push_back(n); }
         const match_t &n = next.pattern ? next.pattern : next->stateno;
         ea_row.nxt_state = n.word1;
@@ -1196,7 +1203,7 @@ void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
     } else
         ea_row.done = 1;
 
-    auto &action_row = pa->mem[state->gress].po_action_row[row];
+    auto &action_row = regs.memory[state->gress].po_action_row[row];
     for (auto &c : csum) {
         action_row.csum_en[c.unit] = 1;
         action_row.csum_addr[c.unit] = c.addr; }
@@ -1207,12 +1214,12 @@ void Parser::State::Match::write_config(Parser *pa, State *state, Match *def) {
         action_row.dst_offset_inc = def->offset;
         action_row.dst_offset_rst = def->offset_reset; }
     phv_output_map output_map[phv_output_map_size];
-    pa->setup_phv_output_map(output_map, state->gress, row);
+    pa->setup_phv_output_map(regs, output_map, state->gress, row);
     unsigned used = 0;
-    for (auto &s : set) s.write_output_config(output_map, used);
-    if (def) for (auto &s : def->set) s.write_output_config(output_map, used);
-    for (auto &s : save) s.write_output_config(output_map, used);
-    if (def) for (auto &s : def->save) s.write_output_config(output_map, used);
+    for (auto &s : set) s.write_output_config(regs, output_map, used);
+    if (def) for (auto &s : def->set) s.write_output_config(regs, output_map, used);
+    for (auto &s : save) s.write_output_config(regs, output_map, used);
+    if (def) for (auto &s : def->save) s.write_output_config(regs, output_map, used);
     for (int i = 0; i < phv_output_map_size; i++)
         if (!(used & (1U << i)))
             *output_map[i].dst = 0x1ff;
@@ -1262,7 +1269,8 @@ phv_8b_slots[] = {
     { 0, 0 }
 };
 
-void Parser::State::Match::Save::write_output_config(phv_output_map *map, unsigned &used) const
+template <class REGS>
+void Parser::State::Match::Save::write_output_config(REGS &regs, phv_output_map *map, unsigned &used) const
 {
     phv_use_slots *usable_slots;
     if (hi-lo == 3) {
@@ -1313,7 +1321,8 @@ static int encode_constant_for_slot(int slot, unsigned val) {
         return -1; }
 }
 
-void Parser::State::Match::Set::write_output_config(phv_output_map *map, unsigned &used) const
+template <class REGS>
+void Parser::State::Match::Set::write_output_config(REGS &regs, phv_output_map *map, unsigned &used) const
 {
     phv_use_slots *usable_slots;
     if (where->reg.size == 32)
@@ -1345,11 +1354,12 @@ void Parser::State::Match::Set::write_output_config(phv_output_map *map, unsigne
     error(where.lineno, "Ran out of phv output slots");
 }
 
-void Parser::State::write_config(Parser *pa) {
+template <class REGS>
+void Parser::State::write_config(REGS &regs, Parser *pa) {
     LOG2(gress << " state " << name << " (" << stateno << ')');
     for (auto i = match.begin(); i != match.end(); i++)
-        i->write_config(pa, this, def);
-    if (def) def->write_config(pa, this, 0);
+        i->write_config(regs, pa, this, def);
+    if (def) def->write_config(regs, pa, this, 0);
 }
 
 #define OUTPUT_MAP_INIT(MAP, ROW, SIZE, INDEX) \
@@ -1367,8 +1377,9 @@ void Parser::State::write_config(Parser *pa) {
     MAP[phv_##SIZE##b_##INDEX].offset_add = &ROW.phv_##SIZE##b_offset_add_dst_##INDEX;  \
     MAP[phv_##SIZE##b_##INDEX].offset_rot = 0;
 
-void Parser::setup_phv_output_map(phv_output_map *map, gress_t gress, int row) {
-    auto &action_row = mem[gress].po_action_row[row];
+template <class REGS>
+void Parser::setup_phv_output_map(REGS &regs, phv_output_map *map, gress_t gress, int row) {
+    auto &action_row = regs.memory[gress].po_action_row[row];
     OUTPUT_MAP_INIT(map, action_row, 32, 0)
     OUTPUT_MAP_INIT(map, action_row, 32, 1)
     OUTPUT_MAP_INIT_PART(map, action_row, 32, 2)

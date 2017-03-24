@@ -1,16 +1,13 @@
 #include "deparser.h"
 #include "phv.h"
 #include "range.h"
+#include "target.h"
 #include "top_level.h"
 
 Deparser Deparser::singleton_object;
 
-Deparser::Deparser() : Section("deparser") {
-    declare_registers(&regs);
-}
-Deparser::~Deparser() {
-    undeclare_registers(&regs);
-}
+Deparser::Deparser() : Section("deparser") { }
+Deparser::~Deparser() { }
 
 struct Deparser::Intrinsic {
     gress_t     gress;
@@ -23,20 +20,25 @@ protected:
         all[gress][name] = this; }
     ~Intrinsic() { all[gress].erase(name); }
 public:
-    virtual void setregs(Deparser *dep, std::vector<Phv::Ref> &vals) = 0;
+    virtual void setregs(Target::Tofino::deparser_regs &regs, std::vector<Phv::Ref> &vals) = 0;
+    virtual void setregs(Target::JBay::deparser_regs &regs, std::vector<Phv::Ref> &vals) = 0;
 };
 std::map<std::string, Deparser::Intrinsic *> Deparser::Intrinsic::all[2];
 #define INTRINSIC(GR, NAME, MAX, CODE) \
 static struct INTRIN##GR##NAME : public Deparser::Intrinsic {           \
     INTRIN##GR##NAME() : Deparser::Intrinsic(GR, #NAME, MAX) {}         \
-    void setregs(Deparser *dep, std::vector<Phv::Ref> &vals) { CODE; }  \
+    template<class REGS> void setregs(REGS &regs, std::vector<Phv::Ref> &vals) { CODE; }  \
+    void setregs(Target::Tofino::deparser_regs &regs, std::vector<Phv::Ref> &vals) {    \
+        setregs<Target::Tofino::deparser_regs>(regs, vals); }                           \
+    void setregs(Target::JBay::deparser_regs &regs, std::vector<Phv::Ref> &vals) {      \
+        /*setregs<Target::JBay::deparser_regs>(regs, vals);*/ assert(0); }              \
 } INTRIN##GR##NAME##_singleton;
 #define YES(X)  X
 #define NO(X)
 #define SIMPLE_INTRINSIC(GR, PFX, NAME, IF_SHIFT) INTRINSIC(GR, NAME, 1,\
-    dep->PFX.NAME.phv = vals[0]->reg.index;                             \
-    IF_SHIFT( dep->PFX.NAME.shft = vals[0]->lo; )                       \
-    dep->PFX.NAME.valid = 1; )
+    PFX.NAME.phv = vals[0]->reg.index;                                  \
+    IF_SHIFT( PFX.NAME.shft = vals[0]->lo; )                            \
+    PFX.NAME.valid = 1; )
 #define IIR_MAIN_INTRINSIC(NAME, SHFT) SIMPLE_INTRINSIC(INGRESS, regs.input.iir.main_i, NAME, SHFT)
 #define IIR_INTRINSIC(NAME, SHFT)      SIMPLE_INTRINSIC(INGRESS, regs.input.iir.ingr, NAME, SHFT)
 #define HIR_INTRINSIC(NAME, SHFT)      SIMPLE_INTRINSIC(INGRESS, regs.header.hir.ingr, NAME, SHFT)
@@ -49,17 +51,17 @@ IIR_INTRINSIC(copy_to_cpu, YES)
 INTRINSIC(INGRESS, egress_multicast_group, 2,
     int i = 0;
     for (auto &el : vals) {
-        dep->regs.header.hir.ingr.egress_multicast_group[i].phv = el->reg.index;
-        dep->regs.header.hir.ingr.egress_multicast_group[i++].valid = 1; } )
+        regs.header.hir.ingr.egress_multicast_group[i].phv = el->reg.index;
+        regs.header.hir.ingr.egress_multicast_group[i++].valid = 1; } )
 INTRINSIC(INGRESS, hash_lag_ecmp_mcast, 2,
     int i = 0;
     for (auto &el : vals) {
-        dep->regs.header.hir.ingr.hash_lag_ecmp_mcast[i].phv = el->reg.index;
-        dep->regs.header.hir.ingr.hash_lag_ecmp_mcast[i++].valid = 1; } )
+        regs.header.hir.ingr.hash_lag_ecmp_mcast[i].phv = el->reg.index;
+        regs.header.hir.ingr.hash_lag_ecmp_mcast[i++].valid = 1; } )
 HIR_INTRINSIC(copy_to_cpu_cos, YES)
 INTRINSIC(INGRESS, ingress_port_source, 1,
-    dep->regs.header.hir.ingr.ingress_port.phv = vals[0]->reg.index;
-    dep->regs.header.hir.ingr.ingress_port.sel = 0; )
+    regs.header.hir.ingr.ingress_port.phv = vals[0]->reg.index;
+    regs.header.hir.ingr.ingress_port.sel = 0; )
 HIR_INTRINSIC(deflect_on_drop, YES)
 HIR_INTRINSIC(meter_color, YES)
 HIR_INTRINSIC(icos, YES)
@@ -90,7 +92,8 @@ protected:
         assert(!all[gress].count(name)); all[gress][name] = this; }
     ~Type() { all[gress].erase(name); }
 public:
-    virtual void setregs(Deparser *dep, Deparser::Digest &data) = 0;
+    virtual void setregs(Target::Tofino::deparser_regs &regs, Deparser::Digest &data) = 0;
+    virtual void setregs(Target::JBay::deparser_regs &regs, Deparser::Digest &data) = 0;
 };
 Deparser::Digest::Digest(Deparser::Digest::Type *t, int lineno, VECTOR(pair_t) &data) {
     type = t;
@@ -117,10 +120,10 @@ std::map<std::string, Deparser::Digest::Type *> Deparser::Digest::Type::all[2];
 struct GRESS##NAME##Digest : public Deparser::Digest::Type {                    \
     GRESS##NAME##Digest() : Deparser::Digest::Type(GRESS, #NAME, CNT) {         \
         IFSHIFT( can_shift = true; ) }                                          \
-    void setregs(Deparser *dep, Deparser::Digest &data) {                       \
-        dep->CFG.phv = data.select->reg.index;                                  \
-        IFSHIFT( dep->CFG.shft = data.shift; )                                  \
-        dep->CFG.valid = 1;                                                     \
+    template<class REGS> void setregs(REGS &regs, Deparser::Digest &data) {     \
+        CFG.phv = data.select->reg.index;                                       \
+        IFSHIFT( CFG.shft = data.shift; )                                       \
+        CFG.valid = 1;                                                          \
         for (auto &set : data.layout) {                                         \
             int id = set.first >> data. shift;                                  \
             int idx = 0;                                                        \
@@ -128,11 +131,15 @@ struct GRESS##NAME##Digest : public Deparser::Digest::Type {                    
             for (auto &reg : set.second) {                                      \
                 if (first) {                                                    \
                     first = false;                                              \
-                    IFID( dep->TBL[id].id_phv = reg->reg.index; continue; ) }   \
+                    IFID( TBL[id].id_phv = reg->reg.index; continue; ) }        \
                 for (int i = reg->reg.size/8; i > 0; i--)                       \
-                    dep->TBL[id].phvs[idx++] = reg->reg.index; }                \
-            dep->TBL[id].valid = 1;                                             \
-            dep->TBL[id].len = idx; } }                                         \
+                    TBL[id].phvs[idx++] = reg->reg.index; }                     \
+            TBL[id].valid = 1;                                                  \
+            TBL[id].len = idx; } }                                              \
+    void setregs(Target::Tofino::deparser_regs &regs, Deparser::Digest &data) { \
+        setregs<Target::Tofino::deparser_regs>(regs, data); }                   \
+    void setregs(Target::JBay::deparser_regs &regs, Deparser::Digest &data) {   \
+        /*setregs<Target::JBay::deparser_regs>(regs, data);*/ assert(0); }      \
 } GRESS##NAME##Digest_singleton;
 #define YES(X)        X
 #define NO(X)
@@ -441,6 +448,13 @@ void output_phv_ownership(bitvec phv_use[2],
 void Deparser::output() {
     if (dictionary[INGRESS].empty() && dictionary[EGRESS].empty())
         return;
+    Target::Tofino::deparser_regs regs;
+    declare_registers(&regs);
+    write_config(regs);
+    undeclare_registers(&regs);
+}
+
+template<class REGS> void Deparser::write_config(REGS &regs) {
     regs.input.icr.inp_cfg.disable();
     regs.input.icr.intr.disable();
     regs.header.hem.he_edf_cfg.disable();
@@ -485,12 +499,12 @@ void Deparser::output() {
                       "egress deparser", i); } } }
 
     for (auto &intrin : intrinsics)
-        intrin.first->setregs(this, intrin.second);
+        intrin.first->setregs(regs, intrin.second);
     if (!regs.header.hir.ingr.ingress_port.sel.modified())
         regs.header.hir.ingr.ingress_port.sel = 1;
 
     for (auto &digest : digests)
-        digest.type->setregs(this, digest);
+        digest.type->setregs(regs, digest);
 
     if (!options.match_compiler) {
         regs.input.disable_if_zero();

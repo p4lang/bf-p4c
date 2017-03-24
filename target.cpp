@@ -1,13 +1,16 @@
+#include "asm-types.h"
 #include "target.h"
 #include "ubits.h"
 
-void declare_registers(const Target::Tofino::parser_memory *mem, const char *gress) {
-    declare_registers(mem, sizeof *mem,
-        [=](std::ostream &out, const char *addr, const void *end) {
-            out << "parser.mem[" << gress << "]";
-            mem->emit_fieldname(out, addr, end); });
-}
 void declare_registers(const Target::Tofino::parser_regs *regs) {
+    declare_registers(&regs->memory[INGRESS], sizeof regs->memory[INGRESS],
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "parser.mem[INGRESS]";
+            regs->memory[INGRESS].emit_fieldname(out, addr, end); });
+    declare_registers(&regs->memory[EGRESS], sizeof regs->memory[EGRESS],
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "parser.mem[EGRESS]";
+            regs->memory[EGRESS].emit_fieldname(out, addr, end); });
     declare_registers(&regs->ingress, sizeof regs->ingress,
         [=](std::ostream &out, const char *addr, const void *end) {
             out << "parser.ibp_reg";
@@ -22,6 +25,8 @@ void declare_registers(const Target::Tofino::parser_regs *regs) {
             regs->merge.emit_fieldname(out, addr, end); });
 }
 void undeclare_registers(const Target::Tofino::parser_regs *regs) {
+    undeclare_registers(&regs->memory[INGRESS]);
+    undeclare_registers(&regs->memory[EGRESS]);
     undeclare_registers(&regs->ingress);
     undeclare_registers(&regs->egress);
     undeclare_registers(&regs->merge);
@@ -47,13 +52,15 @@ void undeclare_registers(const Target::Tofino::deparser_regs *regs) {
     undeclare_registers(&regs->header);
 }
 
-void declare_registers(const Target::JBay::parser_memory *mem, const char *gress) {
-    declare_registers(mem, sizeof *mem,
-        [=](std::ostream &out, const char *addr, const void *end) {
-            out << "parser.mem[" << gress << "]";
-            mem->emit_fieldname(out, addr, end); });
-}
 void declare_registers(const Target::JBay::parser_regs *regs) {
+    declare_registers(&regs->memory[INGRESS], sizeof regs->memory[INGRESS],
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "parser.mem[INGRESS]";
+            regs->memory[INGRESS].emit_fieldname(out, addr, end); });
+    declare_registers(&regs->memory[EGRESS], sizeof regs->memory[EGRESS],
+        [=](std::ostream &out, const char *addr, const void *end) {
+            out << "parser.mem[EGRESS]";
+            regs->memory[EGRESS].emit_fieldname(out, addr, end); });
     declare_registers(&regs->ingress, sizeof regs->ingress,
         [=](std::ostream &out, const char *addr, const void *end) {
             out << "parser.ipb_reg";
@@ -72,6 +79,8 @@ void declare_registers(const Target::JBay::parser_regs *regs) {
             regs->merge.emit_fieldname(out, addr, end); });
 }
 void undeclare_registers(const Target::JBay::parser_regs *regs) {
+    undeclare_registers(&regs->memory[INGRESS]);
+    undeclare_registers(&regs->memory[EGRESS]);
     undeclare_registers(&regs->ingress);
     undeclare_registers(&regs->egress);
     undeclare_registers(&regs->main);

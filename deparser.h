@@ -3,7 +3,6 @@
 
 #include "sections.h"
 #include "phv.h"
-#include "target.h"
 #include <vector>
 
 enum {
@@ -25,7 +24,6 @@ public:
         Phv::Slice operator->() const { return **this; }
     };
     int                                             lineno[2];
-    Target::Tofino::deparser_regs                   regs;
     std::vector<std::pair<RefOrChksum, Phv::Ref>>   dictionary[2];
     std::vector<Phv::Ref>                           checksum[2][DEPARSER_CHECKSUM_UNITS];
     std::vector<Phv::Ref>                           pov_order[2];
@@ -47,6 +45,7 @@ public:
     void input(VECTOR(value_t) args, value_t data);
     void process();
     void output();
+    template<class REGS> void write_config(REGS &);
     static const bitvec &PhvUse(gress_t gr) {
         return singleton_object.phv_use[gr]; }
 };
