@@ -221,7 +221,7 @@ PHV_Bind::bind_fields_to_containers() {
             int container_bit = cc->lo();
             int width_in_container =
                     cc->field()->mau_phv_no_pack && !cc->field()->deparser_no_pack?
-                    const_cast<PHV_Container *>(c)->width():
+                    cc->field()->size:
                     cc->width();
             PHV::Container *asm_container = phv_to_asm_map_i[c];
             //
