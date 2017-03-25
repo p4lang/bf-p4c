@@ -22,7 +22,6 @@ enum {
 
 class Parser : public Section {
     int                                 lineno[2];
-    //Target::Tofino::parser_regs         regs;
     Parser();
     ~Parser();
     void start(int lineno, VECTOR(value_t) args);
@@ -31,7 +30,6 @@ class Parser : public Section {
     void output();
     template<class REGS> void write_config(REGS &);
     static Parser singleton_object;
-    struct phv_output_map;
 
     struct Checksum {
         int             lineno, addr = -1, unit = -1;
@@ -52,7 +50,7 @@ class Parser : public Section {
         int             add = 0, mask = 7, rot = 0, max = 255, src = -1;
         CounterInit(value_t &data);
         bool parse(value_t &exp, int what = 0);
-        template<class REGS> void write_config(REGS &, Parser *, gress_t, int);
+        template<class REGS> void write_config(REGS &, gress_t, int);
         bool equiv(const CounterInit &a) const {
             /* ignoring lineno and offset fields */
             return add == a.add && mask == a.mask && rot == a.rot && max == a.max && src == a.src; }
@@ -116,7 +114,7 @@ class Parser : public Section {
                 int         flags;
                 Save(gress_t, int l, int h, value_t &data, int flgs=0);
                 template<class REGS>
-                void write_output_config(REGS &, phv_output_map *, unsigned &) const;
+                int write_output_config(REGS &, void *, unsigned &) const;
                 OutputUse output_use() const;
             };
             std::vector<Save>               save;
@@ -126,7 +124,7 @@ class Parser : public Section {
                 int             flags;
                 Set(gress_t gress, value_t &data, int v, int flgs=0);
                 template<class REGS>
-                void write_output_config(REGS &, phv_output_map *, unsigned &) const;
+                void write_output_config(REGS &, void *, unsigned &) const;
                 OutputUse output_use() const;
             };
             std::vector<Set>            set;
@@ -138,7 +136,9 @@ class Parser : public Section {
             void pass2(Parser *pa, State *state);
             OutputUse output_use() const;
             void merge_outputs(OutputUse);
-            template<class REGS> void write_future_config(REGS &, Parser *, State *, int) const;
+            template<class REGS> int write_future_config(REGS &, Parser *, State *, int) const;
+            template<class REGS> void write_lookup_config(REGS &, State *, int) const;
+            template<class EA_REGS> void write_counter_config(EA_REGS &) const;
             template<class REGS> void write_config(REGS &, Parser *, State *, Match *);
         };
 
@@ -159,7 +159,7 @@ class Parser : public Section {
         void pass1(Parser *);
         void pass2(Parser *);
         template<class REGS>
-        void write_lookup_config(REGS &, Parser *, State *, int, const std::vector<State *> &);
+        int write_lookup_config(REGS &, Parser *, State *, int, const std::vector<State *> &);
         template<class REGS> void write_config(REGS &, Parser *);
     };
 public:
@@ -179,15 +179,8 @@ public:
     Alloc1D<CounterInit *, PARSER_CTRINIT_ROWS> counter_init[2];
 
 private:
-    /* remapping structure for getting at the config bits for phv output
-     * programming in a systematic way */
-    struct phv_output_map {
-        int         size;   /* 8, 16, or 32 */
-        ubits<9>    *dst;
-        ubits_base  *src;   /* 6 or 8 bits */
-        ubits<1>    *src_type, *offset_add, *offset_rot;
-    };
-    template<class REGS> void setup_phv_output_map(REGS &, phv_output_map *, gress_t, int);
+    template<class REGS> void *setup_phv_output_map(REGS &, gress_t, int);
+    template<class REGS> void mark_unused_output_map(REGS &, void *, unsigned);
 };
 
 #endif /* _parser_h_ */

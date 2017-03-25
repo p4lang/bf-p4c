@@ -28,6 +28,11 @@ class Target {
 class Target::Tofino : public Target {
  public:
     struct                                          parser_regs {
+        typedef ::Tofino::memories_all_parser_          _memory;
+        typedef ::Tofino::regs_all_parser_ingress       _ingress;
+        typedef ::Tofino::regs_all_parser_egress        _egress;
+        typedef ::Tofino::regs_all_parse_merge          _merge;
+
         ::Tofino::memories_all_parser_                  memory[2];
         ::Tofino::regs_all_parser_ingress               ingress;
         ::Tofino::regs_all_parser_egress                egress;
@@ -35,6 +40,9 @@ class Target::Tofino : public Target {
     };
     typedef ::Tofino::regs_match_action_stage_      mau_regs;
     struct                                          deparser_regs {
+        typedef ::Tofino::regs_all_deparser_input_phase         _input;
+        typedef ::Tofino::regs_all_deparser_header_phase        _header;
+
         ::Tofino::regs_all_deparser_input_phase         input;
         ::Tofino::regs_all_deparser_header_phase        header;
     };
@@ -43,10 +51,16 @@ class Target::Tofino : public Target {
 class Target::JBay : public Target {
  public:
     struct                                          parser_regs {
+        typedef ::JBay::memories_prsr_mem_main_rspec    _memory;
+        typedef ::JBay::regs_ipb_csr_regs               _ingress;
+        typedef ::JBay::regs_epb_regs                   _egress;
+        typedef ::JBay::regs_prsr_reg_main_rspec        _main;
+        typedef ::JBay::regs_pmerge_reg                 _merge;
+
         ::JBay::memories_prsr_mem_main_rspec            memory[2];
         ::JBay::regs_ipb_csr_regs                       ingress;
         ::JBay::regs_epb_regs                           egress;
-        ::JBay::regs_prsr_reg_main_rspec                main;
+        ::JBay::regs_prsr_reg_main_rspec                main[2];
         ::JBay::regs_pmerge_reg                         merge;
     };
     typedef ::JBay::regs_mau_addrmap                mau_regs;
