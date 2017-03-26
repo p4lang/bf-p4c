@@ -17,16 +17,22 @@
 //***********************************************************************************
 //
 class PHV_Field_Operations : public Inspector {
- public:
+    //
     // define enum INVALID, R, W, RW
-    explicit PHV_Field_Operations(PhvInfo &phv_f) : phv(phv_f) {}
+    //
  private:
-    PhvInfo &phv;         // phv object referenced through constructor
-    PhvInfo::Field *dst_i = nullptr;
-                                // destination of current statement
+    PhvInfo &phv;                     // phv object referenced through constructor
+    PhvInfo::Field *dst_i = nullptr;  // destination of current statement
     bool preorder(const IR::MAU::Instruction *p) override;
     void end_apply() override;
     void ceil_phv_use_width(PhvInfo::Field*);
+    //
+ public:
+    explicit PHV_Field_Operations(PhvInfo &phv_f) : phv(phv_f) {}
+    //
+    static bool constraint_no_cohabit_exlusive_mau(const PhvInfo::Field *field) {
+        return field->mau_phv_no_pack && !field->deparser_no_pack;
+    }
 };
 //
 //

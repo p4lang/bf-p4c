@@ -219,10 +219,7 @@ PHV_Bind::bind_fields_to_containers() {
             PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(cc->field());
             int field_bit = cc->field_bit_lo();
             int container_bit = cc->lo();
-            int width_in_container =
-                    cc->field()->mau_phv_no_pack && !cc->field()->deparser_no_pack?
-                    cc->field()->size:
-                    cc->width();
+            int width_in_container = cc->width();
             PHV::Container *asm_container = phv_to_asm_map_i[c];
             //
             // ignore allocation for owners of

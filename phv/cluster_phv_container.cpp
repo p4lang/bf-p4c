@@ -1,5 +1,6 @@
 #include "cluster_phv_container.h"
 #include "cluster_phv_mau.h"
+#include "cluster_phv_operations.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
 #include "base/logging.h"
@@ -169,7 +170,7 @@ PHV_Container::taint(
         int processed_width = 0;
         for (auto &member : field->ccgf_fields) {
             int use_width = (member->ccgf == member)? member->size : member->phv_use_width();
-            if (member->mau_phv_no_pack && !member->deparser_no_pack) {
+            if (PHV_Field_Operations::constraint_no_cohabit_exlusive_mau(member)) {
                 if (processed_width != 0) {
                     //
                     // entire phv_use_width to be allocated in stand-alone container
@@ -291,11 +292,11 @@ PHV_Container::taint(
         //
         status_i = Container_status::FULL;
         if (constraint_no_cohabit(field)) {
-            taint_color_i = '-';
+            char pad_color = '-';
             for (auto i=width_i - avail_bits_i;
                 i < width_i;
                 i++) {
-                 bits_i[i] = taint_color_i;
+                 bits_i[i] = pad_color;
             }
         }
     } else {

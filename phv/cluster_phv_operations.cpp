@@ -75,12 +75,12 @@ void PHV_Field_Operations::end_apply() {
             for (auto &op : f.operations) {
                 // element 0 in tuple is 'is_move_op'
                 if (std::get<0>(op) != true) {
-                    f.mau_phv_no_pack = true;
+                    f.mau_phv_no_pack = true;                     // set mau_phv_no_pack
                     //
                     // recompute phv_use_width
                     // do not change width for deparser fields
                     //
-                    if (!f.deparser_no_pack) {
+                    if (constraint_no_cohabit_exlusive_mau(&f)) {
                         ceil_phv_use_width(&f);
                     }
                     LOG3("...packing_constraint... " << f);
@@ -98,16 +98,16 @@ void PHV_Field_Operations::end_apply() {
 
 void PHV_Field_Operations::ceil_phv_use_width(PhvInfo::Field* f) {
     assert(f);
-    if (f->mau_phv_no_pack) {
-        if (f->size <= PHV_Container::PHV_Word::b8) {
-            f->phv_use_hi = PHV_Container::PHV_Word::b8 - 1;
+    assert(f->mau_phv_no_pack);
+    //
+    if (f->size <= PHV_Container::PHV_Word::b8) {
+        f->phv_use_hi = PHV_Container::PHV_Word::b8 - 1;
+    } else {
+        if (f->size <= PHV_Container::PHV_Word::b16) {
+            f->phv_use_hi = PHV_Container::PHV_Word::b16 - 1;
         } else {
-            if (f->size <= PHV_Container::PHV_Word::b16) {
-                f->phv_use_hi = PHV_Container::PHV_Word::b16 - 1;
-            } else {
-                if (f->size <= PHV_Container::PHV_Word::b32) {
-                    f->phv_use_hi = PHV_Container::PHV_Word::b32 - 1;
-                }
+            if (f->size <= PHV_Container::PHV_Word::b32) {
+                f->phv_use_hi = PHV_Container::PHV_Word::b32 - 1;
             }
         }
     }

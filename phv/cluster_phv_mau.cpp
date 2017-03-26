@@ -1,4 +1,5 @@
 #include "cluster_phv_mau.h"
+#include "cluster_phv_operations.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
 #include "base/logging.h"
@@ -660,7 +661,17 @@ PHV_MAU_Group_Assignments::container_no_pack(
                 // for each container assigned to cluster, taint bits that are filled
                 //
                 for (auto i=0, j=0; i < cl->cluster_vec().size(); i++) {
-                    auto field_width = cl->cluster_vec()[i]->phv_use_width();
+                    //
+                    const PhvInfo::Field *field = cl->cluster_vec()[i];
+                    //
+                    // phv_use_width can be inflated by Operations ceil_phv_use_width()
+                    // to compute accurate requirements
+                    // use correct amount to set cc->width
+                    //
+                    auto field_width =
+                        PHV_Field_Operations::constraint_no_cohabit_exlusive_mau(field)?
+                            std::min(field->size, field->phv_use_width()):
+                            field->phv_use_width();
                     for (auto field_stride=0;
                          j < req_containers && field_width > 0;
                          j++, field_stride++) {
@@ -669,7 +680,6 @@ PHV_MAU_Group_Assignments::container_no_pack(
                         field_width -= g->width();   // inner loop termination
                         //
                         PHV_Container *container = g->empty_container();
-                        const PhvInfo::Field *field = cl->cluster_vec()[i];
                         container->taint(
                             0,
                             taint_bits,
@@ -687,11 +697,11 @@ PHV_MAU_Group_Assignments::container_no_pack(
                         // placing field_a in 32b, field_e in 16b will cause mau group violation
                         // "registers in an instruction must all be in the same phv group"
                         //
-                        if (field->deparser_no_holes
+                        if (PHV_Container::constraint_no_holes(field)
+                            && !PHV_Container::constraint_no_cohabit(field)
                             && container->status() == PHV_Container::Container_status::PARTIAL
                             && cl->uniform_width()
-                            && cl->uniform_deparser_no_holes()
-                            && !field->mau_phv_no_pack) {
+                            && cl->uniform_deparser_no_holes()) {
                             //
                             // partial container with parser field
                             // parser / deparser require fully packed containers
@@ -1767,12 +1777,19 @@ void PHV_MAU_Group_Assignments::sanity_check_group_containers(const std::string&
         }
         int field_width = field->phv_use_width();
         if (field_width != width_in_c) {
-            LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****");
-            LOG1(msg);
             if (cc_s.size() > 1) {
+                LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****");
+                LOG1(msg);
                 LOG1(".....field duplicated in containers.....");
             } else {
-                LOG1(".....allocated space exceeds field width (non-uniform cluster ?).....");
+                LOG1("-----cluster_phv_mau.cpp:sanity_WARN-----");
+                LOG1(msg);
+                LOG1(".....allocated space exceeds field width.....");
+                if (PHV_Container::constraint_no_cohabit(field)) {
+                    LOG1(".....constraint_no_cohabit.....");
+                } else {
+                    LOG1(".....non-uniform? cluster.....");
+                }
             }
             LOG1(field);
             LOG1("width_in_c = " << width_in_c << ", phv_use_width = " << field_width);
