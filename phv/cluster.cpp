@@ -422,11 +422,20 @@ void Cluster::end_apply() {
 //
 
 void Cluster::compute_fields_no_use_mau() {
-    // set1 = all fields in phv
-    // set2 = cluster fields
-    // fields not used in mau pipe = set1 - set2 - POV fields
     //
-    std::set<const PhvInfo::Field *> s1;                               // all fields
+    // clear all computed & exported lists
+    //
+    pov_fields_i.clear();
+    pov_fields_not_in_cluster_i.clear();
+    fields_no_use_mau_i.clear();
+    //
+    std::set<const PhvInfo::Field *> s1;                               // all fields in phv_i
+    std::set<const PhvInfo::Field *> s2;                               // cluster fields
+    std::set<const PhvInfo::Field *> s3;                               // all fields-cluster fields
+                                                                       // s3 = s1 - s2
+    std::set<const PhvInfo::Field *> s4;                               // pov fields
+    std::set<const PhvInfo::Field *> s5;                               // fields not used in MAU
+                                                                       // s5 = s1 - s2 - s4
     pov_fields_i.clear();
     for (auto &field : phv_i) {
         s1.insert(&field);
@@ -443,14 +452,14 @@ void Cluster::compute_fields_no_use_mau() {
               && !field.ccgf->header_stack_pov_ccgf
               && !field.ccgf->simple_header_pov_ccgf))) {
             //
-            pov_fields_i.push_back(&field);
+            s4.insert(&field);                                         // pov field
         }
         // pov owners not part of MAU cluster, must be added to pov_fields
         //
         if (field.pov
            && (&field == field.ccgf && !dst_map_i.count(field.ccgf))) {
             //
-            pov_fields_i.push_back(&field);
+            s4.insert(&field);                                         // pov field
         }
         //
         // compute ccgf width
@@ -465,8 +474,8 @@ void Cluster::compute_fields_no_use_mau() {
             field.deparser_no_holes = true;
         }
     }
+    pov_fields_i.assign(s4.begin(), s4.end());                         // pov_fields_i
     LOG3(std::endl << "..........All fields (" << s1.size() << ")..........");
-    std::set<const PhvInfo::Field *> s2;                               // cluster fields
     for (auto &entry : dst_map_i) {
         if (entry.second) {
             s2.insert(entry.first);
@@ -484,17 +493,14 @@ void Cluster::compute_fields_no_use_mau() {
     LOG3("..........Cluster fields (" << s2.size() << ")..........");
     LOG3("..........POV fields (" << pov_fields_i.size() << ")..........");
     //
-    // all fields - cluster fields
+    // s3 = all fields (s1) - cluster fields (s2)
     //
-    std::set<const PhvInfo::Field *> s3;
     set_difference(s1.begin(), s1.end(), s2.begin(), s2.end(), std::inserter(s3, s3.end()));
     //
-    // s3 - pov fields
+    // s5 = s3 - pov fields (s4)
     //
     fields_no_use_mau_i.clear();
-    std::set<const PhvInfo::Field *> s4(pov_fields_i.begin(), pov_fields_i.end());
-    set_difference(s3.begin(), s3.end(), s4.begin(), s4.end(),
-        std::back_inserter(fields_no_use_mau_i));
+    set_difference(s3.begin(), s3.end(), s4.begin(), s4.end(), std::inserter(s5, s5.end()));
     //
     // pov fields not in cluster
     // pov_mau: pov intersect cluster fields
@@ -513,12 +519,13 @@ void Cluster::compute_fields_no_use_mau() {
     //
     // sanity check fields use
     //
-    std::set<const PhvInfo::Field *> s5(fields_no_use_mau_i.begin(), fields_no_use_mau_i.end());
-    sanity_check_fields_use("compute_fields_no_use_mau..", s1, s2, s3, s4, s5);
+    fields_no_use_mau_i.assign(s5.begin(), s5.end());                  // fields_no_use_mau_i
     //
     LOG3("..........Fields avoiding MAU pipe ("
         << fields_no_use_mau_i.size()
         << ")..........");
+    //
+    sanity_check_fields_use("compute_fields_no_use_mau..", s1, s2, s3, s4, s5);
     //
     // from T_PHV candidates,
     // discard the following
@@ -562,11 +569,13 @@ Cluster::sort_fields_remove_non_determinism() {
     // cause of non-determinism:
     // doing things that depend on where garbage collector puts stuff in memory (somewhat random)
     // generally by comparing pointers for order
-    // happens whenever iterate over `std::set` or `std::map` that uses a pointer type as the key
+    // happens whenever iterate over `set` or `map` that uses a pointer type as the key
     // best way to avoid is to use `ordered_set`/`ordered_map` types,
     // which track order of insertion & use that as iteration order.
-    // when cannot replace by ordered_ as we need "count", "set_difference", "set_intersection"
-    // result in std::list
+    // sometimes, can't avoid, need additional support functions in ordered_set
+    // e.g.,
+    // set_intersection, set_difference, insert ordered_set in (ordered_set of ordered_sets)
+    //
     // sort exported list fields by id
     //
     pov_fields_i.sort(
@@ -691,7 +700,7 @@ void Cluster::insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rh
                         dst_map_i[field] = dst_map_i[lhs];
                         lhs_unique_i.erase(field);                   // lhs_unique set erase field
                     }
-                    // delete dst_map_i_rhs;                            // delete std::set
+                    // delete dst_map_i_rhs;                         // delete std::set
                 }
             }
             LOG4("..... insert_cluster ....." << lhs);

@@ -65,7 +65,8 @@ class Cluster : public Inspector, P4WriteContext {
     void sanity_check_field_range(const std::string&);
     void sanity_check_clusters(const std::string&, const PhvInfo::Field *);
     void sanity_check_clusters_unique(const std::string&);
-    void sanity_check_fields_use(const std::string&,
+    void sanity_check_fields_use(
+        const std::string&,
         std::set<const PhvInfo::Field *>,       // all fields
         std::set<const PhvInfo::Field *>,       // cluster fields
         std::set<const PhvInfo::Field *>,       // all - cluster
