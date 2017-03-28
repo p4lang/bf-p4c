@@ -123,21 +123,9 @@ XFAIL_TESTS += \
 
 # These testcases taken from glass and xfail in brig
 XFAIL_TESTS += \
-    tofino/%reldir%/p4_14/test_config_121_tcam_range_5.p4.test.test \
-    tofino/%reldir%/p4_14/test_config_141_first_stateful_conga.p4.test.test \
-    tofino/%reldir%/p4_14/test_config_142_stateful_bfd.p4.test.test \
-    tofino/%reldir%/p4_14/test_config_171_stateful_conga.p4.test.test \
-    tofino/%reldir%/p4_14/test_config_183_sample_e2e.p4.test \
-    tofino/%reldir%/p4_14/test_config_234_ternary_valid.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_171_stateful_conga.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_183_sample_e2e.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_234_ternary_valid.p4.test \
     bmv2/%reldir%/p4_14/exclusive_cf_one_action_fail_after.p4.test \
     bmv2/%reldir%/p4_14/exclusive_cf_one_action_fail_before.p4.test \
-    bmv2/%reldir%/p4_14/test_config_171_stateful_conga.p4.test \
-    bmv2/%reldir%/p4_14/test_config_183_sample_e2e.p4.test \
-    bmv2/%reldir%/p4_14/test_config_190_modify_with_expr.p4.test \
-    bmv2/%reldir%/p4_14/test_config_234_ternary_valid.p4.test
+    bmv2/%reldir%/p4_14/test_config_190_modify_with_expr.p4.test
 
 # parser verify not supported
 XFAIL_TESTS += tofino/%reldir%/p4_16/ipv4_options.p4.test \
@@ -191,16 +179,19 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_214_full_stats.p4.test
 
 # P4_14->16 unhandled primitives
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_182_warp_primitive.p4.test
+XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_183_sample_e2e.p4.test \
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_191_invalidate.p4.test
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_219_modify_field_conditionally.p4.test
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_235_funnel_shift.p4.test
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_254_simple_exit.p4.test
 XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_182_warp_primitive.p4.test
+XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_183_sample_e2e.p4.test \
 XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_191_invalidate.p4.test
 XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_219_modify_field_conditionally.p4.test
 XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_235_funnel_shift.p4.test
 XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_254_simple_exit.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_182_warp_primitive.p4.test
+XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_183_sample_e2e.p4.test \
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_191_invalidate.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_219_modify_field_conditionally.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_235_funnel_shift.p4.test
@@ -229,6 +220,10 @@ XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/flowlet_switching.p4.test \
     tofino/%reldir%/p4_14/07-MacAddrCheck.p4.test \
     tofino/%reldir%/p4_14/08-MacAddrCheck1.p4.test
+
+# Masked table keys ignoring mask in table layout?
+XFAIL_TESTS += tofino/testdata/p4_14_samples/exact_match_mask1.p4.test
+XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/exact_match_mask1.p4.test
 
 # Parser failure.
 XFAIL_TESTS += \
