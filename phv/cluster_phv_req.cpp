@@ -224,7 +224,7 @@ Cluster_PHV::compute_requirements() {
         // <8:_32_16_16_16_16_16_16_16> => {9*b16} vs {8*b32}
         // <8:_16_16_16_16_16_16_16_9>  => {8*b16}
         //
-        auto scale_down = 0;
+        size_t scale_down = 0;
         for (auto &pfield : cluster_vec_i) {
             if (pfield->phv_use_width() * 2 <= container_width(max_width_i)) {
                 scale_down++;

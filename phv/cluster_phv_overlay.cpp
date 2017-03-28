@@ -66,7 +66,7 @@ bool Cluster_PHV_Overlay::overlay_cluster_to_group(Cluster_PHV *cl, PHV_MAU_Grou
     //    field f may need several containers, e.g., f:128 --> C1[32],C2,C3,C4
     //    each C single or partial field, e.g., f:24 --> C1[16], C2[8/16]
     //
-    auto req_containers = cl->num_containers();  // ?!
+    size_t req_containers = cl->num_containers();  // ?!
     if (g->width() < cl->width()) {
         // scale cl width down
         // <2:_48_32>{3*32} => <2:_48_32>{5*16}
@@ -77,7 +77,7 @@ bool Cluster_PHV_Overlay::overlay_cluster_to_group(Cluster_PHV *cl, PHV_MAU_Grou
     // Phase 1: test if cluster can overlay to containers in the same group.
     LOG3("... try to overlay cluster ..." << cl);
     std::vector<PHV_Container*>* cc_set = new std::vector<PHV_Container*>;
-    for (auto i=0, j=0; i < cl->cluster_vec().size(); i++) {
+    for (size_t i=0, j=0; i < cl->cluster_vec().size(); i++) {
         bool field_can_overlay = false;
         // field can be larger than one container..
         const PhvInfo::Field *field = cl->cluster_vec()[i];
@@ -118,8 +118,7 @@ bool Cluster_PHV_Overlay::overlay_cluster_to_group(Cluster_PHV *cl, PHV_MAU_Grou
     }
     // Phase 2: commit cluster to containers in the group.
     LOG3("... can overlay ..." << cc_set->size() << " containers.");
-    for (auto i=0, j=0; i < cl->cluster_vec().size(); i++) {
-        bool field_can_overlay = false;
+    for (size_t i=0, j=0; i < cl->cluster_vec().size(); i++) {
         const PhvInfo::Field *field = cl->cluster_vec()[i];
         auto field_width = field->phv_use_width();
         for (auto field_stride=0;

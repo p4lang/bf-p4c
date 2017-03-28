@@ -79,7 +79,7 @@ class Cluster_PHV {
     }
     //
     std::vector<const PhvInfo::Field *>& cluster_vec()  { return cluster_vec_i; }
-    const int id_num()                                  { return id_num_i; }
+    int id_num()                                        { return id_num_i; }
     std::string id()                                    { return id_i; }
     PHV_Container::Ingress_Egress gress()               { return gress_i; }
     PHV_Container::PHV_Word width()                     { return width_i; }

@@ -143,9 +143,9 @@ class FindDependencyGraph : public MauInspector, ControlFlowVisitor {
     typedef struct { set<const IR::MAU::Table*> read, write; } access_t;
 
   private:
-    map<cstring, access_t>                               access;
-    DependencyGraph                                      &dg;
     PhvInfo                                              &phv;
+    DependencyGraph                                      &dg;
+    map<cstring, access_t>                               access;
 
     void finalize_dependence_graph(void);
 

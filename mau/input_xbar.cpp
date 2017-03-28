@@ -1130,7 +1130,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
 }
 
 
-bool IXBar::allocSelector(const IR::ActionSelector *as, const IR::P4Table *match_table,
+bool IXBar::allocSelector(const IR::ActionSelector *, const IR::P4Table *match_table,
                           const PhvInfo &phv, Use &alloc, bool second_try, cstring name) {
     vector<IXBar::Use::Byte *>  alloced;
     set <cstring>               fields_needed;
@@ -1237,7 +1237,7 @@ bool IXBar::allocHashDistAddress(const HashDistReq &hash_dist_req,
         int extra_addr = hash_dist_req.bits_required(phv) - HASH_DIST_BITS;
         for (int j = 0; j < extra_addr; j++) {
             int index = j + 2 * HASH_DIST_BITS + address_group * 7;
-            if (used_hash_dist_bits & (1ULL < index)) {
+            if (used_hash_dist_bits & (1ULL << index)) {
                 collision = true;
                 break;
             }

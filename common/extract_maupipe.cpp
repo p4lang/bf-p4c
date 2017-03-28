@@ -116,14 +116,6 @@ static IR::ActionFunction *createActionFunction(P4::ReferenceMap *refMap, P4::Ty
     return rv;
 }
 
-static void setIntProperty(cstring name, int *val, const IR::PropertyValue *pval) {
-    if (auto *ev = pval->to<IR::ExpressionValue>()) {
-        if (auto *cv = ev->expression->to<IR::Constant>()) {
-            *val = cv->asInt();
-            return; } }
-    error("%s: %s property must be a constant", pval->srcInfo, name);
-}
-
 static IR::ID getAnnotID(const IR::Annotations *annot, cstring name) {
     if (auto a = annot->getSingle(name))
         if (a->expr.size() == 1)

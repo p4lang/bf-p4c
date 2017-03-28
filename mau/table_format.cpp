@@ -75,12 +75,12 @@ bool TableFormat::analyze_skinny_layout_option(int per_RAM, vector<std::pair<int
 /* Specifically for the allocation of groups that require multiple RAMs.  Determine where
    the overhead has to be, and which RAMs contain the particular match groups */
 bool TableFormat::analyze_wide_layout_option(vector<std::pair<int, int>> &sizes) {
-    int RAM_per = layout_option.way->width / layout_option.way->match_groups;
+    size_t RAM_per = layout_option.way->width / layout_option.way->match_groups;
     if (layout_option.way->width % layout_option.way->match_groups == 0
         && layout_option.way->match_groups != 1) {
         BUG("Ridiculous layout chosen.  Must be shrunken down");
     }
-    if (match_ixbar.groups_single() > RAM_per) {
+    if (size_t(match_ixbar.groups_single()) > RAM_per) {
         return false;  // FIXME: Again, can potentially be saved by ghosting off certain bits
     }
 
@@ -110,11 +110,11 @@ bool TableFormat::analyze_wide_layout_option(vector<std::pair<int, int>> &sizes)
     // Assigns the match group, overhead, and ixbar group information to the particular RAM
     int overhead_start = 0;
     bool single = layout_option.way->match_groups == 1;
-    for (int i = 0; i < layout_option.way->width; i++) {
+    for (size_t i = 0; int(i) < layout_option.way->width; i++) {
         if (i < layout_option.way->match_groups * RAM_per) {
             ixbar_group_per_width.push_back(sizes[i % RAM_per].first);
             match_groups_per_RAM.push_back(1);
-            if (single && i == layout_option.way->width - 1)
+            if (single && i == layout_option.way->width - 1U)
                 overhead_groups_per_RAM.push_back(1);
             else
                 overhead_groups_per_RAM.push_back(0);
@@ -200,7 +200,7 @@ bool TableFormat::allocate_next_table() {
         return true;
     int next_table_bits = ceil_log2(tbl->actions.size());
 
-    for (int i = 0; i < overhead_groups_per_RAM.size(); i++) {
+    for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
         for (int j = 0; j < overhead_groups_per_RAM[i]; j++) {
             size_t start = total_use.ffz(i * SINGLE_RAM_BITS);
             if (start + next_table_bits >= OVERHEAD_BITS + i * SINGLE_RAM_BITS)
@@ -217,7 +217,7 @@ bool TableFormat::allocate_next_table() {
    number of bits needed */
 bool TableFormat::allocate_indirect_ptr(int total, type_t type, int group, int RAM) {
     size_t start = total_use.ffz(RAM * SINGLE_RAM_BITS);
-    if (start + total >= OVERHEAD_BITS + RAM * SINGLE_RAM_BITS)
+    if (start + total >= size_t(OVERHEAD_BITS + RAM * SINGLE_RAM_BITS))
         return false;
     bitvec ptr_mask;
     ptr_mask.setrange(start, total);
@@ -230,7 +230,7 @@ bool TableFormat::allocate_indirect_ptr(int total, type_t type, int group, int R
    easiest to pack.  No gaps are possible at all within the indirect pointers */
 bool TableFormat::allocate_all_indirect_ptrs() {
      int group = 0;
-     for (int i = 0; i < overhead_groups_per_RAM.size(); i++) {
+     for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
          for (int j = 0; j < overhead_groups_per_RAM[i]; j++) {
              int total;
              if ((total = layout_option.layout->counter_overhead_bits) != 0) {
@@ -300,8 +300,8 @@ bool TableFormat::allocate_all_immediate(bool no_match) {
 
     // Allocate the immediate mask for each overhead section
     int group = 0;
-    for (int i = 0; i < overhead_groups_per_RAM.size(); i++) {
-        int start = total_use.ffz(i * SINGLE_RAM_BITS);
+    for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
+        size_t start = total_use.ffz(i * SINGLE_RAM_BITS);
         for (int j = 0; j < overhead_groups_per_RAM[i]; j++) {
             int shift = start + j * max_size;
             bitvec immediate_shift = immediate_mask << shift;
@@ -328,7 +328,7 @@ bool TableFormat::allocate_all_instr_selection() {
     bitvec instr_mask;
     instr_mask.setrange(0, instr_select);
     int group = 0;
-    for (int i = 0; i < overhead_groups_per_RAM.size(); i++) {
+    for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
         for (int j = 0; j < overhead_groups_per_RAM[i]; j++) {
             int start = use->match_groups[group].mask[IMMEDIATE].ffs();
             if (start == -1)
@@ -371,7 +371,7 @@ bool TableFormat::allocate_easy_bytes(bitvec &unaligned_bytes, bitvec &chosen_gh
         return false;
 
     int group = 0;
-    for (int i = 0; i < match_groups_per_RAM.size(); i++) {
+    for (size_t i = 0; i < match_groups_per_RAM.size(); i++) {
         for (int j = 0; j < match_groups_per_RAM[i]; j++) {
             for (auto mg : use->match_groups[group].match) {
                 LOG4("Group " << group << " Byte " << mg.first << " location "
@@ -575,7 +575,7 @@ bool TableFormat::allocate_byte_vector(vector<ByteInfo> &bytes, int prev_allocat
     bool ghost_anywhere) {
     // Save space for the lower 4 bytes and upper 2 bytes for potential gateway allocation
     int group = 0;
-    for (int i = 0; i < match_groups_per_RAM.size(); i++) {
+    for (size_t i = 0; i < match_groups_per_RAM.size(); i++) {
         int starting_byte = i * SINGLE_RAM_BYTES;
         for (int j = 0; j < match_groups_per_RAM[i]; j++) {
             bitvec all_bits = use->match_groups[group].allocated_bytes;
@@ -590,11 +590,11 @@ bool TableFormat::allocate_byte_vector(vector<ByteInfo> &bytes, int prev_allocat
 
     group = 0;
     // Use all space within a RAM, i.e. the lower 4 bytes and upper 2 bytes.
-    for (int i = 0; i < match_groups_per_RAM.size(); i++) {
+    for (size_t i = 0; i < match_groups_per_RAM.size(); i++) {
         int starting_byte = i * SINGLE_RAM_BYTES;
         for (int j = 0; j < match_groups_per_RAM[i]; j++) {
             bitvec all_bits = use->match_groups[group].allocated_bytes;
-            if (all_bits.popcount() == bytes.size() + prev_allocated) {
+            if (all_bits.popcount() == int(bytes.size()) + prev_allocated) {
                 group = determine_next_group(group, i);
                 continue;
             }
@@ -609,10 +609,10 @@ bool TableFormat::allocate_byte_vector(vector<ByteInfo> &bytes, int prev_allocat
 
     // Check to see if all match groups have allocated total space
     group = 0;
-    for (int i = 0; i < match_groups_per_RAM.size(); i++) {
+    for (size_t i = 0; i < match_groups_per_RAM.size(); i++) {
         for (int j = 0; j < match_groups_per_RAM[i]; j++) {
             bitvec all_bits = use->match_groups[group].allocated_bytes;
-            if (all_bits.popcount() != bytes.size() + prev_allocated) {
+            if (all_bits.popcount() != int(bytes.size()) + prev_allocated) {
                 // FIXME: Not yet doing sharing of groups that are too small
                 return false;
             }
@@ -662,7 +662,6 @@ bool TableFormat::allocate_all_match() {
         byte_use.push_back(total_use.getslice(i*8, 8));
     }
 
-    bool rv;
     int easy_size = 0;
     bitvec unaligned_bytes; bitvec chosen_ghost_bytes;
     determine_byte_types(unaligned_bytes, chosen_ghost_bytes);
@@ -681,9 +680,9 @@ bool TableFormat::allocate_one_version(int starting_byte, int group) {
     int version_check = starting_byte + VERSION_BYTES;
     for (int i = 0; i < VERSION_NIBBLES; i++) {
         int version_index = version_check * 8 + i * VERSION_BITS;
-        if (total_use.getrange(version_check * 8 + i * VERSION_BITS, VERSION_BITS)) continue;
+        if (total_use.getrange(version_index, VERSION_BITS)) continue;
         bitvec vers_mask(0, VERSION_BITS);
-        vers_mask <<= version_check * 8 + i * VERSION_BITS;
+        vers_mask <<= version_index;
         use->match_groups[group].mask[VERS] |= vers_mask;
         total_use |= vers_mask;
         byte_use[version_check + i / 2] |= vers_mask;
@@ -695,9 +694,9 @@ bool TableFormat::allocate_one_version(int starting_byte, int group) {
 
 /* Allocates the version for all match groups.  Again, this is a relatively simpler version */
 bool TableFormat::allocate_all_version() {
-    for (int i = 0; i < match_group_info.size(); i++) {
+    for (size_t i = 0; i < match_group_info.size(); i++) {
         bool allocated = false;
-        for (int j = 0; j < match_group_info[i].size(); j++) {
+        for (size_t j = 0; j < match_group_info[i].size(); j++) {
             int starting_byte = match_group_info[i][j] * SINGLE_RAM_BYTES;
             if (allocate_one_version(starting_byte, i)) {
                 allocated = true; break;
@@ -711,7 +710,6 @@ bool TableFormat::allocate_all_version() {
 /* This is a verification pass that guarantees that we don't have overlap.  More constraints can
    be checked as well.  */
 void TableFormat::verify() {
-    int group = 0;
     bitvec verify_mask;
 
     for (int i = 0; i < layout_option.way->match_groups; i++) {

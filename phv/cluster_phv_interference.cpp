@@ -324,7 +324,7 @@ void PHV_Interference::sanity_check_overlay_maps(
     //
     // min registers used + overlays = cl num_containers()
     //
-    if (reg_map.size() + num_overlays != cl->num_containers()) {
+    if (reg_map.size() + num_overlays != size_t(cl->num_containers())) {
         LOG1("*****cluster_phv_interference:sanity_FAIL*****" << msg_1);
         LOG1(" .....reconciliation issue..... min_regs = "
             << reg_map.size()

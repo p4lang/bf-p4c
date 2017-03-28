@@ -97,7 +97,7 @@ vector<Slice> Slice::split(const Slice &a, bool &split) {
             return vec;
         }
 
-        if (a.hi >= hi && a.lo < lo || a.hi > hi && a.lo <= lo) {
+        if ((a.hi >= hi && a.lo < lo) || (a.hi > hi && a.lo <= lo)) {
             BUG("Split cannot work on this scenario");
         }
     }

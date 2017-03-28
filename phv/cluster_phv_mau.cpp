@@ -633,7 +633,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
             //    field f may need several containers, e.g., f:128 --> C1[32],C2,C3,C4
             //    each C single or partial field, e.g., f:24 --> C1[16], C2[8/16]
             //
-            auto req_containers = cl->num_containers();
+            size_t req_containers = cl->num_containers();
             if (g->width() < cl->width()) {
                 // scale cl width down
                 // <2:_48_32>{3*32} => <2:_48_32>{5*16}
@@ -660,7 +660,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                 // pick next Empty container in MAU group g
                 // for each container assigned to cluster, taint bits that are filled
                 //
-                for (auto i=0, j=0; i < cl->cluster_vec().size(); i++) {
+                for (size_t i=0, j=0; i < cl->cluster_vec().size(); i++) {
                     //
                     const PhvInfo::Field *field = cl->cluster_vec()[i];
                     //
@@ -1204,7 +1204,7 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                         //
                         // container tracking based on cc_set ... <cl_n, cl_w>;
                         //
-                        auto field = 0;
+                        size_t field = 0;
                         auto field_bit_lo = 0;  // single field overlapping several containers
                         for (auto &cc : cc_set) {
                             // to honor alignment of fields in clusters
@@ -1518,7 +1518,7 @@ bool PHV_MAU_Group_Assignments::status(
 
 bool PHV_MAU_Group_Assignments::status(
     std::list<PHV_MAU_Group *>& phv_mau_groups,
-    const char *msg) {
+    const char * /*msg*/) {
     //
     if (phv_mau_groups.empty()) {
         LOG3("----------Status: NO MAU Groups w/ empty Containers Available----------"

@@ -56,7 +56,7 @@ class PHV_Container {
         const PhvInfo::Field *field()    { return field_i; }
         int field_bit_lo() const         { return field_bit_lo_i; }
         const PHV_Container *container() { return container_i; }
-        const char taint_color()         { return taint_color_i; }
+        char taint_color()               { return taint_color_i; }
         //
         void sanity_check_container(PHV_Container *, const std::string&);
     };

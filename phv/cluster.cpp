@@ -687,7 +687,6 @@ void Cluster::insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rh
                     }
                     // [b],[d],[x],[a],[u],[v]-->(a,u,v,b,d,x)
                     // lhs_unique set: -remove(b,d,x)
-                    ordered_set<const PhvInfo::Field *>* dst_map_i_rhs = dst_map_i[rhs];
                     for (auto field : *(dst_map_i[rhs])) {
                         dst_map_i[field] = dst_map_i[lhs];
                         lhs_unique_i.erase(field);                   // lhs_unique set erase field

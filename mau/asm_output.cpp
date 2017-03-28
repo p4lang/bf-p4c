@@ -37,7 +37,7 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
 }
 
 class MauAsmOutput::TableMatch {
-    const MauAsmOutput &self;
+    // const MauAsmOutput &self;
  public:
     vector<Slice>       match_fields;
     vector<Slice>       ghost_bits;
@@ -84,7 +84,7 @@ class MauAsmOutput::ImmedFormat {
         for (auto &arg : sorted_args) {
             if (byte >= 4) break;
             if (byte + arg.first / 8 > 4) continue;
-            int index = 0;
+            size_t index = 0;
             while (index < immediate_lengths.size()) {
                 int location = byte * 8;
                 if (immediate_lengths[index].first <= location
@@ -400,7 +400,7 @@ void MauAsmOutput::emit_ixbar_hash_dist_hash(std::ostream &out, indent_t indent,
 /* Emit the ixbar use for a particular type of table */
 void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
         const IXBar::Use &use, const Memories::Use *mem, const TableMatch *fmt,
-        bool hash_action, bool is_sel /*= false*/,
+        bool /*hash_action*/, bool is_sel /*= false*/,
         const IR::ActionSelector *as /*= nullptr */) const {
     map<int, map<int, Slice>> sort;
     emit_ixbar_ways(out, indent, use, mem, is_sel);
@@ -616,7 +616,7 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
             // Specifically, the immediate information may have to be broken up into mutliple
             // places
             if (type == TableFormat::IMMEDIATE) {
-                for (int i = 0; i < bits.size(); i++) {
+                for (size_t i = 0; i < bits.size(); i++) {
                     cstring name = format_name(type);
                     if (bits.size() > 1)
                         name = name + std::to_string(i);
@@ -636,7 +636,6 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
         bits.clear();
         int start = -1; int end = -1;
 
-        int total_amount;
         // For every single match byte information.  Have to understand the byte alignment in
         // PHV to understand exactly which bits to use
         for (auto match_byte : match_group.match) {
@@ -827,15 +826,14 @@ class MauAsmOutput::EmitAction : public Inspector {
 /* Information on which tables are matched and ghosted.  This is used by the emit table format,
    and the hashing information.  Comes directly from the table_format object in the resources
    of a table*/
-MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &s, const PhvInfo &phv,
-        const IR::MAU::Table *tbl) : self(s) {
+MauAsmOutput::TableMatch::TableMatch(const MauAsmOutput &, const PhvInfo &phv,
+        const IR::MAU::Table *tbl) /*: self(s)*/ {
     if (tbl->resources->table_format.match_groups.size() == 0)
         return;
 
     // Determine which fields are part of a table match.  If a field partially ghosted,
     // then this information is contained within the bitvec and the int of the match_info
     for (auto match_info : tbl->resources->table_format.match_groups[0].match) {
-        int i = 0;
         const IXBar::Use::Byte &byte = match_info.first;
         const std::pair<int, bitvec> &byte_layout = match_info.second;
         int lowest_part = byte.lo;
@@ -1388,9 +1386,9 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::TernaryIndirect *ti) {
     auto name = tbl->get_use_name(ti);
     out << indent++ << "ternary_indirect " << name << ':' << std::endl;
     self.emit_memory(out, indent, tbl->resources->memuse.at(name));
-    int action_fmt_size = ceil_log2(tbl->actions.size());
     self.emit_table_format(out, indent, tbl->resources->table_format, nullptr, true);
     /*
+    int action_fmt_size = ceil_log2(tbl->actions.size());
     out << indent << "format: { ";
     const char *sep = "";
     if (action_fmt_size > 0) {
