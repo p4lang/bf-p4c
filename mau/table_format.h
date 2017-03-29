@@ -61,7 +61,7 @@ struct TableFormat {
 
  private:
     Use *use;
-    const IR::MAU::Table::LayoutOption &layout_option;
+    const LayoutOption &layout_option;
     const IXBar::Use &match_ixbar;
     const IR::MAU::Table *tbl;
 
@@ -91,8 +91,7 @@ struct TableFormat {
     bitvec ghost_start;
 
  public:
-    TableFormat(const IR::MAU::Table::LayoutOption &l, const IXBar::Use &mi,
-                const IR::MAU::Table *t)
+    TableFormat(const LayoutOption &l, const IXBar::Use &mi, const IR::MAU::Table *t)
         : layout_option(l), match_ixbar(mi), tbl(t) {}
     bool find_format(Use *u);
     bool analyze_layout_option();

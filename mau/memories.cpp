@@ -47,7 +47,7 @@ void Memories::clear_table_vectors() {
 
 /* Creates a new table_alloc object for each of the taibles within the memory allocation */
 void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
-                         TableResourceAlloc *resources, const IR::MAU::Table::LayoutOption *lo,
+                         TableResourceAlloc *resources, const LayoutOption *lo,
                          int entries) {
     table_alloc *ta;
     if (t->match_table)
@@ -127,8 +127,8 @@ class SetupAttachedTables : public MauInspector {
         profile_t rv = MauInspector::init_apply(root);
         if (ta->layout_option == nullptr) return rv;
 
-        if (!ta->layout_option->layout->no_match_data() &&
-            ta->layout_option->layout->ternary_indirect_required()) {
+        if (!ta->layout_option->layout.no_match_data() &&
+            ta->layout_option->layout.ternary_indirect_required()) {
             auto name = ta->table->get_use_name(nullptr, false, IR::MAU::Table::TIND_NAME);
             (*ta->memuse)[name].type = Memories::Use::TIND;
             mem.tind_tables.push_back(ta);
@@ -136,13 +136,13 @@ class SetupAttachedTables : public MauInspector {
             mi.tind_RAMs += (entries + 1023U) / 1024U;
         }
 
-        if (ta->layout_option->layout->action_data_required()) {
+        if (ta->layout_option->layout.action_data_required()) {
             auto name = ta->table->get_use_name(nullptr, false, IR::MAU::Table::AD_NAME);
             (*ta->memuse)[name].type = Memories::Use::ACTIONDATA;
             mem.action_tables.push_back(ta);
             mi.action_tables++;
             int width = 1;
-            int per_row = ActionDataPerWord(ta->layout_option->layout, &width);
+            int per_row = ActionDataPerWord(&ta->layout_option->layout, &width);
             int depth = (entries + per_row * 1024 - 1) / (per_row * 1024);
             mi.action_bus_min += width; mi.action_RAMs += depth * width;
         }
@@ -297,7 +297,7 @@ bool Memories::analyze_tables(mem_info &mi) {
         }
         auto table = ta->table;
         int entries = ta->provided_entries;
-        if (ta->layout_option->layout->no_match_data()) {
+        if (ta->layout_option->layout.no_match_data()) {
             ta->calculated_entries = 512;
             if (ta->table->layout.hash_action)
                 hash_action_tables.push_back(ta);
@@ -310,8 +310,8 @@ bool Memories::analyze_tables(mem_info &mi) {
             (*ta->memuse)[name].type = Use::EXACT;
             exact_tables.push_back(ta);
             mi.match_tables++;
-            int width = ta->layout_option->way->width;
-            int groups = ta->layout_option->way->match_groups;
+            int width = ta->layout_option->way.width;
+            int groups = ta->layout_option->way.match_groups;
             int depth = ((entries + groups - 1U)/groups + 1023)/1024U;
             mi.match_bus_min += width;
             mi.match_RAMs += depth;
@@ -469,7 +469,7 @@ void Memories::break_exact_tables_into_ways() {
         assert(ta->match_ixbar->way_use.size() == ta->layout_option->way_sizes.size());
         for (auto &way : ta->match_ixbar->way_use) {
             SRAM_group *wa = new SRAM_group(ta, ta->layout_option->way_sizes[index],
-                                             ta->layout_option->way->width, index,
+                                             ta->layout_option->way.width, index,
                                              way.group, SRAM_group::EXACT);
             exact_match_ways.push_back(wa);
             (*ta->memuse)[name].ways.emplace_back(ta->layout_option->way_sizes[index],
@@ -1067,7 +1067,7 @@ void Memories::action_bus_meters_counters() {
 void Memories::find_action_bus_users() {
     for (auto *ta : action_tables) {
         int width = 1;
-        int per_row = ActionDataPerWord(ta->layout_option->layout, &width);
+        int per_row = ActionDataPerWord(&ta->layout_option->layout, &width);
         int depth = (ta->calculated_entries + per_row * 1024 - 1) / (per_row * 1024);
         for (int i = 0; i < width; i++) {
             action_bus_users.push_back(new SRAM_group(ta, depth, i, SRAM_group::ACTION));
@@ -1973,8 +1973,8 @@ bool Memories::gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int wid
     // FIXME: Needs to better orient with the layout
     int bytes_needed = exact_ta->table->layout.match_bytes;
     bytes_needed = (exact_ta->table->layout.overhead_bits + 7) / 8;
-    int groups = exact_ta->layout_option->way->match_groups;
-    int width = exact_ta->layout_option->way->width;
+    int groups = exact_ta->layout_option->way.match_groups;
+    int width = exact_ta->layout_option->way.width;
     bytes_needed *= groups * width;
     // FIXME: For version bits
     bytes_needed += groups / 2 * width;

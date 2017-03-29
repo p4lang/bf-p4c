@@ -114,40 +114,6 @@ class Table : Tofino::Unit {
     vector<Way>    ways;
     const TableResourceAlloc            *resources = nullptr;
 
-
-    class LayoutOption {
-        Layout layout;
-        Way way;  //Assumes all ways are the same size
-        vector<int> way_sizes;
-        int entries = 0;
-        int srams = 0; int maprams = 0; int tcams = 0;
-        toJSON {
-            json << json.indent << "\"layout\" : " << layout << ",\n"
-                 << json.indent << "\"way\" : " << way << ",\n"
-                 << json.indent << "\"way_sizes\" : " << way_sizes; }
-        fromJSON {
-            if (!json.json) return nullptr;
-            LayoutOption *rv = new LayoutOption();
-            json.load("layout", rv->layout);
-            json.load("way", rv->way);
-            json.load("way_sizes", rv->way_sizes);
-            return rv; }
-        LayoutOption() {}
-        LayoutOption(Layout l) : layout(l) {}
-        LayoutOption(Layout l, Way w) : layout(l), way(w) {}
-        operator== { return memcmp(this, &a, sizeof(LayoutOption)); }
-        void clear_mems() { srams = 0; maprams = 0; tcams = 0; entries = 0; way_sizes.clear(); }
-    }
-
-    vector<LayoutOption> layout_options;
-
-    class HashDistReq {
-        int total_bits_required = 0;
-        bool immediate = false;
-        bool address = false;
-        Primitive action; // Should be an instruction?
-        Attached attached;
-    }
 #emit
     static constexpr int TIND_NAME = 1;
     static constexpr int AD_NAME = 2;

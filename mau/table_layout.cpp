@@ -6,6 +6,7 @@
 
 Visitor::profile_t TableLayout::init_apply(const IR::Node *root) {
     alloc_done = phv.alloc_done();
+    lc.clear();
     return MauModifier::init_apply(root);
 }
 
@@ -127,7 +128,7 @@ static void setup_action_layout(IR::MAU::Table *tbl) {
             tbl->layout.action_data_bytes = action_data_bytes; }
 }
 
-static void setup_hash_dist(IR::MAU::Table *tbl, const PhvInfo &phv, HashDistChoices &hdc) {
+static void setup_hash_dist(IR::MAU::Table *tbl, const PhvInfo &phv, LayoutChoices &lc) {
     vector<HashDistReq> hash_dist_reqs;
     for (auto action : Values(tbl->actions)) {
         const IR::MAU::ActionFunctionEx *af = action->to<IR::MAU::ActionFunctionEx>();
@@ -146,7 +147,7 @@ static void setup_hash_dist(IR::MAU::Table *tbl, const PhvInfo &phv, HashDistCho
             }
         }
     }
-    hdc.total_hash_dist_reqs[tbl->name] = hash_dist_reqs;
+    lc.total_hash_dist_reqs[tbl->name] = hash_dist_reqs;
 }
 
 /* Setting up the potential layouts for ternary, either with or without immediate
@@ -155,21 +156,17 @@ void TableLayout::setup_ternary_layout_options(IR::MAU::Table *tbl, int immediat
                                                bool has_action_profile) {
     bool no_action_data = (tbl->layout.action_data_bytes == 0);
 
-    IR::MAU::Table::Layout *layout = new IR::MAU::Table::Layout();
-    *layout = tbl->layout;
-    IR::MAU::Table::LayoutOption lo(layout);
-    tbl->layout_options.push_back(lo);
-
+    IR::MAU::Table::Layout layout = tbl->layout;
+    LayoutOption lo(layout);
+    lc.total_layout_options[tbl->name].push_back(lo);
     if (no_action_data || has_action_profile
         || tbl->layout.action_data_bytes > 4 - immediate_bytes_reserved)
         return;
 
-    layout = new IR::MAU::Table::Layout();
-    *layout = tbl->layout;
-    layout->action_data_bytes_in_overhead = tbl->layout.action_data_bytes;
-    layout->overhead_bits += tbl->layout.action_data_bytes * 8;
-    IR::MAU::Table::LayoutOption lo_tern(layout);
-    tbl->layout_options.push_back(lo_tern);
+    layout.action_data_bytes_in_overhead = tbl->layout.action_data_bytes;
+    layout.overhead_bits += tbl->layout.action_data_bytes * 8;
+    LayoutOption lo_tern(layout);
+    lc.total_layout_options[tbl->name].push_back(lo_tern);
 }
 
 void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes) {
@@ -184,14 +181,13 @@ void TableLayout::setup_exact_match(IR::MAU::Table *tbl, int action_data_bytes) 
             width++;
         if (width > 8) break;
 
-        IR::MAU::Table::Layout *layout = new IR::MAU::Table::Layout();
-        IR::MAU::Table::Way *way = new IR::MAU::Table::Way();
-        *layout = tbl->layout;
-        layout->action_data_bytes_in_overhead = action_data_bytes;
-        layout->overhead_bits += action_data_bytes * 8;
-        way->match_groups = entry_count; way->width = width;
-        IR::MAU::Table::LayoutOption lo(layout, way);
-        tbl->layout_options.push_back(lo);
+        IR::MAU::Table::Layout layout = tbl->layout;
+        IR::MAU::Table::Way way;
+        layout.action_data_bytes_in_overhead = action_data_bytes;
+        layout.overhead_bits += action_data_bytes * 8;
+        way.match_groups = entry_count; way.width = width;
+        LayoutOption lo(layout, way);
+        lc.total_layout_options[tbl->name].push_back(lo);
     }
 }
 
@@ -210,17 +206,16 @@ void TableLayout::setup_layout_options(IR::MAU::Table *tbl, int immediate_bytes_
 /* FIXME: This function is for the setup of a table with no match data.  This is currently hacked
    together in order to pass many of the test cases */
 void TableLayout::setup_layout_option_no_match(IR::MAU::Table *tbl, int immediate_bytes_reserved) {
-    IR::MAU::Table::Layout *layout = new IR::MAU::Table::Layout();
-    *layout = tbl->layout;
-    if (layout->action_data_bytes - immediate_bytes_reserved <= 4) {
-        layout->action_data_bytes_in_overhead = layout->action_data_bytes;
+    IR::MAU::Table::Layout layout = tbl->layout;
+    if (layout.action_data_bytes - immediate_bytes_reserved <= 4) {
+        layout.action_data_bytes_in_overhead = layout.action_data_bytes;
     }
-    if (!hdc.get_hash_dist_req(tbl).empty()) {
+    if (!lc.get_hash_dist_req(tbl).empty()) {
         tbl->layout.hash_action = true;
-        layout->hash_action = true;
+        layout.hash_action = true;
     }
-    IR::MAU::Table::LayoutOption lo(layout);
-    tbl->layout_options.push_back(lo);
+    LayoutOption lo(layout);
+    lc.total_layout_options[tbl->name].push_back(lo);
 }
 
 namespace {
@@ -294,7 +289,7 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
     if ((tbl->layout.gateway = tbl->uses_gateway()))
         setup_gateway_layout(tbl->layout, tbl);
     setup_action_layout(tbl);
-    setup_hash_dist(tbl, phv, hdc);
+    setup_hash_dist(tbl, phv, lc);
     VisitAttached attached(&tbl->layout);
     for (auto at : tbl->attached)
         at->apply(attached);

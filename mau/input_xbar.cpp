@@ -793,9 +793,9 @@ static void add_use(IXBar::Use &alloc, const PhvInfo::Field *field,
 /* Simple first step that aligns with the possible options for layout option way sizes.
    For example, the max a way size can currently be will be 16, and at most 3 16 deep ways
    can be within a single column.  Thus it may need a second hash group */
-void IXBar::layout_option_calculation(const IR::MAU::Table::LayoutOption *layout_option,
+void IXBar::layout_option_calculation(const LayoutOption *layout_option,
                                       size_t &start, size_t &last) {
-    if (layout_option->layout->ternary) {
+    if (layout_option->layout.ternary) {
         start = 0; last = 0; return;
     }
     start = last;
@@ -916,7 +916,7 @@ void IXBar::getHashDistGroups(unsigned hash_table_input, int hash_group_opt[2]) 
 /* Allocate all hashes used within a hash group of a table. The number of hashes in the
    hash group are determined by the layout option */
 bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc,
-                             const IR::MAU::Table::LayoutOption *layout_option,
+                             const LayoutOption *layout_option,
                              size_t start, size_t last) {
     if (ternary)
         return true;
@@ -967,7 +967,7 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
 /* Individual Hash way allocated, called from allocAllHashWays.  Sets up the select bit
    mask provided by the layout option */
 bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
-                         const IR::MAU::Table::LayoutOption *layout_option,
+                         const LayoutOption *layout_option,
                          size_t index, size_t start, Use &alloc) {
     unsigned hash_table_input = alloc.compute_hash_tables();
     int hash_group = getHashGroup(hash_table_input);
@@ -1381,13 +1381,13 @@ bool IXBar::allocHashDist(const HashDistReq &hash_dist_req, const PhvInfo &phv, 
 }
 
 bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_alloc,
-                       Use &gw_alloc, Use &sel_alloc, const IR::MAU::Table::LayoutOption *lo,
+                       Use &gw_alloc, Use &sel_alloc, const LayoutOption *lo,
                        const vector<HashDistReq> &hash_dist_reqs) {
     if (!tbl) return true;
     /* Determine number of groups needed.  Loop through them, alloc match will be the same
        for these.  Alloc All Hash Ways will required multiple groups, and may need to change  */
     LOG1("IXBar::allocTable(" << tbl->name << ")");
-    if (tbl->match_table && !lo->layout->no_match_data()) {
+    if (tbl->match_table && !lo->layout.no_match_data()) {
         bool ternary = tbl->layout.ternary;
         vector<IXBar::Use::Byte *> alloced;
         vector<Use> all_tbl_allocs;

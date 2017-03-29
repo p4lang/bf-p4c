@@ -123,7 +123,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     MauAsmOutput mauasm(phv);
     Visitor *phv_alloc;
     ParserOverlay parserOverlay(phv, mutually_exclusive_field_ids);
-    HashDistChoices hdc;
+    LayoutChoices lc;
 
     if (options.trivial_phvalloc) {
         phv_alloc = new PHV::TrivialAlloc(phv, defuse.conflicts());
@@ -187,7 +187,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         phv_analysis,               // phv analysis after last &phv pass
 
         new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
-        new TableLayout(phv, hdc),
+        new TableLayout(phv, lc),
         new TableFindSeqDependencies,
         new FindDependencyGraph(phv, deps),
         Log::verbose() ? new VisitFunctor([&deps]() { std::cout << deps; }) : nullptr,
@@ -199,7 +199,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         &mutex,
         new DetermineActionProfileFaults(mutex),
         new DumpPipe("Before table placement"),
-        new TablePlacement(&deps, mutex, phv, hdc),
+        new TablePlacement(&deps, mutex, phv, lc),
         new CheckTableNameDuplicate,
         new TableFindSeqDependencies,  // not needed?
         new CheckTableNameDuplicate,

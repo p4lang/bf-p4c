@@ -6,8 +6,13 @@
 std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
     out << " id G                     name       xb  hb g sr tc mr ab" << std::endl;
     for (auto *t : Values(ts.order)) {
+        vector<LayoutOption> lo;
+        if (t->layout.ternary || t->layout.no_match_data())
+            lo.emplace_back(t->layout);
+        else
+            lo.emplace_back(t->layout, t->ways[0]);
         int entries = t->layout.entries;
-        StageUseEstimate use(t, entries, false, false, true);
+        StageUseEstimate use(t, entries, false, false, lo, true);
         out << hex(t->logical_id, 3) << ' ' << (t->gress ? 'E' : 'I')
             << ' ' << std::setw(30) << t->name
             << ' ' << std::setw(2) << t->layout.ixbar_bytes

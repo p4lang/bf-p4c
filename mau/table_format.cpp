@@ -11,11 +11,11 @@ bool TableFormat::analyze_layout_option() {
                                          layout_option.way_sizes.end());
 
     ghost_bits_count = RAM_GHOST_BITS + floor_log2(min_way_size);
-    int per_RAM = layout_option.way->match_groups / layout_option.way->width;
+    int per_RAM = layout_option.way.match_groups / layout_option.way.width;
     vector<std::pair<int, int>> sizes = match_ixbar.bits_per_group_single();
 
     vector<int> empty;
-    for (int i = 0; i < layout_option.way->match_groups; i++) {
+    for (int i = 0; i < layout_option.way.match_groups; i++) {
         match_group_info.push_back(empty);
         use->match_groups.emplace_back();
     }
@@ -43,14 +43,14 @@ bool TableFormat::analyze_skinny_layout_option(int per_RAM, vector<std::pair<int
     }
 
     int total = 0;
-    for (int i = 0; i < layout_option.way->width; i++) {
+    for (int i = 0; i < layout_option.way.width; i++) {
         match_groups_per_RAM.push_back(per_RAM);
         overhead_groups_per_RAM.push_back(per_RAM);
         total += per_RAM;
     }
 
     int i = match_groups_per_RAM.size() - 1;
-    while (total < layout_option.way->match_groups) {
+    while (total < layout_option.way.match_groups) {
         balanced = false;
         match_groups_per_RAM[i]++;
         overhead_groups_per_RAM[i]++;
@@ -59,14 +59,14 @@ bool TableFormat::analyze_skinny_layout_option(int per_RAM, vector<std::pair<int
     }
 
     int index = 0; int min_total = 0;
-    for (int i = 0; i < layout_option.way->match_groups; i++) {
+    for (int i = 0; i < layout_option.way.match_groups; i++) {
         if (min_total == match_groups_per_RAM[index])
             index++;
         match_group_info[i].push_back(index);
         min_total++;
     }
 
-    for (int i = 0; i < layout_option.way->width; i++) {
+    for (int i = 0; i < layout_option.way.width; i++) {
         ixbar_group_per_width.push_back(sizes[0].first);
     }
     return true;
@@ -75,9 +75,9 @@ bool TableFormat::analyze_skinny_layout_option(int per_RAM, vector<std::pair<int
 /* Specifically for the allocation of groups that require multiple RAMs.  Determine where
    the overhead has to be, and which RAMs contain the particular match groups */
 bool TableFormat::analyze_wide_layout_option(vector<std::pair<int, int>> &sizes) {
-    size_t RAM_per = layout_option.way->width / layout_option.way->match_groups;
-    if (layout_option.way->width % layout_option.way->match_groups == 0
-        && layout_option.way->match_groups != 1) {
+    size_t RAM_per = layout_option.way.width / layout_option.way.match_groups;
+    if (layout_option.way.width % layout_option.way.match_groups == 0
+        && layout_option.way.match_groups != 1) {
         BUG("Ridiculous layout chosen.  Must be shrunken down");
     }
     if (size_t(match_ixbar.groups_single()) > RAM_per) {
@@ -100,8 +100,8 @@ bool TableFormat::analyze_wide_layout_option(vector<std::pair<int, int>> &sizes)
     });
 
     // Check to see if two match groups can share the space within an individual RAM
-    if (layout_option.way->match_groups > 1) {
-        if (2 * (sizes.back().second + VERSION_BITS + layout_option.layout->overhead_bits)
+    if (layout_option.way.match_groups > 1) {
+        if (2 * (sizes.back().second + VERSION_BITS + layout_option.layout.overhead_bits)
             > SINGLE_RAM_BITS) {
             return false;
         }
@@ -109,12 +109,12 @@ bool TableFormat::analyze_wide_layout_option(vector<std::pair<int, int>> &sizes)
 
     // Assigns the match group, overhead, and ixbar group information to the particular RAM
     int overhead_start = 0;
-    bool single = layout_option.way->match_groups == 1;
-    for (size_t i = 0; int(i) < layout_option.way->width; i++) {
-        if (i < layout_option.way->match_groups * RAM_per) {
+    bool single = layout_option.way.match_groups == 1;
+    for (size_t i = 0; static_cast<int>(i) < layout_option.way.width; i++) {
+        if (i < layout_option.way.match_groups * RAM_per) {
             ixbar_group_per_width.push_back(sizes[i % RAM_per].first);
             match_groups_per_RAM.push_back(1);
-            if (single && i == layout_option.way->width - 1U)
+            if (single && i == layout_option.way.width - 1U)
                 overhead_groups_per_RAM.push_back(1);
             else
                 overhead_groups_per_RAM.push_back(0);
@@ -136,10 +136,10 @@ bool TableFormat::analyze_wide_layout_option(vector<std::pair<int, int>> &sizes)
 bool TableFormat::find_format(Use *u) {
     use = u;
     LOG3("Find format for table " << tbl->name);
-    if (layout_option.layout->ternary) {
+    if (layout_option.layout.ternary) {
         overhead_groups_per_RAM.push_back(1);
         use->match_groups.emplace_back();
-        if (!layout_option.layout->ternary_indirect_required())
+        if (!layout_option.layout.ternary_indirect_required())
             return true;
         if (!allocate_next_table())
             return false;
@@ -152,7 +152,7 @@ bool TableFormat::find_format(Use *u) {
         return true;
     }
 
-    if (layout_option.layout->no_match_data()) {
+    if (layout_option.layout.no_match_data()) {
         overhead_groups_per_RAM.push_back(1);
         use->match_groups.emplace_back();
         if (!allocate_all_immediate(true))
@@ -233,21 +233,21 @@ bool TableFormat::allocate_all_indirect_ptrs() {
      for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
          for (int j = 0; j < overhead_groups_per_RAM[i]; j++) {
              int total;
-             if ((total = layout_option.layout->counter_overhead_bits) != 0) {
+             if ((total = layout_option.layout.counter_overhead_bits) != 0) {
                  if (!allocate_indirect_ptr(total, COUNTER, group, i))
                      return false;
              }
 
-             if ((total = layout_option.layout->meter_overhead_bits) != 0) {
+             if ((total = layout_option.layout.meter_overhead_bits) != 0) {
                  if (!allocate_indirect_ptr(total, METER, group, i))
                      return false;
              }
 
-             if ((total = layout_option.layout->indirect_action_overhead_bits) != 0) {
+             if ((total = layout_option.layout.indirect_action_overhead_bits) != 0) {
                  if (!allocate_indirect_ptr(total, INDIRECT_ACTION, group, i))
                      return false;
              }
-             if ((total = layout_option.layout->selector_overhead_bits) != 0) {
+             if ((total = layout_option.layout.selector_overhead_bits) != 0) {
                  if (!allocate_indirect_ptr(total, SELECTOR, group, i))
                      return false;
              }
@@ -262,7 +262,7 @@ bool TableFormat::allocate_all_indirect_ptrs() {
    bit field has 7 free bits which can potentially be allocated into.  Thus the spaces
    are left open for space to be filled by either instr selection or match bytes */
 bool TableFormat::allocate_all_immediate(bool no_match) {
-    if (layout_option.layout->action_data_bytes_in_overhead == 0)
+    if (layout_option.layout.action_data_bytes_in_overhead == 0)
         return true;
 
     // Determine the spaces within the immediate format.  Must be the same for each entry
@@ -549,17 +549,17 @@ void TableFormat::easy_byte_fill(int RAM, int group, ByteInfo &byte, int &starti
    Essentially, an individual match group can be in multiple RAMs, and group cannot be 
    simply incremented */
 int TableFormat::determine_next_group(int current_group, int RAM) {
-    int per_RAM = layout_option.way->match_groups / layout_option.way->width;
+    int per_RAM = layout_option.way.match_groups / layout_option.way.width;
 
     if (per_RAM > 0)
         return current_group + 1;
 
-    int RAM_per = layout_option.way->width / layout_option.way->match_groups;
+    int RAM_per = layout_option.way.width / layout_option.way.match_groups;
 
-    if (RAM >= RAM_per * layout_option.way->match_groups)
+    if (RAM >= RAM_per * layout_option.way.match_groups)
         return current_group + 1;
     if (RAM % RAM_per == RAM_per - 1) {
-        if (RAM == RAM_per * layout_option.way->match_groups - 1)
+        if (RAM == RAM_per * layout_option.way.match_groups - 1)
             return 0;
         else
             return current_group + 1;
@@ -594,7 +594,7 @@ bool TableFormat::allocate_byte_vector(vector<ByteInfo> &bytes, int prev_allocat
         int starting_byte = i * SINGLE_RAM_BYTES;
         for (int j = 0; j < match_groups_per_RAM[i]; j++) {
             bitvec all_bits = use->match_groups[group].allocated_bytes;
-            if (all_bits.popcount() == int(bytes.size()) + prev_allocated) {
+            if (all_bits.popcount() == static_cast<int>(bytes.size()) + prev_allocated) {
                 group = determine_next_group(group, i);
                 continue;
             }
@@ -612,7 +612,7 @@ bool TableFormat::allocate_byte_vector(vector<ByteInfo> &bytes, int prev_allocat
     for (size_t i = 0; i < match_groups_per_RAM.size(); i++) {
         for (int j = 0; j < match_groups_per_RAM[i]; j++) {
             bitvec all_bits = use->match_groups[group].allocated_bytes;
-            if (all_bits.popcount() != int(bytes.size()) + prev_allocated) {
+            if (all_bits.popcount() != static_cast<int>(bytes.size()) + prev_allocated) {
                 // FIXME: Not yet doing sharing of groups that are too small
                 return false;
             }
@@ -658,7 +658,7 @@ void TableFormat::determine_byte_types(bitvec &unaligned_bytes, bitvec &chosen_g
 
 /* Total allocation scheme for all match data */
 bool TableFormat::allocate_all_match() {
-    for (int i = 0; i < SINGLE_RAM_BITS / 8 * layout_option.way->width; i++) {
+    for (int i = 0; i < SINGLE_RAM_BITS / 8 * layout_option.way.width; i++) {
         byte_use.push_back(total_use.getslice(i*8, 8));
     }
 
@@ -712,7 +712,7 @@ bool TableFormat::allocate_all_version() {
 void TableFormat::verify() {
     bitvec verify_mask;
 
-    for (int i = 0; i < layout_option.way->match_groups; i++) {
+    for (int i = 0; i < layout_option.way.match_groups; i++) {
         for (int j = ACTION; j <= SELECTOR; j++) {
             if ((verify_mask & use->match_groups[i].mask[j]).popcount() != 0)
                 BUG("Overlap of multiple things in the format");
@@ -720,7 +720,7 @@ void TableFormat::verify() {
         }
     }
 
-    for (int i = 0; i < layout_option.way->match_groups; i++) {
+    for (int i = 0; i < layout_option.way.match_groups; i++) {
         for (auto byte_info : use->match_groups[i].match) {
             std::pair<int, bitvec> &byte_mask = byte_info.second;
             if ((verify_mask & byte_mask.second).popcount() != 0)

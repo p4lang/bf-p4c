@@ -234,10 +234,10 @@ struct IXBar {
     int getHashGroup(unsigned hash_table_input);
     void getHashDistGroups(unsigned hash_table_input, int hash_group_opt[2]);
     bool allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc,
-                          const IR::MAU::Table::LayoutOption *layout_option,
+                          const LayoutOption *layout_option,
                           size_t start, size_t last);
     bool allocHashWay(const IR::MAU::Table *tbl,
-                      const IR::MAU::Table::LayoutOption *layout_option,
+                      const LayoutOption *layout_option,
                       size_t index, size_t start, Use &alloc);
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);
     bool allocSelector(const IR::ActionSelector *, const IR::P4Table *, const PhvInfo &phv,
@@ -245,7 +245,7 @@ struct IXBar {
     bool allocHashDist(const HashDistReq &hash_dist_req, const PhvInfo &phv, Use &alloc,
                        bool second_try, const IR::MAU::Table *tbl, cstring name);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_alloc, Use &gw_alloc,
-                    Use &sel_alloc, const IR::MAU::Table::LayoutOption *lo,
+                    Use &sel_alloc, const LayoutOption *lo,
                     const vector<HashDistReq> &hash_dist_reqs);
     void update_hash_dist(cstring name, const Use &alloc);
     void update(cstring name, const Use &alloc);
@@ -293,7 +293,7 @@ struct IXBar {
     bool small_grp_alloc(bool ternary, bool second_try, vector<IXBar::Use::Byte *> &unalloced,
                          vector<IXBar::Use::Byte *> &alloced, vector<grp_use *> &small_order,
                          vector<big_grp_use> &order, int &total_bytes_needed, bool hash_dist);
-    void layout_option_calculation(const IR::MAU::Table::LayoutOption *layout_option,
+    void layout_option_calculation(const LayoutOption *layout_option,
                                    size_t &start, size_t &last);
     void field_management(const IR::Expression *field, IXBar::Use &alloc,
         set<cstring> &fields_needed, bool hash_dist, cstring name, const PhvInfo &phv);

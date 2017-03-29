@@ -27,8 +27,23 @@ class HashDistReq {
     int bits_required(const PhvInfo &phv) const;
 };
 
-class HashDistChoices {
+class LayoutOption {
  public:
+    IR::MAU::Table::Layout layout;
+    IR::MAU::Table::Way way;
+    vector<int> way_sizes;
+    int entries = 0;
+    int srams = 0, maprams = 0, tcams = 0;
+    LayoutOption() {}
+    explicit LayoutOption(const IR::MAU::Table::Layout l) : layout(l) {}
+    LayoutOption(const IR::MAU::Table::Layout l, const IR::MAU::Table::Way w)
+                : layout(l), way(w) {}
+    void clear_mems() { srams = 0; maprams = 0; tcams = 0; entries = 0; way_sizes.clear(); }
+};
+
+class LayoutChoices {
+ public:
+    ordered_map<cstring, vector<LayoutOption>> total_layout_options;
     ordered_map<cstring, vector<HashDistReq>> total_hash_dist_reqs;
     vector<HashDistReq> get_hash_dist_req(const IR::MAU::Table *t) const {
         vector<HashDistReq> empty;
@@ -38,11 +53,24 @@ class HashDistChoices {
             return empty;
         return total_hash_dist_reqs.at(t->name);
     }
+
+    vector<LayoutOption> get_layout_options(const IR::MAU::Table *t) const {
+        vector<LayoutOption> empty;
+        if (t == nullptr)
+            return empty;
+        if (total_layout_options.find(t->name) == total_layout_options.end())
+            return empty;
+        return total_layout_options.at(t->name);
+    }
+    void clear() {
+        total_layout_options.clear();
+        total_hash_dist_reqs.clear();
+    }
 };
 
 class TableLayout : public MauModifier, Backtrack {
     const PhvInfo &phv;
-    HashDistChoices &hdc;
+    LayoutChoices &lc;
     bool alloc_done = false;
     profile_t init_apply(const IR::Node *root) override;
     bool backtrack(trigger &trig) override;
@@ -56,7 +84,7 @@ class TableLayout : public MauModifier, Backtrack {
                                       bool has_action_profile);
     void setup_layout_option_no_match(IR::MAU::Table *tbl, int immediate_bytes_reserved);
  public:
-    explicit TableLayout(const PhvInfo &phv, HashDistChoices &hdc) : phv(phv), hdc(hdc) {}
+    explicit TableLayout(const PhvInfo &p, LayoutChoices &l) : phv(p), lc(l) {}
 };
 
 #endif /* _TOFINO_MAU_TABLE_LAYOUT_H_ */

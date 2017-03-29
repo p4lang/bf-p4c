@@ -18,8 +18,8 @@
 #include "tofino/phv/phv_fields.h"
 
 TablePlacement::TablePlacement(const DependencyGraph* d, const TablesMutuallyExclusive &m,
-                               const PhvInfo &p, const HashDistChoices &h)
-: deps(d), mutex(m), phv(p), hdc(h) {}
+                               const PhvInfo &p, const LayoutChoices &l)
+: deps(d), mutex(m), phv(p), lc(l) {}
 
 Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
     alloc_done = phv.alloc_done();
@@ -271,7 +271,7 @@ static bool try_alloc_format(TablePlacement::Placed *next, TableResourceAlloc *r
 
 static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::Placed *done,
                             const PhvInfo &phv, StageUseEstimate &sue,
-                            TableResourceAlloc *resources, const HashDistChoices &hdc,
+                            TableResourceAlloc *resources, const LayoutChoices &lc,
                             bool is_gw) {
     resources->match_ixbar.clear();
     resources->gateway_ixbar.clear();
@@ -290,8 +290,8 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
         }
     }
 
-    const vector<HashDistReq> &hdr_match = hdc.get_hash_dist_req(next->table);
-    const vector<HashDistReq> &hdr_gw = hdc.get_hash_dist_req(next->gw);
+    const vector<HashDistReq> &hdr_match = lc.get_hash_dist_req(next->table);
+    const vector<HashDistReq> &hdr_gw = lc.get_hash_dist_req(next->gw);
     if (!current_ixbar.allocTable(next->table, phv, resources->match_ixbar,
                                   resources->gateway_ixbar, resources->selector_ixbar,
                                   sue.preferred(), hdr_match) ||
@@ -397,7 +397,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
     for (auto *p = done; p; p = p->prev) {
         if (p->name == rv->name) {
             prev_placed = true;
-            has_action_data = p->use.preferred()->layout->action_data_required();
+            has_action_data = p->use.preferred()->layout.action_data_required();
             if (p->need_more == false) {
                 LOG2(" - can't place as its already done");
                 return nullptr; }
@@ -406,8 +406,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
                  deps->happens_before(p->table, rv->table)) {
              rv->stage++; } }
     assert(!rv->placed[tblInfo.at(rv->table).uid]);
-
-    StageUseEstimate min_use(t, min_entries, prev_placed, has_action_data);
+    const vector<LayoutOption> layout_options = lc.get_layout_options(t);
+    StageUseEstimate min_use(t, min_entries, prev_placed, has_action_data, layout_options);
     StageUseEstimate stage_current = current;
     if (done && rv->stage != done->stage)
         stage_current.clear();
@@ -423,15 +423,15 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
         auto avail = StageUseEstimate::max();
         bool advance_to_next_stage = false;
         allocated = false; ixbar_allocation_bug = false; mem_allocation_bug = false;
-        rv->use = StageUseEstimate(t, rv->entries, prev_placed, has_action_data);
+        rv->use = StageUseEstimate(t, rv->entries, prev_placed, has_action_data, layout_options);
 
-        if (!try_alloc_ixbar(rv, done, phv, min_use, min_resources, hdc, rv->entries == 0)) {
+        if (!try_alloc_ixbar(rv, done, phv, min_use, min_resources, lc, rv->entries == 0)) {
             advance_to_next_stage = true;
             ixbar_allocation_bug = true;
             LOG3("Min Use ixbar allocation did not fit");
         }
 
-        if (!try_alloc_ixbar(rv, done, phv, rv->use, resources, hdc, rv->entries == 0)) {
+        if (!try_alloc_ixbar(rv, done, phv, rv->use, resources, lc, rv->entries == 0)) {
             advance_to_next_stage = true;
             ixbar_allocation_bug = true;
             LOG3("Table Use ixbar allocation did not fit");
@@ -481,7 +481,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
 
             LOG3(" - reducing to " << rv->entries << " of " << t->name
                  << " in stage " << rv->stage);
-            if (!try_alloc_ixbar(rv, done, phv, rv->use, resources, hdc, rv->entries == 0)) {
+            if (!try_alloc_ixbar(rv, done, phv, rv->use, resources, lc, rv->entries == 0)) {
                 ixbar_allocation_bug = true;
                 ERROR("IXBar Allocation error after previous allocation?");
                 advance_to_next_stage = true;
@@ -741,14 +741,13 @@ static void table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *r
 
 /* Sets the layout and ways for a table from the selected table layout option 
    from table placement */
-static void select_layout_option(IR::MAU::Table *tbl,
-                                 const IR::MAU::Table::LayoutOption *layout_option) {
-    tbl->layout = *(layout_option->layout);
-    if (!layout_option->layout->ternary) {
+static void select_layout_option(IR::MAU::Table *tbl, const LayoutOption *layout_option) {
+    tbl->layout = layout_option->layout;
+    if (!layout_option->layout.ternary) {
         tbl->ways.resize(layout_option->way_sizes.size());
         int index = 0;
         for (auto &way : tbl->ways) {
-            way = *(layout_option->way);
+            way = layout_option->way;
             way.entries = way.match_groups * 1024 * layout_option->way_sizes[index];
             index++;
         }
@@ -756,15 +755,14 @@ static void select_layout_option(IR::MAU::Table *tbl,
 }
 
 /* Adds the potential ternary tables necessary for layout options */
-static void add_attached_tables(IR::MAU::Table *tbl,
-                                const IR::MAU::Table::LayoutOption *layout_option) {
-    if (!layout_option->layout->no_match_data() &&
-        layout_option->layout->ternary_indirect_required()) {
+static void add_attached_tables(IR::MAU::Table *tbl, const LayoutOption *layout_option) {
+    if (!layout_option->layout.no_match_data() &&
+        layout_option->layout.ternary_indirect_required()) {
         LOG3("  Adding Ternary Indirect table to " << tbl->name);
         auto *tern_indir = new IR::MAU::TernaryIndirect(tbl->name);
         tbl->attached.push_back(tern_indir);
     }
-    if (layout_option->layout->action_data_required()) {
+    if (layout_option->layout.action_data_required()) {
         LOG3("  Adding Action Data Table to " << tbl->name);
         auto *act_data = new IR::MAU::ActionData(tbl->name);
         tbl->attached.push_back(act_data);
@@ -798,7 +796,6 @@ IR::Node *TablePlacement::preorder(IR::MAU::Table *tbl) {
         /* Generate the correct table layout from the options */
         gw_layout = tbl->layout;
         gw_layout_used = true;
-        tbl->layout_options = match->layout_options;
         select_layout_option(tbl, it->second->use.preferred());
         add_attached_tables(tbl, it->second->use.preferred());
         tbl->layout += gw_layout;
