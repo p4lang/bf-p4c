@@ -301,6 +301,9 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
         if (!hit_next.empty())
             error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
         else if (kv.value.type == tVEC) {
+            if (kv.value.vec.size > NEXT_TABLE_SUCCESSOR_TABLE_DEPTH)
+                error(kv.value.lineno, "More than %d hit entries not supported",
+                      NEXT_TABLE_SUCCESSOR_TABLE_DEPTH);
             for (auto &v : kv.value.vec)
                 if (CHECKTYPE(v, tSTR))
                     hit_next.emplace_back(v);
@@ -1089,7 +1092,7 @@ template<class REGS> void MatchTable::write_regs(REGS &regs, int type, Table *re
     Table *next = result->hit_next.size() > 0 ? result : this;
     if (next->hit_next.empty()) {
         /* nothing to do... */
-    } else if (next->hit_next.size() < NEXT_TABLE_SUCCESSOR_TABLE_DEPTH) {
+    } else if (next->hit_next.size() <= NEXT_TABLE_SUCCESSOR_TABLE_DEPTH) {
         merge.next_table_map_en |= (1U << logical_id);
         auto &mp = merge.next_table_map_data[logical_id];
         ubits<8> *map_data[8] = { &mp[0].next_table_map_data0, &mp[0].next_table_map_data1,
