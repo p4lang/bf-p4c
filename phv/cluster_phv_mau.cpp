@@ -677,16 +677,21 @@ PHV_MAU_Group_Assignments::container_no_pack(
                          j++, field_stride++) {
                         //
                         int taint_bits = std::min(field_width, static_cast<int>(g->width()));
-                        field_width -= g->width();   // inner loop termination
-                        //
                         PHV_Container *container = g->empty_container();
-                        container->taint(
-                            0,
-                            taint_bits,
-                            field,
-                            0 /* range_start */,
-                            field_stride * g->width() /* field_bit_lo */);
+                        int processed_bits =
+                            container->taint(
+                                0,
+                                taint_bits,
+                                field,
+                                0 /* range_start */,
+                                field_stride * g->width() /* field_bit_lo */);
                         LOG3(container);
+                        //
+                        // ccgf fields with members that have pack constraints may not be done yet
+                        // taint() sets field's hi reflecting balance remaining,
+                        // returns processed width
+                        //
+                        field_width -= processed_bits;  // inner loop termination
                         //
                         // check if this container is partially filled with parser field
                         // if field in MAU, avoid MAU Group violation, avoid relocation to another G

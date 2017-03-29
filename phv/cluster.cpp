@@ -700,7 +700,6 @@ void Cluster::insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rh
                         dst_map_i[field] = dst_map_i[lhs];
                         lhs_unique_i.erase(field);                   // lhs_unique set erase field
                     }
-                    // delete dst_map_i_rhs;                         // delete std::set
                 }
             }
             LOG4("..... insert_cluster ....." << lhs);

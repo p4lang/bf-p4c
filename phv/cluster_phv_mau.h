@@ -100,7 +100,7 @@ class PHV_MAU_Group {
     PHV_Container::Ingress_Egress gress()               { return gress_i; }
     int& empty_containers()                             { return empty_containers_i; }
     void inc_empty_containers() {
-        if (empty_containers_i < int(phv_containers_i.size())) {
+        if (empty_containers_i < static_cast<int>(phv_containers_i.size())) {
             empty_containers_i++;
         }
     }

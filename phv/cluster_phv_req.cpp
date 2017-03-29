@@ -230,7 +230,7 @@ Cluster_PHV::compute_requirements() {
                 scale_down++;
             }
         }
-        if (scale_down * 2 > cluster_vec_i.size()) {
+        if (scale_down * 2 >= cluster_vec_i.size()) {
             width_req = width_req / 2;
         }
     }
@@ -248,7 +248,7 @@ Cluster_PHV::compute_requirements() {
             num_fields_no_cohabit_i++;
         }
     }
-}
+}  // compute requirements
 
 //
 // given width of field, return container width required
@@ -288,8 +288,19 @@ Cluster_PHV::num_containers(
         // (i)  container single-write table interference
         // (ii) surround interference
         //
-        num_containers += pfield->phv_use_width() / width
-                       + (pfield->phv_use_width() % width? 1 : 0);
+        int field_width = pfield->phv_use_width();
+        if (pfield->ccgf_fields.size()) {
+            //
+            // each pack restriction requires additional container
+            //
+            for (auto &m : pfield->ccgf_fields) {
+                if (m->mau_phv_no_pack) {
+                    num_containers++;
+                    field_width -= m->phv_use_width();
+                }
+            }
+        }
+        num_containers += field_width / width + (field_width % width? 1 : 0);
     }
     if (num_containers > PHV_Container::Containers::MAX) {
         LOG1(

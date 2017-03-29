@@ -125,7 +125,7 @@ class PHV_Container {
     Container_status o_status()                                 { return o_status_i; }
     char *bits()                                                { return bits_i; }
     char *o_bits()                                              { return o_bits_i; }
-    void taint(
+    int taint(
         int start,
         int width,
         const PhvInfo::Field *field,

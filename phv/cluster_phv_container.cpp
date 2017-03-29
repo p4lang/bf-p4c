@@ -127,7 +127,7 @@ PHV_Container::create_ranges() {
     sanity_check_container_ranges(msg);
 }
 
-void
+int
 PHV_Container::taint(
     int start,
     int width,
@@ -169,9 +169,8 @@ PHV_Container::taint(
         int processed_members = 0;
         int processed_width = 0;
         for (auto &member : field->ccgf_fields) {
-            int use_width = (member->ccgf == member)? member->size : member->phv_use_width();
             if (PHV_Field_Operations::constraint_no_cohabit_exlusive_mau(member)) {
-                if (processed_width != 0) {
+                if (processed_width) {
                     //
                     // entire phv_use_width to be allocated in stand-alone container
                     // e.g., <3:_12_8_8>{4*8}[28]I( phv_0
@@ -181,33 +180,42 @@ PHV_Container::taint(
                     // :12]
                     //
                     break;
+                } else {
+                    //
+                    // account pad for no_pack constraint
+                    //
+                    assert(width_i >= member->size);
+                    int pad = width - member->size;
+                    start -= pad;                   // taint starts from RHS
+                    processed_width += pad;
                 }
             }
-            int member_bit_lo = member->phv_use_lo;
+            int use_width = member->size;           // always using size to taint container
             if (!member->simple_header_pov_ccgf) {  // ignore simple header ccgf
                 use_width -= member->phv_use_rem;
             }
             start -= use_width;
+            int member_bit_lo = member->phv_use_lo;
             if (start < 0) {
+                //
                 // member straddles containers
-                // remainder bits processed
-                // in subsequent container allocated to owner
+                // remainder bits processed in subsequent container allocated to owner
                 //
                 use_width += start;  // start is -ve
                 start = 0;
                 member_bit_lo = member->size - member->phv_use_rem - use_width;
                 member->phv_use_rem += use_width;  // spans several containers, aggregate used bits
             } else {
-                processed_members++;
                 member->phv_use_rem = 0;
+                processed_members++;
             }
-            member->ccgf = 0;  // recursive taint call should skip ccgf
+            member->ccgf = 0;        // recursive taint call should skip ccgf
             taint(start, use_width, member, start /*range start*/, member_bit_lo, process_overflow);
             processed_width += use_width;
             if (start <= 0) {
                 break;
             }
-        }
+        }  // for ccgf members
         // update ccgf owner record
         PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(field);
         f1->ccgf_fields.erase(
@@ -226,8 +234,9 @@ PHV_Container::taint(
                 new Container_Content(this, 0/*start*/, width, field, field_bit_lo, taint_color_i));
         }
 
-        return;
-    }
+        return processed_width;  // all bits of this field may NOT be processed
+    }  // ccgf field processing
+    //
     // taint() for overlay fields
     if (process_overflow) {
         o_taint_color_i += '1' - '0';
@@ -260,7 +269,7 @@ PHV_Container::taint(
         // sanity check?
         o_fields_in_container_i.push_back(
                 new Container_Content(this, start, width, field, field_bit_lo, taint_color_i));
-        return;
+        return width_i;  // return container width => all bits of this field are processed
     }
     //
     if (taint_color_i == '9') {
@@ -333,6 +342,8 @@ PHV_Container::taint(
             assert(phv_mau_group_i->gress() == gress_i);
         }
     }
+
+    return width_i;  // return container width => all bits of this field are processed
 }  // taint
 
 void PHV_Container::overlay_fields(
