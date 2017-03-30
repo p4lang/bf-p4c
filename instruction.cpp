@@ -51,7 +51,10 @@ struct operand {
             } else return false; }
         virtual Const *clone() { return new Const(*this); }
         int bits(int group) {
-            if (value >= -8 && value < 8)
+            int val = value;
+            if (val > 0 && ((val >> (group_size[group] - 1)) & 1))
+                val |= ~0UL << group_size[group];
+            if (val >= -8 && val < 8)
                 return value+24;
             error(lineno, "constant value %ld out of range for immediate", value);
             return -1; }
