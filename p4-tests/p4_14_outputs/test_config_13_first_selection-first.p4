@@ -178,20 +178,20 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_select") action action_select() {
+    @name(".action_select") action action_select() {
         hash<bit<8>, bit<32>, tuple<bit<32>, bit<8>, bit<64>>, bit<64>>(hdr.ipv4.blah2, HashAlgorithm.random, 32w0, { hdr.ipv4.blah1, hdr.ipv4.blah2, hdr.ipv4.blah3 }, 64w16384);
     }
-    @name("action_0") action action_0(bit<16> param0) {
+    @name(".action_0") action action_0(bit<16> param0) {
         hdr.ipv4.hdrChecksum = param0;
     }
-    @name("big_action") action big_action(bit<32> param0, bit<32> param1, bit<48> param2) {
+    @name(".big_action") action big_action(bit<32> param0, bit<32> param1, bit<48> param2) {
         hdr.ipv4.dstAddr = param0;
         hdr.ipv4.srcAddr = param1;
         hdr.ethernet.dstAddr = param2;
     }
-    @name("do_nothing") action do_nothing() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name("action_1") action action_1(bit<16> param1) {
+    @name(".action_1") action action_1(bit<16> param1) {
         hdr.ethernet.etherType = param1;
     }
     @name("table_group") table table_group {

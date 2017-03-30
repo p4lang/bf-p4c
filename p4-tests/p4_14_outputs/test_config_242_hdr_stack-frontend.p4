@@ -78,12 +78,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("action_0") action action_2(bit<8> p) {
+    @name(".action_0") action action_2(bit<8> p) {
         hdr.stack[0].z = meta.meta.z;
     }
-    @name("action_1") action action_3(bit<8> p) {
+    @name(".action_1") action action_3(bit<8> p) {
         hdr.stack[1].w = hdr.stack[2].x;
     }
     @name("table_i0") table table_i0_0 {

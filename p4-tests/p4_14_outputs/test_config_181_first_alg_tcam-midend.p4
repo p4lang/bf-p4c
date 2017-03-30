@@ -213,23 +213,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_7() {
     }
-    @name("ipv4_lpm_hit") action ipv4_lpm_hit_0() {
+    @name(".ipv4_lpm_hit") action ipv4_lpm_hit_0() {
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
-    @name("lpm_miss") action lpm_miss_0(bit<16> param0) {
+    @name(".lpm_miss") action lpm_miss_0(bit<16> param0) {
         hdr.ethernet.etherType = param0;
         mark_to_drop();
     }
-    @name("set_partition_index") action set_partition_index_0(bit<11> idx) {
+    @name(".set_partition_index") action set_partition_index_0(bit<11> idx) {
         meta.meta.partition_index = idx;
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("do_nothing") action do_nothing_1() {
+    @name(".do_nothing") action do_nothing_1() {
     }
-    @name("do_nothing_2") action do_nothing_4() {
+    @name(".do_nothing_2") action do_nothing_4() {
     }
-    @atcam_partition_index("meta.partition_index") @name("ipv4_alg_tcam") table ipv4_alg_tcam() {
+    @atcam_partition_index("meta.partition_index") @name("ipv4_alg_tcam") table ipv4_alg_tcam {
         actions = {
             ipv4_lpm_hit_0();
             lpm_miss_0();
@@ -243,7 +243,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = NoAction_0();
     }
-    @name("ipv4_lpm_partition") table ipv4_lpm_partition() {
+    @name("ipv4_lpm_partition") table ipv4_lpm_partition {
         actions = {
             set_partition_index_0();
             @default_only NoAction_5();
@@ -255,7 +255,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_5();
     }
-    @name("table_n") table table_n() {
+    @name("table_n") table table_n {
         actions = {
             do_nothing_0();
             do_nothing_4();
@@ -266,7 +266,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_6();
     }
-    @name("table_x") table table_x() {
+    @name("table_x") table table_x {
         actions = {
             do_nothing_1();
             @default_only NoAction_7();

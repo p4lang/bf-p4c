@@ -179,12 +179,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("stateful_cntr") register<bit<16>>(32w4294967295) stateful_cntr;
     @name("cntr") stateful_alu() cntr;
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("cnt") action cnt_0() {
+    @name(".cnt") action cnt_0() {
         cntr.execute_stateful_alu();
     }
-    @name("dummy") table dummy() {
+    @name("dummy") table dummy {
         actions = {
             do_nothing_0();
             @default_only NoAction_0();
@@ -194,7 +194,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name("match_cntr") table match_cntr() {
+    @name("match_cntr") table match_cntr {
         actions = {
             cnt_0();
             @default_only NoAction_3();

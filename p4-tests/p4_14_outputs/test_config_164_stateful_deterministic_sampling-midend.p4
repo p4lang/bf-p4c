@@ -192,17 +192,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("flow_cnt") register<bit<8>>(32w4294967295) flow_cnt;
     @name("sampler_alu") stateful_alu() sampler_alu;
-    @name("drop_me") action drop_me_0() {
+    @name(".drop_me") action drop_me_0() {
         mark_to_drop();
     }
-    @name("on_miss") action on_miss_0() {
+    @name(".on_miss") action on_miss_0() {
     }
-    @name("on_miss") action on_miss_2() {
+    @name(".on_miss") action on_miss_2() {
     }
-    @name("ipv4_fib_hit") action ipv4_fib_hit_0() {
+    @name(".ipv4_fib_hit") action ipv4_fib_hit_0() {
         sampler_alu.execute_stateful_alu();
     }
-    @name("check_needs") table check_needs() {
+    @name("check_needs") table check_needs {
         actions = {
             drop_me_0();
             on_miss_0();
@@ -213,7 +213,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name("ipv4_fib") table ipv4_fib() {
+    @name("ipv4_fib") table ipv4_fib {
         actions = {
             ipv4_fib_hit_0();
             @default_only on_miss_2();

@@ -155,12 +155,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name("modify_b") action modify_b_0(bit<8> my_param) {
+    @name(".modify_b") action modify_b_0(bit<8> my_param) {
         hdr.my_test_config_1.b_8 = my_param;
     }
-    @name("just_no_op") action just_no_op_0() {
+    @name(".just_no_op") action just_no_op_0() {
     }
-    @name("my_test_config_1_table") table my_test_config_1_table() {
+    @name("my_test_config_1_table") table my_test_config_1_table {
         actions = {
             modify_b_0();
             just_no_op_0();

@@ -42,10 +42,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_0") action action_0() {
+    @name(".action_0") action action_0() {
         hash(meta.meta.hash_1, HashAlgorithm.crc16, (bit<16>)0, { hdr.pkt.field_c_32, hdr.pkt.field_d_32 }, (bit<32>)16777216);
     }
-    @name("do_nothing") action do_nothing() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name("table_0") table table_0 {
         actions = {

@@ -241,12 +241,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name("nop") action nop_0() {
+    @name(".nop") action nop_0() {
     }
-    @name("udp_set_src") action udp_set_src_0(bit<16> port) {
+    @name(".udp_set_src") action udp_set_src_0(bit<16> port) {
         hdr.udp.srcPort = port;
     }
-    @immediate(1) @stage(0) @name("eg_udp") table eg_udp() {
+    @immediate(1) @stage(0) @name("eg_udp") table eg_udp {
         actions = {
             nop_0();
             udp_set_src_0();
@@ -266,18 +266,18 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    bit<8> ttl_1;
+    bit<8> ttl_0;
     @name("NoAction") action NoAction_1() {
     }
-    @name("nop") action nop_1() {
+    @name(".nop") action nop_1() {
     }
-    @name("hop_ipv4") action hop_ipv4_0(bit<9> egress_port) {
-        ttl_1 = hdr.ipv4.ttl;
-        ttl_1 = hdr.ipv4.ttl + 8w255;
+    @name(".hop_ipv4") action hop_ipv4_0(bit<9> egress_port) {
+        ttl_0 = hdr.ipv4.ttl;
+        ttl_0 = hdr.ipv4.ttl + 8w255;
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
-        hdr.ipv4.ttl = ttl_1;
+        hdr.ipv4.ttl = ttl_0;
     }
-    @stage(5) @name("tcam_range") table tcam_range() {
+    @stage(5) @name("tcam_range") table tcam_range {
         actions = {
             nop_1();
             hop_ipv4_0();
@@ -325,9 +325,11 @@ struct tuple_0 {
 }
 
 control computeChecksum(inout headers hdr, inout metadata meta) {
+    bit<16> tmp_0;
     @name("ipv4_chksum_calc") Checksum16() ipv4_chksum_calc;
     apply {
-        hdr.ipv4.hdrChecksum = ipv4_chksum_calc.get<tuple_0>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr });
+        tmp_0 = ipv4_chksum_calc.get<tuple_0>({ hdr.ipv4.version, hdr.ipv4.ihl, hdr.ipv4.diffserv, hdr.ipv4.totalLen, hdr.ipv4.identification, hdr.ipv4.flags, hdr.ipv4.fragOffset, hdr.ipv4.ttl, hdr.ipv4.protocol, hdr.ipv4.srcAddr, hdr.ipv4.dstAddr });
+        hdr.ipv4.hdrChecksum = tmp_0;
     }
 }
 

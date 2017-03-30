@@ -35,17 +35,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     tuple<bit<32>, bit<32>> tmp_2;
     bit<16> tmp_3;
     tuple<bit<32>, bit<32>> tmp_4;
-    @name("action1") action action1_0() {
+    @name(".action1") action action1_0() {
         tmp_0 = { hdr.packet.hash_field1, hdr.packet.hash_field2 };
         hash<bit<32>, bit<32>, tuple<bit<32>, bit<32>>, bit<64>>(tmp, HashAlgorithm.random, 32w0, tmp_0, 64w16777216);
         hdr.packet.hash_result1 = tmp;
     }
-    @name("action2") action action2_0() {
+    @name(".action2") action action2_0() {
         tmp_2 = { hdr.packet.hash_field3, hdr.packet.hash_field4 };
         hash<bit<32>, bit<32>, tuple<bit<32>, bit<32>>, bit<64>>(tmp_1, HashAlgorithm.random, 32w0, tmp_2, 64w256);
         hdr.packet.hash_result2 = tmp_1;
     }
-    @name("action3") action action3_0() {
+    @name(".action3") action action3_0() {
         tmp_4 = { hdr.packet.hash_field5, hdr.packet.hash_field6 };
         hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>>, bit<32>>(tmp_3, HashAlgorithm.crc16, 16w0, tmp_4, 32w8);
         hdr.packet.hash_result3 = tmp_3;

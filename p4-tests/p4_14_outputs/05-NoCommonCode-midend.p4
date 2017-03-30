@@ -164,16 +164,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_3() {
     }
-    @name("action1") action action1_0() {
+    @name(".action1") action action1_0() {
         meta.md.field1 = 1w0;
     }
-    @name("action2") action action2_0() {
+    @name(".action2") action action2_0() {
         meta.md.field1 = 1w1;
     }
-    @name("action2_1") action action2_2(bit<1> value) {
+    @name(".action2_1") action action2_2(bit<1> value) {
         meta.md.field2 = value;
     }
-    @name("dmac1") table dmac1() {
+    @name("dmac1") table dmac1 {
         actions = {
             action1_0();
             action2_0();
@@ -185,7 +185,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16536;
         default_action = NoAction_0();
     }
-    @name("dmac2") table dmac2() {
+    @name("dmac2") table dmac2 {
         actions = {
             action2_2();
             @default_only NoAction_3();

@@ -35,25 +35,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_3() {
     }
-    @name("setb1") action setb1_0(bit<8> val1) {
+    @name(".setb1") action setb1_0(bit<8> val1) {
         hdr.data.b1 = val1;
     }
-    @name("setb1") action setb1_2(bit<8> val1) {
+    @name(".setb1") action setb1_2(bit<8> val1) {
         hdr.data.b1 = val1;
     }
-    @name("setb2") action setb2_0(bit<8> val2) {
+    @name(".setb2") action setb2_0(bit<8> val2) {
         hdr.data.b2 = val2;
     }
-    @name("setb2") action setb2_2(bit<8> val2) {
+    @name(".setb2") action setb2_2(bit<8> val2) {
         hdr.data.b2 = val2;
     }
-    @name("setb3") action setb3_0(bit<8> val3) {
+    @name(".setb3") action setb3_0(bit<8> val3) {
         hdr.data.b3 = val3;
     }
-    @name("setb3") action setb3_2(bit<8> val3) {
+    @name(".setb3") action setb3_2(bit<8> val3) {
         hdr.data.b3 = val3;
     }
-    @name("test1") table test1() {
+    @name("test1") table test1 {
         actions = {
             setb1_0();
             setb2_0();
@@ -67,7 +67,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
         @name("set_b1_3") implementation = action_profile(32w1024);
     }
-    @name("test2") table test2() {
+    @name("test2") table test2 {
         actions = {
             setb1_2();
             setb2_2();

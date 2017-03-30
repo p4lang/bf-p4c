@@ -199,23 +199,23 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("set_all") action set_all_0(bit<32> p0, bit<4> p2, bit<16> p3) {
+    @name(".set_all") action set_all_0(bit<32> p0, bit<4> p2, bit<16> p3) {
         meta.meta.a = p0;
         meta.meta.c = p2;
         meta.meta.d = p3;
     }
-    @name("action_0") action action_2(bit<8> p0, bit<8> p1) {
+    @name(".action_0") action action_2(bit<8> p0, bit<8> p1) {
         meta.meta.a = 32w0;
         meta.meta.b = hdr.hdr_0.a_1;
         mark_to_drop();
     }
-    @name("action_1") action action_3(bit<16> p1, bit<8> p2) {
+    @name(".action_1") action action_3(bit<16> p1, bit<8> p2) {
         meta.meta.b = hdr.hdr_1.d_1;
         meta.meta.d = p1;
         meta.meta.c = meta.meta.c + 4w1;
         meta.meta.e = p2 - meta.meta.f;
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
     @name("table_i0") table table_i0_0 {
         actions = {

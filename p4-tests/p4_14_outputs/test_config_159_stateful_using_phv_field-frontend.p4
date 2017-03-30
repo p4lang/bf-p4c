@@ -175,7 +175,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @stateful_table_counter("table_hit") @name("flow_cnt") register<bit<16>>(32w4294967295) flow_cnt_0;
     @name("sampler_alu") stateful_alu() sampler_alu_0;
-    @name("sample") action sample_0() {
+    @name(".sample") action sample_0() {
         sampler_alu_0.execute_stateful_alu();
     }
     @name("match_tbl") table match_tbl_0 {

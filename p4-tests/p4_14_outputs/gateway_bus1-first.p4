@@ -32,16 +32,16 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("setb2_5") action setb2_5(bit<8> val2, bit<8> val3, bit<8> val4, bit<8> val5, bit<8> val6) {
+    @name(".setb2_5") action setb2_5(bit<8> val2, bit<8> val3, bit<8> val4, bit<8> val5, bit<8> val6) {
         hdr.data.b2 = val2;
         hdr.data.b3 = val3;
         hdr.data.b4 = val4;
         hdr.data.b5 = val5;
         hdr.data.b6 = val6;
     }
-    @name("noop") action noop() {
+    @name(".noop") action noop() {
     }
-    @name("setb1") action setb1(bit<8> val1, bit<9> port) {
+    @name(".setb1") action setb1(bit<8> val1, bit<9> port) {
         hdr.data.b1 = val1;
         standard_metadata.egress_spec = port;
     }

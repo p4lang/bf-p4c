@@ -177,10 +177,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("flow_cnt") register<bit<8>>(32w4294967295) flow_cnt;
     @name("sampler_alu") stateful_alu() sampler_alu;
-    @name("sample") action sample_0() {
+    @name(".sample") action sample_0() {
         sampler_alu.execute_stateful_alu();
     }
-    @name("match_tbl") table match_tbl() {
+    @name("match_tbl") table match_tbl {
         actions = {
             sample_0();
             @default_only NoAction_0();

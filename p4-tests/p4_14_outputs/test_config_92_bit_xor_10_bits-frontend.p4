@@ -157,10 +157,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_0") action action_1() {
+    @name(".action_0") action action_1() {
         meta.meta.field_a_10 = meta.meta.field_a_10 ^ meta.meta.field_b_10;
     }
-    @name("action_15") action action_2() {
+    @name(".action_15") action action_2() {
     }
     @name("table_0") table table_1 {
         actions = {

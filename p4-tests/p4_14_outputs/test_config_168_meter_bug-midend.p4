@@ -178,18 +178,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("NoAction") action NoAction_0() {
     }
     @name("exm_meter2") direct_meter<bit<8>>(CounterType.bytes) exm_meter2;
-    @name("action_0") action action_0() {
+    @name(".action_0") action action_0() {
         hdr.ipv4.ttl = 8w4;
         exm_meter2.read(hdr.ipv4.diffserv);
     }
-    @name("action_1") action action_1() {
+    @name(".action_1") action action_1() {
         hdr.ipv4.ttl = 8w5;
         exm_meter2.read(hdr.ipv4.diffserv);
     }
-    @name("nop") action nop() {
+    @name(".nop") action nop() {
         exm_meter2.read(hdr.ipv4.diffserv);
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             action_0();
             action_1();

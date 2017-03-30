@@ -43,7 +43,7 @@ control deparser(packet_out b, in packet_t hdrs, inout standard_metadata meta) {
     action act() {
         b.emit<data_h>(hdrs.data);
     }
-    table tbl_act() {
+    table tbl_act {
         actions = {
             act();
         }
@@ -58,7 +58,7 @@ control c(inout packet_t hdrs, inout standard_metadata meta) {
     @name("a") action a_0() {
         meta.egress_spec = 9w3;
     }
-    table tbl_a() {
+    table tbl_a {
         actions = {
             a_0();
         }

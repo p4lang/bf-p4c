@@ -34,28 +34,43 @@ struct tuple_0 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action1") action action1_0() {
-        hash<bit<32>, bit<32>, tuple_0, bit<64>>(hdr.packet.hash_result1, HashAlgorithm.random, 32w0, { hdr.packet.hash_field1, hdr.packet.hash_field2 }, 64w16777216);
+    bit<32> tmp_5;
+    tuple_0 tmp_6;
+    bit<32> tmp_7;
+    tuple_0 tmp_8;
+    bit<16> tmp_9;
+    tuple_0 tmp_10;
+    @name(".action1") action action1_0() {
+        tmp_6.field = hdr.packet.hash_field1;
+        tmp_6.field_0 = hdr.packet.hash_field2;
+        hash<bit<32>, bit<32>, tuple_0, bit<64>>(tmp_5, HashAlgorithm.random, 32w0, tmp_6, 64w16777216);
+        hdr.packet.hash_result1 = tmp_5;
     }
-    @name("action2") action action2_0() {
-        hash<bit<32>, bit<32>, tuple_0, bit<64>>(hdr.packet.hash_result2, HashAlgorithm.random, 32w0, { hdr.packet.hash_field3, hdr.packet.hash_field4 }, 64w256);
+    @name(".action2") action action2_0() {
+        tmp_8.field = hdr.packet.hash_field3;
+        tmp_8.field_0 = hdr.packet.hash_field4;
+        hash<bit<32>, bit<32>, tuple_0, bit<64>>(tmp_7, HashAlgorithm.random, 32w0, tmp_8, 64w256);
+        hdr.packet.hash_result2 = tmp_7;
     }
-    @name("action3") action action3_0() {
-        hash<bit<16>, bit<16>, tuple_0, bit<32>>(hdr.packet.hash_result3, HashAlgorithm.crc16, 16w0, { hdr.packet.hash_field5, hdr.packet.hash_field6 }, 32w8);
+    @name(".action3") action action3_0() {
+        tmp_10.field = hdr.packet.hash_field5;
+        tmp_10.field_0 = hdr.packet.hash_field6;
+        hash<bit<16>, bit<16>, tuple_0, bit<32>>(tmp_9, HashAlgorithm.crc16, 16w0, tmp_10, 32w8);
+        hdr.packet.hash_result3 = tmp_9;
     }
-    @name("test1") table test1() {
+    @name("test1") table test1 {
         actions = {
             action1_0();
         }
         const default_action = action1_0();
     }
-    @name("test2") table test2() {
+    @name("test2") table test2 {
         actions = {
             action2_0();
         }
         const default_action = action2_0();
     }
-    @name("test3") table test3() {
+    @name("test3") table test3 {
         actions = {
             action3_0();
         }

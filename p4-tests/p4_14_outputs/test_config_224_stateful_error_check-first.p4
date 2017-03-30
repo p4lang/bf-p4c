@@ -169,7 +169,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("r_test") register<bit<8>>(32w4294967295) r_test;
     stateful_alu() b_test;
-    @name("a_test") action a_test() {
+    @name(".a_test") action a_test() {
         b_test.execute_stateful_alu();
     }
     @name("t_test") table t_test {

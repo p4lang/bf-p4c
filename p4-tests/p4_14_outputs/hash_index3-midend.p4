@@ -159,16 +159,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_5() {
     }
-    @name("setf1") action setf1_0(bit<32> val) {
+    @name(".setf1") action setf1_0(bit<32> val) {
         hdr.data.f1 = val;
     }
-    @name("setf3") action setf3_0(bit<32> val) {
+    @name(".setf3") action setf3_0(bit<32> val) {
         hdr.data.f3 = val;
     }
-    @name("setf3") action setf3_2(bit<32> val) {
+    @name(".setf3") action setf3_2(bit<32> val) {
         hdr.data.f3 = val;
     }
-    @use_hash_action(1) @name("test1") table test1() {
+    @use_hash_action(1) @name("test1") table test1 {
         actions = {
             setf1_0();
             @default_only NoAction_0();
@@ -179,7 +179,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_0();
     }
-    @name("test2") table test2() {
+    @name("test2") table test2 {
         actions = {
             setf3_0();
             @default_only NoAction_4();
@@ -189,7 +189,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_4();
     }
-    @name("test3") table test3() {
+    @name("test3") table test3 {
         actions = {
             setf3_2();
             @default_only NoAction_5();

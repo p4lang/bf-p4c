@@ -162,11 +162,11 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @pa_solitary("ingress", "md.field1") @pa_solitary("ingress", "md.field2") @name("action1") action action1_0(bit<4> val1, bit<4> val2) {
+    @pa_solitary("ingress", "md.field1") @pa_solitary("ingress", "md.field2") @name(".action1") action action1_0(bit<4> val1, bit<4> val2) {
         meta.md.field1 = meta.md.field1 + val1;
         meta.md.field2 = meta.md.field2 + val2;
     }
-    @name("dmac") table dmac() {
+    @name("dmac") table dmac {
         actions = {
             action1_0();
             @default_only NoAction_0();

@@ -201,12 +201,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("set_port") action set_port_0(bit<9> p0) {
+    @name(".set_port") action set_port_0(bit<9> p0) {
         hdr.eg_intr_md.egress_port = p0;
     }
-    @name("te0") table te0() {
+    @name("te0") table te0 {
         actions = {
             do_nothing_0();
             set_port_0();
@@ -232,17 +232,17 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_5() {
     }
-    @name("do_nothing") action do_nothing_1() {
+    @name(".do_nothing") action do_nothing_1() {
     }
-    @name("do_nothing") action do_nothing_4() {
+    @name(".do_nothing") action do_nothing_4() {
     }
-    @name("i0") action i0_0(bit<8> px, bit<16> py, bit<64> pz) {
+    @name(".i0") action i0_0(bit<8> px, bit<16> py, bit<64> pz) {
         meta.m.w = 6w4;
         meta.m.x = px;
         meta.m.y = py;
         meta.m.z = pz;
     }
-    @name("t0") table t0() {
+    @name("t0") table t0 {
         actions = {
             do_nothing_1();
             i0_0();
@@ -254,7 +254,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_1();
     }
-    @name("t1") table t1() {
+    @name("t1") table t1 {
         actions = {
             do_nothing_4();
             @default_only NoAction_5();

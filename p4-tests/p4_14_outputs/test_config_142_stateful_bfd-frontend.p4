@@ -167,9 +167,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("bfd_rx") action bfd_rx_0() {
+    @name(".bfd_rx") action bfd_rx_0() {
     }
-    @name("bfd_tx") action bfd_tx_0() {
+    @name(".bfd_tx") action bfd_tx_0() {
     }
     @name("bfd") table bfd_0 {
         actions = {

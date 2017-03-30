@@ -41,7 +41,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("noop") action noop_0() {
+    @name(".noop") action noop_0() {
     }
     @name("test1") table test1_0 {
         actions = {

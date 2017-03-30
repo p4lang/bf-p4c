@@ -170,15 +170,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("meter_0") direct_meter<bit<8>>(CounterType.bytes) meter_0;
     @name("meter_1") meter(32w500, CounterType.bytes) meter_1;
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("action_1") action action_0(bit<8> param0) {
+    @name(".action_1") action action_0(bit<8> param0) {
         meter_1.execute_meter<bit<8>>(32w7, hdr.pkt.color_1);
     }
-    @name("action_0") action action_0_1(bit<8> param0) {
+    @name(".action_0") action action_0_1(bit<8> param0) {
         meter_0.read(hdr.pkt.color_0);
     }
-    @pa_solitare("meter_result.color_0", "meter_result.color_1") @include_stash(1) @name("table_0") table table_0() {
+    @pa_solitare("meter_result.color_0", "meter_result.color_1") @include_stash(1) @name("table_0") table table_0 {
         actions = {
             action_0_1();
             @default_only NoAction_0();
@@ -192,7 +192,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
         meters = meter_0;
     }
-    @idletime_two_way_notification(1) @include_stash(1) @name("table_1") table table_1() {
+    @idletime_two_way_notification(1) @include_stash(1) @name("table_1") table table_1 {
         actions = {
             do_nothing_0();
             action_0();

@@ -174,27 +174,40 @@ struct tuple_1 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    bit<28> tmp_3;
+    tuple_0 tmp_4;
+    bit<8> tmp_5;
+    tuple_1 tmp_6;
     @name("NoAction") action NoAction_0() {
     }
     @name("NoAction") action NoAction_4() {
     }
     @name("NoAction") action NoAction_5() {
     }
-    @name("action_0") action action_3(bit<16> param0) {
+    @name(".action_0") action action_3(bit<16> param0) {
         hdr.pkt.field_e_16 = param0;
-        hash<bit<28>, bit<32>, tuple_0, bit<64>>(hdr.pkt.field_a_28, HashAlgorithm.crc32, 32w0, { hdr.pkt.field_a_28, hdr.pkt.field_b_32, hdr.pkt.field_i_8 }, 64w16384);
+        tmp_4.field = hdr.pkt.field_a_28;
+        tmp_4.field_0 = hdr.pkt.field_b_32;
+        tmp_4.field_1 = hdr.pkt.field_i_8;
+        hash<bit<28>, bit<32>, tuple_0, bit<64>>(tmp_3, HashAlgorithm.crc32, 32w0, tmp_4, 64w16384);
+        hdr.pkt.field_a_28 = tmp_3;
     }
-    @name("action_1") action action_4() {
-        hash<bit<8>, bit<16>, tuple_1, bit<32>>(hdr.pkt.field_l_8, HashAlgorithm.crc16, 16w0, { hdr.pkt.field_c_32, hdr.pkt.field_g_16, hdr.pkt.field_h_16, hdr.pkt.field_k_8 }, 32w256);
+    @name(".action_1") action action_4() {
+        tmp_6.field_2 = hdr.pkt.field_c_32;
+        tmp_6.field_3 = hdr.pkt.field_g_16;
+        tmp_6.field_4 = hdr.pkt.field_h_16;
+        tmp_6.field_5 = hdr.pkt.field_k_8;
+        hash<bit<8>, bit<16>, tuple_1, bit<32>>(tmp_5, HashAlgorithm.crc16, 16w0, tmp_6, 32w256);
+        hdr.pkt.field_l_8 = tmp_5;
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("do_nothing") action do_nothing_2() {
+    @name(".do_nothing") action do_nothing_2() {
     }
-    @name("action_2") action action_5(bit<16> param0) {
+    @name(".action_2") action action_5(bit<16> param0) {
         hdr.pkt.field_h_16 = param0;
     }
-    @include_idletime(1) @idletime_precision(1) @name("table_0") table table_0() {
+    @include_idletime(1) @idletime_precision(1) @name("table_0") table table_0 {
         actions = {
             action_3();
             @default_only NoAction_0();
@@ -204,7 +217,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @ways(8) @include_idletime(1) @name("table_1") table table_1() {
+    @ways(8) @include_idletime(1) @name("table_1") table table_1 {
         actions = {
             action_4();
             do_nothing_0();
@@ -220,7 +233,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 2048;
         default_action = NoAction_4();
     }
-    @selector_max_group_size(121) @include_idletime(1) @idletime_sweep_interval(12) @name("table_2") table table_2() {
+    @selector_max_group_size(121) @include_idletime(1) @idletime_sweep_interval(12) @name("table_2") table table_2 {
         actions = {
             action_5();
             do_nothing_2();

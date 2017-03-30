@@ -179,24 +179,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     stateful_alu() b_no_key;
     stateful_alu() b_t_direct;
     stateful_alu() b_t_indirect;
-    @name("a_em_direct") action a_em_direct() {
+    @name(".a_em_direct") action a_em_direct() {
         b_em_direct.execute_stateful_alu_from_hash({ hdr.pkt.field_a_32, hdr.pkt.field_b_32 });
     }
-    @name("a_em_indirect") action a_em_indirect() {
+    @name(".a_em_indirect") action a_em_indirect() {
         b_em_indirect.execute_stateful_alu_from_hash({ hdr.pkt.field_a_32, hdr.pkt.field_b_32 });
     }
-    @name("do_nothing") action do_nothing() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name("a_hash_act") action a_hash_act() {
+    @name(".a_hash_act") action a_hash_act() {
         b_hash_act.execute_stateful_alu_from_hash({ hdr.pkt.field_a_32, hdr.pkt.field_b_32 });
     }
-    @name("a_no_key") action a_no_key() {
+    @name(".a_no_key") action a_no_key() {
         b_no_key.execute_stateful_alu_from_hash({ hdr.pkt.field_a_32, hdr.pkt.field_b_32 });
     }
-    @name("a_t_direct") action a_t_direct() {
+    @name(".a_t_direct") action a_t_direct() {
         b_t_direct.execute_stateful_alu_from_hash({ hdr.pkt.field_a_32, hdr.pkt.field_b_32 });
     }
-    @name("a_t_indirect") action a_t_indirect() {
+    @name(".a_t_indirect") action a_t_indirect() {
         b_t_indirect.execute_stateful_alu_from_hash({ hdr.pkt.field_a_32, hdr.pkt.field_b_32 });
     }
     @name("t_em_direct") table t_em_direct {

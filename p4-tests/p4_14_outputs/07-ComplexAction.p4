@@ -160,7 +160,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action1") action action1() {
+    @name(".action1") action action1() {
         meta.md.field1 = meta.md.field1 + meta.md.field2;
         meta.md.field2 = 8w5;
     }

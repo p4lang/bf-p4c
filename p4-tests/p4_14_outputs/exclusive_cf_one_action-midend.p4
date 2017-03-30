@@ -152,11 +152,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_3() {
     }
-    @name("a1") action a1_0() {
+    @name(".a1") action a1_0() {
     }
-    @name("a1") action a1_2() {
+    @name(".a1") action a1_2() {
     }
-    @name("table1") table table1() {
+    @name("table1") table table1 {
         actions = {
             a1_0();
             @default_only NoAction_0();
@@ -164,7 +164,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_0();
     }
-    @name("table2") table table2() {
+    @name("table2") table table2 {
         actions = {
             a1_2();
             @default_only NoAction_3();

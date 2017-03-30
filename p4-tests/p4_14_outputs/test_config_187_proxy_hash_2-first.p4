@@ -33,9 +33,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("nop") action nop() {
+    @name(".nop") action nop() {
     }
-    @name("set_dip") action set_dip() {
+    @name(".set_dip") action set_dip() {
         hdr.pkt.blah = 16w8;
     }
     @proxy_hash_width(24) @name("exm_proxy_hash") table exm_proxy_hash {

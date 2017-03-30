@@ -181,9 +181,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("nop") action nop_0() {
+    @name(".nop") action nop_0() {
     }
-    @name("mod_mac_adr") action mod_mac_adr_0(bit<8> egress_port, bit<48> srcmac, bit<48> dstmac) {
+    @name(".mod_mac_adr") action mod_mac_adr_0(bit<8> egress_port, bit<48> srcmac, bit<48> dstmac) {
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;
     }

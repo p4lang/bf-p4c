@@ -235,9 +235,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("nop") action nop_0() {
+    @name(".nop") action nop_0() {
     }
-    @name("modify_ip_id") action modify_ip_id_0(bit<9> port, bit<16> id, bit<48> srcAddr, bit<48> dstAddr) {
+    @name(".modify_ip_id") action modify_ip_id_0(bit<9> port, bit<16> id, bit<48> srcAddr, bit<48> dstAddr) {
         hdr.ipv4.identification = id;
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
         hdr.ethernet.srcAddr = srcAddr;

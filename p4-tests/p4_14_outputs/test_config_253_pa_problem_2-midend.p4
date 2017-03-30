@@ -208,20 +208,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_3() {
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("do_nothing") action do_nothing_2() {
+    @name(".do_nothing") action do_nothing_2() {
     }
-    @name("read_vlan") action read_vlan_0() {
+    @name(".read_vlan") action read_vlan_0() {
         meta.m.p = hdr.vlan.priority;
         meta.m.c = hdr.vlan.cfi;
         meta.m.v = hdr.vlan.vid;
         meta.m.t = hdr.vlan.vtype;
     }
-    @name("set_port") action set_port_0(bit<9> p) {
+    @name(".set_port") action set_port_0(bit<9> p) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
     }
-    @name("t1") table t1() {
+    @name("t1") table t1 {
         actions = {
             do_nothing_0();
             read_vlan_0();
@@ -233,7 +233,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_0();
     }
-    @name("t2") table t2() {
+    @name("t2") table t2 {
         actions = {
             do_nothing_2();
             set_port_0();

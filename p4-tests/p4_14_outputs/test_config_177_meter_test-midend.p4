@@ -174,16 +174,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("NoAction") action NoAction_0() {
     }
     @meter_sweep_interval(1) @name("meter_0") direct_meter<bit<8>>(CounterType.bytes) meter_0;
-    @name("action_0") action action_0(bit<8> param0) {
+    @name(".action_0") action action_0(bit<8> param0) {
         meter_0.read(hdr.pkt.color_0);
     }
-    @name("action_1") action action_1(bit<8> param0) {
+    @name(".action_1") action action_1(bit<8> param0) {
         meter_0.read(hdr.pkt.color_0);
     }
-    @name("do_nothing") action do_nothing() {
+    @name(".do_nothing") action do_nothing() {
         meter_0.read(hdr.pkt.color_0);
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             action_0();
             action_1();

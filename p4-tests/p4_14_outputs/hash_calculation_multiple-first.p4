@@ -34,25 +34,25 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("set_port") action set_port() {
+    @name(".set_port") action set_port() {
         standard_metadata.egress_spec = 9w1;
     }
-    @name("action1") action action1() {
+    @name(".action1") action action1() {
         hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>>, bit<32>>(hdr.packet.hash_result1, HashAlgorithm.random, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field2 }, 32w63356);
     }
-    @name("action2") action action2() {
+    @name(".action2") action action2() {
         hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>>, bit<32>>(hdr.packet.hash_result2, HashAlgorithm.random, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field3 }, 32w65536);
     }
-    @name("action3") action action3() {
+    @name(".action3") action action3() {
         hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>>, bit<32>>(hdr.packet.hash_result3, HashAlgorithm.crc16, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field4 }, 32w65536);
     }
-    @name("action4") action action4() {
+    @name(".action4") action action4() {
         hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>>, bit<32>>(hdr.packet.hash_result4, HashAlgorithm.random, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field5 }, 32w65536);
     }
-    @name("action5") action action5() {
+    @name(".action5") action action5() {
         hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>>, bit<32>>(hdr.packet.hash_result5, HashAlgorithm.random, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field6 }, 32w65536);
     }
-    @name("action6") action action6() {
+    @name(".action6") action action6() {
         hash<bit<16>, bit<16>, tuple<bit<32>, bit<32>>, bit<32>>(hdr.packet.hash_result6, HashAlgorithm.crc16, 16w0, { hdr.packet.hash_field1, hdr.packet.hash_field7 }, 32w65536);
     }
     @name("port") table port {

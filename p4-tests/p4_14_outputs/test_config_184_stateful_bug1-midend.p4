@@ -173,21 +173,26 @@ struct tuple_0 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    bit<16> tmp_1;
+    tuple_0 tmp_2;
     @name("NoAction") action NoAction_0() {
     }
     @name("NoAction") action NoAction_3() {
     }
     @name("sampling_cntr") register<bit<32>>(32w139264) sampling_cntr;
     @name("sampling_alu") stateful_alu() sampling_alu;
-    @name("action_0") action action_2() {
+    @name(".action_0") action action_2() {
         sampling_alu.execute_stateful_alu();
     }
-    @name("action_1") action action_3() {
+    @name(".action_1") action action_3() {
     }
-    @name("action_7") action action_4() {
-        hash<bit<16>, bit<16>, tuple_0, bit<32>>(hdr.ethernet.blah, HashAlgorithm.random, 16w0, { hdr.ethernet.dstAddr, hdr.ethernet.etherType }, 32w262144);
+    @name(".action_7") action action_4() {
+        tmp_2.field = hdr.ethernet.dstAddr;
+        tmp_2.field_0 = hdr.ethernet.etherType;
+        hash<bit<16>, bit<16>, tuple_0, bit<32>>(tmp_1, HashAlgorithm.random, 16w0, tmp_2, 32w262144);
+        hdr.ethernet.blah = tmp_1;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             action_2();
             action_3();
@@ -199,7 +204,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_0();
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_1 {
         actions = {
             action_4();
             @default_only NoAction_3();

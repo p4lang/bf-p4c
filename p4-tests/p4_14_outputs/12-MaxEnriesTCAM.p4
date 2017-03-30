@@ -159,10 +159,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("set_bd") action set_bd(bit<16> bd) {
+    @name(".set_bd") action set_bd(bit<16> bd) {
         hdr.l2_metadata.bd = bd;
     }
-    @name("ing_drop") action ing_drop() {
+    @name(".ing_drop") action ing_drop() {
         mark_to_drop();
     }
     @name("port_bd") table port_bd {

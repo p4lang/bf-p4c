@@ -168,13 +168,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_5() {
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("do_nothing") action do_nothing_3() {
+    @name(".do_nothing") action do_nothing_3() {
     }
-    @name("do_nothing") action do_nothing_4() {
+    @name(".do_nothing") action do_nothing_4() {
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             do_nothing_0();
             @default_only NoAction_0();
@@ -189,7 +189,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_0();
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_1 {
         actions = {
             do_nothing_3();
             @default_only NoAction_4();
@@ -202,7 +202,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_4();
     }
-    @name("table_2") table table_2() {
+    @name("table_2") table table_2 {
         actions = {
             do_nothing_4();
             @default_only NoAction_5();

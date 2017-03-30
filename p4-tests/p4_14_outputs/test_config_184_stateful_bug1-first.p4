@@ -170,12 +170,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("sampling_cntr") register<bit<32>>(32w139264) sampling_cntr;
     stateful_alu() sampling_alu;
-    @name("action_0") action action_0() {
+    @name(".action_0") action action_0() {
         sampling_alu.execute_stateful_alu();
     }
-    @name("action_1") action action_1() {
+    @name(".action_1") action action_1() {
     }
-    @name("action_7") action action_7() {
+    @name(".action_7") action action_7() {
         hash<bit<16>, bit<16>, tuple<bit<48>, bit<16>>, bit<32>>(hdr.ethernet.blah, HashAlgorithm.random, 16w0, { hdr.ethernet.dstAddr, hdr.ethernet.etherType }, 32w262144);
     }
     @name("table_0") table table_0 {

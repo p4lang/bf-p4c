@@ -41,21 +41,21 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("do_nothing") action do_nothing() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name("action_0") action action_0() {
+    @name(".action_0") action action_0() {
         hdr.one.a = hdr.one.a + 8w1;
     }
-    @name("push_3") action push_3() {
+    @name(".push_3") action push_3() {
         hdr.hdr_stack_.push_front(3);
     }
-    @name("push_2") action push_2() {
+    @name(".push_2") action push_2() {
         hdr.hdr_stack_.push_front(2);
     }
-    @name("pop_2") action pop_2() {
+    @name(".pop_2") action pop_2() {
         hdr.hdr_stack_.pop_front(2);
     }
-    @name("pop_1") action pop_1() {
+    @name(".pop_1") action pop_1() {
         hdr.hdr_stack_.pop_front(1);
     }
     @name("table_i0") table table_i0 {

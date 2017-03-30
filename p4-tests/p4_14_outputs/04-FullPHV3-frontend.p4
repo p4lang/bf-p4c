@@ -382,15 +382,15 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("a1") action a1_0() {
+    @name(".a1") action a1_0() {
     }
-    @name("a2") action a2_0() {
+    @name(".a2") action a2_0() {
     }
-    @name("a3") action a3_0() {
+    @name(".a3") action a3_0() {
     }
-    @name("a4") action a4_0() {
+    @name(".a4") action a4_0() {
     }
-    @name("a5") action a5_0() {
+    @name(".a5") action a5_0() {
     }
     @name("t1") table t1_0 {
         actions = {

@@ -29,13 +29,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action1") action action1() {
+    @name(".action1") action action1() {
         hash(hdr.packet.hash_result1, HashAlgorithm.random, (bit<32>)0, { hdr.packet.hash_field1, hdr.packet.hash_field2 }, (bit<64>)16777216);
     }
-    @name("action2") action action2() {
+    @name(".action2") action action2() {
         hash(hdr.packet.hash_result2, HashAlgorithm.random, (bit<32>)0, { hdr.packet.hash_field3, hdr.packet.hash_field4 }, (bit<64>)256);
     }
-    @name("action3") action action3() {
+    @name(".action3") action action3() {
         hash(hdr.packet.hash_result3, HashAlgorithm.crc16, (bit<16>)0, { hdr.packet.hash_field5, hdr.packet.hash_field6 }, (bit<32>)8);
     }
     @name("test1") table test1 {

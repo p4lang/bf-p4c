@@ -224,19 +224,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("sflow_state_seq_num") register<bit<32>>(32w4294967295) sflow_state_seq_num;
     stateful_alu() seq_num_gen;
     stateful_alu() sflow_exp_seq_num;
-    @name("get_sflow_seq_num") action get_sflow_seq_num() {
+    @name(".get_sflow_seq_num") action get_sflow_seq_num() {
         seq_num_gen.execute_stateful_alu();
     }
-    @name("calc_next_seq_num") action calc_next_seq_num() {
+    @name(".calc_next_seq_num") action calc_next_seq_num() {
         meta.sflowHdr.temp = meta.sflowHdr.seq_num + meta.sflowHdr.num_samples;
     }
-    @name("chk_sflow_seq_num") action chk_sflow_seq_num() {
+    @name(".chk_sflow_seq_num") action chk_sflow_seq_num() {
         sflow_exp_seq_num.execute_stateful_alu();
     }
-    @name("drop_me") action drop_me() {
+    @name(".drop_me") action drop_me() {
         mark_to_drop();
     }
-    @name("do_nothing") action do_nothing() {
+    @name(".do_nothing") action do_nothing() {
     }
     @name("sflow_seq_num") table sflow_seq_num {
         actions = {

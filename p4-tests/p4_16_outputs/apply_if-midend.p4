@@ -46,7 +46,7 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
     }
     @name("noop") action noop_2() {
     }
-    @name("t1") table t1() {
+    @name("t1") table t1 {
         key = {
             hdrs.data.f1: ternary @name("hdrs.data.f1") ;
         }
@@ -56,7 +56,7 @@ control ingress(inout packet_t hdrs, inout standard_metadata meta) {
         }
         default_action = noop_0();
     }
-    @name("t2") table t2() {
+    @name("t2") table t2 {
         key = {
             hdrs.data.f1: ternary @name("hdrs.data.f1") ;
         }
@@ -82,7 +82,7 @@ control deparser(packet_out b, in packet_t hdrs, inout standard_metadata meta) {
     action act() {
         b.emit<data_h>(hdrs.data);
     }
-    table tbl_act() {
+    table tbl_act {
         actions = {
             act();
         }

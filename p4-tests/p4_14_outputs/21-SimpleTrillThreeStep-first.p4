@@ -198,13 +198,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("do_copy_hopCount_from_m") action do_copy_hopCount_from_m() {
+    @name(".do_copy_hopCount_from_m") action do_copy_hopCount_from_m() {
         hdr.trill.hopCount = meta.m.hopCount;
     }
-    @name("do_copy_hopCount_to_m") action do_copy_hopCount_to_m() {
+    @name(".do_copy_hopCount_to_m") action do_copy_hopCount_to_m() {
         meta.m.hopCount = hdr.trill.hopCount;
     }
-    @name("forward_trill") action forward_trill(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
+    @name(".forward_trill") action forward_trill(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
         hdr.outer_ethernet.dstAddr = new_mac_da;
         hdr.outer_ethernet.srcAddr = new_mac_sa;
         hdr.vlan_tag.vid = new_vlan_id;

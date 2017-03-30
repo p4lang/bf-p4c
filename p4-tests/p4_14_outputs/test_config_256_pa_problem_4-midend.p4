@@ -208,25 +208,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_3() {
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("do_nothing") action do_nothing_2() {
+    @name(".do_nothing") action do_nothing_2() {
     }
-    @name("set_m") action set_m_0() {
+    @name(".set_m") action set_m_0() {
         meta.m.p = 3w7;
         meta.m.c = 1w0;
         meta.m.v = 12w2;
         meta.m.t = 16w1;
         meta.m.x = 8w4;
     }
-    @name("add_vlan") action add_vlan_0() {
+    @name(".add_vlan") action add_vlan_0() {
         hdr.vlan.setValid();
         hdr.vlan.cfi = meta.m.c;
         hdr.vlan.vid = meta.m.v;
         hdr.vlan.vtype = meta.m.t;
         hdr.ipv4.diffserv = meta.m.x;
     }
-    @name("t1") table t1() {
+    @name("t1") table t1 {
         actions = {
             do_nothing_0();
             set_m_0();
@@ -238,7 +238,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_0();
     }
-    @name("t2") table t2() {
+    @name("t2") table t2 {
         actions = {
             do_nothing_2();
             add_vlan_0();

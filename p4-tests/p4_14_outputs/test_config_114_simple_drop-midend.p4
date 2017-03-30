@@ -160,12 +160,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name("action_1") action action_2() {
+    @name(".action_1") action action_2() {
         mark_to_drop();
     }
-    @name("nop") action nop_0() {
+    @name(".nop") action nop_0() {
     }
-    @name("table_1") table table_0() {
+    @name("table_1") table table_0 {
         actions = {
             action_2();
             nop_0();
@@ -184,12 +184,12 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_1() {
     }
-    @name("action_0") action action_3() {
+    @name(".action_0") action action_3() {
         mark_to_drop();
     }
-    @name("nop") action nop_1() {
+    @name(".nop") action nop_1() {
     }
-    @name("table_0") table table_1() {
+    @name("table_0") table table_1 {
         actions = {
             action_3();
             nop_1();

@@ -70,34 +70,34 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("cnt_0") counter(32w2048, CounterType.packets_and_bytes) cnt;
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("action_0") action action_5(bit<11> idx) {
+    @name(".action_0") action action_5(bit<11> idx) {
         meta.meta.tbl0_tbl1 = 16w1;
         meta.meta.tbl0_tbl2 = 16w1;
         meta.meta.tbl0_tbl3 = 16w1;
         meta.meta.tbl0 = 16w1;
         cnt.count((bit<32>)idx);
     }
-    @name("action_1") action action_6() {
+    @name(".action_1") action action_6() {
         meta.meta.tbl0_tbl1 = 16w1;
         meta.meta.tbl1_tbl2 = 16w1;
         meta.meta.tbl1_tbl3 = 16w1;
         meta.meta.tbl1 = 16w1;
     }
-    @name("action_2") action action_7() {
+    @name(".action_2") action action_7() {
         meta.meta.tbl0_tbl2 = 16w1;
         meta.meta.tbl1_tbl2 = 16w1;
         meta.meta.tbl2_tbl3 = 16w1;
         meta.meta.tbl2 = 16w1;
     }
-    @name("action_3") action action_8() {
+    @name(".action_3") action action_8() {
         meta.meta.tbl0_tbl3 = 16w1;
         meta.meta.tbl1_tbl3 = 16w1;
         meta.meta.tbl2_tbl3 = 16w1;
         meta.meta.tbl3 = 16w1;
     }
-    @name("action_4") action action_9() {
+    @name(".action_4") action action_9() {
         meta.meta.tbl4 = 16w1;
     }
     @name("table_i0") table table_i0_0 {

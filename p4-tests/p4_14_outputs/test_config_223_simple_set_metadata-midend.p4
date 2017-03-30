@@ -57,13 +57,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("action_0") action action_1(bit<32> p) {
+    @name(".action_0") action action_1(bit<32> p) {
         hdr.one.a = hdr.one.a + 8w1;
         meta.meta.a = meta.meta.a + p;
     }
-    @name("table_i0") table table_i0() {
+    @name("table_i0") table table_i0 {
         actions = {
             do_nothing_0();
             action_1();

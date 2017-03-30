@@ -180,10 +180,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("r_pred") register<bit<8>>(32w1024) r_pred_0;
     @name("b_comb_pred") stateful_alu() b_comb_pred_0;
     @name("b_pred") stateful_alu() b_pred_0;
-    @name("a_pred") action a_pred_0(bit<32> idx) {
+    @name(".a_pred") action a_pred_0(bit<32> idx) {
         b_pred_0.execute_stateful_alu(idx);
     }
-    @name("a_comb_pred") action a_comb_pred_0(bit<32> idx) {
+    @name(".a_comb_pred") action a_comb_pred_0(bit<32> idx) {
         b_comb_pred_0.execute_stateful_alu(idx);
     }
     @name("t_pred") table t_pred_0 {

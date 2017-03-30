@@ -235,13 +235,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("nop") action nop_0() {
+    @name(".nop") action nop_0() {
     }
-    @name("hop") action hop_0(inout bit<8> ttl_0, bit<9> egress_port_0) {
+    @name(".hop") action hop_0(inout bit<8> ttl_0, bit<9> egress_port_0) {
         ttl_0 = ttl_0 + 8w255;
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port_0;
     }
-    @name("next_hop_ipv4") action next_hop_ipv4_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
+    @name(".next_hop_ipv4") action next_hop_ipv4_0(bit<9> egress_port, bit<48> srcmac, bit<48> dstmac) {
         hop_0(hdr.ipv4.ttl, egress_port);
         hdr.ethernet.srcAddr = srcmac;
         hdr.ethernet.dstAddr = dstmac;

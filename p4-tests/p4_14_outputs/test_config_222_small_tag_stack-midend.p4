@@ -43,24 +43,24 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("action_0") action action_1() {
+    @name(".action_0") action action_1() {
         hdr.one.a = hdr.one.a + 8w1;
     }
-    @name("push_3") action push() {
+    @name(".push_3") action push() {
         hdr.hdr_stack_.push_front(3);
     }
-    @name("push_2") action push_0() {
+    @name(".push_2") action push_0() {
         hdr.hdr_stack_.push_front(2);
     }
-    @name("pop_2") action pop() {
+    @name(".pop_2") action pop() {
         hdr.hdr_stack_.pop_front(2);
     }
-    @name("pop_1") action pop_0() {
+    @name(".pop_1") action pop_0() {
         hdr.hdr_stack_.pop_front(1);
     }
-    @name("table_i0") table table_i0() {
+    @name("table_i0") table table_i0 {
         actions = {
             do_nothing_0();
             action_1();

@@ -155,26 +155,26 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("branch") action branch_0() {
+    @name(".branch") action branch_0() {
         meta.md.direction[0:0] = hdr.ether.dstAddr[0:0];
     }
-    @name("a1") action a1_0() {
+    @name(".a1") action a1_0() {
         meta.md.port = 9w1;
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w1;
     }
-    @name("a2") action a2_0() {
+    @name(".a2") action a2_0() {
         meta.md.port = 9w2;
     }
-    @name("a3") action a3_0() {
+    @name(".a3") action a3_0() {
         meta.md.port = 9w3;
     }
-    @name("a4") action a4_0() {
+    @name(".a4") action a4_0() {
         meta.md.port = 9w4;
     }
-    @name("a5") action a5_0() {
+    @name(".a5") action a5_0() {
         meta.md.port = 9w5;
     }
-    @name("forward") action forward_0() {
+    @name(".forward") action forward_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.port;
     }
     @name("t0") table t0_0 {

@@ -165,16 +165,16 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("do_nothing") action do_nothing_3() {
+    @name(".do_nothing") action do_nothing_3() {
     }
-    @name("do_nothing") action do_nothing_4() {
+    @name(".do_nothing") action do_nothing_4() {
     }
-    @name("action_1") action action_0(bit<16> param0) {
+    @name(".action_1") action action_0(bit<16> param0) {
         hdr.pkt.field_g_16 = param0;
     }
-    @table_counter("gateway_hit") @name("table_0") table table_0() {
+    @table_counter("gateway_hit") @name("table_0") table table_0 {
         actions = {
             do_nothing_0();
             @default_only NoAction_0();
@@ -185,19 +185,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_0();
     }
-    @table_counter("table_miss") @name("table_1") table table_1() {
+    @table_counter("table_miss") @name("table_1") table table_1 {
         actions = {
             do_nothing_3();
             @default_only action_0();
         }
         key = {
-            hdr.pkt.field_e_16      : exact @name("hdr.pkt.field_e_16") ;
-            hdr.pkt.field_f_16[15:0]: exact @name("hdr.pkt.field_f_16[15:0]") ;
+            hdr.pkt.field_e_16: exact @name("hdr.pkt.field_e_16") ;
+            hdr.pkt.field_f_16: exact @name("hdr.pkt.field_f_16") ;
         }
         size = 16384;
         const default_action = action_0(16w0xf);
     }
-    @table_counter("table_hit") @name("table_2") table table_2() {
+    @table_counter("table_hit") @name("table_2") table table_2 {
         actions = {
             do_nothing_4();
         }

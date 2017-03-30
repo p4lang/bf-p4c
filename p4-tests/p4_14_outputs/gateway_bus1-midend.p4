@@ -36,22 +36,22 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_3() {
     }
-    @name("setb2_5") action setb2(bit<8> val2, bit<8> val3, bit<8> val4, bit<8> val5, bit<8> val6) {
+    @name(".setb2_5") action setb2(bit<8> val2, bit<8> val3, bit<8> val4, bit<8> val5, bit<8> val6) {
         hdr.data.b2 = val2;
         hdr.data.b3 = val3;
         hdr.data.b4 = val4;
         hdr.data.b5 = val5;
         hdr.data.b6 = val6;
     }
-    @name("noop") action noop_0() {
+    @name(".noop") action noop_0() {
     }
-    @name("noop") action noop_2() {
+    @name(".noop") action noop_2() {
     }
-    @name("setb1") action setb1_0(bit<8> val1, bit<9> port) {
+    @name(".setb1") action setb1_0(bit<8> val1, bit<9> port) {
         hdr.data.b1 = val1;
         standard_metadata.egress_spec = port;
     }
-    @name("test1") table test1() {
+    @name("test1") table test1 {
         actions = {
             setb2();
             noop_0();
@@ -65,7 +65,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name("test2") table test2() {
+    @name("test2") table test2 {
         actions = {
             setb1_0();
             noop_2();

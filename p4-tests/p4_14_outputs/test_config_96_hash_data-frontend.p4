@@ -165,20 +165,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     tuple<bit<28>, bit<32>, bit<8>> tmp_0;
     bit<8> tmp_1;
     tuple<bit<32>, bit<16>, bit<16>, bit<8>> tmp_2;
-    @name("action_0") action action_3(bit<16> param0) {
+    @name(".action_0") action action_3(bit<16> param0) {
         hdr.pkt.field_e_16 = param0;
         tmp_0 = { hdr.pkt.field_a_28, hdr.pkt.field_b_32, hdr.pkt.field_i_8 };
         hash<bit<28>, bit<32>, tuple<bit<28>, bit<32>, bit<8>>, bit<64>>(tmp, HashAlgorithm.crc32, 32w0, tmp_0, 64w16384);
         hdr.pkt.field_a_28 = tmp;
     }
-    @name("action_1") action action_4() {
+    @name(".action_1") action action_4() {
         tmp_2 = { hdr.pkt.field_c_32, hdr.pkt.field_g_16, hdr.pkt.field_h_16, hdr.pkt.field_k_8 };
         hash<bit<8>, bit<16>, tuple<bit<32>, bit<16>, bit<16>, bit<8>>, bit<32>>(tmp_1, HashAlgorithm.crc16, 16w0, tmp_2, 32w256);
         hdr.pkt.field_l_8 = tmp_1;
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("action_2") action action_5(bit<16> param0) {
+    @name(".action_2") action action_5(bit<16> param0) {
         hdr.pkt.field_h_16 = param0;
     }
     @include_idletime(1) @idletime_precision(1) @name("table_0") table table_3 {

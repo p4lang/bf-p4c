@@ -211,18 +211,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_5() {
     }
-    @name("ipv4_lpm_hit") action ipv4_lpm_hit_0() {
+    @name(".ipv4_lpm_hit") action ipv4_lpm_hit_0() {
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
-    @name("lpm_miss") action lpm_miss_0(bit<16> param0) {
+    @name(".lpm_miss") action lpm_miss_0(bit<16> param0) {
         hdr.ethernet.etherType = param0;
         mark_to_drop();
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("do_nothing") action do_nothing_2() {
+    @name(".do_nothing") action do_nothing_2() {
     }
-    @alpm(1) @alpm_partitions(2048) @alpm_subtrees_per_partition(1) @name("ipv4_alpm") table ipv4_alpm() {
+    @alpm(1) @alpm_partitions(2048) @alpm_subtrees_per_partition(1) @name("ipv4_alpm") table ipv4_alpm {
         actions = {
             ipv4_lpm_hit_0();
             lpm_miss_0();
@@ -235,7 +235,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 65536;
         default_action = NoAction_0();
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             do_nothing_0();
             @default_only NoAction_4();
@@ -245,7 +245,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_4();
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_1 {
         actions = {
             do_nothing_2();
             @default_only NoAction_5();

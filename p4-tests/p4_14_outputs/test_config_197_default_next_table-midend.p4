@@ -176,24 +176,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_7() {
     }
-    @name("action_0") action action_2(bit<16> param_0) {
+    @name(".action_0") action action_2(bit<16> param_0) {
         hdr.pkt.field_e_16 = param_0;
     }
-    @name("action_1") action action_3(bit<32> param_1) {
+    @name(".action_1") action action_3(bit<32> param_1) {
         hdr.pkt.field_b_32 = param_1;
     }
-    @name("drop_me") action drop_me_0() {
+    @name(".drop_me") action drop_me_0() {
         mark_to_drop();
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("do_nothing") action do_nothing_4() {
+    @name(".do_nothing") action do_nothing_4() {
     }
-    @name("do_nothing") action do_nothing_5() {
+    @name(".do_nothing") action do_nothing_5() {
     }
-    @name("do_nothing") action do_nothing_6() {
+    @name(".do_nothing") action do_nothing_6() {
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             action_2();
             action_3();
@@ -211,7 +211,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_0();
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_1 {
         actions = {
             do_nothing_4();
             @default_only NoAction_5();
@@ -222,14 +222,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_5();
     }
-    @name("table_2") table table_2() {
+    @name("table_2") table table_2 {
         actions = {
             do_nothing_5();
             @default_only NoAction_6();
         }
         default_action = NoAction_6();
     }
-    @name("table_3") table table_3() {
+    @name("table_3") table table_3 {
         actions = {
             do_nothing_6();
             @default_only NoAction_7();

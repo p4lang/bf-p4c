@@ -148,7 +148,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("a1") action a1_0() {
+    @name(".a1") action a1_0() {
     }
     @name("table1") table table1_0 {
         actions = {

@@ -184,29 +184,35 @@ struct tuple_0 {
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    bit<8> tmp_1;
+    tuple_0 tmp_2;
     @name("NoAction") action NoAction_0() {
     }
     @name("NoAction") action NoAction_4() {
     }
     @name("NoAction") action NoAction_5() {
     }
-    @name("action_select") action action_select_0() {
-        hash<bit<8>, bit<32>, tuple_0, bit<64>>(hdr.ipv4.blah2, HashAlgorithm.random, 32w0, { hdr.ipv4.blah1, hdr.ipv4.blah2, hdr.ipv4.blah3 }, 64w16384);
+    @name(".action_select") action action_select_0() {
+        tmp_2.field = hdr.ipv4.blah1;
+        tmp_2.field_0 = hdr.ipv4.blah2;
+        tmp_2.field_1 = hdr.ipv4.blah3;
+        hash<bit<8>, bit<32>, tuple_0, bit<64>>(tmp_1, HashAlgorithm.random, 32w0, tmp_2, 64w16384);
+        hdr.ipv4.blah2 = tmp_1;
     }
-    @name("action_0") action action_2(bit<16> param0) {
+    @name(".action_0") action action_2(bit<16> param0) {
         hdr.ipv4.hdrChecksum = param0;
     }
-    @name("big_action") action big_action_0(bit<32> param0, bit<32> param1, bit<48> param2) {
+    @name(".big_action") action big_action_0(bit<32> param0, bit<32> param1, bit<48> param2) {
         hdr.ipv4.dstAddr = param0;
         hdr.ipv4.srcAddr = param1;
         hdr.ethernet.dstAddr = param2;
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("action_1") action action_3(bit<16> param1) {
+    @name(".action_1") action action_3(bit<16> param1) {
         hdr.ethernet.etherType = param1;
     }
-    @name("table_group") table table_group() {
+    @name("table_group") table table_group {
         actions = {
             action_select_0();
             @default_only NoAction_0();
@@ -216,7 +222,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @immediate(0) @selector_max_group_size(121) @name("test_select") table test_select() {
+    @immediate(0) @selector_max_group_size(121) @name("test_select") table test_select {
         actions = {
             action_2();
             big_action_0();
@@ -235,7 +241,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_4();
         @name("some_action_profile") @mode("resilient") implementation = action_selector(HashAlgorithm.random, 32w2048, 32w32);
     }
-    @name("test_select2") table test_select2() {
+    @name("test_select2") table test_select2 {
         actions = {
             action_3();
             @default_only NoAction_5();

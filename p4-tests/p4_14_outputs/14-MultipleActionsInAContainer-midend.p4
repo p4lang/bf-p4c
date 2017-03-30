@@ -180,24 +180,24 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_3() {
     }
-    @name("a1") action a1_0(bit<3> p1, bit<12> p2) {
+    @name(".a1") action a1_0(bit<3> p1, bit<12> p2) {
         meta.vtag.pri = p1;
         meta.vtag.cfi = 1w1;
         meta.vtag.vid = meta.vtag.vid + p2;
     }
-    @name("a2") action a2_0(bit<3> p1) {
+    @name(".a2") action a2_0(bit<3> p1) {
         hdr.vlan_tag.pri = p1;
         hdr.vlan_tag.cfi = meta.vtag.cfi;
         hdr.vlan_tag.vid = meta.vtag.vid;
     }
-    @name("t1") table t1() {
+    @name("t1") table t1 {
         actions = {
             a1_0();
             @default_only NoAction_0();
         }
         default_action = NoAction_0();
     }
-    @name("t2") table t2() {
+    @name("t2") table t2 {
         actions = {
             a2_0();
             @default_only NoAction_3();

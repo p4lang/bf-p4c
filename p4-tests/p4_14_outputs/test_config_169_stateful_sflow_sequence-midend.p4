@@ -232,21 +232,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("sflow_state_seq_num") register<bit<32>>(32w4294967295) sflow_state_seq_num;
     @name("seq_num_gen") stateful_alu() seq_num_gen;
     @name("sflow_exp_seq_num") stateful_alu() sflow_exp_seq_num;
-    @name("get_sflow_seq_num") action get_sflow_seq_num_0() {
+    @name(".get_sflow_seq_num") action get_sflow_seq_num_0() {
         seq_num_gen.execute_stateful_alu();
     }
-    @name("calc_next_seq_num") action calc_next_seq_num_0() {
+    @name(".calc_next_seq_num") action calc_next_seq_num_0() {
         meta.sflowHdr.temp = meta.sflowHdr.seq_num + meta.sflowHdr.num_samples;
     }
-    @name("chk_sflow_seq_num") action chk_sflow_seq_num_0() {
+    @name(".chk_sflow_seq_num") action chk_sflow_seq_num_0() {
         sflow_exp_seq_num.execute_stateful_alu();
     }
-    @name("drop_me") action drop_me_0() {
+    @name(".drop_me") action drop_me_0() {
         mark_to_drop();
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("sflow_seq_num") table sflow_seq_num() {
+    @name("sflow_seq_num") table sflow_seq_num {
         actions = {
             get_sflow_seq_num_0();
             @default_only NoAction_0();
@@ -258,7 +258,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_0();
     }
-    @name("sflow_verify_seq_no_step_1") table sflow_verify_seq_no_step_1() {
+    @name("sflow_verify_seq_no_step_1") table sflow_verify_seq_no_step_1 {
         actions = {
             calc_next_seq_num_0();
             @default_only NoAction_5();
@@ -266,7 +266,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_5();
     }
-    @stage(1) @name("sflow_verify_seq_no_step_2") table sflow_verify_seq_no_step_2() {
+    @stage(1) @name("sflow_verify_seq_no_step_2") table sflow_verify_seq_no_step_2 {
         actions = {
             chk_sflow_seq_num_0();
             @default_only NoAction_6();
@@ -277,7 +277,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction_6();
     }
-    @name("sflow_verify_seq_no_step_3") table sflow_verify_seq_no_step_3() {
+    @name("sflow_verify_seq_no_step_3") table sflow_verify_seq_no_step_3 {
         actions = {
             drop_me_0();
             do_nothing_0();

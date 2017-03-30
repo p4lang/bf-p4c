@@ -180,13 +180,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     stateful_alu() cntr_1;
     stateful_alu() cntr_2;
     stateful_alu() sampler_alu;
-    @name("cnt_1") action cnt_1() {
+    @name(".cnt_1") action cnt_1() {
         cntr_1.execute_stateful_alu();
     }
-    @name("cnt_2") action cnt_2() {
+    @name(".cnt_2") action cnt_2() {
         cntr_2.execute_stateful_alu();
     }
-    @name("sample") action sample() {
+    @name(".sample") action sample() {
         sampler_alu.execute_stateful_alu();
     }
     @table_counter("disabled") @name("match_cntr_1") table match_cntr_1 {

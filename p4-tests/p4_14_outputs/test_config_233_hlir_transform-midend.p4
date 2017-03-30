@@ -41,21 +41,21 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("NoAction") action NoAction_3() {
     }
     @name("meter_0") direct_meter<bit<8>>(CounterType.packets) meter_0;
-    @name("action_2") action action_0() {
+    @name(".action_2") action action_0() {
         hdr.hdr0.a = 16w1;
         meta.meta.a = 8w0;
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("action_0") action action_0_1() {
+    @name(".action_0") action action_0_1() {
         meta.meta.y = 8w1;
         meter_0.read(meta.meta.x);
     }
-    @name("action_1") action action_1() {
+    @name(".action_1") action action_1() {
         meta.meta.z = 8w0;
         meter_0.read(meta.meta.x);
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             action_0_1();
             action_1();
@@ -68,7 +68,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
         meters = meter_0;
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_1 {
         actions = {
             action_0();
             do_nothing_0();

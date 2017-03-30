@@ -35,12 +35,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name("nop") action nop_0() {
+    @name(".nop") action nop_0() {
     }
-    @name("set_dip") action set_dip_0() {
+    @name(".set_dip") action set_dip_0() {
         hdr.pkt.blah = 16w8;
     }
-    @proxy_hash_width(24) @name("exm_proxy_hash") table exm_proxy_hash() {
+    @proxy_hash_width(24) @name("exm_proxy_hash") table exm_proxy_hash {
         actions = {
             nop_0();
             set_dip_0();

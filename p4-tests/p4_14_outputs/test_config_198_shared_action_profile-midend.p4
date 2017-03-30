@@ -166,25 +166,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_5() {
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("do_nothing") action do_nothing_3() {
+    @name(".do_nothing") action do_nothing_3() {
     }
-    @name("do_nothing") action do_nothing_4() {
+    @name(".do_nothing") action do_nothing_4() {
     }
-    @name("action_0") action action_2(bit<32> param0) {
+    @name(".action_0") action action_2(bit<32> param0) {
         hdr.pkt.field_a_32 = param0;
     }
-    @name("action_0") action action_3(bit<32> param0) {
+    @name(".action_0") action action_3(bit<32> param0) {
         hdr.pkt.field_a_32 = param0;
     }
-    @name("action_1") action action_6(bit<32> param1) {
+    @name(".action_1") action action_6(bit<32> param1) {
         hdr.pkt.field_b_32 = param1;
     }
-    @name("action_1") action action_7(bit<32> param1) {
+    @name(".action_1") action action_7(bit<32> param1) {
         hdr.pkt.field_b_32 = param1;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             do_nothing_0();
             action_2();
@@ -198,7 +198,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
         @name("shared_action_profile") implementation = action_profile(32w1024);
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_1 {
         actions = {
             do_nothing_3();
             action_3();
@@ -212,7 +212,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_4();
         @name("shared_action_profile") implementation = action_profile(32w1024);
     }
-    @name("table_2") table table_2() {
+    @name("table_2") table table_2 {
         actions = {
             do_nothing_4();
             @default_only NoAction_5();

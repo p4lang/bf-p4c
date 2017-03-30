@@ -163,15 +163,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_3() {
     }
-    @name("nop") action nop_0() {
+    @name(".nop") action nop_0() {
     }
-    @name("set_egress_port") action set_egress_port_0(bit<9> egress_port) {
+    @name(".set_egress_port") action set_egress_port_0(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @name("set_bd") action set_bd_0(bit<12> bd) {
+    @name(".set_bd") action set_bd_0(bit<12> bd) {
         hdr.l2_metadata.bd = bd;
     }
-    @name("dmac") table dmac() {
+    @name("dmac") table dmac {
         actions = {
             nop_0();
             set_egress_port_0();
@@ -184,7 +184,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 131072;
         default_action = NoAction_0();
     }
-    @name("port_bd") table port_bd() {
+    @name("port_bd") table port_bd {
         actions = {
             set_bd_0();
             @default_only NoAction_3();

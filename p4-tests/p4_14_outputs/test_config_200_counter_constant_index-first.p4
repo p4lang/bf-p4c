@@ -33,7 +33,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("counter_0") @min_width(32) counter(32w2048, CounterType.packets_and_bytes) counter_0;
-    @name("action_0") action action_0(bit<32> param0, bit<8> param1, bit<8> param2, bit<8> param3, bit<8> param4) {
+    @name(".action_0") action action_0(bit<32> param0, bit<8> param1, bit<8> param2, bit<8> param3, bit<8> param4) {
         counter_0.count(32w2047);
         hdr.pkt.a = param0;
     }

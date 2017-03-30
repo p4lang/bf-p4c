@@ -157,9 +157,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name("nop") action nop_0() {
+    @name(".nop") action nop_0() {
     }
-    @name("e_t1") table e_t1() {
+    @name("e_t1") table e_t1 {
         actions = {
             nop_0();
             @default_only NoAction_0();
@@ -181,23 +181,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_7() {
     }
-    @name("nop") action nop_1() {
+    @name(".nop") action nop_1() {
     }
-    @name("nop") action nop_4() {
+    @name(".nop") action nop_4() {
     }
-    @name("ing_drop") action ing_drop_0() {
+    @name(".ing_drop") action ing_drop_0() {
         meta.ing_metadata.drop = 1w1;
     }
-    @name("ing_drop") action ing_drop_2() {
+    @name(".ing_drop") action ing_drop_2() {
         meta.ing_metadata.drop = 1w1;
     }
-    @name("set_egress_port") action set_egress_port_0(bit<9> egress_port) {
+    @name(".set_egress_port") action set_egress_port_0(bit<9> egress_port) {
         standard_metadata.egress_spec = egress_port;
     }
-    @name("hw_drop") action hw_drop_0() {
+    @name(".hw_drop") action hw_drop_0() {
         mark_to_drop();
     }
-    @name("dmac") table dmac() {
+    @name("dmac") table dmac {
         actions = {
             nop_1();
             ing_drop_0();
@@ -210,14 +210,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 131072;
         default_action = NoAction_1();
     }
-    @name("do_drop") table do_drop() {
+    @name("do_drop") table do_drop {
         actions = {
             hw_drop_0();
             @default_only NoAction_6();
         }
         default_action = NoAction_6();
     }
-    @name("smac_filter") table smac_filter() {
+    @name("smac_filter") table smac_filter {
         actions = {
             nop_4();
             ing_drop_2();

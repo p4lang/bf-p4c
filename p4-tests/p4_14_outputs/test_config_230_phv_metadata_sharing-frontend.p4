@@ -59,15 +59,15 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("action_0") action action_2() {
+    @name(".action_0") action action_2() {
         meta.meta.a_8 = 8w255;
         meta.meta.b_2 = 2w1;
         meta.meta.c_2 = 2w3;
         meta.meta.d_4 = 4w15;
     }
-    @name("action_1") action action_3() {
+    @name(".action_1") action action_3() {
         hdr.hdr2.c = meta.meta.a_8;
     }
     @name("table_i0") table table_i0_0 {

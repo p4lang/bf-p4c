@@ -37,25 +37,25 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("test3_counter") counter(32w4000, CounterType.packets) test3_counter_0;
-    @name("setb1") action setb1_0(bit<8> val1) {
+    @name(".setb1") action setb1_0(bit<8> val1) {
         hdr.data.b1 = val1;
     }
-    @name("setb2") action setb2_0(bit<8> val2) {
+    @name(".setb2") action setb2_0(bit<8> val2) {
         hdr.data.b2 = val2;
     }
-    @name("setb3") action setb3_0(bit<8> val3) {
+    @name(".setb3") action setb3_0(bit<8> val3) {
         hdr.data.b3 = val3;
     }
-    @name("setb4") action setb4_0(bit<8> val4) {
+    @name(".setb4") action setb4_0(bit<8> val4) {
         hdr.data.b4 = val4;
     }
-    @name("setb5") action setb5_0(bit<8> val5) {
+    @name(".setb5") action setb5_0(bit<8> val5) {
         hdr.data.b5 = val5;
     }
-    @name("setb6") action setb6_0(bit<8> val6) {
+    @name(".setb6") action setb6_0(bit<8> val6) {
         hdr.data.b6 = val6;
     }
-    @name("my_count") action my_count_0(bit<12> idx) {
+    @name(".my_count") action my_count_0(bit<12> idx) {
         test3_counter_0.count((bit<32>)idx);
     }
     @name("test1") table test1_0 {

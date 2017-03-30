@@ -181,10 +181,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("eg_drop") action eg_drop() {
+    @name(".eg_drop") action eg_drop() {
         standard_metadata.egress_spec = 9w0;
     }
-    @name("permit") action permit() {
+    @name(".permit") action permit() {
     }
     @name("egress_acl") table egress_acl {
         actions = {
@@ -203,20 +203,20 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("do_nothing") action do_nothing() {
+    @name(".do_nothing") action do_nothing() {
         ;
     }
-    @name("l3_set_index") action l3_set_index(bit<8> index) {
+    @name(".l3_set_index") action l3_set_index(bit<8> index) {
         hdr.ipv4.diffserv = index;
     }
-    @name("ig_drop") action ig_drop() {
+    @name(".ig_drop") action ig_drop() {
         meta.routing_metadata.drop = 1w1;
     }
-    @name("hop") action hop(inout bit<8> ttl, bit<9> egress_port) {
+    @name(".hop") action hop(inout bit<8> ttl, bit<9> egress_port) {
         ttl = ttl + 8w255;
         standard_metadata.egress_port = egress_port;
     }
-    @name("hop_ipv4") action hop_ipv4(bit<48> srcmac, bit<32> srcip, bit<48> dstmac, bit<9> egress_port) {
+    @name(".hop_ipv4") action hop_ipv4(bit<48> srcmac, bit<32> srcip, bit<48> dstmac, bit<9> egress_port) {
         hop(hdr.ipv4.ttl, egress_port);
         hdr.ipv4.srcAddr = srcip;
         hdr.ethernet.srcAddr = srcmac;

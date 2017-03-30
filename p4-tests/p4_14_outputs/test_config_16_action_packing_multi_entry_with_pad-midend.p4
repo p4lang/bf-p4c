@@ -177,14 +177,14 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name("action_0") action action_2(bit<16> param0) {
+    @name(".action_0") action action_2(bit<16> param0) {
         hdr.ipv4.hdrChecksum = param0;
     }
-    @name("action_1") action action_3(bit<8> param0, bit<8> param1) {
+    @name(".action_1") action action_3(bit<8> param0, bit<8> param1) {
         hdr.ipv4.diffserv = param0;
         hdr.ipv4.ttl = param1;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             action_2();
             action_3();

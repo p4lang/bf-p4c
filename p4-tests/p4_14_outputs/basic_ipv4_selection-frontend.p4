@@ -246,10 +246,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("nhop_set") action nhop_set_0(bit<16> port) {
+    @name(".nhop_set") action nhop_set_0(bit<16> port) {
         hdr.ipv4.identification = port;
     }
-    @name("nop") action nop_0() {
+    @name(".nop") action nop_0() {
     }
     @name("ipv4_routing_select_2") table ipv4_routing_select {
         actions = {

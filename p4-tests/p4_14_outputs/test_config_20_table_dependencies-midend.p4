@@ -183,25 +183,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_7() {
     }
-    @name("action_0") action action_4() {
+    @name(".action_0") action action_4() {
         hdr.ipv4.diffserv = 8w1;
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("do_nothing") action do_nothing_3() {
+    @name(".do_nothing") action do_nothing_3() {
     }
-    @name("do_nothing") action do_nothing_4() {
+    @name(".do_nothing") action do_nothing_4() {
     }
-    @name("action_1") action action_5() {
+    @name(".action_1") action action_5() {
         hdr.ipv4.totalLen = 16w2;
     }
-    @name("action_2") action action_6() {
+    @name(".action_2") action action_6() {
         hdr.ipv4.identification = 16w3;
     }
-    @name("action_3") action action_7() {
+    @name(".action_3") action action_7() {
         hdr.ipv4.identification = 16w4;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             action_4();
             do_nothing_0();
@@ -214,7 +214,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 1024;
         default_action = NoAction_0();
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_1 {
         actions = {
             action_5();
             do_nothing_3();
@@ -227,7 +227,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 16384;
         default_action = NoAction_5();
     }
-    @name("table_2") table table_2() {
+    @name("table_2") table table_2 {
         actions = {
             action_6();
             do_nothing_4();
@@ -240,7 +240,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 4096;
         default_action = NoAction_6();
     }
-    @name("table_3") table table_3() {
+    @name("table_3") table table_3 {
         actions = {
             action_7();
             @default_only NoAction_7();

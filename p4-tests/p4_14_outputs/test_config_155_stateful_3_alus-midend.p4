@@ -186,16 +186,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("cntr_1") stateful_alu() cntr_1;
     @name("cntr_2") stateful_alu() cntr_2;
     @name("sampler_alu") stateful_alu() sampler_alu;
-    @name("cnt_1") action cnt() {
+    @name(".cnt_1") action cnt() {
         cntr_1.execute_stateful_alu();
     }
-    @name("cnt_2") action cnt_0() {
+    @name(".cnt_2") action cnt_0() {
         cntr_2.execute_stateful_alu();
     }
-    @name("sample") action sample_0() {
+    @name(".sample") action sample_0() {
         sampler_alu.execute_stateful_alu();
     }
-    @table_counter("disabled") @name("match_cntr_1") table match_cntr_1() {
+    @table_counter("disabled") @name("match_cntr_1") table match_cntr_1 {
         actions = {
             cnt();
             @default_only NoAction_0();
@@ -206,7 +206,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction_0();
     }
-    @name("match_cntr_2") table match_cntr_2() {
+    @name("match_cntr_2") table match_cntr_2 {
         actions = {
             cnt_0();
             @default_only NoAction_4();
@@ -219,7 +219,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 16384;
         default_action = NoAction_4();
     }
-    @name("match_flow") table match_flow() {
+    @name("match_flow") table match_flow {
         actions = {
             sample_0();
             @default_only NoAction_5();

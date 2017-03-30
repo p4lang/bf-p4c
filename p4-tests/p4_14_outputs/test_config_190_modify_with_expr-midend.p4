@@ -38,9 +38,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name("nop") action nop_0() {
+    @name(".nop") action nop_0() {
     }
-    @name("action_0") action action_1(bit<16> param0, bit<16> param1, bit<8> param2) {
+    @name(".action_0") action action_1(bit<16> param0, bit<16> param1, bit<8> param2) {
         hdr.pkt.a = hdr.pkt.b + 32w2;
         hdr.pkt.b = 32w3 - hdr.pkt.b;
         hdr.pkt.c = hdr.pkt.c >> 32w3;
@@ -50,7 +50,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.g = hdr.pkt.g ^ 16w0xfff;
         hdr.pkt.h = (bit<16>)~param2;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             nop_0();
             action_1();

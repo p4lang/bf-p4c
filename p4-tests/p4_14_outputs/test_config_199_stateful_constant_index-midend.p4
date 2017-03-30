@@ -168,12 +168,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("sampling_cntr") register<bit<32>>(32w8192) sampling_cntr;
     @name("sampling_alu") stateful_alu() sampling_alu;
-    @name("action_0") action action_2() {
+    @name(".action_0") action action_2() {
         sampling_alu.execute_stateful_alu(32w8191);
     }
-    @name("action_1") action action_3() {
+    @name(".action_1") action action_3() {
     }
-    @ways(1) @name("table_0") table table_0() {
+    @ways(1) @name("table_0") table table_0 {
         actions = {
             action_2();
             @default_only NoAction_0();
@@ -184,7 +184,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_0();
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_1 {
         actions = {
             action_3();
             @default_only NoAction_3();

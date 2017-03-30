@@ -185,13 +185,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_3() {
     }
-    @name("action_0") action action_2(bit<8> param_0) {
+    @name(".action_0") action action_2(bit<8> param_0) {
         hdr.ipv4.diffserv = param_0;
     }
-    @name("action_1") action action_3() {
+    @name(".action_1") action action_3() {
         hdr.ipv4.totalLen = 16w1;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             action_2();
             @default_only NoAction_0();
@@ -202,7 +202,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         max_size = 4096;
         default_action = NoAction_0();
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_1 {
         actions = {
             action_3();
             @default_only NoAction_3();

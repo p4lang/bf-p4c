@@ -189,7 +189,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_0") action action_0() {
+    @name(".action_0") action action_0() {
         hdr.ipv4.protocol = 8w0xa5;
         hdr.ipv4.ttl = 8w0x81;
     }

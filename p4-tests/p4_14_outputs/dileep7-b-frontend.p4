@@ -240,13 +240,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("nop") action nop_0() {
+    @name(".nop") action nop_0() {
     }
-    @name("hop") action hop_0(inout bit<8> ttl_0, bit<9> egress_port_0) {
+    @name(".hop") action hop_0(inout bit<8> ttl_0, bit<9> egress_port_0) {
         ttl_0 = ttl_0 + 8w255;
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port_0;
     }
-    @name("custom_action_3") action custom_action(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
+    @name(".custom_action_3") action custom_action(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
         hdr.ipv4.dstAddr = dstIp;
         hdr.ethernet.dstAddr = dstAddr;
         hop_0(hdr.ipv4.ttl, egress_port);

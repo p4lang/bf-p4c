@@ -159,12 +159,12 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("nop") action nop_0() {
+    @name(".nop") action nop_0() {
     }
-    @name("set_egress_port") action set_egress_port_0(bit<9> egress_port) {
+    @name(".set_egress_port") action set_egress_port_0(bit<9> egress_port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
-    @name("set_bd") action set_bd_0(bit<12> bd) {
+    @name(".set_bd") action set_bd_0(bit<12> bd) {
         hdr.l2_metadata.bd = bd;
     }
     @name("dmac") table dmac_0 {

@@ -166,12 +166,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("meter_0") direct_meter<bit<8>>(CounterType.bytes) meter_2;
     @name("meter_1") meter(32w500, CounterType.bytes) meter_3;
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("action_1") action action_0(bit<8> param0) {
+    @name(".action_1") action action_0(bit<8> param0) {
         meter_3.execute_meter<bit<8>>(32w7, hdr.pkt.color_1);
     }
-    @name("action_0") action action_0_1(bit<8> param0) {
+    @name(".action_0") action action_0_1(bit<8> param0) {
         meter_2.read(hdr.pkt.color_0);
     }
     @pa_solitare("meter_result.color_0", "meter_result.color_1") @include_stash(1) @name("table_0") table table_2 {

@@ -65,11 +65,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name("action_e") action action_e_0(bit<32> p0) {
+    @name(".action_e") action action_e_0(bit<32> p0) {
         hdr.hdr_1.d = hdr.hdr_0.a;
         hdr.hdr_1.g = p0;
     }
-    @name("table_e0") table table_e0() {
+    @name("table_e0") table table_e0 {
         actions = {
             action_e_0();
             @default_only NoAction_0();
@@ -93,7 +93,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_7() {
     }
-    @name("set_all") action set_all_0(bit<1> p0, bit<32> p1, bit<3> p2, bit<4> p3, bit<1> p4, bit<16> p5, bit<1> p6, bit<12> p7, bit<14> p8, bit<2> p9, bit<20> p10, bit<6> p11, bit<32> p12) {
+    @name(".set_all") action set_all_0(bit<1> p0, bit<32> p1, bit<3> p2, bit<4> p3, bit<1> p4, bit<16> p5, bit<1> p6, bit<12> p7, bit<14> p8, bit<2> p9, bit<20> p10, bit<6> p11, bit<32> p12) {
         meta.meta.a = p0;
         meta.meta.b = p1;
         meta.meta.c = p2;
@@ -108,27 +108,27 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.l = p11;
         meta.meta.m = p12;
     }
-    @name("action_0") action action_3(bit<1> p0, bit<4> p1) {
+    @name(".action_0") action action_3(bit<1> p0, bit<4> p1) {
         meta.meta.a = p0;
         meta.meta.f = 16w0;
         meta.meta.d = p1;
     }
-    @name("action_1") action action_4(bit<3> p0, bit<16> p1) {
+    @name(".action_1") action action_4(bit<3> p0, bit<16> p1) {
         meta.meta.c = p0;
         meta.meta.e = 1w0;
         meta.meta.f = p1;
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("do_nothing") action do_nothing_2() {
+    @name(".do_nothing") action do_nothing_2() {
     }
-    @name("action_2") action action_5(bit<20> p0) {
+    @name(".action_2") action action_5(bit<20> p0) {
         meta.meta.e = meta.meta.a;
         meta.meta.k = p0;
         meta.meta.m = meta.meta.b;
         hdr.hdr_0.f = hdr.hdr_0.f ^ hdr.hdr_1.c;
     }
-    @name("table_i0") table table_i0() {
+    @name("table_i0") table table_i0 {
         actions = {
             set_all_0();
             action_3();
@@ -140,7 +140,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_1();
     }
-    @name("table_i1") table table_i1() {
+    @name("table_i1") table table_i1 {
         actions = {
             action_4();
             do_nothing_0();
@@ -152,7 +152,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_6();
     }
-    @name("table_i2") table table_i2() {
+    @name("table_i2") table table_i2 {
         actions = {
             action_5();
             do_nothing_2();

@@ -175,7 +175,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_e") action action_e(bit<8> param2, bit<16> param_3) {
+    @name(".action_e") action action_e(bit<8> param2, bit<16> param_3) {
         hdr.ipv4.diffserv = param2;
         hdr.ipv4.hdrChecksum = param_3;
     }
@@ -196,10 +196,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_0") action action_0(bit<8> param0) {
+    @name(".action_0") action action_0(bit<8> param0) {
         hdr.ipv4.diffserv = param0;
     }
-    @name("action_1") action action_1(bit<16> param1) {
+    @name(".action_1") action action_1(bit<16> param1) {
         hdr.ipv4.hdrChecksum = param1;
     }
     @name("table_0") table table_0 {

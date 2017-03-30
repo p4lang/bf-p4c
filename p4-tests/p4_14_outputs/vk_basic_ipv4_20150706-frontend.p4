@@ -239,9 +239,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("nop") action nop_0() {
+    @name(".nop") action nop_0() {
     }
-    @name("udp_set_src") action udp_set_src_0(bit<16> port) {
+    @name(".udp_set_src") action udp_set_src_0(bit<16> port) {
         hdr.udp.srcPort = port;
     }
     @immediate(1) @stage(0) @name("eg_udp") table eg_udp_0 {
@@ -264,13 +264,13 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("nop") action nop_1() {
+    @name(".nop") action nop_1() {
     }
-    @name("hop") action hop_0(inout bit<8> ttl_0, bit<9> egress_port_0) {
+    @name(".hop") action hop_0(inout bit<8> ttl_0, bit<9> egress_port_0) {
         ttl_0 = ttl_0 + 8w255;
         hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port_0;
     }
-    @name("hop_ipv4") action hop_ipv4_0(bit<9> egress_port) {
+    @name(".hop_ipv4") action hop_ipv4_0(bit<9> egress_port) {
         hop_0(hdr.ipv4.ttl, egress_port);
     }
     @stage(5) @name("tcam_range") table tcam_range_0 {

@@ -172,12 +172,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     tuple<bit<48>, bit<16>> tmp_0;
     @name("sampling_cntr") register<bit<32>>(32w139264) sampling_cntr_0;
     @name("sampling_alu") stateful_alu() sampling_alu_0;
-    @name("action_0") action action_2() {
+    @name(".action_0") action action_2() {
         sampling_alu_0.execute_stateful_alu();
     }
-    @name("action_1") action action_3() {
+    @name(".action_1") action action_3() {
     }
-    @name("action_7") action action_4() {
+    @name(".action_7") action action_4() {
         tmp_0 = { hdr.ethernet.dstAddr, hdr.ethernet.etherType };
         hash<bit<16>, bit<16>, tuple<bit<48>, bit<16>>, bit<32>>(tmp, HashAlgorithm.random, 16w0, tmp_0, 32w262144);
         hdr.ethernet.blah = tmp;

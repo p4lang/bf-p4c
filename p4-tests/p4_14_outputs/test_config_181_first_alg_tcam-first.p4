@@ -205,19 +205,19 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("ipv4_lpm_hit") action ipv4_lpm_hit() {
+    @name(".ipv4_lpm_hit") action ipv4_lpm_hit() {
         hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
     }
-    @name("lpm_miss") action lpm_miss(bit<16> param0) {
+    @name(".lpm_miss") action lpm_miss(bit<16> param0) {
         hdr.ethernet.etherType = param0;
         mark_to_drop();
     }
-    @name("set_partition_index") action set_partition_index(bit<11> idx) {
+    @name(".set_partition_index") action set_partition_index(bit<11> idx) {
         meta.meta.partition_index = idx;
     }
-    @name("do_nothing") action do_nothing() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name("do_nothing_2") action do_nothing_2() {
+    @name(".do_nothing_2") action do_nothing_2() {
     }
     @atcam_partition_index("meta.partition_index") @name("ipv4_alg_tcam") table ipv4_alg_tcam {
         actions = {

@@ -178,7 +178,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_3() {
     }
-    @name("action_0") action action_2(bit<1> param0, bit<1> param1, bit<4> param2, bit<4> param3, bit<1> param4, bit<1> param5, bit<16> param6) {
+    @name(".action_0") action action_2(bit<1> param0, bit<1> param1, bit<4> param2, bit<4> param3, bit<1> param4, bit<1> param5, bit<16> param6) {
         hdr.pkt.field_a0_1 = 1w0;
         hdr.pkt.field_a1_1 = param0;
         hdr.pkt.field_a2_1 = 1w1;
@@ -196,10 +196,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.field_d_32 = 32w55;
         hdr.pkt.field_g_16 = param6;
     }
-    @name("action_1") action action_3(bit<16> param0) {
+    @name(".action_1") action action_3(bit<16> param0) {
         hdr.pkt.field_f_16 = param0;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             action_2();
             @default_only NoAction_0();
@@ -210,7 +210,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_0();
     }
-    @include_idletime(1) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name("table_1") table table_1() {
+    @include_idletime(1) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name("table_1") table table_1 {
         actions = {
             action_3();
             @default_only NoAction_3();

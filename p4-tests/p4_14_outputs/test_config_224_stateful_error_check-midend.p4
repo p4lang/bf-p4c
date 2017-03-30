@@ -171,10 +171,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("r_test") register<bit<8>>(32w4294967295) r_test;
     @name("b_test") stateful_alu() b_test;
-    @name("a_test") action a_test_0() {
+    @name(".a_test") action a_test_0() {
         b_test.execute_stateful_alu();
     }
-    @name("t_test") table t_test() {
+    @name("t_test") table t_test {
         actions = {
             a_test_0();
             @default_only NoAction_0();

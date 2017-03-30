@@ -201,13 +201,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("b") action b_0() {
+    @name(".b") action b_0() {
         meta.h1.f1 = 14w1;
     }
-    @name("do_forward") action do_forward_0(bit<9> port) {
+    @name(".do_forward") action do_forward_0(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name("a") action a_0(bit<12> data) {
+    @name(".a") action a_0(bit<12> data) {
         meta.h1.f2 = data;
     }
     @name("f") table f_0 {

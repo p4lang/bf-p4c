@@ -44,25 +44,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("meter_2") meter(32w1024, CounterType.bytes) meter_5;
     @name("meter_3") meter(32w6000, CounterType.bytes) meter_6;
     @name("meter_4") meter(32w1024, CounterType.bytes) meter_7;
-    @name("h1_3") action h1_0(bit<16> val1, bit<16> val2, bit<16> val3) {
+    @name(".h1_3") action h1_0(bit<16> val1, bit<16> val2, bit<16> val3) {
         hdr.data.h1 = val1;
         hdr.data.h2 = val2;
         hdr.data.h3 = val3;
         meter_0.execute_meter<bit<8>>(32w7, hdr.data.color_1);
     }
-    @name("h4_6") action h4_0(bit<16> val4, bit<16> val5, bit<16> val6) {
+    @name(".h4_6") action h4_0(bit<16> val4, bit<16> val5, bit<16> val6) {
         hdr.data.h4 = val4;
         hdr.data.h5 = val5;
         hdr.data.h6 = val6;
         meter_5.execute_meter<bit<8>>(32w7, hdr.data.color_2);
     }
-    @name("h7_9") action h7_0(bit<16> val7, bit<16> val8, bit<16> val9) {
+    @name(".h7_9") action h7_0(bit<16> val7, bit<16> val8, bit<16> val9) {
         hdr.data.h7 = val7;
         hdr.data.h8 = val8;
         hdr.data.h9 = val9;
         meter_6.execute_meter<bit<8>>(32w7, hdr.data.color_3);
     }
-    @name("h10_12") action h10_0(bit<16> val10, bit<16> val11, bit<16> val12) {
+    @name(".h10_12") action h10_0(bit<16> val10, bit<16> val11, bit<16> val12) {
         hdr.data.h10 = val10;
         hdr.data.h11 = val11;
         hdr.data.h12 = val12;

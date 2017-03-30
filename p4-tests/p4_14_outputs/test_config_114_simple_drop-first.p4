@@ -158,10 +158,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_1") action action_1() {
+    @name(".action_1") action action_1() {
         mark_to_drop();
     }
-    @name("nop") action nop() {
+    @name(".nop") action nop() {
     }
     @name("table_1") table table_1 {
         actions = {
@@ -180,10 +180,10 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_0") action action_0() {
+    @name(".action_0") action action_0() {
         mark_to_drop();
     }
-    @name("nop") action nop() {
+    @name(".nop") action nop() {
     }
     @name("table_0") table table_0 {
         actions = {

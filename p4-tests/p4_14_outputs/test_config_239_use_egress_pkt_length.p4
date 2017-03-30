@@ -186,9 +186,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("do_nothing") action do_nothing() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name("action_1") action action_1() {
+    @name(".action_1") action action_1() {
         hdr.hdr2.a = hdr.hdr2.a + hdr.eg_intr_md.pkt_length;
     }
     @name("table_e0") table table_e0 {
@@ -212,9 +212,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("do_nothing") action do_nothing() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name("action_0") action action_0(bit<8> py, bit<16> pz) {
+    @name(".action_0") action action_0(bit<8> py, bit<16> pz) {
         meta.meta.x = 8w1;
         meta.meta.y = py;
         meta.meta.z = pz;

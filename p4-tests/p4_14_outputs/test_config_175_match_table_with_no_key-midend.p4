@@ -40,20 +40,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_3() {
     }
-    @name("action_0") action action_2() {
+    @name(".action_0") action action_2() {
         hdr.pkt.field_a_32 = (bit<32>)~(hdr.pkt.field_b_32 | (int<32>)hdr.pkt.field_c_32);
     }
-    @name("action_1") action action_3(int<32> param0) {
+    @name(".action_1") action action_3(int<32> param0) {
         hdr.pkt.field_b_32 = ~param0 | (int<32>)hdr.pkt.field_c_32;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             action_2();
             @default_only NoAction_0();
         }
         default_action = NoAction_0();
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_1 {
         actions = {
             action_3();
             @default_only NoAction_3();

@@ -205,16 +205,16 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("read_vlan") action read_vlan_0() {
+    @name(".read_vlan") action read_vlan_0() {
         meta.m.p = hdr.vlan.priority;
         meta.m.c = hdr.vlan.cfi;
         meta.m.v = hdr.vlan.vid;
         meta.m.t = hdr.vlan.vtype;
         meta.m.x = hdr.vlan.vid;
     }
-    @name("set_port") action set_port_0(bit<9> p) {
+    @name(".set_port") action set_port_0(bit<9> p) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = p;
     }
     @name("t1") table t1_0 {

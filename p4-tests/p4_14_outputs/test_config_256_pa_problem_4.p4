@@ -204,16 +204,16 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("do_nothing") action do_nothing() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name("set_m") action set_m() {
+    @name(".set_m") action set_m() {
         meta.m.p = 3w7;
         meta.m.c = 1w0;
         meta.m.v = 12w2;
         meta.m.t = 16w1;
         meta.m.x = 8w4;
     }
-    @name("add_vlan") action add_vlan() {
+    @name(".add_vlan") action add_vlan() {
         hdr.vlan.setValid();
         hdr.vlan.cfi = meta.m.c;
         hdr.vlan.vid = meta.m.v;

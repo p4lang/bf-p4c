@@ -213,7 +213,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("flowlet_state") register<bit<64>>(32w65536) flowlet_state;
     stateful_alu() flowlet_state_alu;
-    @name("get_flowlet_next_hop") action get_flowlet_next_hop() {
+    @name(".get_flowlet_next_hop") action get_flowlet_next_hop() {
         flowlet_state_alu.execute_stateful_alu();
     }
     @name("flowlet_next_hop") table flowlet_next_hop {

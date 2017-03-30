@@ -46,30 +46,30 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_3() {
     }
-    @name("setr1_5") action setr1(bit<32> val1, bit<32> val2, bit<32> val3, bit<32> val4, bit<32> val5) {
+    @name(".setr1_5") action setr1(bit<32> val1, bit<32> val2, bit<32> val3, bit<32> val4, bit<32> val5) {
         hdr.data.r1 = val1;
         hdr.data.r2 = val2;
         hdr.data.r3 = val3;
         hdr.data.r4 = val4;
         hdr.data.r5 = val5;
     }
-    @name("setr6_10") action setr6(bit<32> val6, bit<32> val7, bit<32> val8, bit<32> val9, bit<32> val10) {
+    @name(".setr6_10") action setr6(bit<32> val6, bit<32> val7, bit<32> val8, bit<32> val9, bit<32> val10) {
         hdr.data.r6 = val6;
         hdr.data.r7 = val7;
         hdr.data.r8 = val8;
         hdr.data.r9 = val9;
         hdr.data.r10 = val10;
     }
-    @name("setb1") action setb1_0(bit<8> val1) {
+    @name(".setb1") action setb1_0(bit<8> val1) {
         hdr.data.b1 = val1;
     }
-    @name("setb2") action setb2_0(bit<8> val2) {
+    @name(".setb2") action setb2_0(bit<8> val2) {
         hdr.data.b2 = val2;
     }
-    @name("setb3") action setb3_0(bit<8> val3) {
+    @name(".setb3") action setb3_0(bit<8> val3) {
         hdr.data.b3 = val3;
     }
-    @name("test1") table test1() {
+    @name("test1") table test1 {
         actions = {
             setr1();
             setr6();
@@ -85,7 +85,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction_0();
         @name("set_r1_10") @mode("fair") implementation = action_selector(HashAlgorithm.crc16, 32w18000, 32w14);
     }
-    @name("test2") table test2() {
+    @name("test2") table test2 {
         actions = {
             setb1_0();
             setb2_0();

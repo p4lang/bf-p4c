@@ -32,18 +32,18 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("meter_1") direct_meter<bit<8>>(CounterType.bytes) meter_1;
     @name("meter_2") direct_meter<bit<8>>(CounterType.bytes) meter_2;
-    @name("h1_3") action h1_3(bit<16> val1, bit<16> val2, bit<16> val3) {
+    @name(".h1_3") action h1_3(bit<16> val1, bit<16> val2, bit<16> val3) {
         hdr.data.h1 = val1;
         hdr.data.h2 = val2;
         hdr.data.h3 = val3;
     }
-    @name("h4_6") action h4_6(bit<16> val4, bit<16> val5, bit<16> val6, bit<9> port) {
+    @name(".h4_6") action h4_6(bit<16> val4, bit<16> val5, bit<16> val6, bit<9> port) {
         hdr.data.h4 = val4;
         hdr.data.h5 = val5;
         hdr.data.h6 = val6;
         standard_metadata.egress_spec = port;
     }
-    @name("h1_3") action h1_3_0(bit<16> val1, bit<16> val2, bit<16> val3) {
+    @name(".h1_3") action h1_3_0(bit<16> val1, bit<16> val2, bit<16> val3) {
         hdr.data.h1 = val1;
         hdr.data.h2 = val2;
         hdr.data.h3 = val3;
@@ -61,7 +61,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         meters = meter_1;
     }
-    @name("h4_6") action h4_6_0(bit<16> val4, bit<16> val5, bit<16> val6, bit<9> port) {
+    @name(".h4_6") action h4_6_0(bit<16> val4, bit<16> val5, bit<16> val6, bit<9> port) {
         hdr.data.h4 = val4;
         hdr.data.h5 = val5;
         hdr.data.h6 = val6;

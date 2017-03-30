@@ -167,7 +167,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_3") action action_4() {
+    @name(".action_3") action action_4() {
         mark_to_drop();
     }
     @name("table_3") table table_4 {
@@ -188,16 +188,16 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("simple_stats") counter(32w32768, CounterType.packets) simple_stats_0;
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("action_0") action action_5(bit<32> param0) {
+    @name(".action_0") action action_5(bit<32> param0) {
         hdr.pkt.field_c_32 = param0;
     }
-    @name("action_1") action action_6(bit<16> param0) {
+    @name(".action_1") action action_6(bit<16> param0) {
         hdr.pkt.field_f_16 = param0;
         meta.meta.field_17 = 17w7;
     }
-    @name("action_2") action action_7() {
+    @name(".action_2") action action_7() {
         simple_stats_0.count((bit<32>)meta.meta.field_17);
     }
     @name("table_0") table table_5 {

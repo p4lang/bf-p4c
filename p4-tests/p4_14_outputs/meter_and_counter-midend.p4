@@ -34,18 +34,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("NoAction") action NoAction_3() {
     }
     @name("meter1") meter(32w32000, CounterType.bytes) meter1;
-    @name("h1_3") action h1_0(bit<16> val1, bit<16> val2, bit<16> val3) {
+    @name(".h1_3") action h1_0(bit<16> val1, bit<16> val2, bit<16> val3) {
         hdr.data.h1 = val1;
         hdr.data.h2 = val2;
         hdr.data.h3 = val3;
         meter1.execute_meter<bit<8>>(32w7, hdr.data.color_1);
     }
-    @name("h4_6") action h4_0(bit<16> val4, bit<16> val5, bit<16> val6) {
+    @name(".h4_6") action h4_0(bit<16> val4, bit<16> val5, bit<16> val6) {
         hdr.data.h4 = val4;
         hdr.data.h5 = val5;
         hdr.data.h6 = val6;
     }
-    @name("test1") table test1() {
+    @name("test1") table test1 {
         actions = {
             h1_0();
             @default_only NoAction_0();
@@ -56,7 +56,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 32000;
         default_action = NoAction_0();
     }
-    @name("test2") table test2() {
+    @name("test2") table test2 {
         actions = {
             h4_0();
             @default_only NoAction_3();

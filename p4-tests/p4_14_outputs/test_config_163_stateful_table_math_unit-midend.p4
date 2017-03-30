@@ -178,10 +178,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("stateful_cntr_1") register<bit<32>>(32w4294967295) stateful_cntr_0;
     @name("cntr_1") stateful_alu() cntr_0;
-    @name("cnt_1") action cnt() {
+    @name(".cnt_1") action cnt() {
         cntr_0.execute_stateful_alu();
     }
-    @name("match_cntr_1") table match_cntr_0() {
+    @name("match_cntr_1") table match_cntr_0 {
         actions = {
             cnt();
             @default_only NoAction_0();

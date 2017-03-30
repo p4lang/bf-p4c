@@ -218,42 +218,42 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_9() {
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("do_nothing") action do_nothing_5() {
+    @name(".do_nothing") action do_nothing_5() {
     }
-    @name("do_nothing") action do_nothing_6() {
+    @name(".do_nothing") action do_nothing_6() {
     }
-    @name("do_nothing") action do_nothing_7() {
+    @name(".do_nothing") action do_nothing_7() {
     }
-    @name("do_nothing") action do_nothing_8() {
+    @name(".do_nothing") action do_nothing_8() {
     }
-    @name("set_m") action set_m_0() {
+    @name(".set_m") action set_m_0() {
         meta.m.p = 3w7;
         meta.m.c = 1w0;
         meta.m.v = 12w2;
         meta.m.t = 16w1;
     }
-    @name("add_vlan") action add_vlan_0() {
+    @name(".add_vlan") action add_vlan_0() {
         hdr.vlan.setValid();
         hdr.vlan.priority = meta.m.p;
         hdr.vlan.cfi = meta.m.c;
         hdr.vlan.vid = meta.m.v;
         hdr.vlan.vtype = meta.m.t;
     }
-    @name("set_m2") action set_m2_0() {
+    @name(".set_m2") action set_m2_0() {
         meta.m2.p = hdr.vlan2.priority;
         meta.m2.c = hdr.vlan2.cfi;
         meta.m2.v = hdr.vlan2.vid;
         meta.m2.t = hdr.vlan2.vtype;
     }
-    @name("set_m_again") action set_m_again_0() {
+    @name(".set_m_again") action set_m_again_0() {
         meta.m.p = meta.m2.p;
         meta.m.c = meta.m2.c;
         meta.m.v = meta.m2.v;
         meta.m.t = meta.m2.t;
     }
-    @name("t1") table t1() {
+    @name("t1") table t1 {
         actions = {
             do_nothing_0();
             set_m_0();
@@ -265,7 +265,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_0();
     }
-    @name("t2") table t2() {
+    @name("t2") table t2 {
         actions = {
             do_nothing_5();
             add_vlan_0();
@@ -277,7 +277,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_6();
     }
-    @name("t3") table t3() {
+    @name("t3") table t3 {
         actions = {
             do_nothing_6();
             set_m2_0();
@@ -289,7 +289,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_7();
     }
-    @name("t4") table t4() {
+    @name("t4") table t4 {
         actions = {
             do_nothing_7();
             set_m_again_0();
@@ -301,7 +301,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_8();
     }
-    @name("t5") table t5() {
+    @name("t5") table t5 {
         support_timeout = true;
         actions = {
             do_nothing_8();

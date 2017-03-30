@@ -190,7 +190,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("cntr") register<bit<64>>(32w8192) cntr_0;
     @name("counter_alu") stateful_alu() counter_alu_0;
-    @name("increment_counter") action increment_counter_0() {
+    @name(".increment_counter") action increment_counter_0() {
         counter_alu_0.execute_stateful_alu();
     }
     @name("packet_offset_counting") table packet_offset_counting_0 {

@@ -37,17 +37,17 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("meter_0") direct_meter<bit<8>>(CounterType.packets) meter_1;
-    @name("action_2") action action_0() {
+    @name(".action_2") action action_0() {
         hdr.hdr0.a = 16w1;
         meta.meta.a = 8w0;
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("action_0") action action_0_1() {
+    @name(".action_0") action action_0_1() {
         meta.meta.y = 8w1;
         meter_1.read(meta.meta.x);
     }
-    @name("action_1") action action_1() {
+    @name(".action_1") action action_1() {
         meta.meta.z = 8w0;
         meter_1.read(meta.meta.x);
     }

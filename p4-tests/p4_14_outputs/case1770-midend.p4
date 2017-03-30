@@ -207,16 +207,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_5() {
     }
-    @name("b") action b_0() {
+    @name(".b") action b_0() {
         meta.h1.f1 = 14w1;
     }
-    @name("do_forward") action do_forward_0(bit<9> port) {
+    @name(".do_forward") action do_forward_0(bit<9> port) {
         hdr.ig_intr_md_for_tm.ucast_egress_port = port;
     }
-    @name("a") action a_0(bit<12> data) {
+    @name(".a") action a_0(bit<12> data) {
         meta.h1.f2 = data;
     }
-    @name("f") table f() {
+    @name("f") table f {
         actions = {
             b_0();
             @default_only NoAction_0();
@@ -224,7 +224,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1;
         default_action = NoAction_0();
     }
-    @name("forward") table forward() {
+    @name("forward") table forward {
         actions = {
             do_forward_0();
             @default_only NoAction_4();
@@ -234,7 +234,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_4();
     }
-    @atcam_partition_index("h1.f1") @atcam_number_partitions(16384) @name("t") table t() {
+    @atcam_partition_index("h1.f1") @atcam_number_partitions(16384) @name("t") table t {
         actions = {
             a_0();
             @default_only NoAction_5();

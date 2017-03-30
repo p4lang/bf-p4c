@@ -160,13 +160,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_0") action action_0(bit<32> param0) {
+    @name(".action_0") action action_0(bit<32> param0) {
         hdr.pkt.field_b_32[27:20] = param0[27:20];
     }
-    @name("action_1") action action_1(bit<32> param0) {
+    @name(".action_1") action action_1(bit<32> param0) {
         hdr.pkt.field_c_32[19:12] = param0[19:12];
     }
-    @name("action_2") action action_2(bit<32> param0) {
+    @name(".action_2") action action_2(bit<32> param0) {
         hdr.pkt.field_d_32[11:4] = param0[11:4];
     }
     @name("table_0") table table_0 {

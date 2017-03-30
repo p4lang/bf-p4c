@@ -164,10 +164,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("sampling_cntr") register<bit<32>>(32w8192) sampling_cntr_0;
     @name("sampling_alu") stateful_alu() sampling_alu_0;
-    @name("action_0") action action_2() {
+    @name(".action_0") action action_2() {
         sampling_alu_0.execute_stateful_alu(32w8191);
     }
-    @name("action_1") action action_3() {
+    @name(".action_1") action action_3() {
     }
     @ways(1) @name("table_0") table table_2 {
         actions = {

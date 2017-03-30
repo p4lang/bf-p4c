@@ -176,55 +176,55 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name("a1") action a1_0() {
+    @name(".a1") action a1_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f1;
     }
-    @name("a2") action a2_0() {
+    @name(".a2") action a2_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f2;
     }
-    @name("a3") action a3_0() {
+    @name(".a3") action a3_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f3;
     }
-    @name("a4") action a4_0() {
+    @name(".a4") action a4_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f4;
     }
-    @name("a5") action a5_0() {
+    @name(".a5") action a5_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f5;
     }
-    @name("a6") action a6_0() {
+    @name(".a6") action a6_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f6;
     }
-    @name("a7") action a7_0() {
+    @name(".a7") action a7_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f7;
     }
-    @name("a8") action a8_0() {
+    @name(".a8") action a8_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f8;
     }
-    @name("a9") action a9_0() {
+    @name(".a9") action a9_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f9;
     }
-    @name("a10") action a10_0() {
+    @name(".a10") action a10_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f10;
     }
-    @name("a11") action a11_0() {
+    @name(".a11") action a11_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f11;
     }
-    @name("a12") action a12_0() {
+    @name(".a12") action a12_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f12;
     }
-    @name("a13") action a13_0() {
+    @name(".a13") action a13_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f13;
     }
-    @name("a14") action a14_0() {
+    @name(".a14") action a14_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f14;
     }
-    @name("a15") action a15_0() {
+    @name(".a15") action a15_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f15;
     }
-    @name("a16") action a16_0() {
+    @name(".a16") action a16_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.m1.f16;
     }
-    @name("t1") table t1() {
+    @name("t1") table t1 {
         actions = {
             a1_0();
             a2_0();

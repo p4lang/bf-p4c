@@ -204,20 +204,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_5() {
     }
-    @name("do_trill_forward") action do_trill_forward_0(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
+    @name(".do_trill_forward") action do_trill_forward_0(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
         hdr.outer_ethernet.dstAddr = new_mac_da;
         hdr.outer_ethernet.srcAddr = new_mac_sa;
         hdr.vlan_tag.vid = new_vlan_id;
         hdr.ig_intr_md_for_tm.ucast_egress_port = new_port;
         meta.m.hopCount = hdr.trill.hopCount;
     }
-    @name("do_trill_forward_1") action do_trill_forward_3() {
+    @name(".do_trill_forward_1") action do_trill_forward_3() {
         meta.m.hopCount = meta.m.hopCount + 6w63;
     }
-    @name("do_trill_forward_2") action do_trill_forward_4() {
+    @name(".do_trill_forward_2") action do_trill_forward_4() {
         hdr.trill.hopCount = meta.m.hopCount;
     }
-    @name("trill_forward") table trill_forward() {
+    @name("trill_forward") table trill_forward {
         actions = {
             do_trill_forward_0();
             @default_only NoAction_0();
@@ -227,14 +227,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name("trill_forward_1") table trill_forward_1() {
+    @name("trill_forward_1") table trill_forward_1 {
         actions = {
             do_trill_forward_3();
             @default_only NoAction_4();
         }
         default_action = NoAction_4();
     }
-    @name("trill_forward_2") table trill_forward_2() {
+    @name("trill_forward_2") table trill_forward_2 {
         actions = {
             do_trill_forward_4();
             @default_only NoAction_5();

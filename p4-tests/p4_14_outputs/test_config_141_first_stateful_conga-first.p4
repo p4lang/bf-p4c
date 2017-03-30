@@ -160,9 +160,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("get_preferred_next_hop") action get_preferred_next_hop() {
+    @name(".get_preferred_next_hop") action get_preferred_next_hop() {
     }
-    @name("update_preferred_next_hop") action update_preferred_next_hop() {
+    @name(".update_preferred_next_hop") action update_preferred_next_hop() {
     }
     @name("conga_rd_next_hop_table") table conga_rd_next_hop_table {
         actions = {

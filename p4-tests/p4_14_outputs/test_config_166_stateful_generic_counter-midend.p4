@@ -192,10 +192,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("cntr") register<bit<64>>(32w8192) cntr;
     @name("counter_alu") stateful_alu() counter_alu;
-    @name("increment_counter") action increment_counter_0() {
+    @name(".increment_counter") action increment_counter_0() {
         counter_alu.execute_stateful_alu();
     }
-    @name("packet_offset_counting") table packet_offset_counting() {
+    @name("packet_offset_counting") table packet_offset_counting {
         actions = {
             increment_counter_0();
             @default_only NoAction_0();

@@ -175,9 +175,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("stateful_cntr") register<bit<16>>(32w4294967295) stateful_cntr;
     stateful_alu() cntr;
-    @name("do_nothing") action do_nothing() {
+    @name(".do_nothing") action do_nothing() {
     }
-    @name("cnt") action cnt() {
+    @name(".cnt") action cnt() {
         cntr.execute_stateful_alu();
     }
     @name("dummy") table dummy {

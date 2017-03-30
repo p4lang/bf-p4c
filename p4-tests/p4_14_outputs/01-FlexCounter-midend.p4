@@ -174,25 +174,26 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    bool tmp_0;
     @name("NoAction") action NoAction_0() {
     }
     @name("NoAction") action NoAction_3() {
     }
     @name("flex_counter") counter(32w8192, CounterType.packets) flex_counter;
-    @name("update_flex_counter") action update_flex_counter_0() {
+    @name(".update_flex_counter") action update_flex_counter_0() {
         flex_counter.count((bit<32>)meta.md.flex_counter_index);
     }
-    @name("set_flex_counter_index") action set_flex_counter_index_0(bit<13> flex_counter_base) {
+    @name(".set_flex_counter_index") action set_flex_counter_index_0(bit<13> flex_counter_base) {
         meta.md.flex_counter_index = flex_counter_base + (bit<13>)hdr.vlan_tag.prio;
     }
-    @name("update_counters") table update_counters() {
+    @name("update_counters") table update_counters {
         actions = {
             update_flex_counter_0();
             @default_only NoAction_0();
         }
         default_action = NoAction_0();
     }
-    @name("vlan") table vlan() {
+    @name("vlan") table vlan {
         actions = {
             set_flex_counter_index_0();
             @default_only NoAction_3();
@@ -203,8 +204,30 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 4096;
         default_action = NoAction_3();
     }
+    action act() {
+        tmp_0 = true;
+    }
+    action act_0() {
+        tmp_0 = false;
+    }
+    table tbl_act {
+        actions = {
+            act();
+        }
+        const default_action = act();
+    }
+    table tbl_act_0 {
+        actions = {
+            act_0();
+        }
+        const default_action = act_0();
+    }
     apply {
         if (vlan.apply().hit) 
+            tbl_act.apply();
+        else 
+            tbl_act_0.apply();
+        if (tmp_0) 
             update_counters.apply();
     }
 }

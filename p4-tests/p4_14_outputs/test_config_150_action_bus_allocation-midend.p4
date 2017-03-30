@@ -164,25 +164,25 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_3() {
     }
-    @name("action_0") action action_6(int<32> param0) {
+    @name(".action_0") action action_6(int<32> param0) {
         hdr.pkt.field_a_signed = hdr.pkt.field_a_signed + param0;
     }
-    @name("action_1") action action_7(bit<16> param0) {
+    @name(".action_1") action action_7(bit<16> param0) {
         hdr.pkt.field_e_sat = hdr.pkt.field_e_sat + param0;
     }
-    @name("action_2") action action_8(int<8> param0) {
+    @name(".action_2") action action_8(int<8> param0) {
         hdr.pkt.field_i_signed_sat = hdr.pkt.field_i_signed_sat + param0;
     }
-    @name("action_3") action action_9(bit<32> param0) {
+    @name(".action_3") action action_9(bit<32> param0) {
         hdr.pkt.field_c_32 = param0;
     }
-    @name("action_4") action action_10(bit<16> param0) {
+    @name(".action_4") action action_10(bit<16> param0) {
         hdr.pkt.field_g_16 = param0;
     }
-    @name("action_5") action action_11(bit<8> param0) {
+    @name(".action_5") action action_11(bit<8> param0) {
         hdr.pkt.field_k_8 = param0;
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             action_6();
             action_7();
@@ -195,7 +195,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_0();
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_1 {
         actions = {
             action_9();
             action_10();

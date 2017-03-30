@@ -24,7 +24,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action_0") action action_1() {
+    @name(".action_0") action action_1() {
         hdr.one.a = hdr.one.a + 8w1;
     }
     @name("table_i0") table table_i0_0 {

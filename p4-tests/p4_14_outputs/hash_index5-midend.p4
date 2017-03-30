@@ -156,10 +156,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("NoAction") action NoAction_0() {
     }
     @name("simple") counter(32w256, CounterType.packets) simple;
-    @name("countb2") action countb2_0(bit<8> val) {
+    @name(".countb2") action countb2_0(bit<8> val) {
         simple.count((bit<32>)hdr.data.b2);
     }
-    @name("test1") table test1() {
+    @name("test1") table test1 {
         actions = {
             countb2_0();
             @default_only NoAction_0();

@@ -191,12 +191,12 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("action_0") action action_2(bit<8> p) {
+    @name(".action_0") action action_2(bit<8> p) {
         hdr.hdr0.b = p;
     }
-    @name("action_1") action action_3(bit<8> p) {
+    @name(".action_1") action action_3(bit<8> p) {
         hdr.hdr0.c = hdr.hdr0.b + p;
     }
     @name("table_i0") table table_i0_0 {

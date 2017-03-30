@@ -67,71 +67,71 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_31() {
     }
-    @name("action_0") action action_2() {
+    @name(".action_0") action action_2() {
     }
-    @name("action_0") action action_3() {
+    @name(".action_0") action action_3() {
     }
-    @name("action_0") action action_34() {
+    @name(".action_0") action action_34() {
     }
-    @name("action_0") action action_35() {
+    @name(".action_0") action action_35() {
     }
-    @name("action_0") action action_36() {
+    @name(".action_0") action action_36() {
     }
-    @name("action_0") action action_37() {
+    @name(".action_0") action action_37() {
     }
-    @name("action_0") action action_38() {
+    @name(".action_0") action action_38() {
     }
-    @name("action_0") action action_39() {
+    @name(".action_0") action action_39() {
     }
-    @name("action_0") action action_40() {
+    @name(".action_0") action action_40() {
     }
-    @name("action_0") action action_41() {
+    @name(".action_0") action action_41() {
     }
-    @name("action_0") action action_42() {
+    @name(".action_0") action action_42() {
     }
-    @name("action_0") action action_43() {
+    @name(".action_0") action action_43() {
     }
-    @name("action_0") action action_44() {
+    @name(".action_0") action action_44() {
     }
-    @name("action_0") action action_45() {
+    @name(".action_0") action action_45() {
     }
-    @name("action_0") action action_46() {
+    @name(".action_0") action action_46() {
     }
-    @name("action_0") action action_47() {
+    @name(".action_0") action action_47() {
     }
-    @name("action_1") action action_48() {
+    @name(".action_1") action action_48() {
     }
-    @name("action_1") action action_49() {
+    @name(".action_1") action action_49() {
     }
-    @name("action_1") action action_50() {
+    @name(".action_1") action action_50() {
     }
-    @name("action_1") action action_51() {
+    @name(".action_1") action action_51() {
     }
-    @name("action_1") action action_52() {
+    @name(".action_1") action action_52() {
     }
-    @name("action_1") action action_53() {
+    @name(".action_1") action action_53() {
     }
-    @name("action_1") action action_54() {
+    @name(".action_1") action action_54() {
     }
-    @name("action_1") action action_55() {
+    @name(".action_1") action action_55() {
     }
-    @name("action_1") action action_56() {
+    @name(".action_1") action action_56() {
     }
-    @name("action_1") action action_57() {
+    @name(".action_1") action action_57() {
     }
-    @name("action_1") action action_58() {
+    @name(".action_1") action action_58() {
     }
-    @name("action_1") action action_59() {
+    @name(".action_1") action action_59() {
     }
-    @name("action_1") action action_60() {
+    @name(".action_1") action action_60() {
     }
-    @name("action_1") action action_61() {
+    @name(".action_1") action action_61() {
     }
-    @name("action_1") action action_62() {
+    @name(".action_1") action action_62() {
     }
-    @name("action_1") action action_63() {
+    @name(".action_1") action action_63() {
     }
-    @name("table_0") table table_0() {
+    @name("table_0") table table_0 {
         actions = {
             action_2();
             action_48();
@@ -143,7 +143,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_0();
     }
-    @name("table_1") table table_1() {
+    @name("table_1") table table_1 {
         actions = {
             action_3();
             action_49();
@@ -155,7 +155,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_17();
     }
-    @name("table_2") table table_2() {
+    @name("table_2") table table_2 {
         actions = {
             action_34();
             action_50();
@@ -167,7 +167,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_18();
     }
-    @name("table_3") table table_3() {
+    @name("table_3") table table_3 {
         actions = {
             action_35();
             action_51();
@@ -179,7 +179,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_19();
     }
-    @name("table_4") table table_4() {
+    @name("table_4") table table_4 {
         actions = {
             action_36();
             action_52();
@@ -191,7 +191,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_20();
     }
-    @name("table_5") table table_5() {
+    @name("table_5") table table_5 {
         actions = {
             action_37();
             action_53();
@@ -203,7 +203,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_21();
     }
-    @name("table_6") table table_6() {
+    @name("table_6") table table_6 {
         actions = {
             action_38();
             action_54();
@@ -215,7 +215,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_22();
     }
-    @name("table_7") table table_7() {
+    @name("table_7") table table_7 {
         actions = {
             action_39();
             action_55();
@@ -227,7 +227,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_23();
     }
-    @name("table_8") table table_8() {
+    @name("table_8") table table_8 {
         actions = {
             action_40();
             action_56();
@@ -239,7 +239,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_24();
     }
-    @name("table_9") table table_9() {
+    @name("table_9") table table_9 {
         actions = {
             action_41();
             action_57();
@@ -251,7 +251,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_25();
     }
-    @ways(2) @name("table_a") table table_a() {
+    @ways(2) @name("table_a") table table_a {
         actions = {
             action_42();
             action_58();
@@ -263,7 +263,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_26();
     }
-    @name("table_b") table table_b() {
+    @name("table_b") table table_b {
         actions = {
             action_43();
             action_59();
@@ -275,7 +275,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_27();
     }
-    @name("table_c") table table_c() {
+    @name("table_c") table table_c {
         actions = {
             action_44();
             action_60();
@@ -287,7 +287,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_28();
     }
-    @name("table_d") table table_d() {
+    @name("table_d") table table_d {
         actions = {
             action_45();
             action_61();
@@ -299,7 +299,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_29();
     }
-    @name("table_e") table table_e() {
+    @name("table_e") table table_e {
         actions = {
             action_46();
             action_62();
@@ -311,7 +311,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_30();
     }
-    @name("table_f") table table_f() {
+    @name("table_f") table table_f {
         actions = {
             action_47();
             action_63();

@@ -170,12 +170,12 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("drop_me") action drop_me_0() {
+    @name(".drop_me") action drop_me_0() {
         mark_to_drop();
     }
-    @name("table_e") table table_e() {
+    @name("table_e") table table_e {
         actions = {
             do_nothing_0();
             drop_me_0();
@@ -201,23 +201,23 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_9() {
     }
-    @name("action_0") action action_2(bit<16> param_0) {
+    @name(".action_0") action action_2(bit<16> param_0) {
         hdr.pkt.field_f_16 = hdr.pkt.field_g_16 ^ param_0;
         hdr.pkt.field_e_16 = param_0;
     }
-    @name("do_nothing") action do_nothing_1() {
+    @name(".do_nothing") action do_nothing_1() {
     }
-    @name("do_nothing") action do_nothing_4() {
+    @name(".do_nothing") action do_nothing_4() {
     }
-    @name("action_1") action action_3(bit<32> param_1) {
+    @name(".action_1") action action_3(bit<32> param_1) {
         hdr.pkt.field_a_32 = hdr.pkt.field_a_32 ^ param_1;
         hdr.pkt.field_b_32 = param_1;
     }
-    @name("action_1") action action_5(bit<32> param_1) {
+    @name(".action_1") action action_5(bit<32> param_1) {
         hdr.pkt.field_a_32 = hdr.pkt.field_a_32 ^ param_1;
         hdr.pkt.field_b_32 = param_1;
     }
-    @immediate(0) @name("table_0") table table_0() {
+    @immediate(0) @name("table_0") table table_0 {
         actions = {
             action_2();
             do_nothing_1();
@@ -233,7 +233,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_1();
     }
-    @immediate(0) @name("table_1") table table_1() {
+    @immediate(0) @name("table_1") table table_1 {
         actions = {
             action_3();
             @default_only NoAction_7();
@@ -244,14 +244,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 256;
         default_action = NoAction_7();
     }
-    @name("table_2") table table_2() {
+    @name("table_2") table table_2 {
         actions = {
             action_5();
             @default_only NoAction_8();
         }
         default_action = NoAction_8();
     }
-    @random_seed(0x4567) @name("table_3") table table_3() {
+    @random_seed(0x4567) @name("table_3") table table_3 {
         actions = {
             do_nothing_4();
             @default_only NoAction_9();

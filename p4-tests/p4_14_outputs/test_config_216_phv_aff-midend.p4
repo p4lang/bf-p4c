@@ -249,35 +249,35 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_7() {
     }
-    @name("set_all") action set_all_0(bit<32> p0, bit<4> p2, bit<16> p3) {
+    @name(".set_all") action set_all_0(bit<32> p0, bit<4> p2, bit<16> p3) {
         meta.meta.a = p0;
         meta.meta.c = p2;
         meta.meta.d = p3;
     }
-    @name("action_0") action action_4(bit<8> p0, bit<8> p1) {
+    @name(".action_0") action action_4(bit<8> p0, bit<8> p1) {
         meta.meta.a = 32w0;
         meta.meta.b = hdr.hdr_0.a_1;
         mark_to_drop();
     }
-    @name("action_1") action action_5(bit<16> p1, bit<8> p2) {
+    @name(".action_1") action action_5(bit<16> p1, bit<8> p2) {
         meta.meta.b = hdr.hdr_1[0].d_1;
         meta.meta.d = p1;
         meta.meta.c = meta.meta.c + 4w1;
         meta.meta.e = p2 - meta.meta.f;
     }
-    @name("do_nothing") action do_nothing_0() {
+    @name(".do_nothing") action do_nothing_0() {
     }
-    @name("do_nothing") action do_nothing_3() {
+    @name(".do_nothing") action do_nothing_3() {
     }
-    @name("do_nothing") action do_nothing_4() {
+    @name(".do_nothing") action do_nothing_4() {
     }
-    @name("action_2") action action_6() {
+    @name(".action_2") action action_6() {
         meta.meta.e = meta.meta.e + 8w5;
     }
-    @name("action_3") action action_7(bit<8> p0) {
+    @name(".action_3") action action_7(bit<8> p0) {
         meta.meta.f = 8w1;
     }
-    @name("table_i0") table table_i0() {
+    @name("table_i0") table table_i0 {
         actions = {
             set_all_0();
             action_4();
@@ -289,7 +289,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_0();
     }
-    @name("table_i1") table table_i1() {
+    @name("table_i1") table table_i1 {
         actions = {
             action_5();
             do_nothing_0();
@@ -301,7 +301,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_5();
     }
-    @name("table_i2") table table_i2() {
+    @name("table_i2") table table_i2 {
         actions = {
             do_nothing_3();
             action_6();
@@ -316,7 +316,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 1024;
         default_action = NoAction_6();
     }
-    @name("table_i3") table table_i3() {
+    @name("table_i3") table table_i3 {
         actions = {
             do_nothing_4();
             action_7();

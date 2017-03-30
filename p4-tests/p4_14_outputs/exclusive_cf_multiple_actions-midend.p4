@@ -157,45 +157,45 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name("branch") action branch_0() {
+    @name(".branch") action branch_0() {
         meta.md.direction[0:0] = hdr.ether.dstAddr[0:0];
     }
-    @name("a1") action a1_0() {
+    @name(".a1") action a1_0() {
         meta.md.port = 9w1;
         hdr.ig_intr_md_for_tm.ucast_egress_port = 9w1;
     }
-    @name("a2") action a2_0() {
+    @name(".a2") action a2_0() {
         meta.md.port = 9w2;
     }
-    @name("a3") action a3_0() {
+    @name(".a3") action a3_0() {
         meta.md.port = 9w3;
     }
-    @name("a4") action a4_0() {
+    @name(".a4") action a4_0() {
         meta.md.port = 9w4;
     }
-    @name("a5") action a5_0() {
+    @name(".a5") action a5_0() {
         meta.md.port = 9w5;
     }
-    @name("forward") action forward_0() {
+    @name(".forward") action forward_0() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.port;
     }
-    @name("forward") action forward_4() {
+    @name(".forward") action forward_4() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.port;
     }
-    @name("forward") action forward_5() {
+    @name(".forward") action forward_5() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.port;
     }
-    @name("forward") action forward_6() {
+    @name(".forward") action forward_6() {
         hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.port;
     }
-    @name("t0") table t0() {
+    @name("t0") table t0 {
         actions = {
             branch_0();
         }
         size = 1;
         const default_action = branch_0();
     }
-    @name("t1") table t1() {
+    @name("t1") table t1 {
         actions = {
             a1_0();
             a2_0();
@@ -209,28 +209,28 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_0();
     }
-    @name("t2") table t2() {
+    @name("t2") table t2 {
         actions = {
             forward_0();
         }
         size = 1;
         const default_action = forward_0();
     }
-    @name("t3") table t3() {
+    @name("t3") table t3 {
         actions = {
             forward_4();
         }
         size = 1;
         const default_action = forward_4();
     }
-    @name("t4") table t4() {
+    @name("t4") table t4 {
         actions = {
             forward_5();
         }
         size = 1;
         const default_action = forward_5();
     }
-    @name("t5") table t5() {
+    @name("t5") table t5 {
         actions = {
             forward_6();
         }

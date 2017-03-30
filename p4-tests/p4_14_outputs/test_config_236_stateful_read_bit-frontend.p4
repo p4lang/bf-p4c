@@ -171,7 +171,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("reg_0") register<bit<1>>(32w131072) reg_1;
     @name("bbox_0") stateful_alu() bbox;
-    @name("action_0") action action_1() {
+    @name(".action_0") action action_1() {
         bbox.execute_stateful_alu();
     }
     @name("table_0") table table_1 {

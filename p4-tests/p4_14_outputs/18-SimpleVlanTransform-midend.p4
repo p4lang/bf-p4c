@@ -192,19 +192,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_9() {
     }
-    @name("do_new_cfi") action do_new_cfi_0() {
+    @name(".do_new_cfi") action do_new_cfi_0() {
         hdr.vlan_tag.cfi = meta.meta.new_cfi;
     }
-    @name("do_new_pri") action do_new_pri_0() {
+    @name(".do_new_pri") action do_new_pri_0() {
         hdr.vlan_tag.pri = meta.meta.new_pri;
     }
-    @name("do_new_tpid") action do_new_tpid_0() {
+    @name(".do_new_tpid") action do_new_tpid_0() {
         hdr.ethernet.ethertype = meta.meta.new_tpid;
     }
-    @name("do_new_vid") action do_new_vid_0() {
+    @name(".do_new_vid") action do_new_vid_0() {
         hdr.vlan_tag.vid = meta.meta.new_vid;
     }
-    @name("rewrite_tag") action rewrite_tag_0(bit<16> new_tpid, bit<1> new_tpid_en, bit<3> new_pri, bit<1> new_pri_en, bit<1> new_cfi, bit<1> new_cfi_en, bit<12> new_vid, bit<1> new_vid_en) {
+    @name(".rewrite_tag") action rewrite_tag_0(bit<16> new_tpid, bit<1> new_tpid_en, bit<3> new_pri, bit<1> new_pri_en, bit<1> new_cfi, bit<1> new_cfi_en, bit<12> new_vid, bit<1> new_vid_en) {
         meta.meta.new_tpid = new_tpid;
         meta.meta.new_tpid_en = new_tpid_en;
         meta.meta.new_pri = new_pri;
@@ -214,35 +214,35 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.new_vid = new_vid;
         meta.meta.new_vid_en = new_vid_en;
     }
-    @name("new_cfi") table new_cfi_1() {
+    @name("new_cfi") table new_cfi_1 {
         actions = {
             do_new_cfi_0();
             @default_only NoAction_0();
         }
         default_action = NoAction_0();
     }
-    @name("new_pri") table new_pri_1() {
+    @name("new_pri") table new_pri_1 {
         actions = {
             do_new_pri_0();
             @default_only NoAction_6();
         }
         default_action = NoAction_6();
     }
-    @name("new_tpid") table new_tpid_1() {
+    @name("new_tpid") table new_tpid_1 {
         actions = {
             do_new_tpid_0();
             @default_only NoAction_7();
         }
         default_action = NoAction_7();
     }
-    @name("new_vid") table new_vid_1() {
+    @name("new_vid") table new_vid_1 {
         actions = {
             do_new_vid_0();
             @default_only NoAction_8();
         }
         default_action = NoAction_8();
     }
-    @name("vlan_xlate") table vlan_xlate() {
+    @name("vlan_xlate") table vlan_xlate {
         actions = {
             rewrite_tag_0();
             @default_only NoAction_9();

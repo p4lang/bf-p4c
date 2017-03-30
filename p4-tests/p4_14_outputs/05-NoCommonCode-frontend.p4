@@ -160,16 +160,16 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("action1_1") action action1_0(bit<1> value_0) {
+    @name(".action1_1") action action1_0(bit<1> value_0) {
         meta.md.field1 = value_0;
     }
-    @name("action1") action action1_2() {
+    @name(".action1") action action1_2() {
         action1_0(1w0);
     }
-    @name("action2") action action2_0() {
+    @name(".action2") action action2_0() {
         action1_0(1w1);
     }
-    @name("action2_1") action action2_2(bit<1> value) {
+    @name(".action2_1") action action2_2(bit<1> value) {
         meta.md.field2 = value;
     }
     @name("dmac1") table dmac1_0 {
