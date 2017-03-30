@@ -1803,7 +1803,7 @@ void PHV_MAU_Group_Assignments::sanity_check_group_containers(const std::string&
             } else {
                 LOG1("-----cluster_phv_mau.cpp:sanity_WARN-----");
                 LOG1(msg);
-                LOG1(".....allocated space exceeds field width.....");
+                LOG1(".....allocated space in container exceeds field width.....");
                 if (PHV_Container::constraint_no_cohabit(field)) {
                     LOG1(".....constraint_no_cohabit.....");
                 } else {

@@ -77,7 +77,7 @@ class Cluster : public Inspector, P4WriteContext {
     //
     Cluster(PhvInfo &p);                       // NOLINT(runtime/explicit)
     //
-    static void set_field_range(PhvInfo::Field *field);
+    static void set_field_range(PhvInfo::Field *field, int container_width = 0);
     //
     ordered_map<const PhvInfo::Field *, ordered_set<const PhvInfo::Field *>*>& dst_map() {
         return dst_map_i;

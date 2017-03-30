@@ -283,7 +283,8 @@ PHV_Container::taint_ccgf(
         f1->ccgf = f1;
     } else {
         f1->ccgf = 0;
-        Cluster::set_field_range(f1);
+        // ccgf owners with no-pack constraint, set range to entire container
+        Cluster::set_field_range(f1, constraint_no_cohabit_exclusive_mau(f1)? width_i: 0);
     }
 
     if (field->header_stack_pov_ccgf) {

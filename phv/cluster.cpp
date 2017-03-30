@@ -637,11 +637,11 @@ void Cluster::set_field_range(const IR::Expression& expression) {
     }
 }
 
-void Cluster::set_field_range(PhvInfo::Field *field) {
+void Cluster::set_field_range(PhvInfo::Field *field, int container_width) {
     if (field) {
         field->phv_use_lo = 0;
         if (field->ccgf != field) {
-            field->phv_use_hi = field->phv_use_lo + field->size - 1;
+            field->phv_use_hi = field->phv_use_lo + std::max(field->size, container_width) - 1;
         }
     }
 }
