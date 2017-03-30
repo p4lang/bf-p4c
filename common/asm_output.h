@@ -13,6 +13,8 @@ class canon_name {
     friend std::ostream &operator<<(std::ostream &, canon_name);
  public:
     explicit canon_name(StringRef n) : name(n) {}
+    explicit canon_name(cstring n) : name(n) {}
+    explicit canon_name(IR::ID n) : name(n.name) {}
 };
 
 class Slice {

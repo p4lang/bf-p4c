@@ -11,6 +11,7 @@ StringRef trim_asm_name(StringRef name) {
 
 std::ostream &operator<<(std::ostream &out, canon_name n) {
     auto name = n.name;
+    if (name[0] == '.') name++;
     if (auto cl = name.findstr("::"))
         name = name.after(cl);
     for (auto ch : name) {

@@ -172,7 +172,7 @@ class MauAsmOutput::ActionDataFormat : public Inspector {
     void print(std::ostream &out) const {
         const char *sep = " ";
         int byte = 0;
-        out << "format " << act->name << ": {";
+        out << "format " << canon_name(act->name) << ": {";
         for (auto &arg : placed_args) {
             int end =  arg.first + arg.second.first;
             if (end > tbl->layout.action_data_bytes_in_overhead) {
@@ -697,7 +697,7 @@ class MauAsmOutput::EmitAction : public Inspector {
     int                         max_size = -1;
 
     void output_action(const IR::ActionFunction *act, ImmedFormat &ifmt) {
-        out << indent << act->name << ":" << std::endl;
+        out << indent << canon_name(act->name) << ":" << std::endl;
         if (ifmt) out << indent << "- { " << ifmt << " }" << std::endl;
         if (act->action.empty()) {
             /* a noop */
@@ -1246,7 +1246,22 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
         --indent;
     }
     if (auto defact = tbl->match_table ? tbl->match_table->getDefaultAction() : nullptr) {
-        out << indent << "default_action: " << DBPrint::Prec_Low << defact << DBPrint::Reset;
+        out << indent << "default_action: ";
+        const IR::Vector<IR::Expression> *args = nullptr;
+        if (auto mc = defact->to<IR::MethodCallExpression>()) {
+            args = mc->arguments;
+            defact = mc->method; }
+        if (auto path = defact->to<IR::PathExpression>())
+            out << canon_name(path->path->name);
+        else
+            BUG("default action %s not handled", defact);
+        if (args) {
+            out << "(" << DBPrint::Prec_Low;
+            const char *sep = "";
+            for (auto arg : *args) {
+                out << sep << arg;
+                sep = ", "; }
+            out << ")" << DBPrint::Reset; }
         out << std::endl; }
 }
 
