@@ -1204,12 +1204,12 @@ void Table::need_on_actionbus(HashDistribution *hd, int off, int size) {
 
 int Table::find_on_ixbar(Phv::Slice sl, int group) {
     if (input_xbar)
-        if (auto *i = input_xbar->find(sl, group)) {
+        if (auto *i = input_xbar->find_exact(sl, group)) {
             unsigned bit = (i->lo + sl.lo - i->what->lo);
             assert(bit < 128);
             return bit/8; }
-    for (auto *in : stage->exact_ixbar[group]) {
-        if (auto *i = in->find(sl, group)) {
+    for (auto *in : stage->ixbar_use[InputXbar::Group(false, group)]) {
+        if (auto *i = in->find_exact(sl, group)) {
             unsigned bit = (i->lo + sl.lo - i->what->lo);
             assert(bit < 128);
             return bit/8; } }

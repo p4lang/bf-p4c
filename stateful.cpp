@@ -118,7 +118,7 @@ void Stateful::pass1() {
     stage->table_use[gress] |= Stage::USE_STATEFUL;
     for (auto &hd : hash_dist)
         hd.pass1(this);
-    if (input_xbar) input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
+    if (input_xbar) input_xbar->pass1();
     int prev_row = -1;
     for (auto &row : layout) {
         if (prev_row >= 0)
@@ -157,7 +157,7 @@ int Stateful::get_const(long v) {
 
 void Stateful::pass2() {
     LOG1("### Stateful table " << name() << " pass2");
-    if (input_xbar) input_xbar->pass2(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
+    if (input_xbar) input_xbar->pass2();
     if (actions)
         actions->stateful_pass2(this);
 }

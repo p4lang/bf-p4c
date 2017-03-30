@@ -78,7 +78,7 @@ void SelectionTable::pass1() {
     alloc_maprams();
     std::sort(layout.begin(), layout.end(),
               [](const Layout &a, const Layout &b)->bool { return a.row > b.row; });
-    if (input_xbar) input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
+    if (input_xbar) input_xbar->pass1();
     if (param < 0 || param > (resilient_hash ? 7 : 2))
         error(mode_lineno, "Invalid %s hash param %d",
               resilient_hash ? "resilient" : "fair", param);
@@ -109,7 +109,7 @@ void SelectionTable::pass1() {
 
 void SelectionTable::pass2() {
     LOG1("### Selection table " << name() << " pass2");
-    if (input_xbar) input_xbar->pass2(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
+    if (input_xbar) input_xbar->pass2();
     if (selection_hash < 0 && (selection_hash = input_xbar->hash_group()) < 0)
         error(lineno, "No selection_hash in selector table %s", name());
 }

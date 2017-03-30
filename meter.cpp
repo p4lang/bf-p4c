@@ -68,7 +68,7 @@ void MeterTable::pass1() {
         stage->table_use[gress] |= Stage::USE_METER_LPF_RED;
     for (auto &hd : hash_dist)
         hd.pass1(this);
-    if (input_xbar) input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
+    if (input_xbar) input_xbar->pass1();
     int prev_row = -1;
     for (auto &row : layout) {
         if (prev_row >= 0)
@@ -82,7 +82,7 @@ void MeterTable::pass1() {
 
 void MeterTable::pass2() {
     LOG1("### Meter table " << name() << " pass2");
-    if (input_xbar) input_xbar->pass2(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
+    if (input_xbar) input_xbar->pass2();
 }
 
 int MeterTable::direct_shiftcount() {

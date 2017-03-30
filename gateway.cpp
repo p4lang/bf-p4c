@@ -210,7 +210,7 @@ void GatewayTable::pass1() {
         else
             stage->gw_unit_use[layout[0].row][gw_unit] = this; }
     if (input_xbar)
-        input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
+        input_xbar->pass1();
     check_match_key(this, match, "match", 44);
     check_match_key(this, xor_match, "xor", 32);
     std::sort(match.begin(), match.end());
@@ -273,7 +273,7 @@ void GatewayTable::pass2() {
                           row.row, row.bus & 1, old->name());
                 else
                     stage->gw_payload_use[row.row][row.bus & 1] = this; } }
-    if (input_xbar) input_xbar->pass2(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
+    if (input_xbar) input_xbar->pass2();
 }
 
 static unsigned match_input_use(const std::vector<GatewayTable::MatchKey> &match) {

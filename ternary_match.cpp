@@ -165,7 +165,7 @@ void TernaryMatchTable::pass1() {
              TCAM_TABLES_PER_STAGE, false, stage->tcam_id_use);
     // alloc_busses(stage->tcam_match_bus_use); -- now hardwired
     if (input_xbar) {
-        input_xbar->pass1(stage->tcam_ixbar, TCAM_XBAR_GROUP_SIZE);
+        input_xbar->pass1();
         if (match.empty()) {
             match.resize(input_xbar->tcam_width());
             for (unsigned i = 0; i < match.size(); i++) {
@@ -231,7 +231,7 @@ void TernaryMatchTable::pass1() {
 void TernaryMatchTable::pass2() {
     LOG1("### Ternary match table " << name() << " pass2");
     if (logical_id < 0) choose_logical_id();
-    if (input_xbar) input_xbar->pass2(stage->tcam_ixbar, TCAM_XBAR_GROUP_SIZE);
+    if (input_xbar) input_xbar->pass2();
     if (!indirect && indirect_bus < 0) {
         for (int i = 0; i < 16; i++)
             if (!stage->tcam_indirect_bus_use[i/2][i&1]) {
@@ -395,20 +395,21 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
     stage_tbl["memory_resource_allocation"] = gen_memory_resource_allocation_tbl_cfg("tcam", layout);
     json::vector match_field_list, match_entry_list;
     for (auto field : *input_xbar) {
-        int word = match_word(field.first);
+        if (!field.first.ternary) continue;
+        int word = match_word(field.first.index);
         if (word < 0) continue;
         if (field.second.hi > 43) {
             // a field in the byte group, which is shared with the adjacent word group
             // each word gets only 4 bits of the byte group
             assert(field.second.hi < 48);
-            assert((field.first & 1) == 0);
+            assert((field.first.index & 1) == 0);
             int hwidth = 44 - field.second.lo;
             match_field_list.push_back( json::map {
                 { "name", json::string(field.second.what.name()) },
                 { "start_offset", json::number(47*word + 2) },
                 { "start_bit", json::number(field.second.what.lobit()) },
                 { "bit_width", json::number(hwidth) }});
-            int adjword = match_word(field.first + 1);
+            int adjword = match_word(field.first.index + 1);
             if (adjword < 0) continue;
             match_field_list.push_back( json::map {
                 { "name", json::string(field.second.what.name()) },

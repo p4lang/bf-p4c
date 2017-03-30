@@ -61,7 +61,7 @@ void ExactMatchTable::setup(VECTOR(pair_t) &data) {
         error(lineno, "Unexpected number of action table arguments %zu", action.args.size());
     if (actions && !action_bus) action_bus = new ActionBus();
     if (!input_xbar)
-        input_xbar = new InputXbar(this, false);
+        input_xbar = new InputXbar(this);
 }
 
 Table::Format::Field *ExactMatchTable::lookup_field(const std::string &n, const std::string &) {
@@ -107,7 +107,7 @@ void ExactMatchTable::pass1() {
     if (action_enable >= 0)
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
-    input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
+    input_xbar->pass1();
     if (format) {
         if (format->log2size < 7)
             format->log2size = 7;
@@ -417,7 +417,7 @@ static int find_in_ixbar(Table *table, std::vector<Phv::Ref> &match) {
         bool ok = true;
         for (auto &r : match) {
             LOG3("  looking for " << r);
-            if (!table->input_xbar->find(*r, group)) {
+            if (!table->input_xbar->find_exact(*r, group)) {
                 LOG3("   -- not found");
                 ok = false;
                 break; } }
@@ -430,8 +430,8 @@ static int find_in_ixbar(Table *table, std::vector<Phv::Ref> &match) {
         for (auto &r : match) {
             LOG3("  looking for " << r);
             bool found = false;
-            for (auto *in : table->stage->exact_ixbar[group]) {
-                if (in->find(*r, group)) {
+            for (auto *in : table->stage->ixbar_use[InputXbar::Group(false, group)]) {
+                if (in->find_exact(*r, group)) {
                     found = true;
                     break; } }
             if (!found) {
@@ -455,7 +455,7 @@ static int find_in_ixbar(Table *table, std::vector<Phv::Ref> &match) {
 void ExactMatchTable::pass2() {
     LOG1("### Exact match table " << name() << " pass2");
     if (logical_id < 0) choose_logical_id();
-    input_xbar->pass2(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
+    input_xbar->pass2();
     word_ixbar_group.resize(match_in_word.size());
     for (unsigned i = 0; i < match_in_word.size(); i++)
         word_ixbar_group[i] = find_in_ixbar(this, match_in_word[i]);
@@ -821,12 +821,13 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) {
     if (options.match_compiler)
         stage_tbl["memory_resource_allocation"] = nullptr;
     json::vector match_field_list;
-    for (auto field : *input_xbar)
+    for (auto field : *input_xbar) {
+        if (field.first.ternary) continue;
         match_field_list.push_back( json::map {
             { "name", json::string(field.second.what.name()) },
-            { "start_offset", json::number(1023 - field.first*128 - field.second.hi) },
+            { "start_offset", json::number(1023 - field.first.index*128 - field.second.hi) },
             { "start_bit", json::number(field.second.what.lobit()) },
-            { "bit_width", json::number(field.second.hi - field.second.lo + 1) }});
+            { "bit_width", json::number(field.second.hi - field.second.lo + 1) }}); }
     canon_field_list(match_field_list);
     stage_tbl["match_group_resource_allocation"] = json::map {
         { "field_list", std::move(match_field_list) } };

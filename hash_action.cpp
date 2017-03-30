@@ -41,7 +41,7 @@ void HashActionTable::pass1() {
         if (action.args.size() < 1 || action.args[0].size() <= (unsigned)action_enable)
             error(lineno, "Action enable bit %d out of range for action selector", action_enable);
     if (input_xbar)
-        input_xbar->pass1(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
+        input_xbar->pass1();
     for (auto &hd : hash_dist) {
         if (hd.xbar_use == 0)
             hd.xbar_use |= HashDistribution::ACTION_DATA_ADDRESS;
@@ -65,7 +65,7 @@ void HashActionTable::pass2() {
     //    error(lineno, "Need explicit hash_dist in hash_action table"); // FIXME
     //if (bus >= 2) stage->table_use[gress] |= Stage::USE_TCAM;
     if (input_xbar)
-        input_xbar->pass2(stage->exact_ixbar, EXACT_XBAR_GROUP_SIZE);
+        input_xbar->pass2();
     if (actions) actions->pass2(this);
     if (action_bus) action_bus->pass2(this);
     if (gateway) gateway->pass2();

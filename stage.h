@@ -5,6 +5,7 @@
 #include <vector>
 #include "alloc.h"
 #include "bitvec.h"
+#include "input_xbar.h"
 
 class Stage_data {
     /* we encapsulate all the Stage non-static fields in a base class to automate the
@@ -23,8 +24,7 @@ public:
     Alloc2D<Table *, SRAM_ROWS, 2>                      gw_payload_use;
     Alloc1D<Table *, LOGICAL_TABLES_PER_STAGE>          logical_id_use;
     Alloc1D<Table *, TCAM_TABLES_PER_STAGE>             tcam_id_use;
-    Alloc1D<std::vector<InputXbar *>, EXACT_XBAR_GROUPS>exact_ixbar;
-    Alloc1D<std::vector<InputXbar *>, TCAM_XBAR_GROUPS> tcam_ixbar;
+    std::map<InputXbar::Group, std::vector<InputXbar *>>     ixbar_use;
     Alloc1D<std::vector<InputXbar *>, HASH_TABLES>      hash_table_use;
     Alloc1D<std::vector<InputXbar *>, EXACT_HASH_GROUPS>hash_group_use;
     Alloc1D<std::vector<HashDistribution *>, 6>         hash_dist_use;

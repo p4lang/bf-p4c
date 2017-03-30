@@ -37,20 +37,31 @@ void InputXbar::setup_hash(std::map<int, HashCol> &hash_table, int id,
 }
 
 InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
-: table(t), ternary(tern), lineno(data[0].key.lineno)
+: table(t), lineno(data[0].key.lineno)
 {
-    int numgroups = ternary ? TCAM_XBAR_GROUPS : EXACT_XBAR_GROUPS;
     for (auto &kv : data) {
+        bool ternary = tern;
         if (!CHECKTYPEM(kv.key, tCMD, "group or hash descriptor"))
             continue;
-        if (kv.key[0] == "group") {
-            if (kv.key.vec.size != 2 || kv.key[1].type != tINT || kv.key[1].i >= numgroups) {
+        unsigned index = 1;
+        if (kv.key[0] != "group" && (kv.key[1] == "group" || kv.key[1] == "table"))
+            ++index;
+        if (!PCHECKTYPE(kv.key.vec.size == int(index+1), kv.key[index], tINT))
+            continue;
+        index = kv.key[index].i;
+        bool isgroup = false;
+
+        if (kv.key[0] == "exact" && kv.key[1] == "group") {
+            ternary = false;
+            isgroup = true;
+        } else if (kv.key[0] == "ternary" && kv.key[1] == "group") {
+            ternary = true;
+            isgroup = true;
+        } else if (isgroup || kv.key[0] == "group") {
+            if (index >= (ternary ? TCAM_XBAR_GROUPS : EXACT_XBAR_GROUPS)) {
                 error(kv.key.lineno, "invalid group descriptor");
                 continue; }
-            if (groups.count(kv.key[1].i)) {
-                error(kv.key[1].lineno, "group %d duplicated", kv.key[1].i);
-                continue; }
-            auto &group = groups[kv.key[1].i];
+            auto &group = groups[Group(ternary, index)];
             if (kv.value.type == tVEC) {
                 for (auto &reg : kv.value.vec)
                     group.emplace_back(Phv::Ref(t->gress, reg));
@@ -64,15 +75,14 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
                                            reg.key.lo, reg.key.hi); }
             } else
                 group.emplace_back(Phv::Ref(t->gress, kv.value));
-        } else if (!ternary && kv.key[0] == "hash") {
-            if (kv.key.vec.size == 3 && kv.key[1] == "group") {
-                if (kv.key[2].type != tINT || kv.key[2].i >= EXACT_HASH_GROUPS) {
+        } else if (kv.key[0] == "hash") {
+            if (kv.key[1] == "group") {
+                if (index >= EXACT_HASH_GROUPS) {
                     error(kv.key.lineno, "invalid hash group descriptor");
                     continue; }
-                int id = kv.key[2].i;
-                hash_groups[id].lineno = kv.key.lineno;
+                hash_groups[index].lineno = kv.key.lineno;
                 if (kv.value.type == tINT && (unsigned)kv.value.i < HASH_TABLES) {
-                    hash_groups[id].tables |= 1U << kv.value.i;
+                    hash_groups[index].tables |= 1U << kv.value.i;
                     continue; }
                 if (!CHECKTYPE2(kv.value, tVEC, tMAP)) continue;
                 VECTOR(value_t) *tbl = 0;
@@ -81,15 +91,15 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
                         if (el.key == "seed") {
                             if (!CHECKTYPE2(el.value, tINT, tBIGINT)) continue;
                             if (el.value.type == tBIGINT) {
-                                hash_groups[id].seed = el.value.bigi.data[0];
+                                hash_groups[index].seed = el.value.bigi.data[0];
                             } else
-                                hash_groups[id].seed = el.value.i;
+                                hash_groups[index].seed = el.value.i;
                         } else if (el.key == "table") {
                             if (el.value.type == tINT) {
                                 if (el.value.i < 0 || el.value.i >= HASH_TABLES)
                                     error(el.value.lineno, "invalid hash group descriptor");
                                 else
-                                    hash_groups[id].tables |= 1U << el.value.i;
+                                    hash_groups[index].tables |= 1U << el.value.i;
                             } else if (CHECKTYPE(el.value, tVEC))
                                 tbl = &el.value.vec;
                         } else
@@ -102,23 +112,18 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
                         if (v.i < 0 || v.i >= HASH_TABLES)
                             error(v.lineno, "invalid hash group descriptor");
                         else
-                            hash_groups[id].tables |= 1U << v.i; } }
+                            hash_groups[index].tables |= 1U << v.i; } }
                 continue; }
-            if (kv.key.vec.size == 3 && kv.key[1] == "table") {
-                free_value(&kv.key[1]);
-                kv.key[1] = kv.key[2];
-                kv.key.vec.size = 2; }
-            if (kv.key.vec.size != 2 || kv.key[1].type != tINT || kv.key[1].i >= HASH_TABLES) {
+            if (index >= HASH_TABLES) {
                 error(kv.key.lineno, "invalid hash descriptor");
                 continue; }
             if (!CHECKTYPE(kv.value, tMAP)) continue;
-            int id = kv.key[1].i;
             for (auto &c : kv.value.map) {
                 if (c.key.type == tINT) {
-                    setup_hash(hash_tables[id], id, t->gress, c.value,
+                    setup_hash(hash_tables[index], index, t->gress, c.value,
                                c.key.lineno, c.key.i, c.key.i);
                 } else if (c.key.type == tRANGE) {
-                    setup_hash(hash_tables[id], id, t->gress, c.value,
+                    setup_hash(hash_tables[index], index, t->gress, c.value,
                                c.key.lineno, c.key.lo, c.key.hi);
                 } else if (CHECKTYPEM(c.key, tCMD, "hash column decriptor")) {
                     if (c.key.vec.size != 2 || c.key[0] != "valid" || c.key[1].type != tINT) {
@@ -129,21 +134,22 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
                         error(c.key.lineno, "Hash column out of range");
                         continue; }
                     if (!CHECKTYPE(c.value, tINT)) continue;
-                    if (hash_tables[id][col].valid)
-                        error(c.key.lineno, "Hash table %d column %d valid duplicated", id, col);
+                    if (hash_tables[index][col].valid)
+                        error(c.key.lineno, "Hash table %d column %d valid duplicated",
+                              index, col);
                     else if (c.value.i >= 0x10000)
                         error(c.value.lineno, "Hash valid value out of range");
                     else
-                        hash_tables[id][col].valid = c.value.i; } }
+                        hash_tables[index][col].valid = c.value.i; } }
         } else {
-            error(kv.key.lineno, "expecting a group %sdescriptor",
-                  ternary ? "" : "or hash "); }
+            error(kv.key.lineno, "expecting a group or hash descriptor"); }
     }
 }
 
 unsigned InputXbar::tcam_width() {
     unsigned words = 0, bytes = 0;
     for (auto &group : groups) {
+        if (!group.first.ternary) continue;
         unsigned in_word = 0, in_byte = 0;
         for (auto &input : group.second) {
             if (input.lo < 40)
@@ -158,20 +164,22 @@ unsigned InputXbar::tcam_width() {
 }
 
 int InputXbar::tcam_byte_group(int idx) {
-    for (auto &group : groups)
+    for (auto &group : groups) {
+        if (!group.first.ternary) continue;
         for (auto &input : group.second)
             if (input.lo >= 40 || input.hi >= 40) {
-                if (--idx < 0) return group.first/2;
-                break; }
+                if (--idx < 0) return group.first.index/2;
+                break; } }
     return -1;
 }
 
 int InputXbar::tcam_word_group(int idx) {
-    for (auto &group : groups)
+    for (auto &group : groups) {
+        if (!group.first.ternary) continue;
         for (auto &input : group.second)
             if (input.lo < 40) {
-                if (--idx < 0) return group.first;
-                break; }
+                if (--idx < 0) return group.first.index;
+                break; } }
     return -1;
 }
 
@@ -241,8 +249,10 @@ bool InputXbar::can_merge(HashGrp &a, HashGrp &b)
     return true;
 }
 
-void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
+void InputXbar::pass1() {
+    auto &use = table->stage->ixbar_use;
     for (auto &group : groups) {
+        auto size = group.first.ternary ? TCAM_XBAR_GROUP_SIZE : EXACT_XBAR_GROUP_SIZE;
         for (auto &input : group.second) {
             if (!input.what.check(true)) continue;
             table->stage->match_use[table->gress][input.what->reg.index] = 1;
@@ -255,7 +265,7 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
                 if (input.lo >= size)
                     error(input.what.lineno, "placing %s off the top of the input xbar",
                           input.what.name()); }
-                if (ternary) {
+                if (group.first.ternary) {
                     unsigned align_mask = input.lo >= 40 ? 3 : 7;
                     if ((input.lo ^ input.what->lo) & align_mask)
                         error(input.what.lineno, "%s misaligned on input_xbar", input.what.name());
@@ -264,7 +274,7 @@ void InputXbar::pass1(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
         for (InputXbar *other : use[group.first]) {
             if (other->groups.count(group.first) &&
                 conflict(other->groups[group.first], group.second)) {
-                error(lineno, "Input xbar group %d conflict in stage %d", group.first,
+                error(lineno, "Input xbar group %d conflict in stage %d", group.first.index,
                       table->stage->stageno);
                 warning(other->lineno, "conflicting group definition here"); } }
         use[group.first].push_back(this); }
@@ -339,21 +349,21 @@ void InputXbar::GroupSet::dbprint(std::ostream &out) const {
         out << prev->what << ':' << prev->lo << ".." << prev->hi; }
 }
 
-void InputXbar::pass2(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
+void InputXbar::pass2() {
+    auto &use = table->stage->ixbar_use;
     for (auto &group : groups) {
+        auto size = group.first.ternary ? TCAM_XBAR_GROUP_SIZE : EXACT_XBAR_GROUP_SIZE;
         unsigned bytes_in_use = 0;
         for (auto &input : group.second) {
             if (input.lo >= 0) continue;
             if (auto *at = GroupSet(use, group.first).find(*input.what)) {
                 input.lo = at->lo;
                 input.hi = at->hi;
-                LOG1(input.what << " found in bytes " << at->lo/8 << ".."
-                     << at->hi/8 << " of " << (ternary ? "tcam" : "exact")
-                     << " ixbar group " << group.first << " in stage "
-                     << table->stage->stageno);
+                LOG1(input.what << " found in bytes " << at->lo/8 << ".." << at->hi/8 <<
+                     " of " << group.first << " in stage " << table->stage->stageno);
                 continue; }
             if (bytes_in_use == 0)
-                for (InputXbar *other : use[group.first])
+                for (InputXbar *other : table->stage->ixbar_use[group.first])
                     if (other->groups.count(group.first))
                         add_use(bytes_in_use, other->groups[group.first]);
             int need = input.what->hi/8U - input.what->lo/8U + 1;
@@ -364,16 +374,15 @@ void InputXbar::pass2(Alloc1Dbase<std::vector<InputXbar *>> &use, int size) {
                     input.lo = i*8 + input.what->lo%8U;
                     input.hi = (i+need-1)*8 + input.what->hi%8U;
                     bytes_in_use |= mask;
-                    LOG1("Putting " << input.what << " in bytes " << i << ".."
-                         << i+need-1 << " of " << (ternary ? "tcam" : "exact")
-                         << " ixbar group " << group.first << " in stage "
-                         << table->stage->stageno);
+                    LOG1("Putting " << input.what << " in bytes " << i << ".." << i+need-1 <<
+                         " of " << group.first << " in stage " << table->stage->stageno);
                     break; }
             if (input.lo < 0) {
-                error(input.what.lineno, "No space in input xbar group %d for %s",
-                      group.first, input.what.name());
-                LOG1("Failed to put " << input.what << " into " << (ternary ? "tcam" : "exact")
-                     << " ixbar group " << group.first << " in stage " << table->stage->stageno);
+                error(input.what.lineno, "No space in input xbar %s group %d for %s",
+                      group.first.ternary ? "ternary" : "exact", group.first.index,
+                      input.what.name());
+                LOG1("Failed to put " << input.what << " into " << group.first <<
+                     " in stage " << table->stage->stageno);
                 LOG1("  inuse: " << GroupSet(use, group.first));
             }
         }
@@ -399,12 +408,13 @@ void InputXbar::write_regs(REGS &regs) {
         LOG1("  # Input xbar group " << group.first);
         unsigned group_base;
         unsigned half_byte = 0;
-        if (ternary) {
-            group_base = 128 + (group.first*11 + 1)/2U;
-            half_byte = 133 + 11*(group.first/2U);
-            xbar.mau_match_input_xbar_ternary_match_enable[table->gress] |= 1 << (group.first)/2U;
+        if (group.first.ternary) {
+            group_base = 128 + (group.first.index*11 + 1)/2U;
+            half_byte = 133 + 11*(group.first.index/2U);
+            xbar.mau_match_input_xbar_ternary_match_enable[table->gress]
+                |= 1 << (group.first.index)/2U;
         } else
-            group_base = group.first * 16U;
+            group_base = group.first.index * 16U;
         for (auto &input : group.second) {
             assert(input.lo >= 0);
             unsigned word_group, word_index, swizzle_mask;
@@ -437,7 +447,7 @@ void InputXbar::write_regs(REGS &regs) {
                 unsigned i = group_base + byte;
                 if (half_byte && byte == 5) i = half_byte;
                 if (i%phv_size != phv_byte) {
-                    if (ternary) {
+                    if (group.first.ternary) {
                         int off;
                         if (phv_size == 2)
                             off = (i&2) ? -1 : 1;
@@ -504,9 +514,7 @@ void InputXbar::write_regs(REGS &regs) {
 template void InputXbar::write_regs(Target::Tofino::mau_regs &);
 template void InputXbar::write_regs(Target::JBay::mau_regs &);
 
-InputXbar::Input *InputXbar::find(Phv::Slice sl, int grp) {
-    if (grp == -1 && groups.size() == 1)
-        grp = groups.begin()->first;
+InputXbar::Input *InputXbar::find(Phv::Slice sl, Group grp) {
     InputXbar::Input *rv = nullptr;
     if (groups.count(grp))
         for (auto &in : groups[grp]) {
