@@ -362,7 +362,27 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
         }
         assert(size[gress] == 0);
     }
-}
+}  // allocatePOV
+
+void PhvInfo::Field::phv_use_width(bool ccgf_owner, int min_ceil) {
+    // compute ccgf width, need PHV container(s) of this width
+    if (ccgf_owner && ccgf_fields.size()) {
+        int ccg_width = 0;
+        for (auto &f : ccgf_fields) {
+            // ccgf owner appears as member, phv_use_width = aggregate size of members
+            if (f->ccgf == f) {
+                if (PHV_Container::constraint_no_cohabit_exclusive_mau(f)) {
+                    ccg_width += PHV_Container::ceil_phv_use_width(f, min_ceil);
+                } else {
+                    ccg_width += f->size;
+                }
+            } else {
+                ccg_width += f->phv_use_width();
+            }
+        }
+        phv_use_hi = ccg_width - 1;
+    }
+}  // phv_use_width()
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &sl) {
     out << '[' << (sl.field_bit+sl.width-1) << ':' << sl.field_bit << "]->[" << sl.container << ']';

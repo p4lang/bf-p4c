@@ -70,6 +70,8 @@ class Cluster_PHV {
                                                        // e.g., POV fields
     //
     void compute_requirements();                       // compute cluster requirements
+    int compute_width_req();                           // determines max_width of field in cluster
+                                                       // field = ccgf w/ constrained member no_pack
     PHV_Container::PHV_Word container_width(int field_width);
     //
     ordered_set<const PhvInfo::Field *> *field_set(const PhvInfo::Field *f) {

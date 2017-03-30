@@ -69,9 +69,7 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
 void PHV_Field_Operations::end_apply() {
     LOG3("..........Begin PHV_Field_Operations..........");
     for (auto &f : phv) {
-        if (f.ccgf != &f
-            && f.phv_use_width() > 1) {
-            //
+        if (f.phv_use_width() > 1) {
             for (auto &op : f.operations) {
                 // element 0 in tuple is 'is_move_op'
                 if (std::get<0>(op) != true) {
@@ -80,35 +78,18 @@ void PHV_Field_Operations::end_apply() {
                     // recompute phv_use_width
                     // do not change width for deparser fields
                     //
-                    if (constraint_no_cohabit_exlusive_mau(&f)) {
-                        ceil_phv_use_width(&f);
+                    if (PHV_Container::constraint_no_cohabit_exclusive_mau(&f)) {
+                        f.phv_use_hi = PHV_Container::ceil_phv_use_width(&f) - 1;
                     }
                     LOG3("...packing_constraint... " << f);
                     break;
                 }
-            }
+            }  // for
         }
     }
-    // recompute width for ccgf owners
+    // recompute phv_use_width for ccgf owners
     for (auto &f : phv) {
         f.phv_use_width(f.ccgf == &f);
     }
     LOG3("..........End PHV_Field_Operations..........");
-}
-
-void PHV_Field_Operations::ceil_phv_use_width(PhvInfo::Field* f) {
-    assert(f);
-    assert(f->mau_phv_no_pack);
-    //
-    if (f->size <= PHV_Container::PHV_Word::b8) {
-        f->phv_use_hi = PHV_Container::PHV_Word::b8 - 1;
-    } else {
-        if (f->size <= PHV_Container::PHV_Word::b16) {
-            f->phv_use_hi = PHV_Container::PHV_Word::b16 - 1;
-        } else {
-            if (f->size <= PHV_Container::PHV_Word::b32) {
-                f->phv_use_hi = PHV_Container::PHV_Word::b32 - 1;
-            }
-        }
-    }
-}
+}  // end_apply()

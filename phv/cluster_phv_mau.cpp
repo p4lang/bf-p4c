@@ -668,10 +668,14 @@ PHV_MAU_Group_Assignments::container_no_pack(
                     // to compute accurate requirements
                     // use correct amount to set cc->width
                     //
-                    auto field_width =
-                        PHV_Field_Operations::constraint_no_cohabit_exlusive_mau(field)?
-                            std::min(field->size, field->phv_use_width()):
-                            field->phv_use_width();
+                    auto field_width = 0;
+                    // field constained no_pack and not ccgf owner, use size
+                    if (PHV_Container::constraint_no_cohabit_exclusive_mau(field)
+                       && field->ccgf != field) {
+                       field_width = field->size;
+                    } else {
+                       field_width = field->phv_use_width();
+                    }
                     for (auto field_stride=0;
                          j < req_containers && field_width > 0;
                          j++, field_stride++) {
@@ -713,8 +717,12 @@ PHV_MAU_Group_Assignments::container_no_pack(
                             //
                             fix_parser_container(container, phv_groups_to_be_filled);
                         }
+                    }  // for
+                    if (field->ccgf == field) {
+                        LOG1("*****sanity_FAIL*****.....ccgf member(s) NOT allocated");
+                        LOG1(field);
                     }
-                }
+                }  // for
                 if (g->empty_containers() == 0) {
                     break;
                 }
@@ -1212,13 +1220,19 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                         size_t field = 0;
                         auto field_bit_lo = 0;  // single field overlapping several containers
                         for (auto &cc : cc_set) {
+                            //
                             // to honor alignment of fields in clusters
                             // start with rightmost vertical slice that accommodates this width
                             //
                             int start = cc->hi() + 1 - cl_w;
+                            const PhvInfo::Field *f = cl->cluster_vec()[field];
+                            if (f->phv_use_width() > cl_w) {
+                                LOG1("*****sanity_FAIL*****.....field width exceeds slice .....");
+                                LOG1(f << " slice width cl_w = " << cl_w);
+                            }
                             cc->container()->taint(start,                     // start
                                                    cl_w,                      // width
-                                                   cl->cluster_vec()[field],  // field
+                                                   f,                         // field
                                                    cc->lo(),                  // range_start
                                                    field_bit_lo);             // field_bit_lo
                             cc->container()->sanity_check_container_ranges(

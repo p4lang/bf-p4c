@@ -131,13 +131,29 @@ class PHV_Container {
         const PhvInfo::Field *field,
         int range_start = 0,
         int field_bit_lo = 0,
-        bool process_overflow = false /* default */);
+        bool cluster_phv_overlay = false /* default */);
+    int taint_ccgf(
+        int start,
+        int width,
+        const PhvInfo::Field *field,
+        int field_bit_lo);
     void overlay_fields(
         PhvInfo::Field *f_overlay,
         const int start,
         const int width,
         const int field_bit_lo,
         const char taint_color);
+    void taint_overflow_bits(
+        int start,
+        int width,
+        const PhvInfo::Field *field,
+        int range_start,
+        int field_bit_lo);
+    void taint_bits(
+        int start,
+        int width,
+        const PhvInfo::Field *field,
+        int field_bit_lo);
     int avail_bits()                                            { return avail_bits_i; }
     int avail_o_bits()                                          { return avail_o_bits_i; }
     ordered_map<int, int>& ranges()                             { return ranges_i; }
@@ -153,6 +169,25 @@ class PHV_Container {
     }
     static bool constraint_no_holes(const PhvInfo::Field *field) {
         return field->deparser_no_holes;
+    }
+    static bool constraint_no_cohabit_exclusive_mau(const PhvInfo::Field *field) {
+        return field->mau_phv_no_pack && !field->deparser_no_pack;
+    }
+    static int ceil_phv_use_width(PhvInfo::Field* f, int min_ceil = 0) {
+        assert(f);
+        //
+        if (f->size <= PHV_Word::b8 && PHV_Word::b8 >= min_ceil) {
+            return PHV_Word::b8;
+        } else {
+            if (f->size <= PHV_Word::b16 && PHV_Word::b16 >= min_ceil) {
+                return PHV_Word::b16;
+            } else {
+                if (f->size <= PHV_Word::b32 && PHV_Word::b32 >= min_ceil) {
+                    return PHV_Word::b32;
+                }
+            }
+        }
+        return std::max(f->size, min_ceil);
     }
     //
     void sanity_check_container(const std::string& msg);

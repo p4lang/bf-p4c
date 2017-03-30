@@ -134,7 +134,7 @@ PHV_Container::taint(
     const PhvInfo::Field *field,
     int range_start,
     int field_bit_lo,
-    bool process_overflow) {
+    bool cluster_phv_overlay) {
     //
     BUG_CHECK((start+width <= width_i),
         "*****PHV_Container::taint()*****PHV-%s start=%d width=%d width_i=%d, field=%d:%s",
@@ -142,211 +142,160 @@ PHV_Container::taint(
     BUG_CHECK((range_start < width_i),
         "*****PHV_Container::taint()*****PHV-%s range_start=%d width=%d width_i=%d, field=%d:%s",
         phv_number_i, start, width, width_i, field->id, field->name);
-    if (!process_overflow && ranges_i[range_start]) {
+    if (!cluster_phv_overlay && ranges_i[range_start]) {
         BUG_CHECK(start+width <= ranges_i[range_start]+1,
             "*****PHV_Container::taint()*****"
             "PHV-%s start=%d width=%d range_start=%d ranges_i[range_start]=%d, field=%d:%s",
             phv_number_i, start, width, range_start, ranges_i[range_start], field->id, field->name);
     }
-    if (process_overflow && o_ranges_i[range_start]) {
+    if (cluster_phv_overlay && o_ranges_i[range_start]) {
         BUG_CHECK(start+width <= o_ranges_i[range_start]+1,
             "*****PHV_Container::taint()*****"
             "PHV-%s start=%d width=%d range_start=%d o_ranges_i[range_start]=%d, field=%d:%s",
             phv_number_i, start, width, range_start, o_ranges_i[range_start],
             field->id, field->name);
     }
+    //
+    // ccgf field processing
+    //
     if (field->ccgf == field) {
-        // container contiguous groups
-        // header fields allocation permits no holes in container
-        // for each member taint container with appropriate width
-        // must consider MSB order
-        //
-        // header stack pov's allocation is composition of members
-        // it is not present as a member in its ccgf
-        // as no separate allocation required
-        //
-        start += width;  // start allocation from ccgf-segment RHS in container
-        int processed_members = 0;
-        int processed_width = 0;
-        for (auto &member : field->ccgf_fields) {
-            if (PHV_Field_Operations::constraint_no_cohabit_exlusive_mau(member)) {
-                if (processed_width) {
-                    //
-                    // entire phv_use_width to be allocated in stand-alone container
-                    // e.g., <3:_12_8_8>{4*8}[28]I( phv_0
-                    // 64:ingress::meta.b[4]{0..11}  meta ccgf=64:ingress::meta.b
-                    // [ 64:ingress::meta.b[4]
-                    //   65:ingress::meta.c[4]{0..7} meta mau_phv_no_pack ccgf=64:ingress::meta.b
-                    // :12]
-                    //
-                    break;
-                } else {
-                    //
-                    // account pad for no_pack constraint
-                    //
-                    assert(width_i >= member->size);
-                    int pad = width - member->size;
-                    start -= pad;                   // taint starts from RHS
-                    processed_width += pad;
-                }
-            }
-            int use_width = member->size;           // always using size to taint container
-            if (!member->simple_header_pov_ccgf) {  // ignore simple header ccgf
-                use_width -= member->phv_use_rem;
-            }
-            start -= use_width;
-            int member_bit_lo = member->phv_use_lo;
-            if (start < 0) {
-                //
-                // member straddles containers
-                // remainder bits processed in subsequent container allocated to owner
-                //
-                use_width += start;  // start is -ve
-                start = 0;
-                member_bit_lo = member->size - member->phv_use_rem - use_width;
-                member->phv_use_rem += use_width;  // spans several containers, aggregate used bits
-            } else {
-                member->phv_use_rem = 0;
-                processed_members++;
-            }
-            member->ccgf = 0;        // recursive taint call should skip ccgf
-            taint(start, use_width, member, start /*range start*/, member_bit_lo, process_overflow);
-            processed_width += use_width;
-            if (start <= 0) {
-                break;
-            }
-        }  // for ccgf members
-        // update ccgf owner record
-        PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(field);
-        f1->ccgf_fields.erase(
-            f1->ccgf_fields.begin(),
-            f1->ccgf_fields.begin() + processed_members);
-        f1->phv_use_hi -= processed_width;
-        if (field->ccgf_fields.size()) {
-            f1->ccgf = f1;
-        } else {
-            f1->ccgf = 0;
-            Cluster::set_field_range(f1);
-        }
-
-        if (field->header_stack_pov_ccgf) {
-            fields_in_container_i.push_back(
-                new Container_Content(this, 0/*start*/, width, field, field_bit_lo, taint_color_i));
-        }
-
-        return processed_width;  // all bits of this field may NOT be processed
-    }  // ccgf field processing
-    //
-    // taint() for overlay fields
-    if (process_overflow) {
-        o_taint_color_i += '1' - '0';
-        if (o_taint_color_i < '0' || o_taint_color_i > '9') {
-            o_taint_color_i = '*';
-        }
-        for (auto i=start; i < start+width; i++) {
-            o_bits_i[i] = o_taint_color_i;
-        }
-        avail_o_bits_i -= width;  // packing reduces available bits
-        BUG_CHECK(
-                avail_o_bits_i >= 0,
-                "*****PHV_Container::taint()*****PHV-%s avail_o_bits = %d",
-                phv_number_i,
-                avail_o_bits_i);
-        if (avail_o_bits_i == 0) {
-            o_status_i = Container_status::FULL;
-            o_ranges_i.clear();
-        } else {
-            o_status_i = Container_status::PARTIAL;
-            if (range_start == start) {
-                if (start+width < o_ranges_i[start]+1) {
-                    o_ranges_i[start+width] = o_ranges_i[start];
-                }
-                o_ranges_i.erase(start);
-            } else {
-                o_ranges_i[range_start] = start-1;
-            }
-        }
-        // sanity check?
-        o_fields_in_container_i.push_back(
-                new Container_Content(this, start, width, field, field_bit_lo, taint_color_i));
-        return width_i;  // return container width => all bits of this field are processed
+        return taint_ccgf(start, width, field, field_bit_lo);
     }
     //
-    if (taint_color_i == '9') {
-        taint_color_i = 'a';
+    // taint() for cluster overlay fields
+    //
+    if (cluster_phv_overlay) {
+        //
+        // cluster_overlay fields only
+        //
+        taint_overflow_bits(start, width, field, range_start, field_bit_lo);
     } else {
-        taint_color_i += '1' - '0';
-    }
-    for (auto i=start; i < start+width; i++) {
-         bits_i[i] = taint_color_i;
-    }
-    //
-    avail_bits_i -= width;  // packing reduces available bits
-    BUG_CHECK(
-        avail_bits_i >= 0,
-        "*****PHV_Container::taint()*****PHV-%s avail_bits = %d",
-        phv_number_i,
-        avail_bits_i);
-    //
-    if (status_i == Container_status::EMPTY) {
-        phv_mau_group_i->dec_empty_containers();
-    }
-    //
-    // first container placement, packing start lo = start + width
-    // after packing, non contiguous availability
-    // e.g., [15..15], [8..10] => ranges[15] = 15, ranges[8] = 10
-    //
-    if (avail_bits_i == 0
-        || constraint_no_cohabit(field)) {
         //
-        status_i = Container_status::FULL;
-        if (constraint_no_cohabit(field)) {
-            char pad_color = '-';
-            for (auto i=width_i - avail_bits_i;
-                i < width_i;
-                i++) {
-                 bits_i[i] = pad_color;
+        // non cluster_overlay fields
+        // includes interference based overlay fields
+        //
+        taint_bits(start, width, field, field_bit_lo);
+        //
+        // if field has overlay fields after cluster's interference graph computation
+        // add those overlay fields to container's container_contents
+        //
+        overlay_fields(
+            const_cast<PhvInfo::Field *>(field),
+            start,
+            width,
+            field_bit_lo,
+            taint_color_i);
+        //
+        // set gress for this container
+        // container may be part of MAU group that is Ingress Or Egress
+        // however for any stage it is used exclusively for Ingress or for Egress
+        // cannot share container with Ingress fields & Egress fields
+        // transition behavior for such sharing unclear
+        //
+        // ignore gress of $tmp fields as cluster_phv sets its gress based on non-tmps
+        //
+        if (strncmp(field->name, "$tmp", strlen("$tmp"))) {
+            gress_i = gress(field);
+            if (phv_mau_group_i->gress() == Ingress_Egress::Ingress_Or_Egress) {
+                phv_mau_group_i->gress(gress_i);
+            } else {
+                assert(phv_mau_group_i->gress() == gress_i);
             }
         }
-    } else {
-        status_i = Container_status::PARTIAL;
     }
-    create_ranges();
-    //
     sanity_check_container_ranges("PHV_Container::taint()..");
+    return width;  // all bits of this field processed
+}  // taint()
+
+int
+PHV_Container::taint_ccgf(
+    int start,
+    int width,
+    const PhvInfo::Field *field,
+    int field_bit_lo) {
     //
-    // track fields in this container
+    // container contiguous groups
+    // header fields allocation permits no holes in container
+    // for each member taint container with appropriate width
+    // must consider MSB order
     //
-    fields_in_container_i.push_back(
-        new Container_Content(this, start, width, field, field_bit_lo, taint_color_i));
+    // header stack pov's allocation is composition of members
+    // it is not present as a member in its ccgf
+    // as no separate allocation required
     //
-    // if field has overlay fields after cluster's interference graph computation
-    // add those overlay fields to container's container_contents
-    //
-    overlay_fields(const_cast<PhvInfo::Field *>(field), start, width, field_bit_lo, taint_color_i);
-    //
-    //
-    // set gress for this container
-    // container may be part of MAU group that is Ingress Or Egress
-    // however for any stage it is used exclusively for Ingress or for Egress
-    // cannot share container with Ingress fields & Egress fields
-    // transition behavior for such sharing unclear
-    //
-    // ignore gress of $tmp fields as cluster_phv sets its gress based on non-tmps
-    //
-    if (strncmp(field->name, "$tmp", strlen("$tmp"))) {
-        gress_i = gress(field);
-        if (phv_mau_group_i->gress() == Ingress_Egress::Ingress_Or_Egress) {
-            phv_mau_group_i->gress(gress_i);
-        } else {
-            assert(phv_mau_group_i->gress() == gress_i);
+    start += width;  // start allocation from ccgf-segment RHS in container
+    int processed_members = 0;
+    int processed_width = 0;
+    for (auto &member : field->ccgf_fields) {
+        if (constraint_no_cohabit_exclusive_mau(member)) {
+            if (processed_width) {
+                //
+                // entire phv_use_width to be allocated in stand-alone container
+                // e.g., <3:_12_8_8>{4*8}[28]I( phv_0
+                // 64:ingress::meta.b[4]{0..11}  meta ccgf=64:ingress::meta.b
+                // [ 64:ingress::meta.b[4]
+                //   65:ingress::meta.c[4]{0..7} meta mau_phv_no_pack ccgf=64:ingress::meta.b
+                // :12]
+                //
+                break;
+            } else {
+                //
+                // account pad for no_pack constraint
+                //
+                assert(width_i >= member->size);
+                int pad = width - member->size;
+                start -= pad;                   // taint starts from RHS
+            }
         }
+        int use_width = member->size;           // always using size to taint container
+        if (!member->simple_header_pov_ccgf) {  // ignore simple header ccgf
+            use_width -= member->phv_use_rem;
+        }
+        start -= use_width;
+        int member_bit_lo = member->phv_use_lo;
+        if (start < 0) {
+            //
+            // member straddles containers
+            // remainder bits processed in subsequent container allocated to owner
+            //
+            use_width += start;  // start is -ve
+            start = 0;
+            member_bit_lo = member->size - member->phv_use_rem - use_width;
+            member->phv_use_rem += use_width;  // spans several containers, aggregate used bits
+        } else {
+            member->phv_use_rem = 0;
+            processed_members++;
+        }
+        member->ccgf = 0;        // recursive taint call should skip ccgf
+        taint(start, use_width, member, start /*range start*/, member_bit_lo);
+        processed_width += constraint_no_cohabit_exclusive_mau(member)? width_i: use_width;
+        if (start <= 0) {
+            break;
+        }
+    }  // for ccgf members
+    // update ccgf owner record
+    PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(field);
+    f1->ccgf_fields.erase(
+        f1->ccgf_fields.begin(),
+        f1->ccgf_fields.begin() + processed_members);
+    f1->phv_use_hi -= processed_width;
+    if (field->ccgf_fields.size()) {
+        f1->ccgf = f1;
+    } else {
+        f1->ccgf = 0;
+        Cluster::set_field_range(f1);
     }
 
-    return width_i;  // return container width => all bits of this field are processed
-}  // taint
+    if (field->header_stack_pov_ccgf) {
+        fields_in_container_i.push_back(
+            new Container_Content(this, 0/*start*/, width, field, field_bit_lo, taint_color_i));
+    }
 
-void PHV_Container::overlay_fields(
+    return processed_width;  // all bits of this field may NOT be processed
+}  // taint_ccgf
+
+void
+PHV_Container::overlay_fields(
     PhvInfo::Field *f_overlay,
     const int start,
     const int width,
@@ -411,7 +360,101 @@ void PHV_Container::overlay_fields(
             }
         }
     }
-}
+}  // overlay_fields()
+
+void
+PHV_Container::taint_overflow_bits(
+    int start,
+    int width,
+    const PhvInfo::Field *field,
+    int range_start,
+    int field_bit_lo) {
+    //
+    o_taint_color_i += '1' - '0';
+    if (o_taint_color_i < '0' || o_taint_color_i > '9') {
+        o_taint_color_i = '*';
+    }
+    for (auto i=start; i < start+width; i++) {
+        o_bits_i[i] = o_taint_color_i;
+    }
+    avail_o_bits_i -= width;  // packing reduces available bits
+    BUG_CHECK(
+            avail_o_bits_i >= 0,
+            "*****PHV_Container::taint_overflow_bits()*****PHV-%s avail_o_bits = %d",
+            phv_number_i,
+            avail_o_bits_i);
+    if (avail_o_bits_i == 0) {
+        o_status_i = Container_status::FULL;
+        o_ranges_i.clear();
+    } else {
+        o_status_i = Container_status::PARTIAL;
+        if (range_start == start) {
+            if (start+width < o_ranges_i[start]+1) {
+                o_ranges_i[start+width] = o_ranges_i[start];
+            }
+            o_ranges_i.erase(start);
+        } else {
+            o_ranges_i[range_start] = start-1;
+        }
+    }
+    //
+    o_fields_in_container_i.push_back(
+            new Container_Content(this, start, width, field, field_bit_lo, taint_color_i));
+}  // taint_overflow_bits()
+
+void
+PHV_Container::taint_bits(
+    int start,
+    int width,
+    const PhvInfo::Field *field,
+    int field_bit_lo) {
+    //
+    if (taint_color_i == '9') {
+        taint_color_i = 'a';
+    } else {
+        taint_color_i += '1' - '0';
+    }
+    for (auto i=start; i < start+width; i++) {
+         bits_i[i] = taint_color_i;
+    }
+    //
+    avail_bits_i -= width;  // packing reduces available bits
+    BUG_CHECK(
+        avail_bits_i >= 0,
+        "*****PHV_Container::taint_bits()*****PHV-%s avail_bits = %d, field = %d:%s ",
+        phv_number_i,
+        avail_bits_i,
+        field->id,
+        field->name);
+    //
+    if (status_i == Container_status::EMPTY) {
+        phv_mau_group_i->dec_empty_containers();
+    }
+    //
+    // first container placement, packing start lo = start + width
+    // after packing, non contiguous availability
+    // e.g., [15..15], [8..10] => ranges[15] = 15, ranges[8] = 10
+    //
+    if (avail_bits_i == 0
+        || constraint_no_cohabit(field)) {
+        //
+        status_i = Container_status::FULL;
+        if (constraint_no_cohabit(field)) {
+            // padding char for unoccupied but un-assignable bits
+            for (auto i=width_i - avail_bits_i; i < width_i; i++) {
+                bits_i[i] = '-';
+            }
+        }
+    } else {
+        status_i = Container_status::PARTIAL;
+    }
+    create_ranges();
+    //
+    // track fields in this container
+    //
+    fields_in_container_i.push_back(
+        new Container_Content(this, start, width, field, field_bit_lo, taint_color_i));
+}  // taint_bits()
 
 
 //***********************************************************************************

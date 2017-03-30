@@ -56,7 +56,7 @@ class PHV_MAU_Group {
     PHV_Container::Ingress_Egress gress_i;              // Ingress_Only,
                                                         // Egress_Only,
                                                         // Ingress_Or_Egress
-    int empty_containers_i;                             // number of containers that remain Empty
+    size_t empty_containers_i;                          // number of containers that remain Empty
     std::vector<PHV_Container *> phv_containers_i;      // containers in this MAU group
     std::vector<Cluster_PHV *> cluster_phv_i;           // clusters in this MAU group
     ordered_map<int,
@@ -98,9 +98,9 @@ class PHV_MAU_Group {
         }
     }
     PHV_Container::Ingress_Egress gress()               { return gress_i; }
-    int& empty_containers()                             { return empty_containers_i; }
+    size_t& empty_containers()                          { return empty_containers_i; }
     void inc_empty_containers() {
-        if (empty_containers_i < static_cast<int>(phv_containers_i.size())) {
+        if (empty_containers_i < phv_containers_i.size()) {
             empty_containers_i++;
         }
     }

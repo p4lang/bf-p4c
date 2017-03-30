@@ -97,17 +97,8 @@ class PhvInfo : public Inspector {
         }
         int phv_use_width() const { return phv_use_hi - phv_use_lo + 1; }
                                            // width of field needed in phv container
-        void phv_use_width(bool ccgf_owner) {
-            // compute ccgf width, need PHV container(s) of this width
-            if (ccgf_owner && ccgf_fields.size()) {
-                int ccg_width = 0;
-                for (auto &f : ccgf_fields) {
-                    // ccgf owner appears as member, phv_use_width = aggregate size of members
-                    ccg_width += (f->ccgf == f)? f->size: f->phv_use_width();
-                }
-                phv_use_hi = ccg_width - 1;
-            }
-        }
+        void phv_use_width(bool ccgf, int min_ceil = 0);
+                                           // set phv_use_width for ccgf owners
         //
         set<constraint> constraints;  // unused -- get rid of it?
         vector<std::tuple<bool, cstring, Field_Ops>> operations;
