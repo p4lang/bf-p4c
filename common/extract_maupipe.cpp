@@ -249,6 +249,15 @@ class FixP4Table : public Transform {
             return mc->method;
         prune();
         return mc; }
+    const IR::Expression *preorder(IR::BAnd *exp) override {
+        if (!getParent<IR::KeyElement>())
+            return exp;
+        if (exp->left->is<IR::Constant>())
+            return new IR::Mask(exp->srcInfo, exp->type, exp->right, exp->left);
+        if (exp->right->is<IR::Constant>())
+            return new IR::Mask(exp->srcInfo, exp->type, exp->left, exp->right);
+        error("%s: mask must have a constant operand to be used as a table key", exp->srcInfo);
+        return exp; }
 
  public:
     FixP4Table(const P4::ReferenceMap *r, IR::MAU::Table *tt, set<cstring> &u)
