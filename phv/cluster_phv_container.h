@@ -105,7 +105,7 @@ class PHV_Container {
     PHV_MAU_Group *phv_mau_group()                              { return phv_mau_group_i; }
     PHV_Word width()                                            { return width_i; }
     int phv_number()                                            { return phv_number_i; }
-    std::string asm_string()                                    { return asm_string_i; }
+    std::string& asm_string()                                   { return asm_string_i; }
     void
     gress(Ingress_Egress gress_p) {  // set when MAU group's gress is set
         gress_i = gress_p;

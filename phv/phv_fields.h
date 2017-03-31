@@ -59,6 +59,10 @@ class PhvInfo : public Inspector {
                                                          // has members in ccgf_fields
         bool            simple_header_pov_ccgf = false;  // simple header ccgf
                                                          // has members in ccgf_fields
+        //
+        std::string cl_i = "??";           // cluster id, field belongs to this cluster
+        std::vector<std::string> phvs_i;   // field placed in these phv containers
+        //
         Field           *ccgf = 0;         // container contiguous group fields
                                            // used for
                                            // (i) header stack povs: container FULL, no holes
@@ -95,10 +99,23 @@ class PhvInfo : public Inspector {
             }
             field_overlay_map_i[r]->insert(field);
         }
-        int phv_use_width() const { return phv_use_hi - phv_use_lo + 1; }
+        int phv_use_width() const          { return phv_use_hi - phv_use_lo + 1; }
                                            // width of field needed in phv container
         void phv_use_width(bool ccgf, int min_ceil = 0);
                                            // set phv_use_width for ccgf owners
+        std::string& cl()                  { return cl_i; }
+        void cl(std::string cl_p)          {
+            cl_i = cl_p;
+            for (auto &m : ccgf_fields) {
+                if (m != this) {
+                    m->cl(cl_p);
+                }
+            }
+        }
+        std::vector<std::string>& phvs()   { return phvs_i; }
+        void phvs(std::string& phv_p) {
+            phvs_i.push_back(phv_p);
+        }
         //
         set<constraint> constraints;  // unused -- get rid of it?
         vector<std::tuple<bool, cstring, Field_Ops>> operations;

@@ -28,6 +28,10 @@ PHV_Container::Container_Content::Container_Content(
     BUG_CHECK(
         field_i,
         "*****PHV_Container::Container_Content constructor called with null field ptr*****");
+    //
+    // insert phv number in field
+    //
+    const_cast<PhvInfo::Field *>(f)->phvs(const_cast<PHV_Container *>(c)->asm_string());
 }
 
 //***********************************************************************************

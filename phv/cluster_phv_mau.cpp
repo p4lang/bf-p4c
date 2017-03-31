@@ -1227,8 +1227,10 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                             int start = cc->hi() + 1 - cl_w;
                             const PhvInfo::Field *f = cl->cluster_vec()[field];
                             if (f->phv_use_width() > cl_w) {
-                                LOG1("*****sanity_FAIL*****.....field width exceeds slice .....");
-                                LOG1(f << " slice width cl_w = " << cl_w);
+                                LOG1("cluster_phv_mau.cpp*****sanity_FAIL*****");
+                                LOG1(".....field width exceeds slice .....");
+                                LOG1(f);
+                                LOG1(" slice width cl_w = " << cl_w);
                             }
                             cc->container()->taint(start,                     // start
                                                    cl_w,                      // width

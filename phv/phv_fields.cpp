@@ -408,6 +408,12 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
     if (field.deparser_no_pack) out << " deparser_no_pack";
     if (field.deparser_no_holes) out << " deparser_no_holes";
     if (field.ccgf) out << " ccgf=" << field.ccgf->id << ':' << field.ccgf->name;
+    out << " (" << field.cl_i << ")";    // cluster id
+    out << " [";
+    for (auto &phv : field.phvs_i) {
+        out << " " << phv << ";";        // phv number
+    }
+    out << "]";
     if (field.ccgf_fields.size()) {
         // aggregate widths of members in "container contiguous group fields"
         out << std::endl << '[';

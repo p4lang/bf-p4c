@@ -190,14 +190,9 @@ Cluster_PHV::Cluster_PHV(
                 assert(gress_i == PHV_Container::gress(f));
             }
         }
+        // set cluster id in field
+        const_cast<PhvInfo::Field *>(f)->cl(id_i);
     }
-    //
-    // cluster vector = sorted decreasing field width
-    //
-    std::sort(cluster_vec_i.begin(),
-              cluster_vec_i.end(),
-              [](const PhvInfo::Field *l, const PhvInfo::Field *r) {
-                  return l->phv_use_width() > r->phv_use_width(); });
     //
     compute_requirements();
     //
@@ -236,10 +231,6 @@ Cluster_PHV::compute_requirements() {
     }
     // container width
     width_i = container_width(width_req);
-    // max width of field in cluster
-    max_width_i = uniform_width_i?
-                  cluster_vec_i.front()->phv_use_width():
-                  std::max(cluster_vec_i.front()->phv_use_width(), width_req);
     // num containers of width
     num_containers_i = num_containers(cluster_vec_i, width_i);
     //
@@ -252,6 +243,19 @@ Cluster_PHV::compute_requirements() {
             num_fields_no_cohabit_i++;
         }
     }
+    //
+    // cluster vector = sorted decreasing field width
+    //
+    std::sort(cluster_vec_i.begin(),
+              cluster_vec_i.end(),
+              [](const PhvInfo::Field *l, const PhvInfo::Field *r) {
+                  return l->phv_use_width() > r->phv_use_width(); });
+    //
+    // max width of field in cluster, computed after sorting cluster fields
+    //
+    max_width_i = uniform_width_i?
+                  cluster_vec_i.front()->phv_use_width():
+                  std::max(cluster_vec_i.front()->phv_use_width(), width_req);
 }  // compute requirements
 
 //
