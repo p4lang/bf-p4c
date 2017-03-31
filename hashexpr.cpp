@@ -129,14 +129,14 @@ HashExpr *HashExpr::create(gress_t gress, const value_t &what) {
 
 void HashExpr::PhvRef::gen_data(bitvec &data, int bit, InputXbar *ix, int grp) {
     auto *in = ix->find_exact(*what, grp);
-    if (in->lo < 0) return;
+    if (!in || in->lo < 0) return;
     data[in->lo%64U + what->lo + bit - in->what->lo] = 1;
 }
 
 void HashExpr::Random::gen_data(bitvec &data, int bit, InputXbar *ix, int grp) {
     for (auto &ref : what) {
         auto *in = ix->find_exact(*ref, grp);
-        if (in->lo < 0) break;
+        if (!in || in->lo < 0) break;
         int off = in->lo%64U - in->what->lo;
         for (int i = ref->lo; i <= ref->hi; i++)
             data[i + off] = random() & 1;
@@ -147,7 +147,7 @@ void HashExpr::Crc::gen_data(bitvec &data, int bit, InputXbar *ix, int grp) {
     bitvec crcbit(1UL);
     for (auto &ref : what) {
         auto *in = ix->find_exact(*ref, grp);
-        if (in->lo < 0) break;
+        if (!in || in->lo < 0) break;
         int off = in->lo%64U - in->what->lo;
         for (int i = ref->lo; i <= ref->hi; i++, crcbit <<= 1)
             data[i + off] = (crc(poly, crcbit) >> bit) & 1; }

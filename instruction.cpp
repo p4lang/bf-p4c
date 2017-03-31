@@ -158,71 +158,78 @@ struct operand {
         void dbprint(std::ostream &out) const { out << 'A' << index; }
     };
     struct HashDist : Base {
-        Table                           *table;
-        std::vector<HashDistribution *> dist;
+        Table                   *table;
+        std::vector<int>        units;
 
         HashDist(int line, Table *t) : Base(line), table(t) {}
-        HashDist(int line, Table *t, int unit) : Base(line), table(t) {
-            if (auto hd = table->find_hash_dist(unit))
-                dist.push_back(hd);
-            else
-                error(lineno, "No hash dist %d in table %s", unit, table->name()); }
+        HashDist(int line, Table *t, int unit) : Base(line), table(t) { units.push_back(unit); }
         static HashDist *parse(Table *tbl, const VECTOR(value_t) &v) {
             if (v.size < 2 || v[0] != "hash_dist") return nullptr;
             auto *rv = new HashDist(v[0].lineno, tbl);
             for (int i = 1; i < v.size; ++i) {
                 if (CHECKTYPE(v[i], tINT)) {
-                    if (auto hd = tbl->find_hash_dist(v[i].i)) {
-                        rv->dist.push_back(hd);
-                        continue;
-                    } else
-                        error(rv->lineno, "No hash_dist %d in table %s", v[i].i, tbl->name()); }
-                delete rv;
-                return nullptr; }
+                    rv->units.push_back(v[i].i);
+                } else {
+                    delete rv;
+                    return nullptr; } }
             return rv; }
 
+        HashDistribution *find_hash_dist(int unit) const {
+            if (auto rv = table->find_hash_dist(unit)) return rv;
+            for (auto mtab : table->get_match_tables())
+                if (auto rv = mtab->find_hash_dist(unit)) return rv;
+            return nullptr; }
         bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const HashDist *>(a_)) {
-                return table == a->table && dist == a->dist;
+                return table == a->table && units == a->units;
             } else return false; }
         virtual HashDist *clone() override { return new HashDist(*this); }
         virtual void pass2(int group) const override {
-            if (dist.size() > 2) {
+            if (units.size() > 2) {
                 error(lineno, "Can't use more than 2 hash_dist units together in an action");
                 return; }
             int size = group_size[group]/8U;
-            if (dist.size() == 2) {
+            if (units.size() == 2) {
                 if (size != 4)
                     error(lineno, "Can't combine hash_dist units in %d bit operation", size*8);
-                dist.at(0)->xbar_use |= HashDistribution::IMMEDIATE_LOW;
-                dist.at(1)->xbar_use |= HashDistribution::IMMEDIATE_HIGH;
-            } else if (!(dist.at(0)->xbar_use & HashDistribution::IMMEDIATE_HIGH))
-                dist.at(0)->xbar_use |= HashDistribution::IMMEDIATE_LOW;
+                auto xbar_use = HashDistribution::IMMEDIATE_LOW;
+                for (auto u : units) {
+                    if (auto hd = find_hash_dist(u))
+                        hd->xbar_use |= xbar_use;
+                    else
+                        error(lineno, "No hash dist %d in table %s", u, table->name());
+                    xbar_use = HashDistribution::IMMEDIATE_HIGH; }
+            } else if (auto hd = find_hash_dist(units.at(0))) {
+                if (!(hd->xbar_use & HashDistribution::IMMEDIATE_HIGH))
+                    hd->xbar_use |= HashDistribution::IMMEDIATE_LOW;
+            } else error(lineno, "No hash dist %d in table %s", units.at(0), table->name());
             int offset = 0;
-            for (auto hd : dist) {
-                if (!(hd->xbar_use & HashDistribution::IMMEDIATE_LOW))
-                    offset = 16;
-                if (table->find_on_actionbus(hd, offset, size) < 0)
-                    table->need_on_actionbus(hd, offset, size);
-                offset = 16; } }
+            for (auto u : units) {
+                if (auto hd = find_hash_dist(u)) {
+                    if (!(hd->xbar_use & HashDistribution::IMMEDIATE_LOW))
+                        offset = 16;
+                    if (table->find_on_actionbus(hd, offset, size) < 0)
+                        table->need_on_actionbus(hd, offset, size);
+                    offset = 16; } } }
         virtual int bits(int group) override { 
             int size = group_size[group]/8U;
-            int offset = dist.at(0)->xbar_use & HashDistribution::IMMEDIATE_LOW ? 0 : 16;
-            int byte = table->find_on_actionbus(dist.at(0), offset, size);
+            auto hd = find_hash_dist(units.at(0));
+            int offset = hd->xbar_use & HashDistribution::IMMEDIATE_LOW ? 0 : 16;
+            int byte = table->find_on_actionbus(hd, offset, size);
             if (byte < 0) {
-                error(lineno, "hash dist %d is not on the action bus", dist.at(0)->id);
+                error(lineno, "hash dist %d is not on the action bus", hd->id);
                 return -1; }
             if (size == 2) byte -= 32;
             if (byte >= 0 || byte < 32*size)
                 return 0x20 + byte/size;
             error(lineno, "action bus entry %d(hash_dist %d) out of range for %d-bit access",
-                  size == 2 ? byte+32 : byte, dist.at(0)->id, size*8);
+                  size == 2 ? byte+32 : byte, hd->id, size*8);
             return -1; }
         virtual void dbprint(std::ostream &out) const {
             out << "hash_dist(";
             const char *sep = "";
-            for (auto hd : dist) {
-                out << sep << hd->id;
+            for (auto u : units) {
+                out << sep << u;
                 sep = ", "; }
             out << ")"; }
     };

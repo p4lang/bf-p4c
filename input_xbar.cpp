@@ -56,8 +56,8 @@ InputXbar::InputXbar(Table *t, bool tern, const VECTOR(pair_t) &data)
             isgroup = true;
         } else if (kv.key[0] == "ternary" && kv.key[1] == "group") {
             ternary = true;
-            isgroup = true;
-        } else if (isgroup || kv.key[0] == "group") {
+            isgroup = true; }
+        if (isgroup || kv.key[0] == "group") {
             if (index >= (ternary ? TCAM_XBAR_GROUPS : EXACT_XBAR_GROUPS)) {
                 error(kv.key.lineno, "invalid group descriptor");
                 continue; }
