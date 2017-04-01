@@ -810,10 +810,10 @@ PHV_MAU_Group_Assignments::fix_parser_container(
         } else {
             // width < 16, <=> 8
             if (cc->width() % PHV_Container::PHV_Word::b8) {
-                LOG1("parser_container width % PHV_Word::b8 ..... pack@header_analysis?"
-                    << cc->width()
-                    << cc
-                    << c);
+                LOG1("parser_container width % PHV_Word::b8 ..... pack@header_analysis?");
+                LOG1("cc_width = " << cc->width());
+                LOG1(cc);
+                LOG1(c);
             }
             // obtain c_transfer with cc->width = 8b
         }
@@ -885,7 +885,8 @@ PHV_MAU_Group_Assignments::parser_container_no_holes(
             }
         }  // for
     }  // for
-    LOG1("parser_container_no_holes() transfer unsuccessful check width: " << cc);
+    LOG1("parser_container_no_holes() transfer unsuccessful check width: ");
+    LOG1(cc);
     return 0;
 }  // parser_container_no_holes
 
@@ -1813,8 +1814,7 @@ void PHV_MAU_Group_Assignments::sanity_check_group_containers(const std::string&
                 }
             }
             LOG1(field);
-            LOG1("width_in_c = " << width_in_c << ", phv_use_width = " << field_width);
-            LOG1(cc_s);
+            LOG1("width_in_c = " << width_in_c << ", phv_use_width = " << field_width << cc_s);
         }
     }
 }

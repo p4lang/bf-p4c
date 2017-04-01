@@ -17,13 +17,15 @@ PHV_Container::Container_Content::Container_Content(
     const int w,
     const PhvInfo::Field *f,
     const int field_bit_lo,
-    const char taint_color)
+    const char taint_color,
+    bool overlayed)
         : container_i(c),
           lo_i(l),
           hi_i(l+w-1),
           field_i(f),
           field_bit_lo_i(field_bit_lo),
-          taint_color_i(taint_color) {
+          taint_color_i(taint_color),
+          overlayed_field_i(overlayed) {
     //
     BUG_CHECK(
         field_i,
@@ -92,12 +94,12 @@ PHV_Container::clean_ranges() {
         ranges_i.clear();
     }
     ordered_set<int> clear_these;
-    for (auto r : ranges_i) {
+    for (auto &r : ranges_i) {
         if (r.second < r.first || (r.second == r.first &&  bits_i[r.first] != '0')) {
             clear_these.insert(r.first);
         }
     }
-    for (auto r : clear_these) {
+    for (auto &r : clear_these) {
         ranges_i.erase(r);
     }
 }
@@ -187,8 +189,7 @@ PHV_Container::taint(
             const_cast<PhvInfo::Field *>(field),
             start,
             width,
-            field_bit_lo,
-            taint_color_i);
+            field_bit_lo);
         //
         // set gress for this container
         // container may be part of MAU group that is Ingress Or Egress
@@ -277,19 +278,10 @@ PHV_Container::taint_ccgf(
             break;
         }
     }  // for ccgf members
+    //
     // update ccgf owner record
-    PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(field);
-    f1->ccgf_fields.erase(
-        f1->ccgf_fields.begin(),
-        f1->ccgf_fields.begin() + processed_members);
-    f1->phv_use_hi -= processed_width;
-    if (field->ccgf_fields.size()) {
-        f1->ccgf = f1;
-    } else {
-        f1->ccgf = 0;
-        // ccgf owners with no-pack constraint, set range to entire container
-        Cluster::set_field_range(f1, constraint_no_cohabit_exclusive_mau(f1)? width_i: 0);
-    }
+    //
+    update_ccgf(const_cast<PhvInfo::Field *>(field), processed_members, processed_width);
 
     if (field->header_stack_pov_ccgf) {
         fields_in_container_i.push_back(
@@ -300,12 +292,30 @@ PHV_Container::taint_ccgf(
 }  // taint_ccgf
 
 void
+PHV_Container::update_ccgf(
+    PhvInfo::Field *field,
+    int processed_members,
+    int processed_width) {
+    //
+    field->ccgf_fields.erase(
+        field->ccgf_fields.begin(),
+        field->ccgf_fields.begin() + processed_members);
+    field->phv_use_hi -= processed_width;
+    if (field->ccgf_fields.size()) {
+        field->ccgf = field;
+    } else {
+        field->ccgf = 0;
+        // ccgf owners with no-pack constraint, set range to entire container
+        Cluster::set_field_range(field, constraint_no_cohabit_exclusive_mau(field)? width_i: 0);
+    }
+}  // update_ccgf
+
+void
 PHV_Container::overlay_fields(
     PhvInfo::Field *f_overlay,
     const int start,
     const int width,
-    const int field_bit_lo,
-    const char taint_color) {
+    const int field_bit_lo) {
     //
     assert(f_overlay);
     //
@@ -336,6 +346,7 @@ PHV_Container::overlay_fields(
                                 m_start = std::min(m_start, m->phv_use_lo);
                             }
                         }
+                        int bias = m_start;
                         for (auto &m : f->ccgf_fields) {
                             int m_width = m->size;
                             int m_field_bit_lo = m->phv_use_lo;
@@ -346,9 +357,14 @@ PHV_Container::overlay_fields(
                                    m_width,
                                    m,
                                    m_field_bit_lo,
-                                   taint_color));
+                                   taint_color(m_start),
+                                   true /* overlayed field */));
                             m_start += m_width;
                         }
+                        update_ccgf(
+                            const_cast<PhvInfo::Field *>(f), 
+                            f->ccgf_fields.size() /* processed members */,  
+                            m_start - bias /* processed width */);
                     } else {
                         fields_in_container_i.push_back(
                             new Container_Content(
@@ -357,10 +373,13 @@ PHV_Container::overlay_fields(
                                 width,
                                 f,
                                 field_bit_lo,
-                                taint_color));
+                                taint_color(start),
+                                true /* overlayed field */));
                     }
                     LOG3(".....PHV_Container::overlay_fields.....");
-                    LOG3(f_overlay << " == " << f);
+                    LOG3(f_overlay);
+                    LOG3(" ===== overlay ===== ");
+                    LOG3(f);
                 }
             }
         }
@@ -449,6 +468,7 @@ PHV_Container::taint_bits(
             for (auto i=width_i - avail_bits_i; i < width_i; i++) {
                 bits_i[i] = '-';
             }
+            avail_bits_i = 0;
         }
     } else {
         status_i = Container_status::PARTIAL;
@@ -477,11 +497,12 @@ void PHV_Container::Container_Content::sanity_check_container(
     // fields can span containers
     //
     if (field_i->size <= width()) {
-        if (field_i->phv_use_hi - field_i->phv_use_lo + 1 != width()) {
+        if (!constraint_no_cohabit(field_i) && field_i->phv_use_width() != width()) {
             LOG1(
                 "*****cluster_phv_container.cpp:sanity_FAIL*****.."
                 << msg_1
-                << " field width does not match container use "
+                << std::endl
+                << " field width does not match container use: "
                 << field_i->phv_use_lo
                 << ".."
                 << field_i->phv_use_hi
@@ -489,7 +510,7 @@ void PHV_Container::Container_Content::sanity_check_container(
                 << lo_i
                 << ".."
                 << hi_i
-                << ".."
+                << std::endl
                 << field_i
                 << *container);
         }
@@ -497,12 +518,18 @@ void PHV_Container::Container_Content::sanity_check_container(
     //
     // cc lo .. hi must be tainted in c bits
     //
+    if (overlayed_field_i && taint_color_i == '0') {
+        // field_i was overlayed ahead of substratum member field of ccgf thus color was 0
+        // update color to substratum field
+        taint_color_i = container->taint_color(lo_i);
+    }
     for (auto i=lo_i; i <= hi_i; i++) {
         if (container->bits()[i] != taint_color_i) {
             LOG1(
                 "*****cluster_phv_container.cpp:sanity_FAIL*****.."
                 << msg_1
-                << " field taint does not match container use "
+                << std::endl
+                << " field taint does not match container use: "
                 << lo_i
                 << ".."
                 << hi_i
@@ -521,33 +548,46 @@ void PHV_Container::sanity_check_container(const std::string& msg) {
     // check total occupation width against available bits
     //
     int occupation_width = 0;
+    int overlayed_width = 0;
     for (auto &cc : fields_in_container_i) {
         cc->sanity_check_container(this, msg_1);
         sanity_check_container_avail(cc->lo(), cc->hi(), msg_1);
-        occupation_width += cc->width();
+        if (cc->overlayed()) {
+            overlayed_width = std::max(overlayed_width, cc->width());  // can have multiple overlays
+        } else {
+            occupation_width += cc->width();
+        }
         // sanity check constraints on field
         if (constraint_no_cohabit(cc->field())) {
             if (fields_in_container_i.size() != 1) {
-                LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****.."
+                LOG4("*****cluster_phv_container.cpp:sanity_FAIL*****.."
                 << msg_1
                 << " cohabit fields with 'constraint_no_cohabit' "
                 << cc->field());
             }
+            if (cc->overlayed()) {
+                overlayed_width = std::max(overlayed_width, static_cast<int>(width_i));  // multiple
+            } else {
+                occupation_width = width_i;
+            }
         }
         if (constraint_no_holes(cc->field())) {
             if (avail_bits_i) {
-                LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****.."
+                LOG4("*****cluster_phv_container.cpp:sanity_FAIL*****.."
                 << msg_1
                 << " container has holes with field 'constraint_no_holes' "
-                << cc->field());
+                << std::endl
+                << cc);
             }
         }
     }
-    if (occupation_width + avail_bits_i != width_i) {
+    int fill = std::max(occupation_width, overlayed_width);
+    if (fill + avail_bits_i != width_i) {
         LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****.."
         << msg_1
-        << " occupation_width + available_bits != container_width "
+        << " fill + available_bits != container_width "
         << " occupation_width = " << occupation_width
+        << " overlayed_width = " << overlayed_width
         << " available_bits = " << avail_bits_i
         << " container_width = " << width_i
         << *this);
@@ -576,21 +616,7 @@ void PHV_Container::sanity_check_container_avail(int lo, int hi, const std::stri
     }
     // check range map in container
     //
-    if (ranges_i[lo] && ranges_i[lo] != hi) {
-        LOG1(
-            "*****cluster_phv_container.cpp:sanity_FAIL*****.."
-            << msg_1
-            << std::endl
-            << "container ranges "
-            << '['
-            << lo
-            << ".."
-            << hi
-            << ']'
-            << ranges_i
-            << *this);
-    }
-    sanity_check_container_ranges(msg_1);
+    sanity_check_container_ranges(msg_1, lo, hi);
     //
     // check available bits in container
     //
@@ -603,7 +629,8 @@ void PHV_Container::sanity_check_container_avail(int lo, int hi, const std::stri
             << ".."
             << hi
             << " vs "
-            << avail_bits_i);
+            << avail_bits_i
+            << *this);
     }
     if (status_i == Container_status::FULL && avail_bits_i > 0) {
         LOG1(
@@ -614,7 +641,8 @@ void PHV_Container::sanity_check_container_avail(int lo, int hi, const std::stri
             << ".."
             << hi
             << " vs "
-            << avail_bits_i);
+            << avail_bits_i
+            << *this);
     }
     //
     // check bits in range lo .. hi
@@ -650,15 +678,15 @@ void PHV_Container::sanity_check_container_avail(int lo, int hi, const std::stri
     }
 }  // sanity_check_container_avail
 
-void PHV_Container::sanity_check_container_ranges(const std::string& msg) {
+void PHV_Container::sanity_check_container_ranges(const std::string& msg, int lo, int hi) {
     //
     const std::string msg_1 = msg + "..PHV_Container::sanity_check_container_ranges";
     //
     clean_ranges();
-    bool warning = false;
+    bool range_absurd = false;
     for (auto r : ranges_i) {
         if (r.second < r.first) {
-            warning = true;
+            range_absurd = true;
             LOG1(
                 "*****cluster_phv_container.cpp:sanity_FAIL*****.."
                 << msg_1
@@ -668,10 +696,53 @@ void PHV_Container::sanity_check_container_ranges(const std::string& msg) {
                 << r.second);
         }
     }
-    if (warning) {
-        LOG1(this->ranges());
+    if (range_absurd) {
+        LOG1(ranges_i);
         LOG1(*this);
     }
+    if (lo >= 0 && hi >= 0) {
+        // check either all lo .. hi occupied or not occupied
+        bool occupied = false;
+        for (auto i = lo; i <= hi; i ++) {
+            if (bits_i[i] != '0') {
+                occupied = true;
+                break;
+            }
+        }
+        std::string error_message = "";
+        if (occupied) {
+            if (ranges_i[lo]) {
+                error_message = ".....container ranges should not be available.....";
+            }
+        } else {
+            bool available = false;
+            for (auto &r : ranges_i) {
+                // ranges_i[1] = 7 ok for slice 3..5
+                if (r.first <= lo && r.second >= hi) {
+                    available = true;
+                    break;
+                }
+            }
+            if (!available) {
+                error_message = ".....container ranges not available.....";
+            }
+        }
+        if (error_message != "") {
+            LOG1(
+                "*****cluster_phv_container.cpp:sanity_FAIL*****.."
+                << msg_1
+                << std::endl
+                << error_message
+                << '['
+                << lo
+                << ".."
+                << hi
+                << ']'
+                << ranges_i
+                << *this);
+        }
+    }
+    clean_ranges();
 }  // sanity_check_container_ranges
 
 //***********************************************************************************
@@ -684,10 +755,10 @@ void PHV_Container::sanity_check_container_ranges(const std::string& msg) {
 //
 std::ostream &operator<<(std::ostream &out, PHV_Container::Container_Content *cc) {
     if (cc) {
-        out << std::endl << "\t\t\t\t";
+        out << "\t\t\t\t";
         out << "  "
             << cc->taint_color()
-            << "= "
+            << (cc->overlayed()? "~ ": "= ")  // overlayed fields use num~, normal fields num=
             << cc->field()
             << " |"
             << cc->container()
@@ -706,16 +777,22 @@ std::ostream &operator<<(std::ostream &out, PHV_Container::Container_Content *cc
 }
 
 
-std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container::Container_Content *>& vc) {
-    for (auto &cc : vc) {
+std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container::Container_Content *>& v_cc) {
+    if (v_cc.size()) {
+        out << std::endl;
+    }
+    for (auto &cc : v_cc) {
         out << cc << std::endl;
     }
     return out;
 }
 
 // ordered_set
-std::ostream &operator<<(std::ostream &out, ordered_set<PHV_Container::Container_Content *>& vc) {
-    for (auto &cc : vc) {
+std::ostream &operator<<(std::ostream &out, ordered_set<PHV_Container::Container_Content *>& o_cc) {
+    if (o_cc.size()) {
+        out << std::endl;
+    }
+    for (auto &cc : o_cc) {
         out << cc << std::endl;
     }
     return out;
@@ -726,7 +803,7 @@ std::ostream &operator<<(std::ostream &out, ordered_set<PHV_Container::Container
 //
 
 std::ostream &operator<<(std::ostream &out, ordered_map<int, int>& ranges) {
-    out << ".....container ranges....." << std::endl;
+    out << std::endl << ".....container ranges....." << std::endl;
     for (auto i : ranges) {
         out << '[' << i.first << "] -- " << i.second << std::endl;
     }

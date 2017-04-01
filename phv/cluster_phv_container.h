@@ -32,11 +32,12 @@ class PHV_Container {
     class Container_Content {
      private:
         const PHV_Container *container_i;  // parent container
-        int lo_i;  // low of bit range in container for field
-        int hi_i;  // high of bit range in container for field
+        int lo_i;                          // low of bit range in container for field
+        int hi_i;                          // high of bit range in container for field
         const PhvInfo::Field *field_i;
-        const int field_bit_lo_i;  // start of field bit in this container
-        char taint_color_i = '?';  // taint color of this field in container
+        const int field_bit_lo_i;          // start of field bit in this container
+        char taint_color_i = '?';          // taint color of this field in container
+        bool overlayed_field_i = false;    // true if field overlays another field in container
 
      public:
         //
@@ -46,7 +47,8 @@ class PHV_Container {
             const int h,
             const PhvInfo::Field *f,
             const int field_bit_lo = 0,
-            const char taint_color = '?');
+            const char taint_color = '?',
+            bool overlayed = false);
         //
         int lo() const                   { return lo_i; }
         void lo(int l)                   { lo_i = l; }
@@ -57,6 +59,7 @@ class PHV_Container {
         int field_bit_lo() const         { return field_bit_lo_i; }
         const PHV_Container *container() { return container_i; }
         char taint_color()               { return taint_color_i; }
+        bool overlayed()                 { return overlayed_field_i; }
         //
         void sanity_check_container(PHV_Container *, const std::string&);
     };
@@ -125,6 +128,10 @@ class PHV_Container {
     Container_status o_status()                                 { return o_status_i; }
     char *bits()                                                { return bits_i; }
     char *o_bits()                                              { return o_bits_i; }
+    char taint_color(int bit) {
+        assert (bit >= 0 && bit < width_i);
+        return bits_i[bit];
+    }
     int taint(
         int start,
         int width,
@@ -137,12 +144,15 @@ class PHV_Container {
         int width,
         const PhvInfo::Field *field,
         int field_bit_lo);
+    void update_ccgf(
+        PhvInfo::Field *f1,
+        int processed_members,
+        int processed_width);
     void overlay_fields(
         PhvInfo::Field *f_overlay,
         const int start,
         const int width,
-        const int field_bit_lo,
-        const char taint_color);
+        const int field_bit_lo);
     void taint_overflow_bits(
         int start,
         int width,
@@ -192,7 +202,7 @@ class PHV_Container {
     //
     void sanity_check_container(const std::string& msg);
     void sanity_check_container_avail(int lo, int hi, const std::string&);
-    void sanity_check_container_ranges(const std::string&);
+    void sanity_check_container_ranges(const std::string&, int lo = -1, int hi = -1);
     //
 };  // class PHV_Container
 //

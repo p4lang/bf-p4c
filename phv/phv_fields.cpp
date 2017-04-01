@@ -425,8 +425,15 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
                 ccgf_width += f->size;
                 out << f->id << ':' << f->name << '<' << f->size << ">*";
             } else {
-                ccgf_width += f->phv_use_width();
-                out << f;
+                if (f->id == field.id) {
+                    // originally f was ccgf owner but after container assignment
+                    // ownership got terminated although f remains ccgf member of itself
+                    ccgf_width += f->size;
+                    out << f->id << ':' << f->name << '<' << f->size << ">#";
+                } else {
+                    ccgf_width += f->phv_use_width();
+                    out << f;
+                }
             }
             out << std::endl;
         }
