@@ -1,0 +1,376 @@
+#! /usr/bin/env python
+# -----------------------------------------------------------------------------
+# stf2ptf.py
+
+# generate a ptf test script out of an STF file
+# -----------------------------------------------------------------------------
+
+import sys, os.path
+from string import maketrans
+from stf_parser import STFParser
+
+class STF2PTF:
+    def __init__(self, ast, testname):
+        testNameEscapeChars = "-."
+        testNameEscapes = "_"*len(testNameEscapeChars)
+        self._transTable = maketrans(testNameEscapeChars,testNameEscapes)
+        self._ast = ast
+        self._testname = testname.translate(self._transTable)
+        self._indent = ''
+        self._indentSize = 0
+        self._indentTabSize = '  '
+        self._namedEntries = {}
+
+    def genPtfPdAPI(self, ptf):
+        self.genHeader(ptf)
+        self.genTestClass(ptf)
+
+    def genTestClass(self, ptf):
+        ptf.write(self._indent + '@group(\'' + self._testname + '\')\n')
+        ptf.write(self._indent + 'class Test'+self._testname.capitalize()+'(pd_base_tests.ThriftInterfaceDataPlane):\n')
+        self.incrementIndent()
+        ptf.write(self._indent + '"""testing ' + self._testname + '"""\n')
+        ptf.write('\n')
+
+        ptf.write(self._indent + 'def __init__(self):\n')
+        self.incrementIndent()
+        ptf.write(self._indent + 'pd_base_tests.ThriftInterfaceDataPlane.__init__(self, ["' + self._testname +'"])\n')
+        ptf.write(self._indent + 'self._entries = []\n')
+        self.decrementIndent()
+        ptf.write('\n')
+
+        ptf.write(self._indent + 'def runTest(self):\n')
+        self.incrementIndent()
+        ptf.write(self._indent + 'logging.info("\\n" + self.__doc__)\n')
+        ptf.write(self._indent + 'self.sess_hdl = self.conn_mgr.client_init()\n')
+        ptf.write(self._indent + 'self.dev_id   = 0\n')
+        ptf.write(self._indent + 'self.dev_tgt  = DevTarget_t(self.dev_id, hex_to_i16(0xFFFF))\n')
+        ptf.write('\n')
+        ptf.write(self._indent + 'try:\n')
+        self.incrementIndent()
+        ptf.write('\n')
+
+        pkt_expects = []  # ptf buffers packets and they can be retrieved after a corresponding send, at wait statements, or at the end. They get delivered in order
+        pkt_pair = [None, None]
+        for s in self._ast:
+            # print s
+            if s[0] == 'packet':
+                if pkt_pair[0] is not None:
+                     # we've already seen another packet without a pairing
+                     # expect. Send the pair packet, and replace the pair with
+                     # the new one
+                     self.genSendPacket(ptf, pkt_pair[0])
+                     pkt_pair[0] = s
+                else:
+                     pkt_pair[0] = s
+            elif s[0] == 'expect':
+                if pkt_pair[1] is not None:
+                    pkt_expects.append(s)
+                else:
+                    pkt_pair[1] = s
+            elif s[0] == 'add':
+                self.genAddTableEntry(ptf, s)
+            elif s[0] == 'wait':
+                for e in pkt_expects:
+                    self.genExpectPacket(ptf, e)
+                pkt_expects = []
+                self.genWaitStmt(ptf)
+            elif s[0] == 'setdefault':
+                self.genAddDefaultAction(ptf, s)
+            elif s[0] == 'check_counter':
+                self.genCheckCounter(ptf, s)
+            else:
+                assert False, "Unknown statement %s" % s[0]
+
+            if pkt_pair[0] is not None and pkt_pair[1] is not None:
+                self.genProcessPacket(ptf, pkt_pair)
+                pkt_pair = [None, None]
+
+        # and the implicit wait at the end of the script
+        self.genWaitStmt(ptf)
+
+        self.decrementIndent()
+        ptf.write('\n')
+        ptf.write(self._indent + 'finally:\n')
+        self.incrementIndent()
+        self.genRemoveTableEntries(ptf)
+        ptf.write('\n')
+
+
+    def genAddTableEntry(self, ptf, entry):
+        """
+            Generate a PD call to add a table entry
+
+            Entry is stored in the self._entries map, keyed by the table name
+            such that they can be deleted at the end of the test
+        """
+        table = entry[1].translate(self._transTable)
+        priority = entry[2]
+        match_list = entry[3]
+        action = entry[4][0].translate(self._transTable)
+        action_params = entry[4][1]
+
+        ptf.write(self._indent + 'e = self.client.' + table + '_table_add_with_' + action + '(self.sess_hdl,')
+        ptf.write('self.dev_tgt, \\\n')
+        self.incrementIndent()     # multiline stmt
+        ptf.write(self._indent + self._testname + '_'+ table + '_match_spec_t(')
+        first = True
+        for match_spec in match_list:
+            match_name, match, mask = self.match2spec(match_spec[0], match_spec[1])
+            if not first: ptf.write(', ')
+            else: first = False
+            ptf.write(match_name + '=' + match)
+            # if there were no ternary symbols then there is no mask defined I
+            # would like a more reliable way to detect when the generated PD
+            # code defines a mask for the field or not. It is based on ternary
+            # lookups, but STF doesn't know
+            if mask is not None:
+                ptf.write(', ' + match_name + '_mask' + '=' + mask)
+        ptf.write(')')
+
+        self.genActionParamList(ptf, table, action, action_params)
+
+        ptf.write(')\n')
+        self.decrementIndent()     # end multiline stmt
+        ptf.write(self._indent + 'self._entries.append(("' + table + '", e))\n')
+        if entry[5] is not None:
+            match_name, match, mask = self.match2spec(match_list[0][0], match_list[0][1])
+            self._namedEntries[entry[5]] = match
+
+    def genAddDefaultAction(self, ptf, set_default):
+        """
+            Generate a default entry
+        """
+        table = set_default[1].translate(self._transTable)
+        action = set_default[2][0].translate(self._transTable)
+        action_params = set_default[2][1]
+        ptf.write(self._indent + 'self.client.' + table + '_set_default_action_' + action + '(self.sess_hdl, self.dev_tgt')
+        self.genActionParamList(ptf, table, action, action_params)
+        ptf.write(')\n')
+
+    def genActionParamList(self, ptf, table, action, action_params):
+        """
+            generate action_spec_t with values for action params
+        """
+        if len(action_params) == 0:
+            return
+
+        ptf.write(', \\\n' + self._indent + self._testname + "_" + table + '_' + action + "_action_spec_t(")
+        first = True
+        for ap in action_params:
+            if not first: ptf.write(', ')
+            else: first = False
+            name, val, mask = self.match2spec(ap[0], ap[1])
+            ptf.write(name + '=' + val)
+        ptf.write(') \\\n' + self._indent)
+
+    def genSendPacket(self, ptf, packet):
+        """
+            Generate a send_packet statement
+        """
+        ptf.write('\n')
+        ptf.write(self._indent + 'logging.info("Sending packet on port ' + packet[1] + '")\n')
+        ptf.write(self._indent + 'send_packet(self, ' + packet[1] + ', \"' + packet[2] + '\")\n')
+
+    def genExpectPacket(self, ptf, expect):
+        """
+            Generate a check_packet statement
+        """
+        ptf.write('\n')
+        ptf.write(self._indent + 'logging.info("Expecting packet on port ' + expect[1] + '")\n')
+        if expect[2] is not None:
+            expected = "\"" + expect[2] + "\""
+        else:
+            expected = "None"
+        ptf.write(self._indent + 'check_packet(self, ' + expected + ', ' + expect[1] + ')\n')
+
+    def genProcessPacket(self, ptf, pkt_pair):
+        """
+            Generate a send_packet/check_packet pair.
+        """
+        ptf.write('\n')
+        self.genSendPacket(ptf, pkt_pair[0])
+        self.genExpectPacket(ptf, pkt_pair[1])
+
+    def genCheckCounter(self, ptf, chk):
+        if str(chk[2]).startswith('$'):
+            varName = chk[2][1:]
+            assert varName in self._namedEntries, "Invalid named entry " + chk[2]
+            counterIndex = self._namedEntries[varName]
+        else:
+            counterIndex = chk[2]
+        ptf.write(self._indent + '# check_counter ' + chk[1] + '(' + counterIndex + ')\n')
+        ptf.write(self._indent + 'counters = self.client.' + chk[1] + '_get(self.dev_id)\n')
+        if chk[3][0] is not None:
+            count_type = chk[3][0]
+            compare = chk[3][1]
+            val = chk[3][2]
+            ptf.write(self._indent + 'self.assertTrue(counters[' + counterIndex + '] ' + \
+                      compare + ' ' + val + ', "Wrong count of ' + count_type + '")\n')
+
+    def genRemoveTableEntries(self, ptf):
+        """
+            Remove table entries
+            Walk the entries added by addTableEntries in self._entries and call table_delete
+        """
+        ptf.write(self._indent + '# remove entries\n')
+        unique_tables = set()
+        for s in self._ast:
+            if s[0] == 'add': unique_tables.add(s[1].translate(self._transTable))
+        if len(unique_tables) > 0:
+            ptf.write(self._indent + 'for t, e in self._entries:\n')
+            self.incrementIndent() # for stmt
+            for table in unique_tables:
+                ptf.write(self._indent + 'if t == "' + table + '":\n')
+                self.incrementIndent() # if stmt
+                ptf.write(self._indent + 'self.client.' + table + '_table_delete(self.sess_hdl, self.dev_id, e)\n')
+                self.decrementIndent() # end if
+            self.decrementIndent() # end for
+        ptf.write(self._indent + '# \\TODO: remove default entries\n')
+        ptf.write(self._indent + 'self.conn_mgr.client_cleanup(self.sess_hdl)\n')
+
+    def genWaitStmt(self, ptf):
+        ptf.write('\n')
+        ptf.write(self._indent + '# -------- WAIT -------\n')
+        ptf.write(self._indent + 'self.conn_mgr.complete_operations(self.sess_hdl)\n\n')
+
+    def incrementIndent(self):
+        self._indentSize += 1
+        self._indent = self._indentTabSize * self._indentSize
+
+    def decrementIndent(self):
+        self._indentSize -= 1
+        self._indent = self._indentTabSize * self._indentSize
+
+    def setExpectTern(self, expect, packet):
+        """
+            Set the expect packet don't care to packet data since
+            the packet comparison looks byte-by-byte
+        """
+        val = ''
+        for e, p in zip(expect, packet):
+            if e == '*': val += p
+            else: val += e
+        return val
+
+    def match2spec(self, match_name, match):
+        """
+            Turns a match into (escaped name, value, mask)
+            Returning a mask of None means there were no don't care symbols in the value
+        """
+        name = match_name.translate(self._transTable)
+        hasMask = False
+        isBinary = False
+        if match.startswith('0x') or match.startswith('0b'):
+            val = match[0:2]
+            mask = match[0:2]
+            matchPtr = match[2:]
+            if match.startswith('0b'):
+                isBinary = True
+        else:
+            val = ''
+            mask = '0x'
+            matchPtr = match[0:]
+
+        for c in matchPtr:
+            if c == '*':
+                val += '0'
+                mask += '0'
+                hasMask = True
+            else:
+                val += c
+                if isBinary: mask += '1'
+                else: mask += 'f'
+        # print name, ',', val, ',', mask
+        if not hasMask: mask = None
+        return name, val, mask
+
+    def genHeader(self, ptf):
+        """
+            Generate the preamble for importing all ptf and pd classes
+        """
+
+        ptf.write('# ' + '-' * 76 + '\n')
+        ptf.write('# Autogenerated PTF test -- please modify the corresponding STF file:\n')
+        ptf.write('# ' + sys.argv[1] + '\n')
+        ptf.write('# ' + '-' * 76 + '\n')
+        ptf.write('\n')
+
+        ptf.write('import time\n')
+        ptf.write('import sys\n')
+        ptf.write('import logging\n')
+        ptf.write('import unittest\n')
+        ptf.write('import random\n')
+        ptf.write('import pd_base_tests\n')
+        ptf.write('from ptf import config\n')
+        ptf.write('from ptf.testutils import *\n')
+        ptf.write('from ptf.thriftutils import *\n')
+        ptf.write('import os\n')
+        ptf.write('\n')
+        ptf.write('from res_pd_rpc.ttypes import *\n')
+        ptf.write('from ' + testname + '.p4_pd_rpc.ttypes import *\n')
+        ptf.write('\n')
+        ptf.write('\n')
+        ptf.write('def match_ternary(expected, received):\n')
+        ptf.write('    if len(expected) > len(received):\n')
+        ptf.write('        logging.debug("Received packet length %d shorter than expected %d", len(received), len(expected))\n')
+        ptf.write('        return False;\n')
+        ptf.write('    for (e, r) in zip(expected, str(received)):\n')
+        ptf.write('        if e != \'*\' and e != r:\n')
+        ptf.write('            return False\n')
+        ptf.write('    return True\n')
+        ptf.write('\n')
+        ptf.write('def check_packet(test, pkt, port_id):\n')
+        ptf.write('    """                                                                                                                \n')
+        ptf.write('        Check that an expected packet is received                                                                          \n')
+        ptf.write('        port_id can either be a single integer (port_number on default device 0)                                           \n')
+        ptf.write('        or a tuple of 2 integers (device_number, port_number)  \n')
+        ptf.write('        The packet matching is customized to compare against ternaries\n')
+        ptf.write('    """\n')
+        ptf.write('    device, port = port_to_tuple(port_id)\n')
+        ptf.write('    logging.debug("Checking for pkt on device %d, port %d", device, port)\n')
+        ptf.write('    (rcv_device, rcv_port, rcv_pkt, pkt_time) = dp_poll(\n')
+        ptf.write('        test, device_number=device, port_number=port, timeout=2, exp_pkt=None)\n')
+        ptf.write('    if pkt is not None and not match_ternary(pkt, rcv_pkt):\n')
+        ptf.write('        rcv_pkt = None\n')
+        ptf.write('    test.assertTrue(rcv_pkt != None, "Did not receive expected pkt on device %d, port %r" % (device, port)))\n')
+        ptf.write('\n')
+        ptf.write('\n')
+
+def usage(args):
+    print "Usage: ", args[0], "[OPTIONS] testname.stf"
+    print ""
+    print "Generates a PTF PD test from the specified input file"
+    print ""
+    print "Options:"
+    print "     --help, print this message"
+    print "     --output output_file_name, generates the test in output_file_name"
+    print "       by default the output file is <testname>_ptf.py"
+
+if __name__ == '__main__':
+
+    if len(sys.argv) == 2 and sys.argv[1] == "--help":
+        usage(sys.argv)
+        sys.exit(0)
+
+    if len(sys.argv) < 2:
+        usage(sys.argv)
+        sys.exit(1)
+
+    inFileName = sys.argv[1]
+    outFileName = None
+    # should use an argument processing package ...
+    if sys.argv[1] == "-o" or sys.argv[1] == "--output":
+        outFileName = sys.argv[2]
+        inFileName = sys.argv[3]
+
+    parser = STFParser()
+    stf, errs = parser.parse(filename=inFileName)
+    if errs != 0:
+        sys.exit(1)
+    testname, ext = os.path.splitext(os.path.basename(inFileName))
+    stf2ptf = STF2PTF(stf, testname)
+    if outFileName is None:
+        outFileName = testname + "_ptf.py"
+    ptffile = open(outFileName, 'w')
+    stf2ptf.genPtfPdAPI(ptffile)
