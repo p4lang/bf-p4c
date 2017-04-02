@@ -129,7 +129,7 @@ class PHV_Container {
     char *bits()                                                { return bits_i; }
     char *o_bits()                                              { return o_bits_i; }
     char taint_color(int bit) {
-        assert (bit >= 0 && bit < width_i);
+        assert(bit >= 0 && bit < width_i);
         return bits_i[bit];
     }
     int taint(

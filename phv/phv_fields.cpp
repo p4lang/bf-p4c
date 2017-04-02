@@ -371,7 +371,7 @@ void PhvInfo::Field::phv_use_width(bool ccgf_owner, int min_ceil) {
         for (auto &f : ccgf_fields) {
             // ccgf owner appears as member, phv_use_width = aggregate size of members
             if (f->ccgf == f) {
-                if (PHV_Container::constraint_no_cohabit_exclusive_mau(f)) {
+                if (PHV_Container::constraint_no_cohabit(f)) {
                     ccg_width += PHV_Container::ceil_phv_use_width(f, min_ceil);
                 } else {
                     ccg_width += f->size;

@@ -232,7 +232,7 @@ PHV_Container::taint_ccgf(
     int processed_members = 0;
     int processed_width = 0;
     for (auto &member : field->ccgf_fields) {
-        if (constraint_no_cohabit_exclusive_mau(member)) {
+        if (constraint_no_cohabit(member)) {
             if (processed_width) {
                 //
                 // entire phv_use_width to be allocated in stand-alone container
@@ -246,10 +246,23 @@ PHV_Container::taint_ccgf(
             } else {
                 //
                 // account pad for no_pack constraint
+                // if width_i (8) is less than member size (egress_port: 9), No padding
+                // such egress_ports may come assigned to 2 Byte containers
                 //
-                assert(width_i >= member->size);
-                int pad = width - member->size;
-                start -= pad;                   // taint starts from RHS
+                if (width_i < member->size) {
+                    LOG1(
+                        "*****cluster_phv_container.cpp:sanity_WARN*****.."
+                        << " width_i of container "
+                        << width_i
+                        << " is less than 'no-pack' ccgf member size "
+                        << member->size
+                        << std::endl
+                        << member);
+                } else {
+                    // width_i >= member->size)
+                    int pad = width - member->size;
+                    start -= pad;               // taint starts from RHS
+                }
             }
         }
         int use_width = member->size;           // always using size to taint container
@@ -273,7 +286,7 @@ PHV_Container::taint_ccgf(
         }
         member->ccgf = 0;        // recursive taint call should skip ccgf
         taint(start, use_width, member, start /*range start*/, member_bit_lo);
-        processed_width += constraint_no_cohabit_exclusive_mau(member)? width_i: use_width;
+        processed_width += constraint_no_cohabit(member)? width_i: use_width;
         if (start <= 0) {
             break;
         }
@@ -306,7 +319,7 @@ PHV_Container::update_ccgf(
     } else {
         field->ccgf = 0;
         // ccgf owners with no-pack constraint, set range to entire container
-        Cluster::set_field_range(field, constraint_no_cohabit_exclusive_mau(field)? width_i: 0);
+        Cluster::set_field_range(field, constraint_no_cohabit(field)? width_i: 0);
     }
 }  // update_ccgf
 
@@ -362,8 +375,8 @@ PHV_Container::overlay_fields(
                             m_start += m_width;
                         }
                         update_ccgf(
-                            const_cast<PhvInfo::Field *>(f), 
-                            f->ccgf_fields.size() /* processed members */,  
+                            const_cast<PhvInfo::Field *>(f),
+                            f->ccgf_fields.size() /* processed members */,
                             m_start - bias /* processed width */);
                     } else {
                         fields_in_container_i.push_back(
@@ -464,9 +477,20 @@ PHV_Container::taint_bits(
         //
         status_i = Container_status::FULL;
         if (constraint_no_cohabit(field)) {
+            //
             // padding char for unoccupied but un-assignable bits
-            for (auto i=width_i - avail_bits_i; i < width_i; i++) {
-                bits_i[i] = '-';
+            // occupation may start at LSb or MSb
+            //
+            if (bits_i[0] != '0') {
+                // LSb occupied
+                for (auto i = width_i - avail_bits_i; i < width_i; i++) {
+                    bits_i[i] = '-';
+                }
+            } else {
+                // MSb occupied
+                for (auto i=0; i < avail_bits_i; i++) {
+                    bits_i[i] = '-';
+                }
             }
             avail_bits_i = 0;
         }
@@ -560,7 +584,7 @@ void PHV_Container::sanity_check_container(const std::string& msg) {
         // sanity check constraints on field
         if (constraint_no_cohabit(cc->field())) {
             if (fields_in_container_i.size() != 1) {
-                LOG4("*****cluster_phv_container.cpp:sanity_FAIL*****.."
+                LOG3("*****cluster_phv_container.cpp:sanity_FAIL*****.."
                 << msg_1
                 << " cohabit fields with 'constraint_no_cohabit' "
                 << cc->field());

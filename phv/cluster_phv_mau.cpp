@@ -670,7 +670,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                     //
                     auto field_width = 0;
                     // field constained no_pack and not ccgf owner, use size
-                    if (PHV_Container::constraint_no_cohabit_exclusive_mau(field)
+                    if (PHV_Container::constraint_no_cohabit(field)
                        && field->ccgf != field) {
                        field_width = field->size;
                     } else {
