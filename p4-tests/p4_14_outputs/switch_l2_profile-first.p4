@@ -1561,11 +1561,15 @@ control process_egress_nat(inout headers hdr, inout metadata meta, inout standar
 }
 
 control process_egress_bd_stats(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("egress_bd_stats") direct_counter(CounterType.packets_and_bytes) egress_bd_stats;
     @name(".nop") action nop() {
+    }
+    @name(".nop") action nop_0() {
+        egress_bd_stats.count();
     }
     @name("egress_bd_stats") table egress_bd_stats_0 {
         actions = {
-            nop();
+            nop_0();
             @default_only NoAction();
         }
         key = {

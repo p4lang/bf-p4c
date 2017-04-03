@@ -32,6 +32,9 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("cnt") direct_counter(CounterType.packets) cnt;
+    @name("cnt2") direct_counter(CounterType.packets) cnt2;
+    @name("cnt3") direct_counter(CounterType.packets) cnt3;
     @name(".c1_3") action c1_3(bit<16> val1, bit<16> val2, bit<16> val3) {
         hdr.data.c1 = val1;
         hdr.data.c2 = val2;
@@ -48,9 +51,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.c8 = val8;
         hdr.data.c9 = val9;
     }
+    @name(".c1_3") action c1_3_0(bit<16> val1, bit<16> val2, bit<16> val3) {
+        hdr.data.c1 = val1;
+        hdr.data.c2 = val2;
+        hdr.data.c3 = val3;
+        cnt.count();
+    }
     @name("test1") table test1 {
         actions = {
-            c1_3();
+            c1_3_0();
             @default_only NoAction();
         }
         key = {
@@ -60,9 +69,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("cnt") counters = direct_counter(CounterType.packets);
     }
+    @name(".c4_6") action c4_6_0(bit<16> val4, bit<16> val5, bit<16> val6, bit<9> port) {
+        hdr.data.c4 = val4;
+        hdr.data.c5 = val5;
+        hdr.data.c6 = val6;
+        standard_metadata.egress_spec = port;
+        cnt2.count();
+    }
     @name("test2") table test2 {
         actions = {
-            c4_6();
+            c4_6_0();
             @default_only NoAction();
         }
         key = {
@@ -72,9 +88,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("cnt2") counters = direct_counter(CounterType.packets);
     }
+    @name(".c7_9") action c7_9_0(bit<16> val7, bit<16> val8, bit<16> val9) {
+        hdr.data.c7 = val7;
+        hdr.data.c8 = val8;
+        hdr.data.c9 = val9;
+        cnt3.count();
+    }
     @name("test3") table test3 {
         actions = {
-            c7_9();
+            c7_9_0();
             @default_only NoAction();
         }
         key = {

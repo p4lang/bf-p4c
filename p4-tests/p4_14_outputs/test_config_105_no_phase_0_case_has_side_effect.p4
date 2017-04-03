@@ -195,6 +195,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.field_f_16 = param0;
     }
     @name(".action_0") action action_0_0(bit<1> param0, bit<1> param1, bit<4> param2, bit<4> param3, bit<1> param4, bit<1> param5) {
+        meter_0.read(hdr.pkt.color_0);
         hdr.pkt.field_a0_1 = 1w0;
         hdr.pkt.field_a1_1 = param0;
         hdr.pkt.field_a2_1 = 1w1;
@@ -209,7 +210,6 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.field_h1_1 = 1w0;
         hdr.pkt.field_h2_1 = param5;
         hdr.pkt.field_h3_1 = 1w1;
-        meter_0.read(hdr.pkt.color_0);
     }
     @name("table_0") table table_0 {
         actions = {

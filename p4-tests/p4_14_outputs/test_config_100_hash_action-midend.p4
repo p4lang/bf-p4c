@@ -169,12 +169,14 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name(".action_3") action action_4() {
+    @name("extra_stats") direct_counter(CounterType.bytes) extra_stats;
+    @name(".action_3") action action_3() {
+        extra_stats.count();
         mark_to_drop();
     }
     @name("table_3") table table_0 {
         actions = {
-            action_4();
+            action_3();
             @default_only NoAction_0();
         }
         key = {
@@ -198,20 +200,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("simple_stats") counter(32w32768, CounterType.packets) simple_stats;
     @name(".do_nothing") action do_nothing_0() {
     }
-    @name(".action_0") action action_5(bit<32> param0) {
+    @name(".action_0") action action_4(bit<32> param0) {
         hdr.pkt.field_c_32 = param0;
     }
-    @name(".action_1") action action_6(bit<16> param0) {
+    @name(".action_1") action action_5(bit<16> param0) {
         hdr.pkt.field_f_16 = param0;
         meta.meta.field_17 = 17w7;
     }
-    @name(".action_2") action action_7() {
+    @name(".action_2") action action_6() {
         simple_stats.count((bit<32>)meta.meta.field_17);
     }
     @name("table_0") table table_1 {
         actions = {
             do_nothing_0();
-            action_5();
+            action_4();
             @default_only NoAction_1();
         }
         key = {
@@ -222,7 +224,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @include_idletime(1) @idletime_two_way_notification(1) @idletime_per_flow_idletime(1) @name("table_1") table table_2 {
         actions = {
-            action_6();
+            action_5();
             @default_only NoAction_6();
         }
         key = {
@@ -233,7 +235,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("table_2") table table_3 {
         actions = {
-            action_7();
+            action_6();
             @default_only NoAction_7();
         }
         default_action = NoAction_7();

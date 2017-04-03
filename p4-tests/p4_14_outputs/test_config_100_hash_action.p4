@@ -167,12 +167,17 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("extra_stats") direct_counter(CounterType.bytes) extra_stats;
     @name(".action_3") action action_3() {
+        mark_to_drop();
+    }
+    @name(".action_3") action action_3_0() {
+        extra_stats.count();
         mark_to_drop();
     }
     @name("table_3") table table_3 {
         actions = {
-            action_3;
+            action_3_0;
             @default_only NoAction;
         }
         key = {

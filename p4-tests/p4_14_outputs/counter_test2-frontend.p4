@@ -32,25 +32,18 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".c1_3") action c1_0(bit<16> val1, bit<16> val2, bit<16> val3) {
+    @name("cnt") direct_counter(CounterType.packets) cnt_0;
+    @name("cnt2") direct_counter(CounterType.packets) cnt2_0;
+    @name("cnt3") direct_counter(CounterType.packets) cnt3_0;
+    @name(".c1_3") action c1_3(bit<16> val1, bit<16> val2, bit<16> val3) {
+        cnt_0.count();
         hdr.data.c1 = val1;
         hdr.data.c2 = val2;
         hdr.data.c3 = val3;
     }
-    @name(".c4_6") action c4_0(bit<16> val4, bit<16> val5, bit<16> val6, bit<9> port) {
-        hdr.data.c4 = val4;
-        hdr.data.c5 = val5;
-        hdr.data.c6 = val6;
-        standard_metadata.egress_spec = port;
-    }
-    @name(".c7_9") action c7_0(bit<16> val7, bit<16> val8, bit<16> val9) {
-        hdr.data.c7 = val7;
-        hdr.data.c8 = val8;
-        hdr.data.c9 = val9;
-    }
     @name("test1") table test1_0 {
         actions = {
-            c1_0();
+            c1_3();
             @default_only NoAction();
         }
         key = {
@@ -60,9 +53,16 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("cnt") counters = direct_counter(CounterType.packets);
     }
+    @name(".c4_6") action c4_6(bit<16> val4, bit<16> val5, bit<16> val6, bit<9> port) {
+        cnt2_0.count();
+        hdr.data.c4 = val4;
+        hdr.data.c5 = val5;
+        hdr.data.c6 = val6;
+        standard_metadata.egress_spec = port;
+    }
     @name("test2") table test2_0 {
         actions = {
-            c4_0();
+            c4_6();
             @default_only NoAction();
         }
         key = {
@@ -72,9 +72,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("cnt2") counters = direct_counter(CounterType.packets);
     }
+    @name(".c7_9") action c7_9(bit<16> val7, bit<16> val8, bit<16> val9) {
+        cnt3_0.count();
+        hdr.data.c7 = val7;
+        hdr.data.c8 = val8;
+        hdr.data.c9 = val9;
+    }
     @name("test3") table test3_0 {
         actions = {
-            c7_0();
+            c7_9();
             @default_only NoAction();
         }
         key = {

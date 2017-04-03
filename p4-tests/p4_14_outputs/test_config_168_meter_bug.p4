@@ -185,12 +185,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".nop") action nop() {
     }
     @name(".action_0") action action_0_0() {
-        hdr.ipv4.ttl = 8w4;
         exm_meter2.read(hdr.ipv4.diffserv);
+        hdr.ipv4.ttl = 8w4;
     }
     @name(".action_1") action action_1_0() {
-        hdr.ipv4.ttl = 8w5;
         exm_meter2.read(hdr.ipv4.diffserv);
+        hdr.ipv4.ttl = 8w5;
     }
     @name(".nop") action nop_0() {
         exm_meter2.read(hdr.ipv4.diffserv);

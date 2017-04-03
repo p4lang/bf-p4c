@@ -26,6 +26,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("cnt") direct_counter(CounterType.packets) cnt;
     @name(".c1_2") action c1_2(bit<8> val1, bit<8> val2) {
         hdr.data.c1 = val1;
         hdr.data.c2 = val2;
@@ -35,9 +36,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.c4 = val4;
         standard_metadata.egress_spec = port;
     }
+    @name(".c1_2") action c1_2_0(bit<8> val1, bit<8> val2) {
+        cnt.count();
+        hdr.data.c1 = val1;
+        hdr.data.c2 = val2;
+    }
     @name("test1") table test1 {
         actions = {
-            c1_2;
+            c1_2_0;
             @default_only NoAction;
         }
         key = {

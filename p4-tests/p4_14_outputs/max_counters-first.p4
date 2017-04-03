@@ -26,6 +26,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("cnt") direct_counter(CounterType.packets) cnt;
+    @name("cnt2") direct_counter(CounterType.bytes) cnt2;
+    @name("cnt3") direct_counter(CounterType.packets) cnt3;
+    @name("cnt4") direct_counter(CounterType.bytes) cnt4;
     @name(".c1_2") action c1_2(bit<8> val1, bit<8> val2) {
         hdr.data.c1 = val1;
         hdr.data.c2 = val2;
@@ -35,9 +39,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.data.c4 = val4;
         standard_metadata.egress_spec = port;
     }
+    @name(".c1_2") action c1_2_0(bit<8> val1, bit<8> val2) {
+        hdr.data.c1 = val1;
+        hdr.data.c2 = val2;
+        cnt.count();
+    }
     @name("test1") table test1 {
         actions = {
-            c1_2();
+            c1_2_0();
             @default_only NoAction();
         }
         key = {
@@ -46,9 +55,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
         @name("cnt") counters = direct_counter(CounterType.packets);
     }
+    @name(".c3_4") action c3_4_0(bit<8> val3, bit<8> val4, bit<9> port) {
+        hdr.data.c3 = val3;
+        hdr.data.c4 = val4;
+        standard_metadata.egress_spec = port;
+        cnt3.count();
+    }
     @name("test2") table test2 {
         actions = {
-            c3_4();
+            c3_4_0();
             @default_only NoAction();
         }
         key = {

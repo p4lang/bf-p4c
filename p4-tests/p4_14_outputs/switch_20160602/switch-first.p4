@@ -1909,11 +1909,15 @@ control process_egress_nat(inout headers hdr, inout metadata meta, inout standar
 }
 
 control process_egress_bd_stats(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("egress_bd_stats") direct_counter(CounterType.packets_and_bytes) egress_bd_stats;
     @name(".nop") action nop() {
+    }
+    @name(".nop") action nop_0() {
+        egress_bd_stats.count();
     }
     @name("egress_bd_stats") table egress_bd_stats_0 {
         actions = {
-            nop();
+            nop_0();
             @default_only NoAction();
         }
         key = {
@@ -4206,6 +4210,8 @@ control process_urpf_bd(inout headers hdr, inout metadata meta, inout standard_m
 }
 
 control process_ipv4_multicast(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("ipv4_multicast_route_s_g_stats") direct_counter(CounterType.packets) ipv4_multicast_route_s_g_stats;
+    @name("ipv4_multicast_route_star_g_stats") direct_counter(CounterType.packets) ipv4_multicast_route_star_g_stats;
     @name(".on_miss") action on_miss() {
     }
     @name(".multicast_bridge_s_g_hit") action multicast_bridge_s_g_hit(bit<16> mc_index) {
@@ -4266,10 +4272,20 @@ control process_ipv4_multicast(inout headers hdr, inout metadata meta, inout sta
         size = 1024;
         default_action = NoAction();
     }
+    @name(".on_miss") action on_miss_0() {
+        ipv4_multicast_route_s_g_stats.count();
+    }
+    @name(".multicast_route_s_g_hit") action multicast_route_s_g_hit_0(bit<16> mc_index, bit<16> mcast_rpf_group) {
+        meta.multicast_metadata.multicast_route_mc_index = mc_index;
+        meta.multicast_metadata.mcast_mode = 2w1;
+        meta.multicast_metadata.mcast_route_hit = 1w1;
+        meta.multicast_metadata.mcast_rpf_group = mcast_rpf_group ^ meta.multicast_metadata.bd_mrpf_group;
+        ipv4_multicast_route_s_g_stats.count();
+    }
     @name("ipv4_multicast_route") table ipv4_multicast_route {
         actions = {
-            on_miss();
-            multicast_route_s_g_hit();
+            on_miss_0();
+            multicast_route_s_g_hit_0();
             @default_only NoAction();
         }
         key = {
@@ -4281,11 +4297,29 @@ control process_ipv4_multicast(inout headers hdr, inout metadata meta, inout sta
         default_action = NoAction();
         @name("ipv4_multicast_route_s_g_stats") counters = direct_counter(CounterType.packets);
     }
+    @name(".multicast_route_star_g_miss") action multicast_route_star_g_miss_0() {
+        meta.l3_metadata.l3_copy = 1w1;
+        ipv4_multicast_route_star_g_stats.count();
+    }
+    @name(".multicast_route_sm_star_g_hit") action multicast_route_sm_star_g_hit_0(bit<16> mc_index, bit<16> mcast_rpf_group) {
+        meta.multicast_metadata.mcast_mode = 2w1;
+        meta.multicast_metadata.multicast_route_mc_index = mc_index;
+        meta.multicast_metadata.mcast_route_hit = 1w1;
+        meta.multicast_metadata.mcast_rpf_group = mcast_rpf_group ^ meta.multicast_metadata.bd_mrpf_group;
+        ipv4_multicast_route_star_g_stats.count();
+    }
+    @name(".multicast_route_bidir_star_g_hit") action multicast_route_bidir_star_g_hit_0(bit<16> mc_index, bit<16> mcast_rpf_group) {
+        meta.multicast_metadata.mcast_mode = 2w2;
+        meta.multicast_metadata.multicast_route_mc_index = mc_index;
+        meta.multicast_metadata.mcast_route_hit = 1w1;
+        meta.multicast_metadata.mcast_rpf_group = mcast_rpf_group | meta.multicast_metadata.bd_mrpf_group;
+        ipv4_multicast_route_star_g_stats.count();
+    }
     @name("ipv4_multicast_route_star_g") table ipv4_multicast_route_star_g {
         actions = {
-            multicast_route_star_g_miss();
-            multicast_route_sm_star_g_hit();
-            multicast_route_bidir_star_g_hit();
+            multicast_route_star_g_miss_0();
+            multicast_route_sm_star_g_hit_0();
+            multicast_route_bidir_star_g_hit_0();
             @default_only NoAction();
         }
         key = {
@@ -4306,7 +4340,7 @@ control process_ipv4_multicast(inout headers hdr, inout metadata meta, inout sta
 
         if ((meta.ingress_metadata.bypass_lookups & 16w0x2) == 16w0 && meta.multicast_metadata.ipv4_multicast_enabled == 1w1) 
             switch (ipv4_multicast_route.apply().action_run) {
-                on_miss: {
+                on_miss_0: {
                     ipv4_multicast_route_star_g.apply();
                 }
             }
@@ -4315,6 +4349,8 @@ control process_ipv4_multicast(inout headers hdr, inout metadata meta, inout sta
 }
 
 control process_ipv6_multicast(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("ipv6_multicast_route_s_g_stats") direct_counter(CounterType.packets) ipv6_multicast_route_s_g_stats;
+    @name("ipv6_multicast_route_star_g_stats") direct_counter(CounterType.packets) ipv6_multicast_route_star_g_stats;
     @name(".on_miss") action on_miss() {
     }
     @name(".multicast_bridge_s_g_hit") action multicast_bridge_s_g_hit(bit<16> mc_index) {
@@ -4375,10 +4411,20 @@ control process_ipv6_multicast(inout headers hdr, inout metadata meta, inout sta
         size = 1024;
         default_action = NoAction();
     }
+    @name(".on_miss") action on_miss_1() {
+        ipv6_multicast_route_s_g_stats.count();
+    }
+    @name(".multicast_route_s_g_hit") action multicast_route_s_g_hit_1(bit<16> mc_index, bit<16> mcast_rpf_group) {
+        meta.multicast_metadata.multicast_route_mc_index = mc_index;
+        meta.multicast_metadata.mcast_mode = 2w1;
+        meta.multicast_metadata.mcast_route_hit = 1w1;
+        meta.multicast_metadata.mcast_rpf_group = mcast_rpf_group ^ meta.multicast_metadata.bd_mrpf_group;
+        ipv6_multicast_route_s_g_stats.count();
+    }
     @name("ipv6_multicast_route") table ipv6_multicast_route {
         actions = {
-            on_miss();
-            multicast_route_s_g_hit();
+            on_miss_1();
+            multicast_route_s_g_hit_1();
             @default_only NoAction();
         }
         key = {
@@ -4390,11 +4436,29 @@ control process_ipv6_multicast(inout headers hdr, inout metadata meta, inout sta
         default_action = NoAction();
         @name("ipv6_multicast_route_s_g_stats") counters = direct_counter(CounterType.packets);
     }
+    @name(".multicast_route_star_g_miss") action multicast_route_star_g_miss_1() {
+        meta.l3_metadata.l3_copy = 1w1;
+        ipv6_multicast_route_star_g_stats.count();
+    }
+    @name(".multicast_route_sm_star_g_hit") action multicast_route_sm_star_g_hit_1(bit<16> mc_index, bit<16> mcast_rpf_group) {
+        meta.multicast_metadata.mcast_mode = 2w1;
+        meta.multicast_metadata.multicast_route_mc_index = mc_index;
+        meta.multicast_metadata.mcast_route_hit = 1w1;
+        meta.multicast_metadata.mcast_rpf_group = mcast_rpf_group ^ meta.multicast_metadata.bd_mrpf_group;
+        ipv6_multicast_route_star_g_stats.count();
+    }
+    @name(".multicast_route_bidir_star_g_hit") action multicast_route_bidir_star_g_hit_1(bit<16> mc_index, bit<16> mcast_rpf_group) {
+        meta.multicast_metadata.mcast_mode = 2w2;
+        meta.multicast_metadata.multicast_route_mc_index = mc_index;
+        meta.multicast_metadata.mcast_route_hit = 1w1;
+        meta.multicast_metadata.mcast_rpf_group = mcast_rpf_group | meta.multicast_metadata.bd_mrpf_group;
+        ipv6_multicast_route_star_g_stats.count();
+    }
     @name("ipv6_multicast_route_star_g") table ipv6_multicast_route_star_g {
         actions = {
-            multicast_route_star_g_miss();
-            multicast_route_sm_star_g_hit();
-            multicast_route_bidir_star_g_hit();
+            multicast_route_star_g_miss_1();
+            multicast_route_sm_star_g_hit_1();
+            multicast_route_bidir_star_g_hit_1();
             @default_only NoAction();
         }
         key = {
@@ -4415,7 +4479,7 @@ control process_ipv6_multicast(inout headers hdr, inout metadata meta, inout sta
 
         if ((meta.ingress_metadata.bypass_lookups & 16w0x2) == 16w0 && meta.multicast_metadata.ipv6_multicast_enabled == 1w1) 
             switch (ipv6_multicast_route.apply().action_run) {
-                on_miss: {
+                on_miss_1: {
                     ipv6_multicast_route_star_g.apply();
                 }
             }
@@ -4557,12 +4621,12 @@ control process_meter_index(inout headers hdr, inout metadata meta, inout standa
     @name("meter_index") direct_meter<bit<2>>(MeterType.bytes) meter_index;
     @name(".nop") action nop() {
     }
-    @name(".nop") action nop_0() {
+    @name(".nop") action nop_1() {
         meter_index.read(meta.meter_metadata.meter_color);
     }
     @ternary(1) @name("meter_index") table meter_index_0 {
         actions = {
-            nop_0();
+            nop_1();
             @default_only NoAction();
         }
         key = {
@@ -4655,15 +4719,23 @@ control process_hashes(inout headers hdr, inout metadata meta, inout standard_me
 }
 
 control process_meter_action(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("meter_stats") direct_counter(CounterType.packets) meter_stats;
     @name(".meter_permit") action meter_permit() {
     }
     @name(".meter_deny") action meter_deny() {
         mark_to_drop();
     }
+    @name(".meter_permit") action meter_permit_0() {
+        meter_stats.count();
+    }
+    @name(".meter_deny") action meter_deny_0() {
+        mark_to_drop();
+        meter_stats.count();
+    }
     @name("meter_action") table meter_action {
         actions = {
-            meter_permit();
-            meter_deny();
+            meter_permit_0();
+            meter_deny_0();
             @default_only NoAction();
         }
         key = {
@@ -4717,11 +4789,15 @@ control process_ingress_acl_stats(inout headers hdr, inout metadata meta, inout 
 }
 
 control process_storm_control_stats(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("storm_control_stats") direct_counter(CounterType.packets) storm_control_stats;
     @name(".nop") action nop() {
+    }
+    @name(".nop") action nop_2() {
+        storm_control_stats.count();
     }
     @name("storm_control_stats") table storm_control_stats_0 {
         actions = {
-            nop();
+            nop_2();
             @default_only NoAction();
         }
         key = {

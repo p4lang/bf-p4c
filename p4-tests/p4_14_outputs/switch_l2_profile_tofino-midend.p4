@@ -1188,9 +1188,11 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         size = 16384;
         default_action = NoAction_38();
     }
+    @name("process_egress_bd_stats.egress_bd_stats") direct_counter(CounterType.packets_and_bytes) process_egress_bd_stats_egress_bd_stats_1;
     @name(".nop") action _nop_3() {
+        process_egress_bd_stats_egress_bd_stats_1.count();
     }
-    @name("process_egress_bd_stats.egress_bd_stats") table process_egress_bd_stats_egress_bd_stats_0 {
+    @name("process_egress_bd_stats.egress_bd_stats") table process_egress_bd_stats_egress_bd_stats_2 {
         actions = {
             _nop_3();
             @default_only NoAction_39();
@@ -1337,7 +1339,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
                     else 
                         ;
                     process_egress_bd_egress_bd_map_0.apply();
-                    process_egress_bd_stats_egress_bd_stats_0.apply();
+                    process_egress_bd_stats_egress_bd_stats_2.apply();
                 }
             }
 

@@ -48,12 +48,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".do_nothing") action do_nothing_0() {
     }
     @name(".action_0") action action_0_1() {
-        meta.meta.y = 8w1;
         meter_0.read(meta.meta.x);
+        meta.meta.y = 8w1;
     }
     @name(".action_1") action action_1() {
-        meta.meta.z = 8w0;
         meter_0.read(meta.meta.x);
+        meta.meta.z = 8w0;
     }
     @name("table_0") table table_0 {
         actions = {

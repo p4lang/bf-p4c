@@ -29,6 +29,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("counter2") direct_counter(CounterType.packets) counter2;
     @name("meter1") meter(32w32000, MeterType.bytes) meter1;
     @name(".h1_3") action h1_3(bit<16> val1, bit<16> val2, bit<16> val3) {
         hdr.data.h1 = val1;
@@ -52,9 +53,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 32000;
         default_action = NoAction();
     }
+    @name(".h4_6") action h4_6_0(bit<16> val4, bit<16> val5, bit<16> val6) {
+        hdr.data.h4 = val4;
+        hdr.data.h5 = val5;
+        hdr.data.h6 = val6;
+        counter2.count();
+    }
     @name("test2") table test2 {
         actions = {
-            h4_6();
+            h4_6_0();
             @default_only NoAction();
         }
         key = {

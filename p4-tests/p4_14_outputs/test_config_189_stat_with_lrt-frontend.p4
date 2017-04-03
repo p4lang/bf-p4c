@@ -32,15 +32,18 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name(".nop") action nop_0() {
+    @lrt_scale(100) @name("counter_0") direct_counter(CounterType.packets_and_bytes) counter_1;
+    @name(".nop") action nop() {
+        counter_1.count();
     }
-    @name(".action_0") action action_1(bit<32> param0, bit<8> param1, bit<8> param2, bit<8> param3, bit<8> param4) {
+    @name(".action_0") action action_0(bit<32> param0, bit<8> param1, bit<8> param2, bit<8> param3, bit<8> param4) {
+        counter_1.count();
         hdr.pkt.a = param0;
     }
     @immediate(0) @name("table_0") table table_1 {
         actions = {
-            nop_0();
-            action_1();
+            nop();
+            action_0();
             @default_only NoAction();
         }
         key = {

@@ -29,17 +29,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
+    @name("counter2") direct_counter(CounterType.packets) counter2_0;
     @name("meter1") meter(32w32000, MeterType.bytes) meter1_0;
     @name(".h1_3") action h1_0(bit<16> val1, bit<16> val2, bit<16> val3) {
         hdr.data.h1 = val1;
         hdr.data.h2 = val2;
         hdr.data.h3 = val3;
         meter1_0.execute_meter<bit<8>>(32w7, hdr.data.color_1);
-    }
-    @name(".h4_6") action h4_0(bit<16> val4, bit<16> val5, bit<16> val6) {
-        hdr.data.h4 = val4;
-        hdr.data.h5 = val5;
-        hdr.data.h6 = val6;
     }
     @name("test1") table test1_0 {
         actions = {
@@ -52,9 +48,15 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 32000;
         default_action = NoAction();
     }
+    @name(".h4_6") action h4_6(bit<16> val4, bit<16> val5, bit<16> val6) {
+        counter2_0.count();
+        hdr.data.h4 = val4;
+        hdr.data.h5 = val5;
+        hdr.data.h6 = val6;
+    }
     @name("test2") table test2_0 {
         actions = {
-            h4_0();
+            h4_6();
             @default_only NoAction();
         }
         key = {

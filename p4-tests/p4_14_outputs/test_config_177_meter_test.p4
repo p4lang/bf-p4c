@@ -186,8 +186,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meter_0.read(hdr.pkt.color_0);
     }
     @name(".do_nothing") action do_nothing_0() {
-        ;
         meter_0.read(hdr.pkt.color_0);
+        ;
     }
     @name("table_0") table table_0 {
         actions = {
