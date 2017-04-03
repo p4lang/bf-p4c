@@ -57,14 +57,97 @@ PHV_Interference::apply_visitor(const IR::Node *node, const char *name) {
         LOG1(name);
     }
     //
-    interference_reduction(phv_requirements_i.cluster_phv_fields(), "phv");
+    interference_reduction(
+        phv_requirements_i.cluster_phv_fields(),
+        "phv");
+    //
     // t_phv fields can benefit from mutex header fields
-    interference_reduction(phv_requirements_i.t_phv_fields(), "t_phv");
+    //
+    interference_reduction(
+        phv_requirements_i.t_phv_fields(),
+        "t_phv");
     //
     LOG3(*this);
     //
     return node;
 }
+
+void
+PHV_Interference::aggregate_singleton_clusters(
+    std::vector<Cluster_PHV *>& cluster_vec,
+    std::vector<Cluster_PHV *>& c_vec,
+    ordered_map<PHV_Container::Ingress_Egress,
+        ordered_map<int,
+            std::vector<Cluster_PHV *>>>& singletons) {
+    //
+    int cluster_num = 0;
+    for (auto &entry : singletons) {
+        for (auto &entry_2 : entry.second) {
+            //
+            // lone cluster with single field, cannot be reduced further
+            //
+            if (entry_2.second.size() > 1) {
+                //
+                // compose an aggregate cluster from singleton clusters
+                // insert in c_vec
+                //
+                ordered_set<const PhvInfo::Field *> *set_of_fields =
+                    new ordered_set<const PhvInfo::Field *>;             // new set
+                for (auto &cl : entry_2.second) {
+                    assert(cl->cluster_vec().size() == 1);
+                    set_of_fields->insert(cl->cluster_vec().front());
+                    //
+                    // remove singleton cluster from cluster_vec
+                    // after they are aggregated and reduced
+                    // surviving fields are added back to cluster_vec as singleton clusters
+                    //
+                    // removing from vector
+                    // move element to end of vector then erase
+                    //
+                    cluster_vec.erase(
+                        std::remove(cluster_vec.begin(), cluster_vec.end(), cl),
+                        cluster_vec.end());
+                }
+                Cluster_PHV *aggregate = new Cluster_PHV(set_of_fields, cluster_num, "agg_");
+                cluster_num++;
+                c_vec.push_back(aggregate);
+            }
+        }
+    }
+}  // aggregate_singleton_clusters
+
+void
+PHV_Interference::interference_reduction_singleton_clusters(
+    std::vector<Cluster_PHV *>& cluster_vec,
+    ordered_map<PHV_Container::Ingress_Egress,
+        ordered_map<int,
+            std::vector<Cluster_PHV *>>> singletons,
+    const std::string& msg) {
+    //
+    LOG3("..........Begin: PHV_Interference::reduction_singleton_clusters().........." << msg);
+    //
+    std::vector<Cluster_PHV *> c_vec;
+    c_vec.clear();
+    aggregate_singleton_clusters(cluster_vec, c_vec, singletons);
+    //
+    interference_reduction(
+        c_vec,
+        "phv_agg");
+    //
+    // create singleton clusters from every field that survived reduction
+    // from c_vec add it back to cluster_vec
+    //
+    int cluster_num = 0;
+    for (auto &cl : c_vec) {
+        for (auto &field : cl->cluster_vec()) {
+            std::string id = "intf_" + cl->id();
+            cluster_vec.push_back(new Cluster_PHV(field, cluster_num, id));
+            cluster_num++;
+        }
+    }
+    LOG3("..........End: PHV_Interference::reduction_singleton_clusters().........." << msg);
+    //
+}  // interference_reduction_singleton_clusters
 
 void
 PHV_Interference::interference_reduction(
@@ -75,6 +158,10 @@ PHV_Interference::interference_reduction(
     //
     // process each cluster, interference based reduction in needs
     //
+    ordered_map<PHV_Container::Ingress_Egress,
+        ordered_map<int,
+            std::vector<Cluster_PHV *>>> singletons;                    // gather singleton clusters
+    singletons.clear();
     for (auto &cl : cluster_vec) {
         if (!cl->cluster_vec().size()) {
             LOG1("*****cluster_phv_interference:sanity_FAIL*****"
@@ -84,8 +171,13 @@ PHV_Interference::interference_reduction(
         }
         if (cl->cluster_vec().size() == 1) {
             //
-            // no requirement reduction possible for singleton clusters
+            // cluster-requirement-reduction for singleton clusters
             // ccgfs considered as a unit so no special treatment
+            // accumulate singletons into separate groups: ingress, egress
+            // a separate routine aggregates these singleton fields to clusters
+            // then attempt reduction on these aggregate clusters
+            //
+            singletons[cl->gress()][cl->max_width()].push_back(cl);
             //
             continue;
         }
@@ -164,8 +256,11 @@ PHV_Interference::interference_reduction(
         }
         cl->compute_requirements();                        // recompute cluster requirements
     }
+    if (!singletons.empty()) {
+        interference_reduction_singleton_clusters(cluster_vec, singletons, msg);
+    }
     LOG3("..........End: PHV_Interference::interference_reduction().........." << msg);
-}
+}  // interference_reduction
 
 void
 PHV_Interference::create_interference_edge(const PhvInfo::Field *f2, const PhvInfo::Field *f1) {
@@ -349,6 +444,26 @@ std::ostream &operator<<(std::ostream &out, ordered_map<int, const PhvInfo::Fiel
             << r.second
             << std::endl;
     }
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out,
+    ordered_map<PHV_Container::Ingress_Egress,
+        ordered_map<int,
+            std::vector<Cluster_PHV *>>> &aggregates) {
+    out << "Begin ....................Singleton cluster aggregates...................."
+        << std::endl;
+    for (auto &entry : aggregates) {
+        out << '/' << entry.first << '/' << std::endl;
+        for (auto &entry_2: entry.second) {
+            out << '\t' << '|' << entry_2.first << '|' << std::endl; 
+            for (auto &cl: entry_2.second) {
+                out << "\t\t" << cl << std::endl;
+            }
+        }
+    }
+    out << "End ....................Singleton cluster aggregates...................."
+        << std::endl;
     return out;
 }
 

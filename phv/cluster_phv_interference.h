@@ -50,7 +50,21 @@ class PHV_Interference : public Visitor {
         mutex()            { return mutex_i; }
     //
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
-    void interference_reduction(std::vector<Cluster_PHV *>&, const std::string&);
+    void aggregate_singleton_clusters(
+        std::vector<Cluster_PHV *>&,  // original cluster vec
+        std::vector<Cluster_PHV *>&,  // aggregate clusters from map of singletons
+        ordered_map<PHV_Container::Ingress_Egress,
+            ordered_map<int,
+                std::vector<Cluster_PHV *>>>&);
+    void interference_reduction_singleton_clusters(
+        std::vector<Cluster_PHV *>&,
+        ordered_map<PHV_Container::Ingress_Egress,
+            ordered_map<int,
+                std::vector<Cluster_PHV *>>>,
+        const std::string&);
+    void interference_reduction(
+        std::vector<Cluster_PHV *>&,
+        const std::string&);
     void create_interference_edge(const PhvInfo::Field *, const PhvInfo::Field *);
     void virtual_container_overlay(
         Cluster_PHV *,
@@ -74,6 +88,10 @@ class PHV_Interference : public Visitor {
 //
 //
 std::ostream &operator<<(std::ostream &, ordered_map<int, const PhvInfo::Field*>&);
+std::ostream &operator<<(std::ostream &out,
+    ordered_map<PHV_Container::Ingress_Egress,
+        ordered_map<int,
+            std::vector<Cluster_PHV *>>>&);
 std::ostream &operator<<(std::ostream &, PHV_Interference&);
 //
 #endif /* _TOFINO_PHV_CLUSTER_PHV_INTERFERENCE_H_ */
