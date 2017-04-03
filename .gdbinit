@@ -31,6 +31,50 @@ end
 python
 import sys
 
+def template_split(s):
+    parts = []
+    bracket_level = 0
+    current = []
+    for c in (s):
+        if c == "," and bracket_level == 1:
+            parts.append("".join(current))
+            current = []
+        else:
+            if c == '>':
+                bracket_level -= 1
+            if bracket_level > 0:
+                current.append(c)
+            if c == '<':
+                bracket_level += 1
+    parts.append("".join(current))
+    return parts
+
+class ordered_map_Printer:
+    "Print an ordered_map<>"
+    def __init__(self, val):
+        self.val = val
+        self.args = template_split(val.type.tag)
+        self.eltype = gdb.lookup_type('std::pair<' + self.args[0] + ' const,' + self.args[1] + '>')
+    def to_string(self):
+        return "ordered_map<..>"
+    class _iter:
+        def __init__(self, eltype, it, e):
+            self.eltype = eltype
+            self.it = it
+            self.e = e
+        def __iter__(self):
+            return self
+        def __next__(self):
+            if self.it == self.e:
+                raise StopIteration
+            el = (self.it + 1).cast(self.eltype.pointer()).dereference()
+            self.it = self.it.dereference()['_M_next']
+            return ("[" + str(el['first']) + "]", el['second']);
+        def next(self): return self.__next__()
+    def children(self):
+        return self._iter(self.eltype, self.val['data']['_M_impl']['_M_node']['_M_next'],
+                          self.val['data']['_M_impl']['_M_node'].address)
+
 class cstringPrinter(object):
     "Print a cstring"
     def __init__(self, val):
@@ -270,6 +314,8 @@ class SlicePrinter(object):
         return name + '(' + str(self.val['lo']) + ".." + str(self.val['hi']) + ')'
 
 def find_pp(val):
+    if str(val.type.tag).startswith('ordered_map<'):
+        return ordered_map_Printer(val)
     if val.type.tag == 'bitvec':
         return bitvecPrinter(val)
     if val.type.tag == 'cstring':
@@ -291,5 +337,7 @@ def find_pp(val):
     if val.type.tag == 'Slice':
         return SlicePrinter(val)
     return None
+
+#gdb.pretty_printers = [ gdb.pretty_printers[0] ]  # uncomment if reloading
 gdb.pretty_printers.append(find_pp)
 end
