@@ -31,8 +31,6 @@ class ParserOverlay : public ControlFlowVisitor,
     bool preorder(const IR::Expression*) override;
     bool preorder(const IR::Tofino::Deparser*) override { return false; }
 
-    bool filter_join_point(const IR::Node *n) override {
-        return !n->is<IR::Tofino::ParserState>(); }
     void flow_merge(Visitor &) override;
 
     void end_apply() override;
