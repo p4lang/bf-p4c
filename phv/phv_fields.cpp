@@ -380,6 +380,10 @@ void PhvInfo::Field::phv_use_width(bool ccgf_owner, int min_ceil) {
                 ccg_width += f->phv_use_width();
             }
         }
+        if (header_stack_pov_ccgf) {
+            // e.g., ingress::data.$stkvalid
+            ccg_width++;
+        }
         phv_use_hi = ccg_width - 1;
     }
 }  // phv_use_width()
@@ -407,6 +411,8 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
     if (field.mau_phv_no_pack) out << " mau_phv_no_pack";
     if (field.deparser_no_pack) out << " deparser_no_pack";
     if (field.deparser_no_holes) out << " deparser_no_holes";
+    if (field.header_stack_pov_ccgf) out << " header_stack_pov_ccgf";
+    if (field.simple_header_pov_ccgf) out << " simple_header_pov_ccgf";
     if (field.ccgf) out << " ccgf=" << field.ccgf->id << ':' << field.ccgf->name;
     out << " (" << field.cl_i << ")";    // cluster id
     out << " [";
