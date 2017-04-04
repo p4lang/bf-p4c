@@ -3,6 +3,7 @@
 
 #include "tofino/common/header_stack.h"
 #include "mau_visitor.h"
+#include "tofino/common/slice.h"
 
 class HeaderPushPop : public MauTransform {
     const HeaderStackInfo &stacks;
@@ -23,8 +24,8 @@ class HeaderPushPop : public MauTransform {
         auto *valid = new IR::Member(IR::Type::Bits::get(info.size + info.maxpop + info.maxpush),
                                      stack, "$stkvalid");
         rv->push_back(new IR::Primitive("modify_field",
-            new IR::Slice(valid, info.maxpop + info.size - 1, info.maxpop),
-            new IR::Slice(valid, info.maxpop + info.size + count - 1, info.maxpop + count)));
+            MakeSlice(valid, info.maxpop, info.maxpop + info.size - 1),
+            MakeSlice(valid, info.maxpop + count, info.maxpop + info.size + count - 1)));
         return rv; }
     IR::Node *do_pop(const IR::HeaderRef *stack, int count) {
         auto & info = stacks.at(stack->toString());
@@ -36,8 +37,8 @@ class HeaderPushPop : public MauTransform {
         auto *valid = new IR::Member(IR::Type::Bits::get(info.size + info.maxpop + info.maxpush),
                                      stack, "$stkvalid");
         rv->push_back(new IR::Primitive("modify_field",
-            new IR::Slice(valid, info.maxpop + info.size - 1, info.maxpop),
-            new IR::Slice(valid, info.maxpop + info.size - count - 1, info.maxpop - count)));
+            MakeSlice(valid, info.maxpop, info.maxpop + info.size - 1),
+            MakeSlice(valid, info.maxpop - count, info.maxpop + info.size - count - 1)));
         return rv; }
 
     IR::Node *preorder(IR::Primitive *prim) override {

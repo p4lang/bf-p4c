@@ -1,6 +1,7 @@
 #include "gateway.h"
 #include <deque>
 #include "split_gateways.h"
+#include "tofino/common/slice.h"
 
 class CanonGatewayExpr::NeedNegate : public Inspector {
     bool        rv = false;
@@ -18,18 +19,6 @@ static bool isSigned(const IR::Type *t) {
     return false;
 }
 
-const IR::Expression *make_slice(const IR::Expression *e, int lo, int hi) {
-    if (lo == 0 && hi == e->type->width_bits() - 1)
-        return e;
-    BUG_CHECK(hi < e->type->width_bits(), "make_slice slice too big");
-    if (auto sl = e->to<IR::Slice>()) {
-        lo += sl->getL();
-        hi += sl->getL();
-        BUG_CHECK(hi <= sl->getH(), "make_slice slice too big");
-        e = sl->e0; }
-    return new IR::Slice(e, hi, lo);
-}
-
 static mpz_class SliceReduce(IR::Operation::Relation *rel, mpz_class val) {
     int slice = 0;
     while ((val & 1) == 0) {
@@ -37,7 +26,7 @@ static mpz_class SliceReduce(IR::Operation::Relation *rel, mpz_class val) {
         val /= 2; }
     if (slice > 0) {
         LOG4("Slicing " << slice << " bits off the bottom of " << rel);
-        rel->left = make_slice(rel->left, slice, rel->left->type->width_bits() - 1);
+        rel->left = MakeSlice(rel->left, slice, rel->left->type->width_bits() - 1);
         rel->right = new IR::Constant(val);
         LOG4("Now have " << rel); }
     return val;
@@ -347,13 +336,13 @@ class GatewayRangeMatch::SetupRanges : public Transform {
             if (lo < bits.lo) lo = bits.lo;
             unsigned data = 1U << ((val >> (lo - bits.lo)) & 0xf);
             const IR::Expression *eq, *c;
-            eq = new IR::RangeMatch(make_slice(rel->left, lo, hi), data);
+            eq = new IR::RangeMatch(MakeSlice(rel->left, lo, hi), data);
             if (forceRange) --data;
             if (reverse) {
                 data ^= 0xffff;
                 if (forceRange && lo != bits.lo)
                     data = (data << 1) & 0xffff; }
-            c = new IR::RangeMatch(make_slice(rel->left, lo, hi), data);
+            c = new IR::RangeMatch(MakeSlice(rel->left, lo, hi), data);
             if (forceRange)
                 c = himatch ? new IR::LAnd(himatch, c) : c;
             if (rv) {

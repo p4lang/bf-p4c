@@ -1,4 +1,5 @@
 #include "split_phv_use.h"
+#include "tofino/common/slice.h"
 
 const IR::Node *SplitPhvUse::preorder(IR::Primitive *p) {
     if (p->operands.empty()) return p;
@@ -21,7 +22,7 @@ const IR::Node *SplitPhvUse::preorder(IR::Primitive *p) {
             if (!rv) rv = new IR::Vector<IR::Primitive>;
             IR::Primitive *cl = p->clone();
             for (auto &operand : cl->operands)
-                operand = new IR::Slice(operand, hi, lo);
+                operand = MakeSlice(operand, lo, hi);
             LOG3("   " << *cl);
             rv->push_back(cl); }
         if (rv) return rv; }
@@ -52,27 +53,10 @@ const IR::Node *SplitPhvUse::preorder(IR::Expression *e) {
                 WARNING("want to split " << *e << " but can't");
                 return e; }
             if (!rv) rv = new IR::Vector<IR::Expression>;
-            auto *sl = new IR::Slice(e, hi, lo);
+            auto *sl = MakeSlice(e, lo, hi);
             LOG3("   " << *sl);
-            rv->push_back(preorder(sl)->to<IR::Expression>());
+            rv->push_back(sl);
             assert(rv->back()); }
         if (rv) return rv; }
     return e;
-}
-
-const IR::Node *SplitPhvUse::preorder(IR::Slice *sl) {
-    if (auto *of = sl->e0->to<IR::Slice>()) {
-        int lo = sl->getL() + of->getL();
-        int hi = sl->getH() + of->getL();
-        if (lo > of->getH())
-            return new IR::Constant(0);
-        if (hi > of->getH())
-            hi = of->getH();
-        return preorder(new IR::Slice(of->srcInfo, of->e0, hi, lo));
-    } else if (auto *k = sl->e0->to<IR::Constant>()) {
-        int lo = sl->getL();
-        int hi = sl->getH();
-        return ((*k >> lo) & IR::Constant((1U << (hi-lo+1)) - 1)).clone();
-    } else {
-        return preorder(static_cast<IR::Expression *>(sl)); }
 }
