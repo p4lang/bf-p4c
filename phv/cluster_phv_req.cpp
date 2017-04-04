@@ -222,6 +222,11 @@ Cluster_PHV::compute_requirements() {
     //
     size_t scale_down = 0;
     for (auto &pfield : cluster_vec_i) {
+        if (pfield->deparser_no_pack) {
+            // cannot scale-down egress_spec<9:0..15> into 8-bit containers
+            scale_down = 0;
+            break;
+        }
         if (pfield->phv_use_width() * 2 <= container_width(width_req)) {
             scale_down++;
         }
