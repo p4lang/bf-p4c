@@ -40,8 +40,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_5() {
     }
-    @name("meter1") meter(32w1000, CounterType.bytes) meter1;
-    @name("meter2") meter(32w2000, CounterType.bytes) meter2;
+    @name("meter1") meter(32w1000, MeterType.bytes) meter1;
+    @name("meter2") meter(32w2000, MeterType.bytes) meter2;
     @name(".h1_3") action h1_0(bit<16> val1, bit<16> val2, bit<16> val3) {
         hdr.data.h1 = val1;
         hdr.data.h2 = val2;

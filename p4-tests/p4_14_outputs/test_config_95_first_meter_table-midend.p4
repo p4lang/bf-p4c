@@ -164,8 +164,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_3() {
     }
-    @name("meter_0") direct_meter<bit<5>>(CounterType.bytes) meter_0;
-    @name("meter_1") meter(32w500, CounterType.bytes) meter_1;
+    @name("meter_0") direct_meter<bit<5>>(MeterType.bytes) meter_0;
+    @name("meter_1") meter(32w500, MeterType.bytes) meter_1;
     @name(".do_nothing") action do_nothing_0() {
     }
     @name(".action_1") action action_0(bit<8> param0) {

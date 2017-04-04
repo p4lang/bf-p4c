@@ -41,10 +41,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("meter_1") direct_meter<bit<8>>(CounterType.bytes) meter_0;
-    @name("meter_2") direct_meter<bit<8>>(CounterType.bytes) meter_5;
-    @name("meter_3") meter(32w1000, CounterType.packets) meter_6;
-    @name("meter_4") meter(32w4096, CounterType.packets) meter_7;
+    @name("meter_1") direct_meter<bit<8>>(MeterType.bytes) meter_0;
+    @name("meter_2") direct_meter<bit<8>>(MeterType.bytes) meter_5;
+    @name("meter_3") meter(32w1000, MeterType.packets) meter_6;
+    @name("meter_4") meter(32w4096, MeterType.packets) meter_7;
     @name(".h7_9") action h7_0(bit<16> val7, bit<16> val8, bit<16> val9) {
         hdr.data.h7 = val7;
         hdr.data.h8 = val8;

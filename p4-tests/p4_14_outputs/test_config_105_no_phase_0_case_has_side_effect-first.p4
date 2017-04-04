@@ -174,7 +174,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("meter_0") direct_meter<bit<8>>(CounterType.bytes) meter_0;
+    @name("meter_0") direct_meter<bit<8>>(MeterType.bytes) meter_0;
     @name(".action_0") action action_0(bit<1> param0, bit<1> param1, bit<4> param2, bit<4> param3, bit<1> param4, bit<1> param5) {
         hdr.pkt.field_a0_1 = 1w0;
         hdr.pkt.field_a1_1 = param0;

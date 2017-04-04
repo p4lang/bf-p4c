@@ -53,10 +53,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("NoAction") action NoAction_11() {
     }
-    @name("meter_1") direct_meter<bit<8>>(CounterType.bytes) meter_1;
-    @name("meter_2") direct_meter<bit<8>>(CounterType.bytes) meter_2;
-    @name("meter_3") meter(32w1000, CounterType.packets) meter_3;
-    @name("meter_4") meter(32w4096, CounterType.packets) meter_4;
+    @name("meter_1") direct_meter<bit<8>>(MeterType.bytes) meter_1;
+    @name("meter_2") direct_meter<bit<8>>(MeterType.bytes) meter_2;
+    @name("meter_3") meter(32w1000, MeterType.packets) meter_3;
+    @name("meter_4") meter(32w4096, MeterType.packets) meter_4;
     @name(".h7_9") action h7_0(bit<16> val7, bit<16> val8, bit<16> val9) {
         hdr.data.h7 = val7;
         hdr.data.h8 = val8;
