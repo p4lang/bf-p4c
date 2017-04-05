@@ -97,5 +97,5 @@ am__v_LEX_1 =
 	@$(RM) $@
 	$(AM_V_LEX) $(LEX) -t $< > $@
 
-check:
-	$(srcdir)/test/runtests -f -v $(srcdir)/test/*.p4
+check-local:
+	cd $(srcdir)/test; ./runtests -f *.p4 */*.p4
