@@ -4,16 +4,20 @@ class OutputDictionary : public Inspector {
     std::ostream        &out;
     const PhvInfo       &phv;
     indent_t            indent;
+    PHV::Container      last;
     bool preorder(const IR::Primitive *prim) {
         if (prim->name != "emit") return true;
         PhvInfo::Field::bitrange bits;
         auto field = phv.field(prim->operands[0], &bits);
         if (!field->size) {
             /* varbits? not supported */
+            LOG3("skipping varbits? " << field->name);
             return false; }
         auto &alloc = field->for_bit(bits.lo);
-        if (size_t(alloc.container_bit + alloc.width) != alloc.container.size())
-            return false;
+        if (last == alloc.container) {
+            LOG2("skipping repeat container " << alloc << " " << field->name);
+            return false; }
+        last = alloc.container;
         int size = alloc.container.size() / 8;
         if (bits.size() != size * 8) {
             out << indent << alloc.container;
