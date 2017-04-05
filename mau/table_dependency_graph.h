@@ -140,7 +140,7 @@ struct DependencyGraph {
 
 class FindDependencyGraph : public MauInspector, ControlFlowVisitor {
   public:
-    typedef struct { set<const IR::MAU::Table*> read, write; } access_t;
+    typedef struct { ordered_set<const IR::MAU::Table*> read, write; } access_t;
 
   private:
     PhvInfo                                              &phv;

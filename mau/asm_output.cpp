@@ -382,7 +382,7 @@ void MauAsmOutput::emit_ixbar_hash_dist_hash(std::ostream &out, indent_t indent,
         int last_bit = -1;
         bool last_bit_found = false;
         for (int j = i * IXBar::HASH_DIST_BITS; j < (i + 1) * IXBar::HASH_DIST_BITS; j++) {
-            if (((1ULL << j) & hash_dist.bit_mask) == 0) {
+            if (((1ULL << j) & hash_dist.bit_mask) == 0 && !last_bit_found) {
                 last_bit_found = true;
                 last_bit = j - 1;
             }
@@ -403,6 +403,7 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
         bool /*hash_action*/, bool is_sel /*= false*/,
         const IR::ActionSelector *as /*= nullptr */) const {
     map<int, map<int, Slice>> sort;
+    map<int, map<int, Slice>> total_sort;
     emit_ixbar_ways(out, indent, use, mem, is_sel);
     emit_ixbar_hash_dist(out, indent, use);
     emit_ixbar_gather_bytes(use.use, sort);
@@ -437,7 +438,7 @@ void MauAsmOutput::emit_ixbar(std::ostream &out, indent_t indent,
         sort.clear();
         emit_ixbar_gather_bytes(hash_dist.use, sort);
         for (auto &group : sort)
-            out << indent << "group " << group.first << ": " << group.second << std::endl;
+            out << indent << "exact group " << group.first << ": " << group.second << std::endl;
         for (int ht : bitvec(hash_dist.hash_table_input)) {
             out << indent++ << "hash " << ht << ":" << std::endl;
             vector<Slice> match_data;
@@ -699,14 +700,25 @@ class MauAsmOutput::EmitAction : public Inspector {
     void output_action(const IR::ActionFunction *act, ImmedFormat &ifmt) {
         out << indent << canon_name(act->name) << ":" << std::endl;
         if (ifmt) out << indent << "- { " << ifmt << " }" << std::endl;
+        bool is_empty = false;
         if (act->action.empty()) {
             /* a noop */
             out << indent << "- 0" << std::endl;
+            is_empty = true;
         } else {
             act->action.visit_children(*this);
             hash_dist_visited = true;
             act->action.visit_children(*this);
         }
+        bool unhandled_primitives = true;
+        for (auto action : act->action) {
+            if (action->is<IR::MAU::Instruction>()) {
+                unhandled_primitives = false;
+                break;
+            }
+        }
+        if (unhandled_primitives && !is_empty)
+            out << indent << "- 0" << std::endl;
     }
     bool preorder(const IR::ActionFunction *act) override {
         ImmedFormat ifmt;
