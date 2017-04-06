@@ -185,10 +185,18 @@ elif $pull_before_rebuild; then
     popd >/dev/null
 fi
 pushd tofino-asm >/dev/null
+    if [ -r opt/Makefile ]; then
+        cd opt
+    elif [ -r debug/Makefile ]; then
+        cd debug
+    fi
     if $reuse_asis && [ -x tfas ]; then
         echo "Reusing $PWD/tfas as is"
         true
     else
+        if [ ! -r Makefile ]; then
+            ./bootstrap.sh
+        fi
         if $clean_before_rebuild; then
             make clean
         fi
