@@ -9,6 +9,9 @@ import sys, os.path
 from string import maketrans
 from stf_parser import STFParser
 
+def encodePacket(packet):
+    return ''.join('\\x' + x.encode('hex') for x in packet.decode('hex'))
+
 class STF2PTF:
     def __init__(self, ast, testname):
         testNameEscapeChars = "-."
@@ -52,6 +55,7 @@ class STF2PTF:
 
         pkt_expects = []  # ptf buffers packets and they can be retrieved after a corresponding send, at wait statements, or at the end. They get delivered in order
         pkt_pair = [None, None]
+        tbl_op = False
         for s in self._ast:
             # print s
             if s[0] == 'packet':
@@ -59,10 +63,13 @@ class STF2PTF:
                      # we've already seen another packet without a pairing
                      # expect. Send the pair packet, and replace the pair with
                      # the new one
-                     self.genSendPacket(ptf, pkt_pair[0])
-                     pkt_pair[0] = s
+                    if tbl_op:
+                        self.genWaitStmt (ptf)
+                        tbl_op = False
+                    self.genSendPacket(ptf, pkt_pair[0])
+                    pkt_pair[0] = s
                 else:
-                     pkt_pair[0] = s
+                    pkt_pair[0] = s
             elif s[0] == 'expect':
                 if pkt_pair[1] is not None:
                     pkt_expects.append(s)
@@ -70,19 +77,28 @@ class STF2PTF:
                     pkt_pair[1] = s
             elif s[0] == 'add':
                 self.genAddTableEntry(ptf, s)
+                tbl_op = True
             elif s[0] == 'wait':
                 for e in pkt_expects:
+                    if tbl_op:
+                        self.genWaitStmt(ptf)
+                        tbl_op = False
                     self.genExpectPacket(ptf, e)
                 pkt_expects = []
                 self.genWaitStmt(ptf)
+                tbl_op = False
             elif s[0] == 'setdefault':
                 self.genAddDefaultAction(ptf, s)
+                tbl_op = True
             elif s[0] == 'check_counter':
                 self.genCheckCounter(ptf, s)
             else:
                 assert False, "Unknown statement %s" % s[0]
 
             if pkt_pair[0] is not None and pkt_pair[1] is not None:
+                if tbl_op:
+                    self.genWaitStmt(ptf)
+                    tbl_op = False                    
                 self.genProcessPacket(ptf, pkt_pair)
                 pkt_pair = [None, None]
 
@@ -170,7 +186,7 @@ class STF2PTF:
         """
         ptf.write('\n')
         ptf.write(self._indent + 'logging.info("Sending packet on port ' + packet[1] + '")\n')
-        ptf.write(self._indent + 'send_packet(self, ' + packet[1] + ', \"' + packet[2] + '\")\n')
+        ptf.write(self._indent + 'send_packet(self, ' + packet[1] + ', \"' + encodePacket(packet[2]) + '\")\n')
 
     def genExpectPacket(self, ptf, expect):
         """
@@ -179,7 +195,7 @@ class STF2PTF:
         ptf.write('\n')
         ptf.write(self._indent + 'logging.info("Expecting packet on port ' + expect[1] + '")\n')
         if expect[2] is not None:
-            expected = "\"" + expect[2] + "\""
+            expected = "\"" + encodePacket(expect[2]) + "\""
         else:
             expected = "None"
         ptf.write(self._indent + 'check_packet(self, ' + expected + ', ' + expect[1] + ')\n')
@@ -331,9 +347,9 @@ class STF2PTF:
         ptf.write('    logging.debug("Checking for pkt on device %d, port %d", device, port)\n')
         ptf.write('    (rcv_device, rcv_port, rcv_pkt, pkt_time) = dp_poll(\n')
         ptf.write('        test, device_number=device, port_number=port, timeout=2, exp_pkt=None)\n')
-        ptf.write('    if pkt is not None and not match_ternary(pkt, rcv_pkt):\n')
+        ptf.write('    if pkt is not None and rcv_pkt is not None and not match_ternary(pkt, rcv_pkt):\n')
         ptf.write('        rcv_pkt = None\n')
-        ptf.write('    test.assertTrue(rcv_pkt != None, "Did not receive expected pkt on device %d, port %r" % (device, port)))\n')
+        ptf.write('    test.assertTrue(rcv_pkt != None, "Did not receive expected pkt on device %d, port %r" % (device, port))\n')
         ptf.write('\n')
         ptf.write('\n')
 
