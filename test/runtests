@@ -123,6 +123,10 @@ TRY_BINDIRS="
 
 function findbin () {
     found=""
+    if [ -x "$BUILDDIR/$1" ]; then
+        echo $BUILDDIR/$1
+        return
+    fi
     for d in $TRY_BINDIRS; do
         if [ -x "$d/$1" ]; then
             if [ -z "$found" -o "$d/$1" -nt "$found" ]; then

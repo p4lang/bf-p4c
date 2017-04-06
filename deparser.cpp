@@ -122,10 +122,10 @@ struct GRESS##NAME##Digest : public Deparser::Digest::Type {                    
         IFSHIFT( can_shift = true; ) }                                          \
     template<class REGS> void setregs(REGS &regs, Deparser::Digest &data) {     \
         CFG.phv = data.select->reg.index;                                       \
-        IFSHIFT( CFG.shft = data.shift; )                                       \
+        IFSHIFT( CFG.shft = data.shift + data.select->lo; )                     \
         CFG.valid = 1;                                                          \
         for (auto &set : data.layout) {                                         \
-            int id = set.first >> data. shift;                                  \
+            int id = set.first >> data.shift;                                   \
             int idx = 0;                                                        \
             bool first = true;                                                  \
             for (auto &reg : set.second) {                                      \
@@ -230,8 +230,11 @@ void Deparser::process() {
         error(lineno[INGRESS], "Registers used in both ingress and egress in deparser: %s",
               Phv::db_regset(phv_use[INGRESS] & phv_use[EGRESS]).c_str());
     for (auto &digest : digests) {
-        if (digest.select.check())
+        if (digest.select.check()) {
             phv_use[digest.type->gress][digest.select->reg.index] = 1;
+            if (digest.select->lo > 0 && !digest.type->can_shift)
+                error(digest.select.lineno, "%s digest selector must be in bottom bits of phv",
+                      digest.type->name.c_str()); }
         for (auto &set : digest.layout)
             for (auto &reg : set.second)
                 if (reg.check())

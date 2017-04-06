@@ -88,6 +88,8 @@ templates/%/.templates-updated: $(srcdir)/%/chip.schema $(srcdir)/%/template_obj
 	$(WALLE) --schema $(srcdir)/$*/chip.schema --generate-templates $(srcdir)/$*/template_objects.yaml -o templates/$*
 	@touch $@
 
+AM_YFLAGS = -v
+
 # FIXME -- get automake to generate these automatcially...
 AM_V_LEX = $(am__v_LEX_$(V))
 am__v_LEX_ = $(am__v_LEX_$(AM_DEFAULT_VERBOSITY))
@@ -98,4 +100,4 @@ am__v_LEX_1 =
 	$(AM_V_LEX) $(LEX) -t $< > $@
 
 check-local:
-	cd $(srcdir)/test; ./runtests -f *.p4 */*.p4
+	export BUILDDIR=$$(pwd); cd $(srcdir)/test; ./runtests -f *.p4 */*.p4
