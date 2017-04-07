@@ -2496,7 +2496,7 @@ control process_system_acl(inout headers hdr, inout metadata meta, inout standar
     }
     @name(".negative_mirror") action negative_mirror_0(bit<32> clone_spec, bit<8> drop_reason) {
         meta.ingress_metadata.drop_reason = drop_reason;
-        clone3<tuple<bit<16>, bit<8>, bit<8>>>(CloneType.I2E, (bit<32>)clone_spec, { meta.ingress_metadata.ifindex, meta.ingress_metadata.drop_reason, meta.l3_metadata.lkp_ip_ttl });
+        clone3<tuple<bit<16>, bit<8>, bit<8>>>(CloneType.I2E, clone_spec, { meta.ingress_metadata.ifindex, meta.ingress_metadata.drop_reason, meta.l3_metadata.lkp_ip_ttl });
         mark_to_drop();
     }
     @name("system_acl") table system_acl_0 {
