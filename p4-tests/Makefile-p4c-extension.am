@@ -127,6 +127,9 @@ XFAIL_TESTS += \
     bmv2/%reldir%/p4_14/exclusive_cf_one_action_fail_before.p4.test \
     bmv2/%reldir%/p4_14/test_config_190_modify_with_expr.p4.test
 
+# Multiple LPM keys in a table (not allowed on bmv2)
+XFAIL_TESTS += bmv2/%reldir%/p4_14/case1770.p4.test
+
 # parser verify not supported
 XFAIL_TESTS += tofino/%reldir%/p4_16/ipv4_options.p4.test \
     tofino-ortools/%reldir%/p4_16/ipv4_options.p4.test
