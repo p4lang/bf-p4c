@@ -118,7 +118,6 @@ cpplint_FILES += $(tofino_backend_parde_UNIFIED) $(tofino_backend_parde_NONUNIFI
 tofino_backend_phv_UNIFIED = \
 	%reldir%/phv/asm_output.cpp \
 	%reldir%/phv/bit_extractor.cpp \
-	%reldir%/phv/byte_constraint.cpp \
 	%reldir%/phv/cluster.cpp \
 	%reldir%/phv/cluster_phv_bind.cpp \
 	%reldir%/phv/cluster_phv_container.cpp \
@@ -128,23 +127,14 @@ tofino_backend_phv_UNIFIED = \
 	%reldir%/phv/cluster_phv_overlay.cpp \
 	%reldir%/phv/cluster_phv_req.cpp \
 	%reldir%/phv/cluster_phv_slicing.cpp \
-	%reldir%/phv/constraints.cpp \
-	%reldir%/phv/container_constraint.cpp \
-	%reldir%/phv/match_xbar_constraint.cpp \
-	%reldir%/phv/mau_group_constraint.cpp \
-	%reldir%/phv/offset_constraint.cpp \
-	%reldir%/phv/parse_graph_constraint.cpp \
 	%reldir%/phv/phv_fields.cpp \
 	%reldir%/phv/repack_metadata.cpp \
-	%reldir%/phv/source_container_constraint.cpp \
 	%reldir%/phv/split_phv_use.cpp \
-	%reldir%/phv/thread_constraint.cpp \
 	%reldir%/phv/trivial_alloc.cpp
 
 noinst_HEADERS += \
 	%reldir%/phv/asm_output.h \
 	%reldir%/phv/bit_extractor.h \
-	%reldir%/phv/byte_constraint.h \
 	%reldir%/phv/cluster.h \
 	%reldir%/phv/cluster_phv_bind.h \
 	%reldir%/phv/cluster_phv_container.h \
@@ -154,54 +144,16 @@ noinst_HEADERS += \
 	%reldir%/phv/cluster_phv_overlay.h \
 	%reldir%/phv/cluster_phv_req.h \
 	%reldir%/phv/cluster_phv_slicing.h \
-	%reldir%/phv/constraints.h \
-	%reldir%/phv/container_constraint.h \
-	%reldir%/phv/create_thread_local_instances.h \
-	%reldir%/phv/match_xbar_constraint.h \
-	%reldir%/phv/mau_group_constraint.h \
-	%reldir%/phv/offset_constraint.h \
-	%reldir%/phv/parse_graph_constraint.h \
-	%reldir%/phv/phv_allocator.h \
 	%reldir%/phv/phv_fields.h \
 	%reldir%/phv/phv.h \
-	%reldir%/phv/source_container_constraint.h \
 	%reldir%/phv/split_phv_use.h \
-	%reldir%/phv/thread_constraint.h \
-	%reldir%/phv/trivial_alloc.h \
-	%reldir%/phv/t_phv_constraint.h
+	%reldir%/phv/trivial_alloc.h
 
 cpplint_FILES += $(tofino_backend_phv_UNIFIED) $(tofino_backend_phv_NONUNIFIED)
 
-# OR Tools uses Protobuf, which includes this wonderful hack:
-#   https://github.com/google/protobuf/blob/master/src/google/protobuf/stubs/common.h#L223
-#
 # We unfortunately have our own hack that puts |vector| in the global namespace
 # in |ir/std.h|. Until at least one of these hacks is removed, files that use OR
 # Tools need to be built separately from files that interact with our IR.
-
-tofino_backend_phv_or_tools_UNIFIED = \
-	%reldir%/phv/phv_allocator.cpp \
-	%reldir%/phv/or_tools/bit.cpp \
-	%reldir%/phv/or_tools/solver.cpp
-
-# These ones have to be built totally non-unified because in some of the files
-# that use OR Tools, the |Solver| in the global namespace is Google's
-# |operations_research::Solver|, and in some it's our own |or_tools::Solver|. We
-# should fix that.
-
-tofino_backend_phv_or_tools_NONUNIFIED = \
-	%reldir%/phv/or_tools/container.cpp \
-	%reldir%/phv/or_tools/mau_group.cpp
-
-noinst_HEADERS += \
-	%reldir%/phv/or_tools/bit.h \
-	%reldir%/phv/or_tools/container.h \
-	%reldir%/phv/or_tools/mau_group.h \
-	%reldir%/phv/or_tools/min_value_solver.h \
-	%reldir%/phv/or_tools/random_value_solver.h \
-	%reldir%/phv/or_tools/solver.h
-
-cpplint_FILES += $(tofino_backend_phv_or_tools_UNIFIED) $(tofino_backend_phv_or_tools_NONUNIFIED)
 
 tofino_backend_main_UNIFIED = \
 	%reldir%/backend.cpp \
@@ -245,4 +197,3 @@ p4c_tofino_SOURCES = \
 	$(tofino_backend_main_SOURCES)
 
 p4c_PYTHON += $(srcdir)/%reldir%/driver/p4c.tofino.cfg
-

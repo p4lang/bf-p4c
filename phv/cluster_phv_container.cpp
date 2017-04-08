@@ -3,7 +3,6 @@
 #include "cluster_phv_operations.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
-#include "base/logging.h"
 
 //***********************************************************************************
 //
@@ -898,4 +897,3 @@ std::ostream &operator<<(std::ostream &out, std::list<PHV_Container *> &phv_cont
     }
     return out;
 }
-

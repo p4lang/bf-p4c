@@ -2,7 +2,6 @@
 #include "cluster_phv_container.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
-#include "base/logging.h"
 
 //***********************************************************************************
 //

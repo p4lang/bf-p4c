@@ -1,7 +1,6 @@
 #include "cluster_phv_mau.h"
 #include "cluster_phv_overlay.h"
 #include "lib/log.h"
-#include "base/logging.h"
 
 //***********************************************************************************
 // Use mutex_i() to check if two fields can be overlayed to the same PHV.
@@ -243,4 +242,3 @@ Cluster_PHV_Overlay::apply_visitor(const IR::Node *node, const char *name) {
     }
     return node;
 }
-

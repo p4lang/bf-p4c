@@ -1,19 +1,3 @@
-dnl Detect OR-Tools, which is a C++-only library. On macOS the linker does not
-dnl export any C symbols we can check for, so we can't use AC_CHECK_LIB.
-
-AC_MSG_CHECKING([for -lortools])
-AC_LANG_PUSH(C++)
-__saved_libs=$LIBS
-LIBS="-lortools $LIBS"
-AC_LINK_IFELSE(
-  [AC_LANG_PROGRAM([#include <constraint_solver/constraint_solver.h>],
-                   [operations_research::Solver s("foo")])],
-  [AC_MSG_RESULT([yes])],
-  [AC_MSG_RESULT([no])
-   AC_MSG_ERROR([Missing Google OR-Tools library])
-   LIBS=$__saved_libs])
-AC_LANG_POP()
-
 AC_MSG_CHECKING([for Boost headers])
 AC_LANG_PUSH([C++])
 AC_CHECK_HEADERS(

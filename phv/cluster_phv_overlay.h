@@ -1,6 +1,7 @@
 #ifndef _TOFINO_PHV_CLUSTER_PHV_OVERLAY_H_
 #define _TOFINO_PHV_CLUSTER_PHV_OVERLAY_H_
 
+#include "lib/symbitmatrix.h"
 #include "phv.h"
 #include "phv_fields.h"
 #include "cluster.h"

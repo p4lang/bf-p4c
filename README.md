@@ -14,22 +14,6 @@ necessary dependences, and build the project.
 
 # Dependences
 
-- C++ Google OR-Tools library.
-  `https://developers.google.com/optimization/installing?hl=en#c`.
-  Unfortunately the binary download does not install itself, so we
-  suggest the following installation procedure for Ubuntu 14.04 64-bit:
-
-```
-wget -O ortools.tar.gz 'https://drive.google.com/uc?id=0B5afcYJzk8ivdnV1Z2IzeExaQzA&export=download'
-tar xvfz ortools.tar.gz
-sudo mv or-tools.Linux64/lib/* /usr/local/lib/
-sudo ldconfig
-sudo mv or-tools.Linux64/include/* /usr/local/include/
-```
-  For Ubuntu 16.04 use  https://github.com/google/or-tools/releases/download/v4.3/or-tools_Ubuntu-16.04-64bit_v4.3.3802.tar.gz as the link and follow the above procedure.
-
-  Later versions (those that use gcc 5?) likely require installing from source.
-
 - Tofino assembler and Harlyn model for testing the output of
   the Tofino backend.  The test scripts will look for sibling repos
   (in preference to installed versions), so the easiest is to

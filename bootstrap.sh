@@ -4,7 +4,7 @@ confirm () {
     # call with a prompt string or use a default
     read -r -p "${1:-Are you sure? [y/N]} " response
     case $response in
-        [yY][eE][sS]|[yY]) 
+        [yY][eE][sS]|[yY])
             true
             ;;
         *)
@@ -124,7 +124,7 @@ popd >/dev/null
 if [ ! -r /usr/local/include/crafter.h -o ! -x /usr/local/lib/libcrafter.so ]; then
     git clone https://github.com/pellegre/libcrafter
     cd libcrafter/libcrafter
-    ./autogen.sh 
+    ./autogen.sh
     make -j4 || die "Failed to build libcrafter"
     sudo make install
     sudo ldconfig
@@ -204,27 +204,6 @@ pushd tofino-asm >/dev/null
     fi
 popd >/dev/null
 
-### ortools setup
-if [ ! -r /usr/local/include/constraint_solver/constraint_solver.h -o ! -x /usr/local/lib/libortools.so ]; then
-    version=$(lsb_release -r | sed 's/.*:[ 	]*//')
-    wget -O ortools.tar.gz "https://github.com/google/or-tools/releases/download/v4.2/or-tools_Ubuntu-$version-64bit_v4.2.3758.tar.gz" || die "No ortools for version $version ($(uname -a))"
-    tar xvfz ortools.tar.gz
-    sudo mv or-tools_Ubuntu*/lib/* /usr/local/lib/
-    sudo ldconfig
-    sudo mkdir -p /usr/local/include/ortools
-    sudo mv or-tools_Ubuntu*/include/* /usr/local/include/ortools
-    pushd /usr/local/include >/dev/null
-    for d in ortools/*; do
-        if [ ! -d $(basename $d) ]; then
-            sudo ln -s $d .
-        fi
-    done
-    popd >/dev/null
-    rm -rf or-tools_Ubuntu* ortools.tar.gz
-else
-    echo "Google ortools already installed"
-fi
-
 ### P4C setup
 if [ ! -d p4c/.git ]; then
     gitclone git@github.com:p4lang/p4c.git p4c
@@ -249,7 +228,7 @@ pushd p4c >/dev/null
         fi
         if [ -d ../build ]; then
             rm -rf ../build
-        fi 
+        fi
     else
         cd tofino
         if $pull_before_rebuild; then

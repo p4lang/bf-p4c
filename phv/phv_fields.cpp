@@ -3,7 +3,6 @@
 #include "lib/log.h"
 #include "lib/stringref.h"
 #include "lib/range.h"
-#include "base/logging.h"
 
 bool PhvInfo::SetReferenced::preorder(const IR::Expression *e) {
     if (auto *field = self.field(e)) {
@@ -248,8 +247,7 @@ const PhvInfo::Field *PhvInfo::field(const IR::Member *fr, Field::bitrange *bits
 
 vector<PhvInfo::Field::alloc_slice> *PhvInfo::alloc(const IR::Member *member) {
     PhvInfo::Field *info = field(member);
-    CHECK(nullptr != info) << "; Cannot find PHV allocation for " <<
-        member->toString();
+    BUG_CHECK(nullptr != info, "; Cannot find PHV allocation for %s", member->toString());
     return &info->alloc;
 }
 
@@ -512,4 +510,3 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field_Ops &op) {
 void dump(PhvInfo *phv) {
     std::cout << *phv;
 }
-

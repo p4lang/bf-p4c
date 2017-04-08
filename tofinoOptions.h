@@ -6,7 +6,6 @@
 
 class Tofino_Options : public CompilerOptions {
  public:
-    cstring phv_ortools = cstring();
     bool trivial_phvalloc = false;
 
     Tofino_Options() {
@@ -16,9 +15,6 @@ class Tofino_Options : public CompilerOptions {
         registerOption("--trivpa", nullptr,
             [this](const char *) { trivial_phvalloc = true; return true; },
             "use the trivial PHV allocator");
-        registerOption("--ortools", nullptr,
-            [this](const char *arg) { phv_ortools = arg ? arg : "default"; return true; },
-            "use ortools-based PHV allocation");
         target = "tofino";
     }
 };

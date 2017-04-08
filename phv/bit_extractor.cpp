@@ -1,5 +1,4 @@
 #include "bit_extractor.h"
-#include <base/logging.h>
 #include "ir/ir.h"
 
 std::set<std::pair<PHV::Bit, PHV::Bit>>

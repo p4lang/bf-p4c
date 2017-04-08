@@ -6,6 +6,7 @@
 #include "ir/ir.h"
 #include "lib/map.h"
 #include "lib/range.h"
+#include "lib/symbitmatrix.h"
 #include "tofino/ir/thread_visitor.h"
 #include "cluster_phv_req.h"
 //

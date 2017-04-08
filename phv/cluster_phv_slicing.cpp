@@ -1,6 +1,5 @@
 #include "cluster_phv_slicing.h"
 #include "lib/log.h"
-#include "base/logging.h"
 
 //***********************************************************************************
 //

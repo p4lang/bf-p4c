@@ -1,5 +1,5 @@
 /*
-Copyright 2013-present Barefoot Networks, Inc. 
+Copyright 2013-present Barefoot Networks, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@ limitations under the License.
 
 #include "backend.h"
 
-#include <base/logging.h>
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
@@ -58,7 +57,6 @@ limitations under the License.
 #include "tofino/phv/trivial_alloc.h"
 #include "tofino/phv/split_phv_use.h"
 #include "tofino/phv/create_thread_local_instances.h"
-#include "tofino/phv/phv_allocator.h"
 #include "tofino/phv/cluster_phv_interference.h"
 #include "tofino/phv/cluster_phv_bind.h"
 #include "tofino/phv/cluster_phv_operations.h"
@@ -127,18 +125,6 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
 
     if (options.trivial_phvalloc) {
         phv_alloc = new PHV::TrivialAlloc(phv, defuse.conflicts());
-    } else if (options.phv_ortools) {
-        auto *newpa = new PhvAllocator(phv, defuse.conflicts(), std::ref(mutex));
-        phv_alloc = new PassManager({
-            newpa,
-            new VisitFunctor([newpa, options]() {
-                if (!newpa->Solve(options.phv_ortools)) {
-                    error("or-tools failed to find PHV allocation"); } }),
-            Log::verbose() ? new VisitFunctor([&phv]() {
-                std::cout << "Printing PHV fields:\n";
-                for (auto iter = phv.begin(); iter != phv.end(); ++iter) {
-                    LOG2("result:" << iter->name << iter->alloc[0]);
-                    LOG2("result:" << iter->name << iter->alloc[1]); }}) : nullptr });
     } else {
         phv_alloc = new PassManager({
             new MauPhvConstraints(phv),

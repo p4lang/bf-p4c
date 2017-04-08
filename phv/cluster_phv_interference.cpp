@@ -1,7 +1,6 @@
 #include "cluster_phv_interference.h"
 #include "lib/log.h"
 #include "lib/stringref.h"
-#include "base/logging.h"
 
 //***********************************************************************************
 //
