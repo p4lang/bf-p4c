@@ -33,7 +33,7 @@ bool LoadMatchKeys::preorder(IR::Tofino::ParserState *st) {
                 int size = (sel->type->width_bits() + 7) / 8U;
                 sel = new IR::Constant(offset);
                 if (size > 1)
-                    sel = new IR::Range(Util::SourceInfo(), sel, new IR::Constant(offset+size-1));
+                    sel = new IR::Range(sel, new IR::Constant(offset+size-1));
             } else {
                 warning("%s not extracted in state %s", sel, st); } }
     return true;

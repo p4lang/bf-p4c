@@ -136,7 +136,7 @@ static IR::Attached *createV1Attached(IR::MAU::Table *tt, Util::SourceInfo srcIn
         tname = tname.before(p);
     if (tname == "action_selector") {
         auto sel = new IR::ActionSelector(srcInfo, name);
-        auto flc = new IR::FieldListCalculation(IR::Annotations::empty);
+        auto flc = new IR::FieldListCalculation();
         flc->algorithm = args->at(0)->as<IR::Member>().member;
         flc->output_width = args->at(2)->as<IR::Constant>().asInt();
         sel->key_fields = flc;
