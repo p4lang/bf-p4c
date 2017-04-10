@@ -104,7 +104,9 @@ const PhvInfo::Field::alloc_slice &PhvInfo::Field::for_bit(int bit) const {
     for (auto &sl : alloc)
         if (bit >= sl.field_bit && bit < sl.field_bit + sl.width)
             return sl;
-    BUG("No allocation for bit %d in %s", bit, name);
+    ERROR("No allocation for bit " << bit << " in " << name);
+    static alloc_slice invalid(PHV::Container(), 0, 0, 0);
+    return invalid;
 }
 
 void PhvInfo::Field::foreach_alloc(int lo, int hi,

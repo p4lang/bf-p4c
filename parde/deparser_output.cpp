@@ -38,6 +38,25 @@ class OutputDictionary : public Inspector {
     : out(out), phv(phv), indent(indent) {}
 };
 
+void DeparserAsmOutput::emit_fieldlist(std::ostream &out, const IR::Vector<IR::Expression> *list,
+                                       const char *sep) const {
+    PHV::Container last;
+    for (auto f : *list) {
+        PhvInfo::Field::bitrange bits;
+        if (auto field = phv.field(f, &bits)) {
+            auto &alloc = field->for_bit(bits.lo);
+            if (last && alloc.container == last)
+                continue;
+            last = alloc.container;
+            if (alloc.container && size_t(bits.size()) != alloc.container.size()) {
+                out << sep << alloc.container;
+            } else {
+                out << sep << canon_name(field->name);
+                if (bits.lo != 0 || bits.hi + 1 != field->size)
+                    out << '.' << bits.lo << '-' << bits.hi; }
+            sep = ", "; } }
+}
+
 std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
     indent_t    indent(1);
     out << "deparser " << d.gress << ":" << std::endl;
@@ -50,6 +69,14 @@ std::ostream &operator<<(std::ostream &out, const DeparserAsmOutput &d) {
         --indent;
         if (d.deparser->egress_port)
             out << indent << "egress_unicast_port: "
-                << canon_name(d.phv.field(d.deparser->egress_port)->name) << std::endl; }
+                << canon_name(d.phv.field(d.deparser->egress_port)->name) << std::endl;
+        for (auto digest : Values(d.deparser->digests)) {
+            int idx = 0;
+            out << indent++ << digest->name << ":" << std::endl;
+            for (auto l : digest->sets) {
+                out << indent << idx++ << ": [ " << digest->select->name;
+                d.emit_fieldlist(out, l, ", ");
+                out << " ]" << std::endl; }
+            out << indent-- << "select: " << digest->select->name << std::endl; } }
     return out;
 }

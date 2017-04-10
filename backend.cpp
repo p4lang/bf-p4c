@@ -49,6 +49,7 @@ limitations under the License.
 #include "tofino/parde/asm_output.h"
 #include "tofino/parde/bridge_metadata.h"
 #include "tofino/parde/compute_shifts.h"
+#include "tofino/parde/digest.h"
 #include "tofino/parde/match_keys.h"
 #include "tofino/parde/split_big_states.h"
 #include "tofino/parde/split_header.h"
@@ -158,6 +159,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         &defuse,
         new AddBridgedMetadata(phv, defuse),
         new AddMetadataShims,
+        new Digests,
         &phv,  // only needed to avoid warnings about otherwise unused ingress/egress_port?
         new LiveAtEntry(phv),
         new CreateThreadLocalInstances(INGRESS),

@@ -45,10 +45,22 @@ class Parser {
     toString { return gress ? "egress parser" : "ingress parser"; }
 }
 
+class Digest {
+    gress_t                             gress;
+    cstring                             name;
+    TempVar                             select;
+    std::vector<Vector<Expression>>     sets;
+#noconstructor
+    Digest(gress_t gress, cstring name) : gress(gress), name(name),
+        select(new TempVar(Type::Bits::get(3),
+                           cstring((gress ? "egress::$" : "ingress::$") + name))) {}
+}
+
 class Deparser : Unit {
-    gress_t                     gress;
-    inline Vector<Expression>   emits;
-    NullOK Expression           egress_port;
+    gress_t                             gress;
+    inline Vector<Expression>           emits;
+    NullOK Expression                   egress_port;
+    inline NameMap<Digest>              digests;
 #noconstructor
     Deparser(gress_t gr, Parser s);
     int stage() const override { return 999999; /* assumed larger than the number of stages */ }

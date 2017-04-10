@@ -116,6 +116,11 @@ void IR::Tofino::Parser::dbprint(std::ostream &out) const {
         out << endl << *st;
 }
 
+void IR::Tofino::Digest::dbprint(std::ostream &out) const {
+    for (auto s : sets)
+        out << endl << name << ": " << *s;
+}
+
 void IR::Tofino::Deparser::dbprint(std::ostream &out) const {
     out << gress << " deparser";
     if (dbgetflags(out) & Brief)
@@ -125,6 +130,8 @@ void IR::Tofino::Deparser::dbprint(std::ostream &out) const {
         out << endl << *st;
     if (egress_port)
         out << endl << "egress_port: " << *egress_port;
+    for (auto digest : Values(digests))
+        out << *digest;
     out << unindent;
 }
 

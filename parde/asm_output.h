@@ -29,6 +29,9 @@ class DeparserAsmOutput {
  public:
     DeparserAsmOutput(const IR::Tofino::Pipe *pipe, const PhvInfo &phv, gress_t gr)
     : gress(gr), phv(phv), deparser(pipe->thread[gress].deparser) {}
+
+    void emit_fieldlist(std::ostream &out, const IR::Vector<IR::Expression> *list,
+                        const char *sep="") const ;
 };
 
 #endif /* _TOFINO_PARDE_ASM_OUTPUT_H_ */

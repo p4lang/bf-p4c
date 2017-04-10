@@ -21,9 +21,10 @@ class PHV::TrivialAlloc::Uses : public Inspector {
         return true; }
     bool preorder(const IR::Tofino::Deparser *d) {
         thread = d->gress;
-        in_mau = true;  // treat egress_port as in mau as it can't go in TPHV
+        in_mau = true;  // treat egress_port and digests as in mau as they can't go in TPHV
         revisit_visited();
         visit(d->egress_port);
+        d->digests.visit_children(*this);
         in_mau = false;
         revisit_visited();
         d->emits.visit_children(*this);
