@@ -1,7 +1,7 @@
 # Tests
 
 -include p4_tests_tofino.mk
--include p4_tests_tofino-ortools.mk
+#-include p4_tests_tofino-ortools.mk
 -include p4_tests_p14_to_16.mk
 -include p4_tests_p4.mk
 -include p4_tests_bmv2.mk
@@ -17,13 +17,13 @@ p4_tests_tofino.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(w
    $(srcdir)/%reldir%/p4_14
 	@$(GENTESTS) $(srcdir) tofino $(srcdir)/%reldir%/runtest $^ >$@ || ( rm $@ && false )
 
-p4_tests_tofino-ortools.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(wildcard \
-   $(srcdir)/testdata/p4_14_samples/*.stf \
-   $(srcdir)/%reldir%/p4_16/*.stf \
-   $(srcdir)/%reldir%/p4_14/*.stf ) \
-   $(srcdir)/%reldir%/p4_16 \
-   $(srcdir)/%reldir%/p4_14
-	@$(GENTESTS) $(srcdir) tofino-ortools $(srcdir)/%reldir%/runtest --ortools $(^:%.stf=%.p4) >$@ || ( rm $@ && false )
+#p4_tests_tofino-ortools.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(wildcard \
+#   $(srcdir)/testdata/p4_14_samples/*.stf \
+#   $(srcdir)/%reldir%/p4_16/*.stf \
+#   $(srcdir)/%reldir%/p4_14/*.stf ) \
+#   $(srcdir)/%reldir%/p4_16 \
+#   $(srcdir)/%reldir%/p4_14
+#	@$(GENTESTS) $(srcdir) tofino-ortools $(srcdir)/%reldir%/runtest --ortools $(^:%.stf=%.p4) >$@ || ( rm $@ && false )
 
 # We have additional test inputs that are used to test the other (standard) back-ends
 # These test input programs depend on Tofino in some way.
