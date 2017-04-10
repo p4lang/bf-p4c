@@ -1,5 +1,14 @@
 - current compiler failures on some tests.
 
+parser1.p4 compile
+parser2.p4 compile
+parser_dc_full.p4 compile
+port_vlan_mapping.p4 compile
+- glass fails to unroll parser loop properly (new problem with 3.3?)
+
+acl1.p4 mismatch
+- deparser mismatch in phv grouping.
+
 action_chain1.p4 tfas
 - asm gen fails to include 'next' field in ternary indirect
 
@@ -9,16 +18,12 @@ counter5.p4 mismatch
 hash_index5.p4 mismatch
 - control of stats table is different
 
-mac_rewrite.p4 tfas
-- asm generation error?  invalid slice on immediate use in action bus
+exact_match3.p4 mismatch
+- vpn lsb encoding swapped (not a bug -- either way is fine)
+- action_hv_xbar differences
+- other differences as well?
 
 meter_test1.p4 mismatch
 - vpn lsb encoding swapped (not a bug -- either way is fine)
 - synth2port fabric is different -- not clear if it is a bug or where
 - idletime missing from asm?
-
-proxy_hash1.p4 mismatch
-- hash config is different -- need something extra in asmgen?
-
-selector0.p4 compile
-- invalid test?
