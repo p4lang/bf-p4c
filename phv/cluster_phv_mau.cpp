@@ -232,8 +232,8 @@ PHV_MAU_Group_Assignments::apply_visitor(const IR::Node *node, const char *name)
     cluster_PHV_placements();           // PHV placements
     cluster_TPHV_placements();          // consider TPHVoverflow => PHV before POV placements
     cluster_POV_placements();           // POV placements after TPHVoverflow => PHV
-    cluster_nibble_PHV_placements();    // nibble cluster PHV placements
-    cluster_nibble_T_PHV_placements();  // nibble T_PHV placements
+    cluster_PHV_nibble_placements();    // nibble cluster PHV placements
+    cluster_T_PHV_nibble_placements();  // nibble T_PHV placements
     //
     container_cohabit_summary();        // summarize recommendations to TP
     //
@@ -485,7 +485,7 @@ PHV_MAU_Group_Assignments::cluster_TPHV_placements() {
 }  // PHV_MAU_Group_Assignments::cluster_TPHV_placements
 
 void
-PHV_MAU_Group_Assignments::cluster_nibble_PHV_placements() {
+PHV_MAU_Group_Assignments::cluster_PHV_nibble_placements() {
     //
     if (clusters_to_be_assigned_nibble_i.size()) {
         //
@@ -496,10 +496,10 @@ PHV_MAU_Group_Assignments::cluster_nibble_PHV_placements() {
             aligned_container_slices_i,
             "PHV_Nibble");
     }
-}  // PHV_MAU_Group_Assignments::cluster_nibble_PHV_placements
+}  // PHV_MAU_Group_Assignments::cluster_PHV_nibble_placements
 
 void
-PHV_MAU_Group_Assignments::cluster_nibble_T_PHV_placements() {
+PHV_MAU_Group_Assignments::cluster_T_PHV_nibble_placements() {
     //
     if (t_phv_fields_nibble_i.size()) {
         //
@@ -522,7 +522,7 @@ PHV_MAU_Group_Assignments::cluster_nibble_T_PHV_placements() {
                 "PHV <== TPHV_Nibble_Overflow");
         }
     }
-}  // PHV_MAU_Group_Assignments::cluster_nibble_T_PHV_placements
+}  // PHV_MAU_Group_Assignments::cluster_T_PHV_nibble_placements
 
 //***********************************************************************************
 //
@@ -779,7 +779,7 @@ PHV_MAU_Group_Assignments::fix_parser_container(
     // or
     // <data.x1.0-31: W0, data.x1.32-47: H2>
     //
-    PHV_Container::Container_Content *cc = c->fields_in_container()[0];
+    PHV_Container::Container_Content *cc = c->fields_in_container().begin()->second;
     PHV_Container::Container_Content *cc_1 = 0;
     //
     // transfer necessary for partially filled container only
@@ -832,6 +832,20 @@ PHV_MAU_Group_Assignments::fix_parser_container(
             cc->field(),
             0 /* range_start */,
             cc->field_bit_lo() /* field_bit_lo */);
+        //
+        // for overlayed fields, their field_bit_lo must be copied over accurately from container c
+        //
+        PHV_Container::Container_Content *cc_new =
+            c_transfer->fields_in_container().begin()->second;
+        const PhvInfo::Field *field = c_transfer->fields_in_container().begin()->first;
+        c_transfer->fields_in_container().clear();
+        c_transfer->fields_in_container(field, cc_new);
+        for (auto &cc : Values(c->fields_in_container())) {
+            if (cc->overlayed()) {
+                cc->container(c_transfer);
+                c_transfer->fields_in_container(cc->field(), cc);
+            }
+        }
         //
         LOG3("----->Transfer parser container----->"
             << c
@@ -1226,7 +1240,9 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
                             //
                             int start = cc->hi() + 1 - cl_w;
                             const PhvInfo::Field *f = cl->cluster_vec()[field];
-                            if (f->phv_use_width() > cl_w) {
+                            if (f->phv_use_width() > cl_w
+                                && cl_w != cc->container()->width()) {       // 128b = 32*4
+                                //
                                 LOG1("cluster_phv_mau.cpp*****sanity_FAIL*****");
                                 LOG1(".....field width exceeds slice .....");
                                 LOG1(f);
@@ -1437,7 +1453,7 @@ void PHV_MAU_Group_Assignments::container_cohabit_summary() {
             for (auto &c : g->phv_containers()) {
                 if (c->fields_in_container().size() > 1) {
                     int fields_written = 0;
-                    for (auto &cc : c->fields_in_container()) {
+                    for (auto &cc : Values(c->fields_in_container())) {
                         if (cc->field()->mau_write) {
                             fields_written++;
                         }
@@ -1637,8 +1653,8 @@ void PHV_MAU_Group::sanity_check_container_fields_gress(const std::string& msg) 
     // all containers in group have the same gress
     //
     PHV_Container::Ingress_Egress g_gress = phv_containers_i.front()->gress();
-    for (auto c : phv_containers_i) {
-        for (auto cc : c->fields_in_container()) {
+    for (auto &c : phv_containers_i) {
+        for (auto &cc : Values(c->fields_in_container())) {
             const PhvInfo::Field *field = cc->field();
             PHV_Container::Ingress_Egress f_gress = PHV_Container::gress(field);
             if (f_gress != c->gress()) {
@@ -1775,10 +1791,10 @@ void PHV_MAU_Group_Assignments::sanity_check_group_containers(const std::string&
     //
     ordered_map<const PhvInfo::Field *,
         ordered_set<PHV_Container::Container_Content *>> field_container_map;
-    for (auto groups : PHV_MAU_i) {
-        for (auto g : groups.second) {
-            for (auto c : g->phv_containers()) {
-                for (auto cc : c->fields_in_container()) {
+    for (auto &groups : PHV_MAU_i) {
+        for (auto &g : groups.second) {
+            for (auto &c : g->phv_containers()) {
+                for (auto &cc : Values(c->fields_in_container())) {
                     const PhvInfo::Field *field = cc->field();
                     field_container_map[field].insert(cc);
                 }
@@ -1798,24 +1814,39 @@ void PHV_MAU_Group_Assignments::sanity_check_group_containers(const std::string&
         }
         int field_width = field->phv_use_width();
         if (field_width != width_in_c) {
+            bool error = false;
             if (cc_s.size() > 1) {
                 LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****");
                 LOG1(msg);
                 LOG1(".....field duplicated in containers.....");
+                error = true;
             } else {
-                LOG1("-----cluster_phv_mau.cpp:sanity_WARN-----");
-                LOG1(msg);
-                LOG1(".....allocated space in container exceeds field width.....");
-                if (PHV_Container::constraint_no_cohabit(field)) {
-                    LOG1(".....constraint_no_cohabit.....");
-                } else {
-                    LOG1(".....non-uniform? cluster.....");
+                if (!PHV_Container::constraint_no_cohabit(field)) {
+                    if (field->ccgf_fields.size()) {
+                        field_width = field->size;
+                        if (field_width != width_in_c) {
+                            //
+                            LOG1("-----cluster_phv_mau.cpp:sanity_FAIL-----");
+                            LOG1(msg);
+                            LOG1(".....allocated space in container != ccgf field size.....");
+                            error = true;
+                        }
+                    } else {
+                        //
+                        LOG1("-----cluster_phv_mau.cpp:sanity_WARN-----");
+                        LOG1(msg);
+                        LOG1(".....allocated space in container exceeds field width.....");
+                        LOG1(".....non-uniform? cluster.....");
+                        error = true;
+                    }
                 }
             }
-            LOG1(field);
-            LOG1("width_in_c = " << width_in_c << ", phv_use_width = " << field_width << cc_s);
+            if (error) {
+                // LOG1(field);
+                LOG1("width_in_c = " << width_in_c << ", phv_use_width = " << field_width << cc_s);
+            }
         }
-    }
+    }  // for
 }
 
 void PHV_MAU_Group_Assignments::sanity_check_T_PHV_collections(const std::string& msg) {
@@ -2062,7 +2093,54 @@ std::ostream &operator<<(
 }
 
 std::ostream &operator<<(std::ostream &out, PHV_MAU_Group_Assignments &phv_mau_grps) {
-    out << "++++++++++ PHV MAU Group Assignments ++++++++++" << std::endl;
+    //
+    std::list<const PhvInfo::Field *> fields_not_fit;
+    fields_not_fit.clear();
+    for (auto &cl : phv_mau_grps.phv_clusters()) {
+        for (auto &f : cl->cluster_vec()) {
+            fields_not_fit.push_front(f);
+        }
+    }
+    for (auto &cl : phv_mau_grps.phv_clusters_nibble()) {
+        for (auto &f : cl->cluster_vec()) {
+            fields_not_fit.push_front(f);
+        }
+    }
+    for (auto &cl : phv_mau_grps.pov_clusters()) {
+        for (auto &f : cl->cluster_vec()) {
+            fields_not_fit.push_front(f);
+        }
+    }
+    for (auto &cl : phv_mau_grps.t_phv_clusters()) {
+        for (auto &f : cl->cluster_vec()) {
+            fields_not_fit.push_front(f);
+        }
+    }
+    for (auto &cl : phv_mau_grps.t_phv_clusters_nibble()) {
+        for (auto &f : cl->cluster_vec()) {
+            fields_not_fit.push_front(f);
+        }
+    }
+    if (fields_not_fit.size()) {
+        fields_not_fit.sort([](const PhvInfo::Field *l, const PhvInfo::Field *r) {
+            return l->id < r->id;
+        });
+        out << "Begin ****************************** Fields NOT Fit ("
+            << fields_not_fit.size()
+            << ") ******************************"
+            << std::endl
+            << std::endl;
+        out << fields_not_fit;
+        out << "End ****************************** Fields NOT Fit ******************************"
+            << std::endl
+            << std::endl;
+    } else {
+        out << "++++++++++++++++++++++++++++++ ALL Fields FIT ++++++++++++++++++++++++++++++"
+            << std::endl;
+    }
+    //
+    out << "++++++++++++++++++++++++++++++ PHV MAU Group Assignments ++++++++++++++++++++++++++++++"
+        << std::endl;
     for (auto rit = phv_mau_grps.phv_mau_map().rbegin();
          rit != phv_mau_grps.phv_mau_map().rend();
          ++rit) {
@@ -2070,7 +2148,8 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group_Assignments &phv_mau_g
     }
     //
     out << std::endl
-        << "++++++++++ T_PHV Collections ++++++++++" << std::endl;
+        << "++++++++++++++++++++++++++++++ T_PHV Collections ++++++++++++++++++++++++++++++"
+        << std::endl;
     for (auto coll : phv_mau_grps.t_phv_map()) {
         out << std::endl << "Collection" << coll.first;
         out << coll.second;

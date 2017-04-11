@@ -14,6 +14,8 @@ namespace PHV {
 class TrivialAlloc;
 }  // end namespace PHV
 
+class  PHV_Container;  // forward declaration PHV_Container
+
 class PhvInfo : public Inspector {
  public:
     struct Field;
@@ -61,7 +63,7 @@ class PhvInfo : public Inspector {
                                                          // has members in ccgf_fields
         //
         std::string cl_i = "??";           // cluster id, field belongs to this cluster
-        std::vector<std::string> phvs_i;   // field placed in these phv containers
+        std::vector<const PHV_Container *> phv_containers_i;  // field in one or more containers
         //
         Field           *ccgf = 0;         // container contiguous group fields
                                            // used for
@@ -112,9 +114,10 @@ class PhvInfo : public Inspector {
                 }
             }
         }
-        std::vector<std::string>& phvs()   { return phvs_i; }
-        void phvs(std::string& phv_p) {
-            phvs_i.push_back(phv_p);
+        std::vector<const PHV_Container *> & phv_containers()  { return phv_containers_i; }
+        void phv_containers(const PHV_Container *c) {
+            assert(c);
+            phv_containers_i.push_back(c);
         }
         //
         set<constraint> constraints;  // unused -- get rid of it?
@@ -238,7 +241,9 @@ class PhvInfo : public Inspector {
     void addTempVar(const IR::TempVar *);
 };
 
+std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::bitrange &br);
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field::alloc_slice &);
+std::ostream &operator<<(std::ostream &, vector<PhvInfo::Field::alloc_slice> &);
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field &);
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field *);
 std::ostream &operator<<(std::ostream &, std::set<const PhvInfo::Field *>&);
@@ -246,10 +251,6 @@ std::ostream &operator<<(std::ostream &, std::list<const PhvInfo::Field *>&);
 std::ostream &operator<<(std::ostream &, const PhvInfo &);
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field_Ops &);
 extern void repack_metadata(PhvInfo &phv);
-
 void dump(const PhvInfo *);
-extern void repack_metadata(PhvInfo &phv);
-
-std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::bitrange &br);
 
 #endif /* _TOFINO_PHV_PHV_FIELDS_H_ */

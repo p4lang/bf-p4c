@@ -143,7 +143,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
                                // fields, eg. (arpSrc, ipSrc)
         &phv_field_ops,        // PHV field operations analysis
         &cluster_phv_req,      // cluster PHV requirements analysis
-        // &cluster_phv_interference,
+        options.phv_interference?  &cluster_phv_interference: nullptr,
                                // cluster PHV interference graph analysis
         &cluster_phv_mau,      // cluster PHV container placements
                                // first cut PHV MAU Group assignments
@@ -171,9 +171,13 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new HeaderPushPop(stacks),
         new CopyHeaderEliminator,   // needs to be after POV alloc and before InstSel
         new InstructionSelection(phv),
-
+        new DumpPipe("Before ElimUnused .....after InstructionSelection"),
+        &defuse,
+        new ElimUnused(phv, defuse),
+        new DumpPipe("After ElimUnused .....before phv_analysis"),
+        //
         phv_analysis,               // phv analysis after last &phv pass
-
+        //
         new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?
         new TableLayout(phv, lc),
         new TableFindSeqDependencies,
@@ -192,17 +196,17 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new TableFindSeqDependencies,  // not needed?
         new CheckTableNameDuplicate,
         new ComputeShifts,
-        new DumpPipe("Before ElimUnused"),
+        new DumpPipe("Before ElimUnused .....after ComputeShifts"),
         &defuse,
         new ElimUnused(phv, defuse),
-        new DumpPipe("After ElimUnused"),
+        new DumpPipe("After ElimUnused .....before SetReferenced"),
         new PhvInfo::SetReferenced(phv),
         &mutex,
         &summary,
         Log::verbose() ? new VisitFunctor([&summary]() { std::cout << summary; }) : nullptr,
-
+        //
         phv_alloc,                   // phv assignment / binding
-
+        //
         Log::verbose() ? new VisitFunctor([&phv]() { std::cout << phv; }) : nullptr,
 
         new IXBarRealign(phv),

@@ -57,7 +57,9 @@ class PHV_Container {
         int width() const                { return hi_i - lo_i + 1; }
         const PhvInfo::Field *field()    { return field_i; }
         int field_bit_lo() const         { return field_bit_lo_i; }
+        int field_bit_hi() const         { return field_bit_lo_i + width() - 1; }
         const PHV_Container *container() { return container_i; }
+        void container(PHV_Container *c) { container_i = c; }   // during transfer parser container
         char taint_color()               { return taint_color_i; }
         bool overlayed()                 { return overlayed_field_i; }
         //
@@ -82,7 +84,8 @@ class PHV_Container {
                                                              // Egress_Only,
                                                              // Ingress_Or_Egress
     Container_status status_i = Container_status::EMPTY;
-    std::vector<Container_Content *> fields_in_container_i;  // fields binned in this container
+    ordered_map<const PhvInfo::Field *, Container_Content *>
+        fields_in_container_i;                               // fields binned in this container
     char *bits_i;                                            // tainted bits in container
     char taint_color_i = '0';                                // each resident field separate color
                                                              // highest number=#fields in container
@@ -108,6 +111,11 @@ class PHV_Container {
     PHV_MAU_Group *phv_mau_group()                              { return phv_mau_group_i; }
     PHV_Word width()                                            { return width_i; }
     int phv_number()                                            { return phv_number_i; }
+    std::string phv_number_string() {
+        std::stringstream ss;
+        ss << phv_number_i;
+        return "PHV-" + ss.str();
+    }
     std::string& asm_string()                                   { return asm_string_i; }
     void
     gress(Ingress_Egress gress_p) {  // set when MAU group's gress is set
@@ -145,11 +153,15 @@ class PHV_Container {
         const PhvInfo::Field *field,
         int field_bit_lo);
     void update_ccgf(
-        PhvInfo::Field *f1,
+        PhvInfo::Field *f,
         int processed_members,
         int processed_width);
-    void overlay_fields(
-        PhvInfo::Field *f_overlay,
+    void overlay_ccgf_field(
+        PhvInfo::Field *field,
+        int start,
+        int width);
+    void field_overlays(
+        PhvInfo::Field *field,
         const int start,
         const int width,
         const int field_bit_lo);
@@ -168,7 +180,16 @@ class PHV_Container {
     int avail_o_bits()                                          { return avail_o_bits_i; }
     ordered_map<int, int>& ranges()                             { return ranges_i; }
     ordered_map<int, int>& o_ranges()                           { return o_ranges_i; }
-    std::vector<Container_Content *>& fields_in_container()     { return fields_in_container_i; }
+    ordered_map<const PhvInfo::Field *, Container_Content *>& fields_in_container() {
+        return fields_in_container_i;
+    }
+    void fields_in_container(const PhvInfo::Field *f, Container_Content *cc) {
+        assert(f);
+        assert(cc);
+        assert(!fields_in_container_i.count(f));
+        //
+        fields_in_container_i[f] = cc;
+    }
     std::vector<Container_Content *>& o_fields_in_container()   { return o_fields_in_container_i; }
     void create_ranges();
     void clear();
@@ -216,5 +237,8 @@ std::ostream &operator<<(std::ostream &, PHV_Container*);
 std::ostream &operator<<(std::ostream &, PHV_Container&);
 std::ostream &operator<<(std::ostream &, std::vector<PHV_Container *>&);
 std::ostream &operator<<(std::ostream &, std::list<PHV_Container *>&);
+std::ostream &operator<<(
+    std::ostream &,
+    ordered_map<const PhvInfo::Field *, PHV_Container::Container_Content *>&);
 //
 #endif /* _TOFINO_PHV_CLUSTER_PHV_CONTAINER_H_ */

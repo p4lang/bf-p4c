@@ -66,6 +66,7 @@ class PHV_Interference : public Visitor {
     void interference_reduction(
         std::vector<Cluster_PHV *>&,
         const std::string&);
+    bool mutually_exclusive(const PhvInfo::Field *f1, const PhvInfo::Field *f2);
     void create_interference_edge(const PhvInfo::Field *, const PhvInfo::Field *);
     void virtual_container_overlay(
         Cluster_PHV *,

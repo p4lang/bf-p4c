@@ -15,7 +15,7 @@ bool Cluster_PHV_Overlay::check_field_with_container(const PhvInfo::Field *field
     bool can_overlay = false;
     // if overlay candidate field is ccgf
     if (field->ccgf) {
-        for (auto *cc : c->fields_in_container()) {
+        for (auto *cc : Values(c->fields_in_container())) {
             for (auto *f : field->ccgf_fields) {
                 can_overlay = mutex_i(f->id, cc->field()->id);
                 if (!can_overlay) {
@@ -25,7 +25,7 @@ bool Cluster_PHV_Overlay::check_field_with_container(const PhvInfo::Field *field
             }
         }
     } else {
-        for (auto *cc : c->fields_in_container()) {
+        for (auto *cc : Values(c->fields_in_container())) {
             can_overlay = mutex_i(field->id, cc->field()->id);
             if (!can_overlay) {
                 //
@@ -242,3 +242,4 @@ Cluster_PHV_Overlay::apply_visitor(const IR::Node *node, const char *name) {
     }
     return node;
 }
+

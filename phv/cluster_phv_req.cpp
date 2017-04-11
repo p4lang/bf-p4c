@@ -239,6 +239,11 @@ Cluster_PHV::compute_requirements() {
     num_containers_i = num_containers(cluster_vec_i, width_i);
     //
     // recompute requirements based on width_i for ccgf fields containing no_pack members
+    // e.g.,
+    // 2 constrained fields each require separate containers
+    // if container width = 8b then 2*8b containers, total width required = 16b
+    // if containers width is 16b then 2*16b containers, total width required = 32b
+    //
     // count constrained fields, preference given during container placement
     //
     for (auto &f : cluster_vec_i) {
@@ -257,10 +262,36 @@ Cluster_PHV::compute_requirements() {
     //
     // max width of field in cluster, computed after sorting cluster fields
     //
-    max_width_i = uniform_width_i?
-                  cluster_vec_i.front()->phv_use_width():
-                  std::max(cluster_vec_i.front()->phv_use_width(), width_req);
+    max_width_i = compute_max_width();
+    //
 }  // compute requirements
+
+int
+Cluster_PHV::compute_max_width() {
+    //
+    int width = static_cast<int>(width_i);
+    const PhvInfo::Field *field = cluster_vec_i.front();
+    if (uniform_width_i) {
+        if (cluster_vec_i.size() == 1 && field->ccgf == field) {
+            int constrained_width = 0;
+            for (auto &m : field->ccgf_fields) {
+                if (PHV_Container::constraint_no_cohabit(m)) {
+                    if (m->ccgf == m) {
+                        constrained_width = std::max(constrained_width, width);
+                    } else {
+                        constrained_width = std::max(constrained_width, m->phv_use_width());
+                    }
+                }
+            }   // for
+            return constrained_width? constrained_width: field->phv_use_width();
+        } else {
+            return field->phv_use_width();
+        }
+    } else {
+        return std::max(field->phv_use_width(), width);
+    }
+    return width_i;
+}  // compute_max_width
 
 //
 // compute max width required by field

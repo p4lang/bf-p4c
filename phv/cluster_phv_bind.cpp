@@ -100,8 +100,8 @@ PHV_Bind::collect_containers_with_fields() {
             for (auto &c : g->phv_containers()) {
                 if (c->fields_in_container().size()) {
                     containers_i.push_front(c);
-                    for (auto &cc : const_cast<PHV_Container *>(c)->fields_in_container()) {
-                        fields_i.insert(cc->field());
+                    for (auto &entry : c->fields_in_container()) {
+                        fields_i.insert(entry.first);
                     }
                 }
             }
@@ -112,8 +112,8 @@ PHV_Bind::collect_containers_with_fields() {
             for (auto &c : c_s.second) {
                 if (c->fields_in_container().size()) {
                     containers_i.push_front(c);
-                    for (auto &cc : const_cast<PHV_Container *>(c)->fields_in_container()) {
-                        fields_i.insert(cc->field());
+                    for (auto &entry : c->fields_in_container()) {
+                        fields_i.insert(entry.first);
                     }
                 }
             }
@@ -128,11 +128,16 @@ PHV_Bind::collect_containers_with_fields() {
         //
         // discard fields that are not used
         //
+        bool use_mau = uses_i->use[1][field.gress][field.id];
+        bool use_parde = uses_i->use[0][field.gress][field.id];
         if (field.pov
-           || uses_i->use[1][field.gress][field.id]
-           || uses_i->use[0][field.gress][field.id]) {
+           || use_mau
+           || use_parde) {
             //
             s1.insert(&field);
+        } else {
+            LOG3("PHV_Bind::collect_containers.....discarding field (use_mau=0,use_parde=0)....."
+                << &field);
         }
     }
     std::set<const PhvInfo::Field *> s2(fields_i.begin(), fields_i.end());
@@ -214,8 +219,9 @@ PHV_Bind::bind_fields_to_containers() {
         }
     }
     for (auto &c : containers_i) {
-        for (auto &cc : const_cast<PHV_Container *>(c)->fields_in_container()) {
-            PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(cc->field());
+        for (auto &entry : const_cast<PHV_Container *>(c)->fields_in_container()) {
+            PHV_Container::Container_Content *cc = entry.second;
+            PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(entry.first);
             int field_bit = cc->field_bit_lo();
             int container_bit = cc->lo();
             int width_in_container = cc->width();
@@ -521,13 +527,8 @@ std::ostream &operator<<(std::ostream &out, PHV_Bind &phv_bind) {
         << std::endl
         << std::endl;
     for (auto &f : phv_bind.fields()) {
-        out << f;
-        for (auto &as : f->alloc) {
-            out << std::endl
-                << '\t'
-                << as;
-        }
-        out << std::endl;
+        out << f
+            << std::endl;
     }
     if (phv_bind.fields_overflow().size()) {
         out << std::endl

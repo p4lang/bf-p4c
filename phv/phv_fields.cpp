@@ -377,9 +377,13 @@ void PhvInfo::Field::phv_use_width(bool ccgf_owner, int min_ceil) {
                     ccg_width += f->size;
                 }
             } else {
-                ccg_width += f->phv_use_width();
+                if (PHV_Container::constraint_no_cohabit(f)) {
+                    ccg_width += PHV_Container::ceil_phv_use_width(f, min_ceil);
+                } else {
+                    ccg_width += f->phv_use_width();
+                }
             }
-        }
+        }  // for
         if (header_stack_pov_ccgf) {
             // e.g., ingress::data.$stkvalid
             ccg_width++;
@@ -395,6 +399,13 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &s
         if (sl.width != 1)
             out << ".." << (sl.container_bit + sl.width - 1);
         out << ')'; }
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, vector<PhvInfo::Field::alloc_slice> &sl_vec) {
+    for (auto &sl : sl_vec) {
+        out << sl << ';';
+    }
     return out;
 }
 
@@ -414,12 +425,11 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
     if (field.header_stack_pov_ccgf) out << " header_stack_pov_ccgf";
     if (field.simple_header_pov_ccgf) out << " simple_header_pov_ccgf";
     if (field.ccgf) out << " ccgf=" << field.ccgf->id << ':' << field.ccgf->name;
-    out << " (" << field.cl_i << ")";    // cluster id
-    out << " [";
-    for (auto &phv : field.phvs_i) {
-        out << " " << phv << ";";        // phv number
+    out << " /" << field.cl_i << ",";    // cluster id
+    for (auto &c : field.phv_containers_i) {
+        out << const_cast<PHV_Container *>(c)->phv_number_string() << ";";  // phv number
     }
-    out << "]";
+    out << "/";
     if (field.ccgf_fields.size()) {
         // aggregate widths of members in "container contiguous group fields"
         out << std::endl << '[';
@@ -443,7 +453,12 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
             }
             out << std::endl;
         }
-        out << ':' << ccgf_width << ']'; }
+        out << ':' << field.phv_use_width();
+        if (field.phv_use_width() != ccgf_width) {
+            out << '(' << ccgf_width << ')';
+        }
+        out << ']';
+    }
     if (field.field_overlay_map_i.size()) {
         for (auto &entry : field.field_overlay_map_i) {
             out << "\t"
@@ -465,7 +480,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
         }
     }
     if (!field.alloc.empty())
-        out << " " << field.alloc;
+        out << field.alloc;
     return out;
 }
 

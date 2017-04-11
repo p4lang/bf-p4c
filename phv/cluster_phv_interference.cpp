@@ -180,12 +180,10 @@ PHV_Interference::interference_reduction(
             //
             continue;
         }
+        LOG3(".........." << msg << ".....attempting to reduce.....");
+        LOG3(cl);
         //
         // cluster: field interference with siblings
-        //
-        // can avoid this interference edge creation step at the
-        // expense of checking mutex_i against all fields in cluster
-        // during assign_virtual_container()
         //
         for (auto &f : cl->cluster_vec()) {
             interference_edge_i[f] = new ordered_set<const PhvInfo::Field *>;  // new set
@@ -194,7 +192,7 @@ PHV_Interference::interference_reduction(
         for (auto &f1 : cl->cluster_vec()) {
             f_set.erase(f1);
             for (auto &f2 : f_set) {
-                bool can_overlay = mutex_i(f2->id, f1->id);
+                bool can_overlay = mutually_exclusive(f2, f1);
                 if (!can_overlay) {
                     create_interference_edge(f2, f1);
                 }
@@ -260,6 +258,42 @@ PHV_Interference::interference_reduction(
     }
     LOG3("..........End: PHV_Interference::interference_reduction().........." << msg);
 }  // interference_reduction
+
+bool
+PHV_Interference::mutually_exclusive(const PhvInfo::Field *f1, const PhvInfo::Field *f2) {
+    //
+    // check m1, m2
+    if (f1->ccgf_fields.size() && f2->ccgf_fields.size()) {
+        for (auto &m1 : f1->ccgf_fields) {
+            for (auto &m2 : f2->ccgf_fields) {
+                if (!mutex_i(m1->id, m2->id)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+    // check m1, f2
+    if (f1->ccgf_fields.size()) {
+        for (auto &m1 : f1->ccgf_fields) {
+            if (!mutex_i(m1->id, f2->id)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    // check m2, f1
+    if (f2->ccgf_fields.size()) {
+        for (auto &m2 : f2->ccgf_fields) {
+            if (!mutex_i(m2->id, f1->id)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    // check f1, f2
+    return mutex_i(f1->id, f2->id);
+}
 
 void
 PHV_Interference::create_interference_edge(const PhvInfo::Field *f2, const PhvInfo::Field *f1) {
@@ -358,7 +392,7 @@ void PHV_Interference::sanity_check_interference(
                 LOG1(f2);
             }
             if (interference_edge_i[f2] && interference_edge_i[f2]->count(f1)) {
-                if (mutex_i(f2->id, f1->id)) {
+                if (mutually_exclusive(f2, f1)) {
                     LOG1("*****cluster_phv_interference:sanity_FAIL*****" << msg_1);
                     LOG1("field1 --interference-- field2 should be NOT mutex ");
                     LOG1(f2);
@@ -367,7 +401,7 @@ void PHV_Interference::sanity_check_interference(
             } else {
                 if (f2 != f1
                     && interference_edge_i[f2] && !interference_edge_i[f2]->count(f1)) {
-                    if (!mutex_i(f2->id, f1->id)) {
+                    if (!mutually_exclusive(f2, f1)) {
                         LOG1("*****cluster_phv_interference:sanity_FAIL*****" << msg_1);
                         LOG1("field1 --NO interference-- field2 should BE mutex ");
                         LOG1(f2);
@@ -454,9 +488,9 @@ std::ostream &operator<<(std::ostream &out,
         << std::endl;
     for (auto &entry : aggregates) {
         out << '/' << entry.first << '/' << std::endl;
-        for (auto &entry_2: entry.second) {
-            out << '\t' << '|' << entry_2.first << '|' << std::endl; 
-            for (auto &cl: entry_2.second) {
+        for (auto &entry_2 : entry.second) {
+            out << '\t' << '|' << entry_2.first << '|' << std::endl;
+            for (auto &cl : entry_2.second) {
                 out << "\t\t" << cl << std::endl;
             }
         }

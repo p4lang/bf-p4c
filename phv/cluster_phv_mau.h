@@ -270,8 +270,8 @@ class PHV_MAU_Group_Assignments : public Visitor {
     void cluster_PHV_placements();
     void cluster_TPHV_placements();
     void cluster_POV_placements();
-    void cluster_nibble_PHV_placements();
-    void cluster_nibble_T_PHV_placements();
+    void cluster_PHV_nibble_placements();
+    void cluster_T_PHV_nibble_placements();
     //
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
     //
