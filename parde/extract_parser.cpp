@@ -4,12 +4,10 @@
 namespace Tofino {
 
 class GetTofinoParser : public Inspector {
-    const IR::V1Program                        *program = 0;
     const IR::P4Parser                         *container = 0;
     gress_t                                     gress = INGRESS;
     map<cstring, IR::Tofino::ParserState *>     states;
     IR::ID                                      ingress_control;
-    bool preorder(const IR::V1Parser *) override;
     bool preorder(const IR::ParserState *) override;
 
     struct Context {
@@ -32,11 +30,7 @@ class GetTofinoParser : public Inspector {
     IR::Tofino::ParserState *state(cstring, const Context *);
 
  public:
-    explicit GetTofinoParser(const IR::V1Program *g) : program(g) {}
     explicit GetTofinoParser(const IR::P4Parser *p) : container(p) {}
-    explicit GetTofinoParser(const IR::Node *n)
-    : program(n->to<IR::V1Program>()), container(n->to<IR::P4Parser>()) {
-        BUG_CHECK(program || container, "Invalid top level for GetTofinoParser"); }
     IR::Tofino::Parser *parser(gress_t);
     cstring ingress_entry();
 };
@@ -54,21 +48,9 @@ ParserInfo extractParser(GetTofinoParser& parserGetter) {
   };
 }
 
-ParserInfo extractParser(const IR::V1Program* p414Program) {
-  GetTofinoParser parserGetter(p414Program);
-  return extractParser(parserGetter);
-}
-
 ParserInfo extractParser(const IR::P4Parser* p416Parser) {
   GetTofinoParser parserGetter(p416Parser);
   return extractParser(parserGetter);
-}
-
-bool GetTofinoParser::preorder(const IR::V1Parser *p) {
-    auto *s = states[p->name] = new IR::Tofino::ParserState(p, gress);
-    if (s->name != p->name)
-        states[s->name] = s;
-    return true;
 }
 
 bool GetTofinoParser::preorder(const IR::ParserState *p) {
@@ -116,7 +98,6 @@ class GetTofinoParser::RewriteExtractNext : public Transform {
     const Context                 *ctxt;
     const IR::Expression          *latest = nullptr;
     std::map<cstring, int>        adjust;
-    const IR::Expression *preorder(IR::PathExpression *name) override;
     const IR::Expression *preorder(IR::Member *name) override;
     const IR::Expression *postorder(IR::Primitive *prim) override {
         if (prim->name == "extract") latest = prim->operands[0];
@@ -177,41 +158,6 @@ class GetTofinoParser::RewriteExtractNext : public Transform {
     RewriteExtractNext(GetTofinoParser &s, const Context *c) : self(s), ctxt(c) {}
 };
 
-const IR::Expression *GetTofinoParser::RewriteExtractNext::preorder(IR::PathExpression *name) {
-    if (name->path->name == "latest") {
-        for (const Context *c = ctxt; c && !latest; c = c->parent)
-            for (auto m : c->state->match)
-                m->stmts.apply(FindLatestExtract(latest));
-        if (!latest) {
-            error("%s: Can't find latest extracted", name->srcInfo, name);
-            return name; }
-        LOG2("   rewrite latest => " << latest);
-        return latest; }
-    if (name->path->name != "next") return name;
-    auto *hdr = findContext<IR::HeaderStackItemRef>();
-    if (!hdr) /* error? */
-        return name;
-    cstring hdrname = hdr->toString();
-    int index = -1;
-    for (const Context *c = ctxt; index < 0 && c; c = c->parent)
-        for (auto m : c->state->match)
-            m->stmts.apply(FindStackExtract(hdr->base(), index));
-    index += adjust[hdrname];
-    ++index;
-    LOG2("   rewrite " << hdr->base() << "[next] => [" << index << "]");
-    auto *hdrstack = self.program->get<IR::HeaderStack>(hdr->base()->toString());
-    if (!hdrstack) {
-        error("%s: No header stack %s", hdr->base()->srcInfo, hdr->base()->toString());
-        failed = true;
-    } else if (index >= hdrstack->size) {
-        failed = true;
-        return name; }
-    if (auto prim = findContext<IR::Primitive>())
-        if (prim->name == "extract")
-            adjust[hdrname]++;
-    return new IR::Constant(index);
-}
-
 const IR::Expression *GetTofinoParser::RewriteExtractNext::preorder(IR::Member *m) {
     if (m->member != "next" && m->member != "last") return m;
     int index = -1;
@@ -242,8 +188,7 @@ void GetTofinoParser::addMatch(IR::Tofino::ParserState *s, match_t match_val,
          ", " << local.depth << ")");
     auto match = new IR::Tofino::ParserMatch(match_val, stmts);
     s->match.push_back(match);
-    if ((match->next = state(action, &local))) {
-    } else if (!program) {
+    if (!(match->next = state(action, &local))) {
         if (action == "accept" || action == "reject")
             return;
         else if (!states.count(action))
@@ -251,20 +196,7 @@ void GetTofinoParser::addMatch(IR::Tofino::ParserState *s, match_t match_val,
         // If there is a parser state with this name, but we couldn't generate it, its probably
         // because we've unrolled a loop filling a header stack completely.  Should set some
         // parser error code?
-    } else if (program->get<IR::V1Control>(action)) {
-        if (ingress_control) {
-            if (ingress_control != action)
-                error("%s: Multiple ingress entry points %s and %s",
-                      action.srcInfo, ingress_control, action);
-        } else {
-            ingress_control = action; }
-    } else if ((match->except = program->get<IR::ParserException>(action))) {
-    } else if (program->get<IR::V1Parser>(action)) {
-        // there is a parser state with this name, but we couldn't generate it, probably
-        // because we've unrolled a loop filling a header stack completely.  Should set some
-        // parser error code?
-    } else {
-        error("%s: No definition for %s", action.srcInfo, action); }
+    }
 }
 
 static match_t buildListMatch(const IR::Vector<IR::Expression> *list) {
@@ -316,14 +248,7 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
     if (!rv->match.empty()) return rv;
     RewriteExtractNext rewrite(*this, ctxt);
     const IR::Vector<IR::Expression> *stmts;
-    auto *v1_0 = rv->p4state->to<IR::V1Parser>();
-    auto *v1_2 = rv->p4state->to<IR::ParserState>();
-    if (v1_0)
-        stmts = v1_0->stmts.apply(rewrite);
-    else if (v1_2)
-        stmts = v1_2->components->Node::apply(rewrite)->to<IR::Vector<IR::Expression>>();
-    else
-        BUG("invalid p4state in GetTofinoParser");
+    stmts = rv->p4state->components->Node::apply(rewrite)->to<IR::Vector<IR::Expression>>();
     if (rewrite.failed)
         // FIXME should be setting an appropriate parser exception?
         return nullptr;
@@ -333,26 +258,16 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
         match_size += s->type->width_bits();
 
     LOG2("GetParser::state(" << name << ")");
-    if (v1_0) {
-        if (v1_0->cases) {
-            for (auto ce : *v1_0->cases) {
-                for (auto val : ce->values) {
-                    uintmax_t v = val.first->asLong(), m = val.second->asLong();
-                    addMatch(rv, m ? match_t(match_size, v, m) : match_t(),
-                             *stmts, ce->action, ctxt); } } }
-        if (v1_0->default_return)
-            addMatch(rv, match_t(), *stmts, v1_0->default_return, ctxt);
-        else if (v1_0->parse_error)
-            addMatch(rv, match_t(), *stmts, v1_0->parse_error, ctxt);
+    if (!rv->p4state->selectExpression) {
+    } else if (auto *path = rv->p4state->selectExpression->to<IR::PathExpression>()) {
+        addMatch(rv, match_t(), *stmts, path->path->name, ctxt);
+    } else if (auto *sel = rv->p4state->selectExpression->to<IR::SelectExpression>()) {
+        for (auto ce : sel->selectCases)
+            addMatch(rv, buildMatch(match_size, ce->keyset), *stmts,
+                     ce->state->path->name, ctxt);
     } else {
-        if (auto *path = dynamic_cast<const IR::PathExpression *>(v1_2->selectExpression)) {
-            addMatch(rv, match_t(), *stmts, path->path->name, ctxt);
-        } else if (auto *sel = dynamic_cast<const IR::SelectExpression *>(v1_2->selectExpression)) {
-            for (auto ce : sel->selectCases)
-                addMatch(rv, buildMatch(match_size, ce->keyset), *stmts,
-                         ce->state->path->name, ctxt);
-        } else if (v1_2->selectExpression) {
-            BUG("Invalid select expression %1%", v1_2->selectExpression); } }
+        BUG("Invalid select expression %1%", rv->p4state->selectExpression); }
+
     return rv;
 }
 
@@ -362,20 +277,14 @@ IR::Tofino::Parser *GetTofinoParser::parser(gress_t gress) {
         this->gress = gress; }
     if (states.empty()) {
         LOG1("#GetTofinoParser");
-        if (program)
-            program->apply(*this);
-        else
-            container->apply(*this); }
+        container->apply(*this); }
     return new IR::Tofino::Parser(gress, state("start", nullptr));
 }
 
 cstring GetTofinoParser::ingress_entry() {
     if (!ingress_control && states.empty()) {
         LOG1("#GetTofinoParser");
-        if (program)
-            program->apply(*this);
-        else
-            container->apply(*this);
+        container->apply(*this);
         state("start", nullptr); }
     return ingress_control.name;
 }

@@ -22,8 +22,8 @@ class ParserState : Unit {
     inline Vector<Expression>   select;
     inline Vector<ParserMatch>  match;
 #noconstructor
-    NullOK Node p4state = 0; /* informational only! not visited or compared for equal */
-    ParserState(Node n, gress_t gr);
+    NullOK IR::ParserState p4state = 0; /* informational only! not visited or compared for equal */
+    ParserState(IR::ParserState n, gress_t gr);
     ParserState(cstring n, gress_t gr,
                 const std::initializer_list<Expression> &sel,
                 const std::initializer_list<ParserMatch> &m)

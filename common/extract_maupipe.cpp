@@ -264,17 +264,7 @@ class FixP4Table : public Transform {
     : refMap(r), tt(tt), unique_names(u) {}
 };
 
-class FindAttached : public Inspector {
-    map<cstring, vector<const IR::Attached *>>    &attached;
-    void postorder(const IR::Stateful *st) override {
-        if (!contains(attached[st->table], st))
-          attached[st->table].push_back(st); }
- public:
-    explicit FindAttached(map<cstring, vector<const IR::Attached *>> &a) : attached(a) {}
-};
-
 struct AttachTables : public Modifier {
-    const IR::V1Program                         *program = nullptr;
     map<cstring, vector<const IR::Attached *>>  attached;
     map<const IR::Declaration_Instance *, const IR::Attached *> converted;
 
@@ -284,7 +274,6 @@ struct AttachTables : public Modifier {
                 if (!contains(tbl->attached, a))
                     tbl->attached.push_back(a); }
     void postorder(IR::GlobalRef *gref) override {
-        if (program) return;
         if (auto di = gref->obj->to<IR::Declaration_Instance>()) {
             if (converted.count(di)) {
                 gref->obj = converted.at(di);
@@ -302,15 +291,10 @@ struct AttachTables : public Modifier {
         const IR::Attached *att = nullptr;
         if (auto gr = prim->operands.at(0)->to<IR::GlobalRef>())
             att = gr->obj->to<IR::Attached>();
-        if (!att && program)
-            att = program->get<IR::Attached>(prim->operands.at(0)->toString());
         if (att && !contains(attached[tt->name], att))
             attached[tt->name].push_back(att);
         /* various error check should be here */ }
-
     AttachTables() {}
-    explicit AttachTables(const IR::V1Program *prg) : program(prg) {
-        program->apply(FindAttached(attached)); }
 };
 
 static const IR::MethodCallExpression *isApplyHit(const IR::Expression *e, bool *lnot = 0) {
@@ -329,7 +313,6 @@ static const IR::MethodCallExpression *isApplyHit(const IR::Expression *e, bool 
 }
 
 class GetTofinoTables : public Inspector {
-    const IR::V1Program                         *program;
     P4::ReferenceMap                            *refMap;
     P4::TypeMap                                 *typeMap;
     gress_t                                     gress;
@@ -343,36 +326,11 @@ class GetTofinoTables : public Inspector {
         return seqs.at(n); }
 
  public:
-    GetTofinoTables(const IR::V1Program *prog, gress_t gr, IR::Tofino::Pipe *p)
-    : program(prog), refMap(nullptr), typeMap(nullptr), gress(gr), pipe(p) {}
     GetTofinoTables(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
                     gress_t gr, IR::Tofino::Pipe *p)
-    : program(nullptr), refMap(refMap), typeMap(typeMap), gress(gr), pipe(p) {}
+    : refMap(refMap), typeMap(typeMap), gress(gr), pipe(p) {}
 
  private:
-    void add_tt_action(IR::MAU::Table *tt, IR::ID name) {
-        if (auto action = program->get<IR::ActionFunction>(name)) {
-            if (!tt->actions.count(name)) {
-                tt->actions.add(name, action);
-            } else {
-                error("%s: action %s appears multiple times in table %s",
-                      name.srcInfo, name, tt->name); }
-        } else {
-            error("%s: no action %s for table %s", name.srcInfo, name, tt->name); } }
-    void setup_tt_actions(IR::MAU::Table *tt, const IR::V1Table *table) {
-        for (auto act : table->actions)
-            add_tt_action(tt, act);
-        if (auto ap = program->get<IR::ActionProfile>(table->action_profile.name)) {
-            tt->attached.push_back(ap);
-            for (auto act : ap->actions)
-                add_tt_action(tt, act);
-            if (auto sel = program->get<IR::ActionSelector>(ap->selector.name))
-                tt->attached.push_back(sel);
-            else if (ap->selector)
-                error("%s: no action_selector %s", ap->selector.srcInfo, ap->selector.name);
-        } else if (table->action_profile) {
-            error("%s: no action_profile %s", table->action_profile.srcInfo,
-                  table->action_profile.name); } }
     void setup_tt_actions(IR::MAU::Table *tt, const IR::P4Table *table) {
         for (auto act : *table->properties->getProperty("actions")->value
                               ->to<IR::ActionList>()->actionList) {
@@ -406,33 +364,6 @@ class GetTofinoTables : public Inspector {
         for (auto el : *b->components)
             if (tables.count(el))
                 seqs.at(b)->tables.push_back(tables.at(el)); }
-
-    bool preorder(const IR::Apply *a) override {
-        auto table = program->get<IR::V1Table>(a->name);
-        if (!tables.count(a)) {
-            if (!table) {
-                error("%s: No table named %s", a->srcInfo, a->name);
-                return true; }
-            BUG("converting V1 tables not supported");
-            auto tt = tables[a] = new IR::MAU::Table(a->name, gress /*, table*/);
-            setup_tt_actions(tt, table);
-        } else {
-            error("%s: Multiple applies of table %s not supported", a->srcInfo, a->name); }
-        return true; }
-    void postorder(const IR::Apply *a) override {
-        auto tt = tables.at(a);
-        for (auto &act : a->actions) {
-            auto name = act.first;
-            if (!tt->actions.count(name)) {
-                if (name == "hit")
-                    name = "$hit";
-                else if (name == "miss")
-                    name = "$miss";
-                else if (name == "default")
-                    name = "$default";
-                else
-                    error("%s: no action %s in table %s", a->srcInfo, name, tt->name); }
-            tt->next[name] = getseq(act.second); } }
     bool preorder(const IR::MethodCallExpression *m) override {
         auto mi = P4::MethodInstance::resolve(m, refMap, typeMap, true);
         if (!mi || !mi->isApply())
@@ -473,19 +404,6 @@ class GetTofinoTables : public Inspector {
                 fallthrough.clear();
             } else {
                 fallthrough.push_back(label); } } }
-    bool preorder(const IR::NamedCond *c) override {
-        if (!tables.count(c))
-            tables[c] = new IR::MAU::Table(c->name, gress, c->pred);
-        else
-            BUG("duplicated unique name?");
-        return true; }
-    void postorder(const IR::NamedCond *c) override {
-        if (c->ifTrue)
-            tables.at(c)->next["$true"] = getseq(c->ifTrue);
-        if (c->ifFalse)
-            tables.at(c)->next["$false"] = getseq(c->ifFalse); }
-    bool preorder(const IR::If *) override {
-        BUG("unnamed condition in control flow"); }
     bool preorder(const IR::IfStatement *c) override {
         if (!isApplyHit(c->condition)) {
             static int uid = 0;
@@ -504,9 +422,6 @@ class GetTofinoTables : public Inspector {
             tables.at(c)->next[T] = getseq(c->ifTrue);
         if (c->ifFalse && !c->ifFalse->is<IR::EmptyStatement>())
             tables.at(c)->next[F] = getseq(c->ifFalse); }
-    void postorder(const IR::V1Control *cf) override {
-        assert(!pipe->thread[gress].mau);
-        pipe->thread[gress].mau = getseq(cf->code); }
     bool preorder(const IR::P4Control *cf) override {
         visit(cf->body);
         assert(!pipe->thread[gress].mau);
@@ -518,30 +433,6 @@ class GetTofinoTables : public Inspector {
         BUG("Unhandled statement %1%", st); }
 };
 }  // anonymous namespace
-
-const IR::Tofino::Pipe *extract_maupipe(const IR::V1Program *program, Tofino_Options &) {
-    auto rv = new IR::Tofino::Pipe();
-    rv->standard_metadata = program->get<IR::Metadata>("standard_metadata");
-    auto parserInfo = Tofino::extractParser(program);
-    auto ingress = program->get<IR::V1Control>(parserInfo.ingressEntryPoint);
-    if (!ingress) ingress = new IR::V1Control(IR::ID("ingress"));
-    ingress = ingress->apply(InlineControlFlow(program));
-    ingress = ingress->apply(NameGateways());
-    auto egress = program->get<IR::V1Control>("egress");
-    if (!egress) egress = new IR::V1Control(IR::ID("egress"));
-    egress = egress->apply(InlineControlFlow(program));
-    egress = egress->apply(NameGateways());
-    ingress->apply(GetTofinoTables(program, INGRESS, rv));
-    egress->apply(GetTofinoTables(program, EGRESS, rv));
-    if (auto in = rv->thread[INGRESS].parser = parserInfo.parser(INGRESS))
-        rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, in);
-    if (auto eg = rv->thread[EGRESS].parser = parserInfo.parser(EGRESS))
-        rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, eg);
-    AttachTables toAttach(program);
-    for (auto &th : rv->thread)
-        th.mau = th.mau->apply(toAttach);
-    return rv;
-}
 
 class ConvertIndexToHeaderStackItemRef : public Transform {
     const IR::Expression *preorder(IR::ArrayIndex *idx) override {
