@@ -10,7 +10,7 @@ class HeaderPushPop : public MauTransform {
 
     void copy_hdr(IR::Vector<IR::Primitive> *rv, const IR::Type_StructLike *hdr,
                   const IR::HeaderRef *to, const IR::HeaderRef *from) {
-        for (auto field : *hdr->fields) {
+        for (auto field : hdr->fields) {
             auto dst = new IR::Member(field->type, to, field->name);
             auto src = new IR::Member(field->type, from, field->name);
             rv->push_back(new IR::Primitive("modify_field", dst, src)); } }

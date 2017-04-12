@@ -16,7 +16,7 @@ CopyHeaderEliminator::preorder(IR::Primitive *primitive) {
                   dst_hdr_ref->type->toString(), src_hdr_ref->type->toString());
         auto *hdr_type = dst_hdr_ref->type->to<IR::Type_StructLike>();
         auto rv = new IR::Vector<IR::Primitive>;
-        for (auto field : *hdr_type->fields) {
+        for (auto field : hdr_type->fields) {
             auto dst = new IR::Member(dst_hdr_ref->srcInfo, field->type, dst_hdr_ref, field->name);
             auto src = new IR::Member(src_hdr_ref->srcInfo, field->type, src_hdr_ref, field->name);
             rv->push_back(new IR::Primitive(primitive->srcInfo, "modify_field", dst, src)); }

@@ -815,7 +815,7 @@ void IXBar::field_management(const IR::Expression *field, IXBar::Use &alloc,
     if (auto list = field->to<IR::ListExpression>()) {
         if (!hash_dist)
             BUG("A field list is somehow contained within the reads in table %s", name);
-        for (auto comp : *(list->components))
+        for (auto comp : list->components)
              field_management(comp, alloc, fields_needed, hash_dist, name, phv);
         return;
     }
@@ -845,7 +845,7 @@ bool IXBar::allocMatch(bool ternary, const IR::P4Table *tbl, const PhvInfo &phv,
     if (!tbl->getKey()) return true;
     set<cstring>                        fields_needed;
     bool                                rv;
-    for (auto key : *tbl->getKey()->keyElements) {
+    for (auto key : tbl->getKey()->keyElements) {
         if (key->matchType->path->name == "selector") continue;
         field_management(key->expression, alloc, fields_needed, false, tbl->name, phv);
     }
@@ -1141,7 +1141,7 @@ bool IXBar::allocSelector(const IR::ActionSelector *, const IR::P4Table *match_t
                           const PhvInfo &phv, Use &alloc, bool second_try, cstring name) {
     vector<IXBar::Use::Byte *>  alloced;
     set <cstring>               fields_needed;
-    for (auto key : *match_table->getKey()->keyElements) {
+    for (auto key : match_table->getKey()->keyElements) {
         // FIXME -- refactor this with the similar loop in allocMatch
         if (key->matchType->path->name != "selector") continue;
         auto *field = key->expression;
@@ -1224,7 +1224,7 @@ void IXBar::initialize_hash_dist(const HashDistReq &hash_dist_req, Use &alloc,
         long con = hash_dist_req.get_instr()->operands[4]->to<IR::Constant>()->asLong();
         alloc.hash_dist_use.back().max_size = __builtin_popcount(con - 1);
         auto *fl = hash_dist_req.get_instr()->operands[3]->to<IR::ListExpression>();
-        for (auto comp : *(fl->components)) {
+        for (auto comp : fl->components) {
             field_management(comp, alloc, fields_needed, true, name, phv);
         }
     }

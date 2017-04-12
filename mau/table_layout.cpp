@@ -39,13 +39,13 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
         layout.entries = k->asInt();
     auto key = tbl->match_table->getKey();
     if (key) {
-        for (auto t : *key->keyElements)
+        for (auto t : key->keyElements)
             if (t->matchType->path->name == "ternary" || t->matchType->path->name == "lpm") {
                 layout.ternary = true;
                 break; } }
     layout.match_width_bits = 0;
     if (key) {
-        for (auto el : *key->keyElements) {
+        for (auto el : key->keyElements) {
             if (el->matchType->path->name == "selector") continue;
             auto r = el->expression;
             PhvInfo::Field::bitrange bits = { 0, 0 };

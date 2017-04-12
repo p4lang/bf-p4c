@@ -42,9 +42,9 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, bool meta) 
     assert(all_headers.count(name) == 0);
     int start = by_id.size();
     int offset = 0;
-    for (auto f : *type->fields)
+    for (auto f : type->fields)
         offset += f->type->width_bits();
-    for (auto f : *type->fields) {
+    for (auto f : type->fields) {
         int size = f->type->width_bits();
         add(name + '.' + f->name, size, offset -= size, meta, false); }
     int end = by_id.size() - 1;

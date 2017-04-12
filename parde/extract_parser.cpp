@@ -231,7 +231,7 @@ static match_t buildMatch(int match_size, const IR::Expression *key) {
         return match_t(match_size, mask->left->to<IR::Constant>()->asLong(),
                                    mask->right->to<IR::Constant>()->asLong());
     else if (auto list = key->to<IR::ListExpression>())
-        return buildListMatch(list->components);
+        return buildListMatch(&list->components);
     else
         BUG("Invalid select case expression %1%", key);
     return match_t();
@@ -248,7 +248,7 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
     if (!rv->match.empty()) return rv;
     RewriteExtractNext rewrite(*this, ctxt);
     const IR::Vector<IR::Expression> *stmts;
-    stmts = rv->p4state->components->Node::apply(rewrite)->to<IR::Vector<IR::Expression>>();
+    stmts = rv->p4state->components.Node::apply(rewrite)->to<IR::Vector<IR::Expression>>();
     if (rewrite.failed)
         // FIXME should be setting an appropriate parser exception?
         return nullptr;

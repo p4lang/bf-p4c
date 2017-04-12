@@ -12,7 +12,7 @@ IR::InstanceRef::InstanceRef(cstring prefix, IR::ID name, const IR::Type *t, boo
             obj = new IR::Header(name, hdr);
     } else if (auto *meta = t->to<IR::Type_Struct>()) {
         obj = new IR::Metadata(name, meta);
-        for (auto f : *meta->fields)
+        for (auto f : meta->fields)
             if (f->type->is<IR::Type_StructLike>() || f->type->is<IR::Type_Stack>())
                 nested.add(f->name, new InstanceRef(name, f->name, f->type, forceMeta));
     } else if (auto *stk = t->to<IR::Type_Stack>()) {

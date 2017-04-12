@@ -9,7 +9,7 @@ IR::Node *SplitExtractEmit::preorder(IR::Primitive *p) {
     auto *rv = new IR::Vector<IR::Expression>;
     auto *hdr_type = hdr->type->to<IR::Type_StructLike>();
     assert(hdr_type);
-    for (auto field : *hdr_type->fields) {
+    for (auto field : hdr_type->fields) {
         IR::Expression *fref = new IR::Member(field->type, hdr, field->name);
         rv->push_back(new IR::Primitive(p->srcInfo, p->name, fref)); }
     if (p->name == "extract" && !hdr->baseRef()->is<IR::Metadata>()) {

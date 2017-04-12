@@ -332,7 +332,7 @@ class GetTofinoTables : public Inspector {
 
  private:
     void setup_tt_actions(IR::MAU::Table *tt, const IR::P4Table *table) {
-        for (auto act : *table->properties->getProperty("actions")->value
+        for (auto act : table->properties->getProperty("actions")->value
                               ->to<IR::ActionList>()->actionList) {
             if (auto action = refMap->getDeclaration(act->getPath())->to<IR::P4Action>()) {
                 auto mce = act->expression->to<IR::MethodCallExpression>();
@@ -361,7 +361,7 @@ class GetTofinoTables : public Inspector {
         seqs[b] = new IR::MAU::TableSeq();
         return true; }
     void postorder(const IR::BlockStatement *b) override {
-        for (auto el : *b->components)
+        for (auto el : b->components)
             if (tables.count(el))
                 seqs.at(b)->tables.push_back(tables.at(el)); }
     bool preorder(const IR::MethodCallExpression *m) override {
@@ -480,7 +480,7 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program, Tofino_Opt
     for (auto param : *deparser->type->applyParams->getEnumerator())
         bindings.bind(param);
 
-    auto it = ingress->type->applyParams->parameters->rbegin();
+    auto it = ingress->type->applyParams->parameters.rbegin();
     rv->standard_metadata =
         bindings.get(*it)->obj->to<IR::Metadata>();
     PassManager fixups = {

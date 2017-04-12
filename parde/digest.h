@@ -25,7 +25,7 @@ class Digests : public Transform {
         auto list = dynamic_cast<const IR::Vector<IR::Expression> *>(expr);
         if (!list) {
             if (auto l = dynamic_cast<const IR::ListExpression *>(expr))
-                list = l->components;
+                list = new IR::Vector<IR::Expression>(l->components);
             else if (expr)
                 list = new IR::Vector<IR::Expression>({expr});
             else

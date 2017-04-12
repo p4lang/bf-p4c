@@ -5,7 +5,7 @@ IR::Tofino::ParserState::ParserState(const IR::ParserState *p4state, gress_t gr)
     srcInfo = p4state->srcInfo;
     name = p4state->name;
     if (auto *sel = dynamic_cast<const IR::SelectExpression *>(p4state->selectExpression))
-        select = *sel->select->components;
+        select = sel->select->components;
     if (name == "start" || name == "end")
         name += "$";
 }
