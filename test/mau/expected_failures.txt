@@ -18,8 +18,9 @@ test_config_139_tcam_error_detection_4.p4 mismatch
 
 test_config_91_gateway_with_split_table.p4 mismatch
 - action table split at 8 rows instead of 10?
-test_config_197_default_next_table.p4 tfas
-- missing next field in ternary indirect format
+
+12-SmallToBigFieldWithMask8.p4 mismatch
+- missing default_action: in generated asm
 
 - uncharacterized failures (FIXME)
 01-FlexCounter.p4 compile
@@ -27,7 +28,6 @@ test_config_197_default_next_table.p4 tfas
 07-MacAddrCheck.p4 compile
 08-MacAddrCheck1.p4 compile
 12-Counters.p4 compile
-12-SmallToBigFieldWithMask8.p4 mismatch
 19-SimpleTrill.p4 compile
 22-BigToSmallFieldWithMask8.p4 compile
 22-SimpleTrillThreeStep.p4 compile
@@ -86,6 +86,7 @@ test_config_192_stateful_driven_by_hash.p4 tfas
 test_config_193_indirect_stats_no_reads.p4 tfas
 test_config_195_stateful_predicate_output.p4 mismatch
 test_config_196_hit_miss.p4 mismatch
+test_config_197_default_next_table.p4 mismatch
 test_config_198_shared_action_profile.p4 mismatch
 test_config_199_stateful_constant_index.p4 tfas
 test_config_200_counter_constant_index.p4 tfas

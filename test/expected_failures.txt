@@ -20,10 +20,13 @@ hash_index5.p4 mismatch
 
 exact_match3.p4 mismatch
 - vpn lsb encoding swapped (not a bug -- either way is fine)
-- action_hv_xbar differences
-- other differences as well?
+- asm chooses different home rows for action table that needs multiple
+  (compiler should specify in asm output)
 
 meter_test1.p4 mismatch
 - vpn lsb encoding swapped (not a bug -- either way is fine)
 - synth2port fabric is different -- not clear if it is a bug or where
 - idletime missing from asm?
+
+mac_rewrite.p4 tfas
+- glass generates invalid slice of immediate for action_bus.
