@@ -1,7 +1,6 @@
 # Tests
 
 -include p4_tests_tofino.mk
-#-include p4_tests_tofino-ortools.mk
 -include p4_tests_p14_to_16.mk
 -include p4_tests_p4.mk
 -include p4_tests_bmv2.mk
@@ -17,14 +16,6 @@ p4_tests_tofino.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(w
    $(srcdir)/%reldir%/p4_16 \
    $(srcdir)/%reldir%/p4_14
 	@$(GENTESTS) $(srcdir) tofino $(srcdir)/%reldir%/runtest $^ >$@ || ( rm $@ && false )
-
-#p4_tests_tofino-ortools.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(wildcard \
-#   $(srcdir)/testdata/p4_14_samples/*.stf \
-#   $(srcdir)/%reldir%/p4_16/*.stf \
-#   $(srcdir)/%reldir%/p4_14/*.stf ) \
-#   $(srcdir)/%reldir%/p4_16 \
-#   $(srcdir)/%reldir%/p4_14
-#	@$(GENTESTS) $(srcdir) tofino-ortools $(srcdir)/%reldir%/runtest --ortools $(^:%.stf=%.p4) >$@ || ( rm $@ && false )
 
 # We have additional test inputs that are used to test the other (standard) back-ends
 # These test input programs depend on Tofino in some way.
@@ -54,7 +45,6 @@ check-nop4test:
 
 CLEANFILES += \
         p4_tests_tofino.mk \
-        p4_tests_tofino-ortools.mk \
         p4_tests_p14_to_16.mk \
         p4_tests_p4.mk \
         p4_tests_bmv2.mk
@@ -132,8 +122,7 @@ XFAIL_TESTS += \
 XFAIL_TESTS += bmv2/%reldir%/p4_14/case1770.p4.test
 
 # parser verify not supported
-XFAIL_TESTS += tofino/%reldir%/p4_16/ipv4_options.p4.test \
-    tofino-ortools/%reldir%/p4_16/ipv4_options.p4.test
+XFAIL_TESTS += tofino/%reldir%/p4_16/ipv4_options.p4.test
 
 # conflict between blackbox meter and builtin meter
 XFAIL_TESTS += \
@@ -220,12 +209,9 @@ XFAIL_TESTS += \
 
 # Masked table keys ignoring mask in table layout?
 XFAIL_TESTS += tofino/testdata/p4_14_samples/exact_match_mask1.p4.test
-XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/exact_match_mask1.p4.test
 
 # Parser failure.
-XFAIL_TESTS += \
-    tofino/testdata/p4_14_samples/parser_dc_full.p4.test \
-    tofino-ortools/testdata/p4_14_samples/parser_dc_full.p4.test
+XFAIL_TESTS += tofino/testdata/p4_14_samples/parser_dc_full.p4.test
 
 # Fails due to complex expressions in the parser that our hardware can't support.
 XFAIL_TESTS += \
@@ -233,37 +219,18 @@ XFAIL_TESTS += \
    tofino/testdata/p4_14_samples/axon.p4.test \
    tofino/testdata/p4_14_samples/simple_nat.p4.test
 
-# Generates broken PHV alloc (regs used by both ingress & egress)
-XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/basic_routing.p4.test
-
-# Missing constraints for header stack POV bits.
-XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/instruct5.p4.test
-
 # match group packing overflow
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_246_fill_stage.p4.test
-
-# Layout Constraints from gateway allocation
-XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/gateway_bus1.p4.test
-XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/gateway_bus2.p4.test
 
 # Fail on purpose due to action profiles not being mutually exclusive
 #XFAIL_TESTS += tofino/%reldir%/p4_14/action_profile_not_shared.p4.test
 #XFAIL_TESTS += tofino/%reldir%/p4_14/action_profile_next_stage.p4.test
-
-# Multiple calculations per action
-XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/counter_test1.p4.test
-XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/counter_test2.p4.test
-XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/meter_test1.p4.test
-XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/hash_action_basic.p4.test
-XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/hash_action_gateway.p4.test
-XFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/hash_action_two_separate.p4.test
 
 # Hash Action Bugs within the ASM or Model
 XFAIL_TESTS += tofino/testdata/p4_14_samples/hash_action_gateway.p4.test
 
 # No support yet in assembler for hash calcuation
 XFAIL_TESTS += tofino/%reldir%/p4_14/hash_calculation_32.p4.test
-XFAIL_TESTS += tofino-ortools/%reldir%/p4_14/hash_calculation_32.p4.test
 
 # Failure for BRIG-44 in JIRA
 XFAIL_TESTS += tofino/testdata/p4_14_samples/basic_conditionals.p4.test
@@ -274,31 +241,14 @@ XFAIL_TESTS += bmv2/%reldir%/p4_14/shared_names.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/shared_names.p4.test
 
 # These fail (or pass) intermittently on Jenkins; not sure why
-IFAIL_TESTS += tofino-ortools/%reldir%/p4_14/simple_counter.p4.test \
-	       tofino-ortools/%reldir%/p4_14/max_counters.p4.test \
-	       tofino-ortools/%reldir%/p4_14/gateway_bus2.p4.test \
-	       tofino-ortools/testdata/p4_14_samples/bigfield1.p4.test \
-	       tofino-ortools/testdata/p4_14_samples/07-MultiProtocol.p4.test \
-	       tofino/testdata/p4_14_samples/basic_routing.p4.test
+IFAIL_TESTS += tofino/testdata/p4_14_samples/basic_routing.p4.test
 
 # Fails intermittently due to allocating two fields to the same PHV container when it shouldn't
 IFAIL_TESTS += tofino/testdata/p4_14_samples/07-MultiProtocol.p4.test
 
 # Fails with CompilerBug "Can't create temp of type bool"
 XFAIL_TESTS += tofino/%reldir%/p4_16/apply_if.p4.test
-XFAIL_TESTS += tofino-ortools/%reldir%/p4_16/apply_if.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_16/depgraph2.p4.test
-XFAIL_TESTS += tofino-ortools/%reldir%/p4_16/depgraph2.p4.test
-
-# Fails intermittenly with ortools as the action bus isn't configured correctly
-IFAIL_TESTS += tofino-ortools/testdata/p4_14_samples/gateway1.p4.test \
-               tofino-ortools/testdata/p4_14_samples/gateway8.p4.test \
-               tofino-ortools/testdata/p4_14_samples/ternary_match4.p4.test \
-               tofino-ortools/testdata/p4_14_samples/ternary_match3.p4.test \
-               tofino-ortools/testdata/p4_14_samples/bridge1.p4.test \
-               tofino-ortools/testdata/p4_14_samples/action_chain1.p4.test \
-               tofino-ortools/%reldir%/p4_14/em_ghost1.p4.test \
-               tofino-ortools/%reldir%/p4_16/ternary2.p4.test
 
 #BMV2 tests that don't work with tofino -- FIXME: characterize failures and fix
 XFAIL_TESTS += \
