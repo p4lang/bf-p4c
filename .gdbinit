@@ -174,7 +174,7 @@ class IXBarPrinter(object):
     def __init__(self, val):
         self.val = val
     def to_string(self):
-        rv = "\n"
+        rv = "\nexact ixbar groups                  ternary ixbar groups\n"
         fields = {}
         ptrs = [ self.val['exact_use']['data'],
                  self.val['ternary_use']['data'],
@@ -190,6 +190,8 @@ class IXBarPrinter(object):
                 rv += pfx[t]
                 for c in range(0, cols[indir[t]]):
                     field = ptrs[indir[t]].dereference()
+                    if c == 8:
+                        rv += ' '
                     if field['first']['str']:
                         name = field['first']['str'].string()
                         if name not in fields:
@@ -205,6 +207,38 @@ class IXBarPrinter(object):
             rv += "\n"
         for field,k in fields.items():
             rv += "   " + k + " " + field + "\n"
+
+        rv += "hash select bits   G  hd  /- hash dist bits ---\n"
+        tables = {}
+        ptrs = [ self.val['hash_index_use']['data'],
+                 self.val['hash_single_bit_use']['data'],
+                 self.val['hash_group_print_use']['data'],
+                 self.val['hash_dist_use']['data'],
+                 self.val['hash_dist_bit_use']['data'] ]
+        cols = [ int(self.val['hash_index_use']['ncols']),
+                 int(self.val['hash_single_bit_use']['ncols']),
+                 1, int(self.val['hash_dist_use']['ncols']),
+                 int(self.val['hash_dist_bit_use']['ncols']) ]
+        pfx = [ "", " ", "  ", "  ", " " ]
+        for r in range(0, 16):
+            for t in range(0, len(ptrs)):
+                rv += pfx[t]
+                if r > 8 and t == 2:
+                    rv += ' '
+                    continue
+                for c in range(0, cols[t]):
+                    tbl = ptrs[t].dereference()
+                    if tbl['str']:
+                        name = tbl['str'].string()
+                        if name not in tables:
+                            tables[name] = chr(ord('A') + len(tables))
+                        rv += tables[name]
+                    else:
+                        rv += '.'
+                    ptrs[t] += 1
+            rv += "\n"
+        for tbl,k in tables.items():
+            rv += "   " + k + " " + tbl + "\n"
         return rv;
 
 def vec_begin(vec):
@@ -254,31 +288,63 @@ class IXBarUsePrinter(object):
     "Print an IXBar::Use object"
     def __init__(self, val):
         self.val = val
-    def to_string(self):
-        rv = "Ternary(" if self.val['ternary'] else "Exact("
-        for i in range(0, vec_size(self.val['use'])):
-            rv += "\n        "
-            byte = vec_at(self.val['use'], i)
+    def use_array(self, arr, indent):
+        rv = ""
+        for i in range(0, vec_size(arr)):
+            rv += "\n" + indent + "use[" + str(i) +"]: "
+            byte = vec_at(arr, i)
             rv += byte['field']['str'].string()
             rv += "[" + str(byte['lo']) + ".." + str(byte['hi']) + "]("
             rv += str(byte['loc']['group']) + ','
             rv += str(byte['loc']['byte']) + ')'
             if int(byte['flags']) != 0:
                 rv += " flags=" + hex(int(byte['flags']))
-        rv += ")"
-        for i in range(0, vec_size(self.val['bit_use'])):
-            rv += "\n     "
-            bits = vec_at(self.val['bit_use'], i)
-            rv += str(bits['group']) + ':' + str(bits['bit']+40) + ': '
-            rv += bits['field']['str'].string()
-            rv += "(" + str(bits['lo'])
-            if bits['width'] > 1:
-                rv += ".." + str(bits['lo'] + bits['width'] - 1)
-            rv += ")"
-        for i in range(0, vec_size(self.val['way_use'])):
-            rv += "\n     "
-            way = vec_at(self.val['way_use'], i)
-            rv += "[%d:%d:%x]" % (int(way['group']), int(way['slice']), int(way['mask']))
+        return rv;
+    def to_string(self):
+        rv = ""
+        try:
+            rv = "Ternary" if self.val['ternary'] else "Exact"
+            rv += self.use_array(self.val['use'], '   ')
+            for i in range(0, 8):
+                hti = self.val['hash_table_inputs'][i]
+                if hti != 0:
+                    rv += "\n   hash_group[%d]: " % i
+                    j = 0
+                    while hti > 0:
+                        if hti % 2 != 0:
+                            rv += "%d " % j
+                        j += 1
+                        hti /= 2
+            for i in range(0, vec_size(self.val['bit_use'])):
+                rv += "\n   bit_use[" + str(i) +"]: "
+                bits = vec_at(self.val['bit_use'], i)
+                rv += str(bits['group']) + ':' + str(bits['bit']+40) + ': '
+                rv += bits['field']['str'].string()
+                rv += "(" + str(bits['lo'])
+                if bits['width'] > 1:
+                    rv += ".." + str(bits['lo'] + bits['width'] - 1)
+                rv += ")"
+            for i in range(0, vec_size(self.val['way_use'])):
+                rv += "\n   way_use[" + str(i) +"]: "
+                way = vec_at(self.val['way_use'], i)
+                rv += "[%d:%d:%x]" % (int(way['group']), int(way['slice']), int(way['mask']))
+            for i in range(0, vec_size(self.val['select_use'])):
+                rv += "\n   sel_use[" + str(i) +"]: "
+                sel = vec_at(self.val['select_use'], i)
+                rv += "%d:%x - %s" % (int(sel['group']), int(sel['bit_mask']), str(sel['alg']))
+            for i in range(0, vec_size(self.val['hash_dist_use'])):
+                rv += "\n   hd_use[" + str(i) +"]: "
+                hd = vec_at(self.val['hash_dist_use'], i)
+                rv += "[i%d u%d g%d s%d]" % (int(hd['hash_table_input']), int(hd['unit']),
+                                             int(hd['group']), int(hd['slice']))
+                if hd['shift'] != 0:
+                    rv += " shift=%d" % hd['shift']
+                if hd['max_size'] != 0:
+                    rv += " max_size=%d" % hd['max_size']
+                rv += " " + str(hd['alg']) + " " + str(hd['type'])
+                rv += self.use_array(hd['use'], '      ')
+        except Exception as e:
+            rv += "{crash: "+str(e)+"}\n"
         return rv;
 
 class PHVBitPrinter(object):

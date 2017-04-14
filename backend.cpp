@@ -219,6 +219,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         new PhvInfo::SetReferenced(phv),
         &mauasm
     };
+    backend.setName("Tofino backend");
     if (LOGGING(4))
         backend.addDebugHook(debug_hook);
     maupipe = maupipe->apply(backend);

@@ -37,7 +37,8 @@ struct IXBar {
     /* IXBar tracks the use of all the input xbar bytes in a single stage.  Each byte use is set
      * to record the name of the field it will be getting and the bit offset within the field.
      * cstrings here are field names as used in PhvInfo (so PhvInfo::field can be used to find
-     * out details about the field) */
+     * out details about the field)
+     * NOTE: Changes here require changes to .gdbinit pretty printer */
     Alloc2D<std::pair<cstring, int>, EXACT_GROUPS, EXACT_BYTES_PER_GROUP>       exact_use;
     Alloc2D<std::pair<cstring, int>, TERNARY_GROUPS, TERNARY_BYTES_PER_GROUP>   ternary_use;
     Alloc1D<std::pair<cstring, int>, BYTE_GROUPS>                               byte_group_use;
@@ -51,7 +52,8 @@ struct IXBar {
         return ternary ? ternary_fields : exact_fields; }
 
     /* Track the use of hashtables/groups too -- FIXME -- should it be a separate data structure?
-     * strings here are table names */
+     * strings here are table names
+     * NOTE: Changes here require changes to .gdbinit pretty printer */
     Alloc2D<cstring, HASH_TABLES, HASH_INDEX_GROUPS>    hash_index_use;
     unsigned                                    hash_index_inuse[HASH_INDEX_GROUPS] = { 0 };
     Alloc2D<cstring, HASH_TABLES, HASH_SINGLE_BITS>     hash_single_bit_use;

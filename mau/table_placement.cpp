@@ -127,6 +127,7 @@ struct TablePlacement::Placed {
     /* A linked list of table placement decisions, from last table placed to first (so we
      * can backtrack and create different lists as needed) */
     TablePlacement              &self;
+    int                         id;
     const Placed                *prev = 0;
     const GroupPlace            *group = 0;  // work group chosen from
     cstring                     name;
@@ -139,8 +140,9 @@ struct TablePlacement::Placed {
     StageUseEstimate            use;
     const TableResourceAlloc    *resources;
     Placed(TablePlacement &self, const IR::MAU::Table *t)
-        : self(self), table(t) {
+        : self(self), id(++uid_counter), table(t) {
         if (t) { name = t->name; }
+        traceCreation();
     }
 
     // test if this table is placed
@@ -181,6 +183,8 @@ struct TablePlacement::Placed {
             auto *prev_p = p;
             while (stage != -1) {
                 auto *new_p = new Placed(*prev_p);
+                new_p->id = ++uid_counter;
+                new_p->traceCreation();
                 new_p->resources = prev_resources[index];
                 index++;
                 curr_p->prev = new_p;
@@ -191,12 +195,21 @@ struct TablePlacement::Placed {
                     stage = -1;
                 }
             }
+            assert(size_t(index) == prev_resources.size());
         }
     }
     friend std::ostream &operator<<(std::ostream &out, const TablePlacement::Placed *pl) {
         out << pl->name;
         return out; }
+
+ private:
+    Placed(const Placed &) = default;  // FIXME -- should delete this, but set_prev needs it
+    Placed(Placed &&) = delete;
+    void traceCreation() { }
+    static int uid_counter;
 };
+
+int TablePlacement::Placed::uid_counter = 0;
 
 void TablePlacement::GroupPlace::finish_if_placed(
     ordered_set<const GroupPlace*> &work, const Placed *pl
