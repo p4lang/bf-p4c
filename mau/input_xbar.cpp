@@ -1005,17 +1005,23 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
     if (way_bits == 0) {
         way_mask = 0;
     } else if (shared) {
-        // FIXME: The used_bits may not be contiguous, but will work in the meantime
         int used_count = __builtin_popcount(used_bits);
         int allocated_select_bits = 0;
+
         for (size_t i = start; i < index; i++) {
             allocated_select_bits += ceil_log2(layout_option->way_sizes[i]);
         }
+        
         int starting_bit = allocated_select_bits % used_count;
         if (starting_bit + way_bits > used_count)
             BUG("Allocated bigger way before smaller way");
-        for (int i = starting_bit; i < starting_bit + way_bits; i++) {
-            way_mask |= (1U << i);
+        
+        int used_bit = -1;
+        for (auto bit : bitvec(used_bits)) {
+            used_bit++;
+            if (starting_bit > used_bit) continue;
+            if (starting_bit + way_bits == used_bit) break;
+            way_mask |= (1U << bit);
         }
     } else if (__builtin_popcount(free_bits) < way_bits) {
         LOG3("Free bits available is too small");
@@ -1034,8 +1040,9 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl,
 
     alloc.way_use.emplace_back(Use::Way{ hash_group, group, way_mask });
     hash_index_inuse[group] |= hash_table_input;
-    for (auto bit : bitvec(way_mask))
+    for (auto bit : bitvec(way_mask)) {
         hash_single_bit_inuse[bit] |= hash_table_input;
+    }
     for (auto ht : bitvec(hash_table_input)) {
         hash_index_use[ht][group] = tbl->name;
         for (auto bit : bitvec(way_mask))
@@ -1124,7 +1131,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     }
     fill_out_use(xbar_alloced, false);
     for (int bit = 0; bit < HASH_SINGLE_BITS; bit++) {
-        LOG3("Hash bit at bit " << bit << " is " << hash_single_bit_inuse[bit]);
+        LOG3("Hash bit at bit " << bit << " is " << hex(hash_single_bit_inuse[bit]));
     }
     return true;
 }
@@ -1517,8 +1524,9 @@ void IXBar::update(cstring name, const Use &alloc) {
                 !(loc = findExactByte(bits.field, (b + bits.lo)/8)))
                 BUG("ixbar hashing bits from %s, but they're not on the bus", bits.field);
             for (auto ht : bitvec(alloc.hash_table_inputs[bits.group])) {
-                if (hash_single_bit_use.at(ht, b + bits.bit))
+                if (hash_single_bit_use.at(ht, b + bits.bit)) {
                     BUG("conflicting ixbar hash bit allocation");
+                }
                 hash_single_bit_use.at(ht, b + bits.bit) = name; }
             hash_single_bit_inuse[b + bits.bit] |= alloc.hash_table_inputs[bits.group]; }
         if (hash_group_use[bits.group] == 0) {
