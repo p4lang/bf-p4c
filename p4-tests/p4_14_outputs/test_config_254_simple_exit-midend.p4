@@ -211,10 +211,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         }
         default_action = NoAction_5();
     }
-    action act() {
+    @hidden action act() {
         hasExited = false;
     }
-    table tbl_act {
+    @hidden table tbl_act {
         actions = {
             act();
         }

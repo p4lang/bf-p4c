@@ -40,10 +40,10 @@ control egress(inout packet_t hdrs, inout standard_metadata meta) {
 }
 
 control deparser(packet_out b, in packet_t hdrs, inout standard_metadata meta) {
-    action act() {
+    @hidden action act() {
         b.emit<data_h>(hdrs.data);
     }
-    table tbl_act {
+    @hidden table tbl_act {
         actions = {
             act();
         }
@@ -55,10 +55,10 @@ control deparser(packet_out b, in packet_t hdrs, inout standard_metadata meta) {
 }
 
 control c(inout packet_t hdrs, inout standard_metadata meta) {
-    action act_0() {
+    @hidden action act_0() {
         meta.egress_spec = 9w3;
     }
-    table tbl_act_0 {
+    @hidden table tbl_act_0 {
         actions = {
             act_0();
         }

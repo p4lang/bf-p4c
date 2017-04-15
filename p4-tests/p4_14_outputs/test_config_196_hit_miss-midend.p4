@@ -258,19 +258,19 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         size = 512;
         default_action = NoAction_7();
     }
-    action act() {
+    @hidden action act() {
         tmp_0 = true;
     }
-    action act_0() {
+    @hidden action act_0() {
         tmp_0 = false;
     }
-    table tbl_act {
+    @hidden table tbl_act {
         actions = {
             act();
         }
         const default_action = act();
     }
-    table tbl_act_0 {
+    @hidden table tbl_act_0 {
         actions = {
             act_0();
         }

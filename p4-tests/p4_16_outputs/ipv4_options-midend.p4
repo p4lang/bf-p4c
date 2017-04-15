@@ -46,13 +46,13 @@ control ingress(inout packet_t p, inout user_metadata_t m, inout standard_metada
     @name("forward") action forward_0() {
         meta.egress_spec = 9w1;
     }
-    table tbl_sendToCPU {
+    @hidden table tbl_sendToCPU {
         actions = {
             sendToCPU_0();
         }
         const default_action = sendToCPU_0();
     }
-    table tbl_forward {
+    @hidden table tbl_forward {
         actions = {
             forward_0();
         }
