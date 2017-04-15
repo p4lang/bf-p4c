@@ -8,7 +8,8 @@
 p4_tests_tofino.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(wildcard \
    $(srcdir)/testdata/p4_14_samples/*.p4 \
    $(srcdir)/testdata/p4_14_samples/switch_*/switch.p4 \
-   $(shell grep -l -E '(v1model|psa)\.p4' $(srcdir)/testdata/p4_16_samples/*.p4) \
+   $(shell grep -l main $(shell grep -l -E '(v1model|psa)\.p4' \
+	   $(srcdir)/testdata/p4_16_samples/*.p4)) \
    $(srcdir)/%reldir%/p4_16/*.p4 \
    $(srcdir)/%reldir%/p4_14/*.p4 \
    $(srcdir)/%reldir%/p4_14/switch_*/switch.p4 ) \
@@ -36,7 +37,8 @@ p4_tests_p4.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(wildc
 p4_tests_bmv2.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(wildcard \
     $(srcdir)/%reldir%/p4_14/*.p4 \
     $(srcdir)/%reldir%/p4_14/switch_*/switch.p4 \
-    $(shell grep -l -E '(v1model|psa)\.p4' $(srcdir)/%reldir%/p4_16/*.p4) ) \
+    $(shell grep -l main $(shell grep -l -E '(v1model|psa)\.p4' \
+	    $(srcdir)/%reldir%/p4_16/*.p4)) ) \
     $(srcdir)/%reldir%/p4_14 $(srcdir)/%reldir%/p4_16
 	@$(GENTESTS) $(srcdir) bmv2 $(srcdir)/%reldir%/test-bmv2.sh $^ >$@ || ( rm $@ && false )
 
