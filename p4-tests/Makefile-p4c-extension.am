@@ -252,6 +252,9 @@ IFAIL_TESTS += tofino/testdata/p4_14_samples/07-MultiProtocol.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_16/apply_if.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_16/depgraph2.p4.test
 
+# Incorrect P4_14->16 conversion for varbit extract
+XFAIL_TESTS += tofino/testdata/p4_14_samples/09-IPv4OptionsUnparsed.p4.test
+
 #BMV2 tests that don't work with tofino -- FIXME: characterize failures and fix
 XFAIL_TESTS += \
     tofino/testdata/p4_16_samples/action_selector_shared-bmv2.p4.test \
