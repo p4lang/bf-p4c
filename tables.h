@@ -632,6 +632,7 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     int find_on_actionbus(const char *n, int off, int size, int *len);
     table_type_t table_type() { return ACTION; }
     int unitram_type() override { return UnitRam::ACTION; }
+    void pad_format_fields();
 )
 
 DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",

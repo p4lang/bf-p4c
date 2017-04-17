@@ -36,6 +36,16 @@ Table::Format::Field *ActionTable::lookup_field(const std::string &name, const s
             return rv; }
     return 0;
 }
+void ActionTable::pad_format_fields() {
+    for (auto &fmt : action_formats) {
+        for (auto &fmt2 : action_formats)
+            if (fmt.second->log2size < fmt2.second->log2size)
+                fmt.second->log2size = fmt2.second->log2size;
+        if (format->log2size < fmt.second->log2size)
+            format->log2size = fmt.second->log2size;
+        if (format->size < fmt.second->size)
+            format->size = fmt.second->size; }
+}
 void ActionTable::apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn) {
     for (auto &fmt : action_formats)
         fmt.second->apply_to_field(n, fn);
@@ -207,12 +217,7 @@ void ActionTable::pass2() {
         format = new Format();
     if (direct) {
         /* need all formats to be the same size, so pad them out */
-        for (auto &fmt : action_formats) {
-            for (auto &fmt2 : action_formats)
-                if (fmt.second->log2size < fmt2.second->log2size)
-                    fmt.second->log2size = fmt2.second->log2size;
-            if (format->size < fmt.second->log2size)
-                format->log2size = fmt.second->log2size; } }
+        pad_format_fields(); }
     if (actions) actions->pass2(this);
     action_bus->pass2(this);
 }
