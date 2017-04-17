@@ -20,6 +20,7 @@ class ActionBus {
             return type == a.type ? field < a.field : type < a.type; }
         std::string toString(Table *tbl) const;
     };
+    friend std::ostream &operator<<(std::ostream &, const Source &);
     struct Slot {
         std::string                 name;
         unsigned                    byte, size;  // size in bits

@@ -3,6 +3,32 @@
 #include "misc.h"
 #include "stage.h"
 
+std::ostream &operator<<(std::ostream &out, const ActionBus::Source &src) {
+    const char *sep = "";
+    switch (src.type) {
+    case ActionBus::Source::None:
+        out << "None";
+        break;
+    case ActionBus::Source::Field:
+        out << "Field(";
+        for (auto &range : src.field->bits) {
+            out << sep << range.lo << ".." << range.hi;
+            sep = ", "; }
+        out << ")";
+        break;
+    case ActionBus::Source::HashDist:
+        out << "HashDist(" << src.hd->hash_group << ", " << src.hd->id << ")";
+        break;
+    case ActionBus::Source::MeterBus:
+        out << "MeterBus";
+        break;
+    default:
+        out << "<invalid type 0x" << hex(src.type) << ">";
+        break;
+    }
+    return out;
+}
+
 ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
     lineno = data.size ? data[0].key.lineno : -1;
     for (auto &kv : data) {
@@ -169,6 +195,7 @@ static int find_free(Table *tbl, int min, int max, int step, int bytes) {
 }
 
 int ActionBus::find_merge(int offset, int bytes, int use) {
+    LOG4("find_merge(" << offset << ", " << bytes << ", " << use << ")");
     for (auto &alloc : by_byte) {
         if (use & 1) {
             if (alloc.first >= 32) break;
@@ -209,6 +236,7 @@ void ActionBus::do_alloc(Table *tbl, Source src, unsigned use, int lobyte,
 static unsigned size_masks[8] = { 7, 7, 15, 15, 31, 31, 31, 31 };
 
 void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned sizes_needed) {
+    LOG4("alloc_field(" << src << ", " << offset << ", " << sizes_needed << ")");
     bool is_action_data = dynamic_cast<ActionTable *>(tbl) != nullptr;
     int immed_offset = tbl->format && tbl->format->immed ? tbl->format->immed->bit(0) : 0;
     assert(immed_offset == 0 || !is_action_data);
