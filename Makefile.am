@@ -101,3 +101,7 @@ am__v_LEX_1 =
 
 check-local:
 	export BUILDDIR=$$(pwd); cd $(srcdir)/test; ./runtests -f *.p4 */*.p4
+
+ctags:
+	cd $(srcdir); ctags -R -I VECTOR --exclude=test --exclude=submodules \
+	    --regex-C++='/^DECLARE_(ABSTRACT_)?TABLE_TYPE\(([a-zA-Z0-9_]+)/\2/c/'
