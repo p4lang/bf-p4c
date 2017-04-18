@@ -93,7 +93,7 @@ test_config_200_counter_constant_index.p4 tfas
 test_config_201_meter_constant_index.p4 tfas
 test_config_203_first_reduction_or.p4 mismatch
 test_config_204_no_tables_in_stage0.p4 mismatch
-test_config_205_modify_field_from_hash.p4 tfas
+test_config_205_modify_field_from_hash.p4 compile
 test_config_206_stateful_logging.p4 tfas
 test_config_208_table_no_key.p4 mismatch
 test_config_209_pack_hash_dist.p4 mismatch
