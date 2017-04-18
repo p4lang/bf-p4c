@@ -181,6 +181,12 @@ public:
                     if (field == &f.second)
                         return f.first;
             return "<unknown>"; }
+        int find_field_lineno(Field *field) {
+            for (auto &m : fmt)
+                for (auto &f : m)
+                    if (field == &f.second)
+                        return lineno;
+            return -1; }
         decltype(fmt[0].begin()) begin(int grp=0) { return fmt[grp].begin(); }
         decltype(fmt[0].end()) end(int grp=0) { return fmt[grp].end(); }
         decltype(fmt[0].cbegin()) begin(int grp=0) const { return fmt[grp].begin(); }
@@ -344,6 +350,8 @@ public:
         { return format ? format->field(n) : 0; }
     virtual std::string find_field(Format::Field *field) {
         return format ? format->find_field(field) : "<unknown>"; }
+    virtual int find_field_lineno(Format::Field *field) {
+        return format ? format->find_field_lineno(field) : -1; }
     virtual void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn)
         { if (format) format->apply_to_field(n, fn); }
     int find_on_ixbar(Phv::Slice sl, int group);
@@ -626,6 +634,7 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     std::map<std::string, Format *>     action_formats;
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override;
     std::string find_field(Format::Field *field);
+    int find_field_lineno(Format::Field *field);
     Format::Field *lookup_field(const std::string &name, const std::string &action) override;
     void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn);
     int find_on_actionbus(Format::Field *f, int off, int size);

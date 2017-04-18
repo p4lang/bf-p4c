@@ -29,6 +29,39 @@ std::ostream &operator<<(std::ostream &out, const ActionBus::Source &src) {
     return out;
 }
 
+/* identifes which bytes on the action bus are tied together in the hv_xbar input,
+ * so must be routed together.  The second table here is basically just bitcount of
+ * masks in the first table. */
+static std::array<std::array<unsigned, 16>, ACTION_HV_XBAR_SLICES> action_hv_slice_byte_groups = {{
+    { 0x3, 0x3, 0xc, 0xc, 0xf0, 0xf0, 0xf0, 0xf0,
+        0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00 },
+    { 0xf, 0xf, 0xf, 0xf, 0xf0, 0xf0, 0xf0, 0xf0,
+        0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00 },
+    { 0xf, 0xf, 0xf, 0xf, 0xf0, 0xf0, 0xf0, 0xf0,
+        0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00 },
+    { 0xf, 0xf, 0xf, 0xf, 0xf0, 0xf0, 0xf0, 0xf0,
+        0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00 },
+    { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00 },
+    { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00 },
+    { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00 },
+    { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00, 0xff00 },
+}};
+
+static std::array<std::array<int, 16>, ACTION_HV_XBAR_SLICES> action_hv_slice_group_align = {{
+    { 2, 2, 2, 2, 4, 4, 4, 4, 8, 8, 8, 8, 8, 8, 8, 8 },
+    { 4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 8, 8, 8, 8, 8, 8 },
+    { 4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 8, 8, 8, 8, 8, 8 },
+    { 4, 4, 4, 4, 4, 4, 4, 4, 8, 8, 8, 8, 8, 8, 8, 8 },
+    { 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8 },
+    { 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8 },
+    { 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8 },
+    { 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8 }
+}};
+
 ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
     lineno = data.size ? data[0].key.lineno : -1;
     for (auto &kv : data) {
@@ -125,6 +158,19 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
     }
 }
 
+unsigned ActionBus::Slot::lo(Table *tbl) const {
+    int rv = -1;
+    int immed_offset = tbl->format && tbl->format->immed ? tbl->format->immed->bit(0) : 0;
+    for (auto &src : data) {
+        int off = src.second;
+        if (src.first.type == Source::Field)
+            off += src.first.field->bit(0) - immed_offset;
+        assert(rv < 0 || rv == off);
+        rv = off; }
+    assert(rv >= 0);
+    return rv;
+}
+
 void ActionBus::pass1(Table *tbl) {
     LOG1("ActionBus::pass1(" << tbl->name() << ")");
     if (lineno < 0)
@@ -159,32 +205,65 @@ void ActionBus::pass1(Table *tbl) {
                               slot.name.c_str(), tbl->name());
                     continue; } }
             tbl->stage->action_bus_use[slotno] = tbl;
-            use[slotno] = &slot; } }
+            use[slotno] = &slot;
+            unsigned hi = slot.lo(tbl) + slot.size - 1;
+            if (action_hv_slice_use.size() <= hi/128U)
+                action_hv_slice_use.resize(hi/128U + 1);
+            auto &hv_groups = action_hv_slice_byte_groups.at(slot.byte/16);
+            for (unsigned byte = slot.lo(tbl)/8U; byte <= hi/8U; ++byte) {
+                byte_use[byte] = 1;
+                action_hv_slice_use.at(byte/16).at(slot.byte/16) |= hv_groups.at(byte%16); } } }
 }
 
 void ActionBus::need_alloc(Table *tbl, Table::Format::Field *f, unsigned off, unsigned size) {
     LOG3("need_alloc " << tbl->find_field(f) << " off=" << off << " size=0x" << hex(size));
     need_place[f][off] |= size;
+    int immed_offset = tbl->format && tbl->format->immed ? tbl->format->immed->bit(0) : 0;
+    byte_use.setrange((f->bit(0) - immed_offset + off)/8U, size);
 }
 void ActionBus::need_alloc(Table *tbl, HashDistribution *hd, unsigned off, unsigned size) {
     LOG3("need_alloc hash_dist " << hd->id << " off=" << off << " size=0x" << hex(size));
     need_place[hd][off] |= size;
+    byte_use.setrange(off/8U, size);
 }
 
-static int find_free(Table *tbl, int min, int max, int step, int bytes) {
+/**
+ * find_free -- find a free slot on the action output bus for some data.  Looks through bytes
+ * in the range min..max for a free space where we can put 'bytes' bytes from an action
+ * input bus starting at 'lobyte'.  'step' is an optimization to only check every step bytes
+ * as we know alignment restrictions mean those are the only possible aligned spots
+ */
+int ActionBus::find_free(Table *tbl, int min, int max, int step, int lobyte, int bytes) {
     int avail;
-    LOG4("find_free(" << min << ", " << max << ", " << step << ", " << bytes << ")");
+    LOG4("find_free(" << min << ", " << max << ", " << step << ", " << lobyte <<
+         ", " << bytes << ")");
     for (int i = min; i + bytes - 1 <= max; i += step) {
+        unsigned hv_slice = i / ACTION_HV_XBAR_SLICE_SIZE;
+        auto &hv_groups = action_hv_slice_byte_groups.at(hv_slice);
+        int mask1 = action_hv_slice_group_align.at(hv_slice).at(lobyte % 16U) - 1;
+        int mask2 = action_hv_slice_group_align.at(hv_slice).at((lobyte + bytes - 1)% 16U) - 1;
+        if ((i ^ lobyte) & mask1)
+            continue;  // misaligned
         bool inuse = false;
-        if (tbl->stage->action_bus_use[Stage::action_bus_slot_map[i]])
-            inuse = true;
-        /* FIXME -- this is a hack and probably incorrect -- need to figure out when an
-         * allocation is going to copy adjacent data into adjacent slots and do the right
-         * thing (use it if it is the right data, or use a different slot) */
-        for (int j = i & -step; j < (i & -step) + step; ++j)
-            if (tbl->stage->action_bus_use[Stage::action_bus_slot_map[j]] &&
-                tbl->stage->action_bus_use[Stage::action_bus_slot_map[j]] != tbl)
+        for (int byte = lobyte & ~mask1; byte <= ((lobyte+bytes-1) | mask2); ++byte) {
+            if (!byte_use[byte]) continue;
+            if (action_hv_slice_use.size() <= byte/16U)
+                action_hv_slice_use.resize(byte/16U + 1);
+            if (action_hv_slice_use.at(byte/16U).at(hv_slice) & hv_groups.at(byte%16U)) {
+                LOG5("  input byte " << byte << " in use for hv_slice " << hv_slice);
                 inuse = true;
+                break; } }
+        if (inuse) {
+            // skip up to next hv_slice
+            while ((i + step)/ACTION_HV_XBAR_SLICE_SIZE == hv_slice)
+                i += step;
+            continue; }
+        for (int byte = i & ~mask1; byte <= ((i + bytes - 1) | mask2); ++byte)
+            if (tbl->stage->action_bus_use[Stage::action_bus_slot_map[byte]]) {
+                LOG5("  output byte " << byte << " in use by " <<
+                     tbl->stage->action_bus_use[Stage::action_bus_slot_map[byte]]->name());
+                inuse = true;
+                break; }
         if (inuse) continue;
         for (avail = 1; avail < bytes; avail++)
             if (tbl->stage->action_bus_use[Stage::action_bus_slot_map[i+avail]])
@@ -194,7 +273,14 @@ static int find_free(Table *tbl, int min, int max, int step, int bytes) {
     return -1;
 }
 
-int ActionBus::find_merge(int offset, int bytes, int use) {
+/**
+ * find_merge -- find any adjacent/overlapping data on the action input bus that means the
+ * data at 'offset' actually already on the action output bus
+ *   offset     offset (in bits) on the action input bus of the data we're interested in
+ *   bytes      how many bytes of data on the action input bus
+ *   use        bitmask of the sizes of phv that need to access this on the action output bus
+ */
+int ActionBus::find_merge(Table *tbl, int offset, int bytes, int use) {
     LOG4("find_merge(" << offset << ", " << bytes << ", " << use << ")");
     for (auto &alloc : by_byte) {
         if (use & 1) {
@@ -202,16 +288,12 @@ int ActionBus::find_merge(int offset, int bytes, int use) {
         } else if (use & 2) {
             if (alloc.first < 32) continue;
             if (alloc.first >= 96) break; }
-        int slot = Stage::action_bus_slot_map[alloc.first];
-        int slotsize = Stage::action_bus_slot_size[slot];
-        int slotbyte = alloc.first & ~(slotsize/8U - 1);
-        for (auto &d : alloc.second.data) {
-            int slotoffset = d.second;
-            if (d.first.type == Source::Field)
-                slotoffset = d.first.field->bit(d.second);
-            slotoffset &= ~(slotsize - 1);
-            if (offset >= slotoffset && offset + bytes*8 <= slotoffset + slotsize)
-                return slotbyte + (offset - slotoffset)/8U; } }
+        int inbyte = alloc.second.lo(tbl) / 8U;
+        int align = action_hv_slice_group_align.at(alloc.first/16U).at(inbyte%16U);
+        int outbyte = alloc.first & ~(align-1);
+        inbyte &= ~(align-1);
+        if (offset >= inbyte*8 && offset + bytes*8 <= (inbyte + align)*8)
+            return outbyte + offset/8 - inbyte; }
     return -1;
 }
 
@@ -220,6 +302,12 @@ void ActionBus::do_alloc(Table *tbl, Source src, unsigned use, int lobyte,
     auto name = src.toString(tbl);
     LOG2("putting " << name << '(' << offset << ".." << (offset + bytes*8 - 1) <<
          ")[" << (lobyte*8) << ".." << ((lobyte+bytes)*8 - 1) << "] at action_bus " << use);
+    unsigned hv_slice = use / ACTION_HV_XBAR_SLICE_SIZE;
+    auto &hv_groups = action_hv_slice_byte_groups.at(hv_slice);
+    for (unsigned byte = lobyte; byte < unsigned(lobyte+bytes); ++byte) {
+        if (action_hv_slice_use.size() <= byte/16)
+            action_hv_slice_use.resize(byte/16 + 1);
+        action_hv_slice_use.at(byte/16).at(hv_slice) |= hv_groups.at(byte%16); }
     while (bytes > 0) {
         int slot = Stage::action_bus_slot_map[use];
         int slotsize = Stage::action_bus_slot_size[slot];
@@ -237,6 +325,7 @@ static unsigned size_masks[8] = { 7, 7, 15, 15, 31, 31, 31, 31 };
 
 void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned sizes_needed) {
     LOG4("alloc_field(" << src << ", " << offset << ", " << sizes_needed << ")");
+    int lineno = this->lineno;
     bool is_action_data = dynamic_cast<ActionTable *>(tbl) != nullptr;
     int immed_offset = tbl->format && tbl->format->immed ? tbl->format->immed->bit(0) : 0;
     assert(immed_offset == 0 || !is_action_data);
@@ -244,6 +333,7 @@ void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned si
     if (src.type == Source::Field) {
         lo = (src.field->bit(offset) - immed_offset) % 128U;
         hi = src.field->bit(src.field->size) - 1 - immed_offset;
+        lineno = tbl->find_field_lineno(src.field);
     } else {
         lo = offset;
         hi = lo | size_masks[sizes_needed]; }
@@ -260,9 +350,12 @@ void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned si
             return; }
         unsigned start = (lo/8U) % step;
         if (!(sizes_needed & 4)) bytes = 1;
-        if ((use = find_merge(lo, bytes, 1)) >= 0 ||
-            (use = find_free(tbl, start, 31, step, bytes)) >= 0)
-            do_alloc(tbl, src, use, lo/8U, bytes, offset); }
+        if ((use = find_merge(tbl, lo, bytes, 1)) >= 0 ||
+            (use = find_free(tbl, start, 31, step, lo/8U, bytes)) >= 0)
+            do_alloc(tbl, src, use, lo/8U, bytes, offset);
+        else
+            error(lineno, "Can't allocate space on 8-bit part of action bus for %s",
+                  src.toString(tbl).c_str()); }
     step = lo < 64 ? 4 : 8;
     if (sizes_needed & 2) {
         /* need 16-bit */
@@ -271,29 +364,35 @@ void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned si
                 error(lineno, "%s not correctly aligned for 16-bit use "
                       "on action bus", src.toString(tbl).c_str());
                 return; }
-            if ((use = find_merge(lo, bytes, 2)) >= 0) {
+            if ((use = find_merge(tbl, lo, bytes, 2)) >= 0) {
                 do_alloc(tbl, src, use, lo/8U, bytes, offset);
                 return; } }
         if (!(sizes_needed & 4) && bytes > 2) bytes = 2;
         unsigned start = 32 + (lo/8U) % step;
-        if ((use = find_merge(lo, bytes, 2)) >= 0 ||
-            (use = find_free(tbl, start, 63, step, bytes)) >= 0 ||
-            (use = find_free(tbl, start+32, 95, 8, bytes)) >= 0)
-            do_alloc(tbl, src, use, lo/8U, bytes, offset); }
+        if ((use = find_merge(tbl, lo, bytes, 2)) >= 0 ||
+            (use = find_free(tbl, start, 63, step, lo/8U, bytes)) >= 0 ||
+            (use = find_free(tbl, start+32, 95, 8, lo/8U, bytes)) >= 0)
+            do_alloc(tbl, src, use, lo/8U, bytes, offset);
+        else
+            error(lineno, "Can't allocate space on 16-bit part of action bus for %s",
+                  src.toString(tbl).c_str()); }
     if (sizes_needed == 4) {
         /* need only 32-bit */
         unsigned odd = (lo/8U) & (4 & step);
         unsigned start = (lo/8U) % step;
         if (lo % 32U) {
-            if ((use = find_merge(lo, bytes, 4)) >= 0) {
+            if ((use = find_merge(tbl, lo, bytes, 4)) >= 0) {
                 do_alloc(tbl, src, use, lo/8U, bytes, 0);
                 return; } }
-        if ((use = find_merge(lo, bytes, 4)) >= 0 ||
-            (use = find_free(tbl, 96+start+odd, 127, 8, bytes)) >= 0 ||
-            (use = find_free(tbl, 64+start+odd, 95, 8, bytes)) >= 0 ||
-            (use = find_free(tbl, 32+start, 63, step, bytes)) >= 0 ||
-            (use = find_free(tbl, 0+start, 31, step, bytes)) >= 0)
-            do_alloc(tbl, src, use, lo/8U, bytes, offset); }
+        if ((use = find_merge(tbl, lo, bytes, 4)) >= 0 ||
+            (use = find_free(tbl, 96+start+odd, 127, 8, lo/8U, bytes)) >= 0 ||
+            (use = find_free(tbl, 64+start+odd, 95, 8, lo/8U, bytes)) >= 0 ||
+            (use = find_free(tbl, 32+start, 63, step, lo/8U, bytes)) >= 0 ||
+            (use = find_free(tbl, 0+start, 31, step, lo/8U, bytes)) >= 0)
+            do_alloc(tbl, src, use, lo/8U, bytes, offset);
+        else
+            error(lineno, "Can't allocate space on action bus for %s",
+                  src.toString(tbl).c_str()); }
 }
 
 

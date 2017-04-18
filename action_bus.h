@@ -30,13 +30,21 @@ class ActionBus {
         Slot(std::string n, unsigned b, unsigned s) : name(n), byte(b), size(s) {}
         Slot(std::string n, unsigned b, unsigned s, Source src, unsigned off)
         : name(n), byte(b), size(s) { data.emplace(src, off); }
+        unsigned lo(Table *tbl) const;  // low bit on the action data bus
     };
     std::map<unsigned, Slot>                        by_byte;
     std::map<Source, std::map<unsigned, unsigned>>  need_place;
     // bytes from the given sources are needed on the action bus -- the pairs in the map
     // are (offset,use) where offset is offset in bits, and use is a bitset of the needed
     // uses (bit index == log2 of the access size in bytes)
-    int find_merge(int offset, int bytes, int use);
+
+    std::vector<std::array<unsigned, ACTION_HV_XBAR_SLICES>>    action_hv_slice_use;
+    // which bytes of input to the ixbar are used in each action_hv_xbar slice, for each
+    // 128-bit slice of the action bus.
+    bitvec      byte_use;  // bytes on the action data bus or immediate bus in use
+
+    int find_free(Table *tbl, int min, int max, int step, int lobyte, int bytes);
+    int find_merge(Table *tbl, int offset, int bytes, int use);
 public:
     int             lineno;
     ActionBus() : lineno(-1) {}

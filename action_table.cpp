@@ -15,6 +15,14 @@ std::string ActionTable::find_field(Table::Format::Field *field) {
     return Table::find_field(field);
 }
 
+int ActionTable::find_field_lineno(Table::Format::Field *field) {
+    int rv = -1;
+    for (auto &af : action_formats)
+        if ((rv = af.second->find_field_lineno(field)) >= 0)
+            return rv;
+    return Table::find_field_lineno(field);
+}
+
 Table::Format::Field *ActionTable::lookup_field(const std::string &name, const std::string &action)
 {
     if (action == "*" || action == "") {
