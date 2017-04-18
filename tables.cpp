@@ -543,10 +543,10 @@ static void overlap_test(int lineno,
 }
 
 static void append_bits(std::vector<Table::Format::bitrange_t> &vec, int lo, int hi) {
-    /* split any chunks that cross a word (128-bit) boundary */
-    while (lo < hi && lo/128U != hi/128U) {
-        vec.emplace_back(lo, lo | 127);
-        lo = (lo | 127) + 1; }
+    /* split any chunks that cross a 1/2 word (64-bit) boundary */
+    while (lo < hi && lo/64U != hi/64U) {
+        vec.emplace_back(lo, lo | 63);
+        lo = (lo | 63) + 1; }
     vec.emplace_back(lo, hi);
 }
 
