@@ -7,7 +7,6 @@
 #include "ir/ir.h"
 #include "tofino/mau/table_layout.h"
 
-class PhvInfo;
 class IXBarRealign;
 struct TableResourceAlloc;
 

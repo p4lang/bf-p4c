@@ -88,11 +88,13 @@ struct TableFormat {
     bool balanced = true;
     int ghost_bits_count = 0;
     bool next_table = false;
+    const bitvec immediate_mask;
     bitvec ghost_start;
 
  public:
-    TableFormat(const LayoutOption &l, const IXBar::Use &mi, const IR::MAU::Table *t)
-        : layout_option(l), match_ixbar(mi), tbl(t) {}
+    TableFormat(const LayoutOption &l, const IXBar::Use &mi, const IR::MAU::Table *t,
+                const bitvec im)
+        : layout_option(l), match_ixbar(mi), tbl(t), immediate_mask(im) {}
     bool find_format(Use *u);
     bool analyze_layout_option();
     bool analyze_skinny_layout_option(int per_RAM, vector<std::pair<int, int>> &sizes);
@@ -100,7 +102,7 @@ struct TableFormat {
     bool allocate_next_table();
     bool allocate_indirect_ptr(int total, type_t type, int group, int RAM);
     bool allocate_all_indirect_ptrs();
-    bool allocate_all_immediate(bool no_match);
+    bool allocate_all_immediate();
     bool allocate_all_instr_selection();
     bool allocate_all_match();
     void determine_byte_types(bitvec &unaligned_bytes, bitvec &chosen_ghost_bytes);

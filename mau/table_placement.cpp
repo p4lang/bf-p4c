@@ -271,9 +271,10 @@ TablePlacement::Placed *TablePlacement::Placed::gateway_merge() {
 }
 
 static bool try_alloc_format(TablePlacement::Placed *next, TableResourceAlloc *resources,
-                             StageUseEstimate &sue) {
+                             StageUseEstimate &sue, const bitvec immediate_mask) {
      resources->table_format.clear();
-     TableFormat current_format(*sue.preferred(), resources->match_ixbar, next->table);
+     TableFormat current_format(*sue.preferred(), resources->match_ixbar, next->table,
+                                immediate_mask);
 
      if (!current_format.find_format(&resources->table_format)) {
          resources->table_format.clear();
@@ -316,7 +317,8 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
         resources->selector_ixbar.clear();
         return false; }
 
-    if (!is_gw && !try_alloc_format(next, resources, sue)) {
+    const bitvec immediate_mask = lc.get_action_format(next->table).immediate_mask;
+    if (!is_gw && !try_alloc_format(next, resources, sue, immediate_mask)) {
         resources->match_ixbar.clear();
         resources->gateway_ixbar.clear();
         resources->selector_ixbar.clear();
@@ -419,6 +421,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(const IR::MAU::Table *t,
                  deps->happens_before(p->table, rv->table)) {
              rv->stage++; } }
     assert(!rv->placed[tblInfo.at(rv->table).uid]);
+    resources->action_format = lc.get_action_format(t);
     const vector<LayoutOption> layout_options = lc.get_layout_options(t);
     StageUseEstimate min_use(t, min_entries, prev_placed, has_action_data, layout_options);
     StageUseEstimate stage_current = current;

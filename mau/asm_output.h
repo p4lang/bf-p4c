@@ -25,8 +25,8 @@ class MauAsmOutput : public MauInspector {
         return true; }
     friend std::ostream &operator<<(std::ostream &, const MauAsmOutput &);
     class TableMatch;
-    class ImmedFormat;
-    class ActionDataFormat;
+    // class ImmedFormat;
+    // class ActionDataFormat;
     void emit_ixbar(std::ostream &out, indent_t, const IXBar::Use &,
             const Memories::Use *, const TableMatch *, bool hash_action,
             bool is_sel = false, const IR::ActionSelector *as = nullptr) const;
@@ -55,6 +55,10 @@ class MauAsmOutput : public MauInspector {
     void find_indirect_index(std::ostream &out, const IR::MAU::Table *tbl,
             const IR::Attached *at) const;
     void emit_table_indir(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
+    void emit_action_data_format(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
+            const IR::ActionFunction *af) const;
+    void emit_immediate_format(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
+            const IR::ActionFunction *af) const;
     class EmitAction;
     class EmitAttached;
     class UnattachedName;

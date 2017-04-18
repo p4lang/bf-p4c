@@ -49,6 +49,7 @@ noinst_HEADERS += \
 cpplint_FILES += $(tofino_backend_common_UNIFIED) $(tofino_backend_common_NONUNIFIED)
 
 tofino_backend_mau_UNIFIED = \
+	%reldir%/mau/action_format.cpp \
 	%reldir%/mau/asm_output.cpp \
 	%reldir%/mau/field_use.cpp \
 	%reldir%/mau/db-gateway.cpp \
@@ -69,6 +70,7 @@ tofino_backend_mau_UNIFIED = \
 	%reldir%/mau/table_summary.cpp
 
 noinst_HEADERS += \
+	%reldir%/mau/action_format.h \
 	%reldir%/mau/asm_output.h \
 	%reldir%/mau/default_next.h \
 	%reldir%/mau/field_use.h \

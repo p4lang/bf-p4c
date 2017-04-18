@@ -137,6 +137,7 @@ bool TableFormat::find_format(Use *u) {
     use = u;
     LOG3("Find format for table " << tbl->name);
     if (layout_option.layout.ternary) {
+        LOG3("Ternary table?");
         overhead_groups_per_RAM.push_back(1);
         use->match_groups.emplace_back();
         if (!layout_option.layout.ternary_indirect_required())
@@ -145,7 +146,7 @@ bool TableFormat::find_format(Use *u) {
             return false;
         if (!allocate_all_indirect_ptrs())
             return false;
-        if (!allocate_all_immediate(false))
+        if (!allocate_all_immediate())
             return false;
         if (!allocate_all_instr_selection())
             return false;
@@ -154,8 +155,9 @@ bool TableFormat::find_format(Use *u) {
 
     if (layout_option.layout.no_match_data()) {
         overhead_groups_per_RAM.push_back(1);
+        LOG3("No match table");
         use->match_groups.emplace_back();
-        if (!allocate_all_immediate(true))
+        if (!allocate_all_immediate())
             return false;
         return true;
     }
@@ -169,7 +171,7 @@ bool TableFormat::find_format(Use *u) {
     if (!allocate_all_indirect_ptrs())
         return false;
     LOG3("Indirect Pointers");
-    if (!allocate_all_immediate(false))
+    if (!allocate_all_immediate())
         return false;
     LOG3("Immediate");
     if (!allocate_all_instr_selection())
@@ -182,6 +184,7 @@ bool TableFormat::find_format(Use *u) {
         return false;
     LOG3("Version");
     verify();
+    LOG3("Everything is verified?");
     return true;
 }
 
@@ -261,54 +264,25 @@ bool TableFormat::allocate_all_indirect_ptrs() {
 /* Algorithm to find space for the immediate data.  Immediate information may have gaps, i.e. a 9
    bit field has 7 free bits which can potentially be allocated into.  Thus the spaces
    are left open for space to be filled by either instr selection or match bytes */
-bool TableFormat::allocate_all_immediate(bool no_match) {
+bool TableFormat::allocate_all_immediate() {
     if (layout_option.layout.action_data_bytes_in_overhead == 0)
         return true;
-
-    // Determine the spaces within the immediate format.  Must be the same for each entry
     int max_size = 0;
-    bitvec immediate_mask;
-    for (auto action : Values(tbl->actions)) {
-        vector<int> arg_sizes;
-        arg_sizes.clear();
-        for (auto arg : action->args) {
-            arg_sizes.push_back(arg->type->width_bits());
-        }
-        std::sort(arg_sizes.begin(), arg_sizes.end(), [=](const int &a, const int &b) {
-            return a > b;
-        });
-
-        int total_required = 0;
-        for (size_t i = 0; i < arg_sizes.size(); i++) {
-            immediate_mask.setrange(total_required, arg_sizes[i]);
-            if (i == arg_sizes.size() - 1)
-                total_required += arg_sizes[i];
-            else
-                total_required += (arg_sizes[i] + 7U) / 8U * 8;
-        }
-
-        if (max_size < total_required)
-            max_size = total_required;
-    }
-
-    // For asm generation, there can be no gaps in immediate mask for action only tables
-    if (no_match) {
-        immediate_mask.setrange(0, immediate_mask.max());
-    }
-
     use->immed_mask = immediate_mask;
 
     // Allocate the immediate mask for each overhead section
     int group = 0;
     for (size_t i = 0; i < overhead_groups_per_RAM.size(); i++) {
-        size_t start = total_use.ffz(i * SINGLE_RAM_BITS);
+        size_t end = i * SINGLE_RAM_BITS;
         for (int j = 0; j < overhead_groups_per_RAM[i]; j++) {
+            size_t start = total_use.ffz(end);
             int shift = start + j * max_size;
             bitvec immediate_shift = immediate_mask << shift;
             if (start + max_size >= OVERHEAD_BITS + i * SINGLE_RAM_BITS)
                 return false;
             total_use |= immediate_shift;
             use->match_groups[group].mask[IMMEDIATE] |= immediate_shift;
+            end = immediate_shift.max().index();
             group++;
         }
     }
@@ -630,7 +604,6 @@ void TableFormat::determine_byte_types(bitvec &unaligned_bytes, bitvec &chosen_g
                                    overhead_groups_per_RAM.end())
                       - overhead_groups_per_RAM.begin();
     int ghosted_group = ixbar_group_per_width[o_index];
-
     int unaligned_bits = 0;
     for (auto byte : single_match) {
         if (byte.loc.group != ghosted_group) continue;

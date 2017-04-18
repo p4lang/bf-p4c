@@ -83,7 +83,9 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
                         if (bits.lo > sl.field_bit)
                             cbits.lo += bits.lo - sl.field_bit;
                         assert(cbits.hi >= cbits.lo);
-                        bytes += cbits.hi/8U + 1 - cbits.lo/8U; } }
+                        bytes += cbits.hi/8U + 1 - cbits.lo/8U;
+                    }
+                }
                 layout.match_bytes += bytes;
                 layout.match_width_bits += bits.size();
                 if (!layout.ternary)
@@ -118,14 +120,22 @@ void TableLayout::setup_gateway_layout(IR::MAU::Table::Layout &layout, IR::MAU::
     // should count gw tcam width and depth to support gw splitting when needed
 }
 
-static void setup_action_layout(IR::MAU::Table *tbl) {
+static void setup_action_layout(IR::MAU::Table *tbl, LayoutChoices &lc, const PhvInfo &phv,
+                                bool alloc_done) {
     tbl->layout.action_data_bytes = 0;
+    /*
     for (auto action : Values(tbl->actions)) {
         int action_data_bytes = 0;
         for (auto arg : action->args)
             action_data_bytes += (arg->type->width_bits() + 7) / 8U;
         if (action_data_bytes > tbl->layout.action_data_bytes)
             tbl->layout.action_data_bytes = action_data_bytes; }
+    */
+    ActionFormat::Use af_use;
+    ActionFormat af(tbl, phv, alloc_done);
+    af.allocate_format(&af_use);
+    tbl->layout.action_data_bytes = af_use.action_data_bytes;
+    lc.total_action_formats[tbl->name] = af_use;
 }
 
 static void setup_hash_dist(IR::MAU::Table *tbl, const PhvInfo &phv, LayoutChoices &lc) {
@@ -288,7 +298,7 @@ bool TableLayout::preorder(IR::MAU::Table *tbl) {
         setup_match_layout(tbl->layout, tbl);
     if ((tbl->layout.gateway = tbl->uses_gateway()))
         setup_gateway_layout(tbl->layout, tbl);
-    setup_action_layout(tbl);
+    setup_action_layout(tbl, lc, phv, alloc_done);
     setup_hash_dist(tbl, phv, lc);
     VisitAttached attached(&tbl->layout);
     for (auto at : tbl->attached)

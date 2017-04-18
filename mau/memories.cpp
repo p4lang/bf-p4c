@@ -1995,12 +1995,10 @@ bool Memories::allocate_all_payload_gw() {
     size_t action_payload_index = 0;
     for (auto *ta : action_payload_gws) {
         bool found = false;
-        bool linked = false;
         auto name = ta->table->get_use_name(nullptr, true);
         cstring link_name;
         if (ta->table_link != nullptr) {
             name = ta->table_link->table->get_use_name(nullptr, true);
-            linked = true;
             link_name = ta->table_link->table->get_use_name();
         }
         auto &alloc = (*ta->memuse)[name];
@@ -2203,7 +2201,6 @@ void Memories::allocate_one_no_match(table_alloc *ta, int row, int col, bool has
 bool Memories::allocate_all_no_match() {
     size_t finished_tables = 0;
     for (auto ta : no_match_tables) {
-        bool allocated = false;
         for (int i = 0; i < SRAM_ROWS; i++) {
             unsigned columns_available = ~sram_inuse[i] & 0x3ff;
             if (__builtin_popcount(columns_available) == 0) continue;
@@ -2211,7 +2208,6 @@ bool Memories::allocate_all_no_match() {
                 continue;
             allocate_one_no_match(ta, i, 0, false);
             finished_tables++;
-            allocated = true;
             break;
         }
     }

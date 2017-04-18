@@ -2,7 +2,7 @@
 #define _TOFINO_MAU_TABLE_LAYOUT_H_
 
 #include "mau_visitor.h"
-class PhvInfo;
+#include "action_format.h"
 
 class HashDistReq {
     bool required = false;
@@ -45,6 +45,7 @@ class LayoutChoices {
  public:
     ordered_map<cstring, vector<LayoutOption>> total_layout_options;
     ordered_map<cstring, vector<HashDistReq>> total_hash_dist_reqs;
+    ordered_map<cstring, ActionFormat::Use> total_action_formats;
     vector<HashDistReq> get_hash_dist_req(const IR::MAU::Table *t) const {
         vector<HashDistReq> empty;
         if (t == nullptr)
@@ -62,9 +63,20 @@ class LayoutChoices {
             return empty;
         return total_layout_options.at(t->name);
     }
+
+    ActionFormat::Use get_action_format(const IR::MAU::Table *t) const {
+        ActionFormat::Use use;
+        if (t == nullptr)
+            return use;
+        else if (total_action_formats.find(t->name) == total_action_formats.end())
+            return use;
+        return total_action_formats.at(t->name);
+    }
+
     void clear() {
         total_layout_options.clear();
         total_hash_dist_reqs.clear();
+        total_action_formats.clear();
     }
 };
 
