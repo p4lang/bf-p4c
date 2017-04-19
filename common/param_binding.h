@@ -24,18 +24,9 @@ class ParamBinding : public Transform {
 };
 
 class SplitComplexInstanceRef : public Transform {
-    const IR::Node *preorder(IR::Primitive *prim) override {
-        if (prim->operands.size() == 0) return prim;
-        auto dest = prim->operands[0]->to<IR::InstanceRef>();
-        if (!dest || dest->nested.empty()) return prim;
-        auto *rv = new IR::Vector<IR::Expression>;
-        for (auto nest : dest->nested) {
-            auto *split = prim->clone();
-            for (auto &op : split->operands)
-                if (auto ir = op->to<IR::InstanceRef>())
-                    op = ir->nested.at(nest.first);
-            rv->push_back(split); }
-        return rv; }
+    profile_t init_apply(const IR::Node *root) override {
+        return Transform::init_apply(root); }
+    const IR::Node *preorder(IR::MethodCallStatement *prim) override;
 };
 
 class RemoveInstanceRef : public Transform {

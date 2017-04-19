@@ -43,3 +43,41 @@ const IR::Expression *ParamBinding::postorder(IR::Member *mem) {
         LOG3("not collapsing " << mem << " (not an iref)"); }
     return mem;
 }
+
+/**
+ * Split extern method calls that refer to a complex objects (non-header structs or stacks)
+ * such calls need to be split to refer to each field or element of the stack.
+ * These are (currently) just 'extract' and 'emit' methods.  They need to be split to
+ * only extract a single header at a time.
+ * We do this as a perorder function so after splitting, we'll recursively visit the split
+ * children, splitting further as needed.
+ */
+const IR::Node *SplitComplexInstanceRef::preorder(IR::MethodCallStatement *mc) {
+    if (mc->methodCall->arguments->size() == 0) return mc;
+    auto dest = mc->methodCall->arguments->at(0)->to<IR::InstanceRef>();
+    if (!dest) return mc;
+    if (auto hs = dest->obj->to<IR::HeaderStack>()) {
+        auto *rv = new IR::Vector<IR::StatOrDecl>;
+        for (int idx = 0; idx < hs->size; ++idx) {
+            auto *split = mc->methodCall->clone();
+            auto *args = split->arguments->clone();
+            split->arguments = args;
+            for (auto &op : *args)
+                if (auto ir = op->to<IR::InstanceRef>())
+                    if (ir->obj == hs)
+                        op = new IR::HeaderStackItemRef(ir, new IR::Constant(idx));
+            rv->push_back(new IR::MethodCallStatement(mc->srcInfo, split)); }
+        return rv;
+    } else if (!dest->nested.empty()) {
+        auto *rv = new IR::Vector<IR::StatOrDecl>;
+        for (auto nest : dest->nested) {
+            auto *split = mc->methodCall->clone();
+            auto *args = split->arguments->clone();
+            split->arguments = args;
+            for (auto &op : *args)
+                if (auto ir = op->to<IR::InstanceRef>())
+                    op = ir->nested.at(nest.first);
+            rv->push_back(new IR::MethodCallStatement(mc->srcInfo, split)); }
+        return rv; }
+    return mc;
+}

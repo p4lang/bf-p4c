@@ -496,11 +496,16 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program, Tofino_Opt
     deparser = deparser->apply(fixups);
 
     auto parserInfo = Tofino::extractParser(&parser->as<IR::P4Parser>());
-    if (auto in = rv->thread[INGRESS].parser = parserInfo.parser(INGRESS))
-        rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, in);
-    if (auto eg = rv->thread[EGRESS].parser = parserInfo.parser(EGRESS))
-        rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, eg);
-    // FIXME -- use the deparser rather than always inferring it from the parser
+    auto in_parser = rv->thread[INGRESS].parser = parserInfo.parser(INGRESS);
+    if (deparser)
+        rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, deparser);
+    else if (in_parser)
+        rv->thread[INGRESS].deparser = new IR::Tofino::Deparser(INGRESS, in_parser);
+    auto eg_parser = rv->thread[EGRESS].parser = parserInfo.parser(EGRESS);
+    if (deparser)
+        rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, deparser);
+    else if (eg_parser)
+        rv->thread[EGRESS].deparser = new IR::Tofino::Deparser(EGRESS, eg_parser);
 
     // ingress = ingress->apply(InlineControlFlow(blockMap));
     ingress->apply(GetTofinoTables(&refMap, &typeMap, INGRESS, rv));

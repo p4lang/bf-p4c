@@ -63,6 +63,7 @@ class Deparser : Unit {
     inline NameMap<Digest>              digests;
 #noconstructor
     Deparser(gress_t gr, Parser s);
+    Deparser(gress_t gr, P4Control dp);
     int stage() const override { return 999999; /* assumed larger than the number of stages */ }
     gress_t thread() const override { return gress; }
 #apply
