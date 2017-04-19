@@ -30,11 +30,9 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
         LOG1("***************Cluster_PHV_Requirements called w/ 0 clusters***************");
     }
     //
-    int cluster_num = 0;
     for (auto &set_of_fields : Values(cluster_i.dst_map())) {
-        Cluster_PHV *m = new Cluster_PHV(set_of_fields, cluster_num, "phv_");
+        Cluster_PHV *m = new Cluster_PHV(set_of_fields, "phv");
         Cluster_PHV_i.push_back(m);
-        cluster_num++;
     }
     //
     // cluster PHV requirement = [qty, width]
@@ -93,8 +91,7 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
     // sort based on width requirement, greatest width first
     //
     for (auto p : cluster_i.pov_fields_not_in_cluster()) {
-        pov_fields_i.push_back(new Cluster_PHV(p, cluster_num, "pov_"));
-        cluster_num++;
+        pov_fields_i.push_back(new Cluster_PHV(p, "pov"));
     }
     std::sort(pov_fields_i.begin(), pov_fields_i.end(),
         [](Cluster_PHV *l, Cluster_PHV *r) {
@@ -119,8 +116,7 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
     // sort based on width requirement, greatest width first
     //
     for (auto p : cluster_i.fields_no_use_mau()) {
-        t_phv_fields_i.push_back(new Cluster_PHV(p, cluster_num, "t_phv_"));
-        cluster_num++;
+        t_phv_fields_i.push_back(new Cluster_PHV(p, "t_phv"));
     }
     std::sort(t_phv_fields_i.begin(), t_phv_fields_i.end(),
         [](Cluster_PHV *l, Cluster_PHV *r) {
@@ -160,19 +156,19 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
 
 Cluster_PHV::Cluster_PHV(
     ordered_set<const PhvInfo::Field *> *p,
-    const int id_n,
-    std::string id_p)
-    : cluster_vec_i(p->begin(), p->end()),
-      id_num_i(id_n) {
+    std::string id_s)
+    : cluster_vec_i(p->begin(), p->end()) {
     //
     if (!p) {
         LOG1("*****Cluster_PHV called w/ nullptr cluster_set******");
     }
+    //
     // set string id for cluster
     //
+    id_num_i = cluster_id_g++;
     std::stringstream ss;
-    ss << id_n;
-    id_i = id_p + ss.str();
+    ss << id_num_i;
+    id_i = id_s + "_" + ss.str();
     //
     // set gress for this cluster
     // ignore gress of temp vars ($tmp1, $tmp2, ....)
@@ -180,6 +176,7 @@ Cluster_PHV::Cluster_PHV(
     //
     gress_i = PHV_Container::Ingress_Egress::Ingress_Or_Egress;
     for (auto &f : cluster_vec_i) {
+        // $tmp gress comes preset
         if (strncmp(f->name, "$tmp", strlen("$tmp")) == 0) {
             continue;
         } else {
@@ -189,8 +186,8 @@ Cluster_PHV::Cluster_PHV(
                 assert(gress_i == PHV_Container::gress(f));
             }
         }
-        // set cluster id in field
-        const_cast<PhvInfo::Field *>(f)->cl(id_i);
+        // set field's cluster pointer
+        const_cast<PhvInfo::Field *>(f)->cluster(this);
     }
     //
     compute_requirements();
@@ -258,6 +255,10 @@ Cluster_PHV::compute_requirements() {
     std::sort(cluster_vec_i.begin(),
               cluster_vec_i.end(),
               [](const PhvInfo::Field *l, const PhvInfo::Field *r) {
+                  if (l->phv_use_width() == r->phv_use_width()) {
+                      // sort by cluster id_num to prevent non-determinism
+                      return l->id < r->id;
+                  }
                   return l->phv_use_width() > r->phv_use_width(); });
     //
     // max width of field in cluster, computed after sorting cluster fields

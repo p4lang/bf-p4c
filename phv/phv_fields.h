@@ -14,6 +14,7 @@ namespace PHV {
 class TrivialAlloc;
 }  // end namespace PHV
 
+class  Cluster_PHV;    // forward declaration Cluster_PHV
 class  PHV_Container;  // forward declaration PHV_Container
 
 class PhvInfo : public Inspector {
@@ -62,10 +63,14 @@ class PhvInfo : public Inspector {
         bool            simple_header_pov_ccgf = false;  // simple header ccgf
                                                          // has members in ccgf_fields
         //
+        Cluster_PHV *cluster_i = 0;        // pointer to Cluster
         std::string cl_i = "??";           // cluster id, field belongs to this cluster
+                                           // this id is modified during cluster_phv_interference
+                                           // to keep trail of cluster ids
+                                           // therefore can differ with cluster_i->id()
         std::vector<const PHV_Container *> phv_containers_i;  // field in one or more containers
         //
-        Field           *ccgf = 0;         // container contiguous group fields
+        Field *ccgf = 0;                   // container contiguous group fields
                                            // used for
                                            // (i) header stack povs: container FULL, no holes
                                            // (ii) sub-byte header fields: container may be PARTIAL
@@ -83,7 +88,8 @@ class PhvInfo : public Inspector {
                                            // member pov fields of header stk pov
                                            // these members are in same container as header stk pov
         //
-        ordered_map<int, ordered_set<const PhvInfo::Field *> *> field_overlay_map_i;
+        Field *overlay_substratum_i = 0;   // substratum field on which this field overlayed
+        ordered_map<int, ordered_set<const Field *> *> field_overlay_map_i;
                                            // liveness / interference graph related
                                            // fields (within cluster) overlay map
                                            // F = <c1,c2> adjacent containers based on F width
@@ -91,23 +97,57 @@ class PhvInfo : public Inspector {
                                            // F[1] = c2
                                            // F<c1,c2> -- [0] -- B<c1>, A<c1>
                                            //          -- [1] -- B<c2>, D<c2>, E<c2>
-        ordered_map<int, ordered_set<const PhvInfo::Field *> *>&
+        Field *overlay_substratum()        { return overlay_substratum_i; }
+        void overlay_substratum(Field *f) {
+            assert(f);
+            overlay_substratum_i = f;
+        }
+        ordered_map<int, ordered_set<const Field *> *>&
             field_overlay_map()            { return field_overlay_map_i; }
-        void field_overlay_map(int r, const PhvInfo::Field *field) {
+        void field_overlay_map(int r, const Field *field) {
             assert(r >= 0);
             assert(field);
             if (!field_overlay_map_i[r]) {
-                field_overlay_map_i[r] = new ordered_set<const PhvInfo::Field *>;
+                field_overlay_map_i[r] = new ordered_set<const Field *>;
             }
             field_overlay_map_i[r]->insert(field);
+            //
+            // overlayed field points to substratum
+            //
+            Field *f1 = const_cast<Field *>(field);
+            f1->overlay_substratum(this);
+            for (auto &m : f1->ccgf_fields) {
+                m->overlay_substratum(this);
+            }
         }
+        void field_overlays(std::list<const Field *>& fields_list) {
+            // fields_list accumulates all overlay fields of this field, including this field
+            fields_list.clear();
+            fields_list.push_back(this);
+            if (field_overlay_map_i.size()) {
+                for (auto *f_set : Values(field_overlay_map_i)) {
+                    fields_list.insert(fields_list.end(), f_set->begin(), f_set->end());
+                }
+            }
+        }
+        void field_overlay(Field *overlay) {
+            // add overlay to substratum's owner field map of overlays
+            // to make phv_interference->mutually_exclusive() computation updated & accurate
+            assert(overlay);
+            overlay->overlay_substratum(overlay_substratum_i? overlay_substratum_i: this);
+            overlay->overlay_substratum()->field_overlay_map(0, overlay);
+        }
+        //
         int phv_use_width() const          { return phv_use_hi - phv_use_lo + 1; }
                                            // width of field needed in phv container
         void phv_use_width(bool ccgf, int min_ceil = 0);
                                            // set phv_use_width for ccgf owners
+        Cluster_PHV *cluster()             { return cluster_i; }
+        void cluster(Cluster_PHV *cluster_p);
         std::string& cl()                  { return cl_i; }
         void cl(std::string cl_p)          {
             cl_i = cl_p;
+            // also sets cl_i for member fields
             for (auto &m : ccgf_fields) {
                 if (m != this) {
                     m->cl(cl_p);
@@ -247,7 +287,7 @@ std::ostream &operator<<(std::ostream &, const PhvInfo::Field::alloc_slice &);
 std::ostream &operator<<(std::ostream &, vector<PhvInfo::Field::alloc_slice> &);
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field &);
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field *);
-std::ostream &operator<<(std::ostream &, std::set<const PhvInfo::Field *>&);
+std::ostream &operator<<(std::ostream &, ordered_set<const PhvInfo::Field *>&);
 std::ostream &operator<<(std::ostream &, std::list<const PhvInfo::Field *>&);
 std::ostream &operator<<(std::ostream &, const PhvInfo &);
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field_Ops &);

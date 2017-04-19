@@ -35,7 +35,8 @@ class PHV_Bind : public Visitor {
     PHV_MAU_Group_Assignments &phv_mau_i;           // PHV MAU Group Assignments
     Cluster::Uses *uses_i;                          // field uses mau, I, E
     std::list<const PHV_Container *> containers_i;  // all filled containers
-    ordered_set<const PhvInfo::Field *> fields_i;   // all fields to be finally bound
+    std::list<const PhvInfo::Field *> allocated_fields_i;
+                                                    // allocated fields to be finally bound
     std::list<const PhvInfo::Field *> fields_overflow_i;
                                                     // overflow fields =  All - PHV_Bind fields
     ordered_map<const PHV_Container*, PHV::Container *> phv_to_asm_map_i;
@@ -53,7 +54,7 @@ class PHV_Bind : public Visitor {
                                                     // i.e., after Cluser Uses computation
     //
     std::list<const PHV_Container *> containers()         { return containers_i; }
-    ordered_set<const PhvInfo::Field *>& fields()         { return fields_i; }
+    std::list<const PhvInfo::Field *>& allocated_fields() { return allocated_fields_i; }
     std::list<const PhvInfo::Field *>& fields_overflow()  { return fields_overflow_i; }
     //
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;

@@ -428,16 +428,14 @@ void Cluster::compute_fields_no_use_mau() {
     pov_fields_not_in_cluster_i.clear();
     fields_no_use_mau_i.clear();
     //
-    std::set<const PhvInfo::Field *> s1;                               // all fields in phv_i
-    std::set<const PhvInfo::Field *> s2;                               // cluster fields
-    std::set<const PhvInfo::Field *> s3;                               // all fields-cluster fields
-                                                                       // s3 = s1 - s2
-    std::set<const PhvInfo::Field *> s4;                               // pov fields
-    std::set<const PhvInfo::Field *> s5;                               // fields not used in MAU
-                                                                       // s5 = s1 - s2 - s4
-    pov_fields_i.clear();
+    ordered_set<const PhvInfo::Field *> all_fields;                    // all fields in phv_i
+    ordered_set<const PhvInfo::Field *> cluster_fields;                // cluster fields
+    ordered_set<const PhvInfo::Field *> all_minus_cluster;             // all - cluster fields
+    ordered_set<const PhvInfo::Field *> pov_fields;                    // pov fields
+    ordered_set<const PhvInfo::Field *> not_used_mau;                  // fields not used in MAU
+                                                                       // all - cluster - pov_fields
     for (auto &field : phv_i) {
-        s1.insert(&field);
+        all_fields.insert(&field);
         //
         // avoid duplicate allocation for povs that are
         // members of owners that represent header_stack_pov_ccgf
@@ -451,14 +449,14 @@ void Cluster::compute_fields_no_use_mau() {
               && !field.ccgf->header_stack_pov_ccgf
               && !field.ccgf->simple_header_pov_ccgf))) {
             //
-            s4.insert(&field);                                         // pov field
+            pov_fields.insert(&field);                                 // pov field
         }
         // pov owners not part of MAU cluster, must be added to pov_fields
         //
         if (field.pov
            && (&field == field.ccgf && !dst_map_i.count(field.ccgf))) {
             //
-            s4.insert(&field);                                         // pov field
+            pov_fields.insert(&field);                                 // pov field
         }
         //
         // compute ccgf width
@@ -473,58 +471,57 @@ void Cluster::compute_fields_no_use_mau() {
             field.deparser_no_holes = true;
         }
     }
-    pov_fields_i.assign(s4.begin(), s4.end());                         // pov_fields_i
-    LOG3(std::endl << "..........All fields (" << s1.size() << ")..........");
+    pov_fields_i.assign(pov_fields.begin(), pov_fields.end());         // pov_fields_i
+    LOG3(std::endl << "..........All fields (" << all_fields.size() << ")..........");
     for (auto &entry : dst_map_i) {
         if (entry.second) {
-            s2.insert(entry.first);
+            cluster_fields.insert(entry.first);
             for (auto entry_2 : *(entry.second)) {
-                s2.insert(entry_2);
+                cluster_fields.insert(entry_2);
                 if (entry_2->ccgf_fields.size()) {
                     for (auto &member : entry_2->ccgf_fields) {
-                        s2.insert(member);
+                        cluster_fields.insert(member);
                     }
                 }
             }
         }
     }
     //
-    LOG3("..........Cluster fields (" << s2.size() << ")..........");
+    LOG3("..........Cluster fields (" << cluster_fields.size() << ")..........");
     LOG3("..........POV fields (" << pov_fields_i.size() << ")..........");
     //
-    // s3 = all fields (s1) - cluster fields (s2)
+    // all_minus_cluster = all_fields - cluster_fields
     //
-    set_difference(s1.begin(), s1.end(), s2.begin(), s2.end(), std::inserter(s3, s3.end()));
+    all_minus_cluster = all_fields;
+    all_minus_cluster -= cluster_fields;
     //
-    // s5 = s3 - pov fields (s4)
+    // not_used_mau = all_minus_cluster - pov_fields
     //
-    fields_no_use_mau_i.clear();
-    set_difference(s3.begin(), s3.end(), s4.begin(), s4.end(), std::inserter(s5, s5.end()));
+    not_used_mau = all_minus_cluster;
+    not_used_mau -= pov_fields;
     //
-    // pov fields not in cluster
-    // pov_mau: pov intersect cluster fields
-    // pov_no_mau: set_diff pov, pov_mau
+    // pov_mau = pov intersect cluster fields
     //
-    std::set<const PhvInfo::Field *> pov_mau;
-    set_intersection(s4.begin(), s4.end(), s2.begin(), s2.end(),
-        std::inserter(pov_mau, pov_mau.end()));
+    ordered_set<const PhvInfo::Field *> pov_mau = pov_fields;
+    pov_mau &= cluster_fields;
     LOG3("..........POV fields in Cluster (" << pov_mau.size() << ")..........");
     //
-    std::set<const PhvInfo::Field *> pov_no_mau;
-    set_difference(s4.begin(), s4.end(), pov_mau.begin(), pov_mau.end(),
-        std::inserter(pov_no_mau, pov_no_mau.end()));
+    // pov fields not in cluster
+    // pov_no_mau = set_diff pov, pov_mau
+    //
+    ordered_set<const PhvInfo::Field *> pov_no_mau = pov_fields;
+    pov_no_mau -= pov_mau;
     LOG3("..........POV fields not in Cluster (" << pov_no_mau.size() << ")..........");
     pov_fields_not_in_cluster_i.assign(pov_no_mau.begin(), pov_no_mau.end());
+    LOG3("..........Fields avoiding MAU pipe (" << not_used_mau.size() << ")..........");
     //
-    // sanity check fields use
-    //
-    fields_no_use_mau_i.assign(s5.begin(), s5.end());                  // fields_no_use_mau_i
-    //
-    LOG3("..........Fields avoiding MAU pipe ("
-        << fields_no_use_mau_i.size()
-        << ")..........");
-    //
-    sanity_check_fields_use("compute_fields_no_use_mau..", s1, s2, s3, s4, s5);
+    sanity_check_fields_use(
+        "compute_fields_no_use_mau..",
+        all_fields,
+        cluster_fields,
+        all_minus_cluster,
+        pov_fields,
+        not_used_mau);
     //
     // from T_PHV candidates,
     // discard the following
@@ -533,8 +530,8 @@ void Cluster::compute_fields_no_use_mau() {
     // fields not used in ingress or egress
     // set_field_range (entire field deparsed) for T_PHV fields_no_use_mau
     //
-    std::set<const PhvInfo::Field *> delete_set;
-    for (auto f : fields_no_use_mau_i) {
+    ordered_set<const PhvInfo::Field *> delete_set;
+    for (auto &f : not_used_mau) {
         PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
         bool use_pd = uses_i->use[0][f1->gress][f1->id];  // used in parser / deparser
         //
@@ -549,14 +546,16 @@ void Cluster::compute_fields_no_use_mau() {
             set_field_range(f1);
         }
     }
-    fields_no_use_mau_i.clear();
-    set_difference(s5.begin(), s5.end(), delete_set.begin(), delete_set.end(),
-        std::back_inserter(fields_no_use_mau_i));
+    // s_diff = not_used_mau - delete_set
+    ordered_set<const PhvInfo::Field *> s_diff = not_used_mau;
+    s_diff -= delete_set;
+    fields_no_use_mau_i.assign(s_diff.begin(), s_diff.end());  // fields_no_use_mau_i
     LOG3("..........T_PHV Fields ("
         << fields_no_use_mau_i.size()
-        << ").........." << std::endl);
+        << ").........."
+        << std::endl);
     //
-}  // fields_no_use_mau
+}  // compute_fields_no_use_mau
 
 void
 Cluster::sort_fields_remove_non_determinism() {
@@ -573,7 +572,7 @@ Cluster::sort_fields_remove_non_determinism() {
     // which track order of insertion & use that as iteration order.
     // sometimes, can't avoid, need additional support functions in ordered_set
     // e.g.,
-    // set_intersection, set_difference, insert ordered_set in (ordered_set of ordered_sets)
+    // set_intersection (&=), set_difference (-=), insert ordered_set in (ordered_set of ordered_sets)
     //
     // sort exported list fields by id
     //
@@ -838,11 +837,6 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg) {
                     for (auto &f : sx) {
                         s2.insert(f);
                     }
-                    // std::vector<const PhvInfo::Field *> s3;
-                    // s3.clear();
-                    // std::set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(),
-                        // std::back_inserter(s3));
-                    // if (s3.size()) {
                     for (auto &f : s1) {
                         if (s2.count(f)) {
                             LOG1("*****cluster.cpp:sanity_FAIL***** cluster uniqueness.."
@@ -851,66 +845,65 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg) {
                             LOG1("/\\");
                             LOG1(&s2);
                             LOG1('=');
-                            // LOG1(s3);
                             LOG1("---> " << f << " <---");
-                            //
                         }
                     }
                 }
             }  // for
         }
     }
-}
+}  // sanity_check_clusters_unique
 
 void Cluster::sanity_check_fields_use(const std::string& msg,
-    std::set<const PhvInfo::Field *> all,
-    std::set<const PhvInfo::Field *> cluster,
-    std::set<const PhvInfo::Field *> all_minus_cluster,
-    std::set<const PhvInfo::Field *> pov,
-    std::set<const PhvInfo::Field *> no_mau) {
+    ordered_set<const PhvInfo::Field *> all,
+    ordered_set<const PhvInfo::Field *> cluster,
+    ordered_set<const PhvInfo::Field *> all_minus_cluster,
+    ordered_set<const PhvInfo::Field *> pov,
+    ordered_set<const PhvInfo::Field *> no_mau) {
     //
-    std::vector<const PhvInfo::Field *> sx;
+    ordered_set<const PhvInfo::Field *> s_check;
     //
-    // cluster + all_minus_cluster = all
+    // all = cluster + all_minus_cluster
     //
-    sx.clear();
-    std::set<const PhvInfo::Field *> s1(cluster.begin(), cluster.end());
-    s1.insert(all_minus_cluster.begin(), all_minus_cluster.end());
-    set_difference(s1.begin(), s1.end(), all.begin(), all.end(), std::back_inserter(sx));
-    if (sx.size()) {
-        LOG1("*****cluster.cpp:sanity_FAIL*****fields_use cluster+all_minus_cluster != all .."
-            << msg << sx);
+    ordered_set<const PhvInfo::Field *> s_all = cluster;
+    s_all |= all_minus_cluster;
+    // s_check = s_all - all
+    s_check = s_all;
+    s_check -= all;
+    if (s_check.size()) {
+        LOG1("*****cluster.cpp:sanity_FAIL*****fields_use.....");
+        LOG1("..... cluster+all_minus_cluster != all .....");
+        LOG1(msg << s_check);
     }
     //
     // cluster intersection all_minus_cluster = null
     //
-    sx.clear();
-    set_intersection(cluster.begin(), cluster.end(),
-        all_minus_cluster.begin(), all_minus_cluster.end(),
-        std::back_inserter(sx));
-    if (sx.size()) {
-        LOG1("*****cluster.cpp:sanity_FAIL*****fields_use.. cl intersect all_minus_cluster != 0"
-            << msg << sx);
+    s_check = cluster;
+    s_check &= all_minus_cluster;
+    if (s_check.size()) {
+        LOG1("*****cluster.cpp:sanity_FAIL*****fields_use.....");
+        LOG1("..... cl intersect all_minus_cluster != 0 .....");
+        LOG1(msg << s_check);
     }
     //
+    // pov_mau = pov intersect with cluster
+    //
+    ordered_set<const PhvInfo::Field *> pov_mau = pov;
+    pov_mau &= cluster;
     // all = cluster + pov + no_mau + pov_mau
-    // pov_mau: pov intersect with cluster
-    //
-    std::set<const PhvInfo::Field *> pov_mau;  // pov intersect cluster fields
-    set_intersection(pov.begin(), pov.end(), cluster.begin(), cluster.end(),
-        std::inserter(pov_mau, pov_mau.end()));
-    sx.clear();
-    s1.clear();
-    s1.insert(cluster.begin(), cluster.end());
-    s1.insert(pov.begin(), pov.end());
-    s1.insert(no_mau.begin(), no_mau.end());
-    s1.insert(pov_mau.begin(), pov_mau.end());
-    set_difference(s1.begin(), s1.end(), all.begin(), all.end(), std::back_inserter(sx));
-    if (sx.size()) {
-        LOG1("*****cluster.cpp:sanity_FAIL*****fields_use all != cluster+pov+no_mau+pov_mau .."
-            << msg << sx);
+    s_all = cluster;
+    s_all |= pov;
+    s_all |= no_mau;
+    s_all |= pov_mau;
+    // s_check = s_all - all
+    s_check = s_all;
+    s_check -= all;
+    if (s_check.size()) {
+        LOG1("*****cluster.cpp:sanity_FAIL*****fields_use .....");
+        LOG1("..... fields_use all != cluster+pov+no_mau+pov_mau .....");
+        LOG1(msg << s_check);
     }
-}
+}  // sanity_check_fields_use
 
 //***********************************************************************************
 //

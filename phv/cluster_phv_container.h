@@ -25,19 +25,22 @@ class PHV_Container {
  public:
     enum PHV_Word {b32 = 32, b16 = 16, b8 = 8};
     enum Containers {MAX = 16};
-    enum Container_status {EMPTY = 'V', PARTIAL = 'P', FULL = 'F'};
-                                                              // V = Vacant, E = Egress_Only
+    enum Container_status {EMPTY = 'V', PARTIAL = 'P', FULL = 'F'};  // V = Vacant, E = Egress_Only
     enum Ingress_Egress {Ingress_Only = 'I', Egress_Only = 'E', Ingress_Or_Egress = ' '};
     //
     class Container_Content {
+     public:
+        enum Overlay_Pass {None = '=', Field_Interference = '~', Cluster_Overlay = '%'};
+
      private:
         const PHV_Container *container_i;  // parent container
         int lo_i;                          // low of bit range in container for field
         int hi_i;                          // high of bit range in container for field
         const PhvInfo::Field *field_i;
         const int field_bit_lo_i;          // start of field bit in this container
-        char taint_color_i = '?';          // taint color of this field in container
+        std::string taint_color_i = "?";   // taint color of this field in container
         bool overlayed_field_i = false;    // true if field overlays another field in container
+        Overlay_Pass pass_i = None;        // tracks pass that performs overlay
 
      public:
         //
@@ -47,8 +50,9 @@ class PHV_Container {
             const int h,
             const PhvInfo::Field *f,
             const int field_bit_lo = 0,
-            const char taint_color = '?',
-            bool overlayed = false);
+            const std::string taint_color = "?",
+            bool overlayed = false,
+            Overlay_Pass = None);
         //
         int lo() const                   { return lo_i; }
         void lo(int l)                   { lo_i = l; }
@@ -60,8 +64,9 @@ class PHV_Container {
         int field_bit_hi() const         { return field_bit_lo_i + width() - 1; }
         const PHV_Container *container() { return container_i; }
         void container(PHV_Container *c) { container_i = c; }   // during transfer parser container
-        char taint_color()               { return taint_color_i; }
+        std::string& taint_color()       { return taint_color_i; }
         bool overlayed()                 { return overlayed_field_i; }
+        Overlay_Pass pass()              { return pass_i; }
         //
         void sanity_check_container(PHV_Container *, const std::string&);
     };
@@ -86,19 +91,12 @@ class PHV_Container {
     Container_status status_i = Container_status::EMPTY;
     ordered_map<const PhvInfo::Field *, Container_Content *>
         fields_in_container_i;                               // fields binned in this container
+    //
     char *bits_i;                                            // tainted bits in container
-    char taint_color_i = '0';                                // each resident field separate color
+    std::string taint_color_i = "0";                         // each resident field separate color
                                                              // highest number=#fields in container
     int avail_bits_i = 0;                                    // available bits in container
     ordered_map<int, int> ranges_i;                          // available ranges in this container
-    //
-    Container_status o_status_i = Container_status::EMPTY;
-    std::vector<Container_Content *> o_fields_in_container_i;
-                                                             // fields to overlay in this container
-    char o_taint_color_i = '0';                              // each resident field separate color
-    char *o_bits_i;                                          // tainted bits for overlay fields
-    int avail_o_bits_i = 0;                                  // available overlay bits
-    ordered_map<int, int> o_ranges_i;                        // available overlay ranges
     //
  public:
     PHV_Container(
@@ -133,20 +131,32 @@ class PHV_Container {
         return PHV_Container::Ingress_Egress::Ingress_Or_Egress;
     }
     Container_status status()                                   { return status_i; }
-    Container_status o_status()                                 { return o_status_i; }
     char *bits()                                                { return bits_i; }
-    char *o_bits()                                              { return o_bits_i; }
     char taint_color(int bit) {
+        // taint color for bit in container
         assert(bit >= 0 && bit < width_i);
         return bits_i[bit];
+    }
+    std::string taint_color(int lo, int hi, bool overlayed = true) {
+        // taint color for range of bits lo .. hi in container
+        assert(lo >= 0 && lo < width_i);
+        assert(hi >= 0 && hi < width_i);
+        if (taint_color(lo) == taint_color(hi)) {
+            return std::string(1, taint_color(lo));
+        } else {
+            // for substratum fields range must be same
+            assert(overlayed);
+            // for overlayed fields range can differ
+            // concatenate start taint, end taint for overlayed, straddling ccgf member
+            return std::string(1, taint_color(lo)) + std::string(1, taint_color(hi));
+        }
     }
     int taint(
         int start,
         int width,
         const PhvInfo::Field *field,
         int range_start = 0,
-        int field_bit_lo = 0,
-        bool cluster_phv_overlay = false /* default */);
+        int field_bit_lo = 0);
     int taint_ccgf(
         int start,
         int width,
@@ -159,27 +169,28 @@ class PHV_Container {
     void overlay_ccgf_field(
         PhvInfo::Field *field,
         int start,
-        int width);
-    void field_overlays(
-        PhvInfo::Field *field,
-        const int start,
-        const int width,
-        const int field_bit_lo);
-    void taint_overflow_bits(
+        int width,
+        Container_Content::Overlay_Pass pass = Container_Content::Overlay_Pass::Field_Interference);
+    void single_field_overlay(
+        PhvInfo::Field *f,
         int start,
         int width,
-        const PhvInfo::Field *field,
-        int range_start,
-        int field_bit_lo);
+        const int field_bit_lo,
+        Container_Content::Overlay_Pass pass = Container_Content::Overlay_Pass::Field_Interference);
+    void field_overlays(
+        PhvInfo::Field *field,
+        int start,
+        int width,
+        const int field_bit_lo);
+    void field_overlays();
+    ordered_map<std::string, std::pair<int, int>>* lowest_bit_and_ccgf_width();
     void taint_bits(
         int start,
         int width,
         const PhvInfo::Field *field,
         int field_bit_lo);
     int avail_bits()                                            { return avail_bits_i; }
-    int avail_o_bits()                                          { return avail_o_bits_i; }
     ordered_map<int, int>& ranges()                             { return ranges_i; }
-    ordered_map<int, int>& o_ranges()                           { return o_ranges_i; }
     ordered_map<const PhvInfo::Field *, Container_Content *>& fields_in_container() {
         return fields_in_container_i;
     }
@@ -190,7 +201,32 @@ class PHV_Container {
         //
         fields_in_container_i[f] = cc;
     }
-    std::vector<Container_Content *>& o_fields_in_container()   { return o_fields_in_container_i; }
+    void fields_in_container(int start, int end, ordered_set<const PhvInfo::Field *>& f_set) {
+        //
+        // fields that overlap start .. end in container
+        // Sub     |xxxxxx|
+        // Ovl  xxx|x     |
+        // Ovl     | xxxx |
+        // Ovl   xx|xxxxxx|xx
+        // Ovl     |     x|xxx
+        //
+        for (auto &cc : Values(fields_in_container_i)) {
+            if ((cc->lo() < start && cc->hi() >= start)
+                || (cc->lo() >= start && cc->lo() <= end)) {
+                //
+                f_set.insert(cc->field());
+            }
+        }  // for
+    }
+    std::pair<int, int>
+        start_bit_and_width(const PhvInfo::Field *f) {
+        //
+        assert(f);
+        assert(fields_in_container_i.count(f));
+        //
+        Container_Content *cc = fields_in_container_i[f];
+        return std::make_pair(cc->lo(), cc->width());
+    }
     void create_ranges();
     void clear();
     void clean_ranges();
@@ -222,6 +258,7 @@ class PHV_Container {
     }
     //
     void sanity_check_container(const std::string& msg);
+    void sanity_check_overlayed_fields(const std::string& msg);
     void sanity_check_container_avail(int lo, int hi, const std::string&);
     void sanity_check_container_ranges(const std::string&, int lo = -1, int hi = -1);
     //

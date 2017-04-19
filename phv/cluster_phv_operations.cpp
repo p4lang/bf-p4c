@@ -11,6 +11,7 @@
 //***********************************************************************************
 //
 bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
+    //
     // see mau/instruction-selection.cpp for all supported instructions
     // operations considered as move-based ops:
     // - set
@@ -26,7 +27,8 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
     // 'set' is a special case of 'deposit-field', with no rotation of source data,
     // and all destination data will be replaced.
     // TODO hanw, more ops to moved_based_ops ?
-    static const std::set<cstring> move_based_ops = {"set"};
+    //
+    static const ordered_set<cstring> move_based_ops = {"set"};
     bool is_move_op = move_based_ops.count(inst->name);
 
     dst_i = nullptr;

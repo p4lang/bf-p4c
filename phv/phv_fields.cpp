@@ -392,6 +392,16 @@ void PhvInfo::Field::phv_use_width(bool ccgf_owner, int min_ceil) {
     }
 }  // phv_use_width()
 
+void PhvInfo::Field::cluster(Cluster_PHV *cluster_p) {
+    assert(cluster_p);
+    cluster_i = cluster_p;
+    //
+    // set field's cluster id (independently modifiable later during phv_interference)
+    // cl() also sets member fields' cl_i
+    //
+    cl(cluster_p->id());
+}
+
 std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &sl) {
     out << '[' << (sl.field_bit+sl.width-1) << ':' << sl.field_bit << "]->[" << sl.container << ']';
     if (sl.container_bit || size_t(sl.width) != sl.container.size()) {
@@ -489,7 +499,8 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field *fld) {
     return out << "(nullptr)";
 }
 
-std::ostream &operator<<(std::ostream &out, std::set<const PhvInfo::Field *>& field_set) {
+// ordered_set
+std::ostream &operator<<(std::ostream &out, ordered_set<const PhvInfo::Field *>& field_set) {
     for (auto &f : field_set) {
         out << f << std::endl;
     }

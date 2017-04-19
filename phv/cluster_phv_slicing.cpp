@@ -64,9 +64,8 @@ Cluster_Slicing::apply_visitor(const IR::Node *node, const char *name) {
         // create new clusters
         if (sliceable) {
             LOG3("... cluster is sliceable ..." << cl->max_width());
-            std::string id = cl->id();
-            Cluster_PHV *m_lo = new Cluster_PHV(cl->cluster_vec()[0], -1, id);
-            Cluster_PHV *m_hi = new Cluster_PHV(cl->cluster_vec()[0], -1, id);
+            Cluster_PHV *m_lo = new Cluster_PHV(cl->cluster_vec()[0], cl->id());
+            Cluster_PHV *m_hi = new Cluster_PHV(cl->cluster_vec()[0], cl->id());
             m_lo->sliceable(true);
             m_hi->sliceable(true);
             for (auto &f : cl->cluster_vec()) {

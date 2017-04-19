@@ -89,11 +89,12 @@ void
 PHV_Bind::collect_containers_with_fields() {
     //
     // collect all allocated containers from phv_mau_map, t_phv_map
-    // accumulate containers_i, fields_i
+    // accumulate containers_i, allocated_fields_i
     //
     containers_i.clear();
-    // fields_i.clear();
+    allocated_fields_i.clear();
     fields_overflow_i.clear();
+    ordered_set<const PhvInfo::Field *> allocated_fields;
     //
     for (auto &it : phv_mau_i.phv_mau_map()) {
         for (auto &g : it.second) {
@@ -101,7 +102,7 @@ PHV_Bind::collect_containers_with_fields() {
                 if (c->fields_in_container().size()) {
                     containers_i.push_front(c);
                     for (auto &entry : c->fields_in_container()) {
-                        fields_i.insert(entry.first);
+                        allocated_fields.insert(entry.first);
                     }
                 }
             }
@@ -113,16 +114,22 @@ PHV_Bind::collect_containers_with_fields() {
                 if (c->fields_in_container().size()) {
                     containers_i.push_front(c);
                     for (auto &entry : c->fields_in_container()) {
-                        fields_i.insert(entry.first);
+                        allocated_fields.insert(entry.first);
                     }
                 }
             }
         }
     }
+    allocated_fields_i.assign(allocated_fields.begin(), allocated_fields.end());
+    allocated_fields_i.sort(
+        [](const PhvInfo::Field *l, const PhvInfo::Field *r) {
+            // sort by cluster id_num to prevent non-determinism
+            return l->id < r->id;
+        });
     //
-    // set difference (All phv_i fields, fields_i) => fields_overflow_i
+    // fields_overflow_i =  all_phv_fields - allocated_fields
     //
-    std::set<const PhvInfo::Field *> s1;
+    ordered_set<const PhvInfo::Field *> all_phv_fields;
     // All Fields
     for (auto &field : phv_i) {
         //
@@ -134,21 +141,15 @@ PHV_Bind::collect_containers_with_fields() {
            || use_mau
            || use_parde) {
             //
-            s1.insert(&field);
+            all_phv_fields.insert(&field);
         } else {
-            LOG3("PHV_Bind::collect_containers.....discarding field (use_mau=0,use_parde=0)....."
+            LOG3("PHV_Bind::collect_containers.....discarding field use_mau,use_parde=<0,0>....."
                 << &field);
         }
     }
-    std::set<const PhvInfo::Field *> s2(fields_i.begin(), fields_i.end());
-    // fields_overflow_i = All - PHV_Bind fields
-    set_difference(
-        s1.begin(),
-        s1.end(),
-        s2.begin(),
-        s2.end(),
-        std::back_inserter(fields_overflow_i));
-    //
+    ordered_set<const PhvInfo::Field *> s_diff = all_phv_fields;
+    s_diff -= allocated_fields;
+    fields_overflow_i.assign(s_diff.begin(), s_diff.end());
     fields_overflow_i.sort(
         [](const PhvInfo::Field *l, const PhvInfo::Field *r) {
             // sort by cluster id_num to prevent non-determinism
@@ -162,7 +163,6 @@ PHV_Bind::phv_tphv_allocate(std::list<const PhvInfo::Field *>& fields) {
     std::list<Cluster_PHV *> phv_clusters;
     std::list<Cluster_PHV *> t_phv_clusters;
     //
-    int cluster_num = 0;
     ordered_set<const PhvInfo::Field *> remove_set;
     for (auto &f : fields) {
         if (f->ccgf && f->ccgf != f) {
@@ -172,13 +172,11 @@ PHV_Bind::phv_tphv_allocate(std::list<const PhvInfo::Field *>& fields) {
         }
         if (uses_i->use[1][f->gress][f->id]) {
             // used in MAU
-            phv_clusters.push_back(new Cluster_PHV(f, cluster_num, "phv_bind_phv_"));
-            cluster_num++;
+            phv_clusters.push_back(new Cluster_PHV(f, "phv_bind_phv_" + f->cl_i));
         } else {
             if (uses_i->use[0][f->gress][f->id]) {
                 // used in parser / deparser
-                t_phv_clusters.push_back(new Cluster_PHV(f, cluster_num, "phv_bind_t_phv_"));
-                cluster_num++;
+                t_phv_clusters.push_back(new Cluster_PHV(f, "phv_bind_t_phv_" + f->cl_i));
             } else {
                 // no allocation required, remove field
                 remove_set.insert(f);
@@ -208,7 +206,7 @@ PHV_Bind::bind_fields_to_containers() {
     // binding fields to containers
     // clear previous field alloc information if any
     //
-    for (auto &f : fields_i) {
+    for (auto &f : allocated_fields_i) {
         PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
         f1->alloc.clear();
         // ccgf members
@@ -252,7 +250,7 @@ PHV_Bind::bind_fields_to_containers() {
     // sorted MSB (field) first
     // sort fields' alloc
     //
-    for (auto &f : fields_i) {
+    for (auto &f : allocated_fields_i) {
         PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
         if (f1->alloc.size() > 1) {
             std::sort(f1->alloc.begin(), f1->alloc.end(),
@@ -474,7 +472,7 @@ void PHV_Bind::sanity_check_field_duplicate_containers(
     //
     const std::string msg_1 = msg+"PHV_Bind::sanity_check_field_duplicate_containers";
     //
-    for (auto &f : fields_i) {
+    for (auto &f : allocated_fields_i) {
         ordered_set<int> hi_s;
         for (auto &as : f->alloc) {
             if (hi_s.count(as.field_bit)) {
@@ -526,7 +524,7 @@ std::ostream &operator<<(std::ostream &out, PHV_Bind &phv_bind) {
         << "Begin ++++++++++++++++++++ PHV Bind Containers to Fields ++++++++++++++++++++"
         << std::endl
         << std::endl;
-    for (auto &f : phv_bind.fields()) {
+    for (auto &f : phv_bind.allocated_fields()) {
         out << f
             << std::endl;
     }

@@ -235,6 +235,10 @@ PHV_MAU_Group_Assignments::apply_visitor(const IR::Node *node, const char *name)
     cluster_PHV_nibble_placements();    // nibble cluster PHV placements
     cluster_T_PHV_nibble_placements();  // nibble T_PHV placements
     //
+    compute_substratum_clusters();
+    //
+    field_overlays();                   // overlay fields in containers
+    //
     container_cohabit_summary();        // summarize recommendations to TP
     //
     sanity_check_group_containers("PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments()..");
@@ -361,6 +365,43 @@ PHV_MAU_Group_Assignments::create_TPHV_collections() {
     sanity_check_T_PHV_collections("PHV_MAU_Group_Assignments::PHV_MAU_Group_Assignments()..");
     //
 }  // PHV_MAU_Group_Assignments::create_TPHV_collections
+
+void
+PHV_MAU_Group_Assignments::compute_substratum_clusters() {
+    //
+    // substratum clusters are computed by noting the incoming clusters from phv_requirements
+    // and then subtracting clusters that remain to be assigned
+    //
+    // pov clusters cannot overlay or be overlayed
+    //
+    std::list<Cluster_PHV *> remaining_phv(
+        clusters_to_be_assigned_i.begin(),
+        clusters_to_be_assigned_i.end());
+    remaining_phv.insert(
+        remaining_phv.end(), 
+        clusters_to_be_assigned_nibble_i.begin(),
+        clusters_to_be_assigned_nibble_i.end());
+    std::set_difference(
+        phv_requirements_i.cluster_phv_fields().begin(),
+        phv_requirements_i.cluster_phv_fields().end(),
+        remaining_phv.begin(),
+        remaining_phv.end(),
+        std::back_inserter(substratum_phv_clusters_i));
+    //
+    std::list<Cluster_PHV *> remaining_t_phv(
+        t_phv_fields_i.begin(),
+        t_phv_fields_i.end());
+    remaining_t_phv.insert(
+        remaining_t_phv.end(), 
+        t_phv_fields_nibble_i.begin(),
+        t_phv_fields_nibble_i.end());
+    std::set_difference(
+        phv_requirements_i.t_phv_fields().begin(),
+        phv_requirements_i.t_phv_fields().end(),
+        remaining_t_phv.begin(),
+        remaining_t_phv.end(),
+        std::back_inserter(substratum_t_phv_clusters_i));
+}  // compute_substratum_clusters
 
 void
 PHV_MAU_Group_Assignments::cluster_PHV_placements() {
@@ -523,6 +564,27 @@ PHV_MAU_Group_Assignments::cluster_T_PHV_nibble_placements() {
         }
     }
 }  // PHV_MAU_Group_Assignments::cluster_T_PHV_nibble_placements
+
+void
+PHV_MAU_Group_Assignments::field_overlays() {
+    //
+    // for each container, overlay fields in container
+    //
+    for (auto &groups : PHV_MAU_i) {
+        for (auto &g : groups.second) {
+            for (auto &c : g->phv_containers()) {
+                c->field_overlays();
+            }
+        }
+    }
+    for (auto &coll : T_PHV_i) {
+        for (auto &m : coll.second) {
+            for (auto &c : m.second) {
+                c->field_overlays();
+            }
+        }
+    }
+}  // field_overlays
 
 //***********************************************************************************
 //
@@ -1746,15 +1808,16 @@ void PHV_MAU_Group_Assignments::sanity_check_group_containers(const std::string&
             for (auto &cc_set : n.second) {
                 PHV_Container *c = (*(cc_set.begin()))->container();
                 PHV_MAU_Group *g = c->phv_mau_group();
-                std::set<std::list<PHV_MAU_Group::Container_Content *>> s1(
-                    g->aligned_container_slices()[w.first][n.first].begin(),
-                    g->aligned_container_slices()[w.first][n.first].end());
-                if (s1.count(cc_set) != 1) {
-                    LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****.."
-                            << msg
-                            << g
-                            << " aligned_container_slices does not contain"
-                            << cc_set);
+                ordered_set<std::list<PHV_MAU_Group::Container_Content *>> l_set;
+                for (auto &l : g->aligned_container_slices()[w.first][n.first]) {
+                    l_set.insert(l);
+                }
+                if (l_set.count(cc_set) != 1) {
+                    LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****....."
+                        << msg
+                        << g
+                        << " aligned_container_slices does not contain "
+                        << cc_set);
                 }
             }
         }
@@ -1768,16 +1831,17 @@ void PHV_MAU_Group_Assignments::sanity_check_group_containers(const std::string&
             for (auto &w : g->aligned_container_slices()) {
                 for (auto &n : w.second) {
                     for (auto &cc_set : n.second) {
-                        std::set<std::list<PHV_MAU_Group::Container_Content *>> s1(
-                            aligned_container_slices_i[w.first][n.first].begin(),
-                            aligned_container_slices_i[w.first][n.first].end());
-                        if (s1.count(cc_set) != 1) {
-                            LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****.."
-                                    << msg
-                                    << " composite aligned_container_slices does not contain"
-                                    << cc_set
-                                    << " from "
-                                    << g);
+                        ordered_set<std::list<PHV_MAU_Group::Container_Content *>> l_set;
+                        for (auto &l : aligned_container_slices_i[w.first][n.first]) {
+                            l_set.insert(l);
+                        }
+                        if (l_set.count(cc_set) != 1) {
+                            LOG1("*****cluster_phv_mau.cpp:sanity_FAIL*****....."
+                                << msg
+                                << " composite aligned_container_slices does not contain "
+                                << cc_set
+                                << " from "
+                                << g);
                         }
                     }
                 }
@@ -2125,13 +2189,22 @@ std::ostream &operator<<(std::ostream &out, PHV_MAU_Group_Assignments &phv_mau_g
         fields_not_fit.sort([](const PhvInfo::Field *l, const PhvInfo::Field *r) {
             return l->id < r->id;
         });
-        out << "Begin ****************************** Fields NOT Fit ("
-            << fields_not_fit.size()
-            << ") ******************************"
+        std::string detailed_string =
+              " ****************************** Clusters NOT Fit ("
+              "\n...PHV cluster\t= " + std::to_string(phv_mau_grps.phv_clusters().size())
+            + "\n...PHV nibble\t= " + std::to_string(phv_mau_grps.phv_clusters_nibble().size())
+            + "\n...POV cluster\t= " + std::to_string(phv_mau_grps.pov_clusters().size())
+            + "\n...T_PHV cl_s\t= " + std::to_string(phv_mau_grps.t_phv_clusters().size())
+            + "\n...T_PHV nibble\t= " + std::to_string(phv_mau_grps.t_phv_clusters_nibble().size())
+            + "\n...Fields\t= " + std::to_string(fields_not_fit.size())
+            + "\n) ******************************";
+        out << "Begin"
+            << detailed_string
             << std::endl
             << std::endl;
         out << fields_not_fit;
-        out << "End ****************************** Fields NOT Fit ******************************"
+        out << "End"
+            << detailed_string
             << std::endl
             << std::endl;
     } else {

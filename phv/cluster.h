@@ -67,11 +67,11 @@ class Cluster : public Inspector, P4WriteContext {
     void sanity_check_clusters_unique(const std::string&);
     void sanity_check_fields_use(
         const std::string&,
-        std::set<const PhvInfo::Field *>,       // all fields
-        std::set<const PhvInfo::Field *>,       // cluster fields
-        std::set<const PhvInfo::Field *>,       // all - cluster
-        std::set<const PhvInfo::Field *>,       // pov fields
-        std::set<const PhvInfo::Field *>);      // no mau fields
+        ordered_set<const PhvInfo::Field *>,       // all fields
+        ordered_set<const PhvInfo::Field *>,       // cluster fields
+        ordered_set<const PhvInfo::Field *>,       // all - cluster
+        ordered_set<const PhvInfo::Field *>,       // pov fields
+        ordered_set<const PhvInfo::Field *>);      // no mau fields
     //
  public:
     //

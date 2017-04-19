@@ -111,7 +111,10 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     PHV_Interference cluster_phv_interference(cluster_phv_req, mutually_exclusive_field_ids);
                                                                  // cluster PHV Interference Graph
     PHV_MAU_Group_Assignments cluster_phv_mau(cluster_phv_req);  // cluster PHV Container placements
-    Cluster_PHV_Overlay cluster_phv_overlay(cluster_phv_mau, mutually_exclusive_field_ids);
+    Cluster_PHV_Overlay cluster_phv_overlay(cluster_phv_mau, cluster_phv_interference);
+                                                                 // overlay clusters to MAU groups
+                                                                 // need cluster_phv_interference
+                                                                 // func mutually_exclusive(f1, f2)
     Cluster_Slicing cluster_slicing(cluster_phv_mau);            // cluster slicing
     PHV_Bind phv_bind(phv, cluster_phv_mau);                     // field binding to PHV Containers
     DependencyGraph deps;
@@ -148,7 +151,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         &cluster_phv_mau,      // cluster PHV container placements
                                // first cut PHV MAU Group assignments
                                // produces cohabit fields for Table Placement
-        // &cluster_phv_overlay,  // use mutually exclusive headers to free up phv containers
+        &cluster_phv_overlay,  // overlay unallocated clusters to MAU groups
         // &cluster_slicing,   // slice clusters into smaller clusters
     });
 

@@ -79,7 +79,6 @@ PHV_Interference::aggregate_singleton_clusters(
         ordered_map<int,
             std::vector<Cluster_PHV *>>>& singletons) {
     //
-    int cluster_num = 0;
     for (auto &entry : singletons) {
         for (auto &entry_2 : entry.second) {
             //
@@ -107,8 +106,7 @@ PHV_Interference::aggregate_singleton_clusters(
                         std::remove(cluster_vec.begin(), cluster_vec.end(), cl),
                         cluster_vec.end());
                 }
-                Cluster_PHV *aggregate = new Cluster_PHV(set_of_fields, cluster_num, "agg_");
-                cluster_num++;
+                Cluster_PHV *aggregate = new Cluster_PHV(set_of_fields, "Agg");
                 c_vec.push_back(aggregate);
             }
         }
@@ -129,19 +127,19 @@ PHV_Interference::interference_reduction_singleton_clusters(
     c_vec.clear();
     aggregate_singleton_clusters(cluster_vec, c_vec, singletons);
     //
-    interference_reduction(
-        c_vec,
-        "phv_agg");
+    interference_reduction(c_vec, msg + "_agg");
     //
     // create singleton clusters from every field that survived reduction
     // from c_vec add it back to cluster_vec
     //
-    int cluster_num = 0;
     for (auto &cl : c_vec) {
+        std::sort(cl->cluster_vec().begin(), cl->cluster_vec().end(),
+            [](const PhvInfo::Field *l, const PhvInfo::Field *r) {
+                // sort by cluster id_num to prevent non-determinism
+                return l->id < r->id;
+            });
         for (auto &field : cl->cluster_vec()) {
-            std::string id = "intf_" + cl->id();
-            cluster_vec.push_back(new Cluster_PHV(field, cluster_num, id));
-            cluster_num++;
+            cluster_vec.push_back(new Cluster_PHV(field, "Intf_" + cl->id()));
         }
     }
     LOG3("..........End: PHV_Interference::reduction_singleton_clusters().........." << msg);
@@ -188,7 +186,10 @@ PHV_Interference::interference_reduction(
         for (auto &f : cl->cluster_vec()) {
             interference_edge_i[f] = new ordered_set<const PhvInfo::Field *>;  // new set
         }
-        std::set<const PhvInfo::Field *> f_set(cl->cluster_vec().begin(), cl->cluster_vec().end());
+        ordered_set<const PhvInfo::Field *> f_set;
+        for (auto &f : cl->cluster_vec()) {
+            f_set.insert(f);
+        }
         for (auto &f1 : cl->cluster_vec()) {
             f_set.erase(f1);
             for (auto &f2 : f_set) {
@@ -223,8 +224,8 @@ PHV_Interference::interference_reduction(
         for (auto &f : cl->cluster_vec()) {
             assign_virtual_container(cl, f, reg_map);
         }
-        LOG3(cl << reg_map);
         sanity_check_overlay_maps(reg_map, cl, "PHV_Interference::apply_visitor()");
+        LOG3(reg_map);
         //
         // recompute reduced cluster requirements
         //
@@ -261,6 +262,20 @@ PHV_Interference::interference_reduction(
 
 bool
 PHV_Interference::mutually_exclusive(const PhvInfo::Field *f1, const PhvInfo::Field *f2) {
+    //
+    // f1, f2 having overlay fields: field->field_overlay_map()
+    //
+    std::list<const PhvInfo::Field *> f1_overlays;
+    const_cast<PhvInfo::Field *>(f1)->field_overlays(f1_overlays);
+    std::list<const PhvInfo::Field *> f2_overlays;
+    const_cast<PhvInfo::Field *>(f2)->field_overlays(f2_overlays);
+    for (auto &f1_x : f1_overlays) {
+        for (auto &f2_x : f2_overlays) {
+            if (!mutex_i(f1_x->id, f2_x->id)) {
+                return false;
+            }
+        }
+    }
     //
     // check m1, m2
     if (f1->ccgf_fields.size() && f2->ccgf_fields.size()) {
@@ -317,7 +332,14 @@ PHV_Interference::virtual_container_overlay(
         //
         const PhvInfo::Field *owner = reg_map[r];
         cl->field_overlay_map()[owner][r]->push_back(field);
-        const_cast<PhvInfo::Field *>(owner)->field_overlay_map(r, field);
+        //
+        // insert field in owner field's field_overlay_map
+        // modify overlayed field's cluster id so it differs w/ other overlayed fields in container
+        // this is necessary to pass sanity_check_overlayed_fields() in container
+        //
+        const_cast<PhvInfo::Field *>(owner)->field_overlay_map(r, field);  // fld->field_overlay_map
+        const_cast<PhvInfo::Field *>(field)->cl(field->cl_i + "_Ovl_" + std::to_string(field->id));
+        // note all ccgf members will have same Ovl id
     } else {
         reg_map[r] = field;
         cl->field_overlay_map()[field][r] = new std::vector<const PhvInfo::Field *>;
@@ -335,26 +357,21 @@ PHV_Interference::assign_virtual_container(
     int field_containers =
         field->phv_use_width() / cl->width() + (field->phv_use_width() % cl->width() ? 1 : 0);
     if (interference_edge_i[field]) {
-        std::set<int> universe_colors;
+        ordered_set<int> universe_colors;
         for (int i = 0; i < cl->num_containers(); i++) {
             universe_colors.insert(i);
         }
-        std::set<int> neighbor_colors;
+        ordered_set<int> neighbor_colors;
         for (auto &neighbor : *(interference_edge_i[field])) {
             for (auto &x : cl->field_overlay_map()[neighbor]) {
                 neighbor_colors.insert(x.first);
             }
         }
         //
-        // universe - neighbor colors
+        // s_diff = universe_colors - neighbor colors
         //
-        std::set<int> s_diff;
-        set_difference(
-            universe_colors.begin(),
-            universe_colors.end(),
-            neighbor_colors.begin(),
-            neighbor_colors.end(),
-            std::inserter(s_diff, s_diff.end()));
+        ordered_set<int> s_diff = universe_colors;
+        s_diff -= neighbor_colors;
         assert(s_diff.size());
         //
         // new color(s) for field

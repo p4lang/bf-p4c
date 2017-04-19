@@ -29,11 +29,13 @@
 //***********************************************************************************
 //
 //
+static int cluster_id_g = 0;                // global counter for assigning cluster ids
+//
 class Cluster_PHV {
  private:
     std::vector<const PhvInfo::Field *> cluster_vec_i;
                                             // cluster vec sorted by decreasing field width
-    int id_num_i = 0;                       // number part of id_i
+    int id_num_i = cluster_id_g;            // number part of id_i
     std::string id_i;                       // cluster id
     PHV_Container::Ingress_Egress gress_i;  // ingress or egress
     PHV_Container::PHV_Word width_i;        // container width in PHV group
@@ -60,13 +62,11 @@ class Cluster_PHV {
  public:
     Cluster_PHV(
         ordered_set<const PhvInfo::Field *> *set_of_f,
-        const int id_n = 0,
         std::string id_s = "???");  // NOLINT(runtime/explicit)
                                                        // cluster set of fields
     Cluster_PHV(const PhvInfo::Field *f,
-        const int id_n = 0,
         std::string id_s = "???")  // NOLINT(runtime/explicit)
-        : Cluster_PHV(field_set(f), id_n, id_s) {}     // cluster singleton field
+        : Cluster_PHV(field_set(f), id_s) {}           // cluster singleton field
                                                        // e.g., POV fields
     //
     void compute_requirements();                       // compute cluster requirements

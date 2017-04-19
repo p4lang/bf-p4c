@@ -192,6 +192,9 @@ class PHV_MAU_Group_Assignments : public Visitor {
     std::list<Cluster_PHV *> t_phv_fields_i;                    // t_phv non-nibble clusters
     std::list<Cluster_PHV *> t_phv_fields_nibble_i;             // t_phv nibble clusters
     //
+    std::list<Cluster_PHV *> substratum_phv_clusters_i;         // allocated substratum phv clusters
+    std::list<Cluster_PHV *> substratum_t_phv_clusters_i;       // alloc'd substratum t_phv clusters
+    //
     ordered_map<int,
         ordered_map<int,
             std::list<std::list<PHV_MAU_Group::Container_Content *>>>> aligned_container_slices_i;
@@ -255,15 +258,18 @@ class PHV_MAU_Group_Assignments : public Visitor {
     //
     // remaining clusters to be processed
     //
-    std::list<Cluster_PHV *>& phv_clusters()            { return clusters_to_be_assigned_i; }
-    std::list<Cluster_PHV *>& phv_clusters_nibble()     { return clusters_to_be_assigned_nibble_i; }
-    std::list<Cluster_PHV *>& pov_clusters()            { return pov_fields_i; }
-    std::list<Cluster_PHV *>& t_phv_clusters()          { return t_phv_fields_i; }
-    std::list<Cluster_PHV *>& t_phv_clusters_nibble()   { return t_phv_fields_nibble_i; }
+    std::list<Cluster_PHV *>& phv_clusters()              { return clusters_to_be_assigned_i; }
+    std::list<Cluster_PHV *>& phv_clusters_nibble()       { return clusters_to_be_assigned_nibble_i; }
+    std::list<Cluster_PHV *>& pov_clusters()              { return pov_fields_i; }
+    std::list<Cluster_PHV *>& t_phv_clusters()            { return t_phv_fields_i; }
+    std::list<Cluster_PHV *>& t_phv_clusters_nibble()     { return t_phv_fields_nibble_i; }
+    //
+    std::list<Cluster_PHV *>& substratum_phv_clusters()   { return substratum_phv_clusters_i; }
+    std::list<Cluster_PHV *>& substratum_t_phv_clusters() { return substratum_t_phv_clusters_i; }
     //
     // cohabit_fields requests to TP to avoid single-write issue
     //
-    std::vector<PHV_Container *>& cohabit_fields()      { return cohabit_fields_i; }
+    std::vector<PHV_Container *>& cohabit_fields()        { return cohabit_fields_i; }
     //
     void create_MAU_groups();
     void create_TPHV_collections();
@@ -272,6 +278,8 @@ class PHV_MAU_Group_Assignments : public Visitor {
     void cluster_POV_placements();
     void cluster_PHV_nibble_placements();
     void cluster_T_PHV_nibble_placements();
+    void compute_substratum_clusters();
+    void field_overlays();
     //
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
     //
