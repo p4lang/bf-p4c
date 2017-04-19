@@ -119,7 +119,6 @@ cpplint_FILES += $(tofino_backend_parde_UNIFIED) $(tofino_backend_parde_NONUNIFI
 
 tofino_backend_phv_UNIFIED = \
 	%reldir%/phv/asm_output.cpp \
-	%reldir%/phv/bit_extractor.cpp \
 	%reldir%/phv/cluster.cpp \
 	%reldir%/phv/cluster_phv_bind.cpp \
 	%reldir%/phv/cluster_phv_container.cpp \
@@ -136,7 +135,6 @@ tofino_backend_phv_UNIFIED = \
 
 noinst_HEADERS += \
 	%reldir%/phv/asm_output.h \
-	%reldir%/phv/bit_extractor.h \
 	%reldir%/phv/cluster.h \
 	%reldir%/phv/cluster_phv_bind.h \
 	%reldir%/phv/cluster_phv_container.h \

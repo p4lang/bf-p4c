@@ -164,12 +164,6 @@ class PhvInfo : public Inspector {
         vector<std::tuple<bool, cstring, Field_Ops>> operations;
                                            // all operations performed on the field
         cstring header() const { return name.before(strrchr(name, '.')); }
-        PHV::Bit bit(unsigned i) const {
-            BUG_CHECK(i < size_t(size), "bit out of range for field");
-            if (pov) {
-                cstring povname = gress ? "egress::$POV" : "ingress::$POV";
-                return PHV::Bit(povname, i+offset); }
-            return PHV::Bit(name, i); }
         struct bitrange {
             int         lo, hi;         // range of bits within a container or field
             int size() const { return hi - lo + 1; }
