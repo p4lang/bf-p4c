@@ -161,7 +161,7 @@ control egress(inout packet_t hdrs, inout standard_metadata meta) {
 
 control deparser(packet_out b, in packet_t hdrs, inout standard_metadata meta) {
     @hidden action act() {
-        b.emit<data_h>(hdrs.data);
+        b.emit<packet_t>(hdrs);
     }
     @hidden table tbl_act {
         actions = {
