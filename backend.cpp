@@ -137,6 +137,12 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
                                 // second cut PHV MAU Group assignments
                                 // honor single write conflicts from Table Placement
             &phv_bind,          // fields bound to PHV containers
+            new VisitFunctor([&phv]() {
+                // later passes assume that phv alloc info is sorted in field bit order, msb first
+                for (auto &field : phv)
+                    std::sort(field.alloc.begin(), field.alloc.end(),
+                        [](PhvInfo::Field::alloc_slice l, PhvInfo::Field::alloc_slice r) {
+                            return l.field_bit > r.field_bit; }); }),
         });
     }
 
