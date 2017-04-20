@@ -30,37 +30,37 @@ def template_split(s):
 class bitvecPrinter(object):
     "Print a bitvec"
     def __init__(self, val):
-	self.val = val
+        self.val = val
     def to_string(self):
-	data = self.val['data']
-	rv = ""
-	size = self.val['size']
-	ptr = self.val['ptr']
-	unitsize = ptr.type.target().sizeof * 8
-	while size > 1:
-	    data = ptr.dereference()
-	    i = 0
-	    while i < unitsize:
-		if (rv.__len__() % 120 == 119): rv += ':'
-		elif (rv.__len__() % 30 == 29): rv += ' '
-		elif (rv.__len__() % 6 == 5): rv += '_'
-		if (data & 1) == 0:
-		    rv += "0"
-		else:
-		    rv += "1"
-		data >>= 1
-		i += 1
-	    ptr += 1
-	    size -= 1
-	    data = ptr.dereference()
-	while rv == "" or data > 0:
-	    if (rv.__len__() % 6 == 5): rv += ' '
-	    if (data & 1) == 0:
-		rv += "0"
-	    else:
-		rv += "1"
-	    data >>= 1
-	return rv
+        data = self.val['data']
+        rv = ""
+        size = self.val['size']
+        ptr = self.val['ptr']
+        unitsize = ptr.type.target().sizeof * 8
+        while size > 1:
+            data = ptr.dereference()
+            i = 0
+            while i < unitsize:
+                if (rv.__len__() % 120 == 119): rv += ':'
+                elif (rv.__len__() % 30 == 29): rv += ' '
+                elif (rv.__len__() % 6 == 5): rv += '_'
+                if (data & 1) == 0:
+                    rv += "0"
+                else:
+                    rv += "1"
+                data >>= 1
+                i += 1
+            ptr += 1
+            size -= 1
+            data = ptr.dereference()
+        while rv == "" or data > 0:
+            if (rv.__len__() % 6 == 5): rv += ' '
+            if (data & 1) == 0:
+                rv += "0"
+            else:
+                rv += "1"
+            data >>= 1
+        return rv
 class value_t_Printer(object):
     "Print a value_t"
     def __init__(self, val):
@@ -230,17 +230,17 @@ class InputXbar_Group_Printer:
 
 def find_pp(val):
     if val.type.tag == 'bitvec':
-	return bitvecPrinter(val)
+        return bitvecPrinter(val)
     if val.type.tag == 'value_t':
-	return value_t_Printer(val)
+        return value_t_Printer(val)
     if val.type.tag == 'value_t_VECTOR':
-	return value_t_VECTOR_Printer(val)
+        return value_t_VECTOR_Printer(val)
     if val.type.tag == 'pair_t_VECTOR':
-	return pair_t_VECTOR_Printer(val)
+        return pair_t_VECTOR_Printer(val)
     if str(val.type.tag).startswith('ordered_map<'):
         return ordered_map_Printer(val)
     if val.type.tag == 'InputXbar::Group':
-	return InputXbar_Group_Printer(val)
+        return InputXbar_Group_Printer(val)
     return None
 
 #gdb.pretty_printers = [ gdb.pretty_printers[0] ]  # uncomment if reloading

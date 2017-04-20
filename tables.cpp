@@ -881,8 +881,8 @@ void Table::Actions::pass2(Table *tbl) {
         if (act.code >= 0)
             code_use[act.code] = true;
         if (act.code >= code_limit)
-            warning(act.lineno, "Code %d for %s too large for action specifier in table %s",
-                    code, act.name.c_str(), limit_match_table->name());
+            error(act.lineno, "Action code %d for %s too large for action specifier in table %s",
+                    act.code, act.name.c_str(), limit_match_table->name());
         if (act.code > max_code) max_code = act.code;
         while (code >= 0 && code_use[code]) code++; }
     actions.sort([](const value_type &a, const value_type &b) -> bool {
