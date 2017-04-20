@@ -300,8 +300,4 @@ XFAIL_TESTS += \
 XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/instruct5.p4.test \
     tofino/testdata/p4_14_samples/bigfield1.p4.test \
-    tofino/extensions/p4_tests/p4_14/meter_test1.p4.test \
-    tofino/extensions/p4_tests/p4_14/counter_test2.p4.test \
-    tofino/extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4.test \
-    tofino/extensions/p4_tests/p4_14/counter_test1.p4.test
-
+    tofino/extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4.test
