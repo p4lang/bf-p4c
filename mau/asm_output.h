@@ -67,18 +67,4 @@ class MauAsmOutput : public MauInspector {
     explicit MauAsmOutput(const PhvInfo &p) : phv(p) {}
 };
 
-// vector<T> output template defined in log.h
-
-// FIXME -- make this generic to operate on any map-like type (that iterates over pairs)
-template<class T>
-std::ostream &operator<<(std::ostream &out, const std::map<cstring, T> &m) {
-    out << "{";
-    bool first = true;
-    for (auto &el : m) {
-        out << (first ? " " : ", ") << el.first << ": ", el.second;
-        first = false; }
-    out << (first ? "" : " ") << "}";
-    return out;
-}
-
 #endif /* _TOFINO_MAU_ASM_OUTPUT_H_ */

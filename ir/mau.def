@@ -270,11 +270,11 @@ class TableSeq {
 #apply
 }
 
-// A single MAU instruction.  For the most part instructions look exactly like Primitives,
-// just with more constraints applied.  For example, an "add" instruction has the same
-// destination and two sources as an "add" primitive, with the additional constraints that
-// the dest and first source are PHV while second source can be PHV, action bus, or constant.
-// We convert the primitive into an instruction when we check those constraints
+/// A single MAU instruction.  For the most part instructions look exactly like Primitives,
+/// just with more constraints applied.  For example, an "add" instruction has the same
+/// destination and two sources as an "add" primitive, with the additional constraints that
+/// the dest and first source are PHV while second source can be PHV, action bus, or constant.
+/// We convert the primitive into an instruction when we check those constraints
 // TODO(cdodd) -- stateful ALU has its own disctinct instruction set -- should use a different
 // class for those or reuse this?
 class Instruction : Primitive {
@@ -282,7 +282,6 @@ class Instruction : Primitive {
 #emit
     using Primitive::Primitive;
 #end
-    bool through_arg = true;
     Instruction(const Primitive &p) : Primitive(p) {}
     bool isOutput(int operand_index) const override { return operand_index == 0; }
 }
@@ -292,6 +291,13 @@ class ActionFunctionEx : ActionFunction {
     inline Vector<Primitive>    stateful = {};
     inline Vector<Primitive>    modify_with_hash = {};
     ActionFunctionEx(const ActionFunction &af) : ActionFunction(af) {}
+}
+
+/// A use of one or two hash distribution units; an operand of an instruction
+class HashDist : Expression {
+#nodbprint
+// FIXME -- what info goes here?
+// Currently we reconstruct the unit id(s) in MauAsmOutput::EmitAction
 }
 
 }  // end namespace MAU

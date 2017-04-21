@@ -328,9 +328,10 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
         return nullptr;
     } else if (prim->name == "hash") {
         modify_with_hash[af].emplace_back(prim);
+        int size = bitcount(prim->operands[4]->to<IR::Constant>()->asLong() - 1);
+        /* FIXME -- is the above correct?  Or do we want ceil_log2? */
         IR::MAU::Instruction *instr = new IR::MAU::Instruction(prim->srcInfo, "set",
-                                                               prim->operands[0]);
-        instr->through_arg = false;
+            new IR::Slice(prim->operands[0], size-1, 0), new IR::MAU::HashDist);
         return instr;
     }
     WARNING("unhandled in InstSel: " << *prim);

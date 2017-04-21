@@ -644,52 +644,30 @@ class MauAsmOutput::EmitAction : public Inspector {
     const IR::MAU::Table        *table;
     indent_t                    indent;
     const char                  *sep = nullptr;
-    bool                        through_hash_dist = false;
-    bool                        hash_dist_visited = false;
-    vector<int>                 hash_dist_units;
-    int                         max_size = -1;
-    bool                        indirect_counter = false;
-    cstring                     counter_index;
+    std::map<cstring, cstring>  alias;
+    bool                        is_empty;
 
     void output_action(const IR::ActionFunction *act) {
         out << indent << canon_name(act->name) << ":" << std::endl;
-        if (table->layout.action_data_bytes_in_overhead > 0)
+        is_empty = true;
+        if (table->layout.action_data_bytes_in_overhead > 0) {
              self.emit_immediate_format(out, indent, table, act);
-        bool is_empty = false;
-        if (indirect_counter) {
-            out << indent << "- { " << counter_index << ": counter_ptr }" << std::endl;
-        }
-
-        if (act->action.empty()) {
-            /* a noop */
-            out << indent << "- 0" << std::endl;
-            is_empty = true;
-        } else {
-            act->action.visit_children(*this);
-            hash_dist_visited = true;
-            act->action.visit_children(*this);
-        }
-        bool unhandled_primitives = true;
-        for (auto action : act->action) {
-            if (action->is<IR::MAU::Instruction>()) {
-                unhandled_primitives = false;
-                break;
-            }
-        }
-        if (unhandled_primitives && !is_empty)
+            is_empty = false; }
+        if (!alias.empty()) {
+            out << indent << "- " << alias << std::endl;
+            alias.clear(); }
+        act->action.visit_children(*this);
+        if (is_empty)
             out << indent << "- 0" << std::endl;
     }
     bool preorder(const IR::ActionFunction *act) override {
         output_action(act);
         return false; }
     bool preorder(const IR::MAU::ActionFunctionEx *act) override {
-        hash_dist_units.clear();
-
         for (auto prim : act->stateful) {
             if (prim->name == "count") {
                 if (auto aa = prim->operands[1]->to<IR::ActionArg>()) {
-                    indirect_counter = true;
-                    counter_index = aa->name;
+                    alias[aa->name] = "counter_ptr";
                 } else {
                     ERROR("counter index arg '" << prim->operands[1] << "' is not an action arg");
                 }
@@ -697,36 +675,14 @@ class MauAsmOutput::EmitAction : public Inspector {
                 ERROR("skipping " << prim);
             }
         }
-        for (auto prim : act->modify_with_hash) {
-            if (prim->name == "hash") {
-                const IXBar::Use use = table->resources->match_ixbar;
-                for (auto hash_dist : use.hash_dist_use) {
-                    if (hash_dist.type == IXBar::Use::Immediate) {
-                        for (int i = 0; i < IXBar::HASH_DIST_GROUPS; i++) {
-                             if (((1 << i) & hash_dist.slice) == 0) continue;
-                             hash_dist_units.push_back(i);
-                        }
-                        max_size = hash_dist.max_size;
-                    }
-                }
-            }
-        }
         output_action(act);
         return false; }
-    void postorder(const IR::MAU::ActionFunctionEx *) override {
-        indirect_counter = false;
-    }
 
     bool preorder(const IR::MAU::Instruction *inst) override {
-        if (hash_dist_units.size() <= 1 && hash_dist_visited)
-            return false;
-        if (hash_dist_units.size() > 1 && hash_dist_visited && max_size <= IXBar::HASH_DIST_BITS)
-            return false;
         out << indent << "- " << inst->name;
         sep = " ";
-        through_hash_dist = !inst->through_arg;
-        return true;
-    }
+        is_empty = false;
+        return true; }
     bool preorder(const IR::Constant *c) override {
         assert(sep);
         out << sep << c->asLong();
@@ -742,15 +698,21 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << sep << a->toString();
         sep = ", ";
         return false; }
+    bool preorder(const IR::MAU::HashDist *) override {
+        assert(sep);
+        out << sep << "hash_dist(";
+        sep = "";
+        const IXBar::Use use = table->resources->match_ixbar;
+        for (auto hash_dist : use.hash_dist_use) {
+            if (hash_dist.type == IXBar::Use::Immediate) {
+                for (int i = 0; i < IXBar::HASH_DIST_GROUPS; i++) {
+                     if (((1 << i) & hash_dist.slice) == 0) continue;
+                     out << sep << i;
+                     sep = ", "; } } }
+        out << ")";
+        sep = ", ";
+        return false; }
     void postorder(const IR::MAU::Instruction *) override {
-        if (through_hash_dist) {
-            out << ", hash_dist ";
-            if (!hash_dist_visited)
-                out << hash_dist_units[0];
-            else
-                out << hash_dist_units[1];
-        }
-        through_hash_dist = false;
         sep = nullptr;
         out << std::endl; }
     bool preorder(const IR::Cast *c) override { visit(c->expr); return false; }
@@ -767,14 +729,6 @@ class MauAsmOutput::EmitAction : public Inspector {
                     bits.hi -= alloc.field_bit; }
                 if (bits.lo || bits.size() != alloc.width)
                     out << '(' << bits.lo << ".." << bits.hi << ')';
-                if (through_hash_dist) {
-                    if (!hash_dist_visited) {
-                        int best_min = std::min(bits.lo + 15, max_size - 1);
-                        out << '(' << bits.lo << ".." << (best_min) << ")";
-                    } else {
-                        out << '(' << (bits.lo + 16) << ".." << (max_size - 1) << ")";
-                    }
-                }
             } else {
                 out << sep << "/* " << *exp << " */"; }
             sep = ", ";
@@ -876,7 +830,7 @@ void MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
     CollectGatewayFields collect(phv, &tbl->resources->gateway_ixbar);
     tbl->apply(collect);
     if (collect.compute_offsets()) {
-        bool have_xor;
+        bool have_xor = false;
         out << gw_indent << "match: {";
         const char *sep = " ";
         for (auto &f : collect.info) {
