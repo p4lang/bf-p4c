@@ -32,13 +32,15 @@ CopyHeaderEliminator::preorder(IR::Primitive *primitive) {
         } else {
             BUG("non-header in %s: %s", primitive, dst_hdr_ref->baseRef()); }
         return rv; }
-    if (primitive->name == "add_header" || primitive->name == "remove_header") {
+    if (primitive->name == "add_header" || primitive->name == "setValid" ||
+        primitive->name == "remove_header" || primitive->name == "setInvalid") {
         auto hdr_ref = primitive->operands[0]->to<const IR::HeaderRef>();
         BUG_CHECK(hdr_ref, "Invalid destination header in %s", primitive->toString());
         BUG_CHECK(!hdr_ref->baseRef()->is<IR::Metadata>(), "Can't %s metadata", primitive);
         auto validtype = IR::Type::Bits::get(1);
         auto dst = new IR::Member(hdr_ref->srcInfo, validtype, hdr_ref, "$valid");
-        auto src = new IR::Constant(validtype, primitive->name == "add_header");
+        auto src = new IR::Constant(validtype,
+            primitive->name == "add_header" || primitive->name == "setValid");
         return new IR::Primitive(primitive->srcInfo, "modify_field", dst, src); }
     return primitive;
 }
