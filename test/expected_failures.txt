@@ -6,9 +6,6 @@ parser_dc_full.p4 compile
 port_vlan_mapping.p4 compile
 - glass fails to unroll parser loop properly (new problem with 3.3?)
 
-acl1.p4 mismatch
-- deparser mismatch in phv grouping.
-
 action_chain1.p4 tfas
 - asm gen fails to include 'next' field in ternary indirect
 

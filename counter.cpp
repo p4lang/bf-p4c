@@ -64,9 +64,11 @@ template<class REGS> void CounterTable::write_merge_regs(REGS &regs, MatchTable 
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge =  regs.rams.match.merge;
     auto pfe_bit = 19;
+    /* FIXME -- This should be cleaner -- rather than checking the match table type, have
+     * the pfe bit stored in the CounterTable and hve the match table set it in some pass?
+     * Should be using the top bit from the counter index field in the match foramt?
+     * Or add a second arg to the stats/counter call in the match table specifying which bit?  */
     if (per_flow_enable && dynamic_cast<HashActionTable *>(match)) {
-        /* FIXME -- This should be cleaner -- rather than checking the match table type, have
-         * the pfe bit stored in the CounterTable and hve the match table set it in some pass? */
         pfe_bit = 7; }
     if (options.match_compiler && dynamic_cast<HashActionTable *>(match)) {
         /* FIXME -- for some reason the compiler does not set the stats_adr_mask

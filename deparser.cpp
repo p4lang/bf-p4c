@@ -480,9 +480,6 @@ template<class REGS> void Deparser::write_config(REGS &regs) {
         Phv::unsetuse(INGRESS, phv_use[EGRESS]);
         Phv::unsetuse(EGRESS, phv_use[INGRESS]);
     }
-    if (options.match_compiler) {
-        phv_use[INGRESS] |= Phv::use(INGRESS);
-        phv_use[EGRESS] |= Phv::use(EGRESS); }
 
     output_phv_ownership(phv_use, regs.input.iir.ingr.phv8_grp, regs.input.iir.ingr.phv8_split,
                          regs.input.ier.egr.phv8_grp, regs.input.ier.egr.phv8_split,

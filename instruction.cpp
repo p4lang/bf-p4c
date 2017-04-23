@@ -718,7 +718,7 @@ int DepositField::encode() {
         bits |= (dest->lo & ~3) << 17;
         break;
     case 16:
-        bits |= (dest->lo & 1) << 16;
+        bits |= (dest->lo & 1) << 15;
         bits |= (dest->lo & ~1) << 19;
         break;
     case 32:

@@ -36,12 +36,11 @@ dileep8.p4 mismatch
 dileep10.p4 mismatch
 dileep11.p4 mismatch
 dileep12.p4 mismatch
-test_config_5_sram_allocation.p4 mismatch
 test_config_13_first_selection.p4 compile
 test_config_25_no_reads_for_table.p4 mismatch
 test_config_78_tcam_with_220_bits_high_nibble_and_version.p4 mismatch
 test_config_93_push_and_pop.p4 compile
-test_config_100_hash_action.p4 mismatch
+test_config_100_hash_action.p4 tfas
 test_config_123_meter_2.p4 tfas
 test_config_124_meter_3.p4 tfas
 test_config_125_meter_pre_color.p4 tfas
@@ -49,7 +48,6 @@ test_config_126_meter_pre_color_2.p4 tfas
 test_config_127_meter_pre_color_3.p4 tfas
 test_config_140_table_counter.p4 mismatch
 test_config_142_stateful_bfd.p4 compile
-test_config_143_packing_constants.p4 mismatch
 test_config_148_action_profile.p4 mismatch
 test_config_152_stateful_simple_cntr.p4 mismatch
 test_config_153_stateful_simple_cntr_with_output.p4 mismatch
@@ -81,7 +79,7 @@ test_config_185_first_lpf.p4 mismatch
 test_config_187_proxy_hash_2.p4 mismatch
 test_config_189_stat_with_lrt.p4 mismatch
 test_config_190_modify_with_expr.p4 compile
-test_config_191_invalidate.p4 tfas
+test_config_191_invalidate.p4 mismatch
 test_config_192_stateful_driven_by_hash.p4 tfas
 test_config_193_indirect_stats_no_reads.p4 tfas
 test_config_195_stateful_predicate_output.p4 mismatch
