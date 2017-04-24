@@ -20,6 +20,8 @@ struct Memories {
     static constexpr int BUS_COUNT = 2;
     static constexpr int STATS_ALUS = 4;
     static constexpr int METER_ALUS = 4;
+    static constexpr int IMEM_ADDRESS_BITS = 6;
+    static constexpr int IMEM_LOOKUP_BITS = 3;
 
     Alloc2D<cstring, SRAM_ROWS, SRAM_COLUMNS>          sram_use;
     unsigned                                           sram_inuse[SRAM_ROWS] = { 0 };

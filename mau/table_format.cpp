@@ -1,4 +1,5 @@
 #include "table_format.h"
+#include "memories.h"
 
 
 /* Overall analysis for the exact match layout option, to determine in which RAMs of table
@@ -299,6 +300,12 @@ bool TableFormat::allocate_all_instr_selection() {
         return true;
 
     int instr_select = ceil_log2(tbl->actions.size());
+    /* If actions cannot be fit inside a lookup table, the action instruction can be
+       anywhere in the IMEM and will need entire imem bits. The assembler decides 
+       based on color scheme allocations. Assembler will flag an error if it fails 
+       to fit the action code in the given bits. */ 
+    if (instr_select > Memories::IMEM_LOOKUP_BITS) instr_select = Memories::IMEM_ADDRESS_BITS;
+
     bitvec instr_mask;
     instr_mask.setrange(0, instr_select);
     int group = 0;
