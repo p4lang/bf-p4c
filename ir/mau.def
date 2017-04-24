@@ -29,10 +29,10 @@ class Table : Tofino::Unit {
      * expression for 'always' -- corresponding to the gateway miss action
      * (taken if no gateway rows match).  If this last row NULL expression
      * is not present, the default action is to run the table. */
-    NullOK ActionFunction                       gateway_payload;
+    NullOK Action                               gateway_payload;
     NullOK IR::P4Table                          match_table;
     inline Vector<Attached>                     attached;
-    inline NameMap<ActionFunction, ordered_map> actions;
+    inline NameMap<Action, ordered_map>         actions;
     inline NameMap<TableSeq>                    next;
 
     class Layout {
@@ -286,11 +286,10 @@ class Instruction : Primitive {
     bool isOutput(int operand_index) const override { return operand_index == 0; }
 }
 
-class ActionFunctionEx : ActionFunction {
+class Action : ActionFunction {
     // Removed the stateful primitives as they aren't instructions as such.
     inline Vector<Primitive>    stateful = {};
     inline Vector<Primitive>    modify_with_hash = {};
-    ActionFunctionEx(const ActionFunction &af) : ActionFunction(af) {}
 }
 
 /// A use of one or two hash distribution units; an operand of an instruction

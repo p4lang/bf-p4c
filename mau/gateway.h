@@ -6,8 +6,9 @@
 #include "input_xbar.h"
 
 class CanonGatewayExpr : public MauTransform {
-    IR::ActionFunction *preorder(IR::ActionFunction *af) override { prune(); return af; }
-    IR::V1Table *preorder(IR::V1Table *t) override { prune(); return t; }
+    IR::MAU::Action *preorder(IR::MAU::Action *af) override { prune(); return af; }
+    IR::P4Table *preorder(IR::P4Table *t) override { prune(); return t; }
+    IR::Attached *preorder(IR::Attached *a) override { prune(); return a; }
     const IR::Expression *postorder(IR::Operation::Relation *) override;
     const IR::Expression *postorder(IR::Leq *) override;
     const IR::Expression *postorder(IR::Lss *) override;
@@ -61,9 +62,11 @@ class CollectGatewayFields : public Inspector {
 
 class GatewayRangeMatch : public MauModifier {
     const PhvInfo       &phv;
-    bool preorder(IR::ActionFunction *) override { return false; }
-    bool preorder(IR::V1Table *) override { return false; }
     void postorder(IR::MAU::Table *) override;
+    // optimization -- prune parts of the tree we know can't contain MAU::Tables
+    bool preorder(IR::MAU::Action *) override { return false; }
+    bool preorder(IR::P4Table *) override { return false; }
+    bool preorder(IR::Attached *) override { return false; }
     class SetupRanges;
 
  public:

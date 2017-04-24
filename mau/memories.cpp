@@ -151,7 +151,7 @@ class SetupAttachedTables : public MauInspector {
 
     /* In order to only visit the attached tables of the current table */
     bool preorder(const IR::MAU::TableSeq *) { return false; }
-    bool preorder(const IR::ActionFunction *) { return false; }
+    bool preorder(const IR::MAU::Action *) { return false; }
 
     bool preorder(const IR::MAU::ActionData *) {
         BUG("Shouldn't have an action data table before table placement");

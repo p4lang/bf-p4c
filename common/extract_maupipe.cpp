@@ -30,7 +30,7 @@ class ActionArgSetup : public Transform {
 class ActionBodySetup : public Inspector {
     P4::ReferenceMap        *refMap;
     P4::TypeMap             *typeMap;
-    IR::ActionFunction      *af;
+    IR::MAU::Action         *af;
     ActionArgSetup          &setup;
     bool preorder(const IR::IndexedVector<IR::StatOrDecl> *) override { return true; }
     bool preorder(const IR::BlockStatement *) override { return true; }
@@ -53,7 +53,7 @@ class ActionBodySetup : public Inspector {
         return false; }
 
  public:
-    ActionBodySetup(P4::ReferenceMap *refMap, P4::TypeMap *typeMap, IR::ActionFunction *af,
+    ActionBodySetup(P4::ReferenceMap *refMap, P4::TypeMap *typeMap, IR::MAU::Action *af,
                     ActionArgSetup &setup)
     : refMap(refMap), typeMap(typeMap), af(af), setup(setup) {}
 };
@@ -91,10 +91,10 @@ bool ActionBodySetup::preorder(const IR::MethodCallStatement *mc) {
 
 }  // anonymous namespace
 
-static IR::ActionFunction *createActionFunction(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-                                                const IR::P4Action *ac,
-                                                const IR::Vector<IR::Expression> *args) {
-    IR::ActionFunction *rv = new IR::ActionFunction;
+static IR::MAU::Action *createActionFunction(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
+                                             const IR::P4Action *ac,
+                                             const IR::Vector<IR::Expression> *args) {
+    auto rv = new IR::MAU::Action;
     rv->srcInfo = ac->srcInfo;
     rv->name = ac->externalName();
     ActionArgSetup setup;

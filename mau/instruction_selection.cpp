@@ -7,7 +7,6 @@ InstructionSelection::InstructionSelection(PhvInfo &phv) : phv(phv) {}
 
 Visitor::profile_t InstructionSelection::init_apply(const IR::Node *root) {
     auto rv = MauTransform::init_apply(root);
-    stateful.clear();
     return rv;
 }
 
@@ -24,8 +23,9 @@ IR::Member *InstructionSelection::gen_stdmeta(cstring field) {
     return nullptr;
 }
 
-const IR::ActionFunction *InstructionSelection::preorder(IR::ActionFunction *af) {
+const IR::MAU::Action *InstructionSelection::preorder(IR::MAU::Action *af) {
     BUG_CHECK(this->af == nullptr, "Nested action functions");
+    BUG_CHECK(stateful.empty() && modify_with_hash.empty(), "invalid state in visitor");
     LOG2("InstructionSelection processing action " << af->name);
     this->af = af;
     return af;
@@ -47,7 +47,7 @@ class InstructionSelection::SplitInstructions : public Transform {
     : self(self), split(s) {}
 };
 
-const IR::ActionFunction *InstructionSelection::postorder(IR::ActionFunction *af) {
+const IR::MAU::Action *InstructionSelection::postorder(IR::MAU::Action *af) {
     BUG_CHECK(this->af == af, "Nested action functions");
     this->af = nullptr;
     IR::Vector<IR::Primitive> split;
@@ -55,15 +55,10 @@ const IR::ActionFunction *InstructionSelection::postorder(IR::ActionFunction *af
         split.push_back(p->apply(SplitInstructions(*this, split)));
     if (split.size() > af->action.size())
         af->action = std::move(split);
-    if (stateful.count(af) || modify_with_hash.count(af)) {
-        BUG_CHECK(!af->is<IR::MAU::ActionFunctionEx>(), "already processed action function?");
-        auto *rv = new IR::MAU::ActionFunctionEx(*af);
-        rv->stateful.insert(rv->stateful.end(), stateful[af].begin(), stateful[af].end());
-        rv->modify_with_hash.insert(rv->modify_with_hash.end(), modify_with_hash[af].begin(),
-                                    modify_with_hash[af].end());
-        stateful[rv] = stateful[af];
-        modify_with_hash[rv] = modify_with_hash[af];
-        af = rv; }
+    af->stateful.append(stateful);
+    stateful.clear();
+    af->modify_with_hash.append(modify_with_hash);
+    modify_with_hash.clear();
     return af;
 }
 
@@ -324,10 +319,10 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
             gen_stdmeta(VisitingThread(this) ? "egress_port" : "egress_spec"));
     } else if (prim->name == "count" || prim->name == "execute_meter" ||
                prim->name == "execute_stateful_alu") {
-        stateful[af].emplace_back(prim);
+        stateful.push_back(prim);
         return nullptr;
     } else if (prim->name == "hash") {
-        modify_with_hash[af].emplace_back(prim);
+        modify_with_hash.push_back(prim);
         int size = bitcount(prim->operands[4]->to<IR::Constant>()->asLong() - 1);
         /* FIXME -- is the above correct?  Or do we want ceil_log2? */
         IR::MAU::Instruction *instr = new IR::MAU::Instruction(prim->srcInfo, "set",
@@ -350,8 +345,7 @@ const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
 
 const IR::MAU::Table *InstructionSelection::postorder(IR::MAU::Table *tbl) {
     for (auto act : Values(tbl->actions)) {
-        if (!stateful.count(act)) continue;
-        for (auto prim : stateful[act]) {
+        for (auto prim : act->stateful) {
             if (prim->name == "execute_stateful_alu")
                 continue;  // skip for now
             // typechecking should have verified

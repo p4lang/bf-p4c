@@ -59,14 +59,18 @@ void IR::MAU::TableSeq::dbprint(std::ostream &out) const {
         out << endl << indent << t << unindent;
 }
 
-void IR::MAU::ActionFunctionEx::dbprint(std::ostream &out) const {
+void IR::MAU::Action::dbprint(std::ostream &out) const {
     ActionFunction::dbprint(out);
     if (!stateful.empty()) {
         out << " + {" << indent;
-        for (auto &p : action)
+        for (auto &p : stateful)
             out << endl << p;
-        out << unindent << " }";
-    }
+        out << unindent << " }"; }
+    if (!modify_with_hash.empty()) {
+        out << " + {" << indent;
+        for (auto &p : modify_with_hash)
+            out << endl << p;
+        out << unindent << " }"; }
 }
 
 void IR::RangeMatch::dbprint(std::ostream &out) const {

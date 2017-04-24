@@ -292,8 +292,9 @@ bool CollectGatewayFields::compute_offsets() {
 class GatewayRangeMatch::SetupRanges : public Transform {
     const PhvInfo               &phv;
     const CollectGatewayFields  &fields;
-    IR::ActionFunction *preorder(IR::ActionFunction *af) override { prune(); return af; }
-    IR::V1Table *preorder(IR::V1Table *t) override { prune(); return t; }
+    IR::MAU::Action *preorder(IR::MAU::Action *af) override { prune(); return af; }
+    IR::P4Table *preorder(IR::P4Table *t) override { prune(); return t; }
+    IR::Attached *preorder(IR::Attached *a) override { prune(); return a; }
     IR::MAU::TableSeq *preorder(IR::MAU::TableSeq *s) override { prune(); return s; }
 
     const IR::Expression *postorder(IR::Operation::Relation *rel) override {

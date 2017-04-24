@@ -252,19 +252,19 @@ class ArgumentAnalyzer : public MauInspector, P4WriteContext {
     vector<const PhvInfo::Field *> fields_used;
     bitvec instr_used;
     ActionFormat::ArgMap arg_map;
-    void parse_container_phv(const IR::ActionFunction *af);
-    void parse_container_non_phv(const IR::ActionFunction *af);
+    void parse_container_phv(const IR::MAU::Action *af);
+    void parse_container_non_phv(const IR::MAU::Action *af);
 
  public:
      ArgumentAnalyzer(const PhvInfo &p, ActionFormat::Use *u, bool ad)
          : phv(p), use(u), alloc_done(ad) {}
-     bool preorder(const IR::ActionFunction *) override;
+     bool preorder(const IR::MAU::Action *) override;
      bool preorder(const IR::Primitive *) override;
      bool preorder(const IR::MAU::Instruction *) override;
      bool preorder(const IR::Expression *) override;
 
      void postorder(const IR::MAU::Instruction *) override;
-     void postorder(const IR::ActionFunction *) override;
+     void postorder(const IR::MAU::Action *) override;
 };
 
 #endif /* EXTENSIONS_TOFINO_MAU_ACTION_FORMAT_H */

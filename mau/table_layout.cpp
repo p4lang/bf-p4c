@@ -141,22 +141,13 @@ static void setup_action_layout(IR::MAU::Table *tbl, LayoutChoices &lc, const Ph
 static void setup_hash_dist(IR::MAU::Table *tbl, const PhvInfo &phv, LayoutChoices &lc) {
     vector<HashDistReq> hash_dist_reqs;
     for (auto action : Values(tbl->actions)) {
-        const IR::MAU::ActionFunctionEx *af = action->to<IR::MAU::ActionFunctionEx>();
-        if (af == nullptr) continue;
-
-        for (auto instr : af->modify_with_hash) {
+        for (auto instr : action->modify_with_hash) {
             if (instr->name == "hash") {
-                hash_dist_reqs.emplace_back(true, instr);
-            }
-        }
-
-        for (auto instr : af->stateful) {
+                hash_dist_reqs.emplace_back(true, instr); } }
+        for (auto instr : action->stateful) {
             if (instr->name == "count" || instr->name == "execute_meter") {
                 if (phv.field(instr->operands[1]) == nullptr) continue;
-                hash_dist_reqs.emplace_back(true, instr);
-            }
-        }
-    }
+                hash_dist_reqs.emplace_back(true, instr); } } }
     lc.total_hash_dist_reqs[tbl->name] = hash_dist_reqs;
 }
 

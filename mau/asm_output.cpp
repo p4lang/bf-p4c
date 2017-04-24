@@ -48,7 +48,7 @@ class MauAsmOutput::TableMatch {
    all of the potential holes within the immediate format, as they might contain other
    data that is not action data */
 void MauAsmOutput::emit_immediate_format(std::ostream &out, indent_t indent,
-        const IR::MAU::Table *tbl, const IR::ActionFunction *af) const {
+        const IR::MAU::Table *tbl, const IR::MAU::Action *af) const {
     auto &placement = tbl->resources->action_format.immediate_format.at(af->name);
     out << indent << "- { ";
     auto &immediate_mask = tbl->resources->action_format.immediate_mask;
@@ -122,7 +122,7 @@ void MauAsmOutput::emit_immediate_format(std::ostream &out, indent_t indent,
 
 // Simply emits the action data format of the action data table or action profile
 void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
-        const IR::MAU::Table *tbl, const IR::ActionFunction *af) const {
+        const IR::MAU::Table *tbl, const IR::MAU::Action *af) const {
     auto &placement = tbl->resources->action_format.action_data_format.at(af->name);
     if (placement.size() == 0)
         return;
@@ -647,7 +647,7 @@ class MauAsmOutput::EmitAction : public Inspector {
     std::map<cstring, cstring>  alias;
     bool                        is_empty;
 
-    void output_action(const IR::ActionFunction *act) {
+    void output_action(const IR::MAU::Action *act) {
         out << indent << canon_name(act->name) << ":" << std::endl;
         is_empty = true;
         if (table->layout.action_data_bytes_in_overhead > 0) {
@@ -660,10 +660,7 @@ class MauAsmOutput::EmitAction : public Inspector {
         if (is_empty)
             out << indent << "- 0" << std::endl;
     }
-    bool preorder(const IR::ActionFunction *act) override {
-        output_action(act);
-        return false; }
-    bool preorder(const IR::MAU::ActionFunctionEx *act) override {
+    bool preorder(const IR::MAU::Action *act) override {
         for (auto prim : act->stateful) {
             if (prim->name == "count") {
                 if (auto aa = prim->operands[1]->to<IR::ActionArg>()) {
@@ -1054,10 +1051,7 @@ void MauAsmOutput::find_indirect_index(std::ostream &out, const IR::MAU::Table *
 
     const IR::Expression *field = nullptr;
     for (auto action : Values(tbl->actions)) {
-        const IR::MAU::ActionFunctionEx *af = action->to<IR::MAU::ActionFunctionEx>();
-        if (af == nullptr) continue;
-
-        for (auto instr : af->stateful) {
+        for (auto instr : action->stateful) {
             if (instr->name != func_name) continue;
             if (phv.field(instr->operands[1]) == nullptr) {
                 out << "(counter_ptr)";

@@ -75,7 +75,7 @@ class TablePlacement::SetupInfo : public Inspector {
         auto &tables = self.seqInfo.at(seq).tables;
         for (auto t : seq->tables)
             tables |= self.tblInfo.at(t).tables; }
-    bool preorder(const IR::ActionFunction *) override { return false; }
+    bool preorder(const IR::MAU::Action *) override { return false; }
     bool preorder(const IR::Expression *) override { return false; }
     bool preorder(const IR::V1Table *) override { return false; }
 

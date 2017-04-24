@@ -3,7 +3,7 @@
 
 constexpr int ActionFormat::CONTAINER_SIZES[];
 
-bool ArgumentAnalyzer::preorder(const IR::ActionFunction *af) {
+bool ArgumentAnalyzer::preorder(const IR::MAU::Action *af) {
     action_args.clear();
     arg_map.clear();
     ActionFormat::ArgInfo arg_info;
@@ -20,7 +20,7 @@ bool ArgumentAnalyzer::preorder(const IR::Primitive *prim) {
     return false;
 }
 
-/** Only want to gather information on Instructions, and not primitives in ActionFunctionEx
+/** Only want to gather information on Instructions, and not primitives in MAU::Action
  *  such as count, as those don't contain primitives that we need
  */
 bool ArgumentAnalyzer::preorder(const IR::MAU::Instruction *) {
@@ -60,7 +60,7 @@ void ArgumentAnalyzer::postorder(const IR::MAU::Instruction *) {
  *  32 bit containers, and N - 64 bits determines the size of the small container.  This is
  *  an easy best estimate for PHV allocation
  */
-void ArgumentAnalyzer::parse_container_non_phv(const IR::ActionFunction *af) {
+void ArgumentAnalyzer::parse_container_non_phv(const IR::MAU::Action *af) {
     vector<ActionFormat::ActionDataPlacement> overlaps;
     for (auto arg_entry : arg_map) {
         auto arg_name = arg_entry.first;
@@ -112,7 +112,7 @@ void ArgumentAnalyzer::parse_container_non_phv(const IR::ActionFunction *af) {
  *  containers may be affected by multiple fields, this only allocates the space for one
  *  container
  */
-void ArgumentAnalyzer::parse_container_phv(const IR::ActionFunction *af) {
+void ArgumentAnalyzer::parse_container_phv(const IR::MAU::Action *af) {
     vector<ActionFormat::ActionDataPlacement> overlaps;
     std::map<const PHV::Container, ContainerInfo> container_info;
 
@@ -190,7 +190,7 @@ void ArgumentAnalyzer::parse_container_phv(const IR::ActionFunction *af) {
     // Have to still step up ArgMap, used more for action bus and asm output
 }
 
-void ArgumentAnalyzer::postorder(const IR::ActionFunction *af) {
+void ArgumentAnalyzer::postorder(const IR::MAU::Action *af) {
     if (alloc_done)
         parse_container_phv(af);
     else
