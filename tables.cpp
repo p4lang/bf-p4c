@@ -1420,3 +1420,24 @@ void MatchTable::gen_name_lookup(json::map &out) {
     else
         out["table_name"] = name();
 }
+
+void Table::common_tbl_cfg(json::map &tbl, const char *default_match_type) {
+    if (!default_action.empty()) {
+        tbl["default_action"] = default_action;
+        json::vector &params = tbl["default_action_parameters"] = json::vector();
+        for (auto val : default_action_args)
+            params.push_back(val);
+    } else if (options.match_compiler) {
+        tbl["default_action"] = nullptr;
+        tbl["default_action_parameters"] = nullptr; }
+    tbl["performs_hash_action"] = false;
+    tbl["uses_versioning"] = true;
+    tbl["tcam_error_detect"] = false;
+    tbl["match_type"] = p4_table->match_type.empty() ? default_match_type : p4_table->match_type;
+    if (!p4_table->action_profile.empty())
+        tbl["action_profile"] = p4_table->action_profile;
+    else
+        tbl["action_profile"] = nullptr;
+    tbl["dynamic_match_key_masks"] = false;
+    tbl["uses_static_entries"] = false;
+}

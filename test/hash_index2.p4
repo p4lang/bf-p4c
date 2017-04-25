@@ -31,6 +31,7 @@ table test1 {
     actions {
         setf1;
     }
+    default_action : setf1(0);
     size : 256;
 }
 

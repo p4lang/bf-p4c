@@ -9,6 +9,10 @@ port_vlan_mapping.p4 compile
 action_chain1.p4 tfas
 - asm gen fails to include 'next' field in ternary indirect
 
+counter4.p4 mismatch
+- compiler duplicates data on ixbar and programs byteswizzle to inconsistently
+  pull from either copy; assembler always pulls from first.
+
 counter5.p4 mismatch
 - synth2port fabric is different -- not clear if it is a bug or where
 
@@ -19,6 +23,14 @@ exact_match3.p4 mismatch
 - vpn lsb encoding swapped (not a bug -- either way is fine)
 - asm chooses different home rows for action table that needs multiple
   (compiler should specify in asm output)
+
+exact_match5.p4 mismatch
+- compiler duplicates data across ixbar groups and programs vh_xbar_select to
+  pull from either copy; assembler always pulls from first.
+
+hash_index2.p4 mismatch
+hash_index3.p4 mismatch
+- compiler fails to produce asm code for default action
 
 meter_test1.p4 mismatch
 - vpn lsb encoding swapped (not a bug -- either way is fine)

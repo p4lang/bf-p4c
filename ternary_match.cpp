@@ -449,29 +449,15 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
     else if (action && action->actions)
         action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-    if (!default_action.empty()) {
-        tbl["default_action"] = default_action;
-        json::vector &params = tbl["default_action_parameters"] = json::vector();
-        for (auto val : default_action_args)
-            params.push_back(val);
-    } else if (options.match_compiler) {
-        tbl["default_action"] = nullptr;
-        tbl["default_action_parameters"] = nullptr; }
+    common_tbl_cfg(tbl, "ternary");
     if (idletime)
         idletime->gen_stage_tbl_cfg(stage_tbl);
-    tbl["performs_hash_action"] = false;
     bool uses_versioning = false;
     for (auto &m : match)
         if (m.byte_config == 3) {
             uses_versioning = true;
             break; }
     tbl["uses_versioning"] = uses_versioning;
-    tbl["tcam_error_detect"] = false;
-    tbl["match_type"] = p4_table->match_type.empty() ? "ternary" : p4_table->match_type;
-    if (!p4_table->action_profile.empty())
-        tbl["action_profile"] = p4_table->action_profile;
-    else
-        tbl["action_profile"] = nullptr;
 }
 
 void TernaryIndirectTable::setup(VECTOR(pair_t) &data) {

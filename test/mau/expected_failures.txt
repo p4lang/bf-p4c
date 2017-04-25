@@ -22,6 +22,15 @@ test_config_91_gateway_with_split_table.p4 mismatch
 12-SmallToBigFieldWithMask8.p4 mismatch
 - missing default_action: in generated asm
 
+debug_issue_3_7_way_table.p4 mismatch
+dileep.p4 mismatch
+dileep2.p4 mismatch
+dileep4.p4 mismatch
+test_config_85_table_ordering.p4 mismatch
+test_config_97_unrelated_tables.p4 mismatch
+test_config_103_first_phase_0.p4 mismatch
+- data duplicated on ixbar; assembler always uses first copy in byteswizzle
+
 - uncharacterized failures (FIXME)
 01-FlexCounter.p4 compile
 02-FlexCounterActionProfile.p4 compile
@@ -32,10 +41,11 @@ test_config_91_gateway_with_split_table.p4 mismatch
 22-BigToSmallFieldWithMask8.p4 compile
 22-SimpleTrillThreeStep.p4 compile
 
-dileep8.p4 mismatch
 dileep10.p4 mismatch
 dileep11.p4 mismatch
 dileep12.p4 mismatch
+dileep8.p4 mismatch
+test_config_10_new_crossbar_allocation.p4 compile
 test_config_13_first_selection.p4 compile
 test_config_25_no_reads_for_table.p4 mismatch
 test_config_78_tcam_with_220_bits_high_nibble_and_version.p4 mismatch
@@ -76,7 +86,7 @@ test_config_181_first_alg_tcam.p4 tfas
 test_config_183_sample_e2e.p4 compile
 test_config_184_stateful_bug1.p4 tfas
 test_config_185_first_lpf.p4 mismatch
-test_config_187_proxy_hash_2.p4 mismatch
+test_config_187_proxy_hash_2.p4 compile
 test_config_189_stat_with_lrt.p4 mismatch
 test_config_190_modify_with_expr.p4 compile
 test_config_191_invalidate.p4 mismatch

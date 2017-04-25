@@ -52,6 +52,8 @@ number_hash_ways
 number_selection_groups
 pack_format_length
 p4_meter_tables
+p4_parameters
+p4_primitives
 p4_stateful_tables
 #p4_statistics_tables
 pack_format_length
@@ -67,6 +69,7 @@ selection_fields
 stage_action_parameter_map
 stage_gateway_table
 #stage_idletime_table
+stage_primitives
 stage_table_type_handle
 stage_table_type_handle_type
 stash_resource_allocation

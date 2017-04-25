@@ -133,24 +133,10 @@ void HashActionTable::gen_tbl_cfg(json::vector &out) {
         stage_tbl["memory_resource_allocation"] = nullptr;
     if (actions)
         actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-    if (!default_action.empty()) {
-        tbl["default_action"] = default_action;
-        json::vector &params = tbl["default_action_parameters"] = json::vector();
-        for (auto val : default_action_args)
-            params.push_back(val);
-    } else if (options.match_compiler) {
-        tbl["default_action"] = nullptr;
-        tbl["default_action_parameters"] = nullptr; }
+    common_tbl_cfg(tbl, "exact");
     if (idletime)
         idletime->gen_stage_tbl_cfg(stage_tbl);
     else if (options.match_compiler)
         stage_tbl["stage_idletime_table"] = nullptr;
     tbl["performs_hash_action"] = !hash_dist.empty();
-    tbl["uses_versioning"] = true;  // FIXME
-    tbl["tcam_error_detect"] = false;
-    tbl["match_type"] = p4_table->match_type.empty() ? "exact" : p4_table->match_type;
-    if (!p4_table->action_profile.empty())
-        tbl["action_profile"] = p4_table->action_profile;
-    else
-        tbl["action_profile"] = nullptr;
 }
