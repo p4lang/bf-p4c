@@ -662,7 +662,7 @@ class MauAsmOutput::EmitAction : public Inspector {
     }
     bool preorder(const IR::MAU::Action *act) override {
         for (auto prim : act->stateful) {
-            if (prim->name == "count") {
+            if (prim->name == "counter.count") {
                 if (auto aa = prim->operands[1]->to<IR::ActionArg>()) {
                     alias[aa->name] = "counter_ptr";
                 } else {
@@ -1042,10 +1042,10 @@ void MauAsmOutput::find_indirect_index(std::ostream &out, const IR::MAU::Table *
     cstring func_name = "";
     IXBar::Use::hash_dist_type_t type;
     if (at->is<IR::Counter>()) {
-        func_name = "count";
+        func_name = "counter.count";
         type = IXBar::Use::CounterPtr;
     }  else if (at->is<IR::Meter>()) {
-        func_name = "execute_meter";
+        func_name = "meter.execute_meter";
         type = IXBar::Use::MeterPtr;
     }
 

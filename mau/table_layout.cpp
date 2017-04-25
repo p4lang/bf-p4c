@@ -91,7 +91,7 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
                 if (!layout.ternary)
                     layout.ixbar_bytes += bytes;
             } else if (auto prim = r->to<IR::Primitive>()) {
-                if (prim->name != "valid")
+                if (prim->name != "isValid")
                     BUG("unexpected reads expression %s", r);
                 layout.match_bytes += 1;   // FIXME don't always need a whole byte
                 layout.match_width_bits += 1;
@@ -145,7 +145,7 @@ static void setup_hash_dist(IR::MAU::Table *tbl, const PhvInfo &phv, LayoutChoic
             if (instr->name == "hash") {
                 hash_dist_reqs.emplace_back(true, instr); } }
         for (auto instr : action->stateful) {
-            if (instr->name == "count" || instr->name == "execute_meter") {
+            if (instr->name == "counter.count" || instr->name == "meter.execute_meter") {
                 if (phv.field(instr->operands[1]) == nullptr) continue;
                 hash_dist_reqs.emplace_back(true, instr); } } }
     lc.total_hash_dist_reqs[tbl->name] = hash_dist_reqs;

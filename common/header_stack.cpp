@@ -19,14 +19,14 @@ void HeaderStackInfo::postorder(const IR::HeaderStack *hs) {
 }
 
 void HeaderStackInfo::postorder(const IR::Primitive *prim) {
-    if (prim->name == "push" || prim->name == "pop") {
+    if (prim->name == "push_front" || prim->name == "pop_front") {
         BUG_CHECK(prim->operands.size() == 2, "wrong number of operands to %s", prim);
         cstring hsname = prim->operands[0]->toString();
         if (!info.count(hsname)) {
             /* Should have been caught by typechecking? */
             error("%s: No header stack %s", prim->srcInfo, prim->operands[0]);
             return; }
-        int &max = (prim->name == "push") ? at(hsname).maxpush : at(hsname).maxpop;
+        int &max = (prim->name == "push_front") ? at(hsname).maxpush : at(hsname).maxpop;
         if (auto count = prim->operands[1]->to<IR::Constant>()) {
             auto countval = count->asInt();
             if (countval <= 0)

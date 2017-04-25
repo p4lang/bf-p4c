@@ -42,10 +42,10 @@ class HeaderPushPop : public MauTransform {
         return rv; }
 
     IR::Node *preorder(IR::Primitive *prim) override {
-        if (prim->name == "push")
+        if (prim->name == "push_front")
             return do_push(prim->operands[0]->to<IR::HeaderRef>(),
                            prim->operands[1]->to<IR::Constant>()->asInt());
-        else if (prim->name == "pop")
+        else if (prim->name == "pop_front")
             return do_pop(prim->operands[0]->to<IR::HeaderRef>(),
                           prim->operands[1]->to<IR::Constant>()->asInt());
         return prim; }

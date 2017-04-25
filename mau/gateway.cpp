@@ -39,7 +39,7 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
         e->left = e->right;
         e->right = t; }
     if (auto prim = e->left->to<IR::Primitive>()) {
-        if (prim->name == "valid") {
+        if (prim->name == "isValid") {
             if (auto k = e->right->to<IR::Constant>()) {
                 if (k->value != 0 && k->value != 1)
                     return new IR::Constant(e->is<IR::Neq>());
@@ -226,7 +226,7 @@ bool CollectGatewayFields::preorder(const IR::Expression *e) {
     return false; }
 
 bool CollectGatewayFields::preorder(const IR::Primitive *prim) {
-    if (prim->name != "valid") return true;
+    if (prim->name != "isValid") return true;
     if (auto *hdr = prim->operands[0]->to<IR::HeaderRef>())
         valid_offsets[hdr->toString()] = -1;
     else
@@ -435,7 +435,7 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
 }
 
 bool BuildGatewayMatch::preorder(const IR::Primitive *prim) {
-    if (prim->name != "valid")
+    if (prim->name != "isValid")
         BUG("Unknown primitive in BuildGatewayMatch: %s", prim);
     auto hdr = prim->operands[0]->to<IR::HeaderRef>()->toString();
     if (!fields.valid_offsets.count(hdr))

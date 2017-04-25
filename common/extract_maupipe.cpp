@@ -73,15 +73,7 @@ bool ActionBodySetup::preorder(const IR::MethodCallStatement *mc) {
         name = ef->method->name;
     } else {
         BUG("method call %s not yet implemented", mc); }
-    static const std::map<cstring, cstring> name_remap = {
-        { "counter.count", "count" },
-        { "isValid", "valid" },
-        { "meter.execute_meter", "execute_meter" },
-        { "pop_front", "pop" },
-        { "push_front", "push" },
-    };
-    if (name_remap.count(name)) name = name_remap.at(name);
-    auto prim = new IR::Primitive(mc->srcInfo, name);
+    auto prim = new IR::Primitive(mc->srcInfo, mc->methodCall->type, name);
     if (recv) prim->operands.push_back(recv);
     for (auto arg : *mc->methodCall->arguments)
         prim->operands.push_back(arg);
@@ -124,9 +116,9 @@ static IR::ID getAnnotID(const IR::Annotations *annot, cstring name) {
     return IR::ID();
 }
 
-static IR::Attached *createV1Attached(IR::MAU::Table *tt, Util::SourceInfo srcInfo, cstring name,
-                                      const IR::Type *type, const IR::Vector<IR::Expression> *args,
-                                      const IR::Annotations *annot) {
+static IR::Attached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo, cstring name,
+                                    const IR::Type *type, const IR::Vector<IR::Expression> *args,
+                                    const IR::Annotations *annot) {
     IR::CounterOrMeter *rv = nullptr;
     // FIXME -- this should be looking at the arch model, but the current arch model stuff
     // is too complex -- need a way of building this automatically from the arch.p4 file.
@@ -135,7 +127,7 @@ static IR::Attached *createV1Attached(IR::MAU::Table *tt, Util::SourceInfo srcIn
     if (auto p = tname.find('<'))  // strip off type args (if any)
         tname = tname.before(p);
     if (tname == "action_selector") {
-        auto sel = new IR::ActionSelector(srcInfo, name);
+        auto sel = new IR::ActionSelector(srcInfo, name, annot);
         auto flc = new IR::FieldListCalculation();
         flc->algorithm = args->at(0)->as<IR::Member>().member;
         flc->output_width = args->at(2)->as<IR::Constant>().asInt();
@@ -146,14 +138,15 @@ static IR::Attached *createV1Attached(IR::MAU::Table *tt, Util::SourceInfo srcIn
         ap->size = args->at(1)->as<IR::Constant>().asInt();
         ap->selector = name;
         // FIXME Need to reconstruct the field list from the table key?
-        tt->attached.push_back(ap);
+        if (tt)
+            tt->attached.push_back(ap);
         return sel;
     } else if (tname == "action_profile") {
         auto ap = new IR::ActionProfile(srcInfo, name);
         ap->size = args->at(0)->as<IR::Constant>().asInt();
         return ap;
     } else if (tname == "counter" || tname == "direct_counter") {
-        auto ctr = new IR::Counter(srcInfo, name);
+        auto ctr = new IR::Counter(srcInfo, name, annot);
         for (auto anno : annot->annotations) {
             if (anno->name == "max_width")
                 ctr->max_width = anno->expr.at(0)->as<IR::Constant>().asInt();
@@ -163,7 +156,7 @@ static IR::Attached *createV1Attached(IR::MAU::Table *tt, Util::SourceInfo srcIn
                 WARNING("unknown annotation " << anno->name << " on " << tname); }
         rv = ctr;
     } else if (tname == "meter" || tname == "direct_meter") {
-        auto mtr = new IR::Meter(srcInfo, name);
+        auto mtr = new IR::Meter(srcInfo, name, annot);
         for (auto anno : annot->annotations) {
             if (anno->name == "result")
                 mtr->result = anno->expr.at(0);
@@ -188,6 +181,7 @@ static IR::Attached *createV1Attached(IR::MAU::Table *tt, Util::SourceInfo srcIn
             BUG("wrong number of arguments to %s ctor %s", tname, args);
             break; }
         return rv; }
+    LOG2("Failed to create attached table for " << *type);
     return nullptr;
 }
 
@@ -220,15 +214,16 @@ class FixP4Table : public Transform {
                 unique_names.insert(tname);   // don't use the type name directly
                 tname = cstring::make_unique(unique_names, tname);
                 unique_names.insert(tname);
-                LOG1("Create at first point");
-                obj = createV1Attached(tt, cc->srcInfo, prop->externalName(tname), cc->type,
-                                       cc->arguments, prop->annotations);
+                obj = createAttached(tt, cc->srcInfo, prop->externalName(tname), cc->type,
+                                     cc->arguments, prop->annotations);
+                LOG3("Created " << obj->node_type_name() << ' ' << obj->name << " (pt 1)");
             } else if (auto pe = pval->to<IR::PathExpression>()) {
                 auto &d = refMap->getDeclaration(pe->path, true)->as<IR::Declaration_Instance>();
-                LOG1("Create at second point");
-                obj = createV1Attached(tt, d.srcInfo, d.externalName(), d.type,
-                                       d.arguments, d.annotations); }
+                obj = createAttached(tt, d.srcInfo, d.externalName(), d.type,
+                                     d.arguments, d.annotations);
+                LOG3("Created " << obj->node_type_name() << ' ' << obj->name << " (pt 2)"); }
             BUG_CHECK(obj, "not valid for %s: %s", prop->name, pval);
+            LOG3("attaching " << obj->name << " to " << tt->name);
             tt->attached.push_back(obj); }
         prune();
         return ev; }
@@ -270,30 +265,27 @@ struct AttachTables : public Modifier {
 
     void postorder(IR::MAU::Table *tbl) override {
         if (attached.count(tbl->name))
-            for (auto a : attached[tbl->name])
-                if (!contains(tbl->attached, a))
-                    tbl->attached.push_back(a); }
+            for (auto a : attached[tbl->name]) {
+                LOG3("attaching " << a->name << " to " << tbl->name);
+                tbl->attached.push_back(a); } }
     void postorder(IR::GlobalRef *gref) override {
         if (auto di = gref->obj->to<IR::Declaration_Instance>()) {
+            auto tt = findContext<IR::MAU::Table>();
+            if (tt) {
+                for (auto att : tt->attached) {
+                    if (att->name == di->name) {
+                        gref->obj = converted[di] = att;
+                        break; } } }
             if (converted.count(di)) {
                 gref->obj = converted.at(di);
             } else {
-                LOG1("Create at this point");
-                auto att = createV1Attached(nullptr, di->srcInfo, di->externalName(), di->type,
-                                            di->arguments, di->annotations);
-                if (att)
-                    gref->obj = converted[di] = att; } } }
-    void postorder(IR::Primitive *prim) override {
-        if (prim->name != "count" && prim->name != "execute_meter")
-            return;
-        auto tt = findContext<IR::MAU::Table>();
-        BUG_CHECK(tt, "%s primitive not in a table", prim);
-        const IR::Attached *att = nullptr;
-        if (auto gr = prim->operands.at(0)->to<IR::GlobalRef>())
-            att = gr->obj->to<IR::Attached>();
-        if (att && !contains(attached[tt->name], att))
-            attached[tt->name].push_back(att);
-        /* various error check should be here */ }
+                auto att = createAttached(nullptr, di->srcInfo, di->externalName(), di->type,
+                                          di->arguments, di->annotations);
+                if (att) {
+                    LOG3("Created " << att->node_type_name() << ' ' << att->name << " (pt 3)");
+                    gref->obj = converted[di] = att;
+                    if (tt)
+                        attached[tt->name].push_back(att); } } } }
     AttachTables() {}
 };
 

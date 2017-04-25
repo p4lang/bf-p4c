@@ -23,6 +23,13 @@ IR::Member *InstructionSelection::gen_stdmeta(cstring field) {
     return nullptr;
 }
 
+const IR::GlobalRef *InstructionSelection::preorder(IR::GlobalRef *gr) {
+    /* don't recurse through GlobalRefs as they refer to things elsewhere, not stuff
+     * we want to turn into VLIW instructions */
+    prune();
+    return gr;
+}
+
 const IR::MAU::Action *InstructionSelection::preorder(IR::MAU::Action *af) {
     BUG_CHECK(this->af == nullptr, "Nested action functions");
     BUG_CHECK(stateful.empty() && modify_with_hash.empty(), "invalid state in visitor");
@@ -317,8 +324,9 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
     } else if (prim->name == "drop" || prim->name == "mark_to_drop") {
         return new IR::MAU::Instruction(prim->srcInfo, "invalidate",
             gen_stdmeta(VisitingThread(this) ? "egress_port" : "egress_spec"));
-    } else if (prim->name == "count" || prim->name == "execute_meter" ||
-               prim->name == "execute_stateful_alu") {
+    } else if (prim->name == "counter.count" || prim->name == "direct_counter.count" ||
+               prim->name == "meter.execute_meter" || prim->name == "direct_meter.read" ||
+               prim->name == "stateful_alu.execute_stateful_alu") {
         stateful.push_back(prim);
         return nullptr;
     } else if (prim->name == "hash") {
@@ -334,11 +342,11 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
 }
 
 const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
-    if (prim->name == "count")
+    if (prim->name == "counter.count" || prim->name == "direct_counter.count")
         return IR::Type_Counter::get();
-    if (prim->name == "execute_meter")
+    if (prim->name == "meter.execute_meter" || prim->name == "direct_meter.read")
         return IR::Type_Meter::get();
-    if (prim->name == "execute_stateful_alu")
+    if (prim->name == "stateful_alu.execute_stateful_alu")
         return IR::Type_Register::get();
     BUG("Not a stateful primitive %s", prim);
 }
@@ -346,10 +354,10 @@ const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
 const IR::MAU::Table *InstructionSelection::postorder(IR::MAU::Table *tbl) {
     for (auto act : Values(tbl->actions)) {
         for (auto prim : act->stateful) {
-            if (prim->name == "execute_stateful_alu")
+            if (prim->name == "stateful_alu.execute_stateful_alu")
                 continue;  // skip for now
             // typechecking should have verified
-            BUG_CHECK(prim->operands.size() >= 2, "Invalid primitive %s", prim);
+            BUG_CHECK(prim->operands.size() >= 1, "Invalid primitive %s", prim);
             auto gref = prim->operands[0]->to<IR::GlobalRef>();
             // typechecking should catch this too
             BUG_CHECK(gref, "No object named %s", prim->operands[0]);
@@ -359,6 +367,9 @@ const IR::MAU::Table *InstructionSelection::postorder(IR::MAU::Table *tbl) {
                 // typechecking is unable to check this without a good bit more work
                 error("%s: %s is not a %s", prim->operands[0]->srcInfo, gref->obj, type);
             } else if (!contains(tbl->attached, stateful)) {
+                // FIXME -- Needed because extract_maupipe does not correctly attach tables to
+                // multiple match tables.
+                // BUG("%s not attached to %s", stateful->name, tbl->name);
                 tbl->attached.push_back(stateful);
             }
         }

@@ -11,6 +11,7 @@ class InstructionSelection : public MauTransform {
     std::vector<const IR::Primitive *>  stateful, modify_with_hash;
 
     profile_t init_apply(const IR::Node *root) override;
+    const IR::GlobalRef *preorder(IR::GlobalRef *) override;
     const IR::MAU::Action *preorder(IR::MAU::Action *) override;
     const IR::MAU::Action *postorder(IR::MAU::Action *) override;
     const IR::Expression *postorder(IR::Add *) override;

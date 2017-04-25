@@ -14,12 +14,12 @@ class HashDistReq {
     bool is_required() const { return required; }
     const IR::Primitive *get_instr() const { return instr; }
     bool is_address() const {
-        if (instr != nullptr && (instr->name == "count" || instr->name == "execute_meter"))
+        if (instr && (instr->name == "counter.count" || instr->name == "meter.execute_meter"))
             return true;
         return false;
     }
     bool is_immediate() const {
-        if (instr != nullptr && instr->name == "hash")
+        if (instr && instr->name == "hash")
             return true;
         return false;
     }

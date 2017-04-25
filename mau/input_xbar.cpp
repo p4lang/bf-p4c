@@ -822,7 +822,7 @@ void IXBar::field_management(const IR::Expression *field, IXBar::Use &alloc,
     if (auto mask = field->to<IR::Mask>())
         field = mask->left;
     if (auto prim = field->to<IR::Primitive>()) {
-        if (prim->name == "valid") {
+        if (prim->name == "isValid") {
             auto hdr = prim->operands[0]->to<IR::HeaderRef>()->toString();
             finfo = phv.field(hdr + ".$valid");
         }
@@ -1186,7 +1186,7 @@ void IXBar::initialize_hash_dist(const HashDistReq &hash_dist_req, Use &alloc,
     const PhvInfo &phv, set<cstring> &fields_needed, const IR::MAU::Table *tbl, cstring name) {
     if (hash_dist_req.is_address()) {
         const IR::Expression *field = hash_dist_req.get_instr()->operands[1];
-        if (hash_dist_req.get_instr()->name == "count") {
+        if (hash_dist_req.get_instr()->name == "counter.count") {
             alloc.hash_dist_use.back().type = Use::CounterPtr;
             alloc.hash_dist_use.back().alg = Use::Identity;
             const IR::Counter *ctr = nullptr;
@@ -1200,7 +1200,7 @@ void IXBar::initialize_hash_dist(const HashDistReq &hash_dist_req, Use &alloc,
                 alloc.hash_dist_use.back().shift = 2;
             else
                 alloc.hash_dist_use.back().shift = 3;
-        } else if (hash_dist_req.get_instr()->name == "execute_meter") {
+        } else if (hash_dist_req.get_instr()->name == "meter.execute_meter") {
             alloc.hash_dist_use.back().type = Use::MeterPtr;
             alloc.hash_dist_use.back().alg = Use::Identity;
             alloc.hash_dist_use.back().shift = 7;

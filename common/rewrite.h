@@ -7,7 +7,7 @@ class RewriteForTofino : public Transform {
     const IR::Expression *preorder(IR::MethodCallExpression *mc) override {
         if (auto *mem = mc->method->to<IR::Member>()) {
             if (mem->member == "isValid") {
-                auto *v = new IR::Primitive(mc->srcInfo, "valid", mem->expr);
+                auto *v = new IR::Primitive(mc->srcInfo, "isValid", mem->expr);
                 v->type = IR::Type::Boolean::get();
                 return v; } }
         return mc; }
