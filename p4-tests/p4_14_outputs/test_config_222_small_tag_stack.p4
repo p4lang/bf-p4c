@@ -44,7 +44,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".do_nothing") action do_nothing() {
     }
     @name(".action_0") action action_0() {
-        hdr.one.a = hdr.one.a + 8w1;
+        hdr.one.a = (bit<8>)(hdr.one.a + 8w1);
     }
     @name(".push_3") action push_3() {
         hdr.hdr_stack_.push_front(3);

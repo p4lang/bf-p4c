@@ -25,19 +25,19 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".b1_act") action b1_act(bit<8> b1) {
-        hdr.data.b1 = b1;
+        hdr.data.b1 = (bit<8>)b1;
     }
     @name(".b4_act") action b4_act(bit<8> b4) {
-        hdr.data.b4 = b4;
+        hdr.data.b4 = (bit<8>)b4;
     }
     @name(".set_port") action set_port(bit<9> port) {
-        standard_metadata.egress_spec = port;
+        standard_metadata.egress_spec = (bit<9>)port;
     }
     @name(".b2_act") action b2_act(bit<8> b2) {
-        hdr.data.b2 = b2;
+        hdr.data.b2 = (bit<8>)b2;
     }
     @name(".b3_act") action b3_act(bit<8> b3) {
-        hdr.data.b3 = b3;
+        hdr.data.b3 = (bit<8>)b3;
     }
     @name("first") table first {
         actions = {

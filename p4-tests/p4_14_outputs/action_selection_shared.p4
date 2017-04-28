@@ -30,13 +30,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".setb1") action setb1(bit<8> val1) {
-        hdr.data.b1 = val1;
+        hdr.data.b1 = (bit<8>)val1;
     }
     @name(".setb2") action setb2(bit<8> val2) {
-        hdr.data.b2 = val2;
+        hdr.data.b2 = (bit<8>)val2;
     }
     @name(".setb3") action setb3(bit<8> val3) {
-        hdr.data.b3 = val3;
+        hdr.data.b3 = (bit<8>)val3;
     }
     @name("test1") table test1 {
         actions = {

@@ -175,23 +175,23 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".action_0") action action_0(bit<1> param0, bit<1> param1, bit<4> param2, bit<4> param3, bit<1> param4, bit<1> param5) {
-        hdr.pkt.field_a0_1 = 1w0;
-        hdr.pkt.field_a1_1 = param0;
-        hdr.pkt.field_a2_1 = 1w1;
-        hdr.pkt.field_a3_1 = param1;
-        hdr.pkt.field_b_4 = 4w9;
-        hdr.pkt.field_c_4 = param2;
-        hdr.pkt.field_d_4 = 4w6;
-        hdr.pkt.field_e_4 = 4w10;
+        hdr.pkt.field_a0_1 = (bit<1>)1w0;
+        hdr.pkt.field_a1_1 = (bit<1>)param0;
+        hdr.pkt.field_a2_1 = (bit<1>)1w1;
+        hdr.pkt.field_a3_1 = (bit<1>)param1;
+        hdr.pkt.field_b_4 = (bit<4>)4w9;
+        hdr.pkt.field_c_4 = (bit<4>)param2;
+        hdr.pkt.field_d_4 = (bit<4>)4w6;
+        hdr.pkt.field_e_4 = (bit<4>)4w10;
         hdr.pkt.field_f_4[3:0] = 4w15[3:0];
-        hdr.pkt.field_g_4 = param3;
-        hdr.pkt.field_h0_1 = param4;
-        hdr.pkt.field_h1_1 = 1w0;
-        hdr.pkt.field_h2_1 = param5;
-        hdr.pkt.field_h3_1 = 1w1;
+        hdr.pkt.field_g_4 = (bit<4>)param3;
+        hdr.pkt.field_h0_1 = (bit<1>)param4;
+        hdr.pkt.field_h1_1 = (bit<1>)1w0;
+        hdr.pkt.field_h2_1 = (bit<1>)param5;
+        hdr.pkt.field_h3_1 = (bit<1>)1w1;
     }
     @name(".action_1") action action_1(bit<16> param0) {
-        hdr.pkt.field_f_16 = param0;
+        hdr.pkt.field_f_16 = (bit<16>)param0;
     }
     @name("table_0") table table_0 {
         actions = {

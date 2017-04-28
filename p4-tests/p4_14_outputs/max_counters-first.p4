@@ -40,9 +40,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         standard_metadata.egress_spec = port;
     }
     @name(".c1_2") action c1_2_0(bit<8> val1, bit<8> val2) {
+        cnt.count();
         hdr.data.c1 = val1;
         hdr.data.c2 = val2;
-        cnt.count();
     }
     @name("test1") table test1 {
         actions = {
@@ -56,10 +56,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         @name("cnt") counters = direct_counter(CounterType.packets);
     }
     @name(".c3_4") action c3_4_0(bit<8> val3, bit<8> val4, bit<9> port) {
+        cnt3.count();
         hdr.data.c3 = val3;
         hdr.data.c4 = val4;
         standard_metadata.egress_spec = port;
-        cnt3.count();
     }
     @name("test2") table test2 {
         actions = {

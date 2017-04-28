@@ -154,7 +154,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".setf1") action setf1(bit<32> val) {
-        hdr.data.f1 = val;
+        hdr.data.f1 = (bit<32>)val;
     }
     @name("test1") table test1 {
         actions = {

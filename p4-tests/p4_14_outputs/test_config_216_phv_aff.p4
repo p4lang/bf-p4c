@@ -242,28 +242,28 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".set_all") action set_all(bit<32> p0, bit<4> p2, bit<16> p3) {
-        meta.meta.a = p0;
-        meta.meta.c = p2;
-        meta.meta.d = p3;
+        meta.meta.a = (bit<32>)p0;
+        meta.meta.c = (bit<4>)p2;
+        meta.meta.d = (bit<16>)p3;
     }
     @name(".action_0") action action_0(bit<8> p0, bit<8> p1) {
-        meta.meta.a = 32w0;
-        meta.meta.b = hdr.hdr_0.a_1;
+        meta.meta.a = (bit<32>)32w0;
+        meta.meta.b = (bit<4>)hdr.hdr_0.a_1;
         mark_to_drop();
     }
     @name(".action_1") action action_1(bit<16> p1, bit<8> p2) {
-        meta.meta.b = hdr.hdr_1[0].d_1;
-        meta.meta.d = p1;
-        meta.meta.c = meta.meta.c + 4w1;
-        meta.meta.e = p2 - meta.meta.f;
+        meta.meta.b = (bit<4>)hdr.hdr_1[0].d_1;
+        meta.meta.d = (bit<16>)p1;
+        meta.meta.c = (bit<4>)(meta.meta.c + 4w1);
+        meta.meta.e = (bit<8>)(p2 - meta.meta.f);
     }
     @name(".do_nothing") action do_nothing() {
     }
     @name(".action_2") action action_2() {
-        meta.meta.e = meta.meta.e + 8w5;
+        meta.meta.e = (bit<8>)(meta.meta.e + 8w5);
     }
     @name(".action_3") action action_3(bit<8> p0) {
-        meta.meta.f = 8w1;
+        meta.meta.f = (bit<8>)8w1;
     }
     @name("table_i0") table table_i0 {
         actions = {

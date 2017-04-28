@@ -28,9 +28,9 @@ control PLT_bloom_filter_way_ctrl(in bit<32> index, in Metadata metadata, out bi
         bit<32> execute_instr(in op_num op, in bit<32> index, in bit<32> digest, in bit<32> not_used) {
             if (op == op_num.INSTRUCTION_1) {
                 StateType digest_in_state = this.get_state(index);
-                this.set_state(index, (StateType)digest);
+                this.set_state(index, digest);
                 bit<32> ret = 32w0;
-                if (digest_in_state == (StateType)digest) 
+                if (digest_in_state == digest) 
                     ret = 32w1;
                 if (digest_in_state == 32w0) 
                     ret = ret | 32w2;

@@ -238,10 +238,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".nop") action nop() {
     }
     @name(".modify_ip_id") action modify_ip_id(bit<9> port, bit<16> id, bit<48> srcAddr, bit<48> dstAddr) {
-        hdr.ipv4.identification = id;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = port;
-        hdr.ethernet.srcAddr = srcAddr;
-        hdr.ethernet.dstAddr = dstAddr;
+        hdr.ipv4.identification = (bit<16>)id;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)port;
+        hdr.ethernet.srcAddr = (bit<48>)srcAddr;
+        hdr.ethernet.dstAddr = (bit<48>)dstAddr;
     }
     @stage(10) @name("tcam_indirect_action") table tcam_indirect_action {
         actions = {

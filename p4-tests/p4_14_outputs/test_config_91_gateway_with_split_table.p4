@@ -170,7 +170,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".action_0") action action_0(bit<32> param_a_32) {
-        hdr.pkt.field_a_32 = param_a_32;
+        hdr.pkt.field_a_32 = (bit<32>)param_a_32;
     }
     @name(".action_15") action action_15() {
     }

@@ -36,7 +36,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".action_1") action action_1() {
-        hdr.pkt.field_k_8 = 8w5;
+        hdr.pkt.field_k_8 = (bit<8>)8w5;
     }
     @stage(1) @name("table_1") table table_1 {
         actions = {
@@ -58,7 +58,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".action_0") action action_0() {
-        hdr.pkt.field_l_8 = 8w2;
+        hdr.pkt.field_l_8 = (bit<8>)8w2;
     }
     @stage(2) @name("table_0") table table_0 {
         actions = {

@@ -37,18 +37,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("meter_2") meter(32w1024, MeterType.bytes) meter_2;
     @name("meter_3") meter(32w1024, MeterType.bytes) meter_3;
     @name(".h1_2") action h1_2(bit<16> val1, bit<16> val2) {
-        hdr.data.h1 = val1;
-        hdr.data.h2 = val2;
+        hdr.data.h1 = (bit<16>)val1;
+        hdr.data.h2 = (bit<16>)val2;
         meter_1.execute_meter((bit<32>)10w7, hdr.data.color_1);
     }
     @name(".h3_b1") action h3_b1(bit<16> val3, bit<8> val1) {
-        hdr.data.h3 = val3;
-        hdr.data.b1 = val1;
+        hdr.data.h3 = (bit<16>)val3;
+        hdr.data.b1 = (bit<8>)val1;
         meter_2.execute_meter((bit<32>)10w7, hdr.data.color_2);
     }
     @name(".h4_5") action h4_5(bit<16> val4, bit<16> val5) {
-        hdr.data.h4 = val4;
-        hdr.data.h5 = val5;
+        hdr.data.h4 = (bit<16>)val4;
+        hdr.data.h5 = (bit<16>)val5;
         meter_3.execute_meter((bit<32>)10w7, hdr.data.color_3);
     }
     @name("test1") table test1 {

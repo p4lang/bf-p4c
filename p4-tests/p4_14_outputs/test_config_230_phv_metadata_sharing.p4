@@ -62,13 +62,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".do_nothing") action do_nothing() {
     }
     @name(".action_0") action action_0() {
-        meta.meta.a_8 = 8w255;
-        meta.meta.b_2 = 2w1;
-        meta.meta.c_2 = 2w3;
-        meta.meta.d_4 = 4w15;
+        meta.meta.a_8 = (bit<8>)8w255;
+        meta.meta.b_2 = (bit<2>)2w1;
+        meta.meta.c_2 = (bit<2>)2w3;
+        meta.meta.d_4 = (bit<4>)4w15;
     }
     @name(".action_1") action action_1() {
-        hdr.hdr2.c = meta.meta.a_8;
+        hdr.hdr2.c = (bit<8>)meta.meta.a_8;
     }
     @name("table_i0") table table_i0 {
         actions = {

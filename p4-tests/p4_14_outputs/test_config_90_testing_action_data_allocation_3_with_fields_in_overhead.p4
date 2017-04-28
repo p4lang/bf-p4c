@@ -173,10 +173,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.pkt.field_a_32[31:20] = param_a_32[31:20];
     }
     @name(".action_1") action action_1(bit<16> param_e_16) {
-        hdr.pkt.field_e_16 = param_e_16;
+        hdr.pkt.field_e_16 = (bit<16>)param_e_16;
     }
     @name(".action_2") action action_2(bit<8> param_i_8) {
-        hdr.pkt.field_i_8 = param_i_8;
+        hdr.pkt.field_i_8 = (bit<8>)param_i_8;
     }
     @name(".action_15") action action_15() {
     }

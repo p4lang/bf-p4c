@@ -238,12 +238,12 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".nop") action nop() {
     }
     @name(".hop") action hop(inout bit<8> ttl, bit<9> egress_port) {
-        ttl = ttl + 8w255;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
+        ttl = (bit<8>)(ttl + 8w255);
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)egress_port;
     }
     @name(".custom_action_3") action custom_action_3(bit<9> egress_port, bit<48> dstAddr, bit<32> dstIp) {
-        hdr.ipv4.dstAddr = dstIp;
-        hdr.ethernet.dstAddr = dstAddr;
+        hdr.ipv4.dstAddr = (bit<32>)dstIp;
+        hdr.ethernet.dstAddr = (bit<48>)dstAddr;
         hop(hdr.ipv4.ttl, egress_port);
     }
     @stage(2) @name("exm_3ways_32k") table exm_3ways_32k {

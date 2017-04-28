@@ -152,10 +152,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".action_0") action action_0(bit<8> p) {
-        hdr.hdr.x = hdr.hdr.y ++ hdr.hdr.z >> 14;
+        hdr.hdr.x = (bit<32>)(hdr.hdr.y ++ hdr.hdr.z >> 14);
     }
     @name(".action_1") action action_1() {
-        hdr.hdr.x = hdr.hdr.x >> 4;
+        hdr.hdr.x = (bit<32>)(hdr.hdr.x >> 4);
     }
     @name(".do_nothing") action do_nothing() {
     }

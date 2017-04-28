@@ -165,13 +165,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".modify_from_constant") action modify_from_constant() {
-        hdr.my_test_config_1.e_32 = 32w3;
+        hdr.my_test_config_1.e_32 = (bit<32>)32w3;
     }
     @name(".modify_from_field") action modify_from_field() {
-        hdr.my_test_config_1.h_32 = hdr.my_test_config_1.g_32;
+        hdr.my_test_config_1.h_32 = (bit<32>)hdr.my_test_config_1.g_32;
     }
     @name(".modify_from_param") action modify_from_param(bit<32> param1_32) {
-        hdr.my_test_config_1.f_32 = param1_32;
+        hdr.my_test_config_1.f_32 = (bit<32>)param1_32;
     }
     @name("my_test_config_1_table") table my_test_config_1_table {
         actions = {

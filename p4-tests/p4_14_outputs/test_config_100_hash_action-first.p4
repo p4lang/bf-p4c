@@ -172,8 +172,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         mark_to_drop();
     }
     @name(".action_3") action action_3_0() {
-        mark_to_drop();
         extra_stats.count();
+        mark_to_drop();
     }
     @name("table_3") table table_3 {
         actions = {

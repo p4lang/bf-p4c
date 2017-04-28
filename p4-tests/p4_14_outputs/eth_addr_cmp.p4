@@ -164,8 +164,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".addr_compare") action addr_compare(bit<1> is_equal, bit<9> port) {
-        meta.md.is_equal = is_equal;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = port;
+        meta.md.is_equal = (bit<1>)is_equal;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)port;
     }
     @name("addr_compare_failure") table addr_compare_failure {
         actions = {

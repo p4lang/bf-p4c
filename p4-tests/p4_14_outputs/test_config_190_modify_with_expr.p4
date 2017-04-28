@@ -39,14 +39,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".nop") action nop() {
     }
     @name(".action_0") action action_0(bit<16> param0, bit<16> param1, bit<8> param2) {
-        hdr.pkt.a = hdr.pkt.b + 32w2;
-        hdr.pkt.b = 32w3 - hdr.pkt.b;
-        hdr.pkt.c = hdr.pkt.c >> 32w3;
-        hdr.pkt.d = hdr.pkt.d << 32w7;
-        hdr.pkt.e = param0 | hdr.pkt.e;
-        hdr.pkt.f = hdr.pkt.f & param1;
-        hdr.pkt.g = hdr.pkt.g ^ 16w0xfff;
-        hdr.pkt.h = ~param2;
+        hdr.pkt.a = (bit<32>)(hdr.pkt.b + 32w2);
+        hdr.pkt.b = (bit<32>)(32w3 - hdr.pkt.b);
+        hdr.pkt.c = (bit<32>)(hdr.pkt.c >> 32w3);
+        hdr.pkt.d = (bit<32>)(hdr.pkt.d << 32w7);
+        hdr.pkt.e = (bit<16>)(param0 | hdr.pkt.e);
+        hdr.pkt.f = (bit<16>)(hdr.pkt.f & param1);
+        hdr.pkt.g = (bit<16>)(hdr.pkt.g ^ 16w0xfff);
+        hdr.pkt.h = (bit<16>)~param2;
     }
     @name("table_0") table table_0 {
         actions = {

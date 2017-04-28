@@ -199,17 +199,17 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".do_copy_hopCount_from_m") action do_copy_hopCount_from_m() {
-        hdr.trill.hopCount = meta.m.hopCount;
+        hdr.trill.hopCount = (bit<6>)meta.m.hopCount;
     }
     @name(".do_copy_hopCount_to_m") action do_copy_hopCount_to_m() {
-        meta.m.hopCount = hdr.trill.hopCount;
+        meta.m.hopCount = (bit<6>)hdr.trill.hopCount;
     }
     @name(".forward_trill") action forward_trill(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
-        hdr.outer_ethernet.dstAddr = new_mac_da;
-        hdr.outer_ethernet.srcAddr = new_mac_sa;
-        hdr.vlan_tag.vid = new_vlan_id;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = new_port;
-        meta.m.hopCount = meta.m.hopCount + 6w63;
+        hdr.outer_ethernet.dstAddr = (bit<48>)new_mac_da;
+        hdr.outer_ethernet.srcAddr = (bit<48>)new_mac_sa;
+        hdr.vlan_tag.vid = (bit<12>)new_vlan_id;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)new_port;
+        meta.m.hopCount = (bit<6>)(meta.m.hopCount + 6w63);
     }
     @name("copy_hopCount_from_m") table copy_hopCount_from_m {
         actions = {

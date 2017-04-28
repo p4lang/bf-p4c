@@ -44,7 +44,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
     @name("p_hdr1") state p_hdr1 {
         packet.extract(hdr.hdr1);
-        meta.meta.a = hdr.hdr1.a;
+        meta.meta.a = (bit<16>)hdr.hdr1.a;
         transition p_hdr2;
     }
     @name("p_hdr2") state p_hdr2 {
@@ -60,8 +60,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".do_nothing") action do_nothing() {
     }
     @name(".action_0") action action_0() {
-        hdr.hdr0.a = hdr.hdr2.a;
-        hdr.hdr2.c = hdr.hdr1.c;
+        hdr.hdr0.a = (bit<16>)hdr.hdr2.a;
+        hdr.hdr2.c = (bit<8>)hdr.hdr1.c;
     }
     @name("table_i0") table table_i0 {
         actions = {

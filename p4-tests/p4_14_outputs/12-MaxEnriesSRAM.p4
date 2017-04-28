@@ -160,7 +160,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".set_bd") action set_bd(bit<22> bd) {
-        hdr.l2_metadata.bd = bd;
+        hdr.l2_metadata.bd = (bit<22>)bd;
     }
     @name(".nop") action nop() {
     }

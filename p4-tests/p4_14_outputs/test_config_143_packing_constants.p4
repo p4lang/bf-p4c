@@ -168,19 +168,19 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".set_hi") action set_hi() {
-        hdr.pkt.field_i_bit_7 = 1w1;
-        hdr.pkt.field_i_bit_6 = 1w0;
-        hdr.pkt.field_i_bit_5 = 1w1;
+        hdr.pkt.field_i_bit_7 = (bit<1>)1w1;
+        hdr.pkt.field_i_bit_6 = (bit<1>)1w0;
+        hdr.pkt.field_i_bit_5 = (bit<1>)1w1;
     }
     @name(".set_mid") action set_mid() {
-        hdr.pkt.field_i_bit_5 = 1w1;
-        hdr.pkt.field_i_bit_4 = 1w0;
-        hdr.pkt.field_i_bit_3 = 1w1;
+        hdr.pkt.field_i_bit_5 = (bit<1>)1w1;
+        hdr.pkt.field_i_bit_4 = (bit<1>)1w0;
+        hdr.pkt.field_i_bit_3 = (bit<1>)1w1;
     }
     @name(".set_lo") action set_lo() {
-        hdr.pkt.field_i_bit_2 = 1w1;
-        hdr.pkt.field_i_bit_1 = 1w0;
-        hdr.pkt.field_i_bit_0 = 1w1;
+        hdr.pkt.field_i_bit_2 = (bit<1>)1w1;
+        hdr.pkt.field_i_bit_1 = (bit<1>)1w0;
+        hdr.pkt.field_i_bit_0 = (bit<1>)1w1;
     }
     @name("table_0") table table_0 {
         actions = {

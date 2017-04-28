@@ -168,10 +168,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         ;
     }
     @name(".action_0") action action_0() {
-        hdr.pkt.field_g_16 = 16w1;
+        hdr.pkt.field_g_16 = (bit<16>)16w1;
     }
     @name(".action_1") action action_1() {
-        hdr.pkt.field_h_16 = 16w1;
+        hdr.pkt.field_h_16 = (bit<16>)16w1;
     }
     @name("table_0") table table_0 {
         actions = {

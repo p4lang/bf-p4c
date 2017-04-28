@@ -178,11 +178,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         ;
     }
     @name(".action_1") action action_1(bit<4> my_param_0) {
-        hdr.pkt.field_c = my_param_0;
+        hdr.pkt.field_c = (bit<4>)my_param_0;
     }
     @name(".action_2") action action_2(bit<4> my_param_0, bit<4> my_param_1) {
-        hdr.pkt.field_a = my_param_0;
-        hdr.pkt.field_i = my_param_1;
+        hdr.pkt.field_a = (bit<4>)my_param_0;
+        hdr.pkt.field_i = (bit<4>)my_param_1;
     }
     @name("table_0") table table_0 {
         actions = {

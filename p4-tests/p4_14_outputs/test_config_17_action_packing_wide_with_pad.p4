@@ -176,14 +176,14 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".action_0") action action_0(bit<48> param0, bit<48> param1, bit<32> param2, bit<32> param3) {
-        hdr.ethernet.dstAddr = param0;
-        hdr.ethernet.srcAddr = param1;
-        hdr.ipv4.dstAddr = param2;
-        hdr.ipv4.srcAddr = param3;
+        hdr.ethernet.dstAddr = (bit<48>)param0;
+        hdr.ethernet.srcAddr = (bit<48>)param1;
+        hdr.ipv4.dstAddr = (bit<32>)param2;
+        hdr.ipv4.srcAddr = (bit<32>)param3;
     }
     @name(".action_1") action action_1(bit<8> param0, bit<8> param1) {
-        hdr.ipv4.diffserv = param0;
-        hdr.ipv4.ttl = param1;
+        hdr.ipv4.diffserv = (bit<8>)param0;
+        hdr.ipv4.ttl = (bit<8>)param1;
     }
     @name("table_0") table table_0 {
         actions = {

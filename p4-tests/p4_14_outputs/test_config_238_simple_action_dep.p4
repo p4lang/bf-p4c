@@ -56,10 +56,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".do_nothing") action do_nothing() {
     }
     @name(".action_0") action action_0(bit<8> idx) {
-        hdr.hdr1.b = 8w1;
+        hdr.hdr1.b = (bit<8>)8w1;
     }
     @name(".action_1") action action_1() {
-        hdr.hdr1.b = 8w2;
+        hdr.hdr1.b = (bit<8>)8w2;
     }
     @name("table_i0") table table_i0 {
         actions = {

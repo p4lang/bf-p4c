@@ -3616,12 +3616,12 @@ control process_flowlet(inout headers hdr, inout metadata meta, inout standard_m
         flowlet_id.read(meta.flowlet_metadata.id, (bit<32>)meta.flowlet_metadata.map_index);
         flowlet_lastseen.read(meta.flowlet_metadata.timestamp, (bit<32>)meta.flowlet_metadata.map_index);
         meta.flowlet_metadata.inter_packet_gap = meta.flowlet_metadata.inter_packet_gap - meta.flowlet_metadata.timestamp;
-        flowlet_lastseen.write((bit<32>)meta.flowlet_metadata.map_index, (bit<32>)meta.intrinsic_metadata.ingress_global_timestamp);
+        flowlet_lastseen.write((bit<32>)meta.flowlet_metadata.map_index, meta.intrinsic_metadata.ingress_global_timestamp);
         meta.flowlet_metadata.inter_packet_gap = meta.flowlet_metadata.inter_packet_gap - meta.flowlet_metadata.inactive_timeout;
     }
     @name(".update_flowlet_id") action update_flowlet_id() {
         meta.flowlet_metadata.id = meta.flowlet_metadata.id + 16w1;
-        flowlet_id.write((bit<32>)meta.flowlet_metadata.map_index, (bit<16>)meta.flowlet_metadata.id);
+        flowlet_id.write((bit<32>)meta.flowlet_metadata.map_index, meta.flowlet_metadata.id);
     }
     @name("flowlet") table flowlet {
         actions = {

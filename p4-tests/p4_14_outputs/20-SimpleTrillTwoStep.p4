@@ -172,7 +172,7 @@ struct headers {
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("parse_trill") state parse_trill {
         packet.extract(hdr.trill);
-        meta.m.hopCount = hdr.trill.hopCount;
+        meta.m.hopCount = (bit<6>)hdr.trill.hopCount;
         packet.extract(hdr.inner_ethernet);
         transition accept;
     }
@@ -200,14 +200,14 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".copy_hopCount") action copy_hopCount() {
-        hdr.trill.hopCount = meta.m.hopCount;
+        hdr.trill.hopCount = (bit<6>)meta.m.hopCount;
     }
     @name(".forward_trill") action forward_trill(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
-        hdr.outer_ethernet.dstAddr = new_mac_da;
-        hdr.outer_ethernet.srcAddr = new_mac_sa;
-        hdr.vlan_tag.vid = new_vlan_id;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = new_port;
-        meta.m.hopCount = meta.m.hopCount + 6w63;
+        hdr.outer_ethernet.dstAddr = (bit<48>)new_mac_da;
+        hdr.outer_ethernet.srcAddr = (bit<48>)new_mac_sa;
+        hdr.vlan_tag.vid = (bit<12>)new_vlan_id;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)new_port;
+        meta.m.hopCount = (bit<6>)(meta.m.hopCount + 6w63);
     }
     @name("fix_trill_header") table fix_trill_header {
         actions = {

@@ -177,52 +177,52 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".nop") action nop() {
     }
     @name(".action_1_1") action action_1_1() {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.field_1_1_1;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_1;
     }
     @name(".action_1_2") action action_1_2() {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.field_1_1_2;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_2;
     }
     @name(".action_1_3") action action_1_3() {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.field_1_1_3;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_3;
     }
     @name(".action_1_4") action action_1_4() {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.field_1_1_4;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_4;
     }
     @name(".action_1_5") action action_1_5() {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.field_1_1_5;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_5;
     }
     @name(".action_1_6") action action_1_6() {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.field_1_1_6;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_6;
     }
     @name(".action_1_7") action action_1_7() {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.field_1_1_7;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_7;
     }
     @name(".action_1_8") action action_1_8() {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.field_1_1_8;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_8;
     }
     @name(".action_1_9") action action_1_9() {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.field_1_1_9;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_9;
     }
     @name(".action_1_10") action action_1_10() {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.field_1_1_10;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_10;
     }
     @name(".action_1_11") action action_1_11() {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.field_1_1_11;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_11;
     }
     @name(".action_1_12") action action_1_12() {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.field_1_1_12;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_12;
     }
     @name(".action_1_13") action action_1_13() {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.field_1_1_13;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_13;
     }
     @name(".action_1_14") action action_1_14() {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.field_1_1_14;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_14;
     }
     @name(".action_1_15") action action_1_15() {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.field_1_1_15;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_15;
     }
     @name(".action_1_16") action action_1_16() {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = meta.md.field_1_1_16;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)meta.md.field_1_1_16;
     }
     @name("t1") table t1 {
         actions = {

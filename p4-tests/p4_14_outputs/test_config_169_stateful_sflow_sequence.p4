@@ -228,7 +228,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         seq_num_gen.execute_stateful_alu();
     }
     @name(".calc_next_seq_num") action calc_next_seq_num() {
-        meta.sflowHdr.temp = meta.sflowHdr.seq_num + meta.sflowHdr.num_samples;
+        meta.sflowHdr.temp = (bit<16>)(meta.sflowHdr.seq_num + meta.sflowHdr.num_samples);
     }
     @name(".chk_sflow_seq_num") action chk_sflow_seq_num() {
         sflow_exp_seq_num.execute_stateful_alu();

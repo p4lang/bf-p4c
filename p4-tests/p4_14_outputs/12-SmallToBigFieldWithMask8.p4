@@ -160,7 +160,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".a1") action a1(bit<8> p1) {
-        meta.m1.f1 = p1;
+        meta.m1.f1 = (bit<8>)p1;
     }
     @name(".a2") action a2() {
         hdr.ethernet.dstAddr[7:0] = meta.m1.f1[7:0];

@@ -66,10 +66,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         default_action = NoAction();
     }
     @name(".h4_6") action h4_6_0(bit<16> val4, bit<16> val5, bit<16> val6) {
+        counter2.count();
         hdr.data.h4 = val4;
         hdr.data.h5 = val5;
         hdr.data.h6 = val6;
-        counter2.count();
     }
     @name("test2") table test2 {
         actions = {

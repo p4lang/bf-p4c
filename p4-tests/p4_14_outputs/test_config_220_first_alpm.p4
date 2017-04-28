@@ -206,10 +206,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".ipv4_lpm_hit") action ipv4_lpm_hit() {
-        hdr.ipv4.ttl = hdr.ipv4.ttl - 8w1;
+        hdr.ipv4.ttl = (bit<8>)(hdr.ipv4.ttl - 8w1);
     }
     @name(".lpm_miss") action lpm_miss(bit<16> param0) {
-        hdr.ethernet.etherType = param0;
+        hdr.ethernet.etherType = (bit<16>)param0;
         mark_to_drop();
     }
     @name(".do_nothing") action do_nothing() {

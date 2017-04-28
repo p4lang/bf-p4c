@@ -31,10 +31,10 @@ struct headers {
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("oneb") state oneb {
         packet.extract(hdr.one);
-        meta.meta.b = hdr.one.a;
-        meta.meta.a = 32w0x7;
-        meta.meta.c = 5w1;
-        meta.meta.d = 3w2;
+        meta.meta.b = (bit<8>)hdr.one.a;
+        meta.meta.a = (bit<32>)32w0x7;
+        meta.meta.c = (bit<5>)5w1;
+        meta.meta.d = (bit<3>)3w2;
         transition accept;
     }
     @name("start") state start {
@@ -42,7 +42,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
     }
     @name("twob") state twob {
         packet.extract(hdr.one);
-        meta.meta.c = 5w2;
+        meta.meta.c = (bit<5>)5w2;
         transition accept;
     }
     @name("zerob") state zerob {
@@ -58,8 +58,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".do_nothing") action do_nothing() {
     }
     @name(".action_0") action action_0(bit<32> p) {
-        hdr.one.a = hdr.one.a + 8w1;
-        meta.meta.a = meta.meta.a + p;
+        hdr.one.a = (bit<8>)(hdr.one.a + 8w1);
+        meta.meta.a = (bit<32>)(meta.meta.a + p);
     }
     @name("table_i0") table table_i0 {
         actions = {
