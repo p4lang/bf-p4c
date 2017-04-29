@@ -303,7 +303,7 @@ header eompls_t {
     bit<16> seqNo;
 }
 
-header erspan_header_t3_t {
+@name("erspan_header_t3_t") header erspan_header_t3_t_0 {
     bit<4>  version;
     bit<12> vlan;
     bit<6>  priority;
@@ -665,7 +665,7 @@ struct headers {
     @name("eompls") 
     eompls_t                  eompls;
     @name("erspan_t3_header") 
-    erspan_header_t3_t        erspan_t3_header;
+    erspan_header_t3_t_0      erspan_t3_header;
     @name("ethernet") 
     ethernet_t                ethernet;
     @name("fabric_header") 
@@ -775,7 +775,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         transition parse_inner_ethernet;
     }
     @name("parse_erspan_t3") state parse_erspan_t3 {
-        packet.extract<erspan_header_t3_t>(hdr.erspan_t3_header);
+        packet.extract<erspan_header_t3_t_0>(hdr.erspan_t3_header);
         transition select(hdr.erspan_t3_header.frame_type) {
             5w0: parse_inner_ethernet;
             5w2: parse_inner_ipv4;
@@ -5164,7 +5164,7 @@ control DeparserImpl(packet_out packet, in headers hdr) {
         packet.emit<ipv6_t>(hdr.ipv6);
         packet.emit<ipv4_t>(hdr.ipv4);
         packet.emit<gre_t>(hdr.gre);
-        packet.emit<erspan_header_t3_t>(hdr.erspan_t3_header);
+        packet.emit<erspan_header_t3_t_0>(hdr.erspan_t3_header);
         packet.emit<nvgre_t>(hdr.nvgre);
         packet.emit<udp_t>(hdr.udp);
         packet.emit<genv_t>(hdr.genv);

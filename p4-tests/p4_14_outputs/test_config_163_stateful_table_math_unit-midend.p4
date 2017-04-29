@@ -101,7 +101,7 @@ header ingress_intrinsic_metadata_from_parser_aux_t {
     bit<16> ingress_parser_err;
 }
 
-header generator_metadata_t {
+@name("generator_metadata_t") header generator_metadata_t_0 {
     bit<16> app_id;
     bit<16> batch_id;
     bit<16> instance_id;
@@ -149,7 +149,7 @@ struct headers {
     @pa_fragment("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @pa_atomic("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_from_parser_aux") @name("ig_intr_md_from_parser_aux") 
     ingress_intrinsic_metadata_from_parser_aux_t   ig_intr_md_from_parser_aux;
     @not_deparsed("ingress") @not_deparsed("egress") @name("ig_pg_md") 
-    generator_metadata_t                           ig_pg_md;
+    generator_metadata_t_0                         ig_pg_md;
     @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
     @name("pkt") 
@@ -176,7 +176,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("NoAction") action NoAction_0() {
     }
-    @name("stateful_cntr_1") register<bit<32>>(32w4294967295) stateful_cntr_0;
+    @name("stateful_cntr_1") register<bit<32>>(32w0) stateful_cntr_0;
     @name("cntr_1") stateful_alu() cntr_0;
     @name(".cnt_1") action cnt() {
         cntr_0.execute_stateful_alu();

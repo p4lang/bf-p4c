@@ -106,7 +106,7 @@ header ingress_intrinsic_metadata_from_parser_aux_t {
     bit<16> ingress_parser_err;
 }
 
-header generator_metadata_t {
+@name("generator_metadata_t") header generator_metadata_t_0 {
     bit<16> app_id;
     bit<16> batch_id;
     bit<16> instance_id;
@@ -156,7 +156,7 @@ struct headers {
     @pa_fragment("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @pa_atomic("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_from_parser_aux") @name("ig_intr_md_from_parser_aux") 
     ingress_intrinsic_metadata_from_parser_aux_t   ig_intr_md_from_parser_aux;
     @not_deparsed("ingress") @not_deparsed("egress") @name("ig_pg_md") 
-    generator_metadata_t                           ig_pg_md;
+    generator_metadata_t_0                         ig_pg_md;
     @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
     @name("ipv4") 
@@ -188,7 +188,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 }
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
-    @name("flow_cnt") register<bit<8>>(32w4294967295) flow_cnt_0;
+    @name("flow_cnt") register<bit<8>>(32w0) flow_cnt_0;
     @name("sampler_alu") stateful_alu() sampler_alu_0;
     @name(".drop_me") action drop_me_0() {
         mark_to_drop();

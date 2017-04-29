@@ -287,7 +287,7 @@ header eompls_t {
     bit<16> seqNo;
 }
 
-header erspan_header_t3_t {
+@name("erspan_header_t3_t") header erspan_header_t3_t_0 {
     bit<4>  version;
     bit<12> vlan;
     bit<6>  priority;
@@ -451,7 +451,7 @@ header ingress_intrinsic_metadata_from_parser_aux_t {
     bit<16> ingress_parser_err;
 }
 
-header generator_metadata_t {
+@name("generator_metadata_t") header generator_metadata_t_0 {
     bit<16> app_id;
     bit<16> batch_id;
     bit<16> instance_id;
@@ -732,7 +732,7 @@ struct headers {
     @name("eompls") 
     eompls_t                                       eompls;
     @name("erspan_t3_header") 
-    erspan_header_t3_t                             erspan_t3_header;
+    erspan_header_t3_t_0                           erspan_t3_header;
     @name("ethernet") 
     ethernet_t                                     ethernet;
     @name("fabric_header") 
@@ -768,7 +768,7 @@ struct headers {
     @pa_fragment("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @pa_atomic("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_from_parser_aux") @name("ig_intr_md_from_parser_aux") 
     ingress_intrinsic_metadata_from_parser_aux_t   ig_intr_md_from_parser_aux;
     @not_deparsed("ingress") @not_deparsed("egress") @name("ig_pg_md") 
-    generator_metadata_t                           ig_pg_md;
+    generator_metadata_t_0                         ig_pg_md;
     @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
     @name("inner_ethernet") 

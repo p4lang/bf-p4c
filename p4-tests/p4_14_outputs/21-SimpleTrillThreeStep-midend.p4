@@ -100,7 +100,7 @@ header ingress_intrinsic_metadata_from_parser_aux_t {
     bit<16> ingress_parser_err;
 }
 
-header generator_metadata_t {
+@name("generator_metadata_t") header generator_metadata_t_0 {
     bit<16> app_id;
     bit<16> batch_id;
     bit<16> instance_id;
@@ -110,7 +110,7 @@ header ingress_parser_control_signals {
     bit<3> priority;
 }
 
-header ethernet_t {
+@name("ethernet_t") header ethernet_t_0 {
     bit<48> dstAddr;
     bit<48> srcAddr;
     bit<16> ethertype;
@@ -156,13 +156,13 @@ struct headers {
     @pa_fragment("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @pa_atomic("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_from_parser_aux") @name("ig_intr_md_from_parser_aux") 
     ingress_intrinsic_metadata_from_parser_aux_t   ig_intr_md_from_parser_aux;
     @not_deparsed("ingress") @not_deparsed("egress") @name("ig_pg_md") 
-    generator_metadata_t                           ig_pg_md;
+    generator_metadata_t_0                         ig_pg_md;
     @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
     @name("inner_ethernet") 
-    ethernet_t                                     inner_ethernet;
+    ethernet_t_0                                   inner_ethernet;
     @name("outer_ethernet") 
-    ethernet_t                                     outer_ethernet;
+    ethernet_t_0                                   outer_ethernet;
     @name("trill") 
     trill_t                                        trill;
     @name("vlan_tag") 
@@ -172,7 +172,7 @@ struct headers {
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("parse_trill") state parse_trill {
         packet.extract<trill_t>(hdr.trill);
-        packet.extract<ethernet_t>(hdr.inner_ethernet);
+        packet.extract<ethernet_t_0>(hdr.inner_ethernet);
         transition accept;
     }
     @name("parse_vlan_tag") state parse_vlan_tag {
@@ -183,7 +183,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
     @name("start") state start {
-        packet.extract<ethernet_t>(hdr.outer_ethernet);
+        packet.extract<ethernet_t_0>(hdr.outer_ethernet);
         transition select(hdr.outer_ethernet.ethertype) {
             16w0x8100: parse_vlan_tag;
             16w0x2222: parse_trill;
@@ -250,10 +250,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        packet.emit<ethernet_t>(hdr.outer_ethernet);
+        packet.emit<ethernet_t_0>(hdr.outer_ethernet);
         packet.emit<vlan_tag_t>(hdr.vlan_tag);
         packet.emit<trill_t>(hdr.trill);
-        packet.emit<ethernet_t>(hdr.inner_ethernet);
+        packet.emit<ethernet_t_0>(hdr.inner_ethernet);
     }
 }
 

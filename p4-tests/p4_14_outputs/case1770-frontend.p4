@@ -55,7 +55,7 @@ header egress_intrinsic_metadata_from_parser_aux_t {
     bit<8>  coalesce_sample_count;
 }
 
-header EthernetHdr {
+@name("EthernetHdr") header EthernetHdr_0 {
     bit<48> dmac;
     bit<48> smac;
     bit<16> etherType;
@@ -107,7 +107,7 @@ header ingress_intrinsic_metadata_from_parser_aux_t {
     bit<16> ingress_parser_err;
 }
 
-header generator_metadata_t {
+@name("generator_metadata_t") header generator_metadata_t_0 {
     bit<16> app_id;
     bit<16> batch_id;
     bit<16> instance_id;
@@ -117,7 +117,7 @@ header ingress_parser_control_signals {
     bit<3> priority;
 }
 
-header Ipv4Hdr {
+@name("Ipv4Hdr") header Ipv4Hdr_0 {
     bit<4>  version;
     bit<4>  ihl;
     bit<8>  diffServ;
@@ -132,7 +132,7 @@ header Ipv4Hdr {
     bit<32> dip;
 }
 
-header VlanHdr {
+@name("VlanHdr") header VlanHdr_0 {
     bit<3>  priority;
     bit<1>  cfi;
     bit<12> vlanId;
@@ -154,7 +154,7 @@ struct headers {
     @pa_fragment("egress", "eg_intr_md_from_parser_aux.coalesce_sample_count") @pa_fragment("egress", "eg_intr_md_from_parser_aux.clone_src") @pa_fragment("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @pa_atomic("egress", "eg_intr_md_from_parser_aux.egress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("egress", "eg_intr_md_from_parser_aux") @name("eg_intr_md_from_parser_aux") 
     egress_intrinsic_metadata_from_parser_aux_t    eg_intr_md_from_parser_aux;
     @name("ethHdr") 
-    EthernetHdr                                    ethHdr;
+    EthernetHdr_0                                  ethHdr;
     @dont_trim @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md.ingress_port") @name("ig_intr_md") 
     ingress_intrinsic_metadata_t                   ig_intr_md;
     @dont_trim @pa_intrinsic_header("ingress", "ig_intr_md_for_mb") @pa_atomic("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @pa_mandatory_intrinsic_field("ingress", "ig_intr_md_for_mb.ingress_mirror_id") @not_deparsed("ingress") @not_deparsed("egress") @name("ig_intr_md_for_mb") 
@@ -164,18 +164,18 @@ struct headers {
     @pa_fragment("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @pa_atomic("ingress", "ig_intr_md_from_parser_aux.ingress_parser_err") @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_intr_md_from_parser_aux") @name("ig_intr_md_from_parser_aux") 
     ingress_intrinsic_metadata_from_parser_aux_t   ig_intr_md_from_parser_aux;
     @not_deparsed("ingress") @not_deparsed("egress") @name("ig_pg_md") 
-    generator_metadata_t                           ig_pg_md;
+    generator_metadata_t_0                         ig_pg_md;
     @not_deparsed("ingress") @not_deparsed("egress") @pa_intrinsic_header("ingress", "ig_prsr_ctrl") @name("ig_prsr_ctrl") 
     ingress_parser_control_signals                 ig_prsr_ctrl;
     @name("ipv4Hdr") 
-    Ipv4Hdr                                        ipv4Hdr;
+    Ipv4Hdr_0                                      ipv4Hdr;
     @name("vlanHdr") 
-    VlanHdr                                        vlanHdr;
+    VlanHdr_0                                      vlanHdr;
 }
 
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("parseEthernet") state parseEthernet {
-        packet.extract<EthernetHdr>(hdr.ethHdr);
+        packet.extract<EthernetHdr_0>(hdr.ethHdr);
         transition select(hdr.ethHdr.etherType) {
             16w0x8100: parseVlanHdr;
             16w0x800: parseIpv4Hdr;
@@ -183,13 +183,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
         }
     }
     @name("parseIpv4Hdr") state parseIpv4Hdr {
-        packet.extract<Ipv4Hdr>(hdr.ipv4Hdr);
+        packet.extract<Ipv4Hdr_0>(hdr.ipv4Hdr);
         transition select(hdr.ipv4Hdr.fragOffset, hdr.ipv4Hdr.ihl, hdr.ipv4Hdr.protocol) {
             default: accept;
         }
     }
     @name("parseVlanHdr") state parseVlanHdr {
-        packet.extract<VlanHdr>(hdr.vlanHdr);
+        packet.extract<VlanHdr_0>(hdr.vlanHdr);
         transition select(hdr.vlanHdr.etherType) {
             16w0x800: parseIpv4Hdr;
             default: accept;
@@ -255,9 +255,9 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
-        packet.emit<EthernetHdr>(hdr.ethHdr);
-        packet.emit<VlanHdr>(hdr.vlanHdr);
-        packet.emit<Ipv4Hdr>(hdr.ipv4Hdr);
+        packet.emit<EthernetHdr_0>(hdr.ethHdr);
+        packet.emit<VlanHdr_0>(hdr.vlanHdr);
+        packet.emit<Ipv4Hdr_0>(hdr.ipv4Hdr);
     }
 }
 

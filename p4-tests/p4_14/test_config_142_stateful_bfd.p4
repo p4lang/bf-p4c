@@ -1,4 +1,5 @@
 #include "tofino/intrinsic_metadata.p4"
+#include "tofino/stateful_alu_blackbox.p4"
 
 /* Sample P4 program */
 header_type pkt_t {
@@ -57,28 +58,26 @@ register bfd_cnt{
     /* instance_count : 16384; */
 }
 
-/*
-stateful_alu bfd_cnt_rx_alu {
-    register: bfd_cnt;
+blackbox stateful_alu bfd_cnt_rx_alu {
+    reg: bfd_cnt;
     update_lo_1_value: 0;
 }
-stateful_alu bfd_cnt_tx_alu {
-    register: bfd_cnt;
-    condition_a: register > 3;
+blackbox stateful_alu bfd_cnt_tx_alu {
+    reg: bfd_cnt;
+    condition_lo: register_lo > 3;
     update_hi_1_value: 1;
-    update_lo_1_value: register + 1;
-    output_predicate: a;
-    output_expr: new_hi;
-    output_dst: egress_md.bfd_timeout_detected;
+    update_lo_1_value: register_lo + 1;
+    output_predicate: condition_lo;
+    output_value: alu_hi;
+    output_dst: pkt.field_i_8;
 }
-*/
 
 action bfd_rx() {
-    /* execute_stateful_alu(bfd_cnt_rx_alu); */
+    execute_stateful_alu(bfd_cnt_rx_alu);
 }
 
 action bfd_tx() {
-    /* execute_stateful_alu(bfd_cnt_tx_alu); */
+    execute_stateful_alu(bfd_cnt_tx_alu);
 }
 
 
