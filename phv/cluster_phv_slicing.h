@@ -14,19 +14,28 @@
 //***********************************************************************************
 //
 // cluster Slicing
-// attempt to slice clusters to enable packing into phv slots
+// attempt to slice clusters to enable packing into smaller width phv empty slots
 //
 //***********************************************************************************
 //
 //
 class Cluster_Slicing : public Visitor {
  private:
-    PHV_MAU_Group_Assignments &phv_mau_i;           // PHV MAU Group Assignments
+    PHV_MAU_Group_Assignments &phv_mau_i;              // PHV MAU Group Assignments
+
  public:
     Cluster_Slicing(PHV_MAU_Group_Assignments &phv_m)  // NOLINT(runtime/explicit)
         : phv_mau_i(phv_m) {}
     //
+    PHV_MAU_Group_Assignments& phv_mau() { return phv_mau_i; }
+    //
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
-    void end_apply() override;
+    //
+    void cluster_slice(std::list<Cluster_PHV *>&);     // slice a list of clusters
+    std::pair<Cluster_PHV *, Cluster_PHV *> cluster_slice(Cluster_PHV *);
+                                                       // slice single cluster into halves
 };
+
+std::ostream &operator<<(std::ostream &, Cluster_Slicing &);
+
 #endif /* _TOFINO_PHV_CLUSTER_PHV_SLICING_H_ */

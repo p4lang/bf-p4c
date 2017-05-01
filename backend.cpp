@@ -137,12 +137,9 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
                                 // second cut PHV MAU Group assignments
                                 // honor single write conflicts from Table Placement
             &phv_bind,          // fields bound to PHV containers
-            new VisitFunctor([&phv]() {
-                // later passes assume that phv alloc info is sorted in field bit order, msb first
-                for (auto &field : phv)
-                    std::sort(field.alloc.begin(), field.alloc.end(),
-                        [](PhvInfo::Field::alloc_slice l, PhvInfo::Field::alloc_slice r) {
-                            return l.field_bit > r.field_bit; }); }),
+                                // later passes assume that phv alloc info
+                                // is sorted in field bit order, msb first
+                                // done by phv_bind
         });
     }
 
@@ -157,8 +154,11 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         &cluster_phv_mau,      // cluster PHV container placements
                                // first cut PHV MAU Group assignments
                                // produces cohabit fields for Table Placement
-        &cluster_phv_overlay,  // overlay unallocated clusters to MAU groups
-        // &cluster_slicing,   // slice clusters into smaller clusters
+        &cluster_slicing,      // slice clusters into smaller clusters
+                               // attempt packing with reduced width requirements
+                               // slicing also improves overlay possibilities due to lesser width
+                               // although number and mutual exclusion of fields don't change
+        &cluster_phv_overlay,  // overlay unallocated clusters to clusters as well as MAU groups
     });
 
     PassManager backend = {

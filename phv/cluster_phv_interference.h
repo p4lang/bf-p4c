@@ -37,7 +37,7 @@ class PHV_Interference : public Visitor {
     Cluster_PHV_Requirements &phv_requirements_i;  // reference to parent PHV Requirements
     SymBitMatrix &mutex_i;                         // fields liveness interference
     //
-    ordered_map<const PhvInfo::Field *, ordered_set<const PhvInfo::Field *>*> interference_edge_i;
+    ordered_map<PhvInfo::Field *, ordered_set<PhvInfo::Field *>*> interference_edge_i;
                                                    // interference graph edges
     //
  public:
@@ -66,30 +66,30 @@ class PHV_Interference : public Visitor {
     void interference_reduction(
         std::vector<Cluster_PHV *>&,
         const std::string&);
-    bool mutually_exclusive(const PhvInfo::Field *f1, const PhvInfo::Field *f2);
-    void create_interference_edge(const PhvInfo::Field *, const PhvInfo::Field *);
+    bool mutually_exclusive(PhvInfo::Field *f1, PhvInfo::Field *f2);
+    void create_interference_edge(PhvInfo::Field *, PhvInfo::Field *);
     void virtual_container_overlay(
         Cluster_PHV *,
-        const PhvInfo::Field *,
-        ordered_map<int, const PhvInfo::Field*>&,
+        PhvInfo::Field *,
+        ordered_map<int, PhvInfo::Field*>&,
         const int);
     void assign_virtual_container(
         Cluster_PHV *,
-        const PhvInfo::Field *,
-        ordered_map<int, const PhvInfo::Field*>&);
+        PhvInfo::Field *,
+        ordered_map<int, PhvInfo::Field*>&);
     //
     void sanity_check_interference(
         Cluster_PHV *,
         const std::string&);
     void sanity_check_overlay_maps(
-        ordered_map<int, const PhvInfo::Field*>&,
+        ordered_map<int, PhvInfo::Field*>&,
         Cluster_PHV *,
         const std::string&);
     //
 };
 //
 //
-std::ostream &operator<<(std::ostream &, ordered_map<int, const PhvInfo::Field*>&);
+std::ostream &operator<<(std::ostream &, ordered_map<int, PhvInfo::Field*>&);
 std::ostream &operator<<(std::ostream &out,
     ordered_map<PHV_Container::Ingress_Egress,
         ordered_map<int,

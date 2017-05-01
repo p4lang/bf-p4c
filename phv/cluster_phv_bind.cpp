@@ -57,6 +57,20 @@ PHV_Bind::apply_visitor(const IR::Node *node, const char *name) {
         trivial_allocate(fields_overflow_i);
     }
     //
+    // phv_fields.h vector<alloc_slice> alloc;
+    // sorted MSB (field) first
+    // sort fields' alloc
+    // later passes assume that phv alloc info is sorted in field bit order, msb first
+    //
+    for (auto &f : phv_i) {
+        if (f.alloc.size() > 1) {
+            std::sort(f.alloc.begin(), f.alloc.end(),
+                [](PhvInfo::Field::alloc_slice l, PhvInfo::Field::alloc_slice r) {
+                    return l.field_bit > r.field_bit;
+            });
+        }
+    }
+    //
     LOG3(*this);
     //
     return node;
@@ -94,7 +108,7 @@ PHV_Bind::collect_containers_with_fields() {
     containers_i.clear();
     allocated_fields_i.clear();
     fields_overflow_i.clear();
-    ordered_set<const PhvInfo::Field *> allocated_fields;
+    ordered_set<PhvInfo::Field *> allocated_fields;
     //
     for (auto &it : phv_mau_i.phv_mau_map()) {
         for (auto &g : it.second) {
@@ -129,7 +143,7 @@ PHV_Bind::collect_containers_with_fields() {
     //
     // fields_overflow_i =  all_phv_fields - allocated_fields
     //
-    ordered_set<const PhvInfo::Field *> all_phv_fields;
+    ordered_set<PhvInfo::Field *> all_phv_fields;
     // All Fields
     for (auto &field : phv_i) {
         //
@@ -147,7 +161,7 @@ PHV_Bind::collect_containers_with_fields() {
                 << &field);
         }
     }
-    ordered_set<const PhvInfo::Field *> s_diff = all_phv_fields;
+    ordered_set<PhvInfo::Field *> s_diff = all_phv_fields;
     s_diff -= allocated_fields;
     fields_overflow_i.assign(s_diff.begin(), s_diff.end());
     fields_overflow_i.sort(
@@ -159,11 +173,11 @@ PHV_Bind::collect_containers_with_fields() {
 }  // collect_containers_with_fields
 
 void
-PHV_Bind::phv_tphv_allocate(std::list<const PhvInfo::Field *>& fields) {
+PHV_Bind::phv_tphv_allocate(std::list<PhvInfo::Field *>& fields) {
     std::list<Cluster_PHV *> phv_clusters;
     std::list<Cluster_PHV *> t_phv_clusters;
     //
-    ordered_set<const PhvInfo::Field *> remove_set;
+    ordered_set<PhvInfo::Field *> remove_set;
     for (auto &f : fields) {
         if (f->ccgf && f->ccgf != f) {
             // no separate allocation required for ccgf members, remove field
@@ -172,11 +186,19 @@ PHV_Bind::phv_tphv_allocate(std::list<const PhvInfo::Field *>& fields) {
         }
         if (uses_i->use[1][f->gress][f->id]) {
             // used in MAU
-            phv_clusters.push_back(new Cluster_PHV(f, "phv_bind_phv_" + f->cl_i));
+            phv_clusters.push_back(
+                new Cluster_PHV(
+                    f,
+                    std::string(1,
+                        PHV_Container::Container_Content::Pass::Phv_Bind) + f->cl_id()));
         } else {
             if (uses_i->use[0][f->gress][f->id]) {
                 // used in parser / deparser
-                t_phv_clusters.push_back(new Cluster_PHV(f, "phv_bind_t_phv_" + f->cl_i));
+                t_phv_clusters.push_back(
+                    new Cluster_PHV(
+                        f,
+                        std::string(1,
+                            PHV_Container::Container_Content::Pass::Phv_Bind) + f->cl_id()));
             } else {
                 // no allocation required, remove field
                 remove_set.insert(f);
@@ -207,56 +229,42 @@ PHV_Bind::bind_fields_to_containers() {
     // clear previous field alloc information if any
     //
     for (auto &f : allocated_fields_i) {
-        PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
-        f1->alloc.clear();
+        f->alloc.clear();
         // ccgf members
-        if (f1->ccgf_fields.size()) {
-            for (auto &m : f1->ccgf_fields) {
+        if (f->ccgf_fields.size()) {
+            for (auto &m : f->ccgf_fields) {
                 m->alloc.clear();
             }
         }
     }
     for (auto &c : containers_i) {
-        for (auto &entry : const_cast<PHV_Container *>(c)->fields_in_container()) {
-            PHV_Container::Container_Content *cc = entry.second;
-            PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(entry.first);
-            int field_bit = cc->field_bit_lo();
-            int container_bit = cc->lo();
-            int width_in_container = cc->width();
-            PHV::Container *asm_container = phv_to_asm_map_i[c];
-            //
-            // ignore allocation for owners of
-            // non-header stack ccgs
-            // simple header ccgs
-            //
-            f1->alloc.emplace_back(
-               *asm_container,
-               field_bit,
-               container_bit,
-               width_in_container);
-
-            // contiguous container group allocation
-            // in case bypassing MAU PHV allocation PHV_container::taint() recursion
-            //
-            // int container_width = const_cast<PHV_Container *>(c)->width();
-            // container_contiguous_alloc(f1,
-            //                            container_width,
-            //                            asm_container,
-            //                            width_in_container);
-        }
-    }
-    //
-    // phv_fields.h vector<alloc_slice> alloc;
-    // sorted MSB (field) first
-    // sort fields' alloc
-    //
-    for (auto &f : allocated_fields_i) {
-        PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
-        if (f1->alloc.size() > 1) {
-            std::sort(f1->alloc.begin(), f1->alloc.end(),
-                [](PhvInfo::Field::alloc_slice l, PhvInfo::Field::alloc_slice r) {
-                    return l.field_bit > r.field_bit;
-            });
+        for (auto &cc_s : Values(const_cast<PHV_Container *>(c)->fields_in_container())) {
+            for (auto &cc : cc_s) {
+                PhvInfo::Field *f = cc->field();
+                int field_bit = cc->field_bit_lo();
+                int container_bit = cc->lo();
+                int width_in_container = cc->width();
+                PHV::Container *asm_container = phv_to_asm_map_i[c];
+                //
+                // ignore allocation for owners of
+                // non-header stack ccgs
+                // simple header ccgs
+                //
+                f->alloc.emplace_back(
+                   *asm_container,
+                   field_bit,
+                   container_bit,
+                   width_in_container);
+                //
+                // contiguous container group allocation
+                // in case bypassing MAU PHV allocation PHV_container::taint() recursion
+                //
+                // int container_width = const_cast<PHV_Container *>(c)->width();
+                // container_contiguous_alloc(f1,
+                //                            container_width,
+                //                            asm_container,
+                //                            width_in_container);
+            }
         }
     }
 }  // bind_fields_to_containers
@@ -354,7 +362,7 @@ PHV_Bind::container_contiguous_alloc(
 }  // container_contiguous_alloc
 
 void
-PHV_Bind::trivial_allocate(std::list<const PhvInfo::Field *>& fields) {
+PHV_Bind::trivial_allocate(std::list<PhvInfo::Field *>& fields) {
     //
     // trivially allocating overflow fields
     //
@@ -369,11 +377,10 @@ PHV_Bind::trivial_allocate(std::list<const PhvInfo::Field *>& fields) {
     // clear previous field alloc information if any
     //
     for (auto &f : fields) {
-        PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
-        f1->alloc.clear();
+        f->alloc.clear();
         // ccgf members
-        if (f1->ccgf_fields.size()) {
-            for (auto &pov_f : f1->ccgf_fields) {
+        if (f->ccgf_fields.size()) {
+            for (auto &pov_f : f->ccgf_fields) {
                 pov_f->alloc.clear();
             }
         }
@@ -394,7 +401,6 @@ PHV_Bind::trivial_allocate(std::list<const PhvInfo::Field *>& fields) {
             //
             container_prefix = "T";
         }
-        PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
         int field_bit = 0;
         int container_bit = 0;
         if (f->phv_use_width() > 16) {
@@ -418,13 +424,13 @@ PHV_Bind::trivial_allocate(std::list<const PhvInfo::Field *>& fields) {
             int width_in_container = f->size - f->phv_use_rem;
             if (width_in_container > container_width) {
                 width_in_container = container_width;
-                f1->phv_use_rem += width_in_container;  // spans several containers
+                f->phv_use_rem += width_in_container;  // spans several containers
                                                         // aggregate used bits
                                                         // [width 20]= 12..19[8b] 4..11[8b] 0..3[4b]
             } else {
-                f1->phv_use_rem = 0;
+                f->phv_use_rem = 0;
             }
-            f1->alloc.emplace_back(
+            f->alloc.emplace_back(
                 *asm_container, field_bit, container_bit, width_in_container);
             LOG3(f << '[' << field_bit << ".." << f->phv_use_width()-1 << "] ..... " << reg_name);
             field_bit += width_in_container;
@@ -449,9 +455,9 @@ PHV_Bind::trivial_allocate(std::list<const PhvInfo::Field *>& fields) {
                 // e.g., [31:0]->[W109]        -- removed
                 //       [8:0]->[W109](23..31) -- fresh allocation
                 //
-                f1->alloc.clear();
+                f->alloc.clear();
             }
-            container_contiguous_alloc(f1,
+            container_contiguous_alloc(f,
                                        container_width,
                                        asm_container,
                                        container_width);

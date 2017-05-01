@@ -30,17 +30,23 @@ class PHV_Container {
     //
     class Container_Content {
      public:
-        enum Overlay_Pass {None = '=', Field_Interference = '~', Cluster_Overlay = '%'};
+        enum Pass {
+            None = '=',
+            Aggregate = '@',
+            Field_Interference = '~',
+            Cluster_Overlay = '%',
+            Cluster_Slicing = '|',
+            Phv_Bind = '$'};
 
      private:
         const PHV_Container *container_i;  // parent container
         int lo_i;                          // low of bit range in container for field
         int hi_i;                          // high of bit range in container for field
-        const PhvInfo::Field *field_i;
+        PhvInfo::Field *field_i;
         const int field_bit_lo_i;          // start of field bit in this container
         std::string taint_color_i = "?";   // taint color of this field in container
         bool overlayed_field_i = false;    // true if field overlays another field in container
-        Overlay_Pass pass_i = None;        // tracks pass that performs overlay
+        Pass pass_i = None;                // tracks pass that performs overlay
 
      public:
         //
@@ -48,25 +54,25 @@ class PHV_Container {
             const PHV_Container *c,
             const int l,
             const int h,
-            const PhvInfo::Field *f,
+            PhvInfo::Field *f,
             const int field_bit_lo = 0,
             const std::string taint_color = "?",
             bool overlayed = false,
-            Overlay_Pass = None);
+            Pass = None);
         //
         int lo() const                   { return lo_i; }
         void lo(int l)                   { lo_i = l; }
         int hi() const                   { return hi_i; }
         void hi(int h)                   { hi_i = h; }
         int width() const                { return hi_i - lo_i + 1; }
-        const PhvInfo::Field *field()    { return field_i; }
+        PhvInfo::Field *field()          { return field_i; }
         int field_bit_lo() const         { return field_bit_lo_i; }
         int field_bit_hi() const         { return field_bit_lo_i + width() - 1; }
         const PHV_Container *container() { return container_i; }
         void container(PHV_Container *c) { container_i = c; }   // during transfer parser container
         std::string& taint_color()       { return taint_color_i; }
         bool overlayed()                 { return overlayed_field_i; }
-        Overlay_Pass pass()              { return pass_i; }
+        Pass pass()                      { return pass_i; }
         //
         void sanity_check_container(PHV_Container *, const std::string&);
     };
@@ -89,8 +95,10 @@ class PHV_Container {
                                                              // Egress_Only,
                                                              // Ingress_Or_Egress
     Container_status status_i = Container_status::EMPTY;
-    ordered_map<const PhvInfo::Field *, Container_Content *>
+    ordered_map<PhvInfo::Field *, std::list<Container_Content *>>
         fields_in_container_i;                               // fields binned in this container
+                                                             // list of ccs necessary for mutliple
+                                                             // sliced fields in same container
     //
     char *bits_i;                                            // tainted bits in container
     std::string taint_color_i = "0";                         // each resident field separate color
@@ -120,11 +128,11 @@ class PHV_Container {
         gress_i = gress_p;
     }
     Ingress_Egress gress()                                      { return gress_i; }
-    static Ingress_Egress gress(const PhvInfo::Field *field) {
-        if (const_cast<const PhvInfo::Field *>(field)->gress == INGRESS) {
+    static Ingress_Egress gress(PhvInfo::Field *field) {
+        if (field->gress == INGRESS) {
             return PHV_Container::Ingress_Egress::Ingress_Only;
         } else {
-            if (const_cast<const PhvInfo::Field *>(field)->gress == EGRESS) {
+            if (field->gress == EGRESS) {
                 return PHV_Container::Ingress_Egress::Egress_Only;
             }
         }
@@ -154,13 +162,13 @@ class PHV_Container {
     int taint(
         int start,
         int width,
-        const PhvInfo::Field *field,
+        PhvInfo::Field *field,
         int range_start = 0,
         int field_bit_lo = 0);
     int taint_ccgf(
         int start,
         int width,
-        const PhvInfo::Field *field,
+        PhvInfo::Field *field,
         int field_bit_lo);
     void update_ccgf(
         PhvInfo::Field *f,
@@ -170,63 +178,47 @@ class PHV_Container {
         PhvInfo::Field *field,
         int start,
         int width,
-        Container_Content::Overlay_Pass pass = Container_Content::Overlay_Pass::Field_Interference);
+        Container_Content::Pass pass = Container_Content::Pass::Field_Interference);
     void single_field_overlay(
         PhvInfo::Field *f,
         int start,
         int width,
         const int field_bit_lo,
-        Container_Content::Overlay_Pass pass = Container_Content::Overlay_Pass::Field_Interference);
+        Container_Content::Pass pass = Container_Content::Pass::Field_Interference);
     void field_overlays(
         PhvInfo::Field *field,
         int start,
         int width,
         const int field_bit_lo);
     void field_overlays();
-    ordered_map<std::string, std::pair<int, int>>* lowest_bit_and_ccgf_width();
+    ordered_map<int, std::pair<int, int>>* lowest_bit_and_ccgf_width(bool by_cluster_id = true);
     void taint_bits(
         int start,
         int width,
-        const PhvInfo::Field *field,
+        PhvInfo::Field *field,
         int field_bit_lo);
     int avail_bits()                                            { return avail_bits_i; }
     ordered_map<int, int>& ranges()                             { return ranges_i; }
-    ordered_map<const PhvInfo::Field *, Container_Content *>& fields_in_container() {
+    ordered_map<PhvInfo::Field *, std::list<Container_Content *>>& fields_in_container() {
         return fields_in_container_i;
     }
-    void fields_in_container(const PhvInfo::Field *f, Container_Content *cc) {
-        assert(f);
-        assert(cc);
-        assert(!fields_in_container_i.count(f));
-        //
-        fields_in_container_i[f] = cc;
-    }
-    void fields_in_container(int start, int end, ordered_set<const PhvInfo::Field *>& f_set) {
-        //
-        // fields that overlap start .. end in container
-        // Sub     |xxxxxx|
-        // Ovl  xxx|x     |
-        // Ovl     | xxxx |
-        // Ovl   xx|xxxxxx|xx
-        // Ovl     |     x|xxx
-        //
-        for (auto &cc : Values(fields_in_container_i)) {
-            if ((cc->lo() < start && cc->hi() >= start)
-                || (cc->lo() >= start && cc->lo() <= end)) {
-                //
-                f_set.insert(cc->field());
+    void fields_in_container(std::list<Container_Content *>& cc_list) {
+        // sorted in bit-wise order in container
+        cc_list.clear();
+        for (auto &cc_s : Values(fields_in_container_i)) {
+            for (auto &cc : cc_s) {
+                cc_list.push_back(cc);
             }
-        }  // for
+        }
+        cc_list.sort([](Container_Content *l, Container_Content *r) {
+            return l->lo() < r->lo();
+        });
     }
-    std::pair<int, int>
-        start_bit_and_width(const PhvInfo::Field *f) {
-        //
-        assert(f);
-        assert(fields_in_container_i.count(f));
-        //
-        Container_Content *cc = fields_in_container_i[f];
-        return std::make_pair(cc->lo(), cc->width());
-    }
+    void fields_in_container(PhvInfo::Field *f, Container_Content *cc);
+    void fields_in_container(int start, int end, ordered_set<PhvInfo::Field *>& f_set);
+    //
+    std::pair<int, int> start_bit_and_width(PhvInfo::Field *f);
+    //
     void create_ranges();
     void clear();
     void clean_ranges();
@@ -266,6 +258,7 @@ class PHV_Container {
 //
 //
 std::ostream &operator<<(std::ostream &, PHV_Container::Container_Content *);
+std::ostream &operator<<(std::ostream &, std::list<PHV_Container::Container_Content *>&);
 std::ostream &operator<<(std::ostream &, std::vector<PHV_Container::Container_Content *>&);
 std::ostream &operator<<(std::ostream &, ordered_set<PHV_Container::Container_Content *>&);
 std::ostream &operator<<(std::ostream &, ordered_map<int, int>&);
@@ -276,6 +269,6 @@ std::ostream &operator<<(std::ostream &, std::vector<PHV_Container *>&);
 std::ostream &operator<<(std::ostream &, std::list<PHV_Container *>&);
 std::ostream &operator<<(
     std::ostream &,
-    ordered_map<const PhvInfo::Field *, PHV_Container::Container_Content *>&);
+    ordered_map<PhvInfo::Field *, std::list<PHV_Container::Container_Content *>>&);
 //
 #endif /* _TOFINO_PHV_CLUSTER_PHV_CONTAINER_H_ */

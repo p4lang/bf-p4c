@@ -23,13 +23,16 @@ class Cluster_PHV_Overlay : public Visitor {
         PHV_Interference &phv_interference_m)
         : phv_mau_i(phv_mau_m), phv_interference_i(phv_interference_m) {}
     //
+    PHV_MAU_Group_Assignments& phv_mau() { return phv_mau_i; }
+    //
     const IR::Node *apply_visitor(const IR::Node *node, const char *name = 0) override;
     //
     // cluster to cluster overlay
     //
     bool overlay_field_to_field(
-        const PhvInfo::Field&,
-        const PhvInfo::Field&);
+        PhvInfo::Field *f_overlay,
+        PhvInfo::Field *f_substratum,
+        bool exceed_substratum = false);
     bool overlay_cluster_to_cluster(
         Cluster_PHV *cl_1,
         Cluster_PHV *cl_2);
@@ -41,8 +44,11 @@ class Cluster_PHV_Overlay : public Visitor {
     // cluster to MAU group overlay
     //
     bool overlay_field_to_container(
-        const PhvInfo::Field *field,
-        PHV_Container *ctnr);
+        Cluster_PHV *cl,
+        PhvInfo::Field *field,
+        PHV_Container *c,
+        int run_width,
+        int &start_bit);
     bool overlay_cluster_to_mau_group(
         Cluster_PHV *cl,
         PHV_MAU_Group *g);
@@ -54,6 +60,9 @@ class Cluster_PHV_Overlay : public Visitor {
 
 std::ostream &operator<<(
     std::ostream &,
-    ordered_map<const PhvInfo::Field *, PHV_Container *>&);
+    ordered_map<PhvInfo::Field *, std::list<std::pair<PHV_Container *, int>>>&);
+std::ostream &operator<<(
+    std::ostream &,
+    Cluster_PHV_Overlay&);
 
 #endif /* _TOFINO_PHV_CLUSTER_PHV_OVERLAY_H_ */

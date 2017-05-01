@@ -14,11 +14,11 @@ PHV_Container::Container_Content::Container_Content(
     const PHV_Container *c,
     const int l,
     const int w,
-    const PhvInfo::Field *f,
+    PhvInfo::Field *f,
     const int field_bit_lo,
     const std::string taint_color,
     bool overlayed,
-    Overlay_Pass pass)
+    Pass pass)
         : container_i(c),
           lo_i(l),
           hi_i(l+w-1),
@@ -34,7 +34,7 @@ PHV_Container::Container_Content::Container_Content(
     //
     // insert phv container in field
     //
-    const_cast<PhvInfo::Field *>(f)->phv_containers(c);
+    f->phv_containers(c);
 }
 
 //***********************************************************************************
@@ -128,7 +128,7 @@ int
 PHV_Container::taint(
     int start,
     int width,
-    const PhvInfo::Field *field,
+    PhvInfo::Field *field,
     int range_start,
     int field_bit_lo) {
     //
@@ -162,7 +162,7 @@ PHV_Container::taint(
     // -- now performed after all phv/tphv allocation as a final pass in cluster_phv_mau.cpp
     //
     // field_overlays(
-        // const_cast<PhvInfo::Field *>(field),
+        // field,
         // start,
         // width,
         // field_bit_lo);
@@ -191,7 +191,7 @@ int
 PHV_Container::taint_ccgf(
     int start,
     int width,
-    const PhvInfo::Field *field,
+    PhvInfo::Field *field,
     int field_bit_lo) {
     //
     // container contiguous groups
@@ -269,7 +269,7 @@ PHV_Container::taint_ccgf(
     //
     // update ccgf owner record
     //
-    update_ccgf(const_cast<PhvInfo::Field *>(field), processed_members, processed_width);
+    update_ccgf(field, processed_members, processed_width);
 
     if (field->header_stack_pov_ccgf) {
         fields_in_container(
@@ -304,7 +304,7 @@ PHV_Container::overlay_ccgf_field(
     PhvInfo::Field *field,
     int start,
     int width,
-    Container_Content::Overlay_Pass pass) {
+    Container_Content::Pass pass) {
     //
     // if two ccgfs are overlayed, start from lowest phv_use bit of substratum
     // e.g.,
@@ -359,7 +359,7 @@ PHV_Container::single_field_overlay(
     int start,
     int width,
     const int field_bit_lo,
-    Container_Content::Overlay_Pass pass) {
+    Container_Content::Pass pass) {
     //
     assert(f);
     assert(start >= 0);
@@ -399,11 +399,11 @@ PHV_Container::field_overlays(
             if (entry.second) {
                 for (auto &f : *(entry.second)) {
                     single_field_overlay(
-                        const_cast<PhvInfo::Field *>(f),
+                        f,
                         start,
                         width,
                         field_bit_lo,
-                        Container_Content::Overlay_Pass::Field_Interference);
+                        Container_Content::Pass::Field_Interference);
                 }
             }
         }
@@ -417,46 +417,60 @@ PHV_Container::field_overlays() {
     // if substratum field has overlay fields after cluster's interference graph computation
     // add those overlay fields to container's container_contents
     //
-    // two fields can't have same cluster in same container unless they are part of ccgf
+    // before overlay:
+    // two fields can't have same cluster id in same container unless they are part of ccgf
+    // after overlay:
+    // Aggregate interference based overlay fields in container can retain same Agg cluster id
+    //
     // get lowest allocation bit for ccgf field
     // overlay starts from this bit
     // e.g., ccgf f1 [f1,f2] may be allocation 22211111
     // lowest bit in container is 0 which is not the lowest bit of owner = 3
     //
-    ordered_map<std::string, std::pair<int, int>> *lbcw = lowest_bit_and_ccgf_width();
-    for (auto &cc : Values(fields_in_container_i)) {
+    ordered_map<int, std::pair<int, int>> *lbcw = lowest_bit_and_ccgf_width();
+    for (auto &cc_s : Values(fields_in_container_i)) {
         //
         // if field has overlay fields after cluster's interference graph computation
         // add those overlay fields to container's container_contents
         //
-        std::string cluster_id = const_cast<PhvInfo::Field *>(cc->field())->cl();
-        field_overlays(
-            const_cast<PhvInfo::Field *>(cc->field()),
-            (*lbcw)[cluster_id].first,  // not necessarily cc->lo() for ccgf field
-            (*lbcw)[cluster_id].second,
-            cc->field_bit_lo());
+        for (auto &cc : cc_s) {
+            int cluster_id = cc->field()->cl_id_num();
+            field_overlays(
+                cc->field(),
+                (*lbcw)[cluster_id].first,  // not necessarily cc->lo() for ccgf field
+                (*lbcw)[cluster_id].second,
+                cc->field_bit_lo());
+        }
     }
 }  // field_overlays()
 
-ordered_map<std::string, std::pair<int, int>>*
-PHV_Container::lowest_bit_and_ccgf_width() {
+ordered_map<int, std::pair<int, int>>*
+PHV_Container::lowest_bit_and_ccgf_width(bool by_cluster_id) {
     //
-    // per cluster_id
+    // if by_cluster_id then map using cluster_id, to obtain all ccgf members in same container
+    // else use field_id
     // lowest bit position of field's member in container
     // total size of all ccgf members in container
     //
-    ordered_map<std::string, std::pair<int, int>> *lbcw =
-        new ordered_map<std::string, std::pair<int, int>>;
+    ordered_map<int, std::pair<int, int>> *lbcw = new ordered_map<int, std::pair<int, int>>;
     lbcw->clear();
-    for (auto &cc : Values(fields_in_container_i)) {
-        std::string cluster_id = const_cast<PhvInfo::Field *>(cc->field())->cl();
-        int lo = cc->lo();
-        int width = cc->width();
-        if (lbcw->count(cluster_id)) {
-            lo = std::min(lo, lbcw->at(cluster_id).first);
-            width += lbcw->at(cluster_id).second;
+    for (auto &cc_s : Values(fields_in_container_i)) {
+        for (auto &cc : cc_s) {
+            int id = by_cluster_id? cc->field()->cl_id_num(): cc->field()->id;
+            int lo = cc->lo();
+            int width = cc->width();
+            if (lbcw->count(id)) {
+                lo = std::min(lo, lbcw->at(id).first);
+                width += lbcw->at(id).second;
+                //
+                // aggregate interference based overlays can overlay on top of each other
+                // having the same cluster_id_num
+                // double (mutliple) counting their widths can exceed container width
+                //
+                width = std::min(width, static_cast<int>(width_i));
+            }
+            (*lbcw)[id] = std::make_pair(lo, width);
         }
-        (*lbcw)[cluster_id] = std::make_pair(lo, width);
     }
     return lbcw;
 }  // lowest_bit_and_ccgf_width
@@ -465,7 +479,7 @@ void
 PHV_Container::taint_bits(
     int start,
     int width,
-    const PhvInfo::Field *field,
+    PhvInfo::Field *field,
     int field_bit_lo) {
     //
     if (taint_color_i == "9") {
@@ -528,6 +542,96 @@ PHV_Container::taint_bits(
         new Container_Content(this, start, width, field, field_bit_lo, taint_color_i));
 }  // taint_bits()
 
+void
+PHV_Container::fields_in_container(PhvInfo::Field *f, Container_Content *cc) {
+    assert(f);
+    assert(cc);
+    if (fields_in_container_i.count(f)) {
+        for (auto &cc_slice : fields_in_container_i[f]) {
+            // ensure ranges do not overlay for field slices
+            int s_lo = cc_slice->lo();
+            int s_hi = cc_slice->hi();
+            BUG_CHECK(((s_lo >= cc->lo() && s_lo <= cc->hi())
+               || (s_hi >= cc->lo() && s_hi <= cc->hi())),
+                "*****PHV_Container::fields_in_container()*****"
+                "<s_lo=%d..s_hi=%d> <cc->lo()=%d..cc->hi()=%d>,"
+                "cc_slice->field()=%d:%s, cc->field()=%d:%s",
+                s_lo, s_hi, cc->lo(), cc->hi(),
+                cc_slice->field()->id, cc_slice->field()->name, cc->field()->id, cc->field()->name);
+        }
+    }
+    fields_in_container_i[f].push_back(cc);
+}  // fields_in_container f cc
+
+void
+PHV_Container::fields_in_container(int start, int end, ordered_set<PhvInfo::Field *>& fs_set) {
+    //
+    // fields that overlap start .. end in container
+    //
+    // Substratum     |xxxxxx|
+    // Overlay     xxx|x     |
+    // Overlay        | xxxx |
+    // Overlay      xx|xxxxxx|xx
+    // Overlay        |     x|xxx
+    //                ^      ^
+    //                |      |
+    //                start  end
+    //
+    for (auto &cc_slices : Values(fields_in_container_i)) {
+        for (auto &cc : cc_slices) {
+            if ((cc->lo() < start && cc->hi() >= start)
+                || (cc->lo() >= start && cc->lo() <= end)) {
+                //
+                fs_set.insert(cc->field());
+            }
+        }
+    }  // for
+}  // fields_in_container fs_set
+
+std::pair<int, int>
+PHV_Container::start_bit_and_width(PhvInfo::Field *f) {
+    //
+    assert(f);
+    assert(fields_in_container_i.count(f));
+    //
+    int lo = 0;
+    int w = 0;
+    //
+    if (fields_in_container_i[f].size() == 1) {
+        Container_Content *cc = fields_in_container_i[f].front();
+        lo = cc->lo();
+        w = cc->width();
+    } else {
+        //
+        // slices may be contiguous .. get contiguous width
+        // or disjoint .. get max slice width
+        //
+        lo = -1;
+        int hi = 0;
+        for (auto &cc_s : fields_in_container_i[f]) {
+            if (lo == -1) {
+                lo = cc_s->lo();
+                hi = cc_s->hi();
+                w = cc_s->width();
+            } else {
+                if (hi + 1 == cc_s->lo()) {
+                    // contiguous
+                    // retain lo
+                    w += cc_s->width();
+                } else {
+                    // disjoint
+                    if (cc_s->width() > w) {
+                        // select this slice as contender for max width
+                        lo = cc_s->lo();
+                        hi = cc_s->hi();
+                        w = cc_s->width();
+                    }
+                }
+            }
+        }  // for
+    }
+    return std::make_pair(lo, w);
+}  // start_bit_and_width
 
 //***********************************************************************************
 //
@@ -543,24 +647,22 @@ void PHV_Container::Container_Content::sanity_check_container(
     //
     // fields can span containers
     //
-    if (field_i->phv_use_width() < width()) {
-        if (!constraint_no_cohabit(field_i) && field_i->phv_use_width() != width()) {
-            LOG1(
-                "*****cluster_phv_container.cpp:sanity_WARN*****....."
-                << msg_1
-                << std::endl
-                << " field width less than container width: "
-                << field_i->phv_use_lo
-                << ".."
-                << field_i->phv_use_hi
-                << " vs "
-                << lo_i
-                << ".."
-                << hi_i
-                << std::endl
-                << field_i
-                << *container);
-        }
+    if (!constraint_no_cohabit(field_i) && field_i->phv_use_width() < width()) {
+        LOG1(
+            "*****cluster_phv_container.cpp:sanity_WARN*****....."
+            << msg_1
+            << std::endl
+            << " field width less than width allocated in container: "
+            << field_i->phv_use_lo
+            << ".."
+            << field_i->phv_use_hi
+            << " vs "
+            << lo_i
+            << ".."
+            << hi_i
+            << std::endl
+            << field_i
+            << *container);
     }
     //
     // cc lo .. hi must be tainted in c bits
@@ -619,6 +721,21 @@ void PHV_Container::Container_Content::sanity_check_container(
                 }
                 break;
             } else {
+                if (field_i->header_stack_pov_ccgf) {
+                    //
+                    // PHV-111.B47.E.Pp(0..0)  05432221
+                    // 1= 948:egress::vxlan_gpe_int_header.$valid<1>
+                    // .....
+                    // 4= 976:egress::mpls[1].$valid<1>
+                    // 5= 977:egress::mpls[2].$valid<1>
+                    // 5= 978:egress::mpls.$stkvalid<6:0..5>
+                    //
+                    if (container->bits()[hi_i - field_i->phv_use_width()]
+                        == taint_color_i.back()) {
+                        // taint color ok
+                        break;
+                    }
+                }
                 LOG1(
                     "*****cluster_phv_container.cpp:sanity_FAIL*****....."
                     << msg_1
@@ -651,38 +768,45 @@ void PHV_Container::sanity_check_container(const std::string& msg) {
     //
     int occupation_width = 0;
     int overlayed_width = 0;
-    for (auto &cc : Values(fields_in_container_i)) {
-        cc->sanity_check_container(this, msg_1);
-        sanity_check_container_avail(cc->lo(), cc->hi(), msg_1);
-        if (cc->overlayed()) {
-            overlayed_width = std::max(overlayed_width, cc->width());  // can have multiple overlays
-        } else {
-            occupation_width += cc->width();
-        }
-        // sanity check constraints on field
-        if (constraint_no_cohabit(cc->field())) {
-            if (fields_in_container_i.size() != 1) {
-                LOG3("*****cluster_phv_container.cpp:sanity_FAIL*****....."
-                << msg_1
-                << " cohabit fields with 'constraint_no_cohabit' "
-                << cc->field());
-            }
+    for (auto &cc_s : Values(fields_in_container_i)) {
+        for (auto &cc : cc_s) {
+            cc->sanity_check_container(this, msg_1);
+            sanity_check_container_avail(cc->lo(), cc->hi(), msg_1);
             if (cc->overlayed()) {
-                overlayed_width = std::max(overlayed_width, static_cast<int>(width_i));  // multiple
+                // can have multiple overlays
+                overlayed_width = std::max(overlayed_width, cc->width());
             } else {
-                occupation_width = width_i;
+                // discount header_stack_pov_ccgf
+                if (!cc->field()->header_stack_pov_ccgf) {
+                    occupation_width += cc->width();
+                }
             }
-        }
-        if (constraint_no_holes(cc->field())) {
-            if (avail_bits_i) {
-                LOG4("*****cluster_phv_container.cpp:sanity_FAIL*****....."
-                << msg_1
-                << " container has holes with field 'constraint_no_holes' "
-                << std::endl
-                << cc);
+            // sanity check constraints on field
+            if (constraint_no_cohabit(cc->field())) {
+                if (fields_in_container_i.size() != 1) {
+                    LOG3("*****cluster_phv_container.cpp:sanity_FAIL*****....."
+                    << msg_1
+                    << " cohabit fields with 'constraint_no_cohabit' "
+                    << cc->field());
+                }
+                if (cc->overlayed()) {
+                    // multiple
+                    overlayed_width = std::max(overlayed_width, static_cast<int>(width_i));
+                } else {
+                    occupation_width = width_i;
+                }
             }
-        }
-    }
+            if (constraint_no_holes(cc->field())) {
+                if (avail_bits_i) {
+                    LOG4("*****cluster_phv_container.cpp:sanity_FAIL*****....."
+                    << msg_1
+                    << " container has holes with field 'constraint_no_holes' "
+                    << std::endl
+                    << cc);
+                }
+            }
+        }  // for
+    }  // for
     int fill = std::max(occupation_width, overlayed_width);
     if (fill + avail_bits_i != width_i) {
         LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****....."
@@ -703,41 +827,52 @@ void PHV_Container::sanity_check_overlayed_fields(const std::string& msg) {
     // ensure overlayed field has span within its substratum field
     //
     const std::string msg_1 = msg + "..PHV_Container::sanity_check_overlayed_fields";
-    ordered_map<std::string, std::pair<int, int>> *lbcw = lowest_bit_and_ccgf_width();
-    for (auto &cc : Values(fields_in_container_i)) {
-        if (cc->overlayed()) {
-           PhvInfo::Field *overlayed = const_cast<PhvInfo::Field *>(cc->field());
-           std::string overlayed_cluster_id = overlayed->cl();
-           PhvInfo::Field *substratum = overlayed->overlay_substratum();
-           assert(substratum);
-           std::string substratum_cluster_id = substratum->cl();
-           if ((*lbcw)[overlayed_cluster_id].first < (*lbcw)[substratum_cluster_id].first) {
-                LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****....."
-                << msg_1
-                << std::endl
-                << ".....overlayed field has 'lo' < substratum....."
-                << std::endl
-                << "overlayed = " <<  overlayed
-                << " ..... lo = " <<  (*lbcw)[overlayed_cluster_id].first
-                << std::endl
-                << "substratum = " << substratum
-                << " ..... lo = " <<  (*lbcw)[substratum_cluster_id].first
-                << *this);
-           }
-           if ((*lbcw)[overlayed_cluster_id].second > (*lbcw)[substratum_cluster_id].second) {
-                LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****....."
-                << msg_1
-                << std::endl
-                << ".....overlayed field has range > substratum....."
-                << std::endl
-                << "overlayed = " <<  overlayed
-                << " ..... width = " <<  (*lbcw)[overlayed_cluster_id].second
-                << std::endl
-                << "substratum = " << substratum
-                << " ..... width = " <<  (*lbcw)[substratum_cluster_id].second
-                << *this);
-           }
-        }
+    ordered_map<int, std::pair<int, int>> *cluster_lbcw = lowest_bit_and_ccgf_width(/*by_cluster*/);
+    ordered_map<int, std::pair<int, int>> *field_lbcw = lowest_bit_and_ccgf_width(false/*byfield*/);
+    for (auto &cc_s : Values(fields_in_container_i)) {
+        for (auto &cc : cc_s) {
+            if (cc->overlayed()) {
+               PhvInfo::Field *overlayed = cc->field();
+               PhvInfo::Field *substratum = overlayed->overlay_substratum();
+               assert(substratum);
+               // field lo's may disagree but cluster's low for ccgf fields can agree
+               // PHV-123.B59.I.Fp        22222211
+               // e.g.,
+               // overlay lo = 1,2,3,4,5 vs substratum lo = 6 but substratum ccgf lo is 1
+               // similarly for overlay range check
+               //
+               if ((*field_lbcw)[overlayed->id].first < (*field_lbcw)[substratum->id].first
+                   && (*cluster_lbcw)[overlayed->cl_id_num()].first
+                       < (*cluster_lbcw)[substratum->cl_id_num()].first) {
+                    LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****....."
+                    << msg_1
+                    << std::endl
+                    << ".....overlayed field has 'lo' < substratum....."
+                    << std::endl
+                    << "overlayed = " <<  overlayed
+                    << " ..... lo = " <<  (*field_lbcw)[overlayed->id].first
+                    << std::endl
+                    << "substratum = " << substratum
+                    << " ..... lo = " <<  (*field_lbcw)[substratum->id].first
+                    << *this);
+               }
+               if ((*field_lbcw)[overlayed->id].second > (*field_lbcw)[substratum->id].second
+                    && (*cluster_lbcw)[overlayed->cl_id_num()].second
+                        > (*cluster_lbcw)[substratum->cl_id_num()].second) {
+                    LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****....."
+                    << msg_1
+                    << std::endl
+                    << ".....overlayed field has range > substratum....."
+                    << std::endl
+                    << "overlayed = " <<  overlayed
+                    << " ..... width = " <<  (*field_lbcw)[overlayed->id].second
+                    << std::endl
+                    << "substratum = " << substratum
+                    << " ..... width = " <<  (*field_lbcw)[substratum->id].second
+                    << *this);
+               }
+            }
+        }  // for
     }  // for
 }  // sanity_check_overlayed_fields
 
@@ -930,23 +1065,32 @@ std::ostream &operator<<(std::ostream &out, PHV_Container::Container_Content *cc
     return out;
 }
 
-
-std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container::Container_Content *>& v_cc) {
-    if (v_cc.size()) {
+std::ostream &operator<<(std::ostream &out, std::list<PHV_Container::Container_Content *>& x_cc) {
+    if (x_cc.size()) {
         out << std::endl;
     }
-    for (auto &cc : v_cc) {
+    for (auto &cc : x_cc) {
+        out << cc << std::endl;
+    }
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, std::vector<PHV_Container::Container_Content *>& x_cc) {
+    if (x_cc.size()) {
+        out << std::endl;
+    }
+    for (auto &cc : x_cc) {
         out << cc << std::endl;
     }
     return out;
 }
 
 // ordered_set
-std::ostream &operator<<(std::ostream &out, ordered_set<PHV_Container::Container_Content *>& o_cc) {
-    if (o_cc.size()) {
+std::ostream &operator<<(std::ostream &out, ordered_set<PHV_Container::Container_Content *>& x_cc) {
+    if (x_cc.size()) {
         out << std::endl;
     }
-    for (auto &cc : o_cc) {
+    for (auto &cc : x_cc) {
         out << cc << std::endl;
     }
     return out;
@@ -1026,10 +1170,12 @@ std::ostream &operator<<(std::ostream &out, std::list<PHV_Container *> &phv_cont
 
 std::ostream &operator<<(
     std::ostream &out,
-    ordered_map<const PhvInfo::Field *, PHV_Container::Container_Content *>& fields_cc_map) {
-    for (auto &cc : Values(fields_cc_map)) {
-        out << std::endl
-            << cc;
+    ordered_map<PhvInfo::Field *, std::list<PHV_Container::Container_Content *>>& fields_cc_map) {
+    for (auto &cc_s : Values(fields_cc_map)) {
+        for (auto &cc : cc_s) {
+            out << std::endl
+                << cc;
+        }
     }
     return out;
 }

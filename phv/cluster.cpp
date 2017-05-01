@@ -335,7 +335,7 @@ void Cluster::end_apply() {
                 // ccgf owners responsible for member allocation
                 // remove duplication as cluster members
                 //
-                ordered_set<const PhvInfo::Field *> s1 = *(dst_map_i[&f]);
+                ordered_set<PhvInfo::Field *> s1 = *(dst_map_i[&f]);
                 for (auto &c_e : s1) {
                     for (auto &m : c_e->ccgf_fields) {
                         if (m != c_e && s1.count(m)) {
@@ -353,7 +353,7 @@ void Cluster::end_apply() {
     // forall x not elem lhs_unique_i, dst_map_i[x] = 0
     // do not remove singleton clusters as x needs MAU PHV, e.g., set x, 3
     //
-    std::list<const PhvInfo::Field *> delete_list;
+    std::list<PhvInfo::Field *> delete_list;
     for (auto &entry : dst_map_i) {
         auto lhs = entry.first;
         //
@@ -428,11 +428,11 @@ void Cluster::compute_fields_no_use_mau() {
     pov_fields_not_in_cluster_i.clear();
     fields_no_use_mau_i.clear();
     //
-    ordered_set<const PhvInfo::Field *> all_fields;                    // all fields in phv_i
-    ordered_set<const PhvInfo::Field *> cluster_fields;                // cluster fields
-    ordered_set<const PhvInfo::Field *> all_minus_cluster;             // all - cluster fields
-    ordered_set<const PhvInfo::Field *> pov_fields;                    // pov fields
-    ordered_set<const PhvInfo::Field *> not_used_mau;                  // fields not used in MAU
+    ordered_set<PhvInfo::Field *> all_fields;                          // all fields in phv_i
+    ordered_set<PhvInfo::Field *> cluster_fields;                      // cluster fields
+    ordered_set<PhvInfo::Field *> all_minus_cluster;                   // all - cluster fields
+    ordered_set<PhvInfo::Field *> pov_fields;                          // pov fields
+    ordered_set<PhvInfo::Field *> not_used_mau;                        // fields not used in MAU
                                                                        // all - cluster - pov_fields
     for (auto &field : phv_i) {
         all_fields.insert(&field);
@@ -502,14 +502,14 @@ void Cluster::compute_fields_no_use_mau() {
     //
     // pov_mau = pov intersect cluster fields
     //
-    ordered_set<const PhvInfo::Field *> pov_mau = pov_fields;
+    ordered_set<PhvInfo::Field *> pov_mau = pov_fields;
     pov_mau &= cluster_fields;
     LOG3("..........POV fields in Cluster (" << pov_mau.size() << ")..........");
     //
     // pov fields not in cluster
     // pov_no_mau = set_diff pov, pov_mau
     //
-    ordered_set<const PhvInfo::Field *> pov_no_mau = pov_fields;
+    ordered_set<PhvInfo::Field *> pov_no_mau = pov_fields;
     pov_no_mau -= pov_mau;
     LOG3("..........POV fields not in Cluster (" << pov_no_mau.size() << ")..........");
     pov_fields_not_in_cluster_i.assign(pov_no_mau.begin(), pov_no_mau.end());
@@ -530,24 +530,23 @@ void Cluster::compute_fields_no_use_mau() {
     // fields not used in ingress or egress
     // set_field_range (entire field deparsed) for T_PHV fields_no_use_mau
     //
-    ordered_set<const PhvInfo::Field *> delete_set;
+    ordered_set<PhvInfo::Field *> delete_set;
     for (auto &f : not_used_mau) {
-        PhvInfo::Field *f1 = const_cast<PhvInfo::Field *>(f);
-        bool use_pd = uses_i->use[0][f1->gress][f1->id];  // used in parser / deparser
+        bool use_pd = uses_i->use[0][f->gress][f->id];  // used in parser / deparser
         //
-        // normally f1->metadata in the T_PHV path can be removed
+        // normally f->metadata in the T_PHV path can be removed
         // but bridge_metadata deparsed must be allocated
-        // f1->metadata && !use_pd
+        // f->metadata && !use_pd
         //
-        if (!use_pd || f1->pov || (f1->ccgf && f1->ccgf != f1)) {
+        if (!use_pd || f->pov || (f->ccgf && f->ccgf != f)) {
             //
             delete_set.insert(f);
         } else {
-            set_field_range(f1);
+            set_field_range(f);
         }
     }
     // s_diff = not_used_mau - delete_set
-    ordered_set<const PhvInfo::Field *> s_diff = not_used_mau;
+    ordered_set<PhvInfo::Field *> s_diff = not_used_mau;
     s_diff -= delete_set;
     fields_no_use_mau_i.assign(s_diff.begin(), s_diff.end());  // fields_no_use_mau_i
     LOG3("..........T_PHV Fields ("
@@ -572,22 +571,23 @@ Cluster::sort_fields_remove_non_determinism() {
     // which track order of insertion & use that as iteration order.
     // sometimes, can't avoid, need additional support functions in ordered_set
     // e.g.,
-    // set_intersection (&=), set_difference (-=), insert ordered_set in (ordered_set of ordered_sets)
+    // set_intersection (&=), set_difference (-=),
+    // insert ordered_set in (ordered_set of ordered_sets)
     //
     // sort exported list fields by id
     //
     pov_fields_i.sort(
-        [](const PhvInfo::Field *l, const PhvInfo::Field *r) {
+        [](PhvInfo::Field *l, PhvInfo::Field *r) {
             // sort by cluster id_num to prevent non-determinism
             return l->id < r->id;
         });
     pov_fields_not_in_cluster_i.sort(
-        [](const PhvInfo::Field *l, const PhvInfo::Field *r) {
+        [](PhvInfo::Field *l, PhvInfo::Field *r) {
             // sort by cluster id_num to prevent non-determinism
             return l->id < r->id;
         });
     fields_no_use_mau_i.sort(
-        [](const PhvInfo::Field *l, const PhvInfo::Field *r) {
+        [](PhvInfo::Field *l, PhvInfo::Field *r) {
             // sort by cluster id_num to prevent non-determinism
             return l->id < r->id;
         });
@@ -605,7 +605,7 @@ Cluster::sort_fields_remove_non_determinism() {
 void Cluster::create_dst_map_entry(PhvInfo::Field *field) {
     assert(field);
     if (!dst_map_i[field]) {
-        dst_map_i[field] = new ordered_set<const PhvInfo::Field *>;  // new set
+        dst_map_i[field] = new ordered_set<PhvInfo::Field *>;  // new set
         lhs_unique_i.insert(field);  // lhs_unique set insert field
         LOG5("lhs_unique..insert[" << std::endl << &lhs_unique_i << "lhs_unique..insert]");
         insert_cluster(field, field);
@@ -668,7 +668,7 @@ void Cluster::set_field_range(PhvInfo::Field *field, int container_width) {
 //
 //***********************************************************************************
 
-void Cluster::insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rhs) {
+void Cluster::insert_cluster(PhvInfo::Field *lhs, PhvInfo::Field *rhs) {
     if (lhs && dst_map_i[lhs] && rhs) {
         if (rhs == lhs) {   // b == a
             dst_map_i[lhs]->insert(rhs);
@@ -709,7 +709,7 @@ void Cluster::insert_cluster(const PhvInfo::Field *lhs, const PhvInfo::Field *rh
 
 
 bool
-Cluster::is_ccgf_member(const PhvInfo::Field *lhs, const PhvInfo::Field *rhs) {
+Cluster::is_ccgf_member(PhvInfo::Field *lhs, PhvInfo::Field *rhs) {
     // ccgf check: rhs is not a member of f.ccgf, f element of dst_map_i[lhs]
     if (lhs && rhs && dst_map_i[lhs]) {
         for (auto &f : *dst_map_i[lhs]) {
@@ -745,7 +745,7 @@ void Cluster::sanity_check_field_range(const std::string& msg) {
     }
 }
 
-void Cluster::sanity_check_clusters(const std::string& msg, const PhvInfo::Field *lhs) {
+void Cluster::sanity_check_clusters(const std::string& msg, PhvInfo::Field *lhs) {
     if (lhs && dst_map_i[lhs]) {
         // b --> (b,d,e); count b=1 in (b,d,e)
         if (dst_map_i[lhs]->count(lhs) != 1) {
@@ -776,7 +776,7 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg) {
     //
     for (auto entry : dst_map_i) {
         if (entry.first && entry.second) {
-            ordered_set<const PhvInfo::Field *> s1 = *(entry.second);
+            ordered_set<PhvInfo::Field *> s1 = *(entry.second);
             //
             // ccgf check
             // for x,y member of cluster, x!=y, z element of x.xxgf
@@ -801,10 +801,10 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg) {
             // s1 <-- s1 U f.ccgf, f element of s1
             // s2 <-- s2 U f.ccgf, f element of s2
             //
-            ordered_set<const PhvInfo::Field *> sx;
+            ordered_set<PhvInfo::Field *> sx;
             for (auto &f : s1) {
                 for (auto &m : f->ccgf_fields) {
-                    const PhvInfo::Field *mx = (const PhvInfo::Field *) m;
+                    PhvInfo::Field *mx = m;
                     if (sx.count(mx)) {
                         LOG1("*****cluster.cpp:sanity_FAIL***** duplicate ccgf member ..." << msg);
                         LOG1(mx);
@@ -818,14 +818,14 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg) {
             //
             for (auto entry_2 : dst_map_i) {
                 if (entry_2.first && entry_2.second && entry_2.first != entry.first) {
-                    ordered_set<const PhvInfo::Field *> s2 = *(entry_2.second);
+                    ordered_set<PhvInfo::Field *> s2 = *(entry_2.second);
                     //
                     // s2 <-- s2 U f.ccgf, f element of s2
                     //
-                    ordered_set<const PhvInfo::Field *> sx;
+                    ordered_set<PhvInfo::Field *> sx;
                     for (auto &f : s2) {
                         for (auto &m : f->ccgf_fields) {
-                            const PhvInfo::Field *mx = (const PhvInfo::Field *) m;
+                            PhvInfo::Field *mx = m;
                             if (sx.count(mx)) {
                                 LOG1("*****cluster.cpp:sanity_FAIL***** duplicate ccgf member ....."
                                     << msg);
@@ -855,17 +855,17 @@ void Cluster::sanity_check_clusters_unique(const std::string& msg) {
 }  // sanity_check_clusters_unique
 
 void Cluster::sanity_check_fields_use(const std::string& msg,
-    ordered_set<const PhvInfo::Field *> all,
-    ordered_set<const PhvInfo::Field *> cluster,
-    ordered_set<const PhvInfo::Field *> all_minus_cluster,
-    ordered_set<const PhvInfo::Field *> pov,
-    ordered_set<const PhvInfo::Field *> no_mau) {
+    ordered_set<PhvInfo::Field *> all,
+    ordered_set<PhvInfo::Field *> cluster,
+    ordered_set<PhvInfo::Field *> all_minus_cluster,
+    ordered_set<PhvInfo::Field *> pov,
+    ordered_set<PhvInfo::Field *> no_mau) {
     //
-    ordered_set<const PhvInfo::Field *> s_check;
+    ordered_set<PhvInfo::Field *> s_check;
     //
     // all = cluster + all_minus_cluster
     //
-    ordered_set<const PhvInfo::Field *> s_all = cluster;
+    ordered_set<PhvInfo::Field *> s_all = cluster;
     s_all |= all_minus_cluster;
     // s_check = s_all - all
     s_check = s_all;
@@ -888,7 +888,7 @@ void Cluster::sanity_check_fields_use(const std::string& msg,
     //
     // pov_mau = pov intersect with cluster
     //
-    ordered_set<const PhvInfo::Field *> pov_mau = pov;
+    ordered_set<PhvInfo::Field *> pov_mau = pov;
     pov_mau &= cluster;
     // all = cluster + pov + no_mau + pov_mau
     s_all = cluster;
@@ -914,7 +914,7 @@ void Cluster::sanity_check_fields_use(const std::string& msg,
 // cluster output
 //
 
-std::ostream &operator<<(std::ostream &out, ordered_set<const PhvInfo::Field *>* p_cluster_set) {
+std::ostream &operator<<(std::ostream &out, ordered_set<PhvInfo::Field *>* p_cluster_set) {
     if (p_cluster_set) {
         out << "cluster<#=" << p_cluster_set->size() << ">(" << std::endl;
         int n = 1;
@@ -928,7 +928,7 @@ std::ostream &operator<<(std::ostream &out, ordered_set<const PhvInfo::Field *>*
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, std::vector<const PhvInfo::Field *>& cluster_vec) {
+std::ostream &operator<<(std::ostream &out, std::vector<PhvInfo::Field *>& cluster_vec) {
     for (auto &field : cluster_vec) {
         out << field << std::endl;
     }
@@ -937,7 +937,7 @@ std::ostream &operator<<(std::ostream &out, std::vector<const PhvInfo::Field *>&
 
 std::ostream &operator<<(
     std::ostream &out,
-    ordered_map<const PhvInfo::Field *, ordered_set<const PhvInfo::Field *>*>& dst_map) {
+    ordered_map<PhvInfo::Field *, ordered_set<PhvInfo::Field *>*>& dst_map) {
     // iterate through all elements in dst_map
     for (auto &entry : dst_map) {
         if (entry.second) {

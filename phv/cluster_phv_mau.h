@@ -98,6 +98,7 @@ class PHV_MAU_Group {
         }
     }
     PHV_Container::Ingress_Egress gress()               { return gress_i; }
+    std::vector<PHV_Container *>& phv_containers()      { return phv_containers_i; }
     size_t& empty_containers()                          { return empty_containers_i; }
     void inc_empty_containers() {
         if (empty_containers_i < phv_containers_i.size()) {
@@ -118,7 +119,18 @@ class PHV_MAU_Group {
         }
         return 0;
     }
-    std::vector<PHV_Container *>& phv_containers()      { return phv_containers_i; }
+    std::pair<size_t, size_t> partial_containers() {
+        size_t num_partial = 0;
+        size_t num_bits = 0;
+        for (auto &c : phv_containers_i) {
+            if (c->avail_bits()) {
+                num_partial++;
+                num_bits += c->avail_bits();
+            }
+        }
+        return std::make_pair(num_partial, num_bits);
+    }
+    //
     std::vector<Cluster_PHV *>& clusters()              { return cluster_phv_i; }
     void create_aligned_container_slices_per_range(std::list<PHV_Container *>&);
     void create_aligned_container_slices(std::list<PHV_Container *>&);
@@ -259,7 +271,8 @@ class PHV_MAU_Group_Assignments : public Visitor {
     // remaining clusters to be processed
     //
     std::list<Cluster_PHV *>& phv_clusters()              { return clusters_to_be_assigned_i; }
-    std::list<Cluster_PHV *>& phv_clusters_nibble()       { return clusters_to_be_assigned_nibble_i; }
+    std::list<Cluster_PHV *>& phv_clusters_nibble()       { return
+                                                              clusters_to_be_assigned_nibble_i; }
     std::list<Cluster_PHV *>& pov_clusters()              { return pov_fields_i; }
     std::list<Cluster_PHV *>& t_phv_clusters()            { return t_phv_fields_i; }
     std::list<Cluster_PHV *>& t_phv_clusters_nibble()     { return t_phv_fields_nibble_i; }
@@ -303,6 +316,11 @@ class PHV_MAU_Group_Assignments : public Visitor {
           && gc_gress != cl_gress;
     }
     //
+    void empty_containers(ordered_map<PHV_Container::PHV_Word, size_t>&, bool phv = true);
+    void partial_containers(
+        ordered_map<PHV_Container::PHV_Word, std::pair<size_t, size_t>>&,
+        bool phv = true);
+    //
     bool status(
         std::list<Cluster_PHV *>&,
         const char *msg = "");
@@ -319,6 +337,11 @@ class PHV_MAU_Group_Assignments : public Visitor {
     void sanity_check_container_fields_gress(const std::string&);
     void sanity_check_group_containers(const std::string&);
     void sanity_check_T_PHV_collections(const std::string&);
+    void sanity_check_clusters_allocation(
+        std::list<Cluster_PHV *>&,
+        bool,
+        const std::string&);
+    void sanity_check_clusters_allocation();
 };  // class PHV_MAU_Group_Assignments
 //
 //

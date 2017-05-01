@@ -392,15 +392,76 @@ void PhvInfo::Field::phv_use_width(bool ccgf_owner, int min_ceil) {
     }
 }  // phv_use_width()
 
-void PhvInfo::Field::cluster(Cluster_PHV *cluster_p) {
+void PhvInfo::Field::clusters(Cluster_PHV *cluster_p) {
     assert(cluster_p);
-    cluster_i = cluster_p;
-    //
-    // set field's cluster id (independently modifiable later during phv_interference)
-    // cl() also sets member fields' cl_i
-    //
-    cl(cluster_p->id());
+    if (!cluster_p->sliced()) {
+        // new owner for non-sliced field, due to phv_interference, phv_bind
+        clusters_i.clear();
+        // clear clusters_i for ccgf members
+        for (auto &m : ccgf_fields) {
+            if (m != this) {
+                m->clusters_i.clear();
+            }
+        }
+    }
+    clusters_i.push_back(cluster_p);
+    // set clusters_i for ccgf members
+    for (auto &m : ccgf_fields) {
+        if (m != this) {
+            m->clusters(cluster_p);
+        }
+    }
 }
+
+void PhvInfo::Field::cl_id(std::string cl_p) {
+    // can only change id of original non-sliced cluster
+    if (!sliced() && clusters_i.size()) {
+        clusters_i.front()->id(cl_p);
+    }
+}
+
+std::string PhvInfo::Field::cl_id() {
+    // the first cl in list is the non-sliced owner cl
+    if (clusters_i.size()) {
+        return clusters_i.front()->id();
+    }
+    return "??";
+}
+
+int PhvInfo::Field::cl_id_num() {
+    // the first cl in list is the non-sliced owner cl
+    if (clusters_i.size()) {
+        return clusters_i.front()->id_num();
+    }
+    return -1;
+}
+
+int PhvInfo::Field::ccgf_width() {
+    int ccgf_width_l = 0;
+    for (auto &f : ccgf_fields) {
+        if (f->ccgf == f) {
+            // ccgf owner appears as member, phv_use_width = aggregate size of members
+            ccgf_width_l += f->size;
+        } else {
+            if (f->id == id) {
+                // originally f was ccgf owner but after container assignment
+                // ownership got terminated although f remains ccgf member of itself
+                ccgf_width_l += f->size;
+            } else {
+                ccgf_width_l += f->phv_use_width();
+            }
+        }
+    }
+    return ccgf_width_l;
+}
+
+//
+//***********************************************************************************
+//
+// output stream <<
+//
+//***********************************************************************************
+//
 
 std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &sl) {
     out << '[' << (sl.field_bit+sl.width-1) << ':' << sl.field_bit << "]->[" << sl.container << ']';
@@ -419,7 +480,19 @@ std::ostream &operator<<(std::ostream &out, vector<PhvInfo::Field::alloc_slice> 
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
+std::ostream &operator<<(
+    std::ostream &out,
+    ordered_map<Cluster_PHV *, std::pair<int, int>>& field_slices) {
+    for (auto &entry : field_slices) {
+        out << '|';
+        out << entry.first->id() << ',';
+        out << entry.second.first << ".." << entry.second.second;
+        out << '|';
+    }
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, PhvInfo::Field &field) {
     out << field.id << ':' << field.name << '<' << field.size;
     if (field.phv_use_lo || field.phv_use_hi)
         out << ':' << field.phv_use_lo << ".." << field.phv_use_hi;
@@ -435,37 +508,35 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
     if (field.header_stack_pov_ccgf) out << " header_stack_pov_ccgf";
     if (field.simple_header_pov_ccgf) out << " simple_header_pov_ccgf";
     if (field.ccgf) out << " ccgf=" << field.ccgf->id << ':' << field.ccgf->name;
-    out << " /" << field.cl_i << ",";    // cluster id
+    out << " /" << field.cl_id() << ",";    // cluster id
     for (auto &c : field.phv_containers_i) {
         out << const_cast<PHV_Container *>(c)->phv_number_string() << ";";  // phv number
     }
     out << "/";
+    out << field.field_slices_i;
     if (field.ccgf_fields.size()) {
         // aggregate widths of members in "container contiguous group fields"
         out << std::endl << '[';
-        int ccgf_width = 0;
         for (auto &f : field.ccgf_fields) {
             out << '\t';
             if (f->ccgf == f) {
                 // ccgf owner appears as member, phv_use_width = aggregate size of members
-                ccgf_width += f->size;
                 out << f->id << ':' << f->name << '<' << f->size << ">*";
             } else {
                 if (f->id == field.id) {
                     // originally f was ccgf owner but after container assignment
                     // ownership got terminated although f remains ccgf member of itself
-                    ccgf_width += f->size;
                     out << f->id << ':' << f->name << '<' << f->size << ">#";
                 } else {
-                    ccgf_width += f->phv_use_width();
                     out << f;
                 }
             }
             out << std::endl;
         }
         out << ':' << field.phv_use_width();
-        if (field.phv_use_width() != ccgf_width) {
-            out << '(' << ccgf_width << ')';
+        int ccgf_width_l = field.ccgf_width();
+        if (field.phv_use_width() != ccgf_width_l) {
+            out << '(' << ccgf_width_l << ')';
         }
         out << ']';
     }
@@ -494,20 +565,20 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const PhvInfo::Field *fld) {
+std::ostream &operator<<(std::ostream &out, PhvInfo::Field *fld) {
     if (fld) return out << *fld;
     return out << "(nullptr)";
 }
 
-// ordered_set
-std::ostream &operator<<(std::ostream &out, ordered_set<const PhvInfo::Field *>& field_set) {
+// ordered_set Field*
+std::ostream &operator<<(std::ostream &out, ordered_set<PhvInfo::Field *>& field_set) {
     for (auto &f : field_set) {
         out << f << std::endl;
     }
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, std::list<const PhvInfo::Field *>& field_list) {
+std::ostream &operator<<(std::ostream &out, std::list<PhvInfo::Field *>& field_list) {
     for (auto &f : field_list) {
         out << f << std::endl;
     }

@@ -33,19 +33,19 @@ static int cluster_id_g = 0;                // global counter for assigning clus
 //
 class Cluster_PHV {
  private:
-    std::vector<const PhvInfo::Field *> cluster_vec_i;
+    std::vector<PhvInfo::Field *> cluster_vec_i;
                                             // cluster vec sorted by decreasing field width
     int id_num_i = cluster_id_g;            // number part of id_i
     std::string id_i;                       // cluster id
     PHV_Container::Ingress_Egress gress_i;  // ingress or egress
     PHV_Container::PHV_Word width_i;        // container width in PHV group
     bool uniform_width_i = false;           // field widths differ in cluster
-    int max_width_i;                        // max width of field in cluster
-    int num_containers_i;                   // number of containers
+    int max_width_i = 0;                    // max width of field in cluster
+    int num_containers_i = 0;               // number of containers
     int num_fields_no_cohabit_i = 0;        // number of constrained fields, no cohabit
     //
-    ordered_map<const PhvInfo::Field *,
-        ordered_map<int, std::vector<const PhvInfo::Field *> *>> field_overlay_map_i;
+    ordered_map<PhvInfo::Field *,
+        ordered_map<int, std::vector<PhvInfo::Field *> *>> field_overlay_map_i;
                                             // liveness / interference graph related
                                             // fields (within cluster) overlay map
                                             // F = <c1,c2> adjacent containers based on F width
@@ -54,21 +54,24 @@ class Cluster_PHV {
                                             // F<c1,c2> -- [0] -- B<c1>, A<c1>
                                             //          -- [1] -- B<c2>, D<c2>, E<c2>
     //
-    bool sliceable_i;                       // can split cluster, move-based ops only
-    ordered_map<const PhvInfo::Field*,
-        std::pair<int, int>> field_slice_o;
-                                            // map field to a list of bitrange after slicing
+    bool sliced_i = false;                  // sliced cluster, move-based ops only
     //
  public:
     Cluster_PHV(
-        ordered_set<const PhvInfo::Field *> *set_of_f,
-        std::string id_s = "???");  // NOLINT(runtime/explicit)
+        ordered_set<PhvInfo::Field *> *set_of_f,
+        std::string id_s = "???");                     // NOLINT(runtime/explicit)
                                                        // cluster set of fields
-    Cluster_PHV(const PhvInfo::Field *f,
-        std::string id_s = "???")  // NOLINT(runtime/explicit)
+    Cluster_PHV(PhvInfo::Field *f,
+        std::string id_s = "???")                      // NOLINT(runtime/explicit)
         : Cluster_PHV(field_set(f), id_s) {}           // cluster singleton field
                                                        // e.g., POV fields
+    Cluster_PHV(
+        Cluster_PHV *cl,                               // cluster slicing interface
+        bool lo = true);                               // NOLINT(runtime/explicit)
     //
+    void set_gress();                                  // set gress
+    void insert_field_clusters(Cluster_PHV *parent = 0, bool slice_lo = true);
+                                                       // field's list of clusters
     void compute_requirements();                       // compute cluster requirements
     int compute_width_req();                           // determines width req of field in cluster
                                                        // field = ccgf w/ constrained member no_pack
@@ -76,15 +79,16 @@ class Cluster_PHV {
                                                        // which can be ccgf "no-pack" constrained
     PHV_Container::PHV_Word container_width(int field_width);
     //
-    ordered_set<const PhvInfo::Field *> *field_set(const PhvInfo::Field *f) {
-        ordered_set<const PhvInfo::Field *> *s = new ordered_set<const PhvInfo::Field *>;
+    ordered_set<PhvInfo::Field *> *field_set(PhvInfo::Field *f) {
+        ordered_set<PhvInfo::Field *> *s = new ordered_set<PhvInfo::Field *>;
         s->insert(f);
         return s;
     }
     //
-    std::vector<const PhvInfo::Field *>& cluster_vec()  { return cluster_vec_i; }
+    std::vector<PhvInfo::Field *>& cluster_vec()        { return cluster_vec_i; }
     int id_num()                                        { return id_num_i; }
     std::string id()                                    { return id_i; }
+    void id(std::string id_p)                           { id_i = id_p; }
     PHV_Container::Ingress_Egress gress()               { return gress_i; }
     PHV_Container::PHV_Word width()                     { return width_i; }
     void width(PHV_Container::PHV_Word w)               { width_i = w; }
@@ -104,7 +108,7 @@ class Cluster_PHV {
     }
     int num_containers()                                { return num_containers_i; }
     void num_containers(int n)                          { num_containers_i = n; }
-    int num_containers(std::vector<const PhvInfo::Field *>&, PHV_Container::PHV_Word);
+    int num_containers(std::vector<PhvInfo::Field *>&, PHV_Container::PHV_Word);
     int num_fields_no_cohabit()                         { return num_fields_no_cohabit_i; }
     //
     bool uniform_deparser_no_holes() {
@@ -116,14 +120,11 @@ class Cluster_PHV {
         return true;
     }
     //
-    ordered_map<const PhvInfo::Field *,
-        ordered_map<int, std::vector<const PhvInfo::Field *> *>>&
+    ordered_map<PhvInfo::Field *,
+        ordered_map<int, std::vector<PhvInfo::Field *> *>>&
             field_overlay_map()                         { return field_overlay_map_i; }
     //
-    ordered_map<const PhvInfo::Field *, std::pair<int, int>>&
-        field_slices()                                  { return field_slice_o; }
-    bool sliceable()                                    { return sliceable_i; }
-    void sliceable(bool i)                              { sliceable_i = i; }
+    bool sliced()                                       { return sliced_i; }
 };
 //
 //

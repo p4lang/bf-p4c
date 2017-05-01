@@ -35,9 +35,9 @@ class PHV_Bind : public Visitor {
     PHV_MAU_Group_Assignments &phv_mau_i;           // PHV MAU Group Assignments
     Cluster::Uses *uses_i;                          // field uses mau, I, E
     std::list<const PHV_Container *> containers_i;  // all filled containers
-    std::list<const PhvInfo::Field *> allocated_fields_i;
+    std::list<PhvInfo::Field *> allocated_fields_i;
                                                     // allocated fields to be finally bound
-    std::list<const PhvInfo::Field *> fields_overflow_i;
+    std::list<PhvInfo::Field *> fields_overflow_i;
                                                     // overflow fields =  All - PHV_Bind fields
     ordered_map<const PHV_Container*, PHV::Container *> phv_to_asm_map_i;
                                                     // PHV_Container = asm_container PHV::Container
@@ -54,20 +54,20 @@ class PHV_Bind : public Visitor {
                                                     // i.e., after Cluser Uses computation
     //
     std::list<const PHV_Container *> containers()         { return containers_i; }
-    std::list<const PhvInfo::Field *>& allocated_fields() { return allocated_fields_i; }
-    std::list<const PhvInfo::Field *>& fields_overflow()  { return fields_overflow_i; }
+    std::list<PhvInfo::Field *>& allocated_fields()       { return allocated_fields_i; }
+    std::list<PhvInfo::Field *>& fields_overflow()        { return fields_overflow_i; }
     //
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
     void create_phv_asm_container_map();
     void collect_containers_with_fields();
-    void phv_tphv_allocate(std::list<const PhvInfo::Field *>& fields);
+    void phv_tphv_allocate(std::list<PhvInfo::Field *>& fields);
     void bind_fields_to_containers();
     void container_contiguous_alloc(               // backup for ccgf fields processing
         PhvInfo::Field *,
         int,
         PHV::Container *,
         int);
-    void trivial_allocate(std::list<const PhvInfo::Field *>&);
+    void trivial_allocate(std::list<PhvInfo::Field *>&);
     //
     void sanity_check_field_duplicate_containers(const std::string&);
     void sanity_check_all_fields_allocated(const std::string&);

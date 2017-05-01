@@ -31,17 +31,17 @@ class Cluster : public Inspector, P4WriteContext {
  private:
     PhvInfo &phv_i;             // phv object referenced through constructor
     //
-    ordered_map<const PhvInfo::Field *, ordered_set<const PhvInfo::Field *>*> dst_map_i;
+    ordered_map<PhvInfo::Field *, ordered_set<PhvInfo::Field *>*> dst_map_i;
                                 // map of field to cluster it belongs
-    ordered_set<const PhvInfo::Field *> lhs_unique_i;
+    ordered_set<PhvInfo::Field *> lhs_unique_i;
                                 // maintains unique cluster ptrs
     PhvInfo::Field *dst_i = nullptr;
                                 // destination of current statement
-    std::list<const PhvInfo::Field *> pov_fields_i;
+    std::list<PhvInfo::Field *> pov_fields_i;
                                 // all pov fields
-    std::list<const PhvInfo::Field *> pov_fields_not_in_cluster_i;
+    std::list<PhvInfo::Field *> pov_fields_not_in_cluster_i;
                                 // pov fields not in cluster, need to be PHV allocated
-    std::list<const PhvInfo::Field *> fields_no_use_mau_i;
+    std::list<PhvInfo::Field *> fields_no_use_mau_i;
                                 // fields that are not used through mau pipeline
     Uses *uses_i;
     //
@@ -59,19 +59,19 @@ class Cluster : public Inspector, P4WriteContext {
     //
     void create_dst_map_entry(PhvInfo::Field *);
     void set_field_range(const IR::Expression&);
-    void insert_cluster(const PhvInfo::Field *, const PhvInfo::Field *);
-    bool is_ccgf_member(const PhvInfo::Field *, const PhvInfo::Field *);
+    void insert_cluster(PhvInfo::Field *, PhvInfo::Field *);
+    bool is_ccgf_member(PhvInfo::Field *, PhvInfo::Field *);
     //
     void sanity_check_field_range(const std::string&);
-    void sanity_check_clusters(const std::string&, const PhvInfo::Field *);
+    void sanity_check_clusters(const std::string&, PhvInfo::Field *);
     void sanity_check_clusters_unique(const std::string&);
     void sanity_check_fields_use(
         const std::string&,
-        ordered_set<const PhvInfo::Field *>,       // all fields
-        ordered_set<const PhvInfo::Field *>,       // cluster fields
-        ordered_set<const PhvInfo::Field *>,       // all - cluster
-        ordered_set<const PhvInfo::Field *>,       // pov fields
-        ordered_set<const PhvInfo::Field *>);      // no mau fields
+        ordered_set<PhvInfo::Field *>,       // all fields
+        ordered_set<PhvInfo::Field *>,       // cluster fields
+        ordered_set<PhvInfo::Field *>,       // all - cluster
+        ordered_set<PhvInfo::Field *>,       // pov fields
+        ordered_set<PhvInfo::Field *>);      // no mau fields
     //
  public:
     //
@@ -79,15 +79,15 @@ class Cluster : public Inspector, P4WriteContext {
     //
     static void set_field_range(PhvInfo::Field *field, int container_width = 0);
     //
-    ordered_map<const PhvInfo::Field *, ordered_set<const PhvInfo::Field *>*>& dst_map() {
+    ordered_map<PhvInfo::Field *, ordered_set<PhvInfo::Field *>*>& dst_map() {
         return dst_map_i;
     }
     //
-    std::list<const PhvInfo::Field *>& pov_fields()         { return pov_fields_i; }
-    std::list<const PhvInfo::Field *>& pov_fields_not_in_cluster()
+    std::list<PhvInfo::Field *>& pov_fields()               { return pov_fields_i; }
+    std::list<PhvInfo::Field *>& pov_fields_not_in_cluster()
                                                             { return pov_fields_not_in_cluster_i; }
     //
-    std::list<const PhvInfo::Field *>& fields_no_use_mau()  { return fields_no_use_mau_i; }
+    std::list<PhvInfo::Field *>& fields_no_use_mau()        { return fields_no_use_mau_i; }
     void compute_fields_no_use_mau();
     void sort_fields_remove_non_determinism();
     //
@@ -139,11 +139,11 @@ class Cluster::Uses : public Inspector {
 };
 //
 //
-std::ostream &operator<<(std::ostream &, ordered_set<const PhvInfo::Field *>*);
-std::ostream &operator<<(std::ostream &, std::vector<const PhvInfo::Field *>&);
+std::ostream &operator<<(std::ostream &, ordered_set<PhvInfo::Field *>*);
+std::ostream &operator<<(std::ostream &, std::vector<PhvInfo::Field *>&);
 std::ostream &operator<<(
     std::ostream&,
-    ordered_map<const PhvInfo::Field *, ordered_set<const PhvInfo::Field *>*>&);
+    ordered_map<PhvInfo::Field *, ordered_set<PhvInfo::Field *>*>&);
 std::ostream &operator<<(std::ostream &, Cluster &);
 //
 #endif /* _TOFINO_PHV_CLUSTER_H_ */
