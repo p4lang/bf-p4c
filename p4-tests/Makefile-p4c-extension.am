@@ -64,6 +64,7 @@ XFAIL_TESTS += \
          bmv2/%reldir%/p4_14/02-FlexCounterActionProfile.p4.test \
     p14_to_16/%reldir%/p4_14/02-FlexCounterActionProfile.p4.test \
        tofino/%reldir%/p4_14/02-FlexCounterActionProfile.p4.test \
+         bmv2/%reldir%/p4_14/stateful1.p4.test \
          bmv2/%reldir%/p4_14/test_config_125_meter_pre_color.p4.test \
     p14_to_16/%reldir%/p4_14/test_config_125_meter_pre_color.p4.test \
        tofino/%reldir%/p4_14/test_config_125_meter_pre_color.p4.test \
@@ -305,3 +306,6 @@ XFAIL_TESTS += \
     tofino/testdata/p4_14_samples/instruct5.p4.test \
     tofino/testdata/p4_14_samples/bigfield1.p4.test \
     tofino/extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4.test
+
+# work in progress
+XFAIL_TESTS += tofino/%reldir%/p4_14/stateful1.p4.test
