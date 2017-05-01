@@ -250,6 +250,18 @@ class ActionData : Attached {
     bool indexed() const override { return !direct; }
 }
 
+class StatefulAlu : Register {
+#nodbprint
+    // The single register extern used in this stateful alu
+    Declaration_Instance                                reg;
+    bool                                                dual = false;  // dual mode
+    // The possible stateful_alu externs executed in this table
+    inline NameMap<Declaration_Instance, ordered_map>   decls = {};
+    // The stateful_alu externs executed for each action in the match table
+    ordered_map<cstring, cstring>                       action_map = {};
+    const char *kind() const override { return "stateful"; }
+}
+
 // a sequence of tables -- may be reordered if deps allow.
 // deps(i,j) is true iff tables[i] is dependent on tables[j]
 // (so must have j < i) */

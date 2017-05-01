@@ -55,6 +55,8 @@ struct Memories {
         int stats_RAMs = 0;
         int meter_tables = 0;
         int meter_RAMs = 0;
+        int stateful_tables = 0;
+        int stateful_RAMs = 0;
         int selector_tables = 0;
         int selector_RAMs = 0;
         int no_match_tables = 0;
@@ -137,7 +139,7 @@ struct Memories {
         int hash_group;
         const IR::Attached *attached;
         int recent_home_row;
-        enum type_t { EXACT, ACTION, STATS, METER, SELECTOR, TIND } type;
+        enum type_t { EXACT, ACTION, STATS, METER, REGISTER, SELECTOR, TIND } type;
         struct color_mapram_group {
             int needed;
             int placed;
@@ -296,6 +298,7 @@ struct Memories {
     vector<table_alloc *>       selector_tables;
     vector<table_alloc *>       stats_tables;
     vector<table_alloc *>       meter_tables;
+    vector<table_alloc *>       stateful_tables;
     vector<SRAM_group *>        action_bus_users;
     vector<SRAM_group *>        suppl_bus_users;
     vector<table_alloc *>       gw_tables;

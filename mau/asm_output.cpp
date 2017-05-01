@@ -17,11 +17,11 @@ class MauAsmOutput::EmitAttached : public Inspector {
     const IR::MAU::Table        *tbl;
     bool preorder(const IR::Counter *) override;
     bool preorder(const IR::Meter *) override;
-    bool preorder(const IR::Register *) override;
     bool preorder(const IR::ActionProfile *) override;
     bool preorder(const IR::ActionSelector *) override;
     bool preorder(const IR::MAU::TernaryIndirect *) override;
     bool preorder(const IR::MAU::ActionData *) override;
+    bool preorder(const IR::MAU::StatefulAlu *) override;
     bool preorder(const IR::Attached *att) override {
         BUG("unknown attached table type %s", typeid(*att).name()); }
     EmitAttached(const MauAsmOutput &s, std::ostream &o, const IR::MAU::Table *t)
@@ -1276,10 +1276,6 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::Meter *meter) {
     return false;
 }
 
-bool MauAsmOutput::EmitAttached::preorder(const IR::Register *) {
-    return false;
-}
-
 bool MauAsmOutput::EmitAttached::preorder(const IR::ActionProfile *ap) {
     auto match_name = tbl->get_use_name();
     if (tbl->resources->memuse.at(match_name).unattached_profile) {
@@ -1342,5 +1338,20 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::ActionData *ad) {
         for (auto act : Values(tbl->actions))
             act->apply(EmitAction(self, out, tbl, indent));
         --indent; }
+    return false;
+}
+
+bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
+    indent_t    indent(1);
+    auto name = tbl->get_use_name(salu);
+    out << indent++ << "stateful " << name << ':' << std::endl;
+    out << indent << "p4: { name: " << salu->name << " }" << std::endl;
+    self.emit_memory(out, indent, tbl->resources->memuse.at(name));
+    out << indent << "format: { lo: ";
+    if (salu->dual)
+        out << salu->width/2 << ", hi:" << salu->width/2;
+    else
+        out << salu->width;
+    out << " }" << std::endl;
     return false;
 }

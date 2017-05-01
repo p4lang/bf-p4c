@@ -39,6 +39,7 @@ void Memories::clear_table_vectors() {
     selector_tables.clear();
     stats_tables.clear();
     meter_tables.clear();
+    stateful_tables.clear();
     action_bus_users.clear();
     suppl_bus_users.clear();
     gw_tables.clear();
@@ -121,7 +122,7 @@ bool Memories::allocate_all() {
 */
 class SetupAttachedTables : public MauInspector {
     Memories &mem; Memories::table_alloc *ta; int entries; Memories::mem_info &mi;
-    bool stats_pushed = false; bool meter_pushed = false;
+    bool stats_pushed = false, meter_pushed = false, stateful_pushed = false; 
 
     profile_t init_apply(const IR::Node *root) {
         profile_t rv = MauInspector::init_apply(root);
@@ -228,6 +229,22 @@ class SetupAttachedTables : public MauInspector {
             mi.stats_RAMs += (entries + per_row * 1024 - 1) / (per_row * 1024) + 1;
         else
             mi.stats_RAMs += (cnt->instance_count + per_row * 1024 - 1) / (per_row * 1024) + 1;
+        return false;
+    }
+
+    bool preorder(const IR::MAU::StatefulAlu *salu) {
+        auto name = ta->table->get_use_name(salu);
+        (*ta->memuse)[name].type = Memories::Use::TWOPORT;
+        if (!stateful_pushed) {
+            mem.stateful_tables.push_back(ta);
+            stateful_pushed = true;
+        }
+        mi.stateful_tables++;
+        int per_row = RegisterPerWord(salu);
+        if (salu->direct)
+            mi.stateful_RAMs += (entries + per_row * 1024 - 1) / (per_row * 1024) + 1;
+        else
+            mi.stateful_RAMs += (salu->instance_count + per_row * 1024 - 1) / (per_row * 1024) + 1;
         return false;
     }
 
@@ -356,8 +373,8 @@ bool Memories::mem_info::constraint_check() {
         || ternary_tables > Memories::TERNARY_TABLES_MAX
         || ternary_TCAMs > Memories::TCAM_ROWS * Memories::TCAM_COLUMNS
         || stats_tables > Memories::STATS_ALUS
-        || meter_tables + selector_tables > Memories::METER_ALUS
-        || meter_RAMs + stats_RAMs + selector_RAMs >
+        || meter_tables + stateful_tables + selector_tables > Memories::METER_ALUS
+        || meter_RAMs + stats_RAMs + stateful_RAMs + selector_RAMs >
            Memories::MAPRAM_COLUMNS * Memories::SRAM_ROWS) {
         return false;
     }
@@ -1058,6 +1075,26 @@ void Memories::action_bus_meters_counters() {
             if (meter->implementation.name == "lpf" || meter->implementation.name == "wred") {
                 suppl_bus_users.back()->requires_ab = true;
             }
+        }
+    }
+
+    for (auto *ta : stateful_tables) {
+        const IR::MAU::StatefulAlu *salu = nullptr;
+        for (auto at : ta->table->attached) {
+            if ((salu = at->to<IR::MAU::StatefulAlu>()) == nullptr)
+                continue;
+            int per_row = RegisterPerWord(salu);
+            int depth;
+            if (salu->direct) {
+                depth = (ta->calculated_entries + per_row * 1024 - 1)/(per_row * 1024) + 1;
+            } else {
+                depth = (salu->instance_count + per_row * 1024 + 1023)/(per_row * 1024) + 1;
+            }
+            suppl_bus_users.push_back(new SRAM_group(ta, depth, 0, SRAM_group::REGISTER));
+            suppl_bus_users.back()->attached = salu;
+            auto name = ta->table->get_use_name(salu);
+            // FIXME: This can go away
+            (*ta->memuse)[name].per_row = per_row;
         }
     }
 }
@@ -1833,6 +1870,21 @@ void Memories::action_bus_users_log() {
                 continue;
             auto name = ta->table->get_use_name(meter);
             LOG4("Meter table for " << name);
+            auto alloc = (*ta->memuse)[name];
+            for (auto row : alloc.row) {
+                LOG4("Row is " << row.row << " and bus is " << row.bus);
+                LOG4("Col is " << row.col);
+                LOG4("Map col is " << row.mapcol);
+            }
+        }
+    }
+    for (auto *ta : stateful_tables) {
+        for (auto at : ta->table->attached) {
+            const IR::MAU::StatefulAlu *salu = nullptr;
+            if ((salu = at->to<IR::MAU::StatefulAlu>()) == nullptr)
+                continue;
+            auto name = ta->table->get_use_name(salu);
+            LOG4("Stateful table for " << name);
             auto alloc = (*ta->memuse)[name];
             for (auto row : alloc.row) {
                 LOG4("Row is " << row.row << " and bus is " << row.bus);

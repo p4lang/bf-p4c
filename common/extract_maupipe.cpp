@@ -181,10 +181,43 @@ static IR::Attached *createAttached(IR::MAU::Table *tt, Util::SourceInfo srcInfo
             BUG("wrong number of arguments to %s ctor %s", tname, args);
             break; }
         return rv; }
-    LOG2("Failed to create attached table for " << *type);
+    LOG2("Failed to create attached table for " << type->toString());
     return nullptr;
 }
 
+static void updateAttachedSalu(const Util::SourceInfo &loc, const P4::ReferenceMap *refMap,
+                               IR::MAU::StatefulAlu *&salu, const IR::Declaration_Instance *ext,
+                               cstring action) {
+    BUG_CHECK(ext->type->toString() == "stateful_alu", "%s is not a stateful alu", ext);
+    auto regprop = ext->properties["reg"];
+    if (!regprop) {
+        error("%s: no reg property in stateful_alu %s", ext->srcInfo, ext->name);
+        return; }
+    auto rpv = regprop->value->to<IR::ExpressionValue>();
+    auto pe = rpv ? rpv->expression->to<IR::PathExpression>() : nullptr;
+    auto d = pe ? refMap->getDeclaration(pe->path, true) : nullptr;
+    auto reg = d ? d->to<IR::Declaration_Instance>() : nullptr;
+    auto regtype = reg ? reg->type->to<IR::Type_Specialized>() : nullptr;
+    if (!regtype || regtype->baseType->toString() != "register") {
+        error("%s: reg is not a register", regprop->srcInfo);
+        return; }
+    if (!salu) {
+        LOG3("Creating new StatefulAlu for " << regtype->toString() << " " << reg->name);
+        salu = new IR::MAU::StatefulAlu(reg->srcInfo, reg->externalName(), reg->annotations, reg);
+        if (auto size = reg->arguments->at(0)->to<IR::Constant>()->asInt()) {
+            salu->direct = false;
+            salu->instance_count = size;
+        } else {
+            salu->direct = true; }
+        salu->width = regtype->arguments->at(0)->width_bits();
+    } else if (salu->reg != reg) {
+        error("%s: stateful_alu blocks in the same table must use the same underlying regster,"
+              "trying to use %s", salu->srcInfo, reg); }
+    LOG3("Adding " << ext->name << " to StatefulAlu " << reg->name);
+    salu->decls.add(ext->name, ext);
+    if (!salu->action_map.emplace(action, ext->name).second)
+        error("%s: multiple calls to execute_stateful_alu in action %s", loc, action);
+}
 
 namespace {
 class FixP4Table : public Transform {
@@ -205,6 +238,9 @@ class FixP4Table : public Transform {
             return ev;
         } else if (prop->name == "counters" || prop->name == "meters" ||
                    prop->name == "implementation") {
+            // counters: direct counters
+            // meters: direct meters
+            // implementation: action profile and action selector
             auto pval = ev->expression;
             IR::Attached *obj = nullptr;
             if (auto cc = pval->to<IR::ConstructorCallExpression>()) {
@@ -260,33 +296,44 @@ class FixP4Table : public Transform {
 };
 
 struct AttachTables : public Modifier {
+    const P4::ReferenceMap                      *refMap;
     map<cstring, vector<const IR::Attached *>>  attached;
+    map<cstring, IR::MAU::StatefulAlu *>        salu;
     map<const IR::Declaration_Instance *, const IR::Attached *> converted;
 
     void postorder(IR::MAU::Table *tbl) override {
         if (attached.count(tbl->name))
             for (auto a : attached[tbl->name]) {
-                LOG3("attaching " << a->name << " to " << tbl->name);
-                tbl->attached.push_back(a); } }
+                if (contains(tbl->attached, a)) {
+                    LOG3(a->name << " already attached to " << tbl->name);
+                } else {
+                    LOG3("attaching " << a->name << " to " << tbl->name);
+                    tbl->attached.push_back(a); } }
+        if (salu.count(tbl->name)) {
+            BUG_CHECK(!contains(tbl->attached, salu.at(tbl->name)), "salu already attached?");
+            LOG3("attaching " << salu.at(tbl->name)->name << " to " << tbl->name);
+            tbl->attached.push_back(salu.at(tbl->name)); } }
     void postorder(IR::GlobalRef *gref) override {
         if (auto di = gref->obj->to<IR::Declaration_Instance>()) {
             auto tt = findContext<IR::MAU::Table>();
-            if (tt) {
-                for (auto att : tt->attached) {
-                    if (att->name == di->name) {
-                        gref->obj = converted[di] = att;
-                        break; } } }
+            BUG_CHECK(tt, "GlobalRef not in a table");
+            for (auto att : tt->attached) {
+                if (att->name == di->name) {
+                    gref->obj = converted[di] = att;
+                    break; } }
             if (converted.count(di)) {
                 gref->obj = converted.at(di);
-            } else {
-                auto att = createAttached(nullptr, di->srcInfo, di->externalName(), di->type,
-                                          di->arguments, di->annotations);
-                if (att) {
-                    LOG3("Created " << att->node_type_name() << ' ' << att->name << " (pt 3)");
-                    gref->obj = converted[di] = att;
-                    if (tt)
-                        attached[tt->name].push_back(att); } } } }
-    AttachTables() {}
+                if (!contains(attached[tt->name], converted.at(di)))
+                    attached[tt->name].push_back(converted.at(di));
+            } else if (auto att = createAttached(nullptr, di->srcInfo, di->externalName(),
+                                                 di->type, di->arguments, di->annotations)) {
+                LOG3("Created " << att->node_type_name() << ' ' << att->name << " (pt 3)");
+                gref->obj = converted[di] = att;
+                attached[tt->name].push_back(att);
+            } else if (di->type->toString() == "stateful_alu") {
+                auto act = findContext<IR::MAU::Action>();
+                updateAttachedSalu(gref->srcInfo, refMap, salu[tt->name], di, act->name); } } }
+    explicit AttachTables(const P4::ReferenceMap *refMap) : refMap(refMap) {}
 };
 
 static const IR::MethodCallExpression *isApplyHit(const IR::Expression *e, bool *lnot = 0) {
@@ -505,7 +552,7 @@ const IR::Tofino::Pipe *extract_maupipe(const IR::P4Program *program, Tofino_Opt
     egress->apply(GetTofinoTables(&refMap, &typeMap, EGRESS, rv));
 
     // AttachTables...
-    AttachTables toAttach;
+    AttachTables toAttach(&refMap);
     for (auto &th : rv->thread)
         th.mau = th.mau->apply(toAttach);
 
