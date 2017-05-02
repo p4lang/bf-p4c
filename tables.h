@@ -844,11 +844,13 @@ DECLARE_TABLE_TYPE(Stateful, Synth2Port, "stateful",
         explicit operator bool() { return lineno >= 0; }
         void check();
     }                   math_table;
+    bool dual_mode = false;
 public:
     int instruction_set() override { return 1; /* STATEFUL_ALU */ }
     int direct_shiftcount() override;
     int unitram_type() override { return UnitRam::STATEFUL; }
     int get_const(long v);
+    bool is_dual_mode() { return dual_mode; }
 )
 
 #endif /* _tables_h_ */

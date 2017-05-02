@@ -143,6 +143,8 @@ void Stateful::pass1() {
             break;
         default:
             error(format->lineno, "only two fields allowed in a stateful table"); } }
+    if ((idx == 2) && (format->size == 2*size))
+        dual_mode = true;
     if (actions) actions->pass1(this);
     if (math_table)
         math_table.check();
@@ -215,6 +217,11 @@ template<class REGS> void Stateful::write_regs(REGS &regs) {
                         bitmask2bytemask(input_xbar->hash_group_bituse());
                 map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_base = minvpn;
                 map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_limit = maxvpn;
+                int meter_group_index = row/2U;
+                auto &delay_ctl = map_alu.meter_alu_group_data_delay_ctl[meter_group_index];
+                delay_ctl.meter_alu_right_group_delay = METER_ALU_GROUP_DATA_DELAY + row/4 + stage->tcam_delay(gress);
+                auto &error_ctl = map_alu.meter_alu_group_error_ctl[meter_group_index];
+                error_ctl.meter_alu_group_ecc_error_enable = 1;
             } else {
                 auto &adr_ctl = map_alu_row.vh_xbars.adr_dist_oflo_adr_xbar_ctl[side];
                 if (home->row >= 8 && logical_row.row < 8) {
@@ -247,6 +254,7 @@ template<class REGS> void Stateful::write_regs(REGS &regs) {
         merge.meter_alu_thread[0].meter_alu_thread_egress |= 1U << meter_group;
         merge.meter_alu_thread[1].meter_alu_thread_egress |= 1U << meter_group; }
     auto &salu = regs.rams.map_alu.meter_group[meter_group].stateful;
+    salu.stateful_ctl.salu_enable = 1;
     if (math_table) {
         for (size_t i = 0; i < math_table.data.size(); ++i)
             salu.salu_mathtable[i/4U].set_subfield(math_table.data[i], 8*(i%4U), 8);

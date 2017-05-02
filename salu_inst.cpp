@@ -140,7 +140,7 @@ struct AluOP : public Instruction {
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
     } *opc;
-    int pred = 15;
+    int predication_encode = STATEFUL_PREDICATION_ENCODE_UNCOND;
     enum { LO, HI }     dest;
     operand             srca, srcb;
     AluOP(const Decode *op, int l) : Instruction(l), opc(op) {}
@@ -182,21 +182,21 @@ Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     AluOP *rv = new AluOP(this, op[0].lineno);
     int idx = 1;
     if (idx < op.size && op[idx].type == tINT) {
-        rv->pred = op[idx++].i;
+        rv->predication_encode = op[idx++].i;
     } else if (idx < op.size && op[idx] == "!") {
         assert(op[idx].type == tCMD && op[idx].vec.size == 2);
         if (op[idx][1] == "cmplo")
-            rv->pred = 5;
+            rv->predication_encode = STATEFUL_PREDICATION_ENCODE_NOTCMPLO;
         else if (op[idx][1] == "cmphi")
-            rv->pred = 3;
+            rv->predication_encode = STATEFUL_PREDICATION_ENCODE_NOTCMPHI;
         else
             error(op[idx].lineno, "Unknown predicate !%s", value_desc(op[idx][1]));
         idx++;
     } else if (idx < op.size && op[idx] == "cmplo") {
-        rv->pred = 10;
+        rv->predication_encode = STATEFUL_PREDICATION_ENCODE_CMPLO;
         idx++;
     } else if (idx < op.size && op[idx] == "cmphi") {
-        rv->pred = 12;
+        rv->predication_encode = STATEFUL_PREDICATION_ENCODE_CMPHI;
         idx++; }
     if (idx < op.size && op[idx] == "lo") {
         rv->dest = LO;
@@ -251,7 +251,7 @@ Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
 
 bool AluOP::equiv(Instruction *a_) {
     if (auto *a = dynamic_cast<AluOP *>(a_))
-        return opc == a->opc && pred == a->pred && dest == a->dest &&
+        return opc == a->opc && predication_encode == a->predication_encode && dest == a->dest &&
                srca == a->srca && srcb == a->srcb;
     return false;
 }
@@ -276,9 +276,16 @@ void AluOP::write_regs(REGS &regs, Table *tbl_, Table::Actions::Action *act) {
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_state_alu[act->code][slot - 2];
+    auto &salu_instr_common = meter_group.stateful.salu_instr_common[act->code];
+    auto &salu_instr_output_alu = meter_group.stateful.salu_instr_output_alu[act->code];
     salu.salu_op = opc->opcode & 0xf;
     salu.salu_arith = opc->opcode >> 4;
-    salu.salu_pred = pred;
+    salu.salu_pred = predication_encode;
+    if (tbl->is_dual_mode()) {
+        salu_instr_common.salu_datasize = tbl->format->log2size - 1;
+        salu_instr_common.salu_op_dual = 1; }
+    else {
+        salu_instr_common.salu_datasize = tbl->format->log2size; }
     if (srca) {
         if (auto m = srca.to<operand::Memory>()) {
             salu.salu_asrc_memory = 1;
@@ -316,6 +323,7 @@ struct BitOP : public Instruction {
         Instruction *decode(Table *tbl, const Table::Actions::Action *act,
                             const VECTOR(value_t) &op) const override;
     } *opc;
+    int predication_encode = STATEFUL_PREDICATION_ENCODE_UNCOND;
     BitOP(const Decode *op, int lineno) : Instruction(lineno), opc(op) {}
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override { slot = ALU1LO; return this; }
     void pass2(Table *tbl, Table::Actions::Action *) override { }
@@ -358,7 +366,10 @@ void BitOP::write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act) {
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
     auto &salu = meter_group.stateful.salu_instr_state_alu[act->code][slot-2];
     salu.salu_op = opc->opcode & 0xf;
-    salu.salu_pred = 0;
+    salu.salu_pred = predication_encode;
+    //1b instructions are from mem-lo to alu1-lo
+    salu.salu_asrc_memory = 1;
+    salu.salu_asrc_memory_index = 0;
 }
 
 struct CmpOP : public Instruction {
@@ -399,9 +410,9 @@ Instruction *CmpOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
                                    const VECTOR(value_t) &op) const {
     auto rv = new CmpOP(this, op[0].lineno);
     if (auto *p = strchr(op[0].s, '.')) {
-        if (type_suffix && strcmp(p, ".s")) rv->type = 1;
-        else if (type_suffix && strcmp(p, ".u")) rv->type = 2;
-        else if (type_suffix && strcmp(p, ".uus")) rv->type = 3;
+        if (type_suffix && !strcmp(p, ".s")) rv->type = 1;
+        else if (type_suffix && !strcmp(p, ".u")) rv->type = 2;
+        else if (type_suffix && !strcmp(p, ".uus")) rv->type = 3;
         else error(rv->lineno, "Invalid type %s for %s instruction", p+1, name.c_str());
     } else if (type_suffix)
         error(rv->lineno, "Missing type for %s instruction", name.c_str());
