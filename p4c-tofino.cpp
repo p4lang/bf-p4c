@@ -10,8 +10,6 @@
 #include "lib/gc.h"
 #include "lib/log.h"
 #include "lib/exceptions.h"
-#include "frontends/p4-14/p4-14-parse.h"
-#include "frontends/p4/p4-parse.h"
 #include "frontends/p4/frontend.h"
 #include "frontends/common/constantFolding.h"
 #include "frontends/p4-14/header_type.h"
@@ -39,7 +37,7 @@ int main(int ac, char **av) {
         error("only supported target is 'tofino'");
         return 1; }
 
-    auto program = parseP4File(options);
+    auto program = P4::parseP4File(options);
     program = P4::FrontEnd(hook).run(options, program, true);
     if (!program)
         return 1;
