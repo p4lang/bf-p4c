@@ -112,20 +112,26 @@ enum salu_slot_use {
     ALUOUT
 };
 
-typedef std::map<std::string, int> OpsLookupT;
-static const OpsLookupT ops_pred_lookup = {
-    { "cmplo", STATEFUL_PREDICATION_ENCODE_CMPLO },
-    { "cmphi", STATEFUL_PREDICATION_ENCODE_CMPHI },
-    { "!cmplo", STATEFUL_PREDICATION_ENCODE_NOTCMPLO },
-    { "!cmphi", STATEFUL_PREDICATION_ENCODE_NOTCMPHI } };
-
 //Abstract interface class for SALU Instructions
 //SALU Instructions - AluOP, BitOP, CmpOP, OutOP
 struct SaluInstruction : public Instruction {
     SaluInstruction(int lineno): Instruction(lineno) {};
     //Stateful ALU's dont access PHV's directly
     void phvRead(std::function<void (const Phv::Slice &sl)>) final {};
+    static int decode_predicate(const value_t &exp);
 };
+
+int SaluInstruction::decode_predicate(const value_t &exp) {
+    if (exp == "cmplo") return STATEFUL_PREDICATION_ENCODE_CMPLO;
+    if (exp == "cmphi") return STATEFUL_PREDICATION_ENCODE_CMPHI;
+    if (exp == "!") return 0xf ^ decode_predicate(exp[1]);
+    if (exp == "&") return decode_predicate(exp[1]) & decode_predicate(exp[2]);;
+    if (exp == "|") return decode_predicate(exp[1]) | decode_predicate(exp[2]);;
+    if (exp == "^") return decode_predicate(exp[1]) ^ decode_predicate(exp[2]);;
+    if (exp.type == tINT && exp.i >=0 && exp.i <= 15) return exp.i;
+    error(exp.lineno, "Unexpected expression %s in predicate", value_desc(&exp));
+    return -1;
+}
 
 struct AluOP : public SaluInstruction {
     const struct Decode : public Instruction::Decode {
@@ -197,24 +203,19 @@ Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
                                    const VECTOR(value_t) &op) const {
     AluOP *rv = new AluOP(this, op[0].lineno);
     int idx = 1;
-    //Check optional predicate operand
+    // Check optional predicate operand
     if (idx < op.size) {
-        //Predicate is an integer
-        if(op[idx].type == tINT) {
+        if (op[idx].type == tINT) {
+            // Predicate is an integer. no warning for odd values
             rv->predication_encode = op[idx++].i;
-        //Predicate is string
-        } else {
-            //FIXME: Need a more generic solution
-            //Will fail for multiple modifiers in operand - !!cmplo
-            std::string op_pred;
-            if (op[idx].vec.size == 2)
-                op_pred = strcat(op[idx][0].s,op[idx][1].s);
-            else
-                op_pred = op[idx].s;
-            auto ops = ops_pred_lookup.find(op_pred);
-            if (ops != ops_pred_lookup.end()) {
-                rv->predication_encode = ops->second;
-                idx++; } } }
+        } else if (op[idx] == "cmplo" || op[idx] == "cmphi" || op[idx] == "!" ||
+                   op[idx] == "&" || op[idx] == "|" || op[idx] == "^") {
+            // Predicate is an expression
+            rv->predication_encode = decode_predicate(op[idx++]);
+            if (rv->predication_encode == 0)
+                warning(op[idx-1].lineno, "Instruction predicate is always false");
+            else if (rv->predication_encode == 15)
+                warning(op[idx-1].lineno, "Instruction predicate is always true"); } }
     if (idx < op.size && op[idx] == "lo") {
         rv->dest = LO;
         idx++;
@@ -508,7 +509,7 @@ struct OutOP : public SaluInstruction {
     int predication_encode = STATEFUL_PREDICATION_ENCODE_UNCOND;
     enum mux_select { MEM_HI=0, MEM_LO, PHV_HI, PHV_LO, ALU_HI, ALU_LO, PRED };
     mux_select output_mux;
-    static const OpsLookupT ops_mux_lookup;
+    static const std::map<std::string, int> ops_mux_lookup;
     OutOP(const Decode *op, int lineno) : SaluInstruction(lineno) {}
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override { slot = ALUOUT; return this; }
     void pass2(Table *tbl, Table::Actions::Action *) override { }
@@ -524,7 +525,7 @@ struct OutOP : public SaluInstruction {
         write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
 };
 
-const OpsLookupT OutOP::ops_mux_lookup = {
+const std::map<std::string, int> OutOP::ops_mux_lookup = {
     { "mem_hi", MEM_HI }, { "mem_lo", MEM_LO },
     { "phv_hi", PHV_HI }, { "phv_lo", PHV_LO },
     { "alu_hi", ALU_HI }, { "alu_lo", ALU_LO },
@@ -552,22 +553,19 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
     OutOP *rv = new OutOP(this, op[0].lineno);
     check_num_ops(rv->lineno, op);
     int idx = 1;
-    //Check optional predicate operand
+    // Check optional predicate operand
     if (idx < op.size) {
-        //Predicate is an integer
+        // Predicate is an integer
         if(op[idx].type == tINT) {
             rv->predication_encode = op[idx++].i;
-        //Predicate is string
-        } else {
-            std::string op_pred;
-            if (op[idx].vec.size == 2)
-                op_pred = strcat(op[idx][0].s,op[idx][1].s);
-            else
-                op_pred = op[idx].s;
-            auto ops = ops_pred_lookup.find(op_pred);
-            if (ops != ops_pred_lookup.end()) {
-                rv->predication_encode = ops->second;
-                idx++; } } }
+        // Predicate is an expression
+        } else if (op[idx] == "cmplo" || op[idx] == "cmphi" || op[idx] == "!" ||
+                   op[idx] == "&" || op[idx] == "|" || op[idx] == "^") {
+            rv->predication_encode = decode_predicate(op[idx++]);
+            if (rv->predication_encode == 0)
+                warning(op[idx-1].lineno, "Instruction predicate is always false");
+            else if (rv->predication_encode == 15)
+                warning(op[idx-1].lineno, "Instruction predicate is always true"); } }
     //Check mux operand
     if (idx < op.size) {
         auto ops = OutOP::ops_mux_lookup.find(op[idx].s);
