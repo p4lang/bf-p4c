@@ -15,4 +15,10 @@ AC_LANG(C++)
 
 AC_CONFIG_HEADERS(config.h)
 AC_CONFIG_FILES([Makefile])
+
+AC_CANONICAL_HOST
+case "${host_os}" in
+    darwin*) AC_DEFINE([NO_UCONTEXT], [], [ucontext.h is not usable]);;
+esac
+
 AC_OUTPUT

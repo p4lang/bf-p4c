@@ -10,6 +10,7 @@
 #include <signal.h>
 #include <string.h>
 #include <sys/wait.h>
+#include "config.h"
 #ifndef NO_UCONTEXT
 #include <ucontext.h>
 #endif
