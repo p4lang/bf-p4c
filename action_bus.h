@@ -1,6 +1,7 @@
 #ifndef _action_bus_h_
 #define _action_bus_h_
 
+#include <array>
 #include "tables.h"
 
 class ActionBus {
