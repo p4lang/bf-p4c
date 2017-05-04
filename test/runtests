@@ -320,17 +320,37 @@ function test_p4() {
 }
 
 function test_tfa() {
-    msg="$1"
+    tfafile="$1"
+    msg="$tfafile"
     pushd $(dirname $1) >/dev/null
     name=$(basename $1 .tfa)
-    rv=0
     mkdir -p $name.out
+    expect_fail=$(sed -n "/^$name.tfa/s/[^ ]* *//p" expected_failures.txt 2>/dev/null | head -1)
+    #cd $name.out
+    ok=true
+    rv=0
     if not run $TFAS -Mvvvvl $name.out/tfas.config.log $name.tfa >$name.out/tfas.log 2>&1; then
         msg="$msg tfas failed"
+        fail_type="tfas"
         flock $FAILLOG -c "echo '$1:' >>$FAILLOG; sed -e 's/^/ /' -e '/\n/!a\' $name.out/tfas.log >>$FAILLOG"
         rv=1
+        ok=false
     else
         msg="$msg pass"
+    fi
+    if [ "$expect_fail" != "" ]; then
+        if $ok; then
+            msg="$msg (UNEXPECTED PASS -- expected $expect_fail failure)"
+            rv=3
+        elif [ "$expect_fail" != "$fail_type" ]; then
+            msg="$msg (expected $expect_fail failure)"
+            if [ "$fail_type" = "mismatch" -o "$expect_fail" = "compile" ]; then
+                rv=2
+            fi
+        else
+            msg="$msg (expected)"
+            rv=2
+        fi
     fi
     echo "$msg"
     popd >/dev/null

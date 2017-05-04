@@ -1,0 +1,4 @@
+- assembler failures on assembly tests.
+
+stateful_multiple_output_error.tfa tfas
+- assembler must fail due to multiple output instructions in a stateful table

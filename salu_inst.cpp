@@ -2,6 +2,7 @@
 #include "phv.h"
 #include "tables.h"
 #include "stage.h"
+#include <cstring>
 
 namespace {
 
@@ -108,9 +109,25 @@ operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v
 enum salu_slot_use {
     CMPLO, CMPHI,
     ALU2LO, ALU1LO, ALU2HI, ALU1HI,
+    ALUOUT
 };
 
-struct AluOP : public Instruction {
+typedef std::map<std::string, int> OpsLookupT;
+static const OpsLookupT ops_pred_lookup = {
+    { "cmplo", STATEFUL_PREDICATION_ENCODE_CMPLO },
+    { "cmphi", STATEFUL_PREDICATION_ENCODE_CMPHI },
+    { "!cmplo", STATEFUL_PREDICATION_ENCODE_NOTCMPLO },
+    { "!cmphi", STATEFUL_PREDICATION_ENCODE_NOTCMPHI } };
+
+//Abstract interface class for SALU Instructions
+//SALU Instructions - AluOP, BitOP, CmpOP, OutOP
+struct SaluInstruction : public Instruction {
+    SaluInstruction(int lineno): Instruction(lineno) {};
+    //Stateful ALU's dont access PHV's directly
+    void phvRead(std::function<void (const Phv::Slice &sl)>) final {};
+};
+
+struct AluOP : public SaluInstruction {
     const struct Decode : public Instruction::Decode {
         std::string name;
         unsigned opcode;
@@ -143,12 +160,11 @@ struct AluOP : public Instruction {
     int predication_encode = STATEFUL_PREDICATION_ENCODE_UNCOND;
     enum { LO, HI }     dest;
     operand             srca, srcb;
-    AluOP(const Decode *op, int l) : Instruction(l), opc(op) {}
+    AluOP(const Decode *op, int l) : SaluInstruction(l), opc(op) {}
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
-    void pass2(Table *tbl, Table::Actions::Action *)  override { }
+    void pass2(Table *tbl, Table::Actions::Action *)  override { 
     bool equiv(Instruction *a_) override;
-    void phvRead(std::function<void (const Phv::Slice &sl)>) override { }
-    void dbprint(std::ostream &out) const override {
+    void dbprint(std::ostream &out) const override{
         out << "INSTR: " << opc->name /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
     void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
@@ -181,23 +197,24 @@ Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
                                    const VECTOR(value_t) &op) const {
     AluOP *rv = new AluOP(this, op[0].lineno);
     int idx = 1;
-    if (idx < op.size && op[idx].type == tINT) {
-        rv->predication_encode = op[idx++].i;
-    } else if (idx < op.size && op[idx] == "!") {
-        assert(op[idx].type == tCMD && op[idx].vec.size == 2);
-        if (op[idx][1] == "cmplo")
-            rv->predication_encode = STATEFUL_PREDICATION_ENCODE_NOTCMPLO;
-        else if (op[idx][1] == "cmphi")
-            rv->predication_encode = STATEFUL_PREDICATION_ENCODE_NOTCMPHI;
-        else
-            error(op[idx].lineno, "Unknown predicate !%s", value_desc(op[idx][1]));
-        idx++;
-    } else if (idx < op.size && op[idx] == "cmplo") {
-        rv->predication_encode = STATEFUL_PREDICATION_ENCODE_CMPLO;
-        idx++;
-    } else if (idx < op.size && op[idx] == "cmphi") {
-        rv->predication_encode = STATEFUL_PREDICATION_ENCODE_CMPHI;
-        idx++; }
+    //Check optional predicate operand
+    if (idx < op.size) {
+        //Predicate is an integer
+        if(op[idx].type == tINT) {
+            rv->predication_encode = op[idx++].i;
+        //Predicate is string
+        } else {
+            //FIXME: Need a more generic solution
+            //Will fail for multiple modifiers in operand - !!cmplo
+            std::string op_pred;
+            if (op[idx].vec.size == 2)
+                op_pred = strcat(op[idx][0].s,op[idx][1].s);
+            else
+                op_pred = op[idx].s;
+            auto ops = ops_pred_lookup.find(op_pred);
+            if (ops != ops_pred_lookup.end()) {
+                rv->predication_encode = ops->second;
+                idx++; } } }
     if (idx < op.size && op[idx] == "lo") {
         rv->dest = LO;
         idx++;
@@ -314,7 +331,7 @@ void AluOP::write_regs(REGS &regs, Table *tbl_, Table::Actions::Action *act) {
         } else assert(0); }
 }
 
-struct BitOP : public Instruction {
+struct BitOP : public SaluInstruction {
     const struct Decode : public Instruction::Decode {
         std::string name;
         unsigned opcode;
@@ -324,12 +341,11 @@ struct BitOP : public Instruction {
                             const VECTOR(value_t) &op) const override;
     } *opc;
     int predication_encode = STATEFUL_PREDICATION_ENCODE_UNCOND;
-    BitOP(const Decode *op, int lineno) : Instruction(lineno), opc(op) {}
+    BitOP(const Decode *op, int lineno) : SaluInstruction(lineno), opc(op) {}
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override { slot = ALU1LO; return this; }
     void pass2(Table *tbl, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;
-    void phvRead(std::function<void (const Phv::Slice &sl)>) override { }
-    void dbprint(std::ostream &out) const override {
+    void dbprint(std::ostream &out) const override{
         out << "INSTR: " << opc->name /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
     void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
@@ -372,7 +388,7 @@ void BitOP::write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act) {
     salu.salu_asrc_memory_index = 0;
 }
 
-struct CmpOP : public Instruction {
+struct CmpOP : public SaluInstruction {
     const struct Decode : public Instruction::Decode {
         std::string     name;
         unsigned        opcode;
@@ -387,12 +403,11 @@ struct CmpOP : public Instruction {
     operand::Phv        *srcb = 0;
     operand::Const      *srcc = 0;
     bool                srca_neg = false, srcb_neg = false;
-    CmpOP(const Decode *op, int lineno) : Instruction(lineno), opc(op) {}
+    CmpOP(const Decode *op, int lineno) : SaluInstruction(lineno), opc(op) {}
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;
-    void phvRead(std::function<void (const Phv::Slice &sl)>) override { }
-    void dbprint(std::ostream &out) const override {
+    void dbprint(std::ostream &out) const override{
         out << "INSTR: " << opc->name /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
     void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
@@ -478,6 +493,100 @@ void CmpOP::write_regs(REGS &regs, Table *tbl_, Table::Actions::Action *act) {
             salu.salu_cmp_const_src = tbl->get_const(srcc->value);
             salu.salu_cmp_regfile_const = 1; } }
     salu.salu_cmp_opcode = opc->opcode | (type << 2);
+}
+
+//Output ALU instruction
+struct OutOP : public SaluInstruction {
+    struct Decode : public Instruction::Decode {
+        static const int min_ops = 2;
+        static const int max_ops = 3;
+        Decode(const char *n) : Instruction::Decode(n, STATEFUL_ALU) {}
+        Instruction *decode(Table *tbl, const Table::Actions::Action *act,
+                            const VECTOR(value_t) &op) const override;
+        void check_num_ops(int lineno, const VECTOR(value_t) &op) const;
+    };
+    int predication_encode = STATEFUL_PREDICATION_ENCODE_UNCOND;
+    enum mux_select { MEM_HI=0, MEM_LO, PHV_HI, PHV_LO, ALU_HI, ALU_LO, PRED };
+    mux_select output_mux;
+    static const OpsLookupT ops_mux_lookup;
+    OutOP(const Decode *op, int lineno) : SaluInstruction(lineno) {}
+    Instruction *pass1(Table *tbl, Table::Actions::Action *) override { slot = ALUOUT; return this; }
+    void pass2(Table *tbl, Table::Actions::Action *) override { }
+    bool equiv(Instruction *a_) override;
+    void dbprint(std::ostream &out) const {
+        out << "INSTR: output " /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
+    template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
+    void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
+                    Table::Actions::Action *act) override {
+        write_regs<Target::Tofino::mau_regs>(regs, tbl, act); }
+    void write_regs(Target::JBay::mau_regs &regs, Table *tbl,
+                    Table::Actions::Action *act) override {
+        write_regs<Target::JBay::mau_regs>(regs, tbl, act); }
+};
+
+const OpsLookupT OutOP::ops_mux_lookup = {
+    { "mem_hi", MEM_HI }, { "mem_lo", MEM_LO },
+    { "phv_hi", PHV_HI }, { "phv_lo", PHV_LO },
+    { "alu_hi", ALU_HI }, { "alu_lo", ALU_LO },
+    { "predicate", PRED } };
+
+static OutOP::Decode opOUTPUT("output");
+
+bool OutOP::equiv(Instruction *a_) {
+    if (auto *a = dynamic_cast<OutOP *>(a_))
+        return predication_encode == a->predication_encode
+                && slot == a->slot && output_mux == a->output_mux;
+    return false;
+}
+void OutOP::Decode::check_num_ops(int lineno, const VECTOR(value_t) &op) const {
+    //FIXME: Mechanism to print more detail on expected instruction format
+    //and allowed operands values
+    if (op.size > max_ops)
+        error(lineno, "too many operands for %s instruction", op[0].s);
+    if (op.size < min_ops)
+        error(lineno, "too few operands for %s instruction", op[0].s);
+}
+
+Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act,
+                                   const VECTOR(value_t) &op) const {
+    OutOP *rv = new OutOP(this, op[0].lineno);
+    check_num_ops(rv->lineno, op);
+    int idx = 1;
+    //Check optional predicate operand
+    if (idx < op.size) {
+        //Predicate is an integer
+        if(op[idx].type == tINT) {
+            rv->predication_encode = op[idx++].i;
+        //Predicate is string
+        } else {
+            std::string op_pred;
+            if (op[idx].vec.size == 2)
+                op_pred = strcat(op[idx][0].s,op[idx][1].s);
+            else
+                op_pred = op[idx].s;
+            auto ops = ops_pred_lookup.find(op_pred);
+            if (ops != ops_pred_lookup.end()) {
+                rv->predication_encode = ops->second;
+                idx++; } } }
+    //Check mux operand
+    if (idx < op.size) {
+        auto ops = OutOP::ops_mux_lookup.find(op[idx].s);
+        if (ops != OutOP::ops_mux_lookup.end()) {
+            rv->output_mux = (mux_select)ops->second;
+        } else
+            error(rv->lineno, "invalid operand '%s' for '%s' instruction", op[idx].s, op[0].s); }
+    return rv;
+}
+
+template<class REGS>
+void OutOP::write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act) {
+    int logical_home_row = tbl->layout[0].row;
+    auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
+    auto &salu = meter_group.stateful.salu_instr_output_alu[act->code];
+    salu.salu_output_cmpfn = STATEFUL_PREDICATION_ENCODE_UNCOND;
+    if (predication_encode)
+        salu.salu_output_cmpfn = predication_encode;
+    salu.salu_output_asrc = output_mux;
 }
 
 }  // end anonymous namespace
