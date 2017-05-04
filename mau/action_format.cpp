@@ -507,6 +507,10 @@ void ActionFormat::align_action_data_layouts() {
         }
         std::sort(placement_vec.begin(), placement_vec.end(),
                 [](const ActionDataPlacement &a, const ActionDataPlacement &b) {
+            // std::sort() in libc++ can compare an element with itself,
+            // breaking our assertions below, so exit early in that case.
+            if (&a == &b) return false;
+
             if (a.start == b.start) {
                 BUG("Two containers in the same action are at the same place?");
             }
