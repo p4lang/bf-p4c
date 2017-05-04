@@ -4905,7 +4905,7 @@ control process_fwd_results(inout headers hdr, inout metadata meta, inout standa
         default_action = NoAction();
     }
     apply {
-        if (!(meta.ingress_metadata.bypass_lookups == 16w0xffff)) 
+        if (meta.ingress_metadata.bypass_lookups != 16w0xffff) 
             fwd_result.apply();
     }
 }

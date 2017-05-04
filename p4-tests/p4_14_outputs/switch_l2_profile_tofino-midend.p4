@@ -2321,7 +2321,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         if (meta.ingress_metadata.port_type != 2w1) {
             process_ingress_bd_stats_ingress_bd_stats_2.apply();
             process_ingress_acl_stats_acl_stats_2.apply();
-            if (!(meta.ingress_metadata.bypass_lookups == 16w0xffff)) 
+            if (meta.ingress_metadata.bypass_lookups != 16w0xffff) 
                 process_fwd_results_fwd_result_0.apply();
             if (meta.nexthop_metadata.nexthop_type == 2w1) 
                 process_nexthop_ecmp_group_0.apply();
