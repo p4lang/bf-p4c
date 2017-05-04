@@ -12,7 +12,7 @@ P4Table *P4Table::get(P4Table::type t, VECTOR(pair_t) &data) {
     auto *h = ::get(data, "handle");
     auto *n = ::get(data, "name");
     if (h) {
-        if (!CHECKTYPE(*h, tINT));
+        if (!CHECKTYPE(*h, tINT)) return nullptr;
         unsigned handle = h->i;
         if (handle >> 24 && handle >> 24 != t) {
             error(h->lineno, "Incorrect handle type %d for %s table", handle >> 24, type_name[t]);

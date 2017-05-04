@@ -146,9 +146,9 @@ struct AluOP : public Instruction {
     AluOP(const Decode *op, int l) : Instruction(l), opc(op) {}
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *)  override { }
-    bool equiv(Instruction *a_);
-    void phvRead(std::function<void (const Phv::Slice &sl)>) { }
-    void dbprint(std::ostream &out) const {
+    bool equiv(Instruction *a_) override;
+    void phvRead(std::function<void (const Phv::Slice &sl)>) override { }
+    void dbprint(std::ostream &out) const override {
         out << "INSTR: " << opc->name /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
     void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
@@ -327,9 +327,9 @@ struct BitOP : public Instruction {
     BitOP(const Decode *op, int lineno) : Instruction(lineno), opc(op) {}
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override { slot = ALU1LO; return this; }
     void pass2(Table *tbl, Table::Actions::Action *) override { }
-    bool equiv(Instruction *a_);
-    void phvRead(std::function<void (const Phv::Slice &sl)>) { }
-    void dbprint(std::ostream &out) const {
+    bool equiv(Instruction *a_) override;
+    void phvRead(std::function<void (const Phv::Slice &sl)>) override { }
+    void dbprint(std::ostream &out) const override {
         out << "INSTR: " << opc->name /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
     void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
@@ -390,9 +390,9 @@ struct CmpOP : public Instruction {
     CmpOP(const Decode *op, int lineno) : Instruction(lineno), opc(op) {}
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
     void pass2(Table *tbl, Table::Actions::Action *) override { }
-    bool equiv(Instruction *a_);
-    void phvRead(std::function<void (const Phv::Slice &sl)>) { }
-    void dbprint(std::ostream &out) const {
+    bool equiv(Instruction *a_) override;
+    void phvRead(std::function<void (const Phv::Slice &sl)>) override { }
+    void dbprint(std::ostream &out) const override {
         out << "INSTR: " << opc->name /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
     void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,

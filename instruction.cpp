@@ -45,12 +45,12 @@ struct operand {
     struct Const : Base {
         long            value;
         Const(int line, long v) : Base(line), value(v) {}
-        bool equiv(const Base *a_) const {
+        bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const Const *>(a_)) {
                 return value == a->value;
             } else return false; }
-        virtual Const *clone() { return new Const(*this); }
-        int bits(int group) {
+        Const *clone() override { return new Const(*this); }
+        int bits(int group) override {
             int val = value;
             if (val > 0 && ((val >> (group_size[group] - 1)) & 1))
                 val |= ~0UL << group_size[group];
@@ -58,7 +58,7 @@ struct operand {
                 return value+24;
             error(lineno, "constant value %ld out of range for immediate", value);
             return -1; }
-        virtual void dbprint(std::ostream &out) const { out << value; }
+        void dbprint(std::ostream &out) const override { out << value; }
     };
     struct Phv : Base {
         ::Phv::Ref      reg;
@@ -66,22 +66,22 @@ struct operand {
         Phv(int line, gress_t g, const std::string &n, int l, int h) :
             Base(line), reg(g, line, n, l, h) {}
         Phv(const ::Phv::Ref &r) : Base(r.lineno), reg(r) {}
-        bool equiv(const Base *a_) const {
+        bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const Phv *>(a_)) {
                 return reg == a->reg;
             } else return false; }
-        virtual Phv *clone() { return new Phv(*this); }
-        bool check() { return reg.check(true); }
-        int phvGroup() { return reg->reg.index / 16; }
-        int bits(int group) {
+        Phv *clone() override { return new Phv(*this); }
+        bool check() override { return reg.check(true); }
+        int phvGroup() override { return reg->reg.index / 16; }
+        int bits(int group) override {
             if (group != phvGroup()) {
                 error(lineno, "registers in an instruction must all be in the same phv group");
                 return -1; }
             return reg->reg.index % 16; }
-        virtual unsigned bitoffset(int group) const { return reg->lo; }
-        virtual void mark_use(Table *tbl) {
+        unsigned bitoffset(int group) const override { return reg->lo; }
+        void mark_use(Table *tbl) override {
             tbl->stage->action_use[tbl->gress][reg->reg.index] = true; }
-        virtual void dbprint(std::ostream &out) const { out << reg; }
+        void dbprint(std::ostream &out) const override { out << reg; }
         void phvRead(std::function<void (const ::Phv::Slice &sl)> fn) override { fn(*reg); }
     };
     struct Action : Base {
@@ -92,13 +92,13 @@ struct operand {
 
         Action(int line, const std::string &n, Table *tbl, Table::Format::Field *f,
                unsigned l, unsigned h) : Base(line), name(n), table(tbl), field(f), lo(l), hi(h) {}
-        bool equiv(const Base *a_) const {
+        bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const Action *>(a_)) {
                 return name == a->name && table == a->table && field == a->field &&
                        lo == a->lo && hi == a->hi;
             } else return false; }
-        virtual Action *clone() { return new Action(*this); }
-        int bits(int group) {
+        Action *clone() override { return new Action(*this); }
+        int bits(int group) override {
             int size = group_size[group]/8U;
             int byte = field ? table->find_on_actionbus(field, lo, size)
                              : table->find_on_actionbus(name, lo, size);
@@ -119,7 +119,7 @@ struct operand {
             else
                 return 0x20 + byte/size;
             return -1; }
-        virtual void pass2(int group) const {
+        void pass2(int group) const override {
             unsigned bits = group_size[group];
             unsigned bytes = bits/8U;
             if (field && table->find_on_actionbus(field, lo, bytes) < 0) {
@@ -130,14 +130,14 @@ struct operand {
                 if (l%bits != 0 && l/bits != h/bits)
                     error(lineno, "%s misaligned for action bus", name.c_str());
                 table->need_on_actionbus(field, lo & ~7, bytes); } }
-        virtual void mark_use(Table *tbl) {
+        void mark_use(Table *tbl) override {
             if (field) field->flags |= Table::Format::Field::USED_IMMED; }
-        virtual unsigned bitoffset(int group) const {
+        unsigned bitoffset(int group) const override {
             int size = group_size[group]/8U;
             int byte = field ? table->find_on_actionbus(field, lo, size)
                              : table->find_on_actionbus(name, lo, size);
             return 8*(byte % size) + lo % 8; }
-        virtual void dbprint(std::ostream &out) const {
+        void dbprint(std::ostream &out) const override {
             out << name << '(' << lo << ".." << hi << ')';
             if (field)
                 out << '[' << field->bits[0].lo << ':' << field->size << ", "
@@ -148,14 +148,14 @@ struct operand {
         unsigned        offset;
 
         RawAction(int line, int idx, unsigned off) : Base(line), index(idx), offset(off) {}
-        bool equiv(const Base *a_) const {
+        bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const RawAction *>(a_)) {
                 return index == a->index && offset == a->offset;
             } else return false; }
-        virtual RawAction *clone() { return new RawAction(*this); }
-        int bits(int group) { return 0x40 + index; }
-        virtual unsigned bitoffset(int group) const { return offset; }
-        void dbprint(std::ostream &out) const { out << 'A' << index; }
+        RawAction *clone() override { return new RawAction(*this); }
+        int bits(int group) override { return 0x40 + index; }
+        unsigned bitoffset(int group) const override { return offset; }
+        void dbprint(std::ostream &out) const override { out << 'A' << index; }
     };
     struct HashDist : Base {
         Table                   *table;
@@ -183,8 +183,8 @@ struct operand {
             if (auto *a = dynamic_cast<const HashDist *>(a_)) {
                 return table == a->table && units == a->units;
             } else return false; }
-        virtual HashDist *clone() override { return new HashDist(*this); }
-        virtual void pass2(int group) const override {
+        HashDist *clone() override { return new HashDist(*this); }
+        void pass2(int group) const override {
             if (units.size() > 2) {
                 error(lineno, "Can't use more than 2 hash_dist units together in an action");
                 return; }
@@ -211,7 +211,7 @@ struct operand {
                     if (table->find_on_actionbus(hd, offset, size) < 0)
                         table->need_on_actionbus(hd, offset, size);
                     offset = 16; } } }
-        virtual int bits(int group) override { 
+        int bits(int group) override { 
             int size = group_size[group]/8U;
             auto hd = find_hash_dist(units.at(0));
             int offset = hd->xbar_use & HashDistribution::IMMEDIATE_LOW ? 0 : 16;
@@ -225,7 +225,7 @@ struct operand {
             error(lineno, "action bus entry %d(hash_dist %d) out of range for %d-bit access",
                   size == 2 ? byte+32 : byte, hd->id, size*8);
             return -1; }
-        virtual void dbprint(std::ostream &out) const {
+        void dbprint(std::ostream &out) const override {
             out << "hash_dist(";
             const char *sep = "";
             for (auto u : units) {
@@ -241,19 +241,19 @@ struct operand {
 
         Named(int line, const std::string &n, int l, int h, Table *t, const std::string &act)
         : Base(line), name(n), lo(l), hi(h), tbl(t), action(act) {}
-        bool equiv(const Base *a_) const {
+        bool equiv(const Base *a_) const override {
             if (auto *a = dynamic_cast<const Named *>(a_)) {
                 return name == a->name && lo == a->lo && hi == a->hi && tbl == a->tbl &&
                        action == a->action;
             } else return false; }
-        Base *lookup(Base *&ref);
-        Named *clone() { return new Named(*this); }
-        bool check() { assert(0); return true; }
-        int phvGroup() { assert(0); return -1; }
-        int bits(int group) { assert(0); return 0; }
-        unsigned bitoffset(int group) const { assert(0); return 0; }
-        void mark_use(Table *tbl) { assert(0); }
-        void dbprint(std::ostream &out) const {
+        Base *lookup(Base *&ref) override;
+        Named *clone() override { return new Named(*this); }
+        bool check() override { assert(0); return true; }
+        int phvGroup() override { assert(0); return -1; }
+        int bits(int group) override { assert(0); return 0; }
+        unsigned bitoffset(int group) const override { assert(0); return 0; }
+        void mark_use(Table *tbl) override { assert(0); }
+        void dbprint(std::ostream &out) const override {
             out << name;
             if (lo >= 0) {
                 out << '(' << lo;

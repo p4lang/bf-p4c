@@ -380,15 +380,15 @@ public:
 class FakeTable : public Table {
 public:
     FakeTable(const char *name) : Table(-1, name, INGRESS, 0, -1) {}
-    void setup(VECTOR(pair_t) &data) { assert(0); }
-    void pass1() { assert(0); }
-    void pass2() { assert(0); }
+    void setup(VECTOR(pair_t) &data) override { assert(0); }
+    void pass1() override { assert(0); }
+    void pass2() override { assert(0); }
     template<class REGS> void write_regs(REGS &) { assert(0); }
     void write_regs(Target::Tofino::mau_regs &regs) override {
         write_regs<Target::Tofino::mau_regs>(regs); }
     void write_regs(Target::JBay::mau_regs &regs) override {
         write_regs<Target::JBay::mau_regs>(regs); }
-    void gen_tbl_cfg(json::vector &out) { assert(0); }
+    void gen_tbl_cfg(json::vector &out) override { assert(0); }
 };
 
 struct AttachedTables {
@@ -422,11 +422,11 @@ DECLARE_ABSTRACT_TABLE_TYPE(MatchTable, Table,
     void common_init_setup(const VECTOR(pair_t) &, bool, P4Table::type) override;
     bool common_setup(pair_t &, const VECTOR(pair_t) &, P4Table::type) override;
 public:
-    const AttachedTables *get_attached() const { return &attached; }
-    const GatewayTable *get_gateway() const { return gateway; }
-    MatchTable *get_match_table() { return this; }
-    std::set<MatchTable *> get_match_tables() { return std::set<MatchTable *>{this}; }
-    void gen_name_lookup(json::map &out);
+    const AttachedTables *get_attached() const override { return &attached; }
+    const GatewayTable *get_gateway() const override { return gateway; }
+    MatchTable *get_match_table() override { return this; }
+    std::set<MatchTable *> get_match_tables() override { return std::set<MatchTable *>{this}; }
+    void gen_name_lookup(json::map &out) override;
     bool run_at_eop() override { return attached.run_at_eop(); }
     virtual bool is_ternary() { return false; }
 )
@@ -498,7 +498,7 @@ DECLARE_TABLE_TYPE(ExactMatchTable, MatchTable, "exact_match",
     int         mgm_lineno = -1;                /* match_group_map lineno */
 public:
     Format::Field *lookup_field(const std::string &n, const std::string &act = "") override;
-    SelectionTable *get_selector() const { return attached.get_selector(); }
+    SelectionTable *get_selector() const override { return attached.get_selector(); }
     template<class REGS> void write_merge_regs(REGS &regs, int type, int bus) {
         attached.write_merge_regs(regs, this, type, bus); }
     void write_merge_regs(Target::Tofino::mau_regs &regs, int type, int bus) override {
@@ -508,7 +508,7 @@ public:
     using Table::gen_memory_resource_allocation_tbl_cfg;
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(Way &);
     void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
-                                  const Table::Format::Field &field);
+                                  const Table::Format::Field &field) override;
     int unitram_type() override { return UnitRam::MATCH; }
 )
 
@@ -532,28 +532,30 @@ public:
     int tcam_id;
     Table::Ref indirect;
     int indirect_bus;   /* indirect bus to use if there's no indirect table */
-    void alloc_vpns();
+    void alloc_vpns() override;
     Format::Field *lookup_field(const std::string &name, const std::string &action) override {
         assert(!format);
         return indirect ? indirect->lookup_field(name, action) : 0; }
-    int find_on_actionbus(Format::Field *f, int off, int size) {
+    int find_on_actionbus(Format::Field *f, int off, int size) override {
         return indirect ? indirect->find_on_actionbus(f, off, size)
                         : Table::find_on_actionbus(f, off, size); }
-    void need_on_actionbus(Format::Field *f, int off, int size) {
+    void need_on_actionbus(Format::Field *f, int off, int size) override {
         indirect ? indirect->need_on_actionbus(f, off, size)
                  : Table::need_on_actionbus(f, off, size); }
-    int find_on_actionbus(const char *n, int off, int size, int *len = 0) {
+    int find_on_actionbus(const char *n, int off, int size, int *len = 0) override {
         return indirect ? indirect->find_on_actionbus(n, off, size, len)
                         : Table::find_on_actionbus(n, off, size, len); }
-    const Call &get_action() const { return indirect ? indirect->get_action() : action; }
-    Actions *get_actions() { return actions ? actions : indirect ? indirect->actions : 0; }
-    const AttachedTables *get_attached() const { return indirect ? indirect->get_attached() : &attached; }
-    SelectionTable *get_selector() const { return indirect ? indirect->get_selector() : 0; }
+    const Call &get_action() const override { return indirect ? indirect->get_action() : action; }
+    Actions *get_actions() override { return actions ? actions : indirect ? indirect->actions : 0; }
+    const AttachedTables *get_attached() const override {
+        return indirect ? indirect->get_attached() : &attached; }
+    SelectionTable *get_selector() const override {
+        return indirect ? indirect->get_selector() : 0; }
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(
             const char *type, std::vector<Layout> &layout, bool skip_spare_bank=false) override;
-    Call &action_call() { return indirect ? indirect->action : action; }
-    int memunit(int r, int c) { return r + c*12; }
-    bool is_ternary() { return true; }
+    Call &action_call() override { return indirect ? indirect->action : action; }
+    int memunit(int r, int c) override { return r + c*12; }
+    bool is_ternary() override { return true; }
     int hit_next_size() const override {
         if (indirect && indirect->hit_next.size() > 0)
             return indirect->hit_next.size();
@@ -577,22 +579,22 @@ public:
 DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     TernaryMatchTable           *match_table;
     AttachedTables              attached;
-    table_type_t table_type() { return TERNARY_INDIRECT; }
-    table_type_t set_match_table(MatchTable *m, bool indirect);
+    table_type_t table_type() override { return TERNARY_INDIRECT; }
+    table_type_t set_match_table(MatchTable *m, bool indirect) override;
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
         width = (format->size-1)/128 + 1;
         depth = layout_size() / width;
         period = 1;
         period_name = 0; }
-    Actions *get_actions() { return actions ? actions : match_table->actions; }
-    const AttachedTables *get_attached() const { return &attached; }
-    const GatewayTable *get_gateway() const { return match_table->get_gateway(); }
-    MatchTable *get_match_table() { return match_table; }
-    std::set<MatchTable *> get_match_tables() {
+    Actions *get_actions() override { return actions ? actions : match_table->actions; }
+    const AttachedTables *get_attached() const override { return &attached; }
+    const GatewayTable *get_gateway() const override { return match_table->get_gateway(); }
+    MatchTable *get_match_table() override { return match_table; }
+    std::set<MatchTable *> get_match_tables() override {
         std::set<MatchTable *> rv;
         if (match_table) rv.insert(match_table);
         return rv; }
-    SelectionTable *get_selector() const { return attached.get_selector(); }
+    SelectionTable *get_selector() const override { return attached.get_selector(); }
     template<class REGS> void write_merge_regs(REGS &regs, int type, int bus) {
         attached.write_merge_regs(regs, match_table, type, bus); }
     void write_merge_regs(Target::Tofino::mau_regs &regs, int type, int bus) override {
@@ -600,7 +602,7 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     void write_merge_regs(Target::JBay::mau_regs &regs, int type, int bus) override {
         write_merge_regs<Target::JBay::mau_regs>(regs, type, bus); }
     void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
-                                  const Table::Format::Field &field);
+                                  const Table::Format::Field &field) override;
     int unitram_type() override { return UnitRam::TERNARY_INDIRECTION; }
 )
 
@@ -634,13 +636,13 @@ DECLARE_TABLE_TYPE(ActionTable, AttachedTable, "action",
     int                                 home_lineno = -1;
     std::map<std::string, Format *>     action_formats;
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override;
-    std::string find_field(Format::Field *field);
-    int find_field_lineno(Format::Field *field);
+    std::string find_field(Format::Field *field) override;
+    int find_field_lineno(Format::Field *field) override;
     Format::Field *lookup_field(const std::string &name, const std::string &action) override;
-    void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn);
-    int find_on_actionbus(Format::Field *f, int off, int size);
-    int find_on_actionbus(const char *n, int off, int size, int *len);
-    table_type_t table_type() { return ACTION; }
+    void apply_to_field(const std::string &n, std::function<void(Format::Field *)> fn) override;
+    int find_on_actionbus(Format::Field *f, int off, int size) override;
+    int find_on_actionbus(const char *n, int off, int size, int *len) override;
+    table_type_t table_type() override { return ACTION; }
     int unitram_type() override { return UnitRam::ACTION; }
     void pad_format_fields();
 )
@@ -675,21 +677,22 @@ private:
     std::vector<Match>          table;
     template<class REGS> void payload_write_regs(REGS &, int row, int type, int bus);
 public:
-    table_type_t table_type() { return GATEWAY; }
-    MatchTable *get_match_table() { return match_table; }
-    std::set<MatchTable *> get_match_tables() {
+    table_type_t table_type() override { return GATEWAY; }
+    MatchTable *get_match_table() override { return match_table; }
+    std::set<MatchTable *> get_match_tables() override {
         std::set<MatchTable *> rv;
         if (match_table) rv.insert(match_table);
         return rv; }
-    table_type_t set_match_table(MatchTable *m, bool indirect) {
+    table_type_t set_match_table(MatchTable *m, bool indirect) override {
         match_table = m;
         if ((unsigned)m->logical_id < (unsigned)logical_id) logical_id = m->logical_id;
         return GATEWAY; }
     static GatewayTable *create(int lineno, const std::string &name, gress_t gress,
                                 Stage *stage, int lid, VECTOR(pair_t) &data)
         { return table_type_singleton.create(lineno, name.c_str(), gress, stage, lid, data); }
-    const GatewayTable *get_gateway() const { return this; }
-    SelectionTable *get_selector() const { return match_table ? match_table->get_selector() : 0; }
+    const GatewayTable *get_gateway() const override { return this; }
+    SelectionTable *get_selector() const override {
+        return match_table ? match_table->get_selector() : 0; }
     bool empty_match() const { return match.empty() && xor_match.empty(); }
     unsigned input_use() const;
 )
@@ -703,7 +706,7 @@ DECLARE_TABLE_TYPE(SelectionTable, AttachedTable, "selection",
     int                 selection_hash = -1;
 public:
     bool                per_flow_enable;
-    table_type_t table_type() { return SELECTION; }
+    table_type_t table_type() override { return SELECTION; }
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
         width = period = 1; depth = layout_size(); period_name = 0; }
 
@@ -730,16 +733,16 @@ class IdletimeTable : public Table {
 
     IdletimeTable(int lineno, const char *name, gress_t gress, Stage *stage, int lid)
         : Table(lineno, name, gress, stage, lid) {}
-    void setup(VECTOR(pair_t) &data);
+    void setup(VECTOR(pair_t) &data) override;
 public:
-    table_type_t table_type() { return IDLETIME; }
-    table_type_t set_match_table(MatchTable *m, bool indirect) {
+    table_type_t table_type() override { return IDLETIME; }
+    table_type_t set_match_table(MatchTable *m, bool indirect) override {
         match_table = m;
         if ((unsigned)m->logical_id < (unsigned)logical_id) logical_id = m->logical_id;
         return IDLETIME; }
     void vpn_params(int &width, int &depth, int &period, const char *&period_name) override {
         width = period = 1; depth = layout_size(); period_name = 0; }
-    int memunit(int r, int c) { return r*6 + c; }
+    int memunit(int r, int c) override { return r*6 + c; }
     int precision_shift();
     void pass1() override;
     void pass2() override;
@@ -753,7 +756,7 @@ public:
         write_regs<Target::Tofino::mau_regs>(regs); }
     void write_regs(Target::JBay::mau_regs &regs) override {
         write_regs<Target::JBay::mau_regs>(regs); }
-    void gen_tbl_cfg(json::vector &out) { /* nothing at top level */ }
+    void gen_tbl_cfg(json::vector &out) override { /* nothing at top level */ }
     void gen_stage_tbl_cfg(json::map &out);
     static IdletimeTable *create(int lineno, const std::string &name, gress_t gress,
                                  Stage *stage, int lid, VECTOR(pair_t) &data) {
@@ -770,10 +773,10 @@ DECLARE_ABSTRACT_TABLE_TYPE(Synth2Port, AttachedTable,
     json::map *base_tbl_cfg(json::vector &out, const char *type, int size) override;
     json::map *add_stage_tbl_cfg(json::map &tbl, const char *type, int size) override;
 public:
-    virtual void write_merge_regs(Target::Tofino::mau_regs &regs, MatchTable *match,
-                                  int type, int bus, const std::vector<Call::Arg> &args) = 0;
-    virtual void write_merge_regs(Target::JBay::mau_regs &regs, MatchTable *match,
-                                  int type, int bus, const std::vector<Call::Arg> &args) = 0;
+    void write_merge_regs(Target::Tofino::mau_regs &regs, MatchTable *match, int type,
+                          int bus, const std::vector<Call::Arg> &args) override = 0;
+    void write_merge_regs(Target::JBay::mau_regs &regs, MatchTable *match, int type,
+                          int bus, const std::vector<Call::Arg> &args) override = 0;
     template<class REGS> void write_regs(REGS &regs);
     void write_regs(Target::Tofino::mau_regs &regs) override {
         write_regs<Target::Tofino::mau_regs>(regs); }
@@ -786,7 +789,7 @@ public:
 
 DECLARE_TABLE_TYPE(CounterTable, Synth2Port, "counter",
     enum { NONE=0, PACKETS=1, BYTES=2, BOTH=3 } type = NONE;
-    table_type_t table_type() { return COUNTER; }
+    table_type_t table_type() override { return COUNTER; }
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
                                                const std::vector<Call::Arg> &args);
     void write_merge_regs(Target::Tofino::mau_regs &regs, MatchTable *match, int type, int bus,
@@ -806,7 +809,7 @@ DECLARE_TABLE_TYPE(MeterTable, Synth2Port, "meter",
     enum { NONE=0, STANDARD=1, LPF=2, RED=3 }   type = NONE;
     enum { NONE_=0, PACKETS=1, BYTES=2 }        count = NONE_;
     std::vector<Layout>                         color_maprams;
-    table_type_t table_type() { return METER; }
+    table_type_t table_type() override { return METER; }
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
                                                const std::vector<Call::Arg> &args);
     void write_merge_regs(Target::Tofino::mau_regs &regs, MatchTable *match, int type, int bus,
@@ -825,7 +828,7 @@ public:
 )
 
 DECLARE_TABLE_TYPE(Stateful, Synth2Port, "stateful",
-    table_type_t table_type() { return STATEFUL; }
+    table_type_t table_type() override { return STATEFUL; }
     template<class REGS> void write_merge_regs(REGS &regs, MatchTable *match, int type, int bus,
                                                const std::vector<Call::Arg> &args);
     void write_merge_regs(Target::Tofino::mau_regs &regs, MatchTable *match, int type, int bus,

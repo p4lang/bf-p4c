@@ -29,7 +29,7 @@ class HashExpr::PhvRef : HashExpr {
     bool check_ixbar(InputXbar *ix, int grp) override { return ::check_ixbar(what, ix, grp); }
     void gen_data(bitvec &data, int bit, InputXbar *ix, int grp) override;
     int width() override { return what.size(); }
-    bool match_phvref(Phv::Ref &ref) {
+    bool match_phvref(Phv::Ref &ref) override {
         if (what->reg != ref->reg || what->lo != ref->lo)
             return false;
         return true; }
