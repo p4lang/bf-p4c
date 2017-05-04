@@ -13,12 +13,10 @@ AC_PROG_YACC
 AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
 AC_LANG(C++)
 
+AC_CHECK_HEADERS([execinfo.h])
+AC_CHECK_HEADERS([ucontext.h])
+
 AC_CONFIG_HEADERS(config.h)
 AC_CONFIG_FILES([Makefile])
-
-AC_CANONICAL_HOST
-case "${host_os}" in
-    darwin*) AC_DEFINE([NO_UCONTEXT], [], [ucontext.h is not usable]);;
-esac
 
 AC_OUTPUT

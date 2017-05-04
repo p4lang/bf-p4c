@@ -1,7 +1,4 @@
 #include <errno.h>
-#ifndef NO_EXECINFO
-#include <execinfo.h>
-#endif
 #include <fcntl.h>
 #include "hex.h"
 #include <iostream>
@@ -10,11 +7,15 @@
 #include <signal.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <unistd.h>
+
 #include "config.h"
-#ifndef NO_UCONTEXT
+#ifdef HAVE_EXECINFO_H
+#include <execinfo.h>
+#endif
+#ifdef HAVE_UCONTEXT_H
 #include <ucontext.h>
 #endif
-#include <unistd.h>
 
 static const char *signames[] = {
     "NONE", "HUP", "INT","QUIT", "ILL","TRAP",  "ABRT", "BUS",  "FPE","KILL",
@@ -101,7 +102,7 @@ const char *addr2line(void *addr, const char *text)
     return buffer;
 }
 
-#ifndef NO_UCONTEXT
+#ifdef HAVE_UCONTEXT_H
 static void dumpregs(mcontext_t *mctxt)
 {
 #if defined(REG_EAX)
@@ -178,10 +179,10 @@ static void crash_shutdown(int sig, siginfo_t *info, void *uctxt)
     if (sig == SIGILL || sig == SIGFPE || sig == SIGSEGV ||
         sig == SIGBUS || sig == SIGTRAP)
         LOG1("  address = " << hex(info->si_addr));
-#ifndef NO_UCONTEXT
+#ifdef HAVE_UCONTEXT_H
     dumpregs(&((ucontext_t *)uctxt)->uc_mcontext);
 #endif
-#ifndef NO_EXECINFO
+#ifdef HAVE_EXECINFO_H
     static void *buffer[64];
     int size = backtrace(buffer, 64);
     char **strings = backtrace_symbols(buffer, size);
