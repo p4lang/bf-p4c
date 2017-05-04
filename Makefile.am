@@ -151,10 +151,6 @@ noinst_HEADERS += \
 
 cpplint_FILES += $(tofino_backend_phv_UNIFIED) $(tofino_backend_phv_NONUNIFIED)
 
-# We unfortunately have our own hack that puts |vector| in the global namespace
-# in |ir/std.h|. Until at least one of these hacks is removed, files that use OR
-# Tools need to be built separately from files that interact with our IR.
-
 tofino_backend_main_UNIFIED = \
 	%reldir%/backend.cpp \
 	%reldir%/midend.cpp \
