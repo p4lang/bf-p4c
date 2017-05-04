@@ -76,6 +76,8 @@ Cluster_Slicing::apply_visitor(const IR::Node *node, const char *name) {
             tag);
     }
     //
+    sanity_check_cluster_slices("Cluster_Slicing::apply_visitor()");
+    //
     LOG3(*this);
     LOG3("\tPHV Clusters = " << phv_mau_i.phv_clusters().size());
     LOG3("\tPHV aligned_slices available = " << phv_mau_i.aligned_container_slices().size());
@@ -174,6 +176,89 @@ Cluster_Slicing::cluster_slice(std::list<Cluster_PHV *>& cluster_list) {
         << cluster_list.size()
         << ")..........");
 }  // cluster_slice list of clusters
+
+//
+//***********************************************************************************
+//
+// sanity checks
+//
+//***********************************************************************************
+//
+//
+void
+Cluster_Slicing::sanity_check_cluster_slices(const std::string& msg) {
+    //
+    const std::string msg_1 = msg + "..Cluster_Slicing::sanity_check_cluster_slices";
+    PhvInfo &phv_l = phv_mau_i.phv_requirements().cluster().phv();
+    for (auto &f : phv_l) {
+        if (f.sliced()) {
+            // there must be field slices
+            if (f.field_slices().empty()) {
+                LOG1(
+                    "*****cluster_phv_slicing.cpp:sanity_FAIL*****....."
+                    << msg_1
+                    << std::endl
+                    << ".....sliced cluster has no field slices....."
+                    << std::endl
+                    << &f);
+            }
+            // every slice has unique cl_id
+            // no overlapping slices
+            // all slices correctly add up to unsliced field width
+            //
+            ordered_set<std::string> set_of_cl_ids;
+            ordered_set<std::pair<int, int>> set_of_ranges;
+            int slice_widths = 0;
+            for (auto &e : f.field_slices()) {
+                //
+                std::string id = e.first->id();
+                if (set_of_cl_ids.count(id)) {
+                    LOG1(
+                        "*****cluster_phv_slicing.cpp:sanity_FAIL*****....."
+                        << msg_1
+                        << std::endl
+                        << ".....cluster ids for slices are not unique....."
+                        << id
+                        << std::endl
+                        << &f);
+                }
+                set_of_cl_ids.insert(id);
+                //
+                int lo = e.second.first;
+                int hi = e.second.second;
+                for (auto &r : set_of_ranges) {
+                    int lo_r = r.first;
+                    int hi_r = r.second;
+                    if ((lo_r >= lo && lo_r <= hi)
+                        || (hi_r >= lo && hi_r <= hi)) {
+                        LOG1(
+                            "*****cluster_phv_slicing.cpp:sanity_FAIL*****....."
+                            << msg_1
+                            << std::endl
+                            << ".....cluster ranges for slices overlap....."
+                            << " " << lo << ".." << hi
+                            << " " << lo_r << ".." << hi_r
+                            << std::endl
+                            << &f);
+                   }
+                }
+                set_of_ranges.insert({lo, hi});
+                slice_widths += hi - lo + 1;
+            }  // for
+            if (slice_widths != f.size) {
+                LOG1(
+                    "*****cluster_phv_slicing.cpp:sanity_FAIL*****....."
+                    << msg_1
+                    << std::endl
+                    << ".....cluster slice ranges do not add up to field size....."
+                    << "slice_widths = " << slice_widths
+                    << " field_size = " << f.size
+                    << std::endl
+                    << &f);
+            }
+        }
+    }
+}  // sanity_check_cluster_slices
 
 //
 //***********************************************************************************

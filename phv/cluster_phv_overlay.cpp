@@ -169,14 +169,18 @@ Cluster_PHV_Overlay::apply_visitor(const IR::Node *node, const char *name) {
 bool
 Cluster_PHV_Overlay::overlay_field_to_field(
     PhvInfo::Field *f_o,
+    Cluster_PHV *cl_f_o,
     PhvInfo::Field *f_s,
     bool exceed_substratum) {
     //
     assert(f_o);
     assert(f_s);
     //
+    // overlay_slice should not exceed entire substratum
+    // overlay field phv_use_width qualified by slice but substratum un-qualified
+    //
     if (!exceed_substratum
-        && f_o->phv_use_width() > f_s->phv_use_width()) {
+        && f_o->phv_use_width(cl_f_o) > f_s->phv_use_width()) {
         return false;
     }
     if (!phv_interference_i.mutually_exclusive(f_o, f_s)) {
@@ -206,6 +210,11 @@ Cluster_PHV_Overlay::overlay_cluster_to_cluster(
         //
         return false;
     }
+    LOG3("..... attempt to overlay Cluster to Cluster ....."
+        << cl_o->id() << " -> " << cl_s->id());
+    // LOG3(cl_o);
+    // LOG3(cl_s);
+    //
     // assumption
     // cluster of fields are sorted decreasing field width
     //
@@ -216,7 +225,7 @@ Cluster_PHV_Overlay::overlay_cluster_to_cluster(
     for (auto &f_o : cl_o->cluster_vec()) {
         PhvInfo::Field *remove_field = 0;
         for (auto &f_s : substratum_fields) {
-            if (overlay_field_to_field(f_o, f_s /*, do not exceed substratum */)) {
+            if (overlay_field_to_field(f_o, cl_o, f_s /* , do not exceed substratum */)) {
                 overlay_substratum_map[f_o] = f_s;
                 remove_field = f_s;
                 break;
@@ -237,13 +246,14 @@ Cluster_PHV_Overlay::overlay_cluster_to_cluster(
     // assign fields to containers
     // i.e., enter additional cc for overlayed field in container
     //
-    LOG3("..... cluster_phv_overlay: cl_to_cl .....");
+    LOG3("+++++ Overlay cl->cl Passed +++++");
+    LOG3(overlay_substratum_map);
     for (auto &e : overlay_substratum_map) {
         PhvInfo::Field *f_o = e.first;
         PhvInfo::Field *f_s = e.second;
         LOG3("\t" << f_o);
         LOG3("\t==> " << f_s);
-        int f_o_width = f_o->phv_use_width();
+        int f_o_width = f_o->phv_use_width(cl_o);
         int f_o_bit_lo = 0;
         if (f_s->phv_containers_i.empty()) {
             LOG1("*****cluster_phv_overlay:sanity_FAIL*****");
@@ -414,26 +424,35 @@ bool Cluster_PHV_Overlay::overlay_field_to_container(
             // field is overlaying parts of container to left of this cc field
             // if this cc is the first field then container is empty to the left
             //
-            break;
+            return true;
         }
         if (start_bit + run_width > c->width()) {
             //
             // current start position + required width exceeds container limit
             // e.g., c<8> = ------11, width req = 3, start at bit 6
             //
-            break;
+            return false;
         }
-        if (!overlay_field_to_field(field, cc->field(), true /* can exceed substratum */)) {
+        if (!overlay_field_to_field(
+                field, cl, cc->field() /* substratum */, true /* can exceed substratum */)) {
             if (care_alignment) {
                 return false;
             } else {
                 //
-                // block all bits to left of this substratum
-                // start_bit should be beyond this non-matching field
-                // try next subtratum which can be trailing empty part of container
+                // if substratum has packing constraints, run-width is entire container
                 //
-                start_bit = cc->hi() + 1;
-                continue;
+                if (cc->field()->constrained(true /* packing constraint only */)) {
+                    // cannot proceed for further matches
+                    return false;
+                } else {
+                    //
+                    // block all bits to left of this substratum
+                    // start_bit should be beyond this non-matching field
+                    // try next subtratum which can be trailing empty part of container
+                    //
+                    start_bit = cc->hi() + 1;
+                    continue;
+                }
             }
         }
     }  // for
@@ -471,8 +490,11 @@ Cluster_PHV_Overlay::overlay_cluster_to_mau_group(Cluster_PHV *cl, PHV_MAU_Group
     // each C single or partial field, e.g., f:24 --> C1[16], C2[8/16]
     //
     // Phase 1: test if cluster can overlay to containers in the same group.
-    LOG3("..... attempt to overlay cluster .....");
-    LOG3(cl);
+    LOG3("..... attempt to overlay Cluster to MAU group ....."
+        << cl->id() << " -> "
+        << "G" << g->number() << "<" << g->width() << "b>" << '.' << static_cast<char>(g->gress()));
+    // LOG3(cl);
+    //
     ordered_map<PhvInfo::Field *,
         std::list<std::pair<PHV_Container *, int>>> field_container_map;
     std::list<PHV_Container *> container_list(
@@ -480,7 +502,7 @@ Cluster_PHV_Overlay::overlay_cluster_to_mau_group(Cluster_PHV *cl, PHV_MAU_Group
         g->phv_containers().end());
     for (size_t i=0; i < cl->cluster_vec().size(); i++) {
         PhvInfo::Field *field = cl->cluster_vec()[i];
-        int field_width = field->phv_use_width();
+        int field_width = field->phv_use_width(cl);
         for (auto &c : container_list) {
             //
             // check field alignment in clusters residing in separate containers.
@@ -519,14 +541,14 @@ Cluster_PHV_Overlay::overlay_cluster_to_mau_group(Cluster_PHV *cl, PHV_MAU_Group
                 container_list.remove(pair.first);
             }
         } else {
-            // reports the field_width not yet accommodated
-            LOG3("----- overlay failed [" << field_width << "b] ----- "
-                << field->id << ":" << field->name);
+            // field_width not accommodated
+            // LOG3("----- overlay failed [" << field_width << "b] ----- "
+            //   << field->id << ":" << field->name);
             return false;
         }
     }  // for
     // Phase 2: commit cluster to containers in the group.
-    LOG3("+++++ overlay passed +++++");
+    LOG3("+++++ Overlay cl->maug Passed +++++");
     LOG3(field_container_map);
     //
     // go through field container map
@@ -535,8 +557,8 @@ Cluster_PHV_Overlay::overlay_cluster_to_mau_group(Cluster_PHV *cl, PHV_MAU_Group
     //
     for (auto &e : field_container_map) {
         PhvInfo::Field *f = e.first;
-        int field_bit_lo = 0;
-        int field_width = f->phv_use_width();
+        int field_bit_lo = f->field_slices_lo(cl);
+        int field_width = f->phv_use_width(cl);
         // field straddles containers when e.second.size() > 1
         for (auto &pair : e.second) {
             PHV_Container *c = pair.first;
@@ -639,15 +661,30 @@ Cluster_PHV_Overlay::overlay_clusters_to_mau_groups(
 
 std::ostream &operator<<(
     std::ostream &out,
+    ordered_map<PhvInfo::Field *, PhvInfo::Field *>& overlay_substratum_map) {
+    //
+    out << "..... Overlay Field -> Field map ....." << std::endl;
+    for (auto &e : overlay_substratum_map) {
+        out << "\t"
+            << e.first
+            << std::endl
+            << "cluster_phv_overlay cl->cl ==> "
+            << e.second;
+    }
+    return out;
+}
+
+std::ostream &operator<<(
+    std::ostream &out,
     ordered_map<PhvInfo::Field *, std::list<std::pair<PHV_Container *, int>>>&
         field_container_map) {
     //
+    out << "..... Overlay Field -> Container_map ....." << std::endl;
     for (auto &e : field_container_map) {
-        PhvInfo::Field *f = e.first;
         out << "\t"
-            << f
+            << e.first
             << std::endl
-            << "cluster_phv_overlay ==> ";
+            << "cluster_phv_overlay cl->maug ==> ";
         if (e.second.size() == 1) {
             out << e.second.front().first;
         } else {

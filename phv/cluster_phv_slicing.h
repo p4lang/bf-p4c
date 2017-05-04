@@ -34,6 +34,7 @@ class Cluster_Slicing : public Visitor {
     void cluster_slice(std::list<Cluster_PHV *>&);     // slice a list of clusters
     std::pair<Cluster_PHV *, Cluster_PHV *> cluster_slice(Cluster_PHV *);
                                                        // slice single cluster into halves
+    void sanity_check_cluster_slices(const std::string&);
 };
 
 std::ostream &operator<<(std::ostream &, Cluster_Slicing &);

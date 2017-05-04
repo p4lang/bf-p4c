@@ -117,12 +117,12 @@ class PHV_Container {
     PHV_MAU_Group *phv_mau_group()                              { return phv_mau_group_i; }
     PHV_Word width()                                            { return width_i; }
     int phv_number()                                            { return phv_number_i; }
-    std::string phv_number_string() {
+    std::string phv_number_string() const {
         std::stringstream ss;
         ss << phv_number_i;
         return "PHV-" + ss.str();
     }
-    std::string& asm_string()                                   { return asm_string_i; }
+    const std::string& asm_string() const                       { return asm_string_i; }
     void
     gress(Ingress_Egress gress_p) {  // set when MAU group's gress is set
         gress_i = gress_p;
@@ -181,8 +181,8 @@ class PHV_Container {
         Container_Content::Pass pass = Container_Content::Pass::Field_Interference);
     void single_field_overlay(
         PhvInfo::Field *f,
-        int start,
-        int width,
+        const int start,
+        const int width,
         const int field_bit_lo,
         Container_Content::Pass pass = Container_Content::Pass::Field_Interference);
     void field_overlays(
@@ -199,6 +199,10 @@ class PHV_Container {
         int field_bit_lo);
     int avail_bits()                                            { return avail_bits_i; }
     ordered_map<int, int>& ranges()                             { return ranges_i; }
+    const ordered_map<PhvInfo::Field *,
+              std::list<Container_Content *>>& fields_in_container() const {
+        return fields_in_container_i;
+    }
     ordered_map<PhvInfo::Field *, std::list<Container_Content *>>& fields_in_container() {
         return fields_in_container_i;
     }

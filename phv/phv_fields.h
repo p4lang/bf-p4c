@@ -19,15 +19,15 @@ class  PHV_Container;  // forward declaration PHV_Container
 
 class PhvInfo : public Inspector {
  public:
-    struct Field;
-    struct constraint {
-        /* FIXME -- example only -- this isn't actually used for anything yet */
-        enum kind_t { SAME_GROUP, FULL_UNIT } kind;
-        const Field     *with;
-        explicit constraint(kind_t k, const Field *w = nullptr) : kind(k), with(w) {}
-        bool operator<(const constraint &a) const {
-            return kind == a.kind ? (with ? with->id : 0) < (a.with ? a.with->id : 0)
-                                  : kind < a.kind; }
+    //
+    class SetReferenced : public Inspector {
+        PhvInfo &self;
+        bool preorder(const IR::Expression *e) override;
+        profile_t init_apply(const IR::Node *root) override {
+            for (auto &field : self) field.referenced = false;
+            return Inspector::init_apply(root); }
+     public:
+        explicit SetReferenced(PhvInfo &phv) : self(phv) {}
     };
     enum class Field_Ops {NONE = 0, R = 1, W = 2, RW = 3};
     struct Field {
@@ -35,44 +35,32 @@ class PhvInfo : public Inspector {
         int             id;
         gress_t         gress;
         int             size;
-        int             phv_use_lo = 0;   // lowest bit of field used through MAU pipeline
-        int             phv_use_rem = 0;  // field straddles containers
-                                          // used in ccg: container contiguous groups
-                                          // phv_container allocation phase:
-                                          // remembers lowest bit of field use in next container
-                                          // phv binding phase:
-                                          // remembers bits already allocated
-        int             phv_use_hi = 0;   // highest bit of field used through MAU pipeline
-                                          // for container contiguous groups
-                                          // owner phv_use_hi = sum of member sizes
         int             offset;           // offset of lsb from lsb (last) bit of containing header
-        //
         bool            referenced;
         bool            metadata;
         bool            pov;
         //
-        bool            mau_write = false;          // true when field Write in MAU
-        bool            mau_phv_no_pack = false;    // true when any op on field is not "move based"
-                                                    // set by PHV_Field_Operations end_apply()
-        bool            deparser_no_pack = false;   // true when egress_port
-        bool            deparser_no_holes = false;  // true if deparsed field
-                                                    // place in container exactly (no holes)
+        // **************************************************
+        // begin phv analysis related members
+        // **************************************************
+        //
+        // operations and constraints on this field
+        //
+        bool            mau_write = false;               // true when field Write in MAU
+        vector<std::tuple<bool, cstring, Field_Ops>> operations;
+                                                         // all operations performed on field
+        bool            mau_phv_no_pack = false;         // true if op on field is not "move based"
+                                                         // set by PHV_Field_Operations end_apply()
+        bool            deparser_no_pack = false;        // true when egress_port
+        bool            deparser_no_holes = false;       // true if deparsed field
+                                                         // place in container exactly (no holes)
+        //
+        // ccgf fields
         //
         bool            header_stack_pov_ccgf = false;   // header stack pov owner
                                                          // has members in ccgf_fields
         bool            simple_header_pov_ccgf = false;  // simple header ccgf
                                                          // has members in ccgf_fields
-        //
-        std::list<Cluster_PHV *> clusters_i;
-                                           // field is in a single cluster before cluster_slicing
-                                           // if this list is a singleton then cluster not sliced
-                                           // after cluster slicing, field in a list of clusters
-                                           // each slice represents same field, slice varies lo..hi
-        ordered_map<Cluster_PHV *, std::pair<int, int>> field_slices_i;
-                                           // each sliced cluster containing this field represents
-                                           // slice of field as pair of bitranges after slicing
-        std::vector<const PHV_Container *> phv_containers_i;  // field in one or more containers
-        //
         Field *ccgf = 0;                   // container contiguous group fields
                                            // used for
                                            // (i) header stack povs: container FULL, no holes
@@ -91,6 +79,34 @@ class PhvInfo : public Inspector {
                                            // member pov fields of header stk pov
                                            // these members are in same container as header stk pov
         //
+        // phv container requirement of field
+        //
+        int             phv_use_lo = 0;   // lowest bit of field used through MAU pipeline
+        int             phv_use_hi = 0;   // highest bit of field used through MAU pipeline
+                                          // for container contiguous groups
+                                          // owner phv_use_hi = sum of member sizes
+        int             phv_use_rem = 0;  // field straddles containers
+                                          // used in ccgf: container contiguous group fields
+                                          // phv_container allocation phase:
+                                          // remembers lowest bit of field use in next container
+                                          // phv binding phase:
+                                          // remembers bits already allocated
+        //
+        // clusters, containers and field_slices associated with this field
+        //
+        std::list<Cluster_PHV *> clusters_i;
+                                           // field is in a single cluster before cluster_slicing
+                                           // if this list is a singleton then cluster not sliced
+                                           // after cluster slicing, field in a list of clusters
+                                           // each slice represents same field, slice varies lo..hi
+        std::vector<const PHV_Container *> phv_containers_i;
+                                           // field in one or more containers
+        ordered_map<Cluster_PHV *, std::pair<int, int>> field_slices_i;
+                                           // each sliced cluster containing this field represents
+                                           // slice of field as pair of bitranges after slicing
+        //
+        // field overlays
+        //
         Field *overlay_substratum_i = 0;   // substratum field on which this field overlayed
         ordered_map<int, ordered_set<Field *> *> field_overlay_map_i;
                                            // liveness / interference graph related
@@ -100,103 +116,57 @@ class PhvInfo : public Inspector {
                                            // F[1] = c2
                                            // F<c1,c2> -- [0] -- B<c1>, A<c1>
                                            //          -- [1] -- B<c2>, D<c2>, E<c2>
-        Field *overlay_substratum()        { return overlay_substratum_i; }
-        void overlay_substratum(Field *f) {
-            assert(f);
-            overlay_substratum_i = f;
-        }
-        ordered_map<int, ordered_set<Field *> *>&
-            field_overlay_map()            { return field_overlay_map_i; }
-        void field_overlay_map(int r, Field *field) {
-            assert(r >= 0);
-            assert(field);
-            if (!field_overlay_map_i[r]) {
-                field_overlay_map_i[r] = new ordered_set<Field *>;
-            }
-            field_overlay_map_i[r]->insert(field);
-            //
-            // overlayed field points to substratum
-            //
-            field->overlay_substratum(this);
-            for (auto &m : field->ccgf_fields) {
-                m->overlay_substratum(this);
-            }
-        }
-        void field_overlays(std::list<Field *>& fields_list) {
-            // fields_list accumulates all overlay fields of this field, including this field
-            fields_list.clear();
-            fields_list.push_back(this);
-            if (field_overlay_map_i.size()) {
-                for (auto *f_set : Values(field_overlay_map_i)) {
-                    fields_list.insert(fields_list.end(), f_set->begin(), f_set->end());
-                }
-            }
-        }
-        void field_overlay(Field *overlay) {
-            // add overlay to substratum's owner field map of overlays
-            // to make phv_interference->mutually_exclusive() computation updated & accurate
-            assert(overlay);
-            overlay->overlay_substratum(overlay_substratum_i? overlay_substratum_i: this);
-            overlay->overlay_substratum()->field_overlay_map(0, overlay);
-        }
         //
-        int phv_use_width(Cluster_PHV *cl = 0) {
-            // non-sliced owner not in map
-            if (cl && field_slices_i.count(cl)) {
-                return field_slices_lo(cl) - field_slices_hi(cl) + 1;
-            }
-            return phv_use_hi - phv_use_lo + 1;
-        }
-                                           // width of field needed in phv container
-        void phv_use_width(bool ccgf, int min_ceil = 0);
-                                           // set phv_use_width for ccgf owners
-        int ccgf_width();
-        bool constrained() {
-           return  mau_phv_no_pack || deparser_no_pack || deparser_no_holes;
-        }
-        std::string cl_id();
+        // member functions
+        //
+        // cluster ids
+        //
         void cl_id(std::string cl_p);
-        int cl_id_num();
-        std::list<Cluster_PHV *>& clusters() { return clusters_i; }
+        std::string cl_id(Cluster_PHV *cl = 0);
+        int cl_id_num(Cluster_PHV *cl = 0);
+        //
+        // constraints, phv_widths
+        //
+        bool constrained(bool packing_constraint = false);
+        bool is_ccgf();
+        int phv_use_width(Cluster_PHV *cl = 0);           // width of field needed in phv container
+        void phv_use_width(bool ccgf, int min_ceil = 0);  // set phv_use_width for ccgf owners
+        int ccgf_width();                                 // phv width = aggregate size of members
+        //
+        // clusters, phv_containers
+        //
+        std::list<Cluster_PHV *>& clusters()                            { return clusters_i; }
         void clusters(Cluster_PHV *cluster_p);
-        ordered_map<Cluster_PHV *, std::pair<int, int>>& field_slices() {
-            return field_slices_i;
-        }
-        std::pair<int, int>& field_slices(Cluster_PHV *cl) {
-            assert(cl);
-            assert(field_slices_i.count(cl));
-            return field_slices_i[cl];
-        }
-        void field_slices(Cluster_PHV *cl, int lo, int hi) {
-            assert(cl);
-            assert(lo >= 0);
-            assert(hi >= lo);
-            field_slices_i.emplace(cl, std::make_pair(lo, hi));
-        }
-        int field_slices_lo(Cluster_PHV *cl) {
-            return field_slices(cl).first;
-        }
-        int field_slices_hi(Cluster_PHV *cl) {
-            return field_slices(cl).second;
-        }
-        bool sliced() {
-            if (clusters_i.size() > 1) {
-                BUG_CHECK(!field_slices_i.empty(), "field %d has empty map field_slices_i", id);
-                return true;
-            }
-            return false;
-        }
+        std::vector<const PHV_Container *> & phv_containers()           { return phv_containers_i; }
+        void phv_containers(const PHV_Container *c);
         //
-        std::vector<const PHV_Container *> & phv_containers()  { return phv_containers_i; }
-        void phv_containers(const PHV_Container *c) {
-            assert(c);
-            phv_containers_i.push_back(c);
-        }
+        // field slices
         //
-        set<constraint> constraints;  // unused -- get rid of it?
-        vector<std::tuple<bool, cstring, Field_Ops>> operations;
-                                           // all operations performed on the field
-        cstring header() const { return name.before(strrchr(name, '.')); }
+        bool sliced();
+        ordered_map<Cluster_PHV *, std::pair<int, int>>& field_slices() { return field_slices_i; }
+        std::pair<int, int>& field_slices(Cluster_PHV *cl);
+        void field_slices(Cluster_PHV *cl, int lo, int hi);
+        int field_slices_lo(Cluster_PHV *cl);
+        int field_slices_hi(Cluster_PHV *cl);
+        //
+        // field overlays
+        //
+        Field *overlay_substratum()                            { return overlay_substratum_i; }
+        void overlay_substratum(Field *f);
+        ordered_map<int, ordered_set<Field *> *>&
+            field_overlay_map()                                { return field_overlay_map_i; }
+        void field_overlay_map(int r, Field *field);
+        void field_overlays(std::list<Field *>& fields_list);
+        void field_overlay(Field *overlay);
+        //
+        // **************************************************
+        // end phv analysis related members
+        // **************************************************
+        //
+        // **************************************************
+        // begin phv assignment (phv_bind) related members
+        // **************************************************
+        //
         struct bitrange {
             int         lo, hi;         // range of bits within a container or field
             int size() const { return hi - lo + 1; }
@@ -212,9 +182,6 @@ class PhvInfo : public Inspector {
                 bitrange rv = { std::min(lo, l), std::max(hi, h) };
                 BUG_CHECK(rv.lo <= rv.hi, "invalid bitrange::intersect");
                 return rv; } };
-        //
-        int container_bytes(bitrange bits = {0, -1}) const;
-
         struct alloc_slice {
             PHV::Container         container;
             int         field_bit, container_bit, width;
@@ -226,6 +193,12 @@ class PhvInfo : public Inspector {
             int container_hi() const { return container_bit + width - 1; } };
         vector<alloc_slice>     alloc;   // sorted MSB (field) first
         //
+        // **************************************************
+        // end phv assignment (phv_bind) related members
+        // **************************************************
+        //
+        cstring header() const { return name.before(strrchr(name, '.')); }
+        int container_bytes(bitrange bits = {0, -1}) const;
         const alloc_slice &for_bit(int bit) const;
         void foreach_alloc(int lo, int hi, std::function<void(const alloc_slice &)> fn) const;
         void foreach_alloc(std::function<void(const alloc_slice &)> fn) const {
@@ -241,18 +214,10 @@ class PhvInfo : public Inspector {
             foreach_byte(r.lo, r.hi, fn); }
         void foreach_byte(const bitrange *r, std::function<void(const alloc_slice &)> fn) const {
             foreach_byte(r ? r->lo : 0, r ? r->hi : size-1, fn); }
-    };
-    class SetReferenced : public Inspector {
-        PhvInfo &self;
-        bool preorder(const IR::Expression *e) override;
-        profile_t init_apply(const IR::Node *root) override {
-            for (auto &field : self) field.referenced = false;
-            return Inspector::init_apply(root); }
-     public:
-        explicit SetReferenced(PhvInfo &phv) : self(phv) {}
-    };
+        //
+    };  // struct Field
 
- private:
+ private:  // class PhvInfo
     map<cstring, Field>                 all_fields;
     vector<Field *>                     by_id;
     map<cstring, std::pair<int, int>>   all_headers;
@@ -282,7 +247,7 @@ class PhvInfo : public Inspector {
     friend class PhvAllocator;
     friend class PHV::TrivialAlloc;
 
- public:
+ public:  // class PhvInfo
     const Field *field(int idx) const { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
     const Field *field(cstring name) const {
         return all_fields.count(name) ? &all_fields.at(name) : 0; }
@@ -303,11 +268,12 @@ class PhvInfo : public Inspector {
     iterator<vector<Field *>::iterator> end() { return by_id.end(); }
     iterator<vector<Field *>::const_iterator> begin() const { return by_id.begin(); }
     iterator<vector<Field *>::const_iterator> end() const { return by_id.end(); }
+    //
     void allocatePOV(const HeaderStackInfo &);
     bool alloc_done() const { return alloc_done_; }
     void set_done() { alloc_done_ = true; }
     void addTempVar(const IR::TempVar *);
-};
+};  // class PhvInfo
 
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field::bitrange &);
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field::alloc_slice &);

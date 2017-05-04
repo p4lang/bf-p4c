@@ -285,34 +285,21 @@ void Cluster::end_apply() {
         sanity_check_clusters("end_apply..", lhs);
     }
     //
-    // transfer ccgf ownership to field in dst_map_i
+    // ccgf owner field must be in dst_map_i
     //
     for (auto &f : phv_i) {
         if (dst_map_i.count(&f))  {
-            //
-            // ccgf accumulations
-            // transfer ownership of container to field in cluster
-            //
             if (f.ccgf
                 && !f.ccgf->header_stack_pov_ccgf  // not header stack pov
                 && !f.ccgf_fields.size()
                 && !dst_map_i.count(f.ccgf)) {  // current owner not in dst_map
                 //
-                PhvInfo::Field *current_owner = f.ccgf;
-                PhvInfo::Field *new_owner = &f;
-                new_owner->ccgf_fields.insert(
-                    new_owner->ccgf_fields.begin(),
-                    current_owner->ccgf_fields.begin(),
-                    current_owner->ccgf_fields.end());
-                current_owner->ccgf_fields.clear();  // clear previous owner
-                new_owner->ccgf = new_owner;
-                for (auto &m : new_owner->ccgf_fields) {
-                    m->ccgf = new_owner;
-                }
+                create_dst_map_entry(f.ccgf);
+                insert_cluster(f.ccgf, &f);
             }
         }
     }
-    LOG4(".....After transfer ccgf ownership.....");
+    LOG4(".....After ccgf owner in dst_map_i.....");
     LOG4(dst_map_i);
     for (auto &f : phv_i) {
         if (dst_map_i.count(&f))  {
@@ -718,7 +705,7 @@ Cluster::is_ccgf_member(PhvInfo::Field *lhs, PhvInfo::Field *rhs) {
                // rhs is member of f.ccgf, f element of lhs.cluster
                LOG4("=====");
                LOG4(rhs);
-               LOG4(" member of ccgf of ");
+               LOG4(" .....member of ccgf of..... ");
                LOG4(f);
                LOG4("=====");
                //
@@ -738,9 +725,20 @@ Cluster::is_ccgf_member(PhvInfo::Field *lhs, PhvInfo::Field *rhs) {
 void Cluster::sanity_check_field_range(const std::string& msg) {
     // for all fields in phv_i, check size >= range
     for (auto field : phv_i) {
-        int range = field.phv_use_hi - field.phv_use_lo + 1;
-        if (range > field.size) {
-            LOG1("*****cluster.cpp:sanity_FAIL*****field range > size .." << msg << &field);
+        if (field.phv_use_width() > field.size) {
+            if (field.is_ccgf()) {
+                if (field.ccgf_width() != field.phv_use_width()) {
+                    LOG1("*****cluster.cpp:sanity_WARN*****"
+                        << msg << ".....ccgf field phv_use_width(" << field.phv_use_width()
+                        << ") != ccgf_width(" << field.ccgf_width() << ")");
+                    LOG1(&field);
+                }
+            } else {
+                LOG1("*****cluster.cpp:sanity_FAIL*****"
+                    << msg << ".....field phv_use_width(" << field.phv_use_width()
+                    << ") > size(" << field.size << ")");
+                LOG1(&field);
+            }
         }
     }
 }
@@ -749,14 +747,16 @@ void Cluster::sanity_check_clusters(const std::string& msg, PhvInfo::Field *lhs)
     if (lhs && dst_map_i[lhs]) {
         // b --> (b,d,e); count b=1 in (b,d,e)
         if (dst_map_i[lhs]->count(lhs) != 1) {
-            LOG1("*****cluster.cpp:sanity_FAIL*****cluster member count > 1.."
-                << msg << lhs << "-->" << dst_map_i[lhs]);
+            LOG1("*****cluster.cpp:sanity_FAIL*****"
+                << msg << ".....cluster member count > 1");
+            LOG1(lhs << "-->" << dst_map_i[lhs]);
         }
         // forall x elem (b,d,e), x-->(b,d,e)
         for (auto rhs : *(dst_map_i[lhs])) {
             if (dst_map_i[rhs] != dst_map_i[lhs]) {
-                LOG1("*****cluster.cpp:sanity_FAIL*****cluster member pointers inconsistent.."
-                    << msg << lhs << "-->" << rhs);
+                LOG1("*****cluster.cpp:sanity_FAIL*****"
+                    << msg << ".....cluster member pointers inconsistent");
+                LOG1(lhs << "-->" << rhs);
             }
         }
     }

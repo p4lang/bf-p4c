@@ -356,8 +356,8 @@ PHV_Container::overlay_ccgf_field(
 void
 PHV_Container::single_field_overlay(
     PhvInfo::Field *f,
-    int start,
-    int width,
+    const int start,
+    const int width,
     const int field_bit_lo,
     Container_Content::Pass pass) {
     //
@@ -380,7 +380,8 @@ PHV_Container::single_field_overlay(
                 true /* overlayed field */,
                 pass /* pass that performs the overlay */));
     }
-    LOG3("\t==> overlayed'" << static_cast<char>(pass) << "' " << f);
+    LOG3("\t==> overlayed'" << static_cast<char>(pass) << "' " << f
+        << "[" << field_bit_lo << ".." << field_bit_lo + width - 1 << "]");
 }  // single_field_overlay
 
 void
@@ -653,13 +654,23 @@ void PHV_Container::Container_Content::sanity_check_container(
             << msg_1
             << std::endl
             << " field width less than width allocated in container: "
-            << field_i->phv_use_lo
-            << ".."
-            << field_i->phv_use_hi
+            << field_i->phv_use_width()
             << " vs "
             << lo_i
             << ".."
             << hi_i
+            << std::endl
+            << field_i
+            << *container);
+    }
+    if (taint_color_i.front() == '-') {
+        LOG1(
+            "*****cluster_phv_container.cpp:sanity_WARN*****....."
+            << msg_1
+            << std::endl
+            << " illegal field taint color: '"
+            << taint_color_i
+            << "'"
             << std::endl
             << field_i
             << *container);
@@ -869,6 +880,17 @@ void PHV_Container::sanity_check_overlayed_fields(const std::string& msg) {
                     << std::endl
                     << "substratum = " << substratum
                     << " ..... width = " <<  (*field_lbcw)[substratum->id].second
+                    << *this);
+               }
+               if (cc->taint_color().front() == '-') {
+                    LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****....."
+                    << msg_1
+                    << std::endl
+                    << ".....incorrectly overlayed on constrained substratum extension bits....."
+                    << std::endl
+                    << "overlayed = " <<  overlayed
+                    << std::endl
+                    << "substratum = " << substratum
                     << *this);
                }
             }
@@ -1110,10 +1132,9 @@ std::ostream &operator<<(std::ostream &out, ordered_map<int, int>& ranges) {
 
 std::ostream &operator<<(std::ostream &out, const PHV_Container *c) {
     if (c) {
-        PHV_Container *c1 = const_cast<PHV_Container *>(c);
-        out << c1->phv_number_string()
+        out << c->phv_number_string()
             << '.'
-            << c1->asm_string();
+            << c->asm_string();
     } else {
         out << "-c-";
     }

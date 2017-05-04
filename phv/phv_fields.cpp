@@ -364,7 +364,83 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
     }
 }  // allocatePOV
 
-void PhvInfo::Field::phv_use_width(bool ccgf_owner, int min_ceil) {
+//
+//***********************************************************************************
+//
+// PhvInfo::Field member functions
+//
+//***********************************************************************************
+//
+
+//
+// cluster ids
+//
+void
+PhvInfo::Field::cl_id(std::string cl_p) {
+    // can only change id of original non-sliced cluster
+    if (!sliced() && clusters_i.size()) {
+        clusters_i.front()->id(cl_p);
+    }
+}
+
+std::string
+PhvInfo::Field::cl_id(Cluster_PHV * cl) {
+    // the first cl in list is the non-sliced owner cl
+    if (!cl && clusters_i.size()) {
+        return clusters_i.front()->id();
+    }
+    // cluster cl among field_slices
+    if (field_slices_i.count(cl)) {
+        return cl->id();
+    }
+    return "??";
+}
+
+int
+PhvInfo::Field::cl_id_num(Cluster_PHV *cl) {
+    // the first cl in list is the non-sliced owner cl
+    if (!cl && clusters_i.size()) {
+        return clusters_i.front()->id_num();
+    }
+    // cluster cl among field_slices
+    if (field_slices_i.count(cl)) {
+        return cl->id_num();
+    }
+    return -1;
+}
+
+//
+// constraints, phv_widths
+//
+bool
+PhvInfo::Field::constrained(bool packing_constraint) {
+    bool pack_c = mau_phv_no_pack || deparser_no_pack;
+    if (packing_constraint) {
+        return pack_c;
+    }
+    return  pack_c || deparser_no_holes;
+}
+
+bool
+PhvInfo::Field::is_ccgf() {
+    if (header_stack_pov_ccgf || simple_header_pov_ccgf) {
+        assert(ccgf_fields.size());
+        return true;
+    }
+    return false;
+}
+
+int
+PhvInfo::Field::phv_use_width(Cluster_PHV *cl) {
+    // non-sliced owner not in map
+    if (cl && field_slices_i.count(cl)) {
+        return field_slices_hi(cl) - field_slices_lo(cl) + 1;
+    }
+    return phv_use_hi - phv_use_lo + 1;
+}
+
+void
+PhvInfo::Field::phv_use_width(bool ccgf_owner, int min_ceil) {
     // compute ccgf width, need PHV container(s) of this width
     if (ccgf_owner && ccgf_fields.size()) {
         int ccg_width = 0;
@@ -385,14 +461,41 @@ void PhvInfo::Field::phv_use_width(bool ccgf_owner, int min_ceil) {
             }
         }  // for
         if (header_stack_pov_ccgf) {
-            // e.g., ingress::data.$stkvalid
+            // e.g.,
+            // ingress::data.$stkvalid, egress::mpls.$stkvalid
+            //
             ccg_width++;
         }
         phv_use_hi = ccg_width - 1;
     }
 }  // phv_use_width()
 
-void PhvInfo::Field::clusters(Cluster_PHV *cluster_p) {
+int
+PhvInfo::Field::ccgf_width() {
+    int ccgf_width_l = 0;
+    for (auto &f : ccgf_fields) {
+        if (f->ccgf == f) {
+            // ccgf owner appears as member, phv_use_width = aggregate size of members
+            ccgf_width_l += f->size;
+        } else {
+            if (f->id == id) {
+                // originally f was ccgf owner but after container assignment
+                // ownership got terminated although f remains ccgf member of itself
+                ccgf_width_l += f->size;
+            } else {
+                ccgf_width_l += f->phv_use_width();
+            }
+        }
+    }
+    return ccgf_width_l;
+}
+
+//
+// clusters, phv_containers
+//
+
+void
+PhvInfo::Field::clusters(Cluster_PHV *cluster_p) {
     assert(cluster_p);
     if (!cluster_p->sliced()) {
         // new owner for non-sliced field, due to phv_interference, phv_bind
@@ -413,48 +516,105 @@ void PhvInfo::Field::clusters(Cluster_PHV *cluster_p) {
     }
 }
 
-void PhvInfo::Field::cl_id(std::string cl_p) {
-    // can only change id of original non-sliced cluster
-    if (!sliced() && clusters_i.size()) {
-        clusters_i.front()->id(cl_p);
+void
+PhvInfo::Field::phv_containers(const PHV_Container *c) {
+    assert(c);
+    phv_containers_i.push_back(c);
+}
+
+//
+// field slices
+//
+
+bool
+PhvInfo::Field::sliced() {
+    if (clusters_i.size() > 1) {
+        BUG_CHECK(!field_slices_i.empty(), "field %d has empty map field_slices_i", id);
+        return true;
+    }
+    return false;
+}
+
+std::pair<int, int>&
+PhvInfo::Field::field_slices(Cluster_PHV *cl) {
+    assert(cl);
+    assert(field_slices_i.count(cl));
+    return field_slices_i[cl];
+}
+
+void
+PhvInfo::Field::field_slices(Cluster_PHV *cl, int lo, int hi) {
+    assert(cl);
+    assert(lo >= 0);
+    assert(hi >= lo);
+    field_slices_i.emplace(cl, std::make_pair(lo, hi));
+}
+
+int
+PhvInfo::Field::field_slices_lo(Cluster_PHV *cl) {
+    if (field_slices_i.size()) {
+        return field_slices(cl).first;
+    }
+    return phv_use_lo;
+}
+
+int
+PhvInfo::Field::field_slices_hi(Cluster_PHV *cl) {
+    if (field_slices_i.size()) {
+        return field_slices(cl).second;
+    }
+    return phv_use_hi;
+}
+
+//
+// field overlays
+//
+
+void
+PhvInfo::Field::overlay_substratum(Field *f) {
+    assert(f);
+    overlay_substratum_i = f;
+}
+
+void
+PhvInfo::Field::field_overlay_map(int r, Field *field) {
+    assert(r >= 0);
+    assert(field);
+    if (!field_overlay_map_i[r]) {
+        field_overlay_map_i[r] = new ordered_set<Field *>;
+    }
+    field_overlay_map_i[r]->insert(field);
+    //
+    // overlayed field points to substratum
+    //
+    field->overlay_substratum(this);
+    for (auto &m : field->ccgf_fields) {
+        m->overlay_substratum(this);
     }
 }
 
-std::string PhvInfo::Field::cl_id() {
-    // the first cl in list is the non-sliced owner cl
-    if (clusters_i.size()) {
-        return clusters_i.front()->id();
-    }
-    return "??";
-}
-
-int PhvInfo::Field::cl_id_num() {
-    // the first cl in list is the non-sliced owner cl
-    if (clusters_i.size()) {
-        return clusters_i.front()->id_num();
-    }
-    return -1;
-}
-
-int PhvInfo::Field::ccgf_width() {
-    int ccgf_width_l = 0;
-    for (auto &f : ccgf_fields) {
-        if (f->ccgf == f) {
-            // ccgf owner appears as member, phv_use_width = aggregate size of members
-            ccgf_width_l += f->size;
-        } else {
-            if (f->id == id) {
-                // originally f was ccgf owner but after container assignment
-                // ownership got terminated although f remains ccgf member of itself
-                ccgf_width_l += f->size;
-            } else {
-                ccgf_width_l += f->phv_use_width();
-            }
+void
+PhvInfo::Field::field_overlays(std::list<Field *>& fields_list) {
+    // fields_list accumulates all overlay fields of this field, including this field
+    fields_list.clear();
+    fields_list.push_back(this);
+    if (field_overlay_map_i.size()) {
+        for (auto *f_set : Values(field_overlay_map_i)) {
+            fields_list.insert(fields_list.end(), f_set->begin(), f_set->end());
         }
     }
-    return ccgf_width_l;
 }
 
+void
+PhvInfo::Field::field_overlay(Field *overlay) {
+    // add overlay to substratum's owner field map of overlays
+    // to make phv_interference->mutually_exclusive() computation updated & accurate
+    assert(overlay);
+    overlay->overlay_substratum(overlay_substratum_i? overlay_substratum_i: this);
+    overlay->overlay_substratum()->field_overlay_map(0, overlay);
+}
+
+//
 //
 //***********************************************************************************
 //
@@ -510,7 +670,7 @@ std::ostream &operator<<(std::ostream &out, PhvInfo::Field &field) {
     if (field.ccgf) out << " ccgf=" << field.ccgf->id << ':' << field.ccgf->name;
     out << " /" << field.cl_id() << ",";    // cluster id
     for (auto &c : field.phv_containers_i) {
-        out << const_cast<PHV_Container *>(c)->phv_number_string() << ";";  // phv number
+        out << c->phv_number_string() << ";";  // phv number
     }
     out << "/";
     out << field.field_slices_i;

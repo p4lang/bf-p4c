@@ -75,7 +75,9 @@ class Cluster : public Inspector, P4WriteContext {
     //
  public:
     //
-    Cluster(PhvInfo &p);                       // NOLINT(runtime/explicit)
+    Cluster(PhvInfo &p);                     // NOLINT(runtime/explicit)
+    //
+    PhvInfo &phv()                                          { return phv_i; }
     //
     static void set_field_range(PhvInfo::Field *field, int container_width = 0);
     //

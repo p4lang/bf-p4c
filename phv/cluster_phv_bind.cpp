@@ -84,7 +84,7 @@ PHV_Bind::create_phv_asm_container_map() {
         for (auto &y : x.second) {
             for (auto &c : y->phv_containers()) {
                 phv_to_asm_map_i[c] =
-                    new PHV::Container(const_cast<PHV_Container *>(c)->asm_string().c_str());
+                    new PHV::Container(c->asm_string().c_str());
             }
         }
     }
@@ -93,7 +93,7 @@ PHV_Bind::create_phv_asm_container_map() {
         for (auto &y : x.second) {
             for (auto &c : y.second) {
                 phv_to_asm_map_i[c] =
-                    new PHV::Container(const_cast<PHV_Container *>(c)->asm_string().c_str());
+                    new PHV::Container(c->asm_string().c_str());
             }
         }
     }
@@ -238,7 +238,7 @@ PHV_Bind::bind_fields_to_containers() {
         }
     }
     for (auto &c : containers_i) {
-        for (auto &cc_s : Values(const_cast<PHV_Container *>(c)->fields_in_container())) {
+        for (auto &cc_s : Values(c->fields_in_container())) {
             for (auto &cc : cc_s) {
                 PhvInfo::Field *f = cc->field();
                 int field_bit = cc->field_bit_lo();
@@ -259,7 +259,7 @@ PHV_Bind::bind_fields_to_containers() {
                 // contiguous container group allocation
                 // in case bypassing MAU PHV allocation PHV_container::taint() recursion
                 //
-                // int container_width = const_cast<PHV_Container *>(c)->width();
+                // int container_width = c->width();
                 // container_contiguous_alloc(f1,
                 //                            container_width,
                 //                            asm_container,
