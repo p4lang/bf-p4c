@@ -162,9 +162,9 @@ struct AluOP : public SaluInstruction {
     operand             srca, srcb;
     AluOP(const Decode *op, int l) : SaluInstruction(l), opc(op) {}
     Instruction *pass1(Table *tbl, Table::Actions::Action *) override;
-    void pass2(Table *tbl, Table::Actions::Action *)  override { 
+    void pass2(Table *tbl, Table::Actions::Action *)  override { }
     bool equiv(Instruction *a_) override;
-    void dbprint(std::ostream &out) const override{
+    void dbprint(std::ostream &out) const override {
         out << "INSTR: " << opc->name /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
     template<class REGS> void write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act);
     void write_regs(Target::Tofino::mau_regs &regs, Table *tbl,
