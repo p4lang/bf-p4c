@@ -58,7 +58,6 @@ tofino_backend_mau_UNIFIED = \
 	%reldir%/mau/instruction_selection.cpp \
 	%reldir%/mau/ixbar_realign.cpp \
 	%reldir%/mau/memories.cpp \
-	%reldir%/mau/phv_constraints.cpp \
 	%reldir%/mau/resource_estimate.cpp \
 	%reldir%/mau/split_gateways.cpp \
 	%reldir%/mau/table_dependency_graph.cpp \
@@ -79,7 +78,6 @@ noinst_HEADERS += \
 	%reldir%/mau/instruction_selection.h \
 	%reldir%/mau/ixbar_realign.h \
 	%reldir%/mau/memories.h \
-	%reldir%/mau/phv_constraints.h \
 	%reldir%/mau/push_pop.h \
 	%reldir%/mau/resource_estimate.h \
 	%reldir%/mau/resource.h \

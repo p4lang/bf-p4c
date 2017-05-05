@@ -36,7 +36,6 @@ limitations under the License.
 #include "tofino/mau/gateway.h"
 #include "tofino/mau/instruction_selection.h"
 #include "tofino/mau/ixbar_realign.h"
-#include "tofino/mau/phv_constraints.h"
 #include "tofino/mau/push_pop.h"
 #include "tofino/mau/split_gateways.h"
 #include "tofino/mau/table_dependency_graph.h"
@@ -131,7 +130,6 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         phv_alloc = new PHV::TrivialAlloc(phv, defuse.conflicts());
     } else {
         phv_alloc = new PassManager({
-            new MauPhvConstraints(phv),
             //
             // &cluster_phv_mau,   // cluster PHV container placements
                                 // second cut PHV MAU Group assignments

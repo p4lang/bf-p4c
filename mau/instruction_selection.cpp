@@ -1,4 +1,5 @@
 #include "instruction_selection.h"
+#include "lib/bitops.h"
 
 template<class T> static
 T *clone(const T *ir) { return ir ? ir->clone() : nullptr; }
