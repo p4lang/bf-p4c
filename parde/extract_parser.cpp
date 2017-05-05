@@ -89,7 +89,6 @@ class GetTofinoParser::FindLatestExtract : public Inspector {
 };
 
 class GetTofinoParser::RewriteExtractNext : public Transform {
-    GetTofinoParser               &self;
     typedef GetTofinoParser::Context Context;     // not to be confused with Visitor::Context
     const Context                 *ctxt;
     const IR::Expression          *latest = nullptr;
@@ -151,7 +150,7 @@ class GetTofinoParser::RewriteExtractNext : public Transform {
 
  public:
     bool                        failed = false;
-    RewriteExtractNext(GetTofinoParser &s, const Context *c) : self(s), ctxt(c) {}
+    explicit RewriteExtractNext(const Context *c) : ctxt(c) {}
 };
 
 const IR::Expression *GetTofinoParser::RewriteExtractNext::preorder(IR::Member *m) {
@@ -242,7 +241,7 @@ IR::Tofino::ParserState *GetTofinoParser::state(cstring name, const Context *ctx
         rv->name = cstring::make_unique(states, name);
         states[rv->name] = rv; }
     if (!rv->match.empty()) return rv;
-    RewriteExtractNext rewrite(*this, ctxt);
+    RewriteExtractNext rewrite(ctxt);
     const IR::Vector<IR::Expression> *stmts;
     stmts = rv->p4state->components.Node::apply(rewrite)->to<IR::Vector<IR::Expression>>();
     if (rewrite.failed)
