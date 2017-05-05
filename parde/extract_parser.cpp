@@ -77,16 +77,6 @@ class FindStackExtract : public Inspector {
         if (!hdr) BUG("not a valid header ref"); }
 };
 
-class FindLatestExtract : public Inspector {
-    const IR::Expression *&latest;
-    bool preorder(const IR::Primitive *prim) override {
-        if (prim->name == "extract") latest = prim->operands[0];
-        return true; }
-
- public:
-    explicit FindLatestExtract(const IR::Expression *&l) : latest(l) {}
-};
-
 class RewriteExtractNext : public Transform {
     typedef GetTofinoParser::Context Context;     // not to be confused with Visitor::Context
     const Context                 *ctxt;
