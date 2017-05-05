@@ -27,7 +27,6 @@ namespace Tofino {
 class Parser;
 }  // namespace Tofino
 
-class V1Program;
 class P4Parser;
 
 }  // namespace IR
@@ -48,8 +47,7 @@ struct ParserInfo {
   }
 };
 
-ParserInfo extractParser(const IR::V1Program* p414Program);
-ParserInfo extractParser(const IR::P4Parser* p416Parser);
+ParserInfo extractParser(const IR::P4Parser* parser);
 
 }  // namespace Tofino
 

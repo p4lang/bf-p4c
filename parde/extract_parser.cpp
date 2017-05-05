@@ -40,17 +40,13 @@ class RemoveSetMetadata : public Transform {
         return prim->name == "set_metadata" ? nullptr : prim; }
 };
 
-ParserInfo extractParser(GetTofinoParser& parserGetter) {
+ParserInfo extractParser(const IR::P4Parser* parser) {
+  GetTofinoParser parserGetter(parser);
   return {
     parserGetter.parser(INGRESS),
     parserGetter.parser(EGRESS)->apply(RemoveSetMetadata()),
     parserGetter.ingress_entry()
   };
-}
-
-ParserInfo extractParser(const IR::P4Parser* p416Parser) {
-  GetTofinoParser parserGetter(p416Parser);
-  return extractParser(parserGetter);
 }
 
 bool GetTofinoParser::preorder(const IR::ParserState *p) {
