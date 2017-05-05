@@ -80,22 +80,8 @@ class FindStackExtract : public Inspector {
 class RewriteExtractNext : public Transform {
     typedef GetTofinoParser::Context Context;     // not to be confused with Visitor::Context
     const Context                 *ctxt;
-    const IR::Expression          *latest = nullptr;
     std::map<cstring, int>        adjust;
     const IR::Expression *preorder(IR::Member *name) override;
-    const IR::Expression *postorder(IR::Primitive *prim) override {
-        if (prim->name == "extract") latest = prim->operands[0];
-        return prim; }
-    const IR::Expression *postorder(IR::Member *mem) override {
-        /* FIXME -- could do full typechecking after this pass, but this is the only fixup needed,
-         * for 'latest' refs that now point to real headers */
-        if (mem->type == IR::Type::Unknown::get()) {
-            if (auto ht = mem->expr->type->to<IR::Type_StructLike>()) {
-                auto f = ht->getField(mem->member);
-                if (f != nullptr)
-                    mem->type = f->type; } }
-        return mem; }
-
     const IR::Vector<IR::Expression> *preorder(IR::IndexedVector<IR::StatOrDecl> *vec) override {
         auto *rv = new IR::Vector<IR::Expression>;
         for (auto stmt : *vec) {
