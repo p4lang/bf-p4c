@@ -13,7 +13,7 @@ struct TableResourceAlloc;
 
 namespace MAU {
 
-/* A Tofino logical table (group) -- a gateway and/or match table
+/** A Tofino logical table (group) -- a gateway and/or match table
  * along with whatever attached tables are run.  The basic scheduling
  * unit for tofino; there are 16 such 'logical' tables available in
  * each stage, which will run simultaneously and have their results
@@ -23,7 +23,7 @@ class Table : Tofino::Unit {
     gress_t                                     gress;
     int                                         logical_id = -1;
     vector<std::pair<Expression, cstring>>      gateway_rows;
-    /* each gateway_row is a an expression for a single row of the gateway,
+    /** each gateway_row is a an expression for a single row of the gateway,
      * with the string being a tag to run in 'next' for next table, or null
      * if the match_table should run.  The last row (only) may have a NULL
      * expression for 'always' -- corresponding to the gateway miss action
@@ -250,13 +250,15 @@ class ActionData : Attached {
     bool indexed() const override { return !direct; }
 }
 
+/** Confugration for a stateful table -- a register object (for the memory) plus
+ * the associated stateful alu instructions and config */
 class StatefulAlu : Register {
 #nodbprint
     // The single register extern used in this stateful alu
     Declaration_Instance                                reg;
     bool                                                dual = false;  // dual mode
     // The possible stateful_alu externs executed in this table
-    inline NameMap<Declaration_Instance, ordered_map>   decls = {};
+    inline NameMap<SaluAction, ordered_map>             instruction = {};
     // The stateful_alu externs executed for each action in the match table
     ordered_map<cstring, cstring>                       action_map = {};
     const char *kind() const override { return "stateful"; }
@@ -288,20 +290,29 @@ class TableSeq {
 /// the dest and first source are PHV while second source can be PHV, action bus, or constant.
 /// We convert the primitive into an instruction when we check those constraints
 // TODO(cdodd) -- stateful ALU has its own disctinct instruction set -- should use a different
-// class for those or reuse this?
+// class for those or reuse this?  Currently reusing this.
 class Instruction : Primitive {
 #nodbprint
 #emit
     using Primitive::Primitive;
 #end
     Instruction(const Primitive &p) : Primitive(p) {}
+    Instruction(cstring op, const std::vector<Expression> &args) : Primitive(op) {
+        for (auto a : args) operands.push_back(a); }
     bool isOutput(int operand_index) const override { return operand_index == 0; }
 }
 
+/// The Action part of an action table -- basically a single VLIW instruction, which is a
+/// set of instructions on different PHV containers that all run simultaneously
 class Action : ActionFunction {
     // Removed the stateful primitives as they aren't instructions as such.
     inline Vector<Primitive>    stateful = {};
     inline Vector<Primitive>    modify_with_hash = {};
+}
+/// A stateful ALU VLIW instruction -- multiple instructions that all run together
+/// "simultanesouly" in different ALUs (certain ALUs are actually later in the pipeline)
+/// in the stateful ALU block (there are 2 comparison, 4 "normal" and 1 output alus)
+class SaluAction : ActionFunction {
 }
 
 /// A use of one or two hash distribution units; an operand of an instruction
@@ -309,6 +320,12 @@ class HashDist : Expression {
 #nodbprint
 // FIXME -- what info goes here?
 // Currently we reconstruct the unit id(s) in MauAsmOutput::EmitAction
+}
+
+/// reference to a fixed Stateful ALU resource -- these can only appear in SALU Instructions
+class SaluReg : Expression {
+    cstring     name;
+    dbprint { out << name; }
 }
 
 }  // end namespace MAU

@@ -53,7 +53,7 @@ blackbox_type stateful_alu {
     attribute update_lo_1_predicate {
         /* Condition expression associated with running ALU 1 lo. */
         type: expression;
-        expression_local_variables { bit<1> condition_lo, bit<1> condition_hi}
+        expression_local_variables { bool condition_lo, bool condition_hi}
         optional;
     }
 
@@ -87,7 +87,7 @@ blackbox_type stateful_alu {
     attribute update_lo_2_predicate {
         /* Condition expression associated with running ALU 2 lo. */
         type: expression;
-        expression_local_variables {bit<1> condition_lo, bit<1> condition_hi}
+        expression_local_variables {bool condition_lo, bool condition_hi}
         optional;
     }
 
@@ -101,7 +101,7 @@ blackbox_type stateful_alu {
     attribute update_hi_1_predicate {
         /* Condition expression associated with running ALU 1 hi. */
         type: expression;
-        expression_local_variables {bit<1> condition_lo, bit<1> condition_hi}
+        expression_local_variables {bool condition_lo, bool condition_hi}
         optional;
     }
 
@@ -115,7 +115,7 @@ blackbox_type stateful_alu {
     attribute update_hi_2_predicate {
         /* Condition expression associated with running ALU 2 hi. */
         type: expression;
-        expression_local_variables {bit<1> condition_lo, bit<1> condition_hi}
+        expression_local_variables {bool condition_lo, bool condition_hi}
         optional;
     }
 
@@ -132,7 +132,7 @@ blackbox_type stateful_alu {
            Allowed operations are 'and', 'or', and 'not'.
          */
         type: expression;
-        expression_local_variables {bit<1> condition_lo, bit<1> condition_hi}
+        expression_local_variables {bool condition_lo, bool condition_hi}
         optional;
     }
 
@@ -145,7 +145,7 @@ blackbox_type stateful_alu {
            computed by the ALU(s).
          */
         type: expression;
-        expression_local_variables {bit<32> alu_lo, bit<32> alu_hi, bit<32> register_lo, bit<32> register_hi, bit<1> predicate, bit<1> combined_predicate}
+        expression_local_variables {bit<32> alu_lo, bit<32> alu_hi, bit<32> register_lo, bit<32> register_hi, bit<32> predicate, bit<32> combined_predicate}
         optional;
     }
 

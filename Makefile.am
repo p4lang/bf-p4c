@@ -60,6 +60,7 @@ tofino_backend_mau_UNIFIED = \
 	%reldir%/mau/memories.cpp \
 	%reldir%/mau/resource_estimate.cpp \
 	%reldir%/mau/split_gateways.cpp \
+	%reldir%/mau/stateful_alu.cpp \
 	%reldir%/mau/table_dependency_graph.cpp \
 	%reldir%/mau/table_format.cpp \
 	%reldir%/mau/table_layout.cpp \
@@ -82,6 +83,7 @@ noinst_HEADERS += \
 	%reldir%/mau/resource_estimate.h \
 	%reldir%/mau/resource.h \
 	%reldir%/mau/split_gateways.h \
+	%reldir%/mau/stateful_alu.h \
 	%reldir%/mau/table_dependency_graph.h \
 	%reldir%/mau/table_format.h \
 	%reldir%/mau/table_layout.h \

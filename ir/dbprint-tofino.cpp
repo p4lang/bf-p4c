@@ -73,6 +73,10 @@ void IR::MAU::Action::dbprint(std::ostream &out) const {
         out << unindent << " }"; }
 }
 
+void IR::MAU::SaluAction::dbprint(std::ostream &out) const {
+    ActionFunction::dbprint(out);
+}
+
 void IR::RangeMatch::dbprint(std::ostream &out) const {
     int prec = getprec(out);
     out << setprec(Prec_Equ) << expr << " in 0x" << hex(data) << setprec(prec);

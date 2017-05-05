@@ -5,6 +5,9 @@
 
 class ElimUnused::ParserMetadata : public Transform {
     ElimUnused &self;
+    IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *salu) override {
+        prune();
+        return salu; }
     IR::Primitive *preorder(IR::Primitive *prim) override {
         if (prim->name == "extract" && self.phv.field(prim->operands[0]) &&
             self.defuse.getUses(this, prim->operands[0]).empty()) {

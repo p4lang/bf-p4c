@@ -6,6 +6,7 @@
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/methodInstance.h"
 #include "tofino/common/param_binding.h"
+#include "tofino/mau/stateful_alu.h"
 #include "tofino/mau/table_dependency_graph.h"
 #include "tofino/parde/extract_parser.h"
 #include "tofino/tofinoOptions.h"
@@ -214,7 +215,7 @@ static void updateAttachedSalu(const Util::SourceInfo &loc, const P4::ReferenceM
         error("%s: stateful_alu blocks in the same table must use the same underlying regster,"
               "trying to use %s", salu->srcInfo, reg); }
     LOG3("Adding " << ext->name << " to StatefulAlu " << reg->name);
-    salu->decls.add(ext->name, ext);
+    ext->apply(CreateSaluInstruction(salu));
     if (!salu->action_map.emplace(action, ext->name).second)
         error("%s: multiple calls to execute_stateful_alu in action %s", loc, action);
 }

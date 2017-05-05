@@ -647,19 +647,6 @@ class MauAsmOutput::EmitAction : public Inspector {
     std::map<cstring, cstring>  alias;
     bool                        is_empty;
 
-    void output_action(const IR::MAU::Action *act) {
-        out << indent << canon_name(act->name) << ":" << std::endl;
-        is_empty = true;
-        if (table->layout.action_data_bytes_in_overhead > 0) {
-             self.emit_immediate_format(out, indent, table, act);
-            is_empty = false; }
-        if (!alias.empty()) {
-            out << indent << "- " << alias << std::endl;
-            alias.clear(); }
-        act->action.visit_children(*this);
-        if (is_empty)
-            out << indent << "- 0" << std::endl;
-    }
     bool preorder(const IR::MAU::Action *act) override {
         for (auto prim : act->stateful) {
             if (prim->name == "counter.count") {
@@ -672,8 +659,26 @@ class MauAsmOutput::EmitAction : public Inspector {
                 ERROR("skipping " << prim);
             }
         }
-        output_action(act);
+        out << indent << canon_name(act->name) << ":" << std::endl;
+        is_empty = true;
+        if (table->layout.action_data_bytes_in_overhead > 0) {
+             self.emit_immediate_format(out, indent, table, act);
+            is_empty = false; }
+        if (!alias.empty()) {
+            out << indent << "- " << alias << std::endl;
+            is_empty = false;
+            alias.clear(); }
+        act->action.visit_children(*this);
+        if (is_empty)
+            out << indent << "- 0" << std::endl;
         return false; }
+    bool preorder(const IR::MAU::SaluAction *act) override {
+        out << indent << canon_name(act->name) << ":" << std::endl;
+        is_empty = true;
+        return true; }
+    void postorder(const IR::ActionFunction *) override {
+        if (is_empty) out << indent << "- 0" << std::endl; }
+    bool preorder(const IR::Annotations *) override { return false; }
 
     bool preorder(const IR::MAU::Instruction *inst) override {
         out << indent << "- " << inst->name;
@@ -693,6 +698,11 @@ class MauAsmOutput::EmitAction : public Inspector {
     bool preorder(const IR::ActionArg *a) override {
         assert(sep);
         out << sep << a->toString();
+        sep = ", ";
+        return false; }
+    bool preorder(const IR::MAU::SaluReg *r) override {
+        assert(sep);
+        out << sep << r->name;
         sep = ", ";
         return false; }
     bool preorder(const IR::MAU::HashDist *) override {
@@ -1353,5 +1363,10 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
     else
         out << salu->width;
     out << " }" << std::endl;
+    if (!salu->instruction.empty()) {
+        out << indent++ << "actions:" << std::endl;
+        for (auto act : Values(salu->instruction))
+            act->apply(EmitAction(self, out, tbl, indent));
+        --indent; }
     return false;
 }
