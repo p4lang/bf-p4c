@@ -1,6 +1,6 @@
 #include "split_big_states.h"
 
-const IR::Tofino::ParserMatch *SplitBigStates::preorder(IR::Tofino::ParserMatch *state) {
+bool SplitBigStates::preorder(IR::Tofino::ParserMatch *state) {
     int use[3] = { 0, 0, 0 };
     int size = 0;
     PHV::Container last;
@@ -24,7 +24,7 @@ const IR::Tofino::ParserMatch *SplitBigStates::preorder(IR::Tofino::ParserMatch 
         use[last.log2sz()]++;
         size += last.size() / 8U; }
     if (it == state->stmts.end())
-        return state;
+        return true;  // No splitting needed.
     auto *rest = new IR::Tofino::ParserMatch(match_t(), state->shift - size, {},
                                              state->next, state->except);
     rest->stmts.insert(rest->stmts.begin(), it, state->stmts.end());
@@ -33,5 +33,5 @@ const IR::Tofino::ParserMatch *SplitBigStates::preorder(IR::Tofino::ParserMatch 
     state->next = new IR::Tofino::ParserState(name, VisitingThread(this), {}, { rest });
     state->except = nullptr;
     state->shift = size;
-    return state;
+    return true;
 }

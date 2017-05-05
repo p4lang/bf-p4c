@@ -25,13 +25,13 @@ class UniqueStateNamer : public PardeInspector {
         return rv; }
 };
 
-class SplitBigStates : public PardeTransform {
+class SplitBigStates : public PardeModifier {
     const PhvInfo       &phv;
     UniqueStateNamer    names;
-    const IR::Tofino::Parser *preorder(IR::Tofino::Parser *p) override {
+    bool preorder(IR::Tofino::Parser *p) override {
         p->apply(names);
-        return p; }
-    const IR::Tofino::ParserMatch *preorder(IR::Tofino::ParserMatch *state) override;
+        return true; }
+    bool preorder(IR::Tofino::ParserMatch *state) override;
  public:
     explicit SplitBigStates(const PhvInfo &phv) : phv(phv) {}
 };
