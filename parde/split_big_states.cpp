@@ -15,10 +15,7 @@ bool SplitBigStates::preorder(IR::Tofino::ParserMatch *state) {
         if (!dest) BUG("%s not in phv?", prim->operands[0]);
         auto &alloc = dest->for_bit(bits.lo);
         if (alloc.container == last) continue;
-        if (!(last = alloc.container)) {
-            std::cout << dest;
-            BUG("not a valid PHV container");
-        }
+        if (!(last = alloc.container)) BUG("Not a valid PHV container: %1%", dest);
         if (use[last.log2sz()] >= 4) break;
         use[last.log2sz()]++;
         size += last.size() / 8U; }
