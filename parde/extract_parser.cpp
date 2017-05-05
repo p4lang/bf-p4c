@@ -4,11 +4,10 @@
 namespace Tofino {
 
 class GetTofinoParser : public Inspector {
-    const IR::P4Parser                         *container = 0;
-    gress_t                                     gress = INGRESS;
-    map<cstring, IR::Tofino::ParserState *>     states;
-    IR::ID                                      ingress_control;
-    bool preorder(const IR::ParserState *) override;
+ public:
+    explicit GetTofinoParser(const IR::P4Parser *p) : container(p) {}
+    IR::Tofino::Parser *parser(gress_t);
+    cstring ingress_entry();
 
     struct Context {
         /* records the path through the parser state machine from the start state to the
@@ -22,17 +21,17 @@ class GetTofinoParser : public Inspector {
                     return c;
             return nullptr; }
     };
-    class FindLatestExtract;
-    class FindStackExtract;
-    class RewriteExtractNext;
     void addMatch(IR::Tofino::ParserState *, match_t, const IR::Vector<IR::Expression> &,
                   const IR::ID &, const Context *);
     IR::Tofino::ParserState *state(cstring, const Context *);
 
- public:
-    explicit GetTofinoParser(const IR::P4Parser *p) : container(p) {}
-    IR::Tofino::Parser *parser(gress_t);
-    cstring ingress_entry();
+private:
+    bool preorder(const IR::ParserState *) override;
+
+    const IR::P4Parser                         *container = 0;
+    gress_t                                     gress = INGRESS;
+    map<cstring, IR::Tofino::ParserState *>     states;
+    IR::ID                                      ingress_control;
 };
 
 class RemoveSetMetadata : public Transform {
@@ -58,7 +57,7 @@ bool GetTofinoParser::preorder(const IR::ParserState *p) {
     return true;
 }
 
-class GetTofinoParser::FindStackExtract : public Inspector {
+class FindStackExtract : public Inspector {
     const IR::HeaderRef         *hdr;
     int                         &index;
     bool preorder(const IR::HeaderStackItemRef *hs) override {
@@ -78,7 +77,7 @@ class GetTofinoParser::FindStackExtract : public Inspector {
         if (!hdr) BUG("not a valid header ref"); }
 };
 
-class GetTofinoParser::FindLatestExtract : public Inspector {
+class FindLatestExtract : public Inspector {
     const IR::Expression *&latest;
     bool preorder(const IR::Primitive *prim) override {
         if (prim->name == "extract") latest = prim->operands[0];
@@ -88,7 +87,7 @@ class GetTofinoParser::FindLatestExtract : public Inspector {
     explicit FindLatestExtract(const IR::Expression *&l) : latest(l) {}
 };
 
-class GetTofinoParser::RewriteExtractNext : public Transform {
+class RewriteExtractNext : public Transform {
     typedef GetTofinoParser::Context Context;     // not to be confused with Visitor::Context
     const Context                 *ctxt;
     const IR::Expression          *latest = nullptr;
@@ -153,7 +152,7 @@ class GetTofinoParser::RewriteExtractNext : public Transform {
     explicit RewriteExtractNext(const Context *c) : ctxt(c) {}
 };
 
-const IR::Expression *GetTofinoParser::RewriteExtractNext::preorder(IR::Member *m) {
+const IR::Expression *RewriteExtractNext::preorder(IR::Member *m) {
     if (m->member != "next" && m->member != "last") return m;
     int index = -1;
     for (const Context *c = ctxt; index < 0 && c; c = c->parent)
