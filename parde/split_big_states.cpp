@@ -8,9 +8,8 @@ bool SplitBigStates::preorder(IR::Tofino::ParserMatch *state) {
     for (; it != state->stmts.end(); ++it) {
         auto *prim = (*it)->to<IR::Primitive>();
         if (!prim) BUG("Non primitive %s in parser state", *it);
-        if (prim->operands[0]->type->is<IR::Type::Varbits>()) {
-            /* FIXME -- ignoring varbits for now (not properly dealt with in general) */
-            continue; }
+        if (prim->operands[0]->type->is<IR::Type::Varbits>())
+            P4C_UNIMPLEMENTED("Parser writes to varbits values are not yet supported.");
         PhvInfo::Field::bitrange bits;
         auto dest = phv.field(prim->operands[0], &bits);
         if (!dest) BUG("%s not in phv?", prim->operands[0]);
