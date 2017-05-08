@@ -35,8 +35,9 @@ p4_tests_p4.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(wildc
 
 # Exercise bmv2 back-end on Tofino-specific programs
 p4_tests_bmv2.mk: $(GENTESTS) $(srcdir)/%reldir%/Makefile-p4c-extension.am $(wildcard \
-    $(srcdir)/%reldir%/p4_14/*.p4 \
-    $(srcdir)/%reldir%/p4_14/switch_*/switch.p4 \
+    $(shell grep -L 'tofino/stateful_alu_blackbox' \
+	$(srcdir)/%reldir%/p4_14/*.p4 \
+	$(srcdir)/%reldir%/p4_14/switch_*/switch.p4 ) \
     $(shell grep -l main $(shell grep -l -E '(v1model|psa)\.p4' \
 	    $(srcdir)/%reldir%/p4_16/*.p4)) ) \
     $(srcdir)/%reldir%/p4_14 $(srcdir)/%reldir%/p4_16
@@ -64,7 +65,6 @@ XFAIL_TESTS += \
          bmv2/%reldir%/p4_14/02-FlexCounterActionProfile.p4.test \
     p14_to_16/%reldir%/p4_14/02-FlexCounterActionProfile.p4.test \
        tofino/%reldir%/p4_14/02-FlexCounterActionProfile.p4.test \
-         bmv2/%reldir%/p4_14/stateful1.p4.test \
          bmv2/%reldir%/p4_14/test_config_125_meter_pre_color.p4.test \
     p14_to_16/%reldir%/p4_14/test_config_125_meter_pre_color.p4.test \
        tofino/%reldir%/p4_14/test_config_125_meter_pre_color.p4.test \
@@ -77,32 +77,15 @@ XFAIL_TESTS += \
          bmv2/%reldir%/p4_14/test_config_132_meter_pre_color_4.p4.test \
     p14_to_16/%reldir%/p4_14/test_config_132_meter_pre_color_4.p4.test \
        tofino/%reldir%/p4_14/test_config_132_meter_pre_color_4.p4.test \
-         bmv2/%reldir%/p4_14/test_config_142_stateful_bfd.p4.test \
          bmv2/%reldir%/p4_14/test_config_144_recirculate.p4.test \
     p14_to_16/%reldir%/p4_14/test_config_144_recirculate.p4.test \
        tofino/%reldir%/p4_14/test_config_144_recirculate.p4.test \
-         bmv2/%reldir%/p4_14/test_config_152_stateful_simple_cntr.p4.test \
-         bmv2/%reldir%/p4_14/test_config_153_stateful_simple_cntr_with_output.p4.test \
-         bmv2/%reldir%/p4_14/test_config_154_stateful_sampling.p4.test \
-         bmv2/%reldir%/p4_14/test_config_155_stateful_3_alus.p4.test \
-         bmv2/%reldir%/p4_14/test_config_156_indirect_stateful_cntr.p4.test \
-         bmv2/%reldir%/p4_14/test_config_159_stateful_using_phv_field.p4.test \
-         bmv2/%reldir%/p4_14/test_config_163_stateful_table_math_unit.p4.test \
-         bmv2/%reldir%/p4_14/test_config_164_stateful_deterministic_sampling.p4.test \
-         bmv2/%reldir%/p4_14/test_config_165_stateful_bfd_failure_detection.p4.test \
-         bmv2/%reldir%/p4_14/test_config_166_stateful_generic_counter.p4.test \
-         bmv2/%reldir%/p4_14/test_config_167_stateful_flowlet_switching.p4.test \
-         bmv2/%reldir%/p4_14/test_config_169_stateful_sflow_sequence.p4.test \
-         bmv2/%reldir%/p4_14/test_config_170_stateful_selection_table_update.p4.test \
     p14_to_16/%reldir%/p4_14/test_config_170_stateful_selection_table_update.p4.test \
        tofino/%reldir%/p4_14/test_config_170_stateful_selection_table_update.p4.test \
-         bmv2/%reldir%/p4_14/test_config_171_stateful_conga.p4.test \
     p14_to_16/%reldir%/p4_14/test_config_171_stateful_conga.p4.test \
        tofino/%reldir%/p4_14/test_config_171_stateful_conga.p4.test \
-         bmv2/%reldir%/p4_14/test_config_172_stateful_heavy_hitter.p4.test \
     p14_to_16/%reldir%/p4_14/test_config_172_stateful_heavy_hitter.p4.test \
        tofino/%reldir%/p4_14/test_config_172_stateful_heavy_hitter.p4.test \
-         bmv2/%reldir%/p4_14/test_config_173_stateful_bloom_filter.p4.test \
     p14_to_16/%reldir%/p4_14/test_config_173_stateful_bloom_filter.p4.test \
        tofino/%reldir%/p4_14/test_config_173_stateful_bloom_filter.p4.test \
        tofino/%reldir%/p4_16/bfd_offload.p4.test \
@@ -112,7 +95,6 @@ XFAIL_TESTS += \
 
 # Signed 1-bit field not allowed in P4_16 (and really makes no sense?)
 XFAIL_TESTS += \
-         bmv2/%reldir%/p4_14/test_config_160_stateful_single_bit_mode.p4.test \
     p14_to_16/%reldir%/p4_14/test_config_160_stateful_single_bit_mode.p4.test \
        tofino/%reldir%/p4_14/test_config_160_stateful_single_bit_mode.p4.test
 
@@ -150,24 +132,13 @@ XFAIL_TESTS += \
 # Could not find declaration error in generated P4_16 code (JIRA #BRIG-31)
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_206_stateful_logging.p4.test
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_209_pack_hash_dist.p4.test
-XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_192_stateful_driven_by_hash.p4.test
-XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_206_stateful_logging.p4.test
-XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_209_pack_hash_dist.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_206_stateful_logging.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_209_pack_hash_dist.p4.test
-
-# cannot find type for <GlobalRef>
-XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_184_stateful_bug1.p4.test
-XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_195_stateful_predicate_output.p4.test
-XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_199_stateful_constant_index.p4.test
-XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_224_stateful_error_check.p4.test
-XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_236_stateful_read_bit.p4.test
 
 # blackbox type unification failures (JIRA #BRIG-30, #COMPILER-341)
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_174_stateful_flow_learning.p4.test
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_205_modify_field_from_hash.p4.test
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_214_full_stats.p4.test
-XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_174_stateful_flow_learning.p4.test
 XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_205_modify_field_from_hash.p4.test
 XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_214_full_stats.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_174_stateful_flow_learning.p4.test
