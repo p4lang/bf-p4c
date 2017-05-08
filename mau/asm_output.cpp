@@ -705,6 +705,11 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << sep << r->name;
         sep = ", ";
         return false; }
+    bool preorder(const IR::MAU::AttachedOutput *att) override {
+        assert(sep);
+        out << sep << table->get_use_name(att->attached);
+        sep = ", ";
+        return false; }
     bool preorder(const IR::MAU::HashDist *) override {
         assert(sep);
         out << sep << "hash_dist(";

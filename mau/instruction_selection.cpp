@@ -4,6 +4,17 @@
 template<class T> static
 T *clone(const T *ir) { return ir ? ir->clone() : nullptr; }
 
+static const IR::Expression *ExternExprProperty(const IR::GlobalRef *glob, cstring propname) {
+    if (!glob) return nullptr;
+    auto di = glob->obj->to<IR::Declaration_Instance>();
+    if (!di) return nullptr;
+    auto prop = di->properties[propname];
+    if (!prop) return nullptr;
+    if (auto ev = prop->value->to<IR::ExpressionValue>())
+        return ev->expression;
+    return nullptr;
+}
+
 InstructionSelection::InstructionSelection(PhvInfo &phv) : phv(phv) {}
 
 Visitor::profile_t InstructionSelection::init_apply(const IR::Node *root) {
@@ -325,9 +336,23 @@ const IR::Primitive *InstructionSelection::postorder(IR::Primitive *prim) {
     } else if (prim->name == "drop" || prim->name == "mark_to_drop") {
         return new IR::MAU::Instruction(prim->srcInfo, "invalidate",
             gen_stdmeta(VisitingThread(this) ? "egress_port" : "egress_spec"));
+    } else if (prim->name == "stateful_alu.execute_stateful_alu") {
+        auto glob = prim->operands.at(0)->to<IR::GlobalRef>();
+        if (auto e = ExternExprProperty(glob, "output_dst")) {
+            if (auto reg = ExternExprProperty(glob, "reg")) {
+                auto tbl = findContext<IR::MAU::Table>();
+                IR::MAU::AttachedOutput *att = nullptr;
+                for (auto a : tbl->attached) {
+                    if (a->name == reg->toString()) {
+                        att = new IR::MAU::AttachedOutput(a);
+                        break; } }
+                BUG_CHECK(att, "failed to find attached table %s", reg);
+                return new IR::MAU::Instruction(prim->srcInfo, "set", e, att);
+            } else {
+                error("%s: no 'reg' property in %s", glob->obj->srcInfo, glob); } }
+        return nullptr;
     } else if (prim->name == "counter.count" || prim->name == "direct_counter.count" ||
-               prim->name == "meter.execute_meter" || prim->name == "direct_meter.read" ||
-               prim->name == "stateful_alu.execute_stateful_alu") {
+               prim->name == "meter.execute_meter" || prim->name == "direct_meter.read") {
         stateful.push_back(prim);
         return nullptr;
     } else if (prim->name == "hash") {
@@ -355,8 +380,6 @@ const IR::Type *stateful_type_for_primitive(const IR::Primitive *prim) {
 const IR::MAU::Table *InstructionSelection::postorder(IR::MAU::Table *tbl) {
     for (auto act : Values(tbl->actions)) {
         for (auto prim : act->stateful) {
-            if (prim->name == "stateful_alu.execute_stateful_alu")
-                continue;  // skip for now
             // typechecking should have verified
             BUG_CHECK(prim->operands.size() >= 1, "Invalid primitive %s", prim);
             auto gref = prim->operands[0]->to<IR::GlobalRef>();

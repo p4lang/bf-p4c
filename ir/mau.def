@@ -322,6 +322,12 @@ class HashDist : Expression {
 // Currently we reconstruct the unit id(s) in MauAsmOutput::EmitAction
 }
 
+/// A use of an attached table output; an operand of an instruction
+class AttachedOutput : Expression {
+    Attached    attached;
+    dbprint { out << attached->name; }
+}
+
 /// reference to a fixed Stateful ALU resource -- these can only appear in SALU Instructions
 class SaluReg : Expression {
     cstring     name;
