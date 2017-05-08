@@ -798,12 +798,31 @@ void Table::Actions::pass1(Table *tbl) {
                 tbl->stage->imem_use[iaddr][inst->slot] = 1; } }
         slot_use |= act.slot_use;
         for (auto &a : act.alias) {
+            while (act.alias.count(a.second.name)) {
+                // the alias refers to something else in the alias list
+                auto &rec = act.alias.at(a.second.name);
+                if (rec.name == a.first) {
+                    error(a.second.lineno, "recursive alias %s", a.first.c_str());
+                    break; }
+                if (rec.lo > 0) {
+                    a.second.lo += rec.lo;
+                    if (a.second.hi >= 0)
+                        a.second.hi += rec.lo; }
+                if (rec.hi > 0 && a.second.hi < 0)
+                    a.second.hi = rec.hi;
+                if (a.second.lo < rec.lo || a.second.hi > rec.hi) {
+                    error(a.second.lineno,
+                            "alias for %s:%s(%d:%d) has out of range index from allowed %s:%s(%d:%d)",
+                            a.first.c_str(), a.second.name.c_str(), a.second.lo, a.second.hi,
+                            a.second.name.c_str(), rec.name.c_str(), rec.lo, rec.hi );
+                    break; }
+                a.second.name = rec.name; }
             if (auto *f = tbl->lookup_field(a.second.name, act.name)) {
                 if (a.second.hi < 0)
                     a.second.hi = f->size - 1;
             } else
-                error(a.second.lineno, "No field %s in table %s", a.second.name.c_str(),
-                      tbl->name()); } }
+                error(a.second.lineno, "No field %s(%d:%d) in table %s",
+                        a.second.name.c_str(), a.second.lo, a.second.hi, tbl->name()); } }
 }
 
 static void find_pred_in_stage(int stageno, std::set<MatchTable *> &pred, Table *tbl) {
