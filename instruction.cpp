@@ -129,7 +129,12 @@ struct operand {
                 int l = field->bit(lo) - immed_offset, h = field->bit(hi) - immed_offset;
                 if (l%bits != 0 && l/bits != h/bits)
                     error(lineno, "%s misaligned for action bus", name.c_str());
-                table->need_on_actionbus(field, lo & ~7, bytes); } }
+                table->need_on_actionbus(field, lo & ~7, bytes);
+            } else if (!field && table->find_on_actionbus(name, lo, bytes) < 0) {
+                if (Table::all.count(name))
+                    table->need_on_actionbus(Table::all.at(name), lo & ~7, bytes);
+                else
+                    error(lineno, "Can't find any operand named %s", name.c_str()); } }
         void mark_use(Table *tbl) override {
             if (field) field->flags |= Table::Format::Field::USED_IMMED; }
         unsigned bitoffset(int group) const override {
@@ -339,7 +344,7 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
         if (ref)
             ref = new Action(lineno, name, tbl, field, lo >= 0 ? lo : 0,
                              hi >= 0 ? hi : field->size - 1);
-    } else if (tbl->find_on_actionbus(name, 0, 7, &len) >= 0) {
+    } else if (tbl->find_on_actionbus(name, lo >= 0 ? lo : 0, 7, &len) >= 0) {
         ref = new Action(lineno, name, tbl, 0, lo >= 0 ? lo : 0,
                          hi >= 0 ? hi : len - 1);
     } else if (::Phv::get(tbl->gress, name)) {
@@ -349,6 +354,8 @@ auto operand::Named::lookup(Base *&ref) -> Base * {
         ref = new RawAction(lineno, slot, lo >= 0 ? lo : 0);
     } else if (name == "hash_dist" && lo == hi) {
         ref = new HashDist(lineno, tbl, lo);
+    } else if (Table::all.count(name)) {
+        ref = new Action(lineno, name, tbl, nullptr, lo >= 0 ? lo : 0, hi >= 0 ? hi : 31);
     } else {
         ref = new Phv(lineno, tbl->gress, name, lo, hi); }
     if (ref != this) delete this;

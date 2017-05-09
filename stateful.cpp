@@ -171,8 +171,18 @@ int Stateful::direct_shiftcount() {
 template<class REGS> void Stateful::write_merge_regs(REGS &regs, MatchTable *match,
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge = regs.rams.match.merge;
-    if (per_flow_enable)
-        merge.mau_stats_adr_per_entry_en_mux_ctl[type][bus] = 16; // FIXME
+    if (args.empty()) { // direct access
+        merge.mau_meter_adr_mask[type][bus] = 0x7fff80;
+    } else { // indirect access
+        assert(args.size() == 1 && args[0].type == Call::Arg::Field);
+        int bits = args[0].size() - 3;
+        if (per_flow_enable) --bits;
+        merge.mau_meter_adr_mask[type][bus] = 0x700000 | (~(~0u << bits) << 7); }
+    merge.mau_meter_adr_per_entry_en_mux_ctl[type][bus] = 16; // FIXME
+    merge.mau_meter_adr_type_position[type][bus] = per_flow_enable ? 16 : 17;
+    if (!per_flow_enable)
+        merge.mau_meter_adr_default[type][bus] |= 1 << 23;
+    merge.mau_meter_adr_default[type][bus] |= 1 << 24;  // FIXME -- instruction number?
 }
 
 template<class REGS> void Stateful::write_regs(REGS &regs) {

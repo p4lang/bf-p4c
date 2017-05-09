@@ -293,6 +293,7 @@ public:
     virtual SelectionTable *get_selector() const { return 0; }
     virtual const Call &get_action() const { return action; }
     virtual int direct_shiftcount() { assert(0); }
+    virtual int home_row() const { assert(0); }
     /* row,col -> mem unitno mapping -- unitnumbers used in context json */
     virtual int memunit(int r, int c) { return r*12 + c; }
     virtual int unitram_type() { assert(0); }
@@ -362,6 +363,7 @@ public:
     virtual int find_on_actionbus(const char *n, int off, int size, int *len = 0);
     int find_on_actionbus(const std::string &n, int off, int size, int *len = 0) {
         return find_on_actionbus(n.c_str(), off, size, len); }
+    virtual void need_on_actionbus(Table *attached, int off, int size);
     virtual int find_on_actionbus(HashDistribution *hd, int off, int size);
     virtual void need_on_actionbus(HashDistribution *hd, int off, int size);
     virtual Call &action_call() { return action; }
@@ -720,7 +722,7 @@ public:
         write_merge_regs<Target::JBay::mau_regs>(regs, match, type, bus, args); }
     unsigned address_shift() const { return 7 + ceil_log2(min_words); }
     unsigned meter_group() const { return layout.at(0).row/4U; }
-    int home_row() const { return layout.at(0).row | 3; }
+    int home_row() const override { return layout.at(0).row | 3; }
     int unitram_type() override { return UnitRam::SELECTOR; }
 )
 
@@ -825,6 +827,7 @@ public:
     bool                color_aware_per_flow_enable = false;
     bool run_at_eop() override { return type == STANDARD; }
     int unitram_type() override { return UnitRam::METER; }
+    int home_row() const override { return layout.at(0).row | 3; }
 )
 
 DECLARE_TABLE_TYPE(Stateful, Synth2Port, "stateful",
@@ -854,6 +857,7 @@ public:
     int unitram_type() override { return UnitRam::STATEFUL; }
     int get_const(long v);
     bool is_dual_mode() { return dual_mode; }
+    int home_row() const override { return layout.at(0).row | 3; }
 )
 
 #endif /* _tables_h_ */

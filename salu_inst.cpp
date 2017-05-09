@@ -212,9 +212,9 @@ Instruction *AluOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
                    op[idx] == "&" || op[idx] == "|" || op[idx] == "^") {
             // Predicate is an expression
             rv->predication_encode = decode_predicate(op[idx++]);
-            if (rv->predication_encode == 0)
+            if (rv->predication_encode == STATEFUL_PREDICATION_ENCODE_NOOP)
                 warning(op[idx-1].lineno, "Instruction predicate is always false");
-            else if (rv->predication_encode == 15)
+            else if (rv->predication_encode == STATEFUL_PREDICATION_ENCODE_UNCOND)
                 warning(op[idx-1].lineno, "Instruction predicate is always true"); } }
     if (idx < op.size && op[idx] == "lo") {
         rv->dest = LO;
@@ -562,9 +562,9 @@ Instruction *OutOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
         } else if (op[idx] == "cmplo" || op[idx] == "cmphi" || op[idx] == "!" ||
                    op[idx] == "&" || op[idx] == "|" || op[idx] == "^") {
             rv->predication_encode = decode_predicate(op[idx++]);
-            if (rv->predication_encode == 0)
+            if (rv->predication_encode == STATEFUL_PREDICATION_ENCODE_NOOP)
                 warning(op[idx-1].lineno, "Instruction predicate is always false");
-            else if (rv->predication_encode == 15)
+            else if (rv->predication_encode == STATEFUL_PREDICATION_ENCODE_UNCOND)
                 warning(op[idx-1].lineno, "Instruction predicate is always true"); } }
     //Check mux operand
     if (idx < op.size) {
@@ -580,10 +580,24 @@ template<class REGS>
 void OutOP::write_regs(REGS &regs, Table *tbl, Table::Actions::Action *act) {
     int logical_home_row = tbl->layout[0].row;
     auto &meter_group = regs.rams.map_alu.meter_group[logical_home_row/4U];
+    auto &action_ctl = regs.rams.map_alu.meter_alu_group_action_ctl[logical_home_row/4U];
+    auto &switch_ctl = regs.rams.array.switchbox.row[logical_home_row/2U].ctl;
+    auto &action_hv_xbar = regs.rams.array.row[logical_home_row/2U].action_hv_xbar;
     auto &salu = meter_group.stateful.salu_instr_output_alu[act->code];
     salu.salu_output_cmpfn = STATEFUL_PREDICATION_ENCODE_UNCOND;
-    if (predication_encode)
+    if (predication_encode) {
         salu.salu_output_cmpfn = predication_encode;
+        // Not clear if this is the best place for the rest of these -- should perhaps
+        // be in stateful?  Only needed if the salu wants to output to the VLIW action data bus
+        // Output onto rhs action data bus w 4 cycle delay iff selectors anywhere in this stage
+        action_ctl.right_alu_action_enable = 1;
+        action_ctl.right_alu_action_delay =
+            tbl->stage->group_table_use[tbl->gress] & Stage::USE_SELECTOR ? 4 : 0;
+        switch_ctl.r_action_o_mux_select.r_action_o_sel_action_rd_r_i = 1;
+        // disable action data address huffman decoding, on the assumtion we're not trying
+        // to combine this with an action data table on the same home row.  Otherwise, the
+        // huffman decoding will think this is an 8-bit value and replicate it.
+        action_hv_xbar.action_hv_xbar_disable_ram_adr.action_hv_xbar_disable_ram_adr_right = 1; }
     salu.salu_output_asrc = output_mux;
 }
 

@@ -1141,8 +1141,14 @@ template<class REGS> void MatchTable::write_regs(REGS &regs, int type, Table *re
             if (result->format->immed_size > 0)
                 merge.mau_payload_shifter_enable[type][bus]
                     .immediate_data_payload_shifter_en = 1; } }
-    if (result->action_bus)
+    if (result->action_bus) {
         result->action_bus->write_immed_regs(regs, result);
+        for (auto &mtab : get_attached()->meter) {
+            // if the meter table outputs something on the action-bus of the meter
+            // home row, need to set up the action hv xbar properly
+            result->action_bus->write_action_regs(regs, result, mtab->home_row(), 0);
+        }
+    }
     if (default_action_args.size() > 0)
         merge.mau_immediate_data_miss_value[logical_id] = default_action_args[0];
     else if (result->default_action_args.size() > 0)
@@ -1211,6 +1217,10 @@ void Table::need_on_actionbus(Format::Field *f, int off, int size) {
 
 int Table::find_on_actionbus(const char *name, int off, int size, int *len) {
     return action_bus ? action_bus->find(name, off, size, len) : -1;
+}
+
+void Table::need_on_actionbus(Table *attached, int off, int size) {
+    if (action_bus) action_bus->need_alloc(this, attached, off, size);
 }
 
 int Table::find_on_actionbus(HashDistribution *hd, int off, int size) {

@@ -19,8 +19,11 @@ std::ostream &operator<<(std::ostream &out, const ActionBus::Source &src) {
     case ActionBus::Source::HashDist:
         out << "HashDist(" << src.hd->hash_group << ", " << src.hd->id << ")";
         break;
-    case ActionBus::Source::MeterBus:
-        out << "MeterBus";
+    case ActionBus::Source::TableOutput:
+        out << "TableOutput(" << (src.table ? src.table->name() : "0") << ")";
+        break;
+    case ActionBus::Source::TableRefOutput:
+        out << "TableRefOutput(" << (src.table_ref ? src.table_ref->name : "0") << ")";
         break;
     default:
         out << "<invalid type 0x" << hex(src.type) << ">";
@@ -68,6 +71,7 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
         if (!CHECKTYPE2(kv.key, tINT, tRANGE)) continue;
         if (!CHECKTYPE2M(kv.value, tSTR, tCMD, "field name or slice")) continue;
         const char *name = kv.value.s;
+        value_t *name_ref = &kv.value;
         unsigned off = 0, sz = 0;
         if (kv.value.type == tCMD) {
             assert(kv.value.vec.size > 0 && kv.value[0].type == tSTR);
@@ -75,6 +79,7 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                 if (!CHECKTYPE(kv.value[1], tINT))
                     continue;
                 name = kv.value[0].s;
+                name_ref = nullptr;
             } else {
                 if (!PCHECKTYPEM(kv.value.vec.size == 2, kv.value[1], tRANGE,
                                  "field name or slice"))
@@ -83,6 +88,7 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                     error(kv.value.lineno, "Slice must be byte slice");
                     continue; }
                 name = kv.value[0].s;
+                name_ref = &kv.value[0];
                 off = kv.value[1].lo;
                 sz = kv.value[1].hi - kv.value[1].lo + 1; } }
         Table::Format::Field *f = tbl->lookup_field(name, "*");
@@ -98,11 +104,6 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                 src = Source(MeterBus);
                 // FIXME -- meter color could be ORed into any byte of the immediate?
                 if (!sz) off = 24, sz = 8;
-            } else if (kv.value == "stateful_alu") {
-                src = Source(MeterBus);
-                // FIXME -- should be getting the size from the attached stateful table,
-                // FIXME -- but that would have to wait until pass1.
-                // if (!sz) sz = 32;
             } else if (kv.value.type == tCMD && kv.value == "hash_dist") {
                 if (auto hd = tbl->find_hash_dist(kv.value[1].i))
                     src = Source(hd);
@@ -126,6 +127,8 @@ ActionBus::ActionBus(Table *tbl, VECTOR(pair_t) &data) {
                         error(kv.value[i].lineno, "Unexpected hash_dist %s",
                               value_desc(kv.value[i]));
                         break; } }
+            } else if (name_ref) {
+                src = Source(new Table::Ref(*name_ref));
             } else if (tbl->format) {
                 error(kv.value.lineno, "No field %s in format", name);
                 continue; }
@@ -172,11 +175,30 @@ unsigned ActionBus::Slot::lo(Table *tbl) const {
 }
 
 void ActionBus::pass1(Table *tbl) {
-    LOG1("ActionBus::pass1(" << tbl->name() << ")");
+    bool is_immed_data = dynamic_cast<MatchTable *>(tbl) != nullptr;
+    LOG1("ActionBus::pass1(" << tbl->name() << ")" << (is_immed_data ? " [immed]" : ""));
     if (lineno < 0)
         lineno = tbl->format && tbl->format->lineno >= 0 ? tbl->format->lineno : tbl->lineno;
     Slot *use[ACTION_DATA_BUS_SLOTS] = { 0 };
     for (auto &slot : Values(by_byte)) {
+        for (auto it = slot.data.begin(); it != slot.data.end();) {
+            if (it->first.type == Source::TableRefOutput) {
+                // Remove all TableRefOutputs and replace with TableOutputs
+                if (it->first.table_ref) {
+                    if (it->first.table_ref->check())
+                        slot.data[Source(*it->first.table_ref)] = it->second;
+                } else {
+                    auto att = tbl->get_attached();
+                    if (!att || att->meter.empty())
+                        error(lineno, "No meter table attached to %s", tbl->name());
+                    else if (att->meter.size() > 1)
+                        error(lineno, "Multiple meter tables attached to %s", tbl->name());
+                    else
+                        slot.data[Source(att->meter.at(0))] = it->second; }
+                it = slot.data.erase(it);
+            } else {
+                ++it; } }
+
         int slotno = Stage::action_bus_slot_map[slot.byte];
         for (unsigned byte = slot.byte; byte < slot.byte + slot.size/8U;
              byte += Stage::action_bus_slot_size[slotno++]/8U)
@@ -224,6 +246,11 @@ void ActionBus::need_alloc(Table *tbl, Table::Format::Field *f, unsigned off, un
 void ActionBus::need_alloc(Table *tbl, HashDistribution *hd, unsigned off, unsigned size) {
     LOG3("need_alloc hash_dist " << hd->id << " off=" << off << " size=0x" << hex(size));
     need_place[hd][off] |= size;
+    byte_use.setrange(off/8U, size);
+}
+void ActionBus::need_alloc(Table *tbl, Table *attached, unsigned off, unsigned size) {
+    LOG3("need_alloc table " << attached->name() << " off=" << off << " size=0x" << hex(size));
+    need_place[attached][off] |= size;
     byte_use.setrange(off/8U, size);
 }
 
@@ -288,6 +315,7 @@ int ActionBus::find_merge(Table *tbl, int offset, int bytes, int use) {
         } else if (use & 2) {
             if (alloc.first < 32) continue;
             if (alloc.first >= 96) break; }
+        if (alloc.second.is_table_output()) continue;  // can't merge table output with immediate
         int inbyte = alloc.second.lo(tbl) / 8U;
         int align = action_hv_slice_group_align.at(alloc.first/16U).at(inbyte%16U);
         int outbyte = alloc.first & ~(align-1);
@@ -330,11 +358,14 @@ void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned si
     int immed_offset = tbl->format && tbl->format->immed ? tbl->format->immed->bit(0) : 0;
     assert(immed_offset == 0 || !is_action_data);
     int lo, hi, use;
+    bool can_merge = true;
     if (src.type == Source::Field) {
         lo = (src.field->bit(offset) - immed_offset) % 128U;
         hi = src.field->bit(src.field->size) - 1 - immed_offset;
         lineno = tbl->find_field_lineno(src.field);
     } else {
+        if (src.type == Source::TableOutput)
+            can_merge = false;
         lo = offset;
         hi = lo | size_masks[sizes_needed]; }
     if (lo/32U != hi/32U) {
@@ -350,7 +381,7 @@ void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned si
             return; }
         unsigned start = (lo/8U) % step;
         if (!(sizes_needed & 4)) bytes = 1;
-        if ((use = find_merge(tbl, lo, bytes, 1)) >= 0 ||
+        if ((can_merge && (use = find_merge(tbl, lo, bytes, 1)) >= 0) ||
             (use = find_free(tbl, start, 31, step, lo/8U, bytes)) >= 0)
             do_alloc(tbl, src, use, lo/8U, bytes, offset);
         else
@@ -364,12 +395,12 @@ void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned si
                 error(lineno, "%s not correctly aligned for 16-bit use "
                       "on action bus", src.toString(tbl).c_str());
                 return; }
-            if ((use = find_merge(tbl, lo, bytes, 2)) >= 0) {
+            if (can_merge && (use = find_merge(tbl, lo, bytes, 2)) >= 0) {
                 do_alloc(tbl, src, use, lo/8U, bytes, offset);
                 return; } }
         if (!(sizes_needed & 4) && bytes > 2) bytes = 2;
         unsigned start = 32 + (lo/8U) % step;
-        if ((use = find_merge(tbl, lo, bytes, 2)) >= 0 ||
+        if ((can_merge && (use = find_merge(tbl, lo, bytes, 2)) >= 0) ||
             (use = find_free(tbl, start, 63, step, lo/8U, bytes)) >= 0 ||
             (use = find_free(tbl, start+32, 95, 8, lo/8U, bytes)) >= 0)
             do_alloc(tbl, src, use, lo/8U, bytes, offset);
@@ -381,10 +412,10 @@ void ActionBus::alloc_field(Table *tbl, Source src, unsigned offset, unsigned si
         unsigned odd = (lo/8U) & (4 & step);
         unsigned start = (lo/8U) % step;
         if (lo % 32U) {
-            if ((use = find_merge(tbl, lo, bytes, 4)) >= 0) {
+            if (can_merge && (use = find_merge(tbl, lo, bytes, 4)) >= 0) {
                 do_alloc(tbl, src, use, lo/8U, bytes, 0);
                 return; } }
-        if ((use = find_merge(tbl, lo, bytes, 4)) >= 0 ||
+        if ((can_merge && (use = find_merge(tbl, lo, bytes, 4)) >= 0) ||
             (use = find_free(tbl, 96+start+odd, 127, 8, lo/8U, bytes)) >= 0 ||
             (use = find_free(tbl, 64+start+odd, 95, 8, lo/8U, bytes)) >= 0 ||
             (use = find_free(tbl, 32+start, 63, step, lo/8U, bytes)) >= 0 ||
@@ -444,20 +475,38 @@ template<class REGS> void ActionBus::write_action_regs(REGS &regs, Table *tbl,
                                                        unsigned home_row, unsigned action_slice) {
     LOG2("--- ActionBus write_action_regs(" << tbl->name() << ", " << home_row << ", " <<
          action_slice << ")");
+    bool is_action_data = dynamic_cast<ActionTable *>(tbl) != nullptr;
     auto &action_hv_xbar = regs.rams.array.row[home_row/2].action_hv_xbar;
     unsigned side = home_row%2;  /* 0 == left,  1 == right */
     for (auto &el : by_byte) {
+        if (!is_action_data && !el.second.is_table_output()) {
+            // Nasty hack -- meter/stateful output uses the action bus on the meter row,
+            // so we need this routine to set it up, but we only want to do it for the
+            // meter bus output; the rest of this ActionBus is for immediate data (set
+            // up by write_immed_regs below)
+            continue; }
         unsigned byte = el.first;
         assert(byte == el.second.byte);
-        assert(el.second.data.begin()->first.type == Source::Field);
-        Table::Format::Field *f = el.second.data.begin()->first.field;
-        if ((f->bit(el.second.data.begin()->second) >> 7) != action_slice)
-            continue;
         unsigned slot = Stage::action_bus_slot_map[byte];
-        unsigned bit = f->bit(el.second.data.begin()->second) & 0x7f;
-        unsigned size = std::min(el.second.size, f->size - el.second.data.begin()->second);
-        LOG3("    byte " << byte << " (slot " << slot << "): field " << tbl->find_field(f) <<
-             "(" << el.second.data.begin()->second << ".." << (el.second.data.begin()->second + size - 1) << ")" <<
+        unsigned bit, size;
+        std::string srcname;
+        auto data = el.second.data.begin();
+        if (data->first.type == Source::Field) {
+            auto f = data->first.field;
+            if ((f->bit(data->second) >> 7) != action_slice)
+                continue;
+            bit = f->bit(data->second) & 0x7f;
+            size = std::min(el.second.size, f->size - data->second);
+            srcname = "field " + tbl->find_field(f);
+        } else if (data->first.type == Source::TableOutput) {
+            bit = data->second;
+            size = el.second.size;
+            srcname = "table " + data->first.table->name_;
+        } else {
+            // HashDist only works in write_immed_regs
+            assert(0); }
+        LOG3("    byte " << byte << " (slot " << slot << "): " << srcname <<
+             " (" << data->second << ".." << (data->second + size - 1) << ")" <<
              " [" << bit << ".." << (bit+size-1) << "]");
         if (bit + size > 128) {
             error(lineno, "Action bus setup can't deal with field %s split across "
@@ -574,6 +623,7 @@ template<class REGS> void ActionBus::write_immed_regs(REGS &regs, Table *tbl) {
     auto &adrdist = regs.rams.match.adrdist;
     int tid = tbl->logical_id;
     for (auto &f : by_byte) {
+        if (f.second.is_table_output()) continue;
         int slot = Stage::action_bus_slot_map[f.first];
         unsigned off = 0;
         if (!f.second.data.empty()) {
@@ -618,8 +668,13 @@ std::string ActionBus::Source::toString(Table *tbl) const {
     case HashDist:
         tmp << "hash_dist " << hd->id;
         return tmp.str();
-    case MeterBus:
-        return "meter_bus";
+    case TableOutput:
+        return table->name();
+    case TableRefOutput:
+        tmp <<  "tableref ";
+        if (table_ref) tmp << table_ref->name;
+        else tmp << "(meter)";
+        return tmp.str();
     default:
         tmp << "<invalid source " << int(type) << ">";
         return tmp.str(); }
