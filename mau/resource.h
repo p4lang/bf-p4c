@@ -8,7 +8,8 @@
 
 
 struct TableResourceAlloc {
-    IXBar::Use                          match_ixbar, gateway_ixbar, selector_ixbar;
+    IXBar::Use                          match_ixbar, gateway_ixbar, selector_ixbar,
+                                        salu_ixbar;
     TableFormat::Use                    table_format;
     map<cstring, Memories::Use>         memuse;
     ActionFormat::Use                   action_format;
@@ -36,13 +37,17 @@ struct TableResourceAlloc {
         rv->match_ixbar = match_ixbar;
         rv->gateway_ixbar = gateway_ixbar;
         rv->selector_ixbar = selector_ixbar;
+        rv->salu_ixbar = salu_ixbar;
         rv->table_format = table_format;
         rv->action_format = action_format;
         return rv; }
-    void clear() {
+    void clear_ixbar() {
         match_ixbar.clear();
         gateway_ixbar.clear();
         selector_ixbar.clear();
+        salu_ixbar.clear(); }
+    void clear() {
+        clear_ixbar();
         table_format.clear();
         memuse.clear(); }
     void toJSON(JSONGenerator &json) const { json << "null"; }

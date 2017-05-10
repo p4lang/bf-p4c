@@ -33,7 +33,7 @@ struct IXBar {
     };
 
  private:
-    /* IXBar tracks the use of all the input xbar bytes in a single stage.  Each byte use is set
+    /** IXBar tracks the use of all the input xbar bytes in a single stage.  Each byte use is set
      * to record the name of the field it will be getting and the bit offset within the field.
      * cstrings here are field names as used in PhvInfo (so PhvInfo::field can be used to find
      * out details about the field)
@@ -67,8 +67,12 @@ struct IXBar {
     friend class IXBarRealign;
 
  public:
-    unordered_set<const IR::ActionSelector *>                selectors;
-    /* IXbar::Use tracks the input xbar use of a single table */
+    /** attached tables that have been accounted for in the current IXBar state -- since
+     * they might be attached to more than one match table, and we only want to account
+     * for them once. */
+    unordered_set<const IR::Attached *>                attached_tables;
+
+    /** IXbar::Use tracks the input xbar use of a single table */
     struct Use {
         /* everything is public so anyone can read it, but only IXBar should write to this */
         enum flags_t { NeedRange = 1, NeedXor = 2,
@@ -243,11 +247,11 @@ struct IXBar {
     bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc, bool second_try);
     bool allocSelector(const IR::ActionSelector *, const IR::P4Table *, const PhvInfo &phv,
                        Use &alloc, bool second_try, cstring name);
+    bool allocStateful(const IR::MAU::StatefulAlu *, const PhvInfo &phv, Use &alloc, bool);
     bool allocHashDist(const HashDistReq &hash_dist_req, const PhvInfo &phv, Use &alloc,
                        bool second_try, const IR::MAU::Table *tbl, cstring name);
-    bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &tbl_alloc, Use &gw_alloc,
-                    Use &sel_alloc, const LayoutOption *lo,
-                    const vector<HashDistReq> &hash_dist_reqs);
+    bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
+                    const LayoutOption *lo, const vector<HashDistReq> &hash_dist_reqs);
     void update_hash_dist(cstring name, const Use &alloc);
     void update(cstring name, const Use &alloc);
     void update(cstring name, const TableResourceAlloc *alloc);
@@ -264,7 +268,7 @@ struct IXBar {
  private:
     bool find_alloc(vector<IXBar::Use::Byte> &alloc_use, bool ternary, bool second_try,
                     vector<IXBar::Use::Byte *> &alloced, int hash_groups_needed,
-                    bool hash_dist = false);
+                    bool hash_dist = false, unsigned byte_mask = ~0U);
     bool find_original_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
     bool find_ternary_alloc(IXBar::Use &alloc, bool ternary, bool second_try);
     void calculate_available_groups(vector<big_grp_use> &order, int hash_groups_needed);
@@ -272,11 +276,11 @@ struct IXBar {
     bool violates_hash_constraints(vector <big_grp_use> &order, bool hash_dist, int group,
                                    int byte);
     void calculate_found(vector<IXBar::Use::Byte *> unalloced, vector<big_grp_use> &order,
-                         bool ternary, bool hash_dist);
+                         bool ternary, bool hash_dist, unsigned byte_mask);
     void calculate_ternary_free(vector<big_grp_use> &order, int big_groups,
                                 int bytes_per_big_group);
     void calculate_exact_free(vector<big_grp_use> &order, int big_groups,
-                              int bytes_per_big_group, bool hash_dist);
+                              int bytes_per_big_group, bool hash_dist, unsigned byte_mask);
     int found_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced, bool ternary);
     int free_bytes(grp_use *grp, vector<IXBar::Use::Byte *> &unalloced,
                    vector<IXBar::Use::Byte *> &alloced, bool ternary, bool hash_dist);
@@ -290,10 +294,11 @@ struct IXBar {
     bool big_grp_alloc(bool ternary, bool second_try, vector<IXBar::Use::Byte *> &unalloced,
                        vector<IXBar::Use::Byte *> &alloced, vector<big_grp_use> &order,
                        int big_groups_needed, int &total_bytes_needed, int bytes_per_big_group,
-                       bool hash_dist);
+                       bool hash_dist, unsigned byte_mask);
     bool small_grp_alloc(bool ternary, bool second_try, vector<IXBar::Use::Byte *> &unalloced,
                          vector<IXBar::Use::Byte *> &alloced, vector<grp_use *> &small_order,
-                         vector<big_grp_use> &order, int &total_bytes_needed, bool hash_dist);
+                         vector<big_grp_use> &order, int &total_bytes_needed, bool hash_dist,
+                         unsigned byte_mask);
     void layout_option_calculation(const LayoutOption *layout_option,
                                    size_t &start, size_t &last);
     void field_management(const IR::Expression *field, IXBar::Use &alloc,

@@ -294,34 +294,28 @@ static bool try_alloc_ixbar(TablePlacement::Placed *next, const TablePlacement::
     for (auto *p = done; p && p->stage == next->stage; p = p->prev) {
         current_ixbar.update(p->name, p->resources->match_ixbar);
         current_ixbar.update(p->name + "$gw", p->resources->gateway_ixbar);
-        const IR::ActionSelector *as;
         for (auto *at : p->table->attached) {
-            if ((as = at->to<IR::ActionSelector>()) != nullptr
-                && !p->resources->selector_ixbar.use.empty()) {
-                current_ixbar.update(p->name + "$selector", p->resources->selector_ixbar);
-                current_ixbar.selectors.emplace(as);
-            }
+            if (auto as = at->to<IR::ActionSelector>()) {
+                if (!p->resources->selector_ixbar.use.empty()) {
+                    current_ixbar.update(p->name + "$selector", p->resources->selector_ixbar);
+                    current_ixbar.attached_tables.emplace(as); } }
+            if (auto salu = at->to<IR::MAU::StatefulAlu>()) {
+                if (!p->resources->salu_ixbar.use.empty()) {
+                    current_ixbar.update(p->name + "$stateful", p->resources->salu_ixbar);
+                    current_ixbar.attached_tables.emplace(salu); } }
         }
     }
 
     const vector<HashDistReq> &hdr_match = lc.get_hash_dist_req(next->table);
     const vector<HashDistReq> &hdr_gw = lc.get_hash_dist_req(next->gw);
-    if (!current_ixbar.allocTable(next->table, phv, resources->match_ixbar,
-                                  resources->gateway_ixbar, resources->selector_ixbar,
-                                  sue.preferred(), hdr_match) ||
-        !current_ixbar.allocTable(next->gw, phv, resources->match_ixbar,
-                                  resources->gateway_ixbar, resources->selector_ixbar,
-                                  sue.preferred(), hdr_gw)) {
-        resources->match_ixbar.clear();
-        resources->gateway_ixbar.clear();
-        resources->selector_ixbar.clear();
+    if (!current_ixbar.allocTable(next->table, phv, *resources, sue.preferred(), hdr_match) ||
+        !current_ixbar.allocTable(next->gw, phv, *resources, sue.preferred(), hdr_gw)) {
+        resources->clear_ixbar();
         return false; }
 
     const bitvec immediate_mask = lc.get_action_format(next->table).immediate_mask;
     if (!is_gw && !try_alloc_format(next, resources, sue, immediate_mask)) {
-        resources->match_ixbar.clear();
-        resources->gateway_ixbar.clear();
-        resources->selector_ixbar.clear();
+        resources->clear_ixbar();
         LOG3("Could not allocate format for selected layout_option");
         return false;
     }
