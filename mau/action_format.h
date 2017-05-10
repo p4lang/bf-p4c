@@ -73,7 +73,9 @@ struct ActionFormat {
             cstring name;       ///< name of the arg
             bitvec data_loc;    ///< The location within the container of this action data
             int field_bit;      ///< The starting bit which the arg is allocating over
-            ArgLoc(cstring n, bitvec dl, int fb) : name(n), data_loc(dl), field_bit(fb) {}
+            bool single_loc = true;
+            ArgLoc(cstring n, bitvec dl, int fb, bool sl)
+                : name(n), data_loc(dl), field_bit(fb), single_loc(sl) {}
         };
         vector<ArgLoc> arg_locs;
         int size;         ///< Number of bits needed
@@ -162,6 +164,7 @@ struct ActionFormat {
 
     typedef std::map<cstring, ArgInfo> ArgMap;
     typedef std::map<cstring, vector<ActionDataPlacement>> ArgFormat;
+    typedef std::map<cstring, vector<std::pair<int, bool>>> ArgPlacementData;
     bool immediate_possible = false;
     vector<ActionContainerInfo> action_counts;
 
@@ -177,6 +180,7 @@ struct ActionFormat {
         bool has_immediate = false;
         ArgFormat action_data_format;
         ArgFormat immediate_format;
+        std::map<cstring, ArgPlacementData> arg_placement;
         int action_data_bytes = 0;
         bitvec immediate_mask;
 
@@ -186,6 +190,11 @@ struct ActionFormat {
             immediate_format.clear();
             immediate_mask.clear();
         }
+    };
+
+    struct failure : public Backtrack::trigger {
+        cstring action_name;
+        explicit failure(cstring an) : trigger(OTHER), action_name(an) {}
     };
 
     Use *use;
@@ -222,6 +231,9 @@ struct ActionFormat {
     void align_action_data_layouts();
     void space_all_immediate_containers();
     void align_immediate_layouts();
+    void sort_and_asm_name(vector<ActionDataPlacement> &placement_vec, bool immediate);
+    void calculate_placement_data(vector<ActionDataPlacement> &placement_vec,
+                                  ArgPlacementData &apd, bool immediate);
 };
 
 /** Class for building the initial information for the ActionDataPlacment, as well as the

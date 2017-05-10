@@ -93,7 +93,8 @@ void ArgumentAnalyzer::parse_container_non_phv(const IR::MAU::Action *af) {
         for (auto cont_pair : arg_info.act_bus_reqs[0]) {
             LOG3("Container information: " << arg_name << " " << cont_pair.second << " " << start);
             ActionFormat::ActionDataPlacement adp;
-            adp.arg_locs.emplace_back(arg_name, cont_pair.second, start);
+            adp.arg_locs.emplace_back(arg_name, cont_pair.second, start,
+                                      arg_info.act_bus_reqs[0].size() == 1);
             adp.size = cont_pair.first;
             adp.range = cont_pair.second;
             start += cont_pair.first;
@@ -101,7 +102,7 @@ void ArgumentAnalyzer::parse_container_non_phv(const IR::MAU::Action *af) {
         }
     }
     use->action_data_format[af->name] = overlaps;
-    use->arguments[af->name] = arg_map;
+    // use->arguments[af->name] = arg_map;
 }
 
 /** Creates the initial ActionDataPlacement after PHV allocation has been completed.  For each
@@ -177,7 +178,7 @@ void ArgumentAnalyzer::parse_container_phv(const IR::MAU::Action *af) {
         ActionFormat::ActionDataPlacement placement;
         for (auto sl : info_vec.sections) {
             placement.arg_locs.emplace_back(sl.arg_name, bitvec(sl.container_bit, sl.width),
-                                            sl.field_bit);
+                sl.field_bit, arg_map[sl.arg_name].fields[0]->alloc.size() == 1);
         }
 
         placement.range = total_mask;
@@ -502,36 +503,12 @@ void ActionFormat::align_action_data_layouts() {
             int loc = aci.layouts[index].ffs(starts[index]);
             if (aci.layouts[index].getrange(loc, container.size / 8) == 0)
                 BUG("Misalignment on the action data format");
-            container.start = loc * 8;
+            container.start = loc;
             starts[index] = loc + container.size / 8;
         }
-        std::sort(placement_vec.begin(), placement_vec.end(),
-                [](const ActionDataPlacement &a, const ActionDataPlacement &b) {
-            // std::sort() in libc++ can compare an element with itself,
-            // breaking our assertions below, so exit early in that case.
-            if (&a == &b) return false;
-
-            if (a.start == b.start) {
-                BUG("Two containers in the same action are at the same place?");
-            }
-
-            if ((a.start + a.size / 8 - 1 > b.start && b.start > a.start)
-                || (b.start + b.size / 8 - 1 > a.start && a.start > b.start)) {
-                BUG("Two containers overlap in the same action");
-            }
-            return a.start < b.start;
-        });
-        int index = 0;
-        for (auto &container : placement_vec) {
-            if (container.arg_locs.size() > 1) {
-                container.asm_name = "$data" + std::to_string(index);
-                index++;
-            } else if (container.arg_locs.size() == 1) {
-                container.asm_name = container.arg_locs[0].name;
-            } else {
-                container.asm_name = "$no_arg";
-            }
-        }
+        sort_and_asm_name(placement_vec, false);
+        ArgPlacementData &apd = use->arg_placement[aci.action];
+        calculate_placement_data(placement_vec, apd, false);
     }
     if (max_bytes != 0)
         use->action_data_bytes = (1 << ceil_log2(max_bytes));
@@ -635,27 +612,9 @@ void ActionFormat::align_immediate_layouts() {
                 starts[index] = loc + container.size / 8;
             }
         }
-        std::sort(placement_vec.begin(), placement_vec.end(),
-                [](const ActionDataPlacement &a, const ActionDataPlacement &b) {
-            if (a.start == b.start) {
-                BUG("Two containers in the same action are at the same place?");
-            }
-            return a.start < b.start;
-        });
-        int index = 0;
-        for (auto &container : placement_vec) {
-            if (container.arg_locs.size() > 1) {
-                container.asm_name = "$data" + std::to_string(index);
-                index++;
-            } else if (container.arg_locs.size() == 1) {
-                container.asm_name = container.arg_locs[0].name;
-            } else {
-                container.asm_name = "$no_arg";
-            }
-            for (auto arg_loc : container.arg_locs) {
-                use->immediate_mask |= (arg_loc.data_loc << (container.start * 8));
-            }
-        }
+        sort_and_asm_name(placement_vec, true);
+        ArgPlacementData &apd = use->arg_placement[aci.action];
+        calculate_placement_data(placement_vec, apd, true);
     }
     if (tbl->layout.no_match_data()) {
         auto max = use->immediate_mask.max();
@@ -663,4 +622,56 @@ void ActionFormat::align_immediate_layouts() {
             use->immediate_mask.setrange(0, max.index());
     }
     LOG3("Immediate mask calculated is " << use->immediate_mask);
+}
+
+/** This sorts the action data from lowest to highest bit position for easiest assembly output.
+ *  It also verifies that two fields of action data within an individual action did not end up
+ *  at the same point.  Lastly, if multiple action data parameters are contained within the same
+ *  action data section, this must be renamed uniquely within the action for the assembler.
+ *  Thus a unique asm_name could potentially be needed, and thus could be generated.
+ */
+void ActionFormat::sort_and_asm_name(vector<ActionDataPlacement> &placement_vec, bool immediate) {
+    std::sort(placement_vec.begin(), placement_vec.end(),
+            [](const ActionDataPlacement &a, const ActionDataPlacement &b) {
+        // std::sort() in libc++ can compare an element with itself,
+        // breaking our assertions below, so exit early in that case.
+        if (&a == &b) return false;
+
+        if (a.start == b.start) {
+            BUG("Two containers in the same action are at the same place?");
+        }
+
+        if ((a.start + a.size / 8 - 1 > b.start && b.start > a.start)
+            || (b.start + b.size / 8 - 1 > a.start && a.start > b.start)) {
+            BUG("Two containers overlap in the same action");
+        }
+        return a.start < b.start;
+    });
+    int index = 0;
+    for (auto &container : placement_vec) {
+        if (container.arg_locs.size() > 1) {
+            container.asm_name = "$data" + std::to_string(index);
+            index++;
+        } else if (container.arg_locs.size() == 1) {
+            container.asm_name = container.arg_locs[0].name;
+        } else {
+            container.asm_name = "$no_arg";
+        }
+        if (immediate) {
+            for (auto arg_loc : container.arg_locs) {
+                use->immediate_mask |= (arg_loc.data_loc << (container.start * 8));
+            }
+        }
+    }
+}
+
+void ActionFormat::calculate_placement_data(vector<ActionDataPlacement> &placement_vec,
+                                            ArgPlacementData &apd, bool immediate) {
+    int index = 0;
+    for (auto &container : placement_vec) {
+        for (auto arg_loc : container.arg_locs) {
+            apd[arg_loc.name].emplace_back(index, immediate);
+        }
+        index++;
+    }
 }

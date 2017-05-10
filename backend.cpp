@@ -34,6 +34,7 @@ limitations under the License.
 #include "tofino/mau/asm_output.h"
 #include "tofino/mau/empty_controls.h"
 #include "tofino/mau/gateway.h"
+#include "tofino/mau/instruction_adjustment.h"
 #include "tofino/mau/instruction_selection.h"
 #include "tofino/mau/ixbar_realign.h"
 #include "tofino/mau/push_pop.h"
@@ -218,6 +219,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
 
         new IXBarRealign(phv),
         new SplitExtractEmit,
+        new TotalInstructionAdjustment(phv),
         new LoadMatchKeys(phv),   // depends on SplitExtractEmit
         new SplitPhvUse(phv),     // depends on SplitExtractEmit
         new SplitBigStates(phv),  // depends on SplitPhvUse

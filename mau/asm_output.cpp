@@ -130,8 +130,13 @@ void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
     size_t index = 0;
     for (auto &container : placement) {
         out << container.asm_name;
-        out << ": " << container.start << ".."
-            << (container.start + container.size - 1);
+        if (container.arg_locs.size() == 1 && !container.arg_locs[0].single_loc) {
+            int start = container.arg_locs[0].field_bit;
+            int end = start + container.arg_locs[0].data_loc.popcount() - 1;
+            out << "." << start << "-" << end;
+        }
+        out << ": " << (8 * container.start) << ".."
+            << (8 * container.start + container.size - 1);
         if (index + 1 != placement.size())
             out << ", ";
         index++;
@@ -645,9 +650,15 @@ class MauAsmOutput::EmitAction : public Inspector {
     indent_t                    indent;
     const char                  *sep = nullptr;
     std::map<cstring, cstring>  alias;
+    bool                        sliced = false;
+    cstring                     act_name;
+    int                         lo = -1;
+    int                         hi = -1;
     bool                        is_empty;
+    cstring                     mo_name;
 
     bool preorder(const IR::MAU::Action *act) override {
+        act_name = act->name;
         for (auto prim : act->stateful) {
             if (prim->name == "counter.count") {
                 if (auto aa = prim->operands[1]->to<IR::ActionArg>()) {
@@ -684,20 +695,48 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << indent << "- " << inst->name;
         sep = " ";
         is_empty = false;
+        mo_name = "";
         return true; }
+    /** With instructions now over potential slices, must keep this information passed
+     *  down through the entirety of the action pass
+     */
+    bool preorder(const IR::MAU::MultiOperand *mo) override {
+         out << sep << mo->name;
+         if (sliced)
+             out << "(" << lo << ".." << hi << ")";
+         if (!mo->is_phv)
+             mo_name = mo->name;
+         sep = ", ";
+         return false;
+    }
+
+    bool preorder(const IR::Slice *sl) override {
+        assert(sep);
+        sliced = true;
+        lo = sl->e2->to<IR::Constant>()->asInt();
+        hi = sl->e1->to<IR::Constant>()->asInt();
+        visit(sl->e0);
+        sep = ", ";
+        sliced = false;
+        return false;
+    }
     bool preorder(const IR::Constant *c) override {
         assert(sep);
         out << sep << c->asLong();
         sep = ", ";
-        return false; }
+        return false;
+    }
     bool preorder(const IR::BoolLiteral *c) override {
         assert(sep);
         out << sep << c->value;
         sep = ", ";
-        return false; }
+        return false;
+    }
     bool preorder(const IR::ActionArg *a) override {
         assert(sep);
         out << sep << a->toString();
+        if (sliced)
+            out << "." << lo << "-" << hi;
         sep = ", ";
         return false; }
     bool preorder(const IR::MAU::SaluReg *r) override {
@@ -724,35 +763,69 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << ")";
         sep = ", ";
         return false; }
+    void emit_multi_op_action_data(cstring name) {
+        out << indent << "- { ";
+        auto &act_format = table->resources->action_format;
+        const vector<ActionFormat::ActionDataPlacement> *placements;
+        if (table->layout.action_data_bytes_in_overhead > 0)
+            placements = &act_format.immediate_format.at(act_name);
+        else
+            placements = &act_format.action_data_format.at(act_name);
+
+        for (auto placement : *placements) {
+            if (name != placement.asm_name) continue;
+
+            size_t index = 0;
+            for (auto arg_loc : placement.arg_locs) {
+                out << arg_loc.name;
+                if (!arg_loc.single_loc) {
+                    int arg_lo = arg_loc.field_bit;
+                    int arg_hi = arg_lo + arg_loc.data_loc.popcount() - 1;
+                    out << "." << arg_lo << "-" << arg_hi;
+                }
+                out << ": ";
+                out << name << "(" << arg_loc.data_loc.min().index() << "..";
+                out << arg_loc.data_loc.max().index() << ")";
+                if (index != placement.arg_locs.size() - 1)
+                    out << ", ";
+                index++;
+            }
+            break;
+        }
+        out << " }" << std::endl;
+    }
+
     void postorder(const IR::MAU::Instruction *) override {
         sep = nullptr;
-        out << std::endl; }
+        out << std::endl;
+        if (!mo_name.isNullOrEmpty())
+            emit_multi_op_action_data(mo_name);
+    }
     bool preorder(const IR::Cast *c) override { visit(c->expr); return false; }
     bool preorder(const IR::Expression *exp) override {
         if (sep) {
             PhvInfo::Field::bitrange bits;
-            auto f = self.phv.field(exp, &bits);
-            if (f && !f->alloc.empty()) {
-                auto &alloc = f->for_bit(bits.lo);
-                out << sep << canon_name(f->name);
-                if (alloc.field_bit > 0 || alloc.width != f->size) {
-                    out << '.' << alloc.field_bit << '-' << alloc.field_hi();
-                    bits.lo -= alloc.field_bit;
-                    bits.hi -= alloc.field_bit; }
-                if (bits.lo || bits.size() != alloc.width)
-                    out << '(' << bits.lo << ".." << bits.hi << ')';
+            if (auto field = self.phv.field(exp, &bits)) {
+                out << sep << canon_name(field->name);
+                if (sliced) {
+                    for (auto &alloc : field->alloc) {
+                        if (alloc.field_bit <= lo && alloc.field_hi() >= hi) {
+                            out << '.' << alloc.field_bit << "-" << alloc.field_hi();
+                            if (lo > alloc.field_bit || hi < alloc.field_hi())
+                                out << "(" << lo << ".." << hi << ")";
+                        }
+                    }
+                }
             } else {
-                out << sep << "/* " << *exp << " */"; }
+                ERROR(exp << " does not have a PHV allocation though it is used in an action");
+                out << sep;
+            }
             sep = ", ";
         } else {
-            out << indent << "# " << *exp << std::endl; }
-        return false; }
-    bool preorder(const IR::Slice *sl) override {
-        if (sep && sl->e0->is<IR::ActionArg>()) {
-            out << sep << sl->e0->toString() << '(' << *sl->e2 << ".." << *sl->e1 << ')';
-            sep = ", ";
-            return false; }
-        return preorder(static_cast<const IR::Expression *>(sl)); }
+            out << indent << "# " << *exp << std::endl;
+        }
+        return false;
+    }
     bool preorder(const IR::Node *n) override { BUG("Unexpected node %s in EmitAction", n); }
 
  public:

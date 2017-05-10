@@ -11,7 +11,7 @@ Visitor::profile_t TableLayout::init_apply(const IR::Node *root) {
 }
 
 bool TableLayout::backtrack(trigger &trig) {
-    return trig.is<IXBar::failure>() && !alloc_done;
+    return (trig.is<IXBar::failure>() || trig.is<ActionFormat::failure>()) && !alloc_done;
 }
 
 cstring HashDistReq::algorithm() const {

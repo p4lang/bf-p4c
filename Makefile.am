@@ -55,6 +55,7 @@ tofino_backend_mau_UNIFIED = \
 	%reldir%/mau/db-gateway.cpp \
 	%reldir%/mau/gateway.cpp \
 	%reldir%/mau/input_xbar.cpp \
+	%reldir%/mau/instruction_adjustment.cpp \
 	%reldir%/mau/instruction_selection.cpp \
 	%reldir%/mau/ixbar_realign.cpp \
 	%reldir%/mau/memories.cpp \
@@ -76,6 +77,7 @@ noinst_HEADERS += \
 	%reldir%/mau/field_use.h \
 	%reldir%/mau/gateway.h \
 	%reldir%/mau/input_xbar.h \
+	%reldir%/mau/instruction_adjustment.h \
 	%reldir%/mau/instruction_selection.h \
 	%reldir%/mau/ixbar_realign.h \
 	%reldir%/mau/memories.h \

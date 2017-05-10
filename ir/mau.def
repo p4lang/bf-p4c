@@ -334,6 +334,14 @@ class SaluReg : Expression {
     dbprint { out << name; }
 }
 
+class MultiOperand : ListExpression {
+#nodbprint
+     cstring name;
+     bool is_phv;
+     MultiOperand(ListExpression &le, cstring n, bool ip)
+        : ListExpression(le), name(n), is_phv(ip) {}
+}
+
 }  // end namespace MAU
 
 class RangeMatch : Operation_Unary {

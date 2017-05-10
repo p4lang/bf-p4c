@@ -122,7 +122,7 @@ bool Memories::allocate_all() {
 */
 class SetupAttachedTables : public MauInspector {
     Memories &mem; Memories::table_alloc *ta; int entries; Memories::mem_info &mi;
-    bool stats_pushed = false, meter_pushed = false, stateful_pushed = false; 
+    bool stats_pushed = false, meter_pushed = false, stateful_pushed = false;
 
     profile_t init_apply(const IR::Node *root) {
         profile_t rv = MauInspector::init_apply(root);
