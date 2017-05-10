@@ -303,9 +303,11 @@ XFAIL_TESTS += \
 
 # New failures with action bus working in compiler
 XFAIL_TESTS += \
-    tofino/testdata/p4_14_samples/instruct5.p4.test \
-    tofino/testdata/p4_14_samples/bigfield1.p4.test \
     tofino/extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4.test
+
+# Failure in misunderstood information from the driver
+XFAIL_TESTS += \
+    tofino/%reldir%/p4_14/adjust_instr3.p4.test
 
 # work in progress
 XFAIL_TESTS += tofino/%reldir%/p4_14/stateful1.p4.test
