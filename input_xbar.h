@@ -78,7 +78,7 @@ public:
     bitvec hash_group_bituse() const;
     std::vector<const HashCol *> hash_column(int col, int grp = -1) const;
     int match_group() {
-        /* used by gateways to get the associated match group */
+        /* used by gateways and stateful to get the associated match group */
         if (groups.size() != 1 || groups.begin()->first.ternary) return -1;
         return groups.begin()->first.index; }
     /* functions for tcam ixbar that take into account funny byte/word group stuff */

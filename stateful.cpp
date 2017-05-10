@@ -220,11 +220,14 @@ template<class REGS> void Stateful::write_regs(REGS &regs) {
             /* FIXME -- factor with selector/meter? */
             if (&logical_row == home) {
                 auto &vh_adr_xbar = regs.rams.array.row[row].vh_adr_xbar;
+                auto &data_ctl = regs.rams.array.row[row].vh_xbar[side].stateful_meter_alu_data_ctl;
                 //setup_muxctl(vh_adr_xbar.exactmatch_row_hashadr_xbar_ctl[2 + logical_row.bus],
                 //             selection_hash);
-                if (input_xbar)
+                if (input_xbar) {
                     vh_adr_xbar.alu_hashdata_bytemask.alu_hashdata_bytemask_right =
                         bitmask2bytemask(input_xbar->hash_group_bituse());
+                    data_ctl.stateful_meter_alu_data_bytemask = phv_byte_mask;
+                    data_ctl.stateful_meter_alu_data_xbar_ctl = 8 | input_xbar->match_group(); }
                 map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_base = minvpn;
                 map_alu_row.i2portctl.synth2port_vpn_ctl.synth2port_vpn_limit = maxvpn;
                 int meter_group_index = row/2U;

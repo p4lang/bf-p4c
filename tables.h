@@ -852,6 +852,7 @@ DECLARE_TABLE_TYPE(Stateful, Synth2Port, "stateful",
     }                   math_table;
     bool dual_mode = false;
 public:
+    unsigned phv_byte_mask = 0;
     int instruction_set() override { return 1; /* STATEFUL_ALU */ }
     int direct_shiftcount() override;
     int unitram_type() override { return UnitRam::STATEFUL; }

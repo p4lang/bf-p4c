@@ -17,6 +17,7 @@ struct operand {
         virtual bool equiv(const Base *) const = 0;
         virtual const char *kind() const = 0;
         virtual Base *lookup(Base *&) { return this; }
+        virtual void pass1(Stateful *) { }
     } *op;
     struct Const : public Base {
         long value;
@@ -39,6 +40,22 @@ struct operand {
                 return reg == a->reg;
             } else return false; }
         const char *kind() const override { return "phv"; }
+        void pass1(Stateful *tbl) override {
+            if (!reg.check()) return;
+            int size = tbl->format->begin()->second.size/8U;
+            int byte = tbl->find_on_ixbar(*reg, tbl->input_xbar->match_group());
+            if (byte < 0)
+                error(lineno, "Can't find %s on the input xbar", reg.name());
+            else if (byte != 8 && byte != 8 + size)
+                error(lineno, "%s must be at 64 or %d on ixbar to be used in stateful table %s",
+                      reg.desc().c_str(), 64 + size*8, tbl->name());
+            else if (reg->size() > size * 8)
+                error(lineno, "%s is too big for stateful table %s",
+                      reg.desc().c_str(), tbl->name());
+            else
+                tbl->phv_byte_mask |= ((1U << (reg->size() + 7)/8U) - 1) << (byte - 8); }
+        int phv_index(Stateful *tbl) {
+            return tbl->find_on_ixbar(*reg, tbl->input_xbar->match_group()) > 8; }
     };
     struct Memory : public Base {
         Table                     *tbl;
@@ -274,7 +291,8 @@ bool AluOP::equiv(Instruction *a_) {
     return false;
 }
 
-Instruction *AluOP::pass1(Table *tbl, Table::Actions::Action *act) {
+Instruction *AluOP::pass1(Table *tbl_, Table::Actions::Action *act) {
+    auto tbl = dynamic_cast<Stateful *>(tbl_);
     if (slot < 0 && act->slot_use[slot = (dest ? ALU1HI : ALU1LO)])
         slot = dest ? ALU2HI : ALU2LO;
     auto k1 = srca.to<operand::Const>();
@@ -283,9 +301,9 @@ Instruction *AluOP::pass1(Table *tbl, Table::Actions::Action *act) {
         error(lineno, "can only have one distinct constant in an SALU instruction");
     if (!k1) k1 = k2;
     if (k1 && (k1->value < -8 || k1->value >= 8))
-        dynamic_cast<Stateful *>(tbl)->get_const(k1->value);
-    if (auto p = srcb.to<operand::Phv>())
-        p->reg.check();
+        tbl->get_const(k1->value);
+    if (srca) srca->pass1(tbl);
+    if (srcb) srcb->pass1(tbl);
     return this; }
 
 template<class REGS>
@@ -318,9 +336,9 @@ void AluOP::write_regs(REGS &regs, Table *tbl_, Table::Actions::Action *act) {
                 salu.salu_regfile_const = 1; }
         } else assert(0); }
     if (srcb) {
-        if (/*auto f =*/ srcb.to<operand::Phv>()) {
+        if (auto f = srcb.to<operand::Phv>()) {
             salu.salu_bsrc_phv = 1;
-            salu.salu_bsrc_phv_index = 0;  // FIXME
+            salu.salu_bsrc_phv_index = f->phv_index(tbl);
         } else if (auto k = srcb.to<operand::Const>()) {
             salu.salu_bsrc_phv = 0;
             if (k->value >= -8 && k->value < 8) {
@@ -343,8 +361,8 @@ struct BitOP : public SaluInstruction {
     } *opc;
     int predication_encode = STATEFUL_PREDICATION_ENCODE_UNCOND;
     BitOP(const Decode *op, int lineno) : SaluInstruction(lineno), opc(op) {}
-    Instruction *pass1(Table *tbl, Table::Actions::Action *) override { slot = ALU1LO; return this; }
-    void pass2(Table *tbl, Table::Actions::Action *) override { }
+    Instruction *pass1(Table *, Table::Actions::Action *) override { slot = ALU1LO; return this; }
+    void pass2(Table *, Table::Actions::Action *) override { }
     bool equiv(Instruction *a_) override;
     void dbprint(std::ostream &out) const override{
         out << "INSTR: " << opc->name /*<< ' ' << dest << ", " << src1 << ", " << src2*/; }
@@ -467,8 +485,11 @@ bool CmpOP::equiv(Instruction *a_) {
 }
 
 Instruction *CmpOP::pass1(Table *tbl_, Table::Actions::Action *act) {
+    auto tbl = dynamic_cast<Stateful *>(tbl_);
     slot = dest;
-    if (srcb) srcb->reg.check();
+    if (srca) srca->pass1(tbl);
+    if (srcb) srcb->pass1(tbl);
+    if (srcc) srcc->pass1(tbl);
     return this;
 }
 
@@ -483,7 +504,7 @@ void CmpOP::write_regs(REGS &regs, Table *tbl_, Table::Actions::Action *act) {
         salu.salu_cmp_asrc_sign = srca_neg;
         salu.salu_cmp_asrc_enable = 1; }
     if (srcb) {
-        salu.salu_cmp_bsrc_input = 0;  // FIXME
+        salu.salu_cmp_bsrc_input = srcb->phv_index(tbl);
         salu.salu_cmp_bsrc_sign = srcb_neg;
         salu.salu_cmp_bsrc_enable = 1; }
     if (srcc) {
