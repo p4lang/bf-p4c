@@ -396,7 +396,7 @@ struct Memories {
     bool gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int width_sect,
                            int row, int col);
     bool allocate_all_no_match();
-    void allocate_one_no_match(table_alloc *ta, int row, int col, bool hash_action);
+    void allocate_one_no_match(table_alloc *ta, int row);
     void update(cstring table_name, const Use &alloc);
     void update(const map<cstring, Use> &alloc);
     void remove(cstring table_name, const Use &alloc);

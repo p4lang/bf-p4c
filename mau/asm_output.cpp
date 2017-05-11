@@ -55,11 +55,12 @@ void MauAsmOutput::emit_immediate_format(std::ostream &out, indent_t indent,
 
     bool need_indices = false;
     if (immediate_mask.max() != immediate_mask.end()
-        && immediate_mask.ffz() < static_cast<size_t>(immediate_mask.max().index()))
+        && immediate_mask.ffz(immediate_mask.min().index())
+               < static_cast<size_t>(immediate_mask.max().index()))
         need_indices = true;
 
     size_t immediate_count = 0;
-    int immediate_location = 0;
+    int immediate_location = immediate_mask.min().index();
     bool immediate_to_end = true;
     int container_spot = 0;
     bool started = false;
@@ -70,14 +71,14 @@ void MauAsmOutput::emit_immediate_format(std::ostream &out, indent_t indent,
             total_arg |= arg_loc.data_loc;
         }
 
-        if ((!started && total_arg.ffs() != 0) || !immediate_to_end
-            || container_spot != container.start) {
+        if ((started && total_arg.ffs() != 0) || !immediate_to_end
+            || container_spot != container.start) { 
             immediate_count++;
             immediate_location = 0;
         }
         started = true;
 
-        int start = 0;
+        int start = total_arg.min().index();
         bool all_spaces_handled = false;
 
         // If a container has a hole, the output of the function must be able to handle that

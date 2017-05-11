@@ -2064,7 +2064,7 @@ bool Memories::allocate_all_payload_gw() {
                 action_payload_index++;
                 if (link_name) {
                     sram_match_bus[i][j] = std::make_pair(link_name, 0);
-                    allocate_one_no_match(ta->table_link, i, j, true);
+                    allocate_one_no_match(ta->table_link, i);
                     alloc.payload |= 1;
                 } else {
                     sram_match_bus[i][j] = std::make_pair(name, 0);
@@ -2184,7 +2184,7 @@ bool Memories::allocate_all_hash_action_gw() {
         for (int i = 0; i < SRAM_ROWS; i++) {
             for (int j = 0; j < BUS_COUNT; j++) {
                 if (sram_match_bus[i][j].first) continue;
-                allocate_one_no_match(ta, i, j, true);
+                allocate_one_no_match(ta, i);
                 hash_action_index++;
                 found = true;
                 break;
@@ -2235,14 +2235,10 @@ bool Memories::allocate_all_gw() {
     return true;
 }
 
-void Memories::allocate_one_no_match(table_alloc *ta, int row, int col, bool hash_action) {
+void Memories::allocate_one_no_match(table_alloc *ta, int row) {
     auto name = ta->table->get_use_name();
     auto &alloc = (*ta->memuse)[name];
-    int available_bus = -1;
-    if (!hash_action)
-        available_bus = match_bus_available(ta, 0, row);
-    else
-        available_bus = col;
+    int available_bus = match_bus_available(ta, 0, row);
     sram_match_bus[row][available_bus] = std::make_pair(name, 0);
     alloc.type = Use::EXACT;
     sram_print_match_bus[row][available_bus] = name;
@@ -2254,11 +2250,9 @@ bool Memories::allocate_all_no_match() {
     size_t finished_tables = 0;
     for (auto ta : no_match_tables) {
         for (int i = 0; i < SRAM_ROWS; i++) {
-            unsigned columns_available = ~sram_inuse[i] & 0x3ff;
-            if (__builtin_popcount(columns_available) == 0) continue;
             if (!sram_match_bus[i][0].first.isNull() && !sram_match_bus[i][1].first.isNull())
                 continue;
-            allocate_one_no_match(ta, i, 0, false);
+            allocate_one_no_match(ta, i);
             finished_tables++;
             break;
         }
