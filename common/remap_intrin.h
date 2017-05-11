@@ -3,6 +3,7 @@
 
 #include "ir/ir.h"
 
+/// remap references to glass-specfic intrinsic metadata to standard metadata
 class RemapIntrinsics : public Modifier {
     bool preorder(IR::Member *) override;
 };

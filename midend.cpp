@@ -48,6 +48,7 @@ limitations under the License.
 #include "midend/tableHit.h"
 #include "midend/validateProperties.h"
 #include "common/blockmap.h"
+#include "common/remap_intrin.h"
 
 namespace Tofino {
 
@@ -159,6 +160,7 @@ MidEnd::MidEnd(CompilerOptions& options) {
         new P4::SynthesizeActions(&refMap, &typeMap, new SkipControls(skip_controls)),
         new P4::MoveActionsToTables(&refMap, &typeMap),
 
+        new RemapIntrinsics,
         new P4::TypeChecking(&refMap, &typeMap, true),
         new FillFromBlockMap(&refMap, &typeMap),
     });
