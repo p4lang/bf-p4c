@@ -279,6 +279,3 @@ XFAIL_TESTS += \
 # Failure in misunderstood information from the driver
 XFAIL_TESTS += \
     tofino/%reldir%/p4_14/adjust_instr3.p4.test
-
-# work in progress
-XFAIL_TESTS += tofino/%reldir%/p4_14/stateful1.p4.test
