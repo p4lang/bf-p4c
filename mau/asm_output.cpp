@@ -764,6 +764,18 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << ")";
         sep = ", ";
         return false; }
+    bool preorder(const IR::LNot *) override {
+        out << sep << "!";
+        sep = "";
+        return true; }
+    bool preorder_binop(const IR::Operation::Binary *bin, const char *op) {
+        visit(bin->left);
+        sep = op;
+        visit(bin->right);
+        sep = ", ";
+        return false; }
+    bool preorder(const IR::LAnd *e) override { return preorder_binop(e, " & "); }
+    bool preorder(const IR::LOr *e) override { return preorder_binop(e, " | "); }
     void emit_multi_op_action_data(cstring name) {
         out << indent << "- { ";
         auto &act_format = table->resources->action_format;
@@ -1126,16 +1138,23 @@ class MauAsmOutput::UnattachedName : public MauInspector {
     cstring name() { return return_name; }
 };
 
-void MauAsmOutput::find_indirect_index(std::ostream &out, const IR::MAU::Table *tbl,
-         const IR::Attached *at) const {
+// Figure out which overhead field in the table is being used to index an attached
+// indirect table (counter, meter, stateful, action data) and return its asm name.
+std::string MauAsmOutput::find_indirect_index(const IR::MAU::Table *tbl,
+                                              const IR::Attached *at) const {
     cstring func_name = "";
     IXBar::Use::hash_dist_type_t type;
     if (at->is<IR::Counter>()) {
         func_name = "counter.count";
         type = IXBar::Use::CounterPtr;
-    }  else if (at->is<IR::Meter>()) {
+    } else if (at->is<IR::Meter>()) {
         func_name = "meter.execute_meter";
         type = IXBar::Use::MeterPtr;
+        return "meter_ptr";
+    } else if (at->is<IR::MAU::StatefulAlu>()) {
+        return "meter_ptr";
+    } else {
+        BUG("unsupported attached table type in find_indirect_index: %s", at);
     }
 
     const IR::Expression *field = nullptr;
@@ -1143,8 +1162,7 @@ void MauAsmOutput::find_indirect_index(std::ostream &out, const IR::MAU::Table *
         for (auto instr : action->stateful) {
             if (instr->name != func_name) continue;
             if (phv.field(instr->operands[1]) == nullptr) {
-                out << "(counter_ptr)";
-                return;
+                return "counter_ptr";
             } else {
                 field = instr->operands[1];
             }
@@ -1159,32 +1177,21 @@ void MauAsmOutput::find_indirect_index(std::ostream &out, const IR::MAU::Table *
         if (hash_dist.type == type) {
             for (int i = 0; i < IXBar::HASH_DIST_GROUPS; i++) {
                 if (((1 << i) & hash_dist.slice) == 0) continue;
-                out << "(hash_dist ";
-                out << (IXBar::HASH_DIST_GROUPS * hash_dist.unit + i) << ")";
-                return;
+                return "hash_dist " + std::to_string(IXBar::HASH_DIST_GROUPS * hash_dist.unit + i);
             }
         }
     }
+    BUG("find_indirect_index failed");
 }
 
 void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
                                     const IR::MAU::Table *tbl) const {
     bool have_action = false;
-    vector<const IR::Counter *> stats_tables;
-    vector<const IR::Meter *> meter_tables;
     auto match_name = tbl->get_use_name();
     for (auto at : tbl->attached) {
         if (at->is<IR::MAU::TernaryIndirect>()) continue;
         if (at->is<IR::ActionProfile>() || at->is<IR::MAU::ActionData>())
             have_action = true;
-        if (auto *c = at->to<IR::Counter>()) {
-            stats_tables.push_back(c);
-            continue;
-        }
-        if (auto *m = at->to<IR::Meter>()) {
-            meter_tables.push_back(m);
-            continue;
-        }
         if (auto *ap = at->to<IR::ActionProfile>()) {
             auto &memuse = tbl->resources->memuse.at(match_name);
             out << indent << "action: ";
@@ -1198,10 +1205,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
             if (at->indexed())
                 out << "(action, action_ptr)";
             out << std::endl;
-            continue;
-        }
-
-        if (auto *as = at->to<IR::ActionSelector>()) {
+        } else if (auto *as = at->to<IR::ActionSelector>()) {
              auto &memuse = tbl->resources->memuse.at(match_name);
              out << indent << "selector: ";
              if (memuse.unattached_selector) {
@@ -1213,38 +1217,12 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
              }
              out << "(select_ptr)";
              out << std::endl;
-             continue;
-        }
-        auto name = tbl->get_use_name(at);
-        out << indent << at->kind() << ": " << name;
-        if (at->indexed())
-            out << '(' << at->kind() << ')';
-        out << std::endl;
-    }
-
-
-    if (!stats_tables.empty()) {
-        out << indent << "stats:" << std::endl;
-        for (auto at : stats_tables) {
-            auto name = tbl->get_use_name(at);
-            out << indent << "- " << name;
-            if (at->indexed()) {
-                find_indirect_index(out, tbl, at);
-            }
-            out << std::endl;
-        }
-    }
-    if (!meter_tables.empty()) {
-        out << indent << "meter:" << std::endl;
-        for (auto at : meter_tables) {
-            auto name = tbl->get_use_name(at);
-            out << indent << "- " << name;
+        } else {
+            out << indent << at->kind() << ": " << tbl->get_use_name(at);
             if (at->indexed())
-                out << '(' << "meter_ptr" << ')';
-            out << std::endl;
-        }
+                out << '(' << find_indirect_index(tbl, at) << ')';
+            out << std::endl; }
     }
-
 
     if (!have_action && !tbl->actions.empty()) {
         out << indent++ << "actions:" << std::endl;

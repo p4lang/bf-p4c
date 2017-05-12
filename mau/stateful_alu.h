@@ -3,6 +3,7 @@
 
 #include "ir/ir.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
+#include "mau_visitor.h"
 
 /**
 Converts a P4_14 stateful_alu extern object (a Declaration_Instance
@@ -66,6 +67,12 @@ class CreateSaluInstruction : public Inspector {
 
  public:
     explicit CreateSaluInstruction(IR::MAU::StatefulAlu *salu) : salu(salu) {}
+};
+
+/** Check all IR::MAU::StatefulAlu objects to make sure they're implementable
+ */
+class CheckStatefulAlu : public MauModifier {
+    bool preorder(IR::MAU::StatefulAlu *) override;
 };
 
 #endif /* EXTENSIONS_TOFINO_MAU_STATEFUL_ALU_H_ */

@@ -39,6 +39,7 @@ limitations under the License.
 #include "tofino/mau/ixbar_realign.h"
 #include "tofino/mau/push_pop.h"
 #include "tofino/mau/split_gateways.h"
+#include "tofino/mau/stateful_alu.h"
 #include "tofino/mau/table_dependency_graph.h"
 #include "tofino/mau/table_layout.h"
 #include "tofino/mau/table_mutex.h"
@@ -167,6 +168,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     PassManager backend = {
         new DumpPipe("Initial table graph"),
         new RemoveEmptyControls,
+        new CheckStatefulAlu,
         &phv,
         &defuse,
         new AddBridgedMetadata(phv, defuse),

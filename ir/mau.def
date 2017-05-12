@@ -253,7 +253,6 @@ class ActionData : Attached {
 /** Confugration for a stateful table -- a register object (for the memory) plus
  * the associated stateful alu instructions and config */
 class StatefulAlu : Register {
-#nodbprint
     // The single register extern used in this stateful alu
     Declaration_Instance                                reg;
     bool                                                dual = false;  // dual mode

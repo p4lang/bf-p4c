@@ -310,3 +310,24 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {
     output = nullptr;
     return false;
 }
+
+bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
+    auto regtype = salu->reg->type->to<IR::Type_Specialized>()->arguments->at(0);
+    auto bits = regtype->to<IR::Type::Bits>();
+    if (auto str = regtype->to<IR::Type_Struct>()) {
+        auto nfields = str->fields.size();
+        if (nfields < 1 || !(bits = str->fields.at(0)->type->to<IR::Type::Bits>()) ||
+            nfields > 2 || (nfields > 1 && bits != str->fields.at(1)->type))
+            bits = nullptr;
+        if (bits) {
+            salu->dual = nfields > 1;;
+            if (bits->size == 1)
+                bits = nullptr; } }
+    if (bits && bits->size == 64 && !salu->dual) {
+        // Some (broken?) test programs use width 1x64 when they really mean 2x32
+        salu->dual = true;
+    } else if (!bits ||
+               (bits->size != 1 && bits->size != 8 && bits->size != 16 && bits->size != 32))
+        error("Unsupported register element type %s for stateful alu %s", regtype, salu);
+    return false;
+}

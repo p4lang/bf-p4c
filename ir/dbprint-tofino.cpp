@@ -48,6 +48,20 @@ void IR::MAU::Table::dbprint(std::ostream &out) const {
     for (auto &a : attached) {
         out << sep << a->kind() << ' ' << a->name;
         sep = ", "; }
+    if (!(dbgetflags(out) & TableNoActions))
+        for (auto &a : attached)
+            if (auto salu = a->to<StatefulAlu>())
+                out << endl << *salu;
+}
+
+void IR::MAU::StatefulAlu::dbprint(std::ostream &out) const {
+    out << "stateful " << name << " ";
+    if (dual) out << width/2 << "x2";
+    else out << width;
+    out << indent;
+    for (auto salu : Values(instruction))
+        out << endl << salu;
+    out << unindent;
 }
 
 void IR::MAU::TableSeq::dbprint(std::ostream &out) const {

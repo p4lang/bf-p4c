@@ -1618,6 +1618,7 @@ void IXBar::update(cstring name, const Use &alloc) {
 }
 
 void IXBar::update(cstring name, const TableResourceAlloc *rsrc) {
+    update(name + "$register", rsrc->salu_ixbar);
     update(name + "$select", rsrc->selector_ixbar);
     update(name + "$gw", rsrc->gateway_ixbar);
     update(name, rsrc->match_ixbar);

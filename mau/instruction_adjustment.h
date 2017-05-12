@@ -167,6 +167,9 @@ class InstructionAdjustment : public MauTransform, P4WriteContext {
         bool preorder(const IR::MAU::Instruction *instr) override;
         bool preorder(const IR::Primitive *prim) override;
         void postorder(const IR::MAU::Instruction *instr) override;
+        bool preorder(const IR::MAU::AttachedOutput *) override {
+            // ignore these for now -- DON'T recurse into the stateful object
+            return false; }
      public:
         BuildContainerActions(PhvInfo &p, ContainerActions &ca)
            : phv(p), container_actions(ca), instr_process() {}
@@ -210,6 +213,11 @@ class InstructionAdjustment : public MauTransform, P4WriteContext {
     const IR::Primitive *preorder(IR::Primitive *) override;
     const IR::MAU::Instruction *postorder(IR::MAU::Instruction *) override;
     const IR::MAU::Action *postorder(IR::MAU::Action *) override;
+    // ignore stuff related to stateful alus
+    const IR::MAU::AttachedOutput *preorder(IR::MAU::AttachedOutput *ao) override {
+        prune(); return ao; }
+    const IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *salu) override {
+        prune(); return salu; }
 
  public:
     explicit InstructionAdjustment(PhvInfo &p, const IR::MAU::Table *t) : phv(p), tbl(t) {}
