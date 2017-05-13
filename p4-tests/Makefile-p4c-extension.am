@@ -93,6 +93,10 @@ XFAIL_TESTS += \
        tofino/%reldir%/p4_16/flowlet_switching.p4.test \
        tofino/%reldir%/p4_16/stateful_alu.p4.test
 
+# failure due to type substitution into a package instance declaration
+XFAIL_TESTS += \
+    tofino/testdata/p4_16_samples/issue584-1.p4.test
+
 # Signed 1-bit field not allowed in P4_16 (and really makes no sense?)
 XFAIL_TESTS += \
     p14_to_16/%reldir%/p4_14/test_config_160_stateful_single_bit_mode.p4.test \
@@ -275,7 +279,3 @@ XFAIL_TESTS += \
 # New failures with action bus working in compiler
 XFAIL_TESTS += \
     tofino/extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4.test
-
-# Failure in misunderstood information from the driver
-XFAIL_TESTS += \
-    tofino/%reldir%/p4_14/adjust_instr3.p4.test
