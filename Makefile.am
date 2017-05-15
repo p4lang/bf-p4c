@@ -22,6 +22,7 @@ common_SOURCES = \
     input_xbar.cpp  \
     instruction.cpp  \
     meter.cpp \
+    misc.cpp \
     p4_table.cpp  \
     parser.cpp  \
     phase0.cpp \

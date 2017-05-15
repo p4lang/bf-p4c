@@ -125,7 +125,12 @@ public:
         struct bitrange_t { unsigned lo, hi;
             bitrange_t(unsigned l, unsigned h) : lo(l), hi(h) {}
             bool operator==(const bitrange_t &a) const { return lo == a.lo && hi == a.hi; }
+            bool disjoint(const bitrange_t &a) const { return lo > a.hi || a.lo > hi; }
+            bitrange_t overlap(const bitrange_t &a) const {
+                // only valid if !disjoint
+                return bitrange_t(std::max(lo, a.lo), std::min(hi, a.hi)); }
             int size() const { return hi-lo+1; }
+
         };
         struct Field {
             unsigned    size = 0, group = 0, flags = 0;
@@ -232,6 +237,8 @@ public:
             Action(Table *, Actions *, pair_t &);
             Action(const char *n, int l) : name(n), lineno(l) {}
             bool equiv(Action *a);
+            typedef const decltype(alias)::value_type alias_value_t;
+            std::map<std::string, std::vector<alias_value_t *>> reverse_alias() const;
         };
     private:
         typedef ordered_map<std::string, Action> map_t;
@@ -369,9 +376,11 @@ public:
     virtual Call &action_call() { return action; }
     virtual Actions *get_actions() { return actions; }
     json::map &add_pack_format(json::map &stage_tbl, int memword, int words, int entries = -1);
-    json::map &add_pack_format(json::map &stage_tbl, const Table::Format *format);
+    json::map &add_pack_format(json::map &stage_tbl, const Table::Format *format,
+                               Table::Actions::Action *act = nullptr);
     virtual void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
-                                          const Table::Format::Field &field);
+                                          const Table::Format::Field &field,
+                                          const std::vector<Actions::Action::alias_value_t *> &);
     void canon_field_list(json::vector &field_list);
     void check_next();
     void check_next(Ref &next);
@@ -510,7 +519,8 @@ public:
     using Table::gen_memory_resource_allocation_tbl_cfg;
     std::unique_ptr<json::map> gen_memory_resource_allocation_tbl_cfg(Way &);
     void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
-                                  const Table::Format::Field &field) override;
+                                  const Table::Format::Field &field,
+                                  const std::vector<Actions::Action::alias_value_t *> &) override;
     int unitram_type() override { return UnitRam::MATCH; }
 )
 
@@ -604,7 +614,8 @@ DECLARE_TABLE_TYPE(TernaryIndirectTable, Table, "ternary_indirect",
     void write_merge_regs(Target::JBay::mau_regs &regs, int type, int bus) override {
         write_merge_regs<Target::JBay::mau_regs>(regs, type, bus); }
     void add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
-                                  const Table::Format::Field &field) override;
+                                  const Table::Format::Field &field,
+                                  const std::vector<Actions::Action::alias_value_t *> &) override;
     int unitram_type() override { return UnitRam::TERNARY_INDIRECTION; }
 )
 

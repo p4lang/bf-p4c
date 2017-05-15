@@ -710,6 +710,14 @@ bool Table::Actions::Action::equiv(Action *a) {
     return true;
 }
 
+std::map<std::string, std::vector<Table::Actions::Action::alias_value_t *>>
+Table::Actions::Action::reverse_alias() const {
+    std::map<std::string, std::vector<alias_value_t *>>      rv;
+    for (auto &a : alias)
+        rv[a.second.name].push_back(&a);
+    return rv;
+}
+
 Table::Actions::Action::alias_t::alias_t(value_t &data) {
     lineno = data.lineno;
     if (CHECKTYPE2(data, tSTR, tCMD)) {
@@ -964,10 +972,12 @@ void Table::Actions::add_immediate_mapping(json::map &tbl) {
         if (act.alias.empty()) continue;
         json::vector &map = tbl["action_to_immediate_mapping"][act.name];
         for (auto &a : act.alias) {
+            json::string name = a.first;
+            int lo = remove_name_tail_range(name);
             map.push_back( json::vector { json::map {
-                { "name", json::string(a.first) },
-                { "parameter_least_significant_bit", json::number(0) },
-                { "parameter_most_significant_bit", json::number(a.second.hi - a.second.lo) },
+                { "name", std::move(name) },
+                { "parameter_least_significant_bit", json::number(lo) },
+                { "parameter_most_significant_bit", json::number(lo + a.second.hi - a.second.lo) },
                 { "immediate_least_significant_bit", json::number(a.second.lo) },
                 { "immediate_most_significant_bit", json::number(a.second.hi) },
                 { "field_called", json::string(a.second.name) } } } ); } }
@@ -1386,16 +1396,13 @@ void Table::canon_field_list(json::vector &field_list) {
     for (auto &field_ : field_list) {
         auto &field = field_->to<json::map>();
         auto &name = field["name"]->to<json::string>();
-        auto tail = name.rfind('.');
-        if (tail == std::string::npos) continue;
-        int lo, hi, len = -1;
-        if (sscanf(&name[tail], ".%d-%d%n", &lo, &hi, &len) >= 2 && tail + len == name.size()) {
-            name.erase(tail);
-            field["start_bit"]->to<json::number>().val += lo; } }
+        if (int lo = remove_name_tail_range(name))
+            field["start_bit"]->to<json::number>().val += lo; }
 }
 
 void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std::string name,
-                                     const Table::Format::Field &field) {
+                                     const Table::Format::Field &field,
+                                     const std::vector<Actions::Action::alias_value_t *> &alias) {
     int lobit = 0;
     for (auto &bits : field.bits) {
         field_list.push_back( json::map {
@@ -1404,9 +1411,28 @@ void Table::add_field_to_pack_format(json::vector &field_list, int basebit, std:
             { "start_bit", json::number(lobit) },
             { "bit_width", json::number(bits.size()) }});
         lobit += bits.size(); }
+    for (auto a : alias) {
+        Format::bitrange_t abits(a->second.lo, a->second.hi);
+        if (a->second.lo < 0) abits.lo = 0;
+        if (a->second.hi < 0) abits.hi = field.size;
+        lobit = 0;
+        for (auto &bits : field.bits) {
+            Format::bitrange_t fbits(lobit, lobit + bits.size() - 1);
+            lobit += bits.size();
+            if (fbits.disjoint(abits)) continue;
+            auto overlap = fbits.overlap(abits);
+            field_list.push_back( json::map {
+                { "name", json::string(a->first) },
+                { "start_offset", json::number(basebit - bits.hi - (overlap.hi - fbits.hi)) },
+                { "start_bit", json::number(overlap.lo) },
+                { "bit_width", json::number(overlap.size()) }}); } }
 }
 
-json::map &Table::add_pack_format(json::map &stage_tbl, const Table::Format *format) {
+json::map &Table::add_pack_format(json::map &stage_tbl, const Table::Format *format,
+                                  Table::Actions::Action *act) {
+
+    decltype(act->reverse_alias()) alias;
+    if (act) alias = act->reverse_alias();
     json::map pack_fmt { { "memory_word_width", json::number(128) } };
     /* FIXME -- factor the two cases of this if better */
     if (format->log2size >= 7 || format->groups() > 1) {
@@ -1418,7 +1444,8 @@ json::map &Table::add_pack_format(json::map &stage_tbl, const Table::Format *for
         for (int i = format->groups()-1; i >= 0; --i) {
             json::vector field_list;
             for (auto it = format->begin(i); it != format->end(i); ++it)
-                add_field_to_pack_format(field_list, basebit, it->first, it->second);
+                add_field_to_pack_format(field_list, basebit, it->first, it->second,
+                                         get(alias, it->first));
             canon_field_list(field_list);
             entry_list.push_back( json::map {
                 { "entry_number", json::number(i) },
@@ -1433,7 +1460,8 @@ json::map &Table::add_pack_format(json::map &stage_tbl, const Table::Format *for
         for (int i = entries-1; i >= 0; --i) {
             json::vector field_list;
             for (auto &field : *format)
-                add_field_to_pack_format(field_list, basebit, field.first, field.second);
+                add_field_to_pack_format(field_list, basebit, field.first, field.second,
+                                         get(alias, field.first));
             canon_field_list(field_list);
             entry_list.push_back( json::map {
                 { "entry_number", json::number(i) },

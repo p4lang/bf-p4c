@@ -42,4 +42,8 @@ T join(const std::vector<T> &vec, U sep) {
         rv += el; }
     return rv; }
 
+#include <string>
+
+extern int remove_name_tail_range(std::string &, int *size = nullptr);
+
 #endif /* _misc_h_ */

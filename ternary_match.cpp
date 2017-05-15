@@ -637,9 +637,10 @@ template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
 }
 
 void TernaryIndirectTable::add_field_to_pack_format(json::vector &field_list, int basebit,
-                                std::string name, const Table::Format::Field &field) {
+                                std::string name, const Table::Format::Field &field,
+                                const std::vector<Table::Actions::Action::alias_value_t *> &alias) {
     if (name == "action") name = "--instruction_address--";
-    Table::add_field_to_pack_format(field_list, basebit, name, field);
+    Table::add_field_to_pack_format(field_list, basebit, name, field, alias);
 }
 
 void TernaryIndirectTable::gen_tbl_cfg(json::vector &out) {
