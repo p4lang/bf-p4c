@@ -6,9 +6,11 @@
 // Cluster Slicing
 //
 // slice clusters into smaller clusters
-// attempt packing with reduced width requirements
-// slicing also improves overlay possibilities due to lesser width
-// although number and mutual exclusion of fields don't change
+// (i) attempt packing with reduced width requirements
+//     albeit due to gress mismatch sliced clusters may not be packed
+//
+// (ii) slicing improves overlay possibilities due to lesser width
+//      although number and mutual exclusion of fields don't change
 //
 // 1. iterate over all fields in cluster,
 //    if all operations on field are "move" based
@@ -36,33 +38,56 @@ Cluster_Slicing::apply_visitor(const IR::Node *node, const char *name) {
     LOG3("\tPHV aligned_slices available = " << phv_mau_i.aligned_container_slices().size());
     LOG3("\tT_PHV Clusters = " << phv_mau_i.t_phv_clusters().size());
     LOG3("\tT_PHV aligned_slices available = " << phv_mau_i.T_PHV_container_slices().size());
+    //
     // PHV Slices
     //
     if (phv_mau_i.phv_clusters().size() && phv_mau_i.aligned_container_slices().size()) {
         const char *tag = (const char *)"Sliced_PHV";
         LOG3(".........." << tag << "..........");
+        //
         cluster_slice(phv_mau_i.phv_clusters());
         //
-        // pack cluster slices to PHV containers empty slots
-        //
-        phv_mau_i.container_pack_cohabit(
-            phv_mau_i.phv_clusters(),
-            phv_mau_i.aligned_container_slices(),
-            tag);
+        if (!gress_compatibility(
+                phv_mau_i.phv_requirements().gress(phv_mau_i.phv_clusters()),
+                phv_mau_i.gress(phv_mau_i.aligned_container_slices()))) {
+            LOG3("...................."
+                << tag
+                << ": gress incompatible, No Packing ....................");
+        } else {
+            //
+            // pack cluster slices to PHV containers empty slots
+            //
+            phv_mau_i.container_pack_cohabit(
+                phv_mau_i.phv_clusters(),
+                phv_mau_i.aligned_container_slices(),
+                tag);
+        }
     }
     // T_PHV Slices
     //
+    bool t_phv_clusters_sliced = false;
     if (phv_mau_i.t_phv_clusters().size() && phv_mau_i.T_PHV_container_slices().size()) {
         const char *tag = (const char *)"Sliced_T_PHV_to_T_PHV";
         LOG3(".........." << tag << "..........");
+        //
         cluster_slice(phv_mau_i.t_phv_clusters());
+        t_phv_clusters_sliced = true;
         //
-        // pack cluster slices to T_PHV containers empty slots
-        //
-        phv_mau_i.container_pack_cohabit(
-            phv_mau_i.t_phv_clusters(),
-            phv_mau_i.T_PHV_container_slices(),
-            tag);
+        if (!gress_compatibility(
+                phv_mau_i.phv_requirements().gress(phv_mau_i.t_phv_clusters()),
+                phv_mau_i.gress(phv_mau_i.T_PHV_container_slices()))) {
+            LOG3("...................."
+                << tag
+                << ": gress incompatible, No Packing ....................");
+        } else {
+            //
+            // pack cluster slices to T_PHV containers empty slots
+            //
+            phv_mau_i.container_pack_cohabit(
+                phv_mau_i.t_phv_clusters(),
+                phv_mau_i.T_PHV_container_slices(),
+                tag);
+        }
     }
     if (phv_mau_i.t_phv_clusters().size() && phv_mau_i.aligned_container_slices().size()) {
         //
@@ -70,10 +95,25 @@ Cluster_Slicing::apply_visitor(const IR::Node *node, const char *name) {
         //
         const char *tag = (const char *)"Sliced_T_PHV_to_PHV";
         LOG3(".........." << tag << "..........");
-        phv_mau_i.container_pack_cohabit(
-            phv_mau_i.t_phv_clusters(),
-            phv_mau_i.aligned_container_slices(),
-            tag);
+        //
+        if (!t_phv_clusters_sliced) {
+            cluster_slice(phv_mau_i.t_phv_clusters());
+            t_phv_clusters_sliced = true;
+        }
+        //
+        if (!gress_compatibility(
+                phv_mau_i.phv_requirements().gress(phv_mau_i.t_phv_clusters()),
+                phv_mau_i.gress(phv_mau_i.aligned_container_slices()))) {
+            LOG3("...................."
+                << tag
+                << ": gress incompatible, No Packing ....................");
+        } else {
+            //
+            phv_mau_i.container_pack_cohabit(
+                phv_mau_i.t_phv_clusters(),
+                phv_mau_i.aligned_container_slices(),
+                tag);
+        }
     }
     //
     sanity_check_cluster_slices("Cluster_Slicing::apply_visitor()");
@@ -88,6 +128,14 @@ Cluster_Slicing::apply_visitor(const IR::Node *node, const char *name) {
     return node;
 }  // apply_visitor
 
+bool
+Cluster_Slicing::gress_compatibility(
+    std::pair<int, int> gress_pair_1,
+    std::pair<int, int> gress_pair_2) {
+    //
+    return (gress_pair_1.first && gress_pair_2.first)
+        || (gress_pair_1.second && gress_pair_2.second);
+}
 
 std::pair<Cluster_PHV *, Cluster_PHV *>
 Cluster_Slicing::cluster_slice(Cluster_PHV *cl) {
@@ -102,9 +150,9 @@ Cluster_Slicing::cluster_slice(Cluster_PHV *cl) {
     return std::make_pair(slice_lo, slice_hi);
 }  // cluster_slice single cluster
 
-
 void
-Cluster_Slicing::cluster_slice(std::list<Cluster_PHV *>& cluster_list) {
+Cluster_Slicing::cluster_slice(
+    std::list<Cluster_PHV *>& cluster_list) {
     //
     std::list<Cluster_PHV *> clusters_remove;
     std::list<Cluster_PHV *> clusters_add;
@@ -135,7 +183,7 @@ Cluster_Slicing::cluster_slice(std::list<Cluster_PHV *>& cluster_list) {
                 break;
             }
             // do not slice ccgf (container contiguous group field)
-            if (f->ccgf != NULL) {
+            if (f->ccgf() != NULL) {
                 sliceable = false;
                 break;
             }
@@ -145,7 +193,7 @@ Cluster_Slicing::cluster_slice(std::list<Cluster_PHV *>& cluster_list) {
                 break;
             }
             // "move"-based ops only -- don't care for T_PHV fields
-            for (auto &op : f->operations) {
+            for (auto &op : f->operations()) {
                 // element 0 in tuple is 'is_move_op'
                 if (std::get<0>(op) != true) {
                     sliceable = false;
@@ -164,11 +212,11 @@ Cluster_Slicing::cluster_slice(std::list<Cluster_PHV *>& cluster_list) {
             clusters_remove.push_back(cl);
         }
     }  // for
-    // remove sliced PHV
+    // remove sliced parents
     for (auto &cl : clusters_remove) {
         cluster_list.remove(cl);
     }
-    // add generated PHV
+    // add generated slices
     for (auto &cl : clusters_add) {
         cluster_list.push_back(cl);
     }

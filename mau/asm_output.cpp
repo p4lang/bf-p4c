@@ -809,7 +809,7 @@ class MauAsmOutput::EmitAction : public Inspector {
             if (auto field = self.phv.field(exp, &bits)) {
                 out << sep << canon_name(field->name);
                 if (sliced) {
-                    for (auto &alloc : field->alloc) {
+                    for (auto &alloc : field->alloc_i) {
                         if (alloc.field_bit <= lo && alloc.field_hi() >= hi) {
                             out << '.' << alloc.field_bit << "-" << alloc.field_hi();
                             if (lo > alloc.field_bit || hi < alloc.field_hi())

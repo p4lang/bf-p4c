@@ -26,6 +26,8 @@
 //***********************************************************************************
 //
 //
+class PHV_MAU_Group_Assignments;
+//
 class PHV_MAU_Group {
  public:
     //
@@ -73,7 +75,10 @@ class PHV_MAU_Group {
                                               // [w](n) --> ((Ingress set) (Egress set))
  public:
     //
-    PHV_MAU_Group(PHV_Container::PHV_Word w, int n,
+    PHV_MAU_Group(
+        PHV_MAU_Group_Assignments *owner,
+        PHV_Container::PHV_Word w,
+        int n,
         int& phv_number,
         std::string asm_encoded,
         PHV_Container::Ingress_Egress gress,
@@ -119,17 +124,8 @@ class PHV_MAU_Group {
         }
         return 0;
     }
-    std::pair<size_t, size_t> partial_containers() {
-        size_t num_partial = 0;
-        size_t num_bits = 0;
-        for (auto &c : phv_containers_i) {
-            if (c->avail_bits()) {
-                num_partial++;
-                num_bits += c->avail_bits();
-            }
-        }
-        return std::make_pair(num_partial, num_bits);
-    }
+    void container_population_density(
+        ordered_map<PHV_Container::Container_status, std::pair<int, int>>&);
     //
     std::vector<Cluster_PHV *>& clusters()              { return cluster_phv_i; }
     void create_aligned_container_slices_per_range(std::list<PHV_Container *>&);
@@ -152,7 +148,7 @@ class PHV_MAU_Group_Assignments : public Visitor {
     //
     enum Nibble {nibble = 4};
     //
-    const ordered_map<PHV_Container::PHV_Word, int> num_groups_i {
+    ordered_map<PHV_Container::PHV_Word, int> num_groups_i {
         {PHV_Container::PHV_Word::b32, 4},
         {PHV_Container::PHV_Word::b16, 6},
         {PHV_Container::PHV_Word::b8,  4},
@@ -185,6 +181,11 @@ class PHV_MAU_Group_Assignments : public Visitor {
         {std::make_pair(144, 159), PHV_Container::Ingress_Egress::Egress_Only},
     };
     //
+    std::pair<int, int> phv_container_numbers_i   = {0, 223};
+    std::pair<int, int> t_phv_container_numbers_i = {256, 367};
+    //
+    ordered_map<int, PHV_Container *> phv_containers_i;
+                                       // map phv_number to Container
     ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>> PHV_MAU_i;
                                        // all PHV MAU groups
                                        // PHV_MAU_i[width] = vector of groups
@@ -256,6 +257,13 @@ class PHV_MAU_Group_Assignments : public Visitor {
     Cluster_PHV_Requirements&
         phv_requirements() { return phv_requirements_i; }
     //
+    // all PHV MAU groups, all TPHV collections
+    //
+    std::pair<int, int> phv_container_numbers()           { return phv_container_numbers_i; }
+    std::pair<int, int> t_phv_container_numbers()         { return t_phv_container_numbers_i; }
+    ordered_map<int, PHV_Container *>& phv_containers()   { return phv_containers_i; }
+    void phv_containers(int n, PHV_Container *c);
+    PHV_Container *phv_container(int phv_num);
     ordered_map<PHV_Container::PHV_Word, std::vector<PHV_MAU_Group *>>&
         phv_mau_map() { return PHV_MAU_i; }
     ordered_map<int, ordered_map<PHV_Container::PHV_Word, std::vector<PHV_Container *>>>&
@@ -306,19 +314,19 @@ class PHV_MAU_Group_Assignments : public Visitor {
         ordered_map<int, std::list<std::list<PHV_MAU_Group::Container_Content *>>>>&,
         const char *msg = "");
     //
-    bool gress_in_compatibility(
+    bool gress_compatibility(
         PHV_Container::Ingress_Egress gc_gress,
-        PHV_Container::Ingress_Egress cl_gress) {
-        //
-        return
-            (gc_gress == PHV_Container::Ingress_Egress::Ingress_Only
-          || gc_gress == PHV_Container::Ingress_Egress::Egress_Only)
-          && gc_gress != cl_gress;
-    }
+        PHV_Container::Ingress_Egress cl_gress);
+    std::pair<int, int>
+        gress(
+            ordered_map<int,
+                ordered_map<int,
+                    std::list<std::list<PHV_MAU_Group::Container_Content *>>>>&);
     //
-    void empty_containers(ordered_map<PHV_Container::PHV_Word, size_t>&, bool phv = true);
-    void partial_containers(
-        ordered_map<PHV_Container::PHV_Word, std::pair<size_t, size_t>>&,
+    void container_population_density(
+        std::map<PHV_Container::PHV_Word,
+            std::map<PHV_Container::Container_status,
+                std::pair<int, int>>>&,
         bool phv = true);
     //
     bool status(
@@ -333,6 +341,11 @@ class PHV_MAU_Group_Assignments : public Visitor {
         std::list<std::list<PHV_MAU_Group::Container_Content *>>>>&,
         const char *msg = "");
     //
+    void sanity_check(
+        std::pair<int, int>& phv_container_numbers,
+        ordered_map<PHV_Container::PHV_Word, int>& phv_number_start,
+        const std::string& msg,
+        bool t_phv = false);
     void sanity_check_container_avail(const std::string&);
     void sanity_check_container_fields_gress(const std::string&);
     void sanity_check_group_containers(const std::string&);
@@ -342,6 +355,15 @@ class PHV_MAU_Group_Assignments : public Visitor {
         bool,
         const std::string&);
     void sanity_check_clusters_allocation();
+    //
+    void statistics(
+        std::ostream &out,
+        std::map<PHV_Container::PHV_Word,
+            std::map<PHV_Container::Container_status,
+                std::pair<int, int>>>& c_bits_agg,
+        const char *str);
+    void statistics(std::ostream &);
+    //
 };  // class PHV_MAU_Group_Assignments
 //
 //

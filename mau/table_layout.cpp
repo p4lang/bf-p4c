@@ -63,11 +63,11 @@ void TableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR::M
                         bits.lo = lo; } }
             if (field) {
                 int bytes = (bits.size() + 7)/8;
-                if (!field->alloc.empty()) {
+                if (!field->alloc_i.empty()) {
                     /* count the number of actual distinct PHV bytes alloced for these bits */
                     /* FIXME -- factor this into a PhvInfo::Field method? or iterator? */
                     bytes = 0;
-                    for (auto &sl : field->alloc) {
+                    for (auto &sl : field->alloc_i) {
                         /* we want to iterate over just the part of the allocation covered by
                          * 'bits' (a slice), so we skip parts entirely above and chops down parts
                          * that overlap as needed, so as to just count the bytes in the slice */

@@ -178,7 +178,7 @@ void ArgumentAnalyzer::parse_container_phv(const IR::MAU::Action *af) {
         ActionFormat::ActionDataPlacement placement;
         for (auto sl : info_vec.sections) {
             placement.arg_locs.emplace_back(sl.arg_name, bitvec(sl.container_bit, sl.width),
-                sl.field_bit, arg_map[sl.arg_name].fields[0]->alloc.size() == 1);
+                sl.field_bit, arg_map[sl.arg_name].fields[0]->alloc_i.size() == 1);
         }
 
         placement.range = total_mask;

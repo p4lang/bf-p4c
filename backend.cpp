@@ -63,6 +63,7 @@ limitations under the License.
 #include "tofino/phv/cluster_phv_operations.h"
 #include "tofino/phv/cluster_phv_slicing.h"
 #include "tofino/phv/cluster_phv_overlay.h"
+#include "tofino/phv/phv_analysis_api.h"
 #include "tofino/common/parser_overlay.h"
 
 namespace Tofino {
@@ -111,11 +112,13 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     PHV_Interference cluster_phv_interference(cluster_phv_req, mutually_exclusive_field_ids);
                                                                  // cluster PHV Interference Graph
     PHV_MAU_Group_Assignments cluster_phv_mau(cluster_phv_req);  // cluster PHV Container placements
+    Cluster_Slicing cluster_slicing(cluster_phv_mau);            // cluster slicing
     Cluster_PHV_Overlay cluster_phv_overlay(cluster_phv_mau, cluster_phv_interference);
                                                                  // overlay clusters to MAU groups
                                                                  // need cluster_phv_interference
                                                                  // func mutually_exclusive(f1, f2)
-    Cluster_Slicing cluster_slicing(cluster_phv_mau);            // cluster slicing
+    PHV_Analysis_API phv_analysis_api(phv, cluster_phv_mau, 0);  // extended object interface
+                                                                 // phv_analysis to rest of compiler
     PHV_Bind phv_bind(phv, cluster_phv_mau);                     // field binding to PHV Containers
     DependencyGraph deps;
     TablesMutuallyExclusive mutex;
@@ -158,6 +161,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
                                // slicing also improves overlay possibilities due to lesser width
                                // although number and mutual exclusion of fields don't change
         &cluster_phv_overlay,  // overlay unallocated clusters to clusters as well as MAU groups
+        &phv_analysis_api,     // phv analysis results api interface
     });
 
     PassManager backend = {

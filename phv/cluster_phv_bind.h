@@ -70,7 +70,9 @@ class PHV_Bind : public Visitor {
     void trivial_allocate(std::list<PhvInfo::Field *>&);
     //
     void sanity_check_field_duplicate_containers(const std::string&);
+    void sanity_check_field_slices(ordered_set<PhvInfo::Field *>&, const std::string&);
     void sanity_check_all_fields_allocated(const std::string&);
+    //
     void end_apply(const IR::Node *) override { phv_i.set_done(); }
     //
 };

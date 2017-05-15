@@ -181,9 +181,16 @@ Cluster_PHV_Overlay::overlay_field_to_field(
     //
     if (!exceed_substratum
         && f_o->phv_use_width(cl_f_o) > f_s->phv_use_width()) {
+        LOG3(".....overlay_field_to_field....."
+            << "overlay field width = "
+            << f_o->phv_use_width(cl_f_o)
+            << ", substratum field width = "
+            << f_s->phv_use_width());
         return false;
     }
     if (!phv_interference_i.mutually_exclusive(f_o, f_s)) {
+        LOG3(".....overlay_field_to_field....."
+            << "not mutually exclusive");
         return false;
     }
     // field overlay acceptable
@@ -204,7 +211,7 @@ Cluster_PHV_Overlay::overlay_cluster_to_cluster(
     //
     // honor MAU group In/Egress only constraints
     //
-    if (phv_mau_i.gress_in_compatibility(cl_o->gress(), cl_s->gress())) {
+    if (!phv_mau_i.gress_compatibility(cl_o->gress(), cl_s->gress())) {
         //
         // gress mismatch, skip cluster
         //
@@ -255,17 +262,16 @@ Cluster_PHV_Overlay::overlay_cluster_to_cluster(
         LOG3("\t==> " << f_s);
         int f_o_width = f_o->phv_use_width(cl_o);
         int f_o_bit_lo = 0;
-        if (f_s->phv_containers_i.empty()) {
+        if (f_s->phv_containers().empty()) {
             LOG1("*****cluster_phv_overlay:sanity_FAIL*****");
             LOG1(f_s);
             LOG1(" should not be a substratum field, it has no PHV allocated ");
             continue;
         }
-        for (auto &c : f_s->phv_containers_i) {
-            PHV_Container *c1 = const_cast<PHV_Container *>(c);
-            std::pair<int, int> f_s_start_bit_and_width_in_c = c1->start_bit_and_width(f_s);
+        for (auto &c : f_s->phv_containers()) {
+            std::pair<int, int> f_s_start_bit_and_width_in_c = c->start_bit_and_width(f_s);
             int width = std::min(f_o_width, f_s_start_bit_and_width_in_c.second);
-            c1->single_field_overlay(
+            c->single_field_overlay(
                 f_o,
                 f_s_start_bit_and_width_in_c.first /* start */,
                 width,
@@ -479,7 +485,7 @@ Cluster_PHV_Overlay::overlay_cluster_to_mau_group(Cluster_PHV *cl, PHV_MAU_Group
     //
     // 3a.honor MAU group In/Egress only constraints
     //
-    if (phv_mau_i.gress_in_compatibility(g->gress(), cl->gress())) {
+    if (!phv_mau_i.gress_compatibility(g->gress(), cl->gress())) {
         //
         // gress mismatch, skip cluster for this MAU group
         //
@@ -557,7 +563,7 @@ Cluster_PHV_Overlay::overlay_cluster_to_mau_group(Cluster_PHV *cl, PHV_MAU_Group
     //
     for (auto &e : field_container_map) {
         PhvInfo::Field *f = e.first;
-        int field_bit_lo = f->field_slices_lo(cl);
+        int field_bit_lo = f->phv_use_lo(cl);
         int field_width = f->phv_use_width(cl);
         // field straddles containers when e.second.size() > 1
         for (auto &pair : e.second) {

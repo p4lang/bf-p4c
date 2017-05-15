@@ -38,8 +38,8 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
         if (dst_i) {
             // insert operation in field.operations with tuple3<operation, mode>
             // most of the information in the tuple is for debugging purpose
-            auto op = std::make_tuple(is_move_op, inst->name, PhvInfo::Field_Ops::W);
-            dst_i->operations.push_back(op);
+            auto op = std::make_tuple(is_move_op, inst->name, PhvInfo::Field::Field_Ops::W);
+            dst_i->operations().push_back(op);
         }
         // get src operands (if more than 1?)
         if (inst->operands.size() > 1) {
@@ -50,8 +50,8 @@ bool PHV_Field_Operations::preorder(const IR::MAU::Instruction *inst) {
                 PhvInfo::Field* field = phv.field(*operand);
                 if (field) {
                     // insert operation in field.operations with tuple3
-                    auto op = std::make_tuple(is_move_op, inst->name, PhvInfo::Field_Ops::R);
-                    field->operations.push_back(op);
+                    auto op = std::make_tuple(is_move_op, inst->name, PhvInfo::Field::Field_Ops::R);
+                    field->operations().push_back(op);
                 }
             }
         }
@@ -71,10 +71,10 @@ void PHV_Field_Operations::end_apply() {
     LOG3("..........Begin PHV_Field_Operations..........");
     for (auto &f : phv) {
         if (f.phv_use_width() > 1) {
-            for (auto &op : f.operations) {
+            for (auto &op : f.operations()) {
                 // element 0 in tuple is 'is_move_op'
                 if (std::get<0>(op) != true) {
-                    f.mau_phv_no_pack = true;                     // set mau_phv_no_pack
+                    f.mau_phv_no_pack(true);                     // set mau_phv_no_pack
                     break;
                 }
             }  // for
@@ -83,13 +83,13 @@ void PHV_Field_Operations::end_apply() {
     // recompute phv_use_width for no_cohabit fields
     for (auto &f : phv) {
         if (PHV_Container::constraint_no_cohabit(&f)) {
-            f.phv_use_hi = PHV_Container::ceil_phv_use_width(&f) - 1;
+            f.phv_use_hi(PHV_Container::ceil_phv_use_width(&f) - 1);
             LOG3("...packing_constraint... " << f);
         }
     }
     // recompute phv_use_width for ccgf owners
     for (auto &f : phv) {
-        f.phv_use_width(f.ccgf == &f);
+        f.phv_use_width(f.ccgf() == &f);
     }
     LOG3("..........End PHV_Field_Operations..........");
 }  // end_apply()

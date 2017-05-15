@@ -6,7 +6,7 @@ void repack_metadata(PhvInfo &phv) {
         if (!field.metadata || field.pov) continue;
         std::map<PHV::Container, uint64_t>      uses;
         bool                                    repack = false;
-        for (auto &alloc : field.alloc) {
+        for (auto &alloc : field.alloc_i) {
             if (uses.count(alloc.container))
                 repack = true;
             uint64_t bits = ((1UL << alloc.width) - 1) << alloc.container_bit;
@@ -15,7 +15,7 @@ void repack_metadata(PhvInfo &phv) {
                     alloc.container.toString());
             uses[alloc.container] |= bits; }
         if (!repack) continue;
-        field.alloc.clear();
+        field.alloc_i.clear();
         int width_left = field.size;
         for (auto &c : uses) {
             unsigned bits = c.second;
@@ -23,7 +23,7 @@ void repack_metadata(PhvInfo &phv) {
                 int hi = floor_log2(bits);
                 int lo = floor_log2(bits ^ ((1UL << (hi+1)) - 1)) + 1;
                 int width = hi - lo + 1;
-                field.alloc.emplace_back(c.first, width_left - width, lo, width);
+                field.alloc_i.emplace_back(c.first, width_left - width, lo, width);
                 width_left -= width;
                 bits &= ~(((1UL << width) - 1) << lo); } }
         if (width_left != 0)

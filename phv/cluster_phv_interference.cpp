@@ -289,9 +289,9 @@ PHV_Interference::mutually_exclusive(PhvInfo::Field *f1, PhvInfo::Field *f2) {
     }
     //
     // check m1, m2
-    if (f1->ccgf_fields.size() && f2->ccgf_fields.size()) {
-        for (auto &m1 : f1->ccgf_fields) {
-            for (auto &m2 : f2->ccgf_fields) {
+    if (f1->ccgf_fields().size() && f2->ccgf_fields().size()) {
+        for (auto &m1 : f1->ccgf_fields()) {
+            for (auto &m2 : f2->ccgf_fields()) {
                 if (!mutex_i(m1->id, m2->id)) {
                     return false;
                 }
@@ -300,8 +300,8 @@ PHV_Interference::mutually_exclusive(PhvInfo::Field *f1, PhvInfo::Field *f2) {
         return true;
     }
     // check m1, f2
-    if (f1->ccgf_fields.size()) {
-        for (auto &m1 : f1->ccgf_fields) {
+    if (f1->ccgf_fields().size()) {
+        for (auto &m1 : f1->ccgf_fields()) {
             if (!mutex_i(m1->id, f2->id)) {
                 return false;
             }
@@ -309,8 +309,8 @@ PHV_Interference::mutually_exclusive(PhvInfo::Field *f1, PhvInfo::Field *f2) {
         return true;
     }
     // check m2, f1
-    if (f2->ccgf_fields.size()) {
-        for (auto &m2 : f2->ccgf_fields) {
+    if (f2->ccgf_fields().size()) {
+        for (auto &m2 : f2->ccgf_fields()) {
             if (!mutex_i(m2->id, f1->id)) {
                 return false;
             }

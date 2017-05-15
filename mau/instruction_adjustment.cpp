@@ -49,11 +49,11 @@ void InstructionAdjustment::BuildContainerActions::postorder(const IR::MAU::Inst
     if (instr_process.write_found) {
         auto *field = phv.field(instr_process.write.expr);
         bool split = true;
-        if (field->alloc.size() == 1)
+        if (field->alloc_i.size() == 1)
             split = false;
-        if (field->alloc.size() == 0)
+        if (field->alloc_i.size() == 0)
             ERROR("PHV not allocated for this field");
-        for (auto &alloc : field->alloc) {
+        for (auto &alloc : field->alloc_i) {
             auto container = alloc.container;
             if (container_actions.find(container) == container_actions.end()) {
                 ContainerProcess cont_proc;
@@ -167,7 +167,7 @@ bool InstructionAdjustment::verify_phv_field(const ActionParam &write, ActionPar
     bool found;
 
     auto &total_reads_phvs = cont_proc.total_reads_phvs;
-    for (auto &alloc : read_field->alloc) {
+    for (auto &alloc : read_field->alloc_i) {
         if (!(alloc.field_bit <= write.lo && alloc.field_hi() >= write.hi)) continue;
 
         bitvec write_bits(write.cont_bit, write.hi - write.lo + 1);
@@ -474,7 +474,7 @@ const IR::MAU::Instruction *InstructionAdjustment::postorder(IR::MAU::Instructio
 
     int index = 0;
     bool remove = false;
-    for (auto alloc : written_field->alloc) {
+    for (auto alloc : written_field->alloc_i) {
         if (index == 0)
             remove = container_actions.at(alloc.container).requires_adjustment;
         else if (remove != container_actions.at(alloc.container).requires_adjustment)
@@ -482,7 +482,7 @@ const IR::MAU::Instruction *InstructionAdjustment::postorder(IR::MAU::Instructio
     }
 
     if (remove) {
-        for (auto alloc : written_field->alloc) {
+        for (auto alloc : written_field->alloc_i) {
             removed_instrs[alloc.container].push_back(instr);
         }
         return nullptr;

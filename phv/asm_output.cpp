@@ -1,7 +1,7 @@
 #include "asm_output.h"
 
-static void emit_phv_field(std::ostream &out, const PhvInfo::Field &field) {
-    for (auto &alloc : field.alloc) {
+void emit_phv_field(std::ostream &out, PhvInfo::Field &field) {
+    for (auto &alloc : field.alloc_i) {
         out << "  " << canon_name(field.name);
         if (alloc.field_bit > 0 || alloc.width != field.size)
             out << '.' << alloc.field_bit << '-' << alloc.field_hi();

@@ -101,7 +101,7 @@ void PhvInfo::addTempVar(const IR::TempVar *tv) {
 }
 
 const PhvInfo::Field::alloc_slice &PhvInfo::Field::for_bit(int bit) const {
-    for (auto &sl : alloc)
+    for (auto &sl : alloc_i)
         if (bit >= sl.field_bit && bit < sl.field_bit + sl.width)
             return sl;
     ERROR("No allocation for bit " << bit << " in " << name);
@@ -112,12 +112,12 @@ const PhvInfo::Field::alloc_slice &PhvInfo::Field::for_bit(int bit) const {
 void PhvInfo::Field::foreach_alloc(int lo, int hi,
                                    std::function<void(const alloc_slice &)> fn) const {
     alloc_slice tmp(PHV::Container(), lo, lo, hi-lo+1);
-    if (alloc.empty()) {
+    if (alloc_i.empty()) {
         fn(tmp);
         return; }
-    auto it = alloc.rbegin();
-    while (it != alloc.rend() && (it->container.tagalong() || it->field_hi() < lo)) ++it;
-    if (it != alloc.rend() && it->field_bit != lo) {
+    auto it = alloc_i.rbegin();
+    while (it != alloc_i.rend() && (it->container.tagalong() || it->field_hi() < lo)) ++it;
+    if (it != alloc_i.rend() && it->field_bit != lo) {
         assert(it->field_bit < lo);
         tmp = *it;
         tmp.container_bit += it->field_bit - lo;
@@ -128,7 +128,7 @@ void PhvInfo::Field::foreach_alloc(int lo, int hi,
             tmp.width -= it->field_bit - lo;
         fn(tmp);
         ++it; }
-    while (it != alloc.rend() && it->field_bit <= hi) {
+    while (it != alloc_i.rend() && it->field_bit <= hi) {
         if (it->container.tagalong()) continue;
         if (it->field_hi() > hi) {
             tmp = *it;
@@ -142,7 +142,7 @@ void PhvInfo::Field::foreach_alloc(int lo, int hi,
 void PhvInfo::Field::foreach_byte(int lo, int hi,
                                   std::function<void(const alloc_slice &)> fn) const {
     alloc_slice tmp(PHV::Container(), lo, lo, 8 - (lo&7));
-    if (alloc.empty()) {
+    if (alloc_i.empty()) {
         while (lo <= hi) {
             if (lo/8U == hi/8U)
                 tmp.width = hi - lo + 1;
@@ -150,9 +150,9 @@ void PhvInfo::Field::foreach_byte(int lo, int hi,
             tmp.field_bit = tmp.container_bit = lo = (lo|7) + 1;
             tmp.width = 8; }
         return; }
-    auto it = alloc.rbegin();
-    while (it != alloc.rend() && (it->container.tagalong() || it->field_hi() < lo)) ++it;
-    while (it != alloc.rend() && it->field_bit <= hi) {
+    auto it = alloc_i.rbegin();
+    while (it != alloc_i.rend() && (it->container.tagalong() || it->field_hi() < lo)) ++it;
+    while (it != alloc_i.rend() && it->field_bit <= hi) {
         if (it->container.tagalong()) continue;
         unsigned clo = it->container_bit, chi = it->container_hi();
         for (unsigned cbyte = clo/8U; cbyte <= chi/8U; ++cbyte) {
@@ -184,7 +184,7 @@ void PhvInfo::Field::foreach_byte(int lo, int hi,
 /* figure out how many disinct container bytes contain info from a bitrange of a particular field */
 int PhvInfo::Field::container_bytes(PhvInfo::Field::bitrange bits) const {
     if (bits.hi < 0) bits.hi = size - 1;
-    if (alloc.empty())
+    if (alloc_i.empty())
         return bits.hi/8U + bits.lo/8U + 1;
     int rv = 0, w;
     for (int bit = bits.lo; bit <= bits.hi; bit += w) {
@@ -250,7 +250,7 @@ const PhvInfo::Field *PhvInfo::field(const IR::Member *fr, Field::bitrange *bits
 vector<PhvInfo::Field::alloc_slice> *PhvInfo::alloc(const IR::Member *member) {
     PhvInfo::Field *info = field(member);
     BUG_CHECK(nullptr != info, "; Cannot find PHV allocation for %s", member->toString());
-    return &info->alloc;
+    return &info->alloc_i;
 }
 
 const std::pair<int, int> *PhvInfo::header(cstring name_) const {
@@ -313,12 +313,12 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
         //
         if (!stacks_num && pov_fields_h.size() > 1) {
             for (auto &f : pov_fields_h) {
-                hdr_dd_valid->ccgf_fields.push_back(f);
-                f->ccgf = hdr_dd_valid;
+                hdr_dd_valid->ccgf_fields().push_back(f);
+                f->ccgf(hdr_dd_valid);
             }
-            hdr_dd_valid->phv_use_hi = pov_fields_h.size();
+            hdr_dd_valid->phv_use_hi(pov_fields_h.size());
                                      // allocate container for ccgf width
-            hdr_dd_valid->simple_header_pov_ccgf = true;
+            hdr_dd_valid->simple_header_pov_ccgf(true);
             pov_fields_h.clear();
         }
         for (auto &stack : stacks) {
@@ -352,11 +352,11 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
                 if (push_exists) {
                     Field *pov_stk = &all_fields[stack.name + ".$stkvalid"];
                     for (auto &f : pov_fields) {
-                        pov_stk->ccgf_fields.push_back(f);
-                        f->ccgf = pov_stk;
+                        pov_stk->ccgf_fields().push_back(f);
+                        f->ccgf(pov_stk);
                     }
-                    pov_stk->ccgf = pov_stk;
-                    pov_stk->header_stack_pov_ccgf = true;
+                    pov_stk->ccgf(pov_stk);
+                    pov_stk->header_stack_pov_ccgf(true);
                 }
             }
         }
@@ -414,17 +414,17 @@ PhvInfo::Field::cl_id_num(Cluster_PHV *cl) {
 //
 bool
 PhvInfo::Field::constrained(bool packing_constraint) {
-    bool pack_c = mau_phv_no_pack || deparser_no_pack;
+    bool pack_c = mau_phv_no_pack_i || deparser_no_pack_i;
     if (packing_constraint) {
         return pack_c;
     }
-    return  pack_c || deparser_no_holes;
+    return  pack_c || deparser_no_holes_i;
 }
 
 bool
 PhvInfo::Field::is_ccgf() {
-    if (header_stack_pov_ccgf || simple_header_pov_ccgf) {
-        assert(ccgf_fields.size());
+    if (header_stack_pov_ccgf_i || simple_header_pov_ccgf_i) {
+        assert(ccgf_fields_i.size());
         return true;
     }
     return false;
@@ -434,19 +434,19 @@ int
 PhvInfo::Field::phv_use_width(Cluster_PHV *cl) {
     // non-sliced owner not in map
     if (cl && field_slices_i.count(cl)) {
-        return field_slices_hi(cl) - field_slices_lo(cl) + 1;
+        return phv_use_hi(cl) - phv_use_lo(cl) + 1;
     }
-    return phv_use_hi - phv_use_lo + 1;
+    return phv_use_hi_i - phv_use_lo_i + 1;
 }
 
 void
 PhvInfo::Field::phv_use_width(bool ccgf_owner, int min_ceil) {
     // compute ccgf width, need PHV container(s) of this width
-    if (ccgf_owner && ccgf_fields.size()) {
+    if (ccgf_owner && ccgf_fields_i.size()) {
         int ccg_width = 0;
-        for (auto &f : ccgf_fields) {
+        for (auto &f : ccgf_fields_i) {
             // ccgf owner appears as member, phv_use_width = aggregate size of members
-            if (f->ccgf == f) {
+            if (f->ccgf() == f) {
                 if (PHV_Container::constraint_no_cohabit(f)) {
                     ccg_width += PHV_Container::ceil_phv_use_width(f, min_ceil);
                 } else {
@@ -460,21 +460,21 @@ PhvInfo::Field::phv_use_width(bool ccgf_owner, int min_ceil) {
                 }
             }
         }  // for
-        if (header_stack_pov_ccgf) {
+        if (header_stack_pov_ccgf_i) {
             // e.g.,
             // ingress::data.$stkvalid, egress::mpls.$stkvalid
             //
             ccg_width++;
         }
-        phv_use_hi = ccg_width - 1;
+        phv_use_hi_i = ccg_width - 1;
     }
 }  // phv_use_width()
 
 int
 PhvInfo::Field::ccgf_width() {
     int ccgf_width_l = 0;
-    for (auto &f : ccgf_fields) {
-        if (f->ccgf == f) {
+    for (auto &f : ccgf_fields_i) {
+        if (f->ccgf() == f) {
             // ccgf owner appears as member, phv_use_width = aggregate size of members
             ccgf_width_l += f->size;
         } else {
@@ -501,7 +501,7 @@ PhvInfo::Field::clusters(Cluster_PHV *cluster_p) {
         // new owner for non-sliced field, due to phv_interference, phv_bind
         clusters_i.clear();
         // clear clusters_i for ccgf members
-        for (auto &m : ccgf_fields) {
+        for (auto &m : ccgf_fields_i) {
             if (m != this) {
                 m->clusters_i.clear();
             }
@@ -509,7 +509,7 @@ PhvInfo::Field::clusters(Cluster_PHV *cluster_p) {
     }
     clusters_i.push_back(cluster_p);
     // set clusters_i for ccgf members
-    for (auto &m : ccgf_fields) {
+    for (auto &m : ccgf_fields_i) {
         if (m != this) {
             m->clusters(cluster_p);
         }
@@ -517,7 +517,7 @@ PhvInfo::Field::clusters(Cluster_PHV *cluster_p) {
 }
 
 void
-PhvInfo::Field::phv_containers(const PHV_Container *c) {
+PhvInfo::Field::phv_containers(PHV_Container *c) {
     assert(c);
     phv_containers_i.push_back(c);
 }
@@ -551,19 +551,19 @@ PhvInfo::Field::field_slices(Cluster_PHV *cl, int lo, int hi) {
 }
 
 int
-PhvInfo::Field::field_slices_lo(Cluster_PHV *cl) {
-    if (field_slices_i.size()) {
+PhvInfo::Field::phv_use_lo(Cluster_PHV *cl) {
+    if (cl && field_slices_i.size()) {
         return field_slices(cl).first;
     }
-    return phv_use_lo;
+    return phv_use_lo_i;
 }
 
 int
-PhvInfo::Field::field_slices_hi(Cluster_PHV *cl) {
-    if (field_slices_i.size()) {
+PhvInfo::Field::phv_use_hi(Cluster_PHV *cl) {
+    if (cl && field_slices_i.size()) {
         return field_slices(cl).second;
     }
-    return phv_use_hi;
+    return phv_use_hi_i;
 }
 
 //
@@ -588,7 +588,7 @@ PhvInfo::Field::field_overlay_map(int r, Field *field) {
     // overlayed field points to substratum
     //
     field->overlay_substratum(this);
-    for (auto &m : field->ccgf_fields) {
+    for (auto &m : field->ccgf_fields()) {
         m->overlay_substratum(this);
     }
 }
@@ -654,32 +654,32 @@ std::ostream &operator<<(
 
 std::ostream &operator<<(std::ostream &out, PhvInfo::Field &field) {
     out << field.id << ':' << field.name << '<' << field.size;
-    if (field.phv_use_lo || field.phv_use_hi)
-        out << ':' << field.phv_use_lo << ".." << field.phv_use_hi;
+    if (field.phv_use_lo() || field.phv_use_hi())
+        out << ':' << field.phv_use_lo() << ".." << field.phv_use_hi();
     out << '>';
     out << (field.gress ? " E" : " I") << " off=" << field.offset;
     if (field.referenced) out << " ref";
     if (field.metadata) out << " meta";
     if (field.pov) out << " pov";
-    if (field.mau_write) out << " mau_write";
-    if (field.mau_phv_no_pack) out << " mau_phv_no_pack";
-    if (field.deparser_no_pack) out << " deparser_no_pack";
-    if (field.deparser_no_holes) out << " deparser_no_holes";
-    if (field.header_stack_pov_ccgf) out << " header_stack_pov_ccgf";
-    if (field.simple_header_pov_ccgf) out << " simple_header_pov_ccgf";
-    if (field.ccgf) out << " ccgf=" << field.ccgf->id << ':' << field.ccgf->name;
+    if (field.mau_write()) out << " mau_write";
+    if (field.mau_phv_no_pack()) out << " mau_phv_no_pack";
+    if (field.deparser_no_pack()) out << " deparser_no_pack";
+    if (field.deparser_no_holes()) out << " deparser_no_holes";
+    if (field.header_stack_pov_ccgf()) out << " header_stack_pov_ccgf";
+    if (field.simple_header_pov_ccgf()) out << " simple_header_pov_ccgf";
+    if (field.ccgf()) out << " ccgf=" << field.ccgf()->id << ':' << field.ccgf()->name;
     out << " /" << field.cl_id() << ",";    // cluster id
-    for (auto &c : field.phv_containers_i) {
+    for (auto &c : field.phv_containers()) {
         out << c->phv_number_string() << ";";  // phv number
     }
     out << "/";
-    out << field.field_slices_i;
-    if (field.ccgf_fields.size()) {
+    out << field.field_slices();
+    if (field.ccgf_fields().size()) {
         // aggregate widths of members in "container contiguous group fields"
         out << std::endl << '[';
-        for (auto &f : field.ccgf_fields) {
+        for (auto &f : field.ccgf_fields()) {
             out << '\t';
-            if (f->ccgf == f) {
+            if (f->ccgf() == f) {
                 // ccgf owner appears as member, phv_use_width = aggregate size of members
                 out << f->id << ':' << f->name << '<' << f->size << ">*";
             } else {
@@ -700,16 +700,16 @@ std::ostream &operator<<(std::ostream &out, PhvInfo::Field &field) {
         }
         out << ']';
     }
-    if (field.field_overlay_map_i.size()) {
-        for (auto &entry : field.field_overlay_map_i) {
+    if (field.field_overlay_map().size()) {
+        for (auto &entry : field.field_overlay_map()) {
             out << "\t"
                 << "[r" << entry.first << "] = [";
             if (entry.second) {
                 for (auto &f : *(entry.second)) {
                     out << f->id;
-                    if (f->ccgf_fields.size()) {
+                    if (f->ccgf_fields().size()) {
                         out << '(';
-                        for (auto &m : f->ccgf_fields) {
+                        for (auto &m : f->ccgf_fields()) {
                             out << m->id << ',';
                         }
                         out << ')';
@@ -720,8 +720,8 @@ std::ostream &operator<<(std::ostream &out, PhvInfo::Field &field) {
             out << ']';
         }
     }
-    if (!field.alloc.empty())
-        out << field.alloc;
+    if (!field.alloc_i.empty())
+        out << field.alloc_i;
     return out;
 }
 
@@ -756,12 +756,12 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo &phv) {
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const PhvInfo::Field_Ops &op) {
+std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::Field_Ops &op) {
     switch (op) {
-        case PhvInfo::Field_Ops::NONE: out << "None"; break;
-        case PhvInfo::Field_Ops::R: out << 'R'; break;
-        case PhvInfo::Field_Ops::W: out << 'W'; break;
-        case PhvInfo::Field_Ops::RW: out << "RW"; break;
+        case PhvInfo::Field::Field_Ops::NONE: out << "None"; break;
+        case PhvInfo::Field::Field_Ops::R: out << 'R'; break;
+        case PhvInfo::Field::Field_Ops::W: out << 'W'; break;
+        case PhvInfo::Field::Field_Ops::RW: out << "RW"; break;
         default: out << "<Field_Ops " << static_cast<int>(op) << ">"; }
     return out;
 }

@@ -31,9 +31,14 @@ class Cluster_Slicing : public Visitor {
     //
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
     //
-    void cluster_slice(std::list<Cluster_PHV *>&);     // slice a list of clusters
-    std::pair<Cluster_PHV *, Cluster_PHV *> cluster_slice(Cluster_PHV *);
-                                                       // slice single cluster into halves
+    bool gress_compatibility(
+        std::pair<int, int>,
+        std::pair<int, int>);
+    void cluster_slice(
+        std::list<Cluster_PHV *>&);                    // slice a list of clusters
+    std::pair<Cluster_PHV *, Cluster_PHV *> cluster_slice(
+        Cluster_PHV *);                                // slice single cluster into halves
+    //
     void sanity_check_cluster_slices(const std::string&);
 };
 

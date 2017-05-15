@@ -97,8 +97,8 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
         [](Cluster_PHV *l, Cluster_PHV *r) {
             PhvInfo::Field *fl =  *(l->cluster_vec().begin());
             PhvInfo::Field *fr =  *(r->cluster_vec().begin());
-            int l_range = fl->phv_use_hi - fl->phv_use_lo;
-            int r_range = fr->phv_use_hi - fr->phv_use_lo;
+            int l_range = fl->phv_use_hi() - fl->phv_use_lo();
+            int r_range = fr->phv_use_hi() - fr->phv_use_lo();
             if (l_range == r_range) {
                 if (fl->phv_use_width() == fr->phv_use_width()) {
                     if (fl->size == fr->size) {
@@ -122,8 +122,8 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
         [](Cluster_PHV *l, Cluster_PHV *r) {
             PhvInfo::Field *fl =  *(l->cluster_vec().begin());
             PhvInfo::Field *fr =  *(r->cluster_vec().begin());
-            int l_range = fl->phv_use_hi - fl->phv_use_lo;
-            int r_range = fr->phv_use_hi - fr->phv_use_lo;
+            int l_range = fl->phv_use_hi() - fl->phv_use_lo();
+            int r_range = fr->phv_use_hi() - fr->phv_use_lo();
             if (l_range == r_range) {
                 if (fl->phv_use_width() == fr->phv_use_width()) {
                     if (fl->size == fr->size) {
@@ -140,7 +140,22 @@ Cluster_PHV_Requirements::apply_visitor(const IR::Node *node, const char *name) 
     LOG3(*this);
     //
     return node;
-}
+}  // apply_visitor
+
+std::pair<int, int>
+Cluster_PHV_Requirements::gress(std::list<Cluster_PHV *>& cluster_list) {
+    std::pair<int, int> gress_pair = {0, 0};
+    for (auto &cl : cluster_list) {
+        if (cl->gress() == PHV_Container::Ingress_Egress::Ingress_Only) {
+            gress_pair.first++;
+        } else {
+            if (cl->gress() == PHV_Container::Ingress_Egress::Egress_Only) {
+                gress_pair.second++;
+            }
+        }
+    }
+    return gress_pair;
+}  // gress()
 
 //***********************************************************************************
 //
@@ -231,21 +246,21 @@ Cluster_PHV::insert_field_clusters(Cluster_PHV *parent_cl, bool slice_lo) {
             int lo = 0, hi = 0;
             if (parent_cl->sliced()) {
                 // if cluster has been sliced before, use _lo and _hi from slices
-                lo = f->field_slices_lo(parent_cl);
+                lo = f->phv_use_lo(parent_cl);
                 if (slice_lo) {
                     hi = lo + parent_cl->max_width() / 2 - 1;
                 } else {
                     lo += parent_cl->max_width() / 2;
-                    hi = f->field_slices_hi(parent_cl);
+                    hi = f->phv_use_hi(parent_cl);
                 }
             } else {
                 // use _lo and _hi from original field
-                lo = f->phv_use_lo;
+                lo = f->phv_use_lo();
                 if (slice_lo) {
                     hi = lo + f->size / 2 - 1;
                 } else {
                     lo += f->size / 2;
-                    hi = f->phv_use_hi;
+                    hi = f->phv_use_hi();
                 }
             }
             f->field_slices(this, lo, hi);
@@ -287,7 +302,7 @@ Cluster_PHV::compute_requirements() {
     //
     size_t scale_down = 0;
     for (auto &pfield : cluster_vec_i) {
-        if (pfield->deparser_no_pack) {
+        if (pfield->deparser_no_pack()) {
             // cannot scale-down egress_spec<9:0..15> into 8-bit containers
             scale_down = 0;
             break;
@@ -313,7 +328,7 @@ Cluster_PHV::compute_requirements() {
     // count constrained fields, preference given during container placement
     //
     for (auto &f : cluster_vec_i) {
-        f->phv_use_width(f->ccgf == f, width_i);
+        f->phv_use_width(f->ccgf() == f, width_i);
         if (PHV_Container::constraint_no_cohabit(f)) {
             num_fields_no_cohabit_i++;
         }
@@ -342,11 +357,11 @@ Cluster_PHV::compute_max_width() {
     int width = static_cast<int>(width_i);
     PhvInfo::Field *field = cluster_vec_i.front();
     if (uniform_width_i) {
-        if (cluster_vec_i.size() == 1 && field->ccgf == field) {
+        if (cluster_vec_i.size() == 1 && field->ccgf() == field) {
             int constrained_width = 0;
-            for (auto &m : field->ccgf_fields) {
+            for (auto &m : field->ccgf_fields()) {
                 if (PHV_Container::constraint_no_cohabit(m)) {
-                    if (m->ccgf == m) {
+                    if (m->ccgf() == m) {
                         constrained_width = std::max(constrained_width, width);
                     } else {
                         constrained_width = std::max(constrained_width, m->phv_use_width());
@@ -371,12 +386,12 @@ int
 Cluster_PHV::compute_width_req() {
     int max_width = 0;
     for (auto &field : cluster_vec_i) {
-        if (field->ccgf == field) {
+        if (field->ccgf() == field) {
             bool phv_no_pack = false;
-            for (auto &m : field->ccgf_fields) {
+            for (auto &m : field->ccgf_fields()) {
                 if (PHV_Container::constraint_no_cohabit(m)) {
                     phv_no_pack = true;
-                    if (m->ccgf == m) {
+                    if (m->ccgf() == m) {
                         max_width = std::max(max_width, m->size);
                     } else {
                         max_width = std::max(max_width, m->phv_use_width());

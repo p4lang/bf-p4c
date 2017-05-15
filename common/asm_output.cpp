@@ -26,7 +26,7 @@ std::ostream &operator<<(std::ostream &out, canon_name n) {
 std::ostream &operator<<(std::ostream &out, const Slice &sl) {
     if (sl.field) {
         out << canon_name(trim_asm_name(sl.field->name));
-        for (auto &alloc : sl.field->alloc) {
+        for (auto &alloc : sl.field->alloc_i) {
             if (sl.lo < alloc.field_bit) continue;
             if (sl.hi > alloc.field_hi())
                 WARNING("Slice not contained within a single PHV container");
@@ -51,7 +51,7 @@ Slice Slice::join(Slice &a) const {
     if (!field)
         return Slice(reg, lo, a.hi);
     /* don't join if the slices were allocated to different PHV containers */
-    for (auto &alloc : field->alloc) {
+    for (auto &alloc : field->alloc_i) {
         if (lo < alloc.field_bit) continue;
         if (a.hi > alloc.field_hi()) return Slice();
         break; }

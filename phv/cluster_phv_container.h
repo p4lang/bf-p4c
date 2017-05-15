@@ -203,7 +203,8 @@ class PHV_Container {
               std::list<Container_Content *>>& fields_in_container() const {
         return fields_in_container_i;
     }
-    ordered_map<PhvInfo::Field *, std::list<Container_Content *>>& fields_in_container() {
+    ordered_map<PhvInfo::Field *,
+        std::list<Container_Content *>>& fields_in_container() {
         return fields_in_container_i;
     }
     void fields_in_container(std::list<Container_Content *>& cc_list) {
@@ -227,14 +228,14 @@ class PHV_Container {
     void clear();
     void clean_ranges();
     //
-    static bool constraint_no_cohabit(const PhvInfo::Field *field) {
-        return field->deparser_no_pack || field->mau_phv_no_pack;
+    static bool constraint_no_cohabit(PhvInfo::Field *field) {
+        return field->deparser_no_pack() || field->mau_phv_no_pack();
     }
-    static bool constraint_no_holes(const PhvInfo::Field *field) {
-        return field->deparser_no_holes;
+    static bool constraint_no_holes(PhvInfo::Field *field) {
+        return field->deparser_no_holes();
     }
-    static bool constraint_no_cohabit_exclusive_mau(const PhvInfo::Field *field) {
-        return field->mau_phv_no_pack && !field->deparser_no_pack;
+    static bool constraint_no_cohabit_exclusive_mau(PhvInfo::Field *field) {
+        return field->mau_phv_no_pack() && !field->deparser_no_pack();
     }
     static int ceil_phv_use_width(PhvInfo::Field* f, int min_ceil = 0) {
         assert(f);

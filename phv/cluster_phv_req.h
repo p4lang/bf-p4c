@@ -113,7 +113,7 @@ class Cluster_PHV {
     //
     bool uniform_deparser_no_holes() {
         for (auto &f : cluster_vec_i) {
-            if (!f->deparser_no_holes) {
+            if (!f->deparser_no_holes()) {
                 return false;
             }
         }
@@ -125,7 +125,7 @@ class Cluster_PHV {
             field_overlay_map()                         { return field_overlay_map_i; }
     //
     bool sliced()                                       { return sliced_i; }
-};
+};  // Cluster_PHV
 //
 //
 class Cluster_PHV_Requirements : public Visitor {
@@ -155,6 +155,7 @@ class Cluster_PHV_Requirements : public Visitor {
     //
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
     //
+    std::pair<int, int> gress(std::list<Cluster_PHV *>& cluster_list);
 };
 //
 //
