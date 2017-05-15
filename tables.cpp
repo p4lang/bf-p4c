@@ -376,6 +376,7 @@ bool MatchTable::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::t
         else if (kv.value == "gateway_miss") table_counter = GATEWAY_MISS;
         else if (kv.value == "gateway_hit") table_counter = GATEWAY_HIT;
         else if (kv.value == "gateway_inhibit") table_counter = GATEWAY_INHIBIT;
+        else if (kv.value == "disabled") table_counter = DISABLED;
         else error(kv.value.lineno, "Invalid table counter %s", value_desc(kv.value));
         return true; }
     return false;

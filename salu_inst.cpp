@@ -31,15 +31,20 @@ struct operand {
         const char *kind() const override { return "constant"; }
     };
     struct Phv : public Base {
+        virtual Phv *clone() const = 0;
+        Phv(int lineno) : Base(lineno) {}
+        virtual int phv_index(Stateful *tbl) = 0;
+    };
+    struct PhvReg : public Phv {
         ::Phv::Ref      reg;
-        Phv *clone() const override { return new Phv(*this); }
-        Phv(gress_t gress, const value_t &v) : Base(v.lineno), reg(gress, v) {}
+        PhvReg *clone() const override { return new PhvReg(*this); }
+        PhvReg(gress_t gress, const value_t &v) : Phv(v.lineno), reg(gress, v) {}
         void dbprint(std::ostream &out) const override { out << reg; }
         bool equiv(const Base *a_) const override {
-            if (auto *a = dynamic_cast<const Phv *>(a_)) {
+            if (auto *a = dynamic_cast<const PhvReg *>(a_)) {
                 return reg == a->reg;
             } else return false; }
-        const char *kind() const override { return "phv"; }
+        const char *kind() const override { return "phv_reg"; }
         void pass1(Stateful *tbl) override {
             if (!reg.check()) return;
             int size = tbl->format->begin()->second.size/8U;
@@ -54,8 +59,24 @@ struct operand {
                       reg.desc().c_str(), tbl->name());
             else
                 tbl->phv_byte_mask |= ((1U << (reg->size() + 7)/8U) - 1) << (byte - 8); }
-        int phv_index(Stateful *tbl) {
+        int phv_index(Stateful *tbl) override {
             return tbl->find_on_ixbar(*reg, tbl->input_xbar->match_group()) > 8; }
+    };
+    // Operand which directly accesses phv(hi/lo) from Input Xbar
+    struct PhvRaw : public Phv {
+        int pi=-1;
+        PhvRaw *clone() const override { return new PhvRaw(*this); }
+        PhvRaw(gress_t gress, const value_t &v) : Phv(v.lineno) {
+            if (v == "phv_lo") pi = 0;
+            else if (v == "phv_hi") pi = 1;
+            else assert(0); }
+        void dbprint(std::ostream &out) const override { out << pi; }
+        bool equiv(const Base *a_) const override {
+            if (auto *a = dynamic_cast<const PhvRaw *>(a_)) {
+                return pi == a->pi;
+            } else return false; }
+        const char *kind() const override { return "phv_ixb"; }
+        int phv_index(Stateful *tbl) override { return pi; }
     };
     struct Memory : public Base {
         Table                     *tbl;
@@ -70,17 +91,7 @@ struct operand {
             } else return false; }
         const char *kind() const override { return "memory"; }
     };
-    struct MathFn : public Base {
-        Base    *of;
-        MathFn *clone() const override { return new MathFn(*this); }
-        MathFn(int line, Base *of) : Base(line), of(of) {}
-        void dbprint(std::ostream &out) const override { out << "math(" << *of << ")";; }
-        bool equiv(const Base *a_) const override {
-            if (auto *a = dynamic_cast<const MathFn *>(a_)) {
-                return of->equiv(a->of);
-            } else return false; }
-        const char *kind() const override { return "math fn"; }
-    };
+    struct MathFn;
     bool neg = false;
     operand() : op(0) {}
     operand(const operand &a) : op(a.op ? a.op->clone() : 0) {}
@@ -109,18 +120,37 @@ struct operand {
     template<class T> T *to() { return dynamic_cast<T *>(op); }
 };
 
+struct operand::MathFn : public Base {
+    operand of;
+    MathFn *clone() const override { return new MathFn(*this); }
+    MathFn(int line, operand of) : Base(line), of(of) {}
+    void dbprint(std::ostream &out) const override { out << "math(" << of << ")";; }
+    bool equiv(const Base *a_) const override {
+        if (auto *a = dynamic_cast<const MathFn *>(a_)) {
+            return of.op == a->of.op;
+        } else return false; }
+    const char *kind() const override { return "math fn"; }
+};
+
 operand::operand(Table *tbl, const Table::Actions::Action *act, const value_t &v_) : op(nullptr) {
     const value_t *v = &v_;
-    if (v->type == tCMD && (*v == "-" || *v == "!")) {
+    if (v->type == tCMD && *v == "-") {
         neg = true;
         v = &v->vec[1]; }
-    if (CHECKTYPE2(*v, tINT, tSTR)) {
-        if (v->type == tINT)
-            op = new Const(v->lineno, v->i);
-        else if (auto f = tbl->format->field(v->s))
+    if (v->type == tINT)
+        op = new Const(v->lineno, v->i);
+    else if (v->type == tSTR) {
+        if (auto f = tbl->format->field(v->s))
             op = new Memory(v->lineno, tbl, f);
+        else if (*v == "phv_lo" || *v == "phv_hi")
+            op = new PhvRaw(tbl->gress, *v);
         else
-            op = new Phv(tbl->gress, *v); }
+            op = new PhvReg(tbl->gress, *v);
+    } else if ((v->type == tCMD) && (v->vec[0] == "math_table")) {
+        //operand *opP = new operand(tbl, act, v->vec[1]);
+        op = new MathFn(v->lineno, operand(tbl, act, v->vec[1])); }
+    else
+        op = new PhvReg(tbl->gress, *v);
 }
 
 enum salu_slot_use {
@@ -339,6 +369,11 @@ void AluOP::write_regs(REGS &regs, Table *tbl_, Table::Actions::Action *act) {
         if (auto f = srcb.to<operand::Phv>()) {
             salu.salu_bsrc_phv = 1;
             salu.salu_bsrc_phv_index = f->phv_index(tbl);
+        } else if (auto m = srcb.to<operand::MathFn>()) {
+            if(auto b = m->of.to<operand::Phv>()) {
+                salu_instr_common.salu_alu2_lo_bsrc_math = 1;
+                salu_instr_common.salu_alu2_lo_math_src = b->phv_index(tbl);
+            } else assert(0);
         } else if (auto k = srcb.to<operand::Const>()) {
             salu.salu_bsrc_phv = 0;
             if (k->value >= -8 && k->value < 8) {
@@ -471,7 +506,7 @@ Instruction *CmpOP::Decode::decode(Table *tbl, const Table::Actions::Action *act
             src.op = nullptr;
             if (src.neg)
                 rv->srcc->value = -rv->srcc->value;
-        } else {
+        } else if (src) {
             error(src->lineno, "Can't have more than one %s operand to an SALU compare",
                   src->kind()); } }
     return rv;
