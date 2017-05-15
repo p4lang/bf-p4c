@@ -111,6 +111,9 @@ XFAIL_TESTS += \
 # Multiple LPM keys in a table (not allowed on bmv2)
 XFAIL_TESTS += bmv2/%reldir%/p4_14/case1770.p4.test
 
+# checksum extern in a parser (not allowed on bmv2)
+XFAIL_TESTS += bmv2/%reldir%/p4_16/ipv4_options.p4.test
+
 # parser verify not supported
 XFAIL_TESTS += tofino/%reldir%/p4_16/ipv4_options.p4.test
 
