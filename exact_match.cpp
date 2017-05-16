@@ -97,8 +97,9 @@ void ExactMatchTable::pass1() {
         assert(action.args.size() == 0);
         if (auto *sel = lookup_field("action"))
             action.args.push_back(sel);
-        else if (actions->count() > 1 && format)
-            error(lineno, "No field 'action' to select between mulitple actions in "
+        else if ((actions->count() > 1 && format && default_action.empty())
+               || (actions->count() > 2 && format && !default_action.empty()))
+            error(lineno, "No field 'action' to select between multiple actions in "
                   "table %s format", name());
         actions->pass1(this);
     } else if (action.args.size() == 0) {
@@ -316,7 +317,7 @@ void ExactMatchTable::setup_ways() {
                       name());
                 return; }
         if (layout.size() % fmt_width != 0) {
-            error(lineno, "Rows is not a mulitple of width in table %s", name());
+            error(lineno, "Rows is not a multiple of width in table %s", name());
             return; }
         for (unsigned i = 0; i < layout.size(); ++i) {
             unsigned first = (i / fmt_width) * fmt_width;

@@ -38,7 +38,7 @@ test_config_103_first_phase_0.p4 mismatch
 08-MacAddrCheck1.p4 compile
 12-Counters.p4 compile
 19-SimpleTrill.p4 compile
-22-BigToSmallFieldWithMask8.p4 compile
+22-BigToSmallFieldWithMask8.p4 mismatch
 22-SimpleTrillThreeStep.p4 compile
 
 dileep10.p4 mismatch
@@ -62,14 +62,14 @@ test_config_148_action_profile.p4 mismatch
 test_config_152_stateful_simple_cntr.p4 mismatch
 test_config_153_stateful_simple_cntr_with_output.p4 mismatch
 test_config_154_stateful_sampling.p4 mismatch
-test_config_155_stateful_3_alus.p4 tfas
+test_config_155_stateful_3_alus.p4 mismatch
 test_config_156_indirect_stateful_cntr.p4 mismatch
 test_config_157_random_number_generator.p4 tfas
-test_config_159_stateful_using_phv_field.p4 tfas
+test_config_159_stateful_using_phv_field.p4 mismatch
 test_config_160_stateful_single_bit_mode.p4 mismatch
 test_config_161_new_primitives.p4 mismatch
-test_config_163_stateful_table_math_unit.p4 tfas
-test_config_164_stateful_deterministic_sampling.p4 tfas
+test_config_163_stateful_table_math_unit.p4 mismatch
+test_config_164_stateful_deterministic_sampling.p4 mismatch
 test_config_165_stateful_bfd_failure_detection.p4 mismatch
 test_config_166_stateful_generic_counter.p4 mismatch
 test_config_167_stateful_flowlet_switching.p4 compile
@@ -86,7 +86,7 @@ test_config_181_first_alg_tcam.p4 tfas
 test_config_183_sample_e2e.p4 compile
 test_config_184_stateful_bug1.p4 tfas
 test_config_185_first_lpf.p4 mismatch
-test_config_187_proxy_hash_2.p4 compile
+test_config_187_proxy_hash_2.p4 mismatch
 test_config_189_stat_with_lrt.p4 mismatch
 test_config_190_modify_with_expr.p4 compile
 test_config_191_invalidate.p4 mismatch

@@ -523,8 +523,9 @@ void TernaryIndirectTable::pass1() {
         assert(action.args.size() == 0);
         if (auto *sel = lookup_field("action"))
             action.args.push_back(sel);
-        else if (actions->count() > 1)
-            error(lineno, "No field 'action' to select between mulitple actions in "
+        else if ((actions->count() > 1 && default_action.empty())
+               || (actions->count() > 2 && !default_action.empty()))
+            error(lineno, "No field 'action' to select between multiple actions in "
                   "table %s format", name());
         actions->pass1(this);
     } else if (action.args.size() == 0) {
