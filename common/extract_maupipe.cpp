@@ -333,7 +333,8 @@ struct AttachTables : public Modifier {
                 attached[tt->name].push_back(att);
             } else if (di->type->toString() == "stateful_alu") {
                 auto act = findContext<IR::MAU::Action>();
-                updateAttachedSalu(gref->srcInfo, refMap, salu[tt->name], di, act->name); } } }
+                updateAttachedSalu(gref->srcInfo, refMap, salu[tt->name], di, act->name);
+                gref->obj = converted[di] = salu[tt->name]; } } }
     explicit AttachTables(const P4::ReferenceMap *refMap) : refMap(refMap) {}
 };
 

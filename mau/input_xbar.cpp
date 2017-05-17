@@ -859,6 +859,9 @@ class FindFieldsToAlloc : public Inspector {
     const PhvInfo       &phv;
     IXBar::Use          &alloc;
     set<cstring>        &fields_needed;
+    bool preorder(const IR::MAU::SaluAction *a) override {
+        visit(a->action, "action");  // just visit the action instructions
+        return false; }
     bool preorder(const IR::Expression *e) override {
         PhvInfo::Field::bitrange bits;
         if (auto *finfo = phv.field(e, &bits)) {
@@ -1240,14 +1243,11 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu,
 void IXBar::initialize_hash_dist(const HashDistReq &hash_dist_req, Use &alloc,
     const PhvInfo &phv, set<cstring> &fields_needed, const IR::MAU::Table *tbl, cstring name) {
     if (hash_dist_req.is_address()) {
-        const IR::Expression *field = hash_dist_req.get_instr()->operands[1];
-        if (hash_dist_req.get_instr()->name == "counter.count") {
+        const IR::Expression *field = hash_dist_req.get_instr()->operands.at(1);
+        auto sful = hash_dist_req.get_stateful();;
+        if (auto ctr = sful->to<IR::Counter>()) {
             alloc.hash_dist_use.back().type = Use::CounterPtr;
             alloc.hash_dist_use.back().alg = Use::Identity;
-            const IR::Counter *ctr = nullptr;
-            for (auto at : tbl->attached) {
-                if ((ctr = at->to<IR::Counter>()) != nullptr) break;
-            }
             int per_word = CounterPerWord(ctr);
             if (per_word == 4)
                 alloc.hash_dist_use.back().shift = 1;
@@ -1255,10 +1255,16 @@ void IXBar::initialize_hash_dist(const HashDistReq &hash_dist_req, Use &alloc,
                 alloc.hash_dist_use.back().shift = 2;
             else
                 alloc.hash_dist_use.back().shift = 3;
-        } else if (hash_dist_req.get_instr()->name == "meter.execute_meter") {
+        } else if (sful->is<IR::Meter>()) {
             alloc.hash_dist_use.back().type = Use::MeterPtr;
             alloc.hash_dist_use.back().alg = Use::Identity;
             alloc.hash_dist_use.back().shift = 7;
+        } else if (auto reg = sful->to<IR::Register>()) {
+            alloc.hash_dist_use.back().type = Use::MeterPtr;
+            alloc.hash_dist_use.back().alg = Use::Identity;
+            alloc.hash_dist_use.back().shift = ceil_log2(reg->width);
+        } else {
+            BUG("Unrecognized stateful object %s", sful);
         }
         alloc.hash_dist_use.back().max_size = hash_dist_req.bits_required(phv);
         field_management(field, alloc, fields_needed, true, name, phv);

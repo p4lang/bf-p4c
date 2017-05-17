@@ -661,16 +661,10 @@ class MauAsmOutput::EmitAction : public Inspector {
     bool preorder(const IR::MAU::Action *act) override {
         act_name = act->name;
         for (auto prim : act->stateful) {
-            if (prim->name == "counter.count") {
-                if (auto aa = prim->operands[1]->to<IR::ActionArg>()) {
-                    alias[aa->name] = "counter_ptr";
-                } else {
-                    ERROR("counter index arg '" << prim->operands[1] << "' is not an action arg");
-                }
-            } else {
-                ERROR("skipping " << prim);
-            }
-        }
+            auto at = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::Attached>();
+            if (prim->operands.size() < 2) continue;
+            if (auto aa = prim->operands.at(1)->to<IR::ActionArg>()) {
+                alias[aa->name] = self.find_indirect_index(table, at); } }
         out << indent << canon_name(act->name) << ":" << std::endl;
         is_empty = true;
         if (table->layout.action_data_bytes_in_overhead > 0) {
@@ -1142,17 +1136,17 @@ class MauAsmOutput::UnattachedName : public MauInspector {
 // indirect table (counter, meter, stateful, action data) and return its asm name.
 std::string MauAsmOutput::find_indirect_index(const IR::MAU::Table *tbl,
                                               const IR::Attached *at) const {
-    cstring func_name = "";
+    cstring index_name = "";
     IXBar::Use::hash_dist_type_t type;
     if (at->is<IR::Counter>()) {
-        func_name = "counter.count";
+        index_name = "counter_ptr";
         type = IXBar::Use::CounterPtr;
     } else if (at->is<IR::Meter>()) {
-        func_name = "meter.execute_meter";
+        index_name = "meter_ptr";
         type = IXBar::Use::MeterPtr;
-        return "meter_ptr";
     } else if (at->is<IR::MAU::StatefulAlu>()) {
-        return "meter_ptr";
+        index_name = "meter_ptr";
+        type = IXBar::Use::MeterPtr;
     } else {
         BUG("unsupported attached table type in find_indirect_index: %s", at);
     }
@@ -1160,18 +1154,13 @@ std::string MauAsmOutput::find_indirect_index(const IR::MAU::Table *tbl,
     const IR::Expression *field = nullptr;
     for (auto action : Values(tbl->actions)) {
         for (auto instr : action->stateful) {
-            if (instr->name != func_name) continue;
-            if (phv.field(instr->operands[1]) == nullptr) {
-                return "counter_ptr";
-            } else {
-                field = instr->operands[1];
-            }
-        }
-    }
+            if (instr->operands[0]->to<IR::GlobalRef>()->obj != at) continue;
+            if (phv.field(instr->operands[1]) == nullptr)
+                return index_name.c_str();
+            field = instr->operands[1];
+            break; } }
 
-    if (field == nullptr) {
-        BUG("Indirect counter does not have an indirect index");
-    }
+    BUG_CHECK(field, "Indirect %s does not have an indirect index", at->kind());
 
     for (auto hash_dist : tbl->resources->match_ixbar.hash_dist_use) {
         if (hash_dist.type == type) {

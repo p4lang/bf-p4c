@@ -163,7 +163,6 @@ class Table : Tofino::Unit {
     Table *clone_rename(const char *ext) const {
         Table *rv = clone();
         rv->name += ext;
-        for (auto &at : rv->attached) at = at->clone();
         return rv; }
 #nooperator==
 #emit
@@ -232,6 +231,7 @@ class Table : Tofino::Unit {
                 gw_next.emplace(gw.second); } }
         attached.visit_children(v);
     }
+#apply
 }
 
 class TernaryIndirect : Attached {
@@ -312,6 +312,7 @@ class Action : ActionFunction {
 /// "simultanesouly" in different ALUs (certain ALUs are actually later in the pipeline)
 /// in the stateful ALU block (there are 2 comparison, 4 "normal" and 1 output alus)
 class SaluAction : ActionFunction {
+    NullOK Expression  output_dst = nullptr;  // implicit write of output to this lvalue
 }
 
 /// A use of one or two hash distribution units; an operand of an instruction

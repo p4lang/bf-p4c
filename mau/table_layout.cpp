@@ -145,9 +145,8 @@ static void setup_hash_dist(IR::MAU::Table *tbl, const PhvInfo &phv, LayoutChoic
             if (instr->name == "hash") {
                 hash_dist_reqs.emplace_back(true, instr); } }
         for (auto instr : action->stateful) {
-            if (instr->name == "counter.count" || instr->name == "meter.execute_meter") {
-                if (phv.field(instr->operands[1]) == nullptr) continue;
-                hash_dist_reqs.emplace_back(true, instr); } } }
+            if (phv.field(instr->operands[1]) == nullptr) continue;
+            hash_dist_reqs.emplace_back(true, instr); } }
     lc.total_hash_dist_reqs[tbl->name] = hash_dist_reqs;
 }
 

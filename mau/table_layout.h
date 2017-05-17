@@ -13,11 +13,10 @@ class HashDistReq {
         : required(r), instr(i) {}
     bool is_required() const { return required; }
     const IR::Primitive *get_instr() const { return instr; }
-    bool is_address() const {
-        if (instr && (instr->name == "counter.count" || instr->name == "meter.execute_meter"))
-            return true;
-        return false;
-    }
+    const IR::Stateful *get_stateful() const {
+        auto glob = instr->operands.at(0)->to<IR::GlobalRef>();
+        return glob ? glob->obj->to<IR::Stateful>() : nullptr; };
+    bool is_address() const { return get_stateful() != nullptr; }
     bool is_immediate() const {
         if (instr && instr->name == "hash")
             return true;

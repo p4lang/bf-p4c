@@ -31,6 +31,9 @@ bool CreateSaluInstruction::preorder(const IR::Property *prop) {
         opcode = "output";
         etype = OUTPUT;
     } else if (prop->name == "output_dst") {
+        if (auto ev = prop->value->to<IR::ExpressionValue>())
+            action->output_dst = ev->expression;
+        return false;
     } else if (prop->name == "math_unit_input") {
         // FIXME -- skip for now
         return false;
@@ -245,13 +248,13 @@ void CreateSaluInstruction::postorder(const IR::Property *prop) {
     } else if (prop->name == "update_lo_1_predicate" || prop->name == "update_lo_1_value") {
         pred_idx = 0;
         dest = "lo";
-    } else if (prop->name == "update_lo_2_predicate" || prop->name == "update_hi_2_value") {
+    } else if (prop->name == "update_lo_2_predicate" || prop->name == "update_lo_2_value") {
         pred_idx = 1;
         dest = "lo";
     } else if (prop->name == "update_hi_1_predicate" || prop->name == "update_hi_1_value") {
         pred_idx = 2;
         dest = "hi";
-    } else if (prop->name == "update_hi_2_predicate" || prop->name == "update_lo_2_value") {
+    } else if (prop->name == "update_hi_2_predicate" || prop->name == "update_hi_2_value") {
         pred_idx = 3;
         dest = "hi";
     } else if (prop->name == "output_predicate" || prop->name == "output_value") {
