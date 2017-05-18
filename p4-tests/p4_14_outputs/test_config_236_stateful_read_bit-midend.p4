@@ -173,8 +173,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("reg_0") register<bit<1>>(32w131072) reg_0;
     @name("bbox_0") stateful_alu() bbox_0;
-    @name(".action_0") action action_1() {
-        bbox_0.execute_stateful_alu();
+    @name(".action_0") action action_1(bit<32> idx) {
+        bbox_0.execute_stateful_alu(idx);
     }
     @name("table_0") table table_0 {
         actions = {

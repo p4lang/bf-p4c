@@ -34,8 +34,8 @@ parser parse_ethernet {
     return ingress;
 }
 
-action action_0(){
-    sampling_alu.execute_stateful_alu();
+action action_0(idx){
+    sampling_alu.execute_stateful_alu(idx);
 }
 
 action action_1(){

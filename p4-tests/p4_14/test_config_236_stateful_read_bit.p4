@@ -62,8 +62,8 @@ blackbox stateful_alu bbox_0 {
     output_dst : pkt.single_bit;
 }
 
-action action_0(){
-    bbox_0.execute_stateful_alu();
+action action_0(idx){
+    bbox_0.execute_stateful_alu(idx);
 }
 
 

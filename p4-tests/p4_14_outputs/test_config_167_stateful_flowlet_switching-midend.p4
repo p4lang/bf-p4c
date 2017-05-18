@@ -215,8 +215,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name("flowlet_state") register<bit<64>>(32w65536) flowlet_state;
     @name("flowlet_state_alu") stateful_alu() flowlet_state_alu;
-    @name(".get_flowlet_next_hop") action get_flowlet_next_hop_0() {
-        flowlet_state_alu.execute_stateful_alu();
+    @name(".get_flowlet_next_hop") action get_flowlet_next_hop_0(bit<32> idx) {
+        flowlet_state_alu.execute_stateful_alu(idx);
     }
     @name("flowlet_next_hop") table flowlet_next_hop {
         actions = {

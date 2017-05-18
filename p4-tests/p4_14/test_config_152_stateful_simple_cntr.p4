@@ -58,16 +58,16 @@ blackbox stateful_alu cntr3 {
 }
 
 
-action cnt() {
-    cntr.execute_stateful_alu();
+action cnt(idx) {
+    cntr.execute_stateful_alu(idx);
 }
 
-action cnt2() {
-    cntr2.execute_stateful_alu();
+action cnt2(idx) {
+    cntr2.execute_stateful_alu(idx);
 }
 
-action cnt3() {
-    cntr3.execute_stateful_alu();
+action cnt3(idx) {
+    cntr3.execute_stateful_alu(idx);
 }
 
 action do_nothing(){}

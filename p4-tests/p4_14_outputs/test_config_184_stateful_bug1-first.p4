@@ -170,8 +170,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("sampling_cntr") register<bit<32>>(32w139264) sampling_cntr;
     stateful_alu() sampling_alu;
-    @name(".action_0") action action_0() {
-        sampling_alu.execute_stateful_alu();
+    @name(".action_0") action action_0(bit<32> idx) {
+        sampling_alu.execute_stateful_alu(idx);
     }
     @name(".action_1") action action_1() {
     }

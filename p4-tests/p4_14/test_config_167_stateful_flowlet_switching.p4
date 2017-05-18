@@ -123,8 +123,8 @@ blackbox stateful_alu flowlet_state_alu {
     output_dst: meta.next_hop;
 }
 
-action get_flowlet_next_hop() {
-   flowlet_state_alu.execute_stateful_alu();
+action get_flowlet_next_hop(idx) {
+   flowlet_state_alu.execute_stateful_alu(idx);
 }
 
 table flowlet_next_hop {

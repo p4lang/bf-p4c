@@ -172,8 +172,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     tuple<bit<48>, bit<16>> tmp_0;
     @name("sampling_cntr") register<bit<32>>(32w139264) sampling_cntr_0;
     @name("sampling_alu") stateful_alu() sampling_alu_0;
-    @name(".action_0") action action_2() {
-        sampling_alu_0.execute_stateful_alu();
+    @name(".action_0") action action_2(bit<32> idx) {
+        sampling_alu_0.execute_stateful_alu(idx);
     }
     @name(".action_1") action action_3() {
     }

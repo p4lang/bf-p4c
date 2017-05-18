@@ -86,12 +86,12 @@ action drop_me(){
    drop();
 }
 
-action bfd_rx() {
-   bfd_cnt_rx_alu.execute_stateful_alu();
+action bfd_rx(idx) {
+   bfd_cnt_rx_alu.execute_stateful_alu(idx);
 }
 
-action bfd_tx() {
-   bfd_cnt_tx_alu.execute_stateful_alu();
+action bfd_tx(idx) {
+   bfd_cnt_tx_alu.execute_stateful_alu(idx);
 }
 
 

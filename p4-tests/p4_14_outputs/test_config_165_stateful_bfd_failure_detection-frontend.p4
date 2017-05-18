@@ -193,11 +193,11 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("bfd_cnt") register<bit<8>>(32w1024) bfd_cnt_0;
     @name("bfd_cnt_rx_alu") stateful_alu() bfd_cnt_rx_alu_0;
     @name("bfd_cnt_tx_alu") stateful_alu() bfd_cnt_tx_alu_0;
-    @name(".bfd_rx") action bfd_rx_0() {
-        bfd_cnt_rx_alu_0.execute_stateful_alu();
+    @name(".bfd_rx") action bfd_rx_0(bit<32> idx) {
+        bfd_cnt_rx_alu_0.execute_stateful_alu(idx);
     }
-    @name(".bfd_tx") action bfd_tx_0() {
-        bfd_cnt_tx_alu_0.execute_stateful_alu();
+    @name(".bfd_tx") action bfd_tx_0(bit<32> idx) {
+        bfd_cnt_tx_alu_0.execute_stateful_alu(idx);
     }
     @name(".drop_me") action drop_me_0() {
         mark_to_drop();

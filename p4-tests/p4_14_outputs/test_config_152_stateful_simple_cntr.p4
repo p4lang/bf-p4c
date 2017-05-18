@@ -171,14 +171,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     stateful_alu() cntr;
     stateful_alu() cntr2;
     stateful_alu() cntr3;
-    @name(".cnt") action cnt() {
-        cntr.execute_stateful_alu();
+    @name(".cnt") action cnt(bit<32> idx) {
+        cntr.execute_stateful_alu(idx);
     }
-    @name(".cnt2") action cnt2() {
-        cntr2.execute_stateful_alu();
+    @name(".cnt2") action cnt2(bit<32> idx) {
+        cntr2.execute_stateful_alu(idx);
     }
-    @name(".cnt3") action cnt3() {
-        cntr3.execute_stateful_alu();
+    @name(".cnt3") action cnt3(bit<32> idx) {
+        cntr3.execute_stateful_alu(idx);
     }
     @name(".do_nothing") action do_nothing() {
     }

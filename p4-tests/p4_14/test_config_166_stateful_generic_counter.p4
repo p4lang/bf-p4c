@@ -74,8 +74,8 @@ blackbox stateful_alu counter_alu {
     update_lo_1_value : register_lo + meta.encap_decap_size;
 }
 
-action increment_counter() {
-   counter_alu.execute_stateful_alu();
+action increment_counter(idx) {
+   counter_alu.execute_stateful_alu(idx);
 }
 
 table packet_offset_counting {
