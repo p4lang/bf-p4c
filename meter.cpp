@@ -92,13 +92,17 @@ int MeterTable::direct_shiftcount() {
 template<class REGS> void MeterTable::write_merge_regs(REGS &regs, MatchTable *match,
             int type, int bus, const std::vector<Call::Arg> &args) {
     auto &merge = regs.rams.match.merge;
+    assert(args.size() <= 1);
     if (args.empty()) { // direct access
         merge.mau_meter_adr_mask[type][bus] =  0x7fff80;
-    } else { // indirect access
-        assert(args.size() == 1 && args[0].type == Call::Arg::Field);
+    } else if (args[0].type == Call::Arg::Field) {
+        // indirect access via overhead field
         int bits = args[0].size() - 3;
         if (per_flow_enable) --bits;
-        merge.mau_meter_adr_mask[type][bus] = 0x700000 | (~(~0u << bits) << 7); }
+        merge.mau_meter_adr_mask[type][bus] = 0x700000 | (~(~0u << bits) << 7);
+    } else if (args[0].type == Call::Arg::HashDist) {
+        // indirect access via hash_dist
+        merge.mau_meter_adr_mask[type][bus] = 0x7fff80; }
     if (!color_aware)
         merge.mau_meter_adr_default[type][bus] |= 2 << 24;
     else if (!color_aware_per_flow_enable)

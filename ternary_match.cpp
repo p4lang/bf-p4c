@@ -346,9 +346,12 @@ void TernaryMatchTable::write_regs(REGS &regs) {
             if (m.args.empty()) {
                 merge.mau_meter_adr_tcam_shiftcount[indirect_bus] = m->direct_shiftcount() + 16;
                 merge.mau_idletime_adr_tcam_shiftcount[indirect_bus] = m->direct_shiftcount();
-            } else {
+            } else if (m.args[0].type == Call::Arg::Field) {
                 merge.mau_meter_adr_tcam_shiftcount[indirect_bus] = m.args[0].field()->bits[0].lo + 16;
-                merge.mau_idletime_adr_tcam_shiftcount[indirect_bus] = m.args[0].field()->bits[0].lo; }
+                merge.mau_idletime_adr_tcam_shiftcount[indirect_bus] = m.args[0].field()->bits[0].lo;
+            } else {
+                assert(m.args[0].type == Call::Arg::HashDist);
+                merge.mau_meter_adr_tcam_shiftcount[indirect_bus] = 0; }
             break; /* all must be the same, only config once */ }
     }
     if (actions) actions->write_regs(regs, this);
@@ -629,9 +632,12 @@ template<class REGS> void TernaryIndirectTable::write_regs(REGS &regs) {
             if (m.args.empty()) {
                 merge.mau_meter_adr_tcam_shiftcount[bus] = m->direct_shiftcount() + tcam_shift + 16;
                 merge.mau_idletime_adr_tcam_shiftcount[bus] = m->direct_shiftcount() + tcam_shift;
-            } else {
+            } else if (m.args[0].type == Call::Arg::Field) {
                 merge.mau_meter_adr_tcam_shiftcount[bus] = m.args[0].field()->bits[0].lo + 16;
-                merge.mau_idletime_adr_tcam_shiftcount[bus] = m.args[0].field()->bits[0].lo; }
+                merge.mau_idletime_adr_tcam_shiftcount[bus] = m.args[0].field()->bits[0].lo;
+            } else {
+                assert(m.args[0].type == Call::Arg::HashDist);
+                merge.mau_meter_adr_tcam_shiftcount[bus] = 0; }
             break; /* all must be the same, only config once */ }
     }
     if (actions) actions->write_regs(regs, this);
