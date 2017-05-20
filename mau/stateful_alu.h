@@ -33,6 +33,9 @@ class CreateSaluInstruction : public Inspector {
     std::vector<const IR::Expression *> operands;
     const IR::Expression        *predicates[5];
     const IR::MAU::Instruction  *output;
+    IR::MAU::StatefulAlu::MathUnit      math;
+    IR::MAU::SaluMathFunction   *math_function = nullptr;
+    const IR::Expression        *math_input = nullptr;
 
     bool preorder(const IR::Declaration_Instance *di) override;
     bool preorder(const IR::Property *) override;

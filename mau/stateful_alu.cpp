@@ -38,19 +38,50 @@ bool CreateSaluInstruction::preorder(const IR::Property *prop) {
             action->output_dst = ev->expression;
         return false;
     } else if (prop->name == "math_unit_input") {
-        // FIXME -- skip for now
+        if (auto ev = prop->value->to<IR::ExpressionValue>()) {
+            math_input = ev->expression;
+            if (math_function)
+                math_function->expr = math_input;
+        } else {
+            error("%s: %s must be a constant", prop->value->srcInfo, prop->name); }
         return false;
     } else if (prop->name == "math_unit_output_scale") {
-        // FIXME -- skip for now
+        if (auto ev = prop->value->to<IR::ExpressionValue>()) {
+            if (auto k = ev->expression->to<IR::Constant>()) {
+                math.valid = true;
+                math.scale = k->asInt();
+                return false; } }
+        error("%s: %s must be a constant", prop->value->srcInfo, prop->name);
         return false;
     } else if (prop->name == "math_unit_exponent_shift") {
-        // FIXME -- skip for now
+        if (auto ev = prop->value->to<IR::ExpressionValue>()) {
+            if (auto k = ev->expression->to<IR::Constant>()) {
+                math.valid = true;
+                math.exp_shift = k->asInt();
+                return false; } }
+        error("%s: %s must be a constant", prop->value->srcInfo, prop->name);
         return false;
     } else if (prop->name == "math_unit_exponent_invert") {
-        // FIXME -- skip for now
+        if (auto ev = prop->value->to<IR::ExpressionValue>()) {
+            if (auto k = ev->expression->to<IR::BoolLiteral>()) {
+                math.valid = true;
+                math.exp_invert = k->value;
+                return false; } }
+        error("%s: %s must be a boolean constant", prop->value->srcInfo, prop->name);
         return false;
     } else if (prop->name == "math_unit_lookup_table") {
-        // FIXME -- skip for now
+        if (auto elist = prop->value->to<IR::ExpressionListValue>()) {
+            int idx = -1;
+            math.valid = true;
+            for (auto ev : elist->expressions) {
+                if (++idx >= 16)
+                    error("%s: too many valus for %s", ev->srcInfo, prop->name);
+                else if (auto k = ev->to<IR::Constant>())
+                    math.table[idx] = k->asInt();
+                else
+                    error("%s: %s values must be a constants", ev->srcInfo, prop->name); }
+        } else {
+            error("%s: %s must be a list", prop->value->srcInfo, prop->name); }
         return false;
     } else if (prop->name == "reduction_or_group") {
         // FIXME -- skip for now
@@ -88,8 +119,10 @@ bool CreateSaluInstruction::preorder(const IR::AttribLocal *attr) {
             e = new IR::MAU::SaluReg("alu_hi");
         break;
     case VALUE:
-        if (attr->name == "math_unit")
-            e = new IR::MAU::SaluReg("math_unit");
+        if (attr->name == "math_unit") {
+            if (!math_function)
+                math_function = new IR::MAU::SaluMathFunction(attr->srcInfo, math_input);
+            e = math_function; }
         // fall through
     case COND:
         if (attr->name == "register_lo")
@@ -231,7 +264,7 @@ bool CreateSaluInstruction::preorder(const IR::BXor *e) {
         if (e->left->is<IR::Cmpl>() || e->right->is<IR::Cmpl>())
             opcode = "xnor";
         else
-            opcode = "xnor";
+            opcode = "xor";
         return true;
     } else {
         error("%s: expression too complex for stateful alu", e->srcInfo);
@@ -317,17 +350,30 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {
     BUG_CHECK(di->type->to<IR::Type_Extern>()->name == "stateful_alu",
               "%s: Not a stateful_alu", di->srcInfo);
     LOG3("Creating action " << di->name << " for stateful table " << salu->name);
-    action = new IR::MAU::SaluAction(di->name);
+    action = new IR::MAU::SaluAction(di->srcInfo, di->name);
     salu->instruction.addUnique(di->name, action);
     predicates[0] = predicates[1] = predicates[2] = predicates[3] = predicates[4] = nullptr;
     output = nullptr;
+    math = IR::MAU::StatefulAlu::MathUnit();
+    math_function = nullptr;
+    math_input = nullptr;
     di->properties.visit_children(*this);  // only visit the properties
     if (output) {
         action->action.push_back(output);
         LOG3("  add " << *action->action.back()); }
+    if (math.valid) {
+        if (salu->math.valid && !(math == salu->math))
+            error("%s: math unit incompatible with %s", di->srcInfo, salu);
+        else
+            salu->math = math; }
+    if (math_function && !math_function->expr)
+        error("%s: math unit requires math_input", di->srcInfo);
     action = nullptr;
     predicates[0] = predicates[1] = predicates[2] = predicates[3] = predicates[4] = nullptr;
     output = nullptr;
+    math = IR::MAU::StatefulAlu::MathUnit();
+    math_function = nullptr;
+    math_input = nullptr;
     return false;
 }
 

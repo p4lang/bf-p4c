@@ -739,6 +739,14 @@ class MauAsmOutput::EmitAction : public Inspector {
         out << sep << r->name;
         sep = ", ";
         return false; }
+    bool preorder(const IR::MAU::SaluMathFunction *mf) override {
+        assert(sep);
+        out << sep << "math_table";
+        sep = "(";
+        visit(mf->expr, "expr");
+        out << ")";
+        sep = ", ";
+        return false; }
     bool preorder(const IR::MAU::AttachedOutput *att) override {
         assert(sep);
         out << sep << table->get_use_name(att->attached);
@@ -1412,6 +1420,18 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::StatefulAlu *salu) {
     else
         out << salu->width;
     out << " }" << std::endl;
+    if (salu->math.valid) {
+        out << indent++ << "math_table:" << std::endl;
+        out << indent << "invert: " << salu->math.exp_invert << std::endl;
+        out << indent << "shift: " << salu->math.exp_shift << std::endl;
+        out << indent << "scale: " << salu->math.scale << std::endl;
+        out << indent << "data: [";
+        const char *sep = " ";
+        for (auto v : salu->math.table) {
+            out << sep << v;
+            sep = ", "; }
+        out << (sep+1) << ']' << std::endl;
+        --indent; }
     if (!salu->instruction.empty()) {
         out << indent++ << "actions:" << std::endl;
         for (auto act : Values(salu->instruction))

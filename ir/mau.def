@@ -90,7 +90,7 @@ class Table : Tofino::Unit {
 #end
     }
 #emit
-    Layout layout;  // need operator<< to remove #emit here.
+    Layout layout;  // need Layout operator<< or dbprint to remove #emit here.
 #end
     class Way {
         /* POD type */
@@ -234,6 +234,10 @@ class Table : Tofino::Unit {
 #apply
 }
 
+/** Tofino-specific attached table type **/
+
+/** Ternary indirect table used to hold overhead (adressing pointers and next table info)
+ * of ternary match tables */
 class TernaryIndirect : Attached {
 #noconstructor
 #nodbprint
@@ -241,6 +245,7 @@ class TernaryIndirect : Attached {
     const char *kind() const override { return "indirect"; }
 }
 
+/** Action data table used to hold action parameters */
 class ActionData : Attached {
     bool        direct = true;
 #noconstructor
@@ -260,6 +265,19 @@ class StatefulAlu : Register {
     inline NameMap<SaluAction, ordered_map>             instruction = {};
     // The stateful_alu externs executed for each action in the match table
     ordered_map<cstring, cstring>                       action_map = {};
+
+    class MathUnit {
+        bool            valid = false;
+        bool            exp_invert = false;
+        int             exp_shift = 0;
+        int             scale = 0;
+        int[16]         table = { 0 };
+        MathUnit() { memset(this, 0, sizeof(*this)); }
+        operator== { return memcmp(this, &a, sizeof(*this)) == 0; }
+        dbprint { out << valid; }
+    }
+    MathUnit            math = MathUnit();
+
     const char *kind() const override { return "stateful"; }
 }
 
@@ -282,6 +300,7 @@ class TableSeq {
     Table front() const { return tables.empty() ? nullptr : tables.front(); }
 #apply
 }
+
 
 /// A single MAU instruction.  For the most part instructions look exactly like Primitives,
 /// just with more constraints applied.  For example, an "add" instruction has the same
@@ -315,6 +334,9 @@ class SaluAction : ActionFunction {
     NullOK Expression  output_dst = nullptr;  // implicit write of output to this lvalue
 }
 
+
+/** Tofino-specific expressions that may be present in various places */
+
 /// A use of one or two hash distribution units; an operand of an instruction
 class HashDist : Expression {
 #nodbprint
@@ -332,6 +354,10 @@ class AttachedOutput : Expression {
 class SaluReg : Expression {
     cstring     name;
     dbprint { out << name; }
+}
+class SaluMathFunction : Operation_Unary {
+    stringOp = "math_unit";
+    dbprint { out << "math_unit (" << expr << ")"; }
 }
 
 class MultiOperand : ListExpression {
