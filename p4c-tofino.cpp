@@ -20,12 +20,15 @@
 #include "midend.h"
 #include "midend/actionsInlining.h"
 #include "tofinoOptions.h"
+#include "version.h"
 
 int main(int ac, char **av) {
     setup_gc_logging();
     setup_signals();
 
     Tofino_Options options;
+    options.compilerVersion = P4C_TOFINO_VERSION;
+
     if (options.process(ac, av) != nullptr)
         options.setInputFile();
     auto hook = options.getDebugHook();
