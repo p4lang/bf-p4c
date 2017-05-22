@@ -86,17 +86,33 @@ std::unique_ptr<std::ostream> open_output(const char *name, ...) {
     return std::unique_ptr<std::ostream>(new std::ofstream(namebuf));
 }
 
+std::string usage(std::string tfas) {
+    std::string u = "usage: ";
+    u.append(tfas);
+    u.append(" [-l:Mo:qtvh] file..."); 
+    return u; }
+
 int main(int ac, char **av) {
     int srcfiles = 0;
     const char *firstsrc = 0;
     struct stat st;
+    bool asmfile = false;
     extern void register_exit_signals();
     register_exit_signals();
+    if (ac == 1) {
+        std::cout<< usage(av[0]) << std::endl;
+        return 0; }
     for (int i = 1; i < ac; i++) {
         if (av[i][0] == '-' && av[i][1] == 0) {
             asm_parse_file("<stdin>", stdin);
         } else if (!strcmp(av[i], "--target")) {
-            if (!strcmp(av[++i], "tofino"))
+            ++i;
+            if (!av[i]) {
+                std::cerr << "No target specified '--target <tofino|jbay>'"
+                    << std::endl;
+                error_count++; 
+                break;}
+            if (!strcmp(av[i], "tofino"))
                 options.target = TOFINO;
             else if (!strcmp(av[i], "jbay"))
                 options.target = JBAY;
@@ -112,16 +128,23 @@ int main(int ac, char **av) {
             for (char *arg = av[i]+1; *arg;)
                 switch (*arg++) {
                 case 'T':
+                    ++i;
                     if (*arg) {
                         check_debug_spec(arg);
                         debug_specs.push_back(arg);
                         arg += strlen(arg);
-                    } else if (++i < ac) {
+                    } else if (i < ac) {
                         check_debug_spec(av[i]);
                         debug_specs.push_back(av[i]); }
                     break;
                 case 'l':
-                    if (auto *tmp = new std::ofstream(av[++i])) {
+                    ++i;
+                    if (!av[i]) {
+                        std::cerr << "No log file specified '-l <log file>'"
+                            << std::endl;
+                        error_count++;
+                        break; }
+                    if (auto *tmp = new std::ofstream(av[i])) {
                         if (*tmp) {
                             /* FIXME -- tmp leaks, but if we delete it, the log
                              * redirect fails, and we crash on exit */
@@ -139,7 +162,13 @@ int main(int ac, char **av) {
                     options.condense_json = false;
                     break;
                 case 'o':
-                    if (stat(av[++i], &st)) {
+                    ++i;
+                    if (!av[i]) {
+                        std::cerr << "No output directory specified '-o <output dir>'"
+                            << std::endl;
+                        error_count++;
+                        break; }
+                    if (stat(av[i], &st)) {
                         if (mkdir(av[i], 0777) < 0) {
                             std::cerr << "Can't create output dir " << av[i] << ": "
                                       << strerror(errno) << std::endl;
@@ -153,7 +182,13 @@ int main(int ac, char **av) {
                     std::clog.setstate(std::ios::failbit);
                     break;
                 case 't':
-                    if (!strcmp(av[++i], "tofino"))
+                    ++i;
+                    if (!av[i]) {
+                        std::cerr << "No target specified '-t <tofino|jbay>'"
+                            << std::endl;
+                        error_count++;
+                        break; }
+                    if (!strcmp(av[i], "tofino"))
                         options.target = TOFINO;
                     else if (!strcmp(av[i], "jbay"))
                         options.target = JBAY;
@@ -164,19 +199,25 @@ int main(int ac, char **av) {
                 case 'v':
                     verbose++;
                     break;
+                case 'h':
+                    std::cout << usage(av[0]) << std::endl;
+                    return 0;
+                    break;
                 default:
                     std::cerr << "Unknown option " << (flag ? '+' : '-')
                               << arg[-1] << std::endl;
-                    std::cerr << "usage: " << av[0] << " [-l:D:Mo:qtv] file..."
-                              << std::endl;
                     error_count++; }
         } else if (FILE *fp = fopen(av[i], "r")) {
             if (!srcfiles++) firstsrc = av[i];
             asm_parse_file(av[i], fp);
             fclose(fp);
+            asmfile = true;
         } else {
             std::cerr << "Can't read " << av[i] << ": " << strerror(errno) << std::endl;
             error_count++; } }
+    if (!asmfile) {
+        std::cerr << "No assembly file specified" << std::endl;
+        error_count++; }
     if (error_count == 0)
         Section::process_all();
     if (error_count == 0) {
@@ -195,7 +236,9 @@ int main(int ac, char **av) {
                 output_dir.clear(); }
         Section::output_all();
         TopLevel::output_all(); }
-    return error_count != 0;
+    if (error_count > 0)
+        std::cerr << usage(av[0]) << std::endl;
+    return error_count;
 }
 
 class Version : public Section {
