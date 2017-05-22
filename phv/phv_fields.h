@@ -137,7 +137,7 @@ class PhvInfo : public Inspector {
                                                            // set by PHV_Field_Operations
         bool            deparser_no_pack_i = false;        // true when egress_port
         bool            deparser_no_holes_i = false;       // true if deparsed field
-                                                           // place in container exactly (no holes)
+        bool            exact_containers_i = false;        // place in container exactly (no holes)
         //
         // operations on this field
         //
@@ -189,7 +189,7 @@ class PhvInfo : public Inspector {
                                            // if this list is a singleton then cluster not sliced
                                            // after cluster slicing, field in a list of clusters
                                            // each slice represents same field, slice varies lo..hi
-        std::vector<PHV_Container *> phv_containers_i;
+        ordered_set<PHV_Container *> phv_containers_i;
                                            // field in one or more containers
         ordered_map<Cluster_PHV *, std::pair<int, int>> field_slices_i;
                                            // each sliced cluster containing this field represents
@@ -225,6 +225,8 @@ class PhvInfo : public Inspector {
         void deparser_no_pack(bool b)                          { deparser_no_pack_i = b; }
         bool deparser_no_holes()                               { return deparser_no_holes_i; }
         void deparser_no_holes(bool b)                         { deparser_no_holes_i = b; }
+        bool exact_containers()                                { return exact_containers_i; }
+        void exact_containers(bool b)                          { exact_containers_i = b; }
         bool constrained(bool packing_constraint = false);
         //
         // operations on this field
@@ -250,7 +252,7 @@ class PhvInfo : public Inspector {
         //
         std::list<Cluster_PHV *>& clusters()                   { return clusters_i; }
         void clusters(Cluster_PHV *cluster_p);
-        std::vector<PHV_Container *> & phv_containers()        { return phv_containers_i; }
+        ordered_set<PHV_Container *>& phv_containers()         { return phv_containers_i; }
         void phv_containers(PHV_Container *c);
         //
         // phv_widths

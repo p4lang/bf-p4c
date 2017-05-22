@@ -55,6 +55,7 @@ class Cluster_PHV {
                                             //          -- [1] -- B<c2>, D<c2>, E<c2>
     //
     bool sliced_i = false;                  // sliced cluster, move-based ops only
+    bool exact_containers_i = false;        // true => single field must exact match container width
     //
  public:
     Cluster_PHV(
@@ -111,20 +112,12 @@ class Cluster_PHV {
     int num_containers(std::vector<PhvInfo::Field *>&, PHV_Container::PHV_Word);
     int num_fields_no_cohabit()                         { return num_fields_no_cohabit_i; }
     //
-    bool uniform_deparser_no_holes() {
-        for (auto &f : cluster_vec_i) {
-            if (!f->deparser_no_holes()) {
-                return false;
-            }
-        }
-        return true;
-    }
-    //
     ordered_map<PhvInfo::Field *,
         ordered_map<int, std::vector<PhvInfo::Field *> *>>&
             field_overlay_map()                         { return field_overlay_map_i; }
     //
     bool sliced()                                       { return sliced_i; }
+    bool exact_containers()                             { return exact_containers_i; }
 };  // Cluster_PHV
 //
 //

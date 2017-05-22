@@ -519,7 +519,7 @@ PhvInfo::Field::clusters(Cluster_PHV *cluster_p) {
 void
 PhvInfo::Field::phv_containers(PHV_Container *c) {
     assert(c);
-    phv_containers_i.push_back(c);
+    phv_containers_i.insert(c);
 }
 
 //
@@ -665,6 +665,7 @@ std::ostream &operator<<(std::ostream &out, PhvInfo::Field &field) {
     if (field.mau_phv_no_pack()) out << " mau_phv_no_pack";
     if (field.deparser_no_pack()) out << " deparser_no_pack";
     if (field.deparser_no_holes()) out << " deparser_no_holes";
+    if (field.exact_containers()) out << " exact_containers";
     if (field.header_stack_pov_ccgf()) out << " header_stack_pov_ccgf";
     if (field.simple_header_pov_ccgf()) out << " simple_header_pov_ccgf";
     if (field.ccgf()) out << " ccgf=" << field.ccgf()->id << ':' << field.ccgf()->name;

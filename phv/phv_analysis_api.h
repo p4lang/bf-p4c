@@ -51,10 +51,21 @@ class PHV_Analysis_API : public Visitor {
             make_tuple(PHV_Container::Container_Content *cc);
     //
     void sanity_check_fields(const std::string&);
+    void sanity_check_fields_containers(const std::string&);
+    void sanity_check_container_holes(const std::string&);
     //
     // APIs
     //
-    void
+    // field allocated, contiguously
+    //
+    bool
+    field_allocated(
+        PhvInfo::Field *f,
+        bool contiguously = false);
+    //
+    // fields to containers
+    //
+    bool
     field_to_containers(
         PhvInfo::Field *,
         std::list<std::tuple<
@@ -65,23 +76,6 @@ class PHV_Analysis_API : public Visitor {
     void
     field_to_containers(
         PhvInfo::Field *,
-        std::pair<int, int>&,
-        std::list<std::tuple<
-            PhvInfo::Field *,
-            const std::pair<int, int>,
-            const PHV_Container *,
-            const std::pair<int, int>>>&);
-    void
-    container_to_fields(
-        int phv_num,
-        std::list<std::tuple<
-            PhvInfo::Field *,
-            const std::pair<int, int>,
-            const PHV_Container *,
-            const std::pair<int, int>>>&);
-    void
-    container_to_fields(
-        int phv_num,
         std::pair<int, int>&,
         std::list<std::tuple<
             PhvInfo::Field *,
@@ -89,8 +83,152 @@ class PHV_Analysis_API : public Visitor {
             const PHV_Container *,
             const std::pair<int, int>>>&);
     //
+    // containers to fields
+    //
+    bool
+    container_holes(int phv_num);
+    void
+    container_holes(
+        int phv_num,
+        std::list<std::tuple<
+            const PHV_Container *,
+            const std::pair<int, int>>>& tuple_list);
+    void
+    container_to_fields(
+        int phv_num,
+        std::list<std::tuple<
+            PhvInfo::Field *,
+            const std::pair<int, int>,
+            const PHV_Container *,
+            const std::pair<int, int>>>&,
+        bool written_fields_only = false,
+        bool overlayed_fields_only = false,
+        bool sliced_fields_only = false);
+    void
+    container_to_fields(
+        int phv_num,
+        std::pair<int, int>&,
+        std::list<std::tuple<
+            PhvInfo::Field *,
+            const std::pair<int, int>,
+            const PHV_Container *,
+            const std::pair<int, int>>>&,
+        bool written_fields_only = false,
+        bool overlayed_fields_only = false,
+        bool sliced_fields_only = false);
+    //
+    // fields written
+    //
+    void
+    fields_written(
+        int phv_num,
+        std::list<std::tuple<
+            PhvInfo::Field *,
+            const std::pair<int, int>,
+            const PHV_Container *,
+            const std::pair<int, int>>>& tuple_list);
+    void
+    fields_written(
+        int phv_num,
+        std::pair<int, int>& f_range,
+        std::list<std::tuple<
+            PhvInfo::Field *,
+            const std::pair<int, int>,
+            const PHV_Container *,
+            const std::pair<int, int>>>& tuple_list);
+    void
+    fields_written(
+        std::list<std::tuple<
+            PhvInfo::Field *,
+            const std::pair<int, int>,
+            const PHV_Container *,
+            const std::pair<int, int>>>& tuple_list);  // all fields written in MAU
+    void
+    fields_written(
+        std::list<std::pair<
+            PhvInfo::Field *,
+            const std::pair<int, int>>>& tuple_list);  // all fields written in program
+    //
+    // fields overlayed
+    //
+    void
+    fields_overlayed(
+        int phv_num,
+        std::list<std::tuple<
+            PhvInfo::Field *,
+            const std::pair<int, int>,
+            const PHV_Container *,
+            const std::pair<int, int>>>& tuple_list);
+    void
+    fields_overlayed(
+        int phv_num,
+        std::pair<int, int>& f_range,
+        std::list<std::tuple<
+            PhvInfo::Field *,
+            const std::pair<int, int>,
+            const PHV_Container *,
+            const std::pair<int, int>>>& tuple_list);
+    void
+    fields_overlayed(
+        std::list<std::tuple<
+            PhvInfo::Field *,
+            const std::pair<int, int>,
+            const PHV_Container *,
+            const std::pair<int, int>>>& tuple_list);  // all fields overlayed in MAU
+    void
+    fields_overlayed(
+        PhvInfo::Field *field,
+        std::list<std::tuple<
+            PhvInfo::Field *,
+            const std::pair<int, int>,
+            const PHV_Container *,
+            const std::pair<int, int>>>& tuple_list);  // all fields overlaying a field
+    //
+    // fields sliced
+    //
+    void
+    fields_sliced(
+        int phv_num,
+        std::list<std::tuple<
+            PhvInfo::Field *,
+            const std::pair<int, int>,
+            const PHV_Container *,
+            const std::pair<int, int>>>& tuple_list);
+    void
+    fields_sliced(
+        int phv_num,
+        std::pair<int, int>& f_range,
+        std::list<std::tuple<
+            PhvInfo::Field *,
+            const std::pair<int, int>,
+            const PHV_Container *,
+            const std::pair<int, int>>>& tuple_list);
+    void
+    fields_sliced(
+        std::list<std::tuple<
+            PhvInfo::Field *,
+            const std::pair<int, int>,
+            const PHV_Container *,
+            const std::pair<int, int>>>& tuple_list);
+    void
+    fields_sliced(
+        std::list<std::pair<
+            PhvInfo::Field *,
+            const std::pair<int, int>>>& tuple_list);
+    void
+    fields_sliced(
+        PhvInfo::Field *f,
+        std::list<std::pair<
+            PhvInfo::Field *,
+            const std::pair<int, int>>>& tuple_list);
+    //
 };  // class PHV_Analysis_API
 //
+std::ostream &operator<<(
+    std::ostream &,
+    std::list<std::tuple<
+        const PHV_Container *,
+        const std::pair<int, int>>>&);
 std::ostream &operator<<(
     std::ostream &,
     std::tuple<

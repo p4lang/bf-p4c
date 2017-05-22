@@ -404,6 +404,9 @@ bool Cluster_PHV_Overlay::overlay_field_to_container(
     assert(cl);
     assert(field);
     assert(run_width <= c->width());
+    if (field->deparser_no_holes() && run_width != c->width()) {
+        return false;
+    }
     //
     // overlay field can be larger than one container: straddles containers if substratum straddles
     // (ii) if substratum field straddles containers, overlay field follows

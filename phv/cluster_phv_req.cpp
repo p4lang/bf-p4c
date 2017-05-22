@@ -210,6 +210,26 @@ Cluster_PHV::Cluster_PHV(
     //
     compute_requirements();
     //
+    if (cluster_vec_i.size() == 1                                                    // no MAU oper
+        && cluster_vec_i.front()->deparser_no_holes()                                // f no holes
+        && (cluster_vec_i.front()->size % PHV_Container::PHV_Word::b8 == 0)          // not 9,23b
+        && cluster_vec_i.front()->phv_use_width() >= PHV_Container::PHV_Word::b8) {  // ignore <b8
+        //
+        // e.g., cannot map
+        // ipv4.hdrChecksum<16:0..15>: W47(16..31)
+        // icmp.hdrChecksum<16:0..15>: W47(0..15)
+        // the parser can only extract whole containers, so extract to W47 => extract 4 bytes
+        // these vars quantities need to be in either 8-bit or 16-bit containers
+        // ipv4.hdrChecksum<16:0..15>: --> H227
+        // icmp.hdrChecksum<16:0..15>: --> TH228
+        // set clusters exact_containers so that
+        // cluster_phv_mau::container_pack_cohabit() honors exact width match
+        // can happen when packing attempted on field before placement attempt
+        // e.g., when PHV <== TPHV_Overflow
+        //
+        exact_containers_i = true;
+        cluster_vec_i.front()->exact_containers(true);
+    }
 }  // Cluster_PHV
 
 void

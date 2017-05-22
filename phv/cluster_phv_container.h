@@ -45,8 +45,7 @@ class PHV_Container {
         PhvInfo::Field *field_i;
         const int field_bit_lo_i;          // start of field bit in this container
         std::string taint_color_i = "?";   // taint color of this field in container
-        bool overlayed_field_i = false;    // true if field overlays another field in container
-        Pass pass_i = None;                // tracks pass that performs overlay
+        Pass pass_i = None;                // tracks pass that creates this cc: overlay, slicing
 
      public:
         //
@@ -57,7 +56,6 @@ class PHV_Container {
             PhvInfo::Field *f,
             const int field_bit_lo = 0,
             const std::string taint_color = "?",
-            bool overlayed = false,
             Pass = None);
         //
         int lo() const                   { return lo_i; }
@@ -71,8 +69,11 @@ class PHV_Container {
         const PHV_Container *container() { return container_i; }
         void container(PHV_Container *c) { container_i = c; }   // during transfer parser container
         std::string& taint_color()       { return taint_color_i; }
-        bool overlayed()                 { return overlayed_field_i; }
         Pass pass()                      { return pass_i; }
+        bool overlayed()                 { return pass_i == Cluster_Overlay
+                                               || pass_i == Field_Interference; }
+        bool sliced()                    { return field_i->sliced(); }
+        bool phv_bind()                  { return pass_i == Phv_Bind; }
         //
         void sanity_check_container(PHV_Container *, const std::string&);
     };
@@ -115,8 +116,8 @@ class PHV_Container {
         Ingress_Egress gress);
     //
     PHV_MAU_Group *phv_mau_group()                              { return phv_mau_group_i; }
-    PHV_Word width()                                            { return width_i; }
-    int phv_number()                                            { return phv_number_i; }
+    PHV_Word width() const                                      { return width_i; }
+    int phv_number() const                                      { return phv_number_i; }
     std::string phv_number_string() const {
         std::stringstream ss;
         ss << phv_number_i;
@@ -223,6 +224,8 @@ class PHV_Container {
     void fields_in_container(int start, int end, ordered_set<PhvInfo::Field *>& f_set);
     //
     std::pair<int, int> start_bit_and_width(PhvInfo::Field *f);
+    void holes(std::vector<char>& bits, char empty, std::list<std::pair<int, int>>& holes_list);
+    void holes(std::list<std::pair<int, int>>& holes_list);
     //
     void create_ranges();
     void clear();
@@ -270,6 +273,7 @@ std::ostream &operator<<(std::ostream &, ordered_map<int, int>&);
 std::ostream &operator<<(std::ostream &, const PHV_Container*);
 std::ostream &operator<<(std::ostream &, PHV_Container*);
 std::ostream &operator<<(std::ostream &, PHV_Container&);
+std::ostream &operator<<(std::ostream &, ordered_set<PHV_Container *>&);
 std::ostream &operator<<(std::ostream &, std::vector<PHV_Container *>&);
 std::ostream &operator<<(std::ostream &, std::list<PHV_Container *>&);
 std::ostream &operator<<(

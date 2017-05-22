@@ -841,7 +841,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                             && !PHV_Container::constraint_no_cohabit(field)
                             && container->status() == PHV_Container::Container_status::PARTIAL
                             && cl->uniform_width()
-                            && cl->uniform_deparser_no_holes()) {
+                            && cl->exact_containers()) {
                             //
                             // partial container with parser field
                             // parser / deparser require fully packed containers
@@ -1007,8 +1007,15 @@ PHV_MAU_Group_Assignments::fix_parser_container(
                 << "\t\t"
                 << cc_1->field());
         }
-        c->clear();
     }
+    // original container was not exact match
+    // even when no transfer viable, the container as well as field allocation cleared
+    // clear source container
+    // clear source container entry in field
+    //
+    c->clear();
+    cc->field()->phv_containers().erase(c);
+    //
 }  // fix_parser_container
 
 PHV_Container *
@@ -1036,7 +1043,7 @@ PHV_MAU_Group_Assignments::parser_container_no_holes(
             }
         }  // for
     }  // for
-    LOG1("parser_container_no_holes() transfer unsuccessful check width: ");
+    LOG1("parser_container_no_holes() Transfer FAIL check width: ");
     LOG1(cc);
     return 0;
 }  // parser_container_no_holes
@@ -1273,13 +1280,29 @@ void PHV_MAU_Group_Assignments::container_pack_cohabit(
             int m_w = i.first;
             if (m_w >= cl_w) {
                 for (auto &j : i.second) {
+                    if (cl->exact_containers()) {
+                        //
+                        // cluster width must exact match container
+                        // check first container in cc_list
+                        //
+                        if (m_w != cl_w) {
+                            continue;
+                        }
+                        std::list<PHV_MAU_Group::Container_Content *>& cc_l = *(j.second.begin());
+                        PHV_MAU_Group::Container_Content *cc = *(cc_l.begin());
+                        auto c_width = cc->container()->width();
+                        if (m_w != c_width) {
+                            continue;
+                        }
+                    }
                     //
                     // split container_pack <mw, mn>
                     // --> <mw, mn-cn>, (<mw, cn> --> <mw-cw, cn>, <cw, cn>)
                     //
                     int m_n = j.first;
                     if (m_n >= cl_n) {
-                        // honor gress compatible match
+                        //
+                        // check gress compatibility
                         //
                         std::list<PHV_MAU_Group::Container_Content *> cc_set;
                         PHV_Container::Ingress_Egress c_gress

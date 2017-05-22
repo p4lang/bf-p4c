@@ -17,7 +17,6 @@ PHV_Container::Container_Content::Container_Content(
     PhvInfo::Field *f,
     const int field_bit_lo,
     const std::string taint_color,
-    bool overlayed,
     Pass pass)
         : container_i(c),
           lo_i(l),
@@ -25,7 +24,6 @@ PHV_Container::Container_Content::Container_Content(
           field_i(f),
           field_bit_lo_i(field_bit_lo),
           taint_color_i(taint_color),
-          overlayed_field_i(overlayed),
           pass_i(pass) {
     //
     BUG_CHECK(
@@ -345,7 +343,6 @@ PHV_Container::overlay_ccgf_field(
                member,
                member_bit_lo,
                taint_color(start, start + use_width - 1),
-               true /* overlayed field */,
                pass /* pass that performs the overlay */));
         width -= use_width;
         if (width <= 0) {
@@ -379,7 +376,6 @@ PHV_Container::single_field_overlay(
                 f,
                 field_bit_lo,
                 taint_color(start, start + width - 1),
-                true /* overlayed field */,
                 pass /* pass that performs the overlay */));
     }
     LOG3("\t==> overlayed'" << static_cast<char>(pass) << "' " << f
@@ -636,6 +632,47 @@ PHV_Container::start_bit_and_width(PhvInfo::Field *f) {
     return std::make_pair(lo, w);
 }  // start_bit_and_width
 
+void
+PHV_Container::holes(
+    std::vector<char>& bits,
+    char empty,
+    std::list<std::pair<int, int>>& holes_list) {
+    //
+    int width = bits.size();
+    int lo = -1;
+    for (auto i=0; i < width; i++) {
+        if (lo == -1 && bits[i] == empty) {
+            lo = i;
+        }
+        if (lo != -1 && bits[i] != empty) {
+            holes_list.push_back(std::make_pair(lo, i - 1));
+            lo = -1;
+        }
+    }  // for
+    if (lo != -1) {
+        holes_list.push_back(std::make_pair(lo, width - 1));
+    }
+}  // holes vector bits
+
+void
+PHV_Container::holes(std::list<std::pair<int, int>>& holes_list) {
+    //
+    // identify holes in container
+    //
+    holes_list.clear();
+    int width = static_cast<int>(width_i);
+    std::vector<char> bits_v(bits_i, bits_i + width);  // 2nd arg "ptr to ch after end" not last ch
+    if (status_i == Container_status::EMPTY) {
+        holes_list.push_back(std::make_pair(0, width - 1));
+    } else if (status_i == Container_status::PARTIAL) {
+        holes(bits_v, '0', holes_list);
+    } else {
+        assert(status_i == Container_status::FULL);
+        // "Full" container w/ pack-constrained fields can yield unoccupied, unassignable holes
+        holes(bits_v, '-', holes_list);
+    }
+}  // holes holes_list
+
 //***********************************************************************************
 //
 // sanity checks
@@ -680,7 +717,7 @@ void PHV_Container::Container_Content::sanity_check_container(
     //
     // cc lo .. hi must be tainted in c bits
     //
-    if (overlayed_field_i && taint_color_i == "0") {
+    if (overlayed() && taint_color_i == "0") {
         //
         // field_i was overlayed ahead of substratum member field of ccgf thus color was 0
         // update color to substratum field
@@ -704,7 +741,7 @@ void PHV_Container::Container_Content::sanity_check_container(
     }
     for (auto i=lo_i; i <= hi_i; i++) {
         if (container->bits()[i] != taint_color_i.back()) {
-            if (overlayed_field_i) {
+            if (overlayed()) {
                 //
                 // overlayed fields may not exact match container taint
                 // if they straddle substratum fields
@@ -909,7 +946,9 @@ void PHV_Container::sanity_check_container_avail(int lo, int hi, const std::stri
     if ((avail_bits_i > 0 && status_i == Container_status::FULL)
      || (avail_bits_i == 0 && status_i != Container_status::FULL)
      || (avail_bits_i == width_i && status_i != Container_status::EMPTY)
-     || (fields_in_container_i.size() && status_i == Container_status::EMPTY)) {
+     || (fields_in_container_i.size() && status_i == Container_status::EMPTY)
+     || (fields_in_container_i.size() == 0 && status_i != Container_status::EMPTY)) {
+        //
         LOG1("*****cluster_phv_container.cpp:sanity_FAIL*****....."
         << msg_1
         << " container status inconsisent w/ available bits or fields_in_container size "
@@ -1174,6 +1213,13 @@ std::ostream &operator<<(std::ostream &out, PHV_Container &c) {
     out << '\t' << &c
         << '\t' << c.bits()
         << c.fields_in_container();
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, ordered_set<PHV_Container *> &phv_containers) {
+    for (auto &c : phv_containers) {
+        out << *c;
+    }
     return out;
 }
 
