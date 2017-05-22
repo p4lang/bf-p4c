@@ -1,5 +1,6 @@
 
 bin_PROGRAMS = tfas
+bin_SCRIPTS = tflink
 noinst_PROGRAMS = json2cpp json_diff reflow mksizes
 BUILT_SOURCES = lex-yaml.c gen/uptr_sizes.h
 nodist_tfas_SOURCES =
@@ -88,6 +89,14 @@ templates/%/.templates-updated: $(srcdir)/%/chip.schema $(srcdir)/%/template_obj
 	@mkdir -p templates/$*
 	$(WALLE) --schema $(srcdir)/$*/chip.schema --generate-templates $(srcdir)/$*/template_objects.yaml -o templates/$*
 	@touch $@
+
+# installation for walle
+walle_PYTHON = walle/chip.py \
+	       walle/csr.py  \
+	       walle/walle.py
+walledir=$(datadir)/p4c/walle
+install-data-hook:
+	chmod 755 $(datadir)/p4c/walle/walle.py
 
 AM_YFLAGS = -v
 

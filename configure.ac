@@ -6,6 +6,8 @@ AM_INIT_AUTOMAKE([foreign subdir-objects 1.14])
 AM_SILENT_RULES([yes])
 
 AC_CONFIG_MACRO_DIR([m4])
+# add python for walle installation
+AM_PATH_PYTHON
 AC_PROG_CXX(g++ clang++ c++)
 AC_PROG_CC
 AC_PROG_LEX

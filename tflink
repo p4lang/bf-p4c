@@ -53,6 +53,9 @@ while [ $# -gt 0 ]; do
     --schema|-s)
         SCHEMA="$2"
         shift ; shift ;;
+    --walle|-w)
+        WALLE="$2"
+        shift ; shift ;;
     *.json.Z)
         if [ -z "$tmpdir" ]; then
             tmpdir=$(mktemp -d)
@@ -95,7 +98,11 @@ while [ $# -gt 0 ]; do
 done
 
 if [ ! -x "$WALLE" ]; then
-    echo >&2 "Can't find walle"
+    if [ -e "$WALLE" ]; then
+        echo "$WALLE must be executable"
+    else
+        echo >&2 "Can't find walle"
+    fi
     exit 1
 fi
 if [ ! -r "$SCHEMA" ]; then
