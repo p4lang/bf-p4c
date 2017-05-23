@@ -8,6 +8,7 @@ class AddBridgedMetadata::FindFieldsToBridge : public ThreadVisitor, Inspector {
             for (auto &loc : self.defuse.getUses(this, e)) {
                 if (loc.first->thread() == EGRESS) {
                     assert(field->metadata);
+                    field->bridged = true;
                     self.need_bridge[field->id] = loc.second;
                     break; } }
             return false;
@@ -51,7 +52,7 @@ class AddBridgedMetadata::AddBridge : public PardeModifier {
     explicit AddBridge(AddBridgedMetadata &self) : self(self) {}
 };
 
-AddBridgedMetadata:: AddBridgedMetadata(const PhvInfo &phv, const FieldDefUse &defuse)
+AddBridgedMetadata:: AddBridgedMetadata(PhvInfo &phv, const FieldDefUse &defuse)
 : phv(phv), defuse(defuse) {
     addPasses({
         new FindFieldsToBridge(*this),

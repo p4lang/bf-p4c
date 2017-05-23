@@ -43,6 +43,7 @@ class PhvInfo : public Inspector {
         int             offset;           // offset of lsb from lsb (last) bit of containing header
         bool            referenced;
         bool            metadata;
+        bool            bridged = false;
         bool            pov;
         //
         // ****************************************************************************************
