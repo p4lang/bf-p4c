@@ -583,8 +583,10 @@ struct OutOP : public SaluInstruction {
 
 const std::map<std::string, int> OutOP::ops_mux_lookup = {
     { "mem_hi", MEM_HI }, { "mem_lo", MEM_LO },
+    { "memory_hi", MEM_HI }, { "memory_lo", MEM_LO },
     { "phv_hi", PHV_HI }, { "phv_lo", PHV_LO },
     { "alu_hi", ALU_HI }, { "alu_lo", ALU_LO },
+    { "alu_hi_out", ALU_HI }, { "alu_lo_out", ALU_LO },
     { "predicate", PRED } };
 
 static OutOP::Decode opOUTPUT("output");
