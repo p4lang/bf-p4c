@@ -74,7 +74,14 @@ class PhvInfo : public Inspector {
             bitrange field_bits() const       { return { field_bit, field_bit+width-1 }; }
             bitrange container_bits() const   { return { container_bit, container_bit+width-1 }; }
             int field_hi() const              { return field_bit + width - 1; }
-            int container_hi() const          { return container_bit + width - 1; } };
+            int container_hi() const          { return container_bit + width - 1; }
+            bool operator==(const alloc_slice& other) const {
+                return container == other.container &&
+                       field_bit == other.field_bit &&
+                       container_bit == other.container_bit &&
+                       width == other.width; }
+            bool operator!=(const alloc_slice& other) const {
+                return !operator==(other); } };
         //
         cstring header() const { return name.before(strrchr(name, '.')); }
         int container_bytes(bitrange bits = {0, -1}) const;
