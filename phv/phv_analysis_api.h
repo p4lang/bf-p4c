@@ -40,7 +40,7 @@ class PHV_Analysis_API : public Visitor {
         field_container_map()                                 { return field_container_map_i; }
     //
     const IR::Node *apply_visitor(const IR::Node *, const char *name = 0) override;
-    void end_apply();
+    void end_apply() override;
     //
     void create_field_container_map();
     std::tuple<
