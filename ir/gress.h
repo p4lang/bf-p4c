@@ -18,12 +18,17 @@ limitations under the License.
 #define TOFINO_IR_GRESS_H_
 
 #include <iosfwd>
-#include "lib/cstring.h"
 
+class cstring;
+
+/// An enumeration identifying a thread in the Tofino architecture.
 enum gress_t {
-  INGRESS,
-  EGRESS
+  INGRESS = 0,
+  EGRESS = 1
 };
+
+/// @return, given a thread @gress, the _other_ thread.
+inline gress_t operator~(const gress_t& gress) { return gress_t(gress ^ 1); }
 
 std::ostream& operator<<(std::ostream& out, gress_t gress);
 bool operator>>(cstring s, gress_t& gressOut);
