@@ -1,10 +1,10 @@
 #ifndef TOFINO_PHV_PHV_H_
 #define TOFINO_PHV_PHV_H_
 
-#include <string.h>
-#include <iostream>
-#include <array>
-#include "lib/exceptions.h"
+#include <iosfwd>
+
+class bitvec;
+class cstring;
 
 namespace PHV {
 
@@ -15,28 +15,57 @@ class Container {
     Container(bool t, unsigned ls, unsigned i) : tagalong_(t), log2sz_(ls), index_(i) {}
 
  public:
+    /// An enumeration of the possible PHV container types.
+    enum class Kind : unsigned {
+        B = 0,   /// 8-bit
+        H = 1,   /// 16-bit
+        W = 2,   /// 32-bit
+        TB = 3,  /// 8-bit tagalong
+        TH = 4,  /// 16-bit tagalong
+        TW = 5   /// 32-bit tagalong
+    };
+    static constexpr unsigned NumKinds = 6;
+
+    /// Construct an empty container. Most operations aren't defined on empty
+    /// containers. (Use `operator bool()` to check if a container is empty.)
     Container() : tagalong_(false), log2sz_(3), index_(0) {}
-    Container(const char *name) {       // NOLINT(runtime/explicit)
-        const char *n = name;
-        if (*name == 'T') {
-            tagalong_ = true;
-            n++;
-        } else {
-            tagalong_ = false; }
-        switch (*n++) {
-        case 'B': log2sz_ = 0; break;
-        case 'H': log2sz_ = 1; break;
-        case 'W': log2sz_ = 2; break;
-        default: BUG("Invalid register '%s'", name); }
-        int v = strtol(n, const_cast<char **>(&n), 10);
-        index_ = v;
-        if (*n || index_ != v)
-            BUG("Invalid register '%s'", name); }
+
+    /// Construct a container from @name - e.g., "B0" for container B0.
+    Container(const char *name);       // NOLINT(runtime/explicit)
+
+    /// Construct a container from @kind and @index - e.g., (Kind::B, 0) for
+    /// container B0.
+    Container(Kind kind, unsigned index);
+
+    /// @return the container with the given @id number, which you can obtain
+    /// from the id() method. Useful when storing containers in bitvecs.
+    static Container fromId(unsigned id) {
+        return Container(Kind(id % NumKinds), id / NumKinds);
+    }
+
     size_t size() const { return 8U << log2sz_; }
     unsigned log2sz() const { return log2sz_; }
+    size_t msb() const { return size() - 1; }
+    size_t lsb() const { return 0; }
+
+    Kind kind() const;
     unsigned index() const { return index_; }
     bool tagalong() const { return tagalong_; }
+
+    /// @return a numerical id that uniquely identifies this container. Useful
+    /// when storing Containers in bitvecs.
+    unsigned id() const {
+        // There are six kinds: B, H, W, and the tagalong variants of each.
+        const unsigned kindId = log2sz_ + (tagalong_ ? 3 : 0);
+        // Ids are assigned in ascending order by index, with kinds interleaved.
+        // For example: B0, H0, W0, TB0, TH0, TW0, B1, H1, W1, ...
+        return index_ * 6 + kindId;
+    }
+
+    /// @return true if this container is nonempty (i.e., refers to an actual
+    /// PHV container).
     explicit operator bool() const { return log2sz_ != 3; }
+
     Container operator++() {
         if (index_ != 0x7ff) ++index_;
         return *this; }
@@ -47,21 +76,60 @@ class Container {
     bool operator<(Container c) const {
         return (tagalong_ << 15) + (log2sz_ << 13) + index_ <
                (c.tagalong_ << 15) + (c.log2sz_ << 13) + c.index_; }
+
     friend std::ostream &operator<<(std::ostream &out, Container c);
+    friend std::ostream &operator<<(std::ostream &out, Kind k);
+
     static Container B(unsigned idx) { return Container(false, 0, idx); }
     static Container H(unsigned idx) { return Container(false, 1, idx); }
     static Container W(unsigned idx) { return Container(false, 2, idx); }
     static Container TB(unsigned idx) { return Container(true, 0, idx); }
     static Container TH(unsigned idx) { return Container(true, 1, idx); }
     static Container TW(unsigned idx) { return Container(true, 2, idx); }
-    cstring toString() const {
-        std::stringstream tmp;
-        tmp << *this;
-        return tmp.str(); }
+
+    /**
+     * Generates a bitvec containing a range of containers. This kind of bitvec
+     * can be used to implement efficient set operations on large numbers of
+     * containers.
+     *
+     * To generate the range [B10, B16), use `range(Kind::B, 10, 6)`.
+     *
+     * @param kind The type of container.
+     * @param start The index of first container in the range.
+     * @param length The number of containers in the range. May be zero.
+     */
+    static bitvec range(Kind kind, unsigned start, unsigned length);
+
+    /// @return a bitvec of the containers which are hard-wired to ingress.
+    static const bitvec& ingressOnly();
+
+    /// @return a bitvec of the containers which are hard-wired to egress.
+    static const bitvec& egressOnly();
+
+    /// @return the ids of every container in the same group as this container.
+    bitvec group() const;
+
+    /// @return the ids of every container in the given tagalong group.
+    static bitvec tagalongGroup(unsigned groupIndex);
+
+    /// @return the ids of containers that can be assigned to a thread
+    /// individually.
+    static const bitvec& individuallyAssignedContainers();
+
+    /// @return the ids of all containers which actually exist on the Tofino
+    /// hardware - i.e., all non-overflow containers.
+    static const bitvec& physicalContainers();
+
+    /// @return a string representation of this container.
+    cstring toString() const;
+
+    /// @return a string representation of the provided @group of containers.
+    static cstring groupToString(const bitvec& group);
 };
 
-inline std::ostream &operator<<(std::ostream &out, PHV::Container c) {
-    return out << (c.tagalong_ ? "T" : "") << "BHW?"[c.log2sz_] << c.index_; }
+std::ostream &operator<<(std::ostream &out, const PHV::Container c);
+std::ostream &operator<<(std::ostream &out, const PHV::Container::Kind k);
 
 }  // namespace PHV
+
 #endif /* TOFINO_PHV_PHV_H_ */

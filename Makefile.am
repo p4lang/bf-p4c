@@ -130,6 +130,7 @@ tofino_backend_phv_UNIFIED = \
 	%reldir%/phv/cluster_phv_overlay.cpp \
 	%reldir%/phv/cluster_phv_req.cpp \
 	%reldir%/phv/cluster_phv_slicing.cpp \
+	%reldir%/phv/phv.cpp \
 	%reldir%/phv/phv_analysis_api.cpp \
 	%reldir%/phv/phv_fields.cpp \
 	%reldir%/phv/repack_metadata.cpp \
