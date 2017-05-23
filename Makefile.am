@@ -135,7 +135,8 @@ tofino_backend_phv_UNIFIED = \
 	%reldir%/phv/phv_fields.cpp \
 	%reldir%/phv/repack_metadata.cpp \
 	%reldir%/phv/split_phv_use.cpp \
-	%reldir%/phv/trivial_alloc.cpp
+	%reldir%/phv/trivial_alloc.cpp \
+	%reldir%/phv/validate_allocation.cpp
 
 noinst_HEADERS += \
 	%reldir%/phv/asm_output.h \
@@ -152,7 +153,8 @@ noinst_HEADERS += \
 	%reldir%/phv/phv_fields.h \
 	%reldir%/phv/phv.h \
 	%reldir%/phv/split_phv_use.h \
-	%reldir%/phv/trivial_alloc.h
+	%reldir%/phv/trivial_alloc.h \
+	%reldir%/phv/validate_allocation.h
 
 cpplint_FILES += $(tofino_backend_phv_UNIFIED) $(tofino_backend_phv_NONUNIFIED)
 

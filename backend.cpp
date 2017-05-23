@@ -65,6 +65,7 @@ limitations under the License.
 #include "tofino/phv/cluster_phv_slicing.h"
 #include "tofino/phv/cluster_phv_overlay.h"
 #include "tofino/phv/phv_analysis_api.h"
+#include "tofino/phv/validate_allocation.h"
 #include "tofino/common/parser_overlay.h"
 
 namespace Tofino {
@@ -222,6 +223,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
         phv_alloc,                   // phv assignment / binding
         //
         Log::verbose() ? new VisitFunctor([&phv]() { std::cout << phv; }) : nullptr,
+        new PHV::ValidateAllocation(phv),
 
         new IXBarRealign(phv),
         new SplitExtractEmit,

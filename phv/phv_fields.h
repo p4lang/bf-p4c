@@ -12,6 +12,7 @@
 
 namespace PHV {
 class TrivialAlloc;
+class ValidateAllocation;
 }  // end namespace PHV
 
 class Cluster_PHV;
@@ -110,6 +111,7 @@ class PhvInfo : public Inspector {
         //
         friend class SplitPhvUse;             // phv/split_phv_use
         friend class PHV::TrivialAlloc;       // phv/trivial_alloc
+        friend class PHV::ValidateAllocation; // phv/validate_allocation
         friend class Slice;                   // common/asm_output
         friend class ArgumentAnalyzer;        // mau/action_format
         friend class TableLayout;             // mau/table_layout
