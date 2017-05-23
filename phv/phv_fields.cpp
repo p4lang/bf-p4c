@@ -314,11 +314,11 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
         if (!stacks_num && pov_fields_h.size() > 1) {
             for (auto &f : pov_fields_h) {
                 hdr_dd_valid->ccgf_fields().push_back(f);
-                f->ccgf(hdr_dd_valid);
+                f->set_ccgf(hdr_dd_valid);
             }
-            hdr_dd_valid->phv_use_hi(pov_fields_h.size());
+            hdr_dd_valid->set_phv_use_hi(pov_fields_h.size());
                                      // allocate container for ccgf width
-            hdr_dd_valid->simple_header_pov_ccgf(true);
+            hdr_dd_valid->set_simple_header_pov_ccgf(true);
             pov_fields_h.clear();
         }
         for (auto &stack : stacks) {
@@ -353,10 +353,10 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
                     Field *pov_stk = &all_fields[stack.name + ".$stkvalid"];
                     for (auto &f : pov_fields) {
                         pov_stk->ccgf_fields().push_back(f);
-                        f->ccgf(pov_stk);
+                        f->set_ccgf(pov_stk);
                     }
-                    pov_stk->ccgf(pov_stk);
-                    pov_stk->header_stack_pov_ccgf(true);
+                    pov_stk->set_ccgf(pov_stk);
+                    pov_stk->set_header_stack_pov_ccgf(true);
                 }
             }
         }
@@ -376,7 +376,7 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
 // cluster ids
 //
 void
-PhvInfo::Field::cl_id(std::string cl_p) {
+PhvInfo::Field::cl_id(std::string cl_p) const {
     // can only change id of original non-sliced cluster
     if (!sliced() && clusters_i.size()) {
         clusters_i.front()->id(cl_p);
@@ -384,7 +384,7 @@ PhvInfo::Field::cl_id(std::string cl_p) {
 }
 
 std::string
-PhvInfo::Field::cl_id(Cluster_PHV * cl) {
+PhvInfo::Field::cl_id(Cluster_PHV * cl) const {
     // the first cl in list is the non-sliced owner cl
     if (!cl && clusters_i.size()) {
         return clusters_i.front()->id();
@@ -397,7 +397,7 @@ PhvInfo::Field::cl_id(Cluster_PHV * cl) {
 }
 
 int
-PhvInfo::Field::cl_id_num(Cluster_PHV *cl) {
+PhvInfo::Field::cl_id_num(Cluster_PHV *cl) const {
     // the first cl in list is the non-sliced owner cl
     if (!cl && clusters_i.size()) {
         return clusters_i.front()->id_num();
@@ -413,7 +413,7 @@ PhvInfo::Field::cl_id_num(Cluster_PHV *cl) {
 // constraints, phv_widths
 //
 bool
-PhvInfo::Field::constrained(bool packing_constraint) {
+PhvInfo::Field::constrained(bool packing_constraint) const {
     bool pack_c = mau_phv_no_pack_i || deparser_no_pack_i;
     if (packing_constraint) {
         return pack_c;
@@ -422,7 +422,7 @@ PhvInfo::Field::constrained(bool packing_constraint) {
 }
 
 bool
-PhvInfo::Field::is_ccgf() {
+PhvInfo::Field::is_ccgf() const {
     if (header_stack_pov_ccgf_i || simple_header_pov_ccgf_i) {
         assert(ccgf_fields_i.size());
         return true;
@@ -431,7 +431,7 @@ PhvInfo::Field::is_ccgf() {
 }
 
 int
-PhvInfo::Field::phv_use_width(Cluster_PHV *cl) {
+PhvInfo::Field::phv_use_width(Cluster_PHV *cl) const {
     // non-sliced owner not in map
     if (cl && field_slices_i.count(cl)) {
         return phv_use_hi(cl) - phv_use_lo(cl) + 1;
@@ -440,7 +440,7 @@ PhvInfo::Field::phv_use_width(Cluster_PHV *cl) {
 }
 
 void
-PhvInfo::Field::phv_use_width(bool ccgf_owner, int min_ceil) {
+PhvInfo::Field::set_phv_use_width(bool ccgf_owner, int min_ceil) {
     // compute ccgf width, need PHV container(s) of this width
     if (ccgf_owner && ccgf_fields_i.size()) {
         int ccg_width = 0;
@@ -474,7 +474,7 @@ PhvInfo::Field::phv_use_width(bool ccgf_owner, int min_ceil) {
 }  // phv_use_width()
 
 int
-PhvInfo::Field::ccgf_width() {
+PhvInfo::Field::ccgf_width() const {
     int ccgf_width_l = 0;
     for (auto &f : ccgf_fields_i) {
         if (f->ccgf() == f) {
@@ -530,7 +530,7 @@ PhvInfo::Field::phv_containers(PHV_Container *c) {
 //
 
 bool
-PhvInfo::Field::sliced() {
+PhvInfo::Field::sliced() const {
     if (clusters_i.size() > 1) {
         BUG_CHECK(!field_slices_i.empty(), "field %d has empty map field_slices_i", id);
         return true;
@@ -545,8 +545,15 @@ PhvInfo::Field::field_slices(Cluster_PHV *cl) {
     return field_slices_i[cl];
 }
 
+const std::pair<int, int>&
+PhvInfo::Field::field_slices(Cluster_PHV *cl) const {
+    assert(cl);
+    assert(field_slices_i.count(cl));
+    return field_slices_i.at(cl);
+}
+
 void
-PhvInfo::Field::field_slices(Cluster_PHV *cl, int lo, int hi) {
+PhvInfo::Field::set_field_slices(Cluster_PHV *cl, int lo, int hi) {
     assert(cl);
     assert(lo >= 0);
     assert(hi >= lo);
@@ -554,7 +561,7 @@ PhvInfo::Field::field_slices(Cluster_PHV *cl, int lo, int hi) {
 }
 
 int
-PhvInfo::Field::phv_use_lo(Cluster_PHV *cl) {
+PhvInfo::Field::phv_use_lo(Cluster_PHV *cl) const {
     if (cl && field_slices_i.size()) {
         return field_slices(cl).first;
     }
@@ -562,7 +569,7 @@ PhvInfo::Field::phv_use_lo(Cluster_PHV *cl) {
 }
 
 int
-PhvInfo::Field::phv_use_hi(Cluster_PHV *cl) {
+PhvInfo::Field::phv_use_hi(Cluster_PHV *cl) const {
     if (cl && field_slices_i.size()) {
         return field_slices(cl).second;
     }
@@ -636,7 +643,7 @@ std::ostream &operator<<(std::ostream &out, const PhvInfo::Field::alloc_slice &s
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, vector<PhvInfo::Field::alloc_slice> &sl_vec) {
+std::ostream &operator<<(std::ostream &out, const vector<PhvInfo::Field::alloc_slice> &sl_vec) {
     for (auto &sl : sl_vec) {
         out << sl << ';';
     }
@@ -645,7 +652,7 @@ std::ostream &operator<<(std::ostream &out, vector<PhvInfo::Field::alloc_slice> 
 
 std::ostream &operator<<(
     std::ostream &out,
-    ordered_map<Cluster_PHV *, std::pair<int, int>>& field_slices) {
+    const ordered_map<Cluster_PHV *, std::pair<int, int>>& field_slices) {
     for (auto &entry : field_slices) {
         out << '|';
         out << entry.first->id() << ',';
@@ -655,7 +662,7 @@ std::ostream &operator<<(
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, PhvInfo::Field &field) {
+std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field) {
     out << field.id << ':' << field.name << '<' << field.size;
     if (field.phv_use_lo() || field.phv_use_hi())
         out << ':' << field.phv_use_lo() << ".." << field.phv_use_hi();
@@ -729,20 +736,20 @@ std::ostream &operator<<(std::ostream &out, PhvInfo::Field &field) {
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, PhvInfo::Field *fld) {
+std::ostream &operator<<(std::ostream &out, const PhvInfo::Field *fld) {
     if (fld) return out << *fld;
     return out << "(nullptr)";
 }
 
 // ordered_set Field*
-std::ostream &operator<<(std::ostream &out, ordered_set<PhvInfo::Field *>& field_set) {
+std::ostream &operator<<(std::ostream &out, const ordered_set<PhvInfo::Field *>& field_set) {
     for (auto &f : field_set) {
         out << f << std::endl;
     }
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, std::list<PhvInfo::Field *>& field_list) {
+std::ostream &operator<<(std::ostream &out, const std::list<PhvInfo::Field *>& field_list) {
     for (auto &f : field_list) {
         out << f << std::endl;
     }

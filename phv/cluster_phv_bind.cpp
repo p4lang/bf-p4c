@@ -303,10 +303,10 @@ PHV_Bind::container_contiguous_alloc(
                     member_bit_lo = member->size - member->phv_use_rem() - use_width;
                     // spans several containers => aggregate used bits
                     // [width 20] = 12..19[8b] 4..11[8b] 0..3[4b]
-                    member->phv_use_rem(member->phv_use_rem() + use_width);
+                    member->set_phv_use_rem(member->phv_use_rem() + use_width);
                 } else {
                     processed_members++;
-                    member->phv_use_rem(0);
+                    member->set_phv_use_rem(0);
                 }
                 // -- reentrant PHV_Bind, preserve entry state of member
                 // member->ccgf = 0;
@@ -339,7 +339,7 @@ PHV_Bind::container_contiguous_alloc(
                 container_bit -= pov_width;
                 if (f1->simple_header_pov_ccgf()) {  // simple header ccgf
                     container_bit -= 2;
-                    f1->phv_use_hi(f1->size - 1);
+                    f1->set_phv_use_hi(f1->size - 1);
                 }
                 //
                 // check constituent members do fit hdr stk pov
@@ -428,9 +428,9 @@ PHV_Bind::trivial_allocate(std::list<PhvInfo::Field *>& fields) {
                 width_in_container = container_width;
                 // spans several containers, aggregate used bits
                 // [width 20]= 12..19[8b] 4..11[8b] 0..3[4b]
-                f->phv_use_rem(f->phv_use_rem() + width_in_container);
+                f->set_phv_use_rem(f->phv_use_rem() + width_in_container);
             } else {
-                f->phv_use_rem(0);
+                f->set_phv_use_rem(0);
             }
             f->alloc_i.emplace_back(
                 *asm_container, field_bit, container_bit, width_in_container);

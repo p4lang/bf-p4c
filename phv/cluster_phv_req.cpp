@@ -228,7 +228,7 @@ Cluster_PHV::Cluster_PHV(
         // e.g., when PHV <== TPHV_Overflow
         //
         exact_containers_i = true;
-        cluster_vec_i.front()->exact_containers(true);
+        cluster_vec_i.front()->set_exact_containers(true);
     }
 }  // Cluster_PHV
 
@@ -283,7 +283,7 @@ Cluster_PHV::insert_field_clusters(Cluster_PHV *parent_cl, bool slice_lo) {
                     hi = f->phv_use_hi();
                 }
             }
-            f->field_slices(this, lo, hi);
+            f->set_field_slices(this, lo, hi);
             // width of field slice in this cluster
             if (max_width_i) {
                 assert(max_width_i == hi - lo + 1);
@@ -348,7 +348,7 @@ Cluster_PHV::compute_requirements() {
     // count constrained fields, preference given during container placement
     //
     for (auto &f : cluster_vec_i) {
-        f->phv_use_width(f->ccgf() == f, width_i);
+        f->set_phv_use_width(f->ccgf() == f, width_i);
         if (PHV_Container::constraint_no_cohabit(f)) {
             num_fields_no_cohabit_i++;
         }

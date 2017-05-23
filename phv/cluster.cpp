@@ -71,7 +71,7 @@ bool Cluster::preorder(const IR::Member* expression) {
                 // restrict to name ending in egress_port, i.e., discard egress_port_id
                 if (strlen(s) == strlen(es)) {
                     LOG1(".....Deparser Constraint on field..... " << field->name);
-                    field->deparser_no_pack(true);
+                    field->set_deparser_no_pack(true);
                 }
             }
         }
@@ -164,7 +164,7 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
                     group_accumulator = field;
                     accumulator_bits = 0;
                 }
-                field->ccgf(group_accumulator);
+                field->set_ccgf(group_accumulator);
                 group_accumulator->ccgf_fields().push_back(field);
                 accumulator_bits += field->size;
                 if (PHV_Container::exact_container(accumulator_bits)) {
@@ -197,7 +197,7 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
             && ccg_width % PHV_Container::PHV_Word::b8)
             || ccg_width > PHV_Container::PHV_Word::b32) {
             for (auto &f : owner->ccgf_fields()) {
-                f->ccgf(0);
+                f->set_ccgf(0);
             }
             owner->ccgf_fields().clear();
             LOG4("-----discarded PHV_container_contiguous_group....."
@@ -249,7 +249,7 @@ bool Cluster::preorder(const IR::Expression* expression) {
         LOG4(field);
     }
     if (field && isWrite()) {
-        field->mau_write(true);
+        field->set_mau_write(true);
         LOG4(".....MAU_write....." << field);
         return false;  // prune children below, e.g., complicated slice expression
     }
@@ -450,13 +450,13 @@ void Cluster::compute_fields_no_use_mau() {
         // compute ccgf width
         // need PHV container of this width
         //
-        field.phv_use_width(field.ccgf() == &field);
+        field.set_phv_use_width(field.ccgf() == &field);
         //
         // set deparsed_no_holes
         // used in parser / deparser
         //
         if (uses_i->use[0][field.gress][field.id]) {
-            field.deparser_no_holes(true);
+            field.set_deparser_no_holes(true);
         }
     }
     pov_fields_i.assign(pov_fields.begin(), pov_fields.end());         // pov_fields_i
@@ -614,9 +614,9 @@ void Cluster::set_field_range(const IR::Expression& expression) {
     bits.lo = bits.hi = 0;
     auto field = phv_i.field(&expression, &bits);
     if (field) {
-        field->phv_use_lo(std::min(field->phv_use_lo(), bits.lo));
+        field->set_phv_use_lo(std::min(field->phv_use_lo(), bits.lo));
         if (field->metadata || field->pov) {
-            field->phv_use_hi(std::max(field->phv_use_hi(), bits.hi));
+            field->set_phv_use_hi(std::max(field->phv_use_hi(), bits.hi));
         } else {
             set_field_range(field);
         }
@@ -625,9 +625,10 @@ void Cluster::set_field_range(const IR::Expression& expression) {
 
 void Cluster::set_field_range(PhvInfo::Field *field, int container_width) {
     if (field) {
-        field->phv_use_lo(0);
+        field->set_phv_use_lo(0);
         if (field->ccgf() != field) {
-            field->phv_use_hi(field->phv_use_lo() + std::max(field->size, container_width) - 1);
+            field->set_phv_use_hi(field->phv_use_lo() +
+                                  std::max(field->size, container_width) - 1);
         }
     }
 }

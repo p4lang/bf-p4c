@@ -74,7 +74,7 @@ void PHV_Field_Operations::end_apply() {
             for (auto &op : f.operations()) {
                 // element 0 in tuple is 'is_move_op'
                 if (std::get<0>(op) != true) {
-                    f.mau_phv_no_pack(true);                     // set mau_phv_no_pack
+                    f.set_mau_phv_no_pack(true);                     // set mau_phv_no_pack
                     break;
                 }
             }  // for
@@ -83,13 +83,13 @@ void PHV_Field_Operations::end_apply() {
     // recompute phv_use_width for no_cohabit fields
     for (auto &f : phv) {
         if (PHV_Container::constraint_no_cohabit(&f)) {
-            f.phv_use_hi(PHV_Container::ceil_phv_use_width(&f) - 1);
+            f.set_phv_use_hi(PHV_Container::ceil_phv_use_width(&f) - 1);
             LOG3("...packing_constraint... " << f);
         }
     }
     // recompute phv_use_width for ccgf owners
     for (auto &f : phv) {
-        f.phv_use_width(f.ccgf() == &f);
+        f.set_phv_use_width(f.ccgf() == &f);
     }
     LOG3("..........End PHV_Field_Operations..........");
 }  // end_apply()

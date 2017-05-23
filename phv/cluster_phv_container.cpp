@@ -252,13 +252,13 @@ PHV_Container::taint_ccgf(
             use_width += start;  // start is -ve
             start = 0;
             member_bit_lo = member->size - member->phv_use_rem() - use_width;
-            member->phv_use_rem(member->phv_use_rem() + use_width);
+            member->set_phv_use_rem(member->phv_use_rem() + use_width);
                                                 // spans several containers, aggregate used bits
         } else {
-            member->phv_use_rem(0);
+            member->set_phv_use_rem(0);
             processed_members++;
         }
-        member->ccgf(0);        // recursive taint call should skip ccgf
+        member->set_ccgf(0);        // recursive taint call should skip ccgf
         taint(start, use_width, member, start /*range start*/, member_bit_lo);
         processed_width += constraint_no_cohabit(member)? width_i: use_width;
         if (start <= 0) {
@@ -288,11 +288,11 @@ PHV_Container::update_ccgf(
     field->ccgf_fields().erase(
         field->ccgf_fields().begin(),
         field->ccgf_fields().begin() + processed_members);
-    field->phv_use_hi(field->phv_use_hi() - processed_width);
+    field->set_phv_use_hi(field->phv_use_hi() - processed_width);
     if (field->ccgf_fields().size()) {
-        field->ccgf(field);
+        field->set_ccgf(field);
     } else {
-        field->ccgf(0);
+        field->set_ccgf(0);
         // ccgf owners with no-pack constraint, set range to entire container
         Cluster::set_field_range(field, constraint_no_cohabit(field)? width_i: 0);
     }
@@ -329,10 +329,10 @@ PHV_Container::overlay_ccgf_field(
             // remainder bits processed in subsequent container allocated to owner
             //
             use_width = width;
-            member->phv_use_rem(member->phv_use_rem() + use_width);
+            member->set_phv_use_rem(member->phv_use_rem() + use_width);
                                                 // spans several containers, aggregate used bits
         } else {
-            member->phv_use_rem(0);
+            member->set_phv_use_rem(0);
         }
         fields_in_container(
             member,

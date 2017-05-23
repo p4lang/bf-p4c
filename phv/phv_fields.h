@@ -115,9 +115,6 @@ class PhvInfo : public Inspector {
         //
         friend std::ostream &operator<<(std::ostream &out, PHV_Bind &phv_bind);
         friend void emit_phv_field(std::ostream &out, PhvInfo::Field &field);
-        friend std::ostream &operator<<(std::ostream &, const PhvInfo::Field::bitrange &);
-        friend std::ostream &operator<<(std::ostream &, vector<PhvInfo::Field::alloc_slice> &);
-        friend std::ostream &operator<<(std::ostream &, const PhvInfo::Field::alloc_slice &);
         friend std::ostream &operator<<(std::ostream &out, const Slice &sl);
         //
         // ****************************************************************************************
@@ -213,66 +210,72 @@ class PhvInfo : public Inspector {
         //
         // cluster ids
         //
-        void cl_id(std::string cl_p);
-        std::string cl_id(Cluster_PHV *cl = 0);
-        int cl_id_num(Cluster_PHV *cl = 0);
+        void cl_id(std::string cl_p) const;
+        std::string cl_id(Cluster_PHV *cl = 0) const;
+        int cl_id_num(Cluster_PHV *cl = 0) const;
         //
         // constraints
         //
-        bool mau_phv_no_pack()                                 { return mau_phv_no_pack_i; }
-        void mau_phv_no_pack(bool b)                           { mau_phv_no_pack_i = b; }
-        bool deparser_no_pack()                                { return deparser_no_pack_i; }
-        void deparser_no_pack(bool b)                          { deparser_no_pack_i = b; }
-        bool deparser_no_holes()                               { return deparser_no_holes_i; }
-        void deparser_no_holes(bool b)                         { deparser_no_holes_i = b; }
-        bool exact_containers()                                { return exact_containers_i; }
-        void exact_containers(bool b)                          { exact_containers_i = b; }
-        bool constrained(bool packing_constraint = false);
+        bool mau_phv_no_pack() const                           { return mau_phv_no_pack_i; }
+        void set_mau_phv_no_pack(bool b)                       { mau_phv_no_pack_i = b; }
+        bool deparser_no_pack() const                          { return deparser_no_pack_i; }
+        void set_deparser_no_pack(bool b)                      { deparser_no_pack_i = b; }
+        bool deparser_no_holes() const                         { return deparser_no_holes_i; }
+        void set_deparser_no_holes(bool b)                     { deparser_no_holes_i = b; }
+        bool exact_containers() const                          { return exact_containers_i; }
+        void set_exact_containers(bool b)                      { exact_containers_i = b; }
+        bool constrained(bool packing_constraint = false) const;
         //
         // operations on this field
         //
-        bool mau_write()                                       { return mau_write_i; }
-        void mau_write(bool b)                                 { mau_write_i = b; }
+        bool mau_write() const                                 { return mau_write_i; }
+        void set_mau_write(bool b)                             { mau_write_i = b; }
         vector<std::tuple<bool, cstring, Field_Ops>>&
             operations()                                       { return  operations_i; }
         //
         // ccgf
         //
-        bool is_ccgf();
-        bool simple_header_pov_ccgf()                          { return simple_header_pov_ccgf_i; }
-        void simple_header_pov_ccgf(bool b)                    { simple_header_pov_ccgf_i = b; }
-        bool header_stack_pov_ccgf()                           { return header_stack_pov_ccgf_i; }
-        void header_stack_pov_ccgf(bool b)                     { header_stack_pov_ccgf_i = b; }
-        Field *ccgf()                                          { return ccgf_i; }
-        void ccgf(Field *f)                                    { ccgf_i = f; }
+        bool is_ccgf() const;
+        bool simple_header_pov_ccgf() const                    { return simple_header_pov_ccgf_i; }
+        void set_simple_header_pov_ccgf(bool b)                { simple_header_pov_ccgf_i = b; }
+        bool header_stack_pov_ccgf() const                     { return header_stack_pov_ccgf_i; }
+        void set_header_stack_pov_ccgf(bool b)                 { header_stack_pov_ccgf_i = b; }
+        Field *ccgf() const                                    { return ccgf_i; }
+        void set_ccgf(Field *f)                                { ccgf_i = f; }
         vector<Field *>& ccgf_fields()                         { return ccgf_fields_i; }
-        int ccgf_width();                                 // phv width = aggregate size of members
+        const vector<Field *>& ccgf_fields() const             { return ccgf_fields_i; }
+        int ccgf_width() const;                               // phv width = aggregate size of members
         //
         // clusters, phv_containers
         //
         std::list<Cluster_PHV *>& clusters()                   { return clusters_i; }
         void clusters(Cluster_PHV *cluster_p);
         ordered_set<PHV_Container *>& phv_containers()         { return phv_containers_i; }
+        const ordered_set<PHV_Container *>&
+            phv_containers() const                             { return phv_containers_i; }
         void phv_containers(PHV_Container *c);
         //
         // phv_widths
         //
-        int phv_use_width(Cluster_PHV *cl = 0);           // width of field needed in phv container
-        void phv_use_width(bool ccgf, int min_ceil = 0);  // set phv_use_width for ccgf owners
-        int phv_use_lo(Cluster_PHV *cl = 0);
-        void phv_use_lo(int value)                             { phv_use_lo_i = value; }
-        int phv_use_hi(Cluster_PHV *cl = 0);
-        void phv_use_hi(int value)                             { phv_use_hi_i = value; }
-        int phv_use_rem()                                      { return phv_use_rem_i; }
-        void phv_use_rem(int value)                            { phv_use_rem_i = value; }
+        int phv_use_width(Cluster_PHV *cl = 0) const;     // width of field needed in phv container
+        void set_phv_use_width(bool ccgf, int min_ceil = 0);  // set phv_use_width for ccgf owners
+        int phv_use_lo(Cluster_PHV *cl = 0) const;
+        void set_phv_use_lo(int value)                         { phv_use_lo_i = value; }
+        int phv_use_hi(Cluster_PHV *cl = 0) const;
+        void set_phv_use_hi(int value)                         { phv_use_hi_i = value; }
+        int phv_use_rem() const                                { return phv_use_rem_i; }
+        void set_phv_use_rem(int value)                        { phv_use_rem_i = value; }
         //
         // field slices
         //
-        bool sliced();
+        bool sliced() const;
         ordered_map<Cluster_PHV *, std::pair<int, int>>&
             field_slices()                                     { return field_slices_i; }
+        const ordered_map<Cluster_PHV *, std::pair<int, int>>&
+            field_slices() const                               { return field_slices_i; }
         std::pair<int, int>& field_slices(Cluster_PHV *cl);
-        void field_slices(Cluster_PHV *cl, int lo, int hi);
+        const std::pair<int, int>& field_slices(Cluster_PHV *cl) const;
+        void set_field_slices(Cluster_PHV *cl, int lo, int hi);
         //
         // field overlays
         //
@@ -280,6 +283,8 @@ class PhvInfo : public Inspector {
         void overlay_substratum(Field *f);
         ordered_map<int, ordered_set<Field *> *>&
             field_overlay_map()                                { return field_overlay_map_i; }
+        const ordered_map<int, ordered_set<Field *> *>&
+            field_overlay_map() const                          { return field_overlay_map_i; }
         void field_overlay_map(int r, Field *field);
         void field_overlays(std::list<Field *>& fields_list);
         void field_overlay(Field *overlay);
@@ -301,7 +306,7 @@ class PhvInfo : public Inspector {
         friend class PhvInfo;
         //
         friend std::ostream &operator<<(std::ostream &, const PhvInfo::Field::Field_Ops &);
-        friend std::ostream &operator<<(std::ostream &out, PhvInfo::Field &field);
+        friend std::ostream &operator<<(std::ostream &out, const PhvInfo::Field &field);
         friend std::ostream &operator<<(std::ostream &out, Cluster_PHV &cp);
         //
      public:  // class Field
@@ -379,12 +384,12 @@ void dump(const PhvInfo *);
 //
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field::bitrange &);
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field::alloc_slice &);
-std::ostream &operator<<(std::ostream &, vector<PhvInfo::Field::alloc_slice> &);
-std::ostream &operator<<(std::ostream &, ordered_map<Cluster_PHV *, std::pair<int, int>>&);
-std::ostream &operator<<(std::ostream &, PhvInfo::Field &);
-std::ostream &operator<<(std::ostream &, PhvInfo::Field *);
-std::ostream &operator<<(std::ostream &, ordered_set<PhvInfo::Field *>&);
-std::ostream &operator<<(std::ostream &, std::list<PhvInfo::Field *>&);
+std::ostream &operator<<(std::ostream &, const vector<PhvInfo::Field::alloc_slice> &);
+std::ostream &operator<<(std::ostream &, const ordered_map<Cluster_PHV *, std::pair<int, int>>&);
+std::ostream &operator<<(std::ostream &, const PhvInfo::Field &);
+std::ostream &operator<<(std::ostream &, const PhvInfo::Field *);
+std::ostream &operator<<(std::ostream &, const ordered_set<PhvInfo::Field *>&);
+std::ostream &operator<<(std::ostream &, const std::list<PhvInfo::Field *>&);
 std::ostream &operator<<(std::ostream &, const PhvInfo &);
 std::ostream &operator<<(std::ostream &, const PhvInfo::Field::Field_Ops &);
 //
