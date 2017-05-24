@@ -79,7 +79,7 @@ void PHV::TrivialAlloc::do_alloc(PhvInfo::Field *i, Regs *use, Regs *skip, int m
         while (size > rtype.size - 8 || (size > 16 && i->metadata)) {
             int abits = rtype.size;
             while (isize < abits && merge_follow) {
-                i->alloc_i.emplace_back(use->*rtype.alloc, 0, abits-isize, isize);
+                i->alloc_i.emplace_back(i, use->*rtype.alloc, 0, abits-isize, isize);
                 LOG3("   allocated " << i->alloc_i << " for " << i->gress);
                 abits -= isize;
                 i = phv.field(i->id + 1);
@@ -88,7 +88,7 @@ void PHV::TrivialAlloc::do_alloc(PhvInfo::Field *i, Regs *use, Regs *skip, int m
             if ((isize -= abits) < 0) {
                 abits += isize;
                 isize = 0; }
-            i->alloc_i.emplace_back((use->*rtype.alloc)++, isize, 0, abits);
+            i->alloc_i.emplace_back(i, (use->*rtype.alloc)++, isize, 0, abits);
             if (skip && use->*rtype.alloc == skip[0].*rtype.alloc)
                 use->*rtype.alloc = skip[1].*rtype.alloc;
             size -= rtype.size; } }
@@ -103,7 +103,7 @@ void alloc_pov(PhvInfo::Field *i, PhvInfo::Field *pov) {
         if (i->offset < sl.field_bit)
             use -= sl.field_bit - i->offset;
         width -= use;
-        i->alloc_i.emplace_back(sl.container, width, i->offset + width - sl.field_bit, use); }
+        i->alloc_i.emplace_back(i, sl.container, width, i->offset + width - sl.field_bit, use); }
     LOG3("   allocated " << i->alloc_i << " for " << i->name);
 }
 

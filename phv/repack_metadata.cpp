@@ -23,7 +23,8 @@ void repack_metadata(PhvInfo &phv) {
                 int hi = floor_log2(bits);
                 int lo = floor_log2(bits ^ ((1UL << (hi+1)) - 1)) + 1;
                 int width = hi - lo + 1;
-                field.alloc_i.emplace_back(c.first, width_left - width, lo, width);
+                field.alloc_i.emplace_back(&field, c.first, width_left - width,
+                                           lo, width);
                 width_left -= width;
                 bits &= ~(((1UL << width) - 1) << lo); } }
         if (width_left != 0)

@@ -253,6 +253,7 @@ PHV_Bind::bind_fields_to_containers() {
                 // simple header ccgs
                 //
                 f->alloc_i.emplace_back(
+                   f,
                    *asm_container,
                    field_bit,
                    container_bit,
@@ -311,6 +312,7 @@ PHV_Bind::container_contiguous_alloc(
                 // -- reentrant PHV_Bind, preserve entry state of member
                 // member->ccgf = 0;
                 member->alloc_i.emplace_back(
+                    member,
                     *asm_container,
                     member_bit_lo,
                     start,
@@ -354,6 +356,7 @@ PHV_Bind::container_contiguous_alloc(
                         << container_bit);
                 }
                 pov_f->alloc_i.emplace_back(
+                    pov_f,
                     *asm_container,
                     field_bit,
                     container_bit,
@@ -433,7 +436,7 @@ PHV_Bind::trivial_allocate(std::list<PhvInfo::Field *>& fields) {
                 f->set_phv_use_rem(0);
             }
             f->alloc_i.emplace_back(
-                *asm_container, field_bit, container_bit, width_in_container);
+                f, *asm_container, field_bit, container_bit, width_in_container);
             LOG3(f << '[' << field_bit << ".." << f->phv_use_width()-1 << "] ..... " << reg_name);
             field_bit += width_in_container;
         }

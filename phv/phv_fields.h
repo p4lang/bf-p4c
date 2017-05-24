@@ -68,10 +68,11 @@ class PhvInfo : public Inspector {
                 return rv; } };
         //
         struct alloc_slice {
+            const Field*           field;
             PHV::Container         container;
             int field_bit, container_bit, width;
-            alloc_slice(PHV::Container c, int fb, int cb, int w) : container(c), field_bit(fb),
-                container_bit(cb), width(w) {}
+            alloc_slice(const Field* f, PHV::Container c, int fb, int cb, int w)
+                : field(f), container(c), field_bit(fb), container_bit(cb), width(w) {}
             bitrange field_bits() const       { return { field_bit, field_bit+width-1 }; }
             bitrange container_bits() const   { return { container_bit, container_bit+width-1 }; }
             int field_hi() const              { return field_bit + width - 1; }

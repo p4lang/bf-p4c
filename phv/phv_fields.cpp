@@ -105,13 +105,13 @@ const PhvInfo::Field::alloc_slice &PhvInfo::Field::for_bit(int bit) const {
         if (bit >= sl.field_bit && bit < sl.field_bit + sl.width)
             return sl;
     ERROR("No allocation for bit " << bit << " in " << name);
-    static alloc_slice invalid(PHV::Container(), 0, 0, 0);
+    static alloc_slice invalid(nullptr, PHV::Container(), 0, 0, 0);
     return invalid;
 }
 
 void PhvInfo::Field::foreach_alloc(int lo, int hi,
                                    std::function<void(const alloc_slice &)> fn) const {
-    alloc_slice tmp(PHV::Container(), lo, lo, hi-lo+1);
+    alloc_slice tmp(this, PHV::Container(), lo, lo, hi-lo+1);
     if (alloc_i.empty()) {
         fn(tmp);
         return; }
@@ -141,7 +141,7 @@ void PhvInfo::Field::foreach_alloc(int lo, int hi,
 
 void PhvInfo::Field::foreach_byte(int lo, int hi,
                                   std::function<void(const alloc_slice &)> fn) const {
-    alloc_slice tmp(PHV::Container(), lo, lo, 8 - (lo&7));
+    alloc_slice tmp(this, PHV::Container(), lo, lo, 8 - (lo&7));
     if (alloc_i.empty()) {
         while (lo <= hi) {
             if (lo/8U == hi/8U)

@@ -29,18 +29,9 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe*) {
     BUG_CHECK(phv.alloc_done(),
               "Calling ValidateAllocation without performing PHV allocation");
 
-    // A mapping from a range of bits in a field to a range of bits in a PHV
-    // container. This is the same thing as PHV::Field::alloc_slice, except that
-    // it contains the field rather than the container.
-    struct FieldSlice {
-        PhvInfo::Field* field;
-        int field_bit;
-        int container_bit;
-        int width;
-    };
-
     // A mapping from PHV containers to the field slices that they contain.
-    std::map<PHV::Container, std::vector<FieldSlice>> allocations;
+    using Slice = PhvInfo::Field::alloc_slice;
+    std::map<PHV::Container, std::vector<Slice>> allocations;
 
     // The set of reserved container ids for each thread.
     bitvec threadAssignments[2] = {
@@ -65,13 +56,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe*) {
 
         bitvec allocatedBits;
         for (auto& slice : field.alloc_i) {
-            allocations[slice.container].emplace_back(FieldSlice{
-                &field,
-                slice.field_bit,
-                slice.container_bit,
-                slice.width
-            });
-
+            allocations[slice.container].emplace_back(slice);
             threadAssignments[field.gress] |= slice.container.group();
 
             // Verify that the field doesn't contain any overlapping slices.
@@ -98,7 +83,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe*) {
     for (auto id : threadAssignments[INGRESS] & threadAssignments[EGRESS]) {
         auto container = PHV::Container::fromId(id);
 
-        std::set<PhvInfo::Field*> fields[2];
+        std::set<const PhvInfo::Field*> fields[2];
         if (allocations.count(container))
             for (auto& slice : allocations[container])
                 fields[slice.field->gress].insert(slice.field);
@@ -116,7 +101,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe*) {
                 container, message.str());
     }
 
-    auto isMetadata = [](PhvInfo::Field* f) { return f->metadata || f->pov; };
+    auto isMetadata = [](const PhvInfo::Field* f) { return f->metadata || f->pov; };
 
     // Check that the allocation for each container is valid.
     for (auto& allocation : allocations) {
@@ -124,10 +109,8 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe*) {
         auto& slices = allocation.second;
 
         // Collect all the fields which are assigned to this container.
-        std::set<PhvInfo::Field*> fields;
-        std::transform(slices.begin(), slices.end(),
-                       std::inserter(fields, fields.begin()),
-                       [](const FieldSlice& slice) { return slice.field; });
+        std::set<const PhvInfo::Field*> fields;
+        for (auto& slice : slices) fields.insert(slice.field);
 
         // Since TPHV containers can't be accessed in the MAU, and metadata is
         // not normally deparsed, it generally doesn't make sense to put
@@ -167,12 +150,10 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe*) {
         // check overlapping with respect to the *field* above.)
         bitvec allocatedBitsForContainer;
         for (auto field : fields) {
-            std::vector<FieldSlice> slicesForField;
-            std::copy_if(slices.begin(), slices.end(),
-                         std::back_inserter(slicesForField),
-                         [&](const FieldSlice& slice) {
-                return slice.field == field;
-            });
+            std::vector<Slice> slicesForField;
+            for (auto& slice : slices)
+                if (slice.field == field) slicesForField.push_back(slice);
+
             ERROR_CHECK(!slicesForField.empty(), "No slices for field?");
 
             bitvec allocatedBitsForField;
