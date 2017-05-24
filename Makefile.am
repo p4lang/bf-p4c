@@ -51,6 +51,16 @@ json2cpp_SOURCES = json2cpp.cpp json.cpp
 reflow_SOURCES = reflow.cpp
 mksizes_SOURCES = mksizes.cpp
 
+# ASAN CHECKS
+if IS_ASAN_ENABLED
+TASM_FLAGS=-fsanitize=address -fno-omit-frame-pointer -fno-optimize-sibling-calls -g -O1
+else
+TASM_FLAGS=-g -O2
+endif
+AM_CFLAGS=$(TASM_FLAGS)
+AM_CXXFLAGS=$(TASM_FLAGS)
+AM_LDFLAGS=$(TASM_FLAGS)
+
 asm-parse.$(OBJEXT): lex-yaml.c gen/uptr_sizes.h
 
 include tofino/Makefile.am
