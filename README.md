@@ -15,6 +15,7 @@ GNU make and should suffice to build the assembler on any target
 - A C++ compiler supporting C++11 (the Makefile uses g++ by defalt)
 - bison
 - flex
+- pyinstaller (for walle)
 
 Running the test suite requires access to the Glass p4c_tofino compiler.
 Running stf tests requires access to the simple test harness.

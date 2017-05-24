@@ -21,15 +21,8 @@ findfile () {
     done
 }
 
-WALLE=$(findfile walle/walle.py)
-if [ ! -x "$WALLE" ]; then
-    WALLE=$(findfile walle/walle/walle.py)
-fi
-SCHEMA=$(findfile chip.schema)
-if [ ! -r "$SCHEMA" ]; then
-    SCHEMA=$(findfile tofino/chip.schema)
-fi
-
+WALLE=""
+SCHEMA=""
 OUT="tofino.bin"
 objs=""
 tmpdir=""
@@ -98,16 +91,29 @@ while [ $# -gt 0 ]; do
 done
 
 if [ ! -x "$WALLE" ]; then
-    if [ -e "$WALLE" ]; then
-        echo "$WALLE must be executable"
-    else
-        echo >&2 "Can't find walle"
+    WALLE=$(findfile walle/walle.py)
+    if [ ! -x "$WALLE" ]; then
+        WALLE=$(findfile walle/walle/walle.py)
     fi
-    exit 1
+    if [ ! -x "$WALLE" ]; then
+        if [ -e "$WALLE" ]; then
+            echo "$WALLE must be executable"
+        else
+            echo "4: $WALLE"
+            echo >&2 "Can't find walle"
+        fi
+        exit 1
+    fi
 fi
 if [ ! -r "$SCHEMA" ]; then
-    echo >&2 "Can't find chip schema"
-    exit 1
+    SCHEMA=$(findfile chip.schema)
+    if [ ! -r "$SCHEMA" ]; then
+        SCHEMA=$(findfile tofino/chip.schema)
+    fi
+    if [ ! -r "$SCHEMA" ]; then
+        echo >&2 "Can't find chip schema"
+        exit 1
+    fi
 fi
 
 $WALLE --schema $SCHEMA -o $OUT $objs

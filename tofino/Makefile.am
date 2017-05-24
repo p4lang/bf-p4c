@@ -9,7 +9,7 @@ TOFINO_HDRS=$(GEN_TOFINO:%=gen/tofino/%.h)
 nodist_tfas_SOURCES += $(TOFINO_SRCS)
 tfas_LDADD += $(TOFINO_OBJS)
 BUILT_SOURCES += $(TOFINO_HDRS) $(TOFINO_SRCS)
-nobase_dist_data_DATA = tofino/chip.schema
+nobase_dist_pkgdata_DATA = tofino/chip.schema
 
 $(GEN_TOFINO:%=gen/tofino/%.$(OBJEXT)): gen/tofino/%.$(OBJEXT): gen/tofino/%.cpp gen/tofino/%.h
 gen/tofino/%: JSON_EXTRA_ARGS=-N Tofino
