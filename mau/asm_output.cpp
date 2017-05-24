@@ -72,7 +72,7 @@ void MauAsmOutput::emit_immediate_format(std::ostream &out, indent_t indent,
         }
 
         if ((started && total_arg.ffs() != 0) || !immediate_to_end
-            || container_spot != container.start) { 
+            || container_spot != container.start) {
             immediate_count++;
             immediate_location = 0;
         }

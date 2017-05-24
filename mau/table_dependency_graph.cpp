@@ -1,10 +1,10 @@
-#include <assert.h>
-#include <algorithm>
 #include "table_dependency_graph.h"
+#include <assert.h>
+#include <boost/graph/breadth_first_search.hpp>
+#include <algorithm>
 #include "ir/ir.h"
 #include "lib/log.h"
 
-#include <boost/graph/breadth_first_search.hpp>
 
 static const char *dep_types[] = { "CONTROL", "DATA", "ANTI", "OUTPUT" };
 
@@ -45,8 +45,8 @@ class FindDependencyGraph::AddDependencies : public MauInspector, P4WriteContext
                     self.dg.add_edge(upstream_t, table, DependencyGraph::ANTI);
                 // Write-after-write dependence.
                 for (auto upstream_t : self.access[field->name].write)
-                    self.dg.add_edge(upstream_t, table, DependencyGraph::OUTPUT); }
-            else {
+                    self.dg.add_edge(upstream_t, table, DependencyGraph::OUTPUT);
+            } else {
                 // Read-after-write dependence.
                 for (auto upstream_t : self.access[field->name].write)
                     self.dg.add_edge(upstream_t, table, DependencyGraph::DATA); }
@@ -120,8 +120,8 @@ class FindDependencyGraph::UpdateAttached : public Inspector {
 bool FindDependencyGraph::preorder(const IR::MAU::TableSeq *seq) {
     const Context *ctxt = getContext();
     if (ctxt && ctxt->node->is<IR::Tofino::Pipe>()) {
-        access.clear(); }
-    else if (ctxt && dynamic_cast<const IR::MAU::Table *>(ctxt->node)) {
+        access.clear();
+    } else if (ctxt && dynamic_cast<const IR::MAU::Table *>(ctxt->node)) {
         const IR::MAU::Table* parent;
         parent = dynamic_cast<const IR::MAU::Table *>(ctxt->node);
         for (auto child : seq->tables) {
@@ -183,7 +183,7 @@ class bfs_happens_before_visitor : public boost::default_bfs_visitor {
   map< const IR::MAU::Table*,
        set<const IR::MAU::Table*> > happens_not_after;
 
-  public:
+ public:
     bfs_happens_before_visitor(
         map< const IR::MAU::Table*,
              set<const IR::MAU::Table*> >& happens_before_map)
@@ -191,8 +191,7 @@ class bfs_happens_before_visitor : public boost::default_bfs_visitor {
     { }
 
     template <typename Vertex, typename Graph>
-    void discover_vertex( Vertex v, const Graph & g)
-    {
+    void discover_vertex(Vertex v, const Graph &g) {
         // Ensure that every table gets entered into the happens-before map.
         const IR::MAU::Table* label = g[v];
 
@@ -203,8 +202,7 @@ class bfs_happens_before_visitor : public boost::default_bfs_visitor {
     }
 
     template <typename Edge, typename Graph>
-    void examine_edge( Edge e, const Graph & g)
-    {
+    void examine_edge(Edge e, const Graph &g) {
         const IR::MAU::Table* src = g[boost::source(e, g)];
         const IR::MAU::Table* dst = g[boost::target(e, g)];
 
@@ -221,16 +219,14 @@ class bfs_happens_before_visitor : public boost::default_bfs_visitor {
 
 class bfs_depth_visitor : public boost::default_bfs_visitor {
   std::map<DependencyGraph::Graph::vertex_descriptor, int>& counts;
-  public:
+ public:
     bfs_depth_visitor(
-        std::map<DependencyGraph::Graph::vertex_descriptor,
-                 int>& counts)
+        std::map<DependencyGraph::Graph::vertex_descriptor, int>& counts)
         : counts(counts) { }
 
     void examine_edge(
         DependencyGraph::Graph::edge_descriptor e,
-        const DependencyGraph::Graph& g)
-    {
+        const DependencyGraph::Graph& g) {
         DependencyGraph::Graph::vertex_descriptor src, dst;
         src = boost::source(e, g);
         dst = boost::target(e, g);
@@ -325,5 +321,4 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
 
     // TODO: traverse the finalized dependency graph and check that no egress
     // table is required to happen before an ingress table.
-
 }

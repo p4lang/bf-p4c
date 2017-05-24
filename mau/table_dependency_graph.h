@@ -1,10 +1,10 @@
 #ifndef _TOFINO_MAU_TABLE_DEPENDENCY_GRAPH_H_
 #define _TOFINO_MAU_TABLE_DEPENDENCY_GRAPH_H_
 
-#include "mau_visitor.h"
-#include "tofino/phv/phv_fields.h"
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/transitive_closure.hpp>
+#include "mau_visitor.h"
+#include "tofino/phv/phv_fields.h"
 
 /* The DependencyGraph data structure is a directed graph in which tables are
  * vertices and edges are dependencies.  An edge from t1 to t2 means that t2
@@ -61,9 +61,7 @@ struct DependencyGraph {
     };
     map<const IR::MAU::Table*, StageInfo> stage_info;
 
-    DependencyGraph (void) {
-        finalized = false;
-    }
+    DependencyGraph(void) { finalized = false; }
 
     /* If a vertex with this label already exists, return it.  Otherwise,
      * create a new vertex with this label. */ 
@@ -84,8 +82,7 @@ struct DependencyGraph {
     std::pair<typename Graph::edge_descriptor, bool> add_edge(
         const IR::MAU::Table* src,
         const IR::MAU::Table* dst,
-        dependencies_t edge_label)
-    {
+        dependencies_t edge_label) {
         typename Graph::vertex_descriptor src_v, dst_v;
         src_v = add_vertex(src);
         dst_v = add_vertex(dst);
@@ -139,10 +136,10 @@ struct DependencyGraph {
 };
 
 class FindDependencyGraph : public MauInspector, ControlFlowVisitor {
-  public:
+ public:
     typedef struct { ordered_set<const IR::MAU::Table*> read, write; } access_t;
 
-  private:
+ private:
     PhvInfo                                              &phv;
     DependencyGraph                                      &dg;
     map<cstring, access_t>                               access;

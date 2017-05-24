@@ -292,7 +292,6 @@ void CreateSaluInstruction::postorder(const IR::Property *prop) {
         break;
     default:
         break; }
-
 }
 
 bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {
@@ -330,7 +329,7 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
         // Some (broken?) test programs use width 1x64 when they really mean 2x32
         salu->dual = true;
     } else if (!bits ||
-               (bits->size != 1 && bits->size != 8 && bits->size != 16 && bits->size != 32))
-        error("Unsupported register element type %s for stateful alu %s", regtype, salu);
+               (bits->size != 1 && bits->size != 8 && bits->size != 16 && bits->size != 32)) {
+        error("Unsupported register element type %s for stateful alu %s", regtype, salu); }
     return false;
 }

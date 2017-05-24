@@ -303,13 +303,13 @@ struct AttachTables : public Modifier {
     map<const IR::Declaration_Instance *, const IR::Attached *> converted;
 
     void postorder(IR::MAU::Table *tbl) override {
-        if (attached.count(tbl->name))
+        if (attached.count(tbl->name)) {
             for (auto a : attached[tbl->name]) {
                 if (contains(tbl->attached, a)) {
                     LOG3(a->name << " already attached to " << tbl->name);
                 } else {
                     LOG3("attaching " << a->name << " to " << tbl->name);
-                    tbl->attached.push_back(a); } }
+                    tbl->attached.push_back(a); } } }
         if (salu.count(tbl->name)) {
             BUG_CHECK(!contains(tbl->attached, salu.at(tbl->name)), "salu already attached?");
             LOG3("attaching " << salu.at(tbl->name)->name << " to " << tbl->name);

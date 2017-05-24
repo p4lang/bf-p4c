@@ -1,5 +1,5 @@
-#ifndef EXTENSIONS_TOFINO_MAU_ACTION_FORMAT_H
-#define EXTENSIONS_TOFINO_MAU_ACTION_FORMAT_H
+#ifndef EXTENSIONS_TOFINO_MAU_ACTION_FORMAT_H_
+#define EXTENSIONS_TOFINO_MAU_ACTION_FORMAT_H_
 
 #include "ir/ir.h"
 #include "lib/bitops.h"
@@ -279,4 +279,4 @@ class ArgumentAnalyzer : public MauInspector, P4WriteContext {
      void postorder(const IR::MAU::Action *) override;
 };
 
-#endif /* EXTENSIONS_TOFINO_MAU_ACTION_FORMAT_H */
+#endif /* EXTENSIONS_TOFINO_MAU_ACTION_FORMAT_H_ */

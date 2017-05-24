@@ -25,7 +25,7 @@ class GetTofinoParser : public Inspector {
                   const IR::ID &, const Context *);
     IR::Tofino::ParserState *state(cstring, const Context *);
 
-private:
+ private:
     bool preorder(const IR::ParserState *) override;
 
     const IR::P4Parser                         *container = 0;

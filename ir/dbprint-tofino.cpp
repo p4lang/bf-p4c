@@ -56,8 +56,10 @@ void IR::MAU::Table::dbprint(std::ostream &out) const {
 
 void IR::MAU::StatefulAlu::dbprint(std::ostream &out) const {
     out << "stateful " << name << " ";
-    if (dual) out << width/2 << "x2";
-    else out << width;
+    if (dual)
+        out << width/2 << "x2";
+    else
+        out << width;
     out << indent;
     for (auto salu : Values(instruction))
         out << endl << salu;
