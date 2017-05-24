@@ -130,10 +130,13 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe*) {
                        [](const FieldSlice& slice) { return slice.field; });
 
         // Since TPHV containers can't be accessed in the MAU, and metadata is
-        // not deparsed, it normally doesn't make sense to put metadata fields
-        // in the TPHV. The only exception is bridged metadata fields that are
-        // written in the parser but not touched in the rest of the ingress
-        // pipeline.
+        // not normally deparsed, it generally doesn't make sense to put
+        // metadata fields in TPHV. There are some exceptional cases, though:
+        // both bridged metadata and mirrored metadata effectively get turned
+        // into compiler-synthesized headers that are prepended to the packet,
+        // and hence must be deparsed.
+        // XXX(seth): We'll have to add a check for mirrored metadata below when
+        // that feature is implemented.
         if (container.tagalong()) {
             for (auto field : fields)
                 ERROR_CHECK(!isMetadata(field) || field->bridged,
