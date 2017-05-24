@@ -210,9 +210,9 @@ Cluster_PHV::Cluster_PHV(
     //
     compute_requirements();
     //
-    if (cluster_vec_i.size() == 1                                                    // no MAU oper
-        && cluster_vec_i.front()->deparser_no_holes()                                // f no holes
-        && (cluster_vec_i.front()->size % PHV_Container::PHV_Word::b8 == 0)          // not 9,23b
+    if (cluster_vec_i.size() == 1                                            // no MAU oper
+        && cluster_vec_i.front()->deparser_no_holes()                        // f tagged no holes
+        && (cluster_vec_i.front()->size % PHV_Container::PHV_Word::b8 == 0)  // -9,23b +24,40,48,56b
         && cluster_vec_i.front()->phv_use_width() >= PHV_Container::PHV_Word::b8) {  // ignore <b8
         //
         // e.g., cannot map

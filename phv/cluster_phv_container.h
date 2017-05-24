@@ -117,6 +117,9 @@ class PHV_Container {
     //
     PHV_MAU_Group *phv_mau_group()                              { return phv_mau_group_i; }
     PHV_Word width() const                                      { return width_i; }
+    static bool exact_container(int width) {
+        return width == PHV_Word::b32 || width == PHV_Word::b16 || width == PHV_Word::b8;
+    }
     int phv_number() const                                      { return phv_number_i; }
     std::string phv_number_string() const {
         std::stringstream ss;
@@ -140,7 +143,7 @@ class PHV_Container {
         return PHV_Container::Ingress_Egress::Ingress_Or_Egress;
     }
     Container_status status()                                   { return status_i; }
-    char *bits()                                                { return bits_i; }
+    char *bits() const                                          { return bits_i; }
     char taint_color(int bit) {
         // taint color for bit in container
         assert(bit >= 0 && bit < width_i);
@@ -270,8 +273,8 @@ std::ostream &operator<<(std::ostream &, std::list<PHV_Container::Container_Cont
 std::ostream &operator<<(std::ostream &, std::vector<PHV_Container::Container_Content *>&);
 std::ostream &operator<<(std::ostream &, ordered_set<PHV_Container::Container_Content *>&);
 std::ostream &operator<<(std::ostream &, ordered_map<int, int>&);
-std::ostream &operator<<(std::ostream &, const PHV_Container*);
 std::ostream &operator<<(std::ostream &, PHV_Container*);
+std::ostream &operator<<(std::ostream &, const PHV_Container*);
 std::ostream &operator<<(std::ostream &, PHV_Container&);
 std::ostream &operator<<(std::ostream &, ordered_set<PHV_Container *>&);
 std::ostream &operator<<(std::ostream &, std::vector<PHV_Container *>&);

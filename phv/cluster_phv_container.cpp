@@ -273,7 +273,7 @@ PHV_Container::taint_ccgf(
     if (field->header_stack_pov_ccgf()) {
         fields_in_container(
             field,
-            new Container_Content(this, 0/*start*/, width, field, field_bit_lo, taint_color_i));
+            new Container_Content(this, 0/*start*/, width-1, field, field_bit_lo, taint_color_i));
     }
 
     return processed_width;  // all bits of this field may NOT be processed
@@ -780,12 +780,13 @@ void PHV_Container::Container_Content::sanity_check_container(
                     // 5= 977:egress::mpls[2].$valid<1>
                     // 5= 978:egress::mpls.$stkvalid<6:0..5>
                     //
-                    if (container->bits()[hi_i - field_i->phv_use_width()]
+                    if (container->bits()[container->width() - field_i->phv_use_width()]
                         == taint_color_i.back()) {
                         // taint color ok
                         break;
                     }
                 }
+                // taint color NOT ok
                 LOG1(
                     "*****cluster_phv_container.cpp:sanity_FAIL*****....."
                     << msg_1
@@ -1171,17 +1172,6 @@ std::ostream &operator<<(std::ostream &out, ordered_map<int, int>& ranges) {
     return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const PHV_Container *c) {
-    if (c) {
-        out << c->phv_number_string()
-            << '.'
-            << c->asm_string();
-    } else {
-        out << "-c-";
-    }
-    return out;
-}
-
 std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
     //
     // summary output
@@ -1201,6 +1191,17 @@ std::ostream &operator<<(std::ostream &out, PHV_Container *c) {
                 out << '(' << r.first << ".." << r.second << ')';
             }
         }
+    } else {
+        out << "-c-";
+    }
+    return out;
+}
+
+std::ostream &operator<<(std::ostream &out, const PHV_Container *c) {
+    if (c) {
+        out << c->phv_number_string()
+            << '.'
+            << c->asm_string();
     } else {
         out << "-c-";
     }

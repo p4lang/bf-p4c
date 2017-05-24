@@ -122,13 +122,14 @@ PHV_Analysis_API::sanity_check_fields_containers(const std::string& msg) {
         if (f.exact_containers()) {
             for (auto &tuple : tuple_list_f) {
                 const PHV_Container *c = get<2>(tuple);
+                PHV_Container *c1 = const_cast<PHV_Container *>(c);
                 int phv_num = c->phv_number();
                 if (container_holes(phv_num)) {
                     LOG1("*****phv_analysis_api.cpp:sanity_FAIL*****....."
                         << "..... sanity_check_fields_containers: NOT exact_containers ..... "
                         << std::endl
                         << f
-                        << c);
+                        << *c1);
                 }
             }
         }

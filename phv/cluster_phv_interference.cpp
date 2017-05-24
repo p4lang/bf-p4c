@@ -181,7 +181,11 @@ PHV_Interference::interference_reduction(
             // a separate routine aggregates these singleton fields to clusters
             // then attempt reduction on these aggregate clusters
             //
-            singletons[cl->gress()][cl->max_width()].push_back(cl);
+            // do not attempt to overlay parser containers as they must match container width
+            //
+            if (!cl->exact_containers()) {
+                singletons[cl->gress()][cl->max_width()].push_back(cl);
+            }
             //
             continue;
         }

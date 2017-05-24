@@ -232,13 +232,17 @@ class PHV_MAU_Group_Assignments : public Visitor {
         const char *msg = "",
         bool smallest_container_width = true);
     //
-    void fix_parser_container(
+    bool fix_parser_container(
         PHV_Container *c,
         std::list<PHV_MAU_Group *>& phv_groups_to_be_filled);
     PHV_Container* parser_container_no_holes(
         PHV_Container::Ingress_Egress,
         PHV_Container::Container_Content *,
         std::list<PHV_MAU_Group *>&);    // ensure parser fields in containers with no holes
+    PHV_MAU_Group* downsize_mau_group(
+        PHV_Container::Ingress_Egress gress,
+        int width,
+        std::list<PHV_MAU_Group *> phv_groups_to_be_filled);
     //
     void create_aligned_container_slices();
     //

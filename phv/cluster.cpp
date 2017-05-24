@@ -154,10 +154,12 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
         // accumulate sub-byte fields to group to a byte boundary
         // so that if any field is part of MAU then entire PHV container has no holes
         // fields must be contiguous
+        // e.g.,
+        //   extra$0.x1: W0(0..23), extra$0.more: B1 = 5 bytes  -- deparser problem
+        //   extra$0.x1: W0(8..31), extra$0.more: W0(0..7) = 4 bytes
         //
         if (!field->ccgf()) {
-            if (group_accumulator
-                || field->size % PHV_Container::PHV_Word::b8) {
+            if (group_accumulator || !PHV_Container::exact_container(field->size)) {
                 if (!group_accumulator) {
                     group_accumulator = field;
                     accumulator_bits = 0;
@@ -165,8 +167,7 @@ bool Cluster::preorder(const IR::HeaderRef *hr) {
                 field->ccgf(group_accumulator);
                 group_accumulator->ccgf_fields().push_back(field);
                 accumulator_bits += field->size;
-                if (accumulator_bits
-                    % PHV_Container::PHV_Word::b8 == 0) {
+                if (PHV_Container::exact_container(accumulator_bits)) {
                     ccg[group_accumulator] = accumulator_bits;
                     LOG4("+++++PHV_container_contiguous_group....."
                         << accumulator_bits

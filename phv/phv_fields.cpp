@@ -462,7 +462,10 @@ PhvInfo::Field::phv_use_width(bool ccgf_owner, int min_ceil) {
         }  // for
         if (header_stack_pov_ccgf_i) {
             // e.g.,
-            // ingress::data.$stkvalid, egress::mpls.$stkvalid
+            // ingress::data.$stkvalid, egress::mpls.$stkvalid, ingress::extra.$stkvalid
+            // width requirement temporarily incremented
+            // so that "header stack" owner gets allocated in members' container pointing to tos
+            // note: size remains untouched
             //
             ccg_width++;
         }
