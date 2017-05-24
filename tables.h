@@ -326,8 +326,10 @@ public:
     Actions                     *actions = 0;
     ActionBus                   *action_bus = 0;
     std::string                 default_action;
+    unsigned                    default_action_handle = -1;
     int                         default_action_lineno = -1;
-    std::vector<int>            default_action_args;
+    std::map<std::string,int>   default_action_parameters;
+    bool                        default_only_action = false;
     std::vector<Ref>            hit_next;
     Ref                         miss_next;
     std::set<Table *>           pred;

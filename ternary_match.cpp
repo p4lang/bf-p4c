@@ -452,7 +452,9 @@ void TernaryMatchTable::gen_tbl_cfg(json::vector &out) {
         actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
     else if (action && action->actions)
         action->actions->gen_tbl_cfg((tbl["actions"] = json::vector()));
-    common_tbl_cfg(tbl, "ternary");
+    if(indirect)
+        indirect->common_tbl_cfg(tbl, "ternary");
+    else common_tbl_cfg(tbl, "ternary");
     if (idletime)
         idletime->gen_stage_tbl_cfg(stage_tbl);
     bool uses_versioning = false;

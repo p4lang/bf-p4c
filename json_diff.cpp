@@ -422,6 +422,13 @@ void print_diff(json::map *a, json::map *b, int indent) {
 
 bool equiv(json::obj *a, json::obj *b, json::obj *key) {
     if (a == b) return true;
+    //Check true for map with nullptr and map with no elements "{}"
+    if (!a) { 
+        if (auto m = b->as_map()) { 
+                if (m->empty()) return true; } } 
+    if (!b) { 
+        if (auto m = a->as_map()) { 
+                if (m->empty()) return true; } } 
     if (!a || !b) return false;
     if (typeid(*a) != typeid(*b)) return false;
     if (typeid(*a) == typeid(json::vector))

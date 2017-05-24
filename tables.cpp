@@ -287,16 +287,21 @@ bool Table::common_setup(pair_t &kv, const VECTOR(pair_t) &data, P4Table::type p
     } else if (kv.key == "action_bus") {
         if (CHECKTYPE(kv.value, tMAP))
             action_bus = new ActionBus(this, kv.value.map);
-    } else if (kv.key == "default_action") {
+    } else if ((kv.key == "default_action")
+            || (kv.key == "default_only_action")) {
+        if (kv.key == "default_only_action")
+            default_only_action = true;
         default_action_lineno = kv.value.lineno;
-        if (CHECKTYPE2(kv.value, tSTR, tCMD)) {
-            if (kv.value.type == tSTR)
+        if (CHECKTYPE2(kv.value, tSTR, tCMD))
+            if (CHECKTYPE(kv.value, tSTR))
                 default_action = kv.value.s;
-            else {
-                default_action = kv.value[0].s;
-                for (int i = 1; i < kv.value.vec.size; ++i)
-                    if (CHECKTYPE(kv.value[i], tINT))
-                        default_action_args.push_back(kv.value[i].i); } }
+    } else if (kv.key == "default_action_parameters") {
+        if (CHECKTYPE(kv.value, tMAP))
+            for(auto &v : kv.value.map)
+                if (CHECKTYPE(v.key, tSTR) && CHECKTYPE(v.value, tINT))
+                    default_action_parameters[v.key.s] = v.value.i;
+    } else if (kv.key == "default_action_handle") {
+        default_action_handle = kv.value.i;
     } else if (kv.key == "hit") {
         if (!hit_next.empty())
             error(kv.key.lineno, "Specifying both 'hit' and 'next' in table %s", name());
@@ -1107,8 +1112,9 @@ template<class REGS> void MatchTable::write_regs(REGS &regs, int type, Table *re
     if (max_code < ACTION_INSTRUCTION_SUCCESSOR_TABLE_DEPTH) {
         merge.mau_action_instruction_adr_map_en[type] |= (1U << logical_id);
         for (auto &act : *actions)
-            merge.mau_action_instruction_adr_map_data[type][logical_id][act.code/4]
-                .set_subfield(act.addr + 0x40, (act.code%4) * 7, 7); }
+            if ((act.name != default_action) || !default_only_action) {
+                merge.mau_action_instruction_adr_map_data[type][logical_id][act.code/4]
+                    .set_subfield(act.addr + 0x40, (act.code%4) * 7, 7); } }
     if (!default_action.empty()) {
         auto *act = actions->action(default_action);
         merge.mau_action_instruction_adr_miss_value[logical_id] = 0x40 + act->addr;
@@ -1160,10 +1166,27 @@ template<class REGS> void MatchTable::write_regs(REGS &regs, int type, Table *re
             result->action_bus->write_action_regs(regs, result, mtab->home_row(), 0);
         }
     }
-    if (default_action_args.size() > 0)
-        merge.mau_immediate_data_miss_value[logical_id] = default_action_args[0];
-    else if (result->default_action_args.size() > 0)
-        merge.mau_immediate_data_miss_value[logical_id] = result->default_action_args[0];
+
+    // FIXME:
+    // The action parameters that are stored as immediates in the match
+    // overhead need to be properly packed into this register. We had been
+    // previously assuming that the compiler would do that for us, specifying
+    // the bits needed here as the argument to the action call; eg assembly
+    // code like:
+    //         default_action: actname(0x100)
+    // for the default action being actname with the value 0x100 for its
+    // parameters stored as immediates (which might actually be several
+    // parameters in the P4 source code.) To get this from the
+    // default_action_parameters map, we need to look up those argument names
+    // in the match table format and action aliases and figure out which ones
+    // correspond to match immediates, and pack the values appropriately.
+    // Doable but non-trivial, probably requiring a small helper function. Need
+    // to deal with both exact match and ternary indirect.
+    //
+    //if (default_action_parameters.size() > 0)
+    //    merge.mau_immediate_data_miss_value[logical_id] = default_action_parameters[0];
+    //else if (result->default_action_parameters.size() > 0)
+    //    merge.mau_immediate_data_miss_value[logical_id] = result->default_action_parameters[0];
 
     if (input_xbar) input_xbar->write_regs(regs);
 
@@ -1481,10 +1504,14 @@ void MatchTable::gen_name_lookup(json::map &out) {
 
 void Table::common_tbl_cfg(json::map &tbl, const char *default_match_type) {
     if (!default_action.empty()) {
-        tbl["default_action"] = default_action;
-        json::vector &params = tbl["default_action_parameters"] = json::vector();
-        for (auto val : default_action_args)
-            params.push_back(val);
+        tbl["default_action"] = json::map{
+            { "name", json::string(default_action) },
+            { "handle", json::number(default_action_handle) } };
+        tbl["default_action_parameters"] = nullptr;
+        if (!default_action_parameters.empty()) {
+            json::map &params = tbl["default_action_parameters"] = json::map();
+            for (auto val : default_action_parameters)
+                params[val.first] = val.second; }
     } else if (options.match_compiler) {
         tbl["default_action"] = nullptr;
         tbl["default_action_parameters"] = nullptr; }
