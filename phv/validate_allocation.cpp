@@ -80,7 +80,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe*) {
             // below.)
             bitvec sliceBits(slice.field_bit, slice.width);
             ERROR_CHECK(!sliceBits.intersects(allocatedBits),
-                        "Overlapping slices in allocation for field %1%",
+                        "Overlapping field slices in allocation for field %1%",
                         cstring::to_cstring(field));
             allocatedBits |= sliceBits;
         }
