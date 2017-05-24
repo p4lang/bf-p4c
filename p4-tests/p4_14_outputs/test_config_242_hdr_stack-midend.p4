@@ -136,7 +136,9 @@ control DeparserImpl(packet_out packet, in headers hdr) {
     apply {
         packet.emit<hdr0_t>(hdr.hdr0);
         packet.emit<hdr1_t>(hdr.hdr1);
-        packet.emit<stack_t[3]>(hdr.stack);
+        packet.emit<stack_t>(hdr.stack[0]);
+        packet.emit<stack_t>(hdr.stack[1]);
+        packet.emit<stack_t>(hdr.stack[2]);
         packet.emit<hdr2_t>(hdr.hdr2);
     }
 }

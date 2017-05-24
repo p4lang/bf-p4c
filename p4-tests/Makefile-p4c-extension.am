@@ -240,7 +240,6 @@ XFAIL_TESTS += tofino/testdata/p4_16_samples/issue512.p4.test
 
 #BMV2 tests that don't work with tofino -- FIXME: characterize failures and fix
 XFAIL_TESTS += \
-    tofino/testdata/p4_16_samples/action_selector_shared-bmv2.p4.test \
     tofino/testdata/p4_16_samples/arith1-bmv2.p4.test \
     tofino/testdata/p4_16_samples/arith2-bmv2.p4.test \
     tofino/testdata/p4_16_samples/arith2-inline-bmv2.p4.test \
@@ -278,6 +277,14 @@ XFAIL_TESTS += \
     tofino/testdata/p4_16_samples/table-entries-range-bmv2.p4.test \
     tofino/testdata/p4_16_samples/table-entries-ternary-bmv2.p4.test \
     tofino/testdata/p4_16_samples/verify-bmv2.p4.test
+
+#varbit extracts don't work in parser
+XFAIL_TESTS += \
+    tofino/testdata/p4_16_samples/issue447-bmv2.p4.test \
+    tofino/testdata/p4_16_samples/issue447-1-bmv2.p4.test \
+    tofino/testdata/p4_16_samples/issue447-2-bmv2.p4.test \
+    tofino/testdata/p4_16_samples/issue447-3-bmv2.p4.test \
+    tofino/testdata/p4_16_samples/issue447-4-bmv2.p4.test
 
 # New failures with action bus working in compiler
 XFAIL_TESTS += \
