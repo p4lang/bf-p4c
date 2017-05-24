@@ -51,7 +51,7 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe*) {
     // collect information that we'll use to check container properties.
     for (auto& field : phv) {
         if (!field.referenced) {
-            ERROR_CHECK(field.alloc_i.empty(),
+            WARN_CHECK(field.alloc_i.empty(),
                         "PHV allocation for unreferenced %1%field %2% (width %3%)",
                         field.bridged ? "bridged " : "",
                         cstring::to_cstring(field),
