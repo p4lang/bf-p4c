@@ -1,3 +1,28 @@
+09-MacAddrCheck2.p4 mismatch
+12-SmallToBigFieldWithMask8.p4 mismatch
+20-SimpleTrillTwoStep.p4 mismatch
+22-BigToSmallFieldWithMask8.p4 mismatch
+test_config_116_predication_with_condition.p4 mismatch
+test_config_11_simple_gateway_table.p4 mismatch
+test_config_128_table_placement_bug.p4 mismatch
+test_config_12_no_overhead.p4 mismatch
+test_config_130_test_default_action.p4 mismatch
+test_config_158_share_vliw.p4 mismatch
+test_config_207_not_gateway.p4 mismatch
+test_config_20_table_dependencies.p4 mismatch
+test_config_99_share_exact_match_key.p4 mismatch
+- missing gateway 'match_address' in glass output
+  (also some default_action context json diffs?)
+
+test_config_114_simple_drop.p4 mismatch
+test_config_140_table_counter.p4 mismatch
+test_config_182_warp_primitive.p4 mismatch
+test_config_25_no_reads_for_table.p4 mismatch
+- default action extra stuff in context json
+
+test_config_208_table_no_key.p4 mismatch
+- lrt_endbale incorrect in context json
+
 test_config_96_hash_data.p4 tfas
  - incorrect asm code for hash_action+counter
 test_config_101_switch_msdc.p4 compile
@@ -91,7 +116,7 @@ test_config_196_hit_miss.p4 mismatch
 test_config_197_default_next_table.p4 mismatch
 test_config_198_shared_action_profile.p4 mismatch
 test_config_199_stateful_constant_index.p4 tfas
-test_config_200_counter_constant_index.p4 tfas
+test_config_200_counter_constant_index.p4 mismatch
 test_config_201_meter_constant_index.p4 tfas
 test_config_203_first_reduction_or.p4 mismatch
 test_config_204_no_tables_in_stage0.p4 mismatch

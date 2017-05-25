@@ -28,10 +28,9 @@ gen/tofino/regs.pipe_addrmap.%: JSON_EXTRA_ARGS+=+E
 gen/tofino/memories.pipe_top_level.%: JSON_NAME=memories.top
 gen/tofino/memories.pipe_addrmap.%: JSON_NAME=memories.pipe
 
-# FIXME -- figure out how to make this work with automake:
-#tofino/chip.schema tofino/template_objects.yaml: tofino/%: p4c-templates/%
-#	@: if there's a symlink 'p4c-templates' to somewhere with new reg schema, copy them
-#	if [ $< -nt $@ ]; then cp $< $@; fi
+# if there's a symlink 'p4c-templates' to somewhere with new reg schema, copy them
+$(srcdir)/tofino/%: $(srcdir)/p4c-templates/%
+	if [ $< -nt $@ ]; then cp $< $@; fi
 
 $(GEN_TOFINO:%=templates/tofino/%.cfg.json) $(GEN_TOFINO:%=templates/tofino/%.size.json): templates/tofino/.templates-updated
 	@test -r $@

@@ -99,9 +99,6 @@ int main(int ac, char **av) {
     bool asmfile = false;
     extern void register_exit_signals();
     register_exit_signals();
-    if (ac == 1) {
-        std::cout<< usage(av[0]) << std::endl;
-        return 0; }
     for (int i = 1; i < ac; i++) {
         if (av[i][0] == '-' && av[i][1] == 0) {
             asm_parse_file("<stdin>", stdin);
@@ -218,6 +215,8 @@ int main(int ac, char **av) {
     if (!asmfile) {
         std::cerr << "No assembly file specified" << std::endl;
         error_count++; }
+    if (error_count > 0)
+        std::cerr << usage(av[0]) << std::endl;
     if (error_count == 0)
         Section::process_all();
     if (error_count == 0) {
@@ -236,9 +235,7 @@ int main(int ac, char **av) {
                 output_dir.clear(); }
         Section::output_all();
         TopLevel::output_all(); }
-    if (error_count > 0)
-        std::cerr << usage(av[0]) << std::endl;
-    return error_count;
+    return error_count > 0 ? 1 : 0;
 }
 
 class Version : public Section {
