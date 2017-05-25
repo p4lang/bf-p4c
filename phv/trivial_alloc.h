@@ -26,8 +26,7 @@ class TrivialAlloc final : public Inspector {
     struct Regs;
     PhvInfo                     &phv;
     static bool tagalong_full(int size, Regs *use);
-    static void alloc_pov(PhvInfo::Field *i, PhvInfo::Field *pov);
-    void do_alloc(PhvInfo::Field *, Regs *, Regs *, int = 0);
+    void do_alloc(const FieldGroup&, Regs *, Regs *);
     bool preorder(const IR::Tofino::Pipe *p) override;
     void end_apply(const IR::Node *) override { phv.set_done(); }
 };
