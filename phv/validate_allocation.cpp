@@ -54,8 +54,10 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe*) {
                     "No PHV allocation for referenced field %1%",
                     cstring::to_cstring(field));
 
+        bitvec assignedContainers;
         bitvec allocatedBits;
         for (auto& slice : field.alloc_i) {
+            assignedContainers[slice.container.id()] = true;
             allocations[slice.container].emplace_back(slice);
             threadAssignments[field.gress] |= slice.container.group();
 
@@ -69,6 +71,12 @@ bool ValidateAllocation::preorder(const IR::Tofino::Pipe*) {
                         cstring::to_cstring(field));
             allocatedBits |= sliceBits;
         }
+
+        // Verify that we didn't overflow the PHV space which is actually
+        // available on the hardware.
+        for (auto id : assignedContainers - PHV::Container::physicalContainers())
+            ::error("Allocated overflow (non-physical) container %1% to field %2%",
+                    PHV::Container::fromId(id), cstring::to_cstring(field));
 
         // Verify that all bits in the field are allocated.
         // XXX(seth): Long term it would be ideal to only allocate the bits we
