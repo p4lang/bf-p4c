@@ -1230,14 +1230,15 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
             out << canon_name(path->path->name);
         else
             BUG("default action %s not handled", defact);
-        if (args) {
-            out << "(" << DBPrint::Prec_Low;
-            const char *sep = "";
-            for (auto arg : *args) {
-                out << sep << arg;
-                sep = ", "; }
-            out << ")" << DBPrint::Reset; }
-        out << std::endl; }
+        out << std::endl;
+        if (args && args->size() > 0) {
+            auto params = defact->type->to<IR::Type_Action>()->parameters;
+            BUG_CHECK(params->size() == args->size(), "Wrong number of params to default action");
+            out << indent++ << "default_action_parameters:" << std::endl;
+            int index = 0;
+            for (auto arg : *args)
+                out << indent << params->getParameter(index++)->name << ": " << arg << std::endl;
+            --indent; } }
 }
 
 static void counter_format(std::ostream &out, const IR::CounterType type, int per_row) {
