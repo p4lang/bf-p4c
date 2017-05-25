@@ -795,9 +795,7 @@ PHV_MAU_Group_Assignments::container_no_pack(
                     } else {
                        field_width = field->phv_use_width();
                     }
-                    for (auto field_stride=0;
-                         j < req_containers && field_width > 0;
-                         j++, field_stride++) {
+                    for (auto field_bit_lo=0; j < req_containers && field_width > 0; j++) {
                         //
                         // parser containers exact width requirement
                         //
@@ -818,13 +816,14 @@ PHV_MAU_Group_Assignments::container_no_pack(
                                 taint_bits,
                                 field,
                                 0 /* range_start */,
-                                field_stride * g->width() /* field_bit_lo */);
+                                field_bit_lo);
                         LOG3(*container);
                         //
                         // ccgf fields with members that have pack constraints may not be done yet
                         // taint() sets field's hi reflecting balance remaining,
                         // returns processed width
                         //
+                        field_bit_lo += g->width();
                         field_width -= processed_bits;  // inner loop termination
                         //
                         // check if this container is partially filled with parser field
