@@ -265,8 +265,9 @@ const std::pair<int, int> *PhvInfo::header(cstring name_) const {
 }
 
 void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
-    if (all_fields.count("ingress::$POV") || all_fields.count("egress::$POV"))
-        BUG("trying to reallocate POV");
+    if (pov_alloc_done) BUG("trying to reallocate POV");
+    pov_alloc_done = true;
+
     int size[2] = { 0, 0 };
     int stacks_num = 0;
     for (auto &stack : stacks) {

@@ -349,6 +349,7 @@ class PhvInfo : public Inspector {
     map<cstring, std::pair<int, int>>   simple_headers;
     gress_t                             gress;
     bool                                alloc_done_ = false;
+    bool                                pov_alloc_done = false;
     void add(cstring, int, int, bool, bool);
     void add_hdr(cstring, const IR::Type_StructLike *, bool);
     profile_t init_apply(const IR::Node *root) override;
