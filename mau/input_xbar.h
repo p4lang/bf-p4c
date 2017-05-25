@@ -249,7 +249,7 @@ struct IXBar {
                        Use &alloc, bool second_try, cstring name);
     bool allocStateful(const IR::MAU::StatefulAlu *, const PhvInfo &phv, Use &alloc, bool);
     bool allocHashDist(const HashDistReq &hash_dist_req, const PhvInfo &phv, Use &alloc,
-                       bool second_try, const IR::MAU::Table *tbl, cstring name);
+                       bool second_try, cstring name);
     bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
                     const LayoutOption *lo, const vector<HashDistReq> &hash_dist_reqs);
     void update_hash_dist(cstring name, const Use &alloc);
@@ -304,7 +304,7 @@ struct IXBar {
     void field_management(const IR::Expression *field, IXBar::Use &alloc,
         set<cstring> &fields_needed, bool hash_dist, cstring name, const PhvInfo &phv);
     void initialize_hash_dist(const HashDistReq &hash_dist_req, IXBar::Use &alloc,
-        const PhvInfo &phv, set<cstring> &fields_needed, const IR::MAU::Table *tbl, cstring name);
+        const PhvInfo &phv, set<cstring> &fields_needed, cstring name);
     bool allocHashDistAddress(const HashDistReq &hash_dist_req,
         const unsigned used_hash_dist_groups, const unsigned long used_hash_dist_bits,
         const unsigned &hash_table_input, unsigned &slice, unsigned long &bit_mask, cstring name,

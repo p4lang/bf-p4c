@@ -1241,7 +1241,8 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu,
 
 /* Provide all necessary information to the IXBar::Use about this specific primitive */
 void IXBar::initialize_hash_dist(const HashDistReq &hash_dist_req, Use &alloc,
-    const PhvInfo &phv, set<cstring> &fields_needed, const IR::MAU::Table *tbl, cstring name) {
+                                 const PhvInfo &phv, set<cstring> &fields_needed,
+                                 cstring name) {
     if (hash_dist_req.is_address()) {
         const IR::Expression *field = hash_dist_req.get_instr()->operands.at(1);
         auto sful = hash_dist_req.get_stateful();;
@@ -1389,12 +1390,12 @@ bool IXBar::allocHashDistImmediate(const HashDistReq &hash_dist_req,
 /* Allocation for an individual hash distribution requirement, both within the match and
    hash crossbars. */
 bool IXBar::allocHashDist(const HashDistReq &hash_dist_req, const PhvInfo &phv, Use &alloc,
-                          bool second_try, const IR::MAU::Table *tbl, cstring name) {
+                          bool second_try, cstring name) {
     set <cstring>                   fields_needed;
     vector <IXBar::Use::Byte *> alloced;
     fields_needed.clear();
     alloc.hash_dist_use.emplace_back();
-    initialize_hash_dist(hash_dist_req, alloc, phv, fields_needed, tbl, name);
+    initialize_hash_dist(hash_dist_req, alloc, phv, fields_needed, name);
     bool rv = find_alloc(alloc.hash_dist_use.back().use, false, second_try, alloced,
                          HASH_INDEX_GROUPS, true);
     unsigned hash_table_input = 0;
@@ -1507,8 +1508,8 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
         return false; }
 
     for (auto &hash_dist_req : hash_dist_reqs) {
-        if (!allocHashDist(hash_dist_req, phv, alloc.match_ixbar, false, tbl, tbl->name) &&
-            !allocHashDist(hash_dist_req, phv, alloc.match_ixbar, true, tbl, tbl->name)) {
+        if (!allocHashDist(hash_dist_req, phv, alloc.match_ixbar, false, tbl->name) &&
+            !allocHashDist(hash_dist_req, phv, alloc.match_ixbar, true, tbl->name)) {
             alloc.clear_ixbar();
             return false;
         }
