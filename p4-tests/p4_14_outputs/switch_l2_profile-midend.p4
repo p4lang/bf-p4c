@@ -1484,7 +1484,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
     @name(".int_transit") action _int_transit_0() {
         meta.int_metadata.hit_state = 2w1;
         meta.int_metadata.insert_cnt = hdr.int_header.max_hop_cnt - hdr.int_header.total_hop_cnt;
-        meta.int_metadata.insert_byte_cnt = (bit<16>)(meta.int_metadata.int_hdr_word_len << 2);
+        meta.int_metadata.insert_byte_cnt = (bit<16>)meta.int_metadata.int_hdr_word_len << 2;
     }
     @name(".int_reset") action _int_reset_0() {
         meta.int_metadata.insert_cnt = 8w0;
@@ -2758,7 +2758,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @min_width(32) @name("process_ingress_bd_stats.ingress_bd_stats") counter(32w16384, CounterType.packets_and_bytes) process_ingress_bd_stats_ingress_bd_stats_1;
     @name(".update_ingress_bd_stats") action _update_ingress_bd_stats() {
-        process_ingress_bd_stats_ingress_bd_stats_1.count((bit<32>)meta.l2_metadata.bd_stats_idx);
+        process_ingress_bd_stats_ingress_bd_stats_1.count((bit<32>)(bit<14>)meta.l2_metadata.bd_stats_idx);
     }
     @name("process_ingress_bd_stats.ingress_bd_stats") table process_ingress_bd_stats_ingress_bd_stats_2 {
         actions = {
@@ -2770,7 +2770,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @min_width(16) @name("process_ingress_acl_stats.acl_stats") counter(32w128, CounterType.packets_and_bytes) process_ingress_acl_stats_acl_stats_1;
     @name(".acl_stats_update") action _acl_stats_update() {
-        process_ingress_acl_stats_acl_stats_1.count((bit<32>)meta.acl_metadata.acl_stats_index);
+        process_ingress_acl_stats_acl_stats_1.count((bit<32>)(bit<7>)meta.acl_metadata.acl_stats_index);
     }
     @name("process_ingress_acl_stats.acl_stats") table process_ingress_acl_stats_acl_stats_2 {
         actions = {

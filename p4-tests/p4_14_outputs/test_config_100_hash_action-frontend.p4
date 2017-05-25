@@ -200,7 +200,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         meta.meta.field_17 = 17w7;
     }
     @name(".action_2") action action_6() {
-        simple_stats_0.count((bit<32>)meta.meta.field_17);
+        simple_stats_0.count((bit<32>)(bit<15>)meta.meta.field_17);
     }
     @name("table_0") table table_5 {
         actions = {

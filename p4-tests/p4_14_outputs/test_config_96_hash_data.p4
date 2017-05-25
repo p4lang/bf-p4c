@@ -162,7 +162,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".action_0") action action_0(bit<16> param0) {
-        hdr.pkt.field_e_16 = (bit<16>)param0;
+        hdr.pkt.field_e_16 = param0;
         hash(hdr.pkt.field_a_28, HashAlgorithm.crc32, (bit<32>)0, { hdr.pkt.field_a_28, hdr.pkt.field_b_32, hdr.pkt.field_i_8 }, (bit<64>)16384);
     }
     @name(".action_1") action action_1() {
@@ -172,7 +172,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         ;
     }
     @name(".action_2") action action_2(bit<16> param0) {
-        hdr.pkt.field_h_16 = (bit<16>)param0;
+        hdr.pkt.field_h_16 = param0;
     }
     @include_idletime(1) @idletime_precision(1) @name("table_0") table table_0 {
         actions = {

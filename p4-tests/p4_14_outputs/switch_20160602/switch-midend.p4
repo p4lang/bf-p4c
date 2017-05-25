@@ -1631,7 +1631,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         meta.tunnel_metadata.egress_tunnel_type = 5w14;
     }
     @name(".rewrite_ipv4_multicast") action _rewrite_ipv4_multicast() {
-        hdr.ethernet.dstAddr[22:0] = hdr.ipv4.dstAddr[22:0];
+        hdr.ethernet.dstAddr[22:0] = ((bit<48>)hdr.ipv4.dstAddr)[22:0];
     }
     @name(".rewrite_ipv6_multicast") action _rewrite_ipv6_multicast() {
     }
@@ -2011,7 +2011,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.gre.S = 1w0;
         hdr.gre.s = 1w0;
         hdr.nvgre.tni = meta.tunnel_metadata.vnid;
-        hdr.nvgre.flow_id[7:0] = meta.hash_metadata.entropy_hash[7:0];
+        hdr.nvgre.flow_id[7:0] = ((bit<8>)meta.hash_metadata.entropy_hash)[7:0];
         hdr.ipv4.setValid();
         hdr.ipv4.protocol = 8w47;
         hdr.ipv4.ttl = 8w64;
@@ -2110,7 +2110,7 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
         hdr.gre.S = 1w0;
         hdr.gre.s = 1w0;
         hdr.nvgre.tni = meta.tunnel_metadata.vnid;
-        hdr.nvgre.flow_id[7:0] = meta.hash_metadata.entropy_hash[7:0];
+        hdr.nvgre.flow_id[7:0] = ((bit<8>)meta.hash_metadata.entropy_hash)[7:0];
         hdr.ipv6.setValid();
         hdr.ipv6.version = 4w0x6;
         hdr.ipv6.nextHdr = 8w47;
@@ -3555,7 +3555,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".nop") action _nop_34() {
     }
     @name(".set_storm_control_meter") action _set_storm_control_meter(bit<16> meter_idx) {
-        process_storm_control_storm_control_meter_0.execute_meter<bit<2>>((bit<32>)meter_idx, meta.meter_metadata.meter_color);
+        process_storm_control_storm_control_meter_0.execute_meter<bit<2>>((bit<32>)(bit<10>)meter_idx, meta.meter_metadata.meter_color);
         meta.meter_metadata.meter_index = meter_idx;
     }
     @name("process_storm_control.storm_control") table process_storm_control_storm_control_0 {
@@ -4626,7 +4626,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @min_width(32) @name("process_ingress_bd_stats.ingress_bd_stats") counter(32w1024, CounterType.packets_and_bytes) process_ingress_bd_stats_ingress_bd_stats_1;
     @name(".update_ingress_bd_stats") action _update_ingress_bd_stats() {
-        process_ingress_bd_stats_ingress_bd_stats_1.count((bit<32>)meta.l2_metadata.bd_stats_idx);
+        process_ingress_bd_stats_ingress_bd_stats_1.count((bit<32>)(bit<10>)meta.l2_metadata.bd_stats_idx);
     }
     @name("process_ingress_bd_stats.ingress_bd_stats") table process_ingress_bd_stats_ingress_bd_stats_2 {
         actions = {
@@ -4638,7 +4638,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @min_width(16) @name("process_ingress_acl_stats.acl_stats") counter(32w1024, CounterType.packets_and_bytes) process_ingress_acl_stats_acl_stats_1;
     @name(".acl_stats_update") action _acl_stats_update() {
-        process_ingress_acl_stats_acl_stats_1.count((bit<32>)meta.acl_metadata.acl_stats_index);
+        process_ingress_acl_stats_acl_stats_1.count((bit<32>)(bit<10>)meta.acl_metadata.acl_stats_index);
     }
     @name("process_ingress_acl_stats.acl_stats") table process_ingress_acl_stats_acl_stats_2 {
         actions = {
@@ -4870,7 +4870,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("process_system_acl.drop_stats") counter(32w1024, CounterType.packets) process_system_acl_drop_stats_2;
     @name("process_system_acl.drop_stats_2") counter(32w1024, CounterType.packets) process_system_acl_drop_stats_3;
     @name(".drop_stats_update") action _drop_stats_update() {
-        process_system_acl_drop_stats_3.count((bit<32>)meta.ingress_metadata.drop_reason);
+        process_system_acl_drop_stats_3.count((bit<32>)(bit<10>)meta.ingress_metadata.drop_reason);
     }
     @name(".nop") action _nop_92() {
     }

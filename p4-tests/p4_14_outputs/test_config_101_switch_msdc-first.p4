@@ -2473,7 +2473,7 @@ control process_nexthop(inout headers hdr, inout metadata meta, inout standard_m
 control process_ingress_bd_stats(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("ingress_bd_stats") counter(32w16384, CounterType.packets_and_bytes) ingress_bd_stats;
     @name(".update_ingress_bd_stats") action update_ingress_bd_stats() {
-        ingress_bd_stats.count((bit<32>)meta.l2_metadata.bd_stats_idx);
+        ingress_bd_stats.count((bit<32>)(bit<14>)meta.l2_metadata.bd_stats_idx);
     }
     @name("ingress_bd_stats") table ingress_bd_stats_0 {
         actions = {

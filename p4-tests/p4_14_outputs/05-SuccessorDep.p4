@@ -176,13 +176,13 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".nop") action nop() {
     }
     @name(".ing_drop") action ing_drop() {
-        meta.ing_metadata.drop = (bit<1>)1w1;
+        meta.ing_metadata.drop = 1w1;
     }
     @name(".set_egress_port") action set_egress_port(bit<8> egress_port) {
-        meta.ing_metadata.egress_port = (bit<8>)egress_port;
+        meta.ing_metadata.egress_port = egress_port;
     }
     @name(".set_bd") action set_bd(bit<16> bd) {
-        meta.ing_metadata.bd = (bit<16>)bd;
+        meta.ing_metadata.bd = bd;
     }
     @name("dmac") table dmac {
         actions = {

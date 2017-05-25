@@ -312,8 +312,8 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".ip_header_modify") action ip_header_modify() {
-        hdr.ipv4.ttl = (bit<8>)(hdr.ipv4.ttl + 8w255);
-        hdr.ipv4.hdrChecksum = (bit<16>)16w0;
+        hdr.ipv4.ttl = hdr.ipv4.ttl + 8w255;
+        hdr.ipv4.hdrChecksum = 16w0;
         clone(CloneType.E2E, (bit<32>)32w200);
     }
     @name("ip_hdr_update") table ip_hdr_update {
@@ -331,7 +331,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".nop") action nop() {
     }
     @name(".nhop_set") action nhop_set(bit<9> port) {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)port;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = port;
         clone(CloneType.I2E, (bit<32>)32w100);
     }
     @name("ingress_port_mapping") table ingress_port_mapping {

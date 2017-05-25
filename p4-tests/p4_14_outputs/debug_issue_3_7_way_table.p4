@@ -185,7 +185,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         ;
     }
     @name(".mod_mac_adr") action mod_mac_adr(bit<48> dstmac) {
-        hdr.ethernet.dstAddr = (bit<48>)dstmac;
+        hdr.ethernet.dstAddr = dstmac;
     }
     @ways(7) @name("table_0") table table_0 {
         actions = {

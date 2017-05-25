@@ -156,7 +156,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".branch") action branch() {
-        meta.md.direction[0:0] = hdr.ether.dstAddr[0:0];
+        meta.md.direction[0:0] = ((bit<1>)hdr.ether.dstAddr)[0:0];
     }
     @name(".a1") action a1() {
         meta.md.port = 9w1;

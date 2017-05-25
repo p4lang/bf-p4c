@@ -182,7 +182,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".eg_drop") action eg_drop() {
-        standard_metadata.egress_spec = (bit<9>)9w0;
+        standard_metadata.egress_spec = 9w0;
     }
     @name(".permit") action permit() {
     }
@@ -205,20 +205,20 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         ;
     }
     @name(".l3_set_index") action l3_set_index(bit<8> index) {
-        hdr.ipv4.diffserv = (bit<8>)index;
+        hdr.ipv4.diffserv = index;
     }
     @name(".ig_drop") action ig_drop() {
-        meta.routing_metadata.drop = (bit<1>)1w1;
+        meta.routing_metadata.drop = 1w1;
     }
     @name(".hop") action hop(inout bit<8> ttl, bit<9> egress_port) {
-        ttl = (bit<8>)(ttl + 8w255);
-        standard_metadata.egress_port = (bit<9>)egress_port;
+        ttl = ttl + 8w255;
+        standard_metadata.egress_port = egress_port;
     }
     @name(".hop_ipv4") action hop_ipv4(bit<48> srcmac, bit<32> srcip, bit<48> dstmac, bit<9> egress_port) {
         hop(hdr.ipv4.ttl, egress_port);
-        hdr.ipv4.srcAddr = (bit<32>)srcip;
-        hdr.ethernet.srcAddr = (bit<48>)srcmac;
-        hdr.ethernet.dstAddr = (bit<48>)dstmac;
+        hdr.ipv4.srcAddr = srcip;
+        hdr.ethernet.srcAddr = srcmac;
+        hdr.ethernet.dstAddr = dstmac;
     }
     @name("host_ip") table host_ip {
         actions = {

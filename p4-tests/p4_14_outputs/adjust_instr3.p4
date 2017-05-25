@@ -24,11 +24,11 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".setport") action setport(bit<9> port) {
-        standard_metadata.egress_spec = (bit<9>)port;
+        standard_metadata.egress_spec = port;
     }
     @name(".set_nibbles") action set_nibbles(bit<4> param1, bit<4> param2) {
-        hdr.data.n1 = (bit<4>)param1;
-        hdr.data.n2 = (bit<4>)param2;
+        hdr.data.n1 = param1;
+        hdr.data.n2 = param2;
     }
     @name("setting_port") table setting_port {
         actions = {

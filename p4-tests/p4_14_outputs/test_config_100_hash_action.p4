@@ -195,14 +195,14 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         ;
     }
     @name(".action_0") action action_0(bit<32> param0) {
-        hdr.pkt.field_c_32 = (bit<32>)param0;
+        hdr.pkt.field_c_32 = param0;
     }
     @name(".action_1") action action_1(bit<16> param0) {
-        hdr.pkt.field_f_16 = (bit<16>)param0;
-        meta.meta.field_17 = (bit<17>)17w7;
+        hdr.pkt.field_f_16 = param0;
+        meta.meta.field_17 = 17w7;
     }
     @name(".action_2") action action_2() {
-        simple_stats.count((bit<32>)meta.meta.field_17);
+        simple_stats.count((bit<32>)(bit<15>)meta.meta.field_17);
     }
     @name("table_0") table table_0 {
         actions = {

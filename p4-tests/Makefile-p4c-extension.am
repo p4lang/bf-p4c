@@ -86,7 +86,6 @@ XFAIL_TESTS += \
        tofino/%reldir%/p4_14/test_config_171_stateful_conga.p4.test \
     p14_to_16/%reldir%/p4_14/test_config_172_stateful_heavy_hitter.p4.test \
        tofino/%reldir%/p4_14/test_config_172_stateful_heavy_hitter.p4.test \
-    p14_to_16/%reldir%/p4_14/test_config_173_stateful_bloom_filter.p4.test \
        tofino/%reldir%/p4_14/test_config_173_stateful_bloom_filter.p4.test \
        tofino/%reldir%/p4_16/bfd_offload.p4.test \
        tofino/%reldir%/p4_16/bloom_filter.p4.test \
@@ -105,8 +104,7 @@ XFAIL_TESTS += \
 # These testcases taken from glass and xfail in brig
 XFAIL_TESTS += \
     bmv2/%reldir%/p4_14/exclusive_cf_one_action_fail_after.p4.test \
-    bmv2/%reldir%/p4_14/exclusive_cf_one_action_fail_before.p4.test \
-    bmv2/%reldir%/p4_14/test_config_190_modify_with_expr.p4.test
+    bmv2/%reldir%/p4_14/exclusive_cf_one_action_fail_before.p4.test
 
 # Multiple LPM keys in a table (not allowed on bmv2)
 XFAIL_TESTS += bmv2/%reldir%/p4_14/case1770.p4.test
@@ -143,7 +141,6 @@ XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_206_stateful_logging.p4.test
 XFAIL_TESTS += tofino/%reldir%/p4_14/test_config_209_pack_hash_dist.p4.test
 
 # blackbox type unification failures (JIRA #BRIG-30, #COMPILER-341)
-XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_174_stateful_flow_learning.p4.test
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_205_modify_field_from_hash.p4.test
 XFAIL_TESTS += p14_to_16/%reldir%/p4_14/test_config_214_full_stats.p4.test
 XFAIL_TESTS += bmv2/%reldir%/p4_14/test_config_205_modify_field_from_hash.p4.test

@@ -177,14 +177,14 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".a1") action a1(bit<3> p1, bit<12> p2) {
-        meta.vtag.pri = (bit<3>)p1;
-        meta.vtag.cfi = (bit<1>)1w1;
-        meta.vtag.vid = (bit<12>)(meta.vtag.vid + p2);
+        meta.vtag.pri = p1;
+        meta.vtag.cfi = 1w1;
+        meta.vtag.vid = meta.vtag.vid + p2;
     }
     @name(".a2") action a2(bit<3> p1) {
-        hdr.vlan_tag.pri = (bit<3>)p1;
-        hdr.vlan_tag.cfi = (bit<1>)meta.vtag.cfi;
-        hdr.vlan_tag.vid = (bit<12>)meta.vtag.vid;
+        hdr.vlan_tag.pri = p1;
+        hdr.vlan_tag.cfi = meta.vtag.cfi;
+        hdr.vlan_tag.vid = meta.vtag.vid;
     }
     @name("t1") table t1 {
         actions = {

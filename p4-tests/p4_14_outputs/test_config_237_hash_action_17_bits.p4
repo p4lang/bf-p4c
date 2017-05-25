@@ -38,10 +38,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".action_0") action action_0(bit<8> p0) {
-        hdr.pkt.field_i_8 = (bit<8>)p0;
+        hdr.pkt.field_i_8 = p0;
     }
     @name(".action_1") action action_1(bit<8> p1) {
-        hdr.pkt.field_j_8 = (bit<8>)p1;
+        hdr.pkt.field_j_8 = p1;
     }
     @name("table_0") table table_0 {
         actions = {

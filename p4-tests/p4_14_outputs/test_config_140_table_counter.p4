@@ -167,7 +167,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         ;
     }
     @name(".action_1") action action_1(bit<16> param0) {
-        hdr.pkt.field_g_16 = (bit<16>)param0;
+        hdr.pkt.field_g_16 = param0;
     }
     @table_counter("gateway_hit") @name("table_0") table table_0 {
         actions = {

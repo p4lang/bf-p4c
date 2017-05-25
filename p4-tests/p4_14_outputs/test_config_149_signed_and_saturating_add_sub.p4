@@ -161,22 +161,22 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".action_0") action action_0() {
-        hdr.pkt.field_a_signed = (int<32>)(hdr.pkt.field_a_signed + (int<32>)hdr.pkt.field_b_32);
+        hdr.pkt.field_a_signed = hdr.pkt.field_a_signed + (int<32>)hdr.pkt.field_b_32;
     }
     @name(".action_1") action action_1() {
-        hdr.pkt.field_e_sat = (bit<16>)(hdr.pkt.field_e_sat + hdr.pkt.field_f_16);
+        hdr.pkt.field_e_sat = hdr.pkt.field_e_sat + hdr.pkt.field_f_16;
     }
     @name(".action_2") action action_2() {
-        hdr.pkt.field_i_signed_sat = (int<8>)(hdr.pkt.field_i_signed_sat + (int<8>)hdr.pkt.field_j_8);
+        hdr.pkt.field_i_signed_sat = hdr.pkt.field_i_signed_sat + (int<8>)hdr.pkt.field_j_8;
     }
     @name(".action_3") action action_3() {
-        hdr.pkt.field_a_signed = (int<32>)(hdr.pkt.field_a_signed - (int<32>)hdr.pkt.field_b_32);
+        hdr.pkt.field_a_signed = hdr.pkt.field_a_signed - (int<32>)hdr.pkt.field_b_32;
     }
     @name(".action_4") action action_4() {
-        hdr.pkt.field_e_sat = (bit<16>)(hdr.pkt.field_e_sat - hdr.pkt.field_f_16);
+        hdr.pkt.field_e_sat = hdr.pkt.field_e_sat - hdr.pkt.field_f_16;
     }
     @name(".action_5") action action_5() {
-        hdr.pkt.field_i_signed_sat = (int<8>)(hdr.pkt.field_i_signed_sat - (int<8>)hdr.pkt.field_j_8);
+        hdr.pkt.field_i_signed_sat = hdr.pkt.field_i_signed_sat - (int<8>)hdr.pkt.field_j_8;
     }
     @name("table_0") table table_0 {
         actions = {

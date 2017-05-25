@@ -29,7 +29,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hash(hdr.packet.hash_result, HashAlgorithm.crc32, (bit<32>)0, { hdr.packet.hash_field1, hdr.packet.hash_field2, hdr.packet.hash_field3 }, (bit<64>)4294967296);
     }
     @name(".set_port") action set_port() {
-        standard_metadata.egress_spec = (bit<9>)9w1;
+        standard_metadata.egress_spec = 9w1;
     }
     @name("test") table test {
         actions = {

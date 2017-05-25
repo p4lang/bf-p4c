@@ -155,7 +155,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         hdr.hdr.x = (bit<32>)(hdr.hdr.y ++ hdr.hdr.z >> 14);
     }
     @name(".action_1") action action_1() {
-        hdr.hdr.x = (bit<32>)(hdr.hdr.x >> 4);
+        hdr.hdr.x = hdr.hdr.x >> 4;
     }
     @name(".do_nothing") action do_nothing() {
     }

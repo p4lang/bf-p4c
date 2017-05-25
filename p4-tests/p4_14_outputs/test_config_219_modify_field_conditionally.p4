@@ -175,13 +175,13 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".action_0") action action_0(bit<32> src0) {
-        hdr.hdr_0.c = (bit<32>)(1 != 0 ? src0 : hdr.hdr_0.c);
+        hdr.hdr_0.c = (1 != 0 ? src0 : hdr.hdr_0.c);
     }
     @name(".action_1") action action_1(bit<32> src1) {
-        hdr.hdr_0.c = (bit<32>)(0 != 0 ? src1 : hdr.hdr_0.c);
+        hdr.hdr_0.c = (0 != 0 ? src1 : hdr.hdr_0.c);
     }
     @name(".action_2") action action_2(bit<8> cond2, bit<32> src2) {
-        hdr.hdr_0.c = (bit<32>)(cond2 != 0 ? src2 : hdr.hdr_0.c);
+        hdr.hdr_0.c = (cond2 != 0 ? src2 : hdr.hdr_0.c);
     }
     @name("table_i0") table table_i0 {
         actions = {

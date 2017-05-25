@@ -211,29 +211,29 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".do_nothing") action do_nothing() {
     }
     @name(".set_m") action set_m() {
-        meta.m.p = (bit<3>)3w7;
-        meta.m.c = (bit<1>)1w0;
-        meta.m.v = (bit<12>)12w2;
-        meta.m.t = (bit<16>)16w1;
+        meta.m.p = 3w7;
+        meta.m.c = 1w0;
+        meta.m.v = 12w2;
+        meta.m.t = 16w1;
     }
     @name(".add_vlan") action add_vlan() {
         hdr.vlan.setValid();
-        hdr.vlan.priority = (bit<3>)meta.m.p;
-        hdr.vlan.cfi = (bit<1>)meta.m.c;
-        hdr.vlan.vid = (bit<12>)meta.m.v;
-        hdr.vlan.vtype = (bit<16>)meta.m.t;
+        hdr.vlan.priority = meta.m.p;
+        hdr.vlan.cfi = meta.m.c;
+        hdr.vlan.vid = meta.m.v;
+        hdr.vlan.vtype = meta.m.t;
     }
     @name(".set_m2") action set_m2() {
-        meta.m2.p = (bit<3>)hdr.vlan2.priority;
-        meta.m2.c = (bit<1>)hdr.vlan2.cfi;
-        meta.m2.v = (bit<12>)hdr.vlan2.vid;
-        meta.m2.t = (bit<16>)hdr.vlan2.vtype;
+        meta.m2.p = hdr.vlan2.priority;
+        meta.m2.c = hdr.vlan2.cfi;
+        meta.m2.v = hdr.vlan2.vid;
+        meta.m2.t = hdr.vlan2.vtype;
     }
     @name(".set_m_again") action set_m_again() {
-        meta.m.p = (bit<3>)meta.m2.p;
-        meta.m.c = (bit<1>)meta.m2.c;
-        meta.m.v = (bit<12>)meta.m2.v;
-        meta.m.t = (bit<16>)meta.m2.t;
+        meta.m.p = meta.m2.p;
+        meta.m.c = meta.m2.c;
+        meta.m.v = meta.m2.v;
+        meta.m.t = meta.m2.t;
     }
     @name("t1") table t1 {
         actions = {

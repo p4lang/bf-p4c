@@ -185,8 +185,8 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         ;
     }
     @name(".mod_mac_adr") action mod_mac_adr(bit<8> egress_port, bit<48> srcmac, bit<48> dstmac) {
-        hdr.ethernet.srcAddr = (bit<48>)srcmac;
-        hdr.ethernet.dstAddr = (bit<48>)dstmac;
+        hdr.ethernet.srcAddr = srcmac;
+        hdr.ethernet.dstAddr = dstmac;
     }
     @immediate(1) @name("tcam_tbl_stage_2") table tcam_tbl_stage_2 {
         actions = {

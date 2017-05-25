@@ -177,20 +177,20 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("exm_meter2") direct_meter<bit<8>>(MeterType.bytes) exm_meter2;
     @name(".action_0") action action_0() {
-        hdr.ipv4.ttl = (bit<8>)8w4;
+        hdr.ipv4.ttl = 8w4;
     }
     @name(".action_1") action action_1() {
-        hdr.ipv4.ttl = (bit<8>)8w5;
+        hdr.ipv4.ttl = 8w5;
     }
     @name(".nop") action nop() {
     }
     @name(".action_0") action action_0_0() {
         exm_meter2.read(hdr.ipv4.diffserv);
-        hdr.ipv4.ttl = (bit<8>)8w4;
+        hdr.ipv4.ttl = 8w4;
     }
     @name(".action_1") action action_1_0() {
         exm_meter2.read(hdr.ipv4.diffserv);
-        hdr.ipv4.ttl = (bit<8>)8w5;
+        hdr.ipv4.ttl = 8w5;
     }
     @name(".nop") action nop_0() {
         exm_meter2.read(hdr.ipv4.diffserv);

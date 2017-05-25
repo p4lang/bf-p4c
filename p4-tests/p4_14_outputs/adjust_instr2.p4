@@ -39,17 +39,17 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".set_fields") action set_fields(bit<32> big_field, bit<2> half_nibble1, bit<2> half_nibble2) {
-        hdr.hdr.f4 = (bit<32>)big_field;
-        hdr.hdr.hn1 = (bit<2>)half_nibble1;
-        hdr.hdr.hn2 = (bit<2>)half_nibble2;
+        hdr.hdr.f4 = big_field;
+        hdr.hdr.hn1 = half_nibble1;
+        hdr.hdr.hn2 = half_nibble2;
     }
     @name(".back_to_hdr") action back_to_hdr() {
-        hdr.hdr.hn2 = (bit<2>)meta.nibble_meta.hn1;
-        hdr.hdr.hn4 = (bit<2>)meta.nibble_meta.hn2;
+        hdr.hdr.hn2 = meta.nibble_meta.hn1;
+        hdr.hdr.hn4 = meta.nibble_meta.hn2;
     }
     @name(".set_nibble_meta") action set_nibble_meta() {
-        meta.nibble_meta.hn1 = (bit<2>)hdr.hdr.hn1;
-        meta.nibble_meta.hn2 = (bit<2>)hdr.hdr.hn2;
+        meta.nibble_meta.hn1 = hdr.hdr.hn1;
+        meta.nibble_meta.hn2 = hdr.hdr.hn2;
     }
     @name("set_all") table set_all {
         actions = {

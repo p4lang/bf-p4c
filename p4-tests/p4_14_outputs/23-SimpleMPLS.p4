@@ -190,11 +190,11 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".forward_mpls") action forward_mpls(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
-        hdr.outer_ethernet.dstAddr = (bit<48>)new_mac_da;
-        hdr.outer_ethernet.srcAddr = (bit<48>)new_mac_sa;
-        hdr.vlan_tag.vid = (bit<12>)new_vlan_id;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)new_port;
-        hdr.mpls.ttl = (bit<8>)(hdr.mpls.ttl + 8w255);
+        hdr.outer_ethernet.dstAddr = new_mac_da;
+        hdr.outer_ethernet.srcAddr = new_mac_sa;
+        hdr.vlan_tag.vid = new_vlan_id;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = new_port;
+        hdr.mpls.ttl = hdr.mpls.ttl + 8w255;
     }
     @name("mpls_forward") table mpls_forward {
         actions = {

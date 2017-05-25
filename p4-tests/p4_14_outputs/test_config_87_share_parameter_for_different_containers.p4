@@ -161,7 +161,7 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".action_0") action action_0(bit<32> my_only_param) {
-        hdr.pkt.field_a = (bit<32>)my_only_param;
+        hdr.pkt.field_a = my_only_param;
         hdr.pkt.field_e = (bit<16>)my_only_param;
         hdr.pkt.field_i = (bit<8>)my_only_param;
     }

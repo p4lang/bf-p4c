@@ -53,7 +53,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("accum") register<pair32_t>(32w2048) accum;
     stateful_alu() sful;
     @name(".act1") action act1(bit<9> port, bit<32> idx) {
-        standard_metadata.egress_spec = (bit<9>)port;
+        standard_metadata.egress_spec = port;
         sful.execute_stateful_alu(idx);
     }
     @name("test1") table test1 {

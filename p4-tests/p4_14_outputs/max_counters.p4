@@ -31,18 +31,18 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("cnt3") direct_counter(CounterType.packets) cnt3;
     @name("cnt4") direct_counter(CounterType.bytes) cnt4;
     @name(".c1_2") action c1_2(bit<8> val1, bit<8> val2) {
-        hdr.data.c1 = (bit<8>)val1;
-        hdr.data.c2 = (bit<8>)val2;
+        hdr.data.c1 = val1;
+        hdr.data.c2 = val2;
     }
     @name(".c3_4") action c3_4(bit<8> val3, bit<8> val4, bit<9> port) {
-        hdr.data.c3 = (bit<8>)val3;
-        hdr.data.c4 = (bit<8>)val4;
-        standard_metadata.egress_spec = (bit<9>)port;
+        hdr.data.c3 = val3;
+        hdr.data.c4 = val4;
+        standard_metadata.egress_spec = port;
     }
     @name(".c1_2") action c1_2_0(bit<8> val1, bit<8> val2) {
         cnt.count();
-        hdr.data.c1 = (bit<8>)val1;
-        hdr.data.c2 = (bit<8>)val2;
+        hdr.data.c1 = val1;
+        hdr.data.c2 = val2;
     }
     @name("test1") table test1 {
         actions = {
@@ -55,9 +55,9 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     }
     @name(".c3_4") action c3_4_0(bit<8> val3, bit<8> val4, bit<9> port) {
         cnt3.count();
-        hdr.data.c3 = (bit<8>)val3;
-        hdr.data.c4 = (bit<8>)val4;
-        standard_metadata.egress_spec = (bit<9>)port;
+        hdr.data.c3 = val3;
+        hdr.data.c4 = val4;
+        standard_metadata.egress_spec = port;
     }
     @name("test2") table test2 {
         actions = {

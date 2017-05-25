@@ -159,7 +159,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
         mark_to_drop();
     }
     @name(".set_egress_port") action set_egress_port(bit<9> egress_port) {
-        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)egress_port;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = egress_port;
     }
     @name("dmac") table dmac {
         actions = {

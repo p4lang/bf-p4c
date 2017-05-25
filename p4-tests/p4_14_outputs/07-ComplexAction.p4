@@ -161,8 +161,8 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".action1") action action1() {
-        meta.md.field1 = (bit<8>)(meta.md.field1 + meta.md.field2);
-        meta.md.field2 = (bit<8>)8w5;
+        meta.md.field1 = meta.md.field1 + meta.md.field2;
+        meta.md.field2 = 8w5;
     }
     @name("table1") table table1 {
         actions = {

@@ -194,10 +194,10 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".do_nothing") action do_nothing() {
     }
     @name(".action_0") action action_0(bit<8> p) {
-        hdr.hdr0.b = (bit<8>)p;
+        hdr.hdr0.b = p;
     }
     @name(".action_1") action action_1(bit<8> p) {
-        hdr.hdr0.c = (bit<8>)(hdr.hdr0.b + p);
+        hdr.hdr0.c = hdr.hdr0.b + p;
     }
     @name("table_i0") table table_i0 {
         actions = {

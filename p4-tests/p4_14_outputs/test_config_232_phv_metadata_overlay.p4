@@ -73,32 +73,32 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name(".do_nothing") action do_nothing() {
     }
     @name(".action_0") action action_0(bit<11> idx) {
-        meta.meta.tbl0_tbl1 = (bit<16>)16w1;
-        meta.meta.tbl0_tbl2 = (bit<16>)16w1;
-        meta.meta.tbl0_tbl3 = (bit<16>)16w1;
-        meta.meta.tbl0 = (bit<16>)16w1;
+        meta.meta.tbl0_tbl1 = 16w1;
+        meta.meta.tbl0_tbl2 = 16w1;
+        meta.meta.tbl0_tbl3 = 16w1;
+        meta.meta.tbl0 = 16w1;
         cnt_0.count((bit<32>)idx);
     }
     @name(".action_1") action action_1() {
-        meta.meta.tbl0_tbl1 = (bit<16>)16w1;
-        meta.meta.tbl1_tbl2 = (bit<16>)16w1;
-        meta.meta.tbl1_tbl3 = (bit<16>)16w1;
-        meta.meta.tbl1 = (bit<16>)16w1;
+        meta.meta.tbl0_tbl1 = 16w1;
+        meta.meta.tbl1_tbl2 = 16w1;
+        meta.meta.tbl1_tbl3 = 16w1;
+        meta.meta.tbl1 = 16w1;
     }
     @name(".action_2") action action_2() {
-        meta.meta.tbl0_tbl2 = (bit<16>)16w1;
-        meta.meta.tbl1_tbl2 = (bit<16>)16w1;
-        meta.meta.tbl2_tbl3 = (bit<16>)16w1;
-        meta.meta.tbl2 = (bit<16>)16w1;
+        meta.meta.tbl0_tbl2 = 16w1;
+        meta.meta.tbl1_tbl2 = 16w1;
+        meta.meta.tbl2_tbl3 = 16w1;
+        meta.meta.tbl2 = 16w1;
     }
     @name(".action_3") action action_3() {
-        meta.meta.tbl0_tbl3 = (bit<16>)16w1;
-        meta.meta.tbl1_tbl3 = (bit<16>)16w1;
-        meta.meta.tbl2_tbl3 = (bit<16>)16w1;
-        meta.meta.tbl3 = (bit<16>)16w1;
+        meta.meta.tbl0_tbl3 = 16w1;
+        meta.meta.tbl1_tbl3 = 16w1;
+        meta.meta.tbl2_tbl3 = 16w1;
+        meta.meta.tbl3 = 16w1;
     }
     @name(".action_4") action action_4() {
-        meta.meta.tbl4 = (bit<16>)16w1;
+        meta.meta.tbl4 = 16w1;
     }
     @name("table_i0") table table_i0 {
         actions = {

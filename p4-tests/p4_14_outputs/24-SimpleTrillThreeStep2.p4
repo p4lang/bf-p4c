@@ -199,17 +199,17 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".do_trill_forward") action do_trill_forward(bit<48> new_mac_da, bit<48> new_mac_sa, bit<12> new_vlan_id, bit<9> new_port) {
-        hdr.outer_ethernet.dstAddr = (bit<48>)new_mac_da;
-        hdr.outer_ethernet.srcAddr = (bit<48>)new_mac_sa;
-        hdr.vlan_tag.vid = (bit<12>)new_vlan_id;
-        hdr.ig_intr_md_for_tm.ucast_egress_port = (bit<9>)new_port;
-        meta.m.hopCount = (bit<6>)hdr.trill.hopCount;
+        hdr.outer_ethernet.dstAddr = new_mac_da;
+        hdr.outer_ethernet.srcAddr = new_mac_sa;
+        hdr.vlan_tag.vid = new_vlan_id;
+        hdr.ig_intr_md_for_tm.ucast_egress_port = new_port;
+        meta.m.hopCount = hdr.trill.hopCount;
     }
     @name(".do_trill_forward_1") action do_trill_forward_1() {
-        meta.m.hopCount = (bit<6>)(meta.m.hopCount + 6w63);
+        meta.m.hopCount = meta.m.hopCount + 6w63;
     }
     @name(".do_trill_forward_2") action do_trill_forward_2() {
-        hdr.trill.hopCount = (bit<6>)meta.m.hopCount;
+        hdr.trill.hopCount = meta.m.hopCount;
     }
     @name("trill_forward") table trill_forward {
         actions = {

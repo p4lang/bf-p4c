@@ -26,7 +26,7 @@ struct headers {
 parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name("p_hdr0") state p_hdr0 {
         packet.extract(hdr.hdr0);
-        meta.meta.c = (bit<5>)5w0;
+        meta.meta.c = 5w0;
         transition accept;
     }
     @name("start") state start {

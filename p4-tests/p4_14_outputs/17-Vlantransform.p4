@@ -194,48 +194,48 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".do_new_inner_cfi") action do_new_inner_cfi() {
-        hdr.vlan_tag[1].cfi = (bit<1>)meta.meta.new_inner_cfi;
+        hdr.vlan_tag[1].cfi = meta.meta.new_inner_cfi;
     }
     @name(".do_new_inner_pri") action do_new_inner_pri() {
-        hdr.vlan_tag[1].pri = (bit<3>)meta.meta.new_inner_pri;
+        hdr.vlan_tag[1].pri = meta.meta.new_inner_pri;
     }
     @name(".do_new_inner_tpid") action do_new_inner_tpid() {
-        hdr.vlan_tag[0].ethertype = (bit<16>)meta.meta.new_inner_tpid;
+        hdr.vlan_tag[0].ethertype = meta.meta.new_inner_tpid;
     }
     @name(".do_new_inner_vid") action do_new_inner_vid() {
-        hdr.vlan_tag[1].vid = (bit<12>)meta.meta.new_inner_vid;
+        hdr.vlan_tag[1].vid = meta.meta.new_inner_vid;
     }
     @name(".do_new_outer_cfi") action do_new_outer_cfi() {
-        hdr.vlan_tag[0].cfi = (bit<1>)meta.meta.new_outer_cfi;
+        hdr.vlan_tag[0].cfi = meta.meta.new_outer_cfi;
     }
     @name(".do_new_outer_pri") action do_new_outer_pri() {
-        hdr.vlan_tag[0].pri = (bit<3>)meta.meta.new_outer_pri;
+        hdr.vlan_tag[0].pri = meta.meta.new_outer_pri;
     }
     @name(".do_new_outer_tpid") action do_new_outer_tpid() {
-        hdr.ethernet.ethertype = (bit<16>)meta.meta.new_outer_tpid;
+        hdr.ethernet.ethertype = meta.meta.new_outer_tpid;
     }
     @name(".do_new_outer_vid") action do_new_outer_vid() {
-        hdr.vlan_tag[0].vid = (bit<12>)meta.meta.new_outer_vid;
+        hdr.vlan_tag[0].vid = meta.meta.new_outer_vid;
     }
     @name(".nop") action nop() {
     }
     @name(".rewrite_tags") action rewrite_tags(bit<16> new_outer_tpid, bit<1> new_outer_tpid_en, bit<3> new_outer_pri, bit<1> new_outer_pri_en, bit<1> new_outer_cfi, bit<1> new_outer_cfi_en, bit<12> new_outer_vid, bit<1> new_outer_vid_en, bit<16> new_inner_tpid, bit<1> new_inner_tpid_en, bit<3> new_inner_pri, bit<1> new_inner_pri_en, bit<1> new_inner_cfi, bit<1> new_inner_cfi_en, bit<12> new_inner_vid, bit<1> new_inner_vid_en) {
-        meta.meta.new_outer_tpid = (bit<16>)new_outer_tpid;
-        meta.meta.new_outer_tpid_en = (bit<1>)new_outer_tpid_en;
-        meta.meta.new_outer_pri = (bit<3>)new_outer_pri;
-        meta.meta.new_outer_pri_en = (bit<1>)new_outer_pri_en;
-        meta.meta.new_outer_cfi = (bit<1>)new_outer_cfi;
-        meta.meta.new_outer_cfi_en = (bit<1>)new_outer_cfi_en;
-        meta.meta.new_outer_vid = (bit<12>)new_outer_vid;
-        meta.meta.new_outer_vid_en = (bit<1>)new_outer_vid_en;
-        meta.meta.new_inner_tpid = (bit<16>)new_inner_tpid;
-        meta.meta.new_inner_tpid_en = (bit<1>)new_inner_tpid_en;
-        meta.meta.new_inner_pri = (bit<3>)new_inner_pri;
-        meta.meta.new_inner_pri_en = (bit<1>)new_inner_pri_en;
-        meta.meta.new_inner_cfi = (bit<1>)new_inner_cfi;
-        meta.meta.new_inner_cfi_en = (bit<1>)new_inner_cfi_en;
-        meta.meta.new_inner_vid = (bit<12>)new_inner_vid;
-        meta.meta.new_inner_vid_en = (bit<1>)new_inner_vid_en;
+        meta.meta.new_outer_tpid = new_outer_tpid;
+        meta.meta.new_outer_tpid_en = new_outer_tpid_en;
+        meta.meta.new_outer_pri = new_outer_pri;
+        meta.meta.new_outer_pri_en = new_outer_pri_en;
+        meta.meta.new_outer_cfi = new_outer_cfi;
+        meta.meta.new_outer_cfi_en = new_outer_cfi_en;
+        meta.meta.new_outer_vid = new_outer_vid;
+        meta.meta.new_outer_vid_en = new_outer_vid_en;
+        meta.meta.new_inner_tpid = new_inner_tpid;
+        meta.meta.new_inner_tpid_en = new_inner_tpid_en;
+        meta.meta.new_inner_pri = new_inner_pri;
+        meta.meta.new_inner_pri_en = new_inner_pri_en;
+        meta.meta.new_inner_cfi = new_inner_cfi;
+        meta.meta.new_inner_cfi_en = new_inner_cfi_en;
+        meta.meta.new_inner_vid = new_inner_vid;
+        meta.meta.new_inner_vid_en = new_inner_vid_en;
     }
     @name("new_inner_cfi") table new_inner_cfi {
         actions = {

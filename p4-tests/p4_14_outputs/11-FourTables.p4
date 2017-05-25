@@ -163,16 +163,16 @@ control egress(inout headers hdr, inout metadata meta, inout standard_metadata_t
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".action1") action action1() {
-        meta.ing_metadata.field1 = (bit<1>)1w1;
+        meta.ing_metadata.field1 = 1w1;
     }
     @name(".action2") action action2() {
-        meta.ing_metadata.field2 = (bit<1>)1w1;
+        meta.ing_metadata.field2 = 1w1;
     }
     @name(".action3") action action3() {
-        meta.ing_metadata.field3 = (bit<1>)1w1;
+        meta.ing_metadata.field3 = 1w1;
     }
     @name(".action4") action action4(bit<48> newAddr) {
-        hdr.ethernet.srcAddr = (bit<48>)newAddr;
+        hdr.ethernet.srcAddr = newAddr;
     }
     @name("table1") table table1 {
         actions = {

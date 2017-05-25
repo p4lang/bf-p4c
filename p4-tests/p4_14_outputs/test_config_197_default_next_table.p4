@@ -169,10 +169,10 @@ parser ParserImpl(packet_in packet, out headers hdr, inout metadata meta, inout 
 
 control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_t standard_metadata) {
     @name(".action_0") action action_0(bit<16> param_0) {
-        hdr.pkt.field_e_16 = (bit<16>)param_0;
+        hdr.pkt.field_e_16 = param_0;
     }
     @name(".action_1") action action_1(bit<32> param_1) {
-        hdr.pkt.field_b_32 = (bit<32>)param_1;
+        hdr.pkt.field_b_32 = param_1;
     }
     @name(".drop_me") action drop_me() {
         mark_to_drop();

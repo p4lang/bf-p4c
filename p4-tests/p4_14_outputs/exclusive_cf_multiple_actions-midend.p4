@@ -158,7 +158,7 @@ control ingress(inout headers hdr, inout metadata meta, inout standard_metadata_
     @name("NoAction") action NoAction_0() {
     }
     @name(".branch") action branch_0() {
-        meta.md.direction[0:0] = hdr.ether.dstAddr[0:0];
+        meta.md.direction[0:0] = ((bit<1>)hdr.ether.dstAddr)[0:0];
     }
     @name(".a1") action a1_0() {
         meta.md.port = 9w1;
