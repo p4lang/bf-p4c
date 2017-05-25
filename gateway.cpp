@@ -342,7 +342,13 @@ void GatewayTable::payload_write_regs(REGS &regs, int row, int type, int bus) {
     if (match_address >= 0) {
         merge.gateway_payload_match_adr[row][bus][type] = match_address;
         merge.gateway_payload_match_adr[row][bus][type^1] = match_address;
-    }
+    } else {
+        //For Tofino A0, there is a bug in snapshot that cannot distinguish if a
+        //gateway is inhibiting a table To work around this, configure the
+        //gateway_payload_match_adr to an invalid value. Add a command line flag
+        //if this is only a tofino A0 issue?.
+        merge.gateway_payload_match_adr[row][bus][type] = 0x7ffff;
+        merge.gateway_payload_match_adr[row][bus][type^1] = 0x7ffff; }
 }
 
 template<class REGS>

@@ -1,18 +1,5 @@
 - current compiler failures on some tests.
 
-acl1.p4 mismatch
-exact_match9.p4 mismatch
-gateway1.p4 mismatch
-gateway2.p4 mismatch
-gateway3.p4 mismatch
-gateway4.p4 mismatch
-gateway5.p4 mismatch
-gateway6.p4 mismatch
-gateway7.p4 mismatch
-hash_index1.p4 mismatch
-testgw.p4 mismatch
-- missing gateway 'match_address' in glass asm output
-
 parser1.p4 compile
 parser2.p4 compile
 parser_dc_full.p4 compile

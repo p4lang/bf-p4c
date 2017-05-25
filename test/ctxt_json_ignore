@@ -82,3 +82,8 @@ uses_range
 vliw_resource_allocation
 way_match_group_map
 & 0xff000000 == 0x21000000
+allowed_to_be_default_action
+disallowed_as_default_action_reason
+override_meter_addr_pfe
+override_stat_addr_pfe
+override_stateful_addr_pfe
