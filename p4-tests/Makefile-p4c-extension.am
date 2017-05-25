@@ -278,6 +278,10 @@ XFAIL_TESTS += \
     tofino/testdata/p4_16_samples/table-entries-ternary-bmv2.p4.test \
     tofino/testdata/p4_16_samples/verify-bmv2.p4.test
 
+#fail due to drop instead of output to port 0 when egress_spec not set
+XFAIL_TESTS += \
+    tofino/testdata/p4_16_samples/issue635-bmv2.p4.test
+
 #varbit extracts don't work in parser
 XFAIL_TESTS += \
     tofino/testdata/p4_16_samples/issue447-bmv2.p4.test \
