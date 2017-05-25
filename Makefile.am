@@ -158,8 +158,7 @@ cpplint_FILES += $(tofino_backend_phv_UNIFIED) $(tofino_backend_phv_NONUNIFIED)
 
 tofino_backend_main_UNIFIED = \
 	%reldir%/backend.cpp \
-	%reldir%/midend.cpp \
-	%reldir%/p4c-tofino.cpp
+	%reldir%/midend.cpp
 
 noinst_HEADERS += \
 	%reldir%/backend.h \
@@ -185,16 +184,24 @@ p4_14include_tofino_HEADERS = \
     $(srcdir)/%reldir%/p4_14include/tofino/stateful_alu_blackbox.p4 \
     $(srcdir)/%reldir%/p4_14include/tofino/wred_blackbox.p4
 
-bin_PROGRAMS += p4c-tofino
-p4c_tofino_LDADD = libfrontend.la libp4ctoolkit.a \
-    $(BOOST_FILESYSTEM_LIB) $(BOOST_SYSTEM_LIB)
-
-p4c_tofino_SOURCES = \
+noinst_LTLIBRARIES += libtofinobackend.la
+libtofinobackend_la_SOURCES = \
 	$(tofino_backend_common_SOURCES) \
+	$(tofino_backend_main_SOURCES) \
 	$(tofino_backend_mau_SOURCES) \
 	$(tofino_backend_parde_SOURCES) \
-	$(tofino_backend_phv_SOURCES) \
-	$(tofino_backend_phv_or_tools_SOURCES) \
-	$(tofino_backend_main_SOURCES)
+	$(tofino_backend_phv_SOURCES)
+
+bin_PROGRAMS += p4c-tofino
+p4c_tofino_LDADD = \
+	libfrontend.la \
+	libp4ctoolkit.a \
+	libtofinobackend.la \
+        $(BOOST_FILESYSTEM_LIB) \
+	$(BOOST_SYSTEM_LIB)
+p4c_tofino_SOURCES = \
+	%reldir%/p4c-tofino.cpp
+
+cpplint_FILES += $(p4c_tofino_SOURCES)
 
 p4c_PYTHON += $(srcdir)/%reldir%/driver/p4c.tofino.cfg
