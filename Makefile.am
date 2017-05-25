@@ -205,3 +205,13 @@ p4c_tofino_SOURCES = \
 cpplint_FILES += $(p4c_tofino_SOURCES)
 
 p4c_PYTHON += $(srcdir)/%reldir%/driver/p4c.tofino.cfg
+
+################ Testing
+
+# Tofino-specific GTests.
+gtest_tofino_UNIFIED = \
+	%reldir%/test/gtest/phv.cpp
+
+cpplint_FILES += $(gtest_tofino_UNIFIED) $(gtest_tofino_NONUNIFIED)
+gtest_SOURCES += $(gtest_tofino_SOURCES)
+gtest_LDADD += libtofinobackend.la
