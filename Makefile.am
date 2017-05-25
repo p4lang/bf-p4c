@@ -210,7 +210,8 @@ p4c_PYTHON += $(srcdir)/%reldir%/driver/p4c.tofino.cfg
 
 # Tofino-specific GTests.
 gtest_tofino_UNIFIED = \
-	%reldir%/test/gtest/phv.cpp
+	%reldir%/test/gtest/phv.cpp \
+	%reldir%/test/gtest/trivial_alloc.cpp
 
 cpplint_FILES += $(gtest_tofino_UNIFIED) $(gtest_tofino_NONUNIFIED)
 gtest_SOURCES += $(gtest_tofino_SOURCES)

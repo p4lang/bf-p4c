@@ -133,7 +133,7 @@ void backend(const IR::Tofino::Pipe* maupipe, const Tofino_Options& options) {
     LayoutChoices lc;
 
     if (options.trivial_phvalloc) {
-        phv_alloc = new PHV::TrivialAlloc(phv, defuse.conflicts());
+        phv_alloc = new PHV::TrivialAlloc(phv);
     } else {
         phv_alloc = new PassManager({
             //

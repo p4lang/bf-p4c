@@ -11,9 +11,15 @@
 #include "tofino/common/header_stack.h"
 
 namespace PHV {
+class ManualAlloc;
 class TrivialAlloc;
 class ValidateAllocation;
 }  // end namespace PHV
+
+namespace Test {
+template <typename T> class TofinoPHVTrivialAllocators;
+class TofinoPHVManualAlloc;
+}  // namespace Test
 
 class Cluster_PHV;
 class PHV_Container;
@@ -111,6 +117,7 @@ class PhvInfo : public Inspector {
         // friends of phv_assignment interface
         //
         friend class SplitPhvUse;             // phv/split_phv_use
+        friend class PHV::ManualAlloc;        // phv/trivial_alloc
         friend class PHV::TrivialAlloc;       // phv/trivial_alloc
         friend class PHV::ValidateAllocation; // phv/validate_allocation
         friend class Slice;                   // common/asm_output
@@ -123,6 +130,9 @@ class PhvInfo : public Inspector {
         //
         friend void alloc_pov(PhvInfo::Field *i, PhvInfo::Field *pov);
         friend void repack_metadata(PhvInfo &phv);
+        //
+        template <typename T> friend class ::Test::TofinoPHVTrivialAllocators;
+        friend class ::Test::TofinoPHVManualAlloc;
         //
         friend std::ostream &operator<<(std::ostream &out, PHV_Bind &phv_bind);
         friend void emit_phv_field(std::ostream &out, PhvInfo::Field &field);
@@ -360,7 +370,6 @@ class PhvInfo : public Inspector {
         decltype(**it) operator*() { return **it; }
         decltype(*it) operator->() { return *it; } };
     friend class PhvAllocator;
-    friend class PHV::TrivialAlloc;
 
  public:  // class PhvInfo
     const Field *field(int idx) const { return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
