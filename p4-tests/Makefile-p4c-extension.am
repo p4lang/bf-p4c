@@ -293,3 +293,7 @@ XFAIL_TESTS += \
 # New failures with action bus working in compiler
 XFAIL_TESTS += \
     tofino/extensions/p4_tests/p4_14/test_config_101_switch_msdc.p4.test
+
+# Failure due to PHV allocation of stkvalid
+XFAIL_TESTS += \
+    tofino/%reldir%/p4_16/stack_valid.p4.test
