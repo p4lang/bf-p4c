@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include <boost/optional.hpp>
+#include <type_traits>
 #include "gtest/gtest.h"
 
 #include "frontends/common/parseInput.h"
@@ -287,34 +288,38 @@ TYPED_TEST(TofinoPHVTrivialAllocators, AutomaticAllocation) {
         EXPECT_TRUE(phv.field(prefix + "h5.$valid") == nullptr);
 
         // Check the POV bits.
-        // XXX(seth): The values here will need to change when the special $POV
-        // fields are removed.
         auto h1_valid = phv.field(prefix + "h1.$valid");
         ASSERT_TRUE(h1_valid != nullptr);
         auto h1_valid_alloc = this->alloc(h1_valid);
         ASSERT_EQ(1u, h1_valid_alloc.size());
-        EXPECT_EQ(3, h1_valid_alloc[0].container_bit);
+        EXPECT_EQ(7, h1_valid_alloc[0].container_bit);
         EXPECT_EQ(0, h1_valid_alloc[0].field_bit);
         EXPECT_EQ(1, h1_valid_alloc[0].width);
         auto h2_valid = phv.field(prefix + "h2.$valid");
         ASSERT_TRUE(h2_valid != nullptr);
         auto h2_valid_alloc = this->alloc(h2_valid);
         ASSERT_EQ(1u, h2_valid_alloc.size());
-        EXPECT_EQ(2, h2_valid_alloc[0].container_bit);
+        EXPECT_EQ(6, h2_valid_alloc[0].container_bit);
         EXPECT_EQ(0, h2_valid_alloc[0].field_bit);
         EXPECT_EQ(1, h2_valid_alloc[0].width);
         auto h3_valid = phv.field(prefix + "h3.$valid");
         ASSERT_TRUE(h3_valid != nullptr);
         auto h3_valid_alloc = this->alloc(h3_valid);
         ASSERT_EQ(1u, h3_valid_alloc.size());
-        EXPECT_EQ(1, h3_valid_alloc[0].container_bit);
+        EXPECT_EQ(5, h3_valid_alloc[0].container_bit);
         EXPECT_EQ(0, h3_valid_alloc[0].field_bit);
         EXPECT_EQ(1, h3_valid_alloc[0].width);
         auto h4_valid = phv.field(prefix + "h4.$valid");
         ASSERT_TRUE(h4_valid != nullptr);
         auto h4_valid_alloc = this->alloc(h4_valid);
         ASSERT_EQ(1u, h4_valid_alloc.size());
-        EXPECT_EQ(0, h4_valid_alloc[0].container_bit);
+        // XXX(seth): TrivialAlloc and ManualAlloc get different results here
+        // because TrivialAlloc places the final field in a container as far to
+        // the right as it can, even if it introduces a gap.
+        int expected_h4_valid_alloc_container_bit =
+            std::is_same<TypeParam, PHV::TrivialAlloc>::value ? 0 : 4;
+        EXPECT_EQ(expected_h4_valid_alloc_container_bit,
+                  h4_valid_alloc[0].container_bit);
         EXPECT_EQ(0, h4_valid_alloc[0].field_bit);
         EXPECT_EQ(1, h4_valid_alloc[0].width);
         auto h1_valid_container = h1_valid_alloc[0].container;

@@ -286,7 +286,6 @@ void PhvInfo::allocatePOV(const HeaderStackInfo &stacks) {
     for (auto gress : Range(INGRESS, EGRESS)) {
         if (size[gress] == 0) continue;
         this->gress = gress;
-        add(gress ? "egress::$POV" : "ingress::$POV", size[gress], 0, false, true);
         for (auto &field : *this)
             if (field.pov && field.metadata && field.gress == gress) {
                 size[gress] -= field.size;
