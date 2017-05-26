@@ -17,11 +17,11 @@ void emit_phv_field(std::ostream &out, PhvInfo::Field &field) {
 std::ostream &operator<<(std::ostream &out, const PhvAsmOutput &phvasm) {
     out << "phv ingress:" << std::endl;
     for (auto &f : phvasm.phv)
-        if (f.gress == INGRESS && f.referenced)
+        if (f.gress == INGRESS)
             emit_phv_field(out, f);
     out << "phv egress:" << std::endl;
     for (auto &f : phvasm.phv)
-        if (f.gress == EGRESS && f.referenced)
+        if (f.gress == EGRESS)
             emit_phv_field(out, f);
     return out;
 }
