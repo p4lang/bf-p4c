@@ -185,6 +185,7 @@ p4_14include_tofino_HEADERS = \
     $(srcdir)/%reldir%/p4_14include/tofino/wred_blackbox.p4
 
 noinst_LTLIBRARIES += libtofinobackend.la
+libtofinobackend_la_LIBADD = libfrontend.la
 libtofinobackend_la_SOURCES = \
 	$(tofino_backend_common_SOURCES) \
 	$(tofino_backend_main_SOURCES) \
@@ -194,7 +195,6 @@ libtofinobackend_la_SOURCES = \
 
 bin_PROGRAMS += p4c-tofino
 p4c_tofino_LDADD = \
-	libfrontend.la \
 	libp4ctoolkit.a \
 	libtofinobackend.la \
         $(BOOST_FILESYSTEM_LIB) \
