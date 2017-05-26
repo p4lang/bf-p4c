@@ -29,7 +29,6 @@ tofino_backend_common_UNIFIED = \
 	%reldir%/common/remap_intrin.cpp \
 	%reldir%/common/param_binding.cpp \
 	%reldir%/common/parser_overlay.cpp \
-	%reldir%/common/phv.cpp \
 	%reldir%/common/slice.cpp
 
 noinst_HEADERS += \
@@ -43,7 +42,6 @@ noinst_HEADERS += \
 	%reldir%/common/remap_intrin.h \
 	%reldir%/common/param_binding.h \
 	%reldir%/common/parser_overlay.h \
-	%reldir%/common/phv.h \
 	%reldir%/common/slice.h
 
 cpplint_FILES += $(tofino_backend_common_UNIFIED) $(tofino_backend_common_NONUNIFIED)
