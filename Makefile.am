@@ -120,15 +120,15 @@ am__v_LEX_1 =
 	$(AM_V_LEX) $(LEX) -t $< > $@
 
 check-local:
-	export BUILDDIR=$$(pwd); cd $(srcdir)/test; ./runtests -f asm/*.tfa *.p4 */*.p4
+	+@export BUILDDIR=$$(pwd); cd $(srcdir)/test; ./runtests -f asm/*.tfa *.p4 */*.p4
 
 ctags:
 	cd $(srcdir); ctags -R -I VECTOR --exclude=test --exclude=submodules \
 	    --regex-C++='/^DECLARE_(ABSTRACT_)?TABLE_TYPE\(([a-zA-Z0-9_]+)/\2/c/'
 
 tests:
-	export BUILDDIR=$$(pwd); cd $(srcdir)/test; ./runtests asm/*.tfa *.p4 */*.p4
+	+@export BUILDDIR=$$(pwd); cd $(srcdir)/test; ./runtests asm/*.tfa *.p4 */*.p4
 
 check-sanity:
-	export BUILDDIR=$$(pwd); cd $(srcdir)/test; ./runtests *.p4
+	+@export BUILDDIR=$$(pwd); cd $(srcdir)/test; ./runtests *.p4
 

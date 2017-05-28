@@ -1,7 +1,12 @@
 #!/bin/bash
 
-fast=false;
+fast=false
 verbose=false
+TIME=false
+# parallel make arguments
+PARALLEL=1
+TOKEN_READ=0
+TOKEN_WRITE=0
 
 shopt -s nullglob
 set -o pipefail
@@ -31,13 +36,25 @@ TRY_STF="
     $TESTDIR/../../model/*/tests/simple_test_harness/simple_test_harness
 "
 
-TIME=false
-PARALLEL=1
-if [[ $TESTFLAGS =~ ^-j\ *[0-9]+$ ]]; then
-    PARALLEL=${TESTFLAGS#-j}
-elif [[ $MAKEFLAGS =~ ^-j\ *[0-9]+$ ]]; then
-    PARALLEL=${MAKEFLAGS#-j}
-fi
+for mflag in $MAKEFLAGS; do
+    case $mflag in
+    n)  exit 0
+        ;;
+    -j[1-9]|-j[1-9][0-9])
+        PARALLEL=${mflag#-j}
+        ;;
+    --jobserver-*=*)
+        fds=${mflag/*=/}
+        vec=(${fds/,/ })
+        if eval "command >&${vec[1]}" 2>/dev/null; then : ; else
+            echo >&2 "invalid --jobserver -- must use '+' in Makefile rule"
+            exit 1
+        fi
+        TOKEN_READ=${vec[0]}
+        TOKEN_WRITE=${vec[1]}
+        ;;
+    esac
+done
 
 while expr "$1" : - >/dev/null; do
     case $1 in
@@ -54,7 +71,7 @@ while expr "$1" : - >/dev/null; do
         if [[ $1 =~ ^[0-9]+$ ]]; then
             PARALLEL=$1
         else
-            echo 2>& "invalid number -j $1"
+            echo >&2 "invalid number -j $1"
         fi
         ;;
     -j[1-9]|-j[1-9][0-9])
@@ -73,7 +90,7 @@ done
 #glsc_args="--placement-order ingress_before_egress --libpd --placement secret"
 glsc_args="--placement-order ingress_before_egress --no-bin"
 
-trap 'exit' 2
+trap 'release_all_tokens; exit' 2
 
 if [ $# -eq 0 ]; then
     set *.p4
@@ -428,6 +445,26 @@ skip=0
 expected_fail=0
 unexpected_pass=0
 running=0
+tokens=0
+token_request=0
+
+function get_token() {
+    eval "dd bs=1 count=1 of=/dev/null <&$TOKEN_READ" 2>/dev/null
+    exit 99
+}
+
+function release_one_token() {
+    eval "dd if=/dev/zero bs=1 count=1 >&$TOKEN_WRITE" 2>/dev/null
+    let tokens--
+    let token_request--
+}
+
+function release_all_tokens() {
+    if (( token_request > 0 )); then
+        eval "dd if=/dev/zero bs=1 count=$token_request >&$TOKEN_WRITE" 2>/dev/null
+        token_request=0
+    fi
+}
 
 function wait_1() {
     wait -n
@@ -444,6 +481,9 @@ function wait_1() {
         ;;
     4)  let skip++
         ;;
+    99) let tokens++
+        return
+        ;;
     esac
     let running--
 }
@@ -451,7 +491,11 @@ function wait_1() {
 if $verbose; then echo "running $PARALLEL threads"; fi
 
 for file in "$@"; do
-    if (( running >= PARALLEL )); then
+    if (( running >= PARALLEL + tokens )); then
+        if (( TOKEN_READ && tokens == token_request )); then
+            let token_request++
+            get_token &
+        fi
         wait_1
     fi
     if [ "${file##*.}" == "p4" ]; then
@@ -469,8 +513,13 @@ for file in "$@"; do
 done
 
 while (( running > 0 )); do
+    while (( running < PARALLEL + tokens  && tokens > 0)); do
+        release_one_token
+    done
     wait_1
 done
+
+release_all_tokens
 
 if [ $pass -ne 1 ]; then
     pmsg="$pass tests passed"
