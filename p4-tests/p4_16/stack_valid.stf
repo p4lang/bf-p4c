@@ -1,5 +1,5 @@
 
-add t 0 data.f:0x0000 set_port(port:1)
+add t 0 data[0].f:0x0000 set_port(port:1)
 
 #        f1       f2       h1   b1 b2
 expect 1 00000101 00000202 0303 55 66
